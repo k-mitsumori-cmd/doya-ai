@@ -5,8 +5,9 @@ import { useRouter, useParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import {
   Download, Smartphone, Monitor, Tablet,
-  Loader2, ArrowLeft, Pencil, Trash2
+  Loader2, ArrowLeft, Pencil, Trash2, AlertCircle,
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 interface Section {
   id: string
@@ -50,6 +51,7 @@ export default function LpPreviewPage() {
   const [device, setDevice] = useState<Device>('desktop')
   const [exporting, setExporting] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [previewHtml, setPreviewHtml] = useState('')
   const [htmlLoading, setHtmlLoading] = useState(false)
 
@@ -107,21 +109,21 @@ export default function LpPreviewPage() {
       a.click()
       URL.revokeObjectURL(url)
     } catch (e: any) {
-      alert(e.message || 'エクスポートに失敗しました')
+      toast.error(e.message || 'エクスポートに失敗しました')
     } finally {
       setExporting(false)
     }
   }
 
   const handleDelete = async () => {
-    if (!confirm(`「${project?.name}」を削除しますか？この操作は取り消せません。`)) return
     setDeleting(true)
     try {
       await fetch(`/api/lp/projects/${projectId}`, { method: 'DELETE' })
       router.push('/lp')
     } catch (e: any) {
-      alert(e.message || '削除に失敗しました')
+      toast.error(e.message || '削除に失敗しました')
       setDeleting(false)
+      setDeleteConfirmOpen(false)
     }
   }
 
@@ -192,7 +194,7 @@ export default function LpPreviewPage() {
             <span className="sm:hidden">DL</span>
           </button>
           <button
-            onClick={handleDelete}
+            onClick={() => setDeleteConfirmOpen(true)}
             disabled={deleting}
             className="p-2 text-slate-600 hover:text-red-400 transition-colors"
           >
@@ -261,6 +263,39 @@ export default function LpPreviewPage() {
               <span className="text-xs text-slate-400 truncate max-w-[120px]">{sec.name}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 削除確認モーダル */}
+      {deleteConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-100 rounded-full">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+              </div>
+              <h3 className="font-bold text-slate-900">プロジェクトの削除</h3>
+            </div>
+            <p className="text-sm text-slate-600 mb-6">
+              「{project?.name}」を削除しますか？この操作は取り消せません。
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirmOpen(false)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold rounded-lg transition-colors"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-1"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                {deleting ? '削除中...' : '削除する'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

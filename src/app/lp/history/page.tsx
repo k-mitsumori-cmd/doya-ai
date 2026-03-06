@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { FileText, Loader2, Trash2, ExternalLink, Plus, Search } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 interface Project {
   id: string
@@ -48,7 +49,7 @@ export default function LpHistoryPage() {
       await fetch(`/api/lp/projects/${id}`, { method: 'DELETE' })
       setProjects(prev => prev.filter(p => p.id !== id))
     } catch (e: any) {
-      alert(e.message || '削除に失敗しました')
+      toast.error(e.message || '削除に失敗しました')
     } finally {
       setDeletingId(null)
     }

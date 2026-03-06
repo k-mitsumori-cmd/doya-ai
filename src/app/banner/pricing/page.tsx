@@ -150,10 +150,10 @@ export default function BannerPricingPage() {
             <div className="flex items-start justify-between gap-6">
               <div>
                 <h2 className="text-2xl font-black text-slate-900">{pro?.name || 'プロプラン'}</h2>
-                <p className="text-sm text-slate-600 mt-2">{pro?.description || '1日30枚まで生成（PRO）'}</p>
+                <p className="text-sm text-slate-600 mt-2">{pro?.description || '月150枚まで生成（PRO）'}</p>
                 <div className="mt-5 flex flex-wrap gap-2">
                   <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
-                    1日30枚まで生成
+                    月150枚まで生成
                   </div>
                   <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
                     サイズ自由指定
@@ -202,10 +202,10 @@ export default function BannerPricingPage() {
             <div className="flex items-start justify-between gap-6">
               <div>
                 <h2 className="text-2xl font-black text-slate-900">{enterprise?.name || 'エンタープライズ'}</h2>
-                <p className="text-sm text-slate-600 mt-2">{enterprise?.description || '1日200枚まで生成（Enterprise）'}</p>
+                <p className="text-sm text-slate-600 mt-2">{enterprise?.description || '月1000枚まで生成（Enterprise）'}</p>
                 <div className="mt-5 flex flex-wrap gap-2">
                   <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
-                    1日200枚まで生成
+                    月1000枚まで生成
                   </div>
                   <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
                     大量運用・チーム向け

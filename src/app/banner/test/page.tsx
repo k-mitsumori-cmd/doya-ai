@@ -1736,7 +1736,7 @@ function BannerTestPageInner() {
                       </p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 全画像解放</span>
-                        <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 1日200枚生成</span>
+                        <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 月1000枚生成</span>
                         <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 詳細指示</span>
                       </div>
                     </div>
@@ -2676,11 +2676,11 @@ function BannerTestPageInner() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-amber-400 font-medium">PRO</span>
-                      <span className="text-amber-300 font-medium">全画像解放 + 1日30枚</span>
+                      <span className="text-amber-300 font-medium">全画像解放 + 月150枚</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-purple-400 font-medium">Enterprise</span>
-                      <span className="text-purple-300 font-medium">全画像解放 + 1日200枚</span>
+                      <span className="text-purple-300 font-medium">全画像解放 + 月1000枚</span>
                     </div>
                   </div>
                 </div>

@@ -7,6 +7,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { Loader2, Save, Clapperboard, List, Eye, Pencil } from 'lucide-react'
 import type { SceneData, BgmTrack, MovieProjectData } from '@/lib/movie/types'
 
 const STEPS = ['商品情報', 'ペルソナ', '企画選択', '編集']
@@ -228,6 +229,8 @@ function SceneEditor({
   )
 }
 
+type MobileTab = 'scenes' | 'preview' | 'editor'
+
 export default function EditPage() {
   const { projectId } = useParams<{ projectId: string }>()
   const router = useRouter()
@@ -239,6 +242,7 @@ export default function EditPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [rendering, setRendering] = useState(false)
+  const [mobileTab, setMobileTab] = useState<MobileTab>('preview')
   const isNewProject = !project?.outputUrl
 
   useEffect(() => {
@@ -335,7 +339,7 @@ export default function EditPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full py-32">
-        <span className="material-symbols-outlined text-rose-400 animate-spin text-3xl">progress_activity</span>
+        <Loader2 className="w-8 h-8 text-rose-400 animate-spin" />
       </div>
     )
   }
@@ -368,7 +372,7 @@ export default function EditPage() {
           disabled={saving}
           className="px-3 py-1.5 rounded-lg text-sm font-semibold text-rose-300 border border-rose-900/40 hover:bg-rose-900/20 transition-all flex items-center gap-1 disabled:opacity-50"
         >
-          {saving ? <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span> : <span className="material-symbols-outlined text-sm">save</span>}
+          {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           保存
         </button>
         <button
@@ -378,18 +382,40 @@ export default function EditPage() {
           style={{ background: 'linear-gradient(135deg, #f43f5e, #ec4899)' }}
         >
           {rendering ? (
-            <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>
+            <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            <span className="material-symbols-outlined text-sm">movie_creation</span>
+            <Clapperboard className="w-4 h-4" />
           )}
           レンダリング
         </button>
       </div>
 
+      {/* モバイルタブ切り替え */}
+      <div className="md:hidden flex-shrink-0 border-b border-rose-900/30 bg-slate-950/80 flex">
+        {([
+          { key: 'scenes' as MobileTab, label: 'シーン', Icon: List },
+          { key: 'preview' as MobileTab, label: 'プレビュー', Icon: Eye },
+          { key: 'editor' as MobileTab, label: '編集', Icon: Pencil },
+        ]).map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => setMobileTab(tab.key)}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-bold transition-colors ${
+              mobileTab === tab.key
+                ? 'text-rose-300 border-b-2 border-rose-500 bg-rose-500/10'
+                : 'text-slate-500 hover:text-slate-300'
+            }`}
+          >
+            <tab.Icon className="w-4 h-4" />
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* メインエリア */}
       <div className="flex-1 flex overflow-hidden">
-        {/* シーンリスト（左）*/}
-        <div className="w-48 flex-shrink-0 border-r border-rose-900/30 bg-slate-950/60 overflow-y-auto p-2 space-y-2">
+        {/* シーンリスト（左）- デスクトップ常時表示 / モバイルはタブ切り替え */}
+        <div className={`${mobileTab === 'scenes' ? 'flex' : 'hidden'} md:flex w-full md:w-48 flex-shrink-0 md:border-r border-rose-900/30 bg-slate-950/60 overflow-y-auto p-2 space-y-2 flex-col`}>
           <div className="text-rose-300/60 text-xs font-bold px-1 py-0.5">シーン</div>
           {scenes.map((scene, i) => (
             <ScenePanel
@@ -397,13 +423,16 @@ export default function EditPage() {
               scene={scene}
               index={i}
               isSelected={selectedScene === i}
-              onSelect={() => setSelectedScene(i)}
+              onSelect={() => {
+                setSelectedScene(i)
+                setMobileTab('preview')
+              }}
             />
           ))}
         </div>
 
-        {/* プレビュー（中央）*/}
-        <div className="flex-1 flex items-center justify-center bg-slate-950 p-4 overflow-hidden">
+        {/* プレビュー（中央）- デスクトップ常時表示 / モバイルはタブ切り替え */}
+        <div className={`${mobileTab === 'preview' ? 'flex' : 'hidden'} md:flex flex-1 items-center justify-center bg-slate-950 p-4 overflow-hidden`}>
           {currentScene ? (
             <div
               className="max-h-full max-w-full rounded-xl overflow-hidden shadow-2xl shadow-black/50 relative"
@@ -442,8 +471,8 @@ export default function EditPage() {
           )}
         </div>
 
-        {/* 編集パネル（右）*/}
-        <div className="w-72 flex-shrink-0 border-l border-rose-900/30 bg-slate-950/60 overflow-y-auto">
+        {/* 編集パネル（右）- デスクトップ常時表示 / モバイルはタブ切り替え */}
+        <div className={`${mobileTab === 'editor' ? 'flex' : 'hidden'} md:flex w-full md:w-72 flex-shrink-0 md:border-l border-rose-900/30 bg-slate-950/60 overflow-y-auto flex-col`}>
           <div className="p-3 border-b border-rose-900/30">
             <div className="text-white text-sm font-bold">
               {currentScene ? `シーン ${selectedScene + 1} 編集` : 'シーンを選択'}

@@ -1374,12 +1374,12 @@ export default function SeoCreateWizardPage() {
                   transition={{ delay: 0.25 }}
                 >
                   <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">
-                    本日の生成上限に達しました
+                    今月の生成上限に達しました
                   </h3>
                   <p className="text-slate-600 font-bold">
                     {userPlan === 'GUEST' || userPlan === 'FREE'
-                      ? 'PROプランにアップグレードすると、1日最大3記事まで生成できます！'
-                      : 'Enterpriseプランにアップグレードすると、1日最大30記事まで生成できます！'}
+                      ? 'LIGHTプラン以上にアップグレードすると、月最大30記事まで生成できます！'
+                      : 'Enterpriseプランにアップグレードすると、月最大200記事まで生成できます！'}
                   </p>
                 </motion.div>
 
@@ -1395,14 +1395,14 @@ export default function SeoCreateWizardPage() {
                   <div className="space-y-2.5 text-sm font-bold text-gray-700">
                     {userPlan === 'GUEST' || userPlan === 'FREE' ? (
                       <>
-                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>1日3記事まで生成可能（PROプラン）</span></div>
+                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>月30記事まで生成可能（PROプラン）</span></div>
                         <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>図解/バナー自動生成</span></div>
                         <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>SEO改善提案のAI自動修正</span></div>
                         <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>20,000字まで生成可能</span></div>
                       </>
                     ) : (
                       <>
-                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>1日30記事まで生成可能（Enterprise）</span></div>
+                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>月200記事まで生成可能（Enterprise）</span></div>
                         <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>優先サポート対応</span></div>
                         <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>チーム利用・複数アカウント対応</span></div>
                         <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>API連携・カスタム開発相談</span></div>

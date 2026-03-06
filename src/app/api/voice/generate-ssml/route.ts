@@ -12,7 +12,7 @@ import prisma from '@/lib/prisma'
 import { getSpeakerById } from '@/lib/voice/speakers'
 import { generateSpeech } from '@/lib/voice/tts'
 import { validateSsml } from '@/lib/voice/ssml'
-import { getVoiceMonthlyLimitByUserPlan } from '@/lib/pricing'
+import { getVoiceMonthlyLimitByUserPlan, isWithinFreeHour } from '@/lib/pricing'
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,9 +33,16 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // 月次利用制限チェック
+    // フリーアワー判定
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { firstLoginAt: true },
+    })
+    const isFreeHour = dbUser ? isWithinFreeHour(dbUser.firstLoginAt) : false
+
+    // 月次利用制限チェック（フリーアワー中はスキップ）
     const monthlyLimit = getVoiceMonthlyLimitByUserPlan(plan)
-    if (monthlyLimit >= 0) {
+    if (!isFreeHour && monthlyLimit >= 0) {
       const now = new Date()
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
       const used = await prisma.voiceProject.count({

@@ -13,6 +13,15 @@ import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { createClient } from '@supabase/supabase-js'
 
+function isProPlan(plan: string | null | undefined): boolean {
+  const p = String(plan || 'FREE').toUpperCase()
+  return ['PRO', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(p)
+}
+function isLightOrAbove(plan: string | null | undefined): boolean {
+  const p = String(plan || 'FREE').toUpperCase()
+  return ['LIGHT', 'PRO', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(p)
+}
+
 const BUCKET = process.env.VOICE_STORAGE_BUCKET || 'voice-recordings'
 
 function getSupabaseAdmin() {
@@ -29,6 +38,15 @@ export async function POST(req: NextRequest) {
 
     if (!user?.id) {
       return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
+    }
+
+    // プラン制限: Freeプランはトリミング不可
+    const plan = String(user?.voicePlan || user?.plan || 'FREE').toUpperCase()
+    if (!isLightOrAbove(plan)) {
+      return NextResponse.json(
+        { success: false, error: 'トリミング機能はプロプラン以上で利用可能です', upgradePath: '/voice/pricing' },
+        { status: 403 }
+      )
     }
 
     const formData = await req.formData()
@@ -92,11 +110,23 @@ export async function POST(req: NextRequest) {
       trimmedUrl,
       durationMs: updated.durationMs,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Voice record trim error:', error)
+
+    let errorMessage = 'トリミングに失敗しました'
+    let statusCode = 500
+
+    if (error?.message?.includes('Supabase未設定')) {
+      errorMessage = 'ストレージサービスが設定されていません。管理者にお問い合わせください。'
+      statusCode = 503
+    } else if (error?.message?.includes('storage') || error?.message?.includes('bucket')) {
+      errorMessage = 'トリミング済みファイルの保存に失敗しました。しばらくしてから再度お試しください。'
+      statusCode = 503
+    }
+
     return NextResponse.json(
-      { success: false, error: 'トリミングに失敗しました' },
-      { status: 500 }
+      { success: false, error: errorMessage },
+      { status: statusCode }
     )
   }
 }

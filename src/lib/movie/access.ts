@@ -5,7 +5,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
-import { MOVIE_PRICING } from '@/lib/pricing'
+import { MOVIE_PRICING, isWithinFreeHour } from '@/lib/pricing'
 
 export const MOVIE_GUEST_COOKIE = 'movie_guest_id'
 
@@ -37,6 +37,7 @@ export async function getGuestIdFromCookies(): Promise<string | null> {
 }
 
 export function getMovieMonthlyLimit(plan: string | null | undefined): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.MOVIE_DISABLE_LIMITS === '1') return -1
   switch (plan?.toUpperCase()) {
     case 'ENTERPRISE': return MOVIE_PRICING.enterpriseLimit ?? 200
     case 'PRO':        return MOVIE_PRICING.proLimit
@@ -71,12 +72,38 @@ export async function checkMovieUsage(userId: string | null, guestId: string | n
     }
   }
 
+  // フリーアワー判定
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { firstLoginAt: true },
+  })
+  if (user && isWithinFreeHour(user.firstLoginAt)) {
+    return {
+      canGenerate: true,
+      used: 0,
+      limit: -1,
+      plan: 'FREE_HOUR',
+      reason: undefined,
+    }
+  }
+
   // ユーザープラン取得
   const subscription = await prisma.userServiceSubscription.findUnique({
     where: { userId_serviceId: { userId, serviceId: 'movie' } },
   })
   const plan = subscription?.plan ?? 'FREE'
   const limit = getMovieMonthlyLimit(plan)
+
+  // DOYA_DISABLE_LIMITS による無制限化
+  if (limit < 0) {
+    return {
+      canGenerate: true,
+      used: 0,
+      limit: -1,
+      plan,
+      reason: undefined,
+    }
+  }
 
   // 今月の使用数
   const now = new Date()

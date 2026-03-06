@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react'
 import { CheckCircle2, XCircle } from 'lucide-react'
 import { VOICE_PRICING } from '@/lib/pricing'
+import { CheckoutButton } from '@/components/CheckoutButton'
 import Link from 'next/link'
 
 function planTierFrom(plan: string): 'free' | 'light' | 'pro' | 'enterprise' {
@@ -51,7 +52,7 @@ export default function VoicePricingPage() {
                   : 'border-slate-200 bg-white'
               }`}
             >
-              {isPopular && (
+              {isPopular && !isCurrent && (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-violet-600 text-white text-xs font-black px-4 py-1 rounded-full whitespace-nowrap">
                   人気No.1
                 </div>
@@ -92,7 +93,11 @@ export default function VoicePricingPage() {
               </ul>
 
               <div>
-                {tier === 'free' ? (
+                {isCurrent ? (
+                  <div className="w-full py-3 text-center font-black rounded-xl text-sm text-green-600 border-2 border-green-300 bg-green-50">
+                    利用中
+                  </div>
+                ) : tier === 'free' ? (
                   <Link
                     href={session ? '/voice/new' : '/auth/signin'}
                     className="block w-full py-3 text-center font-black rounded-xl border-2 border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors text-sm"
@@ -100,26 +105,30 @@ export default function VoicePricingPage() {
                     {plan.cta}
                   </Link>
                 ) : tier === 'light' ? (
-                  <Link
-                    href="/voice/pricing"
-                    className="block w-full py-3 text-center font-black rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm shadow-lg shadow-blue-500/25"
+                  <CheckoutButton
+                    planId="voice-light"
+                    loginCallbackUrl="/voice/pricing"
+                    variant="primary"
+                    className="w-full py-3 rounded-xl text-sm font-black text-white transition-colors bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25"
                   >
                     {plan.cta}
-                  </Link>
+                  </CheckoutButton>
                 ) : tier === 'enterprise' ? (
                   <a
-                    href="mailto:support@surisuta.jp"
+                    href="mailto:k-mitsumori@surisuta.jp?subject=ドヤボイスAI Enterprise問い合わせ"
                     className="block w-full py-3 text-center font-black rounded-xl border-2 border-slate-300 text-slate-700 hover:bg-slate-50 transition-colors text-sm"
                   >
                     {plan.cta}
                   </a>
                 ) : (
-                  <Link
-                    href="/voice/pricing"
-                    className="block w-full py-3 text-center font-black rounded-xl bg-violet-600 text-white hover:bg-violet-700 transition-colors text-sm shadow-lg shadow-violet-500/25"
+                  <CheckoutButton
+                    planId="voice-pro"
+                    loginCallbackUrl="/voice/pricing"
+                    variant="secondary"
+                    className="w-full py-3 rounded-xl text-sm font-black text-white transition-colors bg-violet-600 hover:bg-violet-700 shadow-lg shadow-violet-500/25"
                   >
                     {plan.cta}
-                  </Link>
+                  </CheckoutButton>
                 )}
               </div>
             </div>
@@ -129,7 +138,7 @@ export default function VoicePricingPage() {
 
       <div className="bg-violet-50 border border-violet-200 rounded-2xl p-6 text-center">
         <p className="text-sm font-bold text-violet-800">
-          💡 Proプランに契約すると、ドヤボイスAIだけでなく全サービス（ドヤバナーAI・ドヤ記事作成・ドヤインタビュー等）のPro機能が同時に解放されます。
+          Proプランに契約すると、ドヤボイスAIだけでなく全サービス（ドヤバナーAI・ドヤ記事作成・ドヤインタビュー等）のPro機能が同時に解放されます。
         </p>
       </div>
     </div>

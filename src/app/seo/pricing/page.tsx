@@ -139,12 +139,12 @@ export default function SeoPricingPage() {
               <div>
                 <h2 className="text-2xl font-black text-slate-900">{free?.name || 'フリー'}</h2>
                 <p className="text-sm text-slate-600 mt-2">
-                  ログイン：1日{SEO_PRICING.freeLimit}回まで記事生成（画像生成はPROから）
+                  ログイン：月{SEO_PRICING.freeLimit}回まで記事生成（画像生成はLIGHTから）
                 </p>
                 <div className="mt-5 flex flex-wrap gap-2">
                   <span className="inline-flex items-center px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-900 font-black text-sm">
                     <Lock className="w-4 h-4 mr-2 text-slate-500" />
-                    画像生成（図解）はPROから
+                    画像生成（図解）はLIGHTから
                   </span>
                 </div>
               </div>
@@ -202,10 +202,10 @@ export default function SeoPricingPage() {
                 </div>
                 <h2 className="text-2xl font-black mt-2">{pro?.name || 'プロ'}</h2>
                 <p className="text-sm text-white/80 mt-2">
-                  1日{SEO_PRICING.proLimit}記事まで。図解/再生成/自動修正など、制作フローが一気に解放されます。
+                  月{SEO_PRICING.proLimit}記事まで。図解/再生成/自動修正など、制作フローが一気に解放されます。
                 </p>
                 <ul className="mt-5 space-y-2 text-sm font-bold text-white/90">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-300" /> 1日{SEO_PRICING.proLimit}記事まで生成</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-300" /> 月{SEO_PRICING.proLimit}記事まで生成</li>
                   <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-300" /> 図解/バナー生成（記事に合わせて自動）</li>
                   <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-300" /> SEO改善提案のAI自動修正</li>
                   <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-300" /> 履歴保存：直近3ヶ月</li>
@@ -244,10 +244,10 @@ export default function SeoPricingPage() {
                 </div>
                 <h2 className="text-2xl font-black text-slate-900 mt-2">{enterprise?.name || 'エンタープライズ'}</h2>
                 <p className="text-sm text-slate-600 mt-2">
-                  1日{SEO_PRICING.enterpriseLimit || 30}記事まで。チーム運用・大量制作向け。
+                  月{SEO_PRICING.enterpriseLimit || 200}記事まで。チーム運用・大量制作向け。
                 </p>
                 <ul className="mt-5 space-y-2 text-sm text-slate-700 font-bold">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-purple-600" /> 1日{SEO_PRICING.enterpriseLimit || 30}記事まで生成</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-purple-600" /> 月{SEO_PRICING.enterpriseLimit || 200}記事まで生成</li>
                   <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-purple-600" /> 図解/バナー生成＋再生成</li>
                   <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-purple-600" /> 優先サポート</li>
                 </ul>

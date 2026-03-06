@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { isCopyProPlan } from '@/lib/pricing'
 
 function escapeCsv(value: string): string {
   if (value.includes(',') || value.includes('"') || value.includes('\n')) {
@@ -22,7 +23,7 @@ function buildCsvRow(values: string[]): string {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    const userId = (session?.user as any)?.id
+    const userId = session?.user?.id
 
     const { projectId, format, copyIds } = await req.json() as {
       projectId: string
@@ -32,6 +33,26 @@ export async function POST(req: NextRequest) {
 
     if (!projectId) {
       return NextResponse.json({ error: 'projectIdは必須です' }, { status: 400 })
+    }
+
+    // ===== エクスポートはProプラン以上限定 =====
+    if (userId) {
+      const planUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { plan: true },
+      })
+      if (!isCopyProPlan(planUser?.plan)) {
+        return NextResponse.json(
+          { error: 'CSV/Excelエクスポートはプロプラン以上で利用可能です', upgradePath: '/copy/pricing' },
+          { status: 403 }
+        )
+      }
+    } else {
+      // ゲスト（未ログイン）は利用不可
+      return NextResponse.json(
+        { error: 'CSV/Excelエクスポートはプロプラン以上で利用可能です', upgradePath: '/copy/pricing' },
+        { status: 403 }
+      )
     }
 
     const project = await prisma.copyProject.findUnique({
@@ -71,7 +92,7 @@ export async function POST(req: NextRequest) {
           copy.cta || '',
           copy.description || '',
           desc2.slice(0, 90),
-          (project.productUrl as string) || '',
+          project.productUrl || '',
         ])
         csvContent += row + '\n'
       }
@@ -86,7 +107,7 @@ export async function POST(req: NextRequest) {
           copy.headline || '',
           copy.description || '',
           '',
-          (project.productUrl as string) || '',
+          project.productUrl || '',
         ])
         csvContent += row + '\n'
       }
@@ -118,8 +139,9 @@ export async function POST(req: NextRequest) {
         'Content-Disposition': `attachment; filename="${encodeURIComponent(project.name)}_copies.csv"`,
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('Copy export error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

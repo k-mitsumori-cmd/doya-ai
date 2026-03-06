@@ -6,6 +6,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { Film, Music, Mic, RefreshCw, Loader2, ArrowRight } from 'lucide-react'
 import type { MoviePlan, ProductInfo, MoviePersona } from '@/lib/movie/types'
 
 const STEPS = ['商品情報', 'ペルソナ', '企画選択', '編集']
@@ -64,15 +65,15 @@ function PlanCard({
       {/* シーン数 */}
       <div className="flex items-center gap-3 text-xs text-rose-300/50">
         <span className="flex items-center gap-1">
-          <span className="material-symbols-outlined text-sm">movie</span>
+          <Film className="w-3.5 h-3.5" />
           {plan.scenes.length}シーン
         </span>
         <span className="flex items-center gap-1">
-          <span className="material-symbols-outlined text-sm">music_note</span>
+          <Music className="w-3.5 h-3.5" />
           BGM: {plan.bgmMood}
         </span>
         <span className="flex items-center gap-1">
-          <span className="material-symbols-outlined text-sm">record_voice_over</span>
+          <Mic className="w-3.5 h-3.5" />
           {plan.narrationStyle}
         </span>
       </div>
@@ -240,7 +241,7 @@ export default function PlanPage() {
             onClick={generatePlans}
             className="flex items-center gap-1 text-rose-300 text-sm hover:text-rose-200 transition-colors"
           >
-            <span className="material-symbols-outlined text-base">refresh</span>
+            <RefreshCw className="w-4 h-4" />
             再生成
           </button>
         )}
@@ -263,7 +264,7 @@ export default function PlanPage() {
         {generating && plans.length < 3 && (
           <div className="rounded-xl border border-rose-900/30 bg-slate-900/50 p-5 animate-pulse">
             <div className="flex items-center gap-2 mb-3">
-              <span className="material-symbols-outlined text-rose-400 animate-spin text-base">progress_activity</span>
+              <Loader2 className="w-4 h-4 text-rose-400 animate-spin" />
               <span className="text-rose-300/70 text-sm">企画{plans.length + 1}を生成中...</span>
             </div>
             <div className="h-4 bg-slate-700/50 rounded mb-2 w-3/4" />
@@ -290,13 +291,13 @@ export default function PlanPage() {
           >
             {submitting ? (
               <>
-                <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
+                <Loader2 className="w-5 h-5 animate-spin" />
                 シーンを生成中...
               </>
             ) : (
               <>
                 次へ: 編集
-                <span className="material-symbols-outlined">arrow_forward</span>
+                <ArrowRight className="w-5 h-5" />
               </>
             )}
           </button>

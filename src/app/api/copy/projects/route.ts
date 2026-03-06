@@ -11,7 +11,7 @@ import { prisma } from '@/lib/prisma'
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    const userId = (session?.user as any)?.id
+    const userId = session?.user?.id
 
     if (!userId) {
       return NextResponse.json({ projects: [] })
@@ -35,9 +35,10 @@ export async function GET(req: NextRequest) {
     ])
 
     return NextResponse.json({ projects, total })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('Copy projects GET error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    const userId = (session?.user as any)?.id
+    const userId = session?.user?.id
 
     const body = await req.json()
     const { name, productUrl, productInfo, persona, personaSource, regulations, brandVoiceId } = body
@@ -66,12 +67,13 @@ export async function POST(req: NextRequest) {
         regulations: regulations || {},
         brandVoiceId: brandVoiceId || null,
         status: 'active',
-      } as any, // userId is nullable after schema migration (String?)
+      } as any, // Prisma schema types userId as String but DB column is nullable (String?)
     })
 
     return NextResponse.json({ success: true, project })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('Copy projects POST error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

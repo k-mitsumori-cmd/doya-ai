@@ -137,11 +137,26 @@ export async function POST(req: NextRequest) {
       originalUrl,
       storagePath,
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Voice record upload error:', error)
+
+    let errorMessage = '録音のアップロードに失敗しました'
+    let statusCode = 500
+
+    if (error?.message?.includes('Supabase未設定')) {
+      errorMessage = 'ストレージサービスが設定されていません。管理者にお問い合わせください。'
+      statusCode = 503
+    } else if (error?.message?.includes('storage') || error?.message?.includes('bucket')) {
+      errorMessage = 'ファイルストレージへの保存に失敗しました。しばらくしてから再度お試しください。'
+      statusCode = 503
+    } else if (error?.message?.includes('size') || error?.message?.includes('too large')) {
+      errorMessage = 'ファイルサイズが大きすぎます。50MB以内のファイルをアップロードしてください。'
+      statusCode = 413
+    }
+
     return NextResponse.json(
-      { success: false, error: '録音のアップロードに失敗しました' },
-      { status: 500 }
+      { success: false, error: errorMessage },
+      { status: statusCode }
     )
   }
 }

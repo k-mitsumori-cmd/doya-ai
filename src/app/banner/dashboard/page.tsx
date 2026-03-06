@@ -3215,11 +3215,11 @@ function BannerTestPageInner() {
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-amber-400 font-medium">PRO</span>
-                      <span className="text-amber-300 font-medium">全画像解放 + 1日30枚</span>
+                      <span className="text-amber-300 font-medium">全画像解放 + 月150枚</span>
                     </div>
                     <div className="flex justify-between items-center">
                       <span className="text-purple-400 font-medium">Enterprise</span>
-                      <span className="text-purple-300 font-medium">全画像解放 + 1日200枚</span>
+                      <span className="text-purple-300 font-medium">全画像解放 + 月1000枚</span>
                     </div>
                   </div>
                 </div>

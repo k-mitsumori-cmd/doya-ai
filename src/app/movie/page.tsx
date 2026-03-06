@@ -6,7 +6,11 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
+import { PlusCircle, LayoutGrid } from 'lucide-react'
+import { PLATFORMS as PLATFORM_SPECS } from '@/lib/movie/types'
 import type { MovieProjectData } from '@/lib/movie/types'
+import { MOVIE_TEMPLATES } from '@/lib/movie/templates'
 
 const STEPS = [
   { icon: '📝', title: '商品情報を入力', desc: '商品名・特徴・ターゲットを入力するだけ。URLから自動解析も可能。' },
@@ -100,7 +104,7 @@ export default function MovieDashboard() {
     fetch('/api/movie/projects?limit=6')
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
       .then(d => { if (d.projects) setProjects(d.projects) })
-      .catch(() => {/* silent fail - projects just won't show */})
+      .catch(() => { toast.error('プロジェクト一覧の取得に失敗しました') })
       .finally(() => setLoading(false))
   }, [isLoggedIn])
 
@@ -135,14 +139,14 @@ export default function MovieDashboard() {
                 className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-white text-lg transition-all shadow-lg shadow-rose-500/30"
                 style={{ background: 'linear-gradient(135deg, #f43f5e, #ec4899)' }}
               >
-                <span className="material-symbols-outlined">add_circle</span>
+                <PlusCircle className="w-5 h-5" />
                 無料で動画を作る
               </Link>
               <Link
                 href="/movie/templates"
                 className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-rose-200 text-lg border border-rose-500/30 hover:bg-rose-900/30 transition-all"
               >
-                <span className="material-symbols-outlined">grid_view</span>
+                <LayoutGrid className="w-5 h-5" />
                 テンプレートを見る
               </Link>
             </div>
@@ -155,8 +159,8 @@ export default function MovieDashboard() {
         <div className="max-w-4xl mx-auto">
           <div className="rounded-2xl border border-rose-900/30 bg-rose-950/20 p-6 grid grid-cols-3 gap-6">
             <StatCard value="10分" label="平均作成時間" />
-            <StatCard value="9種類" label="対応プラットフォーム" />
-            <StatCard value="15+" label="テンプレート数" />
+            <StatCard value={`${PLATFORM_SPECS.length}種類`} label="対応プラットフォーム" />
+            <StatCard value={`${MOVIE_TEMPLATES.length}`} label="テンプレート数" />
           </div>
         </div>
       </section>
@@ -252,7 +256,7 @@ export default function MovieDashboard() {
               className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-bold text-white text-lg transition-all shadow-lg shadow-rose-500/30"
               style={{ background: 'linear-gradient(135deg, #f43f5e, #ec4899)' }}
             >
-              <span className="material-symbols-outlined">add_circle</span>
+              <PlusCircle className="w-5 h-5" />
               無料で動画を作る
             </Link>
           </div>

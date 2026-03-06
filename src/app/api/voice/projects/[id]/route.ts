@@ -77,7 +77,16 @@ export async function PUT(
       return NextResponse.json({ success: false, error: 'プロジェクトが見つかりません' }, { status: 404 })
     }
 
-    const body = await req.json()
+    let body: any
+    try {
+      body = await req.json()
+    } catch {
+      return NextResponse.json(
+        { success: false, error: 'リクエストの形式が不正です' },
+        { status: 400 }
+      )
+    }
+
     const {
       name,
       inputText,

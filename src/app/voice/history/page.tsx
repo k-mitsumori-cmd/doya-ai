@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Play, Pause, Download, Star, Trash2, Loader2 } from 'lucide-react'
+import { Play, Pause, Download, Star, Trash2, Loader2, AlertCircle } from 'lucide-react'
 
 interface VoiceProject {
   id: string
@@ -37,11 +37,21 @@ export default function HistoryPage() {
   const [filter, setFilter] = useState<'all' | 'completed' | 'favorite'>('all')
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/voice/projects')
-      .then(r => r.json())
-      .then(data => { if (data.success) setProjects(data.projects || []) })
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+      })
+      .then(data => {
+        if (data.success) setProjects(data.projects || [])
+        else setFetchError(data.error || '履歴の取得に失敗しました')
+      })
+      .catch(() => {
+        setFetchError('履歴の読み込みに失敗しました。通信環境を確認してください。')
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -65,8 +75,9 @@ export default function HistoryPage() {
     }
     audioEl?.pause()
     const audio = new Audio(`/api/voice/projects/${p.id}/download`)
-    audio.play()
+    audio.play().catch(() => setPlayingId(null))
     audio.onended = () => setPlayingId(null)
+    audio.onerror = () => setPlayingId(null)
     setAudioEl(audio)
     setPlayingId(p.id)
   }
@@ -116,6 +127,22 @@ export default function HistoryPage() {
           </button>
         ))}
       </div>
+
+      {/* エラー表示 */}
+      {fetchError && (
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-red-700 font-bold">{fetchError}</p>
+            <button
+              onClick={() => { setFetchError(null); setLoading(true); window.location.reload() }}
+              className="text-xs text-red-500 hover:text-red-700 mt-1 font-bold"
+            >
+              再読み込み
+            </button>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center py-16">

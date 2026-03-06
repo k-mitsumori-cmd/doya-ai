@@ -150,8 +150,8 @@ export const SERVICES: Service[] = [
     pricing: {
       free: {
         name: '無料プラン',
-        limit: '1日3回まで',
-        dailyLimit: 3,
+        limit: '月15枚まで',
+        dailyLimit: 15,
         price: 0
       },
       light: {
@@ -163,15 +163,15 @@ export const SERVICES: Service[] = [
       },
       pro: {
         name: 'プロプラン',
-        limit: '1日30枚まで',
-        dailyLimit: 30,
+        limit: '月150枚まで',
+        dailyLimit: 150,
         price: 9980,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_BANNER_PRO_PRICE_ID,
       },
       enterprise: {
         name: 'エンタープライズ',
-        limit: '1日200枚まで',
-        dailyLimit: 200,
+        limit: '月1000枚まで',
+        dailyLimit: 1000,
         price: 49800,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_BANNER_ENTERPRISE_PRICE_ID,
       },
@@ -421,8 +421,8 @@ export const SERVICES: Service[] = [
     pricing: {
       free: {
         name: '無料プラン',
-        limit: '1日3回まで',
-        dailyLimit: 3,
+        limit: '1日5回まで',
+        dailyLimit: 5,
         price: 0,
       },
       light: {
@@ -736,7 +736,7 @@ export const SERVICES: Service[] = [
         name: 'プロプラン',
         limit: '1日30回まで',
         dailyLimit: 30,
-        price: 2980,
+        price: 9980,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_OPENING_PRO_PRICE_ID,
       },
     },

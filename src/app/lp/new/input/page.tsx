@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import { Link2, PenLine, Plus, X, ArrowRight, Loader2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 type InputMode = 'url' | 'manual'
 
@@ -68,7 +69,7 @@ export default function LpInputPage() {
 
   const handleSubmit = async () => {
     if (!name.trim()) {
-      alert('商品名を入力してください')
+      toast.error('商品名を入力してください')
       return
     }
     setSaving(true)
@@ -91,7 +92,7 @@ export default function LpInputPage() {
       if (!res.ok) throw new Error(data.error)
       router.push(`/lp/new/structure?projectId=${data.project.id}`)
     } catch (e: any) {
-      alert(e.message || 'エラーが発生しました')
+      toast.error(e.message || 'エラーが発生しました')
     } finally {
       setSaving(false)
     }

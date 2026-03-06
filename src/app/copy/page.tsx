@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
 
 interface CopyProject {
   id: string
@@ -50,7 +51,7 @@ export default function CopyPage() {
         setProjects(data.projects || [])
       }
     } catch {
-      // ignore
+      toast.error('プロジェクト一覧の取得に失敗しました')
     } finally {
       setLoading(false)
     }
@@ -109,31 +110,40 @@ export default function CopyPage() {
     { name: 'ストーリー', desc: 'ビフォーアフター型', emoji: '📖' },
   ]
 
-  // セッション読み込み中 → ローディング画面
+  // セッション読み込み中 → skeleton/pulse ローディング
   if (isSessionLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center"
-        >
-          <div className="w-14 h-14 mx-auto mb-5 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
-            <PenLine className="w-7 h-7 text-white animate-pulse" />
+      <div className="min-h-screen bg-gray-50 text-gray-900">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+          {/* ヘッダー skeleton */}
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <div className="h-7 w-48 bg-gray-200 rounded-lg animate-pulse mb-2" />
+              <div className="h-4 w-64 bg-gray-200 rounded animate-pulse" />
+            </div>
+            <div className="h-10 w-36 bg-amber-200 rounded-xl animate-pulse" />
           </div>
-          <h2 className="text-lg font-black text-gray-900 mb-2">ドヤコピーAI</h2>
-          <p className="text-sm text-gray-500 mb-4">読み込み中です。少々お待ちください...</p>
-          <div className="flex items-center justify-center gap-1.5">
-            {[0, 1, 2].map((i) => (
-              <motion.div
-                key={i}
-                className="w-2 h-2 rounded-full bg-amber-500"
-                animate={{ opacity: [0.3, 1, 0.3] }}
-                transition={{ duration: 1.2, repeat: Infinity, delay: i * 0.2 }}
-              />
+
+          {/* クイックアクション skeleton */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-24 bg-gray-100 border border-gray-200 rounded-xl animate-pulse" />
             ))}
           </div>
-        </motion.div>
+
+          {/* プロジェクト一覧 skeleton */}
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-6 w-40 bg-gray-200 rounded-lg animate-pulse" />
+              <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
+            </div>
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-16 bg-white border border-gray-200 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -171,7 +181,7 @@ export default function CopyPage() {
               <span className="text-xs text-gray-500">20案以上生成</span>
             </Link>
             <Link
-              href="/copy/new?type=search"
+              href="/copy/new/search"
               className="flex flex-col items-center gap-2 p-4 bg-orange-50 border border-orange-200 rounded-xl hover:bg-orange-100 transition-colors text-center"
             >
               <BarChart3 className="w-6 h-6 text-orange-600" />
@@ -179,7 +189,7 @@ export default function CopyPage() {
               <span className="text-xs text-gray-500">Google/Yahoo!</span>
             </Link>
             <Link
-              href="/copy/new?type=sns"
+              href="/copy/new/sns"
               className="flex flex-col items-center gap-2 p-4 bg-yellow-50 border border-yellow-200 rounded-xl hover:bg-yellow-100 transition-colors text-center"
             >
               <Sparkles className="w-6 h-6 text-yellow-600" />

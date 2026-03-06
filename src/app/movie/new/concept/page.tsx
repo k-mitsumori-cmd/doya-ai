@@ -4,8 +4,10 @@
 // ============================================
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { Loader2, ArrowRight, ArrowLeft } from 'lucide-react'
 import { PLATFORMS, DURATION_PRESETS } from '@/lib/movie/types'
 import type { AspectRatio, DurationPreset } from '@/lib/movie/types'
 
@@ -86,6 +88,15 @@ export default function ConceptPage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8">
+      {/* 戻るボタン */}
+      <Link
+        href="/movie"
+        className="inline-flex items-center gap-1.5 text-rose-300/70 hover:text-rose-200 text-sm font-semibold mb-6 transition-colors"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        ダッシュボードに戻る
+      </Link>
+
       {/* ステップインジケーター */}
       <div className="flex items-center gap-2 mb-8">
         {STEPS.map((s, i) => (
@@ -272,13 +283,13 @@ export default function ConceptPage() {
         >
           {loading ? (
             <>
-              <span className="material-symbols-outlined animate-spin text-xl">progress_activity</span>
+              <Loader2 className="w-5 h-5 animate-spin" />
               商品を分析中...
             </>
           ) : (
             <>
               次へ: ペルソナ設定
-              <span className="material-symbols-outlined">arrow_forward</span>
+              <ArrowRight className="w-5 h-5" />
             </>
           )}
         </button>

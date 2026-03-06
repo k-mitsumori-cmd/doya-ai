@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ChevronUp, ChevronDown, PlusCircle } from 'lucide-react'
 
 const STEPS = [
   {
@@ -93,9 +94,11 @@ function FaqItem({ q, a }: { q: string; a: string }) {
         className="w-full text-left py-4 flex items-start justify-between gap-3 hover:text-rose-200 transition-colors"
       >
         <span className="text-white text-sm font-semibold">{q}</span>
-        <span className="material-symbols-outlined text-rose-400 flex-shrink-0 text-lg">
-          {open ? 'expand_less' : 'expand_more'}
-        </span>
+        {open ? (
+          <ChevronUp className="w-5 h-5 text-rose-400 flex-shrink-0" />
+        ) : (
+          <ChevronDown className="w-5 h-5 text-rose-400 flex-shrink-0" />
+        )}
       </button>
       <AnimatePresence>
         {open && (
@@ -201,7 +204,7 @@ export default function GuidePage() {
           className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white transition-all"
           style={{ background: 'linear-gradient(135deg, #f43f5e, #ec4899)' }}
         >
-          <span className="material-symbols-outlined">add_circle</span>
+          <PlusCircle className="w-5 h-5" />
           無料で動画を作る
         </Link>
       </div>

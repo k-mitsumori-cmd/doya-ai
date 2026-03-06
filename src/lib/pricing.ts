@@ -163,7 +163,7 @@ export const SEO_PRICING: ServicePricing = {
         { text: '月3回 / 10,000字まで', included: true },
         { text: 'アウトライン/セクション生成', included: true },
         { text: '履歴保存（直近3ヶ月）', included: true },
-        { text: '画像生成（図解/サムネ）はPROから', included: true },
+        { text: '画像生成（図解/サムネ）はLIGHTから', included: true },
       ],
       cta: '無料で試す',
     },
@@ -780,6 +780,24 @@ export function getCopyMonthlyLimitByUserPlan(plan: string | null | undefined): 
   return COPY_PRICING.freeLimit
 }
 
+// Copy: プラン判定ヘルパー
+export function isCopyProPlan(plan: string | null | undefined): boolean {
+  const p = String(plan || 'FREE').toUpperCase()
+  return ['PRO', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(p)
+}
+
+export function isCopyLightOrAbove(plan: string | null | undefined): boolean {
+  const p = String(plan || 'FREE').toUpperCase()
+  return ['LIGHT', 'PRO', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(p)
+}
+
+// Copy: プランごとに許可されるライタータイプ
+export function getAllowedWriterTypes(plan: string | null | undefined): string[] {
+  if (isCopyProPlan(plan)) return ['straight', 'emotional', 'logical', 'provocative', 'story']
+  if (isCopyLightOrAbove(plan)) return ['straight', 'emotional', 'logical']
+  return ['straight']
+}
+
 // ========================================
 // ドヤオープニングAI 料金設定
 // ========================================
@@ -925,6 +943,9 @@ export const LP_PRICING: ServicePricing = {
         { text: 'セクション別コピー自動生成', included: true },
         { text: '5テーマ利用可能', included: true },
         { text: '保存（無制限）', included: true },
+        { text: 'HTMLエクスポート', included: false },
+        { text: 'PDF構成シート出力', included: false },
+        { text: 'セクションブラッシュアップ', included: false },
       ],
       cta: 'ライトプランを始める',
     },
@@ -1476,10 +1497,15 @@ export const MOVIE_PRICING: ServicePricing = {
 }
 
 export function getMovieMonthlyLimitByUserPlan(plan: string | null | undefined): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.MOVIE_DISABLE_LIMITS === '1') return -1
   const p = String(plan || 'FREE').toUpperCase()
   switch (p) {
     case 'ENTERPRISE': return MOVIE_PRICING.enterpriseLimit ?? 200
-    case 'PRO': return MOVIE_PRICING.proLimit
+    case 'BUNDLE': return MOVIE_PRICING.proLimit
+    case 'PRO':
+    case 'BASIC':
+    case 'STARTER':
+    case 'BUSINESS': return MOVIE_PRICING.proLimit
     case 'LIGHT': return MOVIE_PRICING.lightLimit ?? 10
     case 'FREE': return MOVIE_PRICING.freeLimit
     default: return MOVIE_PRICING.freeLimit

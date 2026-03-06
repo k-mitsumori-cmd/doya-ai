@@ -1,5 +1,15 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import type { BgmTrack } from '@/lib/movie/types'
+
+// ---- プラン判定ヘルパー ----
+
+function isProPlan(plan: string | null | undefined): boolean {
+  const p = String(plan || 'FREE').toUpperCase()
+  return ['PRO', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(p)
+}
 
 // フリーBGMライブラリ（サンプル。本番はSupabase Storageに配置）
 const BGM_TRACKS: BgmTrack[] = [
@@ -17,7 +27,41 @@ const BGM_TRACKS: BgmTrack[] = [
   { id: 'luxury-2', name: 'Premium Feel', genre: 'luxury', duration: 60, url: '/audio/bgm/premium-feel.mp3', isPro: true },
 ]
 
-// GET /api/movie/bgm
-export async function GET() {
-  return NextResponse.json({ tracks: BGM_TRACKS })
+// GET /api/movie/bgm - プランに応じてBGMをフィルタして返す
+export async function GET(req: NextRequest) {
+  try {
+    // ユーザーのプランを取得
+    let userPlan = 'FREE'
+    const session = await getServerSession(authOptions)
+    if (session?.user?.email) {
+      const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true },
+      })
+      if (user) {
+        const subscription = await prisma.userServiceSubscription.findUnique({
+          where: { userId_serviceId: { userId: user.id, serviceId: 'movie' } },
+        })
+        userPlan = subscription?.plan ?? 'FREE'
+      }
+    }
+
+    const userIsPro = isProPlan(userPlan)
+
+    // 全BGMを返すが、Freeユーザーにはlockedフラグを付与
+    const tracks = BGM_TRACKS.map(track => ({
+      ...track,
+      locked: track.isPro && !userIsPro,
+    }))
+
+    // Freeユーザーの場合はisPro === falseのもののみ返す
+    const filteredTracks = userIsPro
+      ? tracks
+      : tracks.filter(t => !t.isPro)
+
+    return NextResponse.json({ tracks: filteredTracks, plan: userPlan })
+  } catch (error) {
+    console.error('[GET /api/movie/bgm]', error)
+    return NextResponse.json({ error: 'BGMの取得に失敗しました' }, { status: 500 })
+  }
 }

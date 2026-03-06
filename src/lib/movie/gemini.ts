@@ -3,6 +3,7 @@
 // ============================================
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import type { ProductInfo, MoviePersona, MoviePlan, SceneData } from './types'
+import { getTemplateById } from './templates'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENAI_API_KEY ?? '')
 
@@ -49,7 +50,8 @@ JSONのみ返してください。説明文は不要です。
     const text = result.response.text().trim()
     const json = text.replace(/^```json?\n?/, '').replace(/\n?```$/, '')
     return JSON.parse(json) as ProductInfo
-  } catch {
+  } catch (error) {
+    console.error('[analyzeProduct] Gemini API error, using fallback:', error)
     return {
       name: input.name ?? '不明',
       description: input.description ?? '',
@@ -145,6 +147,24 @@ export async function generateScenes(
   productInfo: ProductInfo,
   config: { duration: number; aspectRatio: string; templateId?: string }
 ): Promise<SceneData[]> {
+  // テンプレートがある場合、参照情報としてプロンプトに含める
+  const template = config.templateId ? getTemplateById(config.templateId) : null
+  const templateHint = template
+    ? `
+## テンプレート参考（${template.name}）
+このテンプレートの構成を参考にシーンを生成してください。
+シーン数: ${template.defaultScenes.length}
+構成:
+${template.defaultScenes
+  .map(
+    (s, i) =>
+      `  シーン${i}: ${s.duration}秒, 背景=${s.bgType}(${s.bgValue ?? ''}), トランジション=${s.transition}, テキスト数=${s.texts.length}`
+  )
+  .join('\n')}
+テンプレートの色味・フォントサイズ・レイアウト配置を踏襲しつつ、企画内容に合わせたテキストに置き換えてください。
+`
+    : ''
+
   const prompt = `
 あなたはRemotionを使った動画制作エンジニアです。以下の企画に基づき、動画のシーンデータをJSONで生成してください。
 
@@ -152,9 +172,14 @@ export async function generateScenes(
 コンセプト: ${plan.concept}
 起: ${plan.storyline.opening} / 承: ${plan.storyline.development} / 転: ${plan.storyline.climax} / 結: ${plan.storyline.conclusion}
 
-## 商品: ${productInfo.name} / USP: ${productInfo.usp}
-## 設定: 総尺${config.duration}秒, アスペクト比${config.aspectRatio}
+## シーン案
+${plan.scenes.map((s, i) => `${i}: "${s.content}" → 表示テキスト「${s.textSuggestion}」 (${s.direction})`).join('\n')}
 
+## 商品: ${productInfo.name} / USP: ${productInfo.usp}
+## 特徴: ${productInfo.features.join(', ')}
+## ターゲット: ${productInfo.target}
+## 設定: 総尺${config.duration}秒, アスペクト比${config.aspectRatio}
+${templateHint}
 ## 出力JSON配列
 [
   {
@@ -170,7 +195,9 @@ export async function generateScenes(
 bgTypeは"gradient"か"color"のみ。bgValueはgradientなら"linear-gradient(135deg,#色1,#色2)"、colorなら"#hex"。
 animationは"fade-in"/"slide-up"/"typewriter"/"zoom-in"/"none"のいずれか。
 transitionは"fade"/"slide"/"wipe"/"zoom"/"none"のいずれか。
-総尺が${config.duration}秒になるよう調整。JSONのみ返してください。
+各シーンのdurationの合計が${config.duration}秒になるよう調整してください。
+narrationTextは各シーンのナレーション原稿を日本語で生成してください。
+JSONのみ返してください。
 `
 
   try {
@@ -178,14 +205,63 @@ transitionは"fade"/"slide"/"wipe"/"zoom"/"none"のいずれか。
     const text = result.response.text().trim()
     const json = text.replace(/^```json?\n?/, '').replace(/\n?```$/, '')
     const scenes = JSON.parse(json) as SceneData[]
-    if (!Array.isArray(scenes)) throw new Error('Invalid scenes')
-    return scenes
-  } catch {
+    if (!Array.isArray(scenes) || scenes.length === 0) {
+      throw new Error('Invalid scenes: empty or not an array')
+    }
+    // orderを正規化
+    return scenes.map((s, i) => ({ ...s, order: i }))
+  } catch (error) {
+    console.error('[generateScenes] Gemini API error, using fallback:', error)
+    // テンプレートがある場合はテンプレートのdefaultScenesをベースにフォールバック
+    if (template) {
+      const scaleFactor = config.duration / template.duration
+      return template.defaultScenes.map((ts, i) => ({
+        order: i,
+        duration: Math.round(ts.duration * scaleFactor * 10) / 10,
+        bgType: ts.bgType,
+        bgValue: ts.bgValue,
+        bgAnimation: ts.bgAnimation ?? 'none',
+        texts: ts.texts.map((t) => ({
+          content: t.content
+            .replace('{{headline}}', productInfo.name)
+            .replace('{{subheadline}}', productInfo.description.slice(0, 40))
+            .replace('{{product_name}}', productInfo.name)
+            .replace('{{product}}', productInfo.name)
+            .replace('{{feature1}}', productInfo.features[0] ?? '')
+            .replace('{{feature2}}', productInfo.features[1] ?? '')
+            .replace('{{feature3}}', productInfo.features[2] ?? '')
+            .replace('{{feature}}', productInfo.features[0] ?? '')
+            .replace('{{feature1_desc}}', '')
+            .replace('{{feature2_desc}}', '')
+            .replace('{{feature3_desc}}', '')
+            .replace('{{cta}}', '詳細はこちら')
+            .replace('{{cta_sub}}', productInfo.url ?? '')
+            .replace('{{url}}', productInfo.url ?? '')
+            .replace('{{company}}', productInfo.name)
+            .replace('{{pain}}', productInfo.target)
+            .replace('{{solution}}', productInfo.usp || productInfo.name)
+            .replace('{{solution_detail}}', productInfo.description.slice(0, 50))
+            .replace('{{usp}}', productInfo.usp || '')
+            .replace(/\{\{[^}]+\}\}/g, ''),
+          x: t.x,
+          y: t.y,
+          fontSize: t.fontSize,
+          fontFamily: t.fontFamily,
+          color: t.color,
+          animation: t.animation,
+          delay: t.delay,
+          align: t.align,
+        })),
+        narrationText: plan.scenes[i]?.content ?? '',
+        transition: ts.transition,
+      }))
+    }
+    // テンプレートなしのフォールバック
     return [
-      { order: 0, duration: config.duration * 0.25, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #f43f5e, #ec4899)', bgAnimation: 'none', texts: [{ content: productInfo.name, x: 50, y: 45, fontSize: 40, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.3, align: 'center' }], transition: 'fade' },
-      { order: 1, duration: config.duration * 0.35, bgType: 'color', bgValue: '#0f172a', bgAnimation: 'none', texts: [{ content: productInfo.description.slice(0, 40), x: 50, y: 50, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#e2e8f0', animation: 'slide-up', delay: 0.3, align: 'center' }], transition: 'slide' },
-      { order: 2, duration: config.duration * 0.25, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #1e1b4b, #312e81)', bgAnimation: 'none', texts: [{ content: productInfo.usp || '今すぐ試す', x: 50, y: 45, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#c7d2fe', animation: 'zoom-in', delay: 0.3, align: 'center' }], transition: 'wipe' },
-      { order: 3, duration: config.duration * 0.15, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #f43f5e, #ec4899)', bgAnimation: 'none', texts: [{ content: '詳細はこちら ▶', x: 50, y: 50, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in', delay: 0.2, align: 'center' }], transition: 'fade' },
+      { order: 0, duration: config.duration * 0.25, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #f43f5e, #ec4899)', bgAnimation: 'none', texts: [{ content: productInfo.name, x: 50, y: 45, fontSize: 40, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in' as const, delay: 0.3, align: 'center' as const }], narrationText: plan.storyline.opening, transition: 'fade' as const },
+      { order: 1, duration: config.duration * 0.35, bgType: 'color', bgValue: '#0f172a', bgAnimation: 'none', texts: [{ content: productInfo.description.slice(0, 40), x: 50, y: 50, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#e2e8f0', animation: 'slide-up' as const, delay: 0.3, align: 'center' as const }], narrationText: plan.storyline.development, transition: 'slide' as const },
+      { order: 2, duration: config.duration * 0.25, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #1e1b4b, #312e81)', bgAnimation: 'none', texts: [{ content: productInfo.usp || '今すぐ試す', x: 50, y: 45, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#c7d2fe', animation: 'zoom-in' as const, delay: 0.3, align: 'center' as const }], narrationText: plan.storyline.climax, transition: 'wipe' as const },
+      { order: 3, duration: config.duration * 0.15, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #f43f5e, #ec4899)', bgAnimation: 'none', texts: [{ content: '詳細はこちら', x: 50, y: 50, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in' as const, delay: 0.2, align: 'center' as const }], narrationText: plan.storyline.conclusion, transition: 'fade' as const },
     ]
   }
 }

@@ -16,6 +16,8 @@ import {
   BarChart3,
   Hash,
 } from 'lucide-react'
+import ProductInfoForm from '@/components/copy/ProductInfoForm'
+import type { ProductInfoData } from '@/components/copy/ProductInfoForm'
 
 type Step = 'input' | 'persona' | 'settings' | 'generating'
 type AdType = 'display' | 'search' | 'sns'
@@ -261,7 +263,7 @@ function CopyNewPageInner() {
 
       <div className="max-w-2xl mx-auto px-4 py-8">
         {error && (
-          <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-xl text-red-400 text-sm mb-6">
+          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm mb-6">
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
             {error}
           </div>
@@ -274,62 +276,25 @@ function CopyNewPageInner() {
               <h1 className="text-2xl font-black text-gray-900 mb-2">商品・サービス情報を入力</h1>
               <p className="text-gray-500 text-sm mb-6">URLを入力すると自動解析します。手動入力も可能です。</p>
 
-              {/* URL解析 */}
-              <div className="mb-6">
-                <label className="block text-sm font-bold text-gray-600 mb-2">商品・LP URL（任意）</label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                    <input
-                      type="url"
-                      value={productUrl}
-                      onChange={e => setProductUrl(e.target.value)}
-                      placeholder="https://..."
-                      className="w-full pl-9 pr-4 py-3 bg-gray-100 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500"
-                    />
-                  </div>
-                  <button
-                    onClick={analyzeUrl}
-                    disabled={!productUrl || isAnalyzing}
-                    className="px-4 py-3 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-colors whitespace-nowrap"
-                  >
-                    {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : '自動解析'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-600 mb-2">商品・サービス名 <span className="text-red-400">*</span></label>
-                  <input
-                    type="text"
-                    value={productName}
-                    onChange={e => setProductName(e.target.value)}
-                    placeholder="例：ドヤコピーAI"
-                    className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-600 mb-2">商品説明</label>
-                  <textarea
-                    value={productDesc}
-                    onChange={e => setProductDesc(e.target.value)}
-                    placeholder="商品の概要・特徴・ターゲットなど"
-                    rows={3}
-                    className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 resize-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-600 mb-2">特徴・ベネフィット</label>
-                  <textarea
-                    value={productFeatures}
-                    onChange={e => setProductFeatures(e.target.value)}
-                    placeholder="例：月200回まで生成可能、5種類のライタータイプ、CSV出力対応"
-                    rows={3}
-                    className="w-full px-4 py-3 bg-gray-100 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:border-amber-500 resize-none"
-                  />
-                </div>
-              </div>
+              <ProductInfoForm
+                data={{
+                  productUrl,
+                  productName,
+                  productDesc,
+                  productFeatures,
+                  analyzedProductInfo: analyzedProductInfo as Record<string, unknown> | null,
+                }}
+                onChange={(updates) => {
+                  if (updates.productUrl !== undefined) setProductUrl(updates.productUrl)
+                  if (updates.productName !== undefined) setProductName(updates.productName)
+                  if (updates.productDesc !== undefined) setProductDesc(updates.productDesc)
+                  if (updates.productFeatures !== undefined) setProductFeatures(updates.productFeatures)
+                  if (updates.analyzedProductInfo !== undefined) setAnalyzedProductInfo(updates.analyzedProductInfo)
+                }}
+                theme="amber"
+                projectName={projectName}
+                onProjectNameChange={setProjectName}
+              />
 
               <div className="mt-8 flex justify-end">
                 <button

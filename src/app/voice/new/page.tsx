@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { Mic, Play, Pause, Download, Settings2, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
@@ -25,7 +25,7 @@ const FORMAT_LABELS: Record<OutputFormat, string> = {
   m4a: 'M4A（Apple）',
 }
 
-export default function NewVoicePage() {
+function NewVoicePageInner() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { data: session } = useSession()
@@ -419,5 +419,17 @@ export default function NewVoicePage() {
         )}
       </button>
     </div>
+  )
+}
+
+export default function NewVoicePage() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-3xl mx-auto flex items-center justify-center py-20">
+        <div className="w-6 h-6 border-2 border-violet-400 border-t-transparent rounded-full animate-spin" />
+      </div>
+    }>
+      <NewVoicePageInner />
+    </Suspense>
   )
 }

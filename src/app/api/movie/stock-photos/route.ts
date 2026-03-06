@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { getGuestIdFromRequest } from '@/lib/movie/access'
 
 // GET /api/movie/stock-photos?query=...&page=1&per_page=12
 export async function GET(req: NextRequest) {
+  // 認証チェック（ログインユーザー or ゲスト）
+  const session = await getServerSession(authOptions)
+  const guestId = getGuestIdFromRequest(req)
+
+  if (!session?.user?.email && !guestId) {
+    return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+  }
+
   const { searchParams } = new URL(req.url)
   const query = searchParams.get('query') ?? 'business'
   const page = searchParams.get('page') ?? '1'

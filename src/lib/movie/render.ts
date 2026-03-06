@@ -60,58 +60,113 @@ export async function renderVideo(
   userId: string,
   format: string = 'mp4'
 ): Promise<string> {
-  // ダイナミックインポートで @remotion/renderer を遅延ロード（ビルドサイズ最適化）
-  const remotion = await import('@remotion/renderer') as any
-  const { renderMedia, bundle } = remotion
-  const path = await import('path')
+  let outputPath: string | null = null
 
-  await updateRenderProgress(jobId, 5)
+  try {
+    // ダイナミックインポートで @remotion/renderer を遅延ロード（ビルドサイズ最適化）
+    const remotion = await import('@remotion/renderer') as any
+    const { renderMedia, bundle } = remotion
+    const path = await import('path')
 
-  const { width, height } = getCompositionDimensions(config)
-  const fps = config.fps ?? 30
-  const totalFrames = Math.round(config.totalDuration * fps)
+    await updateRenderProgress(jobId, 5)
 
-  // Remotionバンドルのエントリポイント（コンポジション登録ファイル）
-  const compositionEntry = path.join(process.cwd(), 'src/lib/movie/compositions/remotion-root.tsx')
-  const bundled = await bundle({ entryPoint: compositionEntry })
+    const { width, height } = getCompositionDimensions(config)
+    const fps = config.fps ?? 30
+    const totalFrames = Math.round(config.totalDuration * fps)
 
-  await updateRenderProgress(jobId, 20)
+    if (totalFrames <= 0) {
+      throw new Error(`無効なフレーム数: ${totalFrames} (totalDuration=${config.totalDuration}, fps=${fps})`)
+    }
 
-  const outputFormat = format === 'gif' ? 'gif' : 'mp4'
-  const outputPath = `/tmp/${jobId}.${outputFormat}`
+    if (config.scenes.length === 0) {
+      throw new Error('シーンデータが空です。レンダリングにはシーンが必要です。')
+    }
 
-  await renderMedia({
-    composition: {
-      id: 'MovieComposition',
-      width,
-      height,
-      fps,
-      durationInFrames: totalFrames,
-      defaultProps: { config },
-    } as any,
-    serveUrl: bundled,
-    codec: 'h264',
-    outputLocation: outputPath,
-    inputProps: { config },
-    onProgress: async ({ progress }: { progress: number }) => {
-      const pct = Math.round(20 + progress * 70)
-      await updateRenderProgress(jobId, pct)
-    },
-  })
+    // Remotionバンドルのエントリポイント（コンポジション登録ファイル）
+    const compositionEntry = path.join(process.cwd(), 'src/lib/movie/compositions/remotion-root.tsx')
+    let bundled: string
+    try {
+      bundled = await bundle({ entryPoint: compositionEntry })
+    } catch (bundleError) {
+      console.error('[renderVideo] Bundle failed:', bundleError)
+      throw new Error(`Remotionバンドルに失敗しました: ${String(bundleError)}`)
+    }
 
-  await updateRenderProgress(jobId, 92)
+    await updateRenderProgress(jobId, 20)
 
-  // Supabase Storage にアップロード
-  const fs = await import('fs')
-  const buffer = fs.readFileSync(outputPath)
-  const storagePath = buildMoviePath(userId, config.projectId, outputFormat)
-  const outputUrl = await uploadMovieFile(buffer as Buffer, storagePath, 'video/mp4')
+    const outputFormat = format === 'gif' ? 'gif' : 'mp4'
+    outputPath = `/tmp/${jobId}.${outputFormat}`
 
-  // 一時ファイル削除
-  fs.unlinkSync(outputPath)
+    try {
+      await renderMedia({
+        composition: {
+          id: 'MovieComposition',
+          width,
+          height,
+          fps,
+          durationInFrames: totalFrames,
+          defaultProps: { config },
+        } as any,
+        serveUrl: bundled,
+        codec: format === 'gif' ? 'gif' : 'h264',
+        outputLocation: outputPath,
+        inputProps: { config },
+        onProgress: async ({ progress }: { progress: number }) => {
+          const pct = Math.round(20 + progress * 70)
+          try {
+            await updateRenderProgress(jobId, pct)
+          } catch (progressError) {
+            console.error('[renderVideo] Progress update failed:', progressError)
+          }
+        },
+      })
+    } catch (renderError) {
+      console.error('[renderVideo] renderMedia failed:', renderError)
+      throw new Error(`動画レンダリングに失敗しました: ${String(renderError)}`)
+    }
 
-  await completeRenderJob(jobId, outputUrl)
-  return outputUrl
+    await updateRenderProgress(jobId, 92)
+
+    // Supabase Storage にアップロード
+    const fs = await import('fs')
+    if (!fs.existsSync(outputPath)) {
+      throw new Error(`レンダリング出力ファイルが見つかりません: ${outputPath}`)
+    }
+
+    const buffer = fs.readFileSync(outputPath)
+    const storagePath = buildMoviePath(userId, config.projectId, outputFormat)
+    const contentType: 'video/mp4' | 'image/gif' = format === 'gif' ? 'image/gif' : 'video/mp4'
+    const outputUrl = await uploadMovieFile(buffer as Buffer, storagePath, contentType)
+
+    // 一時ファイル削除
+    try {
+      fs.unlinkSync(outputPath)
+    } catch (cleanupError) {
+      console.error('[renderVideo] Temp file cleanup failed:', cleanupError)
+    }
+
+    await completeRenderJob(jobId, outputUrl)
+    return outputUrl
+  } catch (error) {
+    console.error('[renderVideo] Fatal error:', error)
+    await failRenderJob(jobId, String(error)).catch((e) =>
+      console.error('[renderVideo] failRenderJob also failed:', e)
+    )
+
+    // 一時ファイルが残っていれば掃除
+    if (outputPath) {
+      try {
+        const fs = await import('fs')
+        if (fs.existsSync(outputPath)) {
+          fs.unlinkSync(outputPath)
+        }
+      } catch (cleanupError) {
+        console.error('[renderVideo] Cleanup after failure failed:', cleanupError)
+      }
+    }
+
+    throw error
+  }
 }
 
 function getCompositionDimensions(config: CompositionConfig): { width: number; height: number } {

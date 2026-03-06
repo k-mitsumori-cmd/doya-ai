@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { Play, Pause, Star } from 'lucide-react'
+import { Play, Pause, Star, AlertCircle, Loader2 } from 'lucide-react'
 import { getAllSpeakers, type VoiceSpeaker } from '@/lib/voice/speakers'
 import Link from 'next/link'
 
@@ -26,8 +26,10 @@ export default function SpeakersPage() {
   const speakers = getAllSpeakers()
   const [filter, setFilter] = useState<'all' | 'male' | 'female' | 'neutral'>('all')
   const [playingId, setPlayingId] = useState<string | null>(null)
+  const [loadingId, setLoadingId] = useState<string | null>(null)
   const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null)
   const [currentBlobUrl, setCurrentBlobUrl] = useState<string | null>(null)
+  const [sampleError, setSampleError] = useState<string | null>(null)
 
   const filtered = filter === 'all' ? speakers : speakers.filter(s => s.gender === filter)
 
@@ -40,25 +42,42 @@ export default function SpeakersPage() {
     }
     audioEl?.pause()
     if (currentBlobUrl) { URL.revokeObjectURL(currentBlobUrl); setCurrentBlobUrl(null) }
+    setSampleError(null)
+    setLoadingId(speaker.id)
 
-    // サンプル音声取得 (audioBase64 → Blob URL)
-    const res = await fetch(`/api/voice/speakers/${speaker.id}/sample`)
-    if (!res.ok) return
-    const data = await res.json()
-    if (!data.audioBase64) return
+    try {
+      // サンプル音声取得 (audioBase64 → Blob URL)
+      const res = await fetch(`/api/voice/speakers/${speaker.id}/sample`)
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}))
+        throw new Error(errData.error || 'サンプル音声の取得に失敗しました')
+      }
+      const data = await res.json()
+      if (!data.audioBase64) throw new Error('サンプル音声データが取得できませんでした')
 
-    const byteChars = atob(data.audioBase64)
-    const byteArr = new Uint8Array(byteChars.length)
-    for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i)
-    const blob = new Blob([byteArr], { type: 'audio/mpeg' })
-    const blobUrl = URL.createObjectURL(blob)
+      const byteChars = atob(data.audioBase64)
+      const byteArr = new Uint8Array(byteChars.length)
+      for (let i = 0; i < byteChars.length; i++) byteArr[i] = byteChars.charCodeAt(i)
+      const blob = new Blob([byteArr], { type: 'audio/mpeg' })
+      const blobUrl = URL.createObjectURL(blob)
 
-    const audio = new Audio(blobUrl)
-    audio.play()
-    audio.onended = () => { setPlayingId(null); URL.revokeObjectURL(blobUrl); setCurrentBlobUrl(null) }
-    setAudioEl(audio)
-    setCurrentBlobUrl(blobUrl)
-    setPlayingId(speaker.id)
+      const audio = new Audio(blobUrl)
+      audio.play().catch(() => {
+        setPlayingId(null)
+        URL.revokeObjectURL(blobUrl)
+        setCurrentBlobUrl(null)
+      })
+      audio.onended = () => { setPlayingId(null); URL.revokeObjectURL(blobUrl); setCurrentBlobUrl(null) }
+      audio.onerror = () => { setPlayingId(null); URL.revokeObjectURL(blobUrl); setCurrentBlobUrl(null) }
+      setAudioEl(audio)
+      setCurrentBlobUrl(blobUrl)
+      setPlayingId(speaker.id)
+    } catch (err: any) {
+      setSampleError(err.message || 'サンプル音声の再生に失敗しました')
+      setPlayingId(null)
+    } finally {
+      setLoadingId(null)
+    }
   }
 
   return (
@@ -67,6 +86,17 @@ export default function SpeakersPage() {
         <h1 className="text-2xl font-black text-slate-900">ボイスキャラクター</h1>
         <p className="text-sm text-slate-500 mt-1">12種類の声質から最適なキャラクターを選んでください</p>
       </div>
+
+      {/* サンプル再生エラー */}
+      {sampleError && (
+        <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-200 rounded-xl">
+          <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+          <p className="text-sm text-red-700 font-bold">{sampleError}</p>
+          <button onClick={() => setSampleError(null)} className="text-xs text-red-500 hover:text-red-700 font-bold ml-auto">
+            閉じる
+          </button>
+        </div>
+      )}
 
       {/* フィルター */}
       <div className="flex gap-2">
@@ -129,16 +159,18 @@ export default function SpeakersPage() {
                   <div className="flex gap-2">
                     <button
                       onClick={() => !locked && togglePlay(speaker)}
-                      disabled={locked}
+                      disabled={locked || loadingId === speaker.id}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-bold transition-colors ${
-                        locked
+                        locked || loadingId === speaker.id
                           ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                           : playingId === speaker.id
                           ? 'bg-violet-600 text-white hover:bg-violet-700'
                           : 'bg-violet-100 text-violet-700 hover:bg-violet-200'
                       }`}
                     >
-                      {playingId === speaker.id ? (
+                      {loadingId === speaker.id ? (
+                        <><Loader2 className="w-3.5 h-3.5 animate-spin" /> 読込中</>
+                      ) : playingId === speaker.id ? (
                         <><Pause className="w-3.5 h-3.5" /> 停止</>
                       ) : (
                         <><Play className="w-3.5 h-3.5" /> 試聴</>

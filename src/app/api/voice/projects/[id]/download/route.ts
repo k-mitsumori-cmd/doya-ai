@@ -20,6 +20,37 @@ const MIME_MAP: Record<string, string> = {
   m4a: 'audio/mp4',
 }
 
+/**
+ * プロジェクトの設定から音声を再生成する
+ */
+async function regenerateAudio(project: any): Promise<string> {
+  const speaker = getSpeakerById(project.speakerId)
+  if (!speaker) {
+    throw new Error(`スピーカー「${project.speakerId}」が見つかりません`)
+  }
+
+  const ssml = project.ssml || textToSsml({
+    text: project.inputText,
+    speed: project.speed,
+    pitch: project.pitch,
+    pauseLength: (project.pauseLength as any) || 'standard',
+    emotionTone: (project.emotionTone as any) || 'neutral',
+  })
+
+  const result = await generateSpeech({
+    text: project.inputText,
+    ssml,
+    speakerId: project.speakerId,
+    voiceId: speaker.voiceId,
+    speed: project.speed,
+    pitch: project.pitch,
+    volume: project.volume,
+    outputFormat: project.outputFormat as any,
+  })
+
+  return result.audioBase64
+}
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
@@ -40,39 +71,29 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'プロジェクトが見つかりません' }, { status: 404 })
     }
 
+    if (project.status !== 'completed') {
+      return NextResponse.json(
+        { success: false, error: '音声が未生成または生成中です。先に音声を生成してください。' },
+        { status: 400 }
+      )
+    }
+
     let audioBase64: string
 
     // outputUrlがあればそこから取得、なければ再生成
     if (project.outputUrl) {
-      const res = await fetch(project.outputUrl)
-      if (!res.ok) throw new Error('音声ファイルの取得に失敗しました')
-      const buffer = await res.arrayBuffer()
-      audioBase64 = Buffer.from(buffer).toString('base64')
-    } else {
-      const speaker = getSpeakerById(project.speakerId)
-      if (!speaker) {
-        return NextResponse.json({ success: false, error: 'スピーカーが見つかりません' }, { status: 400 })
+      try {
+        const res = await fetch(project.outputUrl)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const buffer = await res.arrayBuffer()
+        audioBase64 = Buffer.from(buffer).toString('base64')
+      } catch (fetchErr) {
+        console.warn('Failed to fetch outputUrl, falling back to regeneration:', fetchErr)
+        // outputUrlからの取得に失敗した場合は再生成にフォールバック
+        audioBase64 = await regenerateAudio(project)
       }
-
-      const ssml = project.ssml || textToSsml({
-        text: project.inputText,
-        speed: project.speed,
-        pitch: project.pitch,
-        pauseLength: (project.pauseLength as any) || 'standard',
-        emotionTone: (project.emotionTone as any) || 'neutral',
-      })
-
-      const result = await generateSpeech({
-        text: project.inputText,
-        ssml,
-        speakerId: project.speakerId,
-        voiceId: speaker.voiceId,
-        speed: project.speed,
-        pitch: project.pitch,
-        volume: project.volume,
-        outputFormat: project.outputFormat as any,
-      })
-      audioBase64 = result.audioBase64
+    } else {
+      audioBase64 = await regenerateAudio(project)
     }
 
     const audioBuffer = Buffer.from(audioBase64, 'base64')
@@ -86,11 +107,26 @@ export async function GET(
         'Content-Length': String(audioBuffer.length),
       },
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Voice download API error:', error)
+
+    let errorMessage = 'ダウンロードに失敗しました'
+    let statusCode = 500
+
+    if (error?.message?.includes('スピーカー')) {
+      errorMessage = error.message
+      statusCode = 400
+    } else if (error?.message?.includes('Google TTS')) {
+      errorMessage = '音声合成サービスへの接続に失敗しました。しばらくしてから再度お試しください。'
+      statusCode = 503
+    } else if (error?.message?.includes('timeout') || error?.message?.includes('ETIMEDOUT')) {
+      errorMessage = '処理がタイムアウトしました。時間をおいて再度お試しください。'
+      statusCode = 504
+    }
+
     return NextResponse.json(
-      { success: false, error: 'ダウンロードに失敗しました' },
-      { status: 500 }
+      { success: false, error: errorMessage },
+      { status: statusCode }
     )
   }
 }

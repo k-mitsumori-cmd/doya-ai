@@ -95,7 +95,7 @@ function ShindanSidebarImpl({
                 {planLabel === 'GUEST' || planLabel === 'FREE'
                   ? 'LIGHT：¥2,980/月で1日10回'
                   : planLabel === 'LIGHT'
-                  ? 'PRO：¥9,980/月で無制限'
+                  ? 'PRO：¥9,980/月で1日20回'
                   : planLabel === 'PRO'
                   ? 'ご利用中のプランです'
                   : 'ENTERPRISEプランご利用中'}

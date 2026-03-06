@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { CheckCircle2, ArrowRight, ArrowLeft, Loader2, ChevronUp, ChevronDown, PlusCircle, Trash2 } from 'lucide-react'
+import { CheckCircle2, ArrowRight, ArrowLeft, Loader2, ChevronUp, ChevronDown, PlusCircle, Trash2, RefreshCw } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { Suspense } from 'react'
 
 interface SectionDef {
@@ -37,23 +38,32 @@ function StructurePage() {
   const [saving, setSaving] = useState(false)
   const [statusMsg, setStatusMsg] = useState('LP構成案を生成中...')
 
-  const generate = useCallback(async () => {
+  const generate = useCallback(async (forceRegenerate = false) => {
     if (!projectId) return
     setGenerating(true)
     setError('')
+    setSelectedIdx(null)
+    setEditingSections([])
 
     try {
       // プロジェクトの情報を取得
       const projRes = await fetch(`/api/lp/projects/${projectId}`)
+      if (!projRes.ok) throw new Error('プロジェクト情報の取得に失敗しました')
       const projData = await projRes.json()
       const project = projData.project
       if (!project) throw new Error('プロジェクトが見つかりません')
 
-      // 既に構成案がある場合はそれを使用
-      if (project.structures && Array.isArray(project.structures) && project.structures.length > 0) {
+      // 既に構成案がある場合はそれを使用（強制再生成でなければ）
+      if (!forceRegenerate && project.structures && Array.isArray(project.structures) && project.structures.length > 0) {
         setStructures(project.structures)
         setGenerating(false)
         return
+      }
+
+      // 再生成時は既存の構成案をクリア
+      if (forceRegenerate) {
+        setStructures([])
+        setStatusMsg('LP構成案を再生成中...')
       }
 
       // SSEで生成
@@ -66,6 +76,11 @@ function StructurePage() {
           purposes: project.purpose || [],
         }),
       })
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData.error || `生成リクエストに失敗しました (${response.status})`)
+      }
 
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
@@ -134,7 +149,7 @@ function StructurePage() {
       })
       router.push(`/lp/new/copy?projectId=${projectId}`)
     } catch (e: any) {
-      alert(e.message || 'エラーが発生しました')
+      toast.error(e.message || 'エラーが発生しました')
     } finally {
       setSaving(false)
     }
@@ -162,7 +177,18 @@ function StructurePage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-black text-white mb-2">LP構成案を選択してください</h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-2xl font-black text-white">LP構成案を選択してください</h1>
+          {!generating && structures.length > 0 && (
+            <button
+              onClick={() => generate(true)}
+              className="flex items-center gap-1.5 text-sm text-cyan-400 hover:text-cyan-300 border border-cyan-700 hover:border-cyan-500 rounded-lg px-4 py-2 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              再生成する
+            </button>
+          )}
+        </div>
         <p className="text-slate-400 text-sm mb-8">AIが3パターンの構成案を提案しました。気に入ったものを選んで、セクションの順序を調整できます。</p>
 
         {generating ? (
@@ -174,7 +200,7 @@ function StructurePage() {
         ) : error ? (
           <div className="text-center py-16">
             <p className="text-red-400 mb-4">{error}</p>
-            <button onClick={generate} className="text-cyan-400 hover:text-cyan-300">再生成する</button>
+            <button onClick={() => generate(true)} className="text-cyan-400 hover:text-cyan-300">再生成する</button>
           </div>
         ) : (
           <div className="space-y-8">

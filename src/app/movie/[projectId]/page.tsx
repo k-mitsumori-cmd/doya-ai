@@ -7,6 +7,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { Loader2, Download, Pencil, Clapperboard } from 'lucide-react'
 import type { MovieProjectData, RenderJobData } from '@/lib/movie/types'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -119,7 +120,7 @@ export default function ProjectDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full py-32">
-        <span className="material-symbols-outlined text-rose-400 animate-spin text-3xl">progress_activity</span>
+        <Loader2 className="w-8 h-8 text-rose-400 animate-spin" />
       </div>
     )
   }
@@ -173,7 +174,7 @@ export default function ProjectDetailPage() {
               <div className="text-5xl mb-3 opacity-30">🎬</div>
               {isRendering ? (
                 <div className="text-rose-200/60 text-sm">
-                  <span className="material-symbols-outlined animate-spin text-rose-400 text-xl block mb-2">progress_activity</span>
+                  <Loader2 className="w-5 h-5 text-rose-400 animate-spin mx-auto mb-2" />
                   レンダリング中...
                 </div>
               ) : (
@@ -210,7 +211,7 @@ export default function ProjectDetailPage() {
             className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white transition-all"
             style={{ background: 'linear-gradient(135deg, #f43f5e, #ec4899)' }}
           >
-            <span className="material-symbols-outlined">download</span>
+            <Download className="w-5 h-5" />
             MP4をダウンロード
           </button>
         ) : !isRendering ? (
@@ -219,7 +220,7 @@ export default function ProjectDetailPage() {
               href={`/movie/${projectId}/edit`}
               className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white border border-rose-500/40 hover:bg-rose-500/10 transition-all"
             >
-              <span className="material-symbols-outlined">edit</span>
+              <Pencil className="w-5 h-5" />
               編集する
             </Link>
             <button
@@ -230,12 +231,12 @@ export default function ProjectDetailPage() {
             >
               {rendering ? (
                 <>
-                  <span className="material-symbols-outlined animate-spin">progress_activity</span>
+                  <Loader2 className="w-5 h-5 animate-spin" />
                   開始中...
                 </>
               ) : (
                 <>
-                  <span className="material-symbols-outlined">movie_creation</span>
+                  <Clapperboard className="w-5 h-5" />
                   レンダリング開始
                 </>
               )}
@@ -248,7 +249,7 @@ export default function ProjectDetailPage() {
             href={`/movie/${projectId}/edit`}
             className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-rose-300 border border-rose-900/30 hover:bg-rose-900/20 transition-all"
           >
-            <span className="material-symbols-outlined">edit</span>
+            <Pencil className="w-5 h-5" />
             再編集
           </Link>
         )}

@@ -24,14 +24,14 @@ interface UpgradeSuccessModalProps {
 }
 
 const PRO_FEATURES = [
-  { icon: Palette, text: '1日30枚まで生成可能', highlight: true },
+  { icon: Palette, text: '月150枚まで生成可能', highlight: true },
   { icon: Zap, text: 'サイズ自由指定' },
   { icon: MessageSquare, text: '同時生成: 最大5枚' },
   { icon: Star, text: '高品質な画像生成' },
 ]
 
 const ENTERPRISE_FEATURES = [
-  { icon: Rocket, text: '1日200枚まで生成可能', highlight: true },
+  { icon: Rocket, text: '月1000枚まで生成可能', highlight: true },
   { icon: Palette, text: '大量運用・チーム向け' },
   { icon: Zap, text: '優先サポート' },
   { icon: Star, text: 'さらに上限UP相談可' },

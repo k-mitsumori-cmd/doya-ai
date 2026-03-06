@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { Plus } from 'lucide-react'
 import type { MovieProjectData } from '@/lib/movie/types'
 
 const STATUS_LABELS: Record<string, string> = {
@@ -75,7 +76,7 @@ export default function HistoryPage() {
           className="flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-white text-sm transition-all"
           style={{ background: 'linear-gradient(135deg, #f43f5e, #ec4899)' }}
         >
-          <span className="material-symbols-outlined text-base">add</span>
+          <Plus className="w-4 h-4" />
           新規作成
         </Link>
       </div>

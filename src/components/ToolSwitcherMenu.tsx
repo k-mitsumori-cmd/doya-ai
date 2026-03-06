@@ -7,9 +7,11 @@ import {
   ChevronUp,
   ExternalLink,
   FileText,
+  Film,
   Image,
   LayoutGrid,
   Mic,
+  PenLine,
   Target,
   Sparkles,
   Play,
@@ -28,6 +30,8 @@ const SERVICE_ICON_MAP: Record<string, { icon: LucideIcon; iconBg: string }> = {
   persona:   { icon: Target,   iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600' },
   voice:     { icon: Volume2,  iconBg: 'bg-gradient-to-br from-violet-500 to-purple-500' },
   lp:        { icon: LayoutGrid, iconBg: 'bg-gradient-to-br from-cyan-500 to-blue-500' },
+  copy:      { icon: PenLine,  iconBg: 'bg-gradient-to-br from-amber-500 to-orange-500' },
+  movie:     { icon: Film,     iconBg: 'bg-gradient-to-br from-rose-500 to-pink-500' },
 }
 
 type ToolSwitcherMenuProps = {

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { PlusCircle, FileText, Clock, ArrowRight, Link2, Layout, PenLine, Palette, Trash2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 interface LpProject {
   id: string
@@ -60,7 +61,7 @@ export default function LpDashboardPage() {
     fetch('/api/lp/projects?limit=6')
       .then((r) => r.json())
       .then((d) => setProjects(d.projects || []))
-      .catch(() => {})
+      .catch(() => { toast.error('LPプロジェクト一覧の取得に失敗しました') })
       .finally(() => setLoading(false))
   }, [])
 

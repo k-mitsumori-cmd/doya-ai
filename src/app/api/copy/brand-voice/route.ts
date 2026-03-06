@@ -11,7 +11,7 @@ import { prisma } from '@/lib/prisma'
 export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    const userId = (session?.user as any)?.id
+    const userId = session?.user?.id
 
     if (!userId) {
       return NextResponse.json({ brandVoices: [] })
@@ -23,8 +23,9 @@ export async function GET(req: NextRequest) {
     })
 
     return NextResponse.json({ brandVoices })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    const userId = (session?.user as any)?.id
+    const userId = session?.user?.id
 
     if (!userId) {
       return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
@@ -71,8 +72,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, brandVoice })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
@@ -80,7 +82,7 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    const userId = (session?.user as any)?.id
+    const userId = session?.user?.id
 
     if (!userId) {
       return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
@@ -101,7 +103,8 @@ export async function DELETE(req: NextRequest) {
     await prisma.copyBrandVoice.delete({ where: { id } })
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

@@ -422,8 +422,8 @@ export default function TestPortalPage() {
               <p className="text-white/50 text-sm mb-6">/月（税込）</p>
               <ul className="space-y-4 mb-8">
                 {[
-                  'SEO記事: 1日3回 / 20,000字',
-                  'バナー: 1日30枚',
+                  'SEO記事: 月30回 / 20,000字',
+                  'バナー: 月150枚',
                   '優先サポート',
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-3 text-white/80">

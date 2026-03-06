@@ -708,7 +708,7 @@ export default function SeoDashboardPage() {
                     {[
                       { icon: Image, text: '図解/バナー自動生成', desc: '記事に合わせてAIが画像を自動生成' },
                       { icon: Wand2, text: 'AI自動修正', desc: 'SEO改善提案をワンクリックで適用' },
-                      { icon: FileText, text: `1日${welcomePlan === 'enterprise' ? SEO_PRICING.enterpriseLimit || 30 : SEO_PRICING.proLimit}記事まで生成`, desc: '大量のコンテンツ制作に対応' },
+                      { icon: FileText, text: `月${welcomePlan === 'enterprise' ? SEO_PRICING.enterpriseLimit || 200 : SEO_PRICING.proLimit}記事まで生成`, desc: '大量のコンテンツ制作に対応' },
                       { icon: LayoutDashboard, text: '進捗UI（分割生成）', desc: 'リアルタイムで生成状況を確認' },
                     ].map((item, i) => (
                       <motion.div

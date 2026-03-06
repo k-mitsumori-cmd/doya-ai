@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { Loader2, Sparkles, ArrowRight } from 'lucide-react'
 import type { MoviePersona, ProductInfo } from '@/lib/movie/types'
 
 const STEPS = ['商品情報', 'ペルソナ', '企画選択', '編集']
@@ -131,12 +132,12 @@ export default function PersonaPage() {
               >
                 {generating ? (
                   <>
-                    <span className="material-symbols-outlined animate-spin text-lg">progress_activity</span>
+                    <Loader2 className="w-5 h-5 animate-spin" />
                     生成中...
                   </>
                 ) : (
                   <>
-                    <span className="material-symbols-outlined text-lg">auto_awesome</span>
+                    <Sparkles className="w-5 h-5" />
                     AIでペルソナを自動生成
                   </>
                 )}
@@ -223,7 +224,7 @@ export default function PersonaPage() {
             style={{ background: 'linear-gradient(135deg, #f43f5e, #ec4899)' }}
           >
             次へ: 企画選択
-            <span className="material-symbols-outlined">arrow_forward</span>
+            <ArrowRight className="w-5 h-5" />
           </button>
         </div>
       </motion.div>

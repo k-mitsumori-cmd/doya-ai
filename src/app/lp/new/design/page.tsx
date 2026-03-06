@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import { ArrowRight, ArrowLeft, Loader2, CheckCircle2, Lock } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { Suspense } from 'react'
 
 interface Theme {
@@ -102,7 +103,7 @@ function DesignPage() {
       })
       router.push(`/lp/${projectId}`)
     } catch (e: any) {
-      alert(e.message || 'エラーが発生しました')
+      toast.error(e.message || 'エラーが発生しました')
     } finally {
       setSaving(false)
     }

@@ -57,47 +57,54 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     const body = await req.json()
     const { name, purpose, productInfo, persona, structures, selectedStructure, themeId, customColors, customFonts, status, htmlUrl, pdfUrl, sections } = body
 
-    const updated = await prisma.lpProject.update({
-      where: { id },
-      data: {
-        ...(name !== undefined && { name }),
-        ...(purpose !== undefined && { purpose }),
-        ...(productInfo !== undefined && { productInfo: productInfo as any }),
-        ...(persona !== undefined && { persona: persona as any }),
-        ...(structures !== undefined && { structures: structures as any }),
-        ...(selectedStructure !== undefined && { selectedStructure }),
-        ...(themeId !== undefined && { themeId }),
-        ...(customColors !== undefined && { customColors: customColors as any }),
-        ...(customFonts !== undefined && { customFonts: customFonts as any }),
-        ...(status !== undefined && { status }),
-        ...(htmlUrl !== undefined && { htmlUrl }),
-        ...(pdfUrl !== undefined && { pdfUrl }),
-      },
+    // プロジェクト更新とセクション一括更新をトランザクションで実行
+    const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.lpProject.update({
+        where: { id },
+        data: {
+          ...(name !== undefined && { name }),
+          ...(purpose !== undefined && { purpose }),
+          ...(productInfo !== undefined && { productInfo: productInfo as any }),
+          ...(persona !== undefined && { persona: persona as any }),
+          ...(structures !== undefined && { structures: structures as any }),
+          ...(selectedStructure !== undefined && { selectedStructure }),
+          ...(themeId !== undefined && { themeId }),
+          ...(customColors !== undefined && { customColors: customColors as any }),
+          ...(customFonts !== undefined && { customFonts: customFonts as any }),
+          ...(status !== undefined && { status }),
+          ...(htmlUrl !== undefined && { htmlUrl }),
+          ...(pdfUrl !== undefined && { pdfUrl }),
+        },
+      })
+
+      // セクションの一括更新（並べ替え対応）
+      if (sections && Array.isArray(sections)) {
+        const updatePromises = sections
+          .filter((sec: any) => sec.id)
+          .map((sec: any) =>
+            tx.lpSection.update({
+              where: { id: sec.id },
+              data: {
+                ...(sec.order !== undefined && { order: sec.order }),
+                ...(sec.headline !== undefined && { headline: sec.headline }),
+                ...(sec.subheadline !== undefined && { subheadline: sec.subheadline }),
+                ...(sec.body !== undefined && { body: sec.body }),
+                ...(sec.ctaText !== undefined && { ctaText: sec.ctaText }),
+                ...(sec.ctaUrl !== undefined && { ctaUrl: sec.ctaUrl }),
+                ...(sec.layout !== undefined && { layout: sec.layout }),
+                ...(sec.bgColor !== undefined && { bgColor: sec.bgColor }),
+                ...(sec.bgImage !== undefined && { bgImage: sec.bgImage }),
+                ...(sec.items !== undefined && { items: sec.items as any }),
+              },
+            })
+          )
+        await Promise.all(updatePromises)
+      }
+
+      return updated
     })
 
-    // セクションの一括更新（並べ替え対応）
-    if (sections && Array.isArray(sections)) {
-      for (const sec of sections) {
-        if (sec.id) {
-          await prisma.lpSection.update({
-            where: { id: sec.id },
-            data: {
-              order: sec.order,
-              headline: sec.headline,
-              subheadline: sec.subheadline,
-              body: sec.body,
-              ctaText: sec.ctaText,
-              ctaUrl: sec.ctaUrl,
-              layout: sec.layout,
-              bgColor: sec.bgColor,
-              items: sec.items as any,
-            },
-          })
-        }
-      }
-    }
-
-    return NextResponse.json({ project: updated })
+    return NextResponse.json({ project: result })
   } catch (error) {
     console.error('[PUT /api/lp/projects/[id]]', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

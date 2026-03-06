@@ -246,14 +246,14 @@ export default function SeoPlanPage() {
                     </p>
                     <p className="mt-2 text-sm text-gray-500 font-bold">
                       {tier === 'FREE'
-                        ? `1日${SEO_PRICING.freeLimit}記事まで（画像生成はPROから）`
+                        ? `月${SEO_PRICING.freeLimit}記事まで（画像生成はLIGHTから）`
                         : tier === 'LIGHT'
-                        ? '月10回まで記事生成'
+                        ? '月10回まで記事生成（画像生成OK）'
                         : tier === 'PRO'
-                        ? `1日${SEO_PRICING.proLimit}記事まで（図解/バナー/自動修正OK）`
+                        ? `月${SEO_PRICING.proLimit}記事まで（図解/バナー/自動修正OK）`
                         : tier === 'ENTERPRISE'
-                        ? `1日${SEO_PRICING.enterpriseLimit || 30}記事まで（大規模運用）`
-                        : '1日1記事まで（5,000字）'}
+                        ? `月${SEO_PRICING.enterpriseLimit || 200}記事まで（大規模運用）`
+                        : '月0記事（5,000字）'}
                     </p>
                   </div>
                   <div className="px-5 py-3 rounded-2xl bg-gray-50 border border-gray-100 text-gray-700 text-xs font-black">
@@ -286,7 +286,7 @@ export default function SeoPlanPage() {
                       { icon: Image, text: '図解/バナー自動生成', desc: '記事内容に合わせてAIが画像作成' },
                       { icon: Wand2, text: 'AI自動修正', desc: 'SEO改善提案をワンクリック適用' },
                       { icon: RefreshCcw, text: '画像の再生成', desc: 'プロンプト調整で何度でもリトライ' },
-                      { icon: FileText, text: `1日${SEO_PRICING.proLimit}記事`, desc: '大量のコンテンツ制作に対応' },
+                      { icon: FileText, text: `月${SEO_PRICING.proLimit}記事`, desc: '大量のコンテンツ制作に対応' },
                     ].map((item) => (
                       <div key={item.text} className="flex items-start gap-3 bg-white rounded-2xl p-4 border border-blue-100">
                         <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
@@ -351,7 +351,7 @@ export default function SeoPlanPage() {
                   
                   <div className="grid sm:grid-cols-2 gap-3 mt-5">
                     {[
-                      { text: `1日${SEO_PRICING.enterpriseLimit || 30}記事`, desc: '大量の記事を毎日生成可能' },
+                      { text: `月${SEO_PRICING.enterpriseLimit || 200}記事`, desc: '大量の記事を毎月生成可能' },
                       { text: '優先サポート', desc: '専任担当が迅速に対応' },
                       { text: 'チーム利用', desc: '複数アカウントで連携' },
                       { text: 'API連携', desc: 'カスタム開発・外部連携' },
@@ -390,7 +390,7 @@ export default function SeoPlanPage() {
                     {[
                       { text: '図解/バナー自動生成', desc: '記事に合わせてAIが画像作成' },
                       { text: 'AI自動修正', desc: 'SEO改善提案をワンクリック適用' },
-                      { text: `1日${SEO_PRICING.enterpriseLimit || 30}記事`, desc: '大量のコンテンツ制作に対応' },
+                      { text: `月${SEO_PRICING.enterpriseLimit || 200}記事`, desc: '大量のコンテンツ制作に対応' },
                       { text: '優先サポート・API連携', desc: '専任担当＋カスタム開発対応' },
                     ].map((item) => (
                       <div key={item.text} className="flex items-start gap-3 bg-white rounded-2xl p-4 border border-emerald-100">
@@ -676,7 +676,7 @@ export default function SeoPlanPage() {
                     {[
                       { icon: Image, text: '図解/バナー自動生成', desc: '記事に合わせてAIが画像を自動生成' },
                       { icon: Wand2, text: 'AI自動修正', desc: 'SEO改善提案をワンクリックで適用' },
-                      { icon: FileText, text: `1日${welcomePlan === 'enterprise' ? SEO_PRICING.enterpriseLimit || 30 : SEO_PRICING.proLimit}記事まで生成`, desc: '大量のコンテンツ制作に対応' },
+                      { icon: FileText, text: `月${welcomePlan === 'enterprise' ? SEO_PRICING.enterpriseLimit || 200 : SEO_PRICING.proLimit}記事まで生成`, desc: '大量のコンテンツ制作に対応' },
                       { icon: LayoutDashboard, text: '進捗UI（分割生成）', desc: 'リアルタイムで生成状況を確認' },
                     ].map((item, i) => (
                       <motion.div

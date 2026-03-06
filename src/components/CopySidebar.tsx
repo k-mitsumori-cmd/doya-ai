@@ -3,7 +3,7 @@
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Clock, PenLine, LayoutTemplate, Settings, BookOpen, Zap } from 'lucide-react'
+import { Clock, CreditCard, PenLine, LayoutTemplate, Settings, BookOpen, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { copyTheme } from '@/components/sidebar/themes'
 import {
@@ -27,6 +27,8 @@ const COPY_NAV: NavItem[] = [
   { href: '/copy/history', label: '生成履歴', icon: Clock },
   { href: '/copy/templates', label: 'ライタープリセット', icon: BookOpen },
   { href: '/copy/settings', label: 'ブランド設定', icon: Settings },
+  { href: '/copy/guide', label: '使い方ガイド', icon: BookOpen },
+  { href: '/copy/pricing', label: '料金プラン', icon: CreditCard },
 ]
 
 function CopySidebarImpl({

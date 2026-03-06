@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowRight, ArrowLeft, Loader2, Sparkles, X, ChevronDown, ChevronUp, RefreshCw } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Loader2, Sparkles, X, ChevronDown, ChevronUp, RefreshCw, Pencil, Check as CheckIcon } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { Suspense } from 'react'
 
 interface SectionCopy {
@@ -41,6 +42,67 @@ function CopyPage() {
   const [brushupLoading, setBrushupLoading] = useState(false)
   const hasGenerated = useRef(false)
 
+  // インライン編集の状態
+  const [editingField, setEditingField] = useState<{ sectionIdx: number; field: 'headline' | 'subheadline' | 'body' } | null>(null)
+  const [editingValue, setEditingValue] = useState('')
+  const [savingField, setSavingField] = useState(false)
+
+  const startEditing = (sectionIdx: number, field: 'headline' | 'subheadline' | 'body') => {
+    const sec = sections[sectionIdx]
+    setEditingField({ sectionIdx, field })
+    setEditingValue(sec[field] || '')
+  }
+
+  const cancelEditing = () => {
+    setEditingField(null)
+    setEditingValue('')
+  }
+
+  const saveEditing = async () => {
+    if (!editingField || !projectId) return
+    const { sectionIdx, field } = editingField
+    const sec = sections[sectionIdx]
+    if (!sec.id) return
+
+    setSavingField(true)
+    try {
+      // ローカル状態を先に更新
+      setSections(prev =>
+        prev.map((s, i) => i === sectionIdx ? { ...s, [field]: editingValue } : s)
+      )
+
+      // APIで保存
+      const res = await fetch(`/api/lp/projects/${projectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sections: [{
+            id: sec.id,
+            order: sec.order,
+            headline: field === 'headline' ? editingValue : sec.headline,
+            subheadline: field === 'subheadline' ? editingValue : sec.subheadline,
+            body: field === 'body' ? editingValue : sec.body,
+            ctaText: sec.ctaText,
+            ctaUrl: sec.ctaUrl,
+            items: sec.items,
+          }],
+        }),
+      })
+
+      if (!res.ok) throw new Error('保存に失敗しました')
+      setEditingField(null)
+      setEditingValue('')
+    } catch (e: any) {
+      toast.error(e.message || '保存に失敗しました')
+      // 元に戻す
+      setSections(prev =>
+        prev.map((s, i) => i === sectionIdx ? { ...s, [field]: sec[field] } : s)
+      )
+    } finally {
+      setSavingField(false)
+    }
+  }
+
   const generate = useCallback(async () => {
     if (!projectId || hasGenerated.current) return
     hasGenerated.current = true
@@ -50,6 +112,7 @@ function CopyPage() {
     try {
       // プロジェクトの情報を取得
       const projRes = await fetch(`/api/lp/projects/${projectId}`)
+      if (!projRes.ok) throw new Error('プロジェクト情報の取得に失敗しました')
       const projData = await projRes.json()
       const project = projData.project
       if (!project) throw new Error('プロジェクトが見つかりません')
@@ -78,6 +141,11 @@ function CopyPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ projectId }),
       })
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}))
+        throw new Error(errData.error || `コピー生成リクエストに失敗しました (${response.status})`)
+      }
 
       const reader = response.body?.getReader()
       const decoder = new TextDecoder()
@@ -138,6 +206,9 @@ function CopyPage() {
         }),
       })
       const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || 'ブラッシュアップに失敗しました')
+      }
       if (data.section) {
         setSections(prev =>
           prev.map(s => (s.id === brushupModal.sectionId ? { ...s, ...data.section } : s))
@@ -145,7 +216,7 @@ function CopyPage() {
       }
       setBrushupModal(null)
     } catch (e: any) {
-      alert(e.message || 'ブラッシュアップに失敗しました')
+      toast.error(e.message || 'ブラッシュアップに失敗しました')
     } finally {
       setBrushupLoading(false)
     }
@@ -288,26 +359,105 @@ function CopyPage() {
                         <div className="px-5 pb-5 border-t border-slate-800 pt-4 space-y-3">
                           {sec.headline && (
                             <div>
-                              <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">見出し</span>
-                              <p className="text-white font-bold mt-1">{sec.headline}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">見出し</span>
+                                {editingField?.sectionIdx === i && editingField?.field === 'headline' ? (
+                                  <div className="flex gap-1 ml-auto">
+                                    <button onClick={saveEditing} disabled={savingField} className="p-1 text-cyan-400 hover:text-cyan-300 disabled:opacity-50">
+                                      {savingField ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckIcon className="w-3.5 h-3.5" />}
+                                    </button>
+                                    <button onClick={cancelEditing} className="p-1 text-slate-500 hover:text-slate-300">
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button onClick={() => startEditing(i, 'headline')} className="p-1 text-slate-600 hover:text-cyan-400 ml-auto">
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                              {editingField?.sectionIdx === i && editingField?.field === 'headline' ? (
+                                <input
+                                  value={editingValue}
+                                  onChange={e => setEditingValue(e.target.value)}
+                                  onKeyDown={e => { if (e.key === 'Enter') saveEditing(); if (e.key === 'Escape') cancelEditing() }}
+                                  autoFocus
+                                  className="w-full bg-slate-800 border border-cyan-600 rounded-lg px-3 py-2 text-white font-bold mt-1 focus:outline-none focus:border-cyan-400"
+                                />
+                              ) : (
+                                <p className="text-white font-bold mt-1 cursor-pointer hover:bg-slate-800/50 rounded px-1 -mx-1 transition-colors" onClick={() => startEditing(i, 'headline')}>{sec.headline}</p>
+                              )}
                             </div>
                           )}
                           {sec.subheadline && (
                             <div>
-                              <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">サブ見出し</span>
-                              <p className="text-slate-300 mt-1">{sec.subheadline}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">サブ見出し</span>
+                                {editingField?.sectionIdx === i && editingField?.field === 'subheadline' ? (
+                                  <div className="flex gap-1 ml-auto">
+                                    <button onClick={saveEditing} disabled={savingField} className="p-1 text-cyan-400 hover:text-cyan-300 disabled:opacity-50">
+                                      {savingField ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckIcon className="w-3.5 h-3.5" />}
+                                    </button>
+                                    <button onClick={cancelEditing} className="p-1 text-slate-500 hover:text-slate-300">
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button onClick={() => startEditing(i, 'subheadline')} className="p-1 text-slate-600 hover:text-cyan-400 ml-auto">
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                              {editingField?.sectionIdx === i && editingField?.field === 'subheadline' ? (
+                                <input
+                                  value={editingValue}
+                                  onChange={e => setEditingValue(e.target.value)}
+                                  onKeyDown={e => { if (e.key === 'Enter') saveEditing(); if (e.key === 'Escape') cancelEditing() }}
+                                  autoFocus
+                                  className="w-full bg-slate-800 border border-cyan-600 rounded-lg px-3 py-2 text-slate-300 mt-1 focus:outline-none focus:border-cyan-400"
+                                />
+                              ) : (
+                                <p className="text-slate-300 mt-1 cursor-pointer hover:bg-slate-800/50 rounded px-1 -mx-1 transition-colors" onClick={() => startEditing(i, 'subheadline')}>{sec.subheadline}</p>
+                              )}
                             </div>
                           )}
                           {sec.body && (
                             <div>
-                              <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">本文</span>
-                              <p className="text-slate-400 text-sm mt-1 whitespace-pre-line leading-relaxed">{sec.body}</p>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">本文</span>
+                                {editingField?.sectionIdx === i && editingField?.field === 'body' ? (
+                                  <div className="flex gap-1 ml-auto">
+                                    <button onClick={saveEditing} disabled={savingField} className="p-1 text-cyan-400 hover:text-cyan-300 disabled:opacity-50">
+                                      {savingField ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckIcon className="w-3.5 h-3.5" />}
+                                    </button>
+                                    <button onClick={cancelEditing} className="p-1 text-slate-500 hover:text-slate-300">
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button onClick={() => startEditing(i, 'body')} className="p-1 text-slate-600 hover:text-cyan-400 ml-auto">
+                                    <Pencil className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                              {editingField?.sectionIdx === i && editingField?.field === 'body' ? (
+                                <textarea
+                                  value={editingValue}
+                                  onChange={e => setEditingValue(e.target.value)}
+                                  onKeyDown={e => { if (e.key === 'Escape') cancelEditing() }}
+                                  autoFocus
+                                  rows={6}
+                                  className="w-full bg-slate-800 border border-cyan-600 rounded-lg px-3 py-2 text-slate-400 text-sm mt-1 focus:outline-none focus:border-cyan-400 resize-y leading-relaxed"
+                                />
+                              ) : (
+                                <p className="text-slate-400 text-sm mt-1 whitespace-pre-line leading-relaxed cursor-pointer hover:bg-slate-800/50 rounded px-1 -mx-1 transition-colors" onClick={() => startEditing(i, 'body')}>{sec.body}</p>
+                              )}
                             </div>
                           )}
                           {sec.ctaText && (
                             <div>
                               <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">CTAボタン</span>
-                              <p className="text-cyan-400 font-bold mt-1">「{sec.ctaText}」</p>
+                              <p className="text-cyan-400 font-bold mt-1">{sec.ctaText}</p>
                             </div>
                           )}
                           {sec.items && sec.items.length > 0 && (

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { Mic, Plus, Volume2, Clock, Star, Trash2, Play, Pause } from 'lucide-react'
+import { Mic, Plus, Volume2, Clock, Star, Trash2, Play, Pause, AlertCircle } from 'lucide-react'
 
 interface VoiceProject {
   id: string
@@ -44,14 +44,23 @@ export default function VoiceDashboard() {
   const [loading, setLoading] = useState(true)
   const [playingId, setPlayingId] = useState<string | null>(null)
   const [audioEl, setAudioEl] = useState<HTMLAudioElement | null>(null)
+  const [fetchError, setFetchError] = useState<string | null>(null)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/voice/projects')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json()
+      })
       .then(data => {
         if (data.success) setProjects(data.projects || [])
+        else setFetchError(data.error || 'プロジェクト一覧の取得に失敗しました')
       })
-      .catch(() => {})
+      .catch(() => {
+        setFetchError('プロジェクト一覧の読み込みに失敗しました。通信環境を確認してください。')
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -69,20 +78,28 @@ export default function VoiceDashboard() {
     }
     audioEl?.pause()
     const audio = new Audio(`/api/voice/projects/${project.id}/download`)
-    audio.play()
+    audio.play().catch(() => {
+      setPlayingId(null)
+    })
     audio.onended = () => setPlayingId(null)
+    audio.onerror = () => setPlayingId(null)
     setAudioEl(audio)
     setPlayingId(project.id)
   }
 
   const deleteProject = async (id: string) => {
-    if (!confirm('このプロジェクトを削除しますか？')) return
+    setDeletingId(id)
     if (playingId === id) {
       audioEl?.pause()
       setPlayingId(null)
     }
-    await fetch(`/api/voice/projects/${id}`, { method: 'DELETE' })
-    setProjects(prev => prev.filter(p => p.id !== id))
+    try {
+      await fetch(`/api/voice/projects/${id}`, { method: 'DELETE' })
+      setProjects(prev => prev.filter(p => p.id !== id))
+    } finally {
+      setDeletingId(null)
+      setDeleteConfirmId(null)
+    }
   }
 
   const toggleFavorite = async (project: VoiceProject) => {
@@ -149,6 +166,22 @@ export default function VoiceDashboard() {
           </Link>
         ))}
       </div>
+
+      {/* エラー表示 */}
+      {fetchError && (
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+          <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm text-red-700 font-bold">{fetchError}</p>
+            <button
+              onClick={() => { setFetchError(null); setLoading(true); window.location.reload() }}
+              className="text-xs text-red-500 hover:text-red-700 mt-1 font-bold"
+            >
+              再読み込み
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* プロジェクト一覧 */}
       <div>
@@ -231,7 +264,7 @@ export default function VoiceDashboard() {
                     <Star className={`w-3.5 h-3.5 ${project.isFavorite ? 'fill-current' : ''}`} />
                   </button>
                   <button
-                    onClick={() => deleteProject(project.id)}
+                    onClick={() => setDeleteConfirmId(project.id)}
                     className="p-1.5 rounded-lg text-slate-300 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
@@ -242,6 +275,37 @@ export default function VoiceDashboard() {
           </div>
         )}
       </div>
+
+      {/* 削除確認モーダル */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-100 rounded-full">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+              </div>
+              <h3 className="font-bold text-slate-900">プロジェクトの削除</h3>
+            </div>
+            <p className="text-sm text-slate-600 mb-6">このプロジェクトを削除しますか？この操作は取り消せません。</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold rounded-lg transition-colors"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={() => deleteProject(deleteConfirmId)}
+                disabled={deletingId === deleteConfirmId}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-1"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                {deletingId === deleteConfirmId ? '削除中...' : '削除する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

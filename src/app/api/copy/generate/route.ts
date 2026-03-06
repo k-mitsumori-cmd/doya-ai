@@ -16,6 +16,7 @@ import {
   getCopyMonthlyLimitByUserPlan,
   shouldResetMonthlyUsage,
   isWithinFreeHour,
+  getAllowedWriterTypes,
 } from '@/lib/pricing'
 import { generateDisplayCopiesForType, WRITER_TYPES } from '@/lib/copy/gemini'
 import type { ProductInfo, PersonaData, CopyRegulations } from '@/lib/copy/gemini'
@@ -23,7 +24,7 @@ import type { ProductInfo, PersonaData, CopyRegulations } from '@/lib/copy/gemin
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    const userId = (session?.user as any)?.id
+    const userId = session?.user?.id
 
     const body = await req.json()
     const {
@@ -54,6 +55,7 @@ export async function POST(req: NextRequest) {
     let monthlyLimit = COPY_PRICING.guestLimit
     let usedThisMonth = 0
     let isUnlimited = false
+    let userPlan: string | null = null
 
     if (userId) {
       const user = await prisma.user.findUnique({
@@ -62,6 +64,7 @@ export async function POST(req: NextRequest) {
       })
 
       if (user) {
+        userPlan = user.plan
         if (isWithinFreeHour(user.firstLoginAt)) isUnlimited = true
 
         monthlyLimit = getCopyMonthlyLimitByUserPlan(user.plan)
@@ -90,20 +93,47 @@ export async function POST(req: NextRequest) {
         }
       }
     } else {
-      // ゲストは制限あり（セッション管理が難しいのでゆるめに）
+      // ゲスト: guestIdベースでCopyProjectをカウントし月次制限を適用
       monthlyLimit = COPY_PRICING.guestLimit
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      // プロジェクトのguestIdからゲストの今月の利用数をカウント
+      const project = await prisma.copyProject.findUnique({
+        where: { id: projectId },
+        select: { guestId: true },
+      })
+      if (project?.guestId) {
+        usedThisMonth = await prisma.copyProject.count({
+          where: {
+            guestId: project.guestId,
+            createdAt: { gte: monthStart },
+          },
+        })
+      }
     }
 
-    // 制限チェック（ログインユーザーのみ）
-    if (userId && !isUnlimited && usedThisMonth >= monthlyLimit) {
+    // 制限チェック（ログインユーザー・ゲスト両方）
+    if (!isUnlimited && usedThisMonth >= monthlyLimit) {
       return NextResponse.json(
         {
-          error: `今月の生成上限（${monthlyLimit}回）に達しました`,
+          error: userId
+            ? `今月の生成上限（${monthlyLimit}回）に達しました`
+            : `ゲストの月間生成上限（${monthlyLimit}回）に達しました。ログインするとより多く利用できます。`,
           limitReached: true,
           usedThisMonth,
           monthlyLimit,
         },
         { status: 429 }
+      )
+    }
+
+    // ===== ライタータイプのプラン別制限チェック =====
+    const allowedTypes = getAllowedWriterTypes(userPlan)
+    const disallowedTypes = targetWriterTypes.filter(wt => !allowedTypes.includes(wt))
+    if (disallowedTypes.length > 0) {
+      return NextResponse.json(
+        { error: 'このライタータイプはProプラン以上で利用可能です', disallowedTypes, upgradePath: '/copy/pricing' },
+        { status: 403 }
       )
     }
 
@@ -220,9 +250,10 @@ export async function POST(req: NextRequest) {
             message: 'コピー生成が完了しました',
             projectId,
           })}\n\n`)
-        } catch (e: any) {
+        } catch (e: unknown) {
+          const errMsg = e instanceof Error ? e.message : 'Unknown error'
           console.error('Copy generate stream error:', e)
-          safeEnqueue(`data: ${JSON.stringify({ type: 'error', message: e.message })}\n\n`)
+          safeEnqueue(`data: ${JSON.stringify({ type: 'error', message: errMsg })}\n\n`)
           await prisma.copyProject.update({
             where: { id: projectId },
             data: { status: 'error' },
@@ -240,9 +271,10 @@ export async function POST(req: NextRequest) {
         Connection: 'keep-alive',
       },
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('Copy generate error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 

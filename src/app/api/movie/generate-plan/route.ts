@@ -1,4 +1,7 @@
 import { NextRequest } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { getGuestIdFromRequest } from '@/lib/movie/access'
 import { generatePlansStream } from '@/lib/movie/gemini'
 import type { ProductInfo, MoviePersona } from '@/lib/movie/types'
 
@@ -6,6 +9,14 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
   try {
+    // 認証チェック（ログインユーザー or ゲスト）
+    const session = await getServerSession(authOptions)
+    const guestId = getGuestIdFromRequest(req)
+
+    if (!session?.user?.email && !guestId) {
+      return new Response(JSON.stringify({ error: '認証が必要です。ログインするかゲストとしてプロジェクトを作成してください。' }), { status: 401 })
+    }
+
     const body = await req.json()
     const { productInfo, persona, config } = body as {
       productInfo: ProductInfo

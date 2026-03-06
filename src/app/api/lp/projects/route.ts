@@ -6,6 +6,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import {
+  getLpMonthlyLimitByUserPlan,
+  shouldResetMonthlyUsage,
+  isWithinFreeHour,
+} from '@/lib/pricing'
 
 export async function GET(req: NextRequest) {
   try {
@@ -45,6 +50,60 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const userId = session.user.id
+
+    // ===== 使用制限チェック =====
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { plan: true, firstLoginAt: true },
+    })
+
+    let isUnlimited = false
+
+    if (user) {
+      // フリーアワー判定
+      if (isWithinFreeHour(user.firstLoginAt)) isUnlimited = true
+
+      const monthlyLimit = getLpMonthlyLimitByUserPlan(user.plan)
+      if (monthlyLimit < 0) isUnlimited = true
+
+      if (!isUnlimited) {
+        // UserServiceSubscription で月次使用回数管理
+        let sub = await prisma.userServiceSubscription.findUnique({
+          where: { userId_serviceId: { userId, serviceId: 'lp' } },
+        })
+
+        if (!sub) {
+          sub = await prisma.userServiceSubscription.create({
+            data: { userId, serviceId: 'lp', plan: user.plan || 'FREE' },
+          })
+        }
+
+        let usedThisMonth = sub.monthlyUsage || 0
+
+        // 月次リセット
+        if (shouldResetMonthlyUsage(sub.lastUsageReset)) {
+          await prisma.userServiceSubscription.update({
+            where: { id: sub.id },
+            data: { monthlyUsage: 0, lastUsageReset: new Date() },
+          })
+          usedThisMonth = 0
+        }
+
+        if (usedThisMonth >= monthlyLimit) {
+          return NextResponse.json(
+            {
+              error: `今月のLP生成上限（${monthlyLimit}ページ）に達しました`,
+              limitReached: true,
+              usedThisMonth,
+              monthlyLimit,
+            },
+            { status: 429 }
+          )
+        }
+      }
+    }
+
     const body = await req.json()
     const { name, purpose, productInfo, themeId } = body
 
@@ -54,7 +113,7 @@ export async function POST(req: NextRequest) {
 
     const project = await prisma.lpProject.create({
       data: {
-        userId: session.user.id,
+        userId,
         name,
         purpose: purpose || [],
         productInfo: productInfo || null,
@@ -62,6 +121,15 @@ export async function POST(req: NextRequest) {
         status: 'draft',
       },
     })
+
+    // 使用回数インクリメント
+    if (!isUnlimited) {
+      await prisma.userServiceSubscription.upsert({
+        where: { userId_serviceId: { userId, serviceId: 'lp' } },
+        update: { monthlyUsage: { increment: 1 } },
+        create: { userId, serviceId: 'lp', plan: user?.plan || 'FREE', monthlyUsage: 1, lastUsageReset: new Date() },
+      })
+    }
 
     return NextResponse.json({ project })
   } catch (error) {

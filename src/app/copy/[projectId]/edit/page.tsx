@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { PenLine, Save, ArrowLeft, Trash2 } from 'lucide-react'
+import { PenLine, Save, ArrowLeft, Trash2, AlertCircle } from 'lucide-react'
 
 interface CopyItem {
   id: string
@@ -30,6 +30,8 @@ export default function CopyEditPage({ params }: { params: { projectId: string }
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editValues, setEditValues] = useState<Partial<CopyItem>>({})
   const [saving, setSaving] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchProject()
@@ -85,12 +87,22 @@ export default function CopyEditPage({ params }: { params: { projectId: string }
   }
 
   const handleDelete = async (copyId: string) => {
-    if (!confirm('このコピーを削除しますか？')) return
+    setDeletingId(copyId)
     try {
-      // Note: copy item delete API would be needed - for now just refresh
-      await fetchProject()
+      const res = await fetch(`/api/copy/projects/${params.projectId}/items/${copyId}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        setProject(prev => prev ? {
+          ...prev,
+          copies: prev.copies.filter(c => c.id !== copyId),
+        } : null)
+      }
     } catch {
       // ignore
+    } finally {
+      setDeletingId(null)
+      setDeleteConfirmId(null)
     }
   }
 
@@ -150,12 +162,22 @@ export default function CopyEditPage({ params }: { params: { projectId: string }
                       </button>
                     </>
                   ) : (
-                    <button
-                      onClick={() => startEdit(copy)}
-                      className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-900 text-xs rounded-lg transition-colors"
-                    >
-                      編集
-                    </button>
+                    <>
+                      <button
+                        onClick={() => startEdit(copy)}
+                        className="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-900 text-xs rounded-lg transition-colors"
+                      >
+                        編集
+                      </button>
+                      <button
+                        onClick={() => setDeleteConfirmId(copy.id)}
+                        disabled={deletingId === copy.id}
+                        className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                        title="削除"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -216,6 +238,37 @@ export default function CopyEditPage({ params }: { params: { projectId: string }
           ))}
         </div>
       </div>
+
+      {/* 削除確認ダイアログ */}
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-red-100 rounded-full">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+              </div>
+              <h3 className="font-bold text-gray-900">コピーを削除しますか？</h3>
+            </div>
+            <p className="text-sm text-gray-500 mb-6">この操作は取り消せません。削除されたコピーは復元できません。</p>
+            <div className="flex items-center gap-3 justify-end">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold rounded-lg transition-colors"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={() => handleDelete(deleteConfirmId)}
+                disabled={deletingId === deleteConfirmId}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-bold rounded-lg transition-colors flex items-center gap-1"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                {deletingId === deleteConfirmId ? '削除中...' : '削除する'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

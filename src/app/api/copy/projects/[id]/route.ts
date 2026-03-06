@@ -11,7 +11,7 @@ import { prisma } from '@/lib/prisma'
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions)
-    const userId = (session?.user as any)?.id
+    const userId = session?.user?.id
 
     const project = await prisma.copyProject.findUnique({
       where: { id: params.id },
@@ -33,9 +33,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 
     return NextResponse.json({ project })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('Copy projects [id] GET error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions)
-    const userId = (session?.user as any)?.id
+    const userId = session?.user?.id
 
     const project = await prisma.copyProject.findUnique({
       where: { id: params.id },
@@ -88,9 +89,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     })
 
     return NextResponse.json({ success: true, project: updated })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('Copy projects [id] PUT error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
 
@@ -98,7 +100,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const session = await getServerSession(authOptions)
-    const userId = (session?.user as any)?.id
+    const userId = session?.user?.id
 
     const project = await prisma.copyProject.findUnique({
       where: { id: params.id },
@@ -116,8 +118,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     await prisma.copyProject.delete({ where: { id: params.id } })
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown error'
     console.error('Copy projects [id] DELETE error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }

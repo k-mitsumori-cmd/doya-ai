@@ -136,6 +136,7 @@ export async function sendEventNotification(event: {
     const who = event.userName || event.userEmail || '不明'
 
     const lines = [
+      `<!channel>`,
       `${emoji} *[${label}]* ${now}`,
       `- ユーザー: ${who}${event.userEmail ? ` (${event.userEmail})` : ''}`,
     ]

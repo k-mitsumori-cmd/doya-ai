@@ -3,7 +3,15 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { checkMovieUsage, getGuestIdFromRequest, MOVIE_GUEST_COOKIE } from '@/lib/movie/access'
+import { getTemplateById } from '@/lib/movie/templates'
 import { v4 as uuidv4 } from 'uuid'
+
+// ---- プラン判定ヘルパー ----
+
+function isProPlan(plan: string | null | undefined): boolean {
+  const p = String(plan || 'FREE').toUpperCase()
+  return ['PRO', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(p)
+}
 
 // GET /api/movie/projects - プロジェクト一覧
 export async function GET(req: NextRequest) {
@@ -64,6 +72,32 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json()
     const { name, aspectRatio, duration, resolution, platform, templateId, productInfo, persona, plans, selectedPlan, status } = body
+
+    // テンプレートのProフラグ検証
+    if (templateId) {
+      const template = getTemplateById(templateId)
+      if (template?.isPro) {
+        // ユーザーのプランを取得して検証
+        let currentPlan = 'FREE'
+        if (userId) {
+          const subscription = await prisma.userServiceSubscription.findUnique({
+            where: { userId_serviceId: { userId, serviceId: 'movie' } },
+          })
+          currentPlan = subscription?.plan ?? 'FREE'
+        }
+        if (!isProPlan(currentPlan)) {
+          return NextResponse.json(
+            {
+              error: 'このテンプレートはProプラン以上で利用可能です。プランをアップグレードしてください。',
+              code: 'TEMPLATE_PRO_ONLY',
+              templateId,
+              upgradePath: '/movie/pricing',
+            },
+            { status: 403 }
+          )
+        }
+      }
+    }
 
     const commonData = {
       name: name ?? '新規プロジェクト',
