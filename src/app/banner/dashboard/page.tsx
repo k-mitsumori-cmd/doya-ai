@@ -533,6 +533,7 @@ function BannerTestPageInner() {
   const INITIAL_FETCH_LIMIT = 30
   const [hasMoreFromApi, setHasMoreFromApi] = useState(true)
   const [isFetchingAll, setIsFetchingAll] = useState(false)
+  const [fetchProgress, setFetchProgress] = useState(0) // 0〜100
   const templateOffsetRef = useRef(0)
 
   // サムネイル用URL（WebP + リサイズ）
@@ -853,9 +854,12 @@ function BannerTestPageInner() {
   const fetchRemainingTemplates = useCallback(async (startOffset: number) => {
     if (isFetchingAll) return
     setIsFetchingAll(true)
+    setFetchProgress(0)
     const BATCH_SIZE = 100
     let offset = startOffset
     let hasMore = true
+    // dbTotalCountが分からない場合の推定総数（進捗バー用）
+    const estimatedTotal = 350
     try {
       while (hasMore) {
         const res = await fetch(`/api/banner/test/templates?limit=${BATCH_SIZE}&offset=${offset}`)
@@ -869,11 +873,14 @@ function BannerTestPageInner() {
           })
           offset += data.templates.length
           hasMore = data.templates.length >= BATCH_SIZE
+          const total = data.dbTotalCount || estimatedTotal
+          setFetchProgress(Math.min(Math.round((offset / total) * 100), 95))
           console.log(`[Templates] Background fetch: +${data.templates.length} (offset: ${offset})`)
         } else {
           hasMore = false
         }
       }
+      setFetchProgress(100)
     } catch (e) {
       console.error('[Templates] Background fetch failed:', e)
     } finally {
@@ -1871,9 +1878,15 @@ function BannerTestPageInner() {
                           className="group relative aspect-[16/10] rounded overflow-hidden cursor-pointer border-2 border-dashed border-gray-600 hover:border-blue-500 bg-gray-800/80 hover:bg-gray-800 transition-all flex items-center justify-center"
                         >
                           {isFetchingAll && hiddenCount === 0 ? (
-                            <div className="text-center">
-                              <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-blue-400/60 mx-auto mb-1.5" />
-                              <p className="text-[10px] sm:text-xs text-gray-400 font-medium">読み込み中...</p>
+                            <div className="text-center w-full px-3 sm:px-4">
+                              <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-blue-400/60 mx-auto mb-2" />
+                              <div className="w-full bg-gray-700/50 rounded-full h-1.5 sm:h-2 overflow-hidden mb-1.5">
+                                <div
+                                  className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-500 ease-out"
+                                  style={{ width: `${fetchProgress}%` }}
+                                />
+                              </div>
+                              <p className="text-[9px] sm:text-[10px] text-gray-500 font-medium">{fetchProgress}% 読み込み中</p>
                             </div>
                           ) : (
                             <div className="text-center">
@@ -1999,9 +2012,15 @@ function BannerTestPageInner() {
                     className="group relative aspect-[16/10] rounded overflow-hidden cursor-pointer border-2 border-dashed border-gray-600 hover:border-blue-500 bg-gray-800/80 hover:bg-gray-800 transition-all flex items-center justify-center"
                   >
                     {isFetchingAll && filterHiddenCount === 0 ? (
-                      <div className="text-center">
-                        <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-blue-400/60 mx-auto mb-1.5" />
-                        <p className="text-[10px] sm:text-xs text-gray-400 font-medium">読み込み中...</p>
+                      <div className="text-center w-full px-3 sm:px-4">
+                        <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-blue-400/60 mx-auto mb-2" />
+                        <div className="w-full bg-gray-700/50 rounded-full h-1.5 sm:h-2 overflow-hidden mb-1.5">
+                          <div
+                            className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-500 ease-out"
+                            style={{ width: `${fetchProgress}%` }}
+                          />
+                        </div>
+                        <p className="text-[9px] sm:text-[10px] text-gray-500 font-medium">{fetchProgress}% 読み込み中</p>
                       </div>
                     ) : (
                       <div className="text-center">
