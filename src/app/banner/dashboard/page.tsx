@@ -1865,17 +1865,24 @@ function BannerTestPageInner() {
                         )
                       })}
                       {/* カテゴリ末尾の「もっと見る」タイル */}
-                      {hiddenCount > 0 && (
+                      {(hiddenCount > 0 || isFetchingAll) && (
                         <button
                           onClick={() => loadMoreTemplates(categoryName)}
                           className="group relative aspect-[16/10] rounded overflow-hidden cursor-pointer border-2 border-dashed border-gray-600 hover:border-blue-500 bg-gray-800/80 hover:bg-gray-800 transition-all flex items-center justify-center"
                         >
-                          <div className="text-center">
-                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-dashed border-gray-600 group-hover:border-blue-400 flex items-center justify-center mx-auto mb-2 transition-colors">
-                              <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 group-hover:text-blue-400 transition-colors" />
+                          {isFetchingAll && hiddenCount === 0 ? (
+                            <div className="text-center">
+                              <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-blue-400/60 mx-auto mb-1.5" />
+                              <p className="text-[10px] sm:text-xs text-gray-400 font-medium">読み込み中...</p>
                             </div>
-                            <p className="text-[10px] sm:text-xs text-gray-500 group-hover:text-blue-400 font-medium transition-colors">もっと見る (+{hiddenCount})</p>
-                          </div>
+                          ) : (
+                            <div className="text-center">
+                              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-dashed border-gray-600 group-hover:border-blue-400 flex items-center justify-center mx-auto mb-2 transition-colors">
+                                <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 group-hover:text-blue-400 transition-colors" />
+                              </div>
+                              <p className="text-[10px] sm:text-xs text-gray-500 group-hover:text-blue-400 font-medium transition-colors">もっと見る{hiddenCount > 0 ? ` (+${hiddenCount})` : ''}</p>
+                            </div>
+                          )}
                         </button>
                       )}
                     </div>
@@ -1986,17 +1993,24 @@ function BannerTestPageInner() {
                   )
                 })}
                 {/* フィルタ表示時の「もっと見る」タイル */}
-                {filterHiddenCount > 0 && (
+                {(filterHiddenCount > 0 || isFetchingAll) && (
                   <button
                     onClick={() => loadMoreTemplates(activeFilter)}
                     className="group relative aspect-[16/10] rounded overflow-hidden cursor-pointer border-2 border-dashed border-gray-600 hover:border-blue-500 bg-gray-800/80 hover:bg-gray-800 transition-all flex items-center justify-center"
                   >
-                    <div className="text-center">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-dashed border-gray-600 group-hover:border-blue-400 flex items-center justify-center mx-auto mb-2 transition-colors">
-                        <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 group-hover:text-blue-400 transition-colors" />
+                    {isFetchingAll && filterHiddenCount === 0 ? (
+                      <div className="text-center">
+                        <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin text-blue-400/60 mx-auto mb-1.5" />
+                        <p className="text-[10px] sm:text-xs text-gray-400 font-medium">読み込み中...</p>
                       </div>
-                      <p className="text-[10px] sm:text-xs text-gray-500 group-hover:text-blue-400 font-medium transition-colors">もっと見る (+{filterHiddenCount})</p>
-                    </div>
+                    ) : (
+                      <div className="text-center">
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 border-dashed border-gray-600 group-hover:border-blue-400 flex items-center justify-center mx-auto mb-2 transition-colors">
+                          <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 group-hover:text-blue-400 transition-colors" />
+                        </div>
+                        <p className="text-[10px] sm:text-xs text-gray-500 group-hover:text-blue-400 font-medium transition-colors">もっと見る{filterHiddenCount > 0 ? ` (+${filterHiddenCount})` : ''}</p>
+                      </div>
+                    )}
                   </button>
                 )}
               </div>
