@@ -27,7 +27,7 @@ export default function InterviewUpgradeCelebration({
 }: InterviewUpgradeCelebrationProps) {
   const [showContent, setShowContent] = useState(false)
 
-  const planLabel = planName === 'ENTERPRISE' ? 'エンタープライズ' : 'プロ'
+  const planLabel = planName === 'ENTERPRISE' ? 'エンタープライズ' : planName === 'LIGHT' ? 'ライト' : 'プロ'
 
   useEffect(() => {
     if (isOpen) {

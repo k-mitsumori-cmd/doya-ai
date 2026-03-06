@@ -107,7 +107,7 @@ export default function KantanTopPage() {
   const { data: session } = useSession()
   const service = getServiceById('kantan')!
   const plan = (session?.user as any)?.kantanPlan || 'FREE'
-  const isPro = plan === 'PRO'
+  const isPro = plan === 'LIGHT' || plan === 'PRO' || plan === 'ENTERPRISE'
 
   return (
     <div className="min-h-screen bg-[#0a0a0f] text-white overflow-hidden">

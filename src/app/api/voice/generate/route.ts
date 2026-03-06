@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
     // PRO限定フォーマットチェック
     if (!isPro && outputFormat !== 'mp3') {
       return NextResponse.json(
-        { success: false, error: 'MP3以外の形式はPROプランが必要です' },
+        { success: false, error: 'MP3以外の形式は上位プランが必要です' },
         { status: 403 }
       )
     }
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
 
     if (speaker.isPro && !isPro) {
       return NextResponse.json(
-        { success: false, error: 'このスピーカーはPROプランが必要です' },
+        { success: false, error: 'このスピーカーは上位プランが必要です' },
         { status: 403 }
       )
     }

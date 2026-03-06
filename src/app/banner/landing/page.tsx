@@ -21,7 +21,7 @@ export default function BannerLandingPage() {
   const { data: session } = useSession()
   const service = getServiceById('banner')!
   const plan = (session?.user as any)?.bannerPlan || 'FREE'
-  const isPro = plan === 'PRO'
+  const isPaid = plan === 'LIGHT' || plan === 'PRO' || plan === 'ENTERPRISE'
 
   return (
     <div className="min-h-screen bg-white text-slate-900 selection:bg-blue-100">
@@ -48,10 +48,10 @@ export default function BannerLandingPage() {
             </Link>
             {session ? (
               <div className="flex items-center gap-3">
-                {isPro && (
+                {isPaid && (
                   <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-600 text-[10px] font-black rounded-full uppercase tracking-wider border border-amber-100">
                     <Crown className="w-3.5 h-3.5" />
-                    PRO MEMBER
+                    {plan === 'ENTERPRISE' ? 'ENTERPRISE' : plan === 'PRO' ? 'PRO' : 'LIGHT'} MEMBER
                   </div>
                 )}
                 <Link href="/banner" className="px-3 sm:px-5 md:px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-black rounded-xl transition-all shadow-lg shadow-blue-100 hover:scale-105 active:scale-95">

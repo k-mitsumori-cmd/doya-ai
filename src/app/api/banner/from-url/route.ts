@@ -1433,7 +1433,7 @@ export async function POST(request: NextRequest) {
     const planRaw = !isGuest
       ? String((session?.user as any)?.bannerPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
       : 'GUEST'
-    const isPaidUser = !isGuest && planRaw !== 'FREE'
+    const isPaidUser = !isGuest && (planRaw === 'LIGHT' || planRaw === 'PRO' || planRaw === 'ENTERPRISE')
 
     // 1時間生成し放題の判定（セッションから firstLoginAt を取得）
     const firstLoginAt = (session?.user as any)?.firstLoginAt

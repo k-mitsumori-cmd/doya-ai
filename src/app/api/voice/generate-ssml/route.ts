@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     if (!isPro) {
       return NextResponse.json(
-        { success: false, error: 'SSML直接入力はPROプランが必要です' },
+        { success: false, error: 'SSML直接入力は上位プランが必要です' },
         { status: 403 }
       )
     }

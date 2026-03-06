@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     if (!isPro) {
       return NextResponse.json(
-        { success: false, error: 'バッチ生成はPROプランが必要です' },
+        { success: false, error: 'バッチ生成は上位プランが必要です' },
         { status: 403 }
       )
     }

@@ -29,7 +29,7 @@ export default function TenkaiLayout({ children }: TenkaiLayoutProps) {
   }, [session])
 
   const plan = session?.user?.plan || 'FREE'
-  const planLabel = plan === 'PRO' ? 'Pro' : plan === 'STARTER' ? 'Starter' : plan === 'ENTERPRISE' ? 'Enterprise' : 'Free'
+  const planLabel = plan === 'PRO' ? 'Pro' : plan === 'LIGHT' ? 'Light' : plan === 'STARTER' ? 'Starter' : plan === 'ENTERPRISE' ? 'Enterprise' : 'Free'
 
   return (
     <div className="flex min-h-screen bg-slate-50">

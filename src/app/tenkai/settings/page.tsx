@@ -93,8 +93,8 @@ export default function SettingsPage() {
   })
 
   const plan = session?.user?.plan || 'FREE'
-  const planLabel = plan === 'PRO' ? 'Pro' : plan === 'STARTER' ? 'Starter' : plan === 'ENTERPRISE' ? 'Enterprise' : plan === 'PREMIUM' ? 'Premium' : 'Free'
-  const isPro = plan === 'PRO' || plan === 'ENTERPRISE' || plan === 'PREMIUM'
+  const planLabel = plan === 'PRO' ? 'Pro' : plan === 'LIGHT' ? 'Light' : plan === 'STARTER' ? 'Starter' : plan === 'ENTERPRISE' ? 'Enterprise' : plan === 'PREMIUM' ? 'Premium' : 'Free'
+  const isPro = plan === 'LIGHT' || plan === 'PRO' || plan === 'ENTERPRISE' || plan === 'PREMIUM'
 
   // ============================================
   // 利用状況取得

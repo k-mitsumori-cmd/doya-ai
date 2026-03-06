@@ -10,11 +10,12 @@ import { z } from 'zod'
 export const runtime = 'nodejs'
 export const maxDuration = 60 // 60秒のタイムアウト
 
-type PlanCode = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
+type PlanCode = 'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
 function normalizePlan(raw: any): PlanCode {
   const s = String(raw || '').toUpperCase().trim()
   if (s === 'PRO') return 'PRO'
   if (s === 'ENTERPRISE') return 'ENTERPRISE'
+  if (s === 'LIGHT') return 'LIGHT'
   if (s === 'FREE') return 'FREE'
   if (s === 'GUEST') return 'GUEST'
   return 'UNKNOWN'

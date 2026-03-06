@@ -14,11 +14,12 @@ const BodySchema = z.object({
   targetHeading: z.string().optional(),
 })
 
-type PlanCode = 'FREE' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
+type PlanCode = 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
 function normalizePlan(raw: any): PlanCode {
   const s = String(raw || '').toUpperCase().trim()
   if (s === 'PRO') return 'PRO'
   if (s === 'ENTERPRISE') return 'ENTERPRISE'
+  if (s === 'LIGHT') return 'LIGHT'
   if (s === 'FREE') return 'FREE'
   return 'UNKNOWN'
 }

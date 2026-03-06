@@ -10,12 +10,13 @@ import { guessArticleGenreJa, pickRandomPatterns, buildBannerPromptFromPattern }
 export const runtime = 'nodejs'
 export const maxDuration = 120 // 120秒のタイムアウト（複数画像生成のため）
 
-type PlanCode = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
+type PlanCode = 'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
 
 function normalizePlan(raw: any): PlanCode {
   const s = String(raw || '').toUpperCase().trim()
   if (s === 'PRO') return 'PRO'
   if (s === 'ENTERPRISE') return 'ENTERPRISE'
+  if (s === 'LIGHT') return 'LIGHT'
   if (s === 'FREE') return 'FREE'
   if (s === 'GUEST') return 'GUEST'
   return 'UNKNOWN'

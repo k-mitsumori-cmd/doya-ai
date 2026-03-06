@@ -34,15 +34,16 @@ async function isProUserByDb(userId: string): Promise<boolean> {
     select: { plan: true },
   })
   const plan = (sub?.plan || 'FREE').toUpperCase()
-  return plan !== 'FREE'
+  return plan === 'LIGHT' || plan === 'PRO' || plan === 'ENTERPRISE'
 }
 
 function isProFromSession(session: any): boolean {
   const bannerPlan = String(session?.user?.bannerPlan || '').toUpperCase()
   const globalPlan = String(session?.user?.plan || '').toUpperCase()
+  const isPaid = (p: string) => p === 'LIGHT' || p === 'PRO' || p === 'ENTERPRISE'
   // bannerPlan があればそれを優先。無ければ global plan を見る
-  if (bannerPlan) return bannerPlan !== 'FREE'
-  return !!(globalPlan && globalPlan !== 'FREE')
+  if (bannerPlan) return isPaid(bannerPlan)
+  return !!(globalPlan && isPaid(globalPlan))
 }
 
 // クリーンアップ頻度を抑えてレスポンスを軽くする（サーバレスでも一定効果）

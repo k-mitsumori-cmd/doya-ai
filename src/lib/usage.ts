@@ -3,7 +3,7 @@
 const USAGE_KEY = 'doya_daily_usage'
 const USAGE_DATE_KEY = 'doya_usage_date'
 
-export type UserTier = 'guest' | 'free' | 'premium' | 'business' | 'enterprise'
+export type UserTier = 'guest' | 'free' | 'light' | 'premium' | 'business' | 'enterprise'
 
 export interface UsageLimits {
   daily: number
@@ -22,6 +22,11 @@ export const PLAN_LIMITS: Record<UserTier, UsageLimits> = {
     daily: 15,
     label: '無料プラン',
     features: ['月15枚まで生成可能', '全テンプレート', '履歴保存'],
+  },
+  light: {
+    daily: 50,
+    label: 'ライト',
+    features: ['月50枚まで生成可能', '全テンプレート', 'サイズ変更'],
   },
   premium: {
     daily: 150,

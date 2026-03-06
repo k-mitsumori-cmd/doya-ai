@@ -29,7 +29,8 @@ export function UsageLimitBanner() {
     const plan = (session.user as any)?.plan
     if (plan === 'ENTERPRISE') return 'enterprise'
     if (plan === 'BUSINESS') return 'business'
-    if (plan === 'PREMIUM') return 'premium'
+    if (plan === 'PREMIUM' || plan === 'PRO') return 'premium'
+    if (plan === 'LIGHT') return 'light'
     return 'free'
   }
 
@@ -244,7 +245,8 @@ export function UsageIndicator() {
     const plan = (session.user as any)?.plan
     if (plan === 'ENTERPRISE') return 'enterprise'
     if (plan === 'BUSINESS') return 'business'
-    if (plan === 'PREMIUM') return 'premium'
+    if (plan === 'PREMIUM' || plan === 'PRO') return 'premium'
+    if (plan === 'LIGHT') return 'light'
     return 'free'
   }
 

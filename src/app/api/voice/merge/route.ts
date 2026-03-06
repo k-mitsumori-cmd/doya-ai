@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     if (!isPro) {
       return NextResponse.json(
-        { success: false, error: 'AI音声合成はPROプランが必要です' },
+        { success: false, error: 'AI音声合成は上位プランが必要です' },
         { status: 403 }
       )
     }

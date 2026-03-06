@@ -30,7 +30,7 @@ export async function GET(
 
     if (speaker.isPro && !isPro) {
       return NextResponse.json(
-        { success: false, error: 'このスピーカーはPROプラン限定です' },
+        { success: false, error: 'このスピーカーは上位プラン限定です' },
         { status: 403 }
       )
     }
