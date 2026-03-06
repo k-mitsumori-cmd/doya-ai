@@ -62,7 +62,8 @@ export default function BannerPlanPage() {
 
   const isEnterprise = !isGuest && bannerPlanTier === 'ENTERPRISE'
   const isPro = !isGuest && bannerPlanTier === 'PRO'
-  const isPaid = !isGuest && (bannerPlanTier === 'LIGHT' || bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE')
+  const isLight = !isGuest && bannerPlanTier === 'LIGHT'
+  const isPaid = !isGuest && (isLight || isPro || isEnterprise)
 
   const [totalBanners, setTotalBanners] = useState(0)
   const [usageCount, setUsageCount] = useState(0)
@@ -137,7 +138,7 @@ export default function BannerPlanPage() {
       setCancelScheduledAt(null)
       setCancelMode(null)
       localStorage.removeItem('banner:cancelScheduledAt')
-      toast.success('解約予約を取り消しました！引き続きPRO/Enterpriseプランをご利用いただけます。')
+      toast.success('解約予約を取り消しました！引き続き有料プランをご利用いただけます。')
     } catch (err: any) {
       toast.error(err.message || '解約取り消しに失敗しました')
     } finally {
@@ -203,7 +204,7 @@ export default function BannerPlanPage() {
       try {
         window.dispatchEvent(
           new CustomEvent('doya:plan-updated', {
-            detail: { serviceId: 'banner', planTier: String(data?.planId || '').includes('enterprise') ? 'ENTERPRISE' : 'PRO', source: 'manual', at: Date.now() },
+            detail: { serviceId: 'banner', planTier: String(data?.planId || '').includes('enterprise') ? 'ENTERPRISE' : String(data?.planId || '').includes('light') ? 'LIGHT' : 'PRO', source: 'manual', at: Date.now() },
           })
         )
       } catch {}
@@ -269,16 +270,18 @@ export default function BannerPlanPage() {
   const estimateBasisText = `根拠：\n- 1枚あたりの制作時間を ${ESTIMATED_TIME_SAVED_PER_BANNER_MIN} 分と仮定\n- デザイナー時給を ${HOURLY_DESIGNER_RATE_JPY.toLocaleString()} 円と仮定\n\n計算：\n- 推定削減時間 = 累計生成枚数 × ${ESTIMATED_TIME_SAVED_PER_BANNER_MIN} 分 ÷ 60\n- 推定コスト削減 = 推定削減時間（時間）× ${HOURLY_DESIGNER_RATE_JPY.toLocaleString()} 円`
 
   const currentPlanLabel =
-    isGuest ? 'ゲスト' : isEnterprise ? 'エンタープライズ' : isPaid ? 'プロ' : '無料'
+    isGuest ? 'ゲスト' : isEnterprise ? 'エンタープライズ' : isPro ? 'プロ' : isLight ? 'ライト' : '無料'
 
   const planBadge =
     isEnterprise
       ? { text: 'ENTERPRISE', cls: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20' }
-      : isPaid
+      : isPro
         ? { text: 'PRO', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
-        : isGuest
-          ? { text: 'GUEST', cls: 'bg-gray-200 text-gray-700' }
-          : { text: 'FREE', cls: 'bg-blue-100 text-blue-700' }
+        : isLight
+          ? { text: 'LIGHT', cls: 'bg-blue-500 text-white shadow-sm shadow-blue-500/20' }
+          : isGuest
+            ? { text: 'GUEST', cls: 'bg-gray-200 text-gray-700' }
+            : { text: 'FREE', cls: 'bg-blue-100 text-blue-700' }
 
   // 契約管理 / 課金開始は「リンク遷移」＋CheckoutButtonに統一（確実にStripeへ遷移）
 
@@ -375,9 +378,13 @@ export default function BannerPlanPage() {
                         <div className="text-3xl font-black text-slate-800 tracking-tighter">
                           ¥49,800<span className="text-sm text-slate-400 font-bold ml-1">/mo</span>
                         </div>
-                      ) : isPaid ? (
+                      ) : isPro ? (
                         <div className="text-3xl font-black text-slate-800 tracking-tighter">
                           ¥9,980<span className="text-sm text-slate-400 font-bold ml-1">/mo</span>
+                        </div>
+                      ) : isLight ? (
+                        <div className="text-3xl font-black text-slate-800 tracking-tighter">
+                          ¥2,980<span className="text-sm text-slate-400 font-bold ml-1">/mo</span>
                         </div>
                       ) : (
                         <div className="text-3xl font-black text-slate-800 tracking-tighter">
@@ -415,18 +422,26 @@ export default function BannerPlanPage() {
                         <Crown className="w-5 h-5" />
                         エンタープライズにアップグレード
                       </CheckoutButton>
+                    ) : isLight ? (
+                      <CheckoutButton
+                        planId="banner-pro"
+                        loginCallbackUrl="/banner/dashboard/plan"
+                        variant="secondary"
+                        className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95"
+                      >
+                        <Zap className="w-5 h-5" />
+                        プロプランにアップグレード
+                      </CheckoutButton>
                     ) : (
-                      <>
-                        <CheckoutButton
-                          planId="banner-pro"
-                          loginCallbackUrl="/banner/dashboard/plan"
-                          variant="secondary"
-                          className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95"
-                        >
-                          <Zap className="w-5 h-5" />
-                          プロプランへアップグレード
-                        </CheckoutButton>
-                      </>
+                      <CheckoutButton
+                        planId="banner-light"
+                        loginCallbackUrl="/banner/dashboard/plan"
+                        variant="secondary"
+                        className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95"
+                      >
+                        <Zap className="w-5 h-5" />
+                        ライトプランへアップグレード
+                      </CheckoutButton>
                     )}
 
                     {/* 無料ユーザーのみ：比較用にプランページ導線を残す */}
@@ -453,7 +468,7 @@ export default function BannerPlanPage() {
                         課金状態を確認してプランを反映する
                       </button>
                       <p className="mt-2 text-[11px] text-slate-500 font-bold">
-                        ※ 決済直後にPROへ切り替わらない場合のみ押してください（Stripe→DBを再同期します）
+                        ※ 決済直後にプランへ切り替わらない場合のみ押してください（Stripe→DBを再同期します）
                       </p>
                     </div>
                   )}
@@ -471,7 +486,7 @@ export default function BannerPlanPage() {
                             <span className="underline">{formatJstDateTime(cancelScheduledAt)}</span> に停止予定（日本時間）
                           </p>
                           <p className="mt-2 text-[11px] font-bold text-amber-700">
-                            停止日時まではPRO/Enterpriseの機能をご利用いただけます。
+                            停止日時までは有料プランの機能をご利用いただけます。
                           </p>
                           <button
                             onClick={handleResumeSubscription}
@@ -762,7 +777,7 @@ export default function BannerPlanPage() {
               <div className="text-center">
                 <Sparkles className="w-12 h-12 text-blue-500 mx-auto mb-4" />
                 <h3 className="text-2xl font-black text-slate-900 mb-2">ちょっと待ってください！</h3>
-                <p className="text-slate-600 font-bold mb-6">本当に解約しますか？PRO/Enterpriseプランにはこんなメリットがあります。</p>
+                <p className="text-slate-600 font-bold mb-6">本当に解約しますか？有料プランにはこんなメリットがあります。</p>
                 <ul className="text-left space-y-3 mb-8">
                   <li className="flex items-center gap-3 text-slate-700 font-bold">
                     <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />

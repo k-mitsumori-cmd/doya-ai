@@ -169,7 +169,7 @@ export default function SeoPlanPage() {
                   <Timer className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-black text-blue-900 truncate">初回ログイン特典：1時間 使い放題（PRO相当）</p>
+                  <p className="text-sm font-black text-blue-900 truncate">初回ログイン特典：1時間 使い放題（有料プラン相当）</p>
                   <p className="mt-0.5 text-[11px] font-bold text-blue-800/80 truncate">
                     画像生成・AI自動修正などが解放されています
                   </p>
@@ -216,7 +216,7 @@ export default function SeoPlanPage() {
                     <Timer className="w-6 h-6" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-black text-blue-900">初回ログイン後1時間：PRO相当で使い放題（トライアル）</p>
+                    <p className="text-sm font-black text-blue-900">初回ログイン後1時間：有料プラン相当で使い放題（トライアル）</p>
                     <p className="mt-1 text-[11px] font-bold text-blue-800/80">
                       画像生成・自動修正も含めて解放中です。
                     </p>
@@ -406,7 +406,7 @@ export default function SeoPlanPage() {
               )}
 
               {/* 解約/再開 - 有料プラン契約中の場合のみ表示 */}
-              {(tier === 'PRO' || tier === 'ENTERPRISE') && sub?.hasSubscription && (
+              {(tier === 'LIGHT' || tier === 'PRO' || tier === 'ENTERPRISE') && sub?.hasSubscription && (
                 <div className="rounded-3xl border border-gray-100 bg-white p-6 sm:p-8">
                   <p className="text-lg font-black text-gray-900 mb-2">解約・再開</p>
                   <p className="text-sm text-gray-500 font-bold mb-6">
@@ -433,7 +433,7 @@ export default function SeoPlanPage() {
                           <div>
                             <p className="text-sm font-black">解約予約済み - 停止まで残り {cancelAtDays || 0} 日</p>
                             <p className="text-[11px] font-bold text-amber-800/80 mt-1">
-                              停止日まではPRO/Enterpriseの機能をご利用いただけます。キャンセルして継続することも可能です。
+                              停止日までは有料プランの機能をご利用いただけます。キャンセルして継続することも可能です。
                             </p>
                           </div>
                         </div>
@@ -655,7 +655,7 @@ export default function SeoPlanPage() {
                   transition={{ delay: 0.3 }}
                 >
                   <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">
-                    🎉 {welcomePlan === 'enterprise' ? 'Enterprise' : 'PRO'}プランが有効になりました！
+                    🎉 {welcomePlan === 'enterprise' ? 'Enterprise' : welcomePlan === 'light' ? 'ライト' : 'PRO'}プランが有効になりました！
                   </h3>
                   <p className="text-slate-600 font-bold">
                     すべての機能が解放されました。早速使ってみましょう！

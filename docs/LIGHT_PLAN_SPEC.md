@@ -1,6 +1,6 @@
 # ライトプラン（LIGHT）開発ドキュメント
 
-> 最終更新: 2026-03-06
+> 最終更新: 2026-03-06 v2
 
 ## 1. 概要
 
@@ -147,23 +147,38 @@ STRIPE_PRICE_BANNER_LIGHT_MONTHLY=price_xxxxxxxxxxxxxxx
 
 ---
 
-## 5. 共通実装パターン
+## 5. 共通ユーティリティ (`src/lib/plan-utils.ts`)
+
+### 5.0 共通モジュール（必ず使用すること）
+
+各ページでプラン判定ロジックをローカル定義すると LIGHT の漏れが発生する。
+**必ず `src/lib/plan-utils.ts` のヘルパーを使うこと。**
+
+```typescript
+import { tierFrom, planLabel, planBadge, planPrice, isPaidTier, tierFromPlanId } from '@/lib/plan-utils'
+import type { PlanTier } from '@/lib/plan-utils'
+```
+
+| 関数 | 用途 | 例 |
+|------|------|---|
+| `tierFrom(raw)` | 生文字列 → PlanTier 正規化 | `tierFrom('BANNER_PRO') → 'PRO'` |
+| `planLabel(tier)` | 日本語表示ラベル | `planLabel('LIGHT') → 'ライト'` |
+| `planBadge(tier)` | バッジの text + CSS | `planBadge('LIGHT') → { text: 'LIGHT', cls: 'bg-blue-500...' }` |
+| `planPrice(tier)` | 月額料金（円） | `planPrice('LIGHT') → 2980` |
+| `isPaidTier(tier)` | 有料プランか？ | `isPaidTier('LIGHT') → true` |
+| `tierFromPlanId(id)` | planId文字列 → PlanTier | `tierFromPlanId('banner-light') → 'LIGHT'` |
 
 ### 5.1 プラン判定（サイドバー共通パターン）
 
 ```typescript
-const planLabel = (() => {
-  if (!isLoggedIn) return 'GUEST'
-  const p = String(
-    (session?.user as any)?.{service}Plan ||
-    (session?.user as any)?.plan ||
-    'FREE'
-  ).toUpperCase()
-  if (p === 'ENTERPRISE') return 'ENTERPRISE'
-  if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return 'PRO'
-  if (p === 'LIGHT') return 'LIGHT'
-  return 'FREE'
-})()
+// 推奨: plan-utils.ts の tierFrom() を使用
+import { tierFrom } from '@/lib/plan-utils'
+
+const tier = tierFrom(
+  (session?.user as any)?.{service}Plan ||
+  (session?.user as any)?.plan ||
+  (isLoggedIn ? 'FREE' : 'GUEST')
+)
 ```
 
 > **注意**: `{service}Plan` は各サービス固有のプランフィールド名に置換する
@@ -393,6 +408,7 @@ for (const serviceId of allServiceIds) {
 | Sidebar | `src/components/movie/MovieSidebar.tsx` | LIGHT検出、ライト推奨バナー |
 | Sidebar | `src/components/voice/VoiceSidebar.tsx` | LIGHT検出 |
 | Config | `src/app/banner/dashboard/page.tsx` | PLAN_CONFIGにLIGHT追加 |
+| 共通 | `src/lib/plan-utils.ts` | tierFrom, planLabel, planBadge, planPrice, isPaidTier, tierFromPlanId |
 
 ---
 
@@ -404,3 +420,92 @@ for (const serviceId of allServiceIds) {
 4. **kantan, tenkai** の LIGHT pricing は services.ts 未定義（メンテナンス/coming_soon ステータスのため）
 5. **copy/pricing の #contact アンカー** - Enterprise の CTA が `#contact` を指すが該当セクションが未実装
 6. **movie/guide ページ** - FAQ からリンクされているが未実装の可能性あり
+
+---
+
+## 11. よくあるバグパターンと防止策
+
+### 11.1 `isPaid` で PRO 表示をするバグ（最重要）
+
+**問題**: `isPaid = isLight || isPro || isEnterprise` を使って条件分岐すると、
+LIGHT ユーザーに PRO の表示（ラベル・バッジ・価格・CTA）が出る。
+
+```typescript
+// ❌ NG: LIGHT が PRO 扱いになる
+const label = isPaid ? 'プロ' : '無料'
+const price = isPaid ? '¥9,980' : '¥0'
+
+// ✅ OK: 階層ごとに分岐する
+const label = isEnterprise ? 'エンタープライズ' : isPro ? 'プロ' : isLight ? 'ライト' : '無料'
+// または plan-utils.ts を使う
+import { planLabel } from '@/lib/plan-utils'
+const label = planLabel(tier)
+```
+
+**影響箇所**: currentPlanLabel, planBadge, 価格表示, CTA ボタン, イベント dispatch, 解約メッセージ
+
+### 11.2 解約/再開セクションの表示条件
+
+```typescript
+// ❌ NG: LIGHT ユーザーが解約できない
+{(tier === 'PRO' || tier === 'ENTERPRISE') && sub?.hasSubscription && (...)}
+
+// ✅ OK: LIGHT も含める
+{(tier === 'LIGHT' || tier === 'PRO' || tier === 'ENTERPRISE') && sub?.hasSubscription && (...)}
+
+// ✅ もっとシンプル:
+import { isPaidTier } from '@/lib/plan-utils'
+{isPaidTier(tier) && sub?.hasSubscription && (...)}
+```
+
+### 11.3 ハードコード文字列の回避
+
+```typescript
+// ❌ NG: PRO/Enterprise 固定
+"PRO/Enterpriseの機能をご利用いただけます"
+"決済直後にPROへ切り替わらない場合"
+
+// ✅ OK: 汎用的な表現
+"有料プランの機能をご利用いただけます"
+"決済直後にプランへ切り替わらない場合"
+```
+
+### 11.4 FREE ユーザーの CTA
+
+FREE ユーザーのアップグレード CTA は **LIGHT を主導線** にする（PRO ではない）。
+
+```typescript
+// ❌ NG: FREE → PRO のみ
+<CheckoutButton planId="banner-pro">プロプランへアップグレード</CheckoutButton>
+
+// ✅ OK: FREE → LIGHT を主導線
+<CheckoutButton planId="banner-light">ライトプランへアップグレード</CheckoutButton>
+```
+
+### 11.5 dispatchEvent での planTier
+
+```typescript
+// ❌ NG: LIGHT が PRO になる
+planTier: planId.includes('enterprise') ? 'ENTERPRISE' : 'PRO'
+
+// ✅ OK: plan-utils.ts を使用
+import { tierFromPlanId } from '@/lib/plan-utils'
+planTier: tierFromPlanId(data?.planId || '')
+```
+
+---
+
+## 12. 新しいサービス追加時のチェックリスト
+
+新サービスに LIGHT プランを追加する場合の手順：
+
+1. [ ] `src/lib/pricing.ts` に `lightLimit` 定数を追加
+2. [ ] `src/lib/services.ts` に `light` pricing を追加
+3. [ ] `src/lib/stripe.ts` の `STRIPE_PRICE_IDS` に light マッピング追加
+4. [ ] `src/app/api/stripe/checkout/route.ts` の `getPriceId()` にマッピング追加
+5. [ ] 料金ページに LIGHT カード追加（`bg-blue-50 border-blue-200` デザイン）
+6. [ ] dashboard/plan ページで LIGHT 対応（plan-utils.ts を使用）
+7. [ ] サイドバーに LIGHT 検出 + 推奨バナー追加
+8. [ ] アクセス制御ヘルパーに LIGHT 分岐追加
+9. [ ] レスポンシブ確認（375px でカード崩れなし）
+10. [ ] `isPaid` ではなく `isLight / isPro / isEnterprise` で個別分岐すること
