@@ -105,6 +105,7 @@ const CHAR_PRESETS = [
 const CHAR_LIMITS: Record<string, number> = {
   GUEST: 5000,
   FREE: 10000,
+  LIGHT: 15000,
   PRO: 20000,
   ENTERPRISE: 50000,
 }

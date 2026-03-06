@@ -1038,11 +1038,12 @@ export default function BannerDashboard() {
     if (!p || p === 'GUEST') return 'GUEST' as const
     if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
     if (p.includes('PRO') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
+    if (p.includes('LIGHT')) return 'LIGHT' as const
     if (p.includes('FREE')) return 'FREE' as const
     return 'FREE' as const
   }, [bannerPlan])
   const isEnterpriseUser = !isGuest && planTier === 'ENTERPRISE'
-  const isPaidUser = !isGuest && (planTier === 'PRO' || planTier === 'ENTERPRISE')
+  const isPaidUser = !isGuest && (planTier === 'LIGHT' || planTier === 'PRO' || planTier === 'ENTERPRISE')
   const currentSizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
   const guestRemaining = BANNER_PRICING.guestLimit - guestUsageCount
   const [userUsageCount, setUserUsageCount] = useState(0)

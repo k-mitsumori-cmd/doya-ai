@@ -18,6 +18,7 @@ function pickBestBannerPlan(planIds: Array<string | null | undefined>) {
   if (ids.some((p) => p === 'banner-enterprise')) return 'banner-enterprise'
   if (ids.some((p) => p === 'banner-pro')) return 'banner-pro'
   if (ids.some((p) => p === 'banner-basic' || p === 'banner-starter' || p === 'banner-business')) return 'banner-basic'
+  if (ids.some((p) => p === 'banner-light')) return 'banner-light'
   return null
 }
 
@@ -76,7 +77,7 @@ export async function POST(_req: NextRequest) {
         stripeSubscriptionId: subscription.id,
         stripePriceId: priceId || undefined,
         stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-        plan: bestPlanId === 'banner-enterprise' ? 'ENTERPRISE' : bestPlanId === 'banner-pro' ? 'PRO' : 'PRO',
+        plan: bestPlanId === 'banner-enterprise' ? 'ENTERPRISE' : bestPlanId === 'banner-light' ? 'LIGHT' : 'PRO',
       },
     })
 
@@ -86,7 +87,7 @@ export async function POST(_req: NextRequest) {
       create: {
         userId: user.id,
         serviceId,
-        plan: bestPlanId === 'banner-enterprise' ? 'ENTERPRISE' : 'PRO',
+        plan: bestPlanId === 'banner-enterprise' ? 'ENTERPRISE' : bestPlanId === 'banner-light' ? 'LIGHT' : 'PRO',
         stripeSubscriptionId: subscription.id,
         stripePriceId: priceId || undefined,
         stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
@@ -95,7 +96,7 @@ export async function POST(_req: NextRequest) {
         lastUsageReset: new Date(),
       },
       update: {
-        plan: bestPlanId === 'banner-enterprise' ? 'ENTERPRISE' : 'PRO',
+        plan: bestPlanId === 'banner-enterprise' ? 'ENTERPRISE' : bestPlanId === 'banner-light' ? 'LIGHT' : 'PRO',
         stripeSubscriptionId: subscription.id,
         stripePriceId: priceId || undefined,
         stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),

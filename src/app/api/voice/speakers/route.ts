@@ -15,7 +15,7 @@ export async function GET() {
     const session = await getServerSession(authOptions)
     const user = session?.user as any
 
-    const isPro = ['PRO', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(
+    const isPro = ['PRO', 'LIGHT', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(
       String(user?.voicePlan || user?.plan || '').toUpperCase()
     )
 

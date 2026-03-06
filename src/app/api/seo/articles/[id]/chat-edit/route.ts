@@ -72,7 +72,7 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     }
 
     const plan = normalizePlan(user?.seoPlan || user?.plan || 'FREE')
-    const isPaid = plan === 'PRO' || plan === 'ENTERPRISE'
+    const isPaid = plan === 'LIGHT' || plan === 'PRO' || plan === 'ENTERPRISE'
     if (!isPaid) {
       return NextResponse.json(
         { success: false, error: 'AI修正チャットは有料プラン限定です。', code: 'PAID_ONLY', upgradeUrl: '/pricing' },

@@ -33,7 +33,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
   if (isLoggedIn) {
     const raw = user?.interviewPlan || user?.plan || 'FREE'
     currentPlan = String(raw).toUpperCase()
-    if (!['FREE', 'PRO', 'ENTERPRISE'].includes(currentPlan)) {
+    if (!['FREE', 'LIGHT', 'PRO', 'ENTERPRISE'].includes(currentPlan)) {
       currentPlan = 'FREE'
     }
   }

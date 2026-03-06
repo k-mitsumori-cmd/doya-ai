@@ -20,7 +20,7 @@ function normalizePlan(raw: any): PlanCode {
   return 'UNKNOWN'
 }
 function isPaid(plan: PlanCode) {
-  return plan === 'PRO' || plan === 'ENTERPRISE'
+  return plan === 'LIGHT' || plan === 'PRO' || plan === 'ENTERPRISE'
 }
 
 const BodySchema = z.object({

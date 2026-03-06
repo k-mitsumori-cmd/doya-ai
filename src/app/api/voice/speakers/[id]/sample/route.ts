@@ -24,7 +24,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'スピーカーが見つかりません' }, { status: 404 })
     }
 
-    const isPro = ['PRO', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(
+    const isPro = ['PRO', 'LIGHT', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(
       String(user?.voicePlan || user?.plan || '').toUpperCase()
     )
 

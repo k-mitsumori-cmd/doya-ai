@@ -89,10 +89,10 @@ export function seoGuestTotalArticleLimit(): number {
 }
 
 export function canUseSeoImages(args: { isLoggedIn: boolean; plan: SeoPlanCode; trialActive: boolean }) {
-  // 要件: 画像生成（バナー/図解）は PRO 以上から。例外として「初回ログイン後1時間」は使い放題。
+  // 要件: 画像生成（バナー/図解）は LIGHT 以上から。例外として「初回ログイン後1時間」は使い放題。
   if (args.trialActive) return true
   if (!args.isLoggedIn) return false
-  return args.plan === 'PRO' || args.plan === 'ENTERPRISE'
+  return args.plan === 'LIGHT' || args.plan === 'PRO' || args.plan === 'ENTERPRISE'
 }
 
 

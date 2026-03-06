@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
     const requestedChars = Number(input.targetChars || 10000)
     
     if (requestedChars > charLimit) {
-      const planLabel = isGuest ? 'ゲスト' : (plan === 'PRO' ? 'プロ' : plan === 'ENTERPRISE' ? 'エンタープライズ' : 'フリー')
+      const planLabel = isGuest ? 'ゲスト' : (plan === 'PRO' ? 'プロ' : plan === 'ENTERPRISE' ? 'エンタープライズ' : plan === 'LIGHT' ? 'ライト' : 'フリー')
       return NextResponse.json(
         { 
           success: false, 

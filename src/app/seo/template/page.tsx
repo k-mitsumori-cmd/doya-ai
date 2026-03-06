@@ -47,7 +47,7 @@ const CHAR_PRESETS = [
 ] as const
 
 const CHAR_LIMITS: Record<string, number> = {
-  GUEST: 5000, FREE: 10000, PRO: 20000, ENTERPRISE: 50000,
+  GUEST: 5000, FREE: 10000, LIGHT: 15000, PRO: 20000, ENTERPRISE: 50000,
 }
 
 const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string; badge: string }> = {

@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     }
 
     const plan = String(user?.voicePlan || user?.plan || 'FREE').toUpperCase()
-    const isPro = ['PRO', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(plan)
+    const isPro = ['PRO', 'LIGHT', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(plan)
 
     // 月次利用制限チェック
     const monthlyLimit = getVoiceMonthlyLimitByUserPlan(plan)

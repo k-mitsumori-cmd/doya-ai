@@ -254,7 +254,7 @@ export async function POST(request: NextRequest) {
             : current
 
           const plan = String(normalized.plan || 'FREE').toUpperCase()
-          const isPaidPlan = plan === 'PRO' || plan === 'ENTERPRISE'
+          const isPaidPlan = plan === 'LIGHT' || plan === 'PRO' || plan === 'ENTERPRISE'
 
           // 1時間生成し放題中は最大10枚まで許可（有料と同等）
           desiredCount = Math.max(1, Math.min((isPaidPlan || isFreeHourActive) ? 10 : 3, requestedCount || 3))
@@ -265,7 +265,7 @@ export async function POST(request: NextRequest) {
           if (!isFreeHourActive && monthlyLimit !== -1 && normalized.monthlyUsage + desiredCount > monthlyLimit) {
             const errorMessage = isPaidPlan
               ? '今月の生成上限に達しました。上限をさらにUPしたい場合は「マーケティング施策を丸投げする」からご相談ください。'
-              : '今月の生成上限に達しました。プロプランにアップグレードしてください。'
+              : '今月の生成上限に達しました。上位プランにアップグレードしてください。'
             return NextResponse.json(
               {
                 error: errorMessage,

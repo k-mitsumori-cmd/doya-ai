@@ -68,11 +68,12 @@ const SERVICE_DISPLAY = {
 
 const PLAN_STYLES: Record<string, { bg: string; text: string; border: string; label: string }> = {
   FREE: { bg: 'bg-gray-500/20', text: 'text-gray-400', border: 'border-gray-500/30', label: 'おためし' },
+  LIGHT: { bg: 'bg-blue-500/20', text: 'text-blue-400', border: 'border-blue-500/30', label: 'ライト' },
   PRO: { bg: 'bg-amber-500/20', text: 'text-amber-400', border: 'border-amber-500/30', label: 'プロ' },
   ENTERPRISE: { bg: 'bg-rose-500/20', text: 'text-rose-400', border: 'border-rose-500/30', label: 'エンタープライズ' },
 }
 
-const PLAN_OPTIONS = ['FREE', 'PRO', 'ENTERPRISE']
+const PLAN_OPTIONS = ['FREE', 'LIGHT', 'PRO', 'ENTERPRISE']
 
 // 残り生成可能数を計算（共通プラン）
 function getRemainingGenerations(serviceId: string, plan: string, dailyUsage: number): number {

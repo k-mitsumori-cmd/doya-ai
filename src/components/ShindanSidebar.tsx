@@ -96,15 +96,20 @@ function ShindanSidebarImpl({
                   ? 'LIGHT：¥2,980/月で1日10回'
                   : planLabel === 'LIGHT'
                   ? 'PRO：¥9,980/月で無制限'
-                  : 'PROプラン：¥9,980/月'}
+                  : planLabel === 'PRO'
+                  ? 'ご利用中のプランです'
+                  : 'ENTERPRISEプランご利用中'}
               </p>
+              {(planLabel === 'GUEST' || planLabel === 'FREE' || planLabel === 'LIGHT') && (
               <Link
                 href="/pricing"
                 className="mt-3 w-full py-2 bg-white text-teal-600 text-[11px] font-black rounded-lg hover:bg-teal-50 transition-colors shadow-md block text-center"
               >
-                {planLabel === 'GUEST' || planLabel === 'FREE' ? 'ライトを始める' : planLabel === 'LIGHT' ? 'PROにアップグレード' : 'PROを始める'}
+                {planLabel === 'GUEST' || planLabel === 'FREE' ? 'ライトを始める' : 'PROにアップグレード'}
               </Link>
+              )}
             </div>
+            {(planLabel === 'GUEST' || planLabel === 'FREE' || planLabel === 'LIGHT') ? (
             <Link
               href="/pricing"
               className="md:hidden relative z-10 flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity"
@@ -121,6 +126,14 @@ function ShindanSidebarImpl({
                 UP
               </span>
             </Link>
+            ) : (
+            <div className="md:hidden relative z-10 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
+                <Zap className="w-4 h-4 text-teal-600 fill-teal-600" />
+              </div>
+              <p className="text-[11px] text-white font-bold leading-snug truncate">{planLabel}プランご利用中</p>
+            </div>
+            )}
           </div>
         )}
 

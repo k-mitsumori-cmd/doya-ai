@@ -22,7 +22,7 @@ function normalizePlan(raw: any): PlanCode {
 }
 
 function isPaid(plan: PlanCode) {
-  return plan === 'PRO' || plan === 'ENTERPRISE'
+  return plan === 'LIGHT' || plan === 'PRO' || plan === 'ENTERPRISE'
 }
 
 function clampText(s: string, max: number) {

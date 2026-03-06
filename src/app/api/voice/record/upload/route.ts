@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     const plan = String(user?.voicePlan || user?.plan || 'FREE').toUpperCase()
-    const isPro = ['PRO', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(plan)
+    const isPro = ['PRO', 'LIGHT', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(plan)
 
     if (!isPro) {
       return NextResponse.json(

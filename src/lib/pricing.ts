@@ -867,7 +867,7 @@ export function getOpeningDailyLimitByUserPlan(plan: string | null | undefined):
 // 30枚/日を超える利用（チーム/法人/大量生成など）の相談導線
 export const HIGH_USAGE_CONTACT_URL =
   process.env.NEXT_PUBLIC_HIGH_USAGE_CONTACT_URL ||
-  'https://doyamarke.surisuta.jp/lp/doyamarke'
+  'https://doyamarke.surisuta.jp/contact'
 
 // 改善要望/不具合/問い合わせ導線（アプリ内から共通で利用）
 export const SUPPORT_CONTACT_URL =

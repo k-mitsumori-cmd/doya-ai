@@ -77,10 +77,11 @@ function BannerUrlAutoPageInner() {
     if (!p || p === 'GUEST') return 'GUEST' as const
     if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
     if (p.includes('PRO') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
+    if (p.includes('LIGHT')) return 'LIGHT' as const
     if (p.includes('FREE')) return 'FREE' as const
     return 'FREE' as const
   })()
-  const isPaidUser = bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
+  const isPaidUser = bannerPlanTier === 'LIGHT' || bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
   const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
   const isFreeHourActive = !isGuest && isWithinFreeHour(firstLoginAt)
 
