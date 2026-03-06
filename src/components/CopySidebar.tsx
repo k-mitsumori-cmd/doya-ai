@@ -90,13 +90,13 @@ function CopySidebarImpl({
                 現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}
               </p>
               <p className="text-[10px] text-amber-100 font-bold leading-relaxed opacity-80">
-                PROプラン：¥9,980/月
+                {String(planLabel).toUpperCase() === 'LIGHT' ? 'PROプラン：¥9,980/月' : 'ライトプラン：¥2,980/月'}
               </p>
               <Link
                 href="/copy/pricing"
                 className="mt-3 w-full py-2 bg-white text-amber-600 text-[11px] font-black rounded-lg hover:bg-amber-50 transition-colors shadow-md block text-center"
               >
-                PROを始める
+                {String(planLabel).toUpperCase() === 'LIGHT' ? 'PROにアップグレード' : 'ライトを始める'}
               </Link>
             </div>
             <Link
@@ -108,7 +108,7 @@ function CopySidebarImpl({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] text-white font-bold leading-snug truncate">
-                  {planLabel === 'GUEST' ? 'ゲスト' : planLabel} → PRO
+                  {planLabel === 'GUEST' ? 'ゲスト' : planLabel} → {String(planLabel).toUpperCase() === 'LIGHT' ? 'PRO' : 'LIGHT'}
                 </p>
               </div>
               <span className="flex-shrink-0 px-3 py-1.5 bg-white text-amber-600 text-[10px] font-black rounded-lg hover:bg-amber-50 transition-colors shadow-md whitespace-nowrap">

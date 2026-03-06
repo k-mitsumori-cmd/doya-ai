@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     // 成功URLにプラン情報/Checkout Session IDを追加（決済直後にアプリ側で同期して即反映させる）
     // NOTE: {CHECKOUT_SESSION_ID} はStripeが自動で実IDに置換する
-    const planLabel = planId.includes('enterprise') ? 'enterprise' : 'pro'
+    const planLabel = planId.includes('enterprise') ? 'enterprise' : planId.includes('light') ? 'light' : 'pro'
     const successUrl = `${baseUrl}${successPath}?success=true&plan=${planLabel}&session_id={CHECKOUT_SESSION_ID}`
     const cancelUrl = `${baseUrl}${cancelPath}`
 
@@ -136,6 +136,15 @@ export async function POST(request: NextRequest) {
 // プランIDからStripe価格IDを取得
 function getPriceId(planId: string, billingPeriod: 'monthly' | 'yearly'): string | null {
   const priceMap: Record<string, { monthly: string; yearly: string }> = {
+    // --- ライトプラン（全サービス共通 ¥2,980/月） ---
+    'seo-light': STRIPE_PRICE_IDS.seo.light,
+    'banner-light': STRIPE_PRICE_IDS.banner.light,
+    'interview-light': STRIPE_PRICE_IDS.interview.light,
+    'copy-light': STRIPE_PRICE_IDS.copy.light,
+    'lp-light': STRIPE_PRICE_IDS.lp.light,
+    'voice-light': STRIPE_PRICE_IDS.voice.light,
+    'movie-light': STRIPE_PRICE_IDS.movie.light,
+    // --- プロプラン ---
     // ドヤSEO
     'seo-pro': STRIPE_PRICE_IDS.seo.pro,
     'seo-enterprise': STRIPE_PRICE_IDS.seo.enterprise,

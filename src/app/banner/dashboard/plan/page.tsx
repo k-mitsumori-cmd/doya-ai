@@ -54,6 +54,7 @@ export default function BannerPlanPage() {
     // 既存環境の揺れに耐える（例: BANNER_PRO / PRO_MONTHLY / BASIC / STARTER / BUSINESS など）
     if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
     if (p.includes('PRO') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
+    if (p.includes('LIGHT')) return 'LIGHT' as const
     if (p.includes('FREE')) return 'FREE' as const
     // 不明だがログイン済みの場合はFREE扱い（安全側）
     return 'FREE' as const
@@ -61,7 +62,7 @@ export default function BannerPlanPage() {
 
   const isEnterprise = !isGuest && bannerPlanTier === 'ENTERPRISE'
   const isPro = !isGuest && bannerPlanTier === 'PRO'
-  const isPaid = !isGuest && (bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE')
+  const isPaid = !isGuest && (bannerPlanTier === 'LIGHT' || bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE')
 
   const [totalBanners, setTotalBanners] = useState(0)
   const [usageCount, setUsageCount] = useState(0)
@@ -516,7 +517,7 @@ export default function BannerPlanPage() {
                   </p>
                 </div>
                 <div className="p-4 sm:p-8">
-                  <div className="grid md:grid-cols-3 gap-4">
+                  <div className="grid md:grid-cols-4 gap-4">
                     {/* ゲスト/無料 */}
                     <div className={`rounded-2xl border p-4 sm:p-5 ${bannerPlanTier === 'FREE' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-slate-50'}`}>
                       <p className="text-xs font-black text-slate-500 uppercase tracking-widest">ログイン</p>
@@ -532,6 +533,29 @@ export default function BannerPlanPage() {
                         <p className="mt-4 text-xs font-black text-blue-600 flex items-center gap-1">
                           <CheckCircle2 className="w-4 h-4" /> 現在のプラン
                         </p>
+                      )}
+                    </div>
+
+                    {/* LIGHT */}
+                    <div className={`rounded-2xl border p-4 sm:p-5 ${bannerPlanTier === 'LIGHT' ? 'border-blue-500 bg-blue-50' : 'border-blue-200 bg-blue-50/50'}`}>
+                      <p className="text-xs font-black text-blue-500 uppercase tracking-widest">LIGHT</p>
+                      <p className="text-lg sm:text-xl font-black text-slate-900 mt-1">ライトプラン</p>
+                      <p className="text-xl sm:text-2xl font-black text-slate-800 mt-2">¥2,980<span className="text-sm font-bold text-slate-400">/月</span></p>
+                      <ul className="mt-3 sm:mt-4 space-y-2 text-xs sm:text-sm text-slate-600 font-bold">
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-500 flex-shrink-0" /> 月50枚まで生成</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-500 flex-shrink-0" /> サイズ：1080×1080固定</li>
+                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-500 flex-shrink-0" /> 同時生成：最大3枚</li>
+                      </ul>
+                      {bannerPlanTier === 'LIGHT' ? (
+                        <p className="mt-4 text-xs font-black text-blue-600 flex items-center gap-1">
+                          <CheckCircle2 className="w-4 h-4" /> 現在のプラン
+                        </p>
+                      ) : bannerPlanTier !== 'PRO' && bannerPlanTier !== 'ENTERPRISE' && (
+                        <div className="mt-4">
+                          <CheckoutButton planId="banner-light" loginCallbackUrl="/banner/dashboard/plan" className="w-full py-2 rounded-xl text-xs" variant="primary">
+                            ライトを始める
+                          </CheckoutButton>
+                        </div>
                       )}
                     </div>
 
@@ -552,7 +576,7 @@ export default function BannerPlanPage() {
                       ) : bannerPlanTier !== 'ENTERPRISE' && (
                         <div className="mt-4">
                           <CheckoutButton planId="banner-pro" loginCallbackUrl="/banner/dashboard/plan" className="w-full py-2 rounded-xl text-xs" variant="secondary">
-                            PROを始める
+                            {bannerPlanTier === 'LIGHT' ? 'PROにアップグレード' : 'PROを始める'}
                           </CheckoutButton>
                         </div>
                       )}

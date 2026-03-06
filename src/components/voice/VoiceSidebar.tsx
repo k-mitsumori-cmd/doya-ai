@@ -181,7 +181,7 @@ function VoiceSidebarImpl({
               href="/voice/pricing"
               className="mt-2 w-full py-2 bg-white text-violet-600 text-[11px] font-black rounded-lg hover:bg-violet-50 transition-colors shadow-md block text-center"
             >
-              PROを始める
+              {currentPlan === 'LIGHT' ? 'PROにアップグレード' : 'ライトを始める'}
             </Link>
           </div>
         )}

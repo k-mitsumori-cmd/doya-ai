@@ -39,7 +39,14 @@ function ShindanSidebarImpl({
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const planLabel = isLoggedIn ? 'FREE' : 'GUEST'
+  const planLabel = (() => {
+    if (!isLoggedIn) return 'GUEST'
+    const p = String((session?.user as any)?.shindanPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
+    if (p === 'ENTERPRISE') return 'ENTERPRISE'
+    if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return 'PRO'
+    if (p === 'LIGHT') return 'LIGHT'
+    return 'FREE'
+  })()
 
   const isActive = (href: string) => {
     if (href === '/shindan') return pathname === '/shindan'
@@ -82,16 +89,20 @@ function ShindanSidebarImpl({
                 <p className="text-xs font-black text-white">プラン案内</p>
               </div>
               <p className="text-[11px] text-white font-bold leading-relaxed mb-1">
-                現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}
+                現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel === 'LIGHT' ? 'ライト' : planLabel}
               </p>
               <p className="text-[10px] text-teal-100 font-bold leading-relaxed opacity-80">
-                PROプラン：¥9,980/月
+                {planLabel === 'GUEST' || planLabel === 'FREE'
+                  ? 'LIGHT：¥2,980/月で1日10回'
+                  : planLabel === 'LIGHT'
+                  ? 'PRO：¥9,980/月で無制限'
+                  : 'PROプラン：¥9,980/月'}
               </p>
               <Link
                 href="/pricing"
                 className="mt-3 w-full py-2 bg-white text-teal-600 text-[11px] font-black rounded-lg hover:bg-teal-50 transition-colors shadow-md block text-center"
               >
-                PROを始める
+                {planLabel === 'GUEST' || planLabel === 'FREE' ? 'ライトを始める' : planLabel === 'LIGHT' ? 'PROにアップグレード' : 'PROを始める'}
               </Link>
             </div>
             <Link
@@ -103,7 +114,7 @@ function ShindanSidebarImpl({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] text-white font-bold leading-snug truncate">
-                  {planLabel === 'GUEST' ? 'ゲスト' : planLabel} → PRO
+                  {planLabel === 'GUEST' ? 'ゲスト' : planLabel === 'LIGHT' ? 'ライト' : planLabel} → {planLabel === 'GUEST' || planLabel === 'FREE' ? 'LIGHT' : 'PRO'}
                 </p>
               </div>
               <span className="flex-shrink-0 px-3 py-1.5 bg-white text-teal-600 text-[10px] font-black rounded-lg hover:bg-teal-50 transition-colors shadow-md whitespace-nowrap">

@@ -70,6 +70,7 @@ export function normalizePlan(raw: any): InterviewPlanCode {
   const s = String(raw || '').toUpperCase().trim()
   if (s === 'PRO') return 'PRO'
   if (s === 'ENTERPRISE') return 'ENTERPRISE'
+  if (s === 'LIGHT') return 'LIGHT'
   if (s === 'FREE') return 'FREE'
   return 'GUEST'
 }
@@ -93,6 +94,7 @@ export function interviewDailyLimit(plan: InterviewPlanCode): number {
   switch (plan) {
     case 'ENTERPRISE': return -1
     case 'PRO':        return 30
+    case 'LIGHT':      return 10
     case 'FREE':       return 5
     case 'GUEST':      return 3
     default:           return 3

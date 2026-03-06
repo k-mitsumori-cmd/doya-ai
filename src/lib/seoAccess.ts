@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-export type SeoPlanCode = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE'
+export type SeoPlanCode = 'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE'
 
 export const SEO_GUEST_COOKIE = 'doyaSeo.guestId'
 
@@ -8,6 +8,7 @@ export function normalizeSeoPlan(raw: any): SeoPlanCode {
   const s = String(raw || '').toUpperCase().trim()
   if (s === 'PRO') return 'PRO'
   if (s === 'ENTERPRISE') return 'ENTERPRISE'
+  if (s === 'LIGHT') return 'LIGHT'
   if (s === 'FREE') return 'FREE'
   return 'GUEST'
 }
@@ -75,8 +76,9 @@ export function seoDailyArticleLimit(plan: SeoPlanCode): number {
 
 export function seoMonthlyArticleLimit(plan: SeoPlanCode): number {
   // -1 = 無制限
-  if (plan === 'PRO') return 30
   if (plan === 'ENTERPRISE') return 200
+  if (plan === 'PRO') return 30
+  if (plan === 'LIGHT') return 10
   if (plan === 'FREE') return 3
   // GUESTは生成不可
   return 0

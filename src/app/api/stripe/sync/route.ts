@@ -87,7 +87,9 @@ export async function POST(request: NextRequest) {
               ? 'ENTERPRISE'
               : planId.endsWith('-pro') || isBannerPaid
                 ? 'PRO'
-                : 'FREE'
+                : planId.endsWith('-light')
+                  ? 'LIGHT'
+                  : 'FREE'
 
         await prisma.userServiceSubscription.upsert({
           where: { userId_serviceId: { userId: user.id, serviceId } },
@@ -122,7 +124,9 @@ export async function POST(request: NextRequest) {
             ? 'ENTERPRISE'
             : planId === 'banner-basic' || (planId && String(planId).endsWith('-pro'))
               ? 'PRO'
-              : 'FREE'
+              : (planId && String(planId).endsWith('-light'))
+                ? 'LIGHT'
+                : 'FREE'
 
     await prisma.user.update({
       where: { id: user.id },

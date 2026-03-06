@@ -8,7 +8,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 // プランコード
-export type TenkaiPlanCode = 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE'
+export type TenkaiPlanCode = 'FREE' | 'LIGHT' | 'STARTER' | 'PRO' | 'ENTERPRISE'
 
 // プラン別制限
 export const PLAN_LIMITS: Record<
@@ -20,6 +20,7 @@ export const PLAN_LIMITS: Record<
   }
 > = {
   FREE: { monthlyCredits: 10, platforms: 3, inputChars: 5000 },
+  LIGHT: { monthlyCredits: 30, platforms: 5, inputChars: 10000 },
   STARTER: { monthlyCredits: 50, platforms: 5, inputChars: 20000 },
   PRO: { monthlyCredits: 200, platforms: 9, inputChars: 50000 },
   ENTERPRISE: { monthlyCredits: -1, platforms: 9, inputChars: 100000 },
@@ -59,6 +60,7 @@ export function normalizePlan(raw: string | undefined | null): TenkaiPlanCode {
   if (s === 'STARTER') return 'STARTER'
   if (s === 'PRO') return 'PRO'
   if (s === 'ENTERPRISE') return 'ENTERPRISE'
+  if (s === 'LIGHT') return 'LIGHT'
   return 'FREE'
 }
 

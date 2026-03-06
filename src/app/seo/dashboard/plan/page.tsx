@@ -25,6 +25,7 @@ function tierFrom(raw: any) {
   if (!p || p === 'GUEST') return 'GUEST' as const
   if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
   if (p.includes('PRO')) return 'PRO' as const
+  if (p.includes('LIGHT')) return 'LIGHT' as const
   return 'FREE' as const
 }
 
@@ -241,11 +242,13 @@ export default function SeoPlanPage() {
                   <div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">現在のプラン</p>
                     <p className="mt-1 text-2xl font-black text-gray-900">
-                      {tier === 'FREE' ? 'フリー' : tier === 'PRO' ? 'PRO' : tier === 'ENTERPRISE' ? 'Enterprise' : 'ゲスト'}
+                      {tier === 'FREE' ? 'フリー' : tier === 'LIGHT' ? 'ライト' : tier === 'PRO' ? 'PRO' : tier === 'ENTERPRISE' ? 'Enterprise' : 'ゲスト'}
                     </p>
                     <p className="mt-2 text-sm text-gray-500 font-bold">
                       {tier === 'FREE'
                         ? `1日${SEO_PRICING.freeLimit}記事まで（画像生成はPROから）`
+                        : tier === 'LIGHT'
+                        ? '月10回まで記事生成'
                         : tier === 'PRO'
                         ? `1日${SEO_PRICING.proLimit}記事まで（図解/バナー/自動修正OK）`
                         : tier === 'ENTERPRISE'
@@ -273,11 +276,11 @@ export default function SeoPlanPage() {
                       <Zap className="w-6 h-6" />
                     </div>
                     <div>
-                      <p className="text-lg font-black text-blue-900">PROにアップグレードすると</p>
-                      <p className="text-xs font-bold text-blue-700/80">以下の機能がすべて使えます！</p>
+                      <p className="text-lg font-black text-blue-900">有料プランにアップグレード</p>
+                      <p className="text-xs font-bold text-blue-700/80">用途に合わせてプランをお選びください</p>
                     </div>
                   </div>
-                  
+
                   <div className="grid sm:grid-cols-2 gap-3 mt-5">
                     {[
                       { icon: Image, text: '図解/バナー自動生成', desc: '記事内容に合わせてAIが画像作成' },
@@ -297,9 +300,35 @@ export default function SeoPlanPage() {
                     ))}
                   </div>
 
-                  <div className="mt-6 grid sm:grid-cols-2 gap-3">
+                  <div className="mt-6 grid sm:grid-cols-3 gap-3">
+                    <CheckoutButton planId="seo-light" loginCallbackUrl="/seo/dashboard/plan" className="w-full py-4 rounded-2xl text-sm">
+                      ライト（月額¥2,980）
+                    </CheckoutButton>
                     <CheckoutButton planId="seo-pro" loginCallbackUrl="/seo/dashboard/plan" className="w-full py-4 rounded-2xl text-base font-black shadow-lg shadow-blue-200" variant="primary">
                       <Sparkles className="w-5 h-5 mr-2" /> PROを始める（月額¥9,980）
+                    </CheckoutButton>
+                    <CheckoutButton planId="seo-enterprise" loginCallbackUrl="/seo/dashboard/plan" className="w-full py-4 rounded-2xl text-sm">
+                      <Crown className="w-4 h-4 mr-2" /> Enterpriseを始める
+                    </CheckoutButton>
+                  </div>
+                </div>
+              )}
+
+              {tier === 'LIGHT' && (
+                <div className="rounded-3xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6 sm:p-8 shadow-lg shadow-blue-100/50">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-200">
+                      <Zap className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-black text-blue-900">PROにアップグレードすると</p>
+                      <p className="text-xs font-bold text-blue-700/80">図解/自動修正など制作フローが一気に解放！</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 grid sm:grid-cols-2 gap-3">
+                    <CheckoutButton planId="seo-pro" loginCallbackUrl="/seo/dashboard/plan" className="w-full py-4 rounded-2xl text-base font-black shadow-lg shadow-blue-200" variant="primary">
+                      <Sparkles className="w-5 h-5 mr-2" /> PROにアップグレード（月額¥9,980）
                     </CheckoutButton>
                     <CheckoutButton planId="seo-enterprise" loginCallbackUrl="/seo/dashboard/plan" className="w-full py-4 rounded-2xl text-sm">
                       <Crown className="w-4 h-4 mr-2" /> Enterpriseを始める

@@ -14,11 +14,12 @@ export default function BannerPricingPage() {
     if (!p || p === 'GUEST') return 'GUEST' as const
     if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
     if (p.includes('PRO') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
+    if (p.includes('LIGHT')) return 'LIGHT' as const
     if (p.includes('FREE')) return 'FREE' as const
     return 'FREE' as const
   })()
   const isLoggedIn = !!session?.user?.email
-  const isPaid = bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
+  const isPaid = bannerPlanTier === 'LIGHT' || bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
 
   const plans = BANNER_PRICING.plans
   const free = plans.find((p) => p.id === 'banner-free')
@@ -47,7 +48,7 @@ export default function BannerPricingPage() {
 
         <div className="mb-6 flex flex-col items-center gap-2">
           <p className="text-sm font-black text-slate-800">
-            現在のプラン：{bannerPlanTier === 'GUEST' ? 'ゲスト' : bannerPlanTier === 'FREE' ? '無料' : bannerPlanTier === 'PRO' ? 'PRO' : 'Enterprise'}
+            現在のプラン：{bannerPlanTier === 'GUEST' ? 'ゲスト' : bannerPlanTier === 'FREE' ? '無料' : bannerPlanTier === 'LIGHT' ? 'ライト' : bannerPlanTier === 'PRO' ? 'PRO' : 'Enterprise'}
           </p>
           {/* 解約予約中（次回更新日で停止）の場合は停止日時を表示 */}
           <div className="w-full">
@@ -92,6 +93,55 @@ export default function BannerPricingPage() {
                   {free?.priceLabel || '無料'}
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* ライト */}
+          <div className="rounded-3xl bg-blue-50 border border-blue-200 p-8">
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">ライトプラン</h2>
+                <p className="text-sm text-slate-600 mt-2">月50枚まで生成できるお手軽プラン</p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-500 text-white font-black text-sm">
+                    月50枚まで生成
+                  </div>
+                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-500 text-white font-black text-sm">
+                    同時生成: 最大3枚
+                  </div>
+                </div>
+              </div>
+              <div className="flex-shrink-0">
+                <div className="px-6 py-4 rounded-2xl bg-white text-blue-700 font-black text-xl">
+                  月額 ¥2,980
+                </div>
+              </div>
+            </div>
+            <div className="mt-6">
+              {bannerPlanTier === 'LIGHT' ? (
+                <button
+                  disabled
+                  className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed"
+                >
+                  現在のプラン
+                </button>
+              ) : bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE' ? (
+                <button
+                  disabled
+                  className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed"
+                >
+                  プランダウングレード
+                </button>
+              ) : (
+                <CheckoutButton
+                  planId="banner-light"
+                  loginCallbackUrl="/banner/pricing"
+                  className="w-full py-4 rounded-2xl text-base"
+                  variant="primary"
+                >
+                  ライトプランを始める
+                </CheckoutButton>
+              )}
             </div>
           </div>
 
@@ -141,7 +191,7 @@ export default function BannerPricingPage() {
                   className="w-full py-4 rounded-2xl text-base"
                   variant="primary"
                 >
-                  プロプランを始める
+                  {bannerPlanTier === 'LIGHT' ? 'プロプランにアップグレード' : 'プロプランを始める'}
                 </CheckoutButton>
               )}
             </div>

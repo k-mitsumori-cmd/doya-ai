@@ -40,6 +40,7 @@ export function getMovieMonthlyLimit(plan: string | null | undefined): number {
   switch (plan?.toUpperCase()) {
     case 'ENTERPRISE': return MOVIE_PRICING.enterpriseLimit ?? 200
     case 'PRO':        return MOVIE_PRICING.proLimit
+    case 'LIGHT':      return MOVIE_PRICING.lightLimit ?? 10
     default:           return MOVIE_PRICING.freeLimit
   }
 }

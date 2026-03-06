@@ -64,12 +64,14 @@ function DashboardSidebarImpl({
     const p = bannerPlan || globalPlan || (isLoggedIn ? 'FREE' : 'GUEST')
     if (p === 'ENTERPRISE') return 'ENTERPRISE'
     if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return 'PRO'
+    if (p === 'LIGHT') return 'LIGHT'
     if (p === 'FREE') return 'FREE'
     return isLoggedIn ? 'FREE' : 'GUEST'
   }, [session, isLoggedIn])
 
   const nextBannerPlanLabel = useMemo(() => {
-    if (bannerPlanLabel === 'GUEST' || bannerPlanLabel === 'FREE') return 'PRO'
+    if (bannerPlanLabel === 'GUEST' || bannerPlanLabel === 'FREE') return 'LIGHT'
+    if (bannerPlanLabel === 'LIGHT') return 'PRO'
     if (bannerPlanLabel === 'PRO') return 'ENTERPRISE'
     return 'CONSULT'
   }, [bannerPlanLabel])
@@ -179,6 +181,7 @@ function DashboardSidebarImpl({
             現在：{bannerPlanLabel === 'GUEST' ? 'ゲスト' : bannerPlanLabel}
           </p>
           <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
+            {nextBannerPlanLabel === 'LIGHT' && <>LIGHT（¥2,980/月）で月50枚に</>}
             {nextBannerPlanLabel === 'PRO' && <>次の上位：PRO（¥9,980/月）</>}
             {nextBannerPlanLabel === 'ENTERPRISE' && <>次の上位：Enterprise（¥49,800/月）</>}
             {nextBannerPlanLabel === 'CONSULT' && <>さらに上限UP：要相談</>}
@@ -198,7 +201,7 @@ function DashboardSidebarImpl({
               href="/banner/dashboard/plan"
               className="mt-3 w-full py-2 bg-white text-blue-600 text-[11px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md block text-center"
             >
-              {nextBannerPlanLabel === 'PRO' ? 'PROを始める' : 'Enterpriseへ'}
+              {nextBannerPlanLabel === 'LIGHT' ? 'ライトを始める' : nextBannerPlanLabel === 'PRO' ? 'PROを始める' : 'Enterpriseへ'}
             </Link>
           )}
         </div>
@@ -213,6 +216,7 @@ function DashboardSidebarImpl({
           <div className="flex-1 min-w-0">
             <p className="text-[11px] text-white font-bold leading-snug truncate">
               {bannerPlanLabel === 'GUEST' ? 'ゲスト' : bannerPlanLabel}
+              {nextBannerPlanLabel === 'LIGHT' && ' → LIGHT'}
               {nextBannerPlanLabel === 'PRO' && ' → PRO'}
               {nextBannerPlanLabel === 'ENTERPRISE' && ' → Enterprise'}
               {nextBannerPlanLabel === 'CONSULT' && ' ✓'}

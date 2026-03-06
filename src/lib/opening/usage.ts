@@ -8,6 +8,7 @@ export function getOpeningDailyLimit(plan: string | null | undefined): number {
   if (p === 'BUNDLE') return 30
   if (p === 'ENTERPRISE') return 30
   if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return 30
+  if (p === 'LIGHT') return 15
   return 3
 }
 

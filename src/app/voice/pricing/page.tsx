@@ -5,10 +5,11 @@ import { CheckCircle2, XCircle } from 'lucide-react'
 import { VOICE_PRICING } from '@/lib/pricing'
 import Link from 'next/link'
 
-function planTierFrom(plan: string): 'free' | 'pro' | 'enterprise' {
+function planTierFrom(plan: string): 'free' | 'light' | 'pro' | 'enterprise' {
   const p = String(plan || 'FREE').toUpperCase()
   if (p === 'ENTERPRISE') return 'enterprise'
   if (['PRO', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(p)) return 'pro'
+  if (p === 'LIGHT') return 'light'
   return 'free'
 }
 
@@ -27,10 +28,11 @@ export default function VoicePricingPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {VOICE_PRICING.plans.map(plan => {
-          const tierMap: Record<string, 'free' | 'pro' | 'enterprise'> = {
+          const tierMap: Record<string, 'free' | 'light' | 'pro' | 'enterprise'> = {
             'voice-free': 'free',
+            'voice-light': 'light',
             'voice-pro': 'pro',
             'voice-enterprise': 'enterprise',
           }
@@ -94,6 +96,13 @@ export default function VoicePricingPage() {
                   <Link
                     href={session ? '/voice/new' : '/auth/signin'}
                     className="block w-full py-3 text-center font-black rounded-xl border-2 border-slate-200 text-slate-700 hover:bg-slate-50 transition-colors text-sm"
+                  >
+                    {plan.cta}
+                  </Link>
+                ) : tier === 'light' ? (
+                  <Link
+                    href="/pricing"
+                    className="block w-full py-3 text-center font-black rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm shadow-lg shadow-blue-500/25"
                   >
                     {plan.cta}
                   </Link>

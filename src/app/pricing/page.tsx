@@ -15,6 +15,29 @@ function PricingContent() {
   const canceled = searchParams.get('canceled')
   const success = searchParams.get('success')
 
+  const handleSubscribeLight = async () => {
+    if (!session) {
+      signIn('google', { callbackUrl: '/pricing' })
+      return
+    }
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planId: 'banner-light', billingPeriod: 'monthly' }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'エラーが発生しました')
+      window.location.href = data.url
+    } catch (error) {
+      console.error('Checkout error:', error)
+      toast.error(error instanceof Error ? error.message : 'エラーが発生しました')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleSubscribe = async () => {
     if (!session) {
       signIn('google', { callbackUrl: '/pricing' })
@@ -93,8 +116,10 @@ function PricingContent() {
   }
 
   const plan = String((session?.user as any)?.plan || 'FREE').toUpperCase()
+  const isLight = plan === 'LIGHT'
   const isPro = plan === 'PRO' || plan === 'ENTERPRISE'
   const isEnterprise = plan === 'ENTERPRISE'
+  const isPaid = isLight || isPro
 
   return (
     <div className="min-h-screen bg-white">
@@ -131,17 +156,21 @@ function PricingContent() {
           </div>
         )}
 
-        {isPro ? (
-          /* 有料版（PRO）の場合 */
+        {isPaid ? (
+          /* 有料版の場合 */
           <div className="text-center py-12">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto mb-6">
+            <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${
+              isEnterprise ? 'bg-gradient-to-br from-slate-700 to-slate-900'
+              : isPro ? 'bg-gradient-to-br from-amber-400 to-orange-500'
+              : 'bg-gradient-to-br from-blue-400 to-blue-600'
+            }`}>
               <Crown className="w-10 h-10 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4">
-              {isEnterprise ? 'エンタープライズをご利用中です' : 'プロプランをご利用中です'}
+              {isEnterprise ? 'エンタープライズをご利用中です' : isPro ? 'プロプランをご利用中です' : 'ライトプランをご利用中です'}
             </h1>
             <p className="text-gray-600 mb-8 text-lg">
-              {isEnterprise ? '1日200枚まで生成できます' : '1日30枚まで生成できます'}
+              {isEnterprise ? '1日200枚まで生成できます' : isPro ? '1日30枚まで生成できます' : '月50枚まで生成できます'}
             </p>
             <div className="space-y-3">
               <button
@@ -152,6 +181,16 @@ function PricingContent() {
                 {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
                 サブスクリプションを管理
               </button>
+              {isLight && (
+                <button
+                  onClick={handleSubscribe}
+                  disabled={isLoading}
+                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl transition-colors"
+                >
+                  {isLoading && <Loader2 className="w-5 h-5 animate-spin" />}
+                  PROにアップグレード（¥9,980/月）
+                </button>
+              )}
               <p className="text-sm text-gray-500">
                 解約・プラン管理はこちらから
               </p>
@@ -165,7 +204,7 @@ function PricingContent() {
                 料金プラン
               </h1>
               <p className="text-gray-600 text-lg">
-                PRO（¥9,980 / 1日30枚）と、Enterprise（¥49,800 / 1日200枚）
+                LIGHT（¥2,980 / 月50枚）、PRO（¥9,980 / 1日30枚）、Enterprise（¥49,800 / 1日200枚）
               </p>
             </div>
 
@@ -207,6 +246,49 @@ function PricingContent() {
                     </button>
                   </Link>
                 )}
+              </div>
+
+              {/* ライトプラン */}
+              <div className="bg-blue-50 rounded-2xl p-6 border-2 border-blue-200 relative">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">ライトプラン</h2>
+                    <p className="text-gray-600">お手軽に始めたい方に</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-bold text-blue-700">¥2,980</p>
+                    <p className="text-sm text-gray-500">/月（税込）</p>
+                  </div>
+                </div>
+                <ul className="space-y-3 mb-6">
+                  {[
+                    '月50枚まで生成',
+                    '同時生成: 最大3枚',
+                    '履歴保存（無制限）',
+                  ].map((feature, i) => (
+                    <li key={i} className="flex items-center gap-3 text-gray-700">
+                      <Check className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={handleSubscribeLight}
+                  disabled={isLoading}
+                  className="w-full py-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 transition-colors text-lg flex items-center justify-center gap-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      処理中...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-5 h-5" />
+                      ライトプランを始める
+                    </>
+                  )}
+                </button>
               </div>
 
               {/* 有料版 */}

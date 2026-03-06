@@ -219,12 +219,14 @@ function InterviewSidebarImpl({
     const p = interviewPlan || globalPlan || (isLoggedIn ? 'FREE' : 'GUEST')
     if (p === 'ENTERPRISE') return 'ENTERPRISE'
     if (p === 'PRO') return 'PRO'
+    if (p === 'LIGHT') return 'LIGHT'
     if (p === 'FREE') return 'FREE'
     return isLoggedIn ? 'FREE' : 'GUEST'
   }, [session, isLoggedIn])
 
   const nextPlanLabel = useMemo(() => {
-    if (planLabel === 'GUEST' || planLabel === 'FREE') return 'PRO'
+    if (planLabel === 'GUEST' || planLabel === 'FREE') return 'LIGHT'
+    if (planLabel === 'LIGHT') return 'PRO'
     if (planLabel === 'PRO') return 'ENTERPRISE'
     return 'CONSULT'
   }, [planLabel])
@@ -331,7 +333,7 @@ function InterviewSidebarImpl({
           </a>
         ) : (
           <button
-            onClick={() => handleUpgrade(nextPlanLabel === 'PRO' ? 'interview-pro' : 'interview-enterprise')}
+            onClick={() => handleUpgrade(nextPlanLabel === 'LIGHT' ? 'interview-light' : nextPlanLabel === 'PRO' ? 'interview-pro' : 'interview-enterprise')}
             disabled={isUpgrading}
             className="w-full flex items-center gap-2.5 p-2.5 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition-colors disabled:opacity-60"
           >
@@ -341,7 +343,7 @@ function InterviewSidebarImpl({
             <div className="flex-1 min-w-0 text-left">
               <p className="text-[11px] font-black text-white">{nextPlanLabel}にアップグレード</p>
               <p className="text-[9px] text-white/50 font-bold">
-                {nextPlanLabel === 'PRO' ? '月額¥9,980' : '月額¥49,800'}
+                {nextPlanLabel === 'LIGHT' ? '月額¥2,980' : nextPlanLabel === 'PRO' ? '月額¥9,980' : '月額¥49,800'}
               </p>
             </div>
           </button>

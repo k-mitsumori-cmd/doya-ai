@@ -127,11 +127,21 @@ function MovieSidebarImpl({
             <Link
               href="/movie/pricing"
               className="block rounded-xl p-3 text-center transition-all"
-              style={{ background: 'linear-gradient(135deg, #f43f5e, #ec4899)', boxShadow: '0 4px 12px rgba(244,63,94,0.3)' }}
+              style={{ background: currentPlan === 'LIGHT' ? 'linear-gradient(135deg, #f43f5e, #ec4899)' : 'linear-gradient(135deg, #3b82f6, #6366f1)', boxShadow: currentPlan === 'LIGHT' ? '0 4px 12px rgba(244,63,94,0.3)' : '0 4px 12px rgba(59,130,246,0.3)' }}
             >
-              <div className="text-white text-xs font-bold mb-0.5">Proにアップグレード</div>
-              <div className="text-rose-100 text-xs">月30本・HD画質・全テンプレート</div>
-              <div className="text-white font-bold text-sm mt-1">¥9,980/月</div>
+              {currentPlan === 'LIGHT' ? (
+                <>
+                  <div className="text-white text-xs font-bold mb-0.5">Proにアップグレード</div>
+                  <div className="text-rose-100 text-xs">月30本・HD画質・全テンプレート</div>
+                  <div className="text-white font-bold text-sm mt-1">¥9,980/月</div>
+                </>
+              ) : (
+                <>
+                  <div className="text-white text-xs font-bold mb-0.5">ライトプランを始める</div>
+                  <div className="text-blue-100 text-xs">月10本・HD画質</div>
+                  <div className="text-white font-bold text-sm mt-1">¥2,980/月</div>
+                </>
+              )}
             </Link>
           </div>
         )}

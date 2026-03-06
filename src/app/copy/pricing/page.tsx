@@ -13,7 +13,7 @@ export default function CopyPricingPage() {
           <p className="text-gray-500">あなたの広告制作規模に合わせてプランを選択</p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {COPY_PRICING.plans.map((plan) => (
             <div
               key={plan.id}

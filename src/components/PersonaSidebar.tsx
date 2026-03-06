@@ -39,7 +39,14 @@ function PersonaSidebarImpl({
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const planLabel = isLoggedIn ? 'FREE' : 'GUEST'
+  const planLabel = (() => {
+    if (!isLoggedIn) return 'GUEST'
+    const p = String((session?.user as any)?.personaPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
+    if (p === 'ENTERPRISE') return 'ENTERPRISE'
+    if (p === 'PRO') return 'PRO'
+    if (p === 'LIGHT') return 'LIGHT'
+    return 'FREE'
+  })()
 
   const isActive = (href: string) => {
     if (href === '/persona') return pathname === '/persona'
@@ -86,13 +93,13 @@ function PersonaSidebarImpl({
                 現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}
               </p>
               <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-80">
-                PROプラン：¥9,980/月
+                {planLabel === 'FREE' || planLabel === 'GUEST' ? 'ライトプラン：¥2,980/月' : planLabel === 'LIGHT' ? 'PROプラン：¥9,980/月' : 'PROプラン：¥9,980/月'}
               </p>
               <Link
                 href="/pricing"
                 className="mt-3 w-full py-2 bg-white text-purple-600 text-[11px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md block text-center"
               >
-                PROを始める
+                {planLabel === 'FREE' || planLabel === 'GUEST' ? 'ライトを始める' : planLabel === 'LIGHT' ? 'PROを始める' : 'PROを始める'}
               </Link>
             </div>
             <Link
@@ -104,7 +111,7 @@ function PersonaSidebarImpl({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] text-white font-bold leading-snug truncate">
-                  {planLabel === 'GUEST' ? 'ゲスト' : planLabel} → PRO
+                  {planLabel === 'GUEST' ? 'ゲスト' : planLabel} → {planLabel === 'FREE' || planLabel === 'GUEST' ? 'LIGHT' : 'PRO'}
                 </p>
               </div>
               <span className="flex-shrink-0 px-3 py-1.5 bg-white text-purple-600 text-[10px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md whitespace-nowrap">

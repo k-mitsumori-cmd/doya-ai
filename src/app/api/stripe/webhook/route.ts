@@ -275,8 +275,10 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
     userPlan = 'BUNDLE'
   } else if (planId.endsWith('-enterprise')) {
     userPlan = 'ENTERPRISE'
-  } else if (planId.endsWith('-pro') || planId === 'banner-basic' || planId.startsWith('banner-')) {
+  } else if (planId.endsWith('-pro') || planId === 'banner-basic') {
     userPlan = 'PRO'
+  } else if (planId.endsWith('-light')) {
+    userPlan = 'LIGHT'
   } else if (!planId) {
     userPlan = 'FREE'
   }

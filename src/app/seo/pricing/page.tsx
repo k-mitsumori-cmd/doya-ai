@@ -14,6 +14,7 @@ function planTierFrom(raw: any) {
   if (!p || p === 'GUEST') return 'GUEST' as const
   if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
   if (p.includes('PRO')) return 'PRO' as const
+  if (p.includes('LIGHT')) return 'LIGHT' as const
   return 'FREE' as const
 }
 
@@ -52,7 +53,7 @@ export default function SeoPricingPage() {
     setWelcomeOpen(true)
   }, [])
 
-  const tierLabel = tier === 'GUEST' ? 'ゲスト' : tier === 'FREE' ? '無料' : tier === 'PRO' ? 'PRO' : 'Enterprise'
+  const tierLabel = tier === 'GUEST' ? 'ゲスト' : tier === 'FREE' ? '無料' : tier === 'LIGHT' ? 'ライト' : tier === 'PRO' ? 'PRO' : 'Enterprise'
 
   useEffect(() => {
     if (!isFreeHourActive) return
@@ -155,6 +156,42 @@ export default function SeoPricingPage() {
             </div>
           </div>
 
+          {/* LIGHT */}
+          <div className="rounded-3xl bg-blue-50 border border-blue-200 p-8">
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">ライトプラン</h2>
+                <p className="text-sm text-slate-600 mt-2">
+                  月10回まで記事生成。手軽にSEO記事制作を始めたい方に。
+                </p>
+                <ul className="mt-5 space-y-2 text-sm text-slate-700 font-bold">
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500" /> 月10回まで記事生成</li>
+                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500" /> 基本的な記事生成機能</li>
+                </ul>
+              </div>
+              <div className="flex-shrink-0">
+                <div className="px-6 py-4 rounded-2xl bg-white text-blue-700 font-black text-xl">
+                  ¥2,980/月
+                </div>
+              </div>
+            </div>
+            <div className="mt-6">
+              {tier === 'LIGHT' ? (
+                <button disabled className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed">
+                  現在のプラン
+                </button>
+              ) : tier === 'PRO' || tier === 'ENTERPRISE' ? (
+                <button disabled className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed">
+                  プランダウングレード
+                </button>
+              ) : (
+                <CheckoutButton planId="seo-light" loginCallbackUrl="/seo/pricing" className="w-full py-4 rounded-2xl text-base" variant="primary">
+                  ライトプランを始める
+                </CheckoutButton>
+              )}
+            </div>
+          </div>
+
           {/* PRO */}
           <div className="rounded-3xl bg-slate-900 p-8 text-white">
             <div className="flex items-start justify-between gap-6">
@@ -191,7 +228,7 @@ export default function SeoPricingPage() {
                 </button>
               ) : (
                 <CheckoutButton planId="seo-pro" loginCallbackUrl="/seo/pricing" className="w-full py-4 rounded-2xl text-base" variant="secondary">
-                  PROを始める
+                  {tier === 'LIGHT' ? 'PROにアップグレード' : 'PROを始める'}
                 </CheckoutButton>
               )}
             </div>

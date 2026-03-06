@@ -2,7 +2,7 @@
 // ドヤインタビュー — 型定義
 // ============================================
 
-export type InterviewPlanCode = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE'
+export type InterviewPlanCode = 'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE'
 
 export type MaterialType = 'audio' | 'video' | 'text' | 'pdf' | 'image' | 'url'
 export type MaterialStatus = 'UPLOADED' | 'PROCESSING' | 'COMPLETED' | 'ERROR'

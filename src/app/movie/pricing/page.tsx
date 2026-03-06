@@ -19,6 +19,11 @@ export default function MoviePricingPage() {
       bg: 'bg-slate-900/60',
       badge: 'bg-slate-800 text-slate-300',
     },
+    'movie-light': {
+      border: 'border-blue-500/60',
+      bg: 'bg-gradient-to-b from-blue-950/60 to-slate-900/60',
+      badge: 'bg-blue-600 text-white',
+    },
     'movie-pro': {
       border: 'border-rose-500/60',
       bg: 'bg-gradient-to-b from-rose-950/60 to-slate-900/60',
@@ -39,11 +44,12 @@ export default function MoviePricingPage() {
       </div>
 
       {/* プランカード */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
         {MOVIE_PRICING.plans.map((plan, i) => {
           const colors = planColors[plan.id] || planColors.free
           const isPro = plan.id === 'movie-pro'
           const isCurrent = (plan.id === 'free' && (currentPlan === 'FREE' || currentPlan === 'GUEST')) ||
+                            (plan.id === 'movie-light' && currentPlan === 'LIGHT') ||
                             (plan.id === 'movie-pro' && currentPlan === 'PRO') ||
                             (plan.id === 'movie-enterprise' && currentPlan === 'ENTERPRISE')
 
@@ -107,6 +113,15 @@ export default function MoviePricingPage() {
                 >
                   {plan.cta}
                 </Link>
+              ) : plan.id === 'movie-light' ? (
+                <CheckoutButton
+                  planId="movie-light"
+                  loginCallbackUrl="/movie/pricing"
+                  variant="primary"
+                  className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all bg-blue-600 hover:bg-blue-700"
+                >
+                  {plan.cta}
+                </CheckoutButton>
               ) : plan.id === 'movie-enterprise' ? (
                 <Link
                   href="mailto:k-mitsumori@surisuta.jp?subject=ドヤムービーAI Enterprise問い合わせ"
@@ -138,26 +153,28 @@ export default function MoviePricingPage() {
               <tr className="border-b border-rose-900/30 bg-rose-950/30">
                 <th className="text-left p-4 text-rose-200/70 font-bold">機能</th>
                 <th className="text-center p-4 text-rose-200/70 font-bold">Free</th>
+                <th className="text-center p-4 text-blue-300 font-bold">ライト</th>
                 <th className="text-center p-4 text-rose-300 font-black">Pro</th>
                 <th className="text-center p-4 text-rose-200/70 font-bold">Enterprise</th>
               </tr>
             </thead>
             <tbody>
               {[
-                ['月間生成数', '3本', '30本', '200本'],
-                ['動画画質', 'SD (720p)', 'HD (1080p)', 'HD (1080p)'],
-                ['最大尺', '15秒', '60秒', '60秒'],
-                ['テンプレート', '3種', '全テンプレート', '全テンプレート+カスタム'],
-                ['BGM', '3種', '12種', '12種'],
-                ['透かし', 'あり', 'なし', 'なし'],
-                ['出力形式', 'MP4', 'MP4 / GIF', 'MP4 / GIF'],
-                ['保存期間', '7日間', '無期限', '無期限'],
-                ['APIアクセス', '×', '×', '✓'],
-                ['チームアカウント', '×', '×', '10名'],
-              ].map(([feature, free, pro, enterprise], i) => (
+                ['月間生成数', '3本', '10本', '30本', '200本'],
+                ['動画画質', 'SD (720p)', 'HD (1080p)', 'HD (1080p)', 'HD (1080p)'],
+                ['最大尺', '15秒', '30秒', '60秒', '60秒'],
+                ['テンプレート', '3種', '10種', '全テンプレート', '全テンプレート+カスタム'],
+                ['BGM', '3種', '6種', '12種', '12種'],
+                ['透かし', 'あり', 'なし', 'なし', 'なし'],
+                ['出力形式', 'MP4', 'MP4', 'MP4 / GIF', 'MP4 / GIF'],
+                ['保存期間', '7日間', '無制限', '無期限', '無期限'],
+                ['APIアクセス', '×', '×', '×', '✓'],
+                ['チームアカウント', '×', '×', '×', '10名'],
+              ].map(([feature, free, light, pro, enterprise], i) => (
                 <tr key={i} className={`border-b border-rose-900/20 ${i % 2 === 0 ? 'bg-slate-900/20' : ''}`}>
                   <td className="p-4 text-rose-100/70">{feature}</td>
                   <td className="p-4 text-center text-slate-400">{free}</td>
+                  <td className="p-4 text-center text-blue-200/80">{light}</td>
                   <td className="p-4 text-center text-rose-200 font-semibold bg-rose-950/20">{pro}</td>
                   <td className="p-4 text-center text-slate-400">{enterprise}</td>
                 </tr>
