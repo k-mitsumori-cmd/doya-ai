@@ -517,7 +517,7 @@ export default function BannerPlanPage() {
                   </p>
                 </div>
                 <div className="p-4 sm:p-8">
-                  <div className="grid md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                     {/* ゲスト/無料 */}
                     <div className={`rounded-2xl border p-4 sm:p-5 ${bannerPlanTier === 'FREE' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-slate-50'}`}>
                       <p className="text-xs font-black text-slate-500 uppercase tracking-widest">ログイン</p>

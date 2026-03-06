@@ -147,8 +147,8 @@ export default function MoviePricingPage() {
       {/* 比較表 */}
       <div className="mb-12">
         <h2 className="text-white font-bold text-lg text-center mb-6">プラン比較</h2>
-        <div className="rounded-2xl border border-rose-900/30 overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="rounded-2xl border border-rose-900/30 overflow-x-auto">
+          <table className="w-full text-sm min-w-[600px]">
             <thead>
               <tr className="border-b border-rose-900/30 bg-rose-950/30">
                 <th className="text-left p-4 text-rose-200/70 font-bold">機能</th>

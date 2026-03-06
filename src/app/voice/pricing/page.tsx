@@ -45,7 +45,7 @@ export default function VoicePricingPage() {
               key={plan.id}
               className={`relative rounded-2xl border-2 p-6 transition-all ${
                 isPopular
-                  ? 'border-violet-500 shadow-xl shadow-violet-500/20 scale-105'
+                  ? 'border-violet-500 shadow-xl shadow-violet-500/20 md:scale-105'
                   : isCurrent
                   ? 'border-green-400 bg-green-50/50'
                   : 'border-slate-200 bg-white'
@@ -101,7 +101,7 @@ export default function VoicePricingPage() {
                   </Link>
                 ) : tier === 'light' ? (
                   <Link
-                    href="/pricing"
+                    href="/voice/pricing"
                     className="block w-full py-3 text-center font-black rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm shadow-lg shadow-blue-500/25"
                   >
                     {plan.cta}
@@ -115,7 +115,7 @@ export default function VoicePricingPage() {
                   </a>
                 ) : (
                   <Link
-                    href="/pricing"
+                    href="/voice/pricing"
                     className="block w-full py-3 text-center font-black rounded-xl bg-violet-600 text-white hover:bg-violet-700 transition-colors text-sm shadow-lg shadow-violet-500/25"
                   >
                     {plan.cta}

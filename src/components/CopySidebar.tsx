@@ -42,8 +42,14 @@ function CopySidebarImpl({
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
-  const userPlan = (session?.user as any)?.plan || 'FREE'
-  const planLabel = isLoggedIn ? userPlan : 'GUEST'
+  const planLabel = (() => {
+    if (!isLoggedIn) return 'GUEST'
+    const p = String((session?.user as any)?.copyPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
+    if (p === 'ENTERPRISE') return 'ENTERPRISE'
+    if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return 'PRO'
+    if (p === 'LIGHT') return 'LIGHT'
+    return 'FREE'
+  })()
 
   const isActive = (href: string) => {
     if (href === '/copy') return pathname === '/copy'
