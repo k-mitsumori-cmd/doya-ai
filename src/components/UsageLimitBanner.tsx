@@ -110,7 +110,7 @@ export function UsageLimitBanner() {
                 今月の残り<span className="font-bold text-lg mx-1">{remaining}</span>枚
               </p>
               <p className="text-xs text-purple-700">
-                プレミアムで月100回まで使い放題！
+                LIGHTプランなら月50枚まで生成可能！
               </p>
             </div>
           </div>
@@ -173,7 +173,7 @@ export function UsageLimitModal({
           <p className="text-gray-600">
             {tier === 'guest'
               ? '無料登録で月15回まで利用できます！'
-              : 'プレミアムプランで使用回数を増やしましょう！'}
+              : 'LIGHTプラン以上で使用回数を増やしましょう！'}
           </p>
         </div>
 
@@ -200,7 +200,7 @@ export function UsageLimitModal({
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium rounded-xl hover:opacity-90 transition-opacity"
             >
               <Crown className="w-5 h-5" />
-              プレミアムにアップグレード
+              LIGHTプランにアップグレード
             </Link>
             <button
               onClick={onClose}
@@ -214,17 +214,21 @@ export function UsageLimitModal({
         {/* プラン比較 */}
         <div className="mt-6 pt-6 border-t border-gray-100">
           <p className="text-xs text-gray-500 text-center mb-3">プラン比較</p>
-          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+          <div className="grid grid-cols-4 gap-2 text-center text-xs">
             <div className={`p-2 rounded-lg ${tier === 'guest' ? 'bg-gray-100' : 'bg-gray-50'}`}>
               <p className="font-medium text-gray-700">ゲスト</p>
               <p className="text-gray-500">3枚/月</p>
             </div>
             <div className={`p-2 rounded-lg ${tier === 'free' ? 'bg-primary-100' : 'bg-gray-50'}`}>
-              <p className="font-medium text-gray-700">無料登録</p>
+              <p className="font-medium text-gray-700">無料</p>
               <p className="text-gray-500">15枚/月</p>
             </div>
+            <div className="p-2 rounded-lg bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200">
+              <p className="font-medium text-blue-700">LIGHT</p>
+              <p className="text-blue-600">50枚/月</p>
+            </div>
             <div className="p-2 rounded-lg bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200">
-              <p className="font-medium text-amber-700">プレミアム</p>
+              <p className="font-medium text-amber-700">PRO</p>
               <p className="text-amber-600">150枚/月</p>
             </div>
           </div>

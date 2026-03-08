@@ -328,7 +328,7 @@ function DashboardSidebarImpl({
                   id: 'pricing-plans',
                   label: 'プランをアップグレード',
                   description:
-                    '無料は1日3枚まで。有料プラン（PRO / Enterprise）なら最大500枚/日まで生成できます。',
+                    '無料は月15枚まで。LIGHT（月50枚）/ PRO（月150枚）/ Enterprise（月1000枚）にアップグレードできます。',
                   targetSelector: '[data-tour="pricing-plans"]',
                   allowMissing: true,
                 },

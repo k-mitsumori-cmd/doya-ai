@@ -308,8 +308,8 @@ export const SERVICES: Service[] = [
     pricing: {
       free: {
         name: '無料プラン',
-        limit: '1日3回まで',
-        dailyLimit: 3,
+        limit: '1日5回まで',
+        dailyLimit: 5,
         price: 0,
       },
       light: {

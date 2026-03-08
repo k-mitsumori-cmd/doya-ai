@@ -152,7 +152,7 @@ function PricingContent() {
 
         {success && (
           <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl text-green-700 text-center">
-            🎉 プレミアムプランへのアップグレードありがとうございます！
+            🎉 有料プランへのアップグレードありがとうございます！
           </div>
         )}
 
@@ -221,7 +221,7 @@ function PricingContent() {
                 </div>
                 <ul className="space-y-3 mb-6">
                   {[
-                    '1日3回まで生成',
+                    '月15枚まで生成',
                     '基本機能の利用',
                     '履歴保存（7日間）',
                     'メールサポート',

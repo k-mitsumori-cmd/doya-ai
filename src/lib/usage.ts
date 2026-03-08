@@ -34,14 +34,14 @@ export const PLAN_LIMITS: Record<UserTier, UsageLimits> = {
     features: ['月150枚まで生成可能', '全機能利用可能', '優先サポート'],
   },
   business: {
-    daily: 500,
+    daily: 150,
     label: 'ビジネス',
-    features: ['月500枚まで生成可能', 'チーム共有機能', 'API連携'],
+    features: ['月150枚まで生成可能', '全機能利用可能', '優先サポート'],
   },
   enterprise: {
-    daily: -1, // 無制限
+    daily: 1000,
     label: 'エンタープライズ',
-    features: ['無制限', '専任サポート', 'カスタムテンプレート'],
+    features: ['月1000枚まで生成可能', '専任サポート', 'カスタムテンプレート'],
   },
 }
 

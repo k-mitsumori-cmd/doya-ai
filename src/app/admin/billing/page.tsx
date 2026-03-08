@@ -236,7 +236,7 @@ export default function BillingPage() {
                     </div>
                     <div>
                       <p className="font-medium text-white">エンタープライズ</p>
-                      <p className="text-xs text-white/40">バナー500枚/日 + ライティング50件/日</p>
+                      <p className="text-xs text-white/40">バナー月1000枚 + ライティング月200記事</p>
                     </div>
                   </div>
                   <div className="text-right">
