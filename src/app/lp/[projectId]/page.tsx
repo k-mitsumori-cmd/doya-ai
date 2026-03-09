@@ -78,8 +78,9 @@ export default function LpPreviewPage() {
   }, [projectId])
 
   useEffect(() => {
+    if (sessionStatus !== 'authenticated') return
     loadProject()
-  }, [loadProject])
+  }, [loadProject, sessionStatus])
 
   useEffect(() => {
     if (!project || project.sections.length === 0) return
@@ -128,7 +129,8 @@ export default function LpPreviewPage() {
   const handleDelete = async () => {
     setDeleting(true)
     try {
-      await fetch(`/api/lp/projects/${projectId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/lp/projects/${projectId}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('削除に失敗しました')
       router.push('/lp')
     } catch (e: any) {
       toast.error(e.message || '削除に失敗しました')

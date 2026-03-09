@@ -82,8 +82,8 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
         const updatePromises = sections
           .filter((sec: any) => sec.id)
           .map((sec: any) =>
-            tx.lpSection.update({
-              where: { id: sec.id },
+            tx.lpSection.updateMany({
+              where: { id: sec.id, projectId: id },
               data: {
                 ...(sec.order !== undefined && { order: sec.order }),
                 ...(sec.headline !== undefined && { headline: sec.headline }),

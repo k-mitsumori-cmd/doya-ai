@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
-import { FileText, Loader2, Trash2, ExternalLink, Plus, Search } from 'lucide-react'
+import { FileText, Loader2, Trash2, ExternalLink, Plus, Search, LogIn } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface Project {
@@ -27,6 +28,7 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
 
 export default function LpHistoryPage() {
   const router = useRouter()
+  const { data: session, status: sessionStatus } = useSession()
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -34,20 +36,25 @@ export default function LpHistoryPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
+    if (sessionStatus !== 'authenticated') return
     fetch('/api/lp/projects?limit=50')
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error('取得に失敗しました')
+        return r.json()
+      })
       .then(data => {
         if (data.projects) setProjects(data.projects)
       })
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [])
+  }, [sessionStatus])
 
   const handleDelete = async (id: string) => {
     setDeletingId(id)
     setDeleteTarget(null)
     try {
-      await fetch(`/api/lp/projects/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/lp/projects/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('削除に失敗しました')
       setProjects(prev => prev.filter(p => p.id !== id))
     } catch (e: any) {
       toast.error(e.message || '削除に失敗しました')
@@ -59,6 +66,23 @@ export default function LpHistoryPage() {
   const filtered = projects.filter(p =>
     p.name.toLowerCase().includes(search.toLowerCase())
   )
+
+  if (sessionStatus === 'loading') {
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div>
+  }
+
+  if (!session?.user) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-center px-6">
+        <LogIn className="w-12 h-12 text-cyan-400 mb-4" />
+        <h2 className="text-xl font-bold text-white mb-2">ログインが必要です</h2>
+        <p className="text-slate-400 text-sm mb-6">LP作成機能を使うにはログインしてください。</p>
+        <button onClick={() => router.push('/auth/signin?callbackUrl=/lp/history')} className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition-colors">
+          <LogIn className="w-4 h-4" /> Googleでログイン
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">

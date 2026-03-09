@@ -22,6 +22,17 @@ function sanitizeUrl(url: string | null | undefined): string {
   return '#'
 }
 
+/** CSSカラー値をサニタイズ（CSSインジェクション防止） */
+function sanitizeCssColor(color: string | null | undefined): string {
+  if (!color) return ''
+  // hex, rgb, rgba, hsl, hsla, named colors のみ許可
+  const clean = color.trim()
+  if (/^(#[0-9a-fA-F]{3,8}|rgb\([\d\s,.%]+\)|rgba\([\d\s,.%]+\)|hsl\([\d\s,.%]+\)|hsla\([\d\s,.%]+\)|[a-zA-Z]{3,20})$/.test(clean)) {
+    return clean
+  }
+  return ''
+}
+
 interface SectionData {
   type: string
   name: string
@@ -138,11 +149,13 @@ function renderSection(section: SectionData, theme: LpDesignTheme, idx: number):
   if (isFooter) bgClass = 'bg-gray-900 text-white'
 
   // カスタム背景色で上書き
-  const bgStyle = section.bgColor ? ` style="background-color: ${section.bgColor};"` : ''
+  const safeBgColor = sanitizeCssColor(section.bgColor)
+  const bgStyle = safeBgColor ? ` style="background-color: ${safeBgColor};"` : ''
 
   // 背景画像のスタイル
-  const bgImageStyle = section.bgImage
-    ? ` style="background-image: url('${section.bgImage}'); background-size: cover; background-position: center;${section.bgColor ? ` background-color: ${section.bgColor};` : ''}"`
+  const safeBgImage = sanitizeUrl(section.bgImage)
+  const bgImageStyle = (section.bgImage && safeBgImage !== '#')
+    ? ` style="background-image: url('${safeBgImage}'); background-size: cover; background-position: center;${safeBgColor ? ` background-color: ${safeBgColor};` : ''}"`
     : bgStyle
   const bgOverlay = section.bgImage
     ? `<div class="absolute inset-0 bg-black/50"></div>`

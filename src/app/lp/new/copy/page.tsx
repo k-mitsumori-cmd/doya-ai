@@ -191,8 +191,9 @@ function CopyPage() {
   }, [projectId])
 
   useEffect(() => {
+    if (sessionStatus !== 'authenticated') return
     generate()
-  }, [generate])
+  }, [generate, sessionStatus])
 
   const handleBrushup = async () => {
     if (!brushupModal || !projectId) return

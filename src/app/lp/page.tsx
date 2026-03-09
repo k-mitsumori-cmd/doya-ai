@@ -63,17 +63,26 @@ export default function LpDashboardPage() {
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
   useEffect(() => {
+    if (sessionStatus !== 'authenticated') return
     fetch('/api/lp/projects?limit=6')
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error('取得に失敗しました')
+        return r.json()
+      })
       .then((d) => setProjects(d.projects || []))
       .catch(() => { toast.error('LPプロジェクト一覧の取得に失敗しました') })
       .finally(() => setLoading(false))
-  }, [])
+  }, [sessionStatus])
 
   const handleDelete = async (id: string) => {
     setDeleteTargetId(null)
-    await fetch(`/api/lp/projects/${id}`, { method: 'DELETE' })
-    setProjects((prev) => prev.filter((p) => p.id !== id))
+    try {
+      const res = await fetch(`/api/lp/projects/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('削除に失敗しました')
+      setProjects((prev) => prev.filter((p) => p.id !== id))
+    } catch (e: any) {
+      toast.error(e.message || '削除に失敗しました')
+    }
   }
 
   if (sessionStatus === 'loading') {

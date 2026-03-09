@@ -117,8 +117,9 @@ function StructurePage() {
   }, [projectId])
 
   useEffect(() => {
+    if (sessionStatus !== 'authenticated') return
     generate()
-  }, [generate])
+  }, [generate, sessionStatus])
 
   const handleSelect = (idx: number) => {
     setSelectedIdx(idx)
@@ -141,7 +142,7 @@ function StructurePage() {
     if (selectedIdx === null || !projectId) return
     setSaving(true)
     try {
-      await fetch(`/api/lp/projects/${projectId}`, {
+      const res = await fetch(`/api/lp/projects/${projectId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -151,6 +152,7 @@ function StructurePage() {
           ),
         }),
       })
+      if (!res.ok) throw new Error('構成案の保存に失敗しました')
       router.push(`/lp/new/copy?projectId=${projectId}`)
     } catch (e: any) {
       toast.error(e.message || 'エラーが発生しました')

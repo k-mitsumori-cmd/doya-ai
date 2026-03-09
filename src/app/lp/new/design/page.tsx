@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { ArrowRight, ArrowLeft, Loader2, CheckCircle2, Lock, LogIn } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Suspense } from 'react'
+import { FREE_THEME_IDS } from '@/lib/lp/themes'
 
 interface Theme {
   id: string
@@ -27,8 +28,6 @@ interface Theme {
     accent: string
   }
 }
-
-const FREE_THEME_IDS = ['corporate', 'minimal', 'warm']
 
 function ThemePreview({ theme }: { theme: Theme }) {
   return (
@@ -85,8 +84,9 @@ function DesignPage() {
   }, [projectId])
 
   useEffect(() => {
+    if (sessionStatus !== 'authenticated') return
     loadData()
-  }, [loadData])
+  }, [loadData, sessionStatus])
 
   const userPlan = String((session?.user as any)?.plan || (session ? 'FREE' : 'GUEST')).toUpperCase()
   const isFree = userPlan === 'FREE' || userPlan === 'GUEST'
@@ -96,11 +96,12 @@ function DesignPage() {
     if (!projectId) return
     setSaving(true)
     try {
-      await fetch(`/api/lp/projects/${projectId}`, {
+      const res = await fetch(`/api/lp/projects/${projectId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ themeId: selectedThemeId, status: 'completed' }),
       })
+      if (!res.ok) throw new Error('テーマの保存に失敗しました')
       router.push(`/lp/${projectId}`)
     } catch (e: any) {
       toast.error(e.message || 'エラーが発生しました')
