@@ -2,14 +2,15 @@
 // ============================================
 // ドヤムービーAI - Step1: 商品コンセプト
 // ============================================
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { Loader2, ArrowRight, ArrowLeft } from 'lucide-react'
 import { PLATFORMS, DURATION_PRESETS } from '@/lib/movie/types'
 import type { AspectRatio, DurationPreset } from '@/lib/movie/types'
+import { getTemplateById } from '@/lib/movie/templates'
 
 const STEPS = ['商品情報', 'ペルソナ', '企画選択', '編集']
 
@@ -20,8 +21,12 @@ const ASPECT_RATIOS: { ratio: AspectRatio; label: string; icon: string }[] = [
   { ratio: '4:5',  label: '縦型 4:5', icon: '▯' },
 ]
 
-export default function ConceptPage() {
+function ConceptPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const templateId = searchParams.get('templateId')
+  const template = templateId ? getTemplateById(templateId) : undefined
+
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
     name: '',
@@ -35,6 +40,19 @@ export default function ConceptPage() {
   const [platform, setPlatform] = useState('youtube')
   const [duration, setDuration] = useState<DurationPreset>(15)
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('16:9')
+
+  // テンプレートが選択されている場合、デフォルト値を初期化 & sessionStorageに保存
+  useEffect(() => {
+    if (template) {
+      setAspectRatio(template.aspectRatio)
+      // テンプレートのdurationがDurationPresetに含まれる場合のみセット
+      const validDurations: number[] = [...DURATION_PRESETS]
+      if (validDurations.includes(template.duration)) {
+        setDuration(template.duration as DurationPreset)
+      }
+      sessionStorage.setItem('movie_template_id', template.id)
+    }
+  }, [template])
 
   // プラットフォーム選択でアスペクト比を自動セット
   const handlePlatformChange = (id: string) => {
@@ -115,8 +133,16 @@ export default function ConceptPage() {
       </div>
 
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
+        {/* テンプレート選択バッジ */}
+        {template && (
+          <div className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-200 text-sm font-semibold">
+            <span className="w-2 h-2 rounded-full bg-rose-400" />
+            選択中: {template.name} テンプレート
+          </div>
+        )}
+
         <h1 className="text-2xl font-black text-white mb-2">商品・サービス情報</h1>
-        <p className="text-rose-200/60 text-sm mb-6">動画を作りたい商品・サービスの情報を入力してください。</p>
+        <p className="text-rose-300 text-sm mb-6">動画を作りたい商品・サービスの情報を入力してください。</p>
 
         {/* フォーム */}
         <div className="space-y-4">
@@ -295,5 +321,17 @@ export default function ConceptPage() {
         </button>
       </motion.div>
     </div>
+  )
+}
+
+export default function ConceptPage() {
+  return (
+    <Suspense fallback={
+      <div className="max-w-2xl mx-auto px-4 py-8 flex items-center justify-center min-h-[50vh]">
+        <Loader2 className="w-6 h-6 animate-spin text-rose-400" />
+      </div>
+    }>
+      <ConceptPageInner />
+    </Suspense>
   )
 }

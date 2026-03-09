@@ -40,7 +40,7 @@ export default function MoviePricingPage() {
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="text-center mb-10">
         <h1 className="text-3xl font-black text-white mb-3">料金プラン</h1>
-        <p className="text-rose-200/60">月3本まで無料。本格的な動画制作はProプランで。</p>
+        <p className="text-rose-300">月3本まで無料。本格的な動画制作はProプランで。</p>
       </div>
 
       {/* プランカード */}
@@ -83,9 +83,9 @@ export default function MoviePricingPage() {
               </div>
               <div className="mb-1">
                 <span className="text-4xl font-black text-white">{plan.priceLabel}</span>
-                <span className="text-rose-300/60 ml-1">{plan.period}</span>
+                <span className="text-rose-400 ml-1">{plan.period}</span>
               </div>
-              <p className="text-rose-200/60 text-sm mb-6">{plan.description}</p>
+              <p className="text-rose-300 text-sm mb-6">{plan.description}</p>
 
               {/* 機能リスト */}
               <ul className="space-y-2.5 mb-8">
@@ -186,7 +186,7 @@ export default function MoviePricingPage() {
 
       {/* FAQ */}
       <div className="max-w-2xl mx-auto text-center">
-        <p className="text-rose-200/60 text-sm mb-4">
+        <p className="text-rose-300 text-sm mb-4">
           ご不明な点は{' '}
           <Link href="/movie/guide" className="text-rose-400 hover:text-rose-300 underline">
             使い方ガイド

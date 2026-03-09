@@ -129,7 +129,7 @@ export default function ProjectDetailPage() {
     return (
       <div className="flex flex-col items-center justify-center h-full py-32 gap-4">
         <div className="text-4xl">🎬</div>
-        <p className="text-rose-200/60">プロジェクトが見つかりません</p>
+        <p className="text-rose-300">プロジェクトが見つかりません</p>
         <Link href="/movie" className="text-rose-400 hover:text-rose-300">ダッシュボードに戻る</Link>
       </div>
     )
@@ -144,7 +144,7 @@ export default function ProjectDetailPage() {
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Link href="/movie/history" className="text-rose-400/60 hover:text-rose-300 text-sm transition-colors">
+            <Link href="/movie/history" className="text-rose-400 hover:text-rose-300 text-sm transition-colors">
               履歴
             </Link>
             <span className="text-slate-600">/</span>
@@ -173,12 +173,12 @@ export default function ProjectDetailPage() {
             <div className="text-center">
               <div className="text-5xl mb-3 opacity-30">🎬</div>
               {isRendering ? (
-                <div className="text-rose-200/60 text-sm">
+                <div className="text-rose-300 text-sm">
                   <Loader2 className="w-5 h-5 text-rose-400 animate-spin mx-auto mb-2" />
                   レンダリング中...
                 </div>
               ) : (
-                <p className="text-rose-200/40 text-sm">プレビューなし</p>
+                <p className="text-rose-400 text-sm">プレビューなし</p>
               )}
             </div>
           )}
@@ -260,28 +260,28 @@ export default function ProjectDetailPage() {
         <h2 className="text-white font-bold mb-4">プロジェクト情報</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <div className="text-rose-300/60 text-xs mb-1">アスペクト比</div>
+            <div className="text-rose-400 text-xs mb-1">アスペクト比</div>
             <div className="text-white">{project.aspectRatio}</div>
           </div>
           <div>
-            <div className="text-rose-300/60 text-xs mb-1">尺</div>
+            <div className="text-rose-400 text-xs mb-1">尺</div>
             <div className="text-white">{project.duration}秒</div>
           </div>
           <div>
-            <div className="text-rose-300/60 text-xs mb-1">解像度</div>
+            <div className="text-rose-400 text-xs mb-1">解像度</div>
             <div className="text-white">{project.resolution}</div>
           </div>
           <div>
-            <div className="text-rose-300/60 text-xs mb-1">作成日</div>
+            <div className="text-rose-400 text-xs mb-1">作成日</div>
             <div className="text-white">{new Date(project.createdAt).toLocaleDateString('ja-JP')}</div>
           </div>
           <div>
-            <div className="text-rose-300/60 text-xs mb-1">更新日</div>
+            <div className="text-rose-400 text-xs mb-1">更新日</div>
             <div className="text-white">{new Date(project.updatedAt).toLocaleDateString('ja-JP')}</div>
           </div>
           {project.platform && (
             <div>
-              <div className="text-rose-300/60 text-xs mb-1">配信先</div>
+              <div className="text-rose-400 text-xs mb-1">配信先</div>
               <div className="text-white">{project.platform}</div>
             </div>
           )}

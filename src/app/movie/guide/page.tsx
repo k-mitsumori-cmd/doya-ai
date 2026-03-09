@@ -109,7 +109,7 @@ function FaqItem({ q, a }: { q: string; a: string }) {
             transition={{ duration: 0.2 }}
             className="overflow-hidden"
           >
-            <p className="text-rose-200/60 text-sm pb-4 leading-relaxed">{a}</p>
+            <p className="text-rose-300 text-sm pb-4 leading-relaxed">{a}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -122,7 +122,7 @@ export default function GuidePage() {
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-2xl font-black text-white mb-2">使い方ガイド</h1>
-        <p className="text-rose-200/60 text-sm">ドヤムービーAIの使い方をご説明します。</p>
+        <p className="text-rose-300 text-sm">ドヤムービーAIの使い方をご説明します。</p>
       </div>
 
       {/* ステップガイド */}
@@ -144,13 +144,13 @@ export default function GuidePage() {
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-rose-400/60 text-xs font-black">STEP {step.number}</span>
+                  <span className="text-rose-400 text-xs font-black">STEP {step.number}</span>
                 </div>
                 <h3 className="text-white font-bold mb-1">{step.title}</h3>
-                <p className="text-rose-200/60 text-sm mb-3">{step.desc}</p>
+                <p className="text-rose-300 text-sm mb-3">{step.desc}</p>
                 <ul className="space-y-1">
                   {step.details.map((d, j) => (
-                    <li key={j} className="flex items-start gap-2 text-xs text-rose-200/50">
+                    <li key={j} className="flex items-start gap-2 text-xs text-rose-400">
                       <span className="text-rose-500 mt-0.5 flex-shrink-0">✓</span>
                       {d}
                     </li>
@@ -178,7 +178,7 @@ export default function GuidePage() {
               <span className="text-2xl flex-shrink-0">{f.icon}</span>
               <div>
                 <h3 className="text-white font-semibold text-sm mb-0.5">{f.title}</h3>
-                <p className="text-rose-200/50 text-xs">{f.desc}</p>
+                <p className="text-rose-400 text-xs">{f.desc}</p>
               </div>
             </div>
           ))}
@@ -198,7 +198,7 @@ export default function GuidePage() {
       {/* CTA */}
       <div className="rounded-2xl border border-rose-500/30 bg-rose-950/30 p-6 text-center">
         <h2 className="text-white font-black text-xl mb-2">さっそく動画を作ってみる</h2>
-        <p className="text-rose-200/60 text-sm mb-4">月3本まで無料。登録不要ですぐ始められます。</p>
+        <p className="text-rose-300 text-sm mb-4">月3本まで無料。登録不要ですぐ始められます。</p>
         <Link
           href="/movie/new/concept"
           className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white transition-all"

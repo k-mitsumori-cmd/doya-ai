@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createRenderJob, renderVideo, failRenderJob } from '@/lib/movie/render'
 import { getGuestIdFromRequest } from '@/lib/movie/access'
-import type { CompositionConfig } from '@/lib/movie/types'
+import type { RenderConfig } from '@/lib/movie/types'
 
 export const maxDuration = 300 // Vercel Pro: 最大300秒
 
@@ -103,8 +103,8 @@ export async function POST(req: NextRequest) {
     // プロジェクトのstatusをrenderingに更新
     await prisma.movieProject.update({ where: { id: projectId }, data: { status: 'rendering' } })
 
-    // 非同期でレンダリング実行（レスポンスはJobIDを即座に返す）
-    const config: CompositionConfig = {
+    // Kling API用の設定を構築
+    const config: RenderConfig = {
       projectId,
       scenes: project.scenes.map(s => ({
         id: s.id,
@@ -117,16 +117,18 @@ export async function POST(req: NextRequest) {
         narrationText: s.narrationText ?? undefined,
         narrationUrl: s.narrationUrl ?? undefined,
         transition: s.transition as 'fade' | 'slide' | 'wipe' | 'zoom' | 'none',
+        videoPrompt: (s.metadata as any)?.videoPrompt ?? undefined,
+        referenceImageUrl: (s.metadata as any)?.referenceImageUrl ?? undefined,
       })),
       aspectRatio: project.aspectRatio as '16:9' | '9:16' | '1:1' | '4:5',
       totalDuration: project.duration,
-      fps: 30,
+      productInfo: project.productInfo as any,
       watermark,
       ...(bgmUrl && { bgmUrl }),
     }
 
     // バックグラウンド実行（awaitしない）
-    renderVideo(job.id, config, userId ?? guestId ?? 'guest', format).catch(async (err) => {
+    renderVideo(job.id, config, userId ?? guestId ?? 'guest').catch(async (err) => {
       console.error('[renderVideo]', err)
       await failRenderJob(job.id, String(err))
       await prisma.movieProject.update({ where: { id: projectId }, data: { status: 'failed' } })

@@ -84,7 +84,7 @@ export default function PersonaPage() {
             }`}>
               {i < 1 ? '✓' : i + 1}
             </div>
-            <span className={`text-xs font-medium ${i === 1 ? 'text-rose-300' : i < 1 ? 'text-rose-400/60' : 'text-slate-500'}`}>{s}</span>
+            <span className={`text-xs font-medium ${i === 1 ? 'text-rose-300' : i < 1 ? 'text-rose-400' : 'text-slate-500'}`}>{s}</span>
             {i < STEPS.length - 1 && <div className={`flex-1 h-px ${i < 1 ? 'bg-rose-700/50' : 'bg-slate-700'}`} />}
           </div>
         ))}
@@ -92,7 +92,7 @@ export default function PersonaPage() {
 
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
         <h1 className="text-2xl font-black text-white mb-2">ペルソナ設定</h1>
-        <p className="text-rose-200/60 text-sm mb-6">ターゲット視聴者のペルソナを設定すると、より効果的な動画企画が生成されます。</p>
+        <p className="text-rose-300 text-sm mb-6">ターゲット視聴者のペルソナを設定すると、より効果的な動画企画が生成されます。</p>
 
         {/* モード選択 */}
         <div className="grid grid-cols-3 gap-3 mb-6">
@@ -120,7 +120,7 @@ export default function PersonaPage() {
         {mode === 'skip' ? (
           <div className="rounded-xl border border-dashed border-rose-900/40 p-6 text-center">
             <div className="text-4xl mb-2">⏩</div>
-            <p className="text-rose-200/60 text-sm">ペルソナなしで企画生成に進みます</p>
+            <p className="text-rose-300 text-sm">ペルソナなしで企画生成に進みます</p>
           </div>
         ) : (
           <>

@@ -31,6 +31,7 @@ export default function HistoryPage() {
   const [projects, setProjects] = useState<MovieProjectData[]>([])
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<'updatedAt' | 'createdAt'>('updatedAt')
   const [filterStatus, setFilterStatus] = useState<string>('all')
 
@@ -46,7 +47,7 @@ export default function HistoryPage() {
   useEffect(() => { fetchProjects() }, [])
 
   const handleDelete = async (id: string) => {
-    if (!confirm('このプロジェクトを削除しますか？')) return
+    setDeleteTarget(null)
     setDeleting(id)
     try {
       const res = await fetch(`/api/movie/projects/${id}`, { method: 'DELETE' })
@@ -69,7 +70,7 @@ export default function HistoryPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-black text-white mb-1">生成履歴</h1>
-          <p className="text-rose-200/60 text-sm">{projects.length}件のプロジェクト</p>
+          <p className="text-rose-300 text-sm">{projects.length}件のプロジェクト</p>
         </div>
         <Link
           href="/movie/new/concept"
@@ -121,7 +122,7 @@ export default function HistoryPage() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
           <div className="text-4xl mb-3">🎬</div>
-          <p className="text-rose-200/50 mb-4">
+          <p className="text-rose-400 mb-4">
             {filterStatus === 'all' ? 'まだプロジェクトがありません' : 'このステータスのプロジェクトはありません'}
           </p>
           {filterStatus === 'all' && (
@@ -166,7 +167,7 @@ export default function HistoryPage() {
                       {STATUS_LABELS[project.status] || project.status}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-rose-300/50 text-xs mb-2">
+                  <div className="flex items-center gap-3 text-rose-400 text-xs mb-2">
                     <span>{project.aspectRatio}</span>
                     <span>{project.duration}秒</span>
                     <span>{new Date(project.updatedAt).toLocaleDateString('ja-JP')}</span>
@@ -190,7 +191,7 @@ export default function HistoryPage() {
                       </Link>
                     )}
                     <button
-                      onClick={() => handleDelete(project.id)}
+                      onClick={() => setDeleteTarget(project.id)}
                       disabled={deleting === project.id}
                       className="px-3 py-1 rounded-lg text-xs font-semibold text-red-400/70 border border-red-900/30 hover:bg-red-900/20 transition-all disabled:opacity-50"
                     >
@@ -201,6 +202,30 @@ export default function HistoryPage() {
               </motion.div>
             ))}
           </AnimatePresence>
+        </div>
+      )}
+
+      {/* 削除確認モーダル */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm mx-4 shadow-xl">
+            <h3 className="font-bold text-white mb-2">プロジェクトの削除</h3>
+            <p className="text-sm text-slate-400 mb-6">このプロジェクトを削除しますか？この操作は取り消せません。</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold rounded-lg transition-colors"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={() => handleDelete(deleteTarget)}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-bold rounded-lg transition-colors"
+              >
+                削除する
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

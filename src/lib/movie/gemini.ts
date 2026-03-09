@@ -166,7 +166,8 @@ ${template.defaultScenes
     : ''
 
   const prompt = `
-あなたはRemotionを使った動画制作エンジニアです。以下の企画に基づき、動画のシーンデータをJSONで生成してください。
+あなたはAI動画広告のクリエイティブディレクターです。以下の企画に基づき、動画のシーンデータをJSONで生成してください。
+各シーンにはKling AI（動画生成AI）用の英語プロンプト(videoPrompt)も含めてください。
 
 ## 企画
 コンセプト: ${plan.concept}
@@ -188,7 +189,8 @@ ${templateHint}
     "bgValue": "linear-gradient(135deg, #f43f5e, #ec4899)",
     "bgAnimation": "none",
     "texts": [{ "content": "テキスト", "x": 50, "y": 45, "fontSize": 40, "fontFamily": "Noto Sans JP", "color": "#ffffff", "animation": "fade-in", "delay": 0.3, "align": "center" }],
-    "narrationText": "ナレーション原稿",
+    "narrationText": "ナレーション原稿（日本語）",
+    "videoPrompt": "Professional product showcase scene, modern minimalist office with warm lighting, sleek laptop displaying UI interface, cinematic camera slowly zooming in, 4K quality, advertising commercial style",
     "transition": "fade"
   }
 ]
@@ -197,6 +199,7 @@ animationは"fade-in"/"slide-up"/"typewriter"/"zoom-in"/"none"のいずれか。
 transitionは"fade"/"slide"/"wipe"/"zoom"/"none"のいずれか。
 各シーンのdurationの合計が${config.duration}秒になるよう調整してください。
 narrationTextは各シーンのナレーション原稿を日本語で生成してください。
+videoPromptは英語で、Kling AIが高品質な広告動画を生成できるような詳細な映像描写を記述してください。商品の特徴や雰囲気を反映し、cinematic, professional, 4K qualityなどのキーワードを含めてください。
 JSONのみ返してください。
 `
 
@@ -258,10 +261,10 @@ JSONのみ返してください。
     }
     // テンプレートなしのフォールバック
     return [
-      { order: 0, duration: config.duration * 0.25, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #f43f5e, #ec4899)', bgAnimation: 'none', texts: [{ content: productInfo.name, x: 50, y: 45, fontSize: 40, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in' as const, delay: 0.3, align: 'center' as const }], narrationText: plan.storyline.opening, transition: 'fade' as const },
-      { order: 1, duration: config.duration * 0.35, bgType: 'color', bgValue: '#0f172a', bgAnimation: 'none', texts: [{ content: productInfo.description.slice(0, 40), x: 50, y: 50, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#e2e8f0', animation: 'slide-up' as const, delay: 0.3, align: 'center' as const }], narrationText: plan.storyline.development, transition: 'slide' as const },
-      { order: 2, duration: config.duration * 0.25, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #1e1b4b, #312e81)', bgAnimation: 'none', texts: [{ content: productInfo.usp || '今すぐ試す', x: 50, y: 45, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#c7d2fe', animation: 'zoom-in' as const, delay: 0.3, align: 'center' as const }], narrationText: plan.storyline.climax, transition: 'wipe' as const },
-      { order: 3, duration: config.duration * 0.15, bgType: 'gradient', bgValue: 'linear-gradient(135deg, #f43f5e, #ec4899)', bgAnimation: 'none', texts: [{ content: '詳細はこちら', x: 50, y: 50, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in' as const, delay: 0.2, align: 'center' as const }], narrationText: plan.storyline.conclusion, transition: 'fade' as const },
+      { order: 0, duration: config.duration * 0.25, bgType: 'gradient' as const, bgValue: 'linear-gradient(135deg, #f43f5e, #ec4899)', bgAnimation: 'none' as const, texts: [{ content: productInfo.name, x: 50, y: 45, fontSize: 40, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in' as const, delay: 0.3, align: 'center' as const }], narrationText: plan.storyline.opening, videoPrompt: `Professional product introduction for "${productInfo.name}", clean modern design, elegant typography appearing with fade animation, cinematic warm lighting, advertising quality, 4K`, transition: 'fade' as const },
+      { order: 1, duration: config.duration * 0.35, bgType: 'color' as const, bgValue: '#0f172a', bgAnimation: 'none' as const, texts: [{ content: productInfo.description.slice(0, 40), x: 50, y: 50, fontSize: 24, fontFamily: 'Noto Sans JP', color: '#e2e8f0', animation: 'slide-up' as const, delay: 0.3, align: 'center' as const }], narrationText: plan.storyline.development, videoPrompt: `Feature showcase of "${productInfo.name}", ${productInfo.features[0] || 'key features'}, modern UI interface demonstration, smooth camera movement, professional commercial style`, transition: 'slide' as const },
+      { order: 2, duration: config.duration * 0.25, bgType: 'gradient' as const, bgValue: 'linear-gradient(135deg, #1e1b4b, #312e81)', bgAnimation: 'none' as const, texts: [{ content: productInfo.usp || '今すぐ試す', x: 50, y: 45, fontSize: 32, fontFamily: 'Noto Sans JP', color: '#c7d2fe', animation: 'zoom-in' as const, delay: 0.3, align: 'center' as const }], narrationText: plan.storyline.climax, videoPrompt: `Dramatic reveal of key benefit: "${productInfo.usp || productInfo.name}", dynamic visual effects, premium quality, impactful cinematic moment, advertising style`, transition: 'wipe' as const },
+      { order: 3, duration: config.duration * 0.15, bgType: 'gradient' as const, bgValue: 'linear-gradient(135deg, #f43f5e, #ec4899)', bgAnimation: 'none' as const, texts: [{ content: '詳細はこちら', x: 50, y: 50, fontSize: 28, fontFamily: 'Noto Sans JP', color: '#ffffff', animation: 'fade-in' as const, delay: 0.2, align: 'center' as const }], narrationText: plan.storyline.conclusion, videoPrompt: `Call to action scene, clean and bold design, brand logo and CTA text appearing, professional end card, advertising commercial quality`, transition: 'fade' as const },
     ]
   }
 }

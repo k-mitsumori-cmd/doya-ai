@@ -1,29 +1,15 @@
 'use client'
 // ============================================
-// ドヤムービーAI - Step4: 編集ページ
+// ドヤムービーAI - Step4: 編集ページ（Kling AI対応）
 // ============================================
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import Link from 'next/link'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
-import { Loader2, Save, Clapperboard, List, Eye, Pencil } from 'lucide-react'
+import { Loader2, Save, Clapperboard, List, Eye, Pencil, Sparkles, ImageIcon } from 'lucide-react'
 import type { SceneData, BgmTrack, MovieProjectData } from '@/lib/movie/types'
 
 const STEPS = ['商品情報', 'ペルソナ', '企画選択', '編集']
-
-const BGM_GENRES = [
-  { id: 'corporate', label: 'コーポレート' },
-  { id: 'energetic', label: 'エネルギッシュ' },
-  { id: 'emotional', label: '感動的' },
-  { id: 'minimal', label: 'ミニマル' },
-  { id: 'fun', label: '楽しい' },
-  { id: 'luxury', label: 'ラグジュアリー' },
-]
-
-const TRANSITIONS = ['fade', 'slide', 'wipe', 'zoom', 'none'] as const
-const BG_ANIMATIONS = ['ken-burns', 'zoom-in', 'none'] as const
-const TEXT_ANIMATIONS = ['fade-in', 'slide-up', 'typewriter', 'zoom-in', 'none'] as const
 
 function ScenePanel({
   scene,
@@ -54,21 +40,22 @@ function ScenePanel({
         <span className={`text-xs font-semibold ${isSelected ? 'text-rose-200' : 'text-slate-400'}`}>
           シーン {index + 1}
         </span>
-        <span className={`ml-auto text-xs ${isSelected ? 'text-rose-300/70' : 'text-slate-500'}`}>
+        <span className={`ml-auto text-xs ${isSelected ? 'text-rose-300' : 'text-slate-500'}`}>
           {scene.duration}秒
         </span>
       </div>
 
-      {/* プレビューミニ */}
-      <div className="w-full aspect-video rounded-lg overflow-hidden flex items-center justify-center text-xs text-center"
-        style={{
-          background: scene.bgType === 'gradient' ? scene.bgValue || 'linear-gradient(135deg, #1e293b, #0f172a)' :
-                      scene.bgType === 'color' ? (scene.bgValue || '#1e293b') :
-                      'linear-gradient(135deg, #1e293b, #0f172a)',
-        }}
-      >
-        {scene.texts[0] && (
+      {/* プロンプトプレビュー */}
+      <div className="w-full aspect-video rounded-lg overflow-hidden flex items-center justify-center text-xs text-center bg-gradient-to-br from-rose-950/50 to-slate-900 p-2">
+        {scene.videoPrompt ? (
+          <p className="text-rose-200/70 text-[7px] leading-relaxed line-clamp-3">{scene.videoPrompt}</p>
+        ) : scene.texts[0] ? (
           <p className="text-white text-[8px] font-bold px-1 truncate">{scene.texts[0].content}</p>
+        ) : (
+          <div className="text-rose-400/50">
+            <Sparkles className="w-4 h-4 mx-auto mb-0.5" />
+            <span className="text-[7px]">AI動画</span>
+          </div>
         )}
       </div>
     </button>
@@ -84,89 +71,55 @@ function SceneEditor({
 }) {
   return (
     <div className="space-y-4">
-      {/* 背景 */}
+      {/* AI動画生成プロンプト */}
       <div>
-        <label className="block text-rose-200 text-xs font-semibold mb-1.5">背景タイプ</label>
-        <div className="flex gap-2">
-          {(['color', 'gradient', 'image', 'video'] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => onChange({ bgType: t })}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                scene.bgType === t
-                  ? 'border-rose-500 bg-rose-500/20 text-rose-200'
-                  : 'border-rose-900/30 text-slate-400 hover:border-rose-700/50'
-              }`}
-            >
-              {t === 'color' ? 'カラー' : t === 'gradient' ? 'グラデ' : t === 'image' ? '画像' : '動画'}
-            </button>
-          ))}
-        </div>
+        <label className="flex items-center gap-1.5 text-rose-200 text-xs font-semibold mb-1.5">
+          <Sparkles className="w-3.5 h-3.5 text-rose-400" />
+          AI動画プロンプト（英語推奨）
+        </label>
+        <textarea
+          value={scene.videoPrompt || ''}
+          onChange={e => onChange({ videoPrompt: e.target.value })}
+          rows={4}
+          placeholder="例: Professional product showcase, modern office setting, sleek UI on laptop screen, cinematic lighting, 4K quality, advertising commercial style"
+          className="w-full bg-slate-800/60 border border-rose-900/40 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-rose-500/60 transition-colors resize-none"
+        />
+        <p className="text-rose-400 text-xs mt-1">Kling AIが動画を生成する際の映像指示です</p>
       </div>
 
-      {scene.bgType === 'color' && (
-        <div>
-          <label className="block text-rose-200 text-xs font-semibold mb-1.5">背景色</label>
-          <input
-            type="color"
-            value={scene.bgValue || '#1e293b'}
-            onChange={e => onChange({ bgValue: e.target.value })}
-            className="w-full h-10 rounded-lg cursor-pointer border border-rose-900/30 bg-transparent"
-          />
-        </div>
-      )}
+      {/* 参照画像URL */}
+      <div>
+        <label className="flex items-center gap-1.5 text-rose-200 text-xs font-semibold mb-1.5">
+          <ImageIcon className="w-3.5 h-3.5 text-rose-400" />
+          参照画像URL（任意）
+        </label>
+        <input
+          type="url"
+          value={scene.referenceImageUrl || ''}
+          onChange={e => onChange({ referenceImageUrl: e.target.value })}
+          placeholder="https://... （画像から動画を生成する場合）"
+          className="w-full bg-slate-800/60 border border-rose-900/40 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-rose-500/60 transition-colors"
+        />
+        <p className="text-rose-400 text-xs mt-1">商品画像等を指定すると、画像ベースで動画を生成します</p>
+      </div>
 
-      {(scene.bgType === 'image' || scene.bgType === 'video') && (
-        <div>
-          <label className="block text-rose-200 text-xs font-semibold mb-1.5">背景URL</label>
-          <input
-            type="url"
-            value={scene.bgValue || ''}
-            onChange={e => onChange({ bgValue: e.target.value })}
-            placeholder="https://..."
-            className="w-full bg-slate-800/60 border border-rose-900/40 rounded-xl px-3 py-2.5 text-white text-sm placeholder:text-slate-500 focus:outline-none focus:border-rose-500/60"
-          />
-        </div>
-      )}
-
-      {/* 尺 */}
+      {/* シーン尺 */}
       <div>
         <label className="block text-rose-200 text-xs font-semibold mb-1.5">シーン尺（秒）</label>
         <input
           type="number"
           value={scene.duration}
           onChange={e => onChange({ duration: Number(e.target.value) })}
-          min={1}
-          max={30}
+          min={3}
+          max={15}
           className="w-full bg-slate-800/60 border border-rose-900/40 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-rose-500/60"
         />
+        <p className="text-rose-400 text-xs mt-1">Kling 3.0: 3〜15秒</p>
       </div>
 
-      {/* トランジション */}
+      {/* テキスト（動画内に表示される想定テキスト） */}
       <div>
-        <label className="block text-rose-200 text-xs font-semibold mb-1.5">トランジション</label>
-        <div className="flex flex-wrap gap-2">
-          {TRANSITIONS.map(t => (
-            <button
-              key={t}
-              onClick={() => onChange({ transition: t })}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all ${
-                scene.transition === t
-                  ? 'border-rose-500 bg-rose-500/20 text-rose-200'
-                  : 'border-rose-900/30 text-slate-400 hover:border-rose-700/50'
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* テキスト */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-rose-200 text-xs font-semibold">テキスト</label>
-        </div>
+        <label className="text-rose-200 text-xs font-semibold mb-1.5 block">表示テキスト（参考用）</label>
         {scene.texts.map((text, ti) => (
           <div key={ti} className="rounded-xl border border-rose-900/30 bg-slate-800/40 p-3 mb-2">
             <input
@@ -177,39 +130,9 @@ function SceneEditor({
                 newTexts[ti] = { ...text, content: e.target.value }
                 onChange({ texts: newTexts })
               }}
-              className="w-full bg-slate-700/60 border border-rose-900/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-rose-500/60 mb-2"
+              placeholder="表示テキスト..."
+              className="w-full bg-slate-700/60 border border-rose-900/30 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-rose-500/60"
             />
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <div className="text-rose-300/50 text-xs mb-1">アニメーション</div>
-                <select
-                  value={text.animation}
-                  onChange={e => {
-                    const newTexts = [...scene.texts]
-                    newTexts[ti] = { ...text, animation: e.target.value as any }
-                    onChange({ texts: newTexts })
-                  }}
-                  className="w-full bg-slate-700/60 border border-rose-900/30 rounded-lg px-2 py-1.5 text-white text-xs focus:outline-none"
-                >
-                  {TEXT_ANIMATIONS.map(a => <option key={a} value={a}>{a}</option>)}
-                </select>
-              </div>
-              <div>
-                <div className="text-rose-300/50 text-xs mb-1">フォントサイズ</div>
-                <input
-                  type="number"
-                  value={text.fontSize}
-                  onChange={e => {
-                    const newTexts = [...scene.texts]
-                    newTexts[ti] = { ...text, fontSize: Number(e.target.value) }
-                    onChange({ texts: newTexts })
-                  }}
-                  min={12}
-                  max={120}
-                  className="w-full bg-slate-700/60 border border-rose-900/30 rounded-lg px-2 py-1.5 text-white text-xs focus:outline-none"
-                />
-              </div>
-            </div>
           </div>
         ))}
       </div>
@@ -260,6 +183,8 @@ export default function EditPage() {
         setScenes(rawScenes.map((s: any) => ({
           ...s,
           texts: Array.isArray(s.texts) ? s.texts : [],
+          videoPrompt: s.videoPrompt || s.metadata?.videoPrompt || '',
+          referenceImageUrl: s.referenceImageUrl || s.metadata?.referenceImageUrl || '',
         })) as SceneData[])
 
         if (bgmRes.ok) {
@@ -287,17 +212,27 @@ export default function EditPage() {
   const saveProject = async () => {
     setSaving(true)
     try {
+      // シーンにvideoPromptとreferenceImageUrlをmetadataに含める
+      const scenesWithMeta = scenes.map(s => ({
+        ...s,
+        metadata: {
+          ...(s.metadata || {}),
+          videoPrompt: s.videoPrompt || '',
+          referenceImageUrl: s.referenceImageUrl || '',
+        },
+      }))
+
       // プレビュー保存
       await fetch('/api/movie/preview', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, scenes }),
+        body: JSON.stringify({ projectId, scenes: scenesWithMeta }),
       })
 
       await fetch(`/api/movie/projects/${projectId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenes, status: 'editing' }),
+        body: JSON.stringify({ scenes: scenesWithMeta, status: 'editing' }),
       })
 
       toast.success('保存しました')
@@ -312,10 +247,19 @@ export default function EditPage() {
     setRendering(true)
     try {
       // まず保存
+      const scenesWithMeta = scenes.map(s => ({
+        ...s,
+        metadata: {
+          ...(s.metadata || {}),
+          videoPrompt: s.videoPrompt || '',
+          referenceImageUrl: s.referenceImageUrl || '',
+        },
+      }))
+
       await fetch(`/api/movie/projects/${projectId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenes, status: 'editing' }),
+        body: JSON.stringify({ scenes: scenesWithMeta, status: 'editing' }),
       })
 
       const res = await fetch('/api/movie/render', {
@@ -327,7 +271,7 @@ export default function EditPage() {
         const err = await res.json()
         throw new Error(err.error || 'レンダリングに失敗しました')
       }
-      toast.success('レンダリングを開始しました')
+      toast.success('AI動画生成を開始しました')
       router.push(`/movie/${projectId}`)
     } catch (e: any) {
       toast.error(e.message || 'エラーが発生しました')
@@ -384,9 +328,9 @@ export default function EditPage() {
           {rendering ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
-            <Clapperboard className="w-4 h-4" />
+            <Sparkles className="w-4 h-4" />
           )}
-          レンダリング
+          AI動画生成
         </button>
       </div>
 
@@ -414,9 +358,9 @@ export default function EditPage() {
 
       {/* メインエリア */}
       <div className="flex-1 flex overflow-hidden">
-        {/* シーンリスト（左）- デスクトップ常時表示 / モバイルはタブ切り替え */}
+        {/* シーンリスト（左） */}
         <div className={`${mobileTab === 'scenes' ? 'flex' : 'hidden'} md:flex w-full md:w-48 flex-shrink-0 md:border-r border-rose-900/30 bg-slate-950/60 overflow-y-auto p-2 space-y-2 flex-col`}>
-          <div className="text-rose-300/60 text-xs font-bold px-1 py-0.5">シーン</div>
+          <div className="text-rose-400 text-xs font-bold px-1 py-0.5">シーン</div>
           {scenes.map((scene, i) => (
             <ScenePanel
               key={scene.id || i}
@@ -431,52 +375,69 @@ export default function EditPage() {
           ))}
         </div>
 
-        {/* プレビュー（中央）- デスクトップ常時表示 / モバイルはタブ切り替え */}
+        {/* プレビュー（中央） */}
         <div className={`${mobileTab === 'preview' ? 'flex' : 'hidden'} md:flex flex-1 items-center justify-center bg-slate-950 p-4 overflow-hidden`}>
           {currentScene ? (
-            <div
-              className="max-h-full max-w-full rounded-xl overflow-hidden shadow-2xl shadow-black/50 relative"
-              style={{
-                aspectRatio: project?.aspectRatio === '16:9' ? '16/9' :
-                             project?.aspectRatio === '9:16' ? '9/16' :
-                             project?.aspectRatio === '1:1' ? '1/1' : '4/5',
-                height: 'min(100%, 400px)',
-                background: currentScene.bgType === 'gradient' ? currentScene.bgValue || 'linear-gradient(135deg, #1e293b, #0f172a)' :
-                            currentScene.bgType === 'color' ? (currentScene.bgValue || '#1e293b') :
-                            'linear-gradient(135deg, #1e293b, #0f172a)',
-              }}
-            >
-              {currentScene.bgType === 'image' && currentScene.bgValue && (
-                <img src={currentScene.bgValue} alt="" className="absolute inset-0 w-full h-full object-cover" />
-              )}
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4">
-                {currentScene.texts.map((t, ti) => (
-                  <p
-                    key={ti}
-                    className="text-center font-bold"
-                    style={{
-                      fontSize: `${Math.max(t.fontSize * 0.3, 10)}px`,
-                      color: t.color || '#ffffff',
-                      fontFamily: t.fontFamily || 'inherit',
-                      textAlign: t.align || 'center',
-                    }}
-                  >
-                    {t.content}
-                  </p>
-                ))}
+            <div className="max-h-full max-w-full w-full max-w-lg">
+              {/* AI動画プロンプトプレビュー */}
+              <div
+                className="rounded-xl overflow-hidden shadow-2xl shadow-black/50 relative"
+                style={{
+                  aspectRatio: project?.aspectRatio === '16:9' ? '16/9' :
+                               project?.aspectRatio === '9:16' ? '9/16' :
+                               project?.aspectRatio === '1:1' ? '1/1' : '4/5',
+                }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-rose-950/80 to-slate-900 flex flex-col items-center justify-center p-6">
+                  <Sparkles className="w-8 h-8 text-rose-400 mb-3 opacity-50" />
+                  {currentScene.videoPrompt ? (
+                    <p className="text-rose-200/80 text-xs text-center leading-relaxed max-w-xs">
+                      {currentScene.videoPrompt}
+                    </p>
+                  ) : (
+                    <p className="text-rose-400 text-xs text-center">
+                      AI動画プロンプトを入力してください
+                    </p>
+                  )}
+                  {currentScene.referenceImageUrl && (
+                    <div className="mt-3 flex items-center gap-1.5 text-rose-300/60 text-xs">
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      参照画像あり
+                    </div>
+                  )}
+                </div>
+
+                {/* テキストオーバーレイプレビュー */}
+                {currentScene.texts.length > 0 && (
+                  <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/60 to-transparent">
+                    {currentScene.texts.map((t, ti) => (
+                      <p key={ti} className="text-white text-center font-bold text-sm">
+                        {t.content}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* シーン情報 */}
+              <div className="mt-3 flex items-center justify-between text-xs text-rose-400">
+                <span>シーン {selectedScene + 1} / {scenes.length}</span>
+                <span>{currentScene.duration}秒</span>
               </div>
             </div>
           ) : (
-            <div className="text-rose-200/40 text-sm">シーンを選択してください</div>
+            <div className="text-rose-400 text-sm">シーンを選択してください</div>
           )}
         </div>
 
-        {/* 編集パネル（右）- デスクトップ常時表示 / モバイルはタブ切り替え */}
-        <div className={`${mobileTab === 'editor' ? 'flex' : 'hidden'} md:flex w-full md:w-72 flex-shrink-0 md:border-l border-rose-900/30 bg-slate-950/60 overflow-y-auto flex-col`}>
+        {/* 編集パネル（右） */}
+        <div className={`${mobileTab === 'editor' ? 'flex' : 'hidden'} md:flex w-full md:w-80 flex-shrink-0 md:border-l border-rose-900/30 bg-slate-950/60 overflow-y-auto flex-col`}>
           <div className="p-3 border-b border-rose-900/30">
-            <div className="text-white text-sm font-bold">
+            <div className="text-white text-sm font-bold flex items-center gap-1.5">
+              <Sparkles className="w-4 h-4 text-rose-400" />
               {currentScene ? `シーン ${selectedScene + 1} 編集` : 'シーンを選択'}
             </div>
+            <p className="text-rose-400 text-xs mt-0.5">Kling 3.0 AIで動画を生成します</p>
           </div>
           {currentScene && (
             <div className="p-3">
@@ -512,7 +473,7 @@ export default function EditPage() {
                   }`}
                 >
                   <div className="font-semibold">{track.name}</div>
-                  <div className="text-rose-300/50">{track.genre}</div>
+                  <div className="text-rose-400">{track.genre}</div>
                 </button>
               ))}
             </div>

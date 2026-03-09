@@ -1,11 +1,12 @@
 // ============================================
-// ドヤムービーAI - サーバーサイドレンダリング
+// ドヤムービーAI - Kling 3.0 レンダリング
 // ============================================
 // Vercel Pro (maxDuration: 300s) で実行
 // ============================================
 import { prisma } from '@/lib/prisma'
-import type { CompositionConfig, RenderFormat } from './types'
+import type { RenderConfig, RenderFormat } from './types'
 import { buildMoviePath, uploadMovieFile } from './storage'
+import { createTextToVideo, createImageToVideo, waitForCompletion, buildVideoPrompt } from './kling'
 
 export async function createRenderJob(projectId: string, format: RenderFormat = 'mp4') {
   return prisma.movieRenderJob.create({
@@ -49,101 +50,74 @@ export async function completeRenderJob(jobId: string, outputUrl: string) {
   return job
 }
 
-// ---- 実際のレンダリング処理 ----
-// @remotion/renderer は Node.js 環境（Vercel Pro / Lambda）でのみ動作する。
-// renderMedia() は ffmpeg + Chromium が必要で重い処理のため、
-// Vercel Function の maxDuration を 300s に設定して実行する。
+// ---- Kling API を使った動画レンダリング ----
 
 export async function renderVideo(
   jobId: string,
-  config: CompositionConfig,
+  config: RenderConfig,
   userId: string,
-  format: string = 'mp4'
 ): Promise<string> {
-  let outputPath: string | null = null
-
   try {
-    // ダイナミックインポートで @remotion/renderer を遅延ロード（ビルドサイズ最適化）
-    const remotion = await import('@remotion/renderer') as any
-    const { renderMedia, bundle } = remotion
-    const path = await import('path')
-
     await updateRenderProgress(jobId, 5)
-
-    const { width, height } = getCompositionDimensions(config)
-    const fps = config.fps ?? 30
-    const totalFrames = Math.round(config.totalDuration * fps)
-
-    if (totalFrames <= 0) {
-      throw new Error(`無効なフレーム数: ${totalFrames} (totalDuration=${config.totalDuration}, fps=${fps})`)
-    }
 
     if (config.scenes.length === 0) {
       throw new Error('シーンデータが空です。レンダリングにはシーンが必要です。')
     }
 
-    // Remotionバンドルのエントリポイント（コンポジション登録ファイル）
-    const compositionEntry = path.join(process.cwd(), 'src/lib/movie/compositions/remotion-root.tsx')
-    let bundled: string
-    try {
-      bundled = await bundle({ entryPoint: compositionEntry })
-    } catch (bundleError) {
-      console.error('[renderVideo] Bundle failed:', bundleError)
-      throw new Error(`Remotionバンドルに失敗しました: ${String(bundleError)}`)
+    // Kling用のアスペクト比変換
+    const aspectRatio = config.aspectRatio === '4:5' ? '1:1' : config.aspectRatio
+
+    // Kling用の尺設定（5秒 or 10秒）
+    const duration = config.totalDuration <= 7 ? '5' : '10'
+
+    // プロンプト構築
+    await updateRenderProgress(jobId, 10)
+
+    const productName = config.productInfo?.name || 'Product'
+    const productDescription = config.productInfo?.description || ''
+
+    // シーンに参照画像があればimage-to-video、なければtext-to-video
+    const firstSceneWithImage = config.scenes.find(s => s.referenceImageUrl)
+    let taskId: string
+
+    if (firstSceneWithImage?.referenceImageUrl) {
+      // Image-to-Video モード
+      const prompt = buildVideoPrompt(config.scenes, productName, productDescription)
+      taskId = await createImageToVideo(
+        firstSceneWithImage.referenceImageUrl,
+        prompt,
+        { duration, aspectRatio, mode: 'std' }
+      )
+    } else {
+      // Text-to-Video モード
+      const prompt = buildVideoPrompt(config.scenes, productName, productDescription)
+      taskId = await createTextToVideo(prompt, { duration, aspectRatio, mode: 'std' })
     }
 
-    await updateRenderProgress(jobId, 20)
+    await updateRenderProgress(jobId, 15)
 
-    const outputFormat = format === 'gif' ? 'gif' : 'mp4'
-    outputPath = `/tmp/${jobId}.${outputFormat}`
-
-    try {
-      await renderMedia({
-        composition: {
-          id: 'MovieComposition',
-          width,
-          height,
-          fps,
-          durationInFrames: totalFrames,
-          defaultProps: { config },
-        } as any,
-        serveUrl: bundled,
-        codec: format === 'gif' ? 'gif' : 'h264',
-        outputLocation: outputPath,
-        inputProps: { config },
-        onProgress: async ({ progress }: { progress: number }) => {
-          const pct = Math.round(20 + progress * 70)
-          try {
-            await updateRenderProgress(jobId, pct)
-          } catch (progressError) {
-            console.error('[renderVideo] Progress update failed:', progressError)
-          }
-        },
-      })
-    } catch (renderError) {
-      console.error('[renderVideo] renderMedia failed:', renderError)
-      throw new Error(`動画レンダリングに失敗しました: ${String(renderError)}`)
-    }
+    // Kling APIの完了をポーリング
+    const videoUrl = await waitForCompletion(
+      taskId,
+      async (progress) => {
+        // 15-90% の範囲にマッピング
+        const mappedProgress = Math.round(15 + progress * 0.75)
+        await updateRenderProgress(jobId, mappedProgress).catch(() => {})
+      },
+      240_000, // 最大4分待機
+    )
 
     await updateRenderProgress(jobId, 92)
 
-    // Supabase Storage にアップロード
-    const fs = await import('fs')
-    if (!fs.existsSync(outputPath)) {
-      throw new Error(`レンダリング出力ファイルが見つかりません: ${outputPath}`)
+    // Kling APIから動画をダウンロードしてSupabaseにアップロード
+    const videoResponse = await fetch(videoUrl)
+    if (!videoResponse.ok) {
+      throw new Error(`動画ダウンロードに失敗: ${videoResponse.status}`)
     }
 
-    const buffer = fs.readFileSync(outputPath)
-    const storagePath = buildMoviePath(userId, config.projectId, outputFormat)
-    const contentType: 'video/mp4' | 'image/gif' = format === 'gif' ? 'image/gif' : 'video/mp4'
-    const outputUrl = await uploadMovieFile(buffer as Buffer, storagePath, contentType)
-
-    // 一時ファイル削除
-    try {
-      fs.unlinkSync(outputPath)
-    } catch (cleanupError) {
-      console.error('[renderVideo] Temp file cleanup failed:', cleanupError)
-    }
+    const videoBuffer = Buffer.from(await videoResponse.arrayBuffer())
+    const storagePath = buildMoviePath(userId, config.projectId, 'mp4')
+    const outputUrl = await uploadMovieFile(videoBuffer, storagePath, 'video/mp4')
 
     await completeRenderJob(jobId, outputUrl)
     return outputUrl
@@ -152,28 +126,6 @@ export async function renderVideo(
     await failRenderJob(jobId, String(error)).catch((e) =>
       console.error('[renderVideo] failRenderJob also failed:', e)
     )
-
-    // 一時ファイルが残っていれば掃除
-    if (outputPath) {
-      try {
-        const fs = await import('fs')
-        if (fs.existsSync(outputPath)) {
-          fs.unlinkSync(outputPath)
-        }
-      } catch (cleanupError) {
-        console.error('[renderVideo] Cleanup after failure failed:', cleanupError)
-      }
-    }
-
     throw error
-  }
-}
-
-function getCompositionDimensions(config: CompositionConfig): { width: number; height: number } {
-  switch (config.aspectRatio) {
-    case '9:16': return { width: 1080, height: 1920 }
-    case '1:1':  return { width: 1080, height: 1080 }
-    case '4:5':  return { width: 1080, height: 1350 }
-    default:     return { width: 1920, height: 1080 }
   }
 }

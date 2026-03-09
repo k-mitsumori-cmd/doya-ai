@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
+import { Toaster } from 'react-hot-toast'
 import MovieSidebar from './MovieSidebar'
 
 export default function MovieLayout({
@@ -17,7 +18,7 @@ export default function MovieLayout({
   const pathname = usePathname()
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-slate-950">
       {/* サイドバー (デスクトップ) */}
       <div className="hidden md:block">
         <MovieSidebar
@@ -33,21 +34,21 @@ export default function MovieLayout({
       {/* メインコンテンツ */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* モバイルヘッダー */}
-        <header className="md:hidden flex items-center justify-between px-4 h-14 bg-white border-b border-slate-200">
+        <header className="md:hidden flex items-center justify-between px-4 h-14 bg-slate-950 border-b border-rose-900/30">
           <button
             onClick={() => setMobileMenuOpen(true)}
-            className="p-2 rounded-lg hover:bg-slate-100 transition-colors"
+            className="p-2 rounded-lg hover:bg-slate-800 transition-colors"
           >
-            <svg className="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span className="font-bold text-slate-900 text-sm">ドヤムービーAI</span>
+          <span className="font-bold text-white text-sm">ドヤムービーAI</span>
           <div className="w-9" />
         </header>
 
         {/* コンテンツ */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto bg-slate-950">
           <div className="max-w-7xl mx-auto px-4 md:px-8 py-6 md:py-8">
             <motion.div
               key={pathname}
@@ -60,6 +61,13 @@ export default function MovieLayout({
           </div>
         </main>
       </div>
+
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          style: { background: '#1e293b', color: '#e2e8f0', border: '1px solid #334155' },
+        }}
+      />
 
       {/* モバイルサイドバーオーバーレイ */}
       {mobileMenuOpen && (

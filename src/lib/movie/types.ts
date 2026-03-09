@@ -102,6 +102,8 @@ export interface SceneData {
   narrationText?: string
   narrationUrl?: string
   transition: 'fade' | 'slide' | 'wipe' | 'zoom' | 'none'
+  videoPrompt?: string          // Kling AI動画生成用プロンプト
+  referenceImageUrl?: string    // Kling image-to-video用参照画像
   metadata?: Record<string, unknown>
 }
 
@@ -209,16 +211,15 @@ export interface BgmTrack {
   isPro: boolean
 }
 
-// ---- Remotion コンポジション設定 ----
+// ---- Kling レンダリング設定 ----
 
-export interface CompositionConfig {
+export interface RenderConfig {
   projectId: string
   scenes: SceneData[]
   aspectRatio: AspectRatio
   totalDuration: number   // 秒
-  fps: number             // 通常 30
+  productInfo?: ProductInfo
   bgmUrl?: string
-  bgmVolume?: number      // 0-1
   watermark?: boolean     // Free プランのみ true
 }
 

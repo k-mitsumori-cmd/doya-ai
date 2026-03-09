@@ -56,14 +56,14 @@ function PlanCard({
           { label: '結', text: plan.storyline.conclusion },
         ].map(s => (
           <div key={s.label} className="text-center">
-            <div className="text-rose-400/60 text-xs font-bold mb-1">{s.label}</div>
+            <div className="text-rose-400 text-xs font-bold mb-1">{s.label}</div>
             <div className="text-rose-100/70 text-xs leading-relaxed">{s.text}</div>
           </div>
         ))}
       </div>
 
       {/* シーン数 */}
-      <div className="flex items-center gap-3 text-xs text-rose-300/50">
+      <div className="flex items-center gap-3 text-xs text-rose-400">
         <span className="flex items-center gap-1">
           <Film className="w-3.5 h-3.5" />
           {plan.scenes.length}シーン
@@ -228,7 +228,7 @@ export default function PlanPage() {
             }`}>
               {i < 2 ? '✓' : i + 1}
             </div>
-            <span className={`text-xs font-medium ${i === 2 ? 'text-rose-300' : i < 2 ? 'text-rose-400/60' : 'text-slate-500'}`}>{s}</span>
+            <span className={`text-xs font-medium ${i === 2 ? 'text-rose-300' : i < 2 ? 'text-rose-400' : 'text-slate-500'}`}>{s}</span>
             {i < STEPS.length - 1 && <div className={`flex-1 h-px ${i < 2 ? 'bg-rose-700/50' : 'bg-slate-700'}`} />}
           </div>
         ))}
@@ -246,7 +246,7 @@ export default function PlanPage() {
           </button>
         )}
       </div>
-      <p className="text-rose-200/60 text-sm mb-6">AIが3パターンの動画企画を生成します。最も気に入ったものを選んでください。</p>
+      <p className="text-rose-300 text-sm mb-6">AIが3パターンの動画企画を生成します。最も気に入ったものを選んでください。</p>
 
       {/* 企画カード */}
       <div className="space-y-4">
