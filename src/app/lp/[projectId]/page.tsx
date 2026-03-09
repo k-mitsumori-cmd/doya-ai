@@ -68,6 +68,7 @@ export default function LpPreviewPage() {
   const loadProject = useCallback(async () => {
     try {
       const res = await fetch(`/api/lp/projects/${projectId}`)
+      if (!res.ok) throw new Error('プロジェクトの取得に失敗しました')
       const data = await res.json()
       if (data.project) setProject(data.project)
     } catch (e) {
