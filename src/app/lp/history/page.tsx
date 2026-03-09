@@ -31,6 +31,7 @@ export default function LpHistoryPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
     fetch('/api/lp/projects?limit=50')
@@ -42,9 +43,9 @@ export default function LpHistoryPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`「${name}」を削除しますか？`)) return
+  const handleDelete = async (id: string) => {
     setDeletingId(id)
+    setDeleteTarget(null)
     try {
       await fetch(`/api/lp/projects/${id}`, { method: 'DELETE' })
       setProjects(prev => prev.filter(p => p.id !== id))
@@ -152,7 +153,7 @@ export default function LpHistoryPage() {
                       <span className="hidden sm:inline">開く</span>
                     </button>
                     <button
-                      onClick={() => handleDelete(project.id, project.name)}
+                      onClick={() => setDeleteTarget({ id: project.id, name: project.name })}
                       disabled={deletingId === project.id}
                       className="p-2 text-slate-700 hover:text-red-400 transition-colors"
                     >
@@ -175,6 +176,32 @@ export default function LpHistoryPage() {
           </p>
         )}
       </div>
+
+      {/* 削除確認モーダル */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm mx-4 shadow-xl">
+            <h3 className="font-bold text-white mb-2">プロジェクトの削除</h3>
+            <p className="text-sm text-slate-400 mb-6">
+              「{deleteTarget.name}」を削除しますか？この操作は取り消せません。
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold rounded-lg transition-colors"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={() => handleDelete(deleteTarget.id)}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-bold rounded-lg transition-colors"
+              >
+                削除する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

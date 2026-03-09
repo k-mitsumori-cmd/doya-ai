@@ -2,10 +2,13 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
-import { CheckCircle2, ArrowRight, ArrowLeft, Loader2, ChevronUp, ChevronDown, PlusCircle, Trash2, RefreshCw } from 'lucide-react'
+import { CheckCircle2, ArrowRight, ArrowLeft, Loader2, ChevronUp, ChevronDown, Trash2, RefreshCw, LayoutTemplate, LogIn } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Suspense } from 'react'
+import { generateWireframeSvg } from '@/lib/lp/wireframe'
+import type { LpSectionDef } from '@/lib/lp/types'
 
 interface SectionDef {
   type: string
@@ -28,6 +31,7 @@ interface Structure {
 function StructurePage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { data: session, status: sessionStatus } = useSession()
   const projectId = searchParams.get('projectId')
 
   const [structures, setStructures] = useState<Structure[]>([])
@@ -155,6 +159,23 @@ function StructurePage() {
     }
   }
 
+  if (sessionStatus === 'loading') {
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div>
+  }
+
+  if (!session?.user) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-center px-6">
+        <LogIn className="w-12 h-12 text-cyan-400 mb-4" />
+        <h2 className="text-xl font-bold text-white mb-2">ログインが必要です</h2>
+        <p className="text-slate-400 text-sm mb-6">LP作成機能を使うにはログインしてください。</p>
+        <button onClick={() => router.push('/auth/signin?callbackUrl=/lp/new/input')} className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition-colors">
+          <LogIn className="w-4 h-4" /> Googleでログイン
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-16">
       {/* ステップインジケーター */}
@@ -238,32 +259,49 @@ function StructurePage() {
               ))}
             </div>
 
-            {/* セクション編集 */}
+            {/* セクション編集 + ワイヤーフレーム */}
             {selectedIdx !== null && editingSections.length > 0 && (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-900 border border-slate-800 rounded-xl p-6">
-                <h2 className="font-bold text-white mb-4 flex items-center gap-2">
-                  セクションの順序を調整
-                  <span className="text-xs text-slate-500 font-normal">（上下矢印で並べ替え）</span>
-                </h2>
-                <div className="space-y-2">
-                  {editingSections.map((sec, i) => (
-                    <div key={i} className="flex items-center gap-3 bg-slate-800 rounded-lg px-4 py-3">
-                      <span className="text-xs text-slate-500 w-6 text-center font-bold">{i + 1}</span>
-                      <span className="flex-1 text-sm text-white">{sec.name}</span>
-                      <span className="text-xs text-slate-600 hidden sm:block">{sec.type}</span>
-                      <div className="flex gap-1">
-                        <button onClick={() => moveSection(i, -1)} disabled={i === 0} className="p-1 text-slate-500 hover:text-white disabled:opacity-30">
-                          <ChevronUp className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => moveSection(i, 1)} disabled={i === editingSections.length - 1} className="p-1 text-slate-500 hover:text-white disabled:opacity-30">
-                          <ChevronDown className="w-4 h-4" />
-                        </button>
-                        <button onClick={() => removeSection(i)} className="p-1 text-slate-600 hover:text-red-400">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-1 lg:grid-cols-[1fr_220px] gap-6">
+                {/* セクション編集 */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                  <h2 className="font-bold text-white mb-4 flex items-center gap-2">
+                    セクションの順序を調整
+                    <span className="text-xs text-slate-500 font-normal">（上下矢印で並べ替え）</span>
+                  </h2>
+                  <div className="space-y-2">
+                    {editingSections.map((sec, i) => (
+                      <div key={i} className="flex items-center gap-3 bg-slate-800 rounded-lg px-4 py-3">
+                        <span className="text-xs text-slate-500 w-6 text-center font-bold">{i + 1}</span>
+                        <span className="flex-1 text-sm text-white">{sec.name}</span>
+                        <span className="text-xs text-slate-600 hidden sm:block">{sec.type}</span>
+                        <div className="flex gap-1">
+                          <button onClick={() => moveSection(i, -1)} disabled={i === 0} className="p-1 text-slate-500 hover:text-white disabled:opacity-30">
+                            <ChevronUp className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => moveSection(i, 1)} disabled={i === editingSections.length - 1} className="p-1 text-slate-500 hover:text-white disabled:opacity-30">
+                            <ChevronDown className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => removeSection(i)} className="p-1 text-slate-600 hover:text-red-400">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                </div>
+
+                {/* ワイヤーフレームプレビュー */}
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 hidden lg:block">
+                  <h3 className="text-xs font-bold text-slate-400 mb-3 flex items-center gap-1.5">
+                    <LayoutTemplate className="w-3.5 h-3.5" />
+                    ワイヤーフレーム
+                  </h3>
+                  <div
+                    className="w-full overflow-y-auto max-h-[500px] rounded-lg bg-white/5 p-1"
+                    dangerouslySetInnerHTML={{
+                      __html: generateWireframeSvg(editingSections as LpSectionDef[], { width: 190 }),
+                    }}
+                  />
                 </div>
               </motion.div>
             )}

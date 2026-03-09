@@ -2,8 +2,9 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
-import { Link2, PenLine, Plus, X, ArrowRight, Loader2 } from 'lucide-react'
+import { Link2, PenLine, Plus, X, ArrowRight, Loader2, LogIn } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 type InputMode = 'url' | 'manual'
@@ -20,6 +21,7 @@ const PURPOSES = [
 
 export default function LpInputPage() {
   const router = useRouter()
+  const { data: session, status: sessionStatus } = useSession()
   const [mode, setMode] = useState<InputMode>('manual')
   const [urlInput, setUrlInput] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
@@ -96,6 +98,32 @@ export default function LpInputPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  // 未ログイン時はログイン誘導
+  if (sessionStatus === 'loading') {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+      </div>
+    )
+  }
+
+  if (!session?.user) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-center px-6">
+        <LogIn className="w-12 h-12 text-cyan-400 mb-4" />
+        <h2 className="text-xl font-bold text-white mb-2">ログインが必要です</h2>
+        <p className="text-slate-400 text-sm mb-6">LP作成機能を使うにはGoogleアカウントでログインしてください。</p>
+        <button
+          onClick={() => router.push('/auth/signin?callbackUrl=/lp/new/input')}
+          className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition-colors"
+        >
+          <LogIn className="w-4 h-4" />
+          Googleでログイン
+        </button>
+      </div>
+    )
   }
 
   return (

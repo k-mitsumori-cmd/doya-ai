@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
-import { ArrowRight, ArrowLeft, Loader2, CheckCircle2, Lock } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Loader2, CheckCircle2, Lock, LogIn } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Suspense } from 'react'
 
@@ -58,7 +58,7 @@ function DesignPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const projectId = searchParams.get('projectId')
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
 
   const [themes, setThemes] = useState<Theme[]>([])
   const [selectedThemeId, setSelectedThemeId] = useState<string>('minimal')
@@ -107,6 +107,23 @@ function DesignPage() {
     } finally {
       setSaving(false)
     }
+  }
+
+  if (sessionStatus === 'loading') {
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div>
+  }
+
+  if (!session?.user) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-center px-6">
+        <LogIn className="w-12 h-12 text-cyan-400 mb-4" />
+        <h2 className="text-xl font-bold text-white mb-2">ログインが必要です</h2>
+        <p className="text-slate-400 text-sm mb-6">LP作成機能を使うにはログインしてください。</p>
+        <button onClick={() => router.push('/auth/signin?callbackUrl=/lp/new/input')} className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition-colors">
+          <LogIn className="w-4 h-4" /> Googleでログイン
+        </button>
+      </div>
+    )
   }
 
   return (

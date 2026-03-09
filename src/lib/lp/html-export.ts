@@ -1,6 +1,27 @@
 import { getLpTheme } from './themes'
 import type { LpDesignTheme } from './types'
 
+/** HTMLエスケープでXSSを防止 */
+function escapeHtml(str: string | null | undefined): string {
+  if (!str) return ''
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+/** URLをサニタイズ（javascript: / data: プロトコルを防止） */
+function sanitizeUrl(url: string | null | undefined): string {
+  if (!url) return '#'
+  const trimmed = url.trim().toLowerCase()
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://') || trimmed.startsWith('/') || trimmed.startsWith('#')) {
+    return url.trim()
+  }
+  return '#'
+}
+
 interface SectionData {
   type: string
   name: string
@@ -31,10 +52,10 @@ function renderItemsGrid(
       .map(
         (item) => `
       <div class="p-6 rounded-lg border border-gray-200 bg-white/80 shadow-sm text-center">
-        ${item.icon ? `<div class="text-3xl mb-3">${item.icon}</div>` : ''}
-        ${item.image ? `<img src="${item.image}" alt="${item.title || ''}" class="w-full h-40 object-cover rounded-lg mb-3">` : ''}
-        <h3 class="font-bold text-lg mb-2 ${theme.tailwindClasses.heading}">${item.title || ''}</h3>
-        <p class="text-sm ${theme.tailwindClasses.body}">${item.description || ''}</p>
+        ${item.icon ? `<div class="text-3xl mb-3">${escapeHtml(item.icon)}</div>` : ''}
+        ${item.image ? `<img src="${sanitizeUrl(item.image)}" alt="${escapeHtml(item.title)}" class="w-full h-40 object-cover rounded-lg mb-3">` : ''}
+        <h3 class="font-bold text-lg mb-2 ${theme.tailwindClasses.heading}">${escapeHtml(item.title)}</h3>
+        <p class="text-sm ${theme.tailwindClasses.body}">${escapeHtml(item.description)}</p>
       </div>`
       )
       .join('')}
@@ -51,11 +72,11 @@ function renderItemsCards(
       .map(
         (item) => `
       <div class="rounded-2xl shadow-lg overflow-hidden bg-white">
-        ${item.image ? `<img src="${item.image}" alt="${item.title || ''}" class="w-full h-48 object-cover">` : ''}
+        ${item.image ? `<img src="${sanitizeUrl(item.image)}" alt="${escapeHtml(item.title)}" class="w-full h-48 object-cover">` : ''}
         <div class="p-6">
-          ${item.icon ? `<div class="text-2xl mb-2">${item.icon}</div>` : ''}
-          <h3 class="font-bold text-lg mb-2 ${theme.tailwindClasses.heading}">${item.title || ''}</h3>
-          <p class="text-sm ${theme.tailwindClasses.body} leading-relaxed">${item.description || ''}</p>
+          ${item.icon ? `<div class="text-2xl mb-2">${escapeHtml(item.icon)}</div>` : ''}
+          <h3 class="font-bold text-lg mb-2 ${theme.tailwindClasses.heading}">${escapeHtml(item.title)}</h3>
+          <p class="text-sm ${theme.tailwindClasses.body} leading-relaxed">${escapeHtml(item.description)}</p>
         </div>
       </div>`
       )
@@ -71,10 +92,10 @@ function renderLeftRight(
 ): string {
   const textBlock = `
     <div class="flex-1 ${reverse ? 'md:order-2' : ''}">
-      ${section.headline ? `<h2 class="text-3xl md:text-4xl ${theme.tailwindClasses.heading} mb-4">${section.headline}</h2>` : ''}
-      ${section.subheadline ? `<p class="text-xl ${theme.tailwindClasses.accent} mb-4">${section.subheadline}</p>` : ''}
-      ${section.body ? `<div class="prose prose-lg ${theme.tailwindClasses.body}">${section.body.replace(/\n/g, '<br>')}</div>` : ''}
-      ${section.ctaText ? `<div class="mt-6"><a href="${section.ctaUrl || '#'}" class="${theme.tailwindClasses.button} inline-block">${section.ctaText}</a></div>` : ''}
+      ${section.headline ? `<h2 class="text-3xl md:text-4xl ${theme.tailwindClasses.heading} mb-4">${escapeHtml(section.headline)}</h2>` : ''}
+      ${section.subheadline ? `<p class="text-xl ${theme.tailwindClasses.accent} mb-4">${escapeHtml(section.subheadline)}</p>` : ''}
+      ${section.body ? `<div class="prose prose-lg ${theme.tailwindClasses.body}">${escapeHtml(section.body).replace(/\n/g, '<br>')}</div>` : ''}
+      ${section.ctaText ? `<div class="mt-6"><a href="${sanitizeUrl(section.ctaUrl)}" class="${theme.tailwindClasses.button} inline-block">${escapeHtml(section.ctaText)}</a></div>` : ''}
     </div>`
 
   const contentBlock = section.items && section.items.length > 0
@@ -84,9 +105,9 @@ function renderLeftRight(
             .map(
               (item) => `
             <div class="bg-white/80 rounded-xl p-4 shadow-sm border border-gray-100">
-              ${item.icon ? `<span class="text-xl mr-2">${item.icon}</span>` : ''}
-              <h4 class="font-bold ${theme.tailwindClasses.heading} mb-1">${item.title || ''}</h4>
-              <p class="text-sm ${theme.tailwindClasses.body}">${item.description || ''}</p>
+              ${item.icon ? `<span class="text-xl mr-2">${escapeHtml(item.icon)}</span>` : ''}
+              <h4 class="font-bold ${theme.tailwindClasses.heading} mb-1">${escapeHtml(item.title)}</h4>
+              <p class="text-sm ${theme.tailwindClasses.body}">${escapeHtml(item.description)}</p>
             </div>`
             )
             .join('')}
@@ -132,7 +153,7 @@ function renderSection(section: SectionData, theme: LpDesignTheme, idx: number):
   // left-right / right-left レイアウト
   if (layout === 'left-right' || layout === 'right-left') {
     return `
-  <!-- ${section.name} -->
+  <!-- ${escapeHtml(section.name)} -->
   <section class="py-16 px-4 ${bgClass}${relativeClass}" id="section-${idx}"${bgImageStyle}>
     ${bgOverlay}
     <div class="max-w-5xl mx-auto${contentZClass}">
@@ -156,20 +177,20 @@ function renderSection(section: SectionData, theme: LpDesignTheme, idx: number):
 
   const ctaHtml = section.ctaText
     ? `<div class="mt-8 text-center">
-        <a href="${section.ctaUrl || '#'}" class="${theme.tailwindClasses.button} inline-block">
-          ${section.ctaText}
+        <a href="${sanitizeUrl(section.ctaUrl)}" class="${theme.tailwindClasses.button} inline-block">
+          ${escapeHtml(section.ctaText)}
         </a>
       </div>`
     : ''
 
   return `
-  <!-- ${section.name} -->
+  <!-- ${escapeHtml(section.name)} -->
   <section class="py-16 px-4 ${bgClass}${relativeClass}" id="section-${idx}"${bgImageStyle}>
     ${bgOverlay}
     <div class="max-w-4xl mx-auto text-center${contentZClass}">
-      ${section.headline ? `<h2 class="text-3xl md:text-4xl ${theme.tailwindClasses.heading} mb-4">${section.headline}</h2>` : ''}
-      ${section.subheadline ? `<p class="text-xl ${theme.tailwindClasses.accent} mb-6">${section.subheadline}</p>` : ''}
-      ${section.body ? `<div class="prose prose-lg max-w-2xl mx-auto ${theme.tailwindClasses.body} text-left">${section.body.replace(/\n/g, '<br>')}</div>` : ''}
+      ${section.headline ? `<h2 class="text-3xl md:text-4xl ${theme.tailwindClasses.heading} mb-4">${escapeHtml(section.headline)}</h2>` : ''}
+      ${section.subheadline ? `<p class="text-xl ${theme.tailwindClasses.accent} mb-6">${escapeHtml(section.subheadline)}</p>` : ''}
+      ${section.body ? `<div class="prose prose-lg max-w-2xl mx-auto ${theme.tailwindClasses.body} text-left">${escapeHtml(section.body).replace(/\n/g, '<br>')}</div>` : ''}
       ${itemsHtml}
       ${ctaHtml}
     </div>
@@ -185,8 +206,8 @@ export function generateHtml(opts: ExportOptions): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${opts.projectName}</title>
-  <meta name="description" content="${opts.projectName}">
+  <title>${escapeHtml(opts.projectName)}</title>
+  <meta name="description" content="${escapeHtml(opts.projectName)}">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@400;700&display=swap" rel="stylesheet">

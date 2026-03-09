@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
-import { PlusCircle, FileText, Clock, ArrowRight, Link2, Layout, PenLine, Palette, Trash2 } from 'lucide-react'
+import { PlusCircle, FileText, Clock, ArrowRight, Link2, Layout, PenLine, Palette, Trash2, Loader2, LogIn } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 interface LpProject {
@@ -54,8 +56,11 @@ const FEATURES = [
 ]
 
 export default function LpDashboardPage() {
+  const router = useRouter()
+  const { data: session, status: sessionStatus } = useSession()
   const [projects, setProjects] = useState<LpProject[]>([])
   const [loading, setLoading] = useState(true)
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/lp/projects?limit=6')
@@ -66,9 +71,26 @@ export default function LpDashboardPage() {
   }, [])
 
   const handleDelete = async (id: string) => {
-    if (!confirm('このLPを削除しますか？')) return
+    setDeleteTargetId(null)
     await fetch(`/api/lp/projects/${id}`, { method: 'DELETE' })
     setProjects((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  if (sessionStatus === 'loading') {
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div>
+  }
+
+  if (!session?.user) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-center px-6">
+        <LogIn className="w-12 h-12 text-cyan-400 mb-4" />
+        <h2 className="text-xl font-bold text-white mb-2">ログインが必要です</h2>
+        <p className="text-slate-400 text-sm mb-6">LP作成機能を使うにはログインしてください。</p>
+        <button onClick={() => router.push('/auth/signin?callbackUrl=/lp')} className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition-colors">
+          <LogIn className="w-4 h-4" /> Googleでログイン
+        </button>
+      </div>
+    )
   }
 
   return (
@@ -170,7 +192,7 @@ export default function LpDashboardPage() {
                         開く <ArrowRight className="w-3 h-3" />
                       </Link>
                       <button
-                        onClick={() => handleDelete(project.id)}
+                        onClick={() => setDeleteTargetId(project.id)}
                         className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -210,6 +232,30 @@ export default function LpDashboardPage() {
           </div>
         </section>
       </div>
+
+      {/* 削除確認モーダル */}
+      {deleteTargetId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm mx-4 shadow-xl">
+            <h3 className="font-bold text-white mb-2">LPの削除</h3>
+            <p className="text-sm text-slate-400 mb-6">このLPを削除しますか？この操作は取り消せません。</p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setDeleteTargetId(null)}
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold rounded-lg transition-colors"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={() => handleDelete(deleteTargetId)}
+                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white text-sm font-bold rounded-lg transition-colors"
+              >
+                削除する
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
