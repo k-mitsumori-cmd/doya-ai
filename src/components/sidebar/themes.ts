@@ -128,6 +128,22 @@ export const voiceTheme: SidebarTheme = {
   zapColor: 'text-violet-400',
 }
 
+export const interviewxTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-indigo-900 via-indigo-800 to-violet-900',
+  navText: 'text-indigo-100/70',
+  navTextIcon: 'text-indigo-200/70',
+  sectionText: 'text-indigo-200/50',
+  toggleText: 'text-indigo-600',
+  toggleHover: 'hover:bg-indigo-50',
+  brandingText: 'text-indigo-100/30',
+  profileBg: 'bg-indigo-900/30',
+  avatarBg: 'bg-indigo-600',
+  loginText: 'text-indigo-600',
+  loginHover: 'hover:bg-indigo-50',
+  aiBubbleBg: 'bg-indigo-600',
+  zapColor: 'text-indigo-400 fill-indigo-400',
+}
+
 export const movieTheme: SidebarTheme = {
   bgGradient: 'bg-gradient-to-b from-rose-950 via-rose-900 to-pink-950',
   navText: 'text-rose-100',

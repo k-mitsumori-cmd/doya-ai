@@ -109,6 +109,9 @@ model User {
   // ドヤムービーAI
   movieProjects    MovieProject[]
 
+  // ドヤインタビューAI-X
+  interviewxProjects InterviewXProject[]
+
   // Stripe関連（ポータル全体の顧客情報）
   stripeCustomerId       String?   @unique
   stripeSubscriptionId   String?   @unique
@@ -1499,4 +1502,221 @@ model MovieRenderJob {
 
   @@index([projectId])
   @@map("movie_render_jobs")
+}
+
+// ============================================
+// ドヤインタビューAI-X
+// ============================================
+
+model InterviewXProject {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+
+  // 基本設定
+  title           String
+  templateId      String?
+  template        InterviewXTemplate? @relation(fields: [templateId], references: [id])
+
+  // 対象情報
+  companyName     String?
+  companyUrl      String?
+  companyLogo     String?
+  brandColor      String?  @default("#3B82F6")
+
+  // コンテンツ設定
+  purpose         String?
+  targetAudience  String?
+  tone            String?  @default("professional")
+  articleType     String?  @default("CASE_STUDY")
+  wordCountTarget Int?     @default(3000)
+  customInstructions String? @db.Text
+
+  // ステータス
+  status          String   @default("DRAFT")
+
+  // 共有
+  shareToken      String   @unique @default(cuid())
+  shareUrl        String?
+  respondentEmail String?
+  respondentName  String?
+
+  // 関連
+  questions       InterviewXQuestion[]
+  responses       InterviewXResponse[]
+  drafts          InterviewXDraft[]
+  feedbacks       InterviewXFeedback[]
+  checks          InterviewXCheck[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@index([shareToken])
+  @@index([status])
+  @@map("interviewx_projects")
+}
+
+model InterviewXTemplate {
+  id              String   @id @default(cuid())
+
+  name            String
+  description     String?  @db.Text
+  category        String
+  icon            String?  @default("📋")
+
+  defaultQuestions Json?
+  promptTemplate  String?  @db.Text
+  sampleArticle   String?  @db.Text
+
+  isPreset        Boolean  @default(false)
+  isPublic        Boolean  @default(false)
+  usageCount      Int      @default(0)
+
+  userId          String?
+
+  projects        InterviewXProject[]
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([category])
+  @@map("interviewx_templates")
+}
+
+model InterviewXQuestion {
+  id              String   @id @default(cuid())
+  projectId       String
+  project         InterviewXProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  text            String
+  description     String?
+  type            String   @default("TEXTAREA")
+  options         Json?
+  required        Boolean  @default(true)
+  order           Int
+  aiGenerated     Boolean  @default(true)
+
+  answers         InterviewXAnswer[]
+
+  createdAt       DateTime @default(now())
+
+  @@index([projectId])
+  @@unique([projectId, order])
+  @@map("interviewx_questions")
+}
+
+model InterviewXResponse {
+  id              String   @id @default(cuid())
+  projectId       String
+  project         InterviewXProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  respondentName  String?
+  respondentEmail String?
+  respondentRole  String?
+  respondentCompany String?
+
+  status          String   @default("IN_PROGRESS")
+  completedAt     DateTime?
+
+  ipAddress       String?
+  userAgent       String?
+
+  answers         InterviewXAnswer[]
+
+  startedAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([projectId])
+  @@map("interviewx_responses")
+}
+
+model InterviewXAnswer {
+  id              String   @id @default(cuid())
+  responseId      String
+  response        InterviewXResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  questionId      String
+  question        InterviewXQuestion @relation(fields: [questionId], references: [id])
+
+  answerText      String?  @db.Text
+  answerValue     Json?
+
+  createdAt       DateTime @default(now())
+
+  @@index([responseId])
+  @@index([questionId])
+  @@unique([responseId, questionId])
+  @@map("interviewx_answers")
+}
+
+model InterviewXDraft {
+  id              String   @id @default(cuid())
+  projectId       String
+  project         InterviewXProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  version         Int      @default(1)
+  title           String?
+  lead            String?  @db.Text
+  content         String   @db.Text
+  structure       Json?
+
+  wordCount       Int?
+  readingTime     Int?
+
+  appliedFeedbacks Json?
+
+  status          String   @default("DRAFT")
+
+  feedbacks       InterviewXFeedback[]
+  checks          InterviewXCheck[]
+
+  createdAt       DateTime @default(now())
+
+  @@index([projectId])
+  @@unique([projectId, version])
+  @@map("interviewx_drafts")
+}
+
+model InterviewXFeedback {
+  id              String   @id @default(cuid())
+  projectId       String
+  project         InterviewXProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  draftId         String?
+  draft           InterviewXDraft?  @relation(fields: [draftId], references: [id])
+
+  authorType      String
+  authorName      String?
+
+  content         String   @db.Text
+  section         String?
+  category        String?
+
+  applied         Boolean  @default(false)
+  appliedAt       DateTime?
+
+  createdAt       DateTime @default(now())
+
+  @@index([projectId])
+  @@index([draftId])
+  @@map("interviewx_feedbacks")
+}
+
+model InterviewXCheck {
+  id              String   @id @default(cuid())
+  projectId       String
+  project         InterviewXProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  draftId         String
+  draft           InterviewXDraft   @relation(fields: [draftId], references: [id])
+
+  checkType       String
+  score           Float?
+  passed          Boolean  @default(false)
+  report          String?  @db.Text
+  suggestions     Json?
+
+  createdAt       DateTime @default(now())
+
+  @@index([projectId])
+  @@index([draftId])
+  @@map("interviewx_checks")
 }

@@ -1022,7 +1022,7 @@ export const VOICE_PRICING: ServicePricing = {
       price: 0,
       priceLabel: '¥0',
       period: '',
-      description: 'AIナレーションを試したい方に',
+      description: 'まずは無料で「声の威力」を体感',
       features: [
         { text: '月10回まで生成', included: true },
         { text: '1回あたり1,000文字まで', included: true },
@@ -1043,7 +1043,7 @@ export const VOICE_PRICING: ServicePricing = {
       price: 2980,
       priceLabel: '¥2,980',
       period: '/月（税込）',
-      description: 'AIナレーションを手軽に活用',
+      description: '月50本の声を、外注の1/10の値段で',
       color: 'blue',
       features: [
         { text: '月50回まで生成', included: true },
@@ -1060,8 +1060,8 @@ export const VOICE_PRICING: ServicePricing = {
       name: 'Pro',
       price: 9980,
       priceLabel: '¥9,980',
-      period: '/月',
-      description: '動画制作・コンテンツ制作に',
+      period: '/月（税込）',
+      description: '本気の動画制作を、声の力で加速',
       features: [
         { text: '月200回まで生成', included: true },
         { text: '1回あたり5,000文字まで', included: true },
@@ -1085,8 +1085,8 @@ export const VOICE_PRICING: ServicePricing = {
       name: 'Enterprise',
       price: 49800,
       priceLabel: '¥49,800',
-      period: '/月',
-      description: '大量コンテンツ・法人利用向け',
+      period: '/月（税込）',
+      description: '1,000本規模の量産を、チームで回す',
       features: [
         { text: '月1,000回まで生成', included: true },
         { text: 'Pro全機能', included: true },
@@ -1509,5 +1509,114 @@ export function getMovieMonthlyLimitByUserPlan(plan: string | null | undefined):
     case 'LIGHT': return MOVIE_PRICING.lightLimit ?? 10
     case 'FREE': return MOVIE_PRICING.freeLimit
     default: return MOVIE_PRICING.freeLimit
+  }
+}
+
+// ========================================
+// ドヤインタビューAI-X 料金設定
+// ========================================
+export const INTERVIEWX_PRICING: ServicePricing = {
+  serviceId: 'interviewx',
+  serviceName: 'ドヤインタビューAI-X',
+  serviceIcon: '🚀',
+  guestLimit: 1,
+  freeLimit: 3,
+  lightLimit: 10,
+  proLimit: 50,
+  enterpriseLimit: -1,
+  historyDays: { free: 30, pro: -1 },
+  plans: [
+    {
+      id: 'interviewx-free',
+      name: '無料',
+      price: 0,
+      priceLabel: '¥0',
+      period: '',
+      description: 'まずはAI-Xを体験',
+      features: [
+        { text: '月3プロジェクトまで', included: true },
+        { text: 'AI質問生成', included: true },
+        { text: 'AI記事生成', included: true },
+        { text: '品質チェック（校正のみ）', included: true },
+        { text: 'Markdownエクスポート', included: true },
+        { text: 'メール通知', included: false },
+        { text: 'ブランドカスタマイズ', included: false },
+      ],
+      cta: '無料で試す',
+    },
+    {
+      id: 'interviewx-light',
+      name: 'ライト',
+      price: 2980,
+      priceLabel: '¥2,980',
+      period: '/月（税込）',
+      description: '個人・小規模チーム向け',
+      color: 'blue',
+      features: [
+        { text: '月10プロジェクトまで', included: true },
+        { text: 'AI質問生成', included: true },
+        { text: 'AI記事生成', included: true },
+        { text: '全品質チェック', included: true },
+        { text: 'HTML/Markdownエクスポート', included: true },
+        { text: 'メール通知', included: true },
+        { text: 'ブランドカスタマイズ', included: false },
+      ],
+      cta: 'ライトプランを始める',
+    },
+    {
+      id: 'interviewx-pro',
+      name: 'プロ',
+      price: 9980,
+      priceLabel: '¥9,980',
+      period: '/月（税込）',
+      description: '本格的なコンテンツ制作に',
+      popular: true,
+      color: 'indigo',
+      features: [
+        { text: '月50プロジェクトまで', included: true },
+        { text: 'AI質問生成', included: true },
+        { text: 'AI記事生成', included: true },
+        { text: '全品質チェック', included: true },
+        { text: 'HTML/Markdownエクスポート', included: true },
+        { text: 'メール通知', included: true },
+        { text: 'ブランドカスタマイズ', included: true },
+      ],
+      cta: 'プロプランを始める',
+    },
+    {
+      id: 'interviewx-enterprise',
+      name: 'エンタープライズ',
+      price: 49800,
+      priceLabel: '¥49,800',
+      period: '/月（税込）',
+      description: '大規模チーム・法人向け',
+      color: 'slate',
+      features: [
+        { text: '無制限プロジェクト', included: true },
+        { text: 'AI質問生成', included: true },
+        { text: 'AI記事生成', included: true },
+        { text: '全品質チェック', included: true },
+        { text: 'HTML/Markdownエクスポート', included: true },
+        { text: 'メール通知', included: true },
+        { text: 'ブランドカスタマイズ', included: true },
+      ],
+      cta: 'お問い合わせ',
+    },
+  ],
+}
+
+export function getInterviewXMonthlyLimitByUserPlan(plan: string | null | undefined): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1') return -1
+  const p = String(plan || 'FREE').toUpperCase()
+  switch (p) {
+    case 'ENTERPRISE': return INTERVIEWX_PRICING.enterpriseLimit ?? -1
+    case 'BUNDLE': return INTERVIEWX_PRICING.proLimit
+    case 'PRO':
+    case 'BASIC':
+    case 'STARTER':
+    case 'BUSINESS': return INTERVIEWX_PRICING.proLimit
+    case 'LIGHT': return INTERVIEWX_PRICING.lightLimit ?? 10
+    case 'FREE': return INTERVIEWX_PRICING.freeLimit
+    default: return INTERVIEWX_PRICING.freeLimit
   }
 }

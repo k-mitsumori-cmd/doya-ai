@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
   ChevronUp,
+  ChevronDown,
   ExternalLink,
   FileText,
   Film,
@@ -12,6 +13,7 @@ import {
   LayoutGrid,
   Mic,
   PenLine,
+  Send,
   Target,
   Sparkles,
   Play,
@@ -32,6 +34,7 @@ const SERVICE_ICON_MAP: Record<string, { icon: LucideIcon; iconBg: string }> = {
   lp:        { icon: LayoutGrid, iconBg: 'bg-gradient-to-br from-cyan-500 to-blue-500' },
   copy:      { icon: PenLine,  iconBg: 'bg-gradient-to-br from-amber-500 to-orange-500' },
   movie:     { icon: Film,     iconBg: 'bg-gradient-to-br from-rose-500 to-pink-500' },
+  interviewx: { icon: Send,    iconBg: 'bg-gradient-to-br from-indigo-500 to-violet-500' },
 }
 
 type ToolSwitcherMenuProps = {
@@ -44,16 +47,49 @@ type ToolSwitcherMenuProps = {
 
 export function ToolSwitcherMenu({ currentService, showLabel, isCollapsed, className }: ToolSwitcherMenuProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const [openDirection, setOpenDirection] = useState<'up' | 'down'>('up')
+  const buttonRef = useRef<HTMLButtonElement>(null)
+
+  // ボタン位置に基づいて展開方向を決定
+  const detectDirection = useCallback(() => {
+    if (!buttonRef.current) return
+    const rect = buttonRef.current.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    // ボタンの中心がビューポートの上半分にあれば下に展開、下半分にあれば上に展開
+    setOpenDirection(rect.top + rect.height / 2 < viewportHeight / 2 ? 'down' : 'up')
+  }, [])
+
+  const handleToggle = useCallback(() => {
+    if (!isOpen) detectDirection()
+    setIsOpen((v) => !v)
+  }, [isOpen, detectDirection])
+
+  // 外部クリックで閉じる
+  const containerRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!isOpen) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [isOpen])
 
   const activeServices = getActiveServices()
   const otherCount = activeServices.filter(s => s.id !== currentService).length
 
+  const isUp = openDirection === 'up'
+  const ChevronIcon = isUp ? ChevronUp : ChevronDown
+
   return (
     <div className={className || ''}>
-      <div className="relative">
+      <div className="relative" ref={containerRef}>
         {/* メインボタン - 目立つグラデーション */}
         <button
-          onClick={() => setIsOpen((v) => !v)}
+          ref={buttonRef}
+          onClick={handleToggle}
           className={`group w-full flex items-center gap-2 px-3 py-3 rounded-xl bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 transition-all text-white ${
             !showLabel ? 'justify-center' : 'justify-between'
           }`}
@@ -81,7 +117,7 @@ export function ToolSwitcherMenu({ currentService, showLabel, isCollapsed, class
             </AnimatePresence>
           </div>
           {showLabel && (
-            <ChevronUp className={`w-4 h-4 text-white/80 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            <ChevronIcon className={`w-4 h-4 text-white/80 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
           )}
         </button>
 
@@ -89,11 +125,13 @@ export function ToolSwitcherMenu({ currentService, showLabel, isCollapsed, class
         <AnimatePresence>
           {isOpen && showLabel && (
             <motion.div
-              initial={{ opacity: 0, y: -8, scale: 0.95 }}
+              initial={{ opacity: 0, y: isUp ? -8 : 8, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -8, scale: 0.95 }}
+              exit={{ opacity: 0, y: isUp ? -8 : 8, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[200] max-h-[calc(100vh-200px)] overflow-y-auto"
+              className={`absolute left-0 right-0 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden z-[200] max-h-[calc(100vh-200px)] overflow-y-auto ${
+                isUp ? 'bottom-full mb-2' : 'top-full mt-2'
+              }`}
             >
               <div className="p-2 space-y-1">
                 <p className="px-2 py-1 text-[10px] font-black text-gray-400 uppercase tracking-wider">ツール一覧</p>
