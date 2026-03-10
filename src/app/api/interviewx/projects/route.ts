@@ -102,6 +102,7 @@ export async function POST(req: NextRequest) {
       customInstructions,
       respondentName,
       respondentEmail,
+      interviewMode,
     } = body as {
       title: string
       templateId: string
@@ -117,6 +118,7 @@ export async function POST(req: NextRequest) {
       customInstructions?: string
       respondentName?: string
       respondentEmail?: string
+      interviewMode?: string
     }
 
     if (!title || !templateId) {
@@ -154,6 +156,7 @@ export async function POST(req: NextRequest) {
         customInstructions: customInstructions || null,
         respondentName: respondentName || null,
         respondentEmail: respondentEmail || null,
+        interviewMode: interviewMode === 'chat' ? 'chat' : 'survey',
         status: 'DRAFT',
       },
       include: {

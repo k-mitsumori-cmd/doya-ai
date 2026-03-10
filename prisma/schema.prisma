@@ -1532,6 +1532,9 @@ model InterviewXProject {
   wordCountTarget Int?     @default(3000)
   customInstructions String? @db.Text
 
+  // インタビューモード
+  interviewMode   String   @default("survey") // 'survey' | 'chat'
+
   // ステータス
   status          String   @default("DRAFT")
 
@@ -1623,6 +1626,7 @@ model InterviewXResponse {
   userAgent       String?
 
   answers         InterviewXAnswer[]
+  chatMessages    InterviewXChatMessage[]
 
   startedAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -1719,4 +1723,22 @@ model InterviewXCheck {
   @@index([projectId])
   @@index([draftId])
   @@map("interviewx_checks")
+}
+
+model InterviewXChatMessage {
+  id              String   @id @default(cuid())
+  responseId      String
+  response        InterviewXResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+
+  role            String              // 'interviewer' | 'respondent' | 'system'
+  content         String   @db.Text
+
+  topicIndex      Int?               // 対応する質問インデックス(0始まり)
+  messageType     String?            // 'greeting'|'question'|'follow_up'|'transition'|'closing'|'answer'
+
+  createdAt       DateTime @default(now())
+
+  @@index([responseId])
+  @@index([responseId, createdAt])
+  @@map("interviewx_chat_messages")
 }

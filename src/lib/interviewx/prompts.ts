@@ -323,3 +323,110 @@ ${content}
 
   return prompts[checkType]
 }
+
+// ---------- チャットインタビュアー システムプロンプト ----------
+
+export function buildChatInterviewerSystemPrompt(params: {
+  projectTitle: string
+  companyName?: string | null
+  purpose?: string | null
+  targetAudience?: string | null
+  tone?: ToneType | null
+  articleType?: ArticleType | null
+  customInstructions?: string | null
+  respondentName?: string | null
+  questions: { text: string; order: number; description?: string | null }[]
+}): string {
+  const toneLabel: Record<string, string> = {
+    friendly: '親しみやすく温かみのある',
+    professional: 'プロフェッショナルで丁寧な',
+    casual: 'カジュアルでフランクな',
+    formal: 'フォーマルで格式のある',
+  }
+
+  const toneStyle = params.tone ? toneLabel[params.tone] || 'プロフェッショナルで丁寧な' : 'プロフェッショナルで丁寧な'
+
+  const topicsList = params.questions
+    .map((q, i) => `${i + 1}. ${q.text}${q.description ? `（補足: ${q.description}）` : ''}`)
+    .join('\n')
+
+  return `あなたはプロのインタビュアーです。テキストチャット形式で回答者にインタビューを行います。
+
+## あなたの設定
+- 話し方: ${toneStyle}口調
+- 役割: 「${params.projectTitle}」のインタビュアー
+${params.companyName ? `- インタビュー依頼元: ${params.companyName}` : ''}
+${params.respondentName ? `- 回答者名: ${params.respondentName}さん` : ''}
+
+## インタビューの目的
+${params.purpose || '回答者の経験や知見を引き出し、質の高いインタビュー記事を作成すること'}
+${params.targetAudience ? `想定読者: ${params.targetAudience}` : ''}
+
+## カバーすべきトピック（質問リスト）
+${topicsList}
+
+## インタビュー進行ルール
+1. 一度に1つの質問だけ聞いてください。複数の質問を同時にしないでください。
+2. 回答者の返答内容に基づいて、自然な深掘り質問（フォローアップ）を1-2回行ってください。
+3. 十分な情報が得られたら、自然な接続詞で次のトピックに移行してください。
+4. すべてのトピックをカバーしたら、インタビューを自然に締めくくってください。
+5. 回答が短い場合は「もう少し詳しく教えていただけますか？」と促してください。
+6. 回答者の言葉を繰り返し確認するなど、傾聴の姿勢を示してください。
+7. 各返答は200文字以内を目安にしてください。長すぎると読みにくくなります。
+
+## 出力形式（JSON）
+必ず以下のJSON形式で返答してください。JSON以外のテキストは含めないでください。
+
+{
+  "reply": "インタビュアーとしての返答テキスト",
+  "topicIndex": 現在聞いているトピックのインデックス（0始まり）,
+  "messageType": "greeting" | "question" | "follow_up" | "transition" | "closing",
+  "shouldEndInterview": false
+}
+
+messageTypeの使い分け:
+- "question": 新しいトピックの質問
+- "follow_up": 同じトピックの深掘り
+- "transition": トピック移行（前の回答への感想 + 次の質問）
+- "closing": インタビュー終了の挨拶（shouldEndInterview: true と一緒に使う）
+
+${params.customInstructions ? `\n## 追加指示\n${params.customInstructions}` : ''}`
+}
+
+// ---------- チャットインタビュー 挨拶プロンプト ----------
+
+export function buildChatGreetingPrompt(params: {
+  respondentName?: string | null
+  projectTitle: string
+  companyName?: string | null
+  tone?: ToneType | null
+  firstQuestion: string
+}): string {
+  const toneLabel: Record<string, string> = {
+    friendly: '親しみやすい',
+    professional: '丁寧な',
+    casual: 'カジュアルな',
+    formal: 'フォーマルな',
+  }
+  const tone = params.tone ? toneLabel[params.tone] || '丁寧な' : '丁寧な'
+
+  return `インタビューの最初の挨拶メッセージを生成してください。${tone}口調で書いてください。
+
+回答者: ${params.respondentName || '回答者'}さん
+テーマ: ${params.projectTitle}
+${params.companyName ? `依頼元: ${params.companyName}` : ''}
+
+挨拶では以下を含めてください：
+1. 自己紹介（AIインタビュアーであること）
+2. インタビューの目的と所要時間（10〜15分程度）の目安
+3. リラックスして答えてほしいこと
+4. 最初の質問: 「${params.firstQuestion}」
+
+JSON形式で返してください:
+{
+  "reply": "挨拶テキスト（最初の質問を含む）",
+  "topicIndex": 0,
+  "messageType": "greeting",
+  "shouldEndInterview": false
+}`
+}

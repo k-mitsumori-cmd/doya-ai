@@ -32,6 +32,7 @@ export default function NewProjectPage() {
     wordCountTarget: 3000,
     brandColor: '#6366f1',
     customInstructions: '',
+    interviewMode: 'survey' as 'survey' | 'chat',
   })
 
   useEffect(() => {
@@ -134,6 +135,39 @@ export default function NewProjectPage() {
           </div>
 
           <div className="space-y-5">
+            {/* インタビューモード選択 */}
+            <div>
+              <label className="text-sm font-bold text-slate-700 mb-2 block">インタビュー方式</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setForm(prev => ({ ...prev, interviewMode: 'survey' }))}
+                  className={`p-4 rounded-xl border-2 text-left transition-all ${
+                    form.interviewMode === 'survey'
+                      ? 'border-indigo-500 bg-indigo-50'
+                      : 'border-slate-200 bg-white hover:border-indigo-300'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">📋</div>
+                  <p className="font-bold text-slate-900 text-sm">アンケート形式</p>
+                  <p className="text-xs text-slate-500 mt-1">全質問を一括フォームで回答</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm(prev => ({ ...prev, interviewMode: 'chat' }))}
+                  className={`p-4 rounded-xl border-2 text-left transition-all ${
+                    form.interviewMode === 'chat'
+                      ? 'border-indigo-500 bg-indigo-50'
+                      : 'border-slate-200 bg-white hover:border-indigo-300'
+                  }`}
+                >
+                  <div className="text-2xl mb-2">💬</div>
+                  <p className="font-bold text-slate-900 text-sm">AIチャット形式</p>
+                  <p className="text-xs text-slate-500 mt-1">AIが対話で深掘りインタビュー</p>
+                </button>
+              </div>
+            </div>
+
             <div>
               <label className="text-sm font-bold text-slate-700 mb-1.5 block">プロジェクト名 <span className="text-red-500">*</span></label>
               <input

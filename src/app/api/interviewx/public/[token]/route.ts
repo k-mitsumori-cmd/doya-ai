@@ -32,6 +32,8 @@ export async function GET(
         brandColor: true,
         status: true,
         purpose: true,
+        interviewMode: true,
+        tone: true,
         questions: {
           orderBy: { order: 'asc' },
           select: {
@@ -86,6 +88,8 @@ export async function GET(
         companyLogo: project.companyLogo,
         brandColor: project.brandColor || '#3B82F6',
         purpose: project.purpose,
+        interviewMode: project.interviewMode || 'survey',
+        tone: project.tone || 'professional',
         questions: project.questions,
       },
     })

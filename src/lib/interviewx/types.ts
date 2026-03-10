@@ -58,3 +58,20 @@ export interface SSEEvent {
   text?: string
   data?: any
 }
+
+// インタビューモード
+export type InterviewMode = 'survey' | 'chat'
+
+// チャットメッセージロール
+export type ChatMessageRole = 'interviewer' | 'respondent' | 'system'
+
+// チャットメッセージタイプ
+export type ChatMessageType = 'greeting' | 'question' | 'follow_up' | 'transition' | 'closing' | 'answer'
+
+// Gemini AIインタビュアーのJSON応答型
+export interface ChatAIResponse {
+  reply: string
+  topicIndex: number
+  messageType: ChatMessageType
+  shouldEndInterview: boolean
+}

@@ -27,6 +27,7 @@ interface ProjectData {
   companyLogo?: string
   brandColor: string
   purpose?: string
+  interviewMode?: string
   questions: Question[]
 }
 
@@ -137,6 +138,12 @@ export default function RespondPage() {
         if (!data.success) {
           setError(data.error || 'データの取得に失敗しました')
           setErrorCode(data.code || null)
+          return
+        }
+
+        // チャットモードの場合はチャットページへリダイレクト
+        if (data.project.interviewMode === 'chat') {
+          router.replace(`/interviewx/respond/${token}/chat`)
           return
         }
 
