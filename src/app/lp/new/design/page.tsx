@@ -19,10 +19,13 @@ interface Theme {
     accent: string
     background: string
     text: string
+    muted: string
   }
   tailwindClasses: {
     hero: string
+    section: string
     heading: string
+    body: string
     button: string
     accent: string
   }
