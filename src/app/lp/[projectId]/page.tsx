@@ -96,7 +96,7 @@ export default function LpPreviewPage() {
         return r.text()
       })
       .then(html => setPreviewHtml(html))
-      .catch(console.error)
+      .catch((e: any) => { toast.error(e.message || 'プレビューの読み込みに失敗しました') })
       .finally(() => setHtmlLoading(false))
   }, [project, projectId])
 

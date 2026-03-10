@@ -203,7 +203,7 @@ export default function LpDashboardPage() {
                       </Link>
                       <button
                         onClick={() => setDeleteTargetId(project.id)}
-                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-600 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
+                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-600 hover:text-red-400 transition-colors md:opacity-0 md:group-hover:opacity-100"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

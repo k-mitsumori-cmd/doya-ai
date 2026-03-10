@@ -152,3 +152,4 @@ export function getLpTheme(id: string): LpDesignTheme {
 }
 
 export const FREE_THEME_IDS: LpDesignTheme['id'][] = ['corporate', 'minimal', 'warm']
+export const LIGHT_THEME_IDS: LpDesignTheme['id'][] = ['corporate', 'minimal', 'warm', 'creative', 'bold']

@@ -7,13 +7,12 @@ import { motion } from 'framer-motion'
 import { ArrowRight, ArrowLeft, Loader2, CheckCircle2, Lock, LogIn } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Suspense } from 'react'
-import { FREE_THEME_IDS } from '@/lib/lp/themes'
-
 interface Theme {
   id: string
   name: string
   description: string
   industries: string
+  locked?: boolean
   colors: {
     primary: string
     secondary: string
@@ -88,9 +87,7 @@ function DesignPage() {
     loadData()
   }, [loadData, sessionStatus])
 
-  const userPlan = String((session?.user as any)?.plan || (session ? 'FREE' : 'GUEST')).toUpperCase()
-  const isFree = userPlan === 'FREE' || userPlan === 'GUEST'
-  const isThemeLocked = (themeId: string) => isFree && !FREE_THEME_IDS.includes(themeId)
+  const isThemeLocked = (theme: Theme) => theme.locked === true
 
   const handleNext = async () => {
     if (!projectId) return
@@ -120,7 +117,7 @@ function DesignPage() {
         <LogIn className="w-12 h-12 text-cyan-400 mb-4" />
         <h2 className="text-xl font-bold text-white mb-2">ログインが必要です</h2>
         <p className="text-slate-400 text-sm mb-6">LP作成機能を使うにはログインしてください。</p>
-        <button onClick={() => router.push('/auth/signin?callbackUrl=/lp/new/input')} className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition-colors">
+        <button onClick={() => router.push(`/auth/signin?callbackUrl=${encodeURIComponent(`/lp/new/design${projectId ? `?projectId=${projectId}` : ''}`)}`)} className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition-colors">
           <LogIn className="w-4 h-4" /> Googleでログイン
         </button>
       </div>
@@ -152,7 +149,7 @@ function DesignPage() {
         <h1 className="text-2xl font-black text-white mb-2">デザインテーマを選択してください</h1>
         <p className="text-slate-400 text-sm mb-8">
           LPのデザインを選択します。
-          {isFree && <span className="text-amber-400"> フリープランでは3テーマをご利用いただけます。</span>}
+          {themes.some(t => t.locked) && <span className="text-amber-400"> 現在のプランでは一部テーマが制限されています。</span>}
         </p>
 
         {loading ? (
@@ -163,7 +160,7 @@ function DesignPage() {
           <div className="space-y-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {themes.map((theme, i) => {
-                const locked = isThemeLocked(theme.id)
+                const locked = isThemeLocked(theme)
                 const selected = selectedThemeId === theme.id
 
                 return (
@@ -220,7 +217,7 @@ function DesignPage() {
               })}
             </div>
 
-            {isFree && (
+            {themes.some(t => t.locked) && (
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">
                 <Lock className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
                 <div>

@@ -176,6 +176,7 @@ function CopyPage() {
                 return next
               })
             }
+            if (data.type === 'warning') toast.error(data.message || '一部セクションの生成に失敗しました')
             if (data.type === 'error') throw new Error(data.message)
           } catch (e: any) {
             if (e.message && !e.message.includes('Unexpected token')) throw e
@@ -188,6 +189,10 @@ function CopyPage() {
     } finally {
       setGenerating(false)
     }
+  }, [projectId])
+
+  useEffect(() => {
+    hasGenerated.current = false
   }, [projectId])
 
   useEffect(() => {
@@ -210,6 +215,11 @@ function CopyPage() {
       })
       const data = await res.json()
       if (!res.ok) {
+        if (res.status === 403 && data.upgradePath) {
+          toast.error('ブラッシュアップはProプラン以上で利用可能です')
+          router.push(data.upgradePath)
+          return
+        }
         throw new Error(data.error || 'ブラッシュアップに失敗しました')
       }
       if (data.section) {
@@ -247,7 +257,7 @@ function CopyPage() {
         <LogIn className="w-12 h-12 text-cyan-400 mb-4" />
         <h2 className="text-xl font-bold text-white mb-2">ログインが必要です</h2>
         <p className="text-slate-400 text-sm mb-6">LP作成機能を使うにはログインしてください。</p>
-        <button onClick={() => router.push('/auth/signin?callbackUrl=/lp/new/input')} className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition-colors">
+        <button onClick={() => router.push(`/auth/signin?callbackUrl=${encodeURIComponent(`/lp/new/copy${projectId ? `?projectId=${projectId}` : ''}`)}`)} className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition-colors">
           <LogIn className="w-4 h-4" /> Googleでログイン
         </button>
       </div>

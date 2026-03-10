@@ -5,12 +5,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { LP_THEMES, FREE_THEME_IDS } from '@/lib/lp/themes'
-
-// Free: 3テーマ（Corporate/Minimal/Warm）
-// Light: 5テーマまで
-// Pro/Enterprise: 全8テーマ
-const LIGHT_THEME_IDS = ['corporate', 'minimal', 'warm', 'creative', 'bold']
+import { LP_THEMES, FREE_THEME_IDS, LIGHT_THEME_IDS } from '@/lib/lp/themes'
 
 function isProPlan(plan: string | null | undefined): boolean {
   const p = String(plan || 'FREE').toUpperCase()
