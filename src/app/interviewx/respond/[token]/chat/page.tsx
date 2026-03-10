@@ -50,7 +50,7 @@ export default function ChatInterviewPage() {
   const chatEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
-  const brandColor = project?.brandColor || '#6366f1'
+  const brandColor = project?.brandColor || '#3B82F6'
 
   // プロジェクト読み込み
   useEffect(() => {
@@ -82,6 +82,13 @@ export default function ChatInterviewPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isAiTyping])
+
+  // エラー自動クリア（5秒後）
+  useEffect(() => {
+    if (!error) return
+    const timer = setTimeout(() => setError(''), 5000)
+    return () => clearTimeout(timer)
+  }, [error])
 
   // セッション復元
   async function restoreSession(rid: string) {
@@ -156,25 +163,29 @@ export default function ChatInterviewPage() {
   async function handleSendMessage() {
     if (!inputText.trim() || !responseId || isAiTyping || isComplete) return
 
+    const savedText = inputText.trim()
     const userMessage: ChatMessage = {
       id: `tmp-${Date.now()}`,
       role: 'respondent',
-      content: inputText.trim(),
+      content: savedText,
     }
     setMessages(prev => [...prev, userMessage])
     setInputText('')
     setIsAiTyping(true)
+    setError('')
 
     try {
       const res = await fetch(`/api/interviewx/public/${token}/chat/message`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ responseId, content: userMessage.content }),
+        body: JSON.stringify({ responseId, content: savedText }),
       })
       const data = await res.json()
 
       if (!data.success) {
         setError(data.error)
+        setInputText(savedText)
+        setMessages(prev => prev.filter(m => m.id !== userMessage.id))
         return
       }
 
@@ -192,6 +203,8 @@ export default function ChatInterviewPage() {
       }
     } catch {
       setError('送信に失敗しました。もう一度お試しください。')
+      setInputText(savedText)
+      setMessages(prev => prev.filter(m => m.id !== userMessage.id))
     } finally {
       setIsAiTyping(false)
       inputRef.current?.focus()
@@ -276,7 +289,7 @@ export default function ChatInterviewPage() {
                   placeholder="任意"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">役職</label>
                   <input
@@ -342,7 +355,7 @@ export default function ChatInterviewPage() {
 
   // チャットUI
   return (
-    <div className="h-screen flex flex-col bg-slate-50">
+    <div className="h-[100dvh] flex flex-col bg-slate-50">
       {/* ヘッダー */}
       <div className="flex-shrink-0 px-4 py-3 border-b border-slate-200 bg-white">
         <div className="flex items-center justify-between max-w-2xl mx-auto">
@@ -358,7 +371,7 @@ export default function ChatInterviewPage() {
           {topicsTotal > 0 && (
             <div className="text-right">
               <p className="text-xs text-slate-500">{topicsCovered}/{topicsTotal} トピック</p>
-              <div className="w-20 h-1.5 bg-slate-200 rounded-full mt-1 overflow-hidden">
+              <div className="w-20 h-1.5 bg-slate-200 rounded-full mt-1 overflow-hidden" role="progressbar" aria-valuenow={topicsCovered} aria-valuemax={topicsTotal}>
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{ width: `${(topicsCovered / topicsTotal) * 100}%`, background: brandColor }}
@@ -370,7 +383,7 @@ export default function ChatInterviewPage() {
       </div>
 
       {/* メッセージエリア */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="flex-1 overflow-y-auto px-4 py-4" role="log" aria-live="polite">
         <div className="max-w-2xl mx-auto space-y-4">
           {messages.map(msg => (
             <div key={msg.id} className={`flex gap-3 ${msg.role === 'respondent' ? 'flex-row-reverse' : ''}`}>
@@ -405,7 +418,7 @@ export default function ChatInterviewPage() {
 
           {/* タイピングインジケーター */}
           {isAiTyping && (
-            <div className="flex gap-3">
+            <div className="flex gap-3" aria-label="AIが入力中">
               <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center" style={{ background: `${brandColor}20` }}>
                 <Bot className="w-4 h-4" style={{ color: brandColor }} />
               </div>
@@ -444,6 +457,7 @@ export default function ChatInterviewPage() {
               onChange={e => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="メッセージを入力..."
+              aria-label="メッセージ入力"
               rows={1}
               className="flex-1 px-4 py-3 border border-slate-200 rounded-xl text-sm resize-none focus:outline-none focus:ring-2"
               style={{ ['--tw-ring-color' as any]: brandColor }}
@@ -452,6 +466,7 @@ export default function ChatInterviewPage() {
             <button
               onClick={handleSendMessage}
               disabled={!inputText.trim() || isAiTyping}
+              aria-label="送信"
               className="px-4 py-3 rounded-xl text-white transition-all disabled:opacity-50"
               style={{ background: brandColor }}
             >

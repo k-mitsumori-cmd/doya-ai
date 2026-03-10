@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { buildChatGreetingPrompt, buildChatInterviewerSystemPrompt } from '@/lib/interviewx/prompts'
+import { buildChatGreetingPrompt } from '@/lib/interviewx/prompts'
 import { callGeminiJson, parseAIResponse } from '@/lib/interviewx/chat-utils'
 
 type RouteParams = { params: Promise<{ token: string }> }
@@ -45,9 +45,13 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ success: false, error: '質問が設定されていません' }, { status: 400 })
     }
 
-    // 既存の進行中レスポンスがあればそれを返す
+    // 既存の進行中レスポンスがあればそれを返す（同一回答者のみ）
     const existingResponse = await prisma.interviewXResponse.findFirst({
-      where: { projectId: project.id, status: 'IN_PROGRESS' },
+      where: {
+        projectId: project.id,
+        status: 'IN_PROGRESS',
+        respondentName: respondentName.trim(),
+      },
       include: {
         chatMessages: { orderBy: { createdAt: 'asc' } },
       },
@@ -67,6 +71,15 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         topicsCovered: 0,
         resumed: true,
       })
+    }
+
+    // 完了済みレスポンスがある場合はブロック
+    const completedResponse = await prisma.interviewXResponse.findFirst({
+      where: { projectId: project.id, status: 'COMPLETED' },
+      select: { id: true },
+    })
+    if (completedResponse) {
+      return NextResponse.json({ success: false, error: 'このインタビューは既に完了しています' }, { status: 410 })
     }
 
     // IP/UA取得
@@ -138,7 +151,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   } catch (e: any) {
     console.error('[interviewx-chat] start error:', e?.message)
     return NextResponse.json(
-      { success: false, error: e?.message || 'チャット開始に失敗しました' },
+      { success: false, error: 'チャット開始に失敗しました' },
       { status: 500 }
     )
   }

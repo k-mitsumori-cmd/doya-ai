@@ -21,6 +21,11 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ success: false, error: 'メッセージを入力してください' }, { status: 400 })
     }
 
+    // メッセージ長制限（5000文字）
+    if (content.trim().length > 5000) {
+      return NextResponse.json({ success: false, error: 'メッセージが長すぎます（5000文字以内）' }, { status: 400 })
+    }
+
     // プロジェクト + レスポンス取得
     const project = await prisma.interviewXProject.findUnique({
       where: { shareToken: token },
@@ -120,45 +125,44 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     // トピックカバー状況更新
     coveredTopics.add(aiResponse.topicIndex)
 
-    // インタビュー完了処理
-    if (aiResponse.shouldEndInterview) {
-      // 全チャットメッセージ再取得
+    // サーバー側でshouldEndInterviewを検証（80%以上のトピックカバーが必要）
+    const shouldEnd = aiResponse.shouldEndInterview &&
+      coveredTopics.size >= Math.ceil(project.questions.length * 0.8)
+
+    // インタビュー完了処理（トランザクションで保護）
+    if (shouldEnd) {
       const allMessages = await prisma.interviewXChatMessage.findMany({
         where: { responseId },
         orderBy: { createdAt: 'asc' },
       })
 
-      // Q&Aペア抽出
       const qaPairs = extractQAPairsFromChat(
         allMessages.map(m => ({ role: m.role, content: m.content, topicIndex: m.topicIndex })),
         project.questions.map(q => ({ id: q.id, text: q.text, order: q.order })),
       )
 
-      // InterviewXAnswer保存
-      if (qaPairs.length > 0) {
-        await prisma.interviewXAnswer.createMany({
-          data: qaPairs.map(qa => ({
-            responseId,
-            questionId: qa.questionId,
-            answerText: qa.answerText,
-          })),
+      await prisma.$transaction(async (tx) => {
+        if (qaPairs.length > 0) {
+          await tx.interviewXAnswer.createMany({
+            data: qaPairs.map(qa => ({
+              responseId,
+              questionId: qa.questionId,
+              answerText: qa.answerText,
+            })),
+          })
+        }
+        await tx.interviewXResponse.update({
+          where: { id: responseId },
+          data: { status: 'COMPLETED', completedAt: new Date() },
         })
-      }
-
-      // Response完了
-      await prisma.interviewXResponse.update({
-        where: { id: responseId },
-        data: { status: 'COMPLETED', completedAt: new Date() },
-      })
-
-      // Project status更新
-      await prisma.interviewXProject.update({
-        where: { id: project.id },
-        data: {
-          status: 'ANSWERED',
-          respondentName: response.respondentName,
-          respondentEmail: response.respondentEmail,
-        },
+        await tx.interviewXProject.update({
+          where: { id: project.id },
+          data: {
+            status: 'ANSWERED',
+            respondentName: response.respondentName,
+            respondentEmail: response.respondentEmail,
+          },
+        })
       })
     }
 
@@ -172,12 +176,12 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       },
       topicsTotal: project.questions.length,
       topicsCovered: coveredTopics.size,
-      isComplete: aiResponse.shouldEndInterview,
+      isComplete: shouldEnd,
     })
   } catch (e: any) {
     console.error('[interviewx-chat] message error:', e?.message)
     return NextResponse.json(
-      { success: false, error: e?.message || 'メッセージの送信に失敗しました' },
+      { success: false, error: 'メッセージの送信に失敗しました' },
       { status: 500 }
     )
   }

@@ -98,7 +98,7 @@ export default function NewProjectPage() {
               <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {templates.map(tpl => (
                 <button
                   key={tpl.id}
@@ -247,7 +247,7 @@ export default function NewProjectPage() {
               />
             </div>
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="text-sm font-bold text-slate-700 mb-1.5 block">トーン</label>
                 <select

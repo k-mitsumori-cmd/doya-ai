@@ -26,9 +26,13 @@ export async function callGeminiJson(
   const model = 'gemini-2.0-flash'
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30000)
+
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    signal: controller.signal,
     body: JSON.stringify({
       contents,
       generationConfig: {
@@ -43,7 +47,7 @@ export async function callGeminiJson(
         { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
       ],
     }),
-  })
+  }).finally(() => clearTimeout(timeout))
 
   if (!res.ok) {
     const errText = await res.text().catch(() => '')
