@@ -104,7 +104,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     // Gemini呼び出し
     const contents = buildGeminiContents(
       systemPrompt + progressHint,
-      response.chatMessages.map(m => ({ role: m.role, content: m.content })),
+      response.chatMessages.map(m => ({ role: m.role, content: m.content, topicIndex: m.topicIndex, messageType: m.messageType })),
       content.trim(),
     )
 

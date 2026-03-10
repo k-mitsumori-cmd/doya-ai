@@ -69,10 +69,12 @@ export default function ChatInterviewPage() {
         setProject(data.project)
 
         // localStorage からセッション復元チェック
-        const savedResponseId = localStorage.getItem(`ix-chat-${token}`)
-        if (savedResponseId) {
-          restoreSession(savedResponseId)
-        }
+        try {
+          const savedResponseId = localStorage.getItem(`ix-chat-${token}`)
+          if (savedResponseId) {
+            restoreSession(savedResponseId)
+          }
+        } catch {}
       })
       .catch(() => setError('読み込みに失敗しました'))
       .finally(() => setLoading(false))
@@ -83,12 +85,12 @@ export default function ChatInterviewPage() {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isAiTyping])
 
-  // エラー自動クリア（5秒後）
+  // エラー自動クリア（5秒後）— プロジェクト読み込み完了後のみ
   useEffect(() => {
-    if (!error) return
+    if (!error || !project) return
     const timer = setTimeout(() => setError(''), 5000)
     return () => clearTimeout(timer)
-  }, [error])
+  }, [error, project])
 
   // セッション復元
   async function restoreSession(rid: string) {
@@ -134,13 +136,14 @@ export default function ChatInterviewPage() {
 
       if (!data.success) {
         setError(data.error)
+        setStep('info')
         return
       }
 
       setResponseId(data.responseId)
       setTopicsTotal(data.topicsTotal)
       setTopicsCovered(data.topicsCovered)
-      localStorage.setItem(`ix-chat-${token}`, data.responseId)
+      try { localStorage.setItem(`ix-chat-${token}`, data.responseId) } catch {}
 
       if (data.resumed) {
         await restoreSession(data.responseId)
@@ -154,6 +157,7 @@ export default function ChatInterviewPage() {
       }
     } catch {
       setError('チャットの開始に失敗しました')
+      setStep('info')
     } finally {
       setIsAiTyping(false)
     }

@@ -87,8 +87,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     const ipAddress = forwarded ? forwarded.split(',')[0].trim() : null
     const userAgent = req.headers.get('user-agent')
 
-    // InterviewXResponse作成
-    const response = await prisma.interviewXResponse.create({
+    // 既存の空レスポンス（挨拶生成失敗で残った）を再利用、なければ新規作成
+    const response = existingResponse ?? await prisma.interviewXResponse.create({
       data: {
         projectId: project.id,
         respondentName: respondentName.trim(),

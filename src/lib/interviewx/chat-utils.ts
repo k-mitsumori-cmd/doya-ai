@@ -127,10 +127,11 @@ export function extractQAPairsFromChat(
 
 /**
  * チャット履歴をGemini contents形式に変換
+ * AIメッセージはJSON形式で送信（Geminiの出力形式と一致させる）
  */
 export function buildGeminiContents(
   systemPrompt: string,
-  chatHistory: { role: string; content: string }[],
+  chatHistory: { role: string; content: string; topicIndex?: number | null; messageType?: string | null }[],
   newUserMessage?: string,
 ): { role: string; parts: { text: string }[] }[] {
   const contents: { role: string; parts: { text: string }[] }[] = [
@@ -141,10 +142,23 @@ export function buildGeminiContents(
   // 会話履歴を追加（最新20件に制限）
   const recentHistory = chatHistory.slice(-20)
   for (const msg of recentHistory) {
-    contents.push({
-      role: msg.role === 'interviewer' ? 'model' : 'user',
-      parts: [{ text: msg.content }],
-    })
+    if (msg.role === 'interviewer') {
+      // AIメッセージはJSON形式で送信（Geminiの出力形式と一致）
+      contents.push({
+        role: 'model',
+        parts: [{ text: JSON.stringify({
+          reply: msg.content,
+          topicIndex: msg.topicIndex ?? 0,
+          messageType: msg.messageType || 'question',
+          shouldEndInterview: false,
+        }) }],
+      })
+    } else {
+      contents.push({
+        role: 'user',
+        parts: [{ text: msg.content }],
+      })
+    }
   }
 
   // 新しいユーザーメッセージを追加
