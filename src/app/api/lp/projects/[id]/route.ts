@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { FREE_THEME_IDS } from '@/lib/lp/themes'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
 
@@ -56,6 +57,18 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
 
     const body = await req.json()
     const { name, purpose, productInfo, persona, structures, selectedStructure, themeId, customColors, customFonts, status, htmlUrl, pdfUrl, sections } = body
+
+    // テーマロック: Free/Lightユーザーは無料テーマのみ
+    if (themeId !== undefined && !FREE_THEME_IDS.includes(themeId)) {
+      const user = await prisma.user.findUnique({ where: { id: session.user.id }, select: { plan: true } })
+      const plan = String(user?.plan || 'FREE').toUpperCase()
+      if (!['PRO', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(plan)) {
+        return NextResponse.json(
+          { error: 'このテーマはProプラン以上で利用可能です', upgradePath: '/lp/pricing' },
+          { status: 403 }
+        )
+      }
+    }
 
     // プロジェクト更新とセクション一括更新をトランザクションで実行
     const result = await prisma.$transaction(async (tx) => {

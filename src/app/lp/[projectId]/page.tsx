@@ -89,7 +89,7 @@ export default function LpPreviewPage() {
     fetch('/api/lp/export-html', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ projectId }),
+      body: JSON.stringify({ projectId, mode: 'preview' }),
     })
       .then(r => {
         if (!r.ok) throw new Error('HTMLの生成に失敗しました')
@@ -399,6 +399,7 @@ export default function LpPreviewPage() {
             <iframe
               ref={iframeRef}
               srcDoc={previewHtml}
+              sandbox="allow-scripts"
               className="w-full"
               style={{ height: '80vh', border: 'none' }}
               title="LP Preview"
@@ -441,20 +442,20 @@ export default function LpPreviewPage() {
       {/* 削除確認モーダル */}
       {deleteConfirmOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-2xl p-6 max-w-sm mx-4 shadow-xl">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm mx-4 shadow-xl">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-red-100 rounded-full">
-                <AlertCircle className="w-5 h-5 text-red-500" />
+              <div className="p-2 bg-red-500/10 rounded-full">
+                <AlertCircle className="w-5 h-5 text-red-400" />
               </div>
-              <h3 className="font-bold text-slate-900">プロジェクトの削除</h3>
+              <h3 className="font-bold text-white">プロジェクトの削除</h3>
             </div>
-            <p className="text-sm text-slate-600 mb-6">
+            <p className="text-sm text-slate-400 mb-6">
               「{project?.name}」を削除しますか？この操作は取り消せません。
             </p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setDeleteConfirmOpen(false)}
-                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-bold rounded-lg transition-colors"
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold rounded-lg transition-colors"
               >
                 キャンセル
               </button>

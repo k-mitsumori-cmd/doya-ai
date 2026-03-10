@@ -53,16 +53,23 @@ interface ExportOptions {
   sections: SectionData[]
 }
 
+/** ダークテーマ判定 */
+function isDarkTheme(theme: LpDesignTheme): boolean {
+  return theme.tailwindClasses.section.includes('bg-slate-9')
+}
+
 /** グリッドレイアウト: 3カラムのグリッドで表示 */
 function renderItemsGrid(
   items: Array<{ title?: string; description?: string; icon?: string; image?: string }>,
   theme: LpDesignTheme
 ): string {
+  const dark = isDarkTheme(theme)
+  const cardClass = dark ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-gray-200'
   return `<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
     ${items
       .map(
         (item) => `
-      <div class="p-6 rounded-lg border border-gray-200 bg-white/80 shadow-sm text-center">
+      <div class="p-6 rounded-lg border ${cardClass} shadow-sm text-center">
         ${item.icon ? `<div class="text-3xl mb-3">${escapeHtml(item.icon)}</div>` : ''}
         ${item.image ? `<img src="${sanitizeUrl(item.image)}" alt="${escapeHtml(item.title)}" class="w-full h-40 object-cover rounded-lg mb-3">` : ''}
         <h3 class="font-bold text-lg mb-2 ${theme.tailwindClasses.heading}">${escapeHtml(item.title)}</h3>
@@ -78,11 +85,13 @@ function renderItemsCards(
   items: Array<{ title?: string; description?: string; icon?: string; image?: string }>,
   theme: LpDesignTheme
 ): string {
+  const dark = isDarkTheme(theme)
+  const cardBg = dark ? 'bg-slate-800' : 'bg-white'
   return `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mt-8">
     ${items
       .map(
         (item) => `
-      <div class="rounded-2xl shadow-lg overflow-hidden bg-white">
+      <div class="rounded-2xl shadow-lg overflow-hidden ${cardBg}">
         ${item.image ? `<img src="${sanitizeUrl(item.image)}" alt="${escapeHtml(item.title)}" class="w-full h-48 object-cover">` : ''}
         <div class="p-6">
           ${item.icon ? `<div class="text-2xl mb-2">${escapeHtml(item.icon)}</div>` : ''}
@@ -115,7 +124,7 @@ function renderLeftRight(
           ${section.items
             .map(
               (item) => `
-            <div class="bg-white/80 rounded-xl p-4 shadow-sm border border-gray-100">
+            <div class="${isDarkTheme(theme) ? 'bg-slate-800 border-slate-700' : 'bg-white/80 border-gray-100'} rounded-xl p-4 shadow-sm border">
               ${item.icon ? `<span class="text-xl mr-2">${escapeHtml(item.icon)}</span>` : ''}
               <h4 class="font-bold ${theme.tailwindClasses.heading} mb-1">${escapeHtml(item.title)}</h4>
               <p class="text-sm ${theme.tailwindClasses.body}">${escapeHtml(item.description)}</p>
@@ -125,8 +134,8 @@ function renderLeftRight(
         </div>
       </div>`
     : `<div class="flex-1 ${reverse ? 'md:order-1' : ''}">
-        <div class="bg-gray-100 rounded-2xl h-64 flex items-center justify-center">
-          <span class="text-gray-400 text-sm">コンテンツ画像</span>
+        <div class="${isDarkTheme(theme) ? 'bg-slate-700' : 'bg-gray-100'} rounded-2xl h-64 flex items-center justify-center">
+          <span class="${isDarkTheme(theme) ? 'text-slate-500' : 'text-gray-400'} text-sm">コンテンツ画像</span>
         </div>
       </div>`
 
@@ -143,10 +152,11 @@ function renderSection(section: SectionData, theme: LpDesignTheme, idx: number):
   const layout = section.layout || 'center'
 
   // 背景クラスの決定
-  let bgClass = idx % 2 === 0 ? theme.tailwindClasses.section : 'bg-gray-50'
+  const sectionAlt = theme.tailwindClasses.section.includes('bg-slate-9') ? 'bg-slate-800' : 'bg-gray-50'
+  let bgClass = idx % 2 === 0 ? theme.tailwindClasses.section : sectionAlt
   if (isHero) bgClass = theme.tailwindClasses.hero
   if (isCta) bgClass = theme.tailwindClasses.hero
-  if (isFooter) bgClass = 'bg-gray-900 text-white'
+  if (isFooter) bgClass = theme.tailwindClasses.section.includes('bg-slate-9') ? 'bg-slate-950 text-slate-300' : 'bg-gray-900 text-white'
 
   // カスタム背景色で上書き
   const safeBgColor = sanitizeCssColor(section.bgColor)

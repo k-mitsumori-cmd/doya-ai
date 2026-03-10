@@ -45,7 +45,7 @@ export default function LpHistoryPage() {
       .then(data => {
         if (data.projects) setProjects(data.projects)
       })
-      .catch(console.error)
+      .catch(() => { toast.error('LPプロジェクト一覧の取得に失敗しました') })
       .finally(() => setLoading(false))
   }, [sessionStatus])
 

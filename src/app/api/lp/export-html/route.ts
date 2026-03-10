@@ -20,19 +20,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // プラン制限: Pro以上のみHTMLエクスポート可能
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { plan: true },
-    })
-    if (!isProPlan(user?.plan)) {
-      return NextResponse.json(
-        { error: 'HTMLエクスポートはProプラン以上で利用可能です', upgradePath: '/lp/pricing' },
-        { status: 403 }
-      )
-    }
+    const { projectId, mode } = await req.json() as { projectId?: string; mode?: string }
+    const isPreview = mode === 'preview'
 
-    const { projectId } = await req.json()
+    // プラン制限: HTMLダウンロードはPro以上。プレビューは全ユーザー可。
+    if (!isPreview) {
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { plan: true },
+      })
+      if (!isProPlan(user?.plan)) {
+        return NextResponse.json(
+          { error: 'HTMLエクスポートはProプラン以上で利用可能です', upgradePath: '/lp/pricing' },
+          { status: 403 }
+        )
+      }
+    }
     if (!projectId) {
       return NextResponse.json({ error: 'projectId is required' }, { status: 400 })
     }
@@ -68,12 +71,13 @@ export async function POST(req: NextRequest) {
       })),
     })
 
-    return new NextResponse(html, {
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(project.name)}.html"`,
-      },
-    })
+    const headers: Record<string, string> = {
+      'Content-Type': 'text/html; charset=utf-8',
+    }
+    if (!isPreview) {
+      headers['Content-Disposition'] = `attachment; filename="${encodeURIComponent(project.name)}.html"`
+    }
+    return new NextResponse(html, { headers })
   } catch (error) {
     console.error('[POST /api/lp/export-html]', error)
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })

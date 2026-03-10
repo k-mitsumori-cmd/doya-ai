@@ -1206,7 +1206,7 @@ export function getDailyLimit(serviceId: string, userType: 'guest' | 'free' | 'p
 
 // プランを取得（無料版/有料版など）
 export function getPlanById(planId: string): Plan | null {
-  const allPlans = [...KANTAN_PRICING.plans, ...SEO_PRICING.plans, ...BANNER_PRICING.plans, ...PERSONA_PRICING.plans, ...INTERVIEW_PRICING.plans, ...SHINDAN_PRICING.plans, ...COPY_PRICING.plans, ...VOICE_PRICING.plans]
+  const allPlans = [...KANTAN_PRICING.plans, ...SEO_PRICING.plans, ...BANNER_PRICING.plans, ...PERSONA_PRICING.plans, ...INTERVIEW_PRICING.plans, ...SHINDAN_PRICING.plans, ...COPY_PRICING.plans, ...VOICE_PRICING.plans, ...LP_PRICING.plans]
   return allPlans.find(p => p.id === planId) || null
 }
 

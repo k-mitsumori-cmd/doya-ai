@@ -18,10 +18,11 @@ interface LpProject {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  draft: { label: '下書き', color: 'bg-gray-500/20 text-gray-400' },
-  generating: { label: '生成中', color: 'bg-cyan-500/20 text-cyan-400' },
-  editing: { label: '編集中', color: 'bg-blue-500/20 text-blue-400' },
-  completed: { label: '完成', color: 'bg-green-500/20 text-green-400' },
+  draft: { label: '下書き', color: 'text-slate-400 bg-slate-800' },
+  generating: { label: '生成中', color: 'text-amber-400 bg-amber-500/10' },
+  editing: { label: '編集中', color: 'text-blue-400 bg-blue-500/10' },
+  completed: { label: '完成', color: 'text-cyan-400 bg-cyan-500/10' },
+  published: { label: '公開中', color: 'text-green-400 bg-green-500/10' },
 }
 
 const FEATURES = [
