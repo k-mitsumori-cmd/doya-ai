@@ -18,6 +18,7 @@ export default function NewProjectPage() {
   const [templates, setTemplates] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
+  const [error, setError] = useState('')
 
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null)
   const [form, setForm] = useState({
@@ -40,14 +41,16 @@ export default function NewProjectPage() {
       .then(r => r.json())
       .then(data => {
         if (data.success) setTemplates(data.templates || [])
+        else setError(data.error || 'テンプレートの読み込みに失敗しました')
       })
-      .catch(() => {})
+      .catch(() => setError('テンプレートの読み込みに失敗しました'))
       .finally(() => setLoading(false))
   }, [])
 
   const handleCreate = async () => {
     if (!selectedTemplate || !form.title.trim()) return
     setCreating(true)
+    setError('')
     try {
       const res = await fetch('/api/interviewx/projects', {
         method: 'POST',
@@ -61,9 +64,11 @@ export default function NewProjectPage() {
       const data = await res.json()
       if (data.success && data.project) {
         router.push(`/interviewx/projects/${data.project.id}/questions`)
+      } else {
+        setError(data.error || 'プロジェクトの作成に失敗しました')
       }
     } catch (e) {
-      console.error(e)
+      setError('通信エラーが発生しました。ページを再読み込みしてお試しください。')
     } finally {
       setCreating(false)
     }
@@ -93,6 +98,11 @@ export default function NewProjectPage() {
       {step === 1 && (
         <div>
           <p className="text-slate-500 mb-6">作成する記事のテンプレートを選んでください。</p>
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3 mb-4">
+              {error}
+            </div>
+          )}
           {loading ? (
             <div className="flex items-center justify-center py-20">
               <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
@@ -294,6 +304,12 @@ export default function NewProjectPage() {
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
               />
             </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">
+                {error}
+              </div>
+            )}
 
             <div className="flex gap-3 pt-4">
               <button
