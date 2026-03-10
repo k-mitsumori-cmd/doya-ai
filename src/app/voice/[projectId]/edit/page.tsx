@@ -210,7 +210,7 @@ export default function EditProjectPage() {
       return
     }
     const audio = new Audio(result.blobUrl)
-    audio.play()
+    audio.play().catch(() => setPlaying(false))
     audio.onended = () => setPlaying(false)
     setAudioEl(audio)
     setPlaying(true)

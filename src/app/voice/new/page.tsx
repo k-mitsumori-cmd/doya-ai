@@ -30,7 +30,7 @@ function NewVoicePageInner() {
   const searchParams = useSearchParams()
   const { data: session } = useSession()
   const user = session?.user as any
-  const isPro = ['PRO', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(String(user?.voicePlan || user?.plan || '').toUpperCase())
+  const isPro = ['PRO', 'LIGHT', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(String(user?.voicePlan || user?.plan || '').toUpperCase())
 
   const allSpeakers = getAllSpeakers()
   const freeSpeakers = getFreeSpeakers()
@@ -139,7 +139,7 @@ function NewVoicePageInner() {
       return
     }
     const audio = new Audio(result.blobUrl)
-    audio.play()
+    audio.play().catch(() => setPlaying(false))
     audio.onended = () => setPlaying(false)
     setAudioEl(audio)
     setPlaying(true)

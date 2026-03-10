@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { Play, Pause, Star, AlertCircle, Loader2 } from 'lucide-react'
 import { getAllSpeakers, type VoiceSpeaker } from '@/lib/voice/speakers'
@@ -19,7 +19,7 @@ const AGE_LABEL: Record<string, string> = {
 export default function SpeakersPage() {
   const { data: session } = useSession()
   const user = session?.user as any
-  const isPro = ['PRO', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(
+  const isPro = ['PRO', 'LIGHT', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(
     String(user?.voicePlan || user?.plan || '').toUpperCase()
   )
 
@@ -32,6 +32,14 @@ export default function SpeakersPage() {
   const [sampleError, setSampleError] = useState<string | null>(null)
 
   const filtered = filter === 'all' ? speakers : speakers.filter(s => s.gender === filter)
+
+  // アンマウント時に音声停止 & BlobURL解放
+  useEffect(() => {
+    return () => {
+      audioEl?.pause()
+      if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl)
+    }
+  }, [audioEl, currentBlobUrl])
 
   const togglePlay = async (speaker: VoiceSpeaker) => {
     if (playingId === speaker.id) {
