@@ -447,13 +447,13 @@ export const SERVICES: Service[] = [
   },
 
   // ----------------------------------------
-  // ドヤLP AI
+  // ドヤワイヤーフレーム AI
   // ----------------------------------------
   {
     id: 'lp',
-    name: 'ドヤLP AI',
-    shortName: 'LP',
-    description: 'LPを、1分で設計する。',
+    name: 'ドヤワイヤーフレーム AI',
+    shortName: 'ワイヤーフレーム',
+    description: 'ワイヤーフレームを、1分で設計する。',
     longDescription: '商品情報を入力するだけで、LP構成案・セクション別コピー・デザイン方針をAIが自動生成。HTMLエクスポートで、そのまま公開or制作会社への指示書として使用できる。',
     icon: '📄',
     color: 'cyan',
