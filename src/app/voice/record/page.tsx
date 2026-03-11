@@ -1,9 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useSession } from 'next-auth/react'
-import { Mic, Square, Play, Pause, Trash2, Upload, Download, Loader2, Scissors, X, Check, AlertCircle } from 'lucide-react'
+import { useSession, signIn } from 'next-auth/react'
+import { Mic, Square, Play, Pause, Trash2, Upload, Download, Loader2, Scissors, X, Check, AlertCircle, LogIn, Sparkles } from 'lucide-react'
 import Link from 'next/link'
+import { isVoiceProFromUser } from '@/lib/voice/plans'
 
 interface RecordingItem {
   id: string
@@ -22,9 +23,7 @@ interface RecordingItem {
 export default function RecordPage() {
   const { data: session } = useSession()
   const user = session?.user as any
-  const isPro = ['PRO', 'LIGHT', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(
-    String(user?.voicePlan || user?.plan || '').toUpperCase()
-  )
+  const isPro = isVoiceProFromUser(user)
 
   const [isRecording, setIsRecording] = useState(false)
   const [recordings, setRecordings] = useState<RecordingItem[]>([])
@@ -50,8 +49,10 @@ export default function RecordPage() {
   const analyserRef = useRef<AnalyserNode | null>(null)
   const animFrameRef = useRef<number | null>(null)
   const recordingsRef = useRef<RecordingItem[]>([])
+  const trimPreviewUrlRef = useRef<string | null>(null)
 
   useEffect(() => { recordingsRef.current = recordings }, [recordings])
+  useEffect(() => { trimPreviewUrlRef.current = trimPreviewUrl }, [trimPreviewUrl])
 
   // アンマウント時クリーンアップ
   useEffect(() => {
@@ -64,7 +65,7 @@ export default function RecordPage() {
         URL.revokeObjectURL(r.url)
         if (r.trimmedUrl) URL.revokeObjectURL(r.trimmedUrl)
       })
-      if (trimPreviewUrl) URL.revokeObjectURL(trimPreviewUrl)
+      if (trimPreviewUrlRef.current) URL.revokeObjectURL(trimPreviewUrlRef.current)
     }
   }, [])
 
@@ -307,7 +308,7 @@ export default function RecordPage() {
         const data = await res.json()
         if (!res.ok || !data.success) {
           // サーバー保存は失敗してもローカルトリミングは成功扱い
-          console.warn('Server trim failed:', data.error)
+          // Server trim failed silently — local trimming still succeeds
         }
       }
 
@@ -316,7 +317,7 @@ export default function RecordPage() {
       setTrimStart(0)
       setTrimEnd(100)
     } catch (err) {
-      console.error('Trim error:', err)
+      // Trim error handled by UI error state below
       setError('トリミングに失敗しました。音声データの形式を確認してください。')
     } finally {
       setTrimming(false)
@@ -366,47 +367,107 @@ export default function RecordPage() {
     return `${m}:${s.toString().padStart(2, '0')}.${ms}`
   }
 
+  if (!session?.user) {
+    return (
+      <div className="max-w-2xl mx-auto text-center py-20 space-y-6">
+        <div className="size-20 rounded-full bg-violet-100 flex items-center justify-center mx-auto">
+          <Mic className="w-10 h-10 text-violet-500" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-black text-slate-900">クラウド録音スタジオ</h1>
+          <p className="text-slate-500 mt-1">ログインして録音スタジオをご利用ください。</p>
+        </div>
+        <button
+          onClick={() => signIn('google', { callbackUrl: '/voice/record' })}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-xl font-bold hover:bg-violet-500 transition-colors shadow-lg shadow-violet-600/20"
+        >
+          <LogIn className="w-4 h-4" />
+          Googleでログイン
+        </button>
+      </div>
+    )
+  }
+
   if (!isPro) {
     return (
-      <div className="max-w-2xl mx-auto text-center py-20 space-y-4">
-        <Mic className="w-16 h-16 text-violet-300 mx-auto" />
-        <h1 className="text-2xl font-black text-slate-900">クラウド録音スタジオ</h1>
-        <p className="text-slate-600">クラウド録音スタジオはProプランの機能です。<br />ブラウザで直接録音し、AI音声と合成できます。</p>
-        <Link
-          href="/voice/pricing"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-xl font-black hover:bg-violet-700 transition-colors"
-        >
-          Proプランにアップグレード
-        </Link>
+      <div className="max-w-2xl mx-auto py-20 space-y-8">
+        <div className="text-center space-y-2">
+          <div className="size-20 rounded-full bg-violet-100 flex items-center justify-center mx-auto">
+            <Mic className="w-10 h-10 text-violet-500" />
+          </div>
+          <h1 className="text-3xl font-black text-slate-900">クラウド録音スタジオ</h1>
+          <p className="text-slate-500 mt-1">ブラウザで録音してAI音声と合成できます</p>
+        </div>
+
+        {/* Pro upgrade banner */}
+        <div className="rounded-xl bg-gradient-to-r from-violet-600 to-violet-500 p-6 text-white shadow-xl shadow-violet-600/20 relative overflow-hidden">
+          <div className="absolute -right-12 -top-12 size-48 bg-white/10 rounded-full blur-3xl" />
+          <div className="relative flex items-center gap-5">
+            <div className="size-12 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-md flex-shrink-0">
+              <Sparkles className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="font-bold text-lg">Proプランにアップグレード</p>
+              <p className="text-white/80 text-sm">クラウド録音スタジオはProプランの機能です。ブラウザで直接録音し、AI音声と合成できます。</p>
+            </div>
+            <Link
+              href="/voice/pricing"
+              className="bg-white text-violet-600 px-6 py-2 rounded-lg font-black text-sm flex-shrink-0 hover:bg-violet-50 transition-colors"
+            >
+              アップグレード
+            </Link>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-black text-slate-900">クラウド録音スタジオ</h1>
-        <p className="text-sm text-slate-500 mt-1">ブラウザで録音してAI音声と合成できます</p>
+    <div className="max-w-3xl mx-auto space-y-8">
+      {/* Page Header */}
+      <div className="flex items-center gap-3">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-black text-slate-900">クラウド録音スタジオ</h1>
+            {isPro && (
+              <span className="bg-violet-100 text-violet-600 px-3 py-1 rounded-full text-xs font-bold border border-violet-200">
+                PRO
+              </span>
+            )}
+          </div>
+          <p className="text-slate-500 mt-1">ブラウザで録音してAI音声と合成できます</p>
+        </div>
       </div>
 
       {/* 録音コントロール */}
-      <div className="bg-[#1e1b4b] rounded-2xl p-6 space-y-4">
-        <canvas ref={canvasRef} width={800} height={100} className="w-full rounded-xl" />
+      <div className="bg-[#1e1b4b] rounded-2xl p-8 shadow-2xl relative overflow-hidden">
+        {/* Waveform visualizer */}
+        <div className="flex items-center justify-center">
+          <canvas ref={canvasRef} width={800} height={120} className="w-full rounded-xl" />
+        </div>
 
-        <div className="flex items-center justify-between">
-          <div className="text-violet-300 font-mono text-xl font-bold">
+        {/* Timer + Status */}
+        <div className="flex flex-col items-center justify-center mt-6 mb-6">
+          <div className="font-mono text-5xl font-light text-violet-300 tracking-wider">
             {formatTime(elapsed)}
           </div>
+          <p className="text-violet-400/60 text-sm mt-2 font-medium">
+            {isRecording ? '録音中...' : recordings.length > 0 ? '録音完了' : '待機中'}
+          </p>
+        </div>
+
+        {/* Record/Stop Button */}
+        <div className="flex items-center justify-center">
           <button
             onClick={isRecording ? stopRecording : startRecording}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-black text-base transition-all ${
+            className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold transition-all ${
               isRecording
-                ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse'
-                : 'bg-violet-500 hover:bg-violet-600 text-white'
+                ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20'
+                : 'bg-violet-600 hover:bg-violet-500 text-white shadow-lg shadow-violet-600/20'
             }`}
           >
             {isRecording ? (
-              <><Square className="w-5 h-5" /> 停止</>
+              <><Square className="w-5 h-5" /> 録音を停止</>
             ) : (
               <><Mic className="w-5 h-5" /> 録音開始</>
             )}
@@ -414,10 +475,11 @@ export default function RecordPage() {
         </div>
       </div>
 
+      {/* Error */}
       {error && (
         <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
           <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-          <div>
+          <div className="flex-1">
             <p className="text-sm text-red-700 font-bold">{error}</p>
             <button onClick={() => setError(null)} className="text-xs text-red-500 hover:text-red-700 mt-1 font-bold">
               閉じる
@@ -429,95 +491,135 @@ export default function RecordPage() {
       {/* 録音済みリスト */}
       {recordings.length > 0 && (
         <div>
-          <h2 className="text-base font-black text-slate-900 mb-3">録音済み ({recordings.length}件)</h2>
-          <div className="space-y-2">
+          <h2 className="text-xl font-bold flex items-center gap-2 mb-4">
+            <Mic className="w-5 h-5 text-violet-500" />
+            録音済み ({recordings.length}件)
+          </h2>
+          <div className="space-y-3">
             {recordings.map(rec => (
               <div key={rec.id}>
-                <div className="flex flex-wrap items-center gap-3 p-3 bg-white rounded-xl border border-slate-200">
+                <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center justify-between hover:shadow-sm transition-shadow">
+                  {/* Play button */}
                   <button
                     onClick={() => togglePlay(rec)}
-                    className="w-9 h-9 rounded-lg bg-violet-100 flex items-center justify-center text-violet-700 hover:bg-violet-200 transition-colors flex-shrink-0"
+                    className="size-10 rounded-full bg-violet-100 text-violet-600 flex items-center justify-center hover:bg-violet-600 hover:text-white transition-all flex-shrink-0"
                   >
                     {playingId === rec.id ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
                   </button>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-900">
-                      {rec.label}
+
+                  {/* Recording info */}
+                  <div className="flex-1 min-w-0 ml-4">
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-slate-800">
+                        {rec.label}
+                      </p>
                       {rec.trimmedDurationMs != null && (
-                        <span className="ml-2 text-[10px] font-bold text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+                        <span className="text-[10px] bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded font-bold border border-emerald-200">
                           トリミング済
                         </span>
                       )}
-                    </p>
-                    <p className="text-xs text-slate-400">
+                    </div>
+                    <p className="text-xs text-slate-400 font-mono">
                       {rec.trimmedDurationMs != null
                         ? `${formatTime(rec.trimmedDurationMs)} (元: ${formatTime(rec.durationMs)})`
                         : formatTime(rec.durationMs)
                       }
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                    {/* トリミングボタン */}
+
+                  {/* Action buttons */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={() => openTrimmer(rec)}
                       disabled={trimmingId === rec.id}
-                      className={`flex items-center gap-1 px-2 py-1 text-xs font-bold rounded-lg transition-colors ${
-                        trimmingId === rec.id
-                          ? 'bg-violet-200 text-violet-800'
-                          : 'text-violet-600 bg-violet-50 hover:bg-violet-100'
-                      }`}
+                      title="トリミング"
+                      className="p-2 text-slate-400 hover:text-violet-600 transition-colors"
                     >
-                      <Scissors className="w-3 h-3" />
-                      切取
+                      <Scissors className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => uploadRecording(rec)}
                       disabled={uploading === rec.id}
-                      className="flex items-center gap-1 px-2 py-1 text-xs font-bold text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                      title="クラウド保存"
+                      className="p-2 text-slate-400 hover:text-violet-600 transition-colors"
                     >
-                      {uploading === rec.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Upload className="w-3 h-3" />}
-                      保存
+                      {uploading === rec.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                     </button>
-                    <a href={rec.trimmedUrl || rec.url} download={`${rec.label}.${rec.trimmedUrl ? 'wav' : 'webm'}`}
-                      className="flex items-center gap-1 px-2 py-1 text-xs font-bold text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors"
+                    <a
+                      href={rec.trimmedUrl || rec.url}
+                      download={`${rec.label}.${rec.trimmedUrl ? 'wav' : 'webm'}`}
+                      title="ダウンロード"
+                      className="p-2 text-slate-400 hover:text-violet-600 transition-colors"
                     >
-                      <Download className="w-3 h-3" />
-                      DL
+                      <Download className="w-4 h-4" />
                     </a>
-                    <button onClick={() => deleteRecording(rec.id)}
-                      className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                    <button
+                      onClick={() => deleteRecording(rec.id)}
+                      title="削除"
+                      className="p-2 text-slate-400 hover:text-red-500 transition-colors"
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
 
                 {/* アップロード成功メッセージ */}
                 {uploadSuccessId === rec.id && (
-                  <div className="mt-1 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700 font-bold">
+                  <div className="mt-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-700 font-bold flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5" />
                     クラウドに保存しました
                   </div>
                 )}
 
                 {/* トリミングUI */}
                 {trimmingId === rec.id && (
-                  <div className="mt-2 p-4 bg-violet-50 border border-violet-200 rounded-xl space-y-4">
+                  <div className="mt-3 bg-violet-50 border border-violet-600/10 rounded-xl p-6 space-y-4">
+                    {/* Header */}
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-black text-violet-900">トリミング</h3>
-                      <button onClick={cancelTrim} className="p-1 text-violet-400 hover:text-violet-600 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <Scissors className="w-4 h-4 text-violet-600" />
+                        <h3 className="text-sm font-bold text-violet-900">トリミング編集</h3>
+                      </div>
+                      <button onClick={cancelTrim} className="p-1 text-violet-400 hover:text-violet-600 transition-colors rounded-lg hover:bg-violet-100">
                         <X className="w-4 h-4" />
                       </button>
                     </div>
 
+                    {/* トリミング範囲バー（ビジュアル） */}
+                    <div className="h-12 bg-white rounded-lg border border-slate-200 overflow-hidden relative">
+                      <div
+                        className="absolute h-full bg-violet-500/20 transition-all"
+                        style={{
+                          left: `${trimStart}%`,
+                          width: `${trimEnd - trimStart}%`,
+                        }}
+                      />
+                      <div
+                        className="absolute h-full bg-violet-500 transition-all"
+                        style={{
+                          left: `${trimStart}%`,
+                          width: `${trimEnd - trimStart}%`,
+                          opacity: 0.3,
+                        }}
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="font-mono text-violet-600 font-bold text-sm">
+                          {formatTimeSec(((trimEnd - trimStart) / 100) * (rec.durationMs / 1000))}
+                        </span>
+                      </div>
+                    </div>
+
                     {/* トリミング範囲表示 */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-xs text-violet-700 font-bold">
-                        <span>開始: {formatTimeSec((trimStart / 100) * (rec.durationMs / 1000))}</span>
-                        <span>終了: {formatTimeSec((trimEnd / 100) * (rec.durationMs / 1000))}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-xs text-violet-500">
-                        <span>選択範囲: {formatTimeSec(((trimEnd - trimStart) / 100) * (rec.durationMs / 1000))}</span>
-                      </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-mono text-violet-600 font-bold">
+                        開始: {formatTimeSec((trimStart / 100) * (rec.durationMs / 1000))}
+                      </span>
+                      <span className="text-violet-400">
+                        選択範囲: {formatTimeSec(((trimEnd - trimStart) / 100) * (rec.durationMs / 1000))}
+                      </span>
+                      <span className="font-mono text-violet-600 font-bold">
+                        終了: {formatTimeSec((trimEnd / 100) * (rec.durationMs / 1000))}
+                      </span>
                     </div>
 
                     {/* デュアルスライダー */}
@@ -554,34 +656,18 @@ export default function RecordPage() {
                       </div>
                     </div>
 
-                    {/* トリミング範囲バー（ビジュアル） */}
-                    <div className="relative h-6 bg-violet-200 rounded-full overflow-hidden">
-                      <div
-                        className="absolute h-full bg-violet-500 rounded-full transition-all"
-                        style={{
-                          left: `${trimStart}%`,
-                          width: `${trimEnd - trimStart}%`,
-                        }}
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-[9px] font-bold text-white drop-shadow">
-                          {formatTimeSec(((trimEnd - trimStart) / 100) * (rec.durationMs / 1000))}
-                        </span>
-                      </div>
-                    </div>
-
                     {/* アクション */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 pt-2">
                       <button
                         onClick={playTrimPreview}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-violet-300 text-violet-700 rounded-lg text-sm font-bold hover:bg-violet-100 transition-colors"
+                        className="flex items-center gap-1.5 px-4 py-2 bg-white border border-violet-300 text-violet-700 rounded-lg text-sm font-bold hover:bg-violet-100 transition-colors"
                       >
                         <Play className="w-3.5 h-3.5" />
                         プレビュー
                       </button>
                       <button
                         onClick={cancelTrim}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-bold hover:bg-slate-50 transition-colors"
+                        className="flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-lg text-sm font-bold hover:bg-slate-50 transition-colors"
                       >
                         <X className="w-3.5 h-3.5" />
                         キャンセル
@@ -589,7 +675,7 @@ export default function RecordPage() {
                       <button
                         onClick={applyTrim}
                         disabled={trimming || trimEnd - trimStart < 1}
-                        className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white rounded-lg text-sm font-black hover:bg-violet-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
+                        className="flex-1 flex items-center justify-center gap-1.5 bg-violet-600 text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-violet-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-colors"
                       >
                         {trimming ? (
                           <><Loader2 className="w-3.5 h-3.5 animate-spin" /> トリミング中...</>
@@ -606,10 +692,12 @@ export default function RecordPage() {
         </div>
       )}
 
-      {/* ヒント */}
+      {/* ヒント (empty state) */}
       {recordings.length === 0 && !isRecording && (
-        <div className="text-center py-8 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200">
-          <Mic className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+        <div className="text-center py-12 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-200">
+          <div className="size-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+            <Mic className="w-7 h-7 text-slate-300" />
+          </div>
           <p className="text-sm text-slate-500 font-bold">録音ボタンを押して録音を開始してください</p>
           <p className="text-xs text-slate-400 mt-1">録音後にトリミングやクラウド保存ができます</p>
         </div>

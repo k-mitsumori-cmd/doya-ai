@@ -12,6 +12,7 @@ export default function SharePage() {
 
   const [project, setProject] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [sharing, setSharing] = useState(false)
   const [copied, setCopied] = useState(false)
   const [emailSent, setEmailSent] = useState(false)
@@ -21,8 +22,9 @@ export default function SharePage() {
       .then(r => r.json())
       .then(data => {
         if (data.success) setProject(data.project)
+        else setError(data.error || 'プロジェクトの取得に失敗しました')
       })
-      .catch(() => {})
+      .catch(() => setError('通信エラーが発生しました'))
       .finally(() => setLoading(false))
   }, [projectId])
 
@@ -39,8 +41,8 @@ export default function SharePage() {
         setProject((prev: any) => ({ ...prev, shareUrl: data.shareUrl, status: 'SHARED' }))
         if (data.emailSent) setEmailSent(true)
       }
-    } catch (e) {
-      console.error(e)
+    } catch {
+      setError('共有処理に失敗しました。再度お試しください。')
     } finally {
       setSharing(false)
     }
@@ -64,7 +66,8 @@ export default function SharePage() {
   if (!project) {
     return (
       <div className="max-w-2xl mx-auto px-6 py-12 text-center">
-        <p className="text-slate-500">プロジェクトが見つかりませんでした。</p>
+        <p className="text-slate-500">{error || 'プロジェクトが見つかりませんでした。'}</p>
+        <Link href="/interviewx" className="text-indigo-600 hover:underline mt-4 inline-block text-sm">ダッシュボードに戻る</Link>
       </div>
     )
   }
@@ -80,7 +83,13 @@ export default function SharePage() {
       </Link>
 
       <h1 className="text-2xl font-bold text-slate-900 mb-2">共有設定</h1>
-      <p className="text-slate-500 mb-8">アンケートの共有URLを生成し、回答者に送信します。</p>
+      <p className="text-slate-500 mb-8">ヒヤリングの共有URLを生成し、回答者に送信します。</p>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3 mb-6">
+          {error}
+        </div>
+      )}
 
       {/* プロジェクト情報 */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
@@ -158,7 +167,7 @@ export default function SharePage() {
               ) : (
                 <>
                   <Send className="w-5 h-5" />
-                  アンケートを共有する
+                  ヒヤリングを共有する
                 </>
               )}
             </button>
@@ -179,7 +188,7 @@ export default function SharePage() {
               </div>
             )}
             <p className="text-sm text-slate-500">
-              回答者がアンケートに回答すると、自動的に通知されます。
+              回答者がヒヤリングに回答すると、自動的に通知されます。
             </p>
           </div>
         )}
@@ -191,22 +200,22 @@ export default function SharePage() {
           <h2 className="text-sm font-bold text-indigo-700 mb-3">回答ステータス</h2>
           <div className="flex items-center gap-3">
             <div className={`w-3 h-3 rounded-full ${
-              project.status === 'ANSWERED' || project.status === 'GENERATING' || project.status === 'REVIEW'
+              ['ANSWERED', 'SUMMARIZED', 'COMPLETED'].includes(project.status)
                 ? 'bg-green-500' : 'bg-amber-500 animate-pulse'
             }`} />
             <span className="text-sm font-medium text-slate-700">
               {project.status === 'SHARED' && '回答待ち...'}
               {project.status === 'RESPONDING' && '回答中...'}
-              {project.status === 'ANSWERED' && '回答完了！記事を生成できます。'}
-              {['GENERATING', 'REVIEW', 'FEEDBACK', 'FINALIZING', 'COMPLETED'].includes(project.status) && '回答完了済み'}
+              {project.status === 'ANSWERED' && '回答完了！要約を生成できます。'}
+              {['SUMMARIZED', 'COMPLETED'].includes(project.status) && '回答完了済み'}
             </span>
           </div>
-          {(project.status === 'ANSWERED' || project.status === 'REVIEW') && (
+          {(project.status === 'ANSWERED' || project.status === 'SUMMARIZED') && (
             <button
               onClick={() => router.push(`/interviewx/projects/${projectId}/draft`)}
               className="mt-4 w-full py-3 rounded-xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-colors"
             >
-              記事を確認する →
+              要約を確認する →
             </button>
           )}
         </div>

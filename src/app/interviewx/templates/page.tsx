@@ -42,7 +42,7 @@ export default function TemplatesPage() {
             <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">
               プリセットテンプレート（{presets.length}種類）
             </h2>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {presets.map(tpl => (
                 <div
                   key={tpl.id}
@@ -84,7 +84,7 @@ export default function TemplatesPage() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {custom.map(tpl => (
                   <div
                     key={tpl.id}

@@ -78,32 +78,45 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
         controller.enqueue(sseEvent({ type: 'progress', message: 'AIで質問を生成中...' }))
 
         // ====== プロンプト構築 ======
-        const templateQuestions = project.template?.defaultQuestions
-          ? JSON.stringify(project.template.defaultQuestions, null, 2)
-          : '（テンプレート質問なし）'
+        const templateQuestions = project.template?.defaultQuestions as any[] | null
+        const companyAnalysis = project.companyAnalysis as any
 
-        const prompt = `あなたはプロのインタビューディレクターです。以下の設定に基づいて、インタビュー記事を作成するためのアンケート質問を8〜12個生成してください。
+        // URL調査結果のフォーマット
+        let companyInfo = ''
+        if (companyAnalysis) {
+          const lines: string[] = []
+          if (companyAnalysis.companyName) lines.push(`- 企業名: ${companyAnalysis.companyName}`)
+          if (companyAnalysis.businessDescription) lines.push(`- 事業概要: ${companyAnalysis.businessDescription}`)
+          if (companyAnalysis.industry) lines.push(`- 業界: ${companyAnalysis.industry}`)
+          if (companyAnalysis.services?.length) lines.push(`- サービス: ${companyAnalysis.services.join('、')}`)
+          if (companyAnalysis.keyFeatures?.length) lines.push(`- 特徴: ${companyAnalysis.keyFeatures.join('、')}`)
+          if (companyAnalysis.targetCustomers) lines.push(`- ターゲット: ${companyAnalysis.targetCustomers}`)
+          if (lines.length > 0) companyInfo = `\n## URL調査で判明した企業情報\n${lines.join('\n')}`
+        }
+
+        const prompt = `あなたはプロのヒヤリングディレクターです。以下の設定に基づいて、ヒヤリング質問を8〜12個生成してください。
 
 ## プロジェクト設定
 - タイトル: ${project.title}
-- 記事タイプ: ${project.articleType || 'CASE_STUDY'}
+- カテゴリ: ${project.hearingType || project.articleType || 'BUSINESS_MEETING'}
 - 目的: ${project.purpose || '未設定'}
-- ターゲット読者: ${project.targetAudience || '未設定'}
+- 対象者: ${project.targetAudience || '未設定'}
 - トーン: ${project.tone || 'professional'}
-- 希望文字数: ${project.wordCountTarget || 3000}文字
 ${project.companyName ? `- 企業名: ${project.companyName}` : ''}
 ${project.customInstructions ? `- 追加指示: ${project.customInstructions}` : ''}
+${companyInfo}
 
 ## テンプレートのデフォルト質問（参考）
-${templateQuestions}
+${templateQuestions ? JSON.stringify(templateQuestions, null, 2) : '（テンプレート質問なし）'}
 
 ## 生成ルール
 1. テンプレートの質問を参考にしつつ、プロジェクト設定に合わせた新しい質問を生成
-2. 質問は回答者が答えやすいよう具体的に
-3. 記事の流れを意識した順序で（導入→本題→まとめ）
-4. 各質問にはdescriptionとして回答のヒントを追加
-5. 質問タイプは TEXT, TEXTAREA, SELECT, RATING, YES_NO から選択
-6. 基本的にはTEXTAREAを多用し、一部で他のタイプを使い分ける
+2. URL調査結果がある場合は、その企業・サービスに合わせた具体的な質問にする
+3. 質問は回答者が答えやすいよう具体的に
+4. ヒヤリングの流れを意識した順序で（導入→本題→まとめ）
+5. 各質問にはdescriptionとして回答のヒントを追加
+6. 質問タイプは TEXT, TEXTAREA, SELECT, RATING, YES_NO から選択
+7. 基本的にはTEXTAREAを多用し、一部で他のタイプを使い分ける
 
 ## 出力形式（JSON配列のみ、他のテキストは含めない）
 [

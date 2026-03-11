@@ -9,16 +9,16 @@ const PLANS = [
     price: 0,
     priceLabel: '¥0',
     period: '',
-    description: 'まずはAI-Xを体験',
+    description: 'まずはヒヤリングAIを体験',
     features: [
       { text: '月3プロジェクトまで', included: true },
       { text: 'AI質問生成', included: true },
-      { text: 'AI記事生成', included: true },
-      { text: '品質チェック（校正のみ）', included: true },
+      { text: 'AIチャットヒヤリング', included: true },
+      { text: 'AI要約生成', included: true },
       { text: 'Markdownエクスポート', included: true },
       { text: 'メール通知', included: false },
       { text: 'ブランドカスタマイズ', included: false },
-      { text: '全品質チェック', included: false },
+      { text: 'URL事前調査', included: false },
     ],
     cta: '無料で試す',
   },
@@ -33,12 +33,12 @@ const PLANS = [
     features: [
       { text: '月10プロジェクトまで', included: true },
       { text: 'AI質問生成', included: true },
-      { text: 'AI記事生成', included: true },
-      { text: '全品質チェック', included: true },
+      { text: 'AIチャットヒヤリング', included: true },
+      { text: 'AI要約生成', included: true },
       { text: 'HTML/Markdownエクスポート', included: true },
       { text: 'メール通知', included: true },
+      { text: 'URL事前調査', included: true },
       { text: 'ブランドカスタマイズ', included: false },
-      { text: '優先サポート', included: false },
     ],
     cta: 'ライトプランを始める',
   },
@@ -48,18 +48,18 @@ const PLANS = [
     price: 9980,
     priceLabel: '¥9,980',
     period: '/月（税込）',
-    description: '本格的なコンテンツ制作に',
+    description: '本格的なヒヤリング運用に',
     popular: true,
     color: 'indigo',
     features: [
       { text: '月50プロジェクトまで', included: true },
       { text: 'AI質問生成', included: true },
-      { text: 'AI記事生成', included: true },
-      { text: '全品質チェック', included: true },
+      { text: 'AIチャットヒヤリング', included: true },
+      { text: 'AI要約生成', included: true },
       { text: 'HTML/Markdownエクスポート', included: true },
       { text: 'メール通知', included: true },
+      { text: 'URL事前調査', included: true },
       { text: 'ブランドカスタマイズ', included: true },
-      { text: '優先サポート', included: true },
     ],
     cta: 'プロプランを始める',
   },
@@ -74,12 +74,12 @@ const PLANS = [
     features: [
       { text: '無制限プロジェクト', included: true },
       { text: 'AI質問生成', included: true },
-      { text: 'AI記事生成', included: true },
-      { text: '全品質チェック', included: true },
+      { text: 'AIチャットヒヤリング', included: true },
+      { text: 'AI要約生成', included: true },
       { text: 'HTML/Markdownエクスポート', included: true },
       { text: 'メール通知', included: true },
-      { text: 'ブランドカスタマイズ', included: true },
-      { text: '専任サポート・API連携', included: true },
+      { text: 'URL事前調査', included: true },
+      { text: 'ブランドカスタマイズ・専任サポート', included: true },
     ],
     cta: 'お問い合わせ',
   },
@@ -94,10 +94,10 @@ export default function PricingPage() {
             料金プラン
           </span>
         </h1>
-        <p className="text-slate-500">アンケートを送るだけで、インタビュー記事が完成</p>
+        <p className="text-slate-500">AIチャットで自動ヒヤリング＆要約生成</p>
       </div>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {PLANS.map(plan => (
           <div
             key={plan.id}
@@ -150,19 +150,19 @@ export default function PricingPage() {
       {/* FAQ */}
       <div className="mt-16">
         <h2 className="text-xl font-bold text-slate-900 mb-6 text-center">よくある質問</h2>
-        <div className="grid grid-cols-2 gap-4 max-w-3xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mx-auto">
           {[
             {
               q: 'プロジェクト数の制限とは？',
-              a: '月間で新規作成できるプロジェクト数の上限です。既存プロジェクトの編集は制限に含まれません。',
+              a: '月間で新規作成できるヒヤリングプロジェクト数の上限です。既存プロジェクトの閲覧・編集は制限に含まれません。',
             },
             {
               q: '回答者にコストはかかりますか？',
-              a: 'いいえ。回答者はログイン不要で、無料でアンケートに回答できます。',
+              a: 'いいえ。回答者はログイン不要で、共有URLから無料でヒヤリングに回答できます。',
             },
             {
               q: 'ブランドカスタマイズとは？',
-              a: '公開アンケートページに企業ロゴやブランドカラーを反映できる機能です。',
+              a: '公開ヒヤリングページに企業ロゴやブランドカラーを反映できる機能です。',
             },
             {
               q: 'プランの変更はできますか？',

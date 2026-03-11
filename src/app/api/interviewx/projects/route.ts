@@ -103,6 +103,7 @@ export async function POST(req: NextRequest) {
       respondentName,
       respondentEmail,
       interviewMode,
+      hearingType,
     } = body as {
       title: string
       templateId: string
@@ -114,6 +115,7 @@ export async function POST(req: NextRequest) {
       targetAudience?: string
       tone?: string
       articleType?: string
+      hearingType?: string
       wordCountTarget?: number
       customInstructions?: string
       respondentName?: string
@@ -151,12 +153,13 @@ export async function POST(req: NextRequest) {
         purpose: purpose || null,
         targetAudience: targetAudience || null,
         tone: tone || 'professional',
-        articleType: articleType || 'CASE_STUDY',
+        articleType: articleType || hearingType || 'BUSINESS_MEETING',
+        hearingType: hearingType || articleType || 'BUSINESS_MEETING',
         wordCountTarget: wordCountTarget || 3000,
         customInstructions: customInstructions || null,
         respondentName: respondentName || null,
         respondentEmail: respondentEmail || null,
-        interviewMode: interviewMode === 'chat' ? 'chat' : 'survey',
+        interviewMode: 'chat',
         status: 'DRAFT',
       },
       include: {

@@ -1,15 +1,16 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ArrowLeft, Wand2, Loader2, FileText, Download, MessageSquare,
-  ShieldCheck, RefreshCw, Copy, Check
+  ArrowLeft, Wand2, Loader2, FileText, Download,
+  RefreshCw, Copy, Check, CheckCircle, Info, Sparkles
 } from 'lucide-react'
 
-export default function DraftPage() {
+export default function SummaryPage() {
   const params = useParams()
+  const router = useRouter()
   const projectId = params.id as string
 
   const [project, setProject] = useState<any>(null)
@@ -19,11 +20,14 @@ export default function DraftPage() {
   const [streamText, setStreamText] = useState('')
   const [progress, setProgress] = useState('')
   const [copied, setCopied] = useState(false)
+  const [finalizing, setFinalizing] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetchData()
   }, [projectId])
+
+  const [error, setError] = useState<string | null>(null)
 
   const fetchData = async () => {
     try {
@@ -32,17 +36,20 @@ export default function DraftPage() {
         fetch(`/api/interviewx/projects/${projectId}/drafts`).then(r => r.json()),
       ])
       if (projRes.success) setProject(projRes.project)
+      else setError(projRes.error || 'プロジェクトの取得に失敗しました')
       if (draftRes.success && draftRes.drafts?.length > 0) {
         setDraft(draftRes.drafts[0])
       }
-    } catch {}
+    } catch {
+      setError('通信エラーが発生しました')
+    }
     setLoading(false)
   }
 
-  const generateArticle = async () => {
+  const generateSummary = async () => {
     setGenerating(true)
     setStreamText('')
-    setProgress('記事生成を開始...')
+    setProgress('要約生成を開始...')
     try {
       const res = await fetch(`/api/interviewx/projects/${projectId}/generate-article`, {
         method: 'POST',
@@ -82,10 +89,27 @@ export default function DraftPage() {
         }
       }
     } catch (e) {
-      setProgress('記事生成に失敗しました')
+      setProgress('要約生成に失敗しました')
     } finally {
       setGenerating(false)
     }
+  }
+
+  const handleFinalize = async () => {
+    if (!confirm('このヒヤリングを完了にしますか？')) return
+    setFinalizing(true)
+    try {
+      const res = await fetch(`/api/interviewx/projects/${projectId}/finalize`, { method: 'POST' })
+      const data = await res.json()
+      if (data.success) {
+        router.push(`/interviewx/projects/${projectId}`)
+      } else {
+        setError(data.error || '完了処理に失敗しました')
+      }
+    } catch {
+      setError('完了処理に失敗しました')
+    }
+    setFinalizing(false)
   }
 
   const copyContent = () => {
@@ -96,17 +120,23 @@ export default function DraftPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // 簡易Markdownレンダラー
+  const escapeHtml = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+
   const renderMarkdown = (md: string) => {
-    return md
-      .replace(/^### (.+)/gm, '<h3 class="text-lg font-bold text-slate-900 mt-6 mb-2">$1</h3>')
-      .replace(/^## (.+)/gm, '<h2 class="text-xl font-bold text-slate-900 mt-8 mb-3">$1</h2>')
-      .replace(/^# (.+)/gm, '<h1 class="text-2xl font-black text-slate-900 mt-4 mb-4">$1</h1>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/「(.+?)」/g, '<span class="text-indigo-700 font-medium">「$1」</span>')
-      .replace(/^- (.+)/gm, '<li class="ml-4 list-disc text-slate-700">$1</li>')
-      .replace(/\n\n/g, '</p><p class="text-slate-700 leading-relaxed mb-4">')
-      .replace(/^(?!<[hlps])/gm, '')
+    // まずHTMLエスケープしてからMarkdown変換
+    const escaped = escapeHtml(md)
+    return escaped
+      .replace(/^### (.+)/gm, '<h3 class="text-base font-bold text-slate-900 mt-6 mb-2 flex items-center gap-2"><span class="w-1 h-5 bg-indigo-500 rounded-full inline-block"></span>$1</h3>')
+      .replace(/^## (.+)/gm, '<h2 class="text-lg font-bold text-slate-900 mt-8 mb-3 flex items-center gap-2"><span class="w-1 h-5 bg-indigo-500 rounded-full inline-block"></span>$1</h2>')
+      .replace(/^# (.+)/gm, '<h1 class="text-xl font-black text-slate-900 mt-4 mb-4">$1</h1>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold text-slate-900">$1</strong>')
+      .replace(/&gt; (.+)/gm, '<blockquote class="border-l-4 border-indigo-200 bg-slate-50 pl-4 py-3 my-4 text-sm text-slate-600 italic rounded-r-lg">$1</blockquote>')
+      .replace(/^- \[x\] (.+)/gm, '<div class="flex items-start gap-2 my-1.5"><div class="w-4 h-4 mt-0.5 rounded border border-slate-300 flex-shrink-0 flex items-center justify-center"><svg class="w-3 h-3 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div><span class="text-sm text-slate-700">$1</span></div>')
+      .replace(/^- \[ \] (.+)/gm, '<div class="flex items-start gap-2 my-1.5"><div class="w-4 h-4 mt-0.5 rounded border border-slate-300 flex-shrink-0"></div><span class="text-sm text-slate-700">$1</span></div>')
+      .replace(/^- (.+)/gm, '<li class="ml-4 list-disc text-sm text-slate-700 my-1">$1</li>')
+      .replace(/\n\n/g, '</p><p class="text-sm text-slate-700 leading-relaxed mb-3">')
+      .replace(/^(?!<[hldbs])/gm, '')
   }
 
   if (loading) {
@@ -118,10 +148,11 @@ export default function DraftPage() {
   }
 
   const content = draft?.content || streamText
-  const canGenerate = project && ['ANSWERED', 'REVIEW', 'FEEDBACK', 'GENERATING'].includes(project.status)
+  const canGenerate = project && ['ANSWERED', 'SUMMARIZED', 'COMPLETED'].includes(project.status)
+  const canFinalize = project && ['SUMMARIZED'].includes(project.status) && draft
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
+    <div className="max-w-3xl mx-auto px-6 py-8">
       <Link href={`/interviewx/projects/${projectId}`} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6">
         <ArrowLeft className="w-4 h-4" />
         プロジェクトに戻る
@@ -129,36 +160,64 @@ export default function DraftPage() {
 
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">記事プレビュー</h1>
-          {draft && (
-            <p className="text-slate-500 mt-1">
-              バージョン {draft.version} ・ {draft.wordCount?.toLocaleString()}文字 ・ 約{draft.readingTime}分で読めます
-            </p>
-          )}
+          <h1 className="text-xl font-bold text-slate-900">ヒヤリング要約</h1>
+          <p className="text-sm text-slate-500 mt-0.5">{project?.title}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {canGenerate && (
             <button
-              onClick={generateArticle}
+              onClick={generateSummary}
               disabled={generating}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold hover:from-indigo-600 hover:to-violet-600 transition-all disabled:opacity-50 text-sm"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50"
             >
               {generating ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : draft ? (
                 <RefreshCw className="w-4 h-4" />
               ) : (
-                <Wand2 className="w-4 h-4" />
+                <Sparkles className="w-4 h-4" />
               )}
-              {draft ? '再生成' : '記事を生成'}
+              {draft ? '要約を再生成' : '要約を生成'}
+            </button>
+          )}
+          {content && (
+            <>
+              <a
+                href={`/api/interviewx/projects/${projectId}/export/html`}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors"
+              >
+                HTML
+              </a>
+              <a
+                href={`/api/interviewx/projects/${projectId}/export/markdown`}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors"
+              >
+                Markdown
+              </a>
+            </>
+          )}
+          {canFinalize && (
+            <button
+              onClick={handleFinalize}
+              disabled={finalizing}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-colors disabled:opacity-50"
+            >
+              {finalizing ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+              完了にする
             </button>
           )}
         </div>
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3 mb-6">
+          {error}
+        </div>
+      )}
+
       {/* 生成中プログレス */}
       {generating && progress && (
-        <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-4 mb-6">
+        <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-4 mb-6">
           <div className="flex items-center gap-3">
             <div className="animate-spin w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full" />
             <p className="text-sm font-medium text-indigo-700">{progress}</p>
@@ -166,85 +225,77 @@ export default function DraftPage() {
         </div>
       )}
 
-      {/* 記事コンテンツ */}
+      {/* 要約コンテンツ */}
       {content ? (
         <>
-          {/* ツールバー */}
-          <div className="flex items-center gap-2 mb-4">
-            <button
-              onClick={copyContent}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-medium hover:bg-slate-200 transition-colors"
-            >
-              {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
-              {copied ? 'コピーしました' : 'コピー'}
-            </button>
-            <a
-              href={`/api/interviewx/projects/${projectId}/export/markdown`}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-medium hover:bg-slate-200 transition-colors"
-            >
-              <Download className="w-3.5 h-3.5" />
-              Markdown
-            </a>
-            <a
-              href={`/api/interviewx/projects/${projectId}/export/html`}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-medium hover:bg-slate-200 transition-colors"
-            >
-              <Download className="w-3.5 h-3.5" />
-              HTML
-            </a>
-            <div className="flex-1" />
-            <Link
-              href={`/interviewx/projects/${projectId}/feedback`}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-orange-100 text-orange-700 text-xs font-bold hover:bg-orange-200 transition-colors"
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              フィードバック
-            </Link>
-            <Link
-              href={`/interviewx/projects/${projectId}/checks`}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-bold hover:bg-emerald-200 transition-colors"
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              品質チェック
-            </Link>
-          </div>
-
-          {/* 記事本文 */}
           <div
             ref={contentRef}
-            className="bg-white rounded-2xl border border-slate-200 p-8 prose prose-slate max-w-none"
+            className="bg-white rounded-xl border border-slate-200 p-6 lg:p-8"
             dangerouslySetInnerHTML={{ __html: renderMarkdown(content) }}
           />
 
-          {/* ドラフト情報 */}
-          {draft && (
-            <div className="mt-6 flex items-center gap-4 text-xs text-slate-400">
-              <span>v{draft.version}</span>
-              <span>{draft.wordCount?.toLocaleString()}文字</span>
-              <span>ステータス: {draft.status}</span>
-              <span>{new Date(draft.createdAt).toLocaleString('ja-JP')}</span>
-            </div>
-          )}
+          {/* コピーボタン */}
+          <div className="flex items-center justify-between mt-4">
+            <button
+              onClick={copyContent}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            >
+              {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? 'コピーしました' : 'テキストをコピー'}
+            </button>
+            {draft && (
+              <span className="text-xs text-slate-400">
+                v{draft.version} ・ {draft.wordCount?.toLocaleString()}文字 ・ {new Date(draft.createdAt).toLocaleString('ja-JP')}
+              </span>
+            )}
+          </div>
         </>
       ) : (
-        <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
-          <FileText className="w-16 h-16 text-indigo-200 mx-auto mb-4" />
-          <h2 className="text-xl font-bold text-slate-900 mb-2">まだ記事がありません</h2>
-          <p className="text-slate-500 mb-6">
-            {canGenerate
-              ? '回答データをもとにAIで記事を自動生成できます。'
-              : '回答者がアンケートに回答すると、記事を生成できます。'}
-          </p>
-          {canGenerate && (
-            <button
-              onClick={generateArticle}
-              disabled={generating}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold"
-            >
-              <Wand2 className="w-5 h-5" />
-              記事を自動生成
-            </button>
-          )}
+        /* 未生成状態 */
+        <div>
+          <div className="bg-white rounded-xl border border-slate-200 py-16 text-center mb-6">
+            <div className="w-16 h-16 rounded-full bg-indigo-50 flex items-center justify-center mx-auto mb-4">
+              <Sparkles className="w-8 h-8 text-indigo-400" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-900 mb-2">まだ要約が生成されていません</h2>
+            <p className="text-sm text-slate-500 mb-6 max-w-sm mx-auto">
+              {canGenerate
+                ? '回答完了後に「要約を生成」ボタンで要約を作成できます。'
+                : 'ヒヤリングが完了すると、要約を生成できます。'}
+            </p>
+            {canGenerate && (
+              <button
+                onClick={generateSummary}
+                disabled={generating}
+                className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition-colors"
+              >
+                <Sparkles className="w-4 h-4" />
+                要約を生成
+              </button>
+            )}
+          </div>
+
+          {/* ガイドカード */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="bg-white rounded-xl border border-slate-200 p-5">
+              <h3 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <Info className="w-4 h-4 text-indigo-500" />
+                要約のメリット
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                AIが回答内容を分析し、重要なポイントを数秒で抽出します。商談の振り返りや次のアクションプラン作成に活用できます。
+              </p>
+            </div>
+            <div className="bg-white rounded-xl border border-slate-200 p-5">
+              <h3 className="text-sm font-bold text-slate-900 mb-2 flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-500" />
+                生成のタイミング
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                ヒヤリングの全ステップが完了した後、いつでも生成が可能です。一度生成した要約は履歴からいつでも確認できます。
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>

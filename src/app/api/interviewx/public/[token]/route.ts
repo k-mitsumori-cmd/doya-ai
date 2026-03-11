@@ -59,14 +59,14 @@ export async function GET(
     // SHARED または RESPONDING のみ回答を受け付ける
     if (!['SHARED', 'RESPONDING'].includes(project.status)) {
       // 既に回答済みの場合
-      if (project.status === 'ANSWERED' || project.status === 'GENERATING' || project.status === 'REVIEW' || project.status === 'FEEDBACK' || project.status === 'COMPLETED') {
+      if (['ANSWERED', 'SUMMARIZED', 'COMPLETED'].includes(project.status)) {
         return NextResponse.json(
-          { success: false, error: 'このアンケートは既に回答済みです', code: 'ALREADY_ANSWERED' },
+          { success: false, error: 'このヒヤリングは既に回答済みです', code: 'ALREADY_ANSWERED' },
           { status: 410 }
         )
       }
       return NextResponse.json(
-        { success: false, error: 'このアンケートは現在利用できません' },
+        { success: false, error: 'このヒヤリングは現在利用できません' },
         { status: 404 }
       )
     }

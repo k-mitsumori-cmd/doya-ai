@@ -1,8 +1,8 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'アンケート回答 — ドヤインタビューAI-X',
-  description: 'インタビュー記事のためのアンケートに回答します。',
+  title: 'ヒヤリング回答 — ドヤヒヤリングAI',
+  description: 'AIチャットでヒヤリングに回答します。',
 }
 
 export default function RespondLayout({ children }: { children: React.ReactNode }) {

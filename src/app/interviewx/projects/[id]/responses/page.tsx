@@ -11,14 +11,16 @@ export default function ResponsesPage() {
 
   const [project, setProject] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     fetch(`/api/interviewx/projects/${projectId}`)
       .then(r => r.json())
       .then(data => {
         if (data.success) setProject(data.project)
+        else setError(data.error || 'データの取得に失敗しました')
       })
-      .catch(() => {})
+      .catch(() => setError('通信エラーが発生しました'))
       .finally(() => setLoading(false))
   }, [projectId])
 
@@ -33,7 +35,8 @@ export default function ResponsesPage() {
   if (!project) {
     return (
       <div className="max-w-3xl mx-auto px-6 py-12 text-center">
-        <p className="text-slate-500">プロジェクトが見つかりませんでした。</p>
+        <p className="text-slate-500">{error || 'プロジェクトが見つかりませんでした。'}</p>
+        <Link href="/interviewx" className="text-indigo-600 hover:underline mt-4 inline-block text-sm">ダッシュボードに戻る</Link>
       </div>
     )
   }
@@ -52,14 +55,14 @@ export default function ResponsesPage() {
       <p className="text-slate-500 mb-8">
         {responses.length > 0
           ? `${responses.length}件の回答`
-          : '回答者がアンケートに回答するとここに表示されます。'}
+          : '回答者がヒヤリングに回答するとここに表示されます。'}
       </p>
 
       {responses.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
           <MessageSquare className="w-16 h-16 text-slate-200 mx-auto mb-4" />
           <h2 className="text-lg font-bold text-slate-900 mb-2">まだ回答がありません</h2>
-          <p className="text-slate-500 mb-6">アンケートを共有して、回答を待ちましょう。</p>
+          <p className="text-slate-500 mb-6">ヒヤリングを共有して、回答を待ちましょう。</p>
           <Link
             href={`/interviewx/projects/${projectId}/share`}
             className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 text-white font-bold"

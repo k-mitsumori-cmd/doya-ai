@@ -1,5 +1,5 @@
 // ============================================
-// チャットインタビュー ユーティリティ
+// チャットヒヤリング ユーティリティ
 // ============================================
 
 import type { ChatAIResponse } from './types'
@@ -136,7 +136,7 @@ export function buildGeminiContents(
 ): { role: string; parts: { text: string }[] }[] {
   const contents: { role: string; parts: { text: string }[] }[] = [
     { role: 'user', parts: [{ text: systemPrompt }] },
-    { role: 'model', parts: [{ text: '{"reply":"承知しました。インタビューを開始します。","topicIndex":0,"messageType":"greeting","shouldEndInterview":false}' }] },
+    { role: 'model', parts: [{ text: '{"reply":"承知しました。ヒヤリングを開始します。","topicIndex":0,"messageType":"greeting","shouldEndInterview":false}' }] },
   ]
 
   // 会話履歴を追加（最新20件に制限）

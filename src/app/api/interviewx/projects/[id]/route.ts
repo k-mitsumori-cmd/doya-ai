@@ -50,12 +50,6 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
           orderBy: { version: 'desc' },
           take: 1,
         },
-        feedbacks: {
-          orderBy: { createdAt: 'desc' },
-        },
-        checks: {
-          orderBy: { createdAt: 'desc' },
-        },
       },
     })
 
@@ -112,8 +106,8 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     const allowedFields = [
       'title', 'templateId', 'companyName', 'companyUrl', 'companyLogo',
       'brandColor', 'purpose', 'targetAudience', 'tone', 'articleType',
-      'wordCountTarget', 'customInstructions', 'respondentName',
-      'respondentEmail', 'status',
+      'hearingType', 'wordCountTarget', 'customInstructions', 'respondentName',
+      'respondentEmail', 'status', 'companyAnalysis',
     ]
 
     const updateData: Record<string, any> = {}

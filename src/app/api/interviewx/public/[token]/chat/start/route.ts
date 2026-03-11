@@ -1,7 +1,7 @@
 // ============================================
 // POST /api/interviewx/public/[token]/chat/start
 // ============================================
-// チャットインタビュー開始 — Response作成 + AI挨拶生成
+// チャットヒヤリング開始 — Response作成 + AI挨拶生成
 // 認証不要（トークンベース）
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
 
     if (!['SHARED', 'RESPONDING'].includes(project.status)) {
-      return NextResponse.json({ success: false, error: 'このインタビューは現在利用できません' }, { status: 410 })
+      return NextResponse.json({ success: false, error: 'このヒヤリングは現在利用できません' }, { status: 410 })
     }
 
     if (project.questions.length === 0) {
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       select: { id: true },
     })
     if (completedResponse) {
-      return NextResponse.json({ success: false, error: 'このインタビューは既に完了しています' }, { status: 410 })
+      return NextResponse.json({ success: false, error: 'このヒヤリングは既に完了しています' }, { status: 410 })
     }
 
     // IP/UA取得

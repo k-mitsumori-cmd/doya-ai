@@ -47,12 +47,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
         readingTime: true,
         status: true,
         createdAt: true,
-        _count: {
-          select: {
-            feedbacks: true,
-            checks: true,
-          },
-        },
+        _count: true,
       },
     })
 

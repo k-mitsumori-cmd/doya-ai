@@ -37,17 +37,9 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     const ownerErr = checkOwnership(project, userId)
     if (ownerErr) return ownerErr
 
-    // ドラフト取得（フィードバック・チェック付き）
+    // ドラフト取得
     const draft = await prisma.interviewXDraft.findUnique({
       where: { id: draftId },
-      include: {
-        feedbacks: {
-          orderBy: { createdAt: 'desc' },
-        },
-        checks: {
-          orderBy: { createdAt: 'desc' },
-        },
-      },
     })
 
     if (!draft) {

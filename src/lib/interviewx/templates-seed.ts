@@ -1,5 +1,5 @@
 // ============================================
-// ドヤインタビューAI-X — プリセットテンプレート
+// ドヤヒヤリングAI — プリセットテンプレート
 // ============================================
 
 export interface TemplateQuestion {
@@ -23,227 +23,289 @@ export interface PresetTemplate {
 
 export const PRESET_TEMPLATES: PresetTemplate[] = [
   // ========================================
-  // 導入事例インタビュー
+  // 商談ヒヤリング
   // ========================================
   {
-    name: '導入事例インタビュー',
-    description: 'お客様の導入事例を記事化。課題→選定理由→導入効果→今後の展望の流れで構成。BtoB企業のマーケティングに最適。',
-    category: 'CASE_STUDY',
+    name: '商談ヒヤリング',
+    description: '営業商談の事前・事後ヒヤリング。課題・予算・スケジュール・決裁フローを整理。',
+    category: 'BUSINESS_MEETING',
+    icon: '🤝',
+    defaultQuestions: [
+      { text: '現在抱えている課題や困りごとを教えてください。', type: 'TEXTAREA', required: true, order: 1, description: 'できるだけ具体的に教えてください' },
+      { text: '課題解決に向けて、これまでどのような取り組みをされましたか？', type: 'TEXTAREA', required: true, order: 2 },
+      { text: '理想的な解決策のイメージはありますか？', type: 'TEXTAREA', required: true, order: 3 },
+      { text: '導入を検討する際に重視するポイントは何ですか？', type: 'TEXTAREA', required: true, order: 4, description: '例: コスト、操作性、サポート体制、実績など' },
+      { text: '予算感やご予算の目安はありますか？', type: 'TEXTAREA', required: false, order: 5 },
+      { text: '導入のスケジュール感を教えてください。', type: 'TEXTAREA', required: true, order: 6, description: 'いつまでに導入したいか' },
+      { text: '意思決定のプロセスや関係者を教えてください。', type: 'TEXTAREA', required: false, order: 7, description: '決裁フロー、最終決定者など' },
+      { text: '他社のサービスも検討されていますか？', type: 'TEXTAREA', required: false, order: 8 },
+      { text: '今回のお打ち合わせで確認したいことはありますか？', type: 'TEXTAREA', required: true, order: 9 },
+      { text: 'その他、共有しておきたい情報があれば教えてください。', type: 'TEXTAREA', required: false, order: 10 },
+    ],
+    promptTemplate: `ヒヤリング結果を以下の観点で要約してください。
+
+## 要約構成
+1. **要約概要**: 3-5行でヒヤリング内容を要約
+2. **課題・ニーズ**: 顧客が抱える課題とニーズを整理
+3. **予算・スケジュール**: 予算感と導入スケジュール
+4. **意思決定プロセス**: 決裁フロー・関係者
+5. **競合状況**: 他社検討状況
+6. **次のアクション**: 商談を進めるための次のステップ
+7. **重要ポイント**: 特に留意すべき点
+
+## ルール
+- 事実ベースで簡潔に
+- 数値や固有名詞は正確に
+- アクションアイテムは具体的に`,
+  },
+
+  // ========================================
+  // サービス調査
+  // ========================================
+  {
+    name: 'サービス調査',
+    description: '他社サービス・ツールの利用状況や評価を調査。乗り換え検討にも。',
+    category: 'SERVICE_RESEARCH',
+    icon: '🔍',
+    defaultQuestions: [
+      { text: '現在利用しているサービス・ツールの名前を教えてください。', type: 'TEXT', required: true, order: 1 },
+      { text: 'そのサービスの利用目的・用途を教えてください。', type: 'TEXTAREA', required: true, order: 2 },
+      { text: '利用頻度はどのくらいですか？', type: 'TEXTAREA', required: true, order: 3, description: '毎日、週数回、月数回など' },
+      { text: '気に入っている機能・ポイントを教えてください。', type: 'TEXTAREA', required: true, order: 4 },
+      { text: '不満に感じている点や改善してほしい点はありますか？', type: 'TEXTAREA', required: true, order: 5 },
+      { text: '月額・年額のコストはどのくらいですか？', type: 'TEXTAREA', required: false, order: 6 },
+      { text: 'コストパフォーマンスについてどう感じていますか？', type: 'RATING', required: true, order: 7, description: '1=非常に悪い 〜 5=非常に良い' },
+      { text: 'サポート体制の評価を教えてください。', type: 'TEXTAREA', required: false, order: 8 },
+      { text: '他のサービスへの乗り換えを検討したことはありますか？理由もお聞かせください。', type: 'TEXTAREA', required: true, order: 9 },
+      { text: '理想的なサービスがあるとしたら、どんな機能が欲しいですか？', type: 'TEXTAREA', required: true, order: 10 },
+    ],
+    promptTemplate: `ヒヤリング結果を以下の観点で要約してください。
+
+## 要約構成
+1. **要約概要**: サービス利用状況の全体像
+2. **利用中サービス**: サービス名・用途・利用頻度
+3. **満足ポイント**: 高評価の機能・特徴
+4. **課題・不満**: 改善要望・不満点
+5. **コスト評価**: 費用対効果の評価
+6. **乗り換え意向**: 検討状況と理由
+7. **理想のサービス像**: 求める機能・条件
+
+## ルール
+- 客観的な事実を優先
+- 比較ポイントを明確に`,
+  },
+
+  // ========================================
+  // 顧客満足度
+  // ========================================
+  {
+    name: '顧客満足度ヒヤリング',
+    description: '既存顧客の満足度調査。サービス改善やNPS向上に活用。',
+    category: 'CUSTOMER_SATISFACTION',
+    icon: '⭐',
+    defaultQuestions: [
+      { text: 'ご利用中のサービス・プランを教えてください。', type: 'TEXT', required: true, order: 1 },
+      { text: 'サービスの総合満足度を教えてください。', type: 'RATING', required: true, order: 2, description: '1=非常に不満 〜 5=非常に満足' },
+      { text: 'サービスで最も価値を感じている点は何ですか？', type: 'TEXTAREA', required: true, order: 3 },
+      { text: '改善してほしい点があれば教えてください。', type: 'TEXTAREA', required: true, order: 4 },
+      { text: 'サポート対応の満足度はいかがですか？', type: 'RATING', required: true, order: 5, description: '1=非常に不満 〜 5=非常に満足' },
+      { text: '料金に対する納得感はいかがですか？', type: 'RATING', required: true, order: 6, description: '1=非常に割高 〜 5=非常にお得' },
+      { text: 'このサービスを知人や同僚に勧める可能性はどのくらいですか？', type: 'RATING', required: true, order: 7, description: '1=全く勧めない 〜 5=強く勧める（NPS）' },
+      { text: '今後追加してほしい機能やサービスはありますか？', type: 'TEXTAREA', required: false, order: 8 },
+      { text: '他に共有しておきたいご意見・ご要望はありますか？', type: 'TEXTAREA', required: false, order: 9 },
+    ],
+    promptTemplate: `ヒヤリング結果を以下の観点で要約してください。
+
+## 要約構成
+1. **要約概要**: 満足度の全体像（スコア含む）
+2. **満足度スコア**: 各項目のスコアまとめ
+3. **強み・高評価ポイント**: 顧客が価値を感じている点
+4. **改善要望**: 不満点・改善リクエスト
+5. **NPS**: 推奨度とその理由
+6. **機能要望**: 追加機能リクエスト
+7. **アクションアイテム**: 改善に向けた具体的なアクション
+
+## ルール
+- スコアは数値で明記
+- 顧客の声をそのまま引用`,
+  },
+
+  // ========================================
+  // 要件定義
+  // ========================================
+  {
+    name: '要件定義ヒヤリング',
+    description: 'システム開発・業務改善の要件整理。現状の業務フローと課題を明確化。',
+    category: 'REQUIREMENTS',
+    icon: '📋',
+    defaultQuestions: [
+      { text: '対象となる業務・プロジェクトの概要を教えてください。', type: 'TEXTAREA', required: true, order: 1 },
+      { text: '現在の業務フロー（手順）を教えてください。', type: 'TEXTAREA', required: true, order: 2, description: 'ステップごとに記述してください' },
+      { text: '現状の課題やボトルネックは何ですか？', type: 'TEXTAREA', required: true, order: 3 },
+      { text: '改善後の理想的な業務フローのイメージはありますか？', type: 'TEXTAREA', required: true, order: 4 },
+      { text: '必須で実現したい機能・要件を教えてください。', type: 'TEXTAREA', required: true, order: 5, description: 'マスト要件' },
+      { text: 'あると嬉しい機能・要件はありますか？', type: 'TEXTAREA', required: false, order: 6, description: 'ウォント要件' },
+      { text: '利用するユーザー数や規模感を教えてください。', type: 'TEXTAREA', required: true, order: 7 },
+      { text: '連携が必要な既存システムやツールはありますか？', type: 'TEXTAREA', required: false, order: 8 },
+      { text: 'スケジュールや納期の目安を教えてください。', type: 'TEXTAREA', required: true, order: 9 },
+      { text: '予算感や制約事項があれば教えてください。', type: 'TEXTAREA', required: false, order: 10 },
+    ],
+    promptTemplate: `ヒヤリング結果を以下の観点で要約してください。
+
+## 要約構成
+1. **要約概要**: プロジェクト概要の要約
+2. **現状の業務フロー**: 現在の手順を整理
+3. **課題・ボトルネック**: 問題点の一覧
+4. **要件一覧**: マスト要件とウォント要件を分類
+5. **システム連携**: 既存システムとの連携要件
+6. **非機能要件**: ユーザー数・性能・セキュリティ
+7. **スケジュール・予算**: 納期と予算の制約
+8. **次のステップ**: 要件確定に向けたアクション
+
+## ルール
+- 要件は箇条書きで明確に
+- 優先度を付与（マスト/ウォント）`,
+  },
+
+  // ========================================
+  // 社内ヒヤリング
+  // ========================================
+  {
+    name: '社内ヒヤリング',
+    description: '社内調査・1on1ミーティング・組織改善のためのヒヤリング。',
+    category: 'INTERNAL_HEARING',
+    icon: '🏢',
+    defaultQuestions: [
+      { text: 'お名前と所属部署を教えてください。', type: 'TEXT', required: true, order: 1 },
+      { text: '現在の業務内容と役割を簡単に教えてください。', type: 'TEXTAREA', required: true, order: 2 },
+      { text: '業務で上手くいっていること・成果が出ていることは何ですか？', type: 'TEXTAREA', required: true, order: 3 },
+      { text: '業務上の課題や困っていることはありますか？', type: 'TEXTAREA', required: true, order: 4 },
+      { text: 'チーム内のコミュニケーションについてどう感じていますか？', type: 'TEXTAREA', required: true, order: 5 },
+      { text: '会社や組織に対して改善してほしいことはありますか？', type: 'TEXTAREA', required: false, order: 6 },
+      { text: '今後チャレンジしたいこと・キャリアの方向性を教えてください。', type: 'TEXTAREA', required: true, order: 7 },
+      { text: 'サポートが必要なこと・上長に相談したいことはありますか？', type: 'TEXTAREA', required: false, order: 8 },
+      { text: '職場環境の満足度を教えてください。', type: 'RATING', required: true, order: 9, description: '1=非常に不満 〜 5=非常に満足' },
+    ],
+    promptTemplate: `ヒヤリング結果を以下の観点で要約してください。
+
+## 要約構成
+1. **要約概要**: ヒヤリング対象者と全体の所感
+2. **業務状況**: 現在の業務と成果
+3. **課題・困りごと**: 業務上の問題点
+4. **組織・コミュニケーション**: チーム・組織への評価
+5. **キャリア意向**: 今後の方向性・希望
+6. **要望・相談事項**: 上長やHRへの要望
+7. **アクションアイテム**: フォローすべき事項
+
+## ルール
+- 個人情報の取り扱いに注意
+- 率直な意見をそのまま記録`,
+  },
+
+  // ========================================
+  // 競合調査
+  // ========================================
+  {
+    name: '競合調査ヒヤリング',
+    description: '競合企業・競合サービスに関する情報を体系的に収集・分析。',
+    category: 'COMPETITOR_ANALYSIS',
     icon: '📊',
     defaultQuestions: [
-      { text: '御社の事業内容と、ご担当者様のお役割を教えてください。', type: 'TEXTAREA', required: true, order: 1 },
-      { text: '導入前に抱えていた課題や困りごとは何でしたか？', type: 'TEXTAREA', required: true, order: 2 },
-      { text: '当サービスをどのようにお知りになりましたか？', type: 'TEXTAREA', required: true, order: 3 },
-      { text: '他のサービスと比較して、選定の決め手は何でしたか？', type: 'TEXTAREA', required: true, order: 4 },
-      { text: '導入後、具体的にどのような効果・変化がありましたか？', type: 'TEXTAREA', required: true, order: 5 },
-      { text: '数値で示せる成果があれば教えてください（例：作業時間○%削減、売上○%向上など）。', type: 'TEXTAREA', required: false, order: 6 },
-      { text: '導入時に苦労した点や、工夫した点はありますか？', type: 'TEXTAREA', required: false, order: 7 },
-      { text: '社内での反応・フィードバックはいかがでしたか？', type: 'TEXTAREA', required: false, order: 8 },
-      { text: '今後、当サービスをどのように活用していきたいですか？', type: 'TEXTAREA', required: true, order: 9 },
-      { text: '同様の課題を抱える企業へ、メッセージをお願いします。', type: 'TEXTAREA', required: true, order: 10 },
+      { text: '調査対象の競合企業・サービス名を教えてください。', type: 'TEXT', required: true, order: 1 },
+      { text: 'その競合の主な事業内容・サービスの概要を教えてください。', type: 'TEXTAREA', required: true, order: 2 },
+      { text: '競合の強み・差別化ポイントは何だと思いますか？', type: 'TEXTAREA', required: true, order: 3 },
+      { text: '競合の弱み・課題だと感じる点はありますか？', type: 'TEXTAREA', required: true, order: 4 },
+      { text: '価格帯やビジネスモデルについて知っていることを教えてください。', type: 'TEXTAREA', required: false, order: 5 },
+      { text: '顧客層やターゲット市場はどこだと思いますか？', type: 'TEXTAREA', required: true, order: 6 },
+      { text: '自社と比較した場合の優位性・劣位性は？', type: 'TEXTAREA', required: true, order: 7 },
+      { text: '競合の最近の動き（新サービス・資金調達・提携等）を知っていれば教えてください。', type: 'TEXTAREA', required: false, order: 8 },
+      { text: '競合に対する自社の戦略として、何が効果的だと思いますか？', type: 'TEXTAREA', required: true, order: 9 },
     ],
-    promptTemplate: `あなたはプロのインタビューライターです。以下のアンケート回答を基に、BtoB企業のWebサイトに掲載する「導入事例記事」を作成してください。
+    promptTemplate: `ヒヤリング結果を以下の観点で要約してください。
 
-## 記事構成
-1. **タイトル**: 成果を端的に示す（例：「作業時間を50%削減——○○社が実現したDX」）
-2. **リード文**: 企業名・課題・成果を3行で要約
-3. **導入前の課題**: 読者が共感できるよう具体的に描写
-4. **選定理由**: なぜこのサービスを選んだのか
-5. **導入プロセス**: 導入時のエピソード
-6. **導入効果**: 数値を含む具体的な成果
-7. **今後の展望**: 将来のビジョン
-8. **読者へのメッセージ**: 同業者への推薦
+## 要約構成
+1. **要約概要**: 競合分析の全体像
+2. **競合プロフィール**: 企業名・事業概要・規模
+3. **強み分析**: 競合の差別化ポイント
+4. **弱み分析**: 競合の課題・弱点
+5. **価格・ビジネスモデル**: 収益構造
+6. **自社との比較**: 優位性・劣位性のマトリクス
+7. **市場動向**: 最近の動き・トレンド
+8. **戦略提言**: 自社がとるべきアクション
 
 ## ルール
-- 回答者の言葉をなるべく活かす（一人称は「私たち」）
-- 数値やエピソードは正確に引用
-- 専門用語は必要に応じて補足
-- 読みやすさを重視（1文は60文字以内目安）`,
+- SWOT分析の視点で整理
+- 客観的な事実と主観的な見解を区別`,
   },
 
   // ========================================
-  // 社員インタビュー
+  // 新規事業調査
   // ========================================
   {
-    name: '社員インタビュー',
-    description: '社員の入社理由・仕事のやりがい・成長を伝える記事。採用広報・社内報に活用。',
-    category: 'EMPLOYEE',
-    icon: '👤',
+    name: '新規事業調査ヒヤリング',
+    description: '新規事業・新サービスの市場調査、ニーズ検証のためのヒヤリング。',
+    category: 'NEW_BUSINESS',
+    icon: '🚀',
     defaultQuestions: [
-      { text: 'お名前、所属部署、入社年を教えてください。', type: 'TEXT', required: true, order: 1 },
-      { text: '入社のきっかけ・決め手を教えてください。', type: 'TEXTAREA', required: true, order: 2 },
-      { text: '現在の業務内容を教えてください。', type: 'TEXTAREA', required: true, order: 3 },
-      { text: '仕事で一番やりがいを感じる瞬間は？', type: 'TEXTAREA', required: true, order: 4 },
-      { text: 'これまでで最も印象に残っているプロジェクトや経験は？', type: 'TEXTAREA', required: true, order: 5 },
-      { text: '入社してから成長したと感じるポイントは？', type: 'TEXTAREA', required: true, order: 6 },
-      { text: '会社の雰囲気・社風をどう感じていますか？', type: 'TEXTAREA', required: true, order: 7 },
-      { text: '1日のスケジュール（タイムライン）を教えてください。', type: 'TEXTAREA', required: false, order: 8 },
-      { text: '今後の目標やチャレンジしたいことは？', type: 'TEXTAREA', required: true, order: 9 },
-      { text: '入社を検討している方へメッセージをお願いします。', type: 'TEXTAREA', required: true, order: 10 },
+      { text: '検討中の事業・サービスのアイデアを教えてください。', type: 'TEXTAREA', required: true, order: 1 },
+      { text: 'このアイデアが解決する課題は何ですか？', type: 'TEXTAREA', required: true, order: 2 },
+      { text: 'ターゲットとなるユーザー・顧客層はどこですか？', type: 'TEXTAREA', required: true, order: 3 },
+      { text: '現時点でこの課題はどのように解決されていますか？（既存の代替手段）', type: 'TEXTAREA', required: true, order: 4 },
+      { text: 'あなたのアイデアの独自性・差別化ポイントは？', type: 'TEXTAREA', required: true, order: 5 },
+      { text: '想定するビジネスモデル・収益構造を教えてください。', type: 'TEXTAREA', required: true, order: 6 },
+      { text: '市場規模やトレンドについてどう見ていますか？', type: 'TEXTAREA', required: false, order: 7 },
+      { text: 'リスクや懸念事項はありますか？', type: 'TEXTAREA', required: true, order: 8 },
+      { text: '実現に必要なリソース（人・モノ・カネ）は？', type: 'TEXTAREA', required: false, order: 9 },
+      { text: 'まず最初に検証したいことは何ですか？', type: 'TEXTAREA', required: true, order: 10 },
     ],
-    promptTemplate: `あなたはプロのインタビューライターです。以下のアンケート回答を基に、企業サイトの「社員インタビュー」記事を作成してください。
+    promptTemplate: `ヒヤリング結果を以下の観点で要約してください。
 
-## 記事構成
-1. **タイトル**: 社員の人柄や仕事への情熱が伝わるもの
-2. **プロフィール紹介**: 名前・部署・入社年・簡単な経歴
-3. **入社の決め手**: ストーリー仕立てで
-4. **仕事内容と魅力**: 具体的なエピソード付き
-5. **成長と変化**: ビフォーアフターを描写
-6. **職場の雰囲気**: リアルな声
-7. **今後のビジョン**: 前向きなメッセージ
-8. **読者へのメッセージ**: 採用候補者向け
+## 要約構成
+1. **要約概要**: 新規事業アイデアの全体像
+2. **課題と解決策**: 解決する課題とアプローチ
+3. **ターゲット市場**: 顧客層と市場規模
+4. **競合・代替手段**: 既存ソリューションとの比較
+5. **差別化ポイント**: 独自の強み
+6. **ビジネスモデル**: 収益構造と価格戦略
+7. **リスク分析**: 懸念事項と対策
+8. **必要リソース**: 人・モノ・カネの見積もり
+9. **次のステップ**: MVP・検証計画
 
 ## ルール
-- 本人の話し言葉のニュアンスを活かす
-- 等身大の姿を伝える（過度な美化を避ける）
-- 写真キャプション用の引用を2-3箇所抽出`,
+- リーンスタートアップの視点で整理
+- 仮説と事実を明確に区別`,
   },
 
   // ========================================
-  // お客様の声
+  // カスタム
   // ========================================
   {
-    name: 'お客様の声',
-    description: 'お客様のリアルな感想を記事化。商品・サービスの信頼性向上に。コンパクトな構成。',
-    category: 'TESTIMONIAL',
-    icon: '💬',
+    name: 'カスタムヒヤリング',
+    description: '自由にヒヤリング項目を設定。目的に合わせてAIが質問を自動生成。',
+    category: 'CUSTOM',
+    icon: '✏️',
     defaultQuestions: [
-      { text: 'お名前（ニックネーム可）と、簡単なプロフィールを教えてください。', type: 'TEXT', required: true, order: 1 },
-      { text: '当サービスを利用しようと思ったきっかけは？', type: 'TEXTAREA', required: true, order: 2 },
-      { text: '利用前はどんな不安や期待がありましたか？', type: 'TEXTAREA', required: true, order: 3 },
-      { text: '実際に利用してみて、最も良かった点を教えてください。', type: 'TEXTAREA', required: true, order: 4 },
-      { text: '期待と比べて、どうでしたか？', type: 'TEXTAREA', required: true, order: 5 },
-      { text: '改善してほしい点があれば教えてください。', type: 'TEXTAREA', required: false, order: 6 },
-      { text: '総合的な満足度を5段階で教えてください。', type: 'RATING', required: true, order: 7, description: '1=不満 〜 5=非常に満足' },
-      { text: '友人や同僚にすすめたいですか？', type: 'YES_NO', required: true, order: 8 },
-      { text: '検討中の方へ一言メッセージをお願いします。', type: 'TEXTAREA', required: true, order: 9 },
+      { text: '今回のヒヤリングの背景を教えてください。', type: 'TEXTAREA', required: true, order: 1 },
+      { text: '現状について詳しく教えてください。', type: 'TEXTAREA', required: true, order: 2 },
+      { text: '課題や困っていることはありますか？', type: 'TEXTAREA', required: true, order: 3 },
+      { text: '理想の状態やゴールを教えてください。', type: 'TEXTAREA', required: true, order: 4 },
+      { text: 'これまでに試したことはありますか？', type: 'TEXTAREA', required: false, order: 5 },
+      { text: '優先順位や重要度で気にしていることはありますか？', type: 'TEXTAREA', required: true, order: 6 },
+      { text: 'スケジュールや期限はありますか？', type: 'TEXTAREA', required: false, order: 7 },
+      { text: 'その他、共有しておきたい情報があれば教えてください。', type: 'TEXTAREA', required: false, order: 8 },
     ],
-    promptTemplate: `あなたはプロのコンテンツライターです。以下のアンケート回答を基に、「お客様の声」記事を作成してください。
+    promptTemplate: `ヒヤリング結果を以下の観点で要約してください。
 
-## 記事構成
-1. **見出し**: お客様の印象的な一言を引用
-2. **お客様紹介**: プロフィール（匿名配慮）
-3. **利用のきっかけ**: 課題や背景
-4. **利用した感想**: 良かった点を中心に
-5. **おすすめポイント**: 他の人への推薦理由
+## 要約構成
+1. **要約概要**: ヒヤリング内容の全体像を3-5行で
+2. **背景・現状**: 現在の状況
+3. **課題・ニーズ**: 問題点と求めていること
+4. **目標・ゴール**: 理想の状態
+5. **重要ポイント**: 特に留意すべき点
+6. **アクションアイテム**: 次のステップ
 
 ## ルール
-- お客様のリアルな言葉を最大限活かす
-- コンパクトに（800-1500文字程度）
-- ネガティブな意見も正直に（ただし建設的な表現で）
-- 満足度スコアを明記`,
-  },
-
-  // ========================================
-  // 採用インタビュー
-  // ========================================
-  {
-    name: '採用インタビュー',
-    description: '採用ページ向けの社員紹介。キャリアパス・成長環境・働く魅力を深掘り。',
-    category: 'RECRUIT',
-    icon: '🎯',
-    defaultQuestions: [
-      { text: 'お名前、職種、入社年を教えてください。', type: 'TEXT', required: true, order: 1 },
-      { text: '前職の経験と、転職を考えた理由を教えてください。', type: 'TEXTAREA', required: true, order: 2 },
-      { text: '入社の決め手は何でしたか？', type: 'TEXTAREA', required: true, order: 3 },
-      { text: '入社前と入社後でギャップはありましたか？', type: 'TEXTAREA', required: true, order: 4 },
-      { text: '現在の仕事内容と、やりがいを教えてください。', type: 'TEXTAREA', required: true, order: 5 },
-      { text: 'どんなスキルが身につきましたか？成長を感じるポイントは？', type: 'TEXTAREA', required: true, order: 6 },
-      { text: 'チームや上司との関係性、社風について教えてください。', type: 'TEXTAREA', required: true, order: 7 },
-      { text: 'ワークライフバランスはいかがですか？', type: 'TEXTAREA', required: false, order: 8 },
-      { text: '今後のキャリアビジョンを教えてください。', type: 'TEXTAREA', required: true, order: 9 },
-      { text: '候補者の方へメッセージをお願いします。', type: 'TEXTAREA', required: true, order: 10 },
-    ],
-    promptTemplate: `あなたはプロの採用広報ライターです。以下のアンケート回答を基に、採用ページ向けの「社員インタビュー」記事を作成してください。
-
-## 記事構成
-1. **タイトル**: 働く魅力が伝わるキャッチコピー
-2. **プロフィール**: 名前・職種・入社年
-3. **キャリアストーリー**: 前職→転職→現在
-4. **仕事の魅力**: 具体的なエピソード
-5. **成長環境**: スキルアップ・キャリアパス
-6. **カルチャー**: チーム・社風のリアル
-7. **候補者へのメッセージ**: 背中を押す言葉
-
-## ルール
-- 採用候補者が「この会社で働きたい」と思える内容
-- 嘘くさくならない等身大の言葉
-- Q&A形式 or ストーリー形式を回答内容に応じて選択`,
-  },
-
-  // ========================================
-  // プレスリリース
-  // ========================================
-  {
-    name: 'プレスリリース',
-    description: '新サービス・新機能・イベント告知用のプレスリリース。報道関係者向けの構成。',
-    category: 'PRESS',
-    icon: '📰',
-    defaultQuestions: [
-      { text: '発表する内容を一言で教えてください（新サービス名/イベント名など）。', type: 'TEXT', required: true, order: 1 },
-      { text: '発表の背景・開発のきっかけを教えてください。', type: 'TEXTAREA', required: true, order: 2 },
-      { text: 'サービス/プロダクトの主な特徴・機能を3つ以上教えてください。', type: 'TEXTAREA', required: true, order: 3 },
-      { text: '想定するターゲットユーザー・顧客は？', type: 'TEXTAREA', required: true, order: 4 },
-      { text: '価格・プラン体系があれば教えてください。', type: 'TEXTAREA', required: false, order: 5 },
-      { text: '提供開始日・展開スケジュールを教えてください。', type: 'TEXT', required: true, order: 6 },
-      { text: '代表者または責任者のコメントをお願いします。', type: 'TEXTAREA', required: true, order: 7 },
-      { text: '今後の展開・ビジョンを教えてください。', type: 'TEXTAREA', required: true, order: 8 },
-      { text: '会社概要（社名・所在地・設立・代表者・URL）を教えてください。', type: 'TEXTAREA', required: true, order: 9 },
-    ],
-    promptTemplate: `あなたはプロのPRライターです。以下のアンケート回答を基に、報道機関・メディア向けの「プレスリリース」を作成してください。
-
-## 記事構成
-1. **タイトル**: ニュース価値を端的に示す（40文字以内）
-2. **サブタイトル**: 補足情報
-3. **リード**: 5W1H を網羅した要約（3-4行）
-4. **背景・課題**: なぜ今このリリースなのか
-5. **サービス/プロダクト詳細**: 特徴・機能
-6. **ターゲット・利用シーン**: 誰がどう使うか
-7. **代表者コメント**: 引用形式
-8. **今後の展開**: ロードマップ
-9. **会社概要**: 基本情報一覧
-
-## ルール
-- 客観的・事実ベースの文体
-- 数値や日付は正確に
-- 専門用語は初出時に説明
-- 「です・ます」調で統一`,
-  },
-
-  // ========================================
-  // イベントレポート
-  // ========================================
-  {
-    name: 'イベントレポート',
-    description: 'セミナー・展示会・社内イベントの振り返り記事。臨場感のあるレポート。',
-    category: 'EVENT',
-    icon: '🎪',
-    defaultQuestions: [
-      { text: 'イベント名と開催日・場所を教えてください。', type: 'TEXT', required: true, order: 1 },
-      { text: 'イベントの目的・テーマは何でしたか？', type: 'TEXTAREA', required: true, order: 2 },
-      { text: '参加者数や対象者を教えてください。', type: 'TEXT', required: true, order: 3 },
-      { text: 'プログラム・タイムラインを教えてください。', type: 'TEXTAREA', required: true, order: 4 },
-      { text: '最も盛り上がったセッション・ハイライトは？', type: 'TEXTAREA', required: true, order: 5 },
-      { text: '登壇者や参加者の印象的な発言・エピソードがあれば教えてください。', type: 'TEXTAREA', required: true, order: 6 },
-      { text: '参加者からの反響・フィードバックはいかがでしたか？', type: 'TEXTAREA', required: true, order: 7 },
-      { text: '主催者として得られた学び・気づきは？', type: 'TEXTAREA', required: false, order: 8 },
-      { text: '次回開催の予定やお知らせがあれば教えてください。', type: 'TEXTAREA', required: false, order: 9 },
-    ],
-    promptTemplate: `あなたはプロのイベントレポーターです。以下のアンケート回答を基に、臨場感のある「イベントレポート」記事を作成してください。
-
-## 記事構成
-1. **タイトル**: イベントの魅力が伝わるキャッチ
-2. **概要**: イベント名・日時・場所・参加者数
-3. **イベントの背景**: 開催目的・テーマ
-4. **ハイライト**: 盛り上がったセッション・エピソード
-5. **参加者の声**: リアルな反応
-6. **主催者の振り返り**: 学びと気づき
-7. **次回告知**: 今後の展開
-
-## ルール
-- 臨場感を出すために現在形も活用
-- 登壇者の発言は引用形式で
-- 写真キャプション用の説明を適宜追加
-- 記事が長くなりすぎないよう要点を絞る`,
+- 事実ベースで簡潔に
+- 回答者の言葉をなるべく活かす`,
   },
 ]

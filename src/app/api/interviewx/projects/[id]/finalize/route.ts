@@ -1,11 +1,17 @@
+// ============================================
+// POST /api/interviewx/projects/[id]/finalize
+// ============================================
+// ヒヤリング完了 → COMPLETED に更新
+
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewXUser, requireAuth, checkOwnership, requireDatabase } from '@/lib/interviewx/access'
-import { sendArticleReadyEmail } from '@/lib/interviewx/email'
+
+type RouteParams = { params: Promise<{ id: string }> }
 
 export async function POST(
   _req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: RouteParams
 ) {
   const dbErr = requireDatabase()
   if (dbErr) return dbErr
@@ -15,71 +21,49 @@ export async function POST(
   if (authErr) return authErr
 
   try {
+    const { id } = await params
+
     const project = await prisma.interviewXProject.findUnique({
-      where: { id: params.id },
-      include: {
-        user: { select: { email: true, name: true } },
-      },
+      where: { id },
     })
     if (!project) return NextResponse.json({ success: false, error: 'プロジェクトが見つかりません' }, { status: 404 })
 
     const ownerErr = checkOwnership(project, userId)
     if (ownerErr) return ownerErr
 
-    // 最新ドラフトを取得
-    const latestDraft = await prisma.interviewXDraft.findFirst({
-      where: { projectId: params.id },
-      orderBy: { version: 'desc' },
-    })
-    if (!latestDraft) {
-      return NextResponse.json({ success: false, error: 'ドラフトがありません' }, { status: 400 })
+    // ステータスバリデーション（ANSWERED または SUMMARIZED のみ完了可能）
+    if (!['ANSWERED', 'SUMMARIZED'].includes(project.status)) {
+      return NextResponse.json(
+        { success: false, error: `現在のステータス（${project.status}）では完了にできません` },
+        { status: 400 }
+      )
     }
 
-    // ドラフトを PUBLISHED に更新
-    await prisma.interviewXDraft.update({
-      where: { id: latestDraft.id },
-      data: { status: 'PUBLISHED' },
+    // 最新ドラフト（要約）を取得
+    const latestDraft = await prisma.interviewXDraft.findFirst({
+      where: { projectId: id },
+      orderBy: { version: 'desc' },
     })
+    if (latestDraft) {
+      await prisma.interviewXDraft.update({
+        where: { id: latestDraft.id },
+        data: { status: 'PUBLISHED' },
+      })
+    }
 
     // プロジェクトを COMPLETED に更新
     await prisma.interviewXProject.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: 'COMPLETED' },
     })
 
-    const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://doya-ai.surisuta.jp'
-
-    // 企業ユーザーに完了通知
-    if (project.user?.email) {
-      sendArticleReadyEmail({
-        to: project.user.email,
-        recipientName: project.user.name || undefined,
-        projectTitle: project.title,
-        articleTitle: latestDraft.title || undefined,
-        actionUrl: `${BASE_URL}/interviewx/projects/${params.id}/draft`,
-        actionLabel: '完成記事を確認',
-      }).catch(() => {})
-    }
-
-    // 回答者にも通知
-    if (project.respondentEmail) {
-      sendArticleReadyEmail({
-        to: project.respondentEmail,
-        recipientName: project.respondentName || undefined,
-        projectTitle: project.title,
-        articleTitle: latestDraft.title || undefined,
-        actionUrl: `${BASE_URL}/interviewx/respond/${project.shareToken}/feedback`,
-        actionLabel: '完成記事を確認',
-      }).catch(() => {})
-    }
-
     return NextResponse.json({
       success: true,
-      message: '記事が最終確定されました',
-      draftId: latestDraft.id,
+      message: 'ヒヤリングが完了しました',
+      draftId: latestDraft?.id,
     })
   } catch (e) {
     console.error('[InterviewX] finalize error:', e)
-    return NextResponse.json({ success: false, error: '最終確定に失敗しました' }, { status: 500 })
+    return NextResponse.json({ success: false, error: '完了処理に失敗しました' }, { status: 500 })
   }
 }

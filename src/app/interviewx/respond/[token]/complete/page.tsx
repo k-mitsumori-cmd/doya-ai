@@ -3,7 +3,7 @@
 // ============================================
 // 回答完了ページ（Thank You ページ）
 // ============================================
-// アンケート送信後のリダイレクト先
+// ヒヤリング完了後のリダイレクト先
 // ブランドカラー対応・会社ブランディング表示
 
 import { useEffect, useState } from 'react'
@@ -44,14 +44,14 @@ export default function CompletePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="w-8 h-8 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col">
       {/* ヘッダーグラデーション */}
       <div
         className="relative overflow-hidden"
@@ -99,23 +99,23 @@ export default function CompletePage() {
             </svg>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-3">
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-800 mb-3">
             ご回答ありがとうございました
           </h1>
 
-          <p className="text-gray-500 text-sm leading-relaxed mb-6">
+          <p className="text-slate-500 text-sm leading-relaxed mb-6">
             お忙しい中ご回答いただき、誠にありがとうございます。
             <br />
-            いただいた回答をもとに、AIが記事を自動生成いたします。
+            いただいた回答をもとに、AIが要約を自動生成いたします。
           </p>
 
-          <div className="bg-gray-50 rounded-xl p-5 text-left mb-6">
-            <h3 className="text-sm font-bold text-gray-700 mb-3">今後の流れ</h3>
+          <div className="bg-slate-50 rounded-xl p-5 text-left mb-6">
+            <h3 className="text-sm font-bold text-slate-700 mb-3">今後の流れ</h3>
             <div className="space-y-3">
               {[
-                { step: '1', label: '記事の自動生成', desc: 'AIがインタビュー記事を作成します' },
-                { step: '2', label: '記事の確認・修正', desc: '担当者が内容を確認・調整します' },
-                { step: '3', label: '最終確認のお願い', desc: '記事のご確認依頼をお送りする場合があります' },
+                { step: '1', label: '要約の自動生成', desc: 'AIがヒヤリング内容を要約します' },
+                { step: '2', label: '内容の確認', desc: '担当者が要約を確認・調整します' },
+                { step: '3', label: '完了', desc: 'ヒヤリング結果が共有されます' },
               ].map((item) => (
                 <div key={item.step} className="flex items-start gap-3">
                   <span
@@ -125,8 +125,8 @@ export default function CompletePage() {
                     {item.step}
                   </span>
                   <div>
-                    <p className="text-sm font-medium text-gray-700">{item.label}</p>
-                    <p className="text-xs text-gray-400">{item.desc}</p>
+                    <p className="text-sm font-medium text-slate-700">{item.label}</p>
+                    <p className="text-xs text-slate-400">{item.desc}</p>
                   </div>
                 </div>
               ))}
@@ -134,7 +134,7 @@ export default function CompletePage() {
           </div>
 
           {project?.title && (
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-slate-400">
               回答対象: {project.title}
             </p>
           )}
@@ -143,8 +143,8 @@ export default function CompletePage() {
 
       {/* フッター */}
       <div className="py-6 text-center">
-        <p className="text-xs text-gray-400">
-          Powered by ドヤインタビューAI-X
+        <p className="text-xs text-slate-400">
+          Powered by ドヤヒヤリングAI
         </p>
       </div>
     </div>

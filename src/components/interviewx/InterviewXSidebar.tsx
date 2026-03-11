@@ -158,7 +158,7 @@ function InterviewXSidebarImpl({
   return (
     <>
       <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={interviewxTheme}>
-        <SidebarLogoSection icon={Send} title="インタビューAI-X" subtitle="アンケート型AI記事生成" subtitleClassName="text-indigo-100/70" showLabel={showLabel} />
+        <SidebarLogoSection icon={Send} title="ドヤヒヤリングAI" subtitle="PROJECT MANAGEMENT" subtitleClassName="text-indigo-100/50 uppercase tracking-wider text-[9px]" showLabel={showLabel} />
 
         <div className="flex-1 overflow-y-auto">
           <nav className="py-4 px-3 space-y-1">
@@ -200,7 +200,7 @@ function InterviewXSidebarImpl({
           )}
         />
         <SidebarCollapseToggle isCollapsed={isCollapsed} onToggle={toggle} isMobile={isMobile} theme={interviewxTheme} />
-        <SidebarBrandingFooter brandName="ドヤインタビューAI-X" isCollapsed={isCollapsed} theme={interviewxTheme} />
+        <SidebarBrandingFooter brandName="ドヤヒヤリングAI" isCollapsed={isCollapsed} theme={interviewxTheme} />
       </SidebarShell>
 
       <SidebarLogoutDialog

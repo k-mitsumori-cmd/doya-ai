@@ -50,7 +50,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
 
     if (response.status === 'COMPLETED') {
-      return NextResponse.json({ success: false, error: 'インタビューは既に完了しています' }, { status: 410 })
+      return NextResponse.json({ success: false, error: 'ヒヤリングは既に完了しています' }, { status: 410 })
     }
 
     // 最新のAIメッセージからtopicIndexを取得
@@ -84,7 +84,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       purpose: project.purpose,
       targetAudience: project.targetAudience,
       tone: project.tone as any,
-      articleType: project.articleType as any,
+      hearingType: (project.hearingType || project.articleType) as any,
+      companyAnalysis: project.companyAnalysis as any,
       customInstructions: project.customInstructions,
       respondentName: response.respondentName,
       questions: project.questions.map(q => ({
@@ -97,7 +98,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     // 進捗情報をプロンプトに追加
     const progressHint = `\n\n[進捗: ${coveredTopics.size}/${project.questions.length}トピック完了。${
       coveredTopics.size >= project.questions.length
-        ? 'すべてのトピックをカバーしました。インタビューを締めくくってください。'
+        ? 'すべてのトピックをカバーしました。ヒヤリングを締めくくってください。'
         : `残り${project.questions.length - coveredTopics.size}トピックです。`
     }]`
 
@@ -129,7 +130,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     const shouldEnd = aiResponse.shouldEndInterview &&
       coveredTopics.size >= Math.ceil(project.questions.length * 0.8)
 
-    // インタビュー完了処理（トランザクションで保護）
+    // ヒヤリング完了処理（トランザクションで保護）
     if (shouldEnd) {
       const allMessages = await prisma.interviewXChatMessage.findMany({
         where: { responseId },

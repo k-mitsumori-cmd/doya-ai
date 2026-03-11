@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { useSession } from 'next-auth/react'
+import { useSession, signIn } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import VoiceSidebar from './VoiceSidebar'
 
@@ -32,7 +32,7 @@ export default function VoiceLayout({
   })()
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex h-screen bg-[#f7f6f8]">
       {/* サイドバー (デスクトップ) */}
       <div className="hidden md:block">
         <VoiceSidebar
@@ -54,42 +54,42 @@ export default function VoiceLayout({
             <h2 className="text-base font-black text-slate-900 whitespace-nowrap">
               {pageTitle}
             </h2>
-            <div className="relative w-full max-w-xs lg:max-w-md">
-              <svg
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500 placeholder:text-slate-400 transition-all outline-none"
-                placeholder="プロジェクトを検索..."
-                type="text"
-              />
-            </div>
+            {/* 検索は今後実装予定 */}
           </div>
           <div className="flex items-center gap-3">
-            <Link
-              href="/voice/new"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold rounded-lg transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              新規生成
-            </Link>
-            {user?.image ? (
-              <div className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white cursor-pointer overflow-hidden ring-1 ring-slate-200 flex-shrink-0">
-                <img className="w-full h-full object-cover" src={user.image} alt={user.name || ''} />
-              </div>
+            {user ? (
+              <>
+                <Link
+                  href="/voice/new"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-bold rounded-lg transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  新規生成
+                </Link>
+                {user.image ? (
+                  <div className="w-8 h-8 rounded-full bg-slate-200 border-2 border-white cursor-pointer overflow-hidden ring-1 ring-slate-200 flex-shrink-0">
+                    <img className="w-full h-full object-cover" src={user.image} alt={user.name || ''} />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-violet-100 border-2 border-white ring-1 ring-slate-200 flex items-center justify-center flex-shrink-0">
+                    <svg className="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="w-8 h-8 rounded-full bg-violet-100 border-2 border-white ring-1 ring-slate-200 flex items-center justify-center flex-shrink-0">
-                <svg className="w-4 h-4 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              <button
+                onClick={() => signIn('google', { callbackUrl: '/voice' })}
+                className="flex items-center gap-1.5 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-black rounded-lg transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
                 </svg>
-              </div>
+                ログイン
+              </button>
             )}
           </div>
         </header>
@@ -110,14 +110,23 @@ export default function VoiceLayout({
             </div>
             <span className="font-bold text-slate-900 text-sm">ドヤボイスAI</span>
           </div>
-          <Link
-            href="/voice/new"
-            className="p-2 rounded-lg bg-violet-600 text-white"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </Link>
+          {user ? (
+            <Link
+              href="/voice/new"
+              className="p-2 rounded-lg bg-violet-600 text-white"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </Link>
+          ) : (
+            <button
+              onClick={() => signIn('google', { callbackUrl: '/voice' })}
+              className="px-3 py-1.5 rounded-lg bg-violet-600 text-white text-xs font-black"
+            >
+              ログイン
+            </button>
+          )}
         </header>
 
         {/* コンテンツ */}

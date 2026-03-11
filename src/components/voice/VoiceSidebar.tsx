@@ -13,9 +13,9 @@ import {
   CreditCard,
   Radio,
   Zap,
+  LogIn,
 } from 'lucide-react'
-import { useSession, signOut } from 'next-auth/react'
-import { VOICE_PRICING } from '@/lib/pricing'
+import { useSession, signIn, signOut } from 'next-auth/react'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 import { voiceTheme } from '@/components/sidebar/themes'
 import {
@@ -127,40 +127,38 @@ function VoiceSidebarImpl({
 
         {/* 使用状況 */}
         {showLabel && (
-          <div className="mx-3 mb-2">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-violet-400/70 mb-2 px-1">今月の生成回数</p>
-            <div className="bg-white/5 rounded-xl p-3 border border-white/10 space-y-2">
+          <div className="mx-3 mt-4 mb-2">
+            <div className="p-4 rounded-2xl bg-slate-800/40 border border-slate-700/50 space-y-2">
               {!isLoggedIn ? (
                 <>
                   <div className="flex items-center gap-2 text-[11px] text-violet-100 font-bold">
-                    <Volume2 className="w-3.5 h-3.5 text-violet-300" />
-                    <span>ゲスト: <span className="text-white font-black">{VOICE_PRICING.guestLimit}回</span> まで/月</span>
+                    <LogIn className="w-3.5 h-3.5 text-violet-300" />
+                    <span>ログインして音声を生成</span>
                   </div>
-                  <Link
-                    href="/voice/pricing"
-                    className="block text-center text-[10px] font-bold text-violet-300 hover:text-white transition-colors py-1.5 rounded-lg bg-violet-700/30 hover:bg-violet-700/50"
+                  <button
+                    onClick={() => signIn('google', { callbackUrl: '/voice' })}
+                    className="w-full text-center text-[10px] font-black text-white transition-colors py-1.5 rounded-lg bg-violet-500/50 hover:bg-violet-500/70"
                   >
-                    プランを見る
-                  </Link>
+                    Googleでログイン
+                  </button>
                 </>
               ) : (
                 <>
-                  <div className="flex items-center justify-between text-[11px] font-bold">
-                    <span className="text-violet-200">
-                      {usedCount} / {limitCount === -1 ? '∞' : `${limitCount}回`}
-                    </span>
-                    <span className={`text-[10px] font-black ${remaining === 0 ? 'text-red-300' : isNearLimit ? 'text-amber-300' : 'text-violet-300'}`}>
-                      残り {remaining === -1 ? '無制限' : `${remaining}回`}
-                    </span>
+                  <div className="flex justify-between items-center mb-2">
+                    <p className="text-xs font-bold text-slate-400">今月の生成回数</p>
+                    <p className="text-xs font-black text-white">{limitCount > 0 ? `${Math.round(pct)}%` : '--'}</p>
                   </div>
                   {limitCount !== -1 && (
-                    <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-slate-700 rounded-full overflow-hidden mb-2">
                       <div
-                        className={`h-full rounded-full transition-all ${remaining === 0 ? 'bg-red-400' : isNearLimit ? 'bg-amber-400' : 'bg-violet-400'}`}
+                        className={`h-full rounded-full transition-all ${remaining === 0 ? 'bg-red-400' : isNearLimit ? 'bg-amber-400' : 'bg-gradient-to-r from-violet-500 to-purple-600'}`}
                         style={{ width: `${pct}%` }}
                       />
                     </div>
                   )}
+                  <p className="text-[10px] font-medium text-slate-400 text-center">
+                    {usedCount} / {limitCount === -1 ? '∞' : `${limitCount}回`} (残り {remaining === -1 ? '無制限' : `${remaining}回`})
+                  </p>
                 </>
               )}
             </div>
@@ -169,20 +167,32 @@ function VoiceSidebarImpl({
 
         {/* プランバナー */}
         {showLabel && currentPlan !== 'PRO' && currentPlan !== 'ENTERPRISE' && (
-          <div className="mx-3 md:mx-4 my-2 p-3 rounded-xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-7 h-7 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
-                <Zap className="w-3.5 h-3.5 text-violet-600 fill-violet-600" />
-              </div>
-              <p className="text-xs font-black text-white">プラン案内</p>
+          <div className="mx-3 mt-4 my-2 p-4 rounded-2xl bg-gradient-to-br from-violet-600/20 to-purple-700/20 border border-violet-500/30 flex flex-col gap-3 relative overflow-hidden group">
+            <div className="absolute -right-4 -top-4 opacity-10 group-hover:scale-110 transition-transform">
+              <Zap className="w-16 h-16 text-white" />
             </div>
-            <p className="text-[11px] text-white font-bold mb-1">現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}</p>
-            <Link
-              href="/voice/pricing"
-              className="mt-2 w-full py-2 bg-white text-violet-600 text-[11px] font-black rounded-lg hover:bg-violet-50 transition-colors shadow-md block text-center"
-            >
-              {currentPlan === 'LIGHT' ? 'PROにアップグレード' : 'ライトを始める'}
-            </Link>
+            <div className="flex items-center gap-2">
+              <Zap className="w-4 h-4 text-violet-400" />
+              <div>
+                <p className="text-xs font-black text-white">プラン案内</p>
+                <p className="text-[10px] text-violet-300">{isLoggedIn ? `${planLabel}プラン利用中` : 'ゲスト'}</p>
+              </div>
+            </div>
+            {isLoggedIn ? (
+              <Link
+                href="/voice/pricing"
+                className="w-full py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-black rounded-lg transition-all shadow-md text-center"
+              >
+                PROにアップグレード
+              </Link>
+            ) : (
+              <button
+                onClick={() => signIn('google', { callbackUrl: '/voice' })}
+                className="w-full py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-black rounded-lg transition-all shadow-md text-center"
+              >
+                Googleでログイン
+              </button>
+            )}
           </div>
         )}
 

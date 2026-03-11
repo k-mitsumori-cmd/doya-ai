@@ -2,11 +2,11 @@ import { Metadata } from 'next'
 import InterviewXLayout from '@/components/interviewx/InterviewXLayout'
 
 export const metadata: Metadata = {
-  title: 'ドヤインタビューAI-X — アンケート型AI記事生成',
-  description: 'アンケートを送るだけで、プロ品質のインタビュー記事が自動完成。テンプレート選択→質問生成→共有→記事生成→フィードバック→品質チェックまで一気通貫。',
+  title: 'ドヤヒヤリングAI — AIチャットで自動ヒヤリング',
+  description: 'AIチャットでヒヤリングを実施、要約まで自動生成。商談・サービス調査・顧客満足度など多様なカテゴリに対応。URL事前調査で的確な質問を自動生成。',
   openGraph: {
-    title: 'ドヤインタビューAI-X — アンケート型AI記事生成',
-    description: 'アンケートを送るだけで、プロ品質のインタビュー記事が自動完成。',
+    title: 'ドヤヒヤリングAI — AIチャットで自動ヒヤリング',
+    description: 'AIチャットでヒヤリングを実施、要約まで自動生成。',
     url: 'https://doya-ai.surisuta.jp/interviewx',
     siteName: 'ドヤAI',
     type: 'website',

@@ -1529,11 +1529,15 @@ model InterviewXProject {
   targetAudience  String?
   tone            String?  @default("professional")
   articleType     String?  @default("CASE_STUDY")
+  hearingType     String?  @default("BUSINESS_MEETING")
   wordCountTarget Int?     @default(3000)
   customInstructions String? @db.Text
 
+  // URL調査結果
+  companyAnalysis Json?
+
   // インタビューモード
-  interviewMode   String   @default("survey") // 'survey' | 'chat'
+  interviewMode   String   @default("chat") // 'chat' fixed
 
   // ステータス
   status          String   @default("DRAFT")

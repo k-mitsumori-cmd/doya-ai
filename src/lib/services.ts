@@ -864,15 +864,15 @@ export const SERVICES: Service[] = [
   },
 
   // ----------------------------------------
-  // ドヤインタビューAI-X（アンケート型インタビュー記事生成）
+  // ドヤヒヤリングAI（AIチャット自動ヒヤリング）
   // ----------------------------------------
   {
     id: 'interviewx',
-    name: 'ドヤインタビューAI-X',
-    shortName: 'AI-X',
-    description: 'アンケートを送るだけで、インタビュー記事が完成',
+    name: 'ドヤヒヤリングAI',
+    shortName: 'ヒヤリング',
+    description: 'AIチャットで自動ヒヤリング＆要約生成',
     longDescription:
-      'テンプレートを選び、設定を入力するだけでAIがアンケート質問を自動生成。共有URLを回答者に送れば、回答完了と同時にプロ品質のインタビュー記事が自動完成。フィードバック機能とAI品質チェックで、最終稿まで一気通貫。',
+      '商談・調査・要件定義など多様なヒヤリングをAIチャットで自動化。相手のサービスURLを事前調査し、最適な質問を生成。共有URLを送るだけで、回答完了後にAIが要約を自動生成します。',
     icon: '🚀',
     color: 'indigo',
     gradient: 'from-indigo-500 to-violet-500',
@@ -882,18 +882,18 @@ export const SERVICES: Service[] = [
     pricingHref: '/interviewx/pricing',
     guideHref: '/interviewx',
     features: [
-      '6種類のテンプレート（導入事例/社員/お客様の声/採用/PR/イベント）',
-      'AIが最適なアンケート質問を自動生成',
-      '共有URLで回答者にアンケート送信（ブランドカスタマイズ対応）',
-      '回答完了と同時にAI記事自動生成（SSEストリーミング）',
-      '企業・回答者双方向フィードバック→AI自動反映',
-      '5種類のAI品質チェック（校正/事実確認/読みやすさ/ブランド/センシティブ）',
+      '8種類のテンプレート（商談/サービス調査/顧客満足度/要件定義/社内/競合/新規事業/カスタム）',
+      'サービスURLの事前AI調査で最適な質問を自動生成',
+      'AIチャット形式で自然なヒヤリングを実施',
+      '共有URLで回答者にヒヤリング送信（ログイン不要）',
+      '回答完了後にAIが要約を自動生成',
+      'HTML/Markdownでエクスポート',
     ],
     useCases: [
-      '導入事例記事を効率的に量産したい',
-      '社員インタビューを外注なしで作りたい',
-      'お客様の声を自社サイトに掲載したい',
-      'インタビューの文字起こし・記事化に時間がかかっている',
+      '商談前の情報収集を効率化したい',
+      'サービス調査・競合分析を自動化したい',
+      '要件定義のヒヤリングを漏れなく実施したい',
+      '顧客満足度調査を手軽に行いたい',
     ],
     pricing: {
       free: {
@@ -924,12 +924,12 @@ export const SERVICES: Service[] = [
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_INTERVIEWX_ENTERPRISE_PRICE_ID,
       },
     },
-    status: 'active',
+    status: 'coming_soon',
     category: 'text',
     order: 5,
     requiresAuth: true,
-    isNew: true,
-    badge: 'NEW',
+    isNew: false,
+    badge: '開発中',
   },
 
   // ----------------------------------------

@@ -1,8 +1,8 @@
 // ============================================
 // POST /api/interviewx/projects/[id]/generate-article
 // ============================================
-// 回答データから記事を自動生成 — SSE (Server-Sent Events) ストリーミング
-// Gemini API でアンケート回答をベースにインタビュー記事を生成
+// ヒヤリング結果から要約を自動生成 — SSE (Server-Sent Events) ストリーミング
+// ※URLパスは後方互換のためgenerate-articleを維持
 //
 // レスポンス: SSE stream (data: JSON\n\n)
 //   - { type: 'progress', message: string }
@@ -17,7 +17,7 @@ export const maxDuration = 300
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewXUser, requireAuth, checkOwnership, requireDatabase } from '@/lib/interviewx/access'
-import { buildArticleGenerationPrompt } from '@/lib/interviewx/prompts'
+import { buildSummaryGenerationPrompt } from '@/lib/interviewx/prompts'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -47,7 +47,7 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
 
         controller.enqueue(sseEvent({ type: 'progress', message: 'プロジェクト情報を読み込み中...' }))
 
-        // ====== プロジェクト・質問・回答を取得 ======
+        // ====== プロジェクト・質問・回答・チャットを取得 ======
         const project = await prisma.interviewXProject.findUnique({
           where: { id },
           include: {
@@ -55,7 +55,10 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
             questions: { orderBy: { order: 'asc' } },
             responses: {
               where: { status: 'COMPLETED' },
-              include: { answers: true },
+              include: {
+                answers: true,
+                chatMessages: { orderBy: { createdAt: 'asc' } },
+              },
               orderBy: { completedAt: 'desc' },
               take: 1,
             },
@@ -77,12 +80,12 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
 
         const response = project.responses[0]
         if (!response) {
-          controller.enqueue(sseEvent({ type: 'error', message: '回答が見つかりません。回答者がアンケートに回答してから実行してください。' }))
+          controller.enqueue(sseEvent({ type: 'error', message: '回答が見つかりません。ヒヤリングが完了してから実行してください。' }))
           controller.close()
           return
         }
 
-        controller.enqueue(sseEvent({ type: 'progress', message: '回答データを整理中...' }))
+        controller.enqueue(sseEvent({ type: 'progress', message: 'ヒヤリングデータを整理中...' }))
 
         // Q&Aペアを構築
         const questionsAndAnswers = project.questions.map(q => {
@@ -93,16 +96,23 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
           }
         }).filter(qa => qa.answer !== '（未回答）')
 
-        if (questionsAndAnswers.length === 0) {
+        // チャットメッセージを取得
+        const chatMessages = response.chatMessages?.map(m => ({
+          role: m.role,
+          content: m.content,
+        })) || []
+
+        if (questionsAndAnswers.length === 0 && chatMessages.length === 0) {
           controller.enqueue(sseEvent({ type: 'error', message: '有効な回答がありません' }))
           controller.close()
           return
         }
 
-        controller.enqueue(sseEvent({ type: 'progress', message: 'AIで記事を生成中...' }))
+        controller.enqueue(sseEvent({ type: 'progress', message: 'AIで要約を生成中...' }))
 
         // ====== プロンプト構築 ======
-        const prompt = buildArticleGenerationPrompt({
+        const companyAnalysis = project.companyAnalysis as any
+        const prompt = buildSummaryGenerationPrompt({
           templateName: project.template?.name || '一般',
           templatePrompt: project.template?.promptTemplate as string | null,
           projectTitle: project.title,
@@ -113,10 +123,11 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
           purpose: project.purpose,
           targetAudience: project.targetAudience,
           tone: project.tone as any,
-          articleType: project.articleType as any,
-          wordCountTarget: project.wordCountTarget,
+          hearingType: (project.hearingType || project.articleType) as any,
+          companyAnalysis,
           customInstructions: project.customInstructions,
           questionsAndAnswers,
+          chatMessages,
         })
 
         // ====== Gemini API ストリーミング呼び出し ======
@@ -187,10 +198,9 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
 
         if (!fullText.trim()) throw new Error('AIからの応答が空でした')
 
-        controller.enqueue(sseEvent({ type: 'progress', message: '記事を保存中...' }))
+        controller.enqueue(sseEvent({ type: 'progress', message: '要約を保存中...' }))
 
-        // ====== ドラフト保存 ======
-        // 既存ドラフトの最新バージョン取得
+        // ====== ドラフト（要約）保存 ======
         const existingDraft = await prisma.interviewXDraft.findFirst({
           where: { projectId: id },
           orderBy: { version: 'desc' },
@@ -203,9 +213,9 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
 
         // タイトルを抽出（最初のH1）
         const titleMatch = fullText.match(/^#\s+(.+)/m)
-        const title = titleMatch ? titleMatch[1].trim() : project.title
+        const title = titleMatch ? titleMatch[1].trim() : project.title + ' — 要約'
 
-        // リード文を抽出（H1の次の段落）
+        // リード文を抽出
         const leadMatch = fullText.match(/^#\s+.+\n\n(.+?)(?:\n\n|$)/m)
         const lead = leadMatch ? leadMatch[1].trim() : null
 
@@ -225,12 +235,12 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
         // プロジェクトステータスを更新
         await prisma.interviewXProject.update({
           where: { id },
-          data: { status: 'REVIEW' },
+          data: { status: 'SUMMARIZED' },
         })
 
         controller.enqueue(sseEvent({
           type: 'done',
-          message: `記事を生成しました（${wordCount}文字）`,
+          message: `要約を生成しました（${wordCount}文字）`,
           draftId: newDraft.id,
           version: newVersion,
           wordCount,
@@ -239,9 +249,9 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
 
         controller.close()
       } catch (e: any) {
-        console.error('[interviewx] generate-article error:', e?.message)
+        console.error('[interviewx] generate-summary error:', e?.message)
         try {
-          controller.enqueue(sseEvent({ type: 'error', message: e?.message || '記事生成に失敗しました' }))
+          controller.enqueue(sseEvent({ type: 'error', message: e?.message || '要約生成に失敗しました' }))
         } catch {
           // controller already closed
         }

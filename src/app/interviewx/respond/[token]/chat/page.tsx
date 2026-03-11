@@ -254,7 +254,7 @@ export default function ChatInterviewPage() {
           <div className="relative z-10 max-w-md mx-auto text-center text-white">
             <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-4 py-1.5 text-sm mb-4">
               <MessageSquare className="w-4 h-4" />
-              AIチャットインタビュー
+              AIチャットヒヤリング
             </div>
             <h1 className="text-2xl font-bold mb-2">{project.title}</h1>
             {project.companyName && <p className="text-white/80 text-sm">{project.companyName}</p>}
@@ -266,13 +266,13 @@ export default function ChatInterviewPage() {
           <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
             <h2 className="font-bold text-slate-900 mb-1">はじめに</h2>
             <p className="text-sm text-slate-500 mb-6">
-              AIインタビュアーとの対話形式でインタビューを行います。所要時間は10〜15分程度です。
+              AIとの対話形式でヒヤリングを行います。所要時間は10〜15分程度です。
             </p>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  お名前 <span className="text-red-500">*</span>
+                  お名前 <span className="text-red-500">（必須）</span>
                 </label>
                 <input
                   type="text"
@@ -280,7 +280,7 @@ export default function ChatInterviewPage() {
                   onChange={e => setRespondentName(e.target.value)}
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2"
                   style={{ ['--tw-ring-color' as any]: brandColor }}
-                  placeholder="例: 田中太郎"
+                  placeholder="例：山田 太郎"
                 />
               </div>
               <div>
@@ -325,7 +325,7 @@ export default function ChatInterviewPage() {
               className="w-full mt-6 py-3 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-50"
               style={{ background: brandColor }}
             >
-              インタビューを開始
+              ヒヤリングを開始
             </button>
           </div>
         </div>
@@ -341,9 +341,9 @@ export default function ChatInterviewPage() {
           <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: `${brandColor}20` }}>
             <CheckCircle className="w-8 h-8" style={{ color: brandColor }} />
           </div>
-          <h2 className="text-xl font-bold text-slate-900 mb-2">インタビュー完了</h2>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">ヒヤリング完了</h2>
           <p className="text-sm text-slate-500 mb-6">
-            ご協力ありがとうございました。いただいた内容をもとに、AIが記事を自動生成します。
+            ご協力ありがとうございました。いただいた内容をもとに、AIが要約を自動生成します。このページは閉じていただいて構いません。
           </p>
           <button
             onClick={() => router.push(`/interviewx/respond/${token}/complete`)}
@@ -392,30 +392,37 @@ export default function ChatInterviewPage() {
           {messages.map(msg => (
             <div key={msg.id} className={`flex gap-3 ${msg.role === 'respondent' ? 'flex-row-reverse' : ''}`}>
               {/* アバター */}
-              <div
-                className={`w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center ${
-                  msg.role === 'interviewer' ? '' : 'bg-slate-200'
-                }`}
-                style={msg.role === 'interviewer' ? { background: `${brandColor}20` } : undefined}
-              >
-                {msg.role === 'interviewer' ? (
-                  <Bot className="w-4 h-4" style={{ color: brandColor }} />
-                ) : (
-                  <User className="w-4 h-4 text-slate-500" />
-                )}
+              <div className="flex flex-col items-center gap-1 flex-shrink-0">
+                <div
+                  className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    msg.role === 'interviewer' ? '' : 'bg-slate-200'
+                  }`}
+                  style={msg.role === 'interviewer' ? { background: `${brandColor}20` } : undefined}
+                >
+                  {msg.role === 'interviewer' ? (
+                    <Bot className="w-4 h-4" style={{ color: brandColor }} />
+                  ) : (
+                    <User className="w-4 h-4 text-slate-500" />
+                  )}
+                </div>
               </div>
-              {/* バブル */}
-              <div
-                className={`max-w-[75%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
-                  msg.role === 'interviewer'
-                    ? 'bg-white border border-slate-200 text-slate-800'
-                    : 'text-white'
-                }`}
-                style={msg.role === 'respondent' ? { background: brandColor } : undefined}
-              >
-                {msg.content.split('\n').map((line, i) => (
-                  <p key={i} className={i > 0 ? 'mt-2' : ''}>{line}</p>
-                ))}
+              {/* メッセージ */}
+              <div className={`max-w-[75%] ${msg.role === 'respondent' ? 'text-right' : ''}`}>
+                <p className={`text-[10px] font-medium mb-1 ${msg.role === 'interviewer' ? 'text-slate-400' : 'text-slate-400'}`}>
+                  {msg.role === 'interviewer' ? 'AI Bot' : `${respondentName}様`}
+                </p>
+                <div
+                  className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                    msg.role === 'interviewer'
+                      ? 'bg-white border border-slate-200 text-slate-800'
+                      : 'text-white'
+                  }`}
+                  style={msg.role === 'respondent' ? { background: brandColor } : undefined}
+                >
+                  {msg.content.split('\n').map((line, i) => (
+                    <p key={i} className={i > 0 ? 'mt-2' : ''}>{line}</p>
+                  ))}
+                </div>
               </div>
             </div>
           ))}
@@ -436,12 +443,12 @@ export default function ChatInterviewPage() {
             </div>
           )}
 
-          {/* インタビュー完了カード */}
+          {/* ヒヤリング完了カード */}
           {isComplete && step === 'chat' && (
             <div className="flex justify-center pt-4">
               <div className="bg-white border border-slate-200 rounded-2xl px-6 py-4 text-center">
                 <CheckCircle className="w-6 h-6 mx-auto mb-2" style={{ color: brandColor }} />
-                <p className="text-sm font-bold text-slate-900">インタビューが完了しました</p>
+                <p className="text-sm font-bold text-slate-900">ヒヤリングが完了しました</p>
                 <p className="text-xs text-slate-500 mt-1">ご協力ありがとうございました</p>
               </div>
             </div>
