@@ -56,8 +56,7 @@ export async function generateSpeech(options: TtsOptions): Promise<TtsResult> {
   const apiKey = process.env.GOOGLE_CLOUD_TTS_API_KEY
 
   if (!apiKey) {
-    // モック実装
-    return generateMockSpeech(options)
+    throw new Error('音声合成サービスが現在利用できません。管理者にお問い合わせください。')
   }
 
   const encoding = ENCODING_MAP[options.outputFormat]
