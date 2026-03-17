@@ -47,7 +47,8 @@ const GEMINI_PRICING = {
   avgOutputTokens: 800,
 }
 
-// 為替レート（概算）
+// 為替レート（概算） - 定期的に見直すこと
+// 最終更新: 2026-03
 const USD_TO_JPY = 150
 
 /**
@@ -204,10 +205,18 @@ export async function fetchGCPUsageReport(): Promise<GCPUsageReport> {
   const endTime = now.toISOString()
   const startTime = yesterday.toISOString()
 
-  // 月初（JST基準）
-  const jstNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }))
-  const monthStart = new Date(jstNow.getFullYear(), jstNow.getMonth(), 1)
-  const monthStartTime = monthStart.toISOString()
+  // 月初（JST基準）- Intl.DateTimeFormat で安全にJST年月を取得
+  const jstParts = Object.fromEntries(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Asia/Tokyo',
+      year: 'numeric',
+      month: '2-digit',
+    }).formatToParts(now).map(p => [p.type, p.value])
+  )
+  const jstYear = Number(jstParts.year)
+  const jstMonth = Number(jstParts.month) - 1 // 0-based
+  // JST 月初 0:00 = UTC では 9時間前
+  const monthStartTime = new Date(Date.UTC(jstYear, jstMonth, 1) - 9 * 60 * 60 * 1000).toISOString()
 
   try {
     const token = await getAccessToken()

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { stripe, getPlanIdFromStripePriceId, getServiceIdFromPlanId } from '@/lib/stripe'
+import { stripe, getPlanIdFromStripePriceId, ALL_SERVICE_IDS } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 
 // ========================================
@@ -68,66 +68,23 @@ export async function POST(request: NextRequest) {
     const priceId = subscription.items.data[0]?.price.id || null
     const planIdFromPrice = getPlanIdFromStripePriceId(priceId)
     const planIdFromMeta = (subscription.metadata?.planId as any) || null
-    const planId = (planIdFromPrice || planIdFromMeta) as any
+    const planId = String(planIdFromPrice || planIdFromMeta || '')
 
-    if (planId && typeof planId === 'string' && planId.includes('-')) {
-      const serviceId = getServiceIdFromPlanId(planId as any)
-      if (serviceId !== 'bundle') {
-        const isBannerPaid =
-          serviceId === 'banner' &&
-          (planId === 'banner-basic' ||
-            planId === 'banner-pro' ||
-            planId === 'banner-enterprise' ||
-            planId === 'banner-starter' ||
-            planId === 'banner-business')
-        const servicePlan =
-          serviceId === 'seo' && planId === 'seo-enterprise'
-            ? 'ENTERPRISE'
-            : serviceId === 'banner' && planId === 'banner-enterprise'
-              ? 'ENTERPRISE'
-              : planId.endsWith('-pro') || isBannerPaid
-                ? 'PRO'
-                : planId.endsWith('-light')
-                  ? 'LIGHT'
-                  : 'FREE'
-
-        await prisma.userServiceSubscription.upsert({
-          where: { userId_serviceId: { userId: user.id, serviceId } },
-          create: {
-            userId: user.id,
-            serviceId,
-            plan: servicePlan,
-            stripeSubscriptionId: subscription.id,
-            stripePriceId: priceId,
-            stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-            dailyUsage: 0,
-            monthlyUsage: 0,
-            lastUsageReset: new Date(),
-          },
-          update: {
-            plan: servicePlan,
-            stripeSubscriptionId: subscription.id,
-            stripePriceId: priceId,
-            stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-          },
-        })
-      }
+    // プランレベルを判定
+    let userPlan = 'PRO' // 有料プランのデフォルト
+    if (planId === 'bundle') {
+      userPlan = 'BUNDLE'
+    } else if (planId.endsWith('-enterprise')) {
+      userPlan = 'ENTERPRISE'
+    } else if (planId.endsWith('-pro') || planId === 'banner-basic') {
+      userPlan = 'PRO'
+    } else if (planId.endsWith('-light')) {
+      userPlan = 'LIGHT'
+    } else if (!planId) {
+      userPlan = 'FREE'
     }
 
-    // 互換用の全体planも更新
-    const userPlan =
-      planId === 'bundle'
-        ? 'BUNDLE'
-        : planId === 'seo-enterprise'
-          ? 'ENTERPRISE'
-          : planId === 'banner-enterprise'
-            ? 'ENTERPRISE'
-            : planId === 'banner-basic' || (planId && String(planId).endsWith('-pro'))
-              ? 'PRO'
-              : (planId && String(planId).endsWith('-light'))
-                ? 'LIGHT'
-                : 'FREE'
-
+    // グローバルプランを更新
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -137,6 +94,33 @@ export async function POST(request: NextRequest) {
         stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
       },
     })
+
+    // 統一課金: 全サービスを同じプランに更新（Webhook遅延の保険）
+    const servicePlan = userPlan === 'BUNDLE' ? 'PRO' : userPlan
+    for (const serviceId of ALL_SERVICE_IDS) {
+      await prisma.userServiceSubscription.upsert({
+        where: { userId_serviceId: { userId: user.id, serviceId } },
+        create: {
+          userId: user.id,
+          serviceId,
+          plan: servicePlan,
+          stripeSubscriptionId: subscription.id,
+          stripePriceId: priceId,
+          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          dailyUsage: 0,
+          monthlyUsage: 0,
+          lastUsageReset: new Date(),
+        },
+        update: {
+          plan: servicePlan,
+          stripeSubscriptionId: subscription.id,
+          stripePriceId: priceId,
+          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        },
+      }).catch((e: any) => {
+        console.error(`[Stripe Sync] Failed to upsert service subscription: user=${user.id} service=${serviceId}`, e?.message)
+      })
+    }
 
     return NextResponse.json({
       ok: true,

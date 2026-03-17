@@ -153,9 +153,11 @@ export async function sendEventNotification(event: {
 // ========================================
 export async function sendDailySummary(): Promise<void> {
   const now = new Date()
-  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+  // JST の「今日 0:00」と「昨日 0:00」を基準にする（UTC+9 ベース）
+  const todayJST = getJSTStartOfDay(now)
+  const yesterday = new Date(todayJST.getTime() - 24 * 60 * 60 * 1000)
 
-  // 過去24時間の新規ユーザー（名前付き）
+  // JST昨日0:00〜今日0:00 の新規ユーザー（名前付き）
   const newUsersList = await prisma.user.findMany({
     where: { createdAt: { gte: yesterday } },
     select: { name: true, email: true },
@@ -349,7 +351,7 @@ export async function sendMonthlySummary(): Promise<void> {
   const now = new Date()
   // 先月1日 0:00 JST ～ 今月1日 0:00 JST
   const thisMonth1st = getJSTStartOfMonth(now)
-  const lastMonth1st = getJSTStartOfMonth(new Date(thisMonth1st.getTime() - 1))
+  const lastMonth1st = getJSTStartOfMonth(new Date(thisMonth1st.getTime() - 24 * 60 * 60 * 1000))
 
   // --- 先月の数値 ---
   const monthNewUsers = await prisma.user.findMany({
@@ -445,24 +447,50 @@ export async function sendMonthlySummary(): Promise<void> {
 // ========================================
 // 日付ユーティリティ（JST基準）
 // ========================================
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000
+
+/** JST の年月日時分秒を安全に取得するヘルパー */
+function getJSTParts(date: Date) {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hour12: false,
+    weekday: 'short',
+  })
+  const parts = Object.fromEntries(
+    formatter.formatToParts(date).map(p => [p.type, p.value])
+  )
+  return {
+    year: Number(parts.year),
+    month: Number(parts.month),
+    day: Number(parts.day),
+    weekday: parts.weekday, // Mon, Tue, ...
+    hour: Number(parts.hour),
+  }
+}
+
+/** 指定日時のJSTでの当日 0:00 をUTC Dateで返す */
+function getJSTStartOfDay(date: Date): Date {
+  const p = getJSTParts(date)
+  // JST 0:00 = UTC の前日 15:00
+  return new Date(Date.UTC(p.year, p.month - 1, p.day) - JST_OFFSET_MS)
+}
+
 /** 指定日時のJSTでの週の月曜日 0:00 をUTCのDateで返す */
 function getJSTStartOfWeek(date: Date): Date {
-  // JST = UTC + 9
-  const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000)
-  const day = jst.getUTCDay() // 0=Sun, 1=Mon, ...
-  const diff = day === 0 ? 6 : day - 1 // 月曜からの差分
-  jst.setUTCHours(0, 0, 0, 0)
-  jst.setUTCDate(jst.getUTCDate() - diff)
-  // UTCに戻す
-  return new Date(jst.getTime() - 9 * 60 * 60 * 1000)
+  const p = getJSTParts(date)
+  // 曜日から月曜までの差分を計算
+  const dayMap: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 }
+  const diff = dayMap[p.weekday] ?? 0
+  const mondayUTC = Date.UTC(p.year, p.month - 1, p.day - diff)
+  return new Date(mondayUTC - JST_OFFSET_MS)
 }
 
 /** 指定日時のJSTでの月初 1日 0:00 をUTCのDateで返す */
 function getJSTStartOfMonth(date: Date): Date {
-  const jst = new Date(date.getTime() + 9 * 60 * 60 * 1000)
-  jst.setUTCDate(1)
-  jst.setUTCHours(0, 0, 0, 0)
-  return new Date(jst.getTime() - 9 * 60 * 60 * 1000)
+  const p = getJSTParts(date)
+  return new Date(Date.UTC(p.year, p.month - 1, 1) - JST_OFFSET_MS)
 }
 
 /** DateをJST日付文字列で返す (例: 2/13) */

@@ -113,7 +113,7 @@ export const STRIPE_PRICE_IDS = {
       yearly: process.env.STRIPE_PRICE_INTERVIEW_ENTERPRISE_YEARLY || BANNER_ENTERPRISE_YEARLY,
     },
   },
-  // ドヤLP AI（統一課金: ドヤバナーAIと同じ価格ID）
+  // ドヤワイヤーフレーム AI（統一課金: ドヤバナーAIと同じ価格ID）
   lp: {
     light: {
       monthly: process.env.STRIPE_PRICE_LP_LIGHT_MONTHLY || BANNER_LIGHT_MONTHLY,
@@ -164,6 +164,15 @@ export const STRIPE_PRICE_IDS = {
     yearly: process.env.STRIPE_PRICE_BUNDLE_YEARLY || 'price_bundle_yearly',
   },
 }
+
+// ========================================
+// 全サービスIDリスト（統一課金で更新対象となる全サービス）
+// ========================================
+export const ALL_SERVICE_IDS = [
+  'banner', 'seo', 'interview', 'persona', 'kantan',
+  'copy', 'voice', 'movie', 'lp', 'opening',
+  'shindan', 'tenkai', 'interviewx', 'logo', 'video', 'presentation',
+] as const
 
 // ========================================
 // 価格ID ↔ プランID 変換（厳密マッピング）
@@ -345,7 +354,8 @@ async function getOrCreateCustomerPortalConfigurationId(): Promise<string | null
     })
 
     return created?.id || null
-  } catch {
+  } catch (e) {
+    console.error('[Stripe] Failed to get/create customer portal configuration:', e)
     return null
   }
 }

@@ -256,7 +256,7 @@ export const SERVICES: Service[] = [
       'バナー/図解画像生成・リンクチェック',
     ],
     pricing: {
-      free: { name: '無料プラン', limit: '（暫定）', dailyLimit: 0, price: 0 },
+      free: { name: '無料プラン', limit: 'お試し', dailyLimit: 0, price: 0 },
       light: {
         name: 'ライトプラン',
         limit: '月10回まで',
@@ -264,7 +264,12 @@ export const SERVICES: Service[] = [
         price: 2980,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_SEO_LIGHT_PRICE_ID,
       },
-      pro: { name: 'プロプラン', limit: '（暫定）', dailyLimit: -1, price: 0 },
+      pro: {
+        name: 'プロプラン',
+        limit: '無制限',
+        dailyLimit: -1,
+        price: 9980,
+      },
     },
     status: 'active',
     category: 'text',

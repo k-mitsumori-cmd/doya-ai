@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
-import { constructWebhookEvent, getPlanIdFromStripePriceId, stripe } from '@/lib/stripe'
+import { constructWebhookEvent, getPlanIdFromStripePriceId, stripe, ALL_SERVICE_IDS } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import { sendEventNotification } from '@/lib/notifications'
 import Stripe from 'stripe'
@@ -161,11 +161,14 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   const userId = subscription.metadata?.userId
   if (!userId) {
     // Customer IDからユーザーを検索
+    const customerId = subscription.customer as string
     const user = await prisma.user.findFirst({
-      where: { stripeCustomerId: subscription.customer as string },
+      where: { stripeCustomerId: customerId },
     })
     if (user) {
       await updateUserSubscription(user.id, subscription)
+    } else {
+      console.error(`[Webhook] subscription.created: user not found for customer ${customerId}, subscription ${subscription.id} — subscription will NOT be recorded`)
     }
     return
   }
@@ -225,8 +228,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   }).catch(() => {})
 
   // 統一課金: 全サービスをFREEに戻す
-  const allServiceIds = ['banner', 'seo', 'interview', 'persona', 'kantan', 'copy', 'voice', 'movie', 'lp', 'opening', 'shindan', 'tenkai']
-  for (const serviceId of allServiceIds) {
+  for (const serviceId of ALL_SERVICE_IDS) {
     await prisma.userServiceSubscription.update({
       where: { userId_serviceId: { userId: user.id, serviceId } },
       data: {
@@ -235,7 +237,11 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
         stripePriceId: null,
         stripeCurrentPeriodEnd: null,
       },
-    }).catch(() => {})
+    }).catch((e: any) => {
+      if (e?.code !== 'P2025') {
+        console.error(`[Webhook] Failed to reset service subscription: user=${user.id} service=${serviceId}`, e?.message)
+      }
+    })
   }
 
   console.log(`Subscription canceled for user: ${user.id} (all services reset to FREE)`)
@@ -296,8 +302,7 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
 
   // 統一課金: 全サービスを同じプランに更新
   const servicePlan = userPlan === 'BUNDLE' ? 'PRO' : userPlan
-  const allServiceIds = ['banner', 'seo', 'interview', 'persona', 'kantan', 'copy', 'voice', 'movie', 'lp', 'opening', 'shindan', 'tenkai']
-  for (const serviceId of allServiceIds) {
+  for (const serviceId of ALL_SERVICE_IDS) {
     await prisma.userServiceSubscription.upsert({
       where: { userId_serviceId: { userId, serviceId } },
       create: {
@@ -317,7 +322,9 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
         stripePriceId: priceId,
         stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
       },
-    }).catch(() => {})
+    }).catch((e: any) => {
+      console.error(`[Webhook] Failed to upsert service subscription: user=${userId} service=${serviceId}`, e?.message)
+    })
   }
 
   console.log(`Updated subscription for user ${userId}: ${userPlan} — all services: ${servicePlan} (${subscription.status})`)

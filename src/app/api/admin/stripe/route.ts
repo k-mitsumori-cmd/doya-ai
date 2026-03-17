@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
+import { ALL_SERVICE_IDS } from '@/lib/stripe'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -120,14 +121,32 @@ export async function POST(request: NextRequest) {
       case 'cancel_immediately':
         // 即時キャンセル
         result = await stripe.subscriptions.cancel(user.stripeSubscriptionId)
-        // DBも更新
+        // DBも更新（User + 全サービス）
         await prisma.user.update({
           where: { id: userId },
           data: {
             plan: 'FREE',
             stripeSubscriptionId: null,
+            stripePriceId: null,
+            stripeCurrentPeriodEnd: null,
           },
         })
+        // 統一課金: 全サービスをFREEに戻す
+        for (const serviceId of ALL_SERVICE_IDS) {
+          await prisma.userServiceSubscription.update({
+            where: { userId_serviceId: { userId, serviceId } },
+            data: {
+              plan: 'FREE',
+              stripeSubscriptionId: null,
+              stripePriceId: null,
+              stripeCurrentPeriodEnd: null,
+            },
+          }).catch((e: any) => {
+            if (e?.code !== 'P2025') {
+              console.error(`[Admin] Failed to reset service subscription: user=${userId} service=${serviceId}`, e?.message)
+            }
+          })
+        }
         break
 
       case 'resume':

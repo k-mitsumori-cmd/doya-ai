@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { sendDailySummary, sendErrorNotification } from '@/lib/notifications'
 import { prisma } from '@/lib/prisma'
-import { stripe } from '@/lib/stripe'
+import { stripe, ALL_SERVICE_IDS } from '@/lib/stripe'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -33,7 +33,7 @@ async function resetExpiredSubscriptions() {
   if (expiredUsers.length === 0) return 0
 
   let resetCount = 0
-  const allServiceIds = ['banner', 'seo', 'interview', 'persona', 'kantan', 'copy', 'voice', 'movie', 'lp', 'opening', 'shindan', 'tenkai']
+  const allServiceIds = ALL_SERVICE_IDS
 
   for (const user of expiredUsers) {
     try {
@@ -93,7 +93,12 @@ async function resetExpiredSubscriptions() {
             stripePriceId: null,
             stripeCurrentPeriodEnd: null,
           },
-        }).catch(() => {})
+        }).catch((e: any) => {
+          // レコードが存在しない場合は無視（全サービス分を一律更新するため）
+          if (e?.code !== 'P2025') {
+            console.error(`[Cron] Failed to reset service subscription: user=${user.id} service=${serviceId}`, e?.message)
+          }
+        })
       }
 
       resetCount++
