@@ -266,8 +266,8 @@ export const SERVICES: Service[] = [
       },
       pro: {
         name: 'プロプラン',
-        limit: '無制限',
-        dailyLimit: -1,
+        limit: '月30回まで',
+        dailyLimit: 30,
         price: 9980,
       },
     },
