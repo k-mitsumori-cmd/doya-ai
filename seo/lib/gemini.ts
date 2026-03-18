@@ -1,48 +1,103 @@
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
-// Claude API用のヘルパー関数
-async function generateTextWithClaude(prompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
+// ============================================================
+// Claude Sonnet 4.6 — プライマリLLM
+// ============================================================
+// SEOパイプラインのテキスト/JSON生成はすべてClaude Sonnet 4.6を経由する。
+// Geminiは画像生成専用、およびClaudeがダウンした場合のフォールバックとして残す。
+// SEO_CLAUDE_MODEL で任意のモデルを指定可能（例: claude-opus-4-6）
+const CLAUDE_MODEL_DEFAULT = process.env.SEO_CLAUDE_MODEL || 'claude-sonnet-4-6'
+// Claude Sonnet 4.6 の最大出力トークン数
+const CLAUDE_MAX_OUTPUT_TOKENS = 16384
+
+async function generateTextWithClaude(
+  prompt: string,
+  options?: { temperature?: number; maxTokens?: number; system?: string }
+): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY環境変数が設定されていません。Claude APIを使用するにはANTHROPIC_API_KEYが必要です。')
   }
 
-  // Haiku 4.5はSonnet 4.5の1/3のコストで十分な品質。SEO記事生成に最適。
-  // SEO_CLAUDE_MODEL で上書き可能（例: claude-sonnet-4-5-20250929, claude-opus-4-6）
-  const model = process.env.SEO_CLAUDE_MODEL || 'claude-haiku-4-5-20251001'
+  const model = CLAUDE_MODEL_DEFAULT
+  // Claude Sonnet 4.6の出力上限を超えないようキャップ
+  const maxTokens = Math.min(options?.maxTokens ?? CLAUDE_MAX_OUTPUT_TOKENS, CLAUDE_MAX_OUTPUT_TOKENS)
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: options?.maxTokens ?? 64000,
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      system: 'あなたはプロフェッショナルなコンテンツ作成アシスタントです。日本語で高品質なコンテンツを生成してください。',
-      temperature: options?.temperature ?? 0.4,
-    }),
+  const systemPrompt = options?.system ??
+    'あなたはSEO・LLMO（LLM Optimization）に精通したプロフェッショナルなコンテンツ作成アシスタントです。' +
+    '日本語で高品質なコンテンツを生成してください。' +
+    '指示されたフォーマット（JSON、Markdown等）を厳守してください。'
+
+  const body = JSON.stringify({
+    model,
+    max_tokens: maxTokens,
+    messages: [{ role: 'user', content: prompt }],
+    system: systemPrompt,
+    temperature: options?.temperature ?? 0.4,
   })
 
-  if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Claude API Error: ${response.status} - ${errorText.substring(0, 500)}`)
-  }
+  // リトライロジック（429/5xx対応 — 最大3回試行）
+  let lastError: Error | null = null
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body,
+      })
 
-  const json = await response.json()
-  const content = json?.content
-  if (Array.isArray(content)) {
-    return content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('')
+      if (response.ok) {
+        const json = await response.json()
+        const content = json?.content
+        if (Array.isArray(content)) {
+          const text = content.filter((b: any) => b.type === 'text').map((b: any) => b.text).join('')
+          if (text) {
+            if (attempt > 0) console.log(`[Claude] Succeeded on attempt ${attempt + 1}`)
+            return text
+          }
+        }
+        // 空レスポンス — リトライ対象
+        lastError = new Error('Claude API returned empty content')
+        console.warn(`[Claude] Empty response on attempt ${attempt + 1}`)
+        if (attempt < 2) {
+          await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempt)))
+          continue
+        }
+        return ''
+      }
+
+      // 429（レート制限）/ 529（過負荷）/ 5xx はリトライ
+      if (response.status === 429 || response.status === 529 || response.status >= 500) {
+        const delay = 1500 * Math.pow(2, attempt) + Math.random() * 500
+        console.log(
+          `[Claude] Rate limited or server error (${response.status}), retrying in ${Math.round(delay)}ms... (attempt ${attempt + 1}/3)`
+        )
+        await new Promise(r => setTimeout(r, delay))
+        lastError = new Error(`Claude API Error: ${response.status}`)
+        continue
+      }
+
+      // その他の4xxエラー（400, 401, 403等）はリトライしない
+      const errorText = await response.text()
+      throw new Error(`Claude API Error: ${response.status} - ${errorText.substring(0, 500)}`)
+    } catch (e: any) {
+      // 明示的にthrowされた4xxエラーはそのまま再throw
+      if (e?.message?.startsWith('Claude API Error:') && !/429|529|5\d\d/.test(e.message)) {
+        throw e
+      }
+      lastError = e
+      if (attempt < 2) {
+        const delay = 1500 * Math.pow(2, attempt)
+        console.warn(`[Claude] Network error on attempt ${attempt + 1}, retrying in ${delay}ms...`)
+        await new Promise(r => setTimeout(r, delay))
+      }
+    }
   }
-  return ''
+  throw lastError || new Error('Claude API request failed after 3 retries')
 }
 
 // OpenAI API用のヘルパー関数
@@ -87,41 +142,10 @@ async function generateTextWithChatGPT(prompt: string, options?: { temperature?:
   return json.choices?.[0]?.message?.content || ''
 }
 
-// 外部LLMフォールバック（Claude → ChatGPT の順で試行）
-async function generateTextWithExternalLLM(prompt: string, options?: { temperature?: number; maxTokens?: number }): Promise<string> {
-  // Claude APIが設定されていれば優先
-  if (process.env.ANTHROPIC_API_KEY) {
-    try {
-      const result = await generateTextWithClaude(prompt, options)
-      if (result) {
-        console.log('[LLM] Successfully used Claude API')
-        return result
-      }
-    } catch (e: any) {
-      console.warn('[LLM] Claude API failed:', e?.message?.substring(0, 200))
-    }
-  }
-
-  // ChatGPTにフォールバック
-  if (process.env.OPENAI_API_KEY) {
-    try {
-      const result = await generateTextWithChatGPT(prompt, options)
-      if (result) {
-        console.log('[LLM] Successfully used ChatGPT fallback')
-        return result
-      }
-    } catch (e: any) {
-      console.warn('[LLM] ChatGPT fallback failed:', e?.message?.substring(0, 200))
-    }
-  }
-
-  throw new Error('外部LLM（Claude/ChatGPT）がすべて失敗しました。ANTHROPIC_API_KEY または OPENAI_API_KEY を設定してください。')
-}
-
 // SEO用途のデフォルトモデル
-// - テキスト: gemini-2.5-flash（高速・安定・高品質）
-//   - 環境変数 SEO_GEMINI_TEXT_MODEL で任意のモデルを指定可能
-//   - 未対応環境では自動でChatGPT APIにフォールバック
+// - テキスト: Claude Sonnet 4.6（プライマリ）→ Geminiフォールバック
+//   - SEO_CLAUDE_MODEL で Claude のモデルを変更可能
+//   - SEO_PRIMARY_LLM=gemini で Gemini をプライマリに戻すことも可能
 // - 画像(図解/サムネ): nano-banana-pro-preview（Gemini ネイティブ画像生成）
 export const GEMINI_TEXT_MODEL_DEFAULT =
   process.env.SEO_GEMINI_TEXT_MODEL || process.env.SEO_GEMINI_CHAT_MODEL || 'gemini-2.5-flash'
@@ -389,113 +413,131 @@ async function fetchWithRetry(
 }
 
 export async function geminiGenerateText(req: GenerateContentRequest): Promise<string> {
-  // SEO_PRIMARY_LLM=claude の場合、Geminiを経由せず直接Claude APIを使用
-  const primaryLlm = (process.env.SEO_PRIMARY_LLM || '').trim().toLowerCase()
-  if (primaryLlm === 'claude' && process.env.ANTHROPIC_API_KEY) {
-    const promptText = joinPartsText(req.parts)
-    if (promptText) {
-      try {
-        return await generateTextWithClaude(promptText, {
-          temperature: req.generationConfig?.temperature ?? 0.4,
-          maxTokens: Math.min(req.generationConfig?.maxOutputTokens ?? 65536, 64000),
-        })
-      } catch (e: any) {
-        console.warn('[LLM] Claude primary failed, falling back to Gemini:', e?.message?.substring(0, 200))
-      }
-    }
-  }
-
-  const apiKey = getApiKey()
-
-  // 試行するモデルのリストを作成
-  const modelsToTry = [req.model, ...FALLBACK_MODELS.filter(m => m !== req.model)]
-
-  for (const model of modelsToTry) {
-    const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
-    
-    try {
-      const res = await fetchWithRetry(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify({
-          contents: [{ parts: req.parts }],
-          generationConfig: {
-            temperature: req.generationConfig?.temperature ?? 0.4,
-            // アウトライン等長いJSON出力に対応するため大きめに設定
-            maxOutputTokens: req.generationConfig?.maxOutputTokens ?? 65536,
-          },
-        }),
-      })
-
-      if (!res.ok) {
-        const t = await res.text()
-        const isNotFound = res.status === 404 || /NOT_FOUND|not found/i.test(t)
-        const isRateLimited = res.status === 429 || /rate limit|RESOURCE_EXHAUSTED/i.test(t)
-
-        // 404(モデル未提供)やレート制限の場合は次のモデルを試す
-        if ((isNotFound || isRateLimited) && model !== modelsToTry[modelsToTry.length - 1]) {
-          console.log(
-            `[Gemini] Model ${model} failed (${res.status}${isNotFound ? ', NOT_FOUND' : ''}), trying next model...`
-          )
-          continue
-        }
-        throw new Error(`Gemini API Error: ${res.status} - ${t.substring(0, 500)}`)
-      }
-
-      const json = await res.json()
-      const parts = json?.candidates?.[0]?.content?.parts
-      const text = joinPartsText(parts)
-      
-      // 空のテキストが返された場合は次のモデルを試す
-      if (!text) {
-        console.warn(`[Gemini] Model ${model} returned empty text`)
-        // まだ試していないフォールバックモデルがあれば次を試す
-        const currentIndex = modelsToTry.indexOf(model)
-        if (currentIndex < modelsToTry.length - 1) {
-          console.log(`[Gemini] Trying next model: ${modelsToTry[currentIndex + 1]}`)
-          continue
-        }
-        // すべてのGeminiモデルで空の場合は ChatGPT フォールバックへ
-        console.log('[Gemini] All models returned empty, falling back to ChatGPT...')
-        break // ループを抜けてChatGPTフォールバックへ
-      }
-      
-      if (model !== req.model) {
-        console.log(`[Gemini] Successfully used fallback model: ${model}`)
-      }
-      return text
-    } catch (e: any) {
-      const msg = String(e?.message || '')
-      const isNotFound = /404|NOT_FOUND|not found/i.test(msg)
-      const isRateLimited = /429|rate limit|RESOURCE_EXHAUSTED/i.test(msg)
-
-      // 404(モデル未提供)やレート制限の場合は次のモデルを試す
-      if ((isNotFound || isRateLimited) && model !== modelsToTry[modelsToTry.length - 1]) {
-        console.log(`[Gemini] Model ${model} failed, trying next...`)
-        continue
-      }
-      throw e
-    }
-  }
-  
-  // すべてのGeminiモデルが失敗した場合、外部LLM（Claude/ChatGPT）にフォールバック
   const promptText = joinPartsText(req.parts)
-  if (!promptText) {
-    throw new Error('All Gemini models exhausted and no prompt text available for LLM fallback')
+  const temperature = req.generationConfig?.temperature ?? 0.4
+  const requestedTokens = req.generationConfig?.maxOutputTokens ?? CLAUDE_MAX_OUTPUT_TOKENS
+
+  // ──────────────────────────────────────────────────────
+  // プライマリ: Claude Sonnet 4.6
+  // SEO_PRIMARY_LLM=gemini を設定した場合のみGeminiを優先する
+  // ──────────────────────────────────────────────────────
+  const primaryLlm = (process.env.SEO_PRIMARY_LLM || '').trim().toLowerCase()
+  const useClaudePrimary = primaryLlm !== 'gemini' && !!process.env.ANTHROPIC_API_KEY
+
+  if (useClaudePrimary && promptText) {
+    try {
+      const result = await generateTextWithClaude(promptText, {
+        temperature,
+        maxTokens: requestedTokens,
+      })
+      if (result) return result
+      console.warn('[Claude] Primary returned empty, falling back to Gemini...')
+    } catch (e: any) {
+      console.warn('[Claude] Primary failed, falling back to Gemini:', e?.message?.substring(0, 200))
+    }
   }
 
-  console.log('[Gemini] All models failed, falling back to external LLM (Claude/ChatGPT)...')
+  // ──────────────────────────────────────────────────────
+  // フォールバック1: Gemini（複数モデル試行）
+  // ──────────────────────────────────────────────────────
+  let geminiApiKey: string | null = null
   try {
-    return await generateTextWithExternalLLM(promptText, {
-      temperature: req.generationConfig?.temperature ?? 0.4,
-      maxTokens: Math.min(req.generationConfig?.maxOutputTokens ?? 65536, 64000),
-    })
-  } catch (fallbackError: any) {
-    throw new Error(`All Gemini models exhausted and external LLM fallback failed: ${fallbackError?.message || 'unknown error'}`)
+    geminiApiKey = getApiKey()
+  } catch (_e: any) {
+    // Gemini APIキー未設定 — スキップしてChatGPTフォールバックへ
+    console.warn('[Gemini] No API key configured, skipping Gemini fallback')
   }
+
+  if (geminiApiKey) {
+    const modelsToTry = [req.model, ...FALLBACK_MODELS.filter(m => m !== req.model)]
+
+    for (const model of modelsToTry) {
+      const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
+
+      try {
+        const res = await fetchWithRetry(endpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': geminiApiKey,
+          },
+          body: JSON.stringify({
+            contents: [{ parts: req.parts }],
+            generationConfig: {
+              temperature,
+              maxOutputTokens: requestedTokens,
+            },
+          }),
+        })
+
+        if (!res.ok) {
+          const t = await res.text()
+          const isNotFound = res.status === 404 || /NOT_FOUND|not found/i.test(t)
+          const isRateLimited = res.status === 429 || /rate limit|RESOURCE_EXHAUSTED/i.test(t)
+
+          if ((isNotFound || isRateLimited) && model !== modelsToTry[modelsToTry.length - 1]) {
+            console.log(
+              `[Gemini] Model ${model} failed (${res.status}${isNotFound ? ', NOT_FOUND' : ''}), trying next model...`
+            )
+            continue
+          }
+          throw new Error(`Gemini API Error: ${res.status} - ${t.substring(0, 500)}`)
+        }
+
+        const json = await res.json()
+        const parts = json?.candidates?.[0]?.content?.parts
+        const text = joinPartsText(parts)
+
+        if (!text) {
+          console.warn(`[Gemini] Model ${model} returned empty text`)
+          const currentIndex = modelsToTry.indexOf(model)
+          if (currentIndex < modelsToTry.length - 1) {
+            continue
+          }
+          break
+        }
+
+        console.log(`[Gemini] Fallback succeeded with model: ${model}`)
+        return text
+      } catch (e: any) {
+        const msg = String(e?.message || '')
+        const isNotFound = /404|NOT_FOUND|not found/i.test(msg)
+        const isRateLimited = /429|rate limit|RESOURCE_EXHAUSTED/i.test(msg)
+
+        if ((isNotFound || isRateLimited) && model !== modelsToTry[modelsToTry.length - 1]) {
+          console.log(`[Gemini] Model ${model} failed, trying next...`)
+          continue
+        }
+        // 最後のモデルも失敗 — ChatGPTフォールバックへ
+        console.warn(`[Gemini] All models exhausted: ${msg.substring(0, 200)}`)
+        break
+      }
+    }
+  }
+
+  // ──────────────────────────────────────────────────────
+  // フォールバック2: ChatGPT（最後の手段）
+  // ──────────────────────────────────────────────────────
+  if (!promptText) {
+    throw new Error('All LLMs exhausted and no prompt text available')
+  }
+
+  if (process.env.OPENAI_API_KEY) {
+    console.log('[LLM] All primary/fallback failed, trying ChatGPT as last resort...')
+    try {
+      return await generateTextWithChatGPT(promptText, {
+        temperature,
+        maxTokens: Math.min(requestedTokens, 16384),
+      })
+    } catch (e: any) {
+      console.warn('[ChatGPT] Last resort also failed:', e?.message?.substring(0, 200))
+    }
+  }
+
+  throw new Error(
+    'すべてのLLM（Claude / Gemini / ChatGPT）が失敗しました。' +
+    'ANTHROPIC_API_KEY が正しく設定されているか確認してください。'
+  )
 }
 
 export async function geminiGenerateJson<T>(
