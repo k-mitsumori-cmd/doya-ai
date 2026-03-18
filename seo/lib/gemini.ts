@@ -10,6 +10,60 @@ const CLAUDE_MODEL_DEFAULT = process.env.SEO_CLAUDE_MODEL || 'claude-sonnet-4-6'
 // Claude Sonnet 4.6 の最大出力トークン数
 const CLAUDE_MAX_OUTPUT_TOKENS = 16384
 
+// ============================================================
+// Slack通知（Claudeクレジット切れ検知）
+// ============================================================
+// SLACK_WEBHOOK_URL 環境変数で設定。未設定なら通知スキップ。
+// 同じ種類の通知を1時間以内に連続送信しないようデデュプリケーション。
+let _lastCreditAlertAt = 0
+
+function isClaudeCreditError(status: number, body: string): boolean {
+  // Anthropic APIのクレジット切れ: 400 + "credit" or "billing" in error body
+  // または 402 Payment Required
+  if (status === 402) return true
+  if (status === 400 && /credit|billing|balance|payment|insufficient/i.test(body)) return true
+  return false
+}
+
+async function notifySlackClaudeCreditExhausted(errorDetail: string): Promise<void> {
+  const webhookUrl = process.env.SLACK_WEBHOOK_URL
+  if (!webhookUrl) return
+
+  // 1時間以内の重複通知を抑制
+  const now = Date.now()
+  if (now - _lastCreditAlertAt < 60 * 60 * 1000) return
+  _lastCreditAlertAt = now
+
+  const timestamp = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
+
+  try {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        text: [
+          `<!channel>`,
+          `:warning: *[Claude APIクレジット切れ]* ${timestamp}`,
+          ``,
+          `Claude API（${CLAUDE_MODEL_DEFAULT}）のクレジットが不足しています。`,
+          `現在 *Geminiフォールバック* で記事生成を継続中です。`,
+          ``,
+          `*対応が必要です:*`,
+          `- Anthropic Console ( https://console.anthropic.com ) でクレジットをチャージしてください`,
+          `- チャージ後、自動的にClaude Sonnet 4.6での生成に復帰します`,
+          ``,
+          `*エラー詳細:*`,
+          `\`${errorDetail.substring(0, 300)}\``,
+        ].join('\n'),
+      }),
+    })
+    console.log('[Slack] Credit exhaustion alert sent')
+  } catch (e: any) {
+    // 通知失敗で処理を止めない
+    console.error('[Slack] Failed to send credit alert:', e?.message)
+  }
+}
+
 async function generateTextWithClaude(
   prompt: string,
   options?: { temperature?: number; maxTokens?: number; system?: string }
@@ -83,6 +137,13 @@ async function generateTextWithClaude(
 
       // その他の4xxエラー（400, 401, 403等）はリトライしない
       const errorText = await response.text()
+
+      // クレジット切れ検知 → Slack通知
+      if (isClaudeCreditError(response.status, errorText)) {
+        notifySlackClaudeCreditExhausted(`${response.status} - ${errorText.substring(0, 300)}`)
+          .catch(() => {}) // fire-and-forget
+      }
+
       throw new Error(`Claude API Error: ${response.status} - ${errorText.substring(0, 500)}`)
     } catch (e: any) {
       // 明示的にthrowされた4xxエラーはそのまま再throw
@@ -433,7 +494,13 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
       if (result) return result
       console.warn('[Claude] Primary returned empty, falling back to Gemini...')
     } catch (e: any) {
-      console.warn('[Claude] Primary failed, falling back to Gemini:', e?.message?.substring(0, 200))
+      const msg = e?.message || ''
+      console.warn('[Claude] Primary failed, falling back to Gemini:', msg.substring(0, 200))
+
+      // クレジット切れの場合はSlack通知（エラーメッセージから判定）
+      if (/credit|billing|balance|payment|insufficient|402/i.test(msg)) {
+        notifySlackClaudeCreditExhausted(msg.substring(0, 300)).catch(() => {})
+      }
     }
   }
 
