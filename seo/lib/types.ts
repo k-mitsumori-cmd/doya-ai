@@ -26,7 +26,7 @@ export const SeoCreateArticleInputSchema = z.object({
   keywords: z.array(z.string().min(1).max(100)).min(1).max(50),
   persona: z.string().max(5000).optional().default(''),
   searchIntent: z.string().max(5000).optional().default(''),
-  targetChars: z.number().int().min(1000).max(60000),
+  targetChars: z.number().int().min(1000).max(50000),
   referenceUrls: z.array(z.string().url()).max(20).optional().default([]),
   tone: SeoToneSchema.default('丁寧'),
   forbidden: z.array(z.string().min(1).max(200)).max(50).optional().default([]),
