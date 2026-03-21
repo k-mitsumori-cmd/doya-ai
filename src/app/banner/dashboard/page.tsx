@@ -1375,40 +1375,7 @@ function BannerTestPageInner() {
           </div>
         )}
         
-        {/* ローディング画面（軽量版） */}
-        {isLoadingTemplates && (
-          <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-            <div className="relative w-16 h-16 mb-6">
-              <div className="absolute inset-0 rounded-full border-3 border-transparent border-t-blue-500 animate-spin" />
-              <div className="absolute inset-2 rounded-full border-3 border-transparent border-t-purple-500 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white animate-pulse" />
-              </div>
-            </div>
-            <h2 className="text-xl font-black text-white mb-1">ドヤバナーAI</h2>
-            <p className="text-xs text-white/50 font-bold mb-4">テンプレートを準備中...</p>
-            <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden mb-4">
-              <motion.div
-                className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full"
-                initial={{ width: '0%' }}
-                animate={{ width: `${loadingProgress}%` }}
-                transition={{ duration: 0.2 }}
-              />
-            </div>
-            <AnimatePresence mode="wait">
-              <motion.p
-                key={loadingTipIndex}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="text-xs text-white/40"
-              >
-                {LOADING_TIPS[loadingTipIndex]?.emoji} {LOADING_TIPS[loadingTipIndex]?.text}
-              </motion.p>
-            </AnimatePresence>
-          </div>
-        )}
+        {/* ローディング画面は廃止: テンプレートギャラリーのスケルトンで代替 */}
 
         {/* Netflix風のメインコンテンツ */}
         <div className={`relative ${isTrialActive ? 'pt-20 md:pt-10' : 'pt-12 md:pt-0'}`}>
