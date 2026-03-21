@@ -10,6 +10,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { createClient } from '@supabase/supabase-js'
+import { isVoicePro, getVoicePlan } from '@/lib/voice/plans'
 
 const BUCKET = process.env.VOICE_STORAGE_BUCKET || 'voice-recordings'
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
@@ -32,8 +33,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
     }
 
-    const plan = String(user?.voicePlan || user?.plan || 'FREE').toUpperCase()
-    const isPro = ['PRO', 'LIGHT', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(plan)
+    const plan = getVoicePlan(user)
+    const isPro = isVoicePro(plan)
 
     if (!isPro) {
       return NextResponse.json(

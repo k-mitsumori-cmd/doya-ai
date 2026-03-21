@@ -481,6 +481,7 @@ export default function TestPortalPage() {
             <div className="flex items-center gap-8 text-sm text-white/50">
               <Link href="/terms" className="hover:text-white/80 transition-colors">利用規約</Link>
               <Link href="/privacy" className="hover:text-white/80 transition-colors">プライバシー</Link>
+              <Link href="/tokushoho" className="hover:text-white/80 transition-colors">特定商取引法</Link>
               <a href="mailto:support@doya-ai.com" className="hover:text-white/80 transition-colors">お問い合わせ</a>
             </div>
             <p className="text-sm text-white/40">© 2025 ドヤAI</p>

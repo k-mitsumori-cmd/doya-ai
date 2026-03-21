@@ -22,23 +22,6 @@ export default function BannerDashboardLoading() {
           <div className="w-9" />
         </div>
 
-        {/* ヒーロー画像エリア（スケルトン） */}
-        <div className="relative h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh] bg-gradient-to-br from-gray-900 via-black to-gray-900 overflow-hidden">
-          {/* シマーアニメーション */}
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-800/30 to-transparent animate-[shimmer_2s_infinite]" style={{ backgroundSize: '200% 100%' }} />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent z-10" />
-          {/* ヒーロー上のテキストスケルトン */}
-          <div className="absolute bottom-6 left-4 sm:left-8 z-20 space-y-3">
-            <div className="h-4 w-20 bg-gray-700/60 rounded animate-pulse" />
-            <div className="h-8 sm:h-10 w-48 sm:w-72 bg-gray-700/40 rounded animate-pulse" />
-            <div className="h-4 w-64 sm:w-96 bg-gray-700/30 rounded animate-pulse" />
-            <div className="flex gap-2 mt-4">
-              <div className="h-10 w-40 bg-blue-600/30 rounded-xl animate-pulse" />
-              <div className="h-10 w-28 bg-gray-800/60 rounded-md animate-pulse" />
-            </div>
-          </div>
-        </div>
-
         {/* フィルタータブ（スケルトン） */}
         <div className="bg-black/90 border-b border-gray-800/50 px-2 sm:px-4 md:px-8 lg:px-12 py-2 flex gap-1 overflow-hidden">
           {[80, 64, 56, 72, 64, 48, 72, 56].map((w, i) => (

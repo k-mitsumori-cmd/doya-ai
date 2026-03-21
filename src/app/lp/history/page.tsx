@@ -19,11 +19,11 @@ interface Project {
 }
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
-  draft: { label: '下書き', color: 'text-slate-400 bg-slate-800' },
-  generating: { label: '生成中', color: 'text-amber-400 bg-amber-500/10' },
-  editing: { label: '編集中', color: 'text-blue-400 bg-blue-500/10' },
-  completed: { label: '完成', color: 'text-cyan-400 bg-cyan-500/10' },
-  published: { label: '公開中', color: 'text-green-400 bg-green-500/10' },
+  draft: { label: '下書き', color: 'text-slate-400 bg-slate-500/10 border border-slate-500/20' },
+  generating: { label: '生成中', color: 'text-amber-400 bg-amber-500/10 border border-amber-500/20' },
+  editing: { label: '編集中', color: 'text-blue-400 bg-blue-500/10 border border-blue-500/20' },
+  completed: { label: '完成', color: 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20' },
+  published: { label: '公開中', color: 'text-lp-primary bg-lp-primary/10 border border-lp-primary/20' },
 }
 
 export default function LpHistoryPage() {
@@ -68,16 +68,18 @@ export default function LpHistoryPage() {
   )
 
   if (sessionStatus === 'loading') {
-    return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div>
+    return <div className="min-h-screen bg-lp-bg flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-lp-primary" /></div>
   }
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-center px-6">
-        <LogIn className="w-12 h-12 text-cyan-400 mb-4" />
+      <div className="min-h-screen bg-lp-bg flex flex-col items-center justify-center text-center px-6">
+        <div className="w-16 h-16 rounded-2xl bg-lp-primary/20 flex items-center justify-center mb-6">
+          <LogIn className="w-8 h-8 text-lp-primary" />
+        </div>
         <h2 className="text-xl font-bold text-white mb-2">ログインが必要です</h2>
         <p className="text-slate-400 text-sm mb-6">LP作成機能を使うにはログインしてください。</p>
-        <button onClick={() => router.push('/auth/signin?callbackUrl=/lp/history')} className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition-colors">
+        <button onClick={() => router.push('/auth/signin?callbackUrl=/lp/history')} className="flex items-center gap-2 bg-lp-primary hover:bg-lp-primary/90 text-lp-bg font-bold px-6 py-3 rounded-xl transition-all shadow-lg shadow-lp-primary/20">
           <LogIn className="w-4 h-4" /> Googleでログイン
         </button>
       </div>
@@ -85,17 +87,23 @@ export default function LpHistoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-lp-bg text-white relative">
+      {/* 背景グラデーションオーブ */}
+      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden opacity-20">
+        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-lp-primary/20 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-lp-primary/10 blur-[120px] rounded-full" />
+      </div>
+
       <div className="max-w-4xl mx-auto px-6 py-8">
         {/* ヘッダー */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-black text-white">制作履歴</h1>
+            <h1 className="text-2xl font-black text-white tracking-tight">制作履歴</h1>
             <p className="text-slate-400 text-sm mt-1">過去に作成したLPの一覧</p>
           </div>
           <button
             onClick={() => router.push('/lp/new/input')}
-            className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-4 py-2.5 rounded-xl transition-colors"
+            className="flex items-center gap-2 bg-lp-primary hover:bg-lp-primary/90 text-lp-bg font-bold px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-lp-primary/20"
           >
             <Plus className="w-4 h-4" />
             新規作成
@@ -110,13 +118,13 @@ export default function LpHistoryPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="プロジェクト名で検索..."
-            className="w-full bg-slate-900 border border-slate-700 rounded-xl pl-11 pr-4 py-3 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-lp-bg border border-lp-primary/30 rounded-xl pl-11 pr-4 py-3 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-lp-primary focus:ring-1 focus:ring-lp-primary"
           />
         </div>
 
         {loading ? (
           <div className="text-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mx-auto" />
+            <Loader2 className="w-8 h-8 animate-spin text-lp-primary mx-auto" />
           </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-20">
@@ -127,7 +135,7 @@ export default function LpHistoryPage() {
             {!search && (
               <button
                 onClick={() => router.push('/lp/new/input')}
-                className="text-cyan-400 hover:text-cyan-300 text-sm mt-2"
+                className="text-lp-primary hover:text-lp-primary/80 text-sm mt-2 font-bold"
               >
                 最初のLPを作成する →
               </button>
@@ -148,16 +156,16 @@ export default function LpHistoryPage() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.03 }}
-                  className="bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-xl p-5 flex items-center gap-4 group transition-colors"
+                  className="bg-lp-surface border border-lp-border hover:border-lp-primary/50 rounded-xl p-5 flex items-center gap-4 group transition-all"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center flex-shrink-0">
-                    <FileText className="w-5 h-5 text-cyan-400" />
+                  <div className="w-10 h-10 rounded-xl bg-lp-primary/10 border border-lp-primary/20 flex items-center justify-center flex-shrink-0">
+                    <FileText className="w-5 h-5 text-lp-primary" />
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-bold text-white truncate">{project.name}</h3>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${status.color}`}>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${status.color}`}>
                         {status.label}
                       </span>
                     </div>
@@ -171,7 +179,7 @@ export default function LpHistoryPage() {
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button
                       onClick={() => router.push(`/lp/${project.id}`)}
-                      className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg px-3 py-2 transition-colors"
+                      className="flex items-center gap-1.5 text-xs text-lp-primary bg-lp-primary/10 border border-lp-primary/20 hover:bg-lp-primary/20 rounded-lg px-3 py-2 transition-all font-bold"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline">開く</span>
@@ -195,7 +203,7 @@ export default function LpHistoryPage() {
         )}
 
         {filtered.length > 0 && (
-          <p className="text-xs text-slate-600 text-center mt-6">
+          <p className="text-xs text-slate-500 text-center mt-6">
             {filtered.length}件のプロジェクト
           </p>
         )}
@@ -203,8 +211,8 @@ export default function LpHistoryPage() {
 
       {/* 削除確認モーダル */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm mx-4 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-lp-bg/80 backdrop-blur-sm" onKeyDown={e => { if (e.key === 'Escape') setDeleteTarget(null) }}>
+          <div className="bg-lp-surface border border-red-500/30 rounded-2xl p-6 max-w-sm mx-4 shadow-2xl">
             <h3 className="font-bold text-white mb-2">プロジェクトの削除</h3>
             <p className="text-sm text-slate-400 mb-6">
               「{deleteTarget.name}」を削除しますか？この操作は取り消せません。
@@ -212,7 +220,7 @@ export default function LpHistoryPage() {
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold rounded-lg transition-colors"
+                className="px-4 py-2 bg-lp-bg hover:bg-lp-border text-slate-300 text-sm font-bold rounded-lg transition-colors"
               >
                 キャンセル
               </button>

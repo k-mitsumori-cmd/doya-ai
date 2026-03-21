@@ -2790,6 +2790,7 @@ export default function BannerDashboard() {
               <Link href="/banner" className="hover:text-gray-900 transition-colors">ドヤバナーAIポータル</Link>
               <Link href="/terms" className="hover:text-gray-900 transition-colors">利用規約</Link>
               <Link href="/privacy" className="hover:text-gray-900 transition-colors">プライバシー</Link>
+              <Link href="/tokushoho" className="hover:text-gray-900 transition-colors">特定商取引法</Link>
             </div>
             <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
               © 2025 ドヤバナーAI. All rights reserved.

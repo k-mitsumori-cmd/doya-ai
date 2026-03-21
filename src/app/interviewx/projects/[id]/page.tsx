@@ -5,9 +5,23 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
   ArrowLeft, MessageSquare, Send, FileText, CheckCircle, Wand2,
-  Share2, Eye, Download, Trash2, Loader2, ClipboardList, Search,
-  Building2, Calendar, ArrowRight
+  Share2, Eye, EyeOff, Download, Trash2, Loader2, ClipboardList, Search,
+  Building2, Calendar, ArrowRight, Shield
 } from 'lucide-react'
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@')
+  if (!local || !domain) return '***'
+  const maskedLocal = local.slice(0, 2) + '***'
+  const domainParts = domain.split('.')
+  const maskedDomain = domainParts[0].slice(0, 1) + '***.' + domainParts.slice(1).join('.')
+  return maskedLocal + '@' + maskedDomain
+}
+
+function maskName(name: string): string {
+  if (name.length <= 1) return name[0] + '***'
+  return name.slice(0, 1) + '***'
+}
 
 const STATUS_FLOW = [
   { key: 'DRAFT', label: '下書き', icon: FileText, color: 'text-slate-500' },
@@ -28,6 +42,7 @@ export default function ProjectDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
+  const [showPersonalInfo, setShowPersonalInfo] = useState(false)
 
   useEffect(() => {
     fetch(`/api/interviewx/projects/${projectId}`)
@@ -197,17 +212,35 @@ export default function ProjectDetailPage() {
             </div>
             ヒヤリング情報
           </h2>
+          {(project.respondentName || project.respondentEmail) && (
+            <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100">
+              <div className="flex items-center gap-1.5">
+                <Shield className="w-3.5 h-3.5 text-indigo-500" />
+                <span className="text-[10px] text-indigo-600 font-medium">個人情報は適切に管理してください</span>
+              </div>
+              <button
+                onClick={() => setShowPersonalInfo(prev => !prev)}
+                className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
+              >
+                {showPersonalInfo ? <><EyeOff className="w-3 h-3" />隠す</> : <><Eye className="w-3 h-3" />表示</>}
+              </button>
+            </div>
+          )}
           <div className="space-y-3 text-sm">
             {project.respondentName && (
               <div className="flex justify-between">
                 <span className="text-slate-500">回答者</span>
-                <span className="font-medium text-slate-900">{project.respondentName}</span>
+                <span className="font-medium text-slate-900">
+                  {showPersonalInfo ? project.respondentName : maskName(project.respondentName)}
+                </span>
               </div>
             )}
             {project.respondentEmail && (
               <div className="flex justify-between">
                 <span className="text-slate-500">メール</span>
-                <span className="font-medium text-slate-900">{project.respondentEmail}</span>
+                <span className="font-medium text-slate-900">
+                  {showPersonalInfo ? project.respondentEmail : maskEmail(project.respondentEmail)}
+                </span>
               </div>
             )}
             {project.purpose && (

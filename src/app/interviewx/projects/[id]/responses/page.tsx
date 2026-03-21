@@ -3,7 +3,21 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, User, Clock, CheckCircle, MessageSquare } from 'lucide-react'
+import { ArrowLeft, User, Clock, CheckCircle, MessageSquare, Shield, Eye, EyeOff } from 'lucide-react'
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@')
+  if (!local || !domain) return '***'
+  const maskedLocal = local.slice(0, 2) + '***'
+  const domainParts = domain.split('.')
+  const maskedDomain = domainParts[0].slice(0, 1) + '***.' + domainParts.slice(1).join('.')
+  return maskedLocal + '@' + maskedDomain
+}
+
+function maskName(name: string): string {
+  if (name.length <= 1) return name[0] + '***'
+  return name.slice(0, 1) + '***'
+}
 
 export default function ResponsesPage() {
   const params = useParams()
@@ -12,6 +26,7 @@ export default function ResponsesPage() {
   const [project, setProject] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [revealedRespondents, setRevealedRespondents] = useState<Record<string, boolean>>({})
 
   useEffect(() => {
     fetch(`/api/interviewx/projects/${projectId}`)
@@ -44,6 +59,10 @@ export default function ResponsesPage() {
   const responses = project.responses || []
   const questions = project.questions || []
 
+  const toggleReveal = (responseId: string) => {
+    setRevealedRespondents(prev => ({ ...prev, [responseId]: !prev[responseId] }))
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-6 py-8">
       <Link href={`/interviewx/projects/${projectId}`} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 mb-6">
@@ -52,11 +71,18 @@ export default function ResponsesPage() {
       </Link>
 
       <h1 className="text-2xl font-bold text-slate-900 mb-2">回答確認</h1>
-      <p className="text-slate-500 mb-8">
+      <p className="text-slate-500 mb-4">
         {responses.length > 0
           ? `${responses.length}件の回答`
           : '回答者がヒヤリングに回答するとここに表示されます。'}
       </p>
+
+      {responses.length > 0 && (
+        <div className="flex items-center gap-2 px-4 py-3 mb-8 rounded-xl bg-indigo-50 border border-indigo-100">
+          <Shield className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+          <p className="text-xs text-indigo-700">回答者の個人情報は適切に管理してください。デフォルトでは個人情報がマスクされています。</p>
+        </div>
+      )}
 
       {responses.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
@@ -82,14 +108,34 @@ export default function ResponsesPage() {
                   </div>
                   <div>
                     <p className="font-bold text-slate-900">
-                      {response.respondentName || '匿名'}
+                      {response.respondentName
+                        ? (revealedRespondents[response.id] ? response.respondentName : maskName(response.respondentName))
+                        : '匿名'}
                     </p>
                     {response.respondentRole && (
-                      <p className="text-xs text-slate-500">{response.respondentRole}</p>
+                      <p className="text-xs text-slate-500">
+                        {revealedRespondents[response.id] ? response.respondentRole : response.respondentRole.slice(0, 1) + '***'}
+                      </p>
+                    )}
+                    {response.respondentEmail && (
+                      <p className="text-xs text-slate-400">
+                        {revealedRespondents[response.id] ? response.respondentEmail : maskEmail(response.respondentEmail)}
+                      </p>
                     )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => toggleReveal(response.id)}
+                    className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
+                    title={revealedRespondents[response.id] ? '個人情報を隠す' : '個人情報を表示'}
+                  >
+                    {revealedRespondents[response.id] ? (
+                      <><EyeOff className="w-3 h-3" />隠す</>
+                    ) : (
+                      <><Eye className="w-3 h-3" />表示</>
+                    )}
+                  </button>
                   {response.status === 'COMPLETED' ? (
                     <span className="flex items-center gap-1 text-xs px-2.5 py-1 rounded-full bg-green-100 text-green-700 font-bold">
                       <CheckCircle className="w-3 h-3" />

@@ -1,6 +1,6 @@
 'use client'
 
-import { useSession } from 'next-auth/react'
+import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { 
@@ -254,6 +254,26 @@ export default function KantanPlanPage() {
     )
   }
 
+  if (status === 'unauthenticated') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-white">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+            <UserCircle className="w-6 h-6 text-gray-400" />
+          </div>
+          <p className="text-gray-800 font-bold mb-2">ログインが必要です</p>
+          <p className="text-sm text-gray-500 mb-4">このページを表示するにはログインしてください。</p>
+          <Link
+            href="/auth/doyamarke/signin?callbackUrl=/kantan/dashboard/plan"
+            className="inline-block px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            ログインページへ
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-white flex">
       {/* モバイルオーバーレイ */}
@@ -341,6 +361,17 @@ export default function KantanPlanPage() {
           </Link>
         </div>
 
+        {/* ログアウト */}
+        <div className="px-3 pb-2">
+          <button
+            onClick={() => signOut({ callbackUrl: '/' })}
+            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-all text-sm"
+          >
+            <ArrowUpRight className="w-4 h-4 rotate-180" />
+            <span>ログアウト</span>
+          </button>
+        </div>
+
         {/* ロゴマーク */}
         <div className="p-4 text-white/30 text-xs">
           @カンタンマーケAI
@@ -360,9 +391,18 @@ export default function KantanPlanPage() {
               <Menu className="w-6 h-6" />
             </button>
             
-            <div className="hidden sm:block">
-              <h1 className="text-lg lg:text-xl font-bold text-gray-800">サービスプラン</h1>
-              <p className="text-xs text-gray-500 hidden lg:block">各項目にカーソルを当てると詳細が表示されます</p>
+            <div className="hidden sm:flex items-center gap-3">
+              <div>
+                <h1 className="text-lg lg:text-xl font-bold text-gray-800">サービスプラン</h1>
+                <p className="text-xs text-gray-500 hidden lg:block">各項目にカーソルを当てると詳細が表示されます</p>
+              </div>
+              <span className={`px-2.5 py-0.5 text-xs font-bold rounded-full ${
+                currentPlan === 'ENTERPRISE' ? 'bg-gray-900 text-white' :
+                currentPlan === 'PRO' ? 'bg-blue-500 text-white' :
+                'bg-gray-200 text-gray-600'
+              }`}>
+                {currentPlan}
+              </span>
             </div>
             <h1 className="sm:hidden text-lg font-bold text-gray-800">サービスプラン</h1>
             
@@ -516,6 +556,28 @@ export default function KantanPlanPage() {
               </div>
             </div>
           </div>
+
+          {/* プラン管理・解約 - 有料プランユーザー向け */}
+          {(currentPlan === 'PRO' || currentPlan === 'ENTERPRISE' || currentPlan === 'LIGHT') && (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Settings className="w-5 h-5 text-gray-500" />
+                <h3 className="font-bold text-gray-800">プラン管理・解約</h3>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">
+                プランの変更・解約・支払い方法の更新は、Stripeカスタマーポータルから行えます。
+                解約しても、現在の請求期間の終了日まで有料機能をご利用いただけます。
+              </p>
+              <a
+                href={`/api/stripe/portal?returnTo=${encodeURIComponent('/kantan/dashboard/plan')}`}
+                className="inline-flex items-center gap-2 px-5 py-3 bg-gray-100 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-200 transition-colors border border-gray-200"
+              >
+                <DollarSign className="w-4 h-4" />
+                プラン管理・解約はこちら
+                <ArrowUpRight className="w-4 h-4" />
+              </a>
+            </div>
+          )}
 
           {/* 右側：導入ユーザーの声 */}
           <div className="w-80">

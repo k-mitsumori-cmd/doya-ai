@@ -22,6 +22,7 @@ import {
   LayoutDashboard,
   RefreshCcw,
   X,
+  Trash2,
 } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { SEO_PRICING } from '@/lib/pricing'
@@ -103,6 +104,7 @@ export default function SeoDashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [regenBusyId, setRegenBusyId] = useState<string | null>(null)
+  const [deleteBusyId, setDeleteBusyId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [activeStatus, setActiveStatus] = useState<'ALL' | 'RUNNING' | 'DONE' | 'DRAFT' | 'ERROR'>('ALL')
   const isLoadingRef = useRef(false)
@@ -255,6 +257,28 @@ export default function SeoDashboardPage() {
       setActionError(e?.message || '再生成に失敗しました')
     } finally {
       setRegenBusyId(null)
+    }
+  }
+
+  async function deleteArticle(articleId: string) {
+    if (!articleId) return
+    if (!confirm('この記事を削除しますか？この操作は取り消せません。')) return
+    setActionError(null)
+    setDeleteBusyId(articleId)
+    try {
+      const res = await fetch(`/api/seo/articles/${articleId}`, {
+        method: 'DELETE',
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.error || `削除に失敗しました (${res.status})`)
+      }
+      // 成功: stateから該当記事を除去
+      setArticles((prev) => prev.filter((a) => a.id !== articleId))
+    } catch (e: any) {
+      setActionError(e?.message || '記事の削除に失敗しました')
+    } finally {
+      setDeleteBusyId(null)
     }
   }
 
@@ -634,6 +658,18 @@ export default function SeoDashboardPage() {
                           >
                             {a.status === 'RUNNING' ? '途中を見る' : '記事を開く'}
                             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              deleteArticle(a.id)
+                            }}
+                            disabled={deleteBusyId === a.id}
+                            className="h-10 w-10 rounded-xl bg-white border border-gray-200 text-gray-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 flex items-center justify-center transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+                            title="この記事を削除"
+                          >
+                            <Trash2 className={`w-4 h-4 ${deleteBusyId === a.id ? 'animate-pulse' : ''}`} />
                           </button>
                         </div>
                       </div>

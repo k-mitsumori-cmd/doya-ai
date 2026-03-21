@@ -1,8 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Clock, Download, Trash2, Image as ImageIcon, RefreshCw } from 'lucide-react'
+import { ArrowLeft, Clock, Download, Trash2, Image as ImageIcon, RefreshCw, Search, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import { useSession } from 'next-auth/react'
@@ -71,6 +71,44 @@ export default function BannerHistoryPage() {
   const [tipIndex, setTipIndex] = useState(0)
   const [phase, setPhase] = useState<'list' | 'images' | 'idle'>('idle')
   const [isStale, setIsStale] = useState(false) // キャッシュ表示中かどうか
+  const [searchQuery, setSearchQuery] = useState('')
+  const [periodFilter, setPeriodFilter] = useState<'all' | 'this-month' | 'last-month'>('all')
+
+  // 検索・フィルター適用後の履歴
+  const filteredHistory = useMemo(() => {
+    let result = history
+
+    // 期間フィルター
+    if (periodFilter !== 'all') {
+      const now = new Date()
+      let startDate: Date
+      let endDate: Date
+      if (periodFilter === 'this-month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999)
+      } else {
+        // last-month
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
+      }
+      result = result.filter(item => {
+        const d = item.createdAt
+        return d >= startDate && d <= endDate
+      })
+    }
+
+    // キーワード検索
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase()
+      result = result.filter(item =>
+        item.keyword.toLowerCase().includes(q) ||
+        item.category.toLowerCase().includes(q) ||
+        item.size.toLowerCase().includes(q)
+      )
+    }
+
+    return result
+  }, [history, searchQuery, periodFilter])
 
   const LOADING_TIPS = [
     '作ったバナーは6ヶ月間いつでも再DLできます（有料プラン）',
@@ -265,6 +303,7 @@ export default function BannerHistoryPage() {
   }
 
   const handleDelete = async (id: string) => {
+    if (!confirm('この画像を削除しますか？この操作は取り消せません。')) return
     if (isGuest) {
       // ゲストはlocalStorageから削除
       const updated = history.filter(item => item.id !== id)
@@ -357,6 +396,56 @@ export default function BannerHistoryPage() {
 
         {/* メイン */}
         <main className="max-w-[1200px] mx-auto px-4 sm:px-8 py-8 sm:py-12">
+          {/* 検索バー＆フィルター（履歴がある場合のみ表示） */}
+          {!requiresUpgrade && !errorMessage && history.length > 0 && (
+            <div className="mb-6 space-y-4">
+              {/* 検索バー */}
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="キーワード・業種・サイズで検索..."
+                  className="w-full pl-12 pr-10 py-3.5 bg-white border border-gray-200 rounded-2xl text-sm font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 transition-all shadow-sm"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {/* 期間フィルター */}
+              <div className="flex items-center gap-2">
+                {([
+                  { key: 'all', label: 'すべて' },
+                  { key: 'this-month', label: '今月' },
+                  { key: 'last-month', label: '先月' },
+                ] as const).map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setPeriodFilter(key)}
+                    className={`px-4 py-2 text-xs font-black rounded-xl border transition-all ${
+                      periodFilter === key
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-white text-slate-600 border-gray-200 hover:bg-slate-50 hover:border-slate-300'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+                {(searchQuery || periodFilter !== 'all') && (
+                  <span className="ml-2 text-xs font-bold text-slate-400">
+                    {filteredHistory.length}件
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {isLoading && !requiresUpgrade && !errorMessage && (
             <div className="mb-6 rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
               <div className="flex items-center gap-3">
@@ -453,7 +542,7 @@ export default function BannerHistoryPage() {
               </div>
             </motion.div>
           ) : history.length === 0 ? (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-center py-24 bg-white rounded-3xl border border-gray-100 shadow-sm"
@@ -472,9 +561,27 @@ export default function BannerHistoryPage() {
                 </button>
               </Link>
             </motion.div>
+          ) : filteredHistory.length === 0 ? (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm"
+            >
+              <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-5 border border-slate-100">
+                <Search className="w-10 h-10 text-slate-300" />
+              </div>
+              <h2 className="text-xl font-black text-slate-800 mb-2">該当するバナーが見つかりません</h2>
+              <p className="text-slate-500 text-sm mb-6">検索条件を変更して再度お試しください。</p>
+              <button
+                onClick={() => { setSearchQuery(''); setPeriodFilter('all') }}
+                className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-2xl transition-all text-sm"
+              >
+                条件をリセット
+              </button>
+            </motion.div>
           ) : (
             <div className="grid grid-cols-1 gap-6 sm:gap-8">
-              {history.map((item, idx) => (
+              {filteredHistory.map((item, idx) => (
                 <motion.div 
                   key={item.id}
                   initial={{ opacity: 0, y: 20 }}

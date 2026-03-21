@@ -96,6 +96,7 @@ export default function InterviewDashboard() {
   const userName = (session?.user?.name || '').split(' ')[0] || 'ゲスト'
   const fileInputRef = useRef<HTMLInputElement>(null)
   const uploadSpeedRef = useRef<Map<string, { startTime: number; lastLoaded: number; speed: number }>>(new Map())
+  const xhrRef = useRef<Map<string, XMLHttpRequest>>(new Map())
 
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
@@ -217,6 +218,7 @@ export default function InterviewDashboard() {
         try {
           await new Promise<void>((resolve, reject) => {
             const xhr = new XMLHttpRequest()
+            xhrRef.current.set(uploadKey, xhr)
 
             xhr.upload.addEventListener('progress', (e) => {
               if (e.lengthComputable) {
@@ -250,7 +252,11 @@ export default function InterviewDashboard() {
               }
             })
             xhr.addEventListener('error', () => reject(new Error('ネットワークエラー')))
-            xhr.addEventListener('abort', () => reject(new Error('アップロードが中断されました')))
+            xhr.addEventListener('abort', () => {
+              const err: any = new Error('アップロードをキャンセルしました')
+              err.cancelled = true
+              reject(err)
+            })
 
             const formData = new FormData()
             formData.append('cacheControl', '3600')
@@ -278,6 +284,9 @@ export default function InterviewDashboard() {
           throw uploadErr
         }
       }
+
+      // XHRの参照をクリーンアップ
+      xhrRef.current.delete(uploadKey)
 
       // Step 4: アップロード確認
       setUploads((prev) => {
@@ -332,6 +341,17 @@ export default function InterviewDashboard() {
         })
       }, 5000)
     } catch (e: any) {
+      // キャンセル時はエラー表示せずクリーンアップのみ
+      if (e.cancelled) {
+        xhrRef.current.delete(uploadKey)
+        uploadSpeedRef.current.delete(uploadKey)
+        setUploads((prev) => {
+          const next = new Map(prev)
+          next.delete(uploadKey)
+          return next
+        })
+        return
+      }
       setUploads((prev) => {
         const next = new Map(prev)
         const item = next.get(uploadKey)
@@ -766,7 +786,22 @@ export default function InterviewDashboard() {
                           </div>
                         </div>
                         {isUploading && (
-                          <span className="text-lg font-black text-[#7f19e6] tabular-nums">{upload.progress}%</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg font-black text-[#7f19e6] tabular-nums">{upload.progress}%</span>
+                            <motion.button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                const xhr = xhrRef.current.get(key)
+                                if (xhr) xhr.abort()
+                              }}
+                              className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              title="アップロードをキャンセル"
+                            >
+                              <span className="material-symbols-outlined text-lg">close</span>
+                            </motion.button>
+                          </div>
                         )}
                       </div>
                       {/* プログレスバー */}
@@ -872,6 +907,7 @@ export default function InterviewDashboard() {
                       onClick={() => {
                         setUploads(new Map())
                         uploadSpeedRef.current.clear()
+                        xhrRef.current.clear()
                       }}
                       className="flex-1 px-4 py-3 rounded-xl bg-slate-100 text-slate-700 font-bold hover:bg-slate-200 transition-colors text-sm min-h-[44px]"
                       whileHover={{ scale: 1.02 }}

@@ -365,6 +365,7 @@ export default function BannerLandingPage() {
             <div className="flex items-center gap-6 text-[10px] font-black text-slate-300 uppercase tracking-widest">
               <Link href="/privacy" className="hover:text-slate-400">Privacy Policy</Link>
               <Link href="/terms" className="hover:text-slate-400">Terms of Service</Link>
+              <Link href="/tokushoho" className="hover:text-slate-400">特定商取引法</Link>
             </div>
           </div>
         </div>

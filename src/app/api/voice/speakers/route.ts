@@ -9,15 +9,14 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getAllSpeakers } from '@/lib/voice/speakers'
+import { isVoiceProFromUser } from '@/lib/voice/plans'
 
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user as any
 
-    const isPro = ['PRO', 'LIGHT', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(
-      String(user?.voicePlan || user?.plan || '').toUpperCase()
-    )
+    const isPro = isVoiceProFromUser(user)
 
     const speakers = getAllSpeakers().map((s) => ({
       ...s,

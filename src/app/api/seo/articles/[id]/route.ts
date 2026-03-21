@@ -65,3 +65,60 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     )
   }
 }
+
+export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
+  const params = 'then' in ctx.params ? await ctx.params : ctx.params
+  const id = params.id
+
+  try {
+    await ensureSeoSchema()
+    const session = await getServerSession(authOptions)
+    const user: any = session?.user || null
+    const userId = String(user?.id || '').trim()
+    const guestId = !userId ? getGuestIdFromRequest(_req) : null
+
+    // 記事を取得して所有者チェック
+    const article = await (prisma as any).seoArticle.findUnique({
+      where: { id },
+      select: { id: true, userId: true, guestId: true },
+    })
+    if (!article) {
+      return NextResponse.json({ success: false, error: '記事が見つかりません' }, { status: 404 })
+    }
+
+    // 所有者チェック
+    if (userId) {
+      if (String(article.userId || '') !== userId) {
+        return NextResponse.json({ success: false, error: '記事が見つかりません' }, { status: 404 })
+      }
+    } else {
+      if (!guestId || String(article.guestId || '') !== guestId) {
+        return NextResponse.json({ success: false, error: '記事が見つかりません' }, { status: 404 })
+      }
+    }
+
+    // 関連レコードを削除してから記事を削除
+    await (prisma as any).$transaction(async (tx: any) => {
+      // 関連テーブルを削除（存在する場合）
+      try { await tx.seoJob.deleteMany({ where: { articleId: id } }) } catch {}
+      try { await tx.seoSection.deleteMany({ where: { articleId: id } }) } catch {}
+      try { await tx.seoReference.deleteMany({ where: { articleId: id } }) } catch {}
+      try { await tx.seoAudit.deleteMany({ where: { articleId: id } }) } catch {}
+      try { await tx.seoMemo.deleteMany({ where: { articleId: id } }) } catch {}
+      try { await tx.seoImage.deleteMany({ where: { articleId: id } }) } catch {}
+      try { await tx.seoLinkCheck.deleteMany({ where: { articleId: id } }) } catch {}
+      try { await tx.seoKnowledge.deleteMany({ where: { articleId: id } }) } catch {}
+      // 記事本体を削除
+      await tx.seoArticle.delete({ where: { id } })
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (e: any) {
+    const msg = e?.message || '不明なエラー'
+    console.error('[seo article delete] failed', { articleId: id, msg, error: e })
+    return NextResponse.json(
+      { success: false, error: msg },
+      { status: 500 }
+    )
+  }
+}

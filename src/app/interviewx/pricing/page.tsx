@@ -147,6 +147,22 @@ export default function PricingPage() {
         ))}
       </div>
 
+      {/* プラン管理・解約 */}
+      <div className="mt-12 max-w-xl mx-auto">
+        <div className="bg-white rounded-xl border border-slate-200 p-5 text-center">
+          <p className="text-sm text-slate-600 mb-3">
+            プランの変更・解約・支払い方法の更新はこちらから
+          </p>
+          <a
+            href={`/api/stripe/portal?returnTo=${encodeURIComponent('/interviewx/pricing')}`}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-700 rounded-lg text-sm font-bold hover:bg-slate-200 transition-colors border border-slate-200"
+          >
+            プラン管理・解約はこちら
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+          </a>
+        </div>
+      </div>
+
       {/* FAQ */}
       <div className="mt-16">
         <h2 className="text-xl font-bold text-slate-900 mb-6 text-center">よくある質問</h2>

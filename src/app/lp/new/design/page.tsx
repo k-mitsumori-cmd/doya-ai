@@ -4,9 +4,10 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
-import { ArrowRight, ArrowLeft, Loader2, CheckCircle2, Lock, LogIn } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Loader2, CheckCircle2, Lock, LogIn, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Suspense } from 'react'
+
 interface Theme {
   id: string
   name: string
@@ -33,23 +34,30 @@ interface Theme {
 
 function ThemePreview({ theme }: { theme: Theme }) {
   return (
-    <div className="rounded-lg overflow-hidden border border-slate-700 text-xs" style={{ transform: 'scale(1)', transformOrigin: 'top left' }}>
+    <div className="relative aspect-[3/4] rounded-lg overflow-hidden" style={{ backgroundColor: theme.colors.background }}>
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
       {/* Hero mini */}
-      <div className={`${theme.tailwindClasses.hero} px-3 py-3`}>
+      <div className={`${theme.tailwindClasses.hero} px-3 py-4 h-2/5`}>
         <div className="font-bold text-xs truncate" style={{ color: 'currentColor' }}>見出しテキスト</div>
-        <div className="opacity-70 text-xs mt-0.5 truncate">サブ見出しが入ります</div>
-        <div className={`inline-block mt-2 text-xs px-2 py-0.5 rounded ${theme.tailwindClasses.button}`} style={{ fontSize: '0.6rem' }}>
+        <div className="opacity-70 text-[10px] mt-1 truncate">サブ見出しが入ります</div>
+        <div className={`inline-block mt-2 text-[9px] px-2 py-0.5 rounded ${theme.tailwindClasses.button}`}>
           CTAボタン
         </div>
       </div>
       {/* Body mini */}
-      <div className="bg-white px-3 py-2">
-        <div className={`text-xs font-bold mb-1 ${theme.tailwindClasses.heading}`} style={{ fontSize: '0.6rem' }}>セクション見出し</div>
-        <div className="space-y-0.5">
+      <div className="px-3 py-2" style={{ backgroundColor: theme.colors.background === '#ffffff' ? '#f8fafc' : theme.colors.background }}>
+        <div className="text-[9px] font-bold mb-1" style={{ color: theme.colors.text }}>セクション</div>
+        <div className="space-y-1">
           {[1, 2, 3].map(i => (
-            <div key={i} className="h-1 bg-gray-200 rounded" style={{ width: `${100 - i * 15}%` }} />
+            <div key={i} className="h-1 rounded" style={{ width: `${100 - i * 15}%`, backgroundColor: theme.colors.muted + '30' }} />
           ))}
         </div>
+      </div>
+      {/* Color swatches */}
+      <div className="absolute bottom-3 left-3 flex gap-1 z-20">
+        <div className="h-3 w-3 rounded-full border border-white/30" style={{ backgroundColor: theme.colors.primary }} />
+        <div className="h-3 w-3 rounded-full border border-white/30" style={{ backgroundColor: theme.colors.background }} />
+        <div className="h-3 w-3 rounded-full border border-white/30" style={{ backgroundColor: theme.colors.text }} />
       </div>
     </div>
   )
@@ -65,21 +73,25 @@ function DesignPage() {
   const [selectedThemeId, setSelectedThemeId] = useState<string>('minimal')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [loadError, setLoadError] = useState('')
 
   const loadData = useCallback(async () => {
     if (!projectId) return
+    setLoadError('')
     try {
       const [themesRes, projRes] = await Promise.all([
         fetch('/api/lp/themes'),
         fetch(`/api/lp/projects/${projectId}`),
       ])
+      if (!themesRes.ok) throw new Error('テーマの取得に失敗しました')
       const themesData = await themesRes.json()
       const projData = await projRes.json()
 
       if (themesData.themes) setThemes(themesData.themes)
       if (projData.project?.themeId) setSelectedThemeId(projData.project.themeId)
-    } catch (e) {
-      console.error(e)
+    } catch (e: any) {
+      setLoadError(e.message || 'データの読み込みに失敗しました')
+      toast.error(e.message || 'データの読み込みに失敗しました')
     } finally {
       setLoading(false)
     }
@@ -111,16 +123,18 @@ function DesignPage() {
   }
 
   if (sessionStatus === 'loading') {
-    return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div>
+    return <div className="min-h-screen bg-lp-bg flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-lp-primary" /></div>
   }
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-center px-6">
-        <LogIn className="w-12 h-12 text-cyan-400 mb-4" />
+      <div className="min-h-screen bg-lp-bg flex flex-col items-center justify-center text-center px-6">
+        <div className="w-16 h-16 rounded-2xl bg-lp-primary/20 flex items-center justify-center mb-6">
+          <LogIn className="w-8 h-8 text-lp-primary" />
+        </div>
         <h2 className="text-xl font-bold text-white mb-2">ログインが必要です</h2>
         <p className="text-slate-400 text-sm mb-6">LP作成機能を使うにはログインしてください。</p>
-        <button onClick={() => router.push(`/auth/signin?callbackUrl=${encodeURIComponent(`/lp/new/design${projectId ? `?projectId=${projectId}` : ''}`)}`)} className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition-colors">
+        <button onClick={() => router.push(`/auth/signin?callbackUrl=${encodeURIComponent(`/lp/new/design${projectId ? `?projectId=${projectId}` : ''}`)}`)} className="flex items-center gap-2 bg-lp-primary hover:bg-lp-primary/90 text-lp-bg font-bold px-6 py-3 rounded-xl transition-all shadow-lg shadow-lp-primary/20">
           <LogIn className="w-4 h-4" /> Googleでログイン
         </button>
       </div>
@@ -128,28 +142,28 @@ function DesignPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white pb-16">
+    <div className="min-h-screen bg-lp-bg text-white pb-32 relative">
+      {/* 背景グラデーションオーブ */}
+      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden opacity-20">
+        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-lp-primary/20 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-lp-primary/10 blur-[120px] rounded-full" />
+      </div>
+
       {/* ステップインジケーター */}
-      <div className="bg-slate-900 border-b border-slate-800 px-6 py-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-2 text-sm">
-            {['商品情報入力', '構成案選択', 'コピー確認', 'デザイン選択'].map((step, i) => (
-              <div key={i} className="flex items-center gap-2">
-                {i > 0 && <div className="w-8 h-px bg-slate-700" />}
-                <div className={`flex items-center gap-1.5 ${i === 3 ? 'text-cyan-400' : i < 3 ? 'text-slate-400' : 'text-slate-600'}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 3 ? 'bg-cyan-500 text-slate-950' : i < 3 ? 'bg-slate-600 text-white' : 'bg-slate-700 text-slate-500'}`}>
-                    {i < 3 ? '✓' : i + 1}
-                  </div>
-                  <span className="hidden sm:inline font-medium">{step}</span>
-                </div>
-              </div>
-            ))}
+      <div className="bg-lp-surface/80 backdrop-blur-md border-b border-lp-border px-6 py-4 sticky top-0 z-40">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <p className="text-xs font-bold text-lp-primary uppercase tracking-widest">Step 4 / 4</p>
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-lp-primary/40" />
+            <div className="h-2 w-2 rounded-full bg-lp-primary/40" />
+            <div className="h-2 w-2 rounded-full bg-lp-primary/40" />
+            <div className="h-2.5 w-8 rounded-full bg-lp-primary shadow-[0_0_10px_rgba(5,183,214,0.5)]" />
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-black text-white mb-2">デザインテーマを選択してください</h1>
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        <h1 className="text-2xl font-black text-white mb-2 tracking-tight">デザインテーマを選択してください</h1>
         <p className="text-slate-400 text-sm mb-8">
           LPのデザインを選択します。
           {themes.some(t => t.locked) && <span className="text-amber-400"> 現在のプランでは一部テーマが制限されています。</span>}
@@ -157,11 +171,16 @@ function DesignPage() {
 
         {loading ? (
           <div className="text-center py-16">
-            <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mx-auto" />
+            <Loader2 className="w-8 h-8 animate-spin text-lp-primary mx-auto" />
+          </div>
+        ) : loadError ? (
+          <div className="text-center py-16">
+            <p className="text-red-400 mb-4">{loadError}</p>
+            <button onClick={() => { setLoading(true); loadData() }} className="text-lp-primary hover:text-lp-primary/80 font-bold">再読み込み</button>
           </div>
         ) : (
           <div className="space-y-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {themes.map((theme, i) => {
                 const locked = isThemeLocked(theme)
                 const selected = selectedThemeId === theme.id
@@ -174,46 +193,38 @@ function DesignPage() {
                     transition={{ delay: i * 0.05 }}
                     onClick={() => !locked && setSelectedThemeId(theme.id)}
                     disabled={locked}
-                    className={`text-left rounded-xl border p-3 transition-all relative ${
+                    className={`group relative flex flex-col gap-3 rounded-xl p-2 transition-all text-left ${
                       selected
-                        ? 'border-cyan-500 bg-cyan-500/10'
+                        ? 'ring-2 ring-lp-primary bg-lp-primary/10'
                         : locked
-                        ? 'border-slate-800 bg-slate-900/50 opacity-60 cursor-not-allowed'
-                        : 'border-slate-700 bg-slate-900 hover:border-slate-600'
+                        ? 'ring-1 ring-lp-border bg-lp-surface/50 opacity-80 cursor-not-allowed'
+                        : 'ring-1 ring-lp-border bg-lp-surface hover:ring-lp-primary/50'
                     }`}
                   >
-                    {locked && (
-                      <div className="absolute top-2 right-2 z-10">
-                        <div className="bg-amber-500/20 border border-amber-500/40 rounded-full p-1">
-                          <Lock className="w-3 h-3 text-amber-400" />
-                        </div>
+                    {/* チェックマーク */}
+                    {selected && (
+                      <div className="absolute top-2 right-2 z-20 bg-lp-primary text-white rounded-full p-1 flex items-center justify-center">
+                        <CheckCircle2 className="w-3.5 h-3.5" />
                       </div>
                     )}
-                    {selected && (
-                      <div className="absolute top-2 right-2 z-10">
-                        <CheckCircle2 className="w-4 h-4 text-cyan-400" />
+
+                    {/* ロックオーバーレイ */}
+                    {locked && (
+                      <div className="absolute inset-0 rounded-xl bg-black/40 backdrop-blur-[1px] flex items-center justify-center z-10">
+                        <Lock className="w-6 h-6 text-white" />
                       </div>
                     )}
 
                     <ThemePreview theme={theme} />
 
-                    <div className="mt-3">
-                      <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className="font-bold text-white text-sm">{theme.name}</span>
+                    <div className="px-1 pb-1">
+                      <div className="flex items-center justify-between mb-0.5">
+                        <span className="font-bold text-white text-sm truncate">{theme.name}</span>
+                        {locked && (
+                          <span className="text-[10px] font-bold bg-amber-500/20 text-amber-400 px-1.5 rounded">PRO</span>
+                        )}
                       </div>
-                      <p className="text-xs text-slate-500">{theme.description}</p>
-                      <p className="text-xs text-slate-600 mt-0.5">{theme.industries}</p>
-                    </div>
-
-                    {/* カラーパレット */}
-                    <div className="flex gap-1 mt-2">
-                      {Object.values(theme.colors).slice(0, 4).map((color, j) => (
-                        <div
-                          key={j}
-                          className="w-4 h-4 rounded-full border border-slate-700 flex-shrink-0"
-                          style={{ backgroundColor: color }}
-                        />
-                      ))}
+                      <p className="text-xs text-slate-500 line-clamp-1">{theme.description}</p>
                     </div>
                   </motion.button>
                 )
@@ -221,41 +232,47 @@ function DesignPage() {
             </div>
 
             {themes.some(t => t.locked) && (
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 flex items-start gap-3">
-                <Lock className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-amber-300 font-bold text-sm">プロプランで全テーマが使えます</p>
-                  <p className="text-amber-400/70 text-xs mt-1">Creative、Bold、Elegant、Dark、Medicalテーマはプロプラン以上でご利用いただけます。</p>
-                  <button
-                    onClick={() => router.push('/lp/pricing')}
-                    className="text-xs text-amber-400 hover:text-amber-300 underline mt-2 block"
-                  >
-                    プランをアップグレードする →
-                  </button>
+              <div className="flex items-center justify-between bg-lp-primary/10 rounded-xl p-4 border border-lp-primary/30">
+                <div className="flex items-center gap-3">
+                  <div className="bg-lp-primary text-white rounded-full p-1.5 flex items-center justify-center flex-shrink-0">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-white font-bold text-sm">プロプランで全テーマが使えます</p>
+                    <p className="text-slate-400 text-xs mt-0.5">Creative、Bold、Elegant、Dark、Medicalテーマはプロプラン以上でご利用いただけます。</p>
+                  </div>
                 </div>
+                <button
+                  onClick={() => router.push('/lp/pricing')}
+                  className="text-sm text-lp-primary hover:text-lp-primary/80 font-bold bg-lp-primary/20 hover:bg-lp-primary/30 px-4 py-2 rounded-lg transition-all flex-shrink-0"
+                >
+                  アップグレード
+                </button>
               </div>
             )}
-
-            {/* ナビゲーション */}
-            <div className="flex items-center justify-between pt-4">
-              <button
-                onClick={() => router.back()}
-                className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" /> 戻る
-              </button>
-              <button
-                onClick={handleNext}
-                disabled={saving}
-                className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-black px-8 py-4 rounded-xl transition-colors"
-              >
-                {saving && <Loader2 className="w-5 h-5 animate-spin" />}
-                LPを完成させる
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
           </div>
         )}
+      </div>
+
+      {/* 固定ボトムナビゲーション */}
+      <div className="fixed bottom-0 left-0 right-0 bg-lp-bg border-t border-lp-primary/10 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] z-40">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" /> 戻る
+          </button>
+          <button
+            onClick={handleNext}
+            disabled={saving}
+            className="flex items-center gap-2 bg-lp-primary hover:bg-lp-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-lp-bg font-black px-5 sm:px-8 py-4 rounded-xl transition-all shadow-[0_4px_20px_rgba(5,183,214,0.3)]"
+          >
+            {saving && <Loader2 className="w-5 h-5 animate-spin" />}
+            LPを完成させる
+            <ArrowRight className="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </div>
   )
@@ -263,7 +280,7 @@ function DesignPage() {
 
 export default function LpDesignPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-lp-bg flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-lp-primary" /></div>}>
       <DesignPage />
     </Suspense>
   )

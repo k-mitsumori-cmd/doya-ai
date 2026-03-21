@@ -55,6 +55,7 @@ import {
   Lock,
   LayoutGrid,
   Braces,
+  Trash2,
 } from 'lucide-react'
 
 type SeoImage = {
@@ -588,6 +589,7 @@ function SeoArticleInner() {
   const [regenArticleFix, setRegenArticleFix] = useState('')
   const [regenArticleBusy, setRegenArticleBusy] = useState(false)
   const [regenArticleError, setRegenArticleError] = useState<string | null>(null)
+  const [deleteBusy, setDeleteBusy] = useState(false)
   
   // 比較サービス追加モーダル
   const [addServiceOpen, setAddServiceOpen] = useState(false)
@@ -991,6 +993,25 @@ function SeoArticleInner() {
       setMediaBusy(false)
       const rid = String(regenImage?.id || '')
       if (rid) setImgGenerating((prev) => ({ ...prev, [rid]: false }))
+    }
+  }
+
+  async function deleteArticle() {
+    if (!article) return
+    if (!confirm('この記事を削除しますか？この操作は取り消せません。')) return
+    setDeleteBusy(true)
+    setActionError(null)
+    try {
+      const res = await fetch(`/api/seo/articles/${article.id}`, { method: 'DELETE' })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok || json?.success === false) {
+        throw new Error(json?.error || `削除に失敗しました (${res.status})`)
+      }
+      router.push('/seo')
+    } catch (e: any) {
+      setActionError(e?.message || '記事の削除に失敗しました')
+    } finally {
+      setDeleteBusy(false)
     }
   }
 
@@ -1526,6 +1547,15 @@ function SeoArticleInner() {
             <Button variant="ghost" onClick={() => load({ showLoading: true })} className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center">
               <RefreshCcw className="w-5 h-5 text-gray-400" />
             </Button>
+            <button
+              type="button"
+              onClick={deleteArticle}
+              disabled={deleteBusy}
+              className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center text-gray-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              title="この記事を削除"
+            >
+              <Trash2 className={`w-5 h-5 ${deleteBusy ? 'animate-pulse' : ''}`} />
+            </button>
           </div>
         </div>
 

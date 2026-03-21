@@ -87,6 +87,33 @@ export async function uploadVoiceAudio(opts: {
 }
 
 /**
+ * ユーザーのプロジェクトフォルダ内の音声ファイルを削除
+ */
+export async function deleteVoiceAudio(opts: {
+  userId: string
+  projectId: string
+}): Promise<void> {
+  if (!isStorageAvailable()) return
+
+  try {
+    const supabase = getSupabaseAdmin()
+    await ensureBucket()
+
+    const folderPath = `${opts.userId}/${opts.projectId}`
+    const { data: files } = await supabase.storage
+      .from(BUCKET_NAME)
+      .list(folderPath)
+
+    if (files && files.length > 0) {
+      const paths = files.map(f => `${folderPath}/${f.name}`)
+      await supabase.storage.from(BUCKET_NAME).remove(paths)
+    }
+  } catch (err) {
+    console.warn('Storage cleanup failed:', err)
+  }
+}
+
+/**
  * Supabase Storage が利用可能かチェック
  */
 export function isStorageAvailable(): boolean {

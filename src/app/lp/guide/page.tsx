@@ -64,7 +64,7 @@ export default function LpGuidePage() {
         {/* ヘッダー */}
         <div className="mb-10">
           <h1 className="text-3xl font-black text-white mb-3">使い方ガイド</h1>
-          <p className="text-slate-400">ドヤLP AIの使い方を5ステップで解説します。</p>
+          <p className="text-slate-400">ドヤワイヤーフレーム AIの使い方を5ステップで解説します。</p>
         </div>
 
         {/* ステップ */}

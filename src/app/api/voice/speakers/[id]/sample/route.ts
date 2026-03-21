@@ -10,6 +10,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getSpeakerById } from '@/lib/voice/speakers'
 import { generateSpeech } from '@/lib/voice/tts'
+import { isVoiceProFromUser } from '@/lib/voice/plans'
 
 export async function GET(
   _req: NextRequest,
@@ -24,9 +25,7 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'スピーカーが見つかりません' }, { status: 404 })
     }
 
-    const isPro = ['PRO', 'LIGHT', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(
-      String(user?.voicePlan || user?.plan || '').toUpperCase()
-    )
+    const isPro = isVoiceProFromUser(user)
 
     if (speaker.isPro && !isPro) {
       return NextResponse.json(

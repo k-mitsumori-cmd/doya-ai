@@ -168,9 +168,9 @@ export const SERVICE_SEO = {
     ogImage: '/og/portal.png',
   },
   
-  // ドヤLP AI
+  // ドヤワイヤーフレーム AI
   lp: {
-    title: 'ドヤLP AI | LPランディングページをAIで自動生成',
+    title: 'ドヤワイヤーフレーム AI | ワイヤーフレームをAIで自動生成',
     description: 'URLを入力するだけで、LPの構成案・コピー・デザインをAIが自動生成。8種類のテーマから選んでHTMLエクスポート。',
     keywords: ['LP作成', 'ランディングページ', 'AI', '自動生成', 'Webデザイン'],
     ogImage: '/og/portal.png',

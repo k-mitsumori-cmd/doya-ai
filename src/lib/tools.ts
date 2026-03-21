@@ -32,7 +32,7 @@ export const TOOLS: Tool[] = [
   },
   {
     id: 'lp',
-    name: 'ドヤLP AI',
+    name: 'ドヤワイヤーフレーム AI',
     description: 'ランディングページを簡単に作成',
     icon: '🖥️',
     color: 'from-green-500 to-emerald-500',

@@ -67,35 +67,35 @@ const PLAN_CONFIG: Record<PlanType, PlanConfig> = {
     label: 'ゲスト',
     maxCountPerGeneration: 3,
     monthlyLimit: 3,
-    imagesPerGenre: 1, // 各ジャンル左から1枚目のみ
+    imagesPerGenre: 1,
     allUnlocked: false,
   },
   FREE: {
-    label: 'ベーシック',
+    label: 'ログインプラン',
     maxCountPerGeneration: 3,
     monthlyLimit: 15,
-    imagesPerGenre: 3, // 各ジャンル左から3枚目まで
+    imagesPerGenre: 3,
     allUnlocked: false,
   },
   LIGHT: {
     label: 'ライトプラン',
     maxCountPerGeneration: 3,
     monthlyLimit: 50,
-    imagesPerGenre: 5, // 各ジャンル左から5枚目まで
+    imagesPerGenre: 5,
     allUnlocked: false,
   },
   PRO: {
     label: 'PROプラン',
     maxCountPerGeneration: 5,
     monthlyLimit: 150,
-    imagesPerGenre: Infinity, // 全画像
+    imagesPerGenre: Infinity,
     allUnlocked: true,
   },
   ENTERPRISE: {
     label: 'Enterpriseプラン',
-    maxCountPerGeneration: 5,
-    monthlyLimit: 1000,
-    imagesPerGenre: Infinity, // 全画像
+    maxCountPerGeneration: 10,
+    monthlyLimit: 3000,
+    imagesPerGenre: Infinity,
     allUnlocked: true,
   },
 }
@@ -103,10 +103,11 @@ const PLAN_CONFIG: Record<PlanType, PlanConfig> = {
 // ロック状態の種類
 type LockType = 'login' | 'pro' | 'enterprise' | null
 
-// テンプレートIDからティア（FREE/PRO/ENTERPRISE）を決定論的に判定
+// テンプレートIDからティア（FREE/LIGHT/PRO）を決定論的に判定
 // ハッシュベースなので並び順に依存せず、常に同じ結果になる
-type TemplateTier = 'FREE' | 'PRO' | 'ENTERPRISE'
-type PlanFilterType = 'すべて' | 'FREE' | 'PRO' | 'ENTERPRISE'
+// FREE=ログインで利用可(50%), LIGHT=ライトプラン(25%), PRO=PROプラン以上(25%)
+type TemplateTier = 'FREE' | 'LIGHT' | 'PRO'
+type PlanFilterType = 'すべて' | 'FREE' | 'LIGHT' | 'PRO'
 
 const getTemplateTier = (templateId: string): TemplateTier => {
   let hash = 0
@@ -115,22 +116,22 @@ const getTemplateTier = (templateId: string): TemplateTier => {
     hash |= 0
   }
   const bucket = Math.abs(hash) % 100
-  if (bucket < 40) return 'FREE'        // 40% - ログインで利用可
-  if (bucket < 75) return 'PRO'         // 35% - PROプラン
-  return 'ENTERPRISE'                   // 25% - エンタープライズ
+  if (bucket < 50) return 'FREE'        // 50% - ログインでDL可
+  if (bucket < 75) return 'LIGHT'       // 25% - ライトプランでDL可
+  return 'PRO'                          // 25% - PROプラン以上でDL可
 }
 
 // 後方互換: PRO以上のテンプレートかどうか
 const isProOnlyTemplate = (templateId: string): boolean => {
-  return getTemplateTier(templateId) !== 'FREE'
+  return getTemplateTier(templateId) === 'PRO'
 }
 
 // 後方互換性のためのPLAN_LIMITS
 const PLAN_LIMITS = {
-  FREE: { maxCount: 3, label: '無料プラン' },
+  FREE: { maxCount: 3, label: 'ログインプラン' },
   LIGHT: { maxCount: 3, label: 'ライトプラン' },
   PRO: { maxCount: 5, label: 'PROプラン' },
-  ENTERPRISE: { maxCount: 5, label: 'Enterpriseプラン' },
+  ENTERPRISE: { maxCount: 10, label: 'Enterpriseプラン' },
 }
 
 // ページ内Suspense用のスケルトン（loading.tsxと同じ構造）
@@ -148,15 +149,6 @@ function DashboardSkeleton() {
         </div>
       </div>
       <main className="flex-1 min-h-screen bg-black overflow-hidden">
-        <div className="relative h-[32vh] sm:h-[40vh] md:h-[50vh] lg:h-[55vh] bg-gradient-to-br from-gray-900 via-black to-gray-900 overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-800/30 to-transparent animate-[shimmer_2s_infinite]" style={{ backgroundSize: '200% 100%' }} />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent z-10" />
-          <div className="absolute bottom-6 left-4 sm:left-8 z-20 space-y-3">
-            <div className="h-4 w-20 bg-gray-700/60 rounded animate-pulse" />
-            <div className="h-8 sm:h-10 w-48 sm:w-72 bg-gray-700/40 rounded animate-pulse" />
-            <div className="h-4 w-64 sm:w-96 bg-gray-700/30 rounded animate-pulse" />
-          </div>
-        </div>
         <div className="bg-black/90 border-b border-gray-800/50 px-2 sm:px-4 md:px-8 lg:px-12 py-2 flex gap-1">
           {[80, 64, 56, 72, 64, 48].map((w, i) => (
             <div key={i} className="h-7 rounded-full bg-gray-800/60 animate-pulse flex-shrink-0" style={{ width: `${w}px`, animationDelay: `${i * 80}ms` }} />
@@ -287,15 +279,15 @@ function BannerTestPageInner() {
     { emoji: '🔄', text: '気に入らなければワンクリックで再生成できます' },
   ], [])
 
-  // ローディングTIPSのローテーション & プログレスバー
+  // ローディングTIPSのローテーション & プログレスバー（高速化）
   useEffect(() => {
     if (!isLoadingTemplates) return
     const tipTimer = setInterval(() => {
       setLoadingTipIndex((prev) => (prev + 1) % 7)
-    }, 2500)
+    }, 1500)
     const progressTimer = setInterval(() => {
-      setLoadingProgress((prev) => prev >= 90 ? prev : prev + Math.random() * 8 + 2)
-    }, 400)
+      setLoadingProgress((prev) => prev >= 95 ? prev : prev + Math.random() * 15 + 5)
+    }, 200)
     return () => { clearInterval(tipTimer); clearInterval(progressTimer) }
   }, [isLoadingTemplates])
 
@@ -434,25 +426,30 @@ function BannerTestPageInner() {
   }, [])
   
   // 画像のロック状態を判定する関数
-  // テンプレートIDのハッシュで FREE/PRO/ENTERPRISE の3ティアに割り振り
+  // テンプレートティア: FREE(50%) / LIGHT(25%) / PRO(25%)
+  // ダウンロード権限: ゲスト→全ロック, ログイン→FREE解放(50%), ライト→FREE+LIGHT解放(75%), PRO以上→全解放(100%)
   const getImageLockType = useCallback((template: BannerTemplate, indexInGenre: number): LockType => {
-    // PRO以上は全解放
+    // PRO / ENTERPRISE は全解放
     if (planConfig.allUnlocked) return null
 
     const tier = getTemplateTier(template.id)
 
     if (currentPlan === 'GUEST') {
-      // ゲスト: FREE→ログイン表示、PRO→PRO表示、ENTERPRISE→Enterprise表示
-      if (tier === 'ENTERPRISE') return 'enterprise'
-      if (tier === 'PRO') return 'pro'
+      // ゲスト: すべてロック（ログイン促進）
       return 'login'
     }
 
     if (currentPlan === 'FREE') {
-      // ログイン済み: FREEは解放、PRO/ENTERPRISEはロック
-      if (tier === 'ENTERPRISE') return 'enterprise'
+      // ログインプラン: FREEティア(50%)は解放、LIGHT/PROはロック
       if (tier === 'PRO') return 'pro'
-      return null
+      if (tier === 'LIGHT') return 'pro'
+      return null // FREEティア → ダウンロード可
+    }
+
+    if (currentPlan === 'LIGHT') {
+      // ライトプラン: FREE+LIGHTティア(75%)は解放、PROのみロック
+      if (tier === 'PRO') return 'pro'
+      return null // FREE/LIGHTティア → ダウンロード可
     }
 
     return null
@@ -1306,6 +1303,11 @@ function BannerTestPageInner() {
   }
 
   const handleDownload = (banner: GeneratedBanner) => {
+    // ゲストはダウンロード不可
+    if (currentPlan === 'GUEST') {
+      toast.error('ダウンロードするにはログインが必要です')
+      return
+    }
     const link = document.createElement('a')
     link.href = banner.imageUrl
     link.download = `banner-${banner.id}.png`
@@ -1373,59 +1375,38 @@ function BannerTestPageInner() {
           </div>
         )}
         
-        {/* ローディング画面 */}
+        {/* ローディング画面（軽量版） */}
         {isLoadingTemplates && (
           <div className="fixed inset-0 z-[80] flex flex-col items-center justify-center bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
-            {/* 回転リング */}
-            <div className="relative w-24 h-24 mb-8">
-              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 animate-spin" />
-              <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-purple-500 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
-              <div className="absolute inset-4 rounded-full border-4 border-transparent border-t-pink-500 animate-spin" style={{ animationDuration: '2s' }} />
+            <div className="relative w-16 h-16 mb-6">
+              <div className="absolute inset-0 rounded-full border-3 border-transparent border-t-blue-500 animate-spin" />
+              <div className="absolute inset-2 rounded-full border-3 border-transparent border-t-purple-500 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }} />
               <div className="absolute inset-0 flex items-center justify-center">
-                <Sparkles className="w-8 h-8 text-white animate-pulse" />
+                <Sparkles className="w-6 h-6 text-white animate-pulse" />
               </div>
             </div>
-
-            {/* タイトル */}
-            <h2 className="text-2xl font-black text-white mb-2">ドヤバナーAI</h2>
-            <p className="text-sm text-white/60 font-bold mb-8">テンプレートを読み込んでいます...</p>
-
-            {/* プログレスバー */}
-            <div className="w-64 h-1.5 bg-white/10 rounded-full overflow-hidden mb-8">
+            <h2 className="text-xl font-black text-white mb-1">ドヤバナーAI</h2>
+            <p className="text-xs text-white/50 font-bold mb-4">テンプレートを準備中...</p>
+            <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden mb-4">
               <motion.div
                 className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full"
                 initial={{ width: '0%' }}
                 animate={{ width: `${loadingProgress}%` }}
-                transition={{ duration: 0.3 }}
+                transition={{ duration: 0.2 }}
               />
             </div>
-
-            {/* ローテーションTIPS */}
             <AnimatePresence mode="wait">
-              <motion.div
+              <motion.p
                 key={loadingTipIndex}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/5 border border-white/10"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="text-xs text-white/40"
               >
-                <span className="text-2xl">{LOADING_TIPS[loadingTipIndex]?.emoji}</span>
-                <span className="text-sm text-white/80 font-bold">{LOADING_TIPS[loadingTipIndex]?.text}</span>
-              </motion.div>
+                {LOADING_TIPS[loadingTipIndex]?.emoji} {LOADING_TIPS[loadingTipIndex]?.text}
+              </motion.p>
             </AnimatePresence>
-
-            {/* バウンスドット */}
-            <div className="flex items-center gap-1.5 mt-6">
-              {[0, 1, 2].map((i) => (
-                <motion.div
-                  key={i}
-                  className="w-2 h-2 rounded-full bg-white/30"
-                  animate={{ y: [0, -8, 0] }}
-                  transition={{ repeat: Infinity, duration: 0.8, delay: i * 0.15, ease: 'easeInOut' }}
-                />
-              ))}
-            </div>
           </div>
         )}
 

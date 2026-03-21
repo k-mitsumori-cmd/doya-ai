@@ -78,7 +78,7 @@ function LpSidebarImpl({
   return (
     <>
       <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={lpTheme}>
-        <SidebarLogoSection icon={LayoutTemplate} title="ドヤLP AI" showLabel={showLabel} />
+        <SidebarLogoSection icon={LayoutTemplate} title="ドヤワイヤーフレーム AI" showLabel={showLabel} />
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
         <nav className="py-4 sm:py-6 px-3 space-y-4">
@@ -177,7 +177,7 @@ function LpSidebarImpl({
           isMobile={isMobile}
           theme={lpTheme}
         />
-        <SidebarBrandingFooter brandName="ドヤLP AI" isCollapsed={isCollapsed} theme={lpTheme} />
+        <SidebarBrandingFooter brandName="ドヤワイヤーフレーム AI" isCollapsed={isCollapsed} theme={lpTheme} />
       </SidebarShell>
 
       <SidebarLogoutDialog

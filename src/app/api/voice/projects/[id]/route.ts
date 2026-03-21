@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { deleteVoiceAudio } from '@/lib/voice/storage'
 
 /**
  * GET — プロジェクト詳細
@@ -157,6 +158,9 @@ export async function DELETE(
     if (!existing) {
       return NextResponse.json({ success: false, error: 'プロジェクトが見つかりません' }, { status: 404 })
     }
+
+    // Storage内の音声ファイルを削除
+    await deleteVoiceAudio({ userId: user.id, projectId: params.id })
 
     // 録音データも一緒に削除（cascadeで自動削除されるが明示的に）
     await prisma.voiceProject.delete({ where: { id: params.id } })

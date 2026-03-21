@@ -2,6 +2,8 @@
 // ドヤペルソナAI - シーン画像生成API
 // ========================================
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { callGeminiImageAPI } from '@/lib/resolve-image-model'
 
 export const runtime = 'nodejs'
@@ -10,6 +12,16 @@ export const maxDuration = 300
 
 export async function POST(req: NextRequest) {
   try {
+    // 認証チェック（画像生成はコストが高いため認証必須）
+    const session = await getServerSession(authOptions)
+    const userEmail = session?.user?.email || 'guest'
+
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+    }
+
+    console.log(`[persona/scene] user=${userEmail} - scene generation request`)
+
     const body = await req.json()
     const { scenePrompt, persona } = body
 

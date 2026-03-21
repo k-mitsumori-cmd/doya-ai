@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const user = session?.user as any
 
     if (!user?.id) {
-      return NextResponse.json({ success: true, projects: [] })
+      return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
     }
 
     const { searchParams } = new URL(req.url)

@@ -6,8 +6,8 @@ import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import {
   Download, Smartphone, Monitor, Tablet,
-  Loader2, ArrowLeft, Pencil, Trash2, AlertCircle,
-  LayoutTemplate, ImageDown, LogIn,
+  Loader2, ArrowLeft, Pencil, Trash2, AlertTriangle,
+  LayoutTemplate, ImageDown, LogIn, Lock,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { generateWireframeSvg } from '@/lib/lp/wireframe'
@@ -55,6 +55,7 @@ export default function LpPreviewPage() {
 
   const [project, setProject] = useState<Project | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [device, setDevice] = useState<Device>('desktop')
   const [exporting, setExporting] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -66,13 +67,15 @@ export default function LpPreviewPage() {
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
   const loadProject = useCallback(async () => {
+    setLoadError('')
     try {
       const res = await fetch(`/api/lp/projects/${projectId}`)
-      if (!res.ok) throw new Error('プロジェクトの取得に失敗しました')
+      if (!res.ok) throw new Error(res.status === 404 ? 'プロジェクトが見つかりません' : 'プロジェクトの取得に失敗しました')
       const data = await res.json()
       if (data.project) setProject(data.project)
-    } catch (e) {
-      console.error(e)
+    } catch (e: any) {
+      setLoadError(e.message || 'プロジェクトの取得に失敗しました')
+      toast.error(e.message || 'プロジェクトの取得に失敗しました')
     } finally {
       setLoading(false)
     }
@@ -140,12 +143,10 @@ export default function LpPreviewPage() {
     }
   }
 
-  /** ワイヤーフレームPNGダウンロード */
   const handleDownloadWireframe = async () => {
     if (!project) return
     setDownloadingWireframe(true)
     try {
-      // 構成データからセクション定義を取得
       const structureIdx = project.selectedStructure ?? 0
       const structure = project.structures?.[structureIdx]
       const sectionDefs: LpSectionDef[] = structure?.sections || project.sections.map((s) => ({
@@ -161,7 +162,6 @@ export default function LpPreviewPage() {
 
       const svgStr = generateWireframeSvg(sectionDefs, { width: 800, baseHeight: 200 })
 
-      // SVG → Canvas → PNG
       const img = new Image()
       const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' })
       const svgUrl = URL.createObjectURL(svgBlob)
@@ -192,52 +192,46 @@ export default function LpPreviewPage() {
       })
     } catch (e: any) {
       toast.error('ワイヤーフレームのダウンロードに失敗しました')
-      console.error(e)
     } finally {
       setDownloadingWireframe(false)
     }
   }
 
-  /** LP画像（縦長スクリーンショット）ダウンロード */
   const handleDownloadLpImage = async () => {
     if (!previewHtml || !project) return
     setCapturingImage(true)
     try {
       const html2canvas = (await import('html2canvas')).default
 
-      // 非表示divにLP HTMLを展開してキャプチャ
       const container = document.createElement('div')
       container.style.cssText = 'position:fixed;left:-9999px;top:0;width:1280px;overflow:visible;z-index:-1;'
       document.body.appendChild(container)
 
-      // LP HTMLからbodyの中身だけ抽出して展開
       const parser = new DOMParser()
       const doc = parser.parseFromString(previewHtml, 'text/html')
 
-      // styleタグとscriptタグを移植
       doc.querySelectorAll('style, link[rel="stylesheet"]').forEach((el) => {
         container.appendChild(el.cloneNode(true))
       })
 
-      // Tailwind CDNスクリプトを追加
       const tailwindScript = document.createElement('script')
       tailwindScript.src = 'https://cdn.tailwindcss.com'
       container.appendChild(tailwindScript)
 
-      // Google Fontsリンクを追加
       const fontLink = document.createElement('link')
       fontLink.rel = 'stylesheet'
       fontLink.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Noto+Serif+JP:wght@400;700&display=swap'
       container.appendChild(fontLink)
 
-      // body内容を移植
       const bodyContent = document.createElement('div')
       bodyContent.style.cssText = 'font-family:"Noto Sans JP",sans-serif;'
       bodyContent.innerHTML = doc.body.innerHTML
       container.appendChild(bodyContent)
 
-      // Tailwindが適用されるまで少し待つ
-      await new Promise((r) => setTimeout(r, 1500))
+      await new Promise<void>((resolve) => {
+        tailwindScript.onload = () => setTimeout(resolve, 500)
+        tailwindScript.onerror = () => setTimeout(resolve, 500)
+      })
 
       const canvas = await html2canvas(bodyContent, {
         width: 1280,
@@ -259,11 +253,9 @@ export default function LpPreviewPage() {
 
       document.body.removeChild(container)
     } catch (e: any) {
-      // cleanup on error
       const orphan = document.querySelector('div[style*="left:-9999px"]')
       if (orphan) document.body.removeChild(orphan)
       toast.error('LP画像のダウンロードに失敗しました')
-      console.error('[handleDownloadLpImage]', e)
     } finally {
       setCapturingImage(false)
     }
@@ -271,19 +263,21 @@ export default function LpPreviewPage() {
 
   if (sessionStatus === 'loading' || loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
+      <div className="min-h-screen bg-lp-bg flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-lp-primary" />
       </div>
     )
   }
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-center px-6">
-        <LogIn className="w-12 h-12 text-cyan-400 mb-4" />
+      <div className="min-h-screen bg-lp-bg flex flex-col items-center justify-center text-center px-6">
+        <div className="w-16 h-16 rounded-2xl bg-lp-primary/20 flex items-center justify-center mb-6">
+          <LogIn className="w-8 h-8 text-lp-primary" />
+        </div>
         <h2 className="text-xl font-bold text-white mb-2">ログインが必要です</h2>
         <p className="text-slate-400 text-sm mb-6">LP作成機能を使うにはログインしてください。</p>
-        <button onClick={() => router.push('/auth/signin?callbackUrl=/lp')} className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition-colors">
+        <button onClick={() => router.push(`/auth/signin?callbackUrl=${encodeURIComponent(`/lp/${projectId}`)}`)} className="flex items-center gap-2 bg-lp-primary hover:bg-lp-primary/90 text-lp-bg font-bold px-6 py-3 rounded-xl transition-all shadow-lg shadow-lp-primary/20">
           <LogIn className="w-4 h-4" /> Googleでログイン
         </button>
       </div>
@@ -292,41 +286,60 @@ export default function LpPreviewPage() {
 
   if (!project) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-center px-6">
-        <p className="text-slate-400 mb-4">プロジェクトが見つかりません</p>
-        <button onClick={() => router.push('/lp')} className="text-cyan-400 hover:text-cyan-300">
-          ダッシュボードに戻る
-        </button>
+      <div className="min-h-screen bg-lp-bg flex flex-col items-center justify-center text-center px-6">
+        <p className="text-slate-400 mb-4">{loadError || 'プロジェクトが見つかりません'}</p>
+        <div className="flex gap-4">
+          {loadError && (
+            <button onClick={() => { setLoading(true); loadProject() }} className="text-lp-primary hover:text-lp-primary/80 font-bold">
+              再読み込み
+            </button>
+          )}
+          <button onClick={() => router.push('/lp')} className="text-slate-400 hover:text-white font-bold">
+            ダッシュボードに戻る
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-white overflow-hidden">
+    <div className="flex flex-col h-screen bg-lp-bg text-white overflow-hidden">
       {/* トップバー */}
-      <div className="flex-shrink-0 bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center gap-4">
+      <div className="flex-shrink-0 bg-lp-surface/80 backdrop-blur-md border-b border-lp-border px-4 py-3 flex items-center gap-4">
         <button
           onClick={() => router.push('/lp')}
-          className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-colors"
+          className="p-2 rounded-lg text-slate-500 hover:text-white hover:bg-lp-border transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
         </button>
 
         <div className="flex-1 min-w-0">
           <h1 className="font-bold text-white truncate">{project.name}</h1>
-          <p className="text-xs text-slate-500">{project.sections.length}セクション · テーマ: {project.themeId}</p>
+          <div className="flex items-center gap-2">
+            <p className="text-xs text-slate-500">{project.sections.length}セクション · テーマ: {project.themeId}</p>
+            <span className="px-2 py-0.5 rounded-full bg-lp-primary/20 text-lp-primary text-[10px] font-bold border border-lp-primary/30">
+              {project.status === 'completed' ? '完成' : project.status === 'published' ? '公開中' : '下書き'}
+            </span>
+          </div>
         </div>
 
         {/* デバイス切り替え */}
-        <div className="hidden md:flex items-center gap-1 bg-slate-800 rounded-lg p-1">
+        <div className="hidden md:flex items-center gap-1 bg-lp-bg rounded-lg p-1 border border-lp-border">
           {([['desktop', Monitor], ['tablet', Tablet], ['mobile', Smartphone]] as const).map(([d, Icon]) => (
-            <button
+            <label
               key={d}
-              onClick={() => setDevice(d)}
-              className={`p-2 rounded-md transition-colors ${device === d ? 'bg-cyan-500 text-slate-950' : 'text-slate-500 hover:text-white'}`}
+              className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-medium transition-all ${device === d ? 'bg-lp-primary text-lp-bg' : 'text-slate-500 hover:text-white'}`}
             >
+              <input
+                type="radio"
+                name="device"
+                value={d}
+                checked={device === d}
+                onChange={() => setDevice(d)}
+                className="hidden"
+              />
               <Icon className="w-4 h-4" />
-            </button>
+            </label>
           ))}
         </div>
 
@@ -334,7 +347,7 @@ export default function LpPreviewPage() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => router.push(`/lp/new/copy?projectId=${projectId}`)}
-            className="hidden sm:flex items-center gap-1.5 text-sm text-slate-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg px-3 py-2 transition-colors"
+            className="hidden sm:flex items-center gap-1.5 text-sm text-slate-400 hover:text-white bg-lp-primary/10 hover:bg-lp-primary/20 border border-lp-primary/20 rounded-lg px-3 py-2 transition-all font-medium"
           >
             <Pencil className="w-4 h-4" />
             編集
@@ -342,7 +355,7 @@ export default function LpPreviewPage() {
           <button
             onClick={handleDownloadWireframe}
             disabled={downloadingWireframe}
-            className="hidden sm:flex items-center gap-1.5 text-sm text-slate-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg px-3 py-2 transition-colors"
+            className="hidden sm:flex items-center gap-1.5 text-sm text-slate-400 hover:text-white bg-lp-primary/10 hover:bg-lp-primary/20 border border-lp-primary/20 rounded-lg px-3 py-2 transition-all font-medium"
           >
             {downloadingWireframe ? <Loader2 className="w-4 h-4 animate-spin" /> : <LayoutTemplate className="w-4 h-4" />}
             WF
@@ -350,7 +363,7 @@ export default function LpPreviewPage() {
           <button
             onClick={handleDownloadLpImage}
             disabled={capturingImage || !previewHtml}
-            className="hidden sm:flex items-center gap-1.5 text-sm text-slate-400 hover:text-white border border-slate-700 hover:border-slate-600 rounded-lg px-3 py-2 transition-colors disabled:opacity-40"
+            className="hidden sm:flex items-center gap-1.5 text-sm text-slate-400 hover:text-white bg-lp-primary/10 hover:bg-lp-primary/20 border border-lp-primary/20 rounded-lg px-3 py-2 transition-all font-medium disabled:opacity-40"
           >
             {capturingImage ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageDown className="w-4 h-4" />}
             LP画像
@@ -358,7 +371,7 @@ export default function LpPreviewPage() {
           <button
             onClick={handleExport}
             disabled={exporting}
-            className="flex items-center gap-1.5 text-sm bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 text-slate-950 font-bold rounded-lg px-4 py-2 transition-colors"
+            className="flex items-center gap-1.5 text-sm bg-lp-primary hover:bg-lp-primary/90 disabled:opacity-50 text-lp-bg font-bold rounded-lg px-4 py-2 transition-all shadow-lg shadow-lp-primary/20"
           >
             {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             <span className="hidden sm:inline">HTML</span>
@@ -367,7 +380,7 @@ export default function LpPreviewPage() {
           <button
             onClick={() => setDeleteConfirmOpen(true)}
             disabled={deleting}
-            className="p-2 text-slate-600 hover:text-red-400 transition-colors"
+            className="p-2 text-slate-600 hover:text-red-400 bg-red-500/10 hover:bg-red-500/20 rounded-lg transition-colors"
           >
             {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
           </button>
@@ -375,11 +388,11 @@ export default function LpPreviewPage() {
       </div>
 
       {/* プレビューエリア */}
-      <div className="flex-1 overflow-auto bg-slate-800 flex items-start justify-center p-4 md:p-8">
+      <div className="flex-1 overflow-auto bg-black/40 flex items-start justify-center p-4 md:p-8">
         {htmlLoading ? (
           <div className="flex items-center justify-center w-full h-full">
             <div className="text-center">
-              <Loader2 className="w-8 h-8 animate-spin text-cyan-400 mx-auto mb-3" />
+              <Loader2 className="w-8 h-8 animate-spin text-lp-primary mx-auto mb-3" />
               <p className="text-slate-400 text-sm">プレビューを生成中...</p>
             </div>
           </div>
@@ -396,6 +409,17 @@ export default function LpPreviewPage() {
               minHeight: '600px',
             }}
           >
+            {/* ブラウザクローム */}
+            <div className="flex items-center gap-2 px-4 py-3 bg-slate-100 border-b border-slate-200">
+              <div className="flex gap-1.5">
+                <div className="w-3 h-3 rounded-full bg-red-400" />
+                <div className="w-3 h-3 rounded-full bg-yellow-400" />
+                <div className="w-3 h-3 rounded-full bg-green-400" />
+              </div>
+              <div className="flex-1 mx-4 bg-white rounded px-3 py-1 text-[10px] text-slate-400 flex items-center gap-2 border border-slate-200">
+                <Lock className="w-3 h-3" /> doya-ai.com/{project.name}
+              </div>
+            </div>
             <iframe
               ref={iframeRef}
               srcDoc={previewHtml}
@@ -413,41 +437,26 @@ export default function LpPreviewPage() {
       </div>
 
       {/* モバイルデバイス切り替え */}
-      <div className="md:hidden flex-shrink-0 bg-slate-900 border-t border-slate-800 flex justify-center gap-4 py-3">
+      <div className="md:hidden flex-shrink-0 bg-lp-surface border-t border-lp-border flex justify-center gap-4 py-3">
         {([['desktop', Monitor, 'PC'], ['tablet', Tablet, 'タブレット'], ['mobile', Smartphone, 'スマホ']] as const).map(([d, Icon, label]) => (
           <button
             key={d}
             onClick={() => setDevice(d)}
-            className={`flex flex-col items-center gap-1 px-4 py-1 rounded-lg transition-colors ${device === d ? 'text-cyan-400' : 'text-slate-500'}`}
+            className={`flex flex-col items-center gap-1 px-4 py-1 rounded-lg transition-colors ${device === d ? 'text-lp-primary border-t-2 border-lp-primary' : 'text-slate-500 hover:text-lp-primary'}`}
           >
             <Icon className="w-5 h-5" />
-            <span className="text-xs">{label}</span>
+            <span className="text-[10px] font-bold">{label}</span>
           </button>
         ))}
       </div>
 
-      {/* セクション一覧（サイドパネル風・デスクトップのみ） */}
-      {project.sections.length > 0 && (
-        <div className="hidden xl:flex flex-col fixed right-4 top-1/2 -translate-y-1/2 bg-slate-900 border border-slate-800 rounded-xl p-3 gap-1 max-h-96 overflow-y-auto">
-          <p className="text-xs text-slate-500 font-medium mb-1 px-1">セクション</p>
-          {project.sections.map((sec, i) => (
-            <div key={sec.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-800 cursor-default">
-              <span className="text-xs text-slate-600 w-4 text-center">{i + 1}</span>
-              <span className="text-xs text-slate-400 truncate max-w-[120px]">{sec.name}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
       {/* 削除確認モーダル */}
       {deleteConfirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm mx-4 shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-red-500/10 rounded-full">
-                <AlertCircle className="w-5 h-5 text-red-400" />
-              </div>
-              <h3 className="font-bold text-white">プロジェクトの削除</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-lp-bg/80 backdrop-blur-sm" onKeyDown={e => { if (e.key === 'Escape') setDeleteConfirmOpen(false) }}>
+          <div className="bg-lp-surface border border-red-500/30 rounded-2xl p-6 max-w-sm mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4 text-red-500">
+              <AlertTriangle className="w-7 h-7" />
+              <h3 className="font-bold text-white text-lg">プロジェクトの削除</h3>
             </div>
             <p className="text-sm text-slate-400 mb-6">
               「{project?.name}」を削除しますか？この操作は取り消せません。
@@ -455,7 +464,7 @@ export default function LpPreviewPage() {
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setDeleteConfirmOpen(false)}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-bold rounded-lg transition-colors"
+                className="px-4 py-2 bg-lp-bg hover:bg-lp-border text-slate-300 text-sm font-bold rounded-lg transition-colors"
               >
                 キャンセル
               </button>

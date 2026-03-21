@@ -78,7 +78,7 @@ export default function LpAppLayout({ children }: LpAppLayoutProps) {
           </button>
           <div className="flex items-center gap-2">
             <span className="text-xl">📄</span>
-            <span className="text-base sm:text-lg font-bold text-white whitespace-nowrap">ドヤLP AI</span>
+            <span className="text-base sm:text-lg font-bold text-white whitespace-nowrap">ドヤワイヤーフレーム AI</span>
           </div>
         </div>
 

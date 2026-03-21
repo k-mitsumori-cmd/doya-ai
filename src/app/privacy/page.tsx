@@ -115,6 +115,11 @@ export default function PrivacyPolicyPage() {
         </div>
 
         <footer className="mt-16 pt-8 border-t border-slate-200 text-center">
+          <div className="flex items-center justify-center gap-4 text-xs text-slate-400 font-bold mb-4">
+            <Link href="/terms" className="hover:text-slate-600">利用規約</Link>
+            <span>|</span>
+            <Link href="/tokushoho" className="hover:text-slate-600">特定商取引法に基づく表記</Link>
+          </div>
           <p className="text-xs text-slate-400 font-bold">© 2025 株式会社スリスタ</p>
         </footer>
       </div>

@@ -262,3 +262,63 @@ ${metaSection}${contentSection}
 
 JSONのみ出力してください。`
 }
+
+/** AI入力補助: 部分的な商品情報から残りのフィールドを推測 */
+export function buildSuggestFieldsPrompt(
+  partialInfo: Partial<LpProductInfo> & { purposes?: LpPurpose[] },
+  trigger: 'name' | 'description' | 'all'
+): string {
+  const filled: string[] = []
+  const empty: string[] = []
+
+  if (partialInfo.name?.trim()) filled.push(`商品名: ${partialInfo.name}`)
+  else empty.push('name')
+  if (partialInfo.description?.trim()) filled.push(`説明: ${partialInfo.description}`)
+  else empty.push('description')
+  if (partialInfo.target?.trim()) filled.push(`ターゲット: ${partialInfo.target}`)
+  else empty.push('target')
+  if (partialInfo.price?.trim()) filled.push(`価格: ${partialInfo.price}`)
+  else empty.push('price')
+  if (partialInfo.ctaGoal?.trim()) filled.push(`CTA目的: ${partialInfo.ctaGoal}`)
+  else empty.push('ctaGoal')
+  if (partialInfo.features?.length && partialInfo.features.some(f => f.trim())) {
+    filled.push(`特徴: ${partialInfo.features.filter(f => f.trim()).join(' / ')}`)
+  } else {
+    empty.push('features')
+  }
+  if (partialInfo.problems?.length && partialInfo.problems.some(p => p.trim())) {
+    filled.push(`課題: ${partialInfo.problems.filter(p => p.trim()).join(' / ')}`)
+  } else {
+    empty.push('problems')
+  }
+  if (partialInfo.purposes?.length) {
+    filled.push(`目的: ${partialInfo.purposes.map(p => PURPOSE_LABELS[p]).join('・')}`)
+  } else {
+    empty.push('purposes')
+  }
+
+  const triggerHint = trigger === 'name'
+    ? '商品名のみから推測してください。一般的な業界知識を活用し、妥当な値を提案してください。'
+    : trigger === 'description'
+    ? '商品名と説明から、より精度の高い推測をしてください。'
+    : '入力済みの情報をもとに、空のフィールドを埋めてください。'
+
+  return `あなたはマーケティングのプロフェッショナルです。
+LP制作のための商品情報を、入力済みの情報から推測して提案してください。
+
+## 入力済みの情報
+${filled.length > 0 ? filled.join('\n') : '（まだ何も入力されていません）'}
+
+## 推測が必要なフィールド
+${empty.join(', ')}
+
+## 指示
+${triggerHint}
+
+## 出力形式（JSONのみ）
+以下の未入力フィールドのみを含むJSONを出力してください。入力済みのフィールドは含めないでください。
+{
+${empty.includes('description') ? '  "description": "サービスの簡潔な説明（60文字以内）",\n' : ''}${empty.includes('target') ? '  "target": "想定ターゲット層（具体的に）",\n' : ''}${empty.includes('price') ? '  "price": "想定価格帯（不明なら空文字）",\n' : ''}${empty.includes('ctaGoal') ? '  "ctaGoal": "LPで達成したい行動（例: 無料トライアル申込み）",\n' : ''}${empty.includes('features') ? '  "features": ["強み1", "強み2", "強み3"],\n' : ''}${empty.includes('problems') ? '  "problems": ["解決する課題1", "解決する課題2"],\n' : ''}${empty.includes('purposes') ? '  "purposes": ["demo", "inquiry"]\n' : ''}}
+
+JSONのみ出力してください。`
+}

@@ -84,6 +84,15 @@ export default function TermsPage() {
             </p>
           </section>
         </div>
+
+        <footer className="mt-16 pt-8 border-t border-gray-200 text-center">
+          <div className="flex items-center justify-center gap-4 text-xs text-gray-400 font-bold mb-4">
+            <Link href="/privacy" className="hover:text-gray-600">プライバシーポリシー</Link>
+            <span>|</span>
+            <Link href="/tokushoho" className="hover:text-gray-600">特定商取引法に基づく表記</Link>
+          </div>
+          <p className="text-xs text-gray-400">© 2025 株式会社スリスタ</p>
+        </footer>
       </main>
     </div>
   )

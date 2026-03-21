@@ -28,6 +28,15 @@ interface BrushupModal {
   instruction: string
 }
 
+const BRUSHUP_PRESETS = [
+  '感情的に訴える',
+  '信頼性を高める',
+  '短く簡潔にする',
+  '煽りを入れる',
+  '数字を使って具体化',
+  'カジュアルなトーンに',
+]
+
 function CopyPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -44,7 +53,6 @@ function CopyPage() {
   const [brushupLoading, setBrushupLoading] = useState(false)
   const hasGenerated = useRef(false)
 
-  // インライン編集の状態
   const [editingField, setEditingField] = useState<{ sectionIdx: number; field: 'headline' | 'subheadline' | 'body' } | null>(null)
   const [editingValue, setEditingValue] = useState('')
   const [savingField, setSavingField] = useState(false)
@@ -68,12 +76,10 @@ function CopyPage() {
 
     setSavingField(true)
     try {
-      // ローカル状態を先に更新
       setSections(prev =>
         prev.map((s, i) => i === sectionIdx ? { ...s, [field]: editingValue } : s)
       )
 
-      // APIで保存
       const res = await fetch(`/api/lp/projects/${projectId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -96,7 +102,6 @@ function CopyPage() {
       setEditingValue('')
     } catch (e: any) {
       toast.error(e.message || '保存に失敗しました')
-      // 元に戻す
       setSections(prev =>
         prev.map((s, i) => i === sectionIdx ? { ...s, [field]: sec[field] } : s)
       )
@@ -112,21 +117,18 @@ function CopyPage() {
     setError('')
 
     try {
-      // プロジェクトの情報を取得
       const projRes = await fetch(`/api/lp/projects/${projectId}`)
       if (!projRes.ok) throw new Error('プロジェクト情報の取得に失敗しました')
       const projData = await projRes.json()
       const project = projData.project
       if (!project) throw new Error('プロジェクトが見つかりません')
 
-      // 既にセクションがある場合はそれを使用
       if (project.sections && project.sections.length > 0) {
         setSections(project.sections.map((s: any, i: number) => ({ ...s, order: i })))
         setGenerating(false)
         return
       }
 
-      // スケルトン用に構成案のセクションをセット
       const structure = project.structures?.[project.selectedStructure ?? 0]
       if (structure?.sections) {
         setSections(structure.sections.map((s: any, i: number) => ({
@@ -137,7 +139,6 @@ function CopyPage() {
         setProgress({ current: 0, total: structure.sections.length, sectionName: '' })
       }
 
-      // SSEでコピー生成
       const response = await fetch('/api/lp/generate-copy', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -248,16 +249,18 @@ function CopyPage() {
   const progressPercent = progress.total > 0 ? Math.round((progress.current / progress.total) * 100) : 0
 
   if (sessionStatus === 'loading') {
-    return <div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div>
+    return <div className="min-h-screen bg-lp-bg flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-lp-primary" /></div>
   }
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-center px-6">
-        <LogIn className="w-12 h-12 text-cyan-400 mb-4" />
+      <div className="min-h-screen bg-lp-bg flex flex-col items-center justify-center text-center px-6">
+        <div className="w-16 h-16 rounded-2xl bg-lp-primary/20 flex items-center justify-center mb-6">
+          <LogIn className="w-8 h-8 text-lp-primary" />
+        </div>
         <h2 className="text-xl font-bold text-white mb-2">ログインが必要です</h2>
         <p className="text-slate-400 text-sm mb-6">LP作成機能を使うにはログインしてください。</p>
-        <button onClick={() => router.push(`/auth/signin?callbackUrl=${encodeURIComponent(`/lp/new/copy${projectId ? `?projectId=${projectId}` : ''}`)}`)} className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold px-6 py-3 rounded-xl transition-colors">
+        <button onClick={() => router.push(`/auth/signin?callbackUrl=${encodeURIComponent(`/lp/new/copy${projectId ? `?projectId=${projectId}` : ''}`)}`)} className="flex items-center gap-2 bg-lp-primary hover:bg-lp-primary/90 text-lp-bg font-bold px-6 py-3 rounded-xl transition-all shadow-lg shadow-lp-primary/20">
           <LogIn className="w-4 h-4" /> Googleでログイン
         </button>
       </div>
@@ -265,46 +268,61 @@ function CopyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white pb-16">
-      {/* ステップインジケーター */}
-      <div className="bg-slate-900 border-b border-slate-800 px-6 py-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-center gap-2 text-sm">
-            {['商品情報入力', '構成案選択', 'コピー確認', 'デザイン選択'].map((step, i) => (
-              <div key={i} className="flex items-center gap-2">
-                {i > 0 && <div className="w-8 h-px bg-slate-700" />}
-                <div className={`flex items-center gap-1.5 ${i === 2 ? 'text-cyan-400' : i < 2 ? 'text-slate-400' : 'text-slate-600'}`}>
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 2 ? 'bg-cyan-500 text-slate-950' : i < 2 ? 'bg-slate-600 text-white' : 'bg-slate-700 text-slate-500'}`}>
-                    {i < 2 ? '✓' : i + 1}
-                  </div>
-                  <span className="hidden sm:inline font-medium">{step}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+    <div className="min-h-screen bg-lp-bg text-white pb-32 relative">
+      {/* 背景グラデーションオーブ */}
+      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden opacity-20">
+        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-lp-primary/20 blur-[120px] rounded-full" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-lp-primary/10 blur-[120px] rounded-full" />
       </div>
 
-      <div className="max-w-4xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-black text-white mb-2">コピーを確認・編集してください</h1>
-        <p className="text-slate-400 text-sm mb-6">AIが各セクションのコピーを生成しました。気に入らない箇所は「ブラッシュアップ」ボタンで改善できます。</p>
-
-        {/* プログレスバー */}
+      {/* ステップ + プログレスバー */}
+      <div className="bg-lp-surface/80 backdrop-blur-md border-b border-lp-border sticky top-0 z-40">
+        <div className="px-6 py-4">
+          <div className="max-w-3xl mx-auto flex items-center justify-between">
+            <p className="text-xs font-bold text-lp-primary uppercase tracking-widest">Step 3 / 4</p>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-lp-primary/40" />
+              <div className="h-2 w-2 rounded-full bg-lp-primary/40" />
+              <div className="h-2.5 w-8 rounded-full bg-lp-primary shadow-[0_0_10px_rgba(5,183,214,0.5)]" />
+              <div className="h-2 w-2 rounded-full bg-lp-primary/20" />
+            </div>
+          </div>
+        </div>
+        {/* リニアプログレスバー */}
         {generating && progress.total > 0 && (
-          <div className="mb-8">
+          <div className="w-full h-1 bg-lp-border relative">
+            <motion.div
+              className="absolute top-0 left-0 h-full bg-lp-primary"
+              initial={{ width: 0 }}
+              animate={{ width: `${progressPercent}%` }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* AIステータスピル */}
+      {!generating && sections.some(s => s.headline) && (
+        <div className="flex justify-center py-4">
+          <div className="flex items-center gap-2 bg-lp-primary/10 px-4 py-1.5 rounded-full border border-lp-primary/20">
+            <Sparkles className="w-3.5 h-3.5 text-lp-primary" />
+            <span className="text-xs font-medium text-lp-primary">AIが最適なコピーを生成しました</span>
+          </div>
+        </div>
+      )}
+
+      <div className="max-w-3xl mx-auto px-4 py-4">
+        <h1 className="text-2xl font-black text-white mb-2 tracking-tight">コピーを確認・編集してください</h1>
+        <p className="text-slate-400 text-sm mb-6">各セクションをクリックして内容を確認。「ブラッシュアップ」でAIが改善します。</p>
+
+        {/* プログレスバー（生成中） */}
+        {generating && progress.total > 0 && (
+          <div className="mb-6">
             <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-cyan-400 font-medium">
+              <span className="text-lp-primary font-medium">
                 {progress.sectionName ? `「${progress.sectionName}」を生成中...` : 'コピーを生成中...'}
               </span>
               <span className="text-slate-500">{progress.current} / {progress.total}</span>
-            </div>
-            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${progressPercent}%` }}
-                transition={{ duration: 0.4, ease: 'easeOut' }}
-              />
             </div>
           </div>
         )}
@@ -314,7 +332,7 @@ function CopyPage() {
             <p className="text-red-400 mb-4">{error}</p>
             <button
               onClick={() => { hasGenerated.current = false; generate() }}
-              className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300 mx-auto"
+              className="flex items-center gap-2 text-lp-primary hover:text-lp-primary/80 mx-auto font-bold"
             >
               <RefreshCw className="w-4 h-4" /> 再生成する
             </button>
@@ -331,28 +349,28 @@ function CopyPage() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className={`rounded-xl border transition-colors ${isLoaded ? 'border-slate-700 bg-slate-900' : 'border-slate-800 bg-slate-900/50'}`}
+                  className={`rounded-xl border overflow-hidden transition-colors ${isLoaded ? 'border-lp-primary/20 bg-lp-primary/5' : 'border-lp-border bg-lp-surface/50'}`}
                 >
-                  {/* カードヘッダー */}
-                  <div
-                    className="flex items-center gap-3 px-5 py-4 cursor-pointer"
+                  {/* アコーディオンヘッダー */}
+                  <button
+                    className="w-full flex items-center justify-between p-5 hover:bg-lp-primary/5 transition-colors text-left"
                     onClick={() => setExpandedIdx(isExpanded ? null : i)}
                   >
-                    <span className="text-xs text-slate-500 w-6 text-center font-bold">{i + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold text-white truncate">{sec.name}</span>
-                        {!isLoaded && generating && (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-cyan-400 flex-shrink-0" />
+                    <div className="flex items-center gap-3">
+                      <span className="w-8 h-8 rounded-full bg-lp-primary/20 flex items-center justify-center text-lp-primary font-bold text-sm flex-shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-white text-base">{sec.name}</h3>
+                        {isLoaded && !isExpanded && (
+                          <p className="text-xs text-slate-500 truncate mt-0.5">{sec.headline}</p>
                         )}
                       </div>
-                      {isLoaded && !isExpanded && (
-                        <p className="text-xs text-slate-500 truncate mt-0.5">{sec.headline}</p>
+                      {!isLoaded && generating && (
+                        <Loader2 className="w-4 h-4 animate-spin text-lp-primary flex-shrink-0" />
                       )}
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
                       {isLoaded && sec.id && (
-                        <button
+                        <span
                           onClick={(e) => {
                             e.stopPropagation()
                             setBrushupModal({
@@ -362,19 +380,20 @@ function CopyPage() {
                               instruction: '',
                             })
                           }}
-                          className="flex items-center gap-1.5 text-xs text-cyan-400 hover:text-cyan-300 border border-cyan-700 hover:border-cyan-500 rounded-lg px-3 py-1.5 transition-colors"
+                          className="flex items-center gap-1.5 text-xs text-lp-primary bg-lp-primary/10 border border-lp-primary/20 rounded-lg px-3 py-1.5 hover:bg-lp-primary/20 transition-all cursor-pointer font-medium group"
                         >
-                          <Sparkles className="w-3.5 h-3.5" />
-                          ブラッシュアップ
-                        </button>
+                          <Sparkles className="w-3.5 h-3.5 group-hover:rotate-12 transition-transform" />
+                          <span className="hidden sm:inline">ブラッシュアップ</span>
+                          <span className="bg-lp-primary text-[10px] text-white px-1.5 py-0.5 rounded font-black ml-0.5">PRO</span>
+                        </span>
                       )}
                       {isLoaded ? (
                         isExpanded ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />
                       ) : (
-                        <div className="w-16 h-4 bg-slate-800 rounded animate-pulse" />
+                        <div className="w-16 h-4 bg-lp-border rounded animate-pulse" />
                       )}
                     </div>
-                  </div>
+                  </button>
 
                   {/* 展開コンテンツ */}
                   <AnimatePresence>
@@ -386,22 +405,22 @@ function CopyPage() {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <div className="px-5 pb-5 border-t border-slate-800 pt-4 space-y-3">
+                        <div className="px-5 pb-5 pt-0 space-y-4">
                           {sec.headline && (
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">見出し</span>
                                 {editingField?.sectionIdx === i && editingField?.field === 'headline' ? (
                                   <div className="flex gap-1 ml-auto">
-                                    <button onClick={saveEditing} disabled={savingField} className="p-1 text-cyan-400 hover:text-cyan-300 disabled:opacity-50">
+                                    <button onClick={saveEditing} disabled={savingField} className="p-2 text-lp-primary hover:text-lp-primary/80 disabled:opacity-50">
                                       {savingField ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckIcon className="w-3.5 h-3.5" />}
                                     </button>
-                                    <button onClick={cancelEditing} className="p-1 text-slate-500 hover:text-slate-300">
+                                    <button onClick={cancelEditing} className="p-2 text-slate-500 hover:text-slate-300">
                                       <X className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
                                 ) : (
-                                  <button onClick={() => startEditing(i, 'headline')} className="p-1 text-slate-600 hover:text-cyan-400 ml-auto">
+                                  <button onClick={() => startEditing(i, 'headline')} className="p-2 text-slate-600 hover:text-lp-primary ml-auto">
                                     <Pencil className="w-3.5 h-3.5" />
                                   </button>
                                 )}
@@ -412,10 +431,10 @@ function CopyPage() {
                                   onChange={e => setEditingValue(e.target.value)}
                                   onKeyDown={e => { if (e.key === 'Enter') saveEditing(); if (e.key === 'Escape') cancelEditing() }}
                                   autoFocus
-                                  className="w-full bg-slate-800 border border-cyan-600 rounded-lg px-3 py-2 text-white font-bold mt-1 focus:outline-none focus:border-cyan-400"
+                                  className="w-full bg-lp-bg border border-lp-primary rounded-lg px-3 py-2 text-white font-bold mt-1 focus:outline-none focus:ring-1 focus:ring-lp-primary"
                                 />
                               ) : (
-                                <p className="text-white font-bold mt-1 cursor-pointer hover:bg-slate-800/50 rounded px-1 -mx-1 transition-colors" onClick={() => startEditing(i, 'headline')}>{sec.headline}</p>
+                                <p className="text-white font-bold mt-1 cursor-pointer hover:bg-lp-surface rounded px-1 -mx-1 transition-colors" onClick={() => startEditing(i, 'headline')}>{sec.headline}</p>
                               )}
                             </div>
                           )}
@@ -425,15 +444,15 @@ function CopyPage() {
                                 <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">サブ見出し</span>
                                 {editingField?.sectionIdx === i && editingField?.field === 'subheadline' ? (
                                   <div className="flex gap-1 ml-auto">
-                                    <button onClick={saveEditing} disabled={savingField} className="p-1 text-cyan-400 hover:text-cyan-300 disabled:opacity-50">
+                                    <button onClick={saveEditing} disabled={savingField} className="p-2 text-lp-primary hover:text-lp-primary/80 disabled:opacity-50">
                                       {savingField ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckIcon className="w-3.5 h-3.5" />}
                                     </button>
-                                    <button onClick={cancelEditing} className="p-1 text-slate-500 hover:text-slate-300">
+                                    <button onClick={cancelEditing} className="p-2 text-slate-500 hover:text-slate-300">
                                       <X className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
                                 ) : (
-                                  <button onClick={() => startEditing(i, 'subheadline')} className="p-1 text-slate-600 hover:text-cyan-400 ml-auto">
+                                  <button onClick={() => startEditing(i, 'subheadline')} className="p-2 text-slate-600 hover:text-lp-primary ml-auto">
                                     <Pencil className="w-3.5 h-3.5" />
                                   </button>
                                 )}
@@ -444,10 +463,10 @@ function CopyPage() {
                                   onChange={e => setEditingValue(e.target.value)}
                                   onKeyDown={e => { if (e.key === 'Enter') saveEditing(); if (e.key === 'Escape') cancelEditing() }}
                                   autoFocus
-                                  className="w-full bg-slate-800 border border-cyan-600 rounded-lg px-3 py-2 text-slate-300 mt-1 focus:outline-none focus:border-cyan-400"
+                                  className="w-full bg-lp-bg border border-lp-primary rounded-lg px-3 py-2 text-slate-300 mt-1 focus:outline-none focus:ring-1 focus:ring-lp-primary"
                                 />
                               ) : (
-                                <p className="text-slate-300 mt-1 cursor-pointer hover:bg-slate-800/50 rounded px-1 -mx-1 transition-colors" onClick={() => startEditing(i, 'subheadline')}>{sec.subheadline}</p>
+                                <p className="text-slate-300 mt-1 cursor-pointer hover:bg-lp-surface rounded px-1 -mx-1 transition-colors" onClick={() => startEditing(i, 'subheadline')}>{sec.subheadline}</p>
                               )}
                             </div>
                           )}
@@ -457,15 +476,15 @@ function CopyPage() {
                                 <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">本文</span>
                                 {editingField?.sectionIdx === i && editingField?.field === 'body' ? (
                                   <div className="flex gap-1 ml-auto">
-                                    <button onClick={saveEditing} disabled={savingField} className="p-1 text-cyan-400 hover:text-cyan-300 disabled:opacity-50">
+                                    <button onClick={saveEditing} disabled={savingField} className="p-2 text-lp-primary hover:text-lp-primary/80 disabled:opacity-50">
                                       {savingField ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckIcon className="w-3.5 h-3.5" />}
                                     </button>
-                                    <button onClick={cancelEditing} className="p-1 text-slate-500 hover:text-slate-300">
+                                    <button onClick={cancelEditing} className="p-2 text-slate-500 hover:text-slate-300">
                                       <X className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
                                 ) : (
-                                  <button onClick={() => startEditing(i, 'body')} className="p-1 text-slate-600 hover:text-cyan-400 ml-auto">
+                                  <button onClick={() => startEditing(i, 'body')} className="p-2 text-slate-600 hover:text-lp-primary ml-auto">
                                     <Pencil className="w-3.5 h-3.5" />
                                   </button>
                                 )}
@@ -477,17 +496,17 @@ function CopyPage() {
                                   onKeyDown={e => { if (e.key === 'Escape') cancelEditing() }}
                                   autoFocus
                                   rows={6}
-                                  className="w-full bg-slate-800 border border-cyan-600 rounded-lg px-3 py-2 text-slate-400 text-sm mt-1 focus:outline-none focus:border-cyan-400 resize-y leading-relaxed"
+                                  className="w-full bg-lp-bg border border-lp-primary rounded-lg px-3 py-2 text-slate-400 text-sm mt-1 focus:outline-none focus:ring-1 focus:ring-lp-primary resize-y leading-relaxed"
                                 />
                               ) : (
-                                <p className="text-slate-400 text-sm mt-1 whitespace-pre-line leading-relaxed cursor-pointer hover:bg-slate-800/50 rounded px-1 -mx-1 transition-colors" onClick={() => startEditing(i, 'body')}>{sec.body}</p>
+                                <p className="text-slate-400 text-sm mt-1 whitespace-pre-line leading-relaxed cursor-pointer hover:bg-lp-surface rounded px-1 -mx-1 transition-colors" onClick={() => startEditing(i, 'body')}>{sec.body}</p>
                               )}
                             </div>
                           )}
                           {sec.ctaText && (
                             <div>
                               <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">CTAボタン</span>
-                              <p className="text-cyan-400 font-bold mt-1">{sec.ctaText}</p>
+                              <p className="text-lp-primary font-bold mt-1">{sec.ctaText}</p>
                             </div>
                           )}
                           {sec.items && sec.items.length > 0 && (
@@ -495,7 +514,7 @@ function CopyPage() {
                               <span className="text-xs text-slate-500 font-medium uppercase tracking-wider">アイテム</span>
                               <div className="mt-2 space-y-2">
                                 {sec.items.map((item, j) => (
-                                  <div key={j} className="bg-slate-800 rounded-lg px-3 py-2">
+                                  <div key={j} className="bg-lp-surface rounded-lg px-3 py-2 border border-lp-border">
                                     <p className="text-sm font-bold text-white">{item.title}</p>
                                     <p className="text-xs text-slate-400 mt-0.5">{item.description}</p>
                                   </div>
@@ -510,105 +529,123 @@ function CopyPage() {
                 </motion.div>
               )
             })}
-
-            {/* ナビゲーション */}
-            <div className="flex items-center justify-between pt-4">
-              <button
-                onClick={() => router.back()}
-                className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
-              >
-                <ArrowLeft className="w-4 h-4" /> 戻る
-              </button>
-              <button
-                onClick={handleNext}
-                disabled={sections.length === 0 || generating || saving}
-                className="flex items-center gap-2 bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-black px-8 py-4 rounded-xl transition-colors"
-              >
-                {saving && <Loader2 className="w-5 h-5 animate-spin" />}
-                次へ: デザインを選択する
-                <ArrowRight className="w-5 h-5" />
-              </button>
-            </div>
           </div>
         )}
+      </div>
+
+      {/* 固定ボトムナビゲーション */}
+      <div className="fixed bottom-0 left-0 right-0 bg-lp-bg border-t border-lp-primary/10 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] z-40">
+        <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors flex-shrink-0"
+          >
+            <ArrowLeft className="w-4 h-4" /> 戻る
+          </button>
+          <button
+            onClick={handleNext}
+            disabled={sections.length === 0 || generating || saving}
+            className="flex items-center gap-2 bg-lp-primary hover:bg-lp-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-lp-bg font-black px-5 sm:px-8 py-3 rounded-xl transition-all shadow-lg shadow-lp-primary/20"
+          >
+            {saving && <Loader2 className="w-5 h-5 animate-spin" />}
+            <span className="hidden sm:inline">次へ: デザインを選択する</span>
+            <span className="sm:hidden">次へ</span>
+            <ArrowRight className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
       {/* ブラッシュアップモーダル */}
       <AnimatePresence>
         {brushupModal && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/60 z-40"
-              onClick={() => setBrushupModal(null)}
-            />
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-lp-bg/80 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setBrushupModal(null)}
+            onKeyDown={e => { if (e.key === 'Escape') setBrushupModal(null) }}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              className="bg-lp-surface w-full max-w-lg rounded-2xl shadow-2xl border border-lp-primary/20 overflow-hidden"
+              onClick={e => e.stopPropagation()}
             >
-              <div className="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-lg shadow-2xl" onClick={e => e.stopPropagation()}>
-                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
-                  <div>
-                    <h3 className="font-bold text-white flex items-center gap-2">
-                      <Sparkles className="w-5 h-5 text-cyan-400" />
-                      ブラッシュアップ
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">「{brushupModal.sectionName}」のコピーを改善</p>
-                  </div>
-                  <button onClick={() => setBrushupModal(null)} className="p-2 text-slate-500 hover:text-white">
-                    <X className="w-5 h-5" />
-                  </button>
+              <div className="flex items-center justify-between px-6 py-4 border-b border-lp-border">
+                <div>
+                  <h3 className="font-bold text-white flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-lp-primary" />
+                    AIブラッシュアップ
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">「{brushupModal.sectionName}」のコピーを改善</p>
+                </div>
+                <button onClick={() => setBrushupModal(null)} className="p-2 text-slate-500 hover:text-white rounded-lg hover:bg-lp-border transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="px-6 py-4 space-y-4">
+                {/* 現在のコピー */}
+                <div className="bg-lp-bg rounded-xl p-4 border border-lp-border">
+                  <p className="text-xs text-slate-500 mb-2 font-medium">現在の見出し</p>
+                  <p className="text-white text-sm">{brushupModal.currentCopy.headline || '（なし）'}</p>
+                  {brushupModal.currentCopy.body && (
+                    <>
+                      <p className="text-xs text-slate-500 mt-3 mb-2 font-medium">現在の本文</p>
+                      <p className="text-slate-400 text-xs whitespace-pre-line leading-relaxed line-clamp-4">{brushupModal.currentCopy.body}</p>
+                    </>
+                  )}
                 </div>
 
-                <div className="px-6 py-4 space-y-4">
-                  {/* 現在のコピー */}
-                  <div className="bg-slate-800 rounded-xl p-4">
-                    <p className="text-xs text-slate-500 mb-2 font-medium">現在の見出し</p>
-                    <p className="text-white text-sm">{brushupModal.currentCopy.headline || '（なし）'}</p>
-                    {brushupModal.currentCopy.body && (
-                      <>
-                        <p className="text-xs text-slate-500 mt-3 mb-2 font-medium">現在の本文</p>
-                        <p className="text-slate-400 text-xs whitespace-pre-line leading-relaxed line-clamp-4">{brushupModal.currentCopy.body}</p>
-                      </>
-                    )}
-                  </div>
-
-                  {/* 指示入力 */}
-                  <div>
-                    <label className="text-sm font-medium text-white mb-2 block">改善の指示</label>
-                    <textarea
-                      value={brushupModal.instruction}
-                      onChange={e => setBrushupModal({ ...brushupModal, instruction: e.target.value })}
-                      placeholder="例: もっとカジュアルなトーンにしてください / 数字を使って具体性を出してください / ベネフィットを前に出してください"
-                      rows={3}
-                      className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-cyan-500 resize-none"
-                    />
+                {/* クイック提案チップ */}
+                <div>
+                  <p className="text-xs text-slate-500 font-medium mb-2">クイック指示</p>
+                  <div className="flex flex-wrap gap-2">
+                    {BRUSHUP_PRESETS.map((preset) => (
+                      <button
+                        key={preset}
+                        onClick={() => setBrushupModal({ ...brushupModal, instruction: preset })}
+                        className="px-3 py-1.5 bg-lp-primary/10 border border-lp-primary/20 rounded-full text-xs text-lp-primary hover:bg-lp-primary/20 transition-colors"
+                      >
+                        {preset}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                <div className="px-6 py-4 border-t border-slate-800 flex gap-3">
-                  <button
-                    onClick={() => setBrushupModal(null)}
-                    className="flex-1 py-3 rounded-xl border border-slate-700 text-slate-400 hover:text-white hover:border-slate-600 transition-colors text-sm font-medium"
-                  >
-                    キャンセル
-                  </button>
-                  <button
-                    onClick={handleBrushup}
-                    disabled={!brushupModal.instruction.trim() || brushupLoading}
-                    className="flex-1 py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-black transition-colors text-sm flex items-center justify-center gap-2"
-                  >
-                    {brushupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                    更新する
-                  </button>
+                {/* 指示入力 */}
+                <div>
+                  <label className="text-sm font-medium text-white mb-2 block">改善の指示</label>
+                  <textarea
+                    value={brushupModal.instruction}
+                    onChange={e => setBrushupModal({ ...brushupModal, instruction: e.target.value })}
+                    placeholder="例: もっとカジュアルなトーンにしてください / 数字を使って具体性を出してください"
+                    rows={3}
+                    className="w-full bg-lp-bg border border-lp-primary/30 rounded-xl px-4 py-3 text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-lp-primary focus:ring-1 focus:ring-lp-primary resize-none"
+                  />
                 </div>
               </div>
+
+              <div className="px-6 py-4 border-t border-lp-border flex gap-3">
+                <button
+                  onClick={() => setBrushupModal(null)}
+                  className="flex-1 py-3 rounded-xl border border-lp-border text-slate-400 hover:text-white hover:border-slate-600 transition-colors text-sm font-medium"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={handleBrushup}
+                  disabled={!brushupModal.instruction.trim() || brushupLoading}
+                  className="flex-1 py-3 rounded-xl bg-lp-primary hover:bg-lp-primary/90 disabled:opacity-50 disabled:cursor-not-allowed text-lp-bg font-black transition-all text-sm flex items-center justify-center gap-2 shadow-lg shadow-lp-primary/20"
+                >
+                  {brushupLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  更新する
+                </button>
+              </div>
             </motion.div>
-          </>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
@@ -617,7 +654,7 @@ function CopyPage() {
 
 export default function LpCopyPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-cyan-400" /></div>}>
+    <Suspense fallback={<div className="min-h-screen bg-lp-bg flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-lp-primary" /></div>}>
       <CopyPage />
     </Suspense>
   )

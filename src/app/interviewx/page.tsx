@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import {
   Plus, FileText, Clock, CheckCircle, Send, ArrowRight,
@@ -22,6 +23,39 @@ export default function InterviewXDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all')
+  const { data: session, status } = useSession()
+
+  // ローディング中
+  if (status === 'loading') {
+    return (
+      <div className="max-w-5xl mx-auto px-6 py-8">
+        <div className="flex items-center justify-center py-20">
+          <div className="animate-spin w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full" />
+        </div>
+      </div>
+    )
+  }
+
+  // 未ログイン
+  if (status === 'unauthenticated') {
+    return (
+      <div className="max-w-5xl mx-auto px-6 py-8">
+        <div className="text-center py-20 bg-white rounded-xl border border-slate-200">
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-4">
+            <User className="w-8 h-8 text-slate-400" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900 mb-1">ログインが必要です</h2>
+          <p className="text-sm text-slate-500 mb-6">ヒヤリングプロジェクトの作成・管理にはログインが必要です。</p>
+          <a
+            href="/auth/doyamarke/signin?callbackUrl=/interviewx"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition-colors"
+          >
+            ログインする
+          </a>
+        </div>
+      </div>
+    )
+  }
 
   useEffect(() => {
     fetch('/api/interviewx/projects')

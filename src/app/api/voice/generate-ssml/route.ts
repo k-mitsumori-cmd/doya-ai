@@ -13,6 +13,7 @@ import { getSpeakerById } from '@/lib/voice/speakers'
 import { generateSpeech } from '@/lib/voice/tts'
 import { validateSsml } from '@/lib/voice/ssml'
 import { getVoiceMonthlyLimitByUserPlan, isWithinFreeHour } from '@/lib/pricing'
+import { isVoicePro, getVoicePlan } from '@/lib/voice/plans'
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,8 +24,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
     }
 
-    const plan = String(user?.voicePlan || user?.plan || 'FREE').toUpperCase()
-    const isPro = ['PRO', 'LIGHT', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(plan)
+    const plan = getVoicePlan(user)
+    const isPro = isVoicePro(plan)
 
     if (!isPro) {
       return NextResponse.json(

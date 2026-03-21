@@ -893,12 +893,12 @@ export const SUPPORT_CONTACT_URL =
   'https://doyamarke.surisuta.jp/contact'
 
 // ========================================
-// ドヤLP AI 料金設定
+// ドヤワイヤーフレーム AI 料金設定
 // ========================================
 // 月次制限（ページ数ベース）
 export const LP_PRICING: ServicePricing = {
   serviceId: 'lp',
-  serviceName: 'ドヤLP AI',
+  serviceName: 'ドヤワイヤーフレーム AI',
   serviceIcon: '📄',
   guestLimit: 1,          // ゲスト: 月1ページ
   freeLimit: 3,           // 無料会員: 月3ページ

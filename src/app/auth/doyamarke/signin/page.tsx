@@ -230,6 +230,8 @@ function SignInContent() {
                 <a href="/terms" className="text-blue-600 hover:underline">利用規約</a>
                 <span className="mx-1">/</span>
                 <a href="/privacy" className="text-blue-600 hover:underline">プライバシーポリシー</a>
+                <span className="mx-1">/</span>
+                <a href="/tokushoho" className="text-blue-600 hover:underline">特定商取引法</a>
               </div>
             </div>
           </div>

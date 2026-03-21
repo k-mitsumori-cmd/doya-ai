@@ -2,6 +2,8 @@
 // ドヤペルソナAI - バナー画像生成API
 // ========================================
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { callGeminiImageAPI } from '@/lib/resolve-image-model'
 
 // バナーサイズプリセット
@@ -20,6 +22,11 @@ const BANNER_SIZES: Record<string, { width: number; height: number; label: strin
 
 export async function POST(req: NextRequest) {
   try {
+    // セッション取得（認証不要だがログに記録）
+    const session = await getServerSession(authOptions)
+    const userEmail = session?.user?.email || 'guest'
+    console.log(`[persona/banner] user=${userEmail} - banner generation request`)
+
     const body = await req.json()
     const { persona, serviceName, catchphrase, sizeKey, customWidth, customHeight } = body
 

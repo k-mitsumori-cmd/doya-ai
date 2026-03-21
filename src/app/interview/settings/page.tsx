@@ -166,6 +166,35 @@ export default function InterviewSettingsPage() {
 
   const currentPlan = planLimits[plan] || planLimits.FREE
 
+  // isLoggedIn が false の場合、ログイン促進UIを表示
+  if (!isLoggedIn) {
+    return (
+      <motion.div
+        className="space-y-8 max-w-4xl"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">設定</h1>
+          <p className="text-sm text-slate-500 mt-1">アカウント情報、プラン、使用状況を管理</p>
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 text-center">
+          <span className="material-symbols-outlined text-slate-400 text-5xl mb-4 block">lock</span>
+          <p className="text-lg font-black text-slate-900 mb-2">ログインが必要です</p>
+          <p className="text-sm text-slate-500 mb-6">設定の確認・変更にはログインが必要です。</p>
+          <a
+            href="/auth/doyamarke/signin?callbackUrl=/interview/settings"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#7f19e6] text-white rounded-xl text-sm font-bold hover:bg-[#6b12c9] transition-colors shadow-lg shadow-[#7f19e6]/25"
+          >
+            <span className="material-symbols-outlined text-lg">login</span>
+            ログインする
+          </a>
+        </div>
+      </motion.div>
+    )
+  }
+
   return (
     <motion.div
       className="space-y-8 max-w-4xl"
@@ -489,6 +518,34 @@ export default function InterviewSettingsPage() {
                       <p className="text-sm text-emerald-600">全機能をフルにご活用いただけます</p>
                     </div>
                   </motion.div>
+                )}
+
+                {/* プラン管理・解約（有料プランユーザー向け） */}
+                {(plan === 'PRO' || plan === 'ENTERPRISE') && (
+                  <FloatingCard className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" delay={0.2}>
+                    <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
+                      <h3 className="font-bold tracking-tight flex items-center gap-2">
+                        <span className="material-symbols-outlined text-slate-500">manage_accounts</span>
+                        プラン管理・解約
+                      </h3>
+                    </div>
+                    <div className="p-6">
+                      <p className="text-sm text-slate-600 mb-4">
+                        プランの変更・解約・支払い方法の更新は、Stripeカスタマーポータルから行えます。
+                        解約しても、現在の請求期間の終了日まで有料機能をご利用いただけます。
+                      </p>
+                      <motion.a
+                        href={`/api/stripe/portal?returnTo=${encodeURIComponent('/interview/settings')}`}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="inline-flex items-center gap-2 px-5 py-3 bg-slate-100 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors border border-slate-200"
+                      >
+                        <span className="material-symbols-outlined text-lg">credit_card</span>
+                        プラン管理・解約はこちら
+                        <span className="material-symbols-outlined text-lg">open_in_new</span>
+                      </motion.a>
+                    </div>
+                  </FloatingCard>
                 )}
               </div>
             </FloatingCard>

@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles,
@@ -28,6 +29,9 @@ import {
   Zap,
   Award,
   User,
+  X,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react'
 
 
@@ -178,7 +182,44 @@ const FAKE_CANDIDATES = [
   { name: '中村 拓也', age: 33, gender: '男性', occupation: 'プロダクトマネージャー', trait: '仮説思考・実行力' },
 ]
 
+/** API エラーをユーザーフレンドリーなメッセージに変換 */
+function toFriendlyError(e: unknown, res?: Response | null): string {
+  // ネットワークエラー（fetch 自体が失敗）
+  if (e instanceof TypeError && /fetch|network/i.test(e.message)) {
+    return '通信エラーが発生しました。インターネット接続を確認してください。'
+  }
+  // HTTP ステータスに基づくメッセージ
+  if (res) {
+    if (res.status === 429) {
+      return 'リクエスト回数の上限に達しました。しばらく時間を置いてから再度お試しください。'
+    }
+    if (res.status >= 500) {
+      return 'サーバーエラーが発生しました。しばらくしてから再度お試しください。'
+    }
+  }
+  // その他 — 元のメッセージをそのまま返す
+  if (e instanceof Error) return e.message
+  return 'エラーが発生しました'
+}
+
 export default function PersonaPage() {
+  const { data: session } = useSession()
+
+  // プランに基づく使用制限表示
+  const usageLimitInfo = useMemo(() => {
+    if (!session?.user) {
+      return { planLabel: 'ゲスト', limit: '2回/日', color: 'text-gray-500 bg-gray-100' }
+    }
+    const plan = String((session.user as any)?.personaPlan || (session.user as any)?.plan || 'FREE').toUpperCase()
+    if (plan === 'PRO' || plan === 'BASIC' || plan === 'STARTER' || plan === 'BUSINESS' || plan === 'BUNDLE' || plan === 'ENTERPRISE') {
+      return { planLabel: 'PRO', limit: '30回/日', color: 'text-purple-700 bg-purple-100' }
+    }
+    if (plan === 'LIGHT') {
+      return { planLabel: 'LIGHT', limit: '15回/日', color: 'text-blue-700 bg-blue-100' }
+    }
+    return { planLabel: 'FREE', limit: '5回/日', color: 'text-gray-600 bg-gray-100' }
+  }, [session])
+
   const [url, setUrl] = useState('')
   const [serviceName, setServiceName] = useState('')
   const [additionalInfo, setAdditionalInfo] = useState('')
@@ -343,8 +384,9 @@ export default function PersonaPage() {
     sceneAutoTriggered.current = false
     portraitAutoTriggered.current = false
 
+    let res: Response | null = null
     try {
-      const res = await fetch('/api/persona/generate', {
+      res = await fetch('/api/persona/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, serviceName, additionalInfo }),
@@ -378,7 +420,7 @@ export default function PersonaPage() {
       history.unshift({ data: data.data, url, timestamp: Date.now() })
       localStorage.setItem('doya_persona_history', JSON.stringify(history.slice(0, 20)))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'エラーが発生しました')
+      setError(toFriendlyError(e, res))
     } finally {
       setLoading(false)
     }
@@ -389,8 +431,9 @@ export default function PersonaPage() {
 
     setPortraitLoading(true)
     setPortraitError('')
+    let res: Response | null = null
     try {
-      const res = await fetch('/api/persona/portrait', {
+      res = await fetch('/api/persona/portrait', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ persona: generatedData.persona }),
@@ -417,7 +460,7 @@ export default function PersonaPage() {
         throw new Error(data.error || 'ポートレート画像の取得に失敗しました')
       }
     } catch (e) {
-      setPortraitError(e instanceof Error ? e.message : 'ポートレート生成エラー')
+      setPortraitError(toFriendlyError(e, res))
     } finally {
       setPortraitLoading(false)
     }
@@ -474,8 +517,9 @@ export default function PersonaPage() {
     setError('')
     setPortraitError('')
 
+    let res: Response | null = null
     try {
-      const res = await fetch('/api/persona/generate', {
+      res = await fetch('/api/persona/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -508,7 +552,7 @@ export default function PersonaPage() {
 
       localStorage.setItem('doya_persona_last', JSON.stringify({ data: data.data, url, timestamp: Date.now() }))
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'エラーが発生しました')
+      setError(toFriendlyError(e, res))
     } finally {
       setModifying(false)
     }
@@ -638,12 +682,26 @@ export default function PersonaPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50/30">
       <div className="max-w-6xl mx-auto p-4 lg:p-8">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl lg:text-3xl font-black text-gray-900 mb-1 flex items-center gap-3">
-            <Target className="w-8 h-8 text-purple-600" />
-            ドヤペルソナAI
-          </h1>
-          <p className="text-gray-500 text-sm">URLからマーケティングペルソナを自動生成</p>
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl lg:text-3xl font-black text-gray-900 mb-1 flex items-center gap-3">
+              <Target className="w-8 h-8 text-purple-600" />
+              ドヤペルソナAI
+            </h1>
+            <p className="text-gray-500 text-sm">URLからマーケティングペルソナを自動生成</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-lg ${usageLimitInfo.color}`}>
+              {usageLimitInfo.planLabel}: {usageLimitInfo.limit}
+            </span>
+            <a
+              href={`/api/stripe/portal?returnTo=${encodeURIComponent('/persona')}`}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Shield className="w-3.5 h-3.5" />
+              プラン管理・解約
+            </a>
+          </div>
         </div>
 
         {/* Input Section */}
@@ -722,8 +780,25 @@ export default function PersonaPage() {
           </button>
 
           {error && (
-            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-              {error}
+            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p>{error}</p>
+                <button
+                  onClick={handleGenerate}
+                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-red-700 hover:text-red-900 underline underline-offset-2"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  再試行
+                </button>
+              </div>
+              <button
+                onClick={() => setError('')}
+                className="flex-shrink-0 text-red-400 hover:text-red-600 transition-colors"
+                aria-label="閉じる"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           )}
         </div>
@@ -999,7 +1074,16 @@ export default function PersonaPage() {
                           ) : null}
                         </div>
                         {portraitError && (
-                          <p className="mt-1 text-red-500 text-[10px] text-center">{portraitError}</p>
+                          <div className="mt-1 flex items-center justify-center gap-1">
+                            <p className="text-red-500 text-[10px] text-center">{portraitError}</p>
+                            <button
+                              onClick={() => setPortraitError('')}
+                              className="text-red-400 hover:text-red-600 transition-colors"
+                              aria-label="閉じる"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>

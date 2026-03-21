@@ -13,6 +13,8 @@ import { getSpeakerById } from '@/lib/voice/speakers'
 import { generateSpeech, validateTextLength } from '@/lib/voice/tts'
 import { textToSsml } from '@/lib/voice/ssml'
 import { getVoiceMonthlyLimitByUserPlan, getVoiceCharLimitByUserPlan, isWithinFreeHour } from '@/lib/pricing'
+import { isVoicePro, isVoiceLightOrAbove, getVoicePlan } from '@/lib/voice/plans'
+import { uploadVoiceAudio, isStorageAvailable } from '@/lib/voice/storage'
 
 const VALID_FORMATS = ['mp3', 'wav', 'ogg', 'm4a'] as const
 const VALID_EMOTIONS = ['neutral', 'bright', 'calm', 'serious', 'gentle'] as const
@@ -27,9 +29,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: '音声生成にはログインが必要です' }, { status: 401 })
     }
 
-    const plan = String(user?.voicePlan || user?.plan || 'FREE').toUpperCase()
-    const isPro = ['PRO', 'LIGHT', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(plan)
-    const isLightOrAbove = ['LIGHT', 'PRO', 'ENTERPRISE', 'BUSINESS', 'STARTER', 'BUNDLE'].includes(plan)
+    const plan = getVoicePlan(user)
+    const isPro = isVoicePro(plan)
+    const isLightOrAbove_ = isVoiceLightOrAbove(plan)
 
     // フリーアワー判定
     const dbUser = await prisma.user.findUnique({
@@ -129,9 +131,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Freeプランは話速・ピッチ・音量のカスタマイズ不可（デフォルト値に固定）
-    const speedNum = isLightOrAbove ? Math.min(2.0, Math.max(0.5, Number(speed) || 1.0)) : 1.0
-    const pitchNum = isLightOrAbove ? Math.min(10, Math.max(-10, Number(pitch) || 0)) : 0
-    const volumeNum = isLightOrAbove ? Math.min(100, Math.max(0, Number(volume) || 100)) : 100
+    const speedNum = isLightOrAbove_ ? Math.min(2.0, Math.max(0.5, Number(speed) || 1.0)) : 1.0
+    const pitchNum = isLightOrAbove_ ? Math.min(10, Math.max(-10, Number(pitch) || 0)) : 0
+    const volumeNum = isLightOrAbove_ ? Math.min(100, Math.max(0, Number(volume) || 100)) : 100
 
     // SSML変換（感情トーンとポーズを適用）
     const ssml = textToSsml({
@@ -158,6 +160,35 @@ export async function POST(req: NextRequest) {
     // プロジェクト保存（saveProject=trueのとき）
     let projectId: string | null = existingProjectId || null
     if (saveProject) {
+      // 既存プロジェクトIDの存在確認（不正IDは404エラー）
+      if (existingProjectId) {
+        const existing = await prisma.voiceProject.findFirst({
+          where: { id: existingProjectId, userId: user.id },
+        })
+        if (!existing) {
+          return NextResponse.json(
+            { success: false, error: '指定されたプロジェクトが見つかりません', code: 'PROJECT_NOT_FOUND' },
+            { status: 404 }
+          )
+        }
+      }
+
+      // Storageにアップロード（利用可能な場合）
+      let outputUrl: string | undefined
+      if (isStorageAvailable()) {
+        try {
+          const targetProjectId = existingProjectId || 'temp-' + Date.now()
+          outputUrl = await uploadVoiceAudio({
+            userId: user.id,
+            projectId: targetProjectId,
+            audioBase64: result.audioBase64,
+            format: outputFormat,
+          })
+        } catch (storageErr) {
+          console.warn('Storage upload failed, continuing without outputUrl:', storageErr)
+        }
+      }
+
       const projectData = {
         status: 'completed',
         speakerId,
@@ -171,17 +202,11 @@ export async function POST(req: NextRequest) {
         outputFormat,
         durationMs: result.durationMs,
         fileSize: result.fileSize,
+        ...(outputUrl ? { outputUrl } : {}),
       }
-      // 既存プロジェクトIDがあれば更新、なければ新規作成
+
       if (existingProjectId) {
-        const existing = await prisma.voiceProject.findFirst({
-          where: { id: existingProjectId, userId: user.id },
-        })
-        if (existing) {
-          await prisma.voiceProject.update({ where: { id: existingProjectId }, data: projectData })
-        } else {
-          projectId = null // 不正なIDは無視
-        }
+        await prisma.voiceProject.update({ where: { id: existingProjectId }, data: projectData })
       } else {
         const project = await prisma.voiceProject.create({
           data: {

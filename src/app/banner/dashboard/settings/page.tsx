@@ -322,6 +322,9 @@ export default function SettingsPage() {
             <Link href="/terms" className="block text-sm font-black text-blue-600 hover:text-blue-800">
               利用規約
             </Link>
+            <Link href="/tokushoho" className="block text-sm font-black text-blue-600 hover:text-blue-800">
+              特定商取引法に基づく表記
+            </Link>
           </div>
         </section>
 
