@@ -610,7 +610,7 @@ function BannerTestPageInner() {
         })
       },
       {
-        rootMargin: '300px', // 300px手前から読み込み開始（事前ロード範囲を広げてスムーズに）
+        rootMargin: '800px', // 800px手前から読み込み開始（事前ロード範囲を広げてスムーズに）
         threshold: 0.01,
       }
     )
@@ -994,13 +994,23 @@ function BannerTestPageInner() {
 
   const galleryFilterTabs = ['すべて', '食品・飲料', 'イベント', '美容・ファッション', 'ビジネス', '不動産・旅行', '採用', 'IT・テクノロジー', '教育', 'スポーツ・趣味', 'ライフスタイル', '医療・金融', 'EC']
 
-  // カテゴリの表示数を増やす
+  // カテゴリの表示数を増やす（追加分のテンプレートIDを記録してeager読み込み）
+  const [recentlyLoadedIds, setRecentlyLoadedIds] = useState<Set<string>>(new Set())
   const loadMoreTemplates = useCallback((category: string) => {
+    // 追加表示されるテンプレートIDを特定してeager読み込み対象にする
+    const categoryTemplates = allTemplatesByCategory[category] || filteredTemplates || []
+    const currentCount = visibleCounts[category] || INITIAL_VISIBLE_COUNT
+    const newTemplates = categoryTemplates.slice(currentCount, currentCount + LOAD_MORE_COUNT)
+    const newIds = new Set(newTemplates.map(t => t.id))
+    setRecentlyLoadedIds(newIds)
+    // 3秒後にクリア（eager→lazyに戻す）
+    setTimeout(() => setRecentlyLoadedIds(new Set()), 3000)
+
     setVisibleCounts((prev) => {
       const current = prev[category] || INITIAL_VISIBLE_COUNT
       return { ...prev, [category]: current + LOAD_MORE_COUNT }
     })
-  }, [])
+  }, [allTemplatesByCategory, filteredTemplates, visibleCounts])
 
   // スクロール位置を更新する関数
   const updateScrollPosition = useCallback((category: string) => {
@@ -1776,9 +1786,9 @@ function BannerTestPageInner() {
                                   key={`${template.id}-r${imageRetryRef.current[template.id] || 0}`}
                                   src={`${thumbUrl(template.imageUrl!)}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
                                   alt={template.displayTitle || template.industry}
-                                  loading={index < 4 ? 'eager' : 'lazy'}
+                                  loading={index < 4 || recentlyLoadedIds.has(template.id) ? 'eager' : 'lazy'}
                                   decoding="async"
-                                  fetchPriority={index < 4 ? 'high' : 'auto'}
+                                  fetchPriority={index < 4 || recentlyLoadedIds.has(template.id) ? 'high' : 'auto'}
                                   onLoad={() => handleImageLoad(template.id)}
                                   onError={() => handleImageError(template.id)}
                                   className={`w-full h-full object-cover transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -1911,9 +1921,9 @@ function BannerTestPageInner() {
                             key={`${template.id}-r${imageRetryRef.current[template.id] || 0}`}
                             src={`${thumbUrl(template.imageUrl!)}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
                             alt={template.displayTitle || template.industry}
-                            loading={filterIdx < 4 ? 'eager' : 'lazy'}
+                            loading={filterIdx < 4 || recentlyLoadedIds.has(template.id) ? 'eager' : 'lazy'}
                             decoding="async"
-                            fetchPriority={filterIdx < 4 ? 'high' : 'auto'}
+                            fetchPriority={filterIdx < 4 || recentlyLoadedIds.has(template.id) ? 'high' : 'auto'}
                             onLoad={() => handleImageLoad(template.id)}
                             onError={() => handleImageError(template.id)}
                             className={`w-full h-full object-cover transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
