@@ -39,7 +39,7 @@ export async function GET(
     return new NextResponse(new Uint8Array(cached.buffer), {
       headers: {
         'Content-Type': cached.contentType,
-        'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800',
+        'Cache-Control': 'public, max-age=31536000, s-maxage=31536000, immutable',
         'X-Cache': 'HIT',
       },
     })
@@ -104,7 +104,7 @@ export async function GET(
       return new NextResponse(new Uint8Array(buffer), {
         headers: {
           'Content-Type': contentType,
-          'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800',
+          'Cache-Control': 'public, max-age=31536000, s-maxage=31536000, immutable',
           'Vary': 'Accept',
         },
       })

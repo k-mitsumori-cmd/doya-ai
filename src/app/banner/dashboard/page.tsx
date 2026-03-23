@@ -520,7 +520,7 @@ function BannerTestPageInner() {
   
   // 各カテゴリごとの表示数を管理
   const [visibleCounts, setVisibleCounts] = useState<{ [key: string]: number }>({})
-  const INITIAL_VISIBLE_COUNT = 8 // 初期表示数（4列×2行）
+  const INITIAL_VISIBLE_COUNT = 4 // 初期表示数（4列×1行）→ 画像リクエスト数削減で高速化
   const LOAD_MORE_COUNT = 8 // 追加読み込み数
 
   // 画像リトライ管理（最大3回リトライ）
@@ -572,7 +572,7 @@ function BannerTestPageInner() {
     const retryCount = imageRetryRef.current[id] || 0
     if (retryCount < MAX_IMAGE_RETRY) {
       imageRetryRef.current[id] = retryCount + 1
-      // 段階的に待機時間を増やしてリトライ（1秒、2秒、3秒）
+      // 段階的に待機時間を増やしてリトライ（200ms、400ms、800ms）
       setTimeout(() => {
         setImageErrors(prev => {
           const next = new Set(prev)
@@ -584,7 +584,7 @@ function BannerTestPageInner() {
           next.delete(id)
           return next
         })
-      }, (retryCount + 1) * 1000)
+      }, 200 * Math.pow(2, retryCount))
     } else {
       // 最終失敗 → キャッシュからも除外（次回訪問時に表示されなくなる）
       removeFromCache(id)
@@ -1776,8 +1776,9 @@ function BannerTestPageInner() {
                                   key={`${template.id}-r${imageRetryRef.current[template.id] || 0}`}
                                   src={`${thumbUrl(template.imageUrl!)}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
                                   alt={template.displayTitle || template.industry}
-                                  loading="lazy"
+                                  loading={index < 4 ? 'eager' : 'lazy'}
                                   decoding="async"
+                                  fetchPriority={index < 4 ? 'high' : 'auto'}
                                   onLoad={() => handleImageLoad(template.id)}
                                   onError={() => handleImageError(template.id)}
                                   className={`w-full h-full object-cover transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -1856,7 +1857,7 @@ function BannerTestPageInner() {
               const filterHiddenCount = filteredTemplates.length - visibleFiltered.length
               return (
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
-                {visibleFiltered.map((template) => {
+                {visibleFiltered.map((template, filterIdx) => {
                   const catIndex = getCategoryIndex(template)
                   const hasError = imageErrors.has(template.id)
                   const isLoaded = loadedImages.has(template.id)
@@ -1910,8 +1911,9 @@ function BannerTestPageInner() {
                             key={`${template.id}-r${imageRetryRef.current[template.id] || 0}`}
                             src={`${thumbUrl(template.imageUrl!)}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
                             alt={template.displayTitle || template.industry}
-                            loading="lazy"
+                            loading={filterIdx < 4 ? 'eager' : 'lazy'}
                             decoding="async"
+                            fetchPriority={filterIdx < 4 ? 'high' : 'auto'}
                             onLoad={() => handleImageLoad(template.id)}
                             onError={() => handleImageError(template.id)}
                             className={`w-full h-full object-cover transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}

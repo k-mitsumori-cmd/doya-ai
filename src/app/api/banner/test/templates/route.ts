@@ -902,8 +902,8 @@ export async function GET(request: NextRequest) {
 
     // DBテンプレートをV2プロンプト情報と結合して返す（生成済み）
     const readyTemplates = dbTemplates.map((t) => {
-      const cacheBuster = t.updatedAt ? `?v=${new Date(t.updatedAt).getTime()}` : ''
-      const imageApiUrl = `/api/banner/test/image/${t.templateId}${cacheBuster}`
+      // キャッシュバスター廃止: CDN immutable キャッシュを活用
+      const imageApiUrl = `/api/banner/test/image/${t.templateId}`
       const v2Prompt = v2PromptsMap.get(t.templateId)
       const fullPrompt = v2Prompt?.fullPrompt || t.prompt || ''
 
