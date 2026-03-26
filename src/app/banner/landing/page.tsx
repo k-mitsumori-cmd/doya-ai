@@ -59,7 +59,7 @@ export default function BannerLandingPage() {
                 </Link>
               </div>
             ) : (
-              <Link href="/auth/doyamarke/signin?callbackUrl=%2Fbanner" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-black rounded-xl transition-all shadow-lg shadow-blue-100 hover:scale-105 active:scale-95">
+              <Link href="/auth/signin?callbackUrl=%2Fbanner" className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-black rounded-xl transition-all shadow-lg shadow-blue-100 hover:scale-105 active:scale-95">
                 <LogIn className="w-4 h-4" />
                 ログイン
               </Link>
@@ -115,7 +115,7 @@ export default function BannerLandingPage() {
                 </button>
               </Link>
             ) : (
-              <Link href="/auth/doyamarke/signin?callbackUrl=%2Fbanner">
+              <Link href="/auth/signin?callbackUrl=%2Fbanner">
                 <button className="px-10 py-5 bg-blue-600 hover:bg-blue-700 text-white text-lg font-black rounded-2xl shadow-2xl shadow-blue-200 transition-all flex items-center gap-3 hover:scale-105 active:scale-95">
                   無料でバナーを作る
                   <ArrowRight className="w-6 h-6" />

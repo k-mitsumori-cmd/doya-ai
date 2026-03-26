@@ -87,7 +87,7 @@ export function SidebarUserProfile({
               </button>
             ) : (
               <Link
-                href={`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent(loginCallbackUrl)}`}
+                href={`/auth/signin?callbackUrl=${encodeURIComponent(loginCallbackUrl)}`}
                 className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-white ${theme.loginText} text-[10px] font-black ${theme.loginHover} transition-colors shadow-sm`}
               >
                 <LogIn className="w-3.5 h-3.5" />

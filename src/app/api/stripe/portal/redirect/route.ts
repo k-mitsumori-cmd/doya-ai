@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
-      return NextResponse.redirect(new URL(`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/banner/dashboard/plan')}`, request.url))
+      return NextResponse.redirect(new URL(`/auth/signin?callbackUrl=${encodeURIComponent('/banner/dashboard/plan')}`, request.url))
     }
 
     const user = await prisma.user.findUnique({

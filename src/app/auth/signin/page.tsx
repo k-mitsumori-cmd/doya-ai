@@ -1,79 +1,31 @@
 'use client'
 
 import { signIn } from 'next-auth/react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { BarChart3, PenLine, Palette, Sparkles } from 'lucide-react'
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { BarChart3, PenLine, Palette, Sparkles, Mic, FileText, Wand2 } from 'lucide-react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 
 // エラーコードに対応するメッセージ
 const errorMessages: Record<string, string> = {
-  'Configuration': 'サーバー設定に問題があります。',
-  // NextAuthはプロバイダ初期化に失敗すると error=<providerId> を返すことがある
-  // 例: Google OAuthの clientId / clientSecret が未設定
-  'google': 'Googleログイン設定が未完了です（GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET）。運用環境の環境変数を確認してください。',
-  'AccessDenied': 'アクセスが拒否されました。',
-  'OAuthSignin': 'ログインを開始できませんでした。',
-  'OAuthCallback': 'ログイン処理に失敗しました。',
-  'OAuthCreateAccount': 'アカウントの作成に失敗しました。',
-  'OAuthAccountNotLinked': 'このメールは別の方法で登録されています。',
-  'Default': 'ログインに失敗しました。もう一度お試しください。',
+  Configuration: 'サーバー設定に問題があります。',
+  google: 'Googleログイン設定が未完了です（GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET）。運用環境の環境変数を確認してください。',
+  AccessDenied: 'アクセスが拒否されました。',
+  OAuthSignin: 'ログインを開始できませんでした。',
+  OAuthCallback: 'ログイン処理に失敗しました。',
+  OAuthCreateAccount: 'アカウントの作成に失敗しました。',
+  OAuthAccountNotLinked: 'このメールは別の方法で登録されています。',
+  Default: 'ログインに失敗しました。もう一度お試しください。',
 }
 
 function SignInContent() {
   const searchParams = useSearchParams()
-  const router = useRouter()
   const callbackUrl = searchParams.get('callbackUrl') || '/seo'
   const error = searchParams.get('error')
   const [isLoading, setIsLoading] = useState(false)
 
-  const errorMessage = error ? (errorMessages[error] || errorMessages['Default']) : null
-
-  const shouldUseBannerLogin = useMemo(() => {
-    const raw = String(callbackUrl || '').trim()
-    if (!raw) return false
-    try {
-      // callbackUrl がフルURLで渡るケース
-      if (raw.startsWith('http')) {
-        const u = new URL(raw)
-        if (u.pathname.startsWith('/banner')) return true
-      }
-    } catch {}
-    // callbackUrl がパスで渡るケース
-    if (raw.startsWith('/banner')) return true
-    if (raw.includes('/banner')) return true
-    return false
-  }, [callbackUrl])
-
-  useEffect(() => {
-    // バナー側ログイン失敗時に /auth/signin に飛んできてしまうケースを救済
-    // （NextAuthの pages.error が共通のため）
-    if (typeof window === 'undefined') return
-    const ref = String(document.referrer || '')
-    const fromBanner = ref.includes('/banner') || ref.includes('/auth/doyamarke/signin')
-    if (shouldUseBannerLogin || fromBanner) {
-      const qs = new URLSearchParams()
-      if (callbackUrl) qs.set('callbackUrl', callbackUrl)
-      if (error) qs.set('error', error)
-      router.replace(`/auth/doyamarke/signin?${qs.toString()}`)
-    }
-  }, [router, shouldUseBannerLogin, callbackUrl, error])
-
-  if (typeof window !== 'undefined') {
-    const ref = String(document.referrer || '')
-    const fromBanner = ref.includes('/banner') || ref.includes('/auth/doyamarke/signin')
-    if (shouldUseBannerLogin || fromBanner) {
-      return (
-        <div className="min-h-screen flex items-center justify-center bg-white">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto mb-4" />
-            <p className="text-gray-600">ログイン画面へ移動中...</p>
-          </div>
-        </div>
-      )
-    }
-  }
+  const errorMessage = error ? (errorMessages[error] || errorMessages.Default) : null
 
   const handleGoogleLogin = () => {
     setIsLoading(true)
@@ -103,27 +55,65 @@ function SignInContent() {
           />
 
           <div className="relative">
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-4 py-2 text-xs font-black tracking-wide">
-              <Sparkles className="w-4 h-4 text-blue-300" />
-              ドヤマーケAI
-            </div>
+            {callbackUrl.startsWith('/interview') ? (
+              <>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-4 py-2 text-xs font-black tracking-wide">
+                  <Mic className="w-4 h-4 text-purple-300" />
+                  ドヤインタビューAI
+                </div>
 
-            <h2 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight">
-              マーケティング全体を
-              <span className="text-blue-300"> AIで一気通貫 </span>
-            </h2>
-            <p className="mt-3 text-sm sm:text-base text-white/80 font-bold leading-relaxed">
-              ドヤバナーAIとドヤライティングAIで、企画→制作→改善までを最短で。
-              <br className="hidden sm:block" />
-              「作るだけ」で終わらない、成果につなげる制作体験へ。
-            </p>
+                <h2 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight">
+                  インタビュー記事を
+                  <span className="text-purple-300"> AIが自動生成 </span>
+                </h2>
+                <p className="mt-3 text-sm sm:text-base text-white/80 font-bold leading-relaxed">
+                  音声・動画をアップロードするだけ。文字起こし→構成→執筆→校正まで一気通貫。
+                </p>
+              </>
+            ) : callbackUrl.startsWith('/persona') ? (
+              <>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-4 py-2 text-xs font-black tracking-wide">
+                  <Sparkles className="w-4 h-4 text-blue-300" />
+                  ドヤペルソナAI
+                </div>
+
+                <h2 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight">
+                  URLから
+                  <span className="text-blue-300"> ペルソナを自動生成 </span>
+                </h2>
+                <p className="mt-3 text-sm sm:text-base text-white/80 font-bold leading-relaxed">
+                  WebサイトURLを入力するだけで、ターゲットペルソナとクリエイティブを生成。
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-4 py-2 text-xs font-black tracking-wide">
+                  <Sparkles className="w-4 h-4 text-blue-300" />
+                  ドヤマーケAI
+                </div>
+
+                <h2 className="mt-5 text-2xl sm:text-3xl font-black tracking-tight">
+                  マーケティング全体を
+                  <span className="text-blue-300"> AIで一気通貫 </span>
+                </h2>
+                <p className="mt-3 text-sm sm:text-base text-white/80 font-bold leading-relaxed">
+                  ドヤバナーAIとドヤライティングAIで、企画→制作→改善までを最短で。
+                  <br className="hidden sm:block" />
+                  「作るだけ」で終わらない、成果につなげる制作体験へ。
+                </p>
+              </>
+            )}
 
             <div className="mt-8 grid gap-3">
-              {[
+              {(callbackUrl.startsWith('/interview') ? [
+                { icon: Mic, title: '音声→記事', desc: 'インタビュー音声から自動で記事を生成', tone: 'from-purple-500/20 to-indigo-500/20' },
+                { icon: FileText, title: '校正・ファクトチェック', desc: 'AIが品質をチェック、信頼性を担保', tone: 'from-emerald-500/20 to-teal-500/20' },
+                { icon: Wand2, title: 'SNS・翻訳', desc: '記事からSNS投稿文や多言語翻訳も一括生成', tone: 'from-amber-500/20 to-fuchsia-500/20' },
+              ] : [
                 { icon: Palette, title: 'ドヤバナーAI', desc: '広告バナーを最速で量産（A/Bテストに強い）', tone: 'from-emerald-500/20 to-blue-500/20' },
                 { icon: PenLine, title: 'ドヤライティングAI', desc: 'SEO記事を安定生成（分割生成・監査で品質担保）', tone: 'from-violet-500/20 to-indigo-500/20' },
                 { icon: BarChart3, title: '改善まで支援', desc: '訴求・コピー・構成を改善して成果に寄せる', tone: 'from-amber-500/20 to-fuchsia-500/20' },
-              ].map((item, idx) => (
+              ]).map((item, idx) => (
                 <motion.div
                   key={item.title}
                   className={`rounded-2xl border border-white/15 bg-gradient-to-br ${item.tone} backdrop-blur px-4 py-4 flex items-start gap-3`}
@@ -188,13 +178,15 @@ function SignInContent() {
             </div>
 
             <div className="pt-6 flex items-center justify-between gap-3 flex-wrap">
-              <Link href="/seo" className="text-sm font-black text-blue-600 hover:text-blue-700">
+              <Link href={callbackUrl.startsWith('/') ? callbackUrl : '/seo'} className="text-sm font-black text-blue-600 hover:text-blue-700">
                 ログインせずに試す →
               </Link>
               <div className="text-xs text-slate-500 font-bold">
                 <a href="/terms" className="text-blue-600 hover:underline">利用規約</a>
                 <span className="mx-1">/</span>
                 <a href="/privacy" className="text-blue-600 hover:underline">プライバシーポリシー</a>
+                <span className="mx-1">/</span>
+                <a href="/tokushoho" className="text-blue-600 hover:underline">特定商取引法</a>
               </div>
             </div>
           </div>
@@ -206,14 +198,16 @@ function SignInContent() {
 
 export default function SignInPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto mb-4" />
-          <p className="text-gray-600">読み込み中...</p>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-white">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-600 border-t-transparent mx-auto mb-4" />
+            <p className="text-gray-600">読み込み中...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <SignInContent />
     </Suspense>
   )

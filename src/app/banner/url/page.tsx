@@ -425,7 +425,7 @@ function BannerUrlAutoPageInner() {
                 <p className="text-sm font-black text-slate-900">サイトURL</p>
                 {isGuest ? (
                   <Link
-                    href={`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/banner')}`}
+                    href={`/auth/signin?callbackUrl=${encodeURIComponent('/banner')}`}
                     className="inline-flex items-center gap-2 text-xs font-black text-blue-600 hover:text-blue-800"
                   >
                     <LogIn className="w-4 h-4" />
@@ -594,7 +594,7 @@ function BannerUrlAutoPageInner() {
                           {isGuest ? (
                             <>
                               <Link
-                                href="/auth/doyamarke/signin?callbackUrl=%2Fbanner%2Furl"
+                                href="/auth/signin?callbackUrl=%2Fbanner%2Furl"
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-xs font-black rounded-lg hover:bg-blue-700 transition-colors"
                               >
                                 <LogIn className="w-3.5 h-3.5" />
@@ -850,7 +850,7 @@ function BannerUrlAutoPageInner() {
                       <button disabled className="w-full px-4 py-3 rounded-2xl bg-slate-200 text-slate-600 font-black text-sm cursor-not-allowed">現在のプラン</button>
                     ) : isGuest ? (
                       <Link
-                        href={`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/banner')}`}
+                        href={`/auth/signin?callbackUrl=${encodeURIComponent('/banner')}`}
                         className="inline-flex items-center justify-center w-full px-4 py-3 rounded-2xl bg-white border border-slate-200 text-slate-800 font-black hover:bg-slate-100 transition-colors text-sm"
                       >
                         ログインして試す

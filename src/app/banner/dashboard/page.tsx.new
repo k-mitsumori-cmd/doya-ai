@@ -2464,7 +2464,7 @@ function BannerTestPageInner() {
                   </button>
                   {lockModalType === 'login' ? (
                     <a
-                      href="/auth/doyamarke/signin?callbackUrl=/banner/test"
+                      href="/auth/signin?callbackUrl=/banner/test"
                       className="flex-1 py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-2"
                     >
                       <LogIn className="w-5 h-5" />

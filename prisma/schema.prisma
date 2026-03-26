@@ -112,6 +112,11 @@ model User {
   // ドヤインタビューAI-X
   interviewxProjects InterviewXProject[]
 
+  // ドリップマーケティング
+  dripEnrollments  DripEnrollment[]
+  dripEmailLogs    DripEmailLog[]
+  dripUnsubscribes DripUnsubscribe[]
+
   // Stripe関連（ポータル全体の顧客情報）
   stripeCustomerId       String?   @unique
   stripeSubscriptionId   String?   @unique
@@ -1745,4 +1750,139 @@ model InterviewXChatMessage {
   @@index([responseId])
   @@index([responseId, createdAt])
   @@map("interviewx_chat_messages")
+}
+
+// ============================================
+// ドリップマーケティング（ステップメール自動配信）
+// ============================================
+
+// セグメント（ユーザーの絞り込み条件）
+model DripSegment {
+  id         String   @id @default(cuid())
+  name       String
+  key        String   @unique
+  conditions Json     // {"type": "last_login_over", "days": 7} etc.
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  sequences DripSequence[]
+
+  @@map("drip_segments")
+}
+
+// メールテンプレート
+model DripTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  subject   String
+  bodyHtml  String   @db.Text
+  bodyText  String?  @db.Text
+  variables Json?    // 使用する差し込み変数一覧
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  steps DripStep[]
+
+  @@map("drip_templates")
+}
+
+// シーケンス（ステップメールの単位）
+model DripSequence {
+  id        String   @id @default(cuid())
+  name      String
+  status    String   @default("draft") // draft | active | paused
+  segmentId String?
+  segment   DripSegment? @relation(fields: [segmentId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  steps       DripStep[]
+  enrollments DripEnrollment[]
+
+  @@map("drip_sequences")
+}
+
+// ステップ（シーケンス内の各メール）
+model DripStep {
+  id            String   @id @default(cuid())
+  sequenceId    String
+  sequence      DripSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  sortOrder     Int
+  dayOffset     Int      // Day 0, Day 1, Day 3...
+  sendTime      String   @default("09:00") // 配信時刻 HH:mm
+  templateId    String?
+  template      DripTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  conditionType String?  // null | not_opened | opened | not_clicked | clicked | opened_not_clicked
+  label         String
+  createdAt     DateTime @default(now())
+
+  emailLogs DripEmailLog[]
+
+  @@index([sequenceId])
+  @@map("drip_steps")
+}
+
+// エンロールメント（ユーザー × シーケンスの進行状態）
+model DripEnrollment {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sequenceId  String
+  sequence    DripSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  enrolledAt  DateTime  @default(now())
+  currentStep Int       @default(0)
+  status      String    @default("active") // active | completed | cancelled
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  emailLogs DripEmailLog[]
+
+  @@unique([userId, sequenceId])
+  @@index([status])
+  @@map("drip_enrollments")
+}
+
+// 配信ログ（各メールの送信結果）
+model DripEmailLog {
+  id           String    @id @default(cuid())
+  enrollmentId String
+  enrollment   DripEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  stepId       String
+  step         DripStep  @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sequenceId   String
+  sentAt       DateTime  @default(now())
+  status       String    @default("queued") // queued | sent | delivered | opened | clicked | bounced | failed
+  openedAt     DateTime?
+  clickedAt    DateTime?
+  bouncedAt    DateTime?
+  trackingId   String?   @unique
+  createdAt    DateTime  @default(now())
+
+  @@index([enrollmentId])
+  @@index([userId])
+  @@index([sequenceId])
+  @@index([status])
+  @@map("drip_email_logs")
+}
+
+// 配信停止ログ
+model DripUnsubscribe {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reason         String?
+  unsubscribedAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("drip_unsubscribes")
+}
+
+// 管理設定（ドリップマーケティング用）
+model DripSetting {
+  key   String @id
+  value Json
+
+  @@map("drip_settings")
 }

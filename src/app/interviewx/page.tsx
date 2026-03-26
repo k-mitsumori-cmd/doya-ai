@@ -47,7 +47,7 @@ export default function InterviewXDashboard() {
           <h2 className="text-lg font-bold text-slate-900 mb-1">ログインが必要です</h2>
           <p className="text-sm text-slate-500 mb-6">ヒヤリングプロジェクトの作成・管理にはログインが必要です。</p>
           <a
-            href="/auth/doyamarke/signin?callbackUrl=/interviewx"
+            href="/auth/signin?callbackUrl=/interviewx"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 transition-colors"
           >
             ログインする

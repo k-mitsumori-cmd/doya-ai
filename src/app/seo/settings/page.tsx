@@ -50,7 +50,7 @@ export default function SeoSettingsPage() {
           planLabel={planLabel}
           isLoggedIn={isLoggedIn}
           user={session?.user || null}
-          loginHref="/auth/doyamarke/signin?callbackUrl=/seo/settings"
+          loginHref="/auth/signin?callbackUrl=/seo/settings"
           onLogout={() => signOut({ callbackUrl: '/seo?loggedOut=1' })}
         />
       </div>

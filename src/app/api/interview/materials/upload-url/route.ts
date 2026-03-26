@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
           error: `ファイルサイズが上限 (${mb}MB) を超えています。`,
           code: isGuest ? 'GUEST_UPLOAD_LIMIT' : 'PLAN_UPLOAD_LIMIT',
           actionUrl: isGuest
-            ? '/auth/doyamarke/signin?callbackUrl=/interview'
+            ? '/auth/signin?callbackUrl=/interview'
             : '/interview/settings',
           actionLabel: isGuest ? 'ログインはこちら' : 'アップグレードはこちら',
         },

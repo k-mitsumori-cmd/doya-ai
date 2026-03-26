@@ -157,7 +157,7 @@ export default function SettingsPage() {
           planLabel={bannerPlanTier === 'ENTERPRISE' ? 'Enterprise' : bannerPlanTier === 'PRO' ? 'PRO' : isLoggedIn ? '無料' : 'ゲスト'}
           isLoggedIn={isLoggedIn}
           user={session?.user || null}
-          loginHref="/auth/doyamarke/signin?callbackUrl=/banner/dashboard/settings"
+          loginHref="/auth/signin?callbackUrl=/banner/dashboard/settings"
           onLogout={() => signOut({ callbackUrl: '/banner' })}
         />
 

@@ -257,7 +257,7 @@ function InterviewSidebarImpl({
   // Stripe Checkout へ遷移
   const handleUpgrade = async (planId: string) => {
     if (!isLoggedIn) {
-      router.push(`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent(pathname || '/interview/projects')}`)
+      router.push(`/auth/signin?callbackUrl=${encodeURIComponent(pathname || '/interview/projects')}`)
       return
     }
     setIsUpgrading(true)
@@ -291,7 +291,7 @@ function InterviewSidebarImpl({
     return (
       <div className="mx-3 mb-2">
         <Link
-          href={`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/interview')}`}
+          href={`/auth/signin?callbackUrl=${encodeURIComponent('/interview')}`}
           className="block p-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 relative overflow-hidden shadow-md hover:shadow-lg transition-shadow"
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-white/10 pointer-events-none" />

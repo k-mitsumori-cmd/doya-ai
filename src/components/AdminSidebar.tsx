@@ -17,6 +17,10 @@ import {
   Crown,
   Image,
   FolderOpen,
+  Mail,
+  ListOrdered,
+  FileText,
+  ScrollText,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -32,6 +36,15 @@ const mainNavItems = [
 const doyamanaNavItems = [
   { icon: Image, label: '画像・プロンプト管理', href: '/admin/doyamana-images', badge: null },
   { icon: FolderOpen, label: 'カテゴリ管理', href: '/admin/doyamana-categories', badge: null },
+]
+
+const dripNavItems = [
+  { icon: Mail, label: 'ダッシュボード', href: '/admin/drip', badge: null },
+  { icon: ListOrdered, label: 'シーケンス管理', href: '/admin/drip/sequences', badge: null },
+  { icon: FileText, label: 'テンプレート', href: '/admin/drip/templates', badge: null },
+  { icon: Users, label: 'ユーザー管理', href: '/admin/drip/users', badge: null },
+  { icon: ScrollText, label: '配信ログ', href: '/admin/drip/logs', badge: null },
+  { icon: Settings, label: '配信設定', href: '/admin/drip/settings', badge: null },
 ]
 
 const serviceLinks = [
@@ -147,6 +160,47 @@ export function AdminSidebar({ isMobile }: { isMobile?: boolean } = {}) {
                       </span>
                     )}
                     {isActive && <ChevronRight className="w-4 h-4 ml-auto text-emerald-400" />}
+                  </motion.div>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Drip Marketing Section */}
+        <div className="mt-8">
+          <p className="px-3 text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">
+            ドリップ配信
+          </p>
+          <div className="space-y-1">
+            {dripNavItems.map((item) => {
+              const isActive = item.href === '/admin/drip'
+                ? pathname === '/admin/drip'
+                : pathname === item.href || pathname.startsWith(item.href + '/')
+              return (
+                <Link key={item.href} href={item.href}>
+                  <motion.div
+                    whileHover={{ x: 4 }}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all relative ${
+                      isActive
+                        ? 'bg-amber-500/15 text-amber-300'
+                        : 'text-white/50 hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeDripIndicator"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-amber-400 to-orange-400 rounded-full"
+                      />
+                    )}
+                    <item.icon className={`w-4.5 h-4.5 ${isActive ? 'text-amber-400' : ''}`} />
+                    <span className="font-medium">{item.label}</span>
+                    {item.badge && (
+                      <span className="ml-auto px-2 py-0.5 bg-amber-500 text-white text-[10px] font-bold rounded-full">
+                        {item.badge}
+                      </span>
+                    )}
+                    {isActive && <ChevronRight className="w-4 h-4 ml-auto text-amber-400" />}
                   </motion.div>
                 </Link>
               )

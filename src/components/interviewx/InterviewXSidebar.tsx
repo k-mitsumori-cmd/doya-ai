@@ -83,7 +83,7 @@ function InterviewXSidebarImpl({
 
   const handleUpgrade = async (planId: string) => {
     if (!isLoggedIn) {
-      router.push(`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent(pathname || '/interviewx')}`)
+      router.push(`/auth/signin?callbackUrl=${encodeURIComponent(pathname || '/interviewx')}`)
       return
     }
     setIsUpgrading(true)
@@ -112,7 +112,7 @@ function InterviewXSidebarImpl({
     return (
       <div className="mx-3 mb-2">
         <Link
-          href={`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/interviewx')}`}
+          href={`/auth/signin?callbackUrl=${encodeURIComponent('/interviewx')}`}
           className="block p-3 rounded-xl bg-gradient-to-r from-indigo-400 to-violet-400 relative overflow-hidden shadow-md hover:shadow-lg transition-shadow"
         >
           <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-white/10 pointer-events-none" />

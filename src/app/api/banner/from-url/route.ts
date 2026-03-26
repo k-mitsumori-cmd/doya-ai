@@ -1475,7 +1475,7 @@ export async function POST(request: NextRequest) {
               error: 'ゲストは今月分の生成上限を超えています。ログインしてご利用ください。',
               code: 'MONTHLY_LIMIT_REACHED',
               usage: usageInfo,
-              upgradeUrl: '/auth/doyamarke/signin?callbackUrl=%2Fbanner',
+              upgradeUrl: '/auth/signin?callbackUrl=%2Fbanner',
             },
             { status: 429 }
           )

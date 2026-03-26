@@ -113,7 +113,7 @@ export default function InterviewSettingsPage() {
 
   const handleUpgrade = async (planId: string) => {
     if (!isLoggedIn) {
-      router.push(`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent(pathname || '/interview/settings')}`)
+      router.push(`/auth/signin?callbackUrl=${encodeURIComponent(pathname || '/interview/settings')}`)
       return
     }
     setIsUpgrading(true)
@@ -184,7 +184,7 @@ export default function InterviewSettingsPage() {
           <p className="text-lg font-black text-slate-900 mb-2">ログインが必要です</p>
           <p className="text-sm text-slate-500 mb-6">設定の確認・変更にはログインが必要です。</p>
           <a
-            href="/auth/doyamarke/signin?callbackUrl=/interview/settings"
+            href="/auth/signin?callbackUrl=/interview/settings"
             className="inline-flex items-center gap-2 px-6 py-3 bg-[#7f19e6] text-white rounded-xl text-sm font-bold hover:bg-[#6b12c9] transition-colors shadow-lg shadow-[#7f19e6]/25"
           >
             <span className="material-symbols-outlined text-lg">login</span>
@@ -300,7 +300,7 @@ export default function InterviewSettingsPage() {
                       <p className="text-sm text-slate-500 mb-3">ログインするとデータが保持されます</p>
                       <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
                         <Link
-                          href={`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/interview/settings')}`}
+                          href={`/auth/signin?callbackUrl=${encodeURIComponent('/interview/settings')}`}
                           className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#7f19e6] text-white rounded-xl text-sm font-bold hover:bg-[#6b12c9] transition-colors shadow-lg shadow-[#7f19e6]/25"
                         >
                           <span className="material-symbols-outlined text-lg">login</span>

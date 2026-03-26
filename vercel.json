@@ -17,6 +17,10 @@
     {
       "path": "/api/cron/gcp-usage",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/drip-sender",
+      "schedule": "0 * * * *"
     }
   ]
 }

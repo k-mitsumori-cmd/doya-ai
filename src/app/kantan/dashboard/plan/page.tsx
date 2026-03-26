@@ -264,7 +264,7 @@ export default function KantanPlanPage() {
           <p className="text-gray-800 font-bold mb-2">ログインが必要です</p>
           <p className="text-sm text-gray-500 mb-4">このページを表示するにはログインしてください。</p>
           <Link
-            href="/auth/doyamarke/signin?callbackUrl=/kantan/dashboard/plan"
+            href="/auth/signin?callbackUrl=/kantan/dashboard/plan"
             className="inline-block px-6 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm font-medium rounded-lg transition-colors"
           >
             ログインページへ

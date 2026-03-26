@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
       return NextResponse.redirect(
-        new URL(`/auth/doyamarke/signin?callbackUrl=${encodeURIComponent('/banner/dashboard/plan')}`, request.url)
+        new URL(`/auth/signin?callbackUrl=${encodeURIComponent('/banner/dashboard/plan')}`, request.url)
       )
     }
 
