@@ -123,27 +123,28 @@ function GalleryThumb({ src, alt, lqip, index = 0 }: { src: string; alt: string;
         />
       )}
 
-      {/* LQIPがない場合のフォールバック：シマーアニメーション */}
+      {/* LQIPがない場合のフォールバック：読み込み中表示 */}
       {!hasLqip && (status === 'idle' || status === 'loading' || status === 'error') && (
-        <div
-          className="absolute inset-0"
-          style={shimmerStyle}
-        >
-          {/* 淡いグラデーションオーバーレイ */}
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-50/30 via-purple-50/20 to-pink-50/30" />
-        </div>
-      )}
-
-      {/* ローディングスピナー / エラーアイコン */}
-      {(status === 'loading' || status === 'error') && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          {status === 'loading' && !hasLqip ? (
-            <div className="w-10 h-10 rounded-full border-2 border-slate-300 border-t-blue-500 animate-spin" />
-          ) : status === 'error' ? (
+        <div className="absolute inset-0 bg-slate-100 flex items-center justify-center">
+          {status === 'error' ? (
             <div className="text-center opacity-60">
               <ImageIcon className="w-10 h-10 text-slate-400 mx-auto" />
             </div>
-          ) : null}
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-8 h-8 rounded-full border-2 border-slate-300 border-t-blue-500 animate-spin" />
+              <span className="text-[10px] font-bold text-slate-400">読み込み中</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* LQIP表示中のエラーアイコン */}
+      {hasLqip && status === 'error' && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center opacity-60">
+            <ImageIcon className="w-10 h-10 text-slate-400 mx-auto" />
+          </div>
         </div>
       )}
 

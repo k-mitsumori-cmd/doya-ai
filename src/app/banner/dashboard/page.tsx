@@ -1709,8 +1709,8 @@ function BannerTestPageInner() {
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
                       {[...Array(4)].map((_, i) => (
-                        <div key={i} className="aspect-[16/10] rounded bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden relative">
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-700/20 to-transparent animate-[shimmer_2s_infinite]" style={{ backgroundSize: '200% 100%', animationDelay: `${(section * 4 + i) * 100}ms` }} />
+                        <div key={i} className="aspect-[16/10] rounded bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden relative flex items-center justify-center">
+                          <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
                         </div>
                       ))}
                     </div>

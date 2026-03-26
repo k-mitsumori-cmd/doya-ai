@@ -668,7 +668,7 @@ export default function BannerHistoryPage() {
                               }}
                             >
                               <div className="flex flex-col items-center justify-center gap-3">
-                                <div className="animate-pulse w-16 h-16 rounded-2xl bg-slate-200" />
+                                <div className="w-8 h-8 rounded-full border-2 border-slate-300 border-t-blue-500 animate-spin" />
                                 <div className="text-[11px] font-black text-slate-400">読み込み中（タップで再取得）</div>
                               </div>
                             </div>
