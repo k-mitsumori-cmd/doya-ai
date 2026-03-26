@@ -7,10 +7,10 @@ import { PrismaClient } from '@prisma/client'
  * グローバルシングルトンパターンを使用して接続を再利用し、接続プールの枯渇を防ぐ
  * 
  * Supabase Pooler (PgBouncer) 対応:
- * - connection_limit=1: サーバーレス環境では各インスタンスで1接続に制限
+ * - connection_limit=5: サーバーレス環境でもcron等の同時リクエストに対応
  * - pgbouncer=true: PgBouncerモードを有効化
  * - connect_timeout: 接続タイムアウト設定
- * - pool_timeout: プール取得タイムアウト設定
+ * - pool_timeout: プール取得タイムアウト設定（30秒に拡大）
  */
 
 const globalForPrisma = globalThis as unknown as {
@@ -35,13 +35,13 @@ function getDatabaseUrl(): string {
       url.searchParams.set('pgbouncer', 'true')
     }
     if (!url.searchParams.has('connection_limit')) {
-      url.searchParams.set('connection_limit', '1')
+      url.searchParams.set('connection_limit', '5')
     }
     if (!url.searchParams.has('connect_timeout')) {
-      url.searchParams.set('connect_timeout', '10')
+      url.searchParams.set('connect_timeout', '15')
     }
     if (!url.searchParams.has('pool_timeout')) {
-      url.searchParams.set('pool_timeout', '10')
+      url.searchParams.set('pool_timeout', '30')
     }
     
     return url.toString()
