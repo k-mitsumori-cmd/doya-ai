@@ -40,6 +40,11 @@ export const authOptions: NextAuthOptions = {
               userName: user.name,
             }).catch(() => {})
           }
+
+          // ドリップ配信: 自動エンロール
+          enrollUserInDripSequences(user.id).catch((e) => {
+            console.error('[Drip] Auto-enroll failed:', e)
+          })
         } catch (e) {
           console.error('Failed to set firstLoginAt:', e)
         }
@@ -105,3 +110,67 @@ export const authOptions: NextAuthOptions = {
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
+
+// ============================================
+// ドリップ配信: ログイン時自動エンロール
+// ============================================
+async function enrollUserInDripSequences(userId: string) {
+  // 配信停止済みユーザーはエンロールしない
+  const unsubscribed = await prisma.dripUnsubscribe.findFirst({
+    where: { userId },
+  })
+  if (unsubscribed) return
+
+  // アクティブなシーケンスを取得
+  const activeSequences = await prisma.dripSequence.findMany({
+    where: { status: 'active' },
+    include: { segment: true },
+  })
+
+  // ユーザー情報を取得（セグメント判定用）
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { plan: true, firstLoginAt: true, createdAt: true },
+  })
+  if (!user) return
+
+  for (const seq of activeSequences) {
+    // セグメント条件を評価
+    if (seq.segment) {
+      const conditions = seq.segment.conditions as Record<string, unknown>
+      if (!matchesSegment(user, conditions)) continue
+    }
+
+    // 既にエンロール済みならスキップ
+    const existing = await prisma.dripEnrollment.findUnique({
+      where: { userId_sequenceId: { userId, sequenceId: seq.id } },
+    })
+    if (existing) continue
+
+    // エンロール作成
+    await prisma.dripEnrollment.create({
+      data: { userId, sequenceId: seq.id, status: 'active', currentStep: 0 },
+    })
+  }
+}
+
+function matchesSegment(
+  user: { plan: string; firstLoginAt: Date | null; createdAt: Date },
+  conditions: Record<string, unknown>
+): boolean {
+  const type = conditions.type as string
+  if (!type || type === 'all') return true
+
+  if (type === 'plan_and_active') {
+    return user.plan === (conditions.plan as string)
+  }
+
+  if (type === 'last_login_over') {
+    const days = (conditions.days as number) || 7
+    const lastLogin = user.firstLoginAt || user.createdAt
+    const daysSince = (Date.now() - lastLogin.getTime()) / (1000 * 60 * 60 * 24)
+    return daysSince >= days
+  }
+
+  return true
+}
