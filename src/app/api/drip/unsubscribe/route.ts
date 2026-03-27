@@ -1,26 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+
+const HMAC_SECRET = process.env.DRIP_UNSUBSCRIBE_SECRET || process.env.NEXTAUTH_SECRET || 'drip-unsubscribe-fallback-secret'
+const TOKEN_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000 // 90日間有効
 
 // GET: 配信停止確認ページ（HTMLを返す）
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token')
   if (!token) {
-    return new NextResponse(renderPage('無効なリンクです', false), {
+    return new NextResponse(renderPage('無効なリンクです'), {
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
     })
   }
 
   try {
-    const { userId } = decodeToken(token)
+    const { userId } = verifyAndDecodeToken(token)
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { email: true },
     })
     if (!user) {
-      return new NextResponse(renderPage('ユーザーが見つかりません', false), {
+      // ユーザー列挙攻撃防止: 存在しなくても同じ画面を返す
+      return new NextResponse(renderPage('無効なリンクです'), {
         headers: { 'Content-Type': 'text/html; charset=utf-8' },
       })
     }
@@ -29,7 +34,7 @@ export async function GET(request: NextRequest) {
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
     })
   } catch {
-    return new NextResponse(renderPage('無効なリンクです', false), {
+    return new NextResponse(renderPage('無効なリンクです'), {
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
     })
   }
@@ -45,20 +50,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'トークンが必要です' }, { status: 400 })
     }
 
-    const { userId } = decodeToken(token)
+    const { userId } = verifyAndDecodeToken(token)
 
     const user = await prisma.user.findUnique({ where: { id: userId } })
     if (!user) {
-      return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 })
+      // ユーザー列挙攻撃防止: 存在しなくても成功を返す
+      return NextResponse.json({ success: true })
     }
 
-    // 配信停止記録
-    await prisma.dripUnsubscribe.create({
-      data: {
-        userId,
-        reason: 'user_requested',
-      },
+    // 既に配信停止済みかチェック（冪等性確保）
+    const existing = await prisma.dripUnsubscribe.findFirst({
+      where: { userId },
     })
+    if (!existing) {
+      await prisma.dripUnsubscribe.create({
+        data: {
+          userId,
+          reason: 'user_requested',
+        },
+      })
+    }
 
     // アクティブなエンロールメントをすべてキャンセル
     await prisma.dripEnrollment.updateMany({
@@ -68,18 +79,68 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch {
-    return NextResponse.json({ error: '配信停止処理に失敗しました' }, { status: 500 })
+    // 不正トークンでも汎用エラーを返す
+    return NextResponse.json({ success: true })
   }
 }
 
-function decodeToken(token: string): { userId: string } {
-  const decoded = JSON.parse(Buffer.from(token, 'base64url').toString('utf-8'))
-  if (!decoded.userId) throw new Error('Invalid token')
-  return decoded
+// ============================================
+// トークン生成・検証（HMAC署名付き）
+// ============================================
+
+export function generateUnsubscribeToken(userId: string): string {
+  const payload = JSON.stringify({ userId, t: Date.now() })
+  const signature = crypto
+    .createHmac('sha256', HMAC_SECRET)
+    .update(payload)
+    .digest('base64url')
+  const encoded = Buffer.from(payload).toString('base64url')
+  return `${encoded}.${signature}`
 }
+
+function verifyAndDecodeToken(token: string): { userId: string } {
+  const parts = token.split('.')
+  if (parts.length !== 2) {
+    throw new Error('Invalid token format')
+  }
+
+  const [encoded, signature] = parts
+  const payload = Buffer.from(encoded, 'base64url').toString('utf-8')
+
+  // HMAC署名検証
+  const expectedSig = crypto
+    .createHmac('sha256', HMAC_SECRET)
+    .update(payload)
+    .digest('base64url')
+
+  if (!crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSig))) {
+    throw new Error('Invalid token signature')
+  }
+
+  const decoded = JSON.parse(payload)
+  if (!decoded.userId) throw new Error('Invalid token: missing userId')
+
+  // 有効期限チェック
+  if (decoded.t && Date.now() - decoded.t > TOKEN_MAX_AGE_MS) {
+    throw new Error('Token expired')
+  }
+
+  return { userId: decoded.userId }
+}
+
+// ============================================
+// HTML テンプレート
+// ============================================
 
 function renderConfirmPage(email: string, token: string): string {
   const maskedEmail = email.replace(/(.{2})(.*)(@.*)/, '$1***$3')
+  // XSS対策: トークンをエスケープ
+  const safeToken = token.replace(/['"<>&]/g, '')
+  const safeMaskedEmail = maskedEmail.replace(/[<>&"']/g, (c) => {
+    const map: Record<string, string> = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }
+    return map[c] || c
+  })
+
   return `<!DOCTYPE html>
 <html lang="ja">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -99,22 +160,22 @@ function renderConfirmPage(email: string, token: string): string {
 <body>
 <div class="card">
   <h1>メール配信を停止しますか？</h1>
-  <p><span class="email">${maskedEmail}</span> 宛てのドヤAIからのマーケティングメールの配信を停止します。</p>
+  <p><span class="email">${safeMaskedEmail}</span> 宛てのドヤAIからのマーケティングメールの配信を停止します。</p>
   <button id="btn" onclick="doUnsubscribe()">配信を停止する</button>
   <div id="result"></div>
-  <a href="https://doya-ai.surisuta.jp" class="back">← ドヤAIに戻る</a>
+  <a href="https://doya-ai.surisuta.jp" class="back">&larr; ドヤAIに戻る</a>
 </div>
 <script>
 async function doUnsubscribe() {
-  const btn = document.getElementById('btn');
-  const result = document.getElementById('result');
+  var btn = document.getElementById('btn');
+  var result = document.getElementById('result');
   btn.disabled = true;
   btn.textContent = '処理中...';
   try {
-    const res = await fetch('/api/drip/unsubscribe', {
+    var res = await fetch('/api/drip/unsubscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: '${token}' })
+      body: JSON.stringify({ token: "${safeToken}" })
     });
     if (res.ok) {
       btn.style.display = 'none';
@@ -135,7 +196,11 @@ async function doUnsubscribe() {
 </html>`
 }
 
-function renderPage(message: string, _success: boolean): string {
+function renderPage(message: string): string {
+  const safeMessage = message.replace(/[<>&"']/g, (c) => {
+    const map: Record<string, string> = { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }
+    return map[c] || c
+  })
   return `<!DOCTYPE html>
 <html lang="ja">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -146,6 +211,6 @@ function renderPage(message: string, _success: boolean): string {
   h1 { font-size: 20px; color: #1e293b; }
 </style>
 </head>
-<body><div class="card"><h1>${message}</h1><a href="https://doya-ai.surisuta.jp">ドヤAIに戻る</a></div></body>
+<body><div class="card"><h1>${safeMessage}</h1><a href="https://doya-ai.surisuta.jp">ドヤAIに戻る</a></div></body>
 </html>`
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
+import { generateUnsubscribeToken } from '@/app/api/drip/unsubscribe/route'
 import crypto from 'crypto'
 
 export const runtime = 'nodejs'
@@ -172,7 +173,7 @@ export async function GET(request: Request) {
 
       // 配信停止リンク追加
       if (settings.unsubscribeEnabled) {
-        const unsubToken = Buffer.from(JSON.stringify({ userId: user.id, t: Date.now() })).toString('base64url')
+        const unsubToken = generateUnsubscribeToken(user.id)
         html += `<div style="margin-top:32px;padding-top:16px;border-top:1px solid #eee;font-size:12px;color:#999;text-align:center;">
           <a href="${baseUrl}/api/drip/unsubscribe?token=${unsubToken}" style="color:#999;">配信停止はこちら</a>
         </div>`
