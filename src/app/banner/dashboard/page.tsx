@@ -1712,7 +1712,7 @@ function BannerTestPageInner() {
                         <div key={i} className="aspect-[16/10] rounded bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden relative flex flex-col items-center justify-center gap-1.5">
                           <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
                           <div className="w-12 h-0.5 bg-gray-700 rounded-full overflow-hidden">
-                            <div className="h-full bg-gray-500 rounded-full animate-[progressIndeterminate_1.5s_ease-in-out_infinite]" style={{ width: '40%' }} />
+                            <div className="h-full bg-gray-500 rounded-full animate-[progressGrow_4s_ease-out_forwards]" />
                           </div>
                         </div>
                       ))}
@@ -1784,7 +1784,7 @@ function BannerTestPageInner() {
                                   <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900 flex flex-col items-center justify-center gap-1.5">
                                     <Loader2 className="w-4 h-4 animate-spin text-gray-600" />
                                     <div className="w-10 h-0.5 bg-gray-700 rounded-full overflow-hidden">
-                                      <div className="h-full bg-gray-500 rounded-full animate-[progressIndeterminate_1.5s_ease-in-out_infinite]" style={{ width: '40%' }} />
+                                      <div className="h-full bg-gray-500 rounded-full animate-[progressGrow_4s_ease-out_forwards]" />
                                     </div>
                                   </div>
                                 )}

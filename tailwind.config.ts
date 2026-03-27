@@ -99,9 +99,14 @@ const config: Config = {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
         },
-        progressIndeterminate: {
-          '0%': { transform: 'translateX(-100%)' },
-          '100%': { transform: 'translateX(350%)' },
+        progressGrow: {
+          '0%': { width: '5%' },
+          '15%': { width: '15%' },
+          '30%': { width: '30%' },
+          '50%': { width: '50%' },
+          '65%': { width: '65%' },
+          '80%': { width: '78%' },
+          '100%': { width: '90%' },
         },
       },
       backgroundImage: {
