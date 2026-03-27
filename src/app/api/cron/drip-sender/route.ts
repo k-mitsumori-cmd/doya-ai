@@ -45,9 +45,18 @@ export async function GET(request: Request) {
       })
     }
 
-    // アクティブなエンロールメントを取得
+    // 配信停止済みユーザーIDを一括取得
+    const unsubscribedUsers = await prisma.dripUnsubscribe.findMany({
+      select: { userId: true },
+    })
+    const unsubscribedUserIds = new Set(unsubscribedUsers.map(u => u.userId))
+
+    // アクティブなエンロールメントを取得（配信停止ユーザーを除外）
     const enrollments = await prisma.dripEnrollment.findMany({
-      where: { status: 'active' },
+      where: {
+        status: 'active',
+        userId: { notIn: unsubscribedUserIds.size > 0 ? Array.from(unsubscribedUserIds) : ['__none__'] },
+      },
       include: {
         user: { select: { id: true, name: true, email: true, plan: true, firstLoginAt: true, createdAt: true } },
         sequence: {
@@ -57,6 +66,17 @@ export async function GET(request: Request) {
         },
       },
     })
+
+    // 配信停止ユーザーのエンロールメントを一括キャンセル
+    if (unsubscribedUserIds.size > 0) {
+      await prisma.dripEnrollment.updateMany({
+        where: {
+          status: 'active',
+          userId: { in: Array.from(unsubscribedUserIds) },
+        },
+        data: { status: 'cancelled' },
+      })
+    }
 
     for (const enrollment of enrollments) {
       const { user, sequence } = enrollment
