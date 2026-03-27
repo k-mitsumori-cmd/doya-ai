@@ -133,6 +133,9 @@ function GalleryThumb({ src, alt, lqip, index = 0 }: { src: string; alt: string;
           ) : (
             <div className="flex flex-col items-center gap-2">
               <div className="w-8 h-8 rounded-full border-2 border-slate-300 border-t-blue-500 animate-spin" />
+              <div className="w-16 h-1 bg-slate-200 rounded-full overflow-hidden">
+                <div className="h-full bg-blue-500 rounded-full animate-[progressIndeterminate_1.5s_ease-in-out_infinite]" style={{ width: '40%' }} />
+              </div>
               <span className="text-[10px] font-bold text-slate-400">読み込み中</span>
             </div>
           )}

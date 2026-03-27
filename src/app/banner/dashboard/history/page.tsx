@@ -669,6 +669,9 @@ export default function BannerHistoryPage() {
                             >
                               <div className="flex flex-col items-center justify-center gap-3">
                                 <div className="w-8 h-8 rounded-full border-2 border-slate-300 border-t-blue-500 animate-spin" />
+                                <div className="w-16 h-1 bg-slate-200 rounded-full overflow-hidden">
+                                  <div className="h-full bg-blue-500 rounded-full animate-[progressIndeterminate_1.5s_ease-in-out_infinite]" style={{ width: '40%' }} />
+                                </div>
                                 <div className="text-[11px] font-black text-slate-400">読み込み中（タップで再取得）</div>
                               </div>
                             </div>

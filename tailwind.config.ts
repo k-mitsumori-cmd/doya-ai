@@ -19,6 +19,13 @@ const config: Config = {
         slate: {
           950: '#020617',
         },
+        // LP Design System (Stitch)
+        lp: {
+          bg: '#0f2023',
+          surface: '#183035',
+          border: '#21444a',
+          primary: '#05b7d6',
+        },
         // Border
         border: 'hsl(var(--border, 240 3.7% 15.9%))',
       },
@@ -45,6 +52,8 @@ const config: Config = {
         'glow-lg': '0 0 60px rgba(59, 130, 246, 0.4)',
         'glow-purple': '0 0 40px rgba(139, 92, 246, 0.3)',
         'glow-pink': '0 0 40px rgba(236, 72, 153, 0.3)',
+        'glow-cyan': '0 0 20px rgba(5, 183, 214, 0.3)',
+        'glow-cyan-lg': '0 0 40px -10px rgba(5, 183, 214, 0.3)',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out forwards',
@@ -89,6 +98,10 @@ const config: Config = {
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
+        },
+        progressIndeterminate: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(350%)' },
         },
       },
       backgroundImage: {
