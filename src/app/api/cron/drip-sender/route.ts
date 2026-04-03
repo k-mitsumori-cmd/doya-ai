@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prisma, withRetry } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
 import { generateUnsubscribeToken } from '@/app/api/drip/unsubscribe/route'
 import crypto from 'crypto'
@@ -33,8 +33,8 @@ export async function GET(request: Request) {
   let errors = 0
 
   try {
-    // 配信設定を取得
-    const settings = await getDripSettings()
+    // 配信設定を取得（DB接続エラー時はリトライ）
+    const settings = await withRetry(() => getDripSettings())
 
     // 配信時間帯チェック
     if (!isWithinSendWindow(currentTime, settings.sendWindowStart, settings.sendWindowEnd)) {
@@ -45,14 +45,14 @@ export async function GET(request: Request) {
       })
     }
 
-    // 配信停止済みユーザーIDを一括取得
-    const unsubscribedUsers = await prisma.dripUnsubscribe.findMany({
+    // 配信停止済みユーザーIDを一括取得（DB接続エラー時はリトライ）
+    const unsubscribedUsers = await withRetry(() => prisma.dripUnsubscribe.findMany({
       select: { userId: true },
-    })
+    }))
     const unsubscribedUserIds = new Set(unsubscribedUsers.map(u => u.userId))
 
     // アクティブなエンロールメントを取得（配信停止ユーザーを除外）
-    const enrollments = await prisma.dripEnrollment.findMany({
+    const enrollments = await withRetry(() => prisma.dripEnrollment.findMany({
       where: {
         status: 'active',
         userId: { notIn: unsubscribedUserIds.size > 0 ? Array.from(unsubscribedUserIds) : ['__none__'] },
@@ -65,7 +65,7 @@ export async function GET(request: Request) {
           },
         },
       },
-    })
+    }))
 
     // 配信停止ユーザーのエンロールメントを一括キャンセル
     if (unsubscribedUserIds.size > 0) {

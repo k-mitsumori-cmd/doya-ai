@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { sendMonthlySummary, sendErrorNotification } from '@/lib/notifications'
+import { withRetry } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    await sendMonthlySummary()
+    await withRetry(() => sendMonthlySummary())
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('[Cron] monthly-summary error:', error)

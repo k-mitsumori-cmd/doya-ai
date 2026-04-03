@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { sendGCPUsageReport, sendErrorNotification } from '@/lib/notifications'
+import { withRetry } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,7 +13,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    await sendGCPUsageReport()
+    await withRetry(() => sendGCPUsageReport())
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('[Cron] gcp-usage error:', error)

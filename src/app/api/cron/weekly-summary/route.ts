@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { sendWeeklySummary, sendErrorNotification } from '@/lib/notifications'
+import { withRetry } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -11,7 +12,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    await sendWeeklySummary()
+    await withRetry(() => sendWeeklySummary())
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error('[Cron] weekly-summary error:', error)

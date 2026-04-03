@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { sendDailySummary, sendErrorNotification } from '@/lib/notifications'
-import { prisma } from '@/lib/prisma'
+import { prisma, withRetry } from '@/lib/prisma'
 import { stripe, ALL_SERVICE_IDS } from '@/lib/stripe'
 
 export const runtime = 'nodejs'
@@ -119,13 +119,13 @@ export async function GET(request: Request) {
   }
 
   try {
-    // 期限切れサブスクリプションのフォールバック処理
-    const resetCount = await resetExpiredSubscriptions()
+    // 期限切れサブスクリプションのフォールバック処理（DB接続エラー時はリトライ）
+    const resetCount = await withRetry(() => resetExpiredSubscriptions())
     if (resetCount > 0) {
       console.log(`[Cron] Reset ${resetCount} expired subscription(s)`)
     }
 
-    await sendDailySummary()
+    await withRetry(() => sendDailySummary())
     return NextResponse.json({ success: true, expiredResets: resetCount })
   } catch (error: any) {
     console.error('[Cron] daily-summary error:', error)
