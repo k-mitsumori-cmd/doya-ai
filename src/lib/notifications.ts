@@ -1,4 +1,4 @@
-import { prisma } from './prisma'
+import { prisma, withRetry } from './prisma'
 import { fetchGCPUsageReport } from './gcp-usage'
 
 export type ErrorNotificationData = {
@@ -24,9 +24,9 @@ export type ErrorNotificationData = {
  */
 export async function sendErrorNotification(data: ErrorNotificationData): Promise<void> {
   try {
-    const slackWebhook = await prisma.systemSetting.findUnique({
+    const slackWebhook = await withRetry(() => prisma.systemSetting.findUnique({
       where: { key: 'slack_webhook' },
-    })
+    }))
 
     const webhookUrl = slackWebhook?.value || ''
     if (!webhookUrl) {
@@ -80,9 +80,9 @@ function truncate(s: string, max: number): string {
 // Webhook URL 取得（共通）
 // ========================================
 async function getSlackWebhookUrl(): Promise<string> {
-  const row = await prisma.systemSetting.findUnique({
+  const row = await withRetry(() => prisma.systemSetting.findUnique({
     where: { key: 'slack_webhook' },
-  })
+  }))
   return row?.value || ''
 }
 

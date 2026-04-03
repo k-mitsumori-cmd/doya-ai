@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { constructWebhookEvent, getPlanIdFromStripePriceId, stripe, ALL_SERVICE_IDS } from '@/lib/stripe'
-import { prisma } from '@/lib/prisma'
+import { prisma, withRetry } from '@/lib/prisma'
 import { sendEventNotification } from '@/lib/notifications'
 import Stripe from 'stripe'
 
@@ -133,14 +133,14 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 
   console.log(`Checkout completed for user: ${userId}`)
 
-  // ユーザーにStripe Customer IDを保存
-  const user = await prisma.user.update({
+  // ユーザーにStripe Customer IDを保存（DB接続エラー時はリトライ）
+  const user = await withRetry(() => prisma.user.update({
     where: { id: userId },
     data: {
       stripeCustomerId: customerId,
     },
     select: { email: true, name: true },
-  })
+  }))
 
   // サブスクリプション情報を取得
   if (subscriptionId) {
@@ -208,8 +208,8 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     return
   }
 
-  // プランをフリーに戻す
-  await prisma.user.update({
+  // プランをフリーに戻す（DB接続エラー時はリトライ）
+  await withRetry(() => prisma.user.update({
     where: { id: user.id },
     data: {
       plan: 'FREE',
@@ -217,7 +217,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       stripePriceId: null,
       stripeCurrentPeriodEnd: null,
     },
-  })
+  }))
 
   // 解約通知
   sendEventNotification({
@@ -289,8 +289,8 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
     userPlan = 'FREE'
   }
 
-  // グローバルプランを更新
-  await prisma.user.update({
+  // グローバルプランを更新（DB接続エラー時はリトライ）
+  await withRetry(() => prisma.user.update({
     where: { id: userId },
     data: {
       plan: userPlan,
@@ -298,7 +298,7 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
       stripePriceId: priceId,
       stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
     },
-  })
+  }))
 
   // 統一課金: 全サービスを同じプランに更新
   const servicePlan = userPlan === 'BUNDLE' ? 'PRO' : userPlan

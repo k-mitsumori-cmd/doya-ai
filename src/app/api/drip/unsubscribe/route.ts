@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
+import { prisma, withRetry } from '@/lib/prisma'
 import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
@@ -52,35 +52,40 @@ export async function POST(request: NextRequest) {
 
     const { userId } = verifyAndDecodeToken(token)
 
-    const user = await prisma.user.findUnique({ where: { id: userId } })
+    const user = await withRetry(() => prisma.user.findUnique({ where: { id: userId } }))
     if (!user) {
       // ユーザー列挙攻撃防止: 存在しなくても成功を返す
       return NextResponse.json({ success: true })
     }
 
     // 既に配信停止済みかチェック（冪等性確保）
-    const existing = await prisma.dripUnsubscribe.findFirst({
+    const existing = await withRetry(() => prisma.dripUnsubscribe.findFirst({
       where: { userId },
-    })
+    }))
     if (!existing) {
-      await prisma.dripUnsubscribe.create({
+      await withRetry(() => prisma.dripUnsubscribe.create({
         data: {
           userId,
           reason: 'user_requested',
         },
-      })
+      }))
     }
 
     // アクティブなエンロールメントをすべてキャンセル
-    await prisma.dripEnrollment.updateMany({
+    await withRetry(() => prisma.dripEnrollment.updateMany({
       where: { userId, status: 'active' },
       data: { status: 'cancelled' },
-    })
+    }))
 
     return NextResponse.json({ success: true })
-  } catch {
-    // 不正トークンでも汎用エラーを返す
-    return NextResponse.json({ success: true })
+  } catch (e: any) {
+    // トークン検証エラー（不正トークン・期限切れ）→ セキュリティ上 success: true
+    if (e?.message?.includes('token') || e?.message?.includes('Token') || e?.message?.includes('Invalid')) {
+      return NextResponse.json({ success: true })
+    }
+    // DB接続エラー等 → 500を返してユーザーにリトライを促す
+    console.error('[Drip] Unsubscribe error:', e?.message)
+    return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 }
 

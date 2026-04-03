@@ -1,7 +1,7 @@
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
-import { prisma } from './prisma';
+import { prisma, withRetry } from './prisma';
 import { sendEventNotification } from './notifications';
 
 export const authOptions: NextAuthOptions = {
@@ -33,8 +33,8 @@ export const authOptions: NextAuthOptions = {
               userName: user.name,
             }).catch(() => {})
 
-            // ドリップ配信: 初回ログイン時のみ自動エンロール
-            enrollUserInDripSequences(user.id).catch((e) => {
+            // ドリップ配信: 初回ログイン時のみ自動エンロール（DB接続エラー時はリトライ）
+            withRetry(() => enrollUserInDripSequences(user.id)).catch((e) => {
               console.error('[Drip] Auto-enroll failed:', e)
             })
           } else {
