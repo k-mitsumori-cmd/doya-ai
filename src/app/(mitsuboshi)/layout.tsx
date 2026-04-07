@@ -29,17 +29,46 @@ const cormorant = Cormorant_Garamond({
   variable: '--font-mitsuboshi-en',
 })
 
+// 三ツ星アプリ独自のメタデータ。ルートレイアウトの doya-ai ブランドを完全に上書きし、
+// SNS シェア時にも 三ツ星 として認識されるようにする。
 export const metadata: Metadata = {
+  metadataBase: new URL('https://mitsuboshi.surisuta.jp'),
   title: {
-    default: `${MITSUBOSHI_BRAND.seriesName}`,
+    default: MITSUBOSHI_BRAND.seriesName,
     template: `%s | ${MITSUBOSHI_BRAND.seriesName}`,
   },
   description: MITSUBOSHI_BRAND.tagline,
+  applicationName: MITSUBOSHI_BRAND.seriesName,
+  alternates: {
+    canonical: '/',
+  },
   openGraph: {
+    type: 'website',
+    siteName: MITSUBOSHI_BRAND.seriesName,
     title: MITSUBOSHI_BRAND.seriesName,
     description: MITSUBOSHI_BRAND.tagline,
-    type: 'website',
+    url: 'https://mitsuboshi.surisuta.jp',
+    locale: 'ja_JP',
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: MITSUBOSHI_BRAND.seriesName,
+      },
+    ],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: MITSUBOSHI_BRAND.seriesName,
+    description: MITSUBOSHI_BRAND.tagline,
+    images: ['/opengraph-image'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  keywords: ['ナグサメ', '三ツ星アプリ', '慰め', '愚痴', 'AI', 'メンタルケア', 'コンパニオン'],
 }
 
 export const viewport: Viewport = {
