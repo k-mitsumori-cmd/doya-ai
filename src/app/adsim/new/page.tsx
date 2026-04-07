@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   ChevronLeft,
   Loader2,
@@ -104,9 +105,28 @@ export default function AdSimNewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F8FB]">
+    <div className="relative min-h-screen overflow-hidden bg-[#F8F8FB]">
+      {/* Animated background orbs */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <motion.div
+          className="absolute -left-32 top-20 h-96 w-96 rounded-full bg-[#3460FB] opacity-20 blur-3xl"
+          animate={{ x: [0, 100, -50, 0], y: [0, 80, -40, 0], scale: [1, 1.2, 0.9, 1] }}
+          transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="absolute -right-32 top-1/2 h-[450px] w-[450px] rounded-full bg-[#7096F8] opacity-20 blur-3xl"
+          animate={{ x: [0, -80, 60, 0], y: [0, 100, -50, 0], scale: [1, 0.9, 1.15, 1] }}
+          transition={{ duration: 28, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="absolute bottom-20 left-1/3 h-72 w-72 rounded-full bg-[#0017C1] opacity-15 blur-3xl"
+          animate={{ x: [0, 90, -60, 0], y: [0, -70, 50, 0] }}
+          transition={{ duration: 26, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      </div>
+
       {/* Top bar */}
-      <div className="border-b border-slate-200 bg-white">
+      <div className="relative z-10 border-b border-slate-200 bg-white/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
           <Link href="/adsim" className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900">
             <ChevronLeft className="h-4 w-4" />
@@ -124,24 +144,63 @@ export default function AdSimNewPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-3xl px-6 py-12">
+      <div className="relative z-10 mx-auto max-w-3xl px-6 py-12">
         {/* Hero */}
-        <div className="mb-10 text-center">
-          <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#D9E6FF] px-4 py-1.5 text-xs font-semibold text-[#0017C1]">
-            <Sparkles className="h-3 w-3" />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-10 text-center"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1, duration: 0.5 }}
+            className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#0017C1]/20 bg-[#D9E6FF] px-4 py-1.5 text-xs font-semibold text-[#0017C1] shadow-sm"
+          >
+            <motion.div
+              animate={{ rotate: [0, 15, -15, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              <Sparkles className="h-3 w-3" />
+            </motion.div>
             AI がマーケのプロとして全部考えます
-          </div>
-          <h1 className="mb-3 text-4xl font-bold text-slate-900 md:text-5xl">
-            LP と予算を入れるだけ。
-          </h1>
-          <p className="text-base text-slate-600">
-            業種・ターゲット・KPI・媒体配分・提案文10セクション・グラフ・シミュレーション — <br />
+          </motion.div>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="mb-3 text-4xl font-bold leading-tight text-slate-900 md:text-6xl"
+          >
+            LP と予算を<br className="md:hidden" />
+            <span className="bg-gradient-to-r from-[#0017C1] to-[#3460FB] bg-clip-text text-transparent">入れるだけ。</span>
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="text-base text-slate-600"
+          >
+            業種・ターゲット・KPI・媒体配分・提案文10セクション・グラフ・シミュレーション —<br />
             <strong className="text-[#0017C1]">全部 AI が判断して 1〜3分で完成</strong>します。
-          </p>
-        </div>
+          </motion.p>
+        </motion.div>
 
         {/* Form */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white/95 p-8 shadow-2xl shadow-[#0017C1]/5 backdrop-blur"
+        >
+          {/* Top accent line */}
+          <motion.div
+            className="absolute left-0 right-0 top-0 h-1 bg-gradient-to-r from-[#0017C1] via-[#3460FB] to-[#0017C1]"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.5, duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            style={{ transformOrigin: 'left' }}
+          />
           {/* LP URL */}
           <div className="mb-6">
             <label className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-700">
@@ -247,35 +306,70 @@ export default function AdSimNewPage() {
           )}
 
           {/* CTA */}
-          <button
+          <motion.button
             type="button"
             onClick={submit}
             disabled={submitting || !lpUrl || monthlyBudget <= 0}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#0017C1] px-6 py-4 text-base font-bold text-white shadow-lg shadow-[#0017C1]/30 transition hover:bg-[#000060] disabled:cursor-not-allowed disabled:opacity-50"
+            whileHover={{ scale: submitting ? 1 : 1.02, y: submitting ? 0 : -2 }}
+            whileTap={{ scale: submitting ? 1 : 0.98 }}
+            className="group relative flex w-full items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-r from-[#0017C1] via-[#3460FB] to-[#0017C1] bg-[length:200%_100%] px-6 py-5 text-base font-bold text-white shadow-2xl shadow-[#0017C1]/40 transition disabled:cursor-not-allowed disabled:opacity-50"
+            style={{ backgroundPosition: submitting ? '0% 50%' : '0% 50%' }}
           >
-            {submitting ? (
-              <>
-                <Loader2 className="h-5 w-5 animate-spin" />
-                AI が考えています...
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-5 w-5" />
-                AI に全部任せて生成する
-              </>
+            {/* Animated gradient sweep */}
+            {!submitting && (
+              <motion.span
+                className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                animate={{ x: ['-100%', '200%'] }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut', repeatDelay: 1.5 }}
+              />
             )}
-          </button>
+            <AnimatePresence mode="wait">
+              {submitting ? (
+                <motion.span
+                  key="loading"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="relative flex items-center gap-2"
+                >
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  AI が考えています...
+                </motion.span>
+              ) : (
+                <motion.span
+                  key="ready"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="relative flex items-center gap-2"
+                >
+                  <motion.div
+                    animate={{ rotate: [0, 15, -15, 0], scale: [1, 1.2, 1] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+                  >
+                    <Sparkles className="h-5 w-5" />
+                  </motion.div>
+                  AI に全部任せて生成する
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </motion.button>
           <p className="mt-3 text-center text-xs text-slate-500">
             生成には 1〜3分かかります（LP 解析 + Gemini 提案文10セクション）
           </p>
         </div>
 
         {/* 説明 */}
-        <div className="mt-8 grid gap-4 md:grid-cols-3">
+        <motion.div
+          className="mt-8 grid gap-4 md:grid-cols-3"
+          variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.12, delayChildren: 0.7 } } }}
+          initial="hidden"
+          animate="visible"
+        >
           <InfoCard num="01" title="LPを解析" desc="cheerioで本文を読み込み、Geminiが商材を理解" />
           <InfoCard num="02" title="戦略を立案" desc="シニアプランナーとして業種・媒体配分を判断" />
           <InfoCard num="03" title="資料を生成" desc="シミュレーション + 提案文10セクション + グラフ" />
-        </div>
+        </motion.div>
       </div>
     </div>
   )
@@ -318,10 +412,25 @@ function ProgressItem({
 
 function InfoCard({ num, title, desc }: { num: string; title: string; desc: string }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5">
-      <div className="mb-2 text-xs font-bold tracking-wider text-[#0017C1]">{num}</div>
-      <h3 className="mb-1 text-sm font-bold text-slate-900">{title}</h3>
-      <p className="text-xs leading-relaxed text-slate-600">{desc}</p>
-    </div>
+    <motion.div
+      variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white/80 p-5 backdrop-blur transition-shadow hover:shadow-xl hover:shadow-[#0017C1]/10"
+    >
+      <motion.div
+        className="absolute -top-8 -right-4 text-7xl font-black text-[#D9E6FF]/60"
+        initial={{ opacity: 0, rotate: -10 }}
+        whileInView={{ opacity: 1, rotate: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        {num}
+      </motion.div>
+      <div className="relative">
+        <div className="mb-2 text-xs font-bold tracking-wider text-[#0017C1]">{num}</div>
+        <h3 className="mb-1 text-sm font-bold text-slate-900">{title}</h3>
+        <p className="text-xs leading-relaxed text-slate-600">{desc}</p>
+      </div>
+    </motion.div>
   )
 }
