@@ -357,7 +357,7 @@ export default function AdSimNewPage() {
           <p className="mt-3 text-center text-xs text-slate-500">
             生成には 1〜3分かかります（LP 解析 + Gemini 提案文10セクション）
           </p>
-        </div>
+        </motion.div>
 
         {/* 説明 */}
         <motion.div
