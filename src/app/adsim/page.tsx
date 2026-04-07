@@ -98,7 +98,7 @@ export default function AdSimDashboardPage() {
   if (isSessionLoading || !isLoggedIn) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#0017C1]" />
       </div>
     )
   }
@@ -109,7 +109,7 @@ export default function AdSimDashboardPage() {
       <div className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600 shadow-lg shadow-indigo-200">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#0017C1] to-[#3460FB] shadow-lg shadow-[#0017C1]/20">
               <BarChart3 className="h-5 w-5 text-white" />
             </div>
             <div>
@@ -123,7 +123,7 @@ export default function AdSimDashboardPage() {
             </span>
             <Link
               href="/adsim/new"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-indigo-200 transition hover:bg-indigo-700"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#0017C1] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-[#0017C1]/20 transition hover:bg-[#000060]"
             >
               <Plus className="h-4 w-4" />
               新規提案
@@ -134,7 +134,7 @@ export default function AdSimDashboardPage() {
 
       <div className="mx-auto max-w-7xl px-6 py-8">
         {/* Hero */}
-        <div className="mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-blue-600 to-indigo-800 shadow-xl shadow-indigo-200">
+        <div className="mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-[#0017C1] via-[#3460FB] to-[#000060] shadow-xl shadow-[#0017C1]/20">
           <div className="relative px-8 py-10">
             <div className="absolute right-8 top-8 opacity-10">
               <BarChart3 className="h-40 w-40 text-white" />
@@ -142,18 +142,18 @@ export default function AdSimDashboardPage() {
             <div className="relative max-w-2xl">
               <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white backdrop-blur">
                 <Sparkles className="h-3 w-3" />
-                AI が提案資料を一発生成
+                LP と予算だけで AI が全部やる
               </div>
               <h2 className="mb-3 text-3xl font-bold text-white md:text-4xl">
-                広告提案を、<br className="md:hidden" />4〜8時間 → 10分に。
+                広告提案を、<br className="md:hidden" />4〜8時間 → 1分に。
               </h2>
-              <p className="mb-6 text-sm text-indigo-100 md:text-base">
-                数値シミュレーション・グラフ・提案テキスト10セクション・PDF/PPTX/Excel まで、入力1分で完成。
+              <p className="mb-6 text-sm text-[#D9E6FF] md:text-base">
+                LP と月額予算を入れるだけ。業種・ターゲット・KPI・媒体配分・提案文10セクション・PDF/PPTX/Excel まで AI が全部判断。
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link
                   href="/adsim/new"
-                  className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-indigo-700 shadow-lg transition hover:bg-indigo-50"
+                  className="inline-flex items-center gap-2 rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#0017C1] shadow-lg transition hover:bg-[#D9E6FF]"
                 >
                   <Plus className="h-4 w-4" />
                   新規提案を作成
@@ -231,7 +231,7 @@ export default function AdSimDashboardPage() {
               <h3 className="text-sm font-bold uppercase tracking-wider text-slate-500">最近のプロジェクト</h3>
               <Link
                 href="/adsim/history"
-                className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-700"
+                className="inline-flex items-center gap-1 text-xs font-medium text-[#0017C1] hover:text-[#000060]"
               >
                 すべて見る
                 <ArrowUpRight className="h-3 w-3" />
@@ -240,7 +240,7 @@ export default function AdSimDashboardPage() {
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
               {loading ? (
                 <div className="flex items-center justify-center py-16">
-                  <Loader2 className="h-6 w-6 animate-spin text-indigo-600" />
+                  <Loader2 className="h-6 w-6 animate-spin text-[#0017C1]" />
                 </div>
               ) : projects.length === 0 ? (
                 <div className="px-6 py-16 text-center">
@@ -249,7 +249,7 @@ export default function AdSimDashboardPage() {
                   <p className="mb-4 text-xs text-slate-500">最初の広告提案を作成しましょう</p>
                   <Link
                     href="/adsim/new"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-700"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#0017C1] px-4 py-2 text-xs font-semibold text-white hover:bg-[#000060]"
                   >
                     <Plus className="h-3 w-3" />
                     新規提案を作成
@@ -263,8 +263,8 @@ export default function AdSimDashboardPage() {
                         href={`/adsim/${p.id}`}
                         className="flex items-center gap-4 px-5 py-4 transition hover:bg-slate-50"
                       >
-                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-indigo-50">
-                          <BarChart3 className="h-5 w-5 text-indigo-600" />
+                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-[#D9E6FF]">
+                          <BarChart3 className="h-5 w-5 text-[#0017C1]" />
                         </div>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
@@ -319,7 +319,7 @@ function KpiCard({
   color: 'indigo' | 'emerald' | 'blue' | 'purple'
 }) {
   const colorMap = {
-    indigo: 'bg-indigo-50 text-indigo-600',
+    indigo: 'bg-[#D9E6FF] text-[#0017C1]',
     emerald: 'bg-emerald-50 text-emerald-600',
     blue: 'bg-blue-50 text-blue-600',
     purple: 'bg-purple-50 text-purple-600',
@@ -351,8 +351,8 @@ function FeatureCard({
   desc: string
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-indigo-200 hover:shadow-md">
-      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-blue-600">
+    <div className="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-[#C5D7FB] hover:shadow-md">
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-[#0017C1] to-[#3460FB]">
         <Icon className="h-5 w-5 text-white" />
       </div>
       <h4 className="mb-1 font-bold text-slate-900">{title}</h4>
