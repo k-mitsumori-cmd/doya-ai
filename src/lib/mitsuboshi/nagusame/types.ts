@@ -22,8 +22,10 @@ export interface Persona {
     | 'rational'
     | 'dialect'
     | 'fantasy'
-  /** アバターの絵文字（MVP。将来はイラスト差し替え予定） */
+  /** アバターの絵文字（画像読み込み失敗時のフォールバック表示） */
   avatar: string
+  /** アニメ調キャラクター画像のパス（public 配下） */
+  imageUrl?: string
   /** Claude system prompt 用のキャラクター指示 */
   systemPrompt: string
   /** Free プランで利用可能か */
@@ -47,6 +49,7 @@ export type NagusameStreamEvent =
       personaId: string
       personaName: string
       avatar: string
+      imageUrl?: string
       content: string
       index: number
     }

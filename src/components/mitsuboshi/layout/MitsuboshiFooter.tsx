@@ -26,10 +26,10 @@ export function MitsuboshiFooter() {
           ナグサメはAIで、専門家ではありません。つらい気持ちが続くときは専門機関にご相談ください。
         </p>
         <div className="flex flex-wrap justify-center gap-4 text-[11px]">
-          <Link href="/" className="hover:text-mitsuboshi-champagne">
+          <Link href="/nagusame" className="hover:text-mitsuboshi-champagne">
             ホーム
           </Link>
-          <Link href="/pricing" className="hover:text-mitsuboshi-champagne">
+          <Link href="/nagusame/pricing" className="hover:text-mitsuboshi-champagne">
             プラン
           </Link>
           <a href="mailto:support@surisuta.jp" className="hover:text-mitsuboshi-champagne">

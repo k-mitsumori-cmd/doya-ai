@@ -124,11 +124,13 @@ export async function POST(req: NextRequest) {
             personas,
             onReply: (reply) => {
               starsCount += 1
+              const persona = personas.find((p) => p.id === reply.personaId)
               safeEnqueue({
                 type: 'reply',
                 personaId: reply.personaId,
                 personaName: reply.personaName,
                 avatar: reply.avatar,
+                imageUrl: persona?.imageUrl,
                 content: reply.content,
                 index: reply.orderIndex,
               })

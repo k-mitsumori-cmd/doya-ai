@@ -8,23 +8,27 @@
  * 「話を続ける」ボタンで 1対1 チャットモードに入れる。
  */
 
+import { PersonaAvatar } from './PersonaAvatar'
+
 interface Props {
   avatar: string
+  imageUrl?: string
   personaName: string
   content: string
   /** 押すと 1対1 チャットモードに切り替える。指定がなければボタン非表示 */
   onContinue?: () => void
 }
 
-export function ReplyBubble({ avatar, personaName, content, onContinue }: Props) {
+export function ReplyBubble({
+  avatar,
+  imageUrl,
+  personaName,
+  content,
+  onContinue,
+}: Props) {
   return (
     <div className="flex items-start gap-3 animate-fade-in-up">
-      <div
-        aria-hidden
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-mitsuboshi-champagne/40 bg-mitsuboshi-indigo text-xl shadow-glow-champagne"
-      >
-        {avatar}
-      </div>
+      <PersonaAvatar imageUrl={imageUrl} fallbackEmoji={avatar} alt={personaName} size={48} />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <p className="text-[12px] tracking-wide text-mitsuboshi-champagne">
           {personaName}

@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { PersonaAvatar } from './PersonaAvatar'
 
 export interface ChatMessage {
   role: 'user' | 'assistant'
@@ -19,6 +20,7 @@ interface Props {
   personaId: string
   personaName: string
   avatar: string
+  imageUrl?: string
   /** 親が保持する会話履歴（fully controlled） */
   messages: ChatMessage[]
   onMessagesChange: (next: ChatMessage[]) => void
@@ -32,6 +34,7 @@ export function ChatView({
   personaId,
   personaName,
   avatar,
+  imageUrl,
   messages,
   onMessagesChange,
   onBack,
@@ -115,9 +118,12 @@ export function ChatView({
         >
           ←
         </button>
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-mitsuboshi-champagne/40 bg-mitsuboshi-indigo text-xl shadow-glow-champagne">
-          {avatar}
-        </div>
+        <PersonaAvatar
+          imageUrl={imageUrl}
+          fallbackEmoji={avatar}
+          alt={personaName}
+          size={44}
+        />
         <div className="flex flex-col leading-tight">
           <span className="text-[14px] text-mitsuboshi-moon">{personaName}</span>
           <span className="text-[10px] text-mitsuboshi-fog">1対1の会話</span>
@@ -141,12 +147,12 @@ export function ChatView({
           }
           return (
             <div key={i} className="flex items-start gap-3 animate-fade-in-up">
-              <div
-                aria-hidden
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-mitsuboshi-champagne/40 bg-mitsuboshi-indigo text-lg"
-              >
-                {avatar}
-              </div>
+              <PersonaAvatar
+                imageUrl={imageUrl}
+                fallbackEmoji={avatar}
+                alt={personaName}
+                size={36}
+              />
               <p className="max-w-[80%] whitespace-pre-wrap rounded-2xl rounded-tl-sm border border-mitsuboshi-twilight/80 bg-mitsuboshi-indigo/80 px-4 py-3 text-[14px] leading-[1.85] text-mitsuboshi-moon">
                 {m.content}
               </p>

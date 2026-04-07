@@ -83,7 +83,7 @@ export default function NagusamePricingPage() {
 
         <div className="flex justify-center">
           <Link
-            href="/"
+            href="/nagusame"
             className="text-[12px] text-mitsuboshi-mist underline-offset-4 hover:text-mitsuboshi-champagne hover:underline"
           >
             ホームへ戻る

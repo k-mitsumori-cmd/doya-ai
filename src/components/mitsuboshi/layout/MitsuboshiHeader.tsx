@@ -21,7 +21,7 @@ export function MitsuboshiHeader({ volume, productName, productSubtitle }: Props
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <div className="mx-auto flex w-full max-w-3xl items-center justify-between px-5 py-4">
-        <Link href="/" className="flex flex-col leading-tight">
+        <Link href="/nagusame" className="flex flex-col leading-tight">
           <span className="flex items-center gap-1 text-[11px] tracking-[0.22em] text-mitsuboshi-mist">
             <span className="inline-flex gap-0.5 text-mitsuboshi-champagne animate-star-twinkle">
               <span>☆</span>
@@ -40,10 +40,10 @@ export function MitsuboshiHeader({ volume, productName, productSubtitle }: Props
           ) : null}
         </Link>
         <nav className="flex items-center gap-4 text-[12px] text-mitsuboshi-mist">
-          <Link href="/" className="hover:text-mitsuboshi-champagne">
+          <Link href="/nagusame" className="hover:text-mitsuboshi-champagne">
             ホーム
           </Link>
-          <Link href="/pricing" className="hover:text-mitsuboshi-champagne">
+          <Link href="/nagusame/pricing" className="hover:text-mitsuboshi-champagne">
             PRO
           </Link>
         </nav>

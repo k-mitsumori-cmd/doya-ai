@@ -50,28 +50,43 @@ export function middleware(req: NextRequest) {
   // ===============================================
   // 三ツ星アプリ（toCシリーズ） — サブドメイン運用
   // ===============================================
+  // URL 設計:
+  //   mitsuboshi.surisuta.jp/             → /nagusame に redirect（Vol.01 への入口）
+  //   mitsuboshi.surisuta.jp/nagusame     → そのままサーブ
+  //   mitsuboshi.surisuta.jp/nagusame/*   → そのままサーブ
+  //   mitsuboshi.surisuta.jp/api/*        → そのままサーブ
+  //   mitsuboshi.surisuta.jp/その他       → /nagusame に redirect
+  //
+  // Vol.02 が出たら MITSUBOSHI_ALLOWED_PREFIXES に新しいパスを追加する。
   const mitsuboshiHosts = parseHosts(process.env.MITSUBOSHI_HOSTS)
   const isMitsuboshiHost =
     mitsuboshiHosts.length > 0 && matchHost(host, mitsuboshiHosts)
 
+  // mitsuboshi 配下で許可するアプリパスの prefix 一覧
+  const MITSUBOSHI_ALLOWED_PREFIXES = ['/nagusame']
+
   if (isMitsuboshiHost) {
     if (shouldSkip(pathname)) return NextResponse.next()
 
-    // すでに /nagusame 配下ならそのまま
-    if (pathname === '/nagusame' || pathname.startsWith('/nagusame/')) {
+    const isAllowedAppPath = MITSUBOSHI_ALLOWED_PREFIXES.some(
+      (p) => pathname === p || pathname.startsWith(`${p}/`)
+    )
+
+    if (isAllowedAppPath) {
       return NextResponse.next()
     }
 
-    // / → /nagusame, /pricing → /nagusame/pricing, /business → /nagusame/business
+    // それ以外（/, /about, /home 等）→ Vol.01 ナグサメへ redirect
     const url = req.nextUrl.clone()
-    url.pathname = pathname === '/' ? '/nagusame' : `/nagusame${pathname}`
-    return NextResponse.rewrite(url)
+    url.pathname = '/nagusame'
+    return NextResponse.redirect(url, 308)
   }
 
   // ===============================================
   // 主ドメイン側の /nagusame/* は三ツ星サブドメインへ恒久リダイレクト
   // - MITSUBOSHI_HOSTS が設定されていて、かつ現在が三ツ星ホストでない場合
   // - 旧パスからのSEO流入・ブックマークを正しい新URLへ集約する
+  // - パス構造はそのまま保持（/nagusame/pricing → mitsuboshi.../nagusame/pricing）
   // ===============================================
   if (
     mitsuboshiHosts.length > 0 &&
@@ -80,8 +95,7 @@ export function middleware(req: NextRequest) {
     (pathname === '/nagusame' || pathname.startsWith('/nagusame/'))
   ) {
     const target = mitsuboshiHosts[0]
-    const suffix = pathname === '/nagusame' ? '/' : pathname.slice('/nagusame'.length)
-    const redirectUrl = new URL(`https://${target}${suffix}`)
+    const redirectUrl = new URL(`https://${target}${pathname}`)
     redirectUrl.search = req.nextUrl.search
     return NextResponse.redirect(redirectUrl, 308)
   }

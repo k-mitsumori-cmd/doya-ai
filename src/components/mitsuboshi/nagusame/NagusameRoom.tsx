@@ -15,6 +15,7 @@ import { ReplyBubble } from './ReplyBubble'
 import { StarConstellation } from './StarConstellation'
 import { SafetyModal } from './SafetyModal'
 import { ChatView, type ChatMessage } from './ChatView'
+import { PersonaAvatar } from './PersonaAvatar'
 import { MITSUBOSHI_APPS, MITSUBOSHI_BRAND } from '@/lib/mitsuboshi/_shared/constants'
 import {
   DEFAULT_PERSONAS,
@@ -27,6 +28,7 @@ interface Reply {
   personaId: string
   personaName: string
   avatar: string
+  imageUrl?: string
   content: string
 }
 
@@ -55,13 +57,19 @@ export function NagusameRoom({ segment }: Props) {
     id: string
     name: string
     avatar: string
+    imageUrl?: string
   } | null>(null)
   // ペルソナID → 会話履歴 のマップ。戻る → 別キャラと話す → 戻る で履歴保持
   const [chatHistories, setChatHistories] = useState<Record<string, ChatMessage[]>>({})
 
   const enterChat = useCallback(
     (reply: Reply) => {
-      setChatPersona({ id: reply.personaId, name: reply.personaName, avatar: reply.avatar })
+      setChatPersona({
+        id: reply.personaId,
+        name: reply.personaName,
+        avatar: reply.avatar,
+        imageUrl: reply.imageUrl,
+      })
       setChatHistories((prev) => {
         if (prev[reply.personaId]) return prev
         // 初回は「ユーザーの最初の投稿」と「そのキャラの初回返答」をシード
@@ -223,6 +231,7 @@ export function NagusameRoom({ segment }: Props) {
                   personaId: String(evt.personaId),
                   personaName: String(evt.personaName),
                   avatar: String(evt.avatar || '☆'),
+                  imageUrl: evt.imageUrl ? String(evt.imageUrl) : undefined,
                   content: String(evt.content || ''),
                 },
               ])
@@ -276,7 +285,7 @@ export function NagusameRoom({ segment }: Props) {
 
   const shareToX = () => {
     const text = `${replies.length}人の星から、そっと慰めてもらえました。\n\n${MITSUBOSHI_BRAND.tagline}\n#ナグサメ #三ツ星アプリ`
-    const url = 'https://mitsuboshi.surisuta.jp/'
+    const url = 'https://mitsuboshi.surisuta.jp/nagusame'
     const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
       text
     )}&url=${encodeURIComponent(url)}`
@@ -296,6 +305,7 @@ export function NagusameRoom({ segment }: Props) {
             personaId={chatPersona.id}
             personaName={chatPersona.name}
             avatar={chatPersona.avatar}
+            imageUrl={chatPersona.imageUrl}
             messages={messages}
             onMessagesChange={(next) => updateChatHistory(chatPersona.id, next)}
             onBack={exitChat}
@@ -384,16 +394,17 @@ export function NagusameRoom({ segment }: Props) {
               </p>
               <div className="flex flex-wrap items-center justify-center gap-2">
                 {teaserPersonas.map((p) => (
-                  <div
-                    key={p.id}
-                    className="flex h-11 w-11 items-center justify-center rounded-full border border-mitsuboshi-champagne/40 bg-mitsuboshi-indigo text-xl shadow-glow-champagne"
-                    title={`${p.name}（${p.tagline}）`}
-                  >
-                    {p.avatar}
+                  <div key={p.id} title={`${p.name}（${p.tagline}）`}>
+                    <PersonaAvatar
+                      imageUrl={`/mitsuboshi/personas/${p.id}.jpg`}
+                      fallbackEmoji={p.avatar}
+                      alt={p.name}
+                      size={48}
+                    />
                   </div>
                 ))}
                 <div
-                  className="flex h-11 items-center justify-center rounded-full border border-dashed border-mitsuboshi-fog px-3 text-[11px] text-mitsuboshi-fog"
+                  className="flex h-12 items-center justify-center rounded-full border border-dashed border-mitsuboshi-fog px-3 text-[11px] text-mitsuboshi-fog"
                   title="PROで全員が応える"
                 >
                   +{allPersonaCount - teaserPersonas.length} PRO
@@ -429,6 +440,7 @@ export function NagusameRoom({ segment }: Props) {
                 <ReplyBubble
                   key={r.id}
                   avatar={r.avatar}
+                  imageUrl={r.imageUrl}
                   personaName={r.personaName}
                   content={r.content}
                   onContinue={phase === 'done' ? () => enterChat(r) : undefined}

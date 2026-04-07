@@ -47,7 +47,7 @@ export default function NagusameSegmentPage({ params }: Params) {
             それまでは、無印の『ナグサメ』がいつでもあなたの夜に寄り添います。
           </p>
           <Link
-            href="/"
+            href="/nagusame"
             className="rounded-full border border-mitsuboshi-champagne/70 bg-mitsuboshi-champagne/10 px-6 py-3 text-[14px] text-mitsuboshi-champagne hover:bg-mitsuboshi-champagne/20"
           >
             ナグサメ（無印）へ ☆
