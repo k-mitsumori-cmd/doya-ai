@@ -2,58 +2,110 @@ import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 
 /**
- * ドヤスライド を「別ドメイン」で公開したい場合のための optional middleware。
+ * Host ベース rewrite middleware
  *
- * - 既存サービスへの影響を避けるため、デフォルトでは何もしません。
- * - 環境変数 `SLIDE_HOSTS`（カンマ区切り）に host を登録した場合のみ有効化します。
- *   例: "slide.example.com,slide.vercel.app"
+ * 複数のサブドメインを同一 Next.js デプロイに相乗りさせるためのルータ。
+ * - ドヤスライドを別ドメインで公開する `SLIDE_HOSTS`
+ * - 三ツ星アプリ（toCシリーズ）を別サブドメインで公開する `MITSUBOSHI_HOSTS`
  *
- * 期待する運用:
- * - 同一デプロイに複数ドメインを割り当て
- * - スライド専用ドメインでは / を /slide に、/create を /slide/create に rewrite
+ * どちらも env 未設定なら完全 no-op。既存サービスへの影響を避ける。
+ *
+ * 想定運用:
+ * - MITSUBOSHI_HOSTS="mitsuboshi.surisuta.jp"
+ *   → mitsuboshi.surisuta.jp/ を /nagusame に
+ *   → mitsuboshi.surisuta.jp/pricing を /nagusame/pricing に
+ *   → mitsuboshi.surisuta.jp/business を /nagusame/business に rewrite
  */
-export function middleware(req: NextRequest) {
-  const host = (req.headers.get('host') || '').toLowerCase()
-  const configured = (process.env.SLIDE_HOSTS || '')
+
+const SHARED_SKIP_PREFIXES = [
+  '/_next',
+  '/api',
+  '/favicon',
+  '/icon',
+  '/apple-icon',
+  '/robots',
+  '/sitemap',
+  '/site.webmanifest',
+]
+
+function shouldSkip(pathname: string): boolean {
+  return SHARED_SKIP_PREFIXES.some((p) => pathname.startsWith(p))
+}
+
+function parseHosts(envValue: string | undefined): string[] {
+  return (envValue || '')
     .split(',')
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean)
+}
 
-  // 未設定なら完全に無効（既存サービスに影響させない）
-  if (configured.length === 0) return NextResponse.next()
+function matchHost(host: string, configured: string[]): boolean {
+  return configured.some((h) => host === h || host.endsWith(`.${h}`))
+}
 
-  const enabled = configured.some((h) => host === h || host.endsWith(`.${h}`))
-  if (!enabled) return NextResponse.next()
-
+export function middleware(req: NextRequest) {
+  const host = (req.headers.get('host') || '').toLowerCase()
   const { pathname } = req.nextUrl
 
-  // Next.js内部 / 静的 / API は触らない
+  // ===============================================
+  // 三ツ星アプリ（toCシリーズ） — サブドメイン運用
+  // ===============================================
+  const mitsuboshiHosts = parseHosts(process.env.MITSUBOSHI_HOSTS)
+  const isMitsuboshiHost =
+    mitsuboshiHosts.length > 0 && matchHost(host, mitsuboshiHosts)
+
+  if (isMitsuboshiHost) {
+    if (shouldSkip(pathname)) return NextResponse.next()
+
+    // すでに /nagusame 配下ならそのまま
+    if (pathname === '/nagusame' || pathname.startsWith('/nagusame/')) {
+      return NextResponse.next()
+    }
+
+    // / → /nagusame, /pricing → /nagusame/pricing, /business → /nagusame/business
+    const url = req.nextUrl.clone()
+    url.pathname = pathname === '/' ? '/nagusame' : `/nagusame${pathname}`
+    return NextResponse.rewrite(url)
+  }
+
+  // ===============================================
+  // 主ドメイン側の /nagusame/* は三ツ星サブドメインへ恒久リダイレクト
+  // - MITSUBOSHI_HOSTS が設定されていて、かつ現在が三ツ星ホストでない場合
+  // - 旧パスからのSEO流入・ブックマークを正しい新URLへ集約する
+  // ===============================================
   if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
-    pathname.startsWith('/favicon') ||
-    pathname.startsWith('/icon') ||
-    pathname.startsWith('/apple-icon') ||
-    pathname.startsWith('/robots') ||
-    pathname.startsWith('/sitemap') ||
-    pathname.startsWith('/site.webmanifest')
+    mitsuboshiHosts.length > 0 &&
+    !isMitsuboshiHost &&
+    !shouldSkip(pathname) &&
+    (pathname === '/nagusame' || pathname.startsWith('/nagusame/'))
   ) {
-    return NextResponse.next()
+    const target = mitsuboshiHosts[0]
+    const suffix = pathname === '/nagusame' ? '/' : pathname.slice('/nagusame'.length)
+    const redirectUrl = new URL(`https://${target}${suffix}`)
+    redirectUrl.search = req.nextUrl.search
+    return NextResponse.redirect(redirectUrl, 308)
   }
 
-  // すでに /slide 配下ならそのまま
-  if (pathname === '/slide' || pathname.startsWith('/slide/')) {
-    return NextResponse.next()
+  // ===============================================
+  // ドヤスライド — 別ドメイン運用
+  // ===============================================
+  const slideHosts = parseHosts(process.env.SLIDE_HOSTS)
+  if (slideHosts.length > 0 && matchHost(host, slideHosts)) {
+    if (shouldSkip(pathname)) return NextResponse.next()
+
+    if (pathname === '/slide' || pathname.startsWith('/slide/')) {
+      return NextResponse.next()
+    }
+
+    const url = req.nextUrl.clone()
+    url.pathname = pathname === '/' ? '/slide' : `/slide${pathname}`
+    return NextResponse.rewrite(url)
   }
 
-  // / -> /slide, /create -> /slide/create など
-  const url = req.nextUrl.clone()
-  url.pathname = pathname === '/' ? '/slide' : `/slide${pathname}`
-  return NextResponse.rewrite(url)
+  // どのホストにもマッチしなければそのまま
+  return NextResponse.next()
 }
 
 export const config = {
   matcher: '/:path*',
 }
-
-

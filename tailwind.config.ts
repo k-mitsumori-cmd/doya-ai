@@ -28,10 +28,32 @@ const config: Config = {
         },
         // Border
         border: 'hsl(var(--border, 240 3.7% 15.9%))',
+        // 三ツ星アプリシリーズ（toCブランド、ドヤAIとは独立）
+        mitsuboshi: {
+          midnight: '#0B0E24',
+          indigo: '#161B3A',
+          twilight: '#232851',
+          champagne: '#E8C766',
+          'champagne-light': '#F5E5B8',
+          platinum: '#D4D8F0',
+          moon: '#F5F3E8',
+          mist: '#9098B8',
+          fog: '#4A5070',
+          sakura: '#E8A0BF',
+        },
       },
       fontFamily: {
         sans: ['Inter', 'Noto Sans JP', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
         display: ['Inter', 'Noto Sans JP', 'sans-serif'],
+        mitsuboshi: [
+          'var(--font-mitsuboshi-en)',
+          'var(--font-mitsuboshi-jp)',
+          '"Hiragino Mincho ProN"',
+          '"YuMincho"',
+          '"Noto Serif JP"',
+          '"Noto Sans JP"',
+          'serif',
+        ],
       },
       fontSize: {
         'display-lg': ['4.5rem', { lineHeight: '1.1', letterSpacing: '-0.02em' }],
@@ -54,6 +76,8 @@ const config: Config = {
         'glow-pink': '0 0 40px rgba(236, 72, 153, 0.3)',
         'glow-cyan': '0 0 20px rgba(5, 183, 214, 0.3)',
         'glow-cyan-lg': '0 0 40px -10px rgba(5, 183, 214, 0.3)',
+        'glow-champagne': '0 0 24px rgba(232, 199, 102, 0.45)',
+        'glow-champagne-lg': '0 0 48px rgba(232, 199, 102, 0.35)',
       },
       animation: {
         'fade-in': 'fadeIn 0.5s ease-out forwards',
@@ -65,6 +89,8 @@ const config: Config = {
         'pulse-glow': 'pulseGlow 2s ease-in-out infinite',
         'shimmer': 'shimmer 2s infinite',
         'spin-slow': 'spin 8s linear infinite',
+        'star-twinkle': 'starTwinkle 4s ease-in-out infinite',
+        'star-ignite': 'starIgnite 0.9s ease-out forwards',
       },
       keyframes: {
         fadeIn: {
@@ -98,6 +124,15 @@ const config: Config = {
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
+        },
+        starTwinkle: {
+          '0%, 100%': { opacity: '0.85', filter: 'drop-shadow(0 0 4px rgba(232,199,102,0.5))' },
+          '50%': { opacity: '1', filter: 'drop-shadow(0 0 12px rgba(232,199,102,0.9))' },
+        },
+        starIgnite: {
+          '0%': { opacity: '0', transform: 'scale(0.6)', filter: 'drop-shadow(0 0 0 rgba(232,199,102,0))' },
+          '60%': { opacity: '1', transform: 'scale(1.25)', filter: 'drop-shadow(0 0 18px rgba(232,199,102,0.9))' },
+          '100%': { opacity: '1', transform: 'scale(1)', filter: 'drop-shadow(0 0 8px rgba(232,199,102,0.6))' },
         },
         progressGrow: {
           '0%': { width: '5%' },

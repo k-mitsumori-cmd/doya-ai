@@ -112,6 +112,13 @@ model User {
   // ドヤインタビューAI-X
   interviewxProjects InterviewXProject[]
 
+  // ドヤ広告シミュレーションAI
+  adSimProjects      AdSimProject[]
+
+  // 三ツ星アプリ Vol.01 ナグサメ（toCシリーズ、ドヤAIとは独立）
+  mitsuboshiNagusamePosts         MitsuboshiNagusamePost[]
+  mitsuboshiNagusameSubscription  MitsuboshiNagusameSubscription?
+
   // ドリップマーケティング
   dripEnrollments  DripEnrollment[]
   dripEmailLogs    DripEmailLog[]
@@ -1885,4 +1892,113 @@ model DripSetting {
   value Json
 
   @@map("drip_settings")
+}
+
+// ============================================
+// ドヤ広告シミュレーションAI
+// ============================================
+
+model AdSimProject {
+  id             String   @id @default(cuid())
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestId        String?
+
+  // プロジェクト情報
+  name           String
+  status         String   @default("draft") // draft | generating | completed | error
+
+  // Step 1: クライアント情報
+  clientName     String
+  industry       String
+  productName    String
+  lpUrl          String?
+  targetAudience Json?    // { age, gender, region, interests }
+
+  // Step 2: 提案目的
+  goals          String[] @default([])
+  periodMonths   Int      @default(3)
+  startMonth     String?  // YYYY-MM
+
+  // Step 3: 予算・KPI
+  monthlyBudget  Int      // 円
+  targetCv       Int?
+  targetCpa      Int?
+  targetRoas     Float?
+
+  // Step 4: 媒体配分
+  mediaAllocation Json    // { google: 40, meta: 30, line: 30 }
+
+  // Step 5: 体裁
+  proposerName   String?
+  proposerEmail  String?
+  templateId     String   @default("simple")
+
+  // 生成結果
+  simulationData Json?    // 媒体別×月次の数値
+  proposalText   Json?    // セクション別のテキスト
+  chartData      Json?    // グラフ用整形済みデータ
+
+  // 出力ファイル
+  pptxUrl        String?
+  pdfUrl         String?
+  excelUrl       String?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([guestId])
+  @@map("ad_sim_projects")
+}
+
+// ============================================
+// 三ツ星アプリ Vol.01 ナグサメ
+// ============================================
+// toCブランド「三ツ星アプリ」シリーズの第一弾。
+// ドヤAIのサービス一覧には登録せず、独立導線で運用する。
+// Vol.02以降もこのセクションにモデルを並べていく。
+
+model MitsuboshiNagusamePost {
+  id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestId       String?                              // 匿名ユーザー識別（cookie）
+  segment       String   @default("default")         // default | business | student | ...
+  content       String   @db.Text                    // ユーザー投稿（愚痴）
+  starsLit      Int      @default(0)                 // 灯った星数 = 返信されたキャラ数
+  safetyFlagged Boolean  @default(false)             // 危機ワード検知フラグ
+  createdAt     DateTime @default(now())
+  replies       MitsuboshiNagusameReply[]
+
+  @@index([userId, segment, createdAt])
+  @@index([guestId, createdAt])
+  @@map("mitsuboshi_nagusame_posts")
+}
+
+model MitsuboshiNagusameReply {
+  id          String                  @id @default(cuid())
+  postId      String
+  post        MitsuboshiNagusamePost  @relation(fields: [postId], references: [id], onDelete: Cascade)
+  personaId   String                                  // personas/*.ts の id
+  personaName String
+  content     String                  @db.Text
+  createdAt   DateTime                @default(now())
+
+  @@index([postId])
+  @@map("mitsuboshi_nagusame_replies")
+}
+
+model MitsuboshiNagusameSubscription {
+  id                String    @id @default(cuid())
+  userId            String    @unique
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan              String    @default("free")       // free | pro
+  stripeCustomerId  String?
+  stripeSubId       String?   @unique
+  currentPeriodEnd  DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@map("mitsuboshi_nagusame_subscriptions")
 }
