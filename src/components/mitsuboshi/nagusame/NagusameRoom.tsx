@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ReplyBubble } from './ReplyBubble'
 import { StarConstellation } from './StarConstellation'
 import { SafetyModal } from './SafetyModal'
+import { ChatView, type ChatMessage } from './ChatView'
 import { MITSUBOSHI_APPS, MITSUBOSHI_BRAND } from '@/lib/mitsuboshi/_shared/constants'
 import {
   DEFAULT_PERSONAS,
@@ -48,6 +49,45 @@ export function NagusameRoom({ segment }: Props) {
   const submittedRef = useRef<string>('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const completionFiredRef = useRef(false)
+
+  // チャットモード（1対1継続会話）
+  const [chatPersona, setChatPersona] = useState<{
+    id: string
+    name: string
+    avatar: string
+  } | null>(null)
+  // ペルソナID → 会話履歴 のマップ。戻る → 別キャラと話す → 戻る で履歴保持
+  const [chatHistories, setChatHistories] = useState<Record<string, ChatMessage[]>>({})
+
+  const enterChat = useCallback(
+    (reply: Reply) => {
+      setChatPersona({ id: reply.personaId, name: reply.personaName, avatar: reply.avatar })
+      setChatHistories((prev) => {
+        if (prev[reply.personaId]) return prev
+        // 初回は「ユーザーの最初の投稿」と「そのキャラの初回返答」をシード
+        return {
+          ...prev,
+          [reply.personaId]: [
+            { role: 'user', content: submittedRef.current },
+            { role: 'assistant', content: reply.content },
+          ],
+        }
+      })
+    },
+    []
+  )
+
+  const exitChat = useCallback(() => {
+    setChatPersona(null)
+  }, [])
+
+  // ChatView から会話履歴を更新するためのコールバック
+  const updateChatHistory = useCallback(
+    (personaId: string, messages: ChatMessage[]) => {
+      setChatHistories((prev) => ({ ...prev, [personaId]: messages }))
+    },
+    []
+  )
 
   const currentApp = MITSUBOSHI_APPS[0]
   const teaserPersonas = useMemo(() => getFreePersonas(), [])
@@ -230,6 +270,8 @@ export function NagusameRoom({ segment }: Props) {
     setErrorMsg(null)
     setLimitMsg(null)
     completionFiredRef.current = false
+    setChatHistories({})
+    setChatPersona(null)
   }
 
   const shareToX = () => {
@@ -243,6 +285,30 @@ export function NagusameRoom({ segment }: Props) {
 
   const charCount = content.length
   const charCountPercent = Math.min(100, Math.round((charCount / MAX_LEN) * 100))
+
+  // チャットモード中はチャットビューだけを表示する（投稿欄や全員返信は隠す）
+  if (chatPersona) {
+    const messages = chatHistories[chatPersona.id] || []
+    return (
+      <>
+        <section className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-6 px-5 py-8">
+          <ChatView
+            personaId={chatPersona.id}
+            personaName={chatPersona.name}
+            avatar={chatPersona.avatar}
+            messages={messages}
+            onMessagesChange={(next) => updateChatHistory(chatPersona.id, next)}
+            onBack={exitChat}
+            onSafetyEscalation={() => setSafetyOpen(true)}
+          />
+          <p className="text-center text-[10px] text-mitsuboshi-fog">
+            {currentApp.name}はAIで、専門家ではありません。つらい気持ちが続くときは専門機関にご相談ください。
+          </p>
+        </section>
+        <SafetyModal open={safetyOpen} onClose={() => setSafetyOpen(false)} />
+      </>
+    )
+  }
 
   return (
     <>
@@ -365,6 +431,7 @@ export function NagusameRoom({ segment }: Props) {
                   avatar={r.avatar}
                   personaName={r.personaName}
                   content={r.content}
+                  onContinue={phase === 'done' ? () => enterChat(r) : undefined}
                 />
               ))}
               {phase === 'streaming' && replies.length < expected ? (

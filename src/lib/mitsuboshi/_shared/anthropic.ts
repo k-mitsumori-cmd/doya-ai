@@ -63,3 +63,59 @@ export async function callClaudeMessages(
     outputTokens: data.usage?.output_tokens || 0,
   }
 }
+
+/** チャット用: 会話履歴を含むメッセージ配列 */
+export interface ClaudeChatMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+export interface ClaudeChatRequest {
+  systemPrompt: string
+  messages: ClaudeChatMessage[]
+  model?: string
+  maxTokens?: number
+  temperature?: number
+}
+
+/**
+ * Anthropic Messages API を会話履歴付きで呼ぶ。
+ * チャット継続用。最新のユーザーメッセージは messages 配列の末尾。
+ */
+export async function callClaudeChat(
+  req: ClaudeChatRequest
+): Promise<ClaudeMessagesResult> {
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY が設定されていません')
+  }
+
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: req.model || MITSUBOSHI_CLAUDE_MODEL,
+      max_tokens: req.maxTokens ?? 300,
+      temperature: req.temperature ?? 0.9,
+      system: req.systemPrompt,
+      messages: req.messages,
+    }),
+  })
+
+  if (!response.ok) {
+    const errorBody = await response.text()
+    throw new Error(`Claude API エラー (${response.status}): ${errorBody}`)
+  }
+
+  const data = await response.json()
+  const text: string = data.content?.[0]?.text || ''
+  return {
+    text,
+    inputTokens: data.usage?.input_tokens || 0,
+    outputTokens: data.usage?.output_tokens || 0,
+  }
+}
