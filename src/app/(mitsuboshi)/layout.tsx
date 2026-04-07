@@ -29,10 +29,17 @@ const cormorant = Cormorant_Garamond({
   variable: '--font-mitsuboshi-en',
 })
 
+// metadataBase はサブドメインが立った後は mitsuboshi.surisuta.jp に、
+// それまでは現行の主ドメインに向ける。これで SNS スクレイパが OG画像を取れる。
+const PRIMARY_HOST =
+  process.env.MITSUBOSHI_HOSTS?.split(',')[0]?.trim() ||
+  process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, '') ||
+  'doya-ai.surisuta.jp'
+
 // 三ツ星アプリ独自のメタデータ。ルートレイアウトの doya-ai ブランドを完全に上書きし、
 // SNS シェア時にも 三ツ星 として認識されるようにする。
 export const metadata: Metadata = {
-  metadataBase: new URL('https://mitsuboshi.surisuta.jp'),
+  metadataBase: new URL(`https://${PRIMARY_HOST}`),
   title: {
     default: MITSUBOSHI_BRAND.seriesName,
     template: `%s | ${MITSUBOSHI_BRAND.seriesName}`,
@@ -47,7 +54,7 @@ export const metadata: Metadata = {
     siteName: MITSUBOSHI_BRAND.seriesName,
     title: MITSUBOSHI_BRAND.seriesName,
     description: MITSUBOSHI_BRAND.tagline,
-    url: 'https://mitsuboshi.surisuta.jp',
+    url: `https://${PRIMARY_HOST}`,
     locale: 'ja_JP',
     images: [
       {
