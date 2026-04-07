@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
+  BarChart3,
   ChevronUp,
   ChevronDown,
   ExternalLink,
@@ -35,6 +36,7 @@ const SERVICE_ICON_MAP: Record<string, { icon: LucideIcon; iconBg: string }> = {
   copy:      { icon: PenLine,  iconBg: 'bg-gradient-to-br from-amber-500 to-orange-500' },
   movie:     { icon: Film,     iconBg: 'bg-gradient-to-br from-rose-500 to-pink-500' },
   interviewx: { icon: Send,    iconBg: 'bg-gradient-to-br from-indigo-500 to-violet-500' },
+  adsim:     { icon: BarChart3, iconBg: 'bg-gradient-to-br from-indigo-500 to-blue-600' },
 }
 
 type ToolSwitcherMenuProps = {

@@ -158,6 +158,21 @@ export const STRIPE_PRICE_IDS = {
       yearly: process.env.STRIPE_PRICE_MOVIE_ENTERPRISE_YEARLY || BANNER_ENTERPRISE_YEARLY,
     },
   },
+  // ドヤ広告シミュレーションAI（統一課金: ドヤバナーAIと同じ価格ID）
+  adsim: {
+    light: {
+      monthly: process.env.STRIPE_PRICE_ADSIM_LIGHT_MONTHLY || BANNER_LIGHT_MONTHLY,
+      yearly: process.env.STRIPE_PRICE_ADSIM_LIGHT_YEARLY || BANNER_LIGHT_YEARLY,
+    },
+    pro: {
+      monthly: process.env.STRIPE_PRICE_ADSIM_PRO_MONTHLY || BANNER_PRO_MONTHLY,
+      yearly: process.env.STRIPE_PRICE_ADSIM_PRO_YEARLY || BANNER_PRO_YEARLY,
+    },
+    enterprise: {
+      monthly: process.env.STRIPE_PRICE_ADSIM_ENTERPRISE_MONTHLY || BANNER_ENTERPRISE_MONTHLY,
+      yearly: process.env.STRIPE_PRICE_ADSIM_ENTERPRISE_YEARLY || BANNER_ENTERPRISE_YEARLY,
+    },
+  },
   // セットプラン
   bundle: {
     monthly: process.env.STRIPE_PRICE_BUNDLE_MONTHLY || 'price_bundle_monthly',
@@ -172,13 +187,14 @@ export const ALL_SERVICE_IDS = [
   'banner', 'seo', 'interview', 'persona', 'kantan',
   'copy', 'voice', 'movie', 'lp', 'opening',
   'shindan', 'tenkai', 'interviewx', 'logo', 'video', 'presentation',
+  'adsim',
 ] as const
 
 // ========================================
 // 価格ID ↔ プランID 変換（厳密マッピング）
 // ========================================
-export type PlanId = 'seo-light' | 'seo-pro' | 'seo-enterprise' | 'banner-light' | 'banner-basic' | 'banner-pro' | 'banner-enterprise' | 'interview-light' | 'interview-pro' | 'interview-enterprise' | 'copy-light' | 'copy-pro' | 'copy-enterprise' | 'lp-light' | 'lp-pro' | 'lp-enterprise' | 'voice-light' | 'voice-pro' | 'voice-enterprise' | 'movie-light' | 'movie-pro' | 'movie-enterprise' | 'bundle'
-export type ServiceId = 'seo' | 'banner' | 'interview' | 'copy' | 'lp' | 'voice' | 'movie' | 'bundle'
+export type PlanId = 'seo-light' | 'seo-pro' | 'seo-enterprise' | 'banner-light' | 'banner-basic' | 'banner-pro' | 'banner-enterprise' | 'interview-light' | 'interview-pro' | 'interview-enterprise' | 'copy-light' | 'copy-pro' | 'copy-enterprise' | 'lp-light' | 'lp-pro' | 'lp-enterprise' | 'voice-light' | 'voice-pro' | 'voice-enterprise' | 'movie-light' | 'movie-pro' | 'movie-enterprise' | 'adsim-light' | 'adsim-pro' | 'adsim-enterprise' | 'bundle'
+export type ServiceId = 'seo' | 'banner' | 'interview' | 'copy' | 'lp' | 'voice' | 'movie' | 'adsim' | 'bundle'
 
 export function getServiceIdFromPlanId(planId: PlanId): ServiceId {
   return (planId.split('-')[0] as ServiceId) || 'bundle'
@@ -209,6 +225,9 @@ export function getPlanIdFromStripePriceId(priceId: string | null | undefined): 
     ['movie-light', STRIPE_PRICE_IDS.movie.light],
     ['movie-pro', STRIPE_PRICE_IDS.movie.pro],
     ['movie-enterprise', STRIPE_PRICE_IDS.movie.enterprise],
+    ['adsim-light', STRIPE_PRICE_IDS.adsim.light],
+    ['adsim-pro', STRIPE_PRICE_IDS.adsim.pro],
+    ['adsim-enterprise', STRIPE_PRICE_IDS.adsim.enterprise],
     ['bundle', STRIPE_PRICE_IDS.bundle],
   ]
   for (const [planId, prices] of entries) {

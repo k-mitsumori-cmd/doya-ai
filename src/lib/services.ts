@@ -1006,6 +1006,68 @@ export const SERVICES: Service[] = [
     isNew: true,
     badge: 'NEW',
   },
+
+  // ----------------------------------------
+  // ドヤ広告シミュレーションAI（広告提案資料 自動生成）
+  // ----------------------------------------
+  {
+    id: 'adsim',
+    name: 'ドヤ広告シミュレーションAI',
+    shortName: '広告シミュ',
+    description: '広告提案資料をAIが一発生成',
+    longDescription:
+      'クライアント情報・予算・媒体配分を入力するだけで、媒体別×月次のシミュレーション数値、提案テキスト、グラフ、提案スライド（PPTX/PDF）を自動生成。広告代理店・運用者の提案工数を4〜8時間 → 10分に短縮。',
+    icon: '📊',
+    color: 'indigo',
+    gradient: 'from-indigo-500 to-blue-600',
+    bgGradient: 'from-indigo-50 to-blue-50',
+    href: '/adsim',
+    dashboardHref: '/adsim',
+    pricingHref: '/adsim/pricing',
+    guideHref: '/adsim/guide',
+    features: [
+      '媒体別×月次の数値シミュレーション',
+      '提案テキスト10セクション自動生成',
+      'Recharts グラフ5種（予算配分・CV推移・ファネル等）',
+      'PDF / PPTX / Excel 出力',
+      '6媒体対応（Google / Meta / X / LINE / TikTok / Yahoo!）',
+      '業界平均ベンチマーク自動補完',
+    ],
+    useCases: [
+      '広告提案資料の作成に毎回4〜8時間かかっている',
+      'Excelでの数値シミュレーションが手間',
+      '業界平均値を毎回調べている',
+      '媒体別のクリエイティブ方針を考えるのが面倒',
+    ],
+    pricing: {
+      free: {
+        name: '無料プラン',
+        limit: '月3プロジェクトまで',
+        dailyLimit: 0,
+        price: 0,
+      },
+      pro: {
+        name: 'プロプラン',
+        limit: '無制限・PPTX出力',
+        dailyLimit: -1,
+        price: 9980,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_ADSIM_PRO_PRICE_ID,
+      },
+      enterprise: {
+        name: 'エンタープライズ',
+        limit: '複数ブランド・チーム共有',
+        dailyLimit: -1,
+        price: 49800,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_ADSIM_ENTERPRISE_PRICE_ID,
+      },
+    },
+    status: 'coming_soon',
+    category: 'other',
+    order: 8,
+    requiresAuth: true,
+    isNew: true,
+    badge: 'NEW',
+  },
 ]
 
 // ============================================
