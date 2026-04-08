@@ -14,9 +14,9 @@ const PLANS = [
       { text: 'AI 数値シミュレーション', ok: true },
       { text: '提案文10セクション 自動生成', ok: true },
       { text: 'PDF 出力（ウォーターマーク付き）', ok: true },
-      { text: 'NanoBanana バナー生成 1日2回まで', ok: true },
+      { text: 'NanoBanana バナー生成 月3回まで（9枚）', ok: true },
       { text: 'バナー画像のダウンロード', ok: false },
-      { text: 'チャットで数値編集 1日5回まで', ok: true },
+      { text: 'チャットで数値編集 月20回まで', ok: true },
       { text: 'PPTX / Excel 出力', ok: false },
     ],
     cta: '無料で始める',
@@ -31,13 +31,13 @@ const PLANS = [
     color: 'blue',
     description: '個人運用者・小規模代理店向け',
     features: [
-      { text: '広告提案 月10プロジェクトまで', ok: true },
+      { text: '広告提案 月15プロジェクトまで', ok: true },
       { text: 'AI 数値シミュレーション', ok: true },
       { text: '提案文10セクション 自動生成', ok: true },
       { text: 'PDF / PPTX / Excel 全形式出力', ok: true },
-      { text: 'NanoBanana バナー生成 1日10回まで', ok: true },
+      { text: 'NanoBanana バナー生成 月10回まで（30枚）', ok: true },
       { text: 'バナー画像 ダウンロード可', ok: true },
-      { text: 'チャットで数値編集 1日30回まで', ok: true },
+      { text: 'チャットで数値編集 月100回まで', ok: true },
       { text: 'ロゴ差し替え', ok: true },
     ],
     cta: 'ライトプランを選ぶ',
@@ -52,14 +52,14 @@ const PLANS = [
     color: 'indigo',
     description: '本格運用したい代理店・運用者向け',
     features: [
-      { text: '広告提案 無制限', ok: true },
-      { text: '全機能フル解放', ok: true },
+      { text: '広告提案 月100プロジェクトまで', ok: true },
+      { text: 'AI 数値シミュレーション', ok: true },
+      { text: '提案文10セクション 自動生成', ok: true },
       { text: 'PDF / PPTX / Excel 全形式出力', ok: true },
-      { text: 'NanoBanana バナー生成 無制限', ok: true },
-      { text: 'バナー画像 ダウンロード無制限', ok: true },
-      { text: 'チャットで数値編集 無制限', ok: true },
+      { text: 'NanoBanana バナー生成 月30回まで（90枚）', ok: true },
+      { text: 'バナー画像 ダウンロード可', ok: true },
+      { text: 'チャットで数値編集 月500回まで', ok: true },
       { text: '優先サポート', ok: true },
-      { text: '全 6 媒体対応', ok: true },
     ],
     cta: 'プロプランを選ぶ',
     href: '/adsim/new',
@@ -73,12 +73,12 @@ const PLANS = [
     color: 'slate',
     description: '法人・チーム利用向け',
     features: [
-      { text: 'Pro のすべての機能', ok: true },
+      { text: '広告提案 月500プロジェクトまで', ok: true },
+      { text: 'NanoBanana バナー生成 月150回まで（450枚）', ok: true },
+      { text: 'チャットで数値編集 月3,000回まで', ok: true },
       { text: '複数ブランド管理', ok: true },
       { text: 'チーム共有・コメント', ok: true },
-      { text: 'Google Ads / Meta Marketing API 連携 (近日)', ok: true },
-      { text: '専任サポート', ok: true },
-      { text: 'SLA 保証', ok: true },
+      { text: '専任サポート + SLA 保証', ok: true },
       { text: 'カスタム業界ベンチマーク対応', ok: true },
       { text: 'API 提供 (近日)', ok: true },
     ],
@@ -179,15 +179,21 @@ export default function AdSimPricingPage() {
           </h3>
           <dl className="space-y-3 text-sm">
             <div>
+              <dt className="font-black text-slate-900">Q. ドヤAI の他サービスを契約していれば、ドヤ広告シミュもそのまま使えますか？</dt>
+              <dd className="mt-1 font-bold text-slate-600">
+                A. はい。ドヤAI は <strong>1アカウント・1契約で全サービス利用可能</strong>な統一課金モデルです。ドヤバナーAI / ドヤSEO / ドヤコピーAI 等で Pro 契約していれば、ドヤ広告シミュレーションAI も自動的に Pro 枠でご利用いただけます。
+              </dd>
+            </div>
+            <div>
               <dt className="font-black text-slate-900">Q. NanoBanana バナー画像はなぜ無料プランでダウンロードできないの？</dt>
               <dd className="mt-1 font-bold text-slate-600">
                 A. 画像生成 API のコストが高いため、商用利用可能なダウンロードは Light プラン以上に限定しています。プレビューはご確認いただけます。
               </dd>
             </div>
             <div>
-              <dt className="font-black text-slate-900">Q. チャットで数値編集の制限はありますか？</dt>
+              <dt className="font-black text-slate-900">Q. なぜ Pro プランも無制限ではないの？</dt>
               <dd className="mt-1 font-bold text-slate-600">
-                A. Free プランは 1日5回まで、Light プランは 1日30回まで、Pro 以上は無制限でご利用いただけます。
+                A. Gemini / NanoBanana 等の AI API 使用料が発生するため、サービス品質を維持するために月間制限を設定しています。Pro プランの月100プロジェクト・バナー月30回・チャット月500回は、通常の代理店業務を十分カバーできる設計です。
               </dd>
             </div>
             <div>

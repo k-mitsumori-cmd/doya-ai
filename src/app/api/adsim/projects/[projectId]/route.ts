@@ -22,26 +22,29 @@ export async function GET(_req: NextRequest, { params }: { params: { projectId: 
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // 当日の使用カウントも返す（プレビューUI で残り回数表示用）
-    const startOfDay = new Date()
-    startOfDay.setHours(0, 0, 0, 0)
+    // 当月の使用カウントを返す（プレビューUI で残り回数表示用）
+    const startOfMonth = new Date()
+    startOfMonth.setDate(1)
+    startOfMonth.setHours(0, 0, 0, 0)
     const allProjects = await prisma.adSimProject.findMany({
       where: { userId },
-      select: { chartData: true },
+      select: { chartData: true, createdAt: true },
     })
-    let bannerToday = 0
-    let chatToday = 0
+    let bannerThisMonth = 0
+    let chatThisMonth = 0
+    let projectsThisMonth = 0
     for (const p of allProjects) {
+      if (p.createdAt >= startOfMonth) projectsThisMonth++
       const cd = p.chartData as any
       if (cd?.bannerGeneratedAt) {
         const ts = new Date(cd.bannerGeneratedAt)
-        if (!isNaN(ts.getTime()) && ts >= startOfDay) bannerToday++
+        if (!isNaN(ts.getTime()) && ts >= startOfMonth) bannerThisMonth++
       }
       if (Array.isArray(cd?.chatLog)) {
         for (const e of cd.chatLog) {
           if (e?.timestamp) {
             const ts = new Date(e.timestamp)
-            if (!isNaN(ts.getTime()) && ts >= startOfDay) chatToday++
+            if (!isNaN(ts.getTime()) && ts >= startOfMonth) chatThisMonth++
           }
         }
       }
@@ -50,7 +53,7 @@ export async function GET(_req: NextRequest, { params }: { params: { projectId: 
     return NextResponse.json({
       project,
       userPlan: user?.plan || 'FREE',
-      usage: { bannerToday, chatToday },
+      usage: { bannerThisMonth, chatThisMonth, projectsThisMonth },
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'

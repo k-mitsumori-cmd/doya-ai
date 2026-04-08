@@ -78,14 +78,14 @@ function normalizeAlloc(
   return cleaned
 }
 
-// プラン → 1日あたりのチャット編集回数
-function getChatDailyLimit(plan: string | null | undefined): number {
+// プラン → 月間チャット編集回数（Gemini API コスト管理）
+function getChatMonthlyLimit(plan: string | null | undefined): number {
   if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.ADSIM_DISABLE_LIMITS === '1') return -1
   const p = String(plan || 'FREE').toUpperCase()
-  if (p === 'ENTERPRISE' || p === 'BUSINESS' || p === 'BUNDLE') return -1
-  if (p === 'PRO' || p === 'STARTER') return -1
-  if (p === 'LIGHT') return 30
-  return 5 // FREE
+  if (p === 'ENTERPRISE') return 3000
+  if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS' || p === 'BUNDLE') return 500
+  if (p === 'LIGHT') return 100
+  return 20 // FREE
 }
 
 export async function POST(
@@ -108,38 +108,43 @@ export async function POST(
       return NextResponse.json({ error: 'message は必須です' }, { status: 400 })
     }
 
-    // ----- 1日あたりのチャット編集制限 -----
+    // ----- 月間チャット編集制限 -----
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { plan: true },
     })
-    const dailyLimit = getChatDailyLimit(user?.plan)
-    if (dailyLimit !== -1) {
-      const startOfDay = new Date()
-      startOfDay.setHours(0, 0, 0, 0)
+    const monthlyLimit = getChatMonthlyLimit(user?.plan)
+    if (monthlyLimit !== -1) {
+      const startOfMonth = new Date()
+      startOfMonth.setDate(1)
+      startOfMonth.setHours(0, 0, 0, 0)
       const allProjects = await prisma.adSimProject.findMany({
         where: { userId },
         select: { chartData: true },
       })
-      let todayCount = 0
+      let monthCount = 0
       for (const p of allProjects) {
         const cd = p.chartData as any
         if (Array.isArray(cd?.chatLog)) {
           for (const entry of cd.chatLog) {
             if (entry?.timestamp) {
               const ts = new Date(entry.timestamp)
-              if (!isNaN(ts.getTime()) && ts >= startOfDay) todayCount++
+              if (!isNaN(ts.getTime()) && ts >= startOfMonth) monthCount++
             }
           }
         }
       }
-      if (todayCount >= dailyLimit) {
+      if (monthCount >= monthlyLimit) {
+        const planLabel =
+          String(user?.plan || 'FREE').toUpperCase() === 'FREE'
+            ? '無料プラン'
+            : `${String(user?.plan).toUpperCase()} プラン`
         return NextResponse.json(
           {
-            error: `本日のチャット編集上限（無料プラン: ${dailyLimit}回/日）に達しました。Pro プランへアップグレードで無制限になります。`,
-            code: 'CHAT_DAILY_LIMIT',
-            limit: dailyLimit,
-            current: todayCount,
+            error: `今月のチャット編集上限（${planLabel}: ${monthlyLimit}回/月）に達しました。上位プランへのアップグレードでさらに利用可能になります。`,
+            code: 'CHAT_MONTHLY_LIMIT',
+            limit: monthlyLimit,
+            current: monthCount,
           },
           { status: 402 }
         )

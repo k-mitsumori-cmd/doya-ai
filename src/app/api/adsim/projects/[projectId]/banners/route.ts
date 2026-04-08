@@ -13,14 +13,15 @@ import { generateBanners } from '@/lib/nanobanner'
 export const runtime = 'nodejs'
 export const maxDuration = 300
 
-// プラン → 1日あたりのバナー生成回数
-function getBannerDailyLimit(plan: string | null | undefined): number {
+// プラン → 月間バナー生成回数（NanoBanana API コストが高いため厳密管理）
+// 1回の生成 = 3枚 のバナー画像
+function getBannerMonthlyLimit(plan: string | null | undefined): number {
   if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.ADSIM_DISABLE_LIMITS === '1') return -1
   const p = String(plan || 'FREE').toUpperCase()
-  if (p === 'ENTERPRISE' || p === 'BUSINESS' || p === 'BUNDLE') return -1
-  if (p === 'PRO' || p === 'STARTER') return -1
-  if (p === 'LIGHT') return 10
-  return 2 // FREE
+  if (p === 'ENTERPRISE') return 150 // 月150回 = 月450枚
+  if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS' || p === 'BUNDLE') return 30 // 月30回 = 月90枚
+  if (p === 'LIGHT') return 10 // 月10回 = 月30枚
+  return 3 // FREE: 月3回 = 月9枚
 }
 
 export async function POST(
@@ -38,36 +39,40 @@ export async function POST(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // ----- 1日あたりのバナー生成制限チェック -----
+    // ----- 月間バナー生成制限チェック -----
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { plan: true },
     })
-    const dailyLimit = getBannerDailyLimit(user?.plan)
-    if (dailyLimit !== -1) {
-      // 当日 0:00 を JST 基準で
-      const startOfDay = new Date()
-      startOfDay.setHours(0, 0, 0, 0)
-      // ユーザーの全プロジェクトを取得し、当日の bannerGeneratedAt をカウント
+    const monthlyLimit = getBannerMonthlyLimit(user?.plan)
+    if (monthlyLimit !== -1) {
+      // 当月の1日 0:00
+      const startOfMonth = new Date()
+      startOfMonth.setDate(1)
+      startOfMonth.setHours(0, 0, 0, 0)
       const allProjects = await prisma.adSimProject.findMany({
         where: { userId },
         select: { chartData: true },
       })
-      let todayCount = 0
+      let monthCount = 0
       for (const p of allProjects) {
         const cd = p.chartData as any
         if (cd?.bannerGeneratedAt) {
           const ts = new Date(cd.bannerGeneratedAt)
-          if (!isNaN(ts.getTime()) && ts >= startOfDay) todayCount++
+          if (!isNaN(ts.getTime()) && ts >= startOfMonth) monthCount++
         }
       }
-      if (todayCount >= dailyLimit) {
+      if (monthCount >= monthlyLimit) {
+        const planLabel =
+          String(user?.plan || 'FREE').toUpperCase() === 'FREE'
+            ? '無料プラン'
+            : `${String(user?.plan).toUpperCase()} プラン`
         return NextResponse.json(
           {
-            error: `本日のバナー生成上限（無料プラン: ${dailyLimit}回/日）に達しました。Pro プランへアップグレードで無制限になります。`,
-            code: 'BANNER_DAILY_LIMIT',
-            limit: dailyLimit,
-            current: todayCount,
+            error: `今月のバナー生成上限（${planLabel}: ${monthlyLimit}回/月）に達しました。上位プランへのアップグレードでさらに利用可能になります。`,
+            code: 'BANNER_MONTHLY_LIMIT',
+            limit: monthlyLimit,
+            current: monthCount,
           },
           { status: 402 }
         )

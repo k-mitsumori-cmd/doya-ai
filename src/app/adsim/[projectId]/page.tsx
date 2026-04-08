@@ -105,7 +105,7 @@ export default function AdSimProjectPage() {
   const isLoggedIn = !!session?.user
   const [project, setProject] = useState<AdSimProject | null>(null)
   const [userPlan, setUserPlan] = useState<string>('FREE')
-  const [usage, setUsage] = useState<{ bannerToday: number; chatToday: number }>({ bannerToday: 0, chatToday: 0 })
+  const [usage, setUsage] = useState<{ bannerThisMonth: number; chatThisMonth: number }>({ bannerThisMonth: 0, chatThisMonth: 0 })
   const [loading, setLoading] = useState(true)
   const [generatingBanners, setGeneratingBanners] = useState(false)
   const [chatOpen, setChatOpen] = useState(true) // チャットを主操作にするためデフォルトで開く
@@ -144,10 +144,12 @@ export default function AdSimProjectPage() {
   }
 
   const isFree = userPlan === 'FREE'
-  const bannerDailyLimit = isFree ? 2 : userPlan === 'LIGHT' ? 10 : -1
-  const chatDailyLimit = isFree ? 5 : userPlan === 'LIGHT' ? 30 : -1
-  const bannerRemaining = bannerDailyLimit === -1 ? -1 : Math.max(0, bannerDailyLimit - usage.bannerToday)
-  const chatRemaining = chatDailyLimit === -1 ? -1 : Math.max(0, chatDailyLimit - usage.chatToday)
+  const bannerMonthlyLimit =
+    isFree ? 3 : userPlan === 'LIGHT' ? 10 : userPlan === 'ENTERPRISE' ? 150 : 30 // Pro = 30
+  const chatMonthlyLimit =
+    isFree ? 20 : userPlan === 'LIGHT' ? 100 : userPlan === 'ENTERPRISE' ? 3000 : 500 // Pro = 500
+  const bannerRemaining = Math.max(0, bannerMonthlyLimit - usage.bannerThisMonth)
+  const chatRemaining = Math.max(0, chatMonthlyLimit - usage.chatThisMonth)
 
   useEffect(() => {
     fetchProject()
@@ -155,7 +157,11 @@ export default function AdSimProjectPage() {
   }, [params.projectId, isLoggedIn])
 
   const handleGenerateBanners = async () => {
-    if (!confirm(`バナー画像を3枚生成します。\n本日の残り回数: ${bannerRemaining === -1 ? '無制限' : `${bannerRemaining}回`}\n\n実行しますか？`)) {
+    if (
+      !confirm(
+        `バナー画像を3枚生成します。\n今月の残り回数: ${bannerRemaining}回 / ${bannerMonthlyLimit}回\n\n実行しますか？`
+      )
+    ) {
       return
     }
     setGeneratingBanners(true)
@@ -166,7 +172,7 @@ export default function AdSimProjectPage() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        if (err.code === 'BANNER_DAILY_LIMIT') {
+        if (err.code === 'BANNER_MONTHLY_LIMIT') {
           toast.error(err.error || '本日の上限に達しました', { id: 'banners', duration: 6000 })
           return
         }
@@ -196,7 +202,7 @@ export default function AdSimProjectPage() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
-        if (err.code === 'CHAT_DAILY_LIMIT') {
+        if (err.code === 'CHAT_MONTHLY_LIMIT') {
           setChatMessages((prev) => [
             ...prev,
             { role: 'ai', text: `⚠ ${err.error}` },
@@ -709,9 +715,9 @@ export default function AdSimProjectPage() {
                   業種・商材・戦略を踏まえて NanoBanana AI Pro が自動でデザインします。
                 </p>
                 <div className="mb-4 inline-flex items-center gap-2 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-black backdrop-blur">
-                  本日の残り生成回数:{' '}
+                  今月の残り生成回数:{' '}
                   <span className="text-base">
-                    {bannerRemaining === -1 ? '無制限' : `${bannerRemaining} / ${bannerDailyLimit}回`}
+                    {bannerRemaining} / {bannerMonthlyLimit}回
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -933,7 +939,7 @@ export default function AdSimProjectPage() {
                 </span>
               </div>
               <span className="text-[10px] font-black text-slate-500">
-                {chatRemaining === -1 ? '無制限利用可' : `本日 残り ${chatRemaining}/${chatDailyLimit}回`}
+                今月 残り {chatRemaining}/{chatMonthlyLimit}回
               </span>
             </div>
             <div className="flex items-center gap-2">

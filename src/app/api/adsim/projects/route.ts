@@ -40,13 +40,14 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// プラン → 月間上限プロジェクト数
+// プラン → 月間上限プロジェクト数（API コスト管理のため Pro も制限あり）
+// 他のドヤサービスと同様に月間ベース管理
 function getAdSimMonthlyLimit(plan: string | null | undefined): number {
   if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.ADSIM_DISABLE_LIMITS === '1') return -1
   const p = String(plan || 'FREE').toUpperCase()
-  if (p === 'ENTERPRISE' || p === 'BUSINESS' || p === 'BUNDLE') return -1 // 無制限
-  if (p === 'PRO' || p === 'STARTER') return -1
-  if (p === 'LIGHT') return 10
+  if (p === 'ENTERPRISE') return 500
+  if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS' || p === 'BUNDLE') return 100
+  if (p === 'LIGHT') return 15
   return 3 // FREE
 }
 
