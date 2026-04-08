@@ -1,6 +1,24 @@
 {
   "framework": "nextjs",
   "buildCommand": "prisma generate && node ./scripts/db-push-if-db-url.mjs && next build",
+  "functions": {
+    "src/app/api/adsim/projects/[projectId]/export/route.ts": {
+      "maxDuration": 300,
+      "memory": 3008
+    },
+    "src/app/api/adsim/projects/[projectId]/banners/route.ts": {
+      "maxDuration": 300,
+      "memory": 1024
+    },
+    "src/app/api/adsim/auto-generate/route.ts": {
+      "maxDuration": 300,
+      "memory": 1024
+    },
+    "src/app/api/adsim/projects/[projectId]/proposal/route.ts": {
+      "maxDuration": 300,
+      "memory": 1024
+    }
+  },
   "crons": [
     {
       "path": "/api/cron/daily-summary",

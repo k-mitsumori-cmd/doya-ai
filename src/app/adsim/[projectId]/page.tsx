@@ -109,6 +109,7 @@ export default function AdSimProjectPage() {
   const [loading, setLoading] = useState(true)
   const [generatingBanners, setGeneratingBanners] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
+  const [ogImageBroken, setOgImageBroken] = useState(false)
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([])
   const [chatInput, setChatInput] = useState('')
   const [chatProcessing, setChatProcessing] = useState(false)
@@ -122,6 +123,7 @@ export default function AdSimProjectPage() {
 
   const fetchProject = () => {
     if (!isLoggedIn) return
+    setOgImageBroken(false)
     fetch(`/api/adsim/projects/${params.projectId}`)
       .then((r) => r.json())
       .then((d) => {
@@ -312,23 +314,33 @@ export default function AdSimProjectPage() {
               )}
             </div>
           </div>
-          <div className="relative aspect-[2/1] w-full bg-gradient-to-br from-slate-100 to-slate-200">
-            {ogImage ? (
+          <div className="relative aspect-[2/1] w-full bg-gradient-to-br from-[#D9E6FF] via-white to-[#C5D7FB]">
+            {ogImage && !ogImageBroken ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={ogImage}
                 alt={project.clientName}
                 className="h-full w-full object-cover"
-                onError={(e) => {
-                  ;(e.currentTarget as HTMLImageElement).style.display = 'none'
-                }}
+                onError={() => setOgImageBroken(true)}
               />
             ) : (
-              <div className="flex h-full w-full items-center justify-center">
+              <div className="flex h-full w-full items-center justify-center p-6">
                 <div className="text-center">
-                  <Globe className="mx-auto mb-2 h-12 w-12 text-slate-300" />
-                  <p className="text-sm font-bold text-slate-400">LP 画像取得失敗</p>
-                  <p className="mt-1 text-xs text-slate-400">OG 画像が設定されていない可能性があります</p>
+                  <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-md">
+                    <Globe className="h-8 w-8 text-[#0017C1]" />
+                  </div>
+                  <p className="text-base font-black text-slate-700">{project.clientName}</p>
+                  <p className="mt-1 text-xs font-bold text-slate-500">{project.productName}</p>
+                  {project.lpUrl && (
+                    <a
+                      href={project.lpUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-block text-[10px] font-bold text-[#0017C1] underline hover:text-[#000060]"
+                    >
+                      LP を別タブで開く →
+                    </a>
+                  )}
                 </div>
               </div>
             )}
