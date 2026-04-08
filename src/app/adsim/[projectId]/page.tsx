@@ -34,6 +34,10 @@ import {
   Wallet,
   Eye,
   Globe,
+  ChevronDown,
+  ChevronUp,
+  X,
+  FileText,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -83,7 +87,15 @@ interface AdSimProject {
   chartData: ChartData | null
 }
 
-const COLORS = ['#0017C1', '#3460FB', '#7096F8', '#C5D7FB', '#00A3BF', '#2BC8E4']
+// 濃い青系のカラーパレット（薄い青を排除）
+const COLORS = [
+  '#000060', // Blue 1200 deepest
+  '#0017C1', // Blue 900 main
+  '#1F3CFF', // bright deep
+  '#3460FB', // Blue 600
+  '#0023B5', // dark
+  '#001A8C', // mid dark
+]
 
 export default function AdSimProjectPage() {
   const params = useParams<{ projectId: string }>()
@@ -94,6 +106,7 @@ export default function AdSimProjectPage() {
   const [project, setProject] = useState<AdSimProject | null>(null)
   const [loading, setLoading] = useState(true)
   const [generatingBanners, setGeneratingBanners] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([])
   const [chatInput, setChatInput] = useState('')
   const [chatProcessing, setChatProcessing] = useState(false)
@@ -120,7 +133,7 @@ export default function AdSimProjectPage() {
 
   const handleGenerateBanners = async () => {
     setGeneratingBanners(true)
-    toast.loading('NanoBanana がバナー画像3枚を生成中... (約30〜60秒)', { id: 'banners' })
+    toast.loading('NanoBanana AI Pro がバナー画像3枚を生成中... (約30〜60秒)', { id: 'banners' })
     try {
       const res = await fetch(`/api/adsim/projects/${params.projectId}/banners`, {
         method: 'POST',
@@ -144,6 +157,7 @@ export default function AdSimProjectPage() {
     setChatMessages((prev) => [...prev, { role: 'user', text: userText }])
     setChatInput('')
     setChatProcessing(true)
+    setTimeout(() => chatScrollRef.current?.scrollTo({ top: 99999, behavior: 'smooth' }), 50)
     try {
       const res = await fetch(`/api/adsim/projects/${params.projectId}/chat-edit`, {
         method: 'POST',
@@ -164,9 +178,7 @@ export default function AdSimProjectPage() {
       ])
     } finally {
       setChatProcessing(false)
-      setTimeout(() => {
-        chatScrollRef.current?.scrollTo({ top: chatScrollRef.current.scrollHeight, behavior: 'smooth' })
-      }, 100)
+      setTimeout(() => chatScrollRef.current?.scrollTo({ top: 99999, behavior: 'smooth' }), 100)
     }
   }
 
@@ -191,9 +203,15 @@ export default function AdSimProjectPage() {
   const sections = project.proposalText || []
   const ogImage = chart?.ogImage
   const bannerImages = chart?.bannerImages || []
+  const summarySection = sections.find((s) => s.key === 'summary')
+
+  // 提案サマリ: proposal の summary か、recommendation の最初2文か
+  const executiveSummary =
+    summarySection?.content ||
+    (chart?.recommendation ? chart.recommendation.split('。').slice(0, 3).join('。') + '。' : '')
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#F8F8FB]">
+    <div className="relative min-h-screen overflow-hidden bg-[#F8F8FB] pb-32">
       {/* Animated background orbs */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <motion.div
@@ -202,7 +220,7 @@ export default function AdSimProjectPage() {
           transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div
-          className="absolute -right-40 top-1/2 h-[500px] w-[500px] rounded-full bg-[#7096F8] opacity-15 blur-3xl"
+          className="absolute -right-40 top-1/2 h-[500px] w-[500px] rounded-full bg-[#0017C1] opacity-15 blur-3xl"
           animate={{ x: [0, -100, 60, 0], y: [0, 80, -50, 0] }}
           transition={{ duration: 30, repeat: Infinity, ease: 'easeInOut' }}
         />
@@ -224,16 +242,53 @@ export default function AdSimProjectPage() {
       </div>
 
       <div className="relative z-10 mx-auto max-w-6xl px-6 py-10">
-        {/* === LP ファーストビュー === */}
-        {ogImage && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="mb-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-[#0017C1]/10"
-          >
-            <div className="relative aspect-[2/1] w-full bg-gradient-to-br from-slate-100 to-slate-200">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+        {/* === ヘッダー（クライアント名）=== */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-6"
+        >
+          <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#0017C1] to-[#3460FB] px-4 py-1.5 text-xs font-black uppercase tracking-widest text-white shadow-lg shadow-[#0017C1]/20">
+            <Sparkles className="h-3 w-3" />
+            AI 広告提案レポート
+          </div>
+          <h1 className="text-4xl font-black tracking-tight text-slate-900 md:text-5xl">
+            {project.clientName}
+          </h1>
+          <p className="mt-2 text-lg font-bold text-slate-600">
+            {project.productName}
+          </p>
+        </motion.div>
+
+        {/* === LP ファーストビュー画像（クライアント名の下） === */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-8 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl shadow-[#0017C1]/10"
+        >
+          <div className="border-b border-slate-100 bg-gradient-to-r from-[#0017C1] to-[#3460FB] px-6 py-3 text-white">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-bold">
+                <Globe className="h-4 w-4" />
+                解析対象 LP のファーストビュー
+              </div>
+              {project.lpUrl && (
+                <a
+                  href={project.lpUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-medium text-white/90 hover:text-white"
+                >
+                  {project.lpUrl.length > 50 ? project.lpUrl.substring(0, 50) + '...' : project.lpUrl}
+                </a>
+              )}
+            </div>
+          </div>
+          <div className="relative aspect-[2/1] w-full bg-gradient-to-br from-slate-100 to-slate-200">
+            {ogImage ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={ogImage}
                 alt={project.clientName}
@@ -242,56 +297,59 @@ export default function AdSimProjectPage() {
                   ;(e.currentTarget as HTMLImageElement).style.display = 'none'
                 }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-8 md:p-12">
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-bold text-white backdrop-blur">
-                  <Globe className="h-3 w-3" />
-                  解析対象 LP
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <div className="text-center">
+                  <Globe className="mx-auto mb-2 h-12 w-12 text-slate-300" />
+                  <p className="text-sm font-bold text-slate-400">LP 画像取得失敗</p>
+                  <p className="mt-1 text-xs text-slate-400">OG 画像が設定されていない可能性があります</p>
                 </div>
-                <h1 className="mb-2 text-3xl font-black tracking-tight text-white md:text-5xl">
-                  {project.clientName}
-                </h1>
-                <p className="text-base font-bold text-white/90 md:text-lg">
-                  {project.productName}
-                </p>
-                {project.lpUrl && (
-                  <a
-                    href={project.lpUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-white/70 hover:text-white"
-                  >
-                    {project.lpUrl}
-                  </a>
-                )}
               </div>
-            </div>
-          </motion.div>
-        )}
+            )}
+          </div>
+          <div className="border-t border-slate-100 bg-slate-50 px-6 py-3">
+            <p className="text-xs font-bold text-slate-600">
+              ↑ 上記 LP を AI が解析し、以下の戦略・数値・提案文を生成しました
+            </p>
+          </div>
+        </motion.div>
 
-        {/* === ヘッダー（ogImage 無い場合） === */}
-        {!ogImage && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8 overflow-hidden rounded-3xl bg-gradient-to-br from-[#0017C1] via-[#3460FB] to-[#000060] p-10 text-white shadow-2xl"
-          >
-            <h1 className="mb-2 text-4xl font-black">{project.clientName}</h1>
-            <p className="text-lg font-bold opacity-90">{project.productName}</p>
-          </motion.div>
-        )}
-
-        {/* === 提案概要 === */}
+        {/* === 提案概要（業種・予算・期間） === */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, duration: 0.6 }}
-          className="mb-8 grid gap-4 md:grid-cols-3"
+          className="mb-6 grid gap-4 md:grid-cols-3"
         >
           <InfoBox label="業種" value={chart?.industryName || project.industry} />
           <InfoBox label="月額予算" value={`¥${project.monthlyBudget.toLocaleString()}`} />
           <InfoBox label="提案期間" value={`${project.periodMonths}ヶ月`} />
         </motion.div>
+
+        {/* === 提案サマリ（具体的に何を提案するか） === */}
+        {executiveSummary && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.25, duration: 0.6 }}
+            className="mb-8 overflow-hidden rounded-3xl border-2 border-[#0017C1]/30 bg-gradient-to-br from-[#0017C1] via-[#1F3CFF] to-[#3460FB] p-1 shadow-2xl shadow-[#0017C1]/30"
+          >
+            <div className="rounded-[22px] bg-white p-8">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0017C1] to-[#3460FB] text-white shadow-lg shadow-[#0017C1]/30">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black tracking-tight text-slate-900">提案サマリ</h2>
+                  <p className="text-xs font-bold text-slate-500">どんな状況・どんな広告運用を提案するか</p>
+                </div>
+              </div>
+              <p className="whitespace-pre-wrap text-base font-bold leading-loose tracking-wide text-slate-800">
+                {executiveSummary}
+              </p>
+            </div>
+          </motion.div>
+        )}
 
         {/* === LP 分析 === */}
         {chart?.lpAnalysis && (
@@ -301,7 +359,7 @@ export default function AdSimProjectPage() {
             title="LP 分析"
             subtitle="このランディングページから読み取れる強み・訴求点・課題"
           >
-            <p className="whitespace-pre-wrap text-base font-medium leading-loose tracking-wide text-slate-700">
+            <p className="whitespace-pre-wrap text-base font-bold leading-loose tracking-wide text-slate-700">
               {chart.lpAnalysis}
             </p>
           </Section>
@@ -316,7 +374,7 @@ export default function AdSimProjectPage() {
             subtitle="AI シニアプランナーによる戦略提案"
             highlight
           >
-            <p className="whitespace-pre-wrap text-base font-bold leading-loose tracking-wide text-slate-800">
+            <p className="whitespace-pre-wrap text-base font-black leading-loose tracking-wide text-slate-900">
               {chart.recommendation}
             </p>
           </Section>
@@ -327,7 +385,7 @@ export default function AdSimProjectPage() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="mb-8 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-medium text-amber-900"
+          className="mb-8 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-bold text-amber-900"
         >
           ※ 本数値はAIおよび業界平均ベンチマークに基づく推定値であり、実際の広告運用結果を保証するものではありません。
         </motion.div>
@@ -352,7 +410,7 @@ export default function AdSimProjectPage() {
           </motion.div>
         )}
 
-        {/* === グラフ（グラデーション SVG） === */}
+        {/* === グラフ（リーダーライン付き円グラフ + 棒 + 線） === */}
         {chart && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -360,14 +418,15 @@ export default function AdSimProjectPage() {
             transition={{ delay: 0.7, duration: 0.6 }}
             className="mb-10 grid gap-6 md:grid-cols-2"
           >
-            <ChartCard title="予算配分">
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
+            {/* 予算配分 - リーダーライン付き */}
+            <ChartCard title="予算配分" className="md:col-span-2">
+              <ResponsiveContainer width="100%" height={420}>
+                <PieChart margin={{ top: 30, right: 100, bottom: 30, left: 100 }}>
                   <defs>
                     {COLORS.map((c, i) => (
                       <linearGradient key={i} id={`pieGrad${i}`} x1="0" y1="0" x2="1" y2="1">
                         <stop offset="0%" stopColor={c} stopOpacity={1} />
-                        <stop offset="100%" stopColor={c} stopOpacity={0.6} />
+                        <stop offset="100%" stopColor={i === 0 ? '#000060' : COLORS[Math.max(0, i - 1)]} stopOpacity={1} />
                       </linearGradient>
                     ))}
                   </defs>
@@ -375,19 +434,21 @@ export default function AdSimProjectPage() {
                     data={chart.budgetAllocation}
                     dataKey="value"
                     nameKey="name"
-                    outerRadius={100}
-                    innerRadius={50}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={120}
+                    innerRadius={60}
                     paddingAngle={3}
-                    label={(e: any) => `¥${(e.value / 10000).toFixed(0)}万`}
-                    labelLine={false}
+                    label={(props: any) => renderPieLabel(props, chart.budgetAllocation)}
+                    labelLine={{ stroke: '#94a3b8', strokeWidth: 1.5 }}
                   >
                     {chart.budgetAllocation.map((_, i) => (
-                      <Cell key={i} fill={`url(#pieGrad${i % COLORS.length})`} stroke="white" strokeWidth={2} />
+                      <Cell key={i} fill={`url(#pieGrad${i % COLORS.length})`} stroke="white" strokeWidth={3} />
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number) => [`¥${value.toLocaleString()}`, '予算']}
-                    contentStyle={{ borderRadius: 12, border: '1px solid #C5D7FB', fontWeight: 700 }}
+                    formatter={(value: number, name: string) => [`¥${value.toLocaleString()}`, name]}
+                    contentStyle={{ borderRadius: 12, border: '2px solid #0017C1', fontWeight: 800 }}
                   />
                 </PieChart>
               </ResponsiveContainer>
@@ -398,51 +459,43 @@ export default function AdSimProjectPage() {
                 <BarChart data={chart.mediaPerformance} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
                   <defs>
                     <linearGradient id="barGradClick" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#3460FB" stopOpacity={1} />
-                      <stop offset="100%" stopColor="#7096F8" stopOpacity={0.7} />
+                      <stop offset="0%" stopColor="#000060" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#0017C1" stopOpacity={1} />
                     </linearGradient>
                     <linearGradient id="barGradCv" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#0017C1" stopOpacity={1} />
-                      <stop offset="100%" stopColor="#3460FB" stopOpacity={0.7} />
+                      <stop offset="0%" stopColor="#1F3CFF" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#3460FB" stopOpacity={1} />
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 700 }} />
-                  <YAxis tick={{ fontSize: 11, fontWeight: 700 }} />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 800, fill: '#1f2937' }} />
+                  <YAxis tick={{ fontSize: 11, fontWeight: 800, fill: '#1f2937' }} />
                   <Tooltip
                     formatter={(value: number) => value.toLocaleString()}
-                    contentStyle={{ borderRadius: 12, border: '1px solid #C5D7FB', fontWeight: 700 }}
+                    contentStyle={{ borderRadius: 12, border: '2px solid #0017C1', fontWeight: 800 }}
                   />
-                  <Legend wrapperStyle={{ fontWeight: 700, fontSize: 12 }} />
+                  <Legend wrapperStyle={{ fontWeight: 800, fontSize: 12 }} />
                   <Bar dataKey="click" name="Click" fill="url(#barGradClick)" radius={[6, 6, 0, 0]} />
                   <Bar dataKey="cv" name="CV" fill="url(#barGradCv)" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </ChartCard>
 
-            <ChartCard title="月次CV推移" className="md:col-span-2">
-              <ResponsiveContainer width="100%" height={300}>
+            <ChartCard title="月次CV推移">
+              <ResponsiveContainer width="100%" height={280}>
                 <LineChart data={chart.monthlyCv} margin={{ top: 20, right: 30, left: 10, bottom: 10 }}>
-                  <defs>
-                    {COLORS.map((c, i) => (
-                      <linearGradient key={i} id={`lineGrad${i}`} x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor={c} />
-                        <stop offset="100%" stopColor={COLORS[(i + 1) % COLORS.length]} />
-                      </linearGradient>
-                    ))}
-                  </defs>
-                  <XAxis dataKey="month" tick={{ fontSize: 12, fontWeight: 700 }} />
-                  <YAxis tick={{ fontSize: 12, fontWeight: 700 }} />
+                  <XAxis dataKey="month" tick={{ fontSize: 12, fontWeight: 800, fill: '#1f2937' }} />
+                  <YAxis tick={{ fontSize: 12, fontWeight: 800, fill: '#1f2937' }} />
                   <Tooltip
                     formatter={(value: number) => value.toLocaleString()}
-                    contentStyle={{ borderRadius: 12, border: '1px solid #C5D7FB', fontWeight: 700 }}
+                    contentStyle={{ borderRadius: 12, border: '2px solid #0017C1', fontWeight: 800 }}
                   />
-                  <Legend wrapperStyle={{ fontWeight: 700, fontSize: 12 }} />
+                  <Legend wrapperStyle={{ fontWeight: 800, fontSize: 12 }} />
                   {chart.mediaPerformance.map((m, i) => (
                     <Line
                       key={m.name}
                       type="monotone"
                       dataKey={m.name}
-                      stroke={`url(#lineGrad${i % COLORS.length})`}
+                      stroke={COLORS[i % COLORS.length]}
                       strokeWidth={3}
                       dot={{ r: 5, strokeWidth: 2, fill: 'white' }}
                       activeDot={{ r: 7 }}
@@ -462,7 +515,7 @@ export default function AdSimProjectPage() {
             title="予算配分の根拠"
             subtitle="なぜこの媒体ミックスにしたのか"
           >
-            <p className="whitespace-pre-wrap text-base font-medium leading-loose tracking-wide text-slate-700">
+            <p className="whitespace-pre-wrap text-base font-bold leading-loose tracking-wide text-slate-700">
               {chart.budgetRationale}
             </p>
           </Section>
@@ -476,7 +529,7 @@ export default function AdSimProjectPage() {
             title="平均CPA・CVの根拠"
             subtitle="目標値の算定根拠"
           >
-            <p className="whitespace-pre-wrap text-base font-medium leading-loose tracking-wide text-slate-700">
+            <p className="whitespace-pre-wrap text-base font-bold leading-loose tracking-wide text-slate-700">
               {chart.cpaRationale}
             </p>
           </Section>
@@ -501,7 +554,7 @@ export default function AdSimProjectPage() {
                   className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md"
                 >
                   <h3 className="mb-3 text-lg font-black text-[#0017C1]">{sec.title}</h3>
-                  <p className="whitespace-pre-wrap text-sm font-medium leading-loose tracking-wide text-slate-700">
+                  <p className="whitespace-pre-wrap text-sm font-bold leading-loose tracking-wide text-slate-700">
                     {sec.content}
                   </p>
                 </motion.div>
@@ -510,162 +563,267 @@ export default function AdSimProjectPage() {
           </motion.div>
         )}
 
-        {/* === NanoBanana バナー画像生成 === */}
+        {/* === NanoBanana バナー画像生成（改善版） === */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.1, duration: 0.6 }}
-          className="mb-10 rounded-3xl border border-slate-200 bg-gradient-to-br from-white via-[#F8F8FB] to-[#D9E6FF]/40 p-8 shadow-sm"
+          className="mb-10 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
         >
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <h2 className="flex items-center gap-2 text-xl font-black text-slate-900">
-                <ImageIcon className="h-5 w-5 text-[#0017C1]" />
-                NanoBanana AI Pro バナー画像
-              </h2>
-              <p className="mt-1 text-sm font-medium text-slate-600">
-                提案内容に合わせた正方形バナーを 3枚 自動生成
-              </p>
+          {bannerImages.length === 0 ? (
+            // 生成前: ヒーロー型カード
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#000060] via-[#0017C1] to-[#3460FB] p-10 text-white">
+              <motion.div
+                className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"
+                animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
+                transition={{ duration: 5, repeat: Infinity }}
+              />
+              <motion.div
+                className="absolute -left-20 -bottom-20 h-64 w-64 rounded-full bg-[#1F3CFF]/30 blur-3xl"
+                animate={{ scale: [1, 1.3, 1], opacity: [0.2, 0.4, 0.2] }}
+                transition={{ duration: 6, repeat: Infinity }}
+              />
+              <div className="relative">
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-black backdrop-blur">
+                  <ImageIcon className="h-3 w-3" />
+                  NanoBanana AI Pro 連携
+                </div>
+                <h2 className="mb-3 text-3xl font-black tracking-tight md:text-4xl">
+                  広告バナー画像を<br />
+                  <span className="bg-gradient-to-r from-white to-[#D9E6FF] bg-clip-text text-transparent">
+                    3パターン一括生成
+                  </span>
+                </h2>
+                <p className="mb-6 max-w-xl text-sm font-bold leading-loose text-white/90">
+                  クリック1回で、提案内容に合わせた正方形バナー画像（1080×1080）を <strong>3パターン同時に生成</strong> します。<br />
+                  業種・商材・戦略を踏まえて NanoBanana AI Pro が自動でデザインします。
+                </p>
+                <motion.button
+                  type="button"
+                  onClick={handleGenerateBanners}
+                  disabled={generatingBanners}
+                  whileHover={{ scale: generatingBanners ? 1 : 1.05, y: generatingBanners ? 0 : -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-white px-7 py-4 text-base font-black text-[#0017C1] shadow-2xl shadow-[#000060]/50 disabled:opacity-50"
+                >
+                  {generatingBanners ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      生成中... (30〜60秒)
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-5 w-5" />
+                      バナー画像を3枚一括生成する
+                    </>
+                  )}
+                </motion.button>
+              </div>
             </div>
-            <motion.button
-              type="button"
-              onClick={handleGenerateBanners}
-              disabled={generatingBanners}
-              whileHover={{ scale: generatingBanners ? 1 : 1.04 }}
-              whileTap={{ scale: 0.97 }}
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#0017C1] to-[#3460FB] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-[#0017C1]/30 disabled:opacity-50"
-            >
-              {generatingBanners ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> 生成中...
-                </>
-              ) : bannerImages.length > 0 ? (
-                <>
-                  <Wand2 className="h-4 w-4" /> 再生成
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4" /> 3枚生成
-                </>
-              )}
-            </motion.button>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            {bannerImages.length > 0
-              ? bannerImages.map((src, i) => (
-                  <motion.div
+          ) : (
+            // 生成後: 3枚グリッド + 再生成ボタン
+            <div className="p-8">
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h2 className="flex items-center gap-2 text-xl font-black text-slate-900">
+                    <ImageIcon className="h-5 w-5 text-[#0017C1]" />
+                    生成済みバナー画像（3パターン）
+                  </h2>
+                  <p className="mt-1 text-xs font-bold text-slate-500">
+                    NanoBanana AI Pro により自動生成・各画像をクリックでダウンロード
+                  </p>
+                </div>
+                <motion.button
+                  type="button"
+                  onClick={handleGenerateBanners}
+                  disabled={generatingBanners}
+                  whileHover={{ scale: 1.04 }}
+                  whileTap={{ scale: 0.97 }}
+                  className="inline-flex items-center gap-2 rounded-xl border border-[#0017C1]/30 bg-[#D9E6FF] px-4 py-2 text-sm font-bold text-[#0017C1] hover:bg-[#C5D7FB] disabled:opacity-50"
+                >
+                  {generatingBanners ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+                  再生成
+                </motion.button>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                {bannerImages.map((src, i) => (
+                  <motion.a
                     key={i}
+                    href={src}
+                    download={`banner-${i + 1}.png`}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.1 }}
-                    className="group relative aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm"
+                    whileHover={{ scale: 1.03, y: -4 }}
+                    className="group relative aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-md"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={src} alt={`Banner ${i + 1}`} className="h-full w-full object-cover transition group-hover:scale-105" />
-                    <a
-                      href={src}
-                      download={`banner-${i + 1}.png`}
-                      className="absolute bottom-2 right-2 rounded-full bg-[#0017C1] p-2 text-white opacity-0 shadow-lg transition group-hover:opacity-100"
-                    >
-                      <Download className="h-4 w-4" />
-                    </a>
-                  </motion.div>
-                ))
-              : [0, 1, 2].map((i) => (
-                  <div
-                    key={i}
-                    className="flex aspect-square items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-white/50"
-                  >
-                    <span className="text-xs font-bold text-slate-400">バナー {i + 1}</span>
-                  </div>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
+                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between opacity-0 transition group-hover:opacity-100">
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#0017C1]">
+                        Pattern {String.fromCharCode(65 + i)}
+                      </span>
+                      <span className="rounded-full bg-[#0017C1] p-2 text-white">
+                        <Download className="h-4 w-4" />
+                      </span>
+                    </div>
+                  </motion.a>
                 ))}
-          </div>
+              </div>
+            </div>
+          )}
         </motion.div>
+      </div>
 
-        {/* === チャット形式数値編集 === */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 1.2, duration: 0.6 }}
-          className="mb-10 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"
-        >
-          <div className="border-b border-slate-200 bg-gradient-to-r from-[#0017C1] to-[#3460FB] p-5 text-white">
-            <h2 className="flex items-center gap-2 text-xl font-black">
-              <MessageCircle className="h-5 w-5" />
-              チャットで数値を調整
-            </h2>
-            <p className="mt-1 text-xs font-medium text-white/80">
-              「Google の予算を増やして」「CPA を 5000 に下げて」のように入力 → AI が自動で再計算
-            </p>
-          </div>
-
-          <div ref={chatScrollRef} className="max-h-96 space-y-3 overflow-y-auto p-5">
-            {chatMessages.length === 0 && (
-              <div className="py-6 text-center text-sm font-medium text-slate-400">
-                例: 「Meta の配分を 50% にして」「CV 数を 1.5 倍に」「Google を減らして TikTok を増やして」
-              </div>
-            )}
-            <AnimatePresence>
-              {chatMessages.map((m, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm font-medium leading-relaxed ${
-                      m.role === 'user'
-                        ? 'bg-gradient-to-br from-[#0017C1] to-[#3460FB] text-white shadow-md'
-                        : 'border border-slate-200 bg-slate-50 text-slate-800'
-                    }`}
-                  >
-                    {m.text}
+      {/* === チャット 画面下部固定 === */}
+      <div className="fixed bottom-0 left-0 right-0 z-40">
+        {/* 展開時のチャット履歴 */}
+        <AnimatePresence>
+          {chatOpen && (
+            <motion.div
+              initial={{ y: 400, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 400, opacity: 0 }}
+              transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              className="mx-auto max-w-3xl px-4"
+            >
+              <div
+                ref={chatScrollRef}
+                className="max-h-80 space-y-3 overflow-y-auto rounded-t-2xl border border-b-0 border-slate-200 bg-white p-5 shadow-2xl"
+              >
+                {chatMessages.length === 0 && (
+                  <div className="py-2 text-center text-xs font-bold text-slate-400">
+                    例: 「Meta の予算を 50% に増やして」「CV を 1.5倍に」「Google を減らして TikTok を増やして」
                   </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-            {chatProcessing && (
-              <div className="flex justify-start">
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5">
-                  <Loader2 className="h-4 w-4 animate-spin text-[#0017C1]" />
-                </div>
+                )}
+                {chatMessages.map((m, i) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                  >
+                    <div
+                      className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm font-bold leading-relaxed ${
+                        m.role === 'user'
+                          ? 'bg-gradient-to-br from-[#0017C1] to-[#3460FB] text-white shadow-md'
+                          : 'border border-slate-200 bg-slate-50 text-slate-800'
+                      }`}
+                    >
+                      {m.text}
+                    </div>
+                  </motion.div>
+                ))}
+                {chatProcessing && (
+                  <div className="flex justify-start">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2.5">
+                      <Loader2 className="h-4 w-4 animate-spin text-[#0017C1]" />
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-          <div className="border-t border-slate-200 p-3">
+        {/* 常時表示の入力バー */}
+        <div className="border-t border-slate-200 bg-white/95 backdrop-blur-md shadow-2xl shadow-[#0017C1]/10">
+          <div className="mx-auto max-w-3xl px-4 py-3">
             <form
               onSubmit={(e) => {
                 e.preventDefault()
+                if (!chatOpen) setChatOpen(true)
                 handleChatSend()
               }}
-              className="flex gap-2"
+              className="flex items-center gap-2"
             >
-              <input
-                type="text"
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                placeholder="例: Google の予算を 60% に増やして"
-                disabled={chatProcessing}
-                className="flex-1 rounded-xl border border-slate-300 px-4 py-3 text-sm font-medium focus:border-[#0017C1] focus:outline-none focus:ring-2 focus:ring-[#0017C1]/20 disabled:bg-slate-50"
-              />
+              <button
+                type="button"
+                onClick={() => setChatOpen(!chatOpen)}
+                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#0017C1] to-[#3460FB] text-white shadow-md transition hover:shadow-lg"
+                title={chatOpen ? '閉じる' : '履歴を見る'}
+              >
+                {chatOpen ? <ChevronDown className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
+              </button>
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onFocus={() => setChatOpen(true)}
+                  placeholder="例: Google の予算を 60% に増やして"
+                  disabled={chatProcessing}
+                  className="w-full rounded-full border-2 border-slate-200 bg-slate-50 px-5 py-3 text-sm font-bold focus:border-[#0017C1] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#0017C1]/10 disabled:bg-slate-100"
+                />
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                  AI で数値を即時調整
+                </span>
+              </div>
               <motion.button
                 type="submit"
                 disabled={chatProcessing || !chatInput.trim()}
                 whileHover={{ scale: chatProcessing ? 1 : 1.05 }}
                 whileTap={{ scale: 0.97 }}
-                className="inline-flex items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-[#0017C1] to-[#3460FB] px-5 py-3 text-sm font-bold text-white shadow-md disabled:opacity-50"
+                className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[#0017C1] to-[#3460FB] text-white shadow-md disabled:opacity-50"
               >
-                <Send className="h-4 w-4" />
-                送信
+                {chatProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
               </motion.button>
             </form>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
+  )
+}
+
+// ----------------------------------------
+// PieChart カスタムラベル（リーダーライン + 媒体名 + 金額）
+// ----------------------------------------
+function renderPieLabel(props: any, data: { name: string; value: number }[]) {
+  const { cx, cy, midAngle, outerRadius, index } = props
+  const RADIAN = Math.PI / 180
+  const radius = outerRadius + 28
+  const x = cx + radius * Math.cos(-midAngle * RADIAN)
+  const y = cy + radius * Math.sin(-midAngle * RADIAN)
+  const isRight = x > cx
+  const item = data[index]
+  if (!item) return null
+  const color = COLORS[index % COLORS.length]
+
+  return (
+    <g>
+      {/* 媒体カラーマーカー（小さい丸） */}
+      <circle
+        cx={isRight ? x - 6 : x + 6}
+        cy={y - 10}
+        r={5}
+        fill={color}
+      />
+      {/* 媒体名 */}
+      <text
+        x={x}
+        y={y - 7}
+        fill={color}
+        fontSize={13}
+        fontWeight={900}
+        textAnchor={isRight ? 'start' : 'end'}
+        style={{ letterSpacing: '0.04em' }}
+      >
+        {item.name}
+      </text>
+      {/* 金額 */}
+      <text
+        x={x}
+        y={y + 11}
+        fill="#1f2937"
+        fontSize={12}
+        fontWeight={800}
+        textAnchor={isRight ? 'start' : 'end'}
+      >
+        ¥{item.value.toLocaleString()}
+      </text>
+    </g>
   )
 }
 
@@ -694,8 +852,8 @@ function DownloadBtn({ href, label, primary }: { href: string; label: string; pr
 function InfoBox({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="text-xs font-bold uppercase tracking-wider text-slate-500">{label}</div>
-      <div className="mt-2 text-2xl font-black text-slate-900">{value}</div>
+      <div className="text-xs font-black uppercase tracking-widest text-slate-500">{label}</div>
+      <div className="mt-2 text-2xl font-black tracking-tight text-slate-900">{value}</div>
     </div>
   )
 }
@@ -733,7 +891,7 @@ function Section({
       transition={{ delay, duration: 0.6 }}
       className={`mb-8 rounded-3xl border p-8 shadow-sm ${
         highlight
-          ? 'border-[#0017C1]/20 bg-gradient-to-br from-white via-[#D9E6FF]/30 to-white'
+          ? 'border-[#0017C1]/30 bg-gradient-to-br from-[#D9E6FF]/40 via-white to-[#C5D7FB]/30 shadow-lg shadow-[#0017C1]/10'
           : 'border-slate-200 bg-white'
       }`}
     >
@@ -747,7 +905,7 @@ function Section({
         </div>
         <div>
           <h2 className="text-xl font-black tracking-tight text-slate-900">{title}</h2>
-          {subtitle && <p className="text-xs font-medium text-slate-500">{subtitle}</p>}
+          {subtitle && <p className="text-xs font-bold text-slate-500">{subtitle}</p>}
         </div>
       </div>
       {children}
@@ -772,7 +930,7 @@ function KpiTile({
     >
       <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-gradient-to-br from-[#D9E6FF] to-transparent opacity-50" />
       <div className="relative">
-        <div className="mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">
+        <div className="mb-2 flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-slate-500">
           <Icon className="h-3 w-3" />
           {label}
         </div>
@@ -793,7 +951,7 @@ function ChartCard({
 }) {
   return (
     <div className={`rounded-2xl border border-slate-200 bg-white p-6 shadow-sm ${className}`}>
-      <h3 className="mb-4 text-sm font-black uppercase tracking-wider text-slate-700">{title}</h3>
+      <h3 className="mb-4 text-sm font-black uppercase tracking-widest text-slate-700">{title}</h3>
       {children}
     </div>
   )
