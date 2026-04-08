@@ -82,19 +82,21 @@ interface AdSimProject {
   status: string
   lpUrl: string | null
   goals: string[]
+  targetAudience: { age?: string; gender?: string; region?: string; interests?: string[] } | null
+  mediaAllocation: Record<string, number> | null
   simulationData: { overall: SimOverall; media: any[] } | null
   proposalText: ProposalSection[] | null
   chartData: ChartData | null
 }
 
-// 濃い青系のカラーパレット（薄い青を排除）
+// 中明度〜中濃度の青系カラーパレット（濃すぎず・薄すぎず）
 const COLORS = [
-  '#000060', // Blue 1200 deepest
-  '#0017C1', // Blue 900 main
-  '#1F3CFF', // bright deep
-  '#3460FB', // Blue 600
-  '#0023B5', // dark
-  '#001A8C', // mid dark
+  '#0023D6', // 明るい primary
+  '#1F4DFF', // bright
+  '#3460FB', // 中
+  '#5575FC', // 中明
+  '#0017C1', // やや濃い
+  '#4A6BFC', // 中
 ]
 
 export default function AdSimProjectPage() {
@@ -104,6 +106,8 @@ export default function AdSimProjectPage() {
   const isSessionLoading = status === 'loading'
   const isLoggedIn = !!session?.user
   const [project, setProject] = useState<AdSimProject | null>(null)
+  const [userPlan, setUserPlan] = useState<string>('FREE')
+  const [usage, setUsage] = useState<{ bannerToday: number; chatToday: number }>({ bannerToday: 0, chatToday: 0 })
   const [loading, setLoading] = useState(true)
   const [generatingBanners, setGeneratingBanners] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
@@ -122,9 +126,19 @@ export default function AdSimProjectPage() {
     if (!isLoggedIn) return
     fetch(`/api/adsim/projects/${params.projectId}`)
       .then((r) => r.json())
-      .then((d) => setProject(d.project))
+      .then((d) => {
+        setProject(d.project)
+        if (d.userPlan) setUserPlan(d.userPlan)
+        if (d.usage) setUsage(d.usage)
+      })
       .finally(() => setLoading(false))
   }
+
+  const isFree = userPlan === 'FREE'
+  const bannerDailyLimit = isFree ? 2 : userPlan === 'LIGHT' ? 10 : -1
+  const chatDailyLimit = isFree ? 5 : userPlan === 'LIGHT' ? 30 : -1
+  const bannerRemaining = bannerDailyLimit === -1 ? -1 : Math.max(0, bannerDailyLimit - usage.bannerToday)
+  const chatRemaining = chatDailyLimit === -1 ? -1 : Math.max(0, chatDailyLimit - usage.chatToday)
 
   useEffect(() => {
     fetchProject()
@@ -132,6 +146,9 @@ export default function AdSimProjectPage() {
   }, [params.projectId, isLoggedIn])
 
   const handleGenerateBanners = async () => {
+    if (!confirm(`バナー画像を3枚生成します。\n本日の残り回数: ${bannerRemaining === -1 ? '無制限' : `${bannerRemaining}回`}\n\n実行しますか？`)) {
+      return
+    }
     setGeneratingBanners(true)
     toast.loading('NanoBanana AI Pro がバナー画像3枚を生成中... (約30〜60秒)', { id: 'banners' })
     try {
@@ -140,6 +157,10 @@ export default function AdSimProjectPage() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
+        if (err.code === 'BANNER_DAILY_LIMIT') {
+          toast.error(err.error || '本日の上限に達しました', { id: 'banners', duration: 6000 })
+          return
+        }
         throw new Error(err.error || 'バナー生成に失敗しました')
       }
       toast.success('バナー画像 3枚を生成しました', { id: 'banners' })
@@ -166,6 +187,13 @@ export default function AdSimProjectPage() {
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
+        if (err.code === 'CHAT_DAILY_LIMIT') {
+          setChatMessages((prev) => [
+            ...prev,
+            { role: 'ai', text: `⚠ ${err.error}` },
+          ])
+          return
+        }
         throw new Error(err.error || '編集に失敗しました')
       }
       const data = await res.json()
@@ -551,12 +579,26 @@ export default function AdSimProjectPage() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 1.0 + i * 0.05 }}
-                  className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md"
+                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-md"
                 >
-                  <h3 className="mb-3 text-lg font-black text-[#0017C1]">{sec.title}</h3>
-                  <p className="whitespace-pre-wrap text-sm font-bold leading-loose tracking-wide text-slate-700">
-                    {sec.content}
-                  </p>
+                  <div className="flex items-center gap-3 border-b border-slate-100 bg-gradient-to-r from-[#D9E6FF]/40 to-transparent px-6 py-4">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#0023D6] to-[#3460FB] text-white shadow-md">
+                      <span className="text-xs font-black">{String(i + 1).padStart(2, '0')}</span>
+                    </div>
+                    <h3 className="text-lg font-black text-[#0017C1]">{sec.title}</h3>
+                  </div>
+                  <div className="p-6">
+                    {/* 特別レイアウト: ターゲティング */}
+                    {sec.key === 'targeting' && project ? (
+                      <TargetingVisual content={sec.content} project={project} />
+                    ) : sec.key === 'creative' ? (
+                      <CreativeVisual content={sec.content} mediaAllocation={project?.mediaAllocation} />
+                    ) : (
+                      <p className="whitespace-pre-wrap text-sm font-bold leading-loose tracking-wide text-slate-700">
+                        {sec.content}
+                      </p>
+                    )}
+                  </div>
                 </motion.div>
               ))}
             </div>
@@ -572,7 +614,7 @@ export default function AdSimProjectPage() {
         >
           {bannerImages.length === 0 ? (
             // 生成前: ヒーロー型カード
-            <div className="relative overflow-hidden bg-gradient-to-br from-[#000060] via-[#0017C1] to-[#3460FB] p-10 text-white">
+            <div className="relative overflow-hidden bg-gradient-to-br from-[#0023D6] via-[#1F4DFF] to-[#3460FB] p-10 text-white">
               <motion.div
                 className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl"
                 animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }}
@@ -598,26 +640,44 @@ export default function AdSimProjectPage() {
                   クリック1回で、提案内容に合わせた正方形バナー画像（1080×1080）を <strong>3パターン同時に生成</strong> します。<br />
                   業種・商材・戦略を踏まえて NanoBanana AI Pro が自動でデザインします。
                 </p>
-                <motion.button
-                  type="button"
-                  onClick={handleGenerateBanners}
-                  disabled={generatingBanners}
-                  whileHover={{ scale: generatingBanners ? 1 : 1.05, y: generatingBanners ? 0 : -2 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-white px-7 py-4 text-base font-black text-[#0017C1] shadow-2xl shadow-[#000060]/50 disabled:opacity-50"
-                >
-                  {generatingBanners ? (
-                    <>
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      生成中... (30〜60秒)
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-5 w-5" />
-                      バナー画像を3枚一括生成する
-                    </>
+                <div className="mb-4 inline-flex items-center gap-2 rounded-lg bg-white/15 px-3 py-1.5 text-xs font-black backdrop-blur">
+                  本日の残り生成回数:{' '}
+                  <span className="text-base">
+                    {bannerRemaining === -1 ? '無制限' : `${bannerRemaining} / ${bannerDailyLimit}回`}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  <motion.button
+                    type="button"
+                    onClick={handleGenerateBanners}
+                    disabled={generatingBanners || (bannerRemaining === 0)}
+                    whileHover={{ scale: generatingBanners ? 1 : 1.05, y: generatingBanners ? 0 : -2 }}
+                    whileTap={{ scale: 0.97 }}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-white px-7 py-4 text-base font-black text-[#0017C1] shadow-2xl shadow-[#000060]/50 disabled:opacity-50"
+                  >
+                    {generatingBanners ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        生成中... (30〜60秒)
+                      </>
+                    ) : bannerRemaining === 0 ? (
+                      <>本日の上限に達しました</>
+                    ) : (
+                      <>
+                        <Sparkles className="h-5 w-5" />
+                        このバナー画像を作る
+                      </>
+                    )}
+                  </motion.button>
+                  {bannerRemaining === 0 && (
+                    <Link
+                      href="/adsim/pricing"
+                      className="inline-flex items-center gap-2 rounded-2xl border-2 border-white/40 bg-white/10 px-5 py-4 text-sm font-black text-white backdrop-blur hover:bg-white/20"
+                    >
+                      Pro プランで無制限に →
+                    </Link>
                   )}
-                </motion.button>
+                </div>
               </div>
             </div>
           ) : (
@@ -646,31 +706,71 @@ export default function AdSimProjectPage() {
                 </motion.button>
               </div>
               <div className="grid gap-4 sm:grid-cols-3">
-                {bannerImages.map((src, i) => (
-                  <motion.a
-                    key={i}
-                    href={src}
-                    download={`banner-${i + 1}.png`}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: i * 0.1 }}
-                    whileHover={{ scale: 1.03, y: -4 }}
-                    className="group relative aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-md"
-                  >
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={src} alt={`Banner ${i + 1}`} className="h-full w-full object-cover transition group-hover:scale-105" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
-                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between opacity-0 transition group-hover:opacity-100">
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#0017C1]">
-                        Pattern {String.fromCharCode(65 + i)}
-                      </span>
-                      <span className="rounded-full bg-[#0017C1] p-2 text-white">
-                        <Download className="h-4 w-4" />
-                      </span>
-                    </div>
-                  </motion.a>
-                ))}
+                {bannerImages.map((src, i) => {
+                  const inner = (
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={src}
+                        alt={`Banner ${i + 1}`}
+                        className={`h-full w-full object-cover transition group-hover:scale-105 ${isFree ? 'blur-md' : ''}`}
+                      />
+                      {isFree && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/50 backdrop-blur-sm">
+                          <div className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white backdrop-blur">
+                            🔒 ロック中
+                          </div>
+                          <div className="text-xs font-black text-white">Pro プラン限定</div>
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
+                      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between opacity-0 transition group-hover:opacity-100">
+                        <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-[#0017C1]">
+                          Pattern {String.fromCharCode(65 + i)}
+                        </span>
+                        {!isFree && (
+                          <span className="rounded-full bg-[#0017C1] p-2 text-white">
+                            <Download className="h-4 w-4" />
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  )
+                  return isFree ? (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.1 }}
+                      whileHover={{ scale: 1.03, y: -4 }}
+                      className="group relative aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-md"
+                    >
+                      {inner}
+                    </motion.div>
+                  ) : (
+                    <motion.a
+                      key={i}
+                      href={src}
+                      download={`banner-${i + 1}.png`}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: i * 0.1 }}
+                      whileHover={{ scale: 1.03, y: -4 }}
+                      className="group relative aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-md"
+                    >
+                      {inner}
+                    </motion.a>
+                  )
+                })}
               </div>
+              {isFree && (
+                <Link
+                  href="/adsim/pricing"
+                  className="mt-5 flex items-center justify-center gap-2 rounded-2xl border-2 border-[#0017C1]/30 bg-gradient-to-r from-[#D9E6FF] to-[#C5D7FB] px-5 py-4 text-sm font-black text-[#0017C1] transition hover:from-[#C5D7FB] hover:to-[#D9E6FF]"
+                >
+                  🔓 Pro プランへアップグレードしてバナー画像をダウンロード →
+                </Link>
+              )}
             </div>
           )}
         </motion.div>
@@ -690,7 +790,7 @@ export default function AdSimProjectPage() {
             >
               <div
                 ref={chatScrollRef}
-                className="max-h-80 space-y-3 overflow-y-auto rounded-t-2xl border border-b-0 border-slate-200 bg-white p-5 shadow-2xl"
+                className="max-h-[55vh] min-h-[280px] space-y-3 overflow-y-auto rounded-t-2xl border border-b-0 border-slate-200 bg-white p-6 shadow-2xl"
               >
                 {chatMessages.length === 0 && (
                   <div className="py-2 text-center text-xs font-bold text-slate-400">
@@ -754,10 +854,12 @@ export default function AdSimProjectPage() {
                   onFocus={() => setChatOpen(true)}
                   placeholder="例: Google の予算を 60% に増やして"
                   disabled={chatProcessing}
-                  className="w-full rounded-full border-2 border-slate-200 bg-slate-50 px-5 py-3 text-sm font-bold focus:border-[#0017C1] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#0017C1]/10 disabled:bg-slate-100"
+                  className="w-full rounded-full border-2 border-slate-200 bg-slate-50 px-5 py-3 pr-32 text-sm font-bold focus:border-[#0017C1] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#0017C1]/10 disabled:bg-slate-100"
                 />
-                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                  AI で数値を即時調整
+                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">
+                  {chatRemaining === -1
+                    ? 'AI で即時調整'
+                    : `本日 残り ${chatRemaining}/${chatDailyLimit}回`}
                 </span>
               </div>
               <motion.button
@@ -926,15 +1028,17 @@ function KpiTile({
     <motion.div
       variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
       whileHover={{ y: -4 }}
-      className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-xl hover:shadow-[#0017C1]/10"
+      className="group relative min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-xl hover:shadow-[#0017C1]/10"
     >
-      <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-gradient-to-br from-[#D9E6FF] to-transparent opacity-50" />
-      <div className="relative">
-        <div className="mb-2 flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-slate-500">
-          <Icon className="h-3 w-3" />
-          {label}
+      <div className="pointer-events-none absolute -right-4 -top-4 h-20 w-20 rounded-full bg-gradient-to-br from-[#D9E6FF] to-transparent opacity-50" />
+      <div className="relative min-w-0">
+        <div className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-slate-500">
+          <Icon className="h-3 w-3 flex-shrink-0" />
+          <span className="truncate">{label}</span>
         </div>
-        <div className="text-2xl font-black tracking-tight text-slate-900 md:text-3xl">{value}</div>
+        <div className="text-lg font-black leading-tight tracking-tight text-slate-900 break-all sm:text-xl md:text-[1.4rem]">
+          {value}
+        </div>
       </div>
     </motion.div>
   )
@@ -953,6 +1057,93 @@ function ChartCard({
     <div className={`rounded-2xl border border-slate-200 bg-white p-6 shadow-sm ${className}`}>
       <h3 className="mb-4 text-sm font-black uppercase tracking-widest text-slate-700">{title}</h3>
       {children}
+    </div>
+  )
+}
+
+// ターゲティング可視化（年齢/性別/地域/興味のチップ）
+function TargetingVisual({ content, project }: { content: string; project: AdSimProject }) {
+  const targetAudience = project.targetAudience || undefined
+
+  return (
+    <div className="space-y-5">
+      {/* チップ表示エリア */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <ChipBox label="年齢層" value={targetAudience?.age || '指定なし'} icon="👤" />
+        <ChipBox label="性別" value={targetAudience?.gender || '指定なし'} icon="⚥" />
+        <ChipBox label="地域" value={targetAudience?.region || '全国'} icon="📍" />
+        <ChipBox label="興味" value={targetAudience?.interests?.join(' / ') || '指定なし'} icon="❤️" />
+      </div>
+      <div className="rounded-2xl bg-slate-50 p-5">
+        <p className="whitespace-pre-wrap text-sm font-bold leading-loose tracking-wide text-slate-700">
+          {content}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+// クリエイティブ方針 可視化（媒体ごとのカード）
+function CreativeVisual({ content, mediaAllocation }: { content: string; mediaAllocation: any }) {
+  const allocation = mediaAllocation || {}
+  const mediaList = [
+    { id: 'google', name: 'Google広告', tone: '検索意図・論理訴求', color: '#0023D6' },
+    { id: 'meta', name: 'Meta広告', tone: 'ビジュアル訴求・UGC風', color: '#1F4DFF' },
+    { id: 'line', name: 'LINE広告', tone: '日常導線・親近感', color: '#3460FB' },
+    { id: 'x', name: 'X広告', tone: '即時拡散・話題性', color: '#5575FC' },
+    { id: 'tiktok', name: 'TikTok', tone: 'バズ動画・縦型', color: '#0017C1' },
+    { id: 'yahoo', name: 'Yahoo!', tone: '幅広い世代・信頼性', color: '#4A6BFC' },
+  ]
+  const activeMedia = mediaList.filter((m) => (allocation[m.id] || 0) > 0)
+
+  return (
+    <div className="space-y-5">
+      {/* 媒体ごとのカード */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {activeMedia.map((m) => (
+          <div
+            key={m.id}
+            className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md"
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <span
+                className="inline-block rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest text-white"
+                style={{ background: `linear-gradient(135deg, ${m.color}, #3460FB)` }}
+              >
+                {m.name}
+              </span>
+              <span className="text-xs font-black text-slate-700">{allocation[m.id]}%</span>
+            </div>
+            <div className="text-xs font-bold text-slate-600">{m.tone}</div>
+            <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${allocation[m.id] || 0}%`,
+                  background: `linear-gradient(90deg, ${m.color}, #3460FB)`,
+                }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="rounded-2xl bg-slate-50 p-5">
+        <p className="whitespace-pre-wrap text-sm font-bold leading-loose tracking-wide text-slate-700">
+          {content}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+function ChipBox({ label, value, icon }: { label: string; value: string; icon: string }) {
+  return (
+    <div className="rounded-2xl border-2 border-[#D9E6FF] bg-gradient-to-br from-white to-[#D9E6FF]/40 p-4">
+      <div className="mb-1 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500">
+        <span className="text-base leading-none">{icon}</span>
+        {label}
+      </div>
+      <div className="text-sm font-black text-slate-900">{value}</div>
     </div>
   )
 }

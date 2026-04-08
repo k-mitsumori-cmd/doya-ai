@@ -76,14 +76,52 @@ async function scrapeLp(url: string): Promise<{
     if (t && t.length < 200) h1s.push(t)
   })
 
-  // OG イメージ取得
+  // OG イメージ取得（複数のソースから fallback）
   let ogImage: string | null =
     $('meta[property="og:image"]').attr('content') ||
+    $('meta[property="og:image:secure_url"]').attr('content') ||
+    $('meta[property="og:image:url"]').attr('content') ||
     $('meta[name="twitter:image"]').attr('content') ||
+    $('meta[name="twitter:image:src"]').attr('content') ||
+    $('link[rel="image_src"]').attr('href') ||
+    $('meta[itemprop="image"]').attr('content') ||
     null
-  if (ogImage && !ogImage.startsWith('http')) {
+
+  // それでも無ければページ内の最初の大きい画像を取得
+  if (!ogImage) {
+    const candidates: string[] = []
+    $('img').each((_, el) => {
+      const src =
+        $(el).attr('src') ||
+        $(el).attr('data-src') ||
+        $(el).attr('data-lazy-src') ||
+        $(el).attr('data-original') ||
+        ''
+      if (!src) return
+      // ロゴ・アイコン・トラッキング画像を除外
+      const lower = src.toLowerCase()
+      if (
+        lower.includes('logo') ||
+        lower.includes('icon') ||
+        lower.includes('favicon') ||
+        lower.includes('sprite') ||
+        lower.includes('blank.gif') ||
+        lower.includes('pixel.') ||
+        lower.endsWith('.svg')
+      ) {
+        return
+      }
+      candidates.push(src)
+      if (candidates.length >= 5) return false
+    })
+    if (candidates.length > 0) ogImage = candidates[0]
+  }
+
+  // 相対URL → 絶対URL
+  if (ogImage) {
     try {
-      ogImage = new URL(ogImage, url).toString()
+      const resolved = new URL(ogImage, url).toString()
+      ogImage = resolved
     } catch {
       ogImage = null
     }
@@ -140,6 +178,13 @@ ${lp.bodyText.substring(0, 2500)}
 - recommendation は「このLPから、このような広告運用を行います」を主張する詳細提案文を500字以上で執筆
 - budgetRationale は「なぜこの媒体配分にしたか」を媒体ごとの理由付きで400字以上
 - cpaRationale は「なぜこの目標CPA・CV数か」の根拠を業界相場・配分・LP特性から300字以上
+
+【ハルシネーション厳禁】
+- LPに書かれていない事実・数値・企業情報を絶対に推測・捏造しないこと
+- 商品の販売実績、ユーザー数、創業年、受賞歴、メディア掲載などは LP に明記されている場合のみ言及
+- 「業界No.1」「累計100万人」のような根拠の無い表現を一切使わない
+- 不確かな情報は「LP上で明示されている範囲では〜」と限定する
+- 業界平均ベンチマークの数値（CPA等）は「業界平均ベンチマークによれば〜」と出典を明示
 
 【出力JSONスキーマ】
 {

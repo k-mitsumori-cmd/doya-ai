@@ -61,6 +61,16 @@ function normalizeAlloc(
   return cleaned
 }
 
+// プラン → 1日あたりのチャット編集回数
+function getChatDailyLimit(plan: string | null | undefined): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.ADSIM_DISABLE_LIMITS === '1') return -1
+  const p = String(plan || 'FREE').toUpperCase()
+  if (p === 'ENTERPRISE' || p === 'BUSINESS' || p === 'BUNDLE') return -1
+  if (p === 'PRO' || p === 'STARTER') return -1
+  if (p === 'LIGHT') return 30
+  return 5 // FREE
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: { projectId: string } }
@@ -79,6 +89,44 @@ export async function POST(
     const { message } = await req.json()
     if (!message || typeof message !== 'string') {
       return NextResponse.json({ error: 'message は必須です' }, { status: 400 })
+    }
+
+    // ----- 1日あたりのチャット編集制限 -----
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { plan: true },
+    })
+    const dailyLimit = getChatDailyLimit(user?.plan)
+    if (dailyLimit !== -1) {
+      const startOfDay = new Date()
+      startOfDay.setHours(0, 0, 0, 0)
+      const allProjects = await prisma.adSimProject.findMany({
+        where: { userId },
+        select: { chartData: true },
+      })
+      let todayCount = 0
+      for (const p of allProjects) {
+        const cd = p.chartData as any
+        if (Array.isArray(cd?.chatLog)) {
+          for (const entry of cd.chatLog) {
+            if (entry?.timestamp) {
+              const ts = new Date(entry.timestamp)
+              if (!isNaN(ts.getTime()) && ts >= startOfDay) todayCount++
+            }
+          }
+        }
+      }
+      if (todayCount >= dailyLimit) {
+        return NextResponse.json(
+          {
+            error: `本日のチャット編集上限（無料プラン: ${dailyLimit}回/日）に達しました。Pro プランへアップグレードで無制限になります。`,
+            code: 'CHAT_DAILY_LIMIT',
+            limit: dailyLimit,
+            current: todayCount,
+          },
+          { status: 402 }
+        )
+      }
     }
 
     const currentAlloc = (project.mediaAllocation as Record<string, number>) || {}
@@ -150,6 +198,10 @@ ${message}
         click: simResult.overall.totalClick,
         cv: simResult.overall.totalCv,
       },
+      chatLog: [
+        ...(Array.isArray(oldChart.chatLog) ? oldChart.chatLog : []),
+        { timestamp: new Date().toISOString(), message: message.substring(0, 500), summary },
+      ].slice(-50), // 直近50件まで保持
     }
 
     await prisma.adSimProject.update({

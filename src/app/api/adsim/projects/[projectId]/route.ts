@@ -13,12 +13,45 @@ export async function GET(_req: NextRequest, { params }: { params: { projectId: 
     const userId = session?.user?.id
     if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const project = await prisma.adSimProject.findUnique({ where: { id: params.projectId } })
+    const [project, user] = await Promise.all([
+      prisma.adSimProject.findUnique({ where: { id: params.projectId } }),
+      prisma.user.findUnique({ where: { id: userId }, select: { plan: true } }),
+    ])
     if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     if (project.userId !== userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
-    return NextResponse.json({ project })
+
+    // 当日の使用カウントも返す（プレビューUI で残り回数表示用）
+    const startOfDay = new Date()
+    startOfDay.setHours(0, 0, 0, 0)
+    const allProjects = await prisma.adSimProject.findMany({
+      where: { userId },
+      select: { chartData: true },
+    })
+    let bannerToday = 0
+    let chatToday = 0
+    for (const p of allProjects) {
+      const cd = p.chartData as any
+      if (cd?.bannerGeneratedAt) {
+        const ts = new Date(cd.bannerGeneratedAt)
+        if (!isNaN(ts.getTime()) && ts >= startOfDay) bannerToday++
+      }
+      if (Array.isArray(cd?.chatLog)) {
+        for (const e of cd.chatLog) {
+          if (e?.timestamp) {
+            const ts = new Date(e.timestamp)
+            if (!isNaN(ts.getTime()) && ts >= startOfDay) chatToday++
+          }
+        }
+      }
+    }
+
+    return NextResponse.json({
+      project,
+      userPlan: user?.plan || 'FREE',
+      usage: { bannerToday, chatToday },
+    })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
     return NextResponse.json({ error: message }, { status: 500 })

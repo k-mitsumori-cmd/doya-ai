@@ -13,6 +13,16 @@ import { generateBanners } from '@/lib/nanobanner'
 export const runtime = 'nodejs'
 export const maxDuration = 300
 
+// プラン → 1日あたりのバナー生成回数
+function getBannerDailyLimit(plan: string | null | undefined): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.ADSIM_DISABLE_LIMITS === '1') return -1
+  const p = String(plan || 'FREE').toUpperCase()
+  if (p === 'ENTERPRISE' || p === 'BUSINESS' || p === 'BUNDLE') return -1
+  if (p === 'PRO' || p === 'STARTER') return -1
+  if (p === 'LIGHT') return 10
+  return 2 // FREE
+}
+
 export async function POST(
   _req: NextRequest,
   { params }: { params: { projectId: string } }
@@ -26,6 +36,42 @@ export async function POST(
     if (!project) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     if (project.userId !== userId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    // ----- 1日あたりのバナー生成制限チェック -----
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { plan: true },
+    })
+    const dailyLimit = getBannerDailyLimit(user?.plan)
+    if (dailyLimit !== -1) {
+      // 当日 0:00 を JST 基準で
+      const startOfDay = new Date()
+      startOfDay.setHours(0, 0, 0, 0)
+      // ユーザーの全プロジェクトを取得し、当日の bannerGeneratedAt をカウント
+      const allProjects = await prisma.adSimProject.findMany({
+        where: { userId },
+        select: { chartData: true },
+      })
+      let todayCount = 0
+      for (const p of allProjects) {
+        const cd = p.chartData as any
+        if (cd?.bannerGeneratedAt) {
+          const ts = new Date(cd.bannerGeneratedAt)
+          if (!isNaN(ts.getTime()) && ts >= startOfDay) todayCount++
+        }
+      }
+      if (todayCount >= dailyLimit) {
+        return NextResponse.json(
+          {
+            error: `本日のバナー生成上限（無料プラン: ${dailyLimit}回/日）に達しました。Pro プランへアップグレードで無制限になります。`,
+            code: 'BANNER_DAILY_LIMIT',
+            limit: dailyLimit,
+            current: todayCount,
+          },
+          { status: 402 }
+        )
+      }
     }
 
     // 提案内容からプロンプト材料を組み立て
@@ -61,10 +107,11 @@ export async function POST(
       )
     }
 
-    // chartData.bannerImages に保存
+    // chartData.bannerImages + 生成日時を保存
     const updatedChartData = {
       ...chartData,
       bannerImages: result.banners,
+      bannerGeneratedAt: new Date().toISOString(),
     }
     await prisma.adSimProject.update({
       where: { id: params.projectId },
