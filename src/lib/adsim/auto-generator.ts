@@ -33,6 +33,12 @@ export interface AutoGenerateResult {
   targetCpa: number | null
   targetRoas: number | null
   rationale: string
+  // 拡張: LP 詳細
+  ogImage: string | null
+  lpAnalysis: string // LP の詳細分析（強み/訴求点/課題）
+  recommendation: string // 「このLPから、このような広告運用を行います」の詳細提案
+  budgetRationale: string // 予算配分の根拠
+  cpaRationale: string // CPA / CV の根拠
 }
 
 // ----------------------------------------
@@ -43,6 +49,7 @@ async function scrapeLp(url: string): Promise<{
   description: string
   h1s: string[]
   bodyText: string
+  ogImage: string | null
 }> {
   const res = await fetch(url, {
     headers: {
@@ -69,6 +76,19 @@ async function scrapeLp(url: string): Promise<{
     if (t && t.length < 200) h1s.push(t)
   })
 
+  // OG イメージ取得
+  let ogImage: string | null =
+    $('meta[property="og:image"]').attr('content') ||
+    $('meta[name="twitter:image"]').attr('content') ||
+    null
+  if (ogImage && !ogImage.startsWith('http')) {
+    try {
+      ogImage = new URL(ogImage, url).toString()
+    } catch {
+      ogImage = null
+    }
+  }
+
   // 本文テキスト（最大4000文字）
   $('script, style, nav, footer, header').remove()
   const bodyText = $('body').text().replace(/\s+/g, ' ').trim().substring(0, 4000)
@@ -78,6 +98,7 @@ async function scrapeLp(url: string): Promise<{
     description: description.substring(0, 400),
     h1s: h1s.slice(0, 10),
     bodyText,
+    ogImage,
   }
 }
 
@@ -115,6 +136,10 @@ ${lp.bodyText.substring(0, 2500)}
 - ターゲットは LP の文脈から推定
 - targetCpa は業界相場と予算から逆算
 - rationale は「なぜこの戦略か」を3〜5文で簡潔に
+- lpAnalysis は LP の強み・訴求点・課題を400字以上で詳細分析（プレーンテキスト）
+- recommendation は「このLPから、このような広告運用を行います」を主張する詳細提案文を500字以上で執筆
+- budgetRationale は「なぜこの媒体配分にしたか」を媒体ごとの理由付きで400字以上
+- cpaRationale は「なぜこの目標CPA・CV数か」の根拠を業界相場・配分・LP特性から300字以上
 
 【出力JSONスキーマ】
 {
@@ -135,7 +160,11 @@ ${lp.bodyText.substring(0, 2500)}
   "targetCv": 数値（月間想定CV数、整数）,
   "targetCpa": 数値（円、整数）,
   "targetRoas": 数値（%、整数。例: 300）,
-  "rationale": "戦略理由（3〜5文）"
+  "rationale": "戦略理由（3〜5文）",
+  "lpAnalysis": "LP の強み・訴求点・課題の詳細分析（400字以上）",
+  "recommendation": "このLPから、このような広告運用を行います という詳細提案（500字以上）",
+  "budgetRationale": "媒体配分の根拠を媒体ごとに（400字以上）",
+  "cpaRationale": "目標CPA・CV数の根拠（300字以上）"
 }
 `
 }
@@ -239,5 +268,10 @@ export async function autoGenerateProposal(
     targetCpa: parsed.targetCpa ? Number(parsed.targetCpa) : null,
     targetRoas: parsed.targetRoas ? Number(parsed.targetRoas) : null,
     rationale: String(parsed.rationale || '').substring(0, 1000),
+    ogImage: lp.ogImage,
+    lpAnalysis: String(parsed.lpAnalysis || '').substring(0, 3000),
+    recommendation: String(parsed.recommendation || '').substring(0, 3000),
+    budgetRationale: String(parsed.budgetRationale || '').substring(0, 2000),
+    cpaRationale: String(parsed.cpaRationale || '').substring(0, 2000),
   }
 }

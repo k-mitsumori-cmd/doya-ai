@@ -134,6 +134,14 @@ export async function POST(req: NextRequest) {
         click: simResult.overall.totalClick,
         cv: simResult.overall.totalCv,
       },
+      // LP 詳細情報（プレビュー画面で使用）
+      ogImage: auto.ogImage,
+      lpAnalysis: auto.lpAnalysis,
+      recommendation: auto.recommendation,
+      budgetRationale: auto.budgetRationale,
+      cpaRationale: auto.cpaRationale,
+      industryName: auto.industryName,
+      bannerImages: [] as string[], // 後でNanoBanana で生成
     }
 
     // 4. 提案テキスト10セクション

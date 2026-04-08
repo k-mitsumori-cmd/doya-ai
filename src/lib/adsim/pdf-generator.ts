@@ -16,12 +16,20 @@ export interface PdfInput {
   clientName: string
   productName: string
   industry: string
+  industryName?: string
   monthlyBudget: number
   periodMonths: number
   mediaAllocation: Record<string, number>
   proposerName?: string | null
   simulation: SimulationResult
   proposal: ProposalSection[]
+  // 拡張: LP 詳細
+  ogImage?: string | null
+  lpAnalysis?: string
+  recommendation?: string
+  budgetRationale?: string
+  cpaRationale?: string
+  lpUrl?: string | null
 }
 
 // ----------------------------------------
@@ -76,105 +84,239 @@ function renderHtml(input: PdfInput): string {
 <meta charset="UTF-8" />
 <title>${escapeHtml(input.clientName)} 広告提案書</title>
 <style>
-  @page { size: A4; margin: 20mm; }
+  @page { size: A4; margin: 18mm 16mm; }
   * { box-sizing: border-box; }
   body {
     font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Noto Sans JP", "Yu Gothic", sans-serif;
     color: #1f2937;
     margin: 0;
-    line-height: 1.7;
-    font-size: 11pt;
+    line-height: 1.85;
+    letter-spacing: 0.04em;
+    font-size: 10.5pt;
+    font-weight: 600;
   }
+  /* === 表紙 === */
   .cover {
     page-break-after: always;
-    text-align: left;
-    padding: 80px 40px;
-    background: linear-gradient(135deg, #6366f1 0%, #3b82f6 100%);
+    padding: 0;
+    background: linear-gradient(135deg, #0017C1 0%, #3460FB 50%, #000060 100%);
     color: white;
-    min-height: 90vh;
+    min-height: 96vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover-bg-orb1 {
+    position: absolute;
+    top: -120px;
+    right: -100px;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%);
+  }
+  .cover-bg-orb2 {
+    position: absolute;
+    bottom: -120px;
+    left: -80px;
+    width: 350px;
+    height: 350px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  }
+  .cover-content {
+    padding: 60px 50px;
+    position: relative;
+    z-index: 1;
+    flex: 1;
     display: flex;
     flex-direction: column;
     justify-content: center;
   }
-  .cover .client { font-size: 28pt; font-weight: 700; margin-bottom: 8px; }
-  .cover .title { font-size: 42pt; font-weight: 800; margin-bottom: 32px; }
-  .cover .meta { font-size: 14pt; opacity: 0.9; }
-  .cover .footer { margin-top: 60px; font-size: 11pt; opacity: 0.8; }
+  ${input.ogImage ? `
+  .cover-image {
+    width: 100%;
+    height: 240px;
+    background-image: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,23,193,0.7) 100%), url('${input.ogImage}');
+    background-size: cover;
+    background-position: center;
+    margin-bottom: 30px;
+    border-radius: 16px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+  }` : ''}
+  .cover .badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-size: 10pt;
+    font-weight: 800;
+    margin-bottom: 24px;
+    border: 1px solid rgba(255,255,255,0.3);
+    letter-spacing: 0.08em;
+  }
+  .cover .client {
+    font-size: 26pt;
+    font-weight: 800;
+    margin-bottom: 8px;
+    letter-spacing: 0.05em;
+  }
+  .cover .title {
+    font-size: 48pt;
+    font-weight: 900;
+    margin-bottom: 32px;
+    letter-spacing: 0.06em;
+    line-height: 1.2;
+  }
+  .cover .meta {
+    font-size: 13pt;
+    opacity: 0.95;
+    font-weight: 700;
+    line-height: 1.8;
+  }
+  .cover .footer {
+    padding: 20px 50px;
+    font-size: 10pt;
+    opacity: 0.8;
+    font-weight: 700;
+    border-top: 1px solid rgba(255,255,255,0.2);
+    position: relative;
+    z-index: 1;
+  }
 
+  /* === 内容ページ === */
+  .page { padding: 0; }
   h1 {
-    font-size: 20pt;
-    color: #6366f1;
-    border-bottom: 3px solid #6366f1;
-    padding-bottom: 8px;
-    margin-top: 0;
+    font-size: 22pt;
+    font-weight: 900;
+    color: #0017C1;
+    margin: 0 0 8px 0;
+    letter-spacing: 0.06em;
+    padding-bottom: 12px;
+    border-bottom: 4px solid;
+    border-image: linear-gradient(90deg, #0017C1, #3460FB, #7096F8) 1;
+  }
+  h1 .h1-sub {
+    display: block;
+    font-size: 10pt;
+    color: #626264;
+    font-weight: 700;
+    margin-top: 4px;
+    letter-spacing: 0.05em;
   }
   h2 {
-    font-size: 15pt;
-    color: #6366f1;
-    margin-top: 24px;
-    margin-bottom: 8px;
+    font-size: 14pt;
+    font-weight: 900;
+    color: #0017C1;
+    margin: 28px 0 12px;
+    letter-spacing: 0.05em;
   }
-  p { margin: 0 0 12px; }
+  p {
+    margin: 0 0 14px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.95;
+  }
+  strong, b { font-weight: 900; color: #000060; }
 
   .kpi-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin: 20px 0;
+    gap: 14px;
+    margin: 22px 0;
   }
   .kpi-card {
-    background: #f3f4f6;
-    border-radius: 8px;
-    padding: 16px;
+    background: linear-gradient(135deg, #F8F8FB 0%, #D9E6FF 100%);
+    border-radius: 14px;
+    padding: 20px;
     text-align: center;
+    border: 1px solid #C5D7FB;
+    box-shadow: 0 4px 12px rgba(0,23,193,0.08);
   }
-  .kpi-card .label { font-size: 9pt; color: #6b7280; margin-bottom: 4px; }
-  .kpi-card .value { font-size: 18pt; font-weight: 700; color: #6366f1; }
+  .kpi-card .label {
+    font-size: 9pt;
+    color: #626264;
+    margin-bottom: 8px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .kpi-card .value {
+    font-size: 20pt;
+    font-weight: 900;
+    color: #0017C1;
+    letter-spacing: 0.04em;
+  }
 
   table {
     width: 100%;
-    border-collapse: collapse;
-    margin: 16px 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 18px 0;
     font-size: 9pt;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,23,193,0.1);
   }
   th {
-    background: #6366f1;
+    background: linear-gradient(135deg, #0017C1 0%, #3460FB 100%);
     color: white;
-    padding: 8px;
+    padding: 12px 10px;
     text-align: left;
-    font-weight: 600;
+    font-weight: 900;
+    letter-spacing: 0.05em;
   }
   td {
-    border-bottom: 1px solid #e5e7eb;
-    padding: 8px;
+    border-bottom: 1px solid #E5E7EB;
+    padding: 12px 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
   }
-  tr:nth-child(even) td { background: #f9fafb; }
+  tr:nth-child(even) td { background: #F8F8FB; }
+  tr:last-child td { border-bottom: none; }
 
   .pill {
     display: inline-block;
-    background: #eef2ff;
-    color: #4338ca;
-    padding: 4px 12px;
+    background: linear-gradient(135deg, #D9E6FF 0%, #C5D7FB 100%);
+    color: #0017C1;
+    padding: 6px 14px;
     border-radius: 999px;
     font-size: 9pt;
-    margin-right: 4px;
-    margin-bottom: 4px;
+    font-weight: 900;
+    margin-right: 6px;
+    margin-bottom: 6px;
+    letter-spacing: 0.04em;
+    border: 1px solid #7096F8;
   }
 
   .section {
     page-break-inside: avoid;
-    margin-bottom: 24px;
+    margin-bottom: 28px;
   }
+  .highlight-section {
+    background: linear-gradient(135deg, #F8F8FB 0%, #D9E6FF 100%);
+    border-left: 6px solid #0017C1;
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin: 24px 0;
+    box-shadow: 0 4px 16px rgba(0,23,193,0.08);
+  }
+  .highlight-section h2 { margin-top: 0; }
   .page-break { page-break-before: always; }
 
   .disclaimer {
-    background: #fffbeb;
-    border: 1px solid #fbbf24;
-    border-radius: 8px;
-    padding: 16px;
+    background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%);
+    border: 1px solid #F59E0B;
+    border-radius: 12px;
+    padding: 18px 22px;
     font-size: 9pt;
-    color: #78350f;
+    color: #78350F;
     margin-top: 40px;
+    font-weight: 700;
   }
 </style>
 </head>
@@ -182,25 +324,49 @@ function renderHtml(input: PdfInput): string {
 
 <!-- 表紙 -->
 <div class="cover">
-  <div class="client">${escapeHtml(input.clientName)} 様</div>
-  <div class="title">広告運用 提案書</div>
-  <div class="meta">
-    ${escapeHtml(input.productName)} / ${escapeHtml(input.industry)}<br />
-    月額 ¥${input.monthlyBudget.toLocaleString()} × ${input.periodMonths}ヶ月
+  <div class="cover-bg-orb1"></div>
+  <div class="cover-bg-orb2"></div>
+  <div class="cover-content">
+    ${input.ogImage ? `<div class="cover-image"></div>` : ''}
+    <div class="badge">AD PROPOSAL · ${escapeHtml(input.industryName || input.industry)}</div>
+    <div class="client">${escapeHtml(input.clientName)} 様</div>
+    <div class="title">広告運用 提案書</div>
+    <div class="meta">
+      <strong>${escapeHtml(input.productName)}</strong><br />
+      月額 <strong>¥${input.monthlyBudget.toLocaleString()}</strong> × <strong>${input.periodMonths}ヶ月</strong>
+      （総額 <strong>¥${(input.monthlyBudget * input.periodMonths).toLocaleString()}</strong>）
+    </div>
   </div>
-  ${input.proposerName ? `<div class="footer">提案者: ${escapeHtml(input.proposerName)}</div>` : ''}
+  ${input.proposerName ? `<div class="footer">提案者: <strong>${escapeHtml(input.proposerName)}</strong></div>` : '<div class="footer">&nbsp;</div>'}
 </div>
 
-<!-- 提案サマリ -->
-<h1>シミュレーション結果サマリ</h1>
-<div style="margin: 8px 0 16px;">${allocationPills}</div>
+<!-- LP 分析 -->
+${input.lpAnalysis ? `
+<div class="page">
+  <h1>LP 分析<span class="h1-sub">このランディングページから読み取れる強み・訴求点・課題</span></h1>
+  <p>${escapeHtml(input.lpAnalysis).replace(/\n/g, '<br />')}</p>
+</div>
+` : ''}
+
+<!-- このLPから、このような広告運用を行います（重要セクション） -->
+${input.recommendation ? `
+<div class="highlight-section">
+  <h2>このLPから、このような広告運用を行います</h2>
+  <p><strong>${escapeHtml(input.recommendation).replace(/\n/g, '<br />')}</strong></p>
+</div>
+` : ''}
+
+<!-- シミュレーション結果サマリ -->
+<div class="page-break"></div>
+<h1>シミュレーション結果サマリ<span class="h1-sub">媒体別×月次のパフォーマンス予測</span></h1>
+<div style="margin: 14px 0 18px;">${allocationPills}</div>
 <div class="kpi-grid">
   <div class="kpi-card"><div class="label">総予算</div><div class="value">¥${overall.totalBudget.toLocaleString()}</div></div>
   <div class="kpi-card"><div class="label">総Impression</div><div class="value">${overall.totalImpression.toLocaleString()}</div></div>
   <div class="kpi-card"><div class="label">総Click</div><div class="value">${overall.totalClick.toLocaleString()}</div></div>
   <div class="kpi-card"><div class="label">総CV</div><div class="value">${overall.totalCv.toLocaleString()}</div></div>
   <div class="kpi-card"><div class="label">平均CPA</div><div class="value">¥${overall.avgCpa.toLocaleString()}</div></div>
-  <div class="kpi-card"><div class="label">平均ROAS</div><div class="value">${overall.avgRoas}</div></div>
+  <div class="kpi-card"><div class="label">平均ROAS</div><div class="value">${overall.avgRoas}%</div></div>
 </div>
 
 <h2>媒体別パフォーマンス</h2>
@@ -213,9 +379,25 @@ function renderHtml(input: PdfInput): string {
   <tbody>${mediaRows}</tbody>
 </table>
 
-<!-- 提案テキスト -->
+<!-- 予算配分の根拠 -->
+${input.budgetRationale ? `
+<div class="section">
+  <h2>予算配分の根拠</h2>
+  <p>${escapeHtml(input.budgetRationale).replace(/\n/g, '<br />')}</p>
+</div>
+` : ''}
+
+<!-- CPA・CV の根拠 -->
+${input.cpaRationale ? `
+<div class="section">
+  <h2>平均CPA・CVの根拠</h2>
+  <p>${escapeHtml(input.cpaRationale).replace(/\n/g, '<br />')}</p>
+</div>
+` : ''}
+
+<!-- 提案テキスト10セクション -->
 <div class="page-break"></div>
-<h1>提案内容</h1>
+<h1>提案内容<span class="h1-sub">全 10 セクション</span></h1>
 ${proposalSections}
 
 <!-- 免責 -->
@@ -256,7 +438,20 @@ export async function generatePdfBuffer(input: PdfInput): Promise<Uint8Array> {
       headless: chromium.headless,
     })
     const page = await browser.newPage()
-    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 })
+    // networkidle0 だと OG image 取得失敗時に詰まるので domcontentloaded に
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 30000 })
+    // 画像読み込みは最大 5秒だけ待つ
+    try {
+      await page.evaluate(async () => {
+        const imgs = Array.from(document.images)
+        await Promise.race([
+          Promise.all(imgs.map((img) => (img.complete ? null : new Promise((r) => { img.onload = img.onerror = r })))),
+          new Promise((r) => setTimeout(r, 5000)),
+        ])
+      })
+    } catch {
+      // ignore
+    }
     const pdfBuffer = await page.pdf({
       format: 'A4',
       printBackground: true,

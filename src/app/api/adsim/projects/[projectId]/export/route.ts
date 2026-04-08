@@ -14,6 +14,7 @@ import { SimulationResult } from '@/lib/adsim/simulator'
 import { ProposalSection } from '@/lib/adsim/gemini'
 
 export const runtime = 'nodejs'
+export const maxDuration = 300
 
 export async function GET(
   req: NextRequest,
@@ -43,6 +44,7 @@ export async function GET(
 
     const simulation = project.simulationData as unknown as SimulationResult
     const proposal = project.proposalText as unknown as ProposalSection[]
+    const chartData = (project.chartData as any) || {}
     const baseName = `${project.clientName}_広告提案_${new Date().toISOString().slice(0, 10)}`
       .replace(/[\\/:*?"<>|]/g, '_')
 
@@ -51,12 +53,19 @@ export async function GET(
         clientName: project.clientName,
         productName: project.productName,
         industry: project.industry,
+        industryName: chartData.industryName || project.industry,
         monthlyBudget: project.monthlyBudget,
         periodMonths: project.periodMonths,
         mediaAllocation: project.mediaAllocation as Record<string, number>,
         proposerName: project.proposerName,
         simulation,
         proposal,
+        ogImage: chartData.ogImage || null,
+        lpAnalysis: chartData.lpAnalysis || '',
+        recommendation: chartData.recommendation || '',
+        budgetRationale: chartData.budgetRationale || '',
+        cpaRationale: chartData.cpaRationale || '',
+        lpUrl: project.lpUrl || null,
       })
       return new NextResponse(buf, {
         headers: {
