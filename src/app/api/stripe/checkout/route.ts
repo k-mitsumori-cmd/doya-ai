@@ -156,6 +156,18 @@ function getPriceId(planId: string, billingPeriod: 'monthly' | 'yearly'): string
     // ドヤインタビューAI（統一課金）
     'interview-pro': STRIPE_PRICE_IDS.interview.pro,
     'interview-enterprise': STRIPE_PRICE_IDS.interview.enterprise,
+    // ドヤコピーAI（統一課金）
+    'copy-pro': STRIPE_PRICE_IDS.copy.pro,
+    'copy-enterprise': STRIPE_PRICE_IDS.copy.enterprise,
+    // ドヤLP AI（統一課金）
+    'lp-pro': STRIPE_PRICE_IDS.lp.pro,
+    'lp-enterprise': STRIPE_PRICE_IDS.lp.enterprise,
+    // ドヤボイスAI（統一課金）
+    'voice-pro': STRIPE_PRICE_IDS.voice.pro,
+    'voice-enterprise': STRIPE_PRICE_IDS.voice.enterprise,
+    // ドヤムービーAI（統一課金）
+    'movie-pro': STRIPE_PRICE_IDS.movie.pro,
+    'movie-enterprise': STRIPE_PRICE_IDS.movie.enterprise,
     // ドヤ広告シミュレーションAI（統一課金）
     'adsim-pro': STRIPE_PRICE_IDS.adsim.pro,
     'adsim-enterprise': STRIPE_PRICE_IDS.adsim.enterprise,
