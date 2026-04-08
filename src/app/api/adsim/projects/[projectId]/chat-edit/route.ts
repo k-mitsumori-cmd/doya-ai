@@ -19,12 +19,29 @@ export const runtime = 'nodejs'
 export const maxDuration = 60
 
 function extractJson(raw: string): any {
-  let text = raw.trim()
+  let text = (raw || '').trim()
+  // コードフェンス除去
   text = text.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '')
+  // 最初の { から最後の } まで
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
-  if (start === -1 || end === -1) throw new Error('JSON not found')
-  return JSON.parse(text.substring(start, end + 1))
+  if (start === -1 || end === -1) {
+    console.error('[chat-edit] JSON not found in raw response:', String(raw).substring(0, 800))
+    throw new Error('AI が JSON 形式で応答しませんでした。もう一度お試しください')
+  }
+  const slice = text.substring(start, end + 1)
+  try {
+    return JSON.parse(slice)
+  } catch (e) {
+    // 末尾カンマ除去のフォールバック
+    try {
+      const cleaned = slice.replace(/,(\s*[}\]])/g, '$1')
+      return JSON.parse(cleaned)
+    } catch {
+      console.error('[chat-edit] JSON parse failed:', slice.substring(0, 800))
+      throw new Error(`AI のレスポンス解析に失敗しました（${e instanceof Error ? e.message : 'parse error'}）`)
+    }
+  }
 }
 
 function normalizeAlloc(
@@ -145,22 +162,34 @@ export async function POST(
 【ユーザーの指示】
 ${message}
 
-【出力ルール】
-- JSON のみで返答（前置き・コードフェンス禁止）
-- mediaAllocation の合計は必ず100
-- 媒体ID: google, meta, line, x, tiktok, yahoo
-- monthlyBudget は必要時のみ変更（指示が無ければ現状維持）
-- summary は変更内容を「Meta の配分を 30% → 50% に増やしました」のような短い日本語で
+【出力ルール - 厳守】
+- 必ず JSON のみで応答してください
+- 前置き、後置き、説明文、コードフェンス（\`\`\`）は一切禁止
+- 最初の文字は { で始まり、最後の文字は } で終わること
+- mediaAllocation の値は数値（"40" などの文字列ではなく 40）
+- mediaAllocation の合計は必ず100になるようにしてください
+- 全6媒体すべてのキーを含めること: google, meta, line, x, tiktok, yahoo
+- monthlyBudget は数値（必要時のみ変更、指示が無ければ現状の値をそのまま入れる）
+- summary は日本語で短い変更説明（例: 「Meta の配分を 30% → 50% に増やしました」）
 
-【出力JSON】
-{
-  "mediaAllocation": { "google": n, "meta": n, "line": n, "x": n, "tiktok": n, "yahoo": n },
-  "monthlyBudget": 数値,
-  "summary": "変更内容の短い説明"
-}
+【出力JSON サンプル】
+{"mediaAllocation":{"google":50,"meta":30,"line":10,"x":5,"tiktok":3,"yahoo":2},"monthlyBudget":${currentBudget},"summary":"Google を 50% に増やしました"}
 `
 
-    const raw = await generateTextWithGemini(prompt, {}, { temperature: 0.3, maxOutputTokens: 1024 })
+    let raw: string
+    try {
+      raw = await generateTextWithGemini(prompt, {}, { temperature: 0.1, maxOutputTokens: 1024 })
+    } catch (geminiErr) {
+      console.error('[chat-edit] Gemini call failed:', geminiErr)
+      return NextResponse.json(
+        { error: `AI 呼び出しに失敗しました: ${geminiErr instanceof Error ? geminiErr.message : 'unknown'}` },
+        { status: 502 }
+      )
+    }
+    if (!raw || raw.trim().length === 0) {
+      return NextResponse.json({ error: 'AI が空のレスポンスを返しました' }, { status: 502 })
+    }
+
     const parsed = extractJson(raw)
 
     const newAlloc = normalizeAlloc(parsed.mediaAllocation || currentAlloc)

@@ -108,7 +108,7 @@ export default function AdSimProjectPage() {
   const [usage, setUsage] = useState<{ bannerToday: number; chatToday: number }>({ bannerToday: 0, chatToday: 0 })
   const [loading, setLoading] = useState(true)
   const [generatingBanners, setGeneratingBanners] = useState(false)
-  const [chatOpen, setChatOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(true) // チャットを主操作にするためデフォルトで開く
   const [ogImageBroken, setOgImageBroken] = useState(false)
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'ai'; text: string }[]>([])
   const [chatInput, setChatInput] = useState('')
@@ -364,8 +364,8 @@ export default function AdSimProjectPage() {
           <InfoBox label="提案期間" value={`${project.periodMonths}ヶ月`} />
         </motion.div>
 
-        {/* === 提案サマリ（具体的に何を提案するか） === */}
-        {executiveSummary && (
+        {/* === 提案サマリ（具体的な数値を含む詳細サマリ） === */}
+        {(executiveSummary || overall) && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -373,18 +373,66 @@ export default function AdSimProjectPage() {
             className="mb-8 overflow-hidden rounded-3xl border-2 border-[#0017C1]/30 bg-gradient-to-br from-[#0017C1] via-[#1F3CFF] to-[#3460FB] p-1 shadow-2xl shadow-[#0017C1]/30"
           >
             <div className="rounded-[22px] bg-white p-8">
-              <div className="mb-4 flex items-center gap-3">
+              <div className="mb-5 flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0017C1] to-[#3460FB] text-white shadow-lg shadow-[#0017C1]/30">
                   <FileText className="h-6 w-6" />
                 </div>
                 <div>
                   <h2 className="text-2xl font-black tracking-tight text-slate-900">提案サマリ</h2>
-                  <p className="text-xs font-bold text-slate-500">どんな状況・どんな広告運用を提案するか</p>
+                  <p className="text-xs font-bold text-slate-500">数値で見る具体的な広告運用提案</p>
                 </div>
               </div>
-              <p className="whitespace-pre-wrap text-base font-bold leading-loose tracking-wide text-slate-800">
-                {executiveSummary}
-              </p>
+
+              {/* 数値ハイライト 6項目 */}
+              {overall && (
+                <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                  <SummaryStat
+                    label="月額予算"
+                    value={`¥${(project.monthlyBudget / 10000).toLocaleString()}万`}
+                    sub={`${project.periodMonths}ヶ月運用`}
+                  />
+                  <SummaryStat
+                    label="総予算"
+                    value={`¥${(overall.totalBudget / 10000).toLocaleString()}万`}
+                    sub="期間トータル"
+                  />
+                  <SummaryStat
+                    label="想定CV"
+                    value={overall.totalCv.toLocaleString()}
+                    sub="件 / 期間中"
+                  />
+                  <SummaryStat
+                    label="平均CPA"
+                    value={`¥${overall.avgCpa.toLocaleString()}`}
+                    sub="1CVあたり"
+                    highlight
+                  />
+                  <SummaryStat
+                    label="想定ROAS"
+                    value={`${overall.avgRoas}%`}
+                    sub="費用対効果"
+                    highlight
+                  />
+                  <SummaryStat
+                    label="月間Click"
+                    value={Math.round(overall.totalClick / project.periodMonths).toLocaleString()}
+                    sub="平均クリック数"
+                  />
+                </div>
+              )}
+
+              {/* 提案文 */}
+              {executiveSummary && (
+                <div className="border-t border-slate-100 pt-5">
+                  <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[#D9E6FF] px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[#0017C1]">
+                    <Sparkles className="h-3 w-3" />
+                    AI による提案要旨
+                  </div>
+                  <p className="whitespace-pre-wrap text-base font-bold leading-loose tracking-wide text-slate-800">
+                    {executiveSummary}
+                  </p>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -800,11 +848,36 @@ export default function AdSimProjectPage() {
             >
               <div
                 ref={chatScrollRef}
-                className="max-h-[55vh] min-h-[280px] space-y-3 overflow-y-auto rounded-t-2xl border border-b-0 border-slate-200 bg-white p-6 shadow-2xl"
+                className="max-h-[65vh] min-h-[420px] space-y-4 overflow-y-auto rounded-t-3xl border border-b-0 border-slate-200 bg-gradient-to-br from-white via-[#F8F8FB] to-[#D9E6FF]/30 p-7 shadow-2xl shadow-[#0017C1]/10"
               >
                 {chatMessages.length === 0 && (
-                  <div className="py-2 text-center text-xs font-bold text-slate-400">
-                    例: 「Meta の予算を 50% に増やして」「CV を 1.5倍に」「Google を減らして TikTok を増やして」
+                  <div className="space-y-5 py-4 text-center">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-[#0017C1] to-[#3460FB] shadow-lg shadow-[#0017C1]/30">
+                      <MessageCircle className="h-8 w-8 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-black text-slate-900">
+                        AI チャットで提案を調整
+                      </h3>
+                      <p className="mt-1 text-xs font-bold text-slate-500">
+                        自然言語で数値・配分・KPI を指示すれば、AI が即座に再計算します
+                      </p>
+                    </div>
+                    <div className="mx-auto grid max-w-md gap-2">
+                      {[
+                        '💰 「Google の予算を 60% に増やして」',
+                        '📈 「CV 数を 1.5 倍にして」',
+                        '🎯 「CPA を 5,000円 に下げて」',
+                        '📺 「TikTok を 20% 追加して」',
+                      ].map((ex, i) => (
+                        <div
+                          key={i}
+                          className="rounded-xl border border-[#0017C1]/15 bg-white px-4 py-2 text-left text-xs font-bold text-slate-700 shadow-sm"
+                        >
+                          {ex}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {chatMessages.map((m, i) => (
@@ -839,19 +912,25 @@ export default function AdSimProjectPage() {
 
         {/* 常時表示の入力バー */}
         <div className="border-t border-slate-200 bg-white/95 backdrop-blur-md shadow-2xl shadow-[#0017C1]/10">
-          <div className="mx-auto max-w-3xl px-4 py-3">
-            <form
-              onSubmit={(e) => {
-                e.preventDefault()
-                if (!chatOpen) setChatOpen(true)
-                handleChatSend()
-              }}
-              className="flex items-center gap-2"
-            >
+          <div className="mx-auto max-w-3xl px-4 py-4">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-[#0017C1] to-[#3460FB] text-white">
+                  <MessageCircle className="h-4 w-4" />
+                </div>
+                <span className="text-xs font-black text-slate-700">
+                  チャットで提案を即時調整
+                </span>
+              </div>
+              <span className="text-[10px] font-black text-slate-500">
+                {chatRemaining === -1 ? '無制限利用可' : `本日 残り ${chatRemaining}/${chatDailyLimit}回`}
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setChatOpen(!chatOpen)}
-                className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#0017C1] to-[#3460FB] text-white shadow-md transition hover:shadow-lg"
+                className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#0017C1] to-[#3460FB] text-white shadow-md transition hover:shadow-lg"
                 title={chatOpen ? '閉じる' : '履歴を見る'}
               >
                 {chatOpen ? <ChevronDown className="h-5 w-5" /> : <MessageCircle className="h-5 w-5" />}
@@ -862,26 +941,38 @@ export default function AdSimProjectPage() {
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   onFocus={() => setChatOpen(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && !chatProcessing && chatInput.trim()) {
+                      e.preventDefault()
+                      handleChatSend()
+                    }
+                  }}
                   placeholder="例: Google の予算を 60% に増やして"
                   disabled={chatProcessing}
-                  className="w-full rounded-full border-2 border-slate-200 bg-slate-50 px-5 py-3 pr-32 text-sm font-bold focus:border-[#0017C1] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#0017C1]/10 disabled:bg-slate-100"
+                  className="w-full rounded-full border-2 border-slate-200 bg-slate-50 px-5 py-4 text-base font-bold focus:border-[#0017C1] focus:bg-white focus:outline-none focus:ring-4 focus:ring-[#0017C1]/10 disabled:bg-slate-100"
                 />
-                <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400">
-                  {chatRemaining === -1
-                    ? 'AI で即時調整'
-                    : `本日 残り ${chatRemaining}/${chatDailyLimit}回`}
-                </span>
               </div>
               <motion.button
-                type="submit"
+                type="button"
+                onClick={() => handleChatSend()}
                 disabled={chatProcessing || !chatInput.trim()}
                 whileHover={{ scale: chatProcessing ? 1 : 1.05 }}
                 whileTap={{ scale: 0.97 }}
-                className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-[#0017C1] to-[#3460FB] text-white shadow-md disabled:opacity-50"
+                className="inline-flex h-12 items-center justify-center gap-1.5 rounded-full bg-gradient-to-r from-[#0017C1] to-[#3460FB] px-5 text-sm font-black text-white shadow-md disabled:opacity-50"
               >
-                {chatProcessing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                {chatProcessing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    送信中
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4" />
+                    送信
+                  </>
+                )}
               </motion.button>
-            </form>
+            </div>
           </div>
         </div>
       </div>
@@ -1141,6 +1232,50 @@ function CreativeVisual({ content, mediaAllocation }: { content: string; mediaAl
         <p className="whitespace-pre-wrap text-sm font-bold leading-loose tracking-wide text-slate-700">
           {content}
         </p>
+      </div>
+    </div>
+  )
+}
+
+function SummaryStat({
+  label,
+  value,
+  sub,
+  highlight,
+}: {
+  label: string
+  value: string
+  sub: string
+  highlight?: boolean
+}) {
+  return (
+    <div
+      className={`min-w-0 rounded-2xl border p-3 ${
+        highlight
+          ? 'border-[#0017C1]/30 bg-gradient-to-br from-[#0017C1] to-[#3460FB] text-white shadow-lg shadow-[#0017C1]/30'
+          : 'border-slate-200 bg-gradient-to-br from-[#F8F8FB] to-white'
+      }`}
+    >
+      <div
+        className={`text-[10px] font-black uppercase tracking-widest ${
+          highlight ? 'text-white/80' : 'text-slate-500'
+        }`}
+      >
+        {label}
+      </div>
+      <div
+        className={`mt-1 break-all text-lg font-black leading-tight tracking-tight md:text-xl ${
+          highlight ? 'text-white' : 'text-slate-900'
+        }`}
+      >
+        {value}
+      </div>
+      <div
+        className={`mt-0.5 text-[10px] font-bold ${
+          highlight ? 'text-white/70' : 'text-slate-400'
+        }`}
+      >
+        {sub}
       </div>
     </div>
   )
