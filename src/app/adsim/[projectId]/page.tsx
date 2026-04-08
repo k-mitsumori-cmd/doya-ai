@@ -121,17 +121,26 @@ export default function AdSimProjectPage() {
     }
   }, [isSessionLoading, isLoggedIn, router, params.projectId])
 
-  const fetchProject = () => {
+  const fetchProject = async () => {
     if (!isLoggedIn) return
     setOgImageBroken(false)
-    fetch(`/api/adsim/projects/${params.projectId}`)
-      .then((r) => r.json())
-      .then((d) => {
-        setProject(d.project)
-        if (d.userPlan) setUserPlan(d.userPlan)
-        if (d.usage) setUsage(d.usage)
-      })
-      .finally(() => setLoading(false))
+    try {
+      const res = await fetch(`/api/adsim/projects/${params.projectId}`)
+      if (!res.ok) {
+        console.error('[adsim preview] fetch failed:', res.status)
+        setProject(null)
+        return
+      }
+      const d = await res.json()
+      if (d.project) setProject(d.project)
+      if (d.userPlan) setUserPlan(d.userPlan)
+      if (d.usage) setUsage(d.usage)
+    } catch (err) {
+      console.error('[adsim preview] fetch error:', err)
+      setProject(null)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const isFree = userPlan === 'FREE'
@@ -228,10 +237,11 @@ export default function AdSimProjectPage() {
 
   const chart = project.chartData
   const overall = project.simulationData?.overall
-  const sections = project.proposalText || []
+  // proposalText は Json field なので配列であることを保証
+  const sections: ProposalSection[] = Array.isArray(project.proposalText) ? project.proposalText : []
   const ogImage = chart?.ogImage
-  const bannerImages = chart?.bannerImages || []
-  const summarySection = sections.find((s) => s.key === 'summary')
+  const bannerImages = Array.isArray(chart?.bannerImages) ? chart!.bannerImages : []
+  const summarySection = sections.find((s) => s?.key === 'summary')
 
   // 提案サマリ: proposal の summary か、recommendation の最初2文か
   const executiveSummary =
