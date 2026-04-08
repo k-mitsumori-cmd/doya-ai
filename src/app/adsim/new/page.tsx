@@ -17,7 +17,7 @@ import {
   CheckCircle2,
 } from 'lucide-react'
 
-const SAMPLE_LP = 'https://www.shiseido.co.jp/sw/products/SWFG020201.jsp?SHOHIN_CD=11003'
+const SAMPLE_LP = 'https://doyamarke.surisuta.jp/'
 const SAMPLE_BUDGET = 800000
 
 export default function AdSimNewPage() {
