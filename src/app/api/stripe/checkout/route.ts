@@ -144,6 +144,7 @@ function getPriceId(planId: string, billingPeriod: 'monthly' | 'yearly'): string
     'lp-light': STRIPE_PRICE_IDS.lp.light,
     'voice-light': STRIPE_PRICE_IDS.voice.light,
     'movie-light': STRIPE_PRICE_IDS.movie.light,
+    'adsim-light': STRIPE_PRICE_IDS.adsim.light,
     // --- プロプラン ---
     // ドヤSEO
     'seo-pro': STRIPE_PRICE_IDS.seo.pro,
@@ -155,6 +156,9 @@ function getPriceId(planId: string, billingPeriod: 'monthly' | 'yearly'): string
     // ドヤインタビューAI（統一課金）
     'interview-pro': STRIPE_PRICE_IDS.interview.pro,
     'interview-enterprise': STRIPE_PRICE_IDS.interview.enterprise,
+    // ドヤ広告シミュレーションAI（統一課金）
+    'adsim-pro': STRIPE_PRICE_IDS.adsim.pro,
+    'adsim-enterprise': STRIPE_PRICE_IDS.adsim.enterprise,
     // セットプラン
     'bundle': STRIPE_PRICE_IDS.bundle,
   }
