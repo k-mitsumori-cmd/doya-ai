@@ -239,9 +239,9 @@ export default function AdSimProjectPage() {
     (chart?.recommendation ? chart.recommendation.split('。').slice(0, 3).join('。') + '。' : '')
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#F8F8FB] pb-32">
+    <div className="relative min-h-full bg-[#F8F8FB]">
       {/* Animated background orbs */}
-      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <motion.div
           className="absolute -left-32 top-20 h-96 w-96 rounded-full bg-[#3460FB] opacity-15 blur-3xl"
           animate={{ x: [0, 80, -50, 0], y: [0, 60, -40, 0] }}
@@ -834,8 +834,8 @@ export default function AdSimProjectPage() {
         </motion.div>
       </div>
 
-      {/* === チャット 画面下部固定 === */}
-      <div className="fixed bottom-0 left-0 right-0 z-40">
+      {/* === チャット 画面下部固定 (sticky bottom で sidebar と共存) === */}
+      <div className="sticky bottom-0 z-40">
         {/* 展開時のチャット履歴 */}
         <AnimatePresence>
           {chatOpen && (

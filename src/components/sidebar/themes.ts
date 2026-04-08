@@ -159,3 +159,20 @@ export const movieTheme: SidebarTheme = {
   aiBubbleBg: 'bg-rose-800/40',
   zapColor: 'text-rose-400',
 }
+
+// ドヤ広告シミュレーションAI（デジタル庁公式 Blue 系）
+export const adsimTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-[#000060] via-[#0017C1] to-[#1F3CFF]',
+  navText: 'text-blue-100/85',
+  navTextIcon: 'text-blue-200/80',
+  sectionText: 'text-blue-300/60',
+  toggleText: 'text-[#0017C1]',
+  toggleHover: 'hover:bg-blue-50',
+  brandingText: 'text-blue-100/40',
+  profileBg: 'bg-[#000060]/40',
+  avatarBg: 'bg-[#0017C1]',
+  loginText: 'text-[#0017C1]',
+  loginHover: 'hover:bg-blue-50',
+  aiBubbleBg: 'bg-[#0017C1]',
+  zapColor: 'text-[#0017C1] fill-[#0017C1]',
+}
