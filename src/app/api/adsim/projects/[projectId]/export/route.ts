@@ -97,12 +97,17 @@ export async function GET(
         clientName: project.clientName,
         productName: project.productName,
         industry: project.industry,
+        industryName: chartData.industryName || project.industry,
         monthlyBudget: project.monthlyBudget,
         periodMonths: project.periodMonths,
         mediaAllocation: project.mediaAllocation as Record<string, number>,
         proposerName: project.proposerName,
         simulation,
         proposal,
+        lpAnalysis: chartData.lpAnalysis || '',
+        recommendation: chartData.recommendation || '',
+        budgetRationale: chartData.budgetRationale || '',
+        cpaRationale: chartData.cpaRationale || '',
       })
       return new NextResponse(buf, {
         headers: {
