@@ -1,0 +1,1502 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// NextAuth.js 認証関連
+// ============================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================
+// ユーザー管理（統一アカウント）
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          String    @default("USER") // USER | ADMIN
+
+  // NextAuth関連
+  accounts Account[]
+  sessions Session[]
+
+  // サービス別のプラン・使用状況（1対多）
+  serviceSubscriptions UserServiceSubscription[]
+
+  // Stripeサブスクリプション
+  subscriptions Subscription[]
+
+  // 生成履歴
+  generations Generation[]
+
+  // SEO記事生成（ドヤ記事作成）
+  seoArticles       SeoArticle[]
+  seoKnowledgeItems SeoKnowledgeItem[]
+  swipeSessions     SwipeSession[]
+
+  // ドヤインタビューAI
+  interviewProjects InterviewProject[]
+  interviewRecipes  InterviewRecipe[]
+
+  // ドヤ戦略AI
+  strategyProjects StrategyProject[]
+
+  // ドヤ展開AI
+  tenkaiProjects   TenkaiProject[]
+  tenkaiBrandVoices TenkaiBrandVoice[]
+  tenkaiTemplates  TenkaiTemplate[]
+  tenkaiUsages     TenkaiUsage[]
+  tenkaiApiKeys    TenkaiApiKey[]
+
+  // ドヤオープニングAI
+  openingProjects  OpeningProject[]
+
+  // ドヤコピーAI
+  copyProjects     CopyProject[]
+  copyBrandVoices  CopyBrandVoice[]
+
+  // ドヤボイスAI
+  voiceProjects    VoiceProject[]
+
+  // ドヤLP AI
+  lpProjects       LpProject[]
+
+  // ドヤムービーAI
+  movieProjects    MovieProject[]
+
+  // Stripe関連（ポータル全体の顧客情報）
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  plan                   String    @default("FREE") // FREE | STARTER | PRO | BUSINESS | BUNDLE
+
+  // 初回ログイン時刻（1時間生成し放題の起点）
+  firstLoginAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// サービス別のプラン・使用状況管理
+// ============================================
+
+// ユーザーごと・サービスごとのサブスクリプション
+model UserServiceSubscription {
+  id        String @id @default(cuid())
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  serviceId String // 'kantan' | 'banner' | 'lp' | 'video' など
+
+  // プラン情報
+  plan String @default("FREE") // FREE | PRO | ENTERPRISE
+
+  // Stripe（サービス別サブスク）
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+
+  // 使用制限
+  dailyUsage     Int      @default(0)
+  monthlyUsage   Int      @default(0)
+  lastUsageReset DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, serviceId]) // ユーザー×サービスでユニーク
+  @@index([serviceId])
+}
+
+// ============================================
+// Stripeサブスクリプション管理
+// ============================================
+
+model Subscription {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Stripe情報
+  stripeSubscriptionId String  @unique
+  stripeCustomerId     String
+  priceId              String?
+  planId               String? // 'kantan-pro', 'banner-starter' など
+
+  // ステータス
+  status             String // active, canceled, past_due, etc.
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean  @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([stripeCustomerId])
+}
+
+// ============================================
+// サービス定義（DBで管理する場合用、コードでも定義可）
+// ============================================
+
+model Service {
+  id          String  @id @default(cuid())
+  slug        String  @unique // 'kantan', 'banner', 'lp', 'video'
+  name        String // 'カンタンドヤAI'
+  description String? @db.Text
+  icon        String? // 絵文字 or アイコン名
+  color       String? // グラデーションクラス
+
+  // 料金設定
+  freeLimit Int @default(3) // 無料プランの1日の上限
+  proLimit  Int @default(100) // プロプランの1日の上限
+  proPrice  Int @default(2980) // プロプラン月額（円）
+
+  // 状態
+  isActive     Boolean @default(true)
+  isComingSoon Boolean @default(false)
+  order        Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// テンプレート・カテゴリ（カンタンドヤAI用）
+// ============================================
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?
+  icon        String?
+  color       String?
+  order       Int        @default(0)
+  serviceId   String     @default("kantan") // どのサービスのカテゴリか
+  templates   Template[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([serviceId])
+}
+
+model Template {
+  id          String       @id @default(cuid())
+  name        String
+  description String       @db.Text
+  category    Category     @relation(fields: [categoryId], references: [id])
+  categoryId  String
+  prompt      String       @db.Text
+  inputFields Json // [{name: string, label: string, type: string, required: boolean}]
+  outputType  String       @default("TEXT")
+  isPremium   Boolean      @default(false)
+  isActive    Boolean      @default(true)
+  usageCount  Int          @default(0)
+  generations Generation[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+// ============================================
+// 生成履歴（全サービス共通）
+// ============================================
+
+model Generation {
+  id     String @id @default(cuid())
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+
+  // サービス識別
+  serviceId String // 'kantan' | 'banner' | 'lp' など
+
+  // テンプレート（オプション、テンプレートを使う場合）
+  template   Template? @relation(fields: [templateId], references: [id])
+  templateId String?
+
+  // 入出力
+  input      Json
+  output     String @db.Text
+  outputType String @default("TEXT") // TEXT | IMAGE | HTML など
+
+  // メタデータ
+  metadata Json? // サービス固有の追加情報
+
+  isFavorite Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([userId, serviceId])
+  @@index([serviceId, createdAt])
+}
+
+// ============================================
+// システム設定
+// ============================================
+
+model SystemSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String @db.Text
+}
+
+// ============================================
+// 管理者関連
+// ============================================
+
+model AdminUser {
+  id            String              @id @default(cuid())
+  username      String              @unique
+  passwordHash  String
+  email         String?             @unique
+  name          String?
+  isActive      Boolean             @default(true)
+  lastLoginAt   DateTime?
+  loginAttempts AdminLoginAttempt[]
+  sessions      AdminSession[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+}
+
+model AdminLoginAttempt {
+  id            String     @id @default(cuid())
+  adminUser     AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  adminUserId   String?
+  username      String
+  ipAddress     String?
+  userAgent     String?
+  success       Boolean
+  failureReason String?
+  createdAt     DateTime   @default(now())
+
+  @@index([adminUserId, createdAt])
+  @@index([username, createdAt])
+  @@index([ipAddress, createdAt])
+}
+
+model AdminSession {
+  id          String    @id @default(cuid())
+  token       String    @unique
+  adminUser   AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  adminUserId String
+  ipAddress   String?
+  userAgent   String?
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+
+  @@index([adminUserId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+// ============================================
+// SEO記事生成（ドヤ記事作成）
+// ============================================
+
+model SeoArticle {
+  id String @id @default(cuid())
+
+  userId  String?
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  // 未ログイン（ゲスト）向けの識別子（cookieで付与）
+  guestId String?
+
+  status String @default("DRAFT") // DRAFT | RUNNING | DONE | ERROR
+
+  // 入力
+  title         String
+  keywords      Json // string[]
+  persona       String? @db.Text
+  searchIntent  String? @db.Text
+  targetChars   Int     @default(10000)
+  tone          String  @default("丁寧")
+  forbidden     Json? // string[]
+  referenceUrls Json? // string[]
+  llmoOptions   Json? // {tldr:boolean, faq:boolean, glossary:boolean, comparison:boolean, quotes:boolean, templates:boolean, objections:boolean}
+
+  // 依頼テキスト・参考画像（新機能）
+  requestText     String? @db.Text // ユーザーが入力した依頼内容・参考テキスト
+  referenceImages Json? // [{name:string, dataUrl:string}] 参考画像のBase64
+  autoBundle      Boolean @default(true) // 記事+図解+サムネを自動生成するか
+
+  // 比較記事（調査型）
+  mode                 String @default("standard") // standard | comparison_research
+  comparisonConfig     Json? // 比較記事設定（対象数/地域/除外条件/参照方針/テンプレ種別など）
+  comparisonCandidates Json? // 候補企業（確定リスト）
+  referenceInputs      Json? // 参考記事入力（URL/ファイル/貼り付け）と抽出プレビュー
+
+  // 途中成果物
+  outline       String? @db.Text
+  finalMarkdown String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  jobs           SeoJob[]
+  sections       SeoSection[]
+  references     SeoReference[]
+  audits         SeoAuditReport[]
+  memo           SeoUserMemo?
+  images         SeoImage[]
+  linkChecks     SeoLinkCheckResult[]
+  knowledgeItems SeoKnowledgeItem[]
+
+  @@index([userId, createdAt])
+  @@index([guestId, createdAt])
+  @@index([status, createdAt])
+}
+
+model SwipeSession {
+  id          String   @id @default(cuid())
+  sessionId   String   @unique // UUID（フロント側で生成）
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestId     String?  // 未ログイン時の識別子
+
+  mainKeyword String   // 最初に入力したキーワード
+  swipes      Json     // SwipeLog[]（スワイプログ配列）
+  finalConditions Json? // {targetChars: number, articleType: string}
+  primaryInfo Json?     // {results: string, experience: string, opinion: string, fixedPhrase: string}
+  generatedArticleId String? // 生成された記事のID
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([sessionId])
+  @@index([userId, createdAt])
+  @@index([guestId, createdAt])
+}
+
+model SwipeCelebrationImage {
+  id        String   @id @default(cuid())
+  category  String   // カテゴリ（例: "thanks", "completion", "article"など）
+  prompt    String   @db.Text // 生成時のプロンプト
+  imageBase64 String @db.Text // base64エンコードされた画像データ
+  mimeType  String   @default("image/png")
+  width     Int?
+  height    Int?
+  
+  createdAt DateTime @default(now())
+
+  @@index([category])
+}
+
+model SwipeQuestionImage {
+  id        String   @id @default(cuid())
+  category  String   // カテゴリ（例: "記事の方向性", "記事タイプ", "ターゲット読者"など）
+  prompt    String   @db.Text // 生成時のプロンプト
+  imageBase64 String @db.Text // base64エンコードされた画像データ
+  mimeType  String   @default("image/png")
+  width     Int?
+  height    Int?
+  
+  createdAt DateTime @default(now())
+
+  @@index([category])
+}
+
+model SeoJob {
+  id        String     @id @default(cuid())
+  articleId String
+  article   SeoArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  status   String  @default("queued") // queued | running | done | error
+  progress Int     @default(0)
+  step     String  @default("init") // init | outline | sections | integrate | audit | done
+  error    String? @db.Text
+
+  // 途中再開用
+  cursor Int   @default(0) // 次に生成するセクションindex
+  meta   Json? // 進捗ログ/各ステップのカーソル等（JSON）
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  startedAt  DateTime?
+  finishedAt DateTime?
+
+  sections SeoSection[]
+  audits   SeoAuditReport[]
+
+  @@index([articleId, createdAt])
+  @@index([status, updatedAt])
+}
+
+model SeoSection {
+  id        String     @id @default(cuid())
+  articleId String
+  article   SeoArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  jobId String?
+  job   SeoJob? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  index        Int
+  headingPath  String? // "H2:... > H3:..."
+  plannedChars Int     @default(2000)
+  status       String  @default("pending") // pending | generated | reviewed | error
+
+  prompt      String? @db.Text
+  content     String? @db.Text
+  consistency String? @db.Text
+  error       String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([articleId, index])
+  @@index([articleId, index])
+  @@index([status, updatedAt])
+}
+
+model SeoReference {
+  id        String     @id @default(cuid())
+  articleId String
+  article   SeoArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  url       String
+  title     String?
+  fetchedAt DateTime?
+
+  extractedText String? @db.Text
+  headings      Json? // {h2:string[], h3:string[], faq:string[]}
+  summary       String? @db.Text
+  insights      Json? // {claims:string[], structure:string[], internalLinks:string[], faq:string[]}
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([articleId, url])
+  @@index([articleId, createdAt])
+}
+
+model SeoAuditReport {
+  id        String     @id @default(cuid())
+  articleId String
+  article   SeoArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  jobId String?
+  job   SeoJob? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  report    String   @db.Text
+  createdAt DateTime @default(now())
+
+  @@index([articleId, createdAt])
+}
+
+model SeoUserMemo {
+  id        String     @id @default(cuid())
+  articleId String     @unique
+  article   SeoArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SeoImage {
+  id        String     @id @default(cuid())
+  articleId String
+  article   SeoArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  kind        String // BANNER | DIAGRAM
+  title       String?
+  prompt      String  @db.Text
+  description String? @db.Text
+
+  filePath String
+  mimeType String @default("image/png")
+  width    Int?
+  height   Int?
+
+  createdAt DateTime @default(now())
+
+  @@index([articleId, createdAt])
+}
+
+model SeoLinkCheckResult {
+  id        String     @id @default(cuid())
+  articleId String
+  article   SeoArticle @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  url        String
+  statusCode Int?
+  ok         Boolean  @default(false)
+  finalUrl   String?
+  error      String?
+  checkedAt  DateTime @default(now())
+
+  createdAt DateTime @default(now())
+
+  @@unique([articleId, url])
+  @@index([articleId, checkedAt])
+}
+
+model SeoKnowledgeItem {
+  id String @id @default(cuid())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  articleId String?
+  article   SeoArticle? @relation(fields: [articleId], references: [id], onDelete: SetNull)
+
+  type       String // trend | insight | prompt | internalLink | note
+  title      String?
+  content    String  @db.Text
+  sourceUrls Json? // string[]
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([type, createdAt])
+}
+
+// ============================================
+// ドヤインタビューAI
+// ============================================
+
+model InterviewProject {
+  id String @id @default(cuid())
+
+  userId  String?
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestId String? // 未ログイン（ゲスト）向けの識別子
+
+  // 基本情報
+  title  String
+  status String @default("DRAFT") // DRAFT | PLANNING | RECORDING | TRANSCRIBING | EDITING | REVIEWING | COMPLETED
+
+  thumbnailUrl   String? @db.Text // プロジェクトサムネイル画像URL (base64 data URL)
+
+  // インタビュー対象者情報
+  intervieweeName    String?
+  intervieweeRole    String?
+  intervieweeCompany String?
+  intervieweeBio     String? @db.Text
+
+  // 企画情報
+  genre          String? // CASE_STUDY | PRODUCT_INTERVIEW | PERSONA_INTERVIEW | OTHER
+  theme          String? @db.Text // 取材テーマ
+  purpose        String? @db.Text // 目的
+  targetAudience String? @db.Text // 想定読者
+  tone           String? @default("friendly") // friendly | professional | casual | formal
+  mediaType      String? // blog | news | sns | pr | other
+
+  // レシピ（企画案・質問リスト）
+  recipeId String?
+  recipe   InterviewRecipe? @relation(fields: [recipeId], references: [id], onDelete: SetNull)
+
+  // 素材
+  materials InterviewMaterial[]
+
+  // 文字起こし
+  transcriptions InterviewTranscription[]
+
+  // 構成案・ドラフト
+  outline String?          @db.Text
+  drafts  InterviewDraft[]
+
+  // 校閲
+  reviews InterviewReview[]
+
+  // 出力
+  finalContent  String? @db.Text // 最終記事
+  exportFormats Json? // {word: string, markdown: string, html: string}
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([guestId, createdAt])
+  @@index([status, createdAt])
+  @@map("interview_project")
+}
+
+model InterviewRecipe {
+  id String @id @default(cuid())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // レシピ情報
+  name        String // レシピ名
+  description String? @db.Text
+  category    String? // formal | casual | panel | technical | pr
+
+  // 企画案（複数パターン）
+  proposals Json // [{title: string, summary: string, questions: string[], value: string}]
+
+  // 質問リスト
+  questions Json // string[]
+
+  // 編集方針
+  editingGuidelines String? @db.Text
+
+  // 共有設定
+  isPublic   Boolean @default(false)
+  isTemplate Boolean @default(false) // テンプレートとして使用可能
+
+  usageCount Int @default(0)
+
+  projects InterviewProject[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([category, isTemplate])
+  @@map("interview_recipe")
+}
+
+model InterviewMaterial {
+  id String @id @default(cuid())
+
+  projectId String
+  project   InterviewProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // 素材タイプ
+  type String // audio | video | text | pdf | image | url
+
+  transcriptions InterviewTranscription[]
+
+  // ファイル情報
+  fileName String
+  filePath String? // サーバー上のパス
+  fileUrl  String? // 外部URL
+  fileSize BigInt? // バイト数（10GBまで対応）
+  mimeType String?
+  duration Int? // 秒数（音声・動画の場合）
+
+  // メタデータ
+  metadata Json? // {width, height, bitrate, etc.}
+
+  // 処理状態
+  status String  @default("UPLOADED") // UPLOADED | PROCESSING | COMPLETED | ERROR
+  error  String? @db.Text
+
+  // 抽出テキスト（PDF等）
+  extractedText String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, createdAt])
+  @@map("interview_material")
+}
+
+model InterviewTranscription {
+  id String @id @default(cuid())
+
+  projectId String
+  project   InterviewProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  materialId String?
+  material   InterviewMaterial? @relation(fields: [materialId], references: [id], onDelete: SetNull)
+
+  // 文字起こし内容
+  text     String @db.Text
+  segments Json? // [{start: number, end: number, text: string, speaker?: string}]
+
+  // 要約・トピック分割
+  summary String? @db.Text
+  topics  Json? // [{topic: string, startTime: number, endTime: number, summary: string}]
+
+  // 処理情報
+  provider       String? // google | whisper | deepgram | manual
+  externalJobId  String? // AssemblyAI transcript ID (再接続用)
+  confidence     Float? // 信頼度スコア
+  status         String  @default("PENDING") // PENDING | PROCESSING | COMPLETED | ERROR
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, createdAt])
+  @@index([materialId, status])
+  @@map("interview_transcription")
+}
+
+model InterviewReview {
+  id String @id @default(cuid())
+
+  projectId String
+  project   InterviewProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  draftId String?
+  draft   InterviewDraft? @relation(fields: [draftId], references: [id], onDelete: SetNull)
+
+  // 校閲結果
+  report String @db.Text // 校閲レポート
+
+  // チェック項目
+  checks Json? // {grammar: boolean, facts: boolean, consistency: boolean, readability: boolean}
+
+  // スコア
+  score            Float? // 0-100
+  readabilityScore Float? // 読みやすさスコア
+
+  // 修正提案
+  suggestions Json? // [{type: string, position: number, original: string, suggested: string, reason: string}]
+
+  createdAt DateTime @default(now())
+
+  @@index([projectId, createdAt])
+  @@map("interview_review")
+}
+
+model InterviewDraft {
+  id String @id @default(cuid())
+
+  projectId String
+  project   InterviewProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // ドラフト情報
+  version Int     @default(1)
+  title   String?
+  lead    String? @db.Text // リード文
+  content String  @db.Text // 本文
+
+  // 記事タイプと表示形式
+  articleType   String? // INTERVIEW | BUSINESS_REPORT | INTERNAL_INTERVIEW | CASE_STUDY
+  displayFormat String? // QA | MONOLOGUE (Q&A形式 or 一人で喋っている形式)
+
+  // 構成
+  structure Json? // [{heading: string, summary: string, quotes: string[], content: string}]
+
+  // メタデータ
+  wordCount   Int?
+  readingTime Int? // 分
+
+  // SEO用
+  seoTitle          String?
+  seoDescription    String? @db.Text
+  socialTitle       String?
+  socialDescription String? @db.Text
+
+  // 状態
+  status String @default("DRAFT") // DRAFT | REVIEWING | APPROVED | PUBLISHED
+
+  reviews InterviewReview[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, createdAt])
+  @@index([projectId, version])
+  @@map("interview_draft")
+}
+
+// ============================================
+// ゲストセッション管理（1時間使い放題機能用）
+// ============================================
+
+model GuestSession {
+  id      String @id @default(cuid())
+  guestId String @unique // ゲストユーザーの識別子
+
+  // 初回アクセス時刻（1時間使い放題の起点）
+  firstAccessAt DateTime @default(now())
+
+  // 最後のアクセス時刻
+  lastAccessAt DateTime @default(now())
+
+  // 使用状況
+  transcriptionCount Int @default(0) // 文字起こし実行回数
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([guestId])
+  @@index([firstAccessAt])
+  @@map("guest_session")
+}
+
+// ============================================
+// ドヤ戦略AI
+// ============================================
+
+model StrategyProject {
+  id String @id @default(cuid())
+
+  userId  String?
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestId String?
+
+  // 入力情報
+  serviceUrl    String? @db.Text
+  businessModel String? @db.Text
+  averagePrice  String? // 平均単価
+  targetCustomer String? @db.Text // 想定顧客
+  budgetRange   String? @db.Text // 予算レンジ
+  salesType     String? @db.Text // 営業体制
+
+  // 戦略データ（多層構造）
+  // Kernel（コア戦略）
+  coreStrategy Json? // {core_strategy: string, main_levers: string[]}
+  
+  // Phase（フェーズ別戦略）
+  phases Json? // [{phase_name: string, goal: string, actions: string[], kpi: string[], budget_ratio: number}]
+  
+  // Visualization（可視化データ）
+  visualizationData Json? // {budget_chart: [], kpi_chart: [], phase_map: []}
+  
+  // ExternalResearch（外部調査結果）
+  externalResearch Json? // {competitors: [], summary: string, patterns: []}
+
+  // メタデータ
+  title       String?
+  description String? @db.Text
+  status      String   @default("DRAFT") // DRAFT | GENERATED | COMPLETED
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([guestId, createdAt])
+  @@index([status, createdAt])
+  @@map("strategy_project")
+}
+
+// ============================================
+// ドヤマナAI - 画像・プロンプト・カテゴリ管理
+// ============================================
+
+model DoyamanaCategory {
+  id          String   @id @default(cuid())
+  name        String   // カテゴリ名（例: SEO系、LP系、WP系）
+  slug        String   @unique // URL用スラッグ
+  description String?  @db.Text
+  order       Int      @default(0) // 表示順
+  isActive    Boolean  @default(true) // ON/OFF
+  
+  images      DoyamanaImage[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([isActive, order])
+  @@map("doyamana_category")
+}
+
+model DoyamanaImage {
+  id          String   @id @default(cuid())
+  
+  // カテゴリ
+  categoryId  String
+  category    DoyamanaCategory @relation(fields: [categoryId], references: [id])
+  
+  // 画像情報
+  imageUrl    String   @db.Text // Supabase Storage URL or Base64
+  thumbnailUrl String? @db.Text // サムネイル用（オプション）
+  fileName    String?  // 元ファイル名
+  mimeType    String   @default("image/png")
+  width       Int?
+  height      Int?
+  
+  // プロンプト
+  prompt      String   @db.Text // 生成プロンプト
+  promptSummary String? // プロンプト冒頭（一覧表示用、50文字程度）
+  
+  // 表示設定
+  order       Int      @default(0) // 表示順
+  isActive    Boolean  @default(true) // ON/OFF
+  isDeleted   Boolean  @default(false) // 論理削除
+  
+  // 使用回数トラッキング
+  usageCount  Int      @default(0)
+  
+  // 使用ログ
+  usageLogs   DoyamanaUsageLog[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime? // 論理削除日時
+  
+  @@index([categoryId, isActive, isDeleted])
+  @@index([isActive, isDeleted, order])
+  @@index([usageCount])
+  @@map("doyamana_image")
+}
+
+model DoyamanaUsageLog {
+  id        String   @id @default(cuid())
+  
+  imageId   String
+  image     DoyamanaImage @relation(fields: [imageId], references: [id], onDelete: Cascade)
+  
+  // 使用コンテキスト
+  userId    String?  // ログインユーザーの場合
+  guestId   String?  // ゲストの場合
+  serviceId String?  // どのサービスで使用されたか
+  
+  // メタデータ
+  metadata  Json?    // 追加情報（生成パラメータ等）
+  
+  createdAt DateTime @default(now())
+  
+  @@index([imageId, createdAt])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+  @@map("doyamana_usage_log")
+}
+
+// ============================================
+// ドヤバナーAI - テンプレート管理
+// ============================================
+
+model BannerTemplate {
+  id        String   @id @default(cuid())
+  templateId String  @unique // 'brand-001', 'ux-001' など（コード内のID）
+  industry  String
+  category  String   // 'it', 'recruit', 'ec', 'beauty' など
+  prompt    String   @db.Text // デザイン要素のみのプロンプト
+  size      String   @default("1200x628")
+  
+  // 画像URL（生成済みの場合）
+  imageUrl  String?  // ヒーロー画像として表示するURL
+  previewUrl String? // サムネイル用（オプション）
+  
+  // フラグ
+  isFeatured Boolean @default(false) // 初期表示用のヒーロー画像として使用
+  isActive   Boolean @default(true)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@index([industry])
+  @@index([category])
+  @@index([isFeatured])
+  @@index([isActive])
+  @@map("banner_template")
+}
+
+// ============================================
+// ドヤ展開AI
+// ============================================
+
+model TenkaiProject {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title         String
+  inputType     String   // "url" | "text" | "youtube" | "video"
+  inputUrl      String?
+  inputText     String?  @db.Text
+  inputVideoUrl String?  // Supabase Storage URL
+  transcript    String?  @db.Text
+  analysis      Json?    // コンテンツ分析結果
+  status        String   @default("draft") // draft | analyzing | ready | generating | completed
+  wordCount     Int?
+  language      String   @default("ja")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  outputs       TenkaiOutput[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("tenkai_projects")
+}
+
+model TenkaiOutput {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       TenkaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  platform      String   // "note" | "blog" | "x" | "instagram" | "line" | "facebook" | "linkedin" | "newsletter" | "press_release"
+  content       Json     // プラットフォーム固有のJSON構造
+  charCount     Int?
+  qualityScore  Float?   // 0.0-1.0
+  isEdited      Boolean  @default(false)
+  status        String   @default("pending") // pending | generating | completed | failed
+  tokensUsed    Int?
+  brandVoiceId  String?
+  brandVoice    TenkaiBrandVoice? @relation(fields: [brandVoiceId], references: [id], onDelete: SetNull)
+  templateId    String?
+  feedback      String?  @db.Text // 再生成時のフィードバック
+  version       Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([projectId, platform, version])
+  @@index([projectId, status])
+  @@index([projectId, platform])
+  @@index([status, createdAt])
+  @@map("tenkai_outputs")
+}
+
+model TenkaiBrandVoice {
+  id                 String   @id @default(cuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name               String
+  firstPerson        String   @default("私")
+  formalityLevel     Int      @default(3) // 1-5
+  enthusiasmLevel    Int      @default(3)
+  technicalLevel     Int      @default(3)
+  humorLevel         Int      @default(2)
+  targetAudience     String?
+  sampleText         String?  @db.Text
+  preferredExpressions String[] // 好んで使う表現
+  prohibitedWords    String[] // 禁止ワード
+  isDefault          Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  outputs            TenkaiOutput[]
+
+  @@index([userId])
+  @@index([userId, isDefault])
+  @@map("tenkai_brand_voices")
+}
+
+model TenkaiTemplate {
+  id            String   @id @default(cuid())
+  userId        String?  // null = システムテンプレート
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform      String
+  name          String
+  description   String?
+  promptOverride String? @db.Text // プロンプト上書き
+  structureHint Json?    // 構造指定
+  isSystem      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+  @@index([platform])
+  @@map("tenkai_templates")
+}
+
+model TenkaiUsage {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  yearMonth       String   // "2026-02" 形式
+  creditsUsed     Int      @default(0)
+  tokensTotal     Int      @default(0)
+  projectsCreated Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, yearMonth])
+  @@index([userId])
+  @@map("tenkai_usage")
+}
+
+model TenkaiApiKey {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyPrefix     String    // "sk-doya-xxxx" の先頭8文字（表示用）
+  keyHash       String    // SHA-256ハッシュ（認証用）
+  lastUsedAt    DateTime?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([keyHash])
+  @@map("tenkai_api_keys")
+}
+
+// ============================================
+// ドヤオープニングAI
+// ============================================
+
+model OpeningProject {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestId   String?
+
+  inputUrl      String
+  siteAnalysis  Json?
+  status        String   @default("ANALYZING") // ANALYZING | READY | COMPLETED | ERROR
+
+  metadata  Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  animations OpeningAnimation[]
+
+  @@index([userId, createdAt])
+  @@index([guestId, createdAt])
+  @@index([status])
+}
+
+model OpeningAnimation {
+  id         String   @id @default(cuid())
+  projectId  String
+  project    OpeningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  templateId String
+  config     Json
+  reactCode  String?  @db.Text
+
+  isSelected Boolean  @default(false)
+  isFavorite Boolean  @default(false)
+
+  metadata   Json?
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([templateId])
+}
+
+// ============================================
+// ドヤコピーAI
+// ============================================
+
+model CopyBrandVoice {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name          String
+  tone          String   @db.Text
+  vocabulary    Json?
+  examples      Json?
+  ngWords       String[] @default([])
+  requiredWords String[] @default([])
+
+  projects      CopyProject[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model CopyProject {
+  id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestId       String?
+
+  name          String
+  status        String   @default("draft")
+  productUrl    String?
+  productInfo   Json?
+  persona       Json?
+  personaSource String?
+
+  regulations   Json?
+  brandVoiceId  String?
+  brandVoice    CopyBrandVoice? @relation(fields: [brandVoiceId], references: [id])
+
+  copies        CopyItem[]
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([guestId])
+}
+
+model CopyItem {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       CopyProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  type          String
+  platform      String?
+  writerType    String
+  headline      String?
+  description   String?  @db.Text
+  catchcopy     String?
+  hashtags      String[] @default([])
+  cta           String?
+
+  appealAxis    String?
+  charCount     Int?
+  score         Float?
+  isFavorite    Boolean  @default(false)
+
+  revisions     Json[]   @default([])
+
+  createdAt     DateTime @default(now())
+
+  @@index([projectId])
+}
+
+// ============================================
+// ドヤLP AI
+// ============================================
+
+model LpProject {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestId       String?
+
+  // プロジェクト情報
+  name          String
+  status        String   @default("draft")  // draft | generating | editing | completed
+  purpose       String[]                     // LP目的（複数可）
+  productUrl    String?
+  productInfo   Json?
+  persona       Json?
+
+  // 構成
+  structures    Json?    // AI生成された3案
+  selectedStructure Int? // 選択された案（0-based）
+
+  // デザイン
+  themeId       String   @default("minimal")
+  customColors  Json?
+  customFonts   Json?
+
+  // セクション
+  sections      LpSection[]
+
+  // 出力
+  htmlUrl       String?
+  pdfUrl        String?
+  previewUrl    String?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([guestId])
+  @@map("lp_projects")
+}
+
+model LpSection {
+  id            String    @id @default(cuid())
+  projectId     String
+  project       LpProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  order         Int
+  type          String    // "hero" | "problem" | "solution" | "features" | "testimonial" | "pricing" | "faq" | "cta" | "footer" 等
+  name          String
+  purpose       String?
+
+  // コピー
+  headline      String?
+  subheadline   String?
+  body          String?  @db.Text
+  ctaText       String?
+  ctaUrl        String?
+
+  // レイアウト
+  layout        String   @default("center")  // "center" | "left-right" | "right-left" | "grid" | "cards"
+  bgColor       String?
+  bgImage       String?
+
+  // リスト型コンテンツ
+  items         Json?    // [{ title, description, icon, image }]
+
+  // リビジョン履歴
+  revisions     Json[]   @default([])
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([projectId, order])
+  @@map("lp_sections")
+}
+
+// ============================================
+// ドヤボイスAI
+// ============================================
+
+model VoiceProject {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestId       String?
+
+  // プロジェクト情報
+  name          String
+  status        String   @default("draft")  // draft, generating, completed, failed
+
+  // 音声設定
+  speakerId     String   @default("akira")
+  speed         Float    @default(1.0)       // 0.5 ~ 2.0
+  pitch         Float    @default(0.0)       // -10 ~ +10
+  volume        Float    @default(100.0)     // 0 ~ 100
+  pauseLength   String   @default("standard") // "short", "standard", "long"
+  emotionTone   String   @default("neutral") // "neutral", "bright", "calm", "serious", "gentle"
+
+  // テキスト
+  inputText     String   @db.Text
+  ssml          String?  @db.Text
+
+  // 出力
+  outputFormat  String   @default("mp3")     // "mp3", "wav", "ogg", "m4a"
+  outputUrl     String?
+  durationMs    Int?
+  fileSize      Int?
+
+  // 録音データ
+  recordings    VoiceRecording[]
+
+  // メタ
+  isFavorite    Boolean  @default(false)
+  metadata      Json?
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([guestId])
+}
+
+model VoiceRecording {
+  id            String       @id @default(cuid())
+  projectId     String
+  project       VoiceProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  originalUrl   String
+  trimmedUrl    String?
+  durationMs    Int
+  fileSize      Int
+  format        String   @default("webm")
+
+  label         String?
+  order         Int      @default(0)
+
+  createdAt     DateTime @default(now())
+
+  @@index([projectId])
+}
+
+// ============================================
+// ドヤムービーAI
+// ============================================
+
+model MovieProject {
+  id            String   @id @default(cuid())
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestId       String?
+
+  // プロジェクト情報
+  name          String
+  status        String   @default("draft")  // draft, planning, editing, rendering, completed, failed
+  productInfo   Json?
+  persona       Json?
+
+  // テンプレート・設定
+  templateId    String?
+  aspectRatio   String   @default("16:9")   // "16:9", "9:16", "1:1", "4:5"
+  duration      Int      @default(15)       // 秒
+  resolution    String   @default("1080p")  // "720p", "1080p"
+  platform      String?                     // 配信先
+
+  // 企画・シナリオ
+  plans         Json?    // AI生成された3案 [{ concept, storyline, scenes }]
+  selectedPlan  Int?     // 選択された案のインデックス
+
+  // シーンデータ
+  scenes        MovieScene[]
+
+  // レンダリング
+  renderJobs    MovieRenderJob[]
+
+  // 出力
+  outputUrl     String?  // 完成動画のURL
+  thumbnailUrl  String?  // サムネイルURL
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([userId, createdAt])
+  @@index([guestId])
+  @@map("movie_projects")
+}
+
+model MovieScene {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       MovieProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  order         Int                          // シーン順序
+  duration      Float                        // 秒数（小数対応）
+  bgType        String   @default("image")   // "image", "video", "color", "gradient"
+  bgValue       String?                      // URL or カラーコード
+  bgAnimation   String?                      // "ken-burns", "zoom-in", "none"
+
+  // テキストオーバーレイ
+  texts         Json?    // [{ content, x, y, fontSize, fontFamily, color, animation, delay }]
+
+  // ナレーション
+  narrationText String?
+  narrationUrl  String?  // ドヤボイスAI 生成音声のURL
+
+  // トランジション
+  transition    String   @default("fade")    // "fade", "slide", "wipe", "zoom", "none"
+
+  // メタ
+  metadata      Json?
+
+  @@index([projectId, order])
+  @@map("movie_scenes")
+}
+
+model MovieRenderJob {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       MovieProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  status        String   @default("queued")  // queued, rendering, completed, failed
+  progress      Int      @default(0)         // 0-100
+  outputUrl     String?
+  format        String   @default("mp4")     // "mp4", "gif"
+  error         String?
+
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+
+  @@index([projectId])
+  @@map("movie_render_jobs")
+}

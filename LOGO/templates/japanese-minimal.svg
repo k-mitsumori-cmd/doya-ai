@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!--
+    Template: japanese-minimal
+    Used as a "mark source" (MARK block).
+  -->
+  <!--MARK_START-->
+  <g id="mark" fill="none" stroke="currentColor" stroke-width="26" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Minimal "ma" (間) motif: two vertical lines + one floating dot -->
+    <path d="M198 146v220" />
+    <path d="M314 146v220" />
+    <circle cx="256" cy="188" r="10" fill="currentColor" stroke="none" />
+  </g>
+  <!--MARK_END-->
+  <rect x="0" y="0" width="512" height="512" fill="none"/>
+</svg>
+
+
+
+
+
+
+
+
