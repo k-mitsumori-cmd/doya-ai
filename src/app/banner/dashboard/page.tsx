@@ -1464,6 +1464,7 @@ function BannerTestPageInner() {
                 // @ts-ignore fetchpriority is valid HTML but not in React types
                 fetchpriority="high"
                 className="w-full h-full object-cover"
+                style={{ filter: 'contrast(1.05) saturate(1.05)', imageRendering: 'auto' }}
               />
             ) : selectedTemplate?.imageUrl && !imageErrors.has(selectedTemplate.id) ? (
               <img
@@ -1475,6 +1476,7 @@ function BannerTestPageInner() {
                 fetchpriority="high"
                 onError={() => handleImageError(selectedTemplate.id)}
                 className="w-full h-full object-cover"
+                style={{ filter: 'contrast(1.05) saturate(1.05)', imageRendering: 'auto' }}
               />
             ) : selectedTemplate && imageErrors.has(selectedTemplate.id) ? (
               // ヒーロー画像読み込みエラー時

@@ -80,8 +80,11 @@ export async function GET(
         if (resizeWidth) {
           pipeline = pipeline.resize({ width: resizeWidth, withoutEnlargement: true })
         }
+        // 軽い鮮鋭化（元画像 1280px の拡大表示時のぼやけ感を抑制、処理コスト ~5ms）
+        // sigma=0.7 / m1=1.0 / m2=2.0 は自然な仕上がりのバランス
+        pipeline = pipeline.sharpen({ sigma: 0.7, m1: 1.0, m2: 2.0 })
         if (fmt === 'webp') {
-          pipeline = pipeline.webp({ quality: 75 })
+          pipeline = pipeline.webp({ quality: 82 })
           contentType = 'image/webp'
         } else {
           pipeline = pipeline.png({ compressionLevel: 9 })
