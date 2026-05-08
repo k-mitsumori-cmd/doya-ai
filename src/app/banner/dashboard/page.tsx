@@ -540,6 +540,15 @@ function BannerTestPageInner() {
     return `${url}${sep}w=300&fmt=webp`
   }, [])
 
+  // ヒーロー画像用URL（WebP + 大きめリサイズ）— 最初の1枚を最速で出すための最適化
+  const heroUrl = useCallback((url: string | null | undefined) => {
+    if (!url) return url || ''
+    // data URL (base64) の場合はそのまま（クライアント側でリサイズ不可）
+    if (url.startsWith('data:')) return url
+    const sep = url.includes('?') ? '&' : '?'
+    return `${url}${sep}w=1280&fmt=webp`
+  }, [])
+
   // キャッシュから失敗テンプレートを除外するヘルパー
   const removeFromCache = useCallback((failedId: string) => {
     try {
@@ -671,13 +680,16 @@ function BannerTestPageInner() {
   }
 
   // ヒーロー画像のプリロード（テンプレートURL確定直後に呼び出し、ブラウザが先行取得開始）
+  // ※ heroUrl と同じ ?w=1280&fmt=webp に揃えて preload と <img src> のキャッシュキーを一致させる
   const preloadHeroImage = useCallback((imageUrl: string | null | undefined) => {
     try {
       if (!imageUrl) return
       const link = document.createElement('link')
       link.rel = 'preload'
       link.as = 'image'
-      link.href = imageUrl
+      link.href = imageUrl.startsWith('data:')
+        ? imageUrl
+        : `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}w=1280&fmt=webp`
       link.setAttribute('fetchpriority', 'high')
       document.head.appendChild(link)
     } catch (e) {
@@ -1407,7 +1419,7 @@ function BannerTestPageInner() {
             
             {selectedBanner ? (
               <img
-                src={selectedBanner.imageUrl}
+                src={heroUrl(selectedBanner.imageUrl)}
                 alt="Selected banner"
                 loading="eager"
                 decoding="async"
@@ -1417,7 +1429,7 @@ function BannerTestPageInner() {
               />
             ) : selectedTemplate?.imageUrl && !imageErrors.has(selectedTemplate.id) ? (
               <img
-                src={selectedTemplate.imageUrl}
+                src={heroUrl(selectedTemplate.imageUrl)}
                 alt={selectedTemplate.prompt}
                 loading="eager"
                 decoding="async"
