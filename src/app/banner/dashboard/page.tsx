@@ -533,11 +533,18 @@ function BannerTestPageInner() {
   const [fetchProgress, setFetchProgress] = useState(0) // 0〜100
   const templateOffsetRef = useRef(0)
 
-  // サムネイル用URL（WebP + リサイズ）
+  // サムネイル用URL（WebP + リサイズ、1x ディスプレイ用）
   const thumbUrl = useCallback((url: string) => {
     if (!url) return url
     const sep = url.includes('?') ? '&' : '?'
     return `${url}${sep}w=300&fmt=webp`
+  }, [])
+
+  // サムネイル srcSet（Retina/DPR 2x で w=600 を自動選択、1x はそのまま）
+  const thumbSrcSet = useCallback((url: string) => {
+    if (!url) return ''
+    const sep = url.includes('?') ? '&' : '?'
+    return `${url}${sep}w=300&fmt=webp 1x, ${url}${sep}w=600&fmt=webp 2x`
   }, [])
 
   // ヒーロー画像用URL（WebP + 段階的リサイズ）
@@ -1843,6 +1850,7 @@ function BannerTestPageInner() {
                                 <img
                                   key={`${template.id}-r${imageRetryRef.current[template.id] || 0}`}
                                   src={`${thumbUrl(template.imageUrl!)}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
+                                  srcSet={thumbSrcSet(template.imageUrl!)}
                                   alt={template.displayTitle || template.industry}
                                   loading={index < 12 || recentlyLoadedIds.has(template.id) ? 'eager' : 'lazy'}
                                   decoding="async"
@@ -1978,6 +1986,7 @@ function BannerTestPageInner() {
                           <img
                             key={`${template.id}-r${imageRetryRef.current[template.id] || 0}`}
                             src={`${thumbUrl(template.imageUrl!)}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
+                            srcSet={thumbSrcSet(template.imageUrl!)}
                             alt={template.displayTitle || template.industry}
                             loading={filterIdx < 12 || recentlyLoadedIds.has(template.id) ? 'eager' : 'lazy'}
                             decoding="async"
