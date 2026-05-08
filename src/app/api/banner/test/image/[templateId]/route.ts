@@ -8,8 +8,8 @@ export const runtime = 'nodejs'
 // サーバーサイドメモリキャッシュ（同一インスタンス内でDBアクセスを削減）
 // キーに w/fmt を含めてバリエーション別にキャッシュ
 const IMAGE_CACHE = new Map<string, { buffer: Buffer; contentType: string; ts: number }>()
-const MEMORY_CACHE_TTL = 60 * 60 * 1000 // 1時間
-const MEMORY_CACHE_MAX = 500
+const MEMORY_CACHE_TTL = 6 * 60 * 60 * 1000 // 6時間（cold start 軽減）
+const MEMORY_CACHE_MAX = 2000
 
 // 静的フォールバック画像（生成中プレースホルダー）
 const FALLBACK_IMAGE = '/banner-samples/generating-placeholder.png'

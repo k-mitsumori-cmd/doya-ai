@@ -537,7 +537,7 @@ function BannerTestPageInner() {
   const thumbUrl = useCallback((url: string) => {
     if (!url) return url
     const sep = url.includes('?') ? '&' : '?'
-    return `${url}${sep}w=400&fmt=webp`
+    return `${url}${sep}w=300&fmt=webp`
   }, [])
 
   // キャッシュから失敗テンプレートを除外するヘルパー
@@ -1630,9 +1630,9 @@ function BannerTestPageInner() {
                   ? 'pt-[17vh] sm:pt-[20vh] md:pt-[22vh] lg:pt-[24vh]'
                   : 'pt-[34vh] sm:pt-[42vh] md:pt-[52vh] lg:pt-[57vh]'
           }`}>
-            {/* ギャラリーに戻るバー（ヒーロー展開時のみ表示） */}
+            {/* ギャラリーに戻るバー（ヒーロー展開時のみ表示・スクロール時は画面上部に追従） */}
             {!isHeroCollapsed && (
-              <div className="flex items-center justify-between px-2 sm:px-4 md:px-8 lg:px-12 py-2 border-b border-gray-800/30">
+              <div className="sticky top-0 z-30 flex items-center justify-between px-2 sm:px-4 md:px-8 lg:px-12 py-2 border-b border-gray-800/50 bg-black/95 backdrop-blur-sm shadow-md">
                 <span className="text-xs sm:text-sm text-gray-400 font-medium truncate mr-2">
                   選択中: {selectedTemplate?.displayTitle || selectedTemplate?.name || selectedTemplate?.industry || ''}
                 </span>
@@ -1792,9 +1792,9 @@ function BannerTestPageInner() {
                                   key={`${template.id}-r${imageRetryRef.current[template.id] || 0}`}
                                   src={`${thumbUrl(template.imageUrl!)}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
                                   alt={template.displayTitle || template.industry}
-                                  loading={index < 4 || recentlyLoadedIds.has(template.id) ? 'eager' : 'lazy'}
+                                  loading={index < 12 || recentlyLoadedIds.has(template.id) ? 'eager' : 'lazy'}
                                   decoding="async"
-                                  fetchPriority={index < 4 || recentlyLoadedIds.has(template.id) ? 'high' : 'auto'}
+                                  fetchPriority={index < 12 || recentlyLoadedIds.has(template.id) ? 'high' : 'auto'}
                                   onLoad={() => handleImageLoad(template.id)}
                                   onError={() => handleImageError(template.id)}
                                   className={`w-full h-full object-cover transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -1927,9 +1927,9 @@ function BannerTestPageInner() {
                             key={`${template.id}-r${imageRetryRef.current[template.id] || 0}`}
                             src={`${thumbUrl(template.imageUrl!)}${imageRetryRef.current[template.id] ? `&_r=${imageRetryRef.current[template.id]}` : ''}`}
                             alt={template.displayTitle || template.industry}
-                            loading={filterIdx < 4 || recentlyLoadedIds.has(template.id) ? 'eager' : 'lazy'}
+                            loading={filterIdx < 12 || recentlyLoadedIds.has(template.id) ? 'eager' : 'lazy'}
                             decoding="async"
-                            fetchPriority={filterIdx < 4 || recentlyLoadedIds.has(template.id) ? 'high' : 'auto'}
+                            fetchPriority={filterIdx < 12 || recentlyLoadedIds.has(template.id) ? 'high' : 'auto'}
                             onLoad={() => handleImageLoad(template.id)}
                             onError={() => handleImageError(template.id)}
                             className={`w-full h-full object-cover transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'}`}
