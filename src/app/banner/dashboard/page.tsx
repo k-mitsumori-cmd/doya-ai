@@ -541,12 +541,12 @@ function BannerTestPageInner() {
   }, [])
 
   // ヒーロー画像用URL（WebP + 段階的リサイズ）
-  // tier='lo' → w=640 (~25KB) を即時表示、tier='hi' → w=1280 (~61KB) を裏でロードしてアップグレード
+  // tier='lo' → w=300 (サムネと同URL = キャッシュヒットで即時表示)、tier='hi' → w=1280 を裏で取得して差し替え
   const heroUrl = useCallback((url: string | null | undefined, tier: 'lo' | 'hi' = 'hi') => {
     if (!url) return url || ''
     if (url.startsWith('data:')) return url
     const sep = url.includes('?') ? '&' : '?'
-    const w = tier === 'lo' ? 640 : 1280
+    const w = tier === 'lo' ? 300 : 1280
     return `${url}${sep}w=${w}&fmt=webp`
   }, [])
 
@@ -680,7 +680,7 @@ function BannerTestPageInner() {
     'ライフスタイル・暮らし': 'ライフスタイル',
   }
 
-  // ヒーロー画像のプリロード（軽量版を最優先で先行取得し、HeroImage の初回表示と同じURL）
+  // ヒーロー画像のプリロード（hi=w=1280 を最優先で先行取得 → 段階2で差し替え時にキャッシュヒット）
   const preloadHeroImage = useCallback((imageUrl: string | null | undefined) => {
     try {
       if (!imageUrl) return
@@ -689,7 +689,7 @@ function BannerTestPageInner() {
       link.as = 'image'
       link.href = imageUrl.startsWith('data:')
         ? imageUrl
-        : `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}w=640&fmt=webp`
+        : `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}w=1280&fmt=webp`
       link.setAttribute('fetchpriority', 'high')
       document.head.appendChild(link)
     } catch (e) {
