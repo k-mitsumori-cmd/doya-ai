@@ -341,3 +341,23 @@ export function buildBannerPromptFromPattern(
     .replace('{{ARTICLE_TEXT}}', articleText)
     .replace('{{GENRE}}', genre)
 }
+
+/**
+ * 記事情報からランダムなパターンを選んでバナープロンプトを生成
+ */
+export function buildArticleBannerPrompt(args: {
+  title: string
+  articleText: string
+  bannerSize?: string
+  genre?: string
+}): string {
+  const [pattern] = pickRandomPatterns(1)
+  const base = buildBannerPromptFromPattern(pattern, {
+    title: args.title,
+    articleText: args.articleText,
+    genre: args.genre,
+  })
+  return args.bannerSize
+    ? `${base}\n\nバナーサイズ: ${args.bannerSize}`
+    : base
+}

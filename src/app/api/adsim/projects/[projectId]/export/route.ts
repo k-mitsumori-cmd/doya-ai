@@ -67,7 +67,7 @@ export async function GET(
         cpaRationale: chartData.cpaRationale || '',
         lpUrl: project.lpUrl || null,
       })
-      return new NextResponse(buf, {
+      return new NextResponse(new Uint8Array(buf), {
         headers: {
           'Content-Type': 'application/pdf',
           'Content-Disposition': `attachment; filename="${encodeURIComponent(baseName)}.pdf"`,
@@ -84,7 +84,7 @@ export async function GET(
         periodMonths: project.periodMonths,
         simulation,
       })
-      return new NextResponse(buf, {
+      return new NextResponse(new Uint8Array(buf), {
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
           'Content-Disposition': `attachment; filename="${encodeURIComponent(baseName)}.xlsx"`,
@@ -109,7 +109,7 @@ export async function GET(
         budgetRationale: chartData.budgetRationale || '',
         cpaRationale: chartData.cpaRationale || '',
       })
-      return new NextResponse(buf, {
+      return new NextResponse(new Uint8Array(buf), {
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
           'Content-Disposition': `attachment; filename="${encodeURIComponent(baseName)}.pptx"`,
