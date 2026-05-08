@@ -1,9 +1,12 @@
 // ========================================
 // 画像生成モデル名解決ユーティリティ
 // ========================================
-// DOYA_BANNER_IMAGE_MODEL の "nano-banana-pro" エイリアスを
-// 実際のGemini APIモデルIDに解決する共有ロジック
-// nanobanner.ts の resolveNanoBananaImageModel と同等
+// メイン: gpt-image-2 (OpenAI ChatGPT Images 2.0)
+// フォールバック: nano-banana-pro-preview (Google Gemini 3 系)
+// 入力画像（inlineData）あり → nano-banana-pro-preview 直行
+// ※ 呼び出し元との互換のため、戻り値は Response オブジェクト（Gemini 形式 JSON）
+
+import { generateImageWithFallback } from './image-generator'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
@@ -113,49 +116,85 @@ export async function resolveImageModel(apiKey: string): Promise<string[]> {
 }
 
 /**
- * Gemini画像生成APIを呼び出す（モデル自動解決 + フォールバック付き）
+ * 画像生成 API を呼び出す（メイン: gpt-image-2 / フォールバック: nano-banana-pro-preview）
+ *
+ * 互換: 呼び出し元4ファイル（persona/portrait, persona/scene, persona/banner,
+ * interview/projects/[id]/thumbnail）が `response.json()` で Gemini 形式を期待するため、
+ * 結果を Gemini 形式の JSON でラップした Response を返す。
+ *
+ * @param _apiKey 旧 Gemini API キー（互換目的、内部では未使用 — image-generator が環境変数から取得）
+ * @param requestBody Gemini 形式の generateContent リクエストボディ
  */
 export async function callGeminiImageAPI(
-  apiKey: string,
+  _apiKey: string,
   requestBody: Record<string, any>
 ): Promise<{ response: Response; model: string }> {
-  const modelsToTry = await resolveImageModel(apiKey)
-  console.log('[image-api] Models to try:', modelsToTry.join(' → '))
+  // requestBody から prompt と入力画像を抽出
+  const contents = (requestBody as any)?.contents
+  const rawParts = Array.isArray(contents) && contents[0]?.parts
+  const parts: any[] = Array.isArray(rawParts) ? rawParts : []
 
-  let lastErr: any = null
-  for (const model of modelsToTry) {
-    const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
-    console.log(`[image-api] Trying model: ${model}`)
-
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify(requestBody),
+  let prompt = ''
+  const inputImages: Array<{ mimeType: string; base64: string }> = []
+  for (const p of parts) {
+    if (typeof p?.text === 'string' && p.text.trim()) {
+      prompt += (prompt ? '\n' : '') + p.text
+    }
+    const inline = p?.inlineData || p?.inline_data
+    if (inline?.data && typeof inline.data === 'string') {
+      inputImages.push({
+        mimeType: inline.mimeType || inline.mime_type || 'image/png',
+        base64: inline.data,
       })
-
-      if (response.ok) {
-        console.log(`[image-api] Success with model: ${model}`)
-        return { response, model }
-      }
-
-      // 429 = レート制限 → すぐエラー返す
-      if (response.status === 429) {
-        throw new Error('APIの使用量制限に達しました。しばらく時間をおいてから再試行してください。')
-      }
-
-      const errText = await response.text()
-      console.warn(`[image-api] Model ${model} failed (${response.status}):`, errText.slice(0, 300))
-      lastErr = new Error(`画像生成に失敗しました (${response.status}): ${errText.slice(0, 200)}`)
-    } catch (e: any) {
-      if (e?.message?.includes('使用量制限')) throw e
-      console.warn(`[image-api] Model ${model} error:`, e?.message)
-      lastErr = e
     }
   }
 
-  throw lastErr || new Error('画像生成モデルが利用できません。環境変数 DOYA_BANNER_IMAGE_MODEL を確認してください。')
+  if (!prompt) {
+    throw new Error('画像生成: prompt が空です')
+  }
+
+  console.log(
+    `[image-api] dispatching (inputImages=${inputImages.length})` +
+      ` → primary: gpt-image-2, fallback: nano-banana-pro-preview`
+  )
+
+  const result = await generateImageWithFallback({
+    prompt,
+    size: '1024x1024',
+    quality: 'medium',
+    inputImages,
+    responseModalities: (requestBody as any)?.generationConfig?.responseModalities,
+    temperature: (requestBody as any)?.generationConfig?.temperature,
+    safetySettings: (requestBody as any)?.safetySettings,
+  })
+
+  console.log(
+    `[image-api] success with ${result.model}` +
+      (result.fallbackUsed ? ' (フォールバック発動)' : '')
+  )
+
+  // 呼び出し元互換: Gemini 形式 (candidates[0].content.parts[*].inlineData.data) でラップ
+  const wrappedJson = {
+    candidates: [
+      {
+        content: {
+          parts: [
+            {
+              inlineData: {
+                mimeType: result.mimeType,
+                data: result.base64,
+              },
+            },
+          ],
+        },
+      },
+    ],
+  }
+
+  const response = new Response(JSON.stringify(wrappedJson), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  })
+
+  return { response, model: result.model }
 }

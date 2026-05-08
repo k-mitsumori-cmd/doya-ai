@@ -61,8 +61,9 @@ git push vercel HEAD:main
 | アニメーション | Framer Motion |
 | 状態管理 | Zustand |
 | AI (テキスト) | Google Gemini API (gemini-2.0-flash) |
-| AI (画像) | Gemini 3 Pro Image Preview |
-| AI (fallback) | OpenAI (gpt-4o) |
+| AI (画像メイン) | OpenAI gpt-image-2 (ChatGPT Images 2.0) |
+| AI (画像フォールバック) | nano-banana-pro-preview (Gemini 3 Pro Image Preview) |
+| AI (テキスト fallback) | OpenAI (gpt-4o) |
 | 文字起こし | AssemblyAI (universal-2) |
 | 決済 | Stripe |
 | ストレージ | Supabase Storage |
@@ -132,13 +133,25 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 }
 ```
 
-### Gemini API 呼び出し（2パターン）
+### 画像生成 API（統一ディスパッチャ）
 ```typescript
-// パターン1: 直接fetch（バナー画像生成等）
-const model = process.env.DOYA_BANNER_IMAGE_MODEL || 'gemini-3-pro-image-preview'
-const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+// 統一ラッパー: src/lib/image-generator.ts
+// メイン: gpt-image-2 / フォールバック: nano-banana-pro-preview
+// 入力画像あり → nano-banana-pro-preview 直接使用
+import { generateImageWithFallback } from '@/lib/image-generator'
 
-// パターン2: seo/lib/gemini.ts のラッパー
+const result = await generateImageWithFallback({
+  prompt: '...',
+  size: '1024x1024',  // gpt-image-2 は 16の倍数、3:1以内、最大3840px
+  quality: 'medium',  // low / medium / high / auto
+  inputImages: [],    // { mimeType, base64 }[]
+})
+// result: { base64, mimeType, model, fallbackUsed, primaryError? }
+```
+
+### テキスト生成（Gemini）
+```typescript
+// seo/lib/gemini.ts のラッパー
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 // テキスト生成: GenerateContentRequest形式
 await geminiGenerateText({ model: GEMINI_TEXT_MODEL_DEFAULT, parts: [{ text: prompt }] })

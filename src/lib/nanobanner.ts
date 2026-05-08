@@ -1,25 +1,31 @@
 // ========================================
-// 画像生成（Nano Banana Pro ONLY）
+// 画像生成（メイン: gpt-image-2 / フォールバック: nano-banana-pro-preview）
 // ========================================
-// 
-// 参考: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
-// 
+//
+// 【設計方針】
+// - メイン: OpenAI gpt-image-2 (ChatGPT Images 2.0)
+// - フォールバック: nano-banana-pro-preview (Google Gemini 3 系)
+// - 入力画像（参照/ロゴ/人物）あり → nano-banana-pro-preview 直接使用
+//   理由: gpt-image-2 generations は入力画像非対応
+// - 第2フォールバックなし
+// - Nano Banana 無印（Pro なし）は使用しない
+//
+// 【参考】
+// - OpenAI: https://developers.openai.com/api/docs/models/gpt-image-2
+// - Gemini: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
+//
 // 【必要な環境変数】
-// GOOGLE_GENAI_API_KEY: Google AI Studio で取得したAPIキー
+// - OPENAI_API_KEY: OpenAI API キー（Organization Verification 必須）
+// - GOOGLE_GENAI_API_KEY: Google AI Studio APIキー（フォールバック用）
 //
-// 【APIキー取得手順】
-// 1. Google AI Studio (https://aistudio.google.com/) にアクセス
-// 2. 「Get API key」をクリック
-// 3. 「Create API key」でキーを作成
-// 4. 生成されたAPIキーをコピー
-//
-// 【使用モデル（画像生成）】
-// - Nano Banana Pro（画像生成 🍌）
-//   ※ Gemini 2.5 以下 / Imagen は使用しない（要望）
+// 【実装】
+// 統一ディスパッチャ: src/lib/image-generator.ts
+// テキスト最適化用 Gemini モデル: gemini-3-pro-preview / gemini-3-flash-preview
 //
 // ========================================
 
 import sharp from 'sharp'
+import { generateImageWithFallback } from './image-generator'
 
 // Google AI Studio API 設定
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
@@ -946,271 +952,119 @@ Return ONE high-quality ad banner image WITH the Japanese text rendered correctl
 }
 
 // ========================================
-// Nano Banana Pro で画像生成
-// 公式ドキュメント: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
+// 画像生成
+// メイン: gpt-image-2 (OpenAI ChatGPT Images 2.0)
+// フォールバック: nano-banana-pro-preview (Google Gemini 3 系)
+// ※ 入力画像（参照/ロゴ/人物）あり → nano-banana-pro-preview を直接使用
 // ========================================
 async function generateSingleBanner(
   prompt: string,
   size: string = '1080x1080',
   options: GenerateOptions = {}
 ): Promise<{ image: string; model: string }> {
-  const apiKey = getApiKey()
-  const configuredModel = getImageModel()
-  const resolved = await resolveNanoBananaImageModel(apiKey, configuredModel)
-
-  // Nano Banana Pro 系モデルの範囲内でフォールバック（Gemini 3のみ）
-  const modelsToTry = Array.from(
-    new Set([
-      resolved,
-      resolved === 'nano-banana-pro-preview' ? 'gemini-3-pro-image-preview' : 'nano-banana-pro-preview',
-    ])
-  )
-
-  let lastErr: any = null
-  for (const model of modelsToTry) {
-    try {
-      console.log(
-        `Calling Image Generation (Nano Banana Pro) with model: ${model}...` +
-          (normalizeModelId(configuredModel) !== model ? ` (resolved from ${configuredModel})` : '')
-      )
-
   const aspectRatio = getAspectRatio(size)
-  const [w, h] = size.split('x').map((v) => Number(v))
+  const [w_num, h_num] = size.split('x').map((v) => Number(v))
 
-  // Nano Banana Pro 用のAPIコール（generateContent）
-  const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
-
-      // 参考画像/ロゴ/人物を「画像→テキスト」の順で渡す
-      const imageParts: any[] = []
-      const refs = (options?.referenceImages || []).slice(0, 2)
-      for (const ref of refs) {
-        try {
-          const parsed = parseDataUrl(ref)
-          imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
-        } catch { /* ignore */ }
-      }
-      if (options?.logoImage) {
-        try {
-          const parsed = parseDataUrl(options.logoImage)
-          imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
-        } catch { /* ignore */ }
-      }
-      const personImages =
-        Array.isArray(options?.personImages) && options.personImages.length > 0
-          ? options.personImages
-          : (options?.personImage ? [options.personImage] : [])
-      for (const p of personImages.slice(0, 4)) {
-        try {
-          const parsed = parseDataUrl(p)
-          imageParts.push({ inlineData: { mimeType: parsed.mimeType, data: parsed.data } })
-        } catch { /* ignore */ }
-      }
-
-      const requestBody = {
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                ...imageParts,
-                {
-                  text: [
-                    prompt,
-                    '',
-                    '=== MANDATORY OUTPUT CONSTRAINTS ===',
-                    `**TARGET SIZE: ${w}x${h} pixels (width x height)**`,
-                    `**ASPECT RATIO: ${aspectRatio}**`,
-                    '',
-                    'CRITICAL REQUIREMENTS:',
-                    `- Generate image with ${aspectRatio} aspect ratio.`,
-                    '- Fill the entire canvas edge-to-edge with content.',
-                    '- NO letterboxing, NO empty bars, NO padding, NO borders.',
-                    '',
-                    '=== JAPANESE TEXT QUALITY (CRITICAL) ===',
-                    '- Japanese text must be PERFECTLY CORRECT and READABLE.',
-                    '- ABSOLUTELY FORBIDDEN: garbled text, non-existent kanji, meaningless character combinations.',
-                    '- If you cannot render Japanese text correctly, DO NOT include any text in the image.',
-                    '- Examples of WRONG text to avoid: "夏月" (wrong), "お布" (wrong), random kanji combinations.',
-                    '- Better to have NO TEXT than WRONG TEXT.',
-                    '',
-                    'Return ONE PNG image.',
-                  ].join('\n'),
-                },
-              ],
-            },
-          ],
-          generationConfig: {
-            // 画像生成は IMAGE のみを要求（テキストのみの返答を防ぐ）
-            // 参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja#image_generation
-            responseModalities: ['IMAGE'],
-            temperature: 0.4,
-            candidateCount: 1,
-            // 注意: aspectRatioパラメータはGemini APIでサポートされていない可能性があるため、
-            // プロンプト内でサイズを指示し、後処理でリサイズする方式を採用
-          },
-          safetySettings: [
-            { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_ONLY_HIGH' },
-            { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_ONLY_HIGH' },
-          ],
-        }
-            
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify(requestBody),
-      })
-            
-      if (!response.ok) {
-        const errorText = await response.text()
-        let errorMessage = ''
-        
-        try {
-          const errorJson = JSON.parse(errorText)
-          const errorCode = errorJson?.error?.code || response.status
-          const errorMsg = errorJson?.error?.message || errorText
-          
-          // 429エラー（使用量制限）の場合
-          if (response.status === 429 || errorCode === 429) {
-            errorMessage = `APIの使用量制限に達しました。しばらく時間をおいてから再試行してください。\n` +
-              `詳細: ${errorMsg}\n` +
-              `プランと請求情報をご確認ください: https://ai.google.dev/gemini-api`
-          } else if (response.status === 401 || errorCode === 401) {
-            errorMessage = `APIキーが無効です。環境変数のGOOGLE_GENAI_API_KEYをご確認ください。`
-          } else if (response.status === 403 || errorCode === 403) {
-            errorMessage = `APIアクセスが拒否されました。APIキーの権限とプランをご確認ください。`
-          } else if (response.status === 400 || errorCode === 400) {
-            errorMessage = `リクエストが無効です。プロンプトやパラメータをご確認ください。\n` +
-              `詳細: ${errorMsg}`
-          } else {
-            errorMessage = `画像生成に失敗しました（Nano Banana Pro / ${model}）。\n` +
-              `環境変数のモデルIDとAPIキーをご確認ください。\n` +
-              `参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja#image_generation\n` +
-              `ステータス: ${response.status}\n` +
-              `エラー: ${errorMsg.substring(0, 200)}`
-          }
-        } catch (parseError) {
-          // JSONパースに失敗した場合は元のエラーテキストを使用
-          if (response.status === 429) {
-            errorMessage = `APIの使用量制限に達しました。しばらく時間をおいてから再試行してください。\n` +
-              `詳細: ${errorText.substring(0, 200)}`
-          } else {
-            errorMessage = `画像生成に失敗しました（Nano Banana Pro / ${model}）。\n` +
-              `環境変数のモデルIDとAPIキーをご確認ください。\n` +
-              `参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja#image_generation\n` +
-              `ステータス: ${response.status}\n` +
-              `エラー: ${errorText.substring(0, 200)}`
-          }
-        }
-        
-        console.warn(`Model ${model} failed:`, response.status, errorText)
-        
-        // 429エラーの場合は、他のモデルにフォールバックせずに即座にエラーを返す
-        if (response.status === 429) {
-          throw new Error(errorMessage)
-        }
-        
-        throw new Error(errorMessage)
-      }
-            
-      const result = await response.json()
-            
-      // ブロック/フィードバック（あれば原因に含める）
-      const blockReason =
-        result?.promptFeedback?.blockReason ||
-        result?.prompt_feedback?.block_reason ||
-        ''
-
-      // レスポンスから画像を抽出（inlineData / fileData 両対応）
-      const extracted = await extractImageBase64FromGeminiResult(result)
-      if (extracted?.base64) {
-        console.log(`Image generated successfully with ${model}`)
-        const rawBase64 = String(extracted.base64)
-        const [w_num, h_num] = size.split('x').map(v => Number(v))
-        
-        // サイズを確実に反映するための処理
-        // 1. まず生成された画像のサイズを取得
-        // 2. 指定サイズに合わせてリサイズ（アスペクト比を維持）
-        // 3. 必要に応じてパディングを追加して正確なサイズにする
-        const imageBuffer = Buffer.from(rawBase64, 'base64')
-        const metadata = await sharp(imageBuffer).metadata()
-        const originalWidth = metadata.width || 1024
-        const originalHeight = metadata.height || 1024
-        
-        let resized: Buffer
-        if (Number.isFinite(w_num) && Number.isFinite(h_num) && w_num > 0 && h_num > 0) {
-          // 生成された画像のアスペクト比と目標アスペクト比を比較
-          const originalRatio = originalWidth / originalHeight
-          const targetRatio = w_num / h_num
-          const ratioDiff = Math.abs(originalRatio - targetRatio) / targetRatio
-          
-          if (ratioDiff < 0.05) {
-            // アスペクト比がほぼ同じ（5%以内）の場合：
-            // 単純にリサイズ（fillで正確なサイズに）
-            // Gemini APIが正しいアスペクト比で生成した場合はこちら
-            resized = await sharp(imageBuffer)
-              .resize({ 
-                width: w_num, 
-                height: h_num, 
-                fit: 'fill' // 正確なサイズにリサイズ
-              })
-              .png()
-              .toBuffer()
-          } else {
-            // アスペクト比が異なる場合：
-            // 'contain' を使用してクロップを避け、背景色でパディング
-            // 背景色を画像の dominant color から取得
-            let bgColor = { r: 0, g: 0, b: 0, alpha: 1 }
-            
-            try {
-              const { dominant } = await sharp(imageBuffer).stats()
-              if (dominant) {
-                bgColor = { r: dominant.r, g: dominant.g, b: dominant.b, alpha: 1 }
-              }
-            } catch {
-              // 色取得に失敗した場合は黒を使用
-            }
-            
-            resized = await sharp(imageBuffer)
-              .resize({ 
-                width: w_num, 
-                height: h_num, 
-                fit: 'contain', // クロップせず、アスペクト比を維持
-                background: bgColor 
-              })
-              .png()
-              .toBuffer()
-          }
-        } else {
-          resized = await sharp(imageBuffer).png().toBuffer()
-        }
-
-        // Nano Banana Proが画像内にテキストを描画するため、
-        // 後処理でのテキストオーバーレイは行わない（AIに任せる）
-
-        return { image: `data:image/png;base64,${resized.toString('base64')}`, model }
-      }
-
-      const parts = result?.candidates?.[0]?.content?.parts
-      const text = pickFirstText(parts)
-      const hint = [
-        blockReason ? `blockReason=${blockReason}` : '',
-        text ? `text="${text.slice(0, 180)}"` : '',
-      ]
-        .filter(Boolean)
-        .join(' / ')
-
-      throw new Error(`Model ${model} returned no image data${hint ? ` (${hint})` : ''}`)
-    } catch (e: any) {
-      lastErr = e
-      continue
-    }
+  // 入力画像（参考画像/ロゴ/人物）を統一フォーマットに整形
+  const inputImages: Array<{ mimeType: string; base64: string }> = []
+  const refs = (options?.referenceImages || []).slice(0, 2)
+  for (const ref of refs) {
+    try {
+      const parsed = parseDataUrl(ref)
+      inputImages.push({ mimeType: parsed.mimeType, base64: parsed.data })
+    } catch { /* ignore */ }
+  }
+  if (options?.logoImage) {
+    try {
+      const parsed = parseDataUrl(options.logoImage)
+      inputImages.push({ mimeType: parsed.mimeType, base64: parsed.data })
+    } catch { /* ignore */ }
+  }
+  const personImages =
+    Array.isArray(options?.personImages) && options.personImages.length > 0
+      ? options.personImages
+      : (options?.personImage ? [options.personImage] : [])
+  for (const p of personImages.slice(0, 4)) {
+    try {
+      const parsed = parseDataUrl(p)
+      inputImages.push({ mimeType: parsed.mimeType, base64: parsed.data })
+    } catch { /* ignore */ }
   }
 
-  throw lastErr || new Error('Model returned no image data')
+  // 既存のサイズ・日本語制約をプロンプトに付与
+  const fullPrompt = [
+    prompt,
+    '',
+    '=== MANDATORY OUTPUT CONSTRAINTS ===',
+    `**TARGET SIZE: ${w_num}x${h_num} pixels (width x height)**`,
+    `**ASPECT RATIO: ${aspectRatio}**`,
+    '',
+    'CRITICAL REQUIREMENTS:',
+    `- Generate image with ${aspectRatio} aspect ratio.`,
+    '- Fill the entire canvas edge-to-edge with content.',
+    '- NO letterboxing, NO empty bars, NO padding, NO borders.',
+    '',
+    '=== JAPANESE TEXT QUALITY (CRITICAL) ===',
+    '- Japanese text must be PERFECTLY CORRECT and READABLE.',
+    '- ABSOLUTELY FORBIDDEN: garbled text, non-existent kanji, meaningless character combinations.',
+    '- If you cannot render Japanese text correctly, DO NOT include any text in the image.',
+    '- Examples of WRONG text to avoid: "夏月" (wrong), "お布" (wrong), random kanji combinations.',
+    '- Better to have NO TEXT than WRONG TEXT.',
+    '',
+    'Return ONE PNG image.',
+  ].join('\n')
+
+  // 統一ディスパッチャ呼び出し
+  const result = await generateImageWithFallback({
+    prompt: fullPrompt,
+    size,
+    quality: 'medium',
+    inputImages,
+    responseModalities: ['IMAGE'],
+    temperature: 0.4,
+  })
+
+  console.log(
+    `Image generated successfully with ${result.model}` +
+      (result.fallbackUsed ? ' (フォールバック発動)' : '')
+  )
+
+  // sharp で目標サイズに正確にフィット
+  const imageBuffer = Buffer.from(result.base64, 'base64')
+  const metadata = await sharp(imageBuffer).metadata()
+  const originalWidth = metadata.width || 1024
+  const originalHeight = metadata.height || 1024
+
+  let resized: Buffer
+  if (Number.isFinite(w_num) && Number.isFinite(h_num) && w_num > 0 && h_num > 0) {
+    const originalRatio = originalWidth / originalHeight
+    const targetRatio = w_num / h_num
+    const ratioDiff = Math.abs(originalRatio - targetRatio) / targetRatio
+
+    if (ratioDiff < 0.05) {
+      resized = await sharp(imageBuffer)
+        .resize({ width: w_num, height: h_num, fit: 'fill' })
+        .png()
+        .toBuffer()
+    } else {
+      let bgColor = { r: 0, g: 0, b: 0, alpha: 1 }
+      try {
+        const { dominant } = await sharp(imageBuffer).stats()
+        if (dominant) {
+          bgColor = { r: dominant.r, g: dominant.g, b: dominant.b, alpha: 1 }
+        }
+      } catch { /* ignore */ }
+
+      resized = await sharp(imageBuffer)
+        .resize({ width: w_num, height: h_num, fit: 'contain', background: bgColor })
+        .png()
+        .toBuffer()
+    }
+  } else {
+    resized = await sharp(imageBuffer).png().toBuffer()
+  }
+
+  return { image: `data:image/png;base64,${resized.toString('base64')}`, model: result.model }
 }
 
 // 使用モデルの表示名を取得

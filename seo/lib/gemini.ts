@@ -677,93 +677,54 @@ export async function geminiGenerateJson<T>(
   }
 }
 
+/**
+ * SEO 用画像生成
+ * メイン: gpt-image-2 (OpenAI ChatGPT Images 2.0)
+ * フォールバック: nano-banana-pro-preview (Google Gemini 3 系)
+ *
+ * 入力画像非対応（テキストプロンプトのみ）— 既存の SEO 用途と一致
+ * NOTE: import の循環を避けるため、image-generator は呼び出し時に動的 import
+ */
 export async function geminiGenerateImagePng(args: {
   prompt: string
   aspectRatio?: string
   imageSize?: '2K' | '4K'
   model?: string
 }): Promise<{ mimeType: string; dataBase64: string }> {
-  const apiKey = getApiKey()
-  const configured = args.model ?? GEMINI_IMAGE_MODEL_DEFAULT
+  const aspectRatio = args.aspectRatio ?? '16:9'
+  const size = mapAspectRatioToSize(aspectRatio)
 
-  // 画像生成対応モデルのみ許可（運用上の事故防止）
-  if (!isNanoBananaFamily(configured)) {
-    throw new Error(
-      `SEO画像生成モデル（${configured}）は画像生成対応モデルではありません。` +
-        ` 環境変数 SEO_GEMINI_IMAGE_MODEL を 'nano-banana-pro-preview' に設定してください。`
-    )
-  }
+  // 動的 import（src/lib への参照、循環依存を避ける）
+  const { generateImageWithFallback } = await import('../../src/lib/image-generator')
 
-  const modelsToTry = nanoBananaModelCandidates(configured)
-  let lastErr: any = null
+  const result = await generateImageWithFallback({
+    prompt: args.prompt,
+    size,
+    quality: 'medium',
+    inputImages: [],
+  })
 
-  for (const model of modelsToTry) {
-  const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
-    try {
-  const res = await fetchWithRetry(
-    endpoint,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: args.prompt }] }],
-        generationConfig: {
-          // Gemini ネイティブ画像生成は TEXT + IMAGE の両方が必要
-          responseModalities: ['TEXT', 'IMAGE'],
-          imageConfig: {
-            aspectRatio: args.aspectRatio ?? '16:9',
-            imageSize: args.imageSize ?? '2K',
-          },
-        },
-      }),
-    },
-    3,
-    1500
+  console.log(
+    `[seo/image] generated with ${result.model}` +
+      (result.fallbackUsed ? ' (フォールバック発動)' : '')
   )
 
-  if (!res.ok) {
-    const t = await res.text()
-        // 404/400（モデル未対応/未存在）のときは次を試す
-        if ((res.status === 404 || res.status === 400) && model !== modelsToTry[modelsToTry.length - 1]) {
-          lastErr = new Error(`Gemini Image API Error: ${res.status} - ${t.substring(0, 300)}`)
-          continue
-        }
-    throw new Error(`Gemini Image API Error: ${res.status} - ${t.substring(0, 500)}`)
+  return {
+    mimeType: result.mimeType,
+    dataBase64: result.base64,
   }
+}
 
-  const json = await res.json()
-  const parts = json?.candidates?.[0]?.content?.parts
-  if (Array.isArray(parts)) {
-    for (const part of parts) {
-      if (part?.inlineData?.data) {
-        return {
-          mimeType: part?.inlineData?.mimeType || 'image/png',
-          dataBase64: part.inlineData.data as string,
-        }
-      }
-    }
-  }
-
-      // 成功レスポンスでも画像が無い場合は次のモデルへ
-      lastErr = new Error(`Gemini が画像を返しませんでした（モデル: ${model}）。`)
-      if (model !== modelsToTry[modelsToTry.length - 1]) continue
-      throw lastErr
-    } catch (e: any) {
-      lastErr = e
-      if (model !== modelsToTry[modelsToTry.length - 1]) continue
-      throw e
-    }
-  }
-
-  throw (
-    lastErr ||
-    new Error(
-      `Gemini 画像生成に失敗しました。SEO_GEMINI_IMAGE_MODEL を 'gemini-2.5-flash-image' または 'gemini-3-pro-image-preview' に設定してください。`
-    )
-  )
+function mapAspectRatioToSize(aspectRatio: string): string {
+  const a = String(aspectRatio || '').trim()
+  if (a === '16:9') return '1536x1024'
+  if (a === '9:16') return '1024x1536'
+  if (a === '4:3') return '1536x1024'
+  if (a === '3:4') return '1024x1536'
+  if (a === '1:1') return '1024x1024'
+  if (a === '21:9') return '1536x1024'
+  if (a === '9:21') return '1024x1536'
+  return '1024x1024'
 }
 
 
