@@ -540,13 +540,14 @@ function BannerTestPageInner() {
     return `${url}${sep}w=300&fmt=webp`
   }, [])
 
-  // ヒーロー画像用URL（WebP + 大きめリサイズ）— 最初の1枚を最速で出すための最適化
-  const heroUrl = useCallback((url: string | null | undefined) => {
+  // ヒーロー画像用URL（WebP + 段階的リサイズ）
+  // tier='lo' → w=640 (~25KB) を即時表示、tier='hi' → w=1280 (~61KB) を裏でロードしてアップグレード
+  const heroUrl = useCallback((url: string | null | undefined, tier: 'lo' | 'hi' = 'hi') => {
     if (!url) return url || ''
-    // data URL (base64) の場合はそのまま（クライアント側でリサイズ不可）
     if (url.startsWith('data:')) return url
     const sep = url.includes('?') ? '&' : '?'
-    return `${url}${sep}w=1280&fmt=webp`
+    const w = tier === 'lo' ? 640 : 1280
+    return `${url}${sep}w=${w}&fmt=webp`
   }, [])
 
   // キャッシュから失敗テンプレートを除外するヘルパー
@@ -679,8 +680,7 @@ function BannerTestPageInner() {
     'ライフスタイル・暮らし': 'ライフスタイル',
   }
 
-  // ヒーロー画像のプリロード（テンプレートURL確定直後に呼び出し、ブラウザが先行取得開始）
-  // ※ heroUrl と同じ ?w=1280&fmt=webp に揃えて preload と <img src> のキャッシュキーを一致させる
+  // ヒーロー画像のプリロード（軽量版を最優先で先行取得し、HeroImage の初回表示と同じURL）
   const preloadHeroImage = useCallback((imageUrl: string | null | undefined) => {
     try {
       if (!imageUrl) return
@@ -689,13 +689,51 @@ function BannerTestPageInner() {
       link.as = 'image'
       link.href = imageUrl.startsWith('data:')
         ? imageUrl
-        : `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}w=1280&fmt=webp`
+        : `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}w=640&fmt=webp`
       link.setAttribute('fetchpriority', 'high')
       document.head.appendChild(link)
     } catch (e) {
       // プリロード失敗してもテンプレート読み込みを止めない
     }
   }, [])
+
+  // ヒーロー画像のプログレッシブ読み込み
+  // 1. selectedBanner / selectedTemplate のURL確定で即時に lo (w=640) を表示
+  // 2. 裏で hi (w=1280) を取得し、完了したら差し替え
+  const [heroImgSrc, setHeroImgSrc] = useState<string>('')
+
+  useEffect(() => {
+    const url = selectedBanner?.imageUrl || selectedTemplate?.imageUrl
+    if (!url) {
+      setHeroImgSrc('')
+      return
+    }
+    if (url.startsWith('data:')) {
+      setHeroImgSrc(url)
+      return
+    }
+
+    let cancelled = false
+    const lo = heroUrl(url, 'lo')
+    const hi = heroUrl(url, 'hi')
+
+    // 段階1: 即時表示（preload 済みなら同期表示）
+    setHeroImgSrc(lo)
+
+    // 段階2: 裏で高画質を取得 → 完了で差し替え
+    const img = new window.Image()
+    img.onload = () => {
+      if (!cancelled) setHeroImgSrc(hi)
+    }
+    img.onerror = () => {
+      // 高画質取得失敗時は lo のまま
+    }
+    img.src = hi
+
+    return () => {
+      cancelled = true
+    }
+  }, [selectedBanner?.imageUrl, selectedTemplate?.imageUrl, heroUrl])
 
   // テンプレートを取得（高速化: 最小限のデータを最初に取得）
   useEffect(() => {
@@ -1419,7 +1457,7 @@ function BannerTestPageInner() {
             
             {selectedBanner ? (
               <img
-                src={heroUrl(selectedBanner.imageUrl)}
+                src={heroImgSrc || heroUrl(selectedBanner.imageUrl, 'lo')}
                 alt="Selected banner"
                 loading="eager"
                 decoding="async"
@@ -1429,7 +1467,7 @@ function BannerTestPageInner() {
               />
             ) : selectedTemplate?.imageUrl && !imageErrors.has(selectedTemplate.id) ? (
               <img
-                src={heroUrl(selectedTemplate.imageUrl)}
+                src={heroImgSrc || heroUrl(selectedTemplate.imageUrl, 'lo')}
                 alt={selectedTemplate.prompt}
                 loading="eager"
                 decoding="async"
