@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
-import { generateUnsubscribeToken } from '@/app/api/drip/unsubscribe/route'
+import { generateUnsubscribeToken } from '@/lib/drip-tokens'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'

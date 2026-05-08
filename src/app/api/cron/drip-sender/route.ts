@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma, withRetry } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
-import { generateUnsubscribeToken } from '@/app/api/drip/unsubscribe/route'
+import { generateUnsubscribeToken } from '@/lib/drip-tokens'
 import crypto from 'crypto'
 
 export const runtime = 'nodejs'
