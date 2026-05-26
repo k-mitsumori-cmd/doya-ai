@@ -60,10 +60,14 @@ export default function AiInsightPanel({
         </div>
 
         {loading ? (
-          <div className="flex items-center gap-3 py-4">
-            <div className="relative">
-              <div className="w-8 h-8 border-2 border-indigo-200 border-t-indigo-500 rounded-full animate-spin" />
-            </div>
+          <div className="flex items-center gap-4 py-4">
+            <motion.img
+              src="/hr/characters/working_作業中.png"
+              alt="白くまキャラクター"
+              className="w-24"
+              animate={{ y: [0, -10, 0] }}
+              transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+            />
             <div>
               <p className="text-base font-bold text-indigo-700">AIが分析中...</p>
               <p className="text-sm font-semibold text-indigo-400 mt-0.5">しばらくお待ちください</p>
@@ -71,8 +75,17 @@ export default function AiInsightPanel({
           </div>
         ) : (
           <>
-            <div className="text-base text-gray-800 leading-relaxed whitespace-pre-wrap">
-              {content}
+            <div className="flex gap-3">
+              <div className="flex-1 text-base text-gray-800 leading-relaxed whitespace-pre-wrap">
+                {content}
+              </div>
+              {content && (
+                <img
+                  src="/hr/characters/surprise_驚き.png"
+                  alt="白くまキャラクター"
+                  className="w-16 h-16 object-contain shrink-0 self-start"
+                />
+              )}
             </div>
             {content && (
               <div className="mt-4 flex justify-end">

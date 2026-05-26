@@ -149,10 +149,16 @@ export default function EvaluationsPage() {
           </div>
         ) : (
           <div className="bg-white rounded-3xl shadow-lg p-12 text-center">
-            <span className="material-symbols-outlined text-7xl text-red-300 mb-4 block">assignment</span>
-            <h3 className="text-2xl font-black text-slate-900 mb-2">評価期間を作成しましょう</h3>
+            <motion.img
+              src="/hr/characters/point_解説.png"
+              alt="白くまキャラクター"
+              className="w-40 mx-auto mb-4"
+              animate={{ y: [0, -10, 0] }}
+              transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+            />
+            <h3 className="text-2xl font-black text-slate-900 mb-2">評価をはじめてみましょう！</h3>
             <p className="text-base text-slate-500 mb-6 max-w-md mx-auto">
-              MBO（目標管理制度）に基づいた人事評価をオンラインで管理できます。
+              MBO（目標管理制度）に基づいた人事評価をオンラインでかんたんに管理できます。
             </p>
             <div className="flex flex-col items-center gap-3 mb-6">
               <div className="flex items-center gap-3 text-left max-w-sm w-full">
@@ -168,13 +174,15 @@ export default function EvaluationsPage() {
                 <span className="text-sm font-bold text-slate-700">自己評価 → 上司評価 → 最終評価</span>
               </div>
             </div>
-            <button
+            <motion.button
               onClick={() => setShowCreateModal(true)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               className="inline-flex items-center gap-2 px-8 py-3.5 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all"
             >
               <span className="material-symbols-outlined text-lg">add</span>
               評価期間を作成
-            </button>
+            </motion.button>
           </div>
         )}
 

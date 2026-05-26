@@ -4,6 +4,23 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 
+/** Hook: 0 から target まで段階的にカウントアップする */
+function useCountUp(target: number, loading: boolean) {
+  const [display, setDisplay] = useState(0)
+  useEffect(() => {
+    if (loading || target === 0) { setDisplay(target); return }
+    let current = 0
+    const step = Math.max(1, Math.ceil(target / 20))
+    const interval = setInterval(() => {
+      current += step
+      if (current >= target) { setDisplay(target); clearInterval(interval) }
+      else setDisplay(current)
+    }, 50)
+    return () => clearInterval(interval)
+  }, [target, loading])
+  return display
+}
+
 interface DashboardStats {
   employeeCount: number
   departmentCount: number
@@ -84,6 +101,13 @@ const QUICK_ACTIONS = [
   { href: '/hr/org-chart', icon: 'account_tree', label: '組織図を確認', iconBg: 'bg-amber-100', iconColor: 'text-amber-500' },
 ]
 
+function StatValue({ statKey, stats, loading }: { statKey: string; stats: DashboardStats; loading: boolean }) {
+  const target = (stats as any)[statKey] as number
+  const display = useCountUp(target, loading)
+  if (loading) return <span className="inline-block w-12 h-8 bg-slate-100 rounded animate-pulse" />
+  return <>{display}</>
+}
+
 export default function HrDashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
     employeeCount: 0,
@@ -123,11 +147,20 @@ export default function HrDashboardPage() {
   return (
     <div className="p-6 lg:p-10 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-black text-slate-900">
-          {stats.orgName ? `${stats.orgName} のダッシュボード` : 'ダッシュボード'}
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">組織の概況をひと目で確認</p>
+      <div className="mb-8 flex items-center gap-4">
+        <div className="flex-1">
+          <h1 className="text-3xl font-black text-slate-900">
+            {stats.orgName ? `${stats.orgName} のダッシュボード` : 'ダッシュボード'}
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">組織の概況をひと目で確認</p>
+        </div>
+        <motion.img
+          src="/hr/characters/thumbsup_いいね.png"
+          alt="白くまキャラクター"
+          className="w-16 drop-shadow-md"
+          animate={{ y: [0, -8, 0] }}
+          transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+        />
       </div>
 
       {/* Stats Cards */}
@@ -147,11 +180,7 @@ export default function HrDashboardPage() {
               <span className="text-sm font-bold text-slate-600 uppercase tracking-wider">{card.label}</span>
             </div>
             <p className="text-4xl font-black text-slate-900">
-              {loading ? (
-                <span className="inline-block w-12 h-8 bg-slate-100 rounded animate-pulse" />
-              ) : (
-                (stats as any)[card.key]
-              )}
+              <StatValue statKey={card.key} stats={stats} loading={loading} />
             </p>
           </motion.div>
         ))}
@@ -170,7 +199,15 @@ export default function HrDashboardPage() {
             </div>
             <h2 className="text-xl font-black text-slate-900">はじめてのセットアップ</h2>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex flex-col sm:flex-row gap-4 items-start">
+            {/* Setup Guide Character */}
+            <motion.img
+              src="/hr/characters/point_解説.png"
+              alt="白くまキャラクター"
+              className="hidden sm:block w-40 flex-shrink-0 drop-shadow-lg"
+              animate={{ y: [0, -10, 0] }}
+              transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+            />
             {SETUP_STEPS.map((item) => {
               const done = (stats as any)[item.doneKey] > 0
               return (
@@ -327,16 +364,17 @@ export default function HrDashboardPage() {
         <h2 className="text-lg font-black text-slate-900 mb-4">クイックアクション</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {QUICK_ACTIONS.map((action) => (
-            <Link
-              key={action.href}
-              href={action.href}
-              className="flex items-center gap-3 px-5 py-4 rounded-3xl shadow-md hover:shadow-lg bg-white transition-all"
-            >
-              <div className={`w-10 h-10 rounded-2xl ${action.iconBg} flex items-center justify-center`}>
-                <span className={`material-symbols-outlined ${action.iconColor}`}>{action.icon}</span>
-              </div>
-              <span className="text-base font-bold text-slate-700">{action.label}</span>
-            </Link>
+            <motion.div key={action.href} whileHover={{ scale: 1.03, y: -2 }}>
+              <Link
+                href={action.href}
+                className="flex items-center gap-3 px-5 py-4 rounded-3xl shadow-md hover:shadow-lg bg-white transition-shadow"
+              >
+                <div className={`w-10 h-10 rounded-2xl ${action.iconBg} flex items-center justify-center`}>
+                  <span className={`material-symbols-outlined ${action.iconColor}`}>{action.icon}</span>
+                </div>
+                <span className="text-base font-bold text-slate-700">{action.label}</span>
+              </Link>
+            </motion.div>
           ))}
         </div>
       </div>

@@ -227,7 +227,14 @@ export default function HrSettingsPage() {
     <div className="p-6 lg:p-10 max-w-3xl mx-auto">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="mb-8">
-          <h1 className="text-3xl font-black text-slate-900">設定</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-black text-slate-900">設定</h1>
+            <img
+              src="/hr/characters/thumbsup_いいね.png"
+              alt="白くまキャラクター"
+              className="w-14"
+            />
+          </div>
           <p className="text-sm text-slate-500 mt-1">組織情報とメンバーを管理</p>
         </div>
 
@@ -239,10 +246,19 @@ export default function HrSettingsPage() {
           </div>
         )}
         {success && (
-          <div className="mb-6 p-4 bg-emerald-50 rounded-2xl text-sm text-emerald-700">
-            <span className="material-symbols-outlined text-lg align-middle mr-1">check_circle</span>
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 bg-emerald-50 rounded-2xl text-sm text-emerald-700 flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-lg align-middle">check_circle</span>
             設定を保存しました
-          </div>
+            <img
+              src="/hr/characters/success_成功.png"
+              alt="白くまキャラクター"
+              className="w-10 inline-block ml-1"
+            />
+          </motion.div>
         )}
 
         {/* Organization Info */}

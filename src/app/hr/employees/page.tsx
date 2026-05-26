@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import Link from 'next/link'
 import EmployeeGrid from '@/components/hr/EmployeeGrid'
 import { Employee } from '@/components/hr/EmployeeCard'
@@ -80,22 +81,32 @@ export default function EmployeesPage() {
           ))}
         </div>
       ) : employees.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-sky-50 mb-4">
-            <span className="material-symbols-outlined text-4xl text-sky-500">group</span>
-          </div>
-          <h3 className="text-xl font-black text-slate-900 mb-2">まだ従業員が登録されていません</h3>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-2xl border border-slate-200 p-12 text-center"
+        >
+          <motion.img
+            src="/hr/characters/hello_挨拶.png"
+            alt="白くまキャラクター"
+            className="w-40 mx-auto mb-4"
+            animate={{ y: [0, -10, 0] }}
+            transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+          />
+          <h3 className="text-xl font-black text-slate-900 mb-2">チームのメンバーを登録しましょう！</h3>
           <p className="text-base text-slate-500 mb-6 max-w-md mx-auto">
             従業員を追加して、タレントマネジメントを始めましょう。
           </p>
           <div className="flex items-center justify-center gap-3">
-            <Link
-              href="/hr/employees/new"
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
-            >
-              <span className="material-symbols-outlined text-lg">person_add</span>
-              従業員を追加する
-            </Link>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link
+                href="/hr/employees/new"
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+              >
+                <span className="material-symbols-outlined text-lg">person_add</span>
+                従業員を追加する
+              </Link>
+            </motion.div>
             <button
               disabled
               className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-500 rounded-xl text-base font-bold cursor-not-allowed opacity-60"
@@ -105,7 +116,7 @@ export default function EmployeesPage() {
               CSVで一括登録
             </button>
           </div>
-        </div>
+        </motion.div>
       ) : (
         <EmployeeGrid employees={employees} departments={departments} />
       )}

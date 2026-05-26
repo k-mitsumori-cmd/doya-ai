@@ -208,21 +208,29 @@ export default function OneOnOnePage() {
           </div>
         ) : (
           <div className="bg-white rounded-3xl shadow-lg p-12 text-center">
-            <span className="material-symbols-outlined text-7xl text-emerald-300 mb-4 block">chat</span>
-            <h3 className="text-2xl font-black text-slate-900 mb-2">1on1ミーティングを記録しましょう</h3>
+            <motion.img
+              src="/hr/characters/present_プレゼン.png"
+              alt="白くまキャラクター"
+              className="w-40 mx-auto mb-4"
+              animate={{ y: [0, -10, 0] }}
+              transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+            />
+            <h3 className="text-2xl font-black text-slate-900 mb-2">1on1をはじめましょう！</h3>
             <p className="text-base text-slate-500 mb-2 max-w-md mx-auto">
-              定期的な1on1で、メンバーの成長を支援。
+              定期的な1on1で、メンバーの成長をサポートしましょう。
             </p>
             <p className="text-base text-slate-500 mb-6 max-w-md mx-auto">
               AIが会話の要約とアクションアイテムを自動生成します。
             </p>
-            <button
+            <motion.button
               onClick={() => setShowNewModal(true)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
               className="inline-flex items-center gap-2 px-8 py-3.5 bg-emerald-600 text-white rounded-full text-base font-bold shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:bg-emerald-700 transition-all"
             >
               <span className="material-symbols-outlined text-lg">add</span>
               1on1を記録する
-            </button>
+            </motion.button>
           </div>
         )}
 

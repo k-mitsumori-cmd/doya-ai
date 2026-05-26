@@ -159,19 +159,25 @@ export default function OrgChartView({ departments, orgName }: OrgChartViewProps
   if (departments.length === 0) {
     return (
       <div className="text-center py-16">
-        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-sky-50 mb-4">
-          <span className="material-symbols-outlined text-4xl text-sky-500">account_tree</span>
-        </div>
+        <motion.img
+          src="/hr/characters/thinking_考え中.png"
+          alt="白くまキャラクター"
+          className="w-40 mx-auto mb-4"
+          animate={{ y: [0, -10, 0] }}
+          transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+        />
         <h3 className="text-xl font-black text-slate-900 mb-2">組織図を表示するには、まず部署を作成してください</h3>
         <p className="text-base text-slate-500 mb-6">部署と従業員を登録すると、組織図が自動的に生成されます。</p>
-        <Link
-          href="/hr/settings"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
-        >
-          <span className="material-symbols-outlined text-lg">settings</span>
-          設定画面で部署を追加
-          <span className="material-symbols-outlined text-lg">arrow_forward</span>
-        </Link>
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="inline-block">
+          <Link
+            href="/hr/settings"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+          >
+            <span className="material-symbols-outlined text-lg">settings</span>
+            設定画面で部署を追加
+            <span className="material-symbols-outlined text-lg">arrow_forward</span>
+          </Link>
+        </motion.div>
       </div>
     )
   }

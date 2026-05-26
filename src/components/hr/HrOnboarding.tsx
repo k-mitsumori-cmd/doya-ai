@@ -1,8 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+
+const STEP_CHARACTERS = [
+  '/hr/characters/hello_挨拶.png',
+  '/hr/characters/focus_集中.png',
+  '/hr/characters/success_成功.png',
+]
 
 const INDUSTRY_OPTIONS = [
   'IT・通信', '製造', '小売・卸売', '飲食・サービス',
@@ -105,6 +111,26 @@ export default function HrOnboarding() {
             ))}
           </div>
 
+          {/* Step Character */}
+          <div className="flex justify-center mb-6">
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={step}
+                src={STEP_CHARACTERS[step]}
+                alt="白くまキャラクター"
+                className="w-32 drop-shadow-lg"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1, y: [0, -10, 0] }}
+                exit={{ opacity: 0, scale: 0.8 }}
+                transition={{
+                  opacity: { duration: 0.3 },
+                  scale: { duration: 0.3 },
+                  y: { repeat: Infinity, duration: 3, ease: 'easeInOut' },
+                }}
+              />
+            </AnimatePresence>
+          </div>
+
           {step === 0 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <label className="block text-base font-bold text-gray-900 mb-2">
@@ -118,13 +144,14 @@ export default function HrOnboarding() {
                 className="w-full px-4 py-3.5 rounded-full border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-base text-gray-900 shadow-sm"
                 autoFocus
               />
-              <button
+              <motion.button
                 onClick={() => orgName.trim() && setStep(1)}
                 disabled={!orgName.trim()}
+                whileTap={{ scale: 0.95 }}
                 className="w-full mt-6 py-4 bg-blue-600 text-white text-base font-black rounded-full shadow-md hover:bg-blue-700 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 次へ
-              </button>
+              </motion.button>
             </motion.div>
           )}
 
@@ -147,18 +174,20 @@ export default function HrOnboarding() {
                 ))}
               </div>
               <div className="flex gap-3">
-                <button
+                <motion.button
                   onClick={() => setStep(0)}
+                  whileTap={{ scale: 0.95 }}
                   className="flex-1 py-4 bg-gray-100 text-gray-700 text-base font-black rounded-full hover:bg-gray-200 transition-all"
                 >
                   戻る
-                </button>
-                <button
+                </motion.button>
+                <motion.button
                   onClick={() => setStep(2)}
+                  whileTap={{ scale: 0.95 }}
                   className="flex-1 py-4 bg-blue-600 text-white text-base font-black rounded-full shadow-md hover:bg-blue-700 hover:shadow-lg transition-all"
                 >
                   次へ
-                </button>
+                </motion.button>
               </div>
             </motion.div>
           )}
@@ -190,15 +219,17 @@ export default function HrOnboarding() {
               )}
 
               <div className="flex gap-3">
-                <button
+                <motion.button
                   onClick={() => setStep(1)}
+                  whileTap={{ scale: 0.95 }}
                   className="flex-1 py-4 bg-gray-100 text-gray-700 text-base font-black rounded-full hover:bg-gray-200 transition-all"
                 >
                   戻る
-                </button>
-                <button
+                </motion.button>
+                <motion.button
                   onClick={handleCreate}
                   disabled={loading}
+                  whileTap={{ scale: 0.95 }}
                   className="flex-1 py-4 bg-blue-600 text-white text-base font-black rounded-full shadow-md hover:bg-blue-700 hover:shadow-lg transition-all disabled:opacity-50"
                 >
                   {loading ? (
@@ -212,7 +243,7 @@ export default function HrOnboarding() {
                   ) : (
                     '組織を作成'
                   )}
-                </button>
+                </motion.button>
               </div>
             </motion.div>
           )}

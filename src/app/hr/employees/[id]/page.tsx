@@ -149,7 +149,12 @@ export default function EmployeeDetailPage() {
         </button>
 
         {/* Employee Header */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 relative">
+          <img
+            src="/hr/characters/focus_集中.png"
+            alt="白くまキャラクター"
+            className="w-14 absolute top-4 right-4 opacity-80"
+          />
           <div className="flex flex-col sm:flex-row items-center gap-6">
             {employee.photoUrl ? (
               <img
@@ -270,8 +275,15 @@ export default function EmployeeDetailPage() {
               </div>
             ) : (
               <div className="text-center py-8 text-slate-500">
-                <span className="material-symbols-outlined text-3xl mb-2 block">assessment</span>
-                <p className="text-lg font-bold">評価履歴がありません</p>
+                <motion.img
+                  src="/hr/characters/thinking_考え中.png"
+                  alt="白くまキャラクター"
+                  className="w-24 mx-auto mb-3"
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+                />
+                <p className="text-lg font-bold">まだ評価がありません</p>
+                <p className="text-sm mt-1">評価期間を作成して評価を始めましょう</p>
               </div>
             )}
           </div>
@@ -304,8 +316,15 @@ export default function EmployeeDetailPage() {
               </div>
             ) : (
               <div className="text-center py-8 text-slate-500">
-                <span className="material-symbols-outlined text-3xl mb-2 block">forum</span>
-                <p className="text-lg font-bold">1on1記録がありません</p>
+                <motion.img
+                  src="/hr/characters/ramen_休憩.png"
+                  alt="白くまキャラクター"
+                  className="w-24 mx-auto mb-3"
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+                />
+                <p className="text-lg font-bold">まだ1on1の記録がありません</p>
+                <p className="text-sm mt-1">1on1を実施して記録を残しましょう</p>
               </div>
             )}
           </div>

@@ -126,7 +126,14 @@ export default function NewEmployeePage() {
             <span className="material-symbols-outlined text-lg">arrow_back</span>
             戻る
           </button>
-          <h1 className="text-3xl font-black text-slate-900">従業員を追加</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-black text-slate-900">従業員を追加</h1>
+            <img
+              src="/hr/characters/working_作業中.png"
+              alt="白くまキャラクター"
+              className="w-16 opacity-70"
+            />
+          </div>
           <p className="text-sm text-slate-500 mt-1">新しい従業員の情報を登録します</p>
         </div>
 
@@ -339,6 +346,11 @@ export default function NewEmployeePage() {
               >
                 <span className="material-symbols-outlined text-lg">check_circle</span>
                 {successMessage}
+                <img
+                  src="/hr/characters/jump_大喜び.png"
+                  alt="白くまキャラクター"
+                  className="w-12 inline-block ml-1"
+                />
               </motion.div>
             )}
 
