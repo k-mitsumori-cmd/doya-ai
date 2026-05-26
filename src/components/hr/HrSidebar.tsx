@@ -21,6 +21,7 @@ const ICON_COLORS: Record<string, string> = {
   assessment: 'text-red-500',
   forum: 'text-purple-600',
   settings: 'text-gray-500',
+  credit_card: 'text-indigo-600',
   payments: 'text-teal-600',
 }
 
@@ -34,6 +35,7 @@ const NAV_ITEMS = [
 
 const SUPPORT_ITEMS = [
   { href: '/hr/settings', icon: 'settings', label: '設定' },
+  { href: '/hr/settings/billing', icon: 'credit_card', label: '課金管理' },
   { href: '/hr/pricing', icon: 'payments', label: '料金プラン' },
 ]
 

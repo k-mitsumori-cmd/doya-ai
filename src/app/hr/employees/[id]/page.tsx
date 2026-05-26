@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 
 interface EmployeeDetail {
@@ -223,8 +223,16 @@ export default function EmployeeDetailPage() {
         </div>
 
         {/* Tab Content */}
+        <AnimatePresence mode="wait">
         {activeTab === 'profile' && (
-          <div className="bg-white rounded-3xl shadow-md p-6">
+          <motion.div
+            key="profile"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="bg-white rounded-3xl shadow-md p-6"
+          >
             <h2 className="text-lg font-bold text-slate-900 mb-4">基本情報</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
@@ -243,11 +251,18 @@ export default function EmployeeDetailPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </motion.div>
         )}
 
         {activeTab === 'evaluations' && (
-          <div className="bg-white rounded-3xl shadow-md p-6">
+          <motion.div
+            key="evaluations"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="bg-white rounded-3xl shadow-md p-6"
+          >
             <h2 className="text-lg font-bold text-slate-900 mb-4">評価履歴</h2>
             {evaluations.length > 0 ? (
               <div className="space-y-3">
@@ -295,11 +310,18 @@ export default function EmployeeDetailPage() {
                 <p className="text-sm mt-1">評価期間を作成して評価を始めましょう</p>
               </div>
             )}
-          </div>
+          </motion.div>
         )}
 
         {activeTab === 'one-on-one' && (
-          <div className="bg-white rounded-3xl shadow-md p-6">
+          <motion.div
+            key="one-on-one"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="bg-white rounded-3xl shadow-md p-6"
+          >
             <h2 className="text-lg font-bold text-slate-900 mb-4">1on1履歴</h2>
             {oneOnOnes.length > 0 ? (
               <div className="space-y-3">
@@ -336,11 +358,18 @@ export default function EmployeeDetailPage() {
                 <p className="text-sm mt-1">1on1を実施して記録を残しましょう</p>
               </div>
             )}
-          </div>
+          </motion.div>
         )}
 
         {activeTab === 'transfers' && (
-          <div className="bg-white rounded-3xl shadow-md p-6">
+          <motion.div
+            key="transfers"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="bg-white rounded-3xl shadow-md p-6"
+          >
             <h2 className="text-lg font-bold text-slate-900 mb-4">異動履歴</h2>
             {transfers.length > 0 ? (
               <div className="space-y-3">
@@ -369,8 +398,9 @@ export default function EmployeeDetailPage() {
                 <p className="text-lg font-bold">異動履歴がありません</p>
               </div>
             )}
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
       </motion.div>
     </div>
   )

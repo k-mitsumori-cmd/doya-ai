@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { buildOneOnOneSummaryPrompt } from '@/lib/hr/prompts'
+import { checkAiUsageLimit, incrementAiUsage } from '@/lib/hr/billing'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
 
@@ -50,6 +51,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       )
     }
 
+    // AI使用量制限チェック
+    const aiLimitError = await checkAiUsageLimit(hrCtx.organizationId)
+    if (aiLimitError) {
+      return NextResponse.json({ error: aiLimitError }, { status: 403 })
+    }
+
     const prompt = buildOneOnOneSummaryPrompt({
       employeeName: `${oneOnOne.employee.lastName} ${oneOnOne.employee.firstName}`,
       managerName: `${oneOnOne.manager.lastName} ${oneOnOne.manager.firstName}`,
@@ -68,6 +75,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       where: { id },
       data: { aiSummary },
     })
+
+    // AI使用カウントをインクリメント
+    await incrementAiUsage(hrCtx.organizationId)
 
     return NextResponse.json({ success: true, aiSummary })
   } catch (e: any) {

@@ -8,6 +8,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@/lib/hr/constants'
+import { checkEmployeeLimit } from '@/lib/hr/billing'
 
 export async function GET(req: NextRequest) {
   try {
@@ -106,6 +107,12 @@ export async function POST(req: NextRequest) {
 
     if (!lastName || !firstName) {
       return NextResponse.json({ error: 'lastName and firstName are required' }, { status: 400 })
+    }
+
+    // プラン制限チェック
+    const limitError = await checkEmployeeLimit(ctx.organizationId)
+    if (limitError) {
+      return NextResponse.json({ error: limitError }, { status: 403 })
     }
 
     if (departmentId) {

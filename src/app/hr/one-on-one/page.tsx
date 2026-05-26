@@ -147,8 +147,19 @@ export default function OneOnOnePage() {
             ))}
           </div>
         ) : records.length > 0 ? (
-          <div className="space-y-3">
-            {records.map((record, i) => {
+          <motion.div
+            className="space-y-3"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.06 },
+              },
+            }}
+          >
+            {records.map((record) => {
               const initials = record.employeeName
                 ? `${record.employeeName[0]}${record.employeeName.length > 1 ? record.employeeName[1] : ''}`
                 : '??'
@@ -156,9 +167,12 @@ export default function OneOnOnePage() {
               return (
                 <motion.div
                   key={record.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.03 }}
+                  variants={{
+                    hidden: { opacity: 0, x: -15 },
+                    visible: { opacity: 1, x: 0 },
+                  }}
+                  whileHover={{ x: 4 }}
+                  transition={{ duration: 0.25, ease: 'easeOut' }}
                 >
                   <Link
                     href={`/hr/one-on-one/${record.id}`}
@@ -205,7 +219,7 @@ export default function OneOnOnePage() {
                 </motion.div>
               )
             })}
-          </div>
+          </motion.div>
         ) : (
           <div className="bg-white rounded-3xl shadow-lg p-12 text-center">
             <motion.img

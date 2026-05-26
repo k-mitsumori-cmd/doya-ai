@@ -168,14 +168,28 @@ export default function HrDashboardPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {STAT_CARDS.map((card, i) => (
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: { opacity: 0 },
+          visible: {
+            opacity: 1,
+            transition: { staggerChildren: 0.08 },
+          },
+        }}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+      >
+        {STAT_CARDS.map((card) => (
           <motion.div
             key={card.key}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
-            className="bg-white rounded-3xl shadow-md p-5"
+            variants={{
+              hidden: { opacity: 0, y: 20, scale: 0.95 },
+              visible: { opacity: 1, y: 0, scale: 1 },
+            }}
+            whileHover={{ scale: 1.05, y: -4 }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
+            className="bg-white rounded-3xl shadow-md p-5 cursor-default"
           >
             <div className="flex items-center gap-3 mb-3">
               <div className={`w-10 h-10 rounded-2xl ${card.iconBg} flex items-center justify-center`}>
@@ -188,7 +202,7 @@ export default function HrDashboardPage() {
             </p>
           </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Setup Guide — shown when no employees */}
       {!loading && stats.employeeCount === 0 && (
@@ -203,7 +217,18 @@ export default function HrDashboardPage() {
             </div>
             <h2 className="text-xl font-black text-slate-900">はじめてのセットアップ</h2>
           </div>
-          <div className="flex flex-col sm:flex-row gap-4 items-start">
+          <motion.div
+            className="flex flex-col sm:flex-row gap-4 items-start"
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.1, delayChildren: 0.2 },
+              },
+            }}
+          >
             {/* Setup Guide Character */}
             <motion.img
               src="/hr/characters/point_解説.png"
@@ -215,10 +240,17 @@ export default function HrDashboardPage() {
             {SETUP_STEPS.map((item) => {
               const done = (stats as any)[item.doneKey] > 0
               return (
-                <Link
+                <motion.div
                   key={item.step}
+                  variants={{
+                    hidden: { opacity: 0, y: 15, scale: 0.95 },
+                    visible: { opacity: 1, y: 0, scale: 1 },
+                  }}
+                  className="flex-1"
+                >
+                <Link
                   href={item.href}
-                  className={`relative flex-1 block rounded-3xl p-4 transition-all hover:shadow-md ${
+                  className={`relative block rounded-3xl p-4 transition-all hover:shadow-md ${
                     done ? 'bg-emerald-50' : 'bg-slate-50 hover:bg-blue-50'
                   }`}
                 >
@@ -248,9 +280,10 @@ export default function HrDashboardPage() {
                     {item.time}
                   </p>
                 </Link>
+                </motion.div>
               )
             })}
-          </div>
+          </motion.div>
         </motion.div>
       )}
 

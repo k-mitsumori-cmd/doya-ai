@@ -127,21 +127,48 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
         {viewMode === 'grid' ? (
           <motion.div
             key="grid"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial="hidden"
+            animate="visible"
             exit={{ opacity: 0 }}
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.06,
+                },
+              },
+            }}
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
           >
             {filtered.map((emp) => (
-              <EmployeeCard key={emp.id} employee={emp} />
+              <motion.div
+                key={emp.id}
+                variants={{
+                  hidden: { opacity: 0, y: 20, scale: 0.95 },
+                  visible: { opacity: 1, y: 0, scale: 1 },
+                }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+              >
+                <EmployeeCard employee={emp} />
+              </motion.div>
             ))}
           </motion.div>
         ) : (
           <motion.div
             key="list"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial="hidden"
+            animate="visible"
             exit={{ opacity: 0 }}
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.06,
+                },
+              },
+            }}
             className="bg-white rounded-3xl shadow-md overflow-hidden"
           >
             <table className="w-full">
@@ -164,8 +191,13 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
                   }
                   const st = statusMap[emp.status] ?? statusMap.ACTIVE
                   return (
-                      <tr
+                      <motion.tr
                         key={emp.id}
+                        variants={{
+                          hidden: { opacity: 0, x: -10 },
+                          visible: { opacity: 1, x: 0 },
+                        }}
+                        transition={{ duration: 0.25 }}
                         onClick={() => router.push(`/hr/employees/${emp.id}`)}
                         className="border-b border-gray-50 hover:bg-blue-50/50 transition-colors cursor-pointer"
                       >
@@ -199,7 +231,7 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
                             {st.label}
                           </span>
                         </td>
-                      </tr>
+                      </motion.tr>
                   )
                 })}
               </tbody>

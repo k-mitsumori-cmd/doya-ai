@@ -101,8 +101,19 @@ export default function EvaluationsPage() {
             ))}
           </div>
         ) : periods.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {periods.map((period, i) => {
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: { opacity: 0 },
+              visible: {
+                opacity: 1,
+                transition: { staggerChildren: 0.08 },
+              },
+            }}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          >
+            {periods.map((period) => {
               const total = period.totalEvaluations ?? period.evaluationCount ?? 0
               const completed = period.completedEvaluations ?? 0
               const pct = total > 0 ? Math.round((completed / total) * 100) : 0
@@ -110,9 +121,12 @@ export default function EvaluationsPage() {
               return (
                 <motion.div
                   key={period.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.05 }}
+                  variants={{
+                    hidden: { opacity: 0, y: 20, scale: 0.95 },
+                    visible: { opacity: 1, y: 0, scale: 1 },
+                  }}
+                  whileHover={{ y: -4 }}
+                  transition={{ duration: 0.3, ease: 'easeOut' }}
                 >
                   <Link
                     href={`/hr/evaluations/${period.id}`}
@@ -136,7 +150,7 @@ export default function EvaluationsPage() {
                         className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full"
                         initial={{ width: 0 }}
                         animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.8, ease: 'easeOut' }}
+                        transition={{ duration: 1.2, ease: 'easeOut' }}
                       />
                     </div>
                     <div className="flex items-center justify-between mt-2">
@@ -149,7 +163,7 @@ export default function EvaluationsPage() {
                 </motion.div>
               )
             })}
-          </div>
+          </motion.div>
         ) : (
           <div className="bg-white rounded-3xl shadow-lg p-12 text-center">
             <motion.img
