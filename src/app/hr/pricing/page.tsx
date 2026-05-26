@@ -30,7 +30,7 @@ export default function HrPricingPage() {
             >
               {plan.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">
-                  おすすめ
+                  人気
                 </div>
               )}
 
@@ -53,7 +53,7 @@ export default function HrPricingPage() {
                       className={`material-symbols-outlined text-lg mt-0.5 flex-shrink-0 ${
                         feature.included ? 'text-emerald-500' : 'text-slate-300'
                       }`}
-                      style={{ fontVariationSettings: "'FILL' 1" }}
+                      style={feature.included ? { fontVariationSettings: "'FILL' 1" } : undefined}
                     >
                       {feature.included ? 'check_circle' : 'cancel'}
                     </span>
@@ -87,13 +87,15 @@ export default function HrPricingPage() {
             クレジットカード不要、5名までの従業員管理が永久無料でお使いいただけます。
             アップグレードはいつでも可能です。
           </p>
-          <Link
-            href="/hr/dashboard"
-            className="inline-flex items-center gap-2 px-10 py-4 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all"
-          >
-            <span className="material-symbols-outlined text-lg">rocket_launch</span>
-            無料で始める
-          </Link>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }} className="inline-block">
+            <Link
+              href="/hr/dashboard"
+              className="inline-flex items-center gap-2 px-10 py-4 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all"
+            >
+              <span className="material-symbols-outlined text-lg">rocket_launch</span>
+              無料で始める
+            </Link>
+          </motion.div>
         </div>
       </motion.div>
     </div>

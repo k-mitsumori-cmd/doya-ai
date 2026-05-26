@@ -150,7 +150,7 @@ export default function NewEmployeePage() {
                 {photoPreview ? (
                   <img src={photoPreview} alt="プレビュー" className="w-28 h-28 rounded-full object-cover ring-4 ring-blue-100" />
                 ) : (
-                  <div className="w-28 h-28 rounded-full bg-slate-50 flex items-center justify-center border-2 border-dashed border-slate-300 rounded-3xl">
+                  <div className="w-28 h-28 rounded-full bg-slate-50 flex items-center justify-center border-2 border-dashed border-slate-300">
                     <span className="material-symbols-outlined text-4xl text-slate-400">person</span>
                   </div>
                 )}

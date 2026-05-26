@@ -154,7 +154,7 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
                   const initials = `${emp.lastName?.[0] || ''}${emp.firstName?.[0] || ''}`
                   const colorIndex = ((emp.lastName?.charCodeAt(0) || 0) + (emp.firstName?.charCodeAt(0) || 0)) % AVATAR_COLORS.length
                   const statusMap: Record<string, { label: string; color: string }> = {
-                    ACTIVE: { label: '在籍', color: 'bg-green-100 text-green-700' },
+                    ACTIVE: { label: '在籍', color: 'bg-emerald-100 text-emerald-700' },
                     ON_LEAVE: { label: '休職中', color: 'bg-amber-100 text-amber-700' },
                     RESIGNED: { label: '退職', color: 'bg-gray-100 text-gray-500' },
                   }
