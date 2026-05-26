@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import EmployeeCard, { Employee } from './EmployeeCard'
-import Link from 'next/link'
 
 interface Department {
   id: string
@@ -25,6 +25,7 @@ const AVATAR_COLORS = [
 ]
 
 export default function EmployeeGrid({ employees, departments }: EmployeeGridProps) {
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [departmentFilter, setDepartmentFilter] = useState<string>('all')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
@@ -160,12 +161,11 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
                   }
                   const st = statusMap[emp.status] ?? statusMap.ACTIVE
                   return (
-                    <Link
-                      key={emp.id}
-                      href={`/hr/employees/${emp.id}`}
-                      className="contents"
-                    >
-                      <tr className="border-b border-gray-50 hover:bg-blue-50/50 transition-colors cursor-pointer">
+                      <tr
+                        key={emp.id}
+                        onClick={() => router.push(`/hr/employees/${emp.id}`)}
+                        className="border-b border-gray-50 hover:bg-blue-50/50 transition-colors cursor-pointer"
+                      >
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
                             {emp.photoUrl ? (
@@ -197,7 +197,6 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
                           </span>
                         </td>
                       </tr>
-                    </Link>
                   )
                 })}
               </tbody>

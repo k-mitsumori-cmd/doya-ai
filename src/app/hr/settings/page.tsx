@@ -23,6 +23,7 @@ interface Department {
   id: string
   name: string
   code: string | null
+  sortOrder: number
   employeeCount: number
 }
 
@@ -72,6 +73,7 @@ export default function HrSettingsPage() {
   const [showDeptModal, setShowDeptModal] = useState(false)
   const [newDeptName, setNewDeptName] = useState('')
   const [newDeptCode, setNewDeptCode] = useState('')
+  const [newDeptSortOrder, setNewDeptSortOrder] = useState(0)
   const [creatingDept, setCreatingDept] = useState(false)
   const [deletingDeptId, setDeletingDeptId] = useState<string | null>(null)
 
@@ -94,6 +96,7 @@ export default function HrSettingsPage() {
               id: d.id,
               name: d.name,
               code: d.code,
+              sortOrder: d.sortOrder ?? 0,
               employeeCount: d.employeeCount ?? d._count?.employees ?? 0,
             }))
           )
@@ -162,6 +165,7 @@ export default function HrSettingsPage() {
             id: d.id,
             name: d.name,
             code: d.code,
+            sortOrder: d.sortOrder ?? 0,
             employeeCount: d.employeeCount ?? d._count?.employees ?? 0,
           }))
         )
@@ -177,7 +181,7 @@ export default function HrSettingsPage() {
       const res = await fetch('/api/hr/departments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newDeptName, code: newDeptCode || null }),
+        body: JSON.stringify({ name: newDeptName, code: newDeptCode || null, sortOrder: newDeptSortOrder }),
       })
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
@@ -185,6 +189,7 @@ export default function HrSettingsPage() {
       }
       setNewDeptName('')
       setNewDeptCode('')
+      setNewDeptSortOrder(0)
       setShowDeptModal(false)
       await fetchDepartments()
     } catch (e: any) {
@@ -426,7 +431,7 @@ export default function HrSettingsPage() {
                       <div>
                         <p className="text-base font-bold text-slate-900">{dept.name}</p>
                         <p className="text-xs text-slate-500">
-                          {dept.code ? `${dept.code} / ` : ''}{dept.employeeCount}名
+                          {dept.code ? `${dept.code} / ` : ''}表示順: {dept.sortOrder} / {dept.employeeCount}名
                         </p>
                       </div>
                     </div>
@@ -484,15 +489,28 @@ export default function HrSettingsPage() {
                     autoFocus
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">部署コード</label>
-                  <input
-                    type="text"
-                    value={newDeptCode}
-                    onChange={(e) => setNewDeptCode(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-                    placeholder="例: SALES"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">部署コード</label>
+                    <input
+                      type="text"
+                      value={newDeptCode}
+                      onChange={(e) => setNewDeptCode(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                      placeholder="例: SALES"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-slate-500 mb-1">表示順</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={newDeptSortOrder}
+                      onChange={(e) => setNewDeptSortOrder(parseInt(e.target.value) || 0)}
+                      className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-6">

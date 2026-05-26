@@ -214,10 +214,10 @@ export default function OneOnOneForm({
             <button
               type="button"
               onClick={addAgenda}
-              className="flex items-center gap-1 px-3 py-1.5 bg-sky-50 text-sky-600 rounded-lg text-sm font-semibold hover:bg-sky-100 transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 bg-sky-500 text-white rounded-full text-sm font-bold shadow-md shadow-sky-500/20 hover:bg-sky-600 hover:shadow-lg transition-all"
             >
-              <span className="material-symbols-outlined text-lg">add</span>
-              追加
+              <span className="material-symbols-outlined text-lg">add_circle</span>
+              アジェンダ追加
             </button>
           )}
         </div>
@@ -393,7 +393,11 @@ export default function OneOnOneForm({
               disabled={aiLoading}
               className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-lg">auto_awesome</span>
+              {aiLoading ? (
+                <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+              ) : (
+                <span className="material-symbols-outlined text-lg">auto_awesome</span>
+              )}
               {aiLoading ? '生成中...' : 'AI要約生成'}
             </button>
           </div>

@@ -56,6 +56,7 @@ const SETUP_STEPS = [
     step: 1,
     title: '部署を作成する',
     desc: 'まず組織の部署構成を登録しましょう',
+    time: '約1分',
     href: '/hr/settings',
     icon: 'apartment',
     doneKey: 'departmentCount',
@@ -66,6 +67,7 @@ const SETUP_STEPS = [
     step: 2,
     title: '従業員を登録する',
     desc: 'メンバーの情報を登録します',
+    time: '1人あたり約2分',
     href: '/hr/employees/new',
     icon: 'person_add',
     doneKey: 'employeeCount',
@@ -76,6 +78,7 @@ const SETUP_STEPS = [
     step: 3,
     title: '評価期間を設定する',
     desc: 'MBO評価の期間を設定しましょう',
+    time: '約3分',
     href: '/hr/evaluations',
     icon: 'assessment',
     doneKey: 'activeEvaluations',
@@ -86,6 +89,7 @@ const SETUP_STEPS = [
     step: 4,
     title: '1on1を記録する',
     desc: '面談記録をつけ始めましょう',
+    time: '約1分',
     href: '/hr/one-on-one',
     icon: 'forum',
     doneKey: 'monthlyOneOnOnes',
@@ -239,6 +243,10 @@ export default function HrDashboardPage() {
                     {item.title}
                   </p>
                   <p className="text-xs text-slate-500 mt-1">{item.desc}</p>
+                  <p className="text-xs font-bold text-slate-400 mt-1.5 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-xs">schedule</span>
+                    {item.time}
+                  </p>
                 </Link>
               )
             })}

@@ -237,7 +237,7 @@ export default function OneOnOnePage() {
         {/* FAB */}
         <button
           onClick={() => setShowNewModal(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-xl shadow-emerald-500/30 flex items-center justify-center hover:bg-emerald-700 hover:shadow-2xl transition-all z-50"
+          className="fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-xl shadow-emerald-500/30 flex items-center justify-center hover:bg-emerald-700 hover:shadow-2xl transition-all z-40"
           title="1on1を記録"
         >
           <span className="material-symbols-outlined text-3xl">add</span>

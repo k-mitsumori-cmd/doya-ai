@@ -205,9 +205,21 @@ export default function EvaluationForm({
             目標一覧
           </h3>
           <div className="flex items-center gap-3">
-            <span className={`text-xs font-medium ${totalWeight === 100 ? 'text-emerald-600' : 'text-amber-600'}`}>
-              ウェイト合計: {totalWeight}%
-            </span>
+            {totalWeight !== 100 ? (
+              <motion.span
+                animate={{ x: [0, -4, 4, -4, 4, 0] }}
+                transition={{ duration: 0.5, repeat: Infinity, repeatDelay: 3 }}
+                className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full"
+              >
+                <span className="material-symbols-outlined text-sm">warning</span>
+                ウェイト合計: {totalWeight}%（100%にしてください）
+              </motion.span>
+            ) : (
+              <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full">
+                <span className="material-symbols-outlined text-sm">check_circle</span>
+                ウェイト合計: 100%
+              </span>
+            )}
             {!isReadOnly && (
               <button
                 type="button"
@@ -359,7 +371,11 @@ export default function EvaluationForm({
               disabled={aiLoading}
               className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
             >
-              <span className="material-symbols-outlined text-lg">auto_awesome</span>
+              {aiLoading ? (
+                <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
+              ) : (
+                <span className="material-symbols-outlined text-lg">auto_awesome</span>
+              )}
               {aiLoading ? '生成中...' : 'AIコメント生成'}
             </button>
           </div>

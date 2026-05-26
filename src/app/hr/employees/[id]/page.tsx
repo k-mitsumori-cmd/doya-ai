@@ -150,11 +150,20 @@ export default function EmployeeDetailPage() {
 
         {/* Employee Header */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 relative">
-          <img
-            src="/hr/characters/focus_集中.png"
-            alt="白くまキャラクター"
-            className="w-14 absolute top-4 right-4 opacity-80"
-          />
+          <div className="absolute top-4 right-4 flex items-center gap-2">
+            <Link
+              href={`/hr/employees/${id}/edit`}
+              className="flex items-center gap-1.5 px-4 py-2 bg-sky-50 text-sky-600 rounded-full text-sm font-bold hover:bg-sky-100 transition-colors"
+            >
+              <span className="material-symbols-outlined text-lg">edit</span>
+              編集
+            </Link>
+            <img
+              src="/hr/characters/focus_集中.png"
+              alt="白くまキャラクター"
+              className="w-14 opacity-80"
+            />
+          </div>
           <div className="flex flex-col sm:flex-row items-center gap-6">
             {employee.photoUrl ? (
               <img

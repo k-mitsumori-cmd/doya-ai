@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 
 interface HrSidebarProps {
   userName?: string
@@ -140,6 +141,11 @@ export default function HrSidebar({
         </div>
       )}
 
+      {/* Tool Switcher */}
+      <div className="px-3 pb-2">
+        <ToolSwitcherMenu currentService="hr" showLabel={!isCollapsed} isCollapsed={isCollapsed} />
+      </div>
+
       {/* User */}
       <div className="p-3 border-t border-gray-200">
         <div className="flex items-center gap-3 px-2">
@@ -158,6 +164,15 @@ export default function HrSidebar({
           )}
         </div>
       </div>
+
+      {/* Powered by */}
+      {!isCollapsed && (
+        <div className="px-4 pb-3">
+          <Link href="/" className="flex items-center justify-center gap-1 text-[10px] text-gray-400 hover:text-gray-500 transition-colors">
+            Powered by <span className="font-black text-[#7f19e6]">ドヤAI</span>
+          </Link>
+        </div>
+      )}
     </div>
   )
 
@@ -166,6 +181,7 @@ export default function HrSidebar({
       {/* Mobile hamburger */}
       <button
         onClick={() => setIsMobileOpen(true)}
+        aria-label="メニューを開く"
         className="lg:hidden fixed top-4 left-4 z-40 p-2 bg-white rounded-full shadow-md"
       >
         <span className="material-symbols-outlined text-gray-600">menu</span>
@@ -180,6 +196,7 @@ export default function HrSidebar({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="lg:hidden fixed inset-0 bg-black/30 z-40"
+              aria-label="メニューを閉じる"
               onClick={() => setIsMobileOpen(false)}
             />
             <motion.div

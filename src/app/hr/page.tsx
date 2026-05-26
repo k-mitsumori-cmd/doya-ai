@@ -64,7 +64,7 @@ export default function HrLandingPage() {
                 <span className="text-sm font-semibold text-slate-700">中小企業のためのタレントマネジメント</span>
               </div>
 
-              <h1 className="text-6xl lg:text-8xl font-black text-slate-900 mb-6 tracking-tight">
+              <h1 className="text-4xl sm:text-6xl lg:text-8xl font-black text-slate-900 mb-6 tracking-tight">
                 人を活かす<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500">AI</span>。
               </h1>
 
@@ -99,7 +99,7 @@ export default function HrLandingPage() {
             <motion.img
               src="/hr/characters/hello_挨拶.png"
               alt="白くまキャラクター"
-              className="w-64 lg:w-80 drop-shadow-xl"
+              className="w-40 sm:w-48 lg:w-80 drop-shadow-xl"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1, y: [0, -12, 0] }}
               transition={{
@@ -109,6 +109,25 @@ export default function HrLandingPage() {
               }}
             />
           </div>
+
+          {/* Social Proof */}
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.8 }}
+            className="text-center mt-10 text-sm font-bold text-slate-400"
+          >
+            まもなく正式リリース — 先行登録を受付中
+          </motion.p>
+
+          {/* Scroll chevron */}
+          <motion.div
+            className="flex justify-center mt-8"
+            animate={{ y: [0, 8, 0] }}
+            transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
+          >
+            <span className="material-symbols-outlined text-3xl text-slate-300">expand_more</span>
+          </motion.div>
         </div>
       </section>
 
@@ -237,7 +256,7 @@ export default function HrLandingPage() {
               <motion.img
                 src="/hr/characters/jump_大喜び.png"
                 alt="白くまキャラクター"
-                className="w-40 drop-shadow-xl"
+                className="w-28 sm:w-40 drop-shadow-xl"
                 animate={{ y: [0, -12, 0] }}
                 transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
               />

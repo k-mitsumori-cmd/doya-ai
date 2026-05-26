@@ -97,23 +97,23 @@ export default function EmployeesPage() {
           <p className="text-base text-slate-500 mb-6 max-w-md mx-auto">
             従業員を追加して、タレントマネジメントを始めましょう。
           </p>
-          <div className="flex items-center justify-center gap-3">
+          <div className="flex flex-col items-center gap-4">
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Link
                 href="/hr/employees/new"
-                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+                className="flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-2xl text-lg font-black hover:shadow-xl hover:shadow-sky-500/30 transition-all shadow-lg shadow-sky-500/20"
               >
-                <span className="material-symbols-outlined text-lg">person_add</span>
-                従業員を追加する
+                <span className="material-symbols-outlined text-2xl">person_add</span>
+                最初の従業員を追加する
               </Link>
             </motion.div>
             <button
               disabled
-              className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-500 rounded-xl text-base font-bold cursor-not-allowed opacity-60"
+              className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-500 rounded-xl text-sm font-bold cursor-not-allowed opacity-60"
               title="準備中"
             >
               <span className="material-symbols-outlined text-lg">upload_file</span>
-              CSVで一括登録
+              CSVで一括登録（準備中）
             </button>
           </div>
         </motion.div>

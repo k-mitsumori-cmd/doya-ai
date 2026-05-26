@@ -81,12 +81,12 @@ export default function HrOnboarding() {
           </div>
 
           {/* Google-style Stepper */}
-          <div className="flex items-center mb-8 px-2">
-            {STEP_LABELS.map((label, s) => (
-              <div key={s} className="flex items-center flex-1 last:flex-none">
-                <div className="flex flex-col items-center">
+          <div className="mb-8 px-2">
+            <div className="flex items-center">
+              {STEP_LABELS.map((label, s) => (
+                <div key={s} className="flex items-center flex-1 last:flex-none">
                   <div
-                    className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-black transition-all ${
+                    className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-sm font-black transition-all ${
                       s < step
                         ? 'bg-blue-600 text-white'
                         : s === step
@@ -100,15 +100,21 @@ export default function HrOnboarding() {
                       s + 1
                     )}
                   </div>
-                  <span className={`text-xs font-bold mt-1.5 ${s <= step ? 'text-blue-600' : 'text-gray-400'}`}>
+                  {s < STEP_LABELS.length - 1 && (
+                    <div className={`flex-1 h-0.5 mx-2 rounded-full transition-all ${s < step ? 'bg-blue-600' : 'bg-gray-200'}`} />
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="flex">
+              {STEP_LABELS.map((label, s) => (
+                <div key={s} className="flex-1 last:flex-none">
+                  <span className={`block text-center text-xs font-bold mt-1.5 ${s <= step ? 'text-blue-600' : 'text-gray-400'} ${s < STEP_LABELS.length - 1 ? '' : 'w-9'}`}>
                     {label}
                   </span>
                 </div>
-                {s < STEP_LABELS.length - 1 && (
-                  <div className={`flex-1 h-0.5 mx-2 mt-[-18px] rounded-full transition-all ${s < step ? 'bg-blue-600' : 'bg-gray-200'}`} />
-                )}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
 
           {/* Step Character */}

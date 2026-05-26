@@ -272,7 +272,24 @@ export default function NewEmployeePage() {
                 職務情報
               </h2>
               <div className="h-1 bg-gradient-to-r from-blue-500 via-emerald-500 to-amber-400 rounded-full w-16 mb-2" />
-              <p className="text-sm text-slate-400 mb-4">部署がまだ作成されていない場合は、<a href="/hr/settings" className="text-blue-600 underline hover:text-blue-700">設定画面</a>から追加できます。</p>
+              {departments.length === 0 ? (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-3">
+                  <span className="material-symbols-outlined text-amber-500">info</span>
+                  <p className="text-sm text-amber-800 flex-1">
+                    部署がまだ登録されていません。先に部署を追加すると従業員の配属先を選べます。
+                  </p>
+                  <a
+                    href="/hr/settings"
+                    className="flex items-center gap-1 px-4 py-2 bg-amber-500 text-white rounded-full text-sm font-bold hover:bg-amber-600 transition-colors whitespace-nowrap shadow-sm"
+                  >
+                    <span className="material-symbols-outlined text-sm">apartment</span>
+                    部署を追加
+                    <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                  </a>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400 mb-4">部署がまだ作成されていない場合は、<a href="/hr/settings" className="text-blue-600 underline hover:text-blue-700">設定画面</a>から追加できます。</p>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1">部署</label>
