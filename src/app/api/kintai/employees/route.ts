@@ -1,0 +1,94 @@
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const maxDuration = 300
+
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
+
+export async function GET(req: NextRequest) {
+  try {
+    const ctx = await getKintaiContext()
+    if (!ctx || !hasMinRole(ctx.role, 'hr_admin')) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+    }
+
+    const { searchParams } = new URL(req.url)
+    const search = searchParams.get('search') || ''
+    const departmentId = searchParams.get('departmentId') || ''
+    const employmentType = searchParams.get('employmentType') || ''
+    const isActive = searchParams.get('isActive')
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
+    const pageSize = Math.min(200, Math.max(1, parseInt(searchParams.get('pageSize') || '50')))
+
+    const where: any = { organizationId: ctx.organizationId }
+    if (search) {
+      where.OR = [
+        { name: { contains: search, mode: 'insensitive' } },
+        { nameKana: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+      ]
+    }
+    if (departmentId) where.departmentId = departmentId
+    if (employmentType) where.employmentType = employmentType
+    if (isActive !== null && isActive !== '') where.isActive = isActive === 'true'
+
+    const [employees, total] = await Promise.all([
+      prisma.kintaiEmployee.findMany({
+        where,
+        include: { department: true, workRule: true, member: { select: { role: true } } },
+        orderBy: { name: 'asc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.kintaiEmployee.count({ where }),
+    ])
+
+    return NextResponse.json({ employees, total, page, pageSize })
+  } catch (e) {
+    console.error('[kintai/employees GET]', e)
+    return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const ctx = await getKintaiContext()
+    if (!ctx || !hasMinRole(ctx.role, 'hr_admin')) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+    }
+
+    const body = await req.json()
+    const { name, nameKana, email, departmentId, workRuleId, employmentType, hireDate, role } = body
+    if (!name || !email) {
+      return NextResponse.json({ error: '氏名とメールは必須です' }, { status: 400 })
+    }
+
+    const employee = await prisma.kintaiEmployee.create({
+      data: {
+        organizationId: ctx.organizationId,
+        name,
+        nameKana: nameKana || null,
+        email,
+        departmentId: departmentId || null,
+        workRuleId: workRuleId || null,
+        employmentType: employmentType || 'full_time',
+        hireDate: hireDate ? new Date(hireDate) : null,
+        member: {
+          create: {
+            organizationId: ctx.organizationId,
+            userId: `pending_${Date.now()}`,
+            role: role || 'employee',
+            status: 'ACTIVE',
+          },
+        },
+      },
+      include: { department: true, workRule: true, member: { select: { role: true } } },
+    })
+
+    return NextResponse.json({ employee }, { status: 201 })
+  } catch (e) {
+    console.error('[kintai/employees POST]', e)
+    return NextResponse.json({ error: '作成に失敗しました' }, { status: 500 })
+  }
+}
