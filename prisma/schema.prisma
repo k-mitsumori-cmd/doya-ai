@@ -119,6 +119,9 @@ model User {
   mitsuboshiNagusamePosts         MitsuboshiNagusamePost[]
   mitsuboshiNagusameSubscription  MitsuboshiNagusameSubscription?
 
+  // ドヤHR（タレントマネジメント）
+  hrMemberships    HrOrganizationMember[]
+
   // ドリップマーケティング
   dripEnrollments  DripEnrollment[]
   dripEmailLogs    DripEmailLog[]
@@ -2001,4 +2004,434 @@ model MitsuboshiNagusameSubscription {
   updatedAt         DateTime  @updatedAt
 
   @@map("mitsuboshi_nagusame_subscriptions")
+}
+
+// ============================================
+// ドヤHR（タレントマネジメント）
+// ============================================
+
+model HrOrganization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  logoUrl     String?  @db.Text
+  industry    String?
+  size        String?
+  address     String?  @db.Text
+  website     String?
+  fiscalMonth Int      @default(4)
+
+  evaluationType  String @default("MBO")
+  evaluationCycle String @default("SEMI")
+
+  customFields Json?
+
+  members           HrOrganizationMember[]
+  departments       HrDepartment[]
+  employees         HrEmployee[]
+  evaluationPeriods HrEvaluationPeriod[]
+  oneOnOnes         HrOneOnOne[]
+  invitations       HrInvitation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@map("hr_organizations")
+}
+
+model HrOrganizationMember {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   HrOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   String @default("MEMBER")
+
+  invitedEmail String?
+  invitedAt    DateTime?
+  acceptedAt   DateTime?
+  status       String   @default("ACTIVE")
+
+  employeeId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([organizationId, role])
+  @@map("hr_organization_members")
+}
+
+model HrDepartment {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   HrOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name      String
+  code      String?
+  parentId  String?
+  parent    HrDepartment?  @relation("DepartmentTree", fields: [parentId], references: [id])
+  children  HrDepartment[] @relation("DepartmentTree")
+  managerId String?
+  sortOrder Int            @default(0)
+  isActive  Boolean        @default(true)
+
+  employees HrEmployee[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, code])
+  @@index([organizationId, parentId])
+  @@index([organizationId, isActive])
+  @@map("hr_departments")
+}
+
+model HrEmployee {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   HrOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  employeeNumber String?
+  lastName       String
+  firstName      String
+  lastNameKana   String?
+  firstNameKana  String?
+  email          String?
+  phone          String?
+
+  photoUrl     String? @db.Text
+  thumbnailUrl String? @db.Text
+
+  departmentId   String?
+  department     HrDepartment? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  position       String?
+  grade          String?
+  employmentType String        @default("FULL_TIME")
+
+  hireDate   DateTime?
+  resignDate DateTime?
+  status     String    @default("ACTIVE")
+
+  birthDate DateTime?
+  gender    String?
+
+  customFieldValues Json?
+  notes             String? @db.Text
+
+  evaluations         HrEvaluation[]           @relation("EmployeeEvaluations")
+  evaluationsGiven    HrEvaluation[]           @relation("EvaluatorRelation")
+  oneOnOnesAsEmployee HrOneOnOne[]             @relation("EmployeeOneOnOne")
+  oneOnOnesAsManager  HrOneOnOne[]             @relation("ManagerOneOnOne")
+  histories           HrEmployeeHistory[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([organizationId, employeeNumber])
+  @@index([organizationId, status])
+  @@index([organizationId, departmentId])
+  @@index([organizationId, lastName, firstName])
+  @@map("hr_employees")
+}
+
+model HrEmployeeHistory {
+  id         String     @id @default(cuid())
+  employeeId String
+  employee   HrEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  changeType         String
+  previousDepartment String?
+  newDepartment      String?
+  previousPosition   String?
+  newPosition        String?
+  previousGrade      String?
+  newGrade           String?
+
+  effectiveDate DateTime
+  endDate       DateTime?
+  reason        String?   @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([employeeId, effectiveDate])
+  @@index([employeeId, changeType])
+  @@map("hr_employee_histories")
+}
+
+model HrEvaluationPeriod {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   HrOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  status    String   @default("DRAFT")
+
+  evaluationTemplate Json?
+
+  evaluations HrEvaluation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@index([organizationId, startDate])
+  @@map("hr_evaluation_periods")
+}
+
+model HrEvaluation {
+  id String @id @default(cuid())
+
+  periodId String
+  period   HrEvaluationPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   HrEmployee @relation("EmployeeEvaluations", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  evaluatorId String?
+  evaluator   HrEmployee? @relation("EvaluatorRelation", fields: [evaluatorId], references: [id], onDelete: SetNull)
+
+  goals        Json?
+  competencies Json?
+
+  selfRating    Int?
+  managerRating Int?
+  finalRating   Int?
+
+  selfComment    String? @db.Text
+  managerComment String? @db.Text
+  aiComment      String? @db.Text
+
+  status      String    @default("DRAFT")
+  submittedAt DateTime?
+  reviewedAt  DateTime?
+  finalizedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([periodId, employeeId])
+  @@index([employeeId, status])
+  @@index([periodId, status])
+  @@map("hr_evaluations")
+}
+
+model HrOneOnOne {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   HrOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  employeeId String
+  employee   HrEmployee @relation("EmployeeOneOnOne", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  managerId String
+  manager   HrEmployee @relation("ManagerOneOnOne", fields: [managerId], references: [id], onDelete: Cascade)
+
+  scheduledAt DateTime?
+  conductedAt DateTime?
+  duration    Int?
+
+  agenda       Json?
+  managerNotes String? @db.Text
+  employeeNotes String? @db.Text
+  privateNotes String? @db.Text
+
+  aiSummary     String? @db.Text
+  aiActionItems Json?
+  aiInsights    Json?
+
+  status String @default("SCHEDULED")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([organizationId, scheduledAt])
+  @@index([employeeId, scheduledAt])
+  @@index([managerId, scheduledAt])
+  @@map("hr_one_on_ones")
+}
+
+model HrInvitation {
+  id             String @id @default(cuid())
+  organizationId String
+
+  email     String
+  role      String   @default("MEMBER")
+  token     String   @unique
+  invitedBy String
+
+  status    String   @default("PENDING")
+  expiresAt DateTime
+  acceptedAt DateTime?
+
+  organization HrOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([email, status])
+  @@index([token])
+  @@map("hr_invitations")
+}
+
+// ============================================
+// ドヤ勤怠（勤怠管理）
+// ============================================
+
+model KintaiOrganization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members     KintaiMember[]
+  departments KintaiDepartment[]
+  workRules   KintaiWorkRule[]
+
+  @@map("kintai_organizations")
+}
+
+model KintaiMember {
+  id             String             @id @default(cuid())
+  organizationId String
+  organization   KintaiOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  role           String             @default("employee") // system_admin, hr_admin, manager, employee
+  status         String             @default("ACTIVE")
+  acceptedAt     DateTime?
+  createdAt      DateTime           @default(now())
+
+  employee KintaiEmployee?
+
+  @@unique([organizationId, userId])
+  @@map("kintai_members")
+}
+
+model KintaiDepartment {
+  id             String             @id @default(cuid())
+  organizationId String
+  organization   KintaiOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  parentId       String?
+  parent         KintaiDepartment?  @relation("DeptHierarchy", fields: [parentId], references: [id])
+  children       KintaiDepartment[] @relation("DeptHierarchy")
+  managerId      String?
+  createdAt      DateTime           @default(now())
+
+  employees KintaiEmployee[]
+
+  @@map("kintai_departments")
+}
+
+model KintaiWorkRule {
+  id                 String             @id @default(cuid())
+  organizationId     String
+  organization       KintaiOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name               String
+  workStart          String             @default("09:00")
+  workEnd            String             @default("18:00")
+  breakMinutes       Int                @default(60)
+  overtimeCalcMethod String             @default("daily") // daily, weekly, monthly
+  flexEnabled        Boolean            @default(false)
+  coreStart          String?
+  coreEnd            String?
+  createdAt          DateTime           @default(now())
+
+  employees KintaiEmployee[]
+
+  @@map("kintai_work_rules")
+}
+
+model KintaiEmployee {
+  id             String              @id @default(cuid())
+  organizationId String
+  memberId       String              @unique
+  member         KintaiMember        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  departmentId   String?
+  department     KintaiDepartment?   @relation(fields: [departmentId], references: [id])
+  workRuleId     String?
+  workRule       KintaiWorkRule?     @relation(fields: [workRuleId], references: [id])
+  name           String
+  nameKana       String?
+  email          String
+  employmentType String              @default("full_time") // full_time, part_time, contract
+  hireDate       DateTime?
+  isActive       Boolean             @default(true)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  clockRecords KintaiClockRecord[]
+  attendances  KintaiAttendance[]
+  requests     KintaiRequest[]       @relation("EmployeeRequests")
+  reviewed     KintaiRequest[]       @relation("ReviewerRequests")
+
+  @@map("kintai_employees")
+}
+
+model KintaiClockRecord {
+  id                String          @id @default(cuid())
+  employeeId        String
+  employee          KintaiEmployee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type              String          // clock_in, clock_out, break_start, break_end
+  timestamp         DateTime
+  source            String          @default("pc") // pc, mobile, manual
+  latitude          Float?
+  longitude         Float?
+  ipAddress         String?
+  note              String?         @db.Text
+  isModified        Boolean         @default(false)
+  originalTimestamp DateTime?
+  createdAt         DateTime        @default(now())
+
+  @@index([employeeId, timestamp])
+  @@map("kintai_clock_records")
+}
+
+model KintaiAttendance {
+  id                 String          @id @default(cuid())
+  employeeId         String
+  employee           KintaiEmployee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date               DateTime        @db.Date
+  clockIn            DateTime?
+  clockOut           DateTime?
+  breakMinutes       Int             @default(0)
+  workMinutes        Int             @default(0)
+  overtimeMinutes    Int             @default(0)
+  lateMinutes        Int             @default(0)
+  earlyLeaveMinutes  Int             @default(0)
+  nightMinutes       Int             @default(0)
+  holidayWork        Boolean         @default(false)
+  status             String          @default("normal") // normal, absent, holiday, paid_leave, special_leave
+  note               String?         @db.Text
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@unique([employeeId, date])
+  @@index([employeeId, date])
+  @@map("kintai_attendances")
+}
+
+model KintaiRequest {
+  id              String          @id @default(cuid())
+  employeeId      String
+  employee        KintaiEmployee  @relation("EmployeeRequests", fields: [employeeId], references: [id], onDelete: Cascade)
+  type            String          // clock_fix, leave, overtime, holiday_work
+  status          String          @default("pending") // pending, approved, rejected, withdrawn
+  details         Json            @default("{}")
+  reason          String?         @db.Text
+  submittedAt     DateTime        @default(now())
+  reviewedAt      DateTime?
+  reviewerId      String?
+  reviewer        KintaiEmployee? @relation("ReviewerRequests", fields: [reviewerId], references: [id])
+  reviewerComment String?         @db.Text
+  createdAt       DateTime        @default(now())
+
+  @@index([employeeId, status])
+  @@map("kintai_requests")
 }

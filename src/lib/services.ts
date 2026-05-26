@@ -1068,6 +1068,75 @@ export const SERVICES: Service[] = [
     isNew: true,
     badge: 'NEW',
   },
+
+  // ----------------------------------------
+  // ドヤHR（タレントマネジメント）
+  // ----------------------------------------
+  {
+    id: 'hr',
+    name: 'ドヤHR',
+    shortName: 'HR',
+    description: '人を活かすAI。中小企業のためのタレントマネジメント。',
+    longDescription: '従業員データベース、顔写真管理、人事評価、1on1記録をAIが支援。AI評価コメント生成や1on1自動要約で、データドリブンな人材マネジメントを実現。',
+    icon: '👥',
+    color: 'sky',
+    gradient: 'from-sky-500 to-blue-600',
+    bgGradient: 'from-sky-50 to-blue-50',
+    href: '/hr',
+    dashboardHref: '/hr/dashboard',
+    pricingHref: '/hr/pricing',
+    guideHref: '/hr',
+    features: [
+      '顔写真中心の従業員データベース',
+      '組織図の自動生成',
+      'MBO対応の人事評価',
+      '1on1記録とAI要約',
+      'AI評価コメント生成',
+      'CSV一括インポート/エクスポート',
+    ],
+    useCases: [
+      '従業員情報がExcelでバラバラに管理されている',
+      '人事評価のやり取りがメールで煩雑',
+      '1on1の記録が残っていない',
+      '組織図を手作業で更新している',
+      '少人数でも使えるタレマネを探している',
+    ],
+    pricing: {
+      free: {
+        name: '無料プラン',
+        limit: '従業員5名まで',
+        dailyLimit: 3,
+        price: 0,
+      },
+      light: {
+        name: 'スタータープラン',
+        limit: '従業員30名まで',
+        dailyLimit: 30,
+        price: 4980,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_HR_STARTER_PRICE_ID,
+      },
+      pro: {
+        name: 'プロプラン',
+        limit: '従業員100名まで',
+        dailyLimit: -1,
+        price: 14800,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_HR_PRO_PRICE_ID,
+      },
+      enterprise: {
+        name: 'エンタープライズ',
+        limit: '無制限',
+        dailyLimit: -1,
+        price: 49800,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_HR_ENTERPRISE_PRICE_ID,
+      },
+    },
+    status: 'active',
+    category: 'other',
+    order: 9,
+    requiresAuth: true,
+    isNew: true,
+    badge: 'NEW',
+  },
 ]
 
 // ============================================

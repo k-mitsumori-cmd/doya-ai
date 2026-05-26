@@ -1605,6 +1605,123 @@ export const INTERVIEWX_PRICING: ServicePricing = {
   ],
 }
 
+// ========================================
+// ドヤHR（タレントマネジメント）料金設定
+// ========================================
+export const HR_PRICING: ServicePricing = {
+  serviceId: 'hr',
+  serviceName: 'ドヤHR',
+  serviceIcon: '👥',
+  guestLimit: 0,
+  freeLimit: 5,
+  lightLimit: 30,
+  proLimit: 100,
+  enterpriseLimit: -1,
+  historyDays: {
+    free: 90,
+    pro: -1,
+  },
+  plans: [
+    {
+      id: 'hr-free',
+      name: '無料',
+      price: 0,
+      priceLabel: '¥0',
+      period: '',
+      description: 'まずは試してみたい方に',
+      features: [
+        { text: '従業員5名まで', included: true },
+        { text: '従業員データベース', included: true },
+        { text: '組織図表示', included: true },
+        { text: 'MBO評価管理', included: true },
+        { text: '1on1記録', included: true },
+        { text: 'AI機能（月3回）', included: true },
+      ],
+      cta: '無料で始める',
+    },
+    {
+      id: 'hr-starter',
+      name: 'スターター',
+      price: 4980,
+      priceLabel: '¥4,980',
+      period: '/月（税込）',
+      description: '成長中のチームに最適',
+      color: 'sky',
+      features: [
+        { text: '従業員30名まで', included: true },
+        { text: '全機能利用可能', included: true },
+        { text: 'AI機能（月30回）', included: true },
+        { text: 'CSVインポート/エクスポート', included: true },
+        { text: '評価テンプレート', included: true },
+        { text: 'メンバー招待（5名）', included: true },
+      ],
+      cta: 'スタータープランを始める',
+    },
+    {
+      id: 'hr-pro',
+      name: 'プロ',
+      price: 14800,
+      priceLabel: '¥14,800',
+      period: '/月（税込）',
+      description: '本格的な人材マネジメントに',
+      popular: true,
+      color: 'blue',
+      features: [
+        { text: '従業員100名まで', included: true },
+        { text: '全機能利用可能', included: true },
+        { text: 'AI機能（無制限）', included: true },
+        { text: 'メンバー招待（無制限）', included: true },
+        { text: 'カスタムフィールド', included: true },
+        { text: '優先サポート', included: true },
+      ],
+      cta: 'プロプランを始める',
+    },
+    {
+      id: 'hr-enterprise',
+      name: 'エンタープライズ',
+      price: 0,
+      priceLabel: '要相談',
+      period: '',
+      description: '大規模組織向け',
+      color: 'slate',
+      features: [
+        { text: '従業員数無制限', included: true },
+        { text: 'SSO/SAML認証', included: true },
+        { text: 'API連携', included: true },
+        { text: '専任サポート', included: true },
+        { text: '請求書払い対応', included: true },
+      ],
+      cta: 'お問い合わせ',
+    },
+  ],
+}
+
+export function getHrEmployeeLimitByUserPlan(plan: string | null | undefined): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1') return -1
+  const p = String(plan || 'FREE').toUpperCase()
+  switch (p) {
+    case 'ENTERPRISE': return HR_PRICING.enterpriseLimit ?? -1
+    case 'PRO': return HR_PRICING.proLimit
+    case 'LIGHT':
+    case 'STARTER': return HR_PRICING.lightLimit ?? 30
+    case 'FREE': return HR_PRICING.freeLimit
+    default: return HR_PRICING.freeLimit
+  }
+}
+
+export function getHrAiLimitByUserPlan(plan: string | null | undefined): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1') return -1
+  const p = String(plan || 'FREE').toUpperCase()
+  switch (p) {
+    case 'ENTERPRISE':
+    case 'PRO': return -1
+    case 'LIGHT':
+    case 'STARTER': return 30
+    case 'FREE': return 3
+    default: return 3
+  }
+}
+
 export function getInterviewXMonthlyLimitByUserPlan(plan: string | null | undefined): number {
   if (process.env.DOYA_DISABLE_LIMITS === '1') return -1
   const p = String(plan || 'FREE').toUpperCase()

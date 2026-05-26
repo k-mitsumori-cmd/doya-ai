@@ -18,6 +18,7 @@ import {
   Target,
   Sparkles,
   Play,
+  Users,
   Volume2,
   type LucideIcon,
 } from 'lucide-react'
@@ -37,6 +38,7 @@ const SERVICE_ICON_MAP: Record<string, { icon: LucideIcon; iconBg: string }> = {
   movie:     { icon: Film,     iconBg: 'bg-gradient-to-br from-rose-500 to-pink-500' },
   interviewx: { icon: Send,    iconBg: 'bg-gradient-to-br from-indigo-500 to-violet-500' },
   adsim:     { icon: BarChart3, iconBg: 'bg-gradient-to-br from-indigo-500 to-blue-600' },
+  hr:        { icon: Users,    iconBg: 'bg-gradient-to-br from-sky-500 to-blue-600' },
 }
 
 type ToolSwitcherMenuProps = {
