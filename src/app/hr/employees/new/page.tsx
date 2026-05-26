@@ -130,247 +130,244 @@ export default function NewEmployeePage() {
           <p className="text-sm text-slate-500 mt-1">新しい従業員の情報を登録します</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Photo Upload */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-sky-500">photo_camera</span>
-              顔写真
-            </h2>
-            <div className="flex items-center gap-6">
-              {photoPreview ? (
-                <img src={photoPreview} alt="プレビュー" className="w-24 h-24 rounded-full object-cover border-2 border-sky-200" />
-              ) : (
-                <div className="w-24 h-24 rounded-full bg-slate-100 flex items-center justify-center border-2 border-dashed border-slate-300">
-                  <span className="material-symbols-outlined text-3xl text-slate-400">person</span>
+        <form onSubmit={handleSubmit}>
+          <div className="bg-white rounded-3xl shadow-lg p-8 space-y-8">
+            {/* Photo Upload */}
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
+                <span className="material-symbols-outlined text-blue-600">photo_camera</span>
+                顔写真
+              </h2>
+              <div className="h-1 bg-gradient-to-r from-blue-500 via-emerald-500 to-amber-400 rounded-full w-16 mb-4" />
+              <div className="flex items-center gap-6">
+                {photoPreview ? (
+                  <img src={photoPreview} alt="プレビュー" className="w-28 h-28 rounded-full object-cover ring-4 ring-blue-100" />
+                ) : (
+                  <div className="w-28 h-28 rounded-full bg-slate-50 flex items-center justify-center border-2 border-dashed border-slate-300 rounded-3xl">
+                    <span className="material-symbols-outlined text-4xl text-slate-400">person</span>
+                  </div>
+                )}
+                <div>
+                  <label className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold cursor-pointer shadow-md hover:shadow-lg hover:bg-blue-700 transition-all">
+                    <span className="material-symbols-outlined text-lg">upload</span>
+                    写真をアップロード
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handlePhotoChange}
+                      className="hidden"
+                    />
+                  </label>
+                  <p className="text-xs text-slate-400 mt-2">JPG, PNG, WebP 対応（5MB以下）</p>
                 </div>
-              )}
-              <div>
-                <label className="inline-flex items-center gap-2 px-4 py-2 bg-sky-50 text-sky-600 rounded-xl text-sm font-semibold cursor-pointer hover:bg-sky-100 transition-colors">
-                  <span className="material-symbols-outlined text-lg">upload</span>
-                  写真をアップロード
+              </div>
+            </div>
+
+            {/* Basic Info */}
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
+                <span className="material-symbols-outlined text-emerald-600">person</span>
+                基本情報
+              </h2>
+              <div className="h-1 bg-gradient-to-r from-blue-500 via-emerald-500 to-amber-400 rounded-full w-16 mb-2" />
+              <p className="text-sm text-slate-400 mb-4">姓名は必須です。社員番号は後から設定できます。</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    姓 <span className="text-red-500">*</span>
+                  </label>
                   <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handlePhotoChange}
-                    className="hidden"
+                    type="text"
+                    name="lastName"
+                    value={form.lastName}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    placeholder="山田"
                   />
-                </label>
-                <p className="text-xs text-slate-400 mt-2">JPG, PNG, WebP 対応（5MB以下）</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
+                    名 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={form.firstName}
+                    onChange={handleChange}
+                    required
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    placeholder="太郎"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">姓（カナ）</label>
+                  <input
+                    type="text"
+                    name="lastNameKana"
+                    value={form.lastNameKana}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    placeholder="ヤマダ"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">名（カナ）</label>
+                  <input
+                    type="text"
+                    name="firstNameKana"
+                    value={form.firstNameKana}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    placeholder="タロウ"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">社員番号</label>
+                  <input
+                    type="text"
+                    name="employeeNumber"
+                    value={form.employeeNumber}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    placeholder="EMP-001"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">メールアドレス</label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    placeholder="taro@example.com"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-bold text-slate-700 mb-1">電話番号</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={form.phone}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    placeholder="090-1234-5678"
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Basic Info */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-sky-500">person</span>
-              基本情報
-            </h2>
-            <p className="text-sm text-slate-400 mb-4">姓名は必須です。社員番号は後から設定できます。</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">
-                  姓 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="lastName"
-                  value={form.lastName}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
-                  placeholder="山田"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">
-                  名 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="firstName"
-                  value={form.firstName}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
-                  placeholder="太郎"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">姓（カナ）</label>
-                <input
-                  type="text"
-                  name="lastNameKana"
-                  value={form.lastNameKana}
-                  onChange={handleChange}
-                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
-                  placeholder="ヤマダ"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">名（カナ）</label>
-                <input
-                  type="text"
-                  name="firstNameKana"
-                  value={form.firstNameKana}
-                  onChange={handleChange}
-                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
-                  placeholder="タロウ"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">社員番号</label>
-                <input
-                  type="text"
-                  name="employeeNumber"
-                  value={form.employeeNumber}
-                  onChange={handleChange}
-                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
-                  placeholder="EMP-001"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">メールアドレス</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={form.email}
-                  onChange={handleChange}
-                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
-                  placeholder="taro@example.com"
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-bold text-slate-700 mb-1">電話番号</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={form.phone}
-                  onChange={handleChange}
-                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
-                  placeholder="090-1234-5678"
-                />
+            {/* Job Info */}
+            <div>
+              <h2 className="text-lg font-bold text-slate-900 mb-1 flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-500">work</span>
+                職務情報
+              </h2>
+              <div className="h-1 bg-gradient-to-r from-blue-500 via-emerald-500 to-amber-400 rounded-full w-16 mb-2" />
+              <p className="text-sm text-slate-400 mb-4">部署がまだ作成されていない場合は、<a href="/hr/settings" className="text-blue-600 underline hover:text-blue-700">設定画面</a>から追加できます。</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">部署</label>
+                  <select
+                    name="departmentId"
+                    value={form.departmentId}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                  >
+                    <option value="">選択してください</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>{d.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">役職</label>
+                  <input
+                    type="text"
+                    name="position"
+                    value={form.position}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    placeholder="マネージャー"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">等級</label>
+                  <input
+                    type="text"
+                    name="grade"
+                    value={form.grade}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    placeholder="M1"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">雇用形態</label>
+                  <select
+                    name="employmentType"
+                    value={form.employmentType}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                  >
+                    {EMPLOYMENT_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-bold text-slate-700 mb-1">入社日</label>
+                  <input
+                    type="date"
+                    name="hireDate"
+                    value={form.hireDate}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                  />
+                  <p className="text-xs text-slate-400 mt-1.5">入社日を設定すると在籍年数が自動計算されます。</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Job Info */}
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-              <span className="material-symbols-outlined text-sky-500">work</span>
-              職務情報
-            </h2>
-            <p className="text-sm text-slate-400 mb-4">部署がまだ作成されていない場合は、<a href="/hr/settings" className="text-sky-500 underline hover:text-sky-600">設定画面</a>から追加できます。</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">部署</label>
-                <select
-                  name="departmentId"
-                  value={form.departmentId}
-                  onChange={handleChange}
-                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
-                >
-                  <option value="">選択してください</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name}</option>
-                  ))}
-                </select>
+            {/* Success Toast */}
+            {successMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="p-4 bg-emerald-50 rounded-2xl text-sm text-emerald-700 flex items-center gap-2"
+              >
+                <span className="material-symbols-outlined text-lg">check_circle</span>
+                {successMessage}
+              </motion.div>
+            )}
+
+            {/* Error */}
+            {error && (
+              <div className="p-4 bg-red-50 rounded-2xl text-sm text-red-700">
+                <span className="material-symbols-outlined text-lg align-middle mr-1">error</span>
+                {error}
               </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">役職</label>
-                <input
-                  type="text"
-                  name="position"
-                  value={form.position}
-                  onChange={handleChange}
-                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
-                  placeholder="マネージャー"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">等級</label>
-                <input
-                  type="text"
-                  name="grade"
-                  value={form.grade}
-                  onChange={handleChange}
-                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
-                  placeholder="M1"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">雇用形態</label>
-                <select
-                  name="employmentType"
-                  value={form.employmentType}
-                  onChange={handleChange}
-                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
-                >
-                  {EMPLOYMENT_TYPES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="sm:col-span-2">
-                <label className="block text-sm font-bold text-slate-700 mb-1">入社日</label>
-                <input
-                  type="date"
-                  name="hireDate"
-                  value={form.hireDate}
-                  onChange={handleChange}
-                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
-                />
-                <p className="text-xs text-slate-400 mt-1.5">入社日を設定すると在籍年数が自動計算されます。</p>
-              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex justify-end gap-3 pt-4">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="px-6 py-3.5 bg-white text-slate-700 rounded-full text-base font-bold shadow-md hover:shadow-lg transition-all"
+              >
+                キャンセル
+              </button>
+              <button
+                type="submit"
+                disabled={saving || !!successMessage}
+                className="flex items-center gap-2 px-8 py-3.5 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-lg">save</span>
+                {saving ? '保存中...' : '保存する'}
+              </button>
             </div>
-          </div>
-
-          {/* Success Toast */}
-          {successMessage && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700 flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined text-lg">check_circle</span>
-              {successMessage}
-            </motion.div>
-          )}
-
-          {/* Error */}
-          {error && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-              <span className="material-symbols-outlined text-lg align-middle mr-1">error</span>
-              {error}
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="px-6 py-3.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-base font-bold hover:bg-slate-50 transition-colors"
-            >
-              キャンセル
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !!successMessage}
-              className="flex items-center gap-2 px-6 py-3.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-base font-bold hover:bg-slate-50 transition-colors disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined text-lg">draft</span>
-              下書き保存
-            </button>
-            <button
-              type="submit"
-              disabled={saving || !!successMessage}
-              className="flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined text-lg">save</span>
-              {saving ? '保存中...' : '保存する'}
-            </button>
           </div>
         </form>
       </motion.div>

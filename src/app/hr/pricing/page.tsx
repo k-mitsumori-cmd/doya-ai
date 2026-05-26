@@ -24,12 +24,12 @@ export default function HrPricingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
-              className={`relative bg-white rounded-2xl border-2 p-6 ${
-                plan.popular ? 'border-blue-500 shadow-xl shadow-blue-500/10' : 'border-slate-200'
+              className={`relative bg-white rounded-3xl p-6 ${
+                plan.popular ? 'shadow-2xl ring-2 ring-blue-500' : 'shadow-lg'
               }`}
             >
               {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-blue-500 text-white text-xs font-bold rounded-full">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">
                   おすすめ
                 </div>
               )}
@@ -66,11 +66,11 @@ export default function HrPricingPage() {
 
               <Link
                 href={plan.price === 0 && plan.id !== 'hr-enterprise' ? '/hr/dashboard' : '#'}
-                className={`block w-full py-3 text-center text-base font-bold rounded-xl transition-all ${
+                className={`block w-full py-3 text-center text-base font-bold rounded-full transition-all ${
                   plan.popular
-                    ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white hover:shadow-lg hover:shadow-sky-500/20'
+                    ? 'bg-blue-600 text-white shadow-md hover:shadow-lg hover:bg-blue-700'
                     : plan.id === 'hr-enterprise'
-                      ? 'bg-slate-900 text-white hover:bg-slate-800'
+                      ? 'bg-slate-900 text-white rounded-full hover:bg-slate-800'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
@@ -81,7 +81,7 @@ export default function HrPricingPage() {
         </div>
 
         {/* FAQ or extra info */}
-        <div className="bg-gradient-to-br from-sky-50 to-blue-50 rounded-2xl p-8 text-center">
+        <div className="bg-white rounded-3xl shadow-lg p-8 text-center">
           <h3 className="text-xl font-black text-slate-900 mb-2">まずは無料で始めてみませんか？</h3>
           <p className="text-base text-slate-600 mb-6 max-w-lg mx-auto">
             クレジットカード不要、5名までの従業員管理が永久無料でお使いいただけます。
@@ -89,7 +89,7 @@ export default function HrPricingPage() {
           </p>
           <Link
             href="/hr/dashboard"
-            className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+            className="inline-flex items-center gap-2 px-10 py-4 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all"
           >
             <span className="material-symbols-outlined text-lg">rocket_launch</span>
             無料で始める

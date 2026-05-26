@@ -17,6 +17,23 @@ interface OneOnOneRecord {
   actionItemCount: number
 }
 
+const AVATAR_COLORS = [
+  'from-blue-500 to-blue-600',
+  'from-red-400 to-red-500',
+  'from-emerald-500 to-emerald-600',
+  'from-amber-400 to-amber-500',
+  'from-purple-500 to-purple-600',
+  'from-pink-400 to-pink-500',
+]
+
+function getAvatarColor(name: string) {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
+
 export default function OneOnOnePage() {
   const router = useRouter()
   const [records, setRecords] = useState<OneOnOneRecord[]>([])
@@ -107,7 +124,7 @@ export default function OneOnOnePage() {
           </div>
           <button
             onClick={() => setShowNewModal(true)}
-            className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+            className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-full text-base font-bold shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:bg-emerald-700 transition-all"
           >
             <span className="material-symbols-outlined text-lg">add</span>
             1on1を記録
@@ -116,7 +133,7 @@ export default function OneOnOnePage() {
 
         {/* Error */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <div className="mb-6 p-4 bg-red-50 rounded-2xl text-sm text-red-700">
             <span className="material-symbols-outlined text-lg align-middle mr-1">error</span>
             {error}
           </div>
@@ -126,7 +143,7 @@ export default function OneOnOnePage() {
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map((i) => (
-              <div key={i} className="h-20 bg-white rounded-2xl border border-slate-200 animate-pulse" />
+              <div key={i} className="h-20 bg-white rounded-3xl shadow-md animate-pulse" />
             ))}
           </div>
         ) : records.length > 0 ? (
@@ -135,6 +152,7 @@ export default function OneOnOnePage() {
               const initials = record.employeeName
                 ? `${record.employeeName[0]}${record.employeeName.length > 1 ? record.employeeName[1] : ''}`
                 : '??'
+              const avatarColor = getAvatarColor(record.employeeName || record.employeeId)
               return (
                 <motion.div
                   key={record.id}
@@ -144,12 +162,12 @@ export default function OneOnOnePage() {
                 >
                   <Link
                     href={`/hr/one-on-one/${record.id}`}
-                    className="flex items-center gap-4 bg-white rounded-2xl border border-slate-200 p-5 hover:shadow-md hover:border-sky-200 transition-all"
+                    className="flex items-center gap-4 bg-white rounded-3xl shadow-md p-5 hover:shadow-lg transition-all"
                   >
                     {record.employeePhotoUrl ? (
                       <img src={record.employeePhotoUrl} alt="" className="w-11 h-11 rounded-full object-cover" />
                     ) : (
-                      <div className="w-11 h-11 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white text-sm font-bold">
+                      <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center text-white text-sm font-bold`}>
                         {initials}
                       </div>
                     )}
@@ -189,11 +207,9 @@ export default function OneOnOnePage() {
             })}
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-sky-50 mb-4">
-              <span className="material-symbols-outlined text-4xl text-sky-500">chat</span>
-            </div>
-            <h3 className="text-xl font-black text-slate-900 mb-2">1on1ミーティングを記録しましょう</h3>
+          <div className="bg-white rounded-3xl shadow-lg p-12 text-center">
+            <span className="material-symbols-outlined text-7xl text-emerald-300 mb-4 block">chat</span>
+            <h3 className="text-2xl font-black text-slate-900 mb-2">1on1ミーティングを記録しましょう</h3>
             <p className="text-base text-slate-500 mb-2 max-w-md mx-auto">
               定期的な1on1で、メンバーの成長を支援。
             </p>
@@ -202,13 +218,22 @@ export default function OneOnOnePage() {
             </p>
             <button
               onClick={() => setShowNewModal(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+              className="inline-flex items-center gap-2 px-8 py-3.5 bg-emerald-600 text-white rounded-full text-base font-bold shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:bg-emerald-700 transition-all"
             >
               <span className="material-symbols-outlined text-lg">add</span>
               1on1を記録する
             </button>
           </div>
         )}
+
+        {/* FAB */}
+        <button
+          onClick={() => setShowNewModal(true)}
+          className="fixed bottom-8 right-8 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-xl shadow-emerald-500/30 flex items-center justify-center hover:bg-emerald-700 hover:shadow-2xl transition-all z-40"
+          title="1on1を記録"
+        >
+          <span className="material-symbols-outlined text-3xl">add</span>
+        </button>
 
         {/* New 1on1 Modal */}
         {showNewModal && (
@@ -217,7 +242,7 @@ export default function OneOnOnePage() {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4"
+              className="relative bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md mx-4"
             >
               <h2 className="text-lg font-bold text-slate-900 mb-4">1on1を記録</h2>
               <div className="space-y-4">
@@ -226,7 +251,7 @@ export default function OneOnOnePage() {
                   <select
                     value={selectedEmployee}
                     onChange={(e) => setSelectedEmployee(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                   >
                     <option value="">選択してください</option>
                     {employees.map((emp: any) => (
@@ -241,7 +266,7 @@ export default function OneOnOnePage() {
                   <select
                     value={selectedManager}
                     onChange={(e) => setSelectedManager(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                   >
                     <option value="">選択してください</option>
                     {employees.filter((e: any) => e.id !== selectedEmployee).map((emp: any) => (
@@ -255,14 +280,14 @@ export default function OneOnOnePage() {
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setShowNewModal(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors"
+                  className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors"
                 >
                   キャンセル
                 </button>
                 <button
                   onClick={handleCreateRecord}
                   disabled={creating || !selectedEmployee || !selectedManager}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-emerald-700 transition-all disabled:opacity-50"
                 >
                   {creating ? '作成中...' : '開始'}
                 </button>

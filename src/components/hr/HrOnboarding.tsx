@@ -18,6 +18,8 @@ const SIZE_OPTIONS = [
   { value: '101+', label: '101名以上' },
 ]
 
+const STEP_LABELS = ['組織名', '業種', '規模']
+
 export default function HrOnboarding() {
   const router = useRouter()
   const [step, setStep] = useState(0)
@@ -55,38 +57,57 @@ export default function HrOnboarding() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-sky-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-blue-50 via-white to-green-50">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-lg bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden"
+        className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
       >
         <div className="p-8">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-400 via-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
               <span className="material-symbols-outlined text-2xl">groups</span>
             </div>
             <div>
-              <h1 className="text-2xl font-black text-slate-900">ドヤHR へようこそ</h1>
-              <p className="text-base font-bold text-slate-600">まずは組織を作成しましょう</p>
+              <h1 className="text-2xl font-black text-gray-900">ドヤHR へようこそ!</h1>
+              <p className="text-base font-bold text-gray-500">かんたんに組織を作成しましょう</p>
             </div>
           </div>
 
-          {/* Progress dots */}
-          <div className="flex items-center gap-2 mb-8">
-            {[0, 1, 2].map((s) => (
-              <div
-                key={s}
-                className={`h-1.5 rounded-full transition-all ${
-                  s <= step ? 'bg-sky-500 flex-1' : 'bg-slate-200 flex-1'
-                }`}
-              />
+          {/* Google-style Stepper */}
+          <div className="flex items-center mb-8 px-2">
+            {STEP_LABELS.map((label, s) => (
+              <div key={s} className="flex items-center flex-1 last:flex-none">
+                <div className="flex flex-col items-center">
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-black transition-all ${
+                      s < step
+                        ? 'bg-blue-600 text-white'
+                        : s === step
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
+                        : 'bg-gray-200 text-gray-500'
+                    }`}
+                  >
+                    {s < step ? (
+                      <span className="material-symbols-outlined text-lg">check</span>
+                    ) : (
+                      s + 1
+                    )}
+                  </div>
+                  <span className={`text-xs font-bold mt-1.5 ${s <= step ? 'text-blue-600' : 'text-gray-400'}`}>
+                    {label}
+                  </span>
+                </div>
+                {s < STEP_LABELS.length - 1 && (
+                  <div className={`flex-1 h-0.5 mx-2 mt-[-18px] rounded-full transition-all ${s < step ? 'bg-blue-600' : 'bg-gray-200'}`} />
+                )}
+              </div>
             ))}
           </div>
 
           {step === 0 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <label className="block text-base font-bold text-slate-900 mb-2">
+              <label className="block text-base font-bold text-gray-900 mb-2">
                 組織名（会社名・チーム名）
               </label>
               <input
@@ -94,13 +115,13 @@ export default function HrOnboarding() {
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
                 placeholder="例: 株式会社スリスタ"
-                className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none text-base text-slate-900"
+                className="w-full px-4 py-3.5 rounded-full border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none text-base text-gray-900 shadow-sm"
                 autoFocus
               />
               <button
                 onClick={() => orgName.trim() && setStep(1)}
                 disabled={!orgName.trim()}
-                className="w-full mt-6 py-4 bg-gradient-to-r from-sky-500 to-blue-600 text-white text-base font-black rounded-xl hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full mt-6 py-4 bg-blue-600 text-white text-base font-black rounded-full shadow-md hover:bg-blue-700 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 次へ
               </button>
@@ -109,16 +130,16 @@ export default function HrOnboarding() {
 
           {step === 1 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <label className="block text-base font-bold text-slate-900 mb-2">業種</label>
+              <label className="block text-base font-bold text-gray-900 mb-2">業種</label>
               <div className="grid grid-cols-2 gap-2 mb-6">
                 {INDUSTRY_OPTIONS.map((opt) => (
                   <button
                     key={opt}
                     onClick={() => setIndustry(opt)}
-                    className={`px-3 py-2.5 rounded-xl text-base font-bold border transition-all ${
+                    className={`px-3 py-2.5 rounded-full text-base font-bold transition-all ${
                       industry === opt
-                        ? 'border-sky-500 bg-sky-50 text-sky-700'
-                        : 'border-slate-200 text-slate-700 hover:border-sky-300'
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     {opt}
@@ -128,13 +149,13 @@ export default function HrOnboarding() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(0)}
-                  className="flex-1 py-4 border border-slate-200 text-slate-700 text-base font-black rounded-xl hover:bg-slate-50 transition-all"
+                  className="flex-1 py-4 bg-gray-100 text-gray-700 text-base font-black rounded-full hover:bg-gray-200 transition-all"
                 >
                   戻る
                 </button>
                 <button
                   onClick={() => setStep(2)}
-                  className="flex-1 py-4 bg-gradient-to-r from-sky-500 to-blue-600 text-white text-base font-black rounded-xl hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+                  className="flex-1 py-4 bg-blue-600 text-white text-base font-black rounded-full shadow-md hover:bg-blue-700 hover:shadow-lg transition-all"
                 >
                   次へ
                 </button>
@@ -144,16 +165,16 @@ export default function HrOnboarding() {
 
           {step === 2 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <label className="block text-base font-bold text-slate-900 mb-2">従業員数</label>
+              <label className="block text-base font-bold text-gray-900 mb-2">従業員数</label>
               <div className="space-y-2 mb-6">
                 {SIZE_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     onClick={() => setSize(opt.value)}
-                    className={`w-full px-4 py-3.5 rounded-xl text-base font-bold border text-left transition-all ${
+                    className={`w-full px-4 py-3.5 rounded-full text-base font-bold text-left transition-all ${
                       size === opt.value
-                        ? 'border-sky-500 bg-sky-50 text-sky-700'
-                        : 'border-slate-200 text-slate-700 hover:border-sky-300'
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
                     {opt.label}
@@ -162,7 +183,8 @@ export default function HrOnboarding() {
               </div>
 
               {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-600 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-red-500 text-lg">error</span>
                   {error}
                 </div>
               )}
@@ -170,14 +192,14 @@ export default function HrOnboarding() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(1)}
-                  className="flex-1 py-4 border border-slate-200 text-slate-700 text-base font-black rounded-xl hover:bg-slate-50 transition-all"
+                  className="flex-1 py-4 bg-gray-100 text-gray-700 text-base font-black rounded-full hover:bg-gray-200 transition-all"
                 >
                   戻る
                 </button>
                 <button
                   onClick={handleCreate}
                   disabled={loading}
-                  className="flex-1 py-4 bg-gradient-to-r from-sky-500 to-blue-600 text-white text-base font-black rounded-xl hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
+                  className="flex-1 py-4 bg-blue-600 text-white text-base font-black rounded-full shadow-md hover:bg-blue-700 hover:shadow-lg transition-all disabled:opacity-50"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">

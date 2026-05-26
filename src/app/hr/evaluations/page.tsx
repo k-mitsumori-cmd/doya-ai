@@ -78,7 +78,7 @@ export default function EvaluationsPage() {
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all"
           >
             <span className="material-symbols-outlined text-lg">add</span>
             評価期間を作成
@@ -87,7 +87,7 @@ export default function EvaluationsPage() {
 
         {/* Error */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+          <div className="mb-6 p-4 bg-red-50 rounded-2xl text-sm text-red-700">
             <span className="material-symbols-outlined text-lg align-middle mr-1">error</span>
             {error}
           </div>
@@ -97,7 +97,7 @@ export default function EvaluationsPage() {
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-40 bg-white rounded-2xl border border-slate-200 animate-pulse" />
+              <div key={i} className="h-40 bg-white rounded-3xl shadow-md animate-pulse" />
             ))}
           </div>
         ) : periods.length > 0 ? (
@@ -116,7 +116,7 @@ export default function EvaluationsPage() {
                 >
                   <Link
                     href={`/hr/evaluations/${period.id}`}
-                    className="block bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-md hover:border-sky-200 transition-all"
+                    className="block bg-white rounded-3xl shadow-md p-6 hover:shadow-lg transition-all"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <h3 className="text-lg font-bold text-slate-900">{period.name}</h3>
@@ -129,11 +129,11 @@ export default function EvaluationsPage() {
                     </p>
                     <div className="mb-2 flex items-center justify-between">
                       <span className="text-xs font-medium text-slate-500">進捗</span>
-                      <span className="text-base font-black text-sky-600">{pct}%</span>
+                      <span className="text-base font-black text-blue-600">{pct}%</span>
                     </div>
-                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
                       <motion.div
-                        className="h-full bg-gradient-to-r from-sky-500 to-blue-500 rounded-full"
+                        className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full"
                         initial={{ width: 0 }}
                         animate={{ width: `${pct}%` }}
                         transition={{ duration: 0.8, ease: 'easeOut' }}
@@ -148,37 +148,44 @@ export default function EvaluationsPage() {
             })}
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-sky-50 mb-4">
-              <span className="material-symbols-outlined text-4xl text-sky-500">assignment</span>
-            </div>
-            <h3 className="text-xl font-black text-slate-900 mb-2">評価期間を作成しましょう</h3>
+          <div className="bg-white rounded-3xl shadow-lg p-12 text-center">
+            <span className="material-symbols-outlined text-7xl text-red-300 mb-4 block">assignment</span>
+            <h3 className="text-2xl font-black text-slate-900 mb-2">評価期間を作成しましょう</h3>
             <p className="text-base text-slate-500 mb-6 max-w-md mx-auto">
               MBO（目標管理制度）に基づいた人事評価をオンラインで管理できます。
             </p>
             <div className="flex flex-col items-center gap-3 mb-6">
               <div className="flex items-center gap-3 text-left max-w-sm w-full">
-                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-sky-100 text-sky-700 text-xs font-black shrink-0">1</span>
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-600 text-xs font-black shrink-0">1</span>
                 <span className="text-sm font-bold text-slate-700">評価期間を作成する</span>
               </div>
               <div className="flex items-center gap-3 text-left max-w-sm w-full">
-                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-sky-100 text-sky-700 text-xs font-black shrink-0">2</span>
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-500 text-xs font-black shrink-0">2</span>
                 <span className="text-sm font-bold text-slate-700">対象者に評価シートを配布</span>
               </div>
               <div className="flex items-center gap-3 text-left max-w-sm w-full">
-                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-sky-100 text-sky-700 text-xs font-black shrink-0">3</span>
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 text-xs font-black shrink-0">3</span>
                 <span className="text-sm font-bold text-slate-700">自己評価 → 上司評価 → 最終評価</span>
               </div>
             </div>
             <button
               onClick={() => setShowCreateModal(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+              className="inline-flex items-center gap-2 px-8 py-3.5 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all"
             >
               <span className="material-symbols-outlined text-lg">add</span>
               評価期間を作成
             </button>
           </div>
         )}
+
+        {/* FAB */}
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="fixed bottom-8 right-8 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-500/30 flex items-center justify-center hover:bg-blue-700 hover:shadow-2xl transition-all z-40"
+          title="評価期間を作成"
+        >
+          <span className="material-symbols-outlined text-3xl">add</span>
+        </button>
 
         {/* Create Modal */}
         {showCreateModal && (
@@ -187,7 +194,7 @@ export default function EvaluationsPage() {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="relative bg-white rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4"
+              className="relative bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md mx-4"
             >
               <h2 className="text-lg font-bold text-slate-900 mb-4">評価期間を作成</h2>
               <div className="space-y-4">
@@ -197,7 +204,7 @@ export default function EvaluationsPage() {
                     type="text"
                     value={newPeriod.name}
                     onChange={(e) => setNewPeriod({ ...newPeriod, name: e.target.value })}
-                    className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                    className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                     placeholder="2026年度 上期評価"
                   />
                 </div>
@@ -208,7 +215,7 @@ export default function EvaluationsPage() {
                       type="date"
                       value={newPeriod.startDate}
                       onChange={(e) => setNewPeriod({ ...newPeriod, startDate: e.target.value })}
-                      className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                      className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                     />
                   </div>
                   <div>
@@ -217,7 +224,7 @@ export default function EvaluationsPage() {
                       type="date"
                       value={newPeriod.endDate}
                       onChange={(e) => setNewPeriod({ ...newPeriod, endDate: e.target.value })}
-                      className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                      className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                     />
                   </div>
                 </div>
@@ -225,14 +232,14 @@ export default function EvaluationsPage() {
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors"
+                  className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-800 transition-colors"
                 >
                   キャンセル
                 </button>
                 <button
                   onClick={handleCreatePeriod}
                   disabled={creating || !newPeriod.name}
-                  className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all disabled:opacity-50"
                 >
                   {creating ? '作成中...' : '作成'}
                 </button>
