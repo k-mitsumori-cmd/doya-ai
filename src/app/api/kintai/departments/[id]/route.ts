@@ -16,6 +16,13 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     }
 
     const p = 'then' in ctx.params ? await ctx.params : ctx.params
+
+    // Organization scoping: verify the department belongs to the caller's org
+    const existing = await prisma.kintaiDepartment.findFirst({
+      where: { id: p.id, organizationId: kctx.organizationId },
+    })
+    if (!existing) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+
     const { name, parentId, managerId } = await req.json()
 
     const dept = await prisma.kintaiDepartment.update({
@@ -42,6 +49,13 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     }
 
     const p = 'then' in ctx.params ? await ctx.params : ctx.params
+
+    // Organization scoping: verify the department belongs to the caller's org
+    const existing = await prisma.kintaiDepartment.findFirst({
+      where: { id: p.id, organizationId: kctx.organizationId },
+    })
+    if (!existing) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+
     const empCount = await prisma.kintaiEmployee.count({ where: { departmentId: p.id } })
     if (empCount > 0) {
       return NextResponse.json({ error: '従業員が所属しているため削除できません' }, { status: 400 })

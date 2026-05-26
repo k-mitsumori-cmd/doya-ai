@@ -16,6 +16,13 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     }
 
     const p = 'then' in ctx.params ? await ctx.params : ctx.params
+
+    // Organization scoping: verify the work rule belongs to the caller's org
+    const existing = await prisma.kintaiWorkRule.findFirst({
+      where: { id: p.id, organizationId: kctx.organizationId },
+    })
+    if (!existing) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+
     const body = await req.json()
 
     const rule = await prisma.kintaiWorkRule.update({
@@ -47,6 +54,13 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     }
 
     const p = 'then' in ctx.params ? await ctx.params : ctx.params
+
+    // Organization scoping: verify the work rule belongs to the caller's org
+    const existingRule = await prisma.kintaiWorkRule.findFirst({
+      where: { id: p.id, organizationId: kctx.organizationId },
+    })
+    if (!existingRule) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+
     const empCount = await prisma.kintaiEmployee.count({ where: { workRuleId: p.id } })
     if (empCount > 0) {
       return NextResponse.json({ error: '使用中の従業員がいるため削除できません' }, { status: 400 })

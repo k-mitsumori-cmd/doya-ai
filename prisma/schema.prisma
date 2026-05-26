@@ -2026,12 +2026,24 @@ model HrOrganization {
 
   customFields Json?
 
+  // Stripe（組織レベル課金）
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+  plan                   String    @default("FREE")
+
+  // AI使用量（月次）
+  aiUsageCount    Int      @default(0)
+  aiUsageResetAt  DateTime @default(now())
+
   members           HrOrganizationMember[]
   departments       HrDepartment[]
   employees         HrEmployee[]
   evaluationPeriods HrEvaluationPeriod[]
   oneOnOnes         HrOneOnOne[]
   invitations       HrInvitation[]
+  auditLogs         HrAuditLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -2277,6 +2289,27 @@ model HrInvitation {
   @@index([email, status])
   @@index([token])
   @@map("hr_invitations")
+}
+
+model HrAuditLog {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   HrOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  userId    String
+  userName  String?
+  action    String
+  target    String
+  targetId  String?
+  details   Json?
+  ipAddress String?
+
+  createdAt DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, action])
+  @@index([userId])
+  @@map("hr_audit_logs")
 }
 
 // ============================================

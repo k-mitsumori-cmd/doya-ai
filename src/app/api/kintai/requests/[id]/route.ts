@@ -18,12 +18,18 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     const request = await prisma.kintaiRequest.findUnique({
       where: { id: p.id },
       include: {
-        employee: { select: { name: true, email: true } },
+        employee: { select: { name: true, email: true, organizationId: true } },
         reviewer: { select: { name: true } },
       },
     })
 
     if (!request) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+
+    // Organization scoping: verify the request belongs to the caller's org
+    if (request.employee.organizationId !== kctx.organizationId) {
+      return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+    }
+
     return NextResponse.json({ request })
   } catch (e) {
     console.error('[kintai/requests/[id] GET]', e)
@@ -40,8 +46,16 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const body = await req.json()
     const { status, reviewerComment } = body
 
-    const existing = await prisma.kintaiRequest.findUnique({ where: { id: p.id } })
+    const existing = await prisma.kintaiRequest.findUnique({
+      where: { id: p.id },
+      include: { employee: { select: { organizationId: true } } },
+    })
     if (!existing) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+
+    // Organization scoping: verify the request belongs to the caller's org
+    if (existing.employee.organizationId !== kctx.organizationId) {
+      return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+    }
 
     if (status === 'withdrawn') {
       if (existing.employeeId !== kctx.employeeId) {
@@ -84,8 +98,8 @@ async function applyClockFix(employeeId: string, details: { date?: string; clock
   const dayEnd = new Date(dateObj.getTime() + 86400000)
 
   const [h, m] = details.correctedTime.split(':').map(Number)
-  const correctedTimestamp = new Date(dateObj)
-  correctedTimestamp.setHours(h, m, 0, 0)
+  // dateObj is JST midnight; add JST hours to get correct UTC timestamp
+  const correctedTimestamp = new Date(dateObj.getTime() + (h * 60 + m) * 60000)
 
   const existingRecord = await prisma.kintaiClockRecord.findFirst({
     where: { employeeId, type: details.clockType, timestamp: { gte: dateObj, lt: dayEnd } },
@@ -124,11 +138,14 @@ async function applyClockFix(employeeId: string, details: { date?: string; clock
 
   const calc = calculateDailyAttendance(allRecords, employee?.workRule || null, dateObj)
 
+  // Normalize date to UTC midnight for consistent upsert key
+  const dateOnly = new Date(Date.UTC(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate()))
+
   await prisma.kintaiAttendance.upsert({
-    where: { employeeId_date: { employeeId, date: dateObj } },
+    where: { employeeId_date: { employeeId, date: dateOnly } },
     create: {
       employeeId,
-      date: dateObj,
+      date: dateOnly,
       clockIn: calc.clockIn,
       clockOut: calc.clockOut,
       breakMinutes: calc.breakMinutes,

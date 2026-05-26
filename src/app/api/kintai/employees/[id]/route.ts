@@ -35,6 +35,13 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     }
 
     const p = 'then' in ctx.params ? await ctx.params : ctx.params
+
+    // Organization scoping: verify the employee belongs to the caller's org
+    const existingEmp = await prisma.kintaiEmployee.findFirst({
+      where: { id: p.id, organizationId: kctx.organizationId },
+    })
+    if (!existingEmp) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+
     const body = await req.json()
     const { name, nameKana, email, departmentId, workRuleId, employmentType, hireDate, isActive, role } = body
 
@@ -59,6 +66,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         where: { id: employee.member.id },
         data: { role },
       })
+      // Re-fetch to include updated role in response
+      employee.member.role = role
     }
 
     return NextResponse.json({ employee })
@@ -76,6 +85,13 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     }
 
     const p = 'then' in ctx.params ? await ctx.params : ctx.params
+
+    // Organization scoping: verify the employee belongs to the caller's org
+    const existingEmp = await prisma.kintaiEmployee.findFirst({
+      where: { id: p.id, organizationId: kctx.organizationId },
+    })
+    if (!existingEmp) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+
     await prisma.kintaiEmployee.update({
       where: { id: p.id },
       data: { isActive: false },

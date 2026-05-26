@@ -15,11 +15,16 @@ export async function GET() {
     }
 
     const now = new Date()
-    const todayStart = new Date(now.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' }).replace(/\//g, '-') + 'T00:00:00+09:00')
+    const jstOffset = 9 * 60 * 60 * 1000
+    const jstNow = new Date(now.getTime() + jstOffset)
+    const todayStart = new Date(
+      Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), jstNow.getUTCDate()) - jstOffset
+    )
     const todayEnd = new Date(todayStart.getTime() + 86400000)
 
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    // Month boundaries in JST (converted to UTC for DB queries)
+    const monthStart = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), 1))
+    const monthEnd = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth() + 1, 1))
 
     const [todayRecords, monthAttendances, recentRequests, employee] = await Promise.all([
       prisma.kintaiClockRecord.findMany({
@@ -27,7 +32,7 @@ export async function GET() {
         orderBy: { timestamp: 'asc' },
       }),
       prisma.kintaiAttendance.findMany({
-        where: { employeeId: ctx.employeeId, date: { gte: monthStart, lte: monthEnd } },
+        where: { employeeId: ctx.employeeId, date: { gte: monthStart, lt: monthEnd } },
         orderBy: { date: 'asc' },
       }),
       prisma.kintaiRequest.findMany({
