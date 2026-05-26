@@ -15,8 +15,13 @@ export default function NewRequestPage() {
   return (
     <Suspense fallback={
       <div className="p-4 lg:p-6 max-w-2xl mx-auto flex flex-col items-center justify-center py-20 gap-4">
+        <img
+          src="/kintai/characters/thinking_考え中.png"
+          alt="読み込み中"
+          style={{ width: 80, height: 80, objectFit: 'contain' }}
+        />
         <div className="w-10 h-10 rounded-full border-4 border-[#7f19e6]/20 border-t-[#7f19e6] animate-spin" />
-        <p className="text-sm text-slate-400">読み込み中...</p>
+        <p className="text-sm text-slate-400 font-medium">読み込み中...</p>
       </div>
     }>
       <NewRequestContent />

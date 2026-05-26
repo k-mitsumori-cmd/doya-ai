@@ -113,7 +113,7 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
           <div className="flex items-center gap-2">
             <div>
               <h1 className="font-bold text-slate-900 text-sm leading-tight">ドヤ勤怠</h1>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Attendance</p>
+              <p className="text-[10px] text-slate-400 tracking-wider">勤怠管理</p>
             </div>
             <img
               src="/kintai/characters/hello_挨拶.png"

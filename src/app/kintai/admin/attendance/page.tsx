@@ -33,8 +33,8 @@ export default function AdminAttendancePage() {
       .finally(() => setLoading(false))
   }, [date])
 
-  const prevDay = () => { const d = new Date(date); d.setDate(d.getDate() - 1); setDate(d.toLocaleDateString('sv-SE')) }
-  const nextDay = () => { const d = new Date(date); d.setDate(d.getDate() + 1); setDate(d.toLocaleDateString('sv-SE')) }
+  const prevDay = () => { const d = new Date(date); d.setDate(d.getDate() - 1); setDate(d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })) }
+  const nextDay = () => { const d = new Date(date); d.setDate(d.getDate() + 1); setDate(d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })) }
   const goToday = () => setDate(new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }))
 
   const isToday = date === new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
@@ -214,14 +214,14 @@ export default function AdminAttendancePage() {
                           <td className="px-4 py-3 text-slate-600">{emp.departmentName || <span className="text-slate-300">-</span>}</td>
                           <td className="px-4 py-3 text-center">
                             {att?.clockIn ? (
-                              <span className="font-medium text-slate-700">{new Date(att.clockIn).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span className="font-medium text-slate-700">{new Date(att.clockIn).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })}</span>
                             ) : (
                               <span className="text-slate-300">-</span>
                             )}
                           </td>
                           <td className="px-4 py-3 text-center">
                             {att?.clockOut ? (
-                              <span className="font-medium text-slate-700">{new Date(att.clockOut).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}</span>
+                              <span className="font-medium text-slate-700">{new Date(att.clockOut).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })}</span>
                             ) : (
                               <span className="text-slate-300">-</span>
                             )}

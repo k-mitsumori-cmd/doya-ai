@@ -137,7 +137,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Explanation with bear */}
-        <div className="flex items-center gap-3 bg-[#7f19e6]/5 border border-[#7f19e6]/15 rounded-xl px-4 py-3">
+        <div className="flex items-center gap-3 bg-[#7f19e6]/5 border border-[#7f19e6]/10 rounded-xl px-4 py-3">
           <img src="/kintai/characters/point_解説.png" alt="" width={40} height={40} className="bear-wiggle shrink-0" />
           <p className="text-sm text-slate-600">就業ルールは従業員に割り当てて使用します。複数のルールを作成して、異なる勤務形態に対応できます。</p>
         </div>
@@ -250,8 +250,8 @@ export default function SettingsPage() {
         )}
 
         {showForm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowForm(false)}>
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4 space-y-5 max-h-[90vh] overflow-y-auto fade-in-up" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowForm(false)}>
+            <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md mx-4 space-y-5 max-h-[90vh] overflow-y-auto fade-in-up" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <img src="/kintai/characters/focus_集中.png" alt="" width={40} height={40} className="bear-wiggle" />
@@ -332,8 +332,8 @@ export default function SettingsPage() {
 
         {/* Delete confirmation dialog */}
         {showDeleteConfirm && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowDeleteConfirm(null)}>
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 space-y-4 fade-in-up" onClick={(e) => e.stopPropagation()}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(null)}>
+            <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm mx-4 space-y-4 fade-in-up" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-3">
                 <img src="/kintai/characters/surprise_驚き.png" alt="" width={56} height={56} className="bear-wiggle" />
                 <h2 className="text-lg font-bold text-slate-800">ルールを削除</h2>

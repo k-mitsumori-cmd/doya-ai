@@ -237,13 +237,13 @@ export default function DashboardPage() {
               <StatChip
                 icon="login"
                 label="出勤"
-                value={clockInTime ? clockInTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                value={clockInTime ? clockInTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }) : '-'}
                 color="emerald"
               />
               <StatChip
                 icon="logout"
                 label="退勤"
-                value={clockOutTime ? clockOutTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                value={clockOutTime ? clockOutTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }) : '-'}
                 color="rose"
               />
               <StatChip
@@ -330,11 +330,11 @@ export default function DashboardPage() {
                       </span>
                       {r.targetDate && (
                         <span className="text-xs text-slate-400 ml-2">
-                          対象: {new Date(r.targetDate).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}
+                          対象: {new Date(r.targetDate).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', timeZone: 'Asia/Tokyo' })}
                         </span>
                       )}
                       <p className="text-xs text-slate-400 mt-0.5">
-                        申請日: {new Date(r.submittedAt).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })}
+                        申請日: {new Date(r.submittedAt).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', timeZone: 'Asia/Tokyo' })}
                       </p>
                     </div>
                   </div>

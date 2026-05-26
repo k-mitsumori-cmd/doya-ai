@@ -255,7 +255,7 @@ export default function ApprovalsPage() {
                           }`}>
                             {REQUEST_TYPE_LABELS[r.type] || r.type}
                           </span>
-                          <span className="text-xs text-slate-400">{new Date(r.submittedAt).toLocaleDateString('ja-JP')} 申請</span>
+                          <span className="text-xs text-slate-400">{new Date(r.submittedAt).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })} 申請</span>
                         </div>
 
                         <div className={`text-sm rounded-lg px-3 py-2 ${details.isDetailed ? 'bg-slate-50 border border-slate-100' : ''}`}>
@@ -306,8 +306,8 @@ export default function ApprovalsPage() {
 
         {/* Reject modal */}
         {rejectingId && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setRejectingId(null)}>
-            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 space-y-4 fade-in-up" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setRejectingId(null)}>
+            <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm mx-4 space-y-4 fade-in-up" onClick={e => e.stopPropagation()}>
               <div className="flex items-center gap-3">
                 <img src="/kintai/characters/error_泣き.png" alt="" width={48} height={48} className="bear-wiggle" />
                 <h2 className="text-lg font-bold text-slate-800">申請を却下</h2>

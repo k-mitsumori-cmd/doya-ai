@@ -708,7 +708,7 @@ export default function ClockPage() {
                         {CLOCK_TYPE_LABELS[r.type] || r.type}
                       </p>
                       <p className="text-xs font-mono font-bold text-slate-400 tabular-nums">
-                        {new Date(r.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        {new Date(r.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Tokyo' })}
                       </p>
                     </div>
                   </div>

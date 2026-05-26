@@ -247,8 +247,8 @@ export default function KintaiLandingPage() {
               className={`feature-card relative bg-white rounded-2xl border border-slate-200 p-6 overflow-hidden animate-fade-in-up animate-delay-${i + 1}`}
             >
               {feature.comingSoon && (
-                <span className="absolute top-4 right-4 px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full uppercase tracking-wider z-10">
-                  Coming Soon
+                <span className="absolute top-4 right-4 px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full tracking-wider z-10">
+                  準備中
                 </span>
               )}
               <div className="w-12 h-12 rounded-xl bg-[#7f19e6]/10 flex items-center justify-center text-[#7f19e6] mb-4">

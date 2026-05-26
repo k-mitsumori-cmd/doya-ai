@@ -20,6 +20,7 @@ export interface MonthlyAttendanceSummary {
   totalWorkMinutes: number
   totalOvertimeMinutes: number
   totalLateMinutes: number
+  totalLateCount: number
   totalEarlyLeaveMinutes: number
   totalNightMinutes: number
   totalAbsentDays: number

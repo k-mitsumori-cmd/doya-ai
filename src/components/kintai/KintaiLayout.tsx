@@ -54,9 +54,22 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
   if (status === 'loading' || (session?.user && hasOrg === null)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="flex flex-col items-center gap-3">
+        <style jsx>{`
+          @keyframes layoutBearFloat {
+            0%, 100% { transform: translateY(0px) rotate(-2deg); }
+            50% { transform: translateY(-10px) rotate(2deg); }
+          }
+          .layout-bear-float { animation: layoutBearFloat 2.5s ease-in-out infinite; }
+        `}</style>
+        <div className="flex flex-col items-center gap-4">
+          <img
+            src="/kintai/characters/thinking_考え中.png"
+            alt="読み込み中"
+            className="layout-bear-float"
+            style={{ width: 100, height: 100, objectFit: 'contain' }}
+          />
           <div className="w-10 h-10 rounded-full border-4 border-[#7f19e6]/20 border-t-[#7f19e6] animate-spin" />
-          <p className="text-sm text-slate-400">読み込み中...</p>
+          <p className="text-sm text-slate-400 font-medium">読み込み中...</p>
         </div>
       </div>
     )
@@ -66,7 +79,20 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
   if (!session?.user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-violet-50 p-6">
-        <div className="text-center bg-white rounded-3xl border border-slate-200 shadow-xl p-12 max-w-md">
+        <style jsx>{`
+          @keyframes loginBearBounce {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+          }
+          .login-bear-bounce { animation: loginBearBounce 2.5s ease-in-out infinite; }
+        `}</style>
+        <div className="text-center bg-white rounded-3xl border border-slate-200 shadow-2xl p-12 max-w-md">
+          <img
+            src="/kintai/characters/hello_挨拶.png"
+            alt="挨拶するクマ"
+            className="login-bear-bounce mx-auto mb-4"
+            style={{ width: 120, height: 120, objectFit: 'contain' }}
+          />
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-[#7f19e6]/20">
             <span className="material-symbols-outlined text-3xl">schedule</span>
           </div>
@@ -141,6 +167,7 @@ function BreadcrumbLabel({ pathname }: { pathname: string }) {
     '/kintai/clock': '打刻',
     '/kintai/attendance': '勤怠一覧',
     '/kintai/requests': '申請',
+    '/kintai/requests/new': '新規申請',
     '/kintai/approvals': '承認',
     '/kintai/admin/attendance': '部署勤怠',
     '/kintai/employees': '従業員管理',
