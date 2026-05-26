@@ -1,9 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard,
   Clock,
@@ -28,9 +27,28 @@ interface NavItem {
   label: string
 }
 
+const CHEER_MESSAGES = [
+  '今日もがんばろう！',
+  'いい調子です！',
+  '応援してるよ！',
+  '素敵な一日を！',
+  'ファイトです！',
+  '休憩も大事だよ！',
+]
+
 export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
   const pathname = usePathname()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [cheerIndex, setCheerIndex] = useState(0)
+
+  // Rotate cheer message every 30 seconds
+  useEffect(() => {
+    setCheerIndex(Math.floor(Math.random() * CHEER_MESSAGES.length))
+    const timer = setInterval(() => {
+      setCheerIndex((prev) => (prev + 1) % CHEER_MESSAGES.length)
+    }, 30000)
+    return () => clearInterval(timer)
+  }, [])
 
   const isActive = (href: string) => {
     if (href === '/kintai/dashboard') {
@@ -71,9 +89,9 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
       key={item.href}
       href={item.href}
       onClick={closeMobile}
-      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+      className={`sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
         isActive(item.href)
-          ? 'bg-[#7f19e6]/10 text-[#7f19e6] shadow-sm'
+          ? 'bg-[#7f19e6]/10 text-[#7f19e6] shadow-sm sidebar-nav-active'
           : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
       }`}
     >
@@ -86,15 +104,22 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
 
   const sidebar = (
     <div className="flex flex-col h-full bg-white border-r border-slate-200 w-60 transition-all duration-300">
-      {/* Logo */}
+      {/* Logo with Bear */}
       <div className="p-4 border-b border-slate-100">
-        <Link href="/kintai/dashboard" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center text-white shadow-lg shadow-[#7f19e6]/20">
+        <Link href="/kintai/dashboard" className="sidebar-logo-link flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center text-white shadow-lg shadow-[#7f19e6]/20 relative overflow-hidden">
             <span className="material-symbols-outlined text-xl">schedule</span>
           </div>
-          <div>
-            <h1 className="font-bold text-slate-900 text-sm leading-tight">ドヤ勤怠</h1>
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider">Attendance</p>
+          <div className="flex items-center gap-2">
+            <div>
+              <h1 className="font-bold text-slate-900 text-sm leading-tight">ドヤ勤怠</h1>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Attendance</p>
+            </div>
+            <img
+              src="/kintai/characters/hello_挨拶.png"
+              alt="くま"
+              className="w-8 h-8 object-contain sidebar-logo-bear"
+            />
           </div>
         </Link>
       </div>
@@ -121,6 +146,57 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
           </div>
         )}
       </nav>
+
+      {/* Bottom section with bear and cheer message */}
+      <div className="p-4 border-t border-slate-100">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-2xl bg-gradient-to-r from-[#7f19e6]/5 to-purple-50">
+          <img
+            src="/kintai/characters/thumbsup_いいね.png"
+            alt="応援くま"
+            className="w-10 h-10 object-contain sidebar-cheer-bear"
+          />
+          <p className="text-xs font-bold text-[#7f19e6]/80 leading-snug sidebar-cheer-text">
+            {CHEER_MESSAGES[cheerIndex]}
+          </p>
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes sidebarLogoWiggle {
+          0%, 100% { transform: rotate(0deg); }
+          25% { transform: rotate(-8deg); }
+          75% { transform: rotate(8deg); }
+        }
+        .sidebar-logo-link:hover .sidebar-logo-bear {
+          animation: sidebarLogoWiggle 0.5s ease-in-out;
+        }
+        @keyframes sidebarNavBounce {
+          0% { transform: translateX(0); }
+          30% { transform: translateX(3px); }
+          60% { transform: translateX(-1px); }
+          100% { transform: translateX(0); }
+        }
+        .sidebar-nav-active {
+          animation: sidebarNavBounce 0.3s ease-out;
+        }
+        .sidebar-nav-item:hover {
+          transform: scale(1.02);
+        }
+        @keyframes sidebarCheerFloat {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-4px); }
+        }
+        .sidebar-cheer-bear {
+          animation: sidebarCheerFloat 3s ease-in-out infinite;
+        }
+        @keyframes cheerTextFade {
+          0% { opacity: 0; transform: translateY(4px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
+        .sidebar-cheer-text {
+          animation: cheerTextFade 0.4s ease-out;
+        }
+      `}</style>
     </div>
   )
 
@@ -134,34 +210,40 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
         <span className="material-symbols-outlined text-slate-600">menu</span>
       </button>
 
-      {/* Mobile overlay */}
-      <AnimatePresence>
-        {isMobileOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="lg:hidden fixed inset-0 bg-black/30 z-40"
-              onClick={closeMobile}
-            />
-            <motion.div
-              initial={{ x: -260 }}
-              animate={{ x: 0 }}
-              exit={{ x: -260 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="lg:hidden fixed left-0 top-0 bottom-0 z-50"
-            >
-              {sidebar}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {/* Mobile overlay + slide-in sidebar (CSS-only, no framer-motion) */}
+      {isMobileOpen && (
+        <>
+          <div
+            className="lg:hidden fixed inset-0 bg-black/30 z-40 sidebar-mobile-overlay"
+            onClick={closeMobile}
+          />
+          <div className="lg:hidden fixed left-0 top-0 bottom-0 z-50 sidebar-mobile-slide">
+            {sidebar}
+          </div>
+        </>
+      )}
 
       {/* Desktop sidebar */}
       <div className="hidden lg:block h-screen sticky top-0">
         {sidebar}
       </div>
+
+      <style jsx>{`
+        @keyframes overlayFadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .sidebar-mobile-overlay {
+          animation: overlayFadeIn 0.2s ease-out;
+        }
+        @keyframes slideInLeft {
+          from { transform: translateX(-260px); }
+          to { transform: translateX(0); }
+        }
+        .sidebar-mobile-slide {
+          animation: slideInLeft 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+      `}</style>
     </>
   )
 }

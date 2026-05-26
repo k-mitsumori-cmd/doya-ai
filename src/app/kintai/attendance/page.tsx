@@ -65,16 +65,20 @@ export default function AttendancePage() {
   // Current month check for "today" navigation
   const isCurrentMonth = year === new Date().getFullYear() && month === new Date().getMonth() + 1
 
+  const hasData = data.length > 0
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-5 pb-20">
 
-        {/* ===== Header ===== */}
+        {/* ===== Header with Bear Character ===== */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-[#7f19e6]/10 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[#7f19e6] text-xl">calendar_month</span>
-            </div>
+            <img
+              src="/kintai/characters/present_プレゼン.png"
+              alt="レポートくま"
+              className="w-16 h-16 object-contain bear-header-float"
+            />
             <div>
               <h1 className="text-lg font-black text-slate-800">月間レポート</h1>
               <p className="text-xs text-slate-500">勤怠データの確認と修正申請</p>
@@ -117,11 +121,12 @@ export default function AttendancePage() {
           )}
         </div>
 
-        {/* ===== Summary Pills ===== */}
+        {/* ===== Summary Pills with Bear Characters ===== */}
         <div className="grid grid-cols-3 gap-3">
           {/* Days pill */}
-          <SummaryPill
-            emoji="📅"
+          <SummaryPillBear
+            bearSrc="/kintai/characters/thumbsup_いいね.png"
+            bearAlt="出勤くま"
             label="出勤日数"
             value={`${totalDays}`}
             unit={`/ ${workingDaysInMonth}日`}
@@ -131,8 +136,9 @@ export default function AttendancePage() {
             borderColor="border-purple-200/50"
           />
           {/* Total work pill */}
-          <SummaryPill
-            emoji="⏱️"
+          <SummaryPillBear
+            bearSrc="/kintai/characters/working_作業中.png"
+            bearAlt="作業くま"
             label="労働時間"
             value={formatMinutesJa(totalWork)}
             unit=""
@@ -143,8 +149,9 @@ export default function AttendancePage() {
             sub={`目標: ${formatMinutesJa(targetMinutes)}`}
           />
           {/* Overtime pill */}
-          <SummaryPill
-            emoji={overtimeWarning ? '⚠️' : '🔥'}
+          <SummaryPillBear
+            bearSrc={overtimeWarning ? '/kintai/characters/surprise_驚き.png' : '/kintai/characters/focus_集中.png'}
+            bearAlt={overtimeWarning ? '驚きくま' : '集中くま'}
             label="残業時間"
             value={formatMinutesJa(totalOvertime)}
             unit=""
@@ -159,8 +166,25 @@ export default function AttendancePage() {
 
         {/* ===== Table ===== */}
         {loading ? (
-          <div className="flex justify-center py-16">
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <img
+              src="/kintai/characters/thinking_考え中.png"
+              alt="読み込み中"
+              className="w-20 h-20 object-contain bear-loading-float"
+            />
             <div className="w-10 h-10 rounded-full border-4 border-[#7f19e6]/20 border-t-[#7f19e6] animate-spin" />
+            <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          </div>
+        ) : !hasData ? (
+          /* Empty state with sleeping bear */
+          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-200/30 p-10 flex flex-col items-center justify-center gap-4">
+            <img
+              src="/kintai/characters/sleep_居眠り.png"
+              alt="データなし"
+              className="w-24 h-24 object-contain bear-empty-float"
+            />
+            <p className="text-lg font-bold text-slate-400">データがありません</p>
+            <p className="text-sm text-slate-400">この月の勤怠データはまだ記録されていません</p>
           </div>
         ) : (
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-200/30 overflow-hidden">
@@ -338,20 +362,53 @@ export default function AttendancePage() {
           .att-today-row:hover {
             background: linear-gradient(90deg, rgba(127, 25, 230, 0.09) 0%, rgba(127, 25, 230, 0.04) 100%);
           }
+          @keyframes bearHeaderFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-6px) rotate(3deg); }
+          }
+          .bear-header-float {
+            animation: bearHeaderFloat 3s ease-in-out infinite;
+          }
+          @keyframes bearLoadingFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+          }
+          .bear-loading-float {
+            animation: bearLoadingFloat 2s ease-in-out infinite;
+          }
+          @keyframes bearEmptyFloat {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            25% { transform: translateY(-4px) rotate(-2deg); }
+            75% { transform: translateY(-2px) rotate(2deg); }
+          }
+          .bear-empty-float {
+            animation: bearEmptyFloat 3s ease-in-out infinite;
+          }
+          @keyframes summaryBearWiggle {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            20% { transform: rotate(-6deg) scale(1.08); }
+            40% { transform: rotate(6deg) scale(1.08); }
+            60% { transform: rotate(-3deg) scale(1.04); }
+            80% { transform: rotate(3deg) scale(1.04); }
+          }
         `}</style>
       </div>
     </div>
   )
 }
 
-/* ===== Summary Pill ===== */
-function SummaryPill({ emoji, label, value, unit, progress, barColor, bgColor, borderColor, sub, warning }: {
-  emoji: string; label: string; value: string; unit: string; progress: number; barColor: string; bgColor: string; borderColor: string; sub?: string; warning?: boolean
+/* ===== Summary Pill with Bear ===== */
+function SummaryPillBear({ bearSrc, bearAlt, label, value, unit, progress, barColor, bgColor, borderColor, sub, warning }: {
+  bearSrc: string; bearAlt: string; label: string; value: string; unit: string; progress: number; barColor: string; bgColor: string; borderColor: string; sub?: string; warning?: boolean
 }) {
   return (
-    <div className={`${bgColor} rounded-2xl border ${borderColor} p-4 space-y-2`}>
+    <div className={`${bgColor} rounded-2xl border ${borderColor} p-4 space-y-2 summary-pill-card`}>
       <div className="flex items-center gap-2">
-        <span className="text-lg">{emoji}</span>
+        <img
+          src={bearSrc}
+          alt={bearAlt}
+          className="w-10 h-10 object-contain summary-pill-bear"
+        />
         <p className="text-[11px] font-bold text-slate-500">{label}</p>
         {warning && (
           <span className="ml-auto text-[10px] font-black text-orange-700 bg-orange-100 px-1.5 py-0.5 rounded-full">注意</span>
@@ -368,6 +425,18 @@ function SummaryPill({ emoji, label, value, unit, progress, barColor, bgColor, b
         />
       </div>
       {sub && <p className="text-[10px] text-slate-400 font-medium">{sub}</p>}
+      <style jsx>{`
+        .summary-pill-card:hover .summary-pill-bear {
+          animation: summaryBearWiggle 0.6s ease-in-out;
+        }
+        @keyframes summaryBearWiggle {
+          0%, 100% { transform: rotate(0deg) scale(1); }
+          20% { transform: rotate(-6deg) scale(1.08); }
+          40% { transform: rotate(6deg) scale(1.08); }
+          60% { transform: rotate(-3deg) scale(1.04); }
+          80% { transform: rotate(3deg) scale(1.04); }
+        }
+      `}</style>
     </div>
   )
 }

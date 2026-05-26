@@ -58,7 +58,6 @@ export default function RequestsPage() {
       .finally(() => setLoading(false))
   }
 
-  // Fetch all once for counts
   useEffect(() => {
     fetch('/api/kintai/requests')
       .then((r) => r.json())
@@ -85,7 +84,6 @@ export default function RequestsPage() {
         body: JSON.stringify({ status: 'withdrawn' }),
       })
       fetchRequests(tab)
-      // Refresh counts
       fetch('/api/kintai/requests')
         .then((r) => r.json())
         .then((d) => setAllRequests(d.requests || []))
@@ -96,146 +94,183 @@ export default function RequestsPage() {
   }
 
   return (
-    <div className="p-4 lg:p-6 max-w-4xl mx-auto space-y-5">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#7f19e6]/10 flex items-center justify-center">
-            <span className="material-symbols-outlined text-[#7f19e6] text-xl">description</span>
-          </div>
-          <div>
-            <h1 className="text-lg font-bold text-slate-800">申請一覧</h1>
-            <p className="text-xs text-slate-500">打刻修正や休暇の申請を管理</p>
-          </div>
-        </div>
-        <Link
-          href="/kintai/requests/new"
-          className="flex items-center gap-1.5 px-4 py-2.5 bg-[#7f19e6] text-white text-sm font-bold rounded-xl hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20"
-        >
-          <span className="material-symbols-outlined text-lg">add_circle</span>
-          新規申請
-        </Link>
-      </div>
+    <>
+      <style jsx>{`
+        @keyframes bearFloat {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-8px); }
+        }
+        @keyframes bearBounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-6px); }
+        }
+        @keyframes bearWiggle {
+          0%, 100% { transform: rotate(0deg); }
+          25% { transform: rotate(-5deg); }
+          75% { transform: rotate(5deg); }
+        }
+        @keyframes bearSpin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(12px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .bear-float { animation: bearFloat 3s ease-in-out infinite; }
+        .bear-bounce { animation: bearBounce 2s ease-in-out infinite; }
+        .bear-wiggle { animation: bearWiggle 2s ease-in-out infinite; }
+        .bear-spin { animation: bearSpin 2s linear infinite; }
+        .fade-in-up { animation: fadeInUp 0.4s ease-out both; }
+      `}</style>
 
-      {/* Tabs with counts */}
-      <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
-        {TABS.map((t) => {
-          const count = tabCounts[t.key] || 0
-          return (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                tab === t.key ? 'bg-white text-[#7f19e6] shadow-sm' : 'text-slate-600 hover:text-slate-800'
-              }`}
-            >
-              {t.label}
-              {count > 0 && (
-                <span className={`text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full ${
-                  tab === t.key ? 'bg-[#7f19e6]/10 text-[#7f19e6]' : 'bg-slate-200 text-slate-500'
-                }`}>
-                  {count}
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
-
-      {loading ? (
-        <div className="flex justify-center py-12">
-          <div className="w-8 h-8 rounded-full border-4 border-[#7f19e6]/20 border-t-[#7f19e6] animate-spin" />
-        </div>
-      ) : requests.length === 0 ? (
-        /* Empty state with illustration and CTA */
-        <div className="text-center py-16 space-y-4">
-          <div className="w-20 h-20 mx-auto rounded-2xl bg-slate-100 flex items-center justify-center">
-            <span className="material-symbols-outlined text-5xl text-slate-300">inbox</span>
-          </div>
-          <div>
-            <p className="text-slate-600 font-medium">申請がありません</p>
-            <p className="text-sm text-slate-400 mt-1">
-              {tab === 'pending' ? '承認待ちの申請はありません' : '表示する申請が見つかりませんでした'}
-            </p>
+      <div className="p-4 lg:p-6 max-w-4xl mx-auto space-y-5">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="/kintai/characters/point_解説.png" alt="くまさん" width={80} height={80} className="bear-float" />
+            <div>
+              <h1 className="text-xl font-bold text-slate-800">申請一覧</h1>
+              <p className="text-xs text-slate-500">打刻修正や休暇の申請を管理</p>
+            </div>
           </div>
           <Link
             href="/kintai/requests/new"
-            className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#7f19e6] text-white text-sm font-bold rounded-xl hover:bg-[#6a14c2] transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2.5 bg-[#7f19e6] text-white text-sm font-bold rounded-xl hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20"
           >
             <span className="material-symbols-outlined text-lg">add_circle</span>
-            新規申請を作成
+            新規申請
           </Link>
         </div>
-      ) : (
-        <div className="space-y-2">
-          {requests.map((r: any) => {
-            const summary = getRequestSummary(r)
+
+        {/* Tabs with counts */}
+        <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
+          {TABS.map((t) => {
+            const count = tabCounts[t.key] || 0
             return (
-              <div
-                key={r.id}
-                className="bg-white rounded-xl border border-slate-200 p-4 hover:border-slate-300 hover:shadow-sm transition-all"
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                  tab === t.key ? 'bg-white text-[#7f19e6] shadow-sm' : 'text-slate-600 hover:text-slate-800'
+                }`}
               >
-                <div className="flex items-start gap-3">
-                  {/* Type icon as avatar */}
-                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                    r.type === 'clock_fix' ? 'bg-blue-50 text-blue-600' :
-                    r.type === 'leave' ? 'bg-green-50 text-green-600' :
-                    r.type === 'overtime' ? 'bg-orange-50 text-orange-600' :
-                    'bg-slate-50 text-slate-600'
+                {t.label}
+                {count > 0 && (
+                  <span className={`text-[10px] font-bold min-w-[18px] h-[18px] flex items-center justify-center rounded-full ${
+                    tab === t.key ? 'bg-[#7f19e6]/10 text-[#7f19e6]' : 'bg-slate-200 text-slate-500'
                   }`}>
-                    <span className="material-symbols-outlined text-xl">
-                      {r.type === 'clock_fix' ? 'edit_clock' :
-                       r.type === 'leave' ? 'event_busy' :
-                       r.type === 'overtime' ? 'more_time' :
-                       'work_history'}
-                    </span>
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-slate-800 text-sm">
-                        {REQUEST_TYPE_LABELS[r.type] || r.type}
-                      </span>
-                      <StatusBadge status={r.status} />
-                    </div>
-
-                    {summary && (
-                      <p className="text-xs text-[#7f19e6] mt-1 font-medium">{summary}</p>
-                    )}
-
-                    <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
-                      <span className="flex items-center gap-0.5">
-                        <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>calendar_today</span>
-                        {formatDateJa(r.submittedAt)}
-                      </span>
-                      {r.reason && (
-                        <span className="truncate max-w-[200px]" title={r.reason}>
-                          {r.reason}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="shrink-0">
-                    {r.status === 'pending' && (
-                      <button
-                        onClick={() => withdraw(r.id)}
-                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 border border-red-200 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>undo</span>
-                        取下げ
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+                    {count}
+                  </span>
+                )}
+              </button>
             )
           })}
         </div>
-      )}
-    </div>
+
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-16 gap-4">
+            <img src="/kintai/characters/thinking_考え中.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
+            <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          </div>
+        ) : requests.length === 0 ? (
+          <div className="text-center py-16 space-y-4 fade-in-up">
+            {tab === 'pending' ? (
+              <>
+                <img src="/kintai/characters/thinking_考え中.png" alt="" width={100} height={100} className="bear-wiggle mx-auto" />
+                <div>
+                  <p className="text-slate-600 font-bold text-lg">承認待ちの申請はありません</p>
+                  <p className="text-sm text-slate-400 mt-1">新しい申請が届くまでお待ちください</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <img src="/kintai/characters/love_大好き.png" alt="" width={120} height={120} className="bear-bounce mx-auto" />
+                <div>
+                  <p className="text-slate-600 font-bold text-lg">申請を作成してみましょう！</p>
+                  <p className="text-sm text-slate-400 mt-1">打刻修正や休暇の申請ができます</p>
+                </div>
+                <Link
+                  href="/kintai/requests/new"
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#7f19e6] text-white text-sm font-bold rounded-xl hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20"
+                >
+                  <span className="material-symbols-outlined text-lg">add_circle</span>
+                  新規申請を作成
+                </Link>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {requests.map((r: any) => {
+              const summary = getRequestSummary(r)
+              return (
+                <div
+                  key={r.id}
+                  className="bg-white rounded-xl border border-slate-200 p-4 hover:border-slate-300 hover:shadow-sm transition-all"
+                >
+                  <div className="flex items-start gap-3">
+                    {/* Type icon */}
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      r.type === 'clock_fix' ? 'bg-blue-50 text-blue-600' :
+                      r.type === 'leave' ? 'bg-green-50 text-green-600' :
+                      r.type === 'overtime' ? 'bg-orange-50 text-orange-600' :
+                      'bg-slate-50 text-slate-600'
+                    }`}>
+                      <span className="material-symbols-outlined text-xl">
+                        {r.type === 'clock_fix' ? 'edit_clock' :
+                         r.type === 'leave' ? 'event_busy' :
+                         r.type === 'overtime' ? 'more_time' :
+                         'work_history'}
+                      </span>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-slate-800 text-sm">
+                          {REQUEST_TYPE_LABELS[r.type] || r.type}
+                        </span>
+                        <StatusBadge status={r.status} />
+                      </div>
+
+                      {summary && (
+                        <p className="text-xs text-[#7f19e6] mt-1 font-medium">{summary}</p>
+                      )}
+
+                      <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-400">
+                        <span className="flex items-center gap-0.5">
+                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>calendar_today</span>
+                          {formatDateJa(r.submittedAt)}
+                        </span>
+                        {r.reason && (
+                          <span className="truncate max-w-[200px]" title={r.reason}>
+                            {r.reason}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="shrink-0">
+                      {r.status === 'pending' && (
+                        <button
+                          onClick={() => withdraw(r.id)}
+                          className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-red-600 border-2 border-red-200 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>undo</span>
+                          取下げ
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </>
   )
 }
 

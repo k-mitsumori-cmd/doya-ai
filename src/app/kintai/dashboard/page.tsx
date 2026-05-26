@@ -9,10 +9,19 @@ import { REQUEST_TYPE_LABELS, REQUEST_STATUS_LABELS } from '@/lib/kintai/types'
 // Standard 8-hour workday
 const STANDARD_WORK_MINUTES = 480
 
+// Random encouraging messages for the tip section
+const TIP_MESSAGES = [
+  '出退勤の打刻は「打刻」ボタンまたはサイドメニューの「打刻」から行えます。打刻の修正や休暇申請は「申請」から行ってください。',
+  '休憩はしっかり取ることで午後の集中力がアップします！こまめにリフレッシュしましょう。',
+  '勤怠データは毎月の給与計算に使われます。打刻忘れに気づいたら早めに「修正申請」を！',
+  '月間レポートで自分の勤務パターンを振り返ってみましょう。効率アップのヒントが見つかるかも！',
+]
+
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [now, setNow] = useState(new Date())
+  const [tipIndex] = useState(() => Math.floor(Math.random() * TIP_MESSAGES.length))
   const router = useRouter()
 
   useEffect(() => {
@@ -30,8 +39,23 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <img
+          src="/kintai/characters/thinking_考え中.png"
+          alt="読み込み中"
+          className="w-24 h-24 object-contain bear-float"
+        />
         <div className="w-10 h-10 rounded-full border-4 border-[#7f19e6]/20 border-t-[#7f19e6] animate-spin" />
+        <p className="text-sm text-slate-500 font-medium">データを読み込んでいます...</p>
+        <style jsx>{`
+          @keyframes bearFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+          }
+          .bear-float {
+            animation: bearFloat 2s ease-in-out infinite;
+          }
+        `}</style>
       </div>
     )
   }
@@ -73,7 +97,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-5 pb-20">
 
-        {/* ===== Hero Status Card (Google "At a Glance" style) ===== */}
+        {/* ===== Hero Status Card with Bear Character ===== */}
         <div className={`rounded-3xl ${heroConfig.bg} border ${heroConfig.border} p-6 shadow-lg ${heroConfig.shadow} relative overflow-hidden`}>
           {/* Decorative background shapes */}
           <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-white/10 -translate-y-1/2 translate-x-1/4" />
@@ -93,10 +117,17 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            {/* Status + Action */}
+            {/* Bear Character + Status + Action */}
             <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 flex-1">
-                <span className="text-3xl">{heroConfig.emoji}</span>
+              <div className="flex items-center gap-4 flex-1">
+                {/* Bear character - large, animated */}
+                <div className="flex-shrink-0">
+                  <img
+                    src={heroConfig.bearImage}
+                    alt={heroConfig.bearAlt}
+                    className={`w-[140px] h-[140px] object-contain ${heroConfig.bearAnimation}`}
+                  />
+                </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <p className={`text-lg font-black ${heroConfig.headText}`}>{heroConfig.statusText}</p>
@@ -133,31 +164,28 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ===== Quick Actions (Google-style icon shortcuts) ===== */}
+        {/* ===== Quick Actions with Bear Characters ===== */}
         <div className="grid grid-cols-3 gap-3">
-          <QuickAction
+          <QuickActionBear
             href="/kintai/clock"
-            icon="fingerprint"
+            bearSrc="/kintai/characters/working_作業中.png"
+            bearAlt="打刻くま"
             label="打刻"
             gradient="from-[#7f19e6] to-[#6311c4]"
-            iconBg="bg-white/20"
-            textColor="text-white"
           />
-          <QuickAction
+          <QuickActionBear
             href="/kintai/requests/new"
-            icon="edit_note"
+            bearSrc="/kintai/characters/point_解説.png"
+            bearAlt="申請くま"
             label="申請"
             gradient="from-blue-500 to-blue-600"
-            iconBg="bg-white/20"
-            textColor="text-white"
           />
-          <QuickAction
+          <QuickActionBear
             href="/kintai/attendance"
-            icon="calendar_month"
+            bearSrc="/kintai/characters/present_プレゼン.png"
+            bearAlt="勤怠確認くま"
             label="勤怠確認"
             gradient="from-emerald-500 to-green-600"
-            iconBg="bg-white/20"
-            textColor="text-white"
           />
         </div>
 
@@ -203,7 +231,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ===== Monthly Summary (2x2 colorful grid) ===== */}
+        {/* ===== Monthly Summary (2x2 with Bear Characters) ===== */}
         <div className="bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-200/30 p-5">
           <h2 className="text-sm font-bold text-slate-600 mb-4 flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-[#7f19e6]/10 flex items-center justify-center">
@@ -212,36 +240,36 @@ export default function DashboardPage() {
             今月の実績
           </h2>
           <div className="grid grid-cols-2 gap-3">
-            <MonthlyStat
-              emoji="📅"
-              icon="calendar_month"
+            <MonthlyStatBear
+              bearSrc="/kintai/characters/thumbsup_いいね.png"
+              bearAlt="出勤くま"
               label="出勤日数"
               value={`${monthlySummary?.totalWorkDays || 0}`}
               unit="日"
               sub="今月の出勤"
               color="blue"
             />
-            <MonthlyStat
-              emoji="⏱️"
-              icon="schedule"
+            <MonthlyStatBear
+              bearSrc="/kintai/characters/working_作業中.png"
+              bearAlt="労働くま"
               label="労働時間"
               value={formatMinutesJa(monthlySummary?.totalWorkMinutes || 0)}
               unit=""
               sub={monthlySummary?.totalWorkDays ? `1日平均 ${formatMinutesJa(Math.round((monthlySummary?.totalWorkMinutes || 0) / monthlySummary.totalWorkDays))}` : '-'}
               color="emerald"
             />
-            <MonthlyStat
-              emoji="🔥"
-              icon="more_time"
+            <MonthlyStatBear
+              bearSrc="/kintai/characters/focus_集中.png"
+              bearAlt="残業くま"
               label="残業時間"
               value={formatMinutesJa(monthlySummary?.totalOvertimeMinutes || 0)}
               unit=""
               sub={monthlySummary?.totalOvertimeMinutes > 0 ? '所定外労働' : '残業なし'}
               color={monthlySummary?.totalOvertimeMinutes > 0 ? 'orange' : 'slate'}
             />
-            <MonthlyStat
-              emoji={monthlySummary?.totalLateCount > 0 ? '⚠️' : '✅'}
-              icon="warning"
+            <MonthlyStatBear
+              bearSrc={monthlySummary?.totalLateCount > 0 ? '/kintai/characters/surprise_驚き.png' : '/kintai/characters/thumbsup_いいね.png'}
+              bearAlt={monthlySummary?.totalLateCount > 0 ? '遅刻くま' : 'パーフェクトくま'}
               label="遅刻回数"
               value={`${monthlySummary?.totalLateCount || 0}`}
               unit="回"
@@ -290,15 +318,17 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ===== Helpful tip ===== */}
-        <div className="bg-gradient-to-r from-[#7f19e6]/5 to-blue-500/5 rounded-3xl border border-[#7f19e6]/10 p-5 flex items-start gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#7f19e6]/10 flex items-center justify-center flex-shrink-0">
-            <span className="material-symbols-outlined text-[#7f19e6] text-lg">lightbulb</span>
-          </div>
+        {/* ===== Helpful tip with Bear Character ===== */}
+        <div className="bg-gradient-to-r from-[#7f19e6]/5 to-blue-500/5 rounded-3xl border border-[#7f19e6]/10 p-5 flex items-start gap-4">
+          <img
+            src="/kintai/characters/point_解説.png"
+            alt="ヒントくま"
+            className="w-16 h-16 object-contain flex-shrink-0 bear-tip-bob"
+          />
           <div>
             <p className="text-sm font-bold text-slate-700">ヒント</p>
             <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-              出退勤の打刻は「打刻」ボタンまたはサイドメニューの「打刻」から行えます。打刻の修正や休暇申請は「申請」から行ってください。
+              {TIP_MESSAGES[tipIndex]}
             </p>
           </div>
         </div>
@@ -311,6 +341,39 @@ export default function DashboardPage() {
           .dash-live-pulse {
             animation: livePulse 1.5s ease-in-out infinite;
           }
+          @keyframes bearFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+          }
+          @keyframes bearBob {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            25% { transform: translateY(-6px) rotate(-2deg); }
+            75% { transform: translateY(-3px) rotate(2deg); }
+          }
+          @keyframes bearWiggle {
+            0%, 100% { transform: rotate(0deg); }
+            25% { transform: rotate(-5deg); }
+            75% { transform: rotate(5deg); }
+          }
+          @keyframes bearBounce {
+            0%, 100% { transform: translateY(0px) scale(1); }
+            40% { transform: translateY(-14px) scale(1.05); }
+            60% { transform: translateY(-7px) scale(1.02); }
+          }
+          @keyframes bearTipBob {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-5px) rotate(3deg); }
+          }
+          @keyframes quickActionWiggle {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.08) rotate(-3deg); }
+            75% { transform: scale(1.08) rotate(3deg); }
+          }
+          .bear-float { animation: bearFloat 3s ease-in-out infinite; }
+          .bear-bob { animation: bearBob 2.5s ease-in-out infinite; }
+          .bear-wiggle { animation: bearWiggle 2s ease-in-out infinite; }
+          .bear-bounce { animation: bearBounce 2s ease-in-out infinite; }
+          .bear-tip-bob { animation: bearTipBob 3s ease-in-out infinite; }
         `}</style>
       </div>
     </div>
@@ -328,9 +391,11 @@ function getHeroConfig(clockStatus: string, liveHours: number, liveMins: number,
       subText: 'text-amber-700/70',
       timeText: 'text-amber-700',
       timeBg: 'bg-white/50',
-      emoji: '☀️',
+      bearImage: '/kintai/characters/sleep_居眠り.png',
+      bearAlt: '居眠りくま',
+      bearAnimation: 'bear-float',
       statusText: 'まだ出勤していません',
-      statusSub: '打刻画面から出勤してください',
+      statusSub: 'おはようございます！打刻画面から出勤してください',
       pulseColor: '',
       btnBg: 'bg-gradient-to-r from-emerald-500 to-green-600',
       btnIcon: 'wb_sunny',
@@ -344,9 +409,11 @@ function getHeroConfig(clockStatus: string, liveHours: number, liveMins: number,
       subText: 'text-emerald-700/70',
       timeText: 'text-emerald-700',
       timeBg: 'bg-white/50',
-      emoji: '💼',
+      bearImage: '/kintai/characters/working_作業中.png',
+      bearAlt: '作業中くま',
+      bearAnimation: 'bear-bob',
       statusText: `勤務中 — ${liveHours}時間${liveMins}分経過`,
-      statusSub: 'リアルタイムで更新中',
+      statusSub: 'お仕事がんばってますね！',
       pulseColor: 'bg-emerald-500',
       btnBg: 'bg-gradient-to-r from-[#7f19e6] to-[#5b0fb3]',
       btnIcon: 'fingerprint',
@@ -360,9 +427,11 @@ function getHeroConfig(clockStatus: string, liveHours: number, liveMins: number,
       subText: 'text-amber-700/70',
       timeText: 'text-amber-700',
       timeBg: 'bg-white/50',
-      emoji: '☕',
+      bearImage: '/kintai/characters/ramen_休憩.png',
+      bearAlt: '休憩くま',
+      bearAnimation: 'bear-wiggle',
       statusText: '休憩中',
-      statusSub: 'ゆっくり休んでリフレッシュ！',
+      statusSub: 'ゆっくり休んでくださいね',
       pulseColor: 'bg-amber-500',
       btnBg: 'bg-gradient-to-r from-amber-500 to-orange-600',
       btnIcon: 'fingerprint',
@@ -376,7 +445,9 @@ function getHeroConfig(clockStatus: string, liveHours: number, liveMins: number,
       subText: 'text-blue-700/70',
       timeText: 'text-blue-700',
       timeBg: 'bg-white/50',
-      emoji: '🌙',
+      bearImage: '/kintai/characters/jump_大喜び.png',
+      bearAlt: '大喜びくま',
+      bearAnimation: 'bear-bounce',
       statusText: 'お疲れさまでした！',
       statusSub: `本日の勤務時間: ${formatMinutesJa(workMinutes)}`,
       pulseColor: '',
@@ -428,19 +499,31 @@ function DayTimelineBar({ clockIn, clockOut, isWorking, now }: { clockIn: Date |
   )
 }
 
-/* ===== Quick Action ===== */
-function QuickAction({ href, icon, label, gradient, iconBg, textColor }: {
-  href: string; icon: string; label: string; gradient: string; iconBg: string; textColor: string
+/* ===== Quick Action with Bear ===== */
+function QuickActionBear({ href, bearSrc, bearAlt, label, gradient }: {
+  href: string; bearSrc: string; bearAlt: string; label: string; gradient: string
 }) {
   return (
     <Link
       href={href}
-      className={`flex flex-col items-center justify-center gap-2 py-5 rounded-2xl bg-gradient-to-br ${gradient} ${textColor} font-bold text-sm shadow-lg hover:shadow-xl active:scale-[0.97] transition-all`}
+      className={`quick-action-card flex flex-col items-center justify-center gap-2 py-5 rounded-2xl bg-gradient-to-br ${gradient} text-white font-bold text-sm shadow-lg hover:shadow-xl active:scale-[0.97] transition-all relative overflow-hidden`}
     >
-      <div className={`w-11 h-11 rounded-xl ${iconBg} flex items-center justify-center`}>
-        <span className="material-symbols-outlined text-2xl">{icon}</span>
-      </div>
+      <img
+        src={bearSrc}
+        alt={bearAlt}
+        className="w-12 h-12 object-contain quick-action-bear"
+      />
       {label}
+      <style jsx>{`
+        .quick-action-card:hover .quick-action-bear {
+          animation: quickActionWiggle 0.5s ease-in-out;
+        }
+        @keyframes quickActionWiggle {
+          0%, 100% { transform: scale(1) rotate(0deg); }
+          25% { transform: scale(1.1) rotate(-5deg); }
+          75% { transform: scale(1.1) rotate(5deg); }
+        }
+      `}</style>
     </Link>
   )
 }
@@ -467,9 +550,9 @@ function StatChip({ icon, label, value, color }: { icon: string; label: string; 
   )
 }
 
-/* ===== Monthly Stat Card ===== */
-function MonthlyStat({ emoji, icon, label, value, unit, sub, color }: {
-  emoji: string; icon: string; label: string; value: string; unit: string; sub: string; color: string
+/* ===== Monthly Stat Card with Bear ===== */
+function MonthlyStatBear({ bearSrc, bearAlt, label, value, unit, sub, color }: {
+  bearSrc: string; bearAlt: string; label: string; value: string; unit: string; sub: string; color: string
 }) {
   const colorMap: Record<string, { bg: string; accent: string; valueColor: string }> = {
     blue: { bg: 'bg-blue-50', accent: 'text-blue-600', valueColor: 'text-blue-700' },
@@ -481,15 +564,31 @@ function MonthlyStat({ emoji, icon, label, value, unit, sub, color }: {
   const c = colorMap[color] || colorMap.slate
 
   return (
-    <div className={`${c.bg} rounded-2xl p-4`}>
+    <div className={`${c.bg} rounded-2xl p-4 monthly-stat-card`}>
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-xl">{emoji}</span>
+        <img
+          src={bearSrc}
+          alt={bearAlt}
+          className="w-9 h-9 object-contain monthly-stat-bear"
+        />
         <span className="text-xs font-medium text-slate-500">{label}</span>
       </div>
       <p className={`text-2xl font-black tabular-nums ${c.valueColor}`}>
         {value}<span className="text-base font-bold ml-0.5">{unit}</span>
       </p>
       <p className="text-[11px] text-slate-400 mt-1">{sub}</p>
+      <style jsx>{`
+        .monthly-stat-card:hover .monthly-stat-bear {
+          animation: monthlyBearWiggle 0.6s ease-in-out;
+        }
+        @keyframes monthlyBearWiggle {
+          0%, 100% { transform: rotate(0deg) scale(1); }
+          20% { transform: rotate(-8deg) scale(1.1); }
+          40% { transform: rotate(8deg) scale(1.1); }
+          60% { transform: rotate(-4deg) scale(1.05); }
+          80% { transform: rotate(4deg) scale(1.05); }
+        }
+      `}</style>
     </div>
   )
 }
