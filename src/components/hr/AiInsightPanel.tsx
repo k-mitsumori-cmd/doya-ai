@@ -47,8 +47,8 @@ export default function AiInsightPanel({
         {/* Title */}
         {title && (
           <div className="flex items-center gap-2 mb-3">
-            <span className="material-symbols-outlined text-purple-500 text-lg">auto_awesome</span>
-            <h4 className="text-sm font-bold text-purple-700">{title}</h4>
+            <span className="material-symbols-outlined text-purple-500 text-2xl">auto_awesome</span>
+            <h4 className="text-base font-black text-purple-700">{title}</h4>
           </div>
         )}
 
@@ -58,20 +58,20 @@ export default function AiInsightPanel({
               <div className="w-8 h-8 border-2 border-purple-200 border-t-purple-500 rounded-full animate-spin" />
             </div>
             <div>
-              <p className="text-sm font-medium text-purple-700">AIが分析中...</p>
-              <p className="text-xs text-purple-400 mt-0.5">しばらくお待ちください</p>
+              <p className="text-base font-bold text-purple-700">AIが分析中...</p>
+              <p className="text-sm font-semibold text-purple-400 mt-0.5">しばらくお待ちください</p>
             </div>
           </div>
         ) : (
           <>
-            <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+            <div className="text-base text-slate-800 leading-relaxed whitespace-pre-wrap">
               {content}
             </div>
             {content && (
               <div className="mt-4 flex justify-end">
                 <button
                   onClick={handleCopy}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+                  className="flex items-center gap-1.5 px-4 py-2 text-sm font-bold text-purple-600 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
                 >
                   <span className="material-symbols-outlined text-base">
                     {copied ? 'check' : 'content_copy'}

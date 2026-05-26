@@ -32,7 +32,7 @@ export default function OrgChartPage() {
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-black text-slate-900">組織図</h1>
+          <h1 className="text-3xl font-black text-slate-900">組織図</h1>
           <p className="text-sm text-slate-500 mt-1">部署と従業員の構成を視覚的に確認</p>
         </div>
 

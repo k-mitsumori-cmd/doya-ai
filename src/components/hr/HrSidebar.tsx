@@ -49,13 +49,13 @@ export default function HrSidebar({
       {/* Logo */}
       <div className="p-4 border-b border-slate-100">
         <Link href="/hr/dashboard" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20">
-            <span className="material-symbols-outlined text-xl">groups</span>
+          <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/20">
+            <span className="material-symbols-outlined text-2xl">groups</span>
           </div>
           {!isCollapsed && (
             <div>
-              <h1 className="font-bold text-slate-900 text-sm leading-tight">Doya HR</h1>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Talent Management</p>
+              <h1 className="font-black text-slate-900 text-base leading-tight">ドヤHR</h1>
+              <p className="text-[10px] text-slate-500 font-bold tracking-wider">タレントマネジメント</p>
             </div>
           )}
         </Link>
@@ -67,13 +67,13 @@ export default function HrSidebar({
           <Link
             key={item.href}
             href={item.href}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            className={`flex items-center gap-3 px-3 py-3 rounded-xl text-base transition-all ${
               isActive(item.href)
-                ? 'bg-sky-50 text-sky-600 shadow-sm'
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                ? 'bg-sky-100 text-sky-700 font-black border-l-4 border-sky-500 shadow-sm'
+                : 'text-slate-700 font-bold hover:bg-slate-50 hover:text-slate-900'
             }`}
           >
-            <span className={`material-symbols-outlined text-xl ${isActive(item.href) ? 'text-sky-600' : 'text-slate-400'}`}>
+            <span className={`material-symbols-outlined text-2xl ${isActive(item.href) ? 'text-sky-600' : 'text-slate-500'}`}>
               {item.icon}
             </span>
             {!isCollapsed && <span>{item.label}</span>}
@@ -82,20 +82,20 @@ export default function HrSidebar({
 
         {/* Support Section */}
         <div className="pt-4 mt-4 border-t border-slate-100">
-          <p className={`px-3 mb-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider ${isCollapsed ? 'hidden' : ''}`}>
+          <p className={`px-3 mb-2 text-xs font-bold text-slate-500 uppercase tracking-wider ${isCollapsed ? 'hidden' : ''}`}>
             管理
           </p>
           {SUPPORT_ITEMS.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+              className={`flex items-center gap-3 px-3 py-3 rounded-xl text-base transition-all ${
                 isActive(item.href)
-                  ? 'bg-sky-50 text-sky-600'
-                  : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                  ? 'bg-sky-100 text-sky-700 font-black border-l-4 border-sky-500'
+                  : 'text-slate-700 font-bold hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              <span className="material-symbols-outlined text-xl text-slate-400">{item.icon}</span>
+              <span className="material-symbols-outlined text-2xl text-slate-500">{item.icon}</span>
               {!isCollapsed && <span>{item.label}</span>}
             </Link>
           ))}
@@ -107,7 +107,7 @@ export default function HrSidebar({
         <div className="p-4 mx-3 mb-3 bg-slate-50 rounded-xl border border-slate-100">
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">従業員数</span>
-            <span className="text-sm font-bold text-sky-600">
+            <span className="text-lg font-black text-sky-600">
               {employeeCount}/{employeeLimit === -1 ? '∞' : employeeLimit}
             </span>
           </div>
@@ -121,7 +121,7 @@ export default function HrSidebar({
           </div>
           <Link
             href="/hr/pricing"
-            className="block w-full py-2 text-center text-xs font-semibold text-sky-600 bg-white border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors"
+            className="block w-full py-2 text-center text-xs font-bold text-sky-600 bg-white border border-sky-200 rounded-lg hover:bg-sky-50 transition-colors"
           >
             プランをアップグレード
           </Link>
@@ -140,8 +140,8 @@ export default function HrSidebar({
           )}
           {!isCollapsed && (
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-900 truncate">{userName}</p>
-              <p className="text-[10px] text-slate-400">{plan} プラン</p>
+              <p className="text-base font-bold text-slate-900 truncate">{userName}</p>
+              <p className="text-xs font-bold text-slate-500">{plan} プラン</p>
             </div>
           )}
         </div>

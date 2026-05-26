@@ -51,11 +51,11 @@ export default function HrLandingPage() {
               <span className="text-sm font-semibold text-sky-700">中小企業のためのタレントマネジメント</span>
             </div>
 
-            <h1 className="text-5xl lg:text-7xl font-black text-slate-900 mb-6 tracking-tight">
+            <h1 className="text-6xl lg:text-8xl font-black text-slate-900 mb-6 tracking-tight">
               人を活かす<span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-600">AI</span>。
             </h1>
 
-            <p className="text-lg lg:text-xl text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
+            <p className="text-xl lg:text-2xl font-medium text-slate-600 max-w-2xl mx-auto mb-10 leading-relaxed">
               従業員データベース、組織図、人事評価、1on1記録をまとめて管理。
               <br className="hidden sm:block" />
               AIが評価コメントの生成や1on1の要約を自動化します。
@@ -64,14 +64,14 @@ export default function HrLandingPage() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
                 href="/hr/dashboard"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-2xl text-lg font-bold hover:shadow-xl hover:shadow-sky-500/20 transition-all"
+                className="inline-flex items-center justify-center gap-2 px-8 py-5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-2xl text-xl font-black hover:shadow-xl hover:shadow-sky-500/20 transition-all"
               >
                 <span className="material-symbols-outlined">rocket_launch</span>
                 無料で始める
               </Link>
               <Link
                 href="/hr/pricing"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-slate-700 rounded-2xl text-lg font-bold border border-slate-200 hover:border-sky-300 hover:text-sky-600 transition-all"
+                className="inline-flex items-center justify-center gap-2 px-8 py-5 bg-white text-slate-700 rounded-2xl text-xl font-black border border-slate-200 hover:border-sky-300 hover:text-sky-600 transition-all"
               >
                 料金プランを見る
               </Link>
@@ -85,7 +85,7 @@ export default function HrLandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-black text-slate-900 mb-4">すべてが揃った、かんたんHR</h2>
-            <p className="text-slate-500">Excelやメールでのバラバラ管理を卒業しませんか？</p>
+            <p className="text-base font-medium text-slate-500">Excelやメールでのバラバラ管理を卒業しませんか？</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -101,8 +101,8 @@ export default function HrLandingPage() {
                 <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center text-white mb-4 shadow-lg`}>
                   <span className="material-symbols-outlined text-2xl">{feature.icon}</span>
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-2">{feature.title}</h3>
-                <p className="text-sm text-slate-500 leading-relaxed">{feature.description}</p>
+                <h3 className="text-xl font-black text-slate-900 mb-2">{feature.title}</h3>
+                <p className="text-base text-slate-500 leading-relaxed">{feature.description}</p>
               </motion.div>
             ))}
           </div>
@@ -114,7 +114,7 @@ export default function HrLandingPage() {
         <div className="max-w-6xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-black text-slate-900 mb-4">料金プラン</h2>
-            <p className="text-slate-500">5名までは永久無料。成長に合わせてアップグレード。</p>
+            <p className="text-base font-medium text-slate-500">5名までは永久無料。成長に合わせてアップグレード。</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -139,12 +139,12 @@ export default function HrLandingPage() {
                   <p className="text-xs text-slate-500 mt-1">{plan.description}</p>
                 </div>
                 <div className="mb-6">
-                  <span className="text-3xl font-black text-slate-900">{plan.priceLabel}</span>
+                  <span className="text-4xl font-black text-slate-900">{plan.priceLabel}</span>
                   {plan.period && <span className="text-sm text-slate-500">{plan.period}</span>}
                 </div>
                 <ul className="space-y-2 mb-6">
                   {plan.features.map((f) => (
-                    <li key={f.text} className="flex items-start gap-2 text-sm">
+                    <li key={f.text} className="flex items-start gap-2 text-base">
                       <span className={`material-symbols-outlined text-base mt-0.5 ${f.included ? 'text-emerald-500' : 'text-slate-300'}`}>
                         {f.included ? 'check_circle' : 'cancel'}
                       </span>
@@ -154,7 +154,7 @@ export default function HrLandingPage() {
                 </ul>
                 <Link
                   href="/hr/dashboard"
-                  className={`block w-full py-3 text-center text-sm font-bold rounded-xl transition-all ${
+                  className={`block w-full py-3 text-center text-base font-bold rounded-xl transition-all ${
                     plan.popular
                       ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white hover:shadow-lg hover:shadow-sky-500/20'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -183,7 +183,7 @@ export default function HrLandingPage() {
             </p>
             <Link
               href="/hr/dashboard"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-blue-600 rounded-2xl text-lg font-bold hover:shadow-xl transition-all"
+              className="inline-flex items-center gap-2 px-8 py-5 bg-white text-blue-600 rounded-2xl text-xl font-black hover:shadow-xl transition-all"
             >
               <span className="material-symbols-outlined">rocket_launch</span>
               無料で始める

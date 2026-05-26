@@ -39,7 +39,7 @@ function StarInput({ value, onChange, disabled }: { value: number; onChange: (v:
           onMouseEnter={() => !disabled && setHover(star)}
           onMouseLeave={() => setHover(0)}
           onClick={() => !disabled && onChange(star)}
-          className={`text-2xl transition-colors ${disabled ? 'cursor-default' : 'cursor-pointer'}`}
+          className={`text-2xl font-black transition-colors ${disabled ? 'cursor-default' : 'cursor-pointer'}`}
         >
           <span
             className={`material-symbols-outlined ${
@@ -200,7 +200,7 @@ export default function EvaluationForm({
       {/* Goals */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-slate-900 flex items-center gap-2">
+          <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
             <span className="material-symbols-outlined text-sky-500">flag</span>
             目標一覧
           </h3>
@@ -212,7 +212,7 @@ export default function EvaluationForm({
               <button
                 type="button"
                 onClick={addGoal}
-                className="flex items-center gap-1 px-3 py-1.5 bg-sky-50 text-sky-600 rounded-lg text-sm font-semibold hover:bg-sky-100 transition-colors"
+                className="flex items-center gap-1 px-3 py-1.5 bg-sky-50 text-sky-600 rounded-lg text-base font-bold hover:bg-sky-100 transition-colors"
               >
                 <span className="material-symbols-outlined text-lg">add</span>
                 追加
@@ -245,29 +245,29 @@ export default function EvaluationForm({
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-medium text-slate-500 mb-1">タイトル</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">タイトル</label>
                     <input
                       type="text"
                       value={goal.title}
                       onChange={(e) => updateGoal(goal.id, 'title', e.target.value)}
                       disabled={isReadOnly}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500"
+                      className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500"
                       placeholder="目標タイトルを入力"
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-medium text-slate-500 mb-1">説明</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">説明</label>
                     <textarea
                       value={goal.description}
                       onChange={(e) => updateGoal(goal.id, 'description', e.target.value)}
                       disabled={isReadOnly}
                       rows={2}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
+                      className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
                       placeholder="目標の詳細を入力"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">ウェイト (%)</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">ウェイト (%)</label>
                     <input
                       type="number"
                       min={0}
@@ -275,11 +275,11 @@ export default function EvaluationForm({
                       value={goal.weight}
                       onChange={(e) => updateGoal(goal.id, 'weight', parseInt(e.target.value) || 0)}
                       disabled={isReadOnly}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500"
+                      className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-lg font-bold text-center focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">スコア (1-5)</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">スコア (1-5)</label>
                     <StarInput
                       value={goal.score}
                       onChange={(v) => updateGoal(goal.id, 'score', v)}
@@ -287,13 +287,13 @@ export default function EvaluationForm({
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-medium text-slate-500 mb-1">達成結果</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">達成結果</label>
                     <textarea
                       value={goal.result}
                       onChange={(e) => updateGoal(goal.id, 'result', e.target.value)}
                       disabled={isReadOnly}
                       rows={2}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
+                      className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
                       placeholder="達成結果を記入"
                     />
                   </div>
@@ -306,30 +306,30 @@ export default function EvaluationForm({
 
       {/* Comments */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
-        <h3 className="font-bold text-slate-900 flex items-center gap-2">
+        <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
           <span className="material-symbols-outlined text-sky-500">comment</span>
           コメント
         </h3>
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">自己評価コメント</label>
+          <label className="block text-base font-bold text-slate-700 mb-1">自己評価コメント</label>
           <textarea
             value={selfComment}
             onChange={(e) => setSelfComment(e.target.value)}
             disabled={isReadOnly}
             rows={4}
-            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
+            className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
             placeholder="この評価期間の振り返りを記入してください..."
           />
         </div>
         {isManager && (
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">上司コメント</label>
+            <label className="block text-base font-bold text-slate-700 mb-1">上司コメント</label>
             <textarea
               value={managerComment}
               onChange={(e) => setManagerComment(e.target.value)}
               disabled={isReadOnly}
               rows={4}
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
+              className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
               placeholder="部下への評価コメントを記入してください..."
             />
           </div>
@@ -338,7 +338,7 @@ export default function EvaluationForm({
 
       {/* Overall Score */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <h3 className="font-bold text-slate-900 mb-3 flex items-center gap-2">
+        <h3 className="text-lg font-black text-slate-900 mb-3 flex items-center gap-2">
           <span className="material-symbols-outlined text-sky-500">stars</span>
           総合評価
         </h3>
@@ -349,7 +349,7 @@ export default function EvaluationForm({
       {!isReadOnly && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-slate-900 flex items-center gap-2">
+            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
               <span className="material-symbols-outlined text-purple-500">auto_awesome</span>
               AI評価コメント生成
             </h3>
@@ -357,7 +357,7 @@ export default function EvaluationForm({
               type="button"
               onClick={handleAiComment}
               disabled={aiLoading}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-lg">auto_awesome</span>
               {aiLoading ? '生成中...' : 'AIコメント生成'}
@@ -384,7 +384,7 @@ export default function EvaluationForm({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-lg">save</span>
             {saving ? '保存中...' : '保存する'}

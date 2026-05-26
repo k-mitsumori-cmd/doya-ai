@@ -164,34 +164,34 @@ export default function OneOnOneForm({
     <div className="space-y-6">
       {/* Date & Duration */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
-        <h3 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+        <h3 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
           <span className="material-symbols-outlined text-sky-500">event</span>
           基本情報
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {employeeName && (
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">対象者</label>
+              <label className="block text-sm font-bold text-slate-700 mb-1">対象者</label>
               <p className="text-sm font-semibold text-slate-900 py-2">{employeeName}</p>
             </div>
           )}
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">日時</label>
+            <label className="block text-sm font-bold text-slate-700 mb-1">日時</label>
             <input
               type="datetime-local"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               disabled={readOnly}
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
+              className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">所要時間（分）</label>
+            <label className="block text-sm font-bold text-slate-700 mb-1">所要時間（分）</label>
             <select
               value={duration}
               onChange={(e) => setDuration(parseInt(e.target.value))}
               disabled={readOnly}
-              className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
+              className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
             >
               <option value={15}>15分</option>
               <option value={30}>30分</option>
@@ -206,7 +206,7 @@ export default function OneOnOneForm({
       {/* Agenda */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-slate-900 flex items-center gap-2">
+          <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
             <span className="material-symbols-outlined text-sky-500">list_alt</span>
             アジェンダ
           </h3>
@@ -238,14 +238,14 @@ export default function OneOnOneForm({
                     value={item.topic}
                     onChange={(e) => updateAgenda(item.id, 'topic', e.target.value)}
                     disabled={readOnly}
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 mb-2"
+                    className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 mb-2"
                     placeholder="トピックを入力"
                   />
                   <select
                     value={item.category}
                     onChange={(e) => updateAgenda(item.id, 'category', e.target.value)}
                     disabled={readOnly}
-                    className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
+                    className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-base font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
                   >
                     {AGENDA_CATEGORIES.map((c) => (
                       <option key={c.value} value={c.value}>
@@ -271,12 +271,12 @@ export default function OneOnOneForm({
 
       {/* Notes */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
-        <h3 className="font-bold text-slate-900 flex items-center gap-2">
+        <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
           <span className="material-symbols-outlined text-sky-500">edit_note</span>
           メモ
         </h3>
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">
+          <label className="block text-sm font-bold text-slate-700 mb-1">
             共有メモ（上司・部下で共有）
           </label>
           <textarea
@@ -284,12 +284,12 @@ export default function OneOnOneForm({
             onChange={(e) => setSharedNote(e.target.value)}
             disabled={readOnly}
             rows={4}
-            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 resize-none"
+            className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 resize-none"
             placeholder="1on1の内容を記録..."
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-slate-500 mb-1">
+          <label className="block text-sm font-bold text-slate-700 mb-1">
             上司メモ（上司のみ閲覧可）
           </label>
           <textarea
@@ -297,7 +297,7 @@ export default function OneOnOneForm({
             onChange={(e) => setManagerNote(e.target.value)}
             disabled={readOnly}
             rows={3}
-            className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 resize-none"
+            className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 resize-none"
             placeholder="部下には見えないメモ..."
           />
         </div>
@@ -306,7 +306,7 @@ export default function OneOnOneForm({
       {/* Action Items */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-slate-900 flex items-center gap-2">
+          <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
             <span className="material-symbols-outlined text-sky-500">task_alt</span>
             アクションアイテム
           </h3>
@@ -350,7 +350,7 @@ export default function OneOnOneForm({
                       value={item.content}
                       onChange={(e) => updateAction(item.id, 'content', e.target.value)}
                       disabled={readOnly}
-                      className={`w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 ${item.done ? 'line-through text-slate-400' : ''}`}
+                      className={`w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 ${item.done ? 'line-through text-slate-400' : ''}`}
                       placeholder="アクションアイテムを入力"
                     />
                   </div>
@@ -360,7 +360,7 @@ export default function OneOnOneForm({
                       value={item.dueDate}
                       onChange={(e) => updateAction(item.id, 'dueDate', e.target.value)}
                       disabled={readOnly}
-                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
+                      className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
                     />
                   </div>
                 </div>
@@ -383,7 +383,7 @@ export default function OneOnOneForm({
       {!readOnly && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-bold text-slate-900 flex items-center gap-2">
+            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
               <span className="material-symbols-outlined text-purple-500">auto_awesome</span>
               AI要約生成
             </h3>
@@ -391,7 +391,7 @@ export default function OneOnOneForm({
               type="button"
               onClick={handleAiSummary}
               disabled={aiLoading}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl text-sm font-semibold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-lg">auto_awesome</span>
               {aiLoading ? '生成中...' : 'AI要約生成'}
@@ -418,7 +418,7 @@ export default function OneOnOneForm({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-lg">save</span>
             {saving ? '保存中...' : '保存する'}

@@ -67,8 +67,8 @@ export default function HrOnboarding() {
               <span className="material-symbols-outlined text-2xl">groups</span>
             </div>
             <div>
-              <h1 className="text-xl font-black text-slate-900">ドヤHR へようこそ</h1>
-              <p className="text-sm text-slate-500">まずは組織を作成しましょう</p>
+              <h1 className="text-2xl font-black text-slate-900">ドヤHR へようこそ</h1>
+              <p className="text-base font-bold text-slate-600">まずは組織を作成しましょう</p>
             </div>
           </div>
 
@@ -86,7 +86,7 @@ export default function HrOnboarding() {
 
           {step === 0 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <label className="block text-sm font-bold text-slate-700 mb-2">
+              <label className="block text-base font-bold text-slate-900 mb-2">
                 組織名（会社名・チーム名）
               </label>
               <input
@@ -94,13 +94,13 @@ export default function HrOnboarding() {
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
                 placeholder="例: 株式会社スリスタ"
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none text-slate-900"
+                className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none text-base text-slate-900"
                 autoFocus
               />
               <button
                 onClick={() => orgName.trim() && setStep(1)}
                 disabled={!orgName.trim()}
-                className="w-full mt-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full mt-6 py-4 bg-gradient-to-r from-sky-500 to-blue-600 text-white text-base font-black rounded-xl hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 次へ
               </button>
@@ -109,16 +109,16 @@ export default function HrOnboarding() {
 
           {step === 1 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <label className="block text-sm font-bold text-slate-700 mb-2">業種</label>
+              <label className="block text-base font-bold text-slate-900 mb-2">業種</label>
               <div className="grid grid-cols-2 gap-2 mb-6">
                 {INDUSTRY_OPTIONS.map((opt) => (
                   <button
                     key={opt}
                     onClick={() => setIndustry(opt)}
-                    className={`px-3 py-2 rounded-xl text-sm font-medium border transition-all ${
+                    className={`px-3 py-2.5 rounded-xl text-base font-bold border transition-all ${
                       industry === opt
                         ? 'border-sky-500 bg-sky-50 text-sky-700'
-                        : 'border-slate-200 text-slate-600 hover:border-sky-300'
+                        : 'border-slate-200 text-slate-700 hover:border-sky-300'
                     }`}
                   >
                     {opt}
@@ -128,13 +128,13 @@ export default function HrOnboarding() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(0)}
-                  className="flex-1 py-3 border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all"
+                  className="flex-1 py-4 border border-slate-200 text-slate-700 text-base font-black rounded-xl hover:bg-slate-50 transition-all"
                 >
                   戻る
                 </button>
                 <button
                   onClick={() => setStep(2)}
-                  className="flex-1 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+                  className="flex-1 py-4 bg-gradient-to-r from-sky-500 to-blue-600 text-white text-base font-black rounded-xl hover:shadow-lg hover:shadow-sky-500/20 transition-all"
                 >
                   次へ
                 </button>
@@ -144,16 +144,16 @@ export default function HrOnboarding() {
 
           {step === 2 && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-              <label className="block text-sm font-bold text-slate-700 mb-2">従業員数</label>
+              <label className="block text-base font-bold text-slate-900 mb-2">従業員数</label>
               <div className="space-y-2 mb-6">
                 {SIZE_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
                     onClick={() => setSize(opt.value)}
-                    className={`w-full px-4 py-3 rounded-xl text-sm font-medium border text-left transition-all ${
+                    className={`w-full px-4 py-3.5 rounded-xl text-base font-bold border text-left transition-all ${
                       size === opt.value
                         ? 'border-sky-500 bg-sky-50 text-sky-700'
-                        : 'border-slate-200 text-slate-600 hover:border-sky-300'
+                        : 'border-slate-200 text-slate-700 hover:border-sky-300'
                     }`}
                   >
                     {opt.label}
@@ -170,14 +170,14 @@ export default function HrOnboarding() {
               <div className="flex gap-3">
                 <button
                   onClick={() => setStep(1)}
-                  className="flex-1 py-3 border border-slate-200 text-slate-600 font-bold rounded-xl hover:bg-slate-50 transition-all"
+                  className="flex-1 py-4 border border-slate-200 text-slate-700 text-base font-black rounded-xl hover:bg-slate-50 transition-all"
                 >
                   戻る
                 </button>
                 <button
                   onClick={handleCreate}
                   disabled={loading}
-                  className="flex-1 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
+                  className="flex-1 py-4 bg-gradient-to-r from-sky-500 to-blue-600 text-white text-base font-black rounded-xl hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
                 >
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">

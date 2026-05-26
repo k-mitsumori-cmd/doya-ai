@@ -42,7 +42,7 @@ function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: numb
         {/* Department Header */}
         <button
           onClick={() => setExpanded(!expanded)}
-          className="w-full p-4 text-left hover:bg-sky-50/50 transition-colors"
+          className="w-full p-5 text-left hover:bg-sky-50/50 transition-colors"
         >
           <div className="flex items-center gap-3">
             {dept.head?.photoUrl ? (
@@ -61,15 +61,15 @@ function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: numb
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-slate-900 text-sm">{dept.name}</p>
+              <p className="font-bold text-slate-900 text-lg">{dept.name}</p>
               {dept.head && (
-                <p className="text-xs text-slate-500 truncate">
+                <p className="text-base font-bold text-slate-500 truncate">
                   {dept.head.lastName} {dept.head.firstName}
                   {dept.head.position && ` (${dept.head.position})`}
                 </p>
               )}
             </div>
-            <span className={`material-symbols-outlined text-slate-400 text-lg transition-transform ${expanded ? 'rotate-180' : ''}`}>
+            <span className={`material-symbols-outlined text-slate-400 text-sm font-bold transition-transform ${expanded ? 'rotate-180' : ''}`}>
               expand_more
             </span>
           </div>
@@ -107,11 +107,11 @@ function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: numb
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="text-xs font-medium text-slate-700 truncate">
+                        <p className="text-sm font-bold text-slate-700 truncate">
                           {member.lastName} {member.firstName}
                         </p>
                         {member.position && (
-                          <p className="text-[10px] text-slate-400 truncate">{member.position}</p>
+                          <p className="text-xs font-semibold text-slate-400 truncate">{member.position}</p>
                         )}
                       </div>
                     </div>
@@ -172,7 +172,7 @@ export default function OrgChartView({ departments, orgName }: OrgChartViewProps
         {orgName && (
           <div className="mb-6">
             <div className="px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-2xl shadow-lg shadow-sky-500/20">
-              <p className="font-bold text-lg">{orgName}</p>
+              <p className="font-black text-2xl">{orgName}</p>
             </div>
             <div className="flex justify-center">
               <div className="w-0.5 h-6 bg-sky-200" />

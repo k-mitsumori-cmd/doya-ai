@@ -74,7 +74,7 @@ export default function HrDashboardPage() {
     <div className="p-6 lg:p-10 max-w-7xl mx-auto">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-2xl font-black text-slate-900">
+        <h1 className="text-3xl font-black text-slate-900">
           {stats.orgName ? `${stats.orgName} のダッシュボード` : 'ダッシュボード'}
         </h1>
         <p className="text-sm text-slate-500 mt-1">組織の概況をひと目で確認</p>
@@ -94,9 +94,9 @@ export default function HrDashboardPage() {
               <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.color} flex items-center justify-center text-white shadow-sm`}>
                 <span className="material-symbols-outlined text-xl">{card.icon}</span>
               </div>
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{card.label}</span>
+              <span className="text-sm font-bold text-slate-600 uppercase tracking-wider">{card.label}</span>
             </div>
-            <p className="text-3xl font-black text-slate-900">
+            <p className="text-4xl font-black text-slate-900">
               {loading ? (
                 <span className="inline-block w-12 h-8 bg-slate-100 rounded animate-pulse" />
               ) : (
@@ -111,7 +111,7 @@ export default function HrDashboardPage() {
         {/* Recent 1on1 */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
               <span className="material-symbols-outlined text-sky-500">forum</span>
               最近の1on1
             </h2>
@@ -134,10 +134,10 @@ export default function HrDashboardPage() {
                   className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">{item.employeeName}</p>
-                    <p className="text-xs text-slate-400">{new Date(item.date).toLocaleDateString('ja-JP')}</p>
+                    <p className="text-base font-bold text-slate-900">{item.employeeName}</p>
+                    <p className="text-sm text-slate-500">{new Date(item.date).toLocaleDateString('ja-JP')}</p>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                  <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${
                     item.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                   }`}>
                     {item.status === 'COMPLETED' ? '完了' : '予定'}
@@ -146,9 +146,9 @@ export default function HrDashboardPage() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-slate-400">
+            <div className="text-center py-8 text-slate-500">
               <span className="material-symbols-outlined text-3xl mb-2 block">forum</span>
-              <p className="text-sm">まだ1on1の記録がありません</p>
+              <p className="text-lg font-bold">まだ1on1の記録がありません</p>
               <Link
                 href="/hr/one-on-one"
                 className="inline-flex items-center gap-1 mt-3 text-sm font-semibold text-sky-600 hover:text-sky-700"
@@ -163,7 +163,7 @@ export default function HrDashboardPage() {
         {/* Evaluation Periods */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
               <span className="material-symbols-outlined text-sky-500">assessment</span>
               評価期間の進捗
             </h2>
@@ -185,8 +185,8 @@ export default function HrDashboardPage() {
                   <Link key={period.id} href={`/hr/evaluations/${period.id}`} className="block">
                     <div className="p-3 rounded-xl hover:bg-slate-50 transition-colors">
                       <div className="flex items-center justify-between mb-2">
-                        <p className="text-sm font-semibold text-slate-900">{period.name}</p>
-                        <span className="text-xs font-bold text-sky-600">{pct}%</span>
+                        <p className="text-base font-bold text-slate-900">{period.name}</p>
+                        <span className="text-base font-black text-sky-600">{pct}%</span>
                       </div>
                       <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                         <motion.div
@@ -196,16 +196,16 @@ export default function HrDashboardPage() {
                           transition={{ duration: 0.8, ease: 'easeOut' }}
                         />
                       </div>
-                      <p className="text-xs text-slate-400 mt-1">{period.completed}/{period.total}件完了</p>
+                      <p className="text-xs text-slate-500 mt-1">{period.completed}/{period.total}件完了</p>
                     </div>
                   </Link>
                 )
               })}
             </div>
           ) : (
-            <div className="text-center py-8 text-slate-400">
+            <div className="text-center py-8 text-slate-500">
               <span className="material-symbols-outlined text-3xl mb-2 block">assessment</span>
-              <p className="text-sm">評価期間が設定されていません</p>
+              <p className="text-lg font-bold">評価期間が設定されていません</p>
               <Link
                 href="/hr/evaluations"
                 className="inline-flex items-center gap-1 mt-3 text-sm font-semibold text-sky-600 hover:text-sky-700"
@@ -220,7 +220,7 @@ export default function HrDashboardPage() {
 
       {/* Quick Actions */}
       <div className="mt-8 bg-white rounded-2xl border border-slate-200 p-6">
-        <h2 className="font-bold text-slate-900 mb-4">クイックアクション</h2>
+        <h2 className="text-lg font-black text-slate-900 mb-4">クイックアクション</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             { href: '/hr/employees/new', icon: 'person_add', label: '従業員を追加' },
@@ -234,7 +234,7 @@ export default function HrDashboardPage() {
               className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 hover:border-sky-300 hover:bg-sky-50/50 transition-all"
             >
               <span className="material-symbols-outlined text-sky-500">{action.icon}</span>
-              <span className="text-sm font-semibold text-slate-700">{action.label}</span>
+              <span className="text-base font-bold text-slate-700">{action.label}</span>
             </Link>
           ))}
         </div>

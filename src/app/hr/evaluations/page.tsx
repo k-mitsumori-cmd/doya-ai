@@ -73,12 +73,12 @@ export default function EvaluationsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-black text-slate-900">評価管理</h1>
+            <h1 className="text-3xl font-black text-slate-900">評価管理</h1>
             <p className="text-sm text-slate-500 mt-1">MBO評価の期間を管理</p>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+            className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
           >
             <span className="material-symbols-outlined text-lg">add</span>
             評価期間を作成
@@ -119,17 +119,17 @@ export default function EvaluationsPage() {
                     className="block bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-md hover:border-sky-200 transition-all"
                   >
                     <div className="flex items-start justify-between mb-3">
-                      <h3 className="font-bold text-slate-900">{period.name}</h3>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${st.color}`}>
+                      <h3 className="text-lg font-bold text-slate-900">{period.name}</h3>
+                      <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${st.color}`}>
                         {st.label}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-400 mb-4">
+                    <p className="text-xs text-slate-500 mb-4">
                       {new Date(period.startDate).toLocaleDateString('ja-JP')} 〜 {new Date(period.endDate).toLocaleDateString('ja-JP')}
                     </p>
                     <div className="mb-2 flex items-center justify-between">
                       <span className="text-xs font-medium text-slate-500">進捗</span>
-                      <span className="text-xs font-bold text-sky-600">{pct}%</span>
+                      <span className="text-base font-black text-sky-600">{pct}%</span>
                     </div>
                     <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                       <motion.div
@@ -139,7 +139,7 @@ export default function EvaluationsPage() {
                         transition={{ duration: 0.8, ease: 'easeOut' }}
                       />
                     </div>
-                    <p className="text-xs text-slate-400 mt-2">
+                    <p className="text-xs text-slate-500 mt-2">
                       {completed}/{total}件完了
                     </p>
                   </Link>
@@ -148,9 +148,9 @@ export default function EvaluationsPage() {
             })}
           </div>
         ) : (
-          <div className="text-center py-20 text-slate-400">
+          <div className="text-center py-20 text-slate-500">
             <span className="material-symbols-outlined text-5xl mb-3 block">assessment</span>
-            <p className="text-lg font-medium">評価期間がまだありません</p>
+            <p className="text-lg font-bold">評価期間がまだありません</p>
             <p className="text-sm mt-1">「評価期間を作成」ボタンから始めましょう</p>
           </div>
         )}

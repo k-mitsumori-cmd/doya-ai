@@ -122,14 +122,14 @@ export default function NewEmployeePage() {
             <span className="material-symbols-outlined text-lg">arrow_back</span>
             戻る
           </button>
-          <h1 className="text-2xl font-black text-slate-900">従業員を追加</h1>
+          <h1 className="text-3xl font-black text-slate-900">従業員を追加</h1>
           <p className="text-sm text-slate-500 mt-1">新しい従業員の情報を登録します</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Photo Upload */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-sky-500">photo_camera</span>
               顔写真
             </h2>
@@ -159,13 +159,13 @@ export default function NewEmployeePage() {
 
           {/* Basic Info */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-sky-500">person</span>
               基本情報
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">
+                <label className="block text-sm font-bold text-slate-700 mb-1">
                   姓 <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -174,12 +174,12 @@ export default function NewEmployeePage() {
                   value={form.lastName}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                   placeholder="山田"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">
+                <label className="block text-sm font-bold text-slate-700 mb-1">
                   名 <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -188,62 +188,62 @@ export default function NewEmployeePage() {
                   value={form.firstName}
                   onChange={handleChange}
                   required
-                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                   placeholder="太郎"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">姓（カナ）</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1">姓（カナ）</label>
                 <input
                   type="text"
                   name="lastNameKana"
                   value={form.lastNameKana}
                   onChange={handleChange}
-                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                   placeholder="ヤマダ"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">名（カナ）</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1">名（カナ）</label>
                 <input
                   type="text"
                   name="firstNameKana"
                   value={form.firstNameKana}
                   onChange={handleChange}
-                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                   placeholder="タロウ"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">社員番号</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1">社員番号</label>
                 <input
                   type="text"
                   name="employeeNumber"
                   value={form.employeeNumber}
                   onChange={handleChange}
-                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                   placeholder="EMP-001"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">メールアドレス</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1">メールアドレス</label>
                 <input
                   type="email"
                   name="email"
                   value={form.email}
                   onChange={handleChange}
-                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                   placeholder="taro@example.com"
                 />
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-slate-500 mb-1">電話番号</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1">電話番号</label>
                 <input
                   type="tel"
                   name="phone"
                   value={form.phone}
                   onChange={handleChange}
-                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                   placeholder="090-1234-5678"
                 />
               </div>
@@ -252,18 +252,18 @@ export default function NewEmployeePage() {
 
           {/* Job Info */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
               <span className="material-symbols-outlined text-sky-500">work</span>
               職務情報
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">部署</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1">部署</label>
                 <select
                   name="departmentId"
                   value={form.departmentId}
                   onChange={handleChange}
-                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                 >
                   <option value="">選択してください</option>
                   {departments.map((d) => (
@@ -272,34 +272,34 @@ export default function NewEmployeePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">役職</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1">役職</label>
                 <input
                   type="text"
                   name="position"
                   value={form.position}
                   onChange={handleChange}
-                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                   placeholder="マネージャー"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">等級</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1">等級</label>
                 <input
                   type="text"
                   name="grade"
                   value={form.grade}
                   onChange={handleChange}
-                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                   placeholder="M1"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">雇用形態</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1">雇用形態</label>
                 <select
                   name="employmentType"
                   value={form.employmentType}
                   onChange={handleChange}
-                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                 >
                   {EMPLOYMENT_TYPES.map((t) => (
                     <option key={t.value} value={t.value}>{t.label}</option>
@@ -307,13 +307,13 @@ export default function NewEmployeePage() {
                 </select>
               </div>
               <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-slate-500 mb-1">入社日</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1">入社日</label>
                 <input
                   type="date"
                   name="hireDate"
                   value={form.hireDate}
                   onChange={handleChange}
-                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                 />
               </div>
             </div>
@@ -332,14 +332,14 @@ export default function NewEmployeePage() {
             <button
               type="button"
               onClick={() => router.back()}
-              className="px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors"
+              className="px-6 py-3.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-base font-bold hover:bg-slate-50 transition-colors"
             >
               キャンセル
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-lg">save</span>
               {saving ? '保存中...' : '保存する'}

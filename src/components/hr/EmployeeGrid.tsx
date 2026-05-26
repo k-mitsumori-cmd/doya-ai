@@ -45,7 +45,7 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         {/* Search */}
         <div className="relative flex-1">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-2xl">
             search
           </span>
           <input
@@ -53,7 +53,7 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="名前、社員番号、メールで検索..."
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 transition-all"
+            className="w-full pl-11 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 transition-all"
           />
         </div>
 
@@ -61,7 +61,7 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
         <select
           value={departmentFilter}
           onChange={(e) => setDepartmentFilter(e.target.value)}
-          className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+          className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-base font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
         >
           <option value="all">全部署</option>
           {departments.map((d) => (
@@ -75,7 +75,7 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+          className="px-4 py-3 bg-white border border-slate-200 rounded-xl text-base font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
         >
           <option value="all">全ステータス</option>
           <option value="ACTIVE">在籍</option>
@@ -87,25 +87,25 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
         <div className="flex bg-white border border-slate-200 rounded-xl overflow-hidden">
           <button
             onClick={() => setViewMode('grid')}
-            className={`px-3 py-2.5 transition-colors ${
-              viewMode === 'grid' ? 'bg-sky-50 text-sky-600' : 'text-slate-400 hover:text-slate-600'
+            className={`px-4 py-3 transition-colors ${
+              viewMode === 'grid' ? 'bg-sky-100 text-sky-600' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <span className="material-symbols-outlined text-xl">grid_view</span>
+            <span className="material-symbols-outlined text-2xl">grid_view</span>
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`px-3 py-2.5 transition-colors ${
-              viewMode === 'list' ? 'bg-sky-50 text-sky-600' : 'text-slate-400 hover:text-slate-600'
+            className={`px-4 py-3 transition-colors ${
+              viewMode === 'list' ? 'bg-sky-100 text-sky-600' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <span className="material-symbols-outlined text-xl">view_list</span>
+            <span className="material-symbols-outlined text-2xl">view_list</span>
           </button>
         </div>
       </div>
 
       {/* Results Count */}
-      <p className="text-sm text-slate-500 mb-4">
+      <p className="text-base font-bold text-slate-700 mb-4">
         {filtered.length}名の従業員
       </p>
 
@@ -156,33 +156,33 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
                       className="contents"
                     >
                       <tr className="border-b border-slate-50 hover:bg-slate-50 transition-colors cursor-pointer">
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
                             {emp.photoUrl ? (
-                              <img src={emp.photoUrl} alt="" className="w-9 h-9 rounded-full object-cover" />
+                              <img src={emp.photoUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
                             ) : (
-                              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white text-xs font-bold">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white text-sm font-bold">
                                 {initials}
                               </div>
                             )}
                             <div>
-                              <p className="text-sm font-semibold text-slate-900">
+                              <p className="text-base font-bold text-slate-900">
                                 {emp.lastName} {emp.firstName}
                               </p>
                               {emp.employeeNumber && (
-                                <p className="text-xs text-slate-400">{emp.employeeNumber}</p>
+                                <p className="text-xs font-semibold text-slate-500">{emp.employeeNumber}</p>
                               )}
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-600 hidden sm:table-cell">
+                        <td className="px-4 py-4 text-base font-semibold text-slate-700 hidden sm:table-cell">
                           {emp.department?.name || '-'}
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-600 hidden md:table-cell">
+                        <td className="px-4 py-4 text-base text-slate-600 hidden md:table-cell">
                           {emp.position || '-'}
                         </td>
-                        <td className="px-4 py-3">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${st.color}`}>
+                        <td className="px-4 py-4">
+                          <span className={`px-3 py-1 rounded-full text-xs font-bold ${st.color}`}>
                             {st.label}
                           </span>
                         </td>
@@ -193,9 +193,9 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
               </tbody>
             </table>
             {filtered.length === 0 && (
-              <div className="p-12 text-center text-slate-400">
-                <span className="material-symbols-outlined text-4xl mb-2 block">person_off</span>
-                <p>該当する従業員が見つかりません</p>
+              <div className="p-12 text-center text-slate-500">
+                <span className="material-symbols-outlined text-5xl mb-2 block">person_off</span>
+                <p className="text-lg font-bold">該当する従業員が見つかりません</p>
               </div>
             )}
           </motion.div>
@@ -203,10 +203,10 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
       </AnimatePresence>
 
       {filtered.length === 0 && viewMode === 'grid' && (
-        <div className="text-center py-16 text-slate-400">
+        <div className="text-center py-16 text-slate-500">
           <span className="material-symbols-outlined text-5xl mb-3 block">person_off</span>
-          <p className="text-lg font-medium">該当する従業員が見つかりません</p>
-          <p className="text-sm mt-1">検索条件を変更してみてください</p>
+          <p className="text-lg font-bold text-slate-700">該当する従業員が見つかりません</p>
+          <p className="text-base font-semibold mt-1">検索条件を変更してみてください</p>
         </div>
       )}
     </div>

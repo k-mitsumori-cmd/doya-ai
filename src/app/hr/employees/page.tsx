@@ -45,12 +45,12 @@ export default function EmployeesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-black text-slate-900">従業員一覧</h1>
+          <h1 className="text-3xl font-black text-slate-900">従業員一覧</h1>
           <p className="text-sm text-slate-500 mt-1">組織のメンバーを管理</p>
         </div>
         <Link
           href="/hr/employees/new"
-          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+          className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
         >
           <span className="material-symbols-outlined text-lg">person_add</span>
           従業員を追加

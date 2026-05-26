@@ -42,7 +42,7 @@ export default function EmployeeCard({ employee }: EmployeeCardProps) {
       <motion.div
         whileHover={{ y: -4, boxShadow: '0 12px 24px -4px rgba(0,0,0,0.08)' }}
         transition={{ duration: 0.2 }}
-        className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col items-center text-center cursor-pointer hover:border-sky-200 transition-colors"
+        className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col items-center text-center cursor-pointer hover:border-sky-300 transition-colors"
       >
         {/* Photo */}
         {employee.photoUrl ? (
@@ -58,20 +58,20 @@ export default function EmployeeCard({ employee }: EmployeeCardProps) {
         )}
 
         {/* Name */}
-        <h3 className="font-bold text-slate-900 text-base">
+        <h3 className="font-black text-slate-900 text-base">
           {employee.lastName} {employee.firstName}
         </h3>
 
         {/* Department + Position */}
-        <p className="text-sm text-slate-500 mt-1">
+        <p className="text-sm font-bold text-slate-600 mt-1">
           {employee.department?.name || '未所属'}
         </p>
         {employee.position && (
-          <p className="text-xs text-slate-400 mt-0.5">{employee.position}</p>
+          <p className="text-sm font-semibold text-slate-500 mt-0.5">{employee.position}</p>
         )}
 
         {/* Status Badge */}
-        <span className={`mt-3 px-3 py-1 rounded-full text-xs font-semibold ${status.color}`}>
+        <span className={`mt-3 px-3 py-1 rounded-full text-xs font-bold ${status.color}`}>
           {status.label}
         </span>
       </motion.div>

@@ -122,7 +122,7 @@ export default function EmployeeDetailPage() {
   if (error || !employee) {
     return (
       <div className="p-6 lg:p-10 max-w-4xl mx-auto">
-        <div className="text-center py-20 text-slate-400">
+        <div className="text-center py-20 text-slate-500">
           <span className="material-symbols-outlined text-5xl mb-3 block">error</span>
           <p className="text-lg font-medium">{error || '従業員が見つかりません'}</p>
           <button onClick={() => router.back()} className="mt-4 text-sm font-semibold text-sky-600 hover:text-sky-700">
@@ -163,25 +163,25 @@ export default function EmployeeDetailPage() {
               </div>
             )}
             <div className="text-center sm:text-left flex-1">
-              <h1 className="text-2xl font-black text-slate-900">
+              <h1 className="text-3xl font-black text-slate-900">
                 {employee.lastName} {employee.firstName}
               </h1>
               {(employee.lastNameKana || employee.firstNameKana) && (
-                <p className="text-sm text-slate-400 mt-0.5">
+                <p className="text-sm text-slate-500 mt-0.5">
                   {employee.lastNameKana} {employee.firstNameKana}
                 </p>
               )}
               <div className="flex flex-wrap items-center gap-2 mt-2 justify-center sm:justify-start">
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${status.color}`}>
+                <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${status.color}`}>
                   {status.label}
                 </span>
                 {employee.department && (
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-600">
+                  <span className="px-3 py-1.5 rounded-full text-sm font-bold bg-sky-50 text-sky-600">
                     {employee.department.name}
                   </span>
                 )}
                 {employee.position && (
-                  <span className="px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+                  <span className="px-3 py-1.5 rounded-full text-sm font-bold bg-slate-100 text-slate-600">
                     {employee.position}
                   </span>
                 )}
@@ -196,7 +196,7 @@ export default function EmployeeDetailPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-bold transition-colors whitespace-nowrap ${
                 activeTab === tab.key
                   ? 'bg-sky-50 text-sky-600'
                   : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
@@ -211,7 +211,7 @@ export default function EmployeeDetailPage() {
         {/* Tab Content */}
         {activeTab === 'profile' && (
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="font-bold text-slate-900 mb-4">基本情報</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">基本情報</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
                 { label: '社員番号', value: employee.employeeNumber },
@@ -224,8 +224,8 @@ export default function EmployeeDetailPage() {
                 { label: '入社日', value: employee.hireDate ? new Date(employee.hireDate).toLocaleDateString('ja-JP') : null },
               ].map((item) => (
                 <div key={item.label}>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">{item.label}</p>
-                  <p className="text-sm text-slate-900">{item.value || '-'}</p>
+                  <p className="text-sm font-bold text-slate-600 uppercase tracking-wider mb-1">{item.label}</p>
+                  <p className="text-base font-bold text-slate-900">{item.value || '-'}</p>
                 </div>
               ))}
             </div>
@@ -234,7 +234,7 @@ export default function EmployeeDetailPage() {
 
         {activeTab === 'evaluations' && (
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="font-bold text-slate-900 mb-4">評価履歴</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">評価履歴</h2>
             {evaluations.length > 0 ? (
               <div className="space-y-3">
                 {evaluations.map((ev) => (
@@ -245,7 +245,7 @@ export default function EmployeeDetailPage() {
                   >
                     <div>
                       <p className="text-sm font-semibold text-slate-900">{ev.periodName}</p>
-                      <p className="text-xs text-slate-400">{new Date(ev.createdAt).toLocaleDateString('ja-JP')}</p>
+                      <p className="text-xs text-slate-500">{new Date(ev.createdAt).toLocaleDateString('ja-JP')}</p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex">
@@ -259,7 +259,7 @@ export default function EmployeeDetailPage() {
                           </span>
                         ))}
                       </div>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${
                         ev.status === 'FINALIZED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                       }`}>
                         {ev.status === 'FINALIZED' ? '確定' : '進行中'}
@@ -269,9 +269,9 @@ export default function EmployeeDetailPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-slate-400">
+              <div className="text-center py-8 text-slate-500">
                 <span className="material-symbols-outlined text-3xl mb-2 block">assessment</span>
-                <p className="text-sm">評価履歴がありません</p>
+                <p className="text-lg font-bold">評価履歴がありません</p>
               </div>
             )}
           </div>
@@ -279,7 +279,7 @@ export default function EmployeeDetailPage() {
 
         {activeTab === 'one-on-one' && (
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="font-bold text-slate-900 mb-4">1on1履歴</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">1on1履歴</h2>
             {oneOnOnes.length > 0 ? (
               <div className="space-y-3">
                 {oneOnOnes.map((oo) => (
@@ -292,9 +292,9 @@ export default function EmployeeDetailPage() {
                       <p className="text-sm font-semibold text-slate-900">
                         {new Date(oo.date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}
                       </p>
-                      <p className="text-xs text-slate-400">{oo.duration}分</p>
+                      <p className="text-xs text-slate-500">{oo.duration}分</p>
                     </div>
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                    <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${
                       oo.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                     }`}>
                       {oo.status === 'COMPLETED' ? '完了' : '予定'}
@@ -303,9 +303,9 @@ export default function EmployeeDetailPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-slate-400">
+              <div className="text-center py-8 text-slate-500">
                 <span className="material-symbols-outlined text-3xl mb-2 block">forum</span>
-                <p className="text-sm">1on1記録がありません</p>
+                <p className="text-lg font-bold">1on1記録がありません</p>
               </div>
             )}
           </div>
@@ -313,12 +313,12 @@ export default function EmployeeDetailPage() {
 
         {activeTab === 'transfers' && (
           <div className="bg-white rounded-2xl border border-slate-200 p-6">
-            <h2 className="font-bold text-slate-900 mb-4">異動履歴</h2>
+            <h2 className="text-lg font-bold text-slate-900 mb-4">異動履歴</h2>
             {transfers.length > 0 ? (
               <div className="space-y-3">
                 {transfers.map((tr) => (
                   <div key={tr.id} className="p-4 rounded-xl border border-slate-100">
-                    <p className="text-xs text-slate-400 mb-2">
+                    <p className="text-xs text-slate-500 mb-2">
                       {new Date(tr.effectiveDate).toLocaleDateString('ja-JP')}
                     </p>
                     <div className="flex items-center gap-3 text-sm">
@@ -336,9 +336,9 @@ export default function EmployeeDetailPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-slate-400">
+              <div className="text-center py-8 text-slate-500">
                 <span className="material-symbols-outlined text-3xl mb-2 block">swap_horiz</span>
-                <p className="text-sm">異動履歴がありません</p>
+                <p className="text-lg font-bold">異動履歴がありません</p>
               </div>
             )}
           </div>

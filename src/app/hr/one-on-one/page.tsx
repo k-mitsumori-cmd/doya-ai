@@ -102,12 +102,12 @@ export default function OneOnOnePage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-black text-slate-900">1on1</h1>
+            <h1 className="text-3xl font-black text-slate-900">1on1</h1>
             <p className="text-sm text-slate-500 mt-1">1対1ミーティングの記録を管理</p>
           </div>
           <button
             onClick={() => setShowNewModal(true)}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+            className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
           >
             <span className="material-symbols-outlined text-lg">add</span>
             1on1を記録
@@ -154,8 +154,8 @@ export default function OneOnOnePage() {
                       </div>
                     )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-900">{record.employeeName}</p>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-base font-bold text-slate-900">{record.employeeName}</p>
+                      <p className="text-xs text-slate-500">
                         {new Date(record.date).toLocaleDateString('ja-JP', {
                           year: 'numeric',
                           month: 'long',
@@ -177,7 +177,7 @@ export default function OneOnOnePage() {
                           {record.actionItemCount}
                         </span>
                       </div>
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${
                         record.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                       }`}>
                         {record.status === 'COMPLETED' ? '完了' : '予定'}
@@ -189,9 +189,9 @@ export default function OneOnOnePage() {
             })}
           </div>
         ) : (
-          <div className="text-center py-20 text-slate-400">
+          <div className="text-center py-20 text-slate-500">
             <span className="material-symbols-outlined text-5xl mb-3 block">forum</span>
-            <p className="text-lg font-medium">1on1の記録がまだありません</p>
+            <p className="text-lg font-bold">1on1の記録がまだありません</p>
             <p className="text-sm mt-1">「1on1を記録」ボタンから始めましょう</p>
           </div>
         )}

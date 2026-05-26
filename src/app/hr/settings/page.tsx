@@ -112,7 +112,7 @@ export default function HrSettingsPage() {
     <div className="p-6 lg:p-10 max-w-3xl mx-auto">
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
         <div className="mb-8">
-          <h1 className="text-2xl font-black text-slate-900">設定</h1>
+          <h1 className="text-3xl font-black text-slate-900">設定</h1>
           <p className="text-sm text-slate-500 mt-1">組織情報とメンバーを管理</p>
         </div>
 
@@ -132,38 +132,38 @@ export default function HrSettingsPage() {
 
         {/* Organization Info */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
-          <h2 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-sky-500">apartment</span>
             組織情報
           </h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">組織名</label>
+              <label className="block text-sm font-bold text-slate-700 mb-1">組織名</label>
               <input
                 type="text"
                 value={settings.name}
                 onChange={(e) => setSettings({ ...settings, name: e.target.value })}
-                className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                 placeholder="株式会社サンプル"
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">業種</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1">業種</label>
                 <input
                   type="text"
                   value={settings.industry}
                   onChange={(e) => setSettings({ ...settings, industry: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                   placeholder="IT・ソフトウェア"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-slate-500 mb-1">従業員規模</label>
+                <label className="block text-sm font-bold text-slate-700 mb-1">従業員規模</label>
                 <select
                   value={settings.employeeScale}
                   onChange={(e) => setSettings({ ...settings, employeeScale: e.target.value })}
-                  className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                  className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                 >
                   <option value="">選択してください</option>
                   <option value="1-10">1〜10名</option>
@@ -176,11 +176,11 @@ export default function HrSettingsPage() {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-500 mb-1">期首月</label>
+              <label className="block text-sm font-bold text-slate-700 mb-1">期首月</label>
               <select
                 value={settings.fiscalYearStart}
                 onChange={(e) => setSettings({ ...settings, fiscalYearStart: e.target.value })}
-                className="w-full px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+                className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
               >
                 {Array.from({ length: 12 }, (_, i) => {
                   const month = String(i + 1).padStart(2, '0')
@@ -195,7 +195,7 @@ export default function HrSettingsPage() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-lg">save</span>
               {saving ? '保存中...' : '保存する'}
@@ -205,7 +205,7 @@ export default function HrSettingsPage() {
 
         {/* Members */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
-          <h2 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-sky-500">group</span>
             メンバー
           </h2>
@@ -217,7 +217,7 @@ export default function HrSettingsPage() {
               value={inviteEmail}
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder="メールアドレスで招待"
-              className="flex-1 px-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
+              className="flex-1 px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
             />
             <button
               onClick={handleInvite}
@@ -239,11 +239,11 @@ export default function HrSettingsPage() {
                       {member.name?.[0] || member.email[0]}
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">{member.name || member.email}</p>
-                      <p className="text-xs text-slate-400">{member.email}</p>
+                      <p className="text-base font-bold text-slate-900">{member.name || member.email}</p>
+                      <p className="text-xs text-slate-500">{member.email}</p>
                     </div>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                  <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${
                     member.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'
                   }`}>
                     {member.role === 'ADMIN' ? '管理者' : 'メンバー'}
@@ -252,17 +252,17 @@ export default function HrSettingsPage() {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-slate-400 text-center py-4">まだメンバーはいません</p>
+            <p className="text-lg font-bold text-slate-500 text-center py-4">まだメンバーはいません</p>
           )}
         </div>
 
         {/* Evaluation Templates */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
-          <h2 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
+          <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
             <span className="material-symbols-outlined text-sky-500">description</span>
             評価テンプレート
           </h2>
-          <div className="text-center py-8 text-slate-400">
+          <div className="text-center py-8 text-slate-500">
             <span className="material-symbols-outlined text-3xl mb-2 block">construction</span>
             <p className="text-sm">評価テンプレートの管理機能は準備中です</p>
             <p className="text-xs mt-1">現在はデフォルトのMBO形式で評価を実施できます</p>

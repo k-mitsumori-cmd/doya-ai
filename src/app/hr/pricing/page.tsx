@@ -35,7 +35,7 @@ export default function HrPricingPage() {
               )}
 
               <div className="mb-6">
-                <h2 className="text-xl font-bold text-slate-900">{plan.name}</h2>
+                <h2 className="text-xl font-black text-slate-900">{plan.name}</h2>
                 <p className="text-sm text-slate-500 mt-1">{plan.description}</p>
               </div>
 
@@ -57,7 +57,7 @@ export default function HrPricingPage() {
                     >
                       {feature.included ? 'check_circle' : 'cancel'}
                     </span>
-                    <span className={`text-sm ${feature.included ? 'text-slate-700' : 'text-slate-400'}`}>
+                    <span className={`text-base ${feature.included ? 'text-slate-700' : 'text-slate-400'}`}>
                       {feature.text}
                     </span>
                   </li>
@@ -66,7 +66,7 @@ export default function HrPricingPage() {
 
               <Link
                 href={plan.price === 0 && plan.id !== 'hr-enterprise' ? '/hr/dashboard' : '#'}
-                className={`block w-full py-3 text-center text-sm font-bold rounded-xl transition-all ${
+                className={`block w-full py-3 text-center text-base font-bold rounded-xl transition-all ${
                   plan.popular
                     ? 'bg-gradient-to-r from-sky-500 to-blue-600 text-white hover:shadow-lg hover:shadow-sky-500/20'
                     : plan.id === 'hr-enterprise'
@@ -82,14 +82,14 @@ export default function HrPricingPage() {
 
         {/* FAQ or extra info */}
         <div className="bg-gradient-to-br from-sky-50 to-blue-50 rounded-2xl p-8 text-center">
-          <h3 className="text-lg font-bold text-slate-900 mb-2">まずは無料で始めてみませんか？</h3>
-          <p className="text-sm text-slate-600 mb-6 max-w-lg mx-auto">
+          <h3 className="text-xl font-black text-slate-900 mb-2">まずは無料で始めてみませんか？</h3>
+          <p className="text-base text-slate-600 mb-6 max-w-lg mx-auto">
             クレジットカード不要、5名までの従業員管理が永久無料でお使いいただけます。
             アップグレードはいつでも可能です。
           </p>
           <Link
             href="/hr/dashboard"
-            className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-sm font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+            className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
           >
             <span className="material-symbols-outlined text-lg">rocket_launch</span>
             無料で始める
