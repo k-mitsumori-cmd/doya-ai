@@ -36,6 +36,7 @@ function StarInput({ value, onChange, disabled }: { value: number; onChange: (v:
           key={star}
           type="button"
           disabled={disabled}
+          aria-label={`${star}点`}
           onMouseEnter={() => !disabled && setHover(star)}
           onMouseLeave={() => setHover(0)}
           onClick={() => !disabled && onChange(star)}
@@ -165,7 +166,7 @@ export default function EvaluationForm({
     <div className="space-y-6">
       {/* Header Info */}
       {(employeeName || periodName) && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="bg-white rounded-3xl shadow-md p-6">
           <div className="flex flex-wrap gap-6">
             {employeeName && (
               <div>
@@ -198,7 +199,7 @@ export default function EvaluationForm({
       )}
 
       {/* Goals */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+      <div className="bg-white rounded-3xl shadow-md p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
             <span className="material-symbols-outlined text-sky-500">flag</span>
@@ -249,6 +250,7 @@ export default function EvaluationForm({
                     <button
                       type="button"
                       onClick={() => removeGoal(goal.id)}
+                      aria-label="目標を削除"
                       className="text-slate-400 hover:text-red-500 transition-colors"
                     >
                       <span className="material-symbols-outlined text-lg">delete</span>
@@ -317,13 +319,13 @@ export default function EvaluationForm({
       </div>
 
       {/* Comments */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+      <div className="bg-white rounded-3xl shadow-md p-6 space-y-4">
         <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
           <span className="material-symbols-outlined text-sky-500">comment</span>
           コメント
         </h3>
         <div>
-          <label className="block text-base font-bold text-slate-700 mb-1">自己評価コメント</label>
+          <label className="block text-sm font-bold text-slate-700 mb-1">自己評価コメント</label>
           <textarea
             value={selfComment}
             onChange={(e) => setSelfComment(e.target.value)}
@@ -335,7 +337,7 @@ export default function EvaluationForm({
         </div>
         {isManager && (
           <div>
-            <label className="block text-base font-bold text-slate-700 mb-1">上司コメント</label>
+            <label className="block text-sm font-bold text-slate-700 mb-1">上司コメント</label>
             <textarea
               value={managerComment}
               onChange={(e) => setManagerComment(e.target.value)}
@@ -349,7 +351,7 @@ export default function EvaluationForm({
       </div>
 
       {/* Overall Score */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+      <div className="bg-white rounded-3xl shadow-md p-6">
         <h3 className="text-lg font-black text-slate-900 mb-3 flex items-center gap-2">
           <span className="material-symbols-outlined text-sky-500">stars</span>
           総合評価
@@ -359,7 +361,7 @@ export default function EvaluationForm({
 
       {/* AI Comment Generation */}
       {!isReadOnly && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="bg-white rounded-3xl shadow-md p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
               <span className="material-symbols-outlined text-purple-500">auto_awesome</span>
@@ -369,7 +371,7 @@ export default function EvaluationForm({
               type="button"
               onClick={handleAiComment}
               disabled={aiLoading}
-              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full text-base font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
             >
               {aiLoading ? (
                 <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
@@ -400,7 +402,7 @@ export default function EvaluationForm({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full text-base font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-lg">save</span>
             {saving ? '保存中...' : '保存する'}

@@ -51,7 +51,7 @@ export default function EmployeesPage() {
         </div>
         <Link
           href="/hr/employees/new"
-          className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+          className="flex items-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all"
         >
           <span className="material-symbols-outlined text-lg">person_add</span>
           従業員を追加
@@ -70,7 +70,7 @@ export default function EmployeesPage() {
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <div key={i} className="bg-white rounded-2xl border border-slate-200 p-6 animate-pulse">
+            <div key={i} className="bg-white rounded-3xl shadow-md p-6 animate-pulse">
               <div className="flex flex-col items-center">
                 <div className="w-20 h-20 rounded-full bg-slate-100 mb-4" />
                 <div className="w-24 h-4 bg-slate-100 rounded mb-2" />
@@ -84,7 +84,7 @@ export default function EmployeesPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-white rounded-2xl border border-slate-200 p-12 text-center"
+          className="bg-white rounded-3xl shadow-md p-12 text-center"
         >
           <motion.img
             src="/hr/characters/hello_挨拶.png"

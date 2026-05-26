@@ -477,7 +477,7 @@ export default function HrSettingsPage() {
               <h2 className="text-lg font-bold text-slate-900 mb-4">部署を追加</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">
+                  <label className="block text-sm font-bold text-slate-700 mb-1">
                     部署名 <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -491,7 +491,7 @@ export default function HrSettingsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">部署コード</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">部署コード</label>
                     <input
                       type="text"
                       value={newDeptCode}
@@ -501,7 +501,7 @@ export default function HrSettingsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">表示順</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">表示順</label>
                     <input
                       type="number"
                       min={0}

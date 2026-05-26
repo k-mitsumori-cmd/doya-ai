@@ -149,7 +149,7 @@ export default function EmployeeDetailPage() {
         </button>
 
         {/* Employee Header */}
-        <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 relative">
+        <div className="bg-white rounded-3xl shadow-md p-6 mb-6 relative">
           <div className="absolute top-4 right-4 flex items-center gap-2">
             <Link
               href={`/hr/employees/${id}/edit`}
@@ -205,7 +205,7 @@ export default function EmployeeDetailPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 bg-white rounded-xl border border-slate-200 p-1 overflow-x-auto">
+        <div className="flex gap-1 mb-6 bg-white rounded-3xl shadow-md p-1 overflow-x-auto">
           {TABS.map((tab) => (
             <button
               key={tab.key}
@@ -224,7 +224,7 @@ export default function EmployeeDetailPage() {
 
         {/* Tab Content */}
         {activeTab === 'profile' && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <div className="bg-white rounded-3xl shadow-md p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-4">基本情報</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
@@ -247,7 +247,7 @@ export default function EmployeeDetailPage() {
         )}
 
         {activeTab === 'evaluations' && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <div className="bg-white rounded-3xl shadow-md p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-4">評価履歴</h2>
             {evaluations.length > 0 ? (
               <div className="space-y-3">
@@ -299,7 +299,7 @@ export default function EmployeeDetailPage() {
         )}
 
         {activeTab === 'one-on-one' && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <div className="bg-white rounded-3xl shadow-md p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-4">1on1履歴</h2>
             {oneOnOnes.length > 0 ? (
               <div className="space-y-3">
@@ -340,7 +340,7 @@ export default function EmployeeDetailPage() {
         )}
 
         {activeTab === 'transfers' && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <div className="bg-white rounded-3xl shadow-md p-6">
             <h2 className="text-lg font-bold text-slate-900 mb-4">異動履歴</h2>
             {transfers.length > 0 ? (
               <div className="space-y-3">

@@ -93,7 +93,7 @@ export default function OneOnOneDetailPage() {
           戻る
         </button>
 
-        <h1 className="text-2xl font-black text-slate-900 mb-6">1on1詳細</h1>
+        <h1 className="text-3xl font-black text-slate-900 mb-6">1on1詳細</h1>
 
         <OneOnOneForm
           recordId={record.id}

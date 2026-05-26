@@ -165,7 +165,7 @@ export default function OneOnOnePage() {
                     className="flex items-center gap-4 bg-white rounded-3xl shadow-md p-5 hover:shadow-lg transition-all"
                   >
                     {record.employeePhotoUrl ? (
-                      <img src={record.employeePhotoUrl} alt="" className="w-11 h-11 rounded-full object-cover" />
+                      <img src={record.employeePhotoUrl} alt={record.employeeName} className="w-11 h-11 rounded-full object-cover" />
                     ) : (
                       <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center text-white text-sm font-bold`}>
                         {initials}
@@ -238,7 +238,7 @@ export default function OneOnOnePage() {
         <button
           onClick={() => setShowNewModal(true)}
           className="fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-xl shadow-emerald-500/30 flex items-center justify-center hover:bg-emerald-700 hover:shadow-2xl transition-all z-40"
-          title="1on1を記録"
+          aria-label="1on1を記録"
         >
           <span className="material-symbols-outlined text-3xl">add</span>
         </button>
@@ -255,7 +255,7 @@ export default function OneOnOnePage() {
               <h2 className="text-lg font-bold text-slate-900 mb-4">1on1を記録</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">対象の従業員（部下）</label>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">対象の従業員（部下）</label>
                   <select
                     value={selectedEmployee}
                     onChange={(e) => setSelectedEmployee(e.target.value)}
@@ -270,7 +270,7 @@ export default function OneOnOnePage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">上司（面談者）</label>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">上司（面談者）</label>
                   <select
                     value={selectedManager}
                     onChange={(e) => setSelectedManager(e.target.value)}

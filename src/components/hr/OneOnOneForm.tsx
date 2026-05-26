@@ -163,7 +163,7 @@ export default function OneOnOneForm({
   return (
     <div className="space-y-6">
       {/* Date & Duration */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+      <div className="bg-white rounded-3xl shadow-md p-6">
         <h3 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
           <span className="material-symbols-outlined text-sky-500">event</span>
           基本情報
@@ -204,7 +204,7 @@ export default function OneOnOneForm({
       </div>
 
       {/* Agenda */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+      <div className="bg-white rounded-3xl shadow-md p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
             <span className="material-symbols-outlined text-sky-500">list_alt</span>
@@ -214,7 +214,7 @@ export default function OneOnOneForm({
             <button
               type="button"
               onClick={addAgenda}
-              className="flex items-center gap-1.5 px-4 py-2 bg-sky-500 text-white rounded-full text-sm font-bold shadow-md shadow-sky-500/20 hover:bg-sky-600 hover:shadow-lg transition-all"
+              className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 hover:shadow-lg transition-all"
             >
               <span className="material-symbols-outlined text-lg">add_circle</span>
               アジェンダ追加
@@ -258,6 +258,7 @@ export default function OneOnOneForm({
                   <button
                     type="button"
                     onClick={() => removeAgenda(item.id)}
+                    aria-label="アジェンダを削除"
                     className="text-slate-400 hover:text-red-500 transition-colors mt-2"
                   >
                     <span className="material-symbols-outlined text-lg">close</span>
@@ -270,7 +271,7 @@ export default function OneOnOneForm({
       </div>
 
       {/* Notes */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
+      <div className="bg-white rounded-3xl shadow-md p-6 space-y-4">
         <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
           <span className="material-symbols-outlined text-sky-500">edit_note</span>
           メモ
@@ -304,7 +305,7 @@ export default function OneOnOneForm({
       </div>
 
       {/* Action Items */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6">
+      <div className="bg-white rounded-3xl shadow-md p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
             <span className="material-symbols-outlined text-sky-500">task_alt</span>
@@ -368,6 +369,7 @@ export default function OneOnOneForm({
                   <button
                     type="button"
                     onClick={() => removeAction(item.id)}
+                    aria-label="アクションアイテムを削除"
                     className="text-slate-400 hover:text-red-500 transition-colors mt-1.5"
                   >
                     <span className="material-symbols-outlined text-lg">close</span>
@@ -381,7 +383,7 @@ export default function OneOnOneForm({
 
       {/* AI Summary */}
       {!readOnly && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+        <div className="bg-white rounded-3xl shadow-md p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
               <span className="material-symbols-outlined text-purple-500">auto_awesome</span>
@@ -391,7 +393,7 @@ export default function OneOnOneForm({
               type="button"
               onClick={handleAiSummary}
               disabled={aiLoading}
-              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full text-base font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
             >
               {aiLoading ? (
                 <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
@@ -422,7 +424,7 @@ export default function OneOnOneForm({
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full text-base font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-lg">save</span>
             {saving ? '保存中...' : '保存する'}

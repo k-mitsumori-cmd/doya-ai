@@ -63,6 +63,7 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="名前、社員番号、メールで検索..."
+            aria-label="従業員を検索"
             className="w-full pl-12 pr-4 py-3 bg-white rounded-full shadow-sm hover:shadow-md text-base focus:outline-none focus:shadow-md focus:ring-1 focus:ring-blue-200 transition-all"
           />
         </div>
@@ -97,16 +98,18 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
         <div className="flex bg-gray-100 rounded-full overflow-hidden p-1">
           <button
             onClick={() => setViewMode('grid')}
+            aria-label="グリッド表示"
             className={`px-4 py-2 rounded-full transition-all ${
-              viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'
+              viewMode === 'grid' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-600'
             }`}
           >
             <span className="material-symbols-outlined text-2xl">grid_view</span>
           </button>
           <button
             onClick={() => setViewMode('list')}
+            aria-label="リスト表示"
             className={`px-4 py-2 rounded-full transition-all ${
-              viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-400 hover:text-gray-600'
+              viewMode === 'list' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-500 hover:text-gray-600'
             }`}
           >
             <span className="material-symbols-outlined text-2xl">view_list</span>
@@ -139,7 +142,7 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="bg-white rounded-2xl shadow-md overflow-hidden"
+            className="bg-white rounded-3xl shadow-md overflow-hidden"
           >
             <table className="w-full">
               <thead>
@@ -169,7 +172,7 @@ export default function EmployeeGrid({ employees, departments }: EmployeeGridPro
                         <td className="px-4 py-4">
                           <div className="flex items-center gap-3">
                             {emp.photoUrl ? (
-                              <img src={emp.photoUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
+                              <img src={emp.photoUrl} alt={`${emp.lastName} ${emp.firstName}`} className="w-10 h-10 rounded-full object-cover" />
                             ) : (
                               <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${AVATAR_COLORS[colorIndex]} flex items-center justify-center text-white text-sm font-bold`}>
                                 {initials}

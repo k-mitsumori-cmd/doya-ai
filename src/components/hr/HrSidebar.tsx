@@ -93,7 +93,7 @@ export default function HrSidebar({
 
         {/* Support Section */}
         <div className="pt-4 mt-4 border-t border-gray-200">
-          <p className={`px-4 mb-2 text-xs font-bold text-gray-400 uppercase tracking-wider ${isCollapsed ? 'hidden' : ''}`}>
+          <p className={`px-4 mb-2 text-xs font-bold text-gray-500 uppercase tracking-wider ${isCollapsed ? 'hidden' : ''}`}>
             管理
           </p>
           {SUPPORT_ITEMS.map((item) => (
@@ -196,6 +196,7 @@ export default function HrSidebar({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               className="lg:hidden fixed inset-0 bg-black/30 z-40"
+              role="button"
               aria-label="メニューを閉じる"
               onClick={() => setIsMobileOpen(false)}
             />

@@ -193,7 +193,7 @@ export default function EvaluationsPage() {
         <button
           onClick={() => setShowCreateModal(true)}
           className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-500/30 flex items-center justify-center hover:bg-blue-700 hover:shadow-2xl transition-all z-40"
-          title="評価期間を作成"
+          aria-label="評価期間を作成"
         >
           <span className="material-symbols-outlined text-3xl">add</span>
         </button>
@@ -210,7 +210,7 @@ export default function EvaluationsPage() {
               <h2 className="text-lg font-bold text-slate-900 mb-4">評価期間を作成</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-medium text-slate-500 mb-1">期間名</label>
+                  <label className="block text-sm font-bold text-slate-700 mb-1">期間名</label>
                   <input
                     type="text"
                     value={newPeriod.name}
@@ -221,7 +221,7 @@ export default function EvaluationsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">開始日</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">開始日</label>
                     <input
                       type="date"
                       value={newPeriod.startDate}
@@ -230,7 +230,7 @@ export default function EvaluationsPage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">終了日</label>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">終了日</label>
                     <input
                       type="date"
                       value={newPeriod.endDate}

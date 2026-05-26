@@ -35,7 +35,8 @@ export type EvaluationStatus = (typeof EvaluationStatus)[keyof typeof Evaluation
 
 export const EvaluationPeriodStatus = {
   DRAFT: 'DRAFT',
-  ACTIVE: 'ACTIVE',
+  OPEN: 'OPEN',
+  IN_REVIEW: 'IN_REVIEW',
   CLOSED: 'CLOSED',
 } as const
 export type EvaluationPeriodStatus =

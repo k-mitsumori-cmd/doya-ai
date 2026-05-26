@@ -81,7 +81,7 @@ export default function EmployeeCard({ employee }: EmployeeCardProps) {
 
         {/* Hire Date */}
         {employee.hireDate && (
-          <p className="text-xs font-semibold text-gray-400 mt-0.5">
+          <p className="text-xs font-semibold text-gray-500 mt-0.5">
             {formatHireDate(employee.hireDate)}
           </p>
         )}

@@ -94,7 +94,7 @@ export default function EvaluationDetailPage() {
           戻る
         </button>
 
-        <h1 className="text-2xl font-black text-slate-900 mb-6">評価詳細</h1>
+        <h1 className="text-3xl font-black text-slate-900 mb-6">評価詳細</h1>
 
         <EvaluationForm
           evaluationId={evaluation.id}

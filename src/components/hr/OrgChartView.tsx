@@ -101,7 +101,7 @@ function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: numb
                   return (
                     <div key={member.id} className="flex items-center gap-2.5 px-2 py-1.5 rounded-lg hover:bg-slate-50">
                       {member.photoUrl ? (
-                        <img src={member.photoUrl} alt="" className="w-7 h-7 rounded-full object-cover" />
+                        <img src={member.photoUrl} alt={`${member.lastName} ${member.firstName}`} className="w-7 h-7 rounded-full object-cover" />
                       ) : (
                         <div className="w-7 h-7 rounded-full bg-gradient-to-br from-sky-300 to-blue-400 flex items-center justify-center text-white text-[10px] font-bold">
                           {mi}
@@ -112,7 +112,7 @@ function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: numb
                           {member.lastName} {member.firstName}
                         </p>
                         {member.position && (
-                          <p className="text-xs font-semibold text-slate-400 truncate">{member.position}</p>
+                          <p className="text-xs font-semibold text-slate-500 truncate">{member.position}</p>
                         )}
                       </div>
                     </div>
@@ -171,7 +171,7 @@ export default function OrgChartView({ departments, orgName }: OrgChartViewProps
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="inline-block">
           <Link
             href="/hr/settings"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all"
           >
             <span className="material-symbols-outlined text-lg">settings</span>
             設定画面で部署を追加
