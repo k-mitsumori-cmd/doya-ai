@@ -148,10 +148,35 @@ export default function EvaluationsPage() {
             })}
           </div>
         ) : (
-          <div className="text-center py-20 text-slate-500">
-            <span className="material-symbols-outlined text-5xl mb-3 block">assessment</span>
-            <p className="text-lg font-bold">評価期間がまだありません</p>
-            <p className="text-sm mt-1">「評価期間を作成」ボタンから始めましょう</p>
+          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-sky-50 mb-4">
+              <span className="material-symbols-outlined text-4xl text-sky-500">assignment</span>
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-2">評価期間を作成しましょう</h3>
+            <p className="text-base text-slate-500 mb-6 max-w-md mx-auto">
+              MBO（目標管理制度）に基づいた人事評価をオンラインで管理できます。
+            </p>
+            <div className="flex flex-col items-center gap-3 mb-6">
+              <div className="flex items-center gap-3 text-left max-w-sm w-full">
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-sky-100 text-sky-700 text-xs font-black shrink-0">1</span>
+                <span className="text-sm font-bold text-slate-700">評価期間を作成する</span>
+              </div>
+              <div className="flex items-center gap-3 text-left max-w-sm w-full">
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-sky-100 text-sky-700 text-xs font-black shrink-0">2</span>
+                <span className="text-sm font-bold text-slate-700">対象者に評価シートを配布</span>
+              </div>
+              <div className="flex items-center gap-3 text-left max-w-sm w-full">
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-sky-100 text-sky-700 text-xs font-black shrink-0">3</span>
+                <span className="text-sm font-bold text-slate-700">自己評価 → 上司評価 → 最終評価</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+            >
+              <span className="material-symbols-outlined text-lg">add</span>
+              評価期間を作成
+            </button>
           </div>
         )}
 

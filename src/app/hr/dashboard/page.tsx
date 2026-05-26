@@ -107,6 +107,88 @@ export default function HrDashboardPage() {
         ))}
       </div>
 
+      {/* Setup Guide — shown when no employees */}
+      {!loading && stats.employeeCount === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 bg-gradient-to-br from-sky-50 to-blue-50 rounded-2xl border border-sky-200 p-6"
+        >
+          <div className="flex items-center gap-3 mb-5">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-blue-500 flex items-center justify-center text-white shadow-sm">
+              <span className="material-symbols-outlined text-xl">rocket_launch</span>
+            </div>
+            <h2 className="text-xl font-black text-slate-900">はじめてのセットアップ</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                step: 1,
+                title: '部署を作成する',
+                desc: 'まず組織の部署構成を登録しましょう',
+                href: '/hr/settings',
+                icon: 'apartment',
+                done: stats.departmentCount > 0,
+              },
+              {
+                step: 2,
+                title: '従業員を登録する',
+                desc: 'メンバーの情報を登録します',
+                href: '/hr/employees/new',
+                icon: 'person_add',
+                done: stats.employeeCount > 0,
+              },
+              {
+                step: 3,
+                title: '評価期間を設定する',
+                desc: 'MBO評価の期間を設定しましょう',
+                href: '/hr/evaluations',
+                icon: 'assessment',
+                done: stats.activeEvaluations > 0,
+              },
+              {
+                step: 4,
+                title: '1on1を記録する',
+                desc: '面談記録をつけ始めましょう',
+                href: '/hr/one-on-one',
+                icon: 'forum',
+                done: stats.monthlyOneOnOnes > 0,
+              },
+            ].map((item) => (
+              <Link
+                key={item.step}
+                href={item.href}
+                className={`relative block rounded-xl border p-4 transition-all hover:shadow-md ${
+                  item.done
+                    ? 'bg-white border-emerald-200 hover:border-emerald-300'
+                    : 'bg-white border-slate-200 hover:border-sky-300'
+                }`}
+              >
+                {item.done && (
+                  <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-white text-sm">check</span>
+                  </div>
+                )}
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-black ${
+                    item.done ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-100 text-sky-700'
+                  }`}>
+                    {item.step}
+                  </span>
+                  <span className={`material-symbols-outlined text-lg ${item.done ? 'text-emerald-500' : 'text-sky-500'}`}>
+                    {item.icon}
+                  </span>
+                </div>
+                <p className={`text-base font-bold ${item.done ? 'text-emerald-700' : 'text-slate-900'}`}>
+                  {item.title}
+                </p>
+                <p className="text-xs text-slate-500 mt-1">{item.desc}</p>
+              </Link>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Recent 1on1 */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6">

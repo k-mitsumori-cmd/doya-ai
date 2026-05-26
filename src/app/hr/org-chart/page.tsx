@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
+import Link from 'next/link'
 import OrgChartView from '@/components/hr/OrgChartView'
 
 export default function OrgChartPage() {
@@ -33,7 +34,7 @@ export default function OrgChartPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-black text-slate-900">組織図</h1>
-          <p className="text-sm text-slate-500 mt-1">部署と従業員の構成を視覚的に確認</p>
+          <p className="text-sm text-slate-500 mt-1">部署構成と所属メンバーをビジュアルで確認</p>
         </div>
 
         {/* Error */}

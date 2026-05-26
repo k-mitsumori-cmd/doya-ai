@@ -24,6 +24,7 @@ export default function NewEmployeePage() {
   const [error, setError] = useState<string | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const [form, setForm] = useState({
     lastName: '',
@@ -102,7 +103,10 @@ export default function NewEmployeePage() {
         throw new Error(errData.error || '従業員の登録に失敗しました')
       }
 
-      router.push('/hr/employees')
+      setSuccessMessage('従業員を登録しました')
+      setTimeout(() => {
+        router.push('/hr/employees')
+      }, 1500)
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -163,6 +167,7 @@ export default function NewEmployeePage() {
               <span className="material-symbols-outlined text-sky-500">person</span>
               基本情報
             </h2>
+            <p className="text-sm text-slate-400 mb-4">姓名は必須です。社員番号は後から設定できます。</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">
@@ -256,6 +261,7 @@ export default function NewEmployeePage() {
               <span className="material-symbols-outlined text-sky-500">work</span>
               職務情報
             </h2>
+            <p className="text-sm text-slate-400 mb-4">部署がまだ作成されていない場合は、<a href="/hr/settings" className="text-sky-500 underline hover:text-sky-600">設定画面</a>から追加できます。</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-bold text-slate-700 mb-1">部署</label>
@@ -315,9 +321,22 @@ export default function NewEmployeePage() {
                   onChange={handleChange}
                   className="w-full px-3 py-3 bg-white border border-slate-200 rounded-xl text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400"
                 />
+                <p className="text-xs text-slate-400 mt-1.5">入社日を設定すると在籍年数が自動計算されます。</p>
               </div>
             </div>
           </div>
+
+          {/* Success Toast */}
+          {successMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-700 flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-lg">check_circle</span>
+              {successMessage}
+            </motion.div>
+          )}
 
           {/* Error */}
           {error && (
@@ -338,7 +357,15 @@ export default function NewEmployeePage() {
             </button>
             <button
               type="submit"
-              disabled={saving}
+              disabled={saving || !!successMessage}
+              className="flex items-center gap-2 px-6 py-3.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-base font-bold hover:bg-slate-50 transition-colors disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-lg">draft</span>
+              下書き保存
+            </button>
+            <button
+              type="submit"
+              disabled={saving || !!successMessage}
               className="flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-lg">save</span>

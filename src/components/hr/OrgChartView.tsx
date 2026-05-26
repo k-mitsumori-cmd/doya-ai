@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import Link from 'next/link'
 
 interface OrgEmployee {
   id: string
@@ -157,10 +158,20 @@ function DepartmentNode({ dept, level = 0 }: { dept: OrgDepartment; level?: numb
 export default function OrgChartView({ departments, orgName }: OrgChartViewProps) {
   if (departments.length === 0) {
     return (
-      <div className="text-center py-20 text-slate-400">
-        <span className="material-symbols-outlined text-5xl mb-3 block">account_tree</span>
-        <p className="text-lg font-medium">組織図データがありません</p>
-        <p className="text-sm mt-1">部署と従業員を登録すると組織図が表示されます</p>
+      <div className="text-center py-16">
+        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-sky-50 mb-4">
+          <span className="material-symbols-outlined text-4xl text-sky-500">account_tree</span>
+        </div>
+        <h3 className="text-xl font-black text-slate-900 mb-2">組織図を表示するには、まず部署を作成してください</h3>
+        <p className="text-base text-slate-500 mb-6">部署と従業員を登録すると、組織図が自動的に生成されます。</p>
+        <Link
+          href="/hr/settings"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+        >
+          <span className="material-symbols-outlined text-lg">settings</span>
+          設定画面で部署を追加
+          <span className="material-symbols-outlined text-lg">arrow_forward</span>
+        </Link>
       </div>
     )
   }

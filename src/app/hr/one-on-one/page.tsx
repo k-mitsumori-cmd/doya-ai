@@ -189,10 +189,24 @@ export default function OneOnOnePage() {
             })}
           </div>
         ) : (
-          <div className="text-center py-20 text-slate-500">
-            <span className="material-symbols-outlined text-5xl mb-3 block">forum</span>
-            <p className="text-lg font-bold">1on1の記録がまだありません</p>
-            <p className="text-sm mt-1">「1on1を記録」ボタンから始めましょう</p>
+          <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-sky-50 mb-4">
+              <span className="material-symbols-outlined text-4xl text-sky-500">chat</span>
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-2">1on1ミーティングを記録しましょう</h3>
+            <p className="text-base text-slate-500 mb-2 max-w-md mx-auto">
+              定期的な1on1で、メンバーの成長を支援。
+            </p>
+            <p className="text-base text-slate-500 mb-6 max-w-md mx-auto">
+              AIが会話の要約とアクションアイテムを自動生成します。
+            </p>
+            <button
+              onClick={() => setShowNewModal(true)}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-blue-600 text-white rounded-xl text-base font-bold hover:shadow-lg hover:shadow-sky-500/20 transition-all"
+            >
+              <span className="material-symbols-outlined text-lg">add</span>
+              1on1を記録する
+            </button>
           </div>
         )}
 
