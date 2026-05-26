@@ -32,6 +32,8 @@ export default function SettingsPage() {
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState({ name: '', workStart: '09:00', workEnd: '18:00', breakMinutes: 60, overtimeCalcMethod: 'daily', flexEnabled: false, coreStart: '', coreEnd: '' })
   const [saving, setSaving] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<any>(null)
+  const [deleting, setDeleting] = useState(false)
 
   const fetchRules = () => {
     setLoading(true)
@@ -73,11 +75,15 @@ export default function SettingsPage() {
     } catch { alert('通信エラー') } finally { setSaving(false) }
   }
 
-  const handleDelete = async (rule: any) => {
-    if (!window.confirm(`「${rule.name}」を削除しますか？`)) return
-    const res = await fetch(`/api/kintai/work-rules/${rule.id}`, { method: 'DELETE' })
-    if (!res.ok) { const d = await res.json(); alert(d.error || '削除に失敗しました'); return }
-    fetchRules()
+  const handleDelete = async () => {
+    if (!showDeleteConfirm) return
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/kintai/work-rules/${showDeleteConfirm.id}`, { method: 'DELETE' })
+      if (!res.ok) { const d = await res.json(); alert(d.error || '削除に失敗しました'); return }
+      setShowDeleteConfirm(null)
+      fetchRules()
+    } catch { alert('通信エラー') } finally { setDeleting(false) }
   }
 
   const OT_LABELS: Record<string, string> = { daily: '日次', weekly: '週次', monthly: '月次' }
@@ -183,7 +189,7 @@ export default function SettingsPage() {
                       <button onClick={() => openEdit(rule)} className="p-1.5 text-slate-400 hover:text-[#7f19e6] hover:bg-purple-50 rounded-lg transition-colors">
                         <span className="material-symbols-outlined text-lg">edit</span>
                       </button>
-                      <button onClick={() => handleDelete(rule)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                      <button onClick={() => setShowDeleteConfirm(rule)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                         <span className="material-symbols-outlined text-lg">delete</span>
                       </button>
                     </div>
@@ -318,6 +324,36 @@ export default function SettingsPage() {
                 <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">キャンセル</button>
                 <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl hover:bg-[#6a14c2] transition-colors disabled:opacity-50">
                   {saving ? '保存中...' : '保存'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete confirmation dialog */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowDeleteConfirm(null)}>
+            <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4 space-y-4 fade-in-up" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-3">
+                <img src="/kintai/characters/surprise_驚き.png" alt="" width={56} height={56} className="bear-wiggle" />
+                <h2 className="text-lg font-bold text-slate-800">ルールを削除</h2>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm text-slate-600">
+                  <span className="font-bold text-slate-800">「{showDeleteConfirm.name}」</span>を削除しますか？
+                </p>
+                {(showDeleteConfirm._count?.employees || 0) > 0 && (
+                  <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                    <span className="material-symbols-outlined text-amber-600 text-base mt-0.5">info</span>
+                    <p className="text-xs text-amber-700">このルールは<span className="font-bold">{showDeleteConfirm._count.employees}名</span>の従業員に適用されています。</p>
+                  </div>
+                )}
+                <p className="text-xs text-slate-400">この操作は元に戻せません。</p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setShowDeleteConfirm(null)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">キャンセル</button>
+                <button onClick={handleDelete} disabled={deleting} className="flex-1 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50">
+                  {deleting ? '削除中...' : '削除する'}
                 </button>
               </div>
             </div>

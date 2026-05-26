@@ -94,6 +94,7 @@ export default function KintaiOnboarding() {
           to { opacity: 1; transform: translateY(0); }
         }
         .fade-in-up {
+          opacity: 0;
           animation: fadeInUp 0.5s ease-out forwards;
         }
 
@@ -139,11 +140,11 @@ export default function KintaiOnboarding() {
 
       {/* ===== Floating Decorative Dots ===== */}
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-        <div className="float-dot-1 absolute top-[20%] left-[10%] w-4 h-4 rounded-full bg-[#7f19e6]/8" />
+        <div className="float-dot-1 absolute top-[20%] left-[10%] w-4 h-4 rounded-full bg-[#7f19e6]/10" />
         <div className="float-dot-2 absolute top-[15%] right-[12%] w-5 h-5 rounded-full bg-amber-300/15" />
-        <div className="float-dot-1 absolute bottom-[25%] left-[15%] w-3 h-3 rounded-full bg-emerald-400/12" />
+        <div className="float-dot-1 absolute bottom-[25%] left-[15%] w-3 h-3 rounded-full bg-emerald-400/10" />
         <div className="float-dot-2 absolute bottom-[30%] right-[20%] w-4 h-4 rounded-full bg-rose-300/10" />
-        <div className="float-dot-1 absolute top-[50%] right-[5%] w-3 h-3 rounded-full bg-[#7f19e6]/6" />
+        <div className="float-dot-1 absolute top-[50%] right-[5%] w-3 h-3 rounded-full bg-[#7f19e6]/5" />
       </div>
 
       <div className="relative z-10 w-full max-w-md card-pop">

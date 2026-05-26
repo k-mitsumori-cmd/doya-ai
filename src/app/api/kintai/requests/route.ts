@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
 
     const requests = await prisma.kintaiRequest.findMany({
       where,
-      include: { employee: { select: { name: true, email: true } } },
+      include: { employee: { select: { name: true, email: true, department: { select: { name: true } } } } },
       orderBy: { submittedAt: 'desc' },
       take: 100,
     })

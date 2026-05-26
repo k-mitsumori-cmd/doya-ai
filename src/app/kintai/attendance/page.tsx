@@ -248,7 +248,7 @@ export default function AttendancePage() {
                         <td className="px-3 py-3 text-center">
                           {att?.clockIn ? (
                             <span className="font-mono font-bold text-slate-700 text-xs">
-                              {new Date(att.clockIn).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(att.clockIn).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })}
                             </span>
                           ) : isWeekend && !att ? (
                             <span className="text-[10px] text-slate-300 font-medium">休日</span>
@@ -262,7 +262,7 @@ export default function AttendancePage() {
                         <td className="px-3 py-3 text-center">
                           {att?.clockOut ? (
                             <span className="font-mono font-bold text-slate-700 text-xs">
-                              {new Date(att.clockOut).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}
+                              {new Date(att.clockOut).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })}
                             </span>
                           ) : isWeekend && !att ? (
                             <span className="text-[10px] text-slate-300 font-medium">休日</span>

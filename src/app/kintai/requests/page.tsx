@@ -14,7 +14,8 @@ const TABS = [
 
 function formatDateJa(dateStr: string): string {
   const d = new Date(dateStr)
-  return `${d.getMonth() + 1}月${d.getDate()}日`
+  const jst = new Date(d.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }))
+  return `${jst.getMonth() + 1}月${jst.getDate()}日`
 }
 
 function getRequestSummary(r: any): string {

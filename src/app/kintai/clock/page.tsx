@@ -117,7 +117,7 @@ export default function ClockPage() {
   const jstNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }))
   const hour = jstNow.getHours()
   const timeStr = now.toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour12: false })
-  const monthDay = `${now.getMonth() + 1}月${now.getDate()}日（${WEEKDAYS[now.getDay()]}）`
+  const monthDay = `${jstNow.getMonth() + 1}月${jstNow.getDate()}日（${WEEKDAYS[jstNow.getDay()]}）`
 
   const breakMinutes = calcBreakMinutes(records)
   const workMinutes = calcWorkMinutes(records, breakMinutes)
@@ -207,7 +207,7 @@ export default function ClockPage() {
   }
 
   return (
-    <div className="min-h-screen transition-colors duration-700" style={{ ...(statusConfig.bg ? { background: '' } : {}) }}>
+    <div className="min-h-screen" style={parseBgStyle(statusConfig.bg)}>
       <style jsx>{`
         /* ===== Status Background (applied via inline style) ===== */
 
@@ -400,7 +400,7 @@ export default function ClockPage() {
         }
       `}</style>
 
-      <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-5 pb-20" style={parseBgStyle(statusConfig.bg)}>
+      <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-5 pb-20">
 
         {/* ===== Success Animation Overlay ===== */}
         {showSuccess && (

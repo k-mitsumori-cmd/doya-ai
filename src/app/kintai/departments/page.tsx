@@ -17,7 +17,6 @@ export default function DepartmentsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState<any>(null)
   const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<any>(null)
   const [deleting, setDeleting] = useState(false)
@@ -33,8 +32,8 @@ export default function DepartmentsPage() {
 
   useEffect(() => { fetchDepts() }, [])
 
-  const openCreate = () => { setEditing(null); setName(''); setDescription(''); setShowForm(true) }
-  const openEdit = (dept: any) => { setEditing(dept); setName(dept.name); setDescription(dept.description || ''); setShowForm(true) }
+  const openCreate = () => { setEditing(null); setName(''); setShowForm(true) }
+  const openEdit = (dept: any) => { setEditing(dept); setName(dept.name); setShowForm(true) }
 
   const handleSave = async () => {
     if (!name.trim()) { alert('部署名を入力してください'); return }
@@ -43,7 +42,6 @@ export default function DepartmentsPage() {
       const url = editing ? `/api/kintai/departments/${editing.id}` : '/api/kintai/departments'
       const method = editing ? 'PATCH' : 'POST'
       const body: any = { name }
-      if (description.trim()) body.description = description
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
       if (!res.ok) { const d = await res.json(); alert(d.error || '保存に失敗しました'); return }
       setShowForm(false)
@@ -161,9 +159,6 @@ export default function DepartmentsPage() {
                         )}
                         <h3 className="font-bold text-slate-800 truncate">{dept.name}</h3>
                       </div>
-                      {dept.description && (
-                        <p className="text-xs text-slate-400 mt-1 line-clamp-2">{dept.description}</p>
-                      )}
                       <div className="flex items-center gap-3 mt-2.5">
                         <span className="inline-flex items-center gap-1 text-sm text-slate-600">
                           <span className="material-symbols-outlined text-base" style={{ color: borderColor }}>group</span>
@@ -210,14 +205,6 @@ export default function DepartmentsPage() {
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6]"
                   placeholder="例: 営業部" autoFocus />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  説明 <span className="text-xs text-slate-400 font-normal">(任意)</span>
-                </label>
-                <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] resize-none"
-                  placeholder="この部署に関するメモ..." />
-              </div>
               <div className="flex gap-3">
                 <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">キャンセル</button>
                 <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl hover:bg-[#6a14c2] transition-colors disabled:opacity-50">
@@ -243,7 +230,7 @@ export default function DepartmentsPage() {
                 {(showDeleteConfirm._count?.employees || 0) > 0 && (
                   <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3">
                     <span className="material-symbols-outlined text-amber-600 text-base mt-0.5">info</span>
-                    <p className="text-xs text-amber-700">この部署には<span className="font-bold">{showDeleteConfirm._count.employees}名</span>の従業員が所属しています。削除すると所属が解除されます。</p>
+                    <p className="text-xs text-amber-700">この部署には<span className="font-bold">{showDeleteConfirm._count.employees}名</span>の従業員が所属しています。先に従業員の所属を変更してください。</p>
                   </div>
                 )}
                 <p className="text-xs text-slate-400">この操作は元に戻せません。</p>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 
@@ -12,6 +12,19 @@ const REQUEST_TYPES = [
 ]
 
 export default function NewRequestPage() {
+  return (
+    <Suspense fallback={
+      <div className="p-4 lg:p-6 max-w-2xl mx-auto flex flex-col items-center justify-center py-20 gap-4">
+        <div className="w-10 h-10 rounded-full border-4 border-[#7f19e6]/20 border-t-[#7f19e6] animate-spin" />
+        <p className="text-sm text-slate-400">読み込み中...</p>
+      </div>
+    }>
+      <NewRequestContent />
+    </Suspense>
+  )
+}
+
+function NewRequestContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [step, setStep] = useState(1)
@@ -50,8 +63,9 @@ export default function NewRequestPage() {
 
   const previewText = (): string => {
     if (type === 'clock_fix' && fixDate && fixTime && fixClockType) {
-      const d = new Date(fixDate)
-      const dateStr = `${d.getMonth() + 1}月${d.getDate()}日`
+      // fixDate is YYYY-MM-DD from date input; parse as JST
+      const [, mm, dd] = fixDate.split('-')
+      const dateStr = `${parseInt(mm)}月${parseInt(dd)}日`
       const clockLabel = CLOCK_TYPE_LABELS[fixClockType] || fixClockType
       return `${dateStr}の${clockLabel}時刻を ${fixTime} に修正します`
     }

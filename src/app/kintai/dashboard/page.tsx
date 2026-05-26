@@ -60,7 +60,7 @@ export default function DashboardPage() {
     )
   }
 
-  const { employee, clockStatus, todayAttendance, monthlySummary, recentRequests } = data || {}
+  const { employee, clockStatus, todayRecords, todayAttendance, monthlySummary, recentRequests } = data || {}
 
   const jstNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }))
   const hour = jstNow.getHours()
@@ -74,21 +74,52 @@ export default function DashboardPage() {
     weekday: 'long',
   })
 
-  // Compute real-time working duration for 'working' status
+  // Compute real-time working duration for 'working' or 'on_break' status
+  // todayAttendance is only written on clock_out, so for active sessions we use todayRecords
   const liveWorkMinutes = useMemo(() => {
-    if (clockStatus !== 'working' || !todayAttendance?.clockIn) return todayAttendance?.workMinutes || 0
-    const clockIn = new Date(todayAttendance.clockIn).getTime()
-    const elapsed = Math.round((now.getTime() - clockIn) / 60000)
-    const breakMins = todayAttendance.breakMinutes || 0
-    return Math.max(0, elapsed - breakMins)
-  }, [clockStatus, todayAttendance, now])
+    if (clockStatus === 'working' || clockStatus === 'on_break') {
+      // Use raw records to compute live work time
+      const records = todayRecords || []
+      const clockInRecord = records.find((r: any) => r.type === 'clock_in')
+      if (!clockInRecord) return 0
+      const clockInTime = new Date(clockInRecord.timestamp).getTime()
+      // Calculate break minutes from completed break pairs
+      const breakStarts = records.filter((r: any) => r.type === 'break_start')
+      const breakEnds = records.filter((r: any) => r.type === 'break_end')
+      let breakMins = 0
+      for (let i = 0; i < Math.min(breakStarts.length, breakEnds.length); i++) {
+        breakMins += Math.round((new Date(breakEnds[i].timestamp).getTime() - new Date(breakStarts[i].timestamp).getTime()) / 60000)
+      }
+      // If currently on break, add the ongoing break duration
+      if (clockStatus === 'on_break' && breakStarts.length > breakEnds.length) {
+        const ongoingBreakStart = new Date(breakStarts[breakStarts.length - 1].timestamp).getTime()
+        breakMins += Math.round((now.getTime() - ongoingBreakStart) / 60000)
+      }
+      const elapsed = Math.round((now.getTime() - clockInTime) / 60000)
+      return Math.max(0, elapsed - breakMins)
+    }
+    // For clocked_out or not_clocked_in, use the attendance record
+    return todayAttendance?.workMinutes || 0
+  }, [clockStatus, todayRecords, todayAttendance, now])
 
   const liveHours = Math.floor(liveWorkMinutes / 60)
   const liveMins = liveWorkMinutes % 60
 
   // Clock-in and clock-out times for timeline visualization
-  const clockInTime = todayAttendance?.clockIn ? new Date(todayAttendance.clockIn) : null
-  const clockOutTime = todayAttendance?.clockOut ? new Date(todayAttendance.clockOut) : null
+  // Prefer todayAttendance, fallback to todayRecords for active sessions
+  const clockInTime = useMemo(() => {
+    if (todayAttendance?.clockIn) return new Date(todayAttendance.clockIn)
+    const records = todayRecords || []
+    const clockInRecord = records.find((r: any) => r.type === 'clock_in')
+    return clockInRecord ? new Date(clockInRecord.timestamp) : null
+  }, [todayAttendance, todayRecords])
+
+  const clockOutTime = useMemo(() => {
+    if (todayAttendance?.clockOut) return new Date(todayAttendance.clockOut)
+    const records = todayRecords || []
+    const clockOutRecord = records.find((r: any) => r.type === 'clock_out')
+    return clockOutRecord ? new Date(clockOutRecord.timestamp) : null
+  }, [todayAttendance, todayRecords])
 
   // Hero status config
   const heroConfig = getHeroConfig(clockStatus, liveHours, liveMins, todayAttendance?.workMinutes || 0)
@@ -190,7 +221,7 @@ export default function DashboardPage() {
         </div>
 
         {/* ===== Today's Attendance Card ===== */}
-        {todayAttendance && (
+        {(todayAttendance || clockInTime) && (
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-200/30 p-5">
             <h2 className="text-sm font-bold text-slate-600 mb-4 flex items-center gap-2">
               <div className="w-7 h-7 rounded-lg bg-[#7f19e6]/10 flex items-center justify-center">
@@ -206,26 +237,26 @@ export default function DashboardPage() {
               <StatChip
                 icon="login"
                 label="出勤"
-                value={todayAttendance.clockIn ? new Date(todayAttendance.clockIn).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                value={clockInTime ? clockInTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '-'}
                 color="emerald"
               />
               <StatChip
                 icon="logout"
                 label="退勤"
-                value={todayAttendance.clockOut ? new Date(todayAttendance.clockOut).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                value={clockOutTime ? clockOutTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '-'}
                 color="rose"
               />
               <StatChip
                 icon="schedule"
                 label="勤務時間"
-                value={clockStatus === 'working' ? `${liveHours}h ${liveMins}m` : formatMinutesJa(todayAttendance.workMinutes)}
+                value={(clockStatus === 'working' || clockStatus === 'on_break') ? `${liveHours}h ${liveMins}m` : formatMinutesJa(todayAttendance?.workMinutes || 0)}
                 color="blue"
               />
               <StatChip
                 icon="more_time"
                 label="残業"
-                value={formatMinutesJa(todayAttendance.overtimeMinutes)}
-                color={todayAttendance.overtimeMinutes > 0 ? 'orange' : 'slate'}
+                value={formatMinutesJa(todayAttendance?.overtimeMinutes || 0)}
+                color={(todayAttendance?.overtimeMinutes || 0) > 0 ? 'orange' : 'slate'}
               />
             </div>
           </div>

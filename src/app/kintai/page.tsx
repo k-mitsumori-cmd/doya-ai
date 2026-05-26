@@ -170,11 +170,11 @@ export default function KintaiLandingPage() {
         <div className="dot-drift-1 absolute top-[15%] left-[10%] w-4 h-4 rounded-full bg-[#7f19e6]/10" />
         <div className="dot-drift-2 absolute top-[25%] right-[15%] w-6 h-6 rounded-full bg-amber-300/20" />
         <div className="dot-drift-3 absolute top-[50%] left-[5%] w-3 h-3 rounded-full bg-emerald-400/15" />
-        <div className="dot-drift-1 absolute top-[60%] right-[8%] w-5 h-5 rounded-full bg-[#7f19e6]/8" />
+        <div className="dot-drift-1 absolute top-[60%] right-[8%] w-5 h-5 rounded-full bg-[#7f19e6]/10" />
         <div className="dot-drift-2 absolute top-[35%] left-[50%] w-3 h-3 rounded-full bg-rose-300/15" />
         <div className="dot-drift-3 absolute top-[75%] left-[30%] w-4 h-4 rounded-full bg-blue-300/15" />
         <div className="dot-drift-1 absolute top-[80%] right-[25%] w-5 h-5 rounded-full bg-amber-400/10" />
-        <div className="dot-drift-2 absolute top-[10%] left-[60%] w-3 h-3 rounded-full bg-[#7f19e6]/6" />
+        <div className="dot-drift-2 absolute top-[10%] left-[60%] w-3 h-3 rounded-full bg-[#7f19e6]/5" />
       </div>
 
       {/* ===== Header ===== */}
