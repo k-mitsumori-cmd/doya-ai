@@ -145,6 +145,15 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
         )}
       </nav>
 
+      {/* Plan link */}
+      <div className="px-3 mb-2">
+        <Link href="/kintai/pricing" onClick={closeMobile}
+          className="flex items-center gap-3 px-4 py-3 rounded-full text-base font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 transition-all">
+          <span className="text-lg">💎</span>
+          料金プラン
+        </Link>
+      </div>
+
       {/* Bottom section with bear and cheer message */}
       <div className="p-4 border-t border-slate-100">
         <div className="flex items-center gap-3 px-2 py-2 rounded-2xl bg-gradient-to-r from-[#7f19e6]/5 to-purple-50">

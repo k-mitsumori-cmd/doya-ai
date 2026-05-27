@@ -167,24 +167,28 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2.5 text-sm">
-                    {/* Work time */}
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-base text-[#7f19e6]">schedule</span>
-                      <span className="text-slate-700 font-black text-lg">{rule.workStart} 〜 {rule.workEnd}</span>
-                      <span className="text-xs text-slate-400">({workH > 0 ? `${workH}時間` : ''}{workM > 0 ? `${workM}分` : ''}勤務)</span>
+                  <div className="space-y-3">
+                    {/* Work time — big and clear */}
+                    <div className="bg-purple-50 rounded-2xl p-4">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="material-symbols-outlined text-2xl text-[#7f19e6]">schedule</span>
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-3xl font-black text-[#7f19e6]">{rule.workStart}</span>
+                          <span className="text-xl font-black text-slate-400">〜</span>
+                          <span className="text-3xl font-black text-[#7f19e6]">{rule.workEnd}</span>
+                        </div>
+                        <span className="text-base font-bold text-slate-500 ml-2">({workH > 0 ? `${workH}時間` : ''}{workM > 0 ? `${workM}分` : ''}勤務)</span>
+                      </div>
                     </div>
 
                     {/* Visual hours bar */}
-                    <div className="relative h-6 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="relative h-8 bg-slate-100 rounded-full overflow-hidden">
                       <div
-                        className="absolute top-0 bottom-0 bg-[#7f19e6]/20 rounded-full"
+                        className="absolute top-0 bottom-0 bg-gradient-to-r from-[#7f19e6]/40 to-[#7f19e6]/60 rounded-full"
                         style={{ left: `${barLeftPct}%`, width: `${barWidthPct}%` }}
-                      >
-                        <div className="absolute inset-0 bg-[#7f19e6]/30 rounded-full" />
-                      </div>
-                      <span className="absolute text-[10px] font-bold text-[#7f19e6] top-1/2 -translate-y-1/2" style={{ left: `${barLeftPct}%`, transform: 'translate(-50%, -50%)' }}>{rule.workStart}</span>
-                      <span className="absolute text-[10px] font-bold text-[#7f19e6] top-1/2 -translate-y-1/2" style={{ left: `${barLeftPct + barWidthPct}%`, transform: 'translate(-50%, -50%)' }}>{rule.workEnd}</span>
+                      />
+                      <span className="absolute text-xs font-black text-[#7f19e6] top-1/2 -translate-y-1/2" style={{ left: `${Math.max(3, barLeftPct - 2)}%` }}>{rule.workStart}</span>
+                      <span className="absolute text-xs font-black text-[#7f19e6] top-1/2 -translate-y-1/2" style={{ left: `${Math.min(92, barLeftPct + barWidthPct + 1)}%` }}>{rule.workEnd}</span>
                     </div>
 
                     {/* Break */}
