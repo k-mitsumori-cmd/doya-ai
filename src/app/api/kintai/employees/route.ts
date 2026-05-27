@@ -113,8 +113,8 @@ export async function POST(req: NextRequest) {
         name,
         nameKana: nameKana || null,
         email,
-        departmentId: departmentId || null,
-        workRuleId: workRuleId || null,
+        ...(departmentId ? { department: { connect: { id: departmentId } } } : {}),
+        ...(workRuleId ? { workRule: { connect: { id: workRuleId } } } : {}),
         employmentType: employmentType || 'full_time',
         hireDate: hireDate ? new Date(hireDate) : null,
         member: {
