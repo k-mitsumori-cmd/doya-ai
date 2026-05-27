@@ -21,6 +21,10 @@
 12. [新サービス追加チェックリスト](#12-新サービス追加チェックリスト)
 13. [課金 & アクセス制御](#13-課金--アクセス制御)
 14. [デザイン方針 —「かわいい・楽しい・わかりやすい」](#14-デザイン方針-かわいい楽しいわかりやすい)
+15. [共通機能 & 共通データベース管理](#15-共通機能--共通データベース管理)
+16. [メール配信システム（Resend + ドリップマーケティング）](#16-メール配信システムresend--ドリップマーケティング)
+17. [エラー通知 & ユーザーエラー報告システム](#17-エラー通知--ユーザーエラー報告システム)
+18. [現状の不整合・要注意事項レポート](#18-現状の不整合要注意事項レポート)
 
 ---
 
@@ -1517,7 +1521,323 @@ layout.tsx (Root)
 
 ---
 
-## 16. 現状の不整合・要注意事項レポート（2026-05-27 監査）
+## 16. メール配信システム（Resend + ドリップマーケティング）
+
+### 16.1 基盤: Resend API 統合
+
+| 項目 | 詳細 |
+|------|------|
+| パッケージ | `resend` v6.12.4 |
+| 実装方式 | Resend HTTP API を fetch で直接呼び出し（`src/lib/email.ts`） |
+| 送信元 | `noreply@doya-ai.surisuta.jp`（デフォルト） |
+| 環境変数 | `RESEND_API_KEY`（必須）、`RESEND_FROM_EMAIL`（任意） |
+
+```typescript
+// src/lib/email.ts — コア送信関数
+export async function sendEmail(params: {
+  to: string | string[]
+  subject: string
+  html: string
+  from?: string
+  replyTo?: string
+  tags?: { name: string; value: string }[]
+}): Promise<{ success: boolean; id?: string; error?: string }>
+```
+
+### 16.2 ドリップマーケティングエンジン（自動ステップメール）
+
+管理画面から設定可能な、本格的な自動メール配信ワークフロー。
+
+#### ワークフロー全体像
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ 管理画面 (/admin/drip/)                                   │
+│  ├─ セグメント作成（対象ユーザー条件）                       │
+│  ├─ テンプレート作成（HTML メール本文）                      │
+│  └─ シーケンス作成（ステップ群 + スケジュール）              │
+└─────────────────────────┬───────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────┐
+│ ユーザー登録 → DripEnrollment レコード作成                  │
+└─────────────────────────┬───────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────┐
+│ 毎時 Cron 実行 (/api/cron/drip-sender)                    │
+│  ├─ アクティブな Enrollment を取得                         │
+│  ├─ 送信条件を評価:                                       │
+│  │   ├─ 送信時間帯内か（sendWindowStart〜sendWindowEnd）   │
+│  │   ├─ 日数オフセット到達か（enrolledAt + dayOffset）     │
+│  │   └─ 送信時刻に合致するか                               │
+│  ├─ 条件分岐を評価（前メールの開封/クリック状況）            │
+│  ├─ テンプレート変数を置換                                  │
+│  ├─ トラッキングピクセル & クリック URL を埋め込み           │
+│  ├─ Resend 経由で送信                                      │
+│  ├─ DripEmailLog に記録                                    │
+│  └─ 次ステップへ進む or 完了                                │
+└─────────────────────────────────────────────────────────┘
+                          ↓
+┌─────────────────────────────────────────────────────────┐
+│ トラッキング                                               │
+│  ├─ 開封: /api/t/open/[trackingId] — 1x1 透明 GIF         │
+│  ├─ クリック: /api/t/click/[trackingId]/[linkId] — 302     │
+│  └─ 配信停止: /api/drip/unsubscribe?token={HMAC token}     │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### DB モデル（8 テーブル）
+
+| テーブル | 用途 |
+|---------|------|
+| `DripSegment` | ターゲットセグメント（条件定義） |
+| `DripTemplate` | メールテンプレート（HTML + テキスト） |
+| `DripSequence` | シーケンス（キャンペーン単位、draft/active/paused） |
+| `DripStep` | シーケンス内の各ステップ（日数オフセット・送信時刻・条件分岐） |
+| `DripEnrollment` | ユーザーの進捗管理（1 ユーザー × 1 シーケンス） |
+| `DripEmailLog` | 配信ログ（開封/クリック/バウンス追跡） |
+| `DripUnsubscribe` | 配信停止記録 |
+| `DripSetting` | グローバル設定（送信時間帯・レート制限等） |
+
+#### 条件分岐（前ステップの開封/クリック状況で分岐）
+
+```typescript
+case 'not_opened':         // 前メール未開封
+case 'opened':             // 前メール開封済み
+case 'not_clicked':        // 前メール未クリック
+case 'clicked':            // 前メールクリック済み
+case 'opened_not_clicked': // 開封したがクリックしていない
+```
+
+#### テンプレート変数
+
+| 変数 | 置換内容 |
+|------|---------|
+| `{{user_name}}` | ユーザー名（未設定時「お客様」） |
+| `{{email}}` | メールアドレス |
+| `{{plan}}` | サブスクリプションプラン |
+| `{{last_login}}` | 最終ログイン日（JP 形式） |
+| `{{days_since_login}}` | 最終ログインからの日数 |
+| `{{registered_at}}` | 登録日（JP 形式） |
+| `{{enrolled_at}}` | エンロール日（JP 形式） |
+
+#### DripSetting 設定項目
+
+| キー | デフォルト | 説明 |
+|------|----------|------|
+| `fromName` | — | 差出人名 |
+| `fromEmail` | — | 送信元アドレス |
+| `replyTo` | — | 返信先 |
+| `timezone` | — | タイムゾーン |
+| `sendWindowStart` | `09:00` | 送信開始時刻 |
+| `sendWindowEnd` | `21:00` | 送信終了時刻 |
+| `rateLimit` | `100` | 時間あたり送信数上限 |
+| `unsubscribeEnabled` | `true` | 配信停止リンク表示 |
+
+#### 配信停止（コンプライアンス対応）
+
+- HMAC-SHA256 署名付きトークン（90 日有効）
+- シークレット: `DRIP_UNSUBSCRIBE_SECRET`（未設定時 `NEXTAUTH_SECRET` にフォールバック）
+- ユーザー列挙攻撃を防止（無効トークンでも同じエラー表示）
+
+### 16.3 サービス固有トランザクションメール
+
+| サービス | ファイル | メール種別 | トリガー |
+|---------|---------|----------|---------|
+| ドヤHR | `src/lib/hr/email.ts` | 従業員招待 | 管理者が「招待」ボタン押下 |
+| ドヤ勤怠 | `api/kintai/employees/[id]/invite/route.ts` | 勤怠システム招待 | 管理者が従業員を招待 |
+| ドヤヒヤリングAI | `src/lib/interviewx/email.ts` | アンケート招待 + 回答完了通知 | プロジェクト作成 / 回答完了 |
+
+### 16.4 展開AI ニュースレター生成
+
+`src/lib/tenkai/prompts/newsletter.ts` で AI がニュースレター用 HTML メールを生成。
+件名・プレビューテキスト・本文（インラインスタイル HTML）・CTA を構造化 JSON で出力。
+
+### 16.5 管理画面 API
+
+| エンドポイント | メソッド | 用途 |
+|-------------|---------|------|
+| `/api/admin/drip/settings` | GET/PUT | グローバル設定 |
+| `/api/admin/drip/templates` | GET/POST | テンプレート管理 |
+| `/api/admin/drip/templates/[id]` | PATCH/DELETE | テンプレート編集 |
+| `/api/admin/drip/sequences` | GET/POST | シーケンス管理 |
+| `/api/admin/drip/sequences/[id]` | GET/PATCH/DELETE | シーケンス編集 |
+| `/api/admin/drip/sequences/[id]/steps` | GET/POST | ステップ管理 |
+| `/api/admin/drip/segments` | GET/POST | セグメント管理 |
+| `/api/admin/drip/dashboard` | GET | 配信分析ダッシュボード |
+| `/api/admin/drip/logs` | GET | 配信ログ |
+| `/api/admin/drip/users` | GET | 登録ユーザー一覧 |
+| `/api/admin/drip/users/[id]/timeline` | GET | ユーザー行動タイムライン |
+
+### 16.6 メール関連の環境変数
+
+```bash
+# Resend（必須）
+RESEND_API_KEY=re_xxxxxxxxxxxx
+
+# 送信元（任意）
+RESEND_FROM_EMAIL=noreply@doya-ai.surisuta.jp
+
+# 配信停止トークン署名（任意、NEXTAUTH_SECRET にフォールバック）
+DRIP_UNSUBSCRIBE_SECRET=xxxxxxxx
+
+# Cron 認証（推奨）
+CRON_SECRET=xxxxxxxx
+```
+
+---
+
+## 17. エラー通知 & ユーザーエラー報告システム
+
+### 17.1 既存のエラー通知基盤
+
+#### バックエンド自動通知（`errorHandler.ts` → Slack）
+
+API でエラーが発生した際に自動で Slack に通知する仕組みが実装済み。
+
+```typescript
+// src/lib/errorHandler.ts
+export async function notifyApiError(params: {
+  error: Error
+  request: NextRequest
+  session?: Session
+}): Promise<void>
+```
+
+送信される情報: エラーメッセージ、スタックトレース、リクエスト URL/メソッド/ボディ、ユーザー情報
+
+```typescript
+// src/lib/notifications.ts — Slack 送信
+export async function sendErrorNotification(data: {
+  path: string
+  status: number
+  method: string
+  url: string
+  message: string
+  body?: string
+  stack?: string
+  userId?: string
+  userEmail?: string
+  userName?: string
+}): Promise<void>
+```
+
+#### イベント通知（Slack）
+
+| イベント | Emoji | タイミング |
+|---------|-------|----------|
+| サインアップ | 🎉 | 新規ユーザー登録時 |
+| ログイン | 🚪 | 既存ユーザーログイン時 |
+| サブスクリプション | 💳 | 課金成功時 |
+| 解約 | 👋 | サブスク解約時 |
+| 支払い失敗 | ⚠️ | 決済失敗時 |
+
+### 17.2 ユーザー向けエラー報告フォーム（必須仕様）
+
+**全サービス共通ルール**: 404 やエラーが発生してリトライしても解消しない場合、ユーザーがエラー内容を報告できるフォームを必ず表示する。報告内容は Slack に通知される。
+
+#### 表示条件
+
+```
+エラー発生（404 / 500 / タイムアウト等）
+  → リトライボタン表示
+  → リトライしても解消しない
+  → エラー報告フォームを表示
+```
+
+具体的には:
+- **404 ページ** (`not-found.tsx`): 常にエラー報告フォームを表示
+- **エラーバウンダリ** (`error.tsx`): リトライボタン + エラー報告フォームを併設
+- **API エラー（各サービス画面内）**: リトライ失敗後にエラー報告フォームを表示
+
+#### フォーム仕様
+
+```
+┌─────────────────────────────────────────────┐
+│  Character（error）                           │
+│  「うぅ...エラーだ...報告してくれると助かる！」  │
+│                                               │
+│  ┌─────────────────────────────────────────┐ │
+│  │ 何をしていましたか？（任意）               │ │
+│  │ [テキストエリア]                           │ │
+│  └─────────────────────────────────────────┘ │
+│  ┌─────────────────────────────────────────┐ │
+│  │ 改善してほしい点（任意）                   │ │
+│  │ [テキストエリア]                           │ │
+│  └─────────────────────────────────────────┘ │
+│                                               │
+│  [自動収集情報（折りたたみ表示）]               │
+│   - エラー種別: 404 / 500 / timeout 等         │
+│   - URL: 発生したページ                        │
+│   - ブラウザ / OS                              │
+│   - ユーザー ID（ログイン済みの場合）           │
+│   - タイムスタンプ                             │
+│                                               │
+│  [ 報告する ]  ← btn-primary（グラデーション）  │
+│                                               │
+│  送信後 → Character（thumbsup）                │
+│  「ありがとう！すぐ確認するね！」               │
+└─────────────────────────────────────────────┘
+```
+
+#### API 仕様
+
+```
+POST /api/feedback/error-report
+
+Request:
+{
+  errorType: '404' | '500' | 'timeout' | 'unknown'
+  errorUrl: string          // 発生 URL（自動取得）
+  errorMessage?: string     // エラーメッセージ（自動取得）
+  userDescription?: string  // ユーザー入力: 何をしていたか
+  userSuggestion?: string   // ユーザー入力: 改善点
+  browser?: string          // UA（自動取得）
+  timestamp: string         // ISO 8601（自動取得）
+}
+
+Response:
+{ success: true }
+```
+
+#### Slack 通知フォーマット
+
+```
+🐛 エラー報告が届きました
+
+エラー種別: 404
+URL: https://doya-ai.surisuta.jp/banner/xxx
+ユーザー: k-mitsumori@surisuta.jp (PRO)
+日時: 2026-05-27 15:30 JST
+
+💬 ユーザーの声:
+何をしていたか: バナーを新規作成しようとした
+改善してほしい点: ボタンを押しても何も起こらない
+
+🔧 技術情報:
+Browser: Chrome 126 / macOS 14.3
+Error: Page not found
+```
+
+#### 実装チェックリスト
+
+- [ ] `src/components/common/ErrorReportForm.tsx` — 共通コンポーネント作成
+- [ ] `src/app/api/feedback/error-report/route.ts` — API ルート作成
+- [ ] `src/app/not-found.tsx` にフォーム組み込み
+- [ ] `src/app/error.tsx` にフォーム組み込み
+- [ ] `src/lib/notifications.ts` に `sendErrorReportNotification()` 追加
+- [ ] キャラクター活用: 送信前 `error`、送信後 `thumbsup`
+
+#### デザインルール（セクション 14 準拠）
+
+- フォームは**押しつけがましくない**が、**見つけやすい**位置に配置
+- キャラクター（error → thumbsup）で親しみやすさを演出
+- テキストエリアは `rounded-xl`、ボタンは `btn-primary`（グラデーション + グロー）
+- 送信後はキャラクターアニメーション（`bounce-in`）でお礼を表示
+- 自動収集情報は折りたたみ（デフォルト非表示）で透明性を確保
+
+---
+
+## 18. 現状の不整合・要注意事項レポート（2026-05-27 監査）
 
 ### 🔴 Critical — 即座に対応が必要
 
@@ -1624,3 +1944,4 @@ src/
 |------|---------|
 | 2026-02-17 | 初版作成 |
 | 2026-05-27 | 全面改訂: UI デザイン・キャラクター・ステータス管理・サービス遷移マップ・新サービス追加チェックリストを統合。19 サービス対応 |
+| 2026-05-27 | メール配信システム（Resend + ドリップマーケティング）追加。エラー報告フォーム仕様追加。kintai を coming_soon に変更 |

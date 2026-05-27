@@ -28,17 +28,25 @@ export default function DashboardPage() {
   useEffect(() => {
     fetch('/api/kintai/dashboard')
       .then(async (r) => {
-        const json = await r.json()
-        if (!r.ok) {
-          setApiError(json.error || `APIエラー (${r.status})`)
+        const text = await r.text()
+        let json: any
+        try {
+          json = JSON.parse(text)
+        } catch {
+          setApiError(`レスポンス解析エラー (${r.status}): ${text.substring(0, 100)}`)
           setData(null)
+          return
+        }
+        if (!r.ok || json.error) {
+          setApiError(json.error || `APIエラー (${r.status})`)
+          setData(json)
           return
         }
         setData(json)
         setApiError(null)
       })
       .catch((e) => {
-        setApiError('通信エラーが発生しました')
+        setApiError(`通信エラー: ${e.message || '不明'}`)
         setData(null)
       })
       .finally(() => setLoading(false))
@@ -72,17 +80,17 @@ export default function DashboardPage() {
     )
   }
 
+  // If API returned error, show friendly error with report form
+  if (!loading && (!data || data.error || apiError)) {
+    return <DashboardError error={apiError || data?.error || null} detail={data?.detail || null} />
+  }
+
   const employee = data?.employee || null
   const clockStatus = data?.clockStatus || 'not_clocked_in'
   const todayRecords = data?.todayRecords || []
   const todayAttendance = data?.todayAttendance || null
   const monthlySummary = data?.monthlySummary || { totalWorkDays: 0, totalWorkMinutes: 0, totalOvertimeMinutes: 0, totalLateCount: 0 }
   const recentRequests = data?.recentRequests || []
-
-  // If API returned error, show friendly error with report form
-  if (!loading && !data) {
-    return <DashboardError error={apiError} />
-  }
 
   const jstNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }))
   const hour = jstNow.getHours()
@@ -677,7 +685,7 @@ function RequestPill({ status }: { status: string }) {
   )
 }
 
-function DashboardError({ error }: { error: string | null }) {
+function DashboardError({ error, detail }: { error: string | null; detail?: string | null }) {
   const [showReport, setShowReport] = useState(false)
   const [reportText, setReportText] = useState('')
   const [sending, setSending] = useState(false)
@@ -710,7 +718,7 @@ function DashboardError({ error }: { error: string | null }) {
       <img src="/kintai/characters/error_泣き.png" alt="エラー" style={{ width: 120, height: 120, objectFit: 'contain' }} />
       <h2 className="text-2xl font-black text-slate-800">エラーが発生しました</h2>
       <p className="text-base font-bold text-slate-500 text-center max-w-md">
-        {error || 'ページの読み込みに失敗しました。しばらく経ってからもう一度お試しください。'}
+        {error || 'ページの読み込みに失敗しました。しばらく経ってからもう一度お試しください。'}{detail && <><br /><span className="text-xs text-slate-400 mt-1 block">詳細: {detail}</span></>}
       </p>
       <div className="flex items-center gap-3">
         <button
