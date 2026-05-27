@@ -249,24 +249,8 @@ export default function HrSettingsPage() {
     }
   }
 
-  const handleGenerateInviteUrl = async () => {
-    setGeneratingInviteUrl(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/hr/organization/invite', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: `invite-${Date.now()}@placeholder.local`, role: 'MEMBER' }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || '招待URLの生成に失敗しました')
-      const url = data.inviteUrl || `${window.location.origin}/hr/invite/${data.invitation?.token}`
-      setInviteUrl(url)
-    } catch (e: any) {
-      setError(e.message)
-    } finally {
-      setGeneratingInviteUrl(false)
-    }
+  const handleGenerateInviteUrl = () => {
+    setError('招待URLを取得するには、まずメールアドレスで招待を送信してください。送信後にURLが表示されます。')
   }
 
   const handleCopyInviteUrl = async () => {
@@ -542,19 +526,19 @@ export default function HrSettingsPage() {
             </button>
           </div>
 
-          {/* Invite URL */}
-          <div className="mb-4 p-4 rounded-2xl bg-slate-50">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="material-symbols-outlined text-sm text-slate-500">link</span>
-              <span className="text-sm font-bold text-slate-700">招待URLで招待</span>
-            </div>
-            {inviteUrl ? (
+          {/* Invite URL（メール招待後に表示） */}
+          {inviteUrl && (
+            <div className="mb-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="material-symbols-outlined text-sm text-emerald-600">check_circle</span>
+                <span className="text-sm font-bold text-emerald-700">招待を送信しました！以下のURLを共有することもできます</span>
+              </div>
               <div className="flex gap-2">
                 <input
                   type="text"
                   value={inviteUrl}
                   readOnly
-                  className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 truncate"
+                  className="flex-1 px-3 py-2 bg-white border border-emerald-200 rounded-xl text-sm text-slate-600 truncate"
                 />
                 <motion.button
                   onClick={handleCopyInviteUrl}
@@ -571,17 +555,8 @@ export default function HrSettingsPage() {
                   {inviteUrlCopied ? 'コピー済み!' : 'コピー'}
                 </motion.button>
               </div>
-            ) : (
-              <button
-                onClick={handleGenerateInviteUrl}
-                disabled={generatingInviteUrl}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-full text-sm font-bold text-slate-700 hover:bg-slate-100 transition-all disabled:opacity-50"
-              >
-                <span className="material-symbols-outlined text-sm">add_link</span>
-                {generatingInviteUrl ? '生成中...' : '招待URLを生成'}
-              </button>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Member List */}
           {members.length > 0 ? (
