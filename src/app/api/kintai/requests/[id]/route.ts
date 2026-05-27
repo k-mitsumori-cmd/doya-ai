@@ -57,6 +57,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: '見つかりません' }, { status: 404 })
     }
 
+    // SEC: ステータス値のホワイトリスト検証
+    const ALLOWED_STATUSES = ['withdrawn', 'approved', 'rejected']
+    if (!ALLOWED_STATUSES.includes(status)) {
+      return NextResponse.json({ error: '無効なステータスです' }, { status: 400 })
+    }
+
     if (status === 'withdrawn') {
       if (existing.employeeId !== kctx.employeeId) {
         return NextResponse.json({ error: '自分の申請のみ取下げできます' }, { status: 403 })
@@ -93,6 +99,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
 async function applyClockFix(employeeId: string, details: { date?: string; clockType?: string; correctedTime?: string }) {
   if (!details?.date || !details?.clockType || !details?.correctedTime) return
+
+  // SEC: clockType ホワイトリスト検証
+  const ALLOWED_CLOCK_TYPES = ['clock_in', 'clock_out', 'break_start', 'break_end']
+  if (!ALLOWED_CLOCK_TYPES.includes(details.clockType)) return
 
   const dateObj = new Date(details.date + 'T00:00:00+09:00')
   const dayEnd = new Date(dateObj.getTime() + 86400000)

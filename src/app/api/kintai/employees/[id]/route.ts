@@ -14,6 +14,13 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     if (!kctx) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
 
     const p = 'then' in ctx.params ? await ctx.params : ctx.params
+
+    // SEC: 自分自身のデータまたはhr_admin以上のみアクセス可能
+    const isSelf = kctx.employeeId === p.id
+    if (!isSelf && !hasMinRole(kctx.role, 'hr_admin')) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+    }
+
     const employee = await prisma.kintaiEmployee.findFirst({
       where: { id: p.id, organizationId: kctx.organizationId },
       include: { department: true, workRule: true, member: { select: { role: true } } },
@@ -61,12 +68,19 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       include: { department: true, workRule: true, member: { select: { id: true, role: true } } },
     })
 
+    // SEC: ロール変更のホワイトリスト検証 + 権限エスカレーション防止
     if (role && employee.member) {
+      const ALLOWED_ROLES = ['employee', 'manager', 'hr_admin']
+      if (!ALLOWED_ROLES.includes(role)) {
+        return NextResponse.json({ error: '無効なロールです' }, { status: 400 })
+      }
+      if (role === 'system_admin') {
+        return NextResponse.json({ error: 'system_adminロールは割り当てできません' }, { status: 403 })
+      }
       await prisma.kintaiMember.update({
         where: { id: employee.member.id },
         data: { role },
       })
-      // Re-fetch to include updated role in response
       employee.member.role = role
     }
 

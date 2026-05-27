@@ -89,6 +89,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '氏名とメールは必須です' }, { status: 400 })
     }
 
+    // SEC: ロール値のホワイトリスト検証 + 権限エスカレーション防止
+    const ALLOWED_ROLES = ['employee', 'manager', 'hr_admin'] as const
+    const assignRole = ALLOWED_ROLES.includes(role) ? role : 'employee'
+    // hr_adminはsystem_adminを割り当て不可
+    if (role === 'system_admin') {
+      return NextResponse.json({ error: 'system_adminロールは割り当てできません' }, { status: 403 })
+    }
+
     const employee = await prisma.kintaiEmployee.create({
       data: {
         organizationId: ctx.organizationId,
@@ -102,8 +110,8 @@ export async function POST(req: NextRequest) {
         member: {
           create: {
             organizationId: ctx.organizationId,
-            userId: `pending_${Date.now()}`,
-            role: role || 'employee',
+            userId: `pending_${crypto.randomUUID()}`,
+            role: assignRole,
             status: 'ACTIVE',
           },
         },

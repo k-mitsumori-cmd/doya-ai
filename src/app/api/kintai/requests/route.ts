@@ -64,7 +64,11 @@ export async function POST(req: NextRequest) {
     if (!ctx) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
 
     const { type, details, reason } = await req.json()
-    if (!type) return NextResponse.json({ error: '申請種別は必須です' }, { status: 400 })
+    // SEC: タイプ値のホワイトリスト検証
+    const ALLOWED_TYPES = ['clock_fix', 'leave', 'overtime', 'holiday_work']
+    if (!type || !ALLOWED_TYPES.includes(type)) {
+      return NextResponse.json({ error: '無効な申請種別です' }, { status: 400 })
+    }
 
     const request = await prisma.kintaiRequest.create({
       data: {
