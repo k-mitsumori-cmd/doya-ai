@@ -125,8 +125,8 @@ export default function ClockPage() {
   // Time-based greeting
   const greeting = hour < 12 ? 'おはようございます！' : hour < 18 ? 'お疲れさまです！' : 'お疲れさまです！'
 
-  // Real-time working duration
-  const liveWorkMinutes = status === 'working' ? calcWorkMinutes(records, breakMinutes) : workMinutes
+  // Real-time working duration (recalculated every second via `now`)
+  const liveWorkMinutes = status === 'working' ? calcLiveWorkMinutes(records, breakMinutes, now) : workMinutes
   const liveHours = Math.floor(liveWorkMinutes / 60)
   const liveMins = liveWorkMinutes % 60
 
@@ -623,5 +623,13 @@ function calcWorkMinutes(records: any[], breakMins: number) {
   const clockOut = records.find((r) => r.type === 'clock_out')
   if (!clockIn) return 0
   const end = clockOut ? new Date(clockOut.timestamp) : new Date()
+  return Math.max(0, Math.round((end.getTime() - new Date(clockIn.timestamp).getTime()) / 60000) - breakMins)
+}
+
+function calcLiveWorkMinutes(records: any[], breakMins: number, now: Date) {
+  const clockIn = records.find((r) => r.type === 'clock_in')
+  if (!clockIn) return 0
+  const clockOut = records.find((r) => r.type === 'clock_out')
+  const end = clockOut ? new Date(clockOut.timestamp) : now
   return Math.max(0, Math.round((end.getTime() - new Date(clockIn.timestamp).getTime()) / 60000) - breakMins)
 }

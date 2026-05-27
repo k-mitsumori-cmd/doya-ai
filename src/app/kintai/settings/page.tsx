@@ -170,15 +170,15 @@ export default function SettingsPage() {
                   <div className="space-y-3">
                     {/* Work time — big and clear */}
                     <div className="bg-purple-50 rounded-2xl p-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="material-symbols-outlined text-2xl text-[#7f19e6]">schedule</span>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-black text-[#7f19e6]">{rule.workStart}</span>
-                          <span className="text-xl font-black text-slate-400">〜</span>
-                          <span className="text-3xl font-black text-[#7f19e6]">{rule.workEnd}</span>
-                        </div>
-                        <span className="text-base font-bold text-slate-500 ml-2">({workH > 0 ? `${workH}時間` : ''}{workM > 0 ? `${workM}分` : ''}勤務)</span>
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-xl text-[#7f19e6]">schedule</span>
+                        <span className="text-2xl font-black text-[#7f19e6]">{rule.workStart}</span>
+                        <span className="text-lg font-black text-slate-400">〜</span>
+                        <span className="text-2xl font-black text-[#7f19e6]">{rule.workEnd}</span>
                       </div>
+                      <p className="text-sm font-bold text-slate-500 mt-1">
+                        {workH > 0 ? `${workH}時間` : ''}{workM > 0 ? `${workM}分` : ''}勤務
+                      </p>
                     </div>
 
                     {/* Visual hours bar */}

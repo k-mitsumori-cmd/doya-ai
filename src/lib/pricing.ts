@@ -698,7 +698,7 @@ export const COPY_PRICING: ServicePricing = {
       price: 0,
       priceLabel: '¥0',
       period: '',
-      description: 'まずは試してみたい方に',
+      description: '5名以下の小規模チームに',
       features: [
         { text: 'ゲスト: 月3回まで', included: true },
         { text: 'ログイン: 月10回まで', included: true },
@@ -1630,7 +1630,7 @@ export const HR_PRICING: ServicePricing = {
       price: 0,
       priceLabel: '¥0',
       period: '',
-      description: 'まずは試してみたい方に',
+      description: '5名以下の小規模チームに',
       features: [
         { text: '従業員5名まで', included: true },
         { text: '従業員データベース', included: true },
@@ -1647,7 +1647,7 @@ export const HR_PRICING: ServicePricing = {
       price: 4980,
       priceLabel: '¥4,980',
       period: '/月（税込）',
-      description: '成長中のチームに最適',
+      description: '30名以下の成長チームに',
       color: 'sky',
       features: [
         { text: '従業員30名まで', included: true },
@@ -1684,7 +1684,7 @@ export const HR_PRICING: ServicePricing = {
       price: 0,
       priceLabel: '要相談',
       period: '',
-      description: '大規模組織向け',
+      description: '100名以上の大規模組織に',
       color: 'slate',
       features: [
         { text: '従業員数無制限', included: true },
@@ -1747,7 +1747,7 @@ export const KINTAI_PRICING: ServicePricing = {
       price: 0,
       priceLabel: '¥0',
       period: '',
-      description: 'まずは試してみたい方に',
+      description: '5名以下の小規模チームに',
       features: [
         { text: '従業員5名まで', included: true },
         { text: '全機能利用可能', included: true },
@@ -1760,7 +1760,7 @@ export const KINTAI_PRICING: ServicePricing = {
       price: 2980,
       priceLabel: '¥2,980',
       period: '/月（税込）',
-      description: '成長中のチームに最適',
+      description: '30名以下の成長チームに',
       color: 'violet',
       features: [
         { text: '従業員30名まで', included: true },
@@ -1774,7 +1774,7 @@ export const KINTAI_PRICING: ServicePricing = {
       price: 9980,
       priceLabel: '¥9,980',
       period: '/月（税込）',
-      description: '本格的な勤怠管理に',
+      description: '100名以下の企業に',
       popular: true,
       color: 'purple',
       features: [
@@ -1790,7 +1790,7 @@ export const KINTAI_PRICING: ServicePricing = {
       price: 0,
       priceLabel: '要相談',
       period: '',
-      description: '大規模組織向け',
+      description: '100名以上の大規模組織に',
       color: 'slate',
       features: [
         { text: '従業員数無制限', included: true },

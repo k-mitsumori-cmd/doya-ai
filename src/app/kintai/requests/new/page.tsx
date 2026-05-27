@@ -251,11 +251,16 @@ function NewRequestContent() {
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5 fade-in-up">
             <div>
               <h2 className="font-bold text-slate-700 flex items-center gap-2">
-                <span className="material-symbols-outlined text-[#7f19e6]">edit_clock</span>
-                打刻修正申請
+                <span className="material-symbols-outlined text-[#7f19e6]">
+                  {type === 'clock_fix' ? 'edit_clock' : type === 'leave' ? 'event_busy' : type === 'overtime' ? 'more_time' : 'work_history'}
+                </span>
+                {type === 'clock_fix' ? '打刻修正申請' : type === 'leave' ? '休暇申請' : type === 'overtime' ? '残業申請' : '休日出勤申請'}
               </h2>
               <p className="text-xs text-slate-400 mt-1">
-                打刻の修正が必要な場合は、対象の日時と理由を入力してください
+                {type === 'clock_fix' ? '打刻の修正が必要な場合は、対象の日時と理由を入力してください' :
+                 type === 'leave' ? '休暇を取得する日程と理由を入力してください' :
+                 type === 'overtime' ? '残業の予定日時と理由を入力してください' :
+                 '休日出勤の日程と理由を入力してください'}
               </p>
             </div>
 
@@ -394,7 +399,7 @@ function NewRequestContent() {
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
-                placeholder="例: 打刻を忘れたため"
+                placeholder={type === 'clock_fix' ? '例: 打刻を忘れたため' : type === 'leave' ? '例: 私用のため' : type === 'overtime' ? '例: プロジェクト納期対応のため' : '例: イベント対応のため'}
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] resize-none bg-white"
               />
             </div>
