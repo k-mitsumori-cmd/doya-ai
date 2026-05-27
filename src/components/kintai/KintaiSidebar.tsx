@@ -102,23 +102,10 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
 
   const sidebar = (
     <div className="flex flex-col h-full bg-gray-50 w-64 transition-all duration-300">
-      {/* Logo with Bear */}
-      <div className="p-4 mb-1">
-        <Link href="/kintai/dashboard" className="sidebar-logo-link flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center text-white shadow-lg shadow-[#7f19e6]/30">
-            <span className="material-symbols-outlined text-2xl">schedule</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div>
-              <h1 className="font-black text-slate-900 text-base leading-tight">ドヤ勤怠</h1>
-              <p className="text-[10px] text-slate-500 font-bold tracking-wider">勤怠管理</p>
-            </div>
-            <img
-              src="/kintai/characters/hello_挨拶.png"
-              alt="くま"
-              className="w-9 h-9 object-contain sidebar-logo-bear"
-            />
-          </div>
+      {/* Logo */}
+      <div className="p-3 mb-1">
+        <Link href="/kintai/dashboard" className="block">
+          <img src="/kintai/logo.png" alt="ドヤ勤怠" className="h-12 object-contain" />
         </Link>
       </div>
 

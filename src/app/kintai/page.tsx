@@ -50,9 +50,8 @@ export default function KintaiLandingPage() {
       <header className="relative z-10 px-6 py-4 flex items-center justify-between max-w-6xl mx-auto">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center text-white shadow-lg shadow-[#7f19e6]/20">
-            <span className="material-symbols-outlined text-xl">schedule</span>
-          </div>
-          <span className="font-bold text-slate-900 text-lg">ドヤ勤怠</span>
+          <img src="/kintai/logo.png" alt="ドヤ勤怠" style={{ height: 36, objectFit: "contain" }} />          </div>
+          
         </div>
         <Link
           href="/auth/signin?callbackUrl=/kintai/dashboard"

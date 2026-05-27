@@ -82,9 +82,9 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
             style={{ width: 120, height: 120, objectFit: 'contain' }}
           />
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-[#7f19e6]/20">
-            <span className="material-symbols-outlined text-3xl">schedule</span>
+            <img src="/kintai/logo.png" alt="ドヤ勤怠" style="height:48px;objectFit:contain" />
           </div>
-          <h1 className="text-2xl font-black text-slate-900 mb-2">ドヤ勤怠</h1>
+          
           <p className="text-slate-500 mb-6">ログインして勤怠管理を始めましょう</p>
           <a
             href="/auth/signin?callbackUrl=/kintai/dashboard"
@@ -115,8 +115,8 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
           <div className="flex items-center justify-between">
             {/* Breadcrumb */}
             <div className="flex items-center gap-2 text-sm text-slate-500 ml-12 lg:ml-0">
-              <span className="material-symbols-outlined text-base text-[#7f19e6]">schedule</span>
-              <span className="font-medium text-slate-700">ドヤ勤怠</span>
+              <img src="/kintai/logo.png" alt="ドヤ勤怠" className="h-6 object-contain" />
+              
               <BreadcrumbLabel pathname={pathname} />
             </div>
             {/* Plan badge + User area */}
