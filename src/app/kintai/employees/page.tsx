@@ -343,6 +343,25 @@ export default function EmployeesPage() {
                             <span className="material-symbols-outlined text-lg">edit</span>
                           </button>
                           <button
+                            onClick={async () => {
+                              if (!confirm(`${emp.name} さんに招待メールを送信しますか？`)) return
+                              try {
+                                const res = await fetch(`/api/kintai/employees/${emp.id}/invite`, { method: 'POST' })
+                                const data = await res.json()
+                                if (data.inviteUrl) {
+                                  await navigator.clipboard.writeText(data.inviteUrl).catch(() => {})
+                                  alert(`招待${data.emailSent ? 'メールを送信し、' : ''}リンクをコピーしました！\n\n${data.inviteUrl}`)
+                                } else {
+                                  alert(data.error || '招待の作成に失敗しました')
+                                }
+                              } catch { alert('通信エラーが発生しました') }
+                            }}
+                            className="p-1.5 text-blue-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            title="招待メールを送信"
+                          >
+                            <span className="material-symbols-outlined text-lg">mail</span>
+                          </button>
+                          <button
                             onClick={() => toggleActive(emp)}
                             className={`p-1.5 rounded-lg transition-colors ${emp.isActive ? 'text-green-500 hover:text-slate-500 hover:bg-slate-100' : 'text-slate-400 hover:text-green-500 hover:bg-green-50'}`}
                             title={emp.isActive ? '無効化する' : '有効化する'}

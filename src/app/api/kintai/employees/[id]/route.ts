@@ -68,14 +68,19 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       include: { department: true, workRule: true, member: { select: { id: true, role: true } } },
     })
 
-    // SEC: ロール変更のホワイトリスト検証 + 権限エスカレーション防止
+    // SEC: ロール変更の検証
     if (role && employee.member) {
-      const ALLOWED_ROLES = ['employee', 'manager', 'hr_admin']
-      if (!ALLOWED_ROLES.includes(role)) {
+      const ALL_ROLES = ['employee', 'manager', 'hr_admin', 'system_admin']
+      if (!ALL_ROLES.includes(role)) {
         return NextResponse.json({ error: '無効なロールです' }, { status: 400 })
       }
-      if (role === 'system_admin') {
-        return NextResponse.json({ error: 'system_adminロールは割り当てできません' }, { status: 403 })
+      // system_adminロールの付与はsystem_adminのみ可能
+      if (role === 'system_admin' && kctx.role !== 'system_admin') {
+        return NextResponse.json({ error: 'システム管理者のみがsystem_adminを付与できます' }, { status: 403 })
+      }
+      // hr_adminはsystem_adminを付与不可（自分より上のロール付与禁止）
+      if (role === 'system_admin' && kctx.role === 'hr_admin') {
+        return NextResponse.json({ error: '権限が不足しています' }, { status: 403 })
       }
       await prisma.kintaiMember.update({
         where: { id: employee.member.id },
