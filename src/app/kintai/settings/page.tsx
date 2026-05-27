@@ -99,7 +99,7 @@ export default function SettingsPage() {
           <div className="flex items-center gap-3">
             <img src="/kintai/characters/focus_集中.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
-              <h1 className="text-xl font-bold text-slate-800">就業ルール設定</h1>
+              <h1 className="text-2xl font-black text-slate-800">就業ルール設定</h1>
               <p className="text-xs text-slate-500">勤務時間やフレックスを設定しよう</p>
             </div>
           </div>
@@ -146,10 +146,10 @@ export default function SettingsPage() {
               const barWidthPct = Math.min(100 - barLeftPct, ((barEnd - barStart) / rangeTotal) * 100)
 
               return (
-                <div key={rule.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-5 hover:shadow-md transition-shadow">
+                <div key={rule.id} className="bg-white rounded-2xl border-2 border-slate-200 shadow-md p-6 hover:shadow-xl hover:border-purple-300 transition-all">
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-base font-bold text-slate-800">{rule.name}</h3>
+                      <h3 className="text-lg font-black text-slate-800">{rule.name}</h3>
                       {rule.flexEnabled && (
                         <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 bg-[#7f19e6]/10 text-[#7f19e6] rounded-full font-bold">
                           <span className="material-symbols-outlined text-xs">sync</span>
@@ -171,7 +171,7 @@ export default function SettingsPage() {
                     {/* Work time */}
                     <div className="flex items-center gap-2">
                       <span className="material-symbols-outlined text-base text-[#7f19e6]">schedule</span>
-                      <span className="text-slate-700 font-medium">{rule.workStart} 〜 {rule.workEnd}</span>
+                      <span className="text-slate-700 font-black text-lg">{rule.workStart} 〜 {rule.workEnd}</span>
                       <span className="text-xs text-slate-400">({workH > 0 ? `${workH}時間` : ''}{workM > 0 ? `${workM}分` : ''}勤務)</span>
                     </div>
 

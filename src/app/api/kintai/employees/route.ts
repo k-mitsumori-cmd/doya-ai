@@ -121,10 +121,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ employee }, { status: 201 })
   } catch (e: any) {
-    console.error('[kintai/employees POST]', e)
-    const msg = e?.code === 'P2002' ? 'このメールアドレスは既に登録されています' :
-                e?.message?.includes('Unique constraint') ? '同じデータが既に存在します' :
-                '作成に失敗しました'
-    return NextResponse.json({ error: msg, detail: e?.message?.substring(0, 200) }, { status: 500 })
+    console.error('[kintai/employees POST]', e?.message?.substring(0, 500))
+    let msg = '作成に失敗しました'
+    if (e?.code === 'P2002') msg = 'このメールアドレスは既に登録されています'
+    else if (e?.code === 'P2003') msg = '指定された部署または就業ルールが見つかりません'
+    else if (e?.message?.includes('Unique constraint')) msg = '同じデータが既に存在します'
+    else if (e?.message?.includes('Foreign key constraint')) msg = '指定された部署または就業ルールが見つかりません'
+    return NextResponse.json({ error: msg, detail: e?.message?.substring(0, 300) }, { status: 500 })
   }
 }

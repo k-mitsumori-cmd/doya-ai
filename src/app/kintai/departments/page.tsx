@@ -69,7 +69,7 @@ export default function DepartmentsPage() {
           <div className="flex items-center gap-3">
             <img src="/kintai/characters/present_プレゼン.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
-              <h1 className="text-xl font-bold text-slate-800">部署管理</h1>
+              <h1 className="text-2xl font-black text-slate-800">部署管理</h1>
               {!loading && (
                 <span className="text-sm text-slate-500">
                   全<span className="font-bold text-[#7f19e6]">{departments.length}</span>部署
@@ -77,8 +77,8 @@ export default function DepartmentsPage() {
               )}
             </div>
           </div>
-          <button onClick={openCreate} className="flex items-center gap-1.5 px-4 py-2 bg-[#7f19e6] text-white text-sm font-bold rounded-lg hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20">
-            <span className="material-symbols-outlined text-lg">add</span>部署を追加
+          <button onClick={openCreate} className="flex items-center gap-2 px-5 py-3 bg-[#7f19e6] text-white text-base font-black rounded-full hover:bg-[#6a14c2] transition-all shadow-lg shadow-[#7f19e6]/20">
+            <span className="material-symbols-outlined text-xl">add</span>部署を追加
           </button>
         </div>
 
@@ -105,7 +105,7 @@ export default function DepartmentsPage() {
               const hasParent = !!dept.parentId
 
               return (
-                <div key={dept.id} className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 relative overflow-hidden hover:shadow-md transition-shadow card-hover">
+                <div key={dept.id} className="bg-white rounded-2xl border-2 border-slate-200 shadow-md p-5 relative overflow-hidden hover:shadow-xl hover:border-purple-300 transition-all">
                   {/* Colored left border */}
                   <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl" style={{ backgroundColor: borderColor }} />
 
@@ -117,12 +117,12 @@ export default function DepartmentsPage() {
                             {hasChildren ? 'account_tree' : 'subdirectory_arrow_right'}
                           </span>
                         )}
-                        <h3 className="font-bold text-slate-800 truncate">{dept.name}</h3>
+                        <h3 className="text-lg font-black text-slate-800 truncate">{dept.name}</h3>
                       </div>
                       <div className="flex items-center gap-3 mt-2.5">
-                        <span className="inline-flex items-center gap-1 text-sm text-slate-600">
-                          <span className="material-symbols-outlined text-base" style={{ color: borderColor }}>group</span>
-                          <span className="font-medium">{empCount}</span>名
+                        <span className="inline-flex items-center gap-1.5 text-base text-slate-600">
+                          <span className="material-symbols-outlined text-xl" style={{ color: borderColor }}>group</span>
+                          <span className="font-black text-lg">{empCount}</span>名
                         </span>
                         {empCount === 0 && (
                           <span className="text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full font-medium">管理者未設定</span>
