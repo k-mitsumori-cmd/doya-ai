@@ -5,7 +5,7 @@ export const maxDuration = 300
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext } from '@/lib/kintai/access'
-import { getClockStatus } from '@/lib/kintai/attendance'
+import { getClockStatusFromRecords as getClockStatus } from '@/lib/kintai/format'
 
 export async function GET() {
   try {
