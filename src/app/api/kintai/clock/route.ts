@@ -217,8 +217,10 @@ async function upsertDailyAttendance(
 
   const result = calculateDailyAttendance(records, workRule, dayStart)
 
-  // 日付を Date-only (UTC midnight) に正規化
-  const dateOnly = new Date(Date.UTC(dayStart.getFullYear(), dayStart.getMonth(), dayStart.getDate()))
+  // 日付を Date-only に正規化（JSTの日付をUTC midnightとして保存）
+  const jstOffsetMs = 9 * 60 * 60 * 1000
+  const jstDayStart = new Date(dayStart.getTime() + jstOffsetMs)
+  const dateOnly = new Date(Date.UTC(jstDayStart.getUTCFullYear(), jstDayStart.getUTCMonth(), jstDayStart.getUTCDate()))
 
   await prisma.kintaiAttendance.upsert({
     where: {
