@@ -40,6 +40,7 @@ const AVATAR_COLORS = [
 
 function formatHireDate(dateStr: string): string {
   const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return ''
   const y = d.getFullYear()
   const m = d.getMonth() + 1
   return `${y}年${m}月入社`

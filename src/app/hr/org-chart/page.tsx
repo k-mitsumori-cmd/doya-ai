@@ -4,6 +4,34 @@ import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import OrgChartView from '@/components/hr/OrgChartView'
 
+/** APIレスポンスの orgChart 配列を OrgChartView が期待する形式に変換 */
+function mapOrgChartNodes(nodes: any[]): any[] {
+  return nodes.map((node: any) => {
+    // API形式: { department: {id, name, managerId, ...}, employees: [...], children: [...] }
+    if (node.department) {
+      const managerId = node.department.managerId
+      const employees = node.employees || []
+      const head = managerId
+        ? employees.find((e: any) => e.id === managerId) || null
+        : null
+      const members = employees.filter((e: any) => e.id !== managerId)
+      return {
+        id: node.department.id,
+        name: node.department.name,
+        headId: managerId || null,
+        head,
+        members,
+        children: mapOrgChartNodes(node.children || []),
+      }
+    }
+    // 既にフラット形式の場合はそのまま返す
+    return {
+      ...node,
+      children: mapOrgChartNodes(node.children || []),
+    }
+  })
+}
+
 export default function OrgChartPage() {
   const [departments, setDepartments] = useState<any[]>([])
   const [orgName, setOrgName] = useState('')
@@ -16,7 +44,8 @@ export default function OrgChartPage() {
         const res = await fetch('/api/hr/org-chart')
         if (!res.ok) throw new Error('組織図データの取得に失敗しました')
         const data = await res.json()
-        setDepartments(data.departments ?? [])
+        const rawDepts = data.orgChart ?? data.departments ?? []
+        setDepartments(mapOrgChartNodes(rawDepts))
         setOrgName(data.orgName ?? '')
       } catch (e: any) {
         setError(e.message)

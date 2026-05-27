@@ -357,7 +357,11 @@ export default function HrDashboardPage() {
                 >
                   <div>
                     <p className="text-base font-bold text-slate-900">{item.employeeName}</p>
-                    <p className="text-sm text-slate-500">{new Date(item.date).toLocaleDateString('ja-JP')}</p>
+                    <p className="text-sm text-slate-500">
+                      {item.date && !isNaN(new Date(item.date).getTime())
+                        ? new Date(item.date).toLocaleDateString('ja-JP')
+                        : '日時未設定'}
+                    </p>
                   </div>
                   <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${
                     item.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'

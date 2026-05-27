@@ -140,7 +140,13 @@ export default function EvaluationsPage() {
                       </span>
                     </div>
                     <p className="text-xs text-slate-500 mb-4">
-                      {new Date(period.startDate).toLocaleDateString('ja-JP')} 〜 {new Date(period.endDate).toLocaleDateString('ja-JP')}
+                      {period.startDate && !isNaN(new Date(period.startDate).getTime())
+                        ? new Date(period.startDate).toLocaleDateString('ja-JP')
+                        : '未設定'}
+                      {' 〜 '}
+                      {period.endDate && !isNaN(new Date(period.endDate).getTime())
+                        ? new Date(period.endDate).toLocaleDateString('ja-JP')
+                        : '未設定'}
                     </p>
                     <div className="mb-2 flex items-center justify-between">
                       <span className="text-xs font-medium text-slate-500">進捗</span>

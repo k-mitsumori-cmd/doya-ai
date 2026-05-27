@@ -89,10 +89,11 @@ export default function EmployeeDetailPage() {
         const res = await fetch(`/api/hr/employees/${id}`)
         if (!res.ok) throw new Error('従業員データの取得に失敗しました')
         const data = await res.json()
-        setEmployee(data.employee ?? data)
-        setEvaluations(data.evaluations ?? [])
-        setOneOnOnes(data.oneOnOnes ?? [])
-        setTransfers(data.transfers ?? [])
+        const emp = data.employee ?? data
+        setEmployee(emp)
+        setEvaluations(data.evaluations ?? emp.evaluations ?? [])
+        setOneOnOnes(data.oneOnOnes ?? emp.oneOnOnesAsEmployee ?? emp.oneOnOnes ?? [])
+        setTransfers(data.transfers ?? emp.histories ?? [])
       } catch (e: any) {
         setError(e.message)
       } finally {
@@ -276,7 +277,11 @@ export default function EmployeeDetailPage() {
                   >
                     <div>
                       <p className="text-sm font-semibold text-slate-900">{ev.periodName}</p>
-                      <p className="text-xs text-slate-500">{new Date(ev.createdAt).toLocaleDateString('ja-JP')}</p>
+                      <p className="text-xs text-slate-500">
+                        {ev.createdAt && !isNaN(new Date(ev.createdAt).getTime())
+                          ? new Date(ev.createdAt).toLocaleDateString('ja-JP')
+                          : ''}
+                      </p>
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="flex">
@@ -342,7 +347,9 @@ export default function EmployeeDetailPage() {
                   >
                     <div>
                       <p className="text-sm font-semibold text-slate-900">
-                        {new Date(oo.date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        {oo.date && !isNaN(new Date(oo.date).getTime())
+                          ? new Date(oo.date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })
+                          : '日時未設定'}
                       </p>
                       <p className="text-xs text-slate-500">{oo.duration}分</p>
                     </div>
@@ -392,7 +399,9 @@ export default function EmployeeDetailPage() {
                 {transfers.map((tr) => (
                   <div key={tr.id} className="p-4 rounded-xl border border-slate-100">
                     <p className="text-xs text-slate-500 mb-2">
-                      {new Date(tr.effectiveDate).toLocaleDateString('ja-JP')}
+                      {tr.effectiveDate && !isNaN(new Date(tr.effectiveDate).getTime())
+                        ? new Date(tr.effectiveDate).toLocaleDateString('ja-JP')
+                        : '日付不明'}
                     </p>
                     <div className="flex items-center gap-3 text-sm">
                       <div>

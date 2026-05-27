@@ -119,7 +119,7 @@ export default function OneOnOneForm({
       })
       if (!res.ok) throw new Error('AI要約の生成に失敗しました')
       const data = await res.json()
-      setAiResult(data.summary || data.result || '')
+      setAiResult(data.aiSummary || data.summary || data.result || '')
     } catch (e: any) {
       setAiResult(`エラー: ${e.message}`)
     } finally {

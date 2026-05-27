@@ -23,7 +23,10 @@ export default function HrLayout({ children }: HrLayoutProps) {
   useEffect(() => {
     if (session?.user) {
       fetch('/api/hr/usage')
-        .then((r) => r.json())
+        .then((r) => {
+          if (!r.ok) throw new Error('usage fetch failed')
+          return r.json()
+        })
         .then((data) => {
           if (data.organizationId) {
             setHasOrg(true)

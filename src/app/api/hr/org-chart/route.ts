@@ -41,7 +41,11 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const [departments, employees] = await Promise.all([
+    const [org, departments, employees] = await Promise.all([
+      prisma.hrOrganization.findUnique({
+        where: { id: ctx.organizationId },
+        select: { name: true },
+      }),
       prisma.hrDepartment.findMany({
         where: { organizationId: ctx.organizationId, isActive: true },
         orderBy: { sortOrder: 'asc' },
@@ -73,6 +77,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
+      orgName: org?.name || '',
       orgChart: tree,
       unassignedEmployees: unassigned.map((e) => ({
         id: e.id,

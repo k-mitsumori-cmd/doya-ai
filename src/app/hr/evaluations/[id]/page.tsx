@@ -46,7 +46,7 @@ export default function EvaluationDetailPage() {
 
   const handleSave = async (payload: any) => {
     const res = await fetch(`/api/hr/evaluations/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })

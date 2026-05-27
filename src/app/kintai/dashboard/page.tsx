@@ -26,9 +26,12 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetch('/api/kintai/dashboard')
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error('API error')
+        return r.json()
+      })
       .then(setData)
-      .catch(console.error)
+      .catch(() => setData(null))
       .finally(() => setLoading(false))
   }, [])
 
@@ -60,7 +63,26 @@ export default function DashboardPage() {
     )
   }
 
-  const { employee, clockStatus, todayRecords, todayAttendance, monthlySummary, recentRequests } = data || {}
+  const employee = data?.employee || null
+  const clockStatus = data?.clockStatus || 'not_clocked_in'
+  const todayRecords = data?.todayRecords || []
+  const todayAttendance = data?.todayAttendance || null
+  const monthlySummary = data?.monthlySummary || { totalWorkDays: 0, totalWorkMinutes: 0, totalOvertimeMinutes: 0, totalLateCount: 0 }
+  const recentRequests = data?.recentRequests || []
+
+  // If API returned error (no org yet), show a friendly message
+  if (!loading && !data) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6">
+        <img src="/kintai/characters/hello_挨拶.png" alt="挨拶" style={{ width: 120, height: 120, objectFit: 'contain' }} />
+        <h2 className="text-xl font-bold text-slate-800">まだ準備ができていません</h2>
+        <p className="text-slate-500 text-center">組織の作成が完了していないか、セッションが切れています。</p>
+        <button onClick={() => window.location.reload()} className="px-6 py-2 bg-[#7f19e6] text-white font-bold rounded-xl hover:bg-[#6a14c2] transition-colors">
+          再読み込み
+        </button>
+      </div>
+    )
+  }
 
   const jstNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }))
   const hour = jstNow.getHours()

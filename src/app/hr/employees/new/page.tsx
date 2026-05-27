@@ -43,8 +43,11 @@ export default function NewEmployeePage() {
 
   useEffect(() => {
     fetch('/api/hr/departments')
-      .then((r) => r.json())
-      .then((data) => setDepartments(data.departments ?? data ?? []))
+      .then((r) => {
+        if (!r.ok) throw new Error('departments fetch failed')
+        return r.json()
+      })
+      .then((data) => setDepartments(data.flat ?? data.departments ?? []))
       .catch(() => {})
   }, [])
 

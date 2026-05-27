@@ -3,7 +3,7 @@
 ## ドヤAI とは
 
 日本語マーケティング業務に特化したマルチサービスAIプラットフォーム。
-1つのアカウントで全サービスを利用可能。サービスごとに個別のプラン管理。
+1つのアカウントで全サービスを利用可能。**統一プラン方式** — 1つのサブスク契約で全サービスのPROプランが利用可能。
 
 ## 技術スタック
 
@@ -45,24 +45,36 @@
 │   │   ├── banner/              # ドヤバナーAI (16ページ)
 │   │   ├── seo/                 # ドヤライティングAI (45ページ)
 │   │   ├── interview/           # ドヤインタビューAI (15ページ)
+│   │   ├── copy/                # ドヤコピーAI (12ページ)
+│   │   ├── lp/                  # ドヤLP AI (9ページ)
+│   │   ├── adsim/               # ドヤ広告シミュレーションAI (6ページ)
 │   │   ├── tenkai/              # ドヤ展開AI (10ページ)
-│   │   ├── kantan/              # カンタンマーケAI (10ページ, →/seoにリダイレクト)
+│   │   ├── voice/               # ドヤボイスAI (10ページ)
+│   │   ├── movie/               # ドヤ動画AI (11ページ)
 │   │   ├── persona/             # ドヤペルソナAI (5ページ)
+│   │   ├── hr/                  # ドヤHR (14ページ)
+│   │   ├── kantan/              # カンタンマーケAI (→/seoにリダイレクト)
 │   │   ├── opening/             # ドヤオープニングAI
 │   │   ├── logo/                # ドヤロゴ
 │   │   ├── shindan/             # ドヤ診断AI (3ページ)
 │   │   ├── slide/               # ドヤスライド (3ページ)
 │   │   ├── slashslide/          # SlashSlide (3ページ)
 │   │   │
-│   │   └── api/                 # APIルート (150+エンドポイント)
+│   │   └── api/                 # APIルート (327エンドポイント)
 │   │       ├── auth/            # NextAuth
 │   │       ├── stripe/          # 決済API
 │   │       ├── admin/           # 管理API (16+)
 │   │       ├── health/          # ヘルスチェック
 │   │       ├── banner/          # バナーAPI (17)
-│   │       ├── seo/             # SEO API (35+)
-│   │       ├── interview/       # インタビューAPI (15)
+│   │       ├── seo/             # SEO API (54)
+│   │       ├── interview/       # インタビューAPI (21)
+│   │       ├── copy/            # コピーAPI (11)
+│   │       ├── lp/              # LP API (9)
+│   │       ├── adsim/           # 広告シミュレーションAPI (9)
 │   │       ├── tenkai/          # 展開AI API (23)
+│   │       ├── voice/           # ボイスAPI (12)
+│   │       ├── movie/           # 動画API (15)
+│   │       ├── hr/              # HR API (30)
 │   │       ├── swipe/           # Swipe API (11)
 │   │       ├── persona/         # ペルソナAPI (3)
 │   │       ├── opening/         # オープニングAPI (5)
@@ -81,6 +93,7 @@
 │   │   ├── ShindanAppLayout.tsx
 │   │   ├── interview/           # インタビュー専用
 │   │   ├── seo/                 # SEO専用
+│   │   ├── copy/                # コピーAI専用
 │   │   ├── shindan/             # 診断専用
 │   │   ├── tenkai/              # 展開AI専用
 │   │   └── ...
@@ -103,6 +116,9 @@
 │   │   │   ├── types.ts         # 型定義
 │   │   │   ├── prompts.ts       # AIプロンプト
 │   │   │   └── recipes-seed.ts  # レシピ初期データ
+│   │   ├── copy/                # コピーAI専用 (gemini.ts, personas.ts)
+│   │   ├── lp/                  # LP AI専用 (wireframe, prompts, html-export, themes)
+│   │   ├── adsim/               # 広告シミュレーション専用 (auto-generator, simulator, benchmark, pptx/pdf/excel)
 │   │   ├── tenkai/              # 展開AI専用
 │   │   │   ├── generation-pipeline.ts  # 生成パイプライン
 │   │   │   ├── access.ts        # アクセス制御・使用量管理
@@ -145,7 +161,7 @@
 │   └── seo/                     # シンボリックリンク → seo-symlink-backup/
 │
 ├── prisma/
-│   └── schema.prisma            # DBスキーマ (38モデル)
+│   └── schema.prisma            # DBスキーマ (103モデル)
 │
 ├── middleware.ts                 # Next.jsミドルウェア (Slide専用ドメイン書換え)
 ├── next.config.js               # Next.js設定
@@ -190,4 +206,4 @@ npm run db:push    # Prismaスキーマ反映
 - `eslint.ignoreDuringBuilds: true` — ESLintエラーもビルド時は無視
 - APIルートはすべて `maxDuration = 300` (5分タイムアウト)
 - ゲスト (未ログイン) ユーザーもCookieベースで利用可能
-- Prismaモデル数: 38個 (認証3, ユーザー2, SEO12, Interview7, Swipe3, Tenkai6, 管理3, その他2)
+- Prismaモデル数: 103個 (認証3, ユーザー2, SEO12, Interview7, InterviewX9, Swipe3, Tenkai6, Copy3, LP2, AdSim1, Voice2, Movie3, Opening2, HR10, Kintai8, Promane7, Drip8, 管理3, その他12)

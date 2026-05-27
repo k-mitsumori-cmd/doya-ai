@@ -28,257 +28,221 @@
 
 ## サービスステータス一覧
 
+### 課金方針: 統一プラン方式
+
+ドヤAIは**統一プラン方式**を採用。1つのサブスクリプション（ドヤマーケAI）に課金すれば、全サービスのPROプランが利用可能。サービス個別の課金は行わない。
+
 ### 実装マトリクス
 
-| サービス | パス | ステータス | services.ts | ページ | API | DBモデル | pricing.ts | Stripe | ドキュメント |
-|---------|------|-----------|-------------|--------|-----|---------|-----------|--------|------------|
-| カンタンマーケAI | `/kantan` | maintenance | ✅ | ✅ 10頁 | ❌ | ⚠️汎用 | ✅ | ⚠️レガシー | ✅ |
-| ドヤバナーAI | `/banner` | active | ✅ | ✅ 16頁 | ✅ 17件 | ✅ 1モデル | ✅ | ✅ 5プラン | ✅ |
-| ドヤロゴ | `/logo` | maintenance | ✅ | ✅ | ✅ 1件 | ⚠️汎用 | ⚠️暫定 | ❌ | ✅ |
-| ドヤライティングAI | `/seo` | active | ✅ | ✅ 45頁 | ✅ 35+件 | ✅ 12モデル | ✅ | ✅ 2プラン | ✅ |
-| ドヤSwipe | `/seo/swipe` | maintenance | ❌ | 🔗 SEO内 | ✅ 11件 | ✅ 3モデル | 🔗 SEO | 🔗 SEO | ✅ |
-| ドヤインタビュー | `/interview` | active | ✅ | ✅ 15頁 | ✅ 15件 | ✅ 7モデル | ✅ | ✅ 統合済 | ✅ |
-| ドヤ展開AI | `/tenkai` | coming_soon | ✅ | ✅ 10頁 | ✅ 23件 | ✅ 6モデル | ✅ | ✅ 統合済 | ⚠️ |
-| ドヤペルソナAI | `/persona` | active | ✅ | ✅ 5頁 | ✅ 3件 | ⚠️汎用 | ✅ | ❌ | ✅ |
-| ドヤオープニングAI | `/opening` | maintenance | ✅ | ✅ | ✅ 5件 | ✅ 2モデル | ❌ | ❌ | ❌ |
-| ドヤWeb診断AI | `/shindan` | maintenance | ✅ | ✅ 3頁 | ❌ | ❌ | ✅ | ❌ | ✅ |
-| ドヤスライド | `/slide` | maintenance | ❌ | ✅ 3頁 | ✅ 2件 | ⚠️汎用 | ❌ | ❌ | ✅ |
-| SlashSlide | `/slashslide` | maintenance | ❌ | ✅ 3頁 | ✅ 2件 | ⚠️汎用 | ❌ | ❌ | 🔗 slide |
-| ドヤLP AI | `/lp` | maintenance | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| ドヤ動画AI | `/video` | maintenance | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| ドヤプレゼンAI | `/presentation` | maintenance | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| 管理画面 | `/admin` | active | ❌ | ✅ 15頁 | ✅ 16件+ | ✅ 3モデル | ❌ | ❌ | ❌ |
+| サービス | パス | ステータス | services.ts | ページ | API | DBモデル | Stripe | ドキュメント |
+|---------|------|-----------|-------------|--------|-----|---------|--------|------------|
+| ドヤバナーAI | `/banner` | active | ✅ | ✅ 16頁 | ✅ 17件 | ✅ 1モデル | ✅ 統一プラン | ✅ |
+| ドヤライティングAI | `/seo` | active | ✅ | ✅ 45頁 | ✅ 54件 | ✅ 12モデル | ✅ 統一プラン | ✅ |
+| ドヤインタビュー | `/interview` | active | ✅ | ✅ 15頁 | ✅ 21件 | ✅ 7モデル | ✅ 統一プラン | ✅ |
+| ドヤコピーAI | `/copy` | active | ✅ | ✅ 12頁 | ✅ 11件 | ✅ 3モデル | ✅ 統一プラン | ✅ |
+| ドヤLP AI | `/lp` | active | ✅ | ✅ 9頁 | ✅ 9件 | ✅ 2モデル | ✅ 統一プラン | ✅ |
+| ドヤ広告シミュレーションAI | `/adsim` | coming_soon | ✅ | ✅ 6頁 | ✅ 9件 | ✅ 1モデル | ✅ 統一プラン | ✅ |
+| ドヤ展開AI | `/tenkai` | coming_soon | ✅ | ✅ 10頁 | ✅ 23件 | ✅ 6モデル | ✅ 統一プラン | ✅ |
+| ドヤペルソナAI | `/persona` | active | ✅ | ✅ 5頁 | ✅ 3件 | ⚠️汎用 | ✅ 統一プラン | ✅ |
+| ドヤボイスAI | `/voice` | active | ✅ | ✅ 10頁 | ✅ 12件 | ✅ 2モデル | ✅ 統一プラン | ❌ |
+| ドヤ動画AI | `/movie` | active | ✅ | ✅ 11頁 | ✅ 15件 | ✅ 3モデル | ✅ 統一プラン | ❌ |
+| カンタンマーケAI | `/kantan` | maintenance | ✅ | ✅ 10頁 | ❌ | ⚠️汎用 | ⚠️レガシー | ✅ |
+| ドヤロゴ | `/logo` | maintenance | ✅ | ✅ | ✅ 1件 | ⚠️汎用 | ⚠️暫定 | ✅ |
+| ドヤSwipe | `/seo/swipe` | maintenance | ❌ | 🔗 SEO内 | ✅ 11件 | ✅ 3モデル | 🔗 SEO | ✅ |
+| ドヤオープニングAI | `/opening` | maintenance | ✅ | ✅ | ✅ 5件 | ✅ 2モデル | ❌ | ❌ |
+| ドヤWeb診断AI | `/shindan` | maintenance | ✅ | ✅ 3頁 | ❌ | ❌ | ❌ | ✅ |
+| ドヤスライド | `/slide` | maintenance | ❌ | ✅ 3頁 | ✅ 2件 | ⚠️汎用 | ❌ | ✅ |
+| SlashSlide | `/slashslide` | maintenance | ❌ | ✅ 3頁 | ✅ 2件 | ⚠️汎用 | ❌ | 🔗 slide |
+| ドヤHR | `/hr` | active | ✅ | ✅ 14頁 | ✅ 30件 | ✅ 10モデル | ✅ 統一プラン | ❌ |
+| 管理画面 | `/admin` | active | ❌ | ✅ 15頁 | ✅ 16件+ | ✅ 3モデル | ❌ | ❌ |
 
-### 課金統合ステータス
+### Stripe統合ステータス
 
-| サービス | PlanId (stripe.ts) | ServiceId (stripe.ts) | Stripe Price ID | 課金状態 |
-|---------|-------------------|----------------------|-----------------|---------|
-| バナー | banner-basic/starter/pro/business/enterprise | banner | ✅ 環境変数設定済 | **完全統合** |
-| SEO | seo-pro/enterprise | seo | ✅ 環境変数設定済 | **完全統合** |
-| インタビュー | interview-pro/enterprise | interview | ✅ バナーと共通価格 | **統合済** |
-| 展開AI | ✅ バナー/SEOと共通価格 | ✅ tenkai | ✅ 独自使用量管理 | **統合済** |
-| バンドル | bundle | bundle | ✅ 環境変数設定済 | **完全統合** |
-| カンタン | ❌ PlanId未定義 | ❌ ServiceId未定義 | ⚠️ レガシー (NEXT_PUBLIC_) | **レガシー方式** |
-| ペルソナ | ❌ PlanId未定義 | ❌ ServiceId未定義 | ❌ 未設定 | **未統合** |
-| オープニング | ❌ PlanId未定義 | ❌ ServiceId未定義 | ❌ 未設定 | **未統合** |
-| ロゴ | ❌ PlanId未定義 | ❌ ServiceId未定義 | ❌ 未設定 | 暫定無料 |
-| 診断 | ❌ PlanId未定義 | ❌ ServiceId未定義 | ❌ 未設定 | **未統合** |
-| スライド | ❌ PlanId未定義 | ❌ ServiceId未定義 | ❌ 未設定 | 無料 |
+全サービスが統一プラン方式で管理される。`stripe.ts` の PlanId / ServiceId 型で定義。
+
+```typescript
+type PlanId =
+  'seo-light' | 'seo-pro' | 'seo-enterprise' |
+  'banner-light' | 'banner-basic' | 'banner-pro' | 'banner-enterprise' |
+  'interview-light' | 'interview-pro' | 'interview-enterprise' |
+  'copy-light' | 'copy-pro' | 'copy-enterprise' |
+  'lp-light' | 'lp-pro' | 'lp-enterprise' |
+  'voice-light' | 'voice-pro' | 'voice-enterprise' |
+  'movie-light' | 'movie-pro' | 'movie-enterprise' |
+  'adsim-light' | 'adsim-pro' | 'adsim-enterprise' |
+  'hr-starter' | 'hr-pro' | 'hr-enterprise' |
+  'bundle'
+
+type ServiceId = 'seo' | 'banner' | 'interview' | 'copy' | 'lp' | 'voice' | 'movie' | 'adsim' | 'hr' | 'bundle'
+```
 
 ---
 
 ## 各サービス詳細
 
-### 1. カンタンマーケAI (`kantan`)
-
-| 項目 | 状態 | 詳細 |
-|------|------|------|
-| **ステータス** | maintenance | services.ts 登録済み |
-| **カテゴリ** | text | チャット型AIマーケアシスタント |
-| **ページ** | ✅ | `src/app/kantan/page.tsx`, `layout.tsx`, dashboard/, pricing/ |
-| **API** | ❌ | APIルートなし（フロント直接呼出） |
-| **コンポーネント** | ❌ | 汎用レイアウト使用 (DashboardLayout) |
-| **Lib** | ❌ | 専用ライブラリなし |
-| **DBモデル** | ⚠️ | 汎用 Generation, UserServiceSubscription |
-| **課金** | ⚠️ | pricing.ts定義あり / Stripe レガシー方式 |
-| **料金** | Free: ¥0 (3回/日) / Pro: ¥4,980 (100回/日) |
-| **ドキュメント** | ✅ | reference/services/kantan.md |
-| **課題** | Stripe PlanId/ServiceId 未統合 |
-
-### 2. ドヤバナーAI (`banner`)
+### 1. ドヤバナーAI (`banner`)
 
 | 項目 | 状態 | 詳細 |
 |------|------|------|
 | **ステータス** | active | services.ts 登録済み |
 | **カテゴリ** | image | A/B/C 3案同時バナー生成 |
-| **ページ** | ✅ | `src/app/banner/page.tsx`, dashboard/(11件), gallery/, landing/, pricing/ |
-| **API** | ✅ 25件 | `src/app/api/banner/` — 25 route.ts |
-| **コンポーネント** | ❌ | 汎用レイアウト使用 |
+| **ページ** | ✅ 16頁 | `src/app/banner/` — dashboard/(11件), gallery/, landing/, pricing/ |
+| **API** | ✅ 17件 | `src/app/api/banner/` |
 | **Lib** | ✅ | `banners.ts`, `banner-prompts-v2.ts` |
 | **DBモデル** | ✅ | BannerTemplate |
-| **課金** | ✅ 完全統合 | PlanId: 5プラン / ServiceId: banner |
-| **料金** | Free: ¥0 (9枚/日) / Pro: ¥9,980 (30枚/日) / Enterprise: ¥49,800 (200枚/日) |
+| **課金** | ✅ 統一プラン | ServiceId: banner |
 | **ドキュメント** | ✅ | reference/services/banner.md |
-| **課題** | なし（最も整備されたサービスの一つ） |
 
-### 3. ドヤロゴ (`logo`)
-
-| 項目 | 状態 | 詳細 |
-|------|------|------|
-| **ステータス** | maintenance | services.ts 登録済み |
-| **カテゴリ** | image | ロゴ3パターン生成 |
-| **ページ** | ✅ | `src/app/logo/page.tsx` (28KB) |
-| **API** | ✅ 1件 | `src/app/api/logo/generate/route.ts` |
-| **コンポーネント** | ❌ | なし |
-| **Lib** | ❌ | なし |
-| **DBモデル** | ⚠️ | 汎用 Generation |
-| **課金** | ⚠️ 暫定 | pricing.ts 暫定定義 / Stripe 未設定 |
-| **料金** | Free: ¥0 (1回/日) / Pro: ¥0 (暫定無料) |
-| **ドキュメント** | ✅ | reference/services/logo.md |
-| **課題** | 料金体系未確定、Stripe未統合 |
-
-### 4. ドヤライティングAI (`seo`)
+### 2. ドヤライティングAI (`seo`)
 
 | 項目 | 状態 | 詳細 |
 |------|------|------|
-| **ステータス** | active | services.ts 登録済み |
+| **ステータス** | active | 最大規模サービス |
 | **カテゴリ** | text | SEO + LLMO 長文記事生成 |
-| **ページ** | ✅ | `src/app/seo/` — 18サブディレクトリ |
-| **API** | ✅ 54件 | `src/app/api/seo/` — 54 route.ts |
-| **コンポーネント** | ✅ | SeoAppLayout.tsx, SeoSidebar.tsx |
-| **Lib** | ✅ | `seo.ts`, `seoAccess.ts` + `seo/` サブプロジェクト |
-| **DBモデル** | ✅ 12モデル | SeoArticle, SeoJob, SeoSection, SeoReference, SeoAuditReport, SeoUserMemo, SeoImage, SeoLinkCheckResult, SeoKnowledgeItem + Swipe系3モデル |
-| **課金** | ✅ 完全統合 | PlanId: seo-pro, seo-enterprise / ServiceId: seo |
-| **料金** | Free: ¥0 (1回/日, 10,000字) / Pro: ¥9,980 (3回/日, 20,000字) / Enterprise: ¥49,980 (30回/日, 50,000字) |
+| **ページ** | ✅ 45頁 | `src/app/seo/` — 18サブディレクトリ |
+| **API** | ✅ 54件 | `src/app/api/seo/` |
+| **Lib** | ✅ | `seo/lib/` (pipeline.ts=175KB) |
+| **DBモデル** | ✅ 12モデル | SeoArticle, SeoJob, SeoSection 他 |
+| **課金** | ✅ 統一プラン | ServiceId: seo |
 | **ドキュメント** | ✅ | reference/services/seo.md |
-| **課題** | なし（最大規模・最も完成度の高いサービス） |
 
-### 5. ドヤSwipe (`swipe`)
-
-| 項目 | 状態 | 詳細 |
-|------|------|------|
-| **ステータス** | maintenance | services.ts **未登録** (SEO内サブ機能) |
-| **カテゴリ** | text | Tinder風UI→SEO記事生成 |
-| **ページ** | 🔗 | `src/app/seo/swipe/` (SEOのサブルート) |
-| **API** | ✅ 11件 | `src/app/api/swipe/` — 11 route.ts |
-| **コンポーネント** | ❌ | SEOコンポーネントに統合 |
-| **Lib** | ❌ | なし |
-| **DBモデル** | ✅ 3モデル | SwipeSession, SwipeCelebrationImage, SwipeQuestionImage |
-| **課金** | 🔗 SEO | SEOプランに含まれる |
-| **料金** | SEOと共通 |
-| **ドキュメント** | ✅ | reference/services/swipe.md |
-| **課題** | 独立サービス化するか、SEOサブ機能のままか未決定 |
-
-### 6. ドヤインタビュー (`interview`)
+### 3. ドヤインタビュー (`interview`)
 
 | 項目 | 状態 | 詳細 |
 |------|------|------|
 | **ステータス** | active | services.ts 登録済み |
 | **カテゴリ** | text | 音声→文字起こし→記事生成 |
-| **ページ** | ✅ | `src/app/interview/` — projects/, recipes/, settings/, skills/ |
-| **API** | ✅ 21件 | `src/app/api/interview/` — 21 route.ts |
-| **コンポーネント** | ❌ | 汎用レイアウト使用 |
-| **Lib** | ❌ | `src/lib/interview/` (storage, transcription, access, types, prompts) |
-| **DBモデル** | ✅ 7モデル | InterviewProject, InterviewRecipe, InterviewMaterial, InterviewTranscription, InterviewDraft, InterviewReview, GuestSession |
-| **課金** | ⚠️ レガシー | pricing.ts定義あり / Stripe レガシー方式 |
-| **料金** | Free: ¥0 (30分/月) / Pro: ¥9,980 (150分/月) / Enterprise: ¥49,980 (1,000分/月) |
+| **ページ** | ✅ 15頁 | `src/app/interview/` — projects/, recipes/, settings/, skills/ |
+| **API** | ✅ 21件 | `src/app/api/interview/` |
+| **Lib** | ✅ | `src/lib/interview/` (storage, transcription, access, types, prompts) |
+| **DBモデル** | ✅ 7モデル | InterviewProject, InterviewRecipe 他 |
+| **課金** | ✅ 統一プラン | ServiceId: interview |
 | **ドキュメント** | ✅ | reference/services/interview.md |
-| **課題** | Stripe PlanId/ServiceId 未統合 |
+
+### 4. ドヤコピーAI (`copy`)
+
+| 項目 | 状態 | 詳細 |
+|------|------|------|
+| **ステータス** | active | services.ts 登録済み |
+| **カテゴリ** | text | 5タイプのAIコピーライターで20案以上生成 |
+| **ページ** | ✅ 12頁 | `src/app/copy/` — new/ (display/search/sns), [projectId]/, history/, templates/, settings/ |
+| **API** | ✅ 11件 | `src/app/api/copy/` — generate, generate-search, generate-sns, brushup, export 他 |
+| **Lib** | ✅ | `src/lib/copy/` (gemini.ts, personas.ts) |
+| **DBモデル** | ✅ 3モデル | CopyProject, CopyItem, CopyBrandVoice |
+| **課金** | ✅ 統一プラン | ServiceId: copy |
+| **ドキュメント** | ✅ | reference/services/copy.md |
+
+### 5. ドヤLP AI (`lp`)
+
+| 項目 | 状態 | 詳細 |
+|------|------|------|
+| **ステータス** | active | services.ts 登録済み |
+| **カテゴリ** | text | LP構成案3パターン + セクション別コピー + HTMLエクスポート |
+| **ページ** | ✅ 9頁 | `src/app/lp/` — new/ (4ステップ), [projectId]/, history/ |
+| **API** | ✅ 9件 | `src/app/api/lp/` — analyze-url, generate-structure, generate-copy, brushup-section, export-html, themes 他 |
+| **Lib** | ✅ | `src/lib/lp/` (wireframe.ts, prompts.ts, html-export.ts, themes.ts) |
+| **DBモデル** | ✅ 2モデル | LpProject, LpSection |
+| **課金** | ✅ 統一プラン | ServiceId: lp |
+| **ドキュメント** | ✅ | reference/services/lp.md |
+
+### 6. ドヤ広告シミュレーションAI (`adsim`)
+
+| 項目 | 状態 | 詳細 |
+|------|------|------|
+| **ステータス** | coming_soon | 実装完了済み、公開前 |
+| **カテゴリ** | text | LP URL + 予算 → 30業種×6媒体シミュレーション → PDF/PPTX/Excel |
+| **ページ** | ✅ 6頁 | `src/app/adsim/` — new/ (5ステップ), [projectId]/, history/ |
+| **API** | ✅ 9件 | `src/app/api/adsim/` — projects, simulate, proposal, export, auto-generate, scrape 他 |
+| **Lib** | ✅ | `src/lib/adsim/` (auto-generator, simulator, benchmark, pptx/pdf/excel-generator, gemini) |
+| **DBモデル** | ✅ 1モデル | AdSimProject |
+| **課金** | ✅ 統一プラン | ServiceId: adsim |
+| **ドキュメント** | ✅ | reference/services/adsim.md |
 
 ### 7. ドヤ展開AI (`tenkai`)
 
 | 項目 | 状態 | 詳細 |
 |------|------|------|
-| **ステータス** | coming_soon | services.ts 登録済み (coming_soon) |
+| **ステータス** | coming_soon | 実装完了済み、公開前 |
 | **カテゴリ** | text | 1コンテンツ→9プラットフォーム自動展開 |
-| **ページ** | ✅ 10頁 | `src/app/tenkai/` — create/, projects/, [id]/, brand-voice/, templates/, pricing/, settings/ |
-| **API** | ✅ 23件 | `src/app/api/tenkai/` — projects, generate, content, outputs, brand-voices, templates, usage, api-key, health |
-| **コンポーネント** | ✅ | `src/components/tenkai/` — PricingTable, ProjectCard, StepAnalysis, StepGeneration, TenkaiSidebar |
-| **Lib** | ✅ | `src/lib/tenkai/` — generation-pipeline, prompts/ (9プラットフォーム), access, validation, scraper, brand-voice, storage |
+| **ページ** | ✅ 10頁 | `src/app/tenkai/` — create/, projects/, brand-voice/, templates/, settings/ |
+| **API** | ✅ 23件 | `src/app/api/tenkai/` — projects, generate, content, outputs, brand-voices, templates, usage, api-key |
+| **Lib** | ✅ | `src/lib/tenkai/` (generation-pipeline, prompts/ 9種, access, scraper, brand-voice) |
 | **DBモデル** | ✅ 6モデル | TenkaiProject, TenkaiOutput, TenkaiBrandVoice, TenkaiTemplate, TenkaiUsage, TenkaiApiKey |
-| **課金** | ✅ 統合済 | バナー/SEOと同一価格ID共有。独自使用量管理 (TenkaiUsage) |
-| **料金** | バナー/SEOプランに含まれる（Pro: ¥9,980, Enterprise: ¥49,980） |
-| **対応プラットフォーム** | blog, x, instagram, facebook, linkedin, line, newsletter, press-release, note |
-| **ドキュメント** | ⚠️ | reference/services/tenkai.md 未作成 |
-| **課題** | 専用ドキュメント未作成 |
+| **課金** | ✅ 統一プラン | ServiceId: tenkai (独自使用量管理 TenkaiUsage) |
+| **ドキュメント** | ✅ | reference/services/tenkai.md |
 
-### 8. ドヤオープニングAI (`opening`)
-
-| 項目 | 状態 | 詳細 |
-|------|------|------|
-| **ステータス** | maintenance | services.ts 登録済み |
-| **カテゴリ** | animation | URL→アニメーション自動生成 |
-| **ページ** | ✅ | `src/app/opening/` |
-| **API** | ✅ 5件 | `src/app/api/opening/` — analyze, projects, animations, usage |
-| **コンポーネント** | ✅ | `src/components/opening/` — AnimationCard, AnimationGrid, AnimationPreview, CodeExporter, MiniPreview, SiteAnalysisProgress, UrlInputForm, templates/ (12種) |
-| **Lib** | ✅ | `src/lib/opening/` — animation-engine, site-analyzer, gemini, templates, color-utils, usage |
-| **DBモデル** | ✅ 2モデル | OpeningProject, OpeningAnimation |
-| **課金** | ❌ | 未設定 |
-| **料金** | 無料（課金未定） |
-| **ドキュメント** | ❌ | reference/services/opening.md 未作成 |
-| **課題** | Stripe未統合、専用ドキュメント未作成 |
-
-### 9. ドヤペルソナAI (`persona`)
+### 8. ドヤペルソナAI (`persona`)
 
 | 項目 | 状態 | 詳細 |
 |------|------|------|
 | **ステータス** | active | services.ts 登録済み |
 | **カテゴリ** | text + image | URL→ペルソナ分析・画像生成 |
-| **ページ** | ✅ | `src/app/persona/` — history/ |
+| **ページ** | ✅ 5頁 | `src/app/persona/` — history/ |
 | **API** | ✅ 3件 | `src/app/api/persona/` — generate, portrait, banner |
-| **コンポーネント** | ✅ | PersonaAppLayout.tsx, PersonaSidebar.tsx |
 | **Lib** | ❌ | なし |
 | **DBモデル** | ⚠️ | 汎用 Generation |
-| **課金** | ⚠️ 部分的 | pricing.ts定義あり / Stripe 未設定 |
-| **料金** | Free: ¥0 (5回/日) / Pro: ¥9,980 (30回/日) |
+| **課金** | ✅ 統一プラン | ServiceId定義予定 |
 | **ドキュメント** | ✅ | reference/services/persona.md |
-| **課題** | Stripe未統合、専用DBモデルなし |
 
-### 10. ドヤWeb診断AI (`shindan`)
-
-| 項目 | 状態 | 詳細 |
-|------|------|------|
-| **ステータス** | maintenance | services.ts 登録済みだが実装なし |
-| **カテゴリ** | web | Web7軸スコアリング診断 |
-| **ページ** | ❌ | 未作成 |
-| **API** | ❌ | 未作成 |
-| **コンポーネント** | ❌ | 未作成 |
-| **Lib** | ❌ | 未作成 |
-| **DBモデル** | ❌ | 未作成 |
-| **課金** | ⚠️ | pricing.ts定義のみ / Stripe 未設定 |
-| **料金** | Free: ¥0 (3回/日) / Pro: ¥9,980 (20回/日) |
-| **ドキュメント** | ✅ | reference/services/shindan.md (仕様書のみ) |
-| **課題** | **全実装が必要** — ページ・API・DB・コンポーネント未作成 |
-
-### 11. ドヤスライド (`slide`)
+### 9. ドヤボイスAI (`voice`)
 
 | 項目 | 状態 | 詳細 |
 |------|------|------|
-| **ステータス** | maintenance | services.ts **未登録** |
-| **カテゴリ** | other | AI→Googleスライド生成 |
-| **ページ** | ✅ | `src/app/slide/` — create/ |
-| **API** | ✅ 2件 | `src/app/api/slide/` — generate, publish |
-| **コンポーネント** | ❌ | なし |
-| **Lib** | ✅ | `src/lib/slide/` (gemini.ts, googleSlides.ts, types.ts) |
-| **DBモデル** | ⚠️ | 汎用 Generation |
-| **課金** | ❌ | 未設定 |
-| **料金** | 無料（課金未定） |
-| **ドキュメント** | ✅ | reference/services/slide.md |
-| **課題** | services.ts未登録、課金体系未定 |
+| **ステータス** | active | services.ts 登録済み |
+| **カテゴリ** | audio | 音声コンテンツ生成 |
+| **ページ** | ✅ 10頁 | `src/app/voice/` |
+| **API** | ✅ 12件 | `src/app/api/voice/` |
+| **DBモデル** | ✅ 2モデル | VoiceProject, VoiceRecording |
+| **課金** | ✅ 統一プラン | ServiceId: voice |
+| **ドキュメント** | ❌ | 未作成 |
 
-### 12. SlashSlide (`slashslide`)
+### 10. ドヤ動画AI (`movie`)
 
 | 項目 | 状態 | 詳細 |
 |------|------|------|
-| **ステータス** | maintenance | services.ts **未登録** |
-| **カテゴリ** | other | AI→スライド生成（別ブランド） |
-| **ページ** | ✅ | `src/app/slashslide/` — create/ |
-| **API** | ✅ 2件 | `src/app/api/slashslide/` — generate, publish |
-| **コンポーネント** | ❌ | なし |
-| **Lib** | ✅ | `src/lib/slashslide/` (slide/と同構造) |
-| **DBモデル** | ⚠️ | 汎用 Generation |
-| **課金** | ❌ | 未設定 |
-| **料金** | 無料（課金未定） |
-| **ドキュメント** | 🔗 | reference/services/slide.md に統合 |
-| **課題** | services.ts未登録、slideとの統合/分離方針未決 |
+| **ステータス** | active | services.ts 登録済み |
+| **カテゴリ** | video | 動画コンテンツ生成 |
+| **ページ** | ✅ 11頁 | `src/app/movie/` |
+| **API** | ✅ 15件 | `src/app/api/movie/` |
+| **DBモデル** | ✅ 3モデル | MovieProject, MovieScene, MovieRenderJob |
+| **課金** | ✅ 統一プラン | ServiceId: movie |
+| **ドキュメント** | ❌ | 未作成 |
 
-### 13. 管理画面 (`admin`)
+### 11. ドヤHR (`hr`)
 
 | 項目 | 状態 | 詳細 |
 |------|------|------|
-| **ステータス** | active | — |
-| **ページ** | ✅ | `src/app/admin/` — 15+ページ |
-| **API** | ✅ 16件+ | `src/app/api/admin/` |
-| **認証** | ✅ | 独自認証 (bcrypt + JWT + Turnstile) |
-| **ドキュメント** | ⚠️ | reference/05-auth-payments.md に含まれる |
+| **ステータス** | active | Phase 1 MVP実装済み (2026-05-26) |
+| **カテゴリ** | business | タレントマネジメントシステム |
+| **ページ** | ✅ 14頁 | `src/app/hr/` |
+| **API** | ✅ 30件 | `src/app/api/hr/` |
+| **DBモデル** | ✅ 10モデル | HrOrganization, HrEmployee, HrEvaluation 他 |
+| **課金** | ✅ 統一プラン | ServiceId: hr |
+| **ドキュメント** | ❌ | 未作成 |
 
-### 14-16. 開発予定サービス
+### 12. カンタンマーケAI (`kantan`)
 
-| サービス | パス | services.ts | 備考 |
-|---------|------|-------------|------|
-| ドヤLP AI | `/lp` | ✅ maintenance | LP自動生成 |
-| ドヤ動画AI | `/video` | ✅ maintenance | 動画コンテンツ生成 |
-| ドヤプレゼンAI | `/presentation` | ✅ maintenance | プレゼン生成 |
+| 項目 | 状態 | 詳細 |
+|------|------|------|
+| **ステータス** | maintenance | `/seo` にリダイレクト中 |
+| **カテゴリ** | text | チャット型AIマーケアシスタント (68+エージェント) |
+| **ページ** | ✅ 10頁 | `src/app/kantan/` |
+| **API** | ❌ | フロント直接呼出 |
+| **DBモデル** | ⚠️ | 汎用 Generation, UserServiceSubscription |
+| **課金** | ⚠️ | レガシー方式 |
+| **ドキュメント** | ✅ | reference/services/kantan.md |
+
+### 13-17. その他サービス
+
+| サービス | パス | ステータス | ページ | API | 備考 |
+|---------|------|-----------|--------|-----|------|
+| ドヤロゴ | `/logo` | maintenance | ✅ | ✅ 1件 | 暫定無料 |
+| ドヤSwipe | `/seo/swipe` | maintenance | 🔗 SEO内 | ✅ 11件 | SEOサブ機能 |
+| ドヤオープニングAI | `/opening` | maintenance | ✅ | ✅ 5件 | アニメーション生成 |
+| ドヤWeb診断AI | `/shindan` | maintenance | ✅ 3頁 | ❌ | 仕様定義のみ |
+| ドヤスライド | `/slide` | maintenance | ✅ 3頁 | ✅ 2件 | services.ts未登録 |
+| SlashSlide | `/slashslide` | maintenance | ✅ 3頁 | ✅ 2件 | services.ts未登録 |
+| 管理画面 | `/admin` | active | ✅ 15頁 | ✅ 16件+ | 独自認証 |
 
 ---
 
@@ -288,25 +252,17 @@
 
 | # | 対応内容 | 対象サービス | 理由 |
 |---|---------|-------------|------|
-| 1 | Stripe PlanId/ServiceId 統合 | カンタン, インタビュー | レガシー方式のまま放置されている |
-| 2 | services.ts 登録 | スライド, SlashSlide | 実装済みなのに未登録 |
-| 3 | shindan 実装判断 | 診断AI | services.ts登録済みだが実装ゼロ — 実装するか削除するか判断必要 |
+| 1 | ドキュメント作成 | Voice, Movie, HR | 実装済みだがドキュメント未作成 |
+| 2 | coming_soon → active 移行 | AdSim, Tenkai | 実装完了済み、公開判断待ち |
+| 3 | カンタンのレガシー課金移行 | カンタン | 統一プラン方式への統合が必要 |
 
 ### 中優先度
 
 | # | 対応内容 | 対象サービス | 理由 |
 |---|---------|-------------|------|
-| 4 | ペルソナ Stripe統合 | ペルソナ | pricing.ts定義済みだがStripe未連携 |
-| 5 | ロゴ料金体系確定 | ロゴ | 暫定無料のまま |
-| 6 | スライド課金設計 | スライド, SlashSlide | 課金体系未定 |
-
-### 低優先度
-
-| # | 対応内容 | 対象サービス | 理由 |
-|---|---------|-------------|------|
-| 7 | Swipe独立サービス化検討 | Swipe | SEOサブ機能のまま or 独立化 |
-| 8 | 管理画面ドキュメント整備 | 管理画面 | 専用ドキュメントなし |
-| 9 | coming_soon 開発着手 | LP, 動画, プレゼン | 新サービス開発 |
+| 4 | services.ts 登録 | スライド, SlashSlide | 実装済みなのに未登録 |
+| 5 | shindan 実装判断 | 診断AI | services.ts登録済みだが実装ゼロ |
+| 6 | オープニングAI ドキュメント | Opening | 実装済みだがドキュメント未作成 |
 
 ---
 
@@ -355,3 +311,4 @@ grep "^model " prisma/schema.prisma
 | 2026-02-18 | ドヤ展開AI (tenkai) を追加。インタビューStripe統合ステータスを更新。ページ数・API数を実態に合わせて修正 |
 | 2026-02-20 | ドヤオープニングAI (opening) を追加。Slack通知/Cronジョブ/GTM・HubSpot連携の運用機能を全ドキュメントに反映。README.md全面改訂 |
 | 2026-02-22 | opening→maintenance、tenkai→coming_soon、persona/tenkai/opening services.ts登録反映。サイドバー共通コンポーネント化 (`src/components/sidebar/`) |
+| 2026-05-27 | 大規模更新: AdSim/Copy/LP/Voice/Movie/HR追加。統一プラン方式反映。Prisma 103モデル・API 327件に実態合わせ。tenkai.md新規作成 |

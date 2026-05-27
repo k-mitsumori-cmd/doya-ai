@@ -167,9 +167,12 @@ export default function OneOnOnePage() {
             }}
           >
             {records.map((record) => {
-              const initials = record.employeeName
-                ? `${record.employeeName[0]}${record.employeeName.length > 1 ? record.employeeName[1] : ''}`
-                : '??'
+              const nameParts = (record.employeeName || '').split(' ').filter(Boolean)
+              const initials = nameParts.length >= 2
+                ? `${nameParts[0][0]}${nameParts[1][0]}`
+                : nameParts.length === 1
+                  ? nameParts[0].slice(0, 2)
+                  : '??'
               const avatarColor = getAvatarColor(record.employeeName || record.employeeId)
               return (
                 <motion.div
@@ -195,14 +198,16 @@ export default function OneOnOnePage() {
                     <div className="flex-1 min-w-0">
                       <p className="text-base font-bold text-slate-900">{record.employeeName}</p>
                       <p className="text-xs text-slate-500">
-                        {new Date(record.date).toLocaleDateString('ja-JP', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                        {' '}/ {record.duration}分
+                        {record.date && !isNaN(new Date(record.date).getTime())
+                          ? new Date(record.date).toLocaleDateString('ja-JP', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : '日時未設定'}
+                        {' '}/ {record.duration || 0}分
                       </p>
                     </div>
                     <div className="flex items-center gap-3">

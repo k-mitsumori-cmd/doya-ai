@@ -34,7 +34,7 @@ export default function OneOnOneDetailPage() {
         const res = await fetch(`/api/hr/one-on-one/${id}`)
         if (!res.ok) throw new Error('1on1データの取得に失敗しました')
         const data = await res.json()
-        setRecord(data.record ?? data)
+        setRecord(data.oneOnOne ?? data.record ?? data)
       } catch (e: any) {
         setError(e.message)
       } finally {
@@ -46,13 +46,13 @@ export default function OneOnOneDetailPage() {
 
   const handleSave = async (payload: any) => {
     const res = await fetch(`/api/hr/one-on-one/${id}`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
     if (!res.ok) throw new Error('保存に失敗しました')
     const data = await res.json()
-    setRecord(data.record ?? data)
+    setRecord(data.oneOnOne ?? data.record ?? data)
   }
 
   if (loading) {

@@ -118,10 +118,17 @@ export default function HrSettingsPage() {
         }
         // Fetch audit logs
         try {
-          const logRes = await fetch('/api/hr/audit-logs?limit=10')
+          const logRes = await fetch('/api/hr/audit-logs?pageSize=10')
           if (logRes.ok) {
             const logData = await logRes.json()
-            setAuditLogs(logData.logs ?? logData.items ?? [])
+            const rawLogs = logData.items ?? logData.logs ?? []
+            setAuditLogs(rawLogs.map((l: any) => ({
+              id: l.id,
+              action: l.action,
+              actor: l.userName || l.actor || '',
+              target: l.target || '',
+              timestamp: l.createdAt || l.timestamp || '',
+            })))
           }
         } catch {}
       } catch {
@@ -286,10 +293,15 @@ export default function HrSettingsPage() {
     setTransferring(true)
     setError(null)
     try {
-      const res = await fetch('/api/hr/organization/transfer', {
+      // メールアドレスから対象メンバーを特定
+      const targetMember = members.find((m) => m.email === transferEmail)
+      if (!targetMember) {
+        throw new Error('指定されたメールアドレスのメンバーが見つかりません')
+      }
+      const res = await fetch('/api/hr/organization/transfer-owner', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: transferEmail }),
+        body: JSON.stringify({ targetMemberId: targetMember.id }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
@@ -727,12 +739,14 @@ export default function HrSettingsPage() {
                       </p>
                     </div>
                     <span className="text-xs text-slate-400 flex-shrink-0">
-                      {new Date(log.timestamp).toLocaleDateString('ja-JP', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {log.timestamp && !isNaN(new Date(log.timestamp).getTime())
+                        ? new Date(log.timestamp).toLocaleDateString('ja-JP', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })
+                        : ''}
                     </span>
                   </motion.div>
                 )

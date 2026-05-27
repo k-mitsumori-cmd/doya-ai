@@ -25,13 +25,13 @@ export default function UpgradeBanner({
 
   if (limit <= 0) return null
   const pct = Math.round((used / limit) * 100)
-  if (pct < threshold || dismissed) return null
+  const shouldShow = pct >= threshold && !dismissed
 
   const isCritical = pct >= 95
 
   return (
     <AnimatePresence>
-      <motion.div
+      {shouldShow && <motion.div
         initial={{ opacity: 0, y: -10, height: 0 }}
         animate={{ opacity: 1, y: 0, height: 'auto' }}
         exit={{ opacity: 0, y: -10, height: 0 }}
@@ -100,7 +100,7 @@ export default function UpgradeBanner({
         >
           <span className="material-symbols-outlined text-sm">close</span>
         </button>
-      </motion.div>
+      </motion.div>}
     </AnimatePresence>
   )
 }
