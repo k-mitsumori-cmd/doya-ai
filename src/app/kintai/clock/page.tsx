@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
-import { formatMinutesJa } from '@/lib/kintai/attendance'
+import { formatMinutesJa } from '@/lib/kintai/format'
 
 type ClockStatus = 'not_clocked_in' | 'working' | 'on_break' | 'clocked_out'
 

@@ -86,7 +86,7 @@ export default function EmployeesPage() {
       const url = editing ? `/api/kintai/employees/${editing.id}` : '/api/kintai/employees'
       const method = editing ? 'PATCH' : 'POST'
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
-      if (!res.ok) { const d = await res.json(); alert(d.error || '保存に失敗しました'); return }
+      if (!res.ok) { const d = await res.json(); alert((d.error || '保存に失敗しました') + (d.detail ? '\n\n詳細: ' + d.detail : '')); return }
       setShowForm(false)
       fetchAll()
     } catch { alert('通信エラー') } finally { setSaving(false) }

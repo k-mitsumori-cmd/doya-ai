@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
-import { formatMinutesJa } from '@/lib/kintai/attendance'
+import { formatMinutesJa } from '@/lib/kintai/format'
 import { ATTENDANCE_STATUS_LABELS } from '@/lib/kintai/types'
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']

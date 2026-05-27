@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { formatMinutesJa } from '@/lib/kintai/attendance'
+import { formatMinutesJa } from '@/lib/kintai/format'
 import { REQUEST_TYPE_LABELS, REQUEST_STATUS_LABELS } from '@/lib/kintai/types'
 
 // Standard 8-hour workday
