@@ -106,7 +106,7 @@ export default function AttendancePage() {
           <select
             value={`${year}-${month}`}
             onChange={(e) => { const [y, m] = e.target.value.split('-').map(Number); setYear(y); setMonth(m); }}
-            className="text-xl font-black text-slate-800 bg-transparent border-none focus:outline-none cursor-pointer text-center"
+            className="text-xl font-black text-slate-800 bg-white border-2 border-slate-200 rounded-xl px-3 py-1.5 focus:outline-none focus:border-purple-400 cursor-pointer appearance-auto"
           >
             {Array.from({ length: 24 }, (_, i) => {
               const d = new Date(); d.setMonth(d.getMonth() - 12 + i);

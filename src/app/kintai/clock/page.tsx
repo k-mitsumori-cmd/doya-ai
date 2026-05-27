@@ -451,7 +451,7 @@ export default function ClockPage() {
               </div>
               <button
                 onClick={() => handleClock('clock_in')}
-                disabled={submitting}
+                disabled={acting}
                 className="w-full py-3 bg-white border-2 border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition-all text-sm"
               >
                 🔄 再出勤する（シフト・深夜勤務など）
