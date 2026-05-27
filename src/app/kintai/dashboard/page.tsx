@@ -26,7 +26,7 @@ export default function DashboardPage() {
   const router = useRouter()
 
   useEffect(() => {
-    fetch('/api/kintai/dashboard')
+    fetch('/api/kintai/dashboard', { credentials: 'include' })
       .then(async (r) => {
         const text = await r.text()
         let json: any
@@ -46,7 +46,7 @@ export default function DashboardPage() {
         setApiError(null)
       })
       .catch((e) => {
-        setApiError(`通信エラー: ${e.message || '不明'}`)
+        setApiError(`通信エラー: ${String(e?.message || e)}`)
         setData(null)
       })
       .finally(() => setLoading(false))
@@ -152,7 +152,16 @@ export default function DashboardPage() {
   }, [todayAttendance, todayRecords])
 
   // Hero status config
-  const heroConfig = getHeroConfig(clockStatus, liveHours, liveMins, todayAttendance?.workMinutes || 0)
+  let heroConfig: any
+  try {
+    heroConfig = getHeroConfig(clockStatus, liveHours, liveMins, todayAttendance?.workMinutes || 0)
+  } catch (e) {
+    return <DashboardError error={`レンダリングエラー: ${String(e)}`} />
+  }
+
+  if (!heroConfig) {
+    return <DashboardError error={`heroConfig が null です (status: ${clockStatus})`} />
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
