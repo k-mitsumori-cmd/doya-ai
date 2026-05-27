@@ -160,13 +160,13 @@ export default function DashboardPage() {
             {/* Date & Time */}
             <div className="flex items-start justify-between mb-4">
               <div>
-                <p className={`text-sm font-medium ${heroConfig.subText}`}>{dateStr}</p>
-                <h1 className={`text-2xl font-black ${heroConfig.headText} mt-1`}>
+                <p className={`text-base font-bold ${heroConfig.subText}`}>{dateStr}</p>
+                <h1 className={`text-3xl font-black ${heroConfig.headText} mt-1`}>
                   {greeting}、{employee?.name || 'ゲスト'}さん
                 </h1>
               </div>
               <div className={`text-right px-3 py-1.5 rounded-2xl ${heroConfig.timeBg}`}>
-                <p className={`text-2xl font-mono font-black tabular-nums ${heroConfig.timeText}`}>{timeStr}</p>
+                <p className={`text-3xl font-mono font-black tabular-nums ${heroConfig.timeText}`}>{timeStr}</p>
               </div>
             </div>
 
@@ -183,17 +183,17 @@ export default function DashboardPage() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className={`text-lg font-black ${heroConfig.headText}`}>{heroConfig.statusText}</p>
+                    <p className={`text-xl font-black ${heroConfig.headText}`}>{heroConfig.statusText}</p>
                     {(clockStatus === 'working' || clockStatus === 'on_break') && (
                       <div className={`w-2.5 h-2.5 rounded-full ${heroConfig.pulseColor} dash-live-pulse`} />
                     )}
                   </div>
-                  <p className={`text-sm ${heroConfig.subText} mt-0.5`}>{heroConfig.statusSub}</p>
+                  <p className={`text-base font-bold ${heroConfig.subText} mt-0.5`}>{heroConfig.statusSub}</p>
                 </div>
               </div>
               <button
                 onClick={() => router.push(clockStatus === 'clocked_out' ? '/kintai/attendance' : '/kintai/clock')}
-                className={`px-5 py-3 rounded-2xl ${heroConfig.btnBg} text-white font-bold text-sm hover:shadow-xl active:scale-[0.97] transition-all flex items-center gap-2 flex-shrink-0 shadow-lg`}
+                className={`px-6 py-4 rounded-full ${heroConfig.btnBg} text-white font-black text-base hover:shadow-xl active:scale-[0.97] transition-all flex items-center gap-2 flex-shrink-0 shadow-lg`}
               >
                 <span className="material-symbols-outlined text-xl">{heroConfig.btnIcon}</span>
                 {heroConfig.btnLabel}

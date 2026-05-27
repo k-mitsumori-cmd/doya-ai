@@ -121,11 +121,11 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
   const employeeName = usage?.employeeName || session?.user?.name || 'ゲスト'
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50/30">
       <KintaiSidebar role={role} />
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 px-4 lg:px-6 py-3">
+        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 lg:px-6 py-3 shadow-sm">
           <div className="flex items-center justify-between">
             {/* Breadcrumb */}
             <div className="flex items-center gap-2 text-sm text-slate-500 ml-12 lg:ml-0">

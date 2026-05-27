@@ -63,24 +63,24 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
   }
 
   const baseItems: NavItem[] = [
-    { href: '/kintai/dashboard', icon: <LayoutDashboard size={20} />, label: 'マイページ' },
-    { href: '/kintai/clock', icon: <Clock size={20} />, label: '打刻' },
-    { href: '/kintai/attendance', icon: <CalendarDays size={20} />, label: '勤怠一覧' },
-    { href: '/kintai/requests', icon: <FileText size={20} />, label: '申請' },
+    { href: '/kintai/dashboard', icon: <span className="text-lg">📊</span>, label: 'マイページ' },
+    { href: '/kintai/clock', icon: <span className="text-lg">⏰</span>, label: '打刻' },
+    { href: '/kintai/attendance', icon: <span className="text-lg">📅</span>, label: '勤怠一覧' },
+    { href: '/kintai/requests', icon: <span className="text-lg">📝</span>, label: '申請' },
   ]
 
   const managerItems: NavItem[] = hasMinRole(role, 'manager')
     ? [
-        { href: '/kintai/approvals', icon: <CheckSquare size={20} />, label: '承認' },
-        { href: '/kintai/admin/attendance', icon: <BarChart3 size={20} />, label: '部署勤怠' },
+        { href: '/kintai/approvals', icon: <span className="text-lg">✅</span>, label: '承認' },
+        { href: '/kintai/admin/attendance', icon: <span className="text-lg">📈</span>, label: '部署勤怠' },
       ]
     : []
 
   const adminItems: NavItem[] = hasMinRole(role, 'hr_admin')
     ? [
-        { href: '/kintai/employees', icon: <Users size={20} />, label: '従業員管理' },
-        { href: '/kintai/departments', icon: <Building2 size={20} />, label: '部署管理' },
-        { href: '/kintai/settings', icon: <Settings size={20} />, label: '就業ルール' },
+        { href: '/kintai/employees', icon: <span className="text-lg">👥</span>, label: '従業員管理' },
+        { href: '/kintai/departments', icon: <span className="text-lg">🏢</span>, label: '部署管理' },
+        { href: '/kintai/settings', icon: <span className="text-lg">⚙️</span>, label: '就業ルール' },
       ]
     : []
 
@@ -89,36 +89,34 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
       key={item.href}
       href={item.href}
       onClick={closeMobile}
-      className={`sidebar-nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+      className={`sidebar-nav-item flex items-center gap-3 px-4 py-3 rounded-full text-base transition-all ${
         isActive(item.href)
-          ? 'bg-[#7f19e6]/10 text-[#7f19e6] shadow-sm sidebar-nav-active'
-          : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+          ? 'bg-purple-100 text-[#7f19e6] font-black shadow-sm sidebar-nav-active'
+          : 'text-slate-700 font-bold hover:bg-slate-100'
       }`}
     >
-      <span className={isActive(item.href) ? 'text-[#7f19e6]' : 'text-slate-400'}>
-        {item.icon}
-      </span>
+      {item.icon}
       <span>{item.label}</span>
     </Link>
   )
 
   const sidebar = (
-    <div className="flex flex-col h-full bg-white border-r border-slate-200 w-60 transition-all duration-300">
+    <div className="flex flex-col h-full bg-gray-50 w-64 transition-all duration-300">
       {/* Logo with Bear */}
-      <div className="p-4 border-b border-slate-100">
+      <div className="p-4 mb-1">
         <Link href="/kintai/dashboard" className="sidebar-logo-link flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center text-white shadow-lg shadow-[#7f19e6]/20 relative overflow-hidden">
-            <span className="material-symbols-outlined text-xl">schedule</span>
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center text-white shadow-lg shadow-[#7f19e6]/30">
+            <span className="material-symbols-outlined text-2xl">schedule</span>
           </div>
           <div className="flex items-center gap-2">
             <div>
-              <h1 className="font-bold text-slate-900 text-sm leading-tight">ドヤ勤怠</h1>
-              <p className="text-[10px] text-slate-400 tracking-wider">勤怠管理</p>
+              <h1 className="font-black text-slate-900 text-base leading-tight">ドヤ勤怠</h1>
+              <p className="text-[10px] text-slate-500 font-bold tracking-wider">勤怠管理</p>
             </div>
             <img
               src="/kintai/characters/hello_挨拶.png"
               alt="くま"
-              className="w-8 h-8 object-contain sidebar-logo-bear"
+              className="w-9 h-9 object-contain sidebar-logo-bear"
             />
           </div>
         </Link>
