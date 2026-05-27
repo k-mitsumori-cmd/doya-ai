@@ -23,8 +23,8 @@ export async function GET() {
     const todayEnd = new Date(todayStart.getTime() + 86400000)
 
     // Month boundaries in JST (converted to UTC for DB queries)
-    const monthStart = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), 1))
-    const monthEnd = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth() + 1, 1))
+    const monthStart = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), 1) - jstOffset)
+    const monthEnd = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth() + 1, 1) - jstOffset)
 
     const [todayRecords, monthAttendances, recentRequests, employee] = await Promise.all([
       prisma.kintaiClockRecord.findMany({

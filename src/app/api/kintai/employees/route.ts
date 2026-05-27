@@ -120,8 +120,11 @@ export async function POST(req: NextRequest) {
     })
 
     return NextResponse.json({ employee }, { status: 201 })
-  } catch (e) {
+  } catch (e: any) {
     console.error('[kintai/employees POST]', e)
-    return NextResponse.json({ error: '作成に失敗しました' }, { status: 500 })
+    const msg = e?.code === 'P2002' ? 'このメールアドレスは既に登録されています' :
+                e?.message?.includes('Unique constraint') ? '同じデータが既に存在します' :
+                '作成に失敗しました'
+    return NextResponse.json({ error: msg, detail: e?.message?.substring(0, 200) }, { status: 500 })
   }
 }

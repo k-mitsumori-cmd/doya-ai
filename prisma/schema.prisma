@@ -2340,7 +2340,9 @@ model KintaiMember {
   organization   KintaiOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   userId         String
   role           String             @default("employee") // system_admin, hr_admin, manager, employee
-  status         String             @default("ACTIVE")
+  status         String             @default("ACTIVE") // ACTIVE, PENDING, INACTIVE
+  inviteToken    String?            @unique
+  inviteEmail    String?
   acceptedAt     DateTime?
   createdAt      DateTime           @default(now())
 

@@ -102,11 +102,29 @@ export default function AdminAttendancePage() {
 
       <div className="p-4 lg:p-6 max-w-6xl mx-auto space-y-4">
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <img src="/kintai/characters/present_プレゼン.png" alt="くまさん" width={80} height={80} className="bear-float" />
-          <div>
-            <h1 className="text-xl font-bold text-slate-800">部署勤怠管理</h1>
-            <p className="text-xs text-slate-500">チームの出勤状況をチェック</p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img src="/kintai/characters/present_プレゼン.png" alt="くまさん" width={80} height={80} className="bear-float" />
+            <div>
+              <h1 className="text-2xl font-black text-slate-800">部署勤怠管理</h1>
+              <p className="text-sm font-bold text-slate-500">チームの出勤状況をチェック</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <a
+              href={`/api/kintai/attendance/export?year=${date.split('-')[0]}&month=${date.split('-')[1]}&format=csv`}
+              className="px-4 py-2.5 bg-green-600 text-white font-bold text-sm rounded-full hover:bg-green-700 transition-all shadow-md flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-lg">download</span>
+              CSV
+            </a>
+            <a
+              href={`/api/kintai/attendance/export?year=${date.split('-')[0]}&month=${date.split('-')[1]}&format=excel`}
+              className="px-4 py-2.5 bg-blue-600 text-white font-bold text-sm rounded-full hover:bg-blue-700 transition-all shadow-md flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-lg">table_chart</span>
+              Excel
+            </a>
           </div>
         </div>
 
