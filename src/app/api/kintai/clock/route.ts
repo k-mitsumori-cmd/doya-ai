@@ -118,8 +118,8 @@ export async function POST(req: NextRequest) {
         if (!hasClockIn) {
           return NextResponse.json({ error: '出勤していません。先に出勤してください。' }, { status: 400 })
         }
-        if (hasClockOut) {
-          return NextResponse.json({ error: '既に退勤済みです。' }, { status: 400 })
+        if (lastType === 'clock_out') {
+          return NextResponse.json({ error: '既に退勤済みです。再度出勤してから退勤してください。' }, { status: 400 })
         }
         // 休憩中は自動で休憩終了
         if (lastType === 'break_start') {
@@ -167,8 +167,8 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    // 退勤時は日次勤怠を計算してupsert
-    if (clockType === 'clock_out') {
+    // 退勤時・再出勤時に日次勤怠を再計算してupsert
+    if (clockType === 'clock_out' || (clockType === 'clock_in' && hasClockOut)) {
       await upsertDailyAttendance(ctx.employeeId, ctx.organizationId, todayStart, todayEnd)
     }
 

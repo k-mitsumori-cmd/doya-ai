@@ -122,8 +122,8 @@ export default function KintaiPricingPage() {
                   plan.id === 'kintai-free'
                     ? '/kintai/dashboard'
                     : plan.id === 'kintai-enterprise'
-                      ? '#'
-                      : '#'
+                      ? 'https://doyamarke.surisuta.jp/contact'
+                      : '/kintai/dashboard'
                 }
                 className={`block w-full py-3 text-center text-base font-bold rounded-full transition-all ${
                   plan.popular

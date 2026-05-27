@@ -59,12 +59,31 @@ function NewRequestContent() {
   const [hwStart, setHwStart] = useState('09:00')
   const [hwEnd, setHwEnd] = useState('18:00')
 
+  // original clock times for clock_fix display
+  const [origClockIn, setOrigClockIn] = useState<string | null>(null)
+  const [origClockOut, setOrigClockOut] = useState<string | null>(null)
+
   useEffect(() => {
     const t = searchParams.get('type')
     const d = searchParams.get('date')
     if (t) { setType(t); setStep(2) }
     if (d) setFixDate(d)
   }, [searchParams])
+
+  useEffect(() => {
+    if (fixDate && type === 'clock_fix') {
+      fetch(`/api/kintai/clock?date=${fixDate}`)
+        .then(r => r.json())
+        .then(d => {
+          const recs = d.records || []
+          const cin = recs.find((r: any) => r.type === 'clock_in')
+          const cout = recs.find((r: any) => r.type === 'clock_out')
+          setOrigClockIn(cin ? new Date(cin.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }) : null)
+          setOrigClockOut(cout ? new Date(cout.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }) : null)
+        })
+        .catch(() => {})
+    }
+  }, [fixDate, type])
 
   const selectType = (key: string) => {
     setType(key)
@@ -212,14 +231,16 @@ function NewRequestContent() {
         {step === 1 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {REQUEST_TYPES.map((t) => (
-              <button
+              <div
                 key={t.key}
+                role="button"
+                tabIndex={t.disabled ? -1 : 0}
                 onClick={() => !t.disabled && selectType(t.key)}
-                disabled={t.disabled}
-                className={`relative text-left transition-all rounded-xl border ${
+                onKeyDown={(e) => { if (!t.disabled && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); selectType(t.key) } }}
+                className={`relative text-left transition-all rounded-xl border select-none ${
                   t.disabled
                     ? 'border-slate-200 bg-slate-50 cursor-not-allowed p-4'
-                    : 'border-slate-200 bg-white hover:border-[#7f19e6] hover:shadow-md hover:shadow-[#7f19e6]/10 p-5'
+                    : 'border-slate-200 bg-white hover:border-[#7f19e6] hover:shadow-md hover:shadow-[#7f19e6]/10 active:scale-[0.98] cursor-pointer p-5'
                 }`}
               >
                 {t.disabled && (
@@ -233,15 +254,15 @@ function NewRequestContent() {
                     alt=""
                     width={48}
                     height={48}
-                    className={t.disabled ? 'opacity-30' : 'bear-bounce'}
-                    style={{ animationDelay: `${REQUEST_TYPES.indexOf(t) * 0.2}s` }}
+                    className={t.disabled ? 'opacity-30' : ''}
+                    style={{ pointerEvents: 'none' }}
                   />
-                  <div>
+                  <div style={{ pointerEvents: 'none' }}>
                     <p className={`font-bold ${t.disabled ? 'text-slate-400 text-sm' : 'text-slate-800'}`}>{t.label}</p>
                     <p className={`text-xs mt-1 ${t.disabled ? 'text-slate-300' : 'text-slate-500'}`}>{t.desc}</p>
                   </div>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         )}
@@ -272,6 +293,24 @@ function NewRequestContent() {
             )}
 
             {type === 'clock_fix' && (<div className="space-y-4">
+            {(origClockIn || origClockOut) && (
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+                <p className="text-xs font-bold text-slate-500 mb-2 flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">history</span>
+                  現在の打刻記録
+                </p>
+                <div className="flex gap-6 text-sm">
+                  <div>
+                    <span className="text-slate-400 text-xs">出勤</span>
+                    <p className="font-mono font-bold text-slate-700">{origClockIn || '-'}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-xs">退勤</span>
+                    <p className="font-mono font-bold text-slate-700">{origClockOut || '-'}</p>
+                  </div>
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1">
                 <span className="material-symbols-outlined text-base text-slate-400">calendar_today</span>

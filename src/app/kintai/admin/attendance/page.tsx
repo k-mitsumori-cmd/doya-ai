@@ -264,13 +264,13 @@ export default function AdminAttendancePage() {
                         </td>
                         <td className="px-4 py-3 text-center text-slate-500" colSpan={2}></td>
                         <td className="px-4 py-3 text-center text-slate-600">
-                          {totals.totalBreakMin > 0 ? `${totals.totalBreakMin}分` : '-'}
+                          {totals.totalBreakMin > 0 ? `${totals.totalBreakMin}分` : '0分'}
                         </td>
                         <td className="px-4 py-3 text-center text-slate-700 font-bold">
-                          {totals.totalWorkMin > 0 ? formatMinutesJa(totals.totalWorkMin) : '-'}
+                          {formatMinutesJa(totals.totalWorkMin)}
                         </td>
                         <td className={`px-4 py-3 text-center font-bold ${totals.totalOtMin > 0 ? 'text-orange-600' : 'text-slate-400'}`}>
-                          {totals.totalOtMin > 0 ? formatMinutesJa(totals.totalOtMin) : '-'}
+                          {formatMinutesJa(totals.totalOtMin)}
                         </td>
                         <td className="px-4 py-3"></td>
                       </tr>

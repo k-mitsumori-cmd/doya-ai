@@ -14,27 +14,32 @@ export function calculateDailyAttendance(
   earlyLeaveMinutes: number
   nightMinutes: number
 } {
-  const clockIn = records.find(r => r.type === 'clock_in')
-  const clockOut = records.find(r => r.type === 'clock_out')
+  const clockIns = records.filter(r => r.type === 'clock_in')
+  const clockOuts = records.filter(r => r.type === 'clock_out')
   const breakStarts = records.filter(r => r.type === 'break_start')
   const breakEnds = records.filter(r => r.type === 'break_end')
 
-  if (!clockIn) {
+  if (clockIns.length === 0) {
     return { clockIn: null, clockOut: null, breakMinutes: 0, workMinutes: 0, overtimeMinutes: 0, lateMinutes: 0, earlyLeaveMinutes: 0, nightMinutes: 0 }
   }
 
-  const clockInTime = new Date(clockIn.timestamp)
-  const clockOutTime = clockOut ? new Date(clockOut.timestamp) : null
+  const firstClockIn = new Date(clockIns[0].timestamp)
+  const lastClockOut = clockOuts.length > 0 ? new Date(clockOuts[clockOuts.length - 1].timestamp) : null
 
   let breakMinutes = 0
   for (let i = 0; i < Math.min(breakStarts.length, breakEnds.length); i++) {
     breakMinutes += Math.round((new Date(breakEnds[i].timestamp).getTime() - new Date(breakStarts[i].timestamp).getTime()) / 60000)
   }
 
-  let workMinutes = 0
-  if (clockOutTime) {
-    workMinutes = Math.max(0, Math.round((clockOutTime.getTime() - clockInTime.getTime()) / 60000) - breakMinutes)
+  let totalWorkMs = 0
+  for (let i = 0; i < clockIns.length; i++) {
+    const inTime = new Date(clockIns[i].timestamp).getTime()
+    const outTime = i < clockOuts.length ? new Date(clockOuts[i].timestamp).getTime() : null
+    if (outTime) {
+      totalWorkMs += outTime - inTime
+    }
   }
+  let workMinutes = Math.max(0, Math.round(totalWorkMs / 60000) - breakMinutes)
 
   const wStart = workRule?.workStart || '09:00'
   const wEnd = workRule?.workEnd || '18:00'
@@ -45,34 +50,30 @@ export function calculateDailyAttendance(
 
   const overtimeMinutes = Math.max(0, workMinutes - scheduledMinutes)
 
-  // Helper: get JST hours/minutes from a UTC Date
   const JST_OFFSET_MS = 9 * 60 * 60 * 1000
   const getJSTHours = (d: Date) => new Date(d.getTime() + JST_OFFSET_MS).getUTCHours()
   const getJSTMinutes = (d: Date) => new Date(d.getTime() + JST_OFFSET_MS).getUTCMinutes()
 
-  // Calculate scheduled start in the same day as clockIn (JST-based)
-  // Use the date portion (JST) from the day boundary, then add schedule hours
   const scheduledStart = new Date(date.getTime() + (startH * 60 + startM) * 60000)
-  const lateMinutes = clockInTime > scheduledStart ? Math.round((clockInTime.getTime() - scheduledStart.getTime()) / 60000) : 0
+  const lateMinutes = firstClockIn > scheduledStart ? Math.round((firstClockIn.getTime() - scheduledStart.getTime()) / 60000) : 0
 
   let earlyLeaveMinutes = 0
-  if (clockOutTime) {
+  if (lastClockOut) {
     const scheduledEnd = new Date(date.getTime() + (endH * 60 + endM) * 60000)
-    earlyLeaveMinutes = clockOutTime < scheduledEnd ? Math.round((scheduledEnd.getTime() - clockOutTime.getTime()) / 60000) : 0
+    earlyLeaveMinutes = lastClockOut < scheduledEnd ? Math.round((scheduledEnd.getTime() - lastClockOut.getTime()) / 60000) : 0
   }
 
   let nightMinutes = 0
-  // Simplified night work calculation (22:00-05:00 JST)
-  if (clockOutTime) {
-    const outH = getJSTHours(clockOutTime)
-    const outM = getJSTMinutes(clockOutTime)
+  if (lastClockOut) {
+    const outH = getJSTHours(lastClockOut)
+    const outM = getJSTMinutes(lastClockOut)
     if (outH >= 22) nightMinutes += (outH - 22) * 60 + outM
     if (outH < 5) nightMinutes += outH * 60 + outM
   }
 
   return {
-    clockIn: clockInTime,
-    clockOut: clockOutTime,
+    clockIn: firstClockIn,
+    clockOut: lastClockOut,
     breakMinutes,
     workMinutes,
     overtimeMinutes,

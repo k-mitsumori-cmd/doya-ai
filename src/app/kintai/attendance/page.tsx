@@ -330,9 +330,9 @@ export default function AttendancePage() {
                           {!isFuture && att && (
                             <Link
                               href={`/kintai/requests/new?type=clock_fix&date=${dateStr}`}
-                              className="inline-flex items-center gap-0.5 px-2.5 py-1.5 text-xs font-bold text-[#7f19e6] bg-[#7f19e6]/5 hover:bg-[#7f19e6]/10 rounded-xl transition-colors"
+                              className="inline-flex items-center justify-center gap-1 min-w-[64px] px-3 py-2 text-xs font-bold text-[#7f19e6] bg-[#7f19e6]/5 hover:bg-[#7f19e6]/10 active:bg-[#7f19e6]/15 rounded-xl transition-colors"
                             >
-                              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit</span>
+                              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>edit</span>
                               修正
                             </Link>
                           )}
