@@ -158,6 +158,18 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-5 pb-20">
 
+        {/* ===== Simple Debug View ===== */}
+        <div className="bg-white rounded-2xl border border-green-300 p-6 shadow-lg">
+          <div className="flex items-center gap-4 mb-4">
+            <img src="/kintai/characters/hello_挨拶.png" alt="" width={80} height={80} style={{ objectFit: 'contain' }} />
+            <div>
+              <h1 className="text-2xl font-black text-slate-900">{greeting}、{employee?.name || 'ゲスト'}さん</h1>
+              <p className="text-base font-bold text-slate-500">{dateStr} {timeStr}</p>
+              <p className="text-sm font-bold text-green-600 mt-1">ステータス: {clockStatus}</p>
+            </div>
+          </div>
+        </div>
+
         {/* ===== Hero Status Card with Bear Character ===== */}
         <div className={`rounded-3xl ${heroConfig.bg} border ${heroConfig.border} p-6 shadow-lg ${heroConfig.shadow} relative overflow-hidden`}>
           {/* Decorative background shapes */}
