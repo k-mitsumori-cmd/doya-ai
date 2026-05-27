@@ -16,7 +16,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const dateParam = searchParams.get('date') || new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
 
-    const dateObj = new Date(dateParam + 'T00:00:00+09:00')
+    // @db.Date フィールドはUTC midnightで保存されるためUTC基準でクエリ
+    const dateObj = new Date(dateParam + 'T00:00:00.000Z')
     const nextDay = new Date(dateObj.getTime() + 86400000)
 
     const allEmployees = await prisma.kintaiEmployee.findMany({

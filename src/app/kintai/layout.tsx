@@ -7,5 +7,11 @@ export const metadata: Metadata = {
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <KintaiLayout>{children}</KintaiLayout>
+  return (
+    <>
+      {/* HubSpotチャットウィジェットを業務画面で非表示 */}
+      <style>{`#hubspot-messages-iframe-container, .hs-chat-widget { display: none !important; }`}</style>
+      <KintaiLayout>{children}</KintaiLayout>
+    </>
+  )
 }
