@@ -163,13 +163,16 @@ export default function HrSettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: inviteEmail }),
       })
-      if (!res.ok) throw new Error('招待の送信に失敗しました')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '招待の送信に失敗しました')
       setInviteEmail('')
-      // Re-fetch members
+      if (data.inviteUrl) {
+        setInviteUrl(data.inviteUrl)
+      }
       const settingsRes = await fetch('/api/hr/settings')
       if (settingsRes.ok) {
-        const data = await settingsRes.json()
-        if (data.members) setMembers(data.members)
+        const settingsData = await settingsRes.json()
+        if (settingsData.members) setMembers(settingsData.members)
       }
     } catch (e: any) {
       setError(e.message)
@@ -243,10 +246,14 @@ export default function HrSettingsPage() {
     setGeneratingInviteUrl(true)
     setError(null)
     try {
-      const res = await fetch('/api/hr/organization/invite-link', { method: 'POST' })
-      if (!res.ok) throw new Error('招待URLの生成に失敗しました')
+      const res = await fetch('/api/hr/organization/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: `invite-${Date.now()}@placeholder.local`, role: 'MEMBER' }),
+      })
       const data = await res.json()
-      const url = data.url || data.inviteUrl || `${window.location.origin}/hr/invite/${data.token}`
+      if (!res.ok) throw new Error(data.error || '招待URLの生成に失敗しました')
+      const url = data.inviteUrl || `${window.location.origin}/hr/invite/${data.invitation?.token}`
       setInviteUrl(url)
     } catch (e: any) {
       setError(e.message)

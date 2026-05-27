@@ -32,8 +32,18 @@ export default function InviteAcceptPage() {
           return
         }
         const data = await res.json()
-        setOrgName(data.organizationName || data.orgName || '')
-        setInviterName(data.inviterName || data.invitedBy || '')
+        const inv = data.invitation || data
+        setOrgName(inv.organization?.name || inv.organizationName || inv.orgName || '')
+        setInviterName(inv.inviterName || inv.invitedBy || '')
+        if (inv.status === 'EXPIRED') {
+          setStatus('expired')
+          return
+        }
+        if (inv.status !== 'PENDING') {
+          setError('この招待は既に使用済みです')
+          setStatus('error')
+          return
+        }
         setStatus('ready')
       } catch {
         setError('招待の検証に失敗しました')
@@ -46,8 +56,10 @@ export default function InviteAcceptPage() {
   const handleAccept = async () => {
     setStatus('accepting')
     try {
-      const res = await fetch(`/api/hr/organization/invite/${token}/accept`, {
+      const res = await fetch('/api/hr/organization/invite/accept', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))

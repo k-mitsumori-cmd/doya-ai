@@ -35,7 +35,7 @@ const NAV_ITEMS = [
 
 const SUPPORT_ITEMS = [
   { href: '/hr/settings', icon: 'settings', label: '設定' },
-  { href: '/hr/settings/billing', icon: 'credit_card', label: '課金管理' },
+  { href: '/hr/settings/billing', icon: 'credit_card', label: '現在のプラン' },
   { href: '/hr/pricing', icon: 'payments', label: '料金プラン' },
 ]
 

@@ -233,9 +233,9 @@ export default function BillingPage() {
                 設定
               </Link>
               <span className="material-symbols-outlined text-sm text-slate-400">chevron_right</span>
-              <span className="text-sm font-bold text-slate-700">課金管理</span>
+              <span className="text-sm font-bold text-slate-700">現在のプラン</span>
             </div>
-            <h1 className="text-3xl font-black text-slate-900">課金管理</h1>
+            <h1 className="text-3xl font-black text-slate-900">現在のプラン</h1>
             <p className="text-sm text-slate-500 mt-1">プランと使用量を管理</p>
           </div>
           <motion.img
