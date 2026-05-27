@@ -6,32 +6,6 @@ import { KINTAI_PRICING } from '@/lib/pricing'
 export default function KintaiPricingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
-      <style jsx>{`
-        @keyframes pricingFadeIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes bearFloat {
-          0%, 100% { transform: translateY(0px) rotate(-3deg); }
-          50% { transform: translateY(-12px) rotate(3deg); }
-        }
-        @keyframes bearFloat2 {
-          0%, 100% { transform: translateY(0px) rotate(2deg); }
-          50% { transform: translateY(-8px) rotate(-2deg); }
-        }
-        @keyframes badgePulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.05); }
-        }
-        .pricing-fade-in { animation: pricingFadeIn 0.6s ease-out both; }
-        .pricing-fade-in-1 { animation: pricingFadeIn 0.6s ease-out 0.1s both; }
-        .pricing-fade-in-2 { animation: pricingFadeIn 0.6s ease-out 0.2s both; }
-        .pricing-fade-in-3 { animation: pricingFadeIn 0.6s ease-out 0.3s both; }
-        .pricing-fade-in-4 { animation: pricingFadeIn 0.6s ease-out 0.4s both; }
-        .bear-float { animation: bearFloat 3s ease-in-out infinite; }
-        .bear-float-2 { animation: bearFloat2 3.5s ease-in-out infinite; }
-        .badge-pulse { animation: badgePulse 2s ease-in-out infinite; }
-      `}</style>
 
       <div className="p-6 lg:p-10 max-w-6xl mx-auto relative">
         {/* Floating bears */}

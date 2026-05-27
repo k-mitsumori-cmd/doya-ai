@@ -158,43 +158,6 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
           </p>
         </div>
       </div>
-
-      <style jsx>{`
-        @keyframes sidebarLogoWiggle {
-          0%, 100% { transform: rotate(0deg); }
-          25% { transform: rotate(-8deg); }
-          75% { transform: rotate(8deg); }
-        }
-        .sidebar-logo-link:hover .sidebar-logo-bear {
-          animation: sidebarLogoWiggle 0.5s ease-in-out;
-        }
-        @keyframes sidebarNavBounce {
-          0% { transform: translateX(0); }
-          30% { transform: translateX(3px); }
-          60% { transform: translateX(-1px); }
-          100% { transform: translateX(0); }
-        }
-        .sidebar-nav-active {
-          animation: sidebarNavBounce 0.3s ease-out;
-        }
-        .sidebar-nav-item:hover {
-          transform: scale(1.02);
-        }
-        @keyframes sidebarCheerFloat {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-4px); }
-        }
-        .sidebar-cheer-bear {
-          animation: sidebarCheerFloat 3s ease-in-out infinite;
-        }
-        @keyframes cheerTextFade {
-          0% { opacity: 0; transform: translateY(4px); }
-          100% { opacity: 1; transform: translateY(0); }
-        }
-        .sidebar-cheer-text {
-          animation: cheerTextFade 0.4s ease-out;
-        }
-      `}</style>
     </div>
   )
 
@@ -225,23 +188,6 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
       <div className="hidden lg:block h-screen sticky top-0">
         {sidebar}
       </div>
-
-      <style jsx>{`
-        @keyframes overlayFadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        .sidebar-mobile-overlay {
-          animation: overlayFadeIn 0.2s ease-out;
-        }
-        @keyframes slideInLeft {
-          from { transform: translateX(-260px); }
-          to { transform: translateX(0); }
-        }
-        .sidebar-mobile-slide {
-          animation: slideInLeft 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-        }
-      `}</style>
     </>
   )
 }

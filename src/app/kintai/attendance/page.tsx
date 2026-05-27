@@ -354,44 +354,6 @@ export default function AttendancePage() {
         )}
 
         {/* ===== CSS ===== */}
-        <style jsx>{`
-          .att-today-row {
-            background: linear-gradient(90deg, rgba(127, 25, 230, 0.06) 0%, rgba(127, 25, 230, 0.02) 100%);
-            box-shadow: inset 4px 0 0 0 #7f19e6;
-          }
-          .att-today-row:hover {
-            background: linear-gradient(90deg, rgba(127, 25, 230, 0.09) 0%, rgba(127, 25, 230, 0.04) 100%);
-          }
-          @keyframes bearHeaderFloat {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-6px) rotate(3deg); }
-          }
-          .bear-header-float {
-            animation: bearHeaderFloat 3s ease-in-out infinite;
-          }
-          @keyframes bearLoadingFloat {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-8px); }
-          }
-          .bear-loading-float {
-            animation: bearLoadingFloat 2s ease-in-out infinite;
-          }
-          @keyframes bearEmptyFloat {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            25% { transform: translateY(-4px) rotate(-2deg); }
-            75% { transform: translateY(-2px) rotate(2deg); }
-          }
-          .bear-empty-float {
-            animation: bearEmptyFloat 3s ease-in-out infinite;
-          }
-          @keyframes summaryBearWiggle {
-            0%, 100% { transform: rotate(0deg) scale(1); }
-            20% { transform: rotate(-6deg) scale(1.08); }
-            40% { transform: rotate(6deg) scale(1.08); }
-            60% { transform: rotate(-3deg) scale(1.04); }
-            80% { transform: rotate(3deg) scale(1.04); }
-          }
-        `}</style>
       </div>
     </div>
   )
@@ -425,18 +387,6 @@ function SummaryPillBear({ bearSrc, bearAlt, label, value, unit, progress, barCo
         />
       </div>
       {sub && <p className="text-[10px] text-slate-400 font-medium">{sub}</p>}
-      <style jsx>{`
-        .summary-pill-card:hover .summary-pill-bear {
-          animation: summaryBearWiggle 0.6s ease-in-out;
-        }
-        @keyframes summaryBearWiggle {
-          0%, 100% { transform: rotate(0deg) scale(1); }
-          20% { transform: rotate(-6deg) scale(1.08); }
-          40% { transform: rotate(6deg) scale(1.08); }
-          60% { transform: rotate(-3deg) scale(1.04); }
-          80% { transform: rotate(3deg) scale(1.04); }
-        }
-      `}</style>
     </div>
   )
 }

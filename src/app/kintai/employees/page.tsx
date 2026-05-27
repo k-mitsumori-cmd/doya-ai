@@ -146,37 +146,6 @@ export default function EmployeesPage() {
 
   return (
     <>
-      <style jsx>{`
-        @keyframes bearFloat {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-        }
-        @keyframes bearSpin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        @keyframes bearBounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
-        }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes bearWiggle {
-          0%, 100% { transform: rotate(0deg); }
-          25% { transform: rotate(-5deg); }
-          75% { transform: rotate(5deg); }
-        }
-        .bear-float { animation: bearFloat 3s ease-in-out infinite; }
-        .bear-spin { animation: bearSpin 2s linear infinite; }
-        .bear-bounce { animation: bearBounce 2s ease-in-out infinite; }
-        .bear-wiggle { animation: bearWiggle 2s ease-in-out infinite; }
-        .fade-in-up { animation: fadeInUp 0.4s ease-out both; }
-        .fade-in-up-1 { animation: fadeInUp 0.4s ease-out 0.05s both; }
-        .fade-in-up-2 { animation: fadeInUp 0.4s ease-out 0.1s both; }
-        .fade-in-up-3 { animation: fadeInUp 0.4s ease-out 0.15s both; }
-      `}</style>
 
       <div className="p-4 lg:p-6 max-w-6xl mx-auto space-y-4">
         {/* Header */}

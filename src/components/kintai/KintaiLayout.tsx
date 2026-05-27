@@ -56,13 +56,6 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
   if (status === 'loading' || (session?.user && hasOrg === null)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <style jsx>{`
-          @keyframes layoutBearFloat {
-            0%, 100% { transform: translateY(0px) rotate(-2deg); }
-            50% { transform: translateY(-10px) rotate(2deg); }
-          }
-          .layout-bear-float { animation: layoutBearFloat 2.5s ease-in-out infinite; }
-        `}</style>
         <div className="flex flex-col items-center gap-4">
           <img
             src="/kintai/characters/thinking_考え中.png"
@@ -81,13 +74,6 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
   if (!session?.user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-violet-50 p-6">
-        <style jsx>{`
-          @keyframes loginBearBounce {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-          }
-          .login-bear-bounce { animation: loginBearBounce 2.5s ease-in-out infinite; }
-        `}</style>
         <div className="text-center bg-white rounded-3xl border border-slate-200 shadow-2xl p-12 max-w-md">
           <img
             src="/kintai/characters/hello_挨拶.png"

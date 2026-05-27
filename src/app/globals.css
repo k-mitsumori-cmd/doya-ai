@@ -432,3 +432,46 @@
 .exporting .animate-spin {
   animation: none !important;
 }
+
+/* ============================================
+   ドヤ勤怠 アニメーション
+   ============================================ */
+@keyframes kintaiLivePulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; }
+}
+.dash-live-pulse { animation: kintaiLivePulse 1.5s ease-in-out infinite; }
+
+@keyframes kintaiBearFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+.bear-float { animation: kintaiBearFloat 2s ease-in-out infinite; }
+
+@keyframes kintaiBearBob {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  25% { transform: translateY(-6px) rotate(-2deg); }
+  75% { transform: translateY(-3px) rotate(2deg); }
+}
+.bear-bob { animation: kintaiBearBob 2s ease-in-out infinite; }
+
+@keyframes kintaiBearWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+.bear-wiggle { animation: kintaiBearWiggle 0.5s ease-in-out; }
+
+@keyframes kintaiBearBounce {
+  0%, 100% { transform: translateY(0px) scale(1); }
+  40% { transform: translateY(-14px) scale(1.05); }
+  60% { transform: translateY(-7px) scale(1); }
+}
+.bear-bounce { animation: kintaiBearBounce 1s ease-in-out infinite; }
+
+@keyframes kintaiQuickActionBounce {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+.quick-action-bounce:active { animation: kintaiQuickActionBounce 0.2s ease-out; }

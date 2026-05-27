@@ -62,46 +62,6 @@ export default function DepartmentsPage() {
 
   return (
     <>
-      <style jsx>{`
-        @keyframes bearFloat {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-        }
-        @keyframes bearBounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
-        }
-        @keyframes bearWiggle {
-          0%, 100% { transform: rotate(0deg); }
-          25% { transform: rotate(-5deg); }
-          75% { transform: rotate(5deg); }
-        }
-        @keyframes bearSpin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes cardWiggle {
-          0%, 100% { transform: rotate(0deg) scale(1); }
-          25% { transform: rotate(-1deg) scale(1.01); }
-          75% { transform: rotate(1deg) scale(1.01); }
-        }
-        @keyframes surpriseShake {
-          0%, 100% { transform: translateX(0); }
-          25% { transform: translateX(-3px); }
-          75% { transform: translateX(3px); }
-        }
-        .bear-float { animation: bearFloat 3s ease-in-out infinite; }
-        .bear-bounce { animation: bearBounce 2s ease-in-out infinite; }
-        .bear-wiggle { animation: bearWiggle 2s ease-in-out infinite; }
-        .bear-spin { animation: bearSpin 2s linear infinite; }
-        .bear-surprise { animation: surpriseShake 0.5s ease-in-out infinite; }
-        .fade-in-up { animation: fadeInUp 0.4s ease-out both; }
-        .card-hover:hover { animation: cardWiggle 0.6s ease-in-out; }
-      `}</style>
 
       <div className="p-4 lg:p-6 max-w-4xl mx-auto space-y-4">
         {/* Header */}

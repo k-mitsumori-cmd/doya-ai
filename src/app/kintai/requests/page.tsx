@@ -96,34 +96,6 @@ export default function RequestsPage() {
 
   return (
     <>
-      <style jsx>{`
-        @keyframes bearFloat {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-        }
-        @keyframes bearBounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
-        }
-        @keyframes bearWiggle {
-          0%, 100% { transform: rotate(0deg); }
-          25% { transform: rotate(-5deg); }
-          75% { transform: rotate(5deg); }
-        }
-        @keyframes bearSpin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .bear-float { animation: bearFloat 3s ease-in-out infinite; }
-        .bear-bounce { animation: bearBounce 2s ease-in-out infinite; }
-        .bear-wiggle { animation: bearWiggle 2s ease-in-out infinite; }
-        .bear-spin { animation: bearSpin 2s linear infinite; }
-        .fade-in-up { animation: fadeInUp 0.4s ease-out both; }
-      `}</style>
 
       <div className="p-4 lg:p-6 max-w-4xl mx-auto space-y-5">
         {/* Header */}

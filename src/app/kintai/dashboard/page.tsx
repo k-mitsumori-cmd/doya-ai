@@ -67,15 +67,6 @@ export default function DashboardPage() {
         />
         <div className="w-10 h-10 rounded-full border-4 border-[#7f19e6]/20 border-t-[#7f19e6] animate-spin" />
         <p className="text-sm text-slate-500 font-medium">データを読み込んでいます...</p>
-        <style jsx>{`
-          @keyframes bearFloat {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-8px); }
-          }
-          .bear-float {
-            animation: bearFloat 2s ease-in-out infinite;
-          }
-        `}</style>
       </div>
     )
   }
@@ -402,49 +393,6 @@ export default function DashboardPage() {
             </p>
           </div>
         </div>
-
-        <style jsx>{`
-          @keyframes livePulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.4); opacity: 0.6; }
-          }
-          .dash-live-pulse {
-            animation: livePulse 1.5s ease-in-out infinite;
-          }
-          @keyframes bearFloat {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-          }
-          @keyframes bearBob {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            25% { transform: translateY(-6px) rotate(-2deg); }
-            75% { transform: translateY(-3px) rotate(2deg); }
-          }
-          @keyframes bearWiggle {
-            0%, 100% { transform: rotate(0deg); }
-            25% { transform: rotate(-5deg); }
-            75% { transform: rotate(5deg); }
-          }
-          @keyframes bearBounce {
-            0%, 100% { transform: translateY(0px) scale(1); }
-            40% { transform: translateY(-14px) scale(1.05); }
-            60% { transform: translateY(-7px) scale(1.02); }
-          }
-          @keyframes bearTipBob {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-5px) rotate(3deg); }
-          }
-          @keyframes quickActionWiggle {
-            0%, 100% { transform: scale(1) rotate(0deg); }
-            25% { transform: scale(1.08) rotate(-3deg); }
-            75% { transform: scale(1.08) rotate(3deg); }
-          }
-          .bear-float { animation: bearFloat 3s ease-in-out infinite; }
-          .bear-bob { animation: bearBob 2.5s ease-in-out infinite; }
-          .bear-wiggle { animation: bearWiggle 2s ease-in-out infinite; }
-          .bear-bounce { animation: bearBounce 2s ease-in-out infinite; }
-          .bear-tip-bob { animation: bearTipBob 3s ease-in-out infinite; }
-        `}</style>
       </div>
     </div>
   )
@@ -584,16 +532,6 @@ function QuickActionBear({ href, bearSrc, bearAlt, label, gradient }: {
         className="w-12 h-12 object-contain quick-action-bear"
       />
       {label}
-      <style jsx>{`
-        .quick-action-card:hover .quick-action-bear {
-          animation: quickActionWiggle 0.5s ease-in-out;
-        }
-        @keyframes quickActionWiggle {
-          0%, 100% { transform: scale(1) rotate(0deg); }
-          25% { transform: scale(1.1) rotate(-5deg); }
-          75% { transform: scale(1.1) rotate(5deg); }
-        }
-      `}</style>
     </Link>
   )
 }
@@ -647,18 +585,6 @@ function MonthlyStatBear({ bearSrc, bearAlt, label, value, unit, sub, color }: {
         {value}<span className="text-base font-bold ml-0.5">{unit}</span>
       </p>
       <p className="text-[11px] text-slate-400 mt-1">{sub}</p>
-      <style jsx>{`
-        .monthly-stat-card:hover .monthly-stat-bear {
-          animation: monthlyBearWiggle 0.6s ease-in-out;
-        }
-        @keyframes monthlyBearWiggle {
-          0%, 100% { transform: rotate(0deg) scale(1); }
-          20% { transform: rotate(-8deg) scale(1.1); }
-          40% { transform: rotate(8deg) scale(1.1); }
-          60% { transform: rotate(-4deg) scale(1.05); }
-          80% { transform: rotate(4deg) scale(1.05); }
-        }
-      `}</style>
     </div>
   )
 }

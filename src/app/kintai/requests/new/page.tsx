@@ -118,25 +118,6 @@ function NewRequestContent() {
   if (submitted) {
     return (
       <>
-        <style jsx>{`
-          @keyframes bearJump {
-            0%, 100% { transform: translateY(0) scale(1); }
-            30% { transform: translateY(-30px) scale(1.05); }
-            50% { transform: translateY(-35px) scale(1.08); }
-            70% { transform: translateY(-20px) scale(1.03); }
-          }
-          @keyframes fadeInScale {
-            from { opacity: 0; transform: scale(0.8); }
-            to { opacity: 1; transform: scale(1); }
-          }
-          @keyframes confettiBounce {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-10px) rotate(10deg); }
-          }
-          .bear-jump { animation: bearJump 1.5s ease-in-out infinite; }
-          .fade-in-scale { animation: fadeInScale 0.5s ease-out both; }
-          .confetti { animation: confettiBounce 1s ease-in-out infinite; }
-        `}</style>
         <div className="p-4 lg:p-6 max-w-2xl mx-auto flex flex-col items-center justify-center py-20 space-y-5">
           <img src="/kintai/characters/jump_大喜び.png" alt="成功！" width={140} height={140} className="bear-jump" />
           <h2 className="text-2xl font-bold text-slate-800 fade-in-scale">申請が完了しました！</h2>
@@ -152,29 +133,6 @@ function NewRequestContent() {
 
   return (
     <>
-      <style jsx>{`
-        @keyframes bearFloat {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-8px); }
-        }
-        @keyframes bearBounce {
-          0%, 100% { transform: translateY(0); }
-          50% { transform: translateY(-6px); }
-        }
-        @keyframes bearWiggle {
-          0%, 100% { transform: rotate(0deg); }
-          25% { transform: rotate(-5deg); }
-          75% { transform: rotate(5deg); }
-        }
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(12px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .bear-float { animation: bearFloat 3s ease-in-out infinite; }
-        .bear-bounce { animation: bearBounce 2s ease-in-out infinite; }
-        .bear-wiggle { animation: bearWiggle 2s ease-in-out infinite; }
-        .fade-in-up { animation: fadeInUp 0.4s ease-out both; }
-      `}</style>
 
       <div className="p-4 lg:p-6 max-w-2xl mx-auto space-y-6">
         {/* Header with back button */}
