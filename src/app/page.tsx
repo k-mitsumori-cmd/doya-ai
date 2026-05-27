@@ -18,7 +18,7 @@ import { SEO_PRICING, BANNER_PRICING } from '@/lib/pricing'
 
 export default function TestPortalPage() {
   const { data: session } = useSession()
-  const [activeTab, setActiveTab] = useState<'seo' | 'banner'>('seo')
+  const [activeTab, setActiveTab] = useState('seo' as 'seo' | 'banner')
 
   return (
     <div className="min-h-screen bg-[#0f1629] text-white overflow-x-hidden">
