@@ -5,6 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
+import { getKintaiEmployeeLimitByUserPlan } from '@/lib/pricing'
 
 export async function GET(req: NextRequest) {
   try {
@@ -56,6 +57,30 @@ export async function POST(req: NextRequest) {
     const ctx = await getKintaiContext()
     if (!ctx || !hasMinRole(ctx.role, 'hr_admin')) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+    }
+
+    // --- Employee limit check ---
+    const owner = await prisma.kintaiMember.findFirst({
+      where: { organizationId: ctx.organizationId, role: 'system_admin' },
+      select: { userId: true },
+    })
+    const ownerUser = owner ? await prisma.user.findUnique({
+      where: { id: owner.userId },
+      select: { plan: true },
+    }) : null
+    const plan = ownerUser?.plan || 'FREE'
+    const limit = getKintaiEmployeeLimitByUserPlan(plan)
+
+    if (limit !== -1) {
+      const activeCount = await prisma.kintaiEmployee.count({
+        where: { organizationId: ctx.organizationId, isActive: true },
+      })
+      if (activeCount >= limit) {
+        return NextResponse.json(
+          { error: `従業員数が上限（${limit}名）に達しています。プランをアップグレードしてください。` },
+          { status: 403 },
+        )
+      }
     }
 
     const body = await req.json()

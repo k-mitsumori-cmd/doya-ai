@@ -244,6 +244,11 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     })
   }
 
+  // HR固有: HrOrganization.planもFREEにリセット
+  await syncHrOrganizationPlan(user.id, 'FREE').catch((e: any) => {
+    console.error(`[Webhook] Failed to sync HrOrganization.plan on cancellation: user=${user.id}`, e?.message)
+  })
+
   console.log(`Subscription canceled for user: ${user.id} (all services reset to FREE)`)
 }
 
@@ -283,7 +288,7 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
     userPlan = 'ENTERPRISE'
   } else if (planId.endsWith('-pro') || planId === 'banner-basic') {
     userPlan = 'PRO'
-  } else if (planId.endsWith('-light')) {
+  } else if (planId.endsWith('-light') || planId.endsWith('-starter')) {
     userPlan = 'LIGHT'
   } else if (!planId) {
     userPlan = 'FREE'
@@ -327,5 +332,35 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
     })
   }
 
+  // HR固有: UserServiceSubscription(serviceId:'hr') が更新されたら
+  // ユーザーがOWNERの HrOrganization.plan も同期する
+  await syncHrOrganizationPlan(userId, servicePlan).catch((e: any) => {
+    console.error(`[Webhook] Failed to sync HrOrganization.plan: user=${userId}`, e?.message)
+  })
+
   console.log(`Updated subscription for user ${userId}: ${userPlan} — all services: ${servicePlan} (${subscription.status})`)
+}
+
+// ========================================
+// HR組織プラン同期
+// ========================================
+// ユーザーがOWNERである全HrOrganization.planをUserServiceSubscriptionの値と同期
+async function syncHrOrganizationPlan(userId: string, plan: string) {
+  // hr-starter → STARTER, hr-pro → PRO, hr-enterprise → ENTERPRISE のマッピングは
+  // servicePlan が既に LIGHT/PRO/ENTERPRISE/FREE なのでそのまま使える
+  const ownerships = await prisma.hrOrganizationMember.findMany({
+    where: { userId, role: 'OWNER', status: 'ACTIVE' },
+    select: { organizationId: true },
+  })
+
+  for (const membership of ownerships) {
+    // LIGHT → STARTER にマッピング（HrOrganization.plan は STARTER を使用）
+    const hrPlan = plan === 'LIGHT' ? 'STARTER' : plan
+    await prisma.hrOrganization.update({
+      where: { id: membership.organizationId },
+      data: { plan: hrPlan },
+    }).catch((e: any) => {
+      console.error(`[Webhook] Failed to update HrOrganization.plan: org=${membership.organizationId}`, e?.message)
+    })
+  }
 }

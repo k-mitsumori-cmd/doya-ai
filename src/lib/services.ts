@@ -1137,6 +1137,75 @@ export const SERVICES: Service[] = [
     isNew: true,
     badge: 'NEW',
   },
+
+  // ----------------------------------------
+  // ドヤ勤怠（クラウド勤怠管理）
+  // ----------------------------------------
+  {
+    id: 'kintai',
+    name: 'ドヤ勤怠',
+    shortName: '勤怠',
+    description: 'シンプルで使いやすいクラウド勤怠管理。',
+    longDescription: '打刻・勤怠集計・申請承認をオールインワンで。中小企業のための勤怠管理システム。KING OF TIME/ジョブカンに匹敵する機能を、ドヤAIのアカウントで。',
+    icon: '⏰',
+    color: 'violet',
+    gradient: 'from-violet-500 to-purple-600',
+    bgGradient: 'from-violet-50 to-purple-50',
+    href: '/kintai',
+    dashboardHref: '/kintai/dashboard',
+    pricingHref: '/kintai/pricing',
+    guideHref: '/kintai',
+    features: [
+      'ワンクリック出退勤打刻',
+      '勤怠自動集計（残業・深夜・休日）',
+      '打刻修正・休暇申請承認フロー',
+      '従業員・部署・就業ルール管理',
+      'リアルタイム勤務状況ダッシュボード',
+      'かわいいクマキャラクターUI',
+    ],
+    useCases: [
+      'Excelで勤怠を手動管理していて限界',
+      '打刻忘れや残業計算ミスが多い',
+      '申請・承認がメールで煩雑',
+      'KING OF TIMEやジョブカンが高すぎる',
+      '少人数チームでもちゃんと勤怠管理したい',
+    ],
+    pricing: {
+      free: {
+        name: '無料プラン',
+        limit: '従業員5名まで',
+        dailyLimit: -1,
+        price: 0,
+      },
+      light: {
+        name: 'スタータープラン',
+        limit: '従業員30名まで',
+        dailyLimit: -1,
+        price: 2980,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_KINTAI_STARTER_PRICE_ID,
+      },
+      pro: {
+        name: 'プロプラン',
+        limit: '従業員100名まで',
+        dailyLimit: -1,
+        price: 9980,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_KINTAI_PRO_PRICE_ID,
+      },
+      enterprise: {
+        name: 'エンタープライズ',
+        limit: '無制限',
+        dailyLimit: -1,
+        price: 49800,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_KINTAI_ENTERPRISE_PRICE_ID,
+      },
+    },
+    status: 'active',
+    category: 'other',
+    order: 10,
+    requiresAuth: true,
+    isNew: true,
+    badge: 'NEW',
+  },
 ]
 
 // ============================================

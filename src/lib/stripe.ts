@@ -173,6 +173,21 @@ export const STRIPE_PRICE_IDS = {
       yearly: process.env.STRIPE_PRICE_ADSIM_ENTERPRISE_YEARLY || BANNER_ENTERPRISE_YEARLY,
     },
   },
+  // ドヤHR（組織向け課金）
+  hr: {
+    starter: {
+      monthly: process.env.STRIPE_PRICE_HR_STARTER_MONTHLY || 'price_hr_starter_monthly',
+      yearly: process.env.STRIPE_PRICE_HR_STARTER_YEARLY || 'price_hr_starter_yearly',
+    },
+    pro: {
+      monthly: process.env.STRIPE_PRICE_HR_PRO_MONTHLY || 'price_hr_pro_monthly',
+      yearly: process.env.STRIPE_PRICE_HR_PRO_YEARLY || 'price_hr_pro_yearly',
+    },
+    enterprise: {
+      monthly: process.env.STRIPE_PRICE_HR_ENTERPRISE_MONTHLY || 'price_hr_enterprise_monthly',
+      yearly: process.env.STRIPE_PRICE_HR_ENTERPRISE_YEARLY || 'price_hr_enterprise_yearly',
+    },
+  },
   // セットプラン
   bundle: {
     monthly: process.env.STRIPE_PRICE_BUNDLE_MONTHLY || 'price_bundle_monthly',
@@ -187,14 +202,14 @@ export const ALL_SERVICE_IDS = [
   'banner', 'seo', 'interview', 'persona', 'kantan',
   'copy', 'voice', 'movie', 'lp', 'opening',
   'shindan', 'tenkai', 'interviewx', 'logo', 'video', 'presentation',
-  'adsim',
+  'adsim', 'hr',
 ] as const
 
 // ========================================
 // 価格ID ↔ プランID 変換（厳密マッピング）
 // ========================================
-export type PlanId = 'seo-light' | 'seo-pro' | 'seo-enterprise' | 'banner-light' | 'banner-basic' | 'banner-pro' | 'banner-enterprise' | 'interview-light' | 'interview-pro' | 'interview-enterprise' | 'copy-light' | 'copy-pro' | 'copy-enterprise' | 'lp-light' | 'lp-pro' | 'lp-enterprise' | 'voice-light' | 'voice-pro' | 'voice-enterprise' | 'movie-light' | 'movie-pro' | 'movie-enterprise' | 'adsim-light' | 'adsim-pro' | 'adsim-enterprise' | 'bundle'
-export type ServiceId = 'seo' | 'banner' | 'interview' | 'copy' | 'lp' | 'voice' | 'movie' | 'adsim' | 'bundle'
+export type PlanId = 'seo-light' | 'seo-pro' | 'seo-enterprise' | 'banner-light' | 'banner-basic' | 'banner-pro' | 'banner-enterprise' | 'interview-light' | 'interview-pro' | 'interview-enterprise' | 'copy-light' | 'copy-pro' | 'copy-enterprise' | 'lp-light' | 'lp-pro' | 'lp-enterprise' | 'voice-light' | 'voice-pro' | 'voice-enterprise' | 'movie-light' | 'movie-pro' | 'movie-enterprise' | 'adsim-light' | 'adsim-pro' | 'adsim-enterprise' | 'hr-starter' | 'hr-pro' | 'hr-enterprise' | 'bundle'
+export type ServiceId = 'seo' | 'banner' | 'interview' | 'copy' | 'lp' | 'voice' | 'movie' | 'adsim' | 'hr' | 'bundle'
 
 export function getServiceIdFromPlanId(planId: PlanId): ServiceId {
   return (planId.split('-')[0] as ServiceId) || 'bundle'
@@ -228,6 +243,9 @@ export function getPlanIdFromStripePriceId(priceId: string | null | undefined): 
     ['adsim-light', STRIPE_PRICE_IDS.adsim.light],
     ['adsim-pro', STRIPE_PRICE_IDS.adsim.pro],
     ['adsim-enterprise', STRIPE_PRICE_IDS.adsim.enterprise],
+    ['hr-starter', STRIPE_PRICE_IDS.hr.starter],
+    ['hr-pro', STRIPE_PRICE_IDS.hr.pro],
+    ['hr-enterprise', STRIPE_PRICE_IDS.hr.enterprise],
     ['bundle', STRIPE_PRICE_IDS.bundle],
   ]
   for (const [planId, prices] of entries) {
@@ -416,6 +434,13 @@ function collectRealPriceIds(): string[] {
     process.env.STRIPE_PRICE_VOICE_PRO_YEARLY,
     process.env.STRIPE_PRICE_VOICE_ENTERPRISE_MONTHLY,
     process.env.STRIPE_PRICE_VOICE_ENTERPRISE_YEARLY,
+    // HR
+    process.env.STRIPE_PRICE_HR_STARTER_MONTHLY,
+    process.env.STRIPE_PRICE_HR_STARTER_YEARLY,
+    process.env.STRIPE_PRICE_HR_PRO_MONTHLY,
+    process.env.STRIPE_PRICE_HR_PRO_YEARLY,
+    process.env.STRIPE_PRICE_HR_ENTERPRISE_MONTHLY,
+    process.env.STRIPE_PRICE_HR_ENTERPRISE_YEARLY,
     // Bundle
     process.env.STRIPE_PRICE_BUNDLE_MONTHLY,
     process.env.STRIPE_PRICE_BUNDLE_YEARLY,

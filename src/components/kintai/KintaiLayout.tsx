@@ -3,6 +3,7 @@
 import { useSession, signOut } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import Link from 'next/link'
 import KintaiSidebar from './KintaiSidebar'
 import KintaiOnboarding from './KintaiOnboarding'
 
@@ -15,6 +16,7 @@ interface UsageData {
   employeeId?: string
   role?: string
   employeeName?: string
+  plan?: string
 }
 
 export default function KintaiLayout({ children }: KintaiLayoutProps) {
@@ -131,8 +133,9 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
               <span className="font-medium text-slate-700">ドヤ勤怠</span>
               <BreadcrumbLabel pathname={pathname} />
             </div>
-            {/* User area */}
+            {/* Plan badge + User area */}
             <div className="flex items-center gap-3">
+              <PlanBadge plan={usage?.plan} />
               <span className="text-sm font-medium text-slate-700 hidden sm:block">{employeeName}</span>
               {session?.user?.image ? (
                 <img
@@ -161,6 +164,45 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
   )
 }
 
+function PlanBadge({ plan }: { plan?: string }) {
+  const p = (plan || 'FREE').toUpperCase()
+  let label: string
+  let badgeClass: string
+
+  switch (p) {
+    case 'ENTERPRISE':
+      label = 'エンタープライズ'
+      badgeClass = 'bg-slate-100 text-slate-700 border-slate-200'
+      break
+    case 'PRO':
+      label = 'プロ'
+      badgeClass = 'bg-purple-50 text-purple-700 border-purple-200'
+      break
+    case 'LIGHT':
+    case 'STARTER':
+      label = 'スターター'
+      badgeClass = 'bg-violet-50 text-violet-700 border-violet-200'
+      break
+    default:
+      label = '無料プラン'
+      badgeClass = 'bg-gray-50 text-gray-600 border-gray-200'
+  }
+
+  return (
+    <div className="hidden sm:flex items-center gap-1.5">
+      <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${badgeClass}`}>
+        {label}
+      </span>
+      <Link
+        href="/kintai/pricing"
+        className="text-xs text-[#7f19e6] hover:text-[#5b0fb3] font-medium hover:underline transition-colors"
+      >
+        プランを見る
+      </Link>
+    </div>
+  )
+}
+
 function BreadcrumbLabel({ pathname }: { pathname: string }) {
   const segments: Record<string, string> = {
     '/kintai/dashboard': 'マイページ',
@@ -173,6 +215,7 @@ function BreadcrumbLabel({ pathname }: { pathname: string }) {
     '/kintai/employees': '従業員管理',
     '/kintai/departments': '部署管理',
     '/kintai/settings': '就業ルール',
+    '/kintai/pricing': '料金プラン',
   }
 
   const label = segments[pathname]

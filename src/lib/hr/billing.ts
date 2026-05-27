@@ -32,19 +32,33 @@ export function getOrgPlanLimits(plan: string): PlanLimits {
 }
 
 /**
+ * 組織のプランを、OWNERの UserServiceSubscription(serviceId:'hr') から取得する。
+ * HrOrganization.plan はキャッシュ的に残すが、信頼できるソースは UserServiceSubscription。
+ */
+export async function getOrgPlan(organizationId: string): Promise<string> {
+  // 組織のOWNERを取得
+  const owner = await prisma.hrOrganizationMember.findFirst({
+    where: { organizationId, role: 'OWNER', status: 'ACTIVE' },
+  })
+  if (!owner) return 'FREE'
+
+  // OWNERのhr用サブスクリプションを取得
+  const sub = await prisma.userServiceSubscription.findUnique({
+    where: { userId_serviceId: { userId: owner.userId, serviceId: 'hr' } },
+  })
+
+  return sub?.plan || 'FREE'
+}
+
+/**
  * 従業員追加が可能か確認
  * @returns null = OK, string = エラーメッセージ
  */
 export async function checkEmployeeLimit(organizationId: string): Promise<string | null> {
   if (process.env.DOYA_DISABLE_LIMITS === '1') return null
 
-  const org = await prisma.hrOrganization.findUnique({
-    where: { id: organizationId },
-    select: { plan: true },
-  })
-  if (!org) return '組織が見つかりません'
-
-  const limits = getOrgPlanLimits(org.plan)
+  const plan = await getOrgPlan(organizationId)
+  const limits = getOrgPlanLimits(plan)
   if (limits.maxEmployees === -1) return null
 
   const count = await prisma.hrEmployee.count({
@@ -65,14 +79,15 @@ export async function checkEmployeeLimit(organizationId: string): Promise<string
 export async function checkAiUsageLimit(organizationId: string): Promise<string | null> {
   if (process.env.DOYA_DISABLE_LIMITS === '1') return null
 
+  const plan = await getOrgPlan(organizationId)
+  const limits = getOrgPlanLimits(plan)
+  if (limits.maxAiUsage === -1) return null
+
   const org = await prisma.hrOrganization.findUnique({
     where: { id: organizationId },
-    select: { plan: true, aiUsageCount: true, aiUsageResetAt: true },
+    select: { aiUsageCount: true, aiUsageResetAt: true },
   })
   if (!org) return '組織が見つかりません'
-
-  const limits = getOrgPlanLimits(org.plan)
-  if (limits.maxAiUsage === -1) return null
 
   // 月次リセット判定
   const now = new Date()
@@ -114,13 +129,8 @@ export async function incrementAiUsage(organizationId: string): Promise<void> {
 export async function checkMemberLimit(organizationId: string): Promise<string | null> {
   if (process.env.DOYA_DISABLE_LIMITS === '1') return null
 
-  const org = await prisma.hrOrganization.findUnique({
-    where: { id: organizationId },
-    select: { plan: true },
-  })
-  if (!org) return '組織が見つかりません'
-
-  const limits = getOrgPlanLimits(org.plan)
+  const plan = await getOrgPlan(organizationId)
+  const limits = getOrgPlanLimits(plan)
   if (limits.maxMembers === -1) return null
 
   const memberCount = await prisma.hrOrganizationMember.count({

@@ -6,21 +6,20 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { stripe } from '@/lib/stripe'
+import { stripe, STRIPE_PRICE_IDS } from '@/lib/stripe'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { logAudit } from '@/lib/hr/audit'
 
-// ドヤHR用のStripe価格ID
-const HR_STRIPE_PRICES: Record<string, string> = {
-  'hr-starter-monthly': process.env.STRIPE_PRICE_HR_STARTER_MONTHLY || 'price_hr_starter_monthly',
-  'hr-starter-yearly': process.env.STRIPE_PRICE_HR_STARTER_YEARLY || 'price_hr_starter_yearly',
-  'hr-pro-monthly': process.env.STRIPE_PRICE_HR_PRO_MONTHLY || 'price_hr_pro_monthly',
-  'hr-pro-yearly': process.env.STRIPE_PRICE_HR_PRO_YEARLY || 'price_hr_pro_yearly',
+// HR用Stripe価格IDマッピング（統一課金のSTRIPE_PRICE_IDSから取得）
+const HR_PLAN_PRICES: Record<string, { monthly: string; yearly: string }> = {
+  starter: STRIPE_PRICE_IDS.hr.starter,
+  pro: STRIPE_PRICE_IDS.hr.pro,
+  enterprise: STRIPE_PRICE_IDS.hr.enterprise,
 }
 
 // POST /api/hr/billing/checkout
-// Stripe Checkoutセッションを作成
+// Stripe Checkoutセッションを作成（統一課金パターン）
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -40,42 +39,48 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { planId } = body
+    const { plan, interval = 'monthly' } = body // plan: 'starter' | 'pro' | 'enterprise', interval: 'monthly' | 'yearly'
 
-    if (!planId || !HR_STRIPE_PRICES[planId]) {
+    if (!plan || !HR_PLAN_PRICES[plan]) {
       return NextResponse.json(
-        { error: `無効なプランIDです: ${planId}` },
+        { error: `無効なプランです: ${plan}` },
         { status: 400 }
       )
     }
 
-    const priceId = HR_STRIPE_PRICES[planId]
-
-    // 組織情報取得
-    const org = await prisma.hrOrganization.findUnique({
-      where: { id: ctx.organizationId },
-      select: { id: true, name: true, stripeCustomerId: true },
-    })
-    if (!org) {
-      return NextResponse.json({ error: '組織が見つかりません' }, { status: 404 })
+    const priceId = HR_PLAN_PRICES[plan][interval === 'yearly' ? 'yearly' : 'monthly']
+    if (!priceId) {
+      return NextResponse.json(
+        { error: `無効な課金間隔です: ${interval}` },
+        { status: 400 }
+      )
     }
 
-    // Stripe Customer取得or作成
-    let customerId = org.stripeCustomerId
-    if (!customerId) {
+    // User.stripeCustomerIdを使用（組織ではなくユーザーレベル）
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { stripeCustomerId: true, email: true, name: true },
+    })
+    if (!dbUser) {
+      return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 })
+    }
+
+    let stripeCustomerId = dbUser.stripeCustomerId
+
+    // StripeCustomerがない場合は作成してUser.stripeCustomerIdに保存
+    if (!stripeCustomerId) {
       const customer = await stripe.customers.create({
-        email: user.email,
-        name: org.name,
+        email: dbUser.email || user.email,
+        name: dbUser.name || user.name,
         metadata: {
-          hrOrganizationId: org.id,
           userId: user.id,
         },
       })
-      customerId = customer.id
+      stripeCustomerId = customer.id
 
-      await prisma.hrOrganization.update({
-        where: { id: org.id },
-        data: { stripeCustomerId: customerId },
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { stripeCustomerId },
       })
     }
 
@@ -85,23 +90,24 @@ export async function POST(req: NextRequest) {
       mode: 'subscription',
       payment_method_types: ['card'],
       allow_promotion_codes: true,
-      customer: customerId,
+      customer: stripeCustomerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${baseUrl}/hr/settings?tab=billing&checkout=success`,
-      cancel_url: `${baseUrl}/hr/settings?tab=billing&checkout=cancelled`,
+      success_url: `${baseUrl}/hr/settings/billing?success=true`,
+      cancel_url: `${baseUrl}/hr/settings/billing`,
       locale: 'ja',
       subscription_data: {
         metadata: {
-          hrOrganizationId: org.id,
-          planId,
           userId: user.id,
+          serviceId: 'hr',
+          planId: `hr-${plan}`,
         },
       },
       metadata: {
-        hrOrganizationId: org.id,
-        planId,
         userId: user.id,
+        serviceId: 'hr',
+        planId: `hr-${plan}`,
       },
+      client_reference_id: user.id,
     })
 
     // 監査ログ
@@ -111,7 +117,7 @@ export async function POST(req: NextRequest) {
       userName: user.name,
       action: 'BILLING_CHECKOUT',
       target: 'billing',
-      details: { planId, checkoutSessionId: checkoutSession.id },
+      details: { plan, interval, priceId, checkoutSessionId: checkoutSession.id },
     }).catch(() => {})
 
     return NextResponse.json({

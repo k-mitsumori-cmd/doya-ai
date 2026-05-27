@@ -12,7 +12,7 @@ import { HrMemberRole } from '@/lib/hr/types'
 import { logAudit } from '@/lib/hr/audit'
 
 // POST /api/hr/billing/portal
-// Stripeカスタマーポータルセッションを作成
+// Stripeカスタマーポータルセッションを作成（User.stripeCustomerIdを使用）
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -31,12 +31,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const org = await prisma.hrOrganization.findUnique({
-      where: { id: ctx.organizationId },
+    // User.stripeCustomerIdを使用（組織ではなくユーザーレベル）
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
       select: { stripeCustomerId: true },
     })
 
-    if (!org?.stripeCustomerId) {
+    if (!dbUser?.stripeCustomerId) {
       return NextResponse.json(
         { error: 'Stripe顧客情報がまだ登録されていません。先にプランをご購入ください。' },
         { status: 400 }
@@ -46,8 +47,8 @@ export async function POST(req: NextRequest) {
     const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.surisuta.jp'
 
     const portalSession = await stripe.billingPortal.sessions.create({
-      customer: org.stripeCustomerId,
-      return_url: `${baseUrl}/hr/settings?tab=billing`,
+      customer: dbUser.stripeCustomerId,
+      return_url: `${baseUrl}/hr/settings/billing`,
       locale: 'ja',
     })
 

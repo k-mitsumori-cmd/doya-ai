@@ -1179,6 +1179,8 @@ export function getPricingByService(serviceId: string): ServicePricing | null {
       return LP_PRICING
     case 'voice':
       return VOICE_PRICING
+    case 'kintai':
+      return KINTAI_PRICING
     default:
       return null
   }
@@ -1206,7 +1208,7 @@ export function getDailyLimit(serviceId: string, userType: 'guest' | 'free' | 'p
 
 // プランを取得（無料版/有料版など）
 export function getPlanById(planId: string): Plan | null {
-  const allPlans = [...KANTAN_PRICING.plans, ...SEO_PRICING.plans, ...BANNER_PRICING.plans, ...PERSONA_PRICING.plans, ...INTERVIEW_PRICING.plans, ...SHINDAN_PRICING.plans, ...COPY_PRICING.plans, ...VOICE_PRICING.plans, ...LP_PRICING.plans]
+  const allPlans = [...KANTAN_PRICING.plans, ...SEO_PRICING.plans, ...BANNER_PRICING.plans, ...PERSONA_PRICING.plans, ...INTERVIEW_PRICING.plans, ...SHINDAN_PRICING.plans, ...COPY_PRICING.plans, ...VOICE_PRICING.plans, ...LP_PRICING.plans, ...KINTAI_PRICING.plans]
   return allPlans.find(p => p.id === planId) || null
 }
 
@@ -1719,6 +1721,110 @@ export function getHrAiLimitByUserPlan(plan: string | null | undefined): number 
     case 'STARTER': return 30
     case 'FREE': return 3
     default: return 3
+  }
+}
+
+// ========================================
+// ドヤ勤怠 プラン設定
+// ========================================
+export const KINTAI_PRICING: ServicePricing = {
+  serviceId: 'kintai',
+  serviceName: 'ドヤ勤怠',
+  serviceIcon: '⏰',
+  guestLimit: 0,
+  freeLimit: 5,
+  lightLimit: 30,
+  proLimit: 100,
+  enterpriseLimit: -1,
+  historyDays: {
+    free: 90,
+    pro: -1,
+  },
+  plans: [
+    {
+      id: 'kintai-free',
+      name: '無料',
+      price: 0,
+      priceLabel: '¥0',
+      period: '',
+      description: 'まずは試してみたい方に',
+      features: [
+        { text: '従業員5名まで', included: true },
+        { text: 'ワンクリック打刻', included: true },
+        { text: '勤怠自動集計', included: true },
+        { text: '打刻修正申請', included: true },
+        { text: 'CSV出力', included: false },
+        { text: '36協定管理', included: false },
+      ],
+      cta: '無料で始める',
+    },
+    {
+      id: 'kintai-starter',
+      name: 'スターター',
+      price: 2980,
+      priceLabel: '¥2,980',
+      period: '/月（税込）',
+      description: '成長中のチームに最適',
+      color: 'violet',
+      features: [
+        { text: '従業員30名まで', included: true },
+        { text: '全打刻機能', included: true },
+        { text: '承認フロー', included: true },
+        { text: '就業ルール複数設定', included: true },
+        { text: 'CSV出力', included: true },
+        { text: '36協定管理', included: false },
+      ],
+      cta: 'スタータープランを始める',
+    },
+    {
+      id: 'kintai-pro',
+      name: 'プロ',
+      price: 9980,
+      priceLabel: '¥9,980',
+      period: '/月（税込）',
+      description: '本格的な勤怠管理に',
+      popular: true,
+      color: 'purple',
+      features: [
+        { text: '従業員100名まで', included: true },
+        { text: '全機能利用可能', included: true },
+        { text: '36協定管理', included: true },
+        { text: 'CSV/Excel出力', included: true },
+        { text: '多段階承認フロー', included: true },
+        { text: '優先サポート', included: true },
+      ],
+      cta: 'プロプランを始める',
+    },
+    {
+      id: 'kintai-enterprise',
+      name: 'エンタープライズ',
+      price: 0,
+      priceLabel: '要相談',
+      period: '',
+      description: '大規模組織向け',
+      color: 'slate',
+      features: [
+        { text: '従業員数無制限', included: true },
+        { text: 'API連携', included: true },
+        { text: 'SSO/SAML認証', included: true },
+        { text: '多拠点管理', included: true },
+        { text: '専任サポート', included: true },
+      ],
+      cta: 'お問い合わせ',
+    },
+  ],
+}
+
+export function getKintaiEmployeeLimitByUserPlan(plan: string | null | undefined): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1') return -1
+  const p = String(plan || 'FREE').toUpperCase()
+  switch (p) {
+    case 'ENTERPRISE': return KINTAI_PRICING.enterpriseLimit ?? -1
+    case 'PRO': return KINTAI_PRICING.proLimit
+    case 'LIGHT':
+    case 'STARTER': return KINTAI_PRICING.lightLimit ?? 30
+    case 'FREE': return KINTAI_PRICING.freeLimit
+    default: return KINTAI_PRICING.freeLimit
   }
 }
 

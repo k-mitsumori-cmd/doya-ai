@@ -9,14 +9,10 @@ interface BillingInfo {
   planLabel: string
   employeeCount: number
   employeeLimit: number
-  evaluationCount: number
-  evaluationLimit: number
-  oneOnOneCount: number
-  oneOnOneLimit: number
-  storageUsedMB: number
-  storageLimitMB: number
-  nextBillingDate?: string
-  monthlyPrice?: number
+  memberCount: number
+  memberLimit: number
+  aiUsageCount: number
+  aiUsageLimit: number
 }
 
 const PLANS = [
@@ -25,7 +21,7 @@ const PLANS = [
     name: 'Free',
     price: 0,
     priceLabel: '無料',
-    features: ['従業員5名まで', '基本的な評価管理', '1on1記録 月10件', 'ストレージ 100MB'],
+    features: ['従業員5名まで', 'AI機能 月3回', 'メンバー2名まで'],
     color: 'from-slate-400 to-slate-500',
     iconBg: 'bg-slate-100',
     iconColor: 'text-slate-600',
@@ -35,7 +31,7 @@ const PLANS = [
     name: 'Starter',
     price: 4980,
     priceLabel: '4,980',
-    features: ['従業員30名まで', 'AI評価アシスト', '1on1記録 無制限', 'ストレージ 1GB', '組織図エクスポート'],
+    features: ['従業員30名まで', 'AI機能 月30回', 'メンバー5名まで', '組織図エクスポート'],
     color: 'from-blue-500 to-blue-600',
     iconBg: 'bg-blue-100',
     iconColor: 'text-blue-600',
@@ -46,7 +42,7 @@ const PLANS = [
     name: 'Pro',
     price: 9980,
     priceLabel: '9,980',
-    features: ['従業員100名まで', 'AI評価アシスト 高精度', '1on1 + アクションアイテム自動生成', 'ストレージ 10GB', '監査ログ', 'SSO対応'],
+    features: ['従業員100名まで', 'AI機能 無制限', 'メンバー無制限', '監査ログ', 'SSO対応'],
     color: 'from-purple-500 to-purple-600',
     iconBg: 'bg-purple-100',
     iconColor: 'text-purple-600',
@@ -56,7 +52,7 @@ const PLANS = [
     name: 'Enterprise',
     price: -1,
     priceLabel: 'お問い合わせ',
-    features: ['従業員 無制限', '全機能アクセス', '専任サポート', 'API連携', 'カスタムSLA', 'オンプレ対応可'],
+    features: ['従業員 無制限', '全機能アクセス', '専任サポート', 'API連携', 'カスタムSLA'],
     color: 'from-amber-500 to-orange-500',
     iconBg: 'bg-amber-100',
     iconColor: 'text-amber-600',
@@ -82,7 +78,7 @@ function UsageBar({ label, used, limit, icon, color }: {
           <span className="text-sm font-bold text-slate-700">{label}</span>
         </div>
         <span className={`text-sm font-black ${isCritical ? 'text-red-600' : isWarning ? 'text-amber-600' : 'text-slate-600'}`}>
-          {used} / {limit === -1 ? '∞' : limit}
+          {used} / {limit >= 999 ? '∞' : limit}
         </span>
       </div>
       <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden">
@@ -116,27 +112,26 @@ function UsageBar({ label, used, limit, icon, color }: {
 export default function BillingPage() {
   const [billing, setBilling] = useState<BillingInfo | null>(null)
   const [loading, setLoading] = useState(true)
+  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
+  const [portalLoading, setPortalLoading] = useState(false)
 
   useEffect(() => {
     async function fetchBilling() {
       try {
-        const res = await fetch('/api/hr/billing')
+        const res = await fetch('/api/hr/usage')
         if (res.ok) {
           const data = await res.json()
           setBilling(data)
         } else {
-          // API not ready - show defaults
           setBilling({
             plan: 'free',
             planLabel: 'Free',
             employeeCount: 0,
             employeeLimit: 5,
-            evaluationCount: 0,
-            evaluationLimit: 3,
-            oneOnOneCount: 0,
-            oneOnOneLimit: 10,
-            storageUsedMB: 0,
-            storageLimitMB: 100,
+            memberCount: 0,
+            memberLimit: 2,
+            aiUsageCount: 0,
+            aiUsageLimit: 3,
           })
         }
       } catch {
@@ -145,12 +140,10 @@ export default function BillingPage() {
           planLabel: 'Free',
           employeeCount: 0,
           employeeLimit: 5,
-          evaluationCount: 0,
-          evaluationLimit: 3,
-          oneOnOneCount: 0,
-          oneOnOneLimit: 10,
-          storageUsedMB: 0,
-          storageLimitMB: 100,
+          memberCount: 0,
+          memberLimit: 2,
+          aiUsageCount: 0,
+          aiUsageLimit: 3,
         })
       } finally {
         setLoading(false)
@@ -158,6 +151,54 @@ export default function BillingPage() {
     }
     fetchBilling()
   }, [])
+
+  const handleCheckout = async (planId: string) => {
+    if (planId === 'enterprise') {
+      // お問い合わせ
+      window.open('mailto:info@surisuta.jp?subject=ドヤHR Enterpriseプランのお問い合わせ', '_blank')
+      return
+    }
+    if (planId === 'free') return
+
+    setCheckoutLoading(planId)
+    try {
+      const res = await fetch('/api/hr/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planId, interval: 'monthly' }),
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        alert(data.error || 'チェックアウトセッションの作成に失敗しました')
+      }
+    } catch {
+      alert('エラーが発生しました。もう一度お試しください。')
+    } finally {
+      setCheckoutLoading(null)
+    }
+  }
+
+  const handlePortal = async () => {
+    setPortalLoading(true)
+    try {
+      const res = await fetch('/api/hr/billing/portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        alert(data.error || 'ポータルセッションの作成に失敗しました')
+      }
+    } catch {
+      alert('エラーが発生しました。もう一度お試しください。')
+    } finally {
+      setPortalLoading(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -176,6 +217,7 @@ export default function BillingPage() {
   }
 
   const currentPlan = PLANS.find((p) => p.id === billing?.plan) || PLANS[0]
+  const isPaid = billing?.plan !== 'free'
 
   return (
     <div className="p-6 lg:p-10 max-w-5xl mx-auto">
@@ -223,17 +265,17 @@ export default function BillingPage() {
                 <h2 className="text-2xl font-black">{currentPlan.name}</h2>
               </div>
             </div>
-            {billing?.nextBillingDate && (
-              <p className="text-sm opacity-80 mt-2">
-                <span className="material-symbols-outlined text-sm align-middle mr-1">calendar_today</span>
-                次回請求日: {new Date(billing.nextBillingDate).toLocaleDateString('ja-JP')}
-              </p>
-            )}
-            {billing?.monthlyPrice !== undefined && billing.monthlyPrice > 0 && (
-              <p className="text-sm opacity-80 mt-1">
-                <span className="material-symbols-outlined text-sm align-middle mr-1">payments</span>
-                月額: ¥{billing.monthlyPrice.toLocaleString()}
-              </p>
+            {isPaid && (
+              <motion.button
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={handlePortal}
+                disabled={portalLoading}
+                className="mt-3 px-5 py-2 bg-white/20 hover:bg-white/30 rounded-full text-sm font-bold transition-all disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-sm align-middle mr-1">settings</span>
+                {portalLoading ? '読み込み中...' : '契約を管理'}
+              </motion.button>
             )}
           </div>
         </motion.div>
@@ -251,7 +293,7 @@ export default function BillingPage() {
             </div>
             使用状況
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <UsageBar
               label="従業員数"
               used={billing?.employeeCount ?? 0}
@@ -260,24 +302,17 @@ export default function BillingPage() {
               color="text-blue-600"
             />
             <UsageBar
-              label="評価期間"
-              used={billing?.evaluationCount ?? 0}
-              limit={billing?.evaluationLimit ?? 3}
-              icon="assessment"
-              color="text-red-500"
-            />
-            <UsageBar
-              label="1on1 (今月)"
-              used={billing?.oneOnOneCount ?? 0}
-              limit={billing?.oneOnOneLimit ?? 10}
-              icon="forum"
+              label="メンバー数"
+              used={billing?.memberCount ?? 0}
+              limit={billing?.memberLimit ?? 2}
+              icon="group"
               color="text-purple-600"
             />
             <UsageBar
-              label="ストレージ (MB)"
-              used={billing?.storageUsedMB ?? 0}
-              limit={billing?.storageLimitMB ?? 100}
-              icon="cloud"
+              label="AI利用 (今月)"
+              used={billing?.aiUsageCount ?? 0}
+              limit={billing?.aiUsageLimit ?? 3}
+              icon="smart_toy"
               color="text-teal-600"
             />
           </div>
@@ -298,6 +333,7 @@ export default function BillingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {PLANS.map((plan, i) => {
               const isCurrent = plan.id === billing?.plan
+              const isLoading = checkoutLoading === plan.id
               return (
                 <motion.div
                   key={plan.id}
@@ -307,7 +343,7 @@ export default function BillingPage() {
                   whileHover={{ y: -4 }}
                   className={`relative bg-white rounded-3xl shadow-md p-5 flex flex-col ${
                     isCurrent ? 'ring-2 ring-blue-500' : ''
-                  } ${plan.popular ? 'ring-2 ring-purple-400' : ''}`}
+                  } ${plan.popular && !isCurrent ? 'ring-2 ring-purple-400' : ''}`}
                 >
                   {plan.popular && !isCurrent && (
                     <div className="absolute -top-3 left-1/2 -translate-x-1/2">
@@ -364,13 +400,15 @@ export default function BillingPage() {
                     <motion.button
                       whileHover={{ scale: 1.03 }}
                       whileTap={{ scale: 0.97 }}
-                      className={`w-full py-3 rounded-full text-sm font-bold shadow-md hover:shadow-lg transition-all ${
+                      onClick={() => handleCheckout(plan.id)}
+                      disabled={isLoading || checkoutLoading !== null}
+                      className={`w-full py-3 rounded-full text-sm font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 ${
                         plan.popular
                           ? 'bg-purple-600 text-white hover:bg-purple-700'
                           : 'bg-blue-600 text-white hover:bg-blue-700'
                       }`}
                     >
-                      {plan.price === -1 ? 'お問い合わせ' : 'アップグレード'}
+                      {isLoading ? '処理中...' : plan.price === -1 ? 'お問い合わせ' : isPaid ? 'プラン変更' : 'アップグレード'}
                     </motion.button>
                   )}
                 </motion.div>
@@ -397,7 +435,10 @@ export default function BillingPage() {
               従業員数や必要な機能に応じて最適なプランをご案内します。お気軽にお問い合わせください。
             </p>
           </div>
-          <button className="flex-shrink-0 px-5 py-2.5 bg-slate-100 text-slate-700 rounded-full text-sm font-bold hover:bg-slate-200 transition-all">
+          <button
+            onClick={() => window.open('mailto:info@surisuta.jp?subject=ドヤHR プランのご相談', '_blank')}
+            className="flex-shrink-0 px-5 py-2.5 bg-slate-100 text-slate-700 rounded-full text-sm font-bold hover:bg-slate-200 transition-all"
+          >
             <span className="material-symbols-outlined text-sm align-middle mr-1">mail</span>
             相談する
           </button>

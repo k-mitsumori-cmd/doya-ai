@@ -25,11 +25,22 @@ export async function GET() {
       return NextResponse.json({ organizationId: null })
     }
 
+    // Get the organization owner's plan
+    const owner = await prisma.kintaiMember.findFirst({
+      where: { organizationId: membership.organizationId, role: 'system_admin' },
+      select: { userId: true },
+    })
+    const ownerUser = owner ? await prisma.user.findUnique({
+      where: { id: owner.userId },
+      select: { plan: true },
+    }) : null
+
     return NextResponse.json({
       organizationId: membership.organizationId,
       employeeId: membership.employee.id,
       role: membership.role,
       employeeName: membership.employee.name,
+      plan: ownerUser?.plan || 'FREE',
     })
   } catch (e) {
     console.error('[kintai/usage] Error:', e)
