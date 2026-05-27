@@ -54,7 +54,7 @@ export default function AttendancePage() {
 
   const totalWork = data.reduce((s, a) => s + (a.workMinutes || 0), 0)
   const totalOvertime = data.reduce((s, a) => s + (a.overtimeMinutes || 0), 0)
-  const totalDays = data.filter((a) => a.status === 'normal').length
+  const totalDays = data.filter((a: any) => a.clockIn && !['absent', 'holiday'].includes(a.status)).length
 
   const workingDaysInMonth = useMemo(() => countWorkingDays(year, month), [year, month])
   const targetMinutes = workingDaysInMonth * 8 * 60

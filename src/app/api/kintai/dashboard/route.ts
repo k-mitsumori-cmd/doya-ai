@@ -52,10 +52,10 @@ export async function GET() {
     )
 
     const summary = {
-      totalWorkDays: monthAttendances.filter((a) => a.status === 'normal').length,
+      totalWorkDays: monthAttendances.filter((a) => a.clockIn && !['absent', 'holiday'].includes(a.status)).length,
       totalWorkMinutes: monthAttendances.reduce((s, a) => s + a.workMinutes, 0),
       totalOvertimeMinutes: monthAttendances.reduce((s, a) => s + a.overtimeMinutes, 0),
-      totalLateCount: monthAttendances.filter((a) => a.lateMinutes > 0).length,
+      totalLateCount: monthAttendances.filter((a) => a.status === 'late' || a.lateMinutes > 0).length,
     }
 
     return NextResponse.json({
