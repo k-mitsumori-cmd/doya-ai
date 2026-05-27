@@ -302,9 +302,15 @@ export default function EmployeesPage() {
                       <td className="px-4 py-3 text-center"><span className="text-xs px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full">{EMPLOYMENT_TYPE_LABELS[emp.employmentType] || emp.employmentType}</span></td>
                       <td className="px-4 py-3 text-slate-600 text-sm">{formatHireDate(emp.hireDate)}</td>
                       <td className="px-4 py-3 text-center">
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${emp.isActive ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>
-                          {emp.isActive ? '有効' : '無効'}
-                        </span>
+                        {emp.isActive ? (
+                          emp.workRule ? (
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">有効</span>
+                          ) : (
+                            <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">⚠️ ルール未設定</span>
+                          )
+                        ) : (
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-500">無効</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-center">
                         <div className="flex items-center justify-center gap-1">

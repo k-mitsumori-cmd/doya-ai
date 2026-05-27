@@ -99,24 +99,30 @@ export default function AttendancePage() {
         </div>
 
         {/* ===== Month Navigation (Google Calendar style) ===== */}
-        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-200/30 p-4 flex items-center justify-center gap-2">
+        <div className="bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-200/30 p-4 flex items-center justify-center gap-3 flex-wrap">
           <button onClick={prevMonth} className="w-10 h-10 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors flex items-center justify-center">
             <span className="material-symbols-outlined text-slate-600">chevron_left</span>
           </button>
-          <div className="text-center min-w-[160px]">
-            <p className="text-2xl font-black text-slate-800">
-              {year}年 <span className="text-[#7f19e6]">{month}月</span>
-            </p>
-          </div>
+          <select
+            value={`${year}-${month}`}
+            onChange={(e) => { const [y, m] = e.target.value.split('-').map(Number); setYear(y); setMonth(m); }}
+            className="text-xl font-black text-slate-800 bg-transparent border-none focus:outline-none cursor-pointer text-center"
+          >
+            {Array.from({ length: 24 }, (_, i) => {
+              const d = new Date(); d.setMonth(d.getMonth() - 12 + i);
+              const y = d.getFullYear(); const m = d.getMonth() + 1;
+              return <option key={`${y}-${m}`} value={`${y}-${m}`}>{y}年{m}月</option>
+            })}
+          </select>
           <button onClick={nextMonth} className="w-10 h-10 rounded-xl hover:bg-slate-100 active:bg-slate-200 transition-colors flex items-center justify-center">
             <span className="material-symbols-outlined text-slate-600">chevron_right</span>
           </button>
           {!isCurrentMonth && (
             <button
               onClick={() => { setYear(new Date().getFullYear()); setMonth(new Date().getMonth() + 1) }}
-              className="ml-2 px-3 py-1.5 text-xs font-bold text-[#7f19e6] bg-[#7f19e6]/5 hover:bg-[#7f19e6]/10 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-bold text-white bg-[#7f19e6] hover:bg-[#6a14c2] rounded-full transition-colors shadow-sm"
             >
-              今月
+              今月に戻る
             </button>
           )}
         </div>
@@ -188,7 +194,7 @@ export default function AttendancePage() {
           </div>
         ) : (
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-200/30 overflow-hidden">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[70vh] overflow-y-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50/80 border-b border-slate-200 sticky top-0 z-10">

@@ -71,6 +71,8 @@ export const REQUEST_STATUS_LABELS: Record<string, string> = {
 
 export const ATTENDANCE_STATUS_LABELS: Record<string, string> = {
   normal: '通常',
+  late: '遅刻',
+  clock_missing: '打刻漏れ',
   absent: '欠勤',
   holiday: '休日',
   paid_leave: '有給休暇',

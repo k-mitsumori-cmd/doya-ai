@@ -441,16 +441,24 @@ export default function ClockPage() {
           )}
 
           {status === 'clocked_out' && (
-            <div className="w-full rounded-3xl bg-gradient-to-br from-violet-50 to-indigo-50 border-2 border-violet-200/60 p-5 flex items-center gap-4">
-              <img
-                src={CHARS.success}
-                alt="トロフィークマ"
-                style={{ width: 56, height: 56, objectFit: 'contain' }}
-              />
-              <div className="flex-1 text-left">
-                <p className="text-lg font-black text-violet-700 leading-tight">お疲れさまでした！</p>
-                <p className="text-sm font-medium text-violet-500/80 mt-0.5">ゆっくり休んでくださいね</p>
+            <div className="w-full space-y-3">
+              <div className="rounded-3xl bg-gradient-to-br from-violet-50 to-indigo-50 border-2 border-violet-200/60 p-5 flex items-center gap-4">
+                <img src={CHARS.success} alt="" style={{ width: 56, height: 56, objectFit: 'contain' }} />
+                <div className="flex-1 text-left">
+                  <p className="text-lg font-black text-violet-700 leading-tight">お疲れさまでした！</p>
+                  <p className="text-sm font-medium text-violet-500/80 mt-0.5">ゆっくり休んでくださいね</p>
+                </div>
               </div>
+              <button
+                onClick={() => handleClock('clock_in')}
+                disabled={submitting}
+                className="w-full py-3 bg-white border-2 border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 hover:border-slate-300 transition-all text-sm"
+              >
+                🔄 再出勤する（シフト・深夜勤務など）
+              </button>
+              <a href="/kintai/requests/new" className="block w-full py-3 bg-white border-2 border-slate-200 text-slate-600 font-bold rounded-2xl hover:bg-slate-50 text-sm text-center">
+                ✏️ 打刻を修正申請する
+              </a>
             </div>
           )}
         </div>

@@ -70,6 +70,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '無効な申請種別です' }, { status: 400 })
     }
 
+    // バリデーション: 各申請種別ごとの必須フィールドチェック
+    if (type === 'clock_fix') {
+      if (!details?.date) return NextResponse.json({ error: '対象日は必須です' }, { status: 400 })
+      if (!details?.clockType) return NextResponse.json({ error: '打刻種別を選択してください' }, { status: 400 })
+      if (!details?.correctedTime) return NextResponse.json({ error: '修正後の時刻を入力してください' }, { status: 400 })
+    }
+    if (type === 'leave') {
+      if (!details?.startDate) return NextResponse.json({ error: '開始日は必須です' }, { status: 400 })
+      if (!details?.endDate) return NextResponse.json({ error: '終了日は必須です' }, { status: 400 })
+      if (details.startDate > details.endDate) return NextResponse.json({ error: '開始日は終了日より前にしてください' }, { status: 400 })
+    }
+    if (type === 'overtime') {
+      if (!details?.date) return NextResponse.json({ error: '対象日は必須です' }, { status: 400 })
+      if (!details?.hours && !details?.minutes) return NextResponse.json({ error: '残業時間を入力してください' }, { status: 400 })
+    }
+    if (!reason?.trim()) {
+      return NextResponse.json({ error: '理由を入力してください' }, { status: 400 })
+    }
+
     const request = await prisma.kintaiRequest.create({
       data: {
         employeeId: ctx.employeeId,

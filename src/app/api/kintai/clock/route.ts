@@ -238,7 +238,7 @@ async function upsertDailyAttendance(
       lateMinutes: result.lateMinutes,
       earlyLeaveMinutes: result.earlyLeaveMinutes,
       nightMinutes: result.nightMinutes,
-      status: 'normal',
+      status: !result.clockOut ? 'clock_missing' : result.lateMinutes > 0 ? 'late' : 'normal',
     },
     create: {
       employeeId,
@@ -251,7 +251,7 @@ async function upsertDailyAttendance(
       lateMinutes: result.lateMinutes,
       earlyLeaveMinutes: result.earlyLeaveMinutes,
       nightMinutes: result.nightMinutes,
-      status: 'normal',
+      status: !result.clockOut ? 'clock_missing' : result.lateMinutes > 0 ? 'late' : 'normal',
     },
   })
 }
