@@ -112,6 +112,14 @@ function StatValue({ statKey, stats, loading }: { statKey: string; stats: Dashbo
   return <>{display}</>
 }
 
+function getGreeting(): string {
+  const hour = new Date().getHours()
+  if (hour >= 6 && hour <= 11) return 'おはようございます！'
+  if (hour >= 12 && hour <= 17) return 'お疲れさまです！'
+  if (hour >= 18 && hour <= 23) return '今日もお疲れさまでした！'
+  return '夜遅くまでお疲れさまです！'
+}
+
 export default function HrDashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
     employeeCount: 0,
@@ -153,6 +161,7 @@ export default function HrDashboardPage() {
       {/* Header */}
       <div className="mb-8 flex items-center gap-4">
         <div className="flex-1">
+          <p className="text-base font-bold text-blue-600 mb-1">{getGreeting()}</p>
           <h1 className="text-3xl font-black text-slate-900">
             {stats.orgName ? `${stats.orgName} のダッシュボード` : 'ダッシュボード'}
           </h1>
@@ -206,9 +215,41 @@ export default function HrDashboardPage() {
 
       {/* Setup Guide — shown when no employees */}
       {!loading && stats.employeeCount === 0 && (
+        <>
+        {/* What ドヤHR can do */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          className="mb-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-3xl shadow-md p-6"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm">
+              <span className="material-symbols-outlined text-xl text-blue-600">info</span>
+            </div>
+            <h2 className="text-xl font-black text-slate-900">ドヤHR でできること</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {[
+              { icon: 'people', color: 'text-blue-600', bg: 'bg-blue-100', title: '従業員管理', desc: '社員の基本情報・部署・役職を一元管理' },
+              { icon: 'assessment', color: 'text-red-500', bg: 'bg-red-100', title: 'MBO評価', desc: '目標管理に基づく人事評価をオンラインで実施' },
+              { icon: 'forum', color: 'text-emerald-600', bg: 'bg-emerald-100', title: '1on1記録', desc: 'AIが会話の要約とアクションアイテムを自動生成' },
+              { icon: 'account_tree', color: 'text-amber-500', bg: 'bg-amber-100', title: '組織図', desc: '部署構成をビジュアルに表示・管理' },
+            ].map((item) => (
+              <div key={item.title} className="bg-white rounded-2xl p-4 shadow-sm">
+                <div className={`w-9 h-9 rounded-xl ${item.bg} flex items-center justify-center mb-2`}>
+                  <span className={`material-symbols-outlined text-lg ${item.color}`}>{item.icon}</span>
+                </div>
+                <p className="text-sm font-bold text-slate-900">{item.title}</p>
+                <p className="text-xs text-slate-500 mt-1">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
           className="mb-8 bg-white rounded-3xl shadow-md p-6"
         >
           <div className="flex items-center gap-3 mb-5">
@@ -285,6 +326,7 @@ export default function HrDashboardPage() {
             })}
           </motion.div>
         </motion.div>
+        </>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

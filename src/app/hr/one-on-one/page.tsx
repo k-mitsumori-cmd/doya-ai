@@ -43,6 +43,9 @@ export default function OneOnOnePage() {
   const [showNewModal, setShowNewModal] = useState(false)
   const [selectedEmployee, setSelectedEmployee] = useState('')
   const [selectedManager, setSelectedManager] = useState('')
+  const [scheduledDate, setScheduledDate] = useState('')
+  const [scheduledTime, setScheduledTime] = useState('')
+  const [selectedDuration, setSelectedDuration] = useState(30)
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
@@ -94,7 +97,10 @@ export default function OneOnOnePage() {
         body: JSON.stringify({
           employeeId: selectedEmployee,
           managerId: selectedManager,
-          scheduledAt: new Date().toISOString(),
+          scheduledAt: scheduledDate && scheduledTime
+            ? new Date(`${scheduledDate}T${scheduledTime}`).toISOString()
+            : new Date().toISOString(),
+          duration: selectedDuration,
         }),
       })
       if (!res.ok) throw new Error('1on1の作成に失敗しました')
@@ -136,6 +142,7 @@ export default function OneOnOnePage() {
           <div className="mb-6 p-4 bg-red-50 rounded-2xl text-sm text-red-700">
             <span className="material-symbols-outlined text-lg align-middle mr-1">error</span>
             {error}
+            <span className="text-red-500 ml-1">もう一度お試しください。</span>
           </div>
         )}
 
@@ -297,6 +304,45 @@ export default function OneOnOnePage() {
                       </option>
                     ))}
                   </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">日付</label>
+                    <input
+                      type="date"
+                      value={scheduledDate}
+                      onChange={(e) => setScheduledDate(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 mb-1">時間</label>
+                    <input
+                      type="time"
+                      value={scheduledTime}
+                      onChange={(e) => setScheduledTime(e.target.value)}
+                      className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">所要時間</label>
+                  <div className="flex gap-2">
+                    {[15, 30, 45, 60].map((min) => (
+                      <button
+                        key={min}
+                        type="button"
+                        onClick={() => setSelectedDuration(min)}
+                        className={`flex-1 py-2 rounded-full text-sm font-bold transition-all ${
+                          selectedDuration === min
+                            ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-300'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        }`}
+                      >
+                        {min}分
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
               <div className="flex justify-end gap-3 mt-6">

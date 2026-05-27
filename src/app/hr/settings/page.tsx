@@ -343,6 +343,7 @@ export default function HrSettingsPage() {
           <div className="mb-6 p-4 bg-red-50 rounded-2xl text-sm text-red-700">
             <span className="material-symbols-outlined text-lg align-middle mr-1">error</span>
             {error}
+            <span className="text-red-500 ml-1">もう一度お試しください。</span>
           </div>
         )}
         {success && (
@@ -361,181 +362,7 @@ export default function HrSettingsPage() {
           </motion.div>
         )}
 
-        {/* Organization Info */}
-        <div className="bg-white rounded-3xl shadow-md p-6 mb-6">
-          <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
-              <span className="material-symbols-outlined text-blue-600">apartment</span>
-            </div>
-            組織情報
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">組織名</label>
-              <input
-                type="text"
-                value={settings.name}
-                onChange={(e) => setSettings({ ...settings, name: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-                placeholder="株式会社サンプル"
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">業種</label>
-                <input
-                  type="text"
-                  value={settings.industry}
-                  onChange={(e) => setSettings({ ...settings, industry: e.target.value })}
-                  className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-                  placeholder="IT・ソフトウェア"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1">従業員規模</label>
-                <select
-                  value={settings.employeeScale}
-                  onChange={(e) => setSettings({ ...settings, employeeScale: e.target.value })}
-                  className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-                >
-                  <option value="">選択してください</option>
-                  <option value="1-10">1〜10名</option>
-                  <option value="11-30">11〜30名</option>
-                  <option value="31-50">31〜50名</option>
-                  <option value="51-100">51〜100名</option>
-                  <option value="101-300">101〜300名</option>
-                  <option value="301+">301名以上</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">期首月</label>
-              <select
-                value={settings.fiscalYearStart}
-                onChange={(e) => setSettings({ ...settings, fiscalYearStart: e.target.value })}
-                className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-              >
-                {Array.from({ length: 12 }, (_, i) => {
-                  const month = String(i + 1).padStart(2, '0')
-                  return (
-                    <option key={month} value={month}>{i + 1}月</option>
-                  )
-                })}
-              </select>
-            </div>
-          </div>
-          <div className="mt-6 flex justify-end">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined text-lg">save</span>
-              {saving ? '保存中...' : '保存する'}
-            </button>
-          </div>
-        </div>
-
-        {/* Members */}
-        <div className="bg-white rounded-3xl shadow-md p-6 mb-6">
-          <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center">
-              <span className="material-symbols-outlined text-emerald-600">group</span>
-            </div>
-            メンバー
-          </h2>
-
-          {/* Invite by email */}
-          <div className="flex gap-2 mb-4">
-            <input
-              type="email"
-              value={inviteEmail}
-              onChange={(e) => setInviteEmail(e.target.value)}
-              placeholder="メールアドレスで招待"
-              className="flex-1 px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
-            />
-            <button
-              onClick={handleInvite}
-              disabled={inviting || !inviteEmail}
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all disabled:opacity-50"
-            >
-              <span className="material-symbols-outlined text-lg">send</span>
-              {inviting ? '送信中...' : '招待'}
-            </button>
-          </div>
-
-          {/* Invite URL */}
-          <div className="mb-4 p-4 rounded-2xl bg-slate-50">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="material-symbols-outlined text-sm text-slate-500">link</span>
-              <span className="text-sm font-bold text-slate-700">招待URLで招待</span>
-            </div>
-            {inviteUrl ? (
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={inviteUrl}
-                  readOnly
-                  className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 truncate"
-                />
-                <motion.button
-                  onClick={handleCopyInviteUrl}
-                  whileTap={{ scale: 0.95 }}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold transition-all ${
-                    inviteUrlCopied
-                      ? 'bg-emerald-500 text-white'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-sm">
-                    {inviteUrlCopied ? 'check' : 'content_copy'}
-                  </span>
-                  {inviteUrlCopied ? 'コピー済み!' : 'コピー'}
-                </motion.button>
-              </div>
-            ) : (
-              <button
-                onClick={handleGenerateInviteUrl}
-                disabled={generatingInviteUrl}
-                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-full text-sm font-bold text-slate-700 hover:bg-slate-100 transition-all disabled:opacity-50"
-              >
-                <span className="material-symbols-outlined text-sm">add_link</span>
-                {generatingInviteUrl ? '生成中...' : '招待URLを生成'}
-              </button>
-            )}
-          </div>
-
-          {/* Member List */}
-          {members.length > 0 ? (
-            <div className="space-y-2">
-              {members.map((member) => {
-                const avatarColor = getColorByIndex(MEMBER_AVATAR_COLORS, member.name || member.email)
-                return (
-                  <div key={member.id} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center text-white text-xs font-bold`}>
-                        {member.name?.[0] || member.email[0]}
-                      </div>
-                      <div>
-                        <p className="text-base font-bold text-slate-900">{member.name || member.email}</p>
-                        <p className="text-xs text-slate-500">{member.email}</p>
-                      </div>
-                    </div>
-                    <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${
-                      member.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {member.role === 'ADMIN' ? '管理者' : 'メンバー'}
-                    </span>
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <p className="text-lg font-bold text-slate-500 text-center py-4">まだメンバーはいません</p>
-          )}
-        </div>
-
-        {/* Department Management */}
+        {/* 1. Department Management — most frequently used */}
         <div className="bg-white rounded-3xl shadow-md p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -667,6 +494,180 @@ export default function HrSettingsPage() {
             </motion.div>
           </div>
         )}
+
+        {/* 2. Members */}
+        <div className="bg-white rounded-3xl shadow-md p-6 mb-6">
+          <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <span className="material-symbols-outlined text-emerald-600">group</span>
+            </div>
+            メンバー管理
+          </h2>
+
+          {/* Invite by email */}
+          <div className="flex gap-2 mb-4">
+            <input
+              type="email"
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="メールアドレスで招待"
+              className="flex-1 px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+            />
+            <button
+              onClick={handleInvite}
+              disabled={inviting || !inviteEmail}
+              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-lg">send</span>
+              {inviting ? '送信中...' : '招待'}
+            </button>
+          </div>
+
+          {/* Invite URL */}
+          <div className="mb-4 p-4 rounded-2xl bg-slate-50">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="material-symbols-outlined text-sm text-slate-500">link</span>
+              <span className="text-sm font-bold text-slate-700">招待URLで招待</span>
+            </div>
+            {inviteUrl ? (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={inviteUrl}
+                  readOnly
+                  className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 truncate"
+                />
+                <motion.button
+                  onClick={handleCopyInviteUrl}
+                  whileTap={{ scale: 0.95 }}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                    inviteUrlCopied
+                      ? 'bg-emerald-500 text-white'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-sm">
+                    {inviteUrlCopied ? 'check' : 'content_copy'}
+                  </span>
+                  {inviteUrlCopied ? 'コピー済み!' : 'コピー'}
+                </motion.button>
+              </div>
+            ) : (
+              <button
+                onClick={handleGenerateInviteUrl}
+                disabled={generatingInviteUrl}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-full text-sm font-bold text-slate-700 hover:bg-slate-100 transition-all disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-sm">add_link</span>
+                {generatingInviteUrl ? '生成中...' : '招待URLを生成'}
+              </button>
+            )}
+          </div>
+
+          {/* Member List */}
+          {members.length > 0 ? (
+            <div className="space-y-2">
+              {members.map((member) => {
+                const avatarColor = getColorByIndex(MEMBER_AVATAR_COLORS, member.name || member.email)
+                return (
+                  <div key={member.id} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center text-white text-xs font-bold`}>
+                        {member.name?.[0] || member.email[0]}
+                      </div>
+                      <div>
+                        <p className="text-base font-bold text-slate-900">{member.name || member.email}</p>
+                        <p className="text-xs text-slate-500">{member.email}</p>
+                      </div>
+                    </div>
+                    <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${
+                      member.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {member.role === 'ADMIN' ? '管理者' : 'メンバー'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-lg font-bold text-slate-500 text-center py-4">まだメンバーはいません</p>
+          )}
+        </div>
+
+        {/* 3. Organization Info */}
+        <div className="bg-white rounded-3xl shadow-md p-6 mb-6">
+          <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <div className="w-8 h-8 rounded-xl bg-blue-100 flex items-center justify-center">
+              <span className="material-symbols-outlined text-blue-600">apartment</span>
+            </div>
+            組織情報
+          </h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-1">組織名</label>
+              <input
+                type="text"
+                value={settings.name}
+                onChange={(e) => setSettings({ ...settings, name: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                placeholder="株式会社サンプル"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">業種</label>
+                <input
+                  type="text"
+                  value={settings.industry}
+                  onChange={(e) => setSettings({ ...settings, industry: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                  placeholder="IT・ソフトウェア"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-700 mb-1">従業員規模</label>
+                <select
+                  value={settings.employeeScale}
+                  onChange={(e) => setSettings({ ...settings, employeeScale: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+                >
+                  <option value="">選択してください</option>
+                  <option value="1-10">1〜10名</option>
+                  <option value="11-30">11〜30名</option>
+                  <option value="31-50">31〜50名</option>
+                  <option value="51-100">51〜100名</option>
+                  <option value="101-300">101〜300名</option>
+                  <option value="301+">301名以上</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-bold text-slate-700 mb-1">期首月</label>
+              <select
+                value={settings.fiscalYearStart}
+                onChange={(e) => setSettings({ ...settings, fiscalYearStart: e.target.value })}
+                className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
+              >
+                {Array.from({ length: 12 }, (_, i) => {
+                  const month = String(i + 1).padStart(2, '0')
+                  return (
+                    <option key={month} value={month}>{i + 1}月</option>
+                  )
+                })}
+              </select>
+            </div>
+          </div>
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-lg">save</span>
+              {saving ? '保存中...' : '保存する'}
+            </button>
+          </div>
+        </div>
 
         {/* Evaluation Templates */}
         <div className="bg-white rounded-3xl shadow-md p-6 mb-6">

@@ -104,6 +104,7 @@ export default function NewEmployeePage() {
       }
 
       setSuccessMessage('従業員を登録しました')
+      setTimeout(() => setSuccessMessage(null), 3000)
       setTimeout(() => {
         router.push('/hr/employees')
       }, 1500)
@@ -135,6 +136,31 @@ export default function NewEmployeePage() {
             />
           </div>
           <p className="text-sm text-slate-500 mt-1">新しい従業員の情報を登録します</p>
+        </div>
+
+        {/* Step Indicator */}
+        <div className="mb-6 bg-white rounded-3xl shadow-md p-4">
+          <div className="flex items-center justify-between">
+            {[
+              { step: 1, label: '基本情報', icon: 'person' },
+              { step: 2, label: '職務情報', icon: 'work' },
+              { step: 3, label: '入社情報', icon: 'calendar_month' },
+            ].map((item, i) => (
+              <div key={item.step} className="flex items-center flex-1">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                    <span className="text-xs font-black text-blue-600">{item.step}</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-700">{item.label}</p>
+                  </div>
+                </div>
+                {i < 2 && (
+                  <div className="flex-1 mx-3 h-0.5 bg-slate-200 rounded-full" />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -376,11 +402,12 @@ export default function NewEmployeePage() {
               <div className="p-4 bg-red-50 rounded-2xl text-sm text-red-700">
                 <span className="material-symbols-outlined text-lg align-middle mr-1">error</span>
                 {error}
+                <span className="text-red-500 ml-1">もう一度お試しください。</span>
               </div>
             )}
 
-            {/* Actions */}
-            <div className="flex justify-end gap-3 pt-4">
+            {/* Actions (desktop) */}
+            <div className="hidden sm:flex justify-end gap-3 pt-4">
               <button
                 type="button"
                 onClick={() => router.back()}
@@ -397,6 +424,25 @@ export default function NewEmployeePage() {
                 {saving ? '保存中...' : '保存する'}
               </button>
             </div>
+          </div>
+
+          {/* Sticky bottom save bar (mobile) */}
+          <div className="sm:hidden sticky bottom-0 bg-white/80 backdrop-blur-md p-4 border-t border-slate-200 -mx-6 mt-4 flex gap-3 z-30">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="flex-1 px-4 py-3 bg-white text-slate-700 rounded-full text-base font-bold shadow-md transition-all"
+            >
+              キャンセル
+            </button>
+            <button
+              type="submit"
+              disabled={saving || !!successMessage}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 transition-all disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-lg">save</span>
+              {saving ? '保存中...' : '保存する'}
+            </button>
           </div>
         </form>
       </motion.div>

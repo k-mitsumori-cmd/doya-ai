@@ -11,11 +11,14 @@ interface Department {
   name: string
 }
 
+type SortKey = 'name' | 'hireDate' | 'department'
+
 export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [sortKey, setSortKey] = useState<SortKey>('name')
 
   useEffect(() => {
     async function fetchData() {
@@ -41,12 +44,30 @@ export default function EmployeesPage() {
     fetchData()
   }, [])
 
+  const sortedEmployees = [...employees].sort((a, b) => {
+    switch (sortKey) {
+      case 'name':
+        return `${a.lastName ?? ''}${a.firstName ?? ''}`.localeCompare(`${b.lastName ?? ''}${b.firstName ?? ''}`, 'ja')
+      case 'hireDate':
+        return ((b as any).hireDate ?? '').localeCompare((a as any).hireDate ?? '')
+      case 'department':
+        return ((a as any).department?.name ?? '').localeCompare((b as any).department?.name ?? '', 'ja')
+      default:
+        return 0
+    }
+  })
+
   return (
     <div className="p-6 lg:p-10 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-3xl font-black text-slate-900">従業員一覧</h1>
+          <h1 className="text-3xl font-black text-slate-900">
+            従業員一覧
+            {!loading && employees.length > 0 && (
+              <span className="ml-3 text-lg font-bold text-slate-400">全 {employees.length} 名</span>
+            )}
+          </h1>
           <p className="text-sm text-slate-500 mt-1">組織のメンバーを管理</p>
         </div>
         <Link
@@ -58,11 +79,39 @@ export default function EmployeesPage() {
         </Link>
       </div>
 
+      {/* Sort Controls */}
+      {!loading && employees.length > 0 && (
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-sm font-bold text-slate-500 flex items-center gap-1">
+            <span className="material-symbols-outlined text-sm">sort</span>
+            並び替え:
+          </span>
+          {[
+            { key: 'name' as SortKey, label: '名前順' },
+            { key: 'hireDate' as SortKey, label: '入社日順' },
+            { key: 'department' as SortKey, label: '部署別' },
+          ].map((opt) => (
+            <button
+              key={opt.key}
+              onClick={() => setSortKey(opt.key)}
+              className={`px-3 py-1.5 rounded-full text-sm font-bold transition-all ${
+                sortKey === opt.key
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Error */}
       {error && (
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
           <span className="material-symbols-outlined text-lg align-middle mr-1">error</span>
           {error}
+          <span className="text-red-500 ml-1">もう一度お試しください。</span>
         </div>
       )}
 
@@ -118,7 +167,7 @@ export default function EmployeesPage() {
           </div>
         </motion.div>
       ) : (
-        <EmployeeGrid employees={employees} departments={departments} />
+        <EmployeeGrid employees={sortedEmployees} departments={departments} />
       )}
     </div>
   )

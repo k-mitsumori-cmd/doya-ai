@@ -90,6 +90,7 @@ export default function EvaluationsPage() {
           <div className="mb-6 p-4 bg-red-50 rounded-2xl text-sm text-red-700">
             <span className="material-symbols-outlined text-lg align-middle mr-1">error</span>
             {error}
+            <span className="text-red-500 ml-1">もう一度お試しください。</span>
           </div>
         )}
 
@@ -177,18 +178,27 @@ export default function EvaluationsPage() {
             <p className="text-base text-slate-500 mb-6 max-w-md mx-auto">
               MBO（目標管理制度）に基づいた人事評価をオンラインでかんたんに管理できます。
             </p>
-            <div className="flex flex-col items-center gap-3 mb-6">
-              <div className="flex items-center gap-3 text-left max-w-sm w-full">
-                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100 text-blue-600 text-xs font-black shrink-0">1</span>
-                <span className="text-sm font-bold text-slate-700">評価期間を作成する</span>
+            <div className="flex flex-col items-center gap-4 mb-6">
+              <div className="flex items-start gap-3 text-left max-w-md w-full bg-blue-50 rounded-2xl p-4">
+                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 text-xs font-black shrink-0 mt-0.5">1</span>
+                <div>
+                  <span className="text-sm font-bold text-slate-900">評価期間を作成する</span>
+                  <p className="text-xs text-slate-500 mt-0.5">上期（4-9月）や下期（10-3月）など、評価の対象期間を設定します</p>
+                </div>
               </div>
-              <div className="flex items-center gap-3 text-left max-w-sm w-full">
-                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-red-100 text-red-500 text-xs font-black shrink-0">2</span>
-                <span className="text-sm font-bold text-slate-700">対象者に評価シートを配布</span>
+              <div className="flex items-start gap-3 text-left max-w-md w-full bg-red-50 rounded-2xl p-4">
+                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-100 text-red-500 text-xs font-black shrink-0 mt-0.5">2</span>
+                <div>
+                  <span className="text-sm font-bold text-slate-900">従業員に評価シートを割り当て</span>
+                  <p className="text-xs text-slate-500 mt-0.5">対象の従業員を選んで、目標設定用の評価シートを配布します</p>
+                </div>
               </div>
-              <div className="flex items-center gap-3 text-left max-w-sm w-full">
-                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-emerald-100 text-emerald-600 text-xs font-black shrink-0">3</span>
-                <span className="text-sm font-bold text-slate-700">自己評価 → 上司評価 → 最終評価</span>
+              <div className="flex items-start gap-3 text-left max-w-md w-full bg-emerald-50 rounded-2xl p-4">
+                <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 text-xs font-black shrink-0 mt-0.5">3</span>
+                <div>
+                  <span className="text-sm font-bold text-slate-900">自己評価 → 上司評価 → 最終評価</span>
+                  <p className="text-xs text-slate-500 mt-0.5">3ステップで評価を進行。進捗はダッシュボードで確認できます</p>
+                </div>
               </div>
             </div>
             <motion.button
@@ -223,6 +233,29 @@ export default function EvaluationsPage() {
             >
               <h2 className="text-lg font-bold text-slate-900 mb-4">評価期間を作成</h2>
               <div className="space-y-4">
+                {/* Presets */}
+                <div>
+                  <label className="block text-sm font-bold text-slate-700 mb-2">プリセットから選択</label>
+                  <div className="flex flex-wrap gap-2">
+                    {(() => {
+                      const y = new Date().getFullYear()
+                      return [
+                        { label: `上期（${y}年4月〜9月）`, name: `${y}年度 上期評価`, start: `${y}-04-01`, end: `${y}-09-30` },
+                        { label: `下期（${y}年10月〜${y+1}年3月）`, name: `${y}年度 下期評価`, start: `${y}-10-01`, end: `${y+1}-03-31` },
+                        { label: '四半期（Q1）', name: `${y}年度 Q1評価`, start: `${y}-04-01`, end: `${y}-06-30` },
+                      ]
+                    })().map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => setNewPeriod({ name: preset.name, startDate: preset.start, endDate: preset.end })}
+                        className="px-3 py-1.5 text-xs font-bold rounded-full bg-blue-50 text-blue-600 hover:bg-blue-100 transition-colors"
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1">期間名</label>
                   <input

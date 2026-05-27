@@ -150,14 +150,7 @@ export default function EmployeeDetailPage() {
 
         {/* Employee Header */}
         <div className="bg-white rounded-3xl shadow-md p-6 mb-6 relative">
-          <div className="absolute top-4 right-4 flex items-center gap-2">
-            <Link
-              href={`/hr/employees/${id}/edit`}
-              className="flex items-center gap-1.5 px-4 py-2 bg-sky-50 text-sky-600 rounded-full text-sm font-bold hover:bg-sky-100 transition-colors"
-            >
-              <span className="material-symbols-outlined text-lg">edit</span>
-              編集
-            </Link>
+          <div className="absolute top-4 right-4">
             <img
               src="/hr/characters/focus_集中.png"
               alt="白くまキャラクター"
@@ -177,9 +170,18 @@ export default function EmployeeDetailPage() {
               </div>
             )}
             <div className="text-center sm:text-left flex-1">
-              <h1 className="text-3xl font-black text-slate-900">
-                {employee.lastName} {employee.firstName}
-              </h1>
+              <div className="flex items-center gap-3 justify-center sm:justify-start flex-wrap">
+                <h1 className="text-3xl font-black text-slate-900">
+                  {employee.lastName} {employee.firstName}
+                </h1>
+                <Link
+                  href={`/hr/employees/${id}/edit`}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-sky-50 text-sky-600 rounded-full text-sm font-bold hover:bg-sky-100 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-lg">edit</span>
+                  編集
+                </Link>
+              </div>
               {(employee.lastNameKana || employee.firstNameKana) && (
                 <p className="text-sm text-slate-500 mt-0.5">
                   {employee.lastNameKana} {employee.firstNameKana}
@@ -308,6 +310,13 @@ export default function EmployeeDetailPage() {
                 />
                 <p className="text-lg font-bold">まだ評価がありません</p>
                 <p className="text-sm mt-1">評価期間を作成して評価を始めましょう</p>
+                <Link
+                  href="/hr/evaluations"
+                  className="inline-flex items-center gap-1.5 mt-4 px-5 py-2.5 bg-red-500 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-red-600 transition-all"
+                >
+                  評価を作成する
+                  <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                </Link>
               </div>
             )}
           </motion.div>
@@ -356,6 +365,13 @@ export default function EmployeeDetailPage() {
                 />
                 <p className="text-lg font-bold">まだ1on1の記録がありません</p>
                 <p className="text-sm mt-1">1on1を実施して記録を残しましょう</p>
+                <Link
+                  href="/hr/one-on-one"
+                  className="inline-flex items-center gap-1.5 mt-4 px-5 py-2.5 bg-emerald-600 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-emerald-700 transition-all"
+                >
+                  1on1を記録する
+                  <span className="material-symbols-outlined text-lg">arrow_forward</span>
+                </Link>
               </div>
             )}
           </motion.div>

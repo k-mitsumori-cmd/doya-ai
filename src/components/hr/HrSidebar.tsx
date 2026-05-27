@@ -117,6 +117,30 @@ export default function HrSidebar({
         </div>
       </nav>
 
+      {/* Quick Action: Add Employee */}
+      {!isCollapsed && (
+        <div className="px-3 mb-2">
+          <Link
+            href="/hr/employees/new"
+            className="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all"
+          >
+            <span className="material-symbols-outlined text-lg">person_add</span>
+            従業員を追加
+          </Link>
+        </div>
+      )}
+      {isCollapsed && (
+        <div className="px-3 mb-2 flex justify-center">
+          <Link
+            href="/hr/employees/new"
+            className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md hover:shadow-lg hover:bg-blue-700 transition-all"
+            title="従業員を追加"
+          >
+            <span className="material-symbols-outlined text-lg">person_add</span>
+          </Link>
+        </div>
+      )}
+
       {/* Employee Count */}
       {!isCollapsed && (
         <div className="p-4 mx-3 mb-3 bg-white rounded-2xl shadow-sm">
