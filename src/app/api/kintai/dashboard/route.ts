@@ -67,7 +67,7 @@ export async function GET() {
       recentRequests,
     })
   } catch (e) {
-    console.error('[kintai/dashboard] Error:', e)
-    return NextResponse.json({ error: 'ダッシュボードの取得に失敗しました' }, { status: 500 })
+    console.error('[kintai/dashboard] Error:', (e as any)?.message, (e as any)?.code)
+    return NextResponse.json({ error: 'ダッシュボードの取得に失敗しました', detail: String((e as any)?.message || '').substring(0, 200) }, { status: 500 })
   }
 }

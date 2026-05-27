@@ -20,18 +20,27 @@ const TIP_MESSAGES = [
 export default function DashboardPage() {
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [apiError, setApiError] = useState<string | null>(null)
   const [now, setNow] = useState(new Date())
   const [tipIndex] = useState(() => Math.floor(Math.random() * TIP_MESSAGES.length))
   const router = useRouter()
 
   useEffect(() => {
     fetch('/api/kintai/dashboard')
-      .then((r) => {
-        if (!r.ok) throw new Error('API error')
-        return r.json()
+      .then(async (r) => {
+        const json = await r.json()
+        if (!r.ok) {
+          setApiError(json.error || `APIエラー (${r.status})`)
+          setData(null)
+          return
+        }
+        setData(json)
+        setApiError(null)
       })
-      .then(setData)
-      .catch(() => setData(null))
+      .catch((e) => {
+        setApiError('通信エラーが発生しました')
+        setData(null)
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -70,18 +79,9 @@ export default function DashboardPage() {
   const monthlySummary = data?.monthlySummary || { totalWorkDays: 0, totalWorkMinutes: 0, totalOvertimeMinutes: 0, totalLateCount: 0 }
   const recentRequests = data?.recentRequests || []
 
-  // If API returned error (no org yet), show a friendly message
+  // If API returned error, show friendly error with report form
   if (!loading && !data) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6">
-        <img src="/kintai/characters/hello_挨拶.png" alt="挨拶" style={{ width: 120, height: 120, objectFit: 'contain' }} />
-        <h2 className="text-xl font-bold text-slate-800">まだ準備ができていません</h2>
-        <p className="text-slate-500 text-center">組織の作成が完了していないか、セッションが切れています。</p>
-        <button onClick={() => window.location.reload()} className="px-6 py-2 bg-[#7f19e6] text-white font-bold rounded-xl hover:bg-[#6a14c2] transition-colors">
-          再読み込み
-        </button>
-      </div>
-    )
+    return <DashboardError error={apiError} />
   }
 
   const jstNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Tokyo' }))
@@ -674,5 +674,101 @@ function RequestPill({ status }: { status: string }) {
     <span className={`text-xs px-3 py-1.5 rounded-full font-bold border ${colors[status] || 'bg-slate-100 border-slate-200'}`}>
       {REQUEST_STATUS_LABELS[status] || status}
     </span>
+  )
+}
+
+function DashboardError({ error }: { error: string | null }) {
+  const [showReport, setShowReport] = useState(false)
+  const [reportText, setReportText] = useState('')
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+
+  async function handleReport() {
+    if (!reportText.trim()) return
+    setSending(true)
+    try {
+      await fetch('/api/kintai/dashboard', { method: 'GET' }).then(r => r.json()).catch(() => null)
+      // Slack通知用のfeedback API（ドヤAI共通）
+      const slackRes = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          service: 'kintai',
+          type: 'error',
+          page: '/kintai/dashboard',
+          error: error || 'マイページ表示エラー',
+          description: reportText.trim(),
+        }),
+      }).catch(() => null)
+      setSent(true)
+    } catch {}
+    setSending(false)
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6">
+      <img src="/kintai/characters/error_泣き.png" alt="エラー" style={{ width: 120, height: 120, objectFit: 'contain' }} />
+      <h2 className="text-2xl font-black text-slate-800">エラーが発生しました</h2>
+      <p className="text-base font-bold text-slate-500 text-center max-w-md">
+        {error || 'ページの読み込みに失敗しました。しばらく経ってからもう一度お試しください。'}
+      </p>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => window.location.reload()}
+          className="px-6 py-3 bg-[#7f19e6] text-white font-black rounded-full hover:bg-[#6a14c2] transition-all shadow-lg text-base"
+        >
+          再試行する
+        </button>
+        <a
+          href="/kintai"
+          className="px-6 py-3 bg-white text-slate-700 font-bold rounded-full border-2 border-slate-200 hover:bg-slate-50 transition-all text-base"
+        >
+          トップへ戻る
+        </a>
+      </div>
+
+      {!showReport && !sent && (
+        <button
+          onClick={() => setShowReport(true)}
+          className="mt-4 text-sm font-bold text-[#7f19e6] hover:underline"
+        >
+          🐛 エラーを報告する
+        </button>
+      )}
+
+      {showReport && !sent && (
+        <div className="mt-4 w-full max-w-md bg-white rounded-2xl border-2 border-slate-200 p-5 shadow-lg">
+          <div className="flex items-center gap-2 mb-3">
+            <img src="/kintai/characters/point_解説.png" alt="" width={32} height={32} style={{ objectFit: 'contain' }} />
+            <p className="text-base font-black text-slate-800">エラー報告</p>
+          </div>
+          <p className="text-sm text-slate-500 mb-3">
+            どんな操作をしたらエラーが出ましたか？詳しく教えてください。
+          </p>
+          <textarea
+            value={reportText}
+            onChange={(e) => setReportText(e.target.value)}
+            placeholder="例: ログイン後にマイページを開いたらエラーになった"
+            rows={3}
+            className="w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium focus:border-[#7f19e6] focus:ring-2 focus:ring-[#7f19e6]/20 outline-none resize-none"
+          />
+          <button
+            onClick={handleReport}
+            disabled={sending || !reportText.trim()}
+            className="mt-3 w-full px-6 py-3 bg-gradient-to-r from-[#7f19e6] to-[#5b0fb3] text-white font-black rounded-full hover:shadow-lg transition-all disabled:opacity-50 text-sm"
+          >
+            {sending ? '送信中...' : '報告を送信する'}
+          </button>
+        </div>
+      )}
+
+      {sent && (
+        <div className="mt-4 bg-green-50 border-2 border-green-200 rounded-2xl px-6 py-4 text-center">
+          <img src="/kintai/characters/thumbsup_いいね.png" alt="" width={48} height={48} style={{ objectFit: 'contain', margin: '0 auto' }} />
+          <p className="text-base font-black text-green-700 mt-2">ありがとうございます！</p>
+          <p className="text-sm text-green-600">報告を受け付けました。改善に努めます。</p>
+        </div>
+      )}
+    </div>
   )
 }
