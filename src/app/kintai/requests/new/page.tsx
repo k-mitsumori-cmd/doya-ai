@@ -6,9 +6,9 @@ import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 
 const REQUEST_TYPES = [
   { key: 'clock_fix', label: '打刻修正', icon: 'edit_clock', desc: '打刻の追加・修正を申請します', disabled: false, bear: '/kintai/characters/working_作業中.png' },
-  { key: 'leave', label: '休暇', icon: 'event_busy', desc: '有給休暇・特別休暇を申請します', disabled: true, bear: '/kintai/characters/ramen_休憩.png' },
-  { key: 'overtime', label: '残業', icon: 'more_time', desc: '残業の事前申請をします', disabled: true, bear: '/kintai/characters/focus_集中.png' },
-  { key: 'holiday_work', label: '休日出勤', icon: 'work_history', desc: '休日出勤を申請します', disabled: true, bear: '/kintai/characters/surprise_驚き.png' },
+  { key: 'leave', label: '休暇', icon: 'event_busy', desc: '有給休暇・特別休暇を申請します', disabled: false, bear: '/kintai/characters/ramen_休憩.png' },
+  { key: 'overtime', label: '残業', icon: 'more_time', desc: '残業の事前申請をします', disabled: false, bear: '/kintai/characters/focus_集中.png' },
+  { key: 'holiday_work', label: '休日出勤', icon: 'work_history', desc: '休日出勤を申請します', disabled: false, bear: '/kintai/characters/surprise_驚き.png' },
 ]
 
 export default function NewRequestPage() {
@@ -43,6 +43,21 @@ function NewRequestContent() {
   const [fixClockType, setFixClockType] = useState('clock_in')
   const [fixTime, setFixTime] = useState('')
   const [reason, setReason] = useState('')
+
+  // leave form
+  const [leaveStart, setLeaveStart] = useState('')
+  const [leaveEnd, setLeaveEnd] = useState('')
+  const [leaveType, setLeaveType] = useState('paid')
+
+  // overtime form
+  const [otDate, setOtDate] = useState('')
+  const [otHours, setOtHours] = useState('')
+  const [otMinutes, setOtMinutes] = useState('')
+
+  // holiday_work form
+  const [hwDate, setHwDate] = useState('')
+  const [hwStart, setHwStart] = useState('09:00')
+  const [hwEnd, setHwEnd] = useState('18:00')
 
   useEffect(() => {
     const t = searchParams.get('type')
@@ -89,6 +104,21 @@ function NewRequestContent() {
         details.date = fixDate
         details.clockType = fixClockType
         details.correctedTime = fixTime
+      } else if (type === 'leave') {
+        if (!leaveStart || !leaveEnd) { setError('開始日と終了日を入力してください'); setSubmitting(false); return }
+        details.startDate = leaveStart
+        details.endDate = leaveEnd
+        details.leaveType = leaveType
+      } else if (type === 'overtime') {
+        if (!otDate || (!otHours && !otMinutes)) { setError('日付と時間を入力してください'); setSubmitting(false); return }
+        details.date = otDate
+        details.hours = parseInt(otHours || '0')
+        details.minutes = parseInt(otMinutes || '0')
+      } else if (type === 'holiday_work') {
+        if (!hwDate) { setError('日付を入力してください'); setSubmitting(false); return }
+        details.date = hwDate
+        details.startTime = hwStart
+        details.endTime = hwEnd
       }
 
       const res = await fetch('/api/kintai/requests', {
@@ -217,7 +247,7 @@ function NewRequestContent() {
         )}
 
         {/* Step 2: clock_fix form */}
-        {step === 2 && type === 'clock_fix' && (
+        {step === 2 && (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5 fade-in-up">
             <div>
               <h2 className="font-bold text-slate-700 flex items-center gap-2">
@@ -236,10 +266,11 @@ function NewRequestContent() {
               </div>
             )}
 
+            {type === 'clock_fix' && (<div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1">
                 <span className="material-symbols-outlined text-base text-slate-400">calendar_today</span>
-                対象日
+                対象日 <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
@@ -277,6 +308,71 @@ function NewRequestContent() {
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white"
               />
             </div>
+            </div>)}
+
+            {/* ===== Leave form ===== */}
+            {type === 'leave' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">休暇種別</label>
+                  <select value={leaveType} onChange={(e) => setLeaveType(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white">
+                    <option value="paid">有給休暇</option>
+                    <option value="special">特別休暇</option>
+                    <option value="unpaid">欠勤</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">開始日 <span className="text-red-500">*</span></label>
+                    <input type="date" value={leaveStart} onChange={(e) => setLeaveStart(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">終了日 <span className="text-red-500">*</span></label>
+                    <input type="date" value={leaveEnd} onChange={(e) => setLeaveEnd(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ===== Overtime form ===== */}
+            {type === 'overtime' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">対象日 <span className="text-red-500">*</span></label>
+                  <input type="date" value={otDate} onChange={(e) => setOtDate(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">時間</label>
+                    <input type="number" min="0" max="24" value={otHours} onChange={(e) => setOtHours(e.target.value)} placeholder="1" className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">分</label>
+                    <input type="number" min="0" max="59" value={otMinutes} onChange={(e) => setOtMinutes(e.target.value)} placeholder="30" className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ===== Holiday work form ===== */}
+            {type === 'holiday_work' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">対象日 <span className="text-red-500">*</span></label>
+                  <input type="date" value={hwDate} onChange={(e) => setHwDate(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">開始時刻</label>
+                    <input type="time" value={hwStart} onChange={(e) => setHwStart(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">終了時刻</label>
+                    <input type="time" value={hwEnd} onChange={(e) => setHwEnd(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Preview of change */}
             {preview && (
