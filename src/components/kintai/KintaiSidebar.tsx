@@ -66,12 +66,12 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
     { href: '/kintai/dashboard', icon: <span className="text-lg">📊</span>, label: 'マイページ' },
     { href: '/kintai/clock', icon: <span className="text-lg">⏰</span>, label: '打刻' },
     { href: '/kintai/attendance', icon: <span className="text-lg">📅</span>, label: '勤怠一覧' },
-    { href: '/kintai/requests', icon: <span className="text-lg">📝</span>, label: '申請' },
+    { href: '/kintai/requests', icon: <span className="text-lg">📝</span>, label: 'マイ申請' },
   ]
 
   const managerItems: NavItem[] = hasMinRole(role, 'manager')
     ? [
-        { href: '/kintai/approvals', icon: <span className="text-lg">✅</span>, label: '承認' },
+        { href: '/kintai/approvals', icon: <span className="text-lg">✅</span>, label: '承認管理' },
         { href: '/kintai/admin/attendance', icon: <span className="text-lg">📈</span>, label: '部署勤怠' },
       ]
     : []

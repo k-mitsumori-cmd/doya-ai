@@ -1,7 +1,7 @@
 'use client'
 
 import { useSession, signOut } from 'next-auth/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import KintaiSidebar from './KintaiSidebar'
@@ -122,25 +122,13 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
             {/* Plan badge + User area */}
             <div className="flex items-center gap-3">
               <PlanBadge plan={usage?.plan} />
-              <span className="text-sm font-medium text-slate-700 hidden sm:block">{employeeName}</span>
-              {session?.user?.image ? (
-                <img
-                  src={session.user.image}
-                  alt={employeeName}
-                  className="w-8 h-8 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center text-white text-xs font-bold">
-                  {employeeName[0]}
-                </div>
-              )}
-              <button
-                onClick={() => signOut({ callbackUrl: '/kintai' })}
-                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                title="ログアウト"
-              >
-                <span className="material-symbols-outlined text-xl">logout</span>
-              </button>
+              <UserMenu
+                name={employeeName}
+                email={session?.user?.email || ''}
+                image={session?.user?.image || ''}
+                plan={usage?.plan || 'FREE'}
+                onSignOut={() => signOut({ callbackUrl: '/kintai' })}
+              />
             </div>
           </div>
         </header>
@@ -194,9 +182,9 @@ function BreadcrumbLabel({ pathname }: { pathname: string }) {
     '/kintai/dashboard': 'マイページ',
     '/kintai/clock': '打刻',
     '/kintai/attendance': '勤怠一覧',
-    '/kintai/requests': '申請',
+    '/kintai/requests': 'マイ申請',
     '/kintai/requests/new': '新規申請',
-    '/kintai/approvals': '承認',
+    '/kintai/approvals': '承認管理',
     '/kintai/admin/attendance': '部署勤怠',
     '/kintai/employees': '従業員管理',
     '/kintai/departments': '部署管理',
@@ -212,5 +200,58 @@ function BreadcrumbLabel({ pathname }: { pathname: string }) {
       <span className="text-slate-300">/</span>
       <span className="text-slate-600">{label}</span>
     </>
+  )
+}
+
+function UserMenu({ name, email, image, plan, onSignOut }: { name: string; email: string; image: string; plan: string; onSignOut: () => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  return (
+    <div ref={ref} className="relative">
+      <button onClick={() => setOpen(!open)} className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 transition-colors">
+        {image ? (
+          <img src={image} alt={name} className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-200" />
+        ) : (
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center text-white text-sm font-bold ring-2 ring-purple-200">
+            {name[0]}
+          </div>
+        )}
+        <span className="text-sm font-bold text-slate-700 hidden sm:block">{name}</span>
+        <span className="material-symbols-outlined text-slate-400 text-lg hidden sm:block">expand_more</span>
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 py-2 overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100">
+            <p className="text-sm font-black text-slate-800">{name}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{email}</p>
+            <span className="inline-block mt-1.5 text-xs font-bold px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full">{plan.toUpperCase()} プラン</span>
+          </div>
+          <div className="py-1">
+            <Link href="/kintai/pricing" onClick={() => setOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+              <span className="material-symbols-outlined text-lg text-amber-500">diamond</span>
+              料金プラン
+            </Link>
+            <Link href="/kintai/settings" onClick={() => setOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors">
+              <span className="material-symbols-outlined text-lg text-slate-400">settings</span>
+              設定
+            </Link>
+          </div>
+          <div className="border-t border-slate-100 py-1">
+            <button onClick={onSignOut} className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors w-full text-left">
+              <span className="material-symbols-outlined text-lg">logout</span>
+              ログアウト
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }

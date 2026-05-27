@@ -1,9 +1,23 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { KINTAI_PRICING } from '@/lib/pricing'
 
 export default function KintaiPricingPage() {
+  const [userPlan, setUserPlan] = useState<string>('FREE')
+  useEffect(() => {
+    fetch('/api/kintai/usage').then(r => r.json()).then(d => setUserPlan(d.plan || 'FREE')).catch(() => {})
+  }, [])
+
+  const getPlanLevel = (planId: string) => {
+    if (planId.includes('enterprise')) return 4
+    if (planId.includes('pro')) return 3
+    if (planId.includes('starter')) return 2
+    return 1
+  }
+  const userLevel = getPlanLevel(userPlan.toLowerCase())
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
 
@@ -121,7 +135,7 @@ export default function KintaiPricingPage() {
                         : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                 }`}
               >
-                {plan.cta}
+                {getPlanLevel(plan.id) <= userLevel ? '✅ 利用中' : plan.cta}
               </Link>
             </div>
           ))}
