@@ -111,9 +111,7 @@ export async function POST(req: NextRequest) {
         if (hasClockIn && !hasClockOut) {
           return NextResponse.json({ error: '既に出勤済みです。先に退勤してください。' }, { status: 400 })
         }
-        if (hasClockOut) {
-          return NextResponse.json({ error: '本日は既に退勤済みです。' }, { status: 400 })
-        }
+        // 退勤後の再出勤を許可（シフト・深夜勤務対応）
         break
 
       case 'clock_out':
