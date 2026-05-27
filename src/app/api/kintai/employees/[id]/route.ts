@@ -23,7 +23,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
     const employee = await prisma.kintaiEmployee.findFirst({
       where: { id: p.id, organizationId: kctx.organizationId },
-      include: { department: true, workRule: true, member: { select: { role: true } } },
+      include: { department: true, workRule: true, member: { select: { id: true, role: true, status: true } } },
     })
     if (!employee) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
 
@@ -65,7 +65,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const employee = await prisma.kintaiEmployee.update({
       where: { id: p.id },
       data,
-      include: { department: true, workRule: true, member: { select: { id: true, role: true } } },
+      include: { department: true, workRule: true, member: { select: { id: true, role: true, status: true, inviteToken: true } } },
     })
 
     // SEC: ロール変更の検証

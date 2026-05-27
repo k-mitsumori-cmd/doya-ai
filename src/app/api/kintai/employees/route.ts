@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     const [employees, total] = await Promise.all([
       prisma.kintaiEmployee.findMany({
         where,
-        include: { department: true, workRule: true, member: { select: { role: true } } },
+        include: { department: true, workRule: true, member: { select: { id: true, role: true, status: true, inviteToken: true } } },
         orderBy: { name: 'asc' },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
           },
         },
       },
-      include: { department: true, workRule: true, member: { select: { role: true } } },
+      include: { department: true, workRule: true, member: { select: { id: true, role: true, status: true, inviteToken: true } } },
     })
 
     return NextResponse.json({ employee }, { status: 201 })
