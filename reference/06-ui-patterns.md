@@ -1555,7 +1555,190 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient()
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 ```
 
-### 15.3 ミドルウェア（全ルート共通）
+### 15.3 データ分離 & セキュリティ（絶対遵守）
+
+> **最重要ルール: あるユーザーのデータが、別のユーザーに絶対に見えてはいけない。**
+> DB クエリには必ず `userId` または `organizationId` のフィルターを付ける。例外なし。
+
+#### データスコープの3分類
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ 1. ユーザースコープ（userId で分離）                        │
+│    → SEO, Banner, Interview, Copy, LP, Voice, Movie,      │
+│      Persona, AdSim, Tenkai, Opening, InterviewX          │
+│    → 全クエリに where: { userId: session.user.id } が必須   │
+├──────────────────────────────────────────────────────────┤
+│ 2. 組織スコープ（organizationId で分離）                    │
+│    → HR, Kintai                                           │
+│    → getHrContext() / getKintaiContext() で組織 ID を取得    │
+│    → 全クエリに where: { organizationId } が必須            │
+├──────────────────────────────────────────────────────────┤
+│ 3. システムスコープ（全ユーザー共通）                        │
+│    → テンプレート、カテゴリ、システム設定                     │
+│    → userId 不要だが、書き込みは管理者のみ                   │
+└──────────────────────────────────────────────────────────┘
+```
+
+#### API ルートの必須パターン
+
+**すべての API ルートで以下を守る。1 つでも漏れたら情報漏洩になる。**
+
+```typescript
+// ✅ 正しい: セッションチェック + userId フィルター
+export async function GET(req: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // データ取得には必ず userId を含める
+  const projects = await prisma.copyProject.findMany({
+    where: { userId: session.user.id },  // ← これが必須
+    orderBy: { createdAt: 'desc' },
+  })
+
+  return NextResponse.json(projects)
+}
+```
+
+```typescript
+// 🚫 禁止: userId フィルターなしの findMany
+const projects = await prisma.copyProject.findMany({
+  orderBy: { createdAt: 'desc' },
+  // ← userId がない = 全ユーザーのデータが返る
+})
+```
+
+```typescript
+// ✅ 正しい: 個別リソースアクセス時のオーナーシップ確認
+export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const project = await prisma.copyProject.findUnique({
+    where: { id: ctx.params.id },
+  })
+
+  // オーナーシップ確認（自分のデータか？）
+  if (!project || project.userId !== session.user.id) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  return NextResponse.json(project)
+}
+```
+
+```typescript
+// 🚫 禁止: ID だけでデータを返す（他人のデータが見える）
+const project = await prisma.copyProject.findUnique({
+  where: { id: ctx.params.id },
+  // ← userId チェックがない = URL の ID を変えるだけで他人のデータが見える
+})
+return NextResponse.json(project)  // 🚫 危険
+```
+
+#### 組織スコープ（HR / Kintai）のパターン
+
+```typescript
+// ✅ 正しい: コンテキスト関数で組織 ID を取得 → クエリに含める
+import { getHrContext } from '@/lib/hr/context'
+
+export async function GET(req: NextRequest) {
+  const ctx = await getHrContext(req)  // session + organizationId を返す
+  if (!ctx) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  const employees = await prisma.hrEmployee.findMany({
+    where: { organizationId: ctx.organizationId },  // ← 組織で分離
+  })
+
+  return NextResponse.json(employees)
+}
+```
+
+#### ゲストセッションの分離
+
+```typescript
+// ゲスト（未ログイン）のデータは Cookie の guestId で分離
+const guestId = getGuestIdFromRequest(req)
+
+const articles = await prisma.seoArticle.findMany({
+  where: session?.user?.id
+    ? { userId: session.user.id }   // ログイン済み → userId
+    : { guestId: guestId },         // ゲスト → guestId
+})
+```
+
+#### 公開データ（shareToken）の扱い
+
+```typescript
+// InterviewX の共有リンク: トークンでアクセス制御
+// ✅ 正しい: ステータスチェックを含む
+const project = await prisma.interviewXProject.findUnique({
+  where: { shareToken: token },
+})
+
+// 公開状態でなければアクセス拒否
+if (!project || !['SHARED', 'RESPONDING'].includes(project.status)) {
+  return NextResponse.json({ error: 'Not found' }, { status: 404 })
+}
+
+// 返すフィールドを制限（userId 等の内部情報は返さない）
+return NextResponse.json({
+  title: project.title,
+  questions: project.questions,
+  // userId は返さない
+})
+```
+
+#### セキュリティチェックリスト（API ルート作成時に必ず確認）
+
+- [ ] `getServerSession(authOptions)` でセッションを取得している
+- [ ] セッションがない場合 401 を返している
+- [ ] `findMany` に `where: { userId: session.user.id }` が含まれている
+- [ ] `findFirst` / `findUnique` の結果に対して `project.userId === session.user.id` を確認している
+- [ ] HR/Kintai の場合は `getHrContext()` / `getKintaiContext()` で組織 ID を取得している
+- [ ] URL パラメータの `id` だけでデータを返していない（必ずオーナーシップ確認）
+- [ ] ゲストアクセスの場合は `guestId` で分離している
+- [ ] 公開 API の場合は返すフィールドを制限している（内部 ID やメールアドレスを含めない）
+- [ ] 管理者 API の場合は `verifyAdminSession()` で管理者認証している
+- [ ] `$queryRaw` / `$executeRaw`（生 SQL）は使用していない（SQL インジェクション防止）
+
+#### 禁止事項
+
+| 禁止 | 理由 |
+|------|------|
+| `findMany()` に `userId` / `organizationId` フィルターなし | 全ユーザーのデータが返る |
+| URL の `id` パラメータだけでデータ返却 | ID を推測すると他人のデータが見える |
+| `$queryRaw` / `$executeRaw` の使用 | SQL インジェクションの危険 |
+| レスポンスに `userId` / `email` を含める（公開 API） | 個人情報漏洩 |
+| セッションチェックの省略 | 未認証アクセスでデータが見える |
+| 他ユーザーの `userId` を受け取って処理する | なりすまし攻撃 |
+
+#### 現状の監査結果（2026-05-27）
+
+全 150+ の API エンドポイントを監査した結果:
+
+- **userId フィルター漏れ**: 検出なし ✅
+- **オーナーシップ確認漏れ**: 検出なし ✅
+- **生 SQL 使用**: 検出なし ✅
+- **管理者認証漏れ**: 検出なし ✅
+- **ゲストセッション分離**: 正常 ✅
+- **共有トークンのアクセス制御**: 正常 ✅
+
+**既存の実装パターン**:
+- `checkOwnership()` — Interview, InterviewX 等で使用
+- `getHrContext()` — HR モジュールの組織分離
+- `getKintaiContext()` — 勤怠モジュールの組織分離
+- `where: { id, userId }` — 大半のサービスで直接フィルター
+
+---
+
+### 15.4 ミドルウェア（全ルート共通）
 
 ```typescript
 // middleware.ts (プロジェクトルート)

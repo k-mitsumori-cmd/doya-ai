@@ -89,6 +89,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '氏名とメールは必須です' }, { status: 400 })
     }
 
+    // SEC: departmentId/workRuleId が同じ組織に属するか検証
+    if (departmentId) {
+      const dept = await prisma.kintaiDepartment.findFirst({ where: { id: departmentId, organizationId: ctx.organizationId } })
+      if (!dept) return NextResponse.json({ error: '指定された部署が見つかりません' }, { status: 400 })
+    }
+    if (workRuleId) {
+      const rule = await prisma.kintaiWorkRule.findFirst({ where: { id: workRuleId, organizationId: ctx.organizationId } })
+      if (!rule) return NextResponse.json({ error: '指定された就業ルールが見つかりません' }, { status: 400 })
+    }
+
     // SEC: ロール値のホワイトリスト検証 + 権限エスカレーション防止
     const ALLOWED_ROLES = ['employee', 'manager', 'hr_admin'] as const
     const assignRole = ALLOWED_ROLES.includes(role) ? role : 'employee'
