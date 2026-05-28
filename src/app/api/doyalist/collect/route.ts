@@ -6,25 +6,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { collectCompanies } from '@/lib/doyalist/collect'
 import {
   getUserDoyalistLimits,
   countMonthlyCompanies,
 } from '@/lib/doyalist/limits'
 
-interface GeneratedCompany {
-  name: string
-  website?: string
-  industry?: string
-  region?: string
-  size?: string
-  description?: string
-  score?: number
-}
-
 /**
  * POST /api/doyalist/collect
- * Geminiで企業候補を生成し、DoyalistCompany レコードを作成
+ * gBizINFO（経済産業省）+ 法人番号API（国税庁）から実企業を抽出し、
+ * DoyalistCompany レコードを作成
  * Body: { projectId: string, count: number }
  */
 export async function POST(req: NextRequest) {
@@ -79,69 +70,59 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const industry = project.industry || '指定なし'
-    const region = project.region || '日本全国'
-    const targetSize = project.targetSize || '指定なし'
-    const keywords = project.keywords || ''
+    const industry = project.industry || ''
+    const region = project.region || ''
+    const keywords = (project.keywords || '').split(/[,、 \n]/).map(s => s.trim()).filter(Boolean)
 
-    const prompt = [
-      `「${industry}」業界、${region}地域、${targetSize}規模の架空でリアルな日本企業を${count}社、JSON形式で提案してください。`,
-      keywords ? `関連キーワード: ${keywords}` : '',
-      '出力は { "companies": [...] } のオブジェクト形式で、companies配列の各要素は以下のフィールドを持つこと:',
-      '- name: 企業名（架空でも実在感のある日本企業名）',
-      '- website: ウェブサイトURL（架空のドメインでよい。例: https://example-corp.co.jp）',
-      '- industry: 業種',
-      '- region: 所在地（都道府県・市区町村）',
-      '- size: 規模（従業員数の目安。例: "50〜100名"）',
-      '- description: 事業概要（100字程度）',
-      '- score: 営業優先度スコア（0-100の整数。営業対象として魅力的なほど高スコア）',
-      '注意: 実在企業を模倣しない。あくまで営業ターゲットとして参考になる架空企業を提案する。',
-    ]
-      .filter(Boolean)
-      .join('\n')
+    // 検索キーワード: ユーザー入力 > 業界
+    const searchKeywords = keywords.length > 0 ? keywords : (industry ? [industry] : ['企業'])
 
-    let result: { companies?: GeneratedCompany[] }
+    let collected: Awaited<ReturnType<typeof collectCompanies>>
     try {
-      result = await geminiGenerateJson<{ companies?: GeneratedCompany[] }>({
-        prompt,
-        model: GEMINI_TEXT_MODEL_DEFAULT,
+      collected = await collectCompanies({
+        criteria: {
+          keywords: searchKeywords,
+          areas: region && region !== '全国' ? [region] : undefined,
+          industries: industry ? [industry] : undefined,
+        } as any,
+        maxResults: count,
+        sources: ['gbizinfo', 'corporate_number'],
       })
     } catch (e: any) {
-      console.error('[doyalist/collect] gemini error', e)
+      console.error('[doyalist/collect] API error', e)
       return NextResponse.json(
-        { error: 'AIによる企業生成に失敗しました。しばらく経ってから再試行してください' },
+        { error: '企業データの取得に失敗しました。しばらく経ってから再試行してください。' },
         { status: 502 }
       )
     }
 
-    const generated = Array.isArray(result?.companies) ? result.companies : []
-    if (generated.length === 0) {
+    if (collected.length === 0) {
       return NextResponse.json(
-        { error: 'AIから企業候補を取得できませんでした' },
-        { status: 502 }
+        { error: '該当する企業が見つかりませんでした。キーワードを変更してお試しください。' },
+        { status: 404 }
       )
     }
 
-    // DB保存（createManyで一括挿入: パフォーマンス改善）
-    const rows = generated.slice(0, count).map((c: any) => ({
+    // DB保存（実企業データ）
+    const rows = collected.slice(0, count).map((c) => ({
       projectId,
-      name: (c.name || '名称未設定').toString().slice(0, 200),
+      name: c.companyName.slice(0, 200),
       website: c.website || null,
       industry: c.industry || project.industry || null,
-      region: c.region || project.region || null,
-      size: c.size || project.targetSize || null,
-      description: c.description || null,
-      score: typeof c.score === 'number' && c.score >= 0 && c.score <= 100
-        ? Math.round(c.score)
-        : Math.floor(Math.random() * 46) + 50,
+      region: c.prefecture || c.address || project.region || null,
+      size: c.employeeCount || project.targetSize || null,
+      description: [c.address, c.representative ? `代表: ${c.representative}` : '', c.capital ? `資本金: ${c.capital}` : ''].filter(Boolean).join(' / ') || null,
+      contactPerson: c.representative || null,
+      score: null,
       status: 'new',
-      source: 'collected',
+      source: c.source,
     }))
     await prisma.doyalistCompany.createMany({ data: rows })
 
     // 直近作成データを取得して返す（createManyはレコードを返さないため）
+    const sourceTypes = ['corporate_number', 'gbizinfo', 'corporate_number+gbizinfo', 'gbizinfo+corporate_number']
     const created = await prisma.doyalistCompany.findMany({
-      where: { projectId, source: 'collected' },
+      where: { projectId, source: { in: sourceTypes } },
       orderBy: { createdAt: 'desc' },
       take: rows.length,
     })

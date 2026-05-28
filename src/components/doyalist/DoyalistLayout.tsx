@@ -50,7 +50,7 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
   // Loading state
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-violet-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0a1530] via-white to-[#0a1530]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-12 h-12 rounded-full border-4 border-[#7f19e6]/20 border-t-[#7f19e6] animate-spin" />
           <p className="text-sm text-slate-400 font-medium">読み込み中...</p>
@@ -63,7 +63,7 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
   if (!session?.user) {
     const callback = encodeURIComponent(pathname || '/doyalist')
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-violet-50 p-6">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0a1530] via-white to-[#0a1530] p-6">
         <div className="text-center bg-white rounded-3xl border border-slate-200 shadow-2xl p-12 max-w-md">
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-[#7f19e6]/30">
             <span className="material-symbols-outlined" style={{ fontSize: 44 }}>list_alt</span>
@@ -88,14 +88,14 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
   const plan = String((usage?.plan as any) || (session.user as any)?.plan || 'FREE').toUpperCase()
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50/30">
+    <div className="flex min-h-screen bg-[#0a1530]">
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-40 p-2 bg-white rounded-xl shadow-lg border border-slate-200"
+        className="lg:hidden fixed top-4 left-4 z-40 p-2 bg-[#13234d] rounded-xl shadow-lg border border-cyan-400/30"
         aria-label="メニューを開く"
       >
-        <span className="material-symbols-outlined text-slate-600">menu</span>
+        <span className="material-symbols-outlined text-cyan-300">menu</span>
       </button>
 
       {/* Mobile overlay + sidebar */}
@@ -119,16 +119,10 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
       {/* Main content */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 lg:px-6 py-3 shadow-sm">
+        <header className="sticky top-0 z-30 bg-[#13234d]/90 backdrop-blur-md border-b border-cyan-400/20 px-4 lg:px-6 py-3 shadow-sm">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-slate-500 ml-12 lg:ml-0">
-              <span
-                className="material-symbols-outlined text-[#7f19e6]"
-                style={{ fontVariationSettings: "'FILL' 1" }}
-              >
-                list_alt
-              </span>
-              <span className="font-black text-slate-800">ドヤリスト</span>
+            <div className="flex items-center gap-2 text-sm text-cyan-300/70 ml-12 lg:ml-0">
+              <img src="/doyalist/logo.png" alt="ドヤリスト" className="h-7 hidden lg:block" />
               <BreadcrumbLabel pathname={pathname} />
             </div>
 
@@ -158,22 +152,11 @@ function Sidebar({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50 w-64 border-r border-slate-100">
+    <div className="flex flex-col h-full bg-[#0a1530] w-64 border-r border-cyan-400/20">
       {/* Logo */}
-      <div className="p-5 mb-1">
-        <Link href="/doyalist" className="flex items-center gap-2.5" onClick={onNavigate}>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center text-white shadow-md shadow-[#7f19e6]/20">
-            <span
-              className="material-symbols-outlined"
-              style={{ fontSize: 24, fontVariationSettings: "'FILL' 1" }}
-            >
-              list_alt
-            </span>
-          </div>
-          <div>
-            <p className="text-base font-black text-slate-800 leading-tight">ドヤリスト</p>
-            <p className="text-[10px] font-bold text-slate-400">営業リスト生成AI</p>
-          </div>
+      <div className="p-4 mb-1 border-b border-cyan-400/10">
+        <Link href="/doyalist" className="block" onClick={onNavigate}>
+          <img src="/doyalist/logo.png" alt="ドヤリスト" className="w-full h-auto" />
         </Link>
       </div>
 
@@ -187,10 +170,10 @@ function Sidebar({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
               href={item.href}
               onClick={onNavigate}
               aria-current={active ? 'page' : undefined}
-              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-base transition-all ${
+              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm transition-all ${
                 active
-                  ? 'bg-purple-100 text-[#7f19e6] font-black shadow-sm'
-                  : 'text-slate-600 font-bold hover:bg-slate-100'
+                  ? 'bg-gradient-to-r from-cyan-400 to-lime-300 text-[#0a1530] font-black shadow-lg shadow-cyan-400/30'
+                  : 'text-cyan-200 font-bold hover:bg-cyan-400/10'
               }`}
             >
               <span
@@ -207,14 +190,14 @@ function Sidebar({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
       </nav>
 
       {/* Bottom CTA */}
-      <div className="p-4 border-t border-slate-100">
-        <div className="rounded-2xl bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] p-4 text-white shadow-lg shadow-[#7f19e6]/20">
-          <p className="text-xs font-bold opacity-80">AIで営業を加速</p>
-          <p className="text-sm font-black mt-0.5 leading-snug">AIで企業リスト・営業文を自動生成</p>
+      <div className="p-4 border-t border-cyan-400/20">
+        <div className="rounded-2xl bg-gradient-to-br from-cyan-400/20 to-lime-300/20 border border-cyan-400/30 p-4 text-cyan-100 shadow-lg">
+          <p className="text-xs font-bold opacity-80">⚡ AIで営業を加速</p>
+          <p className="text-sm font-black mt-0.5 leading-snug text-white">企業リスト・営業文を自動生成</p>
           <Link
             href="/doyalist"
             onClick={onNavigate}
-            className="mt-3 inline-flex items-center gap-1 text-xs font-bold bg-white/20 hover:bg-white/30 transition-colors px-3 py-1.5 rounded-full"
+            className="mt-3 inline-flex items-center gap-1 text-xs font-bold bg-cyan-400 text-[#0a1530] hover:bg-cyan-300 transition-colors px-3 py-1.5 rounded-full"
           >
             <span className="material-symbols-outlined text-sm">auto_awesome</span>
             リスト作成へ

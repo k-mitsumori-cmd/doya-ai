@@ -8,7 +8,7 @@ export default function PhoneToolPage() {
       title="荷電スクリプト 作成"
       subtitle="電話営業用のトークスクリプトをAIが作成"
       emoji="📞"
-      charHero="/kintai/characters/point_解説.png"
+      
     />
   )
 }

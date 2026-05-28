@@ -8,7 +8,7 @@ export default function EmailToolPage() {
       title="メール文面 作成"
       subtitle="新規開拓メール（件名+本文）をAIが作成"
       emoji="📧"
-      charHero="/kintai/characters/present_プレゼン.png"
+      
     />
   )
 }

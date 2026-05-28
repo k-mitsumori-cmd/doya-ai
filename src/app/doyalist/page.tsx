@@ -15,25 +15,10 @@ interface Company {
   score?: number | null
 }
 
-const INDUSTRIES = ['IT・ソフトウェア', '製造業', '小売・EC', '医療・介護', '教育', '金融・保険', '不動産', '飲食', '物流', '建設', 'その他']
+const INDUSTRIES = ['IT・ソフトウェア', '製造業', '小売・EC', '医療・介護', '教育', '金融・保険', '不動産', '飲食', '物流', '建設', 'コンサル', '広告・マーケ', '人材', 'その他']
 const REGIONS = ['全国', '東京都', '神奈川県', '埼玉県', '千葉県', '大阪府', '愛知県', '京都府', '兵庫県', '福岡県', '北海道', 'その他']
 const SIZES = ['指定なし', 'スタートアップ（〜20名）', '中小企業（20〜300名）', '中堅企業（300〜1000名）', '大企業（1000名〜）']
 const COUNTS = [5, 10, 15, 20]
-
-const CHARS = {
-  hello: '/kintai/characters/hello_挨拶.png',
-  thinking: '/kintai/characters/thinking_考え中.png',
-  working: '/kintai/characters/working_作業中.png',
-  jump: '/kintai/characters/jump_大喜び.png',
-  success: '/kintai/characters/success_成功.png',
-  present: '/kintai/characters/present_プレゼン.png',
-  point: '/kintai/characters/point_解説.png',
-  thumbsup: '/kintai/characters/thumbsup_いいね.png',
-  love: '/kintai/characters/love_大好き.png',
-  surprise: '/kintai/characters/surprise_驚き.png',
-  error: '/kintai/characters/error_泣き.png',
-  sleep: '/kintai/characters/sleep_居眠り.png',
-}
 
 export default function DoyalistHomePage() {
   const { data: session, status } = useSession()
@@ -44,19 +29,15 @@ export default function DoyalistHomePage() {
   const [count, setCount] = useState(10)
   const [generating, setGenerating] = useState(false)
   const [companies, setCompanies] = useState<Company[]>([])
-  const [projectId, setProjectId] = useState<string | null>(null)
   const [savedListId, setSavedListId] = useState<string | null>(null)
 
-  // 既存の「デフォルトプロジェクト」を取得 or 作成（裏で勝手にやる）
   const ensureDefaultProject = async (overrides?: { industry?: string; region?: string; size?: string; keywords?: string }): Promise<string | null> => {
     try {
-      // 既存プロジェクト一覧取得
       const r = await fetch('/api/doyalist/projects')
       const data = await r.json()
       const list = Array.isArray(data) ? data : (data?.projects || [])
       const existing = list.find((p: any) => p.name === 'マイリスト')
       if (existing) {
-        // 設定を更新
         await fetch(`/api/doyalist/projects/${existing.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
@@ -69,7 +50,6 @@ export default function DoyalistHomePage() {
         })
         return existing.id
       }
-      // 作成
       const create = await fetch('/api/doyalist/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -103,7 +83,6 @@ export default function DoyalistHomePage() {
         toast.error('準備に失敗しました', { id: tid })
         return
       }
-      setProjectId(pid)
 
       const res = await fetch('/api/doyalist/collect', {
         method: 'POST',
@@ -139,10 +118,10 @@ export default function DoyalistHomePage() {
 
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50">
+      <div className="min-h-screen flex items-center justify-center bg-[#0a1530]">
         <div className="flex flex-col items-center gap-4">
-          <img src={CHARS.thinking} alt="" className="w-32 h-32 animate-bounce" />
-          <p className="text-sm font-bold text-slate-500">読み込み中...</p>
+          <img src="/doyalist/logo.png" alt="ドヤリスト" className="w-48 animate-pulse" />
+          <p className="text-sm font-bold text-cyan-300">読み込み中...</p>
         </div>
       </div>
     )
@@ -150,16 +129,13 @@ export default function DoyalistHomePage() {
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-violet-50 p-6">
-        <div className="bg-white rounded-3xl shadow-2xl p-10 max-w-md w-full text-center space-y-5">
-          <img src={CHARS.hello} alt="" className="w-32 h-32 mx-auto" />
-          <div>
-            <h1 className="text-2xl font-black text-slate-800 mb-2">ドヤリストへようこそ！</h1>
-            <p className="text-sm font-bold text-slate-500">AIが営業先リストを自動で作ります 🚀</p>
-          </div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0a1530] via-[#13234d] to-[#0a1530] p-6">
+        <div className="bg-[#13234d]/80 backdrop-blur border-2 border-cyan-400/30 rounded-3xl shadow-2xl shadow-cyan-500/20 p-10 max-w-md w-full text-center space-y-5">
+          <img src="/doyalist/logo.png" alt="ドヤリスト" className="w-64 mx-auto" />
+          <p className="text-sm font-bold text-cyan-200">AIが営業先リストを自動で作ります 🚀</p>
           <a
             href={`/auth/signin?callbackUrl=${encodeURIComponent('/doyalist')}`}
-            className="block w-full py-3.5 bg-gradient-to-r from-[#7f19e6] to-pink-500 text-white font-black rounded-2xl shadow-lg hover:shadow-xl transition-shadow"
+            className="block w-full py-3.5 bg-gradient-to-r from-cyan-400 to-lime-300 text-[#0a1530] font-black rounded-2xl shadow-lg hover:shadow-cyan-400/50 hover:shadow-2xl transition-all"
           >
             Googleでログイン
           </a>
@@ -169,91 +145,51 @@ export default function DoyalistHomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-violet-50 p-4 lg:p-8">
-      <Toaster position="top-center" />
+    <div className="min-h-screen bg-gradient-to-br from-[#0a1530] via-[#13234d] to-[#0a1530] p-4 lg:p-8 text-white">
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          style: { background: '#13234d', color: '#fff', border: '1px solid rgba(56, 189, 248, 0.3)' },
+        }}
+      />
 
       <div className="max-w-4xl mx-auto space-y-6 pb-20">
-        {/* ===== Hero ===== */}
+        {/* ===== Logo Hero ===== */}
         <div className="text-center pt-4 pb-2">
-          <div className="flex items-center justify-center gap-3 mb-3">
-            <img src={CHARS.hello} alt="" className="w-20 h-20" />
-            <img src={CHARS.present} alt="" className="w-24 h-24" />
-            <img src={CHARS.thumbsup} alt="" className="w-20 h-20" />
-          </div>
-          <h1 className="text-3xl lg:text-4xl font-black bg-gradient-to-r from-[#7f19e6] via-pink-500 to-rose-500 bg-clip-text text-transparent">
-            ドヤリスト
-          </h1>
-          <p className="text-sm font-bold text-slate-500 mt-2">条件を選ぶだけ✨ AIが営業リストを作ります</p>
+          <img src="/doyalist/logo.png" alt="ドヤリスト" className="w-72 lg:w-96 mx-auto drop-shadow-2xl" />
+          <p className="text-sm font-bold text-cyan-300 mt-3">⚡ 条件を選ぶだけ。AIが営業リストを爆速生成 ⚡</p>
         </div>
 
         {/* ===== Form Card ===== */}
-        <div className="bg-white rounded-3xl shadow-xl shadow-purple-100/50 border-2 border-purple-100 p-6 lg:p-8 space-y-6">
-          <div className="flex items-center gap-3 pb-3 border-b border-purple-100">
-            <img src={CHARS.point} alt="" className="w-14 h-14" />
+        <div className="bg-[#13234d]/80 backdrop-blur rounded-3xl shadow-2xl shadow-cyan-500/10 border-2 border-cyan-400/30 p-6 lg:p-8 space-y-6">
+          <div className="flex items-center gap-3 pb-4 border-b border-cyan-400/20">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-lime-300 flex items-center justify-center text-2xl shadow-lg">
+              ⚙️
+            </div>
             <div>
-              <h2 className="text-lg font-black text-slate-800">どんな企業を探しますか？</h2>
-              <p className="text-xs font-bold text-slate-400">業界・地域・規模を選んでください</p>
+              <h2 className="text-lg font-black text-white">どんな企業を探しますか？</h2>
+              <p className="text-xs font-bold text-cyan-300/80">業界・地域・規模を選んでください</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* 業界 */}
-            <div>
-              <label className="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
-                🏢 業界
-              </label>
-              <select
-                value={industry}
-                onChange={(e) => setIndustry(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-purple-200 rounded-2xl text-sm font-bold text-slate-700 bg-white focus:outline-none focus:border-[#7f19e6] focus:ring-2 focus:ring-purple-100"
-              >
-                {INDUSTRIES.map((i) => <option key={i} value={i}>{i}</option>)}
-              </select>
-            </div>
-            {/* 地域 */}
-            <div>
-              <label className="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
-                📍 地域
-              </label>
-              <select
-                value={region}
-                onChange={(e) => setRegion(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-purple-200 rounded-2xl text-sm font-bold text-slate-700 bg-white focus:outline-none focus:border-[#7f19e6] focus:ring-2 focus:ring-purple-100"
-              >
-                {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
-              </select>
-            </div>
-            {/* 規模 */}
+            <Field label="🏢 業界" value={industry} onChange={setIndustry} options={INDUSTRIES} />
+            <Field label="📍 地域" value={region} onChange={setRegion} options={REGIONS} />
             <div className="sm:col-span-2">
-              <label className="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
-                👥 企業規模
-              </label>
-              <select
-                value={size}
-                onChange={(e) => setSize(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-purple-200 rounded-2xl text-sm font-bold text-slate-700 bg-white focus:outline-none focus:border-[#7f19e6] focus:ring-2 focus:ring-purple-100"
-              >
-                {SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <Field label="👥 企業規模" value={size} onChange={setSize} options={SIZES} />
             </div>
-            {/* キーワード */}
             <div className="sm:col-span-2">
-              <label className="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
-                🔍 キーワード（任意）
-              </label>
+              <label className="block text-sm font-black text-cyan-200 mb-2">🔍 キーワード（任意）</label>
               <input
                 type="text"
                 value={keywords}
                 onChange={(e) => setKeywords(e.target.value)}
                 placeholder="例: SaaS, AI, 業務効率化"
-                className="w-full px-4 py-3 border-2 border-purple-200 rounded-2xl text-sm font-bold text-slate-700 bg-white placeholder:text-slate-300 focus:outline-none focus:border-[#7f19e6] focus:ring-2 focus:ring-purple-100"
+                className="w-full px-4 py-3 border-2 border-cyan-400/30 rounded-2xl text-sm font-bold text-white bg-[#0a1530]/60 placeholder:text-cyan-300/40 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30"
               />
             </div>
-            {/* 件数 */}
             <div className="sm:col-span-2">
-              <label className="block text-sm font-black text-slate-700 mb-2 flex items-center gap-1">
-                📊 生成する件数
-              </label>
+              <label className="block text-sm font-black text-cyan-200 mb-2">📊 生成する件数</label>
               <div className="grid grid-cols-4 gap-2">
                 {COUNTS.map((c) => (
                   <button
@@ -261,8 +197,8 @@ export default function DoyalistHomePage() {
                     onClick={() => setCount(c)}
                     className={`py-3 rounded-2xl text-sm font-black transition-all ${
                       count === c
-                        ? 'bg-gradient-to-r from-[#7f19e6] to-pink-500 text-white shadow-lg scale-105'
-                        : 'bg-purple-50 text-slate-600 hover:bg-purple-100'
+                        ? 'bg-gradient-to-r from-cyan-400 to-lime-300 text-[#0a1530] shadow-lg shadow-cyan-400/50 scale-105'
+                        : 'bg-[#0a1530]/60 text-cyan-200 hover:bg-[#0a1530] border border-cyan-400/20'
                     }`}
                   >
                     {c}社
@@ -272,95 +208,88 @@ export default function DoyalistHomePage() {
             </div>
           </div>
 
-          {/* ===== Generate Button ===== */}
           <button
             onClick={handleGenerate}
             disabled={generating}
-            className="w-full py-4 bg-gradient-to-r from-[#7f19e6] via-pink-500 to-rose-500 text-white font-black text-lg rounded-2xl shadow-xl shadow-purple-300/50 hover:shadow-2xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            className="w-full py-4 bg-gradient-to-r from-cyan-400 via-sky-400 to-lime-300 text-[#0a1530] font-black text-lg rounded-2xl shadow-xl shadow-cyan-400/40 hover:shadow-2xl hover:shadow-cyan-400/60 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
           >
             {generating ? (
               <>
-                <img src={CHARS.working} alt="" className="w-8 h-8 animate-spin" />
+                <span className="inline-block animate-spin">⚡</span>
                 AIが頑張ってます...
               </>
             ) : (
               <>
-                <img src={CHARS.jump} alt="" className="w-8 h-8" />
-                リストを生成する 🚀
+                ⚡ リストを生成する 🚀
               </>
             )}
           </button>
         </div>
 
-        {/* ===== Results ===== */}
+        {/* ===== Loading ===== */}
         {generating && companies.length === 0 && (
-          <div className="bg-white rounded-3xl shadow-xl border-2 border-purple-100 p-10 text-center space-y-4">
-            <img src={CHARS.thinking} alt="" className="w-32 h-32 mx-auto animate-bounce" />
-            <p className="text-lg font-black text-slate-700">クマが企業を探しています...</p>
-            <p className="text-xs font-bold text-slate-400">⏰ 通常10〜30秒ほどかかります</p>
+          <div className="bg-[#13234d]/80 backdrop-blur rounded-3xl shadow-xl border-2 border-cyan-400/30 p-10 text-center space-y-4">
+            <div className="text-6xl animate-bounce">🐻</div>
+            <p className="text-lg font-black text-cyan-200">クマが企業を探しています...</p>
+            <p className="text-xs font-bold text-cyan-300/60">⏰ 通常10〜30秒ほどかかります</p>
           </div>
         )}
 
+        {/* ===== Results ===== */}
         {companies.length > 0 && (
-          <div className="bg-white rounded-3xl shadow-xl shadow-purple-100/50 border-2 border-purple-100 overflow-hidden">
-            <div className="p-6 bg-gradient-to-r from-purple-100 via-pink-50 to-rose-50 border-b-2 border-purple-100 flex items-center justify-between flex-wrap gap-3">
+          <div className="bg-[#13234d]/80 backdrop-blur rounded-3xl shadow-2xl shadow-cyan-500/10 border-2 border-cyan-400/30 overflow-hidden">
+            <div className="p-6 bg-gradient-to-r from-cyan-400/20 via-sky-400/20 to-lime-300/20 border-b-2 border-cyan-400/30 flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-3">
-                <img src={CHARS.success} alt="" className="w-14 h-14" />
+                <div className="text-3xl">🎉</div>
                 <div>
-                  <h2 className="text-lg font-black text-slate-800">{companies.length}社できました！</h2>
-                  <p className="text-xs font-bold text-slate-500">⬇️ ダウンロードで保存できます</p>
+                  <h2 className="text-lg font-black text-white">{companies.length}社できました！</h2>
+                  <p className="text-xs font-bold text-cyan-300">⬇️ ダウンロードで保存できます</p>
                 </div>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={downloadCSV}
-                  className="px-4 py-2.5 bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg hover:bg-emerald-600 active:scale-95 transition-all flex items-center gap-1.5"
-                >
+                <button onClick={downloadCSV} className="px-4 py-2.5 bg-lime-400 text-[#0a1530] font-black text-sm rounded-2xl shadow-lg hover:bg-lime-300 active:scale-95 transition-all">
                   📥 CSV
                 </button>
-                <button
-                  onClick={downloadExcel}
-                  className="px-4 py-2.5 bg-blue-500 text-white font-black text-sm rounded-2xl shadow-lg hover:bg-blue-600 active:scale-95 transition-all flex items-center gap-1.5"
-                >
+                <button onClick={downloadExcel} className="px-4 py-2.5 bg-cyan-400 text-[#0a1530] font-black text-sm rounded-2xl shadow-lg hover:bg-cyan-300 active:scale-95 transition-all">
                   📊 Excel
                 </button>
               </div>
             </div>
 
-            <div className="divide-y divide-purple-50">
+            <div className="divide-y divide-cyan-400/10">
               {companies.map((c, i) => (
-                <div key={c.id || i} className="p-5 hover:bg-purple-50/30 transition-colors">
+                <div key={c.id || i} className="p-5 hover:bg-cyan-400/5 transition-colors">
                   <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-[#7f19e6] to-pink-500 flex items-center justify-center text-white font-black shadow-md">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-lime-300 flex items-center justify-center text-[#0a1530] font-black shadow-md">
                       {i + 1}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <h3 className="text-base font-black text-slate-800">{c.name}</h3>
+                        <h3 className="text-base font-black text-white">{c.name}</h3>
                         {typeof c.score === 'number' && (
                           <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
-                            c.score >= 80 ? 'bg-emerald-100 text-emerald-700' :
-                            c.score >= 60 ? 'bg-amber-100 text-amber-700' :
-                            'bg-slate-100 text-slate-600'
+                            c.score >= 80 ? 'bg-lime-400/20 text-lime-300 border border-lime-400/30' :
+                            c.score >= 60 ? 'bg-cyan-400/20 text-cyan-300 border border-cyan-400/30' :
+                            'bg-slate-500/20 text-slate-300 border border-slate-500/30'
                           }`}>
                             スコア {c.score}
                           </span>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 text-xs font-bold text-slate-500 mb-2 flex-wrap">
+                      <div className="flex items-center gap-3 text-xs font-bold text-cyan-300/80 mb-2 flex-wrap">
                         {c.industry && <span>🏢 {c.industry}</span>}
                         {c.region && <span>📍 {c.region}</span>}
                         {c.size && <span>👥 {c.size}</span>}
                       </div>
                       {c.description && (
-                        <p className="text-sm text-slate-600 leading-relaxed line-clamp-2">{c.description}</p>
+                        <p className="text-sm text-cyan-100/80 leading-relaxed line-clamp-2">{c.description}</p>
                       )}
                       {c.website && (
                         <a
                           href={c.website.startsWith('http') ? c.website : `https://${c.website}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-block mt-2 text-xs font-bold text-[#7f19e6] hover:underline"
+                          className="inline-block mt-2 text-xs font-bold text-lime-300 hover:underline"
                         >
                           🔗 {c.website}
                         </a>
@@ -371,21 +300,36 @@ export default function DoyalistHomePage() {
               ))}
             </div>
 
-            <div className="p-5 bg-gradient-to-r from-purple-50 to-pink-50 border-t-2 border-purple-100 flex items-center justify-center gap-2">
-              <img src={CHARS.love} alt="" className="w-10 h-10" />
-              <p className="text-sm font-bold text-slate-600">いいリストができましたね！</p>
+            <div className="p-5 bg-gradient-to-r from-cyan-400/10 to-lime-300/10 border-t-2 border-cyan-400/30 flex items-center justify-center gap-2">
+              <span className="text-2xl">🐻</span>
+              <p className="text-sm font-bold text-cyan-200">いいリストができましたね！</p>
             </div>
           </div>
         )}
 
         {/* ===== Empty hint ===== */}
         {companies.length === 0 && !generating && (
-          <div className="bg-white/60 backdrop-blur rounded-3xl border-2 border-dashed border-purple-200 p-8 text-center space-y-3">
-            <img src={CHARS.sleep} alt="" className="w-24 h-24 mx-auto opacity-80" style={{ animation: 'pulse 3s infinite' }} />
-            <p className="text-base font-black text-slate-500">条件を選んで「リストを生成する」を押してください 👆</p>
+          <div className="bg-[#13234d]/40 backdrop-blur rounded-3xl border-2 border-dashed border-cyan-400/30 p-8 text-center space-y-3">
+            <div className="text-5xl">💤</div>
+            <p className="text-base font-black text-cyan-200">条件を選んで「リストを生成する」を押してください 👆</p>
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+function Field({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: string[] }) {
+  return (
+    <div>
+      <label className="block text-sm font-black text-cyan-200 mb-2">{label}</label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full px-4 py-3 border-2 border-cyan-400/30 rounded-2xl text-sm font-bold text-white bg-[#0a1530]/60 focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 cursor-pointer"
+      >
+        {options.map((o) => <option key={o} value={o} className="bg-[#0a1530]">{o}</option>)}
+      </select>
     </div>
   )
 }
