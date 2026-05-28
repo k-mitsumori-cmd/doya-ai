@@ -234,19 +234,24 @@ export async function GET(request: NextRequest) {
       ? parseFloat(((proUsers / totalUsers) * 100).toFixed(1))
       : 0
 
-    // 生成数の前月比
-    const generationGrowth = lastMonthGenerations > 0
-      ? parseFloat((((monthGenerations - lastMonthGenerations) / lastMonthGenerations) * 100).toFixed(1))
-      : (monthGenerations > 0 ? 100 : 0)
+    // 生成数の前月比（月初で当月データがほぼ無い場合は誤解を招くため0扱い）
+    const now2 = new Date()
+    const dayOfMonth = now2.getDate()
+    const generationGrowth = lastMonthGenerations === 0
+      ? (monthGenerations > 0 ? 100 : 0)
+      : (monthGenerations === 0 && dayOfMonth <= 3)
+        ? 0  // 月初3日以内かつ当月0件は「計測中」扱い（-100%を出さない）
+        : parseFloat((((monthGenerations - lastMonthGenerations) / lastMonthGenerations) * 100).toFixed(1))
 
     // 平均生成数/ユーザー
     const avgGenerationsPerUser = totalUsers > 0
       ? parseFloat((totalGenerations / totalUsers).toFixed(1))
       : 0
 
-    // 月間売上計算（コンプリートパック: PRO=9,980円, ENTERPRISE=49,800円）
-    const COMPLETE_PACK_PRO_PRICE = 9980
-    const COMPLETE_PACK_ENTERPRISE_PRICE = 49800
+    // 月間売上計算 — 料金は src/lib/pricing.ts と同期
+    const { SEO_PRICING } = await import('@/lib/pricing')
+    const COMPLETE_PACK_PRO_PRICE = SEO_PRICING.plans.find(p => p.id === 'seo-pro')?.price || 9980
+    const COMPLETE_PACK_ENTERPRISE_PRICE = SEO_PRICING.plans.find(p => p.id === 'seo-enterprise')?.price || 49800
     // PRO会員（Stripe未連携）とEnterprise会員（Stripe連携）を分けて計算
     const proOnlyUsers = Math.max(0, proUsers - stripeUsers)
     const monthlyRevenue = (proOnlyUsers * COMPLETE_PACK_PRO_PRICE) + (stripeUsers * COMPLETE_PACK_ENTERPRISE_PRICE)

@@ -576,7 +576,7 @@ export default function AdminUsersPage() {
                     <td className="px-6 py-4">
                       {(() => {
                         // 共通プランを取得（bannerとwritingは連動）
-                        const bannerSub = user.serviceSubscriptions.find((s) => s.serviceId === 'banner')
+                        const bannerSub = user.serviceSubscriptions?.find((s) => s.serviceId === 'banner')
                         const currentPlan = bannerSub?.plan || user.plan || 'FREE'
                         const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
                         return (
@@ -600,7 +600,7 @@ export default function AdminUsersPage() {
                     {/* バナー残り生成数 列 */}
                     <td className="px-6 py-4">
                       {(() => {
-                        const bannerSub = user.serviceSubscriptions.find((s) => s.serviceId === 'banner')
+                        const bannerSub = user.serviceSubscriptions?.find((s) => s.serviceId === 'banner')
                         const currentPlan = bannerSub?.plan || user.plan || 'FREE'
                         const dailyUsage = bannerSub?.dailyUsage || 0
                         const remaining = getRemainingGenerations('banner', currentPlan, dailyUsage)
@@ -619,8 +619,8 @@ export default function AdminUsersPage() {
                     <td className="px-6 py-4">
                       {(() => {
                         // コンプリートパックなのでbannerのプランを参照（共通プラン）
-                        const bannerSub = user.serviceSubscriptions.find((s) => s.serviceId === 'banner')
-                        const writingSub = user.serviceSubscriptions.find((s) => s.serviceId === 'writing')
+                        const bannerSub = user.serviceSubscriptions?.find((s) => s.serviceId === 'banner')
+                        const writingSub = user.serviceSubscriptions?.find((s) => s.serviceId === 'writing')
                         const currentPlan = bannerSub?.plan || user.plan || 'FREE'
                         const dailyUsage = writingSub?.dailyUsage || 0
                         const remaining = getRemainingGenerations('writing', currentPlan, dailyUsage)
@@ -805,8 +805,8 @@ export default function AdminUsersPage() {
                   </div>
                   
                   {(() => {
-                    const bannerSub = editingUser.serviceSubscriptions.find((s) => s.serviceId === 'banner')
-                    const writingSub = editingUser.serviceSubscriptions.find((s) => s.serviceId === 'writing')
+                    const bannerSub = editingUser.serviceSubscriptions?.find((s) => s.serviceId === 'banner')
+                    const writingSub = editingUser.serviceSubscriptions?.find((s) => s.serviceId === 'writing')
                     const currentPlan = bannerSub?.plan || editingUser.plan || 'FREE'
                     const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
                     
