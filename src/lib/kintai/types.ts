@@ -42,6 +42,13 @@ export const ROLE_LABELS: Record<string, string> = {
   employee: '一般',
 }
 
+export const ROLE_DESCRIPTIONS: Record<string, string> = {
+  system_admin: '全機能の管理・設定変更・権限付与が可能',
+  hr_admin: '従業員管理・部署管理・就業ルール設定が可能',
+  manager: '部署の勤怠確認・申請承認が可能',
+  employee: '打刻・自分の勤怠確認・申請提出が可能',
+}
+
 export const EMPLOYMENT_TYPE_LABELS: Record<string, string> = {
   full_time: '正社員',
   part_time: 'パート',

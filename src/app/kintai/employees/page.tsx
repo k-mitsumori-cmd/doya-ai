@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import { ROLE_LABELS, EMPLOYMENT_TYPE_LABELS } from '@/lib/kintai/types'
+import { ROLE_LABELS, ROLE_DESCRIPTIONS, EMPLOYMENT_TYPE_LABELS } from '@/lib/kintai/types'
 
 const DEPT_COLORS = [
   '#7f19e6', '#2563eb', '#0891b2', '#059669', '#d97706',
@@ -35,6 +35,7 @@ export default function EmployeesPage() {
   const [form, setForm] = useState({ name: '', nameKana: '', email: '', departmentId: '', workRuleId: '', employmentType: 'full_time', hireDate: '', role: 'employee' })
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [currentUserRole, setCurrentUserRole] = useState('employee')
 
   const fetchAll = () => {
     setLoading(true)
@@ -42,10 +43,12 @@ export default function EmployeesPage() {
       fetch('/api/kintai/employees').then(r => r.json()),
       fetch('/api/kintai/departments').then(r => r.json()),
       fetch('/api/kintai/work-rules').then(r => r.json()),
-    ]).then(([empData, deptData, ruleData]) => {
+      fetch('/api/kintai/usage').then(r => r.json()),
+    ]).then(([empData, deptData, ruleData, usageData]) => {
       setEmployees(empData.employees || [])
       setDepartments(deptData.departments || [])
       setWorkRules(ruleData.rules || [])
+      if (usageData.role) setCurrentUserRole(usageData.role)
     }).catch(console.error).finally(() => setLoading(false))
   }
 
@@ -404,9 +407,40 @@ export default function EmployeesPage() {
                 <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1.5 border-b border-slate-100 pb-1.5">
                   <span className="material-symbols-outlined text-base text-[#7f19e6]">badge</span>所属・権限
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <SelectField label="部署" value={form.departmentId} onChange={(v) => setForm({ ...form, departmentId: v })} options={[{ value: '', label: '未設定' }, ...departments.map(d => ({ value: d.id, label: d.name }))]} />
-                  <SelectField label="権限" value={form.role} onChange={(v) => setForm({ ...form, role: v })} options={Object.entries(ROLE_LABELS).map(([k, v]) => ({ value: k, label: v }))} />
+                <SelectField label="部署" value={form.departmentId} onChange={(v) => setForm({ ...form, departmentId: v })} options={[{ value: '', label: '未設定' }, ...departments.map(d => ({ value: d.id, label: d.name }))]} />
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">権限 <span className="text-red-500">*</span></label>
+                  <div className="space-y-2">
+                    {(['system_admin', 'hr_admin', 'manager', 'employee'] as const).map(r => {
+                      const isDisabled = r === 'system_admin' && currentUserRole !== 'system_admin'
+                      return (
+                        <label
+                          key={r}
+                          className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                            form.role === r
+                              ? 'border-[#7f19e6] bg-[#7f19e6]/5 ring-1 ring-[#7f19e6]/30'
+                              : isDisabled
+                                ? 'border-slate-100 bg-slate-50 opacity-50 cursor-not-allowed'
+                                : 'border-slate-200 hover:border-slate-300 bg-white'
+                          }`}
+                        >
+                          <input
+                            type="radio"
+                            name="role"
+                            value={r}
+                            checked={form.role === r}
+                            disabled={isDisabled}
+                            onChange={() => setForm({ ...form, role: r })}
+                            className="mt-0.5 accent-[#7f19e6]"
+                          />
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">{ROLE_LABELS[r]}</p>
+                            <p className="text-xs text-slate-500 mt-0.5">{ROLE_DESCRIPTIONS[r]}</p>
+                          </div>
+                        </label>
+                      )
+                    })}
+                  </div>
                 </div>
                 <SelectField label="雇用形態" value={form.employmentType} onChange={(v) => setForm({ ...form, employmentType: v })} options={Object.entries(EMPLOYMENT_TYPE_LABELS).map(([k, v]) => ({ value: k, label: v }))} />
               </div>

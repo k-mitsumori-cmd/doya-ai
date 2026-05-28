@@ -8,6 +8,8 @@ import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { getKintaiEmployeeLimitByUserPlan } from '@/lib/pricing'
 import { sendEmail } from '@/lib/email'
 
+const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+
 export async function GET(req: NextRequest) {
   try {
     const ctx = await getKintaiContext()
@@ -101,11 +103,13 @@ export async function POST(req: NextRequest) {
     }
 
     // SEC: ロール値のホワイトリスト検証 + 権限エスカレーション防止
-    const ALLOWED_ROLES = ['employee', 'manager', 'hr_admin'] as const
-    const assignRole = ALLOWED_ROLES.includes(role) ? role : 'employee'
-    // hr_adminはsystem_adminを割り当て不可
-    if (role === 'system_admin') {
-      return NextResponse.json({ error: 'system_adminロールは割り当てできません' }, { status: 403 })
+    const ALL_ROLES = ['employee', 'manager', 'hr_admin', 'system_admin'] as const
+    const assignRole = ALL_ROLES.includes(role) ? role : 'employee'
+    if (role === 'system_admin' && ctx.role !== 'system_admin') {
+      return NextResponse.json({ error: 'システム管理者のみがシステム管理者権限を付与できます' }, { status: 403 })
+    }
+    if (role === 'hr_admin' && !hasMinRole(ctx.role, 'system_admin')) {
+      // hr_adminはhr_admin以下の権限のみ付与可能だが、自分と同等は許可
     }
 
     const inviteToken = crypto.randomUUID()
@@ -143,7 +147,7 @@ export async function POST(req: NextRequest) {
 
     sendEmail({
       to: email,
-      subject: `【ドヤ勤怠】${org?.name || '組織'}への招待`,
+      subject: `【ドヤ勤怠】${esc(org?.name || '組織')}への招待`,
       html: `
         <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
           <div style="text-align: center; margin-bottom: 24px;">
@@ -151,10 +155,10 @@ export async function POST(req: NextRequest) {
           </div>
           <h1 style="text-align: center; font-size: 24px; font-weight: 800; color: #1e293b; margin-bottom: 8px;">ドヤ勤怠への招待</h1>
           <p style="text-align: center; color: #64748b; font-size: 15px; margin-bottom: 24px;">
-            <strong style="color: #7f19e6;">${org?.name || '組織'}</strong> に招待されました
+            <strong style="color: #7f19e6;">${esc(org?.name || '組織')}</strong> に招待されました
           </p>
           <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
-            ${name} さん、こんにちは！<br>
+            ${esc(name)} さん、こんにちは！<br>
             以下のボタンをクリックして、ドヤ勤怠に参加してください。
           </p>
           <div style="text-align: center; margin-bottom: 24px;">
