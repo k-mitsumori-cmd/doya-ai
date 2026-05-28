@@ -30,15 +30,16 @@ interface Usage {
     maxCompaniesPerMonth?: number
     maxApproachesPerMonth?: number
   }
-  monthly?: {
+  usage?: {
+    monthStart?: string
+    activeProjects?: number
+    companiesGenerated?: number
+    approachesGenerated?: number
+  }
+  remaining?: {
+    projects?: number
     companies?: number
     approaches?: number
-  }
-  usage?: {
-    creditsUsed?: number
-    creditsLimit?: number
-    totalProjects?: number
-    monthlyUsage?: number
   }
 }
 
@@ -221,21 +222,21 @@ export default function SettingsPage() {
             icon="diamond"
           />
           <StatBlock
-            label="今月のリスト"
-            value={String(usage?.monthly?.companies ?? usage?.usage?.totalProjects ?? 0)}
-            icon="folder"
+            label="今月の抽出社数"
+            value={String(usage?.usage?.companiesGenerated ?? 0)}
+            icon="apartment"
           />
           <StatBlock
             label="今月のツール利用"
-            value={String(usage?.monthly?.approaches ?? usage?.usage?.creditsUsed ?? 0)}
-            icon="trending_up"
+            value={String(usage?.usage?.approachesGenerated ?? 0)}
+            icon="edit_note"
           />
           <StatBlock
             label="今月の上限（社数）"
             value={
               usage?.limits?.maxCompaniesPerMonth === -1
                 ? '無制限'
-                : String(usage?.limits?.maxCompaniesPerMonth ?? usage?.usage?.creditsLimit ?? 0)
+                : (usage?.limits?.maxCompaniesPerMonth ?? 0).toLocaleString()
             }
             icon="speed"
           />

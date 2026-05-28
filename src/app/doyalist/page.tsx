@@ -249,7 +249,7 @@ export default function DoyalistHomePage() {
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-black text-[#0a1530] mb-2">
-                📊 抽出する件数 <span className="text-xs font-medium text-slate-400">（最大5,000社）</span>
+                📊 抽出する件数 <span className="text-xs font-medium text-slate-400">（最大5,000社 / データソースには約450万社の日本法人が登録）</span>
               </label>
               <div className="grid grid-cols-4 sm:grid-cols-4 gap-2">
                 {COUNT_OPTIONS.map((c) => (
@@ -262,7 +262,7 @@ export default function DoyalistHomePage() {
                         : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
                     }`}
                   >
-                    {c >= 1000 ? `${c / 1000}k` : c}社
+                    {c.toLocaleString()}社
                   </button>
                 ))}
               </div>
@@ -307,7 +307,11 @@ export default function DoyalistHomePage() {
                 <div className="text-3xl">🎉</div>
                 <div>
                   <h2 className="text-lg font-black text-[#0a1530]">{companies.length}社できました！</h2>
-                  <p className="text-xs font-bold text-slate-500">⬇️ ダウンロードで保存できます</p>
+                  <p className="text-xs font-bold text-slate-500">
+                    {companies.length < count
+                      ? `⚠️ 指定${count.toLocaleString()}社のうち${companies.length}社のみ該当（条件を緩めると増えます）`
+                      : `⬇️ ダウンロードで保存できます`}
+                  </p>
                 </div>
               </div>
               <div className="flex gap-2">

@@ -293,7 +293,15 @@ export default function PricingPage() {
             <div>
               <p className="font-black text-slate-700 mb-1">他のドヤAIサービスも使えますか?</p>
               <p className="text-slate-500">
-                ドヤマーケAIの統一プランに加入いただくと、すべてのドヤAIサービスのPROプランをご利用いただけます。
+                ドヤAIの統一プランに加入いただくと、ドヤリスト・ドヤ勤怠・ドヤバナーAI・ドヤライティングAI・ドヤインタビューなど、すべてのドヤAIサービスのPROプランをご利用いただけます。
+              </p>
+            </div>
+            <div>
+              <p className="font-black text-slate-700 mb-1">用語について</p>
+              <p className="text-slate-500 text-xs leading-relaxed">
+                <strong>ドヤAI</strong>: スリスタが提供するAI SaaSプラットフォームの総称<br />
+                <strong>ドヤリスト</strong>: 営業リスト抽出・営業文作成ツール（本サービス）<br />
+                <strong>ドヤ勤怠 / ドヤバナーAI / ドヤライティングAI 等</strong>: ドヤAIのサブサービス
               </p>
             </div>
           </div>
