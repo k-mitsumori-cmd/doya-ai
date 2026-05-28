@@ -21,7 +21,12 @@ export async function GET() {
     }
 
     const projects = await prisma.doyalistProject.findMany({
-      where: { userId, status: { not: 'archived' } },
+      where: {
+        userId,
+        status: { not: 'archived' },
+        // 0社プロジェクトは履歴に出さない（過去の失敗データもここでフィルタ）
+        companies: { some: {} },
+      },
       include: {
         _count: { select: { companies: true, approaches: true } },
       },

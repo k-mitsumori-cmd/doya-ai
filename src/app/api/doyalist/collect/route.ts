@@ -146,15 +146,31 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // 業種名のサニタイズ: 数字のみ・空・"指定なし"はAPIの実態にないので無効扱い
+    const sanitizeIndustry = (v: string | null | undefined): string | null => {
+      if (!v) return null
+      const s = String(v).trim()
+      if (!s || s === '指定なし' || /^\d+$/.test(s)) return null
+      return s
+    }
+    const sanitizeEmployees = (v: string | null | undefined): string | null => {
+      if (!v) return null
+      const s = String(v).trim()
+      if (!s || s === '指定なし' || s === '0' || s === '−' || s === '-') return null
+      return s
+    }
+
     // DB保存（実企業データ）
     const rows = collected.slice(0, count).map((c) => {
+      const industryClean = sanitizeIndustry(c.industry) || sanitizeIndustry(project.industry)
+      const employeesClean = sanitizeEmployees(c.employeeCount)
       return {
         projectId,
         name: c.companyName.slice(0, 200),
         website: c.website || null,
-        industry: c.industry || project.industry || null,
-        region: c.prefecture || project.region || null,
-        size: c.employeeCount || project.targetSize || null,
+        industry: industryClean,
+        region: c.prefecture || (project.region && project.region !== '全国' ? project.region : null),
+        size: employeesClean, // gBizINFO 未取得の場合は null（"指定なし"を入れない）
         description: c.businessSummary || null,
         contactPerson: c.representative || null,
         enrichedData: {
@@ -163,10 +179,10 @@ export async function POST(req: NextRequest) {
           prefecture: c.prefecture || null,
           representative: c.representative || null,
           capital: c.capital || null,
-          employeeCount: c.employeeCount || null,
+          employeeCount: employeesClean,
           foundedYear: c.foundedYear || null,
           businessSummary: c.businessSummary || null,
-          industry: c.industry || null,
+          industry: industryClean,
         },
         score: null,
         status: 'new',

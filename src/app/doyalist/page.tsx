@@ -91,6 +91,11 @@ export default function DoyalistHomePage() {
   const [aiTags, setAiTags] = useState<string[]>([])
   const [activeTags, setActiveTags] = useState<Set<string>>(new Set())
 
+  // 実数プレビュー
+  const [estimateLoading, setEstimateLoading] = useState(false)
+  const [estimatedCount, setEstimatedCount] = useState<number | null>(null)
+  const [estimateNote, setEstimateNote] = useState<string | null>(null)
+
   // キーワード入力時にタグをリセット
   const handleKeywordChange = (v: string) => {
     setKeywords(v)
@@ -126,6 +131,34 @@ export default function DoyalistHomePage() {
       setExpanding(false)
     }
   }
+
+  // フィルタ条件変更時に実数を推定
+  useEffect(() => {
+    if (!session?.user) return
+    const ctrl = new AbortController()
+    const timer = setTimeout(async () => {
+      setEstimateLoading(true)
+      try {
+        const tagsList = Array.from(activeTags)
+        const res = await fetch('/api/doyalist/estimate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ industry, region, keywords: tagsList.length > 0 ? tagsList : undefined }),
+          signal: ctrl.signal,
+        })
+        const data = await res.json()
+        if (data?.success) {
+          setEstimatedCount(typeof data.estimated === 'number' ? data.estimated : null)
+          setEstimateNote(data.note || null)
+        }
+      } catch {
+        /* abort or error: keep last value */
+      } finally {
+        setEstimateLoading(false)
+      }
+    }, 400) // デバウンス
+    return () => { clearTimeout(timer); ctrl.abort() }
+  }, [session, industry, region, Array.from(activeTags).join(',')])
 
   const toggleTag = (tag: string) => {
     setActiveTags((prev) => {
@@ -427,9 +460,32 @@ export default function DoyalistHomePage() {
               <div className="py-5 text-center border-b border-slate-100">
                 <p className="text-xs font-bold text-slate-500 mb-1">最大取得件数</p>
                 <p className="text-4xl font-black text-[#0a1530]">{count.toLocaleString()}<span className="text-base font-bold text-slate-500 ml-1">社</span></p>
-                <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
-                  条件に合う企業数が少ない場合は<br/>これより少ない件数になります
-                </p>
+
+                {/* 実数推定 */}
+                <div className="mt-3 pt-3 border-t border-slate-100">
+                  <p className="text-[10px] font-bold text-slate-500">この条件に該当する企業数（推定）</p>
+                  {estimateLoading ? (
+                    <p className="text-sm font-bold text-slate-400 mt-1">計測中...</p>
+                  ) : estimatedCount !== null ? (
+                    <>
+                      <p className={`text-2xl font-black mt-1 ${
+                        estimatedCount >= count ? 'text-emerald-600' : 'text-amber-600'
+                      }`}>
+                        約 {estimatedCount.toLocaleString()}<span className="text-sm font-bold ml-0.5">社</span>
+                      </p>
+                      {estimatedCount < count && (
+                        <p className="text-[10px] text-amber-700 mt-1 font-bold">
+                          ⚠️ 該当数が少ないため、実際は{Math.min(count, estimatedCount).toLocaleString()}社程度になります
+                        </p>
+                      )}
+                      {estimateNote && (
+                        <p className="text-[10px] text-slate-400 mt-1">{estimateNote}</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 mt-1">推定不可</p>
+                  )}
+                </div>
               </div>
 
               <div className="py-4 space-y-2">
@@ -526,10 +582,10 @@ export default function DoyalistHomePage() {
                           <h3 className="text-base font-bold text-[#0a1530]">{c.name}</h3>
                         )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                          {c.industry && <InfoRow icon="🏢" label="業種" value={c.industry} />}
+                          {isValidIndustry(c.industry) && <InfoRow icon="🏢" label="業種" value={c.industry!} />}
                           {(ed.address || c.region) && <InfoRow icon="📍" label="所在地" value={ed.address || c.region!} />}
                           {ed.representative && <InfoRow icon="👤" label="代表者" value={ed.representative} />}
-                          {(ed.employeeCount || c.size) && <InfoRow icon="👥" label="従業員数" value={`${ed.employeeCount || c.size!} 名`} />}
+                          {isValidEmployees(ed.employeeCount) && <InfoRow icon="👥" label="従業員数" value={`${ed.employeeCount} 名`} />}
                           {ed.capital && <InfoRow icon="💰" label="資本金" value={formatCapital(ed.capital)} />}
                           {ed.foundedYear && <InfoRow icon="📅" label="設立年" value={`${ed.foundedYear}年`} />}
                         </div>
@@ -540,9 +596,20 @@ export default function DoyalistHomePage() {
                           </div>
                         )}
                         <div className="flex flex-wrap items-center gap-2 pt-1">
-                          {c.website && (
+                          {c.website ? (
                             <a href={c.website.startsWith('http') ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 bg-cyan-100 text-cyan-700 text-xs font-bold rounded-lg hover:bg-cyan-200 transition-colors">
                               🌐 公式サイト
+                            </a>
+                          ) : (
+                            // gBizINFOに登録なし → Google検索リンクで代替
+                            <a
+                              href={`https://www.google.com/search?q=${encodeURIComponent(c.name + ' 公式サイト')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-500 text-xs font-bold rounded-lg hover:bg-slate-100 transition-colors border border-dashed border-slate-300"
+                              title="公式サイトURLがgBizINFOに登録なし"
+                            >
+                              🔍 公式サイトを検索
                             </a>
                           )}
                           {gbizUrl && (
@@ -574,6 +641,22 @@ export default function DoyalistHomePage() {
       </div>
     </div>
   )
+}
+
+// 業種が表示に適しているか（数値コードや「指定なし」等は除外）
+function isValidIndustry(v: string | null | undefined): boolean {
+  if (!v) return false
+  const s = String(v).trim()
+  if (!s || s === '指定なし' || /^\d+$/.test(s)) return false
+  return true
+}
+// 従業員数が実在データかを判定
+function isValidEmployees(v: string | number | null | undefined): boolean {
+  if (v == null) return false
+  const s = String(v).trim()
+  if (!s || s === '指定なし') return false
+  // 数字が1つでも含まれていればOK
+  return /\d/.test(s)
 }
 
 // 資本金（円）を万円/百万円/億円表記に整形
