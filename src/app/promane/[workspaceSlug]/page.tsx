@@ -5,9 +5,10 @@ import { formatCurrency, formatPercent, PROJECT_STATUS_LABELS, PROJECT_STATUS_CO
 import { Badge } from "@/components/promane/ui/badge";
 import { Progress } from "@/components/promane/ui/progress";
 import Link from "next/link";
-import { ArrowRight, Plus } from "lucide-react";
+import { ArrowRight, Plus, TrendingUp, Wallet, Briefcase, Target } from "lucide-react";
 import { Button } from "@/components/promane/ui/button";
 import Image from "next/image";
+import { TaskPieChart, RevenueLineChart, ProfitBarChart, ActivityTimeline } from "@/components/promane/dashboard-charts";
 
 async function getMyAssignmentsData(workspaceId: string, myMemberId: string) {
   const tasks = await prisma.promaneTask.findMany({
@@ -44,6 +45,112 @@ async function getMyAssignmentsData(workspaceId: string, myMemberId: string) {
   const myProjects = Array.from(projectMap.values());
 
   return { tasks, myProjects };
+}
+
+async function getChartData(workspaceId: string) {
+  // タスクステータス集計
+  const allTasks = await prisma.promaneTask.findMany({
+    where: { project: { workspaceId } },
+    select: { status: true },
+  });
+  const statusCounts = new Map<string, number>();
+  for (const t of allTasks) {
+    statusCounts.set(t.status, (statusCounts.get(t.status) || 0) + 1);
+  }
+  const taskSummary = Array.from(statusCounts.entries()).map(([status, count]) => ({ status, count }));
+
+  // 月次売上・原価データ（直近6ヶ月）
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+  sixMonthsAgo.setDate(1);
+
+  const projects = await prisma.promaneProject.findMany({
+    where: { workspaceId },
+    select: { id: true, contractAmount: true, createdAt: true, expenses: { select: { amount: true, createdAt: true } } },
+  });
+  const timeEntries = await prisma.promaneTimeEntry.findMany({
+    where: {
+      member: { workspaceId },
+      startTime: { gte: sixMonthsAgo },
+    },
+    select: { duration: true, startTime: true, member: { select: { hourlyRate: true } } },
+  });
+
+  const monthlyData = new Map<string, { revenue: number; cost: number }>();
+  const now = new Date();
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getMonth() + 1}月`;
+    monthlyData.set(key, { revenue: 0, cost: 0 });
+  }
+
+  // 売上は契約日基準で月次配分（簡易: createdAt月に全額を計上）
+  for (const p of projects) {
+    if (p.createdAt < sixMonthsAgo) continue;
+    const key = `${p.createdAt.getMonth() + 1}月`;
+    if (monthlyData.has(key)) {
+      const m = monthlyData.get(key)!;
+      m.revenue += p.contractAmount;
+    }
+  }
+
+  // 人件費
+  for (const te of timeEntries) {
+    const key = `${te.startTime.getMonth() + 1}月`;
+    if (monthlyData.has(key)) {
+      const cost = (te.duration / 60) * te.member.hourlyRate;
+      monthlyData.get(key)!.cost += cost;
+    }
+  }
+
+  // 経費
+  for (const p of projects) {
+    for (const e of p.expenses) {
+      if (e.createdAt < sixMonthsAgo) continue;
+      const key = `${e.createdAt.getMonth() + 1}月`;
+      if (monthlyData.has(key)) {
+        monthlyData.get(key)!.cost += e.amount;
+      }
+    }
+  }
+
+  const revenueData = Array.from(monthlyData.entries()).map(([month, v]) => ({
+    month,
+    revenue: Math.round(v.revenue),
+    cost: Math.round(v.cost),
+    profit: Math.round(v.revenue - v.cost),
+  }));
+
+  // 最近のアクティビティ（最新タスク更新 + プロジェクト作成）
+  const recentTasks = await prisma.promaneTask.findMany({
+    where: { project: { workspaceId } },
+    include: { assignee: { select: { displayName: true } } },
+    orderBy: { updatedAt: 'desc' },
+    take: 5,
+  });
+  const activities = recentTasks.map((t) => ({
+    id: t.id,
+    type: 'task' as const,
+    title: `「${t.title}」を ${t.status === 'done' ? '完了しました' : t.status === 'in_progress' ? '進行中にしました' : '更新しました'}`,
+    user: t.assignee?.displayName || '担当者',
+    time: relativeTime(t.updatedAt),
+    icon: t.status === 'done' ? '✅' : t.status === 'in_progress' ? '⚡' : '📝',
+  }));
+
+  return { taskSummary, revenueData, activities };
+}
+
+function relativeTime(date: Date): string {
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  const minutes = Math.floor(diff / (1000 * 60));
+  if (minutes < 1) return 'たった今';
+  if (minutes < 60) return `${minutes}分前`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}時間前`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}日前`;
+  return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
 }
 
 async function getDashboardData(workspaceId: string) {
@@ -104,6 +211,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
   const myMember = workspace.members[0];
   const data = await getDashboardData(workspace.id);
   const myData = myMember ? await getMyAssignmentsData(workspace.id, myMember.id) : { tasks: [], myProjects: [] };
+  const chartData = await getChartData(workspace.id);
 
   const kpiCards = [
     { icon: "/character/present.png", label: "売上合計", value: formatCurrency(data.totalRevenue), bg: "from-blue-100 to-indigo-100", text: "text-blue-800", ring: "ring-blue-200" },
@@ -220,8 +328,49 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
         ))}
       </div>
 
-      {/* 案件一覧 */}
-      <div className="rounded-[28px] bg-white ring-1 ring-gray-200 shadow-md overflow-hidden animate-slide-up stagger-5">
+      {/* チャートグリッド (3 cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
+        {/* タスク円グラフ */}
+        <div className="rounded-[28px] bg-white ring-1 ring-gray-200 shadow-sm p-6 animate-slide-up stagger-1">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-[16px] font-black text-gray-900">タスクの進捗</h3>
+              <p className="text-[11px] font-bold text-gray-400 mt-0.5">サマリー</p>
+            </div>
+            <Image src="/character/focus.png" alt="" width={32} height={32} className="animate-float" unoptimized />
+          </div>
+          <TaskPieChart data={chartData.taskSummary} />
+        </div>
+
+        {/* 売上推移 */}
+        <div className="rounded-[28px] bg-white ring-1 ring-gray-200 shadow-sm p-6 animate-slide-up stagger-2">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-[16px] font-black text-gray-900">売上・利益推移</h3>
+              <p className="text-[11px] font-bold text-gray-400 mt-0.5">直近6ヶ月</p>
+            </div>
+            <Image src="/character/present.png" alt="" width={32} height={32} className="animate-float" unoptimized />
+          </div>
+          <RevenueLineChart data={chartData.revenueData} />
+        </div>
+
+        {/* 利益棒グラフ */}
+        <div className="rounded-[28px] bg-white ring-1 ring-gray-200 shadow-sm p-6 animate-slide-up stagger-3">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="text-[16px] font-black text-gray-900">月次利益</h3>
+              <p className="text-[11px] font-bold text-gray-400 mt-0.5">直近6ヶ月</p>
+            </div>
+            <Image src="/character/success.png" alt="" width={32} height={32} className="animate-float" unoptimized />
+          </div>
+          <ProfitBarChart data={chartData.revenueData} />
+        </div>
+      </div>
+
+      {/* メインコンテンツ: 案件一覧 + アクティビティ */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
+        {/* 案件一覧 (2/3) */}
+        <div className="lg:col-span-2 rounded-[28px] bg-white ring-1 ring-gray-200 shadow-md overflow-hidden animate-slide-up stagger-4">
         <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100">
           <div className="flex items-center gap-3">
             <Image src="/character/point.png" alt="" width={40} height={40} className="animate-wiggle" unoptimized />
@@ -292,6 +441,19 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
             ))}
           </div>
         )}
+        </div>
+
+        {/* アクティビティ (1/3) */}
+        <div className="rounded-[28px] bg-white ring-1 ring-gray-200 shadow-md p-6 animate-slide-up stagger-5">
+          <div className="flex items-center gap-3 mb-5">
+            <Image src="/character/love.png" alt="" width={40} height={40} className="animate-wiggle" unoptimized />
+            <div>
+              <h2 className="text-[18px] font-black text-gray-900">最近のアクティビティ</h2>
+              <p className="text-[11px] font-bold text-gray-400">チームの動き</p>
+            </div>
+          </div>
+          <ActivityTimeline items={chartData.activities} />
+        </div>
       </div>
     </div>
   );
