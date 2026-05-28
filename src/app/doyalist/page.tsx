@@ -674,21 +674,39 @@ export default function DoyalistHomePage() {
                     <div className="flex items-start gap-4">
                       <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#0a1530] flex items-center justify-center text-white font-bold text-sm shadow">{i + 1}</div>
                       <div className="flex-1 min-w-0 space-y-2">
-                        {/* 企業名 → gBizINFO 詳細リンク */}
-                        {gbizUrl ? (
-                          <a
-                            href={gbizUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="group inline-flex items-center gap-1.5"
-                            title="gBizINFOで詳細を確認"
-                          >
-                            <h3 className="text-base font-bold text-[#0a1530] group-hover:text-cyan-600 group-hover:underline transition-colors">{c.name}</h3>
-                            <span className="material-symbols-outlined text-base text-slate-300 group-hover:text-cyan-500 transition-colors">open_in_new</span>
-                          </a>
-                        ) : (
-                          <h3 className="text-base font-bold text-[#0a1530]">{c.name}</h3>
-                        )}
+                        {/* 企業名 + URL登録バッジ */}
+                        <div className="flex items-start gap-2 flex-wrap">
+                          {gbizUrl ? (
+                            <a
+                              href={gbizUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group inline-flex items-center gap-1.5"
+                              title="Google検索で企業情報を確認"
+                            >
+                              <h3 className="text-base font-bold text-[#0a1530] group-hover:text-cyan-600 group-hover:underline transition-colors">{c.name}</h3>
+                              <span className="material-symbols-outlined text-base text-slate-300 group-hover:text-cyan-500 transition-colors">arrow_outward</span>
+                            </a>
+                          ) : (
+                            <h3 className="text-base font-bold text-[#0a1530]">{c.name}</h3>
+                          )}
+                          {/* URL登録バッジ */}
+                          {c.website ? (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-black rounded-md leading-tight" title="公式URL登録あり">
+                              ✓ URL登録
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-black rounded-md leading-tight" title="gBizINFOにURL登録なし">
+                              URL未登録
+                            </span>
+                          )}
+                          {/* 代表者情報バッジ */}
+                          {ed.representative && (
+                            <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-violet-100 text-violet-700 text-[9px] font-black rounded-md leading-tight" title="代表者名登録あり">
+                              ✓ 代表者
+                            </span>
+                          )}
+                        </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                           {isValidIndustry(c.industry) && <InfoRow icon="🏢" label="業種" value={c.industry!} />}
                           {(ed.address || c.region) && <InfoRow icon="📍" label="所在地" value={ed.address || c.region!} />}
@@ -705,8 +723,9 @@ export default function DoyalistHomePage() {
                         )}
                         <div className="flex flex-wrap items-center gap-2 pt-1">
                           {c.website ? (
-                            <a href={c.website.startsWith('http') ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 bg-cyan-100 text-cyan-700 text-xs font-bold rounded-lg hover:bg-cyan-200 transition-colors">
+                            <a href={c.website.startsWith('http') ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 bg-cyan-100 text-cyan-700 text-xs font-bold rounded-lg hover:bg-cyan-200 transition-colors group">
                               🌐 公式サイト
+                              <span className="material-symbols-outlined text-sm group-hover:translate-x-0.5 transition-transform">arrow_outward</span>
                             </a>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-400 text-xs font-bold rounded-lg border border-dashed border-slate-200" title="gBizINFOに公式URLが登録されていません">
@@ -714,8 +733,9 @@ export default function DoyalistHomePage() {
                             </span>
                           )}
                           {gbizUrl && (
-                            <a href={gbizUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors" title="Google検索で企業情報を調べる">
+                            <a href={gbizUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors group" title="Google検索で企業情報を調べる">
                               🔍 企業情報を検索
+                              <span className="material-symbols-outlined text-sm group-hover:translate-x-0.5 transition-transform">arrow_outward</span>
                             </a>
                           )}
                           {ed.corporateNumber && (
