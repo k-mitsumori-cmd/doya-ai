@@ -5,22 +5,8 @@ import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 
-interface DoyalistLayoutProps {
-  children: React.ReactNode
-}
-
-interface UsageData {
-  plan?: string
-  usage?: {
-    creditsUsed?: number
-    creditsLimit?: number
-    totalProjects?: number
-  }
-  limits?: {
-    monthlyCredits?: number
-    isPro?: boolean
-  }
-}
+interface DoyalistLayoutProps { children: React.ReactNode }
+interface UsageData { plan?: string }
 
 const NAV_ITEMS: { href: string; icon: string; label: string }[] = [
   { href: '/doyalist', icon: 'auto_awesome', label: 'リスト作成' },
@@ -40,42 +26,34 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
 
   useEffect(() => {
     if (session?.user) {
-      fetch('/api/doyalist/usage')
-        .then((r) => r.json())
-        .then((data: UsageData) => setUsage(data))
-        .catch(() => setUsage({ plan: 'FREE' }))
+      fetch('/api/doyalist/usage').then((r) => r.json()).then((data: UsageData) => setUsage(data)).catch(() => setUsage({ plan: 'FREE' }))
     }
   }, [session])
 
-  // Loading state
   if (status === 'loading') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0a1530] via-white to-[#0a1530]">
+      <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full border-4 border-[#7f19e6]/20 border-t-[#7f19e6] animate-spin" />
+          <img src="/doyalist/logo.png" alt="ドヤリスト" className="w-40 animate-pulse" />
           <p className="text-sm text-slate-400 font-medium">読み込み中...</p>
         </div>
       </div>
     )
   }
 
-  // Not authenticated
   if (!session?.user) {
     const callback = encodeURIComponent(pathname || '/doyalist')
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0a1530] via-white to-[#0a1530] p-6">
-        <div className="text-center bg-white rounded-3xl border border-slate-200 shadow-2xl p-12 max-w-md">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-[#7f19e6]/30">
-            <span className="material-symbols-outlined" style={{ fontSize: 44 }}>list_alt</span>
-          </div>
-          <h1 className="text-2xl font-black text-slate-800 mb-2">ドヤリスト</h1>
-          <p className="text-slate-500 mb-6">ログインして営業リスト生成を始めましょう</p>
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <div className="text-center bg-white rounded-3xl border border-slate-200 shadow-xl p-12 max-w-md">
+          <img src="/doyalist/logo.png" alt="ドヤリスト" className="w-56 mx-auto mb-6" />
+          <p className="text-slate-500 mb-6 font-medium">ログインして営業リスト生成を始めましょう</p>
           <a
             href={`/auth/signin?callbackUrl=${callback}`}
-            className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-[#7f19e6] to-[#5b0fb3] text-white font-bold rounded-xl hover:shadow-lg hover:shadow-[#7f19e6]/30 transition-all"
+            className="inline-flex items-center gap-2 px-8 py-3.5 bg-[#0a1530] text-white font-bold rounded-2xl hover:bg-[#13234d] hover:shadow-xl transition-all"
           >
             <span className="material-symbols-outlined">login</span>
-            ログイン
+            Googleでログイン
           </a>
         </div>
       </div>
@@ -88,44 +66,36 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
   const plan = String((usage?.plan as any) || (session.user as any)?.plan || 'FREE').toUpperCase()
 
   return (
-    <div className="flex min-h-screen bg-[#0a1530]">
+    <div className="flex min-h-screen bg-slate-50">
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-40 p-2 bg-[#13234d] rounded-xl shadow-lg border border-cyan-400/30"
+        className="lg:hidden fixed top-4 left-4 z-40 p-2 bg-white rounded-xl shadow-md border border-slate-200"
         aria-label="メニューを開く"
       >
-        <span className="material-symbols-outlined text-cyan-300">menu</span>
+        <span className="material-symbols-outlined text-slate-700">menu</span>
       </button>
 
-      {/* Mobile overlay + sidebar */}
       {mobileOpen && (
         <>
-          <div
-            className="lg:hidden fixed inset-0 bg-black/40 z-40"
-            onClick={() => setMobileOpen(false)}
-          />
+          <div className="lg:hidden fixed inset-0 bg-black/40 z-40" onClick={() => setMobileOpen(false)} />
           <div className="lg:hidden fixed left-0 top-0 bottom-0 z-50">
             <Sidebar pathname={pathname} onNavigate={() => setMobileOpen(false)} />
           </div>
         </>
       )}
 
-      {/* Desktop sidebar */}
       <div className="hidden lg:block h-screen sticky top-0">
         <Sidebar pathname={pathname} />
       </div>
 
-      {/* Main content */}
       <div className="flex-1 min-w-0 flex flex-col">
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-[#13234d]/90 backdrop-blur-md border-b border-cyan-400/20 px-4 lg:px-6 py-3 shadow-sm">
+        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 px-4 lg:px-6 py-3 shadow-sm">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-cyan-300/70 ml-12 lg:ml-0">
-              <img src="/doyalist/logo.png" alt="ドヤリスト" className="h-7 hidden lg:block" />
+            <div className="flex items-center gap-2 text-sm text-slate-500 ml-12 lg:ml-0">
+              <img src="/doyalist/logo.png" alt="ドヤリスト" className="h-8 hidden lg:block" />
               <BreadcrumbLabel pathname={pathname} />
             </div>
-
             <div className="flex items-center gap-3">
               <PlanBadge plan={plan} />
               <UserMenu
@@ -138,8 +108,7 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
             </div>
           </div>
         </header>
-
-        <main className="flex-1 min-w-0">{children}</main>
+        <main className="flex-1 min-w-0 bg-slate-50">{children}</main>
       </div>
     </div>
   )
@@ -152,15 +121,13 @@ function Sidebar({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
   }
 
   return (
-    <div className="flex flex-col h-full bg-[#0a1530] w-64 border-r border-cyan-400/20">
-      {/* Logo */}
-      <div className="p-4 mb-1 border-b border-cyan-400/10">
+    <div className="flex flex-col h-full bg-[#0a1530] w-64">
+      <div className="p-4 border-b border-white/10">
         <Link href="/doyalist" className="block" onClick={onNavigate}>
           <img src="/doyalist/logo.png" alt="ドヤリスト" className="w-full h-auto" />
         </Link>
       </div>
 
-      {/* Navigation */}
       <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
           const active = isActive(item.href)
@@ -170,17 +137,13 @@ function Sidebar({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
               href={item.href}
               onClick={onNavigate}
               aria-current={active ? 'page' : undefined}
-              className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-sm transition-all ${
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all ${
                 active
-                  ? 'bg-gradient-to-r from-cyan-400 to-lime-300 text-[#0a1530] font-black shadow-lg shadow-cyan-400/30'
-                  : 'text-cyan-200 font-bold hover:bg-cyan-400/10'
+                  ? 'bg-gradient-to-r from-cyan-400 to-cyan-500 text-[#0a1530] font-bold shadow-lg shadow-cyan-500/20'
+                  : 'text-slate-300 font-medium hover:bg-white/5'
               }`}
             >
-              <span
-                className="material-symbols-outlined text-xl"
-                aria-hidden="true"
-                style={active ? { fontVariationSettings: "'FILL' 1" } : {}}
-              >
+              <span className="material-symbols-outlined text-xl" aria-hidden="true" style={active ? { fontVariationSettings: "'FILL' 1" } : {}}>
                 {item.icon}
               </span>
               <span>{item.label}</span>
@@ -189,18 +152,17 @@ function Sidebar({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
         })}
       </nav>
 
-      {/* Bottom CTA */}
-      <div className="p-4 border-t border-cyan-400/20">
-        <div className="rounded-2xl bg-gradient-to-br from-cyan-400/20 to-lime-300/20 border border-cyan-400/30 p-4 text-cyan-100 shadow-lg">
-          <p className="text-xs font-bold opacity-80">⚡ AIで営業を加速</p>
-          <p className="text-sm font-black mt-0.5 leading-snug text-white">企業リスト・営業文を自動生成</p>
+      <div className="p-4 border-t border-white/10">
+        <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
+          <p className="text-[10px] font-bold text-cyan-300">⚡ AIで営業を加速</p>
+          <p className="text-sm font-bold mt-1 leading-snug text-white">企業リスト・<br/>営業文を自動生成</p>
           <Link
             href="/doyalist"
             onClick={onNavigate}
             className="mt-3 inline-flex items-center gap-1 text-xs font-bold bg-cyan-400 text-[#0a1530] hover:bg-cyan-300 transition-colors px-3 py-1.5 rounded-full"
           >
             <span className="material-symbols-outlined text-sm">auto_awesome</span>
-            リスト作成へ
+            リスト作成
           </Link>
         </div>
       </div>
@@ -209,36 +171,12 @@ function Sidebar({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
 }
 
 function PlanBadge({ plan }: { plan: string }) {
-  let label = '無料プラン'
-  let badgeClass = 'bg-gray-50 text-gray-600 border-gray-200'
-
-  switch (plan) {
-    case 'ENTERPRISE':
-      label = 'エンタープライズ'
-      badgeClass = 'bg-slate-100 text-slate-700 border-slate-200'
-      break
-    case 'PRO':
-      label = 'プロ'
-      badgeClass = 'bg-purple-50 text-purple-700 border-purple-200'
-      break
-    case 'LIGHT':
-    case 'STARTER':
-      label = 'ライト'
-      badgeClass = 'bg-violet-50 text-violet-700 border-violet-200'
-      break
-  }
-
+  const label = plan === 'PRO' ? 'プロ' : plan === 'LIGHT' ? 'ライト' : plan === 'ENTERPRISE' ? 'エンタープライズ' : '無料'
+  const cls = plan === 'FREE' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-cyan-50 text-cyan-700 border-cyan-200'
   return (
     <div className="hidden sm:flex items-center gap-1.5">
-      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${badgeClass}`}>
-        {label}
-      </span>
-      <Link
-        href="/doyalist/pricing"
-        className="text-xs text-[#7f19e6] hover:text-[#5b0fb3] font-medium hover:underline transition-colors"
-      >
-        プランを見る
-      </Link>
+      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${cls}`}>{label}プラン</span>
+      <Link href="/doyalist/pricing" className="text-xs text-[#0a1530] hover:underline font-medium">プランを見る</Link>
     </div>
   )
 }
@@ -253,42 +191,22 @@ function BreadcrumbLabel({ pathname }: { pathname: string }) {
     { match: '/doyalist/pricing', label: '料金プラン' },
     { match: '/doyalist/settings', label: '設定' },
   ]
-
-  // Match from most-specific to least-specific
-  const found = [...segments]
-    .reverse()
-    .find((s) => (typeof s.match === 'string' ? pathname === s.match : s.match.test(pathname)))
-
+  const found = [...segments].reverse().find((s) => (typeof s.match === 'string' ? pathname === s.match : s.match.test(pathname)))
   if (!found || found.label === 'リスト作成') return null
-
   return (
     <>
       <span className="text-slate-300">/</span>
-      <span className="text-slate-600 font-bold hidden sm:inline">{found.label}</span>
+      <span className="text-slate-700 font-medium">{found.label}</span>
     </>
   )
 }
 
-function UserMenu({
-  name,
-  email,
-  image,
-  plan,
-  onSignOut,
-}: {
-  name: string
-  email: string
-  image: string
-  plan: string
-  onSignOut: () => void
-}) {
+function UserMenu({ name, email, image, plan, onSignOut }: { name: string; email: string; image: string; plan: string; onSignOut: () => void }) {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-    }
+    const handler = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
@@ -297,62 +215,37 @@ function UserMenu({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        aria-label="ユーザーメニューを開く"
+        aria-label="ユーザーメニュー"
         aria-expanded={open}
         aria-haspopup="menu"
         className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 transition-colors"
       >
         {image ? (
-          <img
-            src={image}
-            alt={name}
-            className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-200"
-          />
+          <img src={image} alt={name} className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-200" />
         ) : (
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center text-white text-sm font-bold ring-2 ring-purple-200">
-            {name[0]}
-          </div>
+          <div className="w-9 h-9 rounded-full bg-[#0a1530] flex items-center justify-center text-white text-sm font-bold">{name[0]}</div>
         )}
         <span className="text-sm font-bold text-slate-700 hidden sm:block">{name}</span>
-        <span className="material-symbols-outlined text-slate-400 text-lg hidden sm:block">
-          expand_more
-        </span>
+        <span className="material-symbols-outlined text-slate-400 text-lg hidden sm:block">expand_more</span>
       </button>
-
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 py-2 overflow-hidden">
+        <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 py-2 overflow-hidden">
           <div className="px-4 py-3 border-b border-slate-100">
-            <p className="text-sm font-black text-slate-800">{name}</p>
-            <p className="text-xs text-slate-400 mt-0.5 truncate">{email}</p>
-            <span className="inline-block mt-1.5 text-xs font-bold px-2 py-0.5 bg-purple-50 text-purple-700 rounded-full">
-              {plan} プラン
-            </span>
+            <p className="text-sm font-bold text-slate-800">{name}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{email}</p>
+            <span className="inline-block mt-1.5 text-xs font-bold px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded-full">{plan} プラン</span>
           </div>
           <div className="py-1">
-            <Link
-              href="/doyalist/pricing"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors"
-            >
-              <span className="material-symbols-outlined text-lg text-amber-500">diamond</span>
-              料金プラン
+            <Link href="/doyalist/pricing" onClick={() => setOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+              <span className="material-symbols-outlined text-lg text-cyan-500">diamond</span>料金プラン
             </Link>
-            <Link
-              href="/doyalist/settings"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors"
-            >
-              <span className="material-symbols-outlined text-lg text-slate-400">settings</span>
-              設定
+            <Link href="/doyalist/settings" onClick={() => setOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+              <span className="material-symbols-outlined text-lg text-slate-400">settings</span>設定
             </Link>
           </div>
           <div className="border-t border-slate-100 py-1">
-            <button
-              onClick={onSignOut}
-              className="flex items-center gap-3 px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors w-full text-left"
-            >
-              <span className="material-symbols-outlined text-lg">logout</span>
-              ログアウト
+            <button onClick={onSignOut} className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-rose-500 hover:bg-rose-50 w-full text-left">
+              <span className="material-symbols-outlined text-lg">logout</span>ログアウト
             </button>
           </div>
         </div>

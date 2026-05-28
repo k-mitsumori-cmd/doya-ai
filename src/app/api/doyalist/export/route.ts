@@ -38,41 +38,38 @@ function buildCsv(companies: any[], approaches: any[]): string {
   // 企業セクション
   lines.push('# 企業一覧')
   const companyHeaders = [
-    '企業ID',
+    '法人番号',
     '企業名',
-    'ウェブサイト',
     '業種',
-    '地域',
-    '規模',
+    '所在地',
+    '都道府県',
+    '代表者',
+    '従業員数',
+    '資本金',
+    '設立年',
+    'ウェブサイト',
     '事業概要',
-    '担当者',
-    'メール',
-    '電話',
-    'スコア',
-    'ステータス',
-    'ソース',
-    'メモ',
+    '取得元',
     '作成日',
   ]
   lines.push(companyHeaders.map(csvEscape).join(','))
   for (const c of companies) {
+    const ed = (c.enrichedData as any) || {}
     lines.push(
       [
-        c.id,
+        ed.corporateNumber || '',
         c.name,
+        c.industry || ed.industry || '',
+        ed.address || c.region || '',
+        ed.prefecture || '',
+        ed.representative || c.contactPerson || '',
+        ed.employeeCount || c.size || '',
+        ed.capital || '',
+        ed.foundedYear || '',
         c.website || '',
-        c.industry || '',
-        c.region || '',
-        c.size || '',
-        c.description || '',
-        c.contactPerson || '',
-        c.contactEmail || '',
-        c.contactPhone || '',
-        c.score ?? '',
-        c.status,
+        ed.businessSummary || c.description || '',
         c.source || '',
-        c.notes || '',
-        c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt,
+        c.createdAt instanceof Date ? c.createdAt.toISOString().slice(0, 10) : String(c.createdAt).slice(0, 10),
       ]
         .map(csvEscape)
         .join(',')
@@ -127,20 +124,18 @@ function buildXlsXml(
   }
 
   const companyHeaders = [
-    '企業ID',
+    '法人番号',
     '企業名',
-    'ウェブサイト',
     '業種',
-    '地域',
-    '規模',
+    '所在地',
+    '都道府県',
+    '代表者',
+    '従業員数',
+    '資本金',
+    '設立年',
+    'ウェブサイト',
     '事業概要',
-    '担当者',
-    'メール',
-    '電話',
-    'スコア',
-    'ステータス',
-    'ソース',
-    'メモ',
+    '取得元',
     '作成日',
   ]
   const approachHeaders = [
@@ -155,22 +150,21 @@ function buildXlsXml(
 
   const companyRows = companies
     .map((c) => {
+      const ed = (c.enrichedData as any) || {}
       const cells = [
-        cell(c.id),
+        cell(ed.corporateNumber || ''),
         cell(c.name),
+        cell(c.industry || ed.industry || ''),
+        cell(ed.address || c.region || ''),
+        cell(ed.prefecture || ''),
+        cell(ed.representative || c.contactPerson || ''),
+        cell(ed.employeeCount || c.size || ''),
+        cell(ed.capital || ''),
+        cell(ed.foundedYear || ''),
         cell(c.website || ''),
-        cell(c.industry || ''),
-        cell(c.region || ''),
-        cell(c.size || ''),
-        cell(c.description || ''),
-        cell(c.contactPerson || ''),
-        cell(c.contactEmail || ''),
-        cell(c.contactPhone || ''),
-        cell(c.score ?? '', 'Number'),
-        cell(c.status),
+        cell(ed.businessSummary || c.description || ''),
         cell(c.source || ''),
-        cell(c.notes || ''),
-        cell(c.createdAt instanceof Date ? c.createdAt.toISOString() : c.createdAt),
+        cell(c.createdAt instanceof Date ? c.createdAt.toISOString().slice(0, 10) : String(c.createdAt).slice(0, 10)),
       ]
       return `<Row>${cells.join('')}</Row>`
     })

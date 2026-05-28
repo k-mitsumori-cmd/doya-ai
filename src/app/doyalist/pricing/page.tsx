@@ -148,7 +148,7 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a1530] via-white to-[#0a1530]">
+    <div className="min-h-screen bg-white">
       <div className="p-6 lg:p-10 max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-10">

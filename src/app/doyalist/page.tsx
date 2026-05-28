@@ -12,7 +12,20 @@ interface Company {
   region?: string | null
   size?: string | null
   description?: string | null
+  contactPerson?: string | null
   score?: number | null
+  source?: string | null
+  enrichedData?: {
+    corporateNumber?: string | null
+    address?: string | null
+    prefecture?: string | null
+    representative?: string | null
+    capital?: string | null
+    employeeCount?: string | null
+    foundedYear?: number | string | null
+    businessSummary?: string | null
+    industry?: string | null
+  } | null
 }
 
 const INDUSTRIES = ['IT・ソフトウェア', '製造業', '小売・EC', '医療・介護', '教育', '金融・保険', '不動産', '飲食', '物流', '建設', 'コンサル', '広告・マーケ', '人材', 'その他']
@@ -149,7 +162,7 @@ export default function DoyalistHomePage() {
 
   if (!session?.user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-cyan-50 to-white p-6">
+      <div className="min-h-screen flex items-center justify-center bg-white p-6">
         <div className="bg-white border-2 border-[#0a1530] rounded-3xl shadow-2xl shadow-[#0a1530]/10 p-10 max-w-md w-full text-center space-y-5">
           <img src="/doyalist/logo.png" alt="ドヤリスト" className="w-64 mx-auto" />
           <p className="text-sm font-bold text-slate-600">AIが営業先リストを自動で作ります 🚀</p>
@@ -165,13 +178,8 @@ export default function DoyalistHomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-cyan-50/30 to-white p-4 lg:p-8 text-slate-800">
-      <Toaster
-        position="top-center"
-        toastOptions={{
-          style: { background: '#0a1530', color: '#fff', border: '1px solid rgba(56, 189, 248, 0.3)' },
-        }}
-      />
+    <div className="min-h-screen bg-slate-50 p-4 lg:p-8 text-slate-800">
+      <Toaster position="top-center" />
 
       <div className="max-w-4xl mx-auto space-y-6 pb-20">
         {/* ===== Logo Hero ===== */}
@@ -305,47 +313,73 @@ export default function DoyalistHomePage() {
             </div>
 
             <div className="divide-y divide-[#0a1530]/10">
-              {companies.map((c, i) => (
-                <div key={c.id || i} className="p-5 hover:bg-cyan-50/50 transition-colors">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-[#0a1530] flex items-center justify-center text-white font-black shadow-md">
-                      {i + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                        <h3 className="text-base font-black text-[#0a1530]">{c.name}</h3>
-                        {typeof c.score === 'number' && (
-                          <span className={`text-xs font-black px-2 py-0.5 rounded-full ${
-                            c.score >= 80 ? 'bg-lime-100 text-lime-700 border border-lime-300' :
-                            c.score >= 60 ? 'bg-cyan-100 text-cyan-700 border border-cyan-300' :
-                            'bg-slate-100 text-slate-600 border border-slate-300'
-                          }`}>
-                            スコア {c.score}
-                          </span>
+              {companies.map((c, i) => {
+                const ed = c.enrichedData || {}
+                return (
+                  <div key={c.id || i} className="p-5 hover:bg-cyan-50/50 transition-colors">
+                    <div className="flex items-start gap-4">
+                      <div className="flex-shrink-0 w-12 h-12 rounded-2xl bg-[#0a1530] flex items-center justify-center text-white font-black shadow-md">
+                        {i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        {/* 企業名 */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-base font-black text-[#0a1530]">{c.name}</h3>
+                          {ed.corporateNumber && (
+                            <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
+                              法人番号: {ed.corporateNumber}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* 主要情報グリッド */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs font-bold">
+                          {c.industry && (
+                            <InfoRow icon="🏢" label="業種" value={c.industry} />
+                          )}
+                          {(ed.address || c.region) && (
+                            <InfoRow icon="📍" label="所在地" value={ed.address || c.region!} />
+                          )}
+                          {ed.representative && (
+                            <InfoRow icon="👤" label="代表者" value={ed.representative} />
+                          )}
+                          {(ed.employeeCount || c.size) && (
+                            <InfoRow icon="👥" label="従業員数" value={ed.employeeCount || c.size!} />
+                          )}
+                          {ed.capital && (
+                            <InfoRow icon="💰" label="資本金" value={ed.capital} />
+                          )}
+                          {ed.foundedYear && (
+                            <InfoRow icon="📅" label="設立年" value={String(ed.foundedYear)} />
+                          )}
+                        </div>
+
+                        {/* 事業概要 */}
+                        {(ed.businessSummary || c.description) && (
+                          <div className="bg-cyan-50/50 border-l-4 border-cyan-400 px-3 py-2 rounded-r-lg mt-2">
+                            <p className="text-[11px] font-black text-cyan-700 mb-0.5">📝 事業概要</p>
+                            <p className="text-sm text-slate-700 leading-relaxed">
+                              {ed.businessSummary || c.description}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Webサイト */}
+                        {c.website && (
+                          <a
+                            href={c.website.startsWith('http') ? c.website : `https://${c.website}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 mt-1 px-3 py-1.5 bg-cyan-100 text-cyan-700 text-xs font-black rounded-lg hover:bg-cyan-200 transition-colors"
+                          >
+                            🌐 公式サイトを開く
+                          </a>
                         )}
                       </div>
-                      <div className="flex items-center gap-3 text-xs font-bold text-slate-500 mb-2 flex-wrap">
-                        {c.industry && <span>🏢 {c.industry}</span>}
-                        {c.region && <span>📍 {c.region}</span>}
-                        {c.size && <span>👥 {c.size}</span>}
-                      </div>
-                      {c.description && (
-                        <p className="text-sm text-slate-600 leading-relaxed line-clamp-2">{c.description}</p>
-                      )}
-                      {c.website && (
-                        <a
-                          href={c.website.startsWith('http') ? c.website : `https://${c.website}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-block mt-2 text-xs font-bold text-cyan-600 hover:underline"
-                        >
-                          🔗 {c.website}
-                        </a>
-                      )}
                     </div>
                   </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             <div className="p-5 bg-gradient-to-r from-cyan-50 to-lime-50 border-t-2 border-[#0a1530]/10 flex items-center justify-center gap-2">
@@ -362,6 +396,18 @@ export default function DoyalistHomePage() {
             <p className="text-base font-black text-[#0a1530]">条件を選んで「リストを生成する」を押してください 👆</p>
           </div>
         )}
+      </div>
+    </div>
+  )
+}
+
+function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <div className="flex items-start gap-1.5">
+      <span className="flex-shrink-0">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <span className="text-slate-400 mr-1">{label}:</span>
+        <span className="text-[#0a1530]">{value}</span>
       </div>
     </div>
   )

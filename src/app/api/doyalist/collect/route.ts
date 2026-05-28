@@ -104,19 +104,34 @@ export async function POST(req: NextRequest) {
     }
 
     // DB保存（実企業データ）
-    const rows = collected.slice(0, count).map((c) => ({
-      projectId,
-      name: c.companyName.slice(0, 200),
-      website: c.website || null,
-      industry: c.industry || project.industry || null,
-      region: c.prefecture || c.address || project.region || null,
-      size: c.employeeCount || project.targetSize || null,
-      description: [c.address, c.representative ? `代表: ${c.representative}` : '', c.capital ? `資本金: ${c.capital}` : ''].filter(Boolean).join(' / ') || null,
-      contactPerson: c.representative || null,
-      score: null,
-      status: 'new',
-      source: c.source,
-    }))
+    const rows = collected.slice(0, count).map((c) => {
+      const rawBusinessSummary = (c.rawData as any)?.business_summary || (c.rawData as any)?.businessSummary || null
+      return {
+        projectId,
+        name: c.companyName.slice(0, 200),
+        website: c.website || null,
+        industry: c.industry || project.industry || null,
+        region: c.prefecture || project.region || null,
+        size: c.employeeCount || project.targetSize || null,
+        description: rawBusinessSummary || null,
+        contactPerson: c.representative || null,
+        // 取得可能データを全て enrichedData に保存
+        enrichedData: {
+          corporateNumber: c.corporateNumber || null,
+          address: c.address || null,
+          prefecture: c.prefecture || null,
+          representative: c.representative || null,
+          capital: c.capital || null,
+          employeeCount: c.employeeCount || null,
+          foundedYear: c.foundedYear || null,
+          businessSummary: rawBusinessSummary,
+          industry: c.industry || null,
+        },
+        score: null,
+        status: 'new',
+        source: c.source,
+      }
+    })
     await prisma.doyalistCompany.createMany({ data: rows })
 
     // 直近作成データを取得して返す（createManyはレコードを返さないため）
