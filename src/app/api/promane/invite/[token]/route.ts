@@ -87,8 +87,19 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (invitation.expiresAt < new Date()) {
       return NextResponse.json({ error: '有効期限が切れています' }, { status: 410 })
     }
-    // メールアドレスが一致しなくても受け入れる（柔軟性のため）が、警告に使う
-    const emailMismatch = userEmail?.toLowerCase() !== invitation.email
+
+    // セキュリティ: 招待リンクが漏洩した場合の不正参加を防ぐため、メール一致を必須化
+    // 招待されたメールと別のGoogleアカウントでログインしている場合は拒否
+    if (!userEmail || userEmail.toLowerCase() !== invitation.email.toLowerCase()) {
+      return NextResponse.json(
+        {
+          error: `この招待は ${invitation.email} 宛です。一旦ログアウトし、招待されたGoogleアカウントでログインしてください。`,
+          code: 'email_mismatch',
+          expectedEmail: invitation.email,
+        },
+        { status: 403 }
+      )
+    }
 
     // 既にメンバーか確認
     const existing = await prisma.promaneMember.findUnique({
@@ -126,7 +137,6 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({
       success: true,
       workspaceSlug: invitation.workspace.slug,
-      emailMismatch,
     })
   } catch (e: any) {
     console.error('[promane/invite/token][POST]', e)

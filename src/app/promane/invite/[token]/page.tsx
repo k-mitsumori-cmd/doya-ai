@@ -57,15 +57,16 @@ export default function PromaneInvitePage() {
       const res = await fetch(`/api/promane/invite/${params?.token}`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) {
-        toast.error(data?.error || '参加に失敗しました', { id: tid })
-        setError(data?.error || '参加に失敗しました')
+        toast.error(data?.error || '参加に失敗しました', { id: tid, duration: 7000 })
+        // メール不一致の場合は持続表示で明確に
+        if (data?.code === 'email_mismatch') {
+          setError(`この招待は ${data.expectedEmail} 宛です。一度ログアウトし、招待されたGoogleアカウントでログインしてください。`)
+        } else {
+          setError(data?.error || '参加に失敗しました')
+        }
         return
       }
-      if (data.emailMismatch) {
-        toast.success(`参加しました（招待メールと別アカウントで参加）`, { id: tid, duration: 5000 })
-      } else {
-        toast.success(data.alreadyMember ? '既にメンバーです' : '参加しました 🎉', { id: tid })
-      }
+      toast.success(data.alreadyMember ? '既にメンバーです' : '参加しました 🎉', { id: tid })
       router.push(`/promane/${data.workspaceSlug}`)
     } catch (e: any) {
       toast.error(e?.message || 'エラーが発生しました', { id: tid })
