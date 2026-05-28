@@ -91,9 +91,66 @@ export default function DoyalistHomePage() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [savedListId, setSavedListId] = useState<string | null>(null)
 
+  // AI変換タグ
+  const [expanding, setExpanding] = useState(false)
+  const [aiTags, setAiTags] = useState<string[]>([])
+  const [activeTags, setActiveTags] = useState<Set<string>>(new Set())
+
+  // キーワード入力時にタグをリセット
+  const handleKeywordChange = (v: string) => {
+    setKeywords(v)
+    setAiTags([])
+    setActiveTags(new Set())
+  }
+
+  const handleExpandKeyword = async () => {
+    if (!keywords.trim()) {
+      toast.error('キーワードを入力してください')
+      return
+    }
+    setExpanding(true)
+    const tid = toast.loading('AIが検索ワードに変換中...')
+    try {
+      const res = await fetch('/api/doyalist/expand-keywords', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keyword: keywords, industry }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        toast.error(data?.error || '変換に失敗しました', { id: tid })
+        return
+      }
+      const tags: string[] = data.tags || []
+      setAiTags(tags)
+      setActiveTags(new Set(tags))
+      toast.success(`${tags.length}個のタグに変換しました`, { id: tid })
+    } catch (e: any) {
+      toast.error(e?.message || '通信エラー', { id: tid })
+    } finally {
+      setExpanding(false)
+    }
+  }
+
+  const toggleTag = (tag: string) => {
+    setActiveTags((prev) => {
+      const next = new Set(prev)
+      if (next.has(tag)) next.delete(tag)
+      else next.add(tag)
+      return next
+    })
+  }
+
   const [filterText, setFilterText] = useState('')
   const [sortBy, setSortBy] = useState('default')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+
+  // 検索に使うキーワード: AIタグ（選択中）優先 → ユーザー入力 → なし
+  const searchKeywords = (): string => {
+    const selectedTags = Array.from(activeTags)
+    if (selectedTags.length > 0) return selectedTags.join(',')
+    return keywords
+  }
 
   const createProject = async (): Promise<string | null> => {
     try {
@@ -102,7 +159,7 @@ export default function DoyalistHomePage() {
       const create = await fetch('/api/doyalist/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: projectName, industry, region, targetSize: size, keywords }),
+        body: JSON.stringify({ name: projectName, industry, region, targetSize: size, keywords: searchKeywords() }),
       })
       const createdData = await create.json()
       return createdData?.project?.id || createdData?.id || null
@@ -227,16 +284,64 @@ export default function DoyalistHomePage() {
                 <Field label="🏢 業界" value={industry} onChange={setIndustry} options={INDUSTRIES} />
                 <Field label="🗾 エリア" value={area} onChange={handleAreaChange} options={AREAS} />
                 <Field label="👥 企業規模" value={size} onChange={setSize} options={SIZES} />
-                <div>
-                  <label className="block text-sm font-bold text-[#0a1530] mb-2">🔍 キーワード（任意）</label>
+              </div>
+
+              {/* キーワード + AI変換 */}
+              <div>
+                <label className="block text-sm font-bold text-[#0a1530] mb-2">
+                  🔍 キーワード <span className="text-xs font-normal text-slate-400">（任意・AIで法人検索ワードに変換）</span>
+                </label>
+                <div className="flex gap-2">
                   <input
                     type="text"
                     value={keywords}
-                    onChange={(e) => setKeywords(e.target.value)}
-                    placeholder="例: SaaS, AI, 業務効率化"
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl text-sm font-medium text-slate-800 bg-white placeholder:text-slate-300 focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100"
+                    onChange={(e) => handleKeywordChange(e.target.value)}
+                    placeholder="例: SaaS, AI, 営業効率化, 美容、コンサル..."
+                    className="flex-1 px-4 py-3 border border-slate-300 rounded-xl text-sm font-medium text-slate-800 bg-white placeholder:text-slate-300 focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100"
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleExpandKeyword() } }}
                   />
+                  <button
+                    type="button"
+                    onClick={handleExpandKeyword}
+                    disabled={expanding || !keywords.trim()}
+                    className="px-4 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-black rounded-xl shadow hover:shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {expanding ? '変換中...' : '🤖 AIで変換'}
+                  </button>
                 </div>
+
+                {/* AI生成タグ */}
+                {aiTags.length > 0 && (
+                  <div className="mt-3 p-3 bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200 rounded-xl">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xs font-black text-violet-700">🤖 AI変換タグ</span>
+                      <span className="text-[10px] text-slate-500">クリックで使用ON/OFF（選択タグで検索）</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {aiTags.map((tag) => {
+                        const active = activeTags.has(tag)
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => toggleTag(tag)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
+                              active
+                                ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow'
+                                : 'bg-white text-slate-500 border border-slate-200 hover:bg-slate-50'
+                            }`}
+                          >
+                            {active ? '✓ ' : ''}{tag}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    <p className="text-[10px] text-violet-600 mt-2">
+                      {activeTags.size}個のタグを選択中
+                      {activeTags.size > 0 && ' → これらの語を含む法人を検索します'}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {prefectureOptions.length > 0 && (
