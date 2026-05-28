@@ -138,54 +138,89 @@ export async function GET(request: NextRequest) {
 
     // サービス別統計
     const serviceStats: any[] = []
-    const serviceIds = ['banner', 'writing']
+    const serviceIds = ['banner', 'writing', 'interview', 'copy', 'lp', 'voice', 'movie', 'hr', 'kintai']
     const serviceLabels: Record<string, { name: string; icon: string; gradient: string }> = {
       banner: { name: 'ドヤバナーAI', icon: '🎨', gradient: 'from-violet-500 to-fuchsia-500' },
       writing: { name: 'ドヤライティングAI', icon: '✍️', gradient: 'from-emerald-500 to-cyan-500' },
+      interview: { name: 'ドヤインタビュー', icon: '🎙️', gradient: 'from-rose-500 to-pink-500' },
+      copy: { name: 'ドヤコピーAI', icon: '📝', gradient: 'from-amber-500 to-orange-500' },
+      lp: { name: 'ドヤLP AI', icon: '📄', gradient: 'from-cyan-500 to-blue-500' },
+      voice: { name: 'ドヤボイスAI', icon: '🔊', gradient: 'from-indigo-500 to-violet-500' },
+      movie: { name: 'ドヤ動画AI', icon: '🎬', gradient: 'from-pink-500 to-rose-500' },
+      hr: { name: 'ドヤHR', icon: '💼', gradient: 'from-blue-500 to-indigo-500' },
+      kintai: { name: 'ドヤ勤怠', icon: '⏰', gradient: 'from-purple-500 to-indigo-500' },
     }
 
     for (const serviceId of serviceIds) {
       try {
-        // 表示名は writing だが、DB上の serviceId は seo のまま（互換のため）
         const queryServiceId = serviceId === 'writing' ? 'seo' : serviceId
+        const safe = async <T>(fn: () => Promise<T>, fallback: T): Promise<T> => {
+          try { return await fn() } catch { return fallback }
+        }
 
-        // サービス別ユーザー数
-        const serviceUsers = await prisma.userServiceSubscription.count({
-          where: { serviceId: queryServiceId },
-        })
+        let serviceUsers = 0
+        let serviceProUsers = 0
+        let serviceGenerations = 0
+        let serviceTodayGenerations = 0
+        let serviceLastMonthGenerations = 0
+        let serviceMonthGenerations = 0
 
-        // サービス別PROユーザー
-        const serviceProUsers = await prisma.userServiceSubscription.count({
-          where: { serviceId: queryServiceId, plan: { in: ['PRO', 'BUSINESS', 'ENTERPRISE'] } },
-        })
+        // サービス別の集計（Generationテーブルを使うサービスとモデル特化サービスを分岐）
+        const usesGeneration = ['banner', 'writing'].includes(serviceId)
 
-        // サービス別生成数
-        const serviceGenerations = await prisma.generation.count({
-          where: { serviceId: queryServiceId },
-        })
-
-        // サービス別今日の生成
-        const serviceTodayGenerations = await prisma.generation.count({
-          where: { serviceId: queryServiceId, createdAt: { gte: todayStart } },
-        })
-
-        // サービス別先月の生成
-        const serviceLastMonthGenerations = await prisma.generation.count({
-          where: { serviceId: queryServiceId, createdAt: { gte: lastMonthStart, lte: lastMonthEnd } },
-        })
-
-        // サービス別今月の生成
-        const serviceMonthGenerations = await prisma.generation.count({
-          where: { serviceId: queryServiceId, createdAt: { gte: monthStart } },
-        })
+        if (usesGeneration) {
+          serviceUsers = await safe(() => prisma.userServiceSubscription.count({ where: { serviceId: queryServiceId } }), 0)
+          serviceProUsers = await safe(() => prisma.userServiceSubscription.count({
+            where: { serviceId: queryServiceId, plan: { in: ['PRO', 'BUSINESS', 'ENTERPRISE'] } },
+          }), 0)
+          serviceGenerations = await safe(() => prisma.generation.count({ where: { serviceId: queryServiceId } }), 0)
+          serviceTodayGenerations = await safe(() => prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: todayStart } } }), 0)
+          serviceLastMonthGenerations = await safe(() => prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: lastMonthStart, lte: lastMonthEnd } } }), 0)
+          serviceMonthGenerations = await safe(() => prisma.generation.count({ where: { serviceId: queryServiceId, createdAt: { gte: monthStart } } }), 0)
+        } else if (serviceId === 'interview') {
+          serviceGenerations = await safe(() => prisma.interviewProject.count(), 0)
+          serviceTodayGenerations = await safe(() => prisma.interviewProject.count({ where: { createdAt: { gte: todayStart } } }), 0)
+          serviceMonthGenerations = await safe(() => prisma.interviewProject.count({ where: { createdAt: { gte: monthStart } } }), 0)
+          serviceLastMonthGenerations = await safe(() => prisma.interviewProject.count({ where: { createdAt: { gte: lastMonthStart, lte: lastMonthEnd } } }), 0)
+        } else if (serviceId === 'copy') {
+          serviceGenerations = await safe(() => prisma.copyProject.count(), 0)
+          serviceTodayGenerations = await safe(() => prisma.copyProject.count({ where: { createdAt: { gte: todayStart } } }), 0)
+          serviceMonthGenerations = await safe(() => prisma.copyProject.count({ where: { createdAt: { gte: monthStart } } }), 0)
+          serviceLastMonthGenerations = await safe(() => prisma.copyProject.count({ where: { createdAt: { gte: lastMonthStart, lte: lastMonthEnd } } }), 0)
+        } else if (serviceId === 'lp') {
+          serviceGenerations = await safe(() => prisma.lpProject.count(), 0)
+          serviceTodayGenerations = await safe(() => prisma.lpProject.count({ where: { createdAt: { gte: todayStart } } }), 0)
+          serviceMonthGenerations = await safe(() => prisma.lpProject.count({ where: { createdAt: { gte: monthStart } } }), 0)
+          serviceLastMonthGenerations = await safe(() => prisma.lpProject.count({ where: { createdAt: { gte: lastMonthStart, lte: lastMonthEnd } } }), 0)
+        } else if (serviceId === 'voice') {
+          serviceGenerations = await safe(() => prisma.voiceProject.count(), 0)
+          serviceTodayGenerations = await safe(() => prisma.voiceProject.count({ where: { createdAt: { gte: todayStart } } }), 0)
+          serviceMonthGenerations = await safe(() => prisma.voiceProject.count({ where: { createdAt: { gte: monthStart } } }), 0)
+          serviceLastMonthGenerations = await safe(() => prisma.voiceProject.count({ where: { createdAt: { gte: lastMonthStart, lte: lastMonthEnd } } }), 0)
+        } else if (serviceId === 'movie') {
+          serviceGenerations = await safe(() => prisma.movieProject.count(), 0)
+          serviceTodayGenerations = await safe(() => prisma.movieProject.count({ where: { createdAt: { gte: todayStart } } }), 0)
+          serviceMonthGenerations = await safe(() => prisma.movieProject.count({ where: { createdAt: { gte: monthStart } } }), 0)
+          serviceLastMonthGenerations = await safe(() => prisma.movieProject.count({ where: { createdAt: { gte: lastMonthStart, lte: lastMonthEnd } } }), 0)
+        } else if (serviceId === 'hr') {
+          serviceUsers = await safe(() => prisma.hrEmployee.count(), 0)
+          serviceGenerations = await safe(() => prisma.hrOrganization.count(), 0)
+          serviceTodayGenerations = await safe(() => prisma.hrEmployee.count({ where: { createdAt: { gte: todayStart } } }), 0)
+        } else if (serviceId === 'kintai') {
+          serviceUsers = await safe(() => prisma.kintaiEmployee.count(), 0)
+          serviceGenerations = await safe(() => prisma.kintaiClockRecord.count(), 0)
+          serviceTodayGenerations = await safe(() => prisma.kintaiClockRecord.count({ where: { timestamp: { gte: todayStart } } }), 0)
+          serviceMonthGenerations = await safe(() => prisma.kintaiClockRecord.count({ where: { timestamp: { gte: monthStart } } }), 0)
+          serviceLastMonthGenerations = await safe(() => prisma.kintaiClockRecord.count({ where: { timestamp: { gte: lastMonthStart, lte: lastMonthEnd } } }), 0)
+        }
 
         // 成長率
-        const growth = serviceLastMonthGenerations > 0
-          ? ((serviceMonthGenerations - serviceLastMonthGenerations) / serviceLastMonthGenerations * 100)
-          : (serviceMonthGenerations > 0 ? 100 : 0)
-
-        // 売上はコンプリートパックなのでサービス別では計算しない（0にする）
-        const revenue = 0
+        const dayOfMonth = new Date().getDate()
+        const growth = serviceLastMonthGenerations === 0
+          ? (serviceMonthGenerations > 0 ? 100 : 0)
+          : (serviceMonthGenerations === 0 && dayOfMonth <= 3)
+            ? 0
+            : ((serviceMonthGenerations - serviceLastMonthGenerations) / serviceLastMonthGenerations * 100)
 
         const label = serviceLabels[serviceId]
         serviceStats.push({
@@ -197,7 +232,7 @@ export async function GET(request: NextRequest) {
           proUsers: serviceProUsers,
           generations: serviceGenerations,
           todayGenerations: serviceTodayGenerations,
-          revenue,
+          revenue: 0,
           growth: parseFloat(growth.toFixed(1)),
         })
       } catch (e) {

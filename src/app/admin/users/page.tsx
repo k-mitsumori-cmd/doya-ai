@@ -507,8 +507,9 @@ export default function AdminUsersPage() {
         </div>
 
         {/* User Table */}
-        <div className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 overflow-x-auto">
-          <table className="w-full min-w-[800px]">
+        <div className="bg-white/[0.02] backdrop-blur rounded-2xl border border-white/5 overflow-x-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+          <p className="lg:hidden text-xs text-white/40 px-4 py-2 border-b border-white/5">⇄ 横にスクロールで全列表示</p>
+          <table className="w-full min-w-[1400px]">
             <thead className="border-b border-white/5">
               <tr>
                 <th className="text-left px-6 py-4">

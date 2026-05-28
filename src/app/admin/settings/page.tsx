@@ -11,20 +11,17 @@ export default function AdminSettingsPage() {
     openaiApiKey: '••••••••••••••••••••••••••••••',
     openaiModel: 'gpt-4-turbo-preview',
     dalleModel: 'dall-e-3',
-    
+
     // 制限設定
     freeDailyLimit: 5,
     premiumDailyLimit: -1, // -1 = 無制限
     maxInputLength: 2000,
     maxOutputLength: 4000,
-    
-    // 料金設定
-    premiumPrice: 2980,
-    
+
     // 通知設定
     emailNotifications: true,
     slackWebhook: '',
-    
+
     // メンテナンス
     maintenanceMode: false,
     maintenanceMessage: 'システムメンテナンス中です。しばらくお待ちください。',
