@@ -35,7 +35,7 @@ interface Project {
 
 const COMPANY_STATUS_OPTIONS: { value: string; label: string; color: string }[] = [
   { value: 'new', label: '新規', color: 'bg-slate-100 text-slate-600' },
-  { value: 'contacted', label: 'コンタクト済み', color: 'bg-blue-100 text-blue-700' },
+  { value: 'contacted', label: 'コンタクト済み', color: 'bg-purple-100 text-purple-700' },
   { value: 'replied', label: '返信あり', color: 'bg-amber-100 text-amber-700' },
   { value: 'won', label: '受注', color: 'bg-emerald-100 text-emerald-700' },
   { value: 'lost', label: '失注', color: 'bg-rose-100 text-rose-600' },

@@ -197,7 +197,7 @@ export default function NewProjectPage() {
                   isCompleted
                     ? 'bg-emerald-500 text-white shadow-md'
                     : isActive
-                      ? 'bg-blue-500 text-white ring-4 ring-blue-100 shadow-md'
+                      ? 'bg-purple-500 text-white ring-4 ring-purple-100 shadow-md'
                       : 'bg-slate-100 text-slate-400'
                 }`}
               >
@@ -209,7 +209,7 @@ export default function NewProjectPage() {
               </motion.div>
               <span
                 className={`text-sm mt-2.5 font-medium whitespace-nowrap ${
-                  isActive ? 'text-blue-600' : isCompleted ? 'text-emerald-600' : 'text-slate-400'
+                  isActive ? 'text-purple-600' : isCompleted ? 'text-emerald-600' : 'text-slate-400'
                 }`}
               >
                 {step.title}
@@ -221,7 +221,7 @@ export default function NewProjectPage() {
               <div className="relative w-20 sm:w-32 h-0.5 mx-4 mt-5">
                 <div className="absolute inset-0 bg-slate-200 rounded-full" />
                 <motion.div
-                  className="absolute inset-y-0 left-0 bg-blue-500 rounded-full"
+                  className="absolute inset-y-0 left-0 bg-purple-500 rounded-full"
                   initial={false}
                   animate={{ width: isCompleted ? '100%' : '0%' }}
                   transition={{ duration: 0.4, ease: 'easeInOut' }}
@@ -256,7 +256,7 @@ export default function NewProjectPage() {
           <p className="text-slate-500 mb-8">リストを作成するにはGoogleアカウントでログインしてください</p>
           <button
             onClick={() => signIn('google', { callbackUrl: '/doyalist/new' })}
-            className="inline-flex items-center gap-3 px-8 py-3.5 bg-blue-500 text-white font-bold rounded-full shadow-lg hover:bg-blue-600 active:scale-95 transition-all"
+            className="inline-flex items-center gap-3 px-8 py-3.5 bg-purple-500 text-white font-bold rounded-full shadow-lg hover:bg-purple-600 active:scale-95 transition-all"
           >
             <span className="material-symbols-outlined">login</span>
             Googleでログイン
@@ -272,8 +272,8 @@ export default function NewProjectPage() {
       <div className="p-6 lg:p-10 max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-10 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 mb-4">
-            <span className="material-symbols-outlined text-3xl text-blue-500">playlist_add</span>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-50 mb-4">
+            <span className="material-symbols-outlined text-3xl text-purple-500">playlist_add</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-800 tracking-tight">新規リスト作成</h1>
           <p className="text-sm text-slate-500 mt-1.5">AIが最適なターゲット企業を見つけます</p>
@@ -298,8 +298,8 @@ export default function NewProjectPage() {
                 {/* Section heading */}
                 <div>
                   <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-blue-50">
-                      <span className="material-symbols-outlined text-xl text-blue-500">edit_note</span>
+                    <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-purple-50">
+                      <span className="material-symbols-outlined text-xl text-purple-500">edit_note</span>
                     </span>
                     基本情報入力
                   </h2>
@@ -309,7 +309,7 @@ export default function NewProjectPage() {
                 </div>
 
                 {/* Tip card */}
-                <div className="bg-blue-50 rounded-2xl p-4 flex items-start gap-3">
+                <div className="bg-purple-50 rounded-2xl p-4 flex items-start gap-3">
                   <motion.img
                     src="/characters/point_解説.png"
                     alt="ポイント"
@@ -318,8 +318,8 @@ export default function NewProjectPage() {
                     transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                   />
                   <div>
-                    <p className="text-sm font-semibold text-blue-800">はじめての方へ</p>
-                    <p className="text-xs text-blue-600 mt-0.5 leading-relaxed">
+                    <p className="text-sm font-semibold text-purple-800">はじめての方へ</p>
+                    <p className="text-xs text-purple-600 mt-0.5 leading-relaxed">
                       自社サービスの情報を入力すると、AIが最適なターゲット企業を自動で提案します。まずは簡単な説明から始めましょう。
                     </p>
                   </div>
@@ -336,7 +336,7 @@ export default function NewProjectPage() {
                       value={formData.title}
                       onChange={(e) => updateField('title', e.target.value)}
                       placeholder="例: IT企業向け新規開拓リスト"
-                      className="w-full rounded-2xl border-2 border-slate-200 focus:border-blue-400 focus:ring-4 focus:ring-blue-50 px-4 py-3.5 text-base text-slate-800 placeholder:text-slate-300 outline-none transition-all"
+                      className="w-full rounded-2xl border-2 border-slate-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-50 px-4 py-3.5 text-base text-slate-800 placeholder:text-slate-300 outline-none transition-all"
                     />
                   </div>
 
@@ -350,7 +350,7 @@ export default function NewProjectPage() {
                       value={formData.companyName}
                       onChange={(e) => updateField('companyName', e.target.value)}
                       placeholder="例: 株式会社ドヤ"
-                      className="w-full rounded-2xl border-2 border-slate-200 focus:border-blue-400 focus:ring-4 focus:ring-blue-50 px-4 py-3.5 text-base text-slate-800 placeholder:text-slate-300 outline-none transition-all"
+                      className="w-full rounded-2xl border-2 border-slate-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-50 px-4 py-3.5 text-base text-slate-800 placeholder:text-slate-300 outline-none transition-all"
                     />
                   </div>
 
@@ -364,7 +364,7 @@ export default function NewProjectPage() {
                       onChange={(e) => updateField('serviceDescription', e.target.value)}
                       placeholder="例: 中小企業向けのクラウド会計ソフト。月額5,000円から利用でき、請求書発行や経費精算を自動化します。"
                       rows={4}
-                      className="w-full rounded-2xl border-2 border-slate-200 focus:border-blue-400 focus:ring-4 focus:ring-blue-50 px-4 py-3.5 text-base text-slate-800 placeholder:text-slate-300 outline-none transition-all resize-none min-h-[100px]"
+                      className="w-full rounded-2xl border-2 border-slate-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-50 px-4 py-3.5 text-base text-slate-800 placeholder:text-slate-300 outline-none transition-all resize-none min-h-[100px]"
                     />
                   </div>
 
@@ -378,7 +378,7 @@ export default function NewProjectPage() {
                       onChange={(e) => updateField('strengths', e.target.value)}
                       placeholder="例: 業界最安値の料金設定、導入後3日で運用開始可能、24時間チャットサポート"
                       rows={3}
-                      className="w-full rounded-2xl border-2 border-slate-200 focus:border-blue-400 focus:ring-4 focus:ring-blue-50 px-4 py-3.5 text-base text-slate-800 placeholder:text-slate-300 outline-none transition-all resize-none min-h-[100px]"
+                      className="w-full rounded-2xl border-2 border-slate-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-50 px-4 py-3.5 text-base text-slate-800 placeholder:text-slate-300 outline-none transition-all resize-none min-h-[100px]"
                     />
                   </div>
                 </div>
@@ -398,8 +398,8 @@ export default function NewProjectPage() {
                 {/* Section heading */}
                 <div>
                   <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-blue-50">
-                      <span className="material-symbols-outlined text-xl text-blue-500">tune</span>
+                    <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-purple-50">
+                      <span className="material-symbols-outlined text-xl text-purple-500">tune</span>
                     </span>
                     ターゲット条件設定
                   </h2>
@@ -413,7 +413,7 @@ export default function NewProjectPage() {
                   <button
                     onClick={handleSuggestTarget}
                     disabled={isSuggesting}
-                    className="w-full bg-white border-2 border-blue-200 rounded-2xl p-5 flex items-center gap-4 hover:border-blue-300 hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed text-left group relative overflow-hidden"
+                    className="w-full bg-white border-2 border-purple-200 rounded-2xl p-5 flex items-center gap-4 hover:border-purple-300 hover:shadow-md transition-all disabled:opacity-60 disabled:cursor-not-allowed text-left group relative overflow-hidden"
                   >
                     <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-amber-50 shrink-0 group-hover:bg-amber-100 transition-colors relative">
                       {isSuggesting ? (
@@ -431,7 +431,7 @@ export default function NewProjectPage() {
                       </p>
                     </div>
                     {!isSuggesting && (
-                      <span className="material-symbols-outlined text-xl text-blue-400 shrink-0">arrow_forward</span>
+                      <span className="material-symbols-outlined text-xl text-purple-400 shrink-0">arrow_forward</span>
                     )}
                   </button>
                   {/* Sparkle particles around AI button */}
@@ -443,7 +443,7 @@ export default function NewProjectPage() {
                         transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                       >&#10024;</motion.span>
                       <motion.span
-                        className="absolute top-2 left-2 text-blue-400 pointer-events-none select-none text-xs"
+                        className="absolute top-2 left-2 text-purple-400 pointer-events-none select-none text-xs"
                         animate={{ rotate: -360, scale: [1, 1.3, 1] }}
                         transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
                       >&#10024;</motion.span>
@@ -498,20 +498,20 @@ export default function NewProjectPage() {
                       exit={{ opacity: 0, height: 0, marginTop: 0 }}
                       className="overflow-hidden"
                     >
-                      <div className="bg-blue-50 rounded-2xl p-5">
+                      <div className="bg-purple-50 rounded-2xl p-5">
                         <div className="flex items-center gap-2 mb-3">
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100">
-                            <span className="material-symbols-outlined text-base text-blue-500">lightbulb</span>
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-purple-100">
+                            <span className="material-symbols-outlined text-base text-purple-500">lightbulb</span>
                           </span>
-                          <span className="text-sm font-bold text-blue-700">AIからの提案</span>
+                          <span className="text-sm font-bold text-purple-700">AIからの提案</span>
                         </div>
                         <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">
                           {formData.aiSuggestion}
                         </p>
                         {(formData.industries.length > 0 || formData.areas.length > 0) && (
-                          <div className="mt-3 pt-3 border-t border-blue-100 flex flex-wrap gap-1.5">
+                          <div className="mt-3 pt-3 border-t border-purple-100 flex flex-wrap gap-1.5">
                             {formData.industries.map((i) => (
-                              <span key={i} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">
+                              <span key={i} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
                                 {i}
                               </span>
                             ))}
@@ -547,8 +547,8 @@ export default function NewProjectPage() {
                             onClick={() => toggleArrayItem('industries', industry)}
                             className={`px-4 py-2 text-sm rounded-full border-2 transition-colors duration-200 ${
                               isSelected
-                                ? 'bg-blue-500 border-blue-500 text-white font-semibold shadow-sm'
-                                : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
+                                ? 'bg-purple-500 border-purple-500 text-white font-semibold shadow-sm'
+                                : 'bg-white border-slate-200 text-slate-600 hover:border-purple-300 hover:text-purple-600'
                             }`}
                           >
                             {isSelected && (
@@ -585,8 +585,8 @@ export default function NewProjectPage() {
                                   onClick={() => toggleArrayItem('areas', area)}
                                   className={`px-4 py-2 text-sm rounded-full border-2 transition-colors duration-200 ${
                                     isSelected
-                                      ? 'bg-blue-500 border-blue-500 text-white font-semibold shadow-sm'
-                                      : 'bg-white border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
+                                      ? 'bg-purple-500 border-purple-500 text-white font-semibold shadow-sm'
+                                      : 'bg-white border-slate-200 text-slate-600 hover:border-purple-300 hover:text-purple-600'
                                   }`}
                                 >
                                   {isSelected && (
@@ -614,23 +614,23 @@ export default function NewProjectPage() {
                             onClick={() => updateField('companySize', size.value)}
                             className={`relative flex flex-col items-center justify-center px-3 py-5 rounded-2xl border-2 transition-all duration-200 text-center ${
                               isSelected
-                                ? 'border-blue-500 bg-blue-50 shadow-md'
+                                ? 'border-purple-500 bg-purple-50 shadow-md'
                                 : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm'
                             }`}
                           >
                             {isSelected && (
-                              <span className="absolute top-2.5 right-2.5 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                              <span className="absolute top-2.5 right-2.5 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center">
                                 <span className="material-symbols-outlined text-white" style={{ fontSize: '14px' }}>check</span>
                               </span>
                             )}
-                            <span className={`material-symbols-outlined text-2xl mb-1.5 ${isSelected ? 'text-blue-500' : 'text-slate-300'}`}>
+                            <span className={`material-symbols-outlined text-2xl mb-1.5 ${isSelected ? 'text-purple-500' : 'text-slate-300'}`}>
                               {size.icon}
                             </span>
-                            <span className={`text-sm font-bold ${isSelected ? 'text-blue-700' : 'text-slate-700'}`}>
+                            <span className={`text-sm font-bold ${isSelected ? 'text-purple-700' : 'text-slate-700'}`}>
                               {size.label}
                             </span>
                             {size.sub && (
-                              <span className={`text-xs mt-0.5 ${isSelected ? 'text-blue-500' : 'text-slate-400'}`}>
+                              <span className={`text-xs mt-0.5 ${isSelected ? 'text-purple-500' : 'text-slate-400'}`}>
                                 {size.sub}
                               </span>
                             )}
@@ -650,7 +650,7 @@ export default function NewProjectPage() {
                         value={formData.keywords}
                         onChange={(e) => updateField('keywords', e.target.value)}
                         placeholder="例: DX推進, 業務効率化, クラウド移行"
-                        className="w-full rounded-2xl border-2 border-slate-200 focus:border-blue-400 focus:ring-4 focus:ring-blue-50 pl-11 pr-4 py-3.5 text-base text-slate-800 placeholder:text-slate-300 outline-none transition-all"
+                        className="w-full rounded-2xl border-2 border-slate-200 focus:border-purple-400 focus:ring-4 focus:ring-purple-50 pl-11 pr-4 py-3.5 text-base text-slate-800 placeholder:text-slate-300 outline-none transition-all"
                       />
                     </div>
                     <p className="text-xs text-slate-400 mt-1.5 ml-1">カンマ区切りで複数入力可</p>
@@ -694,8 +694,8 @@ export default function NewProjectPage() {
                 {/* Basic Info Summary Card */}
                 <div className="bg-slate-50 rounded-2xl p-5">
                   <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100">
-                      <span className="material-symbols-outlined text-base text-blue-500">info</span>
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-purple-100">
+                      <span className="material-symbols-outlined text-base text-purple-500">info</span>
                     </span>
                     基本情報
                   </h3>
@@ -724,8 +724,8 @@ export default function NewProjectPage() {
                 {/* Target Criteria Summary Card */}
                 <div className="bg-slate-50 rounded-2xl p-5">
                   <h3 className="text-sm font-bold text-slate-700 mb-4 flex items-center gap-2">
-                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-blue-100">
-                      <span className="material-symbols-outlined text-base text-blue-500">filter_alt</span>
+                    <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-purple-100">
+                      <span className="material-symbols-outlined text-base text-purple-500">filter_alt</span>
                     </span>
                     ターゲット条件
                   </h3>
@@ -738,7 +738,7 @@ export default function NewProjectPage() {
                             {formData.industries.map((i) => (
                               <span
                                 key={i}
-                                className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium"
+                                className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"
                               >
                                 {i}
                               </span>
@@ -755,7 +755,7 @@ export default function NewProjectPage() {
                             {formData.areas.map((a) => (
                               <span
                                 key={a}
-                                className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium"
+                                className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"
                               >
                                 {a}
                               </span>
@@ -782,7 +782,7 @@ export default function NewProjectPage() {
                             {formData.keywords.split(/[,、]/).filter(Boolean).map((kw) => (
                               <span
                                 key={kw.trim()}
-                                className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium"
+                                className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"
                               >
                                 {kw.trim()}
                               </span>
@@ -831,7 +831,7 @@ export default function NewProjectPage() {
                       transition={{ type: "spring", bounce: 0.6 }}
                     />
                     <motion.p
-                      className="text-2xl font-black text-blue-600"
+                      className="text-2xl font-black text-purple-600"
                       initial={{ opacity: 0, scale: 0.5, y: 10 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       transition={{ delay: 0.3, type: "spring", bounce: 0.4 }}
@@ -851,7 +851,7 @@ export default function NewProjectPage() {
                   <button
                     onClick={handleSubmit}
                     disabled={isSubmitting}
-                    className="w-full flex items-center justify-center gap-3 py-4 bg-blue-500 text-white text-lg font-bold rounded-full shadow-lg hover:bg-blue-600 hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+                    className="w-full flex items-center justify-center gap-3 py-4 bg-purple-500 text-white text-lg font-bold rounded-full shadow-lg hover:bg-purple-600 hover:shadow-xl disabled:opacity-60 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
                   >
                     {isSubmitting ? (
                       <>
@@ -885,7 +885,7 @@ export default function NewProjectPage() {
               <button
                 onClick={() => setCurrentStep((s) => Math.min(3, s + 1))}
                 disabled={!canProceed()}
-                className="inline-flex items-center gap-2 px-8 py-3 bg-blue-500 text-white font-semibold text-sm rounded-full shadow-md hover:bg-blue-600 hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+                className="inline-flex items-center gap-2 px-8 py-3 bg-purple-500 text-white font-semibold text-sm rounded-full shadow-md hover:bg-purple-600 hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
               >
                 次へ
                 <span className="material-symbols-outlined text-lg">arrow_forward</span>
@@ -894,7 +894,7 @@ export default function NewProjectPage() {
               <button
                 onClick={handleSubmit}
                 disabled={isSubmitting}
-                className="inline-flex items-center gap-2 px-8 py-3 bg-blue-500 text-white font-semibold text-sm rounded-full shadow-md hover:bg-blue-600 hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
+                className="inline-flex items-center gap-2 px-8 py-3 bg-purple-500 text-white font-semibold text-sm rounded-full shadow-md hover:bg-purple-600 hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
               >
                 {isSubmitting ? (
                   <>

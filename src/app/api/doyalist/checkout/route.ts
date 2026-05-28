@@ -19,6 +19,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '無効なプランです' }, { status: 400 })
   }
 
+  // メールアドレス形式検証
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(session.user.email)) {
+    return NextResponse.json({ error: 'メールアドレスの形式が不正です' }, { status: 400 })
+  }
+
   if (planId === 'free') {
     return NextResponse.json({ error: 'Freeプランはチェックアウト不要です' }, { status: 400 })
   }

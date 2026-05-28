@@ -84,6 +84,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'プロジェクトが見つからないか、アクセス権限がありません' }, { status: 404 })
     }
 
+    // プラン上限チェック
+    const { getUserDoyalistLimits, countMonthlyApproaches } = await import('@/lib/doyalist/limits')
+    const limits = await getUserDoyalistLimits(session.user.id)
+    if (limits.maxApproachesPerMonth > 0) {
+      const used = await countMonthlyApproaches(session.user.id)
+      const remaining = limits.maxApproachesPerMonth - used
+      if (remaining <= 0) {
+        return NextResponse.json(
+          { error: `今月のアプローチ生成上限（${limits.maxApproachesPerMonth}件）に達しました。プランをアップグレードしてください。` },
+          { status: 403 }
+        )
+      }
+    }
+
     // Fetch all companies in the project
     const companies = await prisma.doyalistCompany.findMany({
       where: { projectId },

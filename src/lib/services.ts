@@ -1238,7 +1238,7 @@ export const SERVICES: Service[] = [
       '企業の意思決定者・課題が把握できない',
       '営業先の優先度判断に時間を使っている',
     ],
-    plans: {
+    pricing: {
       free: {
         name: 'おためし',
         limit: '1プロジェクト / 月10社 / 月5アプローチ',

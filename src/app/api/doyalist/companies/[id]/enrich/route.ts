@@ -45,6 +45,19 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'アクセス権がありません' }, { status: 403 })
     }
 
+    // プラン上限チェック（AI分析回数はアプローチ枠に含める）
+    const { getUserDoyalistLimits, countMonthlyApproaches } = await import('@/lib/doyalist/limits')
+    const limits = await getUserDoyalistLimits(userId)
+    if (limits.maxApproachesPerMonth > 0) {
+      const used = await countMonthlyApproaches(userId)
+      if (used >= limits.maxApproachesPerMonth) {
+        return NextResponse.json(
+          { error: `今月のAI生成上限（${limits.maxApproachesPerMonth}回）に達しました。プランをアップグレードしてください。` },
+          { status: 403 }
+        )
+      }
+    }
+
     const prompt = [
       `${company.name}社（業種: ${company.industry || '不明'}、地域: ${company.region || '不明'}、規模: ${company.size || '不明'}）について、`,
       '営業視点での詳細分析をJSON形式で行ってください。',

@@ -30,7 +30,7 @@ interface Project {
 }
 
 const TYPE_OPTIONS = [
-  { value: 'email', label: 'メール', icon: 'mail', color: 'bg-blue-100 text-blue-700' },
+  { value: 'email', label: 'メール', icon: 'mail', color: 'bg-purple-100 text-purple-700' },
   { value: 'dm', label: 'DM', icon: 'forum', color: 'bg-violet-100 text-violet-700' },
   { value: 'phone', label: '電話', icon: 'call', color: 'bg-emerald-100 text-emerald-700' },
   { value: 'letter', label: '手紙', icon: 'description', color: 'bg-amber-100 text-amber-700' },
@@ -38,7 +38,7 @@ const TYPE_OPTIONS = [
 
 const STATUS_OPTIONS = [
   { value: 'draft', label: '下書き', color: 'bg-slate-100 text-slate-600' },
-  { value: 'sent', label: '送信済み', color: 'bg-blue-100 text-blue-700' },
+  { value: 'sent', label: '送信済み', color: 'bg-purple-100 text-purple-700' },
   { value: 'replied', label: '返信あり', color: 'bg-emerald-100 text-emerald-700' },
 ]
 
