@@ -5,7 +5,30 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { scrapeCompanyWebsite } from '@/lib/doyalist/collect/web-scraper'
+
+const TOOL_PROJECT_NAME = '__tool_history__'
+
+/** ユーザーごとの「ツール履歴」用 仮想プロジェクト ID を取得（必要なら作成） */
+async function getOrCreateToolProject(userId: string): Promise<string> {
+  const existing = await prisma.doyalistProject.findFirst({
+    where: { userId, name: TOOL_PROJECT_NAME },
+    select: { id: true },
+  })
+  if (existing) return existing.id
+  const created = await prisma.doyalistProject.create({
+    data: {
+      userId,
+      name: TOOL_PROJECT_NAME,
+      description: 'ツール生成履歴（システム生成・非表示）',
+      status: 'archived', // 一覧に出さない
+    },
+    select: { id: true },
+  })
+  return created.id
+}
 
 type ToolType = 'form' | 'email' | 'phone'
 
@@ -22,7 +45,7 @@ interface Input {
   tone?: 'formal' | 'casual' | 'friendly'
 }
 
-function buildPrompt(input: Input): string {
+function buildPrompt(input: Input, fetchedSiteInfo?: string | null): string {
   const type = input.type
   const companyName = input.companyName || '【貴社名】'
   const industry = input.targetIndustry || input.industry || ''
@@ -34,10 +57,12 @@ function buildPrompt(input: Input): string {
 
   const toneLabel = tone === 'casual' ? 'カジュアル' : tone === 'friendly' ? '親しみやすい' : '丁寧でフォーマル'
 
-  // 自社サービスがURLっぽい場合は補足
+  // 自社サービスがURLの場合、実際に取得したサイト情報を優先利用
   const isUrl = /^https?:\/\//.test(myService.trim())
   const serviceDesc = isUrl
-    ? `URL: ${myService}（このサービスサイトの内容を推定して、サービスの強み・特徴を文章内に反映してください）`
+    ? (fetchedSiteInfo
+        ? `URL: ${myService}\n以下はそのサイトから取得した実際の情報です。この内容を必ず文章に反映してください:\n${fetchedSiteInfo}`
+        : `URL: ${myService}（サイト取得に失敗。URLから推測してサービスの内容を文章に反映してください）`)
     : myService
 
   const placeholderNote = '【プレースホルダ】企業名は「【貴社名】」、自社名は「【自社名】」、担当者は「【ご担当者名】」「【自分の名前】」のように明確に置き換え可能な形で挿入してください。'
@@ -140,7 +165,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'typeは form/email/phone のいずれかを指定してください' }, { status: 400 })
     }
 
-    const prompt = buildPrompt(body)
+    // URL指定の場合は実際にサイトを取得して内容を要約
+    let fetchedSiteInfo: string | null = null
+    const rawService = (body.serviceInput || body.myService || '').trim()
+    if (/^https?:\/\//.test(rawService)) {
+      try {
+        const scraped = await scrapeCompanyWebsite(rawService)
+        if (scraped) {
+          fetchedSiteInfo = [
+            scraped.companyName ? `企業名: ${scraped.companyName}` : '',
+            scraped.description ? `事業内容: ${scraped.description}` : '',
+            scraped.services?.length ? `サービス/製品: ${scraped.services.join('、')}` : '',
+            scraped.industry ? `業種: ${scraped.industry}` : '',
+          ].filter(Boolean).join('\n')
+        }
+      } catch (e) {
+        console.warn('[doyalist/tools] URL取得失敗（プロンプトはURLからの推測に切替）', e)
+      }
+    }
+
+    const prompt = buildPrompt(body, fetchedSiteInfo)
 
     const text = await geminiGenerateText({
       model: GEMINI_TEXT_MODEL_DEFAULT,
@@ -151,7 +195,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'AI生成に失敗しました' }, { status: 502 })
     }
 
-    return NextResponse.json({ success: true, text: text.trim() })
+    const finalText = text.trim()
+
+    // 履歴保存（ベストエフォート / 失敗してもユーザー応答は成功扱い）
+    try {
+      const projectId = await getOrCreateToolProject(userId)
+      const approachType = body.type === 'form' ? 'form' : body.type === 'email' ? 'email' : 'phone'
+      const subject = body.type === 'email'
+        ? (finalText.match(/^件名[:：]\s*(.+)$/m)?.[1]?.slice(0, 200) || `[メール] ${body.targetIndustry || ''}`)
+        : body.type === 'form'
+          ? `[フォーム文面] ${body.targetIndustry || ''}`
+          : `[電話スクリプト] ${body.targetIndustry || ''}`
+      await prisma.doyalistApproach.create({
+        data: {
+          projectId,
+          type: approachType,
+          subject,
+          body: finalText.slice(0, 8000),
+          status: 'draft',
+        },
+      })
+    } catch (e) {
+      console.warn('[doyalist/tools] 履歴保存失敗（生成自体は成功）', e)
+    }
+
+    return NextResponse.json({ success: true, text: finalText })
   } catch (e: any) {
     console.error('[doyalist/tools]', e)
     return NextResponse.json({ error: e?.message || 'ツール実行に失敗しました' }, { status: 500 })

@@ -14,34 +14,56 @@ interface ListSummary {
   createdAt?: string
 }
 
+interface ApproachSummary {
+  id: string
+  type: 'form' | 'email' | 'phone'
+  subject: string | null
+  body: string
+  status: string
+  createdAt: string
+}
+
 const CHARS = {
   thinking: '/kintai/characters/thinking_考え中.png',
   sleep: '/kintai/characters/sleep_居眠り.png',
 }
 
-const TABS = [
-  { v: 'all', l: 'すべて' },
-  { v: 'list', l: 'リスト' },
-  { v: 'form', l: 'フォーム文面' },
-  { v: 'email', l: 'メール文面' },
-  { v: 'script', l: 'スクリプト' },
+const TABS: { v: 'all' | 'list' | 'form' | 'email' | 'phone'; l: string; icon: string }[] = [
+  { v: 'all', l: 'すべて', icon: '📚' },
+  { v: 'list', l: 'リスト', icon: '📋' },
+  { v: 'form', l: 'フォーム文面', icon: '📝' },
+  { v: 'email', l: 'メール文面', icon: '✉️' },
+  { v: 'phone', l: 'スクリプト', icon: '📞' },
 ]
+
+const TYPE_LABEL: Record<string, { l: string; color: string; icon: string }> = {
+  form: { l: 'フォーム', color: 'bg-emerald-100 text-emerald-700', icon: '📝' },
+  email: { l: 'メール', color: 'bg-violet-100 text-violet-700', icon: '✉️' },
+  phone: { l: '電話', color: 'bg-amber-100 text-amber-700', icon: '📞' },
+}
 
 export default function HistoryPage() {
   const [lists, setLists] = useState<ListSummary[]>([])
+  const [approaches, setApproaches] = useState<ApproachSummary[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState('all')
+  const [tab, setTab] = useState<typeof TABS[number]['v']>('all')
   const [search, setSearch] = useState('')
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/doyalist/projects')
-      .then((r) => r.json())
-      .then((d) => setLists(Array.isArray(d) ? d : (d?.projects || [])))
+    Promise.all([
+      fetch('/api/doyalist/projects').then((r) => r.json()).catch(() => ({ projects: [] })),
+      fetch('/api/doyalist/approaches').then((r) => r.json()).catch(() => ({ approaches: [] })),
+    ])
+      .then(([projectsData, approachesData]) => {
+        setLists(Array.isArray(projectsData) ? projectsData : (projectsData?.projects || []))
+        setApproaches(approachesData?.approaches || [])
+      })
       .catch((e) => console.error('[history]', e))
       .finally(() => setLoading(false))
   }, [])
 
-  const handleDelete = async (id: string, name: string) => {
+  const handleDeleteList = async (id: string, name: string) => {
     if (!confirm(`「${name}」を削除しますか？`)) return
     try {
       const res = await fetch(`/api/doyalist/projects/${id}`, { method: 'DELETE' })
@@ -53,23 +75,51 @@ export default function HistoryPage() {
     }
   }
 
+  const handleDeleteApproach = async (id: string) => {
+    if (!confirm('この生成履歴を削除しますか？')) return
+    try {
+      const res = await fetch(`/api/doyalist/approaches?id=${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('削除に失敗しました')
+      toast.success('削除しました')
+      setApproaches((prev) => prev.filter((a) => a.id !== id))
+    } catch (e: any) {
+      toast.error(e?.message || '削除に失敗しました')
+    }
+  }
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text).then(() => toast.success('コピーしました'))
+  }
+
   const stats = useMemo(() => {
-    const total = lists.length
+    const total = lists.length + approaches.length
     const now = new Date()
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
-    const thisMonth = lists.filter((l) => new Date(l.updatedAt || l.createdAt || 0).getTime() >= monthStart).length
+    const listThisMonth = lists.filter((l) => new Date(l.updatedAt || l.createdAt || 0).getTime() >= monthStart).length
+    const apprThisMonth = approaches.filter((a) => new Date(a.createdAt || 0).getTime() >= monthStart).length
     const totalCompanies = lists.reduce((sum, l) => sum + (l.companyCount || 0), 0)
-    return { total, thisMonth, totalCompanies }
-  }, [lists])
+    return { total, thisMonth: listThisMonth + apprThisMonth, totalCompanies }
+  }, [lists, approaches])
 
-  const filtered = useMemo(() => {
-    let f = lists
+  const filteredLists = useMemo(() => {
+    if (tab !== 'all' && tab !== 'list') return []
+    if (!search.trim()) return lists
+    const q = search.toLowerCase()
+    return lists.filter((l) => l.name.toLowerCase().includes(q) || l.industry?.toLowerCase().includes(q) || l.region?.toLowerCase().includes(q))
+  }, [lists, search, tab])
+
+  const filteredApproaches = useMemo(() => {
+    let f = approaches
+    if (tab === 'list') return []
+    if (tab !== 'all') f = approaches.filter((a) => a.type === tab)
     if (search.trim()) {
       const q = search.toLowerCase()
-      f = f.filter((l) => l.name.toLowerCase().includes(q) || l.industry?.toLowerCase().includes(q) || l.region?.toLowerCase().includes(q))
+      f = f.filter((a) => (a.subject || '').toLowerCase().includes(q) || a.body.toLowerCase().includes(q))
     }
     return f
-  }, [lists, search])
+  }, [approaches, search, tab])
+
+  const isEmpty = filteredLists.length === 0 && filteredApproaches.length === 0
 
   if (loading) {
     return (
@@ -87,7 +137,6 @@ export default function HistoryPage() {
       <Toaster position="top-center" />
 
       <div className="max-w-7xl mx-auto pb-20">
-        {/* Page Header */}
         <div className="flex items-center gap-3 mb-6">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md text-2xl">📚</div>
           <div>
@@ -96,46 +145,52 @@ export default function HistoryPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <StatCard icon="📊" label="リスト総数" value={stats.total} color="cyan" />
+          <StatCard icon="📊" label="合計件数" value={stats.total} color="cyan" />
           <StatCard icon="📅" label="今月の生成" value={stats.thisMonth} color="emerald" />
           <StatCard icon="🏢" label="累計企業数" value={stats.totalCompanies} color="violet" />
         </div>
 
-        {/* Tabs + Search */}
         <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center gap-3">
             <div className="flex gap-1 flex-wrap">
-              {TABS.map((t) => (
-                <button
-                  key={t.v}
-                  onClick={() => setTab(t.v)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                    tab === t.v ? 'bg-[#0a1530] text-white' : 'text-slate-600 hover:bg-slate-100'
-                  }`}
-                >
-                  {t.l}
-                </button>
-              ))}
+              {TABS.map((t) => {
+                const count = t.v === 'all' ? lists.length + approaches.length
+                  : t.v === 'list' ? lists.length
+                  : approaches.filter((a) => a.type === t.v).length
+                return (
+                  <button
+                    key={t.v}
+                    onClick={() => setTab(t.v)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${
+                      tab === t.v ? 'bg-[#0a1530] text-white' : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>{t.icon}</span>
+                    <span>{t.l}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${tab === t.v ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`}>{count}</span>
+                  </button>
+                )
+              })}
             </div>
             <div className="flex-1 min-w-[200px]" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="🔍 名前・業種・地域で検索"
+              placeholder="🔍 検索"
               className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100 min-w-[200px]"
             />
           </div>
 
-          {filtered.length === 0 ? (
+          {isEmpty ? (
             <div className="p-12 text-center space-y-4">
               <img src={CHARS.sleep} alt="" className="w-24 h-24 mx-auto opacity-80" />
-              <p className="text-lg font-bold text-slate-500">まだリストがありません</p>
-              <Link href="/doyalist" className="inline-block px-8 py-3 bg-[#0a1530] text-white font-bold rounded-xl shadow hover:bg-[#13234d] hover:shadow-xl transition-all">
-                ⚡ リストを作成する
-              </Link>
+              <p className="text-lg font-bold text-slate-500">該当する履歴がありません</p>
+              <div className="flex gap-2 justify-center flex-wrap">
+                <Link href="/doyalist" className="px-6 py-2.5 bg-[#0a1530] text-white font-bold text-sm rounded-xl hover:bg-[#13234d] transition-all">⚡ リストを作成</Link>
+                <Link href="/doyalist/tools/form" className="px-6 py-2.5 bg-cyan-500 text-white font-bold text-sm rounded-xl hover:bg-cyan-600 transition-all">📝 営業文を作成</Link>
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -143,20 +198,18 @@ export default function HistoryPage() {
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
                     <th className="px-5 py-3 text-left font-bold text-slate-600 text-xs">タイプ</th>
-                    <th className="px-5 py-3 text-left font-bold text-slate-600 text-xs">タイトル</th>
+                    <th className="px-5 py-3 text-left font-bold text-slate-600 text-xs">タイトル / 内容</th>
                     <th className="px-5 py-3 text-center font-bold text-slate-600 text-xs">件数</th>
                     <th className="px-5 py-3 text-left font-bold text-slate-600 text-xs">作成日時</th>
-                    <th className="px-5 py-3 text-center font-bold text-slate-600 text-xs">ステータス</th>
                     <th className="px-5 py-3 text-center font-bold text-slate-600 text-xs">操作</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {filtered.map((l) => (
-                    <tr key={l.id} className="hover:bg-slate-50 transition-colors">
+                  {/* リスト */}
+                  {filteredLists.map((l) => (
+                    <tr key={`list-${l.id}`} className="hover:bg-slate-50 transition-colors">
                       <td className="px-5 py-3">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-cyan-100 text-cyan-700 text-[10px] font-bold rounded-md">
-                          📋 リスト
-                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-cyan-100 text-cyan-700 text-[10px] font-bold rounded-md">📋 リスト</span>
                       </td>
                       <td className="px-5 py-3">
                         <p className="font-bold text-[#0a1530] text-sm">{l.name}</p>
@@ -172,18 +225,53 @@ export default function HistoryPage() {
                       <td className="px-5 py-3 text-xs text-slate-500">
                         {new Date(l.updatedAt).toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
                       </td>
-                      <td className="px-5 py-3 text-center">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-md">完了</span>
-                      </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center justify-center gap-1">
                           <a href={`/api/doyalist/export?projectId=${l.id}&format=csv`} title="CSVダウンロード" className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs">📥</a>
                           <a href={`/api/doyalist/export?projectId=${l.id}&format=excel`} title="Excelダウンロード" className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs">📊</a>
-                          <button onClick={() => handleDelete(l.id, l.name)} title="削除" aria-label={`${l.name}を削除`} className="p-1.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg text-xs">🗑️</button>
+                          <button onClick={() => handleDeleteList(l.id, l.name)} title="削除" aria-label={`${l.name}を削除`} className="p-1.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg text-xs">🗑️</button>
                         </div>
                       </td>
                     </tr>
                   ))}
+                  {/* ツール履歴 */}
+                  {filteredApproaches.map((a) => {
+                    const meta = TYPE_LABEL[a.type] || TYPE_LABEL.form
+                    const isExpanded = expandedId === a.id
+                    return (
+                      <tr key={`appr-${a.id}`} className="hover:bg-slate-50 transition-colors align-top">
+                        <td className="px-5 py-3">
+                          <span className={`inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold rounded-md ${meta.color}`}>
+                            {meta.icon} {meta.l}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 max-w-[400px]">
+                          <p className="font-bold text-[#0a1530] text-sm truncate">{a.subject || '(無題)'}</p>
+                          <button
+                            onClick={() => setExpandedId(isExpanded ? null : a.id)}
+                            className="text-[11px] text-slate-500 mt-1 hover:text-cyan-600 transition-colors"
+                          >
+                            {isExpanded ? '▲ 閉じる' : '▼ 全文を表示'}
+                          </button>
+                          {isExpanded && (
+                            <div className="mt-2 p-3 bg-slate-50 rounded-lg max-h-64 overflow-y-auto">
+                              <pre className="whitespace-pre-wrap text-xs text-slate-700 leading-relaxed font-sans">{a.body}</pre>
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-5 py-3 text-center text-xs text-slate-400">—</td>
+                        <td className="px-5 py-3 text-xs text-slate-500">
+                          {new Date(a.createdAt).toLocaleDateString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="px-5 py-3">
+                          <div className="flex items-center justify-center gap-1">
+                            <button onClick={() => handleCopy(a.body)} title="コピー" className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs">📋</button>
+                            <button onClick={() => handleDeleteApproach(a.id)} title="削除" aria-label="削除" className="p-1.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg text-xs">🗑️</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

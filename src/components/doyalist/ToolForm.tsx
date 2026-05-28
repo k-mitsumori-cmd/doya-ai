@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
+import { INDUSTRIES } from '@/lib/doyalist/constants'
 
 const CHARS = {
   point: '/kintai/characters/point_解説.png',
@@ -10,8 +11,6 @@ const CHARS = {
   thinking: '/kintai/characters/thinking_考え中.png',
   success: '/kintai/characters/success_成功.png',
 }
-
-const INDUSTRIES = ['IT・ソフトウェア', '製造業', '小売・EC', '医療・介護', '教育', '金融・保険', '不動産', '飲食', '物流', '建設', 'コンサル', '広告・マーケ', '人材', 'その他']
 
 interface Props {
   type: 'form' | 'email' | 'phone'

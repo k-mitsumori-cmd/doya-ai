@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import toast, { Toaster } from 'react-hot-toast'
+import { INDUSTRIES, AREAS as AREA_LIST, SIZES } from '@/lib/doyalist/constants'
+import { AREA_TO_PREFECTURES } from '@/lib/doyalist/collect/prefecture-codes'
 
 interface Company {
   id?: string
@@ -38,20 +40,12 @@ const CHARS = {
   sleep: '/kintai/characters/sleep_居眠り.png',
 }
 
-const INDUSTRIES = ['IT・ソフトウェア', '製造業', '小売・EC', '医療・介護', '教育', '金融・保険', '不動産', '飲食', '物流', '建設', 'コンサル', '広告・マーケ', '人材', 'その他']
-
+// "全国" を含むエリア配列を構築
 const AREA_PREFECTURES: Record<string, string[]> = {
   '全国': [],
-  '北海道・東北': ['北海道', '青森県', '岩手県', '宮城県', '秋田県', '山形県', '福島県'],
-  '関東': ['東京都', '神奈川県', '埼玉県', '千葉県', '茨城県', '栃木県', '群馬県'],
-  '中部': ['新潟県', '富山県', '石川県', '福井県', '山梨県', '長野県', '岐阜県', '静岡県', '愛知県'],
-  '近畿': ['三重県', '滋賀県', '京都府', '大阪府', '兵庫県', '奈良県', '和歌山県'],
-  '中国': ['鳥取県', '島根県', '岡山県', '広島県', '山口県'],
-  '四国': ['徳島県', '香川県', '愛媛県', '高知県'],
-  '九州・沖縄': ['福岡県', '佐賀県', '長崎県', '熊本県', '大分県', '宮崎県', '鹿児島県', '沖縄県'],
+  ...AREA_TO_PREFECTURES,
 }
-const AREAS = Object.keys(AREA_PREFECTURES)
-const SIZES = ['指定なし', 'スタートアップ（〜20名）', '中小企業（20〜300名）', '中堅企業（300〜1000名）', '大企業（1000名〜）']
+const AREAS = [...AREA_LIST]
 const COUNT_OPTIONS = [100, 500, 1000, 2000, 3000, 5000, 7000, 10000]
 const PAGE_SIZE = 50
 const SORT_OPTIONS = [
@@ -62,16 +56,17 @@ const SORT_OPTIONS = [
   { v: 'employees_desc', l: '従業員数（多い順）' },
 ]
 
-const PREVIEW_FIELDS = [
-  '法人名',
-  '業種',
-  '所在地・都道府県',
-  '代表者名',
-  '従業員数',
-  '資本金',
-  '設立年',
-  '公式WebサイトURL',
-  '事業概要',
+const PREVIEW_FIELDS: { label: string; always: boolean }[] = [
+  { label: '法人名', always: true },
+  { label: '法人番号', always: true },
+  { label: '所在地（都道府県・住所）', always: true },
+  { label: '業種', always: false },
+  { label: '代表者名', always: false },
+  { label: '従業員数', always: false },
+  { label: '資本金', always: false },
+  { label: '設立年', always: false },
+  { label: '公式WebサイトURL', always: false },
+  { label: '事業概要', always: false },
 ]
 
 export default function DoyalistHomePage() {
@@ -401,18 +396,25 @@ export default function DoyalistHomePage() {
               </div>
 
               <div className="py-5 text-center border-b border-slate-100">
-                <p className="text-xs font-bold text-slate-500 mb-1">想定取得件数</p>
+                <p className="text-xs font-bold text-slate-500 mb-1">最大取得件数</p>
                 <p className="text-4xl font-black text-[#0a1530]">{count.toLocaleString()}<span className="text-base font-bold text-slate-500 ml-1">社</span></p>
+                <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">
+                  条件に合う企業数が少ない場合は<br/>これより少ない件数になります
+                </p>
               </div>
 
               <div className="py-4 space-y-2">
                 <p className="text-xs font-bold text-slate-700 mb-2">📋 取得できる情報</p>
                 {PREVIEW_FIELDS.map((f) => (
-                  <div key={f} className="flex items-center gap-2 text-xs text-slate-600">
-                    <span className="text-emerald-500">✓</span>
-                    <span>{f}</span>
+                  <div key={f.label} className="flex items-start gap-2 text-xs text-slate-600">
+                    <span className={f.always ? 'text-emerald-500' : 'text-cyan-500'}>{f.always ? '✓' : '◯'}</span>
+                    <span className="flex-1">{f.label}</span>
+                    {!f.always && <span className="text-[9px] text-slate-400 whitespace-nowrap">登録時のみ</span>}
                   </div>
                 ))}
+                <p className="text-[10px] text-slate-400 pt-2 mt-2 border-t border-slate-100 leading-relaxed">
+                  ※ <span className="font-bold">◯</span>の項目はgBizINFO登録状況によって取得できないことがあります（株式会社未上場の小規模法人など）
+                </p>
               </div>
 
               <div className="pt-4 border-t border-slate-100 space-y-2">
@@ -472,20 +474,35 @@ export default function DoyalistHomePage() {
             <div className="divide-y divide-slate-100">
               {visibleCompanies.map((c, i) => {
                 const ed = c.enrichedData || {}
-                const gbizUrl = ed.corporateNumber ? `https://info.gbiz.go.jp/hojin/ichiran?hojinBangou=${ed.corporateNumber}` : null
+                // gBizINFO公式の企業詳細ページ。新仕様では `/hojin/{法人番号}` に直接アクセス
+                const gbizUrl = ed.corporateNumber ? `https://info.gbiz.go.jp/hojin/ichiran?hojinBangou=${encodeURIComponent(ed.corporateNumber)}` : null
                 return (
                   <div key={c.id || i} className="p-5 hover:bg-slate-50/50 transition-colors">
                     <div className="flex items-start gap-4">
                       <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#0a1530] flex items-center justify-center text-white font-bold text-sm shadow">{i + 1}</div>
                       <div className="flex-1 min-w-0 space-y-2">
-                        <h3 className="text-base font-bold text-[#0a1530]">{c.name}</h3>
+                        {/* 企業名 → gBizINFO 詳細リンク */}
+                        {gbizUrl ? (
+                          <a
+                            href={gbizUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group inline-flex items-center gap-1.5"
+                            title="gBizINFOで詳細を確認"
+                          >
+                            <h3 className="text-base font-bold text-[#0a1530] group-hover:text-cyan-600 group-hover:underline transition-colors">{c.name}</h3>
+                            <span className="material-symbols-outlined text-base text-slate-300 group-hover:text-cyan-500 transition-colors">open_in_new</span>
+                          </a>
+                        ) : (
+                          <h3 className="text-base font-bold text-[#0a1530]">{c.name}</h3>
+                        )}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                           {c.industry && <InfoRow icon="🏢" label="業種" value={c.industry} />}
                           {(ed.address || c.region) && <InfoRow icon="📍" label="所在地" value={ed.address || c.region!} />}
                           {ed.representative && <InfoRow icon="👤" label="代表者" value={ed.representative} />}
-                          {(ed.employeeCount || c.size) && <InfoRow icon="👥" label="従業員数" value={ed.employeeCount || c.size!} />}
-                          {ed.capital && <InfoRow icon="💰" label="資本金" value={ed.capital} />}
-                          {ed.foundedYear && <InfoRow icon="📅" label="設立年" value={String(ed.foundedYear)} />}
+                          {(ed.employeeCount || c.size) && <InfoRow icon="👥" label="従業員数" value={`${ed.employeeCount || c.size!} 名`} />}
+                          {ed.capital && <InfoRow icon="💰" label="資本金" value={formatCapital(ed.capital)} />}
+                          {ed.foundedYear && <InfoRow icon="📅" label="設立年" value={`${ed.foundedYear}年`} />}
                         </div>
                         {(ed.businessSummary || c.description) && (
                           <div className="bg-cyan-50/50 border-l-4 border-cyan-400 px-3 py-2 rounded-r-lg">
@@ -528,6 +545,15 @@ export default function DoyalistHomePage() {
       </div>
     </div>
   )
+}
+
+// 資本金（円）を万円/百万円/億円表記に整形
+function formatCapital(v: string | number): string {
+  const n = typeof v === 'number' ? v : parseInt(String(v).replace(/[^\d]/g, ''), 10)
+  if (!Number.isFinite(n) || n <= 0) return String(v)
+  if (n >= 100000000) return `${(n / 100000000).toLocaleString(undefined, { maximumFractionDigits: 1 })}億円`
+  if (n >= 10000) return `${(n / 10000).toLocaleString()}万円`
+  return `${n.toLocaleString()}円`
 }
 
 function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {

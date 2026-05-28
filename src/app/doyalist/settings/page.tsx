@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { INDUSTRIES, AREAS } from '@/lib/doyalist/constants'
 
-const INDUSTRY_OPTIONS = ['IT', '製造', '小売', '医療', '教育', '金融', '不動産', 'その他']
-const REGION_OPTIONS = ['全国', '東京', '大阪', '名古屋', '福岡', 'その他']
+const INDUSTRY_OPTIONS = INDUSTRIES
+const REGION_OPTIONS = AREAS
 
 const SETTINGS_KEY = 'doyalist:settings'
 

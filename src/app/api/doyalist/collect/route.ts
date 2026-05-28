@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { collectCompanies } from '@/lib/doyalist/collect'
+import { collectCompaniesDetailed } from '@/lib/doyalist/collect'
 import {
   getUserDoyalistLimits,
   countMonthlyCompanies,
@@ -99,9 +99,9 @@ export async function POST(req: NextRequest) {
           ? INDUSTRY_FALLBACK_KEYWORDS[industry]
           : ['株式会社'])
 
-    let collected: Awaited<ReturnType<typeof collectCompanies>>
+    let collectedResult: Awaited<ReturnType<typeof collectCompaniesDetailed>>
     try {
-      collected = await collectCompanies({
+      collectedResult = await collectCompaniesDetailed({
         criteria: {
           keywords: searchKeywords,
           areas: region && region !== '全国' ? [region] : undefined,
@@ -109,25 +109,43 @@ export async function POST(req: NextRequest) {
         } as any,
         maxResults: count,
         sources: ['gbizinfo', 'corporate_number'],
+        enrich: true,
+        enrichLimit: Math.min(count, 300),
       })
     } catch (e: any) {
       console.error('[doyalist/collect] API error', e)
+      // 失敗時は空プロジェクトを削除
+      try { await prisma.doyalistProject.delete({ where: { id: projectId } }) } catch {}
       return NextResponse.json(
         { error: '企業データの取得に失敗しました。しばらく経ってから再試行してください。' },
         { status: 502 }
       )
     }
 
+    const collected = collectedResult.companies
+
     if (collected.length === 0) {
+      // 空プロジェクトを削除して履歴に残さない
+      try { await prisma.doyalistProject.delete({ where: { id: projectId } }) } catch {}
+      // APIが応答していたかどうかで原因を区別
+      if (!collectedResult.apiOk) {
+        return NextResponse.json(
+          { error: '企業データAPIから応答がありませんでした。時間をおいて再試行してください。', code: 'api_error' },
+          { status: 502 }
+        )
+      }
       return NextResponse.json(
-        { error: '該当する企業が見つかりませんでした。キーワードを変更してお試しください。' },
-        { status: 404 }
+        {
+          error: '該当する企業が見つかりませんでした。キーワードや業界・地域の絞り込みを緩めてお試しください。',
+          code: 'no_hits',
+          hint: 'AIキーワード変換ボタンで検索ワードを増やすとヒット数が増えやすくなります',
+        },
+        { status: 422 }
       )
     }
 
     // DB保存（実企業データ）
     const rows = collected.slice(0, count).map((c) => {
-      const rawBusinessSummary = (c.rawData as any)?.business_summary || (c.rawData as any)?.businessSummary || null
       return {
         projectId,
         name: c.companyName.slice(0, 200),
@@ -135,9 +153,8 @@ export async function POST(req: NextRequest) {
         industry: c.industry || project.industry || null,
         region: c.prefecture || project.region || null,
         size: c.employeeCount || project.targetSize || null,
-        description: rawBusinessSummary || null,
+        description: c.businessSummary || null,
         contactPerson: c.representative || null,
-        // 取得可能データを全て enrichedData に保存
         enrichedData: {
           corporateNumber: c.corporateNumber || null,
           address: c.address || null,
@@ -146,7 +163,7 @@ export async function POST(req: NextRequest) {
           capital: c.capital || null,
           employeeCount: c.employeeCount || null,
           foundedYear: c.foundedYear || null,
-          businessSummary: rawBusinessSummary,
+          businessSummary: c.businessSummary || null,
           industry: c.industry || null,
         },
         score: null,

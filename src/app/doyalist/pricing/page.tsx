@@ -99,7 +99,12 @@ export default function PricingPage() {
   useEffect(() => {
     fetch('/api/doyalist/usage')
       .then((r) => r.json())
-      .then((d) => setCurrentPlan(String(d?.plan || 'FREE').toUpperCase() as PlanId))
+      .then((d) => {
+        // usage.plan は { raw, tier, periodEnd } のオブジェクト or string で返る
+        const planRaw: any = d?.plan
+        const tier = (typeof planRaw === 'object' && planRaw !== null ? planRaw.tier || planRaw.raw : planRaw) || 'FREE'
+        setCurrentPlan(String(tier).toUpperCase() as PlanId)
+      })
       .catch(() => {})
   }, [])
 
