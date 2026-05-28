@@ -47,6 +47,9 @@ const AREA_PREFECTURES: Record<string, string[]> = {
 }
 const AREAS = [...AREA_LIST]
 const COUNT_OPTIONS = [100, 500, 1000, 2000, 3000, 5000, 7000, 10000]
+// gBizINFO の詳細データ登録率が低い業界（実測ベース）
+// 上場・公共調達・補助金受給企業が中心の傾向のため、小規模代理店・店舗系は欠落しがち
+const SPARSE_INDUSTRIES = ['広告・マーケ', '小売・EC', 'コンサル', '飲食', '人材', 'その他']
 const PAGE_SIZE = 50
 const SORT_OPTIONS = [
   { v: 'default', l: '抽出順' },
@@ -409,6 +412,19 @@ export default function DoyalistHomePage() {
                       </button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {/* gBizINFO登録率が低い業界の警告 */}
+              {SPARSE_INDUSTRIES.includes(industry) && (
+                <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+                  <p className="text-xs font-bold text-amber-700 leading-relaxed">
+                    ⚠️ <strong>「{industry}」業界はgBizINFO登録率が低い傾向です</strong>
+                  </p>
+                  <p className="text-[11px] text-amber-600 mt-1 leading-relaxed">
+                    代表者名・従業員数・公式URL等の詳細情報が取得できない企業が多い場合があります。<br/>
+                    法人名・住所・法人番号は確実に取得できます。
+                  </p>
                 </div>
               )}
 

@@ -60,7 +60,10 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
       const data = await res.json()
       if (!res.ok) { toast.error(data?.error || '生成に失敗しました', { id: tid }); return }
       setResult(data.text || '')
-      toast.success('完成しました！', { id: tid })
+      toast.success(
+        data.savedToHistory ? '完成 & 履歴に保存しました ✓' : '完成しました（履歴保存は失敗）',
+        { id: tid }
+      )
     } catch (e: any) {
       toast.error(e?.message || '通信エラー', { id: tid })
     } finally { setGenerating(false) }

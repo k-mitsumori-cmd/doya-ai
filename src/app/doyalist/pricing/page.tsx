@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 
@@ -88,27 +89,48 @@ const COMPARISON: { label: string; values: [string, string, string] }[] = [
   { label: 'SLA契約', values: ['—', '—', '◯'] },
 ]
 
+function normalizePlan(rawTier: unknown): PlanId {
+  const s = String(rawTier || '').toUpperCase()
+  if (s.includes('ENTERPRISE')) return 'ENTERPRISE'
+  // 統一プラン方式: PRO / LIGHT / BUSINESS / STARTER / BASIC は全て PRO 扱い
+  if (s.includes('PRO') || s.includes('LIGHT') || s.includes('BUSINESS') || s.includes('STARTER') || s.includes('BASIC')) return 'PRO'
+  return 'FREE'
+}
+
 export default function PricingPage() {
-  const [currentPlan, setCurrentPlan] = useState('FREE' as PlanId)
+  const { data: session, status: sessionStatus } = useSession()
+  const [currentPlan, setCurrentPlan] = useState<PlanId>('FREE')
   const [periodEnd, setPeriodEnd] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
+  const [planLoading, setPlanLoading] = useState(true)
 
   useEffect(() => {
+    setPlanLoading(true)
     fetch('/api/doyalist/usage')
       .then((r) => r.json())
       .then((d) => {
+        // 1) API から tier 取得（最優先・DBから最新値）
         const planRaw: any = d?.plan
-        const tier = (typeof planRaw === 'object' && planRaw !== null ? planRaw.tier || planRaw.raw : planRaw) || 'FREE'
-        // ライト/プロは同一プランとして扱う（統一プラン方式）
-        const tierUpper = String(tier).toUpperCase()
-        const normalized: PlanId = tierUpper === 'ENTERPRISE' ? 'ENTERPRISE'
-          : (tierUpper === 'PRO' || tierUpper === 'LIGHT') ? 'PRO'
-          : 'FREE'
-        setCurrentPlan(normalized)
+        const apiTier = typeof planRaw === 'object' && planRaw !== null
+          ? planRaw.tier || planRaw.raw
+          : planRaw
+        // 2) NextAuth セッションの user.plan も予備
+        const sessionPlan = (session?.user as any)?.plan
+        // 3) 両方を見て、より上位のプランを採用（ダウングレード誤表示防止）
+        const apiPlan = normalizePlan(apiTier)
+        const sessPlan = normalizePlan(sessionPlan)
+        const priority = { FREE: 0, PRO: 1, ENTERPRISE: 2 }
+        const best: PlanId = priority[apiPlan] >= priority[sessPlan] ? apiPlan : sessPlan
+        setCurrentPlan(best)
         if (planRaw?.periodEnd) setPeriodEnd(planRaw.periodEnd)
       })
-      .catch(() => {})
-  }, [])
+      .catch(() => {
+        // API失敗時はセッションだけで判定
+        const sessionPlan = (session?.user as any)?.plan
+        setCurrentPlan(normalizePlan(sessionPlan))
+      })
+      .finally(() => setPlanLoading(false))
+  }, [session])
 
   const handlePortal = async () => {
     setPortalLoading(true)
@@ -182,13 +204,19 @@ export default function PricingPage() {
             </div>
             <div>
               <p className="text-xs font-bold text-slate-500">現在のプラン</p>
-              <p className="text-lg font-black text-[#0a1530]">
-                {PLANS.find((p) => p.id === currentPlan)?.name || '無料プラン'}
-              </p>
-              {periodEnd && currentPlan !== 'FREE' && (
-                <p className="text-xs text-slate-400 mt-0.5">
-                  次回更新: {new Date(periodEnd).toLocaleDateString('ja-JP')}
-                </p>
+              {planLoading || sessionStatus === 'loading' ? (
+                <p className="text-lg font-black text-slate-300 animate-pulse">読み込み中...</p>
+              ) : (
+                <>
+                  <p className="text-lg font-black text-[#0a1530]">
+                    {PLANS.find((p) => p.id === currentPlan)?.name || '無料プラン'}
+                  </p>
+                  {periodEnd && currentPlan !== 'FREE' && (
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      次回更新: {new Date(periodEnd).toLocaleDateString('ja-JP')}
+                    </p>
+                  )}
+                </>
               )}
             </div>
           </div>

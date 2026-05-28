@@ -197,16 +197,18 @@ export async function POST(req: NextRequest) {
 
     const finalText = text.trim()
 
-    // 履歴保存（ベストエフォート / 失敗してもユーザー応答は成功扱い）
+    // 履歴保存（成功時はsavedToHistoryをtrueで返す。失敗してもAI生成自体は成功扱い）
+    let savedToHistory = false
+    let savedId: string | null = null
     try {
       const projectId = await getOrCreateToolProject(userId)
       const approachType = body.type === 'form' ? 'form' : body.type === 'email' ? 'email' : 'phone'
       const subject = body.type === 'email'
-        ? (finalText.match(/^件名[:：]\s*(.+)$/m)?.[1]?.slice(0, 200) || `[メール] ${body.targetIndustry || ''}`)
+        ? (finalText.match(/^件名[:：]\s*(.+)$/m)?.[1]?.slice(0, 200) || `[メール] ${body.targetIndustry || '営業'}`)
         : body.type === 'form'
-          ? `[フォーム文面] ${body.targetIndustry || ''}`
-          : `[電話スクリプト] ${body.targetIndustry || ''}`
-      await prisma.doyalistApproach.create({
+          ? `[フォーム文面] ${body.targetIndustry || '営業'}`
+          : `[電話スクリプト] ${body.targetIndustry || '営業'}`
+      const created = await prisma.doyalistApproach.create({
         data: {
           projectId,
           type: approachType,
@@ -214,12 +216,16 @@ export async function POST(req: NextRequest) {
           body: finalText.slice(0, 8000),
           status: 'draft',
         },
+        select: { id: true },
       })
+      savedToHistory = true
+      savedId = created.id
+      console.log(`[doyalist/tools] 履歴保存成功 type=${approachType} id=${created.id} userId=${userId}`)
     } catch (e) {
-      console.warn('[doyalist/tools] 履歴保存失敗（生成自体は成功）', e)
+      console.error('[doyalist/tools] 履歴保存失敗（生成自体は成功）', e)
     }
 
-    return NextResponse.json({ success: true, text: finalText })
+    return NextResponse.json({ success: true, text: finalText, savedToHistory, savedId })
   } catch (e: any) {
     console.error('[doyalist/tools]', e)
     return NextResponse.json({ error: e?.message || 'ツール実行に失敗しました' }, { status: 500 })

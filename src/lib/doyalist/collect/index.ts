@@ -1,5 +1,6 @@
 import { searchCorporateNumber } from './corporate-number'
 import { searchGbizInfo, getGbizCompanyDetailsBatch } from './gbizinfo'
+import { discoverCompanyUrlsBatch } from './url-discovery'
 import { AREA_TO_PREFECTURES, PREFECTURE_TO_CODE } from './prefecture-codes'
 import type { TargetCriteria } from '../types'
 
@@ -29,6 +30,10 @@ interface CollectOptions {
   enrich?: boolean
   /** 詳細取得の最大件数（コスト/時間制限） */
   enrichLimit?: number
+  /** SerpAPIで企業名→URLを自動探索（URLなし企業向け） */
+  discoverUrls?: boolean
+  /** URL自動探索の最大件数（SerpAPIコスト制限） */
+  urlDiscoveryLimit?: number
 }
 
 export interface CollectResult {
@@ -50,7 +55,15 @@ export async function collectCompanies(options: CollectOptions): Promise<Collect
  * - 詳細取得（enrich=true）で代表者・従業員数・資本金等を埋める
  */
 export async function collectCompaniesDetailed(options: CollectOptions): Promise<CollectResult> {
-  const { criteria, maxResults = 100, sources = ['corporate_number', 'gbizinfo'], enrich = true, enrichLimit = 300 } = options
+  const {
+    criteria,
+    maxResults = 100,
+    sources = ['corporate_number', 'gbizinfo'],
+    enrich = true,
+    enrichLimit = 300,
+    discoverUrls = true,
+    urlDiscoveryLimit = 100, // SerpAPIコスト保護（1回最大100社まで）
+  } = options
 
   const allCompanies: CollectedCompany[] = []
   let anyApiSuccess = false
@@ -209,6 +222,31 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
         c.foundedYear = c.foundedYear || (d.foundingYear ? parseInt(d.foundingYear) : undefined)
         c.address = c.address || d.address
         c.rawData = { ...c.rawData, ...d }
+      }
+    }
+  }
+
+  // URL自動探索: gBizINFOにURLがない企業を SerpAPI で補完
+  if (discoverUrls && urlDiscoveryLimit > 0) {
+    const noUrlCompanies = deduplicated
+      .filter((c) => !c.website && c.companyName)
+      .slice(0, urlDiscoveryLimit)
+
+    if (noUrlCompanies.length > 0) {
+      // 企業ID代わりに companyName をキーに使う
+      const targets = noUrlCompanies.map((c, i) => ({
+        id: c.corporateNumber || `idx-${i}`,
+        name: c.companyName,
+      }))
+      const discovered = await discoverCompanyUrlsBatch(targets, {
+        concurrency: 4,
+        budgetMs: 60000,
+      })
+      for (let i = 0; i < noUrlCompanies.length; i++) {
+        const c = noUrlCompanies[i]
+        const key = c.corporateNumber || `idx-${i}`
+        const url = discovered.get(key)
+        if (url && !c.website) c.website = url
       }
     }
   }
