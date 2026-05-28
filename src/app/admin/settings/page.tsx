@@ -158,14 +158,20 @@ export default function AdminSettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">プレミアム：1日の生成回数</label>
-              <input
-                type="number"
-                value={settings.premiumDailyLimit}
-                onChange={(e) => setSettings({ ...settings, premiumDailyLimit: parseInt(e.target.value) })}
-                className="input-field"
-                placeholder="-1 で無制限"
-              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">プロ：1日の生成回数</label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="number"
+                  value={settings.premiumDailyLimit}
+                  onChange={(e) => setSettings({ ...settings, premiumDailyLimit: parseInt(e.target.value) })}
+                  className="input-field flex-1"
+                  placeholder="-1 で無制限"
+                />
+                <span className="text-xs text-gray-500 whitespace-nowrap">
+                  {settings.premiumDailyLimit < 0 ? '🔓 無制限' : `${settings.premiumDailyLimit}回/日`}
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">※ -1 を入力すると「無制限」になります</p>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">入力文字数の上限</label>
@@ -201,19 +207,24 @@ export default function AdminSettingsPage() {
             </div>
             <div>
               <h2 className="text-lg font-bold text-gray-900">料金設定</h2>
-              <p className="text-sm text-gray-500">プレミアムプランの料金を設定します</p>
+              <p className="text-sm text-gray-500">料金は src/lib/pricing.ts で一元管理されています</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">プレミアムプラン月額（円）</label>
-              <input
-                type="number"
-                value={settings.premiumPrice}
-                onChange={(e) => setSettings({ ...settings, premiumPrice: parseInt(e.target.value) })}
-                className="input-field"
-              />
-              <p className="text-xs text-gray-400 mt-1">※ Stripeの価格設定と同期してください</p>
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-3">
+            <span className="text-blue-600 text-lg">ℹ️</span>
+            <div className="flex-1 text-sm">
+              <p className="font-medium text-blue-900 mb-1">料金マスタは一元管理されています</p>
+              <p className="text-blue-700">
+                プラン料金（フリー/ライト/プロ/エンタープライズ）は
+                <code className="bg-blue-100 px-1.5 py-0.5 rounded mx-1 text-xs">src/lib/pricing.ts</code>
+                で管理されており、Stripe価格IDと同期されています。
+              </p>
+              <a
+                href="/admin/billing"
+                className="inline-flex items-center gap-1 mt-2 text-xs text-blue-600 hover:text-blue-800 font-bold"
+              >
+                売上・課金ページで詳細を確認 →
+              </a>
             </div>
           </div>
         </motion.div>

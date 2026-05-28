@@ -21,6 +21,7 @@ interface DripUser {
   name: string | null
   email: string | null
   plan: string
+  planLabel?: string
   status: string
   lastLogin: string | null
   enrollmentsCount: number
@@ -200,11 +201,15 @@ export default function DripUsersPage() {
                       <span
                         className={`text-xs px-1.5 py-0.5 rounded ${
                           user.plan === 'PRO'
-                            ? 'bg-amber-500/20 text-amber-400'
-                            : 'bg-white/10 text-white/50'
+                            ? 'bg-purple-500/20 text-purple-400'
+                            : user.plan === 'ENTERPRISE'
+                              ? 'bg-slate-500/20 text-slate-300'
+                              : user.plan === 'LIGHT'
+                                ? 'bg-blue-500/20 text-blue-400'
+                                : 'bg-white/10 text-white/50'
                         }`}
                       >
-                        {user.plan}
+                        {user.planLabel || user.plan}
                       </span>
                     </span>
                     <span>
