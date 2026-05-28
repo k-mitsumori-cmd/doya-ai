@@ -74,6 +74,20 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       if (!hasMinRole(kctx.role, 'manager')) {
         return NextResponse.json({ error: '承認権限がありません' }, { status: 403 })
       }
+      // マネージャーは自部署の申請のみ承認可能（hr_admin以上は全部署OK）
+      if (kctx.role === 'manager') {
+        const requester = await prisma.kintaiEmployee.findUnique({
+          where: { id: existing.employeeId },
+          select: { departmentId: true },
+        })
+        const approver = await prisma.kintaiEmployee.findUnique({
+          where: { id: kctx.employeeId },
+          select: { departmentId: true },
+        })
+        if (requester?.departmentId !== approver?.departmentId) {
+          return NextResponse.json({ error: '他部署の申請は承認できません' }, { status: 403 })
+        }
+      }
     }
 
     const updated = await prisma.kintaiRequest.update({

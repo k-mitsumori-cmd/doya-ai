@@ -21,6 +21,12 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: '無効または期限切れの招待リンクです' }, { status: 404 })
     }
 
+    // 招待トークン有効期限チェック（48時間）
+    const INVITE_EXPIRY_MS = 48 * 60 * 60 * 1000
+    if (member.createdAt && Date.now() - new Date(member.createdAt).getTime() > INVITE_EXPIRY_MS) {
+      return NextResponse.json({ error: '招待リンクの有効期限（48時間）が切れています。管理者に再招待を依頼してください。' }, { status: 410 })
+    }
+
     const employee = await prisma.kintaiEmployee.findFirst({
       where: { organizationId: member.organizationId, member: { id: member.id } },
       select: { name: true, email: true },
@@ -65,6 +71,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     })
     if (!member) {
       return NextResponse.json({ error: '無効または期限切れの招待リンクです' }, { status: 404 })
+    }
+
+    const INVITE_EXPIRY_MS = 48 * 60 * 60 * 1000
+    if (member.createdAt && Date.now() - new Date(member.createdAt).getTime() > INVITE_EXPIRY_MS) {
+      return NextResponse.json({ error: '招待リンクの有効期限（48時間）が切れています。管理者に再招待を依頼してください。' }, { status: 410 })
     }
 
     // 既存の他組織メンバーシップを非活性化（招待先に切り替え）

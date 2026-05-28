@@ -84,18 +84,13 @@ export default function AttendancePage() {
               <p className="text-xs text-slate-500">勤怠データの確認と修正申請</p>
             </div>
           </div>
-          <div className="relative group">
-            <button
-              disabled
-              className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-slate-400 border border-slate-200 rounded-xl cursor-not-allowed bg-slate-50/80"
-            >
-              <span className="material-symbols-outlined text-base">download</span>
-              CSV
-            </button>
-            <div className="absolute right-0 top-full mt-1 px-2.5 py-1 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10">
-              準備中
-            </div>
-          </div>
+          <a
+            href={`/api/kintai/attendance/export?year=${year}&month=${month}&format=csv`}
+            className="flex items-center gap-1.5 px-3.5 py-2 text-sm text-slate-600 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors bg-white"
+          >
+            <span className="material-symbols-outlined text-base">download</span>
+            CSV
+          </a>
         </div>
 
         {/* ===== Month Navigation (Google Calendar style) ===== */}
