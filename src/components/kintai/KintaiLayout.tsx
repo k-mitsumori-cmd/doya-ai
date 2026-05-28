@@ -27,7 +27,8 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
 
   const isLandingPage = pathname === '/kintai'
   const isPricingPage = pathname === '/kintai/pricing'
-  const isPublicPage = isLandingPage || isPricingPage
+  const isInvitePage = pathname?.startsWith('/kintai/invite')
+  const isPublicPage = isLandingPage || isPricingPage || isInvitePage
 
   useEffect(() => {
     if (session?.user) {
