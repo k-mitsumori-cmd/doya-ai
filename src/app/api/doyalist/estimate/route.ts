@@ -58,58 +58,72 @@ export async function POST(req: NextRequest) {
     const prefCodes = region && region !== '全国' ? resolvePrefectureCodes(region) : []
     const samplePrefCode = prefCodes[0]
 
-    // gBizINFO API は totalCount を返さないので、実際にデータを取得して件数を数える
-    // 最大数 = limit (5000) × pages (最大10) = 50,000 / キーワード
-    // ここでは limit=5000 で 1ページ分のサンプル取得し、5000満たすかで「以上」判定
-    const SAMPLE_LIMIT = 5000
+    // gBizINFO API は totalCount を返さないので、実際にデータを取得して件数測定
+    // 軽量化: limit=1000 (約100KB) で page=1, page=10 を確認
+    // - page1<1000 → 実数
+    // - page1==1000 → page10で総数推定 (10000+ / 中間値)
+    const SAMPLE_LIMIT = 1000
+    const MAX_PAGE = 10
     let totalEstimate = 0
-    let isApprox = false // 上限到達フラグ
+    let isApprox = false
     let detailNotice: string | null = null
+    let anyError = false
+
+    async function fetchPage(kw: string, page: number): Promise<number | null> {
+      const u = new URL(`${API_BASE}/hojin`)
+      u.searchParams.set('name', kw)
+      if (samplePrefCode) u.searchParams.set('prefecture', samplePrefCode)
+      u.searchParams.set('limit', String(SAMPLE_LIMIT))
+      u.searchParams.set('page', String(page))
+      try {
+        const r = await fetch(u.toString(), {
+          headers: { 'Accept': 'application/json', 'X-hojinInfo-api-token': apiToken },
+          signal: AbortSignal.timeout(12000),
+        })
+        if (r.status === 404) return 0  // ヒット0件
+        if (!r.ok) {
+          console.warn(`[estimate] gBizINFO ${r.status} for "${kw}" page=${page}`)
+          return null  // エラー
+        }
+        const data = await r.json()
+        return (data['hojin-infos'] || []).length
+      } catch (e: any) {
+        console.warn(`[estimate] fetch error for "${kw}" page=${page}:`, e?.message || e)
+        return null
+      }
+    }
 
     for (const kw of searchKeywords.slice(0, 2)) {
-      const url = new URL(`${API_BASE}/hojin`)
-      url.searchParams.set('name', kw)
-      if (samplePrefCode) url.searchParams.set('prefecture', samplePrefCode)
-      url.searchParams.set('limit', String(SAMPLE_LIMIT))
-      url.searchParams.set('page', '1')
-
-      try {
-        const r = await fetch(url.toString(), {
-          headers: { 'Accept': 'application/json', 'X-hojinInfo-api-token': apiToken },
-        })
-        if (r.status === 404) continue
-        if (!r.ok) continue
-        const data = await r.json()
-        const count = (data['hojin-infos'] || []).length
-        // 5000満タンなら追加で page 2-3 も叩いて「上限以上」を粗推定
-        if (count >= SAMPLE_LIMIT) {
-          isApprox = true
-          // 2ページ目チェック
-          const url2 = new URL(`${API_BASE}/hojin`)
-          url2.searchParams.set('name', kw)
-          if (samplePrefCode) url2.searchParams.set('prefecture', samplePrefCode)
-          url2.searchParams.set('limit', String(SAMPLE_LIMIT))
-          url2.searchParams.set('page', '2')
-          try {
-            const r2 = await fetch(url2.toString(), {
-              headers: { 'Accept': 'application/json', 'X-hojinInfo-api-token': apiToken },
-            })
-            if (r2.ok) {
-              const data2 = await r2.json()
-              const count2 = (data2['hojin-infos'] || []).length
-              totalEstimate += count + count2
-            } else {
-              totalEstimate += count
-            }
-          } catch {
-            totalEstimate += count
-          }
-        } else {
-          totalEstimate += count
-        }
-      } catch {
-        // ignore
+      const c1 = await fetchPage(kw, 1)
+      if (c1 === null) { anyError = true; continue }
+      if (c1 < SAMPLE_LIMIT) {
+        // 実数
+        totalEstimate += c1
+        continue
       }
+      // 1000満タン → 10ページ目で「10,000+」かチェック
+      isApprox = true
+      const cMax = await fetchPage(kw, MAX_PAGE)
+      if (cMax === null) {
+        totalEstimate += SAMPLE_LIMIT // 取得失敗時は 1000+ 扱い
+      } else if (cMax >= SAMPLE_LIMIT) {
+        totalEstimate += SAMPLE_LIMIT * MAX_PAGE // 10000+
+      } else if (cMax > 0) {
+        // 中間値: (MAX_PAGE-1)*1000 + cMax
+        totalEstimate += (MAX_PAGE - 1) * SAMPLE_LIMIT + cMax
+      } else {
+        // page10で0件 → 最後のページを二分探索的に推定
+        // 簡略化: 1000+ (実態は1000-10000のどこか)
+        totalEstimate += SAMPLE_LIMIT * 5
+      }
+    }
+
+    if (totalEstimate === 0 && anyError) {
+      return NextResponse.json({
+        success: true,
+        estimated: null,
+        note: 'gBizINFO API応答なし',
+      })
     }
 
     // エリア指定だが複数県の場合の補足
