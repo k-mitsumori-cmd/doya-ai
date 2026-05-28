@@ -318,6 +318,7 @@ function NewRequestContent() {
               </label>
               <input
                 type="date"
+                required
                 value={fixDate}
                 onChange={(e) => setFixDate(e.target.value)}
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white"
@@ -347,6 +348,7 @@ function NewRequestContent() {
               </label>
               <input
                 type="time"
+                required
                 value={fixTime}
                 onChange={(e) => setFixTime(e.target.value)}
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white"
@@ -368,11 +370,11 @@ function NewRequestContent() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">開始日 <span className="text-red-500">*</span></label>
-                    <input type="date" value={leaveStart} onChange={(e) => setLeaveStart(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                    <input type="date" required value={leaveStart} onChange={(e) => setLeaveStart(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">終了日 <span className="text-red-500">*</span></label>
-                    <input type="date" value={leaveEnd} onChange={(e) => setLeaveEnd(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                    <input type="date" required value={leaveEnd} onChange={(e) => setLeaveEnd(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
                   </div>
                 </div>
               </div>
@@ -383,12 +385,12 @@ function NewRequestContent() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">対象日 <span className="text-red-500">*</span></label>
-                  <input type="date" value={otDate} onChange={(e) => setOtDate(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  <input type="date" required value={otDate} onChange={(e) => setOtDate(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">時間</label>
-                    <input type="number" min="0" max="24" value={otHours} onChange={(e) => setOtHours(e.target.value)} placeholder="1" className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">時間 <span className="text-red-500">*</span></label>
+                    <input type="number" required min="0" max="24" value={otHours} onChange={(e) => setOtHours(e.target.value)} placeholder="1" className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">分</label>
@@ -403,16 +405,16 @@ function NewRequestContent() {
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">対象日 <span className="text-red-500">*</span></label>
-                  <input type="date" value={hwDate} onChange={(e) => setHwDate(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                  <input type="date" required value={hwDate} onChange={(e) => setHwDate(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">開始時刻</label>
-                    <input type="time" value={hwStart} onChange={(e) => setHwStart(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                    <input type="time" required value={hwStart} onChange={(e) => setHwStart(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">終了時刻</label>
-                    <input type="time" value={hwEnd} onChange={(e) => setHwEnd(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">終了時刻 <span className="text-red-500">*</span></label>
+                    <input type="time" required value={hwEnd} onChange={(e) => setHwEnd(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white" />
                   </div>
                 </div>
               </div>
@@ -436,6 +438,7 @@ function NewRequestContent() {
               </label>
               <textarea
                 value={reason}
+                required
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
                 placeholder={type === 'clock_fix' ? '例: 打刻を忘れたため' : type === 'leave' ? '例: 私用のため' : type === 'overtime' ? '例: プロジェクト納期対応のため' : '例: イベント対応のため'}

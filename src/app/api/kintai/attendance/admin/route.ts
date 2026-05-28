@@ -5,6 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
+import { recalculateDayForEmployee } from '@/lib/kintai/recalculate'
 
 export async function GET(req: NextRequest) {
   try {
@@ -26,12 +27,26 @@ export async function GET(req: NextRequest) {
       orderBy: { name: 'asc' },
     })
 
-    const attendances = await prisma.kintaiAttendance.findMany({
+    let attendances = await prisma.kintaiAttendance.findMany({
       where: {
         employeeId: { in: allEmployees.map(e => e.id) },
         date: { gte: dateObj, lt: nextDay },
       },
     })
+
+    // 勤務時間0のレコードを自動再計算
+    const stale = attendances.filter(a => a.clockIn && a.workMinutes === 0 && a.clockOut)
+    if (stale.length > 0) {
+      for (const att of stale) {
+        await recalculateDayForEmployee(att.employeeId, ctx.organizationId, att.date)
+      }
+      attendances = await prisma.kintaiAttendance.findMany({
+        where: {
+          employeeId: { in: allEmployees.map(e => e.id) },
+          date: { gte: dateObj, lt: nextDay },
+        },
+      })
+    }
 
     const attMap = new Map(attendances.map(a => [a.employeeId, a]))
 

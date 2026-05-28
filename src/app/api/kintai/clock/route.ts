@@ -5,7 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext } from '@/lib/kintai/access'
-import { calculateDailyAttendance } from '@/lib/kintai/attendance'
+import { recalculateDayForEmployee } from '@/lib/kintai/recalculate'
 import type { ClockType } from '@/lib/kintai/types'
 
 // ----------------------------------------------------------------
@@ -169,7 +169,10 @@ export async function POST(req: NextRequest) {
 
     // 退勤時・再出勤時に日次勤怠を再計算してupsert
     if (clockType === 'clock_out' || (clockType === 'clock_in' && hasClockOut)) {
-      await upsertDailyAttendance(ctx.employeeId, ctx.organizationId, todayStart, todayEnd)
+      const jstOffsetMs = 9 * 60 * 60 * 1000
+      const jstDayStart = new Date(todayStart.getTime() + jstOffsetMs)
+      const dateOnly = new Date(Date.UTC(jstDayStart.getUTCFullYear(), jstDayStart.getUTCMonth(), jstDayStart.getUTCDate()))
+      await recalculateDayForEmployee(ctx.employeeId, ctx.organizationId, dateOnly)
     }
 
     return NextResponse.json({ record, message: '打刻しました' })
@@ -177,79 +180,4 @@ export async function POST(req: NextRequest) {
     console.error('[kintai/clock POST]', error)
     return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 })
   }
-}
-
-// ----------------------------------------------------------------
-// 日次勤怠の集計・upsert
-// ----------------------------------------------------------------
-async function upsertDailyAttendance(
-  employeeId: string,
-  organizationId: string,
-  dayStart: Date,
-  dayEnd: Date
-) {
-  // 当日の全レコードを再取得（自動 break_end が追加されている可能性）
-  const records = await prisma.kintaiClockRecord.findMany({
-    where: {
-      employeeId,
-      timestamp: { gte: dayStart, lt: dayEnd },
-    },
-    orderBy: { timestamp: 'asc' },
-  })
-
-  // 従業員の就業ルールを取得
-  const employee = await prisma.kintaiEmployee.findUnique({
-    where: { id: employeeId },
-    include: { workRule: true },
-  })
-
-  let workRule = employee?.workRule ?? null
-
-  // フォールバック: 組織のデフォルト就業ルール
-  if (!workRule) {
-    workRule = await prisma.kintaiWorkRule.findFirst({
-      where: { organizationId },
-      orderBy: { createdAt: 'asc' },
-    })
-  }
-
-  const result = calculateDailyAttendance(records, workRule, dayStart)
-
-  // 日付を Date-only に正規化（JSTの日付をUTC midnightとして保存）
-  const jstOffsetMs = 9 * 60 * 60 * 1000
-  const jstDayStart = new Date(dayStart.getTime() + jstOffsetMs)
-  const dateOnly = new Date(Date.UTC(jstDayStart.getUTCFullYear(), jstDayStart.getUTCMonth(), jstDayStart.getUTCDate()))
-
-  await prisma.kintaiAttendance.upsert({
-    where: {
-      employeeId_date: {
-        employeeId,
-        date: dateOnly,
-      },
-    },
-    update: {
-      clockIn: result.clockIn,
-      clockOut: result.clockOut,
-      breakMinutes: result.breakMinutes,
-      workMinutes: result.workMinutes,
-      overtimeMinutes: result.overtimeMinutes,
-      lateMinutes: result.lateMinutes,
-      earlyLeaveMinutes: result.earlyLeaveMinutes,
-      nightMinutes: result.nightMinutes,
-      status: !result.clockOut ? 'clock_missing' : result.lateMinutes > 0 ? 'late' : 'normal',
-    },
-    create: {
-      employeeId,
-      date: dateOnly,
-      clockIn: result.clockIn,
-      clockOut: result.clockOut,
-      breakMinutes: result.breakMinutes,
-      workMinutes: result.workMinutes,
-      overtimeMinutes: result.overtimeMinutes,
-      lateMinutes: result.lateMinutes,
-      earlyLeaveMinutes: result.earlyLeaveMinutes,
-      nightMinutes: result.nightMinutes,
-      status: !result.clockOut ? 'clock_missing' : result.lateMinutes > 0 ? 'late' : 'normal',
-    },
-  })
 }

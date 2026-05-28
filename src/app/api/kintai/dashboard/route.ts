@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext } from '@/lib/kintai/access'
 import { getClockStatusFromRecords as getClockStatus } from '@/lib/kintai/format'
+import { recalculateDayForEmployee } from '@/lib/kintai/recalculate'
 
 export async function GET() {
   try {
@@ -26,7 +27,7 @@ export async function GET() {
     const monthStart = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), 1) - jstOffset)
     const monthEnd = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth() + 1, 1) - jstOffset)
 
-    const [todayRecords, monthAttendances, recentRequests, employee] = await Promise.all([
+    const [todayRecords, rawMonthAttendances, recentRequests, employee] = await Promise.all([
       prisma.kintaiClockRecord.findMany({
         where: { employeeId: ctx.employeeId, timestamp: { gte: todayStart, lt: todayEnd } },
         orderBy: { timestamp: 'asc' },
@@ -45,6 +46,20 @@ export async function GET() {
         select: { name: true, email: true },
       }),
     ])
+
+    // 勤務時間0のレコードを自動再計算
+    const stale = rawMonthAttendances.filter(a => a.clockIn && a.workMinutes === 0 && a.clockOut)
+    if (stale.length > 0) {
+      for (const att of stale) {
+        await recalculateDayForEmployee(att.employeeId, ctx.organizationId, att.date)
+      }
+    }
+    const monthAttendances = stale.length > 0
+      ? await prisma.kintaiAttendance.findMany({
+          where: { employeeId: ctx.employeeId, date: { gte: monthStart, lt: monthEnd } },
+          orderBy: { date: 'asc' },
+        })
+      : rawMonthAttendances
 
     const clockStatus = getClockStatus(todayRecords)
     const todayAttendance = monthAttendances.find(

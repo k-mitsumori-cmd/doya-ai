@@ -4,8 +4,8 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getKintaiContext } from '@/lib/kintai/access'
-import { hasMinRole } from '@/lib/kintai/access'
+import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
+import { recalculateDayForEmployee } from '@/lib/kintai/recalculate'
 
 // ----------------------------------------------------------------
 // GET /api/kintai/attendance?month=YYYY-MM&employee_id=xxx
@@ -61,13 +61,28 @@ export async function GET(req: NextRequest) {
     const monthStart = new Date(Date.UTC(year, month - 1, 1) - jstOffsetMs)
     const monthEnd = new Date(Date.UTC(year, month, 1) - jstOffsetMs)
 
-    const attendances = await prisma.kintaiAttendance.findMany({
+    let attendances = await prisma.kintaiAttendance.findMany({
       where: {
         employeeId: targetEmployeeId,
         date: { gte: monthStart, lt: monthEnd },
       },
       orderBy: { date: 'asc' },
     })
+
+    // 勤務時間が0のレコード（clockIn有り）を自動再計算
+    const stale = attendances.filter(a => a.clockIn && a.workMinutes === 0 && a.clockOut)
+    if (stale.length > 0) {
+      for (const att of stale) {
+        await recalculateDayForEmployee(att.employeeId, ctx.organizationId, att.date)
+      }
+      attendances = await prisma.kintaiAttendance.findMany({
+        where: {
+          employeeId: targetEmployeeId,
+          date: { gte: monthStart, lt: monthEnd },
+        },
+        orderBy: { date: 'asc' },
+      })
+    }
 
     // 月間サマリーを計算
     const summary = {

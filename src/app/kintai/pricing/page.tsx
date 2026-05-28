@@ -117,26 +117,54 @@ export default function KintaiPricingPage() {
                 ))}
               </ul>
 
-              <Link
-                href={
-                  plan.id === 'kintai-free'
-                    ? '/kintai/dashboard'
-                    : plan.id === 'kintai-enterprise'
-                      ? 'https://doyamarke.surisuta.jp/contact'
-                      : '/kintai/dashboard'
-                }
-                className={`block w-full py-3 text-center text-base font-bold rounded-full transition-all ${
-                  plan.popular
-                    ? 'bg-[#7f19e6] text-white shadow-md hover:shadow-lg hover:bg-[#6b14c4]'
-                    : plan.id === 'kintai-free'
-                      ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-md'
-                      : plan.id === 'kintai-enterprise'
-                        ? 'bg-slate-900 text-white hover:bg-slate-800'
-                        : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                {getPlanLevel(plan.id) <= userLevel ? '✅ 利用中' : plan.cta}
-              </Link>
+              {(() => {
+                const planLevel = getPlanLevel(plan.id)
+                const isCurrent = planLevel === userLevel
+                const isLower = planLevel < userLevel
+                const isEnterprise = plan.id === 'kintai-enterprise'
+
+                const label = isCurrent
+                  ? '現在のプラン'
+                  : isLower
+                    ? plan.name
+                    : isEnterprise
+                      ? 'お問い合わせ'
+                      : 'アップグレード'
+
+                const href = isCurrent || isLower
+                  ? '/kintai/dashboard'
+                  : isEnterprise
+                    ? 'https://doyamarke.surisuta.jp/contact'
+                    : '/kintai/dashboard'
+
+                const disabled = isCurrent || isLower
+
+                return disabled ? (
+                  <span
+                    className={`block w-full py-3 text-center text-base font-bold rounded-full ${
+                      isCurrent
+                        ? 'bg-[#7f19e6]/10 text-[#7f19e6] ring-2 ring-[#7f19e6]/30'
+                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                    }`}
+                  >
+                    {isCurrent && <span className="mr-1">✅</span>}
+                    {label}
+                  </span>
+                ) : (
+                  <Link
+                    href={href}
+                    className={`block w-full py-3 text-center text-base font-bold rounded-full transition-all ${
+                      plan.popular
+                        ? 'bg-[#7f19e6] text-white shadow-md hover:shadow-lg hover:bg-[#6b14c4]'
+                        : isEnterprise
+                          ? 'bg-slate-900 text-white hover:bg-slate-800'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                )
+              })()}
             </div>
           ))}
         </div>
