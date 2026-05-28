@@ -112,34 +112,40 @@ function NewRequestContent() {
   }
 
   const handleSubmit = async () => {
-    if (!reason.trim()) { setError('理由を入力してください'); return }
-    setSubmitting(true)
     setError('')
 
-    try {
-      const details: any = {}
-      if (type === 'clock_fix') {
-        if (!fixDate || !fixTime) { setError('日付と時刻を入力してください'); setSubmitting(false); return }
-        details.date = fixDate
-        details.clockType = fixClockType
-        details.correctedTime = fixTime
-      } else if (type === 'leave') {
-        if (!leaveStart || !leaveEnd) { setError('開始日と終了日を入力してください'); setSubmitting(false); return }
-        details.startDate = leaveStart
-        details.endDate = leaveEnd
-        details.leaveType = leaveType
-      } else if (type === 'overtime') {
-        if (!otDate || (!otHours && !otMinutes)) { setError('日付と時間を入力してください'); setSubmitting(false); return }
-        details.date = otDate
-        details.hours = parseInt(otHours || '0')
-        details.minutes = parseInt(otMinutes || '0')
-      } else if (type === 'holiday_work') {
-        if (!hwDate) { setError('日付を入力してください'); setSubmitting(false); return }
-        details.date = hwDate
-        details.startTime = hwStart
-        details.endTime = hwEnd
-      }
+    // 必須フィールドを先に検証
+    const details: any = {}
+    if (type === 'clock_fix') {
+      if (!fixDate) { setError('対象日を入力してください'); return }
+      if (!fixTime) { setError('修正後時刻を入力してください'); return }
+      details.date = fixDate
+      details.clockType = fixClockType
+      details.correctedTime = fixTime
+    } else if (type === 'leave') {
+      if (!leaveStart) { setError('開始日を入力してください'); return }
+      if (!leaveEnd) { setError('終了日を入力してください'); return }
+      details.startDate = leaveStart
+      details.endDate = leaveEnd
+      details.leaveType = leaveType
+    } else if (type === 'overtime') {
+      if (!otDate) { setError('対象日を入力してください'); return }
+      if (!otHours && !otMinutes) { setError('時間または分を入力してください'); return }
+      details.date = otDate
+      details.hours = parseInt(otHours || '0')
+      details.minutes = parseInt(otMinutes || '0')
+    } else if (type === 'holiday_work') {
+      if (!hwDate) { setError('対象日を入力してください'); return }
+      if (!hwStart || !hwEnd) { setError('開始時刻と終了時刻を入力してください'); return }
+      details.date = hwDate
+      details.startTime = hwStart
+      details.endTime = hwEnd
+    }
 
+    if (!reason.trim()) { setError('理由を入力してください'); return }
+    setSubmitting(true)
+
+    try {
       const res = await fetch('/api/kintai/requests', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

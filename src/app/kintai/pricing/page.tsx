@@ -121,44 +121,48 @@ export default function KintaiPricingPage() {
                 const planLevel = getPlanLevel(plan.id)
                 const isCurrent = planLevel === userLevel
                 const isLower = planLevel < userLevel
+                const isHigher = planLevel > userLevel
                 const isEnterprise = plan.id === 'kintai-enterprise'
+                const isFree = plan.id === 'kintai-free'
 
-                const label = isCurrent
-                  ? '現在のプラン'
-                  : isLower
-                    ? plan.name
-                    : isEnterprise
-                      ? 'お問い合わせ'
-                      : 'アップグレード'
+                if (isCurrent) {
+                  return (
+                    <span className="block w-full py-3 text-center text-base font-bold rounded-full bg-[#7f19e6]/10 text-[#7f19e6] ring-2 ring-[#7f19e6]/30">
+                      ✅ 現在のプラン
+                    </span>
+                  )
+                }
 
-                const href = isCurrent || isLower
-                  ? '/kintai/dashboard'
-                  : isEnterprise
-                    ? 'https://doyamarke.surisuta.jp/contact'
-                    : '/kintai/dashboard'
+                if (isEnterprise) {
+                  return (
+                    <Link
+                      href="https://doyamarke.surisuta.jp/contact"
+                      className="block w-full py-3 text-center text-base font-bold rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-all"
+                    >
+                      お問い合わせ
+                    </Link>
+                  )
+                }
 
-                const disabled = isCurrent || isLower
+                const label = isHigher ? 'アップグレード' : 'ダウングレード'
+                const portalUrl = `/api/stripe/portal?returnTo=${encodeURIComponent('/kintai/pricing')}`
 
-                return disabled ? (
-                  <span
-                    className={`block w-full py-3 text-center text-base font-bold rounded-full ${
-                      isCurrent
-                        ? 'bg-[#7f19e6]/10 text-[#7f19e6] ring-2 ring-[#7f19e6]/30'
-                        : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                    }`}
+                return isFree && isLower ? (
+                  <Link
+                    href={portalUrl}
+                    className="block w-full py-3 text-center text-base font-bold rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all"
                   >
-                    {isCurrent && <span className="mr-1">✅</span>}
-                    {label}
-                  </span>
+                    無料プランに戻す
+                  </Link>
                 ) : (
                   <Link
-                    href={href}
+                    href={portalUrl}
                     className={`block w-full py-3 text-center text-base font-bold rounded-full transition-all ${
-                      plan.popular
+                      isHigher && plan.popular
                         ? 'bg-[#7f19e6] text-white shadow-md hover:shadow-lg hover:bg-[#6b14c4]'
-                        : isEnterprise
-                          ? 'bg-slate-900 text-white hover:bg-slate-800'
-                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        : isHigher
+                          ? 'bg-slate-700 text-white hover:bg-slate-800'
+                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
                     }`}
                   >
                     {label}
