@@ -110,7 +110,9 @@ export async function POST(req: NextRequest) {
         maxResults: count,
         sources: ['gbizinfo', 'corporate_number'],
         enrich: true,
-        enrichLimit: Math.min(count, 300),
+        // 全件 enrich してすべてソート可能にする（Vercel 300秒制限内に収まる範囲）
+        // 1万社で 約3分（並列12 × 200ms × 833ラウンド）
+        enrichLimit: Math.min(count, 10000),
       })
     } catch (e: any) {
       console.error('[doyalist/collect] API error', e)

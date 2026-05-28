@@ -204,14 +204,38 @@ export default function DoyalistHomePage() {
         return c.name?.toLowerCase().includes(q) || c.industry?.toLowerCase().includes(q) || ed.address?.toLowerCase().includes(q) || ed.representative?.toLowerCase().includes(q) || c.description?.toLowerCase().includes(q)
       })
     }
-    const parseYear = (v: any) => { const n = parseInt(String(v || ''), 10); return isNaN(n) ? 0 : n }
-    const parseEmpCount = (v: any) => { const m = String(v || '').match(/\d+/g); return m ? Math.max(...m.map(Number)) : 0 }
+    // データなしは末尾固定（昇順時も末尾）にする比較関数
+    const parseYear = (v: any): number | null => {
+      const n = parseInt(String(v || ''), 10)
+      return isNaN(n) || n <= 0 ? null : n
+    }
+    const parseEmpCount = (v: any): number | null => {
+      const m = String(v || '').match(/\d+/g)
+      if (!m) return null
+      const max = Math.max(...m.map(Number))
+      return max > 0 ? max : null
+    }
+    const sortWithNullsLast = <T,>(arr: T[], getValue: (x: T) => number | null, desc: boolean): T[] => {
+      return [...arr].sort((a, b) => {
+        const va = getValue(a)
+        const vb = getValue(b)
+        if (va === null && vb === null) return 0
+        if (va === null) return 1   // null は末尾
+        if (vb === null) return -1
+        return desc ? vb - va : va - vb
+      })
+    }
     switch (sortBy) {
-      case 'name': return [...list].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ja'))
-      case 'founded_desc': return [...list].sort((a, b) => parseYear(b.enrichedData?.foundedYear) - parseYear(a.enrichedData?.foundedYear))
-      case 'founded_asc': return [...list].sort((a, b) => parseYear(a.enrichedData?.foundedYear) - parseYear(b.enrichedData?.foundedYear))
-      case 'employees_desc': return [...list].sort((a, b) => parseEmpCount(b.enrichedData?.employeeCount) - parseEmpCount(a.enrichedData?.employeeCount))
-      default: return list
+      case 'name':
+        return [...list].sort((a, b) => (a.name || '').localeCompare(b.name || '', 'ja'))
+      case 'founded_desc':
+        return sortWithNullsLast(list, (c) => parseYear(c.enrichedData?.foundedYear), true)
+      case 'founded_asc':
+        return sortWithNullsLast(list, (c) => parseYear(c.enrichedData?.foundedYear), false)
+      case 'employees_desc':
+        return sortWithNullsLast(list, (c) => parseEmpCount(c.enrichedData?.employeeCount), true)
+      default:
+        return list
     }
   }, [companies, filterText, sortBy])
 
@@ -366,9 +390,14 @@ export default function DoyalistHomePage() {
                     </button>
                   ))}
                 </div>
-                {count >= 1000 && (
+                {count >= 500 && (
                   <p className="text-xs font-medium text-cyan-700 mt-2">
-                    ⏰ {count.toLocaleString()}社の抽出は約 {Math.ceil(count / 50)}〜{Math.ceil(count / 50) * 3}秒かかります
+                    ⏰ {count.toLocaleString()}社の抽出（詳細情報の取得込み）は約 {Math.max(20, Math.ceil(count / 60))}〜{Math.ceil(count / 30)}秒かかります
+                  </p>
+                )}
+                {count >= 5000 && (
+                  <p className="text-xs font-medium text-amber-700 mt-1">
+                    ⚠️ 大量抽出時はブラウザを閉じずにお待ちください
                   </p>
                 )}
               </div>

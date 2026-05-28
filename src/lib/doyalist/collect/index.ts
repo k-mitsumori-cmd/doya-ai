@@ -194,7 +194,7 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
     if (targetForDetail.length > 0) {
       const details = await getGbizCompanyDetailsBatch(
         targetForDetail.map((c) => c.corporateNumber!),
-        { concurrency: 8 }
+        { concurrency: 12 }
       )
       for (const c of deduplicated) {
         if (!c.corporateNumber) continue
