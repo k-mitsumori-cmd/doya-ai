@@ -33,7 +33,6 @@ const PLANS: Plan[] = [
       'AIキーワード変換',
       'CSV/Excelエクスポート',
       '営業文・メール・スクリプト生成（月30回）',
-      'メールサポート',
     ],
   },
   {
@@ -52,7 +51,6 @@ const PLANS: Plan[] = [
       '営業文・メール・スクリプト生成（月500回）',
       'プロジェクト数 無制限',
       'ドヤAI 全サービスPRO利用可（バナー/SEO/インタビュー他）',
-      '優先サポート',
     ],
   },
   {
@@ -66,7 +64,6 @@ const PLANS: Plan[] = [
       '月 無制限の抽出',
       '営業文等 無制限生成',
       'SSO / SAML 認証',
-      '専任カスタマーサクセス',
       'SLA契約 / オンプレ対応',
       'API連携 / カスタム開発',
     ],
@@ -82,9 +79,7 @@ const COMPARISON: { label: string; values: [string, string, string] }[] = [
   { label: '詳細データ取得（代表者・資本金等）', values: ['◯', '◯', '◯'] },
   { label: 'CSV/Excelエクスポート', values: ['◯', '◯', '◯'] },
   { label: 'ドヤAI 全サービスPRO（バナー/SEO/インタビュー他）', values: ['—', '◯', '◯'] },
-  { label: '優先サポート', values: ['—', '◯', '◯'] },
   { label: 'SSO/SAML', values: ['—', '—', '◯'] },
-  { label: '専任カスタマーサクセス', values: ['—', '—', '◯'] },
   { label: 'API連携 / カスタム開発', values: ['—', '—', '◯'] },
   { label: 'SLA契約', values: ['—', '—', '◯'] },
 ]

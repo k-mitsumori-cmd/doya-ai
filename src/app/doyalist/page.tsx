@@ -179,6 +179,9 @@ export default function DoyalistHomePage() {
   const [filterText, setFilterText] = useState('')
   const [sortBy, setSortBy] = useState('default')
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+  const [filterHasUrl, setFilterHasUrl] = useState(false)
+  const [filterHasRep, setFilterHasRep] = useState(false)
+  const [filterHasEmployees, setFilterHasEmployees] = useState(false)
 
   // 検索に使うキーワード: AIタグ（選択中）優先 → ユーザー入力 → なし
   const searchKeywords = (): string => {
@@ -266,6 +269,10 @@ export default function DoyalistHomePage() {
         return c.name?.toLowerCase().includes(q) || c.industry?.toLowerCase().includes(q) || ed.address?.toLowerCase().includes(q) || ed.representative?.toLowerCase().includes(q) || c.description?.toLowerCase().includes(q)
       })
     }
+    // データ有無で絞り込み
+    if (filterHasUrl) list = list.filter((c) => !!c.website)
+    if (filterHasRep) list = list.filter((c) => !!c.enrichedData?.representative)
+    if (filterHasEmployees) list = list.filter((c) => isValidEmployees(c.enrichedData?.employeeCount))
     // データなしは末尾固定（昇順時も末尾）にする比較関数
     const parseYear = (v: any): number | null => {
       const n = parseInt(String(v || ''), 10)
@@ -299,7 +306,7 @@ export default function DoyalistHomePage() {
       default:
         return list
     }
-  }, [companies, filterText, sortBy])
+  }, [companies, filterText, sortBy, filterHasUrl, filterHasRep, filterHasEmployees])
 
   const visibleCompanies = filteredCompanies.slice(0, visibleCount)
   const hasMore = filteredCompanies.length > visibleCount
@@ -608,25 +615,60 @@ export default function DoyalistHomePage() {
               </div>
             </div>
 
-            <div className="p-4 border-b border-slate-200 flex gap-2 flex-wrap items-center">
-              <input
-                type="text"
-                value={filterText}
-                onChange={(e) => { setFilterText(e.target.value); setVisibleCount(PAGE_SIZE) }}
-                placeholder="🔍 名前・業種・住所で絞り込み"
-                className="flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100"
-              />
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white cursor-pointer focus:outline-none focus:border-[#0a1530]">
-                {SORT_OPTIONS.map((s) => <option key={s.v} value={s.v}>並び替え: {s.l}</option>)}
-              </select>
-              <span className="text-xs font-medium text-slate-500">{filteredCompanies.length}社表示中</span>
+            <div className="p-4 border-b border-slate-200 space-y-3">
+              <div className="flex gap-2 flex-wrap items-center">
+                <input
+                  type="text"
+                  value={filterText}
+                  onChange={(e) => { setFilterText(e.target.value); setVisibleCount(PAGE_SIZE) }}
+                  placeholder="🔍 名前・業種・住所で絞り込み"
+                  className="flex-1 min-w-[200px] px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100"
+                />
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="px-3 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 bg-white cursor-pointer focus:outline-none focus:border-[#0a1530]">
+                  {SORT_OPTIONS.map((s) => <option key={s.v} value={s.v}>並び替え: {s.l}</option>)}
+                </select>
+                <span className="text-xs font-medium text-slate-500">{filteredCompanies.length}社表示中</span>
+              </div>
+              {/* データ有無フィルタ（チップ） */}
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-[11px] font-bold text-slate-500">絞り込み:</span>
+                {[
+                  { state: filterHasUrl, set: setFilterHasUrl, label: '🌐 公式URLあり', count: companies.filter(c => !!c.website).length },
+                  { state: filterHasRep, set: setFilterHasRep, label: '👤 代表者名あり', count: companies.filter(c => !!c.enrichedData?.representative).length },
+                  { state: filterHasEmployees, set: setFilterHasEmployees, label: '👥 従業員数あり', count: companies.filter(c => isValidEmployees(c.enrichedData?.employeeCount)).length },
+                ].map((f, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { f.set(!f.state); setVisibleCount(PAGE_SIZE) }}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                      f.state
+                        ? 'bg-cyan-500 text-white border-cyan-500 shadow shadow-cyan-500/20'
+                        : 'bg-white text-slate-600 border-slate-200 hover:border-cyan-300 hover:bg-cyan-50'
+                    }`}
+                  >
+                    <span>{f.label}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${f.state ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`}>{f.count}</span>
+                  </button>
+                ))}
+                {(filterHasUrl || filterHasRep || filterHasEmployees) && (
+                  <button
+                    onClick={() => { setFilterHasUrl(false); setFilterHasRep(false); setFilterHasEmployees(false); setVisibleCount(PAGE_SIZE) }}
+                    className="text-[10px] text-slate-500 hover:text-rose-500 underline"
+                  >
+                    フィルタ解除
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="divide-y divide-slate-100">
               {visibleCompanies.map((c, i) => {
                 const ed = c.enrichedData || {}
-                // gBizINFO公式の企業詳細ページ。新仕様では `/hojin/{法人番号}` に直接アクセス
-                const gbizUrl = ed.corporateNumber ? `https://info.gbiz.go.jp/hojin/ichiran?hojinBangou=${encodeURIComponent(ed.corporateNumber)}` : null
+                // gBizINFOの直リンクは仕様変更で機能しないため、Google検索で代替
+                // 「{企業名} 法人番号 {番号}」で検索 → 公式サイト・gBizINFO・国税庁等が上位ヒット
+                const gbizUrl = ed.corporateNumber
+                  ? `https://www.google.com/search?q=${encodeURIComponent(c.name + ' 法人番号 ' + ed.corporateNumber)}`
+                  : null
                 return (
                   <div key={c.id || i} className="p-5 hover:bg-slate-50/50 transition-colors">
                     <div className="flex items-start gap-4">
@@ -672,9 +714,14 @@ export default function DoyalistHomePage() {
                             </span>
                           )}
                           {gbizUrl && (
-                            <a href={gbizUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors">
-                              🔗 gBizINFO詳細
+                            <a href={gbizUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors" title="Google検索で企業情報を調べる">
+                              🔍 企業情報を検索
                             </a>
+                          )}
+                          {ed.corporateNumber && (
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-500 text-[11px] font-mono rounded-lg" title="法人番号">
+                              #{ed.corporateNumber}
+                            </span>
                           )}
                         </div>
                         <div className="pt-2 mt-1 border-t border-slate-100 flex items-center gap-2 text-[10px] text-slate-400">
