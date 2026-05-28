@@ -69,6 +69,31 @@ const QUICK_LINKS = [
   { title: '機能・サービス一覧', eyebrow: '9 TOOLS', href: '#tools', Icon: Database },
 ]
 
+const PROOF_POINTS = [
+  { value: '9', label: 'AI制作ツールを統合' },
+  { value: '1', label: '共通プランで運用' },
+  { value: '0', label: '無料プランから開始' },
+  { value: '3', label: 'SEO・広告・LPを横断' },
+]
+
+const SCENARIOS = [
+  {
+    title: '検索流入を増やしたい',
+    body: 'ペルソナとキーワードから、記事構成、本文、改善案まで一気通貫で作成。',
+    Icon: FileText,
+  },
+  {
+    title: '広告の初稿を揃えたい',
+    body: 'コピー、バナー、動画のたたき台を同じ訴求軸で用意し、比較しやすくします。',
+    Icon: Megaphone,
+  },
+  {
+    title: 'LPの勝ち筋を作りたい',
+    body: 'ターゲット、訴求、構成、ワイヤーフレームを短時間で整理します。',
+    Icon: LayoutTemplate,
+  },
+]
+
 const BENEFITS: Benefit[] = [
   {
     label: 'Benefit 1',
@@ -123,7 +148,7 @@ export default function DoyaMarkePage() {
             <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white text-[#0647a6]">
               <Route className="h-5 w-5" />
             </span>
-            <span className="text-xl font-black tracking-tight">ドヤマーケ</span>
+            <span className="text-xl font-black tracking-normal">ドヤマーケ</span>
           </Link>
 
           <nav className="hidden items-center gap-7 text-sm font-bold lg:flex">
@@ -166,7 +191,7 @@ export default function DoyaMarkePage() {
           />
           <div className="absolute inset-0 -z-20 bg-[linear-gradient(90deg,rgba(4,41,104,0.98)_0%,rgba(6,71,166,0.92)_28%,rgba(6,71,166,0.52)_58%,rgba(6,71,166,0.14)_100%)] md:bg-[linear-gradient(90deg,rgba(4,41,104,0.92)_0%,rgba(6,71,166,0.72)_34%,rgba(6,71,166,0.24)_72%,rgba(6,71,166,0.06)_100%)]" />
           <div className="absolute inset-x-0 bottom-0 -z-10 h-48 bg-[linear-gradient(0deg,rgba(5,29,74,0.72),transparent)]" />
-          <div className="absolute left-[14%] top-[36%] -z-10 hidden select-none text-[116px] font-black tracking-tight text-[#003c92]/35 lg:block">
+          <div className="absolute left-[14%] top-[36%] -z-10 hidden select-none text-[116px] font-black tracking-normal text-[#003c92]/35 lg:block">
             DOYA MARKE
           </div>
 
@@ -208,6 +233,19 @@ export default function DoyaMarkePage() {
               >
                 記事、広告、LP、動画まで。中小企業のマーケ制作を、ひとつの共通プランで前に進めます。
               </motion.p>
+              <motion.div
+                variants={fadeUp}
+                initial="hidden"
+                animate="show"
+                transition={{ duration: 0.62, delay: 0.14, ease: [0.16, 1, 0.3, 1] }}
+                className="mt-6 flex flex-wrap gap-2"
+              >
+                {['全9サービス共通', '個別課金なし', '無料プランあり'].map((item) => (
+                  <span key={item} className="rounded-full border border-white/24 bg-white/10 px-4 py-2 text-xs font-black text-white/90 backdrop-blur">
+                    {item}
+                  </span>
+                ))}
+              </motion.div>
             </div>
 
             <motion.div
@@ -227,7 +265,7 @@ export default function DoyaMarkePage() {
                 ))}
               </div>
 
-              <Link href={primaryHref} className="group grid min-h-[96px] grid-cols-[94px_1fr_auto] items-center gap-5 rounded-[10px] bg-white p-4 text-[#06347b] shadow-[0_24px_70px_rgba(0,0,0,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_30px_85px_rgba(0,0,0,0.32)] active:scale-[0.98]">
+              <Link href={primaryHref} className="group grid min-h-[96px] grid-cols-[94px_1fr_auto] items-center gap-5 rounded-lg bg-white p-4 text-[#06347b] shadow-[0_24px_70px_rgba(0,0,0,0.25)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_30px_85px_rgba(0,0,0,0.32)] active:scale-[0.98]">
                 <span className="flex h-16 items-center justify-center rounded-[8px] bg-[#edf5ff] text-xs font-black text-[#0647a6]">
                   GUIDE
                 </span>
@@ -238,7 +276,7 @@ export default function DoyaMarkePage() {
                 <ArrowRight className="h-6 w-6 transition-transform group-hover:translate-x-1" />
               </Link>
 
-              <a href="#concept" className="hidden rounded-[10px] border border-white/20 bg-[#052a67]/74 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#052a67] active:scale-[0.98] lg:block">
+              <a href="#concept" className="hidden rounded-lg border border-white/20 bg-[#052a67]/74 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#052a67] active:scale-[0.98] lg:block">
                 <div className="mb-3 flex items-center justify-between text-xs font-black">
                   <span>3分でわかるドヤマーケ</span>
                   <Play className="h-4 w-4" />
@@ -256,7 +294,7 @@ export default function DoyaMarkePage() {
         <section className="relative z-10 -mt-8 px-5 pb-16 lg:px-8">
           <div className="mx-auto grid max-w-[1210px] gap-4 md:grid-cols-3">
             {QUICK_LINKS.map(({ title, eyebrow, href, Icon }) => (
-              <a key={title} href={href} className="group grid min-h-[112px] grid-cols-[auto_1fr_auto] items-center gap-4 rounded-[10px] bg-white p-6 shadow-[0_18px_54px_rgba(15,23,42,0.12)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_70px_rgba(15,23,42,0.18)] active:scale-[0.98]">
+              <a key={title} href={href} className="group grid min-h-[112px] grid-cols-[auto_1fr_auto] items-center gap-4 rounded-lg bg-white p-6 shadow-[0_18px_54px_rgba(15,23,42,0.12)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_24px_70px_rgba(15,23,42,0.18)] active:scale-[0.98]">
                 <span className="flex h-12 w-12 items-center justify-center rounded-[8px] bg-[#edf5ff] text-[#0647a6]">
                   <Icon className="h-6 w-6" />
                 </span>
@@ -266,6 +304,17 @@ export default function DoyaMarkePage() {
                 </span>
                 <ArrowRight className="h-5 w-5 text-[#0647a6] transition-transform group-hover:translate-x-1" />
               </a>
+            ))}
+          </div>
+        </section>
+
+        <section className="border-y border-[#d9e6fb] bg-[#f7fbff] px-5 py-8 lg:px-8">
+          <div className="mx-auto grid max-w-[1210px] gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {PROOF_POINTS.map((item) => (
+              <div key={item.label} className="grid grid-cols-[auto_1fr] items-center gap-4">
+                <div className="text-4xl font-black leading-none text-[#0647a6]">{item.value}</div>
+                <div className="text-sm font-black leading-relaxed text-zinc-800">{item.label}</div>
+              </div>
             ))}
           </div>
         </section>
@@ -314,6 +363,34 @@ export default function DoyaMarkePage() {
           </div>
         </section>
 
+        <section className="bg-white px-5 pb-20 lg:px-8 lg:pb-28">
+          <div className="mx-auto max-w-[1210px]">
+            <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <p className="mb-3 text-sm font-black text-[#0647a6]">USE CASES</p>
+                <h2 className="text-3xl font-black leading-tight tracking-normal md:text-5xl">すぐ使える制作シーン</h2>
+              </div>
+              <p className="max-w-[48ch] text-sm leading-relaxed text-zinc-600">
+                単体ツールではなく、日々のマーケ業務の流れに合わせて使える設計です。
+              </p>
+            </div>
+            <div className="grid gap-4 lg:grid-cols-3">
+              {SCENARIOS.map(({ title, body, Icon }) => (
+                <div key={title} className="group rounded-lg border border-zinc-200 bg-white p-6 shadow-[0_12px_34px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
+                  <div className="mb-8 flex items-center justify-between">
+                    <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#edf5ff] text-[#0647a6]">
+                      <Icon className="h-5 w-5" />
+                    </span>
+                    <ArrowUpRight className="h-5 w-5 text-zinc-300 transition-colors group-hover:text-[#0647a6]" />
+                  </div>
+                  <h3 className="mb-3 text-xl font-black leading-tight tracking-normal text-zinc-950">{title}</h3>
+                  <p className="text-sm leading-relaxed text-zinc-600">{body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         <section id="benefits" className="bg-[#f2f7ff] px-5 py-20 lg:px-8 lg:py-28">
           <div className="mx-auto max-w-[1210px]">
             <div className="mb-12 max-w-[850px]">
@@ -334,7 +411,7 @@ export default function DoyaMarkePage() {
                   whileInView="show"
                   viewport={{ once: true, amount: 0.3 }}
                   transition={{ duration: 0.55, delay: index * 0.08, ease: [0.16, 1, 0.3, 1] }}
-                  className="rounded-[10px] bg-white p-7 shadow-[0_16px_42px_rgba(15,23,42,0.08)]"
+                  className="rounded-lg bg-white p-7 shadow-[0_16px_42px_rgba(15,23,42,0.08)]"
                 >
                   <div className="mb-12 flex items-center justify-between">
                     <span className="text-xs font-black text-[#1f66cf]">{label}</span>
@@ -370,7 +447,7 @@ export default function DoyaMarkePage() {
               whileInView="show"
               viewport={{ once: true, amount: 0.25 }}
               transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
-              className="rounded-[10px] bg-[#0647a6] p-5 shadow-[0_28px_90px_rgba(6,71,166,0.22)]"
+              className="rounded-lg bg-[#0647a6] p-5 shadow-[0_28px_90px_rgba(6,71,166,0.22)]"
             >
               <div className="mb-5 flex items-center justify-between border-b border-white/15 pb-4">
                 <div>
@@ -443,7 +520,7 @@ export default function DoyaMarkePage() {
                     <Link
                       href={service.href}
                       className={[
-                        'group flex h-full flex-col rounded-[10px] p-6 shadow-[0_14px_42px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_58px_rgba(15,23,42,0.14)] active:scale-[0.98]',
+                        'group flex h-full flex-col rounded-lg p-6 shadow-[0_14px_42px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_22px_58px_rgba(15,23,42,0.14)] active:scale-[0.98]',
                         isPrimary ? 'bg-[#0647a6] text-white' : isBlue ? 'bg-[#edf5ff] text-zinc-950' : 'bg-white text-zinc-950',
                       ].join(' ')}
                     >
@@ -481,7 +558,7 @@ export default function DoyaMarkePage() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               {PLAN_FEATURES.map((feature) => (
-                <div key={feature} className="flex min-h-24 items-center gap-4 rounded-[10px] border border-zinc-200 bg-white p-5 shadow-[0_12px_34px_rgba(15,23,42,0.06)]">
+                <div key={feature} className="flex min-h-24 items-center gap-4 rounded-lg border border-zinc-200 bg-white p-5 shadow-[0_12px_34px_rgba(15,23,42,0.06)]">
                   <span className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#edf5ff] text-[#0647a6]">
                     <Check className="h-5 w-5" />
                   </span>
@@ -623,5 +700,5 @@ function PlanCard({
     </>
   )
 
-  return <div className={['relative rounded-[10px] border border-zinc-200 bg-white p-7 shadow-[0_12px_34px_rgba(15,23,42,0.06)]', className].join(' ')}>{content}</div>
+  return <div className={['relative rounded-lg border border-zinc-200 bg-white p-7 shadow-[0_12px_34px_rgba(15,23,42,0.06)]', className].join(' ')}>{content}</div>
 }

@@ -158,13 +158,14 @@ function Sidebar({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
       </nav>
 
       <div className="p-4 border-t border-white/10">
-        <div className="rounded-2xl bg-white/5 border border-white/10 p-4">
-          <p className="text-[10px] font-bold text-cyan-300">⚡ AIで営業を加速</p>
-          <p className="text-sm font-bold mt-1 leading-snug text-white">企業リスト・<br/>営業文を自動生成</p>
+        <div className="rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 p-4 text-white shadow-lg shadow-violet-500/30 relative overflow-hidden">
+          <img src="/kintai/characters/working_作業中.png" alt="" className="absolute -bottom-2 -right-2 w-16 h-16 opacity-90" />
+          <p className="text-[10px] font-bold opacity-90">AIで営業を加速</p>
+          <p className="text-sm font-black mt-0.5 leading-snug">あなたの営業を<br/>AIがサポート</p>
           <Link
             href="/doyalist"
             onClick={onNavigate}
-            className="mt-3 inline-flex items-center gap-1 text-xs font-bold bg-cyan-400 text-[#0a1530] hover:bg-cyan-300 transition-colors px-3 py-1.5 rounded-full"
+            className="mt-3 inline-flex items-center gap-1 text-xs font-bold bg-white text-violet-600 hover:bg-cyan-50 transition-colors px-3 py-1.5 rounded-full relative z-10"
           >
             <span className="material-symbols-outlined text-sm">auto_awesome</span>
             リスト作成
