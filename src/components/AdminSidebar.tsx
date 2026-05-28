@@ -21,6 +21,8 @@ import {
   ListOrdered,
   FileText,
   ScrollText,
+  Clock,
+  Building2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -47,9 +49,16 @@ const dripNavItems = [
   { icon: Settings, label: '配信設定', href: '/admin/drip/settings', badge: null },
 ]
 
+const kintaiNavItems = [
+  { icon: LayoutDashboard, label: 'ダッシュボード', href: '/admin/kintai', badge: null },
+  { icon: Building2, label: '組織一覧', href: '/admin/kintai/organizations', badge: null },
+  { icon: Users, label: '全従業員', href: '/admin/kintai/employees', badge: null },
+]
+
 const serviceLinks = [
   { emoji: '🎨', label: 'ドヤバナーAI', href: '/banner/dashboard', gradient: 'from-violet-500 to-fuchsia-500' },
   { emoji: '✍️', label: 'ドヤライティングAI', href: '/seo/dashboard', gradient: 'from-emerald-500 to-cyan-500' },
+  { emoji: '⏰', label: 'ドヤ勤怠', href: '/kintai/dashboard', gradient: 'from-purple-500 to-indigo-500' },
 ]
 
 export function AdminSidebar({ isMobile }: { isMobile?: boolean } = {}) {
@@ -201,6 +210,42 @@ export function AdminSidebar({ isMobile }: { isMobile?: boolean } = {}) {
                       </span>
                     )}
                     {isActive && <ChevronRight className="w-4 h-4 ml-auto text-amber-400" />}
+                  </motion.div>
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Kintai Section */}
+        <div className="mt-8">
+          <p className="px-3 text-[10px] font-bold text-white/30 uppercase tracking-wider mb-3">
+            ドヤ勤怠 管理
+          </p>
+          <div className="space-y-1">
+            {kintaiNavItems.map((item) => {
+              const isActive = item.href === '/admin/kintai'
+                ? pathname === '/admin/kintai'
+                : pathname === item.href || pathname.startsWith(item.href + '/')
+              return (
+                <Link key={item.href} href={item.href}>
+                  <motion.div
+                    whileHover={{ x: 4 }}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all relative ${
+                      isActive
+                        ? 'bg-purple-500/15 text-purple-300'
+                        : 'text-white/50 hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeKintaiIndicator"
+                        className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-purple-400 to-indigo-400 rounded-full"
+                      />
+                    )}
+                    <item.icon className={`w-4.5 h-4.5 ${isActive ? 'text-purple-400' : ''}`} />
+                    <span className="font-medium">{item.label}</span>
+                    {isActive && <ChevronRight className="w-4 h-4 ml-auto text-purple-400" />}
                   </motion.div>
                 </Link>
               )
