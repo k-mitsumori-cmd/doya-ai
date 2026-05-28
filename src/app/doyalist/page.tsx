@@ -97,6 +97,7 @@ export default function DoyalistHomePage() {
   // 実数プレビュー
   const [estimateLoading, setEstimateLoading] = useState(false)
   const [estimatedCount, setEstimatedCount] = useState<number | null>(null)
+  const [estimateIsApprox, setEstimateIsApprox] = useState(false)
   const [estimateNote, setEstimateNote] = useState<string | null>(null)
 
   // キーワード入力時にタグをリセット
@@ -152,6 +153,7 @@ export default function DoyalistHomePage() {
         const data = await res.json()
         if (data?.success) {
           setEstimatedCount(typeof data.estimated === 'number' ? data.estimated : null)
+          setEstimateIsApprox(!!data.isApprox)
           setEstimateNote(data.note || null)
         }
       } catch {
@@ -482,16 +484,18 @@ export default function DoyalistHomePage() {
                   <p className="text-[10px] font-bold text-slate-500">この条件に該当する企業数（推定）</p>
                   {estimateLoading ? (
                     <p className="text-sm font-bold text-slate-400 mt-1">計測中...</p>
-                  ) : estimatedCount !== null ? (
+                  ) : estimatedCount !== null && estimatedCount > 0 ? (
                     <>
                       <p className={`text-2xl font-black mt-1 ${
-                        estimatedCount >= count ? 'text-emerald-600' : 'text-amber-600'
+                        (estimateIsApprox || estimatedCount >= count) ? 'text-emerald-600' : 'text-amber-600'
                       }`}>
-                        約 {estimatedCount.toLocaleString()}<span className="text-sm font-bold ml-0.5">社</span>
+                        {estimateIsApprox ? '約 ' : ''}
+                        {estimatedCount.toLocaleString()}
+                        <span className="text-sm font-bold ml-0.5">社{estimateIsApprox ? '以上' : ''}</span>
                       </p>
-                      {estimatedCount < count && (
+                      {!estimateIsApprox && estimatedCount < count && (
                         <p className="text-[10px] text-amber-700 mt-1 font-bold">
-                          ⚠️ 該当数が少ないため、実際は{Math.min(count, estimatedCount).toLocaleString()}社程度になります
+                          ⚠️ 該当数が少ないため、実際は{estimatedCount.toLocaleString()}社程度になります
                         </p>
                       )}
                       {estimateNote && (
