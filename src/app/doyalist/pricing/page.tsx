@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import toast from 'react-hot-toast'
+import toast, { Toaster } from 'react-hot-toast'
 
-type PlanId = 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE'
+type PlanId = 'FREE' | 'PRO' | 'ENTERPRISE'
 
 interface Plan {
   id: PlanId
@@ -14,7 +14,8 @@ interface Plan {
   priceSub: string
   highlight?: boolean
   badge?: string
-  limits: { label: string; value: string }[]
+  cta: string
+  ctaSub?: string
   features: string[]
 }
 
@@ -25,50 +26,32 @@ const PLANS: Plan[] = [
     tagline: 'まずは試してみる',
     price: '¥0',
     priceSub: '永久無料',
-    limits: [
-      { label: 'プロジェクト数', value: '1件' },
-      { label: '企業数 / 月', value: '20社' },
-      { label: 'アプローチ / 月', value: '10件' },
-    ],
-    features: ['基本的なAI企業収集', 'CSV/Excelエクスポート', 'メールサポート'],
-  },
-  {
-    id: 'LIGHT',
-    name: 'ライト',
-    tagline: '個人事業主・スタートアップ向け',
-    price: '¥2,980',
-    priceSub: '/月',
-    limits: [
-      { label: 'プロジェクト数', value: '5件' },
-      { label: '企業数 / 月', value: '300社' },
-      { label: 'アプローチ / 月', value: '100件' },
-    ],
+    cta: '無料で始める',
     features: [
-      'AI企業収集（高精度）',
-      'AI分析・スコアリング',
-      'アプローチ文面生成',
-      'メール・チャットサポート',
+      '月 1,000社まで抽出',
+      'AIキーワード変換',
+      'CSV/Excelエクスポート',
+      '営業文・メール・スクリプト生成（月30回）',
+      'メールサポート',
     ],
   },
   {
     id: 'PRO',
     name: 'プロ',
-    tagline: '営業チーム向け（人気）',
+    tagline: '営業チームの定番',
     price: '¥9,800',
-    priceSub: '/月',
+    priceSub: '/月（税抜）',
     highlight: true,
     badge: '人気',
-    limits: [
-      { label: 'プロジェクト数', value: '50件' },
-      { label: '企業数 / 月', value: '3,000社' },
-      { label: 'アプローチ / 月', value: '1,000件' },
-    ],
+    cta: 'プロを始める',
+    ctaSub: 'いつでも解約可',
     features: [
-      'すべてのライト機能',
-      '一括アプローチ生成',
-      'テンプレート無制限',
+      '月 50,000社まで抽出',
+      'AIキーワード変換 / 詳細データ全件',
+      '営業文・メール・スクリプト生成（月500回）',
+      'プロジェクト数 無制限',
+      'ドヤAI 全サービスPRO利用可（バナー/SEO/インタビュー他）',
       '優先サポート',
-      'API連携（β）',
     ],
   },
   {
@@ -77,33 +60,52 @@ const PLANS: Plan[] = [
     tagline: '大規模組織向け',
     price: 'お問い合わせ',
     priceSub: 'カスタム見積もり',
-    limits: [
-      { label: 'プロジェクト数', value: '無制限' },
-      { label: '企業数 / 月', value: '無制限' },
-      { label: 'アプローチ / 月', value: '無制限' },
-    ],
+    cta: 'お問い合わせ',
     features: [
-      'すべてのプロ機能',
+      '月 無制限の抽出',
+      '営業文等 無制限生成',
       'SSO / SAML 認証',
       '専任カスタマーサクセス',
-      'SLA契約',
-      'オンプレ対応',
+      'SLA契約 / オンプレ対応',
+      'API連携 / カスタム開発',
     ],
   },
 ]
 
+// 機能比較表
+const COMPARISON: { label: string; values: [string, string, string] }[] = [
+  { label: '月間 抽出社数', values: ['1,000社', '50,000社', '無制限'] },
+  { label: 'プロジェクト数', values: ['無制限', '無制限', '無制限'] },
+  { label: '営業文・メール・スクリプト生成', values: ['月30回', '月500回', '無制限'] },
+  { label: 'AIキーワード変換', values: ['◯', '◯', '◯'] },
+  { label: '詳細データ取得（代表者・資本金等）', values: ['◯', '◯', '◯'] },
+  { label: 'CSV/Excelエクスポート', values: ['◯', '◯', '◯'] },
+  { label: 'ドヤAI 全サービスPRO（バナー/SEO/インタビュー他）', values: ['—', '◯', '◯'] },
+  { label: '優先サポート', values: ['—', '◯', '◯'] },
+  { label: 'SSO/SAML', values: ['—', '—', '◯'] },
+  { label: '専任カスタマーサクセス', values: ['—', '—', '◯'] },
+  { label: 'API連携 / カスタム開発', values: ['—', '—', '◯'] },
+  { label: 'SLA契約', values: ['—', '—', '◯'] },
+]
+
 export default function PricingPage() {
   const [currentPlan, setCurrentPlan] = useState('FREE' as PlanId)
+  const [periodEnd, setPeriodEnd] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
 
   useEffect(() => {
     fetch('/api/doyalist/usage')
       .then((r) => r.json())
       .then((d) => {
-        // usage.plan は { raw, tier, periodEnd } のオブジェクト or string で返る
         const planRaw: any = d?.plan
         const tier = (typeof planRaw === 'object' && planRaw !== null ? planRaw.tier || planRaw.raw : planRaw) || 'FREE'
-        setCurrentPlan(String(tier).toUpperCase() as PlanId)
+        // ライト/プロは同一プランとして扱う（統一プラン方式）
+        const tierUpper = String(tier).toUpperCase()
+        const normalized: PlanId = tierUpper === 'ENTERPRISE' ? 'ENTERPRISE'
+          : (tierUpper === 'PRO' || tierUpper === 'LIGHT') ? 'PRO'
+          : 'FREE'
+        setCurrentPlan(normalized)
+        if (planRaw?.periodEnd) setPeriodEnd(planRaw.periodEnd)
       })
       .catch(() => {})
   }, [])
@@ -139,7 +141,7 @@ export default function PricingPage() {
       const res = await fetch('/api/doyalist/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planId.toLowerCase() }),
+        body: JSON.stringify({ plan: 'pro' }),
       })
       const data = await res.json()
       if (data?.url) {
@@ -153,64 +155,70 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="p-6 lg:p-10 max-w-6xl mx-auto">
-        {/* Header */}
+    <div className="min-h-screen bg-slate-50">
+      <Toaster position="top-center" />
+
+      <div className="p-4 lg:p-10 max-w-6xl mx-auto pb-20">
+        {/* ===== Page Header ===== */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#7f19e6]/10 mb-4">
-            <span className="material-symbols-outlined text-[#7f19e6] text-base">diamond</span>
-            <span className="text-xs font-black text-[#7f19e6]">料金プラン</span>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-50 border border-cyan-200 mb-4">
+            <span className="material-symbols-outlined text-cyan-600 text-base">diamond</span>
+            <span className="text-xs font-black text-cyan-700">料金プラン</span>
           </div>
-          <h1 className="text-3xl lg:text-4xl font-black text-slate-800 mb-3">
-            ドヤリスト 料金プラン
+          <h1 className="text-3xl lg:text-4xl font-black text-[#0a1530] mb-3">
+            シンプルな3プラン
           </h1>
           <p className="text-base text-slate-500 max-w-xl mx-auto">
-            営業の規模・チームサイズに合わせて選べる4つのプラン。いつでも変更・解約可能です。
+            営業の規模に合わせて選べる3プラン。<br className="sm:hidden" />
+            いつでも変更・解約可能です。
           </p>
         </div>
 
-        {/* Current plan banner */}
-        <div className="bg-white rounded-3xl border border-purple-200 shadow-sm p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {/* ===== Current Plan Banner ===== */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-5 mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-purple-100 flex items-center justify-center text-[#7f19e6]">
-              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
-                diamond
-              </span>
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center text-white shadow">
+              <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>diamond</span>
             </div>
             <div>
               <p className="text-xs font-bold text-slate-500">現在のプラン</p>
-              <p className="text-lg font-black text-slate-800">
+              <p className="text-lg font-black text-[#0a1530]">
                 {PLANS.find((p) => p.id === currentPlan)?.name || '無料プラン'}
               </p>
+              {periodEnd && currentPlan !== 'FREE' && (
+                <p className="text-xs text-slate-400 mt-0.5">
+                  次回更新: {new Date(periodEnd).toLocaleDateString('ja-JP')}
+                </p>
+              )}
             </div>
           </div>
           {currentPlan !== 'FREE' && (
             <button
               onClick={handlePortal}
               disabled={portalLoading}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border border-slate-200 text-slate-700 font-bold text-sm hover:bg-slate-50 disabled:opacity-50 transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white border border-slate-300 text-slate-700 font-bold text-sm hover:bg-slate-50 disabled:opacity-50 transition-colors"
             >
               <span className="material-symbols-outlined text-base">settings</span>
-              サブスク管理
+              サブスクリプション管理
             </button>
           )}
         </div>
 
-        {/* Plans grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-10">
+        {/* ===== Plans Grid (3 cards) ===== */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
           {PLANS.map((plan) => {
             const isCurrent = currentPlan === plan.id
             return (
               <div
                 key={plan.id}
-                className={`relative bg-white rounded-3xl p-6 transition-all ${
+                className={`relative bg-white rounded-3xl p-7 transition-all ${
                   plan.highlight
-                    ? 'ring-2 ring-[#7f19e6] shadow-2xl shadow-[#7f19e6]/20 lg:-translate-y-2'
-                    : 'border border-slate-100 shadow-sm hover:shadow-md'
+                    ? 'ring-2 ring-cyan-500 shadow-2xl shadow-cyan-500/20 lg:-translate-y-3'
+                    : 'border border-slate-200 shadow-sm hover:shadow-md'
                 }`}
               >
                 {plan.badge && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-[#7f19e6] text-white text-xs font-black rounded-full shadow-lg shadow-[#7f19e6]/30">
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white text-xs font-black rounded-full shadow-lg shadow-cyan-500/30">
                     {plan.badge}
                   </div>
                 )}
@@ -220,33 +228,20 @@ export default function PricingPage() {
                   </div>
                 )}
 
-                <div className="mb-5">
-                  <h3 className="text-lg font-black text-slate-800">{plan.name}</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">{plan.tagline}</p>
+                <div className="mb-6">
+                  <h3 className="text-xl font-black text-[#0a1530]">{plan.name}</h3>
+                  <p className="text-xs text-slate-500 mt-1">{plan.tagline}</p>
                 </div>
 
-                <div className="mb-5">
-                  <p className="text-3xl font-black text-slate-800">{plan.price}</p>
-                  <p className="text-xs font-bold text-slate-400 mt-0.5">{plan.priceSub}</p>
+                <div className="mb-6 pb-6 border-b border-slate-100">
+                  <p className="text-4xl font-black text-[#0a1530]">{plan.price}</p>
+                  <p className="text-xs font-bold text-slate-400 mt-1">{plan.priceSub}</p>
                 </div>
 
-                {/* Limits */}
-                <div className="mb-5 pb-5 border-b border-slate-100 space-y-2">
-                  {plan.limits.map((l) => (
-                    <div key={l.label} className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500">{l.label}</span>
-                      <span className="font-black text-slate-800">{l.value}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Features */}
-                <ul className="space-y-2 mb-6">
+                <ul className="space-y-3 mb-6 min-h-[280px]">
                   {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-xs text-slate-600">
-                      <span className="material-symbols-outlined text-base text-emerald-500 mt-px">
-                        check_circle
-                      </span>
+                    <li key={f} className="flex items-start gap-2 text-sm text-slate-700">
+                      <span className="material-symbols-outlined text-base text-emerald-500 flex-shrink-0 mt-0.5">check_circle</span>
                       <span>{f}</span>
                     </li>
                   ))}
@@ -255,63 +250,96 @@ export default function PricingPage() {
                 <button
                   onClick={() => handleCheckout(plan.id)}
                   disabled={isCurrent}
-                  className={`w-full py-2.5 rounded-full font-bold text-sm transition-all ${
+                  className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${
                     isCurrent
                       ? 'bg-slate-100 text-slate-400 cursor-default'
                       : plan.highlight
-                        ? 'bg-[#7f19e6] hover:bg-[#5b0fb3] text-white shadow-lg shadow-[#7f19e6]/30'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                        ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white shadow-lg shadow-cyan-500/30'
+                        : 'bg-[#0a1530] hover:bg-[#13234d] text-white'
                   }`}
                 >
-                  {isCurrent
-                    ? '利用中'
-                    : plan.id === 'ENTERPRISE'
-                      ? 'お問い合わせ'
-                      : plan.id === 'FREE'
-                        ? '無料で始める'
-                        : 'このプランにする'}
+                  {isCurrent ? '利用中' : plan.cta}
                 </button>
+                {plan.ctaSub && !isCurrent && (
+                  <p className="text-[10px] text-slate-400 text-center mt-2">{plan.ctaSub}</p>
+                )}
               </div>
             )
           })}
         </div>
 
-        {/* FAQ / Notes */}
-        <div className="bg-white rounded-3xl border border-slate-100 p-6 lg:p-8 shadow-sm">
-          <h3 className="text-base font-black text-slate-800 mb-4 flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#7f19e6]">help</span>
+        {/* ===== Comparison Table ===== */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-10">
+          <div className="px-6 py-5 border-b border-slate-200 bg-slate-50">
+            <h2 className="text-lg font-black text-[#0a1530] flex items-center gap-2">
+              <span className="material-symbols-outlined text-cyan-600">compare</span>
+              機能比較表
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">プラン別の機能差をまとめて確認できます</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-5 py-4 text-left font-bold text-slate-600 text-xs w-1/3">機能</th>
+                  {PLANS.map((p) => (
+                    <th key={p.id} className={`px-5 py-4 text-center font-black text-xs ${p.highlight ? 'bg-cyan-50 text-cyan-700' : 'text-[#0a1530]'}`}>
+                      {p.name}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {COMPARISON.map((row, idx) => (
+                  <tr key={row.label} className={`border-b border-slate-100 ${idx % 2 === 1 ? 'bg-slate-50/30' : ''}`}>
+                    <td className="px-5 py-3 text-sm text-slate-700 font-medium">{row.label}</td>
+                    {row.values.map((v, i) => (
+                      <td key={i} className={`px-5 py-3 text-center text-sm ${i === 1 ? 'bg-cyan-50/50' : ''}`}>
+                        {v === '◯' ? (
+                          <span className="material-symbols-outlined text-emerald-500" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                        ) : v === '—' ? (
+                          <span className="text-slate-300">—</span>
+                        ) : (
+                          <span className="font-bold text-[#0a1530]">{v}</span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* ===== FAQ ===== */}
+        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 lg:p-8">
+          <h3 className="text-lg font-black text-[#0a1530] mb-5 flex items-center gap-2">
+            <span className="material-symbols-outlined text-cyan-600">help</span>
             よくある質問
           </h3>
-          <div className="space-y-4 text-sm">
-            <div>
-              <p className="font-black text-slate-700 mb-1">プランはいつでも変更できますか?</p>
-              <p className="text-slate-500">
-                はい。いつでもアップグレード・ダウングレードが可能です。Stripeのカスタマーポータルから簡単に変更できます。
-              </p>
-            </div>
-            <div>
-              <p className="font-black text-slate-700 mb-1">月の途中で契約した場合は?</p>
-              <p className="text-slate-500">
-                日割り計算が適用されます。残日数分の料金のみご請求します。
-              </p>
-            </div>
-            <div>
-              <p className="font-black text-slate-700 mb-1">他のドヤAIサービスも使えますか?</p>
-              <p className="text-slate-500">
-                ドヤAIの統一プランに加入いただくと、ドヤリスト・ドヤ勤怠・ドヤバナーAI・ドヤライティングAI・ドヤインタビューなど、すべてのドヤAIサービスのPROプランをご利用いただけます。
-              </p>
-            </div>
-            <div>
-              <p className="font-black text-slate-700 mb-1">用語について</p>
-              <p className="text-slate-500 text-xs leading-relaxed">
-                <strong>ドヤAI</strong>: スリスタが提供するAI SaaSプラットフォームの総称<br />
-                <strong>ドヤリスト</strong>: 営業リスト抽出・営業文作成ツール（本サービス）<br />
-                <strong>ドヤ勤怠 / ドヤバナーAI / ドヤライティングAI 等</strong>: ドヤAIのサブサービス
-              </p>
-            </div>
+          <div className="space-y-5 text-sm">
+            <Faq q="プランはいつでも変更できますか?" a="はい。いつでもアップグレード・ダウングレードが可能です。Stripeのカスタマーポータルから簡単に変更できます。" />
+            <Faq q="月の途中で契約した場合は?" a="日割り計算が適用されます。残日数分の料金のみご請求します。" />
+            <Faq q="無料プランの上限を超えるとどうなりますか?" a="月初にリセットされます。途中でPROプランに変更すれば即時に拡張上限が適用されます。" />
+            <Faq q="他のドヤAIサービスも使えますか?" a="PRO以上に加入いただくと、ドヤリスト・ドヤ勤怠・ドヤバナーAI・ドヤライティングAI・ドヤインタビュー等、すべてのドヤAIサービスのPROプランをご利用いただけます（統一プラン方式）。" />
+            <Faq q="支払い方法は?" a="クレジットカード（Visa / Mastercard / JCB / American Express）に対応しています。Stripeで安全に処理されます。" />
+            <Faq q="解約方法は?" a="サブスクリプション管理ボタンからいつでも解約できます。解約後も契約期間終了まではご利用いただけます。" />
+          </div>
+          <div className="mt-8 pt-5 border-t border-slate-100 text-xs text-slate-400 leading-relaxed">
+            <strong className="text-slate-600">用語について:</strong><br />
+            <strong>ドヤAI</strong>: スリスタが提供するAI SaaSプラットフォームの総称 / <strong>ドヤリスト</strong>: 営業リスト抽出・営業文作成ツール（本サービス） / <strong>ドヤ勤怠 / ドヤバナーAI / ドヤライティングAI 等</strong>: ドヤAIのサブサービス
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function Faq({ q, a }: { q: string; a: string }) {
+  return (
+    <div>
+      <p className="font-black text-[#0a1530] mb-1.5">Q. {q}</p>
+      <p className="text-slate-600 leading-relaxed pl-4 border-l-2 border-cyan-200">{a}</p>
     </div>
   )
 }
