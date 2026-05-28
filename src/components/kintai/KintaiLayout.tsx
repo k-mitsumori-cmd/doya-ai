@@ -88,7 +88,7 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
           
           <p className="text-slate-500 mb-6">ログインして勤怠管理を始めましょう</p>
           <a
-            href="/auth/signin?callbackUrl=/kintai/dashboard"
+            href="/auth/signin?callbackUrl=/kintai/clock"
             className="inline-flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-[#7f19e6] to-[#5b0fb3] text-white font-bold rounded-xl hover:shadow-lg hover:shadow-[#7f19e6]/20 transition-all"
           >
             <span className="material-symbols-outlined">login</span>

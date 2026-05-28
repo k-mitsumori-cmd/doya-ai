@@ -34,7 +34,7 @@ export default function InvitePage() {
       const res = await fetch(`/api/kintai/invite/${token}`, { method: 'POST' })
       const data = await res.json()
       if (data.success) {
-        router.push('/kintai/dashboard')
+        window.location.href = '/kintai/clock'
       } else {
         setError(data.error || '参加に失敗しました')
       }
@@ -82,7 +82,7 @@ export default function InvitePage() {
         </div>
         {!session?.user ? (
           <a
-            href={`/auth/signin?callbackUrl=/kintai/invite/${token}`}
+            href={`/auth/signin?callbackUrl=${encodeURIComponent(`/kintai/invite/${token}`)}`}
             className="inline-flex items-center gap-2 px-8 py-4 bg-gradient-to-r from-[#7f19e6] to-[#5b0fb3] text-white font-black text-lg rounded-full hover:shadow-xl transition-all shadow-lg w-full justify-center"
           >
             Googleでログインして参加

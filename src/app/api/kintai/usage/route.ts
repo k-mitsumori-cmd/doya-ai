@@ -10,7 +10,14 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
-    const userId = (session?.user as any)?.id as string | undefined
+    let userId = (session?.user as any)?.id as string | undefined
+    if (!userId && session?.user?.email) {
+      const dbUser = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true },
+      })
+      userId = dbUser?.id
+    }
     if (!userId) {
       return NextResponse.json({ organizationId: null })
     }

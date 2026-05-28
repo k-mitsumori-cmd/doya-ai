@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { getKintaiEmployeeLimitByUserPlan } from '@/lib/pricing'
+import { sendEmail } from '@/lib/email'
 
 export async function GET(req: NextRequest) {
   try {
@@ -107,6 +108,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'system_adminロールは割り当てできません' }, { status: 403 })
     }
 
+    const inviteToken = crypto.randomUUID()
     const employee = await prisma.kintaiEmployee.create({
       data: {
         organizationId: ctx.organizationId,
@@ -122,14 +124,55 @@ export async function POST(req: NextRequest) {
             organizationId: ctx.organizationId,
             userId: `pending_${crypto.randomUUID()}`,
             role: assignRole,
-            status: 'ACTIVE',
+            status: 'PENDING',
+            inviteToken,
+            inviteEmail: email,
           },
         },
       },
       include: { department: true, workRule: true, member: { select: { id: true, role: true, status: true, inviteToken: true } } },
     })
 
-    return NextResponse.json({ employee }, { status: 201 })
+    // 招待メールを自動送信
+    const org = await prisma.kintaiOrganization.findUnique({
+      where: { id: ctx.organizationId },
+      select: { name: true },
+    })
+    const baseUrl = process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'
+    const inviteUrl = `${baseUrl}/kintai/invite/${inviteToken}`
+
+    sendEmail({
+      to: email,
+      subject: `【ドヤ勤怠】${org?.name || '組織'}への招待`,
+      html: `
+        <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="display: inline-block; width: 48px; height: 48px; border-radius: 16px; background: linear-gradient(135deg, #7f19e6, #5b0fb3); color: white; line-height: 48px; font-size: 20px; font-weight: bold;">⏰</div>
+          </div>
+          <h1 style="text-align: center; font-size: 24px; font-weight: 800; color: #1e293b; margin-bottom: 8px;">ドヤ勤怠への招待</h1>
+          <p style="text-align: center; color: #64748b; font-size: 15px; margin-bottom: 24px;">
+            <strong style="color: #7f19e6;">${org?.name || '組織'}</strong> に招待されました
+          </p>
+          <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
+            ${name} さん、こんにちは！<br>
+            以下のボタンをクリックして、ドヤ勤怠に参加してください。
+          </p>
+          <div style="text-align: center; margin-bottom: 24px;">
+            <a href="${inviteUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #7f19e6, #5b0fb3); color: white; text-decoration: none; border-radius: 999px; font-weight: 700; font-size: 16px;">
+              組織に参加する
+            </a>
+          </div>
+          <p style="color: #94a3b8; font-size: 12px; text-align: center;">
+            このリンクは本人のみ使用できます。心当たりのない場合は無視してください。
+          </p>
+          <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+          <p style="color: #cbd5e1; font-size: 11px; text-align: center;">ドヤ勤怠 by ドヤAI</p>
+        </div>
+      `,
+      tags: [{ name: 'service', value: 'kintai-invite' }],
+    }).catch(e => console.error('[kintai/employees] invite email failed:', e))
+
+    return NextResponse.json({ employee, inviteUrl }, { status: 201 })
   } catch (e: any) {
     console.error('[kintai/employees POST]', e?.message?.substring(0, 500))
     let msg = '作成に失敗しました'

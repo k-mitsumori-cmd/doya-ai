@@ -32,8 +32,7 @@ export default function KintaiOnboarding() {
         const data = await res.json()
         throw new Error(data.error || '組織の作成に失敗しました')
       }
-      router.refresh()
-      window.location.reload()
+      window.location.href = '/kintai/clock'
     } catch (e: any) {
       setError(e.message)
     } finally {
