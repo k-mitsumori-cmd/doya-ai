@@ -246,7 +246,19 @@ export default function AdminAccountsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-white/60">
-                      {admin.email || '-'}
+                      {admin.email ? (
+                        <div className="flex items-center gap-2">
+                          <span>{admin.email}</span>
+                          {!admin.email.endsWith('@surisuta.jp') && (
+                            <span
+                              className="text-[10px] px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded-full"
+                              title="セキュリティ強化のため、@surisuta.jp ドメインへの統一を推奨します"
+                            >
+                              ⚠️ 非Surisutaドメイン
+                            </span>
+                          )}
+                        </div>
+                      ) : '-'}
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${

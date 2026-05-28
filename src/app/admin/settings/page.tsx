@@ -84,16 +84,24 @@ export default function AdminSettingsPage() {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">OpenAI API Key</label>
-              <div className="flex gap-2">
-                <input
-                  type="password"
-                  value={settings.openaiApiKey}
-                  onChange={(e) => setSettings({ ...settings, openaiApiKey: e.target.value })}
-                  className="input-field flex-1"
-                />
-                <button className="btn-secondary">変更</button>
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg flex items-start gap-2">
+                <span className="text-blue-600 mt-0.5">🔒</span>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-blue-900">Vercel環境変数で管理されています</p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    APIキーは <code className="bg-blue-100 px-1.5 py-0.5 rounded">OPENAI_API_KEY</code> として Vercel に保存されています。
+                    変更は Vercel ダッシュボード または <code className="bg-blue-100 px-1.5 py-0.5 rounded">vercel env</code> CLIから行ってください。
+                  </p>
+                  <a
+                    href="https://vercel.com/surisutas-projects/doya-ai/settings/environment-variables"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 mt-2 text-xs text-blue-600 hover:text-blue-800 font-bold"
+                  >
+                    Vercel環境変数を開く →
+                  </a>
+                </div>
               </div>
-              <p className="text-xs text-gray-400 mt-1">※ Vercel環境変数で設定することを推奨します</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>

@@ -75,7 +75,7 @@ export default function DripUsersPage() {
       const data = await res.json()
       setUsers(data.users ?? data ?? [])
     } catch {
-      toast.error('ユーザーの取得に失敗しました')
+      toast.error('ユーザーの取得に失敗しました', { id: 'drip-users-fetch-error' })
     } finally {
       setIsLoading(false)
     }
@@ -96,7 +96,7 @@ export default function DripUsersPage() {
       const data = await res.json()
       setTimeline(data.logs ?? data ?? [])
     } catch {
-      toast.error('タイムラインの取得に失敗しました')
+      toast.error('タイムラインの取得に失敗しました', { id: 'drip-timeline-fetch-error' })
     } finally {
       setIsLoadingTimeline(false)
     }

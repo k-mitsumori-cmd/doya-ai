@@ -24,7 +24,8 @@
 15. [共通機能 & 共通データベース管理](#15-共通機能--共通データベース管理)
 16. [メール配信システム（Resend + ドリップマーケティング）](#16-メール配信システムresend--ドリップマーケティング)
 17. [エラー通知 & ユーザーエラー報告システム](#17-エラー通知--ユーザーエラー報告システム)
-18. [現状の不整合・要注意事項レポート](#18-現状の不整合要注意事項レポート)
+18. [管理画面 — 統合コントロールセンター](#18-管理画面admin-統合コントロールセンター)
+19. [現状の不整合・要注意事項レポート](#19-現状の不整合要注意事項レポート)
 
 ---
 
@@ -1012,7 +1013,127 @@ type PlanId =
   'bundle'
 ```
 
-**Stripe 実装**: 全サービスがドヤバナーAI の Price ID をフォールバックとして共有。1 回の課金で全サービスの PRO が解放される。
+#### Stripe 共通プランの仕組み（統一課金アーキテクチャ）
+
+**コア設計**: Stripe 上の「商品」はドヤバナーAI の Price ID を基準とし、全サービスが同じ Price ID にフォールバックする。ユーザーがどのサービスから課金しても、結果的に同一の Stripe サブスクリプションが作成され、全サービスの PRO が解放される。
+
+```
+ユーザーが「ドヤ記事作成 PRO」に課金
+  ↓
+Stripe Price ID を解決:
+  STRIPE_PRICE_SEO_PRO_MONTHLY が設定されていれば → それを使用
+  設定されていなければ → BANNER_PRO_MONTHLY にフォールバック
+  ↓
+結果: バナーAI と同じ Price ID で課金 = 同一サブスクリプション
+  ↓
+Webhook で user.plan = 'PRO' に更新
+  ↓
+全サービスの PRO 機能が解放
+```
+
+**Price ID フォールバックチェーン** (`src/lib/stripe.ts`):
+
+```typescript
+// 基準価格（ドヤバナーAI）
+const BANNER_LIGHT_MONTHLY = process.env.STRIPE_PRICE_BANNER_LIGHT_MONTHLY
+const BANNER_PRO_MONTHLY   = process.env.STRIPE_PRICE_BANNER_PRO_MONTHLY
+const BANNER_ENTERPRISE_MONTHLY = process.env.STRIPE_PRICE_BANNER_ENTERPRISE_MONTHLY
+
+// 他サービスはバナーにフォールバック
+STRIPE_PRICE_IDS = {
+  seo:       { light: { monthly: env.SEO_LIGHT   || BANNER_LIGHT_MONTHLY } },
+  copy:      { light: { monthly: env.COPY_LIGHT  || BANNER_LIGHT_MONTHLY } },
+  interview: { light: { monthly: env.INTERVIEW_LIGHT || BANNER_LIGHT_MONTHLY } },
+  lp:        { light: { monthly: env.LP_LIGHT    || BANNER_LIGHT_MONTHLY } },
+  voice:     { light: { monthly: env.VOICE_LIGHT || BANNER_LIGHT_MONTHLY } },
+  movie:     { light: { monthly: env.MOVIE_LIGHT || BANNER_LIGHT_MONTHLY } },
+  adsim:     { light: { monthly: env.ADSIM_LIGHT || BANNER_LIGHT_MONTHLY } },
+  // ↑ 全サービスが BANNER の Price ID を共有
+}
+```
+
+**Webhook 処理で全サービスを一括更新**:
+
+```typescript
+// src/lib/stripe.ts — 全サービス ID リスト
+export const ALL_SERVICE_IDS = [
+  'banner', 'seo', 'interview', 'persona', 'kantan',
+  'copy', 'voice', 'movie', 'lp', 'opening',
+  'shindan', 'tenkai', 'interviewx', 'logo', 'video', 'presentation',
+  'adsim', 'hr',
+] as const
+
+// Webhook: subscription.created / updated 時
+// → ALL_SERVICE_IDS の全てに対して UserServiceSubscription を upsert
+// → どのサービスから課金しても、全サービスのプランが同時に更新される
+```
+
+**プラン判定の流れ**:
+
+```
+Stripe Price ID → getPlanIdFromStripePriceId() → PlanId
+  ↓
+PlanId → getServiceIdFromPlanId() → ServiceId
+  ↓
+PlanId から 'LIGHT' / 'PRO' / 'ENTERPRISE' を抽出
+  ↓
+user.plan に保存 → 全 API ルートで参照
+```
+
+**BUNDLE プラン**: 特別契約向け。`BUNDLE` プランのユーザーは全サービスで `PRO` 相当の制限が適用される。
+
+```typescript
+// pricing.ts の各 get*LimitByUserPlan() 関数内
+if (p === 'BUNDLE') return PRICING.proLimit  // BUNDLE は PRO 扱い
+```
+
+**旧プラン互換**: `basic` / `starter` / `business` は旧プラン名。既存契約者の Price ID 解決のために残されている。新規開発では使用しない。
+
+#### Checkout & カスタマーポータル
+
+```typescript
+// src/lib/stripe.ts
+
+// Checkout Session 作成（日本語・プロモーションコード対応）
+createCheckoutSession({
+  priceId,       // STRIPE_PRICE_IDS から取得
+  userId,        // metadata に埋め込み（Webhook で参照）
+  userEmail,     // Stripe 側のメール
+  successUrl,    // 成功後リダイレクト先
+  cancelUrl,     // キャンセル時リダイレクト先
+  mode: 'subscription',
+})
+
+// カスタマーポータル（プラン変更・解約）
+createCustomerPortalSession({
+  customerId,    // user.stripeCustomerId
+  returnUrl,     // 戻り先 URL
+})
+```
+
+#### 新サービス追加時の Stripe 設定
+
+新サービスを追加する場合、以下の手順で統一プランに組み込む:
+
+1. `src/lib/stripe.ts` の `STRIPE_PRICE_IDS` にサービスを追加
+   - **フォールバックを `BANNER_*_MONTHLY` / `BANNER_*_YEARLY` にする**（統一課金）
+   ```typescript
+   newservice: {
+     light: {
+       monthly: process.env.STRIPE_PRICE_NEWSERVICE_LIGHT_MONTHLY || BANNER_LIGHT_MONTHLY,
+       yearly: process.env.STRIPE_PRICE_NEWSERVICE_LIGHT_YEARLY || BANNER_LIGHT_YEARLY,
+     },
+     pro: { /* 同様 */ },
+     enterprise: { /* 同様 */ },
+   },
+   ```
+2. `ALL_SERVICE_IDS` 配列にサービス ID を追加
+3. `PlanId` 型に `'newservice-light' | 'newservice-pro' | 'newservice-enterprise'` を追加
+4. `ServiceId` 型に `'newservice'` を追加
+5. `getPlanIdFromStripePriceId()` のマッピング配列にエントリ追加
+6. `src/lib/pricing.ts` に `NEWSERVICE_PRICING` と `getNewserviceLimitByUserPlan()` を追加
+
+**注意**: 環境変数（`STRIPE_PRICE_NEWSERVICE_*`）を設定しなくても、フォールバックでバナーAI の Price ID が使われるため動作する。専用の Price ID が必要な場合のみ Stripe ダッシュボードで作成して環境変数に設定する。
 
 ### 13.2 プラン階層と価格体系
 
@@ -2091,7 +2212,258 @@ Error: Page not found
 
 ---
 
-## 18. 現状の不整合・要注意事項レポート（2026-05-27 監査）
+## 18. 管理画面（/admin）— 統合コントロールセンター
+
+> 管理画面は、全サービスの活用状況・ユーザー管理・課金・設定を **1 つの画面から一元管理** できる統合コントロールセンター。
+> サービスが増えても、管理画面から全てを見渡して調整できる状態を維持する。
+
+### 18.1 現在の管理画面構成
+
+```
+/admin/
+├── page.tsx              ← ダッシュボード（KPI・サービス別実績・直近アクティビティ）
+├── users/                ← ユーザー管理（検索・プラン変更・使用量リセット・CSV/JSONエクスポート）
+├── analytics/            ← アナリティクス（生成数・ユーザー数・成長率）
+├── billing/              ← 売上・課金（月次売上・MRR・サービス別売上・転換率）
+├── admins/               ← 管理者アカウント（作成・権限管理・パスワードリセット）
+├── settings/             ← 設定（API・使用制限・GTM/HubSpot・Slack・メンテナンスモード）
+├── templates/            ← テンプレート管理（追加・編集・有効化/無効化・PRO限定フラグ）
+├── drip/                 ← ドリップ配信
+│   ├── page.tsx          ← 配信ダッシュボード（送信数・開封率・クリック率）
+│   ├── sequences/        ← シーケンス管理
+│   ├── templates/        ← メールテンプレート管理
+│   ├── users/            ← 配信ユーザー管理
+│   ├── logs/             ← 配信ログ
+│   └── settings/         ← 配信設定
+├── doyamana-images/      ← ドヤマナAI 画像管理
+├── doyamana-categories/  ← ドヤマナAI カテゴリ管理
+└── login/                ← 管理者ログイン（JWT・レート制限・Turnstile CAPTCHA）
+```
+
+### 18.2 管理画面でできること（現状）
+
+#### ダッシュボード（KPI 概要）
+
+| KPI | 内容 | 更新 |
+|-----|------|------|
+| 総ユーザー数 | Free / Pro / Enterprise の内訳 | リアルタイム |
+| 本日の生成数 | 全サービス合算 | リアルタイム |
+| 月間売上 | MRR（月次経常収益） | リアルタイム |
+| サービス別実績 | ユーザー数・Pro数・生成数・売上・成長率（サービスごと） | リアルタイム |
+| 直近アクティビティ | 過去24時間の生成ログ（ユーザー・サービス・アクション） | リアルタイム |
+| セキュリティ | 管理者ログイン試行数（24時間） | リアルタイム |
+
+#### ユーザー管理
+
+| 機能 | 詳細 |
+|------|------|
+| ユーザー検索 | メールアドレス・名前で検索 |
+| プランフィルター | Free / Pro / Enterprise でフィルタリング |
+| プラン変更 | 統一プランでの一括変更（バナー + ライティング連動） |
+| 使用量リセット | 日次/月次の使用回数をサービスごとにリセット |
+| Stripe 連携確認 | サブスクリプションID・ステータス・期間表示 |
+| サブスク操作 | 期間終了時解約 / 即時解約 / 再開 |
+| データエクスポート | CSV（基本 / Stripe付き）・JSON 形式 |
+| ユーザー削除 | 確認テキスト入力付き（カスケード削除） |
+
+#### 売上・課金
+
+| 機能 | 詳細 |
+|------|------|
+| 月間売上 | 総売上・MRR 表示 |
+| ユーザー内訳 | Free / Premium / Enterprise 数 |
+| 転換率 | Premium ÷ 全ユーザー |
+| サービス別売上 | サービスごとの売上内訳 |
+
+#### ドリップ配信管理
+
+| 機能 | 詳細 |
+|------|------|
+| 配信ダッシュボード | 総送信数・開封率・クリック率・バウンス率 |
+| シーケンス管理 | 作成・編集・開始/一時停止/停止 |
+| テンプレート管理 | HTML メールテンプレートの CRUD |
+| ユーザーセグメント | 条件ベースのターゲティング |
+| 配信ログ | 個別メールの送信状況・開封・クリック追跡 |
+| 配信設定 | 送信時間帯・レート制限・送信元・配信停止設定 |
+
+### 18.3 管理画面から全サービスを統合管理する方針
+
+**目標: どのサービスの状況も、管理画面 1 つで把握・調整できる。**
+
+#### サービス統合管理ダッシュボード（実装方針）
+
+```
+/admin/services/  ← サービス一覧 & 統合管理（新規）
+
+┌─────────────────────────────────────────────────────────┐
+│ サービス統合管理                                           │
+├─────────────────────────────────────────────────────────┤
+│                                                           │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
+│  │ 🎨 バナー  │ │ 🧠 SEO   │ │ 🎙️ インタ │ │ 📄 LP    │   │
+│  │ active    │ │ active    │ │ active    │ │ active    │   │
+│  │ 今日: 234 │ │ 今日: 89  │ │ 今日: 45  │ │ 今日: 23  │   │
+│  │ Pro: 12人 │ │ Pro: 8人  │ │ Pro: 5人  │ │ Pro: 3人  │   │
+│  │ [管理→]   │ │ [管理→]   │ │ [管理→]   │ │ [管理→]   │   │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘   │
+│                                                           │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
+│  │ 🎙️ ボイス │ │ 🎬 ムービ │ │ 👥 HR    │ │ 📊 AdSim │   │
+│  │ active    │ │ active    │ │ active    │ │ coming    │   │
+│  │ ...       │ │ ...       │ │ ...       │ │ soon      │   │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘   │
+│                                                           │
+│  [+ 新サービス追加]                                        │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### サービス個別管理ページ（実装方針）
+
+```
+/admin/services/[serviceId]/  ← サービス個別管理（新規）
+
+┌─────────────────────────────────────────────────────────┐
+│ 🎨 ドヤバナーAI — 管理                                     │
+├─────────────────────────────────────────────────────────┤
+│                                                           │
+│ ステータス: [active ▼]  ← ドロップダウンで変更可能          │
+│                                                           │
+│ ■ 利用状況                                                │
+│   今日の生成数:  234 枚                                    │
+│   今月の生成数:  5,678 枚                                  │
+│   アクティブユーザー: 156 人（うち Pro 12 人）              │
+│   先月比: +23%                                            │
+│                                                           │
+│ ■ 利用制限（この画面で即時変更可能）                        │
+│   ゲスト:      [  3 ] 枚/月                               │
+│   Free:        [ 15 ] 枚/月                               │
+│   Light:       [ 50 ] 枚/月                               │
+│   Pro:         [150 ] 枚/月                               │
+│   Enterprise:  [1000] 枚/月                               │
+│   [保存]                                                   │
+│                                                           │
+│ ■ サービス設定                                             │
+│   表示名:      [ドヤバナーAI        ]                      │
+│   Emoji:       [🎨]                                       │
+│   カラー:      [from-purple-500 to-pink-500]              │
+│   ToolSwitcher表示: [✓]                                   │
+│   NEW バッジ:  [✓]                                        │
+│   [保存]                                                   │
+│                                                           │
+│ ■ 課金設定                                                │
+│   Light 月額:  [¥2,980]   Stripe Price ID: [price_xxx]    │
+│   Pro 月額:    [¥9,980]   Stripe Price ID: [price_xxx]    │
+│   Enterprise:  [¥49,800]  Stripe Price ID: [price_xxx]    │
+│                                                           │
+│ ■ このサービスのユーザー一覧                               │
+│   [ユーザーテーブル（サービス別フィルター済み）]              │
+│                                                           │
+└─────────────────────────────────────────────────────────┘
+```
+
+#### 共通設定管理ページ（実装方針）
+
+```
+/admin/settings/  ← 共通設定（既存を拡張）
+
+┌─────────────────────────────────────────────────────────┐
+│ 共通設定                                                   │
+├─────────────────────────────────────────────────────────┤
+│                                                           │
+│ ■ 全体設定                                                │
+│   メンテナンスモード: [OFF]                                │
+│   メンテナンスメッセージ: [                      ]         │
+│                                                           │
+│ ■ AI モデル設定                                            │
+│   テキスト生成: [gemini-2.0-flash    ▼]                   │
+│   画像生成:     [gpt-image-2         ▼]                   │
+│   画像FB:      [nano-banana-pro-preview ▼]                │
+│                                                           │
+│ ■ 通知設定                                                │
+│   Slack Webhook URL: [https://hooks.slack.com/xxx  ]      │
+│   エラー通知: [✓] サインアップ通知: [✓]                    │
+│   課金通知: [✓] 解約通知: [✓]                              │
+│                                                           │
+│ ■ トラッキング                                             │
+│   GTM Container ID: [GTM-5B2PRCL7]                        │
+│   HubSpot ID:       [48309253     ]                       │
+│                                                           │
+│ ■ メール配信                                               │
+│   Resend From: [noreply@doya-ai.surisuta.jp]              │
+│   送信時間帯:  [09:00] 〜 [21:00]                          │
+│   レート制限:  [100] 通/時                                 │
+│                                                           │
+│ ■ 初回特典                                                │
+│   1時間生成し放題: [ON]                                    │
+│                                                           │
+│ [保存]                                                     │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 18.4 管理画面の開発ルール
+
+#### 共通設定は管理画面から変更できるようにする
+
+```
+✅ 管理画面から変更可能にすべきもの:
+  - サービスのステータス（active / coming_soon / maintenance）
+  - 各プランの利用制限数（日次/月次上限）
+  - メンテナンスモード ON/OFF
+  - Slack 通知の ON/OFF
+  - メール配信設定（送信時間帯・レート制限）
+  - AI モデルの選択（テキスト/画像）
+  - トラッキング ID（GTM / HubSpot）
+
+❌ コード変更が必要なもの（管理画面では変更しない）:
+  - サービスの新規追加（services.ts + ページ + API が必要）
+  - Stripe Price ID の作成（Stripe ダッシュボードで作成が必要）
+  - DB スキーマの変更（Prisma マイグレーションが必要）
+  - 認証方式の変更（NextAuth 設定）
+```
+
+#### 管理画面の認証（既存）
+
+| 項目 | 仕様 |
+|------|------|
+| 認証方式 | JWT（ユーザー認証とは独立） |
+| パスワード要件 | 12文字以上・大文字小文字数字記号を全て含む |
+| セッション有効期限 | 24時間 |
+| レート制限 | 15分間に5回失敗でロック |
+| 同時セッション | 管理者1人あたり最大5セッション |
+| CAPTCHA | Cloudflare Turnstile |
+| ログイン履歴 | `AdminLoginAttempt` テーブルに記録（IP・UA） |
+
+#### 管理画面 API の作り方
+
+```typescript
+// 管理者 API は verifyAdminSession() で認証する（NextAuth とは別系統）
+import { verifyAdminSession } from '@/lib/admin-auth'
+
+export async function GET(req: NextRequest) {
+  const admin = await verifyAdminSession(req)
+  if (!admin) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  // 管理者のみアクセス可能な処理
+}
+```
+
+### 18.5 管理画面の未実装事項
+
+| # | 項目 | 優先度 | 説明 |
+|---|------|--------|------|
+| 1 | **設定ページのバックエンド API** | 高 | 設定画面の UI はあるが API が未接続。変更が保存されない |
+| 2 | **サービス統合管理ページ** | 高 | `/admin/services/` — サービス一覧 & 個別管理 |
+| 3 | **サービスごとの利用制限変更** | 高 | 管理画面から Free/Light/Pro/Enterprise の制限値を変更 |
+| 4 | **サービスステータス変更** | 高 | 管理画面から active/coming_soon/maintenance を切替 |
+| 5 | **監査ログ** | 中 | 管理者の操作履歴（誰が何を変更したか） |
+| 6 | **RBAC（権限管理）** | 中 | 管理者ごとに閲覧/編集権限を分ける |
+| 7 | **サービス別ユーザーフィルター** | 中 | ユーザー一覧をサービス利用状況でフィルター |
+| 8 | **日付範囲フィルター** | 低 | アナリティクスの期間指定 |
+
+---
+
+## 19. 現状の不整合・要注意事項レポート（2026-05-27 監査）
 
 ### 🔴 Critical — 即座に対応が必要
 
@@ -2199,3 +2571,4 @@ src/
 | 2026-02-17 | 初版作成 |
 | 2026-05-27 | 全面改訂: UI デザイン・キャラクター・ステータス管理・サービス遷移マップ・新サービス追加チェックリストを統合。19 サービス対応 |
 | 2026-05-27 | メール配信システム（Resend + ドリップマーケティング）追加。エラー報告フォーム仕様追加。kintai を coming_soon に変更 |
+| 2026-05-28 | Stripe 共通プラン仕組み詳細追加。管理画面（統合コントロールセンター）セクション追加。サービス統合管理・共通設定管理の実装方針を定義 |

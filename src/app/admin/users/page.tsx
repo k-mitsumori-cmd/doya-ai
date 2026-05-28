@@ -655,14 +655,32 @@ export default function AdminUsersPage() {
                             </span>
                           )}
                           <span className="text-[10px] text-white/40">
-                            {user.stripeInfo.cancelAtPeriodEnd 
+                            {user.stripeInfo.cancelAtPeriodEnd
                               ? `${new Date(user.stripeInfo.currentPeriodEnd).toLocaleDateString('ja-JP')}まで`
                               : `契約: ${new Date(user.stripeInfo.created).toLocaleDateString('ja-JP')}`
                             }
                           </span>
                         </div>
+                      ) : user.stripeSubscriptionId ? (
+                        <div className="flex flex-col gap-1">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-500/20 text-blue-400 text-xs rounded-full w-fit">
+                            <Zap className="w-3 h-3" />
+                            Stripe連携済
+                          </span>
+                          <span className="text-[10px] text-white/40">詳細取得中</span>
+                        </div>
+                      ) : user.plan && user.plan !== 'FREE' ? (
+                        <div className="flex flex-col gap-1">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-violet-500/20 text-violet-400 text-xs rounded-full w-fit">
+                            <Crown className="w-3 h-3" />
+                            {user.plan}（手動）
+                          </span>
+                          <span className="text-[10px] text-white/40">Stripe未連携</span>
+                        </div>
                       ) : (
-                        <span className="text-white/30 text-xs">-</span>
+                        <span className="inline-flex items-center px-2 py-1 bg-white/5 text-white/40 text-xs rounded-full w-fit">
+                          無料
+                        </span>
                       )}
                     </td>
                     {/* 合計生成数 列 */}
@@ -675,23 +693,29 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-1">
-                        <button 
+                        <button
                           onClick={() => setEditingUser(user)}
                           className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white transition-colors"
                           title="詳細編集"
+                          aria-label={`${user.name || user.email}の詳細を編集`}
                         >
                           <Edit3 className="w-4 h-4" />
                         </button>
-                        <button className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white transition-colors" title="メール送信">
+                        <button
+                          className="p-2 rounded-lg hover:bg-white/5 text-white/40 hover:text-white transition-colors"
+                          title="メール送信"
+                          aria-label={`${user.name || user.email}にメール送信`}
+                        >
                           <Mail className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
                           onClick={() => {
                             setShowDeleteConfirm(user)
                             setDeleteConfirmText('')
                           }}
                           className="p-2 rounded-lg hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-colors"
                           title="削除"
+                          aria-label={`${user.name || user.email}を削除`}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -797,10 +821,16 @@ export default function AdminUsersPage() {
                     return (
                       <>
                         <div className="mb-4">
-                          <label className="block text-sm text-white/60 mb-2">プラン（両サービス共通）</label>
+                          <label className="block text-sm text-white/60 mb-2">
+                            プラン（両サービス共通）
+                            <span className="text-[10px] text-amber-400 ml-2">⚡ 変更は即座に反映されます</span>
+                          </label>
                           <select
                             value={currentPlan}
                             onChange={async (e) => {
+                              if (!confirm(`プランを「${PLAN_STYLES[e.target.value]?.label || e.target.value}」に変更しますか？`)) {
+                                return
+                              }
                               await handleUpdateCompletePlan(editingUser.id, e.target.value)
                               await fetchUsers()
                               const updated = users.find((u) => u.id === editingUser.id)
@@ -837,20 +867,19 @@ export default function AdminUsersPage() {
                               </p>
                             </div>
                           </div>
-                          {bannerSub && (
-                            <button
-                              onClick={async () => {
-                                await handleResetUsage(editingUser.id, 'banner', 'daily')
-                                await fetchUsers()
-                                const updated = users.find((u) => u.id === editingUser.id)
-                                if (updated) setEditingUser(updated)
-                              }}
-                              disabled={isSaving}
-                              className="w-full mt-2 px-3 py-1.5 text-xs bg-violet-500/20 text-violet-400 rounded-lg hover:bg-violet-500/30 transition-colors disabled:opacity-50"
-                            >
-                              使用回数をリセット
-                            </button>
-                          )}
+                          <button
+                            onClick={async () => {
+                              await handleResetUsage(editingUser.id, 'banner', 'daily')
+                              await fetchUsers()
+                              const updated = users.find((u) => u.id === editingUser.id)
+                              if (updated) setEditingUser(updated)
+                            }}
+                            disabled={isSaving || !bannerSub}
+                            title={bannerSub ? '使用回数をリセット' : 'サブスクリプション未作成のためリセット不可'}
+                            className="w-full mt-2 px-3 py-1.5 text-xs bg-violet-500/20 text-violet-400 rounded-lg hover:bg-violet-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            🔄 使用回数をリセット
+                          </button>
                         </div>
                         
                         {/* ライティングAI 使用状況 */}
@@ -873,20 +902,19 @@ export default function AdminUsersPage() {
                               </p>
                             </div>
                           </div>
-                          {writingSub && (
-                            <button
-                              onClick={async () => {
-                                await handleResetUsage(editingUser.id, 'writing', 'daily')
-                                await fetchUsers()
-                                const updated = users.find((u) => u.id === editingUser.id)
-                                if (updated) setEditingUser(updated)
-                              }}
-                              disabled={isSaving}
-                              className="w-full mt-2 px-3 py-1.5 text-xs bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 transition-colors disabled:opacity-50"
-                            >
-                              使用回数をリセット
-                            </button>
-                          )}
+                          <button
+                            onClick={async () => {
+                              await handleResetUsage(editingUser.id, 'writing', 'daily')
+                              await fetchUsers()
+                              const updated = users.find((u) => u.id === editingUser.id)
+                              if (updated) setEditingUser(updated)
+                            }}
+                            disabled={isSaving || !writingSub}
+                            title={writingSub ? '使用回数をリセット' : 'サブスクリプション未作成のためリセット不可'}
+                            className="w-full mt-2 px-3 py-1.5 text-xs bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                          >
+                            🔄 使用回数をリセット
+                          </button>
                         </div>
                       </>
                     )
