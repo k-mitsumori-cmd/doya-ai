@@ -304,14 +304,40 @@ export default function SettingsPage() {
           </Card>
         </div>
 
-        {/* ===== Footer Help ===== */}
-        <div className="mt-8 p-5 bg-white rounded-3xl border border-slate-200 shadow-sm flex items-center gap-4">
-          <img src={CHARS.point} alt="" className="w-14 h-14 flex-shrink-0" />
-          <div className="flex-1">
-            <p className="text-sm font-black text-[#0a1530]">困ったときは</p>
-            <p className="text-xs text-slate-500 mt-0.5">
-              使い方や不具合は <a href="mailto:support@surisuta.jp" className="text-cyan-600 font-bold hover:underline">support@surisuta.jp</a> までご連絡ください
-            </p>
+        {/* ===== Support Section（強調版） ===== */}
+        <div className="mt-8 p-6 bg-gradient-to-br from-cyan-50 via-white to-violet-50 rounded-3xl border-2 border-cyan-200 shadow-lg">
+          <div className="flex items-center gap-4 flex-wrap">
+            <img src={CHARS.point} alt="" className="w-16 h-16 flex-shrink-0" />
+            <div className="flex-1 min-w-[200px]">
+              <p className="text-base font-black text-[#0a1530] flex items-center gap-2">
+                <span className="material-symbols-outlined text-cyan-600">support_agent</span>
+                サポート窓口
+              </p>
+              <p className="text-xs text-slate-600 mt-1 leading-relaxed">
+                ご質問・不具合報告・ご要望はお気軽にご連絡ください
+              </p>
+            </div>
+            <a
+              href="mailto:support@surisuta.jp?subject=ドヤリストに関するお問い合わせ"
+              className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-black text-sm rounded-xl shadow-lg shadow-cyan-500/30 transition-all active:scale-95"
+            >
+              <span className="material-symbols-outlined">mail</span>
+              support@surisuta.jp
+            </a>
+          </div>
+          <div className="mt-4 pt-4 border-t border-cyan-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px]">
+            <div className="flex items-center gap-2 text-slate-600">
+              <span className="material-symbols-outlined text-cyan-500 text-base">schedule</span>
+              <span>平日 10:00-18:00 (JST)</span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-600">
+              <span className="material-symbols-outlined text-cyan-500 text-base">reply</span>
+              <span>通常 1営業日以内に返信</span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-600">
+              <span className="material-symbols-outlined text-cyan-500 text-base">language</span>
+              <span>日本語のみ</span>
+            </div>
           </div>
         </div>
       </div>
@@ -361,11 +387,16 @@ function InfoRow({ label, value, icon }: { label: string; value: string; icon: s
 function UsageBar({ label, used, max, color }: { label: string; used: number; max: number; color: 'cyan' | 'violet' }) {
   const isUnlimited = max === -1
   const pct = isUnlimited ? 0 : max > 0 ? Math.min(100, (used / max) * 100) : 0
+  // 80%以上で警告色、95%以上で危険色
+  const warningLevel = pct >= 95 ? 'danger' : pct >= 80 ? 'warn' : 'normal'
   const colorMap = {
-    cyan: { bar: 'bg-cyan-500', bg: 'bg-cyan-100' },
-    violet: { bar: 'bg-violet-500', bg: 'bg-violet-100' },
+    cyan: { bar: 'bg-gradient-to-r from-cyan-400 to-cyan-500', bg: 'bg-cyan-50', text: 'text-cyan-700' },
+    violet: { bar: 'bg-gradient-to-r from-violet-400 to-violet-500', bg: 'bg-violet-50', text: 'text-violet-700' },
   }
   const c = colorMap[color]
+  const barColor = warningLevel === 'danger' ? 'bg-gradient-to-r from-rose-400 to-rose-500'
+    : warningLevel === 'warn' ? 'bg-gradient-to-r from-amber-400 to-amber-500'
+    : c.bar
   return (
     <div>
       <div className="flex items-center justify-between mb-1.5">
@@ -374,15 +405,32 @@ function UsageBar({ label, used, max, color }: { label: string; used: number; ma
           {used.toLocaleString()}<span className="text-slate-400 font-medium"> / {isUnlimited ? '∞' : max.toLocaleString()}</span>
         </p>
       </div>
-      <div className={`h-2 rounded-full ${c.bg} overflow-hidden`}>
+      <div className={`relative h-3 rounded-full ${c.bg} overflow-hidden`}>
         {!isUnlimited && (
-          <div
-            className={`h-full ${c.bar} transition-all`}
-            style={{ width: `${pct}%` }}
-          />
+          <>
+            <div className={`h-full ${barColor} transition-all duration-500`} style={{ width: `${pct}%` }} />
+            {pct > 15 && (
+              <span className="absolute inset-0 flex items-center justify-end pr-2 text-[9px] font-black text-white drop-shadow">
+                {pct.toFixed(0)}%
+              </span>
+            )}
+          </>
         )}
-        {isUnlimited && <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500" style={{ width: '100%' }} />}
+        {isUnlimited && (
+          <>
+            <div className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500" style={{ width: '100%' }} />
+            <span className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-white drop-shadow">
+              無制限
+            </span>
+          </>
+        )}
       </div>
+      {warningLevel === 'danger' && (
+        <p className="text-[10px] text-rose-600 mt-1 font-bold">⚠️ まもなく上限です。プランをアップグレードしてください</p>
+      )}
+      {warningLevel === 'warn' && (
+        <p className="text-[10px] text-amber-600 mt-1 font-bold">⏰ あと {(max - used).toLocaleString()} で上限です</p>
+      )}
     </div>
   )
 }
