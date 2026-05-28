@@ -193,24 +193,27 @@ export default function TemplatesPage() {
                 <div className="flex gap-1 pt-3 border-t border-slate-100">
                   <button
                     onClick={() => setPreviewing(t)}
+                    aria-label={`テンプレート「${t.name}」をプレビュー`}
                     className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-base">visibility</span>
+                    <span className="material-symbols-outlined text-base" aria-hidden="true">visibility</span>
                     プレビュー
                   </button>
                   <button
                     onClick={() => setEditing(t)}
+                    aria-label={`テンプレート「${t.name}」を編集`}
                     className="flex-1 inline-flex items-center justify-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold text-[#7f19e6] hover:bg-purple-50 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-base">edit</span>
+                    <span className="material-symbols-outlined text-base" aria-hidden="true">edit</span>
                     編集
                   </button>
                   <button
                     onClick={() => handleDelete(t.id)}
                     title="削除"
+                    aria-label={`テンプレート「${t.name}」を削除`}
                     className="inline-flex items-center justify-center w-8 h-8 rounded-full text-rose-500 hover:bg-rose-50 transition-colors"
                   >
-                    <span className="material-symbols-outlined text-base">delete</span>
+                    <span className="material-symbols-outlined text-base" aria-hidden="true">delete</span>
                   </button>
                 </div>
               </div>

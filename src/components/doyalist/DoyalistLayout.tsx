@@ -184,6 +184,7 @@ function Sidebar({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
               key={item.href}
               href={item.href}
               onClick={onNavigate}
+              aria-current={active ? 'page' : undefined}
               className={`flex items-center gap-3 px-4 py-3 rounded-2xl text-base transition-all ${
                 active
                   ? 'bg-purple-100 text-[#7f19e6] font-black shadow-sm'
@@ -192,6 +193,7 @@ function Sidebar({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
             >
               <span
                 className="material-symbols-outlined text-xl"
+                aria-hidden="true"
                 style={active ? { fontVariationSettings: "'FILL' 1" } : {}}
               >
                 {item.icon}
@@ -312,6 +314,9 @@ function UserMenu({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
+        aria-label="ユーザーメニューを開く"
+        aria-expanded={open}
+        aria-haspopup="menu"
         className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 transition-colors"
       >
         {image ? (

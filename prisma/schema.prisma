@@ -2652,6 +2652,8 @@ model DoyalistProject {
   approaches  DoyalistApproach[]
 
   @@index([userId])
+  @@index([userId, status])
+  @@index([userId, createdAt])
   @@map("doyalist_projects")
 }
 
@@ -2680,6 +2682,8 @@ model DoyalistCompany {
 
   @@index([projectId])
   @@index([status])
+  @@index([projectId, status])
+  @@index([projectId, createdAt])
   @@map("doyalist_companies")
 }
 
@@ -2699,6 +2703,7 @@ model DoyalistApproach {
 
   @@index([projectId])
   @@index([companyId])
+  @@index([projectId, createdAt])
   @@map("doyalist_approaches")
 }
 

@@ -71,15 +71,19 @@ export default function DoyaMarkePage() {
 
   return (
     <div className="min-h-[100dvh] bg-stone-50 text-zinc-900 antialiased">
-      <style jsx global>{`
-        #hs-web-interactives-top-anchor,
-        [id^='hs-overlay-cta'],
-        iframe[src*='hs-web-interactive'] {
-          display: none !important;
-          visibility: hidden !important;
-          pointer-events: none !important;
-        }
-      `}</style>
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            #hs-web-interactives-top-anchor,
+            [id^='hs-overlay-cta'],
+            iframe[src*='hs-web-interactive'] {
+              display: none !important;
+              visibility: hidden !important;
+              pointer-events: none !important;
+            }
+          `,
+        }}
+      />
       <header className="sticky top-0 z-40 border-b border-zinc-200/70 bg-white/88 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-5 lg:px-8">
           <Link href="/" className="text-lg font-bold tracking-tight">ドヤマーケ</Link>
@@ -256,7 +260,7 @@ export default function DoyaMarkePage() {
               </h2>
               <p className="max-w-[65ch] text-base leading-relaxed text-zinc-500">プロプランひとつで全サービスのPRO機能が解放されます。新しいサービスが追加されても、追加料金なしで自動的に利用できます。</p>
             </div>
-            <motion.div initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.25 }} transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }} className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-[0_20px_70px_rgba(39,39,42,0.06)] lg:p-8">
+            <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-[0_20px_70px_rgba(39,39,42,0.06)] lg:p-8">
               <div className="mb-8 grid gap-4 sm:grid-cols-2">
                 {PLAN_POINTS.map((point) => (
                   <div key={point} className="flex items-center gap-3">
@@ -272,7 +276,7 @@ export default function DoyaMarkePage() {
                 </div>
                 <p className="max-w-[65ch] text-sm leading-relaxed text-zinc-400">記事作成だけ、バナーだけ、動画だけで別々に課金しない。少人数チームでも予算管理しやすい統一プランです。</p>
               </div>
-            </motion.div>
+            </div>
           </div>
         </section>
 

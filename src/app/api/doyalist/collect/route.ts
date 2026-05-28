@@ -119,29 +119,29 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // DB保存（スコア未提供時は50-95のランダム値）
-    const created = []
-    for (const c of generated.slice(0, count)) {
-      const score =
-        typeof c.score === 'number' && c.score >= 0 && c.score <= 100
-          ? Math.round(c.score)
-          : Math.floor(Math.random() * 46) + 50
-      const row = await prisma.doyalistCompany.create({
-        data: {
-          projectId,
-          name: (c.name || '名称未設定').toString().slice(0, 200),
-          website: c.website || null,
-          industry: c.industry || project.industry || null,
-          region: c.region || project.region || null,
-          size: c.size || project.targetSize || null,
-          description: c.description || null,
-          score,
-          status: 'new',
-          source: 'collected',
-        },
-      })
-      created.push(row)
-    }
+    // DB保存（createManyで一括挿入: パフォーマンス改善）
+    const rows = generated.slice(0, count).map((c: any) => ({
+      projectId,
+      name: (c.name || '名称未設定').toString().slice(0, 200),
+      website: c.website || null,
+      industry: c.industry || project.industry || null,
+      region: c.region || project.region || null,
+      size: c.size || project.targetSize || null,
+      description: c.description || null,
+      score: typeof c.score === 'number' && c.score >= 0 && c.score <= 100
+        ? Math.round(c.score)
+        : Math.floor(Math.random() * 46) + 50,
+      status: 'new',
+      source: 'collected',
+    }))
+    await prisma.doyalistCompany.createMany({ data: rows })
+
+    // 直近作成データを取得して返す（createManyはレコードを返さないため）
+    const created = await prisma.doyalistCompany.findMany({
+      where: { projectId, source: 'collected' },
+      orderBy: { createdAt: 'desc' },
+      take: rows.length,
+    })
 
     return NextResponse.json({
       success: true,

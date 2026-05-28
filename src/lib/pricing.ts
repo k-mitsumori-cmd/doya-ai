@@ -1181,6 +1181,8 @@ export function getPricingByService(serviceId: string): ServicePricing | null {
       return VOICE_PRICING
     case 'kintai':
       return KINTAI_PRICING
+    case 'doyalist':
+      return DOYALIST_PRICING
     default:
       return null
   }
@@ -1842,5 +1844,105 @@ export function getInterviewXMonthlyLimitByUserPlan(plan: string | null | undefi
     case 'LIGHT': return INTERVIEWX_PRICING.lightLimit ?? 10
     case 'FREE': return INTERVIEWX_PRICING.freeLimit
     default: return INTERVIEWX_PRICING.freeLimit
+  }
+}
+
+// ========================================
+// ドヤリスト（営業リスト生成AI）料金設定
+// ========================================
+// AIによる企業リスト自動生成 + アプローチ文生成
+export const DOYALIST_PRICING: ServicePricing = {
+  serviceId: 'doyalist',
+  serviceName: 'ドヤリスト',
+  serviceIcon: '📋',
+  guestLimit: 0,
+  freeLimit: 10,       // 月10社収集
+  lightLimit: 100,     // 月100社
+  proLimit: 500,       // 月500社
+  enterpriseLimit: -1, // 無制限
+  historyDays: {
+    free: 30,
+    pro: -1,
+  },
+  plans: [
+    {
+      id: 'doyalist-free',
+      name: 'おためし',
+      price: 0,
+      priceLabel: '¥0',
+      period: '',
+      description: '1プロジェクト / 月10社 / 月5アプローチ',
+      features: [
+        { text: '1プロジェクトまで', included: true },
+        { text: '月10社まで収集', included: true },
+        { text: '月5アプローチ生成', included: true },
+        { text: 'CSV/Excelエクスポート', included: false },
+        { text: '優先サポート', included: false },
+      ],
+      cta: '無料で試す',
+    },
+    {
+      id: 'doyalist-light',
+      name: 'ライト',
+      price: 2980,
+      priceLabel: '¥2,980',
+      period: '/月（税込）',
+      description: '5プロジェクト / 月100社 / 月50アプローチ',
+      color: 'blue',
+      features: [
+        { text: '5プロジェクトまで', included: true },
+        { text: '月100社まで収集', included: true },
+        { text: '月50アプローチ生成', included: true },
+        { text: 'CSV/Excelエクスポート', included: true },
+      ],
+      cta: 'ライトプランを始める',
+    },
+    {
+      id: 'doyalist-pro',
+      name: 'プロ',
+      price: 9980,
+      priceLabel: '¥9,980',
+      period: '/月（税込）',
+      description: '無制限プロジェクト / 月500社 / 月200アプローチ',
+      popular: true,
+      color: 'purple',
+      features: [
+        { text: '無制限プロジェクト', included: true },
+        { text: '月500社まで収集', included: true },
+        { text: '月200アプローチ生成', included: true },
+        { text: 'CSV/Excelエクスポート', included: true },
+        { text: '優先サポート', included: true },
+      ],
+      cta: 'プロプランを始める',
+    },
+    {
+      id: 'doyalist-enterprise',
+      name: 'エンタープライズ',
+      price: 49800,
+      priceLabel: '¥49,800',
+      period: '/月（税込）',
+      description: '無制限',
+      color: 'slate',
+      features: [
+        { text: '無制限の全機能', included: true },
+        { text: '専任サポート + API連携', included: true },
+      ],
+      cta: 'お問い合わせ',
+    },
+  ],
+}
+
+export function getDoyalistMonthlyLimitByUserPlan(plan: string | null | undefined): number {
+  if (process.env.DOYA_DISABLE_LIMITS === '1') return -1
+  const p = String(plan || 'FREE').toUpperCase()
+  switch (p) {
+    case 'ENTERPRISE': return DOYALIST_PRICING.enterpriseLimit ?? -1
+    case 'BUNDLE':
+    case 'PRO':
+    case 'BUSINESS':
+    case 'STARTER': return DOYALIST_PRICING.proLimit
+    case 'LIGHT': return DOYALIST_PRICING.lightLimit ?? 100
+    case 'FREE': return DOYALIST_PRICING.freeLimit
+    default: return DOYALIST_PRICING.freeLimit
   }
 }
