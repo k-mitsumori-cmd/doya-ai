@@ -44,7 +44,8 @@ const AREA_PREFECTURES: Record<string, string[]> = {
 const AREAS = Object.keys(AREA_PREFECTURES)
 
 const SIZES = ['指定なし', 'スタートアップ（〜20名）', '中小企業（20〜300名）', '中堅企業（300〜1000名）', '大企業（1000名〜）']
-const COUNTS = [5, 10, 15, 20]
+// 一般的な営業リストツールに合わせた件数選択肢
+const COUNT_OPTIONS = [50, 100, 300, 500, 1000, 2000, 3000, 5000]
 
 export default function DoyalistHomePage() {
   const { data: session, status } = useSession()
@@ -53,7 +54,7 @@ export default function DoyalistHomePage() {
   const [prefecture, setPrefecture] = useState('') // 都道府県（任意）
   const [size, setSize] = useState('指定なし')
   const [keywords, setKeywords] = useState('')
-  const [count, setCount] = useState(10)
+  const [count, setCount] = useState(100)
 
   // エリア変更時に都道府県をリセット
   const handleAreaChange = (v: string) => {
@@ -109,7 +110,7 @@ export default function DoyalistHomePage() {
     }
     setGenerating(true)
     setCompanies([])
-    const tid = toast.loading('🐻 AIがリストを生成中...')
+    const tid = toast.loading('🐻 リストを抽出中...')
     try {
       const pid = await ensureDefaultProject({ industry, region: prefecture || area, size, keywords })
       if (!pid) {
@@ -185,7 +186,7 @@ export default function DoyalistHomePage() {
         {/* ===== Logo Hero ===== */}
         <div className="text-center pt-4 pb-2">
           <img src="/doyalist/logo.png" alt="ドヤリスト" className="w-72 lg:w-96 mx-auto" />
-          <p className="text-sm font-bold text-[#0a1530] mt-3">⚡ 条件を選ぶだけ。AIが営業リストを爆速生成 ⚡</p>
+          <p className="text-sm font-bold text-[#0a1530] mt-3">⚡ 条件を選ぶだけ。実企業データから営業リストをランダム抽出 ⚡</p>
         </div>
 
         {/* ===== Form Card ===== */}
@@ -247,22 +248,29 @@ export default function DoyalistHomePage() {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-sm font-black text-[#0a1530] mb-2">📊 生成する件数</label>
-              <div className="grid grid-cols-4 gap-2">
-                {COUNTS.map((c) => (
+              <label className="block text-sm font-black text-[#0a1530] mb-2">
+                📊 抽出する件数 <span className="text-xs font-medium text-slate-400">（最大5,000社）</span>
+              </label>
+              <div className="grid grid-cols-4 sm:grid-cols-4 gap-2">
+                {COUNT_OPTIONS.map((c) => (
                   <button
                     key={c}
                     onClick={() => setCount(c)}
-                    className={`py-3 rounded-2xl text-sm font-black transition-all ${
+                    className={`py-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${
                       count === c
                         ? 'bg-[#0a1530] text-white shadow-lg shadow-[#0a1530]/30 scale-105'
-                        : 'bg-cyan-50 text-[#0a1530] hover:bg-cyan-100 border border-[#0a1530]/10'
+                        : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
                     }`}
                   >
-                    {c}社
+                    {c >= 1000 ? `${c / 1000}k` : c}社
                   </button>
                 ))}
               </div>
+              {count >= 500 && (
+                <p className="text-xs font-medium text-cyan-700 mt-2">
+                  ⏰ {count.toLocaleString()}社の抽出は約 {Math.ceil(count / 50) * 1}〜{Math.ceil(count / 50) * 3}秒かかります
+                </p>
+              )}
             </div>
           </div>
 
@@ -277,7 +285,7 @@ export default function DoyalistHomePage() {
                 AIが頑張ってます...
               </>
             ) : (
-              <>⚡ リストを生成する 🚀</>
+              <>⚡ リストを抽出する 🚀</>
             )}
           </button>
         </div>
@@ -325,11 +333,6 @@ export default function DoyalistHomePage() {
                         {/* 企業名 */}
                         <div className="flex items-center gap-2 flex-wrap">
                           <h3 className="text-base font-black text-[#0a1530]">{c.name}</h3>
-                          {ed.corporateNumber && (
-                            <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded">
-                              法人番号: {ed.corporateNumber}
-                            </span>
-                          )}
                         </div>
 
                         {/* 主要情報グリッド */}
@@ -375,6 +378,17 @@ export default function DoyalistHomePage() {
                             🌐 公式サイトを開く
                           </a>
                         )}
+
+                        {/* 情報ソース（下部に小さく） */}
+                        <div className="pt-2 mt-2 border-t border-slate-100 flex items-center gap-2 text-[10px] text-slate-400">
+                          <span>📡 情報ソース:</span>
+                          <span className="font-mono">
+                            {c.source === 'gbizinfo' ? 'gBizINFO（経済産業省）' :
+                             c.source === 'corporate_number' ? '法人番号公表サイト（国税庁）' :
+                             c.source?.includes('+') ? 'gBizINFO + 法人番号公表サイト' :
+                             c.source || '不明'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -393,7 +407,7 @@ export default function DoyalistHomePage() {
         {companies.length === 0 && !generating && (
           <div className="bg-white/60 backdrop-blur rounded-3xl border-2 border-dashed border-[#0a1530]/20 p-8 text-center space-y-3">
             <div className="text-5xl">💤</div>
-            <p className="text-base font-black text-[#0a1530]">条件を選んで「リストを生成する」を押してください 👆</p>
+            <p className="text-base font-black text-[#0a1530]">条件を選んで「リストを抽出する」を押してください 👆</p>
           </div>
         )}
       </div>

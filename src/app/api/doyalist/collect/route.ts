@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const { projectId } = body || {}
     const rawCount = Number(body?.count ?? 10)
     const requestedCount = Number.isFinite(rawCount) ? Math.floor(rawCount) : 10
-    const MAX_COUNT_PER_REQUEST = 20
+    const MAX_COUNT_PER_REQUEST = 5000 // gBizINFO ページネーション対応で大量取得可能
     const count = Math.max(1, Math.min(MAX_COUNT_PER_REQUEST, requestedCount))
     const wasClamped = requestedCount > MAX_COUNT_PER_REQUEST
 
@@ -72,10 +72,32 @@ export async function POST(req: NextRequest) {
 
     const industry = project.industry || ''
     const region = project.region || ''
-    const keywords = (project.keywords || '').split(/[,、 \n]/).map(s => s.trim()).filter(Boolean)
+    const userKeywords = (project.keywords || '').split(/[,、 \n]/).map(s => s.trim()).filter(Boolean)
 
-    // 検索キーワード: ユーザー入力 > 業界
-    const searchKeywords = keywords.length > 0 ? keywords : (industry ? [industry] : ['企業'])
+    // 業界からgBizINFO検索向けの代表キーワードを生成
+    const INDUSTRY_FALLBACK_KEYWORDS: Record<string, string[]> = {
+      'IT・ソフトウェア': ['システム', 'ソフトウェア', 'IT'],
+      '製造業': ['製造', '工業', '製作'],
+      '小売・EC': ['販売', '商事', 'リテール'],
+      '医療・介護': ['医療', '介護', 'ヘルスケア'],
+      '教育': ['学習', '教育', 'スクール'],
+      '金融・保険': ['金融', '保険'],
+      '不動産': ['不動産', '住宅'],
+      '飲食': ['フード', '食品', '飲食'],
+      '物流': ['物流', '運輸', '配送'],
+      '建設': ['建設', '建築', '工務'],
+      'コンサル': ['コンサルティング', 'コンサル'],
+      '広告・マーケ': ['広告', 'マーケティング', 'プロモーション'],
+      '人材': ['人材', 'リクルート', 'スタッフ'],
+      'その他': ['株式会社'],
+    }
+
+    // 検索キーワード: ユーザー入力 > 業界フォールバック > 汎用
+    const searchKeywords = userKeywords.length > 0
+      ? userKeywords
+      : (industry && INDUSTRY_FALLBACK_KEYWORDS[industry]
+          ? INDUSTRY_FALLBACK_KEYWORDS[industry]
+          : ['株式会社'])
 
     let collected: Awaited<ReturnType<typeof collectCompanies>>
     try {

@@ -49,3 +49,4 @@ LOGO/outputs/**
 
 
 .env*.local
+.next.backup-*

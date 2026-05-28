@@ -6,7 +6,9 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 
 interface DoyalistLayoutProps { children: React.ReactNode }
-interface UsageData { plan?: string }
+interface UsageData {
+  plan?: { raw?: string; tier?: string; periodEnd?: string | null } | string
+}
 
 const NAV_ITEMS: { href: string; icon: string; label: string }[] = [
   { href: '/doyalist', icon: 'auto_awesome', label: 'リスト作成' },
@@ -63,7 +65,10 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
   const userName = session.user.name || 'ゲスト'
   const userEmail = session.user.email || ''
   const userImage = session.user.image || ''
-  const plan = String((usage?.plan as any) || (session.user as any)?.plan || 'FREE').toUpperCase()
+  // プラン情報の一本化: usage.plan.tier > session.user.plan > 'FREE'
+  const planRaw: any = usage?.plan
+  const planTier = (typeof planRaw === 'object' && planRaw !== null ? planRaw.tier || planRaw.raw : planRaw) || (session.user as any)?.plan || 'FREE'
+  const plan = String(planTier).toUpperCase()
 
   return (
     <div className="flex min-h-screen bg-slate-50">

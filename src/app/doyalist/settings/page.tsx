@@ -24,13 +24,29 @@ const DEFAULT_SETTINGS: Settings = {
 }
 
 interface Usage {
-  plan?: string
+  plan?: { raw?: string; tier?: string; periodEnd?: string | null } | string
+  limits?: {
+    maxProjects?: number
+    maxCompaniesPerMonth?: number
+    maxApproachesPerMonth?: number
+  }
+  monthly?: {
+    companies?: number
+    approaches?: number
+  }
   usage?: {
     creditsUsed?: number
     creditsLimit?: number
     totalProjects?: number
     monthlyUsage?: number
   }
+}
+
+// プラン表示の正規化
+function getPlanTier(usage: Usage | null): string {
+  if (!usage?.plan) return 'FREE'
+  if (typeof usage.plan === 'string') return usage.plan.toUpperCase()
+  return String(usage.plan.tier || usage.plan.raw || 'FREE').toUpperCase()
 }
 
 export default function SettingsPage() {
@@ -201,25 +217,25 @@ export default function SettingsPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatBlock
             label="現在のプラン"
-            value={String(usage?.plan || 'FREE').toUpperCase()}
+            value={getPlanTier(usage)}
             icon="diamond"
           />
           <StatBlock
-            label="累計プロジェクト"
-            value={String(usage?.usage?.totalProjects ?? '-')}
+            label="今月のリスト"
+            value={String(usage?.monthly?.companies ?? usage?.usage?.totalProjects ?? 0)}
             icon="folder"
           />
           <StatBlock
-            label="今月の使用"
-            value={String(usage?.usage?.creditsUsed ?? '-')}
+            label="今月のツール利用"
+            value={String(usage?.monthly?.approaches ?? usage?.usage?.creditsUsed ?? 0)}
             icon="trending_up"
           />
           <StatBlock
-            label="今月の上限"
+            label="今月の上限（社数）"
             value={
-              usage?.usage?.creditsLimit === -1
+              usage?.limits?.maxCompaniesPerMonth === -1
                 ? '無制限'
-                : String(usage?.usage?.creditsLimit ?? '-')
+                : String(usage?.limits?.maxCompaniesPerMonth ?? usage?.usage?.creditsLimit ?? 0)
             }
             icon="speed"
           />

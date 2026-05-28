@@ -56,41 +56,80 @@ export async function collectCompanies(options: CollectOptions): Promise<Collect
     }
   }
 
-  // Source 2: gBizINFO API
+  // Source 2: gBizINFO API（ページネーション + ランダム抽出対応）
   if (sources.includes('gbizinfo')) {
-    for (const keyword of (criteria.keywords || []).slice(0, 3)) {
+    const GBIZ_PAGE_SIZE = 50
+    const FULL_EXTRACT_THRESHOLD = 500 // 500件以上は「全抽出」として順次取得
+    const isFullExtract = maxResults >= FULL_EXTRACT_THRESHOLD
+    // ランダム抽出時は要求件数の3〜5倍をプールしてからシャッフル
+    const OVERSAMPLE_RATIO = isFullExtract ? 1 : 4
+    const targetPoolSize = Math.min(maxResults * OVERSAMPLE_RATIO, 1500)
+
+    const keywords = (criteria.keywords || []).slice(0, 3)
+    const keywordList = keywords.length > 0 ? keywords : ['企業']
+
+    const tempPool: CollectedCompany[] = []
+
+    for (const keyword of keywordList) {
       if (!keyword) continue
-      try {
-        const { companies } = await searchGbizInfo({
-          keyword,
-          prefecture: criteria.areas?.[0],
-          industry: criteria.industries?.[0],
-          minEmployees: criteria.companySize?.minEmployees,
-          maxEmployees: criteria.companySize?.maxEmployees,
-          limit: Math.min(50, maxResults),
-        })
-        for (const c of companies) {
-          allCompanies.push({
-            companyName: c.name,
-            corporateNumber: c.corporateNumber,
-            address: c.address,
-            prefecture: c.address?.match(/^(.+?[都道府県])/)?.[1],
-            phone: undefined,
-            email: undefined,
-            website: c.companyUrl,
-            industry: c.industry,
-            employeeCount: c.employeeNumber,
-            capital: c.capitalStock,
-            foundedYear: c.foundingYear ? parseInt(c.foundingYear) : undefined,
-            representative: c.representativeName,
-            source: 'gbizinfo',
-            rawData: c as any,
+      if (tempPool.length >= targetPoolSize) break
+
+      const remaining = targetPoolSize - tempPool.length
+      const pagesToFetch = Math.ceil(remaining / GBIZ_PAGE_SIZE)
+      // ランダム抽出時はページ開始位置もランダム化（広範囲から取得）
+      const startPage = isFullExtract ? 1 : Math.floor(Math.random() * 5) + 1
+
+      for (let p = 0; p < pagesToFetch; p++) {
+        if (tempPool.length >= targetPoolSize) break
+        const page = startPage + p
+        try {
+          const { companies } = await searchGbizInfo({
+            keyword,
+            prefecture: criteria.areas?.[0],
+            industry: criteria.industries?.[0],
+            minEmployees: criteria.companySize?.minEmployees,
+            maxEmployees: criteria.companySize?.maxEmployees,
+            page,
+            limit: GBIZ_PAGE_SIZE,
           })
+
+          if (companies.length === 0) break
+
+          for (const c of companies) {
+            tempPool.push({
+              companyName: c.name,
+              corporateNumber: c.corporateNumber,
+              address: c.address,
+              prefecture: c.address?.match(/^(.+?[都道府県])/)?.[1],
+              phone: undefined,
+              email: undefined,
+              website: c.companyUrl,
+              industry: c.industry,
+              employeeCount: c.employeeNumber,
+              capital: c.capitalStock,
+              foundedYear: c.foundingYear ? parseInt(c.foundingYear) : undefined,
+              representative: c.representativeName,
+              source: 'gbizinfo',
+              rawData: c as any,
+            })
+          }
+          if (p < pagesToFetch - 1) await new Promise((r) => setTimeout(r, 80))
+        } catch (e) {
+          console.error('gBizINFO API error (page', page, '):', e)
+          break
         }
-      } catch (e) {
-        console.error('gBizINFO API error:', e)
       }
     }
+
+    // ランダム抽出: シャッフルしてN件取得
+    if (!isFullExtract && tempPool.length > maxResults) {
+      // Fisher–Yatesシャッフル
+      for (let i = tempPool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1))
+        ;[tempPool[i], tempPool[j]] = [tempPool[j], tempPool[i]]
+      }
+    }
+    allCompanies.push(...tempPool.slice(0, maxResults))
   }
 
   // Deduplicate by corporate number, then by name similarity

@@ -23,21 +23,21 @@ export const DOYALIST_LIMITS: Record<PlanTier, DoyalistLimits> = {
   },
   FREE: {
     tier: 'FREE',
-    maxProjects: -1, // UI上はプロジェクト概念を非表示にしたため無制限
-    maxCompaniesPerMonth: 50, // 月50社（5回×10社が試せる）
-    maxApproachesPerMonth: 20, // ツール月20回（各3〜7回ずつ試せる）
+    maxProjects: -1,
+    maxCompaniesPerMonth: 1000, // 月1,000社まで試用可能
+    maxApproachesPerMonth: 30,
   },
   LIGHT: {
     tier: 'LIGHT',
-    maxProjects: 5,
-    maxCompaniesPerMonth: 100,
-    maxApproachesPerMonth: 50,
+    maxProjects: -1,
+    maxCompaniesPerMonth: 10000, // 月1万社
+    maxApproachesPerMonth: 100,
   },
   PRO: {
     tier: 'PRO',
     maxProjects: -1,
-    maxCompaniesPerMonth: 500,
-    maxApproachesPerMonth: 200,
+    maxCompaniesPerMonth: 50000, // 月5万社
+    maxApproachesPerMonth: 500,
   },
   ENTERPRISE: {
     tier: 'ENTERPRISE',
