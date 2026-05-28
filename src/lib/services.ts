@@ -1267,6 +1267,68 @@ export const SERVICES: Service[] = [
     isNew: true,
     badge: 'NEW',
   },
+
+  // ----------------------------------------
+  // ドヤプロマネ（案件管理）
+  // ----------------------------------------
+  {
+    id: 'promane',
+    name: 'ドヤプロマネ',
+    shortName: 'プロマネ',
+    description: '案件の進捗・収支・人件費を一元管理。',
+    longDescription: 'ガントチャートとカンバンで案件を進捗管理。作業時間記録から人件費を自動計算し、売上・原価・利益をリアルタイム可視化。中小企業/制作会社のための案件管理ツール。',
+    icon: '📊',
+    color: 'blue',
+    gradient: 'from-blue-500 to-violet-600',
+    bgGradient: 'from-blue-50 to-violet-50',
+    href: '/promane',
+    dashboardHref: '/promane',
+    pricingHref: '/promane',
+    guideHref: '/promane',
+    features: [
+      'ガントチャートで進捗ひと目',
+      'カンバンでタスク管理',
+      '時間記録→人件費自動算出',
+      '売上・原価・利益のリアルタイム可視化',
+      'クライアント/メンバー/招待管理',
+      'レポートグラフ（Recharts）',
+    ],
+    useCases: [
+      '複数案件の進捗を一元管理したい',
+      '案件ごとの利益率を把握したい',
+      'メンバーの工数を見える化したい',
+      '顧客ごとの売上を集計したい',
+      'Excel管理から脱却したい',
+    ],
+    pricing: {
+      free: {
+        name: '無料プラン',
+        limit: '3案件まで',
+        dailyLimit: -1,
+        price: 0,
+      },
+      pro: {
+        name: 'プロ',
+        limit: '無制限',
+        dailyLimit: -1,
+        price: 4980,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PROMANE_PRO_PRICE_ID,
+      },
+      enterprise: {
+        name: 'エンタープライズ',
+        limit: '無制限+SSO',
+        dailyLimit: -1,
+        price: 19800,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PROMANE_ENTERPRISE_PRICE_ID,
+      },
+    },
+    status: 'active',
+    category: 'other',
+    order: 12,
+    requiresAuth: true,
+    isNew: true,
+    badge: 'NEW',
+  },
 ]
 
 // ============================================

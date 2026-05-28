@@ -43,6 +43,7 @@ const SERVICE_ICON_MAP: Record<string, { icon: LucideIcon; iconBg: string }> = {
   hr:        { icon: Users,    iconBg: 'bg-gradient-to-br from-sky-500 to-blue-600' },
   kintai:    { icon: Clock,    iconBg: 'bg-gradient-to-br from-violet-500 to-purple-600' },
   doyalist:  { icon: Database, iconBg: 'bg-gradient-to-br from-purple-500 to-fuchsia-600' },
+  promane:   { icon: BarChart3, iconBg: 'bg-gradient-to-br from-blue-500 to-violet-600' },
 }
 
 type ToolSwitcherMenuProps = {

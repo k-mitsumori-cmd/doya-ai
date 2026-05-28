@@ -125,6 +125,7 @@ model User {
   // ドヤプロマネ（プロジェクト管理）
   promaneWorkspaces PromaneWorkspace[]
   promaneMembers    PromaneMember[]
+  promaneInvitations PromaneInvitation[] @relation("PromaneInvitationInvitedBy")
 
   // ドリップマーケティング
   dripEnrollments  DripEnrollment[]
@@ -2490,6 +2491,7 @@ model PromaneWorkspace {
   members   PromaneMember[]
   clients   PromaneClient[]
   projects  PromaneProject[]
+  invitations PromaneInvitation[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
@@ -2629,6 +2631,29 @@ model PromaneComment {
 
   @@index([taskId])
   @@map("promane_comments")
+}
+
+// ============================================
+// ドヤプロマネ 招待
+// ============================================
+
+model PromaneInvitation {
+  id            String   @id @default(cuid())
+  workspaceId  String
+  email        String
+  role         String   @default("member") // owner / admin / member / guest
+  token        String   @unique
+  invitedById  String
+  acceptedAt   DateTime?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  workspace    PromaneWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy    User             @relation("PromaneInvitationInvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([token])
+  @@map("promane_invitations")
 }
 
 // ============================================

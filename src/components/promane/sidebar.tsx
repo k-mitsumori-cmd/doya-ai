@@ -12,9 +12,11 @@ import {
   Clock,
   Settings,
   LogOut,
+  HelpCircle,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import Image from "next/image";
+import { ToolSwitcherMenu } from "@/components/ToolSwitcherMenu";
 
 const navItems = [
   { label: "ダッシュボード", href: "", icon: LayoutDashboard, color: "text-blue-600 bg-blue-50" },
@@ -23,6 +25,7 @@ const navItems = [
   { label: "メンバー", href: "/members", icon: Users, color: "text-green-600 bg-green-50" },
   { label: "タイムシート", href: "/timesheet", icon: Clock, color: "text-cyan-600 bg-cyan-50" },
   { label: "レポート", href: "/reports", icon: BarChart3, color: "text-rose-600 bg-rose-50" },
+  { label: "使い方", href: "/help", icon: HelpCircle, color: "text-emerald-600 bg-emerald-50" },
   { label: "設定", href: "/settings", icon: Settings, color: "text-gray-600 bg-gray-100" },
 ];
 
@@ -77,13 +80,18 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
         })}
       </nav>
 
+      {/* 他のドヤAIサービスへ */}
+      <div className="px-3 py-2">
+        <ToolSwitcherMenu currentService="promane" showLabel={true} isCollapsed={false} />
+      </div>
+
       {/* キャラクター */}
-      <div className="px-4 py-3 flex justify-center">
+      <div className="px-4 py-2 flex justify-center">
         <Image
           src="/character/ramen.png"
           alt="休憩中"
-          width={80}
-          height={80}
+          width={64}
+          height={64}
           className="animate-float drop-shadow-md opacity-70 hover:opacity-100 transition-opacity"
           unoptimized
         />
