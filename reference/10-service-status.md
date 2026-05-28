@@ -54,6 +54,8 @@
 | ドヤスライド | `/slide` | maintenance | ❌ | ✅ 3頁 | ✅ 2件 | ⚠️汎用 | ❌ | ✅ |
 | SlashSlide | `/slashslide` | maintenance | ❌ | ✅ 3頁 | ✅ 2件 | ⚠️汎用 | ❌ | 🔗 slide |
 | ドヤHR | `/hr` | active | ✅ | ✅ 14頁 | ✅ 30件 | ✅ 10モデル | ✅ 統一プラン | ❌ |
+| ドヤ勤怠 | `/kintai` | active | ✅ | ✅ | ✅ | ✅ | ✅ 統一プラン | ❌ |
+| ドヤリスト | `/doyalist` | active | ✅ | ✅ 7頁 | ✅ 11件 | ✅ 4モデル | ✅ 統一プラン | ✅ |
 | 管理画面 | `/admin` | active | ❌ | ✅ 15頁 | ✅ 16件+ | ✅ 3モデル | ❌ | ❌ |
 
 ### Stripe統合ステータス

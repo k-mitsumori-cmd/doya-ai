@@ -4,6 +4,7 @@ import { useSession, signOut } from 'next-auth/react'
 import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 
 interface DoyalistLayoutProps { children: React.ReactNode }
 interface UsageData {
@@ -156,6 +157,11 @@ function Sidebar({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
           )
         })}
       </nav>
+
+      {/* 他のドヤAIサービスへ */}
+      <div className="px-3 pb-3">
+        <ToolSwitcherMenu currentService="doyalist" showLabel={true} isCollapsed={false} />
+      </div>
 
       <div className="p-4 border-t border-white/10">
         <div className="rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-500 p-4 text-white shadow-lg shadow-violet-500/30 relative overflow-hidden">
