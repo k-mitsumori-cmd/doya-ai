@@ -219,19 +219,20 @@ function UserMenu({ name, email, image, plan, onSignOut }: { name: string; email
   return (
     <div ref={ref} className="relative">
       <button
+        type="button"
         onClick={() => setOpen(!open)}
         aria-label="ユーザーメニュー"
         aria-expanded={open}
         aria-haspopup="menu"
-        className="flex items-center gap-2 p-1 rounded-full hover:bg-slate-100 transition-colors"
+        className="flex items-center gap-2 p-1.5 pl-2 rounded-full hover:bg-slate-100 active:bg-slate-200 transition-colors cursor-pointer select-none"
       >
         {image ? (
-          <img src={image} alt={name} className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-200" />
+          <img src={image} alt={name} className="w-9 h-9 rounded-full object-cover ring-2 ring-slate-200 pointer-events-none" />
         ) : (
-          <div className="w-9 h-9 rounded-full bg-[#0a1530] flex items-center justify-center text-white text-sm font-bold">{name[0]}</div>
+          <div className="w-9 h-9 rounded-full bg-[#0a1530] flex items-center justify-center text-white text-sm font-bold pointer-events-none">{name[0]}</div>
         )}
-        <span className="text-sm font-bold text-slate-700 hidden sm:block">{name}</span>
-        <span className="material-symbols-outlined text-slate-400 text-lg hidden sm:block">expand_more</span>
+        <span className="text-sm font-bold text-slate-700 hidden sm:block pointer-events-none">{name}</span>
+        <span className="material-symbols-outlined text-slate-400 text-lg hidden sm:block pointer-events-none">expand_more</span>
       </button>
       {open && (
         <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 py-2 overflow-hidden">

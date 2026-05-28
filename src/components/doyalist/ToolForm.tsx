@@ -3,6 +3,14 @@
 import { useState } from 'react'
 import toast, { Toaster } from 'react-hot-toast'
 
+const CHARS = {
+  point: '/kintai/characters/point_解説.png',
+  working: '/kintai/characters/working_作業中.png',
+  jump: '/kintai/characters/jump_大喜び.png',
+  thinking: '/kintai/characters/thinking_考え中.png',
+  success: '/kintai/characters/success_成功.png',
+}
+
 const INDUSTRIES = ['IT・ソフトウェア', '製造業', '小売・EC', '医療・介護', '教育', '金融・保険', '不動産', '飲食', '物流', '建設', 'コンサル', '広告・マーケ', '人材', 'その他']
 
 interface Props {
@@ -59,7 +67,7 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
         {/* Form */}
         <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 p-6 lg:p-8 space-y-5">
           <div className="flex items-center gap-3 pb-4 border-b border-slate-100">
-            <div className="w-11 h-11 rounded-xl bg-[#0a1530] flex items-center justify-center text-white text-xl">⚙️</div>
+            <img src={CHARS.point} alt="" className="w-11 h-11" />
             <div>
               <h2 className="text-base font-bold text-[#0a1530]">2つ入力するだけ</h2>
               <p className="text-xs text-slate-500">企業名・担当者名はAIが仮で入れます</p>
@@ -124,13 +132,17 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
             disabled={generating}
             className="w-full py-4 bg-[#0a1530] text-white font-bold text-base rounded-xl shadow-lg shadow-[#0a1530]/20 hover:bg-[#13234d] hover:shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {generating ? (<><span className="inline-block animate-spin">⚡</span>作成中...</>) : (<>⚡ 文章を作成する</>)}
+            {generating ? (
+              <><img src={CHARS.working} alt="" className="w-6 h-6 animate-spin" />作成中...</>
+            ) : (
+              <><img src={CHARS.jump} alt="" className="w-6 h-6" />文章を作成する</>
+            )}
           </button>
         </div>
 
         {generating && !result && (
           <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 p-10 text-center space-y-3">
-            <div className="text-5xl animate-bounce">🐻</div>
+            <img src={CHARS.thinking} alt="" className="w-24 h-24 mx-auto animate-bounce" />
             <p className="text-base font-bold text-[#0a1530]">クマが考え中...</p>
           </div>
         )}
