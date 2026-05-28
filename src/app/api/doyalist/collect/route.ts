@@ -38,7 +38,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}))
     const { projectId } = body || {}
     const rawCount = Number(body?.count ?? 10)
-    const count = Math.max(1, Math.min(20, Number.isFinite(rawCount) ? Math.floor(rawCount) : 10))
+    const requestedCount = Number.isFinite(rawCount) ? Math.floor(rawCount) : 10
+    const MAX_COUNT_PER_REQUEST = 20
+    const count = Math.max(1, Math.min(MAX_COUNT_PER_REQUEST, requestedCount))
+    const wasClamped = requestedCount > MAX_COUNT_PER_REQUEST
 
     if (!projectId || typeof projectId !== 'string') {
       return NextResponse.json({ error: 'projectIdは必須です' }, { status: 400 })
@@ -147,6 +150,9 @@ export async function POST(req: NextRequest) {
       success: true,
       generated: created.length,
       companies: created,
+      ...(wasClamped ? {
+        warning: `1回のリクエストでは最大${MAX_COUNT_PER_REQUEST}社まで生成可能です。${requestedCount}社のリクエストを${count}社に調整しました。`,
+      } : {}),
     })
   } catch (e: any) {
     console.error('[doyalist/collect][POST]', e)

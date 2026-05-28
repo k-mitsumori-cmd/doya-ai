@@ -38,16 +38,29 @@ export default function DoyalistDashboardPage() {
 
   useEffect(() => {
     let cancelled = false
+    const safeFetch = async (url: string) => {
+      try {
+        const r = await fetch(url)
+        if (!r.ok) {
+          console.error(`[doyalist dashboard] ${url} responded ${r.status}`)
+          return null
+        }
+        return await r.json()
+      } catch (err) {
+        console.error(`[doyalist dashboard] ${url} fetch failed:`, err)
+        return null
+      }
+    }
     Promise.all([
-      fetch('/api/doyalist/projects').then((r) => r.json()).catch(() => ({})),
-      fetch('/api/doyalist/usage').then((r) => r.json()).catch(() => ({})),
+      safeFetch('/api/doyalist/projects'),
+      safeFetch('/api/doyalist/usage'),
     ])
       .then(([projRes, usageRes]) => {
         if (cancelled) return
         const list: Project[] =
           (Array.isArray(projRes) ? projRes : projRes?.projects) || []
         setProjects(
-          list.map((p: any) => ({
+          list.map((p: Project & { _count?: { companies?: number; approaches?: number } }) => ({
             ...p,
             companyCount: p.companyCount ?? p._count?.companies ?? 0,
             approachCount: p.approachCount ?? p._count?.approaches ?? 0,

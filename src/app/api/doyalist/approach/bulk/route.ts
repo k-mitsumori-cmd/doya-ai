@@ -7,10 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { buildApproachPrompt } from '@/lib/doyalist/prompts'
-
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_GENAI_API_KEY
-const model = 'gemini-2.0-flash'
-const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 
 const BATCH_SIZE = 5
 const BATCH_DELAY_MS = 2000
@@ -19,40 +16,16 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+// 統一Gemini wrapperを使用（CLAUDE.md準拠）
 async function generateApproachText(prompt: string): Promise<{ subject: string; body: string } | null> {
-  if (!GEMINI_API_KEY) {
-    throw new Error('Gemini API key is not configured')
-  }
-
   try {
-    const response = await fetch(`${endpoint}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 2048,
-        },
-      }),
+    const result = await geminiGenerateJson<{ subject: string; body: string }>({
+      prompt,
+      model: GEMINI_TEXT_MODEL_DEFAULT,
     })
-
-    if (!response.ok) {
-      console.error('Gemini API error:', response.status, await response.text())
-      return null
-    }
-
-    const data = await response.json()
-    const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-    if (!text) return null
-
-    // Extract JSON from response
-    const jsonMatch = text.match(/\{[\s\S]*\}/)
-    if (!jsonMatch) return null
-
-    return JSON.parse(jsonMatch[0])
+    return result || null
   } catch (error) {
-    console.error('Gemini generation error:', error)
+    console.error('[bulk approach] Gemini generation error:', error)
     return null
   }
 }
