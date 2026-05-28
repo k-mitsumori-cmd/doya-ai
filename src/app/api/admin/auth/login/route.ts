@@ -229,6 +229,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 2FA検証（有効な場合）
+    if (adminUser.totpEnabled && adminUser.totpSecret) {
+      const totpToken = (body.totpToken || '').toString().trim()
+      if (!totpToken) {
+        return NextResponse.json(
+          { requires2FA: true, message: '2要素認証コードを入力してください' },
+          { status: 401 }
+        )
+      }
+      const { verifyToken: verifyTotp } = await import('@/lib/totp')
+      if (!verifyTotp(adminUser.totpSecret, totpToken)) {
+        await recordLoginAttempt(identifier, false, adminUser.id, ipAddress, userAgent, '2FAコード不正')
+        return NextResponse.json(
+          { requires2FA: true, error: '2要素認証コードが正しくありません' },
+          { status: 401 }
+        )
+      }
+    }
+
     // 認証成功
     const token = generateToken(adminUser.id, adminUser.username)
 

@@ -320,6 +320,8 @@ model AdminUser {
   name          String?
   isActive      Boolean             @default(true)
   lastLoginAt   DateTime?
+  totpSecret    String?
+  totpEnabled   Boolean             @default(false)
   loginAttempts AdminLoginAttempt[]
   sessions      AdminSession[]
   createdAt     DateTime            @default(now())

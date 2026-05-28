@@ -33,6 +33,8 @@ export default function AdminLoginPage() {
   const [lockoutUntil, setLockoutUntil] = useState<Date | null>(null)
   const [turnstileToken, setTurnstileToken] = useState('')
   const [turnstileLoaded, setTurnstileLoaded] = useState(false)
+  const [show2FA, setShow2FA] = useState(false)
+  const [totpToken, setTotpToken] = useState('')
   const [turnstileError, setTurnstileError] = useState(false)
   const turnstileRef = useRef<HTMLDivElement>(null)
   const widgetIdRef = useRef<string | null>(null)
@@ -146,7 +148,7 @@ export default function AdminLoginPage() {
           'Content-Type': 'application/json',
         },
         credentials: 'include',
-        body: JSON.stringify({ identifier, password, turnstileToken }),
+        body: JSON.stringify({ identifier, password, turnstileToken, totpToken }),
       })
 
       const data = await response.json()
@@ -158,6 +160,12 @@ export default function AdminLoginPage() {
           if (data.lockoutUntil) {
             setLockoutUntil(new Date(data.lockoutUntil))
           }
+        } else if (response.status === 401 && data.requires2FA) {
+          // 2FA要求
+          setShow2FA(true)
+          setError(data.error || '')
+          setIsLoading(false)
+          return
         } else if (response.status === 401) {
           // 認証失敗
           setError(data.error || 'ユーザー名またはパスワードが正しくありません')
@@ -300,6 +308,31 @@ export default function AdminLoginPage() {
                 </button>
               </div>
             </div>
+
+            {/* 2FA Code Input (shown after 2FA is required) */}
+            {show2FA && (
+              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-3">
+                <div className="flex items-center gap-2 text-amber-400">
+                  <Shield className="w-5 h-5" />
+                  <span className="font-bold text-sm">2要素認証コード</span>
+                </div>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  value={totpToken}
+                  onChange={(e) => setTotpToken(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  placeholder="123456"
+                  autoFocus
+                  className="w-full px-4 py-3 bg-gray-900/50 border border-amber-500/30 rounded-xl text-white text-center text-2xl tracking-[0.5em] font-mono focus:outline-none focus:border-amber-500"
+                  required
+                />
+                <p className="text-xs text-amber-300/70">
+                  認証アプリ（Google Authenticator等）に表示されている6桁のコードを入力してください
+                </p>
+              </div>
+            )}
 
             {/* Cloudflare Turnstile CAPTCHA */}
             {IS_TURNSTILE_ENABLED && (
