@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     const { projectId } = body || {}
     const rawCount = Number(body?.count ?? 10)
     const requestedCount = Number.isFinite(rawCount) ? Math.floor(rawCount) : 10
-    const MAX_COUNT_PER_REQUEST = 5000 // gBizINFO ページネーション対応で大量取得可能
+    const MAX_COUNT_PER_REQUEST = 10000 // 1回最大10,000社（Vercel maxDuration=300s以内）
     const count = Math.max(1, Math.min(MAX_COUNT_PER_REQUEST, requestedCount))
     const wasClamped = requestedCount > MAX_COUNT_PER_REQUEST
 

@@ -53,7 +53,7 @@ const AREA_PREFECTURES: Record<string, string[]> = {
 }
 const AREAS = Object.keys(AREA_PREFECTURES)
 const SIZES = ['指定なし', 'スタートアップ（〜20名）', '中小企業（20〜300名）', '中堅企業（300〜1000名）', '大企業（1000名〜）']
-const COUNT_OPTIONS = [50, 100, 300, 500, 1000, 2000, 3000, 5000]
+const COUNT_OPTIONS = [100, 500, 1000, 2000, 3000, 5000, 7000, 10000]
 const PAGE_SIZE = 50
 const SORT_OPTIONS = [
   { v: 'default', l: '抽出順' },
@@ -280,7 +280,7 @@ export default function DoyalistHomePage() {
             </div>
             <div className="sm:col-span-2">
               <label className="block text-sm font-bold text-[#0a1530] mb-2">
-                📊 抽出する件数 <span className="text-xs font-normal text-slate-400">（最大5,000社 / データソースには約450万社の日本法人）</span>
+                📊 抽出する件数 <span className="text-xs font-normal text-slate-400">（1回最大10,000社 / データソースには約450万社の日本法人）</span>
               </label>
               <div className="grid grid-cols-4 gap-2">
                 {COUNT_OPTIONS.map((c) => (
