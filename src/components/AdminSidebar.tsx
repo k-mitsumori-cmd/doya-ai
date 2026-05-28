@@ -146,7 +146,7 @@ export function AdminSidebar({ isMobile }: { isMobile?: boolean } = {}) {
           </p>
           <div className="space-y-1">
             {doyamanaNavItems.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+              const isActive = pathname === item.href || (pathname?.startsWith(item.href + '/') ?? false)
               return (
                 <Link key={item.href} href={item.href}>
                   <motion.div
@@ -187,7 +187,7 @@ export function AdminSidebar({ isMobile }: { isMobile?: boolean } = {}) {
             {dripNavItems.map((item) => {
               const isActive = item.href === '/admin/drip'
                 ? pathname === '/admin/drip'
-                : pathname === item.href || pathname.startsWith(item.href + '/')
+                : pathname === item.href || (pathname?.startsWith(item.href + '/') ?? false)
               return (
                 <Link key={item.href} href={item.href}>
                   <motion.div
@@ -228,7 +228,7 @@ export function AdminSidebar({ isMobile }: { isMobile?: boolean } = {}) {
             {kintaiNavItems.map((item) => {
               const isActive = item.href === '/admin/kintai'
                 ? pathname === '/admin/kintai'
-                : pathname === item.href || pathname.startsWith(item.href + '/')
+                : pathname === item.href || (pathname?.startsWith(item.href + '/') ?? false)
               return (
                 <Link key={item.href} href={item.href}>
                   <motion.div

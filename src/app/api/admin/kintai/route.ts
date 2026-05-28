@@ -47,7 +47,6 @@ export async function GET() {
       include: {
         _count: {
           select: {
-            employees: true,
             members: true,
             departments: true,
           },
@@ -57,12 +56,20 @@ export async function GET() {
       take: 20,
     })
 
+    // 組織IDごとの従業員数を一括取得
+    const employeeCounts = await prisma.kintaiEmployee.groupBy({
+      by: ['organizationId'],
+      _count: { id: true },
+      where: { organizationId: { in: organizations.map(o => o.id) } },
+    })
+    const empCountMap = new Map(employeeCounts.map(c => [c.organizationId, c._count.id]))
+
     const orgList = organizations.map(org => ({
       id: org.id,
       name: org.name,
       slug: org.slug,
       createdAt: org.createdAt,
-      employeeCount: org._count.employees,
+      employeeCount: empCountMap.get(org.id) || 0,
       memberCount: org._count.members,
       departmentCount: org._count.departments,
     }))

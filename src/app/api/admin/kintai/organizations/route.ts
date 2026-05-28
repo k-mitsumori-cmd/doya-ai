@@ -15,7 +15,6 @@ export async function GET() {
 
     const organizations = await prisma.kintaiOrganization.findMany({
       include: {
-        employees: { select: { id: true, name: true, email: true, isActive: true, employmentType: true } },
         members: { select: { id: true, role: true, status: true, userId: true } },
         departments: { select: { id: true, name: true } },
         workRules: { select: { id: true, name: true, workStart: true, workEnd: true } },
@@ -23,15 +22,28 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     })
 
+    // 従業員を別途取得（employeesリレーションが存在しないため）
+    const allEmployees = await prisma.kintaiEmployee.findMany({
+      where: { organizationId: { in: organizations.map(o => o.id) } },
+      select: { id: true, name: true, email: true, isActive: true, employmentType: true, organizationId: true },
+    })
+    const empByOrg = new Map<string, typeof allEmployees>()
+    allEmployees.forEach(e => {
+      const list = empByOrg.get(e.organizationId) || []
+      list.push(e)
+      empByOrg.set(e.organizationId, list)
+    })
+
     const result = organizations.map(org => {
+      const employees = empByOrg.get(org.id) || []
       const adminMember = org.members.find(m => m.role === 'system_admin' && m.status === 'ACTIVE')
       return {
         id: org.id,
         name: org.name,
         slug: org.slug,
         createdAt: org.createdAt,
-        employees: org.employees,
-        activeCount: org.employees.filter(e => e.isActive).length,
+        employees,
+        activeCount: employees.filter(e => e.isActive).length,
         pendingCount: org.members.filter(m => m.status === 'PENDING').length,
         departments: org.departments,
         workRules: org.workRules,
