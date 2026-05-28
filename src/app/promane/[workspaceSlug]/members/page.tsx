@@ -10,6 +10,9 @@ export default async function MembersPage({ params }: { params: Promise<{ worksp
   const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
   if (!workspace) redirect("/login");
 
+  const myMember = workspace.members[0];
+  const canInvite = !!myMember && ['owner', 'admin'].includes(myMember.role);
+
   const members = await prisma.promaneMember.findMany({
     where: { workspaceId: workspace.id },
     include: { user: { select: { email: true } }, timeEntries: { select: { duration: true } } },
@@ -20,13 +23,16 @@ export default async function MembersPage({ params }: { params: Promise<{ worksp
     <div className="p-8 max-w-[1200px]">
       <div className="flex items-center gap-5 mb-8 animate-slide-up">
         <Image src="/character/thumbsup.png" alt="" width={80} height={80} className="animate-bounce-in drop-shadow-xl" unoptimized />
-        <div>
+        <div className="flex-1">
           <h1 className="text-[28px] font-black tracking-tight text-gray-900">メンバー</h1>
           <p className="text-[15px] text-gray-400 font-bold">チームの仲間たち 👥 {members.length}人</p>
         </div>
       </div>
       <MemberList
+        workspaceId={workspace.id}
         workspaceSlug={workspaceSlug}
+        canInvite={canInvite}
+        myMemberId={myMember?.id}
         members={members.map((m) => ({
           id: m.id, displayName: m.displayName, role: m.role, email: m.user.email,
           hourlyRate: m.hourlyRate,

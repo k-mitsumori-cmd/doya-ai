@@ -46,6 +46,18 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
         </div>
       </Link>
 
+      {/* ワークスペース切替 */}
+      <Link
+        href="/promane?select=1"
+        className="mx-3 my-2 px-3 py-2 rounded-xl bg-gradient-to-r from-blue-50 to-violet-50 hover:from-blue-100 hover:to-violet-100 border border-blue-100 text-[12px] font-bold text-gray-700 hover:text-blue-700 transition-all flex items-center justify-between gap-2"
+      >
+        <span className="flex items-center gap-1.5">
+          <span className="text-base">🏢</span>
+          ワークスペース切替
+        </span>
+        <span className="text-gray-400 group-hover:text-blue-500">→</span>
+      </Link>
+
       <div className="h-px bg-gray-100 mx-4" />
 
       {/* ナビ */}
