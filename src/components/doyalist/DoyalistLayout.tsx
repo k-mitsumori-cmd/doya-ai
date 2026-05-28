@@ -23,9 +23,8 @@ interface UsageData {
 }
 
 const NAV_ITEMS: { href: string; icon: string; label: string }[] = [
-  { href: '/doyalist', icon: 'dashboard', label: 'ダッシュボード' },
-  { href: '/doyalist/projects', icon: 'folder', label: 'プロジェクト' },
-  { href: '/doyalist/templates', icon: 'description', label: 'テンプレート' },
+  { href: '/doyalist', icon: 'auto_awesome', label: 'リスト作成' },
+  { href: '/doyalist/history', icon: 'history', label: '履歴' },
   { href: '/doyalist/pricing', icon: 'diamond', label: '料金' },
   { href: '/doyalist/settings', icon: 'settings', label: '設定' },
 ]
