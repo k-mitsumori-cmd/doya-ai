@@ -135,25 +135,42 @@ export async function getGbizCompanyDetail(corporateNumber: string): Promise<Gbi
 
 /**
  * 複数法人の詳細を並列バッチ取得（同時実行数を制限）
+ * - wall-clock 予算でVercel 300秒制限の handle 内に収める
+ * - 各リクエストにタイムアウト
  */
 export async function getGbizCompanyDetailsBatch(
   corporateNumbers: string[],
-  options: { concurrency?: number; signal?: AbortSignal } = {}
+  options: { concurrency?: number; signal?: AbortSignal; budgetMs?: number } = {}
 ): Promise<Map<string, GbizCompanyInfo>> {
-  const concurrency = Math.max(1, Math.min(20, options.concurrency || 8))
+  const concurrency = Math.max(1, Math.min(20, options.concurrency || 12))
+  const budgetMs = options.budgetMs || 240000 // デフォルト 4分
+  const startTime = Date.now()
   const result = new Map<string, GbizCompanyInfo>()
   const queue = [...new Set(corporateNumbers.filter(Boolean))]
+  let processed = 0
+  let exhausted = false
 
   async function worker() {
     while (queue.length > 0) {
       if (options.signal?.aborted) return
+      // wall-clock 予算チェック
+      if (Date.now() - startTime > budgetMs) {
+        exhausted = true
+        return
+      }
       const num = queue.shift()
       if (!num) continue
       const detail = await getGbizCompanyDetail(num)
       if (detail) result.set(num, detail)
+      processed++
     }
   }
 
   await Promise.all(Array.from({ length: concurrency }, worker))
+  if (exhausted) {
+    console.warn(`[gbizinfo] detail batch exhausted budget. processed=${processed}/${corporateNumbers.length}, hit=${result.size}`)
+  } else {
+    console.log(`[gbizinfo] detail batch done. processed=${processed}, hit=${result.size}`)
+  }
   return result
 }
