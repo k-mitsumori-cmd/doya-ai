@@ -210,14 +210,14 @@ function Sidebar({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
       <div className="p-4 border-t border-slate-100">
         <div className="rounded-2xl bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] p-4 text-white shadow-lg shadow-[#7f19e6]/20">
           <p className="text-xs font-bold opacity-80">AIで営業を加速</p>
-          <p className="text-sm font-black mt-0.5 leading-snug">企業リストを自動生成</p>
+          <p className="text-sm font-black mt-0.5 leading-snug">AIで企業リスト・営業文を自動生成</p>
           <Link
-            href="/doyalist/projects/new"
+            href="/doyalist"
             onClick={onNavigate}
             className="mt-3 inline-flex items-center gap-1 text-xs font-bold bg-white/20 hover:bg-white/30 transition-colors px-3 py-1.5 rounded-full"
           >
-            <span className="material-symbols-outlined text-sm">add</span>
-            新規プロジェクト
+            <span className="material-symbols-outlined text-sm">auto_awesome</span>
+            リスト作成へ
           </Link>
         </div>
       </div>
@@ -262,13 +262,11 @@ function PlanBadge({ plan }: { plan: string }) {
 
 function BreadcrumbLabel({ pathname }: { pathname: string }) {
   const segments: { match: RegExp | string; label: string }[] = [
-    { match: '/doyalist', label: 'ダッシュボード' },
-    { match: '/doyalist/projects', label: 'プロジェクト' },
-    { match: '/doyalist/projects/new', label: '新規プロジェクト' },
-    { match: /^\/doyalist\/projects\/[^/]+$/, label: 'プロジェクト詳細' },
-    { match: /^\/doyalist\/projects\/[^/]+\/approach$/, label: 'アプローチ管理' },
-    { match: /^\/doyalist\/projects\/[^/]+\/company\/[^/]+$/, label: '企業詳細' },
-    { match: '/doyalist/templates', label: 'テンプレート' },
+    { match: '/doyalist', label: 'リスト作成' },
+    { match: '/doyalist/tools/form', label: 'フォーム営業文' },
+    { match: '/doyalist/tools/email', label: 'メール文面' },
+    { match: '/doyalist/tools/phone', label: '荷電スクリプト' },
+    { match: '/doyalist/history', label: '履歴' },
     { match: '/doyalist/pricing', label: '料金プラン' },
     { match: '/doyalist/settings', label: '設定' },
   ]
@@ -278,7 +276,7 @@ function BreadcrumbLabel({ pathname }: { pathname: string }) {
     .reverse()
     .find((s) => (typeof s.match === 'string' ? pathname === s.match : s.match.test(pathname)))
 
-  if (!found || found.label === 'ダッシュボード') return null
+  if (!found || found.label === 'リスト作成') return null
 
   return (
     <>
