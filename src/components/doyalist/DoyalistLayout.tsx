@@ -24,6 +24,9 @@ interface UsageData {
 
 const NAV_ITEMS: { href: string; icon: string; label: string }[] = [
   { href: '/doyalist', icon: 'auto_awesome', label: 'リスト作成' },
+  { href: '/doyalist/tools/form', icon: 'edit_note', label: 'フォーム営業文' },
+  { href: '/doyalist/tools/email', icon: 'mail', label: 'メール文面' },
+  { href: '/doyalist/tools/phone', icon: 'phone_in_talk', label: '荷電スクリプト' },
   { href: '/doyalist/history', icon: 'history', label: '履歴' },
   { href: '/doyalist/pricing', icon: 'diamond', label: '料金' },
   { href: '/doyalist/settings', icon: 'settings', label: '設定' },
