@@ -92,7 +92,7 @@ export default function DripDashboardPage() {
   const kpiCards = [
     {
       label: '総配信数',
-      value: data?.kpi.totalSent ?? 0,
+      value: data?.kpi?.totalSent ?? 0,
       format: (v: number) => v.toLocaleString(),
       icon: Send,
       from: 'from-violet-500/10',
@@ -102,7 +102,7 @@ export default function DripDashboardPage() {
     },
     {
       label: '開封率',
-      value: data?.kpi.openRate ?? 0,
+      value: data?.kpi?.openRate ?? 0,
       format: (v: number) => `${v.toFixed(1)}%`,
       icon: MailOpen,
       from: 'from-emerald-500/10',
@@ -112,7 +112,7 @@ export default function DripDashboardPage() {
     },
     {
       label: 'クリック率',
-      value: data?.kpi.clickRate ?? 0,
+      value: data?.kpi?.clickRate ?? 0,
       format: (v: number) => `${v.toFixed(1)}%`,
       icon: MousePointerClick,
       from: 'from-blue-500/10',
@@ -122,7 +122,7 @@ export default function DripDashboardPage() {
     },
     {
       label: 'バウンス率',
-      value: data?.kpi.bounceRate ?? 0,
+      value: data?.kpi?.bounceRate ?? 0,
       format: (v: number) => `${v.toFixed(1)}%`,
       icon: AlertTriangle,
       from: 'from-rose-500/10',
