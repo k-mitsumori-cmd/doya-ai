@@ -78,7 +78,20 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: '招待リンクの有効期限（48時間）が切れています。管理者に再招待を依頼してください。' }, { status: 410 })
     }
 
-    // 既存の他組織メンバーシップを非活性化（招待先に切り替え）
+    // 同じ組織に既存メンバーシップがある場合は削除（@@unique制約対策）
+    const existingInSameOrg = await prisma.kintaiMember.findFirst({
+      where: {
+        organizationId: member.organizationId,
+        userId,
+        id: { not: member.id },
+      },
+    })
+    if (existingInSameOrg) {
+      // 既存メンバーのemployeeがあればinviteメンバーのemployeeにマージ
+      await prisma.kintaiMember.delete({ where: { id: existingInSameOrg.id } })
+    }
+
+    // 他組織メンバーシップを非活性化
     await prisma.kintaiMember.updateMany({
       where: {
         userId,
@@ -104,8 +117,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       organizationId: member.organizationId,
       organizationName: member.organization.name,
     })
-  } catch (e) {
-    console.error('[kintai/invite/[token] POST]', e)
-    return NextResponse.json({ error: '参加に失敗しました' }, { status: 500 })
+  } catch (e: any) {
+    console.error('[kintai/invite/[token] POST]', e?.message, e?.code)
+    const msg = e?.code === 'P2002'
+      ? 'このアカウントは既にこの組織に所属しています'
+      : '参加に失敗しました。管理者にお問い合わせください。'
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

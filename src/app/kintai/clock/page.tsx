@@ -246,7 +246,7 @@ export default function ClockPage() {
         </div>
 
         {/* ===== Clock Display + Bear Character ===== */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-white shadow-xl shadow-slate-200/50 p-6 sm:p-8 text-center relative overflow-hidden">
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl border border-white shadow-xl shadow-slate-200/50 p-4 sm:p-6 lg:p-8 text-center relative overflow-hidden">
           {/* Floating confetti for clocked_out */}
           {status === 'clocked_out' && (
             <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
@@ -264,13 +264,13 @@ export default function ClockPage() {
               src={statusConfig.character}
               alt={statusConfig.characterAlt}
               className={statusConfig.characterAnim}
-              style={{ width: statusConfig.characterSize, height: statusConfig.characterSize, objectFit: 'contain' }}
+              style={{ width: Math.min(statusConfig.characterSize, 120), height: Math.min(statusConfig.characterSize, 120), objectFit: 'contain' }}
             />
           </div>
 
           <p className="text-sm font-medium text-slate-400 mb-2 tracking-wider">{monthDay}</p>
           <div className="relative inline-block">
-            <p className="text-7xl sm:text-8xl font-mono font-black text-slate-800 tracking-wider tabular-nums leading-none py-2">
+            <p className="text-5xl sm:text-7xl lg:text-8xl font-mono font-black text-slate-800 tracking-wide sm:tracking-wider tabular-nums leading-none py-2">
               {timeStr}
             </p>
             {status === 'working' && (
@@ -553,8 +553,8 @@ function SummaryMiniCard({ character, characterAlt, label, value, color, progres
           style={{ width: 40, height: 40, objectFit: 'contain' }}
         />
       </div>
-      <p className="text-[11px] font-medium text-slate-500 mb-0.5">{label}</p>
-      <p className={`text-lg font-black tabular-nums ${c.text}`}>{value}</p>
+      <p className="text-[10px] sm:text-[11px] font-medium text-slate-500 mb-0.5">{label}</p>
+      <p className={`text-sm sm:text-lg font-black tabular-nums ${c.text}`}>{value}</p>
       <div className="w-full h-1.5 bg-white/80 rounded-full overflow-hidden mt-2">
         <div
           className={`h-full rounded-full ${c.bar} transition-all duration-1000 ease-out`}
