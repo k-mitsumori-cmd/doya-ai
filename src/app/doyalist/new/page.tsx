@@ -471,7 +471,7 @@ export default function NewProjectPage() {
                           key={i}
                           className="absolute w-2 h-2 rounded-full"
                           style={{
-                            backgroundColor: ['#3b82f6','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316'][i],
+                            backgroundColor: ['#7f19e6','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899','#06b6d4','#f97316'][i],
                             top: '50%',
                             left: '50%',
                           }}
@@ -806,7 +806,7 @@ export default function NewProjectPage() {
                         key={`confetti-${i}`}
                         className="fixed w-3 h-3 rounded-sm z-50 pointer-events-none"
                         style={{
-                          backgroundColor: ['#3b82f6','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899'][i % 6],
+                          backgroundColor: ['#7f19e6','#f59e0b','#10b981','#ef4444','#8b5cf6','#ec4899'][i % 6],
                           left: `${5 + (i * 4.7) % 90}%`,
                           top: -20,
                         }}

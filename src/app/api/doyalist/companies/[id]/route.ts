@@ -47,19 +47,38 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const body = await req.json()
     const data: Record<string, any> = {}
     const fields = [
-      'name',
-      'website',
-      'industry',
-      'region',
-      'size',
-      'description',
-      'contactEmail',
-      'contactPhone',
-      'contactPerson',
-      'notes',
-      'score',
-      'status',
+      'name', 'website', 'industry', 'region', 'size', 'description',
+      'contactEmail', 'contactPhone', 'contactPerson', 'notes', 'score', 'status',
     ]
+    // バリデーション
+    const ALLOWED_STATUS = ['new', 'contacted', 'replied', 'won', 'lost']
+    if (body.status !== undefined && !ALLOWED_STATUS.includes(body.status)) {
+      return NextResponse.json({ error: '無効なステータスです' }, { status: 400 })
+    }
+    if (body.name !== undefined && (typeof body.name !== 'string' || body.name.length > 200)) {
+      return NextResponse.json({ error: '企業名は200文字以内で入力してください' }, { status: 400 })
+    }
+    if (body.contactEmail && typeof body.contactEmail === 'string' && body.contactEmail.trim()) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.contactEmail)) {
+        return NextResponse.json({ error: 'メールアドレスの形式が正しくありません' }, { status: 400 })
+      }
+    }
+    if (body.contactPhone && typeof body.contactPhone === 'string' && body.contactPhone.trim()) {
+      if (!/^[\d\-+() ]{6,20}$/.test(body.contactPhone)) {
+        return NextResponse.json({ error: '電話番号の形式が正しくありません' }, { status: 400 })
+      }
+    }
+    if (body.website && typeof body.website === 'string' && body.website.trim()) {
+      try {
+        const u = new URL(body.website)
+        if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error()
+      } catch {
+        return NextResponse.json({ error: 'WebサイトURLの形式が正しくありません（http/httpsのみ）' }, { status: 400 })
+      }
+    }
+    if (body.score !== undefined && (typeof body.score !== 'number' || body.score < 0 || body.score > 100)) {
+      return NextResponse.json({ error: 'スコアは0-100の数値で指定してください' }, { status: 400 })
+    }
     for (const k of fields) {
       if (body[k] !== undefined) data[k] = body[k]
     }

@@ -71,6 +71,12 @@ export async function POST(req: NextRequest) {
     if (!name || typeof name !== 'string' || name.trim().length === 0) {
       return NextResponse.json({ error: 'プロジェクト名は必須です' }, { status: 400 })
     }
+    if (name.trim().length > 200) {
+      return NextResponse.json({ error: 'プロジェクト名は200文字以内で入力してください' }, { status: 400 })
+    }
+    if (description && typeof description === 'string' && description.length > 5000) {
+      return NextResponse.json({ error: '説明は5000文字以内で入力してください' }, { status: 400 })
+    }
 
     // プラン上限チェック
     const limits = await getUserDoyalistLimits(userId)

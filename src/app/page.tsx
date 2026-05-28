@@ -119,7 +119,7 @@ export default function DoyaMarkePage() {
               >
                 マーケティングを、
                 <br />
-                もっとシンプルに。
+                ひとつの場所から。
               </motion.h1>
 
               <motion.p
