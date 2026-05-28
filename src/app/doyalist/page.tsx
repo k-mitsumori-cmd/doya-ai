@@ -490,8 +490,9 @@ export default function DoyalistHomePage() {
                         (estimateIsApprox || estimatedCount >= count) ? 'text-emerald-600' : 'text-amber-600'
                       }`}>
                         {estimateIsApprox ? '約 ' : ''}
-                        {estimatedCount.toLocaleString()}
+                        <CountUp value={estimatedCount} />
                         <span className="text-sm font-bold ml-0.5">社{estimateIsApprox ? '以上' : ''}</span>
+                        {estimateIsApprox && <span className="ml-1 animate-bounce inline-block">🎉</span>}
                       </p>
                       {!estimateIsApprox && estimatedCount < count && (
                         <p className="text-[10px] text-amber-700 mt-1 font-bold">
@@ -548,9 +549,12 @@ export default function DoyalistHomePage() {
           <div className="mt-6 bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 overflow-hidden">
             <div className="p-5 bg-slate-50 border-b border-slate-200 flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-3">
-                <img src={CHARS.success} alt="" className="w-12 h-12" />
+                <img src={CHARS.success} alt="" className="w-12 h-12 animate-bounce" />
                 <div>
-                  <h2 className="text-lg font-bold text-[#0a1530]">{companies.length.toLocaleString()}社できました</h2>
+                  <h2 className="text-lg font-bold text-[#0a1530]">
+                    <CountUp value={companies.length} duration={1500} />社できました
+                    <span className="ml-2 inline-block animate-pulse">✨</span>
+                  </h2>
                   <p className="text-xs font-medium text-slate-500">
                     {companies.length < count ? `指定${count.toLocaleString()}社のうち${companies.length}社のみ該当（条件を緩めると増えます）` : `ダウンロードで保存できます`}
                   </p>
@@ -654,6 +658,40 @@ export default function DoyalistHomePage() {
       </div>
     </div>
   )
+}
+
+/**
+ * 数値をスムーズにカウントアップ表示するコンポーネント
+ * - easeOutCubic で最初速く・最後ゆっくりに
+ * - 値が変わるたびに前の値からアニメーション
+ */
+function CountUp({ value, duration = 1200 }: { value: number; duration?: number }) {
+  const [display, setDisplay] = useState(0)
+  useEffect(() => {
+    const startValue = display
+    const diff = value - startValue
+    if (diff === 0) return
+    const startTime = performance.now()
+    let rafId: number
+
+    const tick = (now: number) => {
+      const elapsed = now - startTime
+      const t = Math.min(1, elapsed / duration)
+      // easeOutCubic
+      const eased = 1 - Math.pow(1 - t, 3)
+      const current = Math.round(startValue + diff * eased)
+      setDisplay(current)
+      if (t < 1) {
+        rafId = requestAnimationFrame(tick)
+      } else {
+        setDisplay(value)
+      }
+    }
+    rafId = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(rafId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, duration])
+  return <span className="tabular-nums">{display.toLocaleString()}</span>
 }
 
 // 業種が表示に適しているか（数値コードや「指定なし」等は除外）
