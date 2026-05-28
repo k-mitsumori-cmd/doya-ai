@@ -1,6 +1,5 @@
 import { searchCorporateNumber } from './corporate-number'
 import { searchGbizInfo, getGbizCompanyDetailsBatch } from './gbizinfo'
-import { discoverCompanyUrlsBatch } from './url-discovery'
 import { AREA_TO_PREFECTURES, PREFECTURE_TO_CODE } from './prefecture-codes'
 import type { TargetCriteria } from '../types'
 
@@ -30,10 +29,6 @@ interface CollectOptions {
   enrich?: boolean
   /** 詳細取得の最大件数（コスト/時間制限） */
   enrichLimit?: number
-  /** SerpAPIで企業名→URLを自動探索（URLなし企業向け） */
-  discoverUrls?: boolean
-  /** URL自動探索の最大件数（SerpAPIコスト制限） */
-  urlDiscoveryLimit?: number
 }
 
 export interface CollectResult {
@@ -61,8 +56,6 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
     sources = ['corporate_number', 'gbizinfo'],
     enrich = true,
     enrichLimit = 300,
-    discoverUrls = true,
-    urlDiscoveryLimit = 100, // SerpAPIコスト保護（1回最大100社まで）
   } = options
 
   const allCompanies: CollectedCompany[] = []
@@ -113,13 +106,17 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
 
   // Source 2: gBizINFO（経済産業省）
   if (sources.includes('gbizinfo')) {
-    const GBIZ_PAGE_SIZE = 50
+    // gBizINFO API実測:
+    // - limit は最大 5000 / page は最大 10
+    // - つまり 1検索条件で最大 50,000件まで取得可能
+    const GBIZ_PAGE_SIZE = 1000  // 50→1000 に拡大 (10倍速)
+    const GBIZ_MAX_PAGE = 10
     const FULL_EXTRACT_THRESHOLD = 500
     const isFullExtract = maxResults >= FULL_EXTRACT_THRESHOLD
-    const OVERSAMPLE_RATIO = isFullExtract ? 1 : 4
-    // 大量抽出時は requested 件数までフル取得（上限は 12,000 - APIタイムアウト保護）
+    const OVERSAMPLE_RATIO = isFullExtract ? 1.2 : 4
+    // 大量抽出時は requested 件数の 1.2倍まで取得（重複考慮）
     const targetPoolSize = isFullExtract
-      ? Math.min(maxResults, 12000)
+      ? Math.min(Math.ceil(maxResults * OVERSAMPLE_RATIO), 30000)
       : Math.min(maxResults * OVERSAMPLE_RATIO, 5000)
 
     const keywords = (criteria.keywords || []).slice(0, 3)
@@ -134,19 +131,20 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
         if (tempPool.length >= targetPoolSize) break outer
 
         const remaining = targetPoolSize - tempPool.length
-        // 都道府県ごとに均等にページを割り振る（多すぎないよう調整）
-        const pagesPerPref = Math.max(1, Math.ceil(remaining / GBIZ_PAGE_SIZE / Math.max(1, targetPrefectures.length)))
-        const startPage = isFullExtract ? 1 : Math.floor(Math.random() * 5) + 1
+        // 必要ページ数を計算 (API上限10まで)
+        const pagesNeeded = Math.ceil(remaining / GBIZ_PAGE_SIZE / Math.max(1, targetPrefectures.length))
+        const pagesToFetch = Math.min(GBIZ_MAX_PAGE, Math.max(1, pagesNeeded))
+        // ランダム抽出時は開始ページもランダム (= 多様性)
+        const startPage = isFullExtract ? 1 : (Math.floor(Math.random() * Math.max(1, GBIZ_MAX_PAGE - pagesToFetch + 1)) + 1)
 
-        for (let p = 0; p < pagesPerPref; p++) {
+        for (let p = 0; p < pagesToFetch; p++) {
           if (tempPool.length >= targetPoolSize) break outer
           const page = startPage + p
+          if (page > GBIZ_MAX_PAGE) break // API上限保護
           try {
             const { companies, status } = await searchGbizInfo({
               keyword,
               prefecture: pref,
-              // industry はパラメータ仕様が業種コード必須のため、ここでは検索条件から外す
-              // 業種絞り込みはユーザーキーワード/AIタグで実現する
               minEmployees: criteria.companySize?.minEmployees,
               maxEmployees: criteria.companySize?.maxEmployees,
               page,
@@ -154,7 +152,7 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
             })
 
             if (status === 200 || status === 404) anyApiSuccess = true
-            if (companies.length === 0) break // この組み合わせでは打ち切り
+            if (companies.length === 0) break
 
             for (const c of companies) {
               tempPool.push({
@@ -173,7 +171,8 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
                 rawData: c as any,
               })
             }
-            await new Promise((r) => setTimeout(r, 80))
+            // limit=1000 だとレスポンスが重いので少し長めに待つ
+            await new Promise((r) => setTimeout(r, 150))
           } catch (e) {
             console.error('[collect] gBizINFO API error (page', page, ', pref', pref, '):', e)
             break
@@ -181,6 +180,8 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
         }
       }
     }
+
+    console.log(`[collect] gBizINFO collected ${tempPool.length} raw (target: ${targetPoolSize}, requested: ${maxResults})`)
 
     // ランダム抽出
     if (!isFullExtract && tempPool.length > maxResults) {
@@ -222,31 +223,6 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
         c.foundedYear = c.foundedYear || (d.foundingYear ? parseInt(d.foundingYear) : undefined)
         c.address = c.address || d.address
         c.rawData = { ...c.rawData, ...d }
-      }
-    }
-  }
-
-  // URL自動探索: gBizINFOにURLがない企業を SerpAPI で補完
-  if (discoverUrls && urlDiscoveryLimit > 0) {
-    const noUrlCompanies = deduplicated
-      .filter((c) => !c.website && c.companyName)
-      .slice(0, urlDiscoveryLimit)
-
-    if (noUrlCompanies.length > 0) {
-      // 企業ID代わりに companyName をキーに使う
-      const targets = noUrlCompanies.map((c, i) => ({
-        id: c.corporateNumber || `idx-${i}`,
-        name: c.companyName,
-      }))
-      const discovered = await discoverCompanyUrlsBatch(targets, {
-        concurrency: 4,
-        budgetMs: 60000,
-      })
-      for (let i = 0; i < noUrlCompanies.length; i++) {
-        const c = noUrlCompanies[i]
-        const key = c.corporateNumber || `idx-${i}`
-        const url = discovered.get(key)
-        if (url && !c.website) c.website = url
       }
     }
   }

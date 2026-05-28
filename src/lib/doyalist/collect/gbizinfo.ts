@@ -80,7 +80,9 @@ export async function searchGbizInfo(params: SearchParams): Promise<{ companies:
   if (params.minEmployees) url.searchParams.set('employee_number_from', String(params.minEmployees))
   if (params.maxEmployees) url.searchParams.set('employee_number_to', String(params.maxEmployees))
   url.searchParams.set('page', String(params.page || 1))
-  url.searchParams.set('limit', String(params.limit || 50))
+  // gBizINFO の limit は最大 5000 (それ以上は400)。ページは10まで。
+  // 大きい limit を使うと少ないAPI呼び出しで大量取得可能。
+  url.searchParams.set('limit', String(Math.min(params.limit || 1000, 5000)))
 
   const response = await fetch(url.toString(), {
     headers: {

@@ -617,16 +617,9 @@ export default function DoyalistHomePage() {
                               🌐 公式サイト
                             </a>
                           ) : (
-                            // gBizINFOに登録なし → Google検索リンクで代替
-                            <a
-                              href={`https://www.google.com/search?q=${encodeURIComponent(c.name + ' 公式サイト')}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-500 text-xs font-bold rounded-lg hover:bg-slate-100 transition-colors border border-dashed border-slate-300"
-                              title="公式サイトURLがgBizINFOに登録なし"
-                            >
-                              🔍 公式サイトを検索
-                            </a>
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-400 text-xs font-bold rounded-lg border border-dashed border-slate-200" title="gBizINFOに公式URLが登録されていません">
+                              🌐 登録URLなし
+                            </span>
                           )}
                           {gbizUrl && (
                             <a href={gbizUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors">
