@@ -9,7 +9,12 @@ import { prisma } from '@/lib/prisma'
 
 function csvEscape(value: any): string {
   if (value === null || value === undefined) return ''
-  const s = String(value)
+  let s = String(value)
+  // CSV式インジェクション対策: =/+/-/@/タブ/改行で始まる値の先頭にシングルクォート付与
+  // Excel/LibreOffice等が数式として実行するのを防ぐ
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = "'" + s
+  }
   if (/[",\n\r]/.test(s)) {
     return `"${s.replace(/"/g, '""')}"`
   }

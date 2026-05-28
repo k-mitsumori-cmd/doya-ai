@@ -1,3 +1,6 @@
+import dns from 'dns/promises'
+import net from 'net'
+
 interface ScrapedCompanyInfo {
   companyName?: string
   description?: string
@@ -12,19 +15,74 @@ interface ScrapedCompanyInfo {
   industry?: string
 }
 
+// SSRF対策: プライベート/ループバック/メタデータIPへのアクセスを拒否
+const BLOCKED_HOSTNAMES = new Set([
+  'localhost', '169.254.169.254', 'metadata.google.internal',
+  'metadata.azure.com', '100.100.100.200',
+])
+
+function isPrivateIP(ip: string): boolean {
+  if (net.isIPv4(ip)) {
+    const p = ip.split('.').map(Number)
+    return (
+      p[0] === 127 || p[0] === 10 ||
+      (p[0] === 172 && p[1] >= 16 && p[1] <= 31) ||
+      (p[0] === 192 && p[1] === 168) ||
+      (p[0] === 169 && p[1] === 254) ||
+      p[0] === 0
+    )
+  }
+  if (net.isIPv6(ip)) {
+    const v = ip.toLowerCase()
+    return v === '::1' || v.startsWith('fc') || v.startsWith('fd') ||
+      v.startsWith('fe80:') || v.startsWith('::ffff:')
+  }
+  return false
+}
+
+async function validateUrlForSSRF(rawUrl: string): Promise<URL> {
+  let parsed: URL
+  try { parsed = new URL(rawUrl) } catch { throw new Error('不正なURL形式です') }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('http/httpsのみ許可されています')
+  }
+  const hostname = parsed.hostname.toLowerCase()
+  if (BLOCKED_HOSTNAMES.has(hostname)) throw new Error('このホストへのアクセスは禁止されています')
+  // IP直指定の場合は即チェック
+  if (net.isIP(hostname)) {
+    if (isPrivateIP(hostname)) throw new Error('プライベートIPへのアクセスは禁止されています')
+    return parsed
+  }
+  // DNS解決して全アドレスがパブリックか確認
+  const addrs = await dns.lookup(hostname, { all: true })
+  for (const a of addrs) {
+    if (isPrivateIP(a.address)) throw new Error('解決先がプライベートIPです（SSRF防止）')
+  }
+  return parsed
+}
+
 export async function scrapeCompanyWebsite(url: string): Promise<ScrapedCompanyInfo | null> {
   try {
+    const validatedUrl = await validateUrlForSSRF(url)
+
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 10000)
 
-    const response = await fetch(url, {
+    const response = await fetch(validatedUrl.toString(), {
       signal: controller.signal,
+      redirect: 'manual', // リダイレクト先の再検証が必要なため自動追跡しない
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; DoyaListBot/1.0)',
         'Accept': 'text/html,application/xhtml+xml',
       },
     })
     clearTimeout(timeout)
+
+    // 3xxリダイレクトは追跡しない（SSRF防止）
+    if (response.status >= 300 && response.status < 400) {
+      console.warn(`Redirect not followed for SSRF safety: ${url}`)
+      return null
+    }
 
     if (!response.ok) return null
 

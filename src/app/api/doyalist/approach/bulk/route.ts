@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
         }
 
         const prompt = buildApproachPrompt(
-          company.companyName,
+          company.name,
           companyInfo,
           serviceDesc,
           type,
