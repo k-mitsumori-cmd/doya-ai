@@ -2630,3 +2630,89 @@ model PromaneComment {
   @@index([taskId])
   @@map("promane_comments")
 }
+
+// ============================================
+// ドヤリスト（営業リスト生成AI）
+// ============================================
+
+model DoyalistProject {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?  @db.Text
+  industry    String?
+  region      String?
+  targetSize  String?  // 大企業、中小、スタートアップ等
+  keywords    String?  @db.Text
+  status      String   @default("active") // active, archived
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  companies   DoyalistCompany[]
+  approaches  DoyalistApproach[]
+
+  @@index([userId])
+  @@map("doyalist_projects")
+}
+
+model DoyalistCompany {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       DoyalistProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name          String
+  website       String?
+  industry      String?
+  region        String?
+  size          String?  // 従業員数規模
+  description   String?  @db.Text
+  contactEmail  String?
+  contactPhone  String?
+  contactPerson String?
+  notes         String?  @db.Text
+  enrichedData  Json?    // AI分析詳細データ
+  score         Int?     // 営業優先度スコア（0-100）
+  status        String   @default("new") // new, contacted, replied, won, lost
+  source        String?  // collected, manual, imported
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  approaches    DoyalistApproach[]
+
+  @@index([projectId])
+  @@index([status])
+  @@map("doyalist_companies")
+}
+
+model DoyalistApproach {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      DoyalistProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  companyId    String?
+  company      DoyalistCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  type         String   // email, dm, phone, letter
+  subject      String?
+  body         String   @db.Text
+  templateId   String?
+  status       String   @default("draft") // draft, sent, replied
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([companyId])
+  @@map("doyalist_approaches")
+}
+
+model DoyalistTemplate {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  type        String   // email, dm, phone, letter
+  subject     String?
+  body        String   @db.Text
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@map("doyalist_templates")
+}

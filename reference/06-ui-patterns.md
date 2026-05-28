@@ -785,7 +785,7 @@ export interface Service {
 | 15 | ドヤムービーAI | `movie` | `/movie` | **active** | 11頁 | 15件 | 3 | movie | ❌ |
 | 16 | ドヤ広告シミュレーションAI | `adsim` | `/adsim` | coming_soon | 6頁 | 9件 | 1 | adsim | ✅ |
 | 17 | ドヤHR | `hr` | `/hr` | **active** | 14頁 | 30件 | 10 | — | ❌ |
-| 18 | ドヤ勤怠 | `kintai` | `/kintai` | coming_soon | ✅ | ✅ | ✅ | — | ❌ |
+| 18 | ドヤ勤怠 | `kintai` | `/kintai` | **active** | ✅ | ✅ | ✅ | — | ❌ |
 | 19 | ドヤ動画AI（台本） | `video` | `/video` | coming_soon | ❌ | ❌ | ❌ | — | ❌ |
 | 20 | 管理画面 | — | `/admin` | **active** | 15頁 | 16件+ | 3 | — | ❌ |
 
@@ -2485,7 +2485,6 @@ export async function GET(req: NextRequest) {
 
 以下のサービスは `SERVICE_ICON_MAP` に未登録。`active` に変更する際に追加が必要。
 
-- `kintai`（現在 coming_soon）
 - `tenkai`（現在 coming_soon）
 
 **対応**: `active` への変更前に `src/components/ToolSwitcherMenu.tsx` の `SERVICE_ICON_MAP` への追加が必要。

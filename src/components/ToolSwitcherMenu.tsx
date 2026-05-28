@@ -7,6 +7,8 @@ import {
   BarChart3,
   ChevronUp,
   ChevronDown,
+  Clock,
+  Database,
   ExternalLink,
   FileText,
   Film,
@@ -39,6 +41,8 @@ const SERVICE_ICON_MAP: Record<string, { icon: LucideIcon; iconBg: string }> = {
   interviewx: { icon: Send,    iconBg: 'bg-gradient-to-br from-indigo-500 to-violet-500' },
   adsim:     { icon: BarChart3, iconBg: 'bg-gradient-to-br from-indigo-500 to-blue-600' },
   hr:        { icon: Users,    iconBg: 'bg-gradient-to-br from-sky-500 to-blue-600' },
+  kintai:    { icon: Clock,    iconBg: 'bg-gradient-to-br from-violet-500 to-purple-600' },
+  doyalist:  { icon: Database, iconBg: 'bg-gradient-to-br from-purple-500 to-fuchsia-600' },
 }
 
 type ToolSwitcherMenuProps = {
