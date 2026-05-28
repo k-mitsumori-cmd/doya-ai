@@ -28,6 +28,7 @@ import toast from 'react-hot-toast'
 
 const mainNavItems = [
   { icon: LayoutDashboard, label: 'ダッシュボード', href: '/admin', badge: null },
+  { icon: Zap, label: 'サービス管理', href: '/admin/services', badge: null },
   { icon: Users, label: 'ユーザー管理', href: '/admin/users', badge: null },
   { icon: BarChart3, label: 'アナリティクス', href: '/admin/analytics', badge: null },
   { icon: CreditCard, label: '売上・課金', href: '/admin/billing', badge: null },
