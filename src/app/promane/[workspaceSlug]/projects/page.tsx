@@ -191,24 +191,33 @@ export default async function ProjectsPage({ params }: { params: Promise<{ works
                   )}
                 </div>
 
-                {/* 利益率 + バー */}
+                {/* 利益率 + バー (黒字緑/赤字赤) */}
                 <div className="md:col-span-2 flex items-center gap-2 justify-end">
-                  <div className="flex-1 max-w-[120px] h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full transition-all ${
-                        p.profitRate >= 30 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500'
-                        : p.profitRate >= 10 ? 'bg-gradient-to-r from-blue-400 to-violet-500'
-                        : 'bg-gradient-to-r from-rose-400 to-rose-500'
-                      }`}
-                      style={{ width: `${Math.max(0, Math.min(100, p.profitRate))}%` }}
-                    />
+                  <div className="flex-1 max-w-[120px] h-2 bg-gray-100 rounded-full overflow-hidden relative">
+                    {/* 中央のゼロライン */}
+                    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300" />
+                    {p.profit >= 0 ? (
+                      // 黒字: 中央から右へ伸びる緑バー
+                      <div
+                        className="absolute left-1/2 top-0 bottom-0 bg-gradient-to-r from-emerald-400 to-emerald-500"
+                        style={{ width: `${Math.min(50, p.profitRate / 2)}%` }}
+                      />
+                    ) : (
+                      // 赤字: 中央から左へ伸びる赤バー
+                      <div
+                        className="absolute right-1/2 top-0 bottom-0 bg-gradient-to-l from-rose-400 to-rose-500"
+                        style={{ width: `${Math.min(50, Math.abs(p.profitRate) / 2)}%` }}
+                      />
+                    )}
                   </div>
-                  <span className={`text-[12px] font-black w-12 text-right ${
-                    p.profitRate >= 30 ? 'text-emerald-600'
-                    : p.profitRate >= 10 ? 'text-blue-600'
-                    : 'text-rose-600'
+                  <span className={`text-[12px] font-black w-16 text-right ${
+                    p.profit > 0 ? 'text-emerald-600'
+                    : p.profit < 0 ? 'text-rose-600'
+                    : 'text-gray-500'
                   }`}>
-                    {p.contractAmount > 0 ? `${Math.round(p.profitRate)}%` : '—'}
+                    {p.contractAmount > 0
+                      ? `${p.profit >= 0 ? '📈' : '📉'} ${Math.round(p.profitRate)}%`
+                      : '—'}
                   </span>
                   <ArrowRight className="h-4 w-4 text-gray-300 group-hover:text-blue-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                 </div>

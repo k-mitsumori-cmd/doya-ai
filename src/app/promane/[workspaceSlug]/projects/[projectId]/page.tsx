@@ -1,7 +1,7 @@
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import { formatCurrency, formatPercent, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, BILLING_TYPE_LABELS } from "@/lib/promane/format";
+import { formatCurrency, formatCurrencyWithSign, formatPercent, profitEmoji, profitLabel, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS, BILLING_TYPE_LABELS } from "@/lib/promane/format";
 import { Badge } from "@/components/promane/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/promane/ui/tabs";
 import { KanbanBoard } from "@/components/promane/kanban-board";
@@ -63,8 +63,28 @@ export default async function ProjectDetailPage({
   const kpis = [
     { icon: "/character/present.png", label: "売上", value: formatCurrency(project.contractAmount), bg: "bg-gradient-to-br from-blue-50 to-indigo-50 ring-blue-200/50", text: "text-blue-700" },
     { icon: "/character/working.png", label: "原価", value: formatCurrency(totalCost), bg: "bg-gradient-to-br from-orange-50 to-amber-50 ring-orange-200/50", text: "text-orange-700" },
-    { icon: "/character/success.png", label: "利益", value: formatCurrency(profit), bg: profit >= 0 ? "bg-gradient-to-br from-green-50 to-emerald-50 ring-green-200/50" : "bg-gradient-to-br from-red-50 to-pink-50 ring-red-200/50", text: profit >= 0 ? "text-green-700" : "text-red-600" },
-    { icon: profitRate >= 30 ? "/character/jump.png" : "/character/error.png", label: "利益率", value: project.contractAmount > 0 ? formatPercent(profitRate) : "—", bg: profitRate >= 30 ? "bg-gradient-to-br from-green-50 to-emerald-50 ring-green-200/50" : "bg-gradient-to-br from-red-50 to-pink-50 ring-red-200/50", text: profitRate >= 30 ? "text-green-700" : "text-red-600" },
+    {
+      icon: profit > 0 ? "/character/success.png" : profit < 0 ? "/character/error.png" : "/character/working.png",
+      label: `利益 (${profitLabel(profit)})`,
+      value: `${profitEmoji(profit)} ${formatCurrencyWithSign(profit)}`,
+      bg: profit > 0
+        ? "bg-gradient-to-br from-emerald-100 to-green-100 ring-emerald-300/60"
+        : profit < 0
+          ? "bg-gradient-to-br from-rose-100 to-red-100 ring-rose-300/60"
+          : "bg-gradient-to-br from-gray-100 to-slate-100 ring-gray-200/60",
+      text: profit > 0 ? "text-emerald-700" : profit < 0 ? "text-rose-700" : "text-gray-600",
+    },
+    {
+      icon: profit > 0 ? "/character/jump.png" : profit < 0 ? "/character/error.png" : "/character/working.png",
+      label: `利益率 (${profitLabel(profit)})`,
+      value: project.contractAmount > 0 ? `${profitEmoji(profit)} ${formatPercent(profitRate)}` : "—",
+      bg: profit > 0
+        ? "bg-gradient-to-br from-emerald-100 to-green-100 ring-emerald-300/60"
+        : profit < 0
+          ? "bg-gradient-to-br from-rose-100 to-red-100 ring-rose-300/60"
+          : "bg-gradient-to-br from-gray-100 to-slate-100 ring-gray-200/60",
+      text: profit > 0 ? "text-emerald-700" : profit < 0 ? "text-rose-700" : "text-gray-600",
+    },
   ];
 
   const moodForProgress = progress >= 80 ? "jump" : progress >= 50 ? "thumbsup" : progress >= 20 ? "working" : "thinking";

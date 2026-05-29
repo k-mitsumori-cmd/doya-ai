@@ -12,6 +12,69 @@ export function formatPercent(value: number | null | undefined): string {
   return `${Math.round(v * 10) / 10}%`;
 }
 
+/**
+ * 利益/利益率を黒字/赤字で視覚的に区別するヘルパー
+ */
+export type ProfitTone = 'positive' | 'negative' | 'zero'
+
+export function profitTone(value: number | null | undefined): ProfitTone {
+  const v = (value == null || !Number.isFinite(value)) ? 0 : value
+  if (v > 0) return 'positive' // 黒字
+  if (v < 0) return 'negative' // 赤字
+  return 'zero'
+}
+
+export function profitLabel(value: number | null | undefined): string {
+  const tone = profitTone(value)
+  return tone === 'positive' ? '黒字' : tone === 'negative' ? '赤字' : '±0'
+}
+
+export function profitEmoji(value: number | null | undefined): string {
+  const tone = profitTone(value)
+  return tone === 'positive' ? '📈' : tone === 'negative' ? '📉' : '➖'
+}
+
+export function profitColorClass(value: number | null | undefined): {
+  text: string; bg: string; ring: string; gradient: string;
+} {
+  const tone = profitTone(value)
+  if (tone === 'negative') return {
+    text: 'text-rose-700',
+    bg: 'from-rose-100 to-red-100',
+    ring: 'ring-rose-300',
+    gradient: 'from-rose-500 to-red-500',
+  }
+  if (tone === 'positive') return {
+    text: 'text-emerald-700',
+    bg: 'from-emerald-100 to-green-100',
+    ring: 'ring-emerald-300',
+    gradient: 'from-emerald-500 to-green-500',
+  }
+  return {
+    text: 'text-gray-600',
+    bg: 'from-gray-100 to-slate-100',
+    ring: 'ring-gray-200',
+    gradient: 'from-gray-400 to-slate-400',
+  }
+}
+
+/** 金額を ¥-12,345 のように負値も表示 */
+export function formatCurrencyWithSign(amount: number | null | undefined): string {
+  const v = (amount == null || !Number.isFinite(amount)) ? 0 : amount
+  if (v < 0) {
+    return '-' + new Intl.NumberFormat('ja-JP', {
+      style: 'currency',
+      currency: 'JPY',
+      maximumFractionDigits: 0,
+    }).format(-v)
+  }
+  return new Intl.NumberFormat('ja-JP', {
+    style: 'currency',
+    currency: 'JPY',
+    maximumFractionDigits: 0,
+  }).format(v)
+}
+
 export function formatDuration(minutes: number | null | undefined): string {
   const v = (minutes == null || !Number.isFinite(minutes) || minutes < 0) ? 0 : minutes;
   const h = Math.floor(v / 60);

@@ -1,7 +1,7 @@
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import { formatCurrency, formatPercent, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from "@/lib/promane/format";
+import { formatCurrency, formatPercent, formatCurrencyWithSign, profitTone, profitColorClass, profitEmoji, profitLabel, PROJECT_STATUS_LABELS, PROJECT_STATUS_COLORS } from "@/lib/promane/format";
 import { Badge } from "@/components/promane/ui/badge";
 import { Progress } from "@/components/promane/ui/progress";
 import Link from "next/link";
@@ -266,10 +266,19 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
     safeChartData(workspace.id),
   ]);
 
+  // 利益率を黒字/赤字で色分け
+  const profitColors = profitColorClass(data.totalProfit);
   const kpiCards = [
     { icon: "/character/present.png", label: "売上合計", value: formatCurrency(data.totalRevenue), bg: "from-blue-100 to-indigo-100", text: "text-blue-800", ring: "ring-blue-200" },
     { icon: "/character/working.png", label: "原価合計", value: formatCurrency(data.totalCost), bg: "from-orange-100 to-amber-100", text: "text-orange-800", ring: "ring-orange-200" },
-    { icon: "/character/success.png", label: "利益率", value: formatPercent(data.totalProfitRate), bg: "from-green-100 to-emerald-100", text: "text-green-800", ring: "ring-green-200" },
+    {
+      icon: data.totalProfit >= 0 ? "/character/success.png" : "/character/error.png",
+      label: `利益率 (${profitLabel(data.totalProfit)})`,
+      value: `${profitEmoji(data.totalProfit)} ${formatPercent(data.totalProfitRate)}`,
+      bg: profitColors.bg,
+      text: profitColors.text,
+      ring: profitColors.ring,
+    },
     { icon: "/character/focus.png", label: "進行中", value: `${data.activeProjects} 件`, bg: "from-violet-100 to-purple-100", text: "text-violet-800", ring: "ring-violet-200" },
   ];
 
@@ -484,8 +493,14 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
                 </div>
 
                 <div className="w-20 flex-shrink-0 text-right">
-                  <span className={`text-[18px] font-black ${project.profitRate >= 30 ? "text-green-600" : "text-red-500"}`}>
-                    {project.revenue > 0 ? formatPercent(project.profitRate) : "—"}
+                  <span className={`text-[18px] font-black ${
+                    project.profit > 0 ? "text-emerald-600"
+                    : project.profit < 0 ? "text-rose-600"
+                    : "text-gray-500"
+                  }`}>
+                    {project.revenue > 0
+                      ? `${profitEmoji(project.profit)} ${formatPercent(project.profitRate)}`
+                      : "—"}
                   </span>
                 </div>
 

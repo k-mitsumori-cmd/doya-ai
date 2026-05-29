@@ -1,7 +1,7 @@
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
-import { formatCurrency, formatPercent, formatDuration, PROJECT_STATUS_LABELS } from "@/lib/promane/format";
+import { formatCurrency, formatCurrencyWithSign, formatPercent, formatDuration, profitEmoji, profitColorClass, PROJECT_STATUS_LABELS } from "@/lib/promane/format";
 import { ReportChart } from "@/components/promane/report-chart";
 import Image from "next/image";
 
@@ -107,8 +107,26 @@ export default async function ReportsPage({ params }: { params: Promise<{ worksp
                       <td className="px-4 py-4 text-right text-[15px] font-black text-gray-900">{formatCurrency(pr.revenue)}</td>
                       <td className="px-4 py-4 text-right text-[14px] font-bold text-gray-600">{formatCurrency(pr.laborCost)}</td>
                       <td className="px-4 py-4 text-right text-[14px] font-bold text-gray-600">{formatCurrency(pr.expenseCost)}</td>
-                      <td className={`px-4 py-4 text-right text-[15px] font-black ${pr.profit >= 0 ? "text-green-600" : "text-red-500"}`}>{formatCurrency(pr.profit)}</td>
-                      <td className={`px-4 py-4 text-right text-[15px] font-black ${pr.profitRate >= 30 ? "text-green-600" : "text-red-500"}`}>{pr.revenue > 0 ? formatPercent(pr.profitRate) : "—"}</td>
+                      <td className={`px-4 py-4 text-right text-[15px] font-black ${
+                        pr.profit > 0 ? "text-emerald-600"
+                        : pr.profit < 0 ? "text-rose-600"
+                        : "text-gray-500"
+                      }`}>
+                        {profitEmoji(pr.profit)} {formatCurrencyWithSign(pr.profit)}
+                      </td>
+                      <td className={`px-4 py-4 text-right text-[15px] font-black ${
+                        pr.profit > 0 ? "text-emerald-600"
+                        : pr.profit < 0 ? "text-rose-600"
+                        : "text-gray-500"
+                      }`}>
+                        {pr.revenue > 0 ? (
+                          <span className={`inline-block px-2 py-0.5 rounded-full ${
+                            pr.profit > 0 ? "bg-emerald-100" : pr.profit < 0 ? "bg-rose-100" : "bg-gray-100"
+                          }`}>
+                            {pr.profit > 0 ? "黒字" : pr.profit < 0 ? "赤字" : "±0"} {formatPercent(pr.profitRate)}
+                          </span>
+                        ) : "—"}
+                      </td>
                       <td className="px-6 py-4 text-right text-[14px] font-bold text-gray-500">{formatDuration(pr.totalMinutes)}</td>
                     </tr>
                   ))}
@@ -144,8 +162,26 @@ export default async function ReportsPage({ params }: { params: Promise<{ worksp
                         <td className="px-4 py-4 text-right text-[15px] font-black text-gray-700">{data.projects}</td>
                         <td className="px-4 py-4 text-right text-[15px] font-black text-gray-900">{formatCurrency(data.revenue)}</td>
                         <td className="px-4 py-4 text-right text-[14px] font-bold text-gray-600">{formatCurrency(data.cost)}</td>
-                        <td className={`px-4 py-4 text-right text-[15px] font-black ${profit >= 0 ? "text-green-600" : "text-red-500"}`}>{formatCurrency(profit)}</td>
-                        <td className={`px-6 py-4 text-right text-[15px] font-black ${rate >= 30 ? "text-green-600" : "text-red-500"}`}>{data.revenue > 0 ? formatPercent(rate) : "—"}</td>
+                        <td className={`px-4 py-4 text-right text-[15px] font-black ${
+                          profit > 0 ? "text-emerald-600"
+                          : profit < 0 ? "text-rose-600"
+                          : "text-gray-500"
+                        }`}>
+                          {profitEmoji(profit)} {formatCurrencyWithSign(profit)}
+                        </td>
+                        <td className={`px-6 py-4 text-right text-[15px] font-black ${
+                          profit > 0 ? "text-emerald-600"
+                          : profit < 0 ? "text-rose-600"
+                          : "text-gray-500"
+                        }`}>
+                          {data.revenue > 0 ? (
+                            <span className={`inline-block px-2 py-0.5 rounded-full ${
+                              profit > 0 ? "bg-emerald-100" : profit < 0 ? "bg-rose-100" : "bg-gray-100"
+                            }`}>
+                              {profit > 0 ? "黒字" : profit < 0 ? "赤字" : "±0"} {formatPercent(rate)}
+                            </span>
+                          ) : "—"}
+                        </td>
                       </tr>
                     );
                   })}
