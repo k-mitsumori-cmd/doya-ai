@@ -47,9 +47,16 @@ export function MemberList({
   const [inviteOpen, setInviteOpen] = useState(false);
 
   async function handleSaveRate(memberId: string) {
-    // クライアント側 事前バリデーション
+    // クライアント側 事前バリデーション (二重防御)
+    if (!Number.isFinite(rate)) {
+      toast.error("時間単価は数値で入力してください", { duration: 5000 });
+      return;
+    }
     if (rate < 0) {
-      toast.error("時間単価は 0以上を入力してください", { duration: 5000 });
+      toast.error("時間単価は 0以上を入力してください（負値は保存できません）", {
+        duration: 6000,
+        icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
+      });
       return;
     }
     if (rate > 9999999999) {
@@ -121,32 +128,40 @@ export function MemberList({
                 <div className="flex justify-between items-center">
                   <span className="text-[14px] font-bold text-gray-500">💰 時間単価</span>
                   {editingId === member.id ? (
-                    <div className="flex items-center gap-1.5">
-                      <Input
-                        type="number"
-                        min="0"
-                        max="9999999999"
-                        step="100"
-                        value={rate}
-                        onChange={(e) => {
-                          const v = parseInt(e.target.value);
-                          // 負値は弾く（絶対値化ではなく明示的に「0以上」を要求）
-                          if (Number.isFinite(v) && v < 0) {
-                            toast.error("時間単価は 0以上を入力してください", { duration: 4000 });
-                            return; // state を更新しない（前の値のまま）
-                          }
-                          setRate(!Number.isFinite(v) ? 0 : v);
-                        }}
-                        className="h-9 w-28 text-right text-[14px] font-black rounded-xl"
-                      />
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-9 w-9 p-0 rounded-xl hover:bg-green-50"
-                        onClick={() => handleSaveRate(member.id)}
-                      >
-                        <Save className="h-4 w-4 text-green-600" />
-                      </Button>
+                    <div className="flex flex-col items-end gap-1">
+                      <div className="flex items-center gap-1.5">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="9999999999"
+                          step="100"
+                          value={rate}
+                          onChange={(e) => {
+                            const v = parseInt(e.target.value);
+                            // 負値もそのまま state に入れる (赤枠で警告表示、Save時に弾く)
+                            // → 絶対値化や黙ってクランプはしない
+                            setRate(Number.isFinite(v) ? v : 0);
+                          }}
+                          className={`h-9 w-28 text-right text-[14px] font-black rounded-xl ${
+                            rate < 0 ? "border-2 border-rose-500 bg-rose-50 text-rose-700" : ""
+                          }`}
+                        />
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          disabled={rate < 0}
+                          className="h-9 w-9 p-0 rounded-xl hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                          onClick={() => handleSaveRate(member.id)}
+                          title={rate < 0 ? "負値は保存できません" : "保存"}
+                        >
+                          <Save className={`h-4 w-4 ${rate < 0 ? "text-rose-400" : "text-green-600"}`} />
+                        </Button>
+                      </div>
+                      {rate < 0 && (
+                        <p className="text-[10px] font-bold text-rose-600">
+                          ⚠️ 時間単価は 0以上を入力してください
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <button
