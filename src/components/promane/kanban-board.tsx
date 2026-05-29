@@ -18,14 +18,18 @@ import { moveTask } from "@/lib/promane/actions-tasks";
 import { TASK_STATUS_LABELS } from "@/lib/promane/format";
 import { toast } from "sonner";
 import Image from "next/image";
+import { TaskEditModal } from "./task-edit-modal";
 
 type TaskItem = {
   id: string;
   title: string;
+  description?: string | null;
   status: string;
   priority: string;
   order: number;
+  assigneeId?: string | null;
   assigneeName: string | null;
+  startDate?: string | null;
   dueDate: string | null;
   totalMinutes: number;
 };
@@ -35,12 +39,15 @@ const COLUMNS = ["todo", "in_progress", "review", "done"] as const;
 export function KanbanBoard({
   tasks: initialTasks,
   workspaceSlug,
+  members = [],
 }: {
   tasks: TaskItem[];
   workspaceSlug: string;
+  members?: { id: string; displayName: string }[];
 }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [activeTask, setActiveTask] = useState<TaskItem | null>(null);
+  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -116,7 +123,7 @@ export function KanbanBoard({
                 strategy={verticalListSortingStrategy}
               >
                 {columnTasks.map((task) => (
-                  <KanbanCard key={task.id} task={task} />
+                  <KanbanCard key={task.id} task={task} onEdit={() => setEditingTask(task)} />
                 ))}
               </SortableContext>
             </KanbanColumn>
@@ -127,6 +134,25 @@ export function KanbanBoard({
       <DragOverlay>
         {activeTask && <KanbanCard task={activeTask} isDragging />}
       </DragOverlay>
+
+      {editingTask && (
+        <TaskEditModal
+          workspaceSlug={workspaceSlug}
+          open={!!editingTask}
+          onClose={() => setEditingTask(null)}
+          task={{
+            id: editingTask.id,
+            title: editingTask.title,
+            description: editingTask.description ?? null,
+            status: editingTask.status,
+            priority: editingTask.priority,
+            assigneeId: editingTask.assigneeId ?? null,
+            startDate: editingTask.startDate ?? null,
+            dueDate: editingTask.dueDate ?? null,
+          }}
+          members={members}
+        />
+      )}
     </DndContext>
   );
 }

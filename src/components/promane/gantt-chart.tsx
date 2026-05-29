@@ -11,11 +11,15 @@ import { Input } from "@/components/promane/ui/input";
 import { toast } from "sonner";
 import Image from "next/image";
 
+import { TaskEditModal } from "./task-edit-modal";
+
 type GanttTask = {
   id: string;
   title: string;
+  description?: string | null;
   status: string;
   priority: string;
+  assigneeId?: string | null;
   assigneeName: string | null;
   startDate: string | null;
   dueDate: string | null;
@@ -51,11 +55,13 @@ function getMondayOfWeek(date: Date) {
 export function GanttChart({
   tasks,
   workspaceSlug,
+  members = [],
 }: {
   tasks: GanttTask[];
   workspaceSlug: string;
   projectStartDate: string | null;
   projectEndDate: string | null;
+  members?: { id: string; displayName: string }[];
 }) {
   const router = useRouter();
   const now = new Date();
@@ -65,6 +71,7 @@ export function GanttChart({
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [editStart, setEditStart] = useState("");
   const [editEnd, setEditEnd] = useState("");
+  const [detailTask, setDetailTask] = useState<GanttTask | null>(null);
 
   const DAYS_SHOWN = 14;
   const viewEnd = addDays(viewStart, DAYS_SHOWN - 1);
@@ -139,15 +146,25 @@ export function GanttChart({
           {tasks.map((task) => {
             const sc = STATUS_COLORS[task.status] || STATUS_COLORS.todo;
             return (
-              <div key={task.id} className={cn("flex h-[52px] items-center border-b border-gray-50 px-4 gap-2.5", sc.bg)}>
+              <button
+                key={task.id}
+                type="button"
+                onClick={() => setDetailTask(task)}
+                className={cn(
+                  "flex h-[52px] w-full items-center border-b border-gray-50 px-4 gap-2.5 text-left hover:bg-blue-50/40 transition-colors group cursor-pointer",
+                  sc.bg
+                )}
+                title="クリックで編集"
+              >
                 <span className="text-base flex-shrink-0">{sc.emoji}</span>
-                <div className="min-w-0">
-                  <p className="truncate text-[14px] font-bold text-gray-800">{task.title}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-[14px] font-bold text-gray-800 group-hover:text-blue-600 transition-colors">{task.title}</p>
                   {task.assigneeName && (
                     <p className="text-[11px] text-gray-400 font-medium truncate">{task.assigneeName}</p>
                   )}
                 </div>
-              </div>
+                <span className="text-[11px] text-gray-300 group-hover:text-blue-500 flex-shrink-0 transition-colors">✎</span>
+              </button>
             );
           })}
         </div>
@@ -259,6 +276,25 @@ export function GanttChart({
             </button>
           </div>
         </div>
+      )}
+
+      {detailTask && (
+        <TaskEditModal
+          workspaceSlug={workspaceSlug}
+          open={!!detailTask}
+          onClose={() => setDetailTask(null)}
+          task={{
+            id: detailTask.id,
+            title: detailTask.title,
+            description: detailTask.description ?? null,
+            status: detailTask.status,
+            priority: detailTask.priority,
+            assigneeId: detailTask.assigneeId ?? null,
+            startDate: detailTask.startDate,
+            dueDate: detailTask.dueDate,
+          }}
+          members={members}
+        />
       )}
     </div>
   );

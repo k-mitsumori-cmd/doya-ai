@@ -5,7 +5,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { cn } from "@/lib/promane/utils";
 import { Badge } from "@/components/promane/ui/badge";
 import { PRIORITY_LABELS, PRIORITY_COLORS, formatDuration } from "@/lib/promane/format";
-import { Clock, User } from "lucide-react";
+import { Clock, User, Pencil } from "lucide-react";
 
 type TaskItem = {
   id: string;
@@ -21,9 +21,11 @@ type TaskItem = {
 export function KanbanCard({
   task,
   isDragging = false,
+  onEdit,
 }: {
   task: TaskItem;
   isDragging?: boolean;
+  onEdit?: () => void;
 }) {
   const {
     attributes,
@@ -56,7 +58,24 @@ export function KanbanCard({
         !isOverdue && !isUrgent && "border-gray-100",
       )}
     >
-      <p className="text-[15px] font-bold text-gray-900">{task.title}</p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[15px] font-bold text-gray-900 flex-1 min-w-0 break-words">{task.title}</p>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              onEdit();
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="flex-shrink-0 p-1 rounded-lg text-gray-300 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+            title="編集"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <Badge variant="secondary" className={cn("text-[13px] font-black px-3 py-1 rounded-full", PRIORITY_COLORS[task.priority])}>

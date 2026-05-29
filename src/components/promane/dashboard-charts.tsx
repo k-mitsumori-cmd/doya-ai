@@ -35,7 +35,7 @@ export function TaskPieChart({ data }: TaskSummaryProps) {
   }))
 
   return (
-    <div className="relative h-[200px]">
+    <div className="relative h-[200px] min-w-[100px]">
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
           <Pie data={chartData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={2} dataKey="value">
@@ -63,7 +63,7 @@ interface RevenueData {
 
 export function RevenueLineChart({ data }: { data: RevenueData[] }) {
   return (
-    <div className="h-[200px]">
+    <div className="h-[200px] min-w-[200px]">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
@@ -85,7 +85,7 @@ export function RevenueLineChart({ data }: { data: RevenueData[] }) {
 
 export function ProfitBarChart({ data }: { data: RevenueData[] }) {
   return (
-    <div className="h-[200px]">
+    <div className="h-[200px] min-w-[200px]">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />

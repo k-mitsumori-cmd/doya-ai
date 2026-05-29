@@ -146,8 +146,10 @@ export default async function ProjectDetailPage({
             tasks={project.tasks.map((t) => ({
               id: t.id,
               title: t.title,
+              description: t.description,
               status: t.status,
               priority: t.priority,
+              assigneeId: t.assigneeId,
               assigneeName: t.assignee?.displayName || null,
               startDate: t.startDate?.toISOString() || null,
               dueDate: t.dueDate?.toISOString() || null,
@@ -155,6 +157,7 @@ export default async function ProjectDetailPage({
             workspaceSlug={workspaceSlug}
             projectStartDate={project.startDate?.toISOString() || null}
             projectEndDate={project.endDate?.toISOString() || null}
+            members={members.map((m) => ({ id: m.id, displayName: m.displayName }))}
           />
         </TabsContent>
 
@@ -168,14 +171,18 @@ export default async function ProjectDetailPage({
             tasks={project.tasks.map((t) => ({
               id: t.id,
               title: t.title,
+              description: t.description,
               status: t.status,
               priority: t.priority,
               order: t.order,
+              assigneeId: t.assigneeId,
               assigneeName: t.assignee?.displayName || null,
+              startDate: t.startDate?.toISOString() || null,
               dueDate: t.dueDate?.toISOString() || null,
               totalMinutes: t.timeEntries.reduce((sum, te) => sum + te.duration, 0),
             }))}
             workspaceSlug={workspaceSlug}
+            members={members.map((m) => ({ id: m.id, displayName: m.displayName }))}
           />
         </TabsContent>
 

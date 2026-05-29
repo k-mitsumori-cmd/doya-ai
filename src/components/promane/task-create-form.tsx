@@ -31,29 +31,46 @@ export function TaskCreateForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim()) return;
+
+    // クライアント側でも日付チェック（即時フィードバック）
+    if (startDate && dueDate && new Date(dueDate) < new Date(startDate)) {
+      toast.error("終了日は開始日以降を指定してください", {
+        icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
+      });
+      return;
+    }
+
     setLoading(true);
-    await createTask(workspaceSlug, {
-      projectId,
-      title: title.trim(),
-      assigneeId: assigneeId || undefined,
-      priority,
-      startDate: startDate || undefined,
-      dueDate: dueDate || undefined,
-    });
+    try {
+      await createTask(workspaceSlug, {
+        projectId,
+        title: title.trim(),
+        assigneeId: assigneeId || undefined,
+        priority,
+        startDate: startDate || undefined,
+        dueDate: dueDate || undefined,
+      });
 
-    toast.success(`「${title.trim()}」を追加したよ！`, {
-      icon: <Image src="/character/thumbsup.png" alt="" width={28} height={28} unoptimized />,
-    });
+      toast.success(`「${title.trim()}」を追加したよ！`, {
+        icon: <Image src="/character/thumbsup.png" alt="" width={28} height={28} unoptimized />,
+      });
 
-    setTitle("");
-    setAssigneeId("");
-    setPriority("medium");
-    setStartDate("");
-    setDueDate("");
-    setLoading(false);
-    setJustAdded(true);
-    setTimeout(() => setJustAdded(false), 600);
-    router.refresh();
+      setTitle("");
+      setAssigneeId("");
+      setPriority("medium");
+      setStartDate("");
+      setDueDate("");
+      setJustAdded(true);
+      setTimeout(() => setJustAdded(false), 600);
+      router.refresh();
+    } catch (e: any) {
+      toast.error(e?.message || "タスク追加に失敗しました", {
+        icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
+        duration: 5000,
+      });
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
