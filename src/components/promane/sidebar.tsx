@@ -26,9 +26,11 @@ const navItems: NavItem[] = [
 
 export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const basePath = `/promane/${workspaceSlug}`;
-  const userName = session?.user?.name || 'ゲスト';
+  const isLoading = status === 'loading';
+  // ローディング中は「ゲスト」ではなく「読み込み中」、未ログインなら「未ログイン」
+  const userName = isLoading ? '読み込み中...' : (session?.user?.name || '未ログイン');
   const userImage = session?.user?.image;
 
   return (
@@ -101,21 +103,25 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
           />
         </div>
         <div className="flex items-center gap-2 px-2 py-1.5 rounded-xl bg-gray-50">
-          {userImage ? (
+          {isLoading ? (
+            <div className="w-7 h-7 rounded-full bg-gray-200 animate-pulse" />
+          ) : userImage ? (
             <Image src={userImage} alt={userName} width={28} height={28} className="rounded-full ring-1 ring-white shadow-sm" />
           ) : (
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-400 to-violet-500 flex items-center justify-center text-white text-xs font-black">
               {userName[0]}
             </div>
           )}
-          <p className="text-[12px] font-black text-gray-700 truncate flex-1">{userName}</p>
-          <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
-            title="ログアウト"
-            className="text-gray-400 hover:text-rose-500 transition-colors text-[11px] font-bold"
-          >
-            🚪
-          </button>
+          <p className={`text-[12px] font-black truncate flex-1 ${isLoading ? 'text-gray-300' : 'text-gray-700'}`}>{userName}</p>
+          {!isLoading && session?.user && (
+            <button
+              onClick={() => signOut({ callbackUrl: "/auth/signin" })}
+              title="ログアウト"
+              className="text-gray-400 hover:text-rose-500 transition-colors text-[11px] font-bold"
+            >
+              🚪
+            </button>
+          )}
         </div>
       </div>
     </aside>

@@ -2,12 +2,16 @@ import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Image from "next/image";
+import { WorkspaceSettingsForm } from "@/components/promane/workspace-settings-form";
 
 export default async function SettingsPage({ params }: { params: Promise<{ workspaceSlug: string }> }) {
   const session = await requirePromaneAuth();
   const { workspaceSlug } = await params;
   const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) redirect("/login");
+  if (!workspace) redirect("/promane");
+
+  const myMember = workspace.members[0];
+  const canEdit = !!myMember && ["owner", "admin"].includes(myMember.role);
 
   const memberCount = await prisma.promaneMember.count({ where: { workspaceId: workspace.id } });
   const projectCount = await prisma.promaneProject.count({ where: { workspaceId: workspace.id } });
@@ -51,25 +55,22 @@ export default async function SettingsPage({ params }: { params: Promise<{ works
         </div>
       </div>
 
-      <div className="rounded-3xl bg-white ring-1 ring-gray-200 shadow-sm p-8 animate-slide-up stagger-2">
-        <h2 className="text-[18px] font-black text-gray-900 mb-4">🔧 ワークスペース情報</h2>
-        <div className="space-y-4">
-          {[
-            { label: "ワークスペース名", value: workspace.name },
-            { label: "スラッグ", value: workspace.slug },
-            { label: "作成日", value: new Date(workspace.createdAt).toLocaleDateString("ja-JP") },
-          ].map((item) => (
-            <div key={item.label} className="flex justify-between items-center py-3 border-b border-gray-100 last:border-0">
-              <span className="text-[15px] font-bold text-gray-500">{item.label}</span>
-              <span className="text-[16px] font-black text-gray-900">{item.value}</span>
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* 編集可能フォーム */}
+      <div className="rounded-3xl bg-white ring-1 ring-gray-200 shadow-sm p-8 mb-6 animate-slide-up stagger-2">
+        <h2 className="text-[18px] font-black text-gray-900 mb-1">🔧 ワークスペース情報</h2>
+        <p className="text-[12px] font-bold text-gray-400 mb-5">
+          {canEdit ? '名前とスラッグ (URL) を編集できます' : '編集は owner/admin のみ可能です'}
+        </p>
+        <WorkspaceSettingsForm
+          workspace={{ id: workspace.id, name: workspace.name, slug: workspace.slug }}
+          canEdit={canEdit}
+          currentSlug={workspaceSlug}
+        />
 
-      <div className="mt-8 text-center animate-slide-up stagger-3">
-        <Image src="/character/ramen.png" alt="" width={80} height={80} className="mx-auto animate-float opacity-60" unoptimized />
-        <p className="mt-2 text-[13px] font-bold text-gray-300">設定の変更は今後アップデート予定です</p>
+        <div className="mt-6 pt-4 border-t border-gray-100 flex justify-between items-center text-[12px] font-bold text-gray-400">
+          <span>作成日</span>
+          <span>{new Date(workspace.createdAt).toLocaleDateString("ja-JP")}</span>
+        </div>
       </div>
     </div>
   );

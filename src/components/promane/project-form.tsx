@@ -183,27 +183,27 @@ export function ProjectForm({
             </div>
             <div className="space-y-2">
               <Label htmlFor="contractAmount">契約金額（円）</Label>
-              <Input id="contractAmount" name="contractAmount" type="number" min="0" defaultValue={project?.contractAmount || ""} />
+              <Input id="contractAmount" name="contractAmount" type="number" min="0" max="9999999999" step="1" defaultValue={project?.contractAmount || ""} />
             </div>
           </div>
 
           {billingType === "monthly" && (
             <div className="space-y-2">
               <Label htmlFor="monthlyAmount">月額金額（円）</Label>
-              <Input id="monthlyAmount" name="monthlyAmount" type="number" min="0" defaultValue={project?.monthlyAmount || ""} />
+              <Input id="monthlyAmount" name="monthlyAmount" type="number" min="0" max="9999999999" step="1" defaultValue={project?.monthlyAmount || ""} />
             </div>
           )}
 
           {billingType === "hourly" && (
             <div className="space-y-2">
               <Label htmlFor="hourlyRate">案件時間単価（円/h）</Label>
-              <Input id="hourlyRate" name="hourlyRate" type="number" min="0" defaultValue={project?.hourlyRate || ""} />
+              <Input id="hourlyRate" name="hourlyRate" type="number" min="0" max="9999999999" step="1" defaultValue={project?.hourlyRate || ""} />
             </div>
           )}
 
           <div className="space-y-2">
             <Label htmlFor="estimatedHours">見積工数（時間）</Label>
-            <Input id="estimatedHours" name="estimatedHours" type="number" min="0" defaultValue={project?.estimatedHours || ""} />
+            <Input id="estimatedHours" name="estimatedHours" type="number" min="0" max="9999999999" step="1" defaultValue={project?.estimatedHours || ""} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
