@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import NextImage from 'next/image'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -26,24 +27,59 @@ import {
 } from 'lucide-react'
 import { getActiveServices } from '@/lib/services'
 
-// services.ts の id → lucide アイコン & グラデーション
-const SERVICE_ICON_MAP: Record<string, { icon: LucideIcon; iconBg: string }> = {
-  kantan:    { icon: Sparkles, iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-500' },
-  banner:    { icon: Image,    iconBg: 'bg-gradient-to-br from-purple-500 to-pink-500' },
-  seo:       { icon: FileText, iconBg: 'bg-gradient-to-br from-slate-700 to-slate-900' },
-  interview: { icon: Mic,      iconBg: 'bg-gradient-to-br from-orange-500 to-amber-500' },
-  opening:   { icon: Play,     iconBg: 'bg-gradient-to-br from-red-500 to-rose-600' },
-  persona:   { icon: Target,   iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600' },
-  voice:     { icon: Volume2,  iconBg: 'bg-gradient-to-br from-violet-500 to-purple-500' },
+// services.ts の id → サービス公式ロゴ画像（優先）+ フォールバック用 lucide アイコン
+type ServiceMapping = {
+  /** 公式ロゴ画像のパス（public 配下）。設定されているとロゴ画像が表示される */
+  logo?: string
+  /** ロゴがないときに表示する Lucide アイコン */
+  icon: LucideIcon
+  /** ロゴがないときの背景グラデーション */
+  iconBg: string
+}
+
+const SERVICE_ICON_MAP: Record<string, ServiceMapping> = {
+  // ★ ロゴ配置済み（公式ロゴを表示）
+  banner:    { logo: '/banner/logo.png',    icon: Image,    iconBg: 'bg-gradient-to-br from-purple-500 to-pink-500' },
+  seo:       { logo: '/seo/logo.png',       icon: FileText, iconBg: 'bg-gradient-to-br from-slate-700 to-slate-900' },
+  interview: { logo: '/interview/logo.png', icon: Mic,      iconBg: 'bg-gradient-to-br from-orange-500 to-amber-500' },
+  persona:   { logo: '/persona/logo.png',   icon: Target,   iconBg: 'bg-gradient-to-br from-purple-500 to-purple-600' },
+  kintai:    { logo: '/kintai/logo.png',    icon: Clock,    iconBg: 'bg-gradient-to-br from-violet-500 to-purple-600' },
+  doyalist:  { logo: '/doyalist/logo.png',  icon: Database, iconBg: 'bg-gradient-to-br from-purple-500 to-fuchsia-600' },
+  promane:   { logo: '/promane/logo.png',   icon: BarChart3, iconBg: 'bg-gradient-to-br from-blue-500 to-violet-600' },
+
+  // ロゴ未配置（Lucide アイコン + グラデーション背景）
+  kantan:    { icon: Sparkles,  iconBg: 'bg-gradient-to-br from-emerald-500 to-teal-500' },
+  opening:   { icon: Play,      iconBg: 'bg-gradient-to-br from-red-500 to-rose-600' },
+  voice:     { icon: Volume2,   iconBg: 'bg-gradient-to-br from-violet-500 to-purple-500' },
   lp:        { icon: LayoutGrid, iconBg: 'bg-gradient-to-br from-cyan-500 to-blue-500' },
-  copy:      { icon: PenLine,  iconBg: 'bg-gradient-to-br from-amber-500 to-orange-500' },
-  movie:     { icon: Film,     iconBg: 'bg-gradient-to-br from-rose-500 to-pink-500' },
-  interviewx: { icon: Send,    iconBg: 'bg-gradient-to-br from-indigo-500 to-violet-500' },
+  copy:      { icon: PenLine,   iconBg: 'bg-gradient-to-br from-amber-500 to-orange-500' },
+  movie:     { icon: Film,      iconBg: 'bg-gradient-to-br from-rose-500 to-pink-500' },
+  interviewx: { icon: Send,     iconBg: 'bg-gradient-to-br from-indigo-500 to-violet-500' },
   adsim:     { icon: BarChart3, iconBg: 'bg-gradient-to-br from-indigo-500 to-blue-600' },
-  hr:        { icon: Users,    iconBg: 'bg-gradient-to-br from-sky-500 to-blue-600' },
-  kintai:    { icon: Clock,    iconBg: 'bg-gradient-to-br from-violet-500 to-purple-600' },
-  doyalist:  { icon: Database, iconBg: 'bg-gradient-to-br from-purple-500 to-fuchsia-600' },
-  promane:   { icon: BarChart3, iconBg: 'bg-gradient-to-br from-blue-500 to-violet-600' },
+  hr:        { icon: Users,     iconBg: 'bg-gradient-to-br from-sky-500 to-blue-600' },
+}
+
+/** サービスアイコンを描画（ロゴ画像優先・なければ Lucide アイコン） */
+function ServiceIcon({ mapping, serviceName }: { mapping: ServiceMapping; serviceName: string }) {
+  if (mapping.logo) {
+    return (
+      <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center flex-shrink-0 bg-white ring-1 ring-slate-200 shadow-sm">
+        <NextImage
+          src={mapping.logo}
+          alt={serviceName}
+          width={32}
+          height={32}
+          className="object-contain w-full h-full"
+        />
+      </div>
+    )
+  }
+  const Icon = mapping.icon
+  return (
+    <div className={`w-8 h-8 rounded-lg ${mapping.iconBg} flex items-center justify-center flex-shrink-0 shadow-sm`}>
+      <Icon className="w-4 h-4 text-white" />
+    </div>
+  )
 }
 
 type ToolSwitcherMenuProps = {
@@ -147,16 +183,13 @@ export function ToolSwitcherMenu({ currentService, showLabel, isCollapsed, class
                 {activeServices.map((service) => {
                   const mapping = SERVICE_ICON_MAP[service.id]
                   if (!mapping) return null
-                  const Icon = mapping.icon
                   const isCurrent = service.id === currentService
                   return isCurrent ? (
                     <div
                       key={service.id}
                       className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-slate-50 border border-slate-200"
                     >
-                      <div className={`w-8 h-8 rounded-lg ${mapping.iconBg} flex items-center justify-center flex-shrink-0 shadow-sm`}>
-                        <Icon className="w-4 h-4 text-white" />
-                      </div>
+                      <ServiceIcon mapping={mapping} serviceName={service.name} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-black text-slate-900">{service.name}</p>
                         <p className="text-[10px] font-bold text-slate-600">
@@ -171,9 +204,7 @@ export function ToolSwitcherMenu({ currentService, showLabel, isCollapsed, class
                       className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg hover:bg-slate-50 transition-colors group"
                       onClick={() => setIsOpen(false)}
                     >
-                      <div className={`w-8 h-8 rounded-lg ${mapping.iconBg} flex items-center justify-center flex-shrink-0 shadow-sm`}>
-                        <Icon className="w-4 h-4 text-white" />
-                      </div>
+                      <ServiceIcon mapping={mapping} serviceName={service.name} />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-black text-gray-900 group-hover:text-slate-900 transition-colors">{service.name}</p>
                         <p className="text-[10px] font-bold text-gray-500">{service.description}</p>

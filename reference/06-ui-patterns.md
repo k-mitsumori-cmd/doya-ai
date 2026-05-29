@@ -635,7 +635,7 @@ toast.error('エラーが発生しました')
 **機能**:
 - サイドバー内に常時表示される「他のツールを使う」ボタン
 - `getActiveServices()` で `status === 'active'` なサービスのみ動的表示
-- 各サービスにLucideアイコン + グラデーション背景
+- 各サービスは **公式ロゴ画像を優先表示**（ない場合は Lucide アイコン + グラデーション背景にフォールバック）
 - ビューポート位置に応じて上/下展開を自動判定
 - 現在のサービスはハイライト表示（非リンク）
 
@@ -647,6 +647,62 @@ export function getActiveServices(): Service[] {
   return SERVICES.filter(s => s.status === 'active').sort((a, b) => a.order - b.order)
 }
 ```
+
+#### アイコン表示ロジック（ロゴ画像優先）
+
+ToolSwitcherMenu の `SERVICE_ICON_MAP` は以下の構造:
+
+```typescript
+type ServiceMapping = {
+  logo?: string         // 公式ロゴ画像のパス（あれば優先表示）
+  icon: LucideIcon      // フォールバック用 Lucide アイコン
+  iconBg: string        // フォールバック時の背景グラデーション
+}
+
+const SERVICE_ICON_MAP: Record<string, ServiceMapping> = {
+  // ★ ロゴ配置済みサービス → next/image で公式ロゴを表示
+  banner:    { logo: '/banner/logo.png',    icon: Image,    iconBg: '...' },
+  seo:       { logo: '/seo/logo.png',       icon: FileText, iconBg: '...' },
+  interview: { logo: '/interview/logo.png', icon: Mic,      iconBg: '...' },
+  persona:   { logo: '/persona/logo.png',   icon: Target,   iconBg: '...' },
+  kintai:    { logo: '/kintai/logo.png',    icon: Clock,    iconBg: '...' },
+  doyalist:  { logo: '/doyalist/logo.png',  icon: Database, iconBg: '...' },
+  promane:   { logo: '/promane/logo.png',   icon: BarChart3, iconBg: '...' },
+
+  // ロゴ未配置サービス → Lucide アイコン + グラデーション背景
+  voice:     { icon: Volume2,   iconBg: 'bg-gradient-to-br from-violet-500 to-purple-500' },
+  // ...
+}
+```
+
+#### ロゴアイコンのデザイン仕様
+
+ロゴ画像表示時のコンテナデザイン:
+
+```tsx
+<div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center
+                bg-white ring-1 ring-slate-200 shadow-sm">
+  <NextImage src={logo} alt={serviceName} width={32} height={32} className="object-contain" />
+</div>
+```
+
+- サイズ: 32×32px
+- 角丸: `rounded-lg` (8px)
+- 背景: 白
+- 縁: `ring-1 ring-slate-200`（ロゴが白背景に馴染むよう薄いボーダー）
+- 余白: `object-contain` でロゴ全体が収まる
+
+#### Lucide アイコン表示時（フォールバック）
+
+```tsx
+<div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center shadow-sm`}>
+  <Icon className="w-4 h-4 text-white" />
+</div>
+```
+
+- 同じサイズ・角丸
+- 背景はサービス固有のグラデーション
+- 中央に白の Lucide アイコン
 
 ### 8.2 画面遷移フロー
 
@@ -669,7 +725,8 @@ export function getActiveServices(): Service[] {
 |---------|------|---------|
 | `services.ts` に追加 | ダッシュボードカードに表示 | Service オブジェクト追加 |
 | `status: 'active'` に変更 | ToolSwitcherMenu に表示 | ステータス変更のみ |
-| `ToolSwitcherMenu.tsx` | Lucide アイコン表示 | `SERVICE_ICON_MAP` に追加 |
+| `public/{id}/logo.png` 配置 | ToolSwitcher に公式ロゴ表示 | ロゴ画像作成・配置（推奨） |
+| `ToolSwitcherMenu.tsx` | アイコン表示（ロゴ or Lucide） | `SERVICE_ICON_MAP` にエントリ追加 |
 | `themes.ts` | サイドバー配色 | テーマ追加（任意） |
 | サイドバーコンポーネント | ナビゲーション | 専用サイドバー作成 |
 
