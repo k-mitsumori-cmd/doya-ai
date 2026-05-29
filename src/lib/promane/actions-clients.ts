@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
+import { requirePromaneAuthAction, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { revalidatePath } from "next/cache";
 
 export async function createClient(workspaceSlug: string, data: {
@@ -12,9 +12,9 @@ export async function createClient(workspaceSlug: string, data: {
   address?: string;
   note?: string;
 }) {
-  const session = await requirePromaneAuth();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) throw new Error("Workspace not found");
+  const { userId } = await requirePromaneAuthAction();
+  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
+  if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
   // バリデーション
   if (!data.name?.trim()) throw new Error("会社名は必須です");
@@ -47,9 +47,9 @@ export async function updateClient(workspaceSlug: string, clientId: string, data
   address?: string | null;
   note?: string | null;
 }) {
-  const session = await requirePromaneAuth();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) throw new Error("Workspace not found");
+  const { userId } = await requirePromaneAuthAction();
+  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
+  if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
   const client = await prisma.promaneClient.update({
     where: { id: clientId },
@@ -68,9 +68,9 @@ export async function updateClient(workspaceSlug: string, clientId: string, data
 }
 
 export async function deleteClient(workspaceSlug: string, clientId: string) {
-  const session = await requirePromaneAuth();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) throw new Error("Workspace not found");
+  const { userId } = await requirePromaneAuthAction();
+  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
+  if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
   await prisma.promaneClient.delete({ where: { id: clientId } });
   revalidatePath(`/promane/${workspaceSlug}/clients`);

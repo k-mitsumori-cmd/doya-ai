@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
+import { requirePromaneAuthAction, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { revalidatePath } from "next/cache";
 
 export async function createTimeEntry(workspaceSlug: string, data: {
@@ -11,9 +11,9 @@ export async function createTimeEntry(workspaceSlug: string, data: {
   date: string;
   note?: string;
 }) {
-  const session = await requirePromaneAuth();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) throw new Error("Workspace not found");
+  const { userId } = await requirePromaneAuthAction();
+  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
+  if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
   const entry = await prisma.promaneTimeEntry.create({
     data: {
@@ -30,9 +30,9 @@ export async function createTimeEntry(workspaceSlug: string, data: {
 }
 
 export async function deleteTimeEntry(workspaceSlug: string, entryId: string) {
-  const session = await requirePromaneAuth();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) throw new Error("Workspace not found");
+  const { userId } = await requirePromaneAuthAction();
+  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
+  if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
   await prisma.promaneTimeEntry.delete({ where: { id: entryId } });
   revalidatePath(`/promane/${workspaceSlug}/timesheet`);
@@ -45,9 +45,9 @@ export async function createExpense(workspaceSlug: string, data: {
   description: string;
   date: string;
 }) {
-  const session = await requirePromaneAuth();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) throw new Error("Workspace not found");
+  const { userId } = await requirePromaneAuthAction();
+  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
+  if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
   const expense = await prisma.promaneExpense.create({
     data: {
@@ -64,18 +64,18 @@ export async function createExpense(workspaceSlug: string, data: {
 }
 
 export async function deleteExpense(workspaceSlug: string, expenseId: string, projectId: string) {
-  const session = await requirePromaneAuth();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) throw new Error("Workspace not found");
+  const { userId } = await requirePromaneAuthAction();
+  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
+  if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
   await prisma.promaneExpense.delete({ where: { id: expenseId } });
   revalidatePath(`/promane/${workspaceSlug}/projects/${projectId}`);
 }
 
 export async function updateMemberRate(workspaceSlug: string, memberId: string, hourlyRate: number) {
-  const session = await requirePromaneAuth();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) throw new Error("Workspace not found");
+  const { userId } = await requirePromaneAuthAction();
+  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
+  if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
   await prisma.promaneMember.update({
     where: { id: memberId },

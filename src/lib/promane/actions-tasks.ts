@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
+import { requirePromaneAuthAction, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -33,9 +33,9 @@ export async function createTask(workspaceSlug: string, data: {
   startDate?: string;
   dueDate?: string;
 }) {
-  const session = await requirePromaneAuth();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) throw new Error("Workspace not found");
+  const { userId } = await requirePromaneAuthAction();
+  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
+  if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
   if (!data.title?.trim()) throw new Error("タスク名は必須です");
 
@@ -76,9 +76,9 @@ export async function updateTask(workspaceSlug: string, taskId: string, data: {
   dueDate?: string | null;
   order?: number;
 }) {
-  const session = await requirePromaneAuth();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) throw new Error("Workspace not found");
+  const { userId } = await requirePromaneAuthAction();
+  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
+  if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
   // 既存タスク取得（順序チェックの基準値に必要）
   const existing = await prisma.promaneTask.findUnique({
@@ -117,18 +117,18 @@ export async function updateTask(workspaceSlug: string, taskId: string, data: {
 }
 
 export async function deleteTask(workspaceSlug: string, taskId: string) {
-  const session = await requirePromaneAuth();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) throw new Error("Workspace not found");
+  const { userId } = await requirePromaneAuthAction();
+  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
+  if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
   const task = await prisma.promaneTask.delete({ where: { id: taskId } });
   revalidatePath(`/promane/${workspaceSlug}/projects/${task.projectId}`);
 }
 
 export async function moveTask(workspaceSlug: string, taskId: string, newStatus: string, newOrder: number) {
-  const session = await requirePromaneAuth();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) throw new Error("Workspace not found");
+  const { userId } = await requirePromaneAuthAction();
+  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
+  if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
   const task = await prisma.promaneTask.update({
     where: { id: taskId },
@@ -144,9 +144,9 @@ export async function moveTask(workspaceSlug: string, taskId: string, newStatus:
  * dueDate < startDate のタスクの dueDate を null に修復
  */
 export async function repairInvalidTaskDates(workspaceSlug: string): Promise<{ repaired: number }> {
-  const session = await requirePromaneAuth();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) throw new Error("Workspace not found");
+  const { userId } = await requirePromaneAuthAction();
+  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
+  if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
   const tasks = await prisma.promaneTask.findMany({
     where: {
