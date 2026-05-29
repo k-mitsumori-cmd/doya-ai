@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { updateMemberRate } from "@/lib/promane/actions-time-entries";
+// 注: updateMemberRate Server Action は Server Components renderエラー/チャンクキャッシュの
+//     問題を回避するため、代わりに /api/promane/members/[id]/rate (PATCH) を使用
 import { Input } from "@/components/promane/ui/input";
 import { Button } from "@/components/promane/ui/button";
 import { Badge } from "@/components/promane/ui/badge";
@@ -47,7 +48,7 @@ export function MemberList({
   const [inviteOpen, setInviteOpen] = useState(false);
 
   async function handleSaveRate(memberId: string) {
-    // クライアント側 事前バリデーション (二重防御)
+    // クライアント側 事前バリデーション (一層目)
     if (!Number.isFinite(rate)) {
       toast.error("時間単価は数値で入力してください", { duration: 5000 });
       return;
@@ -64,13 +65,27 @@ export function MemberList({
       return;
     }
     try {
-      await updateMemberRate(workspaceSlug, memberId, rate);
+      // Server Action → API ルート化 (チャンクキャッシュ問題回避)
+      const res = await fetch(`/api/promane/members/${memberId}/rate`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceSlug, hourlyRate: rate }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data?.error || `更新に失敗しました（HTTP ${res.status}）`, {
+          duration: 6000,
+          icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
+        });
+        console.error("[promane/member] rate update failed", res.status, data);
+        return;
+      }
       toast.success("時間単価を更新したよ！");
       setEditingId(null);
       router.refresh();
     } catch (e: any) {
-      console.error("[promane/member] rate update failed", e);
-      toast.error(e?.message || "更新に失敗しました", { duration: 6000 });
+      console.error("[promane/member] rate update exception", e);
+      toast.error(e?.message || "通信エラーが発生しました", { duration: 6000 });
     }
   }
 
