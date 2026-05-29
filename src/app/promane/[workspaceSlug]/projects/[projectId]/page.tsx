@@ -14,6 +14,7 @@ import { ArrowLeft, Pencil } from "lucide-react";
 import { Button } from "@/components/promane/ui/button";
 import { Progress } from "@/components/promane/ui/progress";
 import { CharacterOnly } from "@/components/promane/character";
+import { ProjectDeleteButton } from "@/components/promane/project-delete-button";
 
 export default async function ProjectDetailPage({
   params,
@@ -23,10 +24,11 @@ export default async function ProjectDetailPage({
   const session = await requirePromaneAuth();
   const { workspaceSlug, projectId } = await params;
   const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) redirect("/login");
+  if (!workspace) redirect("/promane");
 
-  const project = await prisma.promaneProject.findUnique({
-    where: { id: projectId },
+  // IDOR防止: workspaceId も where条件に追加 (他WSの project は見せない)
+  const project = await prisma.promaneProject.findFirst({
+    where: { id: projectId, workspaceId: workspace.id },
     include: {
       client: true,
       tasks: {
@@ -91,12 +93,15 @@ export default async function ProjectDetailPage({
               {project.endDate && <span>📅 納期 {new Date(project.endDate).toLocaleDateString("ja-JP")}</span>}
             </div>
           </div>
-          <Link href={`/promane/${workspaceSlug}/projects/${projectId}/edit`}>
-            <Button variant="outline" className="rounded-2xl font-bold text-[14px] h-10 px-4">
-              <Pencil className="mr-1.5 h-4 w-4" />
-              編集
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            <Link href={`/promane/${workspaceSlug}/projects/${projectId}/edit`}>
+              <Button variant="outline" className="rounded-2xl font-bold text-[14px] h-10 px-4">
+                <Pencil className="mr-1.5 h-4 w-4" />
+                編集
+              </Button>
+            </Link>
+            <ProjectDeleteButton workspaceSlug={workspaceSlug} projectId={projectId} projectName={project.name} />
+          </div>
         </div>
       </div>
 

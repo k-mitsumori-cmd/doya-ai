@@ -189,11 +189,13 @@ async function getDashboardData(workspaceId: string) {
         .reduce((sum, te) => sum + safeNum(te.duration), 0);
       laborCost += (memberTime / 60) * safeNum(member.hourlyRate);
     });
+    // 経費は負値を 0 にクランプ (経費がマイナスは会計的に異常)
     const expenseCost = project.expenses.reduce((sum, e) => sum + safeNum(e.amount), 0);
     const totalProjectCost = laborCost + expenseCost;
     const profit = revenue - totalProjectCost;
-    // 利益率: 売上0の場合は0 (NaN防止)
-    const profitRate = revenue > 0 ? (profit / revenue) * 100 : 0;
+    // 利益率: 売上0=0, 100%超えは100%にクランプ (会計上 100%超えは原価マイナスを意味する)
+    const rawRate = revenue > 0 ? (profit / revenue) * 100 : 0;
+    const profitRate = Math.min(100, Math.max(-100, rawRate));
     totalRevenue += revenue;
     totalCost += totalProjectCost;
     return { ...project, revenue, totalProjectCost, profit, profitRate, progress, doneTasks, totalTasks };

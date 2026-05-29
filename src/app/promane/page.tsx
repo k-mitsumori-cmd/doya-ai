@@ -7,6 +7,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/promane/ui/button'
 import { Badge } from '@/components/promane/ui/badge'
+import { CreateWorkspaceButton } from '@/components/promane/create-workspace-button'
 
 const ROLE_LABELS: Record<string, string> = {
   owner: '👑 オーナー',
@@ -137,13 +138,14 @@ export default async function PromaneEntryPage({
         {/* My Workspaces */}
         {memberships.length > 0 && (
           <div>
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
               <div className="flex items-center gap-2">
                 <Image src="/character/working.png" alt="" width={36} height={36} unoptimized />
                 <h2 className="text-[20px] font-black text-gray-900">
                   参加中のワークスペース <span className="text-blue-600">{memberships.length}件</span>
                 </h2>
               </div>
+              <CreateWorkspaceButton />
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               {memberships.map((m, i) => (
