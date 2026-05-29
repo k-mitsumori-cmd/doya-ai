@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { createClient, deleteClient } from "@/lib/promane/actions-clients";
 import { Button } from "@/components/promane/ui/button";
 import { Input } from "@/components/promane/ui/input";
 import { Label } from "@/components/promane/ui/label";
@@ -34,48 +33,57 @@ export function ClientActions({ workspaceSlug, clients }: { workspaceSlug: strin
     const form = new FormData(e.currentTarget);
     const name = (form.get("name") as string)?.trim();
     if (!name) {
-      toast.error("会社名は必須です", {
-        icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
-      });
+      toast.error("会社名は必須です");
       setLoading(false);
       return;
     }
     try {
-      await createClient(workspaceSlug, {
-        name,
-        contactName: (form.get("contactName") as string) || undefined,
-        email: (form.get("email") as string) || undefined,
-        phone: (form.get("phone") as string) || undefined,
+      // Server Action → API ルートに変更（Server Components render エラー回避）
+      const res = await fetch("/api/promane/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceSlug,
+          name,
+          contactName: (form.get("contactName") as string) || undefined,
+          email: (form.get("email") as string) || undefined,
+          phone: (form.get("phone") as string) || undefined,
+        }),
       });
-      toast.success("顧客を追加したよ！", {
-        icon: <Image src="/character/love.png" alt="" width={28} height={28} unoptimized />,
-      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const msg = data?.error || `追加に失敗しました（HTTP ${res.status}）`;
+        toast.error(msg, { duration: 6000 });
+        console.error("[promane/client] create failed", res.status, data);
+        return;
+      }
+      toast.success("顧客を追加しました！", { duration: 3000 });
       setOpen(false);
       router.refresh();
     } catch (e: any) {
-      console.error("[promane/client] create failed", e);
-      toast.error(e?.message || "追加に失敗しました", {
-        icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
-        duration: 6000,
-      });
+      console.error("[promane/client] create exception", e);
+      toast.error(e?.message || "通信エラーが発生しました", { duration: 6000 });
     } finally {
-      setLoading(false); // 必ず解除（成功でも失敗でも）
+      setLoading(false);
     }
   }
 
   async function handleDelete(clientId: string, name: string) {
     if (!confirm(`「${name}」を削除しますか？`)) return;
     try {
-      await deleteClient(workspaceSlug, clientId);
-      toast.success("顧客を削除したよ", {
-        icon: <Image src="/character/surprise.png" alt="" width={28} height={28} unoptimized />,
+      const res = await fetch(`/api/promane/clients?workspaceSlug=${encodeURIComponent(workspaceSlug)}&id=${encodeURIComponent(clientId)}`, {
+        method: "DELETE",
       });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data?.error || "削除に失敗しました");
+        return;
+      }
+      toast.success("顧客を削除しました");
       router.refresh();
     } catch (e: any) {
-      console.error("[promane/client] delete failed", e);
-      toast.error(e?.message || "削除に失敗しました", {
-        icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
-      });
+      console.error("[promane/client] delete exception", e);
+      toast.error(e?.message || "通信エラーが発生しました");
     }
   }
 
