@@ -10,6 +10,7 @@ import { formatCurrency } from "@/lib/promane/format";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
+import { useConfirm } from "@/components/promane/confirm-dialog";
 
 type ClientItem = {
   id: string;
@@ -26,6 +27,7 @@ export function ClientActions({ workspaceSlug, clients }: { workspaceSlug: strin
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -69,7 +71,14 @@ export function ClientActions({ workspaceSlug, clients }: { workspaceSlug: strin
   }
 
   async function handleDelete(clientId: string, name: string) {
-    if (!confirm(`「${name}」を削除しますか？`)) return;
+    const ok = await confirm({
+      title: '顧客を削除',
+      message: `「${name}」を削除しますか？\n関連する案件は保持されますが、顧客リンクは解除されます。`,
+      tone: 'danger',
+      confirmLabel: '削除する',
+      icon: '/character/surprise.png',
+    });
+    if (!ok) return;
     try {
       const res = await fetch(`/api/promane/clients?workspaceSlug=${encodeURIComponent(workspaceSlug)}&id=${encodeURIComponent(clientId)}`, {
         method: "DELETE",
@@ -170,6 +179,7 @@ export function ClientActions({ workspaceSlug, clients }: { workspaceSlug: strin
           ))}
         </div>
       )}
+      <ConfirmDialog />
     </>
   );
 }

@@ -11,6 +11,7 @@ import { formatDuration } from "@/lib/promane/format";
 import { Plus, Trash2, Clock } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
+import { useConfirm } from "@/components/promane/confirm-dialog";
 
 type EntryItem = { id: string; taskId: string | null; duration: number; date: string; note: string | null; taskTitle: string | null; projectName: string | null };
 type ProjectWithTasks = { id: string; name: string; tasks: { id: string; title: string }[] };
@@ -22,6 +23,7 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects }: {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const [selectedProject, setSelectedProject] = useState("");
+  const { confirm, ConfirmDialog } = useConfirm();
   const selectedProjectTasks = projects.find((p) => p.id === selectedProject)?.tasks || [];
   const totalMinutes = entries.reduce((sum, e) => sum + e.duration, 0);
 
@@ -57,7 +59,14 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects }: {
   }
 
   async function handleDelete(entryId: string) {
-    if (!confirm("この時間記録を削除しますか？")) return;
+    const ok = await confirm({
+      title: '時間記録を削除',
+      message: 'この時間記録を削除しますか？\n人件費の集計に影響します。',
+      tone: 'danger',
+      confirmLabel: '削除する',
+      icon: '/character/surprise.png',
+    });
+    if (!ok) return;
     try {
       await deleteTimeEntry(workspaceSlug, entryId);
       toast.success("記録を削除したよ");
@@ -168,6 +177,7 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects }: {
           </div>
         )}
       </div>
+      <ConfirmDialog />
     </>
   );
 }

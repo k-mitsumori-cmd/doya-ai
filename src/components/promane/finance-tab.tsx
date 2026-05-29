@@ -11,6 +11,7 @@ import { formatCurrency, formatDuration, EXPENSE_CATEGORY_LABELS } from "@/lib/p
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
+import { useConfirm } from "@/components/promane/confirm-dialog";
 
 type ExpenseItem = {
   id: string;
@@ -45,6 +46,7 @@ export function FinanceTab({
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { confirm, ConfirmDialog } = useConfirm();
 
   async function handleAddExpense(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -88,7 +90,14 @@ export function FinanceTab({
   }
 
   async function handleDeleteExpense(expenseId: string) {
-    if (!confirm("この経費を削除しますか？")) return;
+    const ok = await confirm({
+      title: '経費を削除',
+      message: 'この経費を削除しますか？\nこの操作は取り消せません。',
+      tone: 'danger',
+      confirmLabel: '削除する',
+      icon: '/character/surprise.png',
+    });
+    if (!ok) return;
     try {
       const res = await fetch(
         `/api/promane/expenses?workspaceSlug=${encodeURIComponent(workspaceSlug)}&id=${encodeURIComponent(expenseId)}`,
@@ -174,7 +183,7 @@ export function FinanceTab({
                 </div>
                 <div>
                   <Label className="text-xs">金額</Label>
-                  <Input name="amount" type="number" placeholder="100000" required />
+                  <Input name="amount" type="number" min="0" max="9999999999" step="1" placeholder="100000" required />
                 </div>
               </div>
               <div>
@@ -225,6 +234,7 @@ export function FinanceTab({
           </div>
         </CardContent>
       </Card>
+      <ConfirmDialog />
     </div>
   );
 }

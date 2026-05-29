@@ -117,7 +117,8 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
   }
 
   const handleRevoke = async (id: string) => {
-    if (!confirm('この招待を取り消しますか？')) return
+    // モーダル内のモーダルは複雑なため、シンプルなネイティブ確認を維持
+    if (!window.confirm('この招待を取り消しますか？')) return
     try {
       const res = await fetch(`/api/promane/invitations?id=${id}`, { method: 'DELETE' })
       if (!res.ok) {

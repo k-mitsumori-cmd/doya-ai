@@ -8,6 +8,7 @@ import { Input } from '@/components/promane/ui/input'
 import { X, Save, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import Image from 'next/image'
+import { useConfirm } from '@/components/promane/confirm-dialog'
 
 interface TaskEditModalProps {
   workspaceSlug: string
@@ -58,6 +59,7 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
   const [dueDate, setDueDate] = useState(toDateInput(task.dueDate))
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const { confirm, ConfirmDialog } = useConfirm()
 
   // task が変わったらフォーム再初期化
   useEffect(() => {
@@ -110,7 +112,14 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
   }
 
   const handleDelete = async () => {
-    if (!confirm(`「${task.title}」を削除しますか？`)) return
+    const ok = await confirm({
+      title: 'タスクを削除',
+      message: `「${task.title}」を削除しますか？\nこの操作は取り消せません。`,
+      tone: 'danger',
+      confirmLabel: '削除する',
+      icon: '/character/surprise.png',
+    })
+    if (!ok) return
     setDeleting(true)
     try {
       await deleteTask(workspaceSlug, task.id)
@@ -268,6 +277,7 @@ export function TaskEditModal({ workspaceSlug, open, onClose, task, members }: T
           </div>
         </div>
       </div>
+      <ConfirmDialog />
     </div>
   )
 }

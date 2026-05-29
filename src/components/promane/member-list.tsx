@@ -124,8 +124,19 @@ export function MemberList({
                     <div className="flex items-center gap-1.5">
                       <Input
                         type="number"
+                        min="0"
+                        max="9999999999"
+                        step="100"
                         value={rate}
-                        onChange={(e) => setRate(parseInt(e.target.value) || 0)}
+                        onChange={(e) => {
+                          const v = parseInt(e.target.value);
+                          // 負値は弾く（絶対値化ではなく明示的に「0以上」を要求）
+                          if (Number.isFinite(v) && v < 0) {
+                            toast.error("時間単価は 0以上を入力してください", { duration: 4000 });
+                            return; // state を更新しない（前の値のまま）
+                          }
+                          setRate(!Number.isFinite(v) ? 0 : v);
+                        }}
                         className="h-9 w-28 text-right text-[14px] font-black rounded-xl"
                       />
                       <Button

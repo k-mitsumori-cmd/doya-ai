@@ -5,21 +5,29 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/promane/ui/button'
 import { Wrench } from 'lucide-react'
 import { toast } from 'sonner'
+import { useConfirm } from '@/components/promane/confirm-dialog'
 
 export function RepairDataButton({ workspaceSlug }: { workspaceSlug: string }) {
   const router = useRouter()
   const [running, setRunning] = useState(false)
+  const { confirm, ConfirmDialog } = useConfirm()
 
   async function handleRepair() {
-    if (!confirm(
-      'データ修復を実行しますか？\n\n以下を一括修正します:\n' +
-      '・経費の負額 → 0\n' +
-      '・契約金額の負額 → 0\n' +
-      '・時間記録の負額 → 0\n' +
-      '・時給の負額 → 0\n' +
-      '・タスク/プロジェクトの逆転日付 → 終了日クリア\n\n' +
-      '※ この操作は取り消せません'
-    )) return
+    const ok = await confirm({
+      title: '不正データを修復',
+      message:
+        '以下を一括修正します:\n' +
+        '・経費の負額 → 0\n' +
+        '・契約金額の負額 → 0\n' +
+        '・時間記録の負額 → 0\n' +
+        '・時給の負額 → 0\n' +
+        '・タスク/プロジェクトの逆転日付 → 終了日クリア\n\n' +
+        '※ この操作は取り消せません',
+      tone: 'warning',
+      confirmLabel: '修復を実行',
+      icon: '/character/working.png',
+    })
+    if (!ok) return
 
     setRunning(true)
     try {
@@ -56,14 +64,17 @@ export function RepairDataButton({ workspaceSlug }: { workspaceSlug: string }) {
   }
 
   return (
-    <Button
-      onClick={handleRepair}
-      disabled={running}
-      variant="outline"
-      className="rounded-full font-black text-amber-600 border-2 border-amber-300 hover:bg-amber-50 hover:border-amber-400"
-    >
-      <Wrench className="h-4 w-4 mr-1.5" />
-      {running ? '修復中...' : '🔧 不正データを修復'}
-    </Button>
+    <>
+      <Button
+        onClick={handleRepair}
+        disabled={running}
+        variant="outline"
+        className="rounded-full font-black text-amber-600 border-2 border-amber-300 hover:bg-amber-50 hover:border-amber-400"
+      >
+        <Wrench className="h-4 w-4 mr-1.5" />
+        {running ? '修復中...' : '🔧 不正データを修復'}
+      </Button>
+      <ConfirmDialog />
+    </>
   )
 }
