@@ -84,13 +84,13 @@ async function getChartData(workspaceId: string) {
     monthlyData.set(key, { revenue: 0, cost: 0 });
   }
 
-  // 売上は契約日基準で月次配分（簡易: createdAt月に全額を計上）
+  // 売上は契約日基準で月次配分（負の値はクランプ）
+  const safe = (n: number | null | undefined) => Number.isFinite(n) && (n as number) > 0 ? (n as number) : 0;
   for (const p of projects) {
     if (p.createdAt < sixMonthsAgo) continue;
     const key = `${p.createdAt.getMonth() + 1}月`;
     if (monthlyData.has(key)) {
-      const m = monthlyData.get(key)!;
-      m.revenue += p.contractAmount;
+      monthlyData.get(key)!.revenue += safe(p.contractAmount);
     }
   }
 
@@ -98,7 +98,7 @@ async function getChartData(workspaceId: string) {
   for (const te of timeEntries) {
     const key = `${te.startTime.getMonth() + 1}月`;
     if (monthlyData.has(key)) {
-      const cost = (te.duration / 60) * te.member.hourlyRate;
+      const cost = (safe(te.duration) / 60) * safe(te.member.hourlyRate);
       monthlyData.get(key)!.cost += cost;
     }
   }
@@ -109,7 +109,7 @@ async function getChartData(workspaceId: string) {
       if (e.createdAt < sixMonthsAgo) continue;
       const key = `${e.createdAt.getMonth() + 1}月`;
       if (monthlyData.has(key)) {
-        monthlyData.get(key)!.cost += e.amount;
+        monthlyData.get(key)!.cost += safe(e.amount);
       }
     }
   }
@@ -153,6 +153,15 @@ function relativeTime(date: Date): string {
   return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' });
 }
 
+/**
+ * 値を安全に正規化（NaN/Infinity/負の値を防ぐ）
+ * 不正データがDBに残っていてもダッシュボードがクラッシュしないように
+ */
+function safeNum(v: number | null | undefined): number {
+  if (v == null || !Number.isFinite(v)) return 0;
+  return Math.max(0, v); // 負の値は0にクランプ
+}
+
 async function getDashboardData(workspaceId: string) {
   const projects = await prisma.promaneProject.findMany({
     where: { workspaceId },
@@ -166,19 +175,22 @@ async function getDashboardData(workspaceId: string) {
   let totalCost = 0;
   const activeProjects = projects.filter((p) => !["completed", "cancelled", "draft"].includes(p.status));
   const projectStats = projects.map((project) => {
-    const revenue = project.contractAmount;
+    const revenue = safeNum(project.contractAmount); // 負の契約金額は0扱い
     const doneTasks = project.tasks.filter((t) => t.status === "done").length;
     const totalTasks = project.tasks.length;
     const progress = totalTasks > 0 ? (doneTasks / totalTasks) * 100 : 0;
     const taskIds = project.tasks.map((t) => t.id);
     let laborCost = 0;
     members.forEach((member) => {
-      const memberTime = member.timeEntries.filter((te) => te.taskId && taskIds.includes(te.taskId)).reduce((sum, te) => sum + te.duration, 0);
-      laborCost += (memberTime / 60) * member.hourlyRate;
+      const memberTime = member.timeEntries
+        .filter((te) => te.taskId && taskIds.includes(te.taskId))
+        .reduce((sum, te) => sum + safeNum(te.duration), 0);
+      laborCost += (memberTime / 60) * safeNum(member.hourlyRate);
     });
-    const expenseCost = project.expenses.reduce((sum, e) => sum + e.amount, 0);
+    const expenseCost = project.expenses.reduce((sum, e) => sum + safeNum(e.amount), 0);
     const totalProjectCost = laborCost + expenseCost;
     const profit = revenue - totalProjectCost;
+    // 利益率: 売上0の場合は0 (NaN防止)
     const profitRate = revenue > 0 ? (profit / revenue) * 100 : 0;
     totalRevenue += revenue;
     totalCost += totalProjectCost;
@@ -186,7 +198,14 @@ async function getDashboardData(workspaceId: string) {
   });
   const totalProfit = totalRevenue - totalCost;
   const totalProfitRate = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0;
-  return { projectStats, activeProjects: activeProjects.length, totalRevenue, totalCost, totalProfit, totalProfitRate };
+  return {
+    projectStats,
+    activeProjects: activeProjects.length,
+    totalRevenue: safeNum(totalRevenue),
+    totalCost: safeNum(totalCost),
+    totalProfit, // 損失の場合は負になる可能性あり (これは正しい)
+    totalProfitRate: Number.isFinite(totalProfitRate) ? totalProfitRate : 0,
+  };
 }
 
 const ROLE_LABELS_DASH: Record<string, string> = {

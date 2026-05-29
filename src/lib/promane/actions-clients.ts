@@ -16,15 +16,22 @@ export async function createClient(workspaceSlug: string, data: {
   const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
   if (!workspace) throw new Error("Workspace not found");
 
+  // バリデーション
+  if (!data.name?.trim()) throw new Error("会社名は必須です");
+  if (data.name.length > 200) throw new Error("会社名は200文字以内");
+  if (data.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) {
+    throw new Error("メールアドレスの形式が不正です");
+  }
+
   const client = await prisma.promaneClient.create({
     data: {
       workspaceId: workspace.id,
-      name: data.name,
-      contactName: data.contactName || null,
-      email: data.email || null,
-      phone: data.phone || null,
-      address: data.address || null,
-      note: data.note || null,
+      name: data.name.trim(),
+      contactName: data.contactName?.trim() || null,
+      email: data.email?.trim() || null,
+      phone: data.phone?.trim() || null,
+      address: data.address?.trim() || null,
+      note: data.note?.slice(0, 5000) || null,
     },
   });
 

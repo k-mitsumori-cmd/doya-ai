@@ -10,6 +10,8 @@ import { Textarea } from "@/components/promane/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/promane/ui/select";
 import { Card, CardContent } from "@/components/promane/ui/card";
 import { PROJECT_STATUS_LABELS, BILLING_TYPE_LABELS } from "@/lib/promane/format";
+import { toast } from "sonner";
+import Image from "next/image";
 
 type Client = { id: string; name: string };
 type ProjectData = {
@@ -40,36 +42,77 @@ export function ProjectForm({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [billingType, setBillingType] = useState(project?.billingType || "fixed");
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true);
+    setError(null);
 
     const form = new FormData(e.currentTarget);
+
+    // クライアント側 事前バリデーション
+    const name = (form.get("name") as string)?.trim();
+    if (!name) {
+      setError("案件名を入力してください");
+      return;
+    }
+    const contractAmount = parseInt(form.get("contractAmount") as string) || 0;
+    if (contractAmount < 0) { setError("契約金額は 0以上の値を入力してください"); return; }
+    const estimatedHours = parseInt(form.get("estimatedHours") as string);
+    if (Number.isFinite(estimatedHours) && estimatedHours < 0) { setError("見積工数は 0以上の値を入力してください"); return; }
+    const monthlyAmount = billingType === "monthly" ? (parseInt(form.get("monthlyAmount") as string) || 0) : undefined;
+    if (monthlyAmount != null && monthlyAmount < 0) { setError("月額は 0以上の値を入力してください"); return; }
+    const hourlyRate = billingType === "hourly" ? (parseInt(form.get("hourlyRate") as string) || 0) : undefined;
+    if (hourlyRate != null && hourlyRate < 0) { setError("時給は 0以上の値を入力してください"); return; }
+    const startDate = (form.get("startDate") as string) || undefined;
+    const endDate = (form.get("endDate") as string) || undefined;
+    if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
+      setError("納期は開始日以降を指定してください");
+      return;
+    }
+
+    setLoading(true);
     const data = {
-      name: form.get("name") as string,
+      name,
       clientId: (form.get("clientId") as string) || undefined,
       description: (form.get("description") as string) || undefined,
       status: form.get("status") as string,
       billingType,
-      contractAmount: parseInt(form.get("contractAmount") as string) || 0,
-      monthlyAmount: billingType === "monthly" ? parseInt(form.get("monthlyAmount") as string) || 0 : undefined,
-      hourlyRate: billingType === "hourly" ? parseInt(form.get("hourlyRate") as string) || 0 : undefined,
-      estimatedHours: parseInt(form.get("estimatedHours") as string) || undefined,
-      startDate: (form.get("startDate") as string) || undefined,
-      endDate: (form.get("endDate") as string) || undefined,
+      contractAmount,
+      monthlyAmount,
+      hourlyRate,
+      estimatedHours: Number.isFinite(estimatedHours) ? estimatedHours : undefined,
+      startDate,
+      endDate,
       tags: (form.get("tags") as string) || undefined,
     };
 
-    if (project) {
-      await updateProject(workspaceSlug, project.id, data);
-      router.push(`/promane/${workspaceSlug}/projects/${project.id}`);
-    } else {
-      const created = await createProject(workspaceSlug, data);
-      router.push(`/promane/${workspaceSlug}/projects/${created.id}`);
+    try {
+      if (project) {
+        await updateProject(workspaceSlug, project.id, data);
+        toast.success("プロジェクトを更新しました", {
+          icon: <Image src="/character/success.png" alt="" width={28} height={28} unoptimized />,
+        });
+        router.push(`/promane/${workspaceSlug}/projects/${project.id}`);
+      } else {
+        const created = await createProject(workspaceSlug, data);
+        toast.success("プロジェクトを作成しました", {
+          icon: <Image src="/character/jump.png" alt="" width={28} height={28} unoptimized />,
+        });
+        router.push(`/promane/${workspaceSlug}/projects/${created.id}`);
+      }
+      router.refresh();
+    } catch (e: any) {
+      const msg = e?.message || "保存に失敗しました";
+      setError(msg);
+      toast.error(msg, {
+        icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
+        duration: 6000,
+      });
+      console.error("[promane/project] save failed", e);
+    } finally {
+      setLoading(false);
     }
-    router.refresh();
-    setLoading(false);
   }
 
   const formatDate = (d: Date | null) => d ? new Date(d).toISOString().split("T")[0] : "";
@@ -77,6 +120,12 @@ export function ProjectForm({
   return (
     <Card className="max-w-2xl">
       <CardContent className="pt-6">
+        {error && (
+          <div className="mb-4 p-3 rounded-xl bg-rose-50 border-2 border-rose-200 flex items-start gap-2">
+            <span className="text-rose-500 text-lg flex-shrink-0">⚠️</span>
+            <p className="text-[13px] font-black text-rose-700">{error}</p>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">案件名 *</Label>
@@ -134,27 +183,27 @@ export function ProjectForm({
             </div>
             <div className="space-y-2">
               <Label htmlFor="contractAmount">契約金額（円）</Label>
-              <Input id="contractAmount" name="contractAmount" type="number" defaultValue={project?.contractAmount || ""} />
+              <Input id="contractAmount" name="contractAmount" type="number" min="0" defaultValue={project?.contractAmount || ""} />
             </div>
           </div>
 
           {billingType === "monthly" && (
             <div className="space-y-2">
               <Label htmlFor="monthlyAmount">月額金額（円）</Label>
-              <Input id="monthlyAmount" name="monthlyAmount" type="number" defaultValue={project?.monthlyAmount || ""} />
+              <Input id="monthlyAmount" name="monthlyAmount" type="number" min="0" defaultValue={project?.monthlyAmount || ""} />
             </div>
           )}
 
           {billingType === "hourly" && (
             <div className="space-y-2">
               <Label htmlFor="hourlyRate">案件時間単価（円/h）</Label>
-              <Input id="hourlyRate" name="hourlyRate" type="number" defaultValue={project?.hourlyRate || ""} />
+              <Input id="hourlyRate" name="hourlyRate" type="number" min="0" defaultValue={project?.hourlyRate || ""} />
             </div>
           )}
 
           <div className="space-y-2">
             <Label htmlFor="estimatedHours">見積工数（時間）</Label>
-            <Input id="estimatedHours" name="estimatedHours" type="number" defaultValue={project?.estimatedHours || ""} />
+            <Input id="estimatedHours" name="estimatedHours" type="number" min="0" defaultValue={project?.estimatedHours || ""} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

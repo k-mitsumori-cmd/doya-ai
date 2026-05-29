@@ -32,27 +32,51 @@ export function ClientActions({ workspaceSlug, clients }: { workspaceSlug: strin
     e.preventDefault();
     setLoading(true);
     const form = new FormData(e.currentTarget);
-    await createClient(workspaceSlug, {
-      name: form.get("name") as string,
-      contactName: (form.get("contactName") as string) || undefined,
-      email: (form.get("email") as string) || undefined,
-      phone: (form.get("phone") as string) || undefined,
-    });
-    toast.success("顧客を追加したよ！", {
-      icon: <Image src="/character/love.png" alt="" width={28} height={28} unoptimized />,
-    });
-    setOpen(false);
-    setLoading(false);
-    router.refresh();
+    const name = (form.get("name") as string)?.trim();
+    if (!name) {
+      toast.error("会社名は必須です", {
+        icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
+      });
+      setLoading(false);
+      return;
+    }
+    try {
+      await createClient(workspaceSlug, {
+        name,
+        contactName: (form.get("contactName") as string) || undefined,
+        email: (form.get("email") as string) || undefined,
+        phone: (form.get("phone") as string) || undefined,
+      });
+      toast.success("顧客を追加したよ！", {
+        icon: <Image src="/character/love.png" alt="" width={28} height={28} unoptimized />,
+      });
+      setOpen(false);
+      router.refresh();
+    } catch (e: any) {
+      console.error("[promane/client] create failed", e);
+      toast.error(e?.message || "追加に失敗しました", {
+        icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
+        duration: 6000,
+      });
+    } finally {
+      setLoading(false); // 必ず解除（成功でも失敗でも）
+    }
   }
 
   async function handleDelete(clientId: string, name: string) {
     if (!confirm(`「${name}」を削除しますか？`)) return;
-    await deleteClient(workspaceSlug, clientId);
-    toast.success("顧客を削除したよ", {
-      icon: <Image src="/character/surprise.png" alt="" width={28} height={28} unoptimized />,
-    });
-    router.refresh();
+    try {
+      await deleteClient(workspaceSlug, clientId);
+      toast.success("顧客を削除したよ", {
+        icon: <Image src="/character/surprise.png" alt="" width={28} height={28} unoptimized />,
+      });
+      router.refresh();
+    } catch (e: any) {
+      console.error("[promane/client] delete failed", e);
+      toast.error(e?.message || "削除に失敗しました", {
+        icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
+      });
+    }
   }
 
   return (

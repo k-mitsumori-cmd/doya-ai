@@ -1130,12 +1130,12 @@ export const SERVICES: Service[] = [
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_HR_ENTERPRISE_PRICE_ID,
       },
     },
-    status: 'active',
+    status: 'coming_soon',
     category: 'other',
     order: 9,
     requiresAuth: true,
     isNew: true,
-    badge: 'NEW',
+    badge: '近日公開',
   },
 
   // ----------------------------------------
