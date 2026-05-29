@@ -34,14 +34,16 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
   return (
     <aside className="flex h-screen w-[240px] flex-col bg-white border-r border-gray-100">
       {/* ロゴ */}
-      <Link href={basePath} className="flex items-center gap-2.5 px-4 py-5 hover:bg-gray-50/50 transition-colors">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 via-violet-500 to-purple-600 text-base font-black text-white shadow-md">
-          P
-        </div>
-        <div>
-          <p className="text-[15px] font-black tracking-tight text-gray-900 leading-tight">ドヤプロマネ</p>
-          <p className="text-[10px] text-gray-400 font-bold leading-tight">プロジェクト管理</p>
-        </div>
+      <Link href={basePath} className="block px-3 py-3 hover:bg-gray-50/50 transition-colors">
+        <Image
+          src="/promane/logo.png"
+          alt="ドヤプロマネ"
+          width={240}
+          height={96}
+          className="w-full h-auto"
+          unoptimized
+          priority
+        />
       </Link>
 
       {/* ナビ */}

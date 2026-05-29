@@ -110,7 +110,15 @@ export default function PromaneInvitePage() {
       <Toaster position="top-center" />
       <div className="bg-white rounded-3xl border border-blue-200 shadow-2xl p-10 max-w-md w-full space-y-6">
         <div className="text-center space-y-3">
-          <Image src="/character/hello.png" alt="" width={120} height={120} className="mx-auto animate-bounce" unoptimized />
+          <Image
+            src="/promane/logo.png"
+            alt="ドヤプロマネ"
+            width={400}
+            height={160}
+            className="w-full max-w-[300px] mx-auto h-auto drop-shadow-xl"
+            unoptimized
+            priority
+          />
           <h1 className="text-2xl font-black text-[#0a1530]">ワークスペースに招待されました</h1>
           <p className="text-sm text-slate-500">ドヤプロマネで一緒に仕事しましょう</p>
         </div>

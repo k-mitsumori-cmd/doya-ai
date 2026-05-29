@@ -76,14 +76,23 @@ export default async function PromaneEntryPage({
   // 複数 or 招待あり → セレクターUI
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-violet-50 p-6">
-      <div className="max-w-4xl mx-auto pt-8">
+      <div className="max-w-4xl mx-auto pt-6">
+        {/* ロゴ */}
+        <div className="flex justify-center mb-6 animate-slide-up">
+          <Image
+            src="/promane/logo.png"
+            alt="ドヤプロマネ"
+            width={480}
+            height={192}
+            className="w-full max-w-[420px] h-auto drop-shadow-xl"
+            unoptimized
+            priority
+          />
+        </div>
         {/* Header */}
-        <div className="flex items-center gap-5 mb-10 animate-slide-up">
-          <Image src="/character/hello.png" alt="" width={100} height={100} className="animate-bounce-in drop-shadow-xl" unoptimized />
-          <div>
-            <h1 className="text-[36px] font-black text-gray-900 tracking-tight">どのワークスペースで作業する？</h1>
-            <p className="text-[16px] text-gray-500 font-bold mt-1">参加中のワークスペース・招待を確認しよう 👇</p>
-          </div>
+        <div className="text-center mb-10 animate-slide-up">
+          <h1 className="text-[28px] font-black text-gray-900 tracking-tight">どのワークスペースで作業する？</h1>
+          <p className="text-[14px] text-gray-500 font-bold mt-2">参加中のワークスペース・招待を確認しよう 👇</p>
         </div>
 
         {/* 招待 (pending invitations) */}
