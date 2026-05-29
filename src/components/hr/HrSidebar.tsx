@@ -1,248 +1,231 @@
 'use client'
 
-import { useState } from 'react'
-import { usePathname } from 'next/navigation'
+import React, { memo, useState } from 'react'
 import Link from 'next/link'
-import { motion, AnimatePresence } from 'framer-motion'
+import { usePathname } from 'next/navigation'
+import {
+  Users,
+  Users2,
+  Network,
+  ClipboardList,
+  MessageSquare,
+  Settings,
+  CreditCard,
+  Tag,
+  UserPlus,
+  LayoutDashboard,
+} from 'lucide-react'
+import { useSession, signOut } from 'next-auth/react'
+import { hrTheme } from '@/components/sidebar/themes'
+import {
+  SidebarShell,
+  SidebarLogoSection,
+  SidebarNavLink,
+  SidebarSectionTitle,
+  SidebarCollapseToggle,
+  SidebarBrandingFooter,
+  SidebarHelpContact,
+  SidebarUserProfile,
+  SidebarLogoutDialog,
+  useSidebarState,
+} from '@/components/sidebar'
+import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 
-interface HrSidebarProps {
-  userName?: string
-  userImage?: string
-  plan?: string
+const HR_MAIN_NAV: NavItem[] = [
+  { href: '/hr/employees/new', label: '従業員を追加', icon: UserPlus, hot: true },
+  { href: '/hr/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
+  { href: '/hr/employees', label: '従業員', icon: Users },
+  { href: '/hr/org-chart', label: '組織図', icon: Network },
+  { href: '/hr/evaluations', label: '評価', icon: ClipboardList },
+  { href: '/hr/one-on-one', label: '1on1', icon: MessageSquare },
+]
+
+const HR_ADMIN_NAV: NavItem[] = [
+  { href: '/hr/settings', label: '設定', icon: Settings },
+  { href: '/hr/settings/billing', label: '現在のプラン', icon: CreditCard },
+  { href: '/hr/pricing', label: '料金プラン', icon: Tag },
+]
+
+interface HrSidebarProps extends SidebarProps {
   employeeCount?: number
   employeeLimit?: number
 }
 
-const ICON_COLORS: Record<string, string> = {
-  dashboard: 'text-blue-600',
-  people: 'text-green-600',
-  account_tree: 'text-amber-600',
-  assessment: 'text-red-500',
-  forum: 'text-purple-600',
-  settings: 'text-gray-500',
-  credit_card: 'text-indigo-600',
-  payments: 'text-teal-600',
-}
-
-const NAV_ITEMS = [
-  { href: '/hr/dashboard', icon: 'dashboard', label: 'ダッシュボード' },
-  { href: '/hr/employees', icon: 'people', label: '従業員' },
-  { href: '/hr/org-chart', icon: 'account_tree', label: '組織図' },
-  { href: '/hr/evaluations', icon: 'assessment', label: '評価' },
-  { href: '/hr/one-on-one', icon: 'forum', label: '1on1' },
-]
-
-const SUPPORT_ITEMS = [
-  { href: '/hr/settings', icon: 'settings', label: '設定' },
-  { href: '/hr/settings/billing', icon: 'credit_card', label: '現在のプラン' },
-  { href: '/hr/pricing', icon: 'payments', label: '料金プラン' },
-]
-
-export default function HrSidebar({
-  userName = 'ユーザー',
-  userImage,
-  plan = 'Free',
+function HrSidebarImpl({
+  isCollapsed: controlledIsCollapsed,
+  onToggle,
+  forceExpanded,
+  isMobile,
   employeeCount = 0,
   employeeLimit = 5,
 }: HrSidebarProps) {
   const pathname = usePathname()
-  const [isCollapsed, setIsCollapsed] = useState(false)
-  const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const { data: session } = useSession()
+  const { isCollapsed, showLabel, toggle } = useSidebarState({
+    controlledIsCollapsed,
+    onToggle,
+    forceExpanded,
+    isMobile,
+  })
+  const isLoggedIn = !!session?.user
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
+  const planLabel = (() => {
+    if (!isLoggedIn) return 'GUEST'
+    const p = String((session?.user as any)?.plan || 'FREE').toUpperCase()
+    if (p === 'ENTERPRISE') return 'ENTERPRISE'
+    if (p === 'PRO' || p === 'BUSINESS') return 'PRO'
+    if (p === 'STARTER' || p === 'BASIC' || p === 'LIGHT') return 'STARTER'
+    return 'FREE'
+  })()
 
   const isActive = (href: string) => {
-    if (href === '/hr/dashboard') {
-      return pathname === '/hr/dashboard'
+    if (href === '/hr/dashboard') return pathname === '/hr/dashboard'
+    if (href === '/hr/settings') return pathname === '/hr/settings'
+    // 「従業員」は /hr/employees とその詳細のみ。「従業員を追加」(/hr/employees/new) では光らせない
+    if (href === '/hr/employees') {
+      return (
+        pathname === '/hr/employees' ||
+        ((pathname?.startsWith('/hr/employees/') ?? false) && pathname !== '/hr/employees/new')
+      )
     }
-    return pathname?.startsWith(href)
+    return pathname?.startsWith(href) ?? false
   }
 
-  const sidebar = (
-    <div className={`flex flex-col h-full bg-gray-50 ${isCollapsed ? 'w-16' : 'w-64'} transition-all duration-300`}>
-      {/* Logo */}
-      <div className="p-4 mb-1">
-        <Link href="/hr/dashboard" className="flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-400 via-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
-            <span className="material-symbols-outlined text-2xl">groups</span>
-          </div>
-          {!isCollapsed && (
-            <div>
-              <h1 className="font-black text-gray-900 text-base leading-tight">ドヤHR</h1>
-              <p className="text-[10px] text-gray-500 font-bold tracking-wider">タレントマネジメント</p>
-            </div>
-          )}
-        </Link>
-      </div>
+  const confirmLogout = async () => {
+    if (isLoggingOut) return
+    setIsLoggingOut(true)
+    try {
+      await signOut({ callbackUrl: '/hr?loggedOut=1' })
+    } finally {
+      setIsLoggingOut(false)
+      setIsLogoutDialogOpen(false)
+    }
+  }
 
-      {/* Navigation */}
-      <nav className="flex-1 px-3 space-y-1">
-        {NAV_ITEMS.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`flex items-center gap-3 px-4 py-3 rounded-full text-base transition-all ${
-              isActive(item.href)
-                ? 'bg-blue-100 text-blue-700 font-black'
-                : 'text-gray-700 font-bold hover:bg-gray-100'
-            }`}
-          >
-            <span className={`material-symbols-outlined text-2xl ${ICON_COLORS[item.icon] || 'text-gray-500'}`}>
-              {item.icon}
-            </span>
-            {!isCollapsed && <span>{item.label}</span>}
-          </Link>
-        ))}
-
-        {/* Support Section */}
-        <div className="pt-4 mt-4 border-t border-gray-200">
-          <p className={`px-4 mb-2 text-xs font-bold text-gray-500 uppercase tracking-wider ${isCollapsed ? 'hidden' : ''}`}>
-            管理
-          </p>
-          {SUPPORT_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-full text-base transition-all ${
-                isActive(item.href)
-                  ? 'bg-blue-100 text-blue-700 font-black'
-                  : 'text-gray-700 font-bold hover:bg-gray-100'
-              }`}
-            >
-              <span className={`material-symbols-outlined text-2xl ${ICON_COLORS[item.icon] || 'text-gray-500'}`}>
-                {item.icon}
-              </span>
-              {!isCollapsed && <span>{item.label}</span>}
-            </Link>
-          ))}
-        </div>
-      </nav>
-
-      {/* Quick Action: Add Employee */}
-      {!isCollapsed && (
-        <div className="px-3 mb-2">
-          <Link
-            href="/hr/employees/new"
-            className="flex items-center justify-center gap-2 w-full py-3 bg-blue-600 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all"
-          >
-            <span className="material-symbols-outlined text-lg">person_add</span>
-            従業員を追加
-          </Link>
-        </div>
-      )}
-      {isCollapsed && (
-        <div className="px-3 mb-2 flex justify-center">
-          <Link
-            href="/hr/employees/new"
-            className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-md hover:shadow-lg hover:bg-blue-700 transition-all"
-            title="従業員を追加"
-          >
-            <span className="material-symbols-outlined text-lg">person_add</span>
-          </Link>
-        </div>
-      )}
-
-      {/* Employee Count */}
-      {!isCollapsed && (
-        <div className="p-4 mx-3 mb-3 bg-white rounded-2xl shadow-sm">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">従業員数</span>
-            <span className="text-lg font-black text-blue-600">
-              {employeeCount}/{employeeLimit === -1 ? '∞' : employeeLimit}
-            </span>
-          </div>
-          <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden mb-3">
-            <motion.div
-              className="h-full bg-gradient-to-r from-blue-500 to-green-500 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${employeeLimit === -1 ? 10 : (employeeCount / Math.max(employeeLimit, 1)) * 100}%` }}
-              transition={{ duration: 0.8, ease: 'easeOut' }}
-            />
-          </div>
-          <Link
-            href="/hr/pricing"
-            className="block w-full py-2.5 text-center text-sm font-bold text-white bg-blue-600 rounded-full hover:bg-blue-700 hover:shadow-lg transition-all"
-          >
-            プランをアップグレード
-          </Link>
-        </div>
-      )}
-
-      {/* Tool Switcher */}
-      <div className="px-3 pb-2">
-        <ToolSwitcherMenu currentService="hr" showLabel={!isCollapsed} isCollapsed={isCollapsed} />
-      </div>
-
-      {/* User */}
-      <div className="p-3 border-t border-gray-200">
-        <div className="flex items-center gap-3 px-2">
-          {userImage ? (
-            <img src={userImage} alt={userName} className="w-9 h-9 rounded-full object-cover" />
-          ) : (
-            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-bold">
-              {userName[0]}
-            </div>
-          )}
-          {!isCollapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-base font-bold text-gray-900 truncate">{userName}</p>
-              <p className="text-xs font-bold text-gray-500">{plan} プラン</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Powered by */}
-      {!isCollapsed && (
-        <div className="px-4 pb-3">
-          <Link href="/" className="flex items-center justify-center gap-1 text-[10px] text-gray-400 hover:text-gray-500 transition-colors">
-            Powered by <span className="font-black text-[#7f19e6]">ドヤAI</span>
-          </Link>
-        </div>
-      )}
-    </div>
-  )
+  // usage API は無制限プランを -1 ではなく 999 で返すため、どちらも無制限として扱う
+  const isUnlimited = employeeLimit === -1 || employeeLimit >= 999
+  const usagePercent = isUnlimited
+    ? 12
+    : Math.min(100, Math.round((employeeCount / Math.max(employeeLimit, 1)) * 100))
+  const nearLimit = !isUnlimited && employeeCount >= employeeLimit
 
   return (
     <>
-      {/* Mobile hamburger */}
-      <button
-        onClick={() => setIsMobileOpen(true)}
-        aria-label="メニューを開く"
-        className="lg:hidden fixed top-4 left-4 z-40 p-2 bg-white rounded-full shadow-md"
-      >
-        <span className="material-symbols-outlined text-gray-600">menu</span>
-      </button>
+      <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={hrTheme}>
+        <SidebarLogoSection
+          icon={Users2}
+          title="ドヤHR"
+          subtitle="タレントマネジメント"
+          showLabel={showLabel}
+        />
 
-      {/* Mobile overlay */}
-      <AnimatePresence>
-        {isMobileOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="lg:hidden fixed inset-0 bg-black/30 z-40"
-              role="button"
-              aria-label="メニューを閉じる"
-              onClick={() => setIsMobileOpen(false)}
-            />
-            <motion.div
-              initial={{ x: -280 }}
-              animate={{ x: 0 }}
-              exit={{ x: -280 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="lg:hidden fixed left-0 top-0 bottom-0 z-50"
-            >
-              {sidebar}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <nav className="py-4 sm:py-6 px-3 space-y-1">
+            <div className="space-y-1">
+              {HR_MAIN_NAV.map((item) => (
+                <SidebarNavLink
+                  key={item.href}
+                  item={item}
+                  isActive={isActive(item.href)}
+                  showLabel={showLabel}
+                  theme={hrTheme}
+                  layoutId="hrActiveIndicator"
+                />
+              ))}
+            </div>
 
-      {/* Desktop sidebar */}
-      <div className="hidden lg:block h-screen sticky top-0">
-        {sidebar}
-      </div>
+            <div className="pt-4 mt-3 border-t border-white/10 space-y-1">
+              <SidebarSectionTitle title="管理" isCollapsed={isCollapsed} theme={hrTheme} />
+              {HR_ADMIN_NAV.map((item) => (
+                <SidebarNavLink
+                  key={item.href}
+                  item={item}
+                  isActive={isActive(item.href)}
+                  showLabel={showLabel}
+                  theme={hrTheme}
+                  layoutId="hrActiveIndicator"
+                />
+              ))}
+            </div>
+          </nav>
+
+          {/* 従業員数 / プラン案内バナー */}
+          {(isMobile || !isCollapsed) && (
+            <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-[11px] font-black text-white/90 flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5" />
+                  従業員数
+                </span>
+                <span className="text-sm font-black text-white">
+                  {employeeCount}
+                  <span className="text-white/60 text-[11px]"> / {isUnlimited ? '∞' : employeeLimit}</span>
+                </span>
+              </div>
+              <div className="w-full h-2 bg-white/15 rounded-full overflow-hidden mb-3">
+                <div
+                  className={`h-full rounded-full transition-all duration-700 ${nearLimit ? 'bg-amber-300' : 'bg-white'}`}
+                  style={{ width: `${usagePercent}%` }}
+                />
+              </div>
+              <Link
+                href="/hr/pricing"
+                className="block w-full py-2 bg-white text-blue-700 text-[11px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md text-center"
+              >
+                {planLabel === 'PRO' || planLabel === 'ENTERPRISE'
+                  ? 'プランを見る'
+                  : nearLimit
+                    ? '上限です・アップグレード'
+                    : 'プランをアップグレード'}
+              </Link>
+            </div>
+          )}
+        </div>
+
+        <ToolSwitcherMenu
+          currentService="hr"
+          showLabel={showLabel}
+          isCollapsed={isCollapsed}
+          className="px-3 sm:px-4 pb-2"
+        />
+        <SidebarHelpContact showLabel={showLabel} isCollapsed={isCollapsed} isMobile={isMobile} />
+        <SidebarUserProfile
+          session={session}
+          isLoggedIn={isLoggedIn}
+          showLabel={showLabel}
+          isCollapsed={isCollapsed}
+          isMobile={isMobile}
+          theme={hrTheme}
+          settingsHref="/hr/settings"
+          loginCallbackUrl="/hr/dashboard"
+          onLogout={() => setIsLogoutDialogOpen(true)}
+          renderExtra={() => (
+            <p className="text-[11px] font-bold text-white/60 truncate">
+              {planLabel === 'GUEST' ? 'ゲスト' : `${planLabel} プラン`}
+            </p>
+          )}
+        />
+        <SidebarCollapseToggle
+          isCollapsed={isCollapsed}
+          onToggle={toggle}
+          isMobile={isMobile}
+          theme={hrTheme}
+        />
+        <SidebarBrandingFooter brandName="ドヤHR" isCollapsed={isCollapsed} theme={hrTheme} />
+      </SidebarShell>
+
+      <SidebarLogoutDialog
+        isOpen={isLogoutDialogOpen}
+        isLoggingOut={isLoggingOut}
+        onClose={() => setIsLogoutDialogOpen(false)}
+        onConfirm={() => void confirmLogout()}
+        theme={hrTheme}
+      />
     </>
   )
 }
+
+export default memo(HrSidebarImpl)

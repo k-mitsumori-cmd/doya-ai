@@ -160,6 +160,23 @@ export const movieTheme: SidebarTheme = {
   zapColor: 'text-rose-400',
 }
 
+// ドヤHR（タレントマネジメント / Sky→Blue→Indigo 系）
+export const hrTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-sky-600 via-blue-700 to-indigo-800',
+  navText: 'text-blue-100/80',
+  navTextIcon: 'text-sky-200/75',
+  sectionText: 'text-sky-200/55',
+  toggleText: 'text-blue-700',
+  toggleHover: 'hover:bg-blue-50',
+  brandingText: 'text-blue-100/35',
+  profileBg: 'bg-indigo-900/30',
+  avatarBg: 'bg-sky-500',
+  loginText: 'text-blue-700',
+  loginHover: 'hover:bg-blue-50',
+  aiBubbleBg: 'bg-blue-600',
+  zapColor: 'text-blue-600 fill-blue-600',
+}
+
 // ドヤ広告シミュレーションAI（デジタル庁公式 Blue 系）
 export const adsimTheme: SidebarTheme = {
   bgGradient: 'bg-gradient-to-b from-[#000060] via-[#0017C1] to-[#1F3CFF]',

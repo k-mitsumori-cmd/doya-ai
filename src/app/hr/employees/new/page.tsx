@@ -1,5 +1,7 @@
 'use client'
 
+import toast from 'react-hot-toast'
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
@@ -21,10 +23,9 @@ export default function NewEmployeePage() {
   const router = useRouter()
   const [departments, setDepartments] = useState<Department[]>([])
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [submitted, setSubmitted] = useState(false)
 
   const [form, setForm] = useState({
     lastName: '',
@@ -68,7 +69,6 @@ export default function NewEmployeePage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
-    setError(null)
 
     try {
       // Validate required fields
@@ -106,13 +106,13 @@ export default function NewEmployeePage() {
         throw new Error(errData.error || '従業員の登録に失敗しました')
       }
 
-      setSuccessMessage('従業員を登録しました')
-      setTimeout(() => setSuccessMessage(null), 3000)
+      toast.success('従業員を登録しました')
+      setSubmitted(true)
       setTimeout(() => {
         router.push('/hr/employees')
-      }, 1500)
+      }, 1200)
     } catch (e: any) {
-      setError(e.message)
+      toast.error(e.message)
     } finally {
       setSaving(false)
     }
@@ -383,32 +383,6 @@ export default function NewEmployeePage() {
               </div>
             </div>
 
-            {/* Success Toast */}
-            {successMessage && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 bg-emerald-50 rounded-2xl text-sm text-emerald-700 flex items-center gap-2"
-              >
-                <span className="material-symbols-outlined text-lg">check_circle</span>
-                {successMessage}
-                <img
-                  src="/hr/characters/jump_大喜び.png"
-                  alt="白くまキャラクター"
-                  className="w-12 inline-block ml-1"
-                />
-              </motion.div>
-            )}
-
-            {/* Error */}
-            {error && (
-              <div className="p-4 bg-red-50 rounded-2xl text-sm text-red-700">
-                <span className="material-symbols-outlined text-lg align-middle mr-1">error</span>
-                {error}
-                <span className="text-red-500 ml-1">もう一度お試しください。</span>
-              </div>
-            )}
-
             {/* Actions (desktop) */}
             <div className="hidden sm:flex justify-end gap-3 pt-4">
               <button
@@ -420,7 +394,7 @@ export default function NewEmployeePage() {
               </button>
               <button
                 type="submit"
-                disabled={saving || !!successMessage}
+                disabled={saving || submitted}
                 className="flex items-center gap-2 px-8 py-3.5 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all disabled:opacity-50"
               >
                 <span className="material-symbols-outlined text-lg">save</span>
@@ -440,7 +414,7 @@ export default function NewEmployeePage() {
             </button>
             <button
               type="submit"
-              disabled={saving || !!successMessage}
+              disabled={saving || submitted}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 transition-all disabled:opacity-50"
             >
               <span className="material-symbols-outlined text-lg">save</span>

@@ -1,5 +1,7 @@
 'use client'
 
+import toast from 'react-hot-toast'
+
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AiInsightPanel from './AiInsightPanel'
@@ -70,7 +72,6 @@ export default function OneOnOneForm({
   const [aiResult, setAiResult] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   // Agenda handlers
   const addAgenda = () => {
@@ -129,7 +130,6 @@ export default function OneOnOneForm({
 
   const handleSave = async () => {
     setSaving(true)
-    setError(null)
     try {
       const payload = {
         recordId,
@@ -154,7 +154,7 @@ export default function OneOnOneForm({
         if (!res.ok) throw new Error('保存に失敗しました')
       }
     } catch (e: any) {
-      setError(e.message)
+      toast.error(e.message)
     } finally {
       setSaving(false)
     }
@@ -406,14 +406,6 @@ export default function OneOnOneForm({
           {(aiLoading || aiResult) && (
             <AiInsightPanel loading={aiLoading} content={aiResult || ''} />
           )}
-        </div>
-      )}
-
-      {/* Error */}
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-          <span className="material-symbols-outlined text-lg align-middle mr-1">error</span>
-          {error}
         </div>
       )}
 

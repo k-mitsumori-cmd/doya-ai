@@ -1,5 +1,7 @@
 'use client'
 
+import toast from 'react-hot-toast'
+
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
@@ -18,7 +20,6 @@ interface EvaluationPeriod {
 export default function EvaluationsPage() {
   const [periods, setPeriods] = useState<EvaluationPeriod[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newPeriod, setNewPeriod] = useState({ name: '', startDate: '', endDate: '' })
   const [creating, setCreating] = useState(false)
@@ -54,7 +55,7 @@ export default function EvaluationsPage() {
       setNewPeriod({ name: '', startDate: '', endDate: '' })
       fetchPeriods()
     } catch (e: any) {
-      setError(e.message)
+      toast.error(e.message)
     } finally {
       setCreating(false)
     }
@@ -84,15 +85,6 @@ export default function EvaluationsPage() {
             評価期間を作成
           </button>
         </div>
-
-        {/* Error */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 rounded-2xl text-sm text-red-700">
-            <span className="material-symbols-outlined text-lg align-middle mr-1">error</span>
-            {error}
-            <span className="text-red-500 ml-1">もう一度お試しください。</span>
-          </div>
-        )}
 
         {/* Periods List */}
         {loading ? (

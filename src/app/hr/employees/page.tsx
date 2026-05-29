@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
 import EmployeeGrid from '@/components/hr/EmployeeGrid'
 import { Employee } from '@/components/hr/EmployeeCard'
+import CsvImportModal from '@/components/hr/CsvImportModal'
 
 interface Department {
   id: string
@@ -17,30 +19,31 @@ export default function EmployeesPage() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [sortKey, setSortKey] = useState<SortKey>('name')
+  const [showImport, setShowImport] = useState(false)
+
+  async function fetchData() {
+    try {
+      const [empRes, deptRes] = await Promise.all([
+        fetch('/api/hr/employees'),
+        fetch('/api/hr/departments'),
+      ])
+      if (empRes.ok) {
+        const empData = await empRes.json()
+        setEmployees(empData.items ?? empData.employees ?? [])
+      }
+      if (deptRes.ok) {
+        const deptData = await deptRes.json()
+        setDepartments(deptData.flat ?? deptData.departments ?? [])
+      }
+    } catch (e: any) {
+      toast.error('データの取得に失敗しました')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const [empRes, deptRes] = await Promise.all([
-          fetch('/api/hr/employees'),
-          fetch('/api/hr/departments'),
-        ])
-        if (empRes.ok) {
-          const empData = await empRes.json()
-          setEmployees(empData.items ?? empData.employees ?? [])
-        }
-        if (deptRes.ok) {
-          const deptData = await deptRes.json()
-          setDepartments(deptData.flat ?? deptData.departments ?? [])
-        }
-      } catch (e: any) {
-        setError('データの取得に失敗しました')
-      } finally {
-        setLoading(false)
-      }
-    }
     fetchData()
   }, [])
 
@@ -70,13 +73,22 @@ export default function EmployeesPage() {
           </h1>
           <p className="text-sm text-slate-500 mt-1">組織のメンバーを管理</p>
         </div>
-        <Link
-          href="/hr/employees/new"
-          className="flex items-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all"
-        >
-          <span className="material-symbols-outlined text-lg">person_add</span>
-          従業員を追加
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowImport(true)}
+            className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 text-slate-700 rounded-full text-base font-bold shadow-sm hover:shadow-md hover:border-blue-400 hover:text-blue-600 transition-all"
+          >
+            <span className="material-symbols-outlined text-lg">upload_file</span>
+            CSV一括登録
+          </button>
+          <Link
+            href="/hr/employees/new"
+            className="flex items-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all"
+          >
+            <span className="material-symbols-outlined text-lg">person_add</span>
+            従業員を追加
+          </Link>
+        </div>
       </div>
 
       {/* Sort Controls */}
@@ -103,15 +115,6 @@ export default function EmployeesPage() {
               {opt.label}
             </button>
           ))}
-        </div>
-      )}
-
-      {/* Error */}
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-          <span className="material-symbols-outlined text-lg align-middle mr-1">error</span>
-          {error}
-          <span className="text-red-500 ml-1">もう一度お試しください。</span>
         </div>
       )}
 
@@ -157,18 +160,26 @@ export default function EmployeesPage() {
               </Link>
             </motion.div>
             <button
-              disabled
-              className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-500 rounded-xl text-sm font-bold cursor-not-allowed opacity-60"
-              title="準備中"
+              onClick={() => setShowImport(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold hover:border-blue-400 hover:text-blue-600 transition-all"
             >
               <span className="material-symbols-outlined text-lg">upload_file</span>
-              CSVで一括登録（準備中）
+              CSVで一括登録
             </button>
           </div>
         </motion.div>
       ) : (
         <EmployeeGrid employees={sortedEmployees} departments={departments} />
       )}
+
+      <CsvImportModal
+        open={showImport}
+        onClose={() => setShowImport(false)}
+        onImported={() => {
+          setLoading(true)
+          fetchData()
+        }}
+      />
     </div>
   )
 }

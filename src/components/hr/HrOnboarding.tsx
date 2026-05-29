@@ -1,5 +1,7 @@
 'use client'
 
+import toast from 'react-hot-toast'
+
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
@@ -33,15 +35,13 @@ export default function HrOnboarding() {
   const [industry, setIndustry] = useState('')
   const [size, setSize] = useState('')
   const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
 
   const handleCreate = async () => {
     if (!orgName.trim()) {
-      setError('組織名を入力してください')
+      toast.error('組織名を入力してください')
       return
     }
     setLoading(true)
-    setError('')
 
     try {
       const res = await fetch('/api/hr/organization', {
@@ -56,7 +56,7 @@ export default function HrOnboarding() {
       router.refresh()
       window.location.reload()
     } catch (e: any) {
-      setError(e.message)
+      toast.error(e.message)
     } finally {
       setLoading(false)
     }
@@ -216,13 +216,6 @@ export default function HrOnboarding() {
                   </button>
                 ))}
               </div>
-
-              {error && (
-                <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-2xl text-sm text-red-600 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-red-500 text-lg">error</span>
-                  {error}
-                </div>
-              )}
 
               <div className="flex gap-3">
                 <motion.button

@@ -3,6 +3,8 @@
 import { useSession } from 'next-auth/react'
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Menu, Users2 } from 'lucide-react'
 import HrSidebar from './HrSidebar'
 import HrOnboarding from './HrOnboarding'
 
@@ -15,6 +17,8 @@ export default function HrLayout({ children }: HrLayoutProps) {
   const pathname = usePathname()
   const [usage, setUsage] = useState({ employeeCount: 0, employeeLimit: 5 })
   const [hasOrg, setHasOrg] = useState<boolean | null>(null)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const isLandingPage = pathname === '/hr'
   const isPricingPage = pathname === '/hr/pricing'
@@ -43,6 +47,11 @@ export default function HrLayout({ children }: HrLayoutProps) {
       setHasOrg(false)
     }
   }, [session, status])
+
+  // ルートを変えたらモバイルメニューを閉じる
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [pathname])
 
   if (isPublicPage) {
     return <>{children}</>
@@ -84,26 +93,78 @@ export default function HrLayout({ children }: HrLayoutProps) {
     return <HrOnboarding />
   }
 
-  const plan = String((session?.user as any)?.plan || 'FREE').toUpperCase()
-  const planLabel =
-    plan === 'PRO'
-      ? 'Pro'
-      : plan === 'STARTER'
-        ? 'Starter'
-        : plan === 'ENTERPRISE'
-          ? 'Enterprise'
-          : 'Free'
-
   return (
-    <div className="flex min-h-screen bg-slate-50">
-      <HrSidebar
-        userName={session?.user?.name || 'ゲスト'}
-        userImage={session?.user?.image || undefined}
-        plan={planLabel}
-        employeeCount={usage.employeeCount}
-        employeeLimit={usage.employeeLimit}
+    <div className="flex h-screen bg-slate-50 overflow-hidden">
+      {/* Desktop Sidebar (fixed / 画面外フロー) */}
+      <div className="hidden md:flex">
+        <HrSidebar
+          isCollapsed={sidebarCollapsed}
+          onToggle={(collapsed) => setSidebarCollapsed(collapsed)}
+          employeeCount={usage.employeeCount}
+          employeeLimit={usage.employeeLimit}
+        />
+      </div>
+      {/* デスクトップ用スペーサー: fixed サイドバー幅をCSSのみで確保（JSブレークポイント不要） */}
+      <div
+        className="hidden md:block flex-shrink-0 transition-[width] duration-200"
+        style={{ width: sidebarCollapsed ? 72 : 240 }}
+        aria-hidden
       />
-      <main className="flex-1 min-w-0">{children}</main>
+
+      {/* Mobile overlay */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-black/50 md:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Sidebar */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <motion.div
+            initial={{ x: -280 }}
+            animate={{ x: 0 }}
+            exit={{ x: -280 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="fixed inset-y-0 left-0 z-50 md:hidden"
+          >
+            <HrSidebar
+              forceExpanded
+              isMobile
+              onToggle={() => setMobileMenuOpen(false)}
+              employeeCount={usage.employeeCount}
+              employeeLimit={usage.employeeLimit}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {/* Mobile Header */}
+        <div className="md:hidden flex items-center gap-3 p-3 sm:p-4 border-b border-slate-200 bg-white">
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            aria-label="メニューを開く"
+            className="p-2 rounded-lg hover:bg-slate-100 text-slate-700"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          <div className="flex items-center gap-2">
+            <Users2 className="h-5 w-5 text-blue-600" />
+            <span className="text-base sm:text-lg font-bold text-slate-900 whitespace-nowrap">ドヤHR</span>
+          </div>
+        </div>
+
+        {/* Page Content */}
+        <div className="flex-1 overflow-y-auto">{children}</div>
+      </main>
     </div>
   )
 }

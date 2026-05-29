@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
 
 interface AuditLog {
   id: string
@@ -73,8 +74,6 @@ export default function HrSettingsPage() {
   const [members, setMembers] = useState<OrgMember[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviting, setInviting] = useState(false)
   const [departments, setDepartments] = useState<Department[]>([])
@@ -142,8 +141,6 @@ export default function HrSettingsPage() {
 
   const handleSave = async () => {
     setSaving(true)
-    setError(null)
-    setSuccess(false)
     try {
       const res = await fetch('/api/hr/settings', {
         method: 'PUT',
@@ -151,10 +148,9 @@ export default function HrSettingsPage() {
         body: JSON.stringify(settings),
       })
       if (!res.ok) throw new Error('設定の保存に失敗しました')
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      toast.success('設定を保存しました')
     } catch (e: any) {
-      setError(e.message)
+      toast.error(e.message)
     } finally {
       setSaving(false)
     }
@@ -163,7 +159,6 @@ export default function HrSettingsPage() {
   const handleInvite = async () => {
     if (!inviteEmail) return
     setInviting(true)
-    setError(null)
     try {
       const res = await fetch('/api/hr/organization/invite', {
         method: 'POST',
@@ -173,6 +168,7 @@ export default function HrSettingsPage() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '招待の送信に失敗しました')
       setInviteEmail('')
+      toast.success('招待を送信しました')
       if (data.inviteUrl) {
         setInviteUrl(data.inviteUrl)
       }
@@ -182,7 +178,7 @@ export default function HrSettingsPage() {
         if (settingsData.members) setMembers(settingsData.members)
       }
     } catch (e: any) {
-      setError(e.message)
+      toast.error(e.message)
     } finally {
       setInviting(false)
     }
@@ -209,7 +205,6 @@ export default function HrSettingsPage() {
   const handleCreateDept = async () => {
     if (!newDeptName) return
     setCreatingDept(true)
-    setError(null)
     try {
       const res = await fetch('/api/hr/departments', {
         method: 'POST',
@@ -225,8 +220,9 @@ export default function HrSettingsPage() {
       setNewDeptSortOrder(0)
       setShowDeptModal(false)
       await fetchDepartments()
+      toast.success('部署を作成しました')
     } catch (e: any) {
-      setError(e.message)
+      toast.error(e.message)
     } finally {
       setCreatingDept(false)
     }
@@ -234,7 +230,6 @@ export default function HrSettingsPage() {
 
   const handleDeleteDept = async (id: string) => {
     setDeletingDeptId(id)
-    setError(null)
     try {
       const res = await fetch(`/api/hr/departments/${id}`, { method: 'DELETE' })
       if (!res.ok) {
@@ -242,15 +237,16 @@ export default function HrSettingsPage() {
         throw new Error(errData.error || '部署の削除に失敗しました')
       }
       await fetchDepartments()
+      toast.success('部署を削除しました')
     } catch (e: any) {
-      setError(e.message)
+      toast.error(e.message)
     } finally {
       setDeletingDeptId(null)
     }
   }
 
   const handleGenerateInviteUrl = () => {
-    setError('招待URLを取得するには、まずメールアドレスで招待を送信してください。送信後にURLが表示されます。')
+    toast('招待URLを取得するには、まずメールアドレスで招待を送信してください。送信後にURLが表示されます。', { icon: 'ℹ️' })
   }
 
   const handleCopyInviteUrl = async () => {
@@ -275,7 +271,6 @@ export default function HrSettingsPage() {
   const handleTransferOwnership = async () => {
     if (!transferEmail) return
     setTransferring(true)
-    setError(null)
     try {
       // メールアドレスから対象メンバーを特定
       const targetMember = members.find((m) => m.email === transferEmail)
@@ -293,10 +288,9 @@ export default function HrSettingsPage() {
       }
       setShowTransferModal(false)
       setTransferEmail('')
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      toast.success('オーナーを移譲しました')
     } catch (e: any) {
-      setError(e.message)
+      toast.error(e.message)
     } finally {
       setTransferring(false)
     }
@@ -340,30 +334,6 @@ export default function HrSettingsPage() {
           </div>
           <p className="text-sm text-slate-500 mt-1">組織情報とメンバーを管理</p>
         </div>
-
-        {/* Error / Success */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 rounded-2xl text-sm text-red-700">
-            <span className="material-symbols-outlined text-lg align-middle mr-1">error</span>
-            {error}
-            <span className="text-red-500 ml-1">もう一度お試しください。</span>
-          </div>
-        )}
-        {success && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 bg-emerald-50 rounded-2xl text-sm text-emerald-700 flex items-center gap-2"
-          >
-            <span className="material-symbols-outlined text-lg align-middle">check_circle</span>
-            設定を保存しました
-            <img
-              src="/hr/characters/success_成功.png"
-              alt="白くまキャラクター"
-              className="w-10 inline-block ml-1"
-            />
-          </motion.div>
-        )}
 
         {/* 1. Department Management — most frequently used */}
         <div className="bg-white rounded-3xl shadow-md p-6 mb-6">
@@ -671,10 +641,27 @@ export default function HrSettingsPage() {
             </div>
             評価テンプレート
           </h2>
-          <div className="text-center py-8 text-slate-500">
-            <span className="material-symbols-outlined text-4xl mb-2 block text-slate-300">construction</span>
-            <p className="text-sm font-bold text-slate-700">評価テンプレートの管理機能は準備中です</p>
-            <p className="text-xs mt-1">現在はデフォルトのMBO形式で評価を実施できます</p>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-xl bg-blue-100 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-blue-600">target</span>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-800">標準のMBO形式で評価を運用できます</p>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  評価期間ごとに目標（業績目標・行動目標）を設定し、本人評価・上司評価・最終評価の3段階で運用します。
+                  AIによる評価コメント生成にも対応しています。評価は
+                  <span className="font-bold text-slate-700">「評価」</span>メニューから作成できます。
+                </p>
+              </div>
+            </div>
+            <a
+              href="/hr/evaluations"
+              className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-blue-600 hover:text-blue-700"
+            >
+              <span className="material-symbols-outlined text-lg">arrow_forward</span>
+              評価期間を作成する
+            </a>
           </div>
         </div>
 

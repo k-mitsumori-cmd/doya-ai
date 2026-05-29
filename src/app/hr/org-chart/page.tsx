@@ -1,5 +1,7 @@
 'use client'
 
+import toast from 'react-hot-toast'
+
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import OrgChartView from '@/components/hr/OrgChartView'
@@ -36,7 +38,6 @@ export default function OrgChartPage() {
   const [departments, setDepartments] = useState<any[]>([])
   const [orgName, setOrgName] = useState('')
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchOrgChart() {
@@ -48,7 +49,7 @@ export default function OrgChartPage() {
         setDepartments(mapOrgChartNodes(rawDepts))
         setOrgName(data.orgName ?? '')
       } catch (e: any) {
-        setError(e.message)
+        toast.error(e.message)
       } finally {
         setLoading(false)
       }
@@ -75,14 +76,6 @@ export default function OrgChartPage() {
             <p className="text-xs text-blue-600 mt-0.5">各カードをクリックすると詳細を表示します。部署の追加は設定画面から行えます。</p>
           </div>
         </div>
-
-        {/* Error */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 rounded-2xl text-sm text-red-700">
-            <span className="material-symbols-outlined text-lg align-middle mr-1">error</span>
-            {error}
-          </div>
-        )}
 
         {/* Loading */}
         {loading ? (
