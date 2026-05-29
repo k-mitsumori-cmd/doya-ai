@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/promane/ui/button'
+import { FeedbackButton } from '@/components/promane/feedback-button'
 
 interface GuideSection {
   icon: string
@@ -141,13 +142,13 @@ export default async function HelpPage({ params }: { params: Promise<{ workspace
       <div className="rounded-[28px] bg-white ring-1 ring-gray-200 shadow-md p-7 text-center">
         <Image src="/character/love.png" alt="" width={80} height={80} className="mx-auto" unoptimized />
         <p className="mt-3 text-[17px] font-black text-gray-900">困ったら気軽に連絡してね！</p>
-        <a
-          href="mailto:support@surisuta.jp?subject=ドヤプロマネに関するお問い合わせ"
-          className="mt-4 inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 text-white font-black text-sm rounded-full shadow-lg transition-all"
-        >
-          📧 support@surisuta.jp
-        </a>
-        <p className="mt-3 text-[12px] text-gray-400">平日 10:00-18:00 / 通常1営業日以内に返信</p>
+        <p className="mt-1 text-[12px] text-gray-500 font-bold">バグ報告・機能要望はワンクリックで Slack に届きます</p>
+        <div className="mt-4 flex justify-center">
+          <FeedbackButton variant="inline" className="rounded-full h-12 px-7 text-[14px] font-black bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 text-white shadow-lg">
+            🐛 不具合を報告 / 💡 要望を送る
+          </FeedbackButton>
+        </div>
+        <p className="mt-3 text-[12px] text-gray-400">通常 1営業日以内に対応します</p>
       </div>
     </div>
   )

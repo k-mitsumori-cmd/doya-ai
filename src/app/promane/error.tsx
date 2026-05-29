@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Button } from '@/components/promane/ui/button'
+import { FeedbackButton } from '@/components/promane/feedback-button'
 
 export default function PromaneError({
   error,
@@ -54,9 +55,15 @@ export default function PromaneError({
           </Link>
         </div>
 
-        <p className="text-[11px] text-gray-400 font-bold pt-2 border-t border-gray-100">
-          解決しない場合は <a href="mailto:support@surisuta.jp" className="text-blue-600 hover:underline">support@surisuta.jp</a> までご連絡ください
-        </p>
+        <div className="pt-3 border-t border-gray-100">
+          <p className="text-[11px] text-gray-400 font-bold mb-2">解決しない場合は不具合を報告してください</p>
+          <FeedbackButton
+            variant="link"
+            className="text-blue-600 hover:underline font-bold text-[12px]"
+          >
+            🐛 不具合を報告する
+          </FeedbackButton>
+        </div>
       </div>
     </div>
   )
