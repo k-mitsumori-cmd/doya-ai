@@ -2527,6 +2527,7 @@ model PromaneClient {
   contactName String?
   email       String?
   phone       String?
+  address     String?
   note        String?   @db.Text
   workspace   PromaneWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   projects    PromaneProject[]

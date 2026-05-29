@@ -65,10 +65,7 @@ async function getChartData(workspaceId: string) {
   sixMonthsAgo.setDate(1);
 
   const projects = await prisma.promaneProject.findMany({
-    where: {
-      workspaceId,
-      contractAmount: { gte: 0, lte: 9_999_999_999 }, // 異常値除外
-    },
+    where: { workspaceId },
     select: { id: true, contractAmount: true, createdAt: true, expenses: { select: { amount: true, createdAt: true } } },
   });
   const timeEntries = await prisma.promaneTimeEntry.findMany({
@@ -166,12 +163,10 @@ function safeNum(v: number | null | undefined): number {
 }
 
 async function getDashboardData(workspaceId: string) {
+  // 全プロジェクトを取得 (異常値は集計時に safeNum でクランプ)
+  // 厳密フィルタしない理由: 一覧に正常プロジェクトも漏れていた問題対応
   const projects = await prisma.promaneProject.findMany({
-    where: {
-      workspaceId,
-      // 異常値プロジェクトは集計から除外（負契約金額・極端に大きい値）
-      contractAmount: { gte: 0, lte: 9_999_999_999 },
-    },
+    where: { workspaceId },
     include: { client: true, tasks: true, expenses: true },
   });
   const members = await prisma.promaneMember.findMany({
