@@ -43,12 +43,48 @@
 
 ### ロゴ & ファビコン
 
+#### 全体ロゴ・アイコン
+
 | アセット | パス | 仕様 |
 |---------|------|------|
 | メインロゴ | `public/images/doyamarke-logo.png` | ヘッダー表示 120×40px |
 | サイトアイコン | `src/app/icon.tsx` | 512×512 PNG、青ロケット + "AI" テキスト |
 | Apple アイコン | `src/app/apple-icon.tsx` | Apple デバイス用 |
 | OG 画像 | `public/og/portal.png` | 1200×630px、SNS シェア用 |
+
+#### サービス別ロゴ
+
+各サービス専用のロゴは `public/{service-id}/logo.png` 配置が標準。
+すべてドヤくん（シロクマ + 青VRゴーグル）を主役にした公式デザイン。
+
+| サービス | パス | デザインモチーフ |
+|---------|------|--------------|
+| ドヤバナーAI | `public/banner/logo.png` | ドヤくん + 浮遊バナーカード（青・オレンジ） |
+| ドヤ記事作成（SEO） | `public/seo/logo.png` | ドヤくん + ペン + 原稿 + ノートPC（青系） |
+| ドヤインタビュー | `public/interview/logo.png` | ドヤくん + マイク + 音声波形（赤橙系） |
+| ドヤペルソナAI | `public/persona/logo.png` | ドヤくん + ペルソナカード（紫・ネオン系） |
+| ドヤ勤怠 | `public/kintai/logo.png` | （既存） |
+| ドヤプロマネ | `public/promane/logo.png` | （既存） |
+| ドヤリスト | `public/doyalist/logo.png` | （既存） |
+
+**配置パターン**: `public/{service-id}/logo.png`
+**ファイル形式**: PNG（透過背景）
+**用途**: ランディングページ・ダッシュボードカード・OG画像のベース
+
+#### サービスロゴが未配置のサービス（追加予定）
+
+以下のサービスはまだロゴ未設定。新規ロゴができたら同パターンで配置:
+
+```
+public/copy/logo.png       ← ドヤコピーAI（未配置）
+public/lp/logo.png         ← ドヤワイヤーフレーム AI（未配置）
+public/voice/logo.png      ← ドヤボイスAI（未配置）
+public/movie/logo.png      ← ドヤムービーAI（未配置）
+public/adsim/logo.png      ← ドヤ広告シミュレーションAI（未配置）
+public/hr/logo.png         ← ドヤHR（未配置）
+public/tenkai/logo.png     ← ドヤ展開AI（未配置）
+public/shindan/logo.png    ← ドヤWeb診断AI（未配置）
+```
 
 ---
 

@@ -44,24 +44,28 @@ export function MemberList({
 }) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [rate, setRate] = useState(0);
+  // ⚠️ 重要: number ではなく string 型で保持
+  // 理由: number 型だと parseInt("-") = NaN → 0 にリセット → 続く "3000" が +3000 として入力される（絶対値化バグ）
+  // string で保持すれば "-3000" がそのまま残り、Save時に validation 可能
+  const [rateInput, setRateInput] = useState("0");
   const [inviteOpen, setInviteOpen] = useState(false);
+  const rate = parseInt(rateInput);
+  const rateValid = Number.isFinite(rate) && rate >= 0 && rate <= 9999999999;
+  const rateError = !Number.isFinite(rate)
+    ? "数値で入力してください"
+    : rate < 0
+      ? "時間単価は 0以上を入力してください"
+      : rate > 9999999999
+        ? "時間単価が大きすぎます"
+        : null;
 
   async function handleSaveRate(memberId: string) {
-    // クライアント側 事前バリデーション (一層目)
-    if (!Number.isFinite(rate)) {
-      toast.error("時間単価は数値で入力してください", { duration: 5000 });
-      return;
-    }
-    if (rate < 0) {
-      toast.error("時間単価は 0以上を入力してください（負値は保存できません）", {
+    // クライアント側 事前バリデーション (rateInput文字列から parseしてチェック)
+    if (rateError) {
+      toast.error(rateError, {
         duration: 6000,
         icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
       });
-      return;
-    }
-    if (rate > 9999999999) {
-      toast.error("時間単価が大きすぎます", { duration: 5000 });
       return;
     }
     try {
@@ -146,35 +150,35 @@ export function MemberList({
                     <div className="flex flex-col items-end gap-1">
                       <div className="flex items-center gap-1.5">
                         <Input
-                          type="number"
-                          min="0"
-                          max="9999999999"
-                          step="100"
-                          value={rate}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          value={rateInput}
                           onChange={(e) => {
-                            const v = parseInt(e.target.value);
-                            // 負値もそのまま state に入れる (赤枠で警告表示、Save時に弾く)
-                            // → 絶対値化や黙ってクランプはしない
-                            setRate(Number.isFinite(v) ? v : 0);
+                            // string で生入力を保持 (絶対値化バグの根本対処)
+                            // 数字とマイナス記号のみ許可（マイナスは保存時に拒否）
+                            const raw = e.target.value.replace(/[^0-9-]/g, "");
+                            setRateInput(raw);
                           }}
                           className={`h-9 w-28 text-right text-[14px] font-black rounded-xl ${
-                            rate < 0 ? "border-2 border-rose-500 bg-rose-50 text-rose-700" : ""
+                            !rateValid ? "border-2 border-rose-500 bg-rose-50 text-rose-700" : ""
                           }`}
+                          placeholder="0"
                         />
                         <Button
                           size="sm"
                           variant="ghost"
-                          disabled={rate < 0}
+                          disabled={!rateValid}
                           className="h-9 w-9 p-0 rounded-xl hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed"
                           onClick={() => handleSaveRate(member.id)}
-                          title={rate < 0 ? "負値は保存できません" : "保存"}
+                          title={!rateValid ? rateError || "保存できません" : "保存"}
                         >
-                          <Save className={`h-4 w-4 ${rate < 0 ? "text-rose-400" : "text-green-600"}`} />
+                          <Save className={`h-4 w-4 ${!rateValid ? "text-rose-400" : "text-green-600"}`} />
                         </Button>
                       </div>
-                      {rate < 0 && (
-                        <p className="text-[10px] font-bold text-rose-600">
-                          ⚠️ 時間単価は 0以上を入力してください
+                      {rateError && (
+                        <p className="text-[10px] font-bold text-rose-600 max-w-[160px] text-right">
+                          ⚠️ {rateError}
                         </p>
                       )}
                     </div>
@@ -182,7 +186,7 @@ export function MemberList({
                     <button
                       onClick={() => {
                         setEditingId(member.id);
-                        setRate(member.hourlyRate);
+                        setRateInput(String(member.hourlyRate ?? 0));
                       }}
                       className="text-[16px] font-black text-blue-600 hover:text-blue-800 transition-colors"
                     >
