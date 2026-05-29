@@ -123,6 +123,10 @@ export function Sidebar({ workspaceSlug }: { workspaceSlug: string }) {
             </button>
           )}
         </div>
+        {/* バージョン表示 (キャッシュ確認用) */}
+        <p className="text-[9px] text-gray-300 font-bold text-center mt-1.5" title="ビルドバージョン">
+          v.{process.env.NEXT_PUBLIC_BUILD_VERSION || 'dev'}
+        </p>
       </div>
     </aside>
   );

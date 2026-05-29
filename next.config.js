@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // ビルド時のコミットハッシュを環境変数に注入 (UIで表示してキャッシュ確認用)
+  env: {
+    NEXT_PUBLIC_BUILD_VERSION: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7)
+      || process.env.GIT_COMMIT_SHA?.slice(0, 7)
+      || 'dev',
+  },
   // NOTE:
   // outputFileTracing を無効化すると、Vercel のServerless同梱で
   // App Router の `page_client-reference-manifest.js` 等が欠落し、実行時に 500 になり得る。
