@@ -1,18 +1,21 @@
-export function formatCurrency(amount: number): string {
+export function formatCurrency(amount: number | null | undefined): string {
+  const v = (amount == null || !Number.isFinite(amount)) ? 0 : amount;
   return new Intl.NumberFormat("ja-JP", {
     style: "currency",
     currency: "JPY",
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(v);
 }
 
-export function formatPercent(value: number): string {
-  return `${Math.round(value * 10) / 10}%`;
+export function formatPercent(value: number | null | undefined): string {
+  const v = (value == null || !Number.isFinite(value)) ? 0 : value;
+  return `${Math.round(v * 10) / 10}%`;
 }
 
-export function formatDuration(minutes: number): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
+export function formatDuration(minutes: number | null | undefined): string {
+  const v = (minutes == null || !Number.isFinite(minutes) || minutes < 0) ? 0 : minutes;
+  const h = Math.floor(v / 60);
+  const m = v % 60;
   if (h === 0) return `${m}分`;
   if (m === 0) return `${h}時間`;
   return `${h}時間${m}分`;

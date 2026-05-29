@@ -222,15 +222,45 @@ const TASK_STATUS_LABEL: Record<string, { label: string; color: string }> = {
   done: { label: '完了', color: 'bg-emerald-100 text-emerald-700' },
 };
 
+/** データ取得を安全化: 失敗してもダッシュボードは表示する */
+async function safeDashboardData(workspaceId: string) {
+  try {
+    return await getDashboardData(workspaceId);
+  } catch (e) {
+    console.error('[dashboard] getDashboardData failed', e);
+    return { projectStats: [], activeProjects: 0, totalRevenue: 0, totalCost: 0, totalProfit: 0, totalProfitRate: 0 };
+  }
+}
+async function safeChartData(workspaceId: string) {
+  try {
+    return await getChartData(workspaceId);
+  } catch (e) {
+    console.error('[dashboard] getChartData failed', e);
+    return { taskSummary: [], revenueData: [], activities: [] };
+  }
+}
+async function safeMyAssignments(workspaceId: string, memberId: string) {
+  try {
+    return await getMyAssignmentsData(workspaceId, memberId);
+  } catch (e) {
+    console.error('[dashboard] getMyAssignmentsData failed', e);
+    return { tasks: [] as any[], myProjects: [] as any[] };
+  }
+}
+
 export default async function DashboardPage({ params }: { params: Promise<{ workspaceSlug: string }> }) {
   const session = await requirePromaneAuth();
   const { workspaceSlug } = await params;
   const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) redirect("/login");
+  if (!workspace) redirect("/promane");
   const myMember = workspace.members[0];
-  const data = await getDashboardData(workspace.id);
-  const myData = myMember ? await getMyAssignmentsData(workspace.id, myMember.id) : { tasks: [], myProjects: [] };
-  const chartData = await getChartData(workspace.id);
+
+  // 並列実行 + 各々が独立して try-catch (1つが落ちても他が表示される)
+  const [data, myData, chartData] = await Promise.all([
+    safeDashboardData(workspace.id),
+    myMember ? safeMyAssignments(workspace.id, myMember.id) : Promise.resolve({ tasks: [] as any[], myProjects: [] as any[] }),
+    safeChartData(workspace.id),
+  ]);
 
   const kpiCards = [
     { icon: "/character/present.png", label: "売上合計", value: formatCurrency(data.totalRevenue), bg: "from-blue-100 to-indigo-100", text: "text-blue-800", ring: "ring-blue-200" },

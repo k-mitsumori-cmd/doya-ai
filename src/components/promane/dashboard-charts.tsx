@@ -25,14 +25,26 @@ interface TaskSummaryProps {
 }
 
 export function TaskPieChart({ data }: TaskSummaryProps) {
-  const total = data.reduce((s, d) => s + d.count, 0)
+  const total = data.reduce((s, d) => s + (d.count || 0), 0)
   const doneCount = data.find((d) => d.status === 'done')?.count || 0
   const completionRate = total > 0 ? Math.round((doneCount / total) * 100) : 0
-  const chartData = data.map((d) => ({
-    name: STATUS_LABELS[d.status] || d.status,
-    value: d.count,
-    fill: STATUS_COLORS[d.status] || '#94a3b8',
-  }))
+  const chartData = data
+    .filter((d) => (d.count || 0) > 0)
+    .map((d) => ({
+      name: STATUS_LABELS[d.status] || d.status,
+      value: d.count,
+      fill: STATUS_COLORS[d.status] || '#94a3b8',
+    }))
+
+  // 空データ時はプレースホルダー
+  if (chartData.length === 0) {
+    return (
+      <div className="relative h-[200px] min-w-[100px] flex flex-col items-center justify-center">
+        <div className="w-[110px] h-[110px] rounded-full border-[18px] border-gray-100" />
+        <p className="text-[11px] font-black text-gray-400 mt-3">タスクがまだありません</p>
+      </div>
+    )
+  }
 
   return (
     <div className="relative h-[200px] min-w-[100px]">
@@ -62,6 +74,13 @@ interface RevenueData {
 }
 
 export function RevenueLineChart({ data }: { data: RevenueData[] }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-[200px] min-w-[200px] flex items-center justify-center">
+        <p className="text-[11px] font-black text-gray-400">データがまだありません</p>
+      </div>
+    )
+  }
   return (
     <div className="h-[200px] min-w-[200px]">
       <ResponsiveContainer width="100%" height="100%">
@@ -84,6 +103,13 @@ export function RevenueLineChart({ data }: { data: RevenueData[] }) {
 }
 
 export function ProfitBarChart({ data }: { data: RevenueData[] }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-[200px] min-w-[200px] flex items-center justify-center">
+        <p className="text-[11px] font-black text-gray-400">データがまだありません</p>
+      </div>
+    )
+  }
   return (
     <div className="h-[200px] min-w-[200px]">
       <ResponsiveContainer width="100%" height="100%">
