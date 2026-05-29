@@ -6,14 +6,12 @@ import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import type { LucideIcon } from 'lucide-react'
 import {
-  ArrowRight,
-  ArrowUpRight,
   Award,
   BarChart3,
   Briefcase,
   Check,
-  ChevronDown,
   Clapperboard,
+  CircleDot,
   Database,
   FileText,
   Image as ImageIcon,
@@ -21,8 +19,10 @@ import {
   Megaphone,
   Mic,
   Play,
+  Plus,
   Route,
   ShieldCheck,
+  Sparkles,
   Target,
   Users,
   Volume2,
@@ -117,6 +117,10 @@ const BENEFITS: Benefit[] = [
 
 const PLAN_FEATURES = ['全9サービスのPRO機能', '新サービスも追加料金なし', '個別課金なしで予算管理', 'ひとつのアカウントで利用']
 
+const PRODUCTION_LINES = ['検索意図から記事へ', '訴求から広告へ', '構成からLPへ']
+
+const VISUAL_BADGES = ['Signal', 'Creative', 'Plan']
+
 const fadeUp = {
   hidden: { opacity: 0, y: 22 },
   show: { opacity: 1, y: 0 },
@@ -161,7 +165,7 @@ export default function DoyaMarkePage() {
             ].map(([label, href]) => (
               <a key={label} href={href} className="inline-flex items-center gap-1 text-white/88 transition-colors hover:text-white">
                 {label}
-                {label === '機能' || label === 'プラン' ? <ChevronDown className="h-4 w-4" /> : null}
+                {label === '機能' || label === 'プラン' ? <CircleDot className="h-3 w-3" /> : null}
               </a>
             ))}
           </nav>
@@ -273,7 +277,7 @@ export default function DoyaMarkePage() {
                   <span className="block text-sm font-black text-zinc-400">ドヤマーケがわかる</span>
                   <span className="mt-1 block text-xl font-black tracking-normal text-[#06347b]">無料ではじめる</span>
                 </span>
-                <ArrowRight className="h-6 w-6 transition-transform group-hover:translate-x-1" />
+                <Sparkles className="h-6 w-6 text-[#f5c400] transition-transform group-hover:scale-110" />
               </Link>
 
               <a href="#concept" className="hidden rounded-lg border border-white/20 bg-[#052a67]/74 p-4 shadow-[0_18px_50px_rgba(0,0,0,0.28)] backdrop-blur transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#052a67] active:scale-[0.98] lg:block">
@@ -302,7 +306,7 @@ export default function DoyaMarkePage() {
                   <span className="block text-xs font-black text-[#1f66cf]">{eyebrow}</span>
                   <span className="mt-1 block text-sm font-black leading-relaxed text-zinc-900">{title}</span>
                 </span>
-                <ArrowRight className="h-5 w-5 text-[#0647a6] transition-transform group-hover:translate-x-1" />
+                <CircleDot className="h-5 w-5 text-[#0647a6] transition-transform group-hover:scale-110" />
               </a>
             ))}
           </div>
@@ -320,13 +324,14 @@ export default function DoyaMarkePage() {
         </section>
 
         <section id="concept" className="bg-white px-5 py-20 lg:px-8 lg:py-28">
-          <div className="mx-auto grid max-w-[1210px] gap-12 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+          <div className="mx-auto grid max-w-[1210px] gap-12 lg:grid-cols-[0.86fr_1.14fr] lg:items-center">
             <motion.div
               variants={fadeUp}
               initial="hidden"
               whileInView="show"
               viewport={{ once: true, amount: 0.35 }}
               transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+              className="max-w-[620px]"
             >
               <p className="mb-4 text-sm font-black text-[#0647a6]">INTENT MARKETING</p>
               <h2 className="text-4xl font-black leading-[1.12] tracking-normal md:text-6xl">
@@ -334,6 +339,23 @@ export default function DoyaMarkePage() {
                 <br />
                 “どう届けるか”まで
               </h2>
+              <div className="mt-7 space-y-5">
+                <p className="text-base leading-relaxed text-zinc-600">
+                  市場も顧客も掴みにくく、広告や記事の本数だけでは成果が安定しにくい時代です。ドヤマーケは、顧客理解、制作、改善をひとつの視界にまとめます。
+                </p>
+                <p className="text-base leading-relaxed text-zinc-600">
+                  ペルソナ分析からSEO記事、広告コピー、バナー、LP、動画までを共通プランで使えるため、少人数チームでも施策を止めずに前へ進められます。
+                </p>
+              </div>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <Link href={primaryHref} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0647a6] px-7 py-4 text-sm font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#053984] hover:shadow-lg active:scale-[0.98]">
+                  無料で試す
+                  <Sparkles className="h-4 w-4" />
+                </Link>
+                <a href="#tools" className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-7 py-4 text-sm font-black text-zinc-800 transition-all duration-300 hover:-translate-y-0.5 hover:border-zinc-500 hover:shadow-lg active:scale-[0.98]">
+                  機能を見る
+                </a>
+              </div>
             </motion.div>
 
             <motion.div
@@ -342,22 +364,27 @@ export default function DoyaMarkePage() {
               whileInView="show"
               viewport={{ once: true, amount: 0.35 }}
               transition={{ duration: 0.6, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
-              className="space-y-6"
+              className="relative"
             >
-              <p className="max-w-[65ch] text-base leading-relaxed text-zinc-600">
-                市場も顧客も掴みにくく、広告や記事の本数だけでは成果が安定しにくい時代です。ドヤマーケは、顧客理解、制作、改善をひとつの視界にまとめます。
-              </p>
-              <p className="max-w-[65ch] text-base leading-relaxed text-zinc-600">
-                ペルソナ分析からSEO記事、広告コピー、バナー、LP、動画までを共通プランで使えるため、少人数チームでも施策を止めずに前へ進められます。
-              </p>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Link href={primaryHref} className="inline-flex items-center justify-center gap-2 rounded-full bg-[#0647a6] px-7 py-4 text-sm font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#053984] hover:shadow-lg active:scale-[0.98]">
-                  無料で試す
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <a href="#tools" className="inline-flex items-center justify-center rounded-full border border-zinc-300 px-7 py-4 text-sm font-black text-zinc-800 transition-all duration-300 hover:-translate-y-0.5 hover:border-zinc-500 hover:shadow-lg active:scale-[0.98]">
-                  機能を見る
-                </a>
+              <div className="relative aspect-[16/10] overflow-hidden rounded-lg border border-[#d9e6fb] bg-[#eaf4ff] shadow-[0_28px_88px_rgba(6,71,166,0.18)]">
+                <Image
+                  src="/doyamarke/workspace-scene-v1.png"
+                  alt="ドヤマーケの制作ワークスペースを表す生成ビジュアル"
+                  fill
+                  sizes="(min-width: 1024px) 620px, 100vw"
+                  className="object-cover"
+                />
+                <div className="absolute left-4 top-4 rounded-full bg-white/90 px-4 py-2 text-xs font-black text-[#0647a6] shadow-[0_12px_32px_rgba(6,71,166,0.18)] backdrop-blur">
+                  INTENT SIGNALS
+                </div>
+                <div className="absolute bottom-4 left-4 right-4 grid gap-3 sm:grid-cols-3">
+                  {VISUAL_BADGES.map((badge) => (
+                    <div key={badge} className="rounded-[8px] border border-white/40 bg-white/84 p-3 shadow-[0_12px_32px_rgba(15,23,42,0.12)] backdrop-blur">
+                      <div className="mb-3 h-2 w-10 rounded-full bg-[#f5c400]" />
+                      <div className="text-sm font-black text-[#06347b]">{badge}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </motion.div>
           </div>
@@ -374,6 +401,40 @@ export default function DoyaMarkePage() {
                 単体ツールではなく、日々のマーケ業務の流れに合わせて使える設計です。
               </p>
             </div>
+            <motion.div
+              variants={fadeUp}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.25 }}
+              transition={{ duration: 0.62, ease: [0.16, 1, 0.3, 1] }}
+              className="mb-8 grid gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center"
+            >
+              <div className="relative aspect-[16/9] overflow-hidden rounded-lg border border-[#d9e6fb] bg-white shadow-[0_24px_74px_rgba(15,23,42,0.12)]">
+                <Image
+                  src="/doyamarke/creative-showcase-v1.png"
+                  alt="AIで生成する記事、広告、LP、動画などの制作物"
+                  fill
+                  sizes="(min-width: 1024px) 650px, 100vw"
+                  className="object-cover"
+                />
+              </div>
+              <div className="border-y border-[#d9e6fb] py-7">
+                <p className="mb-5 text-sm font-black text-[#0647a6]">CREATIVE OUTPUTS</p>
+                <h3 className="text-3xl font-black leading-tight tracking-normal text-zinc-950 md:text-4xl">
+                  初稿づくりを、
+                  <br />
+                  同じ戦略でそろえる
+                </h3>
+                <div className="mt-7 divide-y divide-[#d9e6fb]">
+                  {PRODUCTION_LINES.map((line, index) => (
+                    <div key={line} className="grid grid-cols-[auto_1fr] items-center gap-4 py-4">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-[#0647a6] text-sm font-black text-white">{index + 1}</span>
+                      <span className="text-sm font-black text-zinc-900">{line}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
             <div className="grid gap-4 lg:grid-cols-3">
               {SCENARIOS.map(({ title, body, Icon }) => (
                 <div key={title} className="group rounded-lg border border-zinc-200 bg-white p-6 shadow-[0_12px_34px_rgba(15,23,42,0.06)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg">
@@ -381,7 +442,7 @@ export default function DoyaMarkePage() {
                     <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#edf5ff] text-[#0647a6]">
                       <Icon className="h-5 w-5" />
                     </span>
-                    <ArrowUpRight className="h-5 w-5 text-zinc-300 transition-colors group-hover:text-[#0647a6]" />
+                    <Plus className="h-5 w-5 text-zinc-300 transition-colors group-hover:text-[#0647a6]" />
                   </div>
                   <h3 className="mb-3 text-xl font-black leading-tight tracking-normal text-zinc-950">{title}</h3>
                   <p className="text-sm leading-relaxed text-zinc-600">{body}</p>
@@ -528,7 +589,7 @@ export default function DoyaMarkePage() {
                         <span className={isPrimary ? 'flex h-12 w-12 items-center justify-center rounded-[8px] bg-white/12 text-white' : 'flex h-12 w-12 items-center justify-center rounded-[8px] bg-white text-[#0647a6]'}>
                           <Icon className="h-6 w-6" />
                         </span>
-                        <ArrowUpRight className={isPrimary ? 'h-5 w-5 text-white/50 transition-colors group-hover:text-white' : 'h-5 w-5 text-zinc-300 transition-colors group-hover:text-[#0647a6]'} />
+                        <Plus className={isPrimary ? 'h-5 w-5 text-white/50 transition-colors group-hover:text-white' : 'h-5 w-5 text-zinc-300 transition-colors group-hover:text-[#0647a6]'} />
                       </div>
                       <div className="mt-auto">
                         <h3 className={isPrimary ? 'mb-4 text-3xl font-black leading-tight tracking-normal' : 'mb-3 text-lg font-black tracking-normal'}>{service.name}</h3>
@@ -556,15 +617,37 @@ export default function DoyaMarkePage() {
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              {PLAN_FEATURES.map((feature) => (
-                <div key={feature} className="flex min-h-24 items-center gap-4 rounded-lg border border-zinc-200 bg-white p-5 shadow-[0_12px_34px_rgba(15,23,42,0.06)]">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#edf5ff] text-[#0647a6]">
-                    <Check className="h-5 w-5" />
-                  </span>
-                  <span className="text-sm font-black text-zinc-900">{feature}</span>
+            <div className="space-y-4">
+              <motion.div
+                variants={fadeUp}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, amount: 0.25 }}
+                transition={{ duration: 0.62, ease: [0.16, 1, 0.3, 1] }}
+                className="relative aspect-[16/9] overflow-hidden rounded-lg bg-[#061d4b] shadow-[0_28px_88px_rgba(6,71,166,0.22)]"
+              >
+                <Image
+                  src="/doyamarke/one-plan-hub-v1.png"
+                  alt="ひとつのプランで複数ツールを使えることを表す生成ビジュアル"
+                  fill
+                  sizes="(min-width: 1024px) 620px, 100vw"
+                  className="object-cover"
+                />
+                <div className="absolute left-4 top-4 rounded-full bg-white/90 px-4 py-2 text-xs font-black text-[#0647a6] shadow-[0_12px_32px_rgba(6,71,166,0.18)] backdrop-blur">
+                  UNIFIED SUITE
                 </div>
-              ))}
+              </motion.div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                {PLAN_FEATURES.map((feature) => (
+                  <div key={feature} className="flex min-h-24 items-center gap-4 rounded-lg border border-zinc-200 bg-white p-5 shadow-[0_12px_34px_rgba(15,23,42,0.06)]">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#edf5ff] text-[#0647a6]">
+                      <Check className="h-5 w-5" />
+                    </span>
+                    <span className="text-sm font-black text-zinc-900">{feature}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </section>
@@ -625,7 +708,7 @@ export default function DoyaMarkePage() {
             </div>
             <Link href={primaryHref} className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-8 py-4 text-sm font-black text-[#0647a6] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.98]">
               無料ではじめる
-              <ArrowRight className="h-4 w-4" />
+              <Sparkles className="h-4 w-4" />
             </Link>
           </div>
         </section>

@@ -38,6 +38,14 @@ export async function createTask(workspaceSlug: string, data: {
   if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
   if (!data.title?.trim()) throw new Error("タスク名は必須です");
+  if (!data.projectId) throw new Error("projectId は必須です");
+
+  // セキュリティ: projectId が自分の workspace のものか確認 (IDOR防止)
+  const project = await prisma.promaneProject.findFirst({
+    where: { id: data.projectId, workspaceId: workspace.id },
+    select: { id: true },
+  });
+  if (!project) throw new Error("プロジェクトが見つかりません");
 
   // 日付バリデーション
   const { startDate, dueDate } = validateDates(data.startDate, data.dueDate);
@@ -80,9 +88,9 @@ export async function updateTask(workspaceSlug: string, taskId: string, data: {
   const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
   if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
-  // 既存タスク取得（順序チェックの基準値に必要）
-  const existing = await prisma.promaneTask.findUnique({
-    where: { id: taskId },
+  // セキュリティ: タスクが自分のworkspaceに属するか確認 (IDOR防止)
+  const existing = await prisma.promaneTask.findFirst({
+    where: { id: taskId, project: { workspaceId: workspace.id } },
     select: { startDate: true, dueDate: true, projectId: true },
   });
   if (!existing) throw new Error("タスクが見つかりません");
@@ -121,14 +129,28 @@ export async function deleteTask(workspaceSlug: string, taskId: string) {
   const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
   if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
-  const task = await prisma.promaneTask.delete({ where: { id: taskId } });
-  revalidatePath(`/promane/${workspaceSlug}/projects/${task.projectId}`);
+  // セキュリティ: workspace所属確認 (IDOR防止)
+  const existing = await prisma.promaneTask.findFirst({
+    where: { id: taskId, project: { workspaceId: workspace.id } },
+    select: { id: true, projectId: true },
+  });
+  if (!existing) throw new Error("タスクが見つかりません");
+
+  await prisma.promaneTask.delete({ where: { id: taskId } });
+  revalidatePath(`/promane/${workspaceSlug}/projects/${existing.projectId}`);
 }
 
 export async function moveTask(workspaceSlug: string, taskId: string, newStatus: string, newOrder: number) {
   const { userId } = await requirePromaneAuthAction();
   const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
   if (!workspace) throw new Error("ワークスペースにアクセスできません");
+
+  // セキュリティ: workspace所属確認 (IDOR防止)
+  const existing = await prisma.promaneTask.findFirst({
+    where: { id: taskId, project: { workspaceId: workspace.id } },
+    select: { id: true },
+  });
+  if (!existing) throw new Error("タスクが見つかりません");
 
   const task = await prisma.promaneTask.update({
     where: { id: taskId },

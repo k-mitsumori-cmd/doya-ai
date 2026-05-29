@@ -51,6 +51,13 @@ export async function updateClient(workspaceSlug: string, clientId: string, data
   const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
   if (!workspace) throw new Error("ワークスペースにアクセスできません");
 
+  // セキュリティ: clientId が本当に自分の workspace に属するか確認 (IDOR防止)
+  const existing = await prisma.promaneClient.findFirst({
+    where: { id: clientId, workspaceId: workspace.id },
+    select: { id: true },
+  });
+  if (!existing) throw new Error("顧客が見つかりません");
+
   const client = await prisma.promaneClient.update({
     where: { id: clientId },
     data: {
@@ -71,6 +78,13 @@ export async function deleteClient(workspaceSlug: string, clientId: string) {
   const { userId } = await requirePromaneAuthAction();
   const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
   if (!workspace) throw new Error("ワークスペースにアクセスできません");
+
+  // セキュリティ: workspace 所属確認 (IDOR防止)
+  const existing = await prisma.promaneClient.findFirst({
+    where: { id: clientId, workspaceId: workspace.id },
+    select: { id: true },
+  });
+  if (!existing) throw new Error("顧客が見つかりません");
 
   await prisma.promaneClient.delete({ where: { id: clientId } });
   revalidatePath(`/promane/${workspaceSlug}/clients`);

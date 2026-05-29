@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { requirePromaneAuthAction, getWorkspaceBySlug } from "@/lib/promane/auth";
+import { getUserPromaneLimits, countUserProjects } from "@/lib/promane/limits";
 import { revalidatePath } from "next/cache";
 
 /** 数値バリデーション: 0以上の整数を保証 */
@@ -48,6 +49,19 @@ export async function createProject(workspaceSlug: string, data: {
 
   if (!data.name?.trim()) throw new Error("プロジェクト名は必須です");
   if (data.name.length > 200) throw new Error("プロジェクト名は200文字以内");
+
+  // プラン上限チェック (ドヤAI共通)
+  const limits = await getUserPromaneLimits(userId);
+  if (limits.maxProjects === 0) {
+    throw new Error("現在のプランではプロジェクトを作成できません");
+  }
+  if (limits.maxProjects > 0) {
+    const current = await countUserProjects(userId);
+    if (current >= limits.maxProjects) {
+      throw new Error(`プラン上限 (${limits.maxProjects}件) に達しました。プランをアップグレードしてください`);
+    }
+  }
+
   const contractAmount = validateAmount(data.contractAmount, "契約金額");
   const monthlyAmount = data.monthlyAmount != null ? validateAmount(data.monthlyAmount, "月額") : null;
   const hourlyRate = data.hourlyRate != null ? validateAmount(data.hourlyRate, "時給") : null;
@@ -142,6 +156,12 @@ export async function deleteProject(workspaceSlug: string, projectId: string) {
   const { userId } = await requirePromaneAuthAction();
   const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
   if (!workspace) throw new Error("ワークスペースにアクセスできません");
+  // セキュリティ: workspace所属確認 (IDOR防止)
+  const existing = await prisma.promaneProject.findFirst({
+    where: { id: projectId, workspaceId: workspace.id },
+    select: { id: true },
+  });
+  if (!existing) throw new Error("プロジェクトが見つかりません");
   await prisma.promaneProject.delete({ where: { id: projectId } });
   revalidatePath(`/promane/${workspaceSlug}/projects`);
   revalidatePath(`/promane/${workspaceSlug}`);
