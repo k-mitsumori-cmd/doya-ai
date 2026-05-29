@@ -32,6 +32,8 @@ export default async function ProjectsPage({ params }: { params: Promise<{ works
     include: { timeEntries: { select: { duration: true, taskId: true } } },
   });
 
+  // 安全な数値正規化 (負値/NaN を 0 にクランプ)
+  const safe = (n: number | null | undefined) => (n == null || !Number.isFinite(n)) ? 0 : Math.max(0, n);
   // 集計
   const projectStats = projects.map((p) => {
     const done = p.tasks.filter((t) => t.status === "done").length;
@@ -40,13 +42,17 @@ export default async function ProjectsPage({ params }: { params: Promise<{ works
     const taskIds = p.tasks.map((t) => t.id);
     let laborCost = 0;
     for (const m of members) {
-      const min = m.timeEntries.filter((te) => te.taskId && taskIds.includes(te.taskId)).reduce((s, te) => s + te.duration, 0);
-      laborCost += (min / 60) * m.hourlyRate;
+      const min = m.timeEntries.filter((te) => te.taskId && taskIds.includes(te.taskId)).reduce((s, te) => s + safe(te.duration), 0);
+      laborCost += (min / 60) * safe(m.hourlyRate);
     }
-    const expenseCost = p.expenses.reduce((s, e) => s + e.amount, 0);
+    // 経費は負値を 0 にクランプ (会計的に経費マイナスは異常)
+    const expenseCost = p.expenses.reduce((s, e) => s + safe(e.amount), 0);
     const totalCost = laborCost + expenseCost;
-    const profit = p.contractAmount - totalCost;
-    const profitRate = p.contractAmount > 0 ? (profit / p.contractAmount) * 100 : 0;
+    const revenue = safe(p.contractAmount);
+    const profit = revenue - totalCost;
+    // 利益率は -100% 〜 100% でクランプ
+    const rawRate = revenue > 0 ? (profit / revenue) * 100 : 0;
+    const profitRate = Math.min(100, Math.max(-100, rawRate));
     // ユニーク担当者
     const assignees = Array.from(new Set(p.tasks.map((t) => t.assignee?.displayName).filter(Boolean) as string[]));
     return { ...p, done, total, progress, totalCost, profit, profitRate, assignees };

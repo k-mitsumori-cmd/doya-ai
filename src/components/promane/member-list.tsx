@@ -47,12 +47,24 @@ export function MemberList({
   const [inviteOpen, setInviteOpen] = useState(false);
 
   async function handleSaveRate(memberId: string) {
-    await updateMemberRate(workspaceSlug, memberId, rate);
-    toast.success("時間単価を更新したよ！", {
-      icon: <Image src="/character/thumbsup.png" alt="" width={28} height={28} unoptimized />,
-    });
-    setEditingId(null);
-    router.refresh();
+    // クライアント側 事前バリデーション
+    if (rate < 0) {
+      toast.error("時間単価は 0以上を入力してください", { duration: 5000 });
+      return;
+    }
+    if (rate > 9999999999) {
+      toast.error("時間単価が大きすぎます", { duration: 5000 });
+      return;
+    }
+    try {
+      await updateMemberRate(workspaceSlug, memberId, rate);
+      toast.success("時間単価を更新したよ！");
+      setEditingId(null);
+      router.refresh();
+    } catch (e: any) {
+      console.error("[promane/member] rate update failed", e);
+      toast.error(e?.message || "更新に失敗しました", { duration: 6000 });
+    }
   }
 
   return (

@@ -8,7 +8,6 @@ import { Input } from "@/components/promane/ui/input";
 import { Label } from "@/components/promane/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/promane/ui/select";
 import { formatCurrency, formatDuration, EXPENSE_CATEGORY_LABELS } from "@/lib/promane/format";
-import { createExpense, deleteExpense } from "@/lib/promane/actions-time-entries";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
@@ -51,27 +50,60 @@ export function FinanceTab({
     e.preventDefault();
     setLoading(true);
     const form = new FormData(e.currentTarget);
-    await createExpense(workspaceSlug, {
-      projectId,
-      category: form.get("category") as string,
-      amount: parseInt(form.get("amount") as string) || 0,
-      description: form.get("description") as string,
-      date: form.get("date") as string,
-    });
-    toast.success("経費を登録したよ！", {
-      icon: <Image src="/character/thumbsup.png" alt="" width={28} height={28} unoptimized />,
-    });
-    setShowForm(false);
-    setLoading(false);
-    router.refresh();
+    const amount = parseInt(form.get("amount") as string) || 0;
+    // クライアント側 事前バリデーション
+    if (amount < 0) {
+      toast.error("金額は 0以上の値を入力してください", { duration: 5000 });
+      setLoading(false);
+      return;
+    }
+    try {
+      // Server Action → API ルート (Server Components renderエラー回避)
+      const res = await fetch("/api/promane/expenses", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceSlug,
+          projectId,
+          category: form.get("category") as string,
+          amount,
+          description: form.get("description") as string,
+          date: form.get("date") as string,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data?.error || `追加に失敗しました（${res.status}）`, { duration: 6000 });
+        return;
+      }
+      toast.success("経費を登録したよ！");
+      setShowForm(false);
+      router.refresh();
+    } catch (e: any) {
+      console.error("[promane/expense] create exception", e);
+      toast.error(e?.message || "通信エラーが発生しました");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleDeleteExpense(expenseId: string) {
-    await deleteExpense(workspaceSlug, expenseId, projectId);
-    toast.success("経費を削除したよ", {
-      icon: <Image src="/character/surprise.png" alt="" width={28} height={28} unoptimized />,
-    });
-    router.refresh();
+    if (!confirm("この経費を削除しますか？")) return;
+    try {
+      const res = await fetch(
+        `/api/promane/expenses?workspaceSlug=${encodeURIComponent(workspaceSlug)}&id=${encodeURIComponent(expenseId)}`,
+        { method: "DELETE" }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        toast.error(data?.error || "削除に失敗しました");
+        return;
+      }
+      toast.success("経費を削除したよ");
+      router.refresh();
+    } catch (e: any) {
+      toast.error(e?.message || "通信エラー");
+    }
   }
 
   const expenseTotal = expenses.reduce((sum, e) => sum + e.amount, 0);

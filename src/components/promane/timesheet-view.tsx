@@ -31,26 +31,40 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects }: {
     const form = new FormData(e.currentTarget);
     const hours = parseFloat(form.get("hours") as string) || 0;
     const minutes = parseFloat(form.get("minutes") as string) || 0;
-    await createTimeEntry(workspaceSlug, {
-      taskId: (form.get("taskId") as string) || undefined,
-      memberId, duration: Math.round(hours * 60 + minutes),
-      date: form.get("date") as string,
-      note: (form.get("note") as string) || undefined,
-    });
-    toast.success("作業時間を記録したよ！", {
-      icon: <Image src="/character/thumbsup.png" alt="" width={28} height={28} unoptimized />,
-    });
-    setShowForm(false);
-    setLoading(false);
-    router.refresh();
+    const duration = Math.round(hours * 60 + minutes);
+    if (duration < 0) {
+      toast.error("時間は 0以上を入力してください");
+      setLoading(false);
+      return;
+    }
+    try {
+      await createTimeEntry(workspaceSlug, {
+        taskId: (form.get("taskId") as string) || undefined,
+        memberId,
+        duration,
+        date: form.get("date") as string,
+        note: (form.get("note") as string) || undefined,
+      });
+      toast.success("作業時間を記録したよ！");
+      setShowForm(false);
+      router.refresh();
+    } catch (e: any) {
+      console.error("[promane/time] create exception", e);
+      toast.error(e?.message || "記録に失敗しました", { duration: 6000 });
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleDelete(entryId: string) {
-    await deleteTimeEntry(workspaceSlug, entryId);
-    toast.success("記録を削除したよ", {
-      icon: <Image src="/character/surprise.png" alt="" width={28} height={28} unoptimized />,
-    });
-    router.refresh();
+    if (!confirm("この時間記録を削除しますか？")) return;
+    try {
+      await deleteTimeEntry(workspaceSlug, entryId);
+      toast.success("記録を削除したよ");
+      router.refresh();
+    } catch (e: any) {
+      toast.error(e?.message || "削除に失敗しました");
+    }
   }
 
   return (
