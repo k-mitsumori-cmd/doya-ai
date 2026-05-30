@@ -247,18 +247,15 @@ export function ToolSwitcherMenu({ currentService, showLabel, className }: ToolS
                       <ServiceTile mapping={mapping} size="lg" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-black text-slate-800 truncate group-hover/item:text-slate-900">{service.name}</p>
+                          <p className="text-sm font-black text-slate-800 truncate min-w-0 group-hover/item:text-slate-900">{service.name}</p>
                           {isNew && (
-                            <span className="px-1.5 py-px rounded-full bg-rose-500 text-white text-[8px] font-black leading-none flex-shrink-0">
+                            <span className="px-1 py-px rounded bg-rose-500 text-white text-[8px] font-black leading-none flex-shrink-0">
                               NEW
                             </span>
                           )}
                         </div>
                         <p className="text-[10px] font-bold text-slate-400 truncate group-hover/item:text-slate-500">{service.description}</p>
                       </div>
-                      <ChevronIcon
-                        className="w-4 h-4 text-slate-300 -rotate-90 opacity-0 group-hover/item:opacity-100 transition-opacity flex-shrink-0"
-                      />
                     </Link>
                   )
                 })}
