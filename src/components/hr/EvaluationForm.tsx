@@ -72,7 +72,7 @@ export default function EvaluationForm({
   onSave,
 }: EvaluationFormProps) {
   const [goals, setGoals] = useState<Goal[]>(
-    initialGoals.length > 0
+    (initialGoals?.length ?? 0) > 0
       ? initialGoals
       : [{ id: crypto.randomUUID(), title: '', description: '', weight: 100, result: '', score: 0 }]
   )

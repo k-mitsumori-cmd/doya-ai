@@ -58,14 +58,14 @@ export default function OneOnOneForm({
   const [date, setDate] = useState(initialDate)
   const [duration, setDuration] = useState(initialDuration)
   const [agenda, setAgenda] = useState<AgendaItem[]>(
-    initialAgenda.length > 0
+    (initialAgenda?.length ?? 0) > 0
       ? initialAgenda
       : [{ id: crypto.randomUUID(), topic: '', category: 'BUSINESS' }]
   )
   const [managerNote, setManagerNote] = useState(initialManagerNote)
   const [sharedNote, setSharedNote] = useState(initialSharedNote)
   const [actionItems, setActionItems] = useState<ActionItem[]>(
-    initialActionItems.length > 0
+    (initialActionItems?.length ?? 0) > 0
       ? initialActionItems
       : [{ id: crypto.randomUUID(), content: '', assignee: '', dueDate: '', done: false }]
   )
