@@ -40,8 +40,8 @@ const PLANS = [
   {
     id: 'pro',
     name: 'Pro',
-    price: 14800,
-    priceLabel: '14,800',
+    price: 9980,
+    priceLabel: '9,980',
     features: ['従業員100名まで', 'AI機能 無制限', 'メンバー無制限', '監査ログ', 'SSO対応'],
     color: 'from-purple-500 to-purple-600',
     iconBg: 'bg-purple-100',
