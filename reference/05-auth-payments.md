@@ -212,6 +212,37 @@ ADMIN_BREAKGLASS_PASSWORD=StrongP@ssw0rd123!
 
 ## 決済 (Stripe)
 
+### ★ 統一プラン方式（2026-05-31 確定・全サービス共通）
+
+ドヤAIシリーズは「**無料プラン**」と「**プロプラン（¥9,980/月・税込）**」の2種類のみ。
+**1アカウントでプロを1契約すれば、全アクティブサービスのプロ機能（上限アップ）が解放される。**
+使い放題ではなく各サービスに上限はあるが、プランは無料/プロの2段階に統一。
+
+**プラン判定は `User.plan`（グローバル）が唯一の正。**
+`UserServiceSubscription.plan` は使用量(dailyUsage/monthlyUsage)管理にのみ使い、
+**プラン判定には使わない**（使うと同一ユーザーでツール間プランが食い違う実害が出る。
+2026-05に movie/tenkai がUSS優先で不整合を起こし `User.plan` 参照へ修正済み）。
+
+#### 料金まわりの単一ソース
+- `src/lib/unified-plan.ts` … 価格(`UNIFIED_PRO_PRICE=9980`)・`UNIFIED_PRO_PLAN_ID='banner-pro'`・文言。**料金変更はここ1ファイル**。
+- `src/components/UnifiedPricingPlans.tsx` … 共通料金UI。`<UnifiedPricingPlans serviceId="xxx" currentPlan={plan?} />` で
+  無料/プロ2カードを描画。上限・機能は `services.ts` から、価格は `unified-plan.ts` から読む。
+- 全アクティブ7サービス(banner/seo/interview/persona/kintai/doyalist/promane)の `/{svc}/pricing` がこれを使用。
+- 契約は全サービス共通で `/api/stripe/checkout` に `banner-pro`(=¥9,980, env `STRIPE_PRICE_BANNER_PRO_MONTHLY`)を送る。
+
+#### 新サービスを統一プランに載せる手順
+1. `src/lib/services.ts` の SERVICES に `pricing.free.limit` / `pricing.pro.limit` / `features` を定義。
+2. `src/app/{svc}/pricing/page.tsx` を作り `<UnifiedPricingPlans serviceId="{svc}" />` を置くだけ（価格ハードコード禁止）。
+3. アクセス判定は必ず **`User.plan`** を参照（`getXxxLimitByUserPlan(user.plan)` 形式）。USS.planで判定しない。
+4. 解約反映のため `src/lib/stripe.ts` の `ALL_SERVICE_IDS` に新サービスidを追加（webhookが解約時にFREE化する対象）。
+5. 個別のcheckout API/portal方式を新設しない（doyalistは独自checkoutで`plan`/`planId`キー不一致の400バグを起こし廃止済み）。
+
+#### 既知の注意点
+- 本番Vercel envに必須なのは月額3つ: `STRIPE_PRICE_BANNER_LIGHT_/PRO_/ENTERPRISE_MONTHLY`。
+  年額(YEARLY)・BUNDLE・各サービス個別priceは未設定でbanner月額にフォールバック（=統一価格で動く）。
+- Stripeキーは test/live を3点(SECRET/PUBLISHABLE/WEBHOOK_SECRET)揃える。現状LIVE。
+- 共通プライバシーポリシーは `src/app/privacy/page.tsx`（全サービス対応・法的に有効な範囲の免責）。社名は「株式会社スリスタ（3star Inc.）」。
+
 ### 設定ファイル
 `src/lib/stripe.ts`
 
