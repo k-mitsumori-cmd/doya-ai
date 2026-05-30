@@ -26,7 +26,7 @@ export function UnifiedPricingPlans({
   className,
 }: {
   serviceId: string
-  currentPlan?: string
+  currentPlan?: string | null
   className?: string
 }) {
   const pathname = usePathname()
@@ -125,6 +125,7 @@ export function UnifiedPricingPlans({
           ) : (
             <CheckoutButton
               planId={UNIFIED_PRO_PLAN_ID}
+              loginCallbackUrl={returnTo}
               className="block w-full rounded-full bg-white px-6 py-3 text-center text-sm font-black transition hover:bg-amber-50"
             >
               <span style={{ color: BRAND }}>プロにアップグレード</span>
