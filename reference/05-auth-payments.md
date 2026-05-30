@@ -237,6 +237,13 @@ ADMIN_BREAKGLASS_PASSWORD=StrongP@ssw0rd123!
 4. 解約反映のため `src/lib/stripe.ts` の `ALL_SERVICE_IDS` に新サービスidを追加（webhookが解約時にFREE化する対象）。
 5. 個別のcheckout API/portal方式を新設しない（doyalistは独自checkoutで`plan`/`planId`キー不一致の400バグを起こし廃止済み）。
 
+#### ★ アカウント統一の鉄則（今後の全サービス開発で必須）
+- **プラン判定は常に `User.plan`（グローバル）1本。** サービス専用テーブルや `UserServiceSubscription.plan` をプラン判定に使わない。USS/専用テーブルは使用量(dailyUsage/monthlyUsage/aiUsage)カウント専用。
+  - 違反すると「同一ユーザーでもツールごとにプランが違う」実害が出る。実績: movie/tenkai(USS優先) と HR(`getOrgPlan`がUSS参照)が不整合を起こし、いずれも `User.plan` 参照へ修正済み(2026-05)。
+- **組織/チーム単位のサービス**（HR等）は、**組織オーナーの `User.plan`** を組織全体のプランとする（`src/lib/hr/billing.ts:getOrgPlan` が手本: OWNERメンバー→その `user.plan`）。メンバー個別契約や組織専用plan列で判定しない。
+- 新サービスで使用量を別テーブルに持つ場合も、上限の出し分けは `User.plan` から決定する（テーブルのplan列は持たない or 参照しない）。
+- 不整合データが出た場合は `UserServiceSubscription.plan` 等を `User.plan` に揃える（過去に7レコード/3ユーザーを是正済み）。
+
 #### 契約・ログイン・解約の遷移仕様（UnifiedPricingPlans）
 共通料金UI `UnifiedPricingPlans` のボタン挙動：
 - **表示はすべて動的**。価格=`unified-plan.ts`、利用上限=`services.ts` の `pricing.free.limit`/`pricing.pro.limit`、機能=`services.ts` の `features`。ページ側に価格・上限のハードコードはしない。
