@@ -32,7 +32,7 @@ const FEATURES = [
   {
     icon: 'auto_awesome',
     title: 'AI分析',
-    description: 'AIが評価コメントを自動生成、1on1の内容を自動要約。データドリブンな人材マネジメントを実現。',
+    description: 'AIが評価コメントを自動生成。データドリブンな人材マネジメントを実現。',
     iconBg: 'bg-amber-100',
     iconColor: 'text-amber-500',
     character: '/hr/characters/surprise_驚き.png',
@@ -69,9 +69,9 @@ export default function HrLandingPage() {
               </h1>
 
               <p className="text-xl lg:text-2xl font-medium text-slate-600 max-w-2xl mx-auto lg:mx-0 mb-10 leading-relaxed">
-                従業員データベース、組織図、人事評価、1on1記録をまとめて管理。
+                従業員データベース、組織図、人事評価をまとめて管理。
                 <br className="hidden sm:block" />
-                AIが評価コメントの生成や1on1の要約を自動化します。
+                AIが評価コメントの生成を自動化します。
               </p>
 
               <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">

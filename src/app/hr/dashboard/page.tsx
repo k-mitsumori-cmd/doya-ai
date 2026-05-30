@@ -215,11 +215,10 @@ export default function HrDashboardPage() {
             </div>
             <h2 className="text-xl font-black text-slate-900">ドヤHR でできること</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
               { icon: 'people', color: 'text-blue-600', bg: 'bg-blue-100', title: '従業員管理', desc: '社員の基本情報・部署・役職を一元管理' },
               { icon: 'assessment', color: 'text-red-500', bg: 'bg-red-100', title: 'MBO評価', desc: '目標管理に基づく人事評価をオンラインで実施' },
-              { icon: 'forum', color: 'text-emerald-600', bg: 'bg-emerald-100', title: '1on1記録', desc: 'AIが会話の要約とアクションアイテムを自動生成' },
               { icon: 'account_tree', color: 'text-amber-500', bg: 'bg-amber-100', title: '組織図', desc: '部署構成をビジュアルに表示・管理' },
             ].map((item) => (
               <div key={item.title} className="bg-white rounded-2xl p-4 shadow-sm">
