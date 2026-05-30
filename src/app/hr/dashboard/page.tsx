@@ -48,7 +48,6 @@ const STAT_CARDS = [
   { key: 'employeeCount', icon: 'people', label: '従業員数', iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
   { key: 'departmentCount', icon: 'apartment', label: '部署数', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
   { key: 'activeEvaluations', icon: 'assessment', label: '進行中の評価', iconBg: 'bg-red-100', iconColor: 'text-red-500' },
-  { key: 'monthlyOneOnOnes', icon: 'forum', label: '今月の1on1', iconBg: 'bg-amber-100', iconColor: 'text-amber-500' },
 ]
 
 const SETUP_STEPS = [
@@ -85,22 +84,10 @@ const SETUP_STEPS = [
     iconBg: 'bg-red-100',
     iconColor: 'text-red-500',
   },
-  {
-    step: 4,
-    title: '1on1を記録する',
-    desc: '面談記録をつけ始めましょう',
-    time: '約1分',
-    href: '/hr/one-on-one',
-    icon: 'forum',
-    doneKey: 'monthlyOneOnOnes',
-    iconBg: 'bg-emerald-100',
-    iconColor: 'text-emerald-600',
-  },
 ]
 
 const QUICK_ACTIONS = [
   { href: '/hr/employees/new', icon: 'person_add', label: '従業員を追加', iconBg: 'bg-blue-100', iconColor: 'text-blue-600' },
-  { href: '/hr/one-on-one', icon: 'forum', label: '1on1を記録', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600' },
   { href: '/hr/evaluations', icon: 'assessment', label: '評価を開始', iconBg: 'bg-red-100', iconColor: 'text-red-500' },
   { href: '/hr/org-chart', icon: 'account_tree', label: '組織図を確認', iconBg: 'bg-amber-100', iconColor: 'text-amber-500' },
 ]
@@ -187,7 +174,7 @@ export default function HrDashboardPage() {
             transition: { staggerChildren: 0.08 },
           },
         }}
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8"
       >
         {STAT_CARDS.map((card) => (
           <motion.div
@@ -329,8 +316,9 @@ export default function HrDashboardPage() {
         </>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent 1on1 */}
+      <div className="grid grid-cols-1 gap-6">
+        {/* Recent 1on1 — 一旦非表示 */}
+        {false && (
         <div className="bg-white rounded-3xl shadow-md p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-black text-slate-900 flex items-center gap-2">
@@ -386,6 +374,8 @@ export default function HrDashboardPage() {
             </div>
           )}
         </div>
+
+        )}
 
         {/* Evaluation Periods */}
         <div className="bg-white rounded-3xl shadow-md p-6">

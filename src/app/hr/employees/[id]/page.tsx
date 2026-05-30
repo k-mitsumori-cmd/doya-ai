@@ -51,7 +51,6 @@ interface TransferRecord {
 const TABS = [
   { key: 'profile', label: 'プロフィール', icon: 'person' },
   { key: 'evaluations', label: '評価履歴', icon: 'assessment' },
-  { key: 'one-on-one', label: '1on1履歴', icon: 'forum' },
   { key: 'transfers', label: '異動履歴', icon: 'swap_horiz' },
 ]
 
