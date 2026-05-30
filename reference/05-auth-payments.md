@@ -237,6 +237,17 @@ ADMIN_BREAKGLASS_PASSWORD=StrongP@ssw0rd123!
 4. 解約反映のため `src/lib/stripe.ts` の `ALL_SERVICE_IDS` に新サービスidを追加（webhookが解約時にFREE化する対象）。
 5. 個別のcheckout API/portal方式を新設しない（doyalistは独自checkoutで`plan`/`planId`キー不一致の400バグを起こし廃止済み）。
 
+#### 契約・ログイン・解約の遷移仕様（UnifiedPricingPlans）
+共通料金UI `UnifiedPricingPlans` のボタン挙動：
+- **表示はすべて動的**。価格=`unified-plan.ts`、利用上限=`services.ts` の `pricing.free.limit`/`pricing.pro.limit`、機能=`services.ts` の `features`。ページ側に価格・上限のハードコードはしない。
+- **「プロにアップグレード」ボタン**（`CheckoutButton`, planId=`banner-pro`固定）
+  - 未ログイン → `/auth/signin?callbackUrl=<現在の料金ページ>`（共通ログイン）へ。ログイン後は元のサービスの料金ページに戻る。
+  - ログイン済み → `POST /api/stripe/checkout` → Stripe決済へ。
+  - ※ planIdが全サービス共通(`banner-pro`)のため、`loginCallbackUrl` に現在ページ(`returnTo`)を必ず渡すこと。渡さないと CheckoutButton 既定で `/banner` に戻ってしまう（2026-05に修正済み）。
+- **「ご契約中の方：解約はこちら」リンク** → `GET /api/stripe/portal?returnTo=<現在ページ>`（Stripeカスタマーポータル）。
+  - 未契約(customer無し)でも `?portal=missing` で安全に戻る。未ログインはサインインへ。`returnTo`は同一オリジンのパスのみ許可。
+- これらは全アクティブ7サービスの料金ページで `UnifiedPricingPlans` 経由で共通提供される（解約導線の付け忘れが起きない）。
+
 #### 既知の注意点
 - 本番Vercel envに必須なのは月額3つ: `STRIPE_PRICE_BANNER_LIGHT_/PRO_/ENTERPRISE_MONTHLY`。
   年額(YEARLY)・BUNDLE・各サービス個別priceは未設定でbanner月額にフォールバック（=統一価格で動く）。
