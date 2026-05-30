@@ -22,14 +22,6 @@ const FEATURES = [
     character: '/hr/characters/point_解説.png',
   },
   {
-    icon: 'forum',
-    title: '1on1記録',
-    description: 'アジェンダ設定からメモ、アクションアイテムまで。1on1の質を高め、成長を可視化。',
-    iconBg: 'bg-emerald-100',
-    iconColor: 'text-emerald-600',
-    character: '/hr/characters/present_プレゼン.png',
-  },
-  {
     icon: 'auto_awesome',
     title: 'AI分析',
     description: 'AIが評価コメントを自動生成。データドリブンな人材マネジメントを実現。',
