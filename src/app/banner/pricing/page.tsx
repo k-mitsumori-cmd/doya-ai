@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
+import UnifiedPlanPromo from '@/components/UnifiedPlanPromo'
 
 export default function BannerPricingPage() {
   const { data: session } = useSession()
@@ -265,6 +266,8 @@ export default function BannerPricingPage() {
             </Link>
           )}
         </div>
+
+        <UnifiedPlanPromo currentServiceId="banner" className="mt-12" />
       </main>
     </div>
   )

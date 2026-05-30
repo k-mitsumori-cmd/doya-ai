@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { KINTAI_PRICING } from '@/lib/pricing'
+import UnifiedPlanPromo from '@/components/UnifiedPlanPromo'
 
 export default function KintaiPricingPage() {
   const [userPlan, setUserPlan] = useState<string>('FREE')
@@ -180,6 +181,9 @@ export default function KintaiPricingPage() {
             全プラン14日間の無料トライアル付き（クレジットカード不要）
           </p>
         </div>
+
+        {/* 統一プラン訴求 */}
+        <UnifiedPlanPromo currentServiceId="kintai" className="mt-12" />
 
         {/* CTA section */}
         <div className="bg-white rounded-3xl shadow-lg p-8 text-center pricing-fade-in-4">

@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { SEO_PRICING, getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import SeoCancelScheduleNotice from '@/components/SeoCancelScheduleNotice'
+import UnifiedPlanPromo from '@/components/UnifiedPlanPromo'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Sparkles, X, Timer, Crown, Building2, CheckCircle2, Lock } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -271,6 +272,8 @@ export default function SeoPricingPage() {
             </div>
           </div>
         </div>
+
+        <UnifiedPlanPromo currentServiceId="seo" className="mt-12" />
 
         <div className="mt-10 flex justify-center">
           {isLoggedIn ? (

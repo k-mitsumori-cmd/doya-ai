@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
+import UnifiedPlanPromo from '@/components/UnifiedPlanPromo'
 
 type PlanId = 'FREE' | 'PRO' | 'ENTERPRISE'
 
@@ -333,6 +334,9 @@ export default function PricingPage() {
             </table>
           </div>
         </div>
+
+        {/* ===== Unified Plan Promo ===== */}
+        <UnifiedPlanPromo currentServiceId="doyalist" className="mt-12" />
 
         {/* ===== FAQ ===== */}
         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 lg:p-8">
