@@ -29,8 +29,8 @@ const PLANS = [
   {
     id: 'starter',
     name: 'Starter',
-    price: 4980,
-    priceLabel: '4,980',
+    price: 2980,
+    priceLabel: '2,980',
     features: ['従業員30名まで', 'AI機能 月30回', 'メンバー5名まで', '組織図エクスポート'],
     color: 'from-blue-500 to-blue-600',
     iconBg: 'bg-blue-100',

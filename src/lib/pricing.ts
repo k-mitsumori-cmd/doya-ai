@@ -1646,8 +1646,8 @@ export const HR_PRICING: ServicePricing = {
     {
       id: 'hr-starter',
       name: 'スターター',
-      price: 4980,
-      priceLabel: '¥4,980',
+      price: 2980,
+      priceLabel: '¥2,980',
       period: '/月（税込）',
       description: '30名以下の成長チームに',
       color: 'sky',
