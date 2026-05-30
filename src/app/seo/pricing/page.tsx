@@ -2,12 +2,11 @@
 
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { SEO_PRICING, getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
-import { CheckoutButton } from '@/components/CheckoutButton'
+import { getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
 import SeoCancelScheduleNotice from '@/components/SeoCancelScheduleNotice'
-import UnifiedPlanPromo from '@/components/UnifiedPlanPromo'
+import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Sparkles, X, Timer, Crown, Building2, CheckCircle2, Lock } from 'lucide-react'
+import { Sparkles, X, Timer } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 function planTierFrom(raw: any) {
@@ -27,11 +26,6 @@ export default function SeoPricingPage() {
   const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
   const isFreeHourActive = isLoggedIn && isWithinFreeHour(firstLoginAt)
   const [freeHourRemainingMs, setFreeHourRemainingMs] = useState(() => getFreeHourRemainingMs(firstLoginAt))
-
-  const plans = SEO_PRICING.plans
-  const free = plans.find((p) => p.id === 'seo-free')
-  const pro = plans.find((p) => p.id === 'seo-pro')
-  const enterprise = plans.find((p) => p.id === 'seo-enterprise')
 
   const [welcomeOpen, setWelcomeOpen] = useState(false)
   const [welcomePlan, setWelcomePlan] = useState<string>('')
@@ -133,147 +127,7 @@ export default function SeoPricingPage() {
           )}
         </div>
 
-        <div className="space-y-6">
-          {/* FREE */}
-          <div className="rounded-3xl bg-[#F7F6F1] p-8">
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">{free?.name || 'フリー'}</h2>
-                <p className="text-sm text-slate-600 mt-2">
-                  ログイン：月{SEO_PRICING.freeLimit}回まで記事生成（画像生成はLIGHTから）
-                </p>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center px-4 py-2 rounded-full bg-white border border-slate-200 text-slate-900 font-black text-sm">
-                    <Lock className="w-4 h-4 mr-2 text-slate-500" />
-                    画像生成（図解）はLIGHTから
-                  </span>
-                </div>
-              </div>
-              <div className="flex-shrink-0">
-                <div className="px-6 py-4 rounded-2xl bg-white text-slate-900 font-black text-2xl">
-                  {free?.priceLabel || '¥0'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* LIGHT */}
-          <div className="rounded-3xl bg-blue-50 border border-blue-200 p-8">
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">ライトプラン</h2>
-                <p className="text-sm text-slate-600 mt-2">
-                  月10回まで記事生成。手軽にSEO記事制作を始めたい方に。
-                </p>
-                <ul className="mt-5 space-y-2 text-sm text-slate-700 font-bold">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500" /> 月10回まで記事生成</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-500" /> 基本的な記事生成機能</li>
-                </ul>
-              </div>
-              <div className="flex-shrink-0">
-                <div className="px-6 py-4 rounded-2xl bg-white text-blue-700 font-black text-xl">
-                  ¥2,980/月
-                </div>
-              </div>
-            </div>
-            <div className="mt-6">
-              {tier === 'LIGHT' ? (
-                <button disabled className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed">
-                  現在のプラン
-                </button>
-              ) : tier === 'PRO' || tier === 'ENTERPRISE' ? (
-                <button disabled className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed">
-                  プランダウングレード
-                </button>
-              ) : (
-                <CheckoutButton planId="seo-light" loginCallbackUrl="/seo/pricing" className="w-full py-4 rounded-2xl text-base" variant="primary">
-                  ライトプランを始める
-                </CheckoutButton>
-              )}
-            </div>
-          </div>
-
-          {/* PRO */}
-          <div className="rounded-3xl bg-slate-900 p-8 text-white">
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <div className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-white/70">
-                  <Crown className="w-4 h-4 text-blue-300" />
-                  PRO
-                </div>
-                <h2 className="text-2xl font-black mt-2">{pro?.name || 'プロ'}</h2>
-                <p className="text-sm text-white/80 mt-2">
-                  月{SEO_PRICING.proLimit}記事まで。図解/再生成/自動修正など、制作フローが一気に解放されます。
-                </p>
-                <ul className="mt-5 space-y-2 text-sm font-bold text-white/90">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-300" /> 月{SEO_PRICING.proLimit}記事まで生成</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-300" /> 図解/バナー生成（記事に合わせて自動）</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-300" /> SEO改善提案のAI自動修正</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-blue-300" /> 履歴保存：直近3ヶ月</li>
-                </ul>
-              </div>
-              <div className="flex-shrink-0">
-                <div className="px-6 py-4 rounded-2xl bg-white text-slate-900 font-black text-xl">
-                  {pro?.priceLabel || '¥9,980'}{pro?.period || '/月'}
-                </div>
-              </div>
-            </div>
-            <div className="mt-6">
-              {tier === 'PRO' ? (
-                <button disabled className="w-full py-4 rounded-2xl text-base font-black bg-white/20 text-white cursor-not-allowed">
-                  現在のプラン
-                </button>
-              ) : tier === 'ENTERPRISE' ? (
-                <button disabled className="w-full py-4 rounded-2xl text-base font-black bg-white/20 text-white cursor-not-allowed">
-                  プランダウングレード
-                </button>
-              ) : (
-                <CheckoutButton planId="seo-pro" loginCallbackUrl="/seo/pricing" className="w-full py-4 rounded-2xl text-base" variant="secondary">
-                  {tier === 'LIGHT' ? 'PROにアップグレード' : 'PROを始める'}
-                </CheckoutButton>
-              )}
-            </div>
-          </div>
-
-          {/* Enterprise */}
-          <div className="rounded-3xl bg-[#F7F6F1] p-8">
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <div className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-600">
-                  <Building2 className="w-4 h-4 text-purple-600" />
-                  Enterprise
-                </div>
-                <h2 className="text-2xl font-black text-slate-900 mt-2">{enterprise?.name || 'エンタープライズ'}</h2>
-                <p className="text-sm text-slate-600 mt-2">
-                  月{SEO_PRICING.enterpriseLimit || 200}記事まで。チーム運用・大量制作向け。
-                </p>
-                <ul className="mt-5 space-y-2 text-sm text-slate-700 font-bold">
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-purple-600" /> 月{SEO_PRICING.enterpriseLimit || 200}記事まで生成</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-purple-600" /> 図解/バナー生成＋再生成</li>
-                  <li className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-purple-600" /> 優先サポート</li>
-                </ul>
-              </div>
-              <div className="flex-shrink-0">
-                <div className="px-6 py-4 rounded-2xl bg-white text-slate-900 font-black text-xl">
-                  {enterprise?.priceLabel || '¥49,800'}{enterprise?.period || '/月'}
-                </div>
-              </div>
-            </div>
-            <div className="mt-6">
-              {tier === 'ENTERPRISE' ? (
-                <button disabled className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed">
-                  現在のプラン
-                </button>
-              ) : (
-                <CheckoutButton planId="seo-enterprise" loginCallbackUrl="/seo/pricing" className="w-full py-4 rounded-2xl text-base">
-                  {tier === 'PRO' ? 'Enterpriseにアップグレード' : 'Enterpriseを始める'}
-                </CheckoutButton>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <UnifiedPlanPromo currentServiceId="seo" className="mt-12" />
+        <UnifiedPricingPlans serviceId="seo" className="my-12" />
 
         <div className="mt-10 flex justify-center">
           {isLoggedIn ? (

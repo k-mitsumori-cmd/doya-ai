@@ -2,10 +2,8 @@
 
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
-import { CheckoutButton } from '@/components/CheckoutButton'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
-import UnifiedPlanPromo from '@/components/UnifiedPlanPromo'
+import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 
 export default function BannerPricingPage() {
   const { data: session } = useSession()
@@ -21,11 +19,6 @@ export default function BannerPricingPage() {
   })()
   const isLoggedIn = !!session?.user?.email
   const isPaid = bannerPlanTier === 'LIGHT' || bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
-
-  const plans = BANNER_PRICING.plans
-  const free = plans.find((p) => p.id === 'banner-free')
-  const pro = plans.find((p) => p.id === 'banner-pro')
-  const enterprise = plans.find((p) => p.id === 'banner-enterprise')
 
   return (
     <div className="min-h-screen bg-white">
@@ -65,190 +58,7 @@ export default function BannerPricingPage() {
           )}
         </div>
 
-        <div className="space-y-6">
-          {/* おためし */}
-          <div className="rounded-3xl bg-[#F7F6F1] p-8">
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">{free?.name || 'おためしプラン'}</h2>
-                <p className="text-sm text-slate-600 mt-2">{free?.description || `月${BANNER_PRICING.freeLimit}枚までの生成をすることができます`}</p>
-                <div className="mt-5">
-                  {bannerPlanTier === 'FREE' ? (
-                    <button
-                      disabled
-                      className="px-4 py-2 rounded-full bg-slate-200 text-slate-600 font-black text-sm cursor-not-allowed"
-                    >
-                      現在のプラン
-                    </button>
-                  ) : (
-                    <Link href="/banner">
-                      <button className="px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm hover:bg-blue-700 transition-colors">
-                        {free?.cta || '3回生成'}
-                      </button>
-                    </Link>
-                  )}
-                </div>
-              </div>
-              <div className="flex-shrink-0">
-                <div className="px-6 py-4 rounded-2xl bg-white text-slate-900 font-black text-2xl">
-                  {free?.priceLabel || '無料'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* ライト */}
-          <div className="rounded-3xl bg-blue-50 border border-blue-200 p-8">
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">ライトプラン</h2>
-                <p className="text-sm text-slate-600 mt-2">月50枚まで生成できるお手軽プラン</p>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-500 text-white font-black text-sm">
-                    月50枚まで生成
-                  </div>
-                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-500 text-white font-black text-sm">
-                    同時生成: 最大3枚
-                  </div>
-                </div>
-              </div>
-              <div className="flex-shrink-0">
-                <div className="px-6 py-4 rounded-2xl bg-white text-blue-700 font-black text-xl">
-                  月額 ¥2,980
-                </div>
-              </div>
-            </div>
-            <div className="mt-6">
-              {bannerPlanTier === 'LIGHT' ? (
-                <button
-                  disabled
-                  className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed"
-                >
-                  現在のプラン
-                </button>
-              ) : bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE' ? (
-                <button
-                  disabled
-                  className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed"
-                >
-                  プランダウングレード
-                </button>
-              ) : (
-                <CheckoutButton
-                  planId="banner-light"
-                  loginCallbackUrl="/banner/pricing"
-                  className="w-full py-4 rounded-2xl text-base"
-                  variant="primary"
-                >
-                  ライトプランを始める
-                </CheckoutButton>
-              )}
-            </div>
-          </div>
-
-          {/* Basic */}
-          <div className="rounded-3xl bg-[#F7F6F1] p-8">
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">{pro?.name || 'プロプラン'}</h2>
-                <p className="text-sm text-slate-600 mt-2">{pro?.description || '月150枚まで生成（PRO）'}</p>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
-                    月150枚まで生成
-                  </div>
-                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
-                    サイズ自由指定
-                  </div>
-                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
-                    同時生成: 最大5枚
-                  </div>
-                </div>
-              </div>
-              <div className="flex-shrink-0">
-                <div className="px-6 py-4 rounded-2xl bg-slate-900 text-white font-black text-xl">
-                  {pro?.priceLabel || '月額 ¥9,980'}
-                </div>
-              </div>
-            </div>
-            <div className="mt-6">
-              {bannerPlanTier === 'PRO' ? (
-                <button
-                  disabled
-                  className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed"
-                >
-                  現在のプラン
-                </button>
-              ) : bannerPlanTier === 'ENTERPRISE' ? (
-                <button
-                  disabled
-                  className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed"
-                >
-                  プランダウングレード
-                </button>
-              ) : (
-                <CheckoutButton
-                  planId="banner-pro"
-                  loginCallbackUrl="/banner/pricing"
-                  className="w-full py-4 rounded-2xl text-base"
-                  variant="primary"
-                >
-                  {bannerPlanTier === 'LIGHT' ? 'プロプランにアップグレード' : 'プロプランを始める'}
-                </CheckoutButton>
-              )}
-            </div>
-          </div>
-
-          {/* Enterprise */}
-          <div className="rounded-3xl bg-[#F7F6F1] p-8">
-            <div className="flex items-start justify-between gap-6">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">{enterprise?.name || 'エンタープライズ'}</h2>
-                <p className="text-sm text-slate-600 mt-2">{enterprise?.description || '月1000枚まで生成（Enterprise）'}</p>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
-                    月1000枚まで生成
-                  </div>
-                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
-                    大量運用・チーム向け
-                  </div>
-                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
-                    優先サポート
-                  </div>
-                  <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-600 text-white font-black text-sm">
-                    さらに上限UP相談可
-                  </div>
-                </div>
-              </div>
-              <div className="flex-shrink-0">
-                <div className="px-6 py-4 rounded-2xl bg-white text-slate-900 font-black text-xl">
-                  {enterprise?.priceLabel || '月額 ¥49,800'}
-                </div>
-              </div>
-            </div>
-            <div className="mt-6 grid gap-3">
-              {bannerPlanTier === 'ENTERPRISE' ? (
-                <button
-                  disabled
-                  className="w-full py-4 rounded-2xl text-base font-black bg-slate-200 text-slate-600 cursor-not-allowed"
-                >
-                  現在のプラン
-                </button>
-              ) : (
-                <CheckoutButton planId="banner-enterprise" loginCallbackUrl="/banner/pricing" className="w-full py-4 rounded-2xl text-base">
-                  {bannerPlanTier === 'PRO' ? 'エンタープライズにアップグレード' : 'エンタープライズを始める'}
-                </CheckoutButton>
-              )}
-              <a
-                href={HIGH_USAGE_CONTACT_URL}
-                target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
-                rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
-                className="w-full py-3 rounded-2xl bg-white text-slate-900 font-black text-sm hover:bg-slate-50 transition-colors inline-flex items-center justify-center border border-slate-200"
-              >
-                さらに上限UPの相談（マーケティング施策を丸投げする）
-              </a>
-            </div>
-          </div>
-        </div>
+        <UnifiedPricingPlans serviceId="banner" currentPlan={bannerPlanTier} className="my-12" />
 
         {/* Bottom CTA */}
         <div className="mt-10 flex justify-center">
@@ -266,8 +76,6 @@ export default function BannerPricingPage() {
             </Link>
           )}
         </div>
-
-        <UnifiedPlanPromo currentServiceId="banner" className="mt-12" />
       </main>
     </div>
   )

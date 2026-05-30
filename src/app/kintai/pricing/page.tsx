@@ -2,22 +2,13 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { KINTAI_PRICING } from '@/lib/pricing'
-import UnifiedPlanPromo from '@/components/UnifiedPlanPromo'
+import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 
 export default function KintaiPricingPage() {
   const [userPlan, setUserPlan] = useState<string>('FREE')
   useEffect(() => {
     fetch('/api/kintai/usage').then(r => r.json()).then(d => setUserPlan(d.plan || 'FREE')).catch(() => {})
   }, [])
-
-  const getPlanLevel = (planId: string) => {
-    if (planId.includes('enterprise')) return 4
-    if (planId.includes('pro')) return 3
-    if (planId.includes('starter')) return 2
-    return 1
-  }
-  const userLevel = getPlanLevel(userPlan.toLowerCase())
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
@@ -61,118 +52,8 @@ export default function KintaiPricingPage() {
           </div>
         </div>
 
-        {/* Plans grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {KINTAI_PRICING.plans.map((plan, i) => (
-            <div
-              key={plan.id}
-              className={`pricing-fade-in-${i + 1} relative bg-white rounded-3xl p-6 ${
-                plan.popular
-                  ? 'shadow-2xl ring-2 ring-purple-500'
-                  : plan.price === 0
-                    ? 'shadow-lg ring-2 ring-emerald-200'
-                    : 'shadow-lg'
-              }`}
-            >
-              {/* Popular badge */}
-              {plan.popular && (
-                <div className="badge-pulse absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-[#7f19e6] text-white text-xs font-bold rounded-full shadow-lg shadow-[#7f19e6]/25">
-                  人気
-                </div>
-              )}
-
-              {/* Free badge */}
-              {plan.price === 0 && plan.id === 'kintai-free' && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full">
-                  永久無料
-                </div>
-              )}
-
-              <div className="mb-6">
-                <h2 className="text-xl font-black text-slate-900">{plan.name}</h2>
-                <p className="text-sm text-slate-500 mt-1">{plan.description}</p>
-              </div>
-
-              <div className="mb-6">
-                <span className="text-4xl font-black text-slate-900">{plan.priceLabel}</span>
-                {plan.period && (
-                  <span className="text-sm text-slate-500 ml-1">{plan.period}</span>
-                )}
-              </div>
-
-              <ul className="space-y-3 mb-8">
-                {plan.features.map((feature) => (
-                  <li key={feature.text} className="flex items-start gap-2">
-                    <span
-                      className={`material-symbols-outlined text-lg mt-0.5 flex-shrink-0 ${
-                        feature.included ? 'text-emerald-500' : 'text-slate-300'
-                      }`}
-                      style={feature.included ? { fontVariationSettings: "'FILL' 1" } : undefined}
-                    >
-                      {feature.included ? 'check_circle' : 'cancel'}
-                    </span>
-                    <span className={`text-sm ${feature.included ? 'text-slate-700' : 'text-slate-400'}`}>
-                      {feature.text}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              {(() => {
-                const planLevel = getPlanLevel(plan.id)
-                const isCurrent = planLevel === userLevel
-                const isLower = planLevel < userLevel
-                const isHigher = planLevel > userLevel
-                const isEnterprise = plan.id === 'kintai-enterprise'
-                const isFree = plan.id === 'kintai-free'
-
-                if (isCurrent) {
-                  return (
-                    <span className="block w-full py-3 text-center text-base font-bold rounded-full bg-[#7f19e6]/10 text-[#7f19e6] ring-2 ring-[#7f19e6]/30">
-                      ✅ 現在のプラン
-                    </span>
-                  )
-                }
-
-                if (isEnterprise) {
-                  return (
-                    <Link
-                      href="https://doyamarke.surisuta.jp/contact"
-                      className="block w-full py-3 text-center text-base font-bold rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-all"
-                    >
-                      お問い合わせ
-                    </Link>
-                  )
-                }
-
-                const label = isHigher ? 'アップグレード' : 'ダウングレード'
-                const portalUrl = `/api/stripe/portal?returnTo=${encodeURIComponent('/kintai/pricing')}`
-
-                return isFree && isLower ? (
-                  <Link
-                    href={portalUrl}
-                    className="block w-full py-3 text-center text-base font-bold rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-all"
-                  >
-                    無料プランに戻す
-                  </Link>
-                ) : (
-                  <Link
-                    href={portalUrl}
-                    className={`block w-full py-3 text-center text-base font-bold rounded-full transition-all ${
-                      isHigher && plan.popular
-                        ? 'bg-[#7f19e6] text-white shadow-md hover:shadow-lg hover:bg-[#6b14c4]'
-                        : isHigher
-                          ? 'bg-slate-700 text-white hover:bg-slate-800'
-                          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                    }`}
-                  >
-                    {label}
-                  </Link>
-                )
-              })()}
-            </div>
-          ))}
-        </div>
+        {/* Plans grid (統一プラン: 無料 / プロ¥9,980) */}
+        <UnifiedPricingPlans serviceId="kintai" currentPlan={userPlan} className="my-12" />
 
         {/* Trial notice */}
         <div className="text-center mb-8">
@@ -181,9 +62,6 @@ export default function KintaiPricingPage() {
             全プラン14日間の無料トライアル付き（クレジットカード不要）
           </p>
         </div>
-
-        {/* 統一プラン訴求 */}
-        <UnifiedPlanPromo currentServiceId="kintai" className="mt-12" />
 
         {/* CTA section */}
         <div className="bg-white rounded-3xl shadow-lg p-8 text-center pricing-fade-in-4">
