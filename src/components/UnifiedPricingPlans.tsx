@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Check, Sparkles } from 'lucide-react'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import { getServiceById } from '@/lib/services'
@@ -28,6 +29,9 @@ export function UnifiedPricingPlans({
   currentPlan?: string
   className?: string
 }) {
+  const pathname = usePathname()
+  const returnTo = pathname || `/${serviceId}/pricing`
+
   const svc = getServiceById(serviceId)
   if (!svc) return null
 
@@ -139,6 +143,16 @@ export function UnifiedPricingPlans({
           <Sparkles className="h-4 w-4" />
           プロプラン1つで、全サービスのプロ機能が使えます（詳しく見る）
         </Link>
+      </div>
+
+      {/* プラン管理・解約（Stripeカスタマーポータルへ。契約中の方向け） */}
+      <div className="mt-3 text-center">
+        <a
+          href={`/api/stripe/portal?returnTo=${encodeURIComponent(returnTo)}`}
+          className="text-xs font-bold text-gray-400 transition hover:text-gray-600 hover:underline"
+        >
+          ご契約中の方：お支払い方法の変更・プランの解約はこちら
+        </a>
       </div>
     </section>
   )
