@@ -38,7 +38,6 @@ const HR_MAIN_NAV: NavItem[] = [
   { href: '/hr/employees', label: '従業員', icon: Users },
   { href: '/hr/org-chart', label: '組織図', icon: Network },
   { href: '/hr/evaluations', label: '評価', icon: ClipboardList },
-  { href: '/hr/one-on-one', label: '1on1', icon: MessageSquare },
 ]
 
 const HR_ADMIN_NAV: NavItem[] = [
