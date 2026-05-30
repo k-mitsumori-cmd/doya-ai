@@ -15,6 +15,7 @@ import {
   Settings,
 } from 'lucide-react'
 import { hasMinRole } from '@/lib/kintai/access-client'
+import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 
 interface KintaiSidebarProps {
   role: string
@@ -132,8 +133,13 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
         )}
       </nav>
 
+      {/* 他のドヤAIツールへ切替 */}
+      <div className="px-3 pt-2">
+        <ToolSwitcherMenu currentService="kintai" showLabel={true} isCollapsed={false} />
+      </div>
+
       {/* Plan link */}
-      <div className="px-3 mb-2">
+      <div className="px-3 mb-2 mt-2">
         <Link href="/kintai/pricing" onClick={closeMobile}
           className="flex items-center gap-3 px-4 py-3 rounded-full text-base font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 transition-all">
           <span className="text-lg">💎</span>
