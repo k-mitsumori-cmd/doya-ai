@@ -32,8 +32,10 @@ export function getOrgPlanLimits(plan: string): PlanLimits {
 }
 
 /**
- * 組織のプランを、OWNERの UserServiceSubscription(serviceId:'hr') から取得する。
- * HrOrganization.plan はキャッシュ的に残すが、信頼できるソースは UserServiceSubscription。
+ * 組織のプランを、OWNER の User.plan（グローバル）から取得する。
+ * 統一プラン方針: プラン判定は User.plan が唯一の正。プロ1契約で全サービス解放されるため、
+ * オーナーが ¥9,980 プロを契約していれば組織全体で HR もプロ扱いになる。
+ * （UserServiceSubscription.plan はサービス別の使用量管理用で、プラン判定には使わない）
  */
 export async function getOrgPlan(organizationId: string): Promise<string> {
   // 組織のOWNERを取得
@@ -42,12 +44,13 @@ export async function getOrgPlan(organizationId: string): Promise<string> {
   })
   if (!owner) return 'FREE'
 
-  // OWNERのhr用サブスクリプションを取得
-  const sub = await prisma.userServiceSubscription.findUnique({
-    where: { userId_serviceId: { userId: owner.userId, serviceId: 'hr' } },
+  // OWNER の User.plan（グローバル）をプランの正とする
+  const user = await prisma.user.findUnique({
+    where: { id: owner.userId },
+    select: { plan: true },
   })
 
-  return sub?.plan || 'FREE'
+  return user?.plan || 'FREE'
 }
 
 /**
