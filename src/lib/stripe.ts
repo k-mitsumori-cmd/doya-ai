@@ -174,18 +174,19 @@ export const STRIPE_PRICE_IDS = {
     },
   },
   // ドヤHR（組織向け課金）
+  // ドヤHR（統一課金: 既定はドヤバナーAIと同じ共通価格ID。HR専用priceを使いたい場合のみ STRIPE_PRICE_HR_* で上書き）
   hr: {
     starter: {
-      monthly: process.env.STRIPE_PRICE_HR_STARTER_MONTHLY || 'price_hr_starter_monthly',
-      yearly: process.env.STRIPE_PRICE_HR_STARTER_YEARLY || 'price_hr_starter_yearly',
+      monthly: process.env.STRIPE_PRICE_HR_STARTER_MONTHLY || BANNER_LIGHT_MONTHLY,
+      yearly: process.env.STRIPE_PRICE_HR_STARTER_YEARLY || BANNER_LIGHT_YEARLY,
     },
     pro: {
-      monthly: process.env.STRIPE_PRICE_HR_PRO_MONTHLY || 'price_hr_pro_monthly',
-      yearly: process.env.STRIPE_PRICE_HR_PRO_YEARLY || 'price_hr_pro_yearly',
+      monthly: process.env.STRIPE_PRICE_HR_PRO_MONTHLY || BANNER_PRO_MONTHLY,
+      yearly: process.env.STRIPE_PRICE_HR_PRO_YEARLY || BANNER_PRO_YEARLY,
     },
     enterprise: {
-      monthly: process.env.STRIPE_PRICE_HR_ENTERPRISE_MONTHLY || 'price_hr_enterprise_monthly',
-      yearly: process.env.STRIPE_PRICE_HR_ENTERPRISE_YEARLY || 'price_hr_enterprise_yearly',
+      monthly: process.env.STRIPE_PRICE_HR_ENTERPRISE_MONTHLY || BANNER_ENTERPRISE_MONTHLY,
+      yearly: process.env.STRIPE_PRICE_HR_ENTERPRISE_YEARLY || BANNER_ENTERPRISE_YEARLY,
     },
   },
   // セットプラン
