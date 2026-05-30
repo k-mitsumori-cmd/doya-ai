@@ -19,6 +19,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   improvement: '✨ 改善したほうがいいこと',
   feature: '💡 追加の機能要望',
   bug: '🐛 エラー報告',
+  error: '🚨 エラー報告', // 旧エラー画面（error.tsx）からの type:'error' 互換
   other: '📝 その他',
 }
 
@@ -36,6 +37,9 @@ export async function POST(req: NextRequest) {
       page = '',
       service = '',
       userAgent = '',
+      // 旧エラー画面(error.tsx)からの後方互換フィールド
+      error: errorText,
+      description,
     } = body as {
       category?: string
       type?: string
@@ -43,13 +47,24 @@ export async function POST(req: NextRequest) {
       page?: string
       service?: string
       userAgent?: string
+      error?: string
+      description?: string
     }
 
-    if (!message || typeof message !== 'string' || !message.trim()) {
+    // 本文は message を優先。無ければ旧形式の description/error から組み立てる
+    let finalMessage = (typeof message === 'string' ? message : '').trim()
+    if (!finalMessage) {
+      const parts: string[] = []
+      if (typeof description === 'string' && description.trim()) parts.push(description.trim())
+      if (typeof errorText === 'string' && errorText.trim()) parts.push(`エラー内容: ${errorText.trim()}`)
+      finalMessage = parts.join('\n\n')
+    }
+
+    if (!finalMessage) {
       return NextResponse.json({ error: '内容を入力してください' }, { status: 400 })
     }
-    if (message.length > 5000) {
-      return NextResponse.json({ error: '内容が長すぎます（5000文字以内）' }, { status: 400 })
+    if (finalMessage.length > 5000) {
+      finalMessage = finalMessage.slice(0, 5000)
     }
 
     const key = category || type || 'other'
@@ -85,7 +100,7 @@ export async function POST(req: NextRequest) {
         },
         {
           type: 'section',
-          text: { type: 'mrkdwn', text: `*内容:*\n${message.slice(0, 2900)}` },
+          text: { type: 'mrkdwn', text: `*内容:*\n${finalMessage.slice(0, 2900)}` },
         },
         {
           type: 'context',
@@ -109,7 +124,7 @@ export async function POST(req: NextRequest) {
       }
     } else {
       console.warn('[feedback] Slack webhook 未設定')
-      console.log('[FEEDBACK]', { userName, userEmail, category: key, page, service, message })
+      console.log('[FEEDBACK]', { userName, userEmail, category: key, page, service, message: finalMessage })
     }
 
     return NextResponse.json({ success: true })
