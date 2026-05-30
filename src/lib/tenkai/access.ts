@@ -38,14 +38,15 @@ export async function getTenkaiUser(): Promise<{
   const userId = String(user?.id || '').trim() || null
 
   let plan: TenkaiPlanCode = 'FREE'
-  // サービス別サブスクリプションからtenkaiプランを取得
+  // 統一課金: プランは User.plan（グローバル）を唯一の正とする
+  // （サービス別USS.planは使わず、ツール間でプランが食い違わないようにする）
   if (userId) {
-    const sub = await prisma.userServiceSubscription.findUnique({
-      where: { userId_serviceId: { userId, serviceId: 'tenkai' } },
+    const u = await prisma.user.findUnique({
+      where: { id: userId },
       select: { plan: true },
     })
-    if (sub?.plan) {
-      plan = normalizePlan(sub.plan)
+    if (u?.plan) {
+      plan = normalizePlan(u.plan)
     }
   }
 
@@ -143,11 +144,12 @@ export async function incrementProjectCount(userId: string): Promise<void> {
  * ユーザーのtenkaiプラン取得
  */
 export async function getTenkaiPlan(userId: string): Promise<TenkaiPlanCode> {
-  const sub = await prisma.userServiceSubscription.findUnique({
-    where: { userId_serviceId: { userId, serviceId: 'tenkai' } },
+  // 統一課金: プランは User.plan（グローバル）を唯一の正とする
+  const u = await prisma.user.findUnique({
+    where: { id: userId },
     select: { plan: true },
   })
-  return sub?.plan ? normalizePlan(sub.plan) : 'FREE'
+  return u?.plan ? normalizePlan(u.plan) : 'FREE'
 }
 
 /**

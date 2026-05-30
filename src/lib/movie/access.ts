@@ -72,10 +72,10 @@ export async function checkMovieUsage(userId: string | null, guestId: string | n
     }
   }
 
-  // フリーアワー判定
+  // フリーアワー判定 + プラン取得（統一課金: プランは User.plan を唯一の正とする）
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { firstLoginAt: true },
+    select: { firstLoginAt: true, plan: true },
   })
   if (user && isWithinFreeHour(user.firstLoginAt)) {
     return {
@@ -87,11 +87,8 @@ export async function checkMovieUsage(userId: string | null, guestId: string | n
     }
   }
 
-  // ユーザープラン取得
-  const subscription = await prisma.userServiceSubscription.findUnique({
-    where: { userId_serviceId: { userId, serviceId: 'movie' } },
-  })
-  const plan = subscription?.plan ?? 'FREE'
+  // ユーザープランは User.plan（グローバル）から取得（サービス別USS.planは使わない）
+  const plan = user?.plan ?? 'FREE'
   const limit = getMovieMonthlyLimit(plan)
 
   // DOYA_DISABLE_LIMITS による無制限化
