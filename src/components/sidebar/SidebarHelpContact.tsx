@@ -73,21 +73,25 @@ export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContac
 
   return (
     <>
-      {/* お問い合わせ・改善依頼ボタン */}
+      {/* お問い合わせ・改善依頼ボタン（明暗どちらのサイドバーでも視認できる独立カード） */}
       <div className={`${isCollapsed ? 'px-2' : 'px-3'} pb-2`}>
         <button
           onClick={() => setShowModal(true)}
-          className={`w-full flex items-center gap-2 rounded-xl text-gray-600 hover:bg-purple-50 hover:text-[#7f19e6] transition-colors ${
-            isCollapsed ? 'justify-center p-2' : 'px-3 py-2'
+          className={`group/contact w-full flex items-center gap-2.5 rounded-xl bg-white text-gray-800 shadow-sm ring-1 ring-black/5 hover:ring-[#7f19e6]/40 hover:shadow-md transition-all ${
+            isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2.5'
           }`}
           title={isCollapsed ? 'お問い合わせ・改善依頼' : undefined}
           type="button"
         >
-          <MessageSquarePlus className="w-5 h-5 flex-shrink-0" />
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#7f19e6] to-fuchsia-500 text-white shadow-sm">
+            <MessageSquarePlus className="w-[18px] h-[18px]" />
+          </span>
           {!isCollapsed && showLabel && (
-            <span className="flex flex-col items-start leading-tight">
-              <span className="text-sm font-bold">お問い合わせ・改善依頼</span>
-              <span className="text-[10px] font-bold text-[#7f19e6]">追加機能要望募集中 🙌</span>
+            <span className="flex flex-col items-start leading-tight min-w-0">
+              <span className="text-[13px] font-black text-gray-900">お問い合わせ・改善依頼</span>
+              <span className="inline-flex items-center gap-1 mt-0.5 text-[10px] font-black text-[#7f19e6]">
+                追加機能要望募集中 🙌
+              </span>
             </span>
           )}
         </button>
