@@ -44,6 +44,21 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // 顧客IDが現モードに存在するか検証（テスト/本番不整合での500を防ぐ）
+    try {
+      const c = await stripe.customers.retrieve(dbUser.stripeCustomerId)
+      if ((c as any)?.deleted) throw Object.assign(new Error('deleted'), { code: 'resource_missing' })
+    } catch (err: any) {
+      if (err?.code === 'resource_missing' || err?.statusCode === 404) {
+        await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: null } }).catch(() => {})
+        return NextResponse.json(
+          { error: '有効なサブスクリプションが見つかりません。アップグレードからお手続きください。' },
+          { status: 400 }
+        )
+      }
+      throw err
+    }
+
     const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.surisuta.jp'
 
     const portalSession = await stripe.billingPortal.sessions.create({

@@ -67,6 +67,21 @@ export async function POST(req: NextRequest) {
 
     let stripeCustomerId = dbUser.stripeCustomerId
 
+    // 保存済み顧客IDが現在のStripeモード(本番/テスト)に存在するか検証。
+    // 別モードで作られたID等は resource_missing になるためクリアして作り直す（自己修復）
+    if (stripeCustomerId) {
+      try {
+        const existing = await stripe.customers.retrieve(stripeCustomerId)
+        if ((existing as any)?.deleted) stripeCustomerId = null
+      } catch (err: any) {
+        if (err?.code === 'resource_missing' || err?.statusCode === 404) {
+          stripeCustomerId = null
+        } else {
+          throw err
+        }
+      }
+    }
+
     // StripeCustomerがない場合は作成してUser.stripeCustomerIdに保存
     if (!stripeCustomerId) {
       const customer = await stripe.customers.create({
