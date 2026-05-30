@@ -50,6 +50,7 @@ const HR_ADMIN_NAV: NavItem[] = [
 interface HrSidebarProps extends SidebarProps {
   employeeCount?: number
   employeeLimit?: number
+  plan?: string
 }
 
 function HrSidebarImpl({
@@ -59,6 +60,7 @@ function HrSidebarImpl({
   isMobile,
   employeeCount = 0,
   employeeLimit = 5,
+  plan,
 }: HrSidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
@@ -72,9 +74,10 @@ function HrSidebarImpl({
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
+  // 請求ページ／使用量メーターと一致させるため、HR組織のプラン(plan prop)を優先表示する
   const planLabel = (() => {
-    if (!isLoggedIn) return 'GUEST'
-    const p = String((session?.user as any)?.plan || 'FREE').toUpperCase()
+    if (!plan && !isLoggedIn) return 'GUEST'
+    const p = String(plan || 'FREE').toUpperCase()
     if (p === 'ENTERPRISE') return 'ENTERPRISE'
     if (p === 'PRO' || p === 'BUSINESS') return 'PRO'
     if (p === 'STARTER' || p === 'BASIC' || p === 'LIGHT') return 'STARTER'

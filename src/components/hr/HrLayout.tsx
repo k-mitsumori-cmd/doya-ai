@@ -15,7 +15,7 @@ interface HrLayoutProps {
 export default function HrLayout({ children }: HrLayoutProps) {
   const { data: session, status } = useSession()
   const pathname = usePathname()
-  const [usage, setUsage] = useState({ employeeCount: 0, employeeLimit: 5 })
+  const [usage, setUsage] = useState({ employeeCount: 0, employeeLimit: 5, plan: 'FREE' })
   const [hasOrg, setHasOrg] = useState<boolean | null>(null)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -37,6 +37,7 @@ export default function HrLayout({ children }: HrLayoutProps) {
             setUsage({
               employeeCount: data.employeeCount ?? 0,
               employeeLimit: data.employeeLimit ?? 5,
+              plan: data.plan ?? 'FREE',
             })
           } else {
             setHasOrg(false)
@@ -102,6 +103,7 @@ export default function HrLayout({ children }: HrLayoutProps) {
           onToggle={(collapsed) => setSidebarCollapsed(collapsed)}
           employeeCount={usage.employeeCount}
           employeeLimit={usage.employeeLimit}
+          plan={usage.plan}
         />
       </div>
       {/* デスクトップ用スペーサー: fixed サイドバー幅をCSSのみで確保（JSブレークポイント不要） */}
@@ -140,6 +142,7 @@ export default function HrLayout({ children }: HrLayoutProps) {
               onToggle={() => setMobileMenuOpen(false)}
               employeeCount={usage.employeeCount}
               employeeLimit={usage.employeeLimit}
+              plan={usage.plan}
             />
           </motion.div>
         )}

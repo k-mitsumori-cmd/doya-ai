@@ -122,7 +122,7 @@ export default function EvaluationsPage() {
                   transition={{ duration: 0.3, ease: 'easeOut' }}
                 >
                   <Link
-                    href={`/hr/evaluations/${period.id}`}
+                    href={`/hr/evaluations/period/${period.id}`}
                     className="block bg-white rounded-3xl shadow-md p-6 hover:shadow-lg transition-all"
                   >
                     <div className="flex items-start justify-between mb-3">
