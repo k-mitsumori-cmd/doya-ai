@@ -2,102 +2,32 @@
 
 import { motion } from 'framer-motion'
 import Link from 'next/link'
-import { HR_PRICING } from '@/lib/pricing'
+import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 
 export default function HrPricingPage() {
   return (
-    <div className="p-6 lg:p-10 max-w-6xl mx-auto">
-      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-black text-slate-900 mb-3">料金プラン</h1>
-          <p className="text-slate-500 max-w-lg mx-auto">
-            5名までは永久無料。チームの成長に合わせて最適なプランを選択できます。
-          </p>
-        </div>
-
-        {/* Plans */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {HR_PRICING.plans.map((plan, i) => (
-            <motion.div
-              key={plan.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className={`relative bg-white rounded-3xl p-6 ${
-                plan.popular ? 'shadow-2xl ring-2 ring-blue-500' : 'shadow-lg'
-              }`}
-            >
-              {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-blue-600 text-white text-xs font-bold rounded-full">
-                  人気
-                </div>
-              )}
-
-              <div className="mb-6">
-                <h2 className="text-xl font-black text-slate-900">{plan.name}</h2>
-                <p className="text-sm text-slate-500 mt-1">{plan.description}</p>
-              </div>
-
-              <div className="mb-6">
-                <span className="text-4xl font-black text-slate-900">{plan.priceLabel}</span>
-                {plan.period && (
-                  <span className="text-sm text-slate-500 ml-1">{plan.period}</span>
-                )}
-              </div>
-
-              <ul className="space-y-3 mb-8">
-                {plan.features.map((feature) => (
-                  <li key={feature.text} className="flex items-start gap-2">
-                    <span
-                      className={`material-symbols-outlined text-lg mt-0.5 flex-shrink-0 ${
-                        feature.included ? 'text-emerald-500' : 'text-slate-300'
-                      }`}
-                      style={feature.included ? { fontVariationSettings: "'FILL' 1" } : undefined}
-                    >
-                      {feature.included ? 'check_circle' : 'cancel'}
-                    </span>
-                    <span className={`text-base ${feature.included ? 'text-slate-700' : 'text-slate-400'}`}>
-                      {feature.text}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-
-              <Link
-                href={plan.price === 0 && plan.id !== 'hr-enterprise' ? '/hr/dashboard' : '#'}
-                className={`block w-full py-3 text-center text-base font-bold rounded-full transition-all ${
-                  plan.popular
-                    ? 'bg-blue-600 text-white shadow-md hover:shadow-lg hover:bg-blue-700'
-                    : plan.id === 'hr-enterprise'
-                      ? 'bg-slate-900 text-white rounded-full hover:bg-slate-800'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                {plan.cta}
-              </Link>
-            </motion.div>
-          ))}
-        </div>
-
-        {/* FAQ or extra info */}
-        <div className="bg-white rounded-3xl shadow-lg p-8 text-center">
-          <h3 className="text-xl font-black text-slate-900 mb-2">まずは無料で始めてみませんか？</h3>
-          <p className="text-base text-slate-600 mb-6 max-w-lg mx-auto">
-            クレジットカード不要、5名までの従業員管理が永久無料でお使いいただけます。
-            アップグレードはいつでも可能です。
-          </p>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.97 }} className="inline-block">
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-5xl mx-auto px-6 py-12">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          {/* Header */}
+          <div className="text-center mb-10">
             <Link
               href="/hr/dashboard"
-              className="inline-flex items-center gap-2 px-10 py-4 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all"
+              className="inline-flex items-center gap-1 text-sm font-bold text-slate-500 hover:text-slate-700 mb-4"
             >
-              <span className="material-symbols-outlined text-lg">rocket_launch</span>
-              無料で始める
+              <span className="material-symbols-outlined text-lg">arrow_back</span>
+              ダッシュボードに戻る
             </Link>
-          </motion.div>
-        </div>
-      </motion.div>
+            <h1 className="text-3xl font-black text-slate-900">料金プラン</h1>
+            <p className="mt-2 text-slate-500 font-bold max-w-xl mx-auto">
+              ドヤHR は5名まで永久無料。プロプラン1つで、ドヤAIの全サービスのプロ機能が使い放題になります。
+            </p>
+          </div>
+
+          {/* 全サービス共通の 無料 / プロ(¥9,980) 2プラン */}
+          <UnifiedPricingPlans serviceId="hr" />
+        </motion.div>
+      </div>
     </div>
   )
 }
