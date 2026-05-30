@@ -1664,8 +1664,8 @@ export const HR_PRICING: ServicePricing = {
     {
       id: 'hr-pro',
       name: 'プロ',
-      price: 14800,
-      priceLabel: '¥14,800',
+      price: 9980,
+      priceLabel: '¥9,980',
       period: '/月（税込）',
       description: '本格的な人材マネジメントに',
       popular: true,

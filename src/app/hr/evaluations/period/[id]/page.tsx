@@ -79,7 +79,7 @@ export default function EvaluationPeriodDetailPage() {
       setPeriod(periodData.period)
       if (evalRes.ok) {
         const ev = await evalRes.json()
-        setEvaluations(ev.evaluations ?? [])
+        setEvaluations(ev.items ?? ev.evaluations ?? [])
       }
       if (empRes.ok) {
         const emp = await empRes.json()

@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
     })
     if (existing) {
       return NextResponse.json(
-        { error: 'Evaluation already exists for this period and employee' },
+        { error: 'この従業員の評価はこの期間に既に作成されています' },
         { status: 400 }
       )
     }
