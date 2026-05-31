@@ -253,7 +253,27 @@ ADMIN_BREAKGLASS_PASSWORD=StrongP@ssw0rd123!
   - ※ planIdが全サービス共通(`banner-pro`)のため、`loginCallbackUrl` に現在ページ(`returnTo`)を必ず渡すこと。渡さないと CheckoutButton 既定で `/banner` に戻ってしまう（2026-05に修正済み）。
 - **「ご契約中の方：解約はこちら」リンク** → `GET /api/stripe/portal?returnTo=<現在ページ>`（Stripeカスタマーポータル）。
   - 未契約(customer無し)でも `?portal=missing` で安全に戻る。未ログインはサインインへ。`returnTo`は同一オリジンのパスのみ許可。
-- これらは全アクティブ7サービスの料金ページで `UnifiedPricingPlans` 経由で共通提供される（解約導線の付け忘れが起きない）。
+- これらは全アクティブ8サービス（banner/seo/interview/persona/kintai/doyalist/promane/hr）の料金ページで `UnifiedPricingPlans` 経由で共通提供される（解約導線の付け忘れが起きない）。
+
+#### ★ 旧プラン表示の一掃ルール（料金が出る画面は全て統一UIへ）
+料金やプラン名がユーザーに見える画面は、料金ページだけでなく**至る所**にある。新サービス追加・改修時は必ず以下を全部チェックする（2026-05に旧プラン段階「ライト¥2,980 / スターター¥2,980 / エンタープライズ¥49,800」が多数の画面に残存していた実績あり）：
+- `src/app/{svc}/pricing/page.tsx`（料金ページ本体）
+- `src/app/{svc}/dashboard/plan/page.tsx`、`dashboard/settings/page.tsx`、`settings/page.tsx`、`settings/billing/page.tsx`（設定内のプラン/課金画面）
+- `src/app/pricing/page.tsx`（ルート直下。バナー用checkoutを使う統一2プラン）
+- `src/components/*Sidebar*`（サイドバーのアップグレード誘導に旧価格がベタ書きされがち）
+- `src/components/UsageLimitBanner.tsx` 等のアップグレード誘導バナー/モーダル
+
+ルール:
+- **価格・プランカードは UnifiedPricingPlans に集約**。各画面で `XXX_PRICING.plans` を map して4段階カードを描かない。
+- 現在プラン名の表示は「無料 / プロ」の2値に寄せる（内部の tier 判定文字列 'LIGHT'/'ENTERPRISE' 比較はロジックとして残してよいが、**UIに¥2,980/¥49,800/ライト/スターター/エンタープライズの文字を出さない**）。
+- 旧プラン定義 `src/lib/pricing.ts` には4段階(ライト/プロ/エンタープライズ)が今も残るが、UnifiedPricingPlans未移行画面がここを参照して旧価格を表示する。**ファイル削除はせず**（[[feedback_no_delete_recreate]]）、各画面を統一UIへ移行することで対処する。
+- 検出コマンド: `grep -rnE "¥2,980|¥49,800|2,980|49,800|ライトプラン|スターター|エンタープライズ" src/app src/components | grep -v "_PRICING\|'LIGHT'\|'ENTERPRISE'"`
+
+#### リンク遷移の検証ポイント（料金まわり改修後は必ず確認）
+- 「無料ではじめる」= `svc.dashboardHref` → 各サービスの実在ルートか（seo/interview/persona/doyalist/promane は `/{svc}`、banner/kintai/hr は `/{svc}/dashboard`）。
+- 「プロにアップグレード」= checkout に渡る planId が `getPriceId` の priceMap に存在するか（統一は `banner-pro`）。無いと400「無効なプランID」。
+- 「解約はこちら」= `/api/stripe/portal`（GET=リンク遷移用/POST=JSON用 併用）。未契約は `?portal=missing` で安全に戻り500落ちしない。
+- doyalist は過去に独自 `/api/doyalist/checkout` を `plan`/`planId` キー不一致で叩き常時400だった→共通導線に統一済み。**サービス専用checkout/portalを新設しない**。
 
 #### 既知の注意点
 - 本番Vercel envに必須なのは月額3つ: `STRIPE_PRICE_BANNER_LIGHT_/PRO_/ENTERPRISE_MONTHLY`。
