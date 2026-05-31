@@ -74,7 +74,7 @@ export function UnifiedPricingPlans({
           ) : (
             <Link
               href={svc.dashboardHref}
-              className="block w-full rounded-full bg-gray-100 px-6 py-3 text-center text-sm font-black text-gray-700 transition hover:bg-gray-200"
+              className="block w-full rounded-full bg-white px-6 py-3 text-center text-sm font-black text-gray-900 ring-2 ring-gray-300 transition hover:bg-gray-50"
             >
               無料ではじめる
             </Link>
@@ -126,9 +126,10 @@ export function UnifiedPricingPlans({
             <CheckoutButton
               planId={UNIFIED_PRO_PLAN_ID}
               loginCallbackUrl={returnTo}
-              className="block w-full rounded-full bg-white px-6 py-3 text-center text-sm font-black transition hover:bg-amber-50"
+              variant="secondary"
+              className="block w-full rounded-full bg-amber-400 px-6 py-3.5 text-center text-base font-black text-amber-950 shadow-lg ring-1 ring-amber-300 transition hover:bg-amber-300"
             >
-              <span style={{ color: BRAND }}>プロにアップグレード</span>
+              プロにアップグレード
             </CheckoutButton>
           )}
         </div>
