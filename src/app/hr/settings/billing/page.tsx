@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
+import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 
 interface BillingInfo {
   plan: string
@@ -15,49 +16,12 @@ interface BillingInfo {
   aiUsageLimit: number
 }
 
-const PLANS = [
-  {
-    id: 'free',
-    name: 'Free',
-    price: 0,
-    priceLabel: '無料',
-    features: ['従業員5名まで', 'AI機能 月3回', 'メンバー2名まで'],
-    color: 'from-slate-400 to-slate-500',
-    iconBg: 'bg-slate-100',
-    iconColor: 'text-slate-600',
-  },
-  {
-    id: 'starter',
-    name: 'Starter',
-    price: 2980,
-    priceLabel: '2,980',
-    features: ['従業員30名まで', 'AI機能 月30回', 'メンバー5名まで', '組織図エクスポート'],
-    color: 'from-blue-500 to-blue-600',
-    iconBg: 'bg-blue-100',
-    iconColor: 'text-blue-600',
-    popular: true,
-  },
-  {
-    id: 'pro',
-    name: 'Pro',
-    price: 9980,
-    priceLabel: '9,980',
-    features: ['従業員100名まで', 'AI機能 無制限', 'メンバー無制限', '監査ログ', 'SSO対応'],
-    color: 'from-purple-500 to-purple-600',
-    iconBg: 'bg-purple-100',
-    iconColor: 'text-purple-600',
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: -1,
-    priceLabel: 'お問い合わせ',
-    features: ['従業員 無制限', '全機能アクセス', '専任サポート', 'API連携', 'カスタムSLA'],
-    color: 'from-amber-500 to-orange-500',
-    iconBg: 'bg-amber-100',
-    iconColor: 'text-amber-600',
-  },
-]
+// 現在プラン表示用の最小定義（プラン一覧UIは UnifiedPricingPlans に統一）
+const PLAN_DISPLAY: Record<string, { name: string; color: string }> = {
+  free: { name: 'Free', color: 'from-slate-400 to-slate-500' },
+  pro: { name: 'Pro', color: 'from-purple-500 to-purple-600' },
+  enterprise: { name: 'Enterprise', color: 'from-amber-500 to-orange-500' },
+}
 
 function UsageBar({ label, used, limit, icon, color }: {
   label: string
@@ -112,7 +76,6 @@ function UsageBar({ label, used, limit, icon, color }: {
 export default function BillingPage() {
   const [billing, setBilling] = useState<BillingInfo | null>(null)
   const [loading, setLoading] = useState(true)
-  const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
 
   useEffect(() => {
@@ -152,34 +115,6 @@ export default function BillingPage() {
     fetchBilling()
   }, [])
 
-  const handleCheckout = async (planId: string) => {
-    if (planId === 'enterprise') {
-      // お問い合わせ
-      window.open('mailto:info@surisuta.jp?subject=ドヤHR Enterpriseプランのお問い合わせ', '_blank')
-      return
-    }
-    if (planId === 'free') return
-
-    setCheckoutLoading(planId)
-    try {
-      const res = await fetch('/api/hr/billing/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planId, interval: 'monthly' }),
-      })
-      const data = await res.json()
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        alert(data.error || 'チェックアウトセッションの作成に失敗しました')
-      }
-    } catch {
-      alert('エラーが発生しました。もう一度お試しください。')
-    } finally {
-      setCheckoutLoading(null)
-    }
-  }
-
   const handlePortal = async () => {
     setPortalLoading(true)
     try {
@@ -216,8 +151,9 @@ export default function BillingPage() {
     )
   }
 
-  const currentPlan = PLANS.find((p) => p.id === billing?.plan) || PLANS[0]
-  const isPaid = billing?.plan !== 'free'
+  const planKey = String(billing?.plan || 'free').toLowerCase()
+  const currentPlan = PLAN_DISPLAY[planKey] || PLAN_DISPLAY.free
+  const isPaid = planKey !== 'free'
 
   return (
     <div className="p-6 lg:p-10 max-w-5xl mx-auto">
@@ -330,91 +266,8 @@ export default function BillingPage() {
             </div>
             プラン一覧
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {PLANS.map((plan, i) => {
-              const isCurrent = plan.id === billing?.plan
-              const isLoading = checkoutLoading === plan.id
-              return (
-                <motion.div
-                  key={plan.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 + i * 0.08 }}
-                  whileHover={{ y: -4 }}
-                  className={`relative bg-white rounded-3xl shadow-md p-5 flex flex-col ${
-                    isCurrent ? 'ring-2 ring-blue-500' : ''
-                  } ${plan.popular && !isCurrent ? 'ring-2 ring-purple-400' : ''}`}
-                >
-                  {plan.popular && !isCurrent && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="px-3 py-1 bg-purple-500 text-white text-xs font-bold rounded-full shadow-md">
-                        おすすめ
-                      </span>
-                    </div>
-                  )}
-                  {isCurrent && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="px-3 py-1 bg-blue-500 text-white text-xs font-bold rounded-full shadow-md">
-                        現在のプラン
-                      </span>
-                    </div>
-                  )}
-
-                  <div className={`w-10 h-10 rounded-2xl ${plan.iconBg} flex items-center justify-center mb-3`}>
-                    <span className={`material-symbols-outlined ${plan.iconColor}`}>
-                      {plan.id === 'free' ? 'volunteer_activism' : plan.id === 'starter' ? 'star' : plan.id === 'pro' ? 'diamond' : 'castle'}
-                    </span>
-                  </div>
-
-                  <h3 className="text-lg font-black text-slate-900">{plan.name}</h3>
-                  <div className="mt-1 mb-4">
-                    {plan.price === 0 ? (
-                      <p className="text-2xl font-black text-slate-900">{plan.priceLabel}</p>
-                    ) : plan.price === -1 ? (
-                      <p className="text-base font-bold text-slate-600">{plan.priceLabel}</p>
-                    ) : (
-                      <p className="text-2xl font-black text-slate-900">
-                        ¥{plan.priceLabel}
-                        <span className="text-sm font-bold text-slate-500">/月</span>
-                      </p>
-                    )}
-                  </div>
-
-                  <ul className="space-y-2 flex-1 mb-4">
-                    {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2 text-sm text-slate-600">
-                        <span className="material-symbols-outlined text-sm text-emerald-500 mt-0.5">check_circle</span>
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-
-                  {isCurrent ? (
-                    <button
-                      disabled
-                      className="w-full py-3 bg-slate-100 text-slate-400 rounded-full text-sm font-bold cursor-not-allowed"
-                    >
-                      利用中
-                    </button>
-                  ) : (
-                    <motion.button
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => handleCheckout(plan.id)}
-                      disabled={isLoading || checkoutLoading !== null}
-                      className={`w-full py-3 rounded-full text-sm font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-50 ${
-                        plan.popular
-                          ? 'bg-purple-600 text-white hover:bg-purple-700'
-                          : 'bg-blue-600 text-white hover:bg-blue-700'
-                      }`}
-                    >
-                      {isLoading ? '処理中...' : plan.price === -1 ? 'お問い合わせ' : isPaid ? 'プラン変更' : 'アップグレード'}
-                    </motion.button>
-                  )}
-                </motion.div>
-              )
-            })}
-          </div>
+          {/* 全サービス共通の 無料 / プロ(¥9,980) 2プラン */}
+          <UnifiedPricingPlans serviceId="hr" currentPlan={billing?.plan} />
         </motion.div>
 
         {/* Help */}
