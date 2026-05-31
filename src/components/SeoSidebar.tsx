@@ -68,13 +68,6 @@ function SeoSidebarImpl({
     return isLoggedIn ? 'FREE' : 'GUEST'
   }, [session, isLoggedIn])
 
-  const nextPlanLabel = useMemo(() => {
-    if (seoPlanLabel === 'GUEST' || seoPlanLabel === 'FREE') return 'LIGHT'
-    if (seoPlanLabel === 'LIGHT') return 'PRO'
-    if (seoPlanLabel === 'PRO') return 'ENTERPRISE'
-    return 'CONSULT'
-  }, [seoPlanLabel])
-
   // 残り記事数
   const [entitlements, setEntitlements] = useState<{ remaining?: { articles?: number }; limits?: { articlesPerMonth?: number } } | null>(null)
   useEffect(() => {
@@ -223,16 +216,15 @@ function SeoSidebarImpl({
                 return null
               })()}
               <p className="text-[10px] text-emerald-100 font-bold leading-relaxed opacity-80">
-                {nextPlanLabel === 'LIGHT' && <>LIGHT: 月額¥2,980で月10回まで</>}
-                {nextPlanLabel === 'PRO' && <>PRO: 月額¥9,980で20,000字まで</>}
-                {nextPlanLabel === 'ENTERPRISE' && <>Enterprise: 月額¥49,800で50,000字まで</>}
-                {nextPlanLabel === 'CONSULT' && <>さらに上限UP：要相談</>}
+                {seoPlanLabel === 'PRO' || seoPlanLabel === 'ENTERPRISE'
+                  ? <>さらに上限UP：要相談</>
+                  : <>プロ: 月額¥9,980で生成し放題に</>}
               </p>
               <Link
                 href={isLoggedIn ? '/seo/dashboard/plan' : '/seo/pricing'}
                 className="mt-2 w-full py-2 bg-white text-emerald-700 text-[11px] font-black rounded-lg hover:bg-emerald-50 transition-colors shadow-md block text-center"
               >
-                {nextPlanLabel === 'CONSULT' ? '相談する' : nextPlanLabel === 'LIGHT' ? 'ライトを始める' : nextPlanLabel === 'PRO' ? 'PROを始める' : 'Enterpriseへ'}
+                {seoPlanLabel === 'PRO' || seoPlanLabel === 'ENTERPRISE' ? '相談する' : 'プロにアップグレード'}
               </Link>
             </div>
           </div>

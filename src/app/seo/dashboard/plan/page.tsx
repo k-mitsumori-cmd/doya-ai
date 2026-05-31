@@ -4,9 +4,9 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { CheckCircle2, Crown, ExternalLink, Loader2, RefreshCcw, Shield, Sparkles, Timer, X, Zap, Image, Wand2, FileText, LayoutDashboard } from 'lucide-react'
+import { ExternalLink, Loader2, RefreshCcw, Shield, Sparkles, Timer, X, Zap, Image, Wand2, FileText, LayoutDashboard } from 'lucide-react'
 import { SEO_PRICING, getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
-import { CheckoutButton } from '@/components/CheckoutButton'
+import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import SeoCancelScheduleNotice from '@/components/SeoCancelScheduleNotice'
 import confetti from 'canvas-confetti'
 
@@ -242,18 +242,12 @@ export default function SeoPlanPage() {
                   <div>
                     <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">現在のプラン</p>
                     <p className="mt-1 text-2xl font-black text-gray-900">
-                      {tier === 'FREE' ? 'フリー' : tier === 'LIGHT' ? 'ライト' : tier === 'PRO' ? 'PRO' : tier === 'ENTERPRISE' ? 'Enterprise' : 'ゲスト'}
+                      {tier === 'PRO' || tier === 'ENTERPRISE' ? 'プロ' : '無料'}
                     </p>
                     <p className="mt-2 text-sm text-gray-500 font-bold">
-                      {tier === 'FREE'
-                        ? `月${SEO_PRICING.freeLimit}記事まで（画像生成はLIGHTから）`
-                        : tier === 'LIGHT'
-                        ? '月10回まで記事生成（画像生成OK）'
-                        : tier === 'PRO'
+                      {tier === 'PRO' || tier === 'ENTERPRISE'
                         ? `月${SEO_PRICING.proLimit}記事まで（図解/バナー/自動修正OK）`
-                        : tier === 'ENTERPRISE'
-                        ? `月${SEO_PRICING.enterpriseLimit || 200}記事まで（大規模運用）`
-                        : '月0記事（5,000字）'}
+                        : `月${SEO_PRICING.freeLimit}記事まで（画像生成はプロから）`}
                     </p>
                   </div>
                   <div className="px-5 py-3 rounded-2xl bg-gray-50 border border-gray-100 text-gray-700 text-xs font-black">
@@ -268,142 +262,8 @@ export default function SeoPlanPage() {
                 )}
               </div>
 
-              {/* 🔥 アップグレード訴求 - フリーの下に配置して目立たせる */}
-              {(tier === 'FREE' || tier === 'GUEST') && (
-                <div className="rounded-3xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6 sm:p-8 shadow-lg shadow-blue-100/50">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-200">
-                      <Zap className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-lg font-black text-blue-900">有料プランにアップグレード</p>
-                      <p className="text-xs font-bold text-blue-700/80">用途に合わせてプランをお選びください</p>
-                    </div>
-                  </div>
-
-                  <div className="grid sm:grid-cols-2 gap-3 mt-5">
-                    {[
-                      { icon: Image, text: '図解/バナー自動生成', desc: '記事内容に合わせてAIが画像作成' },
-                      { icon: Wand2, text: 'AI自動修正', desc: 'SEO改善提案をワンクリック適用' },
-                      { icon: RefreshCcw, text: '画像の再生成', desc: 'プロンプト調整で何度でもリトライ' },
-                      { icon: FileText, text: `月${SEO_PRICING.proLimit}記事`, desc: '大量のコンテンツ制作に対応' },
-                    ].map((item) => (
-                      <div key={item.text} className="flex items-start gap-3 bg-white rounded-2xl p-4 border border-blue-100">
-                        <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center flex-shrink-0">
-                          <item.icon className="w-4 h-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-black text-gray-900">{item.text}</p>
-                          <p className="text-[11px] font-bold text-gray-500 mt-0.5">{item.desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-6 grid sm:grid-cols-3 gap-3">
-                    <CheckoutButton planId="seo-light" loginCallbackUrl="/seo/dashboard/plan" className="w-full py-4 rounded-2xl text-sm">
-                      ライト（月額¥2,980）
-                    </CheckoutButton>
-                    <CheckoutButton planId="seo-pro" loginCallbackUrl="/seo/dashboard/plan" className="w-full py-4 rounded-2xl text-base font-black shadow-lg shadow-blue-200" variant="primary">
-                      <Sparkles className="w-5 h-5 mr-2" /> PROを始める（月額¥9,980）
-                    </CheckoutButton>
-                    <CheckoutButton planId="seo-enterprise" loginCallbackUrl="/seo/dashboard/plan" className="w-full py-4 rounded-2xl text-sm">
-                      <Crown className="w-4 h-4 mr-2" /> Enterpriseを始める
-                    </CheckoutButton>
-                  </div>
-                </div>
-              )}
-
-              {tier === 'LIGHT' && (
-                <div className="rounded-3xl border-2 border-blue-200 bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6 sm:p-8 shadow-lg shadow-blue-100/50">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-200">
-                      <Zap className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-lg font-black text-blue-900">PROにアップグレードすると</p>
-                      <p className="text-xs font-bold text-blue-700/80">図解/自動修正など制作フローが一気に解放！</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 grid sm:grid-cols-2 gap-3">
-                    <CheckoutButton planId="seo-pro" loginCallbackUrl="/seo/dashboard/plan" className="w-full py-4 rounded-2xl text-base font-black shadow-lg shadow-blue-200" variant="primary">
-                      <Sparkles className="w-5 h-5 mr-2" /> PROにアップグレード（月額¥9,980）
-                    </CheckoutButton>
-                    <CheckoutButton planId="seo-enterprise" loginCallbackUrl="/seo/dashboard/plan" className="w-full py-4 rounded-2xl text-sm">
-                      <Crown className="w-4 h-4 mr-2" /> Enterpriseを始める
-                    </CheckoutButton>
-                  </div>
-                </div>
-              )}
-
-              {tier === 'PRO' && (
-                <div className="rounded-3xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 via-white to-indigo-50 p-6 sm:p-8 shadow-lg shadow-purple-100/50">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-purple-200">
-                      <Crown className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-lg font-black text-purple-900">Enterpriseにアップグレードすると</p>
-                      <p className="text-xs font-bold text-purple-700/80">さらに大規模な運用が可能に！</p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid sm:grid-cols-2 gap-3 mt-5">
-                    {[
-                      { text: `月${SEO_PRICING.enterpriseLimit || 200}記事`, desc: '大量の記事を毎月生成可能' },
-                      { text: '優先サポート', desc: '専任担当が迅速に対応' },
-                      { text: 'チーム利用', desc: '複数アカウントで連携' },
-                      { text: 'API連携', desc: 'カスタム開発・外部連携' },
-                    ].map((item) => (
-                      <div key={item.text} className="flex items-start gap-3 bg-white rounded-2xl p-4 border border-purple-100">
-                        <CheckCircle2 className="w-5 h-5 text-purple-500 mt-0.5 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-black text-gray-900">{item.text}</p>
-                          <p className="text-[11px] font-bold text-gray-500 mt-0.5">{item.desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-6">
-                    <CheckoutButton planId="seo-enterprise" loginCallbackUrl="/seo/dashboard/plan" className="w-full py-4 rounded-2xl text-base font-black bg-purple-600 hover:bg-purple-700 shadow-lg shadow-purple-200">
-                      <Crown className="w-5 h-5 mr-2" /> Enterpriseを始める
-                    </CheckoutButton>
-                  </div>
-                </div>
-              )}
-
-              {tier === 'ENTERPRISE' && (
-                <div className="rounded-3xl border-2 border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-teal-50 p-6 sm:p-8 shadow-lg shadow-emerald-100/50">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-emerald-200">
-                      <Crown className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-lg font-black text-emerald-900">Enterprise（最上位プラン）</p>
-                      <p className="text-xs font-bold text-emerald-700/80">すべての機能が使い放題です！</p>
-                    </div>
-                  </div>
-                  
-                  <div className="grid sm:grid-cols-2 gap-3 mt-5">
-                    {[
-                      { text: '図解/バナー自動生成', desc: '記事に合わせてAIが画像作成' },
-                      { text: 'AI自動修正', desc: 'SEO改善提案をワンクリック適用' },
-                      { text: `月${SEO_PRICING.enterpriseLimit || 200}記事`, desc: '大量のコンテンツ制作に対応' },
-                      { text: '優先サポート・API連携', desc: '専任担当＋カスタム開発対応' },
-                    ].map((item) => (
-                      <div key={item.text} className="flex items-start gap-3 bg-white rounded-2xl p-4 border border-emerald-100">
-                        <CheckCircle2 className="w-5 h-5 text-emerald-500 mt-0.5 flex-shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-black text-gray-900">{item.text}</p>
-                          <p className="text-[11px] font-bold text-gray-500 mt-0.5">{item.desc}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {/* 料金プラン（無料 / プロ） - 統一プラン */}
+              <UnifiedPricingPlans serviceId="seo" currentPlan={tier} />
 
               {/* 解約/再開 - 有料プラン契約中の場合のみ表示 */}
               {(tier === 'LIGHT' || tier === 'PRO' || tier === 'ENTERPRISE') && sub?.hasSubscription && (
@@ -655,7 +515,7 @@ export default function SeoPlanPage() {
                   transition={{ delay: 0.3 }}
                 >
                   <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">
-                    🎉 {welcomePlan === 'enterprise' ? 'Enterprise' : welcomePlan === 'light' ? 'ライト' : 'PRO'}プランが有効になりました！
+                    🎉 プランが有効になりました！
                   </h3>
                   <p className="text-slate-600 font-bold">
                     すべての機能が解放されました。早速使ってみましょう！
@@ -676,7 +536,7 @@ export default function SeoPlanPage() {
                     {[
                       { icon: Image, text: '図解/バナー自動生成', desc: '記事に合わせてAIが画像を自動生成' },
                       { icon: Wand2, text: 'AI自動修正', desc: 'SEO改善提案をワンクリックで適用' },
-                      { icon: FileText, text: `月${welcomePlan === 'enterprise' ? SEO_PRICING.enterpriseLimit || 200 : SEO_PRICING.proLimit}記事まで生成`, desc: '大量のコンテンツ制作に対応' },
+                      { icon: FileText, text: `月${SEO_PRICING.proLimit}記事まで生成`, desc: '大量のコンテンツ制作に対応' },
                       { icon: LayoutDashboard, text: '進捗UI（分割生成）', desc: 'リアルタイムで生成状況を確認' },
                     ].map((item, i) => (
                       <motion.div

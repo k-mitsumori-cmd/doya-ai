@@ -69,13 +69,6 @@ function DashboardSidebarImpl({
     return isLoggedIn ? 'FREE' : 'GUEST'
   }, [session, isLoggedIn])
 
-  const nextBannerPlanLabel = useMemo(() => {
-    if (bannerPlanLabel === 'GUEST' || bannerPlanLabel === 'FREE') return 'LIGHT'
-    if (bannerPlanLabel === 'LIGHT') return 'PRO'
-    if (bannerPlanLabel === 'PRO') return 'ENTERPRISE'
-    return 'CONSULT'
-  }, [bannerPlanLabel])
-
   // 1時間生成し放題
   const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
   const { isFreeHourActive, freeHourRemainingMs } = useFreeHour(firstLoginAt)
@@ -181,12 +174,11 @@ function DashboardSidebarImpl({
             現在：{bannerPlanLabel === 'GUEST' ? 'ゲスト' : bannerPlanLabel}
           </p>
           <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
-            {nextBannerPlanLabel === 'LIGHT' && <>LIGHT（¥2,980/月）で月50枚に</>}
-            {nextBannerPlanLabel === 'PRO' && <>次の上位：PRO（¥9,980/月）</>}
-            {nextBannerPlanLabel === 'ENTERPRISE' && <>次の上位：Enterprise（¥49,800/月）</>}
-            {nextBannerPlanLabel === 'CONSULT' && <>さらに上限UP：要相談</>}
+            {bannerPlanLabel === 'PRO' || bannerPlanLabel === 'ENTERPRISE'
+              ? <>さらに上限UP：要相談</>
+              : <>プロ（¥9,980/月）で生成し放題に</>}
           </p>
-          {nextBannerPlanLabel === 'CONSULT' ? (
+          {bannerPlanLabel === 'PRO' || bannerPlanLabel === 'ENTERPRISE' ? (
             <a
               href={HIGH_USAGE_CONTACT_URL}
               target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
@@ -201,13 +193,13 @@ function DashboardSidebarImpl({
               href="/banner/dashboard/plan"
               className="mt-3 w-full py-2 bg-white text-blue-600 text-[11px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md block text-center"
             >
-              {nextBannerPlanLabel === 'LIGHT' ? 'ライトを始める' : nextBannerPlanLabel === 'PRO' ? 'PROを始める' : 'Enterpriseへ'}
+              プロにアップグレード
             </Link>
           )}
         </div>
         {/* スマホ用：横1行コンパクト表示 */}
         <Link
-          href={nextBannerPlanLabel === 'CONSULT' ? HIGH_USAGE_CONTACT_URL : '/banner/dashboard/plan'}
+          href={bannerPlanLabel === 'PRO' || bannerPlanLabel === 'ENTERPRISE' ? HIGH_USAGE_CONTACT_URL : '/banner/dashboard/plan'}
           className="md:hidden relative z-10 flex items-center gap-3 cursor-pointer hover:opacity-90 transition-opacity"
         >
           <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
@@ -216,14 +208,11 @@ function DashboardSidebarImpl({
           <div className="flex-1 min-w-0">
             <p className="text-[11px] text-white font-bold leading-snug truncate">
               {bannerPlanLabel === 'GUEST' ? 'ゲスト' : bannerPlanLabel}
-              {nextBannerPlanLabel === 'LIGHT' && ' → LIGHT'}
-              {nextBannerPlanLabel === 'PRO' && ' → PRO'}
-              {nextBannerPlanLabel === 'ENTERPRISE' && ' → Enterprise'}
-              {nextBannerPlanLabel === 'CONSULT' && ' ✓'}
+              {bannerPlanLabel === 'PRO' || bannerPlanLabel === 'ENTERPRISE' ? ' ✓' : ' → プロ'}
             </p>
           </div>
           <span className="flex-shrink-0 px-3 py-1.5 bg-white text-blue-600 text-[10px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md whitespace-nowrap">
-            {nextBannerPlanLabel === 'CONSULT' ? '相談' : 'UP'}
+            {bannerPlanLabel === 'PRO' || bannerPlanLabel === 'ENTERPRISE' ? '相談' : 'UP'}
           </span>
         </Link>
       </div>
@@ -328,7 +317,7 @@ function DashboardSidebarImpl({
                   id: 'pricing-plans',
                   label: 'プランをアップグレード',
                   description:
-                    '無料は月15枚まで。LIGHT（月50枚）/ PRO（月150枚）/ Enterprise（月1000枚）にアップグレードできます。',
+                    '無料は月15枚まで。プロ（¥9,980/月）にアップグレードすると生成枚数が大幅に増えます。',
                   targetSelector: '[data-tour="pricing-plans"]',
                   allowMissing: true,
                 },

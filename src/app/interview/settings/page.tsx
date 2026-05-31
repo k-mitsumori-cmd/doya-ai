@@ -4,8 +4,8 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
 import { INTERVIEW_PRICING, SUPPORT_CONTACT_URL } from '@/lib/pricing'
+import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 
 interface UsageStats {
   totalProjects: number
@@ -48,38 +48,13 @@ function FloatingCard({ children, className = '', delay = 0 }: { children: React
   )
 }
 
-// シマーエフェクト（CTAボタン用）
-function ShimmerButton({ children, onClick, disabled, className = '' }: {
-  children: React.ReactNode; onClick?: () => void; disabled?: boolean; className?: string
-}) {
-  return (
-    <motion.button
-      onClick={onClick}
-      disabled={disabled}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      className={`relative overflow-hidden ${className}`}
-    >
-      <motion.div
-        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-        animate={{ x: ['-100%', '200%'] }}
-        transition={{ duration: 2.5, repeat: Infinity, ease: 'linear', repeatDelay: 1 }}
-      />
-      <span className="relative z-10 flex items-center justify-center gap-2">{children}</span>
-    </motion.button>
-  )
-}
-
 export default function InterviewSettingsPage() {
   const { data: session } = useSession()
   const user = session?.user as any
-  const pathname = usePathname()
-  const router = useRouter()
 
   const [stats, setStats] = useState<UsageStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<TabType>('account')
-  const [isUpgrading, setIsUpgrading] = useState(false)
 
   const isLoggedIn = !!session?.user
 
@@ -110,28 +85,6 @@ export default function InterviewSettingsPage() {
     if (p === 'FREE') return 'FREE'
     return isLoggedIn ? 'FREE' : 'GUEST'
   }, [user, isLoggedIn])
-
-  const handleUpgrade = async (planId: string) => {
-    if (!isLoggedIn) {
-      router.push(`/auth/signin?callbackUrl=${encodeURIComponent(pathname || '/interview/settings')}`)
-      return
-    }
-    setIsUpgrading(true)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId, billingPeriod: 'monthly' }),
-      })
-      const data = await res.json()
-      if (data.url) window.location.href = data.url
-      else console.error('Checkout failed:', data.error)
-    } catch (e) {
-      console.error('Checkout error:', e)
-    } finally {
-      setIsUpgrading(false)
-    }
-  }
 
   const planLimits = useMemo(() => ({
     FREE: {
@@ -395,129 +348,9 @@ export default function InterviewSettingsPage() {
                   ))}
                 </div>
 
-                {/* アップグレードCTA — グラデーション + シマー */}
+                {/* アップグレード訴求（未契約者向け）— 統一プラン料金表 */}
                 {(plan === 'FREE' || plan === 'GUEST') && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.6 }}
-                    className="relative rounded-2xl overflow-hidden"
-                  >
-                    {/* 背景 */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#7f19e6] via-blue-700 to-indigo-800" />
-                    <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIxIiBmaWxsPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDUpIi8+PC9zdmc+')] opacity-50" />
-
-                    <div className="relative z-10 p-5 sm:p-7">
-                      <div className="flex items-center gap-3 sm:gap-4 mb-4">
-                        <motion.div
-                          animate={{ rotate: [0, 10, -10, 0] }}
-                          transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                          className="w-12 h-12 sm:w-14 sm:h-14 bg-white/15 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20 shadow-lg shrink-0"
-                        >
-                          <span className="material-symbols-outlined text-white text-2xl sm:text-3xl">rocket_launch</span>
-                        </motion.div>
-                        <div>
-                          <p className="font-black text-lg sm:text-xl text-white tracking-tight">PROプランにアップグレード</p>
-                          <p className="text-blue-200 text-xs sm:text-sm font-semibold">月額 ¥9,980 で全機能を解放</p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-5">
-                        {[
-                          { icon: 'speed', text: `文字起こし 150分/月（${plan === 'GUEST' ? '30倍' : '5倍'}）` },
-                          { icon: 'timer', text: '1回の文字起こし: 最大約3時間' },
-                          { icon: 'cloud_upload', text: 'アップロード上限 2GB' },
-                          { icon: 'fact_check', text: 'ファクトチェック・翻訳' },
-                          { icon: 'support_agent', text: '優先サポート・履歴無制限' },
-                        ].map((item, i) => (
-                          <motion.div
-                            key={i}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: 0.7 + i * 0.08 }}
-                            className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2.5 backdrop-blur-sm border border-white/10"
-                          >
-                            <span className="material-symbols-outlined text-amber-300 text-[18px]">{item.icon}</span>
-                            <span className="text-[12px] text-blue-100 font-bold leading-tight">{item.text}</span>
-                          </motion.div>
-                        ))}
-                      </div>
-
-                      <ShimmerButton
-                        onClick={() => handleUpgrade('interview-pro')}
-                        disabled={isUpgrading}
-                        className="w-full py-3.5 bg-white text-[#7f19e6] rounded-xl font-black text-sm shadow-xl disabled:opacity-60"
-                      >
-                        {isUpgrading ? (
-                          <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
-                        ) : (
-                          <span className="material-symbols-outlined text-lg">upgrade</span>
-                        )}
-                        {isUpgrading ? '処理中...' : 'PROプランを始める'}
-                      </ShimmerButton>
-                    </div>
-                  </motion.div>
-                )}
-
-                {plan === 'PRO' && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.6 }}
-                    className="relative rounded-2xl overflow-hidden"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-br from-slate-800 via-slate-700 to-slate-900" />
-                    <div className="relative z-10 p-5 sm:p-7">
-                      <div className="flex items-center gap-3 sm:gap-4 mb-4">
-                        <div className="w-12 h-12 sm:w-14 sm:h-14 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20 shrink-0">
-                          <span className="material-symbols-outlined text-white text-2xl sm:text-3xl">corporate_fare</span>
-                        </div>
-                        <div>
-                          <p className="font-black text-lg sm:text-xl text-white tracking-tight">ENTERPRISEプラン</p>
-                          <p className="text-slate-300 text-xs sm:text-sm font-semibold">月額 ¥49,800 で大規模運用に対応</p>
-                        </div>
-                      </div>
-                      <div className="space-y-2 mb-5">
-                        {['文字起こし 1,000分/月（約7倍）', '1回の文字起こし: 最大約3時間', 'アップロード上限 5GB', 'チーム運用・大量制作対応'].map((t, i) => (
-                          <div key={i} className="flex items-center gap-2 text-sm text-slate-300">
-                            <span className="material-symbols-outlined text-[16px] text-amber-300">star</span>
-                            {t}
-                          </div>
-                        ))}
-                      </div>
-                      <ShimmerButton
-                        onClick={() => handleUpgrade('interview-enterprise')}
-                        disabled={isUpgrading}
-                        className="w-full py-3.5 bg-white text-slate-900 rounded-xl font-black text-sm shadow-xl disabled:opacity-60"
-                      >
-                        {isUpgrading ? (
-                          <span className="material-symbols-outlined text-lg animate-spin">progress_activity</span>
-                        ) : (
-                          <span className="material-symbols-outlined text-lg">upgrade</span>
-                        )}
-                        {isUpgrading ? '処理中...' : 'ENTERPRISEへアップグレード'}
-                      </ShimmerButton>
-                    </div>
-                  </motion.div>
-                )}
-
-                {plan === 'ENTERPRISE' && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, delay: 0.4 }}
-                    className="bg-gradient-to-r from-emerald-50 to-emerald-100 rounded-2xl p-5 border border-emerald-200 flex items-center gap-4 shadow-sm"
-                  >
-                    <motion.span
-                      animate={{ scale: [1, 1.2, 1] }}
-                      transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                      className="material-symbols-outlined text-emerald-600 text-3xl"
-                    >verified</motion.span>
-                    <div>
-                      <p className="font-black text-emerald-800">最上位プランをご利用中です</p>
-                      <p className="text-sm text-emerald-600">全機能をフルにご活用いただけます</p>
-                    </div>
-                  </motion.div>
+                  <UnifiedPricingPlans serviceId="interview" currentPlan={plan} />
                 )}
 
                 {/* プラン管理・解約（有料プランユーザー向け） */}
@@ -609,7 +442,7 @@ export default function InterviewSettingsPage() {
               ) : null}
             </FloatingCard>
 
-            {/* プラン比較表 */}
+            {/* プラン比較 — 統一プラン料金表（無料 / プロ ¥9,980） */}
             <FloatingCard className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden" delay={0.15}>
               <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white">
                 <h2 className="text-base font-bold tracking-tight text-slate-900 flex items-center gap-2">
@@ -617,129 +450,8 @@ export default function InterviewSettingsPage() {
                   プラン比較
                 </h2>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[480px]">
-                  <thead>
-                    <tr className="bg-slate-50/80 border-b border-slate-200">
-                      <th className="text-left px-3 sm:px-6 py-3 sm:py-4 font-bold text-slate-600">機能</th>
-                      <th className={`text-center px-4 py-4 font-bold ${plan === 'FREE' ? 'text-[#7f19e6] bg-blue-50/80' : 'text-slate-600'}`}>
-                        無料
-                        {plan === 'FREE' && <span className="block text-[10px] font-black text-[#7f19e6]">現在のプラン</span>}
-                      </th>
-                      <th className={`text-center px-4 py-4 font-bold relative ${plan === 'PRO' ? 'text-[#7f19e6] bg-blue-50/80' : 'text-slate-600'}`}>
-                        PRO
-                        {plan === 'PRO' && <span className="block text-[10px] font-black text-[#7f19e6]">現在のプラン</span>}
-                        {plan !== 'PRO' && plan !== 'ENTERPRISE' && (
-                          <motion.span
-                            animate={{ scale: [1, 1.1, 1] }}
-                            transition={{ duration: 2, repeat: Infinity }}
-                            className="block text-[10px] font-black text-amber-600"
-                          >おすすめ</motion.span>
-                        )}
-                      </th>
-                      <th className={`text-center px-4 py-4 font-bold ${plan === 'ENTERPRISE' ? 'text-[#7f19e6] bg-blue-50/80' : 'text-slate-600'}`}>
-                        ENTERPRISE
-                        {plan === 'ENTERPRISE' && <span className="block text-[10px] font-black text-[#7f19e6]">現在のプラン</span>}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { label: '月額料金', free: '¥0', pro: '¥9,980', enterprise: '¥49,800', isBold: true },
-                      { label: '文字起こし', free: '30分/月', pro: '150分/月', enterprise: '1,000分/月' },
-                      { label: '1回の上限', free: '約3時間', pro: '約3時間', enterprise: '約3時間' },
-                      { label: 'アップロード上限', free: '500MB', pro: '2GB', enterprise: '5GB' },
-                      { label: 'AI記事生成', free: '5回/日', pro: '30回/日', enterprise: '100回/日' },
-                    ].map((row, i) => (
-                      <motion.tr
-                        key={row.label}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.3 + i * 0.04 }}
-                        className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
-                      >
-                        <td className="px-6 py-3.5 font-medium text-slate-700">{row.label}</td>
-                        <td className={`px-4 py-3.5 text-center ${row.isBold ? 'font-black' : ''} ${plan === 'FREE' ? 'bg-blue-50/30' : ''}`}>{row.free}</td>
-                        <td className={`px-4 py-3.5 text-center font-bold text-[#7f19e6] ${plan === 'PRO' ? 'bg-blue-50/30' : ''}`}>{row.pro}</td>
-                        <td className={`px-4 py-3.5 text-center ${row.isBold ? 'font-black' : 'font-bold'} ${plan === 'ENTERPRISE' ? 'bg-blue-50/30' : ''}`}>{row.enterprise}</td>
-                      </motion.tr>
-                    ))}
-                    {[
-                      { label: '校正・タイトル提案', free: true, pro: true, enterprise: true },
-                      { label: 'ファクトチェック', free: false, pro: true, enterprise: true },
-                      { label: '翻訳（10言語）', free: false, pro: true, enterprise: true },
-                      { label: 'SNS投稿文生成', free: false, pro: true, enterprise: true },
-                      { label: '履歴保存', free: '30日', pro: '無制限', enterprise: '無制限' },
-                      { label: '優先サポート', free: false, pro: true, enterprise: true },
-                      { label: '専任サポート', free: false, pro: false, enterprise: true },
-                    ].map((row, i) => (
-                      <motion.tr
-                        key={row.label}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.45 + i * 0.04 }}
-                        className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors"
-                      >
-                        <td className="px-6 py-3.5 font-medium text-slate-700">{row.label}</td>
-                        {(['free', 'pro', 'enterprise'] as const).map((p) => {
-                          const val = row[p]
-                          const isCurrent = (p === 'free' && plan === 'FREE') || (p === 'pro' && plan === 'PRO') || (p === 'enterprise' && plan === 'ENTERPRISE')
-                          return (
-                            <td key={p} className={`px-4 py-3.5 text-center ${isCurrent ? 'bg-blue-50/30' : ''}`}>
-                              {typeof val === 'boolean' ? (
-                                val ? (
-                                  <span className="material-symbols-outlined text-emerald-500 text-[18px]">check_circle</span>
-                                ) : (
-                                  <span className="material-symbols-outlined text-slate-300 text-[18px]">remove</span>
-                                )
-                              ) : (
-                                <span className="font-medium">{val}</span>
-                              )}
-                            </td>
-                          )
-                        })}
-                      </motion.tr>
-                    ))}
-                    <tr>
-                      <td className="px-6 py-5" />
-                      <td className={`px-4 py-5 text-center ${plan === 'FREE' ? 'bg-blue-50/30' : ''}`}>
-                        {plan === 'FREE' && <span className="text-xs font-bold text-slate-400">ご利用中</span>}
-                      </td>
-                      <td className={`px-4 py-5 text-center ${plan === 'PRO' ? 'bg-blue-50/30' : ''}`}>
-                        {plan === 'PRO' ? (
-                          <span className="text-xs font-bold text-slate-400">ご利用中</span>
-                        ) : plan !== 'ENTERPRISE' ? (
-                          <motion.button
-                            whileHover={{ scale: 1.06 }}
-                            whileTap={{ scale: 0.94 }}
-                            onClick={() => handleUpgrade('interview-pro')}
-                            disabled={isUpgrading}
-                            className="px-5 py-2.5 bg-[#7f19e6] text-white rounded-xl text-xs font-black hover:bg-[#6b12c9] transition-colors disabled:opacity-60 inline-flex items-center gap-1.5 shadow-lg shadow-[#7f19e6]/20"
-                          >
-                            {isUpgrading && <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>}
-                            PROを始める
-                          </motion.button>
-                        ) : null}
-                      </td>
-                      <td className={`px-4 py-5 text-center ${plan === 'ENTERPRISE' ? 'bg-blue-50/30' : ''}`}>
-                        {plan === 'ENTERPRISE' ? (
-                          <span className="text-xs font-bold text-slate-400">ご利用中</span>
-                        ) : (
-                          <motion.button
-                            whileHover={{ scale: 1.06 }}
-                            whileTap={{ scale: 0.94 }}
-                            onClick={() => handleUpgrade('interview-enterprise')}
-                            disabled={isUpgrading}
-                            className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-black hover:bg-black transition-colors disabled:opacity-60 inline-flex items-center gap-1.5 shadow-lg"
-                          >
-                            {isUpgrading && <span className="material-symbols-outlined text-sm animate-spin">progress_activity</span>}
-                            ENTERPRISEを始める
-                          </motion.button>
-                        )}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div className="p-6">
+                <UnifiedPricingPlans serviceId="interview" currentPlan={plan} />
               </div>
             </FloatingCard>
           </motion.div>

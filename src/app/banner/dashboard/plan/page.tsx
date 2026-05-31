@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, getGuestUsage } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
+import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
 import {
   ArrowUpRight,
@@ -270,18 +271,14 @@ export default function BannerPlanPage() {
   const estimateBasisText = `根拠：\n- 1枚あたりの制作時間を ${ESTIMATED_TIME_SAVED_PER_BANNER_MIN} 分と仮定\n- デザイナー時給を ${HOURLY_DESIGNER_RATE_JPY.toLocaleString()} 円と仮定\n\n計算：\n- 推定削減時間 = 累計生成枚数 × ${ESTIMATED_TIME_SAVED_PER_BANNER_MIN} 分 ÷ 60\n- 推定コスト削減 = 推定削減時間（時間）× ${HOURLY_DESIGNER_RATE_JPY.toLocaleString()} 円`
 
   const currentPlanLabel =
-    isGuest ? 'ゲスト' : isEnterprise ? 'エンタープライズ' : isPro ? 'プロ' : isLight ? 'ライト' : '無料'
+    isGuest ? 'ゲスト' : isPaid ? 'プロ' : '無料'
 
   const planBadge =
-    isEnterprise
-      ? { text: 'ENTERPRISE', cls: 'bg-rose-600 text-white shadow-sm shadow-rose-600/20' }
-      : isPro
-        ? { text: 'PRO', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
-        : isLight
-          ? { text: 'LIGHT', cls: 'bg-blue-500 text-white shadow-sm shadow-blue-500/20' }
-          : isGuest
-            ? { text: 'GUEST', cls: 'bg-gray-200 text-gray-700' }
-            : { text: 'FREE', cls: 'bg-blue-100 text-blue-700' }
+    isPaid
+      ? { text: 'PRO', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
+      : isGuest
+        ? { text: 'GUEST', cls: 'bg-gray-200 text-gray-700' }
+        : { text: 'FREE', cls: 'bg-blue-100 text-blue-700' }
 
   // 契約管理 / 課金開始は「リンク遷移」＋CheckoutButtonに統一（確実にStripeへ遷移）
 
@@ -374,17 +371,9 @@ export default function BannerPlanPage() {
                     </div>
 
                     <div className="text-right">
-                      {isEnterprise ? (
-                        <div className="text-3xl font-black text-slate-800 tracking-tighter">
-                          ¥49,800<span className="text-sm text-slate-400 font-bold ml-1">/mo</span>
-                        </div>
-                      ) : isPro ? (
+                      {isPaid ? (
                         <div className="text-3xl font-black text-slate-800 tracking-tighter">
                           ¥9,980<span className="text-sm text-slate-400 font-bold ml-1">/mo</span>
-                        </div>
-                      ) : isLight ? (
-                        <div className="text-3xl font-black text-slate-800 tracking-tighter">
-                          ¥2,980<span className="text-sm text-slate-400 font-bold ml-1">/mo</span>
                         </div>
                       ) : (
                         <div className="text-3xl font-black text-slate-800 tracking-tighter">
@@ -404,7 +393,7 @@ export default function BannerPlanPage() {
                         <Sparkles className="w-5 h-5" />
                         ログインして利用を開始
                       </Link>
-                    ) : isEnterprise ? (
+                    ) : isPaid ? (
                       <Link
                         href={HIGH_USAGE_CONTACT_URL || '/banner/pricing'}
                         className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black hover:bg-black transition-all shadow-xl shadow-slate-200"
@@ -412,17 +401,7 @@ export default function BannerPlanPage() {
                         <ArrowUpRight className="w-5 h-5" />
                         さらに上限UPの相談（丸投げ）
                       </Link>
-                    ) : isPro ? (
-                      <CheckoutButton
-                        planId="banner-enterprise"
-                        loginCallbackUrl="/banner/dashboard/plan"
-                        variant="secondary"
-                        className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-slate-900 text-white font-black shadow-xl shadow-slate-200 hover:bg-black transition-all hover:scale-[1.02] active:scale-95"
-                      >
-                        <Crown className="w-5 h-5" />
-                        エンタープライズにアップグレード
-                      </CheckoutButton>
-                    ) : isLight ? (
+                    ) : (
                       <CheckoutButton
                         planId="banner-pro"
                         loginCallbackUrl="/banner/dashboard/plan"
@@ -430,29 +409,8 @@ export default function BannerPlanPage() {
                         className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95"
                       >
                         <Zap className="w-5 h-5" />
-                        プロプランにアップグレード
+                        プロにアップグレード
                       </CheckoutButton>
-                    ) : (
-                      <CheckoutButton
-                        planId="banner-light"
-                        loginCallbackUrl="/banner/dashboard/plan"
-                        variant="secondary"
-                        className="flex-1 inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-blue-600 text-white font-black shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95"
-                      >
-                        <Zap className="w-5 h-5" />
-                        ライトプランへアップグレード
-                      </CheckoutButton>
-                    )}
-
-                    {/* 無料ユーザーのみ：比較用にプランページ導線を残す */}
-                    {!isGuest && !isPaid && (
-                      <Link
-                        href="/banner/pricing"
-                        className="inline-flex items-center justify-center gap-3 px-6 py-4 rounded-2xl bg-white border border-gray-200 text-slate-800 font-black hover:bg-slate-50 transition-all shadow-sm"
-                      >
-                        <ArrowUpRight className="w-5 h-5 text-blue-600" />
-                        料金プランを見る
-                      </Link>
                     )}
                   </div>
 
@@ -520,107 +478,19 @@ export default function BannerPlanPage() {
                 </div>
               </div>
 
-              {/* 料金プラン比較表 */}
+              {/* 料金プラン（統一2プランUI） */}
               <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                 <div className="p-4 sm:p-8 border-b border-gray-100">
                   <h3 className="text-base sm:text-lg font-black text-slate-800 flex items-center gap-2">
                     <CreditCard className="w-5 h-5 text-blue-600" />
-                    料金プラン比較
+                    料金プラン
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-500 font-bold mt-1">
                     用途に合わせてプランをお選びください
                   </p>
                 </div>
                 <div className="p-4 sm:p-8">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                    {/* ゲスト/無料 */}
-                    <div className={`rounded-2xl border p-4 sm:p-5 ${bannerPlanTier === 'FREE' ? 'border-blue-500 bg-blue-50' : 'border-gray-200 bg-slate-50'}`}>
-                      <p className="text-xs font-black text-slate-500 uppercase tracking-widest">ログイン</p>
-                      <p className="text-lg sm:text-xl font-black text-slate-900 mt-1">無料プラン</p>
-                      <p className="text-xl sm:text-2xl font-black text-slate-800 mt-2">¥0</p>
-                      <ul className="mt-3 sm:mt-4 space-y-2 text-xs sm:text-sm text-slate-600 font-bold">
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600 flex-shrink-0" /> ゲスト：月{BANNER_PRICING.guestLimit}枚まで</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600 flex-shrink-0" /> ログイン：月{BANNER_PRICING.freeLimit}枚まで</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600 flex-shrink-0" /> サイズ：1080×1080固定</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-600 flex-shrink-0" /> 同時生成：最大3枚</li>
-                      </ul>
-                      {bannerPlanTier === 'FREE' && (
-                        <p className="mt-4 text-xs font-black text-blue-600 flex items-center gap-1">
-                          <CheckCircle2 className="w-4 h-4" /> 現在のプラン
-                        </p>
-                      )}
-                    </div>
-
-                    {/* LIGHT */}
-                    <div className={`rounded-2xl border p-4 sm:p-5 ${bannerPlanTier === 'LIGHT' ? 'border-blue-500 bg-blue-50' : 'border-blue-200 bg-blue-50/50'}`}>
-                      <p className="text-xs font-black text-blue-500 uppercase tracking-widest">LIGHT</p>
-                      <p className="text-lg sm:text-xl font-black text-slate-900 mt-1">ライトプラン</p>
-                      <p className="text-xl sm:text-2xl font-black text-slate-800 mt-2">¥2,980<span className="text-sm font-bold text-slate-400">/月</span></p>
-                      <ul className="mt-3 sm:mt-4 space-y-2 text-xs sm:text-sm text-slate-600 font-bold">
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-500 flex-shrink-0" /> 月50枚まで生成</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-500 flex-shrink-0" /> サイズ：1080×1080固定</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-500 flex-shrink-0" /> 同時生成：最大3枚</li>
-                      </ul>
-                      {bannerPlanTier === 'LIGHT' ? (
-                        <p className="mt-4 text-xs font-black text-blue-600 flex items-center gap-1">
-                          <CheckCircle2 className="w-4 h-4" /> 現在のプラン
-                        </p>
-                      ) : bannerPlanTier !== 'PRO' && bannerPlanTier !== 'ENTERPRISE' && (
-                        <div className="mt-4">
-                          <CheckoutButton planId="banner-light" loginCallbackUrl="/banner/dashboard/plan" className="w-full py-2 rounded-xl text-xs" variant="primary">
-                            ライトを始める
-                          </CheckoutButton>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* PRO */}
-                    <div className={`rounded-2xl border p-4 sm:p-5 ${bannerPlanTier === 'PRO' ? 'border-blue-500 bg-blue-900' : 'border-slate-900 bg-slate-900'} text-white`}>
-                      <p className="text-xs font-black text-white/70 uppercase tracking-widest">PRO</p>
-                      <p className="text-lg sm:text-xl font-black mt-1">プロプラン</p>
-                      <p className="text-xl sm:text-2xl font-black mt-2">¥9,980<span className="text-sm font-bold opacity-70">/月</span></p>
-                      <ul className="mt-3 sm:mt-4 space-y-2 text-xs sm:text-sm text-white/90 font-bold">
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400 flex-shrink-0" /> 月{BANNER_PRICING.proLimit}枚まで生成</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400 flex-shrink-0" /> サイズ自由指定</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-blue-400 flex-shrink-0" /> 同時生成：最大5枚</li>
-                      </ul>
-                      {bannerPlanTier === 'PRO' ? (
-                        <p className="mt-4 text-xs font-black text-blue-300 flex items-center gap-1">
-                          <CheckCircle2 className="w-4 h-4" /> 現在のプラン
-                        </p>
-                      ) : bannerPlanTier !== 'ENTERPRISE' && (
-                        <div className="mt-4">
-                          <CheckoutButton planId="banner-pro" loginCallbackUrl="/banner/dashboard/plan" className="w-full py-2 rounded-xl text-xs" variant="secondary">
-                            {bannerPlanTier === 'LIGHT' ? 'PROにアップグレード' : 'PROを始める'}
-                          </CheckoutButton>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Enterprise */}
-                    <div className={`rounded-2xl border p-4 sm:p-5 ${bannerPlanTier === 'ENTERPRISE' ? 'border-purple-500 bg-purple-50' : 'border-gray-200 bg-white'}`}>
-                      <p className="text-xs font-black text-slate-500 uppercase tracking-widest">Enterprise</p>
-                      <p className="text-lg sm:text-xl font-black text-slate-900 mt-1">エンタープライズ</p>
-                      <p className="text-xl sm:text-2xl font-black text-slate-800 mt-2">¥49,800<span className="text-sm font-bold text-slate-400">/月</span></p>
-                      <ul className="mt-3 sm:mt-4 space-y-2 text-xs sm:text-sm text-slate-600 font-bold">
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600 flex-shrink-0" /> 月{BANNER_PRICING.enterpriseLimit || 1000}枚まで生成</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600 flex-shrink-0" /> 大量運用・チーム向け</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600 flex-shrink-0" /> 優先サポート</li>
-                        <li className="flex items-center gap-2"><Check className="w-4 h-4 text-purple-600 flex-shrink-0" /> さらに上限UP相談可</li>
-                      </ul>
-                      {bannerPlanTier === 'ENTERPRISE' ? (
-                        <p className="mt-4 text-xs font-black text-purple-600 flex items-center gap-1">
-                          <CheckCircle2 className="w-4 h-4" /> 現在のプラン
-                        </p>
-                      ) : (
-                        <div className="mt-4">
-                          <CheckoutButton planId="banner-enterprise" loginCallbackUrl="/banner/dashboard/plan" className="w-full py-2 rounded-xl text-xs">
-                            {bannerPlanTier === 'PRO' ? 'アップグレード' : 'Enterpriseを始める'}
-                          </CheckoutButton>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                  <UnifiedPricingPlans serviceId="banner" currentPlan={isGuest ? undefined : bannerPlanTier} />
                 </div>
               </div>
 

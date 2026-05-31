@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
+import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import { AccountSummaryCard } from '@/components/AccountSummaryCard'
 
 export default function SettingsPage() {
@@ -154,7 +155,7 @@ export default function SettingsPage() {
         {/* アカウント情報（最上部） */}
         <AccountSummaryCard
           serviceName="ドヤバナーAI"
-          planLabel={bannerPlanTier === 'ENTERPRISE' ? 'Enterprise' : bannerPlanTier === 'PRO' ? 'PRO' : isLoggedIn ? '無料' : 'ゲスト'}
+          planLabel={isPaidUser ? 'プロ' : isLoggedIn ? '無料' : 'ゲスト'}
           isLoggedIn={isLoggedIn}
           user={session?.user || null}
           loginHref="/auth/signin?callbackUrl=/banner/dashboard/settings"
@@ -169,82 +170,17 @@ export default function SettingsPage() {
           </h2>
           <div className="flex items-center gap-4 mb-6">
             <div className={`px-4 py-2 rounded-xl font-black text-sm ${
-              bannerPlanTier === 'ENTERPRISE' ? 'bg-purple-100 text-purple-800' :
-              bannerPlanTier === 'PRO' ? 'bg-blue-100 text-blue-800' :
-              'bg-slate-100 text-slate-600'
+              isPaidUser ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'
             }`}>
-              {bannerPlanTier === 'ENTERPRISE' ? 'Enterprise' : bannerPlanTier === 'PRO' ? 'PRO' : isLoggedIn ? '無料' : 'ゲスト'}
+              {isPaidUser ? 'プロ' : isLoggedIn ? '無料' : 'ゲスト'}
             </div>
             <p className="text-sm text-slate-600 font-bold">
-              月{bannerPlanTier === 'ENTERPRISE' ? BANNER_PRICING.enterpriseLimit || 1000 : bannerPlanTier === 'PRO' ? BANNER_PRICING.proLimit : isLoggedIn ? BANNER_PRICING.freeLimit : BANNER_PRICING.guestLimit}枚まで生成可能
+              月{isPaidUser ? BANNER_PRICING.proLimit : isLoggedIn ? BANNER_PRICING.freeLimit : BANNER_PRICING.guestLimit}枚まで生成可能
             </p>
           </div>
 
-          {/* プラン一覧 */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* ゲスト/無料 */}
-            <div className={`rounded-xl border p-4 ${bannerPlanTier === 'FREE' ? 'border-blue-500 bg-blue-50' : 'border-slate-200 bg-slate-50'}`}>
-              <p className="text-xs font-black text-slate-500">ログイン</p>
-              <p className="text-lg font-black text-slate-900">無料プラン</p>
-              <p className="text-sm font-black text-slate-700 mt-1">¥0</p>
-              <p className="text-[11px] text-slate-500 font-bold mt-2 leading-relaxed">
-                ゲスト：月{BANNER_PRICING.guestLimit}枚<br/>
-                ログイン：月{BANNER_PRICING.freeLimit}枚<br/>
-                サイズ：1080×1080固定
-              </p>
-              {bannerPlanTier === 'FREE' && (
-                <p className="mt-3 text-xs font-black text-blue-600 flex items-center gap-1">
-                  <Check className="w-4 h-4" /> 現在のプラン
-                </p>
-              )}
-            </div>
-
-            {/* PRO */}
-            <div className={`rounded-xl border p-4 ${bannerPlanTier === 'PRO' ? 'border-blue-500 bg-blue-900 text-white' : 'border-slate-900 bg-slate-900 text-white'}`}>
-              <p className="text-xs font-black text-white/70">PRO</p>
-              <p className="text-lg font-black">プロプラン</p>
-              <p className="text-sm font-black mt-1">月額 ¥9,980</p>
-              <p className="text-[11px] text-white/80 font-bold mt-2 leading-relaxed">
-                月{BANNER_PRICING.proLimit}枚まで<br/>
-                サイズ指定可能<br/>
-                最大10枚同時生成
-              </p>
-              {bannerPlanTier === 'PRO' ? (
-                <p className="mt-3 text-xs font-black text-blue-300 flex items-center gap-1">
-                  <Check className="w-4 h-4" /> 現在のプラン
-                </p>
-              ) : bannerPlanTier !== 'ENTERPRISE' && (
-                <div className="mt-3">
-                  <CheckoutButton planId="banner-pro" loginCallbackUrl="/banner/dashboard/settings" className="w-full py-2 rounded-lg text-xs" variant="secondary">
-                    PROを始める
-                  </CheckoutButton>
-                </div>
-              )}
-            </div>
-
-            {/* Enterprise */}
-            <div className={`rounded-xl border p-4 ${bannerPlanTier === 'ENTERPRISE' ? 'border-purple-500 bg-purple-50' : 'border-slate-200 bg-white'}`}>
-              <p className="text-xs font-black text-slate-500">Enterprise</p>
-              <p className="text-lg font-black text-slate-900">エンタープライズ</p>
-              <p className="text-sm font-black text-slate-700 mt-1">月額 ¥49,800</p>
-              <p className="text-[11px] text-slate-500 font-bold mt-2 leading-relaxed">
-                月{BANNER_PRICING.enterpriseLimit || 1000}枚まで<br/>
-                大量生成・チーム向け<br/>
-                優先サポート
-              </p>
-              {bannerPlanTier === 'ENTERPRISE' ? (
-                <p className="mt-3 text-xs font-black text-purple-600 flex items-center gap-1">
-                  <Check className="w-4 h-4" /> 現在のプラン
-                </p>
-              ) : (
-                <div className="mt-3">
-                  <CheckoutButton planId="banner-enterprise" loginCallbackUrl="/banner/dashboard/settings" className="w-full py-2 rounded-lg text-xs">
-                    {bannerPlanTier === 'PRO' ? 'アップグレード' : 'Enterpriseを始める'}
-                  </CheckoutButton>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* プラン一覧（統一2プランUI） */}
+          <UnifiedPricingPlans serviceId="banner" currentPlan={isLoggedIn ? bannerPlanTier : undefined} />
 
           {/* さらに上限UP */}
           <div className="mt-4 text-center">
@@ -272,7 +208,7 @@ export default function SettingsPage() {
                   <span className="underline">{formatJstDateTime(cancelScheduledAt)}</span> に停止予定（日本時間）
                 </p>
                 <p className="mt-2 text-[11px] font-bold text-amber-700">
-                  停止日時まではPRO/Enterpriseの機能をご利用いただけます。
+                  停止日時まではプランの機能をご利用いただけます。
                 </p>
                 <button
                   onClick={handleResumeSubscription}
@@ -296,7 +232,7 @@ export default function SettingsPage() {
             </h2>
             <p className="text-sm text-red-700 font-bold mb-4">
               解約すると、現在の請求期間終了時に無料プランに戻ります。<br/>
-              解約後も請求期間終了まではPRO/Enterpriseの機能をご利用いただけます。
+              解約後も請求期間終了まではプランの機能をご利用いただけます。
             </p>
             <button
               onClick={() => setShowCancelConfirm(true)}
@@ -387,7 +323,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <p className="text-sm font-black text-slate-900">高品質なバナー生成</p>
-                      <p className="text-xs text-slate-500 font-bold">月間最大{bannerPlanTier === 'ENTERPRISE' ? '1000' : '150'}枚まで生成できます</p>
+                      <p className="text-xs text-slate-500 font-bold">月間最大{BANNER_PRICING.proLimit}枚まで生成できます</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
