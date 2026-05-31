@@ -117,12 +117,16 @@ function HrSidebarImpl({
   return (
     <>
       <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={hrTheme}>
-        <SidebarLogoSection
-          icon={Users2}
-          title="ドヤHR"
-          subtitle="タレントマネジメント"
-          showLabel={showLabel}
-        />
+        {/* ロゴ */}
+        <div className="px-3 sm:px-4 py-4 flex items-center">
+          {showLabel ? (
+            <img src="/hr/logo.png" alt="ドヤHR" className="h-9 w-auto" />
+          ) : (
+            <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-md">
+              <Users2 className="w-5 h-5 text-white" />
+            </div>
+          )}
+        </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <nav className="py-4 sm:py-6 px-3 space-y-1">

@@ -73,10 +73,7 @@ export default function HrLayout({ children }: HrLayoutProps) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-50 to-blue-50 p-6">
         <div className="text-center bg-white rounded-3xl border border-slate-200 shadow-xl p-12 max-w-md">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-sky-500 to-blue-600 flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-sky-500/20">
-            <span className="material-symbols-outlined text-3xl">groups</span>
-          </div>
-          <h1 className="text-2xl font-black text-slate-900 mb-2">ドヤHR</h1>
+          <img src="/hr/logo.png" alt="ドヤHR" className="w-56 mx-auto mb-6 drop-shadow" />
           <p className="text-slate-500 mb-6">ログインしてタレントマネジメントを始めましょう</p>
           <a
             href="/auth/signin?callbackUrl=/hr/dashboard"

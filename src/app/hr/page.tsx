@@ -51,6 +51,7 @@ export default function HrLandingPage() {
               transition={{ duration: 0.6 }}
               className="flex-1 text-center lg:text-left"
             >
+              <img src="/hr/logo.png" alt="ドヤHR" className="w-60 sm:w-72 mb-6 mx-auto lg:mx-0 drop-shadow-md" />
               <div className="inline-flex items-center gap-2 px-5 py-2.5 bg-white shadow-md rounded-full mb-8">
                 <span className="material-symbols-outlined text-blue-600 text-lg">groups</span>
                 <span className="text-sm font-semibold text-slate-700">中小企業のためのタレントマネジメント</span>
