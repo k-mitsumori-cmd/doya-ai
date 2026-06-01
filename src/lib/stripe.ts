@@ -203,7 +203,7 @@ export const ALL_SERVICE_IDS = [
   'banner', 'seo', 'interview', 'persona', 'kantan',
   'copy', 'voice', 'movie', 'lp', 'opening',
   'shindan', 'tenkai', 'interviewx', 'logo', 'video', 'presentation',
-  'adsim', 'hr',
+  'adsim', 'hr', 'doyaslide',
 ] as const
 
 // ========================================

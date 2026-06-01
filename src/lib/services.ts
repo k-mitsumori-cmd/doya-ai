@@ -1268,6 +1268,60 @@ export const SERVICES: Service[] = [
   },
 
   // ----------------------------------------
+  // ドヤスライド（全スライド フル画像生成）
+  // ----------------------------------------
+  {
+    id: 'doyaslide',
+    name: 'ドヤスライド',
+    shortName: 'スライド',
+    description: 'AIが全スライドを画像でド派手に生成。',
+    longDescription:
+      'テーマを入力するだけで、AIが各スライドを1枚絵のビジュアルとして生成。最初にアップしたロゴを最後に重ねて統一感を出し、チャットでその場修正もできる。営業・提案・SNS資料を“映える画像”で作れます。',
+    icon: '🖼️',
+    color: 'fuchsia',
+    gradient: 'from-fuchsia-500 to-purple-600',
+    bgGradient: 'from-fuchsia-50 to-purple-50',
+    href: '/doyaslide',
+    dashboardHref: '/doyaslide',
+    pricingHref: '/doyaslide/pricing',
+    guideHref: '/doyaslide',
+    features: [
+      '全スライドをAI画像でド派手に生成',
+      '資料タイプ別に最適な構成を自動設計',
+      'ロゴを重ねて全スライドに統一感',
+      'チャットでその場修正（再生成）',
+      'PNG / PDF / ZIP で出力',
+    ],
+    useCases: [
+      '映える営業・提案資料を作りたい',
+      'SNS用のカルーセル画像を量産したい',
+      'デザイナーがいないがプロ品質の資料が欲しい',
+      '第一印象で惹きつけるプレゼンにしたい',
+    ],
+    pricing: {
+      free: {
+        name: '無料プラン',
+        limit: '月3プロジェクト / 30枚まで',
+        dailyLimit: -1,
+        price: 0,
+      },
+      pro: {
+        name: 'プロプラン',
+        limit: '月1,000枚 / プロジェクト無制限',
+        dailyLimit: -1,
+        price: 9980,
+        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_DOYASLIDE_PRO_PRICE_ID,
+      },
+    },
+    status: 'coming_soon',
+    category: 'image',
+    order: 22,
+    requiresAuth: true,
+    isNew: true,
+    badge: '開発中',
+  },
+
+  // ----------------------------------------
   // ドヤプロマネ（案件管理）
   // ----------------------------------------
   {

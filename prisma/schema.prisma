@@ -2747,3 +2747,98 @@ model DoyalistTemplate {
   @@index([userId])
   @@map("doyalist_templates")
 }
+
+// ============================================
+// ドヤスライド（全スライド フル画像生成）
+// ============================================
+model DoyaSlideProject {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  docType     String   @default("proposal") // sales/proposal/sns/seminar/recruit/pitch/internal/custom
+  customBrief String?  @db.Text             // docType=custom 時の自由入力
+  slideCount  Int      @default(8)
+  aspectRatio String   @default("wide")     // wide(1536x1024) / square(1024x1024) / vertical(1024x1536)
+  themeColor  String   @default("#7f19e6")
+  stylePreset String   @default("flashy")   // flashy/luxury/pop/minimal/cyber/handwritten
+  status      String   @default("draft")    // draft/structuring/generating/completed/error
+
+  // ロゴ設定（右上に枠を空けて最後に合成）
+  logoUrl         String?
+  logoPosition    String  @default("top-right")
+  logoSize        String  @default("M")     // S/M/L
+  logoBackingChip Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  slides DoyaSlideSlide[]
+  assets DoyaSlideAsset[]
+
+  @@index([userId])
+  @@index([userId, status])
+  @@index([userId, createdAt])
+  @@map("doyaslide_projects")
+}
+
+model DoyaSlideSlide {
+  id           String           @id @default(cuid())
+  projectId    String
+  project      DoyaSlideProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  index        Int
+  role         String?          // 表紙/課題/解決/実績/CTA など
+  headline     String?
+  subText      String?          @db.Text
+  visualPrompt String           @db.Text     // 画像生成用のビジュアル指示
+  basePrompt   String?          @db.Text     // 累積プロンプト（チャット修正を蓄積）
+  rawImageUrl  String?                        // ロゴ合成前
+  imageUrl     String?                        // ロゴ合成後（表示用）
+  version      Int      @default(1)
+  status       String   @default("pending")   // pending/generating/done/error
+
+  versions     DoyaSlideVersion[]
+  chatMessages DoyaSlideChatMessage[]
+
+  @@unique([projectId, index])
+  @@index([projectId])
+  @@map("doyaslide_slides")
+}
+
+model DoyaSlideAsset {
+  id        String           @id @default(cuid())
+  projectId String
+  project   DoyaSlideProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type      String           @default("logo")
+  fileUrl   String
+  createdAt DateTime         @default(now())
+
+  @@index([projectId])
+  @@map("doyaslide_assets")
+}
+
+model DoyaSlideChatMessage {
+  id             String         @id @default(cuid())
+  slideId        String
+  slide          DoyaSlideSlide @relation(fields: [slideId], references: [id], onDelete: Cascade)
+  role           String         // user / assistant
+  content        String         @db.Text
+  appliedChanges Json?
+  createdAt      DateTime       @default(now())
+
+  @@index([slideId])
+  @@map("doyaslide_chat_messages")
+}
+
+model DoyaSlideVersion {
+  id          String         @id @default(cuid())
+  slideId     String
+  slide       DoyaSlideSlide @relation(fields: [slideId], references: [id], onDelete: Cascade)
+  version     Int
+  imageUrl    String
+  rawImageUrl String?
+  prompt      String?        @db.Text
+  createdAt   DateTime       @default(now())
+
+  @@index([slideId])
+  @@map("doyaslide_versions")
+}

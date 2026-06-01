@@ -21,6 +21,7 @@ import {
   Sparkles,
   Target,
   Play,
+  Presentation,
   Users,
   Volume2,
   type LucideIcon,
@@ -58,6 +59,7 @@ const SERVICE_ICON_MAP: Record<string, ServiceMapping> = {
   interviewx: { icon: Send,     iconBg: 'from-indigo-500 to-violet-500', hoverBg: 'hover:bg-indigo-50' },
   adsim:     { icon: BarChart3, iconBg: 'from-indigo-500 to-blue-600',   hoverBg: 'hover:bg-indigo-50' },
   hr:        { icon: Users,     iconBg: 'from-sky-500 to-blue-600',      hoverBg: 'hover:bg-sky-50' },
+  doyaslide: { icon: Presentation, iconBg: 'from-fuchsia-500 to-purple-600', hoverBg: 'hover:bg-fuchsia-50' },
 }
 
 const FALLBACK_MAPPING: ServiceMapping = {
