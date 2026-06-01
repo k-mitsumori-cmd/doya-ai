@@ -63,6 +63,9 @@ export default function EditEmployeePage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [photoUrl, setPhotoUrl] = useState('')
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [form, setForm] = useState<FormState>({
     lastName: '',
     firstName: '',
@@ -110,6 +113,7 @@ export default function EditEmployeePage() {
           birthDate: toDateInput(e.birthDate),
           gender: e.gender ?? '',
         })
+        setPhotoUrl(e.photoUrl ?? '')
         if (deptRes.ok) {
           const dd = await deptRes.json()
           setDepartments(dd.flat ?? dd.departments ?? [])
@@ -125,6 +129,21 @@ export default function EditEmployeePage() {
 
   const update = (k: keyof FormState, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoFile(file)
+    const reader = new FileReader()
+    reader.onload = (ev) => setPhotoPreview(ev.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  const removePhoto = () => {
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    setPhotoUrl('')
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!form.lastName || !form.firstName) {
@@ -133,10 +152,23 @@ export default function EditEmployeePage() {
     }
     setSaving(true)
     try {
+      // 新しい写真があれば先にアップロードしてURLを取得
+      let finalPhotoUrl = photoUrl
+      if (photoFile) {
+        const fd = new FormData()
+        fd.append('file', photoFile)
+        const up = await fetch('/api/hr/upload', { method: 'POST', body: fd })
+        if (!up.ok) {
+          const ed = await up.json().catch(() => ({}))
+          throw new Error(ed.error || '写真のアップロードに失敗しました')
+        }
+        finalPhotoUrl = (await up.json()).url
+      }
+
       const res = await fetch(`/api/hr/employees/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, photoUrl: finalPhotoUrl }),
       })
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
@@ -190,6 +222,44 @@ export default function EditEmployeePage() {
         <h1 className="text-3xl font-black text-slate-900 mb-6">従業員情報を編集</h1>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-3xl shadow-md p-6 space-y-6">
+          {/* 顔写真 */}
+          <div>
+            <label className="text-sm font-bold text-slate-700 mb-2 flex items-center gap-2">
+              <span className="material-symbols-outlined text-blue-600 text-lg">photo_camera</span>
+              顔写真
+            </label>
+            <div className="flex items-center gap-6">
+              {photoPreview || photoUrl ? (
+                <img
+                  src={photoPreview || photoUrl}
+                  alt="プレビュー"
+                  className="w-24 h-24 rounded-full object-cover ring-4 ring-blue-100"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-slate-50 flex items-center justify-center border-2 border-dashed border-slate-300">
+                  <span className="material-symbols-outlined text-4xl text-slate-400">person</span>
+                </div>
+              )}
+              <div className="flex flex-col gap-2">
+                <label className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold cursor-pointer shadow-md hover:shadow-lg hover:bg-blue-700 transition-all">
+                  <span className="material-symbols-outlined text-lg">upload</span>
+                  {photoPreview || photoUrl ? '写真を変更' : '写真をアップロード'}
+                  <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+                </label>
+                {(photoPreview || photoUrl) && (
+                  <button
+                    type="button"
+                    onClick={removePhoto}
+                    className="text-xs font-bold text-slate-400 hover:text-red-500 transition-colors text-left"
+                  >
+                    写真を削除
+                  </button>
+                )}
+                <p className="text-xs text-slate-400">JPG, PNG, WebP 対応（5MB以下）</p>
+              </div>
+            </div>
+          </div>
+
           {/* 氏名 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

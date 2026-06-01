@@ -1240,14 +1240,14 @@ export const SERVICES: Service[] = [
     pricing: {
       free: {
         name: 'おためし',
-        limit: '月10社 / 月5回ツール利用',
-        dailyLimit: 10,
+        limit: '月100社 / 営業文ツール月30回',
+        dailyLimit: 100,
         price: 0,
       },
       pro: {
         name: 'プロ',
-        limit: '月500社 / 月200回ツール利用',
-        dailyLimit: 500,
+        limit: '月5,000社 / 営業文ツール月500回',
+        dailyLimit: 5000,
         price: 9980,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_DOYALIST_PRO_PRICE_ID,
       },

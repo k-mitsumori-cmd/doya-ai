@@ -1,864 +1,366 @@
-# ドヤ勤怠 — 開発ナレッジ集
+# ドヤ勤怠 (Kintai) — 詳細仕様
 
-> **このドキュメントの位置づけ**
-> 他の人が AI ツール（Claude / ChatGPT）を使ってドヤ勤怠と同じようなサービスをゼロから作れるようにまとめた「実践ナレッジ集」。
-> 「Claude に何を渡すか」「ChatGPT に何を頼むか」「どの順番で進めるか」が全部書いてあります。
+> このファイルは **サービス仕様書（アプリ情報）** です。実装（`src/app/kintai`, `src/app/api/kintai`, `src/lib/kintai`）に基づく詳細版。
+> 「同種サービスをAIで作る進め方・プロンプト集」は [knowledge/kintai-dev-guide.md](../knowledge/kintai-dev-guide.md) を参照。
 
----
-
-## 目次
-
-1. [このサービスは何？](#1-このサービスは何)
-2. [使う AI ツール一覧](#2-使う-ai-ツール一覧)
-3. [開発の全体フロー](#3-開発の全体フロー)
-4. [Step 1: ロゴ・キャラクター作成（ChatGPT / 画像生成）](#step-1-ロゴキャラクター作成)
-5. [Step 2: DB 設計（Claude に依頼）](#step-2-db-設計claude-に依頼)
-6. [Step 3: 画面作成（Claude に依頼）](#step-3-画面作成claude-に依頼)
-7. [Step 4: API 実装（Claude に依頼）](#step-4-api-実装claude-に依頼)
-8. [Step 5: 認証・権限まわり（Claude に依頼）](#step-5-認証権限まわりclaude-に依頼)
-9. [Step 6: 仕上げ（Claude に依頼）](#step-6-仕上げclaude-に依頼)
-10. [Claude に渡すときのコツ](#claude-に渡すときのコツ)
-11. [トラブルシューティング](#トラブルシューティング)
-12. [付録: コピペ用プロンプト集](#付録-コピペ用プロンプト集)
+## 概要
+- **パス**: `/kintai`　**サービスID**: `kintai`　**本番URL**: `https://doya-ai.surisuta.jp/kintai`
+- **説明**: シンプルで使いやすいクラウド勤怠管理。打刻・勤怠集計・申請承認をオールインワンで。
+- **ステータス**: active　**カテゴリ**: other（管理ツール型 / 画面パターンC）
+- **アイコン**: `⏰`　**カラー**: violet → purple（`from-violet-500 to-purple-600`）、ブランド `#7f19e6`
+- **データスコープ**: **組織スコープ**（`organizationId` 分離のマルチテナント。HRと同型）
+- **競合/差別化**: KING OF TIME・ジョブカンに対し「シンプル・かわいい・安い」。対象は5〜100名の中小企業
 
 ---
 
-## 1. このサービスは何？
+## 1. 認証・コンテキスト（`src/lib/kintai/access.ts`）
 
-**ドヤ勤怠** = 中小企業向けのクラウド勤怠管理システム。
+全API共通の入口 `getKintaiContext()`:
 
-### 何ができる？
+```
+1. getServerSession() で userId を取得（無ければ email から User を引く）
+2. KintaiMember を { userId, status:'ACTIVE' } で検索（employee を include、createdAt desc）
+3. membership も employee も無ければ null（→ APIは401）
+4. 返り値 KintaiContext = { userId, organizationId, role, memberId, employeeId }
+```
 
-- ワンクリックで出退勤の打刻
-- 残業・深夜・遅刻を自動で集計
-- 打刻ミスや休暇申請をシステム内で承認
-- かわいいクマキャラクターで楽しく使える
+- 1ユーザーが複数組織に所属しうるが、**ACTIVE は実質1つ**（招待受諾時に他組織を INACTIVE 化、後述）
+- 権限判定 `hasMinRole(currentRole, minRole)` … `ROLE_HIERARCHY` の数値比較
 
-### 競合
-- KING OF TIME（高機能だが高い）
-- ジョブカン（中堅）
-- → ドヤ勤怠は「シンプル・かわいい・安い」で差別化
-
-### ターゲット
-- 従業員 5〜100 名の中小企業
-- Excel で勤怠管理に限界を感じている会社
+### ロール階層（`ROLE_HIERARCHY` / `ROLE_LABELS`）
+| ロール | 値 | 表示名 | 権限概要 |
+|--------|----|------|---------|
+| `employee` | 0 | 一般 | 打刻・自分の勤怠確認・申請提出 |
+| `manager` | 1 | 部門管理者 | 自部署の勤怠確認・申請承認 |
+| `hr_admin` | 2 | 人事管理者 | 従業員・部署・就業ルール管理、CSV/Excel出力 |
+| `system_admin` | 3 | システム管理者 | 全機能・権限付与 |
 
 ---
 
-## 2. 使う AI ツール一覧
+## 2. 組織の初回作成（`getOrCreateOrganization` / `POST /api/kintai/organization`）
 
-| ツール | 用途 | 月額目安 |
-|--------|------|---------|
-| **Claude (Claude Code)** | コード生成・設計・実装の主軸 | $20 |
-| **ChatGPT (画像生成)** | ロゴ作成（gpt-image-1 / DALL-E） | $20 |
-| **ChatGPT (Plus)** | キャラクター画像生成・補助 | （上記に含む）|
-| **Cursor** | エディタ（Claude/GPT 連携） | $20 |
-| **Vercel** | デプロイ先 | $20〜 |
-| **Supabase** | DB（PostgreSQL） | 無料〜 |
-| **Resend** | メール送信 | 無料〜 |
-| **Stripe** | 決済 | 売上の 3.6% |
+`POST /api/kintai/organization`　body: `{ name, employeeName }`（両方必須・無ければ400）
 
-**合計**: 開発初期は月 $60〜80 程度で始められる。
+作成時の自動セットアップ:
+1. slug 生成（`name` を小文字化＋記号→ハイフン、英数・全角漢字以外を除去。衝突時は `-{timestamp}` 付与、空なら `org-{timestamp}`）
+2. `KintaiOrganization` 作成
+3. 作成者を `KintaiMember`（role=`system_admin`, status=`ACTIVE`, acceptedAt=now）で登録
+4. その `KintaiEmployee`（employmentType=`full_time`）を作成
+5. **既定の就業ルール** `標準（9:00-18:00）`（break 60分）を1件作成
+6. **既定の部署** `営業部 / 開発部 / 総務部 / 人事部` を作成
 
----
-
-## 3. 開発の全体フロー
-
-```
-┌─────────────────────────────────────────────────────┐
-│ Step 1: ロゴ・キャラクター作成                         │
-│   → ChatGPT で画像生成（10分）                        │
-├─────────────────────────────────────────────────────┤
-│ Step 2: DB 設計                                       │
-│   → Claude に「勤怠管理の DB を Prisma で設計して」    │
-│   → schema.prisma 完成（30分）                       │
-├─────────────────────────────────────────────────────┤
-│ Step 3: 画面作成                                       │
-│   → Claude に「打刻画面を Next.js + Tailwind で」     │
-│   → 16ページ完成（数日）                              │
-├─────────────────────────────────────────────────────┤
-│ Step 4: API 実装                                       │
-│   → Claude に「打刻 API を作って」と依頼              │
-│   → 18 エンドポイント完成（数日）                      │
-├─────────────────────────────────────────────────────┤
-│ Step 5: 認証・権限                                     │
-│   → Claude に「NextAuth で組織分離して」              │
-│   → 完成（1日）                                       │
-├─────────────────────────────────────────────────────┤
-│ Step 6: 仕上げ                                         │
-│   → Claude に「CSV エクスポート追加」など             │
-│   → リリース可能な状態に（数日）                       │
-└─────────────────────────────────────────────────────┘
-
-合計: 1〜2 週間で MVP が完成（1 人開発の場合）
-```
+> 既に ACTIVE メンバーがある場合は新規作成せず既存組織を返す（冪等）。
 
 ---
 
-## Step 1: ロゴ・キャラクター作成
+## 3. 打刻（`/api/kintai/clock`）
 
-### 1-1. ロゴを ChatGPT で作る
+### GET `?date=YYYY-MM-DD`（省略時は今日・JST）
+- 自分（`ctx.employeeId`）の当日打刻を `timestamp asc` で取得
+- レスポンス: `{ records, clockStatus, date }`
+- `clockStatus`: 最終レコードから算出 … `not_clocked_in` / `working` / `on_break` / `clocked_out`
 
-**ChatGPT に渡すプロンプト例**:
+### POST　body: `{ type, note? }`
+- `type` は `clock_in|clock_out|break_start|break_end` のホワイトリスト（外れたら400）
+- **状態遷移バリデーション**（当日レコードから判定）:
 
-```
-シンプルでかわいい勤怠管理サービスのロゴを作って。
+| 打刻 | 不可条件（→400メッセージ） | 特記 |
+|------|--------------------------|------|
+| `clock_in` | 出勤済かつ未退勤 → 「既に出勤済みです」 | 退勤後の**再出勤は許可**（シフト/深夜対応） |
+| `clock_out` | 未出勤 → 「出勤していません」／最終が退勤 → 「既に退勤済み」 | 休憩中(`break_start`)なら**自動で休憩終了を挿入**（note「退勤による自動休憩終了」） |
+| `break_start` | 未出勤 or 退勤済 → 「勤務中でない」／既に休憩中 → 「既に休憩中」 | |
+| `break_end` | 直前が `break_start` でない → 「休憩中ではありません」 | |
 
-サービス名: ドヤ勤怠
-イメージ:
-- 時計のアイコンがメイン
-- 紫色 (#7f19e6) がブランドカラー
-- ポップで親しみやすい
-- ビジネスでも使える清潔感
-- 角丸でフラットなデザイン
-
-サイズ: 512x512 px
-背景: 透過 PNG
-```
-
-**コツ**:
-- 何度か生成して気に入ったものを選ぶ
-- 「もう少しシンプルに」「文字を入れて」など微調整を依頼
-- 最終的に `public/images/kintai-logo.png` として保存
-
-### 1-2. キャラクター（ドヤくん）を ChatGPT で作る
-
-**公式キャラクター: ドヤくん**
-
-ドヤマーケAI の公式マスコット。**白いシロクマ + 青いVRゴーグル + パーカー** のテック系デザイン。
-
-**マスターアセット**: Google Drive `01_事業管理 > 15_Saasは死にましぇん > 00_キャラクターボード/` に 15 枚揃っている。
-**既存のアセット流用が可能なため、原則として再生成は不要**。新しく作る必要がある場合のみ以下のプロンプトを使う。
-
-**ChatGPT に渡すプロンプト例**:
-
-```
-SaaS サービスの公式マスコットキャラクター「ドヤくん」を作って。
-同じキャラクターで 15 種類の表情・ポーズを生成する。
-
-キャラクター設定:
-- 種族: シロクマ（体毛は真っ白）
-- 服装: 白いパーカー（フード付き、コードシンボル "</>" が装飾として入っている）
-- アクセサリー: 青色のVRゴーグル（顔の上部に装着、トレードマーク）
-- 表情ベース: 大きな目、口角の上がった親しみやすい顔
-- 体型: 丸みのあるかわいいシルエット
-
-世界観:
-- テック × AI × クリエイティブ
-- 背景: ハーフトーンドット + コード "</>" シンボル + 雲 + 歯車 + AR的な光の粒
-- カラーパレット: 白 + 青系（VRゴーグルと同じ青）
-- スタイル: ポップで親しみやすい、サイバーパンクすぎない
-
-作る表情:
-1. hello（手を振って挨拶）
-2. working（ノートPCで作業中）
-3. ramen（ラーメンを食べて休憩中）
-4. sleep（うとうと居眠り）
-5. jump（飛び上がって大喜び）
-6. success（ガッツポーズ + トロフィー）
-7. error（涙目で泣いている）
-8. thinking（顎に手を当てて考え中）
-9. surprise（目を見開いて驚き）
-10. focus（集中モード）
-11. point（指差して解説）
-12. thumbsup（サムズアップ）
-13. present（プレゼン中）
-14. bug（怒り顔、バグを見つけた）
-15. love（ハートマーク、大好きポーズ）
-
-出力仕様:
-- サイズ: 512x512 px
-- 形式: PNG 透過背景
-- ファイル名: hello.png, working.png, ... の形式
-```
-
-**重要なポイント**:
-- **VRゴーグルの青色は絶対変えない**（ブランドアイデンティティ）
-- 体の白色も変えない
-- 15枚すべて同じキャラクターに見えるよう、表情・ポーズだけ変える
-- 「キャラクターのコンセプト画」を最初に作って、それを参考画像として渡すと統一感が出る
-
-**保存先**:
-```
-public/kintai/characters/
-├── hello.png
-├── working.png
-├── ramen.png
-├── sleep.png
-├── jump.png
-├── success.png
-├── error.png
-├── thinking.png
-├── surprise.png
-├── focus.png
-├── point.png
-├── thumbsup.png
-├── present.png
-├── bug.png
-└── love.png
-```
-
-**コツ**:
-- 1 枚ずつ生成して、表情が違うが同じキャラに見えるよう調整
-- ChatGPT で「同じキャラで違う表情」と指示すると揃いやすい
-- 違和感のあるものは作り直す
+- `ipAddress` は `x-forwarded-for`（先頭）→ `x-real-ip` の順で取得、`source` は `pc` 固定
+- **退勤時 / （退勤後の）再出勤時** に `recalculateDayForEmployee()` で当日サマリーを再計算・upsert
 
 ---
 
-## Step 2: DB 設計（Claude に依頼）
+## 4. 勤怠計算（`src/lib/kintai/attendance.ts` → `calculateDailyAttendance`）
 
-### Claude に渡すプロンプト
+入力: 当日の打刻配列・就業ルール・対象日（JST日初）。出力フィールドと算出:
 
 ```
-中小企業向けの勤怠管理システムを作りたい。
-Prisma + PostgreSQL で DB スキーマを設計してください。
-
-必要な機能:
-1. 組織管理（会社・団体の単位）
-2. 組織メンバー（社員）の管理
-3. 部署管理（階層あり）
-4. 就業ルール（9:00-18:00 などのルール）
-5. 打刻記録（出勤・退勤・休憩開始・休憩終了）
-6. 日次勤怠サマリー（自動計算した結果）
-7. 申請・承認フロー（打刻修正・休暇・残業・休日出勤）
-
-要件:
-- 複数組織を1つのDBで管理（マルチテナント）
-- 他組織のデータが絶対に見えない設計
-- 打刻修正の履歴が残る（監査ログ）
-- IP アドレスを打刻時に記録（不正防止）
-- 役割: system_admin / hr_admin / manager / employee の4段階
-- すべての勤怠系テーブルに kintai_ プレフィックス
-- 雇用形態: 正社員・パート・契約
-- 深夜時間（22:00-05:00）を別途記録
-
-出力フォーマット: prisma/schema.prisma のコード
+clockIn          = 最初の clock_in（無ければ全0で即return）
+clockOut         = 最後の clock_out（無ければ null）
+breakMinutes     = Σ (break_end[i] - break_start[i])  ※ペア数 min(starts, ends)
+workMinutes      = max(0, Σ(clock_out[i]-clock_in[i]) - breakMinutes)   ※複数ペア対応
+scheduledMinutes = (workEnd - workStart) - breakMinutes(就業ルール)
+overtimeMinutes  = max(0, workMinutes - scheduledMinutes)
+lateMinutes      = firstClockIn > 所定始業 なら その差、else 0
+earlyLeaveMinutes= lastClockOut < 所定終業 なら その差、else 0（退勤がある場合のみ）
+nightMinutes     = 退勤時刻(JST)が 22時以降: (h-22)*60+m ／ 5時未満: h*60+m
 ```
 
-### 出力される DB モデル（7 個）
+- 時刻はすべて **JST(UTC+9)** で判定。就業ルール既定は `09:00`-`18:00` / break 60分 → 所定 480分
 
-Claude が出力するモデル:
+### 日次再計算 & 自己修復（`src/lib/kintai/recalculate.ts`）
+- `recalculateDayForEmployee(employeeId, orgId, dateOnly)`:
+  当日打刻を集め、`employee.workRule`（無ければ組織の最古ルール）で計算 → `KintaiAttendance` を `@@unique([employeeId, date])` で upsert
+- 算出 `status`: 退勤なし→`clock_missing` ／ 遅刻あり→`late` ／ それ以外→`normal`
+- `recalculateAllForOrganization(orgId)`: 組織内で `clockIn != null` の全勤怠を再計算（修正件数を返す）
+- **自己修復**: dashboard / attendance / attendance-admin の GET は、`clockIn` 有り＋`clockOut` 有り＋`workMinutes===0` の「壊れた」行を検出すると**その場で再計算**してから返す
 
-1. `KintaiOrganization` — 組織
-2. `KintaiMember` — メンバー（権限付き）
-3. `KintaiDepartment` — 部署（階層構造）
-4. `KintaiWorkRule` — 就業ルール
-5. `KintaiEmployee` — 従業員（Member と 1:1）
-6. `KintaiClockRecord` — 打刻記録
-7. `KintaiAttendance` — 日次勤怠サマリー
-8. `KintaiRequest` — 申請
+---
 
-### 重要なポイント
+## 5. 勤怠閲覧・出力
 
-Claude が出力したスキーマで、必ず以下を確認:
+### GET `/api/kintai/attendance?month=YYYY-MM&employee_id=xxx`
+- 既定は今月・自分。`employee_id` 指定は **hr_admin 以上のみ**（他人は403）かつ同組織チェック（違えば404）
+- JST月範囲で `KintaiAttendance` を取得（自己修復あり）
+- レスポンス: `{ attendances, summary, year, month }`
+- `summary`: `totalWorkDays / totalWorkMinutes / totalOvertimeMinutes / totalLateMinutes / totalEarlyLeaveMinutes / totalNightMinutes / totalAbsentDays / totalLeaveDays / totalHolidayWorkDays`
 
-- [ ] 全テーブルに `organizationId` がある（他組織との分離）
-- [ ] `KintaiClockRecord` に `originalTimestamp`, `isModified` がある（監査ログ）
-- [ ] `KintaiClockRecord` に `ipAddress` がある
-- [ ] `@@map("kintai_xxx")` でプレフィックス指定されている
-- [ ] `@@unique([organizationId, userId])` 等の制約がある
+### GET `/api/kintai/attendance/export?year=&month=&format=csv|excel`（hr_admin 以上）
+- 組織の在籍（`isActive`）従業員×当月の全勤怠を出力。`maxDuration=60`
+- **CSV**: UTF-8 **BOM付き**、各セル `"..."` で囲む。列＝
+  `従業員名, 部署, 日付, 出勤, 退勤, 勤務時間(分), 残業時間(分), 遅刻(分), 早退(分), ステータス`
+  - 勤怠が無い従業員は1行「データなし」で出力
+  - ファイル名 `kintai_YYYY-MM.csv` / `Content-Type: text/csv; charset=utf-8`
+- **Excel**: SpreadsheetML(XML) `.xls`、シート名「YYYY年M月」、`Content-Type: application/vnd.ms-excel`
+- 時刻は `Asia/Tokyo`・24時間表記
 
-### マイグレーション
+### GET `/api/kintai/attendance/admin?date=YYYY-MM-DD`（manager 以上）
+- 組織の在籍従業員一覧に、その日の勤怠を結合。`@db.Date` はUTC midnight保存のため**UTC基準**でクエリ
+- 勤怠レコードが無くても打刻に `clock_in` があり未退勤なら `status:'working'`（出勤中）として返す
+- レスポンス: `{ employees: [{ id, name, departmentId, departmentName, attendance }] }`
 
-```bash
-# Claude が出した schema.prisma を保存後
-npx prisma generate
-npx prisma db push
+### POST `/api/kintai/attendance/recalculate`（hr_admin 以上）
+- 組織全体の勤怠を一括再計算 → `{ message, fixed }`（修正件数）
+
+---
+
+## 6. 申請・承認（`/api/kintai/requests`）
+
+### GET `?status=&type=`（ロールで可視範囲が変わる）
+- `hr_admin`+ → 組織全従業員の申請
+- `manager` → 自部署の従業員の申請（部署が無ければ自分のみ）
+- `employee` → 自分のみ
+- `employee` を include、`submittedAt desc`、最大100件
+
+### POST　body: `{ type, details, reason }` → 201 `{ request }`
+- `type` ホワイトリスト `clock_fix|leave|overtime|holiday_work`（外れたら400）
+- `reason` 必須（空白不可）
+- 種別別の必須 `details`:
+  | type | 必須フィールド | 追加検証 |
+  |------|--------------|---------|
+  | `clock_fix` | `date`, `clockType`, `correctedTime` | — |
+  | `leave` | `startDate`, `endDate` | `startDate <= endDate` |
+  | `overtime` | `date`, (`hours` または `minutes`) | — |
+  | `holiday_work` | （reason のみ） | — |
+- 作成時 `status:'pending'`
+
+### PATCH `/api/kintai/requests/[id]`　body: `{ status, reviewerComment? }`
+- 同組織チェック（違えば404）。`status` は `withdrawn|approved|rejected` のホワイトリスト
+- **取下げ(`withdrawn`)**: 本人のみ、かつ `pending` のものだけ
+- **承認/却下**: `manager` 以上。`manager` は**自部署の申請のみ**（hr_admin+ は全部署）
+- 承認/却下時に `reviewerId / reviewedAt / reviewerComment` を記録
+- **`clock_fix` が `approved` になると `applyClockFix()` を自動実行**:
+  - `clockType` をホワイトリスト検証 → 該当日の同種打刻があれば `originalTimestamp` を退避し `timestamp` を補正＋`isModified=true`、無ければ `source:'manual'` で新規作成
+  - その後その日の勤怠を再計算して upsert
+
+### GET `/api/kintai/requests/[id]`
+- 同組織チェック付きで申請詳細（employee・reviewer を include）
+
+---
+
+## 7. 従業員管理（`/api/kintai/employees`、hr_admin 以上）
+
+### GET `?search=&departmentId=&employmentType=&isActive=&page=&pageSize=`
+- 組織スコープ。`search` は name / nameKana / email の部分一致（大小無視）
+- ページング: `page`(1〜), `pageSize`(1〜200, 既定50)。`department / workRule / member(role,status,inviteToken)` を include
+- レスポンス: `{ employees, total, page, pageSize }`
+
+### POST　body: `{ name, email, nameKana?, departmentId?, workRuleId?, employmentType?, hireDate?, role? }` → 201
+- **従業員数上限チェック**: 組織オーナー（system_admin）の `User.plan` から `getKintaiEmployeeLimitByUserPlan()` を引き、在籍数が上限以上なら403「上限（N名）に達しています」
+- `name` `email` 必須。`departmentId`/`workRuleId` は同組織所属を検証（違えば400）
+- **ロール昇格ガード**: `system_admin` 付与は system_admin のみ。未知ロールは `employee` にフォールバック
+- 招待 `inviteToken = crypto.randomUUID()`、`KintaiMember` を `userId='pending_{uuid}'` / `status:'PENDING'` で同時作成
+- **招待メール自動送信**（`sendEmail`、紫グラデHTML、リンク `/kintai/invite/{token}`、タグ `service=kintai-invite`）。送信失敗してもユーザー作成は成功扱い（catchでログのみ）
+- 重複メールは `P2002` → 「このメールアドレスは既に登録されています」
+
+### GET `/api/kintai/employees/[id]`
+- **本人** または **hr_admin 以上**のみ（IDOR対策）。同組織スコープ。無ければ404
+
+### PATCH `/api/kintai/employees/[id]`（hr_admin 以上）
+- 同組織チェック後、渡されたフィールドのみ更新。`role` 変更は別途検証（未知ロール400 / `system_admin` 付与は system_admin のみ）→ `KintaiMember.role` を更新
+
+### DELETE `/api/kintai/employees/[id]`（hr_admin 以上）
+- **物理削除せず `isActive=false`（論理削除）**
+
+---
+
+## 8. 部署・就業ルール
+
+### 部署 `/api/kintai/departments`
+- GET（全ロール）: 組織の部署一覧（`_count.employees` 付き、name asc）
+- POST（hr_admin+）: `{ name(必須), parentId?, managerId? }` → 階層対応
+- PATCH / DELETE `[id]`（hr_admin+）
+
+### 就業ルール `/api/kintai/work-rules`
+- GET（全ロール）: 組織のルール一覧（`_count.employees` 付き）
+- POST（hr_admin+）: `{ name?, workStart?(09:00), workEnd?(18:00), breakMinutes?(60), overtimeCalcMethod?(daily), flexEnabled?(false), coreStart?, coreEnd? }`
+- PATCH / DELETE `[id]`（hr_admin+）
+- `overtimeCalcMethod`: `daily | weekly | monthly`。フレックス時は `coreStart/coreEnd`（コアタイム）
+
+---
+
+## 9. 招待受け入れ（`/api/kintai/invite/[token]`）
+
+- **有効期限 48時間**（`member.createdAt` 基準。超過は **410 Gone**「有効期限が切れています」）
+- GET: `PENDING` の `KintaiMember` を token で検索 → `{ organizationName, employeeName, email, role }`（無ければ404）
+- POST（ログイン必須）:
+  1. session から userId 解決（無ければ email から User を引く）
+  2. 同組織に別メンバーシップがあれば削除（`@@unique([organizationId,userId])` 対策）
+  3. その userId の他組織 ACTIVE を `INACTIVE` 化（＝同時 ACTIVE は1組織）
+  4. 当該メンバーを `userId=本人 / status:'ACTIVE' / inviteToken=null / acceptedAt=now` に更新
+  5. `{ success, organizationId, organizationName }`
+  - `P2002` → 「既にこの組織に所属しています」
+- 招待メール一致の保証は「メールに届いたトークンを本人が踏む」前提（トークンは UUID）
+
+---
+
+## 10. 利用状況（`GET /api/kintai/usage`）
+
+- 認証ゆるめ（未所属でも `{ organizationId: null }` を返す＝オンボーディング判定用）
+- 所属時: `{ organizationId, employeeId, role, employeeName, plan }`
+- `plan` は**組織オーナー（system_admin）の `User.plan`** を参照（[[feedback_unified_plan]] / `User.plan` 単一参照）
+
+---
+
+## 11. 料金
+
+**統一プラン方式**。料金ページ `/kintai/pricing` は共通 `UnifiedPricingPlans` を使い、ユーザーには **無料 / プロ(¥9,980/月・税込)** の2プランで表示。プロ1契約でドヤAI全サービスのプロ解放。
+
+### 従業員数上限（`getKintaiEmployeeLimitByUserPlan` / `KINTAI_PRICING`）
+| `User.plan` | 上限 | 内部プラン名 |
+|-------------|------|------------|
+| FREE | 5名 | 無料 |
+| LIGHT / STARTER | 30名 | スターター(¥2,980) |
+| PRO | 100名 | プロ(¥9,980) |
+| ENTERPRISE | 無制限(-1) | エンタープライズ(¥49,800) |
+| `DOYA_DISABLE_LIMITS=1` | 無制限(-1) | （開発用） |
+
+> 内部の `services.ts`/`pricing.ts` には4段階の従業員数上限が残るが、**UIに出る価格は統一2プラン**、**プラン判定は `User.plan` が唯一の正**（USS.plan では判定しない）。
+
+---
+
+## 12. DBモデル（8個・`kintai_` プレフィックス）
+
+| モデル | テーブル | 主フィールド / 制約 |
+|--------|---------|------------------|
+| `KintaiOrganization` | `kintai_organizations` | name, slug(unique) |
+| `KintaiMember` | `kintai_members` | userId, role, status(ACTIVE/PENDING/INACTIVE), inviteToken(unique), inviteEmail, acceptedAt / `@@unique([organizationId,userId])` |
+| `KintaiDepartment` | `kintai_departments` | name, parentId(自己参照階層), managerId |
+| `KintaiWorkRule` | `kintai_work_rules` | workStart, workEnd, breakMinutes, overtimeCalcMethod, flexEnabled, coreStart/End |
+| `KintaiEmployee` | `kintai_employees` | name, nameKana, email, employmentType, hireDate, isActive / member と1:1(memberId unique) |
+| `KintaiClockRecord` | `kintai_clock_records` | type, timestamp, source, ipAddress, latitude/longitude, isModified, originalTimestamp / `@@index([employeeId,timestamp])` |
+| `KintaiAttendance` | `kintai_attendances` | date(@db.Date), clockIn/Out, break/work/overtime/late/earlyLeave/nightMinutes, holidayWork, status / `@@unique([employeeId,date])` |
+| `KintaiRequest` | `kintai_requests` | type, status, details(JSON), reason, reviewerId, reviewerComment, submittedAt, reviewedAt / `@@index([employeeId,status])` |
+
+### enum的フィールド（`src/lib/kintai/types.ts`）
+- `role`: `system_admin/hr_admin/manager/employee`　`member.status`: `ACTIVE/PENDING/INACTIVE`
+- `employmentType`: `full_time(正社員)/part_time(パート)/contract(契約社員)`
+- `clock.type`: `clock_in(出勤)/clock_out(退勤)/break_start(休憩開始)/break_end(休憩終了)`
+- `clock.source`: `pc/mobile/manual`
+- `attendance.status`: `normal(通常)/late(遅刻)/clock_missing(打刻漏れ)/absent(欠勤)/holiday(休日)/paid_leave(有給)/special_leave(特別休暇)`
+- `request.type`: `clock_fix(打刻修正)/leave(休暇)/overtime(残業)/holiday_work(休日出勤)`
+- `request.status`: `pending(承認待ち)/approved(承認済)/rejected(却下)/withdrawn(取下げ)`
+- `clockStatus`（画面用）: `not_clocked_in/working/on_break/clocked_out`
+
+---
+
+## 13. セキュリティ（2026-05-27 監査済み・全17 API「安全」）
+
+詳細 → [../kintai-security-audit.md](../kintai-security-audit.md)
+
+- 全APIで `getKintaiContext()` 認証必須（無ければ401）
+- ID直指定の後に `organizationId` 一致を必ず確認（不一致は404）＝ **IDOR対策**
+- 自分のデータのみは `ctx.employeeId` で限定
+- ロール / 申請ステータス / 申請タイプ / clockType を**ホワイトリスト検証**
+- 権限昇格防止: `system_admin` 付与は system_admin のみ。`pending_*` userId はプレースホルダ（招待受諾で実 userId に置換）
+- 打刻修正は `originalTimestamp` 退避＋`isModified=true` で**監査ログ**化
+- 招待メールHTMLは入力を `esc()` でHTMLエスケープ
+- 従業員削除は論理削除（`isActive=false`）
+
+---
+
+## 14. 画面構成（パターンC: 管理ツール型）
+
+```
+src/app/kintai/
+  ├── layout.tsx / page.tsx / error.tsx
+  ├── dashboard/     当日状態・月間サマリー・最近の申請（GET /dashboard）
+  ├── clock/         打刻（最重要・1秒更新時計・状況別クマ）
+  ├── attendance/    月次カレンダー（自分/他従業員切替=管理者）
+  ├── requests/      申請一覧・新規（打刻修正/休暇/残業/休日出勤）
+  ├── approvals/     承認管理（manager+）
+  ├── employees/     従業員管理（hr_admin+、検索・ページング・CSV）
+  ├── departments/   部署管理（階層）
+  ├── settings/      就業ルール設定
+  ├── admin/         部署勤怠レポート等（manager+）
+  ├── invite/        招待受け入れ
+  └── pricing/       料金（UnifiedPricingPlans）
+
+src/lib/kintai/  access.ts / access-client.ts / attendance.ts / recalculate.ts
+                 constants.ts(PAGE_SIZE=50,MAX=200) / format.ts / types.ts
+src/components/   KintaiLayout.tsx / KintaiSidebar.tsx / KintaiOnboarding.tsx / kintai/
+```
+
+### キャラクター（ドヤくん派生）`public/kintai/characters/{mood}_{日本語}.png`
+| 場面 | 表情 | 場面 | 表情 |
+|------|------|------|------|
+| 未出勤 | `sleep` | 退勤済 | `thumbsup` |
+| 出勤中 | `working` | 料金/案内 | `present` |
+| 休憩中 | `ramen` | 大成功 | `jump` |
+
+### デザイン
+- 角丸 `rounded-2xl`、`font-bold` 以上、framer-motion（fade-in-up・打刻ボタンのホバーリフト）
+- 通知は共通 `react-hot-toast`、UI日本語、ポップでかわいく
+
+---
+
+## 15. 環境変数（任意）
+統一課金のため未設定でもバナーAIのPrice IDにフォールバックして動作。招待メールは `sendEmail`（Resend）と `NEXTAUTH_URL` を使用。
+
+```env
+NEXT_PUBLIC_STRIPE_KINTAI_STARTER_PRICE_ID     # 任意（未設定可）
+NEXT_PUBLIC_STRIPE_KINTAI_PRO_PRICE_ID         # 任意（未設定可）
+NEXT_PUBLIC_STRIPE_KINTAI_ENTERPRISE_PRICE_ID  # 任意（未設定可）
+NEXTAUTH_URL                                   # 招待リンクの絶対URL生成に使用
+DOYA_DISABLE_LIMITS=1                          # 全制限無効（開発用）
 ```
 
 ---
 
-## Step 3: 画面作成（Claude に依頼）
+## 16. APIエンドポイント一覧（17）
 
-### 作る画面 16 個
-
-| URL | 画面名 | 優先度 |
-|-----|--------|--------|
-| `/kintai` | ランディングページ | 中 |
-| `/kintai/pricing` | 料金プラン | 中 |
-| `/kintai/dashboard` | マイページ | **高** |
-| `/kintai/clock` | 打刻画面 | **最高** |
-| `/kintai/attendance` | 勤怠カレンダー | **高** |
-| `/kintai/requests` | 申請一覧 | 高 |
-| `/kintai/requests/new` | 新規申請 | 高 |
-| `/kintai/approvals` | 承認管理（管理者） | 高 |
-| `/kintai/employees` | 従業員管理 | 高 |
-| `/kintai/departments` | 部署管理 | 中 |
-| `/kintai/settings` | 就業ルール | 中 |
-| `/kintai/admin/attendance` | 部署勤怠レポート | 中 |
-| `/kintai/invite/[token]` | 招待受け入れ | 高 |
-
-### Claude に渡すプロンプト（打刻画面の例）
-
-```
-Next.js 14 (App Router) + Tailwind CSS + TypeScript で打刻画面を作って。
-
-画面: /kintai/clock
-目的: 従業員がワンクリックで出退勤を打刻できる
-
-UI 要件:
-- 中央に大きな打刻ボタン4つ:
-  1. 出勤 (clock_in) 緑色
-  2. 退勤 (clock_out) オレンジ色
-  3. 休憩開始 (break_start) 青色
-  4. 休憩終了 (break_end) 紫色
-- 角丸は rounded-2xl
-- ボタンはホバーで translateY(-2px) リフト
-- 現在時刻をリアルタイム表示（1秒更新）
-- 本日の打刻タイムラインを下に表示
-- かわいいクマキャラクター（public/kintai/characters/）を画面に配置
-  - 未出勤時: sleep.png
-  - 出勤中: working.png
-  - 休憩中: ramen.png
-  - 退勤済: thumbsup.png
-
-ロジック:
-- 出勤中は退勤・休憩開始のみ表示
-- 休憩中は休憩終了のみ表示
-- 退勤済は出勤のみ表示（同日複数出退勤OK）
-- 打刻成功時にトースト通知（react-hot-toast）
-
-API:
-- GET /api/kintai/clock?date=YYYY-MM-DD で当日記録を取得
-- POST /api/kintai/clock で打刻
-
-デザイン方針:
-- ブランドカラー: 紫 #7f19e6
-- フォント: Noto Sans JP, font-bold 以上
-- アニメーション: framer-motion で fade-in-up
-- とにかくポップでかわいく
-
-完成したコードをすべて出力して。
-```
-
-### 他の画面のプロンプト例
-
-**ダッシュボード**:
-```
-/kintai/dashboard を作って。
-当日の勤務状況（出勤時刻・現在の状態）、月間サマリー（労働時間・残業時間・遅刻回数）、最近の申請（直近5件）、クイックアクション（打刻ボタン、申請ボタン）を表示。
-GET /api/kintai/dashboard で全データを一括取得。
-```
-
-**勤怠カレンダー**:
-```
-/kintai/attendance を作って。
-月別カレンダー表示で、各日にその日の labor hours を表示。
-月切り替えボタン付き。
-CSV/Excel エクスポートボタン（hr_admin 以上のみ表示）。
-hr_admin の場合、他従業員の勤怠も選択して見られる。
-```
-
-**従業員管理**:
-```
-/kintai/employees を作って。
-従業員一覧テーブル、検索、ページネーション、新規作成、編集、削除、招待リンク再送信。
-プラン別の従業員数上限を表示（X / 5 名など）。
-hr_admin 以上のみアクセス可能。
-```
-
-### コツ
-
-- **1 画面ずつ依頼する**（一気に全部頼まない）
-- **API は後で実装するので、今は仮データ（モックデータ）で OK** と伝える
-- **完成したら手で動かして確認**してから次の画面へ
-- 違和感があれば「ここの色を紫っぽく」「ボタンをもっと大きく」と微調整を依頼
-
----
-
-## Step 4: API 実装（Claude に依頼）
-
-### 作る API 18 個
-
-| メソッド | パス | 説明 |
+| メソッド | パス | 権限 |
 |---------|------|------|
-| POST | `/api/kintai/organization` | 初回組織作成 |
-| GET | `/api/kintai/clock` | 当日打刻取得 |
-| POST | `/api/kintai/clock` | 打刻記録 |
-| GET | `/api/kintai/attendance` | 月次勤怠 |
-| GET | `/api/kintai/attendance/export` | CSV/Excel |
-| POST | `/api/kintai/attendance/recalculate` | 再計算 |
-| POST | `/api/kintai/attendance/admin` | 管理者修正 |
-| GET | `/api/kintai/dashboard` | マイページデータ |
-| GET/POST | `/api/kintai/departments` | 部署 CRUD |
-| PATCH | `/api/kintai/departments/[id]` | 部署更新 |
-| GET/POST | `/api/kintai/work-rules` | ルール CRUD |
-| PATCH | `/api/kintai/work-rules/[id]` | ルール更新 |
-| GET/POST | `/api/kintai/employees` | 従業員 CRUD |
-| GET/PATCH | `/api/kintai/employees/[id]` | 従業員操作 |
-| POST | `/api/kintai/employees/[id]/invite` | 招待再送 |
-| GET | `/api/kintai/invite/[token]` | 招待受入 |
-| GET/POST | `/api/kintai/requests` | 申請 |
-| GET/PATCH | `/api/kintai/requests/[id]` | 申請操作 |
+| POST | `/api/kintai/organization` | ログイン |
+| GET / POST | `/api/kintai/clock` | 本人 |
+| GET | `/api/kintai/attendance` | 本人 / hr_admin(他者) |
+| GET | `/api/kintai/attendance/export` | hr_admin |
+| GET | `/api/kintai/attendance/admin` | manager |
+| POST | `/api/kintai/attendance/recalculate` | hr_admin |
+| GET | `/api/kintai/dashboard` | 本人 |
+| GET / POST | `/api/kintai/departments` | GET=全員 / POST=hr_admin |
+| PATCH / DELETE | `/api/kintai/departments/[id]` | hr_admin |
+| GET / POST | `/api/kintai/work-rules` | GET=全員 / POST=hr_admin |
+| PATCH / DELETE | `/api/kintai/work-rules/[id]` | hr_admin |
+| GET / POST | `/api/kintai/employees` | hr_admin |
+| GET / PATCH / DELETE | `/api/kintai/employees/[id]` | GET=本人/hr_admin, PATCH/DELETE=hr_admin |
+| GET | `/api/kintai/invite/[token]` | 公開（トークン） |
+| POST | `/api/kintai/invite/[token]` | ログイン |
+| GET / POST | `/api/kintai/requests` | 本人/承認者 |
+| GET / PATCH | `/api/kintai/requests/[id]` | 条件付き |
+| GET | `/api/kintai/usage` | ゆるめ |
 
-### Claude に渡すプロンプト（打刻 API の例）
-
-```
-Next.js 14 の API ルートで打刻 API を作って。
-
-パス: src/app/api/kintai/clock/route.ts
-
-要件:
-- GET /api/kintai/clock?date=YYYY-MM-DD
-  → 指定日の打刻記録を取得（自分のもののみ）
-  → 現在の状態（未出勤/出勤中/休憩中/退勤済）も返す
-
-- POST /api/kintai/clock
-  → 打刻記録を作成
-  → 状態遷移バリデーション（出勤してないと退勤できない等）
-  → IP アドレスを記録
-  → 退勤時に当日の勤怠サマリーを再計算
-
-定型句（必須）:
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
-export const maxDuration = 300
-
-認証:
-- getKintaiContext(req) でセッションと organizationId を取得
-- ctx がなければ 401 を返す
-
-セキュリティ:
-- type の値を ['clock_in', 'clock_out', 'break_start', 'break_end'] でホワイトリスト検証
-- 必ず ctx.employeeId で自分のデータのみ操作
-
-JST 対応:
-- 日付範囲は JST 基準で計算（UTC + 9時間オフセット）
-
-エラーハンドリング:
-- try/catch でラップ
-- 失敗時は console.error してから 500 を返す
-
-完成したコードをすべて出力して。
-```
-
-### 全 API に共通する定型句
-
-Claude に必ず「これを全 API に入れて」と伝えるテンプレ:
-
-```typescript
-// src/app/api/kintai/{xxx}/route.ts
-
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
-export const maxDuration = 300
-
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { getKintaiContext } from '@/lib/kintai/context'
-import { hasMinRole } from '@/lib/kintai/permissions'
-
-export async function GET(req: NextRequest) {
-  try {
-    // 1. 認証チェック
-    const ctx = await getKintaiContext(req)
-    if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // 2. 権限チェック（管理者 API の場合）
-    if (!hasMinRole(ctx.role, 'hr_admin')) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-    }
-
-    // 3. データ取得（必ず organizationId でフィルター）
-    const data = await prisma.kintaiXxx.findMany({
-      where: { organizationId: ctx.organizationId }
-    })
-
-    return NextResponse.json(data)
-  } catch (error) {
-    console.error('[kintai/xxx] GET error:', error)
-    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
-  }
-}
-```
+全API定型: `runtime='nodejs' / dynamic='force-dynamic' / maxDuration=300`（export のみ60）
 
 ---
 
-## Step 5: 認証・権限まわり（Claude に依頼）
-
-### Claude に渡すプロンプト
-
-```
-NextAuth.js で認証システムを作って。
-
-要件:
-- Google OAuth 認証
-- セッションは JWT（30日有効）
-- セッション取得時に DB から User と KintaiMember を確認
-
-src/lib/kintai/context.ts に getKintaiContext() を実装:
-- セッションから userId を取得
-- KintaiMember を検索（status: ACTIVE のもの）
-- 見つからなければ null を返す
-- 見つかれば以下を返す:
-  {
-    session,
-    organizationId: member.organizationId,
-    memberId: member.id,
-    employeeId: employee.id,
-    role: member.role,
-  }
-
-src/lib/kintai/permissions.ts に hasMinRole() を実装:
-- 4段階のロール階層: employee(0) < manager(1) < hr_admin(2) < system_admin(3)
-- hasMinRole(userRole, requiredRole) で判定
-
-セキュリティルール:
-- 他組織の userId が DB にあっても、organizationId が違えば見えない
-- role の更新は system_admin のみ可能
-- 自分の role を自分で変更できない
-```
-
----
-
-## Step 6: 仕上げ（Claude に依頼）
-
-### 6-1. 勤務時間計算ロジック
-
-```
-src/lib/kintai/calculate.ts に calculateDailyAttendance() を作って。
-
-入力:
-- records: 当日の全打刻記録（KintaiClockRecord[]）
-- workRule: 就業ルール（KintaiWorkRule）
-
-計算:
-- clockIn = 最初の clock_in の時刻
-- clockOut = 最後の clock_out の時刻
-- breakMinutes = 全 break_start / break_end ペアの合計時間
-- workMinutes = (clockOut - clockIn) - breakMinutes
-- overtimeMinutes = max(0, workMinutes - 所定労働時間)
-- lateMinutes = max(0, clockIn - workStart)
-- earlyLeaveMinutes = max(0, workEnd - clockOut)
-- nightMinutes = 22:00-05:00 (JST) と勤務時間の重複部分
-
-出力: KintaiAttendance の更新用オブジェクト
-```
-
-### 6-2. CSV / Excel エクスポート
-
-```
-src/app/api/kintai/attendance/export/route.ts を作って。
-
-要件:
-- GET /api/kintai/attendance/export?year=YYYY&month=MM&format=csv|excel
-- hr_admin 以上のみアクセス可
-- 対象月の全従業員の勤怠を出力
-
-CSV フォーマット（UTF-8 BOM 付き）:
-従業員名,部署,日付,出勤,退勤,勤務時間(分),残業時間(分),遅刻(分),早退(分),ステータス
-田中太郎,開発部,2026-05-01,09:00,18:00,480,0,0,0,通常
-
-Excel フォーマット:
-- XML SpreadsheetML 形式（.xls 互換）
-- 月名をワークシート名にする（"2026年5月"）
-
-レスポンスヘッダー:
-- CSV: Content-Type: text/csv; charset=utf-8
-- Excel: Content-Type: application/vnd.ms-excel
-- Content-Disposition: attachment; filename="kintai_2026_05.csv"
-```
-
-### 6-3. 招待メール
-
-```
-src/lib/kintai/email.ts に sendInvitationEmail() を作って。
-
-要件:
-- Resend API を使用
-- HTML メールテンプレート（紫グラデーション）
-- 招待リンク: https://{domain}/kintai/invite/{token}
-- 「組織に参加する」ボタン付き
-- タグ: { name: 'service', value: 'doya-kintai' }
-
-呼び出し元:
-- POST /api/kintai/employees（新規作成時）
-- POST /api/kintai/employees/[id]/invite（再送信時）
-
-エラー時:
-- メール送信失敗してもユーザー作成は成功とする
-- console.error でログのみ
-```
-
-### 6-4. 招待受け入れ
-
-```
-src/app/kintai/invite/[token]/page.tsx を作って。
-
-フロー:
-1. URL からトークンを取得
-2. 未認証なら Google ログインへリダイレクト
-3. 認証済みなら GET /api/kintai/invite/[token] を呼ぶ
-4. サーバー側でトークン検証:
-   - KintaiMember を inviteToken で検索
-   - status を ACTIVE に更新
-   - userId = session.user.id を設定
-   - acceptedAt = now()
-5. /kintai/dashboard へリダイレクト
-
-エラーハンドリング:
-- 無効なトークン: 「招待リンクが無効です」と表示
-- 期限切れ: 「招待リンクの期限が切れています」
-- 既に他人が使用: 「このリンクは使用済みです」
-```
-
----
-
-## 料金プラン表記ルール（必読）
-
-料金プランを作る・記載するときは以下を必ず守る:
-
-```
-✅ 書いていいこと:
-- 各プランで使える機能・上限値（ポジティブな情報のみ）
-- 月額料金・年額料金
-- 対象ユーザー像（個人 / 中小企業 / 大企業 等）
-
-🚫 書いてはいけないこと:
-- 「できないこと」「含まれない機能」(❌マークの羅列)
-- 「優先サポート」「専任サポート」「メールサポート」等のサポート関連
-- 「電話対応」「営業時間」「メール対応」等の応対関連
-- 「先着順」「期間限定」等の煽り文言
-```
-
-**理由**: ネガティブな情報や応対関連の文言は導入の心理障壁になる。プランの違いは「上限値」と「使える機能」だけで表現する。
-
-### サポートはプランで差別化しない
-
-サポート窓口は全プラン共通にする:
-
-```
-✅ 全プラン共通:
-- 不具合報告フォーム → 同じリンクを全プランで表示
-- お問い合わせフォーム → サイドバーの「お問い合わせ」ボタン
-
-🚫 やらない:
-- Free は「コミュニティのみ」、Pro は「メールサポート」のような差別化
-- Enterprise だけに「専任サポート」を付ける
-```
-
-実装方針:
-- サイドバーの「お問い合わせ」ボタンは全プラン共通の不具合報告 URL へリンク
-- エラー画面の報告フォームも全プラン共通
-- 料金プランの機能一覧に「サポート」項目を載せない
-
-### Claude に料金ページを依頼するときのプロンプト例
-
-```
-/kintai/pricing ページを作って。
-
-プラン:
-- 無料: ¥0 / 5名まで / 基本機能
-- スターター: ¥2,980 / 30名まで / CSV/Excelエクスポート対応
-- プロ: ¥9,980 / 100名まで / 全機能
-- エンタープライズ: 要相談 / 無制限
-
-【絶対ルール】
-- 「できないこと」「含まれない機能」は書かない（❌マーク禁止）
-- 「優先サポート」「専任サポート」等のサポート文言は書かない
-- 各プランで「使える機能」と「上限値」だけ書く
-- 「お問い合わせ」リンクは全プラン共通（プランの機能一覧には載せない）
-```
-
----
-
-## Claude に渡すときのコツ
-
-### 1. 全体像を最初に伝える
-
-```
-最初にこう伝える:
-「中小企業向けの勤怠管理 SaaS を作っています。
-Next.js 14 + Prisma + PostgreSQL + NextAuth + Tailwind の構成です。
-これから複数のファイルを順番に作ります。
-全部のファイルが連携する前提で、依頼ごとに矛盾しないように作ってください。」
-```
-
-### 2. 1 ファイルずつ依頼する
-
-❌ 悪い例: 「勤怠管理システム全部作って」
-✅ 良い例: 「打刻画面 1 ページだけ作って」
-
-### 3. 「定型句」を毎回伝える
-
-API なら毎回:
-```
-export const runtime = 'nodejs'
-export const dynamic = 'force-dynamic'
-export const maxDuration = 300
-```
-
-を入れて、と毎回伝える（忘れがちなので）。
-
-### 4. セキュリティルールを毎回伝える
-
-「他組織のデータが絶対に見えてはいけない。
-全クエリに `organizationId` フィルターを必ず入れて。」
-と毎回念押し。
-
-### 5. 確認してから次へ進む
-
-```
-依頼 → コード生成 → 自分で読む → ローカルで動かす → 問題なければ次へ
-```
-
-一気に作って後でバグまみれ、を防ぐ。
-
-### 6. エラーが出たら Claude にそのまま投げる
-
-```
-「次のエラーが出ました。解決方法を教えて」
-[エラーメッセージをそのまま貼る]
-```
-
-Claude はエラーから原因を逆算できる。
-
----
-
-## トラブルシューティング
-
-### よくある詰まりポイント
-
-| 問題 | 原因 | 対処 |
-|------|------|------|
-| 他組織のデータが見える | organizationId フィルター漏れ | 全 API を再確認。Claude に「organizationId が抜けてる API ない？」と聞く |
-| 打刻時刻が 9 時間ズレる | JST 変換忘れ | `+9 時間オフセット` 処理を入れる |
-| 退勤押せない | 状態遷移バリデーション漏れ | 「出勤中なら退勤可」「休憩中なら自動で休憩終了挿入」を実装 |
-| 招待メールが届かない | Resend のドメイン未認証 | Resend ダッシュボードで送信元ドメインを認証する |
-| 月次集計がズレる | UTC/JST の月境界 | 月初を JST 00:00 = UTC 前日 15:00 で計算する |
-| 権限チェック忘れ | hr_admin チェックなし | 管理 API には必ず `hasMinRole()` を入れる |
-
-### デバッグの順序
-
-1. ブラウザの DevTools で Network タブを確認 → エラーコード（401 / 403 / 500）を見る
-2. `console.log` を仕込んで Claude に「ここまで来てる」を伝える
-3. Prisma クエリの結果を JSON で確認
-4. それでもダメなら Claude にエラーメッセージ + 関連ファイルを丸ごと貼る
-
----
-
-## 付録: コピペ用プロンプト集
-
-### A. ChatGPT 用（画像生成）
-
-#### ロゴ生成
-```
-シンプルでかわいい勤怠管理サービスのロゴを作って。
-サービス名: ドヤ勤怠
-イメージ: 時計アイコン、紫 #7f19e6、ポップ、ビジネス感、角丸フラット
-サイズ: 512x512px、透過 PNG
-```
-
-#### キャラ生成（1 枚ずつ）
-```
-かわいい茶色のクマのマスコットキャラクターで「[表情名]」している姿。
-くりっと大きな目、ふわふわ質感、全身が見える、フラットデザイン、PNG 透過。
-表情リスト: hello / working / ramen / sleep / jump / success / error / thinking / surprise / focus / point / thumbsup / present / bug / love
-```
-
-### B. Claude 用（コード生成）
-
-#### DB スキーマ
-```
-Prisma で勤怠管理の DB スキーマを設計して。
-モデル: 組織、メンバー、部署（階層）、就業ルール、従業員、打刻記録、日次勤怠、申請
-要件: マルチテナント、組織分離、監査ログ（修正履歴・IP）、kintai_ プレフィックス
-4段階ロール: system_admin / hr_admin / manager / employee
-```
-
-#### API テンプレート
-```
-Next.js 14 で API ルートを作って。
-パス: src/app/api/kintai/{機能名}/route.ts
-必須定型句: runtime='nodejs', dynamic='force-dynamic', maxDuration=300
-認証: getKintaiContext() で organizationId 取得、なければ 401
-セキュリティ: 必ず where: { organizationId: ctx.organizationId } を入れる
-入力検証: ホワイトリスト方式（enum 配列で includes チェック）
-エラー: try/catch + console.error + 500
-```
-
-#### 画面テンプレート
-```
-Next.js 14 + Tailwind + framer-motion で画面を作って。
-パス: src/app/kintai/{機能名}/page.tsx
-デザイン: ブランドカラー #7f19e6、rounded-2xl、font-bold 以上、ポップでかわいく
-キャラクター: public/kintai/characters/ から状況に応じた表情を配置
-アニメーション: fade-in-up で登場、ホバーで translateY(-2px)
-ローディング: クマ working.png + スケルトン
-エラー: クマ error.png + 分かりやすいメッセージ
-モバイル対応: レスポンシブ必須
-```
-
-#### セキュリティ監査依頼
-```
-このプロジェクトのセキュリティを監査して。チェック項目:
-1. 全 API に getKintaiContext() の null チェックがあるか
-2. 全クエリに organizationId フィルターがあるか
-3. role の値がホワイトリスト検証されているか
-4. 個別取得 API でオーナーシップ確認しているか
-5. inviteToken が crypto.randomUUID() で生成されているか
-6. 打刻修正に originalTimestamp が記録されているか
-7. レスポンスに他組織の情報が含まれていないか
-```
-
----
-
-## 開発に必要な環境変数
-
-`.env.local` に以下を設定:
-
-```bash
-# 認証
-NEXTAUTH_SECRET=ランダム文字列（openssl rand -base64 32）
-NEXTAUTH_URL=http://localhost:3000
-GOOGLE_CLIENT_ID=Google Cloud Console から取得
-GOOGLE_CLIENT_SECRET=Google Cloud Console から取得
-
-# DB
-DATABASE_URL=postgresql://...  ← Supabase から取得
-
-# メール
-RESEND_API_KEY=re_xxx  ← Resend から取得
-RESEND_FROM_EMAIL=noreply@yourdomain.com
-
-# 決済（任意）
-STRIPE_SECRET_KEY=sk_test_xxx
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_xxx
-```
-
----
-
-## デプロイ手順
-
-```
-1. GitHub にリポジトリを作る
-2. Vercel にログインしてプロジェクトをインポート
-3. 環境変数を Vercel に設定（上記の .env.local の内容）
-4. main ブランチに push → 自動デプロイ
-5. カスタムドメインを設定（任意）
-```
-
----
-
-## まとめ
-
-このナレッジ集に従って AI ツールを使えば、**1 人 × 1〜2 週間**でドヤ勤怠相当の MVP を作れます。
-
-**重要なポイント**:
-- Claude に「全体像 → 1 ファイル」の順で依頼する
-- セキュリティルール（organizationId 必須）を毎回伝える
-- 画像は ChatGPT、コードは Claude と使い分ける
-- 1 ステップずつ動作確認しながら進める
-
-**質問があれば、Claude にこのドキュメント全体を貼って質問してください。**
-コンテキストを理解した状態で答えてくれます。
-
----
-
-**更新履歴**
-
-| 日付 | 内容 |
-|------|------|
-| 2026-05-28 | 初版作成（AI ツール活用ナレッジ集） |
+## 関連ドキュメント
+- 開発ナレッジ集（AIで同種サービスを作る進め方）: [../knowledge/kintai-dev-guide.md](../knowledge/kintai-dev-guide.md)
+- セキュリティ監査: [../kintai-security-audit.md](../kintai-security-audit.md)
+- 組織スコープ共通設計 / 統一課金: [../06-ui-patterns.md](../06-ui-patterns.md) §15.3 / [../05-auth-payments.md](../05-auth-payments.md)
