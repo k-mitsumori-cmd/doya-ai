@@ -14,8 +14,8 @@ export interface DoyaSlideLimits {
 export const DOYASLIDE_LIMITS: Record<PlanTier, DoyaSlideLimits> = {
   GUEST: { tier: 'GUEST', maxProjects: 0, maxSlidesPerMonth: 0 },
   FREE: { tier: 'FREE', maxProjects: 3, maxSlidesPerMonth: 30 },
-  LIGHT: { tier: 'LIGHT', maxProjects: -1, maxSlidesPerMonth: 1000 },
-  PRO: { tier: 'PRO', maxProjects: -1, maxSlidesPerMonth: 1000 },
+  LIGHT: { tier: 'LIGHT', maxProjects: -1, maxSlidesPerMonth: 300 },
+  PRO: { tier: 'PRO', maxProjects: -1, maxSlidesPerMonth: 300 },
   ENTERPRISE: { tier: 'ENTERPRISE', maxProjects: -1, maxSlidesPerMonth: -1 },
 }
 

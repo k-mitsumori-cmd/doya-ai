@@ -1307,7 +1307,7 @@ export const SERVICES: Service[] = [
       },
       pro: {
         name: 'プロプラン',
-        limit: '月1,000枚 / プロジェクト無制限',
+        limit: '月300枚 / プロジェクト無制限',
         dailyLimit: -1,
         price: 9980,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_DOYASLIDE_PRO_PRICE_ID,

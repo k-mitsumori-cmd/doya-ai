@@ -72,6 +72,24 @@ export function buildImagePrompt(params: {
   return lines.filter(Boolean).join('\n')
 }
 
+/** Gemini向け: URL内容からタイトル・狙いを提案するプロンプト */
+export function buildAnalyzePrompt(scraped: {
+  title: string
+  description: string
+  text: string
+}): string {
+  return [
+    'あなたはプレゼン資料の企画者です。次のWebページの内容を読み、その内容を題材にしたプレゼン資料の「タイトル案」と「狙い(brief)」を日本語で作ってください。',
+    `ページタイトル: ${scraped.title}`,
+    scraped.description ? `説明: ${scraped.description}` : '',
+    `本文抜粋:\n${scraped.text.slice(0, 4000)}`,
+    '',
+    '次のJSONのみ出力: {"title":"魅力的な資料タイトル(30文字以内)","brief":"資料の狙い・含めたい要点(120文字以内)"}',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
 /** Gemini向け: チャット修正の意図分解プロンプト */
 export function buildChatEditPrompt(params: {
   userMessage: string

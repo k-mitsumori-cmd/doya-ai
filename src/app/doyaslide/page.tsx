@@ -59,11 +59,12 @@ export default function DoyaSlideDashboard() {
   return (
     <div className="p-6 lg:p-10 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-8">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 flex items-center gap-2">
-            🖼️ ドヤスライド
-          </h1>
-          <p className="text-slate-500 font-bold mt-1">全スライドをAI画像でド派手に生成</p>
+        <div className="flex items-center gap-3">
+          <img src="/character/present.png" alt="" className="w-14 h-14 object-contain hidden sm:block" />
+          <div>
+            <h1 className="text-3xl font-black text-slate-900">ドヤスライド</h1>
+            <p className="text-slate-500 font-bold mt-1">全スライドをAI画像でド派手に生成</p>
+          </div>
         </div>
         <Link
           href="/doyaslide/new"
@@ -98,8 +99,8 @@ export default function DoyaSlideDashboard() {
         </div>
       ) : projects.length === 0 ? (
         <div className="bg-white rounded-3xl shadow-sm p-16 text-center">
-          <div className="text-5xl mb-4">🖼️</div>
-          <p className="text-lg font-black text-slate-700 mb-1">まだプロジェクトがありません</p>
+          <img src="/character/hello.png" alt="" className="w-24 h-24 object-contain mx-auto mb-4" />
+          <p className="text-lg font-black text-slate-700 mb-1">一緒に最初のスライドを作ろう！</p>
           <p className="text-sm text-slate-400 font-bold mb-6">テーマを入れるだけで、AIが全スライドを画像で作ります</p>
           <Link
             href="/doyaslide/new"

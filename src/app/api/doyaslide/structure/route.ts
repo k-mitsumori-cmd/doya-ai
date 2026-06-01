@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { getUserId } from '@/lib/doyaslide/access'
 import { buildStructurePrompt } from '@/lib/doyaslide/prompts'
+import { scrapeUrlText } from '@/lib/doyaslide/scrape'
 import type { SlideStructure } from '@/lib/doyaslide/types'
 
 // POST /api/doyaslide/structure — 資料タイプのひな型でスライド構成を生成
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest) {
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
     const body = await req.json().catch(() => ({}))
-    const { projectId, referenceText } = body
+    const { projectId, referenceText, referenceUrl } = body
     if (!projectId) return NextResponse.json({ error: 'projectIdは必須です' }, { status: 400 })
 
     const project = await prisma.doyaSlideProject.findFirst({ where: { id: projectId, userId } })
@@ -24,12 +25,23 @@ export async function POST(req: NextRequest) {
 
     await prisma.doyaSlideProject.update({ where: { id: projectId }, data: { status: 'structuring' } })
 
+    // 参考URLがあれば内容を取得して参考情報に加える（失敗しても構成生成は続行）
+    let ref = (referenceText as string) || ''
+    if (referenceUrl) {
+      try {
+        const scraped = await scrapeUrlText(referenceUrl)
+        ref = `${ref}\n【参考URL: ${scraped.title}】\n${scraped.text}`.trim()
+      } catch (e) {
+        console.warn('[doyaslide/structure] URL取得スキップ:', (e as any)?.message)
+      }
+    }
+
     const prompt = buildStructurePrompt({
       topic: project.title,
       docType: project.docType,
       customBrief: project.customBrief,
       slideCount: project.slideCount,
-      referenceText: referenceText || null,
+      referenceText: ref || null,
     })
 
     const result = await geminiGenerateJson<{ slides: SlideStructure[] }>(

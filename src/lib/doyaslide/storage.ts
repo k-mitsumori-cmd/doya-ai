@@ -63,6 +63,38 @@ export async function uploadComposedImage(
   return uploadBuffer(buffer, path, 'image/png')
 }
 
+/** スタイルプレビューの公開URL（固定パス・全ユーザー共有キャッシュ） */
+export function stylePreviewPublicUrl(style: string): string {
+  const { data } = getSupabase().storage.from(BUCKET).getPublicUrl(`style-previews/${style}.png`)
+  return data.publicUrl
+}
+
+// 生成済みスタイルのプロセス内メモ（公開URLのHEADは信頼できないため Storage API で確認）
+const knownStylePreviews = new Set<string>()
+
+/** スタイルプレビューが既に存在するか（Storage list で確実に判定 + メモ化） */
+export async function stylePreviewExists(style: string): Promise<boolean> {
+  if (knownStylePreviews.has(style)) return true
+  try {
+    const { data } = await getSupabase()
+      .storage.from(BUCKET)
+      .list('style-previews', { search: `${style}.png`, limit: 100 })
+    const exists = !!data?.some((f) => f.name === `${style}.png`)
+    if (exists) knownStylePreviews.add(style)
+    return exists
+  } catch {
+    return false
+  }
+}
+
+/** スタイルプレビュー画像を固定パスに保存（upsert）して公開URLを返す */
+export async function uploadStylePreview(style: string, base64: string): Promise<string> {
+  const buffer = Buffer.from(base64, 'base64')
+  const url = await uploadBuffer(buffer, `style-previews/${style}.png`, 'image/png')
+  knownStylePreviews.add(style)
+  return url
+}
+
 /** ロゴを保存 */
 export async function uploadLogo(
   userId: string,

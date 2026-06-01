@@ -117,3 +117,39 @@ export const LOGO_POSITION_EN: Record<LogoPosition, string> = {
 export const MIN_SLIDES = 3
 export const MAX_SLIDES = 30
 export const DEFAULT_SLIDES = 8
+
+/** 資料タイプ別の「仮入力」サンプル（ボタン一つ / タイプ選択で自動入力） */
+export const DOC_TYPE_SAMPLES: Record<DocType, { title: string; brief: string }> = {
+  sales: {
+    title: '新サービス「ドヤクラウド」導入のご提案',
+    brief: '中小企業の業務効率化を支援するSaaS。コスト削減と生産性向上の実績を、課題→解決→導入事例→料金の流れで訴求したい。',
+  },
+  proposal: {
+    title: '集客課題を解決するWebマーケティング施策のご提案',
+    brief: '問い合わせ数が伸び悩む課題に対し、現状分析→施策→期待効果→スケジュール→費用の順で論理的に提案したい。',
+  },
+  sns: {
+    title: '知らないと損する！AI活用のコツ5選',
+    brief: 'Instagramカルーセル向け。1枚目で強く惹きつけ、要点を短く大きな文字で。最後にフォロー誘導。',
+  },
+  seminar: {
+    title: 'はじめてのAI活用入門セミナー',
+    brief: '初心者向けに、AIで何ができるかを噛み砕いて紹介。アジェンダ→具体例→まとめの構成。',
+  },
+  recruit: {
+    title: '私たちと一緒に未来をつくりませんか？ ― 会社紹介',
+    brief: '会社の魅力・事業・働く環境・社員の声・募集要項を、温かく前向きなトーンで。',
+  },
+  pitch: {
+    title: '業界の常識を変える ― スタートアップピッチ',
+    brief: '課題→ソリューション→市場規模→トラクション→チーム→資金使途の順で、投資家に刺さる構成。',
+  },
+  internal: {
+    title: '新プロジェクト キックオフ 社内共有資料',
+    brief: '目的・背景・現状・進め方・アクションを簡潔に共有したい。',
+  },
+  custom: {
+    title: '〇〇についてのプレゼン資料',
+    brief: '伝えたい内容や狙いを自由に記入してください。',
+  },
+}

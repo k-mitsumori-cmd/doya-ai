@@ -37,6 +37,7 @@ const SERVICE_LOGO: Record<string, string> = {
   kintai: '/kintai/logo.png',
   doyalist: '/doyalist/logo.png',
   promane: '/promane/logo.png',
+  hr: '/hr/logo.png',
 }
 
 // ロゴが無いサービス用フォールバック（色タイル + Lucide シンボル）
