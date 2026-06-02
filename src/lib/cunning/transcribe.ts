@@ -24,25 +24,46 @@ export async function transcribeChunk(
   if (!apiKey) throw new Error('OPENAI_API_KEY が設定されていません')
 
   const timeoutMs = Number(process.env.CUNNING_TRANSCRIBE_TIMEOUT_MS) || 30000
+  const language = opts.language || 'ja'
+  const filename = opts.filename || 'chunk.webm'
 
-  return withTimeout(`${TRANSCRIBE_MODEL} transcribe`, timeoutMs, async (signal) => {
-    const form = new FormData()
-    form.append('file', audio, opts.filename || 'chunk.webm')
-    form.append('model', TRANSCRIBE_MODEL)
-    form.append('language', opts.language || 'ja')
-    // 文章単位のテキストのみで十分（タイムスタンプ不要）
-    form.append('response_format', 'json')
-
-    const res = await fetch(OPENAI_TRANSCRIBE_ENDPOINT, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}` },
-      body: form,
-      signal,
+  const callModel = (model: string) =>
+    withTimeout(`${model} transcribe`, timeoutMs, async (signal) => {
+      const form = new FormData()
+      form.append('file', audio, filename)
+      form.append('model', model)
+      form.append('language', language)
+      form.append('response_format', 'json') // 文章単位のテキストのみで十分
+      const res = await fetch(OPENAI_TRANSCRIBE_ENDPOINT, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}` },
+        body: form,
+        signal,
+      })
+      if (!res.ok) {
+        const body = (await res.text()).slice(0, 300)
+        const err: any = new Error(`transcribe failed (${res.status}): ${body}`)
+        err.status = res.status
+        err.body = body
+        throw err
+      }
+      const json = await res.json()
+      return { text: (json?.text || '').trim(), model }
     })
-    if (!res.ok) {
-      throw new Error(`transcribe failed (${res.status}): ${(await res.text()).slice(0, 200)}`)
+
+  try {
+    return await callModel(TRANSCRIBE_MODEL)
+  } catch (e: any) {
+    // gpt-4o-transcribe が当該キーで未対応(モデル不明/権限)だと全チャンクが失敗し機能停止する。
+    // モデル起因のエラーに限り whisper-1 へ自動フォールバック。
+    const modelIssue =
+      e?.status === 404 ||
+      e?.status === 400 ||
+      /model|does not exist|not found|unsupported/i.test(e?.body || e?.message || '')
+    if (TRANSCRIBE_MODEL !== 'whisper-1' && modelIssue) {
+      console.warn('[cunning/transcribe] %s 失敗、whisper-1にフォールバック', TRANSCRIBE_MODEL)
+      return await callModel('whisper-1')
     }
-    const json = await res.json()
-    return { text: (json?.text || '').trim(), model: TRANSCRIBE_MODEL }
-  })
+    throw e
+  }
 }

@@ -61,6 +61,12 @@ export default function CunningLivePage() {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const lastLineRef = useRef('') // 直近の文字起こし（重複除去）
   const lastQRef = useRef<{ q: string; t: number }>({ q: '', t: 0 }) // 直近に投げた質問（二重発火ガード）
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const peakRef = useRef(0) // 現在の録音窓の音量ピーク（無音チャンク除外用）
+  const levelTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+// 無音判定の閾値（getByteTimeDomainData の 128 からの最大偏差）。これ未満の窓は送らない。
+const SILENCE_PEAK = 8
 
   const stopAll = useCallback(() => {
     runningRef.current = false
@@ -68,6 +74,11 @@ export default function CunningLivePage() {
     streamRef.current?.getTracks().forEach((t) => t.stop())
     audioStreamRef.current?.getTracks().forEach((t) => t.stop())
     if (videoRef.current) videoRef.current.srcObject = null
+    if (levelTimerRef.current) clearInterval(levelTimerRef.current)
+    levelTimerRef.current = null
+    audioCtxRef.current?.close().catch(() => {})
+    audioCtxRef.current = null
+    peakRef.current = 0
     streamRef.current = null
     audioStreamRef.current = null
   }, [])
@@ -189,8 +200,13 @@ export default function CunningLivePage() {
       if (e.data && e.data.size) parts.push(e.data)
     }
     rec.onstop = () => {
+      // 窓のピーク音量を確定してからリセット（startCycleより前に読む）
+      const peak = peakRef.current
+      peakRef.current = 0
       if (runningRef.current) startCycle() // 次の窓をすぐ開始（取りこぼし最小化）
       const blob = new Blob(parts, { type: mimeRef.current })
+      // 音量モニタが有効で無音だった窓は送らない（幻聴・無駄なAPI回避）
+      if (audioCtxRef.current && peak < SILENCE_PEAK) return
       void sendChunk(blob)
     }
     rec.start()
@@ -215,6 +231,29 @@ export default function CunningLivePage() {
         videoRef.current.play().catch(() => {})
       }
       audioStreamRef.current = new MediaStream(audioTracks)
+
+      // 音量モニタ（無音チャンクを送らず、Whisperの無音幻聴を防ぐ）
+      try {
+        const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
+        const ctx: AudioContext = new Ctx()
+        audioCtxRef.current = ctx
+        const src = ctx.createMediaStreamSource(audioStreamRef.current)
+        const analyser = ctx.createAnalyser()
+        analyser.fftSize = 2048
+        src.connect(analyser)
+        const data = new Uint8Array(analyser.fftSize)
+        levelTimerRef.current = setInterval(() => {
+          analyser.getByteTimeDomainData(data)
+          let dev = 0
+          for (let i = 0; i < data.length; i++) {
+            const d = Math.abs(data[i] - 128)
+            if (d > dev) dev = d
+          }
+          if (dev > peakRef.current) peakRef.current = dev
+        }, 120)
+      } catch {
+        /* AudioContext不可でもチャンク送信は継続（ゲートなし） */
+      }
 
       const onEnded = () => {
         stopAll()
