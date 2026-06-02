@@ -94,7 +94,7 @@ function DoyaSlideSidebarImpl({
           {showLabel && (
             <div className="leading-tight">
               <div className="font-black text-white text-base">ドヤスライド</div>
-              <div className="text-[10px] text-fuchsia-200/70 font-bold">全スライドAI画像生成</div>
+              <div className="text-[10px] text-blue-200/70 font-bold">全スライドAI画像生成</div>
             </div>
           )}
         </div>

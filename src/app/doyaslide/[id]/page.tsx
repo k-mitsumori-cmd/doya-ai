@@ -41,6 +41,8 @@ function aspectClass(a: string) {
   return 'aspect-[3/2]'
 }
 
+const GEN_MESSAGES = ['もくもく描いてるよ…', 'いい感じ…！🎨', '色を塗ってる…', 'ドヤれる仕上がりに…✨', 'あと少し…！']
+
 function EditorInner() {
   const params = useParams()
   const router = useRouter()
@@ -58,6 +60,7 @@ function EditorInner() {
   const [busySlide, setBusySlide] = useState<string | null>(null)
   const [versions, setVersions] = useState<Version[]>([])
   const [celebrate, setCelebrate] = useState(false)
+  const [funIdx, setFunIdx] = useState(0)
   const triggered = useRef(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const mountedRef = useRef(true)
@@ -145,6 +148,13 @@ function EditorInner() {
     if (selected) loadVersions(selected.id)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId])
+
+  // 生成中の楽しいメッセージ回し
+  useEffect(() => {
+    if (!generating) return
+    const t = setInterval(() => setFunIdx((i) => (i + 1) % GEN_MESSAGES.length), 1500)
+    return () => clearInterval(t)
+  }, [generating])
 
   // 生成完了時にお祝い演出（ドヤくんジャンプ）
   useEffect(() => {
@@ -320,7 +330,7 @@ function EditorInner() {
             <button
               onClick={runGenerate}
               disabled={generating}
-              className="inline-flex items-center gap-1 px-5 py-2 rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white font-black text-sm shadow hover:shadow-lg transition-all disabled:opacity-60"
+              className="inline-flex items-center gap-1 px-5 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black text-sm shadow hover:shadow-lg transition-all disabled:opacity-60"
             >
               <span className={`material-symbols-outlined text-lg ${generating ? 'animate-spin' : ''}`}>
                 {generating ? 'progress_activity' : 'bolt'}
@@ -342,7 +352,7 @@ function EditorInner() {
           </div>
           <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-fuchsia-500 to-purple-600 rounded-full transition-all duration-700"
+              className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-700"
               style={{ width: `${total ? (doneCount / total) * 100 : 0}%` }}
             />
           </div>
@@ -357,7 +367,7 @@ function EditorInner() {
               key={s.id}
               onClick={() => setSelectedId(s.id)}
               className={`flex-shrink-0 w-32 lg:w-full rounded-xl overflow-hidden border-2 transition-all ${
-                selected?.id === s.id ? 'border-fuchsia-500 scale-[1.02]' : 'border-transparent hover:border-slate-200'
+                selected?.id === s.id ? 'border-blue-500 scale-[1.02]' : 'border-transparent hover:border-slate-200'
               }`}
             >
               <div className={`${ac} bg-slate-100 flex items-center justify-center relative`}>
@@ -389,7 +399,7 @@ function EditorInner() {
             ) : generating || selected?.status === 'generating' ? (
               <div className="text-center text-white/90">
                 <img src="/character/working.png" alt="" className="w-24 h-24 object-contain mx-auto animate-bounce" />
-                <p className="font-black mt-2">もくもく作成中...</p>
+                <p className="font-black mt-2">{GEN_MESSAGES[funIdx]}</p>
                 <p className="text-xs text-white/60 mt-1">残り {total - doneCount} 枚</p>
               </div>
             ) : (
@@ -423,7 +433,7 @@ function EditorInner() {
           {/* chat */}
           <div className="bg-white rounded-2xl shadow-sm p-4 flex flex-col h-[360px]">
             <p className="font-black text-slate-800 text-sm mb-2 flex items-center gap-1">
-              <span className="material-symbols-outlined text-fuchsia-600 text-lg">chat</span>
+              <span className="material-symbols-outlined text-blue-600 text-lg">chat</span>
               {selected ? `スライド${selected.index}を修正` : 'チャットで修正'}
             </p>
             <div className="flex-1 overflow-y-auto space-y-2 mb-2">
@@ -433,7 +443,7 @@ function EditorInner() {
                     <button
                       key={ex}
                       onClick={() => setChatInput(ex)}
-                      className="px-2.5 py-1 rounded-full bg-fuchsia-50 text-fuchsia-700 text-xs font-bold hover:bg-fuchsia-100"
+                      className="px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold hover:bg-blue-100"
                     >
                       {ex}
                     </button>
@@ -444,7 +454,7 @@ function EditorInner() {
                 <div
                   key={i}
                   className={`text-sm rounded-2xl px-3 py-2 max-w-[90%] ${
-                    m.role === 'user' ? 'bg-fuchsia-100 text-fuchsia-900 ml-auto' : 'bg-slate-100 text-slate-700'
+                    m.role === 'user' ? 'bg-blue-100 text-blue-900 ml-auto' : 'bg-slate-100 text-slate-700'
                   }`}
                 >
                   {m.content}
@@ -463,9 +473,9 @@ function EditorInner() {
                 onKeyDown={(e) => e.key === 'Enter' && !chatBusy && sendChat()}
                 placeholder="修正を入力..."
                 disabled={chatBusy || !selected}
-                className="flex-1 px-3 py-2 bg-slate-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-fuchsia-400"
+                className="flex-1 px-3 py-2 bg-slate-50 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
               />
-              <button onClick={sendChat} disabled={chatBusy || !selected} className="px-3 py-2 rounded-xl bg-fuchsia-600 text-white disabled:opacity-50">
+              <button onClick={sendChat} disabled={chatBusy || !selected} className="px-3 py-2 rounded-xl bg-blue-600 text-white disabled:opacity-50">
                 <span className="material-symbols-outlined text-lg">send</span>
               </button>
             </div>
@@ -475,7 +485,7 @@ function EditorInner() {
           {versions.length > 1 && (
             <div className="bg-white rounded-2xl shadow-sm p-4">
               <p className="font-black text-slate-800 text-sm mb-3 flex items-center gap-1">
-                <span className="material-symbols-outlined text-fuchsia-600 text-lg">history</span>
+                <span className="material-symbols-outlined text-blue-600 text-lg">history</span>
                 履歴（戻せます）
               </p>
               <div className="flex gap-2 overflow-x-auto pb-1">
@@ -483,7 +493,7 @@ function EditorInner() {
                   <button
                     key={v.id}
                     onClick={() => revert(v.version)}
-                    className="flex-shrink-0 w-16 rounded-lg overflow-hidden border-2 border-slate-200 hover:border-fuchsia-400 relative"
+                    className="flex-shrink-0 w-16 rounded-lg overflow-hidden border-2 border-slate-200 hover:border-blue-400 relative"
                     title={`v${v.version} に戻す`}
                   >
                     <img src={v.imageUrl} alt={`v${v.version}`} className="w-full aspect-[3/2] object-cover" />
@@ -499,7 +509,7 @@ function EditorInner() {
           {/* logo config */}
           <div className="bg-white rounded-2xl shadow-sm p-4">
             <p className="font-black text-slate-800 text-sm mb-3 flex items-center gap-1">
-              <span className="material-symbols-outlined text-fuchsia-600 text-lg">branding_watermark</span>
+              <span className="material-symbols-outlined text-blue-600 text-lg">branding_watermark</span>
               ロゴ設定
             </p>
             {project.logoUrl ? (
@@ -524,7 +534,7 @@ function EditorInner() {
                         key={sz}
                         onClick={() => saveLogoConfig({ logoSize: sz })}
                         className={`flex-1 py-2 rounded-xl text-sm font-bold transition-all active:scale-95 ${
-                          project.logoSize === sz ? 'bg-fuchsia-600 text-white' : 'bg-slate-100 text-slate-600'
+                          project.logoSize === sz ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
                         }`}
                       >
                         {sz}
@@ -553,7 +563,7 @@ function EditorInner() {
         <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">
           <div className="bg-white/90 backdrop-blur rounded-3xl shadow-2xl px-10 py-7 flex flex-col items-center gap-2 animate-[fadeIn_.3s_ease]">
             <img src="/character/jump.png" alt="" className="w-28 h-28 object-contain animate-bounce" />
-            <p className="text-xl font-black text-fuchsia-700">完成しました！🎉</p>
+            <p className="text-xl font-black text-blue-700">完成しました！🎉</p>
           </div>
         </div>
       )}

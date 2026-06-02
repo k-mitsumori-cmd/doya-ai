@@ -93,7 +93,7 @@ export default function DoyaSlideLayout({ children }: { children: React.ReactNod
             <Menu className="w-6 h-6" />
           </button>
           <div className="flex items-center gap-2">
-            <Presentation className="h-5 w-5 text-fuchsia-600" />
+            <Presentation className="h-5 w-5 text-blue-600" />
             <span className="text-base sm:text-lg font-bold text-slate-900 whitespace-nowrap">ドヤスライド</span>
           </div>
         </div>

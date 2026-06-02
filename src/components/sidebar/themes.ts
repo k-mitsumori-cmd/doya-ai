@@ -160,21 +160,21 @@ export const movieTheme: SidebarTheme = {
   zapColor: 'text-rose-400',
 }
 
-// ドヤスライド（全スライドAI画像 / Fuchsia→Purple 系）
+// ドヤスライド（全スライドAI画像 / Blue→Indigo 系）
 export const doyaslideTheme: SidebarTheme = {
-  bgGradient: 'bg-gradient-to-b from-fuchsia-600 via-purple-700 to-purple-900',
-  navText: 'text-fuchsia-100/80',
-  navTextIcon: 'text-fuchsia-200/75',
-  sectionText: 'text-fuchsia-200/55',
-  toggleText: 'text-fuchsia-700',
-  toggleHover: 'hover:bg-fuchsia-50',
-  brandingText: 'text-fuchsia-200/40',
-  profileBg: 'bg-purple-900/30',
-  avatarBg: 'bg-fuchsia-600',
-  loginText: 'text-fuchsia-700',
-  loginHover: 'hover:bg-fuchsia-50',
-  aiBubbleBg: 'bg-fuchsia-700/40',
-  zapColor: 'text-fuchsia-300',
+  bgGradient: 'bg-gradient-to-b from-blue-600 via-blue-700 to-indigo-800',
+  navText: 'text-blue-100/80',
+  navTextIcon: 'text-sky-200/75',
+  sectionText: 'text-sky-200/55',
+  toggleText: 'text-blue-700',
+  toggleHover: 'hover:bg-blue-50',
+  brandingText: 'text-blue-200/40',
+  profileBg: 'bg-indigo-900/30',
+  avatarBg: 'bg-blue-600',
+  loginText: 'text-blue-700',
+  loginHover: 'hover:bg-blue-50',
+  aiBubbleBg: 'bg-blue-700/40',
+  zapColor: 'text-sky-300',
 }
 
 // ドヤHR（タレントマネジメント / Sky→Blue→Indigo 系）

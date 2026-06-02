@@ -1278,9 +1278,9 @@ export const SERVICES: Service[] = [
     longDescription:
       'テーマを入力するだけで、AIが各スライドを1枚絵のビジュアルとして生成。最初にアップしたロゴを最後に重ねて統一感を出し、チャットでその場修正もできる。営業・提案・SNS資料を“映える画像”で作れます。',
     icon: '🖼️',
-    color: 'fuchsia',
-    gradient: 'from-fuchsia-500 to-purple-600',
-    bgGradient: 'from-fuchsia-50 to-purple-50',
+    color: 'blue',
+    gradient: 'from-blue-500 to-indigo-600',
+    bgGradient: 'from-blue-50 to-indigo-50',
     href: '/doyaslide',
     dashboardHref: '/doyaslide',
     pricingHref: '/doyaslide/pricing',

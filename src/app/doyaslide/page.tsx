@@ -68,7 +68,7 @@ export default function DoyaSlideDashboard() {
         </div>
         <Link
           href="/doyaslide/new"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white font-black shadow-lg hover:shadow-xl transition-all"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black shadow-lg hover:shadow-xl transition-all"
         >
           <span className="material-symbols-outlined">add</span>
           新規作成
@@ -104,7 +104,7 @@ export default function DoyaSlideDashboard() {
           <p className="text-sm text-slate-400 font-bold mb-6">テーマを入れるだけで、AIが全スライドを画像で作ります</p>
           <Link
             href="/doyaslide/new"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-600 text-white font-black shadow-lg"
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black shadow-lg"
           >
             <span className="material-symbols-outlined">add</span>
             最初のスライドを作る
@@ -139,7 +139,7 @@ export default function DoyaSlideDashboard() {
                     </button>
                   </div>
                   <div className="flex items-center gap-2 mt-2 text-xs font-bold text-slate-400">
-                    <span className="px-2 py-0.5 rounded-full bg-fuchsia-50 text-fuchsia-600">
+                    <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
                       {STATUS_LABEL[p.status] || p.status}
                     </span>
                     <span>{p.slides.filter((s) => s.imageUrl).length}枚</span>

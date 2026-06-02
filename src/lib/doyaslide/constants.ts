@@ -31,6 +31,18 @@ export function getDocType(value: string) {
   return DOC_TYPES.find((d) => d.value === value) || DOC_TYPES[0]
 }
 
+/** 資料タイプの1行説明（選択UIをわかりやすくする） */
+export const DOC_TYPE_DESC: Record<DocType, string> = {
+  sales: '課題→解決→実績→料金で売り込む',
+  proposal: '背景→提案→効果→費用で説得する',
+  sns: 'カルーセル向け。短く強く目を引く',
+  seminar: '登壇・説明会の流れに沿った構成',
+  recruit: '会社の魅力と募集を伝える',
+  pitch: '投資家向け。課題〜資金使途まで',
+  internal: '社内共有をシンプルにまとめる',
+  custom: '目的を自由に書いておまかせ',
+}
+
 /** アスペクト比 → gpt-image-2 が対応するサイズ（このプロジェクトのラッパー制約に準拠） */
 export const ASPECT_TO_SIZE: Record<AspectRatio, '1024x1024' | '1536x1024' | '1024x1536'> = {
   wide: '1536x1024', // 横（プレゼン）— 厳密な16:9はラッパー非対応のため3:2横
