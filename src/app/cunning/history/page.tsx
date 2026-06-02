@@ -42,7 +42,10 @@ export default function CunningHistoryPage() {
       {loading ? (
         <p className="text-slate-400 font-bold">読み込み中…</p>
       ) : sessions.length === 0 ? (
-        <p className="text-slate-400 font-bold">まだセッションがありません</p>
+        <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
+          <img src="/character/sleep.png" alt="" className="w-20 h-20 object-contain mx-auto mb-3" />
+          <p className="text-slate-400 font-bold">まだセッションがありません</p>
+        </div>
       ) : (
         <div className="space-y-2">
           {sessions.map((s) => (

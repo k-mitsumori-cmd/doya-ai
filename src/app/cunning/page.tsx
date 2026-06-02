@@ -74,8 +74,8 @@ export default function CunningDashboard() {
       <div className="p-6 lg:p-10 max-w-5xl mx-auto">
         {/* ヘッダー（Zoom風の青） */}
         <div className="flex items-center gap-3 mb-1">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#2D8CFF] to-[#0B5CFF] flex items-center justify-center text-2xl shadow-lg shadow-blue-500/30">
-            🎧
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#2D8CFF] to-[#0B5CFF] flex items-center justify-center shadow-lg shadow-blue-500/30 p-1.5">
+            <img src="/character/hello.png" alt="" className="w-full h-full object-contain" />
           </div>
           <div>
             <h1 className="text-2xl font-black text-slate-900">ドヤカンニング</h1>
@@ -110,8 +110,10 @@ export default function CunningDashboard() {
                         : 'border-slate-200 hover:border-blue-300'
                     }`}
                   >
-                    <div className="text-2xl mb-1">{m.icon}</div>
-                    <p className="font-black text-slate-800 text-sm">{m.label}</p>
+                    <img src={`/character/${m.character}.png`} alt="" className="w-12 h-12 object-contain mb-1" />
+                    <p className="font-black text-slate-800 text-sm">
+                      {m.icon} {m.label}
+                    </p>
                     <p className="text-[11px] text-slate-500 font-bold mt-0.5 leading-snug">{m.desc}</p>
                   </button>
                 ))}
@@ -165,6 +167,14 @@ export default function CunningDashboard() {
             {def.icon} {def.label}：設定不要。開始して相手のコメント・発話に{def.trigger === 'any' ? '即レス' : '回答'}します。
           </div>
         )}
+
+        {/* キャラの吹き出し（ポップな後押し） */}
+        <div className="flex items-end gap-2 mb-3">
+          <img src={`/character/${def.character}.png`} alt="" className="w-16 h-16 object-contain flex-shrink-0 animate-bounce" />
+          <div className="relative bg-white rounded-2xl rounded-bl-none shadow-sm px-4 py-2.5 font-black text-slate-700 text-sm">
+            {def.icon} {def.label}で行くよ！準備できたらスタート！
+          </div>
+        </div>
 
         <button
           onClick={start}

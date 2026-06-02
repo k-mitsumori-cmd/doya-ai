@@ -13,6 +13,7 @@ export interface ModeDef {
   id: CunningMode
   label: string
   icon: string // emoji
+  character: string // public/character/{character}.png のマスコット表情
   category: ModeCategory
   desc: string
   /** question=相手の質問を検出して回答 / any=相手の発話・コメント全般に反応 */
@@ -35,6 +36,7 @@ export const MODES: Record<CunningMode, ModeDef> = {
     id: 'sales',
     label: '商談アシスト',
     icon: '💼',
+    character: 'thumbsup',
     category: 'business',
     desc: '自社ナレッジに基づく回答を即時提示',
     trigger: 'question',
@@ -54,6 +56,7 @@ export const MODES: Record<CunningMode, ModeDef> = {
     id: 'interview',
     label: '面接対策',
     icon: '🎓',
+    character: 'focus',
     category: 'business',
     desc: '応募先企業に最適化した回答案を提示',
     trigger: 'question',
@@ -73,6 +76,7 @@ export const MODES: Record<CunningMode, ModeDef> = {
     id: 'idol',
     label: 'アイドル神対応',
     icon: '🎤',
+    character: 'love',
     category: 'entertainment',
     desc: '何を言われても明るく可愛く前向きに返す',
     trigger: 'any',
@@ -93,6 +97,7 @@ export const MODES: Record<CunningMode, ModeDef> = {
     id: 'roast',
     label: 'アンチコメント返し',
     icon: '🔥',
+    character: 'point',
     category: 'entertainment',
     desc: 'ひどいコメントにユーモアで軽やかに切り返す',
     trigger: 'any',
@@ -113,6 +118,7 @@ export const MODES: Record<CunningMode, ModeDef> = {
     id: 'stream',
     label: '配信トーク',
     icon: '📺',
+    character: 'jump',
     category: 'entertainment',
     desc: 'コメントや話題を面白く盛り上げる返しを提案',
     trigger: 'any',

@@ -545,11 +545,13 @@ const SILENCE_PEAK = 8
           <div className="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video shadow-lg">
             <video ref={videoRef} muted playsInline autoPlay className="w-full h-full object-contain" />
             {!running && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 gap-2">
-                <div className="text-5xl">🎧</div>
-                <p className="font-bold text-sm px-6 text-center">
-                  ライブ開始で会議タブを共有すると、ここに映像が表示されます
-                </p>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80 gap-2">
+                <img src={`/character/${modeDef.character}.png`} alt="" className="w-24 h-24 object-contain drop-shadow-lg" />
+                <div className="bg-white/15 backdrop-blur rounded-2xl px-4 py-2">
+                  <p className="font-black text-sm text-center">
+                    {modeDef.icon} {modeDef.label}・準備OK！「ライブ開始」でタブを共有してね
+                  </p>
+                </div>
               </div>
             )}
             {latest && (
@@ -604,8 +606,10 @@ const SILENCE_PEAK = 8
           <p className="text-xs font-black text-slate-400">回答履歴</p>
           {answers.length === 0 ? (
             <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-slate-400">
-              <div className="text-3xl mb-2">🎧</div>
-              <p className="font-bold text-sm">相手の質問を検出すると回答案が表示されます</p>
+              <img src="/character/thinking.png" alt="" className="w-16 h-16 object-contain mx-auto mb-2" />
+              <p className="font-bold text-sm">
+                {entertainment ? '相手のコメントを待ってるよ…！' : '相手の質問を検出すると回答案が出るよ'}
+              </p>
             </div>
           ) : (
             answers.map((a) => (
