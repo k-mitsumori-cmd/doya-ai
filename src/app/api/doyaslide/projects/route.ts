@@ -68,8 +68,9 @@ export async function POST(req: NextRequest) {
       },
     })
     return NextResponse.json({ project }, { status: 201 })
-  } catch (e) {
-    console.error('[doyaslide/projects POST]', e)
-    return NextResponse.json({ error: '作成に失敗しました' }, { status: 500 })
+  } catch (e: any) {
+    console.error('[doyaslide/projects POST]', e?.stack || e)
+    const detail = typeof e?.message === 'string' ? e.message : JSON.stringify(e)
+    return NextResponse.json({ error: `作成に失敗しました: ${detail || 'unknown'}`.slice(0, 400) }, { status: 500 })
   }
 }

@@ -179,8 +179,9 @@ export default function NewDoyaSlidePage() {
         }),
       })
       const pData = await pRes.json()
-      if (!pRes.ok) throw new Error(pData.error || '作成に失敗しました')
-      const projectId = pData.project.id
+      if (!pRes.ok) throw new Error(typeof pData?.error === 'string' ? pData.error : JSON.stringify(pData?.error) || '作成に失敗しました')
+      const projectId = pData?.project?.id
+      if (!projectId) throw new Error('プロジェクトの作成に失敗しました（IDが取得できません）')
 
       if (logoFile) {
         const fd = new FormData()
@@ -198,12 +199,14 @@ export default function NewDoyaSlidePage() {
         }),
       })
       const sData = await sRes.json()
-      if (!sRes.ok) throw new Error(sData.error || '構成生成に失敗しました')
+      if (!sRes.ok) throw new Error(typeof sData?.error === 'string' ? sData.error : JSON.stringify(sData?.error) || '構成生成に失敗しました')
 
       toast.success('構成ができました！画像生成に進みます')
       router.push(`/doyaslide/${projectId}?generate=1`)
     } catch (e: any) {
-      toast.error(e.message)
+      console.error('[doyaslide/new submit]', e)
+      const m = typeof e?.message === 'string' && e.message ? e.message : e ? JSON.stringify(e) : 'エラーが発生しました'
+      toast.error(m)
       setBusy(false)
     }
   }
@@ -332,10 +335,9 @@ export default function NewDoyaSlidePage() {
         {/* ③ スタイル（左プレビュー縦並び + 右大プレビュー・ビュン切替） */}
         <div className={card} style={{ animationDelay: '120ms' }}>
           <label className="block text-sm font-black text-slate-700 mb-1">③ スタイル</label>
-          <p className="text-[11px] text-slate-400 font-medium mb-3">スタイルをクリックで切替・右の ◀ ▶ で複数ページの仕上がりを確認できます（比率を変えると形も連動）</p>
-          <div className="grid grid-cols-[88px_minmax(0,1fr)] sm:grid-cols-[120px_minmax(0,1fr)] gap-3">
-            {/* 左: 縦並びプレビュー */}
-            <div className="flex flex-col gap-2 max-h-[440px] overflow-y-auto pr-1">
+          <p className="text-[11px] text-slate-400 font-medium mb-3">12種から選べます。サムネをクリックで切替、下の大プレビューの ◀ ▶ で複数ページの仕上がりを確認（比率を変えると形も連動）</p>
+          {/* スタイル一覧（グリッド・全12種を一目で比較） */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
               {STYLE_PRESETS.map((s) => {
                 const on = style === s.value
                 return (
@@ -361,8 +363,14 @@ export default function NewDoyaSlidePage() {
               })}
             </div>
 
-            {/* 右: 大プレビュー（複数ページをめくって確認） */}
-            <div className="min-w-0">
+            {/* 選択中スタイルの大プレビュー（複数ページをめくって確認） */}
+            <div className="mt-4 min-w-0">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-xs font-black text-slate-700">選択中「{currentStyle?.label}」</p>
+                {stylePages.length > 1 && (
+                  <span className="text-[11px] font-bold text-slate-400">{curPage + 1} / {stylePages.length} ページ</span>
+                )}
+              </div>
               <div className={`relative ${frameClass(aspect)} w-full min-w-0 max-h-[60vh] rounded-2xl overflow-hidden bg-slate-900 shadow-lg`}>
                 {stylePages.length > 0 ? (
                   <img
@@ -423,7 +431,6 @@ export default function NewDoyaSlidePage() {
                 </div>
               )}
             </div>
-          </div>
         </div>
 
         {/* ④ 枚数・比率・色 */}

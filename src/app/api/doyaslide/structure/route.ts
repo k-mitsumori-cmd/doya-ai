@@ -76,7 +76,8 @@ export async function POST(req: NextRequest) {
     const created = await prisma.doyaSlideSlide.findMany({ where: { projectId }, orderBy: { index: 'asc' } })
     return NextResponse.json({ slides: created })
   } catch (e: any) {
-    console.error('[doyaslide/structure]', e?.message)
-    return NextResponse.json({ error: '構成の生成に失敗しました' }, { status: 500 })
+    console.error('[doyaslide/structure]', e?.stack || e?.message)
+    const detail = typeof e?.message === 'string' ? e.message : JSON.stringify(e)
+    return NextResponse.json({ error: `構成の生成に失敗しました: ${detail || 'unknown'}`.slice(0, 400) }, { status: 500 })
   }
 }
