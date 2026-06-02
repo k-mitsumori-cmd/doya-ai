@@ -34,9 +34,9 @@ export async function generateImageGpt(params: {
   const quality: Exclude<GptImageQuality, 'auto'> =
     params.quality && params.quality !== 'auto' ? params.quality : 'high'
 
-  // gpt-image-2 の high 品質は数十秒〜90秒かかることがある。短すぎると abort→フォールバックで画質が落ちるため長め。
-  // タイムアウトは本文読み取り(json/text)まで覆う（withTimeout 内で完結させる）。
-  const timeoutMs = Number(process.env.DOYA_IMAGE_TIMEOUT_MS) || 120000
+  // gpt-image-2 の high・1536x1024 は並列時に実測 123〜145秒。短すぎると abort→nano-banana に落ちて画質が下がるため
+  // 十分長く取る（200秒）。タイムアウトは本文読み取り(json/text)まで覆う（withTimeout 内で完結）。
+  const timeoutMs = Number(process.env.DOYA_IMAGE_TIMEOUT_MS) || 200000
   return withTimeout(OPENAI_IMAGE_MODEL, timeoutMs, async (signal) => {
     const res = await fetch(OPENAI_IMAGE_ENDPOINT, {
       method: 'POST',

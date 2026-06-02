@@ -73,7 +73,9 @@ export async function POST(req: NextRequest) {
 
     // maxDuration(300s) で強制終了されると生成中スライドが固まるため、締切前に新規生成を打ち切る
     const startedAt = Date.now()
-    const START_DEADLINE_MS = Number(process.env.DOYA_GEN_DEADLINE_MS) || 150000
+    // gpt-image-2 high は1枚~145秒かかるため、1回の関数では1波だけ着手（締切100秒）。
+    // 残りはクライアント自動継続ループが次の呼び出しで処理する（300秒の強制終了を避けつつ gpt-image-2 を完走）。
+    const START_DEADLINE_MS = Number(process.env.DOYA_GEN_DEADLINE_MS) || 100000
     let errorCount = 0
     let timedOut = 0
     await mapWithConcurrency(slidesToGen, 4, async (slide) => {
