@@ -7,7 +7,8 @@ import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
 import { generateAnswer } from '@/lib/cunning/answer'
 import { retrieveChunks } from '@/lib/cunning/rag'
-import type { ApplicantProfileLite, CompanyProfileLite, CunningMode } from '@/lib/cunning/types'
+import { resolveSessionContext } from '@/lib/cunning/context'
+import type { ApplicantProfileLite, CompanyProfileLite, CunningMode, KnowledgeChunkLite } from '@/lib/cunning/types'
 
 // POST /api/cunning/answer — 質問テキスト → 回答(要点＋スクリプト＋根拠)
 // body: { sessionId, question, recentTranscript? }
@@ -22,50 +23,20 @@ export async function POST(req: NextRequest) {
     const sessionId = body.sessionId as string | undefined
     if (!question) return NextResponse.json({ error: '質問が空です' }, { status: 400 })
 
-    // セッションからモード・コンテキストを解決
+    // セッションからモード・コンテキストを解決（所有確認は共有ヘルパー）
     let mode: CunningMode = 'sales'
-    let chunks = undefined as any
+    let chunks: KnowledgeChunkLite[] | undefined
     let company: CompanyProfileLite | null = null
     let applicant: ApplicantProfileLite | null = null
 
     if (sessionId) {
-      const session = await prisma.cunningSession.findUnique({ where: { id: sessionId } })
-      if (!session || session.userId !== userId) {
-        return NextResponse.json({ error: 'セッションが見つかりません' }, { status: 404 })
-      }
-      mode = session.mode === 'interview' ? 'interview' : 'sales'
-
-      if (mode === 'sales' && session.knowledgeBaseId) {
-        // ナレッジ所有確認の上で関連チャンクを検索
-        const kb = await prisma.cunningKnowledgeBase.findUnique({
-          where: { id: session.knowledgeBaseId },
-          select: { userId: true },
-        })
-        if (kb && kb.userId === userId) {
-          chunks = await retrieveChunks(session.knowledgeBaseId, question, 4)
-        }
-      }
-      if (mode === 'interview') {
-        if (session.companyProfileId) {
-          const cp = await prisma.cunningCompanyProfile.findUnique({
-            where: { id: session.companyProfileId },
-          })
-          if (cp && cp.userId === userId) {
-            company = {
-              companyName: cp.companyName,
-              businessSummary: cp.businessSummary,
-              requirements: cp.requirements,
-            }
-          }
-        }
-        if (session.applicantProfileId) {
-          const ap = await prisma.cunningApplicantProfile.findUnique({
-            where: { id: session.applicantProfileId },
-          })
-          if (ap && ap.userId === userId) {
-            applicant = { name: ap.name, resume: ap.resume, motivation: ap.motivation }
-          }
-        }
+      const ctx = await resolveSessionContext(userId, sessionId)
+      if (!ctx) return NextResponse.json({ error: 'セッションが見つかりません' }, { status: 404 })
+      mode = ctx.mode
+      company = ctx.company
+      applicant = ctx.applicant
+      if (ctx.knowledgeBaseId) {
+        chunks = await retrieveChunks(ctx.knowledgeBaseId, question, 4)
       }
     }
 
@@ -77,6 +48,11 @@ export async function POST(req: NextRequest) {
       company,
       applicant,
     })
+
+    // 空応答（モデルが中身を返さなかった）は保存も返却もしない
+    if (!result.summary.trim() && !result.script.trim()) {
+      return NextResponse.json({ error: '回答を生成できませんでした。もう一度お試しください' }, { status: 502 })
+    }
 
     const latencyMs = Date.now() - t0
 

@@ -64,6 +64,8 @@ export default function CunningLivePage() {
   const audioCtxRef = useRef<AudioContext | null>(null)
   const peakRef = useRef(0) // 現在の録音窓の音量ピーク（無音チャンク除外用）
   const levelTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const pipWindowRef = useRef<Window | null>(null) // 最新のPiPウィンドウ（アンマウント時に確実に閉じる）
+  const remainingSecRef = useRef<number | null>(null) // 当月の残り利用秒（-1/未取得は null=無制限扱い）
 
 // 無音判定の閾値（getByteTimeDomainData の 128 からの最大偏差）。これ未満の窓は送らない。
 const SILENCE_PEAK = 8
@@ -83,11 +85,28 @@ const SILENCE_PEAK = 8
     audioStreamRef.current = null
   }, [])
 
+  // pipWindow を ref に同期（アンマウント時のクリーンアップが最新値を参照できるように）
+  useEffect(() => {
+    pipWindowRef.current = pipWindow
+  }, [pipWindow])
+
+  // 当月の残り利用時間を取得（セッション中のオートストップ判定用）
+  useEffect(() => {
+    fetch('/api/cunning/usage', { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (typeof d?.remainingMinutes === 'number' && d.remainingMinutes !== -1) {
+          remainingSecRef.current = d.remainingMinutes * 60
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   // アンマウント時に停止＋セッション終了＋PiPを閉じる
   useEffect(() => {
     return () => {
       stopAll()
-      pipWindow?.close()
+      pipWindowRef.current?.close()
       fetch(`/api/cunning/sessions/${sessionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -109,6 +128,17 @@ const SILENCE_PEAK = 8
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ addSeconds: 30 }),
+          }).catch(() => {})
+        }
+        // 当月の残り利用時間に達したらオートストップ（上限超過の青天井防止）
+        if (remainingSecRef.current != null && next >= remainingSecRef.current) {
+          stopAll()
+          setStatusMsg('今月の利用時間の上限に達したため停止しました')
+          toast.error('今月の利用時間の上限に達しました。プロにアップグレードしてください')
+          fetch(`/api/cunning/sessions/${sessionId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ end: true, addSeconds: next % 30 }),
           }).catch(() => {})
         }
         return next
