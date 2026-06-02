@@ -87,19 +87,22 @@ export async function POST(req: NextRequest) {
         const r = await composeSlideImage(userId, cp, slide)
         // 既に画像があるスライドの再生成は +1、初回は現バージョン(1)を採番
         const nextVersion = slide.imageUrl ? (slide.version || 1) + 1 : (slide.version || 1)
-        await prisma.doyaSlideSlide.update({
-          where: { id: slide.id },
-          data: { rawImageUrl: r.rawImageUrl, imageUrl: r.imageUrl, version: nextVersion, status: 'done', model: r.model },
-        })
-        await prisma.doyaSlideVersion.create({
-          data: {
-            slideId: slide.id,
-            version: nextVersion,
-            imageUrl: r.imageUrl,
-            rawImageUrl: r.rawImageUrl,
-            prompt: slide.visualPrompt,
-          },
-        })
+        // 画像確定とバージョン記録を原子化（片方だけ成功＝課金/状態不整合を防ぐ）
+        await prisma.$transaction([
+          prisma.doyaSlideSlide.update({
+            where: { id: slide.id },
+            data: { rawImageUrl: r.rawImageUrl, imageUrl: r.imageUrl, version: nextVersion, status: 'done', model: r.model },
+          }),
+          prisma.doyaSlideVersion.create({
+            data: {
+              slideId: slide.id,
+              version: nextVersion,
+              imageUrl: r.imageUrl,
+              rawImageUrl: r.rawImageUrl,
+              prompt: slide.visualPrompt,
+            },
+          }),
+        ])
       } catch (e: any) {
         errorCount++
         console.error('[doyaslide/generate] slide failed', slide.index, e?.message)

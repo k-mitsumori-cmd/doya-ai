@@ -124,6 +124,7 @@ function EditorInner() {
       // 進捗が止まったら中断（連続エラー/レート制限/上限）。最大8回の安全上限。
       let prevRemaining = Infinity
       let last: any = {}
+      let quotaHit = false
       for (let i = 0; i < 8; i++) {
         const res = await fetch('/api/doyaslide/generate', {
           method: 'POST',
@@ -131,6 +132,13 @@ function EditorInner() {
           body: JSON.stringify({ projectId: id, onlyPending: true }),
         })
         const d = await res.json()
+        if (res.status === 403) {
+          // 月間上限：エラー扱いせず上限案内としてループ停止
+          setLimitMsg(d?.error || '今月の生成枚数の上限に達しました')
+          quotaHit = true
+          await reload()
+          break
+        }
         ensureOk(res, d, '生成に失敗しました')
         last = d
         await reload()
@@ -141,9 +149,11 @@ function EditorInner() {
         prevRemaining = remaining
       }
       const remaining = (last.slides || []).filter((s: Slide) => !s.imageUrl).length
-      if (last.skipped > 0) {
+      if (quotaHit) {
+        toast.error('今月の生成枚数の上限に達しました（プロにアップグレードで続けられます）')
+      } else if (last.skipped > 0) {
         setLimitMsg(`今月の残り枚数の都合で${last.skipped}枚はスキップしました（上限${last.limit}枚）。プロにアップグレードで続けて生成できます。`)
-        toast(`${last.skipped}枚は今月の上限のためスキップしました`)
+        toast(`${last.skipped}枚は上限のためスキップ${last.errorCount ? `／${last.errorCount}枚は生成失敗（再生成可）` : ''}`)
       } else if (remaining > 0) {
         toast.error(`${remaining}枚が未完成です。「未生成を生成」でもう一度お試しください`)
       } else {

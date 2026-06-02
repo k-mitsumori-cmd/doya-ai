@@ -79,28 +79,31 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
     const nextVersion = (slide.version || 1) + 1
 
-    const updated = await prisma.doyaSlideSlide.update({
-      where: { id: slide.id },
-      data: {
-        headline: newHeadline,
-        subText: newSubText,
-        visualPrompt: newVisual,
-        rawImageUrl: r.rawImageUrl,
-        imageUrl: r.imageUrl,
-        version: nextVersion,
-        status: 'done',
-        model: r.model,
-      },
-    })
-    await prisma.doyaSlideVersion.create({
-      data: {
-        slideId: slide.id,
-        version: nextVersion,
-        imageUrl: r.imageUrl,
-        rawImageUrl: r.rawImageUrl,
-        prompt: newVisual,
-      },
-    })
+    // 画像確定とバージョン記録を原子化（片方だけ成功＝不整合を防ぐ）
+    const [updated] = await prisma.$transaction([
+      prisma.doyaSlideSlide.update({
+        where: { id: slide.id },
+        data: {
+          headline: newHeadline,
+          subText: newSubText,
+          visualPrompt: newVisual,
+          rawImageUrl: r.rawImageUrl,
+          imageUrl: r.imageUrl,
+          version: nextVersion,
+          status: 'done',
+          model: r.model,
+        },
+      }),
+      prisma.doyaSlideVersion.create({
+        data: {
+          slideId: slide.id,
+          version: nextVersion,
+          imageUrl: r.imageUrl,
+          rawImageUrl: r.rawImageUrl,
+          prompt: newVisual,
+        },
+      }),
+    ])
 
     const reply = edit.reply || '修正を反映しました！'
     await prisma.doyaSlideChatMessage.create({
