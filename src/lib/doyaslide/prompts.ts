@@ -25,12 +25,13 @@ export function buildStructurePrompt(params: {
       ? `参考情報（最新の事実・数値・具体例の素材。一般論で埋めず、ここの情報を積極的に反映する）:\n${referenceText.slice(0, 5000)}`
       : '',
     `スライド枚数: ちょうど ${slideCount} 枚。`,
+    'URL・メールアドレス・電話番号・SNSアカウントは、参考情報や要望に明記がない限り創作しない（例: example.com のような偽リンクを入れない）。連絡先が無い場合は「詳しくはお問い合わせください」等の一般的な誘導文にする。',
     '',
     '各スライドについて次を日本語で出力:',
     '- role: スライドの役割（例: 表紙, 課題, 解決策, 実績, 料金, まとめ, CTA）',
     '- headline: スライドの主役となる短い見出し（最大25文字程度・強く印象的に）',
     '- subText: 補足の短い説明（最大60文字程度。箇条書き2〜3点でも可）',
-    '- visualPrompt: そのスライドのビジュアル方針（背景・モチーフ・色・雰囲気を具体的に。英語混在可）',
+    '- visualPrompt: そのスライドのビジュアル方針（背景・モチーフ・色・雰囲気を具体的に。英語混在可）。※QRコード・バーコード等のコードは絶対に含めない（CTA/最終ページでも不可）',
     '',
     `出力は次のJSON形式のみ: {"slides":[{"index":1,"role":"...","headline":"...","subText":"...","visualPrompt":"..."}, ...]} （${slideCount}件）`,
   ]
@@ -69,6 +70,10 @@ export function buildImagePrompt(params: {
       ? `IMPORTANT: leave the ${logoArea} completely EMPTY — no text, no graphics, no important elements there — reserve a clean rectangular safe zone for a logo to be placed later.`
       : '',
     extraInstruction ? `Additional adjustment requested by the user: ${extraInstruction}.` : '',
+    // AI生成のQR/バーコードは読み取れず偽物になるため、一切描かせない（全スライド共通の禁止）
+    'Absolutely do NOT include any QR code, barcode, or scannable matrix/dot code anywhere in the image — AI-generated codes are non-functional and must never appear.',
+    // 偽/無効なURL・連絡先を勝手に入れない（指示された情報のみ）
+    'Do NOT invent or display any URL, web address, email, phone number, or social handle. Show contact info ONLY if it is explicitly provided in the text above; otherwise omit it entirely (never use placeholder/example links such as www.example.com).',
     'High quality, professional, visually striking. No watermark. No UI chrome. No borders around the slide.',
   ]
   return lines.filter(Boolean).join('\n')
