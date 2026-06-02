@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import toast from 'react-hot-toast'
 
 interface KB {
@@ -118,15 +119,17 @@ export default function CunningKnowledgePage() {
               <p className="font-black text-slate-800">{b.name}</p>
               <p className="text-xs font-bold text-slate-400">{b._count.chunks}件の情報</p>
             </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                remove(b.id)
-              }}
-              className="text-slate-300 hover:text-red-500"
-            >
-              <span className="material-symbols-outlined text-lg">delete</span>
-            </button>
+            <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
+              <Link
+                href={`/cunning/knowledge/${b.id}`}
+                className="text-xs font-black text-[#7f19e6] hover:underline"
+              >
+                管理
+              </Link>
+              <button onClick={() => remove(b.id)} className="text-slate-300 hover:text-red-500">
+                <span className="material-symbols-outlined text-lg">delete</span>
+              </button>
+            </div>
           </div>
         ))}
         {bases.length === 0 && <p className="text-slate-400 font-bold text-sm">まだナレッジがありません</p>}

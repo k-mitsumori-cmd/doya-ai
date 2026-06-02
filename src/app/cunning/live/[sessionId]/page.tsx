@@ -49,6 +49,9 @@ export default function CunningLivePage() {
   const [showSubs, setShowSubs] = useState(true)
   const [manualQ, setManualQ] = useState('')
   const [pipWindow, setPipWindow] = useState<Window | null>(null)
+  const [prep, setPrep] = useState<{ question: string; summary: string; script: string }[]>([])
+  const [prepLoading, setPrepLoading] = useState(false)
+  const [showPrep, setShowPrep] = useState(false)
 
   const streamRef = useRef<MediaStream | null>(null)
   const audioStreamRef = useRef<MediaStream | null>(null)
@@ -266,12 +269,32 @@ export default function CunningLivePage() {
     requestAnswer(q, { force: true })
   }
 
-  const copyAnswer = async (a: AnswerCard) => {
+  const copyText = async (t: string) => {
     try {
-      await navigator.clipboard.writeText(a.script || a.summary)
+      await navigator.clipboard.writeText(t)
       toast.success('コピーしました')
     } catch {
       toast.error('コピーできませんでした')
+    }
+  }
+  const copyAnswer = (a: AnswerCard) => copyText(a.script || a.summary)
+
+  const loadPrep = async () => {
+    setShowPrep(true)
+    setPrepLoading(true)
+    try {
+      const res = await fetch('/api/cunning/prep', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error || '生成に失敗しました')
+      setPrep(d.items || [])
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setPrepLoading(false)
     }
   }
 
@@ -340,6 +363,61 @@ export default function CunningLivePage() {
         >
           質問する
         </button>
+      </div>
+
+      {/* 想定問答の事前準備 */}
+      <div className="mb-4">
+        <button
+          onClick={prep.length === 0 && !showPrep ? loadPrep : () => setShowPrep((v) => !v)}
+          className="flex items-center gap-2 text-sm font-black text-[#7f19e6]"
+        >
+          <span className="material-symbols-outlined text-lg">lightbulb</span>
+          想定問答を準備
+          {prep.length > 0 && (
+            <span className="material-symbols-outlined text-base">{showPrep ? 'expand_less' : 'expand_more'}</span>
+          )}
+        </button>
+        {showPrep && (
+          <div className="mt-2 space-y-2">
+            {prepLoading ? (
+              <div className="flex items-center gap-2 text-slate-500 font-bold text-sm">
+                <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
+                相手が聞いてきそうな質問を準備中…
+              </div>
+            ) : prep.length === 0 ? (
+              <p className="text-slate-400 font-bold text-sm">想定問答がありません</p>
+            ) : (
+              <>
+                <div className="flex justify-end">
+                  <button onClick={loadPrep} className="text-xs font-black text-slate-400 hover:text-[#7f19e6]">
+                    再生成
+                  </button>
+                </div>
+                {prep.map((p, i) => (
+                  <div key={i} className="bg-purple-50 rounded-xl p-3 border border-purple-100">
+                    <p className="text-xs font-black text-[#7f19e6] mb-1">Q. {p.question}</p>
+                    <p className="text-sm font-black text-slate-800">{p.summary}</p>
+                    {p.script && <p className="text-xs text-slate-600 font-medium mt-1 leading-relaxed">{p.script}</p>}
+                    <div className="mt-2 flex gap-3">
+                      <button
+                        onClick={() => copyText(p.script || p.summary)}
+                        className="text-[11px] font-black text-slate-500 hover:text-[#7f19e6]"
+                      >
+                        コピー
+                      </button>
+                      <button
+                        onClick={() => requestAnswer(p.question, { force: true })}
+                        className="text-[11px] font-black text-slate-500 hover:text-[#7f19e6]"
+                      >
+                        この質問で回答
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
