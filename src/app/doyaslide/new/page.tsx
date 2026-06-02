@@ -205,7 +205,7 @@ export default function NewDoyaSlidePage() {
       router.push(`/doyaslide/${projectId}?generate=1`)
     } catch (e: any) {
       console.error('[doyaslide/new submit]', e)
-      const m = typeof e?.message === 'string' && e.message ? e.message : e ? JSON.stringify(e) : 'エラーが発生しました'
+      const m = typeof e?.message === 'string' && e.message ? e.message : e ? String(e) : 'エラーが発生しました'
       toast.error(m)
       setBusy(false)
     }

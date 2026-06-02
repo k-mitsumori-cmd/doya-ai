@@ -130,13 +130,12 @@ async function callNanoBananaProPreview(
     safetySettings: req.safetySettings || DEFAULT_SAFETY_SETTINGS,
   }
 
-  // ハング対策: タイムアウトを必ず付ける（無いと接続滞留でワーカーが永久ブロックする）
+  // ハング対策: タイムアウトで本文読み取りまで覆う（ヘッダ受信後に本文がストールしても中断される）
   const controller = new AbortController()
-  const timeoutMs = Number(process.env.DOYA_IMAGE_TIMEOUT_MS) || 60000
+  const timeoutMs = Number(process.env.DOYA_IMAGE_TIMEOUT_MS) || 45000
   const to = setTimeout(() => controller.abort(), timeoutMs)
-  let res: Response
   try {
-    res = await fetch(endpoint, {
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -145,38 +144,36 @@ async function callNanoBananaProPreview(
       body: JSON.stringify(body),
       signal: controller.signal,
     })
+
+    if (!res.ok) {
+      const errText = await res.text()
+      throw new Error(`nano-banana-pro-preview failed (${res.status}): ${errText.slice(0, 300)}`)
+    }
+
+    const json = await res.json()
+    const candidates = Array.isArray(json?.candidates) ? json.candidates : []
+    for (const c of candidates) {
+      const cParts = c?.content?.parts
+      if (!Array.isArray(cParts)) continue
+      for (const p of cParts) {
+        const inline = (p as any)?.inlineData || (p as any)?.inline_data
+        if (inline?.data && typeof inline.data === 'string') {
+          return {
+            base64: inline.data,
+            mimeType: inline.mimeType || inline.mime_type || 'image/png',
+            model: NANO_BANANA_PRO_PREVIEW_MODEL,
+          }
+        }
+      }
+    }
+
+    throw new Error('nano-banana-pro-preview returned no image data')
   } catch (e: any) {
     if (e?.name === 'AbortError') throw new Error(`nano-banana-pro-preview timeout (${timeoutMs}ms)`)
     throw e
   } finally {
     clearTimeout(to)
   }
-
-  if (!res.ok) {
-    const errText = await res.text()
-    throw new Error(
-      `nano-banana-pro-preview failed (${res.status}): ${errText.slice(0, 300)}`
-    )
-  }
-
-  const json = await res.json()
-  const candidates = Array.isArray(json?.candidates) ? json.candidates : []
-  for (const c of candidates) {
-    const cParts = c?.content?.parts
-    if (!Array.isArray(cParts)) continue
-    for (const p of cParts) {
-      const inline = (p as any)?.inlineData || (p as any)?.inline_data
-      if (inline?.data && typeof inline.data === 'string') {
-        return {
-          base64: inline.data,
-          mimeType: inline.mimeType || inline.mime_type || 'image/png',
-          model: NANO_BANANA_PRO_PREVIEW_MODEL,
-        }
-      }
-    }
-  }
-
-  throw new Error('nano-banana-pro-preview returned no image data')
 }
 
 function mapSizeForGptImage2(size: string): GptImageSize {

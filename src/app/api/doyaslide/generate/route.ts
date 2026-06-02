@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     // maxDuration(300s) で強制終了されると生成中スライドが固まるため、締切前に新規生成を打ち切る
     const startedAt = Date.now()
-    const START_DEADLINE_MS = Number(process.env.DOYA_GEN_DEADLINE_MS) || 210000
+    const START_DEADLINE_MS = Number(process.env.DOYA_GEN_DEADLINE_MS) || 180000
     let errorCount = 0
     let timedOut = 0
     await mapWithConcurrency(slidesToGen, 3, async (slide) => {
@@ -105,13 +105,14 @@ export async function POST(req: NextRequest) {
     // 失敗分＋時間切れで未生成の分のクレジットを戻す
     await releaseMonthlySlides(userId, errorCount + timedOut)
 
-    const generatedOk = slidesToGen.length - errorCount - timedOut
+    const slides = await prisma.doyaSlideSlide.findMany({ where: { projectId }, orderBy: { index: 'asc' } })
+    // 1枚も生成できていない場合のみ error。既存の完成分があれば completed（未完分は再実行で続行可能）
+    const anyDone = slides.some((s) => s.imageUrl)
     await prisma.doyaSlideProject.update({
       where: { id: projectId },
-      data: { status: generatedOk > 0 ? 'completed' : 'error' },
+      data: { status: anyDone ? 'completed' : 'error' },
     })
 
-    const slides = await prisma.doyaSlideSlide.findMany({ where: { projectId }, orderBy: { index: 'asc' } })
     return NextResponse.json({ slides, errorCount, skipped, timedOut, limit })
   } catch (e: any) {
     console.error('[doyaslide/generate]', e?.message)

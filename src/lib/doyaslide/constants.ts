@@ -163,7 +163,7 @@ export const LOGO_POSITION_EN: Record<LogoPosition, string> = {
 }
 
 export const MIN_SLIDES = 3
-export const MAX_SLIDES = 30
+export const MAX_SLIDES = 12
 export const DEFAULT_SLIDES = 8
 
 /** 1スライドあたりの生成目安秒数（進捗メーター/残り時間表示の共通定数） */

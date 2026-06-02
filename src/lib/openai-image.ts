@@ -32,13 +32,12 @@ export async function generateImageGpt(params: {
   const quality: Exclude<GptImageQuality, 'auto'> =
     params.quality && params.quality !== 'auto' ? params.quality : 'high'
 
-  // ハング対策: タイムアウトを必ず付ける（無いと接続滞留でワーカーが永久ブロックし関数が強制終了する）
+  // ハング対策: タイムアウトで本文読み取りまで覆う（ヘッダ受信後に本文がストールしても中断される）
   const controller = new AbortController()
-  const timeoutMs = Number(process.env.DOYA_IMAGE_TIMEOUT_MS) || 60000
+  const timeoutMs = Number(process.env.DOYA_IMAGE_TIMEOUT_MS) || 45000
   const to = setTimeout(() => controller.abort(), timeoutMs)
-  let res: Response
   try {
-    res = await fetch(OPENAI_IMAGE_ENDPOINT, {
+    const res = await fetch(OPENAI_IMAGE_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -53,24 +52,22 @@ export async function generateImageGpt(params: {
       }),
       signal: controller.signal,
     })
+
+    if (!res.ok) {
+      const errText = await res.text()
+      throw new Error(`OpenAI image generation failed (${res.status}): ${errText.slice(0, 500)}`)
+    }
+
+    const json = await res.json()
+    const data = Array.isArray(json?.data) ? json.data : []
+    return data.map((d: any) => ({
+      b64: String(d?.b64_json || ''),
+      revisedPrompt: d?.revised_prompt ? String(d.revised_prompt) : undefined,
+    }))
   } catch (e: any) {
     if (e?.name === 'AbortError') throw new Error(`${OPENAI_IMAGE_MODEL} timeout (${timeoutMs}ms)`)
     throw e
   } finally {
     clearTimeout(to)
   }
-
-  if (!res.ok) {
-    const errText = await res.text()
-    throw new Error(
-      `OpenAI image generation failed (${res.status}): ${errText.slice(0, 500)}`
-    )
-  }
-
-  const json = await res.json()
-  const data = Array.isArray(json?.data) ? json.data : []
-  return data.map((d: any) => ({
-    b64: String(d?.b64_json || ''),
-    revisedPrompt: d?.revised_prompt ? String(d.revised_prompt) : undefined,
-  }))
 }
