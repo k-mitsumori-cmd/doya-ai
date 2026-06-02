@@ -1322,6 +1322,58 @@ export const SERVICES: Service[] = [
   },
 
   // ----------------------------------------
+  // ドヤカンニング（リアルタイム回答支援）
+  // ----------------------------------------
+  {
+    id: 'cunning',
+    name: 'ドヤカンニング',
+    shortName: 'カンニング',
+    description: 'Web会議の相手の声を解析し、最適な回答をリアルタイム提示。',
+    longDescription:
+      'Google Meet / Zoom のタブ音声を取り込み、相手の日本語の質問をリアルタイムで文字起こし。商談なら自社ナレッジ、面接なら応募先企業情報に基づいた回答案（要点＋話すスクリプト）を即座に画面に提示するAIカンペです。',
+    icon: '🎧',
+    color: 'purple',
+    gradient: 'from-[#7f19e6] to-fuchsia-600',
+    bgGradient: 'from-purple-50 to-fuchsia-50',
+    href: '/cunning',
+    dashboardHref: '/cunning',
+    pricingHref: '/cunning',
+    guideHref: '/cunning',
+    features: [
+      'Meet/Zoomのタブ音声をリアルタイム解析',
+      '相手の質問を検出して回答案を即時提示',
+      '要点（一言）＋話すスクリプト＋根拠を表示',
+      '商談モード：自社ナレッジに基づく回答',
+      '面接モード：応募先企業に最適化した回答',
+    ],
+    useCases: [
+      '商談で想定外の質問に即答したい',
+      '採用面接で企業に刺さる回答を準備したい',
+      'カスタマーサクセスの応対品質を標準化したい',
+    ],
+    pricing: {
+      free: {
+        name: '無料プラン',
+        limit: '合計60分 / ナレッジ1個',
+        dailyLimit: -1,
+        price: 0,
+      },
+      pro: {
+        name: 'プロプラン',
+        limit: '月20時間 / ナレッジ無制限',
+        dailyLimit: -1,
+        price: 9980,
+      },
+    },
+    status: 'coming_soon',
+    category: 'other',
+    order: 23,
+    requiresAuth: true,
+    isNew: true,
+    badge: '開発中',
+  },
+
+  // ----------------------------------------
   // ドヤプロマネ（案件管理）
   // ----------------------------------------
   {

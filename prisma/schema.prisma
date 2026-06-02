@@ -2843,3 +2843,116 @@ model DoyaSlideVersion {
   @@index([slideId])
   @@map("doyaslide_versions")
 }
+
+// ============================================
+// ドヤカンニング（リアルタイム回答支援）cunning_*
+// ============================================
+model CunningSession {
+  id                 String   @id @default(cuid())
+  userId             String
+  mode               String   @default("sales") // sales（商談）/ interview（面接）
+  title              String   @default("無題のセッション")
+  knowledgeBaseId    String?  // sales: 参照ナレッジ
+  companyProfileId   String?  // interview: 参照企業
+  applicantProfileId String?  // interview: 応募者プロフィール
+  status             String   @default("active") // active / ended
+  durationSec        Int      @default(0)         // 文字起こし時間（使用量計上の単位）
+  startedAt          DateTime @default(now())
+  endedAt            DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  transcripts CunningTranscript[]
+  answers     CunningAnswer[]
+
+  @@index([userId])
+  @@index([userId, createdAt])
+  @@map("cunning_sessions")
+}
+
+model CunningTranscript {
+  id        String         @id @default(cuid())
+  sessionId String
+  session   CunningSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  speaker   String?        // remote（相手）/ self（自分）
+  text      String         @db.Text
+  isFinal   Boolean        @default(true)
+  startMs   Int?
+  endMs     Int?
+  createdAt DateTime       @default(now())
+
+  @@index([sessionId])
+  @@map("cunning_transcripts")
+}
+
+model CunningAnswer {
+  id           String         @id @default(cuid())
+  sessionId    String
+  session      CunningSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  questionText String         @db.Text
+  summary      String         @db.Text   // 要点（一言回答）
+  script       String         @db.Text   // 話すスクリプト
+  sources      Json?                       // 参照した根拠チップ
+  model        String?
+  latencyMs    Int?
+  createdAt    DateTime       @default(now())
+
+  @@index([sessionId])
+  @@map("cunning_answers")
+}
+
+model CunningKnowledgeBase {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  chunks CunningKnowledgeChunk[]
+
+  @@index([userId])
+  @@map("cunning_knowledge_bases")
+}
+
+model CunningKnowledgeChunk {
+  id              String               @id @default(cuid())
+  knowledgeBaseId String
+  knowledgeBase   CunningKnowledgeBase @relation(fields: [knowledgeBaseId], references: [id], onDelete: Cascade)
+  content         String               @db.Text
+  sourceUrl       String?
+  sourceLabel     String?
+  embedding       Json?                // pgvector未導入のためJSON保存（MVP）
+  createdAt       DateTime             @default(now())
+
+  @@index([knowledgeBaseId])
+  @@map("cunning_knowledge_chunks")
+}
+
+model CunningCompanyProfile {
+  id              String   @id @default(cuid())
+  userId          String
+  url             String
+  companyName     String?
+  businessSummary String?  @db.Text
+  requirements    Json?    // 求める人物像・職務内容・バリュー等
+  rawText         String?  @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([userId])
+  @@map("cunning_company_profiles")
+}
+
+model CunningApplicantProfile {
+  id         String   @id @default(cuid())
+  userId     String
+  name       String   @default("マイプロフィール")
+  resume     String?  @db.Text
+  motivation String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@map("cunning_applicant_profiles")
+}
