@@ -17,7 +17,7 @@ export default function DoyaSlideLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (session?.user) {
-      fetch('/api/doyaslide/usage')
+      fetch('/api/doyaslide/usage', { cache: 'no-store' })
         .then((r) => r.json())
         .then((d) => setPlan(d.plan || 'FREE'))
         .catch(() => {})

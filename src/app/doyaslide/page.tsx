@@ -33,12 +33,12 @@ export default function DoyaSlideDashboard() {
   const [usage, setUsage] = useState<any>(null)
 
   const load = () => {
-    fetch('/api/doyaslide/projects')
+    fetch('/api/doyaslide/projects', { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => setProjects(d.projects || []))
       .catch(() => {})
       .finally(() => setLoading(false))
-    fetch('/api/doyaslide/usage')
+    fetch('/api/doyaslide/usage', { cache: 'no-store' })
       .then((r) => r.json())
       .then(setUsage)
       .catch(() => {})

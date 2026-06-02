@@ -85,7 +85,7 @@ function EditorInner() {
   }
 
   const reload = useCallback(async () => {
-    const res = await fetch(`/api/doyaslide/projects/${id}`)
+    const res = await fetch(`/api/doyaslide/projects/${id}`, { cache: 'no-store' })
     if (!res.ok) {
       setLoading(false)
       return null
@@ -99,7 +99,7 @@ function EditorInner() {
   }, [id])
 
   const loadVersions = useCallback((slideId: string) => {
-    fetch(`/api/doyaslide/slides/${slideId}/revert`)
+    fetch(`/api/doyaslide/slides/${slideId}/revert`, { cache: 'no-store' })
       .then((r) => r.json())
       .then((d) => {
         if (mountedRef.current) setVersions(d.versions || [])
@@ -296,7 +296,7 @@ function EditorInner() {
     if (!allDone && !confirm('未生成のスライドがあります。完成分のみ書き出しますか？')) return
     setExporting(fmt)
     try {
-      const res = await fetch(`/api/doyaslide/export?projectId=${id}&format=${fmt}`)
+      const res = await fetch(`/api/doyaslide/export?projectId=${id}&format=${fmt}`, { cache: 'no-store' })
       if (!res.ok) throw new Error('書き出しに失敗しました')
       const blob = await res.blob()
       const a = document.createElement('a')
