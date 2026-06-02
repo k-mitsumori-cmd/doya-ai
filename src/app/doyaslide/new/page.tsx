@@ -22,10 +22,20 @@ type Aspect = 'wide' | 'square' | 'vertical'
 const COLOR_SWATCHES = ['#2563eb', '#7f19e6', '#e11d48', '#059669', '#f59e0b', '#0f172a']
 const ASPECT_ICON: Record<Aspect, string> = { wide: 'crop_16_9', square: 'crop_square', vertical: 'crop_portrait' }
 const FUN_MESSAGES = [
-  'もくもく構成を考え中…',
-  'いい感じにまとめてるよ…',
-  'スライドの骨組みづくり中…',
+  '🔍 Webで最新情報をリサーチ中…',
+  '📚 集めた情報を読み込んでいます…',
+  '🧠 刺さる構成を設計しています…',
+  '🎨 スライドをどんどん描いています…',
+  '✨ いい感じに仕上げています…',
   'あと少し！わくわく…',
+]
+
+// 生成中に見せる作業ステップ（実パイプライン: 検索→分析→構成→生成）
+const GEN_STEPS = [
+  { icon: 'travel_explore', label: 'Webで最新情報を検索' },
+  { icon: 'menu_book', label: '内容を読み込み・分析' },
+  { icon: 'lightbulb', label: '構成（ストーリー）を設計' },
+  { icon: 'palette', label: 'スライドを生成' },
 ]
 
 function frameClass(a: Aspect) {
@@ -219,6 +229,8 @@ export default function NewDoyaSlidePage() {
   // 枚数に応じた完成までの目安時間（構成 ≈20秒 + 1枚 ≈SEC_PER_SLIDE秒）
   const estTotalSec = 20 + slideCount * SEC_PER_SLIDE
   const meterPct = Math.min(96, Math.round((elapsed / estTotalSec) * 100))
+  // 経過時間に応じて作業ステップを進める（検索→分析→構成→生成）
+  const genStep = Math.min(GEN_STEPS.length - 1, Math.floor((elapsed / Math.max(1, estTotalSec)) * GEN_STEPS.length))
 
   // 選択中スタイルの複数ページプレビュー
   const stylePages = previews[style] || []
@@ -544,8 +556,75 @@ export default function NewDoyaSlidePage() {
       {/* 生成中オーバーレイ（楽しい・進捗メーター付き） */}
       {busy && (
         <div className="fixed inset-0 z-50 bg-gradient-to-br from-blue-50/95 to-indigo-50/95 backdrop-blur flex flex-col items-center justify-center gap-4 px-6">
-          <img src="/character/working.png" alt="作業中" className="w-32 h-32 object-contain anim-bob" />
-          <p className="text-lg font-black text-slate-800">{FUN_MESSAGES[funIdx]}</p>
+          {/* キャラ + 浮遊スパークル */}
+          <div className="relative">
+            <img src="/character/working.png" alt="作業中" className="w-32 h-32 object-contain anim-bob" />
+            <span className="material-symbols-outlined absolute -top-1 -right-1 text-amber-400 anim-twinkle">auto_awesome</span>
+            <span
+              className="material-symbols-outlined absolute top-8 -left-3 text-blue-400 text-base anim-twinkle"
+              style={{ animationDelay: '0.6s' }}
+            >
+              auto_awesome
+            </span>
+          </div>
+
+          <p className="text-lg font-black text-slate-800 text-center anim-msg" key={funIdx}>
+            {FUN_MESSAGES[funIdx]}
+          </p>
+
+          {/* 作業ステップ: 検索 → 分析 → 構成 → 生成 */}
+          <div className="w-full max-w-sm space-y-1.5">
+            {GEN_STEPS.map((s, i) => {
+              const done = i < genStep
+              const active = i === genStep
+              return (
+                <div
+                  key={i}
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2 transition-all duration-300 ${
+                    active
+                      ? 'bg-white shadow-sm ring-1 ring-blue-200 scale-[1.02]'
+                      : done
+                        ? 'opacity-70'
+                        : 'opacity-40'
+                  }`}
+                >
+                  <span
+                    className={`material-symbols-outlined text-xl ${
+                      done ? 'text-emerald-500' : active ? 'text-blue-600 anim-spin' : 'text-slate-400'
+                    }`}
+                  >
+                    {done ? 'check_circle' : active ? 'progress_activity' : s.icon}
+                  </span>
+                  <span className={`text-sm font-black ${active ? 'text-slate-800' : 'text-slate-500'}`}>
+                    {s.label}
+                    {active ? '中…' : ''}
+                  </span>
+                  {active && (
+                    <span className="ml-auto flex gap-1">
+                      {[0, 1, 2].map((d) => (
+                        <span
+                          key={d}
+                          className="w-1.5 h-1.5 rounded-full bg-blue-500 anim-dot"
+                          style={{ animationDelay: `${d * 0.18}s` }}
+                        />
+                      ))}
+                    </span>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* どんどんスライドが生まれる演出 */}
+          <div className="flex items-center gap-1.5">
+            {Array.from({ length: Math.min(slideCount, 8) }).map((_, i) => (
+              <span
+                key={i}
+                className="w-6 h-4 rounded-sm bg-gradient-to-br from-blue-400 to-indigo-500 shadow-sm anim-pop"
+                style={{ animationDelay: `${i * 0.18}s` }}
+              />
+            ))}
+          </div>
 
           {/* 進捗メーター + 枚数連動の予想時間 */}
           <div className="w-full max-w-sm">
@@ -558,7 +637,7 @@ export default function NewDoyaSlidePage() {
             </div>
             <div className="w-full h-3 bg-white/80 rounded-full overflow-hidden ring-1 ring-blue-100 shadow-inner">
               <div
-                className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-[width] duration-1000 ease-linear"
+                className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-[width] duration-1000 ease-linear anim-stripe"
                 style={{ width: `${meterPct}%` }}
               />
             </div>
@@ -566,16 +645,6 @@ export default function NewDoyaSlidePage() {
               <span>経過 {formatDuration(elapsed)}</span>
               <span>残り 約{formatDuration(Math.max(0, estTotalSec - elapsed))}</span>
             </div>
-          </div>
-
-          <div className="flex gap-1.5">
-            {[0, 1, 2].map((i) => (
-              <span
-                key={i}
-                className="w-2.5 h-2.5 rounded-full bg-blue-500 anim-dot"
-                style={{ animationDelay: `${i * 0.18}s` }}
-              />
-            ))}
           </div>
         </div>
       )}
@@ -631,6 +700,67 @@ export default function NewDoyaSlidePage() {
           50% {
             transform: scale(1.1);
             opacity: 1;
+          }
+        }
+        .anim-twinkle {
+          animation: twinkle 1.6s ease-in-out infinite;
+        }
+        @keyframes twinkle {
+          0%,
+          100% {
+            opacity: 0.3;
+            transform: scale(0.8) rotate(0deg);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.15) rotate(18deg);
+          }
+        }
+        .anim-spin {
+          animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        .anim-pop {
+          animation: pop 1.4s ease-in-out infinite;
+        }
+        @keyframes pop {
+          0%,
+          100% {
+            opacity: 0.25;
+            transform: translateY(4px) scale(0.85);
+          }
+          40% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        .anim-msg {
+          animation: msgIn 0.4s ease both;
+        }
+        @keyframes msgIn {
+          from {
+            opacity: 0;
+            transform: translateY(6px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .anim-stripe {
+          background-size: 200% 100%;
+          animation: stripe 1.2s linear infinite;
+        }
+        @keyframes stripe {
+          from {
+            background-position: 200% 0;
+          }
+          to {
+            background-position: 0 0;
           }
         }
       `}</style>
