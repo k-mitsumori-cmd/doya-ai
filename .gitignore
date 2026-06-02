@@ -50,3 +50,6 @@ LOGO/outputs/**
 
 .env*.local
 .next.backup-*
+
+# Claude Code ローカル設定（共有しない）
+.claude/
