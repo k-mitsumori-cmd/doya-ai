@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { LOGO_POSITIONS, SEC_PER_SLIDE, formatDuration } from '@/lib/doyaslide/constants'
+import { LOGO_POSITIONS, estimateGenSeconds, formatDuration } from '@/lib/doyaslide/constants'
 
 interface Slide {
   id: string
@@ -62,6 +62,7 @@ function EditorInner() {
   const [versions, setVersions] = useState<Version[]>([])
   const [celebrate, setCelebrate] = useState(false)
   const [funIdx, setFunIdx] = useState(0)
+  const [genElapsed, setGenElapsed] = useState(0)
   const [limitMsg, setLimitMsg] = useState<string | null>(null)
   const triggered = useRef(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -73,8 +74,15 @@ function EditorInner() {
   const doneCount = slides.filter((s) => s.imageUrl).length
   const total = slides.length
   const allDone = total > 0 && doneCount === total
-  // 残り枚数に応じた完成までの目安時間（1枚 ≈11秒）
-  const etaRemainingSec = Math.max(0, total - doneCount) * SEC_PER_SLIDE
+  // 残り時間: 並列生成なので「波数 × 1波の所要(≈150秒)」で見積もり、経過でカウントダウン。
+  // 旧実装は「枚数×11秒」で過小見積り(3枚=33秒)だった。
+  const remainingSlides = Math.max(0, total - doneCount)
+  const estTotalSec = estimateGenSeconds(remainingSlides)
+  const etaRemainingSec = Math.max(5, estTotalSec - genElapsed)
+  // 進捗バーは枚数ベースと時間ベースの大きい方を採用 → 1波の間も止まって見えず動く
+  const countPct = total ? (doneCount / total) * 100 : 0
+  const timePct = estTotalSec > 0 ? Math.min(96, (genElapsed / estTotalSec) * 100) : 0
+  const progressPct = generating ? Math.max(countPct, timePct) : countPct
 
   // 403(上限超過)を検知して常設バナーを出す共通ハンドラ（generate/regenerate/chat で共用）
   const ensureOk = (res: Response, d: any, fallback: string) => {
@@ -200,6 +208,14 @@ function EditorInner() {
   useEffect(() => {
     if (!generating) return
     const t = setInterval(() => setFunIdx((i) => (i + 1) % GEN_MESSAGES.length), 1500)
+    return () => clearInterval(t)
+  }, [generating])
+
+  // 生成中の経過秒カウント（残り時間カウントダウンの基準）。開始時に0へリセット。
+  useEffect(() => {
+    if (!generating) return
+    setGenElapsed(0)
+    const t = setInterval(() => setGenElapsed((e) => e + 1), 1000)
     return () => clearInterval(t)
   }, [generating])
 
@@ -421,8 +437,13 @@ function EditorInner() {
           <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
             <span>
               {generating ? 'もくもく生成中...' : '生成状況'}
-              {generating && etaRemainingSec > 0 && (
-                <span className="ml-2 text-blue-600">残り 約{formatDuration(etaRemainingSec)}</span>
+              {generating && (
+                <>
+                  <span className="ml-2 text-blue-600">残り 約{formatDuration(etaRemainingSec)}</span>
+                  {remainingSlides > 1 && (
+                    <span className="ml-2 text-slate-400">（{Math.min(remainingSlides, 4)}枚を並行生成中…）</span>
+                  )}
+                </>
               )}
             </span>
             <span>
@@ -432,7 +453,7 @@ function EditorInner() {
           <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-all duration-700"
-              style={{ width: `${total ? (doneCount / total) * 100 : 0}%` }}
+              style={{ width: `${progressPct}%` }}
             />
           </div>
         </div>

@@ -186,8 +186,23 @@ export const MIN_SLIDES = 3
 export const MAX_SLIDES = 12
 export const DEFAULT_SLIDES = 8
 
-/** 1スライドあたりの生成目安秒数（進捗メーター/残り時間表示の共通定数） */
+/** 1スライドあたりの生成目安秒数（旧: 直列前提。波ベース見積りに置換） */
 export const SEC_PER_SLIDE = 11
+
+/** サーバ側の並列生成数（src/app/api/doyaslide/generate の mapWithConcurrency と一致させる） */
+export const GEN_CONCURRENCY = 4
+/** 1波（並列1セット）あたりの生成目安秒数。gpt-image-2 high ≈ 約145秒 */
+export const SEC_PER_WAVE = 150
+
+/**
+ * 残り枚数 → 完成までの目安秒数。
+ * 並列生成なので「直列に枚数×秒」ではなく「波数 × 1波の所要時間」で見積もる。
+ * 例: 残り3枚・並列4 = 1波 ≈150秒（×11秒=33秒の過小見積りを是正）。
+ */
+export function estimateGenSeconds(remainingSlides: number): number {
+  if (remainingSlides <= 0) return 0
+  return Math.ceil(remainingSlides / GEN_CONCURRENCY) * SEC_PER_WAVE
+}
 
 /** 秒数を「M分SS秒」/「S秒」に整形（新規作成のメーターとエディタのETAで共通利用） */
 export function formatDuration(seconds: number): string {

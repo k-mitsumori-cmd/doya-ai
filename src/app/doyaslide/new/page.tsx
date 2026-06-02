@@ -12,7 +12,7 @@ import {
   STYLE_PRESETS,
   MIN_SLIDES,
   MAX_SLIDES,
-  SEC_PER_SLIDE,
+  estimateGenSeconds,
   formatDuration,
 } from '@/lib/doyaslide/constants'
 import DoyaChar from '@/components/doyaslide/DoyaChar'
@@ -226,8 +226,9 @@ export default function NewDoyaSlidePage() {
     'w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all'
   const currentStyle = STYLE_PRESETS.find((s) => s.value === style)
 
-  // 枚数に応じた完成までの目安時間（構成 ≈20秒 + 1枚 ≈SEC_PER_SLIDE秒）
-  const estTotalSec = 20 + slideCount * SEC_PER_SLIDE
+  // 完成までの目安時間（構成生成+Web調査 ≈25秒 + 画像生成は波ベース見積り）。
+  // 旧実装は「枚数×11秒」で過小だった。並列なので波数×1波(≈150秒)で見積もる。
+  const estTotalSec = 25 + estimateGenSeconds(slideCount)
   const meterPct = Math.min(96, Math.round((elapsed / estTotalSec) * 100))
   // 経過時間に応じて作業ステップを進める（検索→分析→構成→生成）
   const genStep = Math.min(GEN_STEPS.length - 1, Math.floor((elapsed / Math.max(1, estTotalSec)) * GEN_STEPS.length))
