@@ -29,6 +29,15 @@ export async function POST(req: NextRequest) {
         requirements: extract.requirements as any,
         rawText: rawText.slice(0, 20000),
       },
+      // rawText（取得した生本文）はレスポンスに含めない（SSRFでの内容エコー流出を防ぐ多層防御）
+      select: {
+        id: true,
+        url: true,
+        companyName: true,
+        businessSummary: true,
+        requirements: true,
+        createdAt: true,
+      },
     })
 
     return NextResponse.json({ profile })
