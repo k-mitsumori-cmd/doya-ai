@@ -20,3 +20,15 @@ export async function withTimeout<T>(
     clearTimeout(to)
   }
 }
+
+// AbortSignal 非対応の処理（Supabase SDK のアップロード等）に外側からタイムアウトを掛ける。
+// タイムアウト時は reject（元の処理は放棄）。これが無いと接続滞留でワーカーが無限ブロックする。
+export function raceTimeout<T>(label: string, timeoutMs: number, p: Promise<T>): Promise<T> {
+  let to: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    to = setTimeout(() => reject(new Error(`${label} timeout (${timeoutMs}ms)`)), timeoutMs)
+  })
+  return Promise.race([p, timeout]).finally(() => {
+    if (to) clearTimeout(to)
+  }) as Promise<T>
+}

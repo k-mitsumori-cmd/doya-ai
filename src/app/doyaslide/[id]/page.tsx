@@ -120,20 +120,35 @@ function EditorInner() {
     stopPoll()
     pollRef.current = setInterval(reload, 4000)
     try {
-      const res = await fetch('/api/doyaslide/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId: id, onlyPending: true }),
-      })
-      const d = await res.json()
-      ensureOk(res, d, '生成に失敗しました')
-      if (d.skipped > 0) {
-        setLimitMsg(`今月の残り枚数の都合で${d.skipped}枚はスキップしました（上限${d.limit}枚）。プロにアップグレードで続けて生成できます。`)
-        toast(`${d.skipped}枚は今月の上限のためスキップしました`)
+      // 未生成が無くなるまでバッチを自動継続（各呼び出しはサーバ側バジェット内で安全に返る）。
+      // 進捗が止まったら中断（連続エラー/レート制限/上限）。最大8回の安全上限。
+      let prevRemaining = Infinity
+      let last: any = {}
+      for (let i = 0; i < 8; i++) {
+        const res = await fetch('/api/doyaslide/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ projectId: id, onlyPending: true }),
+        })
+        const d = await res.json()
+        ensureOk(res, d, '生成に失敗しました')
+        last = d
+        await reload()
+        const remaining = (d.slides || []).filter((s: Slide) => !s.imageUrl).length
+        if (remaining === 0) break
+        if (d.skipped > 0) break // 月の上限スキップは再試行しても無駄
+        if (remaining >= prevRemaining) break // 進捗なし（連続エラー/レート制限）→中断
+        prevRemaining = remaining
       }
-      if (d.timedOut > 0) toast(`${d.timedOut}枚は時間切れで未生成です。「未生成を生成」で続きを生成できます`, { icon: '⏳' })
-      if (d.errorCount > 0) toast.error(`${d.errorCount}枚の生成に失敗しました（再生成できます）`)
-      else if (!d.skipped && !d.timedOut) toast.success('スライドが完成しました！')
+      const remaining = (last.slides || []).filter((s: Slide) => !s.imageUrl).length
+      if (last.skipped > 0) {
+        setLimitMsg(`今月の残り枚数の都合で${last.skipped}枚はスキップしました（上限${last.limit}枚）。プロにアップグレードで続けて生成できます。`)
+        toast(`${last.skipped}枚は今月の上限のためスキップしました`)
+      } else if (remaining > 0) {
+        toast.error(`${remaining}枚が未完成です。「未生成を生成」でもう一度お試しください`)
+      } else {
+        toast.success('スライドが完成しました！')
+      }
     } catch (e: any) {
       toast.error(e.message)
     } finally {
