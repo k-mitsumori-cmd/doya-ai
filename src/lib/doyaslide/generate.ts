@@ -6,6 +6,7 @@ import { generateImageWithFallback } from '@/lib/image-generator'
 import { raceTimeout } from '@/lib/fetch-timeout'
 import { ASPECT_TO_SIZE } from './constants'
 import { buildImagePrompt } from './prompts'
+import { LOGO_POSITION_EN } from './constants'
 import { compositeLogo, fetchBuffer } from './logo'
 import { uploadSlideImage, uploadComposedImage } from './storage'
 import type { AspectRatio, LogoPosition, LogoSize } from './types'
@@ -40,19 +41,34 @@ export async function composeSlideImage(
   userId: string,
   project: ComposeProject,
   slide: ComposeSlide,
-  extraInstruction?: string
+  extraInstruction?: string,
+  // 修正フロー用: Visionが作った完全プロンプトをそのまま使う（buildImagePromptを通さない）
+  promptOverride?: string
 ): Promise<ComposeResult> {
   const size = ASPECT_TO_SIZE[(project.aspectRatio as AspectRatio)] || ASPECT_TO_SIZE.wide
   const hasLogo = !!project.logoUrl
+  const logoPos = (project.logoPosition as LogoPosition) || 'top-right'
 
-  const prompt = buildImagePrompt({
-    slide,
-    themeColor: project.themeColor,
-    stylePreset: project.stylePreset,
-    hasLogo,
-    logoPosition: (project.logoPosition as LogoPosition) || 'top-right',
-    extraInstruction,
-  })
+  const prompt = promptOverride
+    ? [
+        promptOverride,
+        hasLogo
+          ? `IMPORTANT: leave the ${LOGO_POSITION_EN[logoPos] || 'top-right corner'} completely EMPTY — reserve a clean rectangular safe zone for a logo placed later.`
+          : '',
+        'Absolutely do NOT include any QR code, barcode, or scannable matrix/dot code.',
+        'Do NOT invent or display any URL, email, phone number, or social handle that is not already shown in the original.',
+        'High quality, professional, visually striking. No watermark. No UI chrome. No borders around the slide.',
+      ]
+        .filter(Boolean)
+        .join('\n')
+    : buildImagePrompt({
+        slide,
+        themeColor: project.themeColor,
+        stylePreset: project.stylePreset,
+        hasLogo,
+        logoPosition: logoPos,
+        extraInstruction,
+      })
 
   const img = await generateImageWithFallback({ prompt, size, quality: 'high' })
 

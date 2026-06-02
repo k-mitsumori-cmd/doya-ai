@@ -4,12 +4,12 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { getUserId } from '@/lib/doyaslide/access'
 import { reserveMonthlySlides, releaseMonthlySlides, quotaExceededMessage } from '@/lib/doyaslide/limits'
-import { buildChatEditPrompt } from '@/lib/doyaslide/prompts'
+import { reviseSlidePrompt } from '@/lib/doyaslide/vision'
+import { fetchBuffer } from '@/lib/doyaslide/logo'
+import { raceTimeout } from '@/lib/fetch-timeout'
 import { composeSlideImage, type ComposeProject } from '@/lib/doyaslide/generate'
-import type { ChatEditResult } from '@/lib/doyaslide/types'
 
 // POST /api/doyaslide/slides/[id]/chat — チャットで指示 → 再生成方式で修正
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
@@ -41,36 +41,34 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       data: { slideId: slide.id, role: 'user', content: message },
     })
 
-    // 意図分解（Gemini）
-    const edit = await geminiGenerateJson<ChatEditResult>(
-      { prompt: buildChatEditPrompt({ userMessage: message, slide }), model: GEMINI_TEXT_MODEL_DEFAULT },
-      'ChatEdit'
-    ).catch(() => ({ reply: '修正を反映して再生成します。' }) as ChatEditResult)
+    const project = slide.project
 
-    // ロゴ位置/サイズ変更があればプロジェクトへ反映
-    let project = slide.project
-    if (edit.logoPosition || edit.logoSize) {
-      project = await prisma.doyaSlideProject.update({
-        where: { id: project.id },
-        data: {
-          ...(edit.logoPosition ? { logoPosition: edit.logoPosition } : {}),
-          ...(edit.logoSize ? { logoSize: edit.logoSize } : {}),
-        },
-      })
+    // 現在の画像を Gemini(Vision) に見せ、忠実再現＋指示反映の新プロンプトを作る → gpt-image-2 で生成。
+    // 画像が未生成 or Vision失敗時は、従来どおり指示を追記した通常再生成にフォールバック。
+    const currentUrl = slide.rawImageUrl || slide.imageUrl
+    let revisedPrompt: string | undefined
+    if (currentUrl) {
+      try {
+        const buf = await raceTimeout('fetchSlideImage', 30000, fetchBuffer(currentUrl))
+        revisedPrompt = await reviseSlidePrompt({
+          imageBase64: Buffer.from(buf).toString('base64'),
+          mimeType: 'image/png',
+          userInstruction: message,
+          themeColor: project.themeColor,
+        })
+      } catch (e) {
+        console.warn('[doyaslide/chat] Vision再プロンプト失敗、通常再生成にフォールバック:', (e as any)?.message)
+      }
     }
-
-    // スライドの文言/ビジュアル方針を更新（再生成方式）
-    const newHeadline = edit.headline ?? slide.headline
-    const newSubText = edit.subText ?? slide.subText
-    const newVisual = edit.visualPrompt ?? slide.visualPrompt
 
     let r
     try {
       r = await composeSlideImage(
         userId,
         project as ComposeProject,
-        { role: slide.role, headline: newHeadline, subText: newSubText, visualPrompt: newVisual },
-        message // チャット指示を画像生成に追記
+        { role: slide.role, headline: slide.headline, subText: slide.subText, visualPrompt: slide.visualPrompt },
+        revisedPrompt ? undefined : message, // Vision成功時はoverride、失敗時は指示を追記して通常再生成
+        revisedPrompt
       )
     } catch (e) {
       // 生成失敗ならクレジットを戻す
@@ -78,14 +76,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       throw e
     }
     const nextVersion = (slide.version || 1) + 1
+    const newVisual = revisedPrompt || slide.visualPrompt
 
     // 画像確定とバージョン記録を原子化（片方だけ成功＝不整合を防ぐ）
     const [updated] = await prisma.$transaction([
       prisma.doyaSlideSlide.update({
         where: { id: slide.id },
         data: {
-          headline: newHeadline,
-          subText: newSubText,
           visualPrompt: newVisual,
           rawImageUrl: r.rawImageUrl,
           imageUrl: r.imageUrl,
@@ -105,9 +102,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       }),
     ])
 
-    const reply = edit.reply || '修正を反映しました！'
+    const reply = '修正を反映しました！'
     await prisma.doyaSlideChatMessage.create({
-      data: { slideId: slide.id, role: 'assistant', content: reply, appliedChanges: edit as any },
+      data: { slideId: slide.id, role: 'assistant', content: reply },
     })
 
     return NextResponse.json({ slide: updated, reply })
