@@ -1,15 +1,12 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { looksLikeQuestion } from '@/lib/cunning/classify'
 
-interface TranscriptLine {
-  id: string
-  text: string
-}
 interface AnswerCard {
   id: string
   question: string
@@ -18,6 +15,10 @@ interface AnswerCard {
   sources: { label: string; url?: string }[]
   model?: string
   loading: boolean
+}
+interface TranscriptLine {
+  id: string
+  text: string
 }
 
 // 1チャンクの録音窓（秒）。短いほど反応が速いが文字起こし回数が増える。
@@ -31,6 +32,11 @@ function pickMime(): string {
   return 'audio/webm'
 }
 
+// 質問の正規化（二重発火・重複検出用）
+function normQ(s: string): string {
+  return s.toLowerCase().replace(/[\s、。．，！？!?.\-―ー…]/g, '')
+}
+
 export default function CunningLivePage() {
   const params = useParams()
   const sessionId = params.sessionId as string
@@ -40,6 +46,9 @@ export default function CunningLivePage() {
   const [lines, setLines] = useState<TranscriptLine[]>([])
   const [answers, setAnswers] = useState<AnswerCard[]>([])
   const [statusMsg, setStatusMsg] = useState('「ライブ開始」で会議タブの音声共有を許可してください')
+  const [showSubs, setShowSubs] = useState(true)
+  const [manualQ, setManualQ] = useState('')
+  const [pipWindow, setPipWindow] = useState<Window | null>(null)
 
   const streamRef = useRef<MediaStream | null>(null)
   const audioStreamRef = useRef<MediaStream | null>(null)
@@ -47,7 +56,8 @@ export default function CunningLivePage() {
   const mimeRef = useRef('audio/webm')
   const recentRef = useRef<string[]>([]) // 直近の発話（文脈）
   const videoRef = useRef<HTMLVideoElement | null>(null)
-  const [showSubs, setShowSubs] = useState(true)
+  const lastLineRef = useRef('') // 直近の文字起こし（重複除去）
+  const lastQRef = useRef<{ q: string; t: number }>({ q: '', t: 0 }) // 直近に投げた質問（二重発火ガード）
 
   const stopAll = useCallback(() => {
     runningRef.current = false
@@ -59,10 +69,11 @@ export default function CunningLivePage() {
     audioStreamRef.current = null
   }, [])
 
-  // アンマウント時に停止＋セッション終了
+  // アンマウント時に停止＋セッション終了＋PiPを閉じる
   useEffect(() => {
     return () => {
       stopAll()
+      pipWindow?.close()
       fetch(`/api/cunning/sessions/${sessionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -93,10 +104,19 @@ export default function CunningLivePage() {
   }, [running, sessionId])
 
   const requestAnswer = useCallback(
-    async (question: string) => {
+    async (question: string, opts: { force?: boolean } = {}) => {
+      const q = question.trim()
+      if (!q) return
+      // 二重発火ガード（自動検出時のみ。手動/再生成は force で常に実行）
+      if (!opts.force) {
+        const n = normQ(q)
+        if (n === normQ(lastQRef.current.q) && Date.now() - lastQRef.current.t < 15000) return
+      }
+      lastQRef.current = { q, t: Date.now() }
+
       const cardId = `a-${Date.now()}-${Math.round(Math.random() * 1e6)}`
       setAnswers((prev) => [
-        { id: cardId, question, summary: '', script: '', sources: [], loading: true },
+        { id: cardId, question: q, summary: '', script: '', sources: [], loading: true },
         ...prev,
       ])
       try {
@@ -105,7 +125,7 @@ export default function CunningLivePage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             sessionId,
-            question,
+            question: q,
             recentTranscript: recentRef.current.slice(-4).join(' / '),
           }),
         })
@@ -120,9 +140,7 @@ export default function CunningLivePage() {
         )
       } catch (e: any) {
         setAnswers((prev) =>
-          prev.map((c) =>
-            c.id === cardId ? { ...c, summary: '⚠️ ' + e.message, script: '', loading: false } : c
-          )
+          prev.map((c) => (c.id === cardId ? { ...c, summary: '⚠️ ' + e.message, script: '', loading: false } : c))
         )
       }
     },
@@ -141,6 +159,9 @@ export default function CunningLivePage() {
         if (!res.ok) return
         const text = (d.text || '').trim()
         if (!text) return
+        // 直前と同一/内包の文字起こしは重複として除去
+        if (text === lastLineRef.current || (lastLineRef.current && lastLineRef.current.includes(text))) return
+        lastLineRef.current = text
         setLines((prev) => [...prev.slice(-80), { id: `l-${Date.now()}-${prev.length}`, text }])
         recentRef.current.push(text)
         if (looksLikeQuestion(text)) requestAnswer(text)
@@ -151,7 +172,6 @@ export default function CunningLivePage() {
     [sessionId, requestAnswer]
   )
 
-  // 録音→チャンク送信のループ（窓ごとに独立したwebmを生成）
   const startCycle = useCallback(() => {
     const stream = audioStreamRef.current
     if (!stream || !runningRef.current) return
@@ -179,11 +199,7 @@ export default function CunningLivePage() {
   const start = async () => {
     try {
       mimeRef.current = pickMime()
-      // タブ音声取得には video も要求する必要がある（Chrome仕様）。取得後 video は破棄。
-      const display = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: true,
-      })
+      const display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
       streamRef.current = display
       const audioTracks = display.getAudioTracks()
       if (audioTracks.length === 0) {
@@ -191,15 +207,12 @@ export default function CunningLivePage() {
         toast.error('音声が共有されていません。共有ダイアログで「タブの音声を共有」にチェックしてください')
         return
       }
-      // 共有タブの映像をプレビュー表示（音声はミュートしてエコー防止＝相手の声は会議タブから聞く）
       if (videoRef.current) {
         videoRef.current.srcObject = display
         videoRef.current.play().catch(() => {})
       }
-      // 文字起こし用には音声のみのストリームを使う
       audioStreamRef.current = new MediaStream(audioTracks)
 
-      // 共有停止（ブラウザの停止ボタン）でセッションも止める（音声/映像どちらの終了でも）
       const onEnded = () => {
         stopAll()
         setStatusMsg('画面共有が停止されました')
@@ -211,7 +224,7 @@ export default function CunningLivePage() {
       setRunning(true)
       setStatusMsg('解析中… 相手の質問を検出すると回答が表示されます')
       startCycle()
-    } catch (e: any) {
+    } catch {
       toast.error('音声共有を開始できませんでした')
       stopAll()
     }
@@ -227,9 +240,44 @@ export default function CunningLivePage() {
     }).catch(() => {})
   }
 
+  // ピクチャーインピクチャ（別ウィンドウのカンペ）。会議の脇に常に手前で置ける。
+  const openPip = async () => {
+    const dpip = (window as any).documentPictureInPicture
+    if (!dpip?.requestWindow) {
+      toast.error('このブラウザはPiPに未対応です（Chrome/Edge 116+で利用可）')
+      return
+    }
+    try {
+      const w: Window = await dpip.requestWindow({ width: 440, height: 260 })
+      w.document.body.style.margin = '0'
+      w.document.body.style.background = '#0f172a'
+      w.document.body.style.fontFamily = 'system-ui, sans-serif'
+      w.addEventListener('pagehide', () => setPipWindow(null))
+      setPipWindow(w)
+    } catch {
+      toast.error('PiPウィンドウを開けませんでした')
+    }
+  }
+
+  const manualAsk = () => {
+    const q = manualQ.trim()
+    if (!q) return
+    setManualQ('')
+    requestAnswer(q, { force: true })
+  }
+
+  const copyAnswer = async (a: AnswerCard) => {
+    try {
+      await navigator.clipboard.writeText(a.script || a.summary)
+      toast.success('コピーしました')
+    } catch {
+      toast.error('コピーできませんでした')
+    }
+  }
+
   const mm = String(Math.floor(elapsed / 60)).padStart(2, '0')
   const ss = String(elapsed % 60).padStart(2, '0')
-  const latest = answers[0] // 最新回答（カンペ表示用）
+  const latest = answers[0]
 
   return (
     <div className="p-4 lg:p-6 max-w-6xl mx-auto">
@@ -242,30 +290,60 @@ export default function CunningLivePage() {
           <div className="flex items-center gap-2">
             {running && <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />}
             <span className="font-black text-slate-800">{running ? '解析中' : '待機中'}</span>
-            <span className="text-sm font-mono font-bold text-slate-500">{mm}:{ss}</span>
+            <span className="text-sm font-mono font-bold text-slate-500">
+              {mm}:{ss}
+            </span>
           </div>
         </div>
-        {running ? (
+        <div className="flex items-center gap-2">
           <button
-            onClick={stop}
-            className="px-5 py-2.5 rounded-full bg-slate-800 text-white font-black hover:bg-slate-900 transition-all"
+            onClick={pipWindow ? () => pipWindow.close() : openPip}
+            title="カンペを別ウィンドウで前面表示"
+            className={`px-3 py-2.5 rounded-full font-black text-sm transition-all ${
+              pipWindow ? 'bg-[#7f19e6] text-white' : 'bg-white text-[#7f19e6] shadow-sm hover:shadow'
+            }`}
           >
-            停止
+            <span className="material-symbols-outlined align-middle text-lg">picture_in_picture_alt</span>
           </button>
-        ) : (
-          <button
-            onClick={start}
-            className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#7f19e6] to-fuchsia-600 text-white font-black shadow-lg hover:shadow-xl transition-all"
-          >
-            🎤 ライブ開始
-          </button>
-        )}
+          {running ? (
+            <button
+              onClick={stop}
+              className="px-5 py-2.5 rounded-full bg-slate-800 text-white font-black hover:bg-slate-900 transition-all"
+            >
+              停止
+            </button>
+          ) : (
+            <button
+              onClick={start}
+              className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#7f19e6] to-fuchsia-600 text-white font-black shadow-lg hover:shadow-xl transition-all"
+            >
+              🎤 ライブ開始
+            </button>
+          )}
+        </div>
       </div>
 
-      <p className="text-xs font-bold text-slate-400 mb-4">{statusMsg}</p>
+      <p className="text-xs font-bold text-slate-400 mb-3">{statusMsg}</p>
+
+      {/* 手動で質問（音声が拾えない時/任意の質問） */}
+      <div className="flex gap-2 mb-4">
+        <input
+          value={manualQ}
+          onChange={(e) => setManualQ(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && manualAsk()}
+          placeholder="質問を手入力してカンペを出す（例: 料金プランは？）"
+          className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-sm"
+        />
+        <button
+          onClick={manualAsk}
+          className="px-4 py-2.5 rounded-xl bg-[#7f19e6] text-white font-black text-sm whitespace-nowrap"
+        >
+          質問する
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
-        {/* 映像 + カンペオーバーレイ（メイン） */}
+        {/* 映像 + カンペオーバーレイ */}
         <div className="order-1 space-y-3">
           <div className="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video shadow-lg">
             <video ref={videoRef} muted playsInline autoPlay className="w-full h-full object-contain" />
@@ -277,8 +355,7 @@ export default function CunningLivePage() {
                 </p>
               </div>
             )}
-            {/* カンペ: 最新回答を映像下にテレプロンプター表示 */}
-            {running && latest && (
+            {latest && (
               <div className="absolute left-0 right-0 bottom-0 p-3 sm:p-5 bg-gradient-to-t from-black/95 via-black/75 to-transparent">
                 <p className="text-[10px] font-black text-fuchsia-300 mb-1 truncate">💬 {latest.question}</p>
                 {latest.loading ? (
@@ -325,7 +402,7 @@ export default function CunningLivePage() {
           </div>
         </div>
 
-        {/* 回答履歴（サイド） */}
+        {/* 回答履歴 */}
         <div className="order-2 space-y-3 lg:max-h-[80vh] lg:overflow-y-auto">
           <p className="text-xs font-black text-slate-400">回答履歴</p>
           {answers.length === 0 ? (
@@ -362,7 +439,21 @@ export default function CunningLivePage() {
                         ))}
                       </div>
                     )}
-                    {a.model && <p className="mt-2 text-[10px] text-slate-300 font-bold">生成: {a.model}</p>}
+                    <div className="mt-3 flex items-center gap-3">
+                      <button
+                        onClick={() => copyAnswer(a)}
+                        className="text-xs font-black text-slate-500 hover:text-[#7f19e6] flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-sm">content_copy</span>コピー
+                      </button>
+                      <button
+                        onClick={() => requestAnswer(a.question, { force: true })}
+                        className="text-xs font-black text-slate-500 hover:text-[#7f19e6] flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-sm">refresh</span>もう一度
+                      </button>
+                      {a.model && <span className="ml-auto text-[10px] text-slate-300 font-bold">{a.model}</span>}
+                    </div>
                   </>
                 )}
               </div>
@@ -370,6 +461,37 @@ export default function CunningLivePage() {
           )}
         </div>
       </div>
+
+      {/* PiP（別ウィンドウ）カンペ — インラインstyleで確実に描画 */}
+      {pipWindow &&
+        createPortal(
+          <div style={{ padding: 16, color: '#fff', fontFamily: 'system-ui, sans-serif' }}>
+            {latest ? (
+              <>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#e879f9', marginBottom: 6 }}>
+                  💬 {latest.question}
+                </div>
+                {latest.loading ? (
+                  <div style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 700 }}>カンペ生成中…</div>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 22, fontWeight: 900, lineHeight: 1.3 }}>{latest.summary}</div>
+                    {latest.script && (
+                      <div style={{ fontSize: 14, color: 'rgba(255,255,255,0.85)', marginTop: 8, lineHeight: 1.6 }}>
+                        {latest.script}
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
+            ) : (
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontWeight: 700 }}>
+                質問を検出するとここにカンペが出ます
+              </div>
+            )}
+          </div>,
+          pipWindow.document.body
+        )}
     </div>
   )
 }

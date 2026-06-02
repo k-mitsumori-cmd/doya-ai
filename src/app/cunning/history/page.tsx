@@ -47,7 +47,7 @@ export default function CunningHistoryPage() {
         <div className="space-y-2">
           {sessions.map((s) => (
             <div key={s.id} className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm">
-              <Link href={`/cunning/live/${s.id}`} className="flex items-center gap-3 min-w-0 flex-1">
+              <Link href={`/cunning/history/${s.id}`} className="flex items-center gap-3 min-w-0 flex-1">
                 <span>{s.mode === 'interview' ? '🎓' : '💼'}</span>
                 <div className="min-w-0">
                   <p className="font-bold text-slate-700 truncate">{s.title}</p>
