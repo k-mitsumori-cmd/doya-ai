@@ -1,7 +1,14 @@
 # ドヤカンニング（要件定義書）
 
-> ステータス: **要件定義（not_implemented）** / 本書はコードベース実装前の仕様書。
-> 作成日: 2026-06-01
+> ステータス: **MVP実装済み（coming_soon）** / 2026-06-02 にPhase 1〜3相当をコード実装。
+> 作成日: 2026-06-01 ／ 実装更新: 2026-06-02
+>
+> 実装メモ:
+> - 文字起こしは「数秒チャンクをOpenAI音声APIにPOST」する near-realtime 方式（Vercel ServerlessはWS長時間保持不可のため。Google STT streaming直結はPhase 2）。
+> - 回答生成は gemini-2.0-flash 優先 / gpt-4o フォールバック（SSEではなくJSON応答。ストリーミングはPhase 2）。
+> - RAGは pgvector 未導入のため字句バイグラム類似検索（MVP）。embeddingsはPhase 2。
+> - ライブ画面は共有タブの映像を表示し、最新回答を映像下にカンペ表示（テレプロンプター風）。
+> - 本番DBの cunning_* テーブルは手動DDLで作成済み（Vercelはdb pushをスキップするため）。
 
 ## 概要
 
