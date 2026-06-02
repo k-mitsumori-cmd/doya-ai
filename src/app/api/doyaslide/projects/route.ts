@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/doyaslide/access'
 import { getUserDoyaSlideLimits, countProjects } from '@/lib/doyaslide/limits'
 import { getDocType, MIN_SLIDES, MAX_SLIDES } from '@/lib/doyaslide/constants'
+import { errorSuffix } from '@/lib/doyaslide/errors'
 
 // GET /api/doyaslide/projects — 自分のプロジェクト一覧
 export async function GET() {
@@ -70,7 +71,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ project }, { status: 201 })
   } catch (e: any) {
     console.error('[doyaslide/projects POST]', e?.stack || e)
-    const detail = typeof e?.message === 'string' ? e.message : JSON.stringify(e)
-    return NextResponse.json({ error: `作成に失敗しました: ${detail || 'unknown'}`.slice(0, 400) }, { status: 500 })
+    return NextResponse.json({ error: `作成に失敗しました${errorSuffix(e)}` }, { status: 500 })
   }
 }

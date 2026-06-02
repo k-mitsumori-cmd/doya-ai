@@ -63,6 +63,12 @@ export async function POST(req: NextRequest) {
 
     await prisma.doyaSlideProject.update({ where: { id: projectId }, data: { status: 'generating' } })
 
+    // 前回の強制終了などで 'generating' のまま残った対象を pending に正規化（1クエリ・再凍結防止）
+    await prisma.doyaSlideSlide.updateMany({
+      where: { id: { in: slidesToGen.map((s) => s.id) }, status: 'generating' },
+      data: { status: 'pending' },
+    })
+
     const cp: ComposeProject = project as any
 
     // maxDuration(300s) で強制終了されると生成中スライドが固まるため、締切前に新規生成を打ち切る
@@ -72,9 +78,8 @@ export async function POST(req: NextRequest) {
     let timedOut = 0
     await mapWithConcurrency(slidesToGen, 4, async (slide) => {
       if (Date.now() - startedAt > START_DEADLINE_MS) {
-        // 締切超過: 開始せず pending のまま残す（再実行で続行可能・クレジットは後で返金）
+        // 締切超過: 開始しない。対象は事前に pending 正規化済みなのでそのまま残し、再実行で続行（クレジットは後で返金）
         timedOut++
-        await prisma.doyaSlideSlide.update({ where: { id: slide.id }, data: { status: 'pending' } }).catch(() => {})
         return
       }
       try {

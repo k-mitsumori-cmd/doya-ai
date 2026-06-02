@@ -15,6 +15,7 @@
 // ========================================
 
 import { generateImageGpt, GptImageQuality, GptImageSize } from './openai-image'
+import { withTimeout } from './fetch-timeout'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 const NANO_BANANA_PRO_PREVIEW_MODEL = 'nano-banana-pro-preview'
@@ -130,12 +131,9 @@ async function callNanoBananaProPreview(
     safetySettings: req.safetySettings || DEFAULT_SAFETY_SETTINGS,
   }
 
-  // ハング対策: タイムアウトで本文読み取りまで覆う（ヘッダ受信後に本文がストールしても中断される）
-  const controller = new AbortController()
-  // フォールバックは短めに（primaryで時間を使った後なので全体が長引かないように）
+  // フォールバックは短めに（primaryで時間を使った後なので全体が長引かないように）。本文読み取りまでタイムアウトで覆う。
   const timeoutMs = Number(process.env.DOYA_FALLBACK_TIMEOUT_MS) || 45000
-  const to = setTimeout(() => controller.abort(), timeoutMs)
-  try {
+  return withTimeout(NANO_BANANA_PRO_PREVIEW_MODEL, timeoutMs, async (signal) => {
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -143,7 +141,7 @@ async function callNanoBananaProPreview(
         'x-goog-api-key': apiKey,
       },
       body: JSON.stringify(body),
-      signal: controller.signal,
+      signal,
     })
 
     if (!res.ok) {
@@ -169,12 +167,7 @@ async function callNanoBananaProPreview(
     }
 
     throw new Error('nano-banana-pro-preview returned no image data')
-  } catch (e: any) {
-    if (e?.name === 'AbortError') throw new Error(`nano-banana-pro-preview timeout (${timeoutMs}ms)`)
-    throw e
-  } finally {
-    clearTimeout(to)
-  }
+  })
 }
 
 function mapSizeForGptImage2(size: string): GptImageSize {

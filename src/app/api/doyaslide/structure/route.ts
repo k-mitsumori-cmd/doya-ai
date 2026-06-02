@@ -9,6 +9,7 @@ import { getUserId } from '@/lib/doyaslide/access'
 import { buildStructurePrompt } from '@/lib/doyaslide/prompts'
 import { scrapeUrlText } from '@/lib/doyaslide/scrape'
 import { serpapiSearchGoogle, hasSerpApiKey } from '@seo/lib/serpapi'
+import { errorSuffix } from '@/lib/doyaslide/errors'
 import type { SlideStructure } from '@/lib/doyaslide/types'
 
 // POST /api/doyaslide/structure — 資料タイプのひな型でスライド構成を生成
@@ -94,7 +95,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ slides: created })
   } catch (e: any) {
     console.error('[doyaslide/structure]', e?.stack || e?.message)
-    const detail = typeof e?.message === 'string' ? e.message : JSON.stringify(e)
-    return NextResponse.json({ error: `構成の生成に失敗しました: ${detail || 'unknown'}`.slice(0, 400) }, { status: 500 })
+    return NextResponse.json({ error: `構成の生成に失敗しました${errorSuffix(e)}` }, { status: 500 })
   }
 }

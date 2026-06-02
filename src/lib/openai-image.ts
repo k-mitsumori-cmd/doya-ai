@@ -8,6 +8,8 @@
 // 緊急時は環境変数 OPENAI_IMAGE_MODEL で別モデル(gpt-image-1 等)に切替可能。
 // ========================================
 
+import { withTimeout } from './fetch-timeout'
+
 const OPENAI_IMAGE_ENDPOINT = 'https://api.openai.com/v1/images/generations'
 const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2'
 
@@ -32,12 +34,10 @@ export async function generateImageGpt(params: {
   const quality: Exclude<GptImageQuality, 'auto'> =
     params.quality && params.quality !== 'auto' ? params.quality : 'high'
 
-  // ハング対策: タイムアウトで本文読み取りまで覆う（ヘッダ受信後に本文がストールしても中断される）
-  const controller = new AbortController()
   // gpt-image-2 の high 品質は数十秒〜90秒かかることがある。短すぎると abort→フォールバックで画質が落ちるため長め。
+  // タイムアウトは本文読み取り(json/text)まで覆う（withTimeout 内で完結させる）。
   const timeoutMs = Number(process.env.DOYA_IMAGE_TIMEOUT_MS) || 120000
-  const to = setTimeout(() => controller.abort(), timeoutMs)
-  try {
+  return withTimeout(OPENAI_IMAGE_MODEL, timeoutMs, async (signal) => {
     const res = await fetch(OPENAI_IMAGE_ENDPOINT, {
       method: 'POST',
       headers: {
@@ -51,7 +51,7 @@ export async function generateImageGpt(params: {
         quality,
         n: params.n || 1,
       }),
-      signal: controller.signal,
+      signal,
     })
 
     if (!res.ok) {
@@ -65,10 +65,5 @@ export async function generateImageGpt(params: {
       b64: String(d?.b64_json || ''),
       revisedPrompt: d?.revised_prompt ? String(d.revised_prompt) : undefined,
     }))
-  } catch (e: any) {
-    if (e?.name === 'AbortError') throw new Error(`${OPENAI_IMAGE_MODEL} timeout (${timeoutMs}ms)`)
-    throw e
-  } finally {
-    clearTimeout(to)
-  }
+  })
 }
