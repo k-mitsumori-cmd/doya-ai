@@ -626,6 +626,13 @@ const SILENCE_PEAK = 8
           </div>,
           pipWindow.document.body
         )}
+
+      {/* コンプライアンス注記（録音同意・法令順守はユーザー責任 / 回答案であり発話判断はユーザー） */}
+      <p className="mt-6 text-[11px] text-slate-400 font-medium leading-relaxed">
+        ※ 相手の音声取得・録音に関する同意取得、各Web会議サービスの規約・適用法令の順守はご利用者の責任で行ってください。
+        本ツールは回答<strong>案</strong>を提示する支援機能であり、実際に発話するかの判断はご自身で行ってください。
+        音声データは文字起こし後に保存しません。
+      </p>
     </div>
   )
 }
