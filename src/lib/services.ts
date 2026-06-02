@@ -1301,13 +1301,13 @@ export const SERVICES: Service[] = [
     pricing: {
       free: {
         name: '無料プラン',
-        limit: '月3プロジェクト / 30枚まで',
+        limit: '月3プロジェクト / 20枚まで',
         dailyLimit: -1,
         price: 0,
       },
       pro: {
         name: 'プロプラン',
-        limit: '月300枚 / プロジェクト無制限',
+        limit: '月150枚 / プロジェクト無制限',
         dailyLimit: -1,
         price: 9980,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_DOYASLIDE_PRO_PRICE_ID,

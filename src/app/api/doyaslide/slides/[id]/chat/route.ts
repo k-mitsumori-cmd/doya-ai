@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { getUserId } from '@/lib/doyaslide/access'
+import { reserveMonthlySlides, releaseMonthlySlides, quotaExceededMessage } from '@/lib/doyaslide/limits'
 import { buildChatEditPrompt } from '@/lib/doyaslide/prompts'
 import { composeSlideImage, type ComposeProject } from '@/lib/doyaslide/generate'
 import type { ChatEditResult } from '@/lib/doyaslide/types'
@@ -27,6 +28,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     })
     if (!slide || slide.project.userId !== userId) {
       return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+    }
+
+    // チャット修正も再生成＝1枚分の生成クレジットを原子的に消費（並行でも上限超過しない）
+    const { granted, limit } = await reserveMonthlySlides(userId, 1)
+    if (granted < 1) {
+      return NextResponse.json({ error: quotaExceededMessage(limit) }, { status: 403 })
     }
 
     // ユーザー発話を記録
@@ -57,12 +64,19 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const newSubText = edit.subText ?? slide.subText
     const newVisual = edit.visualPrompt ?? slide.visualPrompt
 
-    const r = await composeSlideImage(
-      userId,
-      project as ComposeProject,
-      { role: slide.role, headline: newHeadline, subText: newSubText, visualPrompt: newVisual },
-      message // チャット指示を画像生成に追記
-    )
+    let r
+    try {
+      r = await composeSlideImage(
+        userId,
+        project as ComposeProject,
+        { role: slide.role, headline: newHeadline, subText: newSubText, visualPrompt: newVisual },
+        message // チャット指示を画像生成に追記
+      )
+    } catch (e) {
+      // 生成失敗ならクレジットを戻す
+      await releaseMonthlySlides(userId, 1)
+      throw e
+    }
     const nextVersion = (slide.version || 1) + 1
 
     const updated = await prisma.doyaSlideSlide.update({

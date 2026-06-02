@@ -5,6 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/doyaslide/access'
+import { reserveMonthlySlides, releaseMonthlySlides, quotaExceededMessage } from '@/lib/doyaslide/limits'
 import { composeSlideImage, type ComposeProject } from '@/lib/doyaslide/generate'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
@@ -24,8 +25,22 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: '見つかりません' }, { status: 404 })
     }
 
+    // 再生成も1枚分の生成クレジットを原子的に消費（並行でも上限超過しない）
+    const { granted, limit } = await reserveMonthlySlides(userId, 1)
+    if (granted < 1) {
+      return NextResponse.json({ error: quotaExceededMessage(limit) }, { status: 403 })
+    }
+
     await prisma.doyaSlideSlide.update({ where: { id: slide.id }, data: { status: 'generating' } })
-    const r = await composeSlideImage(userId, slide.project as ComposeProject, slide)
+    let r
+    try {
+      r = await composeSlideImage(userId, slide.project as ComposeProject, slide)
+    } catch (e) {
+      // 生成失敗ならクレジットを戻す
+      await releaseMonthlySlides(userId, 1)
+      await prisma.doyaSlideSlide.update({ where: { id: slide.id }, data: { status: 'error' } }).catch(() => {})
+      throw e
+    }
     const nextVersion = (slide.version || 1) + 1
 
     const updated = await prisma.doyaSlideSlide.update({

@@ -94,6 +94,42 @@ export const STYLE_PRESETS: { value: StylePreset; label: string; directive: stri
     directive:
       'warm hand-drawn doodle aesthetic, paper texture, hand-lettered headlines, sketchy illustrations, friendly organic feel',
   },
+  {
+    value: 'corporate',
+    label: 'コーポレート',
+    directive:
+      'clean trustworthy corporate aesthetic, navy and blue palette, structured grid layout, professional business photography feel, formal sans-serif typography',
+  },
+  {
+    value: 'gradient',
+    label: 'グラデーション',
+    directive:
+      'vibrant smooth color gradients, modern fluid blends, soft glassmorphism panels and glow, contemporary tech-startup aesthetic',
+  },
+  {
+    value: 'retro',
+    label: 'レトロ',
+    directive:
+      'retro vintage aesthetic, warm muted tones, 70s/80s inspired geometric shapes and typography, nostalgic grain and texture',
+  },
+  {
+    value: 'nature',
+    label: 'ナチュラル',
+    directive:
+      'organic natural aesthetic, earthy green and beige palette, soft botanical motifs, gentle daylight, calm and warm feel',
+  },
+  {
+    value: 'mono',
+    label: 'モノクロ',
+    directive:
+      'high-contrast monochrome, black and white with a single bold accent color, editorial magazine typography, striking and minimal',
+  },
+  {
+    value: 'isometric',
+    label: 'アイソメ図解',
+    directive:
+      'isometric illustration style, clean geometric 3D-ish flat shapes, infographic/diagram vibe, crisp vector look, tech explainer aesthetic',
+  },
 ]
 
 export function getStyleDirective(preset: string): string {
@@ -129,6 +165,16 @@ export const LOGO_POSITION_EN: Record<LogoPosition, string> = {
 export const MIN_SLIDES = 3
 export const MAX_SLIDES = 30
 export const DEFAULT_SLIDES = 8
+
+/** 1スライドあたりの生成目安秒数（進捗メーター/残り時間表示の共通定数） */
+export const SEC_PER_SLIDE = 11
+
+/** 秒数を「M分SS秒」/「S秒」に整形（新規作成のメーターとエディタのETAで共通利用） */
+export function formatDuration(seconds: number): string {
+  return seconds >= 60
+    ? `${Math.floor(seconds / 60)}分${String(seconds % 60).padStart(2, '0')}秒`
+    : `${seconds}秒`
+}
 
 /** 資料タイプ別の「仮入力」サンプル（ボタン一つ / タイプ選択で自動入力） */
 export const DOC_TYPE_SAMPLES: Record<DocType, { title: string; brief: string }> = {

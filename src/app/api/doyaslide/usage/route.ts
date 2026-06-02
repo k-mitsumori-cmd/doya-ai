@@ -8,7 +8,7 @@ import {
   getUserDoyaSlideLimits,
   getUserTier,
   countProjects,
-  countMonthlySlides,
+  getMonthlyUsage,
 } from '@/lib/doyaslide/limits'
 
 // GET /api/doyaslide/usage — プラン・利用状況
@@ -21,7 +21,7 @@ export async function GET() {
       getUserTier(userId),
       getUserDoyaSlideLimits(userId),
       countProjects(userId),
-      countMonthlySlides(userId),
+      getMonthlyUsage(userId),
     ])
 
     return NextResponse.json({

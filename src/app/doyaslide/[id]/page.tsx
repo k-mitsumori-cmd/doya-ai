@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { LOGO_POSITIONS } from '@/lib/doyaslide/constants'
+import { LOGO_POSITIONS, SEC_PER_SLIDE, formatDuration } from '@/lib/doyaslide/constants'
 
 interface Slide {
   id: string
@@ -61,6 +61,7 @@ function EditorInner() {
   const [versions, setVersions] = useState<Version[]>([])
   const [celebrate, setCelebrate] = useState(false)
   const [funIdx, setFunIdx] = useState(0)
+  const [limitMsg, setLimitMsg] = useState<string | null>(null)
   const triggered = useRef(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const mountedRef = useRef(true)
@@ -71,6 +72,16 @@ function EditorInner() {
   const doneCount = slides.filter((s) => s.imageUrl).length
   const total = slides.length
   const allDone = total > 0 && doneCount === total
+  // 残り枚数に応じた完成までの目安時間（1枚 ≈11秒）
+  const etaRemainingSec = Math.max(0, total - doneCount) * SEC_PER_SLIDE
+
+  // 403(上限超過)を検知して常設バナーを出す共通ハンドラ（generate/regenerate/chat で共用）
+  const ensureOk = (res: Response, d: any, fallback: string) => {
+    if (!res.ok) {
+      if (res.status === 403) setLimitMsg(d?.error || '今月の生成枚数の上限に達しました')
+      throw new Error(d?.error || fallback)
+    }
+  }
 
   const reload = useCallback(async () => {
     const res = await fetch(`/api/doyaslide/projects/${id}`)
@@ -114,9 +125,13 @@ function EditorInner() {
         body: JSON.stringify({ projectId: id, onlyPending: true }),
       })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error || '生成に失敗しました')
+      ensureOk(res, d, '生成に失敗しました')
+      if (d.skipped > 0) {
+        setLimitMsg(`今月の残り枚数の都合で${d.skipped}枚はスキップしました（上限${d.limit}枚）。プロにアップグレードで続けて生成できます。`)
+        toast(`${d.skipped}枚は今月の上限のためスキップしました`)
+      }
       if (d.errorCount > 0) toast.error(`${d.errorCount}枚の生成に失敗しました（再生成できます）`)
-      else toast.success('スライドが完成しました！')
+      else if (!d.skipped) toast.success('スライドが完成しました！')
     } catch (e: any) {
       toast.error(e.message)
     } finally {
@@ -175,7 +190,7 @@ function EditorInner() {
     try {
       const res = await fetch(`/api/doyaslide/slides/${slideId}/regenerate`, { method: 'POST' })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error || '再生成に失敗しました')
+      ensureOk(res, d, '再生成に失敗しました')
       toast.success('再生成しました')
       await reload()
       loadVersions(slideId)
@@ -217,7 +232,7 @@ function EditorInner() {
         body: JSON.stringify({ message: msg }),
       })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error || '修正に失敗しました')
+      ensureOk(res, d, '修正に失敗しました')
       setChat((c) => ({ ...c, [sid]: [...(c[sid] || []), { role: 'assistant', content: d.reply || '修正しました' }] }))
       toast.success('✨ 修正を反映しました')
       await reload()
@@ -341,11 +356,43 @@ function EditorInner() {
         </div>
       </div>
 
+      {/* 上限超過バナー（消えない・アップグレード導線つき） */}
+      {limitMsg && (
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border-2 border-amber-300 bg-amber-50 p-4">
+          <span className="material-symbols-outlined text-amber-600">error</span>
+          <div className="flex-1 min-w-0">
+            <p className="font-black text-amber-800 text-sm">今月の生成枚数の上限に達しました</p>
+            <p className="text-xs font-bold text-amber-700 mt-0.5 leading-relaxed">{limitMsg}</p>
+            <p className="text-[11px] font-bold text-amber-600/80 mt-1">
+              ※ 生成・再生成・チャット修正はそれぞれ1枚分の生成枚数を消費します
+            </p>
+          </div>
+          <Link
+            href="/doyaslide/pricing"
+            className="flex-shrink-0 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-black shadow hover:shadow-lg transition-all"
+          >
+            プロにアップグレード
+          </Link>
+          <button
+            onClick={() => setLimitMsg(null)}
+            aria-label="閉じる"
+            className="flex-shrink-0 text-amber-400 hover:text-amber-600"
+          >
+            <span className="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+      )}
+
       {/* 進捗バー */}
       {total > 0 && (generating || !allDone) && (
         <div className="mb-4">
           <div className="flex items-center justify-between text-xs font-bold text-slate-500 mb-1">
-            <span>{generating ? 'もくもく生成中...' : '生成状況'}</span>
+            <span>
+              {generating ? 'もくもく生成中...' : '生成状況'}
+              {generating && etaRemainingSec > 0 && (
+                <span className="ml-2 text-blue-600">残り 約{formatDuration(etaRemainingSec)}</span>
+              )}
+            </span>
             <span>
               {doneCount} / {total} 枚 完成
             </span>
@@ -414,16 +461,19 @@ function EditorInner() {
                 <p className="font-black text-slate-800 truncate">{selected.headline || `スライド ${selected.index}`}</p>
                 <p className="text-xs text-slate-400 font-bold truncate">{selected.role} ・ v{selected.version}</p>
               </div>
-              <button
-                onClick={() => regenerate(selected.id)}
-                disabled={busySlide === selected.id || generating}
-                className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-white text-slate-700 font-bold text-sm ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-60"
-              >
-                <span className={`material-symbols-outlined text-lg ${busySlide === selected.id ? 'animate-spin' : ''}`}>
-                  {busySlide === selected.id ? 'progress_activity' : 'refresh'}
-                </span>
-                再生成
-              </button>
+              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                <button
+                  onClick={() => regenerate(selected.id)}
+                  disabled={busySlide === selected.id || generating}
+                  className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-white text-slate-700 font-bold text-sm ring-1 ring-slate-200 hover:bg-slate-50 disabled:opacity-60"
+                >
+                  <span className={`material-symbols-outlined text-lg ${busySlide === selected.id ? 'animate-spin' : ''}`}>
+                    {busySlide === selected.id ? 'progress_activity' : 'refresh'}
+                  </span>
+                  再生成
+                </button>
+                <span className="text-[10px] font-bold text-slate-400">生成枚数を1枚消費</span>
+              </div>
             </div>
           )}
         </div>

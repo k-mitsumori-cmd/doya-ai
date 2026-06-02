@@ -1,4 +1,14 @@
-# ドヤスライド + SlashSlide
+# 【廃止】旧スライド (`/slide` + `/slashslide`) — Gemini→Googleスライド下書き型
+
+> ⚠️ **このドキュメントは廃止された旧実装の記録です。**
+> `/slide`・`/slashslide`（Gemini が構成JSONを作り Google Slides に書き出す下書き支援型）は **2026-06-02 に廃止**し、
+> 画像主体の新サービス **ドヤスライド `/doyaslide`** に統合しました（`reference/services/doyaslide.md` 参照）。
+> - `/slide`・`/slide/create`・`/slide/:path*`・`/slashslide` 系は `next.config.js` のリダイレクトで `/doyaslide` へ集約。
+> - スライド専用ドメイン（`SLIDE_HOSTS`）も `middleware.ts` で `/doyaslide` を配信。
+> - 旧 `src/app/slide/*`・`src/app/slashslide/*`・`src/app/api/slide/*`・`src/app/api/slashslide/*` のファイルは
+>   到達不能だが**削除せず残置**（参照: feedback「削除→再作成禁止」）。新規開発で参照・拡張しないこと。
+>
+> 以下は旧仕様の歴史的記録。
 
 ## 概要
 

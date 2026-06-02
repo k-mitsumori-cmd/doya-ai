@@ -1,11 +1,15 @@
 // ========================================
-// OpenAI 画像生成 (gpt-image-1 / image 2.0)
+// OpenAI 画像生成 (gpt-image-2 / ChatGPT Images 2.0)
 // ========================================
-// REST API 直叩き（SDK v4.24.1 は gpt-image-1 用 typing が無いため）
-// 参考: https://platform.openai.com/docs/api-reference/images/create
+// REST API 直叩き（SDK の typing が gpt-image 系に未対応のため）
+// 参考: https://developers.openai.com/api/docs/models/gpt-image-2
+// メインモデルは gpt-image-2。size=1024x1024/1536x1024/1024x1536, quality=low/medium/high
+// レスポンスは data[0].b64_json（gpt-image-1 と同一形状・実APIで確認済み）。
+// 緊急時は環境変数 OPENAI_IMAGE_MODEL で別モデル(gpt-image-1 等)に切替可能。
 // ========================================
 
 const OPENAI_IMAGE_ENDPOINT = 'https://api.openai.com/v1/images/generations'
+const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2'
 
 export type GptImageQuality = 'low' | 'medium' | 'high' | 'auto'
 export type GptImageSize = '1024x1024' | '1024x1536' | '1536x1024' | 'auto'
@@ -24,6 +28,10 @@ export async function generateImageGpt(params: {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) throw new Error('OPENAI_API_KEY が設定されていません')
 
+  // gpt-image-2 は quality=low/medium/high のみ（auto 非対応）。auto/未指定は high に寄せる
+  const quality: Exclude<GptImageQuality, 'auto'> =
+    params.quality && params.quality !== 'auto' ? params.quality : 'high'
+
   const res = await fetch(OPENAI_IMAGE_ENDPOINT, {
     method: 'POST',
     headers: {
@@ -31,10 +39,10 @@ export async function generateImageGpt(params: {
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'gpt-image-1',
+      model: OPENAI_IMAGE_MODEL,
       prompt: params.prompt,
       size: params.size || '1024x1024',
-      quality: params.quality || 'high',
+      quality,
       n: params.n || 1,
     }),
   })

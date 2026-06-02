@@ -12,6 +12,8 @@ import {
   STYLE_PRESETS,
   MIN_SLIDES,
   MAX_SLIDES,
+  SEC_PER_SLIDE,
+  formatDuration,
 } from '@/lib/doyaslide/constants'
 import DoyaChar from '@/components/doyaslide/DoyaChar'
 
@@ -49,33 +51,57 @@ export default function NewDoyaSlidePage() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [funIdx, setFunIdx] = useState(0)
-  const [previews, setPreviews] = useState<Record<string, string>>({})
+  const [elapsed, setElapsed] = useState(0)
+  const [previews, setPreviews] = useState<Record<string, string[]>>({})
+  const [previewPage, setPreviewPage] = useState(0)
   const fetchedStyles = useRef<Set<string>>(new Set())
 
-  const loadPreview = (s: string) => {
-    if (previews[s] || fetchedStyles.current.has(s)) return
+  const loadPreview = (s: string): Promise<void> => {
+    if (previews[s] || fetchedStyles.current.has(s)) return Promise.resolve()
     fetchedStyles.current.add(s)
-    fetch(`/api/doyaslide/style-preview?style=${s}`)
+    return fetch(`/api/doyaslide/style-preview?style=${s}`)
       .then((r) => r.json())
       .then((d) => {
-        if (d.url) setPreviews((p) => ({ ...p, [s]: d.url }))
+        const urls: string[] = d.urls || (d.url ? [d.url] : [])
+        if (urls.length) setPreviews((p) => ({ ...p, [s]: urls }))
       })
       .catch(() => {
         fetchedStyles.current.delete(s)
       })
   }
 
-  // 全スタイルのプレビューをあらかじめ生成・先読み
+  // 全スタイルのプレビューを逐次先読み（コールド時に12スタイル同時生成の集中を避ける）
   useEffect(() => {
-    STYLE_PRESETS.forEach((s) => loadPreview(s.value))
+    let cancelled = false
+    ;(async () => {
+      for (const s of STYLE_PRESETS) {
+        if (cancelled) break
+        await loadPreview(s.value)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 生成中の楽しいメッセージ回し
+  // スタイル切替でプレビューのページを先頭に戻す
   useEffect(() => {
-    if (!busy) return
+    setPreviewPage(0)
+  }, [style])
+
+  // 生成中の楽しいメッセージ回し + 経過時間カウント
+  useEffect(() => {
+    if (!busy) {
+      setElapsed(0)
+      return
+    }
     const t = setInterval(() => setFunIdx((i) => (i + 1) % FUN_MESSAGES.length), 1500)
-    return () => clearInterval(t)
+    const e = setInterval(() => setElapsed((s) => s + 1), 1000)
+    return () => {
+      clearInterval(t)
+      clearInterval(e)
+    }
   }, [busy])
 
   const onDocType = (v: string) => {
@@ -186,6 +212,14 @@ export default function NewDoyaSlidePage() {
   const inputCls =
     'w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-xl text-base focus:outline-none focus:border-blue-500 focus:bg-white transition-all'
   const currentStyle = STYLE_PRESETS.find((s) => s.value === style)
+
+  // 枚数に応じた完成までの目安時間（構成 ≈20秒 + 1枚 ≈SEC_PER_SLIDE秒）
+  const estTotalSec = 20 + slideCount * SEC_PER_SLIDE
+  const meterPct = Math.min(96, Math.round((elapsed / estTotalSec) * 100))
+
+  // 選択中スタイルの複数ページプレビュー
+  const stylePages = previews[style] || []
+  const curPage = stylePages.length ? Math.min(previewPage, stylePages.length - 1) : 0
 
   return (
     <div className="p-5 lg:p-10 max-w-3xl mx-auto pb-40">
@@ -298,8 +332,8 @@ export default function NewDoyaSlidePage() {
         {/* ③ スタイル（左プレビュー縦並び + 右大プレビュー・ビュン切替） */}
         <div className={card} style={{ animationDelay: '120ms' }}>
           <label className="block text-sm font-black text-slate-700 mb-1">③ スタイル</label>
-          <p className="text-[11px] text-slate-400 font-medium mb-3">クリックすると右の仕上がりイメージが切り替わります（比率を変えると形も連動）</p>
-          <div className="grid grid-cols-[104px_1fr] sm:grid-cols-[120px_1fr] gap-3">
+          <p className="text-[11px] text-slate-400 font-medium mb-3">スタイルをクリックで切替・右の ◀ ▶ で複数ページの仕上がりを確認できます（比率を変えると形も連動）</p>
+          <div className="grid grid-cols-[88px_minmax(0,1fr)] sm:grid-cols-[120px_minmax(0,1fr)] gap-3">
             {/* 左: 縦並びプレビュー */}
             <div className="flex flex-col gap-2 max-h-[440px] overflow-y-auto pr-1">
               {STYLE_PRESETS.map((s) => {
@@ -313,8 +347,8 @@ export default function NewDoyaSlidePage() {
                     }`}
                   >
                     <div className="aspect-[3/2] bg-slate-100 flex items-center justify-center overflow-hidden">
-                      {previews[s.value] ? (
-                        <img src={previews[s.value]} alt={s.label} className="w-full h-full object-cover" />
+                      {previews[s.value]?.[0] ? (
+                        <img src={previews[s.value][0]} alt={s.label} className="w-full h-full object-cover" />
                       ) : (
                         <span className="material-symbols-outlined animate-spin text-slate-300 text-lg">progress_activity</span>
                       )}
@@ -327,24 +361,67 @@ export default function NewDoyaSlidePage() {
               })}
             </div>
 
-            {/* 右: 大プレビュー（ビュン） */}
-            <div className={`relative ${frameClass(aspect)} rounded-2xl overflow-hidden bg-slate-900 shadow-lg`}>
-              {previews[style] ? (
-                <img
-                  key={`${style}-${aspect}`}
-                  src={previews[style]}
-                  alt={currentStyle?.label}
-                  className="w-full h-full object-cover anim-whoosh"
-                />
-              ) : (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80 gap-2">
-                  <img src="/character/working.png" alt="" className="w-16 h-16 object-contain animate-bounce" />
-                  <p className="text-xs font-bold">イメージを生成中…</p>
+            {/* 右: 大プレビュー（複数ページをめくって確認） */}
+            <div className="min-w-0">
+              <div className={`relative ${frameClass(aspect)} w-full min-w-0 max-h-[60vh] rounded-2xl overflow-hidden bg-slate-900 shadow-lg`}>
+                {stylePages.length > 0 ? (
+                  <img
+                    key={`${style}-${curPage}-${aspect}`}
+                    src={stylePages[curPage]}
+                    alt={`${currentStyle?.label} ${curPage + 1}ページ目`}
+                    className="w-full h-full object-cover anim-whoosh"
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80 gap-2">
+                    <img src="/character/working.png" alt="" className="w-16 h-16 object-contain animate-bounce" />
+                    <p className="text-xs font-bold">ページを生成中…</p>
+                  </div>
+                )}
+                <div className="absolute bottom-2 left-2 bg-black/55 text-white text-xs font-black px-2.5 py-1 rounded-lg backdrop-blur">
+                  {currentStyle?.label}
+                </div>
+
+                {stylePages.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewPage((i) => (i - 1 + stylePages.length) % stylePages.length)}
+                      aria-label="前のページ"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/45 text-white flex items-center justify-center hover:bg-black/65 backdrop-blur active:scale-90 transition"
+                    >
+                      <span className="material-symbols-outlined">chevron_left</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewPage((i) => (i + 1) % stylePages.length)}
+                      aria-label="次のページ"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/45 text-white flex items-center justify-center hover:bg-black/65 backdrop-blur active:scale-90 transition"
+                    >
+                      <span className="material-symbols-outlined">chevron_right</span>
+                    </button>
+                    <div className="absolute bottom-2 right-2 bg-black/55 text-white text-[11px] font-black px-2 py-0.5 rounded-md backdrop-blur">
+                      {curPage + 1} / {stylePages.length}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* ページドット */}
+              {stylePages.length > 1 && (
+                <div className="flex items-center justify-center gap-1.5 mt-2">
+                  {stylePages.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => setPreviewPage(i)}
+                      aria-label={`${i + 1}ページ目`}
+                      className={`h-2 rounded-full transition-all ${
+                        i === curPage ? 'w-5 bg-blue-600' : 'w-2 bg-slate-300 hover:bg-slate-400'
+                      }`}
+                    />
+                  ))}
                 </div>
               )}
-              <div className="absolute bottom-2 left-2 bg-black/55 text-white text-xs font-black px-2.5 py-1 rounded-lg backdrop-blur">
-                {currentStyle?.label}
-              </div>
             </div>
           </div>
         </div>
@@ -457,11 +534,33 @@ export default function NewDoyaSlidePage() {
         </div>
       </div>
 
-      {/* 生成中オーバーレイ（楽しい） */}
+      {/* 生成中オーバーレイ（楽しい・進捗メーター付き） */}
       {busy && (
-        <div className="fixed inset-0 z-50 bg-gradient-to-br from-blue-50/95 to-indigo-50/95 backdrop-blur flex flex-col items-center justify-center gap-4">
+        <div className="fixed inset-0 z-50 bg-gradient-to-br from-blue-50/95 to-indigo-50/95 backdrop-blur flex flex-col items-center justify-center gap-4 px-6">
           <img src="/character/working.png" alt="作業中" className="w-32 h-32 object-contain anim-bob" />
           <p className="text-lg font-black text-slate-800">{FUN_MESSAGES[funIdx]}</p>
+
+          {/* 進捗メーター + 枚数連動の予想時間 */}
+          <div className="w-full max-w-sm">
+            <div className="flex items-center justify-between text-xs font-black text-slate-600 mb-1.5">
+              <span className="inline-flex items-center gap-1">
+                <span className="material-symbols-outlined text-sm text-blue-600">image</span>
+                {slideCount}枚を生成
+              </span>
+              <span className="text-blue-600">完成まで 約{formatDuration(estTotalSec)}</span>
+            </div>
+            <div className="w-full h-3 bg-white/80 rounded-full overflow-hidden ring-1 ring-blue-100 shadow-inner">
+              <div
+                className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full transition-[width] duration-1000 ease-linear"
+                style={{ width: `${meterPct}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 mt-1.5">
+              <span>経過 {formatDuration(elapsed)}</span>
+              <span>残り 約{formatDuration(Math.max(0, estTotalSec - elapsed))}</span>
+            </div>
+          </div>
+
           <div className="flex gap-1.5">
             {[0, 1, 2].map((i) => (
               <span

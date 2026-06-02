@@ -63,35 +63,44 @@ export async function uploadComposedImage(
   return uploadBuffer(buffer, path, 'image/png')
 }
 
+// スタイルプレビューは「スタイル × ページ番号」で複数ページをキャッシュする。
+// 例: style-previews/v2-gptimg2/flashy-0.png（表紙）, flashy-1.png（特長）, flashy-2.png（まとめ）
+// 生成モデルや品質を切り替えたら STYLE_PREVIEW_DIR の版を上げると、旧キャッシュが無視され全プレビューが自動で焼き直される。
+const STYLE_PREVIEW_DIR = 'style-previews/v2-gptimg2'
+function stylePreviewFile(style: string, page: number): string {
+  return `${STYLE_PREVIEW_DIR}/${style}-${page}.png`
+}
+
 /** スタイルプレビューの公開URL（固定パス・全ユーザー共有キャッシュ） */
-export function stylePreviewPublicUrl(style: string): string {
-  const { data } = getSupabase().storage.from(BUCKET).getPublicUrl(`style-previews/${style}.png`)
+export function stylePreviewPublicUrl(style: string, page = 0): string {
+  const { data } = getSupabase().storage.from(BUCKET).getPublicUrl(stylePreviewFile(style, page))
   return data.publicUrl
 }
 
 // 生成済みスタイルのプロセス内メモ（公開URLのHEADは信頼できないため Storage API で確認）
 const knownStylePreviews = new Set<string>()
 
-/** スタイルプレビューが既に存在するか（Storage list で確実に判定 + メモ化） */
-export async function stylePreviewExists(style: string): Promise<boolean> {
-  if (knownStylePreviews.has(style)) return true
+/** スタイルプレビュー(該当ページ)が既に存在するか（Storage list で確実に判定 + メモ化） */
+export async function stylePreviewExists(style: string, page = 0): Promise<boolean> {
+  const key = `${style}-${page}`
+  if (knownStylePreviews.has(key)) return true
   try {
     const { data } = await getSupabase()
       .storage.from(BUCKET)
-      .list('style-previews', { search: `${style}.png`, limit: 100 })
-    const exists = !!data?.some((f) => f.name === `${style}.png`)
-    if (exists) knownStylePreviews.add(style)
+      .list(STYLE_PREVIEW_DIR, { search: `${key}.png`, limit: 100 })
+    const exists = !!data?.some((f) => f.name === `${key}.png`)
+    if (exists) knownStylePreviews.add(key)
     return exists
   } catch {
     return false
   }
 }
 
-/** スタイルプレビュー画像を固定パスに保存（upsert）して公開URLを返す */
-export async function uploadStylePreview(style: string, base64: string): Promise<string> {
+/** スタイルプレビュー画像を固定パス(該当ページ)に保存（upsert）して公開URLを返す */
+export async function uploadStylePreview(style: string, base64: string, page = 0): Promise<string> {
   const buffer = Buffer.from(base64, 'base64')
-  const url = await uploadBuffer(buffer, `style-previews/${style}.png`, 'image/png')
-  knownStylePreviews.add(style)
+  const url = await uploadBuffer(buffer, stylePreviewFile(style, page), 'image/png')
+  knownStylePreviews.add(`${style}-${page}`)
   return url
 }
 

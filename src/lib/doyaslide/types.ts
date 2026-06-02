@@ -21,6 +21,12 @@ export type StylePreset =
   | 'minimal' // ミニマル
   | 'cyber' // サイバー
   | 'handwritten' // 手書き風
+  | 'corporate' // コーポレート
+  | 'gradient' // グラデーション
+  | 'retro' // レトロ
+  | 'nature' // ナチュラル
+  | 'mono' // モノクロ
+  | 'isometric' // アイソメ図解
 
 export type LogoPosition =
   | 'top-right'

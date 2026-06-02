@@ -5,7 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/doyaslide/access'
-import { getUserDoyaSlideLimits, countMonthlySlides } from '@/lib/doyaslide/limits'
+import { reserveMonthlySlides, releaseMonthlySlides, quotaExceededMessage } from '@/lib/doyaslide/limits'
 import { composeSlideImage, type ComposeProject } from '@/lib/doyaslide/generate'
 
 // 並列数を抑えて画像生成（レート制限・タイムアウト対策）
@@ -47,24 +47,26 @@ export async function POST(req: NextRequest) {
 
     const targets = onlyPending ? project.slides.filter((s) => !s.imageUrl) : project.slides
 
-    // 枚数上限チェック（当月生成分 + 今回生成分）
-    const limits = await getUserDoyaSlideLimits(userId)
-    if (limits.maxSlidesPerMonth !== -1) {
-      const used = await countMonthlySlides(userId)
-      if (used + targets.length > limits.maxSlidesPerMonth) {
-        return NextResponse.json(
-          { error: `今月の生成枚数上限（${limits.maxSlidesPerMonth}枚）を超えます。プロにアップグレードしてください。` },
-          { status: 403 }
-        )
-      }
+    // 生成対象が無ければ何もしない（上限チェックも不要）
+    if (targets.length === 0) {
+      const slides = await prisma.doyaSlideSlide.findMany({ where: { projectId }, orderBy: { index: 'asc' } })
+      return NextResponse.json({ slides, errorCount: 0, skipped: 0 })
     }
+
+    // 残枠まで原子的に予約（並行でも上限超過しない=TOCTOU回避 / 残枠未満でも作れる分だけ生成）
+    const { granted, limit } = await reserveMonthlySlides(userId, targets.length)
+    if (granted <= 0) {
+      return NextResponse.json({ error: quotaExceededMessage(limit) }, { status: 403 })
+    }
+    const slidesToGen = targets.slice(0, granted)
+    const skipped = targets.length - slidesToGen.length
 
     await prisma.doyaSlideProject.update({ where: { id: projectId }, data: { status: 'generating' } })
 
     const cp: ComposeProject = project as any
 
     let errorCount = 0
-    await mapWithConcurrency(targets, 3, async (slide) => {
+    await mapWithConcurrency(slidesToGen, 3, async (slide) => {
       try {
         await prisma.doyaSlideSlide.update({ where: { id: slide.id }, data: { status: 'generating' } })
         const r = await composeSlideImage(userId, cp, slide)
@@ -90,13 +92,16 @@ export async function POST(req: NextRequest) {
       }
     })
 
+    // 生成に失敗した分の生成枚数クレジットを戻す
+    await releaseMonthlySlides(userId, errorCount)
+
     await prisma.doyaSlideProject.update({
       where: { id: projectId },
-      data: { status: targets.length > 0 && errorCount >= targets.length ? 'error' : 'completed' },
+      data: { status: errorCount >= slidesToGen.length ? 'error' : 'completed' },
     })
 
     const slides = await prisma.doyaSlideSlide.findMany({ where: { projectId }, orderBy: { index: 'asc' } })
-    return NextResponse.json({ slides, errorCount })
+    return NextResponse.json({ slides, errorCount, skipped, limit })
   } catch (e: any) {
     console.error('[doyaslide/generate]', e?.message)
     return NextResponse.json({ error: '生成に失敗しました' }, { status: 500 })

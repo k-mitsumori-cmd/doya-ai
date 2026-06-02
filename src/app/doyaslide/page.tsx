@@ -60,10 +60,14 @@ export default function DoyaSlideDashboard() {
     <div className="p-6 lg:p-10 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
-          <img src="/character/present.png" alt="" className="w-14 h-14 object-contain hidden sm:block" />
           <div>
-            <h1 className="text-3xl font-black text-slate-900">ドヤスライド</h1>
-            <p className="text-slate-500 font-bold mt-1">全スライドをAI画像でド派手に生成</p>
+            <h1 className="sr-only">ドヤスライド</h1>
+            <img
+              src="/doyaslide/logo.png"
+              alt="ドヤスライド — SaaSサービス向けプレゼン作成ツール"
+              className="h-14 sm:h-16 w-auto object-contain"
+            />
+            <p className="text-slate-500 font-bold mt-1 hidden sm:block">全スライドをAI画像でド派手に生成</p>
           </div>
         </div>
         <Link

@@ -107,12 +107,13 @@ export function middleware(req: NextRequest) {
   if (slideHosts.length > 0 && matchHost(host, slideHosts)) {
     if (shouldSkip(pathname)) return NextResponse.next()
 
-    if (pathname === '/slide' || pathname.startsWith('/slide/')) {
+    // 旧 /slide は廃止しドヤスライド（/doyaslide）へ統一。スライド専用ドメインも /doyaslide を配信
+    if (pathname === '/doyaslide' || pathname.startsWith('/doyaslide/')) {
       return NextResponse.next()
     }
 
     const url = req.nextUrl.clone()
-    url.pathname = pathname === '/' ? '/slide' : `/slide${pathname}`
+    url.pathname = pathname === '/' ? '/doyaslide' : `/doyaslide${pathname}`
     return NextResponse.rewrite(url)
   }
 

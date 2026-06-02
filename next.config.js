@@ -91,6 +91,38 @@ const nextConfig = {
         destination: '/seo',
         permanent: false,
       },
+      // 旧スライド（Gemini→Googleスライド型）は廃止し、ドヤスライド（/doyaslide）に統一
+      {
+        source: '/slide/create',
+        destination: '/doyaslide/new',
+        permanent: false,
+      },
+      {
+        source: '/slide',
+        destination: '/doyaslide',
+        permanent: false,
+      },
+      {
+        source: '/slide/:path*',
+        destination: '/doyaslide',
+        permanent: false,
+      },
+      // SlashSlide（別ブランドの旧スライド）もドヤスライド（/doyaslide）に統一
+      {
+        source: '/slashslide/create',
+        destination: '/doyaslide/new',
+        permanent: false,
+      },
+      {
+        source: '/slashslide',
+        destination: '/doyaslide',
+        permanent: false,
+      },
+      {
+        source: '/slashslide/:path*',
+        destination: '/doyaslide',
+        permanent: false,
+      },
     ]
   },
 }

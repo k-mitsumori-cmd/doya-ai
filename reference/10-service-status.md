@@ -51,8 +51,9 @@
 | ドヤSwipe | `/seo/swipe` | maintenance | ❌ | 🔗 SEO内 | ✅ 11件 | ✅ 3モデル | 🔗 SEO | ✅ |
 | ドヤオープニングAI | `/opening` | maintenance | ✅ | ✅ | ✅ 5件 | ✅ 2モデル | ❌ | ❌ |
 | ドヤWeb診断AI | `/shindan` | maintenance | ✅ | ✅ 3頁 | ❌ | ❌ | ❌ | ✅ |
-| ドヤスライド | `/slide` | maintenance | ❌ | ✅ 3頁 | ✅ 2件 | ⚠️汎用 | ❌ | ✅ |
-| SlashSlide | `/slashslide` | maintenance | ❌ | ✅ 3頁 | ✅ 2件 | ⚠️汎用 | ❌ | 🔗 slide |
+| ドヤスライド | `/doyaslide` | coming_soon | ✅ | ✅ 7頁 | ✅ 13件 | ✅ 5モデル | ✅ 統一プラン | ✅ |
+| 旧スライド | `/slide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
+| 旧SlashSlide | `/slashslide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
 | ドヤHR | `/hr` | active | ✅ | ✅ 14頁 | ✅ 30件 | ✅ 10モデル | ✅ 統一プラン | ❌ |
 | ドヤ勤怠 | `/kintai` | active | ✅ | ✅ | ✅ | ✅ | ✅ 統一プラン | ❌ |
 | ドヤリスト | `/doyalist` | active | ✅ | ✅ 7頁 | ✅ 11件 | ✅ 4モデル | ✅ 統一プラン | ✅ |
@@ -223,6 +224,23 @@ type ServiceId = 'seo' | 'banner' | 'interview' | 'copy' | 'lp' | 'voice' | 'mov
 | **課金** | ✅ 統一プラン | ServiceId: hr |
 | **ドキュメント** | ❌ | 未作成 |
 
+### ドヤスライド (`doyaslide`)【新・画像主体】
+
+| 項目 | 状態 | 詳細 |
+|------|------|------|
+| **ステータス** | coming_soon | services.ts 登録済み・公開判断待ち |
+| **カテゴリ** | image | 全スライドを gpt-image-2 で1枚絵フル生成 |
+| **ページ** | ✅ 7頁 | `src/app/doyaslide/` — page/new/[id]/pricing + layout/error/not-found |
+| **API** | ✅ 13件 | `src/app/api/doyaslide/` — projects, structure, generate, analyze, export, style-preview, slides/[id]/(chat,regenerate,revert), assets/logo, logo-config, usage |
+| **Lib** | ✅ 10 | `src/lib/doyaslide/` — generate, prompts, constants(12スタイル), limits, access, storage, logo, scrape, templates, types |
+| **DBモデル** | ✅ 5モデル | DoyaSlideProject / Slide / Asset / ChatMessage / Version (`doyaslide_*`) |
+| **画像生成** | ✅ | `generateImageWithFallback()`（gpt-image-2 / fallback nano-banana-pro-preview） |
+| **課金** | ✅ 統一プラン | ServiceId: doyaslide（User.plan判定・limits.ts） |
+| **ドキュメント** | ✅ | reference/services/doyaslide.md |
+| **残タスク** | ⚠️ | active化 / public/doyaslide/logo.png / /guide |
+
+> 旧 `/slide`・`/slashslide`（Googleスライド下書き型）はこのサービスに統合し **deprecated**（`/doyaslide` へリダイレクト）。
+
 ### 12. カンタンマーケAI (`kantan`)
 
 | 項目 | 状態 | 詳細 |
@@ -243,8 +261,8 @@ type ServiceId = 'seo' | 'banner' | 'interview' | 'copy' | 'lp' | 'voice' | 'mov
 | ドヤSwipe | `/seo/swipe` | maintenance | 🔗 SEO内 | ✅ 11件 | SEOサブ機能 |
 | ドヤオープニングAI | `/opening` | maintenance | ✅ | ✅ 5件 | アニメーション生成 |
 | ドヤWeb診断AI | `/shindan` | maintenance | ✅ 3頁 | ❌ | 仕様定義のみ |
-| ドヤスライド | `/slide` | maintenance | ✅ 3頁 | ✅ 2件 | services.ts未登録 |
-| SlashSlide | `/slashslide` | maintenance | ✅ 3頁 | ✅ 2件 | services.ts未登録 |
+| 旧スライド | `/slide` | deprecated | 🔗 /doyaslide | 🔗 旧 | /doyaslideへ統合・リダイレクト |
+| 旧SlashSlide | `/slashslide` | deprecated | 🔗 /doyaslide | 🔗 旧 | /doyaslideへ統合・リダイレクト |
 | 管理画面 | `/admin` | active | ✅ 15頁 | ✅ 16件+ | 独自認証 |
 
 ---
@@ -263,7 +281,7 @@ type ServiceId = 'seo' | 'banner' | 'interview' | 'copy' | 'lp' | 'voice' | 'mov
 
 | # | 対応内容 | 対象サービス | 理由 |
 |---|---------|-------------|------|
-| 4 | services.ts 登録 | スライド, SlashSlide | 実装済みなのに未登録 |
+| 4 | coming_soon → active 移行 | ドヤスライド | 実装完了・公開判断待ち（旧 /slide・/slashslide は /doyaslide へ統合・廃止済み） |
 | 5 | shindan 実装判断 | 診断AI | services.ts登録済みだが実装ゼロ |
 | 6 | オープニングAI ドキュメント | Opening | 実装済みだがドキュメント未作成 |
 
@@ -315,3 +333,4 @@ grep "^model " prisma/schema.prisma
 | 2026-02-20 | ドヤオープニングAI (opening) を追加。Slack通知/Cronジョブ/GTM・HubSpot連携の運用機能を全ドキュメントに反映。README.md全面改訂 |
 | 2026-02-22 | opening→maintenance、tenkai→coming_soon、persona/tenkai/opening services.ts登録反映。サイドバー共通コンポーネント化 (`src/components/sidebar/`) |
 | 2026-05-27 | 大規模更新: AdSim/Copy/LP/Voice/Movie/HR追加。統一プラン方式反映。Prisma 103モデル・API 327件に実態合わせ。tenkai.md新規作成 |
+| 2026-06-02 | ドヤスライド刷新: 画像主体の新 `/doyaslide`（gpt-image-2フル生成・5モデル・13API・12スタイル）を追加。旧 `/slide`・`/slashslide` を deprecated とし `/doyaslide` へリダイレクト統合。doyaslide.md 新規作成・slide.md に廃止記録追記 |
