@@ -5,6 +5,7 @@
 // 低レイテンシ優先で gemini-2.0-flash、失敗時は gpt-4o にフォールバック。
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { withTimeout, raceTimeout } from '@/lib/fetch-timeout'
+import { getMode } from './modes'
 import type {
   AnswerSource,
   ApplicantProfileLite,
@@ -24,15 +25,12 @@ export interface BuildAnswerParams {
 }
 
 function buildPrompt(p: BuildAnswerParams): { prompt: string; sources: AnswerSource[] } {
+  const def = getMode(p.mode)
   const sources: AnswerSource[] = []
-  const lines: string[] = []
+  const lines: string[] = [...def.persona]
 
-  if (p.mode === 'sales') {
-    lines.push(
-      'あなたは商談に同席する優秀なセールスアシスタントです。',
-      '見込み顧客からの質問に対し、自社サービス情報（参考情報）に基づいた回答案を作ります。',
-      '参考情報に無いことは断定せず、不明な点は「確認してご連絡します」と促してください。'
-    )
+  // コンテキスト注入（モード定義に従う）
+  if (def.context === 'knowledge') {
     if (p.chunks && p.chunks.length > 0) {
       lines.push('', '--- 自社サービス参考情報 ---')
       p.chunks.forEach((c, i) => {
@@ -43,12 +41,7 @@ function buildPrompt(p: BuildAnswerParams): { prompt: string; sources: AnswerSou
     } else {
       lines.push('', '※ 参考情報が未登録のため、一般的なベストプラクティスで回答してください。')
     }
-  } else {
-    lines.push(
-      'あなたは採用面接を受ける求職者をサポートするコーチです。',
-      '面接官の質問に対し、応募先企業に最適化した回答案を作ります。',
-      '誇張や虚偽は避け、応募者の経歴に基づく誠実な回答にしてください。'
-    )
+  } else if (def.context === 'company') {
     if (p.company) {
       lines.push('', '--- 応募先企業 ---')
       if (p.company.companyName) lines.push(`企業名: ${p.company.companyName}`)
@@ -64,17 +57,17 @@ function buildPrompt(p: BuildAnswerParams): { prompt: string; sources: AnswerSou
   }
 
   if (p.recentTranscript) {
-    lines.push('', `直近の会話の流れ: ${p.recentTranscript}`)
+    lines.push('', `直近の流れ: ${p.recentTranscript}`)
   }
 
   lines.push(
     '',
-    `面接官/相手の質問: 「${p.question}」`,
+    `${def.inputLabel}: 「${p.question}」`,
     '',
     '次の形式で、日本語・JSONのみを出力してください（マークダウン・コードフェンス禁止）:',
     '{',
-    '  "summary": "3秒で読める一言回答（30文字程度）",',
-    '  "script": "そのまま読み上げられる自然な回答（2〜4文）"',
+    `  "summary": "${def.outputHint.summary}",`,
+    `  "script": "${def.outputHint.script}"`,
     '}'
   )
 

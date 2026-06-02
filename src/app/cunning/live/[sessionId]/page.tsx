@@ -6,6 +6,8 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { looksLikeQuestion } from '@/lib/cunning/classify'
+import { getMode } from '@/lib/cunning/modes'
+import type { CunningMode } from '@/lib/cunning/types'
 
 interface AnswerCard {
   id: string
@@ -52,6 +54,9 @@ export default function CunningLivePage() {
   const [prep, setPrep] = useState<{ question: string; summary: string; script: string }[]>([])
   const [prepLoading, setPrepLoading] = useState(false)
   const [showPrep, setShowPrep] = useState(false)
+  const [mode, setMode] = useState<CunningMode>('sales')
+  const modeDef = getMode(mode)
+  const entertainment = modeDef.category === 'entertainment'
 
   const streamRef = useRef<MediaStream | null>(null)
   const audioStreamRef = useRef<MediaStream | null>(null)
@@ -66,6 +71,7 @@ export default function CunningLivePage() {
   const levelTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pipWindowRef = useRef<Window | null>(null) // 最新のPiPウィンドウ（アンマウント時に確実に閉じる）
   const remainingSecRef = useRef<number | null>(null) // 当月の残り利用秒（-1/未取得は null=無制限扱い）
+  const modeRef = useRef<CunningMode>('sales') // 最新モード（録音ループのクロージャから参照）
 
 // 無音判定の閾値（getByteTimeDomainData の 128 からの最大偏差）。これ未満の窓は送らない。
 const SILENCE_PEAK = 8
@@ -89,6 +95,19 @@ const SILENCE_PEAK = 8
   useEffect(() => {
     pipWindowRef.current = pipWindow
   }, [pipWindow])
+
+  // セッションのモードを取得（トリガー挙動・表示の切替）
+  useEffect(() => {
+    fetch(`/api/cunning/sessions/${sessionId}`, { cache: 'no-store' })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.session?.mode) {
+          setMode(d.session.mode)
+          modeRef.current = d.session.mode
+        }
+      })
+      .catch(() => {})
+  }, [sessionId])
 
   // 当月の残り利用時間を取得（セッション中のオートストップ判定用）
   useEffect(() => {
@@ -208,7 +227,10 @@ const SILENCE_PEAK = 8
         lastLineRef.current = text
         setLines((prev) => [...prev.slice(-80), { id: `l-${Date.now()}-${prev.length}`, text }])
         recentRef.current.push(text)
-        if (looksLikeQuestion(text)) requestAnswer(text)
+        // エンタメ系(trigger:any)は相手の発話全般に反応、ビジネス系は質問のみ
+        const shouldReply =
+          getMode(modeRef.current).trigger === 'any' ? text.length >= 5 : looksLikeQuestion(text)
+        if (shouldReply) requestAnswer(text)
       } catch {
         /* 1チャンクの失敗は無視して継続 */
       }
@@ -385,6 +407,9 @@ const SILENCE_PEAK = 8
             <span className="text-sm font-mono font-bold text-slate-500">
               {mm}:{ss}
             </span>
+            <span className="ml-1 inline-flex items-center gap-1 text-xs font-black text-[#0B5CFF] bg-blue-50 rounded-full px-2.5 py-1">
+              {modeDef.icon} {modeDef.label}
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -392,7 +417,7 @@ const SILENCE_PEAK = 8
             onClick={pipWindow ? () => pipWindow.close() : openPip}
             title="カンペを別ウィンドウで前面表示"
             className={`px-3 py-2.5 rounded-full font-black text-sm transition-all ${
-              pipWindow ? 'bg-[#7f19e6] text-white' : 'bg-white text-[#7f19e6] shadow-sm hover:shadow'
+              pipWindow ? 'bg-[#0B5CFF] text-white' : 'bg-white text-[#0B5CFF] shadow-sm hover:shadow'
             }`}
           >
             <span className="material-symbols-outlined align-middle text-lg">picture_in_picture_alt</span>
@@ -407,7 +432,7 @@ const SILENCE_PEAK = 8
           ) : (
             <button
               onClick={start}
-              className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#7f19e6] to-fuchsia-600 text-white font-black shadow-lg hover:shadow-xl transition-all"
+              className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#0B5CFF] to-blue-600 text-white font-black shadow-lg hover:shadow-xl transition-all"
             >
               🎤 ライブ開始
             </button>
@@ -419,17 +444,25 @@ const SILENCE_PEAK = 8
 
       {/* 初回オンボーディング（音声共有の躓き対策） */}
       {!running && (
-        <div className="mb-4 bg-purple-50 border border-purple-100 rounded-2xl p-4">
-          <p className="font-black text-[#7f19e6] text-sm mb-2 flex items-center gap-1">
+        <div className="mb-4 bg-blue-50 border border-blue-100 rounded-2xl p-4">
+          <p className="font-black text-[#0B5CFF] text-sm mb-2 flex items-center gap-1">
             <span className="material-symbols-outlined text-base">tips_and_updates</span>使い方（重要）
           </p>
           <ol className="text-xs font-bold text-slate-600 space-y-1 list-decimal list-inside leading-relaxed">
-            <li>会議（Meet / Zoom）を<strong>ブラウザのタブ</strong>で開く（Chrome / Edge 推奨）</li>
-            <li>「🎤 ライブ開始」→ 共有ダイアログで<strong>その会議タブ</strong>を選択</li>
+            <li>
+              {entertainment ? '配信/動画（YouTube等）' : '会議（Meet / Zoom）'}を
+              <strong>ブラウザのタブ</strong>で開く（Chrome / Edge 推奨）
+            </li>
+            <li>「🎤 ライブ開始」→ 共有ダイアログで<strong>そのタブ</strong>を選択</li>
             <li>
               ダイアログ左下の「<strong>タブの音声も共有</strong>」に必ず<strong>チェック</strong>（これが無いと相手の声を解析できません）
             </li>
-            <li>相手の質問を検出すると、映像の下とPiPにカンペが出ます。自分のマイクは不要です</li>
+            <li>
+              {entertainment
+                ? '相手のコメント・発話に即レスのカンペが、映像の下とPiPに出ます'
+                : '相手の質問を検出すると、映像の下とPiPにカンペが出ます'}
+              。自分のマイクは不要です。コメントは手入力でもOK
+            </li>
           </ol>
         </div>
       )}
@@ -440,12 +473,12 @@ const SILENCE_PEAK = 8
           value={manualQ}
           onChange={(e) => setManualQ(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && manualAsk()}
-          placeholder="質問を手入力してカンペを出す（例: 料金プランは？）"
+          placeholder={modeDef.manualPlaceholder}
           className="flex-1 rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-sm"
         />
         <button
           onClick={manualAsk}
-          className="px-4 py-2.5 rounded-xl bg-[#7f19e6] text-white font-black text-sm whitespace-nowrap"
+          className="px-4 py-2.5 rounded-xl bg-[#0B5CFF] text-white font-black text-sm whitespace-nowrap"
         >
           質問する
         </button>
@@ -455,7 +488,7 @@ const SILENCE_PEAK = 8
       <div className="mb-4">
         <button
           onClick={prep.length === 0 && !showPrep ? loadPrep : () => setShowPrep((v) => !v)}
-          className="flex items-center gap-2 text-sm font-black text-[#7f19e6]"
+          className="flex items-center gap-2 text-sm font-black text-[#0B5CFF]"
         >
           <span className="material-symbols-outlined text-lg">lightbulb</span>
           想定問答を準備
@@ -475,25 +508,25 @@ const SILENCE_PEAK = 8
             ) : (
               <>
                 <div className="flex justify-end">
-                  <button onClick={loadPrep} className="text-xs font-black text-slate-400 hover:text-[#7f19e6]">
+                  <button onClick={loadPrep} className="text-xs font-black text-slate-400 hover:text-[#0B5CFF]">
                     再生成
                   </button>
                 </div>
                 {prep.map((p, i) => (
-                  <div key={i} className="bg-purple-50 rounded-xl p-3 border border-purple-100">
-                    <p className="text-xs font-black text-[#7f19e6] mb-1">Q. {p.question}</p>
+                  <div key={i} className="bg-blue-50 rounded-xl p-3 border border-blue-100">
+                    <p className="text-xs font-black text-[#0B5CFF] mb-1">Q. {p.question}</p>
                     <p className="text-sm font-black text-slate-800">{p.summary}</p>
                     {p.script && <p className="text-xs text-slate-600 font-medium mt-1 leading-relaxed">{p.script}</p>}
                     <div className="mt-2 flex gap-3">
                       <button
                         onClick={() => copyText(p.script || p.summary)}
-                        className="text-[11px] font-black text-slate-500 hover:text-[#7f19e6]"
+                        className="text-[11px] font-black text-slate-500 hover:text-[#0B5CFF]"
                       >
                         コピー
                       </button>
                       <button
                         onClick={() => requestAnswer(p.question, { force: true })}
-                        className="text-[11px] font-black text-slate-500 hover:text-[#7f19e6]"
+                        className="text-[11px] font-black text-slate-500 hover:text-[#0B5CFF]"
                       >
                         この質問で回答
                       </button>
@@ -521,7 +554,7 @@ const SILENCE_PEAK = 8
             )}
             {latest && (
               <div className="absolute left-0 right-0 bottom-0 p-3 sm:p-5 bg-gradient-to-t from-black/95 via-black/75 to-transparent">
-                <p className="text-[10px] font-black text-fuchsia-300 mb-1 truncate">💬 {latest.question}</p>
+                <p className="text-[10px] font-black text-sky-300 mb-1 truncate">💬 {latest.question}</p>
                 {latest.loading ? (
                   <p className="text-white/85 font-bold flex items-center gap-2">
                     <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
@@ -576,7 +609,7 @@ const SILENCE_PEAK = 8
             </div>
           ) : (
             answers.map((a) => (
-              <div key={a.id} className="bg-white rounded-2xl shadow-sm p-4 border-l-4 border-[#7f19e6]">
+              <div key={a.id} className="bg-white rounded-2xl shadow-sm p-4 border-l-4 border-[#0B5CFF]">
                 <p className="text-xs font-bold text-slate-400 mb-1">質問: {a.question}</p>
                 {a.loading ? (
                   <div className="flex items-center gap-2 text-slate-500 font-bold py-2">
@@ -596,7 +629,7 @@ const SILENCE_PEAK = 8
                         {a.sources.map((s, i) => (
                           <span
                             key={i}
-                            className="text-[11px] font-bold text-[#7f19e6] bg-purple-50 rounded-full px-2.5 py-1"
+                            className="text-[11px] font-bold text-[#0B5CFF] bg-blue-50 rounded-full px-2.5 py-1"
                           >
                             {s.label}
                           </span>
@@ -606,13 +639,13 @@ const SILENCE_PEAK = 8
                     <div className="mt-3 flex items-center gap-3">
                       <button
                         onClick={() => copyAnswer(a)}
-                        className="text-xs font-black text-slate-500 hover:text-[#7f19e6] flex items-center gap-1"
+                        className="text-xs font-black text-slate-500 hover:text-[#0B5CFF] flex items-center gap-1"
                       >
                         <span className="material-symbols-outlined text-sm">content_copy</span>コピー
                       </button>
                       <button
                         onClick={() => requestAnswer(a.question, { force: true })}
-                        className="text-xs font-black text-slate-500 hover:text-[#7f19e6] flex items-center gap-1"
+                        className="text-xs font-black text-slate-500 hover:text-[#0B5CFF] flex items-center gap-1"
                       >
                         <span className="material-symbols-outlined text-sm">refresh</span>もう一度
                       </button>
@@ -632,7 +665,7 @@ const SILENCE_PEAK = 8
           <div style={{ padding: 16, color: '#fff', fontFamily: 'system-ui, sans-serif' }}>
             {latest ? (
               <>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#e879f9', marginBottom: 6 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#7CC4FF', marginBottom: 6 }}>
                   💬 {latest.question}
                 </div>
                 {latest.loading ? (

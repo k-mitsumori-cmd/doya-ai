@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
 import { canStartSession } from '@/lib/cunning/limits'
+import { MODES, MODE_IDS } from '@/lib/cunning/modes'
+import type { CunningMode } from '@/lib/cunning/types'
 
 // GET /api/cunning/sessions — セッション一覧
 export async function GET() {
@@ -40,8 +42,8 @@ export async function POST(req: NextRequest) {
   if (!can.ok) return NextResponse.json({ error: can.reason }, { status: 403 })
 
   const body = await req.json().catch(() => ({}))
-  const mode = body.mode === 'interview' ? 'interview' : 'sales'
-  const title = (body.title as string)?.trim() || (mode === 'interview' ? '面接セッション' : '商談セッション')
+  const mode: CunningMode = MODE_IDS.includes(body.mode) ? body.mode : 'sales'
+  const title = (body.title as string)?.trim() || `${MODES[mode].label}セッション`
 
   const session = await prisma.cunningSession.create({
     data: {

@@ -99,7 +99,7 @@ export default function CunningKnowledgePage() {
         <button
           onClick={createKB}
           disabled={busy}
-          className="px-5 py-3 rounded-xl bg-[#7f19e6] text-white font-black disabled:opacity-50"
+          className="px-5 py-3 rounded-xl bg-[#0B5CFF] text-white font-black disabled:opacity-50"
         >
           作成
         </button>
@@ -111,7 +111,7 @@ export default function CunningKnowledgePage() {
           <div
             key={b.id}
             className={`flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm border-2 cursor-pointer ${
-              selected === b.id ? 'border-[#7f19e6]' : 'border-transparent'
+              selected === b.id ? 'border-[#0B5CFF]' : 'border-transparent'
             }`}
             onClick={() => setSelected(b.id)}
           >
@@ -122,7 +122,7 @@ export default function CunningKnowledgePage() {
             <div className="flex items-center gap-3" onClick={(e) => e.stopPropagation()}>
               <Link
                 href={`/cunning/knowledge/${b.id}`}
-                className="text-xs font-black text-[#7f19e6] hover:underline"
+                className="text-xs font-black text-[#0B5CFF] hover:underline"
               >
                 管理
               </Link>
@@ -145,7 +145,7 @@ export default function CunningKnowledgePage() {
                 key={t}
                 onClick={() => setIngestType(t)}
                 className={`px-4 py-2 rounded-full text-sm font-black ${
-                  ingestType === t ? 'bg-[#7f19e6] text-white' : 'bg-slate-100 text-slate-500'
+                  ingestType === t ? 'bg-[#0B5CFF] text-white' : 'bg-slate-100 text-slate-500'
                 }`}
               >
                 {t === 'text' ? 'テキスト' : 'URL'}
@@ -171,7 +171,7 @@ export default function CunningKnowledgePage() {
           <button
             onClick={ingest}
             disabled={busy}
-            className="mt-3 px-5 py-3 rounded-xl bg-[#7f19e6] text-white font-black disabled:opacity-50"
+            className="mt-3 px-5 py-3 rounded-xl bg-[#0B5CFF] text-white font-black disabled:opacity-50"
           >
             {busy ? '取り込み中…' : '取り込む'}
           </button>

@@ -177,21 +177,21 @@ export const doyaslideTheme: SidebarTheme = {
   zapColor: 'text-sky-300',
 }
 
-// ドヤカンニング（リアルタイム回答支援 / ブランド紫 #7f19e6 系）
+// ドヤカンニング（リアルタイム回答支援 / Zoom風の青系）
 export const cunningTheme: SidebarTheme = {
-  bgGradient: 'bg-gradient-to-b from-[#7f19e6] via-[#6b12c9] to-[#3f0a82]',
-  navText: 'text-purple-100/80',
-  navTextIcon: 'text-fuchsia-200/75',
-  sectionText: 'text-fuchsia-200/55',
-  toggleText: 'text-[#7f19e6]',
-  toggleHover: 'hover:bg-purple-50',
-  brandingText: 'text-purple-200/40',
-  profileBg: 'bg-purple-900/30',
-  avatarBg: 'bg-[#7f19e6]',
-  loginText: 'text-[#7f19e6]',
-  loginHover: 'hover:bg-purple-50',
-  aiBubbleBg: 'bg-purple-700/40',
-  zapColor: 'text-fuchsia-300',
+  bgGradient: 'bg-gradient-to-b from-[#2D8CFF] via-[#1A6CF0] to-[#0B43C9]',
+  navText: 'text-blue-50/85',
+  navTextIcon: 'text-sky-100/80',
+  sectionText: 'text-sky-100/60',
+  toggleText: 'text-[#0B5CFF]',
+  toggleHover: 'hover:bg-blue-50',
+  brandingText: 'text-blue-100/40',
+  profileBg: 'bg-blue-900/30',
+  avatarBg: 'bg-[#2D8CFF]',
+  loginText: 'text-[#0B5CFF]',
+  loginHover: 'hover:bg-blue-50',
+  aiBubbleBg: 'bg-blue-700/40',
+  zapColor: 'text-sky-200',
 }
 
 // ドヤHR（タレントマネジメント / Sky→Blue→Indigo 系）

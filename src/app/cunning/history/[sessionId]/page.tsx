@@ -64,7 +64,7 @@ export default function CunningSessionReview() {
       <div className="flex justify-end mb-4">
         <Link
           href={`/cunning/live/${session.id}`}
-          className="px-4 py-2 rounded-full bg-gradient-to-r from-[#7f19e6] to-fuchsia-600 text-white font-black text-sm"
+          className="px-4 py-2 rounded-full bg-gradient-to-r from-[#0B5CFF] to-blue-600 text-white font-black text-sm"
         >
           このセッションを再開
         </Link>
@@ -76,7 +76,7 @@ export default function CunningSessionReview() {
           <p className="text-slate-400 font-bold text-sm">回答はありません</p>
         ) : (
           session.answers.map((a) => (
-            <div key={a.id} className="bg-white rounded-2xl shadow-sm p-4 border-l-4 border-[#7f19e6]">
+            <div key={a.id} className="bg-white rounded-2xl shadow-sm p-4 border-l-4 border-[#0B5CFF]">
               <p className="text-xs font-bold text-slate-400 mb-1">質問: {a.questionText}</p>
               <p className="text-base font-black text-slate-900 leading-snug">{a.summary}</p>
               {a.script && (
@@ -87,7 +87,7 @@ export default function CunningSessionReview() {
               {a.sources && a.sources.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {a.sources.map((s, i) => (
-                    <span key={i} className="text-[11px] font-bold text-[#7f19e6] bg-purple-50 rounded-full px-2.5 py-1">
+                    <span key={i} className="text-[11px] font-bold text-[#0B5CFF] bg-blue-50 rounded-full px-2.5 py-1">
                       {s.label}
                     </span>
                   ))}

@@ -4,6 +4,7 @@
 // セッションのコンテキスト（商談=ナレッジ / 面接=企業×応募者）から、相手が聞いてきそうな
 // 質問と回答案を事前生成する。本番のライブ前に目を通す「想定問答カンペ」。
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { getMode } from './modes'
 import type {
   ApplicantProfileLite,
   CompanyProfileLite,
@@ -27,14 +28,10 @@ export interface BuildPrepParams {
 
 export async function generatePrep(p: BuildPrepParams): Promise<PrepItem[]> {
   const count = Math.min(Math.max(p.count || 6, 3), 10)
-  const lines: string[] = []
+  const def = getMode(p.mode)
+  const lines: string[] = [...def.persona, '', `${def.prepInstruction}（${count}件）`]
 
-  if (p.mode === 'sales') {
-    lines.push(
-      'あなたは商談準備を支援するセールスコーチです。',
-      `見込み顧客が商談で聞いてきそうな質問・懸念・反論を${count}件想定し、それぞれに自社サービス情報に基づく回答案を作ってください。`,
-      '価格・導入・他社比較・サポート・セキュリティ等、実際に出やすい論点を優先。'
-    )
+  if (def.context === 'knowledge') {
     if (p.chunks && p.chunks.length > 0) {
       lines.push('', '--- 自社サービス参考情報 ---')
       p.chunks.forEach((c, i) => lines.push(`[${i + 1}] ${c.content}`))
@@ -42,12 +39,7 @@ export async function generatePrep(p: BuildPrepParams): Promise<PrepItem[]> {
     } else {
       lines.push('', '※参考情報が無いため、一般的なSaaS商談で出やすい質問で作成。')
     }
-  } else {
-    lines.push(
-      'あなたは採用面接対策コーチです。',
-      `面接官がこの企業の面接で聞いてきそうな質問を${count}件想定し、応募者に最適化した回答案を作ってください。`,
-      '志望動機・強み弱み・経験・カルチャーフィット・逆質問など、頻出の論点を優先。誇張・虚偽は避ける。'
-    )
+  } else if (def.context === 'company') {
     if (p.company) {
       lines.push('', '--- 応募先企業 ---')
       if (p.company.companyName) lines.push(`企業名: ${p.company.companyName}`)
@@ -64,7 +56,7 @@ export async function generatePrep(p: BuildPrepParams): Promise<PrepItem[]> {
   lines.push(
     '',
     '次の形式のJSONのみを出力（マークダウン・コードフェンス禁止）:',
-    '{ "items": [ { "question": "想定質問", "summary": "一言回答(30文字程度)", "script": "話すスクリプト(2〜4文)" } ] }',
+    `{ "items": [ { "question": "${def.inputLabel}の例", "summary": "${def.outputHint.summary}", "script": "${def.outputHint.script}" } ] }`,
     `items は ${count} 件。`
   )
 

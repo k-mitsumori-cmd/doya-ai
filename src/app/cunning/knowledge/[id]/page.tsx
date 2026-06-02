@@ -88,7 +88,7 @@ export default function CunningKnowledgeDetail() {
               key={t}
               onClick={() => setIngestType(t)}
               className={`px-4 py-2 rounded-full text-sm font-black ${
-                ingestType === t ? 'bg-[#7f19e6] text-white' : 'bg-slate-100 text-slate-500'
+                ingestType === t ? 'bg-[#0B5CFF] text-white' : 'bg-slate-100 text-slate-500'
               }`}
             >
               {t === 'text' ? 'テキスト' : 'URL'}
@@ -114,7 +114,7 @@ export default function CunningKnowledgeDetail() {
         <button
           onClick={ingest}
           disabled={busy}
-          className="mt-3 px-5 py-3 rounded-xl bg-[#7f19e6] text-white font-black disabled:opacity-50"
+          className="mt-3 px-5 py-3 rounded-xl bg-[#0B5CFF] text-white font-black disabled:opacity-50"
         >
           {busy ? '取り込み中…' : '取り込む'}
         </button>

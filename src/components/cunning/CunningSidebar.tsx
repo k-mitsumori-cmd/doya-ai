@@ -129,31 +129,31 @@ function CunningSidebarImpl({
               <div className="hidden md:block relative z-10">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
-                    <Zap className="w-4 h-4 text-[#7f19e6] fill-[#7f19e6]" />
+                    <Zap className="w-4 h-4 text-[#0B5CFF] fill-[#0B5CFF]" />
                   </div>
                   <p className="text-xs font-black text-white">プラン案内</p>
                 </div>
                 <p className="text-[11px] text-white font-bold leading-relaxed mb-1">
                   現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}
                 </p>
-                <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-80">プロプラン：¥9,980/月</p>
+                <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">プロプラン：¥9,980/月</p>
                 <Link
                   href="/pricing"
-                  className="mt-3 w-full py-2 bg-white text-[#7f19e6] text-[11px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md block text-center"
+                  className="mt-3 w-full py-2 bg-white text-[#0B5CFF] text-[11px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md block text-center"
                 >
                   プロにアップグレード
                 </Link>
               </div>
               <Link href="/pricing" className="md:hidden relative z-10 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
-                  <Zap className="w-4 h-4 text-[#7f19e6] fill-[#7f19e6]" />
+                  <Zap className="w-4 h-4 text-[#0B5CFF] fill-[#0B5CFF]" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[11px] text-white font-bold leading-snug truncate">
                     {planLabel === 'GUEST' ? 'ゲスト' : planLabel} → プロ
                   </p>
                 </div>
-                <span className="flex-shrink-0 px-3 py-1.5 bg-white text-[#7f19e6] text-[10px] font-black rounded-lg shadow-md whitespace-nowrap">
+                <span className="flex-shrink-0 px-3 py-1.5 bg-white text-[#0B5CFF] text-[10px] font-black rounded-lg shadow-md whitespace-nowrap">
                   UP
                 </span>
               </Link>

@@ -101,7 +101,7 @@ export default function CunningCompanyPage() {
           <button
             onClick={analyze}
             disabled={analyzing}
-            className="px-5 py-3 rounded-xl bg-[#7f19e6] text-white font-black disabled:opacity-50"
+            className="px-5 py-3 rounded-xl bg-[#0B5CFF] text-white font-black disabled:opacity-50"
           >
             {analyzing ? '解析中…' : '解析'}
           </button>
@@ -144,7 +144,7 @@ export default function CunningCompanyPage() {
         <button
           onClick={saveProfile}
           disabled={savingProfile}
-          className="mt-3 px-5 py-3 rounded-xl bg-[#7f19e6] text-white font-black disabled:opacity-50"
+          className="mt-3 px-5 py-3 rounded-xl bg-[#0B5CFF] text-white font-black disabled:opacity-50"
         >
           {savingProfile ? '保存中…' : '保存'}
         </button>
@@ -152,7 +152,7 @@ export default function CunningCompanyPage() {
         {applicants.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
             {applicants.map((a) => (
-              <span key={a.id} className="text-xs font-bold text-[#7f19e6] bg-purple-50 rounded-full px-3 py-1.5">
+              <span key={a.id} className="text-xs font-bold text-[#0B5CFF] bg-blue-50 rounded-full px-3 py-1.5">
                 {a.name}
               </span>
             ))}
