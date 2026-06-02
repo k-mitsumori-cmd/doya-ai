@@ -312,17 +312,21 @@ function EditorInner() {
     if (!allDone && !confirm('未生成のスライドがあります。完成分のみ書き出しますか？')) return
     setExporting(fmt)
     try {
+      // サーバはVercelの本文サイズ上限回避のため、生成物URL(JSON)を返す → URLからCDN直DL
       const res = await fetch(`/api/doyaslide/export?projectId=${id}&format=${fmt}`, { cache: 'no-store' })
-      if (!res.ok) throw new Error('書き出しに失敗しました')
-      const blob = await res.blob()
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok || !d?.url) throw new Error(d?.error || '書き出しに失敗しました')
       const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      const safe = (project.title || 'doyaslide').replace(/[^\w\-ぁ-んァ-ヶ一-龠]/g, '_').slice(0, 40) || 'doyaslide'
-      a.download = `${safe}.${fmt}`
+      a.href = d.url
+      a.download = d.filename || `doyaslide.${fmt}`
       document.body.appendChild(a)
       a.click()
       a.remove()
-      URL.revokeObjectURL(a.href)
+      if (d.skipped > 0) {
+        toast(`${d.skipped}枚は画像取得に失敗したため除外しました`, { icon: '⚠️' })
+      } else {
+        toast.success('書き出しました')
+      }
     } catch (e: any) {
       toast.error(e.message)
     } finally {

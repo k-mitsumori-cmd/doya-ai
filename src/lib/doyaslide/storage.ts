@@ -104,6 +104,33 @@ export async function uploadStylePreview(style: string, base64: string, page = 0
   return url
 }
 
+/**
+ * 書き出しファイル(PDF/ZIP)を保存し、ダウンロード用の公開URLを返す。
+ * Vercel Functions のレスポンス本文上限(約4.5MB)を回避するため、生成物は
+ * バイナリ直返しせず Storage 経由でCDNから直接ダウンロードさせる。
+ * download パラメータで Content-Disposition: attachment（ファイル名付き）を付与。
+ */
+export async function uploadExportFile(
+  userId: string,
+  buffer: Buffer,
+  ext: 'pdf' | 'zip',
+  baseName: string
+): Promise<{ url: string; path: string }> {
+  await ensureBucket()
+  const contentType = ext === 'pdf' ? 'application/pdf' : 'application/zip'
+  // 推測不能パス＋毎回上書きなし。古い書き出しはStorageのライフサイクル/手動で整理。
+  const path = `${userId}/exports/${randomUUID()}.${ext}`
+  const { error } = await getSupabase()
+    .storage.from(BUCKET)
+    .upload(path, buffer, { contentType, upsert: false })
+  if (error) throw new Error(`Supabase upload error: ${error.message}`)
+  const { data } = getSupabase()
+    .storage.from(BUCKET)
+    .getPublicUrl(path, { download: `${baseName}.${ext}` })
+  if (!data?.publicUrl) throw new Error('公開URLの生成に失敗しました')
+  return { url: data.publicUrl, path }
+}
+
 /** ロゴを保存 */
 export async function uploadLogo(
   userId: string,
