@@ -1313,12 +1313,12 @@ export const SERVICES: Service[] = [
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_DOYASLIDE_PRO_PRICE_ID,
       },
     },
-    status: 'coming_soon',
+    status: 'active',
     category: 'image',
     order: 22,
     requiresAuth: true,
     isNew: true,
-    badge: '開発中',
+    badge: 'NEW',
   },
 
   // ----------------------------------------

@@ -21,20 +21,55 @@ function isBlockedIp(ip: string): boolean {
   const kind = net.isIP(ip)
   if (kind === 4) return isBlockedV4(ip)
   if (kind === 6) {
-    const lower = ip.toLowerCase()
-    // IPv4-mapped (::ffff:a.b.c.d) は埋め込みv4で判定
-    const mapped = lower.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/)
-    if (mapped) return isBlockedV4(mapped[1])
-    if (lower === '::1' || lower === '::') return true
-    const head = lower.split(':')[0]
-    const h = parseInt(head || '0', 16)
-    if (Number.isNaN(h)) return true
+    const h = expandIpv6(ip)
+    if (!h) return true // 解析不能はブロック
+    // :: (unspecified) / ::1 (loopback)
+    if (h.every((x) => x === 0)) return true
+    if (h.slice(0, 7).every((x) => x === 0) && h[7] === 1) return true
+    // IPv4-mapped(::ffff:0:0/96) / IPv4-compat(deprecated) / NAT64(64:ff9b::/96) は埋め込みv4で判定。
+    // ※ dotted(::ffff:1.2.3.4) でも hex(::ffff:0102:0304) でも同じ16bitに展開されるので両形を遮断。
+    const mapped = h[0] === 0 && h[1] === 0 && h[2] === 0 && h[3] === 0 && h[4] === 0 && h[5] === 0xffff
+    const nat64 = h[0] === 0x64 && h[1] === 0xff9b && h[2] === 0 && h[3] === 0 && h[4] === 0 && h[5] === 0
+    const compat =
+      h[0] === 0 && h[1] === 0 && h[2] === 0 && h[3] === 0 && h[4] === 0 && h[5] === 0 && (h[6] !== 0 || h[7] > 1)
+    if (mapped || nat64 || compat) {
+      const v4 = `${(h[6] >> 8) & 0xff}.${h[6] & 0xff}.${(h[7] >> 8) & 0xff}.${h[7] & 0xff}`
+      return isBlockedV4(v4)
+    }
     // fc00::/7 (ULA: fc/fd), fe80::/10 (link-local)
-    if ((h & 0xfe00) === 0xfc00) return true
-    if ((h & 0xffc0) === 0xfe80) return true
+    if ((h[0] & 0xfe00) === 0xfc00) return true
+    if ((h[0] & 0xffc0) === 0xfe80) return true
     return false
   }
   return true // 解析不能はブロック
+}
+
+/** net.isIP済みのIPv6文字列を8ヘクステット(各16bit)へ完全展開。:: と埋め込みIPv4末尾に対応。失敗はnull。 */
+function expandIpv6(ip: string): number[] | null {
+  let s = ip.toLowerCase().split('%')[0] // zone id 除去
+  // 末尾の埋め込みIPv4(a.b.c.d)を2ヘクステットに変換
+  const m = s.match(/^(.*:)(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/)
+  if (m) {
+    const v4 = m[2].split('.').map((n) => parseInt(n, 10))
+    if (v4.some((n) => Number.isNaN(n) || n < 0 || n > 255)) return null
+    s = m[1] + (((v4[0] << 8) | v4[1]) >>> 0).toString(16) + ':' + (((v4[2] << 8) | v4[3]) >>> 0).toString(16)
+  }
+  const halves = s.split('::')
+  if (halves.length > 2) return null
+  const head = halves[0] ? halves[0].split(':') : []
+  const tail = halves.length === 2 ? (halves[1] ? halves[1].split(':') : []) : []
+  let parts: string[]
+  if (halves.length === 2) {
+    const missing = 8 - head.length - tail.length
+    if (missing < 0) return null
+    parts = [...head, ...Array(missing).fill('0'), ...tail]
+  } else {
+    parts = head
+  }
+  if (parts.length !== 8) return null
+  const out = parts.map((p) => (p === '' ? 0 : parseInt(p, 16)))
+  if (out.some((n) => Number.isNaN(n) || n < 0 || n > 0xffff)) return null
+  return out
 }
 
 function isBlockedV4(ip: string): boolean {
