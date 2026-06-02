@@ -121,11 +121,12 @@ function EditorInner() {
     pollRef.current = setInterval(reload, 4000)
     try {
       // 未生成が無くなるまでバッチを自動継続（各呼び出しはサーバ側バジェット内で安全に返る）。
-      // 進捗が止まったら中断（連続エラー/レート制限/上限）。最大8回の安全上限。
+      // 進捗が2回連続で止まったら中断（連続エラー/レート制限/上限）。最大12回の安全上限。
       let prevRemaining = Infinity
       let last: any = {}
       let quotaHit = false
-      for (let i = 0; i < 8; i++) {
+      let stall = 0
+      for (let i = 0; i < 12; i++) {
         const res = await fetch('/api/doyaslide/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -145,7 +146,11 @@ function EditorInner() {
         const remaining = (d.slides || []).filter((s: Slide) => !s.imageUrl).length
         if (remaining === 0) break
         if (d.skipped > 0) break // 月の上限スキップは再試行しても無駄
-        if (remaining >= prevRemaining) break // 進捗なし（連続エラー/レート制限）→中断
+        if (remaining >= prevRemaining) {
+          if (++stall >= 2) break // 2回連続で進捗が無ければ中断（一時的失敗は1回リトライ）
+        } else {
+          stall = 0
+        }
         prevRemaining = remaining
       }
       const remaining = (last.slides || []).filter((s: Slide) => !s.imageUrl).length
