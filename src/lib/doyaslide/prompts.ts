@@ -21,7 +21,9 @@ export function buildStructurePrompt(params: {
     `テーマ: ${topic}`,
     `資料タイプの方針: ${template}`,
     customBrief ? `補足の要望: ${customBrief}` : '',
-    referenceText ? `参考情報:\n${referenceText.slice(0, 3000)}` : '',
+    referenceText
+      ? `参考情報（最新の事実・数値・具体例の素材。一般論で埋めず、ここの情報を積極的に反映する）:\n${referenceText.slice(0, 5000)}`
+      : '',
     `スライド枚数: ちょうど ${slideCount} 枚。`,
     '',
     '各スライドについて次を日本語で出力:',

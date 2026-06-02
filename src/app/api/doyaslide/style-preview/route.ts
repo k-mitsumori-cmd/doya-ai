@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateImageWithFallback } from '@/lib/image-generator'
 import { getUserId } from '@/lib/doyaslide/access'
 import { buildImagePrompt } from '@/lib/doyaslide/prompts'
-import { STYLE_PRESETS } from '@/lib/doyaslide/constants'
+import { STYLE_PRESETS, getStylePreviewColor } from '@/lib/doyaslide/constants'
 import { stylePreviewPublicUrl, uploadStylePreview, stylePreviewExists } from '@/lib/doyaslide/storage'
 
 // スタイルの雰囲気を「何ページも」伝える共通サンプルスライド（表紙→特長→まとめ）
@@ -47,6 +47,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: '無効なスタイルです' }, { status: 400 })
     }
 
+    // スタイルごとに代表カラーを変えて、一覧を多彩に見せる
+    const themeColor = getStylePreviewColor(style)
     const urls: string[] = []
     for (let page = 0; page < SAMPLE_SLIDES.length; page++) {
       try {
@@ -57,7 +59,7 @@ export async function GET(req: NextRequest) {
         }
         const prompt = buildImagePrompt({
           slide: SAMPLE_SLIDES[page],
-          themeColor: '#7f19e6',
+          themeColor,
           stylePreset: style,
           hasLogo: false,
           logoPosition: 'top-right',

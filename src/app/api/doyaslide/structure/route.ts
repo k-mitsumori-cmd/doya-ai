@@ -8,6 +8,7 @@ import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { getUserId } from '@/lib/doyaslide/access'
 import { buildStructurePrompt } from '@/lib/doyaslide/prompts'
 import { scrapeUrlText } from '@/lib/doyaslide/scrape'
+import { serpapiSearchGoogle, hasSerpApiKey } from '@seo/lib/serpapi'
 import type { SlideStructure } from '@/lib/doyaslide/types'
 
 // POST /api/doyaslide/structure — 資料タイプのひな型でスライド構成を生成
@@ -33,6 +34,22 @@ export async function POST(req: NextRequest) {
         ref = `${ref}\n【参考URL: ${scraped.title}】\n${scraped.text}`.trim()
       } catch (e) {
         console.warn('[doyaslide/structure] URL取得スキップ:', (e as any)?.message)
+      }
+    }
+
+    // Webで調べて原稿の素材にする（SERPER_API_KEY があれば。失敗しても構成生成は続行）
+    if (hasSerpApiKey()) {
+      try {
+        const q = [project.title, project.customBrief].filter(Boolean).join(' ').slice(0, 200)
+        const { organic } = await serpapiSearchGoogle({ query: q, gl: 'jp', hl: 'ja', num: 6 })
+        if (organic.length) {
+          const research = organic
+            .map((r, i) => `${i + 1}. ${r.title}\n${r.snippet || ''}\n(${r.url})`)
+            .join('\n\n')
+          ref = `${ref}\n\n【Web検索の参考情報（最新の事実・数値・具体例の素材）】\n${research}`.trim().slice(0, 6000)
+        }
+      } catch (e) {
+        console.warn('[doyaslide/structure] Web検索スキップ:', (e as any)?.message)
       }
     }
 

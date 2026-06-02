@@ -136,6 +136,26 @@ export function getStyleDirective(preset: string): string {
   return (STYLE_PRESETS.find((s) => s.value === preset) || STYLE_PRESETS[0]).directive
 }
 
+/** スタイルプレビューの代表カラー（一覧を多彩に見せるため、スタイルごとに変える） */
+export const STYLE_PREVIEW_COLOR: Record<StylePreset, string> = {
+  flashy: '#e11d48', // ロゼレッド
+  luxury: '#b8860b', // ゴールド
+  pop: '#ec4899', // ピンク
+  minimal: '#334155', // スレート
+  cyber: '#22d3ee', // ネオンシアン
+  handwritten: '#d97706', // 温かいアンバー
+  corporate: '#1d4ed8', // ネイビーブルー
+  gradient: '#14b8a6', // ティール
+  retro: '#c2410c', // ラストオレンジ
+  nature: '#16a34a', // グリーン
+  mono: '#111827', // ニアブラック
+  isometric: '#0ea5e9', // スカイブルー
+}
+
+export function getStylePreviewColor(preset: string): string {
+  return STYLE_PREVIEW_COLOR[preset as StylePreset] || '#7f19e6'
+}
+
 export const LOGO_POSITIONS: { value: LogoPosition; label: string }[] = [
   { value: 'top-right', label: '右上' },
   { value: 'top-left', label: '左上' },
