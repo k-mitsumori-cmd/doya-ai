@@ -89,6 +89,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         imageUrl: r.imageUrl,
         version: nextVersion,
         status: 'done',
+        model: r.model,
       },
     })
     await prisma.doyaSlideVersion.create({

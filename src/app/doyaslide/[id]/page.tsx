@@ -16,6 +16,7 @@ interface Slide {
   rawImageUrl: string | null
   status: string
   version: number
+  model: string | null
 }
 interface Project {
   id: string
@@ -460,7 +461,10 @@ function EditorInner() {
             <div className="mt-3 flex items-center justify-between gap-2">
               <div className="min-w-0">
                 <p className="font-black text-slate-800 truncate">{selected.headline || `スライド ${selected.index}`}</p>
-                <p className="text-xs text-slate-400 font-bold truncate">{selected.role} ・ v{selected.version}</p>
+                <p className="text-xs text-slate-400 font-bold truncate">
+                  {selected.role} ・ v{selected.version}
+                  {selected.model ? ` ・ ${selected.model}` : ''}
+                </p>
               </div>
               <div className="flex flex-col items-end gap-1 flex-shrink-0">
                 <button
@@ -609,6 +613,26 @@ function EditorInner() {
           </div>
         </div>
       </div>
+
+      {/* 生成エンジン表示（どのAIで生成されたか） */}
+      {(() => {
+        const usedModels = Array.from(new Set(slides.map((s) => s.model).filter(Boolean))) as string[]
+        if (usedModels.length === 0) return null
+        const label = (m: string) =>
+          m.includes('gpt-image')
+            ? `${m}（OpenAI ChatGPT Image 2.0）`
+            : m.includes('nano-banana')
+              ? `${m}（Geminiフォールバック）`
+              : m
+        return (
+          <div className="mt-6 pt-4 border-t border-slate-100 text-center">
+            <p className="text-xs font-bold text-slate-400 inline-flex items-center gap-1">
+              <span className="material-symbols-outlined text-sm">auto_awesome</span>
+              生成エンジン: {usedModels.map(label).join(' / ')}
+            </p>
+          </div>
+        )
+      })()}
 
       {celebrate && (
         <div className="fixed inset-0 z-40 flex items-center justify-center pointer-events-none">

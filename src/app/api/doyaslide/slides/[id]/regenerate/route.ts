@@ -45,7 +45,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const updated = await prisma.doyaSlideSlide.update({
       where: { id: slide.id },
-      data: { rawImageUrl: r.rawImageUrl, imageUrl: r.imageUrl, version: nextVersion, status: 'done' },
+      data: { rawImageUrl: r.rawImageUrl, imageUrl: r.imageUrl, version: nextVersion, status: 'done', model: r.model },
     })
     await prisma.doyaSlideVersion.create({
       data: {

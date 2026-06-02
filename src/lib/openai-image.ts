@@ -34,7 +34,8 @@ export async function generateImageGpt(params: {
 
   // ハング対策: タイムアウトで本文読み取りまで覆う（ヘッダ受信後に本文がストールしても中断される）
   const controller = new AbortController()
-  const timeoutMs = Number(process.env.DOYA_IMAGE_TIMEOUT_MS) || 45000
+  // gpt-image-2 の high 品質は数十秒〜90秒かかることがある。短すぎると abort→フォールバックで画質が落ちるため長め。
+  const timeoutMs = Number(process.env.DOYA_IMAGE_TIMEOUT_MS) || 120000
   const to = setTimeout(() => controller.abort(), timeoutMs)
   try {
     const res = await fetch(OPENAI_IMAGE_ENDPOINT, {

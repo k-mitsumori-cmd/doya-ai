@@ -132,7 +132,8 @@ async function callNanoBananaProPreview(
 
   // ハング対策: タイムアウトで本文読み取りまで覆う（ヘッダ受信後に本文がストールしても中断される）
   const controller = new AbortController()
-  const timeoutMs = Number(process.env.DOYA_IMAGE_TIMEOUT_MS) || 45000
+  // フォールバックは短めに（primaryで時間を使った後なので全体が長引かないように）
+  const timeoutMs = Number(process.env.DOYA_FALLBACK_TIMEOUT_MS) || 45000
   const to = setTimeout(() => controller.abort(), timeoutMs)
   try {
     const res = await fetch(endpoint, {

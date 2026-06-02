@@ -2795,6 +2795,7 @@ model DoyaSlideSlide {
   imageUrl     String?                        // ロゴ合成後（表示用）
   version      Int      @default(1)
   status       String   @default("pending")   // pending/generating/done/error
+  model        String?                         // 実際に生成に使われたモデル（gpt-image-2 / nano-banana-pro-preview）
 
   versions     DoyaSlideVersion[]
   chatMessages DoyaSlideChatMessage[]

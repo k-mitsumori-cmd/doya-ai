@@ -67,10 +67,10 @@ export async function POST(req: NextRequest) {
 
     // maxDuration(300s) で強制終了されると生成中スライドが固まるため、締切前に新規生成を打ち切る
     const startedAt = Date.now()
-    const START_DEADLINE_MS = Number(process.env.DOYA_GEN_DEADLINE_MS) || 180000
+    const START_DEADLINE_MS = Number(process.env.DOYA_GEN_DEADLINE_MS) || 150000
     let errorCount = 0
     let timedOut = 0
-    await mapWithConcurrency(slidesToGen, 3, async (slide) => {
+    await mapWithConcurrency(slidesToGen, 4, async (slide) => {
       if (Date.now() - startedAt > START_DEADLINE_MS) {
         // 締切超過: 開始せず pending のまま残す（再実行で続行可能・クレジットは後で返金）
         timedOut++
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
         const nextVersion = slide.imageUrl ? (slide.version || 1) + 1 : (slide.version || 1)
         await prisma.doyaSlideSlide.update({
           where: { id: slide.id },
-          data: { rawImageUrl: r.rawImageUrl, imageUrl: r.imageUrl, version: nextVersion, status: 'done' },
+          data: { rawImageUrl: r.rawImageUrl, imageUrl: r.imageUrl, version: nextVersion, status: 'done', model: r.model },
         })
         await prisma.doyaSlideVersion.create({
           data: {
