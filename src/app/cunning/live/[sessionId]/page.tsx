@@ -387,6 +387,23 @@ const SILENCE_PEAK = 8
 
       <p className="text-xs font-bold text-slate-400 mb-3">{statusMsg}</p>
 
+      {/* 初回オンボーディング（音声共有の躓き対策） */}
+      {!running && (
+        <div className="mb-4 bg-purple-50 border border-purple-100 rounded-2xl p-4">
+          <p className="font-black text-[#7f19e6] text-sm mb-2 flex items-center gap-1">
+            <span className="material-symbols-outlined text-base">tips_and_updates</span>使い方（重要）
+          </p>
+          <ol className="text-xs font-bold text-slate-600 space-y-1 list-decimal list-inside leading-relaxed">
+            <li>会議（Meet / Zoom）を<strong>ブラウザのタブ</strong>で開く（Chrome / Edge 推奨）</li>
+            <li>「🎤 ライブ開始」→ 共有ダイアログで<strong>その会議タブ</strong>を選択</li>
+            <li>
+              ダイアログ左下の「<strong>タブの音声も共有</strong>」に必ず<strong>チェック</strong>（これが無いと相手の声を解析できません）
+            </li>
+            <li>相手の質問を検出すると、映像の下とPiPにカンペが出ます。自分のマイクは不要です</li>
+          </ol>
+        </div>
+      )}
+
       {/* 手動で質問（音声が拾えない時/任意の質問） */}
       <div className="flex gap-2 mb-4">
         <input

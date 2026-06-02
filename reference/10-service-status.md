@@ -52,6 +52,7 @@
 | ドヤオープニングAI | `/opening` | maintenance | ✅ | ✅ | ✅ 5件 | ✅ 2モデル | ❌ | ❌ |
 | ドヤWeb診断AI | `/shindan` | maintenance | ✅ | ✅ 3頁 | ❌ | ❌ | ❌ | ✅ |
 | ドヤスライド | `/doyaslide` | coming_soon | ✅ | ✅ 7頁 | ✅ 13件 | ✅ 5モデル | ✅ 統一プラン | ✅ |
+| ドヤカンニング | `/cunning` | coming_soon | ✅ | ✅ 7頁 | ✅ 11件 | ✅ 7モデル | ✅ 統一プラン | ✅ |
 | 旧スライド | `/slide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
 | 旧SlashSlide | `/slashslide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
 | ドヤHR | `/hr` | active | ✅ | ✅ 14頁 | ✅ 30件 | ✅ 10モデル | ✅ 統一プラン | ❌ |
@@ -334,3 +335,4 @@ grep "^model " prisma/schema.prisma
 | 2026-02-22 | opening→maintenance、tenkai→coming_soon、persona/tenkai/opening services.ts登録反映。サイドバー共通コンポーネント化 (`src/components/sidebar/`) |
 | 2026-05-27 | 大規模更新: AdSim/Copy/LP/Voice/Movie/HR追加。統一プラン方式反映。Prisma 103モデル・API 327件に実態合わせ。tenkai.md新規作成 |
 | 2026-06-02 | ドヤスライド刷新: 画像主体の新 `/doyaslide`（gpt-image-2フル生成・5モデル・13API・12スタイル）を追加。旧 `/slide`・`/slashslide` を deprecated とし `/doyaslide` へリダイレクト統合。doyaslide.md 新規作成・slide.md に廃止記録追記 |
+| 2026-06-02 | ドヤカンニング (`/cunning`) MVP実装: Web会議のタブ音声→質問検出→回答カンペ。near-realtime文字起こし(OpenAI・whisperフォールバック)、gemini-flash回答、字句RAG、PiPカンペ、想定問答準備。7頁・11API・7モデル(cunning_*)。本番DBは手動DDLで作成。services.ts登録・cunning.md更新 |
