@@ -130,8 +130,9 @@ function EditorInner() {
         setLimitMsg(`今月の残り枚数の都合で${d.skipped}枚はスキップしました（上限${d.limit}枚）。プロにアップグレードで続けて生成できます。`)
         toast(`${d.skipped}枚は今月の上限のためスキップしました`)
       }
+      if (d.timedOut > 0) toast(`${d.timedOut}枚は時間切れで未生成です。「未生成を生成」で続きを生成できます`, { icon: '⏳' })
       if (d.errorCount > 0) toast.error(`${d.errorCount}枚の生成に失敗しました（再生成できます）`)
-      else if (!d.skipped) toast.success('スライドが完成しました！')
+      else if (!d.skipped && !d.timedOut) toast.success('スライドが完成しました！')
     } catch (e: any) {
       toast.error(e.message)
     } finally {

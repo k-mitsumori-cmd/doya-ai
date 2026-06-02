@@ -130,14 +130,27 @@ async function callNanoBananaProPreview(
     safetySettings: req.safetySettings || DEFAULT_SAFETY_SETTINGS,
   }
 
-  const res = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-goog-api-key': apiKey,
-    },
-    body: JSON.stringify(body),
-  })
+  // ハング対策: タイムアウトを必ず付ける（無いと接続滞留でワーカーが永久ブロックする）
+  const controller = new AbortController()
+  const timeoutMs = Number(process.env.DOYA_IMAGE_TIMEOUT_MS) || 60000
+  const to = setTimeout(() => controller.abort(), timeoutMs)
+  let res: Response
+  try {
+    res = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    })
+  } catch (e: any) {
+    if (e?.name === 'AbortError') throw new Error(`nano-banana-pro-preview timeout (${timeoutMs}ms)`)
+    throw e
+  } finally {
+    clearTimeout(to)
+  }
 
   if (!res.ok) {
     const errText = await res.text()
