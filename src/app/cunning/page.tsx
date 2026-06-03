@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
-import { MODES_BY_CATEGORY, getMode } from '@/lib/cunning/modes'
+import { MODES, MODE_IDS, getMode } from '@/lib/cunning/modes'
 import type { CunningMode } from '@/lib/cunning/types'
 
 interface KB { id: string; name: string; _count: { chunks: number } }
@@ -91,13 +91,44 @@ export default function CunningDashboard() {
           </div>
         )}
 
-        {/* モード選択（カテゴリ別） */}
+        {/* モード選択 */}
         <div className="space-y-5 mb-6">
-          {MODES_BY_CATEGORY.map((group) => (
-            <div key={group.category}>
-              <p className="text-xs font-black text-slate-400 mb-2 ml-1">{group.label}</p>
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                {group.modes.map((m) => (
+          {/* メイン：商談・面接（大きく2カラム） */}
+          <div>
+            <p className="text-xs font-black text-slate-400 mb-2 ml-1">メイン</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {(['sales', 'interview'] as const).map((id) => {
+                const m = MODES[id]
+                return (
+                  <button
+                    key={m.id}
+                    onClick={() => setMode(m.id)}
+                    className={`text-left p-6 rounded-3xl border-2 transition-all bg-white flex items-center gap-4 ${
+                      mode === m.id
+                        ? 'border-[#0B5CFF] ring-2 ring-blue-200 shadow-lg'
+                        : 'border-slate-200 hover:border-blue-300'
+                    }`}
+                  >
+                    <img src={`/character/${m.character}.png`} alt="" className="w-20 h-20 object-contain flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-black text-slate-900 text-lg">
+                        {m.icon} {m.label}
+                      </p>
+                      <p className="text-xs text-slate-500 font-bold mt-1 leading-snug">{m.desc}</p>
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* その他（同サイズで下に並べる） */}
+          <div>
+            <p className="text-xs font-black text-slate-400 mb-2 ml-1">その他のモード</p>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+              {MODE_IDS.filter((id) => id !== 'sales' && id !== 'interview').map((id) => {
+                const m = MODES[id]
+                return (
                   <button
                     key={m.id}
                     onClick={() => setMode(m.id)}
@@ -113,10 +144,10 @@ export default function CunningDashboard() {
                     </p>
                     <p className="text-[11px] text-slate-500 font-bold mt-0.5 leading-snug">{m.desc}</p>
                   </button>
-                ))}
-              </div>
+                )
+              })}
             </div>
-          ))}
+          </div>
         </div>
 
         {/* コンテキスト選択（モードに応じて） */}
