@@ -2856,6 +2856,7 @@ model CunningSession {
   companyProfileId   String?  // interview: 参照企業
   applicantProfileId String?  // interview: 応募者プロフィール
   personaNote        String?  @db.Text            // 任意の前提/キャラ設定（エンタメ:口調・世界観 / ビジネス:補足）
+  report             Json?                          // 終了時に生成する議事録＋評価（summary/decisions/todos/score/feedback/good/improve）
   status             String   @default("active") // active / ended
   durationSec        Int      @default(0)         // 文字起こし時間（使用量計上の単位）
   startedAt          DateTime @default(now())

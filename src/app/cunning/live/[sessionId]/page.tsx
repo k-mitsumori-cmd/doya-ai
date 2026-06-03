@@ -21,6 +21,18 @@ interface AnswerCard {
 interface TranscriptLine {
   id: string
   text: string
+  speaker: 'remote' | 'self'
+}
+interface CunningReport {
+  title: string
+  summary: string
+  decisions: string[]
+  todos: string[]
+  score: number
+  scoreLabel: string
+  feedback: string
+  good: string[]
+  improve: string[]
 }
 
 // 1チャンクの録音窓（ミリ秒）。短いほど反応が速く、無音ポーズ(=発話の区切れ目)も早く検出できる。
@@ -66,6 +78,16 @@ export default function CunningLivePage() {
   const [devices, setDevices] = useState<{ deviceId: string; label: string }[]>([])
   const [deviceId, setDeviceId] = useState('')
   const [captureKind, setCaptureKind] = useState<'tab' | 'device' | null>(null)
+  const [captureSelf, setCaptureSelf] = useState(true) // 自分の声(マイク)も取り込む
+  const [report, setReport] = useState<CunningReport | null>(null)
+  const [reportOpen, setReportOpen] = useState(false)
+  const [reportLoading, setReportLoading] = useState(false)
+
+  // 自分の声(マイク)取り込み用
+  const selfStreamRef = useRef<MediaStream | null>(null)
+  const selfAudioCtxRef = useRef<AudioContext | null>(null)
+  const selfPeakRef = useRef(0)
+  const selfLevelTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const streamRef = useRef<MediaStream | null>(null)
   const audioStreamRef = useRef<MediaStream | null>(null)
@@ -82,6 +104,9 @@ export default function CunningLivePage() {
   const remainingSecRef = useRef<number | null>(null) // 当月の残り利用秒（-1/未取得は null=無制限扱い）
   const modeRef = useRef<CunningMode>('sales') // 最新モード（録音ループのクロージャから参照）
   const pendingRef = useRef('') // 集計中の発話（区切れ目で確定して回答）
+  const endedRef = useRef(false) // 終了処理の二重起動ガード
+  const hasContentRef = useRef(false) // 字幕or回答が1つでもあるか（議事録を出すか判定）
+  const elapsedRef = useRef(0) // 最新の経過秒（クロージャから参照）
 
 // 無音判定の閾値（getByteTimeDomainData の 128 からの最大偏差）。これ未満の窓は送らない。
 const SILENCE_PEAK = 8
@@ -100,8 +125,55 @@ const SILENCE_PEAK = 8
     pendingRef.current = ''
     streamRef.current = null
     audioStreamRef.current = null
+    // 自分の声(マイク)側も停止
+    selfStreamRef.current?.getTracks().forEach((t) => t.stop())
+    if (selfLevelTimerRef.current) clearInterval(selfLevelTimerRef.current)
+    selfLevelTimerRef.current = null
+    selfAudioCtxRef.current?.close().catch(() => {})
+    selfAudioCtxRef.current = null
+    selfPeakRef.current = 0
+    selfStreamRef.current = null
     setCaptureKind(null)
   }, [])
+
+  // 終了処理の一本化：停止ボタン・画面共有停止・上限オートストップのどれでも
+  // 「終了→議事録＋評価」を必ず実行する（共有を先に止めても議事録が出る）。
+  const finishSession = useCallback(async () => {
+    if (endedRef.current) return
+    endedRef.current = true
+    stopAll()
+    setStatusMsg('停止しました')
+    await fetch(`/api/cunning/sessions/${sessionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ end: true, addSeconds: elapsedRef.current % 30 }),
+    }).catch(() => {})
+    if (!hasContentRef.current) return // 中身が無ければ議事録は出さない
+    setReport(null)
+    setReportOpen(true)
+    setReportLoading(true)
+    try {
+      const res = await fetch(`/api/cunning/sessions/${sessionId}/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force: true }),
+      })
+      const d = await res.json()
+      if (res.ok) setReport(d.report)
+    } catch {
+      /* 失敗時はモーダル内で案内 */
+    } finally {
+      setReportLoading(false)
+    }
+  }, [stopAll, sessionId])
+
+  // 字幕/回答の有無・経過秒を ref に同期（クロージャから最新値を参照）
+  useEffect(() => {
+    hasContentRef.current = lines.length > 0 || answers.length > 0
+  }, [lines, answers])
+  useEffect(() => {
+    elapsedRef.current = elapsed
+  }, [elapsed])
 
   // pipWindow / mode を ref に同期（録音ループ・クリーンアップが最新値を参照できるように）
   useEffect(() => {
@@ -151,35 +223,28 @@ const SILENCE_PEAK = 8
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // 経過秒カウント + 30秒ごとに利用時間を加算保存
+  // 経過秒カウント + 30秒ごとに利用時間を加算保存（副作用はupdater外で実行）
   useEffect(() => {
     if (!running) return
+    let n = elapsedRef.current
     const t = setInterval(() => {
-      setElapsed((e) => {
-        const next = e + 1
-        if (next % 30 === 0) {
-          fetch(`/api/cunning/sessions/${sessionId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ addSeconds: 30 }),
-          }).catch(() => {})
-        }
-        // 当月の残り利用時間に達したらオートストップ（上限超過の青天井防止）
-        if (remainingSecRef.current != null && next >= remainingSecRef.current) {
-          stopAll()
-          setStatusMsg('今月の利用時間の上限に達したため停止しました')
-          toast.error('今月の利用時間の上限に達しました。プロにアップグレードしてください')
-          fetch(`/api/cunning/sessions/${sessionId}`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ end: true, addSeconds: next % 30 }),
-          }).catch(() => {})
-        }
-        return next
-      })
+      n += 1
+      setElapsed(n) // 純粋なstate更新のみ
+      if (n % 30 === 0) {
+        fetch(`/api/cunning/sessions/${sessionId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ addSeconds: 30 }),
+        }).catch(() => {})
+      }
+      // 当月の残り利用時間に達したらオートストップ（上限超過の青天井防止）→ 議事録まで出す
+      if (remainingSecRef.current != null && n >= remainingSecRef.current) {
+        toast.error('今月の利用時間の上限に達しました。プロにアップグレードしてください')
+        void finishSession()
+      }
     }, 1000)
     return () => clearInterval(t)
-  }, [running, sessionId])
+  }, [running, sessionId, finishSession])
 
   const requestAnswer = useCallback(
     async (question: string, opts: { force?: boolean } = {}) => {
@@ -249,7 +314,7 @@ const SILENCE_PEAK = 8
         if (!text) return
         if (text === lastLineRef.current) return // 直前と同一の窓は重複除去
         lastLineRef.current = text
-        setLines((prev) => [...prev.slice(-80), { id: `l-${Date.now()}-${prev.length}`, text }])
+        setLines((prev) => [...prev.slice(-80), { id: `l-${Date.now()}-${prev.length}`, text, speaker: 'remote' }])
         recentRef.current.push(text)
         // 窓をまたいだ断片を集計バッファに連結（区切れ目で確定）
         pendingRef.current = (pendingRef.current + ' ' + text).trim()
@@ -291,11 +356,63 @@ const SILENCE_PEAK = 8
       }
       void sendChunk(blob)
     }
+    if (!runningRef.current || stream.getTracks().every((t) => t.readyState === 'ended')) return
     rec.start()
     setTimeout(() => {
       if (rec.state !== 'inactive') rec.stop()
     }, WINDOW_MS)
   }, [sendChunk, flushUtterance])
+
+  // 自分(マイク)のチャンク → 文字起こしして字幕に表示（回答トリガーはしない）
+  const sendSelfChunk = useCallback(
+    async (blob: Blob) => {
+      if (blob.size < 1200) return
+      try {
+        const fd = new FormData()
+        fd.append('audio', blob, 'self.webm')
+        fd.append('sessionId', sessionId)
+        fd.append('speaker', 'self')
+        const res = await fetch('/api/cunning/transcribe', { method: 'POST', body: fd })
+        const d = await res.json()
+        if (!res.ok) return
+        const text = (d.text || '').trim()
+        if (!text) return
+        setLines((prev) => [...prev.slice(-80), { id: `s-${Date.now()}-${prev.length}`, text, speaker: 'self' }])
+      } catch {
+        /* 失敗は無視 */
+      }
+    },
+    [sessionId]
+  )
+
+  // 自分の声の録音ループ（独立した無音ゲート）
+  const startSelfCycle = useCallback(() => {
+    const stream = selfStreamRef.current
+    if (!stream || !runningRef.current) return
+    let rec: MediaRecorder
+    try {
+      rec = new MediaRecorder(stream, { mimeType: mimeRef.current })
+    } catch {
+      rec = new MediaRecorder(stream)
+    }
+    const parts: BlobPart[] = []
+    rec.ondataavailable = (e) => {
+      if (e.data && e.data.size) parts.push(e.data)
+    }
+    rec.onstop = () => {
+      const peak = selfPeakRef.current
+      selfPeakRef.current = 0
+      if (runningRef.current) startSelfCycle()
+      const blob = new Blob(parts, { type: mimeRef.current })
+      if (selfAudioCtxRef.current && peak < SILENCE_PEAK) return // 自分が話していない窓は送らない
+      void sendSelfChunk(blob)
+    }
+    if (!runningRef.current || stream.getTracks().every((t) => t.readyState === 'ended')) return
+    rec.start()
+    setTimeout(() => {
+      if (rec.state !== 'inactive') rec.stop()
+    }, WINDOW_MS)
+  }, [sendSelfChunk])
 
   // 入力デバイス一覧を取得（ラベル取得のため一度マイク許可が要る）
   const loadDevices = async () => {
@@ -315,6 +432,7 @@ const SILENCE_PEAK = 8
 
   const start = async () => {
     try {
+      endedRef.current = false // 新しいセッション開始：終了ガードをリセット
       mimeRef.current = pickMime()
       let endTracks: MediaStreamTrack[] = []
 
@@ -373,9 +491,9 @@ const SILENCE_PEAK = 8
         /* AudioContext不可でもチャンク送信は継続（ゲートなし） */
       }
 
+      // 画面共有/デバイスを先に止めても「終了→議事録」を実行する
       const onEnded = () => {
-        stopAll()
-        setStatusMsg('音声の取り込みが停止されました')
+        void finishSession()
       }
       endTracks.forEach((t) => t.addEventListener('ended', onEnded))
 
@@ -387,6 +505,43 @@ const SILENCE_PEAK = 8
           : '解析中… 相手の質問を検出すると回答が表示されます'
       )
       startCycle()
+
+      // 自分の声(マイク)も取り込む（タブ音声モード時のみ。相手=タブ / 自分=マイク で分離）
+      if (captureSelf && audioSource === 'tab') {
+        try {
+          const mic = await navigator.mediaDevices.getUserMedia({ audio: true })
+          selfStreamRef.current = mic
+          try {
+            const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
+            const sctx: AudioContext = new Ctx()
+            if (sctx.state === 'suspended') sctx.resume().catch(() => {})
+            selfAudioCtxRef.current = sctx
+            const ssrc = sctx.createMediaStreamSource(mic)
+            const sAnalyser = sctx.createAnalyser()
+            sAnalyser.fftSize = 2048
+            ssrc.connect(sAnalyser)
+            const sdata = new Uint8Array(sAnalyser.fftSize)
+            selfLevelTimerRef.current = setInterval(() => {
+              sAnalyser.getByteTimeDomainData(sdata)
+              let dev = 0
+              for (let i = 0; i < sdata.length; i++) {
+                const d = Math.abs(sdata[i] - 128)
+                if (d > dev) dev = d
+              }
+              if (dev > selfPeakRef.current) selfPeakRef.current = dev
+            }, 120)
+          } catch {
+            /* 自分側の無音ゲート無しでも継続 */
+          }
+          mic.getAudioTracks()[0]?.addEventListener('ended', () => {
+            selfStreamRef.current?.getTracks().forEach((t) => t.stop())
+            selfStreamRef.current = null
+          })
+          startSelfCycle()
+        } catch {
+          toast('自分の声の取り込みはスキップしました（マイク未許可）', { icon: '🎙' })
+        }
+      }
     } catch (e: any) {
       const name = e?.name || ''
       if (name === 'OverconstrainedError' || name === 'NotFoundError') {
@@ -398,16 +553,6 @@ const SILENCE_PEAK = 8
       }
       stopAll()
     }
-  }
-
-  const stop = () => {
-    stopAll()
-    setStatusMsg('停止しました')
-    fetch(`/api/cunning/sessions/${sessionId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ end: true, addSeconds: elapsed % 30 }),
-    }).catch(() => {})
   }
 
   // ピクチャーインピクチャ（別ウィンドウのカンペ）。会議の脇に常に手前で置ける。
@@ -500,10 +645,11 @@ const SILENCE_PEAK = 8
           </button>
           {running ? (
             <button
-              onClick={stop}
-              className="px-5 py-2.5 rounded-full bg-slate-800 text-white font-black hover:bg-slate-900 transition-all"
+              onClick={finishSession}
+              className="px-7 py-3 rounded-full bg-red-500 text-white font-black text-base shadow-lg shadow-red-500/30 hover:bg-red-600 transition-all flex items-center gap-2"
             >
-              停止
+              <span className="material-symbols-outlined text-xl">stop_circle</span>
+              終了して議事録を見る
             </button>
           ) : (
             <button
@@ -543,6 +689,17 @@ const SILENCE_PEAK = 8
               🎙 入力デバイス
             </button>
           </div>
+          {audioSource === 'tab' && (
+            <label className="mt-3 flex items-center gap-2 text-sm font-bold text-slate-600 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={captureSelf}
+                onChange={(e) => setCaptureSelf(e.target.checked)}
+                className="w-4 h-4 accent-[#0B5CFF]"
+              />
+              🎙 自分の声（マイク）も取り込んで字幕・議事録に反映する
+            </label>
+          )}
           {audioSource === 'device' && (
             <div className="mt-3">
               <div className="flex gap-2">
@@ -719,7 +876,7 @@ const SILENCE_PEAK = 8
               onClick={() => setShowSubs((v) => !v)}
               className="w-full flex items-center justify-between text-[11px] font-black text-slate-400 mb-2"
             >
-              <span>相手の発話（字幕）</span>
+              <span>会話の字幕（🟦自分 / ⬜相手）</span>
               <span className="material-symbols-outlined text-base">{showSubs ? 'expand_less' : 'expand_more'}</span>
             </button>
             {showSubs && (
@@ -728,9 +885,15 @@ const SILENCE_PEAK = 8
                   <p className="text-slate-500 text-sm font-bold">音声待機中…</p>
                 ) : (
                   lines.map((l) => (
-                    <p key={l.id} className="text-sm text-white/90 leading-relaxed">
-                      {l.text}
-                    </p>
+                    <div key={l.id} className={`flex ${l.speaker === 'self' ? 'justify-end' : 'justify-start'}`}>
+                      <p
+                        className={`text-sm leading-relaxed rounded-lg px-2.5 py-1 max-w-[85%] ${
+                          l.speaker === 'self' ? 'bg-[#0B5CFF] text-white' : 'bg-white/10 text-white/90'
+                        }`}
+                      >
+                        {l.text}
+                      </p>
+                    </div>
                   ))
                 )}
               </div>
@@ -860,6 +1023,122 @@ const SILENCE_PEAK = 8
         本ツールは回答<strong>案</strong>を提示する支援機能であり、実際に発話するかの判断はご自身で行ってください。
         音声データは文字起こし後に保存しません。
       </p>
+
+      {/* 終了時の議事録＋評価モーダル（派手な演出） */}
+      {reportOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          {/* キラキラ */}
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            {['🎉', '✨', '🎊', '⭐', '🎉', '✨'].map((e, i) => (
+              <span
+                key={i}
+                className="absolute text-3xl animate-bounce"
+                style={{ left: `${10 + i * 15}%`, top: `${8 + (i % 3) * 10}%`, animationDelay: `${i * 0.15}s` }}
+              >
+                {e}
+              </span>
+            ))}
+          </div>
+          <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[88vh] overflow-y-auto animate-[fadeIn_.3s_ease]">
+            <div className="p-6">
+              <div className="flex flex-col items-center text-center">
+                <img
+                  src={`/character/${reportLoading ? 'working' : 'success'}.png`}
+                  alt=""
+                  className="w-20 h-20 object-contain animate-bounce"
+                />
+                <h2 className="text-xl font-black text-slate-900 mt-2">
+                  {reportLoading ? '議事録を作成中…' : 'おつかれさま！議事録ができたよ'}
+                </h2>
+              </div>
+
+              {reportLoading ? (
+                <p className="text-center text-slate-400 font-bold text-sm mt-4">
+                  会話を振り返って要約・評価しています…
+                </p>
+              ) : report ? (
+                <div className="mt-5 space-y-4">
+                  {/* スコア（でかく） */}
+                  <div className="rounded-2xl bg-gradient-to-br from-[#2D8CFF] to-[#0B5CFF] text-white p-5 text-center shadow-lg shadow-blue-500/30">
+                    <p className="text-xs font-black opacity-90">{report.scoreLabel}</p>
+                    <p className="text-5xl font-black leading-none mt-1 animate-[fadeIn_.5s_ease]">
+                      {report.score}
+                      <span className="text-2xl">点</span>
+                    </p>
+                    {report.feedback && <p className="text-sm font-bold mt-2 opacity-95">{report.feedback}</p>}
+                  </div>
+
+                  {report.summary && (
+                    <div>
+                      <p className="text-xs font-black text-slate-400 mb-1">議事録（要約）</p>
+                      <p className="text-sm text-slate-700 font-medium leading-relaxed whitespace-pre-wrap">
+                        {report.summary}
+                      </p>
+                    </div>
+                  )}
+
+                  {report.decisions.length > 0 && (
+                    <div>
+                      <p className="text-xs font-black text-slate-400 mb-1">決定事項</p>
+                      <ul className="text-sm text-slate-700 font-medium list-disc list-inside space-y-0.5">
+                        {report.decisions.map((d, i) => <li key={i}>{d}</li>)}
+                      </ul>
+                    </div>
+                  )}
+                  {report.todos.length > 0 && (
+                    <div>
+                      <p className="text-xs font-black text-slate-400 mb-1">ネクストアクション</p>
+                      <ul className="text-sm text-slate-700 font-medium space-y-0.5">
+                        {report.todos.map((d, i) => (
+                          <li key={i} className="flex items-start gap-1.5">
+                            <span className="text-[#0B5CFF]">✓</span>
+                            <span>{d}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-3">
+                    {report.good.length > 0 && (
+                      <div className="bg-green-50 rounded-xl p-3">
+                        <p className="text-xs font-black text-green-600 mb-1">👍 良かった点</p>
+                        <ul className="text-xs text-slate-600 font-bold space-y-0.5 list-disc list-inside">
+                          {report.good.map((d, i) => <li key={i}>{d}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {report.improve.length > 0 && (
+                      <div className="bg-amber-50 rounded-xl p-3">
+                        <p className="text-xs font-black text-amber-600 mb-1">💡 改善点</p>
+                        <ul className="text-xs text-slate-600 font-bold space-y-0.5 list-disc list-inside">
+                          {report.improve.map((d, i) => <li key={i}>{d}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center text-slate-400 font-bold text-sm mt-4">議事録の生成に失敗しました</p>
+              )}
+
+              <div className="mt-6 flex gap-2">
+                <button
+                  onClick={() => setReportOpen(false)}
+                  className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-black"
+                >
+                  閉じる
+                </button>
+                <Link
+                  href="/cunning/history"
+                  className="flex-1 py-3 rounded-xl bg-gradient-to-r from-[#2D8CFF] to-[#0B5CFF] text-white font-black text-center"
+                >
+                  履歴で見る
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

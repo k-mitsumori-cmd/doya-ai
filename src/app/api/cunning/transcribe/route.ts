@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
     const form = await req.formData()
     const audio = form.get('audio')
     const sessionId = (form.get('sessionId') as string) || null
+    const speaker = (form.get('speaker') as string) === 'self' ? 'self' : 'remote'
     if (!(audio instanceof Blob) || audio.size === 0) {
       return NextResponse.json({ error: '音声データがありません' }, { status: 400 })
     }
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
       })
       if (session && session.userId === userId) {
         await prisma.cunningTranscript.create({
-          data: { sessionId, speaker: 'remote', text, isFinal: true },
+          data: { sessionId, speaker, text, isFinal: true },
         })
       }
     }
