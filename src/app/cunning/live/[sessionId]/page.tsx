@@ -96,6 +96,7 @@ export default function CunningLivePage() {
   const mimeRef = useRef('audio/webm')
   const recentRef = useRef<string[]>([]) // 直近の発話（文脈）
   const videoRef = useRef<HTMLVideoElement | null>(null)
+  const focusVideoRef = useRef<HTMLVideoElement | null>(null) // 集中モードの相手映像
   const lastLineRef = useRef('') // 直近の文字起こし（重複除去）
   const lastQRef = useRef<{ q: string; t: number }>({ q: '', t: 0 }) // 直近に投げた質問（二重発火ガード）
   const audioCtxRef = useRef<AudioContext | null>(null)
@@ -190,6 +191,13 @@ const SILENCE_PEAK = 8
   useEffect(() => {
     modeRef.current = mode
   }, [mode])
+  // 集中モードの映像に共有ストリームを接続（同じMediaStreamを複数videoで共有可）
+  useEffect(() => {
+    if (focusMode && focusVideoRef.current && streamRef.current) {
+      focusVideoRef.current.srcObject = streamRef.current
+      focusVideoRef.current.play().catch(() => {})
+    }
+  }, [focusMode, running, captureKind])
 
   // セッションのモードを取得（トリガー挙動・表示の切替）
   useEffect(() => {
@@ -693,40 +701,30 @@ const SILENCE_PEAK = 8
           >
             <span className="material-symbols-outlined align-middle text-lg">picture_in_picture_alt</span>
           </button>
+          {running && (
+            <button
+              onClick={finishSession}
+              className="px-5 py-2.5 rounded-full bg-red-500 text-white font-black text-sm shadow-md shadow-red-500/30 hover:bg-red-600 transition-all flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-lg">stop_circle</span>
+              終了して議事録
+            </button>
+          )}
         </div>
       </div>
 
-      {/* 主役の大きなボタン（必ず押すもの・横幅いっぱい） */}
-      {running ? (
-        <button
-          onClick={finishSession}
-          className="w-full mb-4 py-5 rounded-2xl bg-red-500 text-white font-black text-xl shadow-lg shadow-red-500/30 hover:bg-red-600 transition-all flex items-center justify-center gap-2"
-        >
-          <span className="material-symbols-outlined text-3xl">stop_circle</span>
-          終了して議事録を見る
-        </button>
-      ) : (
-        <button
-          onClick={start}
-          className="w-full mb-4 py-5 rounded-2xl bg-gradient-to-r from-[#2D8CFF] to-[#0B5CFF] text-white font-black text-xl shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all flex items-center justify-center gap-2"
-        >
-          <span className="material-symbols-outlined text-3xl">play_circle</span>
-          🎤 ライブ開始
-        </button>
-      )}
-
       <p className="text-xs font-bold text-slate-400 mb-3">{statusMsg}</p>
 
-      {/* このモードで「何にどう答えるか」をでかく明示 */}
-      <div className="mb-4 flex items-start gap-3 bg-gradient-to-r from-[#2D8CFF] to-[#0B5CFF] text-white rounded-2xl p-4 shadow-md">
+      {/* このモードで「何にどう答えるか」を明示（薄い青＝ボタンと色で区別） */}
+      <div className="mb-4 flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-2xl p-4">
         <span className="text-3xl leading-none">{modeDef.icon}</span>
         <div className="min-w-0">
-          <p className="font-black text-sm">
-            {modeDef.label}｜<span className="opacity-90">何にどう答える？</span>
+          <p className="font-black text-sm text-[#0B5CFF]">
+            {modeDef.label}｜<span className="text-slate-600">何にどう答える？</span>
           </p>
-          <p className="text-xs font-bold text-white/95 mt-1 leading-relaxed">{modeDef.guide}</p>
-          <p className="text-[11px] font-bold text-white/80 mt-1">
-            → 「{modeDef.inputLabel}」を検出すると、下に<strong>そのまま言えるカンペ</strong>が出ます
+          <p className="text-xs font-bold text-slate-600 mt-1 leading-relaxed">{modeDef.guide}</p>
+          <p className="text-[11px] font-bold text-slate-400 mt-1">
+            → 「{modeDef.inputLabel}」を検出すると、下に<strong className="text-[#0B5CFF]">そのまま言えるカンペ</strong>が出ます
           </p>
         </div>
       </div>
@@ -896,14 +894,20 @@ const SILENCE_PEAK = 8
           <div className="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video shadow-lg">
             <video ref={videoRef} muted playsInline autoPlay className="w-full h-full object-contain" />
             {!running && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80 gap-2">
-                <img src={`/character/${modeDef.character}.png`} alt="" className="w-24 h-24 object-contain drop-shadow-lg" />
-                <div className="bg-white/15 backdrop-blur rounded-2xl px-4 py-2">
-                  <p className="font-black text-sm text-center">
-                    {modeDef.icon} {modeDef.label}・準備OK！「ライブ開始」で
-                    {audioSource === 'device' ? '入力デバイスから取り込みます' : 'タブを共有してね'}
-                  </p>
-                </div>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80 gap-3 px-4">
+                <img src={`/character/${modeDef.character}.png`} alt="" className="w-20 h-20 object-contain drop-shadow-lg" />
+                <p className="font-bold text-xs text-center text-white/70 max-w-sm">
+                  {modeDef.icon} {modeDef.label}・準備OK！下のボタンで
+                  {audioSource === 'device' ? '入力デバイスから取り込み開始' : '会議/配信タブを共有して開始'}
+                </p>
+                {/* 開始ボタンを中央に・緑で目立たせる（青のガイド/モードチップと色で区別） */}
+                <button
+                  onClick={start}
+                  className="mt-1 px-8 py-4 rounded-full bg-gradient-to-r from-emerald-400 to-green-500 text-white font-black text-xl shadow-xl shadow-green-500/30 hover:scale-[1.03] transition-transform flex items-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-3xl">play_circle</span>
+                  🎤 ライブ開始
+                </button>
               </div>
             )}
             {running && captureKind === 'device' && !latest && (
@@ -1129,63 +1133,85 @@ const SILENCE_PEAK = 8
             </div>
           </div>
 
-          {/* カンペストリーム */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-4 max-w-4xl w-full mx-auto">
-            {answers.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-white/70 gap-3">
-                <img src={`/character/${modeDef.character}.png`} alt="" className="w-28 h-28 object-contain animate-bounce" />
-                <p className="font-black text-lg">{modeDef.guide}</p>
-                <p className="text-sm font-bold text-white/50">相手が話すと、ここに大きくカンペが出ます</p>
-              </div>
-            ) : (
-              answers.map((a) => {
-                const isLatest = a.id === latest?.id
-                return (
-                  <div
-                    key={a.id}
-                    className={`rounded-3xl p-6 sm:p-8 ${
-                      isLatest ? 'bg-white ring-4 ring-[#2D8CFF] shadow-2xl' : 'bg-white/85'
-                    }`}
-                  >
-                    <p className={`font-bold text-slate-500 mb-2 ${isLatest ? 'text-base sm:text-xl' : 'text-sm'}`}>
-                      {isLatest && <span className="text-xs font-black text-white bg-red-500 rounded px-2 py-0.5 mr-2">最新</span>}
-                      {modeDef.inputLabel}: {a.question}
+          {/* Zoom風: 左=相手の映像（＋下にデカカンペ） / 右=カンペ履歴 */}
+          <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+            {/* 左: 相手の映像 */}
+            <div className="relative flex-1 bg-black flex items-center justify-center min-h-0">
+              <video ref={focusVideoRef} muted playsInline autoPlay className="w-full h-full object-contain" />
+              {(!running || captureKind === 'device') && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 gap-2">
+                  <img src={`/character/${modeDef.character}.png`} alt="" className="w-24 h-24 object-contain" />
+                  <p className="font-bold text-sm">
+                    {!running ? 'ライブ開始で相手の画面が映ります' : '音声のみ取り込み中（映像なし）'}
+                  </p>
+                </div>
+              )}
+              {/* 最新カンペを映像下にデカ表示（顔を見ながら読める） */}
+              {latest && (
+                <div className="absolute left-0 right-0 bottom-0 p-4 sm:p-6 bg-gradient-to-t from-black/95 via-black/85 to-transparent max-h-[60%] overflow-y-auto">
+                  <p className="text-xs font-black text-sky-300 mb-1">💬 {latest.question}</p>
+                  {latest.loading ? (
+                    <p className="text-white/85 font-black text-xl flex items-center gap-2">
+                      <span className="material-symbols-outlined animate-spin">progress_activity</span>カンペ生成中…
                     </p>
-                    {a.loading ? (
-                      <div className="flex items-center gap-3 text-slate-500 font-black py-3 text-xl">
-                        <img src="/character/working.png" alt="" className="w-12 h-12 object-contain animate-bounce" />
-                        カンペ生成中…
-                      </div>
-                    ) : (
-                      <>
-                        <p className={`font-black text-slate-900 leading-tight ${isLatest ? 'text-4xl sm:text-6xl' : 'text-2xl'}`}>
-                          {a.summary}
+                  ) : (
+                    <>
+                      <p className="text-white font-black text-3xl sm:text-5xl leading-tight">{latest.summary}</p>
+                      {latest.script && (
+                        <p className="text-white/90 font-bold text-lg sm:text-2xl leading-relaxed whitespace-pre-wrap mt-2">
+                          👉 {latest.script}
                         </p>
-                        {a.script && (
-                          <p className={`text-slate-700 font-bold leading-relaxed whitespace-pre-wrap mt-4 ${isLatest ? 'text-xl sm:text-3xl' : 'text-base'}`}>
-                            👉 {a.script}
-                          </p>
-                        )}
-                      </>
-                    )}
-                  </div>
-                )
-              })
-            )}
-          </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
 
-          {/* 手動入力 */}
-          <div className="border-t border-white/10 p-3 max-w-4xl w-full mx-auto flex gap-2">
-            <input
-              value={manualQ}
-              onChange={(e) => setManualQ(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && manualAsk()}
-              placeholder={modeDef.manualPlaceholder}
-              className="flex-1 rounded-xl px-4 py-2.5 font-bold text-sm bg-white/10 text-white placeholder:text-white/40 border border-white/10"
-            />
-            <button onClick={manualAsk} className="px-4 py-2.5 rounded-xl bg-[#0B5CFF] text-white font-black text-sm whitespace-nowrap">
-              質問する
-            </button>
+            {/* 右: カンペ履歴＋手動入力 */}
+            <div className="w-full lg:w-[400px] flex flex-col bg-slate-800 border-t lg:border-t-0 lg:border-l border-white/10 min-h-0">
+              <p className="px-4 pt-3 pb-1 text-xs font-black text-white/50 flex-shrink-0">カンペ履歴</p>
+              <div className="flex-1 overflow-y-auto px-3 pb-2 space-y-2 min-h-0">
+                {answers.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-white/50 gap-2 py-8">
+                    <img src="/character/thinking.png" alt="" className="w-14 h-14 object-contain" />
+                    <p className="font-bold text-sm text-center px-4">相手が話すとカンペが出るよ</p>
+                  </div>
+                ) : (
+                  answers.map((a) => {
+                    const isLatest = a.id === latest?.id
+                    return (
+                      <div key={a.id} className={`rounded-xl p-3 ${isLatest ? 'bg-white ring-2 ring-[#2D8CFF]' : 'bg-white/85'}`}>
+                        <p className="text-[11px] font-bold text-slate-500 mb-1">
+                          {isLatest && <span className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5 mr-1">最新</span>}
+                          {a.question}
+                        </p>
+                        {a.loading ? (
+                          <p className="text-slate-500 font-black text-sm py-1">カンペ生成中…</p>
+                        ) : (
+                          <>
+                            <p className="font-black text-slate-900 leading-snug">{a.summary}</p>
+                            {a.script && <p className="text-sm text-slate-700 font-medium mt-1 whitespace-pre-wrap">👉 {a.script}</p>}
+                          </>
+                        )}
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+              <div className="border-t border-white/10 p-3 flex gap-2 flex-shrink-0">
+                <input
+                  value={manualQ}
+                  onChange={(e) => setManualQ(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && manualAsk()}
+                  placeholder={modeDef.manualPlaceholder}
+                  className="flex-1 min-w-0 rounded-xl px-3 py-2.5 font-bold text-sm bg-white/10 text-white placeholder:text-white/40 border border-white/10"
+                />
+                <button onClick={manualAsk} className="px-3 py-2.5 rounded-xl bg-[#0B5CFF] text-white font-black text-sm whitespace-nowrap">
+                  質問
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
