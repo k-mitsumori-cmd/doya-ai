@@ -567,6 +567,10 @@ const SILENCE_PEAK = 8
           toast('自分の声の取り込みはスキップしました（マイク未許可）', { icon: '🎙' })
         }
       }
+
+      // 開始したら自動で集中モード（Zoom風）へ。全画面はジェスチャ期限切れで効かない場合があるが
+      // オーバーレイ自体は必ず開く（enterFocus内でrequestFullscreenの失敗は握り潰し）。
+      enterFocus()
     } catch (e: any) {
       const name = e?.name || ''
       if (name === 'OverconstrainedError' || name === 'NotFoundError') {
