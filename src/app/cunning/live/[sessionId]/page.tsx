@@ -987,15 +987,16 @@ const SILENCE_PEAK = 8
                     isLatest ? 'ring-2 ring-[#0B5CFF] shadow-md' : 'opacity-95'
                   }`}
                 >
-                  {/* 質問（相手の発言）＝色ヘッダーで明確に */}
-                  <div className="bg-slate-100 px-4 py-2.5">
-                    <p className="text-[11px] font-black text-slate-500 flex items-center gap-1 mb-0.5">
+                  {/* Q＝相手の発言（グレー帯＋丸Qバッジ） */}
+                  <div className="bg-slate-100 px-4 py-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="w-6 h-6 rounded-full bg-slate-600 text-white text-xs font-black flex items-center justify-center flex-shrink-0">Q</span>
+                      <span className="text-[11px] font-black text-slate-500">{modeDef.inputLabel}</span>
                       {isLatest && <span className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5">最新</span>}
-                      <span className="text-[#0B5CFF]">Q.</span> {modeDef.inputLabel}
-                    </p>
-                    <p className="text-base font-black text-slate-800 leading-snug">{a.question}</p>
+                    </div>
+                    <p className="text-base font-black text-slate-800 leading-snug pl-8">{a.question}</p>
                   </div>
-                  {/* 回答＝白背景でくっきり */}
+                  {/* A＝こう答える（白＋丸Aバッジ） */}
                   <div className="px-4 py-3">
                     {a.loading ? (
                       <div className="flex items-center gap-2 text-slate-500 font-black py-2">
@@ -1004,10 +1005,13 @@ const SILENCE_PEAK = 8
                       </div>
                     ) : (
                       <>
-                        <p className="text-[11px] font-black text-[#0B5CFF] mb-1">A. こう答える 👉</p>
-                        <p className="text-xl font-black text-slate-900 leading-snug">{a.summary}</p>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="w-6 h-6 rounded-full bg-[#0B5CFF] text-white text-xs font-black flex items-center justify-center flex-shrink-0">A</span>
+                          <span className="text-[11px] font-black text-[#0B5CFF]">こう答える 👉</span>
+                        </div>
+                        <p className="text-xl font-black text-slate-900 leading-snug pl-8">{a.summary}</p>
                         {a.script && (
-                          <p className="text-[15px] text-slate-700 font-bold leading-relaxed whitespace-pre-wrap mt-2">
+                          <p className="text-[15px] text-slate-700 font-bold leading-relaxed whitespace-pre-wrap mt-2 pl-8">
                             {a.script}
                           </p>
                         )}
@@ -1153,15 +1157,16 @@ const SILENCE_PEAK = 8
                         key={a.id}
                         className={`cunning-whoosh rounded-2xl overflow-hidden ${isLatest ? 'ring-2 ring-[#2D8CFF] shadow-xl' : 'opacity-90'}`}
                       >
-                        {/* 質問（相手の発言）＝濃色ヘッダー */}
-                        <div className="bg-slate-700 px-3 py-2">
-                          <p className="text-[11px] font-black text-sky-300 flex items-center gap-1">
+                        {/* Q＝相手の発言（濃色＋丸Qバッジ） */}
+                        <div className="bg-slate-700 px-3 py-2.5">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="w-6 h-6 rounded-full bg-white/20 text-white text-xs font-black flex items-center justify-center flex-shrink-0">Q</span>
+                            <span className="text-[11px] font-black text-sky-300">{modeDef.inputLabel}</span>
                             {isLatest && <span className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5">最新</span>}
-                            💬 {modeDef.inputLabel}
-                          </p>
-                          <p className={`font-bold text-white mt-0.5 ${isLatest ? 'text-base' : 'text-sm'}`}>{a.question}</p>
+                          </div>
+                          <p className={`font-bold text-white pl-8 ${isLatest ? 'text-base' : 'text-sm'}`}>{a.question}</p>
                         </div>
-                        {/* 回答＝白背景でくっきり */}
+                        {/* A＝こう答える（白＋丸Aバッジ） */}
                         <div className="bg-white px-3 py-3">
                           {a.loading ? (
                             <p className="text-slate-500 font-black flex items-center gap-2">
@@ -1170,12 +1175,15 @@ const SILENCE_PEAK = 8
                             </p>
                           ) : (
                             <>
-                              <p className="text-[11px] font-black text-[#0B5CFF] mb-1">👉 こう答える</p>
-                              <p className={`font-black text-slate-900 leading-snug ${isLatest ? 'text-2xl sm:text-3xl' : 'text-base'}`}>
+                              <div className="flex items-center gap-2 mb-1">
+                                <span className="w-6 h-6 rounded-full bg-[#0B5CFF] text-white text-xs font-black flex items-center justify-center flex-shrink-0">A</span>
+                                <span className="text-[11px] font-black text-[#0B5CFF]">こう答える 👉</span>
+                              </div>
+                              <p className={`font-black text-slate-900 leading-snug pl-8 ${isLatest ? 'text-2xl sm:text-3xl' : 'text-base'}`}>
                                 {a.summary}
                               </p>
                               {a.script && (
-                                <p className={`text-slate-700 font-bold leading-relaxed whitespace-pre-wrap mt-2 ${isLatest ? 'text-base sm:text-lg' : 'text-sm'}`}>
+                                <p className={`text-slate-700 font-bold leading-relaxed whitespace-pre-wrap mt-2 pl-8 ${isLatest ? 'text-base sm:text-lg' : 'text-sm'}`}>
                                   {a.script}
                                 </p>
                               )}
