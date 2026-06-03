@@ -124,7 +124,10 @@ export default function CunningKnowledgeDetail() {
       <h2 className="font-black text-slate-700 mb-3">取り込み済みの情報</h2>
       <div className="space-y-2">
         {base.chunks.length === 0 ? (
-          <p className="text-slate-400 font-bold text-sm">まだ情報がありません</p>
+          <div className="text-center py-6">
+            <img src="/character/sleep.png" alt="" className="w-14 h-14 object-contain mx-auto mb-2" />
+            <p className="text-slate-400 font-bold text-sm">まだ情報がありません</p>
+          </div>
         ) : (
           base.chunks.map((c) => (
             <div key={c.id} className="bg-white rounded-xl shadow-sm p-4">

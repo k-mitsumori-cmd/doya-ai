@@ -83,7 +83,10 @@ export default function CunningCompanyPage() {
 
   return (
     <div className="p-6 lg:p-10 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-black text-slate-900 mb-1">企業・プロフィール（面接モード）</h1>
+      <div className="flex items-center gap-3 mb-1">
+        <img src="/character/focus.png" alt="" className="w-12 h-12 object-contain" />
+        <h1 className="text-2xl font-black text-slate-900">企業・プロフィール（面接モード）</h1>
+      </div>
       <p className="text-slate-500 font-bold text-sm mb-6">
         応募先の採用ページを解析し、あなたの経歴と掛け合わせて回答を最適化します
       </p>

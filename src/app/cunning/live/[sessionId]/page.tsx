@@ -617,8 +617,8 @@ const SILENCE_PEAK = 8
                 <p className="text-xs font-bold text-slate-400 mb-1">質問: {a.question}</p>
                 {a.loading ? (
                   <div className="flex items-center gap-2 text-slate-500 font-bold py-2">
-                    <span className="material-symbols-outlined animate-spin">progress_activity</span>
-                    回答を生成中…
+                    <img src="/character/working.png" alt="" className="w-7 h-7 object-contain animate-bounce" />
+                    カンペ生成中…
                   </div>
                 ) : (
                   <>

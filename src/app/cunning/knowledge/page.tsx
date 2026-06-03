@@ -83,7 +83,10 @@ export default function CunningKnowledgePage() {
 
   return (
     <div className="p-6 lg:p-10 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-black text-slate-900 mb-1">ナレッジ（商談モード）</h1>
+      <div className="flex items-center gap-3 mb-1">
+        <img src="/character/present.png" alt="" className="w-12 h-12 object-contain" />
+        <h1 className="text-2xl font-black text-slate-900">ナレッジ（商談モード）</h1>
+      </div>
       <p className="text-slate-500 font-bold text-sm mb-6">
         自社サービス情報を登録すると、商談中の質問に根拠つきで回答します
       </p>
@@ -132,7 +135,12 @@ export default function CunningKnowledgePage() {
             </div>
           </div>
         ))}
-        {bases.length === 0 && <p className="text-slate-400 font-bold text-sm">まだナレッジがありません</p>}
+        {bases.length === 0 && (
+          <div className="bg-white rounded-2xl shadow-sm p-10 text-center">
+            <img src="/character/thinking.png" alt="" className="w-16 h-16 object-contain mx-auto mb-2" />
+            <p className="text-slate-400 font-bold text-sm">まだナレッジがありません。上の入力から作ってみよう！</p>
+          </div>
+        )}
       </div>
 
       {/* 取り込み */}
