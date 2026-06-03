@@ -621,8 +621,10 @@ const SILENCE_PEAK = 8
     toast(`${getMode(m).icon} ${getMode(m).label}に切替`, { icon: '🔄' })
   }
 
-  // モード選択プルダウン（ヘッダー/集中モードで共用）
-  const ModeSelect = ({ dark = false }: { dark?: boolean }) => (
+  // モード選択プルダウン（ヘッダー/集中モードで共用）。
+  // ※コンポーネント化(<ModeSelect/>)すると毎レンダーで再マウントされ、実行中(毎秒更新)に
+  //   ネイティブselectが開いた瞬間に閉じてしまうため、JSXを返す関数としてインライン展開する。
+  const renderModeSelect = (dark = false) => (
     <select
       value={mode}
       onChange={(e) => changeMode(e.target.value as CunningMode)}
@@ -690,9 +692,7 @@ const SILENCE_PEAK = 8
             <span className="text-sm font-mono font-bold text-slate-500">
               {mm}:{ss}
             </span>
-            <span className="ml-1">
-              <ModeSelect />
-            </span>
+            <span className="ml-1">{renderModeSelect(false)}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1094,7 +1094,7 @@ const SILENCE_PEAK = 8
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
             <div className="flex items-center gap-2 text-white">
               {running && <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />}
-              <ModeSelect dark />
+              {renderModeSelect(true)}
               <span className="text-sm font-mono font-bold text-white/60">{mm}:{ss}</span>
               <span className="ml-2 text-xs font-bold text-white/50 hidden sm:inline">相手の発言にカンペが次々出ます</span>
             </div>
