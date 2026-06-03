@@ -939,7 +939,7 @@ const SILENCE_PEAK = 8
                   lines.map((l) => (
                     <div key={l.id} className={`flex ${l.speaker === 'self' ? 'justify-end' : 'justify-start'}`}>
                       <p
-                        className={`text-sm leading-relaxed rounded-lg px-2.5 py-1 max-w-[85%] ${
+                        className={`cunning-sub text-sm font-bold leading-relaxed rounded-lg px-2.5 py-1 max-w-[85%] ${
                           l.speaker === 'self' ? 'bg-[#0B5CFF] text-white' : 'bg-white/10 text-white/90'
                         }`}
                       >
@@ -1189,7 +1189,7 @@ const SILENCE_PEAK = 8
                   {lines.slice(-6).map((l) => (
                     <div key={l.id} className={`flex ${l.speaker === 'self' ? 'justify-end' : 'justify-start'}`}>
                       <span
-                        className={`text-xs rounded px-2 py-0.5 max-w-[90%] ${
+                        className={`cunning-sub text-xs font-bold rounded px-2 py-0.5 max-w-[90%] ${
                           l.speaker === 'self' ? 'bg-[#0B5CFF] text-white' : 'bg-white/10 text-white/80'
                         }`}
                       >
