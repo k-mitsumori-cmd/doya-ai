@@ -83,14 +83,15 @@ function CunningSidebarImpl({
   return (
     <>
       <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={cunningTheme}>
-        <div className="px-3 sm:px-4 py-4 flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-md flex-shrink-0">
-            <Headphones className="w-5 h-5 text-white" />
-          </div>
-          {showLabel && (
-            <Link href="/cunning" className="font-black text-white text-lg whitespace-nowrap">
-              ドヤカンニング
+        <div className="px-3 sm:px-4 py-4 flex items-center">
+          {showLabel ? (
+            <Link href="/cunning" className="block" aria-label="ドヤカンニング">
+              <img src="/cunning/logo.png" alt="ドヤカンニング" className="h-12 w-auto object-contain drop-shadow-sm" />
             </Link>
+          ) : (
+            <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-md flex-shrink-0">
+              <Headphones className="w-5 h-5 text-white" />
+            </div>
           )}
         </div>
 

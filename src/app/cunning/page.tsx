@@ -73,14 +73,9 @@ export default function CunningDashboard() {
     <div className="min-h-full bg-gradient-to-b from-[#EAF2FF] to-slate-50">
       <div className="p-6 lg:p-10 max-w-5xl mx-auto">
         {/* ヘッダー（Zoom風の青） */}
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#2D8CFF] to-[#0B5CFF] flex items-center justify-center shadow-lg shadow-blue-500/30 p-1.5">
-            <img src="/character/hello.png" alt="" className="w-full h-full object-contain" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-slate-900">ドヤカンニング</h1>
-            <p className="text-slate-500 font-bold text-sm">相手の声をAIが解析し、最適な“カンペ”をリアルタイム表示</p>
-          </div>
+        <div className="mb-1">
+          <img src="/cunning/logo.png" alt="ドヤカンニング" className="h-16 sm:h-20 w-auto object-contain" />
+          <p className="text-slate-500 font-bold text-sm mt-1">相手の声をAIが解析し、最適な“カンペ”をリアルタイム表示</p>
         </div>
 
         {usage?.limits && (

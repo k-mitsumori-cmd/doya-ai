@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, Headphones } from 'lucide-react'
+import { Menu } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { Toaster } from 'react-hot-toast'
 import CunningSidebar from '@/components/cunning/CunningSidebar'
@@ -81,8 +81,7 @@ export default function CunningLayout({ children }: { children: React.ReactNode 
             <Menu className="w-6 h-6" />
           </button>
           <div className="flex items-center gap-2">
-            <Headphones className="h-5 w-5 text-[#0B5CFF]" />
-            <span className="text-base sm:text-lg font-bold text-slate-900 whitespace-nowrap">ドヤカンニング</span>
+            <img src="/cunning/logo.png" alt="ドヤカンニング" className="h-8 w-auto object-contain" />
           </div>
         </div>
 
