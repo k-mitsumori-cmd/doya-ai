@@ -144,13 +144,7 @@ const SILENCE_PEAK = 8
     if (endedRef.current) return
     endedRef.current = true
     stopAll()
-    // 集中モード/全画面を閉じてから議事録を出す（モーダルの二重表示を防ぐ）
-    setFocusMode(false)
-    try {
-      if (document.fullscreenElement) document.exitFullscreen?.()
-    } catch {
-      /* noop */
-    }
+    setFocusMode(false) // 集中モードを閉じてから議事録を出す
     setStatusMsg('停止しました')
     await fetch(`/api/cunning/sessions/${sessionId}`, {
       method: 'PATCH',
@@ -610,31 +604,10 @@ const SILENCE_PEAK = 8
     requestAnswer(q, { force: true })
   }
 
-  // 集中モード：サイドバー等を覆い、ブラウザの全画面APIで画面いっぱいに広げる
-  const enterFocus = () => {
-    setFocusMode(true)
-    try {
-      ;(document.documentElement.requestFullscreen?.() as Promise<void> | undefined)?.catch(() => {})
-    } catch {
-      /* 全画面不可でもオーバーレイで広がる */
-    }
-  }
-  const exitFocus = () => {
-    setFocusMode(false)
-    try {
-      if (document.fullscreenElement) document.exitFullscreen?.()
-    } catch {
-      /* noop */
-    }
-  }
-  // ブラウザの全画面が解除（Esc等）されたら集中モードも閉じる
-  useEffect(() => {
-    const onFs = () => {
-      if (!document.fullscreenElement) setFocusMode(false)
-    }
-    document.addEventListener('fullscreenchange', onFs)
-    return () => document.removeEventListener('fullscreenchange', onFs)
-  }, [])
+  // 集中モード：ページ内オーバーレイで画面いっぱいに広げる（ブラウザ全画面は使わない＝
+  // 上のタブバーは残り、他タブへ自由に切り替えできる）。
+  const enterFocus = () => setFocusMode(true)
+  const exitFocus = () => setFocusMode(false)
 
   const copyText = async (t: string) => {
     try {
@@ -1203,6 +1176,23 @@ const SILENCE_PEAK = 8
                   })
                 )}
               </div>
+              {/* 字幕（自分の声が取れているかここで確認できる） */}
+              {lines.length > 0 && (
+                <div className="border-t border-white/10 px-3 py-2 max-h-24 overflow-y-auto flex-shrink-0 space-y-1">
+                  <p className="text-[10px] font-black text-white/40">字幕（🟦自分 / ⬜相手）</p>
+                  {lines.slice(-6).map((l) => (
+                    <div key={l.id} className={`flex ${l.speaker === 'self' ? 'justify-end' : 'justify-start'}`}>
+                      <span
+                        className={`text-xs rounded px-2 py-0.5 max-w-[90%] ${
+                          l.speaker === 'self' ? 'bg-[#0B5CFF] text-white' : 'bg-white/10 text-white/80'
+                        }`}
+                      >
+                        {l.text}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="border-t border-white/10 p-3 flex gap-2 flex-shrink-0">
                 <input
                   value={manualQ}
