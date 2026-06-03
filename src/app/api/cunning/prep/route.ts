@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
       chunks,
       company: ctx.company,
       applicant: ctx.applicant,
+      personaNote: ctx.personaNote,
       count: body.count,
     })
     return NextResponse.json({ items }, { headers: { 'Cache-Control': 'no-store' } })

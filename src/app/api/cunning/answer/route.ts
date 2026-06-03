@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
     let chunks: KnowledgeChunkLite[] | undefined
     let company: CompanyProfileLite | null = null
     let applicant: ApplicantProfileLite | null = null
+    let personaNote: string | null = null
 
     if (sessionId) {
       const ctx = await resolveSessionContext(userId, sessionId)
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
       mode = ctx.mode
       company = ctx.company
       applicant = ctx.applicant
+      personaNote = ctx.personaNote
       if (ctx.knowledgeBaseId) {
         chunks = await retrieveChunks(ctx.knowledgeBaseId, question, 4)
       }
@@ -47,6 +49,7 @@ export async function POST(req: NextRequest) {
       chunks,
       company,
       applicant,
+      personaNote,
     })
 
     // 空応答（モデルが中身を返さなかった）は保存も返却もしない

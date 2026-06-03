@@ -2855,6 +2855,7 @@ model CunningSession {
   knowledgeBaseId    String?  // sales: 参照ナレッジ
   companyProfileId   String?  // interview: 参照企業
   applicantProfileId String?  // interview: 応募者プロフィール
+  personaNote        String?  @db.Text            // 任意の前提/キャラ設定（エンタメ:口調・世界観 / ビジネス:補足）
   status             String   @default("active") // active / ended
   durationSec        Int      @default(0)         // 文字起こし時間（使用量計上の単位）
   startedAt          DateTime @default(now())

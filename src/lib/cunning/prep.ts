@@ -23,13 +23,18 @@ export interface BuildPrepParams {
   chunks?: KnowledgeChunkLite[]
   company?: CompanyProfileLite | null
   applicant?: ApplicantProfileLite | null
+  personaNote?: string | null
   count?: number
 }
 
 export async function generatePrep(p: BuildPrepParams): Promise<PrepItem[]> {
   const count = Math.min(Math.max(p.count || 6, 3), 10)
   const def = getMode(p.mode)
-  const lines: string[] = [...def.persona, '', `${def.prepInstruction}（${count}件）`]
+  const lines: string[] = [...def.persona]
+  if (p.personaNote && p.personaNote.trim()) {
+    lines.push('', `【設定・前提（必ず守る）】 ${p.personaNote.trim()}`)
+  }
+  lines.push('', `${def.prepInstruction}（${count}件）`)
 
   if (def.context === 'knowledge') {
     if (p.chunks && p.chunks.length > 0) {

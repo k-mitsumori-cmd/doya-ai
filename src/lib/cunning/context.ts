@@ -12,6 +12,7 @@ export interface SessionContext {
   knowledgeBaseId: string | null // sales: 所有確認済みのナレッジID（チャンク取得は呼び出し側）
   company: CompanyProfileLite | null
   applicant: ApplicantProfileLite | null
+  personaNote: string | null // 任意の前提/キャラ設定
 }
 
 export async function resolveSessionContext(
@@ -48,5 +49,5 @@ export async function resolveSessionContext(
       }
     }
   }
-  return { mode, knowledgeBaseId, company, applicant }
+  return { mode, knowledgeBaseId, company, applicant, personaNote: session.personaNote || null }
 }

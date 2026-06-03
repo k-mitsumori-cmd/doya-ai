@@ -31,6 +31,7 @@ export default function CunningDashboard() {
   const [kbId, setKbId] = useState('')
   const [companyId, setCompanyId] = useState('')
   const [applicantId, setApplicantId] = useState('')
+  const [personaNote, setPersonaNote] = useState('')
   const [starting, setStarting] = useState(false)
 
   const def = getMode(mode)
@@ -55,6 +56,7 @@ export default function CunningDashboard() {
           knowledgeBaseId: def.context === 'knowledge' ? kbId || null : null,
           companyProfileId: def.context === 'company' ? companyId || null : null,
           applicantProfileId: def.context === 'company' ? applicantId || null : null,
+          personaNote: personaNote.trim() || null,
         }),
       })
       const d = await res.json()
@@ -162,6 +164,25 @@ export default function CunningDashboard() {
             {def.icon} {def.label}：設定不要。開始して相手のコメント・発話に{def.trigger === 'any' ? '即レス' : '回答'}します。
           </div>
         )}
+
+        {/* キャラ設定 / 補足メモ（任意・全モード共通） */}
+        <div className="bg-white rounded-2xl shadow-sm p-5 mb-6">
+          <label className="block text-sm font-black text-slate-700 mb-2">
+            {def.category === 'entertainment' ? 'キャラ設定（任意）' : '補足メモ（任意）'}
+          </label>
+          <textarea
+            value={personaNote}
+            onChange={(e) => setPersonaNote(e.target.value)}
+            rows={2}
+            placeholder={
+              def.category === 'entertainment'
+                ? '名前・口調・世界観など（例: 名前は「ドヤにゃん」。語尾は「〜にゃ」。元気で明るいキャラ）'
+                : '回答のトーンや前提（例: 丁寧でフォーマルに。専門用語は避ける）'
+            }
+            className="w-full rounded-xl border border-slate-200 px-4 py-3 font-medium text-sm"
+          />
+          <p className="text-[11px] text-slate-400 font-bold mt-1">回答・想定問答にこの設定を反映します</p>
+        </div>
 
         {/* キャラの吹き出し（ポップな後押し） */}
         <div className="flex items-end gap-2 mb-3">

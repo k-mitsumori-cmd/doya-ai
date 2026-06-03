@@ -22,12 +22,18 @@ export interface BuildAnswerParams {
   chunks?: KnowledgeChunkLite[] // sales
   company?: CompanyProfileLite | null // interview
   applicant?: ApplicantProfileLite | null // interview
+  personaNote?: string | null // 任意の前提/キャラ設定
 }
 
 function buildPrompt(p: BuildAnswerParams): { prompt: string; sources: AnswerSource[] } {
   const def = getMode(p.mode)
   const sources: AnswerSource[] = []
   const lines: string[] = [...def.persona]
+
+  // ユーザー指定のキャラ設定/前提（口調・世界観・名前・補足など）を最優先で反映
+  if (p.personaNote && p.personaNote.trim()) {
+    lines.push('', `【設定・前提（必ず守る）】 ${p.personaNote.trim()}`)
+  }
 
   // コンテキスト注入（モード定義に従う）
   if (def.context === 'knowledge') {

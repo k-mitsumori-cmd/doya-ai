@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
       knowledgeBaseId: body.knowledgeBaseId || null,
       companyProfileId: body.companyProfileId || null,
       applicantProfileId: body.applicantProfileId || null,
+      personaNote: (body.personaNote as string)?.trim().slice(0, 1000) || null,
     },
   })
   return NextResponse.json({ session })
