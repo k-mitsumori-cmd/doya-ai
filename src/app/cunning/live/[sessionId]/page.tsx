@@ -23,8 +23,12 @@ interface TranscriptLine {
   text: string
 }
 
-// 1チャンクの録音窓（秒）。短いほど反応が速いが文字起こし回数が増える。
-const WINDOW_MS = 5000
+// 1チャンクの録音窓（ミリ秒）。短いほど反応が速く、無音ポーズ(=発話の区切れ目)も早く検出できる。
+const WINDOW_MS = 3500
+// 発話の確定（区切れ目）判定：文末/疑問の終端 or バッファ上限
+function looksComplete(text: string): boolean {
+  return /[。．！？!?…]\s*$/.test(text)
+}
 
 function pickMime(): string {
   const cands = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4']
@@ -77,6 +81,7 @@ export default function CunningLivePage() {
   const pipWindowRef = useRef<Window | null>(null) // 最新のPiPウィンドウ（アンマウント時に確実に閉じる）
   const remainingSecRef = useRef<number | null>(null) // 当月の残り利用秒（-1/未取得は null=無制限扱い）
   const modeRef = useRef<CunningMode>('sales') // 最新モード（録音ループのクロージャから参照）
+  const pendingRef = useRef('') // 集計中の発話（区切れ目で確定して回答）
 
 // 無音判定の閾値（getByteTimeDomainData の 128 からの最大偏差）。これ未満の窓は送らない。
 const SILENCE_PEAK = 8
@@ -92,15 +97,19 @@ const SILENCE_PEAK = 8
     audioCtxRef.current?.close().catch(() => {})
     audioCtxRef.current = null
     peakRef.current = 0
+    pendingRef.current = ''
     streamRef.current = null
     audioStreamRef.current = null
     setCaptureKind(null)
   }, [])
 
-  // pipWindow を ref に同期（アンマウント時のクリーンアップが最新値を参照できるように）
+  // pipWindow / mode を ref に同期（録音ループ・クリーンアップが最新値を参照できるように）
   useEffect(() => {
     pipWindowRef.current = pipWindow
   }, [pipWindow])
+  useEffect(() => {
+    modeRef.current = mode
+  }, [mode])
 
   // セッションのモードを取得（トリガー挙動・表示の切替）
   useEffect(() => {
@@ -216,6 +225,16 @@ const SILENCE_PEAK = 8
     [sessionId]
   )
 
+  // 集計中の発話を「ひとまとまりの質問/発話」として確定し、トリガー該当なら回答
+  const flushUtterance = useCallback(() => {
+    const u = pendingRef.current.trim()
+    pendingRef.current = ''
+    if (u.length < 4) return
+    const anyTrigger = getMode(modeRef.current).trigger === 'any'
+    const shouldReply = anyTrigger ? u.length >= 5 : looksLikeQuestion(u)
+    if (shouldReply) requestAnswer(u)
+  }, [requestAnswer])
+
   const sendChunk = useCallback(
     async (blob: Blob) => {
       if (blob.size < 1200) return // ほぼ無音
@@ -228,20 +247,22 @@ const SILENCE_PEAK = 8
         if (!res.ok) return
         const text = (d.text || '').trim()
         if (!text) return
-        // 直前と同一/内包の文字起こしは重複として除去
-        if (text === lastLineRef.current || (lastLineRef.current && lastLineRef.current.includes(text))) return
+        if (text === lastLineRef.current) return // 直前と同一の窓は重複除去
         lastLineRef.current = text
         setLines((prev) => [...prev.slice(-80), { id: `l-${Date.now()}-${prev.length}`, text }])
         recentRef.current.push(text)
-        // エンタメ系(trigger:any)は相手の発話全般に反応、ビジネス系は質問のみ
-        const shouldReply =
-          getMode(modeRef.current).trigger === 'any' ? text.length >= 5 : looksLikeQuestion(text)
-        if (shouldReply) requestAnswer(text)
+        // 窓をまたいだ断片を集計バッファに連結（区切れ目で確定）
+        pendingRef.current = (pendingRef.current + ' ' + text).trim()
+        // 文末/疑問が完成 or ビジネスで質問成立 or 長すぎ → ポーズを待たず即確定（スピード優先）
+        const businessQ = getMode(modeRef.current).trigger !== 'any' && looksLikeQuestion(text)
+        if (looksComplete(text) || businessQ || pendingRef.current.length > 200) {
+          flushUtterance()
+        }
       } catch {
         /* 1チャンクの失敗は無視して継続 */
       }
     },
-    [sessionId, requestAnswer]
+    [sessionId, flushUtterance]
   )
 
   const startCycle = useCallback(() => {
@@ -263,15 +284,18 @@ const SILENCE_PEAK = 8
       peakRef.current = 0
       if (runningRef.current) startCycle() // 次の窓をすぐ開始（取りこぼし最小化）
       const blob = new Blob(parts, { type: mimeRef.current })
-      // 音量モニタが有効で無音だった窓は送らない（幻聴・無駄なAPI回避）
-      if (audioCtxRef.current && peak < SILENCE_PEAK) return
+      // 無音窓は送らない（幻聴・無駄なAPI回避）。ただし溜まった発話があれば「区切れ目」とみなし確定。
+      if (audioCtxRef.current && peak < SILENCE_PEAK) {
+        if (pendingRef.current.trim()) flushUtterance()
+        return
+      }
       void sendChunk(blob)
     }
     rec.start()
     setTimeout(() => {
       if (rec.state !== 'inactive') rec.stop()
     }, WINDOW_MS)
-  }, [sendChunk])
+  }, [sendChunk, flushUtterance])
 
   // 入力デバイス一覧を取得（ラベル取得のため一度マイク許可が要る）
   const loadDevices = async () => {
@@ -327,6 +351,9 @@ const SILENCE_PEAK = 8
       try {
         const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
         const ctx: AudioContext = new Ctx()
+        // suspendedのままだとアナライザが無音(128)を返し、無音ゲートで全チャンクが破棄される。
+        // 開始はユーザー操作起点なので resume() で確実に running にする。
+        if (ctx.state === 'suspended') ctx.resume().catch(() => {})
         audioCtxRef.current = ctx
         const src = ctx.createMediaStreamSource(audioStreamRef.current)
         const analyser = ctx.createAnalyser()
@@ -360,8 +387,15 @@ const SILENCE_PEAK = 8
           : '解析中… 相手の質問を検出すると回答が表示されます'
       )
       startCycle()
-    } catch {
-      toast.error('音声の取り込みを開始できませんでした')
+    } catch (e: any) {
+      const name = e?.name || ''
+      if (name === 'OverconstrainedError' || name === 'NotFoundError') {
+        toast.error('選択した入力デバイスが見つかりません。「更新」で選び直してください')
+      } else if (name === 'NotAllowedError') {
+        toast.error('マイク/画面共有の許可が必要です')
+      } else {
+        toast.error('音声の取り込みを開始できませんでした')
+      }
       stopAll()
     }
   }
@@ -648,7 +682,7 @@ const SILENCE_PEAK = 8
                 </div>
               </div>
             )}
-            {running && captureKind === 'device' && (
+            {running && captureKind === 'device' && !latest && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white/85 gap-2">
                 <img src={`/character/${modeDef.character}.png`} alt="" className="w-24 h-24 object-contain drop-shadow-lg" />
                 <div className="flex items-center gap-2 bg-white/15 backdrop-blur rounded-full px-4 py-2">
