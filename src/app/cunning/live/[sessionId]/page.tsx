@@ -897,7 +897,10 @@ const SILENCE_PEAK = 8
               </div>
             )}
             {latest && (
-              <div className="absolute left-0 right-0 bottom-0 p-3 sm:p-5 bg-gradient-to-t from-black/95 via-black/85 to-transparent max-h-[70%] overflow-y-auto">
+              <div
+                key={latest.id}
+                className="cunning-pop absolute left-0 right-0 bottom-0 p-3 sm:p-5 bg-gradient-to-t from-black/95 via-black/85 to-transparent max-h-[70%] overflow-y-auto"
+              >
                 <p className="text-[11px] font-black text-sky-300 mb-1">💬 {latest.question}</p>
                 {latest.loading ? (
                   <p className="text-white/85 font-bold flex items-center gap-2">
@@ -969,7 +972,7 @@ const SILENCE_PEAK = 8
               return (
                 <div
                   key={a.id}
-                  className={`bg-white rounded-2xl p-4 border-l-4 transition-all ${
+                  className={`cunning-whoosh bg-white rounded-2xl p-4 border-l-4 transition-all ${
                     isLatest ? 'border-[#0B5CFF] ring-2 ring-blue-200 shadow-md' : 'border-slate-200 shadow-sm'
                   }`}
                 >
@@ -977,12 +980,12 @@ const SILENCE_PEAK = 8
                     {isLatest && (
                       <span className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5">最新</span>
                     )}
-                    <p className="text-[11px] font-bold text-slate-400 flex-1 min-w-0">
+                    <p className="text-xs font-black text-slate-500 flex-1 min-w-0">
                       {modeDef.inputLabel}: {a.question}
                     </p>
                   </div>
                   {a.loading ? (
-                    <div className="flex items-center gap-2 text-slate-500 font-bold py-2">
+                    <div className="flex items-center gap-2 text-slate-500 font-black py-2">
                       <img src="/character/working.png" alt="" className="w-7 h-7 object-contain animate-bounce" />
                       カンペ生成中…
                     </div>
@@ -992,12 +995,12 @@ const SILENCE_PEAK = 8
                         <span className="mt-1 text-[10px] font-black text-white bg-[#0B5CFF] rounded px-1.5 py-0.5 flex-shrink-0">
                           要点
                         </span>
-                        <p className="text-lg font-black text-slate-900 leading-snug flex-1">{a.summary}</p>
+                        <p className="text-xl font-black text-slate-900 leading-snug flex-1">{a.summary}</p>
                       </div>
                       {a.script && (
-                        <div className="mt-3 bg-blue-50 rounded-xl p-2.5">
-                          <p className="text-[10px] font-black text-[#0B5CFF] mb-1">👉 そのまま言えばOK</p>
-                          <p className="text-sm text-slate-800 font-medium leading-relaxed whitespace-pre-wrap">
+                        <div className="mt-3 bg-blue-50 rounded-xl p-3">
+                          <p className="text-[11px] font-black text-[#0B5CFF] mb-1">👉 そのまま言えばOK</p>
+                          <p className="text-[15px] text-slate-800 font-bold leading-relaxed whitespace-pre-wrap">
                             {a.script}
                           </p>
                         </div>
@@ -1125,7 +1128,10 @@ const SILENCE_PEAK = 8
               )}
               {/* 最新カンペを映像下にデカ表示（顔を見ながら読める） */}
               {latest && (
-                <div className="absolute left-0 right-0 bottom-0 p-4 sm:p-6 bg-gradient-to-t from-black/95 via-black/85 to-transparent max-h-[60%] overflow-y-auto">
+                <div
+                  key={latest.id}
+                  className="cunning-pop absolute left-0 right-0 bottom-0 p-4 sm:p-6 bg-gradient-to-t from-black/95 via-black/85 to-transparent max-h-[60%] overflow-y-auto"
+                >
                   <p className="text-xs font-black text-sky-300 mb-1">💬 {latest.question}</p>
                   {latest.loading ? (
                     <p className="text-white/85 font-black text-xl flex items-center gap-2">
@@ -1158,8 +1164,8 @@ const SILENCE_PEAK = 8
                   answers.map((a) => {
                     const isLatest = a.id === latest?.id
                     return (
-                      <div key={a.id} className={`rounded-xl p-3 ${isLatest ? 'bg-white ring-2 ring-[#2D8CFF]' : 'bg-white/85'}`}>
-                        <p className="text-[11px] font-bold text-slate-500 mb-1">
+                      <div key={a.id} className={`cunning-whoosh rounded-xl p-3 ${isLatest ? 'bg-white ring-2 ring-[#2D8CFF]' : 'bg-white/85'}`}>
+                        <p className="text-[11px] font-black text-slate-500 mb-1">
                           {isLatest && <span className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5 mr-1">最新</span>}
                           {a.question}
                         </p>
@@ -1167,8 +1173,8 @@ const SILENCE_PEAK = 8
                           <p className="text-slate-500 font-black text-sm py-1">カンペ生成中…</p>
                         ) : (
                           <>
-                            <p className="font-black text-slate-900 leading-snug">{a.summary}</p>
-                            {a.script && <p className="text-sm text-slate-700 font-medium mt-1 whitespace-pre-wrap">👉 {a.script}</p>}
+                            <p className="font-black text-slate-900 leading-snug text-lg">{a.summary}</p>
+                            {a.script && <p className="text-[15px] text-slate-700 font-bold mt-1 whitespace-pre-wrap">👉 {a.script}</p>}
                           </>
                         )}
                       </div>
