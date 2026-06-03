@@ -77,7 +77,9 @@ export default function CunningDashboard() {
         {/* ヘッダー（Zoom風の青） */}
         <div className="mb-1">
           <img src="/cunning/logo.png" alt="ドヤカンニング" className="h-16 sm:h-20 w-auto object-contain" />
-          <p className="text-slate-500 font-bold text-sm mt-1">相手の声をAIが解析し、最適な“カンペ”をリアルタイム表示</p>
+          <p className="text-slate-500 font-bold text-sm mt-1">
+            相手の声をAIが即解析！最高の“カンペ”をリアルタイムでお届け 🎧✨ もう会話で困らない！
+          </p>
         </div>
 
         {usage?.limits && (
@@ -219,7 +221,7 @@ export default function CunningDashboard() {
         <div className="flex items-end gap-2 mb-3">
           <img src={`/character/${def.character}.png`} alt="" className="w-16 h-16 object-contain flex-shrink-0 animate-bounce" />
           <div className="relative bg-white rounded-2xl rounded-bl-none shadow-sm px-4 py-2.5 font-black text-slate-700 text-sm">
-            {def.icon} {def.label}で行くよ！準備できたらスタート！
+            {def.icon} 「{def.label}」で行くよ〜！準備できたらスタート！いっちょやったろ💪
           </div>
         </div>
 
@@ -228,7 +230,7 @@ export default function CunningDashboard() {
           disabled={starting || overLimit}
           className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#2D8CFF] to-[#0B5CFF] text-white font-black text-lg shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all disabled:opacity-50"
         >
-          {overLimit ? '今月の利用上限に達しました' : starting ? '開始中…' : '🎤 ライブを開始する'}
+          {overLimit ? '今月の利用上限に達しました' : starting ? '開始中…' : '🎤 ライブ開始！いくぞ〜'}
         </button>
         <p className="text-center text-xs text-slate-400 font-bold mt-2">
           開始後、会議/配信タブの音声共有を許可してください（Chrome/Edge推奨）

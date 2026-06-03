@@ -38,6 +38,8 @@ const SERVICE_LOGO: Record<string, string> = {
   doyalist: '/doyalist/logo.png',
   promane: '/promane/logo.png',
   hr: '/hr/logo.png',
+  doyaslide: '/doyaslide/logo.png',
+  cunning: '/cunning/logo.png',
 }
 
 // ロゴが無いサービス用フォールバック（色タイル + Lucide シンボル）

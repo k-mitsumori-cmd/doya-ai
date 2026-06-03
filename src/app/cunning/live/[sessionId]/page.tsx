@@ -82,6 +82,7 @@ export default function CunningLivePage() {
   const [report, setReport] = useState<CunningReport | null>(null)
   const [reportOpen, setReportOpen] = useState(false)
   const [reportLoading, setReportLoading] = useState(false)
+  const [focusMode, setFocusMode] = useState(false) // カンペ集中モード（画面を広げて次々表示）
 
   // 自分の声(マイク)取り込み用
   const selfStreamRef = useRef<MediaStream | null>(null)
@@ -448,7 +449,16 @@ const SILENCE_PEAK = 8
         setCaptureKind('device')
       } else {
         // タブ音声取り込み（getDisplayMedia）。映像も取得してプレビュー表示。
-        const display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+        // Conditional Focus: 共有開始後にフォーカスを共有先タブへ移さず、この画面に留める（Chrome 109+）。
+        const controller = (window as any).CaptureController ? new (window as any).CaptureController() : undefined
+        const display = await navigator.mediaDevices.getDisplayMedia(
+          controller ? ({ video: true, audio: true, controller } as any) : { video: true, audio: true }
+        )
+        try {
+          controller?.setFocusBehavior?.('no-focus-change')
+        } catch {
+          /* 未対応ブラウザは無視 */
+        }
         streamRef.current = display
         const audioTracks = display.getAudioTracks()
         if (audioTracks.length === 0) {
@@ -501,8 +511,8 @@ const SILENCE_PEAK = 8
       setRunning(true)
       setStatusMsg(
         entertainment
-          ? '解析中… 相手のコメント・発話に反応します'
-          : '解析中… 相手の質問を検出すると回答が表示されます'
+          ? '解析中…🎧 相手のコメント・発話にどんどん反応するよ！'
+          : '解析中…🎧 相手の質問を検出したらカンペをポンッと出すよ！'
       )
       startCycle()
 
@@ -634,6 +644,13 @@ const SILENCE_PEAK = 8
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setFocusMode(true)}
+            title="集中モード（画面を広げてカンペを大きく表示）"
+            className="px-3 py-2.5 rounded-full font-black text-sm bg-white text-[#0B5CFF] shadow-sm hover:shadow transition-all"
+          >
+            <span className="material-symbols-outlined align-middle text-lg">open_in_full</span>
+          </button>
           <button
             onClick={pipWindow ? () => pipWindow.close() : openPip}
             title="カンペを別ウィンドウで前面表示"
@@ -926,7 +943,7 @@ const SILENCE_PEAK = 8
             <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-slate-400">
               <img src="/character/thinking.png" alt="" className="w-16 h-16 object-contain mx-auto mb-2" />
               <p className="font-bold text-sm">
-                {entertainment ? '相手のコメントを待ってるよ…！' : '相手の発言・質問を検出するとカンペが出るよ'}
+                {entertainment ? '相手のコメント待ち…！何か来たら全力で返すよ🔥' : '相手が話したらカンペをポンッと出すよ！スタンバイOK👀'}
               </p>
             </div>
           ) : (
@@ -1038,6 +1055,104 @@ const SILENCE_PEAK = 8
         本ツールは回答<strong>案</strong>を提示する支援機能であり、実際に発話するかの判断はご自身で行ってください。
         音声データは文字起こし後に保存しません。
       </p>
+
+      {/* カンペ集中モード（画面を広げて想定問答を次々大きく表示） */}
+      {focusMode && (
+        <div className="fixed inset-0 z-[55] bg-slate-900 flex flex-col">
+          {/* バー */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+            <div className="flex items-center gap-2 text-white">
+              {running && <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />}
+              <span className="font-black">{modeDef.icon} {modeDef.label}</span>
+              <span className="text-sm font-mono font-bold text-white/60">{mm}:{ss}</span>
+              <span className="ml-2 text-xs font-bold text-white/50 hidden sm:inline">相手の発言にカンペが次々出ます</span>
+            </div>
+            <div className="flex items-center gap-2">
+              {running ? (
+                <button
+                  onClick={finishSession}
+                  className="px-4 py-2 rounded-full bg-red-500 text-white font-black text-sm flex items-center gap-1"
+                >
+                  <span className="material-symbols-outlined text-lg">stop_circle</span>終了
+                </button>
+              ) : (
+                <button
+                  onClick={start}
+                  className="px-4 py-2 rounded-full bg-gradient-to-r from-[#2D8CFF] to-[#0B5CFF] text-white font-black text-sm"
+                >
+                  🎤 ライブ開始
+                </button>
+              )}
+              <button
+                onClick={() => setFocusMode(false)}
+                title="集中モードを終了"
+                className="px-3 py-2 rounded-full bg-white/10 text-white font-black text-sm"
+              >
+                <span className="material-symbols-outlined align-middle text-lg">close_fullscreen</span>
+              </button>
+            </div>
+          </div>
+
+          {/* カンペストリーム */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-8 space-y-4 max-w-4xl w-full mx-auto">
+            {answers.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-white/70 gap-3">
+                <img src={`/character/${modeDef.character}.png`} alt="" className="w-28 h-28 object-contain animate-bounce" />
+                <p className="font-black text-lg">{modeDef.guide}</p>
+                <p className="text-sm font-bold text-white/50">相手が話すと、ここに大きくカンペが出ます</p>
+              </div>
+            ) : (
+              answers.map((a) => {
+                const isLatest = a.id === latest?.id
+                return (
+                  <div
+                    key={a.id}
+                    className={`rounded-2xl p-5 sm:p-6 ${
+                      isLatest ? 'bg-white ring-4 ring-[#2D8CFF]' : 'bg-white/90'
+                    }`}
+                  >
+                    <p className="text-xs font-bold text-slate-400 mb-1">
+                      {isLatest && <span className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5 mr-1">最新</span>}
+                      {modeDef.inputLabel}: {a.question}
+                    </p>
+                    {a.loading ? (
+                      <div className="flex items-center gap-2 text-slate-500 font-black py-2">
+                        <img src="/character/working.png" alt="" className="w-8 h-8 object-contain animate-bounce" />
+                        カンペ生成中…
+                      </div>
+                    ) : (
+                      <>
+                        <p className={`font-black text-slate-900 leading-snug ${isLatest ? 'text-2xl sm:text-4xl' : 'text-xl'}`}>
+                          {a.summary}
+                        </p>
+                        {a.script && (
+                          <p className={`text-slate-700 font-medium leading-relaxed whitespace-pre-wrap mt-2 ${isLatest ? 'text-base sm:text-xl' : 'text-sm'}`}>
+                            👉 {a.script}
+                          </p>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+
+          {/* 手動入力 */}
+          <div className="border-t border-white/10 p-3 max-w-4xl w-full mx-auto flex gap-2">
+            <input
+              value={manualQ}
+              onChange={(e) => setManualQ(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && manualAsk()}
+              placeholder={modeDef.manualPlaceholder}
+              className="flex-1 rounded-xl px-4 py-2.5 font-bold text-sm bg-white/10 text-white placeholder:text-white/40 border border-white/10"
+            />
+            <button onClick={manualAsk} className="px-4 py-2.5 rounded-xl bg-[#0B5CFF] text-white font-black text-sm whitespace-nowrap">
+              質問する
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 終了時の議事録＋評価モーダル（派手な演出） */}
       {reportOpen && (
