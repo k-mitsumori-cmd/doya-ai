@@ -666,7 +666,7 @@ const SILENCE_PEAK = 8
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_440px] gap-4">
         {/* 映像 + カンペオーバーレイ */}
         <div className="order-1 space-y-3">
           <div className="relative bg-slate-900 rounded-2xl overflow-hidden aspect-video shadow-lg">
@@ -692,8 +692,8 @@ const SILENCE_PEAK = 8
               </div>
             )}
             {latest && (
-              <div className="absolute left-0 right-0 bottom-0 p-3 sm:p-5 bg-gradient-to-t from-black/95 via-black/75 to-transparent">
-                <p className="text-[10px] font-black text-sky-300 mb-1 truncate">💬 {latest.question}</p>
+              <div className="absolute left-0 right-0 bottom-0 p-3 sm:p-5 bg-gradient-to-t from-black/95 via-black/85 to-transparent max-h-[70%] overflow-y-auto">
+                <p className="text-[11px] font-black text-sky-300 mb-1">💬 {latest.question}</p>
                 {latest.loading ? (
                   <p className="text-white/85 font-bold flex items-center gap-2">
                     <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
@@ -701,9 +701,9 @@ const SILENCE_PEAK = 8
                   </p>
                 ) : (
                   <>
-                    <p className="text-white font-black text-base sm:text-2xl leading-snug">{latest.summary}</p>
+                    <p className="text-white font-black text-lg sm:text-2xl leading-snug">{latest.summary}</p>
                     {latest.script && (
-                      <p className="text-white/85 text-xs sm:text-base font-medium mt-1 leading-relaxed line-clamp-3">
+                      <p className="text-white/90 text-sm sm:text-lg font-medium mt-1.5 leading-relaxed whitespace-pre-wrap">
                         {latest.script}
                       </p>
                     )}
@@ -739,63 +739,86 @@ const SILENCE_PEAK = 8
         </div>
 
         {/* 回答履歴 */}
-        <div className="order-2 space-y-3 lg:max-h-[80vh] lg:overflow-y-auto">
-          <p className="text-xs font-black text-slate-400">回答履歴</p>
+        <div className="order-2 space-y-3 lg:max-h-[82vh] lg:overflow-y-auto lg:pr-1">
+          <div className="flex items-center justify-between sticky top-0 bg-slate-50/90 backdrop-blur py-1 z-10">
+            <p className="text-sm font-black text-slate-700">カンペ履歴</p>
+            {answers.length > 0 && <span className="text-xs font-bold text-slate-400">{answers.length}件</span>}
+          </div>
           {answers.length === 0 ? (
             <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-slate-400">
               <img src="/character/thinking.png" alt="" className="w-16 h-16 object-contain mx-auto mb-2" />
               <p className="font-bold text-sm">
-                {entertainment ? '相手のコメントを待ってるよ…！' : '相手の質問を検出すると回答案が出るよ'}
+                {entertainment ? '相手のコメントを待ってるよ…！' : '相手の発言・質問を検出するとカンペが出るよ'}
               </p>
             </div>
           ) : (
-            answers.map((a) => (
-              <div key={a.id} className="bg-white rounded-2xl shadow-sm p-4 border-l-4 border-[#0B5CFF]">
-                <p className="text-xs font-bold text-slate-400 mb-1">質問: {a.question}</p>
-                {a.loading ? (
-                  <div className="flex items-center gap-2 text-slate-500 font-bold py-2">
-                    <img src="/character/working.png" alt="" className="w-7 h-7 object-contain animate-bounce" />
-                    カンペ生成中…
+            answers.map((a) => {
+              const isLatest = a.id === latest?.id
+              return (
+                <div
+                  key={a.id}
+                  className={`bg-white rounded-2xl p-4 border-l-4 transition-all ${
+                    isLatest ? 'border-[#0B5CFF] ring-2 ring-blue-200 shadow-md' : 'border-slate-200 shadow-sm'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 mb-2">
+                    {isLatest && (
+                      <span className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5">最新</span>
+                    )}
+                    <p className="text-[11px] font-bold text-slate-400 flex-1 min-w-0">
+                      {modeDef.inputLabel}: {a.question}
+                    </p>
                   </div>
-                ) : (
-                  <>
-                    <p className="text-base font-black text-slate-900 leading-snug">{a.summary}</p>
-                    {a.script && (
-                      <p className="mt-2 text-sm text-slate-700 font-medium leading-relaxed whitespace-pre-wrap">
-                        {a.script}
-                      </p>
-                    )}
-                    {a.sources.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {a.sources.map((s, i) => (
-                          <span
-                            key={i}
-                            className="text-[11px] font-bold text-[#0B5CFF] bg-blue-50 rounded-full px-2.5 py-1"
-                          >
-                            {s.label}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                    <div className="mt-3 flex items-center gap-3">
-                      <button
-                        onClick={() => copyAnswer(a)}
-                        className="text-xs font-black text-slate-500 hover:text-[#0B5CFF] flex items-center gap-1"
-                      >
-                        <span className="material-symbols-outlined text-sm">content_copy</span>コピー
-                      </button>
-                      <button
-                        onClick={() => requestAnswer(a.question, { force: true })}
-                        className="text-xs font-black text-slate-500 hover:text-[#0B5CFF] flex items-center gap-1"
-                      >
-                        <span className="material-symbols-outlined text-sm">refresh</span>もう一度
-                      </button>
-                      {a.model && <span className="ml-auto text-[10px] text-slate-300 font-bold">{a.model}</span>}
+                  {a.loading ? (
+                    <div className="flex items-center gap-2 text-slate-500 font-bold py-2">
+                      <img src="/character/working.png" alt="" className="w-7 h-7 object-contain animate-bounce" />
+                      カンペ生成中…
                     </div>
-                  </>
-                )}
-              </div>
-            ))
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-2">
+                        <span className="mt-1 text-[10px] font-black text-white bg-[#0B5CFF] rounded px-1.5 py-0.5 flex-shrink-0">
+                          要点
+                        </span>
+                        <p className="text-lg font-black text-slate-900 leading-snug flex-1">{a.summary}</p>
+                      </div>
+                      {a.script && (
+                        <div className="mt-3">
+                          <p className="text-[10px] font-black text-slate-400 mb-1">話す内容</p>
+                          <p className="text-sm text-slate-700 font-medium leading-relaxed whitespace-pre-wrap">
+                            {a.script}
+                          </p>
+                        </div>
+                      )}
+                      {a.sources.length > 0 && (
+                        <div className="mt-3 flex flex-wrap gap-1.5">
+                          {a.sources.map((s, i) => (
+                            <span key={i} className="text-[11px] font-bold text-[#0B5CFF] bg-blue-50 rounded-full px-2.5 py-1">
+                              {s.label}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <div className="mt-3 flex items-center gap-3 border-t border-slate-100 pt-2.5">
+                        <button
+                          onClick={() => copyAnswer(a)}
+                          className="text-xs font-black text-slate-500 hover:text-[#0B5CFF] flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-sm">content_copy</span>コピー
+                        </button>
+                        <button
+                          onClick={() => requestAnswer(a.question, { force: true })}
+                          className="text-xs font-black text-slate-500 hover:text-[#0B5CFF] flex items-center gap-1"
+                        >
+                          <span className="material-symbols-outlined text-sm">refresh</span>もう一度
+                        </button>
+                        {a.model && <span className="ml-auto text-[10px] text-slate-300 font-bold">{a.model}</span>}
+                      </div>
+                    </>
+                  )}
+                </div>
+              )
+            })
           )}
         </div>
       </div>
