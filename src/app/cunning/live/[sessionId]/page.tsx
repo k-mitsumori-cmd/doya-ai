@@ -6,7 +6,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { looksLikeQuestion } from '@/lib/cunning/classify'
-import { getMode } from '@/lib/cunning/modes'
+import { getMode, MODES_BY_CATEGORY } from '@/lib/cunning/modes'
 import type { CunningMode } from '@/lib/cunning/types'
 
 interface AnswerCard {
@@ -609,6 +609,40 @@ const SILENCE_PEAK = 8
   const enterFocus = () => setFocusMode(true)
   const exitFocus = () => setFocusMode(false)
 
+  // セッション途中でモード変更（商談→激詰め 等）。以降の回答・トリガーが新モードになる。
+  const changeMode = (m: CunningMode) => {
+    setMode(m)
+    modeRef.current = m
+    fetch(`/api/cunning/sessions/${sessionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: m }),
+    }).catch(() => {})
+    toast(`${getMode(m).icon} ${getMode(m).label}に切替`, { icon: '🔄' })
+  }
+
+  // モード選択プルダウン（ヘッダー/集中モードで共用）
+  const ModeSelect = ({ dark = false }: { dark?: boolean }) => (
+    <select
+      value={mode}
+      onChange={(e) => changeMode(e.target.value as CunningMode)}
+      title="モードを切り替え"
+      className={`text-xs font-black rounded-full px-2.5 py-1 border cursor-pointer ${
+        dark ? 'bg-white/10 text-white border-white/20' : 'bg-blue-50 text-[#0B5CFF] border-blue-100'
+      }`}
+    >
+      {MODES_BY_CATEGORY.map((g) => (
+        <optgroup key={g.category} label={g.label}>
+          {g.modes.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.icon} {m.label}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  )
+
   const copyText = async (t: string) => {
     try {
       await navigator.clipboard.writeText(t)
@@ -656,8 +690,8 @@ const SILENCE_PEAK = 8
             <span className="text-sm font-mono font-bold text-slate-500">
               {mm}:{ss}
             </span>
-            <span className="ml-1 inline-flex items-center gap-1 text-xs font-black text-[#0B5CFF] bg-blue-50 rounded-full px-2.5 py-1">
-              {modeDef.icon} {modeDef.label}
+            <span className="ml-1">
+              <ModeSelect />
             </span>
           </div>
         </div>
@@ -1056,7 +1090,7 @@ const SILENCE_PEAK = 8
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
             <div className="flex items-center gap-2 text-white">
               {running && <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />}
-              <span className="font-black">{modeDef.icon} {modeDef.label}</span>
+              <ModeSelect dark />
               <span className="text-sm font-mono font-bold text-white/60">{mm}:{ss}</span>
               <span className="ml-2 text-xs font-bold text-white/50 hidden sm:inline">相手の発言にカンペが次々出ます</span>
             </div>

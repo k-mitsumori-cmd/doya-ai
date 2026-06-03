@@ -5,6 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
+import { MODE_IDS } from '@/lib/cunning/modes'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
 
@@ -52,6 +53,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     data.endedAt = new Date()
   }
   if (body.title && typeof body.title === 'string') data.title = body.title.trim().slice(0, 120)
+  // セッション途中のモード変更（商談→激詰め 等）。以降の回答生成は新モードで行われる。
+  if (typeof body.mode === 'string' && MODE_IDS.includes(body.mode as any)) data.mode = body.mode
 
   const updated = await prisma.cunningSession.update({ where: { id: p.id }, data })
   return NextResponse.json({ session: updated })
