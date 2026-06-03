@@ -896,30 +896,7 @@ const SILENCE_PEAK = 8
                 </div>
               </div>
             )}
-            {latest && (
-              <div
-                key={latest.id}
-                className="cunning-pop absolute left-0 right-0 bottom-0 p-3 sm:p-5 bg-gradient-to-t from-black/95 via-black/85 to-transparent max-h-[70%] overflow-y-auto"
-              >
-                <p className="text-[11px] font-black text-sky-300 mb-1">💬 {latest.question}</p>
-                {latest.loading ? (
-                  <p className="text-white/85 font-bold flex items-center gap-2">
-                    <span className="material-symbols-outlined animate-spin text-base">progress_activity</span>
-                    カンペ生成中…
-                  </p>
-                ) : (
-                  <>
-                    <p className="text-[10px] font-black text-sky-300 mb-0.5">👇 これを言おう</p>
-                    <p className="text-white font-black text-lg sm:text-2xl leading-snug">{latest.summary}</p>
-                    {latest.script && (
-                      <p className="text-white/90 text-sm sm:text-lg font-medium mt-1.5 leading-relaxed whitespace-pre-wrap">
-                        {latest.script}
-                      </p>
-                    )}
-                  </>
-                )}
-              </div>
-            )}
+            {/* 映像にはカンペを重ねない（見づらいので右パネルに集約） */}
           </div>
 
           {/* 字幕（折りたたみ可） */}
@@ -972,65 +949,61 @@ const SILENCE_PEAK = 8
               return (
                 <div
                   key={a.id}
-                  className={`cunning-whoosh bg-white rounded-2xl p-4 border-l-4 transition-all ${
-                    isLatest ? 'border-[#0B5CFF] ring-2 ring-blue-200 shadow-md' : 'border-slate-200 shadow-sm'
+                  className={`cunning-whoosh rounded-2xl overflow-hidden bg-white shadow-sm ${
+                    isLatest ? 'ring-2 ring-[#0B5CFF] shadow-md' : 'opacity-95'
                   }`}
                 >
-                  <div className="flex items-center gap-1.5 mb-2">
-                    {isLatest && (
-                      <span className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5">最新</span>
-                    )}
-                    <p className="text-xs font-black text-slate-500 flex-1 min-w-0">
-                      {modeDef.inputLabel}: {a.question}
+                  {/* 質問（相手の発言）＝色ヘッダーで明確に */}
+                  <div className="bg-slate-100 px-4 py-2.5">
+                    <p className="text-[11px] font-black text-slate-500 flex items-center gap-1 mb-0.5">
+                      {isLatest && <span className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5">最新</span>}
+                      <span className="text-[#0B5CFF]">Q.</span> {modeDef.inputLabel}
                     </p>
+                    <p className="text-base font-black text-slate-800 leading-snug">{a.question}</p>
                   </div>
-                  {a.loading ? (
-                    <div className="flex items-center gap-2 text-slate-500 font-black py-2">
-                      <img src="/character/working.png" alt="" className="w-7 h-7 object-contain animate-bounce" />
-                      カンペ生成中…
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-start gap-2">
-                        <span className="mt-1 text-[10px] font-black text-white bg-[#0B5CFF] rounded px-1.5 py-0.5 flex-shrink-0">
-                          要点
-                        </span>
-                        <p className="text-xl font-black text-slate-900 leading-snug flex-1">{a.summary}</p>
+                  {/* 回答＝白背景でくっきり */}
+                  <div className="px-4 py-3">
+                    {a.loading ? (
+                      <div className="flex items-center gap-2 text-slate-500 font-black py-2">
+                        <img src="/character/working.png" alt="" className="w-7 h-7 object-contain animate-bounce" />
+                        カンペ生成中…
                       </div>
-                      {a.script && (
-                        <div className="mt-3 bg-blue-50 rounded-xl p-3">
-                          <p className="text-[11px] font-black text-[#0B5CFF] mb-1">👉 そのまま言えばOK</p>
-                          <p className="text-[15px] text-slate-800 font-bold leading-relaxed whitespace-pre-wrap">
+                    ) : (
+                      <>
+                        <p className="text-[11px] font-black text-[#0B5CFF] mb-1">A. こう答える 👉</p>
+                        <p className="text-xl font-black text-slate-900 leading-snug">{a.summary}</p>
+                        {a.script && (
+                          <p className="text-[15px] text-slate-700 font-bold leading-relaxed whitespace-pre-wrap mt-2">
                             {a.script}
                           </p>
+                        )}
+                        {a.sources.length > 0 && (
+                          <div className="mt-3 flex flex-wrap gap-1.5">
+                            {a.sources.map((s, i) => (
+                              <span key={i} className="text-[11px] font-bold text-[#0B5CFF] bg-blue-50 rounded-full px-2.5 py-1">
+                                {s.label}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        <div className="mt-3 flex items-center gap-3 border-t border-slate-100 pt-2.5">
+                          <button
+                            onClick={() => copyAnswer(a)}
+                            className="text-xs font-black text-slate-500 hover:text-[#0B5CFF] flex items-center gap-1"
+                          >
+                            <span className="material-symbols-outlined text-sm">content_copy</span>コピー
+                          </button>
+                          <button
+                            onClick={() => requestAnswer(a.question, { force: true })}
+                            className="text-xs font-black text-slate-500 hover:text-[#0B5CFF] flex items-center gap-1"
+                          >
+                            <span className="material-symbols-outlined text-sm">refresh</span>もう一度
+                          </button>
+                          {a.model && <span className="ml-auto text-[10px] text-slate-300 font-bold">{a.model}</span>}
                         </div>
-                      )}
-                      {a.sources.length > 0 && (
-                        <div className="mt-3 flex flex-wrap gap-1.5">
-                          {a.sources.map((s, i) => (
-                            <span key={i} className="text-[11px] font-bold text-[#0B5CFF] bg-blue-50 rounded-full px-2.5 py-1">
-                              {s.label}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <div className="mt-3 flex items-center gap-3 border-t border-slate-100 pt-2.5">
-                        <button
-                          onClick={() => copyAnswer(a)}
-                          className="text-xs font-black text-slate-500 hover:text-[#0B5CFF] flex items-center gap-1"
-                        >
-                          <span className="material-symbols-outlined text-sm">content_copy</span>コピー
-                        </button>
-                        <button
-                          onClick={() => requestAnswer(a.question, { force: true })}
-                          className="text-xs font-black text-slate-500 hover:text-[#0B5CFF] flex items-center gap-1"
-                        >
-                          <span className="material-symbols-outlined text-sm">refresh</span>もう一度
-                        </button>
-                        {a.model && <span className="ml-auto text-[10px] text-slate-300 font-bold">{a.model}</span>}
-                      </div>
-                    </>
-                  )}
+                      </>
+                    )}
+                  </div>
                 </div>
               )
             })
@@ -1126,35 +1099,13 @@ const SILENCE_PEAK = 8
                   </p>
                 </div>
               )}
-              {/* 最新カンペを映像下にデカ表示（顔を見ながら読める） */}
-              {latest && (
-                <div
-                  key={latest.id}
-                  className="cunning-pop absolute left-0 right-0 bottom-0 p-4 sm:p-6 bg-gradient-to-t from-black/95 via-black/85 to-transparent max-h-[60%] overflow-y-auto"
-                >
-                  <p className="text-xs font-black text-sky-300 mb-1">💬 {latest.question}</p>
-                  {latest.loading ? (
-                    <p className="text-white/85 font-black text-xl flex items-center gap-2">
-                      <span className="material-symbols-outlined animate-spin">progress_activity</span>カンペ生成中…
-                    </p>
-                  ) : (
-                    <>
-                      <p className="text-white font-black text-3xl sm:text-5xl leading-tight">{latest.summary}</p>
-                      {latest.script && (
-                        <p className="text-white/90 font-bold text-lg sm:text-2xl leading-relaxed whitespace-pre-wrap mt-2">
-                          👉 {latest.script}
-                        </p>
-                      )}
-                    </>
-                  )}
-                </div>
-              )}
+              {/* 映像にはカンペを重ねない（見づらいので右パネルに集約） */}
             </div>
 
-            {/* 右: カンペ履歴＋手動入力 */}
-            <div className="w-full lg:w-[400px] flex flex-col bg-slate-800 border-t lg:border-t-0 lg:border-l border-white/10 min-h-0">
-              <p className="px-4 pt-3 pb-1 text-xs font-black text-white/50 flex-shrink-0">カンペ履歴</p>
-              <div className="flex-1 overflow-y-auto px-3 pb-2 space-y-2 min-h-0">
+            {/* 右: カンペ（質問→回答が一目で分かる）＋手動入力 */}
+            <div className="w-full lg:w-[500px] flex flex-col bg-slate-800 border-t lg:border-t-0 lg:border-l border-white/10 min-h-0">
+              <p className="px-4 pt-3 pb-1 text-xs font-black text-white/50 flex-shrink-0">カンペ（相手の発言 → こう答える）</p>
+              <div className="flex-1 overflow-y-auto px-3 pb-2 space-y-3 min-h-0">
                 {answers.length === 0 ? (
                   <div className="h-full flex flex-col items-center justify-center text-white/50 gap-2 py-8">
                     <img src="/character/thinking.png" alt="" className="w-14 h-14 object-contain" />
@@ -1164,19 +1115,39 @@ const SILENCE_PEAK = 8
                   answers.map((a) => {
                     const isLatest = a.id === latest?.id
                     return (
-                      <div key={a.id} className={`cunning-whoosh rounded-xl p-3 ${isLatest ? 'bg-white ring-2 ring-[#2D8CFF]' : 'bg-white/85'}`}>
-                        <p className="text-[11px] font-black text-slate-500 mb-1">
-                          {isLatest && <span className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5 mr-1">最新</span>}
-                          {a.question}
-                        </p>
-                        {a.loading ? (
-                          <p className="text-slate-500 font-black text-sm py-1">カンペ生成中…</p>
-                        ) : (
-                          <>
-                            <p className="font-black text-slate-900 leading-snug text-lg">{a.summary}</p>
-                            {a.script && <p className="text-[15px] text-slate-700 font-bold mt-1 whitespace-pre-wrap">👉 {a.script}</p>}
-                          </>
-                        )}
+                      <div
+                        key={a.id}
+                        className={`cunning-whoosh rounded-2xl overflow-hidden ${isLatest ? 'ring-2 ring-[#2D8CFF] shadow-xl' : 'opacity-90'}`}
+                      >
+                        {/* 質問（相手の発言）＝濃色ヘッダー */}
+                        <div className="bg-slate-700 px-3 py-2">
+                          <p className="text-[11px] font-black text-sky-300 flex items-center gap-1">
+                            {isLatest && <span className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5">最新</span>}
+                            💬 {modeDef.inputLabel}
+                          </p>
+                          <p className={`font-bold text-white mt-0.5 ${isLatest ? 'text-base' : 'text-sm'}`}>{a.question}</p>
+                        </div>
+                        {/* 回答＝白背景でくっきり */}
+                        <div className="bg-white px-3 py-3">
+                          {a.loading ? (
+                            <p className="text-slate-500 font-black flex items-center gap-2">
+                              <img src="/character/working.png" alt="" className="w-6 h-6 object-contain animate-bounce" />
+                              カンペ生成中…
+                            </p>
+                          ) : (
+                            <>
+                              <p className="text-[11px] font-black text-[#0B5CFF] mb-1">👉 こう答える</p>
+                              <p className={`font-black text-slate-900 leading-snug ${isLatest ? 'text-2xl sm:text-3xl' : 'text-base'}`}>
+                                {a.summary}
+                              </p>
+                              {a.script && (
+                                <p className={`text-slate-700 font-bold leading-relaxed whitespace-pre-wrap mt-2 ${isLatest ? 'text-base sm:text-lg' : 'text-sm'}`}>
+                                  {a.script}
+                                </p>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     )
                   })
