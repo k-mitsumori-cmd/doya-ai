@@ -59,12 +59,20 @@ export default function SfaAccountsPage() {
           <h1 className="text-2xl font-black text-slate-900">取引先</h1>
           <p className="text-slate-500 font-bold text-sm">会社・顧客を一元管理</p>
         </div>
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="px-5 py-3 rounded-full bg-gradient-to-r from-green-500 to-lime-600 text-white font-black shadow-lg hover:shadow-xl transition-all flex items-center gap-1"
-        >
-          <span className="material-symbols-outlined">add</span>新規登録
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href="/api/sfa/export?type=accounts"
+            className="px-4 py-3 rounded-full bg-white border border-slate-200 text-green-700 font-black shadow-sm hover:shadow flex items-center gap-1"
+          >
+            <span className="material-symbols-outlined">download</span>CSV出力
+          </a>
+          <button
+            onClick={() => setOpen((v) => !v)}
+            className="px-5 py-3 rounded-full bg-gradient-to-r from-green-500 to-lime-600 text-white font-black shadow-lg hover:shadow-xl transition-all flex items-center gap-1"
+          >
+            <span className="material-symbols-outlined">add</span>新規登録
+          </button>
+        </div>
       </div>
 
       {open && (

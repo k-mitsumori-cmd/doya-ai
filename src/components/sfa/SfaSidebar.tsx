@@ -3,7 +3,7 @@
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Building2, Tag, TrendingUp, Zap } from 'lucide-react'
+import { LayoutDashboard, Building2, Kanban, UserPlus, Tag, TrendingUp, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { sfaTheme } from '@/components/sidebar/themes'
 import {
@@ -34,12 +34,15 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const base = `/sfa/${orgSlug}`
 
-  // 実装済みルートのみ表示（商談カンバン/リード/活動/タスク等は順次追加）
   const MAIN_NAV: NavItem[] = [
     { href: base, label: 'ダッシュボード', icon: LayoutDashboard },
+    { href: `${base}/deals`, label: '商談（パイプライン）', icon: Kanban, hot: true },
     { href: `${base}/accounts`, label: '取引先', icon: Building2 },
   ]
-  const SUB_NAV: NavItem[] = [{ href: '/sfa/pricing', label: '料金プラン', icon: Tag }]
+  const SUB_NAV: NavItem[] = [
+    { href: `${base}/members`, label: 'メンバー', icon: UserPlus },
+    { href: '/sfa/pricing', label: '料金プラン', icon: Tag },
+  ]
 
   const planLabel = (() => {
     if (!plan && !isLoggedIn) return 'GUEST'
@@ -119,7 +122,7 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
           isCollapsed={isCollapsed}
           isMobile={isMobile}
           theme={sfaTheme}
-          settingsHref={`${base}/settings`}
+          settingsHref={`${base}/members`}
           loginCallbackUrl="/sfa"
           onLogout={() => setIsLogoutDialogOpen(true)}
           renderExtra={() => (
