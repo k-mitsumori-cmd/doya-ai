@@ -143,6 +143,13 @@ const SILENCE_PEAK = 8
     if (endedRef.current) return
     endedRef.current = true
     stopAll()
+    // 集中モード/全画面を閉じてから議事録を出す（モーダルの二重表示を防ぐ）
+    setFocusMode(false)
+    try {
+      if (document.fullscreenElement) document.exitFullscreen?.()
+    } catch {
+      /* noop */
+    }
     setStatusMsg('停止しました')
     await fetch(`/api/cunning/sessions/${sessionId}`, {
       method: 'PATCH',
@@ -591,6 +598,32 @@ const SILENCE_PEAK = 8
     requestAnswer(q, { force: true })
   }
 
+  // 集中モード：サイドバー等を覆い、ブラウザの全画面APIで画面いっぱいに広げる
+  const enterFocus = () => {
+    setFocusMode(true)
+    try {
+      ;(document.documentElement.requestFullscreen?.() as Promise<void> | undefined)?.catch(() => {})
+    } catch {
+      /* 全画面不可でもオーバーレイで広がる */
+    }
+  }
+  const exitFocus = () => {
+    setFocusMode(false)
+    try {
+      if (document.fullscreenElement) document.exitFullscreen?.()
+    } catch {
+      /* noop */
+    }
+  }
+  // ブラウザの全画面が解除（Esc等）されたら集中モードも閉じる
+  useEffect(() => {
+    const onFs = () => {
+      if (!document.fullscreenElement) setFocusMode(false)
+    }
+    document.addEventListener('fullscreenchange', onFs)
+    return () => document.removeEventListener('fullscreenchange', onFs)
+  }, [])
+
   const copyText = async (t: string) => {
     try {
       await navigator.clipboard.writeText(t)
@@ -645,8 +678,8 @@ const SILENCE_PEAK = 8
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setFocusMode(true)}
-            title="集中モード（画面を広げてカンペを大きく表示）"
+            onClick={enterFocus}
+            title="集中モード（画面いっぱいにカンペを大きく表示）"
             className="px-3 py-2.5 rounded-full font-black text-sm bg-white text-[#0B5CFF] shadow-sm hover:shadow transition-all"
           >
             <span className="material-symbols-outlined align-middle text-lg">open_in_full</span>
@@ -660,24 +693,27 @@ const SILENCE_PEAK = 8
           >
             <span className="material-symbols-outlined align-middle text-lg">picture_in_picture_alt</span>
           </button>
-          {running ? (
-            <button
-              onClick={finishSession}
-              className="px-7 py-3 rounded-full bg-red-500 text-white font-black text-base shadow-lg shadow-red-500/30 hover:bg-red-600 transition-all flex items-center gap-2"
-            >
-              <span className="material-symbols-outlined text-xl">stop_circle</span>
-              終了して議事録を見る
-            </button>
-          ) : (
-            <button
-              onClick={start}
-              className="px-5 py-2.5 rounded-full bg-gradient-to-r from-[#0B5CFF] to-blue-600 text-white font-black shadow-lg hover:shadow-xl transition-all"
-            >
-              🎤 ライブ開始
-            </button>
-          )}
         </div>
       </div>
+
+      {/* 主役の大きなボタン（必ず押すもの・横幅いっぱい） */}
+      {running ? (
+        <button
+          onClick={finishSession}
+          className="w-full mb-4 py-5 rounded-2xl bg-red-500 text-white font-black text-xl shadow-lg shadow-red-500/30 hover:bg-red-600 transition-all flex items-center justify-center gap-2"
+        >
+          <span className="material-symbols-outlined text-3xl">stop_circle</span>
+          終了して議事録を見る
+        </button>
+      ) : (
+        <button
+          onClick={start}
+          className="w-full mb-4 py-5 rounded-2xl bg-gradient-to-r from-[#2D8CFF] to-[#0B5CFF] text-white font-black text-xl shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all flex items-center justify-center gap-2"
+        >
+          <span className="material-symbols-outlined text-3xl">play_circle</span>
+          🎤 ライブ開始
+        </button>
+      )}
 
       <p className="text-xs font-bold text-slate-400 mb-3">{statusMsg}</p>
 
@@ -1056,9 +1092,9 @@ const SILENCE_PEAK = 8
         音声データは文字起こし後に保存しません。
       </p>
 
-      {/* カンペ集中モード（画面を広げて想定問答を次々大きく表示） */}
+      {/* カンペ集中モード（画面いっぱいに想定問答を次々特大表示） */}
       {focusMode && (
-        <div className="fixed inset-0 z-[55] bg-slate-900 flex flex-col">
+        <div className="fixed inset-0 z-[60] bg-slate-900 flex flex-col">
           {/* バー */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
             <div className="flex items-center gap-2 text-white">
@@ -1084,7 +1120,7 @@ const SILENCE_PEAK = 8
                 </button>
               )}
               <button
-                onClick={() => setFocusMode(false)}
+                onClick={exitFocus}
                 title="集中モードを終了"
                 className="px-3 py-2 rounded-full bg-white/10 text-white font-black text-sm"
               >
@@ -1107,26 +1143,26 @@ const SILENCE_PEAK = 8
                 return (
                   <div
                     key={a.id}
-                    className={`rounded-2xl p-5 sm:p-6 ${
-                      isLatest ? 'bg-white ring-4 ring-[#2D8CFF]' : 'bg-white/90'
+                    className={`rounded-3xl p-6 sm:p-8 ${
+                      isLatest ? 'bg-white ring-4 ring-[#2D8CFF] shadow-2xl' : 'bg-white/85'
                     }`}
                   >
-                    <p className="text-xs font-bold text-slate-400 mb-1">
-                      {isLatest && <span className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5 mr-1">最新</span>}
+                    <p className={`font-bold text-slate-500 mb-2 ${isLatest ? 'text-base sm:text-xl' : 'text-sm'}`}>
+                      {isLatest && <span className="text-xs font-black text-white bg-red-500 rounded px-2 py-0.5 mr-2">最新</span>}
                       {modeDef.inputLabel}: {a.question}
                     </p>
                     {a.loading ? (
-                      <div className="flex items-center gap-2 text-slate-500 font-black py-2">
-                        <img src="/character/working.png" alt="" className="w-8 h-8 object-contain animate-bounce" />
+                      <div className="flex items-center gap-3 text-slate-500 font-black py-3 text-xl">
+                        <img src="/character/working.png" alt="" className="w-12 h-12 object-contain animate-bounce" />
                         カンペ生成中…
                       </div>
                     ) : (
                       <>
-                        <p className={`font-black text-slate-900 leading-snug ${isLatest ? 'text-2xl sm:text-4xl' : 'text-xl'}`}>
+                        <p className={`font-black text-slate-900 leading-tight ${isLatest ? 'text-4xl sm:text-6xl' : 'text-2xl'}`}>
                           {a.summary}
                         </p>
                         {a.script && (
-                          <p className={`text-slate-700 font-medium leading-relaxed whitespace-pre-wrap mt-2 ${isLatest ? 'text-base sm:text-xl' : 'text-sm'}`}>
+                          <p className={`text-slate-700 font-bold leading-relaxed whitespace-pre-wrap mt-4 ${isLatest ? 'text-xl sm:text-3xl' : 'text-base'}`}>
                             👉 {a.script}
                           </p>
                         )}
@@ -1156,7 +1192,7 @@ const SILENCE_PEAK = 8
 
       {/* 終了時の議事録＋評価モーダル（派手な演出） */}
       {reportOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           {/* キラキラ */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
             {['🎉', '✨', '🎊', '⭐', '🎉', '✨'].map((e, i) => (

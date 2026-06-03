@@ -1337,7 +1337,7 @@ export const SERVICES: Service[] = [
     bgGradient: 'from-purple-50 to-fuchsia-50',
     href: '/cunning',
     dashboardHref: '/cunning',
-    pricingHref: '/cunning',
+    pricingHref: '/cunning/pricing',
     guideHref: '/cunning',
     features: [
       'Meet/Zoomのタブ音声をリアルタイム解析',
@@ -1365,12 +1365,12 @@ export const SERVICES: Service[] = [
         price: 9980,
       },
     },
-    status: 'coming_soon',
+    status: 'active',
     category: 'other',
     order: 23,
     requiresAuth: true,
     isNew: true,
-    badge: '開発中',
+    badge: 'NEW',
   },
 
   // ----------------------------------------

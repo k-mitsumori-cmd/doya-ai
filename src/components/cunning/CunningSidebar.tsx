@@ -3,7 +3,7 @@
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Headphones, LayoutDashboard, BookOpen, Building2, History, Zap } from 'lucide-react'
+import { Headphones, LayoutDashboard, BookOpen, Building2, History, Tag, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { cunningTheme } from '@/components/sidebar/themes'
 import {
@@ -28,6 +28,7 @@ const SUB_NAV: NavItem[] = [
   { href: '/cunning/knowledge', label: 'ナレッジ（商談）', icon: BookOpen },
   { href: '/cunning/company', label: '企業・プロフィール（面接）', icon: Building2 },
   { href: '/cunning/history', label: '履歴', icon: History },
+  { href: '/cunning/pricing', label: '料金プラン', icon: Tag },
 ]
 
 interface CunningSidebarProps extends SidebarProps {
@@ -139,13 +140,13 @@ function CunningSidebarImpl({
                 </p>
                 <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">プロプラン：¥9,980/月</p>
                 <Link
-                  href="/pricing"
+                  href="/cunning/pricing"
                   className="mt-3 w-full py-2 bg-white text-[#0B5CFF] text-[11px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md block text-center"
                 >
                   プロにアップグレード
                 </Link>
               </div>
-              <Link href="/pricing" className="md:hidden relative z-10 flex items-center gap-3">
+              <Link href="/cunning/pricing" className="md:hidden relative z-10 flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
                   <Zap className="w-4 h-4 text-[#0B5CFF] fill-[#0B5CFF]" />
                 </div>
