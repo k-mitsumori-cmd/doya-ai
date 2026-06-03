@@ -664,6 +664,20 @@ const SILENCE_PEAK = 8
 
       <p className="text-xs font-bold text-slate-400 mb-3">{statusMsg}</p>
 
+      {/* このモードで「何にどう答えるか」をでかく明示 */}
+      <div className="mb-4 flex items-start gap-3 bg-gradient-to-r from-[#2D8CFF] to-[#0B5CFF] text-white rounded-2xl p-4 shadow-md">
+        <span className="text-3xl leading-none">{modeDef.icon}</span>
+        <div className="min-w-0">
+          <p className="font-black text-sm">
+            {modeDef.label}｜<span className="opacity-90">何にどう答える？</span>
+          </p>
+          <p className="text-xs font-bold text-white/95 mt-1 leading-relaxed">{modeDef.guide}</p>
+          <p className="text-[11px] font-bold text-white/80 mt-1">
+            → 「{modeDef.inputLabel}」を検出すると、下に<strong>そのまま言えるカンペ</strong>が出ます
+          </p>
+        </div>
+      </div>
+
       {/* 音声ソース選択 */}
       {!running && (
         <div className="mb-4 bg-white rounded-2xl shadow-sm p-4">
@@ -858,6 +872,7 @@ const SILENCE_PEAK = 8
                   </p>
                 ) : (
                   <>
+                    <p className="text-[10px] font-black text-sky-300 mb-0.5">👇 これを言おう</p>
                     <p className="text-white font-black text-lg sm:text-2xl leading-snug">{latest.summary}</p>
                     {latest.script && (
                       <p className="text-white/90 text-sm sm:text-lg font-medium mt-1.5 leading-relaxed whitespace-pre-wrap">
@@ -946,9 +961,9 @@ const SILENCE_PEAK = 8
                         <p className="text-lg font-black text-slate-900 leading-snug flex-1">{a.summary}</p>
                       </div>
                       {a.script && (
-                        <div className="mt-3">
-                          <p className="text-[10px] font-black text-slate-400 mb-1">話す内容</p>
-                          <p className="text-sm text-slate-700 font-medium leading-relaxed whitespace-pre-wrap">
+                        <div className="mt-3 bg-blue-50 rounded-xl p-2.5">
+                          <p className="text-[10px] font-black text-[#0B5CFF] mb-1">👉 そのまま言えばOK</p>
+                          <p className="text-sm text-slate-800 font-medium leading-relaxed whitespace-pre-wrap">
                             {a.script}
                           </p>
                         </div>

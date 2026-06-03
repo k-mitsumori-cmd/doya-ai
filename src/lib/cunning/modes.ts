@@ -16,6 +16,8 @@ export interface ModeDef {
   character: string // public/character/{character}.png のマスコット表情
   category: ModeCategory
   desc: string
+  /** 画面に大きく出す「何にどう答えるか」のガイド文 */
+  guide: string
   /** question=相手の質問を検出して回答 / any=相手の発話・コメント全般に反応 */
   trigger: ModeTrigger
   /** knowledge=商談ナレッジRAG / company=企業×応募者 / none=コンテキスト不要 */
@@ -39,6 +41,7 @@ export const MODES: Record<CunningMode, ModeDef> = {
     character: 'thumbsup',
     category: 'business',
     desc: '自社ナレッジに基づく回答を即時提示',
+    guide: '相手の質問に、自社情報をもとにした回答を出します。下のカンペをそのまま話せばOK。',
     trigger: 'question',
     context: 'knowledge',
     manualPlaceholder: '質問を手入力（例: 料金プランは？）',
@@ -59,6 +62,7 @@ export const MODES: Record<CunningMode, ModeDef> = {
     character: 'focus',
     category: 'business',
     desc: '応募先企業に最適化した回答案を提示',
+    guide: '面接官の質問に、企業に刺さる回答を出します。下のカンペをそのまま話せばOK。',
     trigger: 'question',
     context: 'company',
     manualPlaceholder: '質問を手入力（例: 志望動機は？）',
@@ -79,6 +83,7 @@ export const MODES: Record<CunningMode, ModeDef> = {
     character: 'love',
     category: 'business',
     desc: '相手の発言に共感しつつ、会話として良い問い返し・FBを提案',
+    guide: '相手の発言に、共感＋良い問い返しを出します。会話のきっかけにそのまま使えます。',
     trigger: 'any',
     context: 'none',
     manualPlaceholder: '相手の発言を入力（例: 最近ちょっと疲れてて…）',
@@ -103,6 +108,7 @@ export const MODES: Record<CunningMode, ModeDef> = {
     character: 'focus',
     category: 'business',
     desc: '厳しい追及に感情的にならず、会話として冷静に切り返す',
+    guide: '厳しい追及に、落ち着いた切り返しを出します。まずカンペの一言を返しましょう。',
     trigger: 'any',
     context: 'none',
     manualPlaceholder: '上司/相手の追及を入力（例: なんでこれ終わってないの？）',
@@ -120,6 +126,31 @@ export const MODES: Record<CunningMode, ModeDef> = {
     prepInstruction:
       '上司/客が詰めてきそうな厳しい追及を想定し、感情的にならず冷静に切り返す会話例を作ってください。',
   },
+  apology: {
+    id: 'apology',
+    label: '謝罪対応',
+    icon: '🙇',
+    character: 'focus',
+    category: 'business',
+    desc: '指摘・クレーム・怒りに、誠実な謝罪と対応を会話で返す',
+    guide: '相手の指摘や怒りに、誠実なお詫び＋対応を出します。まずカンペの一言で受け止めましょう。',
+    trigger: 'any',
+    context: 'none',
+    manualPlaceholder: '相手の指摘/怒りを入力（例: 納期に間に合ってないんだけど）',
+    inputLabel: '相手の指摘/怒り',
+    outputHint: {
+      summary: 'まず返すお詫びの一言（20〜30文字）',
+      script: '誠実な謝罪＋事実確認/対応/再発防止（言い訳しない・1〜3文）',
+    },
+    persona: [
+      'あなたは謝罪・クレーム対応のプロをリアルタイムで支援するアシスタントです。',
+      '相手の指摘・怒りに対し、まず誠実に受け止めて謝罪し、言い訳をせず、対応・再発防止を示す返しを作ります。',
+      '感情的にならず、相手の感情に配慮した丁寧な言葉で。事実が不明な点は確認する姿勢を示します。',
+      '過度に卑屈にならず、誠実で前向きに着地させてください。',
+    ],
+    prepInstruction:
+      '相手から来そうな指摘・クレーム・怒りを想定し、誠実な謝罪＋対応の会話例を作ってください。',
+  },
   idol: {
     id: 'idol',
     label: 'アイドル神対応',
@@ -127,6 +158,7 @@ export const MODES: Record<CunningMode, ModeDef> = {
     character: 'love',
     category: 'entertainment',
     desc: '何を言われても明るく可愛く前向きに返す',
+    guide: 'ファンのコメントに、可愛い神対応を出します。そのまま読めばOK！',
     trigger: 'any',
     context: 'none',
     manualPlaceholder: 'コメントを入力（例: 今日も可愛いね！）',
@@ -148,6 +180,7 @@ export const MODES: Record<CunningMode, ModeDef> = {
     character: 'point',
     category: 'entertainment',
     desc: 'ひどいコメントにユーモアで軽やかに切り返す',
+    guide: 'ひどいコメントに、角を立てずユーモアで切り返します。そのまま言えばOK！',
     trigger: 'any',
     context: 'none',
     manualPlaceholder: 'ひどいコメントを貼り付け（例: つまらない、見る価値なし）',
@@ -169,6 +202,7 @@ export const MODES: Record<CunningMode, ModeDef> = {
     character: 'jump',
     category: 'entertainment',
     desc: 'コメントや話題を面白く盛り上げる返しを提案',
+    guide: 'コメントや話題を、面白く広げる返しにします。そのまま言えばOK！',
     trigger: 'any',
     context: 'none',
     manualPlaceholder: 'コメント/話題を入力（例: 最近ハマってるものある？）',
@@ -181,6 +215,66 @@ export const MODES: Record<CunningMode, ModeDef> = {
     ],
     prepInstruction:
       '配信で来そうなコメントや話題を想定し、面白く広げる返し（ボケ・小ネタ・質問返し）を作ってください。',
+  },
+  ogiri: {
+    id: 'ogiri',
+    label: '大喜利',
+    icon: '🎤',
+    character: 'surprise',
+    category: 'entertainment',
+    desc: 'お題・フリに、意外でクスッと笑える一言（ボケ）を返す',
+    guide: 'お題やフリに、面白い一言（ボケ）を出します。そのまま言えばウケる！',
+    trigger: 'any',
+    context: 'none',
+    manualPlaceholder: 'お題/フリを入力（例: こんな結婚式は嫌だ）',
+    inputLabel: 'お題/フリ',
+    outputHint: { summary: 'キレのある一言ボケ（30文字程度）', script: '面白い回答（1〜2文・テンポ重視）' },
+    persona: [
+      'あなたは大喜利の名回答者です。',
+      'お題やフリに対し、意外性とユーモアのある面白い回答（ボケ）を即座に出します。',
+      'テンポよく、短く、クスッと笑える一言に。誹謗中傷・差別・下品すぎる表現は避けてください。',
+    ],
+    prepInstruction: 'ありがちなお題・フリを想定し、面白い回答（ボケ）の例を作ってください。',
+  },
+  praise: {
+    id: 'praise',
+    label: '全肯定褒め殺し',
+    icon: '🌟',
+    character: 'love',
+    category: 'entertainment',
+    desc: '相手の発言を、何でも全力で肯定・絶賛して褒めまくる',
+    guide: '相手の発言を、全力で肯定・絶賛します。そのまま言って相手を気持ちよく！',
+    trigger: 'any',
+    context: 'none',
+    manualPlaceholder: '相手の発言を入力（例: 今日寝坊しちゃって…）',
+    inputLabel: '相手の発言',
+    outputHint: { summary: '全力のひと褒め（30文字程度）', script: '具体的に大げさに肯定・絶賛する返し（1〜3文）' },
+    persona: [
+      'あなたは「全肯定・褒め殺し」の達人です。',
+      '相手が何を言っても、それを全力でポジティブに肯定し、具体的に大げさに褒めちぎります。',
+      '嫌味にならない範囲でテンション高く。相手が思わず笑顔になる褒めを。',
+    ],
+    prepInstruction: '相手が言いそうな発言を想定し、全力で褒め倒す返しの例を作ってください。',
+  },
+  debate: {
+    id: 'debate',
+    label: '徹底論破',
+    icon: '⚔️',
+    character: 'point',
+    category: 'entertainment',
+    desc: '相手の主張に、論理と根拠で鋭く反論する',
+    guide: '相手の主張に、論理と根拠で反論します。人格攻撃はせず、ロジックで切り返します。',
+    trigger: 'any',
+    context: 'none',
+    manualPlaceholder: '相手の主張を入力（例: 残業は絶対した方が成長する）',
+    inputLabel: '相手の主張',
+    outputHint: { summary: '反論の一撃（30文字程度）', script: '論理的な反論（根拠・具体例つき・1〜3文）' },
+    persona: [
+      'あなたはディベートの達人です。',
+      '相手の主張の論理的な穴・前提の誤り・反例を突き、根拠を添えて鋭く反論します。',
+      '人格攻撃・暴言・誹謗中傷は絶対にせず、あくまで論理と事実で。相手の人格は尊重します。',
+    ],
+    prepInstruction: 'ありがちな主張を想定し、論理と根拠で反論する例を作ってください（人格攻撃はしない）。',
   },
 }
 
