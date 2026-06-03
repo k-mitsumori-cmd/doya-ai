@@ -1434,6 +1434,53 @@ export const SERVICES: Service[] = [
     isNew: true,
     badge: 'NEW',
   },
+
+  // ----------------------------------------
+  // ドヤ営業管理（SFA）
+  // ----------------------------------------
+  {
+    id: 'sfa',
+    name: 'ドヤ営業管理',
+    shortName: '営業管理',
+    description: '取引先・商談・活動を一元管理。AI標準搭載のかんたんSFA。',
+    longDescription:
+      '取引先／商談パイプライン（カンバン）／活動履歴／タスクを、設定不要・即日で。AIがリードスコアリング・次アクション提案・議事録要約まで肩代わり。Salesforceは重すぎる中小チーム向けの、シンプルで安いSFAです。',
+    icon: '📈',
+    color: 'green',
+    gradient: 'from-green-500 to-lime-600',
+    bgGradient: 'from-green-50 to-lime-50',
+    href: '/sfa',
+    dashboardHref: '/sfa',
+    pricingHref: '/sfa/pricing',
+    guideHref: '/sfa',
+    features: [
+      '商談パイプラインをカンバンで管理',
+      '取引先・担当者・活動を一元化',
+      'AIリードスコアリング＆次アクション提案',
+      'ドヤリストからリードをワンクリック取込',
+      '個人・チームのダッシュボードと予実',
+    ],
+    useCases: [
+      'Excel管理から卒業したい営業チーム',
+      'Salesforceは重すぎる中小企業',
+      '入力負荷をAIで減らして定着させたい',
+    ],
+    pricing: {
+      free: { name: '無料プラン', limit: '3名 / 取引先・商談 各50件', dailyLimit: -1, price: 0 },
+      pro: {
+        name: 'プロプラン',
+        limit: '50名 / 無制限・AI無制限',
+        dailyLimit: -1,
+        price: 9980,
+      },
+    },
+    status: 'coming_soon',
+    category: 'other',
+    order: 24,
+    requiresAuth: true,
+    isNew: true,
+    badge: '開発中',
+  },
 ]
 
 // ============================================

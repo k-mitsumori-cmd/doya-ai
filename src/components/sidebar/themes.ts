@@ -194,6 +194,23 @@ export const cunningTheme: SidebarTheme = {
   zapColor: 'text-sky-200',
 }
 
+// ドヤ営業管理（SFA / Green→Lime 系・成長/売上）
+export const sfaTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-green-600 via-emerald-600 to-lime-700',
+  navText: 'text-green-50/85',
+  navTextIcon: 'text-lime-100/80',
+  sectionText: 'text-lime-100/60',
+  toggleText: 'text-green-700',
+  toggleHover: 'hover:bg-green-50',
+  brandingText: 'text-green-100/40',
+  profileBg: 'bg-green-900/30',
+  avatarBg: 'bg-green-600',
+  loginText: 'text-green-700',
+  loginHover: 'hover:bg-green-50',
+  aiBubbleBg: 'bg-green-700/40',
+  zapColor: 'text-lime-300',
+}
+
 // ドヤHR（タレントマネジメント / Sky→Blue→Indigo 系）
 export const hrTheme: SidebarTheme = {
   bgGradient: 'bg-gradient-to-b from-sky-600 via-blue-700 to-indigo-800',

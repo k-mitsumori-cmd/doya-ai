@@ -2958,3 +2958,211 @@ model CunningApplicantProfile {
   @@index([userId])
   @@map("cunning_applicant_profiles")
 }
+
+// ============================================
+// ドヤ営業管理（SFA）sfa_*  — 組織スコープ型
+// ============================================
+model SfaOrganization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members   SfaMember[]
+  @@map("sfa_organizations")
+}
+
+model SfaMember {
+  id             String    @id @default(cuid())
+  organizationId String
+  organization   SfaOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  role           String    @default("member") // owner / admin / manager / member
+  status         String    @default("ACTIVE")  // ACTIVE / PENDING / INACTIVE
+  name           String?
+  inviteEmail    String?
+  inviteToken    String?   @unique
+  acceptedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("sfa_members")
+}
+
+model SfaAccount {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  corporateNumber String?
+  industry       String?
+  prefecture     String?
+  address        String?  @db.Text
+  url            String?
+  employeeCount  Int?
+  capital        BigInt?
+  creditRank     String?
+  ownerMemberId  String?  // 自社担当
+  tags           Json?
+  note           String?  @db.Text
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, name])
+  @@map("sfa_accounts")
+}
+
+model SfaContact {
+  id             String   @id @default(cuid())
+  organizationId String
+  accountId      String?
+  name           String
+  nameKana       String?
+  title          String?
+  department     String?
+  email          String?
+  phone          String?
+  isKeyPerson    Boolean  @default(false)
+  note           String?  @db.Text
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([organizationId, accountId])
+  @@map("sfa_contacts")
+}
+
+model SfaLead {
+  id                String   @id @default(cuid())
+  organizationId    String
+  name              String   // 企業名 or 個人
+  corporateNumber   String?
+  contactName       String?
+  email             String?
+  phone             String?
+  status            String   @default("new") // new/working/nurturing/qualified/converted/disqualified
+  score             Int?
+  source            String   @default("manual") // doyalist/csv/manual
+  assigneeMemberId  String?
+  convertedAccountId String?
+  note              String?  @db.Text
+  raw               Json?
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@map("sfa_leads")
+}
+
+model SfaPipeline {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String   @default("標準パイプライン")
+  isDefault      Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  stages SfaStage[]
+  @@index([organizationId])
+  @@map("sfa_pipelines")
+}
+
+model SfaStage {
+  id          String  @id @default(cuid())
+  pipelineId  String
+  pipeline    SfaPipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
+  name        String
+  order       Int
+  probability Int     @default(0)
+  color       String  @default("#22c55e")
+  isWon       Boolean @default(false)
+  isLost      Boolean @default(false)
+
+  @@index([pipelineId])
+  @@map("sfa_stages")
+}
+
+model SfaDeal {
+  id               String    @id @default(cuid())
+  organizationId   String
+  accountId        String?
+  contactId        String?
+  name             String
+  amount           BigInt    @default(0)
+  currency         String    @default("JPY")
+  stageId          String?
+  probability      Int       @default(0)
+  expectedCloseDate DateTime?
+  status           String    @default("open") // open/won/lost
+  wonAt            DateTime?
+  lostAt           DateTime?
+  lostReason       String?
+  assigneeMemberId String?
+  lastActivityAt   DateTime?
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  lineItems SfaLineItem[]
+  @@index([organizationId, stageId])
+  @@index([organizationId, status])
+  @@map("sfa_deals")
+}
+
+model SfaLineItem {
+  id          String  @id @default(cuid())
+  dealId      String
+  deal        SfaDeal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  productName String
+  quantity    Int     @default(1)
+  unitPrice   BigInt  @default(0)
+  amount      BigInt  @default(0)
+
+  @@index([dealId])
+  @@map("sfa_line_items")
+}
+
+model SfaActivity {
+  id             String   @id @default(cuid())
+  organizationId String
+  type           String   // call/meeting/email/note
+  accountId      String?
+  contactId      String?
+  dealId         String?
+  subject        String?
+  body           String?  @db.Text
+  occurredAt     DateTime @default(now())
+  durationMin    Int?
+  memberId       String?
+  aiSummary      String?  @db.Text
+  transcriptId   String?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, occurredAt])
+  @@index([organizationId, dealId])
+  @@map("sfa_activities")
+}
+
+model SfaTask {
+  id               String    @id @default(cuid())
+  organizationId   String
+  title            String
+  dueDate          DateTime?
+  status           String    @default("open") // open/done
+  priority         String    @default("normal")
+  accountId        String?
+  dealId           String?
+  assigneeMemberId String?
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([organizationId, assigneeMemberId, status])
+  @@map("sfa_tasks")
+}
