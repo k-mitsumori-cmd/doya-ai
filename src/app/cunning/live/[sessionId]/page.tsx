@@ -57,6 +57,11 @@ export default function CunningLivePage() {
   const [mode, setMode] = useState<CunningMode>('sales')
   const modeDef = getMode(mode)
   const entertainment = modeDef.category === 'entertainment'
+  // 音声ソース: tab=タブ音声(getDisplayMedia) / device=入力デバイス(getUserMedia: 仮想デバイス等)
+  const [audioSource, setAudioSource] = useState<'tab' | 'device'>('tab')
+  const [devices, setDevices] = useState<{ deviceId: string; label: string }[]>([])
+  const [deviceId, setDeviceId] = useState('')
+  const [captureKind, setCaptureKind] = useState<'tab' | 'device' | null>(null)
 
   const streamRef = useRef<MediaStream | null>(null)
   const audioStreamRef = useRef<MediaStream | null>(null)
@@ -89,6 +94,7 @@ const SILENCE_PEAK = 8
     peakRef.current = 0
     streamRef.current = null
     audioStreamRef.current = null
+    setCaptureKind(null)
   }, [])
 
   // pipWindow を ref に同期（アンマウント時のクリーンアップが最新値を参照できるように）
@@ -267,22 +273,55 @@ const SILENCE_PEAK = 8
     }, WINDOW_MS)
   }, [sendChunk])
 
+  // 入力デバイス一覧を取得（ラベル取得のため一度マイク許可が要る）
+  const loadDevices = async () => {
+    try {
+      const tmp = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const list = await navigator.mediaDevices.enumerateDevices()
+      setDevices(
+        list
+          .filter((d) => d.kind === 'audioinput')
+          .map((d) => ({ deviceId: d.deviceId, label: d.label || 'マイク' }))
+      )
+      tmp.getTracks().forEach((t) => t.stop())
+    } catch {
+      toast.error('入力デバイスを取得できませんでした（マイク許可が必要です）')
+    }
+  }
+
   const start = async () => {
     try {
       mimeRef.current = pickMime()
-      const display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
-      streamRef.current = display
-      const audioTracks = display.getAudioTracks()
-      if (audioTracks.length === 0) {
-        stopAll()
-        toast.error('音声が共有されていません。共有ダイアログで「タブの音声を共有」にチェックしてください')
-        return
+      let endTracks: MediaStreamTrack[] = []
+
+      if (audioSource === 'device') {
+        // 入力デバイス取り込み（BlackHole/VB-CABLE等の仮想デバイスを選べばPC全体/アプリ音声も可）
+        const s = await navigator.mediaDevices.getUserMedia({
+          audio: deviceId ? { deviceId: { exact: deviceId } } : true,
+        })
+        streamRef.current = s
+        audioStreamRef.current = s
+        if (videoRef.current) videoRef.current.srcObject = null
+        endTracks = s.getAudioTracks()
+        setCaptureKind('device')
+      } else {
+        // タブ音声取り込み（getDisplayMedia）。映像も取得してプレビュー表示。
+        const display = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true })
+        streamRef.current = display
+        const audioTracks = display.getAudioTracks()
+        if (audioTracks.length === 0) {
+          stopAll()
+          toast.error('音声が共有されていません。共有ダイアログで「タブの音声を共有」にチェックしてください')
+          return
+        }
+        if (videoRef.current) {
+          videoRef.current.srcObject = display
+          videoRef.current.play().catch(() => {})
+        }
+        audioStreamRef.current = new MediaStream(audioTracks)
+        endTracks = [...audioTracks, ...display.getVideoTracks()]
+        setCaptureKind('tab')
       }
-      if (videoRef.current) {
-        videoRef.current.srcObject = display
-        videoRef.current.play().catch(() => {})
-      }
-      audioStreamRef.current = new MediaStream(audioTracks)
 
       // 音量モニタ（無音チャンクを送らず、Whisperの無音幻聴を防ぐ）
       try {
@@ -309,17 +348,20 @@ const SILENCE_PEAK = 8
 
       const onEnded = () => {
         stopAll()
-        setStatusMsg('画面共有が停止されました')
+        setStatusMsg('音声の取り込みが停止されました')
       }
-      audioTracks[0].addEventListener('ended', onEnded)
-      display.getVideoTracks().forEach((t) => t.addEventListener('ended', onEnded))
+      endTracks.forEach((t) => t.addEventListener('ended', onEnded))
 
       runningRef.current = true
       setRunning(true)
-      setStatusMsg('解析中… 相手の質問を検出すると回答が表示されます')
+      setStatusMsg(
+        entertainment
+          ? '解析中… 相手のコメント・発話に反応します'
+          : '解析中… 相手の質問を検出すると回答が表示されます'
+      )
       startCycle()
     } catch {
-      toast.error('音声共有を開始できませんでした')
+      toast.error('音声の取り込みを開始できませんでした')
       stopAll()
     }
   }
@@ -442,8 +484,59 @@ const SILENCE_PEAK = 8
 
       <p className="text-xs font-bold text-slate-400 mb-3">{statusMsg}</p>
 
-      {/* 初回オンボーディング（音声共有の躓き対策） */}
+      {/* 音声ソース選択 */}
       {!running && (
+        <div className="mb-4 bg-white rounded-2xl shadow-sm p-4">
+          <p className="text-xs font-black text-slate-500 mb-2">音声ソース</p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setAudioSource('tab')}
+              className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-black border-2 transition-all ${
+                audioSource === 'tab' ? 'border-[#0B5CFF] bg-blue-50 text-[#0B5CFF]' : 'border-slate-200 text-slate-500'
+              }`}
+            >
+              🌐 タブ音声（推奨）
+            </button>
+            <button
+              onClick={() => {
+                setAudioSource('device')
+                if (devices.length === 0) loadDevices()
+              }}
+              className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-black border-2 transition-all ${
+                audioSource === 'device' ? 'border-[#0B5CFF] bg-blue-50 text-[#0B5CFF]' : 'border-slate-200 text-slate-500'
+              }`}
+            >
+              🎙 入力デバイス
+            </button>
+          </div>
+          {audioSource === 'device' && (
+            <div className="mt-3">
+              <div className="flex gap-2">
+                <select
+                  value={deviceId}
+                  onChange={(e) => setDeviceId(e.target.value)}
+                  className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5 font-bold text-sm text-slate-700"
+                >
+                  <option value="">既定の入力デバイス</option>
+                  {devices.map((d) => (
+                    <option key={d.deviceId} value={d.deviceId}>{d.label}</option>
+                  ))}
+                </select>
+                <button onClick={loadDevices} className="px-3 py-2.5 rounded-xl bg-slate-100 text-slate-600 font-black text-sm">
+                  更新
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400 font-bold mt-2 leading-relaxed">
+                Zoom等の<strong>アプリ音声やPC全体</strong>を取り込むには、仮想オーディオデバイス（Mac: BlackHole / Win: VB-CABLE）を導入し、
+                PCの出力をそれに流して、ここでそのデバイスを選んでください。
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 初回オンボーディング（音声共有の躓き対策） */}
+      {!running && audioSource === 'tab' && (
         <div className="mb-4 bg-blue-50 border border-blue-100 rounded-2xl p-4">
           <p className="font-black text-[#0B5CFF] text-sm mb-2 flex items-center gap-1">
             <span className="material-symbols-outlined text-base">tips_and_updates</span>使い方（重要）
@@ -549,8 +642,18 @@ const SILENCE_PEAK = 8
                 <img src={`/character/${modeDef.character}.png`} alt="" className="w-24 h-24 object-contain drop-shadow-lg" />
                 <div className="bg-white/15 backdrop-blur rounded-2xl px-4 py-2">
                   <p className="font-black text-sm text-center">
-                    {modeDef.icon} {modeDef.label}・準備OK！「ライブ開始」でタブを共有してね
+                    {modeDef.icon} {modeDef.label}・準備OK！「ライブ開始」で
+                    {audioSource === 'device' ? '入力デバイスから取り込みます' : 'タブを共有してね'}
                   </p>
+                </div>
+              </div>
+            )}
+            {running && captureKind === 'device' && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-white/85 gap-2">
+                <img src={`/character/${modeDef.character}.png`} alt="" className="w-24 h-24 object-contain drop-shadow-lg" />
+                <div className="flex items-center gap-2 bg-white/15 backdrop-blur rounded-full px-4 py-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+                  <p className="font-black text-sm">🎙 入力デバイスから音声取り込み中…</p>
                 </div>
               </div>
             )}
