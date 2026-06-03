@@ -2,9 +2,9 @@
 // ドヤカンニング 型定義
 // ============================================
 
-// ビジネス: sales(商談) / interview(面接)
+// ビジネス: sales(商談) / interview(面接) / oneonone(1on1面談) / grilling(激詰め対応)
 // エンタメ: idol(アイドル神対応) / roast(アンチコメント返し) / stream(配信トーク)
-export type CunningMode = 'sales' | 'interview' | 'idol' | 'roast' | 'stream'
+export type CunningMode = 'sales' | 'interview' | 'oneonone' | 'grilling' | 'idol' | 'roast' | 'stream'
 
 export interface AnswerSource {
   label: string
