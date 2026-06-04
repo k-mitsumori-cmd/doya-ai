@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { sfaInit } from '@/lib/sfa/client'
 
 export default function SfaDashboard() {
   const params = useParams()
@@ -11,8 +12,9 @@ export default function SfaDashboard() {
   const [usage, setUsage] = useState<any>(null)
 
   useEffect(() => {
-    fetch('/api/sfa/usage', { cache: 'no-store' }).then((r) => r.json()).then(setUsage).catch(() => {})
-  }, [])
+    if (!orgSlug) return
+    fetch('/api/sfa/usage', sfaInit(orgSlug)).then((r) => r.json()).then(setUsage).catch(() => {})
+  }, [orgSlug])
 
   const c = usage?.counts || {}
   const stats = [

@@ -4,7 +4,7 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getSfaContext } from '@/lib/sfa/access'
+import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 
 function csvCell(v: unknown): string {
   const s = v == null ? '' : typeof v === 'bigint' ? String(v) : String(v)
@@ -19,7 +19,7 @@ function toCsv(headers: string[], rows: (unknown[])[]): string {
 
 // GET /api/sfa/export?type=accounts|deals — BOM付きCSVダウンロード
 export async function GET(req: NextRequest) {
-  const ctx = await getSfaContext()
+  const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   const type = new URL(req.url).searchParams.get('type') === 'deals' ? 'deals' : 'accounts'
 

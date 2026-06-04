@@ -2,23 +2,49 @@
 // ドヤ営業管理（SFA）認証・組織スコープ（kintai準拠）
 // ============================================
 import { getServerSession } from 'next-auth'
+import type { NextRequest } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ROLE_HIERARCHY, type SfaContext, type SfaRole } from './types'
 import { DEFAULT_STAGES } from './constants'
 
-/** 全API共通の入口。ログイン＋ACTIVEメンバーなら {userId, organizationId, role, memberId} を返す。無ければ null */
-export async function getSfaContext(): Promise<SfaContext | null> {
+/** リクエストから対象ワークスペース(slug)を取り出す。クエリ ?org= 優先、無ければヘッダ x-sfa-org */
+export function orgSlugFrom(req: NextRequest): string | undefined {
+  try {
+    const q = new URL(req.url).searchParams.get('org')?.trim()
+    if (q) return q
+  } catch {
+    /* noop */
+  }
+  return req.headers.get('x-sfa-org')?.trim() || undefined
+}
+
+/** ログイン中ユーザーのIDを解決（session優先、無ければemailから） */
+async function resolveUserId(): Promise<string | undefined> {
   const session = await getServerSession(authOptions)
   let userId = (session?.user as any)?.id as string | undefined
   if (!userId && session?.user?.email) {
     const dbUser = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } })
     userId = dbUser?.id
   }
+  return userId
+}
+
+/**
+ * 全API共通の入口。
+ * orgSlug を指定するとそのワークスペースの ACTIVE メンバーシップを返す（他人の組織には null）。
+ * 未指定なら最後に参加した組織を返す（入口/オンボーディング判定用のフォールバック）。
+ */
+export async function getSfaContext(orgSlug?: string): Promise<SfaContext | null> {
+  const userId = await resolveUserId()
   if (!userId) return null
 
   const membership = await prisma.sfaMember.findFirst({
-    where: { userId, status: 'ACTIVE' },
+    where: {
+      userId,
+      status: 'ACTIVE',
+      ...(orgSlug ? { organization: { slug: orgSlug } } : {}),
+    },
     include: { organization: true },
     orderBy: { createdAt: 'desc' },
   })
@@ -31,6 +57,22 @@ export async function getSfaContext(): Promise<SfaContext | null> {
     role: membership.role as SfaRole,
     memberId: membership.id,
   }
+}
+
+/** ログイン中ユーザーが所属する全ワークスペース（切替メニュー用） */
+export async function listMemberships(): Promise<{ slug: string; name: string; role: SfaRole }[]> {
+  const userId = await resolveUserId()
+  if (!userId) return []
+  const memberships = await prisma.sfaMember.findMany({
+    where: { userId, status: 'ACTIVE' },
+    include: { organization: true },
+    orderBy: { createdAt: 'asc' },
+  })
+  return memberships.map((m) => ({
+    slug: m.organization.slug,
+    name: m.organization.name,
+    role: m.role as SfaRole,
+  }))
 }
 
 export function hasMinRole(currentRole: string, minRole: SfaRole): boolean {

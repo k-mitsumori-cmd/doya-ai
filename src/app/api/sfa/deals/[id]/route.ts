@@ -4,7 +4,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getSfaContext } from '@/lib/sfa/access'
+import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
@@ -16,7 +16,7 @@ async function owned(orgId: string, id: string) {
 
 // GET /api/sfa/deals/[id] — 詳細（明細・活動つき）
 export async function GET(req: NextRequest, ctx: Ctx) {
-  const c = await getSfaContext()
+  const c = await getSfaContext(orgSlugFrom(req))
   if (!c) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
   const p = 'then' in ctx.params ? await ctx.params : ctx.params
   const deal = await owned(c.organizationId, p.id)
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
 // PATCH /api/sfa/deals/[id] — 更新（ステージ移動・金額・受注/失注 等）
 export async function PATCH(req: NextRequest, ctx: Ctx) {
-  const c = await getSfaContext()
+  const c = await getSfaContext(orgSlugFrom(req))
   if (!c) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
   const p = 'then' in ctx.params ? await ctx.params : ctx.params
   const deal = await owned(c.organizationId, p.id)
@@ -75,7 +75,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
 // DELETE /api/sfa/deals/[id] — 論理削除
 export async function DELETE(req: NextRequest, ctx: Ctx) {
-  const c = await getSfaContext()
+  const c = await getSfaContext(orgSlugFrom(req))
   if (!c) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
   const p = 'then' in ctx.params ? await ctx.params : ctx.params
   const deal = await owned(c.organizationId, p.id)

@@ -1,7 +1,9 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
+import { sfaInit } from '@/lib/sfa/client'
 
 interface Member {
   id: string
@@ -13,36 +15,45 @@ interface Member {
 }
 const ROLE_LABEL: Record<string, string> = { owner: 'オーナー', admin: '管理者', manager: 'マネージャー', member: 'メンバー' }
 const STATUS_LABEL: Record<string, string> = { ACTIVE: '参加中', PENDING: '招待中', INACTIVE: '無効' }
+const ASSIGNABLE = [
+  { value: 'member', label: 'メンバー' },
+  { value: 'manager', label: 'マネージャー' },
+  { value: 'admin', label: '管理者' },
+]
 
 export default function SfaMembersPage() {
+  const orgSlug = (useParams().orgSlug as string) || ''
   const [members, setMembers] = useState<Member[]>([])
   const [myRole, setMyRole] = useState('member')
+  const [myMemberId, setMyMemberId] = useState('')
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('member')
   const [busy, setBusy] = useState(false)
 
-  const load = () => {
-    fetch('/api/sfa/members', { cache: 'no-store' })
+  const load = useCallback(() => {
+    if (!orgSlug) return
+    fetch('/api/sfa/members', sfaInit(orgSlug))
       .then((r) => r.json())
       .then((d) => {
         setMembers(d.members || [])
         setMyRole(d.myRole || 'member')
+        setMyMemberId(d.myMemberId || '')
       })
       .catch(() => {})
-  }
-  useEffect(load, [])
+  }, [orgSlug])
+  useEffect(() => load(), [load])
 
-  const canInvite = myRole === 'admin' || myRole === 'owner'
+  const canManage = myRole === 'admin' || myRole === 'owner'
 
   const invite = async () => {
     if (!email.trim()) return
     setBusy(true)
     try {
-      const res = await fetch('/api/sfa/members', {
+      const res = await fetch('/api/sfa/members', sfaInit(orgSlug, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, role }),
-      })
+      }))
       const d = await res.json()
       if (!res.ok) throw new Error(d.error)
       setEmail('')
@@ -55,12 +66,45 @@ export default function SfaMembersPage() {
     }
   }
 
+  const changeRole = async (m: Member, newRole: string) => {
+    if (newRole === m.role) return
+    // 楽観更新
+    setMembers((prev) => prev.map((x) => (x.id === m.id ? { ...x, role: newRole } : x)))
+    try {
+      const res = await fetch(`/api/sfa/members/${m.id}`, sfaInit(orgSlug, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: newRole }),
+      }))
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error)
+      toast.success('権限を変更しました')
+    } catch (e: any) {
+      toast.error(e.message)
+      load()
+    }
+  }
+
+  const remove = async (m: Member) => {
+    const label = m.status === 'PENDING' ? '招待を取り消しますか？' : `${m.name || m.inviteEmail} を削除しますか？`
+    if (!window.confirm(label)) return
+    try {
+      const res = await fetch(`/api/sfa/members/${m.id}`, sfaInit(orgSlug, { method: 'DELETE' }))
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error)
+      toast.success(m.status === 'PENDING' ? '招待を取り消しました' : '削除しました')
+      setMembers((prev) => prev.filter((x) => x.id !== m.id))
+    } catch (e: any) {
+      toast.error(e.message)
+    }
+  }
+
   return (
     <div className="p-6 lg:p-10 max-w-3xl mx-auto">
       <h1 className="text-2xl font-black text-slate-900 mb-1">メンバー</h1>
-      <p className="text-slate-500 font-bold text-sm mb-6">チームを招待して、一緒に営業管理を。</p>
+      <p className="text-slate-500 font-bold text-sm mb-6">チームを招待し、権限を管理できます。</p>
 
-      {canInvite && (
+      {canManage && (
         <div className="bg-white rounded-2xl shadow-sm p-5 mb-6">
           <p className="font-black text-slate-700 mb-3">メンバーを招待</p>
           <div className="flex flex-col sm:flex-row gap-2">
@@ -71,9 +115,9 @@ export default function SfaMembersPage() {
               className="flex-1 rounded-xl border border-slate-200 px-4 py-3 font-bold"
             />
             <select value={role} onChange={(e) => setRole(e.target.value)} className="rounded-xl border border-slate-200 px-4 py-3 font-bold">
-              <option value="member">メンバー</option>
-              <option value="manager">マネージャー</option>
-              <option value="admin">管理者</option>
+              {ASSIGNABLE.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
             </select>
             <button onClick={invite} disabled={busy} className="px-5 py-3 rounded-xl bg-green-600 text-white font-black disabled:opacity-50 whitespace-nowrap">
               {busy ? '送信中…' : '招待する'}
@@ -84,21 +128,53 @@ export default function SfaMembersPage() {
       )}
 
       <div className="space-y-2">
-        {members.map((m) => (
-          <div key={m.id} className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between">
-            <div className="min-w-0">
-              <p className="font-black text-slate-800 truncate">{m.name || m.inviteEmail || '（招待中）'}</p>
-              <p className="text-xs font-bold text-slate-400">{ROLE_LABEL[m.role] || m.role}</p>
+        {members.map((m) => {
+          const isOwner = m.role === 'owner'
+          const isSelf = m.id === myMemberId
+          const editable = canManage && !isOwner && !isSelf
+          return (
+            <div key={m.id} className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="font-black text-slate-800 truncate">
+                  {m.name || m.inviteEmail || '（招待中）'}
+                  {isSelf && <span className="ml-2 text-[10px] font-black text-green-600">あなた</span>}
+                </p>
+                {m.inviteEmail && m.name && <p className="text-[11px] font-bold text-slate-400 truncate">{m.inviteEmail}</p>}
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                {editable ? (
+                  <select
+                    value={m.role}
+                    onChange={(e) => changeRole(m, e.target.value)}
+                    className="text-xs font-black rounded-lg border border-slate-200 px-2 py-1.5 bg-slate-50"
+                  >
+                    {ASSIGNABLE.map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="text-xs font-black text-slate-500">{ROLE_LABEL[m.role] || m.role}</span>
+                )}
+                <span
+                  className={`text-[11px] font-black rounded-full px-2.5 py-1 ${
+                    m.status === 'ACTIVE' ? 'bg-green-50 text-green-600' : m.status === 'PENDING' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-400'
+                  }`}
+                >
+                  {STATUS_LABEL[m.status] || m.status}
+                </span>
+                {editable && (
+                  <button
+                    onClick={() => remove(m)}
+                    title={m.status === 'PENDING' ? '招待を取り消す' : '削除'}
+                    className="text-slate-300 hover:text-red-500 transition-colors"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">delete</span>
+                  </button>
+                )}
+              </div>
             </div>
-            <span
-              className={`text-[11px] font-black rounded-full px-2.5 py-1 ${
-                m.status === 'ACTIVE' ? 'bg-green-50 text-green-600' : m.status === 'PENDING' ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-400'
-              }`}
-            >
-              {STATUS_LABEL[m.status] || m.status}
-            </span>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

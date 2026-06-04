@@ -4,12 +4,12 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getSfaContext } from '@/lib/sfa/access'
+import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
 
 // GET /api/sfa/deals — カンバン用に「ステージ一覧 + 商談一覧（取引先名つき）」を返す
-export async function GET() {
-  const ctx = await getSfaContext()
+export async function GET(req: NextRequest) {
+  const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
   const pipeline = await prisma.sfaPipeline.findFirst({
@@ -41,7 +41,7 @@ export async function GET() {
 
 // POST /api/sfa/deals — 商談作成
 export async function POST(req: NextRequest) {
-  const ctx = await getSfaContext()
+  const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   const body = await req.json().catch(() => ({}))
   const name = (body.name as string)?.trim()

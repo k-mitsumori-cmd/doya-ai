@@ -7,6 +7,9 @@ import { Menu, TrendingUp } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { Toaster } from 'react-hot-toast'
 import SfaSidebar from '@/components/sfa/SfaSidebar'
+import { sfaInit } from '@/lib/sfa/client'
+
+interface Membership { slug: string; name: string; role: string }
 
 export default function SfaOrgLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession()
@@ -17,6 +20,7 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [plan, setPlan] = useState<string>('FREE')
+  const [memberships, setMemberships] = useState<Membership[]>([])
 
   // 未ログインで直接来た場合はログイン導線（/sfa）へ
   useEffect(() => {
@@ -24,17 +28,18 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
   }, [status, router])
 
   useEffect(() => {
-    if (session?.user) {
-      fetch('/api/sfa/usage', { cache: 'no-store' })
+    if (session?.user && orgSlug) {
+      fetch('/api/sfa/usage', sfaInit(orgSlug))
         .then((r) => r.json())
         .then((d) => {
           setPlan(d.plan || 'FREE')
-          // ログイン済みだが未オンボーディング（組織未所属）なら入口へ
+          setMemberships(d.memberships || [])
+          // このワークスペースの ACTIVE メンバーでない場合（slug不一致/未所属）は入口へ
           if (d && d.onboarded === false) router.replace('/sfa')
         })
         .catch(() => {})
     }
-  }, [session, router])
+  }, [session, orgSlug, router])
 
   useEffect(() => {
     setMobileMenuOpen(false)
@@ -44,7 +49,7 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <Toaster position="top-center" />
       <div className="hidden md:flex">
-        <SfaSidebar isCollapsed={sidebarCollapsed} onToggle={(c) => setSidebarCollapsed(c)} plan={plan} orgSlug={orgSlug} />
+        <SfaSidebar isCollapsed={sidebarCollapsed} onToggle={(c) => setSidebarCollapsed(c)} plan={plan} orgSlug={orgSlug} memberships={memberships} />
       </div>
       <div className="hidden md:block flex-shrink-0 transition-[width] duration-200" style={{ width: sidebarCollapsed ? 72 : 240 }} aria-hidden />
 
@@ -56,7 +61,7 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div initial={{ x: -280 }} animate={{ x: 0 }} exit={{ x: -280 }} transition={{ duration: 0.2, ease: 'easeOut' }} className="fixed inset-y-0 left-0 z-50 md:hidden">
-            <SfaSidebar forceExpanded isMobile onToggle={() => setMobileMenuOpen(false)} plan={plan} orgSlug={orgSlug} />
+            <SfaSidebar forceExpanded isMobile onToggle={() => setMobileMenuOpen(false)} plan={plan} orgSlug={orgSlug} memberships={memberships} />
           </motion.div>
         )}
       </AnimatePresence>

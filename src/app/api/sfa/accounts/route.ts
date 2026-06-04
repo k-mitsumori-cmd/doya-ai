@@ -4,12 +4,12 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getSfaContext } from '@/lib/sfa/access'
+import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
 
 // GET /api/sfa/accounts — 取引先一覧（組織スコープ）
 export async function GET(req: NextRequest) {
-  const ctx = await getSfaContext()
+  const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   const q = new URL(req.url).searchParams.get('q')?.trim()
   const accounts = await prisma.sfaAccount.findMany({
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
 // POST /api/sfa/accounts — 取引先作成
 export async function POST(req: NextRequest) {
-  const ctx = await getSfaContext()
+  const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   const body = await req.json().catch(() => ({}))
   const name = (body.name as string)?.trim()

@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
+import { sfaInit, withOrg } from '@/lib/sfa/client'
 
 interface Account {
   id: string
@@ -12,6 +14,7 @@ interface Account {
 }
 
 export default function SfaAccountsPage() {
+  const orgSlug = (useParams().orgSlug as string) || ''
   const [accounts, setAccounts] = useState<Account[]>([])
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
@@ -21,22 +24,23 @@ export default function SfaAccountsPage() {
   const [busy, setBusy] = useState(false)
 
   const load = (query = '') => {
-    fetch(`/api/sfa/accounts${query ? `?q=${encodeURIComponent(query)}` : ''}`, { cache: 'no-store' })
+    if (!orgSlug) return
+    fetch(`/api/sfa/accounts${query ? `?q=${encodeURIComponent(query)}` : ''}`, sfaInit(orgSlug))
       .then((r) => r.json())
       .then((d) => setAccounts(d.accounts || []))
       .catch(() => {})
   }
-  useEffect(() => load(), [])
+  useEffect(() => load(), [orgSlug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const create = async () => {
     if (!name.trim()) return
     setBusy(true)
     try {
-      const res = await fetch('/api/sfa/accounts', {
+      const res = await fetch('/api/sfa/accounts', sfaInit(orgSlug, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, industry, prefecture }),
-      })
+      }))
       const d = await res.json()
       if (!res.ok) throw new Error(d.error)
       setName('')
@@ -61,7 +65,7 @@ export default function SfaAccountsPage() {
         </div>
         <div className="flex items-center gap-2">
           <a
-            href="/api/sfa/export?type=accounts"
+            href={withOrg('/api/sfa/export?type=accounts', orgSlug)}
             className="px-4 py-3 rounded-full bg-white border border-slate-200 text-green-700 font-black shadow-sm hover:shadow flex items-center gap-1"
           >
             <span className="material-symbols-outlined">download</span>CSV出力

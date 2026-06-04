@@ -5,27 +5,27 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
-import { getSfaContext, hasMinRole } from '@/lib/sfa/access'
+import { getSfaContext, hasMinRole, orgSlugFrom } from '@/lib/sfa/access'
 import { sendEmail } from '@/lib/email'
 
 const INVITABLE_ROLES = ['member', 'manager', 'admin']
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 // GET /api/sfa/members — メンバー一覧
-export async function GET() {
-  const ctx = await getSfaContext()
+export async function GET(req: NextRequest) {
+  const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   const members = await prisma.sfaMember.findMany({
     where: { organizationId: ctx.organizationId },
     orderBy: { createdAt: 'asc' },
     select: { id: true, name: true, role: true, status: true, inviteEmail: true, acceptedAt: true, createdAt: true },
   })
-  return NextResponse.json({ members, myRole: ctx.role }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ members, myRole: ctx.role, myMemberId: ctx.memberId }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 // POST /api/sfa/members — メンバー招待（admin+）
 export async function POST(req: NextRequest) {
-  const ctx = await getSfaContext()
+  const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   if (!hasMinRole(ctx.role, 'admin')) return NextResponse.json({ error: '招待権限がありません' }, { status: 403 })
 
