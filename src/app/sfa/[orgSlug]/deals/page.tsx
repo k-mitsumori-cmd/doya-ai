@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { sfaInit, withOrg } from '@/lib/sfa/client'
 
@@ -24,6 +25,8 @@ const yen = (n: number) => '¥' + (n || 0).toLocaleString('ja-JP')
 
 export default function SfaDealsPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
+  const { status } = useSession()
+  const ready = status === 'authenticated' && !!orgSlug
   const [stages, setStages] = useState<Stage[]>([])
   const [deals, setDeals] = useState<Deal[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
@@ -34,7 +37,7 @@ export default function SfaDealsPage() {
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(() => {
-    if (!orgSlug) return
+    if (!ready) return
     fetch('/api/sfa/deals', sfaInit(orgSlug))
       .then((r) => r.json())
       .then((d) => {
@@ -42,11 +45,12 @@ export default function SfaDealsPage() {
         setDeals(d.deals || [])
       })
       .catch(() => {})
-  }, [orgSlug])
+  }, [ready, orgSlug])
   useEffect(() => {
+    if (!ready) return
     load()
-    if (orgSlug) fetch('/api/sfa/accounts', sfaInit(orgSlug)).then((r) => r.json()).then((d) => setAccounts(d.accounts || [])).catch(() => {})
-  }, [load, orgSlug])
+    fetch('/api/sfa/accounts', sfaInit(orgSlug)).then((r) => r.json()).then((d) => setAccounts(d.accounts || [])).catch(() => {})
+  }, [ready, orgSlug, load])
 
   const create = async () => {
     if (!name.trim()) return
@@ -174,7 +178,9 @@ export default function SfaDealsPage() {
             </div>
           )
         })}
-        {stages.length === 0 && <p className="text-slate-400 font-bold">パイプライン未設定です</p>}
+        {stages.length === 0 && (
+          <p className="text-slate-400 font-bold">{ready ? 'パイプラインを読み込み中…' : '読み込み中…'}</p>
+        )}
       </div>
     </div>
   )

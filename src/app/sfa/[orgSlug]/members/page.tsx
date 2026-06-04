@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { sfaInit } from '@/lib/sfa/client'
 
@@ -24,6 +25,8 @@ const RANK: Record<string, number> = { member: 0, manager: 1, admin: 2, owner: 3
 
 export default function SfaMembersPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
+  const { status } = useSession()
+  const ready = status === 'authenticated' && !!orgSlug
   const [members, setMembers] = useState<Member[]>([])
   const [myRole, setMyRole] = useState('member')
   const [myMemberId, setMyMemberId] = useState('')
@@ -32,7 +35,7 @@ export default function SfaMembersPage() {
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(() => {
-    if (!orgSlug) return
+    if (!ready) return
     fetch('/api/sfa/members', sfaInit(orgSlug))
       .then((r) => r.json())
       .then((d) => {
@@ -41,7 +44,7 @@ export default function SfaMembersPage() {
         setMyMemberId(d.myMemberId || '')
       })
       .catch(() => {})
-  }, [orgSlug])
+  }, [ready, orgSlug])
   useEffect(() => load(), [load])
 
   const canManage = myRole === 'admin' || myRole === 'owner'

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { sfaInit, withOrg } from '@/lib/sfa/client'
 
@@ -15,6 +16,8 @@ interface Account {
 
 export default function SfaAccountsPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
+  const { status } = useSession()
+  const ready = status === 'authenticated' && !!orgSlug
   const [accounts, setAccounts] = useState<Account[]>([])
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
@@ -24,13 +27,13 @@ export default function SfaAccountsPage() {
   const [busy, setBusy] = useState(false)
 
   const load = (query = '') => {
-    if (!orgSlug) return
+    if (!ready) return
     fetch(`/api/sfa/accounts${query ? `?q=${encodeURIComponent(query)}` : ''}`, sfaInit(orgSlug))
       .then((r) => r.json())
       .then((d) => setAccounts(d.accounts || []))
       .catch(() => {})
   }
-  useEffect(() => load(), [orgSlug]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (ready) load() }, [ready, orgSlug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const create = async () => {
     if (!name.trim()) return

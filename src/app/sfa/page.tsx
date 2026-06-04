@@ -26,6 +26,9 @@ export default function SfaEntryPage() {
       .then((d) => {
         if (d?.onboarded && d?.organization?.slug) {
           router.replace(`/sfa/${d.organization.slug}`)
+        } else if (d?.memberships?.length) {
+          // 既に所属組織がある場合は組織作成フォームを出さず、その組織へ
+          router.replace(`/sfa/${d.memberships[0].slug}`)
         } else {
           setChecking(false)
         }

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
+import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { sfaInit } from '@/lib/sfa/client'
 
@@ -14,6 +15,8 @@ const yen = (n: number) => '¥' + Math.round(n || 0).toLocaleString('ja-JP')
 
 export default function SfaDashboard() {
   const orgSlug = (useParams().orgSlug as string) || ''
+  const { status } = useSession()
+  const ready = status === 'authenticated' && !!orgSlug
   const base = `/sfa/${orgSlug}`
   const [deals, setDeals] = useState<Deal[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
@@ -21,15 +24,15 @@ export default function SfaDashboard() {
   const [busy, setBusy] = useState(false)
 
   const loadTasks = useCallback(() => {
-    if (!orgSlug) return
+    if (!ready) return
     fetch('/api/sfa/tasks', sfaInit(orgSlug)).then((r) => r.json()).then((d) => setTasks(d.tasks || [])).catch(() => {})
-  }, [orgSlug])
+  }, [ready, orgSlug])
 
   useEffect(() => {
-    if (!orgSlug) return
+    if (!ready) return
     fetch('/api/sfa/deals', sfaInit(orgSlug)).then((r) => r.json()).then((d) => setDeals(d.deals || [])).catch(() => {})
     loadTasks()
-  }, [orgSlug, loadTasks])
+  }, [ready, orgSlug, loadTasks])
 
   // 売上集計
   const open = deals.filter((d) => d.status === 'open')
