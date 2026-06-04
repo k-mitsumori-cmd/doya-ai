@@ -53,6 +53,7 @@
 | ドヤWeb診断AI | `/shindan` | maintenance | ✅ | ✅ 3頁 | ❌ | ❌ | ❌ | ✅ |
 | ドヤスライド | `/doyaslide` | active | ✅ | ✅ 7頁 | ✅ 13件 | ✅ 5モデル | ✅ 統一プラン | ✅ |
 | ドヤカンニング | `/cunning` | coming_soon | ✅ | ✅ 7頁 | ✅ 11件 | ✅ 7モデル | ✅ 統一プラン | ✅ |
+| ドヤ営業管理 | `/sfa` | coming_soon | ✅ | ✅ 6頁 | ✅ 9件 | ✅ 11モデル | ✅ 統一プラン | ✅ |
 | 旧スライド | `/slide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
 | 旧SlashSlide | `/slashslide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
 | ドヤHR | `/hr` | active | ✅ | ✅ 14頁 | ✅ 30件 | ✅ 10モデル | ✅ 統一プラン | ❌ |
