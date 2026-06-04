@@ -34,6 +34,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const session = await getServerSession(authOptions)
   let userId = (session?.user as any)?.id as string | undefined
   const userName = session?.user?.name || null
+  const sessionEmail = session?.user?.email?.trim().toLowerCase()
   if (!userId && session?.user?.email) {
     const u = await prisma.user.findUnique({ where: { email: session.user.email }, select: { id: true } })
     userId = u?.id
@@ -46,6 +47,14 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   }
   if (Date.now() - member.createdAt.getTime() > INVITE_TTL_MS) {
     return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
+  }
+
+  // 招待は宛先メールアドレス本人だけが承諾できる（リンク転送によるなりすまし・権限乗っ取りを防止）
+  if (!sessionEmail || sessionEmail !== member.inviteEmail?.trim().toLowerCase()) {
+    return NextResponse.json(
+      { error: 'この招待は別のメールアドレス宛てです。招待されたメールアドレスでログインしてください。' },
+      { status: 403 }
+    )
   }
 
   // 既に同組織のメンバーなら、この招待は破棄して既存を返す
