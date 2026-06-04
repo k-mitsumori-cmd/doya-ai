@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession, signIn } from 'next-auth/react'
 import toast from 'react-hot-toast'
+import { CharacterOnly } from '@/components/promane/character'
 
 export default function SfaEntryPage() {
   const router = useRouter()
@@ -69,8 +70,8 @@ export default function SfaEntryPage() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-green-50 to-lime-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-md text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-lime-600 flex items-center justify-center text-3xl shadow-lg shadow-green-500/30 mx-auto mb-3">
-            📈
+          <div className="flex justify-center mb-2">
+            <CharacterOnly mood="hello" size={88} animate="float" />
           </div>
           <h1 className="text-2xl font-black text-slate-900">ドヤ営業管理</h1>
           <p className="text-slate-500 font-bold text-sm mt-1 mb-6">
@@ -98,8 +99,8 @@ export default function SfaEntryPage() {
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-lime-50 flex items-center justify-center p-6">
       <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-6">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-500 to-lime-600 flex items-center justify-center text-3xl shadow-lg shadow-green-500/30 mx-auto mb-3">
-            📈
+          <div className="flex justify-center mb-2">
+            <CharacterOnly mood="hello" size={88} animate="float" />
           </div>
           <h1 className="text-2xl font-black text-slate-900">ドヤ営業管理へようこそ</h1>
           <p className="text-slate-500 font-bold text-sm mt-1">組織を作成すると、すぐに使い始められます（サンプル付き）</p>

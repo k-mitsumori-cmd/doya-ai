@@ -6,6 +6,7 @@ import { useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { sfaInit } from '@/lib/sfa/client'
+import { Character } from '@/components/promane/character'
 
 interface Deal { id: string; amount: number; probability: number; status: string; stageId: string | null; lastActivityAt: string | null }
 interface Task { id: string; title: string; status: string; dueDate: string | null }
@@ -44,13 +45,13 @@ export default function SfaDashboard() {
   ).length
   const openTasks = tasks.filter((t) => t.status !== 'done')
 
-  // 🐻 クマちゃんのひとことコメント（状況に応じて変化）
-  const bearComment = (() => {
-    if (deals.length === 0) return 'まずは「商談」を登録してみるクマ！カンバンで案件を見える化できるクマよ🐻'
-    if (staleCount > 0) return `${staleCount}件の商談が${STALE_DAYS}日以上動いてないクマ…！フォローのチャンスだクマ🐻`
-    if (openTasks.length > 0) return `未完了タスクが${openTasks.length}件あるクマ。下のリストから片付けていくクマ！🐻`
-    if (wonTotal > 0) return `受注合計 ${yen(wonTotal)} クマ！この調子で行くクマ〜🎉🐻`
-    return `パイプラインは確度加重で ${yen(weighted)} クマ。いい感じだクマ！💪🐻`
+  // ドヤくん（公式マスコット）のひとこと — 状況に応じて表情(mood)と台詞が変化
+  const doya: { mood: 'hello' | 'thinking' | 'point' | 'success' | 'thumbsup'; message: string } = (() => {
+    if (deals.length === 0) return { mood: 'hello', message: 'まずは「商談」を登録してみよう！カンバンで案件を見える化できるよ' }
+    if (staleCount > 0) return { mood: 'thinking', message: `${staleCount}件の商談が${STALE_DAYS}日以上動いてないみたい…フォローのチャンスだよ！` }
+    if (openTasks.length > 0) return { mood: 'point', message: `未完了タスクが${openTasks.length}件あるよ。下のリストから片付けていこう！` }
+    if (wonTotal > 0) return { mood: 'success', message: `受注合計 ${yen(wonTotal)}！この調子で行こう〜` }
+    return { mood: 'thumbsup', message: `パイプラインは確度加重で ${yen(weighted)}。いい感じだよ！` }
   })()
 
   const addTask = async () => {
@@ -112,15 +113,9 @@ export default function SfaDashboard() {
           </div>
         </div>
 
-        {/* 🐻 クマちゃんのひとこと */}
-        <div className="flex items-start gap-3 bg-white rounded-2xl shadow-sm p-4 mb-6 border border-green-100">
-          <div className="w-12 h-12 rounded-full bg-gradient-to-br from-amber-200 to-amber-400 flex items-center justify-center text-2xl flex-shrink-0 shadow-inner">
-            🐻
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-black text-amber-600 mb-0.5">クマちゃん</p>
-            <p className="text-sm font-bold text-slate-700 leading-relaxed">{bearComment}</p>
-          </div>
+        {/* ドヤくん（公式マスコット）のひとこと */}
+        <div className="bg-white rounded-2xl shadow-sm p-4 mb-6 border border-green-100">
+          <Character mood={doya.mood} message={doya.message} size={72} animate="float" />
         </div>
 
         {/* 売上サマリー */}
