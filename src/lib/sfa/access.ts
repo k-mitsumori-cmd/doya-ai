@@ -46,15 +46,21 @@ export async function getSfaContext(orgSlug?: string): Promise<SfaContext | null
   const userId = await resolveUserId()
   if (!userId) return null
 
-  const membership = await prisma.sfaMember.findFirst({
-    where: {
-      userId,
-      status: 'ACTIVE',
-      ...(orgSlug ? { organization: { slug: orgSlug } } : {}),
-    },
-    include: { organization: true },
-    orderBy: { createdAt: 'desc' },
-  })
+  // 指定slugを優先。見つからなければ所属組織（最新）にフォールバック。
+  // いずれも userId でスコープしているため、他人の組織は決して解決されない（IDOR安全）。
+  let membership = orgSlug
+    ? await prisma.sfaMember.findFirst({
+        where: { userId, status: 'ACTIVE', organization: { slug: orgSlug } },
+        include: { organization: true },
+      })
+    : null
+  if (!membership) {
+    membership = await prisma.sfaMember.findFirst({
+      where: { userId, status: 'ACTIVE' },
+      include: { organization: true },
+      orderBy: { createdAt: 'desc' },
+    })
+  }
   if (!membership) return null
 
   return {

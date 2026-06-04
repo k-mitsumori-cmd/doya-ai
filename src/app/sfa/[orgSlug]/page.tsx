@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { sfaInit } from '@/lib/sfa/client'
 import { Character } from '@/components/promane/character'
@@ -16,8 +15,7 @@ const yen = (n: number) => '¥' + Math.round(n || 0).toLocaleString('ja-JP')
 
 export default function SfaDashboard() {
   const orgSlug = (useParams().orgSlug as string) || ''
-  const { status } = useSession()
-  const ready = status === 'authenticated' && !!orgSlug
+  const ready = !!orgSlug
   const base = `/sfa/${orgSlug}`
   const [deals, setDeals] = useState<Deal[]>([])
   const [tasks, setTasks] = useState<Task[]>([])

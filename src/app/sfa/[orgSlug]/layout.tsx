@@ -1,10 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { usePathname, useParams, useRouter } from 'next/navigation'
+import { usePathname, useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, TrendingUp } from 'lucide-react'
-import { useSession } from 'next-auth/react'
 import { Toaster } from 'react-hot-toast'
 import SfaSidebar from '@/components/sfa/SfaSidebar'
 import { sfaInit } from '@/lib/sfa/client'
@@ -12,35 +11,27 @@ import { sfaInit } from '@/lib/sfa/client'
 interface Membership { slug: string; name: string; role: string }
 
 export default function SfaOrgLayout({ children }: { children: React.ReactNode }) {
-  const { data: session, status } = useSession()
   const pathname = usePathname()
   const params = useParams()
-  const router = useRouter()
   const orgSlug = (params.orgSlug as string) || ''
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [plan, setPlan] = useState<string>('FREE')
   const [memberships, setMemberships] = useState<Membership[]>([])
 
-  // 未ログインで直接来た場合はログイン導線（/sfa）へ
+  // プラン/所属ワークスペースを取得（認証はCookieでサーバ側が処理するため orgSlug だけで実行）。
+  // クライアントの useSession status に依存させない＝statusがloadingでも確実に取得・反映する。
   useEffect(() => {
-    if (status === 'unauthenticated') router.replace('/sfa')
-  }, [status, router])
-
-  useEffect(() => {
-    if (session?.user && orgSlug) {
-      fetch('/api/sfa/usage', sfaInit(orgSlug))
-        .then((r) => r.json())
-        .then((d) => {
-          setPlan(d.plan || 'FREE')
-          setMemberships(d.memberships || [])
-        })
-        .catch(() => {})
-    }
-    // ※ ここで onboarded:false を理由にリダイレクトしない。
-    //   認証/組織スコープは各APIが401で強制しており、クライアント側の自動リダイレクトは
-    //   認証確定タイミングの競合でサブページに到達できなくなる原因になっていたため撤去。
-  }, [session, orgSlug])
+    if (!orgSlug) return
+    fetch('/api/sfa/usage', sfaInit(orgSlug))
+      .then((r) => r.json())
+      .then((d) => {
+        setPlan(d.plan || 'FREE')
+        setMemberships(d.memberships || [])
+      })
+      .catch(() => {})
+    // ※ クライアント側の自動リダイレクトは行わない（認証/スコープは各APIが401で強制）。
+  }, [orgSlug])
 
   useEffect(() => {
     setMobileMenuOpen(false)

@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { sfaInit, withOrg } from '@/lib/sfa/client'
 
@@ -16,8 +15,7 @@ interface Account {
 
 export default function SfaAccountsPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
-  const { status } = useSession()
-  const ready = status === 'authenticated' && !!orgSlug
+  const ready = !!orgSlug
   const [accounts, setAccounts] = useState<Account[]>([])
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)

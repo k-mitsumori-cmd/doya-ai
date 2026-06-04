@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
-import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { sfaInit, withOrg } from '@/lib/sfa/client'
 
@@ -25,8 +24,7 @@ const yen = (n: number) => '¥' + (n || 0).toLocaleString('ja-JP')
 
 export default function SfaDealsPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
-  const { status } = useSession()
-  const ready = status === 'authenticated' && !!orgSlug
+  const ready = !!orgSlug
   const [stages, setStages] = useState<Stage[]>([])
   const [deals, setDeals] = useState<Deal[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
