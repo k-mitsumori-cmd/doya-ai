@@ -6,9 +6,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { getSfaContext, hasMinRole, orgSlugFrom } from '@/lib/sfa/access'
+import { ROLE_HIERARCHY } from '@/lib/sfa/types'
 import { sendEmail } from '@/lib/email'
 
 const INVITABLE_ROLES = ['member', 'manager', 'admin']
+const rank = (role: string) => ROLE_HIERARCHY[role] ?? 0
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
 // GET /api/sfa/members — メンバー一覧
@@ -34,6 +36,10 @@ export async function POST(req: NextRequest) {
   const role = INVITABLE_ROLES.includes(body.role) ? (body.role as string) : 'member'
   if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return NextResponse.json({ error: '有効なメールアドレスを入力してください' }, { status: 400 })
+  }
+  // 自分と同格以上の権限では招待できない（adminはadminを招待不可。ownerのみadmin招待可能）
+  if (rank(role) >= rank(ctx.role)) {
+    return NextResponse.json({ error: '自分と同格以上の権限では招待できません' }, { status: 403 })
   }
 
   // 既に同メールで招待中/参加中なら重複を作らない

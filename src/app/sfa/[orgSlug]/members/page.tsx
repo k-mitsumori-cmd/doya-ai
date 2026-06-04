@@ -20,6 +20,7 @@ const ASSIGNABLE = [
   { value: 'manager', label: 'マネージャー' },
   { value: 'admin', label: '管理者' },
 ]
+const RANK: Record<string, number> = { member: 0, manager: 1, admin: 2, owner: 3 }
 
 export default function SfaMembersPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
@@ -44,6 +45,8 @@ export default function SfaMembersPage() {
   useEffect(() => load(), [load])
 
   const canManage = myRole === 'admin' || myRole === 'owner'
+  // 自分より下位の権限のみ付与可能（サーバ側と一致）
+  const assignable = ASSIGNABLE.filter((r) => RANK[r.value] < (RANK[myRole] ?? 0))
 
   const invite = async () => {
     if (!email.trim()) return
@@ -115,7 +118,7 @@ export default function SfaMembersPage() {
               className="flex-1 rounded-xl border border-slate-200 px-4 py-3 font-bold"
             />
             <select value={role} onChange={(e) => setRole(e.target.value)} className="rounded-xl border border-slate-200 px-4 py-3 font-bold">
-              {ASSIGNABLE.map((r) => (
+              {assignable.map((r) => (
                 <option key={r.value} value={r.value}>{r.label}</option>
               ))}
             </select>
@@ -129,9 +132,9 @@ export default function SfaMembersPage() {
 
       <div className="space-y-2">
         {members.map((m) => {
-          const isOwner = m.role === 'owner'
           const isSelf = m.id === myMemberId
-          const editable = canManage && !isOwner && !isSelf
+          // 自分より下位のメンバーのみ編集可（サーバ側と一致）
+          const editable = canManage && !isSelf && RANK[m.role] < (RANK[myRole] ?? 0)
           return (
             <div key={m.id} className="bg-white rounded-xl shadow-sm p-4 flex items-center justify-between gap-3">
               <div className="min-w-0">
