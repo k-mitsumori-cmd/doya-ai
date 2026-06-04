@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { usePathname, useParams } from 'next/navigation'
+import { usePathname, useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, TrendingUp } from 'lucide-react'
 import { useSession } from 'next-auth/react'
@@ -9,22 +9,32 @@ import { Toaster } from 'react-hot-toast'
 import SfaSidebar from '@/components/sfa/SfaSidebar'
 
 export default function SfaOrgLayout({ children }: { children: React.ReactNode }) {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const pathname = usePathname()
   const params = useParams()
+  const router = useRouter()
   const orgSlug = (params.orgSlug as string) || ''
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [plan, setPlan] = useState<string>('FREE')
 
+  // 未ログインで直接来た場合はログイン導線（/sfa）へ
+  useEffect(() => {
+    if (status === 'unauthenticated') router.replace('/sfa')
+  }, [status, router])
+
   useEffect(() => {
     if (session?.user) {
       fetch('/api/sfa/usage', { cache: 'no-store' })
         .then((r) => r.json())
-        .then((d) => setPlan(d.plan || 'FREE'))
+        .then((d) => {
+          setPlan(d.plan || 'FREE')
+          // ログイン済みだが未オンボーディング（組織未所属）なら入口へ
+          if (d && d.onboarded === false) router.replace('/sfa')
+        })
         .catch(() => {})
     }
-  }, [session])
+  }, [session, router])
 
   useEffect(() => {
     setMobileMenuOpen(false)

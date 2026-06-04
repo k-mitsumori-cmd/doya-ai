@@ -18,8 +18,6 @@ export default function SfaDashboard() {
   const stats = [
     { label: '取引先', value: c.accounts ?? '—', href: `${base}/accounts`, icon: 'business', color: 'from-green-500 to-emerald-600' },
     { label: '商談', value: c.deals ?? '—', href: `${base}/deals`, icon: 'view_kanban', color: 'from-emerald-500 to-lime-600' },
-    { label: 'リード', value: c.leads ?? '—', href: `${base}/leads`, icon: 'trending_up', color: 'from-lime-500 to-green-600' },
-    { label: '未完了タスク', value: c.openTasks ?? '—', href: `${base}/tasks`, icon: 'check_circle', color: 'from-teal-500 to-green-600' },
   ]
 
   return (
@@ -36,7 +34,7 @@ export default function SfaDashboard() {
         </div>
 
         {/* 統計カード */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+        <div className="grid grid-cols-2 gap-3 mt-6">
           {stats.map((s) => (
             <Link key={s.label} href={s.href} className="bg-white rounded-2xl shadow-sm hover:shadow-md transition-all p-4">
               <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${s.color} flex items-center justify-center mb-2`}>
@@ -72,8 +70,8 @@ export default function SfaDashboard() {
         <div className="mt-8 bg-green-50 border border-green-100 rounded-2xl p-4 flex items-start gap-3">
           <span className="text-2xl">💡</span>
           <p className="text-sm font-bold text-slate-600 leading-relaxed">
-            サンプルの取引先・商談・タスクを用意しています。自由に編集・削除して、自社の営業管理を始めましょう。
-            ドヤリストからのリード取込やAIスコアリングも順次ご利用いただけます。
+            サンプルの取引先・商談を用意しています。自由に編集・削除して、自社の営業管理を始めましょう。
+            商談はカンバンでステージ管理でき、取引先・商談はいつでもCSVで書き出せます。
           </p>
         </div>
       </div>
