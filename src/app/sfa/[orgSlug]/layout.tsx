@@ -34,12 +34,13 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
         .then((d) => {
           setPlan(d.plan || 'FREE')
           setMemberships(d.memberships || [])
-          // このワークスペースの ACTIVE メンバーでない場合（slug不一致/未所属）は入口へ
-          if (d && d.onboarded === false) router.replace('/sfa')
         })
         .catch(() => {})
     }
-  }, [session, orgSlug, router])
+    // ※ ここで onboarded:false を理由にリダイレクトしない。
+    //   認証/組織スコープは各APIが401で強制しており、クライアント側の自動リダイレクトは
+    //   認証確定タイミングの競合でサブページに到達できなくなる原因になっていたため撤去。
+  }, [session, orgSlug])
 
   useEffect(() => {
     setMobileMenuOpen(false)

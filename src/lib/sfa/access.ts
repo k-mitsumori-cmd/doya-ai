@@ -11,12 +11,19 @@ import { DEFAULT_STAGES } from './constants'
 /** リクエストから対象ワークスペース(slug)を取り出す。クエリ ?org= 優先、無ければヘッダ x-sfa-org */
 export function orgSlugFrom(req: NextRequest): string | undefined {
   try {
-    const q = new URL(req.url).searchParams.get('org')?.trim()
+    const q = new URL(req.url).searchParams.get('org')?.trim() // URL APIがデコード済み
     if (q) return q
   } catch {
     /* noop */
   }
-  return req.headers.get('x-sfa-org')?.trim() || undefined
+  const h = req.headers.get('x-sfa-org')
+  if (!h) return undefined
+  // クライアントは encodeURIComponent して送る（日本語slug対応）。デコードに失敗したら原文を使う。
+  try {
+    return decodeURIComponent(h).trim() || undefined
+  } catch {
+    return h.trim() || undefined
+  }
 }
 
 /** ログイン中ユーザーのIDを解決（session優先、無ければemailから） */
@@ -87,7 +94,8 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
   })
   if (existing) return existing.organization
 
-  const base = orgName.toLowerCase().replace(/[^a-z0-9ぁ-んァ-ヶ一-龠]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
+  // slugはASCIIのみ（URL/HTTPヘッダ安全）。日本語社名はハイフン除去後に空になるため org-<timestamp> にフォールバック
+  const base = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
   const dup = await prisma.sfaOrganization.findUnique({ where: { slug: base } })
   const slug = dup ? `${base}-${Date.now()}` : base
 

@@ -3,12 +3,16 @@
 // 現在のワークスペース(slug)を x-sfa-org ヘッダで送る
 // ============================================
 
-/** fetch の init に x-sfa-org ヘッダを差し込む */
+/**
+ * fetch の init に x-sfa-org ヘッダを差し込む。
+ * slug に日本語等の非ASCII文字が含まれると HTTP ヘッダ値(ByteString)に設定できず fetch が同期throwするため、
+ * 必ず encodeURIComponent でエンコードして送る（サーバ側 orgSlugFrom でデコード）。
+ */
 export function sfaInit(orgSlug: string, init: RequestInit = {}): RequestInit {
   return {
     cache: 'no-store',
     ...init,
-    headers: { 'x-sfa-org': orgSlug, ...(init.headers || {}) },
+    headers: { 'x-sfa-org': encodeURIComponent(orgSlug || ''), ...(init.headers || {}) },
   }
 }
 
