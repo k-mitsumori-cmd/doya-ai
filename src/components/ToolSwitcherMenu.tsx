@@ -40,6 +40,7 @@ const SERVICE_LOGO: Record<string, string> = {
   hr: '/hr/logo.png',
   doyaslide: '/doyaslide/logo.png',
   cunning: '/cunning/logo.png',
+  sfa: '/sfa/logo.png',
 }
 
 // ロゴが無いサービス用フォールバック（色タイル + Lucide シンボル）

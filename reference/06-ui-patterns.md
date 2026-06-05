@@ -66,6 +66,7 @@
 | ドヤ勤怠 | `public/kintai/logo.png` | （既存） |
 | ドヤプロマネ | `public/promane/logo.png` | （既存） |
 | ドヤリスト | `public/doyalist/logo.png` | （既存） |
+| ドヤ営業管理（SFA） | `public/sfa/logo.png` | ドヤくん + 商談パイプライン/売上ダッシュボード（青ネオン・横長バナー型） |
 
 **配置パターン**: `public/{service-id}/logo.png`
 **ファイル形式**: PNG（透過背景）

@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { useSession, signIn } from 'next-auth/react'
 import toast from 'react-hot-toast'
-import { CharacterOnly } from '@/components/promane/character'
 
 export default function SfaEntryPage() {
   const router = useRouter()
@@ -70,10 +70,14 @@ export default function SfaEntryPage() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-green-50 to-lime-50 flex items-center justify-center p-6">
         <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-md text-center">
-          <div className="flex justify-center mb-2">
-            <CharacterOnly mood="hello" size={88} animate="float" />
-          </div>
-          <h1 className="text-2xl font-black text-slate-900">ドヤ営業管理</h1>
+          <Image
+            src="/sfa/logo.png"
+            alt="ドヤ営業管理"
+            width={2016}
+            height={864}
+            priority
+            className="w-full h-auto rounded-2xl shadow-md mb-4"
+          />
           <p className="text-slate-500 font-bold text-sm mt-1 mb-6">
             商談パイプライン・取引先管理を、ログインするだけですぐ開始できます
           </p>
@@ -99,10 +103,15 @@ export default function SfaEntryPage() {
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-lime-50 flex items-center justify-center p-6">
       <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-6">
-          <div className="flex justify-center mb-2">
-            <CharacterOnly mood="hello" size={88} animate="float" />
-          </div>
-          <h1 className="text-2xl font-black text-slate-900">ドヤ営業管理へようこそ</h1>
+          <Image
+            src="/sfa/logo.png"
+            alt="ドヤ営業管理"
+            width={2016}
+            height={864}
+            priority
+            className="w-full h-auto rounded-2xl shadow-md mb-3"
+          />
+          <h2 className="text-xl font-black text-slate-900">ようこそ！</h2>
           <p className="text-slate-500 font-bold text-sm mt-1">組織を作成すると、すぐに使い始められます（サンプル付き）</p>
         </div>
         <label className="block text-sm font-black text-slate-700 mb-1">組織名（会社名）</label>

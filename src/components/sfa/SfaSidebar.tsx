@@ -2,6 +2,7 @@
 
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Building2, Kanban, UserPlus, Tag, TrendingUp, Zap, ChevronsUpDown, Check } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
@@ -72,14 +73,22 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
   return (
     <>
       <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={sfaTheme}>
-        <div className="px-3 sm:px-4 py-4 flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-md flex-shrink-0">
-            <TrendingUp className="w-5 h-5 text-white" />
-          </div>
-          {showLabel && (
-            <Link href={base} className="font-black text-white text-lg whitespace-nowrap">
-              ドヤ営業管理
+        <div className="px-3 sm:px-4 py-4">
+          {showLabel ? (
+            <Link href={base} className="block rounded-xl overflow-hidden shadow-lg ring-1 ring-white/10">
+              <Image
+                src="/sfa/logo.png"
+                alt="ドヤ営業管理"
+                width={2016}
+                height={864}
+                priority
+                className="w-full h-auto"
+              />
             </Link>
+          ) : (
+            <div className="w-9 h-9 rounded-lg bg-white/20 flex items-center justify-center backdrop-blur-md flex-shrink-0">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
           )}
         </div>
 
