@@ -1007,9 +1007,9 @@ const SILENCE_PEAK = 8
                       <>
                         <div className="flex items-center gap-2 mb-1">
                           <span className="w-6 h-6 rounded-full bg-[#0B5CFF] text-white text-xs font-black flex items-center justify-center flex-shrink-0">A</span>
-                          <span className="text-[11px] font-black text-[#0B5CFF]">こう答える 👉</span>
+                          <span className="text-[11px] font-black text-[#0B5CFF]">こう答える</span>
                         </div>
-                        <p className="text-xl font-black text-slate-900 leading-snug pl-8">{a.summary}</p>
+                        <p className="text-[15px] font-black text-slate-900 leading-snug pl-8">{a.summary}</p>
                         {a.script && (
                           <p className="text-[15px] text-slate-700 font-bold leading-relaxed whitespace-pre-wrap mt-2 pl-8">
                             {a.script}
@@ -1164,7 +1164,7 @@ const SILENCE_PEAK = 8
                             <span className="text-[11px] font-black text-sky-300">{modeDef.inputLabel}</span>
                             {isLatest && <span className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5">最新</span>}
                           </div>
-                          <p className={`font-bold text-white pl-8 ${isLatest ? 'text-base' : 'text-sm'}`}>{a.question}</p>
+                          <p className="font-bold text-white pl-8 text-sm">{a.question}</p>
                         </div>
                         {/* A＝こう答える（白＋丸Aバッジ） */}
                         <div className="bg-white px-3 py-3">
@@ -1177,13 +1177,13 @@ const SILENCE_PEAK = 8
                             <>
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="w-6 h-6 rounded-full bg-[#0B5CFF] text-white text-xs font-black flex items-center justify-center flex-shrink-0">A</span>
-                                <span className="text-[11px] font-black text-[#0B5CFF]">こう答える 👉</span>
+                                <span className="text-[11px] font-black text-[#0B5CFF]">こう答える</span>
                               </div>
-                              <p className={`font-black text-slate-900 leading-snug pl-8 ${isLatest ? 'text-2xl sm:text-3xl' : 'text-base'}`}>
+                              <p className="font-black text-slate-900 leading-snug pl-8 text-base">
                                 {a.summary}
                               </p>
                               {a.script && (
-                                <p className={`text-slate-700 font-bold leading-relaxed whitespace-pre-wrap mt-2 pl-8 ${isLatest ? 'text-base sm:text-lg' : 'text-sm'}`}>
+                                <p className="text-slate-700 font-bold leading-relaxed whitespace-pre-wrap mt-2 pl-8 text-sm">
                                   {a.script}
                                 </p>
                               )}
