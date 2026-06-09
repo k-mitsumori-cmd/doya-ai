@@ -72,6 +72,13 @@ export async function POST(req: NextRequest) {
     if (!acc) accountId = null
   }
 
+  // 商談日（開始日）。未指定なら作成日を起点にする
+  let startDate = new Date()
+  if (typeof body.startDate === 'string' && body.startDate) {
+    const d = new Date(body.startDate)
+    if (!isNaN(d.getTime())) startDate = d
+  }
+
   const deal = await prisma.sfaDeal.create({
     data: {
       organizationId: ctx.organizationId,
@@ -82,6 +89,7 @@ export async function POST(req: NextRequest) {
       accountId,
       assigneeMemberId: ctx.memberId,
       status: 'open',
+      startDate,
       lastActivityAt: new Date(),
     },
   })

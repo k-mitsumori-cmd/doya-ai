@@ -15,12 +15,32 @@ interface Deal {
   accountId: string | null
   accountName: string | null
   status: string
+  startDate: string | null
+  wonAt: string | null
+  lostAt: string | null
   lastActivityAt: string | null
 }
 interface Account { id: string; name: string }
 
 const STALE_DAYS = 14
 const yen = (n: number) => '¥' + (n || 0).toLocaleString('ja-JP')
+// Date → 'YYYY-MM-DD'（ローカル日付、<input type="date"> 用）
+const toDateInput = (d: Date) => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+// 商談日からの経過期間ラベル
+const elapsedLabel = (d: Deal): string | null => {
+  if (!d.startDate) return null
+  const start = new Date(d.startDate)
+  if (isNaN(start.getTime())) return null
+  const closedAt = d.status !== 'open' ? d.wonAt || d.lostAt : null
+  const end = closedAt ? new Date(closedAt) : new Date()
+  const days = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 86400000))
+  return d.status === 'open' ? `${days}日経過` : `${days}日で決着`
+}
 
 export default function SfaDealsPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
@@ -32,6 +52,7 @@ export default function SfaDealsPage() {
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
   const [accountId, setAccountId] = useState('')
+  const [startDate, setStartDate] = useState(() => toDateInput(new Date()))
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(() => {
@@ -57,11 +78,11 @@ export default function SfaDealsPage() {
       const res = await fetch('/api/sfa/deals', sfaInit(orgSlug, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, amount: Number(amount) || 0, accountId: accountId || null }),
+        body: JSON.stringify({ name, amount: Number(amount) || 0, accountId: accountId || null, startDate: startDate || null }),
       }))
       const d = await res.json()
       if (!res.ok) throw new Error(d.error)
-      setName(''); setAmount(''); setAccountId(''); setOpen(false)
+      setName(''); setAmount(''); setAccountId(''); setStartDate(toDateInput(new Date())); setOpen(false)
       toast.success('商談を追加しました')
       load()
     } catch (e: any) {
@@ -131,6 +152,10 @@ export default function SfaDealsPage() {
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </div>
+          <div>
+            <label className="block text-xs font-black text-slate-500 mb-1">商談日</label>
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold" />
+          </div>
           <div className="sm:col-span-4">
             <button onClick={create} disabled={busy} className="px-5 py-2.5 rounded-xl bg-green-600 text-white font-black disabled:opacity-50">{busy ? '追加中…' : '追加する'}</button>
           </div>
@@ -161,7 +186,15 @@ export default function SfaDealsPage() {
                       {isStale(d) && <span title="14日以上停滞" className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5 flex-shrink-0">停滞</span>}
                     </div>
                     {d.accountName && <p className="text-[11px] font-bold text-slate-400 mt-0.5">🏢 {d.accountName}</p>}
-                    <p className="text-green-600 font-black mt-1">{yen(d.amount)}</p>
+                    <div className="flex items-center justify-between mt-1">
+                      <p className="text-green-600 font-black">{yen(d.amount)}</p>
+                      {elapsedLabel(d) && (
+                        <span className="text-[10px] font-black text-slate-400 flex items-center gap-0.5">
+                          <span className="material-symbols-outlined text-[12px] leading-none">schedule</span>
+                          {elapsedLabel(d)}
+                        </span>
+                      )}
+                    </div>
                     <select
                       value={d.stageId || ''}
                       onChange={(e) => moveStage(d, e.target.value)}

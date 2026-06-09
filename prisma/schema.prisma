@@ -3098,6 +3098,7 @@ model SfaDeal {
   currency         String    @default("JPY")
   stageId          String?
   probability      Int       @default(0)
+  startDate        DateTime? // 商談日（開始日）。経過期間の起点に使う
   expectedCloseDate DateTime?
   status           String    @default("open") // open/won/lost
   wonAt            DateTime?

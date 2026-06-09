@@ -46,6 +46,14 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (typeof body.name === 'string' && body.name.trim()) data.name = body.name.trim().slice(0, 200)
   if (body.amount != null && Number(body.amount) >= 0) data.amount = BigInt(Math.round(Number(body.amount)))
   if (typeof body.lostReason === 'string') data.lostReason = body.lostReason.slice(0, 300)
+  if (typeof body.startDate === 'string') {
+    if (body.startDate === '') {
+      data.startDate = null
+    } else {
+      const d = new Date(body.startDate)
+      if (!isNaN(d.getTime())) data.startDate = d
+    }
+  }
 
   // ステージ移動（所有確認＋確度同期＋受注/失注ステータス）
   if (typeof body.stageId === 'string') {
