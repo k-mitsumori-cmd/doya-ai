@@ -4,7 +4,7 @@ import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Building2, Kanban, UserPlus, Tag, TrendingUp, Zap, ChevronsUpDown, Check } from 'lucide-react'
+import { LayoutDashboard, Building2, Kanban, UserPlus, Tag, TrendingUp, Zap, ChevronsUpDown, Check, Magnet, Users, Activity, CheckSquare } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { sfaTheme } from '@/components/sidebar/themes'
 import {
@@ -42,7 +42,11 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
   const MAIN_NAV: NavItem[] = [
     { href: base, label: 'ダッシュボード', icon: LayoutDashboard },
     { href: `${base}/deals`, label: '商談（パイプライン）', icon: Kanban, hot: true },
+    { href: `${base}/leads`, label: 'リード', icon: Magnet },
     { href: `${base}/accounts`, label: '取引先', icon: Building2 },
+    { href: `${base}/contacts`, label: '担当者', icon: Users },
+    { href: `${base}/activities`, label: '活動', icon: Activity },
+    { href: `${base}/tasks`, label: 'タスク', icon: CheckSquare },
   ]
   const SUB_NAV: NavItem[] = [
     { href: `${base}/members`, label: 'メンバー', icon: UserPlus },

@@ -109,6 +109,25 @@ export default function SfaDealsPage() {
     }
   }
 
+  const [aiDealId, setAiDealId] = useState<string | null>(null)
+  const aiNextAction = async (deal: Deal) => {
+    setAiDealId(deal.id)
+    try {
+      const res = await fetch('/api/sfa/ai/next-action', sfaInit(orgSlug, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId: deal.id }),
+      }))
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error)
+      toast.success(`💡 ${d.nextAction}${d.risk ? `\n⚠️ ${d.risk}` : ''}`, { duration: 8000 })
+    } catch (e: any) {
+      toast.error(e.message)
+    } finally {
+      setAiDealId(null)
+    }
+  }
+
   const isStale = (d: Deal) =>
     d.status === 'open' && d.lastActivityAt && Date.now() - new Date(d.lastActivityAt).getTime() > STALE_DAYS * 86400000
 
@@ -202,6 +221,14 @@ export default function SfaDealsPage() {
                     >
                       {stages.map((s) => <option key={s.id} value={s.id}>→ {s.name}</option>)}
                     </select>
+                    <button
+                      onClick={() => aiNextAction(d)}
+                      disabled={aiDealId === d.id}
+                      className="mt-1.5 w-full text-[11px] font-black text-[#7f19e6] hover:bg-purple-50 rounded-lg py-1.5 flex items-center justify-center gap-0.5 disabled:opacity-50"
+                    >
+                      <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+                      {aiDealId === d.id ? 'AI考え中…' : 'AI次アクション'}
+                    </button>
                   </div>
                 ))}
                 {col.length === 0 && <p className="text-[11px] font-bold text-slate-300 text-center py-4">なし</p>}
