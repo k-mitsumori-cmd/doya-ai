@@ -18,6 +18,9 @@ export async function POST(req: NextRequest) {
     const audio = form.get('audio')
     const sessionId = (form.get('sessionId') as string) || null
     const speaker = (form.get('speaker') as string) === 'self' ? 'self' : 'remote'
+    // 言語: ja(既定) / en / auto。auto は自動判定（ヒントなし）。
+    const langRaw = (form.get('language') as string) || 'ja'
+    const language = langRaw === 'en' ? 'en' : langRaw === 'auto' ? 'auto' : 'ja'
     if (!(audio instanceof Blob) || audio.size === 0) {
       return NextResponse.json({ error: '音声データがありません' }, { status: 400 })
     }
@@ -26,7 +29,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '音声チャンクが大きすぎます' }, { status: 413 })
     }
 
-    const { text } = await transcribeChunk(audio, { filename: 'chunk.webm' })
+    const { text } = await transcribeChunk(audio, { filename: 'chunk.webm', language })
 
     // セッションがあれば確定セグメントとして保存（空文字は無音なので保存しない）
     if (sessionId && text) {

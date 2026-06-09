@@ -42,6 +42,9 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const langRaw = typeof body.language === 'string' ? body.language : 'ja'
+    const language: 'ja' | 'en' | 'auto' = langRaw === 'en' ? 'en' : langRaw === 'auto' ? 'auto' : 'ja'
+
     const result = await generateAnswer({
       mode,
       question,
@@ -50,6 +53,7 @@ export async function POST(req: NextRequest) {
       company,
       applicant,
       personaNote,
+      language,
     })
 
     // 空応答（モデルが中身を返さなかった）は保存も返却もしない

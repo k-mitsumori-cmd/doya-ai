@@ -23,6 +23,7 @@ export interface BuildAnswerParams {
   company?: CompanyProfileLite | null // interview
   applicant?: ApplicantProfileLite | null // interview
   personaNote?: string | null // 任意の前提/キャラ設定
+  language?: 'ja' | 'en' | 'auto' // 出力言語: ja(既定)/en/auto(質問と同じ言語)
 }
 
 function buildPrompt(p: BuildAnswerParams): { prompt: string; sources: AnswerSource[] } {
@@ -66,11 +67,18 @@ function buildPrompt(p: BuildAnswerParams): { prompt: string; sources: AnswerSou
     lines.push('', `直近の流れ: ${p.recentTranscript}`)
   }
 
+  const langInstruction =
+    p.language === 'en'
+      ? 'Output in English. JSON only (no markdown, no code fences):'
+      : p.language === 'auto'
+        ? '質問と同じ言語で、JSONのみを出力してください（マークダウン・コードフェンス禁止）:'
+        : '次の形式で、日本語・JSONのみを出力してください（マークダウン・コードフェンス禁止）:'
+
   lines.push(
     '',
     `${def.inputLabel}: 「${p.question}」`,
     '',
-    '次の形式で、日本語・JSONのみを出力してください（マークダウン・コードフェンス禁止）:',
+    langInstruction,
     '{',
     `  "summary": "${def.outputHint.summary}",`,
     `  "script": "${def.outputHint.script}"`,

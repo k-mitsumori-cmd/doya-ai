@@ -83,6 +83,8 @@ export default function CunningLivePage() {
   const [reportOpen, setReportOpen] = useState(false)
   const [reportLoading, setReportLoading] = useState(false)
   const [focusMode, setFocusMode] = useState(false) // カンペ集中モード（画面を広げて次々表示）
+  // 言語: ja=日本語(既定) / en=英語 / auto=自動判定。文字起こし＆カンペ生成の言語を制御。
+  const [lang, setLang] = useState<'ja' | 'en' | 'auto'>('ja')
 
   // 自分の声(マイク)取り込み用
   const selfStreamRef = useRef<MediaStream | null>(null)
@@ -105,6 +107,7 @@ export default function CunningLivePage() {
   const pipWindowRef = useRef<Window | null>(null) // 最新のPiPウィンドウ（アンマウント時に確実に閉じる）
   const remainingSecRef = useRef<number | null>(null) // 当月の残り利用秒（-1/未取得は null=無制限扱い）
   const modeRef = useRef<CunningMode>('sales') // 最新モード（録音ループのクロージャから参照）
+  const langRef = useRef<'ja' | 'en' | 'auto'>('ja') // 最新の言語設定（録音ループ・回答生成のクロージャから参照）
   const pendingRef = useRef('') // 集計中の発話（区切れ目で確定して回答）
   const endedRef = useRef(false) // 終了処理の二重起動ガード
   const hasContentRef = useRef(false) // 字幕or回答が1つでもあるか（議事録を出すか判定）
@@ -185,6 +188,9 @@ const SILENCE_PEAK = 8
   useEffect(() => {
     modeRef.current = mode
   }, [mode])
+  useEffect(() => {
+    langRef.current = lang
+  }, [lang])
   // 集中モードの映像に共有ストリームを接続（同じMediaStreamを複数videoで共有可）
   useEffect(() => {
     if (focusMode && focusVideoRef.current && streamRef.current) {
@@ -280,6 +286,7 @@ const SILENCE_PEAK = 8
             sessionId,
             question: q,
             recentTranscript: recentRef.current.slice(-4).join(' / '),
+            language: langRef.current,
           }),
         })
         const d = await res.json()
@@ -317,6 +324,7 @@ const SILENCE_PEAK = 8
         const fd = new FormData()
         fd.append('audio', blob, 'chunk.webm')
         fd.append('sessionId', sessionId)
+        fd.append('language', langRef.current)
         const res = await fetch('/api/cunning/transcribe', { method: 'POST', body: fd })
         const d = await res.json()
         if (!res.ok) return
@@ -382,6 +390,7 @@ const SILENCE_PEAK = 8
         fd.append('audio', blob, 'self.webm')
         fd.append('sessionId', sessionId)
         fd.append('speaker', 'self')
+        fd.append('language', langRef.current)
         const res = await fetch('/api/cunning/transcribe', { method: 'POST', body: fd })
         const d = await res.json()
         if (!res.ok) return
@@ -765,6 +774,25 @@ const SILENCE_PEAK = 8
               🎙 入力デバイス
             </button>
           </div>
+
+          {/* 言語: 文字起こし＆カンペの言語。英語に誤認識されるときは日本語に固定で安定 */}
+          <p className="text-xs font-black text-slate-500 mb-2 mt-4">言語</p>
+          <div className="flex gap-2">
+            {([['ja', '🇯🇵 日本語'], ['en', '🇺🇸 English'], ['auto', '🌐 自動']] as const).map(([v, label]) => (
+              <button
+                key={v}
+                onClick={() => setLang(v)}
+                className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-black border-2 transition-all ${
+                  lang === v ? 'border-[#0B5CFF] bg-blue-50 text-[#0B5CFF]' : 'border-slate-200 text-slate-500'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[11px] text-slate-400 font-bold mt-1 leading-relaxed">
+            相手の声の文字起こしとカンペの言語です。英語が混じって誤認識されるときは「日本語」に固定すると安定します。
+          </p>
           {audioSource === 'tab' && (
             <label className="mt-3 flex items-center gap-2 text-sm font-bold text-slate-600 cursor-pointer">
               <input

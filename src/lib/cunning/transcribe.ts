@@ -15,7 +15,7 @@ export interface TranscribeResult {
   model: string
 }
 
-/** 音声チャンク（webm/mp4等）を日本語で文字起こし。空文字＝無音/雑音。 */
+/** 音声チャンク（webm/mp4等）を文字起こし。language=ja(既定)/en/auto。空文字＝無音/雑音。 */
 export async function transcribeChunk(
   audio: Blob,
   opts: { filename?: string; language?: string } = {}
@@ -24,15 +24,26 @@ export async function transcribeChunk(
   if (!apiKey) throw new Error('OPENAI_API_KEY が設定されていません')
 
   const timeoutMs = Number(process.env.CUNNING_TRANSCRIBE_TIMEOUT_MS) || 30000
-  const language = opts.language || 'ja'
+  // ja(既定) / en / auto。auto は言語ヒントなしで自動判定。
+  const language = opts.language === 'en' ? 'en' : opts.language === 'auto' ? 'auto' : 'ja'
   const filename = opts.filename || 'chunk.webm'
+  // gpt-4o-transcribe は language ヒントが弱く、短い無音/雑音チャンクで英語へドリフトしやすい。
+  // 言語に合わせた prompt を与えて出力スクリプトをバイアスし、誤って英語に固定されるのを防ぐ。
+  const biasPrompt =
+    language === 'en'
+      ? 'The following is a business conversation in English.'
+      : language === 'auto'
+        ? ''
+        : '以下は日本語のビジネス会話の文字起こしです。日本語で出力してください。'
 
   const callModel = (model: string) =>
     withTimeout(`${model} transcribe`, timeoutMs, async (signal) => {
       const form = new FormData()
       form.append('file', audio, filename)
       form.append('model', model)
-      form.append('language', language)
+      // auto は言語ヒントを付けない（自動判定に委ねる）
+      if (language !== 'auto') form.append('language', language)
+      if (biasPrompt) form.append('prompt', biasPrompt)
       form.append('response_format', 'json') // 文章単位のテキストのみで十分
       const res = await fetch(OPENAI_TRANSCRIBE_ENDPOINT, {
         method: 'POST',
