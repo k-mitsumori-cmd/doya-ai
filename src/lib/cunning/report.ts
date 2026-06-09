@@ -24,6 +24,7 @@ export interface BuildReportParams {
   transcripts: string[] // 相手の発話（時系列）
   answers: { question: string; summary: string; script: string }[]
   personaNote?: string | null
+  language?: 'ja' | 'en' | 'auto' // 出力言語: ja(既定)/en/auto(会話の主要言語に追従)
 }
 
 export async function generateReport(p: BuildReportParams): Promise<CunningReport> {
@@ -45,9 +46,16 @@ export async function generateReport(p: BuildReportParams): Promise<CunningRepor
   p.answers.slice(-40).forEach((a, i) => {
     lines.push(`${i + 1}. Q「${a.question}」→ ${a.summary}｜${a.script}`)
   })
+  const langLine =
+    p.language === 'en'
+      ? '上記から、次のJSONのみを出力（全ての文字列値は英語で・マークダウン/コードフェンス禁止）:'
+      : p.language === 'auto'
+        ? '上記から、次のJSONのみを出力（会話の主要言語に合わせる・マークダウン/コードフェンス禁止）:'
+        : '上記から、次のJSONのみを日本語で出力（マークダウン・コードフェンス禁止）:'
+
   lines.push(
     '',
-    '上記から、次のJSONのみを日本語で出力（マークダウン・コードフェンス禁止）:',
+    langLine,
     '{',
     '  "title": "セッションの短いタイトル",',
     business

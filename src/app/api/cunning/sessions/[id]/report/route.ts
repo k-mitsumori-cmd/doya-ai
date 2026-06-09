@@ -38,11 +38,16 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ report: session.report }, { headers: { 'Cache-Control': 'no-store' } })
     }
 
+    // 出力言語: クライアントの選択（ja/en/auto）。未指定は auto（会話の主要言語に追従）。
+    const langRaw = typeof body.language === 'string' ? body.language : 'auto'
+    const language: 'ja' | 'en' | 'auto' = langRaw === 'en' ? 'en' : langRaw === 'ja' ? 'ja' : 'auto'
+
     const report = await generateReport({
       mode: session.mode as CunningMode,
       transcripts: session.transcripts.map((t) => `${t.speaker === 'self' ? '自分' : '相手'}: ${t.text}`),
       answers: session.answers.map((a) => ({ question: a.questionText, summary: a.summary, script: a.script })),
       personaNote: session.personaNote,
+      language,
     })
 
     await prisma.cunningSession.update({ where: { id: p.id }, data: { report: report as any } })

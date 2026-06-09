@@ -162,7 +162,7 @@ const SILENCE_PEAK = 8
       const res = await fetch(`/api/cunning/sessions/${sessionId}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ force: true }),
+        body: JSON.stringify({ force: true, language: langRef.current }),
       })
       const d = await res.json()
       if (res.ok) setReport(d.report)
