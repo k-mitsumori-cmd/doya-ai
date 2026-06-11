@@ -63,7 +63,17 @@
 | mono | モノクロ |
 | isometric | アイソメ図解 |
 
-- スタイルプレビューは「スタイル×ページ(表紙/特長/まとめ)」で複数ページを事前生成し、Storageに共有キャッシュ（`style-previews/v2-gptimg2/{style}-{page}.png`）。モデル/品質を変えたら `STYLE_PREVIEW_DIR` の版を上げると全焼き直し。
+- スタイルプレビューは「スタイル×ページ(表紙/本文/まとめ)」で複数ページを事前生成し、Storageに共有キャッシュ（`style-previews/v4-document/{style}-{page}.png`）。モデル/品質/プロンプトを変えたら `STYLE_PREVIEW_DIR` の版を上げると全焼き直し。一括再生成は `npx tsx scripts/regenerate-doyaslide-style-previews.ts`。
+- directive はレイアウト指示を含めず「配色・書体・モチーフの味付け」のみ。レイアウトは `buildImagePrompt` の資料テンプレートが固定する。
+
+## プロンプト設計（2026-06-12 改修・きちんとした資料路線）
+
+LayerX Company Deck・スライドランド掲載資料の調査に基づき、「ポスター風」から「きちんとした企業資料」に全面改修。
+
+- **ページ種別テンプレート**: role から 表紙/セクション扉/目次/本文 を判定し、レイアウト定型を切替（本文=タイトル左上+リード文+グリッド本文+フッター線+ページ番号、表紙/扉のみ全面ブランド色可）
+- **構成(Gemini)**: subText は「1行目=結論リード文、2行目以降=・ラベル｜説明 の箇条書き3〜5点」。8枚以上のビジネス資料は2枚目に目次。visualPrompt への**色指定は禁止**
+- **デッキ内配色統一**: 画像プロンプトに STRICT DECK COLOR SYSTEM（テーマカラー+ダークニュートラル+白/ライトグレーのみ。visualPrompt 内の色指定は無視させる）を注入し、1プロジェクト内の色バラつきを防止
+- **ページ番号**: `ComposeSlide.index` を `buildImagePrompt(pageNumber)` に渡し、本文ページ右下に小さく描画
 
 ## APIエンドポイント (13件, `/api/doyaslide/`)
 

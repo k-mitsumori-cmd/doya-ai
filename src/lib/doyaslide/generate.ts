@@ -23,6 +23,7 @@ export interface ComposeProject {
 }
 
 export interface ComposeSlide {
+  index?: number // 1始まり。あれば本文ページの右下にページ番号として描画
   role?: string | null
   headline?: string | null
   subText?: string | null
@@ -68,6 +69,7 @@ export async function composeSlideImage(
         hasLogo,
         logoPosition: logoPos,
         extraInstruction,
+        pageNumber: slide.index,
       })
 
   const img = await generateImageWithFallback({ prompt, size, quality: 'high' })

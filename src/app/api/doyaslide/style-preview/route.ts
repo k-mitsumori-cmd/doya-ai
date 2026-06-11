@@ -6,33 +6,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateImageWithFallback } from '@/lib/image-generator'
 import { getUserId } from '@/lib/doyaslide/access'
 import { buildImagePrompt } from '@/lib/doyaslide/prompts'
-import { STYLE_PRESETS, getStylePreviewColor } from '@/lib/doyaslide/constants'
+import { STYLE_PRESETS, getStylePreviewColor, STYLE_PREVIEW_SAMPLE_SLIDES } from '@/lib/doyaslide/constants'
 import { stylePreviewPublicUrl, uploadStylePreview, stylePreviewExists } from '@/lib/doyaslide/storage'
 
-// スタイルの雰囲気を「何ページも」伝える共通サンプルスライド（表紙→特長→まとめ）
-const SAMPLE_SLIDES = [
-  {
-    role: '表紙',
-    headline: '新サービスのご提案',
-    subText: '課題を解決する、その先へ',
-    visualPrompt:
-      'モダンなビジネスプレゼンの表紙。タイトルを主役に、抽象的なグラフィックと余白のバランス。サンプル見本として魅力的に。',
-  },
-  {
-    role: '特長',
-    headline: '3つの強み',
-    subText: '導入がかんたん / コスト削減 / すぐに効果',
-    visualPrompt:
-      '3つの特長を横並びで見せる本文スライド。各項目にアイコン的なモチーフと短い見出し。情報が整理されたレイアウト。',
-  },
-  {
-    role: 'まとめ',
-    headline: 'まずは無料で体験',
-    subText: 'お気軽にお問い合わせください',
-    visualPrompt:
-      '締めのCTAスライド。行動を促す力強い構図と大きな余白。連絡先やボタン風の要素を含む安心感のある仕上がり。',
-  },
-]
+const SAMPLE_SLIDES = STYLE_PREVIEW_SAMPLE_SLIDES
 
 // GET /api/doyaslide/style-preview?style=flashy
 // スタイルごとの「仕上がりイメージ」を複数ページ生成（全ユーザー共有でキャッシュ）
@@ -63,6 +40,7 @@ export async function GET(req: NextRequest) {
           stylePreset: style,
           hasLogo: false,
           logoPosition: 'top-right',
+          pageNumber: SAMPLE_SLIDES[page].index,
         })
         const img = await generateImageWithFallback({ prompt, size: '1536x1024', quality: 'high' })
         urls.push(await uploadStylePreview(style, img.base64, page))

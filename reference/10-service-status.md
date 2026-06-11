@@ -52,8 +52,8 @@
 | ドヤオープニングAI | `/opening` | maintenance | ✅ | ✅ | ✅ 5件 | ✅ 2モデル | ❌ | ❌ |
 | ドヤWeb診断AI | `/shindan` | maintenance | ✅ | ✅ 3頁 | ❌ | ❌ | ❌ | ✅ |
 | ドヤスライド | `/doyaslide` | active | ✅ | ✅ 7頁 | ✅ 13件 | ✅ 5モデル | ✅ 統一プラン | ✅ |
-| ドヤカンニング | `/cunning` | coming_soon | ✅ | ✅ 7頁 | ✅ 11件 | ✅ 7モデル | ✅ 統一プラン | ✅ |
-| ドヤ営業管理 | `/sfa` | coming_soon | ✅ | ✅ 6頁 | ✅ 9件 | ✅ 11モデル | ✅ 統一プラン | ✅ |
+| ドヤカンニング | `/cunning` | active | ✅ | ✅ 7頁 | ✅ 11件 | ✅ 7モデル | ✅ 統一プラン | ✅ |
+| ドヤ営業管理 | `/sfa` | active | ✅ | ✅ 6頁 | ✅ 9件 | ✅ 11モデル | ✅ 統一プラン | ✅ |
 | 旧スライド | `/slide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
 | 旧SlashSlide | `/slashslide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
 | ドヤHR | `/hr` | active | ✅ | ✅ 14頁 | ✅ 30件 | ✅ 10モデル | ✅ 統一プラン | ❌ |
@@ -338,3 +338,4 @@ grep "^model " prisma/schema.prisma
 | 2026-06-02 | ドヤスライド刷新: 画像主体の新 `/doyaslide`（gpt-image-2フル生成・5モデル・13API・12スタイル）を追加。旧 `/slide`・`/slashslide` を deprecated とし `/doyaslide` へリダイレクト統合。doyaslide.md 新規作成・slide.md に廃止記録追記 |
 | 2026-06-02 | ドヤカンニング (`/cunning`) MVP実装: Web会議のタブ音声→質問検出→回答カンペ。near-realtime文字起こし(OpenAI・whisperフォールバック)、gemini-flash回答、字句RAG、PiPカンペ、想定問答準備。7頁・11API・7モデル(cunning_*)。本番DBは手動DDLで作成。services.ts登録・cunning.md更新 |
 | 2026-06-02 | ドヤスライドを active 化（coming_soon→active、badge 開発中→NEW）。ドヤカンニングは coming_soon のまま |
+| 2026-06-12 | ドヤ営業管理(sfa)・ドヤカンニング(cunning)を active 化。ドヤスライドのプロンプトを「きちんとした企業資料」設計に全面改修（LayerX/スライドランド調査反映・デッキ内配色統一・ページ番号描画・スタイルプレビュー v4-document 焼き直し） |

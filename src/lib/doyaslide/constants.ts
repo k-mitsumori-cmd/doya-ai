@@ -56,79 +56,83 @@ export const ASPECT_LABELS: Record<AspectRatio, string> = {
   vertical: '縦（SNSストーリー）',
 }
 
-/** スタイルプリセット → 画像プロンプトに注入する英語スタイル指示 */
+/**
+ * スタイルプリセット → 画像プロンプトに注入する英語スタイル指示。
+ * 注意: レイアウトは buildImagePrompt の資料テンプレート（タイトル左上・グリッド本文・フッター）が固定する。
+ * directive は配色・書体・モチーフの「味付け」だけを記述し、ポスター的な構図指示は書かないこと。
+ */
 export const STYLE_PRESETS: { value: StylePreset; label: string; directive: string }[] = [
   {
     value: 'flashy',
     label: 'ド派手',
     directive:
-      'bold, high-impact, dramatic lighting, vivid saturated colors, large dynamic typography, energetic magazine-cover aesthetic',
+      'high-energy deck flavor: vivid saturated accent (bold gradients allowed on accent elements), strong bold sans-serif headings, dynamic diagonal accent shapes in margins — body content still on a clean structured grid',
   },
   {
     value: 'luxury',
     label: '高級',
     directive:
-      'premium, elegant, refined, deep rich tones with gold/metallic accents, generous whitespace, sophisticated serif-like typography',
+      'premium flavor: deep charcoal/navy neutrals with gold/metallic accent details, elegant high-contrast typography with serif-style display headings, very generous whitespace',
   },
   {
     value: 'pop',
     label: 'ポップ',
     directive:
-      'playful, cheerful, rounded shapes, pastel + vivid pop colors, friendly bold rounded typography, fun stickers/illustration vibe',
+      'playful flavor: white background with rounded cards, cheerful vivid accent + soft pastel tints, friendly rounded bold typography, simple flat icon illustrations',
   },
   {
     value: 'minimal',
     label: 'ミニマル',
     directive:
-      'clean minimal, lots of whitespace, restrained palette, simple geometric accents, crisp modern sans-serif typography',
+      'clean minimal flavor: maximum whitespace, restrained palette, hairline rules and simple geometric accents, crisp modern sans-serif typography',
   },
   {
     value: 'cyber',
     label: 'サイバー',
     directive:
-      'futuristic cyberpunk, neon glow, dark background, gradient holographic accents, tech HUD motifs, sleek techno typography',
+      'futuristic tech flavor: one consistent dark navy/near-black background on EVERY slide, neon accent lines and subtle grid motifs, light readable text, sleek techno sans-serif',
   },
   {
     value: 'handwritten',
     label: '手書き風',
     directive:
-      'warm hand-drawn doodle aesthetic, paper texture, hand-lettered headlines, sketchy illustrations, friendly organic feel',
+      'warm hand-drawn flavor: paper-white background, hand-lettered style headings, sketchy underlines/frames and doodle icons — but content aligned to a tidy grid',
   },
   {
     value: 'corporate',
     label: 'コーポレート',
     directive:
-      'clean trustworthy corporate aesthetic, navy and blue palette, structured grid layout, professional business photography feel, formal sans-serif typography',
+      'trustworthy corporate flavor: white background, navy text, structured grid with light-gray rounded cards, formal modern sans-serif, flat business diagrams',
   },
   {
     value: 'gradient',
     label: 'グラデーション',
     directive:
-      'vibrant smooth color gradients, modern fluid blends, soft glassmorphism panels and glow, contemporary tech-startup aesthetic',
+      'modern startup flavor: white base with soft smooth accent-color gradient panels and subtle glassmorphism cards, contemporary clean sans-serif',
   },
   {
     value: 'retro',
     label: 'レトロ',
     directive:
-      'retro vintage aesthetic, warm muted tones, 70s/80s inspired geometric shapes and typography, nostalgic grain and texture',
+      'retro flavor: warm cream paper background, muted 70s/80s tones of the accent color, vintage geometric motifs and retro-styled headings, subtle grain',
   },
   {
     value: 'nature',
     label: 'ナチュラル',
     directive:
-      'organic natural aesthetic, earthy green and beige palette, soft botanical motifs, gentle daylight, calm and warm feel',
+      'organic natural flavor: white/beige background, earthy tints of the accent color, soft botanical line motifs in margins, calm gentle typography',
   },
   {
     value: 'mono',
     label: 'モノクロ',
     directive:
-      'high-contrast monochrome, black and white with a single bold accent color, editorial magazine typography, striking and minimal',
+      'editorial monochrome flavor: black and white with the single accent color used sparingly, high-contrast editorial typography, striking and disciplined',
   },
   {
     value: 'isometric',
     label: 'アイソメ図解',
     directive:
-      'isometric illustration style, clean geometric 3D-ish flat shapes, infographic/diagram vibe, crisp vector look, tech explainer aesthetic',
+      'tech explainer flavor: white background with isometric flat-vector illustrations as the diagram language, crisp infographic look, clean sans-serif',
   },
 ]
 
@@ -155,6 +159,37 @@ export const STYLE_PREVIEW_COLOR: Record<StylePreset, string> = {
 export function getStylePreviewColor(preset: string): string {
   return STYLE_PREVIEW_COLOR[preset as StylePreset] || '#7f19e6'
 }
+
+/**
+ * スタイルプレビュー用の共通サンプルスライド（表紙→本文→まとめ）。
+ * subText は本番と同じ「1行目=リード文、2行目以降=・ラベル｜説明」フォーマットで、資料らしい仕上がりを見せる。
+ * /api/doyaslide/style-preview と scripts/regenerate-doyaslide-style-previews.ts で共用。
+ */
+export const STYLE_PREVIEW_SAMPLE_SLIDES = [
+  {
+    index: 1,
+    role: '表紙',
+    headline: '新サービスのご提案',
+    subText: 'サービス紹介資料',
+    visualPrompt: '資料の表紙。タイトルを主役に、抽象的なブランドモチーフと余白のバランス。',
+  },
+  {
+    index: 2,
+    role: '解決策',
+    headline: '選ばれる3つの理由',
+    subText:
+      '導入企業の9割が効果を実感しています\n・かんたん導入｜最短1日で利用開始\n・コスト削減｜運用コストを大幅圧縮\n・伴走サポート｜専任担当が定着まで支援',
+    visualPrompt: '3カラムのカード型レイアウト。各カードはピル型ラベル+短い説明文+小さなフラットアイコン。',
+  },
+  {
+    index: 3,
+    role: 'まとめ',
+    headline: 'まずは無料トライアル',
+    subText:
+      '30日間無料で全機能をお試しいただけます\n・申込は1分｜クレジットカード不要\n・導入相談｜お気軽にお問い合わせください',
+    visualPrompt: '締めのCTAページ。中央にメッセージとボタン風の要素、整理された余白で安心感のある仕上がり。',
+  },
+]
 
 export const LOGO_POSITIONS: { value: LogoPosition; label: string }[] = [
   { value: 'top-right', label: '右上' },
