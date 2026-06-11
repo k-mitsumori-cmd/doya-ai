@@ -44,36 +44,37 @@
 - 品質: 本番スライド=`high`、スタイルプレビュー=`high`（gpt-image-2 は `auto` 非対応）
 - 構成テキスト（Gemini）は `@seo/lib/gemini` 系ではなく `src/lib/doyaslide/` 内で組み立て
 
-## スタイルプリセット（12種）
+## スタイルプリセット（6種 = ビジネス系3 + 遊び系3、2026-06-12 改編）
 
-`src/lib/doyaslide/constants.ts: STYLE_PRESETS`。各 directive を画像プロンプトへ注入。
+`src/lib/doyaslide/constants.ts: STYLE_PRESETS`。directive（アートディレクション）に加え、遊び系は専用 `layout` を持ち企業資料テンプレートを使わない。
 
-| value | ラベル |
-|-------|--------|
-| flashy | ド派手 |
-| luxury | 高級 |
-| pop | ポップ |
-| minimal | ミニマル |
-| cyber | サイバー |
-| handwritten | 手書き風 |
-| corporate | コーポレート |
-| gradient | グラデーション |
-| retro | レトロ |
-| nature | ナチュラル |
-| mono | モノクロ |
-| isometric | アイソメ図解 |
+| value | ラベル | group | レイアウト |
+|-------|--------|-------|-----------|
+| corporate | コーポレート | business | 資料テンプレ（LayerX型） |
+| minimal | ミニマル | business | 資料テンプレ |
+| luxury | 高級 | business | 資料テンプレ（ダーク×ゴールド） |
+| pop | ポップ | fun | 専用（ステッカー/コミック） |
+| handwritten | 手書き風 | fun | 専用（スケッチノート/ホワイトボード） |
+| isometric | アイソメ図解 | fun | 専用（アイソメ3Dイラスト主役） |
 
-- スタイルプレビューは「スタイル×ページ(表紙/本文/まとめ)」で複数ページを事前生成し、Storageに共有キャッシュ（`style-previews/v4-document/{style}-{page}.png`）。モデル/品質/プロンプトを変えたら `STYLE_PREVIEW_DIR` の版を上げると全焼き直し。一括再生成は `npx tsx scripts/regenerate-doyaslide-style-previews.ts`。
-- directive はレイアウト指示を含めず「配色・書体・モチーフの味付け」のみ。レイアウトは `buildImagePrompt` の資料テンプレートが固定する。
+- 旧12種のうち削除6種（flashy/cyber/gradient/retro/nature/mono）は `LEGACY_STYLE_DIRECTIVES` でdirectiveのみ温存（既存プロジェクトの再生成・チャット修正で見た目を維持）。UI・型 `StylePreset` からは削除済み。
+- 既定スタイル: `corporate`（new/page.tsx・projects API とも旧 flashy から変更）。
 
-## プロンプト設計（2026-06-12 改修・きちんとした資料路線）
+- スタイルプレビューは「スタイル×ページ(表紙/本文/まとめ)」で複数ページを事前生成し、Storageに共有キャッシュ（`style-previews/v5-styles6/{style}-{page}.png`）。モデル/品質/プロンプトを変えたら `STYLE_PREVIEW_DIR` の版を上げると全焼き直し。一括再生成は `npx tsx scripts/regenerate-doyaslide-style-previews.ts`。プレビューAPIは3ページを並列生成（直列だと cold cache 時に maxDuration=300 超過）。
 
-LayerX Company Deck・スライドランド掲載資料の調査に基づき、「ポスター風」から「きちんとした企業資料」に全面改修。
+## プロンプト設計（2026-06-12 改修）
 
-- **ページ種別テンプレート**: role から 表紙/セクション扉/目次/本文 を判定し、レイアウト定型を切替（本文=タイトル左上+リード文+グリッド本文+フッター線+ページ番号、表紙/扉のみ全面ブランド色可）
-- **構成(Gemini)**: subText は「1行目=結論リード文、2行目以降=・ラベル｜説明 の箇条書き3〜5点」。8枚以上のビジネス資料は2枚目に目次。visualPrompt への**色指定は禁止**
-- **デッキ内配色統一**: 画像プロンプトに STRICT DECK COLOR SYSTEM（テーマカラー+ダークニュートラル+白/ライトグレーのみ。visualPrompt 内の色指定は無視させる）を注入し、1プロジェクト内の色バラつきを防止
-- **ページ番号**: `ComposeSlide.index` を `buildImagePrompt(pageNumber)` に渡し、本文ページ右下に小さく描画
+`buildImagePrompt` は3系統に分岐:
+
+1. **ビジネス系スタイル**（corporate/minimal/luxury、layout定義なし）: LayerX Company Deck・スライドランド掲載資料の調査に基づく「きちんとした企業資料」テンプレート。本文=タイトル左上（控えめサイズ）+結論リード文+グリッド本文（2-3カラムカード・ピル型ラベル）+フッター線+右下ページ番号。表紙/セクション扉のみ全面ブランド色可
+2. **遊び系スタイル**（pop/handwritten/isometric、layout定義あり）: 資料テンプレを使わず、スタイル専用レイアウト言語で生成（openerも「strong distinctive art direction / do NOT fall back to generic business look」）。並べた時に明確に違って見えることを優先
+3. **docType=sns**: スタイルに関わらずポスター/カルーセル構成（大きな文字・短い言葉・スクロールを止める）。ページ番号なし。`ComposeProject.docType` 経由で伝搬
+
+共通ルール:
+- **構成(Gemini)**: subText は「1行目=結論リード文、2行目以降=・ラベル｜説明 の箇条書き3〜5点」。8枚以上のビジネス資料（sns除く）は2枚目に目次。visualPrompt への**色指定は禁止**。定型roleは「表紙/目次/セクション扉/まとめ/CTA」の表記を強制（本文roleに「タイトル」「セクション」「章」を含めない）
+- **デッキ内配色統一**: ビジネス系=STRICT DECK COLOR SYSTEM（テーマカラー+ダークニュートラル+白/グレーのみ）、遊び系/SNS=CONSISTENT DECK PALETTE（スタイルが定めるパレットを全スライド固定）。いずれも visualPrompt 内の色指定は無視させる
+- **ページ種別判定**: role の**完全一致**（^表紙$等）のみ特別ページ扱い（「導入事例セクション」等の誤判定防止）
+- **ページ番号**: `ComposeSlide.index` を `buildImagePrompt(pageNumber)` に渡し本文ページ右下に描画（generate/regenerate/chat 全ルートで index を渡す）
 
 ## APIエンドポイント (13件, `/api/doyaslide/`)
 

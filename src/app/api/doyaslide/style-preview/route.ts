@@ -26,29 +26,32 @@ export async function GET(req: NextRequest) {
 
     // スタイルごとに代表カラーを変えて、一覧を多彩に見せる
     const themeColor = getStylePreviewColor(style)
-    const urls: string[] = []
-    for (let page = 0; page < SAMPLE_SLIDES.length; page++) {
-      try {
-        // キャッシュ確認（Storage上に存在すれば再利用。HEADは公開URLで信頼できないため list で判定）
-        if (await stylePreviewExists(style, page)) {
-          urls.push(stylePreviewPublicUrl(style, page))
-          continue
+    // 全ページ並列生成（直列だと cold cache 時に 3ページ×約130秒 > maxDuration=300 で関数が落ちる）
+    const results = await Promise.all(
+      SAMPLE_SLIDES.map(async (slide, page) => {
+        try {
+          // キャッシュ確認（Storage上に存在すれば再利用。HEADは公開URLで信頼できないため list で判定）
+          if (await stylePreviewExists(style, page)) {
+            return stylePreviewPublicUrl(style, page)
+          }
+          const prompt = buildImagePrompt({
+            slide,
+            themeColor,
+            stylePreset: style,
+            hasLogo: false,
+            logoPosition: 'top-right',
+            pageNumber: slide.index,
+          })
+          const img = await generateImageWithFallback({ prompt, size: '1536x1024', quality: 'high' })
+          return await uploadStylePreview(style, img.base64, page)
+        } catch (e: any) {
+          // 1ページ失敗しても成功した他ページは返す（全体500にしない）
+          console.error(`[doyaslide/style-preview] ${style}-${page} failed:`, e?.message)
+          return null
         }
-        const prompt = buildImagePrompt({
-          slide: SAMPLE_SLIDES[page],
-          themeColor,
-          stylePreset: style,
-          hasLogo: false,
-          logoPosition: 'top-right',
-          pageNumber: SAMPLE_SLIDES[page].index,
-        })
-        const img = await generateImageWithFallback({ prompt, size: '1536x1024', quality: 'high' })
-        urls.push(await uploadStylePreview(style, img.base64, page))
-      } catch (e: any) {
-        // 1ページ失敗しても成功した他ページは返す（全体500にしない）
-        console.error(`[doyaslide/style-preview] ${style}-${page} failed:`, e?.message)
-      }
-    }
+      })
+    )
+    const urls = results.filter((u): u is string => !!u)
 
     // 後方互換: 先頭ページを url としても返す（全滅時は null）
     return NextResponse.json({ url: urls[0] ?? null, urls })

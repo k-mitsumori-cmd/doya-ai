@@ -57,102 +57,103 @@ export const ASPECT_LABELS: Record<AspectRatio, string> = {
 }
 
 /**
- * スタイルプリセット → 画像プロンプトに注入する英語スタイル指示。
- * 注意: レイアウトは buildImagePrompt の資料テンプレート（タイトル左上・グリッド本文・フッター）が固定する。
- * directive は配色・書体・モチーフの「味付け」だけを記述し、ポスター的な構図指示は書かないこと。
+ * スタイルプリセット（6種 = ビジネス系3 + 遊び系3）。
+ * - directive: 配色・書体・モチーフのアートディレクション（スタイルの個性。強く差別化する）
+ * - layout: 遊び系のみ。企業資料テンプレートの代わりに使う、そのスタイル専用の本文レイアウト言語。
+ *   layout が無いスタイルは buildImagePrompt の「きちんとした資料」テンプレート（タイトル左上+グリッド本文+フッター）になる。
  */
-export const STYLE_PRESETS: { value: StylePreset; label: string; directive: string }[] = [
+export const STYLE_PRESETS: {
+  value: StylePreset
+  label: string
+  group: 'business' | 'fun'
+  directive: string
+  layout?: string
+}[] = [
+  // ---------- ビジネス系3種（きちんとした資料テンプレート） ----------
   {
-    value: 'flashy',
-    label: 'ド派手',
+    value: 'corporate',
+    label: 'コーポレート',
+    group: 'business',
     directive:
-      'high-energy deck flavor: vivid saturated accent (bold gradients allowed on accent elements), strong bold sans-serif headings, dynamic diagonal accent shapes in margins — body content still on a clean structured grid',
-  },
-  {
-    value: 'luxury',
-    label: '高級',
-    directive:
-      'premium flavor: deep charcoal/navy neutrals with gold/metallic accent details, elegant high-contrast typography with serif-style display headings, very generous whitespace',
-  },
-  {
-    value: 'pop',
-    label: 'ポップ',
-    directive:
-      'playful flavor: white background with rounded cards, cheerful vivid accent + soft pastel tints, friendly rounded bold typography, simple flat icon illustrations',
+      'trustworthy Japanese SaaS company-deck look: white background, dark navy text, structured grid of light-gray rounded cards with pill labels, flat business diagrams, formal modern sans-serif',
   },
   {
     value: 'minimal',
     label: 'ミニマル',
+    group: 'business',
     directive:
-      'clean minimal flavor: maximum whitespace, restrained palette, hairline rules and simple geometric accents, crisp modern sans-serif typography',
+      'ultra-clean minimal look: vast whitespace, hairline rules, small refined typography, monochrome neutrals with the accent color used only for one keyword or line per slide — quiet, premium, architectural',
   },
   {
-    value: 'cyber',
-    label: 'サイバー',
+    value: 'luxury',
+    label: '高級',
+    group: 'business',
     directive:
-      'futuristic tech flavor: one consistent dark navy/near-black background on EVERY slide, neon accent lines and subtle grid motifs, light readable text, sleek techno sans-serif',
+      'premium editorial look: one consistent deep charcoal/near-black background on EVERY slide, gold/champagne metallic accent details and thin gold rules, elegant serif display headings with wide letter-spacing, the feel of a luxury brand annual report',
+  },
+  // ---------- 遊び系3種（スタイル専用レイアウト・資料テンプレを使わない） ----------
+  {
+    value: 'pop',
+    label: 'ポップ',
+    group: 'fun',
+    directive:
+      'loud joyful pop-art look: thick black outlines around shapes and type, comic halftone dots, sticker badges and starbursts, blob shapes, a cheerful multi-color palette (3-4 bright colors anchored by the accent color), chunky rounded display type — energetic like a fun magazine for teens',
+    layout:
+      'POP LAYOUT: oversized playful headline with thick outline or sticker-style backing, the lead message in a speech bubble, each bullet item as a colorful sticker card / badge with a doodle icon, scattered with slight playful rotation but still readable and balanced. Confetti dots and starbursts in empty corners.',
   },
   {
     value: 'handwritten',
     label: '手書き風',
+    group: 'fun',
     directive:
-      'warm hand-drawn flavor: paper-white background, hand-lettered style headings, sketchy underlines/frames and doodle icons — but content aligned to a tidy grid',
-  },
-  {
-    value: 'corporate',
-    label: 'コーポレート',
-    directive:
-      'trustworthy corporate flavor: white background, navy text, structured grid with light-gray rounded cards, formal modern sans-serif, flat business diagrams',
-  },
-  {
-    value: 'gradient',
-    label: 'グラデーション',
-    directive:
-      'modern startup flavor: white base with soft smooth accent-color gradient panels and subtle glassmorphism cards, contemporary clean sans-serif',
-  },
-  {
-    value: 'retro',
-    label: 'レトロ',
-    directive:
-      'retro flavor: warm cream paper background, muted 70s/80s tones of the accent color, vintage geometric motifs and retro-styled headings, subtle grain',
-  },
-  {
-    value: 'nature',
-    label: 'ナチュラル',
-    directive:
-      'organic natural flavor: white/beige background, earthy tints of the accent color, soft botanical line motifs in margins, calm gentle typography',
-  },
-  {
-    value: 'mono',
-    label: 'モノクロ',
-    directive:
-      'editorial monochrome flavor: black and white with the single accent color used sparingly, high-contrast editorial typography, striking and disciplined',
+      'hand-drawn sketchnote look: warm paper or whiteboard background with subtle texture, everything looks drawn by hand with marker and pen — rough hand-lettered headings with marker underlines, sketchy boxes and arrows, doodle illustrations, sticky notes and washi tape accents, ink + one or two marker highlight colors anchored by the accent color',
+    layout:
+      'SKETCHNOTE LAYOUT: hand-lettered marker headline with a rough underline, the lead message as a handwritten sentence, each bullet item on a sticky note or inside a hand-drawn frame, connected by sketchy arrows, with small doodle drawings illustrating each point. Looks like a brilliant whiteboard session, but tidy and legible.',
   },
   {
     value: 'isometric',
     label: 'アイソメ図解',
+    group: 'fun',
     directive:
-      'tech explainer flavor: white background with isometric flat-vector illustrations as the diagram language, crisp infographic look, clean sans-serif',
+      'isometric world look: one large detailed isometric 3D flat-vector scene (tiny people, buildings, devices, conveyor flows) is the HERO of every slide, soft shadows, crisp vector edges, a bright modern palette anchored by the accent color, clean sans-serif labels',
+    layout:
+      'ISOMETRIC LAYOUT: the title at the top, then a big isometric 3D vector illustration occupying most of the slide that visually EXPLAINS the content (a miniature world / process flow), with the bullet items as small floating callout labels with leader lines pointing into the scene. The illustration tells the story.',
   },
 ]
 
+/**
+ * 廃止済みスタイル（旧12種のうち削除した6種）の directive。
+ * 既存プロジェクトの再生成・チャット修正で見た目を維持するためだけに残す。UIには出さない。
+ */
+export const LEGACY_STYLE_DIRECTIVES: Record<string, string> = {
+  flashy:
+    'high-energy look: vivid saturated accent with bold gradients, strong bold sans-serif headings, dynamic diagonal accent shapes',
+  cyber:
+    'futuristic tech look: one consistent dark navy/near-black background on EVERY slide, neon accent lines and subtle grid motifs, light readable text, sleek techno sans-serif',
+  gradient:
+    'modern startup look: white base with soft smooth accent-color gradient panels and subtle glassmorphism cards, contemporary clean sans-serif',
+  retro:
+    'retro look: warm cream paper background, muted 70s/80s tones of the accent color, vintage geometric motifs and retro-styled headings, subtle grain',
+  nature:
+    'organic natural look: white/beige background, earthy tints of the accent color, soft botanical line motifs in margins, calm gentle typography',
+  mono: 'editorial monochrome look: black and white with the single accent color used sparingly, high-contrast editorial typography',
+}
+
+export function getStylePreset(preset: string) {
+  return STYLE_PRESETS.find((s) => s.value === preset)
+}
+
 export function getStyleDirective(preset: string): string {
-  return (STYLE_PRESETS.find((s) => s.value === preset) || STYLE_PRESETS[0]).directive
+  return getStylePreset(preset)?.directive || LEGACY_STYLE_DIRECTIVES[preset] || STYLE_PRESETS[0].directive
 }
 
 /** スタイルプレビューの代表カラー（一覧を多彩に見せるため、スタイルごとに変える） */
 export const STYLE_PREVIEW_COLOR: Record<StylePreset, string> = {
-  flashy: '#e11d48', // ロゼレッド
+  corporate: '#1d4ed8', // ネイビーブルー
+  minimal: '#334155', // スレート
   luxury: '#b8860b', // ゴールド
   pop: '#ec4899', // ピンク
-  minimal: '#334155', // スレート
-  cyber: '#22d3ee', // ネオンシアン
   handwritten: '#d97706', // 温かいアンバー
-  corporate: '#1d4ed8', // ネイビーブルー
-  gradient: '#14b8a6', // ティール
-  retro: '#c2410c', // ラストオレンジ
-  nature: '#16a34a', // グリーン
-  mono: '#111827', // ニアブラック
   isometric: '#0ea5e9', // スカイブルー
 }
 

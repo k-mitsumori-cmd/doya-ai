@@ -55,7 +55,7 @@ export default function NewDoyaSlidePage() {
   const [importedRef, setImportedRef] = useState('')
   const [slideCount, setSlideCount] = useState(8)
   const [aspect, setAspect] = useState<Aspect>('wide')
-  const [style, setStyle] = useState('flashy')
+  const [style, setStyle] = useState('corporate')
   const [color, setColor] = useState('#2563eb')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
@@ -80,7 +80,7 @@ export default function NewDoyaSlidePage() {
       })
   }
 
-  // 全スタイルのプレビューを逐次先読み（コールド時に12スタイル同時生成の集中を避ける）
+  // 全スタイルのプレビューを逐次先読み（コールド時に全スタイル同時生成の集中を避ける）
   useEffect(() => {
     let cancelled = false
     ;(async () => {
@@ -348,33 +348,41 @@ export default function NewDoyaSlidePage() {
         {/* ③ スタイル（左プレビュー縦並び + 右大プレビュー・ビュン切替） */}
         <div className={card} style={{ animationDelay: '120ms' }}>
           <label className="block text-sm font-black text-slate-700 mb-1">③ スタイル</label>
-          <p className="text-[11px] text-slate-400 font-medium mb-3">12種から選べます。サムネをクリックで切替、下の大プレビューの ◀ ▶ で複数ページの仕上がりを確認（比率を変えると形も連動）</p>
-          {/* スタイル一覧（グリッド・全12種を一目で比較） */}
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
-              {STYLE_PRESETS.map((s) => {
-                const on = style === s.value
-                return (
-                  <button
-                    key={s.value}
-                    onClick={() => setStyle(s.value)}
-                    className={`rounded-xl overflow-hidden border-2 text-left transition-all hover:-translate-y-0.5 ${
-                      on ? 'border-blue-500 ring-2 ring-blue-200 scale-[1.02]' : 'border-slate-200 hover:border-blue-200'
-                    }`}
-                  >
-                    <div className="aspect-[3/2] bg-slate-100 flex items-center justify-center overflow-hidden">
-                      {previews[s.value]?.[0] ? (
-                        <img src={previews[s.value][0]} alt={s.label} className="w-full h-full object-cover" />
-                      ) : (
-                        <span className="material-symbols-outlined animate-spin text-slate-300 text-lg">progress_activity</span>
-                      )}
-                    </div>
-                    <div className={`px-2 py-1 text-[11px] font-black ${on ? 'text-blue-700 bg-blue-50' : 'text-slate-600'}`}>
-                      {s.label}
-                    </div>
-                  </button>
-                )
-              })}
+          <p className="text-[11px] text-slate-400 font-medium mb-3">ビジネス系3種+おもしろ系3種。サムネをクリックで切替、下の大プレビューの ◀ ▶ で複数ページの仕上がりを確認（比率を変えると形も連動）</p>
+          {/* スタイル一覧（ビジネス系/おもしろ系の2グループ） */}
+          {([
+            { group: 'business', title: 'ビジネス系（きちんとした資料）' },
+            { group: 'fun', title: 'おもしろ系（個性で魅せる）' },
+          ] as const).map(({ group, title }) => (
+            <div key={group} className="mb-3 last:mb-0">
+              <p className="text-[11px] font-black text-slate-500 mb-1.5">{title}</p>
+              <div className="grid grid-cols-3 gap-2.5">
+                {STYLE_PRESETS.filter((s) => s.group === group).map((s) => {
+                  const on = style === s.value
+                  return (
+                    <button
+                      key={s.value}
+                      onClick={() => setStyle(s.value)}
+                      className={`rounded-xl overflow-hidden border-2 text-left transition-all hover:-translate-y-0.5 ${
+                        on ? 'border-blue-500 ring-2 ring-blue-200 scale-[1.02]' : 'border-slate-200 hover:border-blue-200'
+                      }`}
+                    >
+                      <div className="aspect-[3/2] bg-slate-100 flex items-center justify-center overflow-hidden">
+                        {previews[s.value]?.[0] ? (
+                          <img src={previews[s.value][0]} alt={s.label} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="material-symbols-outlined animate-spin text-slate-300 text-lg">progress_activity</span>
+                        )}
+                      </div>
+                      <div className={`px-2 py-1 text-[11px] font-black ${on ? 'text-blue-700 bg-blue-50' : 'text-slate-600'}`}>
+                        {s.label}
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
+          ))}
 
             {/* 選択中スタイルの大プレビュー（複数ページをめくって確認） */}
             <div className="mt-4 min-w-0">

@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         slideCount: count,
         aspectRatio: aspectRatio || dt.defaultAspect,
         themeColor: themeColor || '#7f19e6',
-        stylePreset: stylePreset || 'flashy',
+        stylePreset: stylePreset || 'corporate',
         status: 'draft',
       },
     })

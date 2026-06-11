@@ -6,8 +6,9 @@
 // プロンプトや STYLE_PREVIEW_DIR の版を更新したあとに実行する。
 //
 // 実行: npx tsx scripts/regenerate-doyaslide-style-previews.ts
-//   --only=flashy,corporate  対象スタイルを絞る（省略で全12スタイル）
-//   --force                  既存キャッシュがあっても焼き直す（既定: スキップ）
+//   --only=corporate,pop  対象スタイルを絞る（省略で全スタイル）
+//   --page=1              対象ページ番号を絞る（0=表紙,1=本文,2=まとめ。省略で全ページ）
+//   --force               既存キャッシュがあっても焼き直す（既定: スキップ）
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 
@@ -30,12 +31,15 @@ async function main() {
 
   const onlyArg = process.argv.find((a) => a.startsWith('--only='))
   const only = onlyArg ? onlyArg.slice('--only='.length).split(',') : null
+  const pageArg = process.argv.find((a) => a.startsWith('--page='))
+  const onlyPage = pageArg ? Number(pageArg.slice('--page='.length)) : null
   const force = process.argv.includes('--force')
 
   const styles = STYLE_PRESETS.filter((s) => !only || only.includes(s.value))
   const jobs: { style: string; page: number }[] = []
   for (const s of styles) {
     for (let page = 0; page < STYLE_PREVIEW_SAMPLE_SLIDES.length; page++) {
+      if (onlyPage !== null && page !== onlyPage) continue
       jobs.push({ style: s.value, page })
     }
   }

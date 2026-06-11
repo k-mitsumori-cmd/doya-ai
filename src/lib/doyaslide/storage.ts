@@ -64,9 +64,9 @@ export async function uploadComposedImage(
 }
 
 // スタイルプレビューは「スタイル × ページ番号」で複数ページをキャッシュする。
-// 例: style-previews/v2-gptimg2/flashy-0.png（表紙）, flashy-1.png（特長）, flashy-2.png（まとめ）
-// 生成モデルや品質を切り替えたら STYLE_PREVIEW_DIR の版を上げると、旧キャッシュが無視され全プレビューが自動で焼き直される。
-const STYLE_PREVIEW_DIR = 'style-previews/v4-document'
+// 例: style-previews/v5-styles6/corporate-0.png（表紙）, corporate-1.png（本文）, corporate-2.png（まとめ）
+// 生成モデル/品質/プロンプトを変えたら STYLE_PREVIEW_DIR の版を上げると、旧キャッシュが無視され全プレビューが自動で焼き直される。
+const STYLE_PREVIEW_DIR = 'style-previews/v5-styles6'
 function stylePreviewFile(style: string, page: number): string {
   return `${STYLE_PREVIEW_DIR}/${style}-${page}.png`
 }

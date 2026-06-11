@@ -16,6 +16,7 @@ export interface ComposeProject {
   aspectRatio: string
   themeColor: string
   stylePreset: string
+  docType?: string // 'sns' のときポスター構成に切替（資料テンプレ不使用）
   logoUrl?: string | null
   logoPosition: string
   logoSize: string
@@ -70,6 +71,7 @@ export async function composeSlideImage(
         logoPosition: logoPos,
         extraInstruction,
         pageNumber: slide.index,
+        docType: project.docType,
       })
 
   const img = await generateImageWithFallback({ prompt, size, quality: 'high' })

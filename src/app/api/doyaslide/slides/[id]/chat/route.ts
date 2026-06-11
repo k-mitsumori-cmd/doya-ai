@@ -66,7 +66,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       r = await composeSlideImage(
         userId,
         project as ComposeProject,
-        { role: slide.role, headline: slide.headline, subText: slide.subText, visualPrompt: slide.visualPrompt },
+        { index: slide.index, role: slide.role, headline: slide.headline, subText: slide.subText, visualPrompt: slide.visualPrompt },
         revisedPrompt ? undefined : message, // Vision成功時はoverride、失敗時は指示を追記して通常再生成
         revisedPrompt
       )
