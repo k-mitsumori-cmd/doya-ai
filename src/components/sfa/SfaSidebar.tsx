@@ -4,7 +4,7 @@ import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Building2, Kanban, UserPlus, Tag, TrendingUp, Zap, ChevronsUpDown, Check, Magnet, Activity, CheckSquare } from 'lucide-react'
+import { LayoutDashboard, Building2, Kanban, UserPlus, Tag, TrendingUp, Zap, ChevronsUpDown, Check, CheckSquare } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { sfaTheme } from '@/components/sidebar/themes'
 import {
@@ -42,11 +42,11 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
   const MAIN_NAV: NavItem[] = [
     { href: base, label: 'ダッシュボード', icon: LayoutDashboard },
     { href: `${base}/deals`, label: '商談（パイプライン）', icon: Kanban, hot: true },
-    { href: `${base}/leads`, label: 'リード', icon: Magnet },
+    // リード（leads）は2026-06-12にメニューから廃止（商談パイプラインに集約。ページ自体はURL直アクセスで残存）
     { href: `${base}/accounts`, label: '取引先', icon: Building2 },
-    // 担当者（contacts）は2026-06-12にメニューから廃止（担当者名は商談詳細のフリーテキストで入力する運用に変更。ページ自体はURL直アクセスで残存）
-    { href: `${base}/activities`, label: '活動', icon: Activity },
-    { href: `${base}/tasks`, label: 'タスク', icon: CheckSquare },
+    // 担当者（contacts）・活動（activities）は2026-06-12にメニューから廃止
+    // （担当者名は商談詳細のフリーテキスト、活動はタスクページに統合。旧ページはURL直アクセスで残存）
+    { href: `${base}/tasks`, label: 'タスク・活動', icon: CheckSquare },
   ]
   const SUB_NAV: NavItem[] = [
     { href: `${base}/members`, label: 'メンバー', icon: UserPlus },
