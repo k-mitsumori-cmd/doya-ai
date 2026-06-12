@@ -10,14 +10,11 @@ interface Task {
   title: string
   status: string
   dueDate: string | null
+  dealId: string | null
+  dealName: string | null
   createdAt: string
 }
 
-const fmtDate = (d: string | null) => {
-  if (!d) return null
-  const dt = new Date(d)
-  return `${dt.getMonth() + 1}/${dt.getDate()}`
-}
 const isOverdue = (t: Task) =>
   t.status !== 'done' && t.dueDate && new Date(t.dueDate).getTime() < new Date().setHours(0, 0, 0, 0)
 
@@ -80,6 +77,30 @@ export default function SfaTasksPage() {
     }
   }
 
+  // 期日のインライン変更（'' でクリア）
+  const changeDue = async (t: Task, value: string) => {
+    setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, dueDate: value || null } : x)))
+    try {
+      const res = await fetch(`/api/sfa/tasks/${t.id}`, sfaInit(orgSlug, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dueDate: value }),
+      }))
+      if (!res.ok) throw new Error()
+      load()
+    } catch {
+      toast.error('期日の変更に失敗しました')
+      load()
+    }
+  }
+
+  // 'YYYY-MM-DD'（<input type="date"> 用、ローカル日付）
+  const toDateInput = (iso: string | null) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+  }
+
   const open = tasks.filter((t) => t.status !== 'done')
   const done = tasks.filter((t) => t.status === 'done')
 
@@ -95,12 +116,24 @@ export default function SfaTasksPage() {
       </button>
       <div className="min-w-0 flex-1">
         <p className={`font-black truncate ${t.status === 'done' ? 'text-slate-400 line-through' : 'text-slate-800'}`}>{t.title}</p>
-        {t.dueDate && (
-          <p className={`text-[11px] font-bold ${isOverdue(t) ? 'text-red-500' : 'text-slate-400'}`}>
-            <span className="material-symbols-outlined text-[12px] align-middle">event</span> {fmtDate(t.dueDate)}{isOverdue(t) ? '（期限切れ）' : ''}
-          </p>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {t.dealName && (
+            <span className="text-[10px] font-black text-green-700 bg-green-50 border border-green-200 rounded px-1.5 py-0.5 truncate max-w-[12rem]">
+              📈 {t.dealName}
+            </span>
+          )}
+          {t.dueDate && isOverdue(t) && <span className="text-[11px] font-bold text-red-500">期限切れ</span>}
+        </div>
       </div>
+      <input
+        type="date"
+        value={toDateInput(t.dueDate)}
+        onChange={(e) => changeDue(t, e.target.value)}
+        title="締め切り日"
+        className={`rounded-lg border px-2 py-1.5 text-xs font-bold flex-shrink-0 w-[8.5rem] ${
+          isOverdue(t) ? 'border-red-300 text-red-600 bg-red-50' : 'border-slate-200 text-slate-600'
+        }`}
+      />
       <button onClick={() => remove(t)} className="text-slate-300 hover:text-red-500 flex-shrink-0">
         <span className="material-symbols-outlined text-[20px]">delete</span>
       </button>

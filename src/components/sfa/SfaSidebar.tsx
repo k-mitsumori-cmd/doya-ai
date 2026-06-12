@@ -4,7 +4,7 @@ import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Building2, Kanban, UserPlus, Tag, TrendingUp, Zap, ChevronsUpDown, Check, Magnet, Users, Activity, CheckSquare } from 'lucide-react'
+import { LayoutDashboard, Building2, Kanban, UserPlus, Tag, TrendingUp, Zap, ChevronsUpDown, Check, Magnet, Activity, CheckSquare } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { sfaTheme } from '@/components/sidebar/themes'
 import {
@@ -44,7 +44,7 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
     { href: `${base}/deals`, label: '商談（パイプライン）', icon: Kanban, hot: true },
     { href: `${base}/leads`, label: 'リード', icon: Magnet },
     { href: `${base}/accounts`, label: '取引先', icon: Building2 },
-    { href: `${base}/contacts`, label: '担当者', icon: Users },
+    // 担当者（contacts）は2026-06-12にメニューから廃止（担当者名は商談詳細のフリーテキストで入力する運用に変更。ページ自体はURL直アクセスで残存）
     { href: `${base}/activities`, label: '活動', icon: Activity },
     { href: `${base}/tasks`, label: 'タスク', icon: CheckSquare },
   ]

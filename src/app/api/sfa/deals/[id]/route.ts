@@ -46,12 +46,32 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (typeof body.name === 'string' && body.name.trim()) data.name = body.name.trim().slice(0, 200)
   if (body.amount != null && Number(body.amount) >= 0) data.amount = BigInt(Math.round(Number(body.amount)))
   if (typeof body.lostReason === 'string') data.lostReason = body.lostReason.slice(0, 300)
-  if (typeof body.startDate === 'string') {
-    if (body.startDate === '') {
-      data.startDate = null
+  if (typeof body.contactName === 'string') data.contactName = body.contactName.trim().slice(0, 100) || null
+  if (typeof body.note === 'string') data.note = body.note.slice(0, 5000) || null
+  if (body.probability != null && !isNaN(Number(body.probability))) {
+    data.probability = Math.max(0, Math.min(100, Math.round(Number(body.probability))))
+  }
+  // 日付系（'' はクリア）
+  for (const key of ['startDate', 'expectedCloseDate'] as const) {
+    if (typeof body[key] === 'string') {
+      if (body[key] === '') {
+        data[key] = null
+      } else {
+        const d = new Date(body[key])
+        if (!isNaN(d.getTime())) data[key] = d
+      }
+    }
+  }
+  // 取引先変更（IDOR対策: 自組織のみ。'' で解除）
+  if (typeof body.accountId === 'string') {
+    if (body.accountId === '') {
+      data.accountId = null
     } else {
-      const d = new Date(body.startDate)
-      if (!isNaN(d.getTime())) data.startDate = d
+      const acc = await prisma.sfaAccount.findFirst({
+        where: { id: body.accountId, organizationId: c.organizationId },
+        select: { id: true },
+      })
+      if (acc) data.accountId = acc.id
     }
   }
 

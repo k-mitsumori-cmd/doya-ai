@@ -69,13 +69,19 @@ export interface NextActionInput {
   recentActivities?: string[] // 直近の活動（時系列・新しい順）
 }
 
+export interface NextActionTaskCandidate {
+  title: string // タスク名（例: 見積書を送付する）
+  dueDate: string | null // 'YYYY-MM-DD'（提案期日。不明なら null）
+}
+
 export interface NextActionResult {
   nextAction: string // 推奨アクション（1文）
   reason: string // なぜ今それか
   risk: string // 失注リスクの所見（1文。無ければ空）
+  tasks: NextActionTaskCandidate[] // そのまま登録できるタスク候補（2〜4件）
 }
 
-/** 次アクション提案：停滞・履歴から商談の「次の一手」と失注リスクを提案。 */
+/** 次アクション提案：停滞・履歴から商談の「次の一手」「失注リスク」と、登録可能なタスク候補を提案。 */
 export async function suggestNextAction(input: NextActionInput): Promise<NextActionResult> {
   const facts = [
     `商談名: ${input.dealName}`,
@@ -89,17 +95,26 @@ export async function suggestNextAction(input: NextActionInput): Promise<NextAct
       : '直近の活動: 記録なし',
   ].filter(Boolean).join('\n')
 
+  // 期日提案の基準日（AIに「3日後」等を実日付で計算させる）
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
   const prompt = [
     'あなたは日本のBtoB営業のマネージャーです。次の商談を前に進めるための「次の一手」を提案してください。',
-    '停滞（最終活動からの経過）・ステージ・履歴を踏まえ、今日からできる具体的な行動を1つ示します。',
+    '停滞（最終活動からの経過）・ステージ・履歴を踏まえ、今日からできる具体的な行動を示します。',
+    `今日の日付: ${todayStr}`,
     '',
     facts,
+    '',
+    'あわせて、この商談を進めるために登録すべき具体的なタスク候補を2〜4件提案してください。',
+    'タスク名は「〜する」で終わる短い行動（30文字以内）。期日は今日以降の現実的な日付（緊急なら1〜3日後、通常は1週間前後）。',
     '',
     '次のJSONのみを日本語で出力（マークダウン・コードフェンス禁止）:',
     '{',
     '  "nextAction": "推奨する次の一手を1文で",',
     '  "reason": "なぜ今それが有効かを1文で",',
-    '  "risk": "失注リスクの所見を1文で（特になければ空文字）"',
+    '  "risk": "失注リスクの所見を1文で（特になければ空文字）",',
+    '  "tasks": [{"title": "タスク名", "dueDate": "YYYY-MM-DD"}, ...]',
     '}',
   ].join('\n')
 
@@ -107,9 +122,23 @@ export async function suggestNextAction(input: NextActionInput): Promise<NextAct
     { prompt, model: GEMINI_TEXT_MODEL_DEFAULT },
     'SfaNextAction'
   )
+  // タスク候補のサニタイズ（型崩れ・過去日・件数超過をここで吸収）
+  const tasks: NextActionTaskCandidate[] = Array.isArray(r?.tasks)
+    ? r.tasks
+        .filter((t): t is NextActionTaskCandidate => !!t && typeof (t as any).title === 'string' && !!(t as any).title.trim())
+        .slice(0, 4)
+        .map((t) => {
+          let due: string | null = null
+          if (typeof t.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.dueDate)) {
+            due = t.dueDate < todayStr ? todayStr : t.dueDate // 過去日は今日に丸める
+          }
+          return { title: t.title.trim().slice(0, 100), dueDate: due }
+        })
+    : []
   return {
     nextAction: r?.nextAction || '',
     reason: r?.reason || '',
     risk: r?.risk || '',
+    tasks,
   }
 }

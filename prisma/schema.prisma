@@ -3100,6 +3100,8 @@ model SfaDeal {
   probability      Int       @default(0)
   startDate        DateTime? // 商談日（開始日）。経過期間の起点に使う
   expectedCloseDate DateTime?
+  contactName      String?   // 先方担当者名（フリーテキスト。担当者マスタを使わない運用向け）
+  note             String?   @db.Text // 商談メモ
   status           String    @default("open") // open/won/lost
   wonAt            DateTime?
   lostAt           DateTime?
