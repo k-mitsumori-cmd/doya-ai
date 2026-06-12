@@ -44,20 +44,26 @@
 - 品質: 本番スライド=`high`、スタイルプレビュー=`high`（gpt-image-2 は `auto` 非対応）
 - 構成テキスト（Gemini）は `@seo/lib/gemini` 系ではなく `src/lib/doyaslide/` 内で組み立て
 
-## スタイルプリセット（6種 = ビジネス系3 + 遊び系3、2026-06-12 改編）
+## スタイルプリセット（12種 = ビジネス系6 + 遊び系6、2026-06-12 再拡張）
 
 `src/lib/doyaslide/constants.ts: STYLE_PRESETS`。directive（アートディレクション）に加え、遊び系は専用 `layout` を持ち企業資料テンプレートを使わない。
+一度6種に削減→ユーザー要望で12種へ再拡張。旧 LEGACY_STYLE_DIRECTIVES は撤去（全12値がフルプリセットに復帰）。
 
 | value | ラベル | group | レイアウト |
 |-------|--------|-------|-----------|
 | corporate | コーポレート | business | 資料テンプレ（LayerX型） |
 | minimal | ミニマル | business | 資料テンプレ |
 | luxury | 高級 | business | 資料テンプレ（ダーク×ゴールド） |
+| gradient | グラデーション | business | 資料テンプレ（グラデパネル/グラスモーフィズム） |
+| nature | ナチュラル | business | 資料テンプレ（ベージュ×ボタニカル） |
+| mono | モノクロ | business | 資料テンプレ（白黒+アクセント1点） |
 | pop | ポップ | fun | 専用（ステッカー/コミック） |
 | handwritten | 手書き風 | fun | 専用（スケッチノート/ホワイトボード） |
 | isometric | アイソメ図解 | fun | 専用（アイソメ3Dイラスト主役） |
+| flashy | ド派手 | fun | 専用（バラエティ番組テロップ/セールポスター） |
+| cyber | サイバー | fun | 専用（HUDダッシュボード/ネオンパネル） |
+| retro | レトロ | fun | 専用（70-80年代印刷物/ビンテージラベル） |
 
-- 旧12種のうち削除6種（flashy/cyber/gradient/retro/nature/mono）は `LEGACY_STYLE_DIRECTIVES` でdirectiveのみ温存（既存プロジェクトの再生成・チャット修正で見た目を維持）。UI・型 `StylePreset` からは削除済み。
 - 既定スタイル: `corporate`（new/page.tsx・projects API とも旧 flashy から変更）。
 
 - スタイルプレビューは「スタイル×ページ(表紙/本文/まとめ)」で複数ページを事前生成し、Storageに共有キャッシュ（`style-previews/v5-styles6/{style}-{page}.png`）。モデル/品質/プロンプトを変えたら `STYLE_PREVIEW_DIR` の版を上げると全焼き直し。一括再生成は `npx tsx scripts/regenerate-doyaslide-style-previews.ts`。プレビューAPIは3ページを並列生成（直列だと cold cache 時に maxDuration=300 超過）。

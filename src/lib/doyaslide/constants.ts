@@ -57,7 +57,7 @@ export const ASPECT_LABELS: Record<AspectRatio, string> = {
 }
 
 /**
- * スタイルプリセット（6種 = ビジネス系3 + 遊び系3）。
+ * スタイルプリセット（12種 = ビジネス系6 + 遊び系6）。
  * - directive: 配色・書体・モチーフのアートディレクション（スタイルの個性。強く差別化する）
  * - layout: 遊び系のみ。企業資料テンプレートの代わりに使う、そのスタイル専用の本文レイアウト言語。
  *   layout が無いスタイルは buildImagePrompt の「きちんとした資料」テンプレート（タイトル左上+グリッド本文+フッター）になる。
@@ -91,7 +91,28 @@ export const STYLE_PRESETS: {
     directive:
       'premium editorial look: one consistent deep charcoal/near-black background on EVERY slide, gold/champagne metallic accent details and thin gold rules, elegant serif display headings with wide letter-spacing, the feel of a luxury brand annual report',
   },
-  // ---------- 遊び系3種（スタイル専用レイアウト・資料テンプレを使わない） ----------
+  {
+    value: 'gradient',
+    label: 'グラデーション',
+    group: 'business',
+    directive:
+      'modern startup look: white base with panels and accent elements filled with smooth vivid gradients of the accent color, subtle glassmorphism cards with soft glow edges, contemporary geometric sans-serif — fresh SaaS landing-page energy',
+  },
+  {
+    value: 'nature',
+    label: 'ナチュラル',
+    group: 'business',
+    directive:
+      'organic natural look: warm beige/off-white background, earthy green tones blended with tints of the accent color, delicate hand-drawn botanical line motifs in the margins, soft rounded cards like washi paper, calm humanist typography',
+  },
+  {
+    value: 'mono',
+    label: 'モノクロ',
+    group: 'business',
+    directive:
+      'high-contrast editorial monochrome look: strictly black, white and gray tones with the accent color on only ONE element per slide, oversized numerals, magazine-grade typography with dramatic size contrast — striking and disciplined',
+  },
+  // ---------- 遊び系6種（スタイル専用レイアウト・資料テンプレを使わない） ----------
   {
     value: 'pop',
     label: 'ポップ',
@@ -119,32 +140,41 @@ export const STYLE_PRESETS: {
     layout:
       'ISOMETRIC LAYOUT: the title at the top, then a big isometric 3D vector illustration occupying most of the slide that visually EXPLAINS the content (a miniature world / process flow), with the bullet items as small floating callout labels with leader lines pointing into the scene. The illustration tells the story.',
   },
+  {
+    value: 'flashy',
+    label: 'ド派手',
+    group: 'fun',
+    directive:
+      'explosive promo look: ultra-vivid saturated colors with bold gradients anchored by the accent color, thick condensed display type with outlines and hard shadows, diagonal slash shapes, starbursts and price-tag badges — the energy of Japanese variety-show TV graphics and sale posters, loud but organized',
+    layout:
+      'FLASHY LAYOUT: a giant diagonal headline dominating the slide in outlined or gradient-filled display type, the lead message on a bold ribbon banner, each bullet item inside a burst badge or angled panel arranged dynamically, speed lines and sparkles in the background — maximum impact while staying readable.',
+  },
+  {
+    value: 'cyber',
+    label: 'サイバー',
+    group: 'fun',
+    directive:
+      'futuristic cyber interface look: one consistent near-black/deep-navy background on EVERY slide, glowing neon lines anchored by the accent color, thin HUD frames with corner brackets, scanlines and digital grid motifs, techno/monospaced typography with a subtle glow — like a sci-fi movie UI',
+    layout:
+      'CYBER HUD LAYOUT: the content presented as a futuristic dashboard — the title inside a glowing HUD header bar, the lead message as a terminal-style readout line, each bullet item inside its own neon-bordered HUD panel with tech corner brackets, panels connected by thin glowing circuit lines.',
+  },
+  {
+    value: 'retro',
+    label: 'レトロ',
+    group: 'fun',
+    directive:
+      'nostalgic 70s-80s print look: warm cream paper with visible grain and halftone texture, a muted sunset palette (burnt orange / mustard / teal tints anchored by the accent color), chunky retro display lettering, vintage badges and sunburst stripes — like a beautifully aged magazine advertisement',
+    layout:
+      'RETRO PRINT LAYOUT: the title in big retro display lettering with a vintage badge or ribbon, sunburst stripe rays radiating behind the key area, each bullet item inside a vintage label / ticket-style frame with a stamp-like icon, all arranged on a slightly textured paper grid.',
+  },
 ]
-
-/**
- * 廃止済みスタイル（旧12種のうち削除した6種）の directive。
- * 既存プロジェクトの再生成・チャット修正で見た目を維持するためだけに残す。UIには出さない。
- */
-export const LEGACY_STYLE_DIRECTIVES: Record<string, string> = {
-  flashy:
-    'high-energy look: vivid saturated accent with bold gradients, strong bold sans-serif headings, dynamic diagonal accent shapes',
-  cyber:
-    'futuristic tech look: one consistent dark navy/near-black background on EVERY slide, neon accent lines and subtle grid motifs, light readable text, sleek techno sans-serif',
-  gradient:
-    'modern startup look: white base with soft smooth accent-color gradient panels and subtle glassmorphism cards, contemporary clean sans-serif',
-  retro:
-    'retro look: warm cream paper background, muted 70s/80s tones of the accent color, vintage geometric motifs and retro-styled headings, subtle grain',
-  nature:
-    'organic natural look: white/beige background, earthy tints of the accent color, soft botanical line motifs in margins, calm gentle typography',
-  mono: 'editorial monochrome look: black and white with the single accent color used sparingly, high-contrast editorial typography',
-}
 
 export function getStylePreset(preset: string) {
   return STYLE_PRESETS.find((s) => s.value === preset)
 }
 
 export function getStyleDirective(preset: string): string {
-  return getStylePreset(preset)?.directive || LEGACY_STYLE_DIRECTIVES[preset] || STYLE_PRESETS[0].directive
+  return getStylePreset(preset)?.directive || STYLE_PRESETS[0].directive
 }
 
 /** スタイルプレビューの代表カラー（一覧を多彩に見せるため、スタイルごとに変える） */
@@ -152,9 +182,15 @@ export const STYLE_PREVIEW_COLOR: Record<StylePreset, string> = {
   corporate: '#1d4ed8', // ネイビーブルー
   minimal: '#334155', // スレート
   luxury: '#b8860b', // ゴールド
+  gradient: '#14b8a6', // ティール
+  nature: '#16a34a', // グリーン
+  mono: '#111827', // ニアブラック
   pop: '#ec4899', // ピンク
   handwritten: '#d97706', // 温かいアンバー
   isometric: '#0ea5e9', // スカイブルー
+  flashy: '#e11d48', // ロゼレッド
+  cyber: '#22d3ee', // ネオンシアン
+  retro: '#c2410c', // ラストオレンジ
 }
 
 export function getStylePreviewColor(preset: string): string {

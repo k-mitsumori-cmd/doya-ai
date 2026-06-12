@@ -348,7 +348,7 @@ export default function NewDoyaSlidePage() {
         {/* ③ スタイル（左プレビュー縦並び + 右大プレビュー・ビュン切替） */}
         <div className={card} style={{ animationDelay: '120ms' }}>
           <label className="block text-sm font-black text-slate-700 mb-1">③ スタイル</label>
-          <p className="text-[11px] text-slate-400 font-medium mb-3">ビジネス系3種+おもしろ系3種。サムネをクリックで切替、下の大プレビューの ◀ ▶ で複数ページの仕上がりを確認（比率を変えると形も連動）</p>
+          <p className="text-[11px] text-slate-400 font-medium mb-3">ビジネス系6種+おもしろ系6種。サムネをクリックで切替、下の大プレビューの ◀ ▶ で複数ページの仕上がりを確認（比率を変えると形も連動）</p>
           {/* スタイル一覧（ビジネス系/おもしろ系の2グループ） */}
           {([
             { group: 'business', title: 'ビジネス系（きちんとした資料）' },

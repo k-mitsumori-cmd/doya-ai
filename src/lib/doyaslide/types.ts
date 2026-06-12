@@ -15,17 +15,23 @@ export type DocType =
 export type AspectRatio = 'wide' | 'square' | 'vertical'
 
 /**
- * スタイルプリセット（6種 = ビジネス系3 + 遊び系3）。
- * 旧12種（flashy/cyber/gradient/retro/nature/mono）はUIから廃止。
- * DBに残る旧値は constants.ts の LEGACY_STYLE_DIRECTIVES で見た目を維持する。
+ * スタイルプリセット（12種 = ビジネス系6 + 遊び系6）。
+ * 各スタイルは directive（アートディレクション）で強く差別化し、
+ * 遊び系は専用 layout（企業資料テンプレ不使用）を持つ。
  */
 export type StylePreset =
   | 'corporate' // コーポレート（ビジネス）
   | 'minimal' // ミニマル（ビジネス）
   | 'luxury' // 高級（ビジネス）
+  | 'gradient' // グラデーション（ビジネス）
+  | 'nature' // ナチュラル（ビジネス）
+  | 'mono' // モノクロ（ビジネス）
   | 'pop' // ポップ（遊び）
   | 'handwritten' // 手書き風（遊び）
   | 'isometric' // アイソメ図解（遊び）
+  | 'flashy' // ド派手（遊び）
+  | 'cyber' // サイバー（遊び）
+  | 'retro' // レトロ（遊び）
 
 export type LogoPosition =
   | 'top-right'
