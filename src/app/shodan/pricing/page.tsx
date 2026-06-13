@@ -1,10 +1,13 @@
 'use client'
 
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import { DoyaKun } from '@/components/shodan/ui'
 
 export default function ShodanPricingPage() {
+  const { data: session } = useSession()
+  const currentPlan = (session?.user as any)?.plan as string | undefined
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-purple-50/40">
       <div className="max-w-5xl mx-auto px-6 py-12">
@@ -19,7 +22,7 @@ export default function ShodanPricingPage() {
             無料で毎月お試し。プロプラン1つで、ドヤAIの全サービスのプロ機能が使い放題になります。
           </p>
         </div>
-        <UnifiedPricingPlans serviceId="shodan" />
+        <UnifiedPricingPlans serviceId="shodan" currentPlan={currentPlan} />
       </div>
     </div>
   )
