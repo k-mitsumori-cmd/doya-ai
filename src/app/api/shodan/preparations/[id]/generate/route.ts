@@ -5,7 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
-import { analyzeCompany, generateProposal, type OwnCompanyProfile } from '@/lib/shodan/ai'
+import { analyzeCompany, generateProposal, generateSlides, type OwnCompanyProfile } from '@/lib/shodan/ai'
 import type { CompanyResearch } from '@/lib/shodan/types'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
@@ -34,10 +34,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const analysis = await analyzeCompany(research, own)
     const proposalMarkdown = await generateProposal(research, analysis, own)
+    const slides = await generateSlides(research, analysis, own).catch(() => [])
 
     await prisma.shodanPreparation.update({
       where: { id: prep.id },
-      data: { analysis: analysis as any, proposalMarkdown, status: 'done', errorMessage: null },
+      data: { analysis: analysis as any, proposalMarkdown, slidesJson: slides as any, status: 'done', errorMessage: null },
     })
     return NextResponse.json({ id: prep.id, status: 'done' })
   } catch (e: any) {

@@ -6,14 +6,15 @@ import { useParams, useRouter } from 'next/navigation'
 import { shodanGet, shodanSend } from '@/lib/shodan/client'
 import Markdown from '@/components/shodan/Markdown'
 import { DoyaKun, SiteShot } from '@/components/shodan/ui'
-import type { CompanyResearch, CompanyAnalysis } from '@/lib/shodan/types'
+import SlideDeck from '@/components/shodan/SlideDeck'
+import type { CompanyResearch, CompanyAnalysis, ProposalSlide } from '@/lib/shodan/types'
 import toast from 'react-hot-toast'
 
 const sym = (name: string, size = 18) => <span className="material-symbols-outlined" style={{ fontSize: size }}>{name}</span>
 
 type Prep = {
   id: string; targetUrl: string; targetName: string | null; status: string; errorMessage: string | null
-  research: CompanyResearch | null; analysis: CompanyAnalysis | null; proposalMarkdown: string | null; createdAt: string
+  research: CompanyResearch | null; analysis: CompanyAnalysis | null; proposalMarkdown: string | null; slidesJson: ProposalSlide[] | null; createdAt: string
 }
 
 const FREQ: Record<string, { label: string; cls: string }> = {
@@ -77,6 +78,8 @@ export default function ShodanResultPage() {
     } catch (e: any) { toast.error(e.message); setRetrying(false) }
   }
 
+  // 提案の表示切替（スライド / 文書）
+  const [view, setView] = useState<'slides' | 'doc'>('slides')
   // 調査済み（提案未生成）案件から提案資料を作成
   const [generating, setGenerating] = useState(false)
   const generate = async () => {
@@ -123,7 +126,7 @@ export default function ShodanResultPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-5">
-      <style>{`@media print { aside, .shodan-no-print { display: none !important; } main { width: 100% !important; } body { background: #fff !important; } }`}</style>
+      <style>{`@media print { aside, .shodan-no-print { display: none !important; } .shodan-print-only { display: block !important; } main { width: 100% !important; } body { background: #fff !important; } }`}</style>
       <div className="flex items-center gap-2 text-sm font-bold text-slate-400 shodan-no-print">
         <Link href={`/shodan/${encodeURIComponent(orgSlug)}`} className="hover:text-purple-600 flex items-center gap-1">{sym('arrow_back', 16)}一覧</Link>
       </div>
@@ -327,17 +330,33 @@ export default function ShodanResultPage() {
         </Card>
       )}
 
-      {/* 提案資料 */}
-      {prep.proposalMarkdown && (
-        <Card title="提案資料" icon="description" accent="text-purple-700">
-          <div className="flex items-center gap-2 mb-4 flex-wrap shodan-no-print">
-            <button onClick={copyProposal} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 text-white font-black text-sm hover:bg-purple-700 transition-colors">{sym('content_copy', 16)}コピー</button>
-            <button onClick={downloadProposal} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50 transition-colors">{sym('download', 16)}.md保存</button>
-            <button onClick={printProposal} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50 transition-colors">{sym('print', 16)}印刷 / PDF</button>
+      {/* 提案（スライド / 文書） */}
+      {(prep.proposalMarkdown || (prep.slidesJson && prep.slidesJson.length > 0)) && (
+        <Card title="提案資料" icon="slideshow" accent="text-purple-700">
+          {/* タブ */}
+          <div className="flex items-center gap-2 mb-4 shodan-no-print">
+            {prep.slidesJson && prep.slidesJson.length > 0 && (
+              <button onClick={() => setView('slides')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-black text-sm transition-colors ${view === 'slides' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{sym('slideshow', 16)}スライド</button>
+            )}
+            {prep.proposalMarkdown && (
+              <button onClick={() => setView('doc')} className={`flex items-center gap-1.5 px-4 py-2 rounded-xl font-black text-sm transition-colors ${view === 'doc' ? 'bg-purple-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{sym('description', 16)}文書</button>
+            )}
           </div>
-          <div className="rounded-2xl bg-white border border-slate-100 p-5">
-            <Markdown source={prep.proposalMarkdown} />
-          </div>
+
+          {view === 'slides' && prep.slidesJson && prep.slidesJson.length > 0 ? (
+            <SlideDeck slides={prep.slidesJson} fileBase={prep.targetName || 'proposal'} />
+          ) : prep.proposalMarkdown ? (
+            <>
+              <div className="flex items-center gap-2 mb-4 flex-wrap shodan-no-print">
+                <button onClick={copyProposal} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 text-white font-black text-sm hover:bg-purple-700 transition-colors">{sym('content_copy', 16)}コピー</button>
+                <button onClick={downloadProposal} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50 transition-colors">{sym('download', 16)}.md保存</button>
+                <button onClick={printProposal} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50 transition-colors">{sym('print', 16)}印刷 / PDF</button>
+              </div>
+              <div className="rounded-2xl bg-white border border-slate-100 p-5">
+                <Markdown source={prep.proposalMarkdown} />
+              </div>
+            </>
+          ) : null}
         </Card>
       )}
     </div>

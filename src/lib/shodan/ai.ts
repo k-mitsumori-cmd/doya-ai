@@ -5,7 +5,7 @@
 //  - generateProposal: 提案資料（Markdown）を一括生成
 // ============================================
 import { geminiGenerateJson, geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
-import type { CompanyResearch, CompanyAnalysis } from './types'
+import type { CompanyResearch, CompanyAnalysis, ProposalSlide } from './types'
 
 export interface OwnCompanyProfile {
   companyName?: string | null
@@ -167,6 +167,56 @@ export async function generateProposal(
     generationConfig: { temperature: 0.5, maxOutputTokens: 8192 },
   })
   return (md || '').trim()
+}
+
+/** 提案スライド（プレゼン用デッキ）を生成 */
+export async function generateSlides(
+  research: CompanyResearch,
+  analysis: CompanyAnalysis,
+  own?: OwnCompanyProfile | null
+): Promise<ProposalSlide[]> {
+  const facts = researchToFacts(research)
+  const ownText = ownToText(own)
+  const analysisJson = JSON.stringify(analysis)
+  const targetName = research.companyName || '貴社'
+  const ownName = own?.companyName || '弊社'
+
+  const prompt = [
+    `あなたは${ownName}のトップ営業です。${targetName}への商談で投影する「提案スライド（プレゼンデッキ）」をJSONで作成してください。`,
+    '1スライド＝1メッセージ。各スライドの bullets は3〜5個・各15〜40字で簡潔に（プレゼンで読める粒度）。',
+    '',
+    '# スライド構成（この順序・8〜11枚）',
+    '1. type=cover: 表紙（title=提案タイトル, subtitle=相手企業名＋日付なしの一言）',
+    '2. type=agenda: 本日のアジェンダ',
+    '3. type=content: 御社の現状理解（調査事実の要点。数字を入れる）',
+    '4. type=content: 想定される課題（課題仮説）',
+    '5. type=content: ご提案の全体像',
+    '6〜: type=content: 各解決策（自社商材に紐づけ。必要枚数）',
+    '末尾-1. type=content: 期待できる効果と進め方',
+    '末尾. type=closing: まとめ／ネクストステップ',
+    '',
+    '# 制約: 事実にない数値を創作しない。調査事実と矛盾しない（記事が少ないのに「活発」等は禁止）。敬体。',
+    '',
+    '# 調査事実', facts,
+    '# 分析(JSON)', analysisJson,
+    '# 自社情報', ownText,
+    '',
+    '# 出力（次のJSONのみ。日本語。コードフェンス禁止）',
+    '{ "slides": [ {"type":"cover|agenda|content|closing","title":"見出し","subtitle":"任意の副題","bullets":["要点", "..."],"note":"任意の補足"} ] }',
+  ].join('\n')
+
+  const r = await geminiGenerateJson<{ slides: ProposalSlide[] }>({ prompt, model: GEMINI_TEXT_MODEL_DEFAULT }, 'ShodanSlides')
+  const slides = Array.isArray(r?.slides) ? r!.slides : []
+  return slides
+    .filter((s) => s && typeof (s as any).title === 'string')
+    .slice(0, 14)
+    .map((s) => ({
+      title: String(s.title).slice(0, 120),
+      subtitle: s.subtitle ? String(s.subtitle).slice(0, 160) : undefined,
+      bullets: Array.isArray(s.bullets) ? s.bullets.filter((b) => typeof b === 'string' && b.trim()).slice(0, 6).map((b) => b.slice(0, 120)) : [],
+      note: s.note ? String(s.note).slice(0, 200) : undefined,
+      type: (['cover', 'agenda', 'content', 'closing'].includes(s.type as string) ? s.type : 'content') as ProposalSlide['type'],
+    }))
 }
 
 // ---- 自社情報の自動ドラフト（自社URLのリサーチ結果から下書きを作る） ----

@@ -81,6 +81,14 @@ export interface CompanyResearch {
   rawNotes?: string
 }
 
+export interface ProposalSlide {
+  title: string
+  subtitle?: string
+  bullets?: string[]
+  note?: string
+  type?: 'cover' | 'agenda' | 'content' | 'closing'
+}
+
 export interface PressRelease {
   title: string
   url: string
