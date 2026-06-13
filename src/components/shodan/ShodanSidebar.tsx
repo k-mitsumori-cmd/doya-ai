@@ -21,7 +21,7 @@ export default function ShodanSidebar({ orgSlug, orgName }: { orgSlug: string; o
     exact ? pathname === href : pathname === href || pathname.startsWith(href + '/')
 
   return (
-    <aside className="w-60 shrink-0 bg-white border-r border-slate-200 min-h-screen flex flex-col">
+    <aside className="w-60 shrink-0 bg-white border-r border-slate-200 min-h-screen hidden md:flex flex-col">
       <Link href="/shodan" className="px-5 py-4 flex items-center gap-2 border-b border-slate-100">
         <span className="grid place-items-center w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white shadow-md shadow-purple-500/25">🎯</span>
         <div className="leading-tight">
