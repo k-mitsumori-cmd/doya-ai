@@ -144,6 +144,22 @@ export default function ShodanResultPage() {
         </div>
       </div>
 
+      {/* 完了サマリー＋成果物への素早いジャンプ */}
+      {prep.status === 'done' && r && (
+        <div className="flex items-center gap-2 flex-wrap rounded-2xl bg-white border border-slate-200 px-4 py-3 shodan-no-print">
+          {r.employeeCount != null && <span className="text-xs font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">👥 約{r.employeeCount}名</span>}
+          <span className="text-xs font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">📝 更新{({ high: '活発', medium: '中', low: '低', inactive: '停止', unknown: '不明' } as Record<string, string>)[r.ownedMedia.updateFrequency]}</span>
+          {r.pressReleases && r.pressReleases.length > 0 && <span className="text-xs font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">📣 PR {r.pressReleases.length}件</span>}
+          <div className="flex-1" />
+          {(prep.proposalMarkdown || (prep.slidesJson && prep.slidesJson.length > 0)) && (
+            <button onClick={() => document.getElementById('shodan-proposal')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-xs hover:-translate-y-0.5 transition-all">
+              {sym('slideshow', 16)}提案を見る
+            </button>
+          )}
+        </div>
+      )}
+
       {prep.status === 'processing' && (
         <div className="rounded-3xl bg-white border border-purple-100 p-8 shadow-sm text-center">
           <div className="flex justify-center"><DoyaKun mood="working" size={120} /></div>
@@ -330,6 +346,7 @@ export default function ShodanResultPage() {
         </Card>
       )}
 
+      <div id="shodan-proposal" className="scroll-mt-4" />
       {/* 提案（スライド / 文書） */}
       {(prep.proposalMarkdown || (prep.slidesJson && prep.slidesJson.length > 0)) && (
         <Card title="提案資料" icon="slideshow" accent="text-purple-700">
