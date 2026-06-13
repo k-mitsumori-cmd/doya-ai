@@ -162,3 +162,72 @@ export async function generateProposal(
   })
   return (md || '').trim()
 }
+
+// ---- 自社情報の自動ドラフト（自社URLのリサーチ結果から下書きを作る） ----
+export interface OwnProfileDraft {
+  companyName: string
+  description: string
+  valueProp: string
+  products: string
+  targetCustomer: string
+  pricingNote: string
+  caseStudies: string
+  /** 公開情報からは十分に書けず、ユーザーの加筆が必要なフィールドキー */
+  gaps: string[]
+}
+
+const PROFILE_FIELD_KEYS = ['companyName', 'description', 'valueProp', 'products', 'targetCustomer', 'pricingNote', 'caseStudies'] as const
+
+/**
+ * 自社サイトのリサーチ結果から、自社情報フォームの下書きを生成する。
+ * 公開情報で確証を持って書けない項目は gaps に入れて「加筆すべき領域」を明示する。
+ */
+export async function draftOwnProfile(research: CompanyResearch): Promise<OwnProfileDraft> {
+  const facts = researchToFacts(research)
+  const prompt = [
+    'あなたは日本のBtoBマーケティングの編集者です。以下は「自社」のWebサイトを調査した事実です。',
+    'この事実をもとに、営業提案で使う「自社紹介情報」の下書きを作成してください。',
+    '',
+    '# 方針',
+    '- 事実から無理なく言える範囲で各項目を埋める。誇張・捏造はしない。',
+    '- 公開情報だけでは確証を持って書けない（推測に頼る）項目は、それらしい下書きは入れた上で、その項目キーを gaps 配列に入れる（＝ユーザーに加筆を促す）。',
+    '- 各項目は簡潔に（1〜3文、または短い箇条書き相当のテキスト）。',
+    '',
+    '# 調査事実',
+    facts,
+    '',
+    '# 出力（次のJSONのみ。日本語。マークダウン・コードフェンス禁止）',
+    '{',
+    '  "companyName": "自社名",',
+    '  "description": "事業内容（何をしている会社か）",',
+    '  "valueProp": "提供価値・強み・USP",',
+    '  "products": "主な商材・サービス",',
+    '  "targetCustomer": "想定ターゲット顧客像",',
+    '  "pricingNote": "価格帯・導入条件（不明なら推測せず簡潔に）",',
+    '  "caseStudies": "導入事例・実績（サイトに記載があれば）",',
+    '  "gaps": ["公開情報からは十分に書けずユーザー加筆が必要な項目キー", "..."]',
+    '}',
+  ].join('\n')
+
+  const r = await geminiGenerateJson<OwnProfileDraft>({ prompt, model: GEMINI_TEXT_MODEL_DEFAULT }, 'ShodanOwnProfileDraft')
+  const str = (v: any) => (typeof v === 'string' ? v.trim() : '')
+  const draft: OwnProfileDraft = {
+    companyName: str(r?.companyName) || research.companyName || '',
+    description: str(r?.description) || research.description || '',
+    valueProp: str(r?.valueProp),
+    products: str(r?.products) || (research.services?.length ? research.services.join('、') : ''),
+    targetCustomer: str(r?.targetCustomer),
+    pricingNote: str(r?.pricingNote),
+    caseStudies: str(r?.caseStudies),
+    gaps: [],
+  }
+  // gaps はAIの申告＋「実際に空/極端に短い」項目を統合（加筆すべき領域を確実に拾う）
+  const aiGaps = Array.isArray(r?.gaps) ? r!.gaps.filter((g): g is string => typeof g === 'string') : []
+  const gapSet = new Set(aiGaps.filter((g) => (PROFILE_FIELD_KEYS as readonly string[]).includes(g)))
+  for (const k of PROFILE_FIELD_KEYS) {
+    const v = (draft as any)[k] as string
+    if (!v || v.length < 8) gapSet.add(k)
+  }
+  draft.gaps = Array.from(gapSet)
+  return draft
+}

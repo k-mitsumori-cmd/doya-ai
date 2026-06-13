@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
 import toast from 'react-hot-toast'
+import { BgDots, DoyaKun } from '@/components/shodan/ui'
 
 type State = 'loading' | 'ready' | 'accepting' | 'error' | 'expired'
 
@@ -42,9 +43,12 @@ export default function ShodanInvitePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 to-fuchsia-50 flex items-center justify-center p-6">
-      <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-md text-center">
-        <div className="text-5xl mb-3">🎯</div>
+    <div className="min-h-screen relative bg-gradient-to-b from-purple-50 to-fuchsia-100/50 flex items-center justify-center p-6">
+      <BgDots />
+      <div className="relative z-10 bg-white rounded-3xl shadow-xl shadow-purple-500/10 border border-purple-100 p-8 w-full max-w-md text-center">
+        <div className="flex justify-center mb-2">
+          <DoyaKun mood={state === 'error' || state === 'expired' ? 'error' : state === 'accepting' ? 'jump' : 'hello'} size={110} />
+        </div>
         {state === 'loading' && <p className="text-slate-400 font-bold">読み込み中…</p>}
         {state === 'expired' && <><h1 className="text-xl font-black text-slate-900">招待の有効期限が切れています</h1><p className="text-sm font-bold text-slate-400 mt-2">招待者に再送を依頼してください。</p></>}
         {state === 'error' && <><h1 className="text-xl font-black text-slate-900">招待が見つかりません</h1><p className="text-sm font-bold text-slate-400 mt-2">{errMsg}</p></>}

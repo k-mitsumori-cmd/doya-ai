@@ -4,11 +4,10 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { shodanGet, shodanSend } from '@/lib/shodan/client'
+import { DoyaKun, sym } from '@/components/shodan/ui'
 import toast from 'react-hot-toast'
 
 type Item = { id: string; targetUrl: string; targetName: string | null; status: string; createdAt: string; updatedAt: string }
-
-const sym = (name: string, size = 18) => <span className="material-symbols-outlined" style={{ fontSize: size }}>{name}</span>
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   processing: { label: '生成中', cls: 'bg-amber-100 text-amber-700' },
@@ -38,31 +37,39 @@ export default function ShodanListPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900">商談準備一覧</h1>
-          <p className="text-sm font-bold text-slate-400 mt-1">今、ドヤれる商談を、URL1本で。</p>
+      {/* Header */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white px-6 py-6 mb-6 shadow-lg shadow-purple-500/20">
+        <div className="relative z-10 pr-28">
+          <h1 className="text-2xl font-black">商談準備一覧</h1>
+          <p className="text-sm font-bold text-white/80 mt-1">今、ドヤれる商談を、URL1本で。</p>
+          <Link href={`/shodan/${encodeURIComponent(orgSlug)}/new`}
+            className="inline-flex items-center gap-2 mt-4 px-5 py-2.5 rounded-xl bg-white text-purple-700 font-black text-sm shadow hover:-translate-y-0.5 transition-all">
+            {sym('add')}新規作成
+          </Link>
         </div>
-        <Link href={`/shodan/${encodeURIComponent(orgSlug)}/new`} className="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm shadow-lg shadow-purple-500/25 hover:shadow-xl transition-all">
-          {sym('add')}新規作成
-        </Link>
+        <DoyaKun mood="present" size={120} className="!absolute bottom-0 right-3" />
       </div>
 
       {hasProfile === false && (
-        <Link href={`/shodan/${encodeURIComponent(orgSlug)}/settings`} className="block mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
-          <div className="flex items-center gap-2 text-amber-800 font-black text-sm">{sym('lightbulb')}まず「自社情報」を登録しましょう</div>
-          <p className="text-xs font-bold text-amber-700/80 mt-1">自社のURL・強み・商材を登録すると、提案資料の精度が大きく上がります。</p>
+        <Link href={`/shodan/${encodeURIComponent(orgSlug)}/settings`}
+          className="relative flex items-center gap-3 mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 pr-24 hover:bg-amber-100/70 transition-colors overflow-hidden">
+          <div>
+            <div className="flex items-center gap-1.5 text-amber-800 font-black text-sm">{sym('lightbulb')}まず「自社情報」を登録しましょう</div>
+            <p className="text-xs font-bold text-amber-700/80 mt-1">自社URLを入れるだけでAIが自動入力。提案資料の精度が大きく上がります。</p>
+          </div>
+          <DoyaKun mood="point" size={64} className="!absolute -bottom-1 right-3" float={false} />
         </Link>
       )}
 
       {items === null ? (
-        <div className="text-slate-400 font-bold py-20 text-center">読み込み中…</div>
+        <div className="py-20 text-center"><DoyaKun mood="thinking" size={72} /><p className="mt-2 text-slate-400 font-bold">読み込み中…</p></div>
       ) : items.length === 0 ? (
-        <div className="rounded-3xl border-2 border-dashed border-slate-200 bg-white py-16 text-center">
-          <div className="text-5xl mb-3">🎯</div>
-          <p className="font-black text-slate-700">まだ商談準備がありません</p>
+        <div className="rounded-3xl border-2 border-dashed border-purple-200 bg-white py-14 text-center">
+          <div className="flex justify-center"><DoyaKun mood="hello" size={120} /></div>
+          <p className="font-black text-slate-800 mt-2">まだ商談準備がありません</p>
           <p className="text-sm font-bold text-slate-400 mt-1 mb-5">商談先のURLを入れるだけで、リサーチ〜提案資料まで自動作成します。</p>
-          <Link href={`/shodan/${encodeURIComponent(orgSlug)}/new`} className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm shadow-lg">
+          <Link href={`/shodan/${encodeURIComponent(orgSlug)}/new`}
+            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm shadow-lg shadow-purple-500/25 hover:-translate-y-0.5 transition-all">
             {sym('bolt')}最初の商談準備をつくる
           </Link>
         </div>
@@ -71,7 +78,7 @@ export default function ShodanListPage() {
           {items.map((it) => {
             const st = STATUS[it.status] || STATUS.processing
             return (
-              <div key={it.id} className="group flex items-center gap-4 rounded-2xl bg-white border border-slate-200 px-5 py-4 hover:shadow-md transition-shadow">
+              <div key={it.id} className="group flex items-center gap-4 rounded-2xl bg-white border border-slate-200 px-5 py-4 hover:shadow-md hover:border-purple-200 transition-all">
                 <Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${it.id}`} className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-black text-slate-900 truncate">{it.targetName || it.targetUrl}</span>

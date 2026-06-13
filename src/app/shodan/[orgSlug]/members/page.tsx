@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { shodanGet, shodanSend } from '@/lib/shodan/client'
 import { ROLE_LABEL, type ShodanRole } from '@/lib/shodan/types'
+import { DoyaKun } from '@/components/shodan/ui'
 import toast from 'react-hot-toast'
 
 const sym = (name: string, size = 18) => <span className="material-symbols-outlined" style={{ fontSize: size }}>{name}</span>
@@ -49,8 +50,13 @@ export default function ShodanMembersPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-black text-slate-900">メンバー</h1>
-      <p className="text-sm font-bold text-slate-400 mt-1 mb-6">チームを招待して、商談準備・自社情報を共有できます。組織ごとに情報は分離されています。</p>
+      <div className="flex items-center gap-3 mb-6">
+        <DoyaKun mood="thumbsup" size={56} float={false} />
+        <div>
+          <h1 className="text-2xl font-black text-slate-900">メンバー</h1>
+          <p className="text-sm font-bold text-slate-400 mt-0.5">チームを招待して商談準備・自社情報を共有。組織ごとに情報は分離されています。</p>
+        </div>
+      </div>
 
       {canManage && (
         <div className="rounded-3xl bg-white border border-slate-200 p-5 shadow-sm mb-6">

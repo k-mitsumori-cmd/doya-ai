@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { shodanGet } from '@/lib/shodan/client'
 import Markdown from '@/components/shodan/Markdown'
+import { DoyaKun } from '@/components/shodan/ui'
 import type { CompanyResearch, CompanyAnalysis } from '@/lib/shodan/types'
 import toast from 'react-hot-toast'
 
@@ -69,8 +70,13 @@ export default function ShodanResultPage() {
   }
   const copyText = async (t: string) => { await navigator.clipboard.writeText(t); toast.success('コピーしました') }
 
-  if (notFound) return <div className="p-8 text-center text-slate-400 font-bold">商談準備が見つかりませんでした。<Link href={`/shodan/${encodeURIComponent(orgSlug)}`} className="text-purple-600 underline ml-1">一覧へ戻る</Link></div>
-  if (!prep) return <div className="p-8 text-center text-slate-400 font-bold">読み込み中…</div>
+  if (notFound) return (
+    <div className="p-10 text-center">
+      <DoyaKun mood="error" size={96} />
+      <p className="text-slate-500 font-bold mt-3">商談準備が見つかりませんでした。<Link href={`/shodan/${encodeURIComponent(orgSlug)}`} className="text-purple-600 underline ml-1">一覧へ戻る</Link></p>
+    </div>
+  )
+  if (!prep) return <div className="p-10 text-center"><DoyaKun mood="thinking" size={88} /><p className="mt-2 text-slate-400 font-bold">読み込み中…</p></div>
 
   const r = prep.research
   const a = prep.analysis
@@ -89,8 +95,9 @@ export default function ShodanResultPage() {
       </div>
 
       {prep.status === 'failed' && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-rose-700 font-bold text-sm">
-          生成に失敗しました。{prep.errorMessage ? `（${prep.errorMessage}）` : ''} URLを確認して再度お試しください。
+        <div className="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-rose-700 font-bold text-sm">
+          <DoyaKun mood="error" size={48} float={false} />
+          <span>生成に失敗しました。{prep.errorMessage ? `（${prep.errorMessage}）` : ''} URLを確認して再度お試しください。</span>
         </div>
       )}
 
