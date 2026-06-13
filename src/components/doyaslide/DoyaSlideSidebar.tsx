@@ -21,8 +21,8 @@ import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 
 const MAIN_NAV: NavItem[] = [
-  { href: '/doyaslide/new', label: '新規作成', icon: Plus, hot: true },
-  { href: '/doyaslide', label: 'プロジェクト', icon: LayoutDashboard },
+  { href: '/doyaslide', label: '新規作成', icon: Plus, hot: true },
+  { href: '/doyaslide/projects', label: 'プロジェクト', icon: LayoutDashboard },
 ]
 
 const SUB_NAV: NavItem[] = [
@@ -61,9 +61,13 @@ function DoyaSlideSidebarImpl({
   })()
 
   const isActive = (href: string) => {
+    // 新規作成（ホーム）: ルート完全一致 or 旧URL /doyaslide/new
     if (href === '/doyaslide') {
-      // プロジェクト一覧 + エディタ(/doyaslide/{id})。new / pricing では光らせない
-      if (pathname === '/doyaslide') return true
+      return pathname === '/doyaslide' || (pathname?.startsWith('/doyaslide/new') ?? false)
+    }
+    // プロジェクト: 一覧(/doyaslide/projects) + エディタ(/doyaslide/{id})。new / pricing / ホームでは光らせない
+    if (href === '/doyaslide/projects') {
+      if (pathname?.startsWith('/doyaslide/projects')) return true
       return (
         (pathname?.startsWith('/doyaslide/') ?? false) &&
         !(pathname?.startsWith('/doyaslide/new') ?? false) &&

@@ -347,7 +347,7 @@ function EditorInner() {
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6 text-center">
         <img src="/character/error.png" alt="" className="w-24 h-24 object-contain" />
         <p className="font-black text-slate-700">プロジェクトが見つかりません</p>
-        <Link href="/doyaslide" className="px-6 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl">
+        <Link href="/doyaslide/projects" className="px-6 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl">
           一覧に戻る
         </Link>
       </div>
@@ -362,7 +362,7 @@ function EditorInner() {
       {/* header */}
       <div className="flex items-center justify-between mb-3 gap-3">
         <div className="flex items-center gap-2 min-w-0">
-          <Link href="/doyaslide" className="text-slate-400 hover:text-slate-700">
+          <Link href="/doyaslide/projects" className="text-slate-400 hover:text-slate-700">
             <span className="material-symbols-outlined">arrow_back</span>
           </Link>
           <h1 className="text-xl font-black text-slate-900 truncate">{project.title}</h1>
