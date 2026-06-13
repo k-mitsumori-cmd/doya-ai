@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { useParams } from 'next/navigation'
-import { shodanGet } from '@/lib/shodan/client'
+import { useParams, useRouter } from 'next/navigation'
+import { shodanGet, shodanSend } from '@/lib/shodan/client'
 import Markdown from '@/components/shodan/Markdown'
 import { DoyaKun } from '@/components/shodan/ui'
 import type { CompanyResearch, CompanyAnalysis } from '@/lib/shodan/types'
@@ -45,14 +45,37 @@ export default function ShodanResultPage() {
   const params = useParams<{ orgSlug: string; id: string }>()
   const orgSlug = decodeURIComponent(String(params.orgSlug))
   const id = String(params.id)
+  const router = useRouter()
   const [prep, setPrep] = useState<Prep | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [retrying, setRetrying] = useState(false)
 
+  // 生成中なら数秒ごとにポーリングして done/failed になったら止める
   useEffect(() => {
-    shodanGet<{ item: Prep }>(`/api/shodan/preparations/${id}`, orgSlug)
-      .then((d) => setPrep(d.item))
-      .catch(() => setNotFound(true))
+    let timer: ReturnType<typeof setInterval> | null = null
+    let alive = true
+    const fetchOnce = () =>
+      shodanGet<{ item: Prep }>(`/api/shodan/preparations/${id}`, orgSlug)
+        .then((d) => {
+          if (!alive) return
+          setPrep(d.item)
+          if (d.item.status !== 'processing' && timer) { clearInterval(timer); timer = null }
+        })
+        .catch(() => { if (alive) setNotFound(true) })
+    fetchOnce()
+    timer = setInterval(fetchOnce, 5000)
+    return () => { alive = false; if (timer) clearInterval(timer) }
   }, [orgSlug, id])
+
+  const retry = async () => {
+    if (!prep) return
+    setRetrying(true)
+    try {
+      const d = await shodanSend<{ id: string; status: string }>('/api/shodan/preparations', orgSlug, 'POST', { url: prep.targetUrl })
+      toast.success('再生成を開始しました')
+      router.replace(`/shodan/${encodeURIComponent(orgSlug)}/p/${d.id}`)
+    } catch (e: any) { toast.error(e.message); setRetrying(false) }
+  }
 
   const copyProposal = async () => {
     if (!prep?.proposalMarkdown) return
@@ -94,10 +117,23 @@ export default function ShodanResultPage() {
         </div>
       </div>
 
+      {prep.status === 'processing' && (
+        <div className="rounded-3xl bg-white border border-purple-100 p-8 shadow-sm text-center">
+          <div className="flex justify-center"><DoyaKun mood="working" size={120} /></div>
+          <p className="font-black text-slate-900 text-lg mt-3">ドヤくんが商談準備を作成中です…</p>
+          <p className="text-sm font-bold text-slate-400 mt-1">調査〜提案生成まで30秒〜2分ほど。このまま自動で更新されます。</p>
+          <div className="mt-4 inline-block w-8 h-8 border-4 border-purple-200 border-t-purple-600 rounded-full animate-spin" />
+        </div>
+      )}
+
       {prep.status === 'failed' && (
-        <div className="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-rose-700 font-bold text-sm">
+        <div className="flex items-center gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 text-rose-700 font-bold text-sm flex-wrap">
           <DoyaKun mood="error" size={48} float={false} />
-          <span>生成に失敗しました。{prep.errorMessage ? `（${prep.errorMessage}）` : ''} URLを確認して再度お試しください。</span>
+          <span className="flex-1 min-w-[180px]">生成に失敗しました。{prep.errorMessage ? `（${prep.errorMessage}）` : ''} URLを確認して再度お試しください。</span>
+          <button onClick={retry} disabled={retrying}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 text-white font-black text-xs hover:bg-rose-700 transition-colors disabled:opacity-50">
+            {sym('refresh', 16)}{retrying ? '再生成中…' : '同じURLで再生成'}
+          </button>
         </div>
       )}
 

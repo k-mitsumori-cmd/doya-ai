@@ -27,6 +27,15 @@ export default function ShodanListPage() {
   }
   useEffect(load, [orgSlug])
 
+  // 「生成中」がある間だけ自動更新（完了で停止）
+  useEffect(() => {
+    if (!items?.some((x) => x.status === 'processing')) return
+    const t = setInterval(() => {
+      shodanGet<{ items: Item[] }>('/api/shodan/preparations', orgSlug).then((d) => setItems(d.items)).catch(() => {})
+    }, 5000)
+    return () => clearInterval(t)
+  }, [items, orgSlug])
+
   const remove = async (id: string) => {
     if (!confirm('この商談準備を削除しますか？')) return
     try {
