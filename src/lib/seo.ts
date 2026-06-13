@@ -25,6 +25,15 @@ export const SERVICE_SEO = {
     ogImage: '/og/portal.png',
   },
   
+  // ドヤ商談準備（商談先URLだけで提案準備を一括生成）
+  shodan: {
+    title: 'ドヤ商談準備 | 商談先のURLだけで提案準備を一括生成',
+    description:
+      '商談先企業のURLを入れるだけで、実従業員数・マーケ状況・オウンドメディア・PR TIMESの最新動向まで深掘り調査。現状分析・課題仮説・解決策から提案資料・スライドまでAIが一括作成します。',
+    keywords: ['商談準備', '営業AI', '提案資料作成', '企業調査', '商談', 'BtoB営業', '提案スライド', 'PR TIMES'],
+    ogImage: '/og/portal.png',
+  },
+
   // カンタンマーケAI（マーケティング業務AIエージェント）
   kantan: {
     title: 'カンタンマーケAI | マーケティング業務をAIで劇的効率化',
