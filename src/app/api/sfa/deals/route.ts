@@ -4,7 +4,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
+import { getSfaContext, orgSlugFrom, ensurePipeline } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
 
 // GET /api/sfa/deals — カンバン用に「ステージ一覧 + 商談一覧（取引先名つき）」を返す
@@ -12,13 +12,8 @@ export async function GET(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
-  const pipeline = await prisma.sfaPipeline.findFirst({
-    where: { organizationId: ctx.organizationId },
-    orderBy: { createdAt: 'asc' },
-  })
-  const stages = pipeline
-    ? await prisma.sfaStage.findMany({ where: { pipelineId: pipeline.id }, orderBy: { order: 'asc' } })
-    : []
+  // パイプライン未生成の組織でも必ずステージが返る（カンバンが空にならない）
+  const stages = await ensurePipeline(ctx.organizationId)
 
   const deals = await prisma.sfaDeal.findMany({
     where: { organizationId: ctx.organizationId, isActive: true },

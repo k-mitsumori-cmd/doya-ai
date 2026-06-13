@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef, type PointerEvent as ReactPointerEvent } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { sfaInit, withOrg } from '@/lib/sfa/client'
@@ -133,6 +133,73 @@ export default function SfaDealsPage() {
       load()
     }
   }
+
+  // ============ ポインタベースのドラッグ&ドロップ（マウス + タッチ対応） ============
+  // ネイティブ HTML5 DnD はタッチ非対応で、カード上のボタン領域からは掴めないため、
+  // Pointer Events で自前実装する（マウスはカード全体／タッチはハンドルから掴める）。
+  const dragRef = useRef<{ deal: Deal; startX: number; startY: number; dragging: boolean } | null>(null)
+  const movedRef = useRef(false) // 直近の操作がドラッグだったか（カード本体クリックの抑制用）
+  const moveStageRef = useRef(moveStage)
+  moveStageRef.current = moveStage
+  const [dragDealId, setDragDealId] = useState<string | null>(null)
+  const [ghost, setGhost] = useState<{ x: number; y: number; deal: Deal } | null>(null)
+  const [dragOverStageId, setDragOverStageId] = useState<string | null>(null)
+  const DRAG_THRESHOLD = 8 // px。これ未満の移動はクリック扱い
+
+  const stageIdAtPoint = (x: number, y: number): string | null => {
+    const el = document.elementFromPoint(x, y) as HTMLElement | null
+    return (el?.closest('[data-stage-col]') as HTMLElement | null)?.getAttribute('data-stage-col') ?? null
+  }
+
+  const onCardPointerDown = (e: ReactPointerEvent, deal: Deal) => {
+    movedRef.current = false // 新しい操作の開始時に必ずリセット（前回のドラッグを次回タップに持ち越さない）
+    if (e.pointerType === 'mouse' && e.button !== 0) return // 左ボタンのみ
+    const target = e.target as HTMLElement
+    if (target.closest('[data-no-drag]')) return // 内部コントロール（select/チェック/AI）は除外
+    // タッチはハンドルからのみ開始（カード本体のタップ＝詳細・縦スクロールを温存）
+    if (e.pointerType !== 'mouse' && !target.closest('[data-drag-handle]')) return
+    dragRef.current = { deal, startX: e.clientX, startY: e.clientY, dragging: false }
+  }
+
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      const s = dragRef.current
+      if (!s) return
+      const dx = e.clientX - s.startX
+      const dy = e.clientY - s.startY
+      if (!s.dragging) {
+        if (Math.hypot(dx, dy) < DRAG_THRESHOLD) return
+        s.dragging = true
+        movedRef.current = true
+        setDragDealId(s.deal.id)
+        document.body.style.userSelect = 'none'
+      }
+      e.preventDefault()
+      setGhost({ x: e.clientX, y: e.clientY, deal: s.deal })
+      setDragOverStageId(stageIdAtPoint(e.clientX, e.clientY))
+    }
+    const onUp = (e: PointerEvent) => {
+      const s = dragRef.current
+      if (!s) return
+      dragRef.current = null
+      if (s.dragging) {
+        const stageId = stageIdAtPoint(e.clientX, e.clientY)
+        if (stageId && s.deal.stageId !== stageId) moveStageRef.current(s.deal, stageId)
+      }
+      setDragDealId(null)
+      setGhost(null)
+      setDragOverStageId(null)
+      document.body.style.userSelect = ''
+    }
+    window.addEventListener('pointermove', onMove, { passive: false })
+    window.addEventListener('pointerup', onUp)
+    window.addEventListener('pointercancel', onUp)
+    return () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      window.removeEventListener('pointercancel', onUp)
+    }
+  }, [])
 
   // ============ タスク（カード表示 + 完了トグル） ============
   const tasksOf = (dealId: string) => tasks.filter((t) => t.dealId === dealId && t.status !== 'done')
@@ -349,6 +416,10 @@ export default function SfaDealsPage() {
           <p className="text-slate-500 font-bold text-sm">
             総額 {yen(openTotal)}・確度加重 <span className="text-green-600">{yen(Math.round(weighted))}</span>
           </p>
+          <p className="text-slate-400 font-bold text-[11px] mt-0.5 flex items-center gap-0.5">
+            <span className="material-symbols-outlined text-[14px] leading-none">drag_indicator</span>
+            カードをドラッグしてステージを移動できます
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <a href={withOrg('/api/sfa/export?type=deals', orgSlug)} className="px-4 py-3 rounded-full bg-white border border-slate-200 text-green-700 font-black shadow-sm hover:shadow flex items-center gap-1">
@@ -392,8 +463,13 @@ export default function SfaDealsPage() {
         {stages.map((st) => {
           const col = deals.filter((d) => d.stageId === st.id)
           const colTotal = col.reduce((s, d) => s + d.amount, 0)
+          const isDropTarget = dragOverStageId === st.id && !!dragDealId
           return (
-            <div key={st.id} className="flex-shrink-0 w-72 bg-slate-100 rounded-2xl p-3">
+            <div
+              key={st.id}
+              data-stage-col={st.id}
+              className={`flex-shrink-0 w-72 rounded-2xl p-3 transition-colors ${isDropTarget ? 'bg-green-100 ring-2 ring-green-400' : 'bg-slate-100'}`}
+            >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ background: st.color }} />
@@ -407,70 +483,94 @@ export default function SfaDealsPage() {
                 {col.map((d) => {
                   const dealTasks = tasksOf(d.id)
                   return (
-                    <div key={d.id} className="bg-white rounded-xl p-3 shadow-sm">
-                      {/* カード上部（クリックで詳細） */}
-                      <button onClick={() => openDetail(d)} className="block w-full text-left group">
-                        <div className="flex items-start justify-between gap-1">
-                          <p className="font-black text-slate-800 text-sm leading-snug group-hover:text-green-700 transition-colors">{d.name}</p>
-                          {isStale(d) && <span title="14日以上停滞" className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5 flex-shrink-0">停滞</span>}
+                    <div
+                      key={d.id}
+                      onPointerDown={(e) => onCardPointerDown(e, d)}
+                      className={`bg-white rounded-xl shadow-sm select-none transition-opacity ${dragDealId === d.id ? 'opacity-40' : ''}`}
+                    >
+                      {/* ドラッグハンドル（マウスはカード全体でも掴めるが、タッチはここから。スクロール温存のため touch-action:none） */}
+                      <div
+                        data-drag-handle
+                        style={{ touchAction: 'none' }}
+                        title="ドラッグしてステージを移動"
+                        className="flex items-center justify-center h-5 text-slate-300 hover:text-slate-400 cursor-grab active:cursor-grabbing"
+                      >
+                        <span className="material-symbols-outlined text-[18px] leading-none">drag_indicator</span>
+                      </div>
+
+                      <div className="px-3 pb-3">
+                        {/* カード本体（クリック/タップで詳細。ドラッグ直後のクリックは抑制） */}
+                        <div
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => { if (movedRef.current) { movedRef.current = false; return } openDetail(d) }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') openDetail(d) }}
+                          className="block w-full text-left group cursor-pointer"
+                        >
+                          <div className="flex items-start justify-between gap-1">
+                            <p className="font-black text-slate-800 text-sm leading-snug group-hover:text-green-700 transition-colors">{d.name}</p>
+                            {isStale(d) && <span title="14日以上停滞" className="text-[10px] font-black text-white bg-red-500 rounded px-1.5 py-0.5 flex-shrink-0">停滞</span>}
+                          </div>
+                          {(d.accountName || d.contactName) && (
+                            <p className="text-[11px] font-bold text-slate-400 mt-0.5 truncate">
+                              {d.accountName ? `🏢 ${d.accountName}` : ''}{d.accountName && d.contactName ? '・' : ''}{d.contactName ? `👤 ${d.contactName}` : ''}
+                            </p>
+                          )}
+                          <div className="flex items-center justify-between mt-1">
+                            <p className="text-green-600 font-black">{yen(d.amount)}</p>
+                            {elapsedLabel(d) && (
+                              <span className="text-[10px] font-black text-slate-400 flex items-center gap-0.5">
+                                <span className="material-symbols-outlined text-[12px] leading-none">schedule</span>
+                                {elapsedLabel(d)}
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        {(d.accountName || d.contactName) && (
-                          <p className="text-[11px] font-bold text-slate-400 mt-0.5 truncate">
-                            {d.accountName ? `🏢 ${d.accountName}` : ''}{d.accountName && d.contactName ? '・' : ''}{d.contactName ? `👤 ${d.contactName}` : ''}
-                          </p>
+
+                        {/* タスク（未完了。チェックで完了） */}
+                        {dealTasks.length > 0 && (
+                          <div data-no-drag className="mt-2 pt-2 border-t border-slate-100 space-y-1">
+                            {dealTasks.slice(0, 3).map((t) => (
+                              <div key={t.id} className="flex items-center gap-1.5">
+                                <button
+                                  onClick={() => toggleTask(t)}
+                                  className="w-4 h-4 rounded border-2 border-slate-300 hover:border-green-500 flex-shrink-0 flex items-center justify-center"
+                                  title="完了にする"
+                                />
+                                <span className="text-[11px] font-bold text-slate-600 truncate flex-1">{t.title}</span>
+                                {t.dueDate && (
+                                  <span className={`text-[10px] font-black flex-shrink-0 ${isTaskOverdue(t) ? 'text-red-500' : 'text-slate-400'}`}>
+                                    {fmtShortDate(t.dueDate)}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                            {dealTasks.length > 3 && (
+                              <button onClick={() => openDetail(d)} className="text-[10px] font-black text-slate-400 hover:text-green-600">
+                                ほか{dealTasks.length - 3}件のタスク…
+                              </button>
+                            )}
+                          </div>
                         )}
-                        <div className="flex items-center justify-between mt-1">
-                          <p className="text-green-600 font-black">{yen(d.amount)}</p>
-                          {elapsedLabel(d) && (
-                            <span className="text-[10px] font-black text-slate-400 flex items-center gap-0.5">
-                              <span className="material-symbols-outlined text-[12px] leading-none">schedule</span>
-                              {elapsedLabel(d)}
-                            </span>
-                          )}
-                        </div>
-                      </button>
 
-                      {/* タスク（未完了。チェックで完了） */}
-                      {dealTasks.length > 0 && (
-                        <div className="mt-2 pt-2 border-t border-slate-100 space-y-1">
-                          {dealTasks.slice(0, 3).map((t) => (
-                            <div key={t.id} className="flex items-center gap-1.5">
-                              <button
-                                onClick={() => toggleTask(t)}
-                                className="w-4 h-4 rounded border-2 border-slate-300 hover:border-green-500 flex-shrink-0 flex items-center justify-center"
-                                title="完了にする"
-                              />
-                              <span className="text-[11px] font-bold text-slate-600 truncate flex-1">{t.title}</span>
-                              {t.dueDate && (
-                                <span className={`text-[10px] font-black flex-shrink-0 ${isTaskOverdue(t) ? 'text-red-500' : 'text-slate-400'}`}>
-                                  {fmtShortDate(t.dueDate)}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                          {dealTasks.length > 3 && (
-                            <button onClick={() => openDetail(d)} className="text-[10px] font-black text-slate-400 hover:text-green-600">
-                              ほか{dealTasks.length - 3}件のタスク…
-                            </button>
-                          )}
-                        </div>
-                      )}
-
-                      <select
-                        value={d.stageId || ''}
-                        onChange={(e) => moveStage(d, e.target.value)}
-                        className="mt-2 w-full text-[11px] font-bold rounded-lg border border-slate-200 px-2 py-1.5 bg-slate-50"
-                      >
-                        {stages.map((s) => <option key={s.id} value={s.id}>→ {s.name}</option>)}
-                      </select>
-                      <button
-                        onClick={() => aiNextAction(d)}
-                        disabled={aiDealId === d.id}
-                        className="mt-1.5 w-full text-[11px] font-black text-[#7f19e6] hover:bg-purple-50 rounded-lg py-1.5 flex items-center justify-center gap-0.5 disabled:opacity-50"
-                      >
-                        <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
-                        {aiDealId === d.id ? 'AI考え中…' : 'AI次アクション'}
-                      </button>
+                        <select
+                          data-no-drag
+                          value={d.stageId || ''}
+                          onChange={(e) => moveStage(d, e.target.value)}
+                          className="mt-2 w-full text-[11px] font-bold rounded-lg border border-slate-200 px-2 py-1.5 bg-slate-50"
+                        >
+                          {stages.map((s) => <option key={s.id} value={s.id}>→ {s.name}</option>)}
+                        </select>
+                        <button
+                          data-no-drag
+                          onClick={() => aiNextAction(d)}
+                          disabled={aiDealId === d.id}
+                          className="mt-1.5 w-full text-[11px] font-black text-[#7f19e6] hover:bg-purple-50 rounded-lg py-1.5 flex items-center justify-center gap-0.5 disabled:opacity-50"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+                          {aiDealId === d.id ? 'AI考え中…' : 'AI次アクション'}
+                        </button>
+                      </div>
                     </div>
                   )
                 })}
@@ -483,6 +583,16 @@ export default function SfaDealsPage() {
           <p className="text-slate-400 font-bold">{ready ? 'パイプラインを読み込み中…' : '読み込み中…'}</p>
         )}
       </div>
+
+      {/* ドラッグ中のゴースト（ポインタ追従） */}
+      {ghost && (
+        <div className="fixed z-[60] pointer-events-none w-64" style={{ left: ghost.x + 12, top: ghost.y + 8 }}>
+          <div className="bg-white rounded-xl p-3 shadow-2xl ring-2 ring-green-400 rotate-2">
+            <p className="font-black text-slate-800 text-sm truncate">{ghost.deal.name}</p>
+            <p className="text-green-600 font-black text-sm">{yen(ghost.deal.amount)}</p>
+          </div>
+        </div>
+      )}
 
       {/* ===== AI次アクション モーダル（提案 + タスク候補をチェックして追加） ===== */}
       {aiModal && (

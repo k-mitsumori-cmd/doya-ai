@@ -149,3 +149,43 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
 
   return org
 }
+
+/**
+ * 組織に既定パイプライン＋ステージが存在することを保証する（冪等）。
+ * オンボーディング経路を通っていない（または旧データで）パイプラインが無い組織でも、
+ * 商談画面を開いた時点でステージが自動生成され、カンバンが必ず描画される。
+ * 既存ステージ（順序昇順）を返す。
+ */
+export async function ensurePipeline(organizationId: string) {
+  let pipeline = await prisma.sfaPipeline.findFirst({
+    where: { organizationId },
+    orderBy: { createdAt: 'asc' },
+  })
+  if (!pipeline) {
+    pipeline = await prisma.sfaPipeline.create({
+      data: { organizationId, name: '標準パイプライン', isDefault: true },
+    })
+  }
+  let stages = await prisma.sfaStage.findMany({
+    where: { pipelineId: pipeline.id },
+    orderBy: { order: 'asc' },
+  })
+  if (stages.length === 0) {
+    await prisma.sfaStage.createMany({
+      data: DEFAULT_STAGES.map((s) => ({
+        pipelineId: pipeline!.id,
+        name: s.name,
+        order: s.order,
+        probability: s.probability,
+        color: s.color,
+        isWon: !!s.isWon,
+        isLost: !!s.isLost,
+      })),
+    })
+    stages = await prisma.sfaStage.findMany({
+      where: { pipelineId: pipeline.id },
+      orderBy: { order: 'asc' },
+    })
+  }
+  return stages
+}
