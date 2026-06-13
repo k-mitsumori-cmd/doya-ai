@@ -28,6 +28,14 @@ export const ROLE_LABEL: Record<ShodanRole, string> = {
 export type MemberStatus = 'ACTIVE' | 'PENDING' | 'INACTIVE'
 export type PrepStatus = 'processing' | 'done' | 'failed'
 
+// Vercel maxDuration(300s) でハンドラが強制終了されると catch が走らず 'processing' のまま残る。
+// この時間を超えた処理中は実質失敗とみなす（無限スピナー防止）。maxDuration(5分)より長く取る。
+export const PREP_STALE_MS = 6 * 60 * 1000
+export function effectivePrepStatus(status: string, updatedAt: Date | string): string {
+  if (status === 'processing' && Date.now() - new Date(updatedAt).getTime() > PREP_STALE_MS) return 'failed'
+  return status
+}
+
 // ---- リサーチ（深掘り調査）の構造 ----
 export interface CompanyResearch {
   companyName?: string

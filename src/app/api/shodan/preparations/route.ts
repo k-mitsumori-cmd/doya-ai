@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
 import { researchCompany } from '@/lib/shodan/research'
 import { analyzeCompany, generateProposal, type OwnCompanyProfile } from '@/lib/shodan/ai'
+import { effectivePrepStatus } from '@/lib/shodan/types'
 
 // 統一プラン：有料判定
 function isPaidPlan(plan?: string | null): boolean {
@@ -14,14 +15,6 @@ function isPaidPlan(plan?: string | null): boolean {
   return p !== 'FREE' && p !== 'GUEST'
 }
 const FREE_MONTHLY_LIMIT = 5
-
-// Vercel maxDuration(300s) でハンドラが強制終了されると catch が走らず 'processing' のまま残る。
-// 一定時間を超えた処理中は実質失敗とみなして扱う（無限スピナー防止）。
-const STALE_MS = 6 * 60 * 1000
-function effectiveStatus(status: string, updatedAt: Date): string {
-  if (status === 'processing' && Date.now() - new Date(updatedAt).getTime() > STALE_MS) return 'failed'
-  return status
-}
 
 function normalizeUrl(input: string): string | null {
   let s = (input || '').trim()
@@ -46,7 +39,7 @@ export async function GET(req: NextRequest) {
     select: { id: true, targetUrl: true, targetName: true, status: true, createdAt: true, updatedAt: true },
     take: 100,
   })
-  const items = rows.map((r) => ({ ...r, status: effectiveStatus(r.status, r.updatedAt) }))
+  const items = rows.map((r) => ({ ...r, status: effectivePrepStatus(r.status, r.updatedAt) }))
   return NextResponse.json({ items }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
@@ -63,9 +56,10 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { id: ctx.userId }, select: { plan: true } })
   if (!isPaidPlan(user?.plan)) {
     const since = new Date(); since.setDate(1); since.setHours(0, 0, 0, 0)
-    // 成功（done）した準備のみカウント。失敗・処理中は枠を消費しない。
+    // done（成功）と processing（実行中）を数える＝同時POSTでも作成直後から枠を占有し抜け道を塞ぐ。
+    // failed は除外（失敗は枠を消費しない）。古い stuck processing は GET 側で failed に正規化される。
     const usedThisMonth = await prisma.shodanPreparation.count({
-      where: { organizationId: ctx.organizationId, status: 'done', createdAt: { gte: since } },
+      where: { organizationId: ctx.organizationId, status: { in: ['done', 'processing'] }, createdAt: { gte: since } },
     })
     if (usedThisMonth >= FREE_MONTHLY_LIMIT) {
       return NextResponse.json(
