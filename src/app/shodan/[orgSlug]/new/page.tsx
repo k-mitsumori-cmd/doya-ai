@@ -19,6 +19,7 @@ const RESEARCH_TICKER = [
   'SNS・広告・計測ツールの利用状況を調べています…',
   'オウンドメディア（ブログ/ニュース）を探しています…',
   '記事の更新頻度を分析しています…',
+  'PR TIMESでプレスリリース・最新動向を収集しています…',
   '調査結果をまとめています…',
 ]
 
@@ -33,6 +34,7 @@ function findingsFrom(r: CompanyResearch) {
     { icon: 'campaign', label: 'マーケ施策', value: r.marketing.summary },
     { icon: 'article', label: 'オウンドメディア', value: r.ownedMedia.hasOwnedMedia ? `${SCALE[r.ownedMedia.siteScale]}（約${r.ownedMedia.articleCountEstimate}記事）` : '見当たらない' },
     { icon: 'update', label: '記事更新頻度', value: `${FREQ[r.ownedMedia.updateFrequency]}（${r.ownedMedia.latestArticleDate || '最新日不明'}）` },
+    { icon: 'campaign', label: 'プレスリリース', value: r.pressReleases?.length ? `直近${r.pressReleases.length}件を確認（PR TIMES）` : 'PR TIMESでヒットなし' },
   ]
 }
 

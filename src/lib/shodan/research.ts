@@ -9,7 +9,7 @@
 import { safeFetchText, htmlToText } from '@/lib/net/safe-fetch'
 import { scrapeCompanyWebsite } from '@/lib/doyalist/collect/web-scraper'
 import { searchGbizInfo } from '@/lib/doyalist/collect/gbizinfo'
-import type { CompanyResearch } from './types'
+import type { CompanyResearch, PressRelease } from './types'
 
 // ---- HTMLユーティリティ ----
 function extractTitle(html: string): string | undefined {
@@ -185,6 +185,54 @@ async function analyzeOwnedMedia(mediaUrls: string[], baseUrl: string) {
   }
 }
 
+// ---- PR TIMES からプレスリリース（市場・企業動向）を収集 ----
+function parsePrtimes(html: string): PressRelease[] {
+  const out: PressRelease[] = []
+  const seen = new Set<string>()
+  // リリース詳細リンク: /main/html/rd/p/000000123.000012345.html
+  const re = /\/main\/html\/rd\/p\/\d+\.\d+\.html/g
+  let m: RegExpExecArray | null
+  while ((m = re.exec(html)) && out.length < 12) {
+    const path = m[0]
+    const url = 'https://prtimes.jp' + path
+    if (seen.has(url)) continue
+    seen.add(url)
+    // 周辺ウィンドウからタイトル・画像・日付を拾う
+    const start = Math.max(0, m.index - 900)
+    const win = html.slice(start, m.index + 900)
+    // 画像（lazy対応）
+    const img = win.match(/(?:data-src|data-original|src)=["'](https?:\/\/[^"']+\.(?:jpg|jpeg|png|webp)[^"']*)["']/i)?.[1]
+      || win.match(/(?:data-src|src)=["'](https?:\/\/(?:prcdn|prtimes|images\.prtimes)[^"']+)["']/i)?.[1]
+    // タイトル（aタグのテキスト or alt or title属性）
+    let title = ''
+    const aTextRe = new RegExp(`<a[^>]+href=["'][^"']*${path.replace(/[.]/g, '\\.')}["'][^>]*>([\\s\\S]*?)<\\/a>`, 'i')
+    const aText = html.match(aTextRe)?.[1]
+    if (aText) title = decodeEntities(aText.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim())
+    if (!title) title = decodeEntities((win.match(/alt=["']([^"']{8,})["']/i)?.[1] || win.match(/title=["']([^"']{8,})["']/i)?.[1] || '').trim())
+    if (!title) continue
+    const date = win.match(/(20\d{2})[年.\-/](\d{1,2})[月.\-/](\d{1,2})/)?.[0]?.replace(/[年月]/g, '-').replace(/日/g, '') || null
+    out.push({ title: title.slice(0, 120), url, date, image: img || null, source: 'PR TIMES' })
+  }
+  return out
+}
+
+async function researchPressReleases(companyName: string | undefined): Promise<PressRelease[]> {
+  if (!companyName) return []
+  const name = companyName.replace(/[|｜\-–—].*$/, '').trim().slice(0, 40)
+  if (!name) return []
+  const urls = [
+    `https://prtimes.jp/main/html/searchrlp/company_name/${encodeURIComponent(name)}`,
+    `https://prtimes.jp/main/action.php?run=html&page=searchkey&search_word=${encodeURIComponent(name)}`,
+  ]
+  for (const u of urls) {
+    const html = await safeFetchText(u, { timeoutMs: 9000 }).catch(() => null)
+    if (!html) continue
+    const items = parsePrtimes(html)
+    if (items.length) return items.slice(0, 8)
+  }
+  return []
+}
+
 // ---- gBizINFO で実従業員数などの公的データを引く ----
 async function lookupGbiz(companyName: string | undefined, targetUrl: string) {
   if (!companyName) return null
@@ -220,7 +268,10 @@ export async function researchCompany(targetUrl: string): Promise<CompanyResearc
   ])
 
   const companyName = basic?.companyName || titleName
-  const gbiz = await lookupGbiz(companyName, targetUrl)
+  const [gbiz, pressReleases] = await Promise.all([
+    lookupGbiz(companyName, targetUrl),
+    researchPressReleases(companyName),
+  ])
 
   const employeeFromGbiz = parseEmployee(gbiz?.employeeNumber)
   const employeeFromSite = parseEmployee(basic?.employeeCount)
@@ -244,6 +295,7 @@ export async function researchCompany(targetUrl: string): Promise<CompanyResearc
     services: basic?.services || undefined,
     ogImage: homepage ? extractOgImage(homepage, targetUrl) : null,
     crawledUrls: Array.from(new Set([targetUrl, ...mediaInfo.mediaUrls])).slice(0, 5),
+    pressReleases,
     marketing,
     ownedMedia: mediaInfo,
     rawNotes: homepage ? htmlToText(homepage).slice(0, 1500) : undefined,

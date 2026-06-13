@@ -75,8 +75,18 @@ export interface CompanyResearch {
     frequencyNote: string // 更新頻度の根拠（一言）
     siteScale: 'large' | 'medium' | 'small' | 'unknown' // サイト規模感
   }
+  // プレスリリース（PR TIMES 等。市場・企業の最新動向）
+  pressReleases?: PressRelease[]
   // 取得した生テキスト（分析用、保存はしない/短縮）
   rawNotes?: string
+}
+
+export interface PressRelease {
+  title: string
+  url: string
+  date?: string | null
+  image?: string | null
+  source?: string // 'PR TIMES' 等
 }
 
 // ---- 分析（現状分析・課題仮説・解決策） ----

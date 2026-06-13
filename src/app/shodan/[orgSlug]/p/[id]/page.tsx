@@ -231,6 +231,31 @@ export default function ShodanResultPage() {
         </Card>
       )}
 
+      {/* プレスリリース・最新動向（PR TIMES） */}
+      {r?.pressReleases && r.pressReleases.length > 0 && (
+        <Card title="プレスリリース・最新動向（PR TIMES）" icon="campaign" accent="text-purple-700">
+          <div className="grid sm:grid-cols-2 gap-3">
+            {r.pressReleases.map((p, i) => (
+              <a key={i} href={p.url} target="_blank" rel="noreferrer"
+                className="group flex gap-3 rounded-2xl border border-slate-200 p-3 hover:border-purple-300 hover:shadow-md transition-all">
+                <div className="w-24 h-16 shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                  {p.image ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={p.image} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  ) : (
+                    <div className="w-full h-full grid place-items-center text-slate-300">{sym('article', 22)}</div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  {p.date && <div className="text-[11px] font-black text-purple-500">{p.date}</div>}
+                  <div className="text-sm font-bold text-slate-800 line-clamp-2 group-hover:text-purple-700">{p.title}</div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* 現状分析 */}
       {a?.currentStateAssessment && (
         <Card title="現状分析（はっきりめ）" icon="analytics" accent="text-purple-700">

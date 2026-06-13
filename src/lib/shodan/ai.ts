@@ -50,6 +50,11 @@ export function researchToFacts(r: CompanyResearch): string {
     `- 記事数の概算: 約${r.ownedMedia.articleCountEstimate}件（サイト規模感: ${SCALE_LABEL[r.ownedMedia.siteScale]}）`,
     `- 最新記事の日付: ${r.ownedMedia.latestArticleDate || '取得できず'}`,
     `- 更新頻度: ${FREQ_LABEL[r.ownedMedia.updateFrequency]}（${r.ownedMedia.frequencyNote}）`,
+    '',
+    '【プレスリリース・最新動向（PR TIMES）】',
+    r.pressReleases?.length
+      ? r.pressReleases.slice(0, 8).map((p) => `- ${p.date || ''} ${p.title}`).join('\n')
+      : '- 直近のプレスリリースは確認できず（PR TIMESでヒットなし）',
   ].filter(Boolean).join('\n')
 }
 
