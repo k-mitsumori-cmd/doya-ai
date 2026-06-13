@@ -1,60 +1,130 @@
 'use client'
 
+import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { DoyaKun } from '@/components/shodan/ui'
+import { LayoutDashboard, Sparkles, Building2, Users, CreditCard, Zap, Target } from 'lucide-react'
+import { useSession, signOut } from 'next-auth/react'
+import { shodanTheme } from '@/components/sidebar/themes'
+import {
+  SidebarShell,
+  SidebarLogoSection,
+  SidebarNavLink,
+  SidebarSectionTitle,
+  SidebarCollapseToggle,
+  SidebarBrandingFooter,
+  SidebarHelpContact,
+  SidebarUserProfile,
+  SidebarLogoutDialog,
+  useSidebarState,
+} from '@/components/sidebar'
+import type { NavItem, SidebarProps } from '@/components/sidebar'
+import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 
-const sym = (name: string) => (
-  <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{name}</span>
-)
+interface Props extends SidebarProps {
+  orgSlug: string
+  orgName?: string
+}
 
-export default function ShodanSidebar({ orgSlug, orgName }: { orgSlug: string; orgName?: string }) {
+function ShodanSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapsed, onToggle, forceExpanded, isMobile }: Props) {
   const pathname = usePathname()
+  const { data: session } = useSession()
+  const { isCollapsed, showLabel, toggle } = useSidebarState({ controlledIsCollapsed, onToggle, forceExpanded, isMobile })
+  const isLoggedIn = !!session?.user
+  const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+
   const base = `/shodan/${encodeURIComponent(orgSlug)}`
-  const items = [
-    { href: base, icon: 'dashboard', label: '商談準備一覧', exact: true },
-    { href: `${base}/new`, icon: 'add_circle', label: '新規作成', exact: false },
-    { href: `${base}/settings`, icon: 'business_center', label: '自社情報', exact: false },
-    { href: `${base}/members`, icon: 'group', label: 'メンバー', exact: false },
+  const NAV: NavItem[] = [
+    { href: base, label: '商談準備一覧', icon: LayoutDashboard },
+    { href: `${base}/new`, label: '新規作成', icon: Sparkles, hot: true },
+    { href: `${base}/settings`, label: '自社情報', icon: Building2 },
+    { href: `${base}/members`, label: 'メンバー', icon: Users },
+    { href: '/shodan/pricing', label: '料金プラン', icon: CreditCard },
   ]
-  const isActive = (href: string, exact: boolean) =>
-    exact ? pathname === href : pathname === href || pathname.startsWith(href + '/')
+
+  const planLabel = (() => {
+    if (!isLoggedIn) return 'GUEST'
+    const p = String((session?.user as any)?.plan || 'FREE').toUpperCase()
+    if (p === 'ENTERPRISE') return 'ENTERPRISE'
+    if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS' || p === 'BUNDLE') return 'PRO'
+    if (p === 'LIGHT') return 'LIGHT'
+    return 'FREE'
+  })()
+
+  const isActive = (href: string) => {
+    if (href === base) return pathname === base
+    return pathname === href || pathname.startsWith(href + '/')
+  }
+
+  const confirmLogout = async () => {
+    if (isLoggingOut) return
+    setIsLoggingOut(true)
+    try {
+      await signOut({ callbackUrl: '/shodan?loggedOut=1' })
+    } finally {
+      setIsLoggingOut(false)
+      setIsLogoutDialogOpen(false)
+    }
+  }
 
   return (
-    <aside className="w-60 shrink-0 bg-white border-r border-slate-200 min-h-screen hidden md:flex flex-col">
-      <Link href="/shodan" className="px-5 py-4 flex items-center gap-2 border-b border-slate-100">
-        <span className="grid place-items-center w-9 h-9 rounded-xl bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white shadow-md shadow-purple-500/25">🎯</span>
-        <div className="leading-tight">
-          <div className="font-black text-slate-900 text-[15px]">ドヤ商談準備</div>
-          <div className="text-[11px] font-bold text-slate-400 truncate max-w-[140px]">{orgName || orgSlug}</div>
+    <>
+      <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={shodanTheme}>
+        <SidebarLogoSection icon={Target} title="ドヤ商談準備" subtitle={orgName || orgSlug} showLabel={showLabel} />
+
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <nav className="py-4 sm:py-6 px-3 space-y-1">
+            <SidebarSectionTitle title="ドヤ商談準備" isCollapsed={isCollapsed} theme={shodanTheme} />
+            {NAV.map((item) => (
+              <SidebarNavLink key={item.href} item={item} isActive={isActive(item.href)} showLabel={showLabel} theme={shodanTheme} layoutId="shodanActiveIndicator" />
+            ))}
+          </nav>
+
+          {/* プランバナー */}
+          {(isMobile || !isCollapsed) && (
+            <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md relative overflow-hidden">
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
+                    <Zap className="w-4 h-4 text-fuchsia-600 fill-fuchsia-600" />
+                  </div>
+                  <p className="text-xs font-black text-white">現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}</p>
+                </div>
+                <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-90 mb-2">プロプラン ¥9,980/月で無制限・チーム招待</p>
+                <Link href="/shodan/pricing" className="w-full py-2 bg-white text-fuchsia-700 text-[11px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md block text-center">
+                  プロにアップグレード
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
-      </Link>
 
-      <nav className="flex-1 p-3 space-y-1">
-        {items.map((it) => (
-          <Link key={it.href} href={it.href}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl font-bold text-sm transition-colors ${
-              isActive(it.href, it.exact) ? 'bg-purple-50 text-purple-700' : 'text-slate-600 hover:bg-slate-50'
-            }`}>
-            {sym(it.icon)}
-            {it.label}
-          </Link>
-        ))}
-      </nav>
+        <ToolSwitcherMenu currentService="shodan" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 sm:px-4 pb-2" />
+        <SidebarHelpContact showLabel={showLabel} isCollapsed={isCollapsed} isMobile={isMobile} />
+        <SidebarUserProfile
+          session={session}
+          isLoggedIn={isLoggedIn}
+          showLabel={showLabel}
+          isCollapsed={isCollapsed}
+          isMobile={isMobile}
+          theme={shodanTheme}
+          loginCallbackUrl="/shodan"
+          onLogout={() => setIsLogoutDialogOpen(true)}
+        />
+        <SidebarCollapseToggle isCollapsed={isCollapsed} onToggle={toggle} isMobile={isMobile} theme={shodanTheme} />
+        <SidebarBrandingFooter brandName="ドヤ商談準備" isCollapsed={isCollapsed} theme={shodanTheme} />
+      </SidebarShell>
 
-      <div className="px-4 pb-3">
-        <div className="relative rounded-2xl bg-gradient-to-br from-purple-50 to-fuchsia-50 border border-purple-100 p-3 pr-16">
-          <p className="text-[11px] font-black text-purple-700 leading-snug">URLを入れるだけで<br />商談準備が完成！</p>
-          <DoyaKun mood="thumbsup" size={56} className="!absolute -top-3 -right-1" />
-        </div>
-      </div>
-
-      <div className="p-3 border-t border-slate-100">
-        <Link href={`${base}/new`}
-          className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm shadow-lg shadow-purple-500/25 hover:shadow-xl hover:-translate-y-0.5 transition-all">
-          {sym('bolt')}URLから準備する
-        </Link>
-      </div>
-    </aside>
+      <SidebarLogoutDialog
+        isOpen={isLogoutDialogOpen}
+        isLoggingOut={isLoggingOut}
+        onClose={() => setIsLogoutDialogOpen(false)}
+        onConfirm={() => void confirmLogout()}
+        theme={shodanTheme}
+      />
+    </>
   )
 }
+
+export default memo(ShodanSidebarImpl)

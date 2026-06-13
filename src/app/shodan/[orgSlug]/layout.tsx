@@ -1,8 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getShodanContext } from '@/lib/shodan/access'
 import { prisma } from '@/lib/prisma'
-import ShodanSidebar from '@/components/shodan/ShodanSidebar'
-import ShodanMobileNav from '@/components/shodan/ShodanMobileNav'
+import ShodanAppLayout from '@/components/shodan/ShodanAppLayout'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,10 +32,8 @@ export default async function ShodanOrgLayout({
   })
 
   return (
-    <div className="min-h-screen bg-slate-50 md:flex">
-      <ShodanSidebar orgSlug={orgSlug} orgName={org?.name} />
-      <ShodanMobileNav orgSlug={orgSlug} orgName={org?.name} />
-      <main className="flex-1 min-w-0">{children}</main>
-    </div>
+    <ShodanAppLayout orgSlug={orgSlug} orgName={org?.name}>
+      {children}
+    </ShodanAppLayout>
   )
 }

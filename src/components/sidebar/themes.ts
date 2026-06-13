@@ -244,3 +244,20 @@ export const adsimTheme: SidebarTheme = {
   aiBubbleBg: 'bg-[#0017C1]',
   zapColor: 'text-[#0017C1] fill-[#0017C1]',
 }
+
+// ドヤ商談準備（ブランド紫 #7f19e6 / fuchsia 系）
+export const shodanTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-purple-600 via-purple-700 to-fuchsia-800',
+  navText: 'text-purple-100/75',
+  navTextIcon: 'text-purple-200/75',
+  sectionText: 'text-purple-200/55',
+  toggleText: 'text-purple-600',
+  toggleHover: 'hover:bg-purple-50',
+  brandingText: 'text-purple-100/35',
+  profileBg: 'bg-purple-900/30',
+  avatarBg: 'bg-purple-500',
+  loginText: 'text-purple-600',
+  loginHover: 'hover:bg-purple-50',
+  aiBubbleBg: 'bg-purple-600',
+  zapColor: 'text-fuchsia-400 fill-fuchsia-400',
+}
