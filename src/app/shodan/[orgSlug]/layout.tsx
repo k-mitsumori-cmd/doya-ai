@@ -5,6 +5,11 @@ import ShodanSidebar from '@/components/shodan/ShodanSidebar'
 
 export const dynamic = 'force-dynamic'
 
+export const metadata = {
+  title: 'ドヤ商談準備 | 商談先のURLだけで提案準備を一括生成',
+  description: '商談先のURLを入れるだけで、企業リサーチ・課題仮説・解決策・提案資料までAIが一括作成。',
+}
+
 type Params = { orgSlug: string }
 
 export default async function ShodanOrgLayout({

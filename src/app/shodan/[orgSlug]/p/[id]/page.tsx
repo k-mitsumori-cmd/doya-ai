@@ -147,6 +147,18 @@ export default function ShodanResultPage() {
         </div>
       )}
 
+      {/* 完了したが成果物が空（生成不全）→ 再生成導線 */}
+      {prep.status === 'done' && !r && !a && !prep.proposalMarkdown && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-center gap-3 flex-wrap">
+          <DoyaKun mood="surprise" size={48} float={false} />
+          <span className="flex-1 min-w-[180px] text-amber-800 font-bold text-sm">結果が空でした。サイトが取得できなかった可能性があります。再生成をお試しください。</span>
+          <button onClick={retry} disabled={retrying}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-600 text-white font-black text-xs hover:bg-amber-700 transition-colors disabled:opacity-50">
+            {sym('refresh', 16)}{retrying ? '再生成中…' : '再生成する'}
+          </button>
+        </div>
+      )}
+
       {/* 深掘り調査 */}
       {r && (
         <Card title="深掘りリサーチ" icon="travel_explore" accent="text-purple-700">
