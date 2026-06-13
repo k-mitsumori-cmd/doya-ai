@@ -69,6 +69,16 @@ export async function getShodanContext(orgSlug?: string): Promise<ShodanContext 
   }
 }
 
+/** 指定ユーザーが所属する全ワークスペース（userId既知の場合。セッション再解決を避ける） */
+export async function listMembershipsFor(userId: string): Promise<{ slug: string; name: string; role: ShodanRole }[]> {
+  const memberships = await prisma.shodanMember.findMany({
+    where: { userId, status: 'ACTIVE' },
+    include: { organization: true },
+    orderBy: { createdAt: 'asc' },
+  })
+  return memberships.map((m) => ({ slug: m.organization.slug, name: m.organization.name, role: m.role as ShodanRole }))
+}
+
 /** ログイン中ユーザーが所属する全ワークスペース（切替メニュー用） */
 export async function listMemberships(): Promise<{ slug: string; name: string; role: ShodanRole }[]> {
   const userId = await resolveUserId()

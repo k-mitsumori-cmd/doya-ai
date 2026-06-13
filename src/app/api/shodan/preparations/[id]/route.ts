@@ -15,10 +15,19 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
   // organizationId + id の両方で検索（IDOR防止）
-  const item = await prisma.shodanPreparation.findFirst({
+  let item = await prisma.shodanPreparation.findFirst({
     where: { id: p.id, organizationId: sctx.organizationId },
   })
   if (!item) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+
+  // Vercelタイムアウト等で 'processing' のまま放置された案件を救済（catchが走らず残るケース）
+  const STALE_MS = 6 * 60 * 1000
+  if (item.status === 'processing' && Date.now() - new Date(item.updatedAt).getTime() > STALE_MS) {
+    item = await prisma.shodanPreparation.update({
+      where: { id: item.id },
+      data: { status: 'failed', errorMessage: item.errorMessage || '生成がタイムアウトしました。再度お試しください。' },
+    })
+  }
   return NextResponse.json({ item }, { headers: { 'Cache-Control': 'no-store' } })
 }
 

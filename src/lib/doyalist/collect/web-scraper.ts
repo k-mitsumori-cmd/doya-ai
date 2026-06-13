@@ -61,32 +61,38 @@ async function validateUrlForSSRF(rawUrl: string): Promise<URL> {
   return parsed
 }
 
-export async function scrapeCompanyWebsite(url: string): Promise<ScrapedCompanyInfo | null> {
+export async function scrapeCompanyWebsite(url: string, prefetchedHtml?: string): Promise<ScrapedCompanyInfo | null> {
   try {
-    const validatedUrl = await validateUrlForSSRF(url)
+    let html: string
+    if (prefetchedHtml != null) {
+      // 呼び出し側で（SSRF安全に）取得済みのHTMLがあれば再取得しない
+      html = prefetchedHtml
+    } else {
+      const validatedUrl = await validateUrlForSSRF(url)
 
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 10000)
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 10000)
 
-    const response = await fetch(validatedUrl.toString(), {
-      signal: controller.signal,
-      redirect: 'manual', // リダイレクト先の再検証が必要なため自動追跡しない
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; DoyaListBot/1.0)',
-        'Accept': 'text/html,application/xhtml+xml',
-      },
-    })
-    clearTimeout(timeout)
+      const response = await fetch(validatedUrl.toString(), {
+        signal: controller.signal,
+        redirect: 'manual', // リダイレクト先の再検証が必要なため自動追跡しない
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; DoyaListBot/1.0)',
+          'Accept': 'text/html,application/xhtml+xml',
+        },
+      })
+      clearTimeout(timeout)
 
-    // 3xxリダイレクトは追跡しない（SSRF防止）
-    if (response.status >= 300 && response.status < 400) {
-      console.warn(`Redirect not followed for SSRF safety: ${url}`)
-      return null
+      // 3xxリダイレクトは追跡しない（SSRF防止）
+      if (response.status >= 300 && response.status < 400) {
+        console.warn(`Redirect not followed for SSRF safety: ${url}`)
+        return null
+      }
+
+      if (!response.ok) return null
+      html = await response.text()
     }
 
-    if (!response.ok) return null
-
-    const html = await response.text()
     const text = extractTextFromHtml(html)
 
     // Use AI to extract structured data

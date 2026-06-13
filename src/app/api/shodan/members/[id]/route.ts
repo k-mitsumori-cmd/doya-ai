@@ -22,6 +22,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   const target = await prisma.shodanMember.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
   if (!target) return NextResponse.json({ error: 'メンバーが見つかりません' }, { status: 404 })
   if (target.role === 'owner') return NextResponse.json({ error: 'オーナーの権限は変更できません' }, { status: 403 })
+  // 自分と同格以上のメンバーの権限は変更できない（DELETEと同じ整合性。管理者同士の権限剥奪を防止）
+  if (target.id === sctx.memberId) return NextResponse.json({ error: '自分自身の権限は変更できません' }, { status: 400 })
+  if (target.status === 'ACTIVE' && rank(target.role) >= rank(sctx.role)) {
+    return NextResponse.json({ error: '自分と同格以上のメンバーは変更できません' }, { status: 403 })
+  }
 
   const body = await req.json().catch(() => ({}))
   const role = EDITABLE_ROLES.includes(body.role) ? (body.role as string) : null

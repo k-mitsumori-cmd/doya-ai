@@ -4,67 +4,12 @@
 //  - 実従業員数（gBizINFO 優先 / サイト記載 フォールバック）
 //  - マーケティング実施状況（SNS / 問い合わせ導線 / MA・解析ツール / 広告痕跡）
 //  - オウンドメディア・サイト規模（ブログ/ニュースの有無・記事数・最新日・更新頻度）
+// 外部HTTP取得は SSRF安全な共有ユーティリティ（@/lib/net/safe-fetch）経由。
 // ============================================
-import dns from 'dns/promises'
-import net from 'net'
+import { safeFetchText, htmlToText } from '@/lib/net/safe-fetch'
 import { scrapeCompanyWebsite } from '@/lib/doyalist/collect/web-scraper'
 import { searchGbizInfo } from '@/lib/doyalist/collect/gbizinfo'
 import type { CompanyResearch } from './types'
-
-// ---- SSRF対策（web-scraper.ts と同等のガード） ----
-const BLOCKED_HOSTNAMES = new Set([
-  'localhost', '169.254.169.254', 'metadata.google.internal', 'metadata.azure.com', '100.100.100.200',
-])
-function isPrivateIP(ip: string): boolean {
-  if (net.isIPv4(ip)) {
-    const p = ip.split('.').map(Number)
-    return (
-      p[0] === 127 || p[0] === 10 ||
-      (p[0] === 172 && p[1] >= 16 && p[1] <= 31) ||
-      (p[0] === 192 && p[1] === 168) ||
-      (p[0] === 169 && p[1] === 254) || p[0] === 0
-    )
-  }
-  if (net.isIPv6(ip)) {
-    const v = ip.toLowerCase()
-    return v === '::1' || v.startsWith('fc') || v.startsWith('fd') || v.startsWith('fe80:') || v.startsWith('::ffff:')
-  }
-  return false
-}
-async function validateUrlForSSRF(rawUrl: string): Promise<URL> {
-  let parsed: URL
-  try { parsed = new URL(rawUrl) } catch { throw new Error('不正なURL形式です') }
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') throw new Error('http/httpsのみ許可されています')
-  const hostname = parsed.hostname.toLowerCase()
-  if (BLOCKED_HOSTNAMES.has(hostname)) throw new Error('このホストへのアクセスは禁止されています')
-  if (net.isIP(hostname)) {
-    if (isPrivateIP(hostname)) throw new Error('プライベートIPへのアクセスは禁止されています')
-    return parsed
-  }
-  const addrs = await dns.lookup(hostname, { all: true })
-  for (const a of addrs) if (isPrivateIP(a.address)) throw new Error('解決先がプライベートIPです（SSRF防止）')
-  return parsed
-}
-
-async function safeFetchHtml(url: string, timeoutMs = 10000): Promise<string | null> {
-  try {
-    const validated = await validateUrlForSSRF(url)
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), timeoutMs)
-    const res = await fetch(validated.toString(), {
-      signal: controller.signal,
-      redirect: 'follow', // ホームページは正規ドメインへのリダイレクト想定。最終URLは下流で再検証しない代わりに同一fetchで完結
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DoyaShodanBot/1.0)', 'Accept': 'text/html,application/xhtml+xml' },
-    }).catch(() => null)
-    clearTimeout(timer)
-    if (!res || !res.ok) return null
-    const ct = res.headers.get('content-type') || ''
-    if (!ct.includes('html') && ct !== '') return null
-    return await res.text()
-  } catch {
-    return null
-  }
-}
 
 // ---- HTMLユーティリティ ----
 function extractTitle(html: string): string | undefined {
@@ -156,49 +101,53 @@ function findMediaUrls(links: { href: string; text: string }[], baseUrl: string)
   return Array.from(out).slice(0, 4)
 }
 function extractDates(html: string): string[] {
-  const dates = new Set<string>()
+  // 重複は除去しない（1日複数投稿の頻度を正しく数えるため、出現回数を保持する）
+  const dates: string[] = []
   const patterns = [
     /(20\d{2})[.\-/年](\d{1,2})[.\-/月](\d{1,2})/g,
-    /(20\d{2})[.\-/年](\d{1,2})月?/g,
+    /(20\d{2})[.\-/年](\d{1,2})月?(?![.\-/]?\d)/g,
   ]
   for (const re of patterns) {
     let m: RegExpExecArray | null
     while ((m = re.exec(html))) {
       const y = Number(m[1]); const mo = Number(m[2] || '1'); const d = Number((m as any)[3] || '1')
       if (y < 2005 || y > 2100 || mo < 1 || mo > 12 || d < 1 || d > 31) continue
-      dates.add(`${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`)
+      dates.push(`${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`)
     }
   }
-  return Array.from(dates)
+  return dates
+}
+// 記事リンク判定：日付/記事系パス、または連番ID。ナビ/フッターの汎用リンクを除外。
+function looksLikeArticleLink(href: string, baseUrl: string): boolean {
+  if (!sameHost(href, baseUrl)) return false
+  let p = ''
+  try { p = new URL(href).pathname } catch { return false }
+  return /\/\d{4}\/\d{1,2}\//.test(p) || /\/\d{4,}(?:[/.\-]|$)/.test(p) || /\/(post|posts|entry|entries|article|articles|news|blog|column|columns|story|stories)\/[^/]+/i.test(p)
 }
 async function analyzeOwnedMedia(mediaUrls: string[], baseUrl: string) {
   let articleCountEstimate = 0
   const allDates: string[] = []
   for (const url of mediaUrls.slice(0, 3)) {
-    const html = await safeFetchHtml(url, 8000)
+    const html = await safeFetchText(url, { timeoutMs: 8000 })
     if (!html) continue
     const links = extractLinks(html, url)
-    // 記事っぽいリンク（同一ホスト・本文系パス・年月日を含むURLなど）の数で記事量を概算
-    const articleLinks = links.filter((l) => {
-      if (!sameHost(l.href, baseUrl)) return false
-      const p = (() => { try { return new URL(l.href).pathname } catch { return '' } })()
-      return /\/\d{4}\/\d{1,2}\/|\/\d{5,}|\/(post|entry|article|news|blog|column)s?\//i.test(p) || (l.text.length >= 10)
-    })
+    // 記事っぽいリンク（日付/記事系パス・連番ID）の数で記事量を概算（重複URLは除外）
+    const articleLinks = Array.from(new Set(links.filter((l) => looksLikeArticleLink(l.href, baseUrl)).map((l) => l.href.split('#')[0].split('?')[0])))
     articleCountEstimate += articleLinks.length
     allDates.push(...extractDates(html))
   }
-  const sorted = Array.from(new Set(allDates)).sort().reverse()
-  const latestArticleDate = sorted[0] || null
+  const uniqueSorted = Array.from(new Set(allDates)).sort().reverse()
+  const latestArticleDate = uniqueSorted[0] || null
 
-  // 更新頻度の判定：最新記事日の新しさ＋直近1年の記事日付の本数
+  // 更新頻度：最新記事日の新しさ＋直近1年の日付出現“回数”（重複保持）で判定
   let updateFrequency: CompanyResearch['ownedMedia']['updateFrequency'] = 'unknown'
   let frequencyNote = '更新状況を判定できる日付情報が乏しい'
   if (latestArticleDate) {
     const latest = new Date(latestArticleDate + 'T00:00:00Z').getTime()
     const now = Date.now()
     const daysSince = Math.floor((now - latest) / 86400000)
-    const lastYear = sorted.filter((d) => now - new Date(d + 'T00:00:00Z').getTime() < 365 * 86400000).length
-    if (daysSince > 365) { updateFrequency = 'inactive'; frequencyNote = `最新記事が${Math.floor(daysSince / 30)}ヶ月前。実質的に更新が止まっている可能性` }
+    const lastYear = allDates.filter((d) => now - new Date(d + 'T00:00:00Z').getTime() < 365 * 86400000).length
+    if (daysSince > 365) { updateFrequency = 'inactive'; frequencyNote = `最新記事が約${Math.floor(daysSince / 30)}ヶ月前。実質的に更新が止まっている可能性` }
     else if (lastYear >= 24 || daysSince <= 14) { updateFrequency = 'high'; frequencyNote = `直近1年で${lastYear}件前後を確認。週1ペースに近い活発さ` }
     else if (lastYear >= 8 || daysSince <= 60) { updateFrequency = 'medium'; frequencyNote = `直近1年で${lastYear}件前後。月1〜2回ペースの更新` }
     else { updateFrequency = 'low'; frequencyNote = `直近1年で${lastYear}件前後。更新は散発的` }
@@ -222,8 +171,8 @@ async function analyzeOwnedMedia(mediaUrls: string[], baseUrl: string) {
 // ---- gBizINFO で実従業員数などの公的データを引く ----
 async function lookupGbiz(companyName: string | undefined, targetUrl: string) {
   if (!companyName) return null
-  // 「株式会社」等を含めて検索、ヒットから自社URLのホスト一致 or 先頭を採用
   const cleaned = companyName.replace(/[|｜\-–—].*$/, '').trim().slice(0, 40)
+  if (!cleaned) return null
   const r = await searchGbizInfo({ keyword: cleaned, limit: 20 }).catch(() => null)
   if (!r || !r.companies.length) return null
   const byUrl = r.companies.find((c) => c.companyUrl && sameHost(c.companyUrl, targetUrl))
@@ -241,17 +190,16 @@ function parseEmployee(s?: string | null): number | null {
  * 失敗しても可能な範囲で部分結果を返す（throwしない）。
  */
 export async function researchCompany(targetUrl: string): Promise<CompanyResearch> {
-  const homepage = await safeFetchHtml(targetUrl, 12000)
+  // ホームページは一度だけ取得し、リンク抽出・マーケ検出・会社情報抽出で共有する
+  const homepage = await safeFetchText(targetUrl, { timeoutMs: 12000 })
   const links = homepage ? extractLinks(homepage, targetUrl) : []
   const titleName = homepage ? extractTitle(homepage) : undefined
 
-  // サイト解析（既存スクレイパ：会社名/事業内容/サービス/従業員数記載 等）と並行で gBizINFO を引く
+  // 取得済みHTMLを渡して二重取得を回避（会社名/事業内容/従業員数記載 等を抽出）
+  // メディア解析は並行で実行
   const [basic, mediaInfo] = await Promise.all([
-    scrapeCompanyWebsite(targetUrl).catch(() => null),
-    (async () => {
-      const mediaUrls = findMediaUrls(links, targetUrl)
-      return analyzeOwnedMedia(mediaUrls, targetUrl)
-    })(),
+    scrapeCompanyWebsite(targetUrl, homepage || undefined).catch(() => null),
+    analyzeOwnedMedia(findMediaUrls(links, targetUrl), targetUrl),
   ])
 
   const companyName = basic?.companyName || titleName
@@ -279,16 +227,7 @@ export async function researchCompany(targetUrl: string): Promise<CompanyResearc
     services: basic?.services || undefined,
     marketing,
     ownedMedia: mediaInfo,
-    rawNotes: homepage ? extractPlainText(homepage).slice(0, 1500) : undefined,
+    rawNotes: homepage ? htmlToText(homepage).slice(0, 1500) : undefined,
   }
   return research
-}
-
-function extractPlainText(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
 }
