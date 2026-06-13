@@ -26,7 +26,8 @@ export const ROLE_LABEL: Record<ShodanRole, string> = {
 }
 
 export type MemberStatus = 'ACTIVE' | 'PENDING' | 'INACTIVE'
-export type PrepStatus = 'processing' | 'done' | 'failed'
+// processing=リサーチ実行中 / researched=調査完了・提案生成待ち or 生成中 / done=完成 / failed=失敗
+export type PrepStatus = 'processing' | 'researched' | 'done' | 'failed'
 
 // Vercel maxDuration(300s) でハンドラが強制終了されると catch が走らず 'processing' のまま残る。
 // この時間を超えた処理中は実質失敗とみなす（無限スピナー防止）。maxDuration(5分)より長く取る。
@@ -52,6 +53,9 @@ export interface CompanyResearch {
   // 事業概要（サイト解析）
   description?: string
   services?: string[]
+  // ビジュアル
+  ogImage?: string | null // トップページの og:image（あれば）
+  crawledUrls?: string[] // スクリーンショット表示用に実際に見たページURL（target＋メディア）
   // マーケティング実施状況
   marketing: {
     snsChannels: string[] // 検出したSNS（X/Facebook/Instagram/YouTube/LinkedIn/note 等）

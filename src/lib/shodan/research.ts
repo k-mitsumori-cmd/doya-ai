@@ -19,6 +19,12 @@ function extractTitle(html: string): string | undefined {
   if (t?.[1]) return decodeEntities(t[1].trim())
   return undefined
 }
+function extractOgImage(html: string, baseUrl: string): string | null {
+  const m = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)
+    || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)
+  if (!m?.[1]) return null
+  try { return new URL(m[1].trim(), baseUrl).toString() } catch { return null }
+}
 function decodeEntities(s: string): string {
   return s.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
 }
@@ -144,27 +150,32 @@ async function analyzeOwnedMedia(mediaUrls: string[], baseUrl: string) {
   }
   const uniqueSorted = Array.from(new Set(allDates)).sort().reverse()
   const latestArticleDate = uniqueSorted[0] || null
+  const hasOwnedMedia = mediaUrls.length > 0
 
-  // 更新頻度：最新記事日の新しさ＋直近1年の日付出現“回数”（重複保持）で判定
-  let updateFrequency: CompanyResearch['ownedMedia']['updateFrequency'] = 'unknown'
-  let frequencyNote = '更新状況を判定できる日付情報が乏しい'
-  if (latestArticleDate) {
-    const latest = new Date(latestArticleDate + 'T00:00:00Z').getTime()
-    const now = Date.now()
-    const daysSince = Math.floor((now - latest) / 86400000)
-    const lastYear = allDates.filter((d) => now - new Date(d + 'T00:00:00Z').getTime() < 365 * 86400000).length
-    if (daysSince > 365) { updateFrequency = 'inactive'; frequencyNote = `最新記事が約${Math.floor(daysSince / 30)}ヶ月前。実質的に更新が止まっている可能性` }
-    else if (lastYear >= 24 || daysSince <= 14) { updateFrequency = 'high'; frequencyNote = `直近1年で${lastYear}件前後を確認。週1ペースに近い活発さ` }
-    else if (lastYear >= 8 || daysSince <= 60) { updateFrequency = 'medium'; frequencyNote = `直近1年で${lastYear}件前後。月1〜2回ペースの更新` }
-    else { updateFrequency = 'low'; frequencyNote = `直近1年で${lastYear}件前後。更新は散発的` }
-  }
+  // 規模は「実際に見つかった記事リンク数」を主指標にする
   let siteScale: CompanyResearch['ownedMedia']['siteScale'] = 'unknown'
-  if (articleCountEstimate >= 60) siteScale = 'large'
-  else if (articleCountEstimate >= 20) siteScale = 'medium'
-  else if (articleCountEstimate > 0 || mediaUrls.length > 0) siteScale = 'small'
+  if (articleCountEstimate >= 40) siteScale = 'large'
+  else if (articleCountEstimate >= 12) siteScale = 'medium'
+  else if (articleCountEstimate > 0) siteScale = 'small'
+  else siteScale = hasOwnedMedia ? 'small' : 'unknown'
+
+  // 更新頻度は記事の“実数”と整合させる（日付だけで頻度を誇張しない）。
+  // recentN は「直近1年の日付出現数」を「実際に見つかった記事数」で頭打ちにする＝矛盾防止。
+  const now = Date.now()
+  let updateFrequency: CompanyResearch['ownedMedia']['updateFrequency'] = 'unknown'
+  let frequencyNote = hasOwnedMedia ? 'メディアは確認できたが、記事数・日付を十分に取得できず頻度は判定不可' : 'オウンドメディア（ブログ/ニュース）は確認できず'
+  if (articleCountEstimate > 0 && latestArticleDate) {
+    const daysSince = Math.floor((now - new Date(latestArticleDate + 'T00:00:00Z').getTime()) / 86400000)
+    const lastYearDates = allDates.filter((d) => now - new Date(d + 'T00:00:00Z').getTime() < 365 * 86400000).length
+    const recentN = Math.min(lastYearDates, articleCountEstimate) // 記事数を超える頻度主張をしない
+    if (daysSince > 365) { updateFrequency = 'inactive'; frequencyNote = `最新記事が約${Math.floor(daysSince / 30)}ヶ月前。更新はほぼ停止` }
+    else if (recentN >= 12 && daysSince <= 45) { updateFrequency = 'high'; frequencyNote = `直近1年で約${recentN}本・最新${daysSince}日前。活発に更新` }
+    else if (recentN >= 4 || daysSince <= 120) { updateFrequency = 'medium'; frequencyNote = `直近1年で約${recentN}本・最新${daysSince}日前。月1回程度の更新` }
+    else { updateFrequency = 'low'; frequencyNote = `直近1年で約${recentN}本・最新${daysSince}日前。更新は散発的` }
+  }
 
   return {
-    hasOwnedMedia: mediaUrls.length > 0,
+    hasOwnedMedia,
     mediaUrls,
     articleCountEstimate,
     latestArticleDate,
@@ -231,6 +242,8 @@ export async function researchCompany(targetUrl: string): Promise<CompanyResearc
     representative: gbiz?.representativeName || basic?.representative || null,
     description: basic?.description || gbiz?.businessSummary || undefined,
     services: basic?.services || undefined,
+    ogImage: homepage ? extractOgImage(homepage, targetUrl) : null,
+    crawledUrls: Array.from(new Set([targetUrl, ...mediaInfo.mediaUrls])).slice(0, 5),
     marketing,
     ownedMedia: mediaInfo,
     rawNotes: homepage ? htmlToText(homepage).slice(0, 1500) : undefined,

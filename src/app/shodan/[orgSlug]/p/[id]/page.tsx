@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { shodanGet, shodanSend } from '@/lib/shodan/client'
 import Markdown from '@/components/shodan/Markdown'
-import { DoyaKun } from '@/components/shodan/ui'
+import { DoyaKun, SiteShot } from '@/components/shodan/ui'
 import type { CompanyResearch, CompanyAnalysis } from '@/lib/shodan/types'
 import toast from 'react-hot-toast'
 
@@ -75,6 +75,20 @@ export default function ShodanResultPage() {
       toast.success('再生成を開始しました')
       router.replace(`/shodan/${encodeURIComponent(orgSlug)}/p/${d.id}`)
     } catch (e: any) { toast.error(e.message); setRetrying(false) }
+  }
+
+  // 調査済み（提案未生成）案件から提案資料を作成
+  const [generating, setGenerating] = useState(false)
+  const generate = async () => {
+    if (!prep) return
+    setGenerating(true)
+    try {
+      const d = await shodanSend<{ id: string; status: string }>(`/api/shodan/preparations/${prep.id}/generate`, orgSlug, 'POST')
+      if (d.status !== 'done') throw new Error('提案生成に失敗しました')
+      const r = await shodanGet<{ item: Prep }>(`/api/shodan/preparations/${prep.id}`, orgSlug)
+      setPrep(r.item)
+      toast.success('提案資料が完成しました！')
+    } catch (e: any) { toast.error(e.message) } finally { setGenerating(false) }
   }
 
   const copyProposal = async () => {
@@ -147,6 +161,22 @@ export default function ShodanResultPage() {
         </div>
       )}
 
+      {/* 調査済み・提案未生成 → 提案作成導線 */}
+      {prep.status === 'researched' && !prep.proposalMarkdown && (
+        <div className="flex items-center gap-3 rounded-2xl border border-purple-200 bg-purple-50 px-5 py-4 flex-wrap">
+          <DoyaKun mood={generating ? 'present' : 'thumbsup'} size={52} float={generating} />
+          <span className="flex-1 min-w-[180px] text-purple-800 font-bold text-sm">
+            {generating ? '提案資料を作成中です…' : '企業調査は完了しました。続けて提案資料を作成しましょう。'}
+          </span>
+          {!generating && (
+            <button onClick={generate}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-xs hover:-translate-y-0.5 transition-all">
+              {sym('bolt', 16)}提案資料を作成する
+            </button>
+          )}
+        </div>
+      )}
+
       {/* 完了したが成果物が空（生成不全）→ 再生成導線 */}
       {prep.status === 'done' && !r && !a && !prep.proposalMarkdown && (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 flex items-center gap-3 flex-wrap">
@@ -162,6 +192,21 @@ export default function ShodanResultPage() {
       {/* 深掘り調査 */}
       {r && (
         <Card title="深掘りリサーチ" icon="travel_explore" accent="text-purple-700">
+          {/* サイトのトップ画像＋調査したページのサムネイル */}
+          {(r.crawledUrls?.length || r.ogImage) && (
+            <div className="mb-4">
+              <SiteShot url={r.url} ogImage={r.ogImage} className="w-full aspect-[16/9] mb-2" label={r.companyName || r.url} />
+              {r.crawledUrls && r.crawledUrls.length > 1 && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {r.crawledUrls.slice(1, 5).map((u) => (
+                    <a key={u} href={u} target="_blank" rel="noreferrer" className="block hover:opacity-90 transition-opacity">
+                      <SiteShot url={u} className="w-full aspect-[16/10]" label={(() => { try { return new URL(u).pathname.replace(/\/$/, '') || '/' } catch { return u } })()} />
+                    </a>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             <Stat icon="groups" label="実従業員数" value={r.employeeCount != null ? `約${r.employeeCount}名` : '不明'} sub={r.employeeCount != null ? (r.employeeCountSource === 'gbizinfo' ? 'gBizINFO 公的データ' : r.employeeCountSource === 'website' ? 'サイト記載' : '') : '公的データ・サイトに記載なし'} />
             <Stat icon="campaign" label="マーケ実施" value={r.marketing.snsChannels.length || r.marketing.martechTools.length ? '実施あり' : '痕跡少'} sub={r.marketing.summary} />

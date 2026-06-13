@@ -6,7 +6,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
 import { researchCompany } from '@/lib/shodan/research'
-import { analyzeCompany, generateProposal, type OwnCompanyProfile } from '@/lib/shodan/ai'
 import { effectivePrepStatus, PREP_STALE_MS } from '@/lib/shodan/types'
 
 // 統一プラン：有料判定
@@ -66,6 +65,7 @@ export async function POST(req: NextRequest) {
         createdAt: { gte: since },
         OR: [
           { status: 'done' },
+          { status: 'researched' },
           { status: 'processing', updatedAt: { gte: staleBefore } },
         ],
       },
@@ -78,46 +78,26 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // 案件を作成（処理中）
+  // 案件を作成（処理中＝リサーチ実行中）
   const prep = await prisma.shodanPreparation.create({
     data: { organizationId: ctx.organizationId, createdByMemberId: ctx.memberId, targetUrl, status: 'processing' },
   })
 
   try {
-    // 1) 深掘りリサーチ
+    // フェーズ1: 深掘りリサーチのみ（提案生成は /[id]/generate で実行）。
+    // リサーチ結果を即返すことで、画面に「実際に調べた内容」を表示できる。
     const research = await researchCompany(targetUrl)
     await prisma.shodanPreparation.update({
       where: { id: prep.id },
-      data: { research: research as any, targetName: research.companyName || null },
+      data: { research: research as any, targetName: research.companyName || null, status: 'researched' },
     })
-
-    // 2) 自社情報を読み込み（提案最適化のため）
-    const profile = await prisma.shodanCompanyProfile.findUnique({ where: { organizationId: ctx.organizationId } })
-    const own: OwnCompanyProfile | null = profile
-      ? {
-          companyName: profile.companyName, url: profile.url, description: profile.description,
-          valueProp: profile.valueProp, products: profile.products, targetCustomer: profile.targetCustomer,
-          pricingNote: profile.pricingNote, caseStudies: profile.caseStudies,
-        }
-      : null
-
-    // 3) 現状分析・課題仮説・解決策
-    const analysis = await analyzeCompany(research, own)
-
-    // 4) 提案資料（Markdown）
-    const proposalMarkdown = await generateProposal(research, analysis, own)
-
-    const done = await prisma.shodanPreparation.update({
-      where: { id: prep.id },
-      data: { analysis: analysis as any, proposalMarkdown, status: 'done' },
-    })
-    return NextResponse.json({ id: done.id, status: 'done' })
+    return NextResponse.json({ id: prep.id, status: 'researched', research })
   } catch (e: any) {
-    console.error('[shodan/preparations] pipeline failed', e?.message)
+    console.error('[shodan/preparations] research failed', e?.message)
     await prisma.shodanPreparation.update({
       where: { id: prep.id },
-      data: { status: 'failed', errorMessage: (e?.message || '生成に失敗しました').slice(0, 500) },
+      data: { status: 'failed', errorMessage: (e?.message || '調査に失敗しました').slice(0, 500) },
     }).catch(() => {})
-    return NextResponse.json({ id: prep.id, status: 'failed', error: '準備の生成に失敗しました。URLを確認して再実行してください。' }, { status: 500 })
+    return NextResponse.json({ id: prep.id, status: 'failed', error: '企業調査に失敗しました。URLを確認して再実行してください。' }, { status: 500 })
   }
 }

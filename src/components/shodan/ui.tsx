@@ -72,6 +72,38 @@ export function BrandMark({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   )
 }
 
+/** サイトのスクリーンショット表示（og:image優先、無ければmShotsで生成。失敗時はグラデ+アイコン） */
+export function SiteShot({ url, ogImage, className = '', label }: { url: string; ogImage?: string | null; className?: string; label?: string }) {
+  const [src, setSrc] = React.useState(
+    ogImage || `https://s.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=900`
+  )
+  const [failed, setFailed] = React.useState(false)
+  return (
+    <div className={`relative overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br from-purple-100 to-fuchsia-100 ${className}`}>
+      {!failed ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={src}
+          alt={label || url}
+          className="w-full h-full object-cover object-top"
+          loading="lazy"
+          onError={() => {
+            // og:image が死んでいたら mShots にフォールバック、それも失敗ならプレースホルダ
+            const ms = `https://s.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=900`
+            if (src !== ms) setSrc(ms)
+            else setFailed(true)
+          }}
+        />
+      ) : (
+        <div className="w-full h-full grid place-items-center text-purple-400">
+          <span className="material-symbols-outlined" style={{ fontSize: 40 }}>language</span>
+        </div>
+      )}
+      {label && <div className="absolute bottom-0 inset-x-0 bg-black/55 text-white text-[10px] font-bold px-2 py-1 truncate">{label}</div>}
+    </div>
+  )
+}
+
 /** セクションカード見出し */
 export function sym(name: string, sizePx = 20) {
   return <span className="material-symbols-outlined" style={{ fontSize: sizePx }}>{name}</span>

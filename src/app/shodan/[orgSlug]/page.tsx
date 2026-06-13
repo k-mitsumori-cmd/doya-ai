@@ -10,7 +10,8 @@ import toast from 'react-hot-toast'
 type Item = { id: string; targetUrl: string; targetName: string | null; status: string; createdAt: string; updatedAt: string }
 
 const STATUS: Record<string, { label: string; cls: string }> = {
-  processing: { label: '生成中', cls: 'bg-amber-100 text-amber-700' },
+  processing: { label: '調査中', cls: 'bg-amber-100 text-amber-700' },
+  researched: { label: '作成中', cls: 'bg-sky-100 text-sky-700' },
   done: { label: '完了', cls: 'bg-emerald-100 text-emerald-700' },
   failed: { label: '失敗', cls: 'bg-rose-100 text-rose-700' },
 }
@@ -27,9 +28,9 @@ export default function ShodanListPage() {
   }
   useEffect(load, [orgSlug])
 
-  // 「生成中」がある間だけ自動更新（完了で停止）
+  // 「調査中/作成中」がある間だけ自動更新（完了で停止）
   useEffect(() => {
-    if (!items?.some((x) => x.status === 'processing')) return
+    if (!items?.some((x) => x.status === 'processing' || x.status === 'researched')) return
     const t = setInterval(() => {
       shodanGet<{ items: Item[] }>('/api/shodan/preparations', orgSlug).then((d) => setItems(d.items)).catch(() => {})
     }, 5000)
