@@ -92,6 +92,9 @@ export default function ShodanResultPage() {
     URL.revokeObjectURL(a.href)
   }
   const copyText = async (t: string) => { await navigator.clipboard.writeText(t); toast.success('コピーしました') }
+  const printProposal = () => {
+    if (typeof window !== 'undefined') window.print()
+  }
 
   if (notFound) return (
     <div className="p-10 text-center">
@@ -106,14 +109,21 @@ export default function ShodanResultPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-5">
-      <div className="flex items-center gap-2 text-sm font-bold text-slate-400">
+      <style>{`@media print { aside, .shodan-no-print { display: none !important; } main { width: 100% !important; } body { background: #fff !important; } }`}</style>
+      <div className="flex items-center gap-2 text-sm font-bold text-slate-400 shodan-no-print">
         <Link href={`/shodan/${encodeURIComponent(orgSlug)}`} className="hover:text-purple-600 flex items-center gap-1">{sym('arrow_back', 16)}一覧</Link>
       </div>
 
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-black text-slate-900">{prep.targetName || prep.targetUrl}</h1>
-          <a href={prep.targetUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-purple-600 hover:underline flex items-center gap-1 mt-1">{sym('open_in_new', 14)}{prep.targetUrl}</a>
+        <div className="flex items-center gap-3">
+          {prep.status === 'done' && <DoyaKun mood="success" size={56} float={false} />}
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-black text-slate-900">{prep.targetName || prep.targetUrl}</h1>
+              {prep.status === 'done' && <span className="text-[11px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">準備完了</span>}
+            </div>
+            <a href={prep.targetUrl} target="_blank" rel="noreferrer" className="text-sm font-bold text-purple-600 hover:underline flex items-center gap-1 mt-1">{sym('open_in_new', 14)}{prep.targetUrl}</a>
+          </div>
         </div>
       </div>
 
@@ -238,9 +248,10 @@ export default function ShodanResultPage() {
       {/* 提案資料 */}
       {prep.proposalMarkdown && (
         <Card title="提案資料" icon="description" accent="text-purple-700">
-          <div className="flex items-center gap-2 mb-4">
+          <div className="flex items-center gap-2 mb-4 flex-wrap shodan-no-print">
             <button onClick={copyProposal} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-purple-600 text-white font-black text-sm hover:bg-purple-700 transition-colors">{sym('content_copy', 16)}コピー</button>
             <button onClick={downloadProposal} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50 transition-colors">{sym('download', 16)}.md保存</button>
+            <button onClick={printProposal} className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50 transition-colors">{sym('print', 16)}印刷 / PDF</button>
           </div>
           <div className="rounded-2xl bg-white border border-slate-100 p-5">
             <Markdown source={prep.proposalMarkdown} />

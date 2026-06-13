@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { shodanGet, shodanSend } from '@/lib/shodan/client'
 import { DoyaKun, sym, type Mood } from '@/components/shodan/ui'
@@ -64,9 +65,10 @@ export default function ShodanNewPage() {
           </div>
 
           {hasProfile === false && (
-            <p className="text-xs font-bold text-amber-600 mt-3 flex items-center gap-1">
-              {sym('info', 16)}自社情報が未登録です。登録すると提案資料の精度が上がります（このまま作成も可能）。
-            </p>
+            <Link href={`/shodan/${encodeURIComponent(orgSlug)}/settings`}
+              className="mt-3 flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 hover:bg-amber-100 transition-colors">
+              {sym('info', 16)}自社情報が未登録です。先に登録すると提案精度UP →（クリックで設定へ／このまま作成も可）
+            </Link>
           )}
 
           <button onClick={run}
