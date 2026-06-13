@@ -1481,6 +1481,49 @@ export const SERVICES: Service[] = [
     isNew: true,
     badge: 'NEW',
   },
+
+  // ----------------------------------------
+  // ドヤ商談準備（Shodan）
+  // ----------------------------------------
+  {
+    id: 'shodan',
+    name: 'ドヤ商談準備',
+    shortName: '商談準備',
+    description: '商談先のURLを入れるだけ。リサーチ〜課題仮説〜提案資料まで一括生成。',
+    longDescription:
+      '商談先企業のURLを入力するだけで、実従業員数・マーケ実施状況・オウンドメディアの規模・記事の更新頻度まで深掘り調査。現状分析（はっきりめ）から課題仮説・解決策、そして提案資料（Markdown）までAIが一括で作成します。自社情報を登録しておけば、自社の商材・強みに最適化された提案に。チーム招待・組織スコープで情報は安全に分離。',
+    icon: '🎯',
+    color: 'purple',
+    gradient: 'from-purple-600 to-fuchsia-600',
+    bgGradient: 'from-purple-50 to-fuchsia-50',
+    href: '/shodan',
+    dashboardHref: '/shodan',
+    pricingHref: '/shodan/pricing',
+    guideHref: '/shodan',
+    features: [
+      '企業URLだけで商談準備が完結',
+      '実従業員数・マーケ・オウンドメディアを深掘り調査',
+      '現状分析・課題仮説・解決策をAIが立案',
+      '提案資料（Markdown）まで一括生成',
+      '自社情報を登録して提案を最適化',
+      'チーム招待・組織スコープで安全に共有',
+    ],
+    useCases: [
+      'アポ前の企業リサーチに時間がかかっている',
+      '提案資料づくりを毎回ゼロから作っている',
+      'チームで商談準備の型を揃えたい',
+    ],
+    pricing: {
+      free: { name: '無料プラン', limit: '月5件まで', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: '無制限 / チーム招待', dailyLimit: -1, price: 9980 },
+    },
+    status: 'active',
+    category: 'other',
+    order: 25,
+    requiresAuth: true,
+    isNew: true,
+    badge: 'NEW',
+  },
 ]
 
 // ============================================

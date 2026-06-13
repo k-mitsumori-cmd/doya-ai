@@ -3169,3 +3169,84 @@ model SfaTask {
   @@index([organizationId, assigneeMemberId, status])
   @@map("sfa_tasks")
 }
+
+// ============================================
+// ドヤ商談準備（Shodan）shodan_*  — 組織スコープ型
+// 企業URLを入力するだけで、リサーチ→課題仮説→解決策→提案資料を一括生成。
+// 自社情報（自社URL/詳細）を登録しておくと提案が最適化される。
+// ============================================
+model ShodanOrganization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members      ShodanMember[]
+  profile      ShodanCompanyProfile?
+  preparations ShodanPreparation[]
+  @@map("shodan_organizations")
+}
+
+model ShodanMember {
+  id             String             @id @default(cuid())
+  organizationId String
+  organization   ShodanOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  role           String             @default("member") // owner / admin / manager / member
+  status         String             @default("ACTIVE") // ACTIVE / PENDING / INACTIVE
+  name           String?
+  inviteEmail    String?
+  inviteToken    String?            @unique
+  acceptedAt     DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("shodan_members")
+}
+
+// 自社情報（1組織1件）。提案資料の生成に使う。
+model ShodanCompanyProfile {
+  id             String             @id @default(cuid())
+  organizationId String             @unique
+  organization   ShodanOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  companyName    String?            // 自社名
+  url            String?            // 自社URL
+  description    String?            @db.Text // 事業内容
+  valueProp      String?            @db.Text // 提供価値・強み・USP
+  products       String?            @db.Text // 主な商材・サービス
+  targetCustomer String?            @db.Text // ターゲット顧客像
+  pricingNote    String?            @db.Text // 価格帯・導入条件など
+  caseStudies    String?            @db.Text // 導入事例・実績
+  research       Json?              // 自社URLを解析した結果（任意）
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@map("shodan_company_profiles")
+}
+
+// 商談準備案件。1件 = 1社ぶんの準備。
+model ShodanPreparation {
+  id              String             @id @default(cuid())
+  organizationId  String
+  organization    ShodanOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdByMemberId String?
+  // 入力
+  targetUrl       String
+  targetName      String?            // 解析で判明した相手企業名
+  // 進行状態
+  status          String             @default("processing") // processing / done / failed
+  errorMessage    String?            @db.Text
+  // 成果物
+  research        Json?              // 深掘り調査（従業員数/マーケ実施状況/オウンドメディア規模/記事更新頻度 等）
+  analysis        Json?              // 現状分析・課題仮説・解決策
+  proposalMarkdown String?           @db.Text // 提案資料（Markdown）
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([organizationId, createdAt])
+  @@map("shodan_preparations")
+}

@@ -1,0 +1,89 @@
+// ============================================
+// ドヤ商談準備（Shodan）型定義
+// ============================================
+export type ShodanRole = 'owner' | 'admin' | 'manager' | 'member'
+
+export interface ShodanContext {
+  userId: string
+  organizationId: string
+  organizationSlug: string
+  role: ShodanRole
+  memberId: string
+}
+
+export const ROLE_HIERARCHY: Record<string, number> = {
+  member: 0,
+  manager: 1,
+  admin: 2,
+  owner: 3,
+}
+
+export const ROLE_LABEL: Record<ShodanRole, string> = {
+  member: 'メンバー（営業担当）',
+  manager: 'マネージャー',
+  admin: '管理者',
+  owner: 'オーナー',
+}
+
+export type MemberStatus = 'ACTIVE' | 'PENDING' | 'INACTIVE'
+export type PrepStatus = 'processing' | 'done' | 'failed'
+
+// ---- リサーチ（深掘り調査）の構造 ----
+export interface CompanyResearch {
+  companyName?: string
+  url: string
+  // 公的データ（gBizINFO）
+  corporateNumber?: string
+  employeeCount?: number | null // 実従業員数
+  employeeCountSource?: 'gbizinfo' | 'website' | 'estimate' | 'unknown'
+  capital?: string | null
+  industry?: string | null
+  foundedYear?: string | null
+  address?: string | null
+  representative?: string | null
+  // 事業概要（サイト解析）
+  description?: string
+  services?: string[]
+  // マーケティング実施状況
+  marketing: {
+    snsChannels: string[] // 検出したSNS（X/Facebook/Instagram/YouTube/LinkedIn/note 等）
+    hasContactForm: boolean // 問い合わせ/資料請求 導線
+    hasLeadMagnet: boolean // 資料DL・メルマガ等のリード獲得
+    martechTools: string[] // 検出したMA/解析ツール（GA/GTM/HubSpot/Marketo/Pardot 等）
+    runsAds: boolean // 広告タグの痕跡
+    summary: string // 実施状況の一言要約
+  }
+  // オウンドメディア・サイト規模
+  ownedMedia: {
+    hasOwnedMedia: boolean // ブログ/ニュース/コラム等の有無
+    mediaUrls: string[] // 見つけたメディア/ブログ/ニュースのURL
+    articleCountEstimate: number // 記事数の概算
+    latestArticleDate?: string | null // 最新記事の日付（YYYY-MM-DD）
+    updateFrequency: 'high' | 'medium' | 'low' | 'inactive' | 'unknown' // 更新頻度
+    frequencyNote: string // 更新頻度の根拠（一言）
+    siteScale: 'large' | 'medium' | 'small' | 'unknown' // サイト規模感
+  }
+  // 取得した生テキスト（分析用、保存はしない/短縮）
+  rawNotes?: string
+}
+
+// ---- 分析（現状分析・課題仮説・解決策） ----
+export interface Hypothesis {
+  issue: string // 課題仮説（はっきりめ）
+  basis: string // 根拠（調査事実にひもづける）
+  impact: string // 放置した場合の悪影響
+}
+export interface Solution {
+  title: string // 解決策のタイトル
+  detail: string // 内容（自社商材にひもづける）
+  expectedEffect: string // 期待効果
+}
+export interface CompanyAnalysis {
+  currentStateAssessment: string // 現状分析（はっきりめ・歯に衣着せない）
+  strengths: string[] // 相手企業の強み
+  weaknesses: string[] // 弱み・伸びしろ
+  hypotheses: Hypothesis[] // 課題仮説
+  solutions: Solution[] // 解決策（自社商材ベース）
+  talkingPoints: string[] // 商談で刺さる論点
+  firstMessage: string // 最初の一言（アイスブレイク〜本題への入り）
+}
