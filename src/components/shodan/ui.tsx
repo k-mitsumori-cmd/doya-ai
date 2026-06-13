@@ -72,6 +72,25 @@ export function BrandMark({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
   )
 }
 
+/** 画面共通ヘッダ（アイコン＋タイトル＋サブ。任意でドヤくん） */
+export function PageHeader({ icon, title, subtitle, mood }: { icon: string; title: string; subtitle?: string; mood?: Mood }) {
+  return (
+    <div className="flex items-center gap-3 mb-6">
+      {mood ? (
+        <DoyaKun mood={mood} size={52} float={false} />
+      ) : (
+        <span className="grid place-items-center w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white shadow-md shadow-purple-500/25">
+          <span className="material-symbols-outlined">{icon}</span>
+        </span>
+      )}
+      <div className="min-w-0">
+        <h1 className="text-2xl font-black text-slate-900">{title}</h1>
+        {subtitle && <p className="text-sm font-bold text-slate-400 mt-0.5">{subtitle}</p>}
+      </div>
+    </div>
+  )
+}
+
 /** サイトのスクリーンショット表示（og:image優先、無ければmShotsで生成。失敗時はグラデ+アイコン） */
 export function SiteShot({ url, ogImage, className = '', label }: { url: string; ogImage?: string | null; className?: string; label?: string }) {
   const [src, setSrc] = React.useState(

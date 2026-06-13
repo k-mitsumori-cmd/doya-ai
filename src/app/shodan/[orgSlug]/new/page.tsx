@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { shodanGet, shodanSend } from '@/lib/shodan/client'
-import { DoyaKun, SiteShot, sym } from '@/components/shodan/ui'
+import { DoyaKun, SiteShot, PageHeader, sym } from '@/components/shodan/ui'
 import type { CompanyResearch } from '@/lib/shodan/types'
 import toast from 'react-hot-toast'
 
@@ -71,8 +71,8 @@ export default function ShodanNewPage() {
       if (d.status === 'failed' || !d.research) throw new Error('調査に失敗しました')
       setResearch(d.research)
       setPhase('reveal')
-      // 調査結果を見せてから生成へ
-      await new Promise((r) => setTimeout(r, 2600))
+      // 調査結果を読めるよう少し見せてから生成へ
+      await new Promise((r) => setTimeout(r, 4200))
       // フェーズ2：提案資料の生成
       setPhase('generating')
       const g = await shodanSend<{ id: string; status: string }>(`/api/shodan/preparations/${d.id}/generate`, orgSlug, 'POST')
@@ -89,8 +89,7 @@ export default function ShodanNewPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-black text-slate-900">新規 商談準備</h1>
-      <p className="text-sm font-bold text-slate-400 mt-1 mb-6">商談先企業のURLを入れるだけ。調査→課題仮説→提案資料まで自動で作成します。</p>
+      <PageHeader icon="rocket_launch" mood="point" title="新規 商談準備" subtitle="商談先企業のURLを入れるだけ。調査→課題仮説→提案資料まで自動で作成します。" />
 
       <AnimatePresence mode="wait">
         {phase === 'input' && (

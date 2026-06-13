@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { shodanGet, shodanSend } from '@/lib/shodan/client'
-import { DoyaKun, sym, type Mood } from '@/components/shodan/ui'
+import { DoyaKun, PageHeader, sym, type Mood } from '@/components/shodan/ui'
 import toast from 'react-hot-toast'
 
 type Profile = {
@@ -109,8 +109,7 @@ export default function ShodanSettingsPage() {
 
   return (
     <div className="p-6 md:p-8 max-w-2xl mx-auto">
-      <h1 className="text-2xl font-black text-slate-900">自社情報</h1>
-      <p className="text-sm font-bold text-slate-400 mt-1 mb-5">ここに登録した情報をもとに、提案資料が「自社の商材・強み」に最適化されます。</p>
+      <PageHeader icon="business_center" title="自社情報" subtitle="ここに登録した情報をもとに、提案資料が「自社の商材・強み」に最適化されます。" />
 
       {/* 自動入力カード */}
       <div className="relative rounded-3xl bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white p-6 pr-28 shadow-lg shadow-purple-500/20 mb-5 overflow-hidden">
