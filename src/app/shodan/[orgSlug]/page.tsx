@@ -28,9 +28,9 @@ export default function ShodanListPage() {
   }
   useEffect(load, [orgSlug])
 
-  // 「調査中/作成中」がある間だけ自動更新（完了で停止）
+  // 調査中(processing)の案件がある間だけ自動更新（完了で停止。researchedは操作待ちの安定状態なので除外）
   useEffect(() => {
-    if (!items?.some((x) => x.status === 'processing' || x.status === 'researched')) return
+    if (!items?.some((x) => x.status === 'processing')) return
     const t = setInterval(() => {
       shodanGet<{ items: Item[] }>('/api/shodan/preparations', orgSlug).then((d) => setItems(d.items)).catch(() => {})
     }, 5000)
@@ -74,10 +74,33 @@ export default function ShodanListPage() {
       {items === null ? (
         <div className="py-20 text-center"><DoyaKun mood="thinking" size={72} /><p className="mt-2 text-slate-400 font-bold">読み込み中…</p></div>
       ) : items.length === 0 ? (
-        <div className="rounded-3xl border-2 border-dashed border-purple-200 bg-white py-14 text-center">
-          <div className="flex justify-center"><DoyaKun mood="hello" size={120} /></div>
-          <p className="font-black text-slate-800 mt-2">まだ商談準備がありません</p>
-          <p className="text-sm font-bold text-slate-400 mt-1 mb-5">商談先のURLを入れるだけで、リサーチ〜提案資料まで自動作成します。</p>
+        <div className="rounded-3xl border-2 border-dashed border-purple-200 bg-white py-12 px-6 text-center">
+          <div className="flex justify-center"><DoyaKun mood="hello" size={110} /></div>
+          <p className="font-black text-slate-800 mt-2 text-lg">ようこそ！3ステップで商談準備が完成します</p>
+          <p className="text-sm font-bold text-slate-400 mt-1 mb-6">むずかしい設定は不要。URLを入れるだけ。</p>
+          <div className="grid sm:grid-cols-3 gap-3 max-w-2xl mx-auto mb-7 text-left">
+            {[
+              { n: 1, icon: 'business_center', title: '自社情報を登録', desc: '自社URLからAIが自動入力。提案精度UP', href: `/shodan/${encodeURIComponent(orgSlug)}/settings` },
+              { n: 2, icon: 'language', title: '商談先のURLを入力', desc: 'AIが企業を深掘り調査', href: `/shodan/${encodeURIComponent(orgSlug)}/new` },
+              { n: 3, icon: 'slideshow', title: '提案資料・スライド完成', desc: 'そのまま商談で使える', href: null },
+            ].map((s) => {
+              const inner = (
+                <>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="grid place-items-center w-6 h-6 rounded-lg bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white text-xs font-black">{s.n}</span>
+                    <span className="material-symbols-outlined text-purple-500" style={{ fontSize: 20 }}>{s.icon}</span>
+                  </div>
+                  <div className="font-black text-slate-800 text-sm">{s.title}</div>
+                  <div className="text-xs font-bold text-slate-400 mt-0.5">{s.desc}</div>
+                </>
+              )
+              return s.href ? (
+                <Link key={s.n} href={s.href} className="rounded-2xl border border-purple-100 bg-purple-50/40 p-4 hover:border-purple-300 hover:shadow-md transition-all">{inner}</Link>
+              ) : (
+                <div key={s.n} className="rounded-2xl border border-slate-100 bg-slate-50 p-4">{inner}</div>
+              )
+            })}
+          </div>
           <Link href={`/shodan/${encodeURIComponent(orgSlug)}/new`}
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm shadow-lg shadow-purple-500/25 hover:-translate-y-0.5 transition-all">
             {sym('bolt')}最初の商談準備をつくる
