@@ -145,8 +145,13 @@ export async function safeFetchText(rawUrl: string, opts: SafeFetchOptions = {})
       if (!res.ok) { finish(null); return null }
       const ct = res.headers.get('content-type') || ''
       if (opts.accept === undefined && !ct.includes('html') && ct !== '') { finish(null); return null }
-      const text = await res.text() // close前に本文を読み切る
-      return finish(text)
+      try {
+        const text = await res.text() // close前に本文を読み切る
+        return finish(text)
+      } catch {
+        // 本文読み取り失敗時も dispatcher を確実にクローズ（Agentリーク/タイマー残り防止）
+        return finish(null)
+      }
     }
     return null // リダイレクト上限超過
   } catch {

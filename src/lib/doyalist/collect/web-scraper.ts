@@ -1,4 +1,4 @@
-import { assertUrlSafe } from '@/lib/net/safe-fetch'
+import { assertUrlSafe, htmlToText } from '@/lib/net/safe-fetch'
 
 interface ScrapedCompanyInfo {
   companyName?: string
@@ -48,7 +48,8 @@ export async function scrapeCompanyWebsite(url: string, prefetchedHtml?: string)
       html = await response.text()
     }
 
-    const text = extractTextFromHtml(html)
+    // 共有の htmlToText に一本化（AI処理用に先頭5000字へ制限）
+    const text = htmlToText(html).slice(0, 5000)
 
     // Use AI to extract structured data
     const extracted = await extractWithAI(text, url)
@@ -57,19 +58,6 @@ export async function scrapeCompanyWebsite(url: string, prefetchedHtml?: string)
     console.error(`Scrape error for ${url}:`, error)
     return null
   }
-}
-
-function extractTextFromHtml(html: string): string {
-  // Remove scripts, styles, and tags
-  let text = html
-    .replace(/<script[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?<\/style>/gi, '')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-
-  // Limit to first 5000 chars for AI processing
-  return text.slice(0, 5000)
 }
 
 async function extractWithAI(text: string, url: string): Promise<ScrapedCompanyInfo | null> {

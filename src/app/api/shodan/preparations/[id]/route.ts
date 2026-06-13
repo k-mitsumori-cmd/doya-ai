@@ -5,7 +5,7 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
-import { PREP_STALE_MS } from '@/lib/shodan/types'
+import { effectivePrepStatus } from '@/lib/shodan/types'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
 
@@ -21,8 +21,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   })
   if (!item) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
 
-  // Vercelタイムアウト等で 'processing' のまま放置された案件を救済（catchが走らず残るケース）
-  if (item.status === 'processing' && Date.now() - new Date(item.updatedAt).getTime() > PREP_STALE_MS) {
+  // Vercelタイムアウト等で 'processing' のまま放置された案件を救済（catchが走らず残るケース）。
+  // 判定は共有の effectivePrepStatus に一本化（list GET と同一ルール）。
+  if (item.status === 'processing' && effectivePrepStatus(item.status, item.updatedAt) === 'failed') {
     item = await prisma.shodanPreparation.update({
       where: { id: item.id },
       data: { status: 'failed', errorMessage: item.errorMessage || '生成がタイムアウトしました。再度お試しください。' },

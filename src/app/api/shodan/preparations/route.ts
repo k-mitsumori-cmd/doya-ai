@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
 import { researchCompany } from '@/lib/shodan/research'
 import { analyzeCompany, generateProposal, type OwnCompanyProfile } from '@/lib/shodan/ai'
-import { effectivePrepStatus } from '@/lib/shodan/types'
+import { effectivePrepStatus, PREP_STALE_MS } from '@/lib/shodan/types'
 
 // 統一プラン：有料判定
 function isPaidPlan(plan?: string | null): boolean {
@@ -56,10 +56,19 @@ export async function POST(req: NextRequest) {
   const user = await prisma.user.findUnique({ where: { id: ctx.userId }, select: { plan: true } })
   if (!isPaidPlan(user?.plan)) {
     const since = new Date(); since.setDate(1); since.setHours(0, 0, 0, 0)
-    // done（成功）と processing（実行中）を数える＝同時POSTでも作成直後から枠を占有し抜け道を塞ぐ。
-    // failed は除外（失敗は枠を消費しない）。古い stuck processing は GET 側で failed に正規化される。
+    // done（成功）＋ 実行中(processing で stale でないもの) を数える。
+    // - 同時POSTでも作成直後から枠を占有し抜け道を塞ぐ
+    // - failed は非消費／タイムアウトで詰まった stale processing も除外（GETされず放置されても無料枠を恒久消費しない）
+    const staleBefore = new Date(Date.now() - PREP_STALE_MS)
     const usedThisMonth = await prisma.shodanPreparation.count({
-      where: { organizationId: ctx.organizationId, status: { in: ['done', 'processing'] }, createdAt: { gte: since } },
+      where: {
+        organizationId: ctx.organizationId,
+        createdAt: { gte: since },
+        OR: [
+          { status: 'done' },
+          { status: 'processing', updatedAt: { gte: staleBefore } },
+        ],
+      },
     })
     if (usedThisMonth >= FREE_MONTHLY_LIMIT) {
       return NextResponse.json(

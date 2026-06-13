@@ -103,17 +103,22 @@ function findMediaUrls(links: { href: string; text: string }[], baseUrl: string)
 function extractDates(html: string): string[] {
   // 単一パスで「年(月)(日)」を抽出。日があればYMD、無ければその月の1日扱い。
   // 1正規表現で1出現＝1件なので、同一日付の二重カウントは起きない。
-  // 重複（出現回数）は保持する（1日複数投稿の頻度を正しく数えるため）。未来日は除外。
+  // 重複（出現回数）は保持する（1日複数投稿の頻度を正しく数えるため）。
+  // - 前後を数字境界で区切り、電話番号/連番(例 03-2024-1234)を日付と誤検出しない
+  // - 実在しない暦日(例 2024-02-31)は除外
+  // - 未来日は記事更新の指標にしない
   const dates: string[] = []
-  const re = /(20\d{2})\s*[.\-/年]\s*(\d{1,2})\s*(?:[.\-/月]\s*(\d{1,2})\s*日?)?/g
+  const re = /(?<!\d)(20\d{2})[.\-/年](\d{1,2})(?:[.\-/月](\d{1,2})日?)?(?!\d)/g
   const todayTs = Date.now() + 86400000 // 当日のタイムゾーン差を許容する余白
   let m: RegExpExecArray | null
   while ((m = re.exec(html))) {
     const y = Number(m[1]); const mo = Number(m[2] || '1'); const d = Number(m[3] || '1')
-    if (y < 2005 || y > 2100 || mo < 1 || mo > 12 || d < 1 || d > 31) continue
+    if (y < 2005 || y > 2100 || mo < 1 || mo > 12 || d < 1) continue
+    const daysInMonth = new Date(Date.UTC(y, mo, 0)).getUTCDate() // 当月の末日
+    if (d > daysInMonth) continue // 実在しない日付を除外
     const iso = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`
     const ts = new Date(iso + 'T00:00:00Z').getTime()
-    if (!Number.isFinite(ts) || ts > todayTs) continue // 未来日は記事更新の指標にしない
+    if (!Number.isFinite(ts) || ts > todayTs) continue
     dates.push(iso)
   }
   return dates
@@ -199,7 +204,7 @@ export async function researchCompany(targetUrl: string): Promise<CompanyResearc
   // 取得済みHTMLを渡して二重取得を回避（会社名/事業内容/従業員数記載 等を抽出）
   // メディア解析は並行で実行
   const [basic, mediaInfo] = await Promise.all([
-    scrapeCompanyWebsite(targetUrl, homepage != null ? homepage : undefined).catch(() => null),
+    scrapeCompanyWebsite(targetUrl, homepage || undefined).catch(() => null),
     analyzeOwnedMedia(findMediaUrls(links, targetUrl), targetUrl),
   ])
 
