@@ -51,21 +51,25 @@ export default function ShodanResultPage() {
   const [notFound, setNotFound] = useState(false)
   const [retrying, setRetrying] = useState(false)
 
-  // 生成中なら数秒ごとにポーリングして done/failed になったら止める
+  // 調査中(processing)の間だけポーリングし、done/failed/researched になったら停止。
+  // stopped フラグで「初回fetchがinterval設定前に完了する競合」でも確実に止める（無限ポーリング防止）。
   useEffect(() => {
-    let timer: ReturnType<typeof setInterval> | null = null
     let alive = true
+    let stopped = false
     const fetchOnce = () =>
       shodanGet<{ item: Prep }>(`/api/shodan/preparations/${id}`, orgSlug)
         .then((d) => {
           if (!alive) return
           setPrep(d.item)
-          if (d.item.status !== 'processing' && timer) { clearInterval(timer); timer = null }
+          if (d.item.status !== 'processing') stopped = true
         })
         .catch(() => { if (alive) setNotFound(true) })
     fetchOnce()
-    timer = setInterval(fetchOnce, 5000)
-    return () => { alive = false; if (timer) clearInterval(timer) }
+    const timer = setInterval(() => {
+      if (stopped || !alive) { clearInterval(timer); return }
+      fetchOnce()
+    }, 5000)
+    return () => { alive = false; clearInterval(timer) }
   }, [orgSlug, id])
 
   const retry = async () => {
