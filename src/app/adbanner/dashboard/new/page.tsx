@@ -25,6 +25,24 @@ export default function AdBannerNewPage() {
   const [variants, setVariants] = useState(4)
   const [analyzing, setAnalyzing] = useState(false)
   const [running, setRunning] = useState(false)
+  const [logoPath, setLogoPath] = useState<string | null>(null)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [logoPos, setLogoPos] = useState<'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'>('bottom-right')
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+
+  const onLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingLogo(true)
+    try {
+      const fd = new FormData(); fd.append('file', file)
+      const r = await fetch('/api/adbanner/logo', { method: 'POST', body: fd })
+      const d = await r.json()
+      if (!d.success) throw new Error(d.error || 'アップロード失敗')
+      setLogoPath(d.data.path); setLogoUrl(d.data.url)
+      toast.success('ロゴをアップロードしました')
+    } catch (err: any) { toast.error(err.message) } finally { setUploadingLogo(false) }
+  }
 
   const analyze = async () => {
     if (!sourceUrl.trim()) { toast.error('URLを入力してください'); return }
@@ -51,7 +69,7 @@ export default function AdBannerNewPage() {
     try {
       const cr = await fetch('/api/adbanner/campaigns', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: serviceName || sourceUrl, serviceName, sourceUrl, appeal, brandColors: [color1, color2], media }),
+        body: JSON.stringify({ name: serviceName || sourceUrl, serviceName, sourceUrl, appeal, brandColors: [color1, color2], media, logoPath }),
       })
       const cd = await cr.json()
       if (!cd.success) throw new Error(cd.error || '作成に失敗しました')
@@ -59,7 +77,7 @@ export default function AdBannerNewPage() {
 
       const gr = await fetch('/api/adbanner/generate', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ campaignId, sizes: isPro ? sizes : ['1080x1080'], variants }),
+        body: JSON.stringify({ campaignId, sizes: isPro ? sizes : ['1080x1080'], variants, logoCfg: logoPath ? { pos: logoPos } : undefined }),
       })
       const gd = await gr.json()
       if (!gd.success) {
@@ -110,6 +128,28 @@ export default function AdBannerNewPage() {
                 <select value={media} onChange={(e) => setMedia(e.target.value as AdMedia)} className="w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 font-bold text-sm">
                   {MEDIAS.map((m) => <option key={m} value={m}>{MEDIA_LABEL[m]}</option>)}
                 </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-black text-slate-700 mb-1">ロゴ（任意・原寸で正確に合成）</label>
+              <div className="flex items-center gap-3 flex-wrap">
+                <label className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-600 font-black text-sm cursor-pointer hover:border-purple-400 transition-colors">
+                  {sym(uploadingLogo ? 'progress_activity' : 'upload', 18)}{uploadingLogo ? 'アップロード中…' : logoUrl ? 'ロゴを変更' : 'ロゴをアップロード'}
+                  <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onLogo} disabled={uploadingLogo} />
+                </label>
+                {logoUrl && (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={logoUrl} alt="logo" className="h-10 w-auto max-w-[120px] object-contain rounded border border-slate-200 bg-white p-1" />
+                    <select value={logoPos} onChange={(e) => setLogoPos(e.target.value as any)} className="rounded-xl border-2 border-slate-200 px-3 py-2 font-bold text-sm">
+                      <option value="bottom-right">右下</option>
+                      <option value="bottom-left">左下</option>
+                      <option value="top-right">右上</option>
+                      <option value="top-left">左上</option>
+                    </select>
+                    <button type="button" onClick={() => { setLogoPath(null); setLogoUrl(null) }} className="text-slate-400 hover:text-rose-500" title="ロゴを外す">{sym('close', 18)}</button>
+                  </>
+                )}
               </div>
             </div>
             <div>
