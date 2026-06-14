@@ -1,14 +1,25 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { DoyaKun, sym, PageHeader } from '@/components/shodan/ui'
+import { DoyaKun, sym, PageHeader, type Mood } from '@/components/shodan/ui'
 import { BANNER_SIZES, MEDIA_LABEL, type AdMedia } from '@/lib/adbanner/types'
 import toast from 'react-hot-toast'
 
 const MEDIAS: AdMedia[] = ['meta', 'google', 'line', 'x', 'yda']
+
+// 量産中を飽きさせない応援メッセージ＆ドヤくんの表情
+const AD_RUN_MSGS: { text: string; mood: Mood }[] = [
+  { text: '訴求の切り口を考えています…🤔', mood: 'thinking' },
+  { text: 'ブランドカラーで配色中…🎨', mood: 'focus' },
+  { text: 'キャッチコピーをドヤっと…💪', mood: 'point' },
+  { text: '媒体に最適なレイアウトに調整中…📐', mood: 'working' },
+  { text: 'CTAをくっきり目立たせ中…🔥', mood: 'jump' },
+  { text: 'ロゴを原寸できれいに合成…✨', mood: 'love' },
+  { text: 'もうすぐ完成！仕上げ中…🎁', mood: 'present' },
+]
 
 export default function AdBannerNewPage() {
   const router = useRouter()
@@ -25,6 +36,12 @@ export default function AdBannerNewPage() {
   const [variants, setVariants] = useState(4)
   const [analyzing, setAnalyzing] = useState(false)
   const [running, setRunning] = useState(false)
+  const [runMsg, setRunMsg] = useState(0)
+  useEffect(() => {
+    if (!running) return
+    const t = setInterval(() => setRunMsg((m) => (m + 1) % AD_RUN_MSGS.length), 2500)
+    return () => clearInterval(t)
+  }, [running])
   const [logoPath, setLogoPath] = useState<string | null>(null)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [logoPos, setLogoPos] = useState<'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'>('bottom-right')
@@ -175,9 +192,9 @@ export default function AdBannerNewPage() {
           </motion.div>
         ) : (
           <motion.div key="run" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-3xl bg-white border border-purple-100 p-8 shadow-sm text-center">
-            <div className="flex justify-center"><DoyaKun mood="working" size={120} /></div>
-            <p className="font-black text-purple-700 text-lg mt-3 flex items-center justify-center gap-2"><span className="material-symbols-outlined animate-spin">progress_activity</span>広告バナーを量産中…</p>
-            <p className="text-sm font-bold text-slate-400 mt-1">ドヤくんがデザインしています。タブを閉じずにお待ちください。</p>
+            <div className="flex justify-center"><DoyaKun mood={AD_RUN_MSGS[runMsg].mood} size={120} /></div>
+            <p className="font-black text-purple-700 text-lg mt-3 flex items-center justify-center gap-2 transition-all"><span className="material-symbols-outlined animate-spin">progress_activity</span>{AD_RUN_MSGS[runMsg].text}</p>
+            <p className="text-sm font-bold text-slate-400 mt-1">広告バナーを量産しています。タブを閉じずにお待ちください。</p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 max-w-md mx-auto">
               {Array.from({ length: 4 }).map((_, i) => (
                 <motion.div key={i} initial={{ opacity: 0.3 }} animate={{ opacity: [0.3, 1, 0.3] }} transition={{ delay: i * 0.25, duration: 1.4, repeat: Infinity }} className="aspect-square rounded-xl bg-gradient-to-br from-purple-100 to-orange-100 border border-purple-200 grid place-items-center">
