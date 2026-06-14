@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { DoyaKun, sym } from '@/components/shodan/ui'
@@ -21,6 +21,17 @@ export default function AdBannerCampaignPage() {
   const load = () => fetch(`/api/adbanner/campaigns/${id}`, { cache: 'no-store' }).then((r) => r.json())
     .then((d) => { if (d.success) setData(d.data); else setNotFound(true) }).catch(() => setNotFound(true))
   useEffect(() => { load() }, [id])
+
+  // 仕様: 生成された各バナーをAIが自動採点。未採点のものを順次自動フィードバック（1回だけ・最大8件）。
+  const autoRan = useRef(false)
+  useEffect(() => {
+    if (!data || autoRan.current) return
+    const pending = data.banners.filter((b) => !b.feedback).slice(0, 8)
+    if (!pending.length) return
+    autoRan.current = true
+    ;(async () => { for (const b of pending) await runFeedback(b.id) })()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
 
   const runFeedback = async (bid: string) => {
     setBusy((b) => ({ ...b, [bid]: 'fb' }))
