@@ -55,6 +55,7 @@
 | ドヤカンニング | `/cunning` | active | ✅ | ✅ 7頁 | ✅ 11件 | ✅ 7モデル | ✅ 統一プラン | ✅ |
 | ドヤ営業管理 | `/sfa` | active | ✅ | ✅ 6頁 | ✅ 9件 | ✅ 11モデル | ✅ 統一プラン | ✅ |
 | ドヤ商談準備 | `/shodan` | active | ✅ | ✅ 9頁 | ✅ 9件 | ✅ 4モデル | ✅ 統一プラン | ✅ |
+| ドヤ広告バナーAI | `/adbanner` | active | ✅ | ✅ 5頁 | ✅ 7件 | ✅ 2モデル | ✅ 統一プラン | ✅ |
 | 旧スライド | `/slide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
 | 旧SlashSlide | `/slashslide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
 | ドヤHR | `/hr` | active | ✅ | ✅ 14頁 | ✅ 30件 | ✅ 10モデル | ✅ 統一プラン | ❌ |

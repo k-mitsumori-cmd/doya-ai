@@ -25,6 +25,15 @@ export const SERVICE_SEO = {
     ogImage: '/og/portal.png',
   },
   
+  // ドヤ広告バナーAI（広告バナーを量産して改善）
+  adbanner: {
+    title: 'ドヤ広告バナーAI | 広告バナーを量産して改善',
+    description:
+      'サービスURLやブランドカラー・ロゴから、媒体別の広告バナーを一括量産。AIが視認性・訴求・CTA・媒体適合・ブランド整合を自動採点し、改善提案を反映してワンクリック再生成できます。',
+    keywords: ['広告バナー', 'バナー作成', '広告クリエイティブ', 'Meta広告', 'Google広告', 'LINE広告', 'AI バナー', '量産'],
+    ogImage: '/og/portal.png',
+  },
+
   // ドヤ商談準備（商談先URLだけで提案準備を一括生成）
   shodan: {
     title: 'ドヤ商談準備 | 商談先のURLだけで提案準備を一括生成',
