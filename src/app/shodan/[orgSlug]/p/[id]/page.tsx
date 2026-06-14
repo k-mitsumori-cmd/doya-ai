@@ -79,13 +79,22 @@ export default function ShodanResultPage() {
 
   // 提案の表示切替（スライド / 文書）
   const [view, setView] = useState<'slides' | 'doc'>('slides')
-  // 画像スライド生成（ドヤスライド方式）
+  // 画像スライド生成（ドヤスライド方式・バッチ生成を完了まで繰り返す）
   const [slidesBusy, setSlidesBusy] = useState(false)
+  const [slidesProgress, setSlidesProgress] = useState<{ done: number; total: number } | null>(null)
   const genSlideImages = async () => {
     setSlidesBusy(true)
+    setSlidesProgress(null)
     try {
-      const d = await shodanSend<{ success: boolean; count: number }>(`/api/shodan/preparations/${id}/slides/generate`, orgSlug, 'POST')
-      if (!(d as any).success) throw new Error('生成に失敗しました')
+      let prevDone = -1
+      for (let guard = 0; guard < 12; guard++) {
+        const d = await shodanSend<{ success: boolean; count: number; total: number; remaining: number }>(`/api/shodan/preparations/${id}/slides/generate`, orgSlug, 'POST')
+        if (!d.success) throw new Error('生成に失敗しました')
+        setSlidesProgress({ done: d.count, total: d.total })
+        if (d.remaining <= 0) break
+        if (d.count <= prevDone) break // 進捗なし（失敗枠が残存）→ 編集画面で個別に再生成
+        prevDone = d.count
+      }
       router.push(`/shodan/${encodeURIComponent(orgSlug)}/p/${id}/slides`)
     } catch (e: any) { toast.error(e.message || 'スライド生成に失敗しました'); setSlidesBusy(false) }
   }
@@ -305,7 +314,7 @@ export default function ShodanResultPage() {
             <div className="flex items-center gap-4 flex-wrap">
               <DoyaKun mood={slidesBusy ? 'working' : 'present'} size={56} float={slidesBusy} />
               <div className="flex-1 min-w-[180px]">
-                <p className="font-bold text-slate-700 text-sm">{slidesBusy ? 'スライドを画像として作成中です…（数分かかります）' : '構成をもとに、提案資料をスライド画像として作成します。'}</p>
+                <p className="font-bold text-slate-700 text-sm">{slidesBusy ? `スライドを画像として作成中です…${slidesProgress ? `（${slidesProgress.done}/${slidesProgress.total}枚）` : '（数分かかります）'}` : '構成をもとに、提案資料をスライド画像として作成します。'}</p>
                 <p className="text-xs font-bold text-slate-400 mt-0.5">作成後、各スライドを修正できる編集画面に移動します。</p>
               </div>
               <button onClick={genSlideImages} disabled={slidesBusy}

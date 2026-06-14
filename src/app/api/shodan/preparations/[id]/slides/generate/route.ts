@@ -22,22 +22,30 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   if (!slides.length) return NextResponse.json({ error: '先に提案資料の構成を生成してください' }, { status: 400 })
 
   const list = slides.slice(0, 8)
-  // slidesJson と同じ索引・同じ長さで保持（失敗枠は imageUrl:null のプレースホルダ）。詰めない＝再生成の索引ズレ防止。
-  const images: SlideImage[] = list.map((s) => ({ title: s.title, imageUrl: null }))
-  let next = 0
-  const concurrency = 2
-  async function worker() {
-    while (next < list.length) {
-      const i = next++
-      try { images[i] = await generateSlideImage(sctx!.userId, prep!.id, list[i], i) }
-      catch (e) { console.error('[shodan/slides] slide failed', (e as any)?.message) }
+  // 既存(整列)を引き継ぎ、slidesJson と同じ索引・同じ長さに正規化（未生成は imageUrl:null）
+  const existing = (prep.slideImages as unknown as SlideImage[] | null) || []
+  const images: SlideImage[] = list.map((s, i) => (existing[i]?.imageUrl ? existing[i] : { title: s.title, imageUrl: existing[i]?.imageUrl ?? null }))
+
+  // 未生成の枠だけをこのリクエストで処理（1回あたり最大BATCH枚）＝300sタイムアウト内に収め、各バッチで保存して作業を失わない
+  const todo = images.map((im, i) => (im.imageUrl ? -1 : i)).filter((i) => i >= 0)
+  const BATCH = 3
+  const batch = todo.slice(0, BATCH)
+
+  if (batch.length > 0) {
+    let next = 0
+    const concurrency = 2
+    async function worker() {
+      while (next < batch.length) {
+        const i = batch[next++]
+        try { images[i] = await generateSlideImage(sctx!.userId, prep!.id, list[i], i) }
+        catch (e) { console.error('[shodan/slides] slide failed', (e as any)?.message) }
+      }
     }
+    await Promise.all(Array.from({ length: Math.min(concurrency, batch.length) }, worker))
+    await prisma.shodanPreparation.update({ where: { id: prep.id }, data: { slideImages: images as any } })
   }
-  await Promise.all(Array.from({ length: Math.min(concurrency, list.length) }, worker))
 
   const successCount = images.filter((x) => x.imageUrl).length
   if (!successCount) return NextResponse.json({ error: 'スライド画像の生成に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })
-
-  await prisma.shodanPreparation.update({ where: { id: prep.id }, data: { slideImages: images as any } })
-  return NextResponse.json({ success: true, count: successCount, total: list.length })
+  return NextResponse.json({ success: true, count: successCount, total: list.length, remaining: list.length - successCount })
 }
