@@ -4,6 +4,7 @@
 // ============================================
 import sharp from 'sharp'
 import { generateImageWithFallback } from '@/lib/image-generator'
+import { raceTimeout } from '@/lib/fetch-timeout'
 import { uploadPng } from './storage'
 import { overlayLogo } from './logo-overlay'
 import { buildBannerPrompt } from './prompts'
@@ -82,13 +83,13 @@ async function genOne(input: GenerateInput, idx: number): Promise<GeneratedCreat
 export async function generateBanners(input: GenerateInput): Promise<GeneratedCreative[]> {
   const total = Math.max(1, Math.min(input.variants, 8))
   const out: GeneratedCreative[] = []
-  const concurrency = 2
+  const concurrency = 3 // 8枚でも300s内に収まるよう並行度を上げる（各枚はraceTimeoutで保護）
   let next = 0
   async function worker() {
     while (next < total) {
       const i = next++
       try {
-        const c = await genOne(input, i)
+        const c = await raceTimeout('adbannerGen', 150000, genOne(input, i)) // 1枚あたりハードタイムアウト＝ハング防止
         if (c) out.push(c)
       } catch (e) {
         console.error('[adbanner] genOne failed', (e as any)?.message)
