@@ -14,14 +14,9 @@ const sym = (name: string, size = 18) => <span className="material-symbols-outli
 
 type Prep = {
   id: string; targetUrl: string; targetName: string | null; status: string; errorMessage: string | null
-  research: CompanyResearch | null; analysis: CompanyAnalysis | null; proposalMarkdown: string | null; slidesJson: ProposalSlide[] | null; createdAt: string
+  research: CompanyResearch | null; analysis: CompanyAnalysis | null; proposalMarkdown: string | null; slidesJson: ProposalSlide[] | null; slideImages: { title: string; imageUrl: string; role?: string }[] | null; createdAt: string
 }
 
-const FREQ: Record<string, { label: string; cls: string }> = {
-  high: { label: '高頻度', cls: 'text-emerald-600' }, medium: { label: '中頻度', cls: 'text-sky-600' },
-  low: { label: '低頻度', cls: 'text-amber-600' }, inactive: { label: 'ほぼ停止', cls: 'text-rose-600' }, unknown: { label: '不明', cls: 'text-slate-400' },
-}
-const SCALE: Record<string, string> = { large: '大規模', medium: '中規模', small: '小規模', unknown: '不明' }
 
 function Stat({ icon, label, value, sub }: { icon: string; label: string; value: React.ReactNode; sub?: string }) {
   return (
@@ -84,6 +79,16 @@ export default function ShodanResultPage() {
 
   // 提案の表示切替（スライド / 文書）
   const [view, setView] = useState<'slides' | 'doc'>('slides')
+  // 画像スライド生成（ドヤスライド方式）
+  const [slidesBusy, setSlidesBusy] = useState(false)
+  const genSlideImages = async () => {
+    setSlidesBusy(true)
+    try {
+      const d = await shodanSend<{ success: boolean; count: number }>(`/api/shodan/preparations/${id}/slides/generate`, orgSlug, 'POST')
+      if (!(d as any).success) throw new Error('生成に失敗しました')
+      router.push(`/shodan/${encodeURIComponent(orgSlug)}/p/${id}/slides`)
+    } catch (e: any) { toast.error(e.message || 'スライド生成に失敗しました'); setSlidesBusy(false) }
+  }
   // 調査済み（提案未生成）案件から提案資料を作成
   const [generating, setGenerating] = useState(false)
   const generate = async () => {
@@ -152,7 +157,7 @@ export default function ShodanResultPage() {
       {prep.status === 'done' && r && (
         <div className="flex items-center gap-2 flex-wrap rounded-2xl bg-white border border-slate-200 px-4 py-3 shodan-no-print">
           {r.employeeCount != null && <span className="text-xs font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">👥 約{r.employeeCount}名</span>}
-          <span className="text-xs font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">📝 更新{({ high: '活発', medium: '中', low: '低', inactive: '停止', unknown: '不明' } as Record<string, string>)[r.ownedMedia.updateFrequency]}</span>
+          {r.marketing.snsChannels.length > 0 && <span className="text-xs font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">🔗 SNS {r.marketing.snsChannels.length}媒体</span>}
           {r.pressReleases && r.pressReleases.length > 0 && <span className="text-xs font-black px-2.5 py-1 rounded-full bg-slate-100 text-slate-600">📣 PR {r.pressReleases.length}件</span>}
           <div className="flex-1" />
           {(prep.proposalMarkdown || (prep.slidesJson && prep.slidesJson.length > 0)) && (
@@ -233,8 +238,8 @@ export default function ShodanResultPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             <Stat icon="groups" label="実従業員数" value={r.employeeCount != null ? `約${r.employeeCount}名` : '不明'} sub={r.employeeCount != null ? (r.employeeCountSource === 'gbizinfo' ? 'gBizINFO 公的データ' : r.employeeCountSource === 'website' ? 'サイト記載' : '') : '公的データ・サイトに記載なし'} />
             <Stat icon="campaign" label="マーケ実施" value={r.marketing.snsChannels.length || r.marketing.martechTools.length ? '実施あり' : '痕跡少'} sub={r.marketing.summary} />
-            <Stat icon="article" label="オウンドメディア" value={r.ownedMedia.hasOwnedMedia ? `${SCALE[r.ownedMedia.siteScale]}（約${r.ownedMedia.articleCountEstimate}記事）` : 'なし'} sub={r.ownedMedia.mediaUrls[0] || ''} />
-            <Stat icon="update" label="記事更新頻度" value={<span className={FREQ[r.ownedMedia.updateFrequency]?.cls}>{FREQ[r.ownedMedia.updateFrequency]?.label}</span>} sub={r.ownedMedia.latestArticleDate ? `最新: ${r.ownedMedia.latestArticleDate}` : r.ownedMedia.frequencyNote} />
+            <Stat icon="public" label="保有サイト/メディア" value={r.ownedMedia.hasOwnedMedia ? `${r.ownedMedia.mediaUrls.length}件` : '確認できず'} sub={r.ownedMedia.mediaUrls[0] ? (() => { try { return new URL(r.ownedMedia.mediaUrls[0]).hostname } catch { return '関連ページあり' } })() : '公式サイトのみ'} />
+            <Stat icon="share" label="SNS/チャネル" value={r.marketing.snsChannels.length ? `${r.marketing.snsChannels.length}媒体` : '確認できず'} sub={r.marketing.snsChannels.join('、') || r.marketing.martechTools.join('、') || '—'} />
           </div>
           <div className="grid md:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
             {r.industry && <div><span className="font-black text-slate-400">業種：</span><span className="font-bold text-slate-700">{r.industry}</span></div>}
@@ -276,6 +281,39 @@ export default function ShodanResultPage() {
               </a>
             ))}
           </div>
+        </Card>
+      )}
+
+      {/* 提案資料（画像スライド）の作成 — プレスリリースの直下 */}
+      {prep.status === 'done' && prep.slidesJson && prep.slidesJson.length > 0 && (
+        <Card title="提案資料（スライド）" icon="slideshow" accent="text-purple-700">
+          {prep.slideImages && prep.slideImages.length > 0 ? (
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <DoyaKun mood="success" size={48} float={false} />
+                <p className="font-bold text-slate-700 text-sm">スライド画像が{prep.slideImages.length}枚あります。編集画面で修正できます。</p>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                {prep.slideImages.slice(0, 4).map((s, i) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img key={i} src={s.imageUrl} alt={s.title} className="w-full aspect-video object-cover rounded-lg border border-slate-200" loading="lazy" />
+                ))}
+              </div>
+              <Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${id}/slides`} className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm hover:-translate-y-0.5 transition-all">{sym('edit', 16)}提案スライドを編集</Link>
+            </div>
+          ) : (
+            <div className="flex items-center gap-4 flex-wrap">
+              <DoyaKun mood={slidesBusy ? 'working' : 'present'} size={56} float={slidesBusy} />
+              <div className="flex-1 min-w-[180px]">
+                <p className="font-bold text-slate-700 text-sm">{slidesBusy ? 'スライドを画像として作成中です…（数分かかります）' : '構成をもとに、提案資料をスライド画像として作成します。'}</p>
+                <p className="text-xs font-bold text-slate-400 mt-0.5">作成後、各スライドを修正できる編集画面に移動します。</p>
+              </div>
+              <button onClick={genSlideImages} disabled={slidesBusy}
+                className="inline-flex items-center gap-1.5 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm shadow-lg shadow-purple-500/25 hover:-translate-y-0.5 transition-all disabled:opacity-60">
+                {sym(slidesBusy ? 'progress_activity' : 'auto_awesome', 18)}{slidesBusy ? '作成中…' : '提案資料を作成する'}
+              </button>
+            </div>
+          )}
         </Card>
       )}
 

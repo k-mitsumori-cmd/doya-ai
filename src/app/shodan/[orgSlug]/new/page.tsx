@@ -18,13 +18,10 @@ const RESEARCH_TICKER = [
   '従業員数を公的データ(gBizINFO)と照合しています…',
   'SNS・広告・計測ツールの利用状況を調べています…',
   'オウンドメディア（ブログ/ニュース）を探しています…',
-  '記事の更新頻度を分析しています…',
+  '実施中のマーケ・保有サイトを洗い出しています…',
   'PR TIMESでプレスリリース・最新動向を収集しています…',
   '調査結果をまとめています…',
 ]
-
-const FREQ: Record<string, string> = { high: '高頻度', medium: '中頻度', low: '低頻度', inactive: 'ほぼ停止', unknown: '不明' }
-const SCALE: Record<string, string> = { large: '大規模', medium: '中規模', small: '小規模', unknown: '不明' }
 
 function findingsFrom(r: CompanyResearch) {
   return [
@@ -32,8 +29,8 @@ function findingsFrom(r: CompanyResearch) {
     { icon: 'groups', label: '実従業員数', value: r.employeeCount != null ? `約${r.employeeCount}名（${r.employeeCountSource === 'gbizinfo' ? '公的データ' : r.employeeCountSource === 'website' ? 'サイト記載' : '推定'}）` : '記載なし' },
     { icon: 'category', label: '業種', value: r.industry || '—' },
     { icon: 'campaign', label: 'マーケ施策', value: r.marketing.summary },
-    { icon: 'article', label: 'オウンドメディア', value: r.ownedMedia.hasOwnedMedia ? `${SCALE[r.ownedMedia.siteScale]}（約${r.ownedMedia.articleCountEstimate}記事）` : '見当たらない' },
-    { icon: 'update', label: '記事更新頻度', value: `${FREQ[r.ownedMedia.updateFrequency]}（${r.ownedMedia.latestArticleDate || '最新日不明'}）` },
+    { icon: 'public', label: '保有サイト/メディア', value: r.ownedMedia.hasOwnedMedia ? `${r.ownedMedia.mediaUrls.length}件の関連ページ` : '公式サイトのみ確認' },
+    { icon: 'share', label: 'SNS/チャネル', value: r.marketing.snsChannels.length ? r.marketing.snsChannels.join('、') : '確認できず' },
     { icon: 'campaign', label: 'プレスリリース', value: r.pressReleases?.length ? `直近${r.pressReleases.length}件を確認（PR TIMES）` : 'PR TIMESでヒットなし' },
   ]
 }

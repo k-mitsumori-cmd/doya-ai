@@ -3244,7 +3244,8 @@ model ShodanPreparation {
   research        Json?              // 深掘り調査（従業員数/マーケ実施状況/オウンドメディア規模/記事更新頻度 等）
   analysis        Json?              // 現状分析・課題仮説・解決策
   proposalMarkdown String?           @db.Text // 提案資料（Markdown）
-  slidesJson      Json?              // 提案スライド（ProposalSlide[]）
+  slidesJson      Json?              // 提案スライド構成（ProposalSlide[]）
+  slideImages     Json?              // 画像スライド（[{ title, imageUrl, role }]・ドヤスライド方式でgpt-image-2生成）
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 

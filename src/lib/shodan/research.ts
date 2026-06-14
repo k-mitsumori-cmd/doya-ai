@@ -106,81 +106,18 @@ function findMediaUrls(links: { href: string; text: string }[], baseUrl: string)
   }
   return Array.from(out).slice(0, 4)
 }
-function extractDates(html: string): string[] {
-  // 単一パスで「年(月)(日)」を抽出。日があればYMD、無ければその月の1日扱い。
-  // 1正規表現で1出現＝1件なので、同一日付の二重カウントは起きない。
-  // 重複（出現回数）は保持する（1日複数投稿の頻度を正しく数えるため）。
-  // - 前後を数字境界で区切り、電話番号/連番(例 03-2024-1234)を日付と誤検出しない
-  // - 実在しない暦日(例 2024-02-31)は除外
-  // - 未来日は記事更新の指標にしない
-  const dates: string[] = []
-  const re = /(?<!\d)(20\d{2})[.\-/年](\d{1,2})(?:[.\-/月](\d{1,2})日?)?(?!\d)/g
-  const todayTs = Date.now() + 86400000 // 当日のタイムゾーン差を許容する余白
-  let m: RegExpExecArray | null
-  while ((m = re.exec(html))) {
-    const y = Number(m[1]); const mo = Number(m[2] || '1'); const d = Number(m[3] || '1')
-    if (y < 2005 || y > 2100 || mo < 1 || mo > 12 || d < 1) continue
-    const daysInMonth = new Date(Date.UTC(y, mo, 0)).getUTCDate() // 当月の末日
-    if (d > daysInMonth) continue // 実在しない日付を除外
-    const iso = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-    const ts = new Date(iso + 'T00:00:00Z').getTime()
-    if (!Number.isFinite(ts) || ts > todayTs) continue
-    dates.push(iso)
-  }
-  return dates
-}
-// 記事リンク判定：日付/記事系パス、または連番ID。ナビ/フッターの汎用リンクを除外。
-function looksLikeArticleLink(href: string, baseUrl: string): boolean {
-  if (!sameHost(href, baseUrl)) return false
-  let p = ''
-  try { p = new URL(href).pathname } catch { return false }
-  return /\/\d{4}\/\d{1,2}\//.test(p) || /\/\d{4,}(?:[/.\-]|$)/.test(p) || /\/(post|posts|entry|entries|article|articles|news|blog|column|columns|story|stories)\/[^/]+/i.test(p)
-}
-async function analyzeOwnedMedia(mediaUrls: string[], baseUrl: string) {
-  let articleCountEstimate = 0
-  const allDates: string[] = []
-  for (const url of mediaUrls.slice(0, 3)) {
-    const html = await safeFetchText(url, { timeoutMs: 8000 })
-    if (!html) continue
-    const links = extractLinks(html, url)
-    // 記事っぽいリンク（日付/記事系パス・連番ID）の数で記事量を概算（重複URLは除外）
-    const articleLinks = Array.from(new Set(links.filter((l) => looksLikeArticleLink(l.href, baseUrl)).map((l) => l.href.split('#')[0].split('?')[0])))
-    articleCountEstimate += articleLinks.length
-    allDates.push(...extractDates(html))
-  }
-  const uniqueSorted = Array.from(new Set(allDates)).sort().reverse()
-  const latestArticleDate = uniqueSorted[0] || null
+// オウンドメディア/関連サイトの「有無と所在」だけを収集する。
+// ※記事数・更新頻度は信頼できる取得が難しいため計測しない（仕様変更）。
+function summarizeOwnedMedia(mediaUrls: string[]) {
   const hasOwnedMedia = mediaUrls.length > 0
-
-  // 規模は「実際に見つかった記事リンク数」を主指標にする
-  let siteScale: CompanyResearch['ownedMedia']['siteScale'] = 'unknown'
-  if (articleCountEstimate >= 40) siteScale = 'large'
-  else if (articleCountEstimate >= 12) siteScale = 'medium'
-  else if (articleCountEstimate > 0) siteScale = 'small'
-  else siteScale = hasOwnedMedia ? 'small' : 'unknown'
-
-  // 更新頻度は記事の“実数”と整合させる（日付だけで頻度を誇張しない）。
-  // recentN は「直近1年の日付出現数」を「実際に見つかった記事数」で頭打ちにする＝矛盾防止。
-  const now = Date.now()
-  let updateFrequency: CompanyResearch['ownedMedia']['updateFrequency'] = 'unknown'
-  let frequencyNote = hasOwnedMedia ? 'メディアは確認できたが、記事数・日付を十分に取得できず頻度は判定不可' : 'オウンドメディア（ブログ/ニュース）は確認できず'
-  if (articleCountEstimate > 0 && latestArticleDate) {
-    const daysSince = Math.floor((now - new Date(latestArticleDate + 'T00:00:00Z').getTime()) / 86400000)
-    const lastYearDates = allDates.filter((d) => now - new Date(d + 'T00:00:00Z').getTime() < 365 * 86400000).length
-    const recentN = Math.min(lastYearDates, articleCountEstimate) // 記事数を超える頻度主張をしない
-    if (daysSince > 365) { updateFrequency = 'inactive'; frequencyNote = `最新記事が約${Math.floor(daysSince / 30)}ヶ月前。更新はほぼ停止` }
-    else if (recentN >= 12 && daysSince <= 45) { updateFrequency = 'high'; frequencyNote = `直近1年で約${recentN}本・最新${daysSince}日前。活発に更新` }
-    else if (recentN >= 4 || daysSince <= 120) { updateFrequency = 'medium'; frequencyNote = `直近1年で約${recentN}本・最新${daysSince}日前。月1回程度の更新` }
-    else { updateFrequency = 'low'; frequencyNote = `直近1年で約${recentN}本・最新${daysSince}日前。更新は散発的` }
-  }
-
+  const siteScale: CompanyResearch['ownedMedia']['siteScale'] = mediaUrls.length >= 3 ? 'medium' : hasOwnedMedia ? 'small' : 'unknown'
   return {
     hasOwnedMedia,
     mediaUrls,
-    articleCountEstimate,
-    latestArticleDate,
-    updateFrequency,
-    frequencyNote,
+    articleCountEstimate: 0,
+    latestArticleDate: null as string | null,
+    updateFrequency: 'unknown' as CompanyResearch['ownedMedia']['updateFrequency'],
+    frequencyNote: '記事数・更新頻度は信頼できる取得が難しいため計測していません',
     siteScale,
   }
 }
@@ -261,11 +198,9 @@ export async function researchCompany(targetUrl: string): Promise<CompanyResearc
   const titleName = homepage ? extractTitle(homepage) : undefined
 
   // 取得済みHTMLを渡して二重取得を回避（会社名/事業内容/従業員数記載 等を抽出）
-  // メディア解析は並行で実行
-  const [basic, mediaInfo] = await Promise.all([
-    scrapeCompanyWebsite(targetUrl, homepage || undefined).catch(() => null),
-    analyzeOwnedMedia(findMediaUrls(links, targetUrl), targetUrl),
-  ])
+  const basic = await scrapeCompanyWebsite(targetUrl, homepage || undefined).catch(() => null)
+  // オウンドメディア/関連サイトは「所在」だけ収集（記事数・更新頻度は計測しない）
+  const mediaInfo = summarizeOwnedMedia(findMediaUrls(links, targetUrl))
 
   const companyName = basic?.companyName || titleName
   const [gbiz, pressReleases] = await Promise.all([

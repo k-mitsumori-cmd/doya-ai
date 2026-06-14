@@ -18,11 +18,6 @@ export interface OwnCompanyProfile {
   caseStudies?: string | null
 }
 
-const FREQ_LABEL: Record<string, string> = {
-  high: '高頻度（週1ペース前後）', medium: '中頻度（月1〜2回）', low: '低頻度（散発的）', inactive: 'ほぼ停止', unknown: '不明',
-}
-const SCALE_LABEL: Record<string, string> = { large: '大規模', medium: '中規模', small: '小規模', unknown: '不明' }
-
 /** リサーチ結果を、AIに渡す「調査事実」テキストへ整形 */
 export function researchToFacts(r: CompanyResearch): string {
   return [
@@ -44,12 +39,11 @@ export function researchToFacts(r: CompanyResearch): string {
     `- リード獲得施策（資料DL/メルマガ等）: ${r.marketing.hasLeadMagnet ? 'あり' : '確認できず'}`,
     `- 広告運用の痕跡: ${r.marketing.runsAds ? 'あり' : '確認できず'}`,
     '',
-    '【オウンドメディア・サイト規模】',
-    `- オウンドメディア/ブログ/ニュース: ${r.ownedMedia.hasOwnedMedia ? 'あり' : '見当たらない'}`,
-    r.ownedMedia.mediaUrls.length ? `- 該当URL: ${r.ownedMedia.mediaUrls.join(' , ')}` : '',
-    `- 記事数の概算: 約${r.ownedMedia.articleCountEstimate}件（サイト規模感: ${SCALE_LABEL[r.ownedMedia.siteScale]}）`,
-    `- 最新記事の日付: ${r.ownedMedia.latestArticleDate || '取得できず'}`,
-    `- 更新頻度: ${FREQ_LABEL[r.ownedMedia.updateFrequency]}（${r.ownedMedia.frequencyNote}）`,
+    '【保有サイト・チャネル（複数ソースから収集）】',
+    `- 公式サイト: ${r.url}`,
+    r.ownedMedia.mediaUrls.length ? `- オウンドメディア/関連ページ: ${r.ownedMedia.mediaUrls.join(' , ')}` : '- オウンドメディア/ブログ等: 目立つものは確認できず',
+    `- SNS: ${r.marketing.snsChannels.length ? r.marketing.snsChannels.join('、') : '確認できず'}`,
+    '※記事数・更新頻度は計測していないため、それらの多寡は断定しないこと。',
     '',
     '【プレスリリース・最新動向（PR TIMES）】',
     r.pressReleases?.length
@@ -84,7 +78,7 @@ export async function analyzeCompany(research: CompanyResearch, own?: OwnCompany
     '# 厳守する方針',
     '- 現状分析(currentStateAssessment)は、忖度せず“はっきりめ”に書く。良い点と弱点を遠慮なく言語化する（ただし誹謗ではなく事実ベース）。',
     '- すべての仮説・指摘は、必ず調査事実（従業員数/マーケ実施状況/オウンドメディア規模/記事更新頻度 等）に紐づける。事実が乏しい箇所は「未確認」と明示し、断定しすぎない。',
-    '- 【矛盾厳禁】調査事実の数値と整合させること。例：オウンドメディアの記事数が少ない/見当たらないのに「更新が活発」とは書かない。更新頻度の判定値(高/中/低/停止/不明)と記事規模を一致させる。事実にない数値を創作しない。',
+    '- 【矛盾厳禁】調査事実と整合させること。計測していない指標（記事数・更新頻度など）を断定しない。事実にない数値・固有名詞を創作しない。',
     '- 解決策(solutions)は、必ず自社情報の商材・強みに紐づける。自社が未登録なら一般的なBtoB支援として現実的に提案する。',
     '- 抽象語（「最適化」「強化」だけ等）で終わらせず、具体的な打ち手と期待効果を書く。',
     '',
