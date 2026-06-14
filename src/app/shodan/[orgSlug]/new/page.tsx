@@ -22,6 +22,8 @@ const RESEARCH_TICKER = [
   'PR TIMESでプレスリリース・最新動向を収集しています…',
   '調査結果をまとめています…',
 ]
+// 進行に合わせたドヤくんの表情（RESEARCH_TICKER と対応）
+const RESEARCH_MOODS = ['focus', 'thinking', 'point', 'working', 'thinking', 'point', 'working', 'present'] as const
 
 function findingsFrom(r: CompanyResearch) {
   return [
@@ -116,7 +118,7 @@ export default function ShodanNewPage() {
         {phase === 'researching' && (
           <motion.div key="researching" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="rounded-3xl bg-white border border-purple-100 p-8 shadow-sm text-center">
-            <div className="flex justify-center"><DoyaKun mood="focus" size={120} /></div>
+            <div className="flex justify-center"><DoyaKun mood={RESEARCH_MOODS[Math.min(tick, RESEARCH_MOODS.length - 1)]} size={120} /></div>
             <p className="font-black text-purple-700 text-lg mt-3 flex items-center justify-center gap-2">
               <span className="material-symbols-outlined animate-spin">progress_activity</span>企業を調査中…
             </p>
