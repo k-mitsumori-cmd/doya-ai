@@ -3251,3 +3251,46 @@ model ShodanPreparation {
   @@index([organizationId, createdAt])
   @@map("shodan_preparations")
 }
+
+// ============================================
+// ドヤ広告バナーAI（AdBanner）adbanner_*
+// 広告特化バナーの量産＋AI自動フィードバック＋（Phase2）数値改善
+// ============================================
+model AdBannerCampaign {
+  id          String   @id @default(cuid())
+  userId      String?  // 未ログインゲストは null + guestId
+  guestId     String?
+  name        String
+  sourceUrl   String?
+  serviceName String?
+  appeal      String?  @db.Text
+  brandColors Json?    // ["#7f19e6", ...]
+  logoPath    String?  // Supabase Storage のロゴパス
+  media       String?  // meta / google / line / x ...
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  banners AdBannerCreative[]
+  @@index([userId, createdAt])
+  @@index([guestId, createdAt])
+  @@map("adbanner_campaign")
+}
+
+model AdBannerCreative {
+  id           String           @id @default(cuid())
+  campaignId   String
+  campaign     AdBannerCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  imagePath    String           // 生成画像 (Supabase Storage)
+  size         String           // 1080x1080 等
+  prompt       String           @db.Text
+  variantLabel String?          // 訴求/トーンのバリエーション
+  generation   Int              @default(1) // 改善世代 (Phase2)
+  parentId     String?          // 元バナー (Phase2)
+  model        String?          // 使用モデル / fallbackUsed
+  feedback     Json?            // { visibility, appeal, cta, fit, brand, total, advice }
+  metrics      Json?            // Phase2: { imp, click, ctr, spend, cv, cpa }
+  createdAt    DateTime         @default(now())
+
+  @@index([campaignId, createdAt])
+  @@map("adbanner_creative")
+}

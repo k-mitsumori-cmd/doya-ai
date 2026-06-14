@@ -1524,6 +1524,49 @@ export const SERVICES: Service[] = [
     isNew: true,
     badge: 'NEW',
   },
+
+  // ----------------------------------------
+  // ドヤ広告バナーAI（AdBanner）
+  // ----------------------------------------
+  {
+    id: 'adbanner',
+    name: 'ドヤ広告バナーAI',
+    shortName: '広告バナー',
+    description: '広告に特化したバナーを量産し、AIフィードバックで改善し続ける運用型クリエイティブ。',
+    longDescription:
+      'サービスURLやブランドカラー・ロゴを反映して、媒体別の広告バナーを一括量産。各バナーをAIが「視認性／訴求／CTA／媒体適合／ブランド整合」で自動採点し、提案を1クリックで反映して再生成。キャンペーン単位で作り続け、成果の出るクリエイティブを継続供給します。',
+    icon: '📣',
+    color: 'purple',
+    gradient: 'from-purple-500 to-orange-500',
+    bgGradient: 'from-purple-50 to-orange-50',
+    href: '/adbanner',
+    dashboardHref: '/adbanner/dashboard',
+    pricingHref: '/adbanner/pricing',
+    guideHref: '/adbanner',
+    features: [
+      'URL・ブランドから広告バナーを一括量産',
+      '媒体別サイズ（Meta/Google/LINE/X 等）',
+      'AIが視認性・訴求・CTAを自動採点',
+      '改善提案を反映してワンクリック再生成',
+      'ロゴは原寸で正確に合成（AIに描かせない）',
+      'キャンペーン単位で作り続けて改善',
+    ],
+    useCases: [
+      '広告バナーを大量に回す運用担当・マーケター',
+      'デザイナーに頼まず自分で量産したい中小企業',
+      'クライアント別にキャンペーン管理したい代理店',
+    ],
+    pricing: {
+      free: { name: '無料プラン', limit: 'ゲスト3枚/日・無料9枚/日', dailyLimit: 9, price: 0 },
+      pro: { name: 'プロプラン', limit: '60枚/日・全サイズ・改善', dailyLimit: 60, price: 9980 },
+    },
+    status: 'active',
+    category: 'image',
+    order: 26,
+    requiresAuth: false,
+    isNew: true,
+    badge: 'NEW',
+  },
 ]
 
 // ============================================

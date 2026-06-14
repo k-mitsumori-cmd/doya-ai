@@ -261,3 +261,20 @@ export const shodanTheme: SidebarTheme = {
   aiBubbleBg: 'bg-purple-600',
   zapColor: 'text-fuchsia-400 fill-fuchsia-400',
 }
+
+// ドヤ広告バナーAI（purple / orange）
+export const adbannerTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-purple-600 via-purple-700 to-orange-600',
+  navText: 'text-purple-100/80',
+  navTextIcon: 'text-purple-200/80',
+  sectionText: 'text-purple-200/55',
+  toggleText: 'text-purple-600',
+  toggleHover: 'hover:bg-purple-50',
+  brandingText: 'text-purple-100/35',
+  profileBg: 'bg-purple-900/30',
+  avatarBg: 'bg-orange-500',
+  loginText: 'text-purple-600',
+  loginHover: 'hover:bg-purple-50',
+  aiBubbleBg: 'bg-purple-600',
+  zapColor: 'text-orange-400 fill-orange-400',
+}

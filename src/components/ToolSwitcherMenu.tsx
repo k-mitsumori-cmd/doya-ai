@@ -15,6 +15,7 @@ import {
   Film,
   Image,
   LayoutGrid,
+  Megaphone,
   Mic,
   PenLine,
   Send,
@@ -66,6 +67,7 @@ const SERVICE_ICON_MAP: Record<string, ServiceMapping> = {
   doyaslide: { icon: Presentation, iconBg: 'from-blue-500 to-indigo-600', hoverBg: 'hover:bg-blue-50' },
   sfa:       { icon: BarChart3,   iconBg: 'from-green-500 to-lime-600',    hoverBg: 'hover:bg-green-50' },
   shodan:    { icon: Target,      iconBg: 'from-purple-600 to-fuchsia-600', hoverBg: 'hover:bg-purple-50' },
+  adbanner:  { icon: Megaphone,   iconBg: 'from-purple-500 to-orange-500',  hoverBg: 'hover:bg-orange-50' },
 }
 
 const FALLBACK_MAPPING: ServiceMapping = {
