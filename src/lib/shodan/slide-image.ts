@@ -7,7 +7,7 @@ import type { ProposalSlide } from './types'
 
 export interface SlideImage {
   title: string
-  imageUrl: string
+  imageUrl: string | null // 生成失敗時は null（slidesJson と同じ索引で整列保持するためのプレースホルダ）
   role?: string
 }
 

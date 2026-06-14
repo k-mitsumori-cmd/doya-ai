@@ -24,7 +24,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   if (!prep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   const slides = (prep.slidesJson as unknown as ProposalSlide[] | null) || []
   const images = ((prep.slideImages as unknown as SlideImage[] | null) || []).slice()
-  if (!Number.isInteger(index) || index < 0 || index >= slides.length) {
+  // slideImages は slidesJson と整列保持。索引は両配列の範囲内（=スライド画像が存在する枠）に限定。
+  if (!Number.isInteger(index) || index < 0 || index >= slides.length || index >= images.length) {
     return NextResponse.json({ error: '不正なスライドです' }, { status: 400 })
   }
 

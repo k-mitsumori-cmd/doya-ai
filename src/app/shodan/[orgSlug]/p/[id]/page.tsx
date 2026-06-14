@@ -287,16 +287,16 @@ export default function ShodanResultPage() {
       {/* 提案資料（画像スライド）の作成 — プレスリリースの直下 */}
       {prep.status === 'done' && prep.slidesJson && prep.slidesJson.length > 0 && (
         <Card title="提案資料（スライド）" icon="slideshow" accent="text-purple-700">
-          {prep.slideImages && prep.slideImages.length > 0 ? (
+          {prep.slideImages && prep.slideImages.some((s) => s.imageUrl) ? (
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <DoyaKun mood="success" size={48} float={false} />
-                <p className="font-bold text-slate-700 text-sm">スライド画像が{prep.slideImages.length}枚あります。編集画面で修正できます。</p>
+                <p className="font-bold text-slate-700 text-sm">スライド画像が{prep.slideImages.filter((s) => s.imageUrl).length}枚あります。編集画面で修正できます。</p>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
-                {prep.slideImages.slice(0, 4).map((s, i) => (
+                {prep.slideImages.filter((s) => s.imageUrl).slice(0, 4).map((s, i) => (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img key={i} src={s.imageUrl} alt={s.title} className="w-full aspect-video object-cover rounded-lg border border-slate-200" loading="lazy" />
+                  <img key={i} src={s.imageUrl as string} alt={s.title} className="w-full aspect-video object-cover rounded-lg border border-slate-200" loading="lazy" />
                 ))}
               </div>
               <Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${id}/slides`} className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm hover:-translate-y-0.5 transition-all">{sym('edit', 16)}提案スライドを編集</Link>

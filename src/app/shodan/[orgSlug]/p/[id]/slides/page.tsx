@@ -69,8 +69,14 @@ export default function ShodanSlidesEditPage() {
         <div className="flex flex-col lg:flex-row gap-5">
           {/* メインプレビュー */}
           <div className="flex-1 min-w-0">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={slides[active]?.imageUrl} alt={slides[active]?.title} className="w-full rounded-2xl border border-slate-200 shadow-md" />
+            {slides[active]?.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={slides[active]!.imageUrl as string} alt={slides[active]?.title} className="w-full rounded-2xl border border-slate-200 shadow-md" />
+            ) : (
+              <div className="w-full aspect-video rounded-2xl border-2 border-dashed border-rose-200 bg-rose-50 grid place-items-center text-center px-4">
+                <div><DoyaKun mood="error" size={56} float={false} /><p className="text-sm font-bold text-rose-600 mt-1">このスライドは生成に失敗しました。<br />下の指示を入れて再生成してください。</p></div>
+              </div>
+            )}
             <div className="mt-3 rounded-2xl bg-white border border-slate-200 p-4">
               <p className="font-black text-slate-800 text-sm mb-2">スライド{active + 1}：{slides[active]?.title}</p>
               <label className="block text-xs font-black text-slate-500 mb-1">修正の指示（例: もっと数字を大きく／背景を明るく／CTAを強調）</label>
@@ -78,7 +84,7 @@ export default function ShodanSlidesEditPage() {
                 className="w-full rounded-xl border-2 border-slate-200 focus:border-purple-400 outline-none px-3 py-2 font-bold text-sm resize-y" placeholder="この指示で作り直します" />
               <div className="flex items-center gap-2 mt-2">
                 <button onClick={() => regenerate(active)} disabled={busy[active]} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm disabled:opacity-60">{sym(busy[active] ? 'progress_activity' : 'autorenew', 16)}{busy[active] ? '再生成中…' : 'この指示で再生成'}</button>
-                <a href={slides[active]?.imageUrl} target="_blank" rel="noreferrer" download className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50">{sym('download', 16)}保存</a>
+                {slides[active]?.imageUrl && <a href={slides[active]!.imageUrl as string} target="_blank" rel="noreferrer" download className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50">{sym('download', 16)}保存</a>}
               </div>
             </div>
           </div>
@@ -87,8 +93,12 @@ export default function ShodanSlidesEditPage() {
             <div className="grid grid-cols-3 lg:grid-cols-2 gap-2">
               {slides.map((s, i) => (
                 <button key={i} onClick={() => setActive(i)} className={`relative rounded-lg overflow-hidden border-2 transition-all ${i === active ? 'border-purple-500 ring-2 ring-purple-200' : 'border-slate-200 hover:border-purple-300'}`}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={s.imageUrl} alt={s.title} className="w-full aspect-video object-cover" loading="lazy" />
+                  {s.imageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={s.imageUrl} alt={s.title} className="w-full aspect-video object-cover" loading="lazy" />
+                  ) : (
+                    <div className="w-full aspect-video bg-rose-50 grid place-items-center text-rose-400"><span className="material-symbols-outlined" style={{ fontSize: 18 }}>image_not_supported</span></div>
+                  )}
                   <span className="absolute top-1 left-1 bg-black/60 text-white text-[10px] font-black px-1.5 rounded">{i + 1}</span>
                   {busy[i] && <span className="absolute inset-0 grid place-items-center bg-white/70"><span className="material-symbols-outlined animate-spin text-purple-600">progress_activity</span></span>}
                 </button>

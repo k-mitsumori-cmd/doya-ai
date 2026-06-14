@@ -22,21 +22,22 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   if (!slides.length) return NextResponse.json({ error: '先に提案資料の構成を生成してください' }, { status: 400 })
 
   const list = slides.slice(0, 8)
-  const results: (SlideImage | null)[] = new Array(list.length).fill(null)
+  // slidesJson と同じ索引・同じ長さで保持（失敗枠は imageUrl:null のプレースホルダ）。詰めない＝再生成の索引ズレ防止。
+  const images: SlideImage[] = list.map((s) => ({ title: s.title, imageUrl: null }))
   let next = 0
   const concurrency = 2
   async function worker() {
     while (next < list.length) {
       const i = next++
-      try { results[i] = await generateSlideImage(sctx!.userId, prep!.id, list[i], i) }
+      try { images[i] = await generateSlideImage(sctx!.userId, prep!.id, list[i], i) }
       catch (e) { console.error('[shodan/slides] slide failed', (e as any)?.message) }
     }
   }
   await Promise.all(Array.from({ length: Math.min(concurrency, list.length) }, worker))
 
-  const images = results.filter((x): x is SlideImage => !!x)
-  if (!images.length) return NextResponse.json({ error: 'スライド画像の生成に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })
+  const successCount = images.filter((x) => x.imageUrl).length
+  if (!successCount) return NextResponse.json({ error: 'スライド画像の生成に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })
 
   await prisma.shodanPreparation.update({ where: { id: prep.id }, data: { slideImages: images as any } })
-  return NextResponse.json({ success: true, count: images.length })
+  return NextResponse.json({ success: true, count: successCount, total: list.length })
 }

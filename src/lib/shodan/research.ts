@@ -3,7 +3,8 @@
 // 企業URLだけを起点に、深掘り調査を行う：
 //  - 実従業員数（gBizINFO 優先 / サイト記載 フォールバック）
 //  - マーケティング実施状況（SNS / 問い合わせ導線 / MA・解析ツール / 広告痕跡）
-//  - オウンドメディア・サイト規模（ブログ/ニュースの有無・記事数・最新日・更新頻度）
+//  - 実施中のマーケ・保有サイト/チャネル（公式サイト/オウンドメディアの所在・SNS・PR TIMES）
+//    ※記事数・更新頻度は信頼できる取得が難しいため計測しない
 // 外部HTTP取得は SSRF安全な共有ユーティリティ（@/lib/net/safe-fetch）経由。
 // ============================================
 import { safeFetchText, htmlToText } from '@/lib/net/safe-fetch'
@@ -109,16 +110,15 @@ function findMediaUrls(links: { href: string; text: string }[], baseUrl: string)
 // オウンドメディア/関連サイトの「有無と所在」だけを収集する。
 // ※記事数・更新頻度は信頼できる取得が難しいため計測しない（仕様変更）。
 function summarizeOwnedMedia(mediaUrls: string[]) {
-  const hasOwnedMedia = mediaUrls.length > 0
-  const siteScale: CompanyResearch['ownedMedia']['siteScale'] = mediaUrls.length >= 3 ? 'medium' : hasOwnedMedia ? 'small' : 'unknown'
+  // 記事数・更新頻度・規模は信頼できる取得が難しいため計測しない（所在＝mediaUrls のみ収集）。
   return {
-    hasOwnedMedia,
+    hasOwnedMedia: mediaUrls.length > 0,
     mediaUrls,
     articleCountEstimate: 0,
     latestArticleDate: null as string | null,
     updateFrequency: 'unknown' as CompanyResearch['ownedMedia']['updateFrequency'],
     frequencyNote: '記事数・更新頻度は信頼できる取得が難しいため計測していません',
-    siteScale,
+    siteScale: 'unknown' as CompanyResearch['ownedMedia']['siteScale'],
   }
 }
 
