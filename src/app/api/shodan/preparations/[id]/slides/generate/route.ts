@@ -5,7 +5,8 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
-import { generateSlideImage, type StoredSlide } from '@/lib/shodan/slide-image'
+import { generateSlideImage, type StoredSlide, type SlideBrand } from '@/lib/shodan/slide-image'
+import { signedUrl } from '@/lib/shodan/storage'
 import { raceTimeout } from '@/lib/fetch-timeout'
 import type { ProposalSlide } from '@/lib/shodan/types'
 
@@ -28,6 +29,13 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const images: StoredSlide[] = list.map((s, i) => (existing[i]?.imagePath ? existing[i] : { title: s.title, imagePath: existing[i]?.imagePath ?? null }))
 
   // 未生成の枠だけをこのリクエストで処理（1回あたり最大BATCH枚）＝300sタイムアウト内に収め、各バッチで保存して作業を失わない
+  // 自社情報のブランドカラー・ロゴをスライドに反映（その会社に合った資料に）
+  const profile = await prisma.shodanCompanyProfile.findUnique({ where: { organizationId: sctx.organizationId } })
+  const brand: SlideBrand = {
+    brandColors: (profile?.brandColors as string[] | null) || undefined,
+    logoUrl: profile?.logoPath ? await signedUrl(profile.logoPath) : null,
+  }
+
   const todo = images.map((im, i) => (im.imagePath ? -1 : i)).filter((i) => i >= 0)
   // 1リクエスト最大2枚・並行2・各枚にハードタイムアウト＝300sプラットフォーム制限内に確実に収め、ハングを防ぐ
   const BATCH = 2
@@ -39,7 +47,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     async function worker() {
       while (next < batch.length) {
         const i = batch[next++]
-        try { images[i] = await raceTimeout('slideGen', 150000, generateSlideImage(sctx!.userId, prep!.id, list[i], i)) }
+        try { images[i] = await raceTimeout('slideGen', 150000, generateSlideImage(sctx!.userId, prep!.id, list[i], i, { brand })) }
         catch (e) { console.error('[shodan/slides] slide failed', (e as any)?.message) }
       }
     }

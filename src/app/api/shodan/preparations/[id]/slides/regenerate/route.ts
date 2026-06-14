@@ -30,8 +30,14 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: '不正なスライドです' }, { status: 400 })
   }
 
+  const profile = await prisma.shodanCompanyProfile.findUnique({ where: { organizationId: sctx.organizationId } })
+  const brand = {
+    brandColors: (profile?.brandColors as string[] | null) || undefined,
+    logoUrl: profile?.logoPath ? await signedUrl(profile.logoPath) : null,
+  }
+
   try {
-    const img = await generateSlideImage(sctx.userId, prep.id, slides[index], index, instruction)
+    const img = await generateSlideImage(sctx.userId, prep.id, slides[index], index, { extra: instruction, brand })
     images[index] = img
     await prisma.shodanPreparation.update({ where: { id: prep.id }, data: { slideImages: images as any } })
     return NextResponse.json({ success: true, data: { index, image: { title: img.title, role: img.role, imageUrl: await signedUrl(img.imagePath) } } })

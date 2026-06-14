@@ -25,6 +25,15 @@ export async function uploadPng(path: string, buffer: Buffer): Promise<string> {
   return path
 }
 
+/** 任意のバイナリ（ロゴ等）を保存 */
+export async function uploadFile(path: string, buffer: Buffer, contentType: string): Promise<string> {
+  await ensureBucket()
+  const supabase = getSupabaseAdmin()
+  const { error } = await supabase.storage.from(BUCKET).upload(path, buffer, { contentType, upsert: true })
+  if (error) throw new Error(`アップロードに失敗しました: ${error.message}`)
+  return path
+}
+
 /** 署名付き表示URL（既定2時間） */
 export async function signedUrl(path: string | null | undefined, expiresSec = 7200): Promise<string | null> {
   if (!path) return null

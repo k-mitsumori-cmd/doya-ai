@@ -21,16 +21,22 @@ export interface SlideImage {
   role?: string
 }
 
-function shodanProject(prepId: string): ComposeProject {
+export interface SlideBrand {
+  brandColors?: string[]
+  logoUrl?: string | null
+}
+
+function shodanProject(prepId: string, brand?: SlideBrand): ComposeProject {
+  const theme = brand?.brandColors?.find((c) => /^#[0-9a-fA-F]{6}$/.test(c)) || '#7f19e6'
   return {
     id: `shodan-${prepId}`,
     aspectRatio: 'wide', // 16:9
-    themeColor: '#7f19e6',
+    themeColor: theme, // 自社ブランドカラーをスライドの基調色に
     stylePreset: 'corporate',
-    logoUrl: null,
+    logoUrl: brand?.logoUrl || null, // 自社ロゴをセーフゾーンへ合成
     logoPosition: 'top-right',
     logoSize: 'M',
-    logoBackingChip: false,
+    logoBackingChip: true,
   }
 }
 function roleFromType(t?: string): string {
@@ -50,12 +56,18 @@ function visualPromptFor(slide: ProposalSlide): string {
   ].filter(Boolean).join('')
 }
 
-/** 1スライドを画像生成し、shodan非公開バケットへ保存してパスを返す（extra: 修正の追記指示） */
-export async function generateSlideImage(userId: string, prepId: string, slide: ProposalSlide, index: number, extra?: string): Promise<StoredSlide> {
+/** 1スライドを画像生成し、shodan非公開バケットへ保存してパスを返す */
+export async function generateSlideImage(
+  userId: string,
+  prepId: string,
+  slide: ProposalSlide,
+  index: number,
+  opts?: { extra?: string; brand?: SlideBrand }
+): Promise<StoredSlide> {
   const role = roleFromType(slide.type)
   const res = await composeSlideImage(
     userId,
-    shodanProject(prepId),
+    shodanProject(prepId, opts?.brand),
     {
       index: index + 1,
       role: role || null,
@@ -63,7 +75,7 @@ export async function generateSlideImage(userId: string, prepId: string, slide: 
       subText: (slide.bullets || []).join('\n') || slide.subtitle || null,
       visualPrompt: visualPromptFor(slide),
     },
-    extra
+    opts?.extra
   )
   // 生成結果（doyaslideの公開URL）を取得し、shodan非公開バケットへ再保存（各I/Oはタイムアウトで保護＝ハング防止）
   const ctrl = new AbortController()

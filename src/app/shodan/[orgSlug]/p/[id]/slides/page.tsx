@@ -20,6 +20,34 @@ export default function ShodanSlidesEditPage() {
   const [instr, setInstr] = useState<Record<number, string>>({})
   const [busy, setBusy] = useState<Record<number, boolean>>({})
   const [active, setActive] = useState(0)
+  const [pdfBusy, setPdfBusy] = useState(false)
+
+  const urlToDataUrl = (url: string) => fetch(url).then((r) => r.blob()).then((b) => new Promise<string>((res, rej) => {
+    const fr = new FileReader(); fr.onload = () => res(fr.result as string); fr.onerror = rej; fr.readAsDataURL(b)
+  }))
+  const imgSize = (dataUrl: string) => new Promise<{ w: number; h: number }>((res) => {
+    const im = new window.Image(); im.onload = () => res({ w: im.naturalWidth, h: im.naturalHeight }); im.onerror = () => res({ w: 1536, h: 1024 }); im.src = dataUrl
+  })
+
+  const downloadPdf = async () => {
+    const imgs = (prep?.slideImages || []).filter((s) => s.imageUrl)
+    if (!imgs.length) { toast.error('ダウンロードできる画像がありません'); return }
+    setPdfBusy(true)
+    try {
+      const { jsPDF } = await import('jspdf')
+      const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' })
+      const pw = doc.internal.pageSize.getWidth(), ph = doc.internal.pageSize.getHeight()
+      for (let i = 0; i < imgs.length; i++) {
+        const dataUrl = await urlToDataUrl(imgs[i].imageUrl as string)
+        const { w, h } = await imgSize(dataUrl)
+        const r = Math.min(pw / w, ph / h)
+        const dw = w * r, dh = h * r
+        if (i > 0) doc.addPage()
+        doc.addImage(dataUrl, 'PNG', (pw - dw) / 2, (ph - dh) / 2, dw, dh)
+      }
+      doc.save(`提案資料_${(prep?.targetName || 'slides').replace(/[\\/:*?"<>|]/g, '')}.pdf`)
+    } catch (e: any) { toast.error('PDFの作成に失敗しました') } finally { setPdfBusy(false) }
+  }
 
   useEffect(() => {
     shodanGet<{ item: Prep }>(`/api/shodan/preparations/${id}`, orgSlug)
@@ -51,12 +79,18 @@ export default function ShodanSlidesEditPage() {
       <div className="flex items-center gap-2 text-sm font-bold text-slate-400 mb-3">
         <Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${id}`} className="hover:text-purple-600 flex items-center gap-1">{sym('arrow_back', 16)}商談準備へ戻る</Link>
       </div>
-      <div className="flex items-center gap-3 mb-5">
+      <div className="flex items-center gap-3 mb-5 flex-wrap">
         <DoyaKun mood="present" size={52} float={false} />
-        <div>
+        <div className="flex-1 min-w-[180px]">
           <h1 className="text-2xl font-black text-slate-900">提案スライドの編集</h1>
           <p className="text-sm font-bold text-slate-400 mt-0.5">{prep.targetName || ''}・各スライドに指示を入れて再生成できます。</p>
         </div>
+        {slides.some((s) => s.imageUrl) && (
+          <button onClick={downloadPdf} disabled={pdfBusy}
+            className="inline-flex items-center gap-1.5 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm shadow-lg shadow-purple-500/25 hover:-translate-y-0.5 transition-all disabled:opacity-60">
+            {sym(pdfBusy ? 'progress_activity' : 'picture_as_pdf', 18)}{pdfBusy ? 'PDF作成中…' : 'PDFでダウンロード'}
+          </button>
+        )}
       </div>
 
       {slides.length === 0 ? (

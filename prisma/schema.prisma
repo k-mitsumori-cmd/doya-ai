@@ -3221,6 +3221,8 @@ model ShodanCompanyProfile {
   targetCustomer String?            @db.Text // ターゲット顧客像
   pricingNote    String?            @db.Text // 価格帯・導入条件など
   caseStudies    String?            @db.Text // 導入事例・実績
+  logoPath       String?            // 自社ロゴ（shodan非公開バケットのパス。スライドに合成）
+  brandColors    Json?              // ブランドカラー ["#RRGGBB", ...]（スライドのテーマ色に反映）
   research       Json?              // 自社URLを解析した結果（任意）
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt

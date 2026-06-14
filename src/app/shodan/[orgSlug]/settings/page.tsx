@@ -48,19 +48,43 @@ export default function ShodanSettingsPage() {
   const [extractUrl, setExtractUrl] = useState('')
   const [extracting, setExtracting] = useState(false)
   const [gaps, setGaps] = useState<Set<string>>(new Set())
+  // ブランド（資料に反映）
+  const [brandColors, setBrandColors] = useState<string[]>(['#7f19e6', '#f59e0b'])
+  const [logoPath, setLogoPath] = useState<string | null>(null)
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
 
   useEffect(() => {
-    shodanGet<{ profile: Partial<Profile> | null }>('/api/shodan/company-profile', orgSlug)
+    shodanGet<{ profile: any | null }>('/api/shodan/company-profile', orgSlug)
       .then((d) => {
         if (d.profile) {
-          const p = { ...EMPTY, ...Object.fromEntries(Object.entries(d.profile).map(([k, v]) => [k, v ?? ''])) } as Profile
+          const p = { ...EMPTY, ...Object.fromEntries(FIELDS.map((f) => [f.key, d.profile[f.key] ?? ''])) } as Profile
           setProfile(p)
           if (p.url) setExtractUrl(p.url)
+          if (Array.isArray(d.profile.brandColors) && d.profile.brandColors.length) {
+            setBrandColors([d.profile.brandColors[0] || '#7f19e6', d.profile.brandColors[1] || '#f59e0b'])
+          }
+          setLogoPath(d.profile.logoPath || null)
+          setLogoUrl(d.profile.logoUrl || null)
         }
       })
       .catch((e) => toast.error(e.message))
       .finally(() => setLoading(false))
   }, [orgSlug])
+
+  const onLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingLogo(true)
+    try {
+      const fd = new FormData(); fd.append('file', file)
+      const r = await fetch(`/api/shodan/company-profile/logo?org=${encodeURIComponent(orgSlug)}`, { method: 'POST', body: fd })
+      const d = await r.json()
+      if (!d.ok) throw new Error(d.error || 'アップロードに失敗しました')
+      setLogoPath(d.path); setLogoUrl(d.url)
+      toast.success('ロゴをアップロードしました')
+    } catch (err: any) { toast.error(err.message) } finally { setUploadingLogo(false) }
+  }
 
   const set = (k: keyof Profile, v: string) => setProfile((p) => ({ ...p, [k]: v }))
 
@@ -88,7 +112,7 @@ export default function ShodanSettingsPage() {
   const save = async () => {
     setSaving(true)
     try {
-      await shodanSend('/api/shodan/company-profile', orgSlug, 'PUT', profile)
+      await shodanSend('/api/shodan/company-profile', orgSlug, 'PUT', { ...profile, brandColors, logoPath })
       toast.success('自社情報を保存しました')
     } catch (e: any) { toast.error(e.message) } finally { setSaving(false) }
   }
@@ -141,6 +165,42 @@ export default function ShodanSettingsPage() {
             <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 transition-all" style={{ width: `${score}%` }} />
           </div>
           <p className="text-xs font-bold text-slate-500 mt-1.5">{advice}</p>
+        </div>
+      </div>
+
+      {/* ブランド設定（資料に反映） */}
+      <div className="rounded-3xl bg-white border border-slate-200 p-6 shadow-sm mb-5">
+        <div className="flex items-center gap-1.5 font-black text-slate-800 mb-1">{sym('palette', 20)}ブランド設定</div>
+        <p className="text-xs font-bold text-slate-400 mb-4">ロゴとカラーは、提案スライドの<strong>基調色とロゴ合成</strong>に自動反映され、その会社に合った資料になります。</p>
+        <div className="flex flex-wrap items-start gap-6">
+          <div>
+            <label className="block text-xs font-black text-slate-600 mb-1.5">ロゴ</label>
+            <div className="flex items-center gap-3">
+              <label className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-600 font-black text-sm cursor-pointer hover:border-purple-400 transition-colors">
+                {sym(uploadingLogo ? 'progress_activity' : 'upload', 18)}{uploadingLogo ? '送信中…' : logoUrl ? 'ロゴを変更' : 'ロゴをアップロード'}
+                <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={onLogo} disabled={uploadingLogo} />
+              </label>
+              {logoUrl && (
+                <>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={logoUrl} alt="logo" className="h-10 w-auto max-w-[120px] object-contain rounded border border-slate-200 bg-white p-1" />
+                  <button type="button" onClick={() => { setLogoPath(null); setLogoUrl(null) }} className="text-slate-400 hover:text-rose-500" title="ロゴを外す">{sym('close', 18)}</button>
+                </>
+              )}
+            </div>
+            <p className="text-[11px] font-bold text-slate-400 mt-1.5">PNG / JPG / WebP（5MBまで）</p>
+          </div>
+          <div>
+            <label className="block text-xs font-black text-slate-600 mb-1.5">ブランドカラー</label>
+            <div className="flex items-center gap-3">
+              {[0, 1].map((i) => (
+                <div key={i} className="flex flex-col items-center gap-1">
+                  <input type="color" value={brandColors[i] || '#7f19e6'} onChange={(e) => setBrandColors((c) => { const n = [...c]; n[i] = e.target.value; return n })} className="w-12 h-12 rounded-lg border border-slate-200 cursor-pointer" />
+                  <span className="text-[10px] font-bold text-slate-400">{i === 0 ? 'メイン' : 'アクセント'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
