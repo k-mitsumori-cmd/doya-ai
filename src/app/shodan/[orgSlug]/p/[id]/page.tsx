@@ -12,6 +12,17 @@ import toast from 'react-hot-toast'
 
 const sym = (name: string, size = 18) => <span className="material-symbols-outlined" style={{ fontSize: size }}>{name}</span>
 
+// 「作成中」を飽きさせない楽しいメッセージ＆ドヤくんの表情
+const SLIDE_FUN_MSGS: { text: string; mood: import('@/components/shodan/ui').Mood }[] = [
+  { text: 'ドヤくんが構成を練っています…🤔', mood: 'thinking' },
+  { text: '配色をブランドカラーに整えています…🎨', mood: 'focus' },
+  { text: '見出しを大きく、ドヤっと強調中…💪', mood: 'point' },
+  { text: 'グラフ・図解のレイアウトを調整中…📊', mood: 'working' },
+  { text: '余白を美しく、プロ品質に…✨', mood: 'love' },
+  { text: 'CTAをしっかり目立たせています…🔥', mood: 'jump' },
+  { text: 'もうすぐ完成！最後の仕上げ中…🎁', mood: 'present' },
+]
+
 type Prep = {
   id: string; targetUrl: string; targetName: string | null; status: string; errorMessage: string | null
   research: CompanyResearch | null; analysis: CompanyAnalysis | null; proposalMarkdown: string | null; slidesJson: ProposalSlide[] | null; slideImages: { title: string; imageUrl: string; role?: string }[] | null; createdAt: string
@@ -82,6 +93,12 @@ export default function ShodanResultPage() {
   // 画像スライド生成（ドヤスライド方式・バッチ生成を完了まで繰り返す）
   const [slidesBusy, setSlidesBusy] = useState(false)
   const [slidesProgress, setSlidesProgress] = useState<{ done: number; total: number } | null>(null)
+  const [funMsg, setFunMsg] = useState(0)
+  useEffect(() => {
+    if (!slidesBusy) return
+    const t = setInterval(() => setFunMsg((m) => (m + 1) % SLIDE_FUN_MSGS.length), 2500)
+    return () => clearInterval(t)
+  }, [slidesBusy])
   const genSlideImages = async () => {
     setSlidesBusy(true)
     setSlidesProgress(null)
@@ -317,16 +334,40 @@ export default function ShodanResultPage() {
               </div>
               <Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${id}/slides`} className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm hover:-translate-y-0.5 transition-all">{sym('edit', 16)}提案スライドを編集</Link>
             </div>
+          ) : slidesBusy ? (
+            <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-fuchsia-50 border border-purple-100 p-6 text-center">
+              <div className="flex justify-center"><DoyaKun mood={SLIDE_FUN_MSGS[funMsg].mood} size={96} /></div>
+              <p className="font-black text-purple-700 text-base mt-2 transition-all">{SLIDE_FUN_MSGS[funMsg].text}</p>
+              {/* 進捗バー */}
+              <div className="max-w-sm mx-auto mt-4">
+                <div className="flex items-center justify-between text-xs font-black text-slate-500 mb-1">
+                  <span>提案スライドを作成中…</span>
+                  <span>{slidesProgress ? `${slidesProgress.done}/${slidesProgress.total}枚` : '準備中'}</span>
+                </div>
+                <div className="h-2.5 rounded-full bg-white/70 overflow-hidden">
+                  <div className="h-full rounded-full bg-gradient-to-r from-purple-500 to-fuchsia-500 transition-all duration-700" style={{ width: slidesProgress ? `${Math.round((slidesProgress.done / Math.max(1, slidesProgress.total)) * 100)}%` : '8%' }} />
+                </div>
+              </div>
+              {/* 組み上がるスライドのモック */}
+              <div className="flex justify-center gap-2 mt-5">
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="w-16 aspect-video rounded-lg bg-white border border-purple-200 grid place-items-center animate-pulse" style={{ animationDelay: `${i * 0.25}s` }}>
+                    <span className="material-symbols-outlined text-purple-300" style={{ fontSize: 16 }}>{['title', 'insert_chart', 'lightbulb', 'description'][i]}</span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] font-bold text-slate-400 mt-4">タブを閉じずにお待ちください。完成後そのまま編集画面へ移動します。</p>
+            </div>
           ) : (
             <div className="flex items-center gap-4 flex-wrap">
-              <DoyaKun mood={slidesBusy ? 'working' : 'present'} size={56} float={slidesBusy} />
+              <DoyaKun mood="present" size={56} float={false} />
               <div className="flex-1 min-w-[180px]">
-                <p className="font-bold text-slate-700 text-sm">{slidesBusy ? `スライドを画像として作成中です…${slidesProgress ? `（${slidesProgress.done}/${slidesProgress.total}枚）` : '（数分かかります）'}` : '構成をもとに、提案資料をスライド画像として作成します。'}</p>
+                <p className="font-bold text-slate-700 text-sm">構成をもとに、提案資料をスライド画像として作成します。</p>
                 <p className="text-xs font-bold text-slate-400 mt-0.5">作成後、各スライドを修正できる編集画面に移動します。</p>
               </div>
-              <button onClick={genSlideImages} disabled={slidesBusy}
-                className="inline-flex items-center gap-1.5 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm shadow-lg shadow-purple-500/25 hover:-translate-y-0.5 transition-all disabled:opacity-60">
-                {sym(slidesBusy ? 'progress_activity' : 'auto_awesome', 18)}{slidesBusy ? '作成中…' : '提案資料を作成する'}
+              <button onClick={genSlideImages}
+                className="inline-flex items-center gap-1.5 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm shadow-lg shadow-purple-500/25 hover:-translate-y-0.5 transition-all">
+                {sym('auto_awesome', 18)}提案資料を作成する
               </button>
             </div>
           )}

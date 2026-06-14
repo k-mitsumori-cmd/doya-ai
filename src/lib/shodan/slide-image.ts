@@ -4,6 +4,7 @@
 // 生成画像は shodan 非公開バケットへ保存し、配信は署名URL（機密性確保）。
 // ============================================
 import { composeSlideImage, type ComposeProject } from '@/lib/doyaslide/generate'
+import { raceTimeout } from '@/lib/fetch-timeout'
 import { uploadPng } from './storage'
 import type { ProposalSlide } from './types'
 
@@ -64,11 +65,18 @@ export async function generateSlideImage(userId: string, prepId: string, slide: 
     },
     extra
   )
-  // 生成結果（doyaslideの公開URL）を取得し、shodan非公開バケットへ再保存
-  const resp = await fetch(res.imageUrl)
-  if (!resp.ok) throw new Error('生成画像の取得に失敗しました')
-  const buf = Buffer.from(await resp.arrayBuffer())
+  // 生成結果（doyaslideの公開URL）を取得し、shodan非公開バケットへ再保存（各I/Oはタイムアウトで保護＝ハング防止）
+  const ctrl = new AbortController()
+  const to = setTimeout(() => ctrl.abort(), 25000)
+  let buf: Buffer
+  try {
+    const resp = await fetch(res.imageUrl, { signal: ctrl.signal })
+    if (!resp.ok) throw new Error('生成画像の取得に失敗しました')
+    buf = Buffer.from(await resp.arrayBuffer())
+  } finally {
+    clearTimeout(to)
+  }
   const path = `shodan/slides/${prepId}/${index}-${Date.now()}.png`
-  await uploadPng(path, buf)
+  await raceTimeout('uploadSlide', 25000, uploadPng(path, buf))
   return { title: slide.title, imagePath: path, role }
 }

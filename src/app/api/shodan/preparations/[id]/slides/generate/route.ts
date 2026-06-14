@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
 import { generateSlideImage, type StoredSlide } from '@/lib/shodan/slide-image'
+import { raceTimeout } from '@/lib/fetch-timeout'
 import type { ProposalSlide } from '@/lib/shodan/types'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
@@ -28,7 +29,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   // 未生成の枠だけをこのリクエストで処理（1回あたり最大BATCH枚）＝300sタイムアウト内に収め、各バッチで保存して作業を失わない
   const todo = images.map((im, i) => (im.imagePath ? -1 : i)).filter((i) => i >= 0)
-  const BATCH = 3
+  // 1リクエスト最大2枚・並行2・各枚にハードタイムアウト＝300sプラットフォーム制限内に確実に収め、ハングを防ぐ
+  const BATCH = 2
   const batch = todo.slice(0, BATCH)
 
   if (batch.length > 0) {
@@ -37,7 +39,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     async function worker() {
       while (next < batch.length) {
         const i = batch[next++]
-        try { images[i] = await generateSlideImage(sctx!.userId, prep!.id, list[i], i) }
+        try { images[i] = await raceTimeout('slideGen', 150000, generateSlideImage(sctx!.userId, prep!.id, list[i], i)) }
         catch (e) { console.error('[shodan/slides] slide failed', (e as any)?.message) }
       }
     }
