@@ -34,6 +34,9 @@ export async function POST(req: NextRequest) {
   }
 
   const brandColors = Array.isArray(body.brandColors) ? body.brandColors.filter((c: any) => typeof c === 'string').slice(0, 6) : undefined
+  // logoPath はサーバ(/api/adbanner/logo)が発行する形式のみ許可（任意パス指定でのファイル読みを防ぐ多層防御）
+  const rawLogo = (body.logoPath as string)?.trim()
+  const logoPath = rawLogo && /^adbanner\/logos\/[0-9a-fA-F-]{36}\.(png|jpg|webp)$/.test(rawLogo) ? rawLogo : null
 
   const campaign = await prisma.adBannerCampaign.create({
     data: {
@@ -44,7 +47,7 @@ export async function POST(req: NextRequest) {
       serviceName: (body.serviceName as string)?.trim()?.slice(0, 120) || null,
       appeal: (body.appeal as string)?.trim()?.slice(0, 1000) || null,
       brandColors: brandColors as any,
-      logoPath: (body.logoPath as string)?.trim() || null,
+      logoPath,
       media: (body.media as string)?.trim() || 'meta',
     },
   })

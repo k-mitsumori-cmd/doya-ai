@@ -87,13 +87,20 @@ export default function ShodanResultPage() {
     setSlidesProgress(null)
     try {
       let prevDone = -1
-      for (let guard = 0; guard < 12; guard++) {
+      let stalls = 0
+      for (let guard = 0; guard < 14; guard++) {
         const d = await shodanSend<{ success: boolean; count: number; total: number; remaining: number }>(`/api/shodan/preparations/${id}/slides/generate`, orgSlug, 'POST')
         if (!d.success) throw new Error('生成に失敗しました')
         setSlidesProgress({ done: d.count, total: d.total })
         if (d.remaining <= 0) break
-        if (d.count <= prevDone) break // 進捗なし（失敗枠が残存）→ 編集画面で個別に再生成
-        prevDone = d.count
+        if (d.count <= prevDone) {
+          // 進捗なし。一時的失敗の可能性があるので1回だけ再試行し、2回連続で止まったら打ち切り（編集画面で個別再生成）
+          stalls++
+          if (stalls >= 2) break
+        } else {
+          stalls = 0
+          prevDone = d.count
+        }
       }
       router.push(`/shodan/${encodeURIComponent(orgSlug)}/p/${id}/slides`)
     } catch (e: any) { toast.error(e.message || 'スライド生成に失敗しました'); setSlidesBusy(false) }
