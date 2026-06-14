@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
 import { effectivePrepStatus } from '@/lib/shodan/types'
+import { signedUrl } from '@/lib/shodan/storage'
+import type { StoredSlide } from '@/lib/shodan/slide-image'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
 
@@ -29,7 +31,12 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       data: { status: 'failed', errorMessage: item.errorMessage || '生成がタイムアウトしました。再度お試しください。' },
     })
   }
-  return NextResponse.json({ item }, { headers: { 'Cache-Control': 'no-store' } })
+  // 提案スライド画像は非公開保存のため、表示用に署名URLへ変換して返す
+  const stored = (item.slideImages as unknown as StoredSlide[] | null) || []
+  const slideImages = stored.length
+    ? await Promise.all(stored.map(async (s) => ({ title: s.title, role: s.role, imageUrl: await signedUrl(s.imagePath) })))
+    : item.slideImages
+  return NextResponse.json({ item: { ...item, slideImages } }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 // DELETE /api/shodan/preparations/[id]

@@ -1,13 +1,22 @@
 // ============================================
 // ドヤ商談準備 提案スライドの画像生成（ドヤスライド方式を流用）
 // 既存の slidesJson(構成テキスト) を1枚絵のスライド画像へ。gpt-image-2（composeSlideImage）。
+// 生成画像は shodan 非公開バケットへ保存し、配信は署名URL（機密性確保）。
 // ============================================
 import { composeSlideImage, type ComposeProject } from '@/lib/doyaslide/generate'
+import { uploadPng } from './storage'
 import type { ProposalSlide } from './types'
 
+// DBに保存する形（imagePath は非公開バケット内パス。失敗時 null）
+export interface StoredSlide {
+  title: string
+  imagePath: string | null
+  role?: string
+}
+// クライアントに返す形（署名URL）
 export interface SlideImage {
   title: string
-  imageUrl: string | null // 生成失敗時は null（slidesJson と同じ索引で整列保持するためのプレースホルダ）
+  imageUrl: string | null
   role?: string
 }
 
@@ -16,21 +25,19 @@ function shodanProject(prepId: string): ComposeProject {
     id: `shodan-${prepId}`,
     aspectRatio: 'wide', // 16:9
     themeColor: '#7f19e6',
-    stylePreset: 'corporate', // 企業提案向け
+    stylePreset: 'corporate',
     logoUrl: null,
     logoPosition: 'top-right',
     logoSize: 'M',
     logoBackingChip: false,
   }
 }
-
 function roleFromType(t?: string): string {
   if (t === 'cover') return '表紙'
   if (t === 'agenda') return '目次'
   if (t === 'closing') return 'まとめ'
   return ''
 }
-
 function visualPromptFor(slide: ProposalSlide): string {
   const bullets = (slide.bullets || []).join(' / ')
   return [
@@ -42,8 +49,8 @@ function visualPromptFor(slide: ProposalSlide): string {
   ].filter(Boolean).join('')
 }
 
-/** 1スライドを画像生成して返す（extra: チャット修正の追記指示） */
-export async function generateSlideImage(userId: string, prepId: string, slide: ProposalSlide, index: number, extra?: string): Promise<SlideImage> {
+/** 1スライドを画像生成し、shodan非公開バケットへ保存してパスを返す（extra: 修正の追記指示） */
+export async function generateSlideImage(userId: string, prepId: string, slide: ProposalSlide, index: number, extra?: string): Promise<StoredSlide> {
   const role = roleFromType(slide.type)
   const res = await composeSlideImage(
     userId,
@@ -57,5 +64,11 @@ export async function generateSlideImage(userId: string, prepId: string, slide: 
     },
     extra
   )
-  return { title: slide.title, imageUrl: res.imageUrl, role }
+  // 生成結果（doyaslideの公開URL）を取得し、shodan非公開バケットへ再保存
+  const resp = await fetch(res.imageUrl)
+  if (!resp.ok) throw new Error('生成画像の取得に失敗しました')
+  const buf = Buffer.from(await resp.arrayBuffer())
+  const path = `shodan/slides/${prepId}/${index}-${Date.now()}.png`
+  await uploadPng(path, buf)
+  return { title: slide.title, imagePath: path, role }
 }

@@ -5,7 +5,8 @@ export const maxDuration = 120
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
-import { generateSlideImage, type SlideImage } from '@/lib/shodan/slide-image'
+import { generateSlideImage, type StoredSlide } from '@/lib/shodan/slide-image'
+import { signedUrl } from '@/lib/shodan/storage'
 import type { ProposalSlide } from '@/lib/shodan/types'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
@@ -23,7 +24,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const prep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
   if (!prep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   const slides = (prep.slidesJson as unknown as ProposalSlide[] | null) || []
-  const images = ((prep.slideImages as unknown as SlideImage[] | null) || []).slice()
+  const images = ((prep.slideImages as unknown as StoredSlide[] | null) || []).slice()
   // slideImages は slidesJson と整列保持。索引は両配列の範囲内（=スライド画像が存在する枠）に限定。
   if (!Number.isInteger(index) || index < 0 || index >= slides.length || index >= images.length) {
     return NextResponse.json({ error: '不正なスライドです' }, { status: 400 })
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const img = await generateSlideImage(sctx.userId, prep.id, slides[index], index, instruction)
     images[index] = img
     await prisma.shodanPreparation.update({ where: { id: prep.id }, data: { slideImages: images as any } })
-    return NextResponse.json({ success: true, data: { index, image: img } })
+    return NextResponse.json({ success: true, data: { index, image: { title: img.title, role: img.role, imageUrl: await signedUrl(img.imagePath) } } })
   } catch (e: any) {
     console.error('[shodan/slides/regenerate]', e?.message)
     return NextResponse.json({ error: '再生成に失敗しました' }, { status: 500 })
