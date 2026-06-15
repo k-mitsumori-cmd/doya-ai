@@ -75,7 +75,7 @@ export default function ShodanSlidesEditPage() {
   const slides = prep.slideImages || []
 
   return (
-    <div className="p-6 md:p-8 max-w-5xl mx-auto">
+    <div className="p-6 md:p-8 max-w-6xl mx-auto">
       <div className="flex items-center gap-2 text-sm font-bold text-slate-400 mb-3">
         <Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${id}`} className="hover:text-purple-600 flex items-center gap-1">{sym('arrow_back', 16)}商談準備へ戻る</Link>
       </div>
@@ -100,9 +100,9 @@ export default function ShodanSlidesEditPage() {
           <Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${id}`} className="inline-block mt-3 text-purple-600 font-bold underline">商談準備ページで「提案資料を作成する」</Link>
         </div>
       ) : (
-        <div className="flex flex-col lg:flex-row gap-5">
-          {/* メインプレビュー */}
-          <div className="flex-1 min-w-0">
+        <div className="flex flex-col md:flex-row gap-5 items-start">
+          {/* メインプレビュー＋編集（中央） */}
+          <div className="flex-1 min-w-0 w-full">
             {slides[active]?.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={slides[active]!.imageUrl as string} alt={slides[active]?.title} className="w-full rounded-2xl border border-slate-200 shadow-md" />
@@ -112,7 +112,7 @@ export default function ShodanSlidesEditPage() {
               </div>
             )}
             <div className="mt-3 rounded-2xl bg-white border border-slate-200 p-4">
-              <p className="font-black text-slate-800 text-sm mb-2">スライド{active + 1}：{slides[active]?.title}</p>
+              <p className="font-black text-slate-800 text-sm mb-2">スライド{active + 1}／{slides.length}：{slides[active]?.title}</p>
               <label className="block text-xs font-black text-slate-500 mb-1">修正の指示（例: もっと数字を大きく／背景を明るく／CTAを強調）</label>
               <textarea value={instr[active] || ''} onChange={(e) => setInstr((s) => ({ ...s, [active]: e.target.value }))} rows={2}
                 className="w-full rounded-xl border-2 border-slate-200 focus:border-purple-400 outline-none px-3 py-2 font-bold text-sm resize-y" placeholder="この指示で作り直します" />
@@ -122,11 +122,16 @@ export default function ShodanSlidesEditPage() {
               </div>
             </div>
           </div>
-          {/* サムネイル一覧 */}
-          <div className="lg:w-56 shrink-0">
-            <div className="grid grid-cols-3 lg:grid-cols-2 gap-2">
+          {/* スライド切替リスト（右側・縦並びスクロール） */}
+          <div className="w-full md:w-52 lg:w-60 shrink-0 md:sticky md:top-4">
+            <div className="flex items-center justify-between mb-2 px-0.5">
+              <span className="text-xs font-black text-slate-500">スライド一覧（{slides.length}枚）</span>
+              <span className="text-[10px] font-bold text-slate-400">タップで切替</span>
+            </div>
+            <div className="flex md:flex-col gap-2 overflow-x-auto md:overflow-y-auto md:max-h-[calc(100vh-7rem)] pb-1 md:pr-1 -mx-0.5 px-0.5">
               {slides.map((s, i) => (
-                <button key={i} onClick={() => setActive(i)} className={`relative rounded-lg overflow-hidden border-2 transition-all ${i === active ? 'border-purple-500 ring-2 ring-purple-200' : 'border-slate-200 hover:border-purple-300'}`}>
+                <button key={i} onClick={() => setActive(i)} title={`スライド${i + 1}：${s.title || ''}`}
+                  className={`relative w-36 md:w-full shrink-0 rounded-lg overflow-hidden border-2 text-left transition-all ${i === active ? 'border-purple-500 ring-2 ring-purple-200 shadow-md' : 'border-slate-200 hover:border-purple-300'}`}>
                   {s.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={s.imageUrl} alt={s.title} className="w-full aspect-video object-cover" loading="lazy" />
@@ -134,7 +139,9 @@ export default function ShodanSlidesEditPage() {
                     <div className="w-full aspect-video bg-rose-50 grid place-items-center text-rose-400"><span className="material-symbols-outlined" style={{ fontSize: 18 }}>image_not_supported</span></div>
                   )}
                   <span className="absolute top-1 left-1 bg-black/60 text-white text-[10px] font-black px-1.5 rounded">{i + 1}</span>
+                  {i === active && <span className="absolute top-1 right-1 bg-purple-600 text-white text-[10px] font-black px-1.5 rounded">編集中</span>}
                   {busy[i] && <span className="absolute inset-0 grid place-items-center bg-white/70"><span className="material-symbols-outlined animate-spin text-purple-600">progress_activity</span></span>}
+                  <span className="block px-1.5 py-1 text-[10px] font-bold text-slate-600 truncate bg-white">{s.title || `スライド${i + 1}`}</span>
                 </button>
               ))}
             </div>
