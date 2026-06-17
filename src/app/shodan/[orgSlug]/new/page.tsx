@@ -9,7 +9,7 @@ import { DoyaKun, SiteShot, PageHeader, sym } from '@/components/shodan/ui'
 import type { CompanyResearch } from '@/lib/shodan/types'
 import toast from 'react-hot-toast'
 
-type Phase = 'input' | 'researching' | 'reveal' | 'generating'
+type Phase = 'input' | 'researching' | 'reveal'
 
 // 調査中に流す「現在進行形」メッセージ（実処理と並行して体感を演出）
 const RESEARCH_TICKER = [
@@ -70,13 +70,10 @@ export default function ShodanNewPage() {
       if (d.status === 'failed' || !d.research) throw new Error('調査に失敗しました')
       setResearch(d.research)
       setPhase('reveal')
-      // 調査結果を読めるよう少し見せてから生成へ
-      await new Promise((r) => setTimeout(r, 4200))
-      // フェーズ2：提案資料の生成
-      setPhase('generating')
-      const g = await shodanSend<{ id: string; status: string }>(`/api/shodan/preparations/${d.id}/generate`, orgSlug, 'POST')
-      if (g.status !== 'done') throw new Error('提案生成に失敗しました')
-      toast.success('商談準備が完成しました！')
+      // 会社情報の調査が完了。提案資料の組み立ては時間がかかるので“待たせず”結果ページへ。
+      // 結果ページで会社情報を即表示しつつ、提案生成は自動で継続＆進捗を派手に表示する。
+      await new Promise((r) => setTimeout(r, 3400))
+      toast.success('会社情報の調査が完了！提案資料の作成に進みます')
       router.replace(`/shodan/${encodeURIComponent(orgSlug)}/p/${d.id}`)
     } catch (e: any) {
       toast.error(e.message || '生成に失敗しました')
@@ -161,42 +158,6 @@ export default function ShodanNewPage() {
           </motion.div>
         )}
 
-        {phase === 'generating' && (
-          <motion.div key="generating" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="rounded-3xl bg-white border border-purple-100 p-6 shadow-sm">
-            <div className="flex items-center gap-3 mb-4">
-              <DoyaKun mood="present" size={72} />
-              <div>
-                <p className="font-black text-purple-700 text-lg flex items-center gap-2">
-                  <span className="material-symbols-outlined animate-spin">progress_activity</span>提案資料を作成中…
-                </p>
-                <p className="text-xs font-bold text-slate-400">調査結果をもとに、提案書を組み立てています。</p>
-              </div>
-            </div>
-
-            {/* 資料が組み上がる演出（ドキュメント＋スライドのモックアップ） */}
-            <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
-              <div className="mx-auto max-w-md bg-white rounded-xl shadow-md border border-slate-100 p-5">
-                <motion.div initial={{ width: 0 }} animate={{ width: '70%' }} transition={{ duration: 0.6 }}
-                  className="h-5 rounded bg-gradient-to-r from-purple-400 to-fuchsia-400 mb-4" />
-                {[0, 1, 2, 3, 4, 5].map((i) => (
-                  <motion.div key={i} initial={{ opacity: 0 }} animate={{ opacity: [0, 1, 0.6] }}
-                    transition={{ delay: 0.3 + i * 0.35, duration: 1.2, repeat: Infinity, repeatType: 'reverse' }}
-                    className={`h-3 rounded bg-slate-200 mb-2 ${i % 3 === 0 ? 'w-1/3 bg-purple-200' : i % 2 === 0 ? 'w-5/6' : 'w-full'}`} />
-                ))}
-                <div className="grid grid-cols-3 gap-2 mt-4">
-                  {[0, 1, 2].map((i) => (
-                    <motion.div key={i} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 + i * 0.25 }}
-                      className="aspect-video rounded-lg bg-gradient-to-br from-purple-100 to-fuchsia-100 border border-purple-200 grid place-items-center">
-                      <span className="material-symbols-outlined text-purple-400" style={{ fontSize: 18 }}>{['insert_chart', 'lightbulb', 'description'][i]}</span>
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
-              <p className="text-center text-[11px] font-bold text-slate-400 mt-3">エグゼクティブサマリー・課題・ご提案・効果・進め方 を構成中…</p>
-            </div>
-          </motion.div>
-        )}
       </AnimatePresence>
     </div>
   )

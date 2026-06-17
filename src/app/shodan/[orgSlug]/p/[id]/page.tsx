@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { shodanGet, shodanSend } from '@/lib/shodan/client'
 import Markdown from '@/components/shodan/Markdown'
-import { DoyaKun, SiteShot } from '@/components/shodan/ui'
+import { DoyaKun, SiteShot, type Mood } from '@/components/shodan/ui'
 import SlideDeck from '@/components/shodan/SlideDeck'
 import type { CompanyResearch, CompanyAnalysis, ProposalSlide } from '@/lib/shodan/types'
 import toast from 'react-hot-toast'
@@ -21,6 +21,15 @@ const SLIDE_FUN_MSGS: { text: string; mood: import('@/components/shodan/ui').Moo
   { text: '余白を美しく、プロ品質に…✨', mood: 'love' },
   { text: 'CTAをしっかり目立たせています…🔥', mood: 'jump' },
   { text: 'もうすぐ完成！最後の仕上げ中…🎁', mood: 'present' },
+]
+
+// 提案資料を「組み立て中」に順番で見せる派手なステップ（会社情報は先に出して、ここで待たせない）
+const PROPOSAL_STEPS: { icon: string; mood: Mood; title: string; sub: string }[] = [
+  { icon: 'analytics', mood: 'thinking', title: '現状をはっきり分析中…', sub: '強み・弱み・伸びしろを言語化しています' },
+  { icon: 'psychology', mood: 'focus', title: '課題仮説を組み立て中…', sub: '根拠と“放置リスク”をセットで整理' },
+  { icon: 'lightbulb', mood: 'point', title: '刺さる解決策を設計中…', sub: '期待できる効果まで添えて提案の柱に' },
+  { icon: 'record_voice_over', mood: 'working', title: '商談トークを準備中…', sub: '最初の一言・話す順番を用意しています' },
+  { icon: 'auto_awesome', mood: 'present', title: '提案資料に清書中…', sub: 'もうすぐ完成します！' },
 ]
 
 type Prep = {
@@ -136,6 +145,25 @@ export default function ShodanResultPage() {
     } catch (e: any) { toast.error(e.message) } finally { setGenerating(false) }
   }
 
+  // 「提案資料を作成中」の楽しいステップ送り
+  const [genStep, setGenStep] = useState(0)
+  useEffect(() => {
+    if (!generating) { setGenStep(0); return }
+    const t = setInterval(() => setGenStep((i) => (i < PROPOSAL_STEPS.length - 1 ? i + 1 : i)), 1600)
+    return () => clearInterval(t)
+  }, [generating])
+
+  // 調査済み(researched)の案件を開いたら、提案生成を“自動で”開始（ボタンを押させず待たせない）
+  const genStartedRef = useRef(false)
+  useEffect(() => {
+    if (!prep) return
+    if (prep.status === 'researched' && !prep.proposalMarkdown && !generating && !genStartedRef.current) {
+      genStartedRef.current = true
+      generate()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prep])
+
   const copyProposal = async () => {
     if (!prep?.proposalMarkdown) return
     await navigator.clipboard.writeText(prep.proposalMarkdown)
@@ -222,19 +250,59 @@ export default function ShodanResultPage() {
         </div>
       )}
 
-      {/* 調査済み・提案未生成 → 提案作成導線 */}
-      {prep.status === 'researched' && !prep.proposalMarkdown && (
-        <div className="flex items-center gap-3 rounded-2xl border border-purple-200 bg-purple-50 px-5 py-4 flex-wrap">
-          <DoyaKun mood={generating ? 'present' : 'thumbsup'} size={52} float={generating} />
-          <span className="flex-1 min-w-[180px] text-purple-800 font-bold text-sm">
-            {generating ? '提案資料を作成中です…' : '企業調査は完了しました。続けて提案資料を作成しましょう。'}
-          </span>
-          {!generating && (
-            <button onClick={generate}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-xs hover:-translate-y-0.5 transition-all">
-              {sym('bolt', 16)}提案資料を作成する
-            </button>
-          )}
+      {/* 調査済み・提案生成中 → 派手な「作成中」進捗パネル（会社情報は下にすぐ表示） */}
+      {prep.status === 'researched' && !prep.proposalMarkdown && generating && (
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-600 via-fuchsia-600 to-indigo-600 text-white p-6 shadow-lg shadow-purple-500/25 shodan-no-print">
+          {/* 背景キラキラ */}
+          {['top-4 left-6', 'top-8 right-10', 'bottom-6 left-1/3', 'bottom-10 right-1/4'].map((pos, i) => (
+            <span key={i} className={`material-symbols-outlined absolute ${pos} text-white/25 animate-ping`}
+              style={{ fontSize: 16 + (i % 2) * 10, animationDuration: `${1.6 + i * 0.4}s` }}>{i % 2 ? 'star' : 'auto_awesome'}</span>
+          ))}
+          <div className="relative z-10 flex items-center gap-4">
+            <div className="relative shrink-0 animate-bounce" style={{ animationDuration: '1.5s' }}>
+              <div className="absolute inset-0 -z-10 blur-xl bg-white/40 rounded-full" />
+              <DoyaKun mood={PROPOSAL_STEPS[genStep].mood} size={88} float={false} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur text-[11px] font-black mb-1.5">
+                <span className="material-symbols-outlined animate-spin" style={{ fontSize: 16 }}>progress_activity</span>
+                会社情報の調査は完了！提案資料を作成中
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black leading-tight flex items-center gap-2">
+                <span className="material-symbols-outlined animate-pulse" style={{ fontSize: 24 }}>{PROPOSAL_STEPS[genStep].icon}</span>
+                {PROPOSAL_STEPS[genStep].title}
+              </h2>
+              <p className="text-white/90 font-bold text-sm mt-1">{PROPOSAL_STEPS[genStep].sub}</p>
+            </div>
+          </div>
+          {/* 進捗バー */}
+          <div className="relative z-10 mt-5">
+            <div className="h-2.5 rounded-full bg-white/20 overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-amber-300 via-white to-amber-300 transition-all duration-700 ease-out"
+                style={{ width: `${Math.round(((genStep + 1) / PROPOSAL_STEPS.length) * 92)}%` }} />
+            </div>
+            {/* ステップ・ドット */}
+            <div className="mt-3 flex items-center gap-1.5 flex-wrap">
+              {PROPOSAL_STEPS.map((s, i) => (
+                <span key={i} className={`material-symbols-outlined rounded-full p-0.5 transition-all ${
+                  i < genStep ? 'text-emerald-300' : i === genStep ? 'text-white scale-125 bg-white/15' : 'text-white/30'}`}
+                  style={{ fontSize: 17 }}>{i < genStep ? 'check_circle' : s.icon}</span>
+              ))}
+              <span className="ml-auto text-xs font-black text-white/80">下に会社情報を表示中。完成し次第ここに提案が並びます ✨</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 調査済みだが自動生成が止まった等 → 手動の作成導線（フォールバック） */}
+      {prep.status === 'researched' && !prep.proposalMarkdown && !generating && (
+        <div className="flex items-center gap-3 rounded-2xl border border-purple-200 bg-purple-50 px-5 py-4 flex-wrap shodan-no-print">
+          <DoyaKun mood="thumbsup" size={52} float={false} />
+          <span className="flex-1 min-w-[180px] text-purple-800 font-bold text-sm">企業調査は完了しました。続けて提案資料を作成しましょう。</span>
+          <button onClick={generate}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-xs hover:-translate-y-0.5 transition-all">
+            {sym('bolt', 16)}提案資料を作成する
+          </button>
         </div>
       )}
 
