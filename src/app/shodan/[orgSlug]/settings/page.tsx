@@ -39,6 +39,17 @@ const STATUS_BADGE: Record<Status, { label: string; cls: string }> = {
   ok: { label: 'OK', cls: 'bg-emerald-100 text-emerald-700' },
 }
 
+// 自社情報の抽出中に順番に見せる“ド派手”ステップ（飽きさせない演出）
+const EXTRACT_STEPS: { icon: string; mood: Mood; title: string; sub: string }[] = [
+  { icon: 'travel_explore', mood: 'focus', title: 'サイトに潜入中…', sub: 'トップページを丸ごと読み込んでいます' },
+  { icon: 'menu_book', mood: 'thinking', title: '会社概要をスキャン', sub: '事業内容・沿革・実績を抜き出し中' },
+  { icon: 'rocket_launch', mood: 'point', title: '強み・USPを発掘', sub: '競合と差がつく“ドヤれる”ポイントを探索' },
+  { icon: 'inventory_2', mood: 'working', title: '商材ラインナップを整理', sub: 'サービス・プロダクトを一覧化しています' },
+  { icon: 'groups', mood: 'thumbsup', title: 'ターゲット顧客を推定', sub: '誰に刺さるかをAIが言語化中' },
+  { icon: 'palette', mood: 'love', title: 'ブランドの空気を読み取り', sub: 'カラー・トーンを推定しています' },
+  { icon: 'auto_awesome', mood: 'success', title: '下書きを清書中…', sub: 'もうすぐ自動入力が完成します！' },
+]
+
 export default function ShodanSettingsPage() {
   const params = useParams<{ orgSlug: string }>()
   const orgSlug = decodeURIComponent(String(params.orgSlug))
@@ -53,6 +64,17 @@ export default function ShodanSettingsPage() {
   const [logoPath, setLogoPath] = useState<string | null>(null)
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [stepIdx, setStepIdx] = useState(0)
+
+  // 抽出中はステップ演出を自動で進める（最後の1歩は完了まで手前で待機＝飽き＆“もうすぐ”感）
+  useEffect(() => {
+    if (!extracting) { setStepIdx(0); return }
+    setStepIdx(0)
+    const t = setInterval(() => {
+      setStepIdx((i) => (i < EXTRACT_STEPS.length - 1 ? i + 1 : i))
+    }, 1300)
+    return () => clearInterval(t)
+  }, [extracting])
 
   useEffect(() => {
     shodanGet<{ profile: any | null }>('/api/shodan/company-profile', orgSlug)
@@ -131,8 +153,69 @@ export default function ShodanSettingsPage() {
 
   if (loading) return <div className="p-10 text-center"><DoyaKun mood="thinking" size={72} /><p className="mt-2 text-slate-400 font-bold">読み込み中…</p></div>
 
+  const step = EXTRACT_STEPS[stepIdx]
+  const extractPct = Math.round(((stepIdx + 1) / EXTRACT_STEPS.length) * 92)
+
   return (
     <div className="p-6 md:p-8 max-w-2xl mx-auto">
+      {/* ▼ 自社情報 抽出中 ド派手オーバーレイ ▼ */}
+      {extracting && (
+        <div className="fixed inset-0 z-[80] overflow-hidden flex items-center justify-center p-4
+          bg-gradient-to-br from-purple-700 via-fuchsia-600 to-indigo-700">
+          {/* 背景のキラキラ */}
+          {['top-10 left-8','top-24 right-12','bottom-16 left-16','bottom-28 right-24','top-1/2 left-6','top-1/3 right-1/4'].map((pos, i) => (
+            <span key={i} className={`material-symbols-outlined absolute ${pos} text-white/30 animate-ping`}
+              style={{ fontSize: 18 + (i % 3) * 12, animationDuration: `${1.4 + i * 0.3}s` }}>
+              {i % 2 ? 'star' : 'auto_awesome'}
+            </span>
+          ))}
+          {/* 回転する光のリング */}
+          <div className="absolute w-[520px] h-[520px] rounded-full border-2 border-white/10 border-t-white/40 animate-spin" style={{ animationDuration: '6s' }} />
+          <div className="absolute w-[360px] h-[360px] rounded-full border-2 border-white/10 border-b-white/30 animate-spin" style={{ animationDuration: '4s', animationDirection: 'reverse' }} />
+
+          <div className="relative z-10 w-full max-w-md text-center text-white">
+            {/* ドヤくん（ステップごとに表情チェンジ＋ぴょこぴょこ） */}
+            <div className="relative inline-block animate-bounce" style={{ animationDuration: '1.4s' }}>
+              <div className="absolute inset-0 -z-10 blur-2xl bg-white/40 rounded-full scale-90" />
+              <DoyaKun mood={step.mood} size={150} float={false} />
+            </div>
+
+            {/* いま何をしているか（特大） */}
+            <div className="mt-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/15 backdrop-blur text-sm font-black">
+              <span className="material-symbols-outlined animate-pulse" style={{ fontSize: 20 }}>{step.icon}</span>
+              自社情報をAIが抽出中
+            </div>
+            <h2 className="mt-4 text-3xl font-black drop-shadow-sm leading-tight">{step.title}</h2>
+            <p className="mt-2 text-white/90 font-bold">{step.sub}</p>
+            <p className="mt-1 text-xs font-bold text-white/60 truncate px-6">{extractUrl}</p>
+
+            {/* 進捗バー（シマー） */}
+            <div className="mt-6 mx-auto max-w-xs">
+              <div className="h-3 rounded-full bg-white/20 overflow-hidden">
+                <div className="h-full rounded-full bg-gradient-to-r from-amber-300 via-white to-amber-300 bg-[length:200%_100%] animate-pulse transition-all duration-700 ease-out"
+                  style={{ width: `${extractPct}%` }} />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-xs font-black text-white/80">
+                <span>解析中…</span><span>{extractPct}%</span>
+              </div>
+            </div>
+
+            {/* ステップ・ドット */}
+            <div className="mt-5 flex items-center justify-center gap-1.5 flex-wrap px-4">
+              {EXTRACT_STEPS.map((s, i) => (
+                <span key={i} className={`material-symbols-outlined rounded-full p-1 transition-all ${
+                  i < stepIdx ? 'text-emerald-300' : i === stepIdx ? 'text-white scale-125 bg-white/15' : 'text-white/30'}`}
+                  style={{ fontSize: 18 }}>
+                  {i < stepIdx ? 'check_circle' : s.icon}
+                </span>
+              ))}
+            </div>
+            <p className="mt-4 text-xs font-bold text-white/60">画面はそのままでOK。完了したら自動で反映されます ✨</p>
+          </div>
+        </div>
+      )}
+      {/* ▲ 抽出中オーバーレイ ▲ */}
+
       <PageHeader icon="business_center" title="自社情報" subtitle="ここに登録した情報をもとに、提案資料が「自社の商材・強み」に最適化されます。" />
 
       {/* 自動入力カード */}
