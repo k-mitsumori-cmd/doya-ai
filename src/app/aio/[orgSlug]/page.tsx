@@ -118,14 +118,15 @@ export default function AioDashboard() {
     [scans]
   )
 
-  // クイックスタート(?scan=1)経由の初回は、まだ結果が無ければ自動でスキャンを開始する
+  // ?scan=1 は quick-start 直後の「今すぐスキャンして」という明示要求。
+  // 既存doneの有無に関わらず1回だけ実行し、リロードでの二重実行を防ぐためURLからscanを除去する。
   useEffect(() => {
     if (loading || autoScanTriggered.current) return
     if (searchParams.get('scan') !== '1') return
     autoScanTriggered.current = true
-    const hasDone = scans.some((s) => s.status === 'done')
-    if (!hasDone && !running) runScan()
-  }, [loading, scans, running, searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (typeof window !== 'undefined') window.history.replaceState(null, '', `/aio/${orgSlug}`)
+    if (!running) runScan()
+  }, [loading, running, searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <DashboardSkeleton />
 
@@ -227,7 +228,12 @@ export default function AioDashboard() {
             サービス名・URLは登録済みです。下のボタンでAIでの現状をスキャンしましょう（監視する質問は
             <Link href={`/aio/${orgSlug}/prompts`} className="text-purple-700 underline">プロンプト</Link>で編集できます）。
           </p>
-          <div className="flex justify-center">{RunButton}</div>
+          <div className="flex justify-center items-center gap-2 flex-wrap">
+            {RunButton}
+            <Link href="/aio" className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-purple-200 text-purple-700 font-black text-sm hover:bg-purple-50 transition-colors">
+              {sym('add', 18)}別のURLを調べる
+            </Link>
+          </div>
         </div>
       </div>
     )
@@ -243,7 +249,12 @@ export default function AioDashboard() {
             <p className="text-sm font-bold text-purple-700">{doya.message}</p>
           </div>
         </div>
-        {RunButton}
+        <div className="flex items-center gap-2">
+          <Link href="/aio" className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-purple-200 text-purple-700 font-black text-sm hover:bg-purple-50 transition-colors">
+            {sym('add', 18)}別のURLを調べる
+          </Link>
+          {RunButton}
+        </div>
       </div>
 
       {errorBanner}

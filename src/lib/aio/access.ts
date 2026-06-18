@@ -118,3 +118,19 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
   })
   return org
 }
+
+/**
+ * 新しいワークスペースを必ず新規作成する（冪等再利用しない）。
+ * URLごとに別ワークスペース＝独立した時系列にするための入口（quick-start）で使う。
+ * オーナーとして当該ユーザーを参加させる。
+ */
+export async function createAioOrganization(userId: string, orgName: string, memberName: string) {
+  const base = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
+  const dup = await prisma.aioOrganization.findUnique({ where: { slug: base } })
+  const slug = dup ? `${base}-${Date.now()}` : base
+  const org = await prisma.aioOrganization.create({ data: { name: orgName, slug } })
+  await prisma.aioMember.create({
+    data: { organizationId: org.id, userId, role: 'owner', status: 'ACTIVE', name: memberName, acceptedAt: new Date() },
+  })
+  return org
+}

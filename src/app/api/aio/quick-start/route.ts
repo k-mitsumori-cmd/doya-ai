@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { getOrCreateOrganization } from '@/lib/aio/access'
+import { createAioOrganization } from '@/lib/aio/access'
 import { suggestBrandSetup, deriveBrandFromUrl, normalizeUrl } from '@/lib/aio/suggest'
 
 // POST /api/aio/quick-start — 「サービスURL」だけで開始する入口（サービス名はURLから自動導出）。
@@ -29,22 +29,29 @@ export async function POST(req: NextRequest) {
     // 1) URLからサービス名を自動導出（サイトタイトル→AI整形、失敗時はドメイン名）。ユーザーは名前入力不要。
     const derived = await deriveBrandFromUrl(url)
     const brandName = derived.brandName
-
-    // 2) ワークスペースを用意（冪等：既存があれば再利用。ユーザーには組織作成を見せない）
     const memberName = (session?.user?.name as string)?.trim() || 'オーナー'
-    const org = await getOrCreateOrganization(userId, brandName.slice(0, 120), memberName.slice(0, 80))
+
+    // 2) 同じURLの既存ワークスペースがあれば再利用（＝定点観測の継続）。無ければURLごとに新規作成。
+    //    こうして1ワークスペース=1URL=独立した時系列を保ち、別URL投入で過去結果を汚染しない。
+    const memberships = await prisma.aioMember.findMany({
+      where: { userId, status: 'ACTIVE' },
+      include: { organization: { include: { profile: { select: { brandUrl: true } } } } },
+      orderBy: { createdAt: 'desc' },
+    })
+    const matched = memberships.find((m) => (m.organization.profile?.brandUrl || '') === url)?.organization
+    const org = matched ?? (await createAioOrganization(userId, brandName.slice(0, 120), memberName.slice(0, 80)))
 
     // 3) AIでカテゴリと監視プロンプトを生成（URL＋導出名から）
     const setup = await suggestBrandSetup({ brandName, url })
 
-    // 3) ブランドプロフィールを upsert（入力値で初期化。category は推定値）
+    // 4) ブランドプロフィールを upsert（入力URLで初期化。category は推定値）
     await prisma.aioBrandProfile.upsert({
       where: { organizationId: org.id },
       create: { organizationId: org.id, brandName: brandName.slice(0, 120), brandUrl: url, category: setup.category },
       update: { brandName: brandName.slice(0, 120), brandUrl: url, ...(setup.category ? { category: setup.category } : {}) },
     })
 
-    // 4) 監視プロンプトが未登録なら、生成したものを投入（既存があれば尊重して触らない）
+    // 5) 監視プロンプトが未登録なら投入（同URL再実行では既存を尊重し履歴を保つ）
     const existing = await prisma.aioPrompt.count({ where: { organizationId: org.id } })
     if (existing === 0 && setup.prompts.length) {
       await prisma.aioPrompt.createMany({
