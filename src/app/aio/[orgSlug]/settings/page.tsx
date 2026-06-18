@@ -74,11 +74,11 @@ export default function AioSettingsPage() {
     <div className="max-w-2xl mx-auto p-6">
       <PageHeader icon="manage_search" title="ブランド設定" subtitle="追跡する自社ブランドと競合を登録します" />
       <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
-        {field('追跡ブランド名 *', 'brandName', '例: CARRY ME')}
-        {field('自社サイトURL', 'brandUrl', '例: https://carryme.jp', '自社ドメイン引用率の判定に使います')}
-        {field('別名・表記ゆれ', 'aliases', '例: キャリーミー, キャリーミー', 'カンマ区切り')}
-        {field('競合ブランド', 'competitors', '例: HiPro, lotsful, みらいワークス, Workship', 'カンマ区切り。Share of Voiceの比較対象')}
-        {field('カテゴリ', 'category', '例: プロ人材 業務委託マッチング')}
+        {field('追跡ブランド名 *', 'brandName', '例: ドヤマーケ')}
+        {field('自社サイトURL', 'brandUrl', '例: https://doya-ai.surisuta.jp', '自社ドメイン引用率の判定に使います')}
+        {field('別名・表記ゆれ', 'aliases', '例: ドヤマーケAI, DoyaMarke', 'カンマ区切り')}
+        {field('競合ブランド', 'competitors', '例: 競合サービスA, 競合サービスB', 'カンマ区切り。Share of Voiceの比較対象')}
+        {field('カテゴリ', 'category', '例: マーケティングAI SaaS')}
         {field('市場・地域', 'market', '例: 日本')}
 
         {error && (

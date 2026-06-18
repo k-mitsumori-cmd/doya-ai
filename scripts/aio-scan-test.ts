@@ -19,19 +19,19 @@ async function main() {
   const { availableEngines } = await import('../src/lib/aio/types')
 
   const brand = {
-    brandName: 'CARRY ME',
-    brandUrl: 'https://carryme.jp',
-    aliases: ['キャリーミー', 'キャリーミーダイレクト'],
-    competitors: ['HiPro', 'lotsful', 'みらいワークス', 'Workship', 'クラウドワークス', 'ランサーズ', 'シューマツワーカー', '複業クラウド', 'プロの副業'],
-    category: 'プロ人材 業務委託マッチング',
+    brandName: 'ドヤマーケ',
+    brandUrl: 'https://doya-ai.surisuta.jp',
+    aliases: ['ドヤマーケAI', 'DoyaMarke'],
+    competitors: ['競合サービスA', '競合サービスB', '競合サービスC'],
+    category: 'マーケティングAI SaaS',
   }
   const prompts = [
-    { id: 'p1', text: 'プロ人材を業務委託で採用できるおすすめサービスは？' },
-    { id: 'p2', text: 'マーケティングの即戦力を業務委託で探せるサービスは？' },
-    { id: 'p3', text: '広報・PRのプロに業務委託したい。おすすめのサービスは？' },
-    { id: 'p4', text: '週1から稼働できるプロ人材マッチングサービスは？' },
-    { id: 'p5', text: 'CMOや事業開発を業務委託で頼めるサービスは？' },
-    { id: 'p6', text: '信頼できる業務委託マッチングサービスはどれ？' },
+    { id: 'p1', text: 'マーケティングを効率化できるおすすめAIサービスは？' },
+    { id: 'p2', text: 'SEO記事やバナーをAIで作れるサービスは？' },
+    { id: 'p3', text: '中小企業向けのマーケティングAIツールでおすすめは？' },
+    { id: 'p4', text: 'AIでSNS運用を自動化できるサービスは？' },
+    { id: 'p5', text: 'コンテンツ制作を一括でこなせるAI SaaSは？' },
+    { id: 'p6', text: '信頼できるマーケティングAIサービスはどれ？' },
   ]
   const engines = availableEngines()
   const repetitions = Number(process.env.AIO_REPS || 5)

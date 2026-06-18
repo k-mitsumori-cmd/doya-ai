@@ -307,7 +307,7 @@ function asciiToken(s: string): string {
 
 function classifyChannel(domain: string, ownDomain: string | null, competitors: string[]): CitationChannel {
   if (ownDomain && domain === ownDomain) return 'own'
-  // 競合のオウンドメディア判定：競合名のASCIIトークンがドメインに含まれるか（例: Workship→goworkship.com）
+  // 競合のオウンドメディア判定：競合名のASCIIトークンがドメインに含まれるか（例: 競合名→そのブランドのドメイン）
   const dt = asciiToken(domain)
   for (const c of competitors) {
     const t = asciiToken(c)
