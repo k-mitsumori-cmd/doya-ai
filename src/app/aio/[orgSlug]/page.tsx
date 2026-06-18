@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { aioGet, aioSend } from '@/lib/aio/client'
 import { ENGINE_LABEL, type EngineId } from '@/lib/aio/types'
@@ -26,6 +26,8 @@ const PURPLE = '#7f19e6'
 
 export default function AioDashboard() {
   const { orgSlug } = useParams<{ orgSlug: string }>()
+  const searchParams = useSearchParams()
+  const autoScanTriggered = useRef(false)
   const [tab, setTab] = useState<Tab>('visibility')
   const [scans, setScans] = useState<ScanRow[]>([])
   const [summary, setSummary] = useState<Summary | null>(null)
@@ -116,6 +118,15 @@ export default function AioDashboard() {
     [scans]
   )
 
+  // クイックスタート(?scan=1)経由の初回は、まだ結果が無ければ自動でスキャンを開始する
+  useEffect(() => {
+    if (loading || autoScanTriggered.current) return
+    if (searchParams.get('scan') !== '1') return
+    autoScanTriggered.current = true
+    const hasDone = scans.some((s) => s.status === 'done')
+    if (!hasDone && !running) runScan()
+  }, [loading, scans, running, searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
+
   if (loading) return <DashboardSkeleton />
 
   // ドヤくん（公式マスコット）のひとこと — 状況に応じて表情(mood)と台詞が変化
@@ -188,6 +199,21 @@ export default function AioDashboard() {
   )
 
   if (!summary) {
+    // スキャン実行中（クイックスタート直後の自動スキャン含む）は「調査中」を明示
+    if (running) {
+      return (
+        <div className="max-w-2xl mx-auto p-6">
+          <div className="text-center mt-6">
+            <div className="flex justify-center"><DoyaKun mood="thinking" size={120} /></div>
+            <h1 className="text-2xl font-black text-slate-900 mt-4">AIでの現状を調査中…</h1>
+            <p className="text-slate-500 font-bold mt-2">ChatGPT・Gemini・Claudeに質問を投げて、言及・引用・順位を集計しています。数分かかります。</p>
+            <div className="mt-6 grid gap-2 max-w-md mx-auto">
+              {[0, 1, 2].map((i) => <div key={i} className="h-3 rounded-full bg-slate-100 overflow-hidden"><div className="h-full bg-purple-200 animate-pulse" style={{ width: `${70 - i * 18}%` }} /></div>)}
+            </div>
+          </div>
+        </div>
+      )
+    }
     return (
       <div className="max-w-2xl mx-auto p-6">
         {errorBanner}
@@ -198,9 +224,8 @@ export default function AioDashboard() {
           <div className="inline-block mt-3 rounded-2xl bg-purple-50 border border-purple-100 px-4 py-2 text-sm font-bold text-purple-800">{doya.message}</div>
           <h1 className="text-2xl font-black text-slate-900 mt-3">まだスキャン結果がありません</h1>
           <p className="text-slate-500 font-bold mt-2 mb-6">
-            ① <Link href={`/aio/${orgSlug}/settings`} className="text-purple-700 underline">ブランド設定</Link>で追跡対象を登録 →
-            ② <Link href={`/aio/${orgSlug}/prompts`} className="text-purple-700 underline">監視プロンプト</Link>を追加 →
-            ③ スキャン実行
+            サービス名・URLは登録済みです。下のボタンでAIでの現状をスキャンしましょう（監視する質問は
+            <Link href={`/aio/${orgSlug}/prompts`} className="text-purple-700 underline">プロンプト</Link>で編集できます）。
           </p>
           <div className="flex justify-center">{RunButton}</div>
         </div>

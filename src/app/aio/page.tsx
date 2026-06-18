@@ -16,8 +16,8 @@ const FEATURES = [
 export default function AioEntryPage() {
   const router = useRouter()
   const [phase, setPhase] = useState<'loading' | 'guest' | 'onboard'>('loading')
-  const [orgName, setOrgName] = useState('')
-  const [memberName, setMemberName] = useState('')
+  const [brandName, setBrandName] = useState('')
+  const [serviceUrl, setServiceUrl] = useState('')
   const [creating, setCreating] = useState(false)
 
   useEffect(() => {
@@ -34,19 +34,21 @@ export default function AioEntryPage() {
       .catch(() => setPhase('guest'))
   }, [router])
 
-  const create = async () => {
-    if (!orgName.trim() || !memberName.trim()) return
+  // サービスURL＋サービス名だけで開始（裏でワークスペース・ブランド設定・監視プロンプトを自動用意）
+  const start = async () => {
+    if (!brandName.trim()) { toast.error('サービス名を入力してください'); return }
     setCreating(true)
     try {
-      const res = await fetch('/api/aio/organization', {
+      const res = await fetch('/api/aio/quick-start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: orgName, memberName }),
+        body: JSON.stringify({ brandName, url: serviceUrl }),
       })
       const d = await res.json()
       if (res.status === 401) { signIn('google', { callbackUrl: '/aio' }); return }
-      if (!res.ok) throw new Error(d.error || '作成に失敗しました')
-      router.replace(`/aio/${encodeURIComponent(d.organization.slug)}`)
+      if (!res.ok) throw new Error(d.error || '開始に失敗しました')
+      // ?scan=1 でダッシュボード側が自動でスキャンを実行する
+      router.replace(`/aio/${encodeURIComponent(d.slug)}?scan=1`)
     } catch (e: any) {
       toast.error(e.message)
       setCreating(false)
@@ -67,20 +69,24 @@ export default function AioEntryPage() {
         <BgDots />
         <div className="relative z-10 bg-white rounded-3xl shadow-xl shadow-purple-500/10 p-8 w-full max-w-md border border-purple-100">
           <div className="text-center mb-6">
-            <div className="flex justify-center"><DoyaKun mood="hello" size={110} /></div>
-            <h2 className="text-2xl font-black text-slate-900 mt-2">ようこそ！</h2>
-            <p className="text-slate-500 font-bold text-sm mt-1">組織を作成するとすぐに使い始められます</p>
+            <div className="flex justify-center"><DoyaKun mood="point" size={110} /></div>
+            <h2 className="text-2xl font-black text-slate-900 mt-2">AIでの現状を調べよう</h2>
+            <p className="text-slate-500 font-bold text-sm mt-1">サービス名とURLを入れるだけ。あとはAIが自動で診断します</p>
           </div>
-          <label className="block text-sm font-black text-slate-700 mb-1">組織名（会社名）</label>
-          <input value={orgName} onChange={(e) => setOrgName(e.target.value)} placeholder="例: 株式会社スリスタ"
-            className="w-full rounded-xl border-2 border-slate-200 focus:border-purple-400 outline-none px-4 py-3 font-bold mb-3 transition-colors" />
-          <label className="block text-sm font-black text-slate-700 mb-1">あなたの氏名</label>
-          <input value={memberName} onChange={(e) => setMemberName(e.target.value)} placeholder="例: 三森 律稀"
-            className="w-full rounded-xl border-2 border-slate-200 focus:border-purple-400 outline-none px-4 py-3 font-bold mb-5 transition-colors" />
-          <button onClick={create} disabled={creating}
+          <label className="block text-sm font-black text-slate-700 mb-1">サービス名 <span className="text-purple-600">*</span></label>
+          <input value={brandName} onChange={(e) => setBrandName(e.target.value)} placeholder="例: ドヤマーケ"
+            onKeyDown={(e) => e.key === 'Enter' && start()}
+            className="w-full rounded-xl border-2 border-slate-200 focus:border-purple-600 outline-none px-4 py-3 font-bold mb-3 transition-colors" />
+          <label className="block text-sm font-black text-slate-700 mb-1">サービスURL</label>
+          <input value={serviceUrl} onChange={(e) => setServiceUrl(e.target.value)} placeholder="例: https://doya-ai.surisuta.jp"
+            onKeyDown={(e) => e.key === 'Enter' && start()}
+            className="w-full rounded-xl border-2 border-slate-200 focus:border-purple-600 outline-none px-4 py-3 font-bold mb-2 transition-colors" />
+          <p className="text-xs font-bold text-slate-400 mb-5">URLは自社ドメインの引用率の判定に使います（任意）</p>
+          <button onClick={start} disabled={creating}
             className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-lg shadow-lg shadow-purple-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.98]">
-            {creating ? '作成中…' : '🚀 組織を作成して始める'}
+            {creating ? '準備中…（AIが質問を生成しています）' : '🔍 AIでの現状を調べる'}
           </button>
+          <p className="text-[11px] font-bold text-slate-400 text-center mt-3">監視する質問はAIが自動で作成。あとから自由に編集できます。</p>
         </div>
       </div>
     )
