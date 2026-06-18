@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { DoyaKun, sym } from '@/components/aio/ui'
 import toast from 'react-hot-toast'
 
@@ -58,6 +59,12 @@ export default function AioScanPage() {
             <button key={ex} onClick={() => setUrl(ex)} className="text-xs font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-full px-3 py-1.5 transition-colors">{ex}</button>
           ))}
         </div>
+      </div>
+
+      <div className="text-center mt-4">
+        <Link href={`/aio/${encodeURIComponent(orgSlug)}`} className="inline-flex items-center gap-1 text-sm font-bold text-purple-700 hover:underline">
+          {sym('insights', 18)}これまでの分析・結果ダッシュボードを見る
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-5">

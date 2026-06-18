@@ -29,11 +29,15 @@ export default function AioEntryPage() {
         setAuthed(!!d?.authenticated)
         // memberships は作成順(昇順)なので末尾が最新ワークスペース
         const ms = d?.memberships as { slug: string }[] | undefined
-        if (d?.authenticated && ms?.length) setLatestSlug(ms[ms.length - 1].slug)
+        if (d?.authenticated && ms?.length) {
+          // 既存ユーザーは「URL AI調査」を最初の画面に。入力欄のある /scan へ直行（ダッシュボードはサイドバーから）
+          router.replace(`/aio/${encodeURIComponent(ms[ms.length - 1].slug)}/scan`)
+          return // 遷移中はローディング表示のまま（入口フォームをちらつかせない）
+        }
+        setPhase('ready')
       })
-      .catch(() => {})
-      .finally(() => setPhase('ready'))
-  }, [])
+      .catch(() => setPhase('ready'))
+  }, [router])
 
   // サービスURLだけで開始（裏でサービス名導出・ワークスペース・ブランド設定・監視プロンプトを自動用意）
   const start = async () => {
