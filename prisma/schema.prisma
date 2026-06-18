@@ -3297,3 +3297,126 @@ model AdBannerCreative {
   @@index([campaignId, createdAt])
   @@map("adbanner_creative")
 }
+
+// ============================================
+// ドヤAIO（AI可視性 / 回答エンジン最適化, AEO）aio_*  — 組織スコープ型
+// 監視プロンプトを ChatGPT/Gemini/Claude/Perplexity に反復で投げ、
+// 自社ブランドの言及率・Share of Voice・引用元・感情を定点観測する。
+// 組織/招待/課金は Shodan・SFA と同型。
+// ============================================
+model AioOrganization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members AioMember[]
+  profile AioBrandProfile?
+  prompts AioPrompt[]
+  scans   AioScan[]
+  results AioResult[]
+  @@map("aio_organizations")
+}
+
+model AioMember {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   AioOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  role           String          @default("member") // owner / admin / manager / member
+  status         String          @default("ACTIVE") // ACTIVE / PENDING / INACTIVE
+  name           String?
+  inviteEmail    String?
+  inviteToken    String?         @unique
+  acceptedAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("aio_members")
+}
+
+// 追跡対象ブランド（1組織1件）。自社名＋別名＋競合＋カテゴリ。
+model AioBrandProfile {
+  id             String          @id @default(cuid())
+  organizationId String          @unique
+  organization   AioOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  brandName      String?         // 追跡する自社ブランド名
+  brandUrl       String?         // 自社サイトURL（自社ドメイン引用率の判定に使う）
+  aliases        Json?           // 別名・表記ゆれ ["キャリーミー","CARRY ME"]
+  competitors    Json?           // 競合ブランド名 ["HiPro","lotsful", ...]
+  category       String?         // カテゴリ（例: プロ人材 業務委託マッチング）
+  market         String?         // 市場・地域（例: 日本）
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("aio_brand_profiles")
+}
+
+// 監視プロンプト。これを各エンジンに反復で投げる。
+model AioPrompt {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   AioOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  text           String          @db.Text
+  category       String?         // 任意の分類タグ
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  results AioResult[]
+  @@index([organizationId])
+  @@map("aio_prompts")
+}
+
+// スキャン1回＝日付つきスナップショット（時系列チャートの単位）。
+model AioScan {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   AioOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  status         String          @default("processing") // processing / done / failed
+  engines        Json?           // 実行したエンジン ["chatgpt","gemini","claude","perplexity"]
+  repetitions    Int             @default(3)            // 1プロンプト×1エンジンあたりの反復回数
+  errorMessage   String?         @db.Text
+  // 集計サマリ（このスキャン時点のスナップショット）
+  awarenessPct   Float?          // ブランド認知度（言及した割合 0-100）
+  shareOfVoice   Float?          // SoV（追跡ブランド中の自社シェア 0-100）
+  sentimentPos   Float?          // ポジ割合
+  sentimentNeu   Float?
+  sentimentNeg   Float?
+  ownCitationPct Float?          // 自社ドメイン引用率
+  summary        Json?           // { perEngine, sov[], citations[], promptBreakdown[] } 全文
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  results AioResult[]
+  @@index([organizationId, createdAt])
+  @@map("aio_scans")
+}
+
+// 個別ラン結果（プロンプト×エンジン×反復回 の1回ぶん）。
+model AioResult {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   AioOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  scanId         String
+  scan           AioScan         @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  promptId       String
+  prompt         AioPrompt       @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  engine         String          // chatgpt / gemini / claude / perplexity
+  iteration      Int             @default(0)
+  brandMentioned Boolean         @default(false)
+  brandRank      Int?            // リスト内の自社の位置（1始まり、無ければ null）
+  sentiment      String?         // positive / neutral / negative
+  competitors    Json?           // この回答に出た競合名[]
+  citations      Json?           // 引用URL[]（Perplexity等の検索エンジン）
+  answerText     String?         @db.Text // 回答本文（短縮保存）
+  createdAt      DateTime        @default(now())
+
+  @@index([scanId])
+  @@index([organizationId, createdAt])
+  @@map("aio_results")
+}

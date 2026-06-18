@@ -1526,6 +1526,49 @@ export const SERVICES: Service[] = [
   },
 
   // ----------------------------------------
+  // ドヤAIO（AI可視性・AEO）
+  // ----------------------------------------
+  {
+    id: 'aio',
+    name: 'ドヤAIO',
+    shortName: 'AIO',
+    description: 'ChatGPT・Gemini・Claude・PerplexityでのブランドのAI可視性を定点観測（AEO/回答エンジン最適化）。',
+    longDescription:
+      '監視したい質問（プロンプト）を登録すると、ChatGPT・Gemini・Claude・Perplexityに反復で投げ、自社ブランドの言及率・Share of Voice・引用元ドメイン・感情を測定します。競合との比較、時系列の推移、AIに引用されるための改善アクション（メディア掲載・サイトのAI可読化・比較コンテンツ）まで提案。検索の次の「AIに選ばれる」競争を可視化します。組織スコープ・チーム招待対応。',
+    icon: '🔍',
+    color: 'purple',
+    gradient: 'from-purple-600 to-fuchsia-600',
+    bgGradient: 'from-purple-50 to-fuchsia-50',
+    href: '/aio',
+    dashboardHref: '/aio',
+    pricingHref: '/aio/pricing',
+    guideHref: '/aio',
+    features: [
+      'ChatGPT/Gemini/Claude/Perplexityでの言及率を測定',
+      'Share of Voice（競合比較）',
+      '引用元ドメイン・感情分析',
+      'プロンプト別の言及頻度（◯回中△回）',
+      '認知度・SoVの時系列推移',
+      'AEOの改善アクションを自動提案',
+    ],
+    useCases: [
+      'AI検索で自社が推されているか知りたい',
+      '競合とのAI上での占有率を比較したい',
+      'AIに引用されるための打ち手を知りたい',
+    ],
+    pricing: {
+      free: { name: '無料プラン', limit: 'プロンプト3件 / 週1回スキャン / 認知度のみ閲覧', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: 'スキャン無制限 / SoV・引用元・改善アクションも閲覧 / チーム招待', dailyLimit: -1, price: 9980 },
+    },
+    status: 'active',
+    category: 'other',
+    order: 26,
+    requiresAuth: true,
+    isNew: true,
+    badge: 'NEW',
+  },
+
+  // ----------------------------------------
   // ドヤ広告バナーAI（AdBanner）
   // ----------------------------------------
   {

@@ -262,6 +262,23 @@ export const shodanTheme: SidebarTheme = {
   zapColor: 'text-fuchsia-400 fill-fuchsia-400',
 }
 
+// ドヤAIO（AI可視性・AEO / ブランド紫 #7f19e6 → fuchsia 系）
+export const aioTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-[#7f19e6] via-purple-700 to-fuchsia-800',
+  navText: 'text-purple-100/75',
+  navTextIcon: 'text-fuchsia-200/75',
+  sectionText: 'text-purple-200/55',
+  toggleText: 'text-[#7f19e6]',
+  toggleHover: 'hover:bg-purple-50',
+  brandingText: 'text-purple-100/35',
+  profileBg: 'bg-purple-900/30',
+  avatarBg: 'bg-[#7f19e6]',
+  loginText: 'text-[#7f19e6]',
+  loginHover: 'hover:bg-purple-50',
+  aiBubbleBg: 'bg-purple-600',
+  zapColor: 'text-fuchsia-400 fill-fuchsia-400',
+}
+
 // ドヤ広告バナーAI（purple / orange）
 export const adbannerTheme: SidebarTheme = {
   bgGradient: 'bg-gradient-to-b from-purple-600 via-purple-700 to-orange-600',
