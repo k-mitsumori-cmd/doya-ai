@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getAioContext } from '@/lib/aio/access'
 import { prisma } from '@/lib/prisma'
-import AioShell from '@/components/aio/AioShell'
+import AioAppLayout from '@/components/aio/AioAppLayout'
 
 export const dynamic = 'force-dynamic'
 
@@ -23,8 +23,8 @@ export default async function AioOrgLayout({
   const org = await prisma.aioOrganization.findUnique({ where: { id: ctx.organizationId }, select: { name: true } })
 
   return (
-    <AioShell orgSlug={orgSlug} orgName={org?.name}>
+    <AioAppLayout orgSlug={orgSlug} orgName={org?.name}>
       {children}
-    </AioShell>
+    </AioAppLayout>
   )
 }

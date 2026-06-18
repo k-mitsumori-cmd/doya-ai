@@ -1,15 +1,15 @@
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getOrCreateOrganization } from '@/lib/aio/access'
-import { suggestBrandSetup } from '@/lib/aio/suggest'
+import { suggestBrandSetup, deriveBrandFromUrl, normalizeUrl } from '@/lib/aio/suggest'
 
-// POST /api/aio/quick-start — 「サービスURL＋サービス名」だけで開始する入口。
+// POST /api/aio/quick-start — 「サービスURL」だけで開始する入口（サービス名はURLから自動導出）。
 // 組織作成を意識させず、裏でワークスペース＋ブランド設定＋AI生成の監視プロンプトを用意し、
 // 返した slug のダッシュボードへ遷移してそのままスキャンできる状態にする。
 export async function POST(req: NextRequest) {
@@ -23,15 +23,18 @@ export async function POST(req: NextRequest) {
     if (!userId) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
 
     const body = await req.json().catch(() => ({}))
-    const brandName = (body.brandName as string)?.trim()
-    const url = (body.url as string)?.trim() || null
-    if (!brandName) return NextResponse.json({ error: 'サービス名は必須です' }, { status: 400 })
+    const url = normalizeUrl((body.url as string) || '')
+    if (!url) return NextResponse.json({ error: '有効なURLを入力してください' }, { status: 400 })
 
-    // 1) ワークスペースを用意（冪等：既存があれば再利用。ユーザーには組織作成を見せない）
+    // 1) URLからサービス名を自動導出（サイトタイトル→AI整形、失敗時はドメイン名）。ユーザーは名前入力不要。
+    const derived = await deriveBrandFromUrl(url)
+    const brandName = derived.brandName
+
+    // 2) ワークスペースを用意（冪等：既存があれば再利用。ユーザーには組織作成を見せない）
     const memberName = (session?.user?.name as string)?.trim() || 'オーナー'
     const org = await getOrCreateOrganization(userId, brandName.slice(0, 120), memberName.slice(0, 80))
 
-    // 2) AIでカテゴリと監視プロンプトを生成（URL＋名前だけから）
+    // 3) AIでカテゴリと監視プロンプトを生成（URL＋導出名から）
     const setup = await suggestBrandSetup({ brandName, url })
 
     // 3) ブランドプロフィールを upsert（入力値で初期化。category は推定値）
