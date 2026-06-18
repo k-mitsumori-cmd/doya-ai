@@ -45,10 +45,11 @@ export async function POST(req: NextRequest) {
     const setup = await suggestBrandSetup({ brandName, url })
 
     // 4) ブランドプロフィールを upsert（入力URLで初期化。category は推定値）
+    const aliasesData = setup.aliases.length ? (setup.aliases as any) : undefined
     await prisma.aioBrandProfile.upsert({
       where: { organizationId: org.id },
-      create: { organizationId: org.id, brandName: brandName.slice(0, 120), brandUrl: url, category: setup.category },
-      update: { brandName: brandName.slice(0, 120), brandUrl: url, ...(setup.category ? { category: setup.category } : {}) },
+      create: { organizationId: org.id, brandName: brandName.slice(0, 120), brandUrl: url, category: setup.category, aliases: aliasesData },
+      update: { brandName: brandName.slice(0, 120), brandUrl: url, ...(setup.category ? { category: setup.category } : {}), ...(aliasesData ? { aliases: aliasesData } : {}) },
     })
 
     // 5) 監視プロンプトが未登録なら投入（同URL再実行では既存を尊重し履歴を保つ）

@@ -261,7 +261,7 @@ export default function AioDashboard() {
         ))}
       </div>
 
-      {tab === 'visibility' && <VisibilityTab summary={summary} trend={trend} delta={deltas?.awareness ?? null} />}
+      {tab === 'visibility' && <VisibilityTab summary={summary} trend={trend} delta={deltas?.awareness ?? null} brandName={brandName} />}
       {tab === 'sov' && <SovTab summary={summary} delta={deltas?.sov ?? null} locked={!isPaid} orgSlug={orgSlug} />}
       {tab === 'citations' && <CitationsTab summary={summary} delta={deltas?.citation ?? null} locked={!isPaid} orgSlug={orgSlug} />}
       {tab === 'recommend' && <RecommendTab summary={summary} locked={!isPaid} orgSlug={orgSlug} />}
@@ -442,9 +442,28 @@ function DeltaBadge({ value, suffix = 'pt' }: { value: number; suffix?: string }
   )
 }
 
-function VisibilityTab({ summary, trend, delta }: { summary: Summary; trend: any[]; delta?: number | null }) {
+function VisibilityTab({ summary, trend, delta, brandName }: { summary: Summary; trend: any[]; delta?: number | null; brandName?: string | null }) {
+  const competitors = summary.sov.filter((s) => !s.isOwn)
+  const zeroAware = summary.awarenessPct === 0
+  const label = brandName ? `「${brandName}」` : 'このブランド'
   return (
     <div className="grid md:grid-cols-2 gap-4">
+      {zeroAware && (
+        <div className="md:col-span-2 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+          <div className="flex items-start gap-3">
+            <span className="material-symbols-outlined text-amber-500 mt-0.5 shrink-0">emoji_objects</span>
+            <div className="min-w-0">
+              <p className="font-black text-amber-800 text-sm">AIはまだ{label}を回答に挙げていません</p>
+              <p className="text-xs font-bold text-amber-700/90 mt-1 leading-relaxed">
+                {competitors.length > 0
+                  ? `計測自体は成功していて、競合（${competitors.slice(0, 3).map((c) => c.brand).join('・')} など）はAIに挙げられています。つまり「競合は推されるのに自社は未言及」＝まさにAEOで改善すべき状態です。`
+                  : 'まだ十分なデータが集まっていません。プロンプトを増やすか、再スキャンしてみてください。'}
+                「シェア・オブ・ボイス」で競合との差を、「推奨」タブで具体的な打ち手を確認しましょう。
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       <Card title="ブランド認知度（言及率）">
         <div className="grid place-items-center py-2"><Gauge pct={summary.awarenessPct} label="AIの回答に登場した割合" delta={delta} /></div>
         <div className="grid grid-cols-3 gap-2 mt-2">
