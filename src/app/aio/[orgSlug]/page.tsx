@@ -36,6 +36,7 @@ export default function AioDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [brandName, setBrandName] = useState<string | null>(null)
   const [activePrompts, setActivePrompts] = useState<number | null>(null)
+  const [promptTexts, setPromptTexts] = useState<string[]>([])
   // 前回スキャンとの差分（定点観測の肝）。done が2件以上あるときだけ算出
   const [deltas, setDeltas] = useState<{ awareness: number; sov: number; citation: number } | null>(null)
   // 直近のスキャンが失敗していたら通知する
@@ -50,13 +51,15 @@ export default function AioDashboard() {
       const [scanRes, profRes, promptRes, meRes] = await Promise.all([
         aioGet<{ items: ScanRow[] }>('/api/aio/scans', orgSlug),
         aioGet<{ profile: any }>('/api/aio/brand-profile', orgSlug).catch(() => ({ profile: null })),
-        aioGet<{ prompts: { isActive?: boolean }[] }>('/api/aio/prompts', orgSlug).catch(() => ({ prompts: [] as { isActive?: boolean }[] })),
+        aioGet<{ prompts: { text?: string; isActive?: boolean }[] }>('/api/aio/prompts', orgSlug).catch(() => ({ prompts: [] as { text?: string; isActive?: boolean }[] })),
         aioGet<{ plan?: string }>('/api/aio/me', orgSlug).catch(() => ({ plan: 'FREE' })),
       ])
       const plan = (meRes.plan || 'FREE').toUpperCase()
       setIsPaid(plan !== 'FREE' && plan !== 'GUEST')
       setBrandName(profRes.profile?.brandName || null)
-      setActivePrompts((promptRes.prompts || []).filter((p) => p.isActive !== false).length)
+      const active = (promptRes.prompts || []).filter((p) => p.isActive !== false)
+      setActivePrompts(active.length)
+      setPromptTexts(active.map((p) => p.text || '').filter(Boolean))
 
       const items = scanRes.items || []
       setScans(items)
@@ -124,7 +127,7 @@ export default function AioDashboard() {
     if (loading || autoScanTriggered.current) return
     if (searchParams.get('scan') !== '1') return
     autoScanTriggered.current = true
-    if (typeof window !== 'undefined') window.history.replaceState(null, '', `/aio/${orgSlug}`)
+    if (typeof window !== 'undefined') window.history.replaceState(null, '', `/aio/${encodeURIComponent(orgSlug)}`)
     if (!running) runScan()
   }, [loading, running, searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -200,21 +203,8 @@ export default function AioDashboard() {
   )
 
   if (!summary) {
-    // スキャン実行中（クイックスタート直後の自動スキャン含む）は「調査中」を明示
-    if (running) {
-      return (
-        <div className="max-w-2xl mx-auto p-6">
-          <div className="text-center mt-6">
-            <div className="flex justify-center"><DoyaKun mood="thinking" size={120} /></div>
-            <h1 className="text-2xl font-black text-slate-900 mt-4">AIでの現状を調査中…</h1>
-            <p className="text-slate-500 font-bold mt-2">ChatGPT・Gemini・Claudeに質問を投げて、言及・引用・順位を集計しています。数分かかります。</p>
-            <div className="mt-6 grid gap-2 max-w-md mx-auto">
-              {[0, 1, 2].map((i) => <div key={i} className="h-3 rounded-full bg-slate-100 overflow-hidden"><div className="h-full bg-purple-200 animate-pulse" style={{ width: `${70 - i * 18}%` }} /></div>)}
-            </div>
-          </div>
-        </div>
-      )
-    }
+    // スキャン実行中（クイックスタート直後の自動スキャン含む）は派手な進捗演出を出す
+    if (running) return <ScanProgress brandName={brandName} prompts={promptTexts} />
     return (
       <div className="max-w-2xl mx-auto p-6">
         {errorBanner}
@@ -303,6 +293,91 @@ function DashboardSkeleton() {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+// スキャン中の派手な進捗演出。実際の監視プロンプト・エンジンを小出しに見せて飽きさせない。
+function ScanProgress({ brandName, prompts }: { brandName: string | null; prompts: string[] }) {
+  const [tick, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const engines = ['ChatGPT', 'Gemini', 'Claude', 'Perplexity']
+  const STEPS = [
+    { icon: 'send', label: 'AIに質問を投げています' },
+    { icon: 'forum', label: 'AIの回答を読み取っています' },
+    { icon: 'leaderboard', label: '競合とのシェアを集計しています' },
+    { icon: 'link', label: '引用元ドメインを調べています' },
+    { icon: 'tips_and_updates', label: '改善アクションを作成しています' },
+  ]
+  const stepIdx = Math.min(STEPS.length - 1, Math.floor(tick / 7))
+  const pct = Math.min(95, Math.round(100 * (1 - Math.exp(-tick / 45))))
+  const activeEngine = Math.floor(tick / 2) % engines.length
+  const currentPrompt = prompts.length ? prompts[Math.floor(tick / 3) % prompts.length] : null
+  const TIPS = [
+    'AIに引用されるには、比較記事や第三者メディアでの言及が効きます。',
+    'ChatGPTとPerplexityでは“推されるサービス”が違うことがよくあります。',
+    'スキャンを重ねると、認知度やSoVの推移が時系列で見えるようになります。',
+    'FAQや料金を構造化しておくと、AIが回答に引用しやすくなります。',
+  ]
+  const tip = TIPS[Math.floor(tick / 5) % TIPS.length]
+
+  return (
+    <div className="max-w-2xl mx-auto p-6">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-600 via-fuchsia-600 to-purple-700 text-white shadow-xl shadow-purple-500/30 p-6 sm:p-8">
+        <div className="pointer-events-none absolute inset-0 opacity-30">
+          {[...Array(6)].map((_, i) => (
+            <span key={i} className="absolute rounded-full bg-white/40 animate-pulse"
+              style={{ width: 8 + (i % 3) * 6, height: 8 + (i % 3) * 6, top: `${(i * 37) % 90}%`, left: `${(i * 53) % 90}%`, animationDelay: `${i * 0.3}s` }} />
+          ))}
+        </div>
+        <div className="relative text-center">
+          <div className="flex justify-center animate-bounce"><DoyaKun mood="thinking" size={92} /></div>
+          <p className="mt-3 text-sm font-black text-purple-100">{brandName ? `「${brandName}」をAIで調査中` : 'AIでの現状を調査中'}</p>
+          <div className="text-5xl sm:text-6xl font-black tabular-nums mt-1">{pct}<span className="text-2xl">%</span></div>
+          <div className="mt-3 h-3 rounded-full bg-white/20 overflow-hidden">
+            <div className="h-full rounded-full bg-white transition-all duration-700 ease-out" style={{ width: `${pct}%` }} />
+          </div>
+          <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/15 font-black text-sm">
+            <span className="material-symbols-outlined text-[18px] animate-pulse">{STEPS[stepIdx].icon}</span>
+            {STEPS[stepIdx].label}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-2 mt-4">
+        {engines.map((e, i) => {
+          const on = i === activeEngine
+          return (
+            <div key={e} className={`rounded-xl border p-3 text-center transition-all duration-300 ${on ? 'border-purple-400 bg-purple-50 scale-105 shadow' : 'border-slate-200 bg-white'}`}>
+              <p className={`text-xs font-black ${on ? 'text-purple-700' : 'text-slate-400'}`}>{e}</p>
+              <p className={`text-[10px] font-bold mt-0.5 ${on ? 'text-purple-500' : 'text-slate-300'}`}>{on ? '質問中…' : '待機'}</p>
+            </div>
+          )
+        })}
+      </div>
+
+      {currentPrompt && (
+        <div className="mt-4 bg-white rounded-2xl border border-purple-100 p-4">
+          <p className="text-[11px] font-black text-purple-500 mb-1">いま調べている質問</p>
+          <p key={currentPrompt} className="text-sm font-bold text-slate-800 animate-fade-in-up">「{currentPrompt}」</p>
+        </div>
+      )}
+
+      <div className="mt-4 bg-white rounded-2xl border border-slate-200 p-4 space-y-2">
+        {STEPS.map((s, i) => (
+          <div key={s.label} className={`flex items-center gap-3 text-sm font-bold transition-colors ${i < stepIdx ? 'text-emerald-600' : i === stepIdx ? 'text-purple-700' : 'text-slate-300'}`}>
+            <span className="material-symbols-outlined text-[20px]">{i < stepIdx ? 'check_circle' : i === stepIdx ? 'progress_activity' : 'radio_button_unchecked'}</span>
+            {s.label}
+          </div>
+        ))}
+      </div>
+
+      <p key={tip} className="mt-4 text-center text-xs font-bold text-slate-400 animate-fade-in-up">💡 {tip}</p>
+      <p className="text-center text-[11px] font-bold text-slate-300 mt-2">完了までふつう数分かかります。このままお待ちください。</p>
     </div>
   )
 }

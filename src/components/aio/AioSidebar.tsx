@@ -4,7 +4,7 @@
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, Users, CreditCard, Zap, Eye } from 'lucide-react'
+import { LayoutDashboard, Users, CreditCard, Zap, Eye, ScanSearch } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { aioTheme } from '@/components/sidebar/themes'
 import {
@@ -38,6 +38,7 @@ function AioSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapsed, 
   const base = `/aio/${encodeURIComponent(orgSlug)}`
   // URL一本フローに合わせ、ブランド設定/監視プロンプトはナビから外す（自動セットアップ。ページ自体は残置）
   const NAV: NavItem[] = [
+    { href: `${base}/scan`, label: 'URL AI調査', icon: ScanSearch, hot: true },
     { href: base, label: 'ダッシュボード', icon: LayoutDashboard },
     { href: `${base}/members`, label: 'メンバー', icon: Users },
     { href: '/aio/pricing', label: '料金プラン', icon: CreditCard },
