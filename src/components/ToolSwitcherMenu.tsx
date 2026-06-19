@@ -43,6 +43,9 @@ const SERVICE_LOGO: Record<string, string> = {
   doyaslide: '/doyaslide/logo.png',
   cunning: '/cunning/logo.png',
   sfa: '/sfa/logo.png',
+  shodan: '/shodan/logo.png',
+  aio: '/aio/logo.png',
+  adbanner: '/adbanner/logo.png',
 }
 
 // ロゴが無いサービス用フォールバック（色タイル + Lucide シンボル）
