@@ -71,7 +71,7 @@ function ShodanSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapse
   return (
     <>
       <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={shodanTheme}>
-        <SidebarLogoSection icon={Target} title="ドヤ商談準備" subtitle={orgName || orgSlug} showLabel={showLabel} />
+        <SidebarLogoSection icon={Target} title="ドヤ商談準備" subtitle={orgName || orgSlug} showLabel={showLabel} logoSrc="/shodan/logo.png" />
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <nav className="py-4 sm:py-6 px-3 space-y-1">
