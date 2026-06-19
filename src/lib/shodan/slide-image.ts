@@ -45,13 +45,38 @@ function roleFromType(t?: string): string {
   if (t === 'closing') return 'まとめ'
   return ''
 }
-function visualPromptFor(slide: ProposalSlide): string {
+// 本文スライドが全部同じ見た目にならないよう、スライドごとに異なる図解レイアウトの方向性を与える。
+// （doyaslideの本文テンプレートは「Visual directionの図解で本文を構成してよい」と明記されているため効く）
+const BODY_LAYOUTS = [
+  '左右2カラムの対比レイアウト（左に「現状・課題」、右に「あるべき姿/解決後」、中央に矢印）。',
+  '左から右への3〜4ステップのプロセスフロー図（各ステップをカード＋矢印で接続）。',
+  '3〜4枚のカードを横並びにした並列レイアウト（各カード: アイコン＋小見出し＋短い説明）。',
+  '中央に主役の数値/KPIを特大表示し、周囲に根拠・補足を配置するダッシュボード風。',
+  '2×2のマトリクス（または比較表）で整理する構成。',
+  '横軸タイムラインで段階・スケジュール・ロードマップを表現する構成。',
+  '上部に結論を大きく、その下に根拠を3点の図解カードで支える構成。',
+]
+
+function visualPromptFor(slide: ProposalSlide, index: number): string {
   const bullets = (slide.bullets || []).join(' / ')
+  const t = slide.type
+  if (t === 'cover') {
+    return `プロのビジネス提案スライドの表紙。大きなタイトル「${slide.title}」と一言サブタイトル${slide.subtitle ? `「${slide.subtitle}」` : ''}。余白を活かしたミニマルで信頼感のある構成。`
+  }
+  if (t === 'agenda') {
+    return `提案資料の目次（アジェンダ）。番号付きリストで各章を整然と並べる。見出し:「${slide.title}」。`
+  }
+  if (t === 'closing') {
+    return `提案のまとめ/次のステップ。結論を簡潔に示し、行動喚起(CTA)を1つ。見出し:「${slide.title}」。`
+  }
+  // 本文(content)はスライドごとに別レイアウトを割り当てて単調さを回避
+  const layout = BODY_LAYOUTS[index % BODY_LAYOUTS.length]
   return [
     'プロのビジネス提案スライド（1枚絵）。',
     `主役の見出し: 「${slide.title}」。`,
     slide.subtitle ? `補足: ${slide.subtitle}。` : '',
-    bullets ? `要点を読みやすく図解的にレイアウト: ${bullets}。` : '',
+    `本文の図解レイアウトの方向性（必ずこの構図で本文を構成）: ${layout}`,
+    bullets ? `この構図に落とし込む要点: ${bullets}。` : '',
     'クリーンで信頼感のある企業デザイン。余白を活かし、文字は大きく可読性高く。',
   ].filter(Boolean).join('')
 }
@@ -73,7 +98,7 @@ export async function generateSlideImage(
       role: role || null,
       headline: slide.title,
       subText: (slide.bullets || []).join('\n') || slide.subtitle || null,
-      visualPrompt: visualPromptFor(slide),
+      visualPrompt: visualPromptFor(slide, index),
     },
     opts?.extra
   )
