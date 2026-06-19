@@ -9,6 +9,15 @@ import { prisma } from '@/lib/prisma'
 import { createAioOrganization } from '@/lib/aio/access'
 import { suggestBrandSetup, deriveBrandFromUrl, normalizeUrl } from '@/lib/aio/suggest'
 
+// 同一サイト判定用にホスト名を正規化（www除去・小文字）。失敗時は空文字。
+function hostnameOf(u: string): string {
+  try {
+    return new URL(u).hostname.toLowerCase().replace(/^www\./, '')
+  } catch {
+    return ''
+  }
+}
+
 // POST /api/aio/quick-start — 「サービスURL」だけで開始する入口（サービス名はURLから自動導出）。
 // 組織作成を意識させず、裏でワークスペース＋ブランド設定＋AI生成の監視プロンプトを用意し、
 // 返した slug のダッシュボードへ遷移してそのままスキャンできる状態にする。
@@ -25,23 +34,32 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}))
     const url = normalizeUrl((body.url as string) || '')
     if (!url) return NextResponse.json({ error: '有効なURLを入力してください' }, { status: 400 })
+    const host = hostnameOf(url)
 
-    // 1) URLからサービス名を自動導出（サイトタイトル→AI整形、失敗時はドメイン名）。ユーザーは名前入力不要。
-    const derived = await deriveBrandFromUrl(url)
-    const brandName = derived.brandName
-    const memberName = (session?.user?.name as string)?.trim() || 'オーナー'
-
-    // 2) 同じURLの既存ワークスペースがあれば再利用（＝定点観測の継続）。無ければURLごとに新規作成。
-    //    こうして1ワークスペース=1URL=独立した時系列を保ち、別URL投入で過去結果を汚染しない。
+    // 1) 同じサイト(ホスト名)の既存ワークスペースがあれば再利用＝定点観測の継続。
+    //    末尾スラッシュ/パス/http差で別物にならないようホスト名で照合する。
     const memberships = await prisma.aioMember.findMany({
       where: { userId, status: 'ACTIVE' },
       include: { organization: { include: { profile: { select: { brandUrl: true } } } } },
       orderBy: { createdAt: 'desc' },
     })
-    const matched = memberships.find((m) => (m.organization.profile?.brandUrl || '') === url)?.organization
-    const org = matched ?? (await createAioOrganization(userId, brandName.slice(0, 120), memberName.slice(0, 80)))
+    const matched = memberships.find((m) => {
+      const bu = m.organization.profile?.brandUrl
+      return !!bu && hostnameOf(bu) === host
+    })?.organization
 
-    // 3) AIでカテゴリと監視プロンプトを生成（URL＋導出名から）
+    // 既存サイトの再観測なら、外部fetch/AI生成をやり直さず即返す（再スキャンは ?scan=1 で実行・高速）
+    if (matched) {
+      return NextResponse.json({ organizationId: matched.id, slug: matched.slug })
+    }
+
+    // 2) 新規: URLからサービス名を自動導出（サイトタイトル→AI整形、失敗時はドメイン名）
+    const derived = await deriveBrandFromUrl(url)
+    const brandName = derived.brandName
+    const memberName = (session?.user?.name as string)?.trim() || 'オーナー'
+    const org = await createAioOrganization(userId, brandName.slice(0, 120), memberName.slice(0, 80))
+
+    // 3) AIでカテゴリ・別名・競合・監視プロンプトを生成
     const setup = await suggestBrandSetup({ brandName, url })
 
     // 4) ブランドプロフィールを upsert（入力URLで初期化。category は推定値）

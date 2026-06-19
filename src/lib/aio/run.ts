@@ -105,14 +105,12 @@ export async function runAndPersistScan(
         })),
       })
     } catch (persistErr: any) {
+      // 生の例外メッセージ(接続文字列/スキーマ等を含みうる)はDBに保存せず汎用文言のみ。詳細はサーバログのみ。
       console.error('[aio/run] createMany failed', persistErr?.message)
       await prisma.aioScan
         .update({
           where: { id: scan.id },
-          data: {
-            status: 'failed',
-            errorMessage: ('個別結果の保存に失敗しました: ' + (persistErr?.message || '')).slice(0, 500),
-          },
+          data: { status: 'failed', errorMessage: '個別結果の保存に失敗しました' },
         })
         .catch(() => {})
       return { id: scan.id, status: 'failed', error: '個別結果の保存に失敗しました' }
@@ -135,13 +133,14 @@ export async function runAndPersistScan(
     })
     return { id: updated.id, status: 'done', summary: s, recommendations: out.recommendations }
   } catch (e: any) {
+    // 生の例外メッセージはDB保存・クライアント返却しない（内部情報漏えい防止）。詳細はサーバログのみ。
     console.error('[aio/run] failed', e?.message)
     await prisma.aioScan
       .update({
         where: { id: scan.id },
-        data: { status: 'failed', errorMessage: (e?.message || 'スキャンに失敗しました').slice(0, 500) },
+        data: { status: 'failed', errorMessage: 'スキャンに失敗しました' },
       })
       .catch(() => {})
-    return { id: scan.id, status: 'failed', error: e?.message || 'スキャンに失敗しました' }
+    return { id: scan.id, status: 'failed', error: 'スキャンに失敗しました（時間をおいて再実行してください）' }
   }
 }

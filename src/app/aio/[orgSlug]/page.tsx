@@ -18,7 +18,7 @@ interface Summary {
   perEngine: { engine: EngineId; awarenessPct: number }[]
   sov: { brand: string; mentions: number; pct: number; isOwn: boolean }[]
   citations: { domain: string; count: number; channel: string; isOwn: boolean }[]
-  promptBreakdown: { promptId: string; text: string; perEngine: { engine: EngineId; mentioned: number; total: number }[] }[]
+  promptBreakdown: { promptId: string; text: string; perEngine: { engine: EngineId; mentioned: number; total: number }[]; samples?: { engine: EngineId; answer: string; brandMentioned: boolean; competitors: string[] }[] }[]
   recommendations?: { title: string; detail: string; priority: string }[]
 }
 
@@ -100,7 +100,6 @@ export default function AioDashboard() {
   const runScan = async () => {
     setRunning(true)
     setError(null)
-    setSummary(null) // 再調査中は前回結果を消して「調査中」演出を必ず表示（同じURLでも毎回やり直す）
     toast.loading('スキャン中…（数分かかります）', { id: 'scan' })
     try {
       await aioSend('/api/aio/scans', orgSlug, 'POST')
@@ -133,6 +132,8 @@ export default function AioDashboard() {
   }, [loading, running, searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <DashboardSkeleton />
+  // スキャン実行中は（既存結果の有無に関わらず）派手な進捗演出を表示。前回結果は消さない＝失敗しても残る
+  if (running) return <ScanProgress brandName={brandName} prompts={promptTexts} />
 
   // ドヤくん（公式マスコット）のひとこと — 状況に応じて表情(mood)と台詞が変化
   const doya: { mood: Mood; message: string } = (() => {
@@ -204,8 +205,6 @@ export default function AioDashboard() {
   )
 
   if (!summary) {
-    // スキャン実行中（クイックスタート直後の自動スキャン含む）は派手な進捗演出を出す
-    if (running) return <ScanProgress brandName={brandName} prompts={promptTexts} />
     return (
       <div className="max-w-2xl mx-auto p-6">
         {errorBanner}
@@ -505,28 +504,86 @@ function VisibilityTab({ summary, trend, delta, brandName }: { summary: Summary;
         </div>
       </Card>
 
-      <Card title="プロンプト別の言及頻度" className="md:col-span-2">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead><tr className="text-left text-slate-400 font-bold border-b border-slate-100">
-              <th className="py-2 pr-3">プロンプト</th>
-              {summary.perEngine.map((e) => <th key={e.engine} className="py-2 px-2 text-center whitespace-nowrap">{ENGINE_LABEL[e.engine] || e.engine}</th>)}
-            </tr></thead>
-            <tbody>
-              {summary.promptBreakdown.map((p) => (
-                <tr key={p.promptId} className="border-b border-slate-50">
-                  <td className="py-2 pr-3 font-bold text-slate-700 max-w-xs truncate" title={p.text}>{p.text}</td>
-                  {p.perEngine.map((e) => (
-                    <td key={e.engine} className="py-2 px-2 text-center">
-                      <span className={`font-black ${e.mentioned > 0 ? 'text-purple-700' : 'text-slate-300'}`}>{e.mentioned}/{e.total}</span>
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      <Card title="プロンプト別の言及状況（クリックで実際のAI回答を表示）" className="md:col-span-2">
+        <PromptBreakdown summary={summary} brandName={brandName} />
       </Card>
+    </div>
+  )
+}
+
+// 回答文中の自社名(紫)・競合名(ピンク)をハイライトして読みやすく表示
+function HighlightAnswer({ text, brandName, competitors }: { text: string; brandName?: string | null; competitors: string[] }) {
+  const own = (brandName || '').trim()
+  const comps = competitors.filter((c) => c && c.trim()).map((c) => c.trim())
+  const terms = [own, ...comps].filter(Boolean)
+  if (terms.length === 0) return <>{text}</>
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  // 長い語から優先してマッチ
+  const sorted = [...new Set(terms)].sort((a, b) => b.length - a.length)
+  const re = new RegExp(`(${sorted.map(esc).join('|')})`, 'gi')
+  const parts = text.split(re)
+  return (
+    <>
+      {parts.map((part, i) => {
+        const low = part.toLowerCase()
+        if (own && low === own.toLowerCase()) return <mark key={i} className="bg-purple-100 text-purple-800 font-black rounded px-0.5">{part}</mark>
+        if (comps.some((c) => c.toLowerCase() === low)) return <mark key={i} className="bg-fuchsia-50 text-fuchsia-700 font-bold rounded px-0.5">{part}</mark>
+        return <span key={i}>{part}</span>
+      })}
+    </>
+  )
+}
+
+function PromptBreakdown({ summary, brandName }: { summary: Summary; brandName?: string | null }) {
+  const [openId, setOpenId] = useState<string | null>(null)
+  const compNames = summary.sov.filter((s) => !s.isOwn).map((s) => s.brand)
+  return (
+    <div className="space-y-2">
+      {summary.promptBreakdown.map((p) => {
+        const open = openId === p.promptId
+        const totalMentioned = p.perEngine.reduce((a, e) => a + e.mentioned, 0)
+        const hasSamples = (p.samples?.length || 0) > 0
+        return (
+          <div key={p.promptId} className="rounded-xl border border-slate-200 overflow-hidden">
+            <button onClick={() => setOpenId(open ? null : p.promptId)}
+              className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-slate-50 transition-colors">
+              <span className={`material-symbols-outlined text-[20px] shrink-0 transition-transform ${open ? 'rotate-90' : ''} text-slate-400`}>chevron_right</span>
+              <span className="flex-1 text-sm font-bold text-slate-700 min-w-0 truncate" title={p.text}>{p.text}</span>
+              <span className="flex items-center gap-1.5 shrink-0">
+                {p.perEngine.map((e) => (
+                  <span key={e.engine} title={ENGINE_LABEL[e.engine] || e.engine}
+                    className={`text-[11px] font-black px-1.5 py-0.5 rounded ${e.mentioned > 0 ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-400'}`}>
+                    {(ENGINE_LABEL[e.engine] || e.engine).slice(0, 2)} {e.mentioned}/{e.total}
+                  </span>
+                ))}
+              </span>
+            </button>
+            {open && (
+              <div className="px-3 pb-3 pt-1 bg-slate-50/60 border-t border-slate-100 space-y-3">
+                <p className="text-[11px] font-bold text-slate-400">
+                  {totalMentioned > 0 ? `このプロンプトで自社が ${totalMentioned} 回言及されました。` : 'このプロンプトでは自社はまだ言及されていません。下の回答に挙がっているのが競合です。'}
+                </p>
+                {hasSamples ? p.samples!.map((s, i) => (
+                  <div key={i} className="bg-white rounded-lg border border-slate-200 p-3">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="text-xs font-black text-slate-600">{ENGINE_LABEL[s.engine] || s.engine}</span>
+                      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${s.brandMentioned ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
+                        {s.brandMentioned ? '自社あり' : '自社なし'}
+                      </span>
+                      {s.competitors.length > 0 && <span className="text-[10px] font-bold text-fuchsia-600">競合: {s.competitors.slice(0, 5).join('・')}</span>}
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap break-words">
+                      <HighlightAnswer text={s.answer} brandName={brandName} competitors={compNames} />
+                    </p>
+                  </div>
+                )) : (
+                  <p className="text-xs text-slate-400 font-bold">回答の記録がありません（このスキャンは抜粋保存前のものか、回答が空でした）。</p>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }

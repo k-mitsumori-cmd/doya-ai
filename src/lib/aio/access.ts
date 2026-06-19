@@ -126,11 +126,19 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
  */
 export async function createAioOrganization(userId: string, orgName: string, memberName: string) {
   const base = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
-  const dup = await prisma.aioOrganization.findUnique({ where: { slug: base } })
-  const slug = dup ? `${base}-${Date.now()}` : base
-  const org = await prisma.aioOrganization.create({ data: { name: orgName, slug } })
+  // slug一意性のTOCTOU回避: 衝突(P2002)したら一意サフィックス付きで作り直す（同名同時実行に耐える）
+  let org
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const slug = attempt === 0 ? base : `${base}-${Date.now()}-${attempt}`
+    try {
+      org = await prisma.aioOrganization.create({ data: { name: orgName, slug } })
+      break
+    } catch (e: any) {
+      if (e?.code !== 'P2002' || attempt === 3) throw e
+    }
+  }
   await prisma.aioMember.create({
-    data: { organizationId: org.id, userId, role: 'owner', status: 'ACTIVE', name: memberName, acceptedAt: new Date() },
+    data: { organizationId: org!.id, userId, role: 'owner', status: 'ACTIVE', name: memberName, acceptedAt: new Date() },
   })
-  return org
+  return org!
 }

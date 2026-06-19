@@ -78,11 +78,13 @@ export interface ScanSummary {
   sov: { brand: string; mentions: number; pct: number; isOwn: boolean }[]
   // 上位の引用ドメイン
   citations: { domain: string; count: number; channel: CitationChannel; isOwn: boolean }[]
-  // プロンプト別 × エンジン別の言及頻度（◯回中△回）
+  // プロンプト別 × エンジン別の言及頻度（◯回中△回）＋ 実際の回答抜粋（エビデンス）
   promptBreakdown: {
     promptId: string
     text: string
     perEngine: { engine: EngineId; mentioned: number; total: number }[]
+    // 各エンジンの代表回答（どう答えられたか・自社/競合がどう出たか確認用）
+    samples: { engine: EngineId; answer: string; brandMentioned: boolean; competitors: string[] }[]
   }[]
 }
 

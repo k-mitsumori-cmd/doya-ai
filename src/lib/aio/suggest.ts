@@ -184,21 +184,21 @@ URL: ${url || '(未入力)'}
 1. このサービスのカテゴリを推定する（例:「マーケティングAI SaaS」「会計クラウド」など簡潔に）。
 2. このサービス名の表記ゆれ・別名(aliases)を挙げる（カタカナ⇔英語表記、略称、スペースや記号の有無の違いなど）。無ければ空配列。
 3. 同じカテゴリの主要な競合サービス名(competitors)を5〜8個、実在の固有名で挙げる（Share of Voice比較の対象になる。対象サービス自身は含めない）。
-4. 一般ユーザーが生成AIに尋ねたときに、このサービスが“おすすめ候補として登場しうる”自然な日本語の質問を5つ作る。
+4. 一般ユーザーが生成AIに尋ねたときに、このサービスが“おすすめ候補として登場しうる”自然な日本語の質問を8つ作る。
 
 # 質問の作り方（重要）
-- 5問は**それぞれ異なる切り口**にする（用途・対象者・課題・予算・地域・比較軸など）。似たような質問を並べない。
-- 例の切り口: 「初心者向け」「法人向け」「特定職種/業種向け」「無料・安いもの」「比較・ランキング」「特定の悩みの解決」など、対象サービスの幅に合わせて分散させる。
+- 8問は**それぞれ異なる切り口**にする（用途・対象者・課題・予算・地域・比較軸・購入検討段階など）。似たような質問を並べない。広くカバーする。
+- 例の切り口: 「初心者向け」「法人向け」「特定職種/業種向け」「無料・安いもの」「比較・ランキング」「特定の悩みの解決」「導入事例」「他社からの乗り換え」など、対象サービスの幅に合わせて分散させる。
 - 質問文には固有のブランド名・企業名（対象サービス名も他社名も）を含めない。カテゴリの一般的な相談にする。
 - 「おすすめは？」「比較したい」など、検索代わりにAIへ尋ねる体裁にする。
 
 # 出力（JSONのみ）
-{"category": string, "aliases": string[], "competitors": string[], "prompts": string[5]}`
+{"category": string, "aliases": string[], "competitors": string[], "prompts": string[8]}`
 
   try {
     const r = await geminiGenerateJson<{ category?: string; aliases?: string[]; competitors?: string[]; prompts?: string[] }>({ prompt } as any)
     const prompts = Array.isArray(r?.prompts)
-      ? r!.prompts!.filter((s) => typeof s === 'string' && s.trim()).map((s) => s.trim()).slice(0, 5)
+      ? r!.prompts!.filter((s) => typeof s === 'string' && s.trim()).map((s) => s.trim()).slice(0, 8)
       : []
     const aliases = Array.isArray(r?.aliases)
       ? r!.aliases!.filter((s) => typeof s === 'string' && s.trim() && s.trim() !== brandName).map((s) => s.trim()).slice(0, 8)

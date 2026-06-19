@@ -281,14 +281,31 @@ function aggregate(
     .slice(0, 15)
 
   // プロンプト別 × エンジン別の言及頻度
-  const promptBreakdown = prompts.map((p) => ({
-    promptId: p.id,
-    text: p.text,
-    perEngine: engines.map((engine) => {
+  const promptBreakdown = prompts.map((p) => {
+    const samples: { engine: EngineId; answer: string; brandMentioned: boolean; competitors: string[] }[] = []
+    for (const engine of engines) {
       const er = runs.filter((r) => r.promptId === p.id && r.engine === engine)
-      return { engine, mentioned: er.filter((r) => r.brandMentioned).length, total: er.length }
-    }),
-  }))
+      // 代表回答: 自社言及あり優先 → 競合が出ているもの → 先頭
+      const pick = er.find((r) => r.brandMentioned) || er.find((r) => (r.competitors || []).length > 0) || er[0]
+      if (pick && (pick.answerText || '').trim()) {
+        samples.push({
+          engine,
+          answer: (pick.answerText || '').slice(0, 700),
+          brandMentioned: pick.brandMentioned,
+          competitors: (pick.competitors || []).slice(0, 12),
+        })
+      }
+    }
+    return {
+      promptId: p.id,
+      text: p.text,
+      perEngine: engines.map((engine) => {
+        const er = runs.filter((r) => r.promptId === p.id && r.engine === engine)
+        return { engine, mentioned: er.filter((r) => r.brandMentioned).length, total: er.length }
+      }),
+      samples,
+    }
+  })
 
   return {
     totalRuns,

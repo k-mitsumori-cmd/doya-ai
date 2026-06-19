@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { signIn } from 'next-auth/react'
 import { DoyaKun, sym } from '@/components/aio/ui'
 import toast from 'react-hot-toast'
 
@@ -24,6 +25,7 @@ export default function AioScanPage() {
         body: JSON.stringify({ url }),
       })
       const d = await res.json()
+      if (res.status === 401) { signIn('google', { callbackUrl: `/aio/${encodeURIComponent(orgSlug)}/scan` }); return }
       if (!res.ok) throw new Error(d.error || '調査の開始に失敗しました')
       // 返ったワークスペース（同一URLは継続／別URLは新規）へ。?scan=1 で自動スキャン＋派手な進捗表示
       router.push(`/aio/${encodeURIComponent(d.slug)}?scan=1`)
