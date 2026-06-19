@@ -264,7 +264,7 @@ export default function AioDashboard() {
       {tab === 'visibility' && <VisibilityTab summary={summary} trend={trend} delta={deltas?.awareness ?? null} brandName={brandName} />}
       {tab === 'sov' && <SovTab summary={summary} delta={deltas?.sov ?? null} locked={!isPaid} orgSlug={orgSlug} />}
       {tab === 'citations' && <CitationsTab summary={summary} delta={deltas?.citation ?? null} locked={!isPaid} orgSlug={orgSlug} />}
-      {tab === 'recommend' && <RecommendTab summary={summary} locked={!isPaid} orgSlug={orgSlug} />}
+      {tab === 'recommend' && <RecommendTab summary={summary} locked={!isPaid} orgSlug={orgSlug} brandName={brandName} />}
     </div>
   )
 }
@@ -654,23 +654,60 @@ function CitationsTab({ summary, delta, locked, orgSlug }: { summary: Summary; d
   )
 }
 
-function RecommendTab({ summary, locked, orgSlug }: { summary: Summary; locked: boolean; orgSlug: string }) {
-  const recs = summary.recommendations || []
-  const color: Record<string, string> = { high: 'bg-rose-100 text-rose-700', medium: 'bg-amber-100 text-amber-700', low: 'bg-slate-100 text-slate-600' }
-  const label: Record<string, string> = { high: '優先度：高', medium: '優先度：中', low: '優先度：低' }
+function RecommendTab({ summary, locked, orgSlug, brandName }: { summary: Summary; locked: boolean; orgSlug: string; brandName?: string | null }) {
+  const META: Record<string, { label: string; bar: string; pill: string; icon: string }> = {
+    high: { label: '今すぐ着手', bar: 'bg-rose-500', pill: 'bg-rose-100 text-rose-700', icon: 'priority_high' },
+    medium: { label: 'おすすめ', bar: 'bg-amber-500', pill: 'bg-amber-100 text-amber-700', icon: 'recommend' },
+    low: { label: '余裕があれば', bar: 'bg-slate-400', pill: 'bg-slate-100 text-slate-600', icon: 'schedule' },
+  }
+  const orderOf = (p: string) => (p === 'high' ? 0 : p === 'low' ? 2 : 1)
+  const recs = [...(summary.recommendations || [])].sort((a, b) => orderOf(a.priority) - orderOf(b.priority))
+  const who = brandName ? `「${brandName}」` : 'あなたのサービス'
+
   const body = recs.length === 0 ? (
-    <Card><p className="text-slate-400 font-bold text-center py-8">改善アクションがありません</p></Card>
+    <Card><p className="text-slate-400 font-bold text-center py-8">改善アクションがありません。スキャンを実行すると、AIに選ばれるための打ち手が表示されます。</p></Card>
   ) : (
-    <div className="space-y-3">
-      {recs.map((r, i) => (
-        <div key={i} className="bg-white rounded-2xl border border-slate-200 p-5">
-          <div className="flex items-center gap-2 mb-2">
-            <span className={`text-[11px] font-black px-2 py-0.5 rounded-full ${color[r.priority] || color.medium}`}>{label[r.priority] || '優先度：中'}</span>
-            <h3 className="font-black text-slate-900">{r.title}</h3>
+    <div className="space-y-4">
+      {/* 現状＋使い方のイントロ */}
+      <div className="rounded-2xl bg-gradient-to-br from-purple-50 to-fuchsia-50 border border-purple-100 p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <span className="material-symbols-outlined text-purple-600 mt-0.5">tips_and_updates</span>
+          <div className="min-w-0">
+            <p className="font-black text-slate-900 text-sm sm:text-base">AIに選ばれるための改善アクション</p>
+            <p className="text-xs sm:text-sm font-bold text-slate-500 mt-1 leading-relaxed">
+              現在のAI認知度は <span className="text-purple-700 font-black">{summary.awarenessPct}%</span>。{who}がAIの回答にもっと登場するための打ち手を<strong className="text-slate-700">優先度の高い順</strong>に並べました。上から順に取り組むのがおすすめです。
+            </p>
           </div>
-          <p className="text-sm text-slate-600 font-medium leading-relaxed">{r.detail}</p>
         </div>
-      ))}
+        {/* 凡例 */}
+        <div className="flex flex-wrap gap-2 mt-3 pl-8">
+          {Object.entries(META).map(([k, m]) => (
+            <span key={k} className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full ${m.pill}`}>
+              <span className="material-symbols-outlined text-[13px]">{m.icon}</span>{m.label}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* アクション一覧（番号付きステップ） */}
+      {recs.map((r, i) => {
+        const m = META[r.priority] || META.medium
+        return (
+          <div key={i} className="flex bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div className={`w-1.5 shrink-0 ${m.bar}`} />
+            <div className="p-4 sm:p-5 flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <span className="grid place-items-center w-7 h-7 rounded-full bg-gradient-to-br from-purple-600 to-fuchsia-600 text-white font-black text-sm shrink-0">{i + 1}</span>
+                <span className={`inline-flex items-center gap-1 text-[11px] font-black px-2 py-0.5 rounded-full ${m.pill}`}>
+                  <span className="material-symbols-outlined text-[14px]">{m.icon}</span>{m.label}
+                </span>
+                <h3 className="font-black text-slate-900 text-sm sm:text-base">{r.title}</h3>
+              </div>
+              <p className="text-sm text-slate-600 font-medium leading-relaxed">{r.detail}</p>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
   return (
