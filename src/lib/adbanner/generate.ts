@@ -60,7 +60,9 @@ async function genOne(input: GenerateInput, idx: number): Promise<GeneratedCreat
     logoPos: input.logoCfg?.pos,
   })
 
-  const res = await generateImageWithFallback({ prompt, size: gptSize, quality: 'high' })
+  // quality は medium 固定。high + 1536x1024(横長) は実測123〜200秒かかり、下の raceTimeout を超えて
+  // 横長バナー(1200x628/728x90)が全滅する。medium なら半分以下の時間で安定生成できる。
+  const res = await generateImageWithFallback({ prompt, size: gptSize, quality: 'medium' })
   if (!res?.base64) return null
   const raw = Buffer.from(res.base64, 'base64')
   // 媒体の実寸へリサイズ（cover）
