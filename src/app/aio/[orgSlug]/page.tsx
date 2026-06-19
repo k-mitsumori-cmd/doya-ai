@@ -100,6 +100,7 @@ export default function AioDashboard() {
   const runScan = async () => {
     setRunning(true)
     setError(null)
+    setSummary(null) // 再調査中は前回結果を消して「調査中」演出を必ず表示（同じURLでも毎回やり直す）
     toast.loading('スキャン中…（数分かかります）', { id: 'scan' })
     try {
       await aioSend('/api/aio/scans', orgSlug, 'POST')
