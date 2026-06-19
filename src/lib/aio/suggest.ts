@@ -148,6 +148,7 @@ export async function deriveBrandFromUrl(url: string): Promise<{ brandName: stri
 export interface BrandSetupSuggestion {
   category: string | null
   aliases: string[]
+  competitors: string[]
   prompts: string[]
 }
 
@@ -171,7 +172,7 @@ function fallbackPrompts(brandName: string): string[] {
 export async function suggestBrandSetup(input: { brandName: string; url?: string | null }): Promise<BrandSetupSuggestion> {
   const brandName = (input.brandName || '').trim()
   const url = (input.url || '').trim()
-  if (!brandName) return { category: null, aliases: [], prompts: [] }
+  if (!brandName) return { category: null, aliases: [], competitors: [], prompts: [] }
 
   const prompt = `あなたはAEO（AI可視性最適化）の専門家です。あるサービスについて、生成AI（ChatGPT等）での露出を測定するための情報を作ります。
 
@@ -182,31 +183,36 @@ URL: ${url || '(未入力)'}
 # やること
 1. このサービスのカテゴリを推定する（例:「マーケティングAI SaaS」「会計クラウド」など簡潔に）。
 2. このサービス名の表記ゆれ・別名(aliases)を挙げる（カタカナ/英語/略称/スペース有無など。例: 「キャリーミー」なら ["CARRY ME","CARRYME","careerme"]）。無ければ空配列。
-3. 一般ユーザーが生成AIに尋ねたときに、このサービスが“おすすめ候補として登場しうる”自然な日本語の質問を5つ作る。
+3. 同じカテゴリの主要な競合サービス名(competitors)を5〜8個、実在の固有名で挙げる（Share of Voice比較の対象になる。対象サービス自身は含めない）。
+4. 一般ユーザーが生成AIに尋ねたときに、このサービスが“おすすめ候補として登場しうる”自然な日本語の質問を5つ作る。
 
 # 質問の作り方（重要）
 - 5問は**それぞれ異なる切り口**にする（用途・対象者・課題・予算・地域・比較軸など）。似たような質問を並べない。
 - 例の切り口: 「初心者向け」「法人向け」「特定職種/業種向け」「無料・安いもの」「比較・ランキング」「特定の悩みの解決」など、対象サービスの幅に合わせて分散させる。
-- 質問文に固有のブランド名・企業名（対象サービス名も他社名も）を含めない。カテゴリの一般的な相談にする。
+- 質問文には固有のブランド名・企業名（対象サービス名も他社名も）を含めない。カテゴリの一般的な相談にする。
 - 「おすすめは？」「比較したい」など、検索代わりにAIへ尋ねる体裁にする。
 
 # 出力（JSONのみ）
-{"category": string, "aliases": string[], "prompts": string[5]}`
+{"category": string, "aliases": string[], "competitors": string[], "prompts": string[5]}`
 
   try {
-    const r = await geminiGenerateJson<{ category?: string; aliases?: string[]; prompts?: string[] }>({ prompt } as any)
+    const r = await geminiGenerateJson<{ category?: string; aliases?: string[]; competitors?: string[]; prompts?: string[] }>({ prompt } as any)
     const prompts = Array.isArray(r?.prompts)
       ? r!.prompts!.filter((s) => typeof s === 'string' && s.trim()).map((s) => s.trim()).slice(0, 5)
       : []
     const aliases = Array.isArray(r?.aliases)
       ? r!.aliases!.filter((s) => typeof s === 'string' && s.trim() && s.trim() !== brandName).map((s) => s.trim()).slice(0, 8)
       : []
+    const competitors = Array.isArray(r?.competitors)
+      ? r!.competitors!.filter((s) => typeof s === 'string' && s.trim() && s.trim() !== brandName).map((s) => s.trim()).slice(0, 8)
+      : []
     return {
       category: (typeof r?.category === 'string' && r.category.trim()) ? r.category.trim().slice(0, 120) : null,
       aliases,
+      competitors,
       prompts: prompts.length ? prompts : fallbackPrompts(brandName),
     }
   } catch {
-    return { category: null, aliases: [], prompts: fallbackPrompts(brandName) }
+    return { category: null, aliases: [], competitors: [], prompts: fallbackPrompts(brandName) }
   }
 }

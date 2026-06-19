@@ -217,15 +217,27 @@ function aggregate(
     return { engine, awarenessPct: er.length ? round1((m / er.length) * 100) : 0 }
   })
 
-  // Share of Voice: 自社言及数 + 競合言及数（ラン横断のカウント）
+  // Share of Voice の母数（HubSpot式）:
+  //  競合が登録されていれば「自社＋登録競合だけ」を母数にする（数値が集中し比較しやすい）。
+  //  登録が無ければ従来どおり「検出した全ブランド」を母数にフォールバック。
+  const tracked = brand.competitors || []
   const counts = new Map<string, number>()
   const ownKey = brand.brandName
   counts.set(ownKey, brandRuns)
-  for (const c of brand.competitors) counts.set(c, 0)
-  for (const r of runs) {
-    for (const name of r.competitors) {
-      const key = matchCompetitor(name, brand.competitors) || name
-      counts.set(key, (counts.get(key) || 0) + 1)
+  if (tracked.length > 0) {
+    for (const c of tracked) counts.set(c, 0)
+    for (const r of runs) {
+      for (const name of r.competitors) {
+        const key = matchCompetitor(name, tracked) // 登録競合にマッチした分だけ算入（非登録ブランドは母数に含めない）
+        if (key) counts.set(key, (counts.get(key) || 0) + 1)
+      }
+    }
+  } else {
+    for (const r of runs) {
+      for (const name of r.competitors) {
+        const key = matchCompetitor(name, tracked) || name
+        counts.set(key, (counts.get(key) || 0) + 1)
+      }
     }
   }
   const totalMentions = Array.from(counts.values()).reduce((a, b) => a + b, 0) || 1
@@ -319,7 +331,16 @@ function classifyChannel(domain: string, ownDomain: string | null, competitors: 
 
 function matchCompetitor(name: string, competitors: string[]): string | null {
   const n = name.toLowerCase().trim()
-  return competitors.find((c) => c.toLowerCase().trim() === n || n.includes(c.toLowerCase()) || c.toLowerCase().includes(n)) || null
+  if (!n) return null
+  for (const c of competitors) {
+    const cl = c.toLowerCase().trim()
+    if (!cl) continue
+    if (cl === n) return c
+    // 短い名称(3文字以下)は誤マッチ(例:"PR"→"PR TIMES")を防ぐため完全一致のみ採用
+    if (cl.length <= 3 || n.length <= 3) continue
+    if (n.includes(cl) || cl.includes(n)) return c
+  }
+  return null
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10
