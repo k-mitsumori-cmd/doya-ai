@@ -81,6 +81,15 @@ const FALLBACK_MAPPING: ServiceMapping = {
   hoverBg: 'hover:bg-slate-50',
 }
 
+// ツール切替メニューのジャンル分け（services.ts の category → 表示見出し）。この順で並べる。
+const CATEGORY_GROUPS: { cat: string; label: string }[] = [
+  { cat: 'text', label: '文章・SEO・ライティング' },
+  { cat: 'image', label: '画像・バナー・デザイン' },
+  { cat: 'video', label: '動画・音声' },
+  { cat: 'web', label: 'Web・マーケ' },
+  { cat: 'other', label: 'その他・業務支援' },
+]
+
 /**
  * ツールのビジュアル。公式ロゴがあれば白カードに大きく contain 表示、
  * 無ければ色タイル + Lucide シンボル。ロゴはアスペクト比がバラバラ
@@ -227,7 +236,7 @@ export function ToolSwitcherMenu({ currentService, showLabel, className }: ToolS
               exit={{ opacity: 0, y: isUp ? -8 : 8, scale: 0.97 }}
               transition={{ duration: 0.15 }}
               role="menu"
-              className={`absolute left-0 right-0 flex flex-col bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 border border-gray-100 overflow-hidden z-[200] max-h-[min(34rem,72dvh)] ${
+              className={`absolute left-0 w-[min(460px,calc(100vw-1.5rem))] flex flex-col bg-white rounded-2xl shadow-2xl ring-1 ring-black/5 border border-gray-100 overflow-hidden z-[200] max-h-[min(36rem,78dvh)] ${
                 isUp ? 'bottom-full mb-2' : 'top-full mt-2'
               }`}
             >
@@ -242,50 +251,61 @@ export function ToolSwitcherMenu({ currentService, showLabel, className }: ToolS
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto overscroll-contain p-2 space-y-1.5">
-                {ordered.map((service) => {
-                  const hoverBg = (SERVICE_ICON_MAP[service.id] || FALLBACK_MAPPING).hoverBg
-                  const isCurrent = service.id === currentService
-                  const isNew = service.badge === 'NEW' || service.isNew
-
-                  if (isCurrent) {
-                    return (
-                      <div
-                        key={service.id}
-                        className="rounded-2xl p-2 bg-gradient-to-br from-[#7f19e6]/[0.08] to-fuchsia-500/[0.05] ring-1 ring-[#7f19e6]/20"
-                        role="menuitem"
-                        aria-current="true"
-                      >
-                        <ServiceVisual id={service.id} active />
-                        <div className="flex items-center justify-between gap-2 px-1 pt-1.5">
-                          <p className="text-[13px] font-black text-slate-900 truncate min-w-0">{service.name}</p>
-                          <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#7f19e6] text-white text-[10px] font-black flex-shrink-0">
-                            <Check className="w-3 h-3" strokeWidth={3} />
-                            使用中
-                          </span>
-                        </div>
-                      </div>
-                    )
-                  }
-
+              <div className="flex-1 overflow-y-auto overscroll-contain p-3 space-y-4">
+                {/* ジャンルごとに見出し＋2列グリッドで表示 */}
+                {CATEGORY_GROUPS.map(({ cat, label }) => {
+                  const items = activeServices.filter((s) => (s.category || 'other') === cat)
+                  if (items.length === 0) return null
                   return (
-                    <Link
-                      key={service.id}
-                      href={service.dashboardHref}
-                      className={`block rounded-2xl p-2 transition-colors ${hoverBg}`}
-                      onClick={() => setIsOpen(false)}
-                      role="menuitem"
-                    >
-                      <ServiceVisual id={service.id} />
-                      <div className="flex items-center gap-1.5 px-1 pt-1.5">
-                        <p className="text-[13px] font-black text-slate-800 truncate min-w-0">{service.name}</p>
-                        {isNew && (
-                          <span className="px-1 py-px rounded bg-rose-500 text-white text-[8px] font-black leading-none flex-shrink-0">
-                            NEW
-                          </span>
-                        )}
+                    <div key={cat}>
+                      <div className="flex items-center gap-2 mb-2 px-0.5">
+                        <span className="text-[11px] font-black text-slate-400 tracking-wide">{label}</span>
+                        <span className="text-[10px] font-bold text-slate-300">{items.length}</span>
+                        <div className="flex-1 h-px bg-slate-100" />
                       </div>
-                    </Link>
+                      <div className="grid grid-cols-2 gap-2.5">
+                        {items.map((service) => {
+                          const hoverBg = (SERVICE_ICON_MAP[service.id] || FALLBACK_MAPPING).hoverBg
+                          const isCurrent = service.id === currentService
+                          const isNew = service.badge === 'NEW' || service.isNew
+                          if (isCurrent) {
+                            return (
+                              <div
+                                key={service.id}
+                                className="rounded-2xl p-2.5 bg-gradient-to-br from-[#7f19e6]/[0.08] to-fuchsia-500/[0.05] ring-2 ring-[#7f19e6]/30"
+                                role="menuitem"
+                                aria-current="true"
+                              >
+                                <ServiceVisual id={service.id} active />
+                                <div className="flex items-center justify-between gap-1.5 px-0.5 pt-2">
+                                  <p className="text-[13px] font-black text-slate-900 truncate min-w-0">{service.name}</p>
+                                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#7f19e6] text-white text-[9px] font-black flex-shrink-0">
+                                    <Check className="w-2.5 h-2.5" strokeWidth={3} />使用中
+                                  </span>
+                                </div>
+                              </div>
+                            )
+                          }
+                          return (
+                            <Link
+                              key={service.id}
+                              href={service.dashboardHref}
+                              className={`block rounded-2xl p-2.5 ring-1 ring-slate-100 transition-all hover:-translate-y-0.5 hover:shadow-md ${hoverBg}`}
+                              onClick={() => setIsOpen(false)}
+                              role="menuitem"
+                            >
+                              <ServiceVisual id={service.id} />
+                              <div className="flex items-center gap-1.5 px-0.5 pt-2">
+                                <p className="text-[13px] font-black text-slate-800 truncate min-w-0">{service.name}</p>
+                                {isNew && (
+                                  <span className="px-1 py-px rounded bg-rose-500 text-white text-[8px] font-black leading-none flex-shrink-0">NEW</span>
+                                )}
+                              </div>
+                            </Link>
+                          )
+                        })}
+                      </div>
+                    </div>
                   )
                 })}
               </div>
