@@ -1514,8 +1514,8 @@ export const SERVICES: Service[] = [
       'チームで商談準備の型を揃えたい',
     ],
     pricing: {
-      free: { name: '無料プラン', limit: '月5件まで', dailyLimit: -1, price: 0 },
-      pro: { name: 'プロプラン', limit: '無制限 / チーム招待', dailyLimit: -1, price: 9980 },
+      free: { name: '無料プラン', limit: '企業調査 月5件まで（提案資料の生成はプロ）', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: '提案資料・スライド生成 / 無制限 / チーム招待', dailyLimit: -1, price: 9980 },
     },
     status: 'active',
     category: 'other',

@@ -8,6 +8,7 @@ import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
 import { generateSlideImage, type StoredSlide } from '@/lib/shodan/slide-image'
 import { signedUrl } from '@/lib/shodan/storage'
 import type { ProposalSlide } from '@/lib/shodan/types'
+import { isPaidPlan } from '@/lib/unified-plan'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
 
@@ -16,6 +17,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const p = 'then' in ctx.params ? await ctx.params : ctx.params
   const sctx = await getShodanContext(orgSlugFrom(req))
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+
+  // スライド資料の生成・再生成はプロプラン限定
+  const user = await prisma.user.findUnique({ where: { id: sctx.userId }, select: { plan: true } })
+  if (!isPaidPlan(user?.plan)) {
+    return NextResponse.json({ error: 'スライド資料の生成はプロプランの機能です。', code: 'PLAN' }, { status: 402 })
+  }
 
   const body = await req.json().catch(() => ({}))
   const index = Number(body.index)

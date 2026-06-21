@@ -8,6 +8,15 @@
 /** 統一プロプランの月額（円・税込） */
 export const UNIFIED_PRO_PRICE = 9980
 
+/**
+ * 有料(プロ)プランかどうかの単一判定。User.plan を唯一の真実として全サービスで参照する。
+ * FREE / GUEST（および未設定）は無料。それ以外は有料扱い。
+ */
+export function isPaidPlan(plan?: string | null): boolean {
+  const p = (plan || 'FREE').toUpperCase()
+  return p !== 'FREE' && p !== 'GUEST'
+}
+
 /** 統一プロプランの価格表示ラベル */
 export const UNIFIED_PRO_PRICE_LABEL = '¥9,980'
 

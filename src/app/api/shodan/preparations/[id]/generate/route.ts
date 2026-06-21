@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
 import { analyzeCompany, generateProposal, generateSlides, type OwnCompanyProfile } from '@/lib/shodan/ai'
 import type { CompanyResearch } from '@/lib/shodan/types'
+import { isPaidPlan } from '@/lib/unified-plan'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
 
@@ -21,6 +22,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   if (!prep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   const research = prep.research as unknown as CompanyResearch | null
   if (!research) return NextResponse.json({ error: '先に企業調査が必要です' }, { status: 400 })
+
+  // 提案資料の生成はプロプラン限定（企業調査までは無料で試せる）
+  const user = await prisma.user.findUnique({ where: { id: sctx.userId }, select: { plan: true } })
+  if (!isPaidPlan(user?.plan)) {
+    return NextResponse.json(
+      { error: '提案資料の生成はプロプランの機能です。プロプランにアップグレードするとご利用いただけます。', code: 'PLAN' },
+      { status: 402 }
+    )
+  }
 
   try {
     const profile = await prisma.shodanCompanyProfile.findUnique({ where: { organizationId: sctx.organizationId } })
