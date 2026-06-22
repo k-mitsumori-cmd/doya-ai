@@ -47,7 +47,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   }
 
   const todo = images.map((im, i) => (im.imagePath ? -1 : i)).filter((i) => i >= 0)
-  // 1リクエスト最大2枚・並行2・各枚にハードタイムアウト＝300sプラットフォーム制限内に確実に収め、ハングを防ぐ
+  // 1リクエスト最大2枚を並列生成。クライアントは remaining が尽きるまで再呼び出しして全枚数を埋める。
+  // 旧実装は「2枚並列＋各150sハードタイムアウト」だったが、gpt-image-2 high・1536x1024 は並列時に実測123〜145秒かかるため、
+  // 生成成功の目前で外側150sタイムアウトが先に発火→スライドが白いまま＆フォールバックも効かない事象が出ていた。
+  // 外側タイムアウトを実レイテンシに十分なマージン(220s)へ引き上げ、maxDuration=300s内に2枚並列が確実に収まるようにする。
   const BATCH = 2
   const batch = todo.slice(0, BATCH)
 
@@ -57,7 +60,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     async function worker() {
       while (next < batch.length) {
         const i = batch[next++]
-        try { images[i] = await raceTimeout('slideGen', 150000, generateSlideImage(sctx!.userId, prep!.id, list[i], i, { brand })) }
+        try { images[i] = await raceTimeout('slideGen', 220000, generateSlideImage(sctx!.userId, prep!.id, list[i], i, { brand })) }
         catch (e) { console.error('[shodan/slides] slide failed', (e as any)?.message) }
       }
     }

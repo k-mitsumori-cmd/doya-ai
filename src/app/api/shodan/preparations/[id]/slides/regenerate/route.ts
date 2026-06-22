@@ -1,6 +1,7 @@
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 120
+// gpt-image-2 high・1536x1024 は単発で約100秒＋専用バケットへの再アップロード。120sでは強制終了されるため余裕をもって300sに。
+export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
