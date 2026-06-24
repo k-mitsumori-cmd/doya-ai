@@ -9,6 +9,9 @@ import { prisma } from '@/lib/prisma'
 import { createAioOrganization } from '@/lib/aio/access'
 import { suggestBrandSetup, deriveBrandFromUrl, normalizeUrl } from '@/lib/aio/suggest'
 
+// 1ユーザーが作成できるワークスペース数の上限（量産・AI生成コスト暴発の防止）。
+const MAX_ORGS_PER_USER = 20
+
 // 同一サイト判定用にホスト名を正規化（www除去・小文字）。失敗時は空文字。
 function hostnameOf(u: string): string {
   try {
@@ -51,6 +54,15 @@ export async function POST(req: NextRequest) {
     // 既存サイトの再観測なら、外部fetch/AI生成をやり直さず即返す（再スキャンは ?scan=1 で実行・高速）
     if (matched) {
       return NextResponse.json({ organizationId: matched.id, slug: matched.slug })
+    }
+
+    // 新規作成の入口でのワークスペース量産防止（1ユーザーあたり上限）。
+    // ホストを変えるたびに外部fetch+Gemini生成が走るため、未抑制だとAI生成コスト・テーブル肥大の入口になる。
+    if (memberships.length >= MAX_ORGS_PER_USER) {
+      return NextResponse.json(
+        { error: `登録できるワークスペースの上限（${MAX_ORGS_PER_USER}件）に達しました。不要なワークスペースを整理してください。`, code: 'LIMIT' },
+        { status: 402 }
+      )
     }
 
     // 2) 新規: URLからサービス名を自動導出（サイトタイトル→AI整形、失敗時はドメイン名）

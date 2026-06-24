@@ -69,6 +69,10 @@ export async function POST(req: NextRequest) {
   const result = await runAndPersistScan(ctx.organizationId, { engines: requested })
 
   if (result.status === 'failed') {
+    // 実行中での二重起動は409（コスト暴発防止のための連打ガード）。ユーザー操作なので生メッセージを返す。
+    if (result.code === 'INFLIGHT') {
+      return NextResponse.json({ id: result.id, status: 'processing', error: result.error, code: 'INFLIGHT' }, { status: 409 })
+    }
     return NextResponse.json(
       { id: result.id, status: 'failed', error: 'スキャンに失敗しました。時間をおいて再実行してください。' },
       { status: 500 }

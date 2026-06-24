@@ -5,12 +5,17 @@
 // scans/route.ts（手動実行）と cron/aio-scan（定期実行）の両方から呼ぶ。
 // ============================================
 import { prisma } from '@/lib/prisma'
-import { availableEngines, type EngineId } from '@/lib/aio/types'
+import { availableEngines, SCAN_STALE_MS, type EngineId } from '@/lib/aio/types'
 import { executeScan } from '@/lib/aio/scan'
 
 // 反復回数はプランで差別化しない（無料・プロ共通）。
 // プランの差は「調査回数（スキャン頻度）」と「閲覧できる範囲」で付ける。
 const DEFAULT_REPETITIONS = 3
+
+// 1スキャンのコスト暴発を防ぐハードキャップ。
+// 実行ジョブ総数 = 使用プロンプト数 × エンジン数 × 反復。これを超えないようプロンプト件数を頭打ちにする。
+// （無料はプロンプト登録3件・有料は無制限登録だが、1スキャンで投げる件数はここで制限する）
+const MAX_PROMPTS_PER_SCAN = 30
 
 export interface RunAndPersistOptions {
   // 実行エンジン（未指定なら利用可能なもの全部）
@@ -25,6 +30,8 @@ export interface RunAndPersistResult {
   summary?: Awaited<ReturnType<typeof executeScan>>['summary']
   recommendations?: Awaited<ReturnType<typeof executeScan>>['recommendations']
   error?: string
+  // 失敗理由の機械可読コード（INFLIGHT=実行中で拒否 等）。呼び出し側でHTTPステータスを出し分ける用。
+  code?: string
 }
 
 /**
@@ -46,6 +53,22 @@ export async function runAndPersistScan(
   }
   if (prompts.length === 0) {
     return { id: '', status: 'failed', error: 'アクティブな監視プロンプトがありません' }
+  }
+
+  // 同一組織で既にスキャン実行中なら二重実行を拒否（連打・cron重複によるコスト暴発防止）。
+  // maxDuration(300s)で打ち切られた幽霊processingは stale 扱いで除外し、再実行を妨げない。
+  const inflight = await prisma.aioScan.findFirst({
+    where: { organizationId, status: 'processing', updatedAt: { gte: new Date(Date.now() - SCAN_STALE_MS) } },
+    select: { id: true },
+  })
+  if (inflight) {
+    return { id: inflight.id, status: 'failed', error: 'すでにスキャンを実行中です。完了までお待ちください。', code: 'INFLIGHT' }
+  }
+
+  // コスト上限: 1スキャンで投げるプロンプトは MAX_PROMPTS_PER_SCAN 件まで（超過分は次回以降）。
+  const cappedPrompts = prompts.length > MAX_PROMPTS_PER_SCAN ? prompts.slice(0, MAX_PROMPTS_PER_SCAN) : prompts
+  if (cappedPrompts.length < prompts.length) {
+    console.warn(`[aio/run] org=${organizationId} プロンプト${prompts.length}件中 上限${MAX_PROMPTS_PER_SCAN}件のみスキャン`)
   }
 
   // エンジン：利用可能なもの ∩ リクエスト（未指定なら全部）
@@ -82,7 +105,7 @@ export async function runAndPersistScan(
         competitors: (profile.competitors as string[]) || [],
         category: profile.category,
       },
-      prompts.map((p) => ({ id: p.id, text: p.text })),
+      cappedPrompts.map((p) => ({ id: p.id, text: p.text })),
       engines,
       repetitions
     )
