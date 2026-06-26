@@ -117,10 +117,10 @@ function AdSimSidebarImpl({
                 </p>
                 <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
                   {planLabel === 'LIGHT'
-                    ? 'PROプラン: ¥9,980/月'
+                    ? 'PROプラン: ¥9,980/月・初月無料'
                     : planLabel === 'PRO' || planLabel === 'ENTERPRISE'
                       ? '現在のプランで全機能利用可'
-                      : 'ライトプラン: ¥2,980/月'}
+                      : 'ライトプラン: ¥2,980/月・初月無料'}
                 </p>
                 <Link
                   href="/adsim/pricing"

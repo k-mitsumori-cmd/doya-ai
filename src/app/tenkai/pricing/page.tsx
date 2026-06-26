@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSession } from 'next-auth/react'
+import { TrialBadge, TrialNote } from '@/components/TrialCallout'
 
 // ============================================
 // プラン定義
@@ -256,12 +257,15 @@ export default function PricingPage() {
                   <h3 className="text-lg font-bold text-slate-900 mb-1">{plan.name}</h3>
                   <p className="text-xs text-slate-400 mb-4">{plan.description}</p>
 
-                  <div className="flex items-baseline gap-1 mb-6">
+                  <div className="flex items-baseline gap-1 mb-2">
                     <span className="text-3xl font-extrabold text-slate-900">{plan.price}</span>
                     {plan.period && (
                       <span className="text-sm text-slate-400">{plan.period}</span>
                     )}
+                    {plan.popular && <TrialBadge tone="light" className="ml-1 self-center" />}
                   </div>
+                  {plan.popular && <TrialNote tone="light" className="mb-4" />}
+                  {!plan.popular && <div className="mb-4" />}
 
                   {/* CTA */}
                   {plan.key === 'enterprise' ? (

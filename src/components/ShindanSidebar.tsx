@@ -93,9 +93,9 @@ function ShindanSidebarImpl({
               </p>
               <p className="text-[10px] text-teal-100 font-bold leading-relaxed opacity-80">
                 {planLabel === 'GUEST' || planLabel === 'FREE'
-                  ? 'LIGHT：¥2,980/月で1日10回'
+                  ? 'LIGHT：¥2,980/月・初月無料で1日10回'
                   : planLabel === 'LIGHT'
-                  ? 'PRO：¥9,980/月で1日20回'
+                  ? 'PRO：¥9,980/月・初月無料で1日20回'
                   : planLabel === 'PRO'
                   ? 'ご利用中のプランです'
                   : 'ENTERPRISEプランご利用中'}

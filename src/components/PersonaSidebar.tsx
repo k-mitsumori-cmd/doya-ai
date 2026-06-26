@@ -93,7 +93,7 @@ function PersonaSidebarImpl({
                 現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}
               </p>
               <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-80">
-                {planLabel === 'FREE' || planLabel === 'GUEST' ? 'ライトプラン：¥2,980/月' : planLabel === 'LIGHT' ? 'PROプラン：¥9,980/月' : 'PROプラン：¥9,980/月'}
+                {planLabel === 'FREE' || planLabel === 'GUEST' ? 'ライトプラン：¥2,980/月・初月無料' : planLabel === 'LIGHT' ? 'PROプラン：¥9,980/月・初月無料' : 'PROプラン：¥9,980/月・初月無料'}
               </p>
               <Link
                 href="/pricing"

@@ -1,6 +1,7 @@
 'use client'
 
 import { Check, X } from 'lucide-react'
+import { TrialBadge, TrialNote } from '@/components/TrialCallout'
 
 const PLANS = [
   {
@@ -116,7 +117,9 @@ export default function PricingPage() {
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-black text-slate-900">{plan.priceLabel}</span>
                 {plan.period && <span className="text-sm text-slate-500">{plan.period}</span>}
+                {plan.popular && <TrialBadge tone="light" className="ml-1 self-center" />}
               </div>
+              {plan.popular && <TrialNote tone="light" className="mt-2" />}
             </div>
 
             <ul className="space-y-2.5 mb-6">

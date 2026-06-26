@@ -125,7 +125,7 @@ function LpSidebarImpl({
                 現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}
               </p>
               <p className="text-[10px] text-cyan-100 font-bold leading-relaxed opacity-80">
-                {planLabel === 'LIGHT' ? 'PROプラン：¥9,980/月' : 'ライトプラン：¥2,980/月'}
+                {planLabel === 'LIGHT' ? 'PROプラン：¥9,980/月・初月無料' : 'ライトプラン：¥2,980/月・初月無料'}
               </p>
               <Link
                 href="/lp/pricing"

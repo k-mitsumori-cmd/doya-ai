@@ -17,6 +17,7 @@ import { useSession, signOut } from 'next-auth/react'
 import { SUPPORT_CONTACT_URL, INTERVIEW_PRICING } from '@/lib/pricing'
 import { markLogoutToastPending } from '@/components/LogoutToastListener'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
+import { TrialBadge } from '@/components/TrialCallout'
 import { interviewTheme } from '@/components/sidebar/themes'
 import {
   SidebarShell,
@@ -343,7 +344,7 @@ function InterviewSidebarImpl({
             <div className="flex-1 min-w-0 text-left">
               <p className="text-[11px] font-black text-white">{nextPlanLabel}にアップグレード</p>
               <p className="text-[9px] text-white/50 font-bold">
-                {nextPlanLabel === 'LIGHT' ? '月額¥2,980' : nextPlanLabel === 'PRO' ? '月額¥9,980' : '月額¥49,800'}
+                {nextPlanLabel === 'LIGHT' ? '月額¥2,980・初月無料' : nextPlanLabel === 'PRO' ? '月額¥9,980・初月無料' : '月額¥49,800・初月無料'}
               </p>
             </div>
           </button>
@@ -495,6 +496,7 @@ function InterviewSidebarImpl({
                   <div className="mt-3 pt-3 border-t border-slate-200 text-center">
                     <span className="text-lg font-black text-[#7f19e6]">¥9,980</span>
                     <span className="text-xs text-slate-500">　/月</span>
+                    <div className="mt-1.5 flex justify-center"><TrialBadge tone="light" /></div>
                   </div>
                 </div>
 

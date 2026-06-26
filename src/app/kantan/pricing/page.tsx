@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { ArrowLeft, Sparkles, Crown, Zap, Star, Building2, CheckCircle2, ChevronRight, Rocket, Cpu, ArrowRight, HelpCircle, Clock, Users, FileText, BarChart3, Lightbulb } from 'lucide-react'
 import { KANTAN_PRICING, getAnnualMonthlyPrice } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
+import { TrialBadge, TrialNote } from '@/components/TrialCallout'
 
 const BENEFITS = [
   { metric: '4時間→10分', multiplier: '24x', title: 'LP構成案作成', icon: <FileText className="w-5 h-5" /> },
@@ -127,6 +128,12 @@ export default function KantanPricingPage() {
                         <p className="text-xs text-white/30 mt-1">
                           年払いなら ¥{getAnnualMonthlyPrice(plan.price).toLocaleString()}/月
                         </p>
+                      )}
+                      {isPopular && (
+                        <div className="mt-3">
+                          <TrialBadge tone="dark" />
+                          <TrialNote tone="dark" className="mt-2" />
+                        </div>
                       )}
                     </div>
                     

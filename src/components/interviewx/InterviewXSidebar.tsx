@@ -147,7 +147,7 @@ function InterviewXSidebarImpl({
           <div className="flex-1 min-w-0 text-left">
             <p className="text-[11px] font-black text-white">{nextPlanLabel}にアップグレード</p>
             <p className="text-[9px] text-white/50 font-bold">
-              {nextPlanLabel === 'LIGHT' ? '月額¥2,980' : nextPlanLabel === 'PRO' ? '月額¥9,980' : '月額¥49,800'}
+              {nextPlanLabel === 'LIGHT' ? '月額¥2,980・初月無料' : nextPlanLabel === 'PRO' ? '月額¥9,980・初月無料' : '月額¥49,800・初月無料'}
             </p>
           </div>
         </button>

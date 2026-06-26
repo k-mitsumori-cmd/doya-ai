@@ -133,13 +133,13 @@ function MovieSidebarImpl({
                 <>
                   <div className="text-white text-xs font-bold mb-0.5">Proにアップグレード</div>
                   <div className="text-rose-100 text-xs">月30本・HD画質・全テンプレート</div>
-                  <div className="text-white font-bold text-sm mt-1">¥9,980/月</div>
+                  <div className="text-white font-bold text-sm mt-1">¥9,980/月・初月無料</div>
                 </>
               ) : (
                 <>
                   <div className="text-white text-xs font-bold mb-0.5">ライトプランを始める</div>
                   <div className="text-blue-100 text-xs">月10本・HD画質</div>
-                  <div className="text-white font-bold text-sm mt-1">¥2,980/月</div>
+                  <div className="text-white font-bold text-sm mt-1">¥2,980/月・初月無料</div>
                 </>
               )}
             </Link>

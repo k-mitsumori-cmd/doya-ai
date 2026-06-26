@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { Check, X, Sparkles } from 'lucide-react'
 import { CheckoutButton } from '@/components/CheckoutButton'
+import { TrialBadge, TrialNote } from '@/components/TrialCallout'
 
 interface Feature {
   text: string
@@ -182,7 +183,9 @@ export default function AdSimPricingPage() {
                   <div className="mb-2 flex items-baseline gap-1">
                     <span className="text-4xl font-black text-[#0017C1]">{p.price}</span>
                     <span className="text-sm font-bold text-slate-500">{p.period}</span>
+                    {p.id === 'pro' && <TrialBadge tone="light" className="ml-1 self-center" />}
                   </div>
+                  {p.id === 'pro' && <TrialNote tone="light" className="mb-2" />}
                   <p className="mb-5 text-xs font-bold text-slate-600">{p.description}</p>
 
                   <ul className="mb-6 space-y-2.5 border-t border-slate-100 pt-5">

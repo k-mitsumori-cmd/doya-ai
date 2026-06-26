@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     })
     if (usedThisMonth >= FREE_MONTHLY_LIMIT) {
       return NextResponse.json(
-        { error: `無料プランは月${FREE_MONTHLY_LIMIT}件までです。プロプランで無制限にご利用いただけます。`, code: 'LIMIT' },
+        { error: `無料プランは月${FREE_MONTHLY_LIMIT}件までです。プロプランで無制限にご利用いただけます。初月無料でお試しいただけます。`, code: 'LIMIT' },
         { status: 402 }
       )
     }

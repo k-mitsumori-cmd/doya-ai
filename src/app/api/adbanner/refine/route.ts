@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
   const quota = await remainingQuota(id)
   if (quota.remaining <= 0) {
-    return NextResponse.json({ success: false, error: `本日の生成上限（${quota.limit}枚）に達しました。`, code: 'LIMIT' }, { status: 402 })
+    return NextResponse.json({ success: false, error: `本日の生成上限（${quota.limit}枚）に達しました。プロプランで上限が上がります。初月無料でお試しいただけます。`, code: 'LIMIT' }, { status: 402 })
   }
 
   const advice = (base.feedback as any)?.advice as string | undefined

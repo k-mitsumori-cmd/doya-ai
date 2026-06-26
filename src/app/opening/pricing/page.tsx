@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { Check, X, Zap } from 'lucide-react'
+import { TrialBadge, TrialNote } from '@/components/TrialCallout'
 
 const PLANS = [
   {
@@ -89,10 +90,12 @@ export default function PricingPage() {
             )}
 
             <h3 className="text-2xl font-black text-white mb-1">{plan.name}</h3>
-            <div className="flex items-end gap-1 mb-6">
+            <div className="flex items-end gap-1 mb-2">
               <span className="text-4xl font-black text-white">{plan.price}</span>
               {plan.period && <span className="text-sm text-white/40 mb-1">{plan.period}</span>}
+              {plan.popular && <TrialBadge tone="dark" className="mb-1.5 ml-1" />}
             </div>
+            {plan.popular && <TrialNote tone="dark" className="mb-4" />}
 
             <ul className="space-y-3 mb-8">
               {plan.features.map((f) => (

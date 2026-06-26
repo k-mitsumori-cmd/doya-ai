@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Check, Sparkles } from 'lucide-react'
 import { CheckoutButton } from '@/components/CheckoutButton'
+import { TrialBadge, TrialNote } from '@/components/TrialCallout'
 import { getServiceById } from '@/lib/services'
 import {
   UNIFIED_PRO_PRICE_LABEL,
@@ -97,12 +98,10 @@ export function UnifiedPricingPlans({
           <div className="mb-1 flex items-end gap-2">
             <span className="text-4xl font-black">{UNIFIED_PRO_PRICE_LABEL}</span>
             <span className="mb-1 text-sm font-bold text-white/80">/ 月（税込）</span>
-            <span className="mb-1 rounded-full bg-amber-400 px-2.5 py-0.5 text-xs font-black text-amber-950">
-              {UNIFIED_PLAN_COPY.proTrialBadge}
-            </span>
+            <TrialBadge tone="dark" className="mb-1" />
           </div>
           <p className="mb-1 text-xs font-bold text-white/80">{UNIFIED_PLAN_COPY.proTagline}</p>
-          <p className="mb-5 text-[11px] font-bold text-amber-200">{UNIFIED_PLAN_COPY.proTrialNote}</p>
+          <TrialNote tone="dark" className="mb-5" />
 
           <div className="mb-4 rounded-xl bg-white/15 px-4 py-3">
             <p className="text-xs font-bold text-white/70">利用上限</p>

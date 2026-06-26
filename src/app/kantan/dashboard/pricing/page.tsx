@@ -11,6 +11,7 @@ import {
   CreditCard, Receipt, AlertCircle, RefreshCw, Menu, Calendar
 } from 'lucide-react'
 import { KANTAN_PRICING, getUserUsage, getGuestUsage } from '@/lib/pricing'
+import { TrialBadge, TrialNote } from '@/components/TrialCallout'
 
 // サイドバーメニュー - AIエージェント中心に再構成
 type SidebarMenuItem = { id: string; label: string; icon: React.ReactNode; href: string; active?: boolean; badge?: string | number }
@@ -508,6 +509,12 @@ export default function KantanPricingPage() {
                         <div className="text-3xl font-black text-gray-800">要相談</div>
                       ) : (
                         <div className="text-3xl font-black text-gray-800">無料</div>
+                      )}
+                      {plan.id === 'kantan-pro' && (
+                        <div className="mt-3">
+                          <TrialBadge tone="light" />
+                          <TrialNote tone="light" className="mt-2" />
+                        </div>
                       )}
                     </div>
 

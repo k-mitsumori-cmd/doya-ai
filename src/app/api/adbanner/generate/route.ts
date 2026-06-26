@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
   // 上限チェック
   const quota = await remainingQuota(id)
   if (quota.remaining <= 0) {
-    return NextResponse.json({ success: false, error: `本日の生成上限（${quota.limit}枚）に達しました。プロプランで上限が上がります。`, code: 'LIMIT' }, { status: 402 })
+    return NextResponse.json({ success: false, error: `本日の生成上限（${quota.limit}枚）に達しました。プロプランで上限が上がります。初月無料でお試しいただけます。`, code: 'LIMIT' }, { status: 402 })
   }
 
   // サイズ（無料/ゲストは 1080x1080 固定、PROは複数可）

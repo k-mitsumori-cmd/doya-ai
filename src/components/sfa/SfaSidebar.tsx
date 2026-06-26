@@ -157,7 +157,7 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
                   <p className="text-xs font-black text-white">プラン案内</p>
                 </div>
                 <p className="text-[11px] text-white font-bold mb-1">現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}</p>
-                <p className="text-[10px] text-lime-100 font-bold opacity-80">プロプラン：¥9,980/月</p>
+                <p className="text-[10px] text-lime-100 font-bold opacity-80">プロプラン：¥9,980/月・初月無料</p>
                 <Link href="/sfa/pricing" className="mt-3 w-full py-2 bg-white text-green-700 text-[11px] font-black rounded-lg hover:bg-green-50 transition-colors shadow-md block text-center">
                   プロにアップグレード
                 </Link>

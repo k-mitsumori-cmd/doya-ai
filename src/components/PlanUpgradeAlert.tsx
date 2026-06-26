@@ -15,7 +15,7 @@ export default function PlanUpgradeAlert({ message, upgradePath, serviceName }: 
       <div className="flex-1">
         <p className="text-sm font-medium text-amber-900">{message}</p>
         <Link href={upgradePath} className="text-sm text-amber-700 hover:text-amber-800 hover:underline mt-1 inline-block">
-          プランをアップグレード →
+          初月無料でプロを試す →
         </Link>
       </div>
     </div>

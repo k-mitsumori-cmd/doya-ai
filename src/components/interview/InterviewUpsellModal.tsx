@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { INTERVIEW_PRICING } from '@/lib/pricing'
+import { TrialBadge, TrialNote } from '@/components/TrialCallout'
 
 interface InterviewUpsellModalProps {
   isOpen: boolean
@@ -255,10 +256,14 @@ export default function InterviewUpsellModal({
                 </div>
               ) : proPlan ? (
                 <div className="mt-3 pt-3 border-t border-slate-200 text-center">
-                  <span className="text-lg font-black text-[#7f19e6]">
-                    {proPlan.priceLabel}
-                  </span>
-                  <span className="text-xs text-slate-500">{proPlan.period}</span>
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-lg font-black text-[#7f19e6]">
+                      {proPlan.priceLabel}
+                    </span>
+                    <span className="text-xs text-slate-500">{proPlan.period}</span>
+                    <TrialBadge tone="light" />
+                  </div>
+                  <TrialNote tone="light" className="mt-1.5" />
                 </div>
               ) : null}
             </motion.div>
@@ -279,7 +284,7 @@ export default function InterviewUpsellModal({
                   <span className="material-symbols-outlined text-[20px]">
                     {isGuest ? 'person_add' : 'rocket_launch'}
                   </span>
-                  {isGuest ? '無料で登録する' : 'プロプランにアップグレード'}
+                  {isGuest ? '無料で登録する' : '初月無料でプロにアップグレード'}
                 </span>
               </motion.button>
 

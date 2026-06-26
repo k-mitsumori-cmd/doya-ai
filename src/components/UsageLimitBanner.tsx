@@ -14,6 +14,7 @@ import {
   UserPlus,
 } from 'lucide-react'
 import { getUsageCount, getRemainingCount, PLAN_LIMITS, UserTier } from '@/lib/usage'
+import { TrialCallout } from '@/components/TrialCallout'
 
 export function UsageLimitBanner() {
   // テスト用: 制限表示を無効化（NEXT_PUBLIC_DOYA_DISABLE_LIMITS=1）
@@ -110,7 +111,7 @@ export function UsageLimitBanner() {
                 今月の残り<span className="font-bold text-lg mx-1">{remaining}</span>枚
               </p>
               <p className="text-xs text-purple-700">
-                LIGHTプランなら月50枚まで生成可能！
+                アップグレードで上限解放。<span className="font-bold">今なら初月無料</span>でお試し！
               </p>
             </div>
           </div>
@@ -195,12 +196,13 @@ export function UsageLimitModal({
           </div>
         ) : (
           <div className="space-y-3">
+            <TrialCallout className="mb-1" />
             <Link
               href="/pricing"
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium rounded-xl hover:opacity-90 transition-opacity"
             >
               <Crown className="w-5 h-5" />
-              LIGHTプランにアップグレード
+              初月無料でアップグレード
             </Link>
             <button
               onClick={onClose}

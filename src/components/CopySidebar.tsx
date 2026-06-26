@@ -98,7 +98,7 @@ function CopySidebarImpl({
                 現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}
               </p>
               <p className="text-[10px] text-amber-100 font-bold leading-relaxed opacity-80">
-                プロプラン：¥9,980/月
+                プロプラン：¥9,980/月・初月無料
               </p>
               <Link
                 href="/copy/pricing"

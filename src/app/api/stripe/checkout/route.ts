@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { createCheckoutSession, STRIPE_PRICE_IDS } from '@/lib/stripe'
-import { UNIFIED_PRO_PLAN_ID, UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
+import { UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
 import { prisma } from '@/lib/prisma'
 
 function getStripeKeyMode(): 'test' | 'live' | 'unknown' {
@@ -89,9 +89,10 @@ export async function POST(request: NextRequest) {
     const successUrl = `${baseUrl}${successPath}?success=true&plan=${planLabel}&session_id={CHECKOUT_SESSION_ID}`
     const cancelUrl = `${baseUrl}${cancelPath}`
 
-    // 初月無料トライアルは「ドヤマーケ（統一プロプラン）」のみに付与する。
-    // 個別サービスの旧プラン(light等)には付けない。
-    const trialDays = planId === UNIFIED_PRO_PLAN_ID ? UNIFIED_TRIAL_DAYS : undefined
+    // 初月無料（30日トライアル）は全サブスクプランに付与する。
+    // ドヤAIは統一プラン中心だが、どの有料プランから入っても「初月無料」を一貫して訴求するため。
+    // （createCheckoutSession 側で subscription モードのときのみ実際に適用される）
+    const trialDays = UNIFIED_TRIAL_DAYS
 
     // Checkout Session作成
     const checkoutSession = await createCheckoutSession({

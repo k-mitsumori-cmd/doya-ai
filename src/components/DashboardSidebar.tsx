@@ -176,7 +176,7 @@ function DashboardSidebarImpl({
           <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
             {bannerPlanLabel === 'PRO' || bannerPlanLabel === 'ENTERPRISE'
               ? <>さらに上限UP：要相談</>
-              : <>プロ（¥9,980/月）で生成し放題に</>}
+              : <>プロ（¥9,980/月・初月無料）で生成し放題に</>}
           </p>
           {bannerPlanLabel === 'PRO' || bannerPlanLabel === 'ENTERPRISE' ? (
             <a
