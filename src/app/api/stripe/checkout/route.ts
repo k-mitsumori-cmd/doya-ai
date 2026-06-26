@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { createCheckoutSession, STRIPE_PRICE_IDS } from '@/lib/stripe'
+import { createCheckoutSession, STRIPE_PRICE_IDS, stripe } from '@/lib/stripe'
 import { UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
 import { prisma } from '@/lib/prisma'
 
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     // セッションの user.id が欠ける/揺れる環境でも確実に userId を取得する
     const dbUser = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true },
+      select: { id: true, stripeCustomerId: true },
     })
     if (!dbUser?.id) {
       return NextResponse.json({ error: 'ユーザー情報の取得に失敗しました' }, { status: 404 })
@@ -89,10 +89,27 @@ export async function POST(request: NextRequest) {
     const successUrl = `${baseUrl}${successPath}?success=true&plan=${planLabel}&session_id={CHECKOUT_SESSION_ID}`
     const cancelUrl = `${baseUrl}${cancelPath}`
 
-    // 初月無料（30日トライアル）は全サブスクプランに付与する。
-    // ドヤAIは統一プラン中心だが、どの有料プランから入っても「初月無料」を一貫して訴求するため。
-    // （createCheckoutSession 側で subscription モードのときのみ実際に適用される）
-    const trialDays = UNIFIED_TRIAL_DAYS
+    // 初月無料（30日トライアル）は全サブスクプランで訴求するが、実際の付与は
+    // 「過去にサブスク履歴の無い新規顧客のみ」に限定する（解約→再契約での無料月の繰り返し取得=trial cyclingを防止）。
+    // Stripe の顧客サブスク履歴(canceled含む全件)を真実として参照する。DBの解約フラグは
+    // 解約時にnull化されるため当てにせず、Stripeを直接照会する。
+    let trialDays: number | undefined = UNIFIED_TRIAL_DAYS
+    if (dbUser.stripeCustomerId) {
+      try {
+        const prior = await stripe.subscriptions.list({
+          customer: dbUser.stripeCustomerId,
+          status: 'all',
+          limit: 1,
+        })
+        // 既存顧客（過去に1件でもサブスク履歴あり）にはトライアルを付けない
+        if (prior.data.length > 0) trialDays = undefined
+      } catch (e: any) {
+        // 履歴照会に失敗したら安全側（トライアル無し）に倒す。新規顧客はcustomerId自体が無く
+        // この分岐に入らないため、ここで弾かれるのは既存顧客のみ＝過剰付与を防げる。
+        console.error('[stripe/checkout] trial eligibility check failed:', e?.message)
+        trialDays = undefined
+      }
+    }
 
     // Checkout Session作成
     const checkoutSession = await createCheckoutSession({
