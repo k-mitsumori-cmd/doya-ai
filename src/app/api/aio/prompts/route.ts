@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const count = await prisma.aioPrompt.count({ where: { organizationId: ctx.organizationId } })
     if (count >= FREE_PROMPT_LIMIT) {
       return NextResponse.json(
-        { error: `無料プランは監視プロンプト${FREE_PROMPT_LIMIT}件までです。プロプランで無制限になります。初月無料でお試しいただけます。`, code: 'LIMIT' },
+        { error: `無料プランは監視プロンプト${FREE_PROMPT_LIMIT}件までです。プロプランで無制限になります。`, code: 'LIMIT' },
         { status: 402 }
       )
     }

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutTemplate, PlusCircle, Clock, BookOpen, CreditCard, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
+import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { lpTheme } from '@/components/sidebar/themes'
 import {
   SidebarShell,
@@ -125,7 +126,7 @@ function LpSidebarImpl({
                 現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}
               </p>
               <p className="text-[10px] text-cyan-100 font-bold leading-relaxed opacity-80">
-                {planLabel === 'LIGHT' ? 'PROプラン：¥9,980/月・初月無料' : 'ライトプラン：¥2,980/月・初月無料'}
+                {planLabel === 'LIGHT' ? <>PROプラン：¥9,980/月<TrialInlineSuffix /></> : <>ライトプラン：¥2,980/月<TrialInlineSuffix /></>}
               </p>
               <Link
                 href="/lp/pricing"

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Activity, Clock, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
+import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { shindanTheme } from '@/components/sidebar/themes'
 import {
   SidebarShell,
@@ -93,9 +94,9 @@ function ShindanSidebarImpl({
               </p>
               <p className="text-[10px] text-teal-100 font-bold leading-relaxed opacity-80">
                 {planLabel === 'GUEST' || planLabel === 'FREE'
-                  ? 'LIGHT：¥2,980/月・初月無料で1日10回'
+                  ? <>LIGHT：¥2,980/月<TrialInlineSuffix />で1日10回</>
                   : planLabel === 'LIGHT'
-                  ? 'PRO：¥9,980/月・初月無料で1日20回'
+                  ? <>PRO：¥9,980/月<TrialInlineSuffix />で1日20回</>
                   : planLabel === 'PRO'
                   ? 'ご利用中のプランです'
                   : 'ENTERPRISEプランご利用中'}

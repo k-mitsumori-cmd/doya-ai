@@ -16,6 +16,7 @@ import SidebarTour from '@/components/SidebarTour'
 import MobileTourPopup, { BANNER_TOUR_SLIDES } from '@/components/MobileTourPopup'
 import { markLogoutToastPending } from '@/components/LogoutToastListener'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
+import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { dashboardTheme } from '@/components/sidebar/themes'
 import {
   SidebarShell,
@@ -176,7 +177,7 @@ function DashboardSidebarImpl({
           <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
             {bannerPlanLabel === 'PRO' || bannerPlanLabel === 'ENTERPRISE'
               ? <>さらに上限UP：要相談</>
-              : <>プロ（¥9,980/月・初月無料）で生成し放題に</>}
+              : <>プロ（¥9,980/月<TrialInlineSuffix />）で生成し放題に</>}
           </p>
           {bannerPlanLabel === 'PRO' || bannerPlanLabel === 'ENTERPRISE' ? (
             <a

@@ -13,6 +13,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
+import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { adsimTheme } from '@/components/sidebar/themes'
 import {
   SidebarShell,
@@ -117,10 +118,10 @@ function AdSimSidebarImpl({
                 </p>
                 <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
                   {planLabel === 'LIGHT'
-                    ? 'PROプラン: ¥9,980/月・初月無料'
+                    ? <>PROプラン: ¥9,980/月<TrialInlineSuffix /></>
                     : planLabel === 'PRO' || planLabel === 'ENTERPRISE'
                       ? '現在のプランで全機能利用可'
-                      : 'ライトプラン: ¥2,980/月・初月無料'}
+                      : <>ライトプラン: ¥2,980/月<TrialInlineSuffix /></>}
                 </p>
                 <Link
                   href="/adsim/pricing"

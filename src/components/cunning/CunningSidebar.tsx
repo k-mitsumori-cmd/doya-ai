@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Headphones, LayoutDashboard, BookOpen, Building2, History, Tag, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
+import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { cunningTheme } from '@/components/sidebar/themes'
 import {
   SidebarShell,
@@ -138,7 +139,7 @@ function CunningSidebarImpl({
                 <p className="text-[11px] text-white font-bold leading-relaxed mb-1">
                   現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}
                 </p>
-                <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">プロプラン：¥9,980/月・初月無料</p>
+                <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">プロプラン：¥9,980/月<TrialInlineSuffix /></p>
                 <Link
                   href="/cunning/pricing"
                   className="mt-3 w-full py-2 bg-white text-[#0B5CFF] text-[11px] font-black rounded-lg hover:bg-blue-50 transition-colors shadow-md block text-center"

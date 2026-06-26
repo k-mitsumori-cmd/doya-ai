@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Clock, CreditCard, PenLine, LayoutTemplate, Settings, BookOpen, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
+import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { copyTheme } from '@/components/sidebar/themes'
 import {
   SidebarShell,
@@ -98,7 +99,7 @@ function CopySidebarImpl({
                 現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}
               </p>
               <p className="text-[10px] text-amber-100 font-bold leading-relaxed opacity-80">
-                プロプラン：¥9,980/月・初月無料
+                プロプラン：¥9,980/月<TrialInlineSuffix />
               </p>
               <Link
                 href="/copy/pricing"

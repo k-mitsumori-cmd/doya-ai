@@ -5,17 +5,13 @@ export const maxDuration = 300
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { runAndPersistScan } from '@/lib/aio/run'
+import { isPaidPlan } from '@/lib/unified-plan'
 
 // 1回の実行で処理する組織数の上限（多数組織でのタイムアウト回避）。
 // 直近スキャンが古い順に処理し、超過分は次回以降に回す（ログに残す）。
 const MAX_ORGS_PER_RUN = 10
 
-// 有料プラン判定（scans/route.ts と同一ロジック）。定期スキャンは有料組織のみ対象にし、
-// 無料組織の自動課金（手動は週1制限なのにcronが貫通する問題）を防ぐ。
-function isPaidPlan(plan?: string | null): boolean {
-  const p = (plan || 'FREE').toUpperCase()
-  return p !== 'FREE' && p !== 'GUEST'
-}
+// 有料プラン判定は unified-plan.ts の単一ソース isPaidPlan を使用（定期スキャンは有料組織のみ対象）。
 
 // ============================================
 // ドヤAIO 定期スキャン（週1回想定）

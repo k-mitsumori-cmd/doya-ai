@@ -69,7 +69,7 @@ export async function POST(
             : `${String(user?.plan).toUpperCase()} プラン`
         return NextResponse.json(
           {
-            error: `今月のバナー生成上限（${planLabel}: ${monthlyLimit}回/月）に達しました。上位プランへのアップグレードでさらに利用可能になります。初月無料でお試しいただけます。`,
+            error: `今月のバナー生成上限（${planLabel}: ${monthlyLimit}回/月）に達しました。上位プランへのアップグレードでさらに利用可能になります。`,
             code: 'BANNER_MONTHLY_LIMIT',
             limit: monthlyLimit,
             current: monthCount,

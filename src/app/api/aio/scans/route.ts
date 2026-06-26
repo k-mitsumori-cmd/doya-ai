@@ -7,11 +7,8 @@ import { prisma } from '@/lib/prisma'
 import { getAioContext, orgSlugFrom } from '@/lib/aio/access'
 import { availableEngines, effectiveScanStatus, type EngineId } from '@/lib/aio/types'
 import { runAndPersistScan } from '@/lib/aio/run'
+import { isPaidPlan } from '@/lib/unified-plan'
 
-function isPaidPlan(plan?: string | null): boolean {
-  const p = (plan || 'FREE').toUpperCase()
-  return p !== 'FREE' && p !== 'GUEST'
-}
 const FREE_SCANS_PER_WEEK = 1
 
 // GET /api/aio/scans — スキャン履歴（軽量）

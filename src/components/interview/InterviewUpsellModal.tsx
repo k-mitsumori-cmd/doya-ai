@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { INTERVIEW_PRICING } from '@/lib/pricing'
-import { TrialBadge, TrialNote } from '@/components/TrialCallout'
+import { TrialBadge, TrialNote, useTrialEligible } from '@/components/TrialCallout'
 
 interface InterviewUpsellModalProps {
   isOpen: boolean
@@ -77,6 +77,7 @@ export default function InterviewUpsellModal({
 }: InterviewUpsellModalProps) {
   const router = useRouter()
   const [showFeatures, setShowFeatures] = useState(false)
+  const trialEligible = useTrialEligible()
 
   const info = LIMIT_INFO[limitType]
   const proPlan = INTERVIEW_PRICING.plans.find((p) => p.id === 'interview-pro')
@@ -284,7 +285,7 @@ export default function InterviewUpsellModal({
                   <span className="material-symbols-outlined text-[20px]">
                     {isGuest ? 'person_add' : 'rocket_launch'}
                   </span>
-                  {isGuest ? '無料で登録する' : '初月無料でプロにアップグレード'}
+                  {isGuest ? '無料で登録する' : trialEligible ? '初月無料でプロにアップグレード' : 'プロプランにアップグレード'}
                 </span>
               </motion.button>
 

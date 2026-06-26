@@ -1,6 +1,7 @@
 'use client'
 import { Lock } from 'lucide-react'
 import Link from 'next/link'
+import { useTrialEligible } from '@/components/TrialCallout'
 
 interface PlanUpgradeAlertProps {
   message: string
@@ -9,13 +10,14 @@ interface PlanUpgradeAlertProps {
 }
 
 export default function PlanUpgradeAlert({ message, upgradePath, serviceName }: PlanUpgradeAlertProps) {
+  const trialEligible = useTrialEligible()
   return (
     <div className="flex items-center gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
       <Lock className="w-5 h-5 text-amber-600 flex-shrink-0" />
       <div className="flex-1">
         <p className="text-sm font-medium text-amber-900">{message}</p>
         <Link href={upgradePath} className="text-sm text-amber-700 hover:text-amber-800 hover:underline mt-1 inline-block">
-          初月無料でプロを試す →
+          {trialEligible ? '初月無料でプロを試す' : 'プランをアップグレード'} →
         </Link>
       </div>
     </div>

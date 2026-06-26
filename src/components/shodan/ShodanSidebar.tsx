@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, Sparkles, Building2, Users, CreditCard, Zap, Target } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
+import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { shodanTheme } from '@/components/sidebar/themes'
 import {
   SidebarShell,
@@ -91,7 +92,7 @@ function ShodanSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapse
                   </div>
                   <p className="text-xs font-black text-white">現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}</p>
                 </div>
-                <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-90 mb-2">プロプラン ¥9,980/月・初月無料で無制限・チーム招待</p>
+                <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-90 mb-2">プロプラン ¥9,980/月<TrialInlineSuffix />で無制限・チーム招待</p>
                 <Link href="/shodan/pricing" className="w-full py-2 bg-white text-fuchsia-700 text-[11px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md block text-center">
                   プロにアップグレード
                 </Link>

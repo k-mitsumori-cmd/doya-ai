@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Clock, Zap, Target } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
+import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { personaTheme } from '@/components/sidebar/themes'
 import {
   SidebarShell,
@@ -93,7 +94,7 @@ function PersonaSidebarImpl({
                 現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}
               </p>
               <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-80">
-                {planLabel === 'FREE' || planLabel === 'GUEST' ? 'ライトプラン：¥2,980/月・初月無料' : planLabel === 'LIGHT' ? 'PROプラン：¥9,980/月・初月無料' : 'PROプラン：¥9,980/月・初月無料'}
+                {planLabel === 'FREE' || planLabel === 'GUEST' ? <>ライトプラン：¥2,980/月<TrialInlineSuffix /></> : planLabel === 'LIGHT' ? <>PROプラン：¥9,980/月<TrialInlineSuffix /></> : <>PROプラン：¥9,980/月<TrialInlineSuffix /></>}
               </p>
               <Link
                 href="/pricing"

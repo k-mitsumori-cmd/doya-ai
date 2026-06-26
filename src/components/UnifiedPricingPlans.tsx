@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Check, Sparkles } from 'lucide-react'
 import { CheckoutButton } from '@/components/CheckoutButton'
-import { TrialBadge, TrialNote } from '@/components/TrialCallout'
+import { TrialBadge, TrialNote, useTrialEligible } from '@/components/TrialCallout'
 import { getServiceById } from '@/lib/services'
 import {
   UNIFIED_PRO_PRICE_LABEL,
@@ -32,6 +32,7 @@ export function UnifiedPricingPlans({
 }) {
   const pathname = usePathname()
   const returnTo = pathname || `/${serviceId}/pricing`
+  const trialEligible = useTrialEligible()
 
   const svc = getServiceById(serviceId)
   if (!svc) return null
@@ -132,7 +133,7 @@ export function UnifiedPricingPlans({
               variant="secondary"
               className="block w-full rounded-full bg-amber-400 px-6 py-3.5 text-center text-base font-black text-amber-950 shadow-lg ring-1 ring-amber-300 transition hover:bg-amber-300"
             >
-              初月無料でプロを試す
+              {trialEligible ? '初月無料でプロを試す' : 'プロにアップグレード'}
             </CheckoutButton>
           )}
         </div>

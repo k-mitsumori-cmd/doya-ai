@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { LayoutDashboard, CreditCard, Zap, Eye, ScanSearch } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
+import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { aioTheme } from '@/components/sidebar/themes'
 import {
   SidebarShell,
@@ -91,7 +92,7 @@ function AioSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapsed, 
                   </div>
                   <p className="text-xs font-black text-white">現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}</p>
                 </div>
-                <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-90 mb-2">プロプラン ¥9,980/月・初月無料でSoV・引用元・改善アクションも閲覧</p>
+                <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-90 mb-2">プロプラン ¥9,980/月<TrialInlineSuffix />でSoV・引用元・改善アクションも閲覧</p>
                 <Link href="/aio/pricing" className="w-full py-2 bg-white text-fuchsia-700 text-[11px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md block text-center">
                   プロにアップグレード
                 </Link>

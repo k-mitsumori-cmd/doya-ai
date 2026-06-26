@@ -14,13 +14,14 @@ import {
   UserPlus,
 } from 'lucide-react'
 import { getUsageCount, getRemainingCount, PLAN_LIMITS, UserTier } from '@/lib/usage'
-import { TrialCallout } from '@/components/TrialCallout'
+import { TrialCallout, useTrialEligible } from '@/components/TrialCallout'
 
 export function UsageLimitBanner() {
   // テスト用: 制限表示を無効化（NEXT_PUBLIC_DOYA_DISABLE_LIMITS=1）
   // NOTE: Hooksの呼び出し順を守るため、早期returnはhooksの後で行う
   const disableLimitUi = process.env.NEXT_PUBLIC_DOYA_DISABLE_LIMITS === '1'
   const { data: session, status } = useSession()
+  const trialEligible = useTrialEligible()
   const [remaining, setRemaining] = useState<number | 'unlimited'>(3)
   const [dismissed, setDismissed] = useState(false)
 
@@ -111,7 +112,11 @@ export function UsageLimitBanner() {
                 今月の残り<span className="font-bold text-lg mx-1">{remaining}</span>枚
               </p>
               <p className="text-xs text-purple-700">
-                アップグレードで上限解放。<span className="font-bold">今なら初月無料</span>でお試し！
+                {trialEligible ? (
+                  <>アップグレードで上限解放。<span className="font-bold">今なら初月無料</span>でお試し！</>
+                ) : (
+                  <>アップグレードで上限を解放しましょう。</>
+                )}
               </p>
             </div>
           </div>
@@ -148,6 +153,7 @@ export function UsageLimitModal({
   onClose: () => void
   tier: UserTier
 }) {
+  const trialEligible = useTrialEligible()
   if (!isOpen) return null
 
   return (
@@ -202,7 +208,7 @@ export function UsageLimitModal({
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-medium rounded-xl hover:opacity-90 transition-opacity"
             >
               <Crown className="w-5 h-5" />
-              初月無料でアップグレード
+              {trialEligible ? '初月無料でアップグレード' : 'プロにアップグレード'}
             </Link>
             <button
               onClick={onClose}

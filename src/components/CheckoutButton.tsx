@@ -97,7 +97,7 @@ export function CheckoutButton({
       ) : (
         <>
           {variant === 'primary' ? <Zap className="w-4 h-4" /> : <CreditCard className="w-4 h-4" />}
-          {children || '初月無料でプロを試す'}
+          {children || 'プランを選択'}
         </>
       )}
     </button>

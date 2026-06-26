@@ -186,10 +186,12 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     return
   }
 
-  // サブスクリプションが canceled になった場合は FREE に戻す
-  // （Stripe が期間終了時に cancel_at_period_end のサブスクを canceled にする）
-  if (subscription.status === 'canceled') {
-    console.log(`Subscription canceled via updated event for user: ${user.id}`)
+  // canceled / unpaid は FREE に戻す。
+  // - canceled: 期間終了時の解約、またはトライアル終了時に支払い方法が無く missing_payment_method:'cancel' で解約
+  // - unpaid: トライアル後/更新の初回課金が失敗しダンニング(再試行)も尽きた終端状態。
+  //   updateUserSubscription は status を見ず PRO 付与するため、ここで弾かないと未入金のまま PRO が残る。
+  if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
+    console.log(`Subscription ${subscription.status} via updated event for user: ${user.id}`)
     await handleSubscriptionDeleted(subscription)
     return
   }

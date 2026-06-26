@@ -14,6 +14,7 @@ import {
 import { useSession, signOut } from 'next-auth/react'
 import { markLogoutToastPending } from '@/components/LogoutToastListener'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
+import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { seoTheme } from '@/components/sidebar/themes'
 import {
   SidebarShell,
@@ -218,7 +219,7 @@ function SeoSidebarImpl({
               <p className="text-[10px] text-emerald-100 font-bold leading-relaxed opacity-80">
                 {seoPlanLabel === 'PRO' || seoPlanLabel === 'ENTERPRISE'
                   ? <>さらに上限UP：要相談</>
-                  : <>プロ: 月額¥9,980・初月無料で生成し放題に</>}
+                  : <>プロ: 月額¥9,980<TrialInlineSuffix />で生成し放題に</>}
               </p>
               <Link
                 href={isLoggedIn ? '/seo/dashboard/plan' : '/seo/pricing'}

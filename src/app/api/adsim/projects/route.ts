@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       if (monthCount >= limit) {
         return NextResponse.json(
           {
-            error: `今月の作成上限（${limit}件）に達しました。Pro プランで無制限になります。初月無料でお試しいただけます。`,
+            error: `今月の作成上限（${limit}件）に達しました。Pro プランで無制限になります。`,
             code: 'MONTHLY_LIMIT_REACHED',
             limit,
             current: monthCount,
