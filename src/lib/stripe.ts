@@ -266,6 +266,7 @@ export async function createCheckoutSession({
   cancelUrl,
   metadata,
   mode = 'subscription',
+  trialDays,
 }: {
   priceId: string
   userId: string
@@ -274,7 +275,14 @@ export async function createCheckoutSession({
   cancelUrl: string
   metadata?: Record<string, string>
   mode?: 'subscription' | 'payment'
+  // 無料トライアル日数（初月無料など）。subscription モードのときのみ有効。
+  trialDays?: number
 }) {
+  // 1日以上のときだけトライアルを付与（0/未指定はトライアル無し）
+  const trial = mode === 'subscription' && typeof trialDays === 'number' && trialDays >= 1
+    ? Math.floor(trialDays)
+    : undefined
+
   const session = await stripe.checkout.sessions.create({
     mode,
     payment_method_types: ['card'],
@@ -301,6 +309,11 @@ export async function createCheckoutSession({
         userId,
         ...(metadata || {}),
       },
+      // 初月無料トライアル。トライアル中に支払い方法が無ければ更新せず解約（請求事故防止）。
+      ...(trial ? {
+        trial_period_days: trial,
+        trial_settings: { end_behavior: { missing_payment_method: 'cancel' } },
+      } : {}),
     } : undefined,
     // 請求先住所を収集しない（シンプル化）
     billing_address_collection: 'auto',

@@ -21,6 +21,13 @@ export function isPaidPlan(plan?: string | null): boolean {
 export const UNIFIED_PRO_PRICE_LABEL = '¥9,980'
 
 /**
+ * 統一プロプランの無料トライアル日数（初月無料）。
+ * Stripe Checkout の subscription_data.trial_period_days に渡す。
+ * 0 にするとトライアル無効。日数を変えたいときはここだけ編集すればよい。
+ */
+export const UNIFIED_TRIAL_DAYS = 30
+
+/**
  * 統一プロプランで使う Stripe の planId。
  * checkout API(`/api/stripe/checkout`) の priceMap が解決できる値であること。
  * 'banner-pro' は本番の STRIPE_PRICE_BANNER_PRO_MONTHLY(¥9,980) に紐づく
@@ -35,4 +42,7 @@ export const UNIFIED_PLAN_COPY = {
   freeTagline: 'まずは無料でお試し',
   proTagline: '1契約で全サービスのプロ機能が使い放題',
   proNote: 'プロプランを1つ契約すると、ドヤAIの全サービスでプロ機能（上限アップ）が使えるようになります。',
+  // 初月無料トライアルの訴求（UNIFIED_TRIAL_DAYS と整合させること）
+  proTrialBadge: '初月無料',
+  proTrialNote: `今なら初月無料。${UNIFIED_TRIAL_DAYS}日間は料金がかからず、期間中はいつでも解約できます。`,
 } as const

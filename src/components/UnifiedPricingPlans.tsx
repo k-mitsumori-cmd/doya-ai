@@ -94,11 +94,15 @@ export function UnifiedPricingPlans({
             <Sparkles className="h-4 w-4" />
             {UNIFIED_PLAN_COPY.proName}
           </div>
-          <div className="mb-1 flex items-end gap-1">
+          <div className="mb-1 flex items-end gap-2">
             <span className="text-4xl font-black">{UNIFIED_PRO_PRICE_LABEL}</span>
             <span className="mb-1 text-sm font-bold text-white/80">/ 月（税込）</span>
+            <span className="mb-1 rounded-full bg-amber-400 px-2.5 py-0.5 text-xs font-black text-amber-950">
+              {UNIFIED_PLAN_COPY.proTrialBadge}
+            </span>
           </div>
-          <p className="mb-5 text-xs font-bold text-white/80">{UNIFIED_PLAN_COPY.proTagline}</p>
+          <p className="mb-1 text-xs font-bold text-white/80">{UNIFIED_PLAN_COPY.proTagline}</p>
+          <p className="mb-5 text-[11px] font-bold text-amber-200">{UNIFIED_PLAN_COPY.proTrialNote}</p>
 
           <div className="mb-4 rounded-xl bg-white/15 px-4 py-3">
             <p className="text-xs font-bold text-white/70">利用上限</p>
@@ -129,7 +133,7 @@ export function UnifiedPricingPlans({
               variant="secondary"
               className="block w-full rounded-full bg-amber-400 px-6 py-3.5 text-center text-base font-black text-amber-950 shadow-lg ring-1 ring-amber-300 transition hover:bg-amber-300"
             >
-              プロにアップグレード
+              初月無料でプロを試す
             </CheckoutButton>
           )}
         </div>
