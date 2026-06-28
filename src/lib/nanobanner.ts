@@ -1331,9 +1331,12 @@ export async function generateBanners(
     const variationMode = options?.variationMode || 'diverse'
     const creativePresets = variationMode === 'similar' ? SIMILAR_CREATIVE_PRESETS : DIVERSE_CREATIVE_PRESETS
 
-    // 10枚は逐次だとVercelの実行上限/フロントAbortに当たりやすいので、
-    // 同時実行数を制限した並列生成にする（Nano Banana Pro / Gemini3系は維持）
-    const concurrency = targetCount >= 6 ? 3 : targetCount >= 4 ? 2 : 1
+    // 逐次生成だと gpt-image-2(1枚 約120〜145秒) × 枚数 が積み上がり、
+    // フロント側の Abort(約290秒) / Vercel maxDuration(300秒) を超えてタイムアウトする。
+    // （3枚でも逐次=1なら 約405秒で確実にタイムアウトしていた）
+    // 画像はそれぞれ独立した外部API呼び出しで、出力も小さく(各2MB程度)メモリ負荷も低いため、
+    // 枚数分まとめて並列実行する（メモリ/レート制限の保険として上限のみ設ける）。
+    const concurrency = Math.min(targetCount, Number(process.env.DOYA_BANNER_CONCURRENCY) || 10)
     let cursor = 0
 
     const runOne = async (i: number) => {
