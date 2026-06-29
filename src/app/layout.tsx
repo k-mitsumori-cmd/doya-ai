@@ -37,7 +37,7 @@ export const metadata: Metadata = {
         url: SERVICE_SEO.portal.ogImage,
         width: 1200,
         height: 630,
-        alt: 'ドヤAIポータル - ビジネスを加速するAIツール群',
+        alt: 'ドヤマーケAI - AI SaaSサービス群',
       },
     ],
   },
@@ -123,9 +123,10 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
 
         {/* Material Symbols Outlined */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=block"
         />
       </head>
       <body>

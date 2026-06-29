@@ -155,7 +155,7 @@ export default function KantanPricingPage() {
                         </button>
                       </Link>
                     ) : isEnterprise ? (
-                      <a href="mailto:support@doya-ai.com?subject=カンタンマーケAI法人プランお問い合わせ" className="block">
+                      <a href="mailto:support@surisuta.jp?subject=カンタンマーケAI法人プランお問い合わせ" className="block">
                         <button className="w-full py-4 rounded-xl font-bold border border-amber-500/30 hover:border-amber-500/50 text-amber-400 hover:text-amber-300 transition-all duration-300">
                           {plan.cta}
                         </button>

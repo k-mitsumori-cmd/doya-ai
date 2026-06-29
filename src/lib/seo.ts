@@ -5,23 +5,28 @@
 import { SEO_PRICING, BANNER_PRICING, KANTAN_PRICING, PERSONA_PRICING } from './pricing'
 
 export const SITE_CONFIG = {
-  name: 'ドヤAI',
-  tagline: 'ビジネスを加速するAIツール群',
-  description: 'SEO記事生成、バナー作成、LP制作など、ビジネスに必要なAIツールを1つのアカウントで利用可能。ドヤライティングAI、ドヤバナーAIなど続々追加中。',
-  url: process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.vercel.app',
+  name: 'ドヤマーケAI',
+  tagline: 'ドヤマーケAIのサービス群',
+  description: 'ドヤマーケAIは、記事生成、広告バナー、営業リスト、人事、勤怠、SFA、資料作成などをキャラクターと一緒に試せるAI SaaSサービス群です。SaaSは死にましぇん、ドヤマーケ、株式会社スリスタ、三森 捷暉の運営文脈から生まれています。',
+  // 末尾スラッシュは定義時に一度だけ除去（url を使う全箇所＝org url / service url / OG url の二重スラッシュを防ぐ）
+  url: (process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.vercel.app').replace(/\/+$/, ''),
   locale: 'ja_JP',
-  twitter: '@doya_ai',
+  twitter: '@doyamarke',
   // OGP画像のベースURL
   ogImageBase: '/og',
+}
+
+function withoutTrailingSlash(url: string) {
+  return url.replace(/\/+$/, '')
 }
 
 // 各サービスのSEO設定
 export const SERVICE_SEO = {
   // ポータル
   portal: {
-    title: 'ドヤAIポータル | ビジネスを加速するAIツール群',
-    description: 'SEO記事生成、バナー作成、LP制作など、ビジネスに必要なAIツールを1つのアカウントで利用可能。ドヤライティングAI、ドヤバナーAIなど続々追加中。',
-    keywords: ['AI', 'ビジネスツール', '文章生成', 'バナー作成', 'LP作成', '自動化'],
+    title: 'ドヤマーケAI | AI SaaSサービス群',
+    description: 'ドヤマーケAIは、記事生成、広告バナー、営業リスト、人事、勤怠、SFA、資料作成などを束ねたAI SaaSサービス群です。SaaSは死にましぇん、ドヤマーケ、株式会社スリスタ、三森 捷暉が運営しています。',
+    keywords: ['ドヤマーケAI', 'ドヤマーケ', 'SaaSは死にましぇん', '株式会社スリスタ', '三森捷暉', 'AI SaaS', '記事生成', 'バナー作成', '営業支援', '人事AI', '勤怠管理', 'SFA'],
     ogImage: '/og/portal.png',
   },
   
@@ -181,8 +186,8 @@ export const SERVICE_SEO = {
 
   // 管理画面
   admin: {
-    title: '管理画面 | ドヤAIポータル',
-    description: 'ドヤAIポータルの管理画面。ユーザー管理、統計、設定などを一元管理。',
+    title: '管理画面 | ドヤマーケAI',
+    description: 'ドヤマーケAIの管理画面。ユーザー管理、統計、設定などを一元管理。',
     ogImage: '/og/portal.png',
   },
   
@@ -197,20 +202,22 @@ export const SERVICE_SEO = {
   // 認証
   auth: {
     signin: {
-      title: 'ログイン | ドヤAIポータル',
-      description: 'Googleアカウントでログインして、すべてのドヤAIサービスをご利用ください。',
+      title: 'ログイン | ドヤマーケAI',
+      description: 'Googleアカウントでログインして、すべてのドヤマーケAIサービスをご利用ください。',
     },
   },
 }
 
 // 構造化データ（JSON-LD）
 export function generateOrganizationSchema() {
+  const baseUrl = withoutTrailingSlash(SITE_CONFIG.url)
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
-    name: 'ドヤAI',
+    name: 'ドヤマーケAI',
     url: SITE_CONFIG.url,
-    logo: `${SITE_CONFIG.url}/logo.png`,
+    logo: `${baseUrl}/logo.png`,
     description: SITE_CONFIG.description,
     sameAs: [
       `https://twitter.com/${SITE_CONFIG.twitter.replace('@', '')}`,

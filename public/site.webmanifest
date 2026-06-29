@@ -1,7 +1,7 @@
 {
-  "name": "ドヤAIポータル",
-  "short_name": "ドヤAI",
-  "description": "ビジネスを加速するAIツール群",
+  "name": "ドヤマーケAI",
+  "short_name": "ドヤマーケAI",
+  "description": "SaaSは死にましぇん、ドヤマーケ、株式会社スリスタ、三森 捷暉が運営するAI SaaSサービス群",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
@@ -25,4 +25,3 @@
   "lang": "ja",
   "dir": "ltr"
 }
-

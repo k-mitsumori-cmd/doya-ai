@@ -1,17 +1,7 @@
 // ドヤAIO 実スキャン検証スクリプト（DB/認証を介さず executeScan を直接実行）
 // 実行: npx tsx scripts/aio-scan-test.ts
-import fs from 'fs'
-import path from 'path'
-
 // .env.local を import より先に読み込む（動的importで env を確実に効かせる）
-function loadEnv() {
-  const p = process.env.AIO_ENV_FILE || path.join(process.cwd(), '.env.local')
-  const txt = fs.readFileSync(p, 'utf8')
-  for (const line of txt.split('\n')) {
-    const m = line.match(/^([A-Z0-9_]+)=(.*)$/)
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].trim().replace(/^["']|["']$/g, '')
-  }
-}
+import { loadEnv } from './_env'
 
 async function main() {
   loadEnv()

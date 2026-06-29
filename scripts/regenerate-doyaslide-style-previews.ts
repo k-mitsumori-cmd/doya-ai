@@ -9,16 +9,10 @@
 //   --only=corporate,pop  対象スタイルを絞る（省略で全スタイル）
 //   --page=1              対象ページ番号を絞る（0=表紙,1=本文,2=まとめ。省略で全ページ）
 //   --force               既存キャッシュがあっても焼き直す（既定: スキップ）
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
+import { loadEnv } from './_env'
 
 // .env.local を読み込む（既存の環境変数は上書きしない）
-for (const line of readFileSync(resolve(__dirname, '../.env.local'), 'utf8').split('\n')) {
-  const m = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/)
-  if (m && process.env[m[1]] === undefined) {
-    process.env[m[1]] = m[2].replace(/^["']|["']$/g, '')
-  }
-}
+loadEnv()
 
 async function main() {
   // env 設定後に動的 import（モジュール読込時に env を参照するため）

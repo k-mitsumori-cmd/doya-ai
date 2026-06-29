@@ -31,7 +31,7 @@ export interface GeneratedCreative {
   model: string
 }
 
-function gptSizeFor(w: number, h: number): { size: string; aspect: 'square' | 'landscape' | 'portrait' } {
+export function gptSizeFor(w: number, h: number): { size: string; aspect: 'square' | 'landscape' | 'portrait' } {
   if (w === h) return { size: '1024x1024', aspect: 'square' }
   if (w > h) return { size: '1536x1024', aspect: 'landscape' }
   return { size: '1024x1536', aspect: 'portrait' }

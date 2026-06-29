@@ -494,7 +494,7 @@ export default function KantanTopPage() {
                       </button>
                     </Link>
                   ) : plan.priceLabel === '要相談' ? (
-                    <a href="mailto:support@doya-ai.com?subject=カンタンマーケAI法人プランお問い合わせ" className="block">
+                    <a href="mailto:support@surisuta.jp?subject=カンタンマーケAI法人プランお問い合わせ" className="block">
                       <button className="w-full py-3 rounded-xl font-bold border border-white/10 hover:border-white/30 text-white/60 hover:text-white transition-all">
                         {plan.cta}
                       </button>
