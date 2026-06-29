@@ -71,9 +71,9 @@ async function getChartData(workspaceId: string) {
   const timeEntries = await prisma.promaneTimeEntry.findMany({
     where: {
       member: { workspaceId },
-      startTime: { gte: sixMonthsAgo },
+      date: { gte: sixMonthsAgo },
     },
-    select: { duration: true, startTime: true, member: { select: { hourlyRate: true } } },
+    select: { duration: true, date: true, member: { select: { hourlyRate: true } } },
   });
 
   const monthlyData = new Map<string, { revenue: number; cost: number }>();
@@ -96,7 +96,7 @@ async function getChartData(workspaceId: string) {
 
   // 人件費
   for (const te of timeEntries) {
-    const key = `${te.startTime.getMonth() + 1}月`;
+    const key = `${te.date.getMonth() + 1}月`;
     if (monthlyData.has(key)) {
       const cost = (safe(te.duration) / 60) * safe(te.member.hourlyRate);
       monthlyData.get(key)!.cost += cost;

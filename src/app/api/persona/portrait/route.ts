@@ -6,6 +6,10 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { callGeminiImageAPI } from '@/lib/resolve-image-model'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const maxDuration = 300
+
 export async function POST(req: NextRequest) {
   try {
     // 認証チェック（画像生成はコストが高いため認証必須）

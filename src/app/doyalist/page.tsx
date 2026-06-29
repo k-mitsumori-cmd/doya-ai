@@ -840,7 +840,7 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value: s
   )
 }
 
-function Field({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: string[] }) {
+function Field({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: readonly string[] }) {
   return (
     <div>
       <label className="block text-sm font-bold text-[#0a1530] mb-2">{label}</label>

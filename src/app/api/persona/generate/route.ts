@@ -13,6 +13,10 @@ import {
   isWithinFreeHour,
 } from '@/lib/pricing'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const maxDuration = 300
+
 // HTML解析用ユーティリティ
 function extractTextFromHTML(html: string): string {
   return html

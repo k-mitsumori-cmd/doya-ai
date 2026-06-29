@@ -32,7 +32,7 @@ const BodySchema = z.object({
  * 画像のプロンプトを修正して再生成（新しいSeoImageとして保存）
  * - 有料のみ
  */
-export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
   try {
     await ensureSeoSchema()
     const session = await getServerSession(authOptions)
@@ -46,7 +46,8 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
       return NextResponse.json({ success: false, error: '画像の再生成は有料プラン限定です' }, { status: 403 })
     }
 
-    const id = ctx.params.id
+    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const id = p.id
     const body = BodySchema.parse(await req.json())
 
     const imgRec = await (prisma as any).seoImage.findUnique({ where: { id } })

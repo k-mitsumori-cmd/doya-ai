@@ -103,11 +103,11 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
       try { await tx.seoJob.deleteMany({ where: { articleId: id } }) } catch {}
       try { await tx.seoSection.deleteMany({ where: { articleId: id } }) } catch {}
       try { await tx.seoReference.deleteMany({ where: { articleId: id } }) } catch {}
-      try { await tx.seoAudit.deleteMany({ where: { articleId: id } }) } catch {}
-      try { await tx.seoMemo.deleteMany({ where: { articleId: id } }) } catch {}
+      try { await tx.seoAuditReport.deleteMany({ where: { articleId: id } }) } catch {}
+      try { await tx.seoUserMemo.deleteMany({ where: { articleId: id } }) } catch {}
       try { await tx.seoImage.deleteMany({ where: { articleId: id } }) } catch {}
-      try { await tx.seoLinkCheck.deleteMany({ where: { articleId: id } }) } catch {}
-      try { await tx.seoKnowledge.deleteMany({ where: { articleId: id } }) } catch {}
+      try { await tx.seoLinkCheckResult.deleteMany({ where: { articleId: id } }) } catch {}
+      try { await tx.seoKnowledgeItem.deleteMany({ where: { articleId: id } }) } catch {}
       // 記事本体を削除
       await tx.seoArticle.delete({ where: { id } })
     })

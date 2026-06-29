@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
       u.searchParams.set('page', String(page))
       try {
         const r = await fetch(u.toString(), {
-          headers: { 'Accept': 'application/json', 'X-hojinInfo-api-token': apiToken },
+          headers: { 'Accept': 'application/json', 'X-hojinInfo-api-token': apiToken! },
           signal: AbortSignal.timeout(12000),
         })
         if (r.status === 404) return 0  // ヒット0件

@@ -17,7 +17,7 @@ type MemberItem = {
   id: string;
   displayName: string;
   role: string;
-  email: string;
+  email: string | null;
   hourlyRate: number;
   totalMinutes: number;
 };

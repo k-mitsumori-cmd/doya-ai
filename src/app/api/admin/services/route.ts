@@ -35,7 +35,7 @@ export async function GET() {
       safe(() => prisma.user.count({ where: { plan: { in: ['PRO', 'LIGHT', 'ENTERPRISE', 'BUNDLE', 'STARTER'] } } }), 0),
       safe(() => prisma.seoArticle.count(), 0),
       safe(() => prisma.seoJob.count(), 0),
-      safe(() => prisma.generation.count({ where: { service: 'banner' } }), 0),
+      safe(() => prisma.generation.count({ where: { serviceId: 'banner' } }), 0),
       safe(() => prisma.interviewProject.count(), 0),
       safe(() => prisma.interviewTranscription.count(), 0),
       safe(() => prisma.copyProject.count(), 0),

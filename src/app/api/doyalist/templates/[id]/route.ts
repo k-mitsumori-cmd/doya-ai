@@ -19,14 +19,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   const id = p.id
 
   try {
+    // DoyalistTemplate に公開(isPublic)概念は無く、一覧も userId 所有のみを返すため、取得も所有者に限定する
     const template = await prisma.doyalistTemplate.findFirst({
-      where: {
-        id,
-        OR: [
-          { userId: session.user.id },
-          { isPublic: true },
-        ],
-      },
+      where: { id, userId: session.user.id },
     })
 
     if (!template) {

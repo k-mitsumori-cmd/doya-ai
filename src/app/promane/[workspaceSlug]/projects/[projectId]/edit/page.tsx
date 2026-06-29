@@ -39,8 +39,9 @@ export default async function EditProjectPage({
     monthlyAmount: project.monthlyAmount,
     hourlyRate: project.hourlyRate,
     estimatedHours: project.estimatedHours,
-    startDate: project.startDate?.toISOString().split('T')[0] || null,
-    endDate: project.endDate?.toISOString().split('T')[0] || null,
+    // ProjectData は Date | null を期待（フォーム側 formatDate が表示用に整形する）
+    startDate: project.startDate,
+    endDate: project.endDate,
     tags: project.tags,
   }
 

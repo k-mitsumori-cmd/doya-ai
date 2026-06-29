@@ -16,9 +16,10 @@ const FALLBACK_IMAGE = '/banner-samples/generating-placeholder.png'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { templateId: string } }
+  ctx: { params: Promise<{ templateId: string }> | { templateId: string } }
 ) {
-  const { templateId } = params
+  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const { templateId } = p
 
   if (!templateId) {
     return NextResponse.json({ error: 'templateId is required' }, { status: 400 })

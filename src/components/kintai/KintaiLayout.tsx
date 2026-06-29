@@ -83,7 +83,7 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
             style={{ width: 120, height: 120, objectFit: 'contain' }}
           />
           <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#7f19e6] to-[#5b0fb3] flex items-center justify-center text-white mx-auto mb-6 shadow-lg shadow-[#7f19e6]/20">
-            <img src="/kintai/logo.png" alt="ドヤ勤怠" style="height:48px;objectFit:contain" />
+            <img src="/kintai/logo.png" alt="ドヤ勤怠" style={{ height: 48, objectFit: 'contain' }} />
           </div>
           
           <p className="text-slate-500 mb-6">ログインして勤怠管理を始めましょう</p>

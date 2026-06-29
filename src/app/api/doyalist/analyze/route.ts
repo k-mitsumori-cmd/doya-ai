@@ -66,15 +66,15 @@ export async function POST(req: NextRequest) {
         const prompt = `あなたは営業戦略アナリストです。この企業と自社サービスのマッチ度を分析してください。
 
 【企業情報】
-- 企業名: ${company.companyName}
+- 企業名: ${company.name}
 - 業種: ${company.industry || '不明'}
-- 所在地: ${company.address || '不明'}
+- 所在地: ${company.region || '不明'}
 
 【自社サービス】
-${project.myServiceDesc || '未設定'}
+${project.description || '未設定'}
 
 【自社の強み】
-${project.myStrengths || '未設定'}
+${project.keywords || '未設定'}
 
 以下のJSON形式で回答してください:
 {
@@ -109,10 +109,13 @@ ${project.myStrengths || '未設定'}
           await prisma.doyalistCompany.update({
             where: { id: company.id },
             data: {
-              matchScore: analysis.matchScore || 0,
-              needsAnalysis: analysis.needsAnalysis || null,
-              approachAdvice: analysis.approachAdvice || null,
-              riskFlags: analysis.riskFlags || null,
+              score: analysis.matchScore || 0,
+              enrichedData: {
+                matchScore: analysis.matchScore || 0,
+                needsAnalysis: analysis.needsAnalysis || null,
+                approachAdvice: analysis.approachAdvice || null,
+                riskFlags: analysis.riskFlags || null,
+              },
             }
           })
 

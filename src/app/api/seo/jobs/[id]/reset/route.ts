@@ -3,10 +3,11 @@ import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
 // ジョブが error / 途中失敗した場合でも、ユーザーがワンクリックでやり直せるようにする
-export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
+export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
   try {
     await ensureSeoSchema()
-    const id = ctx.params.id
+    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const id = p.id
 
     const job = await (prisma as any).seoJob.findUnique({
       where: { id },

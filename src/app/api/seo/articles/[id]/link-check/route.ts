@@ -29,10 +29,14 @@ async function checkOne(url: string): Promise<{
   }
 }
 
-export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
+export async function POST(
+  _req: NextRequest,
+  ctx: { params: Promise<{ id: string }> | { id: string } }
+) {
   try {
     await ensureSeoSchema()
-    const articleId = ctx.params.id
+    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const articleId = p.id
     const article = await prisma.seoArticle.findUnique({ where: { id: articleId } })
     if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     if (!article.finalMarkdown) {

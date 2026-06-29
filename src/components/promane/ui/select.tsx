@@ -14,8 +14,10 @@ export function Select({ value, onValueChange, name, defaultValue, children }: {
   const items: { value: string; label: string }[] = []
   const findItems = (nodes: React.ReactNode) => {
     React.Children.forEach(nodes, (child) => {
-      if (React.isValidElement(child) && child.props.value !== undefined) items.push({ value: child.props.value, label: String(child.props.children || child.props.value) })
-      if (React.isValidElement(child) && child.props.children) findItems(child.props.children)
+      if (!React.isValidElement(child)) return
+      const props = child.props as any
+      if (props.value !== undefined) items.push({ value: props.value, label: String(props.children || props.value) })
+      if (props.children) findItems(props.children)
     })
   }
   findItems(children)
@@ -25,7 +27,7 @@ export function Select({ value, onValueChange, name, defaultValue, children }: {
       {name && <input type="hidden" name={name} value={val} />}
       {React.Children.map(children, child => {
         if (React.isValidElement(child) && (child.type as any)?.displayName === "SelectTrigger") return React.cloneElement(child as any, { onClick: () => setOpen(!open), children: selected ? <span className="truncate">{selected.label}</span> : (child.props as any).children })
-        if (React.isValidElement(child) && (child.type as any)?.displayName === "SelectContent") return open ? <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-xl border border-gray-200 bg-white py-1 shadow-lg max-h-60 overflow-auto">{React.Children.map((child.props as any).children, (item: any) => { if (!React.isValidElement(item)) return item; return <button type="button" key={item.props.value} className={cn("flex w-full items-center px-3 py-2 text-sm font-medium hover:bg-blue-50 transition-colors", val === item.props.value && "bg-blue-50 text-blue-700 font-bold")} onClick={() => { setVal(item.props.value); onValueChange?.(item.props.value); setOpen(false) }}>{item.props.children}</button> })}</div> : null
+        if (React.isValidElement(child) && (child.type as any)?.displayName === "SelectContent") return open ? <div className="absolute top-full left-0 right-0 z-50 mt-1 rounded-xl border border-gray-200 bg-white py-1 shadow-lg max-h-60 overflow-auto">{React.Children.map((child.props as any).children, (item: any) => { if (!React.isValidElement(item)) return item; const ip = item.props as any; return <button type="button" key={ip.value} className={cn("flex w-full items-center px-3 py-2 text-sm font-medium hover:bg-blue-50 transition-colors", val === ip.value && "bg-blue-50 text-blue-700 font-bold")} onClick={() => { setVal(ip.value); onValueChange?.(ip.value); setOpen(false) }}>{ip.children}</button> })}</div> : null
         return null
       })}
     </div>

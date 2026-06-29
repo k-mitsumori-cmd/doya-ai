@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Period not found' }, { status: 404 })
       }
     } else {
-      where.period = { organizationId: ctx.organizationId }
+      where.period = { is: { organizationId: ctx.organizationId } }
     }
 
     if (employeeId) where.employeeId = employeeId

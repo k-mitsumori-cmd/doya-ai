@@ -23,10 +23,11 @@ function safeJson(text: string) {
   }
 }
 
-export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
+export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
   try {
     await ensureSeoSchema()
-    const articleId = ctx.params.id
+    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const articleId = p.id
 
     const article = await (prisma as any).seoArticle.findUnique({
       where: { id: articleId },

@@ -94,10 +94,11 @@ function applyFix(mdRaw: string, fix: z.infer<typeof BodySchema>['fix']) {
   return md
 }
 
-export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
   try {
     await ensureSeoSchema()
-    const id = ctx.params.id
+    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const id = p.id
     const body = BodySchema.parse(await req.json().catch(() => ({})))
 
     const article = await (prisma as any).seoArticle.findUnique({ where: { id } })

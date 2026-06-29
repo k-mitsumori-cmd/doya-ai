@@ -58,8 +58,9 @@ function sliceSectionByHeading(md: string, headingText: string): { section: stri
   return { section: lines.slice(start, end).join('\n'), start, end }
 }
 
-export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
-  const articleId = ctx.params.id
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
+  const params = 'then' in ctx.params ? await ctx.params : ctx.params
+  const articleId = params.id
   try {
     await ensureSeoSchema()
 

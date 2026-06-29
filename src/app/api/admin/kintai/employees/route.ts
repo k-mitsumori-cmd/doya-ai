@@ -18,11 +18,17 @@ export async function GET() {
         department: { select: { name: true } },
         workRule: { select: { name: true } },
         member: { select: { role: true, status: true, inviteEmail: true, acceptedAt: true } },
-        organization: { select: { name: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 200,
     })
+
+    // KintaiEmployee には organization relation が無い（organizationId のみ）ため名前は別引きで補完
+    const orgIds = Array.from(new Set(employees.map(e => e.organizationId)))
+    const orgs = orgIds.length
+      ? await prisma.kintaiOrganization.findMany({ where: { id: { in: orgIds } }, select: { id: true, name: true } })
+      : []
+    const orgNameById = new Map(orgs.map(o => [o.id, o.name]))
 
     return NextResponse.json({
       employees: employees.map(e => ({
@@ -33,7 +39,7 @@ export async function GET() {
         employmentType: e.employmentType,
         departmentName: e.department?.name || null,
         workRuleName: e.workRule?.name || null,
-        organizationName: e.organization.name,
+        organizationName: orgNameById.get(e.organizationId) || null,
         role: e.member?.role || 'employee',
         memberStatus: e.member?.status || 'UNKNOWN',
         acceptedAt: e.member?.acceptedAt || null,

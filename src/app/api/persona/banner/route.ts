@@ -6,6 +6,10 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { callGeminiImageAPI } from '@/lib/resolve-image-model'
 
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+export const maxDuration = 300
+
 // バナーサイズプリセット
 const BANNER_SIZES: Record<string, { width: number; height: number; label: string }> = {
   'google-responsive': { width: 1200, height: 628, label: 'Google レスポンシブ' },

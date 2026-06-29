@@ -71,7 +71,7 @@ function applyDiagramTemplate(rawTemplate: string, vars: Record<string, string>)
  * 1クリックで「バナー(4枚候補) + 図解(最大10)」を生成（既存があれば不足分だけ生成）
  * - 有料のみ
  */
-export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
+export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
   try {
     await ensureSeoSchema()
     const session = await getServerSession(authOptions)
@@ -86,7 +86,8 @@ export async function POST(_req: NextRequest, ctx: { params: { id: string } }) {
       return NextResponse.json({ success: false, error: '画像生成は有料プラン限定です' }, { status: 403 })
     }
 
-    const articleId = ctx.params.id
+    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const articleId = p.id
     const article = await (prisma as any).seoArticle.findUnique({
       where: { id: articleId },
       include: { images: { orderBy: { createdAt: 'desc' } } },

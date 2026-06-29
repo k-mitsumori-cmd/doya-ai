@@ -14,22 +14,30 @@ export async function enrichCompany(companyId: string): Promise<EnrichResult> {
 
   const updatedFields: string[] = []
   const updates: Record<string, any> = {}
+  // DoyalistCompany に corporateNumber/employeeCount/capital の専用カラムは無いため、
+  // 構造化エンリッチ値は enrichedData(JSON) に集約する。連絡先は contactPerson/contactPhone/contactEmail カラムを使う。
+  const existingEnriched: Record<string, any> =
+    company.enrichedData && typeof company.enrichedData === 'object' && !Array.isArray(company.enrichedData)
+      ? (company.enrichedData as Record<string, any>)
+      : {}
+  const enriched: Record<string, any> = { ...existingEnriched }
 
-  // Try gBizINFO if we have corporate number
-  if (company.corporateNumber) {
-    const gbizData = await getGbizCompanyDetail(company.corporateNumber)
+  // Try gBizINFO if we have corporate number（法人番号は enrichedData に保持）
+  const corporateNumber = typeof existingEnriched.corporateNumber === 'string' ? existingEnriched.corporateNumber : ''
+  if (corporateNumber) {
+    const gbizData = await getGbizCompanyDetail(corporateNumber)
     if (gbizData) {
-      if (!company.employeeCount && gbizData.employeeNumber) {
-        updates.employeeCount = gbizData.employeeNumber
+      if (!enriched.employeeCount && gbizData.employeeNumber) {
+        enriched.employeeCount = gbizData.employeeNumber
         updatedFields.push('employeeCount')
       }
-      if (!company.capital && gbizData.capitalStock) {
-        updates.capital = gbizData.capitalStock
+      if (!enriched.capital && gbizData.capitalStock) {
+        enriched.capital = gbizData.capitalStock
         updatedFields.push('capital')
       }
-      if (!company.representative && gbizData.representativeName) {
-        updates.representative = gbizData.representativeName
-        updatedFields.push('representative')
+      if (!company.contactPerson && gbizData.representativeName) {
+        updates.contactPerson = gbizData.representativeName
+        updatedFields.push('contactPerson')
       }
       if (!company.website && gbizData.companyUrl) {
         updates.website = gbizData.companyUrl
@@ -47,23 +55,28 @@ export async function enrichCompany(companyId: string): Promise<EnrichResult> {
   if (websiteUrl) {
     const scraped = await scrapeCompanyWebsite(websiteUrl)
     if (scraped) {
-      if (!company.phone && scraped.phone) {
-        updates.phone = scraped.phone
-        updatedFields.push('phone')
+      if (!company.contactPhone && scraped.phone) {
+        updates.contactPhone = scraped.phone
+        updatedFields.push('contactPhone')
       }
-      if (!company.email && scraped.email) {
-        updates.email = scraped.email
-        updatedFields.push('email')
+      if (!company.contactEmail && scraped.email) {
+        updates.contactEmail = scraped.email
+        updatedFields.push('contactEmail')
       }
       if (!company.industry && !updates.industry && scraped.industry) {
         updates.industry = scraped.industry
         updatedFields.push('industry')
       }
-      if (!company.representative && !updates.representative && scraped.representative) {
-        updates.representative = scraped.representative
-        updatedFields.push('representative')
+      if (!company.contactPerson && !updates.contactPerson && scraped.representative) {
+        updates.contactPerson = scraped.representative
+        updatedFields.push('contactPerson')
       }
     }
+  }
+
+  // enrichedData(JSON) に変化があれば更新対象に含める
+  if (JSON.stringify(enriched) !== JSON.stringify(existingEnriched)) {
+    updates.enrichedData = enriched
   }
 
   if (Object.keys(updates).length > 0) {

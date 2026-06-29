@@ -80,8 +80,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'プロジェクトに企業が登録されていません' }, { status: 400 })
     }
 
-    const serviceDesc = (project as any).myServiceDesc || ''
-    const strengths = (project as any).myStrengths || ''
+    const serviceDesc = project.description || ''
 
     let generated = 0
 
@@ -114,7 +113,6 @@ export async function POST(req: NextRequest) {
             companyId: company.id,
             projectId,
             type,
-            tone: tone || 'formal',
             subject: result.subject || '',
             body: result.body,
           },
