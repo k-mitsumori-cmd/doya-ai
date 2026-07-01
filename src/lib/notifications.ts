@@ -576,6 +576,171 @@ function getMonthlyGreeting(newUsers: number, generations: number, paidUsers: nu
 }
 
 // ========================================
+// ドリップ（Resend）配信レポート通知（朝/夜の1日2回）
+// ========================================
+
+/**
+ * ドリップ配信レポート専用のSlack Webhook URLを取得
+ * - 優先: 環境変数 `SLACK_DRIP_WEBHOOK_URL`（メール配信レポート専用チャンネル）
+ * - フォールバック: 既存の SystemSetting `slack_webhook`
+ */
+async function getDripSlackWebhookUrl(): Promise<string> {
+  const fromEnv = process.env.SLACK_DRIP_WEBHOOK_URL
+  if (fromEnv && fromEnv.trim()) return fromEnv.trim()
+  return getSlackWebhookUrl()
+}
+
+async function postDripToSlack(text: string): Promise<void> {
+  const url = await getDripSlackWebhookUrl()
+  if (!url) {
+    throw new Error('Drip Slack webhook URL is not configured (SLACK_DRIP_WEBHOOK_URL / slack_webhook)')
+  }
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Slack webhook returned ${res.status}: ${body}`)
+  }
+}
+
+interface DripDayStats {
+  total: number      // その日のログ総数（sent + failed）
+  sent: number       // 実際に配信できた件数（failed を除く）
+  failed: number     // 送信失敗件数
+  opened: number
+  clicked: number
+  bounced: number
+  openRate: number   // 開封率(%) = opened / sent
+  clickRate: number  // クリック率(%) = clicked / sent
+  bounceRate: number // バウンス率(%) = bounced / sent
+}
+
+/** 指定期間[start, end) に送信されたドリップメールのスタッツを集計 */
+async function computeDripDayStats(start: Date, end: Date): Promise<DripDayStats> {
+  const logs = await withRetry(() => prisma.dripEmailLog.findMany({
+    where: { sentAt: { gte: start, lt: end } },
+    select: { status: true, openedAt: true, clickedAt: true, bouncedAt: true },
+  }))
+  const failed = logs.filter(l => l.status === 'failed').length
+  const sent = logs.length - failed
+  const opened = logs.filter(l => l.openedAt !== null).length
+  const clicked = logs.filter(l => l.clickedAt !== null).length
+  const bounced = logs.filter(l => l.bouncedAt !== null).length
+  const rate = (n: number) => (sent > 0 ? Math.round((n / sent) * 1000) / 10 : 0)
+  return {
+    total: logs.length,
+    sent,
+    failed,
+    opened,
+    clicked,
+    bounced,
+    openRate: rate(opened),
+    clickRate: rate(clicked),
+    bounceRate: rate(bounced),
+  }
+}
+
+/**
+ * 指定期間[start, end) に配信予定のドリップメール件数を算出
+ * - drip-sender と同じロジックで「各アクティブエンロールの次ステップ」の配信予定日を判定
+ * - 配信停止ユーザー / 非アクティブなシーケンス / テンプレート未設定は除外
+ * ※ 条件分岐(conditionType)や送信ウィンドウ外による繰り越しは考慮しない概算値
+ */
+async function computeDripScheduledForDay(start: Date, end: Date): Promise<number> {
+  const unsub = await withRetry(() => prisma.dripUnsubscribe.findMany({ select: { userId: true } }))
+  const unsubIds = new Set(unsub.map(u => u.userId))
+
+  const enrollments = await withRetry(() => prisma.dripEnrollment.findMany({
+    where: { status: 'active' },
+    select: {
+      userId: true,
+      currentStep: true,
+      enrolledAt: true,
+      sequence: {
+        select: {
+          status: true,
+          steps: {
+            orderBy: { sortOrder: 'asc' },
+            select: { dayOffset: true, templateId: true },
+          },
+        },
+      },
+    },
+  }))
+
+  let scheduled = 0
+  for (const e of enrollments) {
+    if (unsubIds.has(e.userId)) continue
+    if (e.sequence.status !== 'active') continue
+    const step = e.sequence.steps[e.currentStep]
+    if (!step || !step.templateId) continue
+    // 配信予定日 = enrolledAt + dayOffset 日（drip-sender と同一の算出方法）
+    const target = new Date(e.enrolledAt)
+    target.setDate(target.getDate() + step.dayOffset)
+    if (target >= start && target < end) scheduled++
+  }
+  return scheduled
+}
+
+/**
+ * ドリップ配信レポートをSlackに送信する（朝/夜の2回）
+ * - 本日の配信予定件数
+ * - 本日の実際の配信件数
+ * - 本日の開封率・クリック率などのスタッツ
+ * - 昨日の最終実績
+ */
+export async function sendDripReport(slot: 'morning' | 'evening'): Promise<void> {
+  const now = new Date()
+  const todayStart = getJSTStartOfDay(now)
+  const todayEnd = new Date(todayStart.getTime() + 24 * 60 * 60 * 1000)
+  const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000)
+
+  const [scheduledToday, todayStats, yStats] = await Promise.all([
+    computeDripScheduledForDay(todayStart, todayEnd),
+    computeDripDayStats(todayStart, todayEnd),
+    computeDripDayStats(yesterdayStart, todayStart),
+  ])
+
+  const dateStr = now.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })
+  const isMorning = slot === 'morning'
+  const header = isMorning
+    ? `☀️ *[ドリップ配信レポート・朝]* ${dateStr}`
+    : `🌙 *[ドリップ配信レポート・夜]* ${dateStr}`
+  const greeting = isMorning
+    ? 'おはようございます！本日のメール配信予定と昨日の結果です 📬'
+    : 'お疲れさまでした！本日のメール配信実績のまとめです 📊'
+  const actualLabel = isMorning ? '現時点' : '本日分'
+
+  const lines: string[] = [
+    header,
+    ``,
+    greeting,
+    ``,
+    `*📮 本日の配信予定*`,
+    `- 配信予定件数: ${scheduledToday}件`,
+    ``,
+    `*📤 本日の配信実績（${actualLabel}）*`,
+    `- 配信済み: ${todayStats.sent}件${todayStats.failed > 0 ? ` / 失敗: ${todayStats.failed}件` : ''}`,
+    `- 開封: ${todayStats.opened}件（開封率 ${todayStats.openRate}%）`,
+    `- クリック: ${todayStats.clicked}件（クリック率 ${todayStats.clickRate}%）`,
+    ...(todayStats.bounced > 0
+      ? [`- バウンス: ${todayStats.bounced}件（${todayStats.bounceRate}%）`]
+      : []),
+    ``,
+    `*📈 昨日の最終実績*`,
+    `- 配信: ${yStats.sent}件${yStats.failed > 0 ? ` / 失敗: ${yStats.failed}件` : ''}`,
+    `- 開封率: ${yStats.openRate}%（${yStats.opened}件）`,
+    `- クリック率: ${yStats.clickRate}%（${yStats.clicked}件）`,
+    ...(yStats.bounced > 0 ? [`- バウンス率: ${yStats.bounceRate}%（${yStats.bounced}件）`] : []),
+  ]
+
+  await postDripToSlack(lines.join('\n'))
+}
+
+// ========================================
 // GCP使用量レポート通知（毎日Slackに通知）
 // ========================================
 export async function sendGCPUsageReport(): Promise<void> {
