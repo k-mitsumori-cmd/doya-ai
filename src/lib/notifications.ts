@@ -613,9 +613,9 @@ interface DripDayStats {
   opened: number
   clicked: number
   bounced: number
-  openRate: number   // 開封率(%) = opened / sent
-  clickRate: number  // クリック率(%) = clicked / sent
-  bounceRate: number // バウンス率(%) = bounced / sent
+  openRate: number   // 開封率(%) = opened / delivered（delivered = sent − bounced）
+  clickRate: number  // クリック率(%) = clicked / delivered
+  bounceRate: number // バウンス率(%) = bounced / delivered
 }
 
 /** 指定期間[start, end) に送信されたドリップメールのスタッツを集計 */
@@ -629,7 +629,9 @@ async function computeDripDayStats(start: Date, end: Date): Promise<DripDayStats
   const opened = logs.filter(l => l.openedAt !== null).length
   const clicked = logs.filter(l => l.clickedAt !== null).length
   const bounced = logs.filter(l => l.bouncedAt !== null).length
-  const rate = (n: number) => (sent > 0 ? Math.round((n / sent) * 1000) / 10 : 0)
+  // 開封率・クリック率の分母は「到達数（送信 − バウンス）」で算出する
+  const delivered = Math.max(0, sent - bounced)
+  const rate = (n: number) => (delivered > 0 ? Math.round((n / delivered) * 1000) / 10 : 0)
   return {
     total: logs.length,
     sent,
@@ -644,21 +646,36 @@ async function computeDripDayStats(start: Date, end: Date): Promise<DripDayStats
 }
 
 /**
- * 指定期間[start, end) に配信予定のドリップメール件数を算出
- * - drip-sender と同じロジックで「各アクティブエンロールの次ステップ」の配信予定日を判定
- * - 配信停止ユーザー / 非アクティブなシーケンス / テンプレート未設定は除外
- * ※ 条件分岐(conditionType)や送信ウィンドウ外による繰り越しは考慮しない概算値
+ * 期間[start, end) に配信予定のドリップメール件数を算出
+ *   配信予定件数 = 「本日すでに配信済み」＋「本日まだ配信待ち」
+ *
+ * drip-sender は送信成功のたびに enrollment.currentStep を進めるため、
+ * currentStep だけを見ると「本日すでに送った分」が予定件数から抜け落ちて
+ * 夜レポートで『予定0件・実績10件』のような矛盾が起きる。これを避けるため
+ * 送信済みログ数を加算し、未送信分は currentStep の予定日で判定する。
+ *
+ * - 配信待ち = 予定日(enrolledAt + dayOffset)が end 到達までに来ているアクティブ
+ *   エンロール（過去日到達＝繰り越しバックログも drip-sender は当日送るので含める）
+ * - 配信停止 / 非アクティブなシーケンス / テンプレート未設定 / email 無しは除外
+ * ※ 条件分岐(conditionType)や送信ウィンドウ跨ぎの1日ズレは考慮しない概算値
  */
 async function computeDripScheduledForDay(start: Date, end: Date): Promise<number> {
   const unsub = await withRetry(() => prisma.dripUnsubscribe.findMany({ select: { userId: true } }))
   const unsubIds = new Set(unsub.map(u => u.userId))
 
+  // 本日すでに配信されたメール（失敗を除く）。currentStep が進んでいるため別途集計する
+  const alreadySent = await withRetry(() => prisma.dripEmailLog.count({
+    where: { sentAt: { gte: start, lt: end }, status: { not: 'failed' } },
+  }))
+
+  // 本日まだ配信待ちのメール（次ステップの予定日が end までに到達済み・未送信）
   const enrollments = await withRetry(() => prisma.dripEnrollment.findMany({
     where: { status: 'active' },
     select: {
       userId: true,
       currentStep: true,
       enrolledAt: true,
+      user: { select: { email: true } },
       sequence: {
         select: {
           status: true,
@@ -671,18 +688,20 @@ async function computeDripScheduledForDay(start: Date, end: Date): Promise<numbe
     },
   }))
 
-  let scheduled = 0
+  let pending = 0
   for (const e of enrollments) {
     if (unsubIds.has(e.userId)) continue
+    if (!e.user?.email) continue
     if (e.sequence.status !== 'active') continue
     const step = e.sequence.steps[e.currentStep]
     if (!step || !step.templateId) continue
     // 配信予定日 = enrolledAt + dayOffset 日（drip-sender と同一の算出方法）
     const target = new Date(e.enrolledAt)
     target.setDate(target.getDate() + step.dayOffset)
-    if (target >= start && target < end) scheduled++
+    // 予定日が end までに到達していれば本日配信対象（当日到達 + 過去日の繰り越し）
+    if (target < end) pending++
   }
-  return scheduled
+  return alreadySent + pending
 }
 
 /**
