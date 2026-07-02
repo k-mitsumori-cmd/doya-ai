@@ -183,9 +183,9 @@ export async function GET(request: Request) {
       let html = replaceVariables(template.bodyHtml, variables)
 
       // 開封トラッキングピクセル挿入
-      const baseUrl = process.env.NEXTAUTH_URL || process.env.VERCEL_URL
-        ? `https://${process.env.VERCEL_URL}`
-        : 'https://doya-ai.surisuta.jp'
+      // ※ VERCEL_URL はデプロイ保護付きのVercel内部URL（ログイン画面に飛ぶ）なので使わない。
+      //   メール内リンクは必ず公開ドメイン(NEXTAUTH_URL)を使う。
+      const baseUrl = process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'
       html += `<img src="${baseUrl}/api/t/open/${trackingId}" width="1" height="1" alt="" style="display:none" />`
 
       // 本文内リンクをクリックトラッキングURLに変換
