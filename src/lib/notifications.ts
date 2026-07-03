@@ -1,5 +1,6 @@
 import { prisma, withRetry } from './prisma'
 import { fetchGCPUsageReport } from './gcp-usage'
+import { serviceLabelOf } from './attribution'
 
 export type ErrorNotificationData = {
   errorMessage: string
@@ -157,10 +158,10 @@ export async function sendDailySummary(): Promise<void> {
   const todayJST = getJSTStartOfDay(now)
   const yesterday = new Date(todayJST.getTime() - 24 * 60 * 60 * 1000)
 
-  // JST昨日0:00〜今日0:00 の新規ユーザー（名前付き）
+  // JST昨日0:00〜今日0:00 の新規ユーザー（名前付き・獲得元つき）
   const newUsersList = await prisma.user.findMany({
     where: { createdAt: { gte: yesterday } },
-    select: { name: true, email: true },
+    select: { name: true, email: true, signupService: true, signupSource: true },
     orderBy: { createdAt: 'desc' },
   })
   const newUsers = newUsersList.length
@@ -224,7 +225,13 @@ export async function sendDailySummary(): Promise<void> {
     `*👥 ユーザー*`,
     `- 新規登録: ${newUsers}人`,
     ...(newUsersList.length > 0
-      ? newUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email})`)
+      ? newUsersList.map((u) => {
+          const svc = u.signupService ? serviceLabelOf(u.signupService) : null
+          const extra = [svc ? `登録元: ${svc}` : null, u.signupSource ? `流入: ${u.signupSource}` : null]
+            .filter(Boolean)
+            .join(' ｜ ')
+          return `  - ${u.name || '名前未設定'} (${u.email})${extra ? `\n    ${extra}` : ''}`
+        })
       : []),
     `- 総ユーザー数: ${totalUsers}人`,
     `- 有料ユーザー: ${paidUsers}人`,

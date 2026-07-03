@@ -3,6 +3,7 @@ import GoogleProvider from 'next-auth/providers/google';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import { prisma, withRetry } from './prisma';
 import { sendEventNotification } from './notifications';
+import { readAttributionFromCookies } from './attribution';
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -28,15 +29,21 @@ export const authOptions: NextAuthOptions = {
             // 新規ユーザー（DB未作成）→ events.createUser に委譲
           } else if (!existing.firstLoginAt) {
             // 既存だが未スタンプ（過去に取りこぼしたユーザーの救済）→ 記録＋自動エンロール
+            const attr = await readAttributionFromCookies()
             await prisma.user.update({
               where: { id: user.id },
-              data: { firstLoginAt: new Date() },
+              data: {
+                firstLoginAt: new Date(),
+                signupService: attr.service,
+                signupSource: attr.source,
+              },
             })
             // 新規登録通知
             sendEventNotification({
               type: 'signup',
               userEmail: user.email,
               userName: user.name,
+              details: `サービス: ${attr.serviceLabel} ｜ 流入経路: ${attr.source}`,
             }).catch(() => {})
 
             // ドリップ配信: 自動エンロール（DB接続エラー時はリトライ）
@@ -44,11 +51,13 @@ export const authOptions: NextAuthOptions = {
               console.error('[Drip] Auto-enroll failed:', e)
             })
           } else {
-            // ログイン通知
+            // ログイン通知（どのサービスからのログインか＋流入経路つき）
+            const attr = await readAttributionFromCookies()
             sendEventNotification({
               type: 'login',
               userEmail: user.email,
               userName: user.name,
+              details: `サービス: ${attr.serviceLabel} ｜ 流入経路: ${attr.source}`,
             }).catch(() => {})
           }
         } catch (e) {
@@ -121,16 +130,22 @@ export const authOptions: NextAuthOptions = {
         })
         if (existing?.firstLoginAt) return
 
+        const attr = await readAttributionFromCookies()
         await prisma.user.update({
           where: { id: user.id },
-          data: { firstLoginAt: new Date() },
+          data: {
+            firstLoginAt: new Date(),
+            signupService: attr.service,
+            signupSource: attr.source,
+          },
         }).catch(() => {})
 
-        // 新規登録通知
+        // 新規登録通知（どのサービスから獲得したか＋流入経路つき）
         sendEventNotification({
           type: 'signup',
           userEmail: user.email,
           userName: user.name,
+          details: `サービス: ${attr.serviceLabel} ｜ 流入経路: ${attr.source}`,
         }).catch(() => {})
 
         // ドリップ配信: 自動エンロール

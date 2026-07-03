@@ -35,6 +35,32 @@ function GaEventsTrackerInner() {
   const searchParams = useSearchParams()
   const pathname = usePathname()
 
+  // アトリビューションCookie（Slack通知用。src/lib/attribution.ts と対）
+  // - doya_attr: 初回流入元（リファラ/UTM/ランディング）30日保持・初回のみ
+  // - doya_last_svc: 最後に閲覧したサービス（ログイン時に「どのサービスから」を判定）
+  useEffect(() => {
+    try {
+      if (!document.cookie.includes('doya_attr=')) {
+        const p = new URLSearchParams(location.search)
+        const attr = {
+          r: (document.referrer || '').slice(0, 200),
+          l: (location.pathname + location.search).slice(0, 120),
+          s: (p.get('utm_source') || '').slice(0, 50),
+          m: (p.get('utm_medium') || '').slice(0, 50),
+        }
+        document.cookie = `doya_attr=${encodeURIComponent(JSON.stringify(attr))}; path=/; max-age=${30 * 24 * 3600}; SameSite=Lax`
+      }
+      const seg = (pathname || '').split('/')[1] || ''
+      const svc = seg === '' ? 'portal' : TOOL_PATHS.has(seg) ? seg : null
+      // authページ等では上書きしない（直前に見ていたサービスを保持する）
+      if (svc) {
+        document.cookie = `doya_last_svc=${svc}; path=/; max-age=${24 * 3600}; SameSite=Lax`
+      }
+    } catch {
+      // noop
+    }
+  }, [pathname])
+
   // 課金完了: Stripe成功リダイレクト（?success=true&session_id=...）を検知
   useEffect(() => {
     try {
