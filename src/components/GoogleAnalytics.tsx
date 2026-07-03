@@ -3,7 +3,7 @@
 import { Suspense, useEffect } from 'react'
 import Script from 'next/script'
 import { useSession } from 'next-auth/react'
-import { useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 
 // GA4測定ID（ドヤマーケと同一プロパティ・同一ストリーム）
 // 同一プロパティにすることで「ドヤマーケ記事 → doya-ai登録 → 課金」の
@@ -22,10 +22,18 @@ function gaEvent(name: string, params?: Record<string, any>) {
   }
 }
 
-// sign_up / purchase の発火（重複防止つき）
+// ツール利用として計測する第1パスセグメント（services.tsのhrefに対応）
+const TOOL_PATHS = new Set([
+  'banner', 'seo', 'interview', 'copy', 'lp', 'persona', 'voice', 'movie',
+  'hr', 'kintai', 'adsim', 'tenkai', 'adbanner', 'aio', 'shodan', 'sfa',
+  'promane', 'doyalist', 'doyaslide', 'cunning', 'interviewx', 'kantan',
+])
+
+// sign_up / purchase / login / tool_open の発火（重複防止つき）
 function GaEventsTrackerInner() {
   const { data: session } = useSession()
   const searchParams = useSearchParams()
+  const pathname = usePathname()
 
   // 課金完了: Stripe成功リダイレクト（?success=true&session_id=...）を検知
   useEffect(() => {
@@ -64,6 +72,35 @@ function GaEventsTrackerInner() {
       // noop
     }
   }, [session])
+
+  // ログイン: 認証済みセッションをブラウザセッションごとに1回だけ記録
+  // （どの流入経路のユーザーがツールを使いに来ているかの計測用）
+  useEffect(() => {
+    try {
+      if (!(session?.user as any)?.id && !session?.user?.email) return
+      if (sessionStorage.getItem('ga_login_sent')) return
+      gaEvent('login', { method: 'google' })
+      sessionStorage.setItem('ga_login_sent', '1')
+    } catch {
+      // noop
+    }
+  }, [session])
+
+  // ツール利用: ログイン済みユーザーがツール配下ページを開いたら、
+  // ツールごとにセッション1回だけ tool_open を記録
+  useEffect(() => {
+    try {
+      if (!session?.user) return
+      const seg = (pathname || '').split('/')[1] || ''
+      if (!TOOL_PATHS.has(seg)) return
+      const guardKey = `ga_tool_open_${seg}`
+      if (sessionStorage.getItem(guardKey)) return
+      gaEvent('tool_open', { tool: seg })
+      sessionStorage.setItem(guardKey, '1')
+    } catch {
+      // noop
+    }
+  }, [session, pathname])
 
   return null
 }
