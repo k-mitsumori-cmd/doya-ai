@@ -41,11 +41,11 @@
       "schedule": "0 * * * *"
     },
     {
-      "path": "/api/cron/drip-report?slot=morning",
+      "path": "/api/cron/drip-report-morning",
       "schedule": "0 23 * * *"
     },
     {
-      "path": "/api/cron/drip-report?slot=evening",
+      "path": "/api/cron/drip-report-evening",
       "schedule": "0 11 * * *"
     },
     {
