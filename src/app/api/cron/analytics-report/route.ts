@@ -20,7 +20,9 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await sendAnalyticsReport()
+    // ?monthly=1 で月次総括を強制送信（手動テスト用。定時cronはプレーンパスで日次判定）
+    const forceMonthly = new URL(request.url).searchParams.get('monthly') === '1'
+    const result = await sendAnalyticsReport({ forceMonthly })
     return NextResponse.json({ success: true, ...result })
   } catch (error: any) {
     console.error('[Cron] analytics-report error:', error)
