@@ -14,14 +14,20 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async signIn({ user, account }) {
-      // 初回ログイン時（firstLoginAt が null）なら現在時刻を記録
+      // ※ 新規ユーザーの初回OAuthログインでは、この signIn コールバックは
+      //   DBにユーザーが作成される前に走る（existing === null）。その場合の
+      //   firstLoginAt記録・自動エンロールは events.createUser 側で確実に行う。
+      //   ここでは「既にDBに存在するユーザー」だけを扱う。
       if (user?.id && account) {
         try {
           const existing = await prisma.user.findUnique({
             where: { id: user.id },
             select: { firstLoginAt: true },
           })
-          if (!existing?.firstLoginAt) {
+          if (!existing) {
+            // 新規ユーザー（DB未作成）→ events.createUser に委譲
+          } else if (!existing.firstLoginAt) {
+            // 既存だが未スタンプ（過去に取りこぼしたユーザーの救済）→ 記録＋自動エンロール
             await prisma.user.update({
               where: { id: user.id },
               data: { firstLoginAt: new Date() },
@@ -33,7 +39,7 @@ export const authOptions: NextAuthOptions = {
               userName: user.name,
             }).catch(() => {})
 
-            // ドリップ配信: 初回ログイン時のみ自動エンロール（DB接続エラー時はリトライ）
+            // ドリップ配信: 自動エンロール（DB接続エラー時はリトライ）
             withRetry(() => enrollUserInDripSequences(user.id)).catch((e) => {
               console.error('[Drip] Auto-enroll failed:', e)
             })
@@ -99,6 +105,41 @@ export const authOptions: NextAuthOptions = {
         }
       }
       return session;
+    },
+  },
+  events: {
+    // 新規ユーザー作成時（OAuth初回ログイン）に確実に1回だけ発火する。
+    // ※ signIn コールバックは新規ユーザーではDB作成前に走り user.id がDB未確定のため
+    //   firstLoginAt 記録・自動エンロールが取りこぼされる。ここで確実に補完する。
+    async createUser({ user }) {
+      try {
+        if (!user?.id) return
+        // 既に signIn 側で処理済みなら二重処理しない（べき等）
+        const existing = await prisma.user.findUnique({
+          where: { id: user.id },
+          select: { firstLoginAt: true },
+        })
+        if (existing?.firstLoginAt) return
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { firstLoginAt: new Date() },
+        }).catch(() => {})
+
+        // 新規登録通知
+        sendEventNotification({
+          type: 'signup',
+          userEmail: user.email,
+          userName: user.name,
+        }).catch(() => {})
+
+        // ドリップ配信: 自動エンロール
+        await withRetry(() => enrollUserInDripSequences(user.id)).catch((e) => {
+          console.error('[Drip] Auto-enroll failed (createUser):', e)
+        })
+      } catch (e) {
+        console.error('[events.createUser] failed:', e)
+      }
     },
   },
   pages: {
