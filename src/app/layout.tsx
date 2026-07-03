@@ -4,6 +4,7 @@ import './globals.css'
 import { Providers } from '@/components/Providers'
 import { SITE_CONFIG, SERVICE_SEO, generateOrganizationSchema } from '@/lib/seo'
 import { GoogleTagManager, GoogleTagManagerNoScript } from '@/components/GoogleTagManager'
+import { GoogleAnalytics } from '@/components/GoogleAnalytics'
 import LogoutToastListener from '@/components/LogoutToastListener'
 
 // ============================================
@@ -159,6 +160,8 @@ export default function RootLayout({
         <GoogleTagManagerNoScript />
         <Providers>
           {children}
+          {/* GA4（ドヤマーケと同一プロパティ）: PV計測 + sign_up/purchaseイベント */}
+          <GoogleAnalytics />
           <LogoutToastListener />
           <Toaster
             position="top-center"
