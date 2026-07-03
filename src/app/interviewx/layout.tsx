@@ -1,7 +1,11 @@
 import { Metadata } from 'next'
+import { generateToolSchema } from '@/lib/seo'
 import InterviewXLayout from '@/components/interviewx/InterviewXLayout'
 
 export const metadata: Metadata = {
+  alternates: {
+    canonical: '/interviewx',
+  },
   title: 'ドヤヒヤリングAI — AIチャットで自動ヒヤリング',
   description: 'AIチャットでヒヤリングを実施、要約まで自動生成。商談・サービス調査・顧客満足度など多様なカテゴリに対応。URL事前調査で的確な質問を自動生成。',
   openGraph: {
@@ -15,8 +19,10 @@ export const metadata: Metadata = {
 }
 
 export default function Layout({ children }: { children: React.ReactNode }) {
+  const toolSchema = generateToolSchema({ path: '/interviewx', name: 'ドヤヒヤリングAI', description: 'AIチャットが相手に自動でヒヤリングし、要約まで自動生成するツール。', category: 'BusinessApplication' })
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(toolSchema) }} />
       <link
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
         rel="stylesheet"

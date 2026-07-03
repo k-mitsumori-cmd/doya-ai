@@ -272,6 +272,36 @@ export function generateSoftwareApplicationSchema(service: 'seo' | 'banner' | 'k
   }
 }
 
+// 汎用ツールLP用 SoftwareApplication スキーマ生成
+// 全ツールLPの JSON-LD はこれを使う（generateSoftwareApplicationSchema は旧3サービス専用）
+export function generateToolSchema(opts: {
+  path: string
+  name: string
+  description: string
+  category?: 'BusinessApplication' | 'DesignApplication' | 'MultimediaApplication'
+}) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: opts.name,
+    applicationCategory: opts.category || 'BusinessApplication',
+    operatingSystem: 'Web',
+    url: `${SITE_CONFIG.url}${opts.path}`,
+    description: opts.description,
+    offers: {
+      '@type': 'Offer',
+      price: '0',
+      priceCurrency: 'JPY',
+      description: '無料プランあり。プロプラン（月額9,980円）で全ツールが利用可能',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: '株式会社スリスタ',
+      url: SITE_CONFIG.url,
+    },
+  }
+}
+
 // OGP画像URL生成
 export function getOgImageUrl(path?: string): string {
   if (path) {

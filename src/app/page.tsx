@@ -32,7 +32,7 @@ import {
   Users,
   Volume2,
 } from 'lucide-react'
-import { SERVICES, type ServiceStatus } from '@/lib/services'
+import { SERVICES, HIDDEN_SERVICE_IDS, type ServiceStatus } from '@/lib/services'
 
 type DisplayStatus = '公開中' | '開発中' | '調整中'
 
@@ -99,10 +99,6 @@ function toServiceCard(service: (typeof SERVICES)[number]): ServiceCard {
     accent: pres.accent,
   }
 }
-
-// SERVICES に残っているがページ(ルート)が未実装のID。トップに出すとリンク切れになるため除外。
-// （恒久対応は src/lib/services.ts 側の整理。実装され次第ここから外す）
-const HIDDEN_SERVICE_IDS = new Set(['video', 'presentation'])
 
 const sortedServices = [...SERVICES]
   .filter((s) => !HIDDEN_SERVICE_IDS.has(s.id))

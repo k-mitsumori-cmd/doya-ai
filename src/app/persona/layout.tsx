@@ -1,8 +1,12 @@
 import type { Metadata } from 'next'
+import { generateToolSchema } from '@/lib/seo'
 import PersonaAppLayout from '@/components/PersonaAppLayout'
 import { SERVICE_SEO, SITE_CONFIG } from '@/lib/seo'
 
 export const metadata: Metadata = {
+  alternates: {
+    canonical: '/persona',
+  },
   title: SERVICE_SEO.persona.title,
   description: SERVICE_SEO.persona.description,
   keywords: SERVICE_SEO.persona.keywords,
@@ -24,6 +28,12 @@ export const metadata: Metadata = {
 }
 
 export default function PersonaLayout({ children }: { children: React.ReactNode }) {
-  return <PersonaAppLayout>{children}</PersonaAppLayout>
+  const toolSchema = generateToolSchema({ path: '/persona', name: 'ドヤペルソナAI', description: 'URLを入力するだけでマーケティングペルソナをAIが自動生成するツール。', category: 'BusinessApplication' })
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(toolSchema) }} />
+      <PersonaAppLayout>{children}</PersonaAppLayout>
+    </>
+  )
 }
 

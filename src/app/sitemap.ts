@@ -1,6 +1,6 @@
 import { MetadataRoute } from 'next'
 import { SITE_CONFIG } from '@/lib/seo'
-import { getAllServices, getActiveServices } from '@/lib/services'
+import { getAllServices, getActiveServices, HIDDEN_SERVICE_IDS } from '@/lib/services'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = SITE_CONFIG.url
@@ -47,7 +47,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ]
 
   // アクティブなサービスのページ
-  const activeServices = getActiveServices()
+  const activeServices = getActiveServices().filter(s => !HIDDEN_SERVICE_IDS.has(s.id))
   const servicePages: MetadataRoute.Sitemap = activeServices.flatMap((service) => [
     // サービスLP
     {
@@ -80,7 +80,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ])
 
   // 近日公開サービスのLP（Coming Soon）
-  const comingSoonServices = getAllServices().filter(s => s.status === 'coming_soon')
+  const comingSoonServices = getAllServices().filter(
+    s => s.status === 'coming_soon' && !HIDDEN_SERVICE_IDS.has(s.id)
+  )
   const comingSoonPages: MetadataRoute.Sitemap = comingSoonServices.map((service) => ({
     url: `${baseUrl}${service.href}`,
     lastModified: now,
@@ -88,6 +90,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.4,
   }))
 
-  return [...staticPages, ...servicePages, ...comingSoonPages]
+  // 同一URLの重複を除去（例: dashboardHref/pricingHref がLPと同じ '/seo' のケース）
+  // 先勝ち＝priorityの高いエントリが残る並び順にしてある
+  const seen = new Set<string>()
+  return [...staticPages, ...servicePages, ...comingSoonPages].filter((entry) => {
+    if (seen.has(entry.url)) return false
+    seen.add(entry.url)
+    return true
+  })
 }
 

@@ -1621,6 +1621,11 @@ export function getServiceById(id: string): Service | undefined {
   return SERVICES.find(service => service.id === id)
 }
 
+// SERVICES に残っているがページ(ルート)が未実装のID。
+// トップページ・sitemap の両方でリンク切れ/404 URL を出さないための共通除外リスト。
+// （恒久対応は SERVICES 側の整理。実装され次第ここから外す）
+export const HIDDEN_SERVICE_IDS = new Set(['video', 'presentation'])
+
 // アクティブなサービスのみ取得
 export function getActiveServices(): Service[] {
   return SERVICES.filter(s => s.status === 'active').sort((a, b) => a.order - b.order)

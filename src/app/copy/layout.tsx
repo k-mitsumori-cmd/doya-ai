@@ -1,8 +1,12 @@
 import type { Metadata } from 'next'
+import { generateToolSchema } from '@/lib/seo'
 import CopyAppLayout from '@/components/CopyAppLayout'
 import { SERVICE_SEO, SITE_CONFIG } from '@/lib/seo'
 
 export const metadata: Metadata = {
+  alternates: {
+    canonical: '/copy',
+  },
   title: SERVICE_SEO.copy.title,
   description: SERVICE_SEO.copy.description,
   keywords: SERVICE_SEO.copy.keywords,
@@ -24,5 +28,11 @@ export const metadata: Metadata = {
 }
 
 export default function CopyLayout({ children }: { children: React.ReactNode }) {
-  return <CopyAppLayout>{children}</CopyAppLayout>
+  const toolSchema = generateToolSchema({ path: '/copy', name: 'ドヤコピーAI', description: 'ターゲットに刺さる広告コピー・キャッチコピーをAIが自動生成するツール。', category: 'BusinessApplication' })
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(toolSchema) }} />
+      <CopyAppLayout>{children}</CopyAppLayout>
+    </>
+  )
 }
