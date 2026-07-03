@@ -549,7 +549,7 @@ export default function AdSimProjectPage() {
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value: number | undefined, name: string | undefined) => [`¥${(value ?? 0).toLocaleString()}`, name ?? '']}
+                    formatter={(value, name) => [`¥${Number(value ?? 0).toLocaleString()}`, String(name ?? '')]}
                     contentStyle={{ borderRadius: 12, border: '2px solid #0017C1', fontWeight: 800 }}
                   />
                 </PieChart>
@@ -572,7 +572,7 @@ export default function AdSimProjectPage() {
                   <XAxis dataKey="name" tick={{ fontSize: 11, fontWeight: 800, fill: '#1f2937' }} />
                   <YAxis tick={{ fontSize: 11, fontWeight: 800, fill: '#1f2937' }} />
                   <Tooltip
-                    formatter={(value: number | undefined) => (value ?? 0).toLocaleString()}
+                    formatter={(value) => Number(value ?? 0).toLocaleString()}
                     contentStyle={{ borderRadius: 12, border: '2px solid #0017C1', fontWeight: 800 }}
                   />
                   <Legend wrapperStyle={{ fontWeight: 800, fontSize: 12 }} />
@@ -588,7 +588,7 @@ export default function AdSimProjectPage() {
                   <XAxis dataKey="month" tick={{ fontSize: 12, fontWeight: 800, fill: '#1f2937' }} />
                   <YAxis tick={{ fontSize: 12, fontWeight: 800, fill: '#1f2937' }} />
                   <Tooltip
-                    formatter={(value: number | undefined) => (value ?? 0).toLocaleString()}
+                    formatter={(value) => Number(value ?? 0).toLocaleString()}
                     contentStyle={{ borderRadius: 12, border: '2px solid #0017C1', fontWeight: 800 }}
                   />
                   <Legend wrapperStyle={{ fontWeight: 800, fontSize: 12 }} />

@@ -1,0 +1,16 @@
+#!/bin/sh
+# pre-commit: ステージ済み TS/TSX への ESLint（エラーのみブロック、警告は通す）
+# 有効化: git config core.hooksPath .githooks（クローンごとに1回）
+# スキップ: git commit --no-verify
+
+files=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx)$' || true)
+[ -z "$files" ] && exit 0
+
+echo "pre-commit: ESLint on staged files..."
+# shellcheck disable=SC2086
+npx eslint --max-warnings=9999 $files
+status=$?
+if [ $status -ne 0 ]; then
+  echo "pre-commit: ESLintエラーがあります。修正するか --no-verify でスキップしてください。"
+fi
+exit $status
