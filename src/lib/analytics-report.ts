@@ -167,7 +167,15 @@ async function postSlack(text: string): Promise<void> {
 
 // ---------- GA4 ----------
 
-type Ga4Totals = { sessions: number; users: number; pageViews: number }
+type Ga4Totals = { sessions: number; users: number; pageViews: number; keyEvents: number }
+
+export type Ga4KeyEvent = {
+  name: string
+  count: number
+  channels: { name: string; count: number }[]
+  sources: { name: string; count: number }[]
+  pages: { path: string; count: number }[]
+}
 
 type Ga4Summary = {
   yesterday: Ga4Totals
@@ -178,21 +186,77 @@ type Ga4Summary = {
   prevMtd: Ga4Totals | null
   channels: { name: string; sessions: number }[]
   topPages: { path: string; views: number }[]
+  keyEvents: Ga4KeyEvent[]
 }
 
-const GA4_METRICS = [{ name: 'sessions' }, { name: 'totalUsers' }, { name: 'screenPageViews' }]
+const GA4_METRICS = [
+  { name: 'sessions' },
+  { name: 'totalUsers' },
+  { name: 'screenPageViews' },
+  { name: 'keyEvents' },
+]
 
 function parseGa4Ranges(res: any): Record<string, Ga4Totals> {
   const byRange: Record<string, Ga4Totals> = {}
   for (const row of res.rows || []) {
     const range = row.dimensionValues?.[0]?.value || ''
     const v = (row.metricValues || []).map((m: any) => Number(m.value) || 0)
-    byRange[range] = { sessions: v[0] || 0, users: v[1] || 0, pageViews: v[2] || 0 }
+    byRange[range] = { sessions: v[0] || 0, users: v[1] || 0, pageViews: v[2] || 0, keyEvents: v[3] || 0 }
   }
   return byRange
 }
 
-const GA4_ZERO: Ga4Totals = { sessions: 0, users: 0, pageViews: 0 }
+const GA4_ZERO: Ga4Totals = { sessions: 0, users: 0, pageViews: 0, keyEvents: 0 }
+
+/** 昨日発生したキーイベントと、その流入経路・発生ページの内訳を取得 */
+async function fetchGa4KeyEvents(propertyId: string, token: string): Promise<Ga4KeyEvent[]> {
+  const base = `${GA4_API}/properties/${propertyId}:runReport`
+  const yesterday = [{ startDate: jstDate(1), endDate: jstDate(1) }]
+
+  const namesRes = await googleApiPost(base, token, {
+    dateRanges: yesterday,
+    dimensions: [{ name: 'eventName' }],
+    metrics: [{ name: 'keyEvents' }],
+  })
+  const events = new Map<string, Ga4KeyEvent>()
+  for (const row of namesRes.rows || []) {
+    const name = row.dimensionValues?.[0]?.value || ''
+    const count = Number(row.metricValues?.[0]?.value) || 0
+    if (name && count > 0) {
+      events.set(name, { name, count, channels: [], sources: [], pages: [] })
+    }
+  }
+  if (events.size === 0) return []
+
+  // 内訳（チャネル / 参照元・メディア / 発生ページ）をまとめて取得
+  const breakdown = async (dimension: string) => {
+    const res = await googleApiPost(base, token, {
+      dateRanges: yesterday,
+      dimensions: [{ name: 'eventName' }, { name: dimension }],
+      metrics: [{ name: 'keyEvents' }],
+      orderBys: [{ metric: { metricName: 'keyEvents' }, desc: true }],
+      limit: 50,
+    })
+    return (res.rows || [])
+      .map((row: any) => ({
+        event: row.dimensionValues?.[0]?.value || '',
+        key: row.dimensionValues?.[1]?.value || '(不明)',
+        count: Number(row.metricValues?.[0]?.value) || 0,
+      }))
+      .filter((r: any) => r.count > 0)
+  }
+
+  const [channels, sources, pages] = await Promise.all([
+    breakdown('sessionDefaultChannelGroup'),
+    breakdown('sessionSourceMedium'),
+    breakdown('pagePath'),
+  ])
+  for (const r of channels) events.get(r.event)?.channels.push({ name: r.key, count: r.count })
+  for (const r of sources) events.get(r.event)?.sources.push({ name: r.key, count: r.count })
+  for (const r of pages) events.get(r.event)?.pages.push({ path: r.key, count: r.count })
+
+  return Array.from(events.values()).sort((a, b) => b.count - a.count)
+}
 
 async function fetchGa4Summary(propertyId: string, token: string): Promise<Ga4Summary> {
   const base = `${GA4_API}/properties/${propertyId}:runReport`
@@ -249,6 +313,8 @@ async function fetchGa4Summary(propertyId: string, token: string): Promise<Ga4Su
     views: Number(row.metricValues?.[0]?.value) || 0,
   }))
 
+  const keyEvents = await fetchGa4KeyEvents(propertyId, token)
+
   return {
     yesterday: byRange['yesterday'] || GA4_ZERO,
     prevDay: byRange['prev_day'] || GA4_ZERO,
@@ -257,6 +323,7 @@ async function fetchGa4Summary(propertyId: string, token: string): Promise<Ga4Su
     prevMtd: byRange['prev_mtd'] || (isFirstOfMonth ? null : GA4_ZERO),
     channels,
     topPages,
+    keyEvents,
   }
 }
 
@@ -554,6 +621,50 @@ async function saveYtSnapshot(channels: YtChannelSummary[]): Promise<void> {
 
 // ---------- 日次レポート組み立て ----------
 
+/** キーイベント発生時のお祝いセクション。発生がなければ null */
+function buildKeyEventCelebration(
+  perTarget: { target: ReportTarget; ga4: Ga4Summary | null }[],
+): string | null {
+  const all: { target: ReportTarget; ev: Ga4KeyEvent }[] = []
+  for (const { target, ga4 } of perTarget) {
+    for (const ev of ga4?.keyEvents || []) {
+      all.push({ target, ev })
+    }
+  }
+  if (all.length === 0) return null
+
+  const total = all.reduce((s, x) => s + x.ev.count, 0)
+  const lines: string[] = []
+  lines.push(`🎉 おめでとうございます！昨日キーイベントが合計${fmt(total)}件発生しました 🎉`)
+  lines.push('')
+  lines.push('《キーイベント詳細》')
+  for (const { ev } of all) {
+    lines.push(`・「${ev.name}」 ${fmt(ev.count)}件`)
+    if (ev.channels.length > 0) {
+      lines.push(
+        `    流入経路: ${ev.channels.map((c) => `${c.name} ${fmt(c.count)}件`).join(' / ')}`,
+      )
+    }
+    if (ev.sources.length > 0) {
+      lines.push(
+        `    参照元: ${ev.sources
+          .slice(0, 3)
+          .map((s) => `${s.name} ${fmt(s.count)}件`)
+          .join(' / ')}`,
+      )
+    }
+    if (ev.pages.length > 0) {
+      lines.push(
+        `    発生ページ: ${ev.pages
+          .slice(0, 3)
+          .map((p) => `${p.path}(${fmt(p.count)})`)
+          .join(' / ')}`,
+      )
+    }
+  }
+  return lines.join('\n')
+}
+
 function buildDailySummarySection(
   ga4: Ga4Summary | null,
   gsc: GscSummary | null,
@@ -650,7 +761,8 @@ type MonthlyData = {
     sessions: number
     users: number
     pageViews: number
-    prev: { sessions: number; users: number; pageViews: number }
+    keyEvents: number
+    prev: Ga4Totals
     topPages: { path: string; views: number }[]
     channels: { name: string; sessions: number }[]
   } | null
@@ -702,6 +814,7 @@ async function fetchMonthlyData(target: ReportTarget, token: string): Promise<Mo
       sessions: lm.sessions,
       users: lm.users,
       pageViews: lm.pageViews,
+      keyEvents: lm.keyEvents,
       prev: bf,
       topPages: (pagesRes.rows || []).map((row: any) => ({
         path: row.dimensionValues?.[0]?.value || '(不明)',
@@ -762,6 +875,11 @@ function buildMonthlyReport(
       lines.push(
         `・アクセス: ${fmt(g.sessions)}セッション（前月比${diffPct(g.sessions, g.prev.sessions)}） / ${fmt(g.pageViews)}PV（${diffPct(g.pageViews, g.prev.pageViews)}） / ユーザー${fmt(g.users)}人`,
       )
+      if (g.keyEvents > 0 || g.prev.keyEvents > 0) {
+        lines.push(
+          `・キーイベント: ${fmt(g.keyEvents)}件（前月比${diffPct(g.keyEvents, g.prev.keyEvents)}）`,
+        )
+      }
       if (g.channels.length > 0) {
         lines.push(`・流入内訳: ${g.channels.map((c) => `${c.name} ${fmt(c.sessions)}`).join(' / ')}`)
       }
@@ -884,6 +1002,11 @@ export async function sendAnalyticsReport(
   // --- 日次メッセージ ---
   const primary = perTarget[0]
   const sections: string[] = []
+  // キーイベントが発生した日はお祝いを最上部に
+  const celebration = buildKeyEventCelebration(perTarget)
+  if (celebration) {
+    sections.push(celebration)
+  }
   sections.push(buildDailySummarySection(primary?.ga4 || null, primary?.gsc || null, ytSummaries))
 
   const topicLines: string[] = []
