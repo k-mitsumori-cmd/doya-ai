@@ -79,6 +79,10 @@
     {
       "path": "/api/cron/noroi-monthly-summary",
       "schedule": "25 1 1 * *"
+    },
+    {
+      "path": "/api/cron/yurusen-appstore-report",
+      "schedule": "30 1 * * *"
     }
   ]
 }
