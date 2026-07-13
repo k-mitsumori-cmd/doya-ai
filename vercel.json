@@ -59,6 +59,14 @@
     {
       "path": "/api/cron/appstore-report",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/cron/appstore-marketing-report",
+      "schedule": "5 1 * * *"
+    },
+    {
+      "path": "/api/cron/noroi-engagement-report",
+      "schedule": "10 1 * * *"
     }
   ]
 }
