@@ -131,6 +131,34 @@ export async function getLatestDailyRows(
   return null
 }
 
+/** YYYY-MM-DD の1日前（前日）を YYYY-MM-DD で返す */
+export function previousDate(dateStr: string): string {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  dt.setUTCDate(dt.getUTCDate() - 1)
+  return dt.toISOString().slice(0, 10)
+}
+
+/**
+ * 指定日の日次レポートを取得して対象アプリ分を集計する（前日比の「前日」取得用）。
+ * ASC は「その日アカウント全体で売上・DLが0」のとき 404 を返すため、
+ * その場合は 0件 の確定値として集計を返す（= 前日は0だった、と扱える）。
+ * ネットワーク等の取得失敗時のみ null（＝前日が不明で比較を省略）。
+ */
+export async function getDailyAggregateForDate(
+  token: string,
+  date: string,
+  appId: string,
+): Promise<SalesAggregate | null> {
+  try {
+    const tsv = await fetchSalesReport(token, date, 'DAILY')
+    if (tsv === null) return emptyAggregate() // 404 = その日は0件の確定値
+    return aggregateSales(parseTsv(tsv), appId)
+  } catch {
+    return null // 取得失敗（前日比は省略）
+  }
+}
+
 // ---------- 為替換算（→ JPY） ----------
 
 export type JpyConversion = {
@@ -171,12 +199,26 @@ export type SalesAggregate = {
   purchaseUnits: number
   grossByCurrency: Map<string, number>
   proceedsByCurrency: Map<string, number>
+  /** 課金アイテム（IAP）ごとの購入個数。SKU → units */
+  unitsBySku: Map<string, number>
+}
+
+/** 全項目0の空集計（前日が0件だった日・データ未生成日の既定値） */
+export function emptyAggregate(): SalesAggregate {
+  return {
+    downloads: 0,
+    purchaseUnits: 0,
+    grossByCurrency: new Map(),
+    proceedsByCurrency: new Map(),
+    unitsBySku: new Map(),
+  }
 }
 
 /** 対象アプリのみ集計。ダウンロード=アプリ本体新規、売上=Units×価格、手取り=Units×proceeds */
 export function aggregateSales(rows: SalesRow[], appId: string): SalesAggregate {
   const grossByCurrency = new Map<string, number>()
   const proceedsByCurrency = new Map<string, number>()
+  const unitsBySku = new Map<string, number>()
   let downloads = 0
   let purchaseUnits = 0
   for (const row of rows) {
@@ -204,7 +246,9 @@ export function aggregateSales(rows: SalesRow[], appId: string): SalesAggregate 
         (proceedsByCurrency.get(proceedsCurrency) || 0) + proceeds * units,
       )
       purchaseUnits += units
+      const sku = row['SKU'] || row['Title'] || '(不明)'
+      unitsBySku.set(sku, (unitsBySku.get(sku) || 0) + units)
     }
   }
-  return { downloads, purchaseUnits, grossByCurrency, proceedsByCurrency }
+  return { downloads, purchaseUnits, grossByCurrency, proceedsByCurrency, unitsBySku }
 }

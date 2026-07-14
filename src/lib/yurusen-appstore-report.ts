@@ -1,10 +1,16 @@
 import {
   makeJwt,
   getLatestDailyRows,
+  getDailyAggregateForDate,
   aggregateSales,
-  convertToJpy,
+  previousDate,
   jstDate,
 } from '@/lib/appstore-sales-core'
+import {
+  buildDailyMessage,
+  aggregateToDailyStats,
+  zeroDailyStats,
+} from '@/lib/appstore-daily-format'
 
 // ============================================
 // ゆるせん App Store 日次レポート
@@ -14,24 +20,29 @@ import {
 // （APPSTORE_KEY_ID / ISSUER_ID / PRIVATE_KEY / VENDOR_NUMBER）を流用し、
 // ゆるせんの Apple Identifier で絞り込む。
 //
+// 数値の取得・集計は共通コア、メッセージ整形（前日比つき）は appstore-daily-format.ts。
 // 通知先: SLACK_YURUSEN_APPSTORE_WEBHOOK_URL
 // ============================================
 
 /** ゆるせんの ascAppId（App Store Connect のアプリID） */
 const YURUSEN_APP_ID = '6789815785'
 
-function fmtYen(n: number): string {
-  return `¥${Math.round(n).toLocaleString('ja-JP')}`
-}
+/** IAP 製品IDの末尾 → 日本語表示名。未知のものは SKU 末尾を表示 */
+const IAP_NAMES: Record<string, string> = {}
 
-function fmtInt(n: number): string {
-  return Math.round(n).toLocaleString('ja-JP')
+function skuLabel(sku: string): string {
+  const suffix = sku.split('.').pop() || sku
+  return IAP_NAMES[suffix] ?? suffix
 }
 
 async function postSlack(text: string): Promise<void> {
-  const webhookUrl = process.env.SLACK_YURUSEN_APPSTORE_WEBHOOK_URL
+  // 専用チャンネルが未設定なら共通の App Store 通知チャンネルにフォールバック
+  const webhookUrl =
+    process.env.SLACK_YURUSEN_APPSTORE_WEBHOOK_URL || process.env.SLACK_APPSTORE_WEBHOOK_URL
   if (!webhookUrl) {
-    throw new Error('SLACK_YURUSEN_APPSTORE_WEBHOOK_URL is not set')
+    throw new Error(
+      'SLACK_YURUSEN_APPSTORE_WEBHOOK_URL / SLACK_APPSTORE_WEBHOOK_URL がいずれも未設定です',
+    )
   }
   const res = await fetch(webhookUrl, {
     method: 'POST',
@@ -43,13 +54,6 @@ async function postSlack(text: string): Promise<void> {
   }
 }
 
-function unconvertedNote(...maps: Map<string, number>[]): string {
-  const currencies = new Set<string>()
-  for (const m of maps) for (const c of m.keys()) currencies.add(c)
-  if (currencies.size === 0) return ''
-  return `\n※ ${[...currencies].join('/')} はレート未取得のため円換算に含めていません。`
-}
-
 export type YurusenAppStoreReportResult = {
   reportDate: string | null
   downloads: number
@@ -59,7 +63,8 @@ export type YurusenAppStoreReportResult = {
 }
 
 /**
- * 直近の取得可能日（1〜3日前）の App Store 日次データからゆるせん分を集計して Slack 通知する。
+ * 直近の取得可能日（1〜3日前）の App Store 日次データからゆるせん分を集計し、
+ * 前日比つきのわかりやすいメッセージで Slack 通知する。
  * @param opts.date 明示日付（YYYY-MM-DD）。手動テスト用。未指定なら自動で最新日を探す
  */
 export async function sendYurusenAppStoreReport(
@@ -68,40 +73,46 @@ export async function sendYurusenAppStoreReport(
   const token = makeJwt()
   const latest = await getLatestDailyRows(token, opts.date)
 
+  // 直近日ともデータ無し（アカウント全体で売上0の日は ASC が 404）→ 0件レポート
   if (!latest) {
-    // 直近日ともデータ無し（アカウント全体で売上0の日は ASC が 404 を返す）。
     const first = opts.date ?? jstDate(1)
     await postSlack(
-      `ゆるせん App Store 日次レポート（${first} 分）\n────────────────\nダウンロード: 0件\n売上: ¥0\n\n※ 直近に記録された売上・ダウンロードはありませんでした（Apple側の集計待ち、または未公開のため）。`,
+      buildDailyMessage({
+        appLabel: 'ゆるせん',
+        reportDate: first,
+        today: zeroDailyStats(),
+        prev: null,
+        prevDate: null,
+        skuLabel,
+        noData: true,
+      }),
     )
     return { reportDate: null, downloads: 0, grossJpy: 0, proceedsJpy: 0, purchaseUnits: 0 }
   }
 
-  const agg = aggregateSales(latest.rows, YURUSEN_APP_ID)
-  const gross = await convertToJpy(agg.grossByCurrency)
-  const proceeds = await convertToJpy(agg.proceedsByCurrency)
+  const today = await aggregateToDailyStats(aggregateSales(latest.rows, YURUSEN_APP_ID))
 
-  const lines: string[] = []
-  lines.push(`ゆるせん App Store 日次レポート（${latest.reportDate} 分）`)
-  lines.push('────────────────')
-  lines.push(`ダウンロード: ${fmtInt(agg.downloads)}件（新規インストール）`)
-  lines.push('')
-  lines.push(`売上（税込・ユーザー支払額）: ${fmtYen(gross.jpyTotal)}`)
-  lines.push(`手取り（Apple手数料差引後）: ${fmtYen(proceeds.jpyTotal)}`)
-  lines.push(`購入件数: ${fmtInt(agg.purchaseUnits)}件`)
+  // 前日（reportDate の1日前）を取得して前日比に使う。取得できなければ比較を省略。
+  const prevDate = previousDate(latest.reportDate)
+  const prevAgg = await getDailyAggregateForDate(token, prevDate, YURUSEN_APP_ID)
+  const prev = prevAgg ? await aggregateToDailyStats(prevAgg) : null
 
-  lines.push('')
-  lines.push('※ 金額は円換算（当日レート）。JPY以外の売上は取得レートで換算しています。')
-  const note = unconvertedNote(gross.unconverted, proceeds.unconverted)
-  if (note) lines.push(note.trim())
-
-  await postSlack(lines.join('\n'))
+  await postSlack(
+    buildDailyMessage({
+      appLabel: 'ゆるせん',
+      reportDate: latest.reportDate,
+      today,
+      prev,
+      prevDate: prev ? prevDate : null,
+      skuLabel,
+    }),
+  )
 
   return {
     reportDate: latest.reportDate,
-    downloads: agg.downloads,
-    grossJpy: Math.round(gross.jpyTotal),
-    proceedsJpy: Math.round(proceeds.jpyTotal),
-    purchaseUnits: agg.purchaseUnits,
+    downloads: today.downloads,
+    grossJpy: today.grossJpy,
+    proceedsJpy: today.proceedsJpy,
+    purchaseUnits: today.purchaseUnits,
   }
 }
