@@ -65,6 +65,57 @@ function nowJst(): string {
   }).format(new Date())
 }
 
+/**
+ * スタックトレースからアプリ内の最初のフレーム（原因ファイル:行）を推定する。
+ * node_modules / Next 内部 / node: 内部フレームは除外し、src/ 以降に短縮する。
+ */
+export function firstAppFrame(stack?: string): string {
+  if (!stack) return ''
+  for (const l of stack.split('\n')) {
+    if (/node_modules|node:internal|webpack-internal|\/\.next\//.test(l)) continue
+    const m = l.match(/([^\s()]+\.(?:tsx?|jsx?)):(\d+):(\d+)/)
+    if (m && m[1]) {
+      const file = m[1].replace(/^.*?((?:src|seo|app)\/)/, '$1')
+      return `${file}:${m[2]}`
+    }
+  }
+  return ''
+}
+
+/**
+ * そのまま AI（Claude Code 等）に貼って修正を依頼できる、自己完結した依頼文を組み立てる。
+ * 原因の種別・推定ファイル・発生箇所・環境・スタックを明示する。
+ */
+export function buildAiRepairPrompt(opts: {
+  system: string
+  where: string
+  errorType?: string
+  message: string
+  originFile?: string
+  stack?: string
+  env: string
+  extra?: Extra
+}): string {
+  const extraLines = opts.extra
+    ? Object.entries(opts.extra)
+        .filter(([, v]) => v !== undefined && v !== null && v !== '')
+        .map(([k, v]) => `- ${k}: ${String(v).slice(0, 200)}`)
+    : []
+  return [
+    `【修正依頼】${opts.system} で発生した下記エラーの原因を特定し、修正パッチを提示してください。`,
+    `- 発生箇所: ${opts.where || '(不明)'}`,
+    opts.errorType ? `- エラー種別: ${opts.errorType}` : '',
+    `- メッセージ: ${opts.message}`,
+    opts.originFile ? `- 原因ファイル(推定): ${opts.originFile}` : '',
+    `- 環境: ${opts.env}`,
+    ...extraLines,
+    opts.stack ? `- スタック:\n${opts.stack}` : '',
+    `根本原因を説明し、該当ファイルの修正差分と再発防止策を提示してください。`,
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
 export type AlertLevel = 'warn' | 'critical'
 type Extra = Record<string, string | number | boolean | null | undefined>
 
@@ -79,8 +130,10 @@ export async function notifyAlert(opts: {
   extra?: Extra
   dedupKey?: string
   cooldownMs?: number
+  /** そのまま AI に貼れる修正依頼文（あれば専用ブロックで表示） */
+  aiRepair?: string
 }): Promise<void> {
-  const { title, detail, context, level = 'warn', extra, dedupKey, cooldownMs = 10 * 60_000 } = opts
+  const { title, detail, context, level = 'warn', extra, dedupKey, cooldownMs = 10 * 60_000, aiRepair } = opts
   if (dedupKey && !shouldSend(`alert:${dedupKey}`, cooldownMs)) return
 
   const webhook = await getAlertWebhook()
@@ -115,6 +168,15 @@ export async function notifyAlert(opts: {
     blocks.push({
       type: 'section',
       text: { type: 'mrkdwn', text: slackEscape(detail).slice(0, 2800) },
+    })
+  }
+  if (aiRepair) {
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*AIへの修正依頼（コピペ用）*\n\`\`\`${slackEscape(aiRepair).slice(0, 2800)}\`\`\``,
+      },
     })
   }
   blocks.push({

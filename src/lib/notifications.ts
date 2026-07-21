@@ -1,7 +1,7 @@
 import { prisma, withRetry } from './prisma'
 import { fetchGCPUsageReport } from './gcp-usage'
 import { serviceLabelOf } from './attribution'
-import { recordErrorAndCheckBurst, shouldSend, notifyAlert, burstThreshold } from './alert'
+import { recordErrorAndCheckBurst, shouldSend, notifyAlert, burstThreshold, buildAiRepairPrompt, firstAppFrame } from './alert'
 
 export type ErrorNotificationData = {
   errorMessage: string
@@ -37,11 +37,24 @@ export async function sendErrorNotification(data: ErrorNotificationData): Promis
       }))
       const webhookUrl = slackWebhook?.value || ''
       if (webhookUrl) {
+        const errorType = data.errorMessage.includes(':')
+          ? data.errorMessage.split(':')[0]?.trim()
+          : ''
+        const aiPrompt = buildAiRepairPrompt({
+          system: 'ドヤAI (09_Cursol・Next.js/Prisma)',
+          where: `${data.requestMethod || ''} ${data.pathname || data.requestUrl || ''}`.trim(),
+          errorType,
+          message: data.errorMessage,
+          originFile: firstAppFrame(data.errorStack),
+          stack: data.errorStack ? data.errorStack.split('\n').slice(0, 6).join('\n') : undefined,
+          env: process.env.VERCEL_ENV || process.env.NODE_ENV || 'unknown',
+          extra: { httpStatus: data.httpStatus, userId: data.userId, digest: data.errorDigest },
+        })
         await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            text: formatErrorMessage(data),
+            text: `${formatErrorMessage(data)}\n\n*AIへの修正依頼（コピペ用）*\n\`\`\`${aiPrompt.slice(0, 2800)}\`\`\``,
           }),
         })
       }
