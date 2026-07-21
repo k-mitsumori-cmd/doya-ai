@@ -87,6 +87,10 @@
     {
       "path": "/api/cron/appstore-source-report",
       "schedule": "35 1 * * *"
+    },
+    {
+      "path": "/api/cron/health-alert",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

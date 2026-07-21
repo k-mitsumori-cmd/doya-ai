@@ -1,6 +1,7 @@
 import { prisma, withRetry } from './prisma'
 import { fetchGCPUsageReport } from './gcp-usage'
 import { serviceLabelOf } from './attribution'
+import { recordErrorAndCheckBurst, shouldSend, notifyAlert, burstThreshold } from './alert'
 
 export type ErrorNotificationData = {
   errorMessage: string
@@ -25,23 +26,36 @@ export type ErrorNotificationData = {
  */
 export async function sendErrorNotification(data: ErrorNotificationData): Promise<void> {
   try {
-    const slackWebhook = await withRetry(() => prisma.systemSetting.findUnique({
-      where: { key: 'slack_webhook' },
-    }))
+    // バーストへ計上（クールダウン判定より前＝deduped でも件数には数える）
+    const { count, burst } = recordErrorAndCheckBurst()
 
-    const webhookUrl = slackWebhook?.value || ''
-    if (!webhookUrl) {
-      // 設定が無ければ静かにスキップ
-      return
+    // 同一シグネチャ（path＋メッセージ）は 5 分クールダウンして連投を防ぐ
+    const sig = `err:${data.pathname || data.requestUrl || ''}:${(data.errorMessage || '').slice(0, 120)}`
+    if (shouldSend(sig, 5 * 60_000)) {
+      const slackWebhook = await withRetry(() => prisma.systemSetting.findUnique({
+        where: { key: 'slack_webhook' },
+      }))
+      const webhookUrl = slackWebhook?.value || ''
+      if (webhookUrl) {
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: formatErrorMessage(data),
+          }),
+        })
+      }
     }
 
-    await fetch(webhookUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: formatErrorMessage(data),
-      }),
-    })
+    // 直近5分でしきい値を超えたら「エラー急増」を別途通知（15分クールダウン）
+    if (burst && shouldSend('burst', 15 * 60_000)) {
+      await notifyAlert({
+        level: 'critical',
+        title: 'エラー急増を検知',
+        context: data.pathname || data.requestUrl || 'api',
+        detail: `直近5分で ${count} 件のAPIエラー（しきい値 ${burstThreshold()} 件）。障害の可能性があります。`,
+      })
+    }
   } catch (e) {
     // 通知の失敗で処理自体を止めない
     console.error('[Notification] Failed to sendErrorNotification:', e)
