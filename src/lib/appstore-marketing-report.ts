@@ -21,7 +21,8 @@ import { prisma } from '@/lib/prisma'
 
 const DEFAULT_APP_ID = '6786964992'
 const DEFAULT_COUNTRY = 'jp'
-const DEFAULT_KEYWORDS = ['呪い日記', '呪い', '日記', 'おまじない', '厄除け', '復讐', '呪術']
+// 2026-07 ASO刷新のターゲット語を追跡（App名/サブ/キーワードに載せた非ブランド語を実測）
+const DEFAULT_KEYWORDS = ['呪い日記', '呪い', '日記', '愚痴', 'ストレス発散', 'おまじない', '厄除け', '復讐', '呪術', '鍵付き日記']
 const SNAPSHOT_KEY = 'appstore_marketing_snapshot'
 const SEARCH_LIMIT = 200
 const CHART_LIMIT = 100
