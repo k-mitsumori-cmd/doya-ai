@@ -28,6 +28,11 @@ const TARGETS: Target[] = [
     url: process.env.NOROI_HEALTH_URL || 'https://game.surisuta.jp/noroi/api/health',
     key: 'noroi',
   },
+  {
+    name: 'ゆるせん',
+    url: process.env.YURUSEN_HEALTH_URL || 'https://game.surisuta.jp/yurusen/api/health',
+    key: 'yurusen',
+  },
 ]
 
 async function checkTarget(t: Target): Promise<{ name: string; ok: boolean; rtt: number; status?: number }> {
