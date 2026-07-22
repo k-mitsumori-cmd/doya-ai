@@ -8,6 +8,7 @@ import { getUserId } from '@/lib/cunning/access'
 import { canStartSession } from '@/lib/cunning/limits'
 import { MODES, MODE_IDS } from '@/lib/cunning/modes'
 import type { CunningMode } from '@/lib/cunning/types'
+import { recordServiceUsage } from '@/lib/service-usage'
 
 // GET /api/cunning/sessions — セッション一覧
 export async function GET() {
@@ -56,5 +57,13 @@ export async function POST(req: NextRequest) {
       personaNote: (body.personaNote as string)?.trim().slice(0, 1000) || null,
     },
   })
+  await recordServiceUsage({
+    userId,
+    serviceId: 'cunning',
+    action: 'セッション開始',
+    summary: title,
+    input: { mode },
+  })
+
   return NextResponse.json({ session })
 }

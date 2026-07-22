@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { recordServiceUsage } from '@/lib/service-usage'
 import {
   SHINDAN_PRICING,
   getShindanDailyLimitByUserPlan,
@@ -1540,6 +1541,15 @@ export async function POST(req: NextRequest) {
         }
 
         // >>> SSE: complete イベント
+        await recordServiceUsage({
+          userId: (session?.user as any)?.id,
+          serviceId: 'shindan',
+          action: 'Webサイト診断',
+          summary: websiteUrl,
+          input: { websiteUrl },
+          metadata: { overallScore, grade },
+        })
+
         sendEvent('complete', { result })
 
       } catch (err: any) {

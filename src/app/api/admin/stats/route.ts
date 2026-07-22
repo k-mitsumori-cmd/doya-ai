@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
+import { serviceLabelOf } from '@/lib/attribution'
 
 // cookies() を使用するため、静的最適化を無効化（ビルド時SSGで落ちるのを防ぐ）
 export const dynamic = 'force-dynamic'
@@ -117,7 +118,12 @@ export async function GET(request: NextRequest) {
     try {
       recentGenerations = await prisma.generation.findMany({
         where: { createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-        include: {
+        // output はバナーだと巨大な dataURL。一覧では絶対に取らない
+        select: {
+          id: true,
+          serviceId: true,
+          metadata: true,
+          createdAt: true,
           user: { select: { name: true, email: true } },
         },
         orderBy: { createdAt: 'desc' },
@@ -325,12 +331,14 @@ export async function GET(request: NextRequest) {
         id: g.id,
         userName: g.user?.name || g.user?.email || '匿名',
         service: g.serviceId || 'unknown',
+        // 利用ログには metadata.action が入っている（service-usage.ts 経由）。
+        // 無い場合はサービス名で代替する
         action:
-          g.serviceId === 'banner'
-            ? 'バナーを生成'
-            : g.serviceId === 'seo' || g.serviceId === 'writing'
-              ? '記事を生成'
-              : 'コンテンツを生成',
+          (g.metadata && typeof g.metadata === 'object' && (g.metadata as any).action)
+            ? `${serviceLabelOf(g.serviceId)}：${(g.metadata as any).action}`
+            : g.serviceId === 'banner'
+              ? 'バナーを生成'
+              : `${serviceLabelOf(g.serviceId)}を利用`,
         createdAt: g.createdAt,
       })),
       

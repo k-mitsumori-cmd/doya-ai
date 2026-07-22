@@ -8,6 +8,7 @@ import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
 import { analyzeCompany, generateProposal, generateSlides, type OwnCompanyProfile } from '@/lib/shodan/ai'
 import type { CompanyResearch } from '@/lib/shodan/types'
 import { isPaidPlan } from '@/lib/unified-plan'
+import { recordServiceUsage } from '@/lib/service-usage'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
 
@@ -50,6 +51,16 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       where: { id: prep.id },
       data: { analysis: analysis as any, proposalMarkdown, slidesJson: slides as any, status: 'done', errorMessage: null },
     })
+    await recordServiceUsage({
+      userId: sctx.userId,
+      serviceId: 'shodan',
+      action: '提案資料生成',
+      summary: research?.companyName || prep.id,
+      count: Array.isArray(slides) ? slides.length : 0,
+      input: { preparationId: prep.id },
+      metadata: { organizationId: sctx.organizationId },
+    })
+
     return NextResponse.json({ id: prep.id, status: 'done' })
   } catch (e: any) {
     console.error('[shodan/generate] failed', e?.message)

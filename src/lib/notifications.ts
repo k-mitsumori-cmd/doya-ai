@@ -114,7 +114,7 @@ async function getSlackWebhookUrl(): Promise<string> {
   return row?.value || ''
 }
 
-async function postToSlack(text: string): Promise<void> {
+async function postSlackPayload(payload: Record<string, unknown>): Promise<void> {
   const url = await getSlackWebhookUrl()
   if (!url) {
     throw new Error('Slack webhook URL is not configured (slack_webhook not found in SystemSetting)')
@@ -122,12 +122,24 @@ async function postToSlack(text: string): Promise<void> {
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(payload),
   })
   if (!res.ok) {
     const body = await res.text().catch(() => '')
     throw new Error(`Slack webhook returned ${res.status}: ${body}`)
   }
+}
+
+async function postToSlack(text: string): Promise<void> {
+  await postSlackPayload({ text })
+}
+
+/**
+ * Block Kit 形式で投稿する。
+ * `text` は通知バナー／未対応クライアント向けのフォールバックなので必ず渡すこと。
+ */
+export async function postToSlackBlocks(text: string, blocks: unknown[]): Promise<void> {
+  await postSlackPayload({ text, blocks })
 }
 
 // ========================================
@@ -177,6 +189,97 @@ export async function sendEventNotification(event: {
 }
 
 // ========================================
+// サービス別利用の集計（日次/週次/月次で共用）
+// ========================================
+// Generation テーブルが全サービス共通の利用台帳。
+// 各サービスからの記録は `src/lib/service-usage.ts:recordServiceUsage()` 経由。
+type ServiceUsageStat = {
+  serviceId: string
+  label: string
+  count: number
+  users: number
+}
+
+/** 期間内のサービス別「利用件数」と「利用ユーザー数」を多い順に返す */
+async function getServiceUsageStats(since: Date, until?: Date): Promise<ServiceUsageStat[]> {
+  const rows = await prisma.generation.groupBy({
+    by: ['serviceId', 'userId'],
+    where: { createdAt: until ? { gte: since, lt: until } : { gte: since } },
+    _count: { _all: true },
+  })
+
+  const map = new Map<string, { count: number; users: Set<string> }>()
+  for (const r of rows) {
+    const entry = map.get(r.serviceId) || { count: 0, users: new Set<string>() }
+    entry.count += (r._count as any)?._all ?? 0
+    entry.users.add(r.userId)
+    map.set(r.serviceId, entry)
+  }
+
+  return Array.from(map.entries())
+    .map(([serviceId, v]) => ({
+      serviceId,
+      label: serviceLabelOf(serviceId),
+      count: v.count,
+      users: v.users.size,
+    }))
+    .sort((a, b) => b.count - a.count)
+}
+
+/** 件数の相対量を横棒で見せる */
+function usageBar(value: number, max: number, width = 8): string {
+  if (max <= 0 || value <= 0) return ''
+  return '▇'.repeat(Math.max(1, Math.round((value / max) * width)))
+}
+
+function formatServiceUsageLines(stats: ServiceUsageStat[]): string[] {
+  if (stats.length === 0) return ['  - (利用なし)']
+  const max = stats[0]?.count ?? 0
+  return stats.map((s) => `  - ${s.label}: ${s.count}件 / ${s.users}人 ${usageBar(s.count, max)}`)
+}
+
+/**
+ * 期間内に「そのサービスを初めて使った」ユーザー×サービスの組を返す。
+ * 全期間の最古利用日を出してから期間で絞るため、Generation が巨大化したら要見直し。
+ */
+async function getFirstUseEntries(since: Date, until?: Date): Promise<{ userId: string; serviceId: string; at: Date }[]> {
+  const rows = await prisma.generation.groupBy({
+    by: ['userId', 'serviceId'],
+    _min: { createdAt: true },
+  })
+  const upper = until ? until.getTime() : Infinity
+  return rows
+    .map((r) => ({ userId: r.userId, serviceId: r.serviceId, at: ((r._min as any)?.createdAt ?? null) as Date | null }))
+    .filter((r): r is { userId: string; serviceId: string; at: Date } =>
+      !!r.at && r.at.getTime() >= since.getTime() && r.at.getTime() < upper)
+    .sort((a, b) => a.at.getTime() - b.at.getTime())
+}
+
+/** 「初回利用」セクションの行を作る。取得に失敗してもレポート全体は落とさない */
+async function formatFirstUseLines(since: Date, until?: Date, limit = 15): Promise<string[]> {
+  try {
+    const entries = await getFirstUseEntries(since, until)
+    if (entries.length === 0) return ['  - (なし)']
+
+    const users = await prisma.user.findMany({
+      where: { id: { in: Array.from(new Set(entries.map((e) => e.userId))) } },
+      select: { id: true, name: true, email: true },
+    })
+    const userMap = new Map(users.map((u) => [u.id, u]))
+
+    const lines = entries.slice(0, limit).map((e) => {
+      const u = userMap.get(e.userId)
+      return `  - ${u?.name || u?.email || '不明'} → ${serviceLabelOf(e.serviceId)}`
+    })
+    if (entries.length > limit) lines.push(`  - ほか${entries.length - limit}件`)
+    return lines
+  } catch (e) {
+    console.error('[Notification] formatFirstUseLines failed:', e)
+    return ['  - (集計に失敗)']
+  }
+}
+
+// ========================================
 // 日次サマリー通知（毎朝9時に送信）
 // ========================================
 export async function sendDailySummary(): Promise<void> {
@@ -201,12 +304,11 @@ export async function sendDailySummary(): Promise<void> {
     where: { createdAt: { gte: yesterday } },
   })
 
-  // サービス別の生成数
-  const generationsByService = await prisma.generation.groupBy({
-    by: ['serviceId'],
-    where: { createdAt: { gte: yesterday } },
-    _count: { _all: true },
-  })
+  // サービス別の利用（件数＋利用ユーザー数）
+  const serviceStats = await getServiceUsageStats(yesterday)
+
+  // 昨日はじめてそのサービスを使ったユーザー
+  const firstUseLines = await formatFirstUseLines(yesterday)
 
   // 生成数トップ3ユーザー（過去24時間）
   const topGeneratorsAll = await prisma.generation.groupBy({
@@ -239,9 +341,7 @@ export async function sendDailySummary(): Promise<void> {
 
   // フォーマット
   const dateStr = now.toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo' })
-  const serviceLines = generationsByService
-    .sort((a, b) => (b._count?._all ?? 0) - (a._count?._all ?? 0))
-    .map((s) => `  - ${s.serviceId}: ${s._count?._all ?? 0}件`)
+  const serviceLines = formatServiceUsageLines(serviceStats)
 
   const lines = [
     `<!channel>`,
@@ -266,16 +366,19 @@ export async function sendDailySummary(): Promise<void> {
       ? paidUsersList.map((u) => `  - ${u.name || '名前未設定'} (${u.email}) [${u.plan}]`)
       : []),
     ``,
-    `*⚡ 生成数（過去24時間）*`,
-    `- 合計: ${newGenerations}件`,
-    ...(serviceLines.length > 0 ? serviceLines : ['  - (なし)']),
+    `*⚡ サービス利用（過去24時間）*`,
+    `- 合計: ${newGenerations}件 / ${serviceStats.length}サービス`,
+    ...serviceLines,
     ``,
-    `*🏆 生成数トップ3*`,
+    `*🌱 初回利用（そのサービスを初めて使った人）*`,
+    ...firstUseLines,
+    ``,
+    `*🏆 利用件数トップ3*`,
     ...(topGenerators.length > 0
       ? topGenerators.map((g, i) => {
           const u = topUserMap.get(g.userId)
           const name = u?.name || u?.email || '不明'
-          return `  ${i + 1}. ${name}：${(g._count as any)?._all ?? 0}枚`
+          return `  ${i + 1}. ${name}：${(g._count as any)?._all ?? 0}件`
         })
       : ['  - (生成なし)']),
   ]
@@ -301,11 +404,8 @@ export async function sendWeeklySummary(): Promise<void> {
   const weekGenerations = await prisma.generation.count({
     where: { createdAt: { gte: lastMonday, lt: thisMonday } },
   })
-  const weekGenByService = await prisma.generation.groupBy({
-    by: ['serviceId'],
-    where: { createdAt: { gte: lastMonday, lt: thisMonday } },
-    _count: { _all: true },
-  })
+  const weekServiceStats = await getServiceUsageStats(lastMonday, thisMonday)
+  const weekFirstUseLines = await formatFirstUseLines(lastMonday, thisMonday, 20)
 
   // 生成数トップ3ユーザー（先週）
   const weekTopGeneratorsAll = await prisma.generation.groupBy({
@@ -335,9 +435,7 @@ export async function sendWeeklySummary(): Promise<void> {
   })
 
   const weekStr = `${formatJSTDate(lastMonday)} 〜 ${formatJSTDate(new Date(thisMonday.getTime() - 1))}`
-  const serviceLines = weekGenByService
-    .sort((a, b) => (b._count?._all ?? 0) - (a._count?._all ?? 0))
-    .map((s) => `  - ${s.serviceId}: ${s._count?._all ?? 0}件`)
+  const serviceLines = formatServiceUsageLines(weekServiceStats)
 
   const greeting = getWeeklyGreeting(weekNewUsers.length, weekGenerations, paidUsersList.length)
 
@@ -354,15 +452,18 @@ export async function sendWeeklySummary(): Promise<void> {
       ? weekNewUsers.map((u) => `  - ${u.name || '名前未設定'} (${u.email})`)
       : []),
     ``,
-    `*⚡ 生成数: ${weekGenerations}件*`,
-    ...(serviceLines.length > 0 ? serviceLines : ['  - (なし)']),
+    `*⚡ サービス利用: ${weekGenerations}件 / ${weekServiceStats.length}サービス*`,
+    ...serviceLines,
     ``,
-    `*🏆 生成数トップ3*`,
+    `*🌱 初回利用（そのサービスを初めて使った人）*`,
+    ...weekFirstUseLines,
+    ``,
+    `*🏆 利用件数トップ3*`,
     ...(weekTopGenerators.length > 0
       ? weekTopGenerators.map((g, i) => {
           const u = weekTopUserMap.get(g.userId)
           const name = u?.name || u?.email || '不明'
-          return `  ${i + 1}. ${name}：${(g._count as any)?._all ?? 0}枚`
+          return `  ${i + 1}. ${name}：${(g._count as any)?._all ?? 0}件`
         })
       : ['  - (生成なし)']),
     ``,
@@ -396,11 +497,8 @@ export async function sendMonthlySummary(): Promise<void> {
   const monthGenerations = await prisma.generation.count({
     where: { createdAt: { gte: lastMonth1st, lt: thisMonth1st } },
   })
-  const monthGenByService = await prisma.generation.groupBy({
-    by: ['serviceId'],
-    where: { createdAt: { gte: lastMonth1st, lt: thisMonth1st } },
-    _count: { _all: true },
-  })
+  const monthServiceStats = await getServiceUsageStats(lastMonth1st, thisMonth1st)
+  const monthFirstUseLines = await formatFirstUseLines(lastMonth1st, thisMonth1st, 30)
 
   // 生成数トップ3ユーザー（先月）
   const monthTopGeneratorsAll = await prisma.generation.groupBy({
@@ -435,9 +533,7 @@ export async function sendMonthlySummary(): Promise<void> {
     year: 'numeric',
     month: 'long',
   })
-  const serviceLines = monthGenByService
-    .sort((a, b) => (b._count?._all ?? 0) - (a._count?._all ?? 0))
-    .map((s) => `  - ${s.serviceId}: ${s._count?._all ?? 0}件`)
+  const serviceLines = formatServiceUsageLines(monthServiceStats)
 
   const greeting = getMonthlyGreeting(monthNewUsers.length, monthGenerations, paidUsersList.length)
 
@@ -454,15 +550,18 @@ export async function sendMonthlySummary(): Promise<void> {
       ? monthNewUsers.map((u) => `  - ${u.name || '名前未設定'} (${u.email})`)
       : []),
     ``,
-    `*⚡ 生成数: ${monthGenerations}件*`,
-    ...(serviceLines.length > 0 ? serviceLines : ['  - (なし)']),
+    `*⚡ サービス利用: ${monthGenerations}件 / ${monthServiceStats.length}サービス*`,
+    ...serviceLines,
     ``,
-    `*🏆 生成数トップ3*`,
+    `*🌱 初回利用（そのサービスを初めて使った人）*`,
+    ...monthFirstUseLines,
+    ``,
+    `*🏆 利用件数トップ3*`,
     ...(monthTopGenerators.length > 0
       ? monthTopGenerators.map((g, i) => {
           const u = monthTopUserMap.get(g.userId)
           const name = u?.name || u?.email || '不明'
-          return `  ${i + 1}. ${name}：${(g._count as any)?._all ?? 0}枚`
+          return `  ${i + 1}. ${name}：${(g._count as any)?._all ?? 0}件`
         })
       : ['  - (生成なし)']),
     ``,

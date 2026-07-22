@@ -5,6 +5,7 @@ import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, shouldResetMonthlyUsage, getCurrentMonthJST, isWithinFreeHour } from '@/lib/pricing'
 import { sendErrorNotification } from '@/lib/notifications'
+import { isFirstServiceUse, notifyFirstServiceUse } from '@/lib/service-usage'
 import crypto from 'crypto'
 
 // Vercel上で画像生成が長引くことがあるため、実行時間上限を引き上げる
@@ -325,6 +326,8 @@ export async function POST(request: NextRequest) {
           const patterns = 'ABCDEFGHIJ'.split('')
           const batchId = crypto.randomUUID()
           const shared = shareToGallery === true
+          // バナーは自前で Generation 行を書くので、初回判定だけ先に取る
+          const isFirstUse = await isFirstServiceUse(userId, 'banner')
           await prisma.generation.createMany({
             data: images.map((img: string, idx: number) => ({
               userId,
@@ -351,6 +354,14 @@ export async function POST(request: NextRequest) {
               },
             })),
           })
+          if (isFirstUse) {
+            await notifyFirstServiceUse({
+              userId,
+              serviceId: 'banner',
+              action: 'バナー生成',
+              summary: `${category || ''} / ${keyword.trim()}`.trim(),
+            })
+          }
         }
       } catch (e: any) {
         console.error('Banner history persist failed:', e)

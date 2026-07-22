@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSfaContext, orgSlugFrom, ensurePipeline } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
+import { recordServiceUsage } from '@/lib/service-usage'
 
 // GET /api/sfa/deals — カンバン用に「ステージ一覧 + 商談一覧（取引先名つき）」を返す
 export async function GET(req: NextRequest) {
@@ -88,5 +89,13 @@ export async function POST(req: NextRequest) {
       lastActivityAt: new Date(),
     },
   })
+  await recordServiceUsage({
+    userId: ctx.userId,
+    serviceId: 'sfa',
+    action: '商談作成',
+    summary: name,
+    metadata: { organizationId: ctx.organizationId },
+  })
+
   return NextResponse.json({ deal: bigIntToNumber(deal) })
 }

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, shouldResetMonthlyUsage, getCurrentMonthJST, isWithinFreeHour } from '@/lib/pricing'
+import { isFirstServiceUse, notifyFirstServiceUse } from '@/lib/service-usage'
 import crypto from 'crypto'
 import sharp from 'sharp'
 
@@ -1666,6 +1667,8 @@ export async function POST(request: NextRequest) {
           const patterns = 'ABCDEFGHIJ'.split('')
           const batchId = crypto.randomUUID()
           const shared = body?.shareToGallery === true
+          // バナーは自前で Generation 行を書くので、初回判定だけ先に取る
+          const isFirstUse = await isFirstServiceUse(userId, 'banner')
           await prisma.generation.createMany({
             data: images.map((img: string, idx: number) => ({
               userId,
@@ -1697,6 +1700,14 @@ export async function POST(request: NextRequest) {
               },
             })),
           })
+          if (isFirstUse) {
+            await notifyFirstServiceUse({
+              userId,
+              serviceId: 'banner',
+              action: 'バナー生成（URLから）',
+              summary: targetUrl || keywordForMeta,
+            })
+          }
         }
       } catch (e: any) {
         console.error('from-url history persist failed:', e)

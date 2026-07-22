@@ -5,6 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/doyaslide/access'
+import { recordServiceUsage } from '@/lib/service-usage'
 import { reserveMonthlySlides, releaseMonthlySlides, quotaExceededMessage } from '@/lib/doyaslide/limits'
 import { composeSlideImage, type ComposeProject } from '@/lib/doyaslide/generate'
 
@@ -121,6 +122,16 @@ export async function POST(req: NextRequest) {
     await prisma.doyaSlideProject.update({
       where: { id: projectId },
       data: { status: anyDone ? 'completed' : 'error' },
+    })
+
+    await recordServiceUsage({
+      userId,
+      serviceId: 'doyaslide',
+      action: 'スライド画像生成',
+      summary: project.title || '',
+      count: Math.max(0, targets.length - errorCount),
+      input: { projectId, targets: targets.length },
+      metadata: { errorCount, skipped, timedOut },
     })
 
     return NextResponse.json({ slides, errorCount, skipped, timedOut, limit })

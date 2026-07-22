@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getKintaiContext } from '@/lib/kintai/access'
 import { recalculateDayForEmployee } from '@/lib/kintai/recalculate'
 import type { ClockType } from '@/lib/kintai/types'
+import { recordServiceUsage } from '@/lib/service-usage'
 
 // ----------------------------------------------------------------
 // GET /api/kintai/clock?date=YYYY-MM-DD
@@ -174,6 +175,17 @@ export async function POST(req: NextRequest) {
       const dateOnly = new Date(Date.UTC(jstDayStart.getUTCFullYear(), jstDayStart.getUTCMonth(), jstDayStart.getUTCDate()))
       await recalculateDayForEmployee(ctx.employeeId, ctx.organizationId, dateOnly)
     }
+
+    const CLOCK_LABELS: Record<string, string> = {
+      clock_in: '出勤', clock_out: '退勤', break_start: '休憩開始', break_end: '休憩終了',
+    }
+    await recordServiceUsage({
+      userId: ctx.userId,
+      serviceId: 'kintai',
+      action: `打刻（${CLOCK_LABELS[clockType] || clockType}）`,
+      input: { clockType },
+      metadata: { organizationId: ctx.organizationId },
+    })
 
     return NextResponse.json({ record, message: '打刻しました' })
   } catch (error) {

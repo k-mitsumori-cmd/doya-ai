@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { SAMPLE_TEMPLATES } from '@/lib/templates'
 import { generateTextWithGemini, getGeminiModelName } from '@/lib/gemini-text'
+import { recordServiceUsage } from '@/lib/service-usage'
 
 // レート制限用（本番環境ではRedisなどを使用することを推奨）
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
@@ -135,6 +136,14 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       )
     }
+
+    await recordServiceUsage({
+      userId: (session?.user as any)?.id,
+      serviceId: 'kantan',
+      action: 'コンテンツ生成',
+      summary: String(templateId || ''),
+      input: { templateId },
+    })
 
     return NextResponse.json({
       success: true,

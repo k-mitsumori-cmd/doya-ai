@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@/lib/hr/constants'
 import { checkEmployeeLimit } from '@/lib/hr/billing'
+import { recordServiceUsage } from '@/lib/service-usage'
 
 export async function GET(req: NextRequest) {
   try {
@@ -160,6 +161,14 @@ export async function POST(req: NextRequest) {
         effectiveDate: hireDate ? new Date(hireDate) : new Date(),
         reason: 'New hire',
       },
+    })
+
+    await recordServiceUsage({
+      userId: ctx.userId,
+      serviceId: 'hr',
+      action: '従業員登録',
+      summary: `${employee.lastName} ${employee.firstName}`.trim(),
+      metadata: { organizationId: ctx.organizationId },
     })
 
     return NextResponse.json({ success: true, employee })

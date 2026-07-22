@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getUserPromaneLimits, countUserWorkspaces } from '@/lib/promane/limits'
+import { recordServiceUsage } from '@/lib/service-usage'
 import crypto from 'crypto'
 
 /**
@@ -71,6 +72,14 @@ export async function POST(req: NextRequest) {
         },
       },
       select: { id: true, slug: true, name: true },
+    })
+
+    await recordServiceUsage({
+      userId,
+      serviceId: 'promane',
+      action: 'ワークスペース作成',
+      summary: workspace.name,
+      metadata: { workspaceId: workspace.id },
     })
 
     return NextResponse.json({ success: true, workspace })

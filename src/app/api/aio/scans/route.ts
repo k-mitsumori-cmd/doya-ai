@@ -8,6 +8,7 @@ import { getAioContext, orgSlugFrom } from '@/lib/aio/access'
 import { availableEngines, effectiveScanStatus, type EngineId } from '@/lib/aio/types'
 import { runAndPersistScan } from '@/lib/aio/run'
 import { isPaidPlan } from '@/lib/unified-plan'
+import { recordServiceUsage } from '@/lib/service-usage'
 
 const FREE_SCANS_PER_WEEK = 1
 
@@ -75,6 +76,16 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     )
   }
+  await recordServiceUsage({
+    userId: ctx.userId,
+    serviceId: 'aio',
+    action: 'AI可視性スキャン',
+    summary: profile.brandName,
+    count: prompts.length,
+    input: { engines: requested ?? avail, promptCount: prompts.length },
+    metadata: { scanId: result.id, organizationId: ctx.organizationId },
+  })
+
   return NextResponse.json({
     id: result.id,
     status: 'done',

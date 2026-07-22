@@ -19,6 +19,7 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { buildArticlePrompt } from '@/lib/interview/prompts'
+import { recordServiceUsage } from '@/lib/service-usage'
 
 function getGeminiApiKey(): string {
   const key =
@@ -261,6 +262,15 @@ export async function POST(req: NextRequest) {
         await prisma.interviewRecipe.update({
           where: { id: recipeId },
           data: { usageCount: { increment: 1 } },
+        })
+
+        await recordServiceUsage({
+          userId,
+          serviceId: 'interview',
+          action: 'インタビュー記事生成',
+          summary: project.title || '',
+          input: { projectId, recipeId, displayFormat },
+          metadata: { wordCount: fullText.length, version: nextVersion },
         })
 
         controller.enqueue(sseEvent({

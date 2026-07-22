@@ -8,6 +8,7 @@ import { getAdIdentity, ownerWhere, remainingQuota } from '@/lib/adbanner/access
 import { generateBanners } from '@/lib/adbanner/generate'
 import { downloadBuffer, signedUrl } from '@/lib/adbanner/storage'
 import { BANNER_SIZES, type AdMedia, type LogoConfig } from '@/lib/adbanner/types'
+import { recordServiceUsage } from '@/lib/service-usage'
 
 const DEFAULT_LOGO_CFG: LogoConfig = { pos: 'bottom-right', maxWidthPct: 22, paddingPct: 4 }
 
@@ -65,6 +66,15 @@ export async function POST(req: NextRequest) {
       id: b.id, size: b.size, variantLabel: b.variantLabel, model: b.model, feedback: null, generation: b.generation, createdAt: b.createdAt,
       imageUrl: await signedUrl(b.imagePath),
     })))
+    await recordServiceUsage({
+      userId: id.userId,
+      serviceId: 'adbanner',
+      action: '広告バナー生成',
+      summary: campaign.serviceName || campaign.name,
+      count: created.length,
+      input: { campaignId: campaign.id, sizes, variants, media: campaign.media },
+    })
+
     return NextResponse.json({ success: true, data })
   } catch (e: any) {
     console.error('[adbanner/generate]', e?.message)

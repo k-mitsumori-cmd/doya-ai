@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { recordServiceUsage } from '@/lib/service-usage'
 import {
   PERSONA_PRICING,
   getPersonaDailyLimitByUserPlan,
@@ -521,6 +522,13 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}`
       await prisma.userServiceSubscription.updateMany({
         where: { userId, serviceId: 'persona' },
         data: { dailyUsage: { increment: 1 } },
+      })
+      await recordServiceUsage({
+        userId,
+        serviceId: 'persona',
+        action: isModifyMode ? 'ペルソナ修正' : 'ペルソナ生成',
+        summary: url || serviceName || '',
+        input: { url, serviceName, isModifyMode },
       })
     }
 

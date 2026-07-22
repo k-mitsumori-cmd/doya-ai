@@ -15,6 +15,7 @@ import {
   setGuestCookie,
 } from '@/lib/seoAccess'
 import { getSeoCharLimitByUserPlan } from '@/lib/pricing'
+import { recordServiceUsage } from '@/lib/service-usage'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -169,6 +170,14 @@ export async function POST(req: NextRequest) {
         comparisonCandidates: (input.comparisonCandidates ?? null) as any,
         referenceInputs: (input.referenceInputs ?? null) as any,
       },
+    })
+
+    await recordServiceUsage({
+      userId,
+      serviceId: 'seo',
+      action: createJob ? '記事生成ジョブ開始' : '記事作成（下書き）',
+      summary: input.title || (Array.isArray(input.keywords) ? input.keywords.join('・') : ''),
+      input: { title: input.title, keywords: input.keywords, targetChars: input.targetChars, mode: input.mode ?? 'standard' },
     })
 
     if (!createJob) {

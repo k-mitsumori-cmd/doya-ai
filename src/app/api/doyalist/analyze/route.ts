@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { recordServiceUsage } from '@/lib/service-usage'
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -134,6 +135,15 @@ ${project.keywords || '未設定'}
     await prisma.doyalistProject.update({
       where: { id: projectId },
       data: { status: 'completed' }
+    })
+
+    await recordServiceUsage({
+      userId: session.user.id,
+      serviceId: 'doyalist',
+      action: '企業分析',
+      summary: project.name || '',
+      count: results.length,
+      input: { projectId, companyCount: project.companies.length },
     })
 
     return NextResponse.json({ success: true, analyzed: results.length, results })
