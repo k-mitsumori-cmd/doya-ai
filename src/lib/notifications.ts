@@ -201,7 +201,7 @@ type ServiceUsageStat = {
 }
 
 /** 期間内のサービス別「利用件数」と「利用ユーザー数」を多い順に返す */
-async function getServiceUsageStats(since: Date, until?: Date): Promise<ServiceUsageStat[]> {
+export async function getServiceUsageStats(since: Date, until?: Date): Promise<ServiceUsageStat[]> {
   const rows = await prisma.generation.groupBy({
     by: ['serviceId', 'userId'],
     where: { createdAt: until ? { gte: since, lt: until } : { gte: since } },
@@ -232,7 +232,7 @@ function usageBar(value: number, max: number, width = 8): string {
   return '▇'.repeat(Math.max(1, Math.round((value / max) * width)))
 }
 
-function formatServiceUsageLines(stats: ServiceUsageStat[]): string[] {
+export function formatServiceUsageLines(stats: ServiceUsageStat[]): string[] {
   if (stats.length === 0) return ['  - (利用なし)']
   const max = stats[0]?.count ?? 0
   return stats.map((s) => `  - ${s.label}: ${s.count}件 / ${s.users}人 ${usageBar(s.count, max)}`)
@@ -256,7 +256,7 @@ async function getFirstUseEntries(since: Date, until?: Date): Promise<{ userId: 
 }
 
 /** 「初回利用」セクションの行を作る。取得に失敗してもレポート全体は落とさない */
-async function formatFirstUseLines(since: Date, until?: Date, limit = 15): Promise<string[]> {
+export async function formatFirstUseLines(since: Date, until?: Date, limit = 15): Promise<string[]> {
   try {
     const entries = await getFirstUseEntries(since, until)
     if (entries.length === 0) return ['  - (なし)']
