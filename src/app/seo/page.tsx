@@ -722,8 +722,9 @@ export default function SeoDashboardPage() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.3 }}
                 >
-                  <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">
-                    🎉 {welcomePlan === 'enterprise' ? 'Enterprise' : 'PRO'}プランが有効になりました！
+                  <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2 inline-flex items-center gap-2">
+                    <span className="material-symbols-outlined" style={{ fontSize: 28 }}>celebration</span>
+                    {welcomePlan === 'enterprise' ? 'Enterprise' : 'PRO'}プランが有効になりました！
                   </h3>
                   <p className="text-slate-600 font-bold">
                     すべての機能が解放されました。早速使ってみましょう！

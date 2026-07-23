@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useSession } from 'next-auth/react'
 import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES, AREAS as AREA_LIST, SIZES } from '@/lib/doyalist/constants'
@@ -347,7 +347,7 @@ export default function DoyalistHomePage() {
         {/* ===== Page Header ===== */}
         <div className="flex items-center gap-3 mb-6">
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md">
-            <span className="text-white text-2xl">📊</span>
+            <span className="material-symbols-outlined text-white text-3xl">bar_chart</span>
           </div>
           <div>
             <h1 className="text-2xl lg:text-3xl font-black text-[#0a1530]">営業リストをつくる</h1>
@@ -369,15 +369,15 @@ export default function DoyalistHomePage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <Field label="🏢 業界" value={industry} onChange={setIndustry} options={INDUSTRIES} />
-                <Field label="🗾 エリア" value={area} onChange={handleAreaChange} options={AREAS} />
-                <Field label="👥 企業規模" value={size} onChange={setSize} options={SIZES} />
+                <Field label={<><span className="material-symbols-outlined align-middle text-base mr-1">apartment</span>業界</>} value={industry} onChange={setIndustry} options={INDUSTRIES} />
+                <Field label={<><span className="material-symbols-outlined align-middle text-base mr-1">map</span>エリア</>} value={area} onChange={handleAreaChange} options={AREAS} />
+                <Field label={<><span className="material-symbols-outlined align-middle text-base mr-1">groups</span>企業規模</>} value={size} onChange={setSize} options={SIZES} />
               </div>
 
               {/* キーワード + AI変換 */}
               <div>
                 <label className="block text-sm font-bold text-[#0a1530] mb-2">
-                  🔍 キーワード <span className="text-xs font-normal text-slate-400">（任意・AIで法人検索ワードに変換）</span>
+                  <span className="material-symbols-outlined align-middle text-base mr-1">search</span>キーワード <span className="text-xs font-normal text-slate-400">（任意・AIで法人検索ワードに変換）</span>
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -394,7 +394,7 @@ export default function DoyalistHomePage() {
                     disabled={expanding || !keywords.trim()}
                     className="px-4 py-3 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white text-xs font-black rounded-xl shadow hover:shadow-lg active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed whitespace-nowrap"
                   >
-                    {expanding ? '変換中...' : '🤖 AIで変換'}
+                    {expanding ? '変換中...' : <><span className="material-symbols-outlined align-middle text-sm mr-0.5">smart_toy</span>AIで変換</>}
                   </button>
                 </div>
 
@@ -402,7 +402,7 @@ export default function DoyalistHomePage() {
                 {aiTags.length > 0 && (
                   <div className="mt-3 p-3 bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-200 rounded-xl">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-black text-violet-700">🤖 AI変換タグ</span>
+                      <span className="text-xs font-black text-violet-700 inline-flex items-center gap-0.5"><span className="material-symbols-outlined text-sm">smart_toy</span>AI変換タグ</span>
                       <span className="text-[10px] text-slate-500">クリックで使用ON/OFF（選択タグで検索）</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
@@ -434,7 +434,7 @@ export default function DoyalistHomePage() {
 
               {prefectureOptions.length > 0 && (
                 <div>
-                  <label className="block text-sm font-bold text-[#0a1530] mb-2">📍 都道府県（任意・絞り込み）</label>
+                  <label className="block text-sm font-bold text-[#0a1530] mb-2"><span className="material-symbols-outlined align-middle text-base mr-1">location_on</span>都道府県（任意・絞り込み）</label>
                   <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 gap-2">
                     <button onClick={() => setPrefecture('')} className={`py-2.5 rounded-xl text-xs font-bold transition-all ${prefecture === '' ? 'bg-[#0a1530] text-white' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>
                       全て
@@ -451,8 +451,8 @@ export default function DoyalistHomePage() {
               {/* gBizINFO登録率が低い業界の警告 */}
               {SPARSE_INDUSTRIES.includes(industry) && (
                 <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
-                  <p className="text-xs font-bold text-amber-700 leading-relaxed">
-                    ⚠️ <strong>「{industry}」業界はgBizINFO登録率が低い傾向です</strong>
+                  <p className="text-xs font-bold text-amber-700 leading-relaxed inline-flex items-start gap-1">
+                    <span className="material-symbols-outlined text-base">warning</span><strong>「{industry}」業界はgBizINFO登録率が低い傾向です</strong>
                   </p>
                   <p className="text-[11px] text-amber-600 mt-1 leading-relaxed">
                     代表者名・従業員数・公式URL等の詳細情報が取得できない企業が多い場合があります。<br/>
@@ -463,7 +463,7 @@ export default function DoyalistHomePage() {
 
               <div>
                 <label className="block text-sm font-bold text-[#0a1530] mb-2">
-                  📊 抽出する件数 <span className="text-xs font-normal text-slate-400">（1回最大10,000社）</span>
+                  <span className="material-symbols-outlined align-middle text-base mr-1">bar_chart</span>抽出する件数 <span className="text-xs font-normal text-slate-400">（1回最大10,000社）</span>
                 </label>
                 <div className="grid grid-cols-4 gap-2">
                   {COUNT_OPTIONS.map((c) => (
@@ -473,13 +473,13 @@ export default function DoyalistHomePage() {
                   ))}
                 </div>
                 {count >= 500 && (
-                  <p className="text-xs font-medium text-cyan-700 mt-2">
-                    ⏰ {count.toLocaleString()}社の抽出（詳細情報の取得込み）は約 {Math.max(20, Math.ceil(count / 60))}〜{Math.ceil(count / 30)}秒かかります
+                  <p className="text-xs font-medium text-cyan-700 mt-2 inline-flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm">schedule</span>{count.toLocaleString()}社の抽出（詳細情報の取得込み）は約 {Math.max(20, Math.ceil(count / 60))}〜{Math.ceil(count / 30)}秒かかります
                   </p>
                 )}
                 {count >= 5000 && (
-                  <p className="text-xs font-medium text-amber-700 mt-1">
-                    ⚠️ 大量抽出時はブラウザを閉じずにお待ちください
+                  <p className="text-xs font-medium text-amber-700 mt-1 inline-flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm">warning</span>大量抽出時はブラウザを閉じずにお待ちください
                   </p>
                 )}
               </div>
@@ -503,7 +503,7 @@ export default function DoyalistHomePage() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-black text-rose-700">{errorMsg}</p>
                     {errorHint && (
-                      <p className="text-xs text-rose-600 mt-1 leading-relaxed">💡 {errorHint}</p>
+                      <p className="text-xs text-rose-600 mt-1 leading-relaxed inline-flex items-start gap-1"><span className="material-symbols-outlined text-sm">lightbulb</span>{errorHint}</p>
                     )}
                   </div>
                   <button
@@ -520,7 +520,7 @@ export default function DoyalistHomePage() {
           <div className="lg:col-span-1">
             <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 p-6 lg:sticky lg:top-24">
               <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                <span className="text-xl">🔍</span>
+                <span className="material-symbols-outlined text-xl text-slate-500">search</span>
                 <h3 className="text-sm font-bold text-[#0a1530]">抽出プレビュー</h3>
               </div>
 
@@ -541,11 +541,11 @@ export default function DoyalistHomePage() {
                         {estimateIsApprox ? '約 ' : ''}
                         <CountUp value={estimatedCount} />
                         <span className="text-sm font-bold ml-0.5">社{estimateIsApprox ? '以上' : ''}</span>
-                        {estimateIsApprox && <span className="ml-1 animate-bounce inline-block">🎉</span>}
+                        {estimateIsApprox && <span className="material-symbols-outlined ml-1 animate-bounce inline-block text-xl align-middle">celebration</span>}
                       </p>
                       {!estimateIsApprox && estimatedCount < count && (
-                        <p className="text-[10px] text-amber-700 mt-1 font-bold">
-                          ⚠️ 該当数が少ないため、実際は{estimatedCount.toLocaleString()}社程度になります
+                        <p className="text-[10px] text-amber-700 mt-1 font-bold inline-flex items-center gap-1">
+                          <span className="material-symbols-outlined text-xs">warning</span>該当数が少ないため、実際は{estimatedCount.toLocaleString()}社程度になります
                         </p>
                       )}
                       {estimateNote && (
@@ -559,7 +559,7 @@ export default function DoyalistHomePage() {
               </div>
 
               <div className="py-4 space-y-2">
-                <p className="text-xs font-bold text-slate-700 mb-2">📋 取得できる情報</p>
+                <p className="text-xs font-bold text-slate-700 mb-2 inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm">checklist</span>取得できる情報</p>
                 {PREVIEW_FIELDS.map((f) => (
                   <div key={f.label} className="flex items-start gap-2 text-xs text-slate-600">
                     <span className={f.always ? 'text-emerald-500' : 'text-cyan-500'}>{f.always ? '✓' : '◯'}</span>
@@ -574,10 +574,10 @@ export default function DoyalistHomePage() {
 
               <div className="pt-4 border-t border-slate-100 space-y-2">
                 <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span>📡</span><span>gBizINFO（経済産業省）</span>
+                  <span className="material-symbols-outlined text-base">cell_tower</span><span>gBizINFO（経済産業省）</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span>📥</span><span>CSV/Excelダウンロード可</span>
+                  <span className="material-symbols-outlined text-base">download</span><span>CSV/Excelダウンロード可</span>
                 </div>
               </div>
             </div>
@@ -602,7 +602,7 @@ export default function DoyalistHomePage() {
                 <div>
                   <h2 className="text-lg font-bold text-[#0a1530]">
                     <CountUp value={companies.length} duration={1500} />社できました
-                    <span className="ml-2 inline-block animate-pulse">✨</span>
+                    <span className="material-symbols-outlined ml-2 inline-block animate-pulse text-xl align-middle">auto_awesome</span>
                   </h2>
                   <p className="text-xs font-medium text-slate-500">
                     {companies.length < count ? `指定${count.toLocaleString()}社のうち${companies.length}社のみ該当（条件を緩めると増えます）` : `ダウンロードで保存できます`}
@@ -610,8 +610,8 @@ export default function DoyalistHomePage() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={downloadCSV} className="px-4 py-2.5 bg-[#0a1530] text-white font-bold text-sm rounded-xl shadow hover:bg-[#13234d] active:scale-95 transition-all">📥 CSV</button>
-                <button onClick={downloadExcel} className="px-4 py-2.5 bg-cyan-500 text-white font-bold text-sm rounded-xl shadow hover:bg-cyan-600 active:scale-95 transition-all">📊 Excel</button>
+                <button onClick={downloadCSV} className="inline-flex items-center gap-1 px-4 py-2.5 bg-[#0a1530] text-white font-bold text-sm rounded-xl shadow hover:bg-[#13234d] active:scale-95 transition-all"><span className="material-symbols-outlined text-base">download</span>CSV</button>
+                <button onClick={downloadExcel} className="inline-flex items-center gap-1 px-4 py-2.5 bg-cyan-500 text-white font-bold text-sm rounded-xl shadow hover:bg-cyan-600 active:scale-95 transition-all"><span className="material-symbols-outlined text-base">bar_chart</span>Excel</button>
               </div>
             </div>
 
@@ -633,9 +633,9 @@ export default function DoyalistHomePage() {
               <div className="flex flex-wrap gap-2 items-center">
                 <span className="text-[11px] font-bold text-slate-500">絞り込み:</span>
                 {[
-                  { state: filterHasUrl, set: setFilterHasUrl, label: '🌐 公式URLあり', count: companies.filter(c => !!c.website).length },
-                  { state: filterHasRep, set: setFilterHasRep, label: '👤 代表者名あり', count: companies.filter(c => !!c.enrichedData?.representative).length },
-                  { state: filterHasEmployees, set: setFilterHasEmployees, label: '👥 従業員数あり', count: companies.filter(c => isValidEmployees(c.enrichedData?.employeeCount)).length },
+                  { state: filterHasUrl, set: setFilterHasUrl, icon: 'language', label: '公式URLあり', count: companies.filter(c => !!c.website).length },
+                  { state: filterHasRep, set: setFilterHasRep, icon: 'person', label: '代表者名あり', count: companies.filter(c => !!c.enrichedData?.representative).length },
+                  { state: filterHasEmployees, set: setFilterHasEmployees, icon: 'groups', label: '従業員数あり', count: companies.filter(c => isValidEmployees(c.enrichedData?.employeeCount)).length },
                 ].map((f, i) => (
                   <button
                     key={i}
@@ -646,7 +646,7 @@ export default function DoyalistHomePage() {
                         : 'bg-white text-slate-600 border-slate-200 hover:border-cyan-300 hover:bg-cyan-50'
                     }`}
                   >
-                    <span>{f.label}</span>
+                    <span className="inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm">{f.icon}</span>{f.label}</span>
                     <span className={`text-[10px] px-1.5 py-0.5 rounded ${f.state ? 'bg-white/20' : 'bg-slate-100 text-slate-500'}`}>{f.count}</span>
                   </button>
                 ))}
@@ -708,33 +708,33 @@ export default function DoyalistHomePage() {
                           )}
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                          {isValidIndustry(c.industry) && <InfoRow icon="🏢" label="業種" value={c.industry!} />}
-                          {(ed.address || c.region) && <InfoRow icon="📍" label="所在地" value={ed.address || c.region!} />}
-                          {ed.representative && <InfoRow icon="👤" label="代表者" value={ed.representative} />}
-                          {isValidEmployees(ed.employeeCount) && <InfoRow icon="👥" label="従業員数" value={`${ed.employeeCount} 名`} />}
-                          {ed.capital && <InfoRow icon="💰" label="資本金" value={formatCapital(ed.capital)} />}
-                          {ed.foundedYear && <InfoRow icon="📅" label="設立年" value={`${ed.foundedYear}年`} />}
+                          {isValidIndustry(c.industry) && <InfoRow icon="apartment" label="業種" value={c.industry!} />}
+                          {(ed.address || c.region) && <InfoRow icon="location_on" label="所在地" value={ed.address || c.region!} />}
+                          {ed.representative && <InfoRow icon="person" label="代表者" value={ed.representative} />}
+                          {isValidEmployees(ed.employeeCount) && <InfoRow icon="groups" label="従業員数" value={`${ed.employeeCount} 名`} />}
+                          {ed.capital && <InfoRow icon="payments" label="資本金" value={formatCapital(ed.capital)} />}
+                          {ed.foundedYear && <InfoRow icon="event" label="設立年" value={`${ed.foundedYear}年`} />}
                         </div>
                         {(ed.businessSummary || c.description) && (
                           <div className="bg-cyan-50/50 border-l-4 border-cyan-400 px-3 py-2 rounded-r-lg">
-                            <p className="text-[11px] font-bold text-cyan-700 mb-0.5">📝 事業概要</p>
+                            <p className="text-[11px] font-bold text-cyan-700 mb-0.5 inline-flex items-center gap-1"><span className="material-symbols-outlined text-sm">description</span>事業概要</p>
                             <p className="text-sm text-slate-700 leading-relaxed">{ed.businessSummary || c.description}</p>
                           </div>
                         )}
                         <div className="flex flex-wrap items-center gap-2 pt-1">
                           {c.website ? (
                             <a href={c.website.startsWith('http') ? c.website : `https://${c.website}`} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 bg-cyan-100 text-cyan-700 text-xs font-bold rounded-lg hover:bg-cyan-200 transition-colors group">
-                              🌐 公式サイト
+                              <span className="material-symbols-outlined text-sm">language</span>公式サイト
                               <span className="material-symbols-outlined text-sm group-hover:translate-x-0.5 transition-transform">arrow_outward</span>
                             </a>
                           ) : (
                             <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-400 text-xs font-bold rounded-lg border border-dashed border-slate-200" title="gBizINFOに公式URLが登録されていません">
-                              🌐 登録URLなし
+                              <span className="material-symbols-outlined text-sm">language</span>登録URLなし
                             </span>
                           )}
                           {gbizUrl && (
                             <a href={gbizUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg hover:bg-slate-200 transition-colors group" title="Google検索で企業情報を調べる">
-                              🔍 企業情報を検索
+                              <span className="material-symbols-outlined text-sm">search</span>企業情報を検索
                               <span className="material-symbols-outlined text-sm group-hover:translate-x-0.5 transition-transform">arrow_outward</span>
                             </a>
                           )}
@@ -745,7 +745,7 @@ export default function DoyalistHomePage() {
                           )}
                         </div>
                         <div className="pt-2 mt-1 border-t border-slate-100 flex items-center gap-2 text-[10px] text-slate-400">
-                          <span>📡 情報ソース:</span>
+                          <span className="inline-flex items-center gap-0.5"><span className="material-symbols-outlined text-xs">cell_tower</span>情報ソース:</span>
                           <span>{c.source === 'gbizinfo' ? 'gBizINFO（経済産業省）' : c.source === 'corporate_number' ? '法人番号公表サイト（国税庁）' : c.source?.includes('+') ? 'gBizINFO + 法人番号公表サイト' : c.source || '不明'}</span>
                         </div>
                       </div>
@@ -831,7 +831,7 @@ function formatCapital(v: string | number): string {
 function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
     <div className="flex items-start gap-1.5">
-      <span className="flex-shrink-0">{icon}</span>
+      <span className="material-symbols-outlined flex-shrink-0 text-slate-400 text-base">{icon}</span>
       <div className="min-w-0 flex-1">
         <span className="text-slate-400 mr-1">{label}:</span>
         <span className="text-[#0a1530] font-medium">{value}</span>
@@ -840,7 +840,7 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value: s
   )
 }
 
-function Field({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: readonly string[] }) {
+function Field({ label, value, onChange, options }: { label: ReactNode; value: string; onChange: (v: string) => void; options: readonly string[] }) {
   return (
     <div>
       <label className="block text-sm font-bold text-[#0a1530] mb-2">{label}</label>

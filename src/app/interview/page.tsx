@@ -88,7 +88,7 @@ const UPLOAD_TIPS = [
   { icon: 'translate', text: '10言語への翻訳機能で、グローバル展開も対応', emoji: '🌐' },
 ]
 
-const FLOATING_EMOJIS = ['🎙️', '📝', '✨', '🎬', '🎵', '💡', '⚡', '🔥', '🚀', '💜']
+const FLOATING_ICONS = ['mic', 'description', 'auto_awesome', 'movie', 'music_note', 'lightbulb', 'bolt', 'local_fire_department', 'rocket_launch', 'favorite']
 
 export default function InterviewDashboard() {
   const { data: session } = useSession()
@@ -549,10 +549,10 @@ export default function InterviewDashboard() {
           >
             {/* 浮遊エモジ背景 */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-              {FLOATING_EMOJIS.map((emoji, i) => (
+              {FLOATING_ICONS.map((icon, i) => (
                 <motion.div
                   key={i}
-                  className="absolute text-2xl opacity-20"
+                  className="absolute opacity-20 text-white"
                   style={{
                     left: `${5 + (i * 10) % 90}%`,
                     top: `${10 + (i * 13) % 70}%`,
@@ -571,7 +571,7 @@ export default function InterviewDashboard() {
                     delay: i * 0.3,
                   }}
                 >
-                  {emoji}
+                  <span className="material-symbols-outlined text-2xl">{icon}</span>
                 </motion.div>
               ))}
             </div>
@@ -637,12 +637,12 @@ export default function InterviewDashboard() {
                     <div className="absolute inset-0 flex flex-col items-center justify-center">
                       {isAllDone ? (
                         <motion.span
-                          className="text-4xl"
+                          className="material-symbols-outlined text-4xl text-white"
                           initial={{ scale: 0, rotate: -180 }}
                           animate={{ scale: 1, rotate: 0 }}
                           transition={{ type: 'spring', stiffness: 200, damping: 15 }}
                         >
-                          🎉
+                          celebration
                         </motion.span>
                       ) : (
                         <>
@@ -864,8 +864,8 @@ export default function InterviewDashboard() {
                       transition={{ duration: 0.3 }}
                       className="flex items-start gap-3"
                     >
-                      <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm text-lg">
-                        {UPLOAD_TIPS[tipIndex].emoji}
+                      <div className="w-9 h-9 bg-white rounded-xl flex items-center justify-center flex-shrink-0 shadow-sm">
+                        <span className="material-symbols-outlined text-[#7f19e6] text-xl">{UPLOAD_TIPS[tipIndex].icon}</span>
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] font-black text-[#7f19e6]/50 uppercase tracking-wider mb-0.5">豆知識</p>

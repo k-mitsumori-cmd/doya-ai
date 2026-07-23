@@ -13,10 +13,10 @@ import type { MovieProjectData } from '@/lib/movie/types'
 import { MOVIE_TEMPLATES } from '@/lib/movie/templates'
 
 const STEPS = [
-  { icon: '📝', title: '商品情報を入力', desc: '商品名・特徴・ターゲットを入力するだけ。URLから自動解析も可能。' },
-  { icon: '🤖', title: 'AIが企画を生成', desc: '3パターンの動画企画をAIが自動生成。ストーリーライン・シーン構成付き。' },
-  { icon: '✏️', title: '編集・カスタマイズ', desc: 'テキスト・背景・BGMを自由に編集。リアルタイムプレビューで確認。' },
-  { icon: '🎬', title: 'ダウンロード', desc: 'MP4またはGIF形式でダウンロード。YouTube・TikTokへそのまま投稿可能。' },
+  { icon: 'description', title: '商品情報を入力', desc: '商品名・特徴・ターゲットを入力するだけ。URLから自動解析も可能。' },
+  { icon: 'smart_toy', title: 'AIが企画を生成', desc: '3パターンの動画企画をAIが自動生成。ストーリーライン・シーン構成付き。' },
+  { icon: 'edit', title: '編集・カスタマイズ', desc: 'テキスト・背景・BGMを自由に編集。リアルタイムプレビューで確認。' },
+  { icon: 'movie', title: 'ダウンロード', desc: 'MP4またはGIF形式でダウンロード。YouTube・TikTokへそのまま投稿可能。' },
 ]
 
 const PLATFORMS = [
@@ -64,7 +64,7 @@ function ProjectCard({ project }: { project: MovieProjectData }) {
           {project.thumbnailUrl ? (
             <img src={project.thumbnailUrl} alt={project.name} className="w-full h-full object-cover" />
           ) : (
-            <span className="text-4xl opacity-40">🎬</span>
+            <span className="material-symbols-outlined text-4xl opacity-40">movie</span>
           )}
           {project.status === 'rendering' && (
             <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -120,7 +120,7 @@ export default function MovieDashboard() {
             transition={{ duration: 0.5 }}
           >
             <div className="inline-flex items-center gap-2 bg-rose-500/20 border border-rose-500/30 rounded-full px-4 py-1.5 mb-6">
-              <span className="text-rose-300 text-sm font-semibold">🎬 NEW</span>
+              <span className="text-rose-300 text-sm font-semibold inline-flex items-center gap-1"><span className="material-symbols-outlined" style={{ fontSize: 16 }}>movie</span>NEW</span>
               <span className="text-rose-200/70 text-sm">AIで動画広告を自動生成</span>
             </div>
             <h1 className="text-4xl md:text-6xl font-black text-white mb-4 leading-tight">
@@ -187,7 +187,7 @@ export default function MovieDashboard() {
               </div>
             ) : (
               <div className="rounded-xl border border-dashed border-rose-900/40 p-8 text-center">
-                <div className="text-4xl mb-3">🎬</div>
+                <div className="material-symbols-outlined text-4xl mb-3">movie</div>
                 <p className="text-rose-200/60 mb-4">まだ動画プロジェクトがありません</p>
                 <Link
                   href="/movie/new/concept"
@@ -215,7 +215,7 @@ export default function MovieDashboard() {
                 transition={{ delay: i * 0.1, duration: 0.4 }}
                 className="flex gap-4 rounded-xl border border-rose-900/30 bg-slate-900/40 p-5"
               >
-                <div className="text-3xl flex-shrink-0">{step.icon}</div>
+                <div className="flex-shrink-0"><span className="material-symbols-outlined text-3xl text-rose-300">{step.icon}</span></div>
                 <div>
                   <div className="text-rose-300 text-xs font-bold mb-1">STEP {i + 1}</div>
                   <h3 className="text-white font-bold mb-1">{step.title}</h3>

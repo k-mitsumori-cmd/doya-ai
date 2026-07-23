@@ -162,13 +162,13 @@ interface GeneratedData {
 
 // ローディング中のフェーズ・候補アニメーション（コンポーネント外で定義）
 const LOADING_PHASES = [
-  { label: 'サイトを分析中', icon: '🔍', detail: 'HTML構造・メタ情報・コンテンツを解析しています...' },
-  { label: 'ターゲット層を推定中', icon: '🎯', detail: '業界・サービス特性から理想的な顧客像を推定しています...' },
-  { label: 'ペルソナ候補を生成中', icon: '👥', detail: '複数のペルソナパターンを検討しています...' },
-  { label: '課題・ペインポイントを深掘り中', icon: '📊', detail: 'リアルなエピソードと心理を構築しています...' },
-  { label: '行動パターンを分析中', icon: '🧠', detail: '情報収集行動・購買心理を設計しています...' },
-  { label: '導入ストーリーを構築中', icon: '📖', detail: '認知〜導入までのカスタマージャーニーを作成しています...' },
-  { label: '最終ペルソナを選定中', icon: '✨', detail: '最もリアルなペルソナを選定・仕上げています...' },
+  { label: 'サイトを分析中', icon: 'search', detail: 'HTML構造・メタ情報・コンテンツを解析しています...' },
+  { label: 'ターゲット層を推定中', icon: 'target', detail: '業界・サービス特性から理想的な顧客像を推定しています...' },
+  { label: 'ペルソナ候補を生成中', icon: 'groups', detail: '複数のペルソナパターンを検討しています...' },
+  { label: '課題・ペインポイントを深掘り中', icon: 'bar_chart', detail: 'リアルなエピソードと心理を構築しています...' },
+  { label: '行動パターンを分析中', icon: 'psychology', detail: '情報収集行動・購買心理を設計しています...' },
+  { label: '導入ストーリーを構築中', icon: 'menu_book', detail: '認知〜導入までのカスタマージャーニーを作成しています...' },
+  { label: '最終ペルソナを選定中', icon: 'auto_awesome', detail: '最もリアルなペルソナを選定・仕上げています...' },
 ]
 
 const FAKE_CANDIDATES = [
@@ -814,8 +814,8 @@ export default function PersonaPage() {
             {/* フェーズ表示 */}
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-xl">
-                  {LOADING_PHASES[loadingPhase].icon}
+                <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-600">
+                  <span className="material-symbols-outlined text-xl">{LOADING_PHASES[loadingPhase].icon}</span>
                 </div>
                 <div className="flex-1">
                   <AnimatePresence mode="wait">
@@ -1048,7 +1048,7 @@ export default function PersonaPage() {
                             </div>
                           ) : (
                             <div className="text-center text-gray-300 text-xs leading-relaxed">
-                              <p className="text-3xl mb-1">👤</p>
+                              <p className="material-symbols-outlined text-3xl mb-1">person</p>
                               <p>写真</p>
                             </div>
                           )}

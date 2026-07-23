@@ -17,11 +17,11 @@ type PreviewPattern = {
 }
 
 const moodOptions: Array<{ value: Mood; label: string; icon: string; desc: string }> = [
-  { value: 'japanese_modern', label: '日本的モダン', icon: '🎌', desc: '余白と信頼感を重視' },
-  { value: 'wa_tech', label: '和×テック', icon: '⛩️', desc: '伝統と革新の融合' },
-  { value: 'minimal', label: 'ミニマル', icon: '◯', desc: '究極にシンプル' },
-  { value: 'bold', label: '力強い', icon: '💪', desc: 'インパクト重視' },
-  { value: 'startup', label: 'スタートアップ', icon: '🚀', desc: 'フレッシュ＆動的' },
+  { value: 'japanese_modern', label: '日本的モダン', icon: 'brush', desc: '余白と信頼感を重視' },
+  { value: 'wa_tech', label: '和×テック', icon: 'temple_buddhist', desc: '伝統と革新の融合' },
+  { value: 'minimal', label: 'ミニマル', icon: 'circle', desc: '究極にシンプル' },
+  { value: 'bold', label: '力強い', icon: 'bolt', desc: 'インパクト重視' },
+  { value: 'startup', label: 'スタートアップ', icon: 'rocket_launch', desc: 'フレッシュ＆動的' },
 ]
 
 const industryOptions: Array<{ value: Industry; label: string; color: string }> = [
@@ -278,7 +278,7 @@ export default function DoyaLogoPage() {
                             : 'bg-white/5 border-white/10 hover:border-white/20'}
                         `}
                       >
-                        <div className="text-2xl mb-2">{opt.icon}</div>
+                        <div className="text-2xl mb-2 flex items-center justify-center"><span className="material-symbols-outlined text-[28px]">{opt.icon}</span></div>
                         <div className="text-sm font-semibold">{opt.label}</div>
                         <div className="text-xs text-white/40 mt-1">{opt.desc}</div>
                       </button>
