@@ -20,6 +20,7 @@ export function LpJsonLd({
   faq,
   price = '9980',
   hasFreeTier = true,
+  includeSoftwareApp = true,
 }: {
   name: string
   path: string
@@ -29,6 +30,8 @@ export function LpJsonLd({
   faq?: Faq[]
   price?: string
   hasFreeTier?: boolean
+  /** 親layoutが既にSoftwareApplicationを注入している場合はfalseで重複回避 */
+  includeSoftwareApp?: boolean
 }) {
   const url = abs(path)
 
@@ -77,7 +80,7 @@ export function LpJsonLd({
       }
     : null
 
-  const graph = [softwareApp, breadcrumb, ...(faqPage ? [faqPage] : [])]
+  const graph = [...(includeSoftwareApp ? [softwareApp] : []), breadcrumb, ...(faqPage ? [faqPage] : [])]
 
   return (
     <>
