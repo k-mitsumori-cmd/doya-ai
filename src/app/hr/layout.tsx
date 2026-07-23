@@ -1,21 +1,28 @@
 import type { Metadata } from 'next'
-import { generateToolSchema } from '@/lib/seo'
-import HrLayout from '@/components/hr/HrLayout'
+import { buildServiceMetadata } from '@/lib/seo'
+import { getServiceById } from '@/lib/services'
+import { LpJsonLd } from '@/components/lp'
+import HrLayoutShell from '@/components/hr/HrLayout'
+import { FAQ } from './lp-data'
 
-export const metadata: Metadata = {
-  alternates: {
-    canonical: '/hr',
-  },
-  title: 'ドヤHR | 人を活かすAI',
-  description: '中小企業のためのAIタレントマネジメントシステム',
-}
+export const metadata: Metadata = buildServiceMetadata('hr', {
+  keywords: ['タレントマネジメント', '人事評価', '従業員データベース', 'MBO', '組織図', 'HR', '人材管理', '中小企業 人事'],
+})
+
+const SVC = getServiceById('hr')!
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const toolSchema = generateToolSchema({ path: '/hr', name: 'ドヤHR', description: '人材データベース・評価・スキル管理をAIで支援するタレントマネジメントシステム。', category: 'BusinessApplication' })
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(toolSchema) }} />
-      <HrLayout>{children}</HrLayout>
+      <LpJsonLd
+        name={SVC.name}
+        path={SVC.href}
+        description={SVC.longDescription || SVC.description}
+        category="BusinessApplication"
+        features={SVC.features}
+        faq={FAQ}
+      />
+      <HrLayoutShell>{children}</HrLayoutShell>
     </>
   )
 }

@@ -2,14 +2,17 @@
 // SEO設定
 // ============================================
 
+import type { Metadata } from 'next'
 import { SEO_PRICING, BANNER_PRICING, KANTAN_PRICING, PERSONA_PRICING } from './pricing'
+import { getServiceById } from './services'
 
 export const SITE_CONFIG = {
   name: 'ドヤマーケAI',
   tagline: 'ドヤマーケAIのサービス群',
   description: 'ドヤマーケAIは、記事生成、広告バナー、営業リスト、人事、勤怠、SFA、資料作成などをキャラクターと一緒に試せるAI SaaSサービス群です。SaaSは死にましぇん、ドヤマーケ、株式会社スリスタ、三森 捷暉の運営文脈から生まれています。',
   // 末尾スラッシュは定義時に一度だけ除去（url を使う全箇所＝org url / service url / OG url の二重スラッシュを防ぐ）
-  url: (process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.vercel.app').replace(/\/+$/, ''),
+  // 既定は本番ドメイン（NEXT_PUBLIC_APP_URL 未設定でも canonical/OG が vercel.app に化けないように）
+  url: (process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.surisuta.jp').replace(/\/+$/, ''),
   locale: 'ja_JP',
   twitter: '@doyamarke',
   // OGP画像のベースURL
@@ -316,4 +319,58 @@ export function generatePageTitle(title: string, suffix = true): string {
     return `${title} | ${SITE_CONFIG.name}`
   }
   return title
+}
+
+// ============================================
+// サービスLP用メタデータ・ファクトリ（正本 = services.ts）
+// 各サービス layout.tsx の手書き metadata をこれ1本に置換する。
+// canonical は必ず自ページの href（相対 → metadataBase で解決）を指し、
+// root layout の '/' 継承バグ（別ページのcanonicalがトップに吸われる）を解消する。
+// ============================================
+export function buildServiceMetadata(
+  serviceId: string,
+  opts?: {
+    /** タイトルの説明部（既定は service.description の要約）。root templateで ` | ドヤマーケAI` が付く */
+    tagline?: string
+    keywords?: string[]
+    /** OG画像パス（既定は動的OGルート /og/{id}） */
+    ogPath?: string
+    /** LP以外のサブページに使う場合の canonical パス上書き（例: '/seo/pricing'） */
+    canonicalPath?: string
+  }
+): Metadata {
+  const svc = getServiceById(serviceId)
+  if (!svc) {
+    // 未知IDでも壊れないフォールバック
+    return { alternates: { canonical: `/${serviceId}` } }
+  }
+  const tagline = opts?.tagline || svc.description
+  const title = `${svc.name}｜${tagline}`
+  const description = svc.longDescription || svc.description
+  const canonical = opts?.canonicalPath || svc.href
+  const ogImage = `${SITE_CONFIG.url}${opts?.ogPath || `/og/${svc.id}`}`
+
+  return {
+    title,
+    description,
+    ...(opts?.keywords?.length ? { keywords: opts.keywords } : {}),
+    alternates: { canonical },
+    openGraph: {
+      type: 'website',
+      locale: SITE_CONFIG.locale,
+      url: `${SITE_CONFIG.url}${canonical}`,
+      siteName: SITE_CONFIG.name,
+      title,
+      description,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: `${svc.name} - ドヤマーケAI` }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      site: SITE_CONFIG.twitter,
+      creator: SITE_CONFIG.twitter,
+      title,
+      description,
+      images: [ogImage],
+    },
+  }
 }

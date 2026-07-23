@@ -1,62 +1,25 @@
-import { Metadata } from 'next'
-import { SITE_CONFIG, SERVICE_SEO, generateSoftwareApplicationSchema } from '@/lib/seo'
+import type { Metadata } from 'next'
+import { buildServiceMetadata } from '@/lib/seo'
+import { getServiceById } from '@/lib/services'
+import { LpJsonLd } from '@/components/lp'
+import { FAQ } from './lp-data'
 
-// ============================================
-// カンタンマーケAI メタデータ
-// ============================================
-export const metadata: Metadata = {
-  title: {
-    default: SERVICE_SEO.kantan.title,
-    template: `%s | カンタンマーケAI`,
-  },
-  description: SERVICE_SEO.kantan.description,
-  keywords: SERVICE_SEO.kantan.keywords,
-  
-  alternates: {
-    canonical: '/kantan',
-  },
-  
-  openGraph: {
-    type: 'website',
-    locale: SITE_CONFIG.locale,
-    url: `${SITE_CONFIG.url}/kantan`,
-    siteName: SITE_CONFIG.name,
-    title: SERVICE_SEO.kantan.title,
-    description: SERVICE_SEO.kantan.description,
-    images: [
-      {
-        url: SERVICE_SEO.kantan.ogImage,
-        width: 1200,
-        height: 630,
-        alt: 'カンタンマーケAI - マーケティング業務をAIで劇的効率化',
-      },
-    ],
-  },
-  
-  twitter: {
-    card: 'summary_large_image',
-    site: SITE_CONFIG.twitter,
-    title: SERVICE_SEO.kantan.title,
-    description: SERVICE_SEO.kantan.description,
-    images: [SERVICE_SEO.kantan.ogImage],
-  },
-}
+export const metadata: Metadata = buildServiceMetadata('kantan', {
+  keywords: ['マーケティングAI', 'マーケ業務効率化', 'AIエージェント', 'LP構成案', 'バナーコピー', '広告分析', 'メルマガ作成', '競合分析', 'プロンプト不要'],
+})
 
-export default function KantanLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  // 構造化データ
-  const softwareSchema = generateSoftwareApplicationSchema('kantan')
+const SVC = getServiceById('kantan')!
 
+export default function KantanLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(softwareSchema),
-        }}
+      <LpJsonLd
+        name={SVC.name}
+        path={SVC.href}
+        description={SVC.longDescription || SVC.description}
+        category="BusinessApplication"
+        features={SVC.features}
+        faq={FAQ}
       />
       {children}
     </>

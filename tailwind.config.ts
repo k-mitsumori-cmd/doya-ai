@@ -9,11 +9,31 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Brand Colors
+        // Brand Colors（2026-06 リブランド: メインは青 #0066ff）
         brand: {
+          DEFAULT: '#0066ff',
+          50: '#eaf2ff',
+          100: '#d6e4ff',
+          200: '#adc9ff',
+          300: '#7aa7ff',
+          400: '#3d80ff',
+          500: '#0066ff',
+          600: '#005ae6',
+          700: '#0047b3',
+          800: '#003985',
+          900: '#002f6b',
+          ink: '#0a1f44',
+          // 旧トークン（後方互換・順次置換）
           blue: '#3B82F6',
           purple: '#8B5CF6',
           pink: '#EC4899',
+        },
+        // アクセント（差し色・LPのサービス別アクセントの既定候補）
+        accent: {
+          rose: '#ff1e72',
+          gold: '#ffd400',
+          aqua: '#00e0ff',
+          sky: '#009bff',
         },
         // Slate (Dark theme base)
         slate: {

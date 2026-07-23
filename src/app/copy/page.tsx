@@ -6,18 +6,20 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import {
   PenLine,
-  Zap,
   BarChart3,
-  Download,
-  RefreshCw,
-  Shield,
   ChevronRight,
   Plus,
   Clock,
   Sparkles,
 } from 'lucide-react'
-import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { getServiceById } from '@/lib/services'
+import {
+  LpShell, Hero, HowItWorks, Benefits, FeatureGrid, UseCases, FaqSection, CtaBand,
+} from '@/components/lp'
+import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
+
+const SVC = getServiceById('copy')!
 
 interface CopyProject {
   id: string
@@ -56,59 +58,6 @@ export default function CopyPage() {
       setLoading(false)
     }
   }
-
-  const FEATURES = [
-    {
-      icon: PenLine,
-      title: '20案以上を一括生成',
-      desc: '1回の生成でディスプレイ広告コピーを20案以上出力。A/Bテスト用の大量バリエーションを瞬時に作成。',
-      color: 'text-amber-500',
-      bg: 'bg-amber-500/10',
-    },
-    {
-      icon: Sparkles,
-      title: '5種類のAIコピーライター',
-      desc: 'ストレート・エモーショナル・ロジカル・プロボカティブ・ストーリーの5タイプが異なる切り口で提案。',
-      color: 'text-orange-500',
-      bg: 'bg-orange-500/10',
-    },
-    {
-      icon: BarChart3,
-      title: '検索広告RSA対応',
-      desc: 'Google/Yahoo!広告の文字数制限を自動遵守。レスポンシブ検索広告のアセットをまとめて生成。',
-      color: 'text-yellow-500',
-      bg: 'bg-yellow-500/10',
-    },
-    {
-      icon: RefreshCw,
-      title: 'チャット形式ブラッシュアップ',
-      desc: '「もっとカジュアルに」「数字を入れて」など自然な指示で修正。リビジョン履歴も自動保存。',
-      color: 'text-amber-600',
-      bg: 'bg-amber-600/10',
-    },
-    {
-      icon: Shield,
-      title: 'レギュレーション設定',
-      desc: 'NG表現・必須キーワード・文字数制限をプロジェクトごとに設定。薬機法・景品表示法に対応。',
-      color: 'text-orange-600',
-      bg: 'bg-orange-600/10',
-    },
-    {
-      icon: Download,
-      title: 'CSV/Excelエクスポート',
-      desc: 'Google広告・Yahoo!広告のインポート形式に準拠したCSVで一括エクスポート。',
-      color: 'text-yellow-600',
-      bg: 'bg-yellow-600/10',
-    },
-  ]
-
-  const WRITER_TYPES = [
-    { name: 'ストレート', desc: 'ベネフィット直訴型', emoji: '🎯' },
-    { name: 'エモーショナル', desc: 'ペインポイント訴求型', emoji: '❤️' },
-    { name: 'ロジカル', desc: 'データ・実績訴求型', emoji: '📊' },
-    { name: 'プロボカティブ', desc: '常識を覆す切り口', emoji: '⚡' },
-    { name: 'ストーリー', desc: 'ビフォーアフター型', emoji: '📖' },
-  ]
 
   // セッション読み込み中 → skeleton/pulse ローディング
   if (isSessionLoading) {
@@ -157,7 +106,7 @@ export default function CopyPage() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
-                <span>✍️</span> ドヤコピーAI
+                <PenLine className="w-6 h-6 text-amber-500" /> ドヤコピーAI
               </h1>
               <p className="text-gray-500 text-sm mt-1">広告コピーを、AIで量産する。</p>
             </div>
@@ -249,104 +198,39 @@ export default function CopyPage() {
     )
   }
 
-  // 未ログイン → LP表示
+  // 未ログイン → 共通LPキットでランディング表示
+  // CopyAppLayout（サイドバー付きシェル）の内側に描画されるため、
+  // fixed オーバーレイでビューポート全体を覆い、LPを全幅で見せる。
   return (
-    <div className="min-h-screen bg-white text-gray-900">
-      {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-white to-orange-50" />
-        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 py-16 sm:py-24 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-amber-100 border border-amber-300 rounded-full text-amber-700 text-sm font-bold mb-6">
-              <Zap className="w-4 h-4" />
-              NEW — ドヤコピーAI
-            </div>
-            <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-4 leading-tight">
-              広告コピーを、<br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-500">
-                AIで量産する。
-              </span>
-            </h1>
-            <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-              商品URLとペルソナを入力するだけで、5種類のAIコピーライターが
-              20案以上の広告コピーを瞬時に生成。ブラッシュアップ機能で実用品質まで磨き上げる。
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link
-                href="/api/auth/signin?callbackUrl=/copy/new"
-                className="inline-flex items-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-400 text-white font-black rounded-2xl transition-colors text-lg shadow-lg shadow-amber-500/20"
-              >
-                <Sparkles className="w-5 h-5" />
-                無料で試す（月10回）
-              </Link>
-              <Link
-                href="/copy/guide"
-                className="inline-flex items-center gap-2 px-8 py-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-2xl transition-colors text-lg border border-gray-300"
-              >
-                使い方を見る
-                <ChevronRight className="w-5 h-5" />
-              </Link>
-            </div>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* AIコピーライタータイプ */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-        <h2 className="text-2xl font-black text-gray-900 text-center mb-8">
-          5種類のAIコピーライターが<br className="sm:hidden" />異なる切り口で提案
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-          {WRITER_TYPES.map((writer) => (
-            <div
-              key={writer.name}
-              className="p-4 bg-white border border-gray-200 rounded-xl text-center shadow-sm"
-            >
-              <div className="text-2xl mb-2">{writer.emoji}</div>
-              <p className="text-sm font-bold text-gray-900">{writer.name}</p>
-              <p className="text-xs text-gray-500 mt-1">{writer.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* 機能一覧 */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 py-12">
-        <h2 className="text-2xl font-black text-gray-900 text-center mb-8">すべての機能</h2>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {FEATURES.map((f) => (
-            <div key={f.title} className="p-5 bg-white border border-gray-200 rounded-xl shadow-sm">
-              <div className={`inline-flex p-2 rounded-lg ${f.bg} mb-3`}>
-                <f.icon className={`w-5 h-5 ${f.color}`} />
-              </div>
-              <h3 className="font-bold text-gray-900 mb-1">{f.title}</h3>
-              <p className="text-sm text-gray-500">{f.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="max-w-2xl mx-auto px-4 sm:px-6 py-16 text-center">
-        <h2 className="text-2xl font-black text-gray-900 mb-4">今すぐ試してみる</h2>
-        <p className="text-gray-500 mb-6">無料プランで月10回まで生成可能。クレジットカード不要。</p>
-        <Link
-          href="/api/auth/signin?callbackUrl=/copy/new"
-          className="inline-flex items-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-400 text-white font-black rounded-2xl transition-colors text-lg shadow-lg shadow-amber-500/20"
-        >
-          <Sparkles className="w-5 h-5" />
-          無料で始める
-        </Link>
-        <p className="text-gray-400 text-sm mt-4">
-          <Link href="/copy/pricing" className="text-amber-600 hover:underline">
-            料金プランを見る
-          </Link>
-        </p>
-      </section>
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-white">
+      <LpShell serviceName="ドヤコピーAI" icon="edit_note" ctaHref={CTA} ctaLabel="無料ではじめる" accent={ACCENT}>
+        <Hero
+          eyebrow="広告コピー生成AI"
+          title="広告コピーを、"
+          highlight="AIで量産する。"
+          subtitle="商材とペルソナを入力するだけ。5人のAIコピーライターが、異なる切り口で20案以上のコピーを瞬時に仕上げます。"
+          note="無料プランで月10回までお試しいただけます"
+          ctaHref={CTA}
+          mood="working"
+        />
+        <HowItWorks
+          title={<>入力するだけの<br className="md:hidden" />3ステップ</>}
+          lead="アイデア出しから入稿データの書き出しまで、そのまま自動化します。"
+          steps={STEPS}
+        />
+        <Benefits title="なぜ、コピー制作が変わるのか" items={BENEFITS} />
+        <FeatureGrid lead="広告コピーづくりに必要な機能を、ひとつの画面に。" features={SVC.features} />
+        {SVC.useCases && <UseCases items={SVC.useCases} />}
+        <FaqSection items={FAQ} />
+        <CtaBand
+          title={<>次の広告、<br className="md:hidden" />コピーで差をつける。</>}
+          subtitle="商材とペルソナを入れるだけ。今日からコピー制作が変わります。"
+          ctaHref={CTA}
+          ctaLabel="無料ではじめる"
+          note="無料プランで月10回まで。クレジットカード登録は不要です"
+          mood="jump"
+        />
+      </LpShell>
     </div>
   )
 }

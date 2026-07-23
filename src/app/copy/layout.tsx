@@ -1,37 +1,27 @@
 import type { Metadata } from 'next'
-import { generateToolSchema } from '@/lib/seo'
+import { buildServiceMetadata } from '@/lib/seo'
+import { getServiceById } from '@/lib/services'
+import { LpJsonLd } from '@/components/lp'
 import CopyAppLayout from '@/components/CopyAppLayout'
-import { SERVICE_SEO, SITE_CONFIG } from '@/lib/seo'
+import { FAQ } from './lp-data'
 
-export const metadata: Metadata = {
-  alternates: {
-    canonical: '/copy',
-  },
-  title: SERVICE_SEO.copy.title,
-  description: SERVICE_SEO.copy.description,
-  keywords: SERVICE_SEO.copy.keywords,
-  openGraph: {
-    type: 'website',
-    locale: SITE_CONFIG.locale,
-    url: `${SITE_CONFIG.url}/copy`,
-    siteName: SITE_CONFIG.name,
-    title: SERVICE_SEO.copy.title,
-    description: SERVICE_SEO.copy.description,
-  },
-  twitter: {
-    card: 'summary_large_image',
-    site: SITE_CONFIG.twitter,
-    creator: SITE_CONFIG.twitter,
-    title: SERVICE_SEO.copy.title,
-    description: SERVICE_SEO.copy.description,
-  },
-}
+export const metadata: Metadata = buildServiceMetadata('copy', {
+  keywords: ['広告コピー', 'キャッチコピー', 'コピー生成AI', '広告文', 'RSA', 'レスポンシブ検索広告', 'SNS広告コピー', 'A/Bテスト'],
+})
+
+const SVC = getServiceById('copy')!
 
 export default function CopyLayout({ children }: { children: React.ReactNode }) {
-  const toolSchema = generateToolSchema({ path: '/copy', name: 'ドヤコピーAI', description: 'ターゲットに刺さる広告コピー・キャッチコピーをAIが自動生成するツール。', category: 'BusinessApplication' })
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(toolSchema) }} />
+      <LpJsonLd
+        name={SVC.name}
+        path={SVC.href}
+        description={SVC.longDescription || SVC.description}
+        category="BusinessApplication"
+        features={SVC.features}
+        faq={FAQ}
+      />
       <CopyAppLayout>{children}</CopyAppLayout>
     </>
   )

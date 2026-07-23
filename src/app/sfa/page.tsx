@@ -2,9 +2,16 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Image from 'next/image'
 import { useSession, signIn } from 'next-auth/react'
 import toast from 'react-hot-toast'
+import { getServiceById } from '@/lib/services'
+import {
+  LpShell, Hero, HowItWorks, Benefits, FeatureGrid, UseCases, FaqSection, CtaBand,
+  DoyaKun, BgDots,
+} from '@/components/lp'
+import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
+
+const SVC = getServiceById('sfa')!
 
 export default function SfaEntryPage() {
   const router = useRouter()
@@ -61,81 +68,77 @@ export default function SfaEntryPage() {
 
   if (status === 'loading' || checking) {
     return (
-      <div className="min-h-screen flex items-center justify-center text-slate-400 font-bold">読み込み中…</div>
+      <div className="min-h-screen grid place-items-center bg-gradient-to-b from-white to-blue-50">
+        <div className="text-center">
+          <DoyaKun mood="thinking" size={88} />
+          <p className="mt-3 text-slate-400 font-bold">読み込み中…</p>
+        </div>
+      </div>
     )
   }
 
-  // 未ログイン → Googleログイン導線
-  if (status === 'unauthenticated') {
+  // ログイン済み・未オンボーディング → 組織作成フォーム
+  if (status === 'authenticated') {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-green-50 to-lime-50 flex items-center justify-center p-6">
-        <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-md text-center">
-          <Image
-            src="/sfa/logo.png"
-            alt="ドヤ営業管理"
-            width={2016}
-            height={864}
-            priority
-            className="w-full h-auto rounded-2xl shadow-md mb-4"
+      <div className="min-h-screen relative bg-gradient-to-b from-white via-blue-50/40 to-blue-100/40 grid place-items-center p-6">
+        <BgDots />
+        <div className="relative z-10 bg-white rounded-3xl shadow-xl shadow-blue-500/10 p-8 w-full max-w-md border border-blue-100">
+          <div className="text-center mb-6">
+            <div className="flex justify-center"><DoyaKun mood="hello" size={110} /></div>
+            <h2 className="text-2xl font-black text-slate-900 mt-2">ようこそ！</h2>
+            <p className="text-slate-500 font-bold text-sm mt-1">組織を作成すると、すぐに使い始められます（サンプル付き）</p>
+          </div>
+          <label className="block text-sm font-black text-slate-700 mb-1">組織名（会社名）</label>
+          <input
+            value={orgName}
+            onChange={(e) => setOrgName(e.target.value)}
+            placeholder="例: 株式会社スリスタ"
+            className="w-full rounded-xl border-2 border-slate-200 focus:border-[#0066ff] outline-none px-4 py-3 font-bold mb-3 transition-colors"
           />
-          <p className="text-slate-500 font-bold text-sm mt-1 mb-6">
-            商談パイプライン・取引先管理を、ログインするだけですぐ開始できます
-          </p>
+          <label className="block text-sm font-black text-slate-700 mb-1">あなたの氏名</label>
+          <input
+            value={memberName}
+            onChange={(e) => setMemberName(e.target.value)}
+            placeholder="例: 三森 律稀"
+            className="w-full rounded-xl border-2 border-slate-200 focus:border-[#0066ff] outline-none px-4 py-3 font-bold mb-5 transition-colors"
+          />
           <button
-            onClick={() => signIn('google', { callbackUrl: '/sfa' })}
-            className="w-full py-4 rounded-2xl bg-white border-2 border-slate-200 text-slate-800 font-black text-base shadow-sm hover:shadow-md hover:border-slate-300 transition-all flex items-center justify-center gap-3"
+            onClick={create}
+            disabled={creating}
+            className="w-full py-4 rounded-2xl text-white font-black text-lg shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 active:scale-[0.98]"
+            style={{ background: 'linear-gradient(135deg, #0066ff, #16a34a)' }}
           >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" />
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z" />
-              <path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.06H2.18a11 11 0 0 0 0 9.88l3.66-2.84z" />
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84C6.71 7.31 9.14 5.38 12 5.38z" />
-            </svg>
-            Googleでログイン
+            {creating ? '作成中…' : '組織を作成して始める'}
           </button>
-          <p className="text-[11px] text-slate-400 font-bold mt-4">ログイン後、組織を作成すればサンプル付きで利用開始できます</p>
         </div>
       </div>
     )
   }
 
+  // guest（未ログイン）= ランディング
   return (
-    <div className="min-h-screen bg-gradient-to-b from-green-50 to-lime-50 flex items-center justify-center p-6">
-      <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-md">
-        <div className="text-center mb-6">
-          <Image
-            src="/sfa/logo.png"
-            alt="ドヤ営業管理"
-            width={2016}
-            height={864}
-            priority
-            className="w-full h-auto rounded-2xl shadow-md mb-3"
-          />
-          <h2 className="text-xl font-black text-slate-900">ようこそ！</h2>
-          <p className="text-slate-500 font-bold text-sm mt-1">組織を作成すると、すぐに使い始められます（サンプル付き）</p>
-        </div>
-        <label className="block text-sm font-black text-slate-700 mb-1">組織名（会社名）</label>
-        <input
-          value={orgName}
-          onChange={(e) => setOrgName(e.target.value)}
-          placeholder="例: 株式会社スリスタ"
-          className="w-full rounded-xl border border-slate-200 px-4 py-3 font-bold mb-3"
-        />
-        <label className="block text-sm font-black text-slate-700 mb-1">あなたの氏名</label>
-        <input
-          value={memberName}
-          onChange={(e) => setMemberName(e.target.value)}
-          placeholder="例: 三森 律稀"
-          className="w-full rounded-xl border border-slate-200 px-4 py-3 font-bold mb-5"
-        />
-        <button
-          onClick={create}
-          disabled={creating}
-          className="w-full py-4 rounded-2xl bg-gradient-to-r from-green-500 to-lime-600 text-white font-black text-lg shadow-lg shadow-green-500/30 hover:shadow-xl transition-all disabled:opacity-50"
-        >
-          {creating ? '作成中…' : '🚀 組織を作成して始める'}
-        </button>
-      </div>
-    </div>
+    <LpShell serviceName="ドヤ営業管理" icon="view_kanban" ctaHref={CTA} ctaLabel="無料ではじめる" accent={ACCENT}>
+      <Hero
+        eyebrow="かんたんSFA"
+        title="営業管理を、"
+        highlight="シンプルに。"
+        subtitle="取引先・商談パイプライン・タスク・売上ダッシュボードを、設定不要・即日で。Salesforceは重すぎる中小チームのための、シンプルで安いSFAです。"
+        note="Googleアカウントでかんたんに始められます"
+        ctaHref={CTA}
+        mood="thumbsup"
+      />
+      <HowItWorks title={<>登録して、すぐ使える<br className="md:hidden" />3ステップ</>} lead="難しい初期設定はいりません。組織を作れば、その日から商談を見える化できます。" steps={STEPS} />
+      <Benefits title="なぜ、営業が回り出すのか" items={BENEFITS} />
+      <FeatureGrid lead="営業チームに必要な機能を、ひとつの画面に。" features={SVC.features} />
+      {SVC.useCases && <UseCases items={SVC.useCases} />}
+      <FaqSection items={FAQ} />
+      <CtaBand
+        title={<>商談の見える化を、<br className="md:hidden" />今日から。</>}
+        subtitle="設定不要・無料で今すぐ。まずはサンプルから触ってみてください。"
+        ctaHref={CTA}
+        ctaLabel="無料ではじめる"
+        note="無料プランで3名・取引先/商談 各50件までお試しいただけます"
+      />
+    </LpShell>
   )
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import CopySidebar from './CopySidebar'
-import { Menu } from 'lucide-react'
+import { Menu, PenLine } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface CopyAppLayoutProps {
@@ -77,7 +77,7 @@ export default function CopyAppLayout({ children }: CopyAppLayoutProps) {
             <Menu className="w-6 h-6" />
           </button>
           <div className="flex items-center gap-2">
-            <span className="text-xl">✍️</span>
+            <PenLine className="w-5 h-5 text-amber-500" />
             <span className="text-base sm:text-lg font-bold text-gray-900 whitespace-nowrap">ドヤコピーAI</span>
           </div>
         </div>

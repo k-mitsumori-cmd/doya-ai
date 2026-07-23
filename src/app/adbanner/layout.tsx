@@ -1,37 +1,27 @@
 import type { Metadata } from 'next'
-import { generateToolSchema } from '@/lib/seo'
-import { SERVICE_SEO, SITE_CONFIG } from '@/lib/seo'
+import { buildServiceMetadata } from '@/lib/seo'
+import { getServiceById } from '@/lib/services'
+import { LpJsonLd } from '@/components/lp'
+import { FAQ } from './lp-data'
 
-export const metadata: Metadata = {
-  alternates: {
-    canonical: '/adbanner',
-  },
-  title: SERVICE_SEO.adbanner.title,
-  description: SERVICE_SEO.adbanner.description,
-  keywords: SERVICE_SEO.adbanner.keywords,
-  openGraph: {
-    type: 'website',
-    locale: SITE_CONFIG.locale,
-    url: `${SITE_CONFIG.url}/adbanner`,
-    siteName: SITE_CONFIG.name,
-    title: SERVICE_SEO.adbanner.title,
-    description: SERVICE_SEO.adbanner.description,
-  },
-  twitter: {
-    card: 'summary_large_image',
-    site: SITE_CONFIG.twitter,
-    creator: SITE_CONFIG.twitter,
-    title: SERVICE_SEO.adbanner.title,
-    description: SERVICE_SEO.adbanner.description,
-  },
-}
+export const metadata: Metadata = buildServiceMetadata('adbanner', {
+  keywords: ['広告バナー', 'バナー作成', 'バナー量産', '広告クリエイティブ', 'AIバナー', 'Meta広告', 'Google広告', 'LINE広告', 'バナーデザイン'],
+})
+
+const SVC = getServiceById('adbanner')!
 
 export default function AdBannerRootLayout({ children }: { children: React.ReactNode }) {
-  const toolSchema = generateToolSchema({ path: '/adbanner', name: 'ドヤ広告バナーAI', description: 'URLを入れるだけでAIが広告バナーを量産し、採点・改善・ロゴ合成まで自動化するツール。', category: 'DesignApplication' })
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(toolSchema) }} />
-      <>{children}</>
+      <LpJsonLd
+        name={SVC.name}
+        path={SVC.href}
+        description={SVC.longDescription || SVC.description}
+        category="DesignApplication"
+        features={SVC.features}
+        faq={FAQ}
+      />
+      {children}
     </>
   )
 }

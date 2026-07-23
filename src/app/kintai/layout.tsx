@@ -1,20 +1,27 @@
 import type { Metadata } from 'next'
-import { generateToolSchema } from '@/lib/seo'
+import { buildServiceMetadata } from '@/lib/seo'
+import { getServiceById } from '@/lib/services'
+import { LpJsonLd } from '@/components/lp'
 import KintaiLayout from '@/components/kintai/KintaiLayout'
+import { FAQ } from './lp-data'
 
-export const metadata: Metadata = {
-  alternates: {
-    canonical: '/kintai',
-  },
-  title: 'ドヤ勤怠 | 勤怠管理システム',
-  description: '中小企業のためのクラウド勤怠管理',
-}
+export const metadata: Metadata = buildServiceMetadata('kintai', {
+  keywords: ['勤怠管理', 'クラウド勤怠', '打刻', '勤怠システム', '出退勤', '残業管理', '休暇申請', '中小企業 勤怠', 'KING OF TIME 代替', 'ジョブカン 代替'],
+})
+
+const SVC = getServiceById('kintai')!
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const toolSchema = generateToolSchema({ path: '/kintai', name: 'ドヤ勤怠', description: '打刻・集計・休暇管理までシンプルに使える中小企業向けクラウド勤怠管理システム。', category: 'BusinessApplication' })
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(toolSchema) }} />
+      <LpJsonLd
+        name={SVC.name}
+        path={SVC.href}
+        description={SVC.longDescription || SVC.description}
+        category="BusinessApplication"
+        features={SVC.features}
+        faq={FAQ}
+      />
       {/* HubSpotチャットウィジェットを業務画面で非表示 */}
       <style>{`#hubspot-messages-iframe-container, .hs-chat-widget { display: none !important; }`}</style>
       <KintaiLayout>{children}</KintaiLayout>
