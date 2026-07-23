@@ -1,21 +1,25 @@
 import type { Metadata } from 'next'
-import { generateToolSchema } from '@/lib/seo'
+import { buildServiceMetadata } from '@/lib/seo'
+import { getServiceById } from '@/lib/services'
+import { LpJsonLd } from '@/components/lp'
 import AdSimAppLayout from '@/components/AdSimAppLayout'
 
-export const metadata: Metadata = {
-  alternates: {
-    canonical: '/adsim',
-  },
-  title: 'ドヤ広告シミュレーションAI | 広告提案資料を AI が一発生成',
-  description:
-    'LP URL と月額予算を入れるだけで、業種・ターゲット・KPI・媒体配分・提案文10セクション・PDF/PPTX/Excel まで AI が全部判断する広告提案ツール',
-}
+export const metadata: Metadata = buildServiceMetadata('adsim', {
+  keywords: ['広告シミュレーション', '広告提案資料', '媒体配分', '広告代理店', '運用型広告', 'PPTX自動生成', '広告予算', 'KPIシミュレーション'],
+})
+
+const SVC = getServiceById('adsim')!
 
 export default function AdSimLayout({ children }: { children: React.ReactNode }) {
-  const toolSchema = generateToolSchema({ path: '/adsim', name: 'ドヤ広告シミュレーションAI', description: '広告予算と商材から、媒体別シミュレーションと提案資料をAIが一括生成するツール。', category: 'BusinessApplication' })
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(toolSchema) }} />
+      <LpJsonLd
+        name={SVC.name}
+        path={SVC.href}
+        description={SVC.longDescription || SVC.description}
+        category="BusinessApplication"
+        features={SVC.features}
+      />
       <AdSimAppLayout>{children}</AdSimAppLayout>
     </>
   )

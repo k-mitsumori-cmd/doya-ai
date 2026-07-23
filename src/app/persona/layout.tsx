@@ -1,39 +1,26 @@
 import type { Metadata } from 'next'
-import { generateToolSchema } from '@/lib/seo'
+import { buildServiceMetadata, SERVICE_SEO } from '@/lib/seo'
+import { getServiceById } from '@/lib/services'
+import { LpJsonLd } from '@/components/lp'
 import PersonaAppLayout from '@/components/PersonaAppLayout'
-import { SERVICE_SEO, SITE_CONFIG } from '@/lib/seo'
 
-export const metadata: Metadata = {
-  alternates: {
-    canonical: '/persona',
-  },
-  title: SERVICE_SEO.persona.title,
-  description: SERVICE_SEO.persona.description,
+export const metadata: Metadata = buildServiceMetadata('persona', {
   keywords: SERVICE_SEO.persona.keywords,
-  openGraph: {
-    type: 'website',
-    locale: SITE_CONFIG.locale,
-    url: `${SITE_CONFIG.url}/persona`,
-    siteName: SITE_CONFIG.name,
-    title: SERVICE_SEO.persona.title,
-    description: SERVICE_SEO.persona.description,
-  },
-  twitter: {
-    card: 'summary_large_image',
-    site: SITE_CONFIG.twitter,
-    creator: SITE_CONFIG.twitter,
-    title: SERVICE_SEO.persona.title,
-    description: SERVICE_SEO.persona.description,
-  },
-}
+})
+
+const SVC = getServiceById('persona')!
 
 export default function PersonaLayout({ children }: { children: React.ReactNode }) {
-  const toolSchema = generateToolSchema({ path: '/persona', name: 'ドヤペルソナAI', description: 'URLを入力するだけでマーケティングペルソナをAIが自動生成するツール。', category: 'BusinessApplication' })
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(toolSchema) }} />
+      <LpJsonLd
+        name={SVC.name}
+        path={SVC.href}
+        description={SVC.longDescription || SVC.description}
+        category="BusinessApplication"
+        features={SVC.features}
+      />
       <PersonaAppLayout>{children}</PersonaAppLayout>
     </>
   )
 }
-

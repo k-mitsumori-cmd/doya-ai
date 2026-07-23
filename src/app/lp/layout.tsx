@@ -1,20 +1,25 @@
 import type { Metadata } from 'next'
-import { generateToolSchema } from '@/lib/seo'
+import { buildServiceMetadata } from '@/lib/seo'
+import { getServiceById } from '@/lib/services'
+import { LpJsonLd } from '@/components/lp'
 import LpAppLayout from '@/components/LpAppLayout'
 
-export const metadata: Metadata = {
-  alternates: {
-    canonical: '/lp',
-  },
-  title: 'ドヤワイヤーフレーム AI | ワイヤーフレームを、1分で設計する。',
-  description: '商品情報を入力するだけで、ワイヤーフレーム構成案・セクション別コピー・デザイン方針をAIが自動生成。HTMLエクスポートで、そのまま公開or制作会社への指示書として使用。',
-}
+export const metadata: Metadata = buildServiceMetadata('lp', {
+  keywords: ['ワイヤーフレーム', 'LP構成案', 'LP制作', 'ランディングページ', 'AIコピー', 'デザイン方針', 'HTMLエクスポート', '構成案'],
+})
+
+const SVC = getServiceById('lp')!
 
 export default function LpLayout({ children }: { children: React.ReactNode }) {
-  const toolSchema = generateToolSchema({ path: '/lp', name: 'ドヤワイヤーフレームAI', description: 'LPのワイヤーフレームを1分でAI設計するツール。', category: 'DesignApplication' })
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(toolSchema) }} />
+      <LpJsonLd
+        name={SVC.name}
+        path={SVC.href}
+        description={SVC.longDescription || SVC.description}
+        category="BusinessApplication"
+        features={SVC.features}
+      />
       <LpAppLayout>{children}</LpAppLayout>
     </>
   )

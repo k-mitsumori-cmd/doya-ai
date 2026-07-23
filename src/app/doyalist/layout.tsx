@@ -1,20 +1,25 @@
 import type { Metadata } from 'next'
-import { generateToolSchema } from '@/lib/seo'
+import { buildServiceMetadata } from '@/lib/seo'
+import { getServiceById } from '@/lib/services'
+import { LpJsonLd } from '@/components/lp'
 import DoyalistLayout from '@/components/doyalist/DoyalistLayout'
 
-export const metadata: Metadata = {
-  alternates: {
-    canonical: '/doyalist',
-  },
-  title: 'ドヤリスト | AI営業リスト + 営業文ツール',
-  description: '業界・地域を選ぶだけでAIが営業リストを自動生成。フォーム営業文・メール文面・荷電スクリプトも1クリックで作成できます。',
-}
+export const metadata: Metadata = buildServiceMetadata('doyalist', {
+  keywords: ['営業リスト', '営業リスト自動生成', '営業AI', 'フォーム営業文', '営業メール文面', '荷電スクリプト', '新規開拓', 'リスト作成'],
+})
+
+const SVC = getServiceById('doyalist')!
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  const toolSchema = generateToolSchema({ path: '/doyalist', name: 'ドヤリスト', description: 'gBizINFO公的データからAIが営業リストと営業文を自動作成する営業支援ツール。', category: 'BusinessApplication' })
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(toolSchema) }} />
+      <LpJsonLd
+        name={SVC.name}
+        path={SVC.href}
+        description={SVC.longDescription || SVC.description}
+        category="BusinessApplication"
+        features={SVC.features}
+      />
       <DoyalistLayout>{children}</DoyalistLayout>
     </>
   )

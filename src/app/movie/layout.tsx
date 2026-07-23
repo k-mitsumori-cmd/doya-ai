@@ -1,29 +1,28 @@
-import { Metadata } from 'next'
+import type { Metadata } from 'next'
+import { buildServiceMetadata } from '@/lib/seo'
+import { getServiceById } from '@/lib/services'
+import { LpJsonLd } from '@/components/lp'
 import MovieLayout from '@/components/movie/MovieLayout'
 
 export const dynamic = 'force-dynamic'
 
-export const metadata: Metadata = {
-  title: 'ドヤムービーAI — 動画広告を10分で作る',
-  description: '商品情報を入力するだけで、AIが動画広告を自動生成。YouTube・TikTok・Instagram対応。',
-  openGraph: {
-    title: 'ドヤムービーAI — 動画広告を10分で作る',
-    description: '商品情報を入力するだけで、AIが動画広告を自動生成。YouTube・TikTok・Instagram対応。',
-    url: 'https://doya-ai.surisuta.jp/movie',
-    siteName: 'ドヤAI',
-    type: 'website',
-    locale: 'ja_JP',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'ドヤムービーAI — 動画広告を10分で作る',
-    description: '商品情報を入力するだけで、AIが動画広告を自動生成。',
-  },
-  alternates: {
-    canonical: 'https://doya-ai.surisuta.jp/movie',
-  },
-}
+export const metadata: Metadata = buildServiceMetadata('movie', {
+  keywords: ['動画広告', '動画生成', 'AI動画', '動画広告作成', 'ショート動画', '広告動画'],
+})
+
+const SVC = getServiceById('movie')!
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return <MovieLayout>{children}</MovieLayout>
+  return (
+    <>
+      <LpJsonLd
+        name={SVC.name}
+        path={SVC.href}
+        description={SVC.longDescription || SVC.description}
+        category="MultimediaApplication"
+        features={SVC.features}
+      />
+      <MovieLayout>{children}</MovieLayout>
+    </>
+  )
 }

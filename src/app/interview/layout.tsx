@@ -1,28 +1,16 @@
 import { Metadata } from 'next'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { buildServiceMetadata } from '@/lib/seo'
+import { getServiceById } from '@/lib/services'
+import { LpJsonLd } from '@/components/lp'
 import InterviewLayout from '@/components/interview/InterviewLayout'
 
-export const metadata: Metadata = {
-  title: 'ドヤインタビューAI — AI記事生成',
-  description: 'インタビュー音声からプロ品質の記事をAIが自動生成。文字起こし→構成→執筆→校正まで一気通貫。',
-  openGraph: {
-    title: 'ドヤインタビューAI — AI記事生成',
-    description: 'インタビュー音声からプロ品質の記事をAIが自動生成。文字起こし→構成→執筆→校正まで一気通貫。',
-    url: 'https://doya-ai.surisuta.jp/interview',
-    siteName: 'ドヤAI',
-    type: 'website',
-    locale: 'ja_JP',
-  },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'ドヤインタビューAI — AI記事生成',
-    description: 'インタビュー音声からプロ品質の記事をAIが自動生成。',
-  },
-  alternates: {
-    canonical: 'https://doya-ai.surisuta.jp/interview',
-  },
-}
+export const metadata: Metadata = buildServiceMetadata('interview', {
+  keywords: ['インタビュー記事', '文字起こし', 'AI記事生成', '取材', 'ライティング', '議事録'],
+})
+
+const SVC = getServiceById('interview')!
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
@@ -40,6 +28,13 @@ export default async function Layout({ children }: { children: React.ReactNode }
 
   return (
     <>
+      <LpJsonLd
+        name={SVC.name}
+        path={SVC.href}
+        description={SVC.longDescription || SVC.description}
+        category="BusinessApplication"
+        features={SVC.features}
+      />
       {/* Material Symbols Outlined font（root layout と同じ URL パラメータ） */}
       <link
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"

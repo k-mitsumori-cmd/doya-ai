@@ -2,15 +2,12 @@ import type { Metadata } from 'next'
 import { buildServiceMetadata } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
-import VoiceLayout from '@/components/voice/VoiceLayout'
 
-export const dynamic = 'force-dynamic'
-
-export const metadata: Metadata = buildServiceMetadata('voice', {
-  keywords: ['音声生成', 'AIナレーション', '音声合成', '日本語ナレーション', 'テキスト読み上げ', 'ボイス生成'],
+export const metadata: Metadata = buildServiceMetadata('logo', {
+  keywords: ['ロゴ生成', 'AIロゴ', 'ロゴデザイン', 'ロゴ作成', 'ブランディング', 'ロゴメーカー'],
 })
 
-const SVC = getServiceById('voice')!
+const SVC = getServiceById('logo')!
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,10 +16,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         name={SVC.name}
         path={SVC.href}
         description={SVC.longDescription || SVC.description}
-        category="MultimediaApplication"
+        category="DesignApplication"
         features={SVC.features}
       />
-      <VoiceLayout>{children}</VoiceLayout>
+      {children}
     </>
   )
 }

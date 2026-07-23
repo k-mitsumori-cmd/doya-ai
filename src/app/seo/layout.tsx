@@ -1,16 +1,16 @@
 import type { Metadata } from 'next'
-import { generateToolSchema } from '@/lib/seo'
+import { buildServiceMetadata, SERVICE_SEO } from '@/lib/seo'
+import { getServiceById } from '@/lib/services'
+import { LpJsonLd } from '@/components/lp'
 import { SeoAppLayout } from '@/components/SeoAppLayout'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 
-export const metadata: Metadata = {
-  alternates: {
-    canonical: '/seo',
-  },
-  title: 'ドヤ記事作成 | SEO・LLMOに強いAI記事作成ツール',
-  description: 'SEOとLLMO（AI検索最適化）に強い長文記事を、構成から執筆まで分割生成で安定作成するAIライティングツール。無料で今すぐ使えます。',
-}
+export const metadata: Metadata = buildServiceMetadata('seo', {
+  keywords: SERVICE_SEO.seo.keywords,
+})
+
+const SVC = getServiceById('seo')!
 
 export default async function SeoLayout({ children }: { children: React.ReactNode }) {
   const session = await getServerSession(authOptions)
@@ -29,11 +29,15 @@ export default async function SeoLayout({ children }: { children: React.ReactNod
             : 'UNKNOWN'
   const firstLoginAt = (user?.firstLoginAt as any) || null
 
-  const toolSchema = generateToolSchema({ path: '/seo', name: 'ドヤ記事作成', description: 'SEOとLLMO（AI検索最適化）に強い長文記事を分割生成で安定作成するAIライティングツール。', category: 'BusinessApplication' })
-
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(toolSchema) }} />
+      <LpJsonLd
+        name={SVC.name}
+        path={SVC.href}
+        description={SVC.longDescription || SVC.description}
+        category="BusinessApplication"
+        features={SVC.features}
+      />
       <SeoAppLayout currentPlan={currentPlan as any} isLoggedIn={isLoggedIn} firstLoginAt={firstLoginAt}>
         {children}
       </SeoAppLayout>
