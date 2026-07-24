@@ -15,3 +15,4 @@ export {
   type Faq,
 } from './sections'
 export { LpJsonLd } from './LpJsonLd'
+export { MockWindow, ProductHero, FeatureShowcase, type ShowcaseRow } from './showcase'
