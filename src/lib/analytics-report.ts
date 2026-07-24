@@ -31,6 +31,24 @@ export type ReportTarget = {
    * 例: "game.surisuta.jp/noroi"）。未指定ならプロパティ全体。
    */
   gscPageFilter?: string
+  /**
+   * GA4の集計を pagePath 部分一致で絞り込む（1つのGA4プロパティを複数サイトで共有し、
+   * パスでサイトを分ける場合に使う。例: "/yurusen"）。未指定ならプロパティ全体。
+   */
+  ga4PageFilter?: string
+}
+
+/** GA4 runReport に付ける pagePath 部分一致フィルタ（未指定なら空＝フィルタ無し）。 */
+function ga4PathFilter(pageFilter?: string): Record<string, unknown> {
+  if (!pageFilter) return {}
+  return {
+    dimensionFilter: {
+      filter: {
+        fieldName: 'pagePath',
+        stringFilter: { matchType: 'CONTAINS', value: pageFilter },
+      },
+    },
+  }
 }
 
 const GA4_API = 'https://analyticsdata.googleapis.com/v1beta'
@@ -215,14 +233,16 @@ function parseGa4Ranges(res: any): Record<string, Ga4Totals> {
 const GA4_ZERO: Ga4Totals = { sessions: 0, users: 0, pageViews: 0, keyEvents: 0 }
 
 /** 昨日発生したキーイベントと、その流入経路・発生ページの内訳を取得 */
-async function fetchGa4KeyEvents(propertyId: string, token: string): Promise<Ga4KeyEvent[]> {
+async function fetchGa4KeyEvents(propertyId: string, token: string, pageFilter?: string): Promise<Ga4KeyEvent[]> {
   const base = `${GA4_API}/properties/${propertyId}:runReport`
   const yesterday = [{ startDate: jstDate(1), endDate: jstDate(1) }]
+  const pf = ga4PathFilter(pageFilter)
 
   const namesRes = await googleApiPost(base, token, {
     dateRanges: yesterday,
     dimensions: [{ name: 'eventName' }],
     metrics: [{ name: 'keyEvents' }],
+    ...pf,
   })
   const events = new Map<string, Ga4KeyEvent>()
   for (const row of namesRes.rows || []) {
@@ -242,6 +262,7 @@ async function fetchGa4KeyEvents(propertyId: string, token: string): Promise<Ga4
       metrics: [{ name: 'keyEvents' }],
       orderBys: [{ metric: { metricName: 'keyEvents' }, desc: true }],
       limit: 50,
+      ...pf,
     })
     return (res.rows || [])
       .map((row: any) => ({
@@ -264,9 +285,10 @@ async function fetchGa4KeyEvents(propertyId: string, token: string): Promise<Ga4
   return Array.from(events.values()).sort((a, b) => b.count - a.count)
 }
 
-async function fetchGa4Summary(propertyId: string, token: string): Promise<Ga4Summary> {
+async function fetchGa4Summary(propertyId: string, token: string, pageFilter?: string): Promise<Ga4Summary> {
   const base = `${GA4_API}/properties/${propertyId}:runReport`
   const isFirstOfMonth = jstDate(0).slice(8, 10) === '01'
+  const pf = ga4PathFilter(pageFilter)
 
   // GA4 runReport は1リクエスト4 dateRangesまでのため、日次(3期間)と月次進捗(2期間)を分ける
   const totalsRes = await googleApiPost(base, token, {
@@ -276,6 +298,7 @@ async function fetchGa4Summary(propertyId: string, token: string): Promise<Ga4Su
       { startDate: jstDate(8), endDate: jstDate(8), name: 'last_week' },
     ],
     metrics: GA4_METRICS,
+    ...pf,
   })
   const byRange = parseGa4Ranges(totalsRes)
 
@@ -291,6 +314,7 @@ async function fetchGa4Summary(propertyId: string, token: string): Promise<Ga4Su
         },
       ],
       metrics: GA4_METRICS,
+      ...pf,
     })
     Object.assign(byRange, parseGa4Ranges(mtdRes))
   }
@@ -301,6 +325,7 @@ async function fetchGa4Summary(propertyId: string, token: string): Promise<Ga4Su
     metrics: [{ name: 'sessions' }],
     orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
     limit: 3,
+    ...pf,
   })
   const channels = (channelsRes.rows || []).map((row: any) => ({
     name: row.dimensionValues?.[0]?.value || '(不明)',
@@ -313,13 +338,14 @@ async function fetchGa4Summary(propertyId: string, token: string): Promise<Ga4Su
     metrics: [{ name: 'screenPageViews' }],
     orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
     limit: 3,
+    ...pf,
   })
   const topPages = (pagesRes.rows || []).map((row: any) => ({
     path: row.dimensionValues?.[0]?.value || '(不明)',
     views: Number(row.metricValues?.[0]?.value) || 0,
   }))
 
-  const keyEvents = await fetchGa4KeyEvents(propertyId, token)
+  const keyEvents = await fetchGa4KeyEvents(propertyId, token, pageFilter)
 
   return {
     yesterday: byRange['yesterday'] || GA4_ZERO,
@@ -899,12 +925,14 @@ async function fetchMonthlyData(target: ReportTarget, token: string): Promise<Mo
   let ga4: MonthlyData['ga4'] = null
   if (target.ga4PropertyId) {
     const base = `${GA4_API}/properties/${target.ga4PropertyId}:runReport`
+    const pf = ga4PathFilter(target.ga4PageFilter)
     const totalsRes = await googleApiPost(base, token, {
       dateRanges: [
         { startDate: start, endDate: end, name: 'last_month' },
         { startDate: prevStart, endDate: prevEnd, name: 'before' },
       ],
       metrics: GA4_METRICS,
+      ...pf,
     })
     const byRange = parseGa4Ranges(totalsRes)
     const pagesRes = await googleApiPost(base, token, {
@@ -913,6 +941,7 @@ async function fetchMonthlyData(target: ReportTarget, token: string): Promise<Mo
       metrics: [{ name: 'screenPageViews' }],
       orderBys: [{ metric: { metricName: 'screenPageViews' }, desc: true }],
       limit: 3,
+      ...pf,
     })
     const channelsRes = await googleApiPost(base, token, {
       dateRanges: [{ startDate: start, endDate: end }],
@@ -920,6 +949,7 @@ async function fetchMonthlyData(target: ReportTarget, token: string): Promise<Mo
       metrics: [{ name: 'sessions' }],
       orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
       limit: 3,
+      ...pf,
     })
     const lm = byRange['last_month'] || GA4_ZERO
     const bf = byRange['before'] || GA4_ZERO
@@ -1082,7 +1112,7 @@ export async function sendAnalyticsReport(
     let gsc: GscSummary | null = null
     if (target.ga4PropertyId) {
       try {
-        ga4 = await fetchGa4Summary(target.ga4PropertyId, token)
+        ga4 = await fetchGa4Summary(target.ga4PropertyId, token, target.ga4PageFilter)
       } catch (e: any) {
         errors.push(`GA4: ${e?.message || e}`)
       }
