@@ -6,12 +6,34 @@ import { signIn } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import { getServiceById } from '@/lib/services'
 import {
-  LpShell, Hero, HowItWorks, Benefits, FeatureGrid, UseCases, FaqSection, CtaBand,
-  DoyaKun, Sym,
+  LpShell, ProductHero, MockWindow, FeatureShowcase, HowItWorks, Benefits, UseCases, FaqSection, CtaBand,
+  DoyaKun, Sym, type ShowcaseRow,
 } from '@/components/lp'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
+import { AioSovMock, AioEnginesMock, AioCitationsMock } from './mocks'
 
 const SVC = getServiceById('aio')!
+
+const ROWS: ShowcaseRow[] = [
+  {
+    icon: 'hub', title: '4つのAIで言及率を測定',
+    desc: 'ChatGPT・Gemini・Claude・Perplexityに同じ質問群を反復で投げ、自社ブランドが「◯回中△回」登場するかをエンジンごとに計測します。',
+    bullets: ['4エンジンを横断で同時観測', '質問ごとの言及頻度を記録', 'AIごとの得意・不得意が一目でわかる'],
+    visual: <MockWindow title="4エンジン言及率"><AioEnginesMock /></MockWindow>,
+  },
+  {
+    icon: 'leaderboard', title: '競合とSoVを比較',
+    desc: '同じ質問群で、競合より自社がどれだけ登場するか。AI上の占有率（Share of Voice）をランキングで定点観測します。',
+    bullets: ['自社と競合の登場比率を可視化', '占有率の推移を時系列で追跡', '「AIに推されている度合い」を数値化'],
+    visual: <MockWindow title="AI可視性ランキング"><AioSovMock /></MockWindow>,
+  },
+  {
+    icon: 'link', title: '引用元ドメインを把握',
+    desc: 'AIが回答の根拠にしているサイトを一覧化。どのメディア・記事に載れば引用されるかがわかり、AEOの打ち手につながります。',
+    bullets: ['AIが参照した引用元を集計', '自社サイトの引用回数も追える', '掲載を狙うべき媒体が見える'],
+    visual: <MockWindow title="引用元ドメイン"><AioCitationsMock /></MockWindow>,
+  },
+]
 
 export default function AioEntryPage() {
   const router = useRouter()
@@ -73,7 +95,7 @@ export default function AioEntryPage() {
   // 未ログイン / 未ワークスペース = ランディング（URLクイックスタートは温存）
   return (
     <LpShell serviceName="ドヤAIO" icon="query_stats" ctaHref={CTA} ctaLabel="無料で診断する" accent={ACCENT}>
-      <Hero
+      <ProductHero
         eyebrow="AI可視性 / AEO"
         title="そのブランド、"
         highlight="AIは推してる？"
@@ -81,7 +103,9 @@ export default function AioEntryPage() {
         note="Googleアカウントで無料ではじめられます"
         ctaHref={CTA}
         ctaLabel="無料で診断する"
-        mood="point"
+        subCtaHref="#start"
+        subCtaLabel="URLで今すぐ診断"
+        visual={<MockWindow title="AI可視性ランキング"><AioSovMock /></MockWindow>}
       />
 
       {/* URLクイックスタート（既存の quick-start ロジックを温存） */}
@@ -123,8 +147,8 @@ export default function AioEntryPage() {
         lead="監視プロンプトの用意から観測、改善提案まで、AI可視性の運用を自動化します。"
         steps={STEPS}
       />
+      <FeatureShowcase title="AIでの「選ばれ方」を、そのまま見せます。" lead="AI検索での可視性を測る機能を、ひとつの画面に。" rows={ROWS} />
       <Benefits title="なぜ、いまAI可視性なのか" items={BENEFITS} />
-      <FeatureGrid lead="AI検索での「選ばれ方」を測る機能を、ひとつの画面に。" features={SVC.features} />
       {SVC.useCases && <UseCases items={SVC.useCases} />}
       <FaqSection items={FAQ} />
       <CtaBand

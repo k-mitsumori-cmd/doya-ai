@@ -15,11 +15,34 @@ import {
 import toast from 'react-hot-toast'
 import { getServiceById } from '@/lib/services'
 import {
-  LpShell, Hero, HowItWorks, Benefits, FeatureGrid, UseCases, FaqSection, CtaBand,
+  LpShell, ProductHero, MockWindow, FeatureShowcase, HowItWorks, Benefits, UseCases, FaqSection, CtaBand,
+  type ShowcaseRow,
 } from '@/components/lp'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
+import { CopyListMock, CopyWritersMock, CopyRefineMock } from './mocks'
 
 const SVC = getServiceById('copy')!
+
+const ROWS: ShowcaseRow[] = [
+  {
+    icon: 'auto_awesome', title: '20案以上を一括生成',
+    desc: '商材とペルソナを入力するだけ。ディスプレイ・検索・SNS向けのコピーを、一度に大量に出力します。A/Bテスト用のバリエーションもまとめて揃います。',
+    bullets: ['1回の生成で20案以上を出力', 'トーン別に王道・攻め・共感を作り分け', '媒体の文字数制限にも自動で対応'],
+    visual: <MockWindow title="doya-ai.surisuta.jp/copy"><CopyListMock /></MockWindow>,
+  },
+  {
+    icon: 'groups', title: '5人のAIコピーライター',
+    desc: 'ストレート・エモーショナル・ロジカル・プロボカティブ・ストーリーの5タイプが、それぞれ異なる切り口で提案。一人では出しきれない角度のコピーが手に入ります。',
+    bullets: ['5つの型で切り口のばらつきを担保', '担当者ごとの品質差を平準化', '刺さる角度を横並びで比較できる'],
+    visual: <MockWindow title="AIコピーライター"><CopyWritersMock /></MockWindow>,
+  },
+  {
+    icon: 'tune', title: 'チャットでブラッシュアップ',
+    desc: '「もっとカジュアルに」「数字を入れて」と話しかけるだけで、実用品質まで磨き込み。リビジョン履歴も自動で保存され、そのままCSV／Excelへ書き出せます。',
+    bullets: ['自然な指示で即リライト', 'リビジョン履歴を自動保存', '入稿形式のCSV／Excelで書き出し'],
+    visual: <MockWindow title="ブラッシュアップ"><CopyRefineMock /></MockWindow>,
+  },
+]
 
 interface CopyProject {
   id: string
@@ -30,12 +53,11 @@ interface CopyProject {
 }
 
 export default function CopyPage() {
-  const { data: session, status } = useSession()
+  const { data: session } = useSession()
   const router = useRouter()
   const [projects, setProjects] = useState<CopyProject[]>([])
   const [loading, setLoading] = useState(false)
 
-  const isSessionLoading = status === 'loading'
   const isLoggedIn = !!session?.user
 
   useEffect(() => {
@@ -59,45 +81,7 @@ export default function CopyPage() {
     }
   }
 
-  // セッション読み込み中 → skeleton/pulse ローディング
-  if (isSessionLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 text-gray-900">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
-          {/* ヘッダー skeleton */}
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <div className="h-7 w-48 bg-gray-200 rounded-lg animate-pulse mb-2" />
-              <div className="h-4 w-64 bg-gray-200 rounded animate-pulse" />
-            </div>
-            <div className="h-10 w-36 bg-amber-200 rounded-xl animate-pulse" />
-          </div>
-
-          {/* クイックアクション skeleton */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-8">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-24 bg-gray-100 border border-gray-200 rounded-xl animate-pulse" />
-            ))}
-          </div>
-
-          {/* プロジェクト一覧 skeleton */}
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="h-6 w-40 bg-gray-200 rounded-lg animate-pulse" />
-              <div className="h-4 w-20 bg-gray-200 rounded animate-pulse" />
-            </div>
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-16 bg-white border border-gray-200 rounded-xl animate-pulse" />
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ログイン済み → ダッシュボード表示
+  // ログイン済み → ダッシュボード表示（未確定時はゲストLPを表示＝status固着で固まらない）
   if (isLoggedIn) {
     return (
       <div className="min-h-screen bg-gray-50 text-gray-900">
@@ -204,14 +188,15 @@ export default function CopyPage() {
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-white">
       <LpShell serviceName="ドヤコピーAI" icon="edit_note" ctaHref={CTA} ctaLabel="無料ではじめる" accent={ACCENT}>
-        <Hero
+        <ProductHero
           eyebrow="広告コピー生成AI"
           title="広告コピーを、"
           highlight="AIで量産する。"
           subtitle="商材とペルソナを入力するだけ。5人のAIコピーライターが、異なる切り口で20案以上のコピーを瞬時に仕上げます。"
           note="無料プランで月10回までお試しいただけます"
           ctaHref={CTA}
-          mood="working"
+          ctaLabel="無料ではじめる"
+          visual={<MockWindow title="doya-ai.surisuta.jp/copy"><CopyListMock /></MockWindow>}
         />
         <HowItWorks
           title={<>入力するだけの<br className="md:hidden" />3ステップ</>}
@@ -219,7 +204,7 @@ export default function CopyPage() {
           steps={STEPS}
         />
         <Benefits title="なぜ、コピー制作が変わるのか" items={BENEFITS} />
-        <FeatureGrid lead="広告コピーづくりに必要な機能を、ひとつの画面に。" features={SVC.features} />
+        <FeatureShowcase title="現場で使う機能を、そのまま見せます。" lead="広告コピーづくりに必要な機能を、ひとつの画面に。" rows={ROWS} />
         {SVC.useCases && <UseCases items={SVC.useCases} />}
         <FaqSection items={FAQ} />
         <CtaBand
