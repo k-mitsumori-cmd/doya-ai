@@ -9,7 +9,7 @@ import {
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 
 export const metadata: Metadata = {
-  title: '統一プラン｜プロ1つで全サービス使い放題 | ドヤマーケAI',
+  title: '統一プラン｜プロ1つで全サービスのプロ機能が使い放題',
   description:
     'プロプランを1つ契約するだけで、ドヤAIの全サービスのプロ機能が使い放題。記事・バナー・営業リスト・人事・勤怠・SFAなど、B2Bに必要なAIツールが月々¥9,980でまるごと揃う統一プラン。',
   alternates: { canonical: '/all-in-one' },
