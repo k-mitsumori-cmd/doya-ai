@@ -1,5 +1,6 @@
 import { GoogleAuth } from 'google-auth-library'
 import { prisma } from '@/lib/prisma'
+import { buildContentScheduleSection } from '@/lib/sns-schedule-report'
 
 // ============================================
 // 毎朝のアクセスレポート（GA4 + Search Console + YouTube → Slack）
@@ -25,6 +26,11 @@ export type ReportTarget = {
   name: string
   ga4PropertyId?: string
   gscSiteUrl?: string
+  /**
+   * GSCの集計をURL部分一致で絞り込む（ドメインプロパティを複数サイトで共有する場合に使う。
+   * 例: "game.surisuta.jp/noroi"）。未指定ならプロパティ全体。
+   */
+  gscPageFilter?: string
 }
 
 const GA4_API = 'https://analyticsdata.googleapis.com/v1beta'
@@ -331,6 +337,8 @@ async function fetchGa4Summary(propertyId: string, token: string): Promise<Ga4Su
 
 type GscQueryRow = { query: string; clicks: number; impressions: number; position: number }
 
+type GscPageRow = { page: string; clicks: number; impressions: number; position: number }
+
 type GscSummary = {
   date: string
   clicks: number
@@ -342,6 +350,18 @@ type GscSummary = {
   prevMtdClicks: number | null
   queries7d: GscQueryRow[]
   queriesPrev7d: GscQueryRow[]
+  pages7d: GscPageRow[]
+  pagesPrev7d: GscPageRow[]
+}
+
+/** gscPageFilter 指定時に query body へ付けるURL部分一致フィルタ */
+function gscPageFilterGroups(pageFilter?: string) {
+  if (!pageFilter) return {}
+  return {
+    dimensionFilterGroups: [
+      { filters: [{ dimension: 'page', operator: 'contains', expression: pageFilter }] },
+    ],
+  }
 }
 
 async function gscQuery(siteUrl: string, token: string, body: unknown): Promise<any> {
@@ -358,44 +378,76 @@ function parseGscQueryRows(res: any): GscQueryRow[] {
   }))
 }
 
-async function fetchGscSummary(siteUrl: string, token: string): Promise<GscSummary> {
+async function fetchGscSummary(
+  siteUrl: string,
+  token: string,
+  pageFilter?: string,
+): Promise<GscSummary> {
   // GSCは確定まで2〜3日かかるため3日前を「最新確定日」として扱う
   const targetDate = jstDate(3)
   const prevWeekDate = jstDate(10)
   const mtdStart = jstMonthStart(0)
   const hasMtd = targetDate >= mtdStart
+  const filter = gscPageFilterGroups(pageFilter)
 
   const requests: Promise<any>[] = [
-    gscQuery(siteUrl, token, { startDate: targetDate, endDate: targetDate }),
-    gscQuery(siteUrl, token, { startDate: prevWeekDate, endDate: prevWeekDate }),
+    gscQuery(siteUrl, token, { startDate: targetDate, endDate: targetDate, ...filter }),
+    gscQuery(siteUrl, token, { startDate: prevWeekDate, endDate: prevWeekDate, ...filter }),
     // 検索トピック抽出用: 直近7日(確定分)と、その前の7日
     gscQuery(siteUrl, token, {
       startDate: jstDate(9),
       endDate: targetDate,
       dimensions: ['query'],
       rowLimit: 25,
+      ...filter,
     }),
     gscQuery(siteUrl, token, {
       startDate: jstDate(16),
       endDate: jstDate(10),
       dimensions: ['query'],
       rowLimit: 25,
+      ...filter,
+    }),
+    // ページ別の掲載順位（順位が上がってきたページの検出用）: 直近7日 vs その前7日
+    gscQuery(siteUrl, token, {
+      startDate: jstDate(9),
+      endDate: targetDate,
+      dimensions: ['page'],
+      rowLimit: 200,
+      ...filter,
+    }),
+    gscQuery(siteUrl, token, {
+      startDate: jstDate(16),
+      endDate: jstDate(10),
+      dimensions: ['page'],
+      rowLimit: 200,
+      ...filter,
     }),
   ]
   if (hasMtd) {
-    requests.push(gscQuery(siteUrl, token, { startDate: mtdStart, endDate: targetDate }))
+    requests.push(gscQuery(siteUrl, token, { startDate: mtdStart, endDate: targetDate, ...filter }))
     requests.push(
       gscQuery(siteUrl, token, {
         startDate: jstMonthStart(-1),
         endDate: sameDayInMonth(targetDate, jstMonthStart(-1)),
+        ...filter,
       }),
     )
   }
 
-  const [totalRes, prevRes, q7Res, qPrev7Res, mtdRes, prevMtdRes] = await Promise.all(requests)
+  const [totalRes, prevRes, q7Res, qPrev7Res, p7Res, pPrev7Res, mtdRes, prevMtdRes] =
+    await Promise.all(requests)
 
   const total = totalRes.rows?.[0] || {}
   const prev = prevRes.rows?.[0] || {}
+
+  const parsePages = (res: any): GscPageRow[] =>
+    (res.rows || []).map((row: any) => ({
+      page: row.keys?.[0] || '',
+      clicks: row.clicks || 0,
+      impressions: row.impressions || 0,
+      position: row.position || 0,
+    }))
 
   return {
     date: targetDate,
@@ -408,7 +460,61 @@ async function fetchGscSummary(siteUrl: string, token: string): Promise<GscSumma
     prevMtdClicks: hasMtd ? prevMtdRes?.rows?.[0]?.clicks || 0 : null,
     queries7d: parseGscQueryRows(q7Res),
     queriesPrev7d: parseGscQueryRows(qPrev7Res),
+    pages7d: parsePages(p7Res),
+    pagesPrev7d: parsePages(pPrev7Res),
   }
+}
+
+/**
+ * 順位が上がってきたページ（直近7日 vs その前7日）。
+ * 新たに検索表示され始めたページも1行で報告する。
+ */
+function buildRisingPages(gsc: GscSummary): string[] {
+  const prevMap = new Map(gsc.pagesPrev7d.map((p) => [p.page, p]))
+  const shorten = (url: string): string => {
+    try {
+      const u = new URL(url)
+      const path = decodeURIComponent(u.pathname)
+      return path.length > 60 ? `${path.slice(0, 57)}…` : path || '/'
+    } catch {
+      return url
+    }
+  }
+
+  type Row = { text: string; score: number }
+  const rising: Row[] = []
+  const fresh: Row[] = []
+  for (const p of gsc.pages7d) {
+    const before = prevMap.get(p.page)
+    if (!before) {
+      // 前週は検索結果に出ていなかったページ
+      if (p.impressions >= 10) {
+        fresh.push({
+          text: `${shorten(p.page)}: 新たに検索表示され始めました（週${fmt(p.impressions)}表示・平均${p.position.toFixed(1)}位）`,
+          score: p.impressions,
+        })
+      }
+      continue
+    }
+    const gain = before.position - p.position
+    // ノイズ除去: 表示が少ないページ・微小変動は載せない
+    if (p.impressions >= 10 && gain >= 2 && p.position <= 40) {
+      rising.push({
+        text: `${shorten(p.page)}: ${before.position.toFixed(1)}位 → ${p.position.toFixed(1)}位（週${fmt(p.impressions)}表示${p.clicks > 0 ? `・${fmt(p.clicks)}クリック` : ''}）`,
+        score: gain * Math.log10(p.impressions + 10) + p.clicks * 2,
+      })
+    }
+  }
+  rising.sort((a, b) => b.score - a.score)
+  fresh.sort((a, b) => b.score - a.score)
+
+  const lines = rising.slice(0, 5).map((r) => r.text)
+  // 上昇が少ない日は新規表示ページで補完（合計最大6行）
+  for (const f of fresh.slice(0, Math.max(1, 6 - lines.length))) {
+    if (lines.length >= 6) break
+    lines.push(f.text)
+  }
+  return lines
 }
 
 /** 検索トピック（伸びたクエリ/新規上位クエリ）を文章で返す */
@@ -727,6 +833,13 @@ function buildTargetSection(
     lines.push(
       `・検索(確定日${gsc.date}): ${fmt(gsc.clicks)}クリック / ${fmt(gsc.impressions)}表示 / CTR ${(gsc.ctr * 100).toFixed(1)}% / 平均${gsc.position.toFixed(1)}位`,
     )
+    const rising = buildRisingPages(gsc)
+    if (rising.length > 0) {
+      lines.push('・順位が上がってきたページ:')
+      lines.push(...rising.map((r) => `    ${r}`))
+    } else {
+      lines.push('・順位が上がってきたページ: 今週は大きな順位変動はありません')
+    }
   }
   for (const err of errors) {
     lines.push(`（取得エラー: ${err}）`)
@@ -976,7 +1089,7 @@ export async function sendAnalyticsReport(
     }
     if (target.gscSiteUrl) {
       try {
-        gsc = await fetchGscSummary(target.gscSiteUrl, token)
+        gsc = await fetchGscSummary(target.gscSiteUrl, token, target.gscPageFilter)
       } catch (e: any) {
         errors.push(`Search Console: ${e?.message || e}`)
       }
@@ -1022,6 +1135,16 @@ export async function sendAnalyticsReport(
   }
   if (ytSummaries.length > 0 || ytErrors.length > 0) {
     sections.push(buildYtSection(ytSummaries, ytErrors))
+  }
+
+  // コンテンツ・SNS予約状況（X予約投稿・メディアのドリップ公開進捗など）
+  try {
+    const { section: scheduleSection, errors: scheduleErrors } =
+      await buildContentScheduleSection()
+    if (scheduleSection) sections.push(scheduleSection)
+    allErrors.push(...scheduleErrors)
+  } catch (e: any) {
+    allErrors.push(`コンテンツ・SNS予約状況: ${e?.message || e}`)
   }
 
   const header = `【アクセスレポート】${jstDate(0)} 朝`
