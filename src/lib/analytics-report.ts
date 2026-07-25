@@ -36,6 +36,32 @@ export type ReportTarget = {
    * パスでサイトを分ける場合に使う。例: "/yurusen"）。未指定ならプロパティ全体。
    */
   ga4PageFilter?: string
+  /**
+   * メディア記事の予約公開（ドリップ）状況を返すJSONエンドポイント。
+   * 設定するとレポートに「予約記事: 残りN本（次回…）」を表示する。
+   * 例: "https://game.surisuta.jp/yurusen/api/media/drip-status"
+   */
+  dripStatusUrl?: string
+}
+
+type DripStatus = {
+  total: number
+  published: number
+  pending: number
+  nextPublishAt: string | null
+}
+
+/** 予約公開状況エンドポイントを取得（失敗時は null。レポート本体を落とさない）。 */
+async function fetchDripStatus(url: string): Promise<DripStatus | null> {
+  try {
+    const res = await fetch(url, { cache: 'no-store' })
+    if (!res.ok) return null
+    const d = await res.json()
+    if (typeof d?.pending !== 'number' || typeof d?.total !== 'number') return null
+    return d as DripStatus
+  } catch {
+    return null
+  }
 }
 
 /** GA4 runReport に付ける pagePath 部分一致フィルタ（未指定なら空＝フィルタ無し）。 */
@@ -840,9 +866,27 @@ function buildTargetSection(
   target: ReportTarget,
   ga4: Ga4Summary | null,
   gsc: GscSummary | null,
+  drip: DripStatus | null,
   errors: string[],
 ): string {
   const lines: string[] = [`■ ${target.name}`]
+
+  if (drip) {
+    const next = drip.nextPublishAt
+      ? new Date(drip.nextPublishAt).toLocaleString('ja-JP', {
+          timeZone: 'Asia/Tokyo',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+      : null
+    lines.push(
+      `・予約記事: 残り${fmt(drip.pending)}本 / 全${fmt(drip.total)}本（公開済 ${fmt(drip.published)}）${
+        next ? `・次回公開 ${next}` : '・すべて公開済み'
+      }`,
+    )
+  }
 
   if (ga4) {
     lines.push(
@@ -1105,11 +1149,12 @@ export async function sendAnalyticsReport(
   const allErrors: string[] = []
 
   // --- データ取得 ---
-  const perTarget: { target: ReportTarget; ga4: Ga4Summary | null; gsc: GscSummary | null; errors: string[] }[] = []
+  const perTarget: { target: ReportTarget; ga4: Ga4Summary | null; gsc: GscSummary | null; drip: DripStatus | null; errors: string[] }[] = []
   for (const target of targets) {
     const errors: string[] = []
     let ga4: Ga4Summary | null = null
     let gsc: GscSummary | null = null
+    let drip: DripStatus | null = null
     if (target.ga4PropertyId) {
       try {
         ga4 = await fetchGa4Summary(target.ga4PropertyId, token, target.ga4PageFilter)
@@ -1124,7 +1169,10 @@ export async function sendAnalyticsReport(
         errors.push(`Search Console: ${e?.message || e}`)
       }
     }
-    perTarget.push({ target, ga4, gsc, errors })
+    if (target.dripStatusUrl) {
+      drip = await fetchDripStatus(target.dripStatusUrl)
+    }
+    perTarget.push({ target, ga4, gsc, drip, errors })
     allErrors.push(...errors.map((e) => `${target.name}: ${e}`))
   }
 
@@ -1160,8 +1208,8 @@ export async function sendAnalyticsReport(
     sections.push(['《検索トピック》', ...topicLines.map((t) => `・${t}`)].join('\n'))
   }
 
-  for (const { target, ga4, gsc, errors } of perTarget) {
-    sections.push(buildTargetSection(target, ga4, gsc, errors))
+  for (const { target, ga4, gsc, drip, errors } of perTarget) {
+    sections.push(buildTargetSection(target, ga4, gsc, drip, errors))
   }
   if (ytSummaries.length > 0 || ytErrors.length > 0) {
     sections.push(buildYtSection(ytSummaries, ytErrors))
