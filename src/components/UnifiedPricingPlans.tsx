@@ -115,7 +115,7 @@ export function UnifiedPricingPlans({
           style={{ background: `linear-gradient(150deg, ${BRAND}, #0047b3 70%, #6d28d9)`, boxShadow: '0 24px 60px -12px rgba(0,102,255,0.5)' }}>
           <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full px-4 py-1.5 text-[11px] font-black text-white shadow-lg whitespace-nowrap"
             style={{ background: `linear-gradient(90deg, ${ACCENT}, #ff5c1e)` }}>
-            いちばん人気・いちばんお得
+            使い放題！めっちゃお得
           </div>
 
           <div className="mb-1 flex items-center gap-1.5 text-sm font-black text-white/85">
