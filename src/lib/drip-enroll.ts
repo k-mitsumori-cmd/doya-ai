@@ -12,14 +12,15 @@ import { prisma } from './prisma'
 export async function enrollUserInDripSequences(
   userId: string,
   opts: { startStep?: number } = {}
-) {
+): Promise<number> {
   const startStep = opts.startStep ?? 0
+  let created = 0
 
   // 配信停止済みユーザーはエンロールしない
   const unsubscribed = await prisma.dripUnsubscribe.findFirst({
     where: { userId },
   })
-  if (unsubscribed) return
+  if (unsubscribed) return created
 
   // アクティブなシーケンスを取得
   const activeSequences = await prisma.dripSequence.findMany({
@@ -32,7 +33,7 @@ export async function enrollUserInDripSequences(
     where: { id: userId },
     select: { plan: true, firstLoginAt: true, createdAt: true },
   })
-  if (!user) return
+  if (!user) return created
 
   for (const seq of activeSequences) {
     // セグメント条件を評価
@@ -51,7 +52,11 @@ export async function enrollUserInDripSequences(
     await prisma.dripEnrollment.create({
       data: { userId, sequenceId: seq.id, status: 'active', currentStep: startStep },
     })
+    created++
   }
+
+  // 新規に作成したエンロールメント数を返す（0=既存/対象外で追加なし）
+  return created
 }
 
 export function matchesSegment(

@@ -739,6 +739,28 @@ async function postDripToSlack(text: string): Promise<void> {
   }
 }
 
+/**
+ * HubSpot自動同期で新規リードを自動メール配信（ドリップ）に追加できたことをSlack通知する。
+ * 通知先はドリップ配信レポートと同じチャンネル（mail01_メール配信通知）。
+ * cronを止めないよう内部で握りつぶす（throwしない）。
+ */
+export async function sendHubspotSyncNotification(
+  leads: Array<{ name?: string | null; email: string }>
+): Promise<void> {
+  if (!leads.length) return
+  try {
+    const now = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
+    const lines = [
+      `:email: *[自動メール配信に追加できました]* ${now}`,
+      `HubSpotの新規コンタクト${leads.length}件を自動メール配信（ナーチャリング）に追加しました。`,
+      ...leads.map((l) => `- ${l.name || '(名前なし)'}（${l.email}）`),
+    ]
+    await postDripToSlack(lines.join('\n'))
+  } catch (e) {
+    console.error('[Notification] Failed to sendHubspotSyncNotification:', e)
+  }
+}
+
 interface DripDayStats {
   total: number      // その日のログ総数（sent + failed）
   sent: number       // 実際に配信できた件数（failed を除く）

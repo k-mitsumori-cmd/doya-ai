@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma, withRetry } from '@/lib/prisma'
 import { enrollUserInDripSequences } from '@/lib/drip-enroll'
 import { fetchContactsCreatedAfter, hubspotConfigured } from '@/lib/hubspot'
+import { sendHubspotSyncNotification } from '@/lib/notifications'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -62,6 +63,8 @@ export async function GET(request: Request) {
   let skippedNoEmail = 0
   let errors = 0
   let maxTs = since
+  // 実際に配信リストへ新規追加できたリード（Slack通知用）
+  const addedLeads: Array<{ name: string | null; email: string }> = []
 
   for (const c of contacts) {
     const ts = c.createdAt ? Date.parse(c.createdAt) : NaN
@@ -93,7 +96,8 @@ export async function GET(request: Request) {
       if (!existing) created++
 
       // ドリップ自動エンロール（歓迎スキップ = startStep既定1）。既存エンロールは内部でスキップ
-      await enrollUserInDripSequences(user.id, { startStep: START_STEP })
+      const enrolledCount = await enrollUserInDripSequences(user.id, { startStep: START_STEP })
+      if (enrolledCount > 0) addedLeads.push({ name, email })
       processed++
     } catch (e) {
       errors++
@@ -108,10 +112,16 @@ export async function GET(request: Request) {
     data: { value: { ts: newCursor } },
   })
 
+  // 実際に配信リストへ追加できたリードがあればSlack通知（mail01_メール配信通知）
+  if (addedLeads.length > 0) {
+    await sendHubspotSyncNotification(addedLeads)
+  }
+
   return NextResponse.json({
     fetched: contacts.length,
     created,
     processed,
+    added: addedLeads.length,
     skippedNoEmail,
     errors,
     cursor: newCursor,
