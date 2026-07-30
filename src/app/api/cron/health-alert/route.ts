@@ -56,14 +56,31 @@ async function checkTarget(t: Target): Promise<{ name: string; ok: boolean; rtt:
         extra: { 往復ms: rtt },
       })
     } else if (rtt > LATENCY_WARN_MS) {
-      await notifyAlert({
-        level: 'warn',
-        title: `${t.name}: 応答遅延を検知`,
-        context: t.url,
-        detail: `ヘルスチェック往復が ${rtt}ms（しきい値 ${LATENCY_WARN_MS}ms）。負荷増・コールドスタートの可能性。`,
-        dedupKey: `health-latency-${t.key}`,
-        cooldownMs: 15 * 60_000,
-      })
+      // 単発のコールドスタートで誤検知しないよう、遅い時は一度だけ再測定する
+      // （1回目で関数が温まるため、恒常的な遅延でなければ2回目は速い）。
+      // 2回目も閾値超過のときだけ「本当の遅延」として通知する。
+      let rtt2 = rtt
+      try {
+        const ctrl2 = new AbortController()
+        const to2 = setTimeout(() => ctrl2.abort(), FETCH_TIMEOUT_MS)
+        const s2 = Date.now()
+        const res2 = await fetch(t.url, { signal: ctrl2.signal, cache: 'no-store' })
+        clearTimeout(to2)
+        await res2.body?.cancel().catch(() => {})
+        if (res2.ok) rtt2 = Date.now() - s2 // 2回目が異常応答なら1回目の値で判断
+      } catch {
+        /* 再測定失敗時は1回目の値で判断（下の閾値比較へ） */
+      }
+      if (rtt2 > LATENCY_WARN_MS) {
+        await notifyAlert({
+          level: 'warn',
+          title: `${t.name}: 応答遅延を検知`,
+          context: t.url,
+          detail: `ヘルスチェック往復が ${rtt2}ms（初回 ${rtt}ms・しきい値 ${LATENCY_WARN_MS}ms）。持続的な負荷増の可能性。`,
+          dedupKey: `health-latency-${t.key}`,
+          cooldownMs: 15 * 60_000,
+        })
+      }
     }
     return { name: t.name, ok: res.ok, rtt, status: res.status }
   } catch (e) {
