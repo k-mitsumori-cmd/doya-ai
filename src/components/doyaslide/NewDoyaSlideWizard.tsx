@@ -239,10 +239,24 @@ export default function NewDoyaSlideWizard() {
   // 経過時間に応じて作業ステップを進める（検索→分析→構成→生成）
   const genStep = Math.min(GEN_STEPS.length - 1, Math.floor((elapsed / Math.max(1, estTotalSec)) * GEN_STEPS.length))
 
-  // 選択中スタイルの複数ページプレビュー
-  const stylePages = previews[style] || (currentStyle?.previewImage ? [currentStyle.previewImage] : [])
-  const isStaticGuidePreview = !previews[style]?.length && !!currentStyle?.previewImage
+  // 追加テンプレートは「専用表紙 → 全体レイアウト → 生成例」の順で見せる。
+  // 一覧カードでは表紙だけを使い、縮小された全体レイアウト同士が同じに見える問題を避ける。
+  const generatedStylePages = previews[style] || []
+  const staticStylePages = [currentStyle?.coverImage, currentStyle?.previewImage].filter(
+    (url): url is string => !!url
+  )
+  const stylePages = [
+    ...staticStylePages,
+    ...generatedStylePages.filter((url) => !staticStylePages.includes(url)),
+  ]
   const curPage = stylePages.length ? Math.min(previewPage, stylePages.length - 1) : 0
+  const currentPreviewUrl = stylePages[curPage]
+  const isStaticTemplatePreview = !!currentPreviewUrl && staticStylePages.includes(currentPreviewUrl)
+  const previewKind = currentPreviewUrl === currentStyle?.coverImage
+    ? '表紙'
+    : currentPreviewUrl === currentStyle?.previewImage
+      ? '全体レイアウト'
+      : '生成例'
 
   return (
     <div className="p-5 lg:p-10 max-w-3xl mx-auto pb-40">
@@ -367,7 +381,7 @@ export default function NewDoyaSlideWizard() {
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                 {STYLE_PRESETS.filter((s) => s.group === group).map((s) => {
                   const on = style === s.value
-                  const thumbnail = previews[s.value]?.[0] || s.previewImage
+                  const thumbnail = s.coverImage || previews[s.value]?.[0] || s.previewImage
                   return (
                     <button
                       key={s.value}
@@ -376,7 +390,7 @@ export default function NewDoyaSlideWizard() {
                         on ? 'border-blue-500 ring-2 ring-blue-200 scale-[1.02]' : 'border-slate-200 hover:border-blue-200'
                       }`}
                     >
-                      <div className={`${s.previewImage ? 'aspect-video' : 'aspect-[3/2]'} bg-slate-100 flex items-center justify-center overflow-hidden`}>
+                      <div className={`${s.coverImage || s.previewImage ? 'aspect-video' : 'aspect-[3/2]'} bg-slate-100 flex items-center justify-center overflow-hidden`}>
                         {thumbnail ? (
                           <img src={thumbnail} alt={s.label} className="w-full h-full object-cover" />
                         ) : (
@@ -398,15 +412,15 @@ export default function NewDoyaSlideWizard() {
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-xs font-black text-slate-700">選択中「{currentStyle?.label}」</p>
                 {stylePages.length > 1 && (
-                  <span className="text-[11px] font-bold text-slate-400">{curPage + 1} / {stylePages.length} ページ</span>
+                  <span className="text-[11px] font-bold text-slate-400">{previewKind} ・ {curPage + 1} / {stylePages.length}</span>
                 )}
               </div>
-              <div className={`relative ${isStaticGuidePreview ? 'aspect-video' : frameClass(aspect)} w-full min-w-0 max-h-[60vh] rounded-2xl overflow-hidden bg-slate-900 shadow-lg`}>
+              <div className={`relative ${isStaticTemplatePreview ? 'aspect-video' : frameClass(aspect)} w-full min-w-0 max-h-[60vh] rounded-2xl overflow-hidden bg-slate-900 shadow-lg`}>
                 {stylePages.length > 0 ? (
                   <img
                     key={`${style}-${curPage}-${aspect}`}
-                    src={stylePages[curPage]}
-                    alt={`${currentStyle?.label} ${curPage + 1}ページ目`}
+                    src={currentPreviewUrl}
+                    alt={`${currentStyle?.label} ${previewKind}`}
                     className="w-full h-full object-cover anim-whoosh"
                   />
                 ) : (
@@ -416,7 +430,7 @@ export default function NewDoyaSlideWizard() {
                   </div>
                 )}
                 <div className="absolute bottom-2 left-2 bg-black/55 text-white text-xs font-black px-2.5 py-1 rounded-lg backdrop-blur">
-                  {currentStyle?.label}
+                  {currentStyle?.label} ・ {previewKind}
                 </div>
 
                 {stylePages.length > 1 && (

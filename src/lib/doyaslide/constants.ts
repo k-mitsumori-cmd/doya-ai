@@ -68,6 +68,8 @@ export const STYLE_PRESETS: {
   group: 'business' | 'fun' | 'template'
   directive: string
   layout?: string
+  /** スタイルカードと大プレビューの先頭で見せる専用16:9表紙 */
+  coverImage?: string
   /** 生成待ちでも即表示する静的な20ページ一覧画像 */
   previewImage?: string
 }[] = [
@@ -174,6 +176,7 @@ export const STYLE_PRESETS: {
     value: 'minimal-isometric',
     label: 'ミニマル・アイソメ',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/01-minimal-isometric.webp',
     previewImage: '/doyaslide/template-guides/01-minimal-isometric.webp',
     directive:
       'minimal isometric system: warm white background, black and gray line art, restrained yellow accent, consistent 2.5–3.5pt outline, 30-degree axonometric objects, documents, cubes, charts and calm gender-neutral people, with at least 35% whitespace',
@@ -184,6 +187,7 @@ export const STYLE_PRESETS: {
     value: 'pop-sticker',
     label: 'ポップ＆ステッカー',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/02-pop-sticker.webp',
     previewImage: '/doyaslide/template-guides/02-pop-sticker.webp',
     directive:
       'warm cream pop-sticker system: coral, yellow and teal accents, chunky black outlines, rounded labels, speech bubbles, sticker shapes, friendly expressive characters and colorful but controlled information cards',
@@ -194,6 +198,7 @@ export const STYLE_PRESETS: {
     value: 'future-grid',
     label: 'フューチャー・グリッド',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/03-future-grid.webp',
     previewImage: '/doyaslide/template-guides/03-future-grid.webp',
     directive:
       'future-grid interface: deep charcoal/navy background on every slide, electric cyan and violet accents, technical grid, restrained glow, HUD frames, data panels, line icons and a composed digital navigator',
@@ -204,6 +209,7 @@ export const STYLE_PRESETS: {
     value: 'gentle-pastel',
     label: 'やさしいパステル',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/04-gentle-pastel.webp',
     previewImage: '/doyaslide/template-guides/04-gentle-pastel.webp',
     directive:
       'gentle editorial pastel system: ivory, dusty pink, sage and pale blue, rounded frames, delicate line illustrations, curved connectors, inclusive calm people, airy whitespace and a mature reassuring tone',
@@ -214,6 +220,7 @@ export const STYLE_PRESETS: {
     value: 'trust-navy',
     label: '信頼感ネイビー',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/05-trust-navy.webp',
     previewImage: '/doyaslide/template-guides/05-trust-navy.webp',
     directive:
       'evidence-first business system: white background, deep navy, teal and pale blue, thin rules, disciplined charts, large numbers, crisp flat icons and a composed professional facilitator',
@@ -224,6 +231,7 @@ export const STYLE_PRESETS: {
     value: 'luxury-monochrome',
     label: 'ラグジュアリー・モノクロ',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/06-luxury-monochrome.webp',
     previewImage: '/doyaslide/template-guides/06-luxury-monochrome.webp',
     directive:
       'quiet luxury editorial system: warm ivory, black and charcoal with champagne gold below five percent, elegant serif display type paired with clean sans-serif body, hairline rules, narrow columns and generous local whitespace',
@@ -234,6 +242,7 @@ export const STYLE_PRESETS: {
     value: 'fresh-aqua',
     label: 'フレッシュ・アクア',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/07-fresh-aqua.webp',
     previewImage: '/doyaslide/template-guides/07-fresh-aqua.webp',
     directive:
       'fresh aqua system: white, aqua, sky blue, leaf green and navy, wave dividers, rounded vectors, curved connectors, clean line icons and a lively but professional guide character',
@@ -244,6 +253,7 @@ export const STYLE_PRESETS: {
     value: 'dynamic-diagonal',
     label: 'ダイナミック・ダイアゴナル',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/08-dynamic-diagonal.webp',
     previewImage: '/doyaslide/template-guides/08-dynamic-diagonal.webp',
     directive:
       'dynamic diagonal system: off-white, deep navy, vivid orange and coral, consistent 15-degree cuts, forward arrows, numbered bands, large action numbers and active business characters',
@@ -254,6 +264,7 @@ export const STYLE_PRESETS: {
     value: 'editorial-red',
     label: 'エディトリアル・レッド',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/09-editorial-red.webp',
     previewImage: '/doyaslide/template-guides/09-editorial-red.webp',
     directive:
       'editorial research system: white, ink black and gray with signal red below ten percent, strong typographic hierarchy, six-column rhythm, red section numbers, pull quotes, captions and thoughtful researcher figures',
@@ -264,6 +275,7 @@ export const STYLE_PRESETS: {
     value: 'two-tone-split',
     label: 'ツートーン・スプリット',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/10-two-tone-split.webp',
     previewImage: '/doyaslide/template-guides/10-two-tone-split.webp',
     directive:
       'two-tone comparison system: cobalt blue, warm orange and off-white, left-right split compositions, alternating labels, 12px rounded rectangles, clear flat icons and a neutral coordinator character',
@@ -274,6 +286,7 @@ export const STYLE_PRESETS: {
     value: 'isometric-system',
     label: 'アイソメ・システム',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/11-isometric-system.webp',
     previewImage: '/doyaslide/template-guides/11-isometric-system.webp',
     directive:
       'detailed isometric system: white, dark gray, yellow and blue, 30-degree axonometric environments, exploded views, layered modules, connected flows, pale gray shadows and precise technical labels',
@@ -284,6 +297,7 @@ export const STYLE_PRESETS: {
     value: 'soft-3d',
     label: 'ソフト3D',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/12-soft-3d.webp',
     previewImage: '/doyaslide/template-guides/12-soft-3d.webp',
     directive:
       'mature soft-3D system: light gray, lilac, mint, peach and charcoal, matte clay objects, upper-left lighting, soft restrained shadows, large rounded cards and a friendly adult 3D helper',
@@ -294,6 +308,7 @@ export const STYLE_PRESETS: {
     value: 'hand-drawn-note',
     label: 'ハンドドローン・ノート',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/13-hand-drawn-note.webp',
     previewImage: '/doyaslide/template-guides/13-hand-drawn-note.webp',
     directive:
       'organized hand-drawn note system: recycled-paper off-white, ink black, marker yellow, blue and coral, imperfect pen lines, marker tabs, arrows, sticky notes and small explanatory doodles',
@@ -304,6 +319,7 @@ export const STYLE_PRESETS: {
     value: 'data-dashboard',
     label: 'データ・ダッシュボード',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/14-data-dashboard.webp',
     previewImage: '/doyaslide/template-guides/14-data-dashboard.webp',
     directive:
       'analytical dashboard system: deep slate, cyan, lime and amber, strict data grid, KPI cards, consistent chart series, visible axes, source-note areas, compact annotations and a professional data analyst',
@@ -314,6 +330,7 @@ export const STYLE_PRESETS: {
     value: 'modular-card',
     label: 'モジュラー・カード',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/15-modular-card.webp',
     previewImage: '/doyaslide/template-guides/15-modular-card.webp',
     directive:
       'modular component system: off-white, indigo, cyan, peach and dark ink, eight-point spacing rhythm, 16px rounded corners, subtle ten-percent shadows and a reusable inventory of large, medium and small cards',
@@ -324,6 +341,7 @@ export const STYLE_PRESETS: {
     value: 'circular-ecosystem',
     label: 'サーキュラー・エコシステム',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/16-circular-ecosystem.webp',
     previewImage: '/doyaslide/template-guides/16-circular-ecosystem.webp',
     directive:
       'circular ecosystem system: cream, forest green, moss, sky and ochre, concentric rings, clockwise arrows, radial maps, value chains, natural line icons and a calm facilitator',
@@ -334,6 +352,7 @@ export const STYLE_PRESETS: {
     value: 'character-story',
     label: 'キャラクター・ストーリー',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/17-character-story.webp',
     previewImage: '/doyaslide/template-guides/17-character-story.webp',
     directive:
       'character-led story system: warm white, navy, coral, mustard and sky, horizontal storyboard scenes, consistent characters, expressive but mature faces, speech bubbles and visual continuity from problem to action',
@@ -344,6 +363,7 @@ export const STYLE_PRESETS: {
     value: 'icon-taxonomy',
     label: 'アイコン・タクソノミー',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/18-icon-taxonomy.webp',
     previewImage: '/doyaslide/template-guides/18-icon-taxonomy.webp',
     directive:
       'systematic icon taxonomy: white, graphite, royal blue, mint and amber, 24px base icons, consistent two-pixel strokes, optical alignment, semantic categories and precise labels',
@@ -354,6 +374,7 @@ export const STYLE_PRESETS: {
     value: 'timeline-process',
     label: 'タイムライン・プロセス',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/19-timeline-process.webp',
     previewImage: '/doyaslide/template-guides/19-timeline-process.webp',
     directive:
       'timeline process system: warm white, navy, purple, orange and turquoise, process arrows, milestones, horizontal and vertical timelines, current-state markers and consistent date notation',
@@ -364,6 +385,7 @@ export const STYLE_PRESETS: {
     value: 'accessible-universal',
     label: 'アクセシブル',
     group: 'template',
+    coverImage: '/doyaslide/template-covers/20-accessible-universal.webp',
     previewImage: '/doyaslide/template-guides/20-accessible-universal.webp',
     directive:
       'accessible universal system: white, near-black, accessible blue, orange and green, high contrast, large readable headings, generous spacing, fixed reading order, inclusive people and redundant color-plus-shape coding',
