@@ -18,6 +18,7 @@ import {
   formatDuration,
 } from '@/lib/doyaslide/constants'
 import DoyaChar from '@/components/doyaslide/DoyaChar'
+import SlideImage from '@/components/doyaslide/SlideImage'
 
 type Aspect = 'wide' | 'square' | 'vertical'
 
@@ -83,11 +84,11 @@ export default function NewDoyaSlideWizard() {
   }
 
   // 既存スタイルのプレビューだけを逐次先読み。
-  // 静的一覧画像を持つ追加テンプレート20種は、選択されるまで代表ページを生成しない。
+  // 個別サンプルを持つ追加テンプレート20種は、静的な3ページだけを表示する。
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      for (const s of STYLE_PRESETS.filter((preset) => !preset.previewImage)) {
+      for (const s of STYLE_PRESETS.filter((preset) => !preset.sampleImages?.length)) {
         if (cancelled) break
         await loadPreview(s.value)
       }
@@ -98,11 +99,11 @@ export default function NewDoyaSlideWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // スタイル切替でページを先頭に戻し、選択中スタイルだけ代表ページを取得する。
-  // 追加テンプレートは取得完了まで静的な20ページ一覧画像を表示する。
+  // スタイル切替でページを先頭に戻し、既存スタイルだけ代表ページを取得する。
   useEffect(() => {
     setPreviewPage(0)
-    void loadPreview(style)
+    const selectedPreset = STYLE_PRESETS.find((preset) => preset.value === style)
+    if (!selectedPreset?.sampleImages?.length) void loadPreview(style)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [style])
 
@@ -239,10 +240,10 @@ export default function NewDoyaSlideWizard() {
   // 経過時間に応じて作業ステップを進める（検索→分析→構成→生成）
   const genStep = Math.min(GEN_STEPS.length - 1, Math.floor((elapsed / Math.max(1, estTotalSec)) * GEN_STEPS.length))
 
-  // 追加テンプレートは「専用表紙 → 全体レイアウト → 生成例」の順で見せる。
-  // 一覧カードでは表紙だけを使い、縮小された全体レイアウト同士が同じに見える問題を避ける。
-  const generatedStylePages = previews[style] || []
-  const staticStylePages = [currentStyle?.coverImage, currentStyle?.previewImage].filter(
+  // 追加テンプレートは「専用表紙 → 個別本文2枚」の3ページだけを見せる。
+  // 21枚の全体一覧画像は使わず、実際の本文レイアウトを読み取れる大きさに保つ。
+  const generatedStylePages = currentStyle?.sampleImages?.length ? [] : previews[style] || []
+  const staticStylePages = [currentStyle?.coverImage, ...(currentStyle?.sampleImages || [])].filter(
     (url): url is string => !!url
   )
   const stylePages = [
@@ -254,8 +255,8 @@ export default function NewDoyaSlideWizard() {
   const isStaticTemplatePreview = !!currentPreviewUrl && staticStylePages.includes(currentPreviewUrl)
   const previewKind = currentPreviewUrl === currentStyle?.coverImage
     ? '表紙'
-    : currentPreviewUrl === currentStyle?.previewImage
-      ? '全体レイアウト'
+    : isStaticTemplatePreview
+      ? '本文サンプル'
       : '生成例'
 
   return (
@@ -417,7 +418,7 @@ export default function NewDoyaSlideWizard() {
               </div>
               <div className={`relative ${isStaticTemplatePreview ? 'aspect-video' : frameClass(aspect)} w-full min-w-0 max-h-[60vh] rounded-2xl overflow-hidden bg-slate-900 shadow-lg`}>
                 {stylePages.length > 0 ? (
-                  <img
+                  <SlideImage
                     key={`${style}-${curPage}-${aspect}`}
                     src={currentPreviewUrl}
                     alt={`${currentStyle?.label} ${previewKind}`}

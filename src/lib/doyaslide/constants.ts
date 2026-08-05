@@ -72,6 +72,8 @@ export const STYLE_PRESETS: {
   coverImage?: string
   /** 生成待ちでも即表示する静的な20ページ一覧画像 */
   previewImage?: string
+  /** 表紙の次に見せる個別の16:9本文サンプル（追加テンプレートは2枚） */
+  sampleImages?: string[]
 }[] = [
   // ---------- ビジネス系3種（きちんとした資料テンプレート） ----------
   {
@@ -178,6 +180,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/01-minimal-isometric.webp',
     previewImage: '/doyaslide/template-guides/01-minimal-isometric.webp',
+    sampleImages: ['/doyaslide/template-previews/01-minimal-isometric-02.webp', '/doyaslide/template-previews/01-minimal-isometric-03.webp'],
     directive:
       'minimal isometric system: warm white background, black and gray line art, restrained yellow accent, consistent 2.5–3.5pt outline, 30-degree axonometric objects, documents, cubes, charts and calm gender-neutral people, with at least 35% whitespace',
     layout:
@@ -189,6 +192,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/02-pop-sticker.webp',
     previewImage: '/doyaslide/template-guides/02-pop-sticker.webp',
+    sampleImages: ['/doyaslide/template-previews/02-pop-sticker-02.webp', '/doyaslide/template-previews/02-pop-sticker-03.webp'],
     directive:
       'warm cream pop-sticker system: coral, yellow and teal accents, chunky black outlines, rounded labels, speech bubbles, sticker shapes, friendly expressive characters and colorful but controlled information cards',
     layout:
@@ -200,6 +204,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/03-future-grid.webp',
     previewImage: '/doyaslide/template-guides/03-future-grid.webp',
+    sampleImages: ['/doyaslide/template-previews/03-future-grid-02.webp', '/doyaslide/template-previews/03-future-grid-03.webp'],
     directive:
       'future-grid interface: deep charcoal/navy background on every slide, electric cyan and violet accents, technical grid, restrained glow, HUD frames, data panels, line icons and a composed digital navigator',
     layout:
@@ -211,6 +216,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/04-gentle-pastel.webp',
     previewImage: '/doyaslide/template-guides/04-gentle-pastel.webp',
+    sampleImages: ['/doyaslide/template-previews/04-gentle-pastel-02.webp', '/doyaslide/template-previews/04-gentle-pastel-03.webp'],
     directive:
       'gentle editorial pastel system: ivory, dusty pink, sage and pale blue, rounded frames, delicate line illustrations, curved connectors, inclusive calm people, airy whitespace and a mature reassuring tone',
     layout:
@@ -222,6 +228,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/05-trust-navy.webp',
     previewImage: '/doyaslide/template-guides/05-trust-navy.webp',
+    sampleImages: ['/doyaslide/template-previews/05-trust-navy-02.webp', '/doyaslide/template-previews/05-trust-navy-03.webp'],
     directive:
       'evidence-first business system: white background, deep navy, teal and pale blue, thin rules, disciplined charts, large numbers, crisp flat icons and a composed professional facilitator',
     layout:
@@ -233,6 +240,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/06-luxury-monochrome.webp',
     previewImage: '/doyaslide/template-guides/06-luxury-monochrome.webp',
+    sampleImages: ['/doyaslide/template-previews/06-luxury-monochrome-02.webp', '/doyaslide/template-previews/06-luxury-monochrome-03.webp'],
     directive:
       'quiet luxury editorial system: warm ivory, black and charcoal with champagne gold below five percent, elegant serif display type paired with clean sans-serif body, hairline rules, narrow columns and generous local whitespace',
     layout:
@@ -244,6 +252,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/07-fresh-aqua.webp',
     previewImage: '/doyaslide/template-guides/07-fresh-aqua.webp',
+    sampleImages: ['/doyaslide/template-previews/07-fresh-aqua-02.webp', '/doyaslide/template-previews/07-fresh-aqua-03.webp'],
     directive:
       'fresh aqua system: white, aqua, sky blue, leaf green and navy, wave dividers, rounded vectors, curved connectors, clean line icons and a lively but professional guide character',
     layout:
@@ -255,6 +264,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/08-dynamic-diagonal.webp',
     previewImage: '/doyaslide/template-guides/08-dynamic-diagonal.webp',
+    sampleImages: ['/doyaslide/template-previews/08-dynamic-diagonal-02.webp', '/doyaslide/template-previews/08-dynamic-diagonal-03.webp'],
     directive:
       'dynamic diagonal system: off-white, deep navy, vivid orange and coral, consistent 15-degree cuts, forward arrows, numbered bands, large action numbers and active business characters',
     layout:
@@ -266,6 +276,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/09-editorial-red.webp',
     previewImage: '/doyaslide/template-guides/09-editorial-red.webp',
+    sampleImages: ['/doyaslide/template-previews/09-editorial-red-02.webp', '/doyaslide/template-previews/09-editorial-red-03.webp'],
     directive:
       'editorial research system: white, ink black and gray with signal red below ten percent, strong typographic hierarchy, six-column rhythm, red section numbers, pull quotes, captions and thoughtful researcher figures',
     layout:
@@ -277,6 +288,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/10-two-tone-split.webp',
     previewImage: '/doyaslide/template-guides/10-two-tone-split.webp',
+    sampleImages: ['/doyaslide/template-previews/10-two-tone-split-02.webp', '/doyaslide/template-previews/10-two-tone-split-03.webp'],
     directive:
       'two-tone comparison system: cobalt blue, warm orange and off-white, left-right split compositions, alternating labels, 12px rounded rectangles, clear flat icons and a neutral coordinator character',
     layout:
@@ -288,6 +300,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/11-isometric-system.webp',
     previewImage: '/doyaslide/template-guides/11-isometric-system.webp',
+    sampleImages: ['/doyaslide/template-previews/11-isometric-system-02.webp', '/doyaslide/template-previews/11-isometric-system-03.webp'],
     directive:
       'detailed isometric system: white, dark gray, yellow and blue, 30-degree axonometric environments, exploded views, layered modules, connected flows, pale gray shadows and precise technical labels',
     layout:
@@ -299,6 +312,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/12-soft-3d.webp',
     previewImage: '/doyaslide/template-guides/12-soft-3d.webp',
+    sampleImages: ['/doyaslide/template-previews/12-soft-3d-02.webp', '/doyaslide/template-previews/12-soft-3d-03.webp'],
     directive:
       'mature soft-3D system: light gray, lilac, mint, peach and charcoal, matte clay objects, upper-left lighting, soft restrained shadows, large rounded cards and a friendly adult 3D helper',
     layout:
@@ -310,6 +324,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/13-hand-drawn-note.webp',
     previewImage: '/doyaslide/template-guides/13-hand-drawn-note.webp',
+    sampleImages: ['/doyaslide/template-previews/13-hand-drawn-note-02.webp', '/doyaslide/template-previews/13-hand-drawn-note-03.webp'],
     directive:
       'organized hand-drawn note system: recycled-paper off-white, ink black, marker yellow, blue and coral, imperfect pen lines, marker tabs, arrows, sticky notes and small explanatory doodles',
     layout:
@@ -321,6 +336,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/14-data-dashboard.webp',
     previewImage: '/doyaslide/template-guides/14-data-dashboard.webp',
+    sampleImages: ['/doyaslide/template-previews/14-data-dashboard-02.webp', '/doyaslide/template-previews/14-data-dashboard-03.webp'],
     directive:
       'analytical dashboard system: deep slate, cyan, lime and amber, strict data grid, KPI cards, consistent chart series, visible axes, source-note areas, compact annotations and a professional data analyst',
     layout:
@@ -332,6 +348,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/15-modular-card.webp',
     previewImage: '/doyaslide/template-guides/15-modular-card.webp',
+    sampleImages: ['/doyaslide/template-previews/15-modular-card-02.webp', '/doyaslide/template-previews/15-modular-card-03.webp'],
     directive:
       'modular component system: off-white, indigo, cyan, peach and dark ink, eight-point spacing rhythm, 16px rounded corners, subtle ten-percent shadows and a reusable inventory of large, medium and small cards',
     layout:
@@ -343,6 +360,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/16-circular-ecosystem.webp',
     previewImage: '/doyaslide/template-guides/16-circular-ecosystem.webp',
+    sampleImages: ['/doyaslide/template-previews/16-circular-ecosystem-02.webp', '/doyaslide/template-previews/16-circular-ecosystem-03.webp'],
     directive:
       'circular ecosystem system: cream, forest green, moss, sky and ochre, concentric rings, clockwise arrows, radial maps, value chains, natural line icons and a calm facilitator',
     layout:
@@ -354,6 +372,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/17-character-story.webp',
     previewImage: '/doyaslide/template-guides/17-character-story.webp',
+    sampleImages: ['/doyaslide/template-previews/17-character-story-02.webp', '/doyaslide/template-previews/17-character-story-03.webp'],
     directive:
       'character-led story system: warm white, navy, coral, mustard and sky, horizontal storyboard scenes, consistent characters, expressive but mature faces, speech bubbles and visual continuity from problem to action',
     layout:
@@ -365,6 +384,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/18-icon-taxonomy.webp',
     previewImage: '/doyaslide/template-guides/18-icon-taxonomy.webp',
+    sampleImages: ['/doyaslide/template-previews/18-icon-taxonomy-02.webp', '/doyaslide/template-previews/18-icon-taxonomy-03.webp'],
     directive:
       'systematic icon taxonomy: white, graphite, royal blue, mint and amber, 24px base icons, consistent two-pixel strokes, optical alignment, semantic categories and precise labels',
     layout:
@@ -376,6 +396,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/19-timeline-process.webp',
     previewImage: '/doyaslide/template-guides/19-timeline-process.webp',
+    sampleImages: ['/doyaslide/template-previews/19-timeline-process-02.webp', '/doyaslide/template-previews/19-timeline-process-03.webp'],
     directive:
       'timeline process system: warm white, navy, purple, orange and turquoise, process arrows, milestones, horizontal and vertical timelines, current-state markers and consistent date notation',
     layout:
@@ -387,6 +408,7 @@ export const STYLE_PRESETS: {
     group: 'template',
     coverImage: '/doyaslide/template-covers/20-accessible-universal.webp',
     previewImage: '/doyaslide/template-guides/20-accessible-universal.webp',
+    sampleImages: ['/doyaslide/template-previews/20-accessible-universal-02.webp', '/doyaslide/template-previews/20-accessible-universal-03.webp'],
     directive:
       'accessible universal system: white, near-black, accessible blue, orange and green, high contrast, large readable headings, generous spacing, fixed reading order, inclusive people and redundant color-plus-shape coding',
     layout:

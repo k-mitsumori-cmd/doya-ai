@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { LOGO_POSITIONS, estimateGenSeconds, formatDuration } from '@/lib/doyaslide/constants'
+import SlideImage from '@/components/doyaslide/SlideImage'
 
 interface Slide {
   id: string
@@ -492,9 +493,9 @@ function EditorInner() {
 
         {/* preview */}
         <div>
-          <div className={`${ac} bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg`}>
+          <div className={`relative ${ac} bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg`}>
             {selected?.imageUrl ? (
-              <img
+              <SlideImage
                 key={selected.imageUrl}
                 src={selected.imageUrl}
                 alt={selected.headline || ''}
