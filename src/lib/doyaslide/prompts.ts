@@ -2,6 +2,7 @@
 // ドヤスライド プロンプトビルダー
 // ============================================
 import { getStyleDirective, getStylePreset, LOGO_POSITION_EN } from './constants'
+import { getAspectSafetyInstruction } from './aspect'
 import { getStructureTemplate } from './templates'
 import type { LogoPosition, SlideStructure } from './types'
 
@@ -62,8 +63,9 @@ export function buildImagePrompt(params: {
   extraInstruction?: string // チャット修正の追記
   pageNumber?: number // 本文ページ右下に小さく入れるページ番号（表紙では未使用）
   docType?: string // 'sns' のときは資料テンプレではなくポスター構成にする
+  aspectRatio?: string // wide のとき、3:2生成後の16:9クロップ用セーフ領域を確保する
 }): string {
-  const { slide, themeColor, stylePreset, hasLogo, logoPosition, extraInstruction, pageNumber, docType } = params
+  const { slide, themeColor, stylePreset, hasLogo, logoPosition, extraInstruction, pageNumber, docType, aspectRatio } = params
   const preset = getStylePreset(stylePreset)
   const style = getStyleDirective(stylePreset)
   const logoArea = LOGO_POSITION_EN[logoPosition] || 'top-right corner'
@@ -126,6 +128,7 @@ export function buildImagePrompt(params: {
 
   const lines = [
     opener,
+    getAspectSafetyInstruction(aspectRatio),
     `Slide role: ${role || 'content'}.`,
     layout,
     slide.headline ? `Slide title (Japanese): "${slide.headline}".` : '',

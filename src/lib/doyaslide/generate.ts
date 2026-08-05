@@ -8,6 +8,7 @@ import { ASPECT_TO_SIZE } from './constants'
 import { buildImagePrompt } from './prompts'
 import { LOGO_POSITION_EN } from './constants'
 import { compositeLogo, fetchBuffer } from './logo'
+import { getAspectSafetyInstruction, normalizeGeneratedSlide } from './aspect'
 import { uploadSlideImage, uploadComposedImage } from './storage'
 import type { AspectRatio, LogoPosition, LogoSize } from './types'
 
@@ -59,6 +60,7 @@ export async function composeSlideImage(
           : '',
         'Absolutely do NOT include any QR code, barcode, or scannable matrix/dot code.',
         'Do NOT invent or display any URL, email, phone number, or social handle that is not already shown in the original.',
+        getAspectSafetyInstruction(project.aspectRatio),
         'High quality, professional, visually striking. No watermark. No UI chrome. No borders around the slide.',
       ]
         .filter(Boolean)
@@ -72,9 +74,11 @@ export async function composeSlideImage(
         extraInstruction,
         pageNumber: slide.index,
         docType: project.docType,
+        aspectRatio: project.aspectRatio,
       })
 
   const img = await generateImageWithFallback({ prompt, size, quality: 'high' })
+  const normalized = await normalizeGeneratedSlide(img.base64, img.mimeType, project.aspectRatio)
 
   // I/O は全てタイムアウトで保護（無いと接続滞留でワーカーが無限ブロック→関数強制終了→凍結）
   const UPLOAD_TIMEOUT_MS = Number(process.env.DOYA_UPLOAD_TIMEOUT_MS) || 30000
@@ -83,14 +87,14 @@ export async function composeSlideImage(
   const rawImageUrl = await raceTimeout(
     'uploadSlideImage',
     UPLOAD_TIMEOUT_MS,
-    uploadSlideImage(userId, project.id, img.base64, img.mimeType)
+    uploadSlideImage(userId, project.id, normalized.base64, normalized.mimeType)
   )
 
   let imageUrl = rawImageUrl
   if (hasLogo && project.logoUrl) {
     try {
       const logoBuf = await raceTimeout('fetchLogo', UPLOAD_TIMEOUT_MS, fetchBuffer(project.logoUrl))
-      const composed = await compositeLogo(Buffer.from(img.base64, 'base64'), logoBuf, {
+      const composed = await compositeLogo(normalized.buffer, logoBuf, {
         position: (project.logoPosition as LogoPosition) || 'top-right',
         size: (project.logoSize as LogoSize) || 'M',
         backingChip: project.logoBackingChip,

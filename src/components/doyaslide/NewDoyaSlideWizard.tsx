@@ -43,7 +43,7 @@ const GEN_STEPS = [
 function frameClass(a: Aspect) {
   if (a === 'square') return 'aspect-square'
   if (a === 'vertical') return 'aspect-[2/3]'
-  return 'aspect-[3/2]'
+  return 'aspect-video'
 }
 
 export default function NewDoyaSlideWizard() {
@@ -82,11 +82,12 @@ export default function NewDoyaSlideWizard() {
       })
   }
 
-  // 全スタイルのプレビューを逐次先読み（コールド時に全スタイル同時生成の集中を避ける）
+  // 既存スタイルのプレビューだけを逐次先読み。
+  // 静的一覧画像を持つ追加テンプレート20種は、選択されるまで代表ページを生成しない。
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      for (const s of STYLE_PRESETS) {
+      for (const s of STYLE_PRESETS.filter((preset) => !preset.previewImage)) {
         if (cancelled) break
         await loadPreview(s.value)
       }
@@ -97,9 +98,12 @@ export default function NewDoyaSlideWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // スタイル切替でプレビューのページを先頭に戻す
+  // スタイル切替でページを先頭に戻し、選択中スタイルだけ代表ページを取得する。
+  // 追加テンプレートは取得完了まで静的な20ページ一覧画像を表示する。
   useEffect(() => {
     setPreviewPage(0)
+    void loadPreview(style)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [style])
 
   // 生成中の楽しいメッセージ回し + 経過時間カウント
@@ -236,7 +240,8 @@ export default function NewDoyaSlideWizard() {
   const genStep = Math.min(GEN_STEPS.length - 1, Math.floor((elapsed / Math.max(1, estTotalSec)) * GEN_STEPS.length))
 
   // 選択中スタイルの複数ページプレビュー
-  const stylePages = previews[style] || []
+  const stylePages = previews[style] || (currentStyle?.previewImage ? [currentStyle.previewImage] : [])
+  const isStaticGuidePreview = !previews[style]?.length && !!currentStyle?.previewImage
   const curPage = stylePages.length ? Math.min(previewPage, stylePages.length - 1) : 0
 
   return (
@@ -350,17 +355,19 @@ export default function NewDoyaSlideWizard() {
         {/* ③ スタイル（左プレビュー縦並び + 右大プレビュー・ビュン切替） */}
         <div className={card} style={{ animationDelay: '120ms' }}>
           <label className="block text-sm font-black text-slate-700 mb-1">③ スタイル</label>
-          <p className="text-[11px] text-slate-400 font-medium mb-3">ビジネス系6種+おもしろ系6種。サムネをクリックで切替、下の大プレビューの ◀ ▶ で複数ページの仕上がりを確認（比率を変えると形も連動）</p>
-          {/* スタイル一覧（ビジネス系/おもしろ系の2グループ） */}
+          <p className="text-[11px] text-slate-400 font-medium mb-3">全32種。サムネをクリックで切替、下の大プレビューの ◀ ▶ で複数ページの仕上がりを確認できます。</p>
+          {/* スタイル一覧（既存2グループ + 追加テンプレート20種） */}
           {([
             { group: 'business', title: 'ビジネス系（きちんとした資料）' },
             { group: 'fun', title: 'おもしろ系（個性で魅せる）' },
+            { group: 'template', title: '追加デザインテンプレート（20種）' },
           ] as const).map(({ group, title }) => (
             <div key={group} className="mb-3 last:mb-0">
               <p className="text-[11px] font-black text-slate-500 mb-1.5">{title}</p>
-              <div className="grid grid-cols-3 gap-2.5">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                 {STYLE_PRESETS.filter((s) => s.group === group).map((s) => {
                   const on = style === s.value
+                  const thumbnail = previews[s.value]?.[0] || s.previewImage
                   return (
                     <button
                       key={s.value}
@@ -369,9 +376,9 @@ export default function NewDoyaSlideWizard() {
                         on ? 'border-blue-500 ring-2 ring-blue-200 scale-[1.02]' : 'border-slate-200 hover:border-blue-200'
                       }`}
                     >
-                      <div className="aspect-[3/2] bg-slate-100 flex items-center justify-center overflow-hidden">
-                        {previews[s.value]?.[0] ? (
-                          <img src={previews[s.value][0]} alt={s.label} className="w-full h-full object-cover" />
+                      <div className={`${s.previewImage ? 'aspect-video' : 'aspect-[3/2]'} bg-slate-100 flex items-center justify-center overflow-hidden`}>
+                        {thumbnail ? (
+                          <img src={thumbnail} alt={s.label} className="w-full h-full object-cover" />
                         ) : (
                           <span className="material-symbols-outlined animate-spin text-slate-300 text-lg">progress_activity</span>
                         )}
@@ -394,7 +401,7 @@ export default function NewDoyaSlideWizard() {
                   <span className="text-[11px] font-bold text-slate-400">{curPage + 1} / {stylePages.length} ページ</span>
                 )}
               </div>
-              <div className={`relative ${frameClass(aspect)} w-full min-w-0 max-h-[60vh] rounded-2xl overflow-hidden bg-slate-900 shadow-lg`}>
+              <div className={`relative ${isStaticGuidePreview ? 'aspect-video' : frameClass(aspect)} w-full min-w-0 max-h-[60vh] rounded-2xl overflow-hidden bg-slate-900 shadow-lg`}>
                 {stylePages.length > 0 ? (
                   <img
                     key={`${style}-${curPage}-${aspect}`}

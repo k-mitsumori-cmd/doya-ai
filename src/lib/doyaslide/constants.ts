@@ -57,7 +57,7 @@ export const ASPECT_LABELS: Record<AspectRatio, string> = {
 }
 
 /**
- * スタイルプリセット（12種 = ビジネス系6 + 遊び系6）。
+ * スタイルプリセット（32種 = ビジネス系6 + 遊び系6 + デザインテンプレート20）。
  * - directive: 配色・書体・モチーフのアートディレクション（スタイルの個性。強く差別化する）
  * - layout: 遊び系のみ。企業資料テンプレートの代わりに使う、そのスタイル専用の本文レイアウト言語。
  *   layout が無いスタイルは buildImagePrompt の「きちんとした資料」テンプレート（タイトル左上+グリッド本文+フッター）になる。
@@ -65,9 +65,11 @@ export const ASPECT_LABELS: Record<AspectRatio, string> = {
 export const STYLE_PRESETS: {
   value: StylePreset
   label: string
-  group: 'business' | 'fun'
+  group: 'business' | 'fun' | 'template'
   directive: string
   layout?: string
+  /** 生成待ちでも即表示する静的な20ページ一覧画像 */
+  previewImage?: string
 }[] = [
   // ---------- ビジネス系3種（きちんとした資料テンプレート） ----------
   {
@@ -167,6 +169,207 @@ export const STYLE_PRESETS: {
     layout:
       'RETRO PRINT LAYOUT: the title in big retro display lettering with a vintage badge or ribbon, sunburst stripe rays radiating behind the key area, each bullet item inside a vintage label / ticket-style frame with a stamp-like icon, all arranged on a slightly textured paper grid.',
   },
+  // ---------- デザインテンプレート20種（静的一覧プレビュー + 選択時に代表ページ生成） ----------
+  {
+    value: 'minimal-isometric',
+    label: 'ミニマル・アイソメ',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/01-minimal-isometric.webp',
+    directive:
+      'minimal isometric system: warm white background, black and gray line art, restrained yellow accent, consistent 2.5–3.5pt outline, 30-degree axonometric objects, documents, cubes, charts and calm gender-neutral people, with at least 35% whitespace',
+    layout:
+      'MINIMAL ISOMETRIC LAYOUT: strict grid and wide margins; use one explanatory isometric scene, process, comparison, KPI or conclusion diagram per slide. Keep text concise and place callouts beside the illustration with thin leader lines.',
+  },
+  {
+    value: 'pop-sticker',
+    label: 'ポップ＆ステッカー',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/02-pop-sticker.webp',
+    directive:
+      'warm cream pop-sticker system: coral, yellow and teal accents, chunky black outlines, rounded labels, speech bubbles, sticker shapes, friendly expressive characters and colorful but controlled information cards',
+    layout:
+      'POP STICKER LAYOUT: build the page from bold rounded title labels, sticker-like cards, simple diagrams and one expressive character. Vary between comparison, steps, KPI and feature cards while keeping strong alignment and readable density.',
+  },
+  {
+    value: 'future-grid',
+    label: 'フューチャー・グリッド',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/03-future-grid.webp',
+    directive:
+      'future-grid interface: deep charcoal/navy background on every slide, electric cyan and violet accents, technical grid, restrained glow, HUD frames, data panels, line icons and a composed digital navigator',
+    layout:
+      'FUTURE GRID LAYOUT: place content inside disciplined HUD modules connected by fine circuit lines. Use dashboards, system maps, scanning rings, timelines and KPI panels; keep glow subtle and preserve breathing room.',
+  },
+  {
+    value: 'gentle-pastel',
+    label: 'やさしいパステル',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/04-gentle-pastel.webp',
+    directive:
+      'gentle editorial pastel system: ivory, dusty pink, sage and pale blue, rounded frames, delicate line illustrations, curved connectors, inclusive calm people, airy whitespace and a mature reassuring tone',
+    layout:
+      'GENTLE PASTEL LAYOUT: use softly rounded panels and circular icon groups with a clear left-to-right reading order. Balance one human illustration with concise cards, diagrams or metrics; friendly but never childish.',
+  },
+  {
+    value: 'trust-navy',
+    label: '信頼感ネイビー',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/05-trust-navy.webp',
+    directive:
+      'evidence-first business system: white background, deep navy, teal and pale blue, thin rules, disciplined charts, large numbers, crisp flat icons and a composed professional facilitator',
+    layout:
+      'TRUST NAVY LAYOUT: lead with the conclusion or evidence, then arrange supporting facts on a strict corporate grid. Use clear 2–4 column comparisons, KPI blocks, process arrows and compact source-note areas.',
+  },
+  {
+    value: 'luxury-monochrome',
+    label: 'ラグジュアリー・モノクロ',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/06-luxury-monochrome.webp',
+    directive:
+      'quiet luxury editorial system: warm ivory, black and charcoal with champagne gold below five percent, elegant serif display type paired with clean sans-serif body, hairline rules, narrow columns and generous local whitespace',
+    layout:
+      'LUXURY MONOCHROME LAYOUT: use restrained asymmetry, refined editorial columns, a single elegant illustration or chart and precise captions. Never crowd the canvas; gold only marks the most important number or rule.',
+  },
+  {
+    value: 'fresh-aqua',
+    label: 'フレッシュ・アクア',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/07-fresh-aqua.webp',
+    directive:
+      'fresh aqua system: white, aqua, sky blue, leaf green and navy, wave dividers, rounded vectors, curved connectors, clean line icons and a lively but professional guide character',
+    layout:
+      'FRESH AQUA LAYOUT: create flowing left-to-right diagrams, wave-separated content zones, rounded metric cards and light scenario illustrations. Communicate cleanliness, growth and forward movement.',
+  },
+  {
+    value: 'dynamic-diagonal',
+    label: 'ダイナミック・ダイアゴナル',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/08-dynamic-diagonal.webp',
+    directive:
+      'dynamic diagonal system: off-white, deep navy, vivid orange and coral, consistent 15-degree cuts, forward arrows, numbered bands, large action numbers and active business characters',
+    layout:
+      'DYNAMIC DIAGONAL LAYOUT: drive the eye from upper-left to lower-right using angled panels and progress arrows. Use bold action statements, numbered steps, rising charts and before/after splits without sacrificing alignment.',
+  },
+  {
+    value: 'editorial-red',
+    label: 'エディトリアル・レッド',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/09-editorial-red.webp',
+    directive:
+      'editorial research system: white, ink black and gray with signal red below ten percent, strong typographic hierarchy, six-column rhythm, red section numbers, pull quotes, captions and thoughtful researcher figures',
+    layout:
+      'EDITORIAL RED LAYOUT: compose like a premium report spread using strong section numbering, narrow text columns, annotated diagrams, pull quotes and concise captions. Red is reserved for navigation and decisive evidence.',
+  },
+  {
+    value: 'two-tone-split',
+    label: 'ツートーン・スプリット',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/10-two-tone-split.webp',
+    directive:
+      'two-tone comparison system: cobalt blue, warm orange and off-white, left-right split compositions, alternating labels, 12px rounded rectangles, clear flat icons and a neutral coordinator character',
+    layout:
+      'TWO-TONE SPLIT LAYOUT: divide the canvas into two balanced territories for choices, roles, before/after or problem/solution. Use color plus labels and icons so the contrast remains understandable without color alone.',
+  },
+  {
+    value: 'isometric-system',
+    label: 'アイソメ・システム',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/11-isometric-system.webp',
+    directive:
+      'detailed isometric system: white, dark gray, yellow and blue, 30-degree axonometric environments, exploded views, layered modules, connected flows, pale gray shadows and precise technical labels',
+    layout:
+      'ISOMETRIC SYSTEM LAYOUT: make a miniature system or environment the hero, then reveal inputs, layers, dependencies and outputs with numbered callouts. Use exploded assemblies and connected scenes for process-heavy pages.',
+  },
+  {
+    value: 'soft-3d',
+    label: 'ソフト3D',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/12-soft-3d.webp',
+    directive:
+      'mature soft-3D system: light gray, lilac, mint, peach and charcoal, matte clay objects, upper-left lighting, soft restrained shadows, large rounded cards and a friendly adult 3D helper',
+    layout:
+      'SOFT 3D LAYOUT: pair one clear matte 3D metaphor with concise cards, metrics or process steps. Keep forms simple and professional, with consistent camera angle, light direction and material treatment across the deck.',
+  },
+  {
+    value: 'hand-drawn-note',
+    label: 'ハンドドローン・ノート',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/13-hand-drawn-note.webp',
+    directive:
+      'organized hand-drawn note system: recycled-paper off-white, ink black, marker yellow, blue and coral, imperfect pen lines, marker tabs, arrows, sticky notes and small explanatory doodles',
+    layout:
+      'HAND-DRAWN NOTE LAYOUT: preserve a tidy sketch grid. Use hand-drawn frames, marker highlights and arrows to connect ideas, but maintain consistent margins, readable text blocks and a deliberate information hierarchy.',
+  },
+  {
+    value: 'data-dashboard',
+    label: 'データ・ダッシュボード',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/14-data-dashboard.webp',
+    directive:
+      'analytical dashboard system: deep slate, cyan, lime and amber, strict data grid, KPI cards, consistent chart series, visible axes, source-note areas, compact annotations and a professional data analyst',
+    layout:
+      'DATA DASHBOARD LAYOUT: build each page from one primary insight plus supporting KPI, chart and annotation modules. Keep units, legends, axes and color meanings consistent; emphasize the conclusion rather than decorative data.',
+  },
+  {
+    value: 'modular-card',
+    label: 'モジュラー・カード',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/15-modular-card.webp',
+    directive:
+      'modular component system: off-white, indigo, cyan, peach and dark ink, eight-point spacing rhythm, 16px rounded corners, subtle ten-percent shadows and a reusable inventory of large, medium and small cards',
+    layout:
+      'MODULAR CARD LAYOUT: assemble each page from a repeatable component library while changing the card combination for the page role. Use clear card sizes, fixed gaps, aligned labels and one dominant card per slide.',
+  },
+  {
+    value: 'circular-ecosystem',
+    label: 'サーキュラー・エコシステム',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/16-circular-ecosystem.webp',
+    directive:
+      'circular ecosystem system: cream, forest green, moss, sky and ochre, concentric rings, clockwise arrows, radial maps, value chains, natural line icons and a calm facilitator',
+    layout:
+      'CIRCULAR ECOSYSTEM LAYOUT: express relationships with loops, rings, orbit maps, radial stages and circular value chains. Vary the circular construction by page while keeping labels outside crowded centers.',
+  },
+  {
+    value: 'character-story',
+    label: 'キャラクター・ストーリー',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/17-character-story.webp',
+    directive:
+      'character-led story system: warm white, navy, coral, mustard and sky, horizontal storyboard scenes, consistent characters, expressive but mature faces, speech bubbles and visual continuity from problem to action',
+    layout:
+      'CHARACTER STORY LAYOUT: tell each page through one to four sequential scenes featuring the same guide or user. Use speech bubbles sparingly and make the narrative progression—problem, insight, solution, action, result—immediately clear.',
+  },
+  {
+    value: 'icon-taxonomy',
+    label: 'アイコン・タクソノミー',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/18-icon-taxonomy.webp',
+    directive:
+      'systematic icon taxonomy: white, graphite, royal blue, mint and amber, 24px base icons, consistent two-pixel strokes, optical alignment, semantic categories and precise labels',
+    layout:
+      'ICON TAXONOMY LAYOUT: use icons to communicate category, order, status and action rather than decoration. Arrange them in semantic groups, matrices, flows or comparison rows with consistent optical size and label spacing.',
+  },
+  {
+    value: 'timeline-process',
+    label: 'タイムライン・プロセス',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/19-timeline-process.webp',
+    directive:
+      'timeline process system: warm white, navy, purple, orange and turquoise, process arrows, milestones, horizontal and vertical timelines, current-state markers and consistent date notation',
+    layout:
+      'TIMELINE PROCESS LAYOUT: organize content around a clear temporal spine. Vary between milestone roadmaps, swimlanes, phased arrows and before/now/next views, always highlighting the current position and next action.',
+  },
+  {
+    value: 'accessible-universal',
+    label: 'アクセシブル',
+    group: 'template',
+    previewImage: '/doyaslide/template-guides/20-accessible-universal.webp',
+    directive:
+      'accessible universal system: white, near-black, accessible blue, orange and green, high contrast, large readable headings, generous spacing, fixed reading order, inclusive people and redundant color-plus-shape coding',
+    layout:
+      'ACCESSIBLE UNIVERSAL LAYOUT: use a predictable top-to-bottom reading order, large labels and simple diagrams. Never rely on color alone; pair color with icons, patterns, labels or shapes and preserve strong contrast and whitespace.',
+  },
 ]
 
 export function getStylePreset(preset: string) {
@@ -191,6 +394,26 @@ export const STYLE_PREVIEW_COLOR: Record<StylePreset, string> = {
   flashy: '#e11d48', // ロゼレッド
   cyber: '#22d3ee', // ネオンシアン
   retro: '#c2410c', // ラストオレンジ
+  'minimal-isometric': '#facc15',
+  'pop-sticker': '#f97316',
+  'future-grid': '#22d3ee',
+  'gentle-pastel': '#e9a8b5',
+  'trust-navy': '#1e3a8a',
+  'luxury-monochrome': '#a16207',
+  'fresh-aqua': '#06b6d4',
+  'dynamic-diagonal': '#f97316',
+  'editorial-red': '#dc2626',
+  'two-tone-split': '#2563eb',
+  'isometric-system': '#eab308',
+  'soft-3d': '#a78bfa',
+  'hand-drawn-note': '#eab308',
+  'data-dashboard': '#06b6d4',
+  'modular-card': '#4f46e5',
+  'circular-ecosystem': '#3f6212',
+  'character-story': '#f97316',
+  'icon-taxonomy': '#2563eb',
+  'timeline-process': '#7c3aed',
+  'accessible-universal': '#2563eb',
 }
 
 export function getStylePreviewColor(preset: string): string {

@@ -1,5 +1,6 @@
 'use client'
 
+import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { CheckoutButton } from '@/components/CheckoutButton'
@@ -14,9 +15,9 @@ import {
 const BRAND = '#0066ff'
 const ACCENT = '#ff1e72'
 
-function Sym({ name, size = 20, className = '', fill = false }: { name: string; size?: number; className?: string; fill?: boolean }) {
+function Sym({ name, size = 20, className = '', fill = false, style }: { name: string; size?: number; className?: string; fill?: boolean; style?: CSSProperties }) {
   return (
-    <span className={`material-symbols-outlined leading-none ${className}`} style={{ fontSize: size, fontVariationSettings: fill ? "'FILL' 1" : undefined }} aria-hidden="true">{name}</span>
+    <span className={`material-symbols-outlined leading-none ${className}`} style={{ fontSize: size, fontVariationSettings: fill ? "'FILL' 1" : undefined, ...style }} aria-hidden="true">{name}</span>
   )
 }
 

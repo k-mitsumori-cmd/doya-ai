@@ -8,6 +8,7 @@ import { getUserId } from '@/lib/doyaslide/access'
 import { buildImagePrompt } from '@/lib/doyaslide/prompts'
 import { STYLE_PRESETS, getStylePreviewColor, STYLE_PREVIEW_SAMPLE_SLIDES } from '@/lib/doyaslide/constants'
 import { stylePreviewPublicUrl, uploadStylePreview, stylePreviewExists } from '@/lib/doyaslide/storage'
+import { normalizeGeneratedSlide } from '@/lib/doyaslide/aspect'
 
 const SAMPLE_SLIDES = STYLE_PREVIEW_SAMPLE_SLIDES
 
@@ -15,8 +16,9 @@ const SAMPLE_SLIDES = STYLE_PREVIEW_SAMPLE_SLIDES
 // スタイルごとの「仕上がりイメージ」を複数ページ生成（全ユーザー共有でキャッシュ）
 export async function GET(req: NextRequest) {
   try {
+    // プレビューは全ユーザー共有。未ログインでも生成済みキャッシュは閲覧可能にし、
+    // キャッシュが無い場合だけログインユーザーによる生成を許可する。
     const userId = await getUserId()
-    if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
     const { searchParams } = new URL(req.url)
     const style = searchParams.get('style') || ''
@@ -34,6 +36,8 @@ export async function GET(req: NextRequest) {
           if (await stylePreviewExists(style, page)) {
             return stylePreviewPublicUrl(style, page)
           }
+          // 匿名アクセスでコールドキャッシュを生成すると費用が集中するため、閲覧だけに限定する。
+          if (!userId) return null
           const prompt = buildImagePrompt({
             slide,
             themeColor,
@@ -41,9 +45,11 @@ export async function GET(req: NextRequest) {
             hasLogo: false,
             logoPosition: 'top-right',
             pageNumber: slide.index,
+            aspectRatio: 'wide',
           })
           const img = await generateImageWithFallback({ prompt, size: '1536x1024', quality: 'high' })
-          return await uploadStylePreview(style, img.base64, page)
+          const normalized = await normalizeGeneratedSlide(img.base64, img.mimeType, 'wide')
+          return await uploadStylePreview(style, normalized.base64, page)
         } catch (e: any) {
           // 1ページ失敗しても成功した他ページは返す（全体500にしない）
           console.error(`[doyaslide/style-preview] ${style}-${page} failed:`, e?.message)
