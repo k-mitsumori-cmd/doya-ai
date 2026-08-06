@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Sparkles, ChevronDown, ExternalLink, Lock } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
-import { getActiveServices, getAllServices, getServiceById, type Service } from '@/lib/services'
+import { getActiveServices, getAllServices, getServiceById, HIDDEN_SERVICE_IDS, type Service } from '@/lib/services'
 
 interface ServiceNavProps {
   currentService?: string  // サービスID（'kantan', 'banner', 'lp', etc.）
@@ -18,7 +18,9 @@ export default function ServiceNav({ currentService }: ServiceNavProps) {
   // サービス一覧を取得
   const allServices = getAllServices()
   const activeServices = getActiveServices()
-  const comingSoonServices = allServices.filter(s => s.status === 'coming_soon')
+  const comingSoonServices = allServices.filter(
+    s => s.status === 'coming_soon' && !HIDDEN_SERVICE_IDS.has(s.id)
+  )
 
   // 現在のサービスを取得
   const current = currentService ? getServiceById(currentService) : null
@@ -170,7 +172,9 @@ export default function ServiceNav({ currentService }: ServiceNavProps) {
 export function OtherServicesCard({ currentService }: { currentService: string }) {
   const activeServices = getActiveServices()
   const otherServices = activeServices.filter(s => s.id !== currentService)
-  const comingSoonServices = getAllServices().filter(s => s.status === 'coming_soon').slice(0, 2)
+  const comingSoonServices = getAllServices()
+    .filter(s => s.status === 'coming_soon' && !HIDDEN_SERVICE_IDS.has(s.id))
+    .slice(0, 2)
 
   return (
     <div className="p-3 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">

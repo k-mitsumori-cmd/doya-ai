@@ -1621,14 +1621,38 @@ export function getServiceById(id: string): Service | undefined {
   return SERVICES.find(service => service.id === id)
 }
 
-// SERVICES に残っているがページ(ルート)が未実装のID。
-// トップページ・sitemap の両方でリンク切れ/404 URL を出さないための共通除外リスト。
-// （恒久対応は SERVICES 側の整理。実装され次第ここから外す）
-export const HIDDEN_SERVICE_IDS = new Set(['video', 'presentation'])
+// 対外的に出さないサービスID（共通除外リスト）。
+// トップページ・sitemap・llms.txt・ServiceNav の全てがこのリストを参照するため、
+// ここに id を足すだけで「サービスカード・サイトマップ・LLM向け一覧」から一括で消える。
+// 定義（SERVICES 本体）・ページ・API・DB は残すので、id をここから外せばそのまま復帰できる。
+// ⚠️ 消したい時に SERVICES 配列ごと削除しないこと（戻せなくなる）。
+//
+// 除外理由の内訳:
+//   - 実体なし（ページ・APIとも未実装）: video / presentation
+//   - 提供終了（2026-08-06 ユーザー判断）: kantan / shindan / logo / opening
+//                                        tenkai / copy / interviewx / lp / adsim
+export const HIDDEN_SERVICE_IDS = new Set([
+  // ルート未実装
+  'video',
+  'presentation',
+  // 提供終了（調整中だったもの）
+  'kantan',
+  'shindan',
+  'logo',
+  'opening',
+  // 提供終了（開発中だったもの。実装は残置）
+  'tenkai',
+  'copy',
+  'interviewx',
+  'lp',
+  'adsim',
+])
 
-// アクティブなサービスのみ取得
+// アクティブなサービスのみ取得（非公開IDは常に除外）
 export function getActiveServices(): Service[] {
-  return SERVICES.filter(s => s.status === 'active').sort((a, b) => a.order - b.order)
+  return SERVICES
+    .filter(s => s.status === 'active' && !HIDDEN_SERVICE_IDS.has(s.id))
+    .sort((a, b) => a.order - b.order)
 }
 
 // 全サービス（近日公開含む）をorder順で取得
