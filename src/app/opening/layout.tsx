@@ -5,6 +5,7 @@ import { LpJsonLd } from '@/components/lp'
 import OpeningAppLayout from '@/components/opening/OpeningAppLayout'
 
 export const metadata: Metadata = buildServiceMetadata('opening', {
+  tagline: 'URLからオープニングアニメを自動生成',
   keywords: ['オープニングアニメーション', 'Reactアニメーション', 'アニメーション生成', 'オープニング動画', 'サイトアニメーション'],
 })
 

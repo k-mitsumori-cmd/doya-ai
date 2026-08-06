@@ -5,6 +5,7 @@ import { LpJsonLd } from '@/components/lp'
 import { FAQ } from './lp-data'
 
 export const metadata: Metadata = buildServiceMetadata('adbanner', {
+  tagline: '広告バナーを量産して改善',
   keywords: ['広告バナー', 'バナー作成', 'バナー量産', '広告クリエイティブ', 'AIバナー', 'Meta広告', 'Google広告', 'LINE広告', 'バナーデザイン'],
 })
 

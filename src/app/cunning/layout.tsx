@@ -5,6 +5,7 @@ import { LpJsonLd } from '@/components/lp'
 import CunningLayoutShell from '@/components/cunning/CunningLayoutShell'
 
 export const metadata: Metadata = buildServiceMetadata('cunning', {
+  tagline: 'Web会議中にAIが回答をカンペ表示',
   keywords: ['Web会議 AI', 'AIカンペ', 'リアルタイム文字起こし', '商談支援', '面接対策', 'カスタマーサポート', 'AI回答', '質問検出'],
 })
 

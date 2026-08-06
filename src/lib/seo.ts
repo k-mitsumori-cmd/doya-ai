@@ -19,6 +19,58 @@ export const SITE_CONFIG = {
   ogImageBase: '/og',
 }
 
+// サイト名の表記ゆれ（指名検索の受け皿）。
+// 検索されうる別表記を構造化データの alternateName で明示し、
+// 「ドヤAI」「doya ai」等でもこのサイトが同一エンティティとして認識されるようにする。
+export const SITE_ALTERNATE_NAMES = [
+  'ドヤAI',
+  'ドヤ マーケAI',
+  'ドヤマーケ AI',
+  'Doya Marke AI',
+  'DoyaMarke AI',
+  'Doya AI',
+  'DoyaAI',
+]
+
+// ============================================
+// サービス名の表記ゆれ（指名検索対策）
+// ============================================
+// 正本の name（services.ts）は変えずに、検索で使われうる別表記だけをここで補う。
+// - 構造化データ SoftwareApplication.alternateName に出力
+// - LPメタデータの keywords 先頭に自動付与
+// 追加する際は「実際に検索窓に打たれうる形」だけにする（無関係な語を足さない）。
+export const SERVICE_ALIASES: Record<string, string[]> = {
+  kantan: ['カンタンマーケAI', 'かんたんマーケAI', 'Kantan Marke AI'],
+  banner: ['ドヤバナー', 'ドヤバナー AI', 'ドヤ バナーAI', 'Doya Banner AI', 'doya banner ai'],
+  logo: ['ドヤロゴAI', 'ドヤ ロゴ', 'Doya Logo'],
+  seo: ['ドヤライティングAI', 'ドヤ記事作成AI', 'ドヤSEO', 'ドヤ記事', 'Doya Writing AI'],
+  interview: ['ドヤインタビューAI', 'ドヤ インタビュー', 'Doya Interview AI'],
+  shindan: ['ドヤ診断AI', 'ドヤWeb診断', 'Doya Web Shindan'],
+  persona: ['ドヤペルソナ', 'ドヤ ペルソナAI', 'Doya Persona AI'],
+  lp: ['ドヤワイヤーフレームAI', 'ドヤワイヤーフレーム', 'ドヤLP', 'Doya Wireframe AI'],
+  tenkai: ['ドヤ展開', 'ドヤてんかいAI', 'Doya Tenkai AI'],
+  copy: ['ドヤコピー', 'ドヤ コピーAI', 'Doya Copy AI'],
+  opening: ['ドヤオープニング', 'ドヤOP AI', 'Doya Opening AI'],
+  voice: ['ドヤボイス', 'ドヤ ボイスAI', 'Doya Voice AI'],
+  interviewx: ['ドヤヒヤリング', 'ドヤヒアリングAI', 'ドヤ ヒヤリングAI', 'Doya Hearing AI'],
+  movie: ['ドヤムービー', 'ドヤ動画AI', 'Doya Movie AI'],
+  adsim: ['ドヤ広告シミュAI', 'ドヤ広告シミュレーション', 'Doya Ad Simulation AI'],
+  hr: ['ドヤHR AI', 'ドヤエイチアール', 'ドヤ人事', 'Doya HR'],
+  kintai: ['ドヤ勤怠AI', 'ドヤきんたい', 'ドヤ勤怠管理', 'Doya Kintai'],
+  doyalist: ['ドヤリストAI', 'ドヤ リスト', 'Doya List'],
+  doyaslide: ['ドヤスライドAI', 'ドヤ スライド', 'ドヤスラ', 'Doya Slide'],
+  cunning: ['ドヤカンニングAI', 'ドヤ カンニング', 'Doya Cunning'],
+  promane: ['ドヤプロマネAI', 'ドヤ プロマネ', 'ドヤプロジェクト管理', 'Doya Promane'],
+  sfa: ['ドヤ営業管理AI', 'ドヤSFA', 'ドヤ営業', 'Doya SFA'],
+  shodan: ['ドヤ商談準備AI', 'ドヤ商談', 'Doya Shodan'],
+  aio: ['ドヤAIO AI', 'ドヤ エーアイオー', 'ドヤAEO', 'Doya AIO'],
+  adbanner: ['ドヤ広告バナー', 'ドヤ広告バナーエーアイ', 'Doya Ad Banner AI'],
+}
+
+export function getServiceAliases(serviceId: string): string[] {
+  return SERVICE_ALIASES[serviceId] || []
+}
+
 function withoutTrailingSlash(url: string) {
   return url.replace(/\/+$/, '')
 }
@@ -219,12 +271,40 @@ export function generateOrganizationSchema() {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: 'ドヤマーケAI',
+    alternateName: SITE_ALTERNATE_NAMES,
     url: SITE_CONFIG.url,
     logo: `${baseUrl}/logo.png`,
     description: SITE_CONFIG.description,
+    parentOrganization: {
+      '@type': 'Organization',
+      name: '株式会社スリスタ',
+      url: 'https://surisuta.jp/',
+    },
     sameAs: [
       `https://twitter.com/${SITE_CONFIG.twitter.replace('@', '')}`,
+      'https://surisuta.jp/',
+      'https://doyamarke.surisuta.jp/',
     ],
+  }
+}
+
+// WebSite スキーマ（サイト名の確定用）
+// Google はサイト名（検索結果に表示されるサイト名）を WebSite.name から取る。
+// alternateName に表記ゆれを並べ、指名検索でこのサイトに紐づくようにする。
+export function generateWebSiteSchema() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE_CONFIG.name,
+    alternateName: SITE_ALTERNATE_NAMES,
+    url: `${withoutTrailingSlash(SITE_CONFIG.url)}/`,
+    description: SITE_CONFIG.description,
+    inLanguage: 'ja',
+    publisher: {
+      '@type': 'Organization',
+      name: '株式会社スリスタ',
+      url: 'https://surisuta.jp/',
+    },
   }
 }
 
@@ -282,11 +362,15 @@ export function generateToolSchema(opts: {
   name: string
   description: string
   category?: 'BusinessApplication' | 'DesignApplication' | 'MultimediaApplication'
+  /** services.ts の id。渡すと表記ゆれが alternateName に載る */
+  serviceId?: string
 }) {
+  const aliases = opts.serviceId ? getServiceAliases(opts.serviceId) : []
   return {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
     name: opts.name,
+    ...(aliases.length ? { alternateName: aliases } : {}),
     applicationCategory: opts.category || 'BusinessApplication',
     operatingSystem: 'Web',
     url: `${SITE_CONFIG.url}${opts.path}`,
@@ -337,6 +421,10 @@ export function buildServiceMetadata(
     ogPath?: string
     /** LP以外のサブページに使う場合の canonical パス上書き（例: '/seo/pricing'） */
     canonicalPath?: string
+    /** タイトル全体の上書き（サブページ用。指定時は `${name}｜${tagline}` を使わない） */
+    titleOverride?: string
+    /** ログイン後のアプリ画面など、検索結果に出したくないページ */
+    noindex?: boolean
   }
 ): Metadata {
   const svc = getServiceById(serviceId)
@@ -345,32 +433,100 @@ export function buildServiceMetadata(
     return { alternates: { canonical: `/${serviceId}` } }
   }
   const tagline = opts?.tagline || svc.description
-  const title = `${svc.name}｜${tagline}`
+  // 見出し部（OG/Twitter用。サイト名は付けない）
+  const headline = opts?.titleOverride || `${svc.name}｜${tagline}`
+  // <title> は absolute で確定させる。
+  // ルートlayoutの title.template は「親がtitleを持つ入れ子」では下層まで届かず、
+  // /banner はサイト名が付くのに /banner/pricing は付かない、という不揃いが起きるため。
+  const title = { absolute: `${headline} | ${SITE_CONFIG.name}` }
   const description = svc.longDescription || svc.description
   const canonical = opts?.canonicalPath || svc.href
   const ogImage = `${SITE_CONFIG.url}${opts?.ogPath || `/og/${svc.id}`}`
+  // 指名検索の受け皿として、サービス名と表記ゆれを keywords の先頭に必ず置く
+  const keywords = Array.from(
+    new Set([svc.name, ...getServiceAliases(svc.id), ...(opts?.keywords || [])])
+  )
 
   return {
     title,
     description,
-    ...(opts?.keywords?.length ? { keywords: opts.keywords } : {}),
+    keywords,
     alternates: { canonical },
+    ...(opts?.noindex
+      ? { robots: { index: false, follow: true, googleBot: { index: false, follow: true } } }
+      : {}),
     openGraph: {
       type: 'website',
       locale: SITE_CONFIG.locale,
       url: `${SITE_CONFIG.url}${canonical}`,
       siteName: SITE_CONFIG.name,
-      title,
+      title: headline,
       description,
-      images: [{ url: ogImage, width: 1200, height: 630, alt: `${svc.name} - ドヤマーケAI` }],
+      images: [{ url: ogImage, width: 1200, height: 630, alt: `${svc.name} - ${SITE_CONFIG.name}` }],
     },
     twitter: {
       card: 'summary_large_image',
       site: SITE_CONFIG.twitter,
       creator: SITE_CONFIG.twitter,
-      title,
+      title: headline,
       description,
       images: [ogImage],
     },
   }
+}
+
+// ============================================
+// サービス配下サブページ用メタデータ・ファクトリ
+// ============================================
+// 料金/ガイド/アプリ画面が親LPと同じ <title> を継承すると、
+// 指名検索（例:「ドヤバナーAI」）でLPではなく設定画面が選ばれてしまう。
+// サブページごとに固有の title と canonical を与えて受け皿をLPに寄せる。
+export type ServiceSubPageKind = 'pricing' | 'guide' | 'app'
+
+const SUB_PAGE_LABEL: Record<ServiceSubPageKind, string> = {
+  pricing: '料金プラン',
+  guide: '使い方ガイド',
+  app: 'マイページ',
+}
+
+export function buildServiceSubMetadata(
+  serviceId: string,
+  kind: ServiceSubPageKind,
+  opts?: {
+    /** canonical パス（既定は services.ts の pricingHref / guideHref） */
+    path?: string
+    /** 説明文の上書き */
+    description?: string
+    /** ラベルの上書き（例: '導入事例'） */
+    label?: string
+  }
+): Metadata {
+  const svc = getServiceById(serviceId)
+  if (!svc) return { alternates: { canonical: `/${serviceId}` } }
+
+  const label = opts?.label || SUB_PAGE_LABEL[kind]
+  const path = opts?.path || (kind === 'pricing' ? svc.pricingHref : kind === 'guide' ? svc.guideHref : svc.dashboardHref)
+
+  const description =
+    opts?.description ||
+    (kind === 'pricing'
+      ? `${svc.name}の料金プラン。無料プランで試せて、プロプラン（月額9,980円）ならドヤマーケAIの全ツールが使い放題です。`
+      : kind === 'guide'
+        ? `${svc.name}の使い方ガイド。基本の流れとコツを解説します。`
+        : `${svc.name}の管理画面です。`)
+
+  // アプリ画面はログイン前提のため検索結果から外す（リンク評価は流す）
+  if (kind === 'app') {
+    return {
+      title: { absolute: `${label}｜${svc.name} | ${SITE_CONFIG.name}` },
+      description,
+      robots: { index: false, follow: true, googleBot: { index: false, follow: true } },
+    }
+  }
+
+  return buildServiceMetadata(serviceId, {
+    titleOverride: `${label}｜${svc.name}`,
+    canonicalPath: path,
+    keywords: [`${svc.name} ${label}`, `${svc.name} 料金`, `${svc.name} 使い方`],
+  })
 }

@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import type { Metadata } from 'next'
 import {
   FileText,
   Users,
@@ -13,9 +12,7 @@ import {
   Mic,
 } from 'lucide-react'
 
-export const metadata: Metadata = {
-  title: '使い方ガイド | ドヤボイスAI',
-}
+// title/canonical は layout.tsx（buildServiceSubMetadata）が正本。ここでは定義しない。
 
 const STEPS = [
   {

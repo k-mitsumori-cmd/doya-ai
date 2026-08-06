@@ -1,3 +1,31 @@
+// ログイン後のアプリ画面（検索結果に出す必要がないURL）。
+// LP（/{service}）・料金（/{service}/pricing）・ガイド（/{service}/guide）は含めない。
+const APP_ONLY_PREFIXES = [
+  '/auth',
+  '/seo/articles', '/seo/create', '/seo/dashboard', '/seo/images',
+  '/seo/jobs', '/seo/new', '/seo/settings', '/seo/swipe', '/seo/template',
+  '/banner/dashboard', '/banner/gallery', '/banner/test', '/banner/url',
+  '/adbanner/dashboard',
+  '/persona/history',
+  '/interview/projects', '/interview/recipes', '/interview/settings',
+  '/interview/skills', '/interview/templates',
+  '/doyalist/history', '/doyalist/settings', '/doyalist/tools',
+  '/doyaslide/new', '/doyaslide/projects',
+  '/cunning/company', '/cunning/history', '/cunning/knowledge', '/cunning/live',
+  '/hr/dashboard', '/hr/employees', '/hr/evaluations', '/hr/one-on-one',
+  '/hr/org-chart', '/hr/settings', '/hr/invite',
+  '/kintai/admin', '/kintai/approvals', '/kintai/attendance', '/kintai/clock',
+  '/kintai/dashboard', '/kintai/departments', '/kintai/employees',
+  '/kintai/requests', '/kintai/settings', '/kintai/invite',
+  '/opening/dashboard',
+  '/tenkai/projects',
+  '/aio/invite', '/sfa/invite', '/shodan/invite', '/promane/invite',
+  '/admin',
+]
+
+// 「そのパス自身」と「配下すべて」の両方を対象にする
+const APP_ONLY_PATHS = APP_ONLY_PREFIXES.flatMap((p) => [p, `${p}/:path*`])
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // ビルド時のコミットハッシュを環境変数に注入 (UIで表示してキャッシュ確認用)
@@ -68,6 +96,18 @@ const nextConfig = {
           },
         ],
       },
+      // ------------------------------------------------------------------
+      // ログイン後のアプリ画面を検索結果から外す（X-Robots-Tag）
+      // ------------------------------------------------------------------
+      // 実測（GSC 90日）で「ドヤバナーAI」の指名検索に /banner/dashboard/settings や
+      // /banner/pricing が出てしまい、LP（/banner）が受け皿になっていなかった。
+      // アプリ画面は noindex（リンク評価は follow で流す）にして、
+      // サービス名の受け皿を各LPに一本化する。
+      // ※ LP・料金・ガイドは対象外（indexさせる）
+      ...APP_ONLY_PATHS.map((source) => ({
+        source,
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, follow' }],
+      })),
     ]
   },
   
@@ -92,36 +132,38 @@ const nextConfig = {
         permanent: false,
       },
       // 旧スライド（Gemini→Googleスライド型）は廃止し、ドヤスライド（/doyaslide）に統一
+      // 廃止済みブランドなので 308（恒久）。307 のままだと旧URLがインデックスに残り、
+      // 「ドヤスライド」の指名検索が旧URLと /doyaslide に分散する
       {
         source: '/slide/create',
         destination: '/doyaslide/new',
-        permanent: false,
+        permanent: true,
       },
       {
         source: '/slide',
         destination: '/doyaslide',
-        permanent: false,
+        permanent: true,
       },
       {
         source: '/slide/:path*',
         destination: '/doyaslide',
-        permanent: false,
+        permanent: true,
       },
       // SlashSlide（別ブランドの旧スライド）もドヤスライド（/doyaslide）に統一
       {
         source: '/slashslide/create',
         destination: '/doyaslide/new',
-        permanent: false,
+        permanent: true,
       },
       {
         source: '/slashslide',
         destination: '/doyaslide',
-        permanent: false,
+        permanent: true,
       },
       {
         source: '/slashslide/:path*',
         destination: '/doyaslide',
-        permanent: false,
+        permanent: true,
       },
     ]
   },

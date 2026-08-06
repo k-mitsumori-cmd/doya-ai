@@ -14,12 +14,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: 'daily',
       priority: 1.0,
     },
-    {
-      url: `${baseUrl}/auth/signin`,
-      lastModified: now,
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
+    // ログインページは sitemap に載せない（noindex 対象。指名検索の受け皿はトップと各LP）
     {
       url: `${baseUrl}/terms`,
       lastModified: now,
@@ -46,42 +41,57 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ]
 
+  // 実在するガイドページを持つサービス（services.ts の guideHref は未実装でも値が入っている）
+  // ここに無いサービスの guideHref は 404 になるため sitemap に載せない
+  const SERVICES_WITH_GUIDE = new Set(['adsim', 'copy', 'lp', 'movie', 'opening', 'voice'])
+  // 実在する /{id}/pricing を持つサービス。
+  // services.ts の pricingHref はLPと同じ値のことがある（例: seo → '/seo'）ため、
+  // 実在する料金ページを sitemap から落とさないようここで補う。
+  const SERVICES_WITH_PRICING_PAGE = new Set([
+    'adbanner', 'adsim', 'aio', 'banner', 'copy', 'cunning', 'doyalist', 'doyaslide',
+    'hr', 'interview', 'interviewx', 'kintai', 'lp', 'movie', 'opening', 'persona',
+    'promane', 'seo', 'sfa', 'shodan', 'tenkai', 'voice',
+  ])
+  // LP が別URLへリダイレクトするサービス（sitemap に載せるとリダイレクトURLを送ることになる）
+  const REDIRECTING_LP = new Set(['tenkai', 'kantan'])
+
   // アクティブなサービスのページ
-  const activeServices = getActiveServices().filter(s => !HIDDEN_SERVICE_IDS.has(s.id))
+  // ダッシュボード（ログイン後のアプリ画面）は noindex 対象なので載せない。
+  // sitemap に残すと指名検索の受け皿がLPではなくアプリ画面になってしまう。
+  const activeServices = getActiveServices().filter(
+    s => !HIDDEN_SERVICE_IDS.has(s.id) && !REDIRECTING_LP.has(s.id)
+  )
   const servicePages: MetadataRoute.Sitemap = activeServices.flatMap((service) => [
-    // サービスLP
+    // サービスLP（指名検索の受け皿）
     {
       url: `${baseUrl}${service.href}`,
       lastModified: now,
       changeFrequency: 'weekly' as const,
       priority: 0.9,
     },
-    // ダッシュボード（認証後）
-    {
-      url: `${baseUrl}${service.dashboardHref}`,
-      lastModified: now,
-      changeFrequency: 'daily' as const,
-      priority: 0.7,
-    },
     // 料金ページ
     {
-      url: `${baseUrl}${service.pricingHref}`,
+      url: `${baseUrl}${SERVICES_WITH_PRICING_PAGE.has(service.id) ? `/${service.id}/pricing` : service.pricingHref}`,
       lastModified: now,
       changeFrequency: 'weekly' as const,
       priority: 0.8,
     },
-    // ガイドページ
-    {
-      url: `${baseUrl}${service.guideHref}`,
-      lastModified: now,
-      changeFrequency: 'monthly' as const,
-      priority: 0.6,
-    },
+    // ガイドページ（実在するものだけ）
+    ...(SERVICES_WITH_GUIDE.has(service.id)
+      ? [
+          {
+            url: `${baseUrl}${service.guideHref}`,
+            lastModified: now,
+            changeFrequency: 'monthly' as const,
+            priority: 0.6,
+          },
+        ]
+      : []),
   ])
 
   // 近日公開サービスのLP（Coming Soon）
   const comingSoonServices = getAllServices().filter(
-    s => s.status === 'coming_soon' && !HIDDEN_SERVICE_IDS.has(s.id)
+    s => s.status === 'coming_soon' && !HIDDEN_SERVICE_IDS.has(s.id) && !REDIRECTING_LP.has(s.id)
   )
   const comingSoonPages: MetadataRoute.Sitemap = comingSoonServices.map((service) => ({
     url: `${baseUrl}${service.href}`,

@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { getOrCreateWorkspace } from '@/lib/promane/auth'
+import { PromaneLp } from './PromaneLp'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Button } from '@/components/promane/ui/button'
@@ -22,7 +23,10 @@ export default async function PromaneEntryPage({
   searchParams?: Promise<{ select?: string }>
 }) {
   const session = await getServerSession(authOptions)
-  if (!session?.user) redirect('/auth/signin?callbackUrl=/promane')
+  // 未ログイン（＝クローラや初見ユーザー）には公開LPを返す。
+  // 以前はここで /auth/signin にリダイレクトしていたため「ドヤプロマネ」でクロールされる
+  // ページが存在せず、指名検索の受け皿が無かった。
+  if (!session?.user) return <PromaneLp />
 
   const userId = (session.user as any).id
   const userEmail = session.user.email?.toLowerCase()

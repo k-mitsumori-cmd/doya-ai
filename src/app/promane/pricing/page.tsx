@@ -1,10 +1,7 @@
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans';
 
-export const metadata = {
-  title: 'ドヤプロマネ 料金プラン',
-  description:
-    'ドヤプロマネの料金プラン。無料プランで気軽にスタートし、プロプランで全機能とすべてのドヤAIサービスを解放。',
-};
+// title/canonical は layout.tsx（buildServiceSubMetadata）が正本。
+// ここで metadata を持つと layout の指定を上書きしてしまうため定義しない。
 
 const faqs = [
   {

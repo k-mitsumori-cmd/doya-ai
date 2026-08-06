@@ -4,7 +4,7 @@
 // LLMO/リッチリザルト強化のため全サービスLPで注入する。
 // ============================================
 import React from 'react'
-import { SITE_CONFIG } from '@/lib/seo'
+import { SITE_CONFIG, getServiceAliases } from '@/lib/seo'
 import type { Faq } from './sections'
 
 function abs(path: string) {
@@ -21,6 +21,7 @@ export function LpJsonLd({
   price = '9980',
   hasFreeTier = true,
   includeSoftwareApp = true,
+  serviceId,
 }: {
   name: string
   path: string
@@ -32,13 +33,19 @@ export function LpJsonLd({
   hasFreeTier?: boolean
   /** 親layoutが既にSoftwareApplicationを注入している場合はfalseで重複回避 */
   includeSoftwareApp?: boolean
+  /** services.ts の id。渡すとサービス名の表記ゆれが alternateName に載る（指名検索対策） */
+  serviceId?: string
 }) {
   const url = abs(path)
+  // path から id を推定（'/adbanner' → 'adbanner'）。明示指定があればそちらを優先
+  const resolvedId = serviceId || path.replace(/^\/+/, '').split('/')[0]
+  const aliases = getServiceAliases(resolvedId)
 
   const softwareApp = {
     '@context': 'https://schema.org',
     '@type': 'SoftwareApplication',
     name,
+    ...(aliases.length ? { alternateName: aliases } : {}),
     applicationCategory: category,
     operatingSystem: 'Web',
     url,
@@ -63,7 +70,7 @@ export function LpJsonLd({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'ドヤマーケAI', item: SITE_CONFIG.url },
+      { '@type': 'ListItem', position: 1, name: SITE_CONFIG.name, item: SITE_CONFIG.url },
       { '@type': 'ListItem', position: 2, name, item: url },
     ],
   }

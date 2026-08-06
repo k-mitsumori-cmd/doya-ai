@@ -5,6 +5,7 @@ import { LpJsonLd } from '@/components/lp'
 import { FAQ } from './lp-data'
 
 export const metadata: Metadata = buildServiceMetadata('shodan', {
+  tagline: '商談先のURLだけで提案準備を一括生成',
   keywords: ['商談準備', '営業AI', '提案資料作成', '企業調査', '商談', 'BtoB営業', '提案スライド', 'PR TIMES'],
 })
 

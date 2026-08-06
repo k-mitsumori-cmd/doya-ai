@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'react-hot-toast'
 import './globals.css'
 import { Providers } from '@/components/Providers'
-import { SITE_CONFIG, SERVICE_SEO, generateOrganizationSchema } from '@/lib/seo'
+import { SITE_CONFIG, SERVICE_SEO, generateOrganizationSchema, generateWebSiteSchema } from '@/lib/seo'
 import { GoogleTagManager, GoogleTagManagerNoScript } from '@/components/GoogleTagManager'
 import { GoogleAnalytics } from '@/components/GoogleAnalytics'
 import LogoutToastListener from '@/components/LogoutToastListener'
@@ -104,6 +104,8 @@ export default function RootLayout({
 }) {
   // 構造化データ
   const organizationSchema = generateOrganizationSchema()
+  // サイト名（検索結果に出る名称）の確定用。表記ゆれは alternateName で吸収する
+  const webSiteSchema = generateWebSiteSchema()
 
   return (
     <html lang="ja">
@@ -118,7 +120,13 @@ export default function RootLayout({
             __html: JSON.stringify(organizationSchema),
           }}
         />
-        
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(webSiteSchema),
+          }}
+        />
+
         {/* Preconnect */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

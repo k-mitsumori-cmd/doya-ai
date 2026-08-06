@@ -5,6 +5,7 @@ import { LpJsonLd } from '@/components/lp'
 import { FAQ } from './lp-data'
 
 export const metadata: Metadata = buildServiceMetadata('sfa', {
+  tagline: '取引先・商談・タスクを一元管理するSFA',
   keywords: ['SFA', '営業管理', '商談管理', 'パイプライン管理', '取引先管理', '中小企業 SFA', 'かんたんSFA', '営業DX'],
 })
 
