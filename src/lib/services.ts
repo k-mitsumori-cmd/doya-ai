@@ -1630,7 +1630,8 @@ export function getServiceById(id: string): Service | undefined {
 // 除外理由の内訳:
 //   - 実体なし（ページ・APIとも未実装）: video / presentation
 //   - 提供終了（2026-08-06 ユーザー判断）: kantan / shindan / logo / opening
-//                                        tenkai / copy / interviewx / lp / adsim
+//                                        tenkai / copy / interviewx / lp / adsim / movie / voice
+// ※ 現時点で coming_soon / maintenance は全て非表示。トップの「開発中」セクションは空になる。
 export const HIDDEN_SERVICE_IDS = new Set([
   // ルート未実装
   'video',
@@ -1646,6 +1647,8 @@ export const HIDDEN_SERVICE_IDS = new Set([
   'interviewx',
   'lp',
   'adsim',
+  'movie',
+  'voice',
 ])
 
 // アクティブなサービスのみ取得（非公開IDは常に除外）

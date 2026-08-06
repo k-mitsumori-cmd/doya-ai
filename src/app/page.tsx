@@ -119,7 +119,11 @@ const operatorMarks = [
 
 const proofs: Proof[] = [
   // 数値は実際に表示するカード数/項目数に連動させる（手書き数値だとズレるため）
-  { value: String(activeServices.length + labServices.length), label: 'サービス構想と実装', note: '公開中、開発中、調整中を含むドヤマーケAI全体' },
+  // 開発中/調整中が全て非表示のときは「公開中の主要サービス」と同じ数になるため、
+  // 同じ数字が2枚並ぶのを避けてこのカード自体を出さない。
+  ...(labServices.length > 0
+    ? [{ value: String(activeServices.length + labServices.length), label: 'サービス構想と実装', note: '公開中、開発中、調整中を含むドヤマーケAI全体' }]
+    : []),
   { value: String(activeServices.length), label: '公開中の主要サービス', note: '制作、営業、人事、業務管理まで横断' },
   { value: '0', label: '無料枠から試せる', note: 'いきなり課金ではなく、触って判断できる設計' },
   { value: String(operatorMarks.length), label: '運営文脈を明確化', note: 'チャンネル、ブランド、会社、運営者を整理して表示' },
@@ -293,7 +297,7 @@ export default function DoyaAiHomePage() {
         </section>
 
         <section className="relative z-10 -mt-8 px-5 pb-16 lg:px-8">
-          <div className="mx-auto grid max-w-[1240px] gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className={`mx-auto grid max-w-[1240px] gap-3 sm:grid-cols-2 ${proofs.length >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
             {proofs.map((proof) => (
               <div key={proof.label} className="min-h-[132px] rounded-lg border border-[#d8e7ff] bg-white p-5 shadow-[0_18px_54px_rgba(10,15,60,0.12)]">
                 <div className="mb-3 flex items-start justify-between gap-4">
@@ -464,6 +468,8 @@ export default function DoyaAiHomePage() {
           </div>
         </section>
 
+        {/* 開発中/調整中が1件も無いときは、見出しだけ残って中身が空の帯になるためセクションごと出さない */}
+        {labServices.length > 0 && (
         <section className="bg-white px-5 py-20 lg:px-8 lg:py-28">
           <div className="mx-auto max-w-[1240px]">
             <div className="mb-10 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -494,6 +500,7 @@ export default function DoyaAiHomePage() {
             </motion.div>
           </div>
         </section>
+        )}
 
         <section id="pricing" className="bg-[#f2f6ff] px-5 py-20 lg:px-8 lg:py-28">
           <div className="mx-auto grid max-w-[1240px] gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-stretch">
