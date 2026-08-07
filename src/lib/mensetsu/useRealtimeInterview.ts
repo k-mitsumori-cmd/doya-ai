@@ -84,9 +84,18 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
     }
   }, [token])
 
+  /** 直近に積んだ発話。transcript イベントと response.done の二重登録を防ぐ */
+  const recentRef = useRef<string[]>([])
+
   const pushLine = useCallback((speaker: TranscriptLine['speaker'], text: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
+    // 同じ発話が別イベント経由で二度届くことがある（保険経路との重複）。
+    // 直近20件に同一文があれば捨てる。
+    const key = `${speaker}:${trimmed}`
+    if (recentRef.current.includes(key)) return
+    recentRef.current = [...recentRef.current.slice(-19), key]
+
     const line: TranscriptLine = { speaker, text: trimmed, at: Date.now() }
     setLines((prev) => [...prev, line])
     pendingRef.current.push(line)
@@ -378,14 +387,28 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
         } catch {
           return
         }
-        switch (ev.type) {
+        const t: string = ev.type || ''
+
+        // ⚠️ イベント名は新旧2系統ある。
+        //    旧: response.audio_transcript.done / response.audio.delta
+        //    新: response.output_audio_transcript.done / response.output_audio.delta
+        //    エンドポイントが /sessions → /client_secrets に移ったのと同じ流れで
+        //    イベント名も変わっており、旧名だけを見ていたため
+        //    「面接官の発話が逐語ログに1件も残らない」「アバターが喋る状態にならない」
+        //    という不具合が本番で起きた。以後どちらでも拾えるよう後方一致で判定する。
+        if (t.endsWith('audio_transcript.done')) {
+          pushLine('interviewer', ev.transcript || '')
+          return
+        }
+        if (t.endsWith('audio.delta')) {
+          setSpeaking(true)
+          return
+        }
+
+        switch (t) {
           // 応募者の発話が文字起こしされた
           case 'conversation.item.input_audio_transcription.completed':
             pushLine('candidate', ev.transcript || '')
-            break
-          // AIの発話（テキスト版）が確定
-          case 'response.audio_transcript.done':
-            pushLine('interviewer', ev.transcript || '')
             break
           case 'input_audio_buffer.speech_started':
             setListening(true)
@@ -394,13 +417,21 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
             setListening(false)
             void flushTurns()
             break
-          case 'response.audio.delta':
-            setSpeaking(true)
-            break
-          case 'response.done':
+          case 'response.done': {
             setSpeaking(false)
+            // 保険: transcript イベントを取りこぼしていても、
+            // response.done の中身から面接官の発話を拾えるようにする。
+            const items = ev?.response?.output ?? []
+            for (const item of items) {
+              for (const c of item?.content ?? []) {
+                if (typeof c?.transcript === 'string' && c.transcript.trim()) {
+                  pushLine('interviewer', c.transcript)
+                }
+              }
+            }
             void flushTurns()
             break
+          }
           case 'response.function_call_arguments.done':
             void handleFunctionCall(ev.call_id, ev.arguments)
             break
