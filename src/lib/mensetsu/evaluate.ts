@@ -92,8 +92,16 @@ export async function evaluateSession(input: EvaluateInput): Promise<EvaluationR
 
   // --- 正規化と安全側への倒し込み ---
   const validKeys = new Set(input.criteria.map((c) => c.key))
+  // 同じ軸を2回返してくることがある。MensetsuScore は [sessionId, criterionId] が unique なので、
+  // 重複したまま createMany すると一意制約違反で評価全体が落ちる。ここで先頭だけ残す。
+  const seenKeys = new Set<string>()
   const scores: CriterionScore[] = (raw.scores || [])
-    .filter((s) => s && validKeys.has(s.criterionKey))
+    .filter((s) => {
+      if (!s || !validKeys.has(s.criterionKey)) return false
+      if (seenKeys.has(s.criterionKey)) return false
+      seenKeys.add(s.criterionKey)
+      return true
+    })
     .map((s) => {
       const n = Number(s.score)
       const valid = Number.isFinite(n) && n >= 1 && n <= 5

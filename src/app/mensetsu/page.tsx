@@ -382,10 +382,17 @@ export default function MensetsuDashboard() {
                           質問{t._count?.questions ?? 0}問 / 評価軸{t._count?.criteria ?? 0}個 / 面接{t._count?.sessions ?? 0}件
                         </p>
                       </div>
-                      {/* 質問の編集画面は未実装。仮リンクを置かず、状態だけ表示する */}
-                      <span className="rounded-lg bg-[#f7faff] px-3 py-1.5 text-xs font-black text-[#425071]">
-                        {t.status === 'draft' ? '下書き' : t.status === 'active' ? '運用中' : '保管'}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="rounded-lg bg-[#f7faff] px-3 py-1.5 text-xs font-black text-[#425071]">
+                          {t.status === 'draft' ? '下書き' : t.status === 'active' ? '運用中' : '保管'}
+                        </span>
+                        <Link
+                          href={`/mensetsu/templates/${t.id}`}
+                          className="rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]"
+                        >
+                          編集
+                        </Link>
+                      </div>
                     </li>
                   ))}
                 </ul>

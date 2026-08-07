@@ -75,6 +75,22 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
   // 質問の全置換（順序の入れ替え・削除を素直に扱うため）
   if (Array.isArray(body?.questions)) {
+    // ⚠️ 実施中の面接がある状態で質問を差し替えると、その面接の currentIndex が
+    //    新しい質問数を超えて進行が打ち切られる（応募者から見ると面接が突然終わる）。
+    //    実施中が1件でもあれば質問の変更は拒否する。基本情報の更新は上で済んでいる。
+    const liveCount = await prisma.mensetsuSession.count({
+      where: { templateId: id, status: { in: ['live', 'consented'] } },
+    })
+    if (liveCount > 0) {
+      return NextResponse.json(
+        {
+          error: `実施中・準備中の面接が${liveCount}件あるため、質問を変更できません。終了後にお試しください。`,
+          liveCount,
+        },
+        { status: 409 }
+      )
+    }
+
     await prisma.mensetsuQuestion.deleteMany({ where: { templateId: id } })
     await prisma.mensetsuQuestion.createMany({
       data: body.questions.map((q: any, i: number) => ({
