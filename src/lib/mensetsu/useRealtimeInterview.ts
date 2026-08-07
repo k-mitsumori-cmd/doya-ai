@@ -438,6 +438,17 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
           case 'error':
             console.error('[mensetsu] realtime error', ev)
             break
+          default:
+            // ⚠️ イベント名の世代交代で静かに壊れた実績がある
+            //    （response.audio_transcript.done → response.output_audio_transcript.done）。
+            //    面接官の発話が逐語ログに1件も残らないという形で本番に出たが、
+            //    ログが無かったため実機テストするまで気づけなかった。
+            //    処理していない response.* を記録しておき、次に名前が変わったときは
+            //    コンソールから即座に追えるようにする。
+            if (t.startsWith('response.') && !t.endsWith('.delta')) {
+              console.debug('[mensetsu] unhandled realtime event', t)
+            }
+            break
         }
       }
 
