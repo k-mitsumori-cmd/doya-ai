@@ -25,6 +25,26 @@ export default function InterviewXDashboard() {
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all')
   const { data: session, status } = useSession()
 
+  // ⚠️ フックは早期returnより前で必ず呼ぶこと。
+  //    以前はログイン判定の early return より後ろに置かれており、
+  //    未ログイン→ログインでフックの数が変わって React が例外を投げる状態だった
+  //    （react-hooks/rules-of-hooks 違反。CIのLintも失敗し続けていた）。
+  //    未認証のときは取得を走らせないよう、条件は effect の内側で見る。
+  useEffect(() => {
+    if (status !== 'authenticated') {
+      if (status === 'unauthenticated') setLoading(false)
+      return
+    }
+    fetch('/api/interviewx/projects')
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) setProjects(data.projects || [])
+        else setError('プロジェクトの取得に失敗しました')
+      })
+      .catch(() => setError('通信エラーが発生しました'))
+      .finally(() => setLoading(false))
+  }, [status])
+
   // ローディング中
   if (status === 'loading') {
     return (
@@ -57,16 +77,6 @@ export default function InterviewXDashboard() {
     )
   }
 
-  useEffect(() => {
-    fetch('/api/interviewx/projects')
-      .then(r => r.json())
-      .then(data => {
-        if (data.success) setProjects(data.projects || [])
-        else setError('プロジェクトの取得に失敗しました')
-      })
-      .catch(() => setError('通信エラーが発生しました'))
-      .finally(() => setLoading(false))
-  }, [])
 
   const inProgress = projects.filter(p => !['COMPLETED', 'DRAFT'].includes(p.status)).length
   const completed = projects.filter(p => p.status === 'COMPLETED').length

@@ -36,7 +36,9 @@ const COLOR_PRESETS = [
 
 type Phase = 'input' | 'generating' | 'preview' | 'publishing' | 'done'
 
-export default function ドヤスライドCreate() {
+// React のコンポーネント名は英大文字始まりである必要がある
+// （日本語名だと eslint がフック呼び出しを不正と判定し、CIが落ちる）
+export default function DoyaSlideCreate() {
   const [phase, setPhase] = useState<Phase>('input')
   const [topic, setTopic] = useState('')
   const [purpose, setPurpose] = useState('proposal')

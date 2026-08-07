@@ -249,15 +249,18 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
     }, 250)
   }
 
-  // 1枚目のみ表示（重なりを完全に排除）
-  if (index !== 0) return null
-
+  // ⚠️ フックは早期returnより前で必ず呼ぶこと。
+  //    以前は `if (index !== 0) return null` の後ろに useMemo が置かれており、
+  //    1枚目とそれ以外でフックの数が変わって React が例外を投げる状態だった。
   const normalizedQuestion = useMemo(() => {
     return String(question.question || '').replace(/\s*\n+\s*/g, '')
   }, [question.question])
 
   // カテゴリに応じたビジュアル
   const categoryVisual = useMemo(() => getCategoryVisual(question.category), [question.category])
+
+  // 1枚目のみ表示（重なりを完全に排除）
+  if (index !== 0) return null
 
   return (
     <motion.div
@@ -345,8 +348,8 @@ export function TinderSwipeCard({ question, onSwipe, index, total }: TinderSwipe
           {/* 質問 */}
           <div className="relative bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl sm:rounded-2xl p-4 sm:p-6 border border-slate-200/80 min-h-[90px] sm:min-h-[120px] flex items-center justify-center shadow-inner">
             {/* 引用符装飾 */}
-            <div className="absolute top-2 left-3 sm:top-3 sm:left-4 text-3xl sm:text-4xl text-slate-200 font-serif leading-none">"</div>
-            <div className="absolute bottom-2 right-3 sm:bottom-3 sm:right-4 text-3xl sm:text-4xl text-slate-200 font-serif leading-none rotate-180">"</div>
+            <div className="absolute top-2 left-3 sm:top-3 sm:left-4 text-3xl sm:text-4xl text-slate-200 font-serif leading-none">&quot;</div>
+            <div className="absolute bottom-2 right-3 sm:bottom-3 sm:right-4 text-3xl sm:text-4xl text-slate-200 font-serif leading-none rotate-180">&quot;</div>
             
             <h2 
               className="relative text-base sm:text-lg md:text-xl font-bold text-slate-800 text-center leading-relaxed px-3 sm:px-4"
