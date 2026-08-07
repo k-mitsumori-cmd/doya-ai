@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Avatar from '@/components/mensetsu/Avatar'
+import Waveform from '@/components/mensetsu/Waveform'
 import { useRealtimeInterview } from '@/lib/mensetsu/useRealtimeInterview'
 
 interface PublicSession {
@@ -68,6 +69,7 @@ export default function MensetsuLivePage() {
   const [cameraOn, setCameraOn] = useState(false)
   const [showText, setShowText] = useState(false)
   const [draft, setDraft] = useState('')
+  const [sheet, setSheet] = useState<null | 'agenda' | 'log'>(null)
   const selfVideoRef = useRef<HTMLVideoElement | null>(null)
   const camStreamRef = useRef<MediaStream | null>(null)
 
@@ -366,142 +368,123 @@ export default function MensetsuLivePage() {
     )
   }
 
-  // ---------------- ライブ面接（Web会議風） ----------------
+  // ---------------- ライブ面接 ----------------
+  // スマホ: 丸アバター → 波形 → 発言カード → 操作バー（縦積み）
+  // PC:     左に質問パネル / 右にアバター（プレゼンター型）
   const remaining = Math.max(0, rt.durationMin * 60 - rt.elapsedSec)
   const connecting = rt.state === 'connecting' || rt.state === 'requesting_mic'
+  const lastLine = rt.lines[rt.lines.length - 1]
+  const statusLabel = rt.speaking ? '面接官が話しています' : rt.listening ? 'お話しください' : 'お待ちください'
 
   return (
-    <main className="flex h-[100dvh] flex-col bg-[#eef2f9]">
+    <main className="flex h-[100dvh] flex-col bg-gradient-to-b from-[#f7faff] to-[#e9f0fb]">
       <style dangerouslySetInnerHTML={{ __html: SUPPRESS_MARKETING_CSS }} />
 
-      {/* 上部バー：会議名・経過・残り時間 */}
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[#dfe6f3] bg-white px-4 py-2.5 lg:px-6">
-        <div className="flex min-w-0 items-center gap-3">
+      {/* 上部バー */}
+      <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[#dfe6f3] bg-white/85 px-3 py-2.5 backdrop-blur lg:px-6">
+        <div className="flex min-w-0 items-center gap-2.5">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#0066ff]">
             <span className="material-symbols-outlined text-[18px] text-white">support_agent</span>
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-black leading-tight text-[#0a0f3c]">
+            <p className="truncate text-[13px] font-black leading-tight text-[#0a0f3c] lg:text-sm">
               {session?.jobTitle} 一次面接
             </p>
-            <p className="truncate text-[11px] font-bold text-[#8a94ad]">{session?.companyName}</p>
+            <p className="truncate text-[10px] font-bold text-[#8a94ad] lg:text-[11px]">{session?.companyName}</p>
           </div>
         </div>
+
         <div className="flex shrink-0 items-center gap-2">
-          <span className="hidden rounded-full bg-[#f2f6ff] px-3 py-1 text-[11px] font-black text-[#0066ff] sm:inline">
-            {rt.state === 'live' ? '接続中' : connecting ? '接続しています' : '待機'}
-          </span>
-          <span className="rounded-full bg-[#0a0f3c] px-3 py-1 text-[11px] font-black tabular-nums text-white">
-            残り {fmt(remaining)}
+          {/* アジェンダ（目次） */}
+          <button
+            onClick={() => setSheet(sheet === 'agenda' ? null : 'agenda')}
+            className="flex items-center gap-1 rounded-full border border-[#dfe6f3] bg-white px-3 py-1.5 text-[11px] font-black text-[#425071]"
+          >
+            アジェンダ
+            <span className="material-symbols-outlined text-[16px]">expand_more</span>
+          </button>
+          <span className="rounded-full bg-[#0a0f3c] px-2.5 py-1 text-[11px] font-black tabular-nums text-white">
+            {fmt(remaining)}
           </span>
         </div>
       </header>
 
-      {/* 参加者タイル */}
-      <section className="flex min-h-0 flex-1 flex-col gap-3 p-3 lg:flex-row lg:p-4">
-        {/* 面接官（メインタイル） */}
-        <div
-          className={`relative min-h-0 flex-1 overflow-hidden rounded-2xl bg-white shadow-sm ring-2 transition-colors ${
-            rt.speaking ? 'ring-[#0066ff]' : 'ring-transparent'
-          }`}
-        >
-          {connecting ? (
-            <div className="flex h-full flex-col items-center justify-center gap-3">
-              <span className="h-8 w-8 animate-spin rounded-full border-2 border-[#0066ff] border-t-transparent" />
-              <p className="text-sm font-bold text-[#425071]">
-                {rt.state === 'requesting_mic' ? 'マイクの許可を確認しています…' : '面接官に接続しています…'}
-              </p>
-            </div>
-          ) : rt.state === 'error' ? (
-            <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-              <span className="material-symbols-outlined text-3xl text-[#8a94ad]">error</span>
-              <p className="mt-2 max-w-sm text-sm font-bold text-[#0a0f3c]">{rt.error}</p>
-              <button
-                onClick={beginInterview}
-                className="mt-4 rounded-lg bg-[#0066ff] px-5 py-2.5 text-sm font-black text-white"
-              >
-                もう一度試す
-              </button>
-            </div>
-          ) : (
-            <Avatar
-              level={rt.level}
-              speaking={rt.speaking}
-              listening={rt.listening}
-              cue={avatarCue}
-            />
-          )}
-
-          {/* 名前バッジ（会議アプリと同じく左下） */}
-          <div className="absolute bottom-3 left-3 flex items-center gap-2 rounded-lg bg-white/90 px-3 py-1.5 shadow-sm backdrop-blur">
-            <span
-              className={`material-symbols-outlined text-[16px] ${rt.speaking ? 'text-[#0066ff]' : 'text-[#8a94ad]'}`}
-            >
-              {rt.speaking ? 'graphic_eq' : 'mic'}
-            </span>
-            <span className="text-xs font-black text-[#0a0f3c]">AI面接官</span>
+      {/* 本体 */}
+      <section className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4 lg:flex-row lg:items-center lg:gap-8 lg:overflow-hidden lg:p-8">
+        {connecting ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-3">
+            <span className="h-8 w-8 animate-spin rounded-full border-2 border-[#0066ff] border-t-transparent" />
+            <p className="text-sm font-bold text-[#425071]">
+              {rt.state === 'requesting_mic' ? 'マイクの許可を確認しています…' : '面接官に接続しています…'}
+            </p>
           </div>
-        </div>
-
-        {/* 自分（サブタイル） */}
-        <div
-          className={`relative h-32 shrink-0 overflow-hidden rounded-2xl bg-[#0a0f3c] shadow-sm ring-2 transition-colors lg:h-auto lg:w-72 ${
-            rt.listening ? 'ring-emerald-400' : 'ring-transparent'
-          }`}
-        >
-          <video
-            ref={selfVideoRef}
-            autoPlay
-            muted
-            playsInline
-            className={`h-full w-full object-cover ${cameraOn ? '' : 'hidden'}`}
-            style={{ transform: 'scaleX(-1)' }}
-          />
-          {!cameraOn && (
-            <div className="flex h-full flex-col items-center justify-center gap-2">
-              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-lg font-black text-white">
-                {(session?.candidateName || name || 'あ').slice(0, 1)}
-              </span>
-              <p className="text-[11px] font-bold text-white/60">カメラはオフです</p>
-            </div>
-          )}
-          <div className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-lg bg-black/45 px-2.5 py-1 backdrop-blur">
-            <span
-              className={`material-symbols-outlined text-[15px] ${
-                micOn ? (rt.listening ? 'text-emerald-300' : 'text-white') : 'text-[#ff6b9a]'
-              }`}
-            >
-              {micOn ? 'mic' : 'mic_off'}
-            </span>
-            <span className="text-[11px] font-black text-white">
-              {session?.candidateName || name || 'あなた'}
-            </span>
+        ) : rt.state === 'error' ? (
+          <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
+            <span className="material-symbols-outlined text-3xl text-[#8a94ad]">error</span>
+            <p className="mt-2 max-w-sm text-sm font-bold text-[#0a0f3c]">{rt.error}</p>
+            <button onClick={beginInterview} className="mt-4 rounded-lg bg-[#0066ff] px-5 py-2.5 text-sm font-black text-white">
+              もう一度試す
+            </button>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* アバター（スマホは丸・上／PCは右） */}
+            <div className="order-1 flex shrink-0 flex-col items-center lg:order-2 lg:w-[38%] lg:max-w-[420px]">
+              <div className="h-40 w-40 lg:h-auto lg:w-full">
+                <Avatar
+                  level={rt.level}
+                  speaking={rt.speaking}
+                  listening={rt.listening}
+                  cue={avatarCue}
+                  circle
+                />
+              </div>
+              <p className="mt-2 text-sm font-black text-[#0a0f3c]">AI面接官</p>
+              <p className="text-[11px] font-bold text-[#8a94ad]">{statusLabel}</p>
+              <Waveform level={rt.level} speaking={rt.speaking} listening={rt.listening} />
+            </div>
+
+            {/* 質問・発言 */}
+            <div className="order-2 flex min-h-0 flex-1 flex-col justify-center lg:order-1">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-[#0066ff] px-3 py-1 text-[11px] font-black text-white">
+                  質問 {rt.questionNumber}
+                  {rt.questionTotal > 0 && ` / ${rt.questionTotal}`}
+                </span>
+                {rt.questionTotal > 0 && (
+                  <span className="hidden items-center gap-1 lg:flex">
+                    {Array.from({ length: rt.questionTotal }).map((_, i) => (
+                      <span
+                        key={i}
+                        className={`h-1.5 rounded-full transition-all ${
+                          i + 1 < rt.questionNumber ? 'w-4 bg-[#0066ff]' : i + 1 === rt.questionNumber ? 'w-8 bg-[#0066ff]' : 'w-4 bg-[#cfe3ff]'
+                        }`}
+                      />
+                    ))}
+                  </span>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-[#dfe6f3] border-l-[6px] border-l-[#0066ff] bg-white p-5 shadow-sm lg:p-8">
+                <p className="text-base font-black leading-[1.75] tracking-tight text-[#0a0f3c] lg:text-[26px]">
+                  {rt.currentQuestion || 'まもなく面接を始めます。'}
+                </p>
+              </div>
+
+              {showCaptions && lastLine && (
+                <p className="mt-3 line-clamp-3 text-[13px] font-medium leading-relaxed text-[#5b6785] lg:text-sm">
+                  <span className={lastLine.speaker === 'interviewer' ? 'font-black text-[#0066ff]' : 'font-black text-[#0a0f3c]'}>
+                    {lastLine.speaker === 'interviewer' ? '面接官' : 'あなた'}:{' '}
+                  </span>
+                  {lastLine.text}
+                </p>
+              )}
+            </div>
+          </>
+        )}
       </section>
 
-      {/* 字幕 */}
-      {showCaptions && rt.lines.length > 0 && (
-        <div
-          ref={logRef}
-          className="mx-auto max-h-32 w-full max-w-4xl shrink-0 overflow-y-auto px-4 pb-1"
-        >
-          {rt.lines.slice(-8).map((l, i) => (
-            <p key={i} className="mb-1.5 text-sm leading-relaxed">
-              <span
-                className={
-                  l.speaker === 'interviewer' ? 'font-black text-[#0066ff]' : 'font-black text-[#0a0f3c]'
-                }
-              >
-                {l.speaker === 'interviewer' ? '面接官' : 'あなた'}:{' '}
-              </span>
-              <span className="font-medium text-[#425071]">{l.text}</span>
-            </p>
-          ))}
-        </div>
-      )}
-
-      {/* テキストで回答（音声が使えない・騒がしいとき用） */}
+      {/* テキストで回答 */}
       {showText && (
         <form
           onSubmit={(e) => {
@@ -509,12 +492,12 @@ export default function MensetsuLivePage() {
             if (!draft.trim()) return
             if (rt.sendText(draft)) setDraft('')
           }}
-          className="mx-auto flex w-full max-w-4xl shrink-0 items-center gap-2 px-4 pb-2"
+          className="mx-auto flex w-full max-w-3xl shrink-0 items-center gap-2 px-4 pb-2"
         >
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="文字で回答する場合はこちらに入力してください"
+            placeholder="文字で回答する場合はこちらに入力"
             className="flex-1 rounded-full border border-[#dfe6f3] bg-white px-4 py-2.5 text-sm font-medium text-[#0a0f3c] outline-none focus:border-[#0066ff]"
           />
           <button
@@ -528,75 +511,110 @@ export default function MensetsuLivePage() {
         </form>
       )}
 
-      {/* 操作バー */}
-      <footer className="flex shrink-0 items-center justify-center gap-2 border-t border-[#dfe6f3] bg-white px-4 py-3">
-        <ControlButton
-          active={micOn}
-          onClick={toggleMic}
-          icon={micOn ? 'mic' : 'mic_off'}
-          label={micOn ? 'ミュート' : '解除'}
-          danger={!micOn}
-        />
-        <ControlButton
-          active={cameraOn}
-          onClick={toggleCamera}
-          icon={cameraOn ? 'videocam' : 'videocam_off'}
-          label={cameraOn ? 'カメラ' : 'カメラ'}
-        />
-        <ControlButton
-          active={showText}
-          onClick={() => setShowText((v) => !v)}
-          icon="keyboard"
-          label="テキスト"
-        />
-        <ControlButton
-          active={showCaptions}
-          onClick={() => setShowCaptions((v) => !v)}
-          icon="closed_caption"
-          label="字幕"
-        />
-        <button
-          onClick={() => void rt.end(true)}
-          className="ml-2 flex items-center gap-1.5 rounded-full bg-[#ff1e72] px-5 py-2.5 text-xs font-black text-white"
-        >
-          <span className="material-symbols-outlined text-[18px]">call_end</span>
-          退出
-        </button>
+      {/* 操作バー（スマホでも押しやすい丸ボタン） */}
+      <footer className="flex shrink-0 items-start justify-center gap-3 border-t border-[#dfe6f3] bg-white px-3 py-3 lg:gap-4">
+        <RoundButton onClick={toggleMic} icon={micOn ? 'mic' : 'mic_off'} label={micOn ? 'ミュート' : '解除'} tone={micOn ? 'default' : 'danger'} />
+        <RoundButton onClick={toggleCamera} icon={cameraOn ? 'videocam' : 'videocam_off'} label="カメラ" tone={cameraOn ? 'active' : 'default'} />
+        <RoundButton onClick={() => setShowText((v) => !v)} icon="keyboard" label="テキスト" tone={showText ? 'active' : 'default'} />
+        <RoundButton onClick={() => setSheet(sheet === 'log' ? null : 'log')} icon="forum" label="会話ログ" tone={sheet === 'log' ? 'active' : 'default'} />
+        <RoundButton onClick={() => void rt.end(true)} icon="logout" label="退出" tone="danger" />
       </footer>
 
-      <p className="shrink-0 pb-2 text-center text-[10px] font-medium text-[#8a94ad]">
-        カメラ映像はこの画面に表示されるだけで、送信も録画もされません。
-      </p>
+      {/* シート: アジェンダ / 会話ログ */}
+      {sheet && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/30" onClick={() => setSheet(null)}>
+          <div
+            className="max-h-[70dvh] w-full max-w-2xl overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl lg:mb-8 lg:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-black text-[#0a0f3c]">
+                {sheet === 'agenda' ? '面接の進み方' : '会話ログ'}
+              </h2>
+              <button onClick={() => setSheet(null)} aria-label="閉じる" className="text-[#8a94ad]">
+                <span className="material-symbols-outlined text-[20px]">close</span>
+              </button>
+            </div>
+
+            {sheet === 'agenda' ? (
+              <ol className="space-y-2">
+                {Array.from({ length: rt.questionTotal || 1 }).map((_, i) => {
+                  const n = i + 1
+                  const done = n < rt.questionNumber
+                  const now = n === rt.questionNumber
+                  return (
+                    <li
+                      key={n}
+                      className={`flex items-center gap-3 rounded-lg px-3 py-2.5 ${now ? 'bg-[#f2f6ff]' : ''}`}
+                    >
+                      <span
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
+                          done ? 'bg-[#0066ff] text-white' : now ? 'bg-[#0066ff] text-white' : 'bg-[#eef3ff] text-[#8a94ad]'
+                        }`}
+                      >
+                        {done ? <span className="material-symbols-outlined text-[14px]">check</span> : n}
+                      </span>
+                      <span className={`text-sm ${now ? 'font-black text-[#0a0f3c]' : 'font-medium text-[#425071]'}`}>
+                        {now ? rt.currentQuestion || `質問 ${n}` : `質問 ${n}`}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ol>
+            ) : rt.lines.length === 0 ? (
+              <p className="py-6 text-center text-sm font-medium text-[#8a94ad]">まだ会話がありません。</p>
+            ) : (
+              <div className="space-y-2.5">
+                {rt.lines.map((l, i) => (
+                  <p key={i} className="text-sm leading-relaxed">
+                    <span className={l.speaker === 'interviewer' ? 'font-black text-[#0066ff]' : 'font-black text-[#0a0f3c]'}>
+                      {l.speaker === 'interviewer' ? '面接官' : 'あなた'}:{' '}
+                    </span>
+                    <span className="font-medium text-[#425071]">{l.text}</span>
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* カメラ映像（オン時のみ小さく重ねる） */}
+      <video
+        ref={selfVideoRef}
+        autoPlay
+        muted
+        playsInline
+        className={`fixed bottom-24 right-3 z-40 h-24 w-32 rounded-xl object-cover shadow-lg ring-2 ring-white ${cameraOn ? '' : 'hidden'}`}
+        style={{ transform: 'scaleX(-1)' }}
+      />
     </main>
   )
 }
 
-function ControlButton({
-  active,
+function RoundButton({
   onClick,
   icon,
   label,
-  danger,
+  tone = 'default',
 }: {
-  active: boolean
   onClick: () => void
   icon: string
   label: string
-  danger?: boolean
+  tone?: 'default' | 'active' | 'danger'
 }) {
+  const style =
+    tone === 'danger'
+      ? 'bg-[#ffe9f0] text-[#c2185b]'
+      : tone === 'active'
+        ? 'bg-[#e8f0ff] text-[#0066ff]'
+        : 'bg-[#f4f6fa] text-[#425071]'
   return (
-    <button
-      onClick={onClick}
-      className={`flex min-w-[62px] flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 transition-colors ${
-        danger
-          ? 'bg-[#ffe9f0] text-[#c2185b]'
-          : active
-            ? 'bg-[#f2f6ff] text-[#0066ff]'
-            : 'bg-[#f4f6fa] text-[#8a94ad]'
-      }`}
-    >
-      <span className="material-symbols-outlined text-[20px]">{icon}</span>
-      <span className="text-[10px] font-black">{label}</span>
+    <button onClick={onClick} className="flex w-16 flex-col items-center gap-1">
+      <span className={`flex h-12 w-12 items-center justify-center rounded-full ${style}`}>
+        <span className="material-symbols-outlined text-[22px]">{icon}</span>
+      </span>
+      <span className="text-[10px] font-black leading-tight text-[#5b6785]">{label}</span>
     </button>
   )
 }

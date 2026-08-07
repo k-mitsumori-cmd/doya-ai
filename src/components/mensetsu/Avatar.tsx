@@ -25,6 +25,8 @@ export interface AvatarProps {
   name?: string
   /** 冒頭の挨拶・締めの会釈を明示的に出したいとき */
   cue?: 'greet' | 'closing' | null
+  /** 丸く切り抜いて表示する（スマホの縦画面向け） */
+  circle?: boolean
 }
 
 type Mood = 'idle' | 'listening' | 'talking' | 'greet' | 'closing'
@@ -49,7 +51,14 @@ const FALLBACK_IMAGE: Record<Mood, string> = {
   closing: '/character/success.png',
 }
 
-export default function Avatar({ level, speaking, listening, name = 'AI面接官', cue = null }: AvatarProps) {
+export default function Avatar({
+  level,
+  speaking,
+  listening,
+  name = 'AI面接官',
+  cue = null,
+  circle = false,
+}: AvatarProps) {
   const mood: Mood = cue === 'greet' ? 'greet' : cue === 'closing' ? 'closing' : speaking ? 'talking' : listening ? 'listening' : 'idle'
 
   // 動画が使えるか。1本でも読めれば動画モードにする。
@@ -174,7 +183,7 @@ export default function Avatar({ level, speaking, listening, name = 'AI面接官
                   muted
                   playsInline
                   onEnded={s === slot ? handleEnded : undefined}
-                  className="absolute inset-0 h-full w-full rounded-3xl object-cover"
+                  className={`absolute inset-0 h-full w-full object-cover ${circle ? 'rounded-full' : 'rounded-3xl'}`}
                   style={{ opacity: slot === s ? 1 : 0, transition: 'opacity 380ms ease' }}
                 />
               ))}
@@ -184,15 +193,22 @@ export default function Avatar({ level, speaking, listening, name = 'AI面接官
             <img
               src={FALLBACK_IMAGE[mood]}
               alt=""
-              className="absolute inset-0 h-full w-full select-none rounded-3xl object-cover"
+              className={`absolute inset-0 h-full w-full select-none object-cover ${circle ? 'rounded-full' : 'rounded-3xl'}`}
               draggable={false}
             />
+          )}
+
+          {/* オンライン表示（丸のときだけ。会議アプリの在席ドットに相当） */}
+          {circle && (
+            <span className="absolute bottom-[6%] right-[6%] z-10 flex h-5 w-5 items-center justify-center rounded-full bg-white shadow">
+              <span className="h-3 w-3 rounded-full bg-emerald-500" />
+            </span>
           )}
 
           {/* 発話リング。会議アプリの「話しています」枠に相当 */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 rounded-3xl"
+            className={`pointer-events-none absolute inset-0 ${circle ? 'rounded-full' : 'rounded-3xl'}`}
             style={{
               boxShadow: speaking
                 ? `0 0 0 3px rgba(0,102,255,${0.45 + amp * 0.45}), 0 0 ${24 + amp * 56}px rgba(0,102,255,${0.22 + amp * 0.35})`
@@ -203,8 +219,8 @@ export default function Avatar({ level, speaking, listening, name = 'AI面接官
         </div>
       </div>
 
-      {/* 音量バー */}
-      {speaking && (
+      {/* 音量バー（丸表示のときは画面側に波形を出すので省く） */}
+      {speaking && !circle && (
         <div aria-hidden className="pointer-events-none absolute bottom-4 flex items-end gap-1">
           {[0, 1, 2, 3, 4].map((i) => (
             <span

@@ -35,6 +35,11 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
   const [listening, setListening] = useState(false)
   const [elapsedSec, setElapsedSec] = useState(0)
   const [durationMin, setDurationMin] = useState(20)
+  // 画面に大きく出すための「いま尋ねている質問」。
+  // 初回は /token の firstQuestion、以降は /advance の戻り値で更新する。
+  const [currentQuestion, setCurrentQuestion] = useState<string | null>(null)
+  const [questionNumber, setQuestionNumber] = useState(1)
+  const [questionTotal, setQuestionTotal] = useState(0)
 
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const dcRef = useRef<RTCDataChannel | null>(null)
@@ -278,6 +283,14 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
         // 進行APIが落ちたら締めに倒す（無限に質問が続くより安全）
       }
 
+      // 画面の質問パネルを進める（深掘り中は質問文を据え置く）
+      if (result?.next_question) {
+        setCurrentQuestion(result.next_question)
+        if (Number.isFinite(Number(result.question_number))) {
+          setQuestionNumber(Number(result.question_number))
+        }
+      }
+
       const dc = dcRef.current
       if (!dc || dc.readyState !== 'open') return
 
@@ -332,6 +345,11 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
       clientSecret = data.clientSecret
       model = data.model
       if (data.durationMin) setDurationMin(data.durationMin)
+      if (data.questionCount) setQuestionTotal(data.questionCount)
+      if (data.firstQuestion) {
+        setCurrentQuestion(data.firstQuestion)
+        setQuestionNumber(1)
+      }
     } catch (e: any) {
       cleanup()
       setState('error')
@@ -581,5 +599,8 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
     end,
     sendText,
     setMicEnabled,
+    currentQuestion,
+    questionNumber,
+    questionTotal,
   }
 }
