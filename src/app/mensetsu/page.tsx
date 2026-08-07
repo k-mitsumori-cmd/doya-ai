@@ -237,6 +237,29 @@ export default function MensetsuDashboard() {
     }
   }
 
+  /**
+   * 実施中のまま残った面接を担当者が閉じる。
+   * 応募者のブラウザがクラッシュすると /end に到達せず live で固着し、
+   * 1件でもあるとテンプレートの質問編集が 409 でブロックされるため、
+   * 手動の出口を用意している。
+   */
+  const closeSession = async (id: string) => {
+    setBusy(`close-${id}`)
+    setError(null)
+    try {
+      const res = await fetch(`/api/mensetsu/sessions/${id}/close`, { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data?.error || '終了処理に失敗しました')
+        return
+      }
+      setNotice(data.status === 'completed' ? '面接を終了しました（評価できます）' : '面接を終了しました')
+      await load()
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const evaluate = async (id: string) => {
     setBusy(`eval-${id}`)
     setError(null)
@@ -510,6 +533,16 @@ export default function MensetsuDashboard() {
                         </p>
                       </div>
                       <div className="flex gap-2">
+                        {['pending', 'consented', 'live'].includes(s.status) && (
+                          <button
+                            onClick={() => closeSession(s.id)}
+                            disabled={busy === `close-${s.id}`}
+                            className="rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#425071] disabled:opacity-50"
+                            title="応募者が離脱したまま実施中で止まっている場合に使います"
+                          >
+                            {busy === `close-${s.id}` ? '処理中…' : '終了にする'}
+                          </button>
+                        )}
                         {s.status === 'completed' && (
                           <button
                             onClick={() => evaluate(s.id)}

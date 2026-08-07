@@ -46,6 +46,25 @@ export async function GET(req: NextRequest) {
     data: { status: 'expired' },
   })
 
+  // 1b) 放置された実施中セッションを回収する。
+  // ⚠️ 応募者のブラウザがクラッシュすると /end に到達せず status='live' のまま残る。
+  //    1件でも残るとテンプレートの質問編集が 409 で永久にブロックされるため、
+  //    開始から十分に時間が経ったものは自動で閉じる。
+  //    発話があれば評価に回せるよう completed、無ければ aborted。
+  const STALE_HOURS = 6
+  const staleBefore = new Date(now.getTime() - STALE_HOURS * 60 * 60 * 1000)
+  const staleLive = await prisma.mensetsuSession.findMany({
+    where: { status: 'live', startedAt: { lt: staleBefore } },
+    select: { id: true, _count: { select: { turns: true } } },
+    take: BATCH,
+  })
+  for (const s of staleLive) {
+    await prisma.mensetsuSession.update({
+      where: { id: s.id },
+      data: { status: s._count.turns > 0 ? 'completed' : 'aborted', endedAt: now },
+    })
+  }
+
   // 2) 保持期限を過ぎたセッションの個人データを削除
   const targets = await prisma.mensetsuSession.findMany({
     where: {
@@ -129,6 +148,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     ok: true,
     expiredSessions: expired.count,
+    closedStaleLive: staleLive.length,
     purgedSessions,
     purgedTurns,
     storageFailures: storageFailures.length,
