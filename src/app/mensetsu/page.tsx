@@ -35,6 +35,14 @@ interface Template {
   status: string
   _count?: { questions: number; criteria: number; sessions: number }
 }
+interface Member {
+  id: string
+  role: string
+  status: string
+  name: string | null
+  inviteEmail: string | null
+  userId: string | null
+}
 interface SessionRow {
   id: string
   token: string
@@ -54,6 +62,14 @@ const STATUS_LABEL: Record<string, string> = {
   expired: '期限切れ',
   aborted: '中断',
 }
+const ROLE_LABEL: Record<string, string> = {
+  owner: 'オーナー',
+  admin: '管理者',
+  manager: 'マネージャー',
+  member: 'メンバー',
+}
+const ROLE_RANK: Record<string, number> = { owner: 4, admin: 3, manager: 2, member: 1 }
+
 const VERDICT_LABEL: Record<string, string> = {
   recommend: '推奨',
   conditional: '条件付き推奨',
@@ -81,6 +97,12 @@ export default function MensetsuDashboard() {
   const [issuedUrl, setIssuedUrl] = useState<string | null>(null)
   const [candidateName, setCandidateName] = useState('')
   const [selectedTemplate, setSelectedTemplate] = useState('')
+  const [members, setMembers] = useState<Member[]>([])
+  const [myRole, setMyRole] = useState<string>('member')
+  const [myUserId, setMyUserId] = useState<string | null>(null)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState('member')
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null)
 
   // ⚠️ useSession の status で fetch をゲートしない（Cookie認証なので未確定でもAPIは応答する）
   const load = useCallback(async () => {
@@ -93,12 +115,16 @@ export default function MensetsuDashboard() {
       }
       setOrg(data?.current || null)
       if (data?.current) {
-        const [t, s] = await Promise.all([
+        const [t, s, m] = await Promise.all([
           fetch('/api/mensetsu/templates').then((r) => r.json()),
           fetch('/api/mensetsu/sessions').then((r) => r.json()),
+          fetch('/api/mensetsu/members').then((r) => r.json()),
         ])
         setTemplates(t?.templates || [])
         setSessions(s?.sessions || [])
+        setMembers(m?.members || [])
+        setMyRole(m?.myRole || 'member')
+        setMyUserId(m?.myUserId || null)
         if (t?.templates?.[0]) setSelectedTemplate(t.templates[0].id)
       }
     } finally {
@@ -272,6 +298,48 @@ export default function MensetsuDashboard() {
         return
       }
       setNotice('受験可能に戻しました。同じURLで受けられます。')
+      await load()
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const invite = async () => {
+    if (!inviteEmail.trim()) return
+    setBusy('invite')
+    setError(null)
+    setInviteUrl(null)
+    try {
+      const res = await fetch('/api/mensetsu/members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data?.error || '招待に失敗しました')
+        return
+      }
+      setInviteEmail('')
+      // メール送信に失敗しても招待自体は成立する。URLを手で渡せるように出す。
+      setNotice(data.emailSent ? '招待メールを送りました' : 'メールを送れませんでした。下のURLを直接お渡しください。')
+      if (!data.emailSent) setInviteUrl(data.url)
+      await load()
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const removeMember = async (id: string) => {
+    setBusy(`member-${id}`)
+    setError(null)
+    try {
+      const res = await fetch(`/api/mensetsu/members/${id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data?.error || '外せませんでした')
+        return
+      }
       await load()
     } finally {
       setBusy(null)
@@ -593,7 +661,82 @@ export default function MensetsuDashboard() {
               )}
             </section>
 
-            {/* --- 5. 組織設定 --- */}
+            {/* --- 5. メンバー --- */}
+            <section className="mt-6 rounded-lg bg-white p-6 shadow-sm">
+              <h2 className="text-base font-black text-[#0a0f3c]">メンバー</h2>
+              <p className="mt-1 text-xs font-medium text-[#8a94ad]">
+                招待した方は、この組織の面接テンプレートと応募者の記録を扱えるようになります。
+              </p>
+
+              <ul className="mt-4 divide-y divide-[#eef3ff]">
+                {members.map((m) => (
+                  <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-[#0a0f3c]">
+                        {m.name || m.inviteEmail || '（名前未設定）'}
+                        {m.userId && m.userId === myUserId && (
+                          <span className="ml-2 text-[11px] font-bold text-[#8a94ad]">あなた</span>
+                        )}
+                      </p>
+                      <p className="text-[11px] font-medium text-[#425071]">
+                        {ROLE_LABEL[m.role] || m.role}
+                        {m.status === 'PENDING' && ' / 招待中'}
+                      </p>
+                    </div>
+                    {m.role !== 'owner' && m.userId !== myUserId && ROLE_RANK[myRole] >= ROLE_RANK.admin && (
+                      <button
+                        onClick={() => removeMember(m.id)}
+                        disabled={busy === `member-${m.id}`}
+                        className="rounded-lg border border-[#ffd0de] px-3 py-1.5 text-xs font-black text-[#c2185b] disabled:opacity-50"
+                      >
+                        {m.status === 'PENDING' ? '招待を取り消す' : '外す'}
+                      </button>
+                    )}
+                  </li>
+                ))}
+              </ul>
+
+              {ROLE_RANK[myRole] >= ROLE_RANK.admin ? (
+                <>
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                    <input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="招待する方のメールアドレス"
+                      className="flex-1 rounded-lg border border-[#d8e7ff] px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                    />
+                    <select
+                      value={inviteRole}
+                      onChange={(e) => setInviteRole(e.target.value)}
+                      className="rounded-lg border border-[#d8e7ff] px-3 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                    >
+                      <option value="member">メンバー</option>
+                      <option value="manager">マネージャー</option>
+                      <option value="admin">管理者</option>
+                    </select>
+                    <button
+                      onClick={invite}
+                      disabled={busy === 'invite' || !inviteEmail.trim()}
+                      className="rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:bg-[#b9cdf5]"
+                    >
+                      {busy === 'invite' ? '送信中…' : '招待する'}
+                    </button>
+                  </div>
+                  {inviteUrl && (
+                    <p className="mt-3 break-all rounded-lg bg-[#f7faff] p-3 text-xs font-bold text-[#0a0f3c]">
+                      {inviteUrl}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="mt-4 text-xs font-medium text-[#8a94ad]">
+                  メンバーの招待は管理者以上が行えます。
+                </p>
+              )}
+            </section>
+
+            {/* --- 6. 組織設定 --- */}
             <section className="mt-6 rounded-lg bg-white p-6 shadow-sm">
               <h2 className="text-base font-black text-[#0a0f3c]">記録の設定</h2>
               <p className="mt-1 text-xs font-medium text-[#8a94ad]">
