@@ -10,7 +10,7 @@ import { loadSessionByToken } from '@/lib/mensetsu/public'
 
 type Ctx = { params: Promise<{ token: string }> | { token: string } }
 
-export async function POST(req: NextRequest, ctx: Ctx) {
+export async function POST(_req: NextRequest, ctx: Ctx) {
   const p = 'then' in ctx.params ? await ctx.params : ctx.params
   const s = await loadSessionByToken(p.token)
   if (!s) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
@@ -18,13 +18,18 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ ok: true, alreadyEnded: true })
   }
 
-  const body = await req.json().catch(() => ({}))
-  const aborted = body?.aborted === true
+  // ⚠️ クライアントの aborted 申告だけで終端状態を決めないこと。
+  //    以前は離脱(beacon)・退出ボタンのどちらも aborted:true を送っており、
+  //    5問答えた面接でも 'aborted' に落ちて、逐語ログがあるのに
+  //    評価も再開もできない状態になっていた（担当者UIもcronも aborted は拾わない）。
+  //    close ルートと cron に合わせ、**発話が残っていれば completed** に倒す。
+  const turns = await prisma.mensetsuTurn.count({ where: { sessionId: s.id } })
+  const next = turns > 0 ? 'completed' : 'aborted'
 
   await prisma.mensetsuSession.update({
     where: { id: s.id },
-    data: { status: aborted ? 'aborted' : 'completed', endedAt: new Date() },
+    data: { status: next, endedAt: new Date() },
   })
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, status: next })
 }

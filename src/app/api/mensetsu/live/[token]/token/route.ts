@@ -44,8 +44,14 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   //  (1) 回数: 通信断からの再接続を許しつつ、明らかな乱用は止める
   //  (2) 時間窓: 面接開始から「所要時間＋猶予」を過ぎたら発行しない。
   //      14日間開きっぱなしの窓を、実際の面接の長さまで縮める。
+  // ⚠️ 判定と加算を分けると、並列リクエストが全て同じ値を読んで上限を突破できる。
+  //    updateMany の条件付き加算で「席を予約」し、更新件数0なら上限到達とみなす。
   const MAX_ISSUES = 12
-  if (s.tokenIssueCount >= MAX_ISSUES) {
+  const reserved = await prisma.mensetsuSession.updateMany({
+    where: { id: s.id, tokenIssueCount: { lt: MAX_ISSUES } },
+    data: { tokenIssueCount: { increment: 1 } },
+  })
+  if (reserved.count === 0) {
     return NextResponse.json(
       { error: '接続の試行回数が上限に達しました。採用ご担当者にお問い合わせください。' },
       { status: 429 }
@@ -139,7 +145,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: '面接セッションを開始できませんでした。' }, { status: 502 })
   }
 
-  // 発行回数は毎回加算する（再接続も1回と数える）
+  // 発行回数は上の予約で加算済み
   if (!s.startedAt) {
     // 保持期限は実施日から数え直す。発行時点の仮の値のままだと、
     // 同意画面で伝えた「実施から◯日間保管」と実態がずれる。
@@ -148,17 +154,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     )
     await prisma.mensetsuSession.update({
       where: { id: s.id },
-      data: {
-        status: 'live',
-        startedAt: new Date(),
-        purgeAfter,
-        tokenIssueCount: { increment: 1 },
-      },
-    })
-  } else {
-    await prisma.mensetsuSession.update({
-      where: { id: s.id },
-      data: { tokenIssueCount: { increment: 1 } },
+      data: { status: 'live', startedAt: new Date(), purgeAfter },
     })
   }
 

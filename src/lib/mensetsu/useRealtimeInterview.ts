@@ -77,24 +77,38 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
           })),
         }),
       })
-      // 4xx は投げ直しても通らない（期限切れ等）ので捨てる。5xx・通信断は戻して再送。
-      if (!res.ok && res.status >= 500) requeue()
+      if (!res.ok) {
+        // 4xx は投げ直しても通らない（評価済み等）ので捨てる。5xx・通信断は戻して再送。
+        if (res.status >= 500) requeue()
+        return
+      }
+      // ⚠️ サーバは1回あたり50件で切り詰める。保存件数を照合せずに成功扱いすると、
+      //    再送で溜まった51件目以降（＝直近の回答）が黙って消える。
+      const data = await res.json().catch(() => null)
+      const saved = Number(data?.saved)
+      if (Number.isFinite(saved) && saved < batch.length) {
+        pendingRef.current = [...batch.slice(saved), ...pendingRef.current]
+      }
     } catch {
       requeue()
     }
   }, [token])
 
   /** 直近に積んだ発話。transcript イベントと response.done の二重登録を防ぐ */
-  const recentRef = useRef<string[]>([])
+  const recentRef = useRef<{ key: string; at: number }[]>([])
 
   const pushLine = useCallback((speaker: TranscriptLine['speaker'], text: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
     // 同じ発話が別イベント経由で二度届くことがある（保険経路との重複）。
-    // 直近20件に同一文があれば捨てる。
+    // ⚠️ 直近20件で判定すると「はい」「そうですね」のような短い定型回答が
+    //    2回目以降まるごと消え、無回答として不利に採点されてしまう。
+    //    重複は必ず数百ms以内に届くので、5秒の時間窓に限定する。
     const key = `${speaker}:${trimmed}`
-    if (recentRef.current.includes(key)) return
-    recentRef.current = [...recentRef.current.slice(-19), key]
+    const nowMs = Date.now()
+    recentRef.current = recentRef.current.filter((r) => nowMs - r.at < 5000)
+    if (recentRef.current.some((r) => r.key === key)) return
+    recentRef.current.push({ key, at: nowMs })
 
     const line: TranscriptLine = { speaker, text: trimmed, at: Date.now() }
     setLines((prev) => [...prev, line])
@@ -506,9 +520,14 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
   //    status='live' のまま残り、そのテンプレートの質問編集を永久にブロックしていた。
   //    pagehide で sendBeacon を撃ち、ページ破棄後でも終了を届ける。
   useEffect(() => {
-    const notifyEnd = () => {
+    const notifyEnd = (e: PageTransitionEvent) => {
+      // ⚠️ bfcache へ入るだけの pagehide（persisted=true）では終了扱いにしない。
+      //    スマホでホームに戻っただけのケースまで面接を終わらせてしまい、
+      //    復帰後に「終了」を押しても no-op になる（endedRef が立っているため
+      //    最後の flushTurns・録音アップロード・完了画面が全て走らない）状態だった。
+      if (e.persisted) return
       if (endedRef.current) return
-      endedRef.current = true
+      // ⚠️ endedRef は立てない。ここで立てると、復帰後の正規の end() が丸ごと無効化される。
       try {
         const body = new Blob([JSON.stringify({ aborted: true })], { type: 'application/json' })
         navigator.sendBeacon?.(`/api/mensetsu/live/${token}/end`, body)

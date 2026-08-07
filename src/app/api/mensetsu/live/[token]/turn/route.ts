@@ -6,7 +6,7 @@ export const maxDuration = 300
 // クライアントが Realtime のイベントからテキストを拾い、まとめて送る。
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { assertUsable, loadSessionByToken } from '@/lib/mensetsu/public'
+import { loadSessionByToken } from '@/lib/mensetsu/public'
 
 type Ctx = { params: Promise<{ token: string }> | { token: string } }
 
@@ -18,12 +18,21 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const s = await loadSessionByToken(p.token)
   if (!s) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
   if (!s.consentedAt) return NextResponse.json({ error: '同意が必要です' }, { status: 403 })
-  // ⚠️ 他の live/* ルートと同じく assertUsable を通す。
-  //    以前は status==='evaluated' しか弾いておらず、面接終了後・期限切れ後でも
-  //    逐語ログを追記できた。評価の根拠として引用されるデータなので、
-  //    書き込める窓は面接が有効な間だけに閉じる。
-  const usable = assertUsable(s)
-  if (!usable.ok) return NextResponse.json({ error: usable.reason }, { status: usable.status })
+  // ⚠️ ここで assertUsable をそのまま使うと、面接中に期限を跨いだり
+  //    担当者が close した瞬間から 4xx になり、送信中だった発話が
+  //    クライアント側で破棄されて逐語ログがぶつ切りになる。
+  //    書き込みを閉じるのは「評価が済んだ後」と「終了から十分に経った後」に限定する。
+  //    （評価前の追記は面接中にも可能なので、ここを厳しくしても偽装は防げない）
+  const GRACE_MS = 10 * 60 * 1000
+  if (s.evaluatedAt) {
+    return NextResponse.json({ error: 'この面接は評価済みです' }, { status: 409 })
+  }
+  if (s.endedAt && Date.now() - s.endedAt.getTime() > GRACE_MS) {
+    return NextResponse.json({ error: 'この面接は終了しています' }, { status: 409 })
+  }
+  if (s.purgeAfter && s.purgeAfter.getTime() < Date.now()) {
+    return NextResponse.json({ error: 'この面接の記録は削除されています' }, { status: 410 })
+  }
 
   const body = await req.json().catch(() => ({}))
   const incoming = Array.isArray(body?.turns) ? body.turns.slice(0, MAX_TURNS_PER_CALL) : []

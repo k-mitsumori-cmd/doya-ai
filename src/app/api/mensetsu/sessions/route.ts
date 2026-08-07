@@ -69,12 +69,13 @@ export async function POST(req: NextRequest) {
   })
 
   const expiresAt = new Date(Date.now() + Math.max(1, validDays) * 24 * 60 * 60 * 1000)
-  // ⚠️ 保持期限は「面接を実施した時点」から数える。
-  //    発行時点から数えると、retentionDays が短い組織では応募者が面接を受ける前や
-  //    受けた直後に削除が走り、逐語ログごと消えて評価できなくなる。
-  //    ここでは仮に expiresAt を起点に置き、実際の開始時（/token）で貼り直す。
+  // 保持期限の起点は「発行時」。面接が実施されたら /token で実施日起点に貼り直す。
+  // ⚠️ 発行時を expiresAt 起点にすると、一度も受験されなかったセッションの
+  //    氏名・メール・同意IPが、告知した保持期間より最大 validDays 分長く残る。
+  //    受験されなかった面接に「実施日」は無いので、発行時から数えるのが正しい。
+  //    受験中に消える心配は、開始時の貼り直しで解消済み。
   const purgeAfter = new Date(
-    expiresAt.getTime() + Math.max(1, org?.retentionDays ?? 180) * 24 * 60 * 60 * 1000
+    Date.now() + Math.max(1, org?.retentionDays ?? 180) * 24 * 60 * 60 * 1000
   )
 
   const session = await prisma.mensetsuSession.create({
