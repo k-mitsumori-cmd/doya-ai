@@ -46,6 +46,26 @@ export default function MensetsuReportPage() {
     }
   }, [id])
 
+  const [evaluating, setEvaluating] = useState(false)
+
+  /** この画面から直接評価を実行する（一覧に戻らせない） */
+  const runEvaluate = useCallback(async () => {
+    setEvaluating(true)
+    setError(null)
+    try {
+      const res = await fetch(`/api/mensetsu/sessions/${id}/evaluate`, { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) {
+        setError(json?.error || '評価に失敗しました')
+        return
+      }
+      const r = await fetch(`/api/mensetsu/sessions/${id}`)
+      setData(await r.json())
+    } finally {
+      setEvaluating(false)
+    }
+  }, [id])
+
   const load = useCallback(async () => {
     try {
       const res = await fetch(`/api/mensetsu/sessions/${id}`)
@@ -110,6 +130,17 @@ export default function MensetsuReportPage() {
             AIの評価のみで不合格を確定させず、必ず担当者が内容を確認して判断してください。
           </p>
         </div>
+
+        {!s.evaluatedAt && (
+          <div className="mt-5 flex flex-wrap items-center gap-3 rounded-lg border border-[#dfe6f3] bg-white p-5 shadow-sm">
+            <span className="rounded-full bg-[#f1f3f4] px-4 py-1.5 text-sm font-black text-[#3c4043]">
+              未評価
+            </span>
+            <span className="text-sm font-medium text-[#425071]">
+              逐語ログ{s.turns.length}件 / この面接はまだ採点していません
+            </span>
+          </div>
+        )}
 
         {s.verdict && (
           <div className="mt-5 flex flex-wrap items-center gap-4 rounded-lg bg-white p-6 shadow-sm">
@@ -188,7 +219,28 @@ export default function MensetsuReportPage() {
           </section>
         )}
 
-        {tab === 'report' ? (
+        {tab === 'report' && !s.evaluatedAt ? (
+          // ⚠️ 未評価の面接で評価軸を「情報不足」で埋めて表示しない。
+          //    まだ採点していないだけなのに、AIがそう判定したように見えてしまう。
+          <section className="mt-4 rounded-lg bg-white p-8 text-center shadow-sm">
+            <span className="material-symbols-outlined text-3xl text-[#8a94ad]">fact_check</span>
+            <p className="mt-2 text-sm font-black text-[#0a0f3c]">まだ評価していません</p>
+            <p className="mt-1 text-xs font-medium leading-relaxed text-[#425071]">
+              {s.turns.length > 0
+                ? `逐語ログ${s.turns.length}件をもとに評価します。数十秒かかります。`
+                : '発話が記録されていないため評価できません。'}
+            </p>
+            {s.turns.length > 0 && (
+              <button
+                onClick={runEvaluate}
+                disabled={evaluating}
+                className="mt-4 rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:bg-[#b9cdf5]"
+              >
+                {evaluating ? '評価中…' : '評価する'}
+              </button>
+            )}
+          </section>
+        ) : tab === 'report' ? (
           <>
             <section className="mt-4 space-y-3">
               {criteria.map((c) => {
