@@ -3445,6 +3445,10 @@ model MensetsuOrganization {
   slug                String   @unique
   // 組織設定
   recordVideo         Boolean  @default(false) // 映像収録（既定OFF。音声のみでも評価は成立する）
+  // 音声ファイルそのものの保存。既定OFF。
+  // ⚠️ 文字起こしの保存と、音声そのものの保存は別の同意事項。
+  //    ONにすると同意画面の文面も「音声を録音して保存する」に変わる。
+  recordAudio         Boolean  @default(false)
   retentionDays       Int      @default(180) // 逐語ログ・録音の保持日数
   discloseToCandidate Boolean  @default(false) // 応募者本人へのスコア開示
   createdAt           DateTime @default(now())

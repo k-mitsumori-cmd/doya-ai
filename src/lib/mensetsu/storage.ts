@@ -52,6 +52,38 @@ export async function signedRecordingUrl(
   }
 }
 
+/**
+ * ブラウザから直接アップロードするための署名付きURL。
+ *
+ * なぜ経由させないか: Vercel Functions のリクエスト本文は約4.5MBが上限で、
+ * 20分の面接音声はこれを超えうる。サーバを経由すると長い面接ほど失敗する。
+ * 署名URLを渡してブラウザ→Supabaseに直接送らせることで上限を回避する。
+ */
+export async function createSignedUploadUrl(
+  path: string
+): Promise<{ signedUrl: string; token: string; path: string }> {
+  await ensureBucket()
+  const supabase = getSupabaseAdmin()
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUploadUrl(path)
+  if (error || !data) {
+    throw new Error(`アップロードURLの発行に失敗しました: ${error?.message || 'unknown'}`)
+  }
+  return { signedUrl: data.signedUrl, token: data.token, path }
+}
+
+/** 実際にオブジェクトが存在するか（アップロード完了の確認用） */
+export async function recordingExists(path: string): Promise<boolean> {
+  try {
+    const supabase = getSupabaseAdmin()
+    const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : ''
+    const file = path.slice(path.lastIndexOf('/') + 1)
+    const { data } = await supabase.storage.from(BUCKET).list(dir, { search: file, limit: 1 })
+    return !!data?.some((f) => f.name === file)
+  } catch {
+    return false
+  }
+}
+
 /** 保持期限切れの削除（cronから呼ばれる） */
 export async function deleteRecording(path: string): Promise<void> {
   const supabase = getSupabaseAdmin()

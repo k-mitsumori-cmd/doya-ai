@@ -22,9 +22,11 @@ export type ConnState = 'idle' | 'requesting_mic' | 'connecting' | 'live' | 'end
 interface UseRealtimeInterviewOptions {
   token: string
   onEnded?: () => void
+  /** 組織設定で音声保存が有効なときだけ true。同意していない録音は作らない。 */
+  recordAudio?: boolean
 }
 
-export function useRealtimeInterview({ token, onEnded }: UseRealtimeInterviewOptions) {
+export function useRealtimeInterview({ token, onEnded, recordAudio = false }: UseRealtimeInterviewOptions) {
   const [state, setState] = useState<ConnState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [lines, setLines] = useState<TranscriptLine[]>([])
@@ -43,6 +45,10 @@ export function useRealtimeInterview({ token, onEnded }: UseRealtimeInterviewOpt
   const startedAtRef = useRef<number>(0)
   const pendingRef = useRef<TranscriptLine[]>([])
   const endedRef = useRef(false)
+  // 録音（組織設定が有効なときのみ）
+  const recorderRef = useRef<MediaRecorder | null>(null)
+  const chunksRef = useRef<Blob[]>([])
+  const mixCtxRef = useRef<AudioContext | null>(null)
 
   /** 逐語ログはまとめてサーバへ送る（1発話ごとに叩かない） */
   const flushTurns = useCallback(async () => {
@@ -75,9 +81,44 @@ export function useRealtimeInterview({ token, onEnded }: UseRealtimeInterviewOpt
     pendingRef.current.push(line)
   }, [])
 
+  /**
+   * 録音をアップロードする。
+   * ブラウザ → Supabase へ直接送る（サーバ経由だと Vercel の本文上限4.5MBに当たり、
+   * 長い面接ほど失敗する）。失敗しても面接の完了自体は妨げない。
+   */
+  const uploadRecording = useCallback(async () => {
+    const chunks = chunksRef.current
+    chunksRef.current = []
+    if (chunks.length === 0) return
+    try {
+      const blob = new Blob(chunks, { type: 'audio/webm' })
+      const res = await fetch(`/api/mensetsu/live/${token}/recording`, { method: 'POST' })
+      if (!res.ok) return
+      const { signedUrl } = await res.json()
+      if (!signedUrl) return
+      const put = await fetch(signedUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'audio/webm' },
+        body: blob,
+      })
+      if (!put.ok) return
+      await fetch(`/api/mensetsu/live/${token}/recording`, { method: 'PATCH' })
+    } catch {
+      // 録音の保存に失敗しても、逐語ログと評価は成立する。面接を止めない。
+    }
+  }, [token])
+
   const cleanup = useCallback(() => {
     if (rafRef.current) cancelAnimationFrame(rafRef.current)
     rafRef.current = null
+    try {
+      if (recorderRef.current?.state === 'recording') recorderRef.current.stop()
+    } catch {}
+    recorderRef.current = null
+    try {
+      mixCtxRef.current?.close()
+    } catch {}
+    mixCtxRef.current = null
     try {
       dcRef.current?.close()
     } catch {}
@@ -98,8 +139,22 @@ export function useRealtimeInterview({ token, onEnded }: UseRealtimeInterviewOpt
     async (aborted = false) => {
       if (endedRef.current) return
       endedRef.current = true
+      // stop() は非同期に最後の dataavailable を発火させるため、cleanup 前に少し待つ
+      const rec = recorderRef.current
+      if (rec && rec.state === 'recording') {
+        await new Promise<void>((resolve) => {
+          rec.onstop = () => resolve()
+          try {
+            rec.stop()
+          } catch {
+            resolve()
+          }
+          setTimeout(resolve, 2000)
+        })
+      }
       cleanup()
       await flushTurns()
+      if (recordAudio) await uploadRecording()
       try {
         await fetch(`/api/mensetsu/live/${token}/end`, {
           method: 'POST',
@@ -110,7 +165,7 @@ export function useRealtimeInterview({ token, onEnded }: UseRealtimeInterviewOpt
       setState('ended')
       onEnded?.()
     },
-    [cleanup, flushTurns, onEnded, token]
+    [cleanup, flushTurns, onEnded, recordAudio, token, uploadRecording]
   )
 
   /** Realtime からの function call を受けてサーバに進行を問い合わせ、結果を返す */
@@ -229,6 +284,34 @@ export function useRealtimeInterview({ token, onEnded }: UseRealtimeInterviewOpt
         } catch {
           // 音量解析ができなくても面接は続行できる（口が動かないだけ）
         }
+
+        // --- 録音（組織設定が有効なときだけ）---
+        // 応募者のマイクとAIの音声を1本にミックスして録る。片方だけだと後で聞き直せない。
+        if (recordAudio && !recorderRef.current && typeof MediaRecorder !== 'undefined') {
+          try {
+            const mixCtx = new AudioContext()
+            mixCtxRef.current = mixCtx
+            const dest = mixCtx.createMediaStreamDestination()
+            mixCtx.createMediaStreamSource(e.streams[0]).connect(dest) // AI
+            if (micRef.current) mixCtx.createMediaStreamSource(micRef.current).connect(dest) // 応募者
+
+            // opus が使えない環境では既定のコーデックに任せる
+            const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+              ? 'audio/webm;codecs=opus'
+              : undefined
+            const rec = new MediaRecorder(dest.stream, {
+              ...(mime ? { mimeType: mime } : {}),
+              audioBitsPerSecond: 32000, // 20分で約5MB。会話の聞き取りには十分
+            })
+            rec.ondataavailable = (ev) => {
+              if (ev.data && ev.data.size > 0) chunksRef.current.push(ev.data)
+            }
+            rec.start(5000) // 5秒ごとに切り出し、タブが落ちても直前まで残す
+            recorderRef.current = rec
+          } catch {
+            // 録音できなくても面接は成立する（逐語ログと評価は別経路）
+          }
+        }
       }
 
       mic.getTracks().forEach((t) => pc.addTrack(t, mic))
@@ -304,7 +387,7 @@ export function useRealtimeInterview({ token, onEnded }: UseRealtimeInterviewOpt
       setState('error')
       setError(e?.message || '接続に失敗しました')
     }
-  }, [cleanup, flushTurns, handleFunctionCall, pushLine, token])
+  }, [cleanup, flushTurns, handleFunctionCall, pushLine, recordAudio, token])
 
   // 経過時間
   useEffect(() => {

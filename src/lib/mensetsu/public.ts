@@ -19,6 +19,7 @@ export interface PublicSession {
   questionCount: number
   consented: boolean
   recordVideo: boolean
+  recordAudio: boolean
   retentionDays: number
   expired: boolean
 }
@@ -30,7 +31,14 @@ export async function loadSessionByToken(token: string) {
     where: { token },
     include: {
       organization: {
-        select: { id: true, name: true, recordVideo: true, retentionDays: true, discloseToCandidate: true },
+        select: {
+          id: true,
+          name: true,
+          recordVideo: true,
+          recordAudio: true,
+          retentionDays: true,
+          discloseToCandidate: true,
+        },
       },
       template: {
         select: {
@@ -62,6 +70,7 @@ export function toPublicSession(s: LoadedSession): PublicSession {
     questionCount: s.template.questions.length,
     consented: !!s.consentedAt,
     recordVideo: s.organization.recordVideo,
+    recordAudio: s.organization.recordAudio,
     retentionDays: s.organization.retentionDays,
     expired: s.expiresAt.getTime() < Date.now(),
   }

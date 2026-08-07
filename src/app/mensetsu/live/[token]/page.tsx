@@ -22,6 +22,7 @@ interface PublicSession {
   questionCount: number
   consented: boolean
   recordVideo: boolean
+  recordAudio: boolean
   retentionDays: number
   expired: boolean
 }
@@ -48,7 +49,7 @@ export default function MensetsuLivePage() {
   const logRef = useRef<HTMLDivElement | null>(null)
 
   const onEnded = useCallback(() => setStep('done'), [])
-  const rt = useRealtimeInterview({ token, onEnded })
+  const rt = useRealtimeInterview({ token, onEnded, recordAudio: !!session?.recordAudio })
 
   // 面接情報の取得。
   // ⚠️ Cookie認証ではないので、セッション状態でfetchをゲートしない（空画面固定の事故を避ける）
@@ -183,6 +184,11 @@ export default function MensetsuLivePage() {
                 <span className="material-symbols-outlined text-[18px] text-[#0066ff]">mic</span>
                 <span>
                   面接中の音声は<strong className="font-black text-[#0a0f3c]">文字に起こして記録</strong>されます。
+                  {session.recordAudio && (
+                    <>
+                      あわせて<strong className="font-black text-[#0a0f3c]">音声そのものを録音して保存</strong>します。
+                    </>
+                  )}
                   {session.recordVideo ? '映像も録画されます。' : '映像は録画しません。'}
                 </span>
               </li>

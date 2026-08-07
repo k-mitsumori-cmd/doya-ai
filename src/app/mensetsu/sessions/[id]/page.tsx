@@ -30,6 +30,21 @@ export default function MensetsuReportPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<'report' | 'transcript'>('report')
+  const [audioUrl, setAudioUrl] = useState<string | null>(null)
+  const [audioBusy, setAudioBusy] = useState(false)
+
+  // 録音URLは押されたときだけ発行する。15分で失効するため、
+  // 画面表示のたびに先読みすると使う頃には切れている。
+  const loadRecording = useCallback(async () => {
+    setAudioBusy(true)
+    try {
+      const res = await fetch(`/api/mensetsu/sessions/${id}/recording`)
+      const json = await res.json()
+      if (res.ok && json?.url) setAudioUrl(json.url)
+    } finally {
+      setAudioBusy(false)
+    }
+  }, [id])
 
   const load = useCallback(async () => {
     try {
@@ -145,6 +160,33 @@ export default function MensetsuReportPage() {
             </div>
           )}
         </div>
+
+        {/* 録音（保存されている面接のみ） */}
+        {s.recordingPath && (
+          <section className="mt-4 rounded-lg bg-white p-5 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-black text-[#0a0f3c]">面接の録音</p>
+                <p className="mt-0.5 text-xs font-medium text-[#8a94ad]">
+                  再生用リンクは15分で失効します。ダウンロードして共有しないでください。
+                </p>
+              </div>
+              {!audioUrl && (
+                <button
+                  onClick={loadRecording}
+                  disabled={audioBusy}
+                  className="flex items-center gap-1.5 rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff] disabled:opacity-50"
+                >
+                  <span className="material-symbols-outlined text-[16px]">play_circle</span>
+                  {audioBusy ? '準備中…' : '録音を再生'}
+                </button>
+              )}
+            </div>
+            {audioUrl && (
+              <audio controls src={audioUrl} className="mt-3 w-full" controlsList="nodownload" />
+            )}
+          </section>
+        )}
 
         {tab === 'report' ? (
           <>
