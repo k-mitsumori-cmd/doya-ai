@@ -112,7 +112,7 @@ export default function MensetsuReportPage() {
           </div>
         )}
 
-        <div className="mt-6 flex gap-2">
+        <div className="mt-6 flex flex-wrap items-center gap-2">
           {(['report', 'transcript'] as const).map((t) => (
             <button
               key={t}
@@ -124,6 +124,26 @@ export default function MensetsuReportPage() {
               {t === 'report' ? '評価' : '逐語ログ'}
             </button>
           ))}
+
+          {/* PDFは評価済みのときだけ。未評価だとAPIが400を返すため、押せるのに進まないボタンにしない */}
+          {s.evaluatedAt && (
+            <div className="ml-auto flex items-center gap-2">
+              <a
+                href={`/api/mensetsu/sessions/${id}/pdf`}
+                className="flex items-center gap-1.5 rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 text-xs font-black text-[#0066ff]"
+              >
+                <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+                レポートPDF
+              </a>
+              <a
+                href={`/api/mensetsu/sessions/${id}/pdf?transcript=1`}
+                className="rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 text-xs font-black text-[#425071]"
+                title="応募者の発言そのものが綴じ込まれます。取り扱いにご注意ください。"
+              >
+                逐語ログ付き
+              </a>
+            </div>
+          )}
         </div>
 
         {tab === 'report' ? (
