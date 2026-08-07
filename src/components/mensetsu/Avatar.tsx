@@ -64,6 +64,24 @@ export default function Avatar({ level, speaking, listening, name = 'AI面接官
     }
   }, [])
 
+  // 全カットを先読みしておく。
+  // 1本200KB弱・15本で約3MBなので一括で取れる。
+  // 読み込みを切替時まで遅らせると、状態が変わった瞬間に一拍固まる。
+  useEffect(() => {
+    if (videoOk !== true) return
+    const all = Object.values(CLIPS).flat()
+    const els: HTMLLinkElement[] = []
+    for (const slug of all) {
+      const link = document.createElement('link')
+      link.rel = 'prefetch'
+      link.as = 'video'
+      link.href = `${BASE}/${slug}.mp4`
+      document.head.appendChild(link)
+      els.push(link)
+    }
+    return () => els.forEach((el) => el.remove())
+  }, [videoOk])
+
   // 2枚のvideoを交互に使う（A/Bバッファ）
   const [slot, setSlot] = useState(0)
   const [srcs, setSrcs] = useState<[string | null, string | null]>([null, null])
