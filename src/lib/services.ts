@@ -1648,7 +1648,7 @@ export const SERVICES: Service[] = [
       free: { name: '無料プラン', limit: 'テンプレート1件 / 面接3件まで', dailyLimit: -1, price: 0 },
       pro: { name: 'プロプラン', limit: '面接無制限 / 評価レポート / チーム招待', dailyLimit: -1, price: 9980 },
     },
-    status: 'coming_soon',
+    status: 'active',
     category: 'other',
     order: 28,
     requiresAuth: true,
