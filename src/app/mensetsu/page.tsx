@@ -453,7 +453,18 @@ export default function MensetsuDashboard() {
 
             {/* --- 4. 面接一覧 --- */}
             <section className="mt-6 rounded-lg bg-white p-6 shadow-sm">
-              <h2 className="text-base font-black text-[#0a0f3c]">面接一覧</h2>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="text-base font-black text-[#0a0f3c]">面接一覧</h2>
+                {sessions.some((s) => s.status === 'evaluated') && (
+                  <Link
+                    href="/mensetsu/compare"
+                    className="flex items-center gap-1.5 rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">table_chart</span>
+                    候補者を比較
+                  </Link>
+                )}
+              </div>
               {sessions.length === 0 ? (
                 <p className="mt-3 text-sm font-medium text-[#425071]">まだ面接はありません。</p>
               ) : (
