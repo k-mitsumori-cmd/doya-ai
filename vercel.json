@@ -99,6 +99,10 @@
     {
       "path": "/api/cron/health-alert",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/mensetsu-purge",
+      "schedule": "40 1 * * *"
     }
   ]
 }
