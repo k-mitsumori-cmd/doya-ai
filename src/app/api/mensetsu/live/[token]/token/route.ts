@@ -116,9 +116,14 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
 
   // 面接開始を記録（最初の1回だけ）
   if (!s.startedAt) {
+    // 保持期限は実施日から数え直す。発行時点の仮の値のままだと、
+    // 同意画面で伝えた「実施から◯日間保管」と実態がずれる。
+    const purgeAfter = new Date(
+      Date.now() + Math.max(1, s.organization.retentionDays) * 24 * 60 * 60 * 1000
+    )
     await prisma.mensetsuSession.update({
       where: { id: s.id },
-      data: { status: 'live', startedAt: new Date() },
+      data: { status: 'live', startedAt: new Date(), purgeAfter },
     })
   }
 

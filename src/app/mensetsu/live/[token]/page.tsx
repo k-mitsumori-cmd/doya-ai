@@ -71,6 +71,10 @@ export default function MensetsuLivePage() {
   const selfVideoRef = useRef<HTMLVideoElement | null>(null)
   const camStreamRef = useRef<MediaStream | null>(null)
 
+  // 冒頭の数秒は挨拶カット、残り時間わずかになったら締めのカットを出す。
+  // 面接の「入り」と「締め」が固定の絵になることで、会話の区切りが体感しやすくなる。
+  const [avatarCue, setAvatarCue] = useState<'greet' | 'closing' | null>(null)
+
   const onEnded = useCallback(() => setStep('done'), [])
   const rt = useRealtimeInterview({ token, onEnded, recordAudio: !!session?.recordAudio })
 
@@ -152,6 +156,18 @@ export default function MensetsuLivePage() {
       alive = false
     }
   }, [token])
+
+  // 経過時間からアバターの特別カットを出し分ける
+  useEffect(() => {
+    if (rt.state !== 'live') {
+      setAvatarCue(null)
+      return
+    }
+    const remain = rt.durationMin * 60 - rt.elapsedSec
+    if (rt.elapsedSec > 0 && rt.elapsedSec <= 6) setAvatarCue('greet')
+    else if (remain <= 20) setAvatarCue('closing')
+    else setAvatarCue(null)
+  }, [rt.state, rt.elapsedSec, rt.durationMin])
 
   // 字幕は常に最新を表示
   useEffect(() => {
@@ -408,7 +424,12 @@ export default function MensetsuLivePage() {
               </button>
             </div>
           ) : (
-            <Avatar level={rt.level} speaking={rt.speaking} listening={rt.listening} />
+            <Avatar
+              level={rt.level}
+              speaking={rt.speaking}
+              listening={rt.listening}
+              cue={avatarCue}
+            />
           )}
 
           {/* 名前バッジ（会議アプリと同じく左下） */}

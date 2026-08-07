@@ -70,6 +70,20 @@ export async function GET(req: NextRequest) {
   const storageFailures: string[] = []
 
   for (const s of targets) {
+    // ⚠️ Storage の削除を先に試す。DB側の recordingPath を先に消すと、
+    //    Storage 削除が失敗したときにパスを二度と辿れず、音声が永久に残る。
+    let storageOk = true
+    if (s.recordingPath) {
+      try {
+        const { deleteRecording } = await import('@/lib/mensetsu/storage')
+        await deleteRecording(s.recordingPath)
+      } catch (e: any) {
+        storageOk = false
+        storageFailures.push(s.recordingPath)
+        console.error('[mensetsu-purge] storage delete failed', s.recordingPath, e?.message)
+      }
+    }
+
     try {
       const del = await prisma.mensetsuTurn.deleteMany({ where: { sessionId: s.id } })
       purgedTurns += del.count
@@ -86,11 +100,15 @@ export async function GET(req: NextRequest) {
           candidateEmail: null,
           consentIp: null,
           consentUa: null,
-          recordingPath: null,
+          // 消せなかったパスは残す（次回の実行で再試行できるように）
+          ...(storageOk ? { recordingPath: null } : {}),
           // 応募者向けの文面にも発言内容が含まれうるため消す。担当者向けレポートは残す判断もあるが、
           // 引用が入っている可能性があるため同様に消す。
           candidateFeedback: null,
           recruiterReport: null,
+          // 総評にも応募者の発言の言い換え・引用が入るため必ず消す。
+          // ここが残っていると「◯日で削除」の約束と実態がずれる。
+          overallComment: null,
         },
       })
       purgedSessions++
@@ -99,17 +117,6 @@ export async function GET(req: NextRequest) {
       console.error('[mensetsu-purge] failed', s.id, e?.message)
     }
 
-    // 録音ファイルの削除。Storage削除が失敗してもDB側の消し込みは進める
-    // （DBに残す方が個人情報上のリスクが高いため）。失敗はレスポンスで可視化する。
-    if (s.recordingPath) {
-      try {
-        const { deleteRecording } = await import('@/lib/mensetsu/storage')
-        await deleteRecording(s.recordingPath)
-      } catch (e: any) {
-        storageFailures.push(s.recordingPath)
-        console.error('[mensetsu-purge] storage delete failed', s.recordingPath, e?.message)
-      }
-    }
   }
 
   const remaining = await prisma.mensetsuSession.count({

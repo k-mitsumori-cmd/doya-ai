@@ -3,17 +3,18 @@
 // ============================================
 // ドヤ面接官 アバター（ドヤマーケAIのクマ）
 // ============================================
-// ブランドのマスコット（白クマ）をそのまま面接官として立てる。
-// 状態でポーズを切り替え、AIの音声の音量エンベロープで
-// 拡大・傾き・発光を動かして「喋っている」感を出す。
+// 短いループ動画を状態に応じて切り替えて再生する。
+// 生成物は public/mensetsu/avatar/*.mp4（Seedance 2.0 Mini・5秒・1:1）。
+// 生成手順は ~/Code/tools/seedance-studio/README_mensetsu.md。
 //
-// ⚠️ 差し替え可能な設計にしてある:
-//    public/mensetsu/avatar/{idle,talking,listening}.mp4 を置くと
-//    自動で動画ループ再生に切り替わる（静止画はフォールバック）。
-//    将来 Seedance / HeyGen 等で生成したループに差し替えるための口。
+// 繋ぎを滑らかにするための作り:
+//  1. video要素を2枚持ち、切替時に新しい方を裏で再生開始してからクロスフェードする
+//     （1枚だと src 差し替えの瞬間に黒フレームが出る）
+//  2. 同じ状態が続く間は、その分類の中から別カットを順に流して単調さを消す
+//  3. 動画が無い環境では静止画へ自動フォールバック（生成前でも壊れない）
 // ⚠️ 絵文字は使わない（ブランド規約）。
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export interface AvatarProps {
   /** 0..1 の音量。AIが喋っている間だけ動く */
@@ -22,52 +23,104 @@ export interface AvatarProps {
   /** 応募者が話している間は「聞いている」表情にする */
   listening: boolean
   name?: string
-  /** 動画ループを使う（public/mensetsu/avatar/*.mp4 が存在する場合のみ true にする） */
-  useVideo?: boolean
+  /** 冒頭の挨拶・締めの会釈を明示的に出したいとき */
+  cue?: 'greet' | 'closing' | null
 }
 
-type Pose = 'idle' | 'talking' | 'listening'
+type Mood = 'idle' | 'listening' | 'talking' | 'greet' | 'closing'
 
-/** ポーズ → マスコット画像。既存の /public/character を流用する */
-const POSE_IMAGE: Record<Pose, string> = {
+const BASE = '/mensetsu/avatar'
+
+/** 状態ごとのカット。同じ状態が続く間は順に巡回させる */
+const CLIPS: Record<Mood, string[]> = {
+  idle: ['idle_breathe', 'idle_blink', 'idle_look', 'idle_settle'],
+  listening: ['listen_nod', 'listen_lean', 'listen_think', 'listen_smile'],
+  talking: ['talk_calm', 'talk_gesture', 'talk_point', 'talk_emphasize'],
+  greet: ['greet_wave'],
+  closing: ['closing_bow'],
+}
+
+/** 動画が無いときの静止画フォールバック */
+const FALLBACK_IMAGE: Record<Mood, string> = {
   idle: '/character/hello.png',
-  talking: '/character/point.png',
   listening: '/character/thinking.png',
+  talking: '/character/point.png',
+  greet: '/character/hello.png',
+  closing: '/character/success.png',
 }
 
-const POSE_VIDEO: Record<Pose, string> = {
-  idle: '/mensetsu/avatar/idle.mp4',
-  talking: '/mensetsu/avatar/talking.mp4',
-  listening: '/mensetsu/avatar/listening.mp4',
-}
+export default function Avatar({ level, speaking, listening, name = 'AI面接官', cue = null }: AvatarProps) {
+  const mood: Mood = cue === 'greet' ? 'greet' : cue === 'closing' ? 'closing' : speaking ? 'talking' : listening ? 'listening' : 'idle'
 
-export default function Avatar({ level, speaking, listening, name = 'AI面接官', useVideo = false }: AvatarProps) {
-  const [bob, setBob] = useState(0)
-  const rafRef = useRef<number | null>(null)
-  const tRef = useRef(0)
-
-  const pose: Pose = speaking ? 'talking' : listening ? 'listening' : 'idle'
-
-  // ゆっくりした呼吸・浮遊。話している間は速く大きく。
+  // 動画が使えるか。1本でも読めれば動画モードにする。
+  const [videoOk, setVideoOk] = useState<boolean | null>(null)
   useEffect(() => {
-    const tick = () => {
-      tRef.current += speaking ? 0.09 : 0.028
-      setBob(Math.sin(tRef.current))
-      rafRef.current = requestAnimationFrame(tick)
-    }
-    rafRef.current = requestAnimationFrame(tick)
+    let alive = true
+    fetch(`${BASE}/idle_breathe.mp4`, { method: 'HEAD' })
+      .then((r) => alive && setVideoOk(r.ok))
+      .catch(() => alive && setVideoOk(false))
     return () => {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      alive = false
     }
-  }, [speaking])
+  }, [])
 
-  // 音量を滑らかに反映（生の値は跳ねるので上限を掛ける）
-  const amp = useMemo(() => (speaking ? Math.min(1, Math.max(0, level * 2.2)) : 0), [level, speaking])
+  // 2枚のvideoを交互に使う（A/Bバッファ）
+  const [slot, setSlot] = useState(0)
+  const [srcs, setSrcs] = useState<[string | null, string | null]>([null, null])
+  const idxRef = useRef<Record<Mood, number>>({ idle: 0, listening: 0, talking: 0, greet: 0, closing: 0 })
+  const moodRef = useRef<Mood>(mood)
+  const videoRefs = [useRef<HTMLVideoElement | null>(null), useRef<HTMLVideoElement | null>(null)]
 
-  const scale = 1 + amp * 0.075 + (speaking ? 0.012 : 0.004) * bob
-  const rotY = (speaking ? 5.5 : 2.2) * bob + (listening ? -3 : 0)
-  const rotX = (speaking ? -3.2 : -1.1) * bob
-  const translateY = (speaking ? -7 : -4) * bob - amp * 5
+  /** 次のクリップへ切り替える（裏で再生してからクロスフェード） */
+  const swapTo = useCallback(
+    (m: Mood) => {
+      const list = CLIPS[m]
+      const i = idxRef.current[m] % list.length
+      idxRef.current[m] = i + 1
+      const next = `${BASE}/${list[i]}.mp4`
+      const target = slot === 0 ? 1 : 0
+      setSrcs((prev) => {
+        const copy: [string | null, string | null] = [...prev] as any
+        copy[target] = next
+        return copy
+      })
+      // 読み込めたら表に出す。失敗しても現在のカットが流れ続ける。
+      const el = videoRefs[target].current
+      if (el) {
+        const onReady = () => {
+          el.removeEventListener('canplay', onReady)
+          void el.play().catch(() => {})
+          setSlot(target)
+        }
+        el.addEventListener('canplay', onReady)
+        el.load()
+      } else {
+        setSlot(target)
+      }
+    },
+    // videoRefs は毎レンダリング同一参照なので依存に含めない
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [slot]
+  )
+
+  // 状態が変わったら即切替
+  useEffect(() => {
+    if (videoOk !== true) return
+    if (moodRef.current !== mood || srcs[slot] === null) {
+      moodRef.current = mood
+      swapTo(mood)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mood, videoOk])
+
+  // 同じ状態が続く場合、クリップが終わるたびに同分類の別カットへ
+  const handleEnded = useCallback(() => {
+    if (videoOk !== true) return
+    swapTo(moodRef.current)
+  }, [swapTo, videoOk])
+
+  // 音量に連動した演出（動画・静止画のどちらでも効かせる）
+  const amp = speaking ? Math.min(1, Math.max(0, level * 2.2)) : 0
 
   return (
     <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
@@ -76,108 +129,76 @@ export default function Avatar({ level, speaking, listening, name = 'AI面接官
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
-          background: `radial-gradient(circle at 50% 42%, rgba(0,102,255,${0.16 + amp * 0.3}) 0%, rgba(0,102,255,0.06) 38%, rgba(255,255,255,0) 68%)`,
+          background: `radial-gradient(circle at 50% 45%, rgba(0,102,255,${0.14 + amp * 0.26}) 0%, rgba(0,102,255,0.05) 40%, rgba(255,255,255,0) 70%)`,
           transition: 'background 120ms linear',
         }}
       />
 
-      {/* 発話リング。Zoomの「話しています」枠の役割も兼ねる */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute rounded-full"
-        style={{
-          width: `${46 + amp * 16}%`,
-          aspectRatio: '1 / 1',
-          border: `3px solid rgba(0,102,255,${speaking ? 0.35 + amp * 0.5 : 0.12})`,
-          boxShadow: speaking
-            ? `0 0 ${28 + amp * 70}px rgba(0,102,255,${0.3 + amp * 0.45}), inset 0 0 ${20 + amp * 40}px rgba(0,224,255,0.22)`
-            : '0 0 18px rgba(0,102,255,0.12)',
-          transition: 'width 90ms linear, box-shadow 90ms linear, border-color 90ms linear',
-        }}
-      />
-      {/* 外側にもう一枚、音量で波打つ輪 */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute rounded-full"
-        style={{
-          width: `${58 + amp * 26}%`,
-          aspectRatio: '1 / 1',
-          border: `2px solid rgba(0,224,255,${speaking ? 0.1 + amp * 0.3 : 0.05})`,
-          transition: 'width 140ms ease-out, border-color 140ms linear',
-        }}
-      />
-
-      {/* キャラクター本体（3D） */}
-      <div className="relative" style={{ perspective: '900px', width: '78%', maxWidth: 460 }}>
+      <div className="relative flex h-full w-full items-center justify-center" style={{ perspective: '900px' }}>
         <div
+          className="relative aspect-square w-[min(78%,460px)]"
           style={{
-            transform: `translateY(${translateY}px) rotateX(${rotX}deg) rotateY(${rotY}deg) scale(${scale})`,
-            transformStyle: 'preserve-3d',
-            transition: 'transform 70ms linear',
+            transform: `scale(${1 + amp * 0.045})`,
+            transition: 'transform 90ms linear',
             filter: speaking
-              ? `drop-shadow(0 22px 44px rgba(10,15,60,0.28)) saturate(${1 + amp * 0.35}) brightness(${1 + amp * 0.06})`
-              : 'drop-shadow(0 16px 32px rgba(10,15,60,0.2))',
+              ? `drop-shadow(0 20px 40px rgba(10,15,60,0.24)) saturate(${1 + amp * 0.2})`
+              : 'drop-shadow(0 14px 30px rgba(10,15,60,0.18))',
           }}
         >
-          {useVideo ? (
-            <video
-              key={pose}
-              src={POSE_VIDEO[pose]}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="w-full rounded-3xl"
-            />
+          {videoOk === true ? (
+            <>
+              {[0, 1].map((s) => (
+                <video
+                  key={s}
+                  ref={videoRefs[s]}
+                  src={srcs[s] ?? undefined}
+                  autoPlay
+                  muted
+                  playsInline
+                  onEnded={s === slot ? handleEnded : undefined}
+                  className="absolute inset-0 h-full w-full rounded-3xl object-cover"
+                  style={{ opacity: slot === s ? 1 : 0, transition: 'opacity 380ms ease' }}
+                />
+              ))}
+            </>
           ) : (
-            // ポーズ切替はクロスフェード（パッと入れ替わると安っぽく見える）
-            (['idle', 'talking', 'listening'] as Pose[]).map((p) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={p}
-                src={POSE_IMAGE[p]}
-                alt=""
-                className="w-full select-none rounded-3xl"
-                style={{
-                  opacity: pose === p ? 1 : 0,
-                  transition: 'opacity 260ms ease',
-                  position: p === 'idle' ? 'relative' : 'absolute',
-                  inset: p === 'idle' ? undefined : 0,
-                }}
-                draggable={false}
-              />
-            ))
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={FALLBACK_IMAGE[mood]}
+              alt=""
+              className="absolute inset-0 h-full w-full select-none rounded-3xl object-cover"
+              draggable={false}
+            />
           )}
-        </div>
 
-        {/* 足元の影。浮遊に合わせて伸縮させると立体に見える */}
-        <div
-          aria-hidden
-          className="mx-auto rounded-[50%] bg-[#0a0f3c]"
-          style={{
-            width: `${52 - bob * 3 - amp * 4}%`,
-            height: 14,
-            marginTop: -6,
-            filter: 'blur(10px)',
-            opacity: 0.16 + amp * 0.05,
-            transition: 'width 70ms linear',
-          }}
-        />
+          {/* 発話リング。会議アプリの「話しています」枠に相当 */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-3xl"
+            style={{
+              boxShadow: speaking
+                ? `0 0 0 3px rgba(0,102,255,${0.45 + amp * 0.45}), 0 0 ${24 + amp * 56}px rgba(0,102,255,${0.22 + amp * 0.35})`
+                : '0 0 0 1px rgba(10,15,60,0.06)',
+              transition: 'box-shadow 90ms linear',
+            }}
+          />
+        </div>
       </div>
 
-      {/* 音量バー。喋っているのが一目で分かる */}
+      {/* 音量バー */}
       {speaking && (
         <div aria-hidden className="pointer-events-none absolute bottom-4 flex items-end gap-1">
-          {[0, 1, 2, 3, 4].map((i) => {
-            const h = 6 + Math.abs(Math.sin(tRef.current * 1.5 + i * 0.7)) * (8 + amp * 34)
-            return (
-              <span
-                key={i}
-                className="w-1.5 rounded-full bg-[#0066ff]"
-                style={{ height: h, opacity: 0.55 + amp * 0.4, transition: 'height 70ms linear' }}
-              />
-            )
-          })}
+          {[0, 1, 2, 3, 4].map((i) => (
+            <span
+              key={i}
+              className="w-1.5 rounded-full bg-[#0066ff]"
+              style={{
+                height: 6 + Math.abs(Math.sin(Date.now() / 180 + i * 0.7)) * (8 + amp * 30),
+                opacity: 0.5 + amp * 0.45,
+                transition: 'height 80ms linear',
+              }}
+            />
+          ))}
         </div>
       )}
 

@@ -50,13 +50,23 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
   const chunksRef = useRef<Blob[]>([])
   const mixCtxRef = useRef<AudioContext | null>(null)
 
-  /** 逐語ログはまとめてサーバへ送る（1発話ごとに叩かない） */
+  /**
+   * 逐語ログはまとめてサーバへ送る（1発話ごとに叩かない）。
+   * ⚠️ 送信に失敗したらキューへ戻すこと。
+   *    以前は fetch の前にキューを空にして失敗時に戻していなかったため、
+   *    一瞬の通信断でその区間の発話が永久に消え、実際には答えているのに
+   *    評価が「情報不足」に倒れる原因になっていた。
+   */
   const flushTurns = useCallback(async () => {
     const batch = pendingRef.current
     if (batch.length === 0) return
     pendingRef.current = []
+    const requeue = () => {
+      // 後から届いた発話より前に並ぶよう、先頭へ戻す
+      pendingRef.current = [...batch, ...pendingRef.current]
+    }
     try {
-      await fetch(`/api/mensetsu/live/${token}/turn`, {
+      const res = await fetch(`/api/mensetsu/live/${token}/turn`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -67,9 +77,10 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
           })),
         }),
       })
+      // 4xx は投げ直しても通らない（期限切れ等）ので捨てる。5xx・通信断は戻して再送。
+      if (!res.ok && res.status >= 500) requeue()
     } catch {
-      // 送信失敗は面接を止めない。次のflushでまとめて再送されないため取りこぼすが、
-      // 面接継続を優先する（ログ欠落 < 面接中断）。
+      requeue()
     }
   }, [token])
 
@@ -448,8 +459,27 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
     if (elapsedSec > durationMin * 60 + 180) void end(false)
   }, [elapsedSec, durationMin, state, end])
 
-  // 離脱時のクリーンアップ
-  useEffect(() => () => cleanup(), [cleanup])
+  // 離脱時のクリーンアップ。
+  // ⚠️ アンマウントだけでは /end に到達しないため、タブを閉じた面接が
+  //    status='live' のまま残り、そのテンプレートの質問編集を永久にブロックしていた。
+  //    pagehide で sendBeacon を撃ち、ページ破棄後でも終了を届ける。
+  useEffect(() => {
+    const notifyEnd = () => {
+      if (endedRef.current) return
+      endedRef.current = true
+      try {
+        const body = new Blob([JSON.stringify({ aborted: true })], { type: 'application/json' })
+        navigator.sendBeacon?.(`/api/mensetsu/live/${token}/end`, body)
+      } catch {
+        /* 送れなくても離脱は止められない */
+      }
+    }
+    window.addEventListener('pagehide', notifyEnd)
+    return () => {
+      window.removeEventListener('pagehide', notifyEnd)
+      cleanup()
+    }
+  }, [cleanup, token])
 
   return {
     state,

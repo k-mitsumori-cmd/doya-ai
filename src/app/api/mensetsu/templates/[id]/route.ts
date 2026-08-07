@@ -63,21 +63,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     }
   }
 
-  const data: any = {}
-  if (typeof body?.name === 'string') data.name = body.name.trim()
-  if (typeof body?.jobTitle === 'string') data.jobTitle = body.jobTitle.trim()
-  if ([10, 20, 30].includes(Number(body?.durationMin))) data.durationMin = Number(body.durationMin)
-  if (typeof body?.intro === 'string') data.intro = body.intro
-  if (typeof body?.closing === 'string') data.closing = body.closing
-  if (['draft', 'active', 'archived'].includes(body?.status)) data.status = body.status
-
-  await prisma.mensetsuTemplate.update({ where: { id }, data })
-
-  // 質問の全置換（順序の入れ替え・削除を素直に扱うため）
+  // ⚠️ 検査は書き込みより前に済ませる。
+  //    以前は基本情報を先に update してから 409 を返していたため、
+  //    UIが「保存に失敗」と出しているのに durationMin や status だけ変わって残った。
   if (Array.isArray(body?.questions)) {
-    // ⚠️ 実施中の面接がある状態で質問を差し替えると、その面接の currentIndex が
-    //    新しい質問数を超えて進行が打ち切られる（応募者から見ると面接が突然終わる）。
-    //    実施中が1件でもあれば質問の変更は拒否する。基本情報の更新は上で済んでいる。
     const liveCount = await prisma.mensetsuSession.count({
       where: { templateId: id, status: { in: ['live', 'consented'] } },
     })
@@ -90,18 +79,49 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         { status: 409 }
       )
     }
-
-    await prisma.mensetsuQuestion.deleteMany({ where: { templateId: id } })
-    await prisma.mensetsuQuestion.createMany({
-      data: body.questions.map((q: any, i: number) => ({
-        templateId: id,
-        ord: i,
-        text: String(q?.text || ''),
-        followUpHint: q?.followUpHint ? String(q.followUpHint) : null,
-        targetMin: Number.isFinite(Number(q?.targetMin)) ? Number(q.targetMin) : 3,
-        criterionKeys: Array.isArray(q?.criterionKeys) ? q.criterionKeys.map(String) : [],
-      })),
+    // 想定時間は Postgres の integer 列に入る。極端な値を弾かないと
+    // deleteMany 済みの状態で createMany が落ち、質問が全消失する。
+    const bad = body.questions.find((q: any) => {
+      const n = Number(q?.targetMin)
+      return q?.targetMin != null && (!Number.isFinite(n) || n < 1 || n > 600)
     })
+    if (bad) {
+      return NextResponse.json(
+        { error: '想定時間は1〜600分の範囲で入力してください' },
+        { status: 400 }
+      )
+    }
+  }
+
+  const data: any = {}
+  if (typeof body?.name === 'string') data.name = body.name.trim()
+  if (typeof body?.jobTitle === 'string') data.jobTitle = body.jobTitle.trim()
+  if ([10, 20, 30].includes(Number(body?.durationMin))) data.durationMin = Number(body.durationMin)
+  if (typeof body?.intro === 'string') data.intro = body.intro
+  if (typeof body?.closing === 'string') data.closing = body.closing
+  if (['draft', 'active', 'archived'].includes(body?.status)) data.status = body.status
+
+  await prisma.mensetsuTemplate.update({ where: { id }, data })
+
+  // 質問の全置換（順序の入れ替え・削除を素直に扱うため）
+  if (Array.isArray(body?.questions)) {
+    // 削除と再作成は必ず1つのトランザクションで。
+    // 分けると createMany の失敗時に質問が0件のまま残り、復元手段が無い。
+    await prisma.$transaction([
+      prisma.mensetsuQuestion.deleteMany({ where: { templateId: id } }),
+      prisma.mensetsuQuestion.createMany({
+        data: body.questions.map((q: any, i: number) => ({
+          templateId: id,
+          ord: i,
+          text: String(q?.text || ''),
+          followUpHint: q?.followUpHint ? String(q.followUpHint) : null,
+          targetMin: Number.isFinite(Number(q?.targetMin))
+            ? Math.min(600, Math.max(1, Math.round(Number(q.targetMin))))
+            : 3,
+          criterionKeys: Array.isArray(q?.criterionKeys) ? q.criterionKeys.map(String) : [],
+        })),
+      }),
+    ])
   }
 
   const template = await prisma.mensetsuTemplate.findUnique({
