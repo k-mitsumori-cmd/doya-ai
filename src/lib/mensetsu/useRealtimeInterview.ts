@@ -96,6 +96,17 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
 
   /** 直近に積んだ発話。transcript イベントと response.done の二重登録を防ぐ */
   const recentRef = useRef<{ key: string; at: number }[]>([])
+  /**
+   * 各話者の「話し始めた時刻」。
+   * ⚠️ 発話は読み上げ／認識が終わって初めて確定するため、確定時刻で並べると
+   *    長い発話が後ろにずれる。実際に本番の面接で、面接官の冒頭挨拶(長い)より
+   *    応募者の相槌(短い)が先に採番され、逐語ログが会話の順序として
+   *    読めなくなっていた。開始時刻を別に持ち、それを並び順の根拠にする。
+   */
+  const speechStartRef = useRef<{ interviewer: number; candidate: number }>({
+    interviewer: 0,
+    candidate: 0,
+  })
 
   const pushLine = useCallback((speaker: TranscriptLine['speaker'], text: string) => {
     const trimmed = text.trim()
@@ -110,7 +121,10 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
     if (recentRef.current.some((r) => r.key === key)) return
     recentRef.current.push({ key, at: nowMs })
 
-    const line: TranscriptLine = { speaker, text: trimmed, at: Date.now() }
+    // 開始時刻が記録されていればそれを使う（無ければ確定時刻で代用）
+    const startedAt = speechStartRef.current[speaker] || Date.now()
+    speechStartRef.current[speaker] = 0
+    const line: TranscriptLine = { speaker, text: trimmed, at: startedAt }
     setLines((prev) => [...prev, line])
     pendingRef.current.push(line)
   }, [])
@@ -415,6 +429,9 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
           return
         }
         if (t.endsWith('audio.delta')) {
+          if (!speechStartRef.current.interviewer) {
+            speechStartRef.current.interviewer = Date.now()
+          }
           setSpeaking(true)
           return
         }
@@ -425,6 +442,9 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
             pushLine('candidate', ev.transcript || '')
             break
           case 'input_audio_buffer.speech_started':
+            if (!speechStartRef.current.candidate) {
+              speechStartRef.current.candidate = Date.now()
+            }
             setListening(true)
             break
           case 'input_audio_buffer.speech_stopped':

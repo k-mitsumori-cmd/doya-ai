@@ -45,8 +45,18 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   })
   let ord = (last?.ord ?? -1) + 1
 
+  // ⚠️ 到着順ではなく「話し始めた時刻」で並べてから採番する。
+  //    発話は読み上げ／認識が終わって初めて確定するため、到着順のままだと
+  //    長い発話が後ろにずれ、逐語ログが会話の順序として読めなくなる
+  //    （実際に本番で、面接官の冒頭挨拶より応募者の相槌が先に並んだ）。
+  //    評価AIもこのログを根拠に読むため、順序が狂うと採点が歪む。
   const rows = incoming
     .filter((t: any) => t && typeof t.text === 'string' && t.text.trim())
+    .sort((a: any, b: any) => {
+      const av = Number.isFinite(Number(a?.startMs)) ? Number(a.startMs) : Number.MAX_SAFE_INTEGER
+      const bv = Number.isFinite(Number(b?.startMs)) ? Number(b.startMs) : Number.MAX_SAFE_INTEGER
+      return av - bv
+    })
     .map((t: any) => ({
       sessionId: s.id,
       ord: ord++,
