@@ -168,6 +168,47 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
     [cleanup, flushTurns, onEnded, recordAudio, token, uploadRecording]
   )
 
+  /**
+   * マイクのミュート切替。
+   * トラックを stop せず enabled で切るのは、解除のたびに getUserMedia を
+   * 呼び直すとブラウザが再度許可を求めたり、WebRTCの再ネゴが必要になるため。
+   */
+  const setMicEnabled = useCallback((enabled: boolean) => {
+    micRef.current?.getAudioTracks().forEach((t) => {
+      t.enabled = enabled
+    })
+  }, [])
+
+  /**
+   * テキストで回答する（音声が使えない環境・騒がしい場所・聞き取り精度が不安なとき用）。
+   * Realtime のセッションに応募者の発言として積み、その場で応答を促す。
+   * 逐語ログにも同じ内容を残すので、評価は音声で答えた場合と同じ扱いになる。
+   */
+  const sendText = useCallback(
+    (text: string) => {
+      const trimmed = text.trim()
+      if (!trimmed) return false
+      const dc = dcRef.current
+      if (!dc || dc.readyState !== 'open') return false
+
+      dc.send(
+        JSON.stringify({
+          type: 'conversation.item.create',
+          item: {
+            type: 'message',
+            role: 'user',
+            content: [{ type: 'input_text', text: trimmed }],
+          },
+        })
+      )
+      dc.send(JSON.stringify({ type: 'response.create' }))
+      pushLine('candidate', trimmed)
+      void flushTurns()
+      return true
+    },
+    [flushTurns, pushLine]
+  )
+
   /** Realtime からの function call を受けてサーバに進行を問い合わせ、結果を返す */
   const handleFunctionCall = useCallback(
     async (callId: string, argsJson: string) => {
@@ -410,5 +451,18 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
   // 離脱時のクリーンアップ
   useEffect(() => () => cleanup(), [cleanup])
 
-  return { state, error, lines, level, speaking, listening, elapsedSec, durationMin, start, end }
+  return {
+    state,
+    error,
+    lines,
+    level,
+    speaking,
+    listening,
+    elapsedSec,
+    durationMin,
+    start,
+    end,
+    sendText,
+    setMicEnabled,
+  }
 }

@@ -73,11 +73,15 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
               // 応募者の発話を文字起こしして字幕・逐語ログに使う（F1-6, F4-1）
               transcription: { model: 'whisper-1', language: 'ja' },
               // サーバVAD: 応募者が話し始めたらAIの発話を止める（F1-3 バージイン）
+              // ⚠️ しきい値を上げているのは、生活音・キーボード・同席者の声のような
+              //    短い物音でAIの発話が止まり、そのたびに質問を最初から言い直す挙動を防ぐため。
+              //    silence_duration も長めにして、少し考えて間が空いただけで
+              //    「話し終わった」と判定されないようにしている。
               turn_detection: {
                 type: 'server_vad',
-                threshold: 0.5,
+                threshold: 0.68,
                 prefix_padding_ms: 300,
-                silence_duration_ms: 700,
+                silence_duration_ms: 1000,
                 create_response: true,
                 interrupt_response: true,
               },
