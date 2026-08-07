@@ -1610,6 +1610,51 @@ export const SERVICES: Service[] = [
     isNew: true,
     badge: 'NEW',
   },
+
+  // ----------------------------------------
+  // ドヤ面接官（Mensetsu）
+  // 仕様: reference/services/mensetsu.md
+  // ----------------------------------------
+  {
+    id: 'mensetsu',
+    name: 'ドヤ面接官',
+    shortName: '面接官',
+    description: 'AIアバターが一次面接を実施し、評価レポートまで残す。応募者はブラウザだけで受けられます。',
+    longDescription:
+      '企業URLを入力するだけで、自社に合った質問セットと評価基準（ルーブリック）を自動生成。応募者はワンタイムURLを開くだけで、AI面接官と音声で会話する一次面接を受けられます。回答に応じた深掘り、全発話の逐語ログ、評価軸ごとのスコアと根拠引用、応募者向け・採用担当者向けの2種類のレポートまで自動化。構造化面接（全員に同じ主質問・同じ基準）を既定とし、就職差別につながる質問はシステムがブロックします。判定は「推薦度」であり、最終決定は必ず人が行います。',
+    icon: '🎙️',
+    color: 'fuchsia',
+    gradient: 'from-fuchsia-600 to-violet-600',
+    bgGradient: 'from-fuchsia-50 to-violet-50',
+    href: '/mensetsu',
+    dashboardHref: '/mensetsu',
+    pricingHref: '/mensetsu',
+    guideHref: '/mensetsu',
+    features: [
+      '企業URLから質問セット＋評価基準を自動生成',
+      'AIアバターが音声で一次面接を実施',
+      '回答に応じた深掘り（最大2回）',
+      '全発話の逐語ログを自動保存',
+      '評価軸ごとのスコアと根拠となる発言の引用',
+      '応募者向け・採用担当者向けの2種類のレポート',
+      '就職差別につながる質問を自動ブロック',
+    ],
+    useCases: [
+      '一次面接の母数をスケールさせたい',
+      '面接官によって評価がブレるのをなくしたい',
+      '応募者を待たせず即日で面接を受けてもらいたい',
+    ],
+    pricing: {
+      free: { name: '無料プラン', limit: 'テンプレート1件 / 面接3件まで', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: '面接無制限 / 評価レポート / チーム招待', dailyLimit: -1, price: 9980 },
+    },
+    status: 'coming_soon',
+    category: 'other',
+    order: 28,
+    requiresAuth: true,
+    isNew: true,
+    badge: 'NEW',
+  },
 ]
 
 // ============================================

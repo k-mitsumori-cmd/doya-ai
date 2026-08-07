@@ -87,44 +87,44 @@ model User {
   strategyProjects StrategyProject[]
 
   // ドヤ展開AI
-  tenkaiProjects   TenkaiProject[]
+  tenkaiProjects    TenkaiProject[]
   tenkaiBrandVoices TenkaiBrandVoice[]
-  tenkaiTemplates  TenkaiTemplate[]
-  tenkaiUsages     TenkaiUsage[]
-  tenkaiApiKeys    TenkaiApiKey[]
+  tenkaiTemplates   TenkaiTemplate[]
+  tenkaiUsages      TenkaiUsage[]
+  tenkaiApiKeys     TenkaiApiKey[]
 
   // ドヤオープニングAI
-  openingProjects  OpeningProject[]
+  openingProjects OpeningProject[]
 
   // ドヤコピーAI
-  copyProjects     CopyProject[]
-  copyBrandVoices  CopyBrandVoice[]
+  copyProjects    CopyProject[]
+  copyBrandVoices CopyBrandVoice[]
 
   // ドヤボイスAI
-  voiceProjects    VoiceProject[]
+  voiceProjects VoiceProject[]
 
   // ドヤLP AI
-  lpProjects       LpProject[]
+  lpProjects LpProject[]
 
   // ドヤムービーAI
-  movieProjects    MovieProject[]
+  movieProjects MovieProject[]
 
   // ドヤインタビューAI-X
   interviewxProjects InterviewXProject[]
 
   // ドヤ広告シミュレーションAI
-  adSimProjects      AdSimProject[]
+  adSimProjects AdSimProject[]
 
   // 三ツ星アプリ Vol.01 ナグサメ（toCシリーズ、ドヤAIとは独立）
-  mitsuboshiNagusamePosts         MitsuboshiNagusamePost[]
-  mitsuboshiNagusameSubscription  MitsuboshiNagusameSubscription?
+  mitsuboshiNagusamePosts        MitsuboshiNagusamePost[]
+  mitsuboshiNagusameSubscription MitsuboshiNagusameSubscription?
 
   // ドヤHR（タレントマネジメント）
-  hrMemberships    HrOrganizationMember[]
+  hrMemberships HrOrganizationMember[]
 
   // ドヤプロマネ（プロジェクト管理）
-  promaneWorkspaces PromaneWorkspace[]
-  promaneMembers    PromaneMember[]
+  promaneWorkspaces  PromaneWorkspace[]
+  promaneMembers     PromaneMember[]
   promaneInvitations PromaneInvitation[] @relation("PromaneInvitationInvitedBy")
 
   // ドリップマーケティング
@@ -422,16 +422,16 @@ model SeoArticle {
 }
 
 model SwipeSession {
-  id          String   @id @default(cuid())
-  sessionId   String   @unique // UUID（フロント側で生成）
-  userId      String?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  guestId     String?  // 未ログイン時の識別子
+  id        String  @id @default(cuid())
+  sessionId String  @unique // UUID（フロント側で生成）
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestId   String? // 未ログイン時の識別子
 
-  mainKeyword String   // 最初に入力したキーワード
-  swipes      Json     // SwipeLog[]（スワイプログ配列）
-  finalConditions Json? // {targetChars: number, articleType: string}
-  primaryInfo Json?     // {results: string, experience: string, opinion: string, fixedPhrase: string}
+  mainKeyword        String // 最初に入力したキーワード
+  swipes             Json // SwipeLog[]（スワイプログ配列）
+  finalConditions    Json? // {targetChars: number, articleType: string}
+  primaryInfo        Json? // {results: string, experience: string, opinion: string, fixedPhrase: string}
   generatedArticleId String? // 生成された記事のID
 
   createdAt DateTime @default(now())
@@ -443,28 +443,28 @@ model SwipeSession {
 }
 
 model SwipeCelebrationImage {
-  id        String   @id @default(cuid())
-  category  String   // カテゴリ（例: "thanks", "completion", "article"など）
-  prompt    String   @db.Text // 生成時のプロンプト
+  id          String @id @default(cuid())
+  category    String // カテゴリ（例: "thanks", "completion", "article"など）
+  prompt      String @db.Text // 生成時のプロンプト
   imageBase64 String @db.Text // base64エンコードされた画像データ
-  mimeType  String   @default("image/png")
-  width     Int?
-  height    Int?
-  
+  mimeType    String @default("image/png")
+  width       Int?
+  height      Int?
+
   createdAt DateTime @default(now())
 
   @@index([category])
 }
 
 model SwipeQuestionImage {
-  id        String   @id @default(cuid())
-  category  String   // カテゴリ（例: "記事の方向性", "記事タイプ", "ターゲット読者"など）
-  prompt    String   @db.Text // 生成時のプロンプト
+  id          String @id @default(cuid())
+  category    String // カテゴリ（例: "記事の方向性", "記事タイプ", "ターゲット読者"など）
+  prompt      String @db.Text // 生成時のプロンプト
   imageBase64 String @db.Text // base64エンコードされた画像データ
-  mimeType  String   @default("image/png")
-  width     Int?
-  height    Int?
-  
+  mimeType    String @default("image/png")
+  width       Int?
+  height      Int?
+
   createdAt DateTime @default(now())
 
   @@index([category])
@@ -640,7 +640,7 @@ model InterviewProject {
   title  String
   status String @default("DRAFT") // DRAFT | PLANNING | RECORDING | TRANSCRIBING | EDITING | REVIEWING | COMPLETED
 
-  thumbnailUrl   String? @db.Text // プロジェクトサムネイル画像URL (base64 data URL)
+  thumbnailUrl String? @db.Text // プロジェクトサムネイル画像URL (base64 data URL)
 
   // インタビュー対象者情報
   intervieweeName    String?
@@ -776,10 +776,10 @@ model InterviewTranscription {
   topics  Json? // [{topic: string, startTime: number, endTime: number, summary: string}]
 
   // 処理情報
-  provider       String? // google | whisper | deepgram | manual
-  externalJobId  String? // AssemblyAI transcript ID (再接続用)
-  confidence     Float? // 信頼度スコア
-  status         String  @default("PENDING") // PENDING | PROCESSING | COMPLETED | ERROR
+  provider      String? // google | whisper | deepgram | manual
+  externalJobId String? // AssemblyAI transcript ID (再接続用)
+  confidence    Float? // 信頼度スコア
+  status        String  @default("PENDING") // PENDING | PROCESSING | COMPLETED | ERROR
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -896,30 +896,30 @@ model StrategyProject {
   guestId String?
 
   // 入力情報
-  serviceUrl    String? @db.Text
-  businessModel String? @db.Text
-  averagePrice  String? // 平均単価
+  serviceUrl     String? @db.Text
+  businessModel  String? @db.Text
+  averagePrice   String? // 平均単価
   targetCustomer String? @db.Text // 想定顧客
-  budgetRange   String? @db.Text // 予算レンジ
-  salesType     String? @db.Text // 営業体制
+  budgetRange    String? @db.Text // 予算レンジ
+  salesType      String? @db.Text // 営業体制
 
   // 戦略データ（多層構造）
   // Kernel（コア戦略）
   coreStrategy Json? // {core_strategy: string, main_levers: string[]}
-  
+
   // Phase（フェーズ別戦略）
   phases Json? // [{phase_name: string, goal: string, actions: string[], kpi: string[], budget_ratio: number}]
-  
+
   // Visualization（可視化データ）
   visualizationData Json? // {budget_chart: [], kpi_chart: [], phase_map: []}
-  
+
   // ExternalResearch（外部調査結果）
   externalResearch Json? // {competitors: [], summary: string, patterns: []}
 
   // メタデータ
   title       String?
   description String? @db.Text
-  status      String   @default("DRAFT") // DRAFT | GENERATED | COMPLETED
+  status      String  @default("DRAFT") // DRAFT | GENERATED | COMPLETED
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -935,56 +935,56 @@ model StrategyProject {
 // ============================================
 
 model DoyamanaCategory {
-  id          String   @id @default(cuid())
-  name        String   // カテゴリ名（例: SEO系、LP系、WP系）
-  slug        String   @unique // URL用スラッグ
-  description String?  @db.Text
-  order       Int      @default(0) // 表示順
-  isActive    Boolean  @default(true) // ON/OFF
-  
-  images      DoyamanaImage[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  id          String  @id @default(cuid())
+  name        String // カテゴリ名（例: SEO系、LP系、WP系）
+  slug        String  @unique // URL用スラッグ
+  description String? @db.Text
+  order       Int     @default(0) // 表示順
+  isActive    Boolean @default(true) // ON/OFF
+
+  images DoyamanaImage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([isActive, order])
   @@map("doyamana_category")
 }
 
 model DoyamanaImage {
-  id          String   @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // カテゴリ
-  categoryId  String
-  category    DoyamanaCategory @relation(fields: [categoryId], references: [id])
-  
+  categoryId String
+  category   DoyamanaCategory @relation(fields: [categoryId], references: [id])
+
   // 画像情報
-  imageUrl    String   @db.Text // Supabase Storage URL or Base64
+  imageUrl     String  @db.Text // Supabase Storage URL or Base64
   thumbnailUrl String? @db.Text // サムネイル用（オプション）
-  fileName    String?  // 元ファイル名
-  mimeType    String   @default("image/png")
-  width       Int?
-  height      Int?
-  
+  fileName     String? // 元ファイル名
+  mimeType     String  @default("image/png")
+  width        Int?
+  height       Int?
+
   // プロンプト
-  prompt      String   @db.Text // 生成プロンプト
+  prompt        String  @db.Text // 生成プロンプト
   promptSummary String? // プロンプト冒頭（一覧表示用、50文字程度）
-  
+
   // 表示設定
-  order       Int      @default(0) // 表示順
-  isActive    Boolean  @default(true) // ON/OFF
-  isDeleted   Boolean  @default(false) // 論理削除
-  
+  order     Int     @default(0) // 表示順
+  isActive  Boolean @default(true) // ON/OFF
+  isDeleted Boolean @default(false) // 論理削除
+
   // 使用回数トラッキング
-  usageCount  Int      @default(0)
-  
+  usageCount Int @default(0)
+
   // 使用ログ
-  usageLogs   DoyamanaUsageLog[]
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  deletedAt   DateTime? // 論理削除日時
-  
+  usageLogs DoyamanaUsageLog[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime? // 論理削除日時
+
   @@index([categoryId, isActive, isDeleted])
   @@index([isActive, isDeleted, order])
   @@index([usageCount])
@@ -992,21 +992,21 @@ model DoyamanaImage {
 }
 
 model DoyamanaUsageLog {
-  id        String   @id @default(cuid())
-  
-  imageId   String
-  image     DoyamanaImage @relation(fields: [imageId], references: [id], onDelete: Cascade)
-  
+  id String @id @default(cuid())
+
+  imageId String
+  image   DoyamanaImage @relation(fields: [imageId], references: [id], onDelete: Cascade)
+
   // 使用コンテキスト
-  userId    String?  // ログインユーザーの場合
-  guestId   String?  // ゲストの場合
-  serviceId String?  // どのサービスで使用されたか
-  
+  userId    String? // ログインユーザーの場合
+  guestId   String? // ゲストの場合
+  serviceId String? // どのサービスで使用されたか
+
   // メタデータ
-  metadata  Json?    // 追加情報（生成パラメータ等）
-  
+  metadata Json? // 追加情報（生成パラメータ等）
+
   createdAt DateTime @default(now())
-  
+
   @@index([imageId, createdAt])
   @@index([userId, createdAt])
   @@index([createdAt])
@@ -1018,24 +1018,24 @@ model DoyamanaUsageLog {
 // ============================================
 
 model BannerTemplate {
-  id        String   @id @default(cuid())
-  templateId String  @unique // 'brand-001', 'ux-001' など（コード内のID）
-  industry  String
-  category  String   // 'it', 'recruit', 'ec', 'beauty' など
-  prompt    String   @db.Text // デザイン要素のみのプロンプト
-  size      String   @default("1200x628")
-  
+  id         String @id @default(cuid())
+  templateId String @unique // 'brand-001', 'ux-001' など（コード内のID）
+  industry   String
+  category   String // 'it', 'recruit', 'ec', 'beauty' など
+  prompt     String @db.Text // デザイン要素のみのプロンプト
+  size       String @default("1200x628")
+
   // 画像URL（生成済みの場合）
-  imageUrl  String?  // ヒーロー画像として表示するURL
+  imageUrl   String? // ヒーロー画像として表示するURL
   previewUrl String? // サムネイル用（オプション）
-  
+
   // フラグ
   isFeatured Boolean @default(false) // 初期表示用のヒーロー画像として使用
   isActive   Boolean @default(true)
-  
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  
+
   @@index([industry])
   @@index([category])
   @@index([isFeatured])
@@ -1052,19 +1052,19 @@ model TenkaiProject {
   userId        String
   user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title         String
-  inputType     String   // "url" | "text" | "youtube" | "video"
+  inputType     String // "url" | "text" | "youtube" | "video"
   inputUrl      String?
   inputText     String?  @db.Text
-  inputVideoUrl String?  // Supabase Storage URL
+  inputVideoUrl String? // Supabase Storage URL
   transcript    String?  @db.Text
-  analysis      Json?    // コンテンツ分析結果
+  analysis      Json? // コンテンツ分析結果
   status        String   @default("draft") // draft | analyzing | ready | generating | completed
   wordCount     Int?
   language      String   @default("ja")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  outputs       TenkaiOutput[]
+  outputs TenkaiOutput[]
 
   @@index([userId, createdAt])
   @@index([status, createdAt])
@@ -1072,23 +1072,23 @@ model TenkaiProject {
 }
 
 model TenkaiOutput {
-  id            String   @id @default(cuid())
-  projectId     String
-  project       TenkaiProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  platform      String   // "note" | "blog" | "x" | "instagram" | "line" | "facebook" | "linkedin" | "newsletter" | "press_release"
-  content       Json     // プラットフォーム固有のJSON構造
-  charCount     Int?
-  qualityScore  Float?   // 0.0-1.0
-  isEdited      Boolean  @default(false)
-  status        String   @default("pending") // pending | generating | completed | failed
-  tokensUsed    Int?
-  brandVoiceId  String?
-  brandVoice    TenkaiBrandVoice? @relation(fields: [brandVoiceId], references: [id], onDelete: SetNull)
-  templateId    String?
-  feedback      String?  @db.Text // 再生成時のフィードバック
-  version       Int      @default(1)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String            @id @default(cuid())
+  projectId    String
+  project      TenkaiProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  platform     String // "note" | "blog" | "x" | "instagram" | "line" | "facebook" | "linkedin" | "newsletter" | "press_release"
+  content      Json // プラットフォーム固有のJSON構造
+  charCount    Int?
+  qualityScore Float? // 0.0-1.0
+  isEdited     Boolean           @default(false)
+  status       String            @default("pending") // pending | generating | completed | failed
+  tokensUsed   Int?
+  brandVoiceId String?
+  brandVoice   TenkaiBrandVoice? @relation(fields: [brandVoiceId], references: [id], onDelete: SetNull)
+  templateId   String?
+  feedback     String?           @db.Text // 再生成時のフィードバック
+  version      Int               @default(1)
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
   @@unique([projectId, platform, version])
   @@index([projectId, status])
@@ -1098,24 +1098,24 @@ model TenkaiOutput {
 }
 
 model TenkaiBrandVoice {
-  id                 String   @id @default(cuid())
-  userId             String
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name               String
-  firstPerson        String   @default("私")
-  formalityLevel     Int      @default(3) // 1-5
-  enthusiasmLevel    Int      @default(3)
-  technicalLevel     Int      @default(3)
-  humorLevel         Int      @default(2)
-  targetAudience     String?
-  sampleText         String?  @db.Text
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name                 String
+  firstPerson          String   @default("私")
+  formalityLevel       Int      @default(3) // 1-5
+  enthusiasmLevel      Int      @default(3)
+  technicalLevel       Int      @default(3)
+  humorLevel           Int      @default(2)
+  targetAudience       String?
+  sampleText           String?  @db.Text
   preferredExpressions String[] // 好んで使う表現
-  prohibitedWords    String[] // 禁止ワード
-  isDefault          Boolean  @default(false)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  prohibitedWords      String[] // 禁止ワード
+  isDefault            Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
-  outputs            TenkaiOutput[]
+  outputs TenkaiOutput[]
 
   @@index([userId])
   @@index([userId, isDefault])
@@ -1123,17 +1123,17 @@ model TenkaiBrandVoice {
 }
 
 model TenkaiTemplate {
-  id            String   @id @default(cuid())
-  userId        String?  // null = システムテンプレート
-  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  platform      String
-  name          String
-  description   String?
-  promptOverride String? @db.Text // プロンプト上書き
-  structureHint Json?    // 構造指定
-  isSystem      Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(cuid())
+  userId         String? // null = システムテンプレート
+  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform       String
+  name           String
+  description    String?
+  promptOverride String?  @db.Text // プロンプト上書き
+  structureHint  Json? // 構造指定
+  isSystem       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([userId])
   @@index([platform])
@@ -1144,7 +1144,7 @@ model TenkaiUsage {
   id              String   @id @default(cuid())
   userId          String
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  yearMonth       String   // "2026-02" 形式
+  yearMonth       String // "2026-02" 形式
   creditsUsed     Int      @default(0)
   tokensTotal     Int      @default(0)
   projectsCreated Int      @default(0)
@@ -1157,15 +1157,15 @@ model TenkaiUsage {
 }
 
 model TenkaiApiKey {
-  id            String    @id @default(cuid())
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  keyPrefix     String    // "sk-doya-xxxx" の先頭8文字（表示用）
-  keyHash       String    // SHA-256ハッシュ（認証用）
-  lastUsedAt    DateTime?
-  isActive      Boolean   @default(true)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  keyPrefix  String // "sk-doya-xxxx" の先頭8文字（表示用）
+  keyHash    String // SHA-256ハッシュ（認証用）
+  lastUsedAt DateTime?
+  isActive   Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([userId])
   @@index([keyHash])
@@ -1177,16 +1177,16 @@ model TenkaiApiKey {
 // ============================================
 
 model OpeningProject {
-  id        String   @id @default(cuid())
-  userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  guestId   String?
+  id      String  @id @default(cuid())
+  userId  String?
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestId String?
 
-  inputUrl      String
-  siteAnalysis  Json?
-  status        String   @default("ANALYZING") // ANALYZING | READY | COMPLETED | ERROR
+  inputUrl     String
+  siteAnalysis Json?
+  status       String @default("ANALYZING") // ANALYZING | READY | COMPLETED | ERROR
 
-  metadata  Json?
+  metadata Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1199,21 +1199,21 @@ model OpeningProject {
 }
 
 model OpeningAnimation {
-  id         String   @id @default(cuid())
-  projectId  String
-  project    OpeningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String         @id @default(cuid())
+  projectId String
+  project   OpeningProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   templateId String
   config     Json
-  reactCode  String?  @db.Text
+  reactCode  String? @db.Text
 
-  isSelected Boolean  @default(false)
-  isFavorite Boolean  @default(false)
+  isSelected Boolean @default(false)
+  isFavorite Boolean @default(false)
 
-  metadata   Json?
+  metadata Json?
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
   @@index([templateId])
@@ -1224,9 +1224,9 @@ model OpeningAnimation {
 // ============================================
 
 model CopyBrandVoice {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   name          String
   tone          String   @db.Text
@@ -1235,62 +1235,62 @@ model CopyBrandVoice {
   ngWords       String[] @default([])
   requiredWords String[] @default([])
 
-  projects      CopyProject[]
+  projects CopyProject[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
 }
 
 model CopyProject {
-  id            String   @id @default(cuid())
-  userId        String?
-  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  guestId       String?
+  id      String  @id @default(cuid())
+  userId  String?
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestId String?
 
   name          String
-  status        String   @default("draft")
+  status        String  @default("draft")
   productUrl    String?
   productInfo   Json?
   persona       Json?
   personaSource String?
 
-  regulations   Json?
-  brandVoiceId  String?
-  brandVoice    CopyBrandVoice? @relation(fields: [brandVoiceId], references: [id])
+  regulations  Json?
+  brandVoiceId String?
+  brandVoice   CopyBrandVoice? @relation(fields: [brandVoiceId], references: [id])
 
-  copies        CopyItem[]
+  copies CopyItem[]
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId, createdAt])
   @@index([guestId])
 }
 
 model CopyItem {
-  id            String   @id @default(cuid())
-  projectId     String
-  project       CopyProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String      @id @default(cuid())
+  projectId String
+  project   CopyProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  type          String
-  platform      String?
-  writerType    String
-  headline      String?
-  description   String?  @db.Text
-  catchcopy     String?
-  hashtags      String[] @default([])
-  cta           String?
+  type        String
+  platform    String?
+  writerType  String
+  headline    String?
+  description String?  @db.Text
+  catchcopy   String?
+  hashtags    String[] @default([])
+  cta         String?
 
-  appealAxis    String?
-  charCount     Int?
-  score         Float?
-  isFavorite    Boolean  @default(false)
+  appealAxis String?
+  charCount  Int?
+  score      Float?
+  isFavorite Boolean @default(false)
 
-  revisions     Json[]   @default([])
+  revisions Json[] @default([])
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([projectId])
 }
@@ -1300,38 +1300,38 @@ model CopyItem {
 // ============================================
 
 model LpProject {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  guestId       String?
+  id      String  @id @default(cuid())
+  userId  String
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestId String?
 
   // プロジェクト情報
-  name          String
-  status        String   @default("draft")  // draft | generating | editing | completed
-  purpose       String[]                     // LP目的（複数可）
-  productUrl    String?
-  productInfo   Json?
-  persona       Json?
+  name        String
+  status      String   @default("draft") // draft | generating | editing | completed
+  purpose     String[] // LP目的（複数可）
+  productUrl  String?
+  productInfo Json?
+  persona     Json?
 
   // 構成
-  structures    Json?    // AI生成された3案
+  structures        Json? // AI生成された3案
   selectedStructure Int? // 選択された案（0-based）
 
   // デザイン
-  themeId       String   @default("minimal")
-  customColors  Json?
-  customFonts   Json?
+  themeId      String @default("minimal")
+  customColors Json?
+  customFonts  Json?
 
   // セクション
-  sections      LpSection[]
+  sections LpSection[]
 
   // 出力
-  htmlUrl       String?
-  pdfUrl        String?
-  previewUrl    String?
+  htmlUrl    String?
+  pdfUrl     String?
+  previewUrl String?
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId, createdAt])
   @@index([guestId])
@@ -1339,35 +1339,35 @@ model LpProject {
 }
 
 model LpSection {
-  id            String    @id @default(cuid())
-  projectId     String
-  project       LpProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String    @id @default(cuid())
+  projectId String
+  project   LpProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  order         Int
-  type          String    // "hero" | "problem" | "solution" | "features" | "testimonial" | "pricing" | "faq" | "cta" | "footer" 等
-  name          String
-  purpose       String?
+  order   Int
+  type    String // "hero" | "problem" | "solution" | "features" | "testimonial" | "pricing" | "faq" | "cta" | "footer" 等
+  name    String
+  purpose String?
 
   // コピー
-  headline      String?
-  subheadline   String?
-  body          String?  @db.Text
-  ctaText       String?
-  ctaUrl        String?
+  headline    String?
+  subheadline String?
+  body        String? @db.Text
+  ctaText     String?
+  ctaUrl      String?
 
   // レイアウト
-  layout        String   @default("center")  // "center" | "left-right" | "right-left" | "grid" | "cards"
-  bgColor       String?
-  bgImage       String?
+  layout  String  @default("center") // "center" | "left-right" | "right-left" | "grid" | "cards"
+  bgColor String?
+  bgImage String?
 
   // リスト型コンテンツ
-  items         Json?    // [{ title, description, icon, image }]
+  items Json? // [{ title, description, icon, image }]
 
   // リビジョン履歴
-  revisions     Json[]   @default([])
+  revisions Json[] @default([])
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId, order])
   @@map("lp_sections")
@@ -1378,62 +1378,62 @@ model LpSection {
 // ============================================
 
 model VoiceProject {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  guestId       String?
+  id      String  @id @default(cuid())
+  userId  String
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestId String?
 
   // プロジェクト情報
-  name          String
-  status        String   @default("draft")  // draft, generating, completed, failed
+  name   String
+  status String @default("draft") // draft, generating, completed, failed
 
   // 音声設定
-  speakerId     String   @default("akira")
-  speed         Float    @default(1.0)       // 0.5 ~ 2.0
-  pitch         Float    @default(0.0)       // -10 ~ +10
-  volume        Float    @default(100.0)     // 0 ~ 100
-  pauseLength   String   @default("standard") // "short", "standard", "long"
-  emotionTone   String   @default("neutral") // "neutral", "bright", "calm", "serious", "gentle"
+  speakerId   String @default("akira")
+  speed       Float  @default(1.0) // 0.5 ~ 2.0
+  pitch       Float  @default(0.0) // -10 ~ +10
+  volume      Float  @default(100.0) // 0 ~ 100
+  pauseLength String @default("standard") // "short", "standard", "long"
+  emotionTone String @default("neutral") // "neutral", "bright", "calm", "serious", "gentle"
 
   // テキスト
-  inputText     String   @db.Text
-  ssml          String?  @db.Text
+  inputText String  @db.Text
+  ssml      String? @db.Text
 
   // 出力
-  outputFormat  String   @default("mp3")     // "mp3", "wav", "ogg", "m4a"
-  outputUrl     String?
-  durationMs    Int?
-  fileSize      Int?
+  outputFormat String  @default("mp3") // "mp3", "wav", "ogg", "m4a"
+  outputUrl    String?
+  durationMs   Int?
+  fileSize     Int?
 
   // 録音データ
-  recordings    VoiceRecording[]
+  recordings VoiceRecording[]
 
   // メタ
-  isFavorite    Boolean  @default(false)
-  metadata      Json?
+  isFavorite Boolean @default(false)
+  metadata   Json?
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId, createdAt])
   @@index([guestId])
 }
 
 model VoiceRecording {
-  id            String       @id @default(cuid())
-  projectId     String
-  project       VoiceProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String       @id @default(cuid())
+  projectId String
+  project   VoiceProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  originalUrl   String
-  trimmedUrl    String?
-  durationMs    Int
-  fileSize      Int
-  format        String   @default("webm")
+  originalUrl String
+  trimmedUrl  String?
+  durationMs  Int
+  fileSize    Int
+  format      String  @default("webm")
 
-  label         String?
-  order         Int      @default(0)
+  label String?
+  order Int     @default(0)
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([projectId])
 }
@@ -1443,40 +1443,40 @@ model VoiceRecording {
 // ============================================
 
 model MovieProject {
-  id            String   @id @default(cuid())
-  userId        String?
-  user          User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  guestId       String?
+  id      String  @id @default(cuid())
+  userId  String?
+  user    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  guestId String?
 
   // プロジェクト情報
-  name          String
-  status        String   @default("draft")  // draft, planning, editing, rendering, completed, failed
-  productInfo   Json?
-  persona       Json?
+  name        String
+  status      String @default("draft") // draft, planning, editing, rendering, completed, failed
+  productInfo Json?
+  persona     Json?
 
   // テンプレート・設定
-  templateId    String?
-  aspectRatio   String   @default("16:9")   // "16:9", "9:16", "1:1", "4:5"
-  duration      Int      @default(15)       // 秒
-  resolution    String   @default("1080p")  // "720p", "1080p"
-  platform      String?                     // 配信先
+  templateId  String?
+  aspectRatio String  @default("16:9") // "16:9", "9:16", "1:1", "4:5"
+  duration    Int     @default(15) // 秒
+  resolution  String  @default("1080p") // "720p", "1080p"
+  platform    String? // 配信先
 
   // 企画・シナリオ
-  plans         Json?    // AI生成された3案 [{ concept, storyline, scenes }]
-  selectedPlan  Int?     // 選択された案のインデックス
+  plans        Json? // AI生成された3案 [{ concept, storyline, scenes }]
+  selectedPlan Int? // 選択された案のインデックス
 
   // シーンデータ
-  scenes        MovieScene[]
+  scenes MovieScene[]
 
   // レンダリング
-  renderJobs    MovieRenderJob[]
+  renderJobs MovieRenderJob[]
 
   // 出力
-  outputUrl     String?  // 完成動画のURL
-  thumbnailUrl  String?  // サムネイルURL
+  outputUrl    String? // 完成動画のURL
+  thumbnailUrl String? // サムネイルURL
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId, createdAt])
   @@index([guestId])
@@ -1484,47 +1484,47 @@ model MovieProject {
 }
 
 model MovieScene {
-  id            String   @id @default(cuid())
-  projectId     String
-  project       MovieProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String       @id @default(cuid())
+  projectId String
+  project   MovieProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  order         Int                          // シーン順序
-  duration      Float                        // 秒数（小数対応）
-  bgType        String   @default("image")   // "image", "video", "color", "gradient"
-  bgValue       String?                      // URL or カラーコード
-  bgAnimation   String?                      // "ken-burns", "zoom-in", "none"
+  order       Int // シーン順序
+  duration    Float // 秒数（小数対応）
+  bgType      String  @default("image") // "image", "video", "color", "gradient"
+  bgValue     String? // URL or カラーコード
+  bgAnimation String? // "ken-burns", "zoom-in", "none"
 
   // テキストオーバーレイ
-  texts         Json?    // [{ content, x, y, fontSize, fontFamily, color, animation, delay }]
+  texts Json? // [{ content, x, y, fontSize, fontFamily, color, animation, delay }]
 
   // ナレーション
   narrationText String?
-  narrationUrl  String?  // ドヤボイスAI 生成音声のURL
+  narrationUrl  String? // ドヤボイスAI 生成音声のURL
 
   // トランジション
-  transition    String   @default("fade")    // "fade", "slide", "wipe", "zoom", "none"
+  transition String @default("fade") // "fade", "slide", "wipe", "zoom", "none"
 
   // メタ
-  metadata      Json?
+  metadata Json?
 
   @@index([projectId, order])
   @@map("movie_scenes")
 }
 
 model MovieRenderJob {
-  id            String   @id @default(cuid())
-  projectId     String
-  project       MovieProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String       @id @default(cuid())
+  projectId String
+  project   MovieProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  status        String   @default("queued")  // queued, rendering, completed, failed
-  progress      Int      @default(0)         // 0-100
-  outputUrl     String?
-  format        String   @default("mp4")     // "mp4", "gif"
-  error         String?
+  status    String  @default("queued") // queued, rendering, completed, failed
+  progress  Int     @default(0) // 0-100
+  outputUrl String?
+  format    String  @default("mp4") // "mp4", "gif"
+  error     String?
 
-  startedAt     DateTime?
-  completedAt   DateTime?
-  createdAt     DateTime @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
 
   @@index([projectId])
   @@map("movie_render_jobs")
@@ -1535,54 +1535,54 @@ model MovieRenderJob {
 // ============================================
 
 model InterviewXProject {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id])
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
   // 基本設定
-  title           String
-  templateId      String?
-  template        InterviewXTemplate? @relation(fields: [templateId], references: [id])
+  title      String
+  templateId String?
+  template   InterviewXTemplate? @relation(fields: [templateId], references: [id])
 
   // 対象情報
-  companyName     String?
-  companyUrl      String?
-  companyLogo     String?
-  brandColor      String?  @default("#3B82F6")
+  companyName String?
+  companyUrl  String?
+  companyLogo String?
+  brandColor  String? @default("#3B82F6")
 
   // コンテンツ設定
-  purpose         String?
-  targetAudience  String?
-  tone            String?  @default("professional")
-  articleType     String?  @default("CASE_STUDY")
-  hearingType     String?  @default("BUSINESS_MEETING")
-  wordCountTarget Int?     @default(3000)
+  purpose            String?
+  targetAudience     String?
+  tone               String? @default("professional")
+  articleType        String? @default("CASE_STUDY")
+  hearingType        String? @default("BUSINESS_MEETING")
+  wordCountTarget    Int?    @default(3000)
   customInstructions String? @db.Text
 
   // URL調査結果
   companyAnalysis Json?
 
   // インタビューモード
-  interviewMode   String   @default("chat") // 'chat' fixed
+  interviewMode String @default("chat") // 'chat' fixed
 
   // ステータス
-  status          String   @default("DRAFT")
+  status String @default("DRAFT")
 
   // 共有
-  shareToken      String   @unique @default(cuid())
+  shareToken      String  @unique @default(cuid())
   shareUrl        String?
   respondentEmail String?
   respondentName  String?
 
   // 関連
-  questions       InterviewXQuestion[]
-  responses       InterviewXResponse[]
-  drafts          InterviewXDraft[]
-  feedbacks       InterviewXFeedback[]
-  checks          InterviewXCheck[]
+  questions InterviewXQuestion[]
+  responses InterviewXResponse[]
+  drafts    InterviewXDraft[]
+  feedbacks InterviewXFeedback[]
+  checks    InterviewXCheck[]
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@index([shareToken])
@@ -1591,144 +1591,144 @@ model InterviewXProject {
 }
 
 model InterviewXTemplate {
-  id              String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  name            String
-  description     String?  @db.Text
-  category        String
-  icon            String?  @default("📋")
+  name        String
+  description String? @db.Text
+  category    String
+  icon        String? @default("📋")
 
   defaultQuestions Json?
-  promptTemplate  String?  @db.Text
-  sampleArticle   String?  @db.Text
+  promptTemplate   String? @db.Text
+  sampleArticle    String? @db.Text
 
-  isPreset        Boolean  @default(false)
-  isPublic        Boolean  @default(false)
-  usageCount      Int      @default(0)
+  isPreset   Boolean @default(false)
+  isPublic   Boolean @default(false)
+  usageCount Int     @default(0)
 
-  userId          String?
+  userId String?
 
-  projects        InterviewXProject[]
+  projects InterviewXProject[]
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([category])
   @@map("interviewx_templates")
 }
 
 model InterviewXQuestion {
-  id              String   @id @default(cuid())
-  projectId       String
-  project         InterviewXProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String            @id @default(cuid())
+  projectId String
+  project   InterviewXProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  text            String
-  description     String?
-  type            String   @default("TEXTAREA")
-  options         Json?
-  required        Boolean  @default(true)
-  order           Int
-  aiGenerated     Boolean  @default(true)
+  text        String
+  description String?
+  type        String  @default("TEXTAREA")
+  options     Json?
+  required    Boolean @default(true)
+  order       Int
+  aiGenerated Boolean @default(true)
 
-  answers         InterviewXAnswer[]
+  answers InterviewXAnswer[]
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  @@index([projectId])
   @@unique([projectId, order])
+  @@index([projectId])
   @@map("interviewx_questions")
 }
 
 model InterviewXResponse {
-  id              String   @id @default(cuid())
-  projectId       String
-  project         InterviewXProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String            @id @default(cuid())
+  projectId String
+  project   InterviewXProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  respondentName  String?
-  respondentEmail String?
-  respondentRole  String?
+  respondentName    String?
+  respondentEmail   String?
+  respondentRole    String?
   respondentCompany String?
 
-  status          String   @default("IN_PROGRESS")
-  completedAt     DateTime?
+  status      String    @default("IN_PROGRESS")
+  completedAt DateTime?
 
-  ipAddress       String?
-  userAgent       String?
+  ipAddress String?
+  userAgent String?
 
-  answers         InterviewXAnswer[]
-  chatMessages    InterviewXChatMessage[]
+  answers      InterviewXAnswer[]
+  chatMessages InterviewXChatMessage[]
 
-  startedAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  startedAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
   @@map("interviewx_responses")
 }
 
 model InterviewXAnswer {
-  id              String   @id @default(cuid())
-  responseId      String
-  response        InterviewXResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
-  questionId      String
-  question        InterviewXQuestion @relation(fields: [questionId], references: [id])
+  id         String             @id @default(cuid())
+  responseId String
+  response   InterviewXResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  questionId String
+  question   InterviewXQuestion @relation(fields: [questionId], references: [id])
 
-  answerText      String?  @db.Text
-  answerValue     Json?
+  answerText  String? @db.Text
+  answerValue Json?
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
+  @@unique([responseId, questionId])
   @@index([responseId])
   @@index([questionId])
-  @@unique([responseId, questionId])
   @@map("interviewx_answers")
 }
 
 model InterviewXDraft {
-  id              String   @id @default(cuid())
-  projectId       String
-  project         InterviewXProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  id        String            @id @default(cuid())
+  projectId String
+  project   InterviewXProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  version         Int      @default(1)
-  title           String?
-  lead            String?  @db.Text
-  content         String   @db.Text
-  structure       Json?
+  version   Int     @default(1)
+  title     String?
+  lead      String? @db.Text
+  content   String  @db.Text
+  structure Json?
 
-  wordCount       Int?
-  readingTime     Int?
+  wordCount   Int?
+  readingTime Int?
 
   appliedFeedbacks Json?
 
-  status          String   @default("DRAFT")
+  status String @default("DRAFT")
 
-  feedbacks       InterviewXFeedback[]
-  checks          InterviewXCheck[]
+  feedbacks InterviewXFeedback[]
+  checks    InterviewXCheck[]
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  @@index([projectId])
   @@unique([projectId, version])
+  @@index([projectId])
   @@map("interviewx_drafts")
 }
 
 model InterviewXFeedback {
-  id              String   @id @default(cuid())
-  projectId       String
-  project         InterviewXProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  draftId         String?
-  draft           InterviewXDraft?  @relation(fields: [draftId], references: [id])
+  id        String            @id @default(cuid())
+  projectId String
+  project   InterviewXProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  draftId   String?
+  draft     InterviewXDraft?  @relation(fields: [draftId], references: [id])
 
-  authorType      String
-  authorName      String?
+  authorType String
+  authorName String?
 
-  content         String   @db.Text
-  section         String?
-  category        String?
+  content  String  @db.Text
+  section  String?
+  category String?
 
-  applied         Boolean  @default(false)
-  appliedAt       DateTime?
+  applied   Boolean   @default(false)
+  appliedAt DateTime?
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([projectId])
   @@index([draftId])
@@ -1736,19 +1736,19 @@ model InterviewXFeedback {
 }
 
 model InterviewXCheck {
-  id              String   @id @default(cuid())
-  projectId       String
-  project         InterviewXProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  draftId         String
-  draft           InterviewXDraft   @relation(fields: [draftId], references: [id])
+  id        String            @id @default(cuid())
+  projectId String
+  project   InterviewXProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  draftId   String
+  draft     InterviewXDraft   @relation(fields: [draftId], references: [id])
 
-  checkType       String
-  score           Float?
-  passed          Boolean  @default(false)
-  report          String?  @db.Text
-  suggestions     Json?
+  checkType   String
+  score       Float?
+  passed      Boolean @default(false)
+  report      String? @db.Text
+  suggestions Json?
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([projectId])
   @@index([draftId])
@@ -1756,17 +1756,17 @@ model InterviewXCheck {
 }
 
 model InterviewXChatMessage {
-  id              String   @id @default(cuid())
-  responseId      String
-  response        InterviewXResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  id         String             @id @default(cuid())
+  responseId String
+  response   InterviewXResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
 
-  role            String              // 'interviewer' | 'respondent' | 'system'
-  content         String   @db.Text
+  role    String // 'interviewer' | 'respondent' | 'system'
+  content String @db.Text
 
-  topicIndex      Int?               // 対応する質問インデックス(0始まり)
-  messageType     String?            // 'greeting'|'question'|'follow_up'|'transition'|'closing'|'answer'
+  topicIndex  Int? // 対応する質問インデックス(0始まり)
+  messageType String? // 'greeting'|'question'|'follow_up'|'transition'|'closing'|'answer'
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
   @@index([responseId])
   @@index([responseId, createdAt])
@@ -1782,7 +1782,7 @@ model DripSegment {
   id         String   @id @default(cuid())
   name       String
   key        String   @unique
-  conditions Json     // {"type": "last_login_over", "days": 7} etc.
+  conditions Json // {"type": "last_login_over", "days": 7} etc.
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
@@ -1798,7 +1798,7 @@ model DripTemplate {
   subject   String
   bodyHtml  String   @db.Text
   bodyText  String?  @db.Text
-  variables Json?    // 使用する差し込み変数一覧
+  variables Json? // 使用する差し込み変数一覧
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1809,13 +1809,13 @@ model DripTemplate {
 
 // シーケンス（ステップメールの単位）
 model DripSequence {
-  id        String   @id @default(cuid())
+  id        String       @id @default(cuid())
   name      String
-  status    String   @default("draft") // draft | active | paused
+  status    String       @default("draft") // draft | active | paused
   segmentId String?
   segment   DripSegment? @relation(fields: [segmentId], references: [id], onDelete: SetNull)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   steps       DripStep[]
   enrollments DripEnrollment[]
@@ -1825,17 +1825,17 @@ model DripSequence {
 
 // ステップ（シーケンス内の各メール）
 model DripStep {
-  id            String   @id @default(cuid())
+  id            String        @id @default(cuid())
   sequenceId    String
-  sequence      DripSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  sequence      DripSequence  @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
   sortOrder     Int
-  dayOffset     Int      // Day 0, Day 1, Day 3...
-  sendTime      String   @default("09:00") // 配信時刻 HH:mm
+  dayOffset     Int // Day 0, Day 1, Day 3...
+  sendTime      String        @default("09:00") // 配信時刻 HH:mm
   templateId    String?
   template      DripTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  conditionType String?  // null | not_opened | opened | not_clicked | clicked | opened_not_clicked
+  conditionType String? // null | not_opened | opened | not_clicked | clicked | opened_not_clicked
   label         String
-  createdAt     DateTime @default(now())
+  createdAt     DateTime      @default(now())
 
   emailLogs DripEmailLog[]
 
@@ -1845,16 +1845,16 @@ model DripStep {
 
 // エンロールメント（ユーザー × シーケンスの進行状態）
 model DripEnrollment {
-  id          String    @id @default(cuid())
+  id          String       @id @default(cuid())
   userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   sequenceId  String
   sequence    DripSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
-  enrolledAt  DateTime  @default(now())
-  currentStep Int       @default(0)
-  status      String    @default("active") // active | completed | cancelled
+  enrolledAt  DateTime     @default(now())
+  currentStep Int          @default(0)
+  status      String       @default("active") // active | completed | cancelled
   completedAt DateTime?
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime     @default(now())
 
   emailLogs DripEmailLog[]
 
@@ -1865,21 +1865,21 @@ model DripEnrollment {
 
 // 配信ログ（各メールの送信結果）
 model DripEmailLog {
-  id           String    @id @default(cuid())
+  id           String         @id @default(cuid())
   enrollmentId String
   enrollment   DripEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
   stepId       String
-  step         DripStep  @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  step         DripStep       @relation(fields: [stepId], references: [id], onDelete: Cascade)
   userId       String
-  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   sequenceId   String
-  sentAt       DateTime  @default(now())
-  status       String    @default("queued") // queued | sent | delivered | opened | clicked | bounced | failed
+  sentAt       DateTime       @default(now())
+  status       String         @default("queued") // queued | sent | delivered | opened | clicked | bounced | failed
   openedAt     DateTime?
   clickedAt    DateTime?
   bouncedAt    DateTime?
-  trackingId   String?   @unique
-  createdAt    DateTime  @default(now())
+  trackingId   String?        @unique
+  createdAt    DateTime       @default(now())
 
   @@index([enrollmentId])
   @@index([userId])
@@ -1913,53 +1913,53 @@ model DripSetting {
 // ============================================
 
 model AdSimProject {
-  id             String   @id @default(cuid())
-  userId         String?
-  user           User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  guestId        String?
+  id      String  @id @default(cuid())
+  userId  String?
+  user    User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestId String?
 
   // プロジェクト情報
-  name           String
-  status         String   @default("draft") // draft | generating | completed | error
+  name   String
+  status String @default("draft") // draft | generating | completed | error
 
   // Step 1: クライアント情報
   clientName     String
   industry       String
   productName    String
   lpUrl          String?
-  targetAudience Json?    // { age, gender, region, interests }
+  targetAudience Json? // { age, gender, region, interests }
 
   // Step 2: 提案目的
-  goals          String[] @default([])
-  periodMonths   Int      @default(3)
-  startMonth     String?  // YYYY-MM
+  goals        String[] @default([])
+  periodMonths Int      @default(3)
+  startMonth   String? // YYYY-MM
 
   // Step 3: 予算・KPI
-  monthlyBudget  Int      // 円
-  targetCv       Int?
-  targetCpa      Int?
-  targetRoas     Float?
+  monthlyBudget Int // 円
+  targetCv      Int?
+  targetCpa     Int?
+  targetRoas    Float?
 
   // Step 4: 媒体配分
-  mediaAllocation Json    // { google: 40, meta: 30, line: 30 }
+  mediaAllocation Json // { google: 40, meta: 30, line: 30 }
 
   // Step 5: 体裁
-  proposerName   String?
-  proposerEmail  String?
-  templateId     String   @default("simple")
+  proposerName  String?
+  proposerEmail String?
+  templateId    String  @default("simple")
 
   // 生成結果
-  simulationData Json?    // 媒体別×月次の数値
-  proposalText   Json?    // セクション別のテキスト
-  chartData      Json?    // グラフ用整形済みデータ
+  simulationData Json? // 媒体別×月次の数値
+  proposalText   Json? // セクション別のテキスト
+  chartData      Json? // グラフ用整形済みデータ
 
   // 出力ファイル
-  pptxUrl        String?
-  pdfUrl         String?
-  excelUrl       String?
+  pptxUrl  String?
+  pdfUrl   String?
+  excelUrl String?
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId, createdAt])
   @@index([guestId])
@@ -1974,15 +1974,15 @@ model AdSimProject {
 // Vol.02以降もこのセクションにモデルを並べていく。
 
 model MitsuboshiNagusamePost {
-  id            String   @id @default(cuid())
+  id            String                    @id @default(cuid())
   userId        String?
-  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  guestId       String?                              // 匿名ユーザー識別（cookie）
-  segment       String   @default("default")         // default | business | student | ...
-  content       String   @db.Text                    // ユーザー投稿（愚痴）
-  starsLit      Int      @default(0)                 // 灯った星数 = 返信されたキャラ数
-  safetyFlagged Boolean  @default(false)             // 危機ワード検知フラグ
-  createdAt     DateTime @default(now())
+  user          User?                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guestId       String? // 匿名ユーザー識別（cookie）
+  segment       String                    @default("default") // default | business | student | ...
+  content       String                    @db.Text // ユーザー投稿（愚痴）
+  starsLit      Int                       @default(0) // 灯った星数 = 返信されたキャラ数
+  safetyFlagged Boolean                   @default(false) // 危機ワード検知フラグ
+  createdAt     DateTime                  @default(now())
   replies       MitsuboshiNagusameReply[]
 
   @@index([userId, segment, createdAt])
@@ -1991,28 +1991,28 @@ model MitsuboshiNagusamePost {
 }
 
 model MitsuboshiNagusameReply {
-  id          String                  @id @default(cuid())
+  id          String                 @id @default(cuid())
   postId      String
-  post        MitsuboshiNagusamePost  @relation(fields: [postId], references: [id], onDelete: Cascade)
-  personaId   String                                  // personas/*.ts の id
+  post        MitsuboshiNagusamePost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  personaId   String // personas/*.ts の id
   personaName String
-  content     String                  @db.Text
-  createdAt   DateTime                @default(now())
+  content     String                 @db.Text
+  createdAt   DateTime               @default(now())
 
   @@index([postId])
   @@map("mitsuboshi_nagusame_replies")
 }
 
 model MitsuboshiNagusameSubscription {
-  id                String    @id @default(cuid())
-  userId            String    @unique
-  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan              String    @default("free")       // free | pro
-  stripeCustomerId  String?
-  stripeSubId       String?   @unique
-  currentPeriodEnd  DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan             String    @default("free") // free | pro
+  stripeCustomerId String?
+  stripeSubId      String?   @unique
+  currentPeriodEnd DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@map("mitsuboshi_nagusame_subscriptions")
 }
@@ -2022,15 +2022,15 @@ model MitsuboshiNagusameSubscription {
 // ============================================
 
 model HrOrganization {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
-  slug        String   @unique
-  logoUrl     String?  @db.Text
+  slug        String  @unique
+  logoUrl     String? @db.Text
   industry    String?
   size        String?
-  address     String?  @db.Text
+  address     String? @db.Text
   website     String?
-  fiscalMonth Int      @default(4)
+  fiscalMonth Int     @default(4)
 
   evaluationType  String @default("MBO")
   evaluationCycle String @default("SEMI")
@@ -2045,8 +2045,8 @@ model HrOrganization {
   plan                   String    @default("FREE")
 
   // AI使用量（月次）
-  aiUsageCount    Int      @default(0)
-  aiUsageResetAt  DateTime @default(now())
+  aiUsageCount   Int      @default(0)
+  aiUsageResetAt DateTime @default(now())
 
   members           HrOrganizationMember[]
   departments       HrDepartment[]
@@ -2075,7 +2075,7 @@ model HrOrganizationMember {
   invitedEmail String?
   invitedAt    DateTime?
   acceptedAt   DateTime?
-  status       String   @default("ACTIVE")
+  status       String    @default("ACTIVE")
 
   employeeId String? @unique
 
@@ -2145,10 +2145,10 @@ model HrEmployee {
   customFieldValues Json?
   notes             String? @db.Text
 
-  evaluations         HrEvaluation[]           @relation("EmployeeEvaluations")
-  evaluationsGiven    HrEvaluation[]           @relation("EvaluatorRelation")
-  oneOnOnesAsEmployee HrOneOnOne[]             @relation("EmployeeOneOnOne")
-  oneOnOnesAsManager  HrOneOnOne[]             @relation("ManagerOneOnOne")
+  evaluations         HrEvaluation[]      @relation("EmployeeEvaluations")
+  evaluationsGiven    HrEvaluation[]      @relation("EvaluatorRelation")
+  oneOnOnesAsEmployee HrOneOnOne[]        @relation("EmployeeOneOnOne")
+  oneOnOnesAsManager  HrOneOnOne[]        @relation("ManagerOneOnOne")
   histories           HrEmployeeHistory[]
 
   createdAt DateTime @default(now())
@@ -2259,10 +2259,10 @@ model HrOneOnOne {
   conductedAt DateTime?
   duration    Int?
 
-  agenda       Json?
-  managerNotes String? @db.Text
+  agenda        Json?
+  managerNotes  String? @db.Text
   employeeNotes String? @db.Text
-  privateNotes String? @db.Text
+  privateNotes  String? @db.Text
 
   aiSummary     String? @db.Text
   aiActionItems Json?
@@ -2284,12 +2284,12 @@ model HrInvitation {
   organizationId String
 
   email     String
-  role      String   @default("MEMBER")
-  token     String   @unique
+  role      String @default("MEMBER")
+  token     String @unique
   invitedBy String
 
-  status    String   @default("PENDING")
-  expiresAt DateTime
+  status     String    @default("PENDING")
+  expiresAt  DateTime
   acceptedAt DateTime?
 
   organization HrOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -2395,68 +2395,68 @@ model KintaiWorkRule {
 }
 
 model KintaiEmployee {
-  id             String              @id @default(cuid())
+  id             String            @id @default(cuid())
   organizationId String
-  memberId       String              @unique
-  member         KintaiMember        @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  memberId       String            @unique
+  member         KintaiMember      @relation(fields: [memberId], references: [id], onDelete: Cascade)
   departmentId   String?
-  department     KintaiDepartment?   @relation(fields: [departmentId], references: [id])
+  department     KintaiDepartment? @relation(fields: [departmentId], references: [id])
   workRuleId     String?
-  workRule       KintaiWorkRule?     @relation(fields: [workRuleId], references: [id])
+  workRule       KintaiWorkRule?   @relation(fields: [workRuleId], references: [id])
   name           String
   nameKana       String?
   email          String
-  employmentType String              @default("full_time") // full_time, part_time, contract
+  employmentType String            @default("full_time") // full_time, part_time, contract
   hireDate       DateTime?
-  isActive       Boolean             @default(true)
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  isActive       Boolean           @default(true)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
   clockRecords KintaiClockRecord[]
   attendances  KintaiAttendance[]
-  requests     KintaiRequest[]       @relation("EmployeeRequests")
-  reviewed     KintaiRequest[]       @relation("ReviewerRequests")
+  requests     KintaiRequest[]     @relation("EmployeeRequests")
+  reviewed     KintaiRequest[]     @relation("ReviewerRequests")
 
   @@map("kintai_employees")
 }
 
 model KintaiClockRecord {
-  id                String          @id @default(cuid())
+  id                String         @id @default(cuid())
   employeeId        String
-  employee          KintaiEmployee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  type              String          // clock_in, clock_out, break_start, break_end
+  employee          KintaiEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type              String // clock_in, clock_out, break_start, break_end
   timestamp         DateTime
-  source            String          @default("pc") // pc, mobile, manual
+  source            String         @default("pc") // pc, mobile, manual
   latitude          Float?
   longitude         Float?
   ipAddress         String?
-  note              String?         @db.Text
-  isModified        Boolean         @default(false)
+  note              String?        @db.Text
+  isModified        Boolean        @default(false)
   originalTimestamp DateTime?
-  createdAt         DateTime        @default(now())
+  createdAt         DateTime       @default(now())
 
   @@index([employeeId, timestamp])
   @@map("kintai_clock_records")
 }
 
 model KintaiAttendance {
-  id                 String          @id @default(cuid())
-  employeeId         String
-  employee           KintaiEmployee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  date               DateTime        @db.Date
-  clockIn            DateTime?
-  clockOut           DateTime?
-  breakMinutes       Int             @default(0)
-  workMinutes        Int             @default(0)
-  overtimeMinutes    Int             @default(0)
-  lateMinutes        Int             @default(0)
-  earlyLeaveMinutes  Int             @default(0)
-  nightMinutes       Int             @default(0)
-  holidayWork        Boolean         @default(false)
-  status             String          @default("normal") // normal, absent, holiday, paid_leave, special_leave
-  note               String?         @db.Text
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
+  id                String         @id @default(cuid())
+  employeeId        String
+  employee          KintaiEmployee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date              DateTime       @db.Date
+  clockIn           DateTime?
+  clockOut          DateTime?
+  breakMinutes      Int            @default(0)
+  workMinutes       Int            @default(0)
+  overtimeMinutes   Int            @default(0)
+  lateMinutes       Int            @default(0)
+  earlyLeaveMinutes Int            @default(0)
+  nightMinutes      Int            @default(0)
+  holidayWork       Boolean        @default(false)
+  status            String         @default("normal") // normal, absent, holiday, paid_leave, special_leave
+  note              String?        @db.Text
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   @@unique([employeeId, date])
   @@index([employeeId, date])
@@ -2467,7 +2467,7 @@ model KintaiRequest {
   id              String          @id @default(cuid())
   employeeId      String
   employee        KintaiEmployee  @relation("EmployeeRequests", fields: [employeeId], references: [id], onDelete: Cascade)
-  type            String          // clock_fix, leave, overtime, holiday_work
+  type            String // clock_fix, leave, overtime, holiday_work
   status          String          @default("pending") // pending, approved, rejected, withdrawn
   details         Json            @default("{}")
   reason          String?         @db.Text
@@ -2487,37 +2487,37 @@ model KintaiRequest {
 // ========================================
 
 model PromaneWorkspace {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name      String
-  slug      String    @unique
-  members   PromaneMember[]
-  clients   PromaneClient[]
-  projects  PromaneProject[]
+  id          String              @id @default(cuid())
+  userId      String
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  slug        String              @unique
+  members     PromaneMember[]
+  clients     PromaneClient[]
+  projects    PromaneProject[]
   invitations PromaneInvitation[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 
   @@index([userId])
   @@map("promane_workspaces")
 }
 
 model PromaneMember {
-  id          String      @id @default(cuid())
+  id          String             @id @default(cuid())
   workspaceId String
   userId      String
-  role        String      @default("member")
+  role        String             @default("member")
   displayName String
-  hourlyRate  Int         @default(0)
-  isActive    Boolean     @default(true)
-  workspace   PromaneWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tasks       PromaneTask[] @relation("PromaneTaskAssignee")
+  hourlyRate  Int                @default(0)
+  isActive    Boolean            @default(true)
+  workspace   PromaneWorkspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks       PromaneTask[]      @relation("PromaneTaskAssignee")
   timeEntries PromaneTimeEntry[]
   comments    PromaneComment[]
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
   @@unique([workspaceId, userId])
   @@index([userId])
@@ -2525,114 +2525,114 @@ model PromaneMember {
 }
 
 model PromaneClient {
-  id          String    @id @default(cuid())
+  id          String           @id @default(cuid())
   workspaceId String
   name        String
   contactName String?
   email       String?
   phone       String?
   address     String?
-  note        String?   @db.Text
+  note        String?          @db.Text
   workspace   PromaneWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   projects    PromaneProject[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
   @@index([workspaceId])
   @@map("promane_clients")
 }
 
 model PromaneProject {
-  id            String    @id @default(cuid())
-  workspaceId   String
-  clientId      String?
-  name          String
-  description   String?   @db.Text
-  status        String    @default("draft")
-  billingType   String    @default("fixed")
-  contractAmount Int      @default(0)
+  id             String           @id @default(cuid())
+  workspaceId    String
+  clientId       String?
+  name           String
+  description    String?          @db.Text
+  status         String           @default("draft")
+  billingType    String           @default("fixed")
+  contractAmount Int              @default(0)
   monthlyAmount  Int?
   hourlyRate     Int?
   estimatedHours Int?
-  startDate     DateTime?
-  endDate       DateTime?
-  tags          String?
-  workspace     PromaneWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  client        PromaneClient? @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  tasks         PromaneTask[]
-  expenses      PromaneExpense[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  startDate      DateTime?
+  endDate        DateTime?
+  tags           String?
+  workspace      PromaneWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  client         PromaneClient?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  tasks          PromaneTask[]
+  expenses       PromaneExpense[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 
   @@index([workspaceId])
   @@map("promane_projects")
 }
 
 model PromaneTask {
-  id          String    @id @default(cuid())
+  id          String             @id @default(cuid())
   projectId   String
   parentId    String?
   assigneeId  String?
   title       String
-  description String?   @db.Text
-  status      String    @default("todo")
-  priority    String    @default("medium")
+  description String?            @db.Text
+  status      String             @default("todo")
+  priority    String             @default("medium")
   startDate   DateTime?
   dueDate     DateTime?
-  order       Int       @default(0)
-  project     PromaneProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  parent      PromaneTask?   @relation("PromaneSubTasks", fields: [parentId], references: [id])
-  children    PromaneTask[]  @relation("PromaneSubTasks")
-  assignee    PromaneMember? @relation("PromaneTaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  order       Int                @default(0)
+  project     PromaneProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent      PromaneTask?       @relation("PromaneSubTasks", fields: [parentId], references: [id])
+  children    PromaneTask[]      @relation("PromaneSubTasks")
+  assignee    PromaneMember?     @relation("PromaneTaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   timeEntries PromaneTimeEntry[]
   comments    PromaneComment[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
   @@index([projectId])
   @@map("promane_tasks")
 }
 
 model PromaneTimeEntry {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   taskId    String?
   memberId  String
   duration  Int
   date      DateTime
   note      String?
-  task      PromaneTask?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
-  member    PromaneMember  @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  task      PromaneTask?  @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  member    PromaneMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
   @@index([memberId])
   @@map("promane_time_entries")
 }
 
 model PromaneExpense {
-  id          String   @id @default(cuid())
+  id          String         @id @default(cuid())
   projectId   String
   category    String
   amount      Int
   description String
   date        DateTime
   project     PromaneProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   @@index([projectId])
   @@map("promane_expenses")
 }
 
 model PromaneComment {
-  id        String   @id @default(cuid())
+  id        String        @id @default(cuid())
   taskId    String
   memberId  String
-  content   String   @db.Text
+  content   String        @db.Text
   task      PromaneTask   @relation(fields: [taskId], references: [id], onDelete: Cascade)
   member    PromaneMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
   @@index([taskId])
   @@map("promane_comments")
@@ -2643,18 +2643,18 @@ model PromaneComment {
 // ============================================
 
 model PromaneInvitation {
-  id            String   @id @default(cuid())
-  workspaceId  String
-  email        String
-  role         String   @default("member") // owner / admin / member / guest
-  token        String   @unique
-  invitedById  String
-  acceptedAt   DateTime?
-  expiresAt    DateTime
-  createdAt    DateTime @default(now())
+  id          String    @id @default(cuid())
+  workspaceId String
+  email       String
+  role        String    @default("member") // owner / admin / member / guest
+  token       String    @unique
+  invitedById String
+  acceptedAt  DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
 
-  workspace    PromaneWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  invitedBy    User             @relation("PromaneInvitationInvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+  workspace PromaneWorkspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  invitedBy User             @relation("PromaneInvitationInvitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([token])
@@ -2672,14 +2672,14 @@ model DoyalistProject {
   description String?  @db.Text
   industry    String?
   region      String?
-  targetSize  String?  // 大企業、中小、スタートアップ等
+  targetSize  String? // 大企業、中小、スタートアップ等
   keywords    String?  @db.Text
   status      String   @default("active") // active, archived
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  companies   DoyalistCompany[]
-  approaches  DoyalistApproach[]
+  companies  DoyalistCompany[]
+  approaches DoyalistApproach[]
 
   @@index([userId])
   @@index([userId, status])
@@ -2688,27 +2688,27 @@ model DoyalistProject {
 }
 
 model DoyalistCompany {
-  id            String   @id @default(cuid())
+  id            String          @id @default(cuid())
   projectId     String
   project       DoyalistProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   name          String
   website       String?
   industry      String?
   region        String?
-  size          String?  // 従業員数規模
-  description   String?  @db.Text
+  size          String? // 従業員数規模
+  description   String?         @db.Text
   contactEmail  String?
   contactPhone  String?
   contactPerson String?
-  notes         String?  @db.Text
-  enrichedData  Json?    // AI分析詳細データ
-  score         Int?     // 営業優先度スコア（0-100）
-  status        String   @default("new") // new, contacted, replied, won, lost
-  source        String?  // collected, manual, imported
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  notes         String?         @db.Text
+  enrichedData  Json? // AI分析詳細データ
+  score         Int? // 営業優先度スコア（0-100）
+  status        String          @default("new") // new, contacted, replied, won, lost
+  source        String? // collected, manual, imported
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
 
-  approaches    DoyalistApproach[]
+  approaches DoyalistApproach[]
 
   @@index([projectId])
   @@index([status])
@@ -2718,18 +2718,18 @@ model DoyalistCompany {
 }
 
 model DoyalistApproach {
-  id           String   @id @default(cuid())
-  projectId    String
-  project      DoyalistProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  companyId    String?
-  company      DoyalistCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  type         String   // email, dm, phone, letter
-  subject      String?
-  body         String   @db.Text
-  templateId   String?
-  status       String   @default("draft") // draft, sent, replied
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id         String           @id @default(cuid())
+  projectId  String
+  project    DoyalistProject  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  companyId  String?
+  company    DoyalistCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  type       String // email, dm, phone, letter
+  subject    String?
+  body       String           @db.Text
+  templateId String?
+  status     String           @default("draft") // draft, sent, replied
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
   @@index([projectId])
   @@index([companyId])
@@ -2738,15 +2738,15 @@ model DoyalistApproach {
 }
 
 model DoyalistTemplate {
-  id          String   @id @default(cuid())
-  userId      String
-  name        String
-  type        String   // email, dm, phone, letter
-  subject     String?
-  body        String   @db.Text
-  isDefault   Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  type      String // email, dm, phone, letter
+  subject   String?
+  body      String   @db.Text
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([userId])
   @@map("doyalist_templates")
@@ -2756,21 +2756,21 @@ model DoyalistTemplate {
 // ドヤスライド（全スライド フル画像生成）
 // ============================================
 model DoyaSlideProject {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   userId      String
   title       String
-  docType     String   @default("proposal") // sales/proposal/sns/seminar/recruit/pitch/internal/custom
-  customBrief String?  @db.Text             // docType=custom 時の自由入力
-  slideCount  Int      @default(8)
-  aspectRatio String   @default("wide")     // wide(1536x1024) / square(1024x1024) / vertical(1024x1536)
-  themeColor  String   @default("#7f19e6")
-  stylePreset String   @default("flashy")   // flashy/luxury/pop/minimal/cyber/handwritten
-  status      String   @default("draft")    // draft/structuring/generating/completed/error
+  docType     String  @default("proposal") // sales/proposal/sns/seminar/recruit/pitch/internal/custom
+  customBrief String? @db.Text // docType=custom 時の自由入力
+  slideCount  Int     @default(8)
+  aspectRatio String  @default("wide") // wide(1536x1024) / square(1024x1024) / vertical(1024x1536)
+  themeColor  String  @default("#7f19e6")
+  stylePreset String  @default("flashy") // flashy/luxury/pop/minimal/cyber/handwritten
+  status      String  @default("draft") // draft/structuring/generating/completed/error
 
   // ロゴ設定（右上に枠を空けて最後に合成）
   logoUrl         String?
   logoPosition    String  @default("top-right")
-  logoSize        String  @default("M")     // S/M/L
+  logoSize        String  @default("M") // S/M/L
   logoBackingChip Boolean @default(true)
 
   createdAt DateTime @default(now())
@@ -2790,16 +2790,16 @@ model DoyaSlideSlide {
   projectId    String
   project      DoyaSlideProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
   index        Int
-  role         String?          // 表紙/課題/解決/実績/CTA など
+  role         String? // 表紙/課題/解決/実績/CTA など
   headline     String?
   subText      String?          @db.Text
-  visualPrompt String           @db.Text     // 画像生成用のビジュアル指示
-  basePrompt   String?          @db.Text     // 累積プロンプト（チャット修正を蓄積）
-  rawImageUrl  String?                        // ロゴ合成前
-  imageUrl     String?                        // ロゴ合成後（表示用）
-  version      Int      @default(1)
-  status       String   @default("pending")   // pending/generating/done/error
-  model        String?                         // 実際に生成に使われたモデル（gpt-image-2 / nano-banana-pro-preview）
+  visualPrompt String           @db.Text // 画像生成用のビジュアル指示
+  basePrompt   String?          @db.Text // 累積プロンプト（チャット修正を蓄積）
+  rawImageUrl  String? // ロゴ合成前
+  imageUrl     String? // ロゴ合成後（表示用）
+  version      Int              @default(1)
+  status       String           @default("pending") // pending/generating/done/error
+  model        String? // 実際に生成に使われたモデル（gpt-image-2 / nano-banana-pro-preview）
 
   versions     DoyaSlideVersion[]
   chatMessages DoyaSlideChatMessage[]
@@ -2825,7 +2825,7 @@ model DoyaSlideChatMessage {
   id             String         @id @default(cuid())
   slideId        String
   slide          DoyaSlideSlide @relation(fields: [slideId], references: [id], onDelete: Cascade)
-  role           String         // user / assistant
+  role           String // user / assistant
   content        String         @db.Text
   appliedChanges Json?
   createdAt      DateTime       @default(now())
@@ -2852,21 +2852,21 @@ model DoyaSlideVersion {
 // ドヤカンニング（リアルタイム回答支援）cunning_*
 // ============================================
 model CunningSession {
-  id                 String   @id @default(cuid())
+  id                 String    @id @default(cuid())
   userId             String
-  mode               String   @default("sales") // sales（商談）/ interview（面接）
-  title              String   @default("無題のセッション")
-  knowledgeBaseId    String?  // sales: 参照ナレッジ
-  companyProfileId   String?  // interview: 参照企業
-  applicantProfileId String?  // interview: 応募者プロフィール
-  personaNote        String?  @db.Text            // 任意の前提/キャラ設定（エンタメ:口調・世界観 / ビジネス:補足）
-  report             Json?                          // 終了時に生成する議事録＋評価（summary/decisions/todos/score/feedback/good/improve）
-  status             String   @default("active") // active / ended
-  durationSec        Int      @default(0)         // 文字起こし時間（使用量計上の単位）
-  startedAt          DateTime @default(now())
+  mode               String    @default("sales") // sales（商談）/ interview（面接）
+  title              String    @default("無題のセッション")
+  knowledgeBaseId    String? // sales: 参照ナレッジ
+  companyProfileId   String? // interview: 参照企業
+  applicantProfileId String? // interview: 応募者プロフィール
+  personaNote        String?   @db.Text // 任意の前提/キャラ設定（エンタメ:口調・世界観 / ビジネス:補足）
+  report             Json? // 終了時に生成する議事録＋評価（summary/decisions/todos/score/feedback/good/improve）
+  status             String    @default("active") // active / ended
+  durationSec        Int       @default(0) // 文字起こし時間（使用量計上の単位）
+  startedAt          DateTime  @default(now())
   endedAt            DateTime?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   transcripts CunningTranscript[]
   answers     CunningAnswer[]
@@ -2880,7 +2880,7 @@ model CunningTranscript {
   id        String         @id @default(cuid())
   sessionId String
   session   CunningSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  speaker   String?        // remote（相手）/ self（自分）
+  speaker   String? // remote（相手）/ self（自分）
   text      String         @db.Text
   isFinal   Boolean        @default(true)
   startMs   Int?
@@ -2896,9 +2896,9 @@ model CunningAnswer {
   sessionId    String
   session      CunningSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   questionText String         @db.Text
-  summary      String         @db.Text   // 要点（一言回答）
-  script       String         @db.Text   // 話すスクリプト
-  sources      Json?                       // 参照した根拠チップ
+  summary      String         @db.Text // 要点（一言回答）
+  script       String         @db.Text // 話すスクリプト
+  sources      Json? // 参照した根拠チップ
   model        String?
   latencyMs    Int?
   createdAt    DateTime       @default(now())
@@ -2928,7 +2928,7 @@ model CunningKnowledgeChunk {
   content         String               @db.Text
   sourceUrl       String?
   sourceLabel     String?
-  embedding       Json?                // pgvector未導入のためJSON保存（MVP）
+  embedding       Json? // pgvector未導入のためJSON保存（MVP）
   createdAt       DateTime             @default(now())
 
   @@index([knowledgeBaseId])
@@ -2941,7 +2941,7 @@ model CunningCompanyProfile {
   url             String
   companyName     String?
   businessSummary String?  @db.Text
-  requirements    Json?    // 求める人物像・職務内容・バリュー等
+  requirements    Json? // 求める人物像・職務内容・バリュー等
   rawText         String?  @db.Text
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -2973,23 +2973,24 @@ model SfaOrganization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  members   SfaMember[]
+  members SfaMember[]
+
   @@map("sfa_organizations")
 }
 
 model SfaMember {
-  id             String    @id @default(cuid())
+  id             String          @id @default(cuid())
   organizationId String
   organization   SfaOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   userId         String?
-  role           String    @default("member") // owner / admin / manager / member
-  status         String    @default("ACTIVE")  // ACTIVE / PENDING / INACTIVE
+  role           String          @default("member") // owner / admin / manager / member
+  status         String          @default("ACTIVE") // ACTIVE / PENDING / INACTIVE
   name           String?
   inviteEmail    String?
-  inviteToken    String?   @unique
+  inviteToken    String?         @unique
   acceptedAt     DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
 
   @@unique([organizationId, userId])
   @@index([organizationId])
@@ -2998,23 +2999,23 @@ model SfaMember {
 }
 
 model SfaAccount {
-  id             String   @id @default(cuid())
-  organizationId String
-  name           String
+  id              String   @id @default(cuid())
+  organizationId  String
+  name            String
   corporateNumber String?
-  industry       String?
-  prefecture     String?
-  address        String?  @db.Text
-  url            String?
-  employeeCount  Int?
-  capital        BigInt?
-  creditRank     String?
-  ownerMemberId  String?  // 自社担当
-  tags           Json?
-  note           String?  @db.Text
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  industry        String?
+  prefecture      String?
+  address         String?  @db.Text
+  url             String?
+  employeeCount   Int?
+  capital         BigInt?
+  creditRank      String?
+  ownerMemberId   String? // 自社担当
+  tags            Json?
+  note            String?  @db.Text
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([organizationId])
   @@index([organizationId, name])
@@ -3043,23 +3044,23 @@ model SfaContact {
 }
 
 model SfaLead {
-  id                String   @id @default(cuid())
-  organizationId    String
-  name              String   // 企業名 or 個人
-  corporateNumber   String?
-  contactName       String?
-  email             String?
-  phone             String?
-  status            String   @default("new") // new/working/nurturing/qualified/converted/disqualified
-  score             Int?
-  source            String   @default("manual") // doyalist/csv/manual
-  assigneeMemberId  String?
+  id                 String   @id @default(cuid())
+  organizationId     String
+  name               String // 企業名 or 個人
+  corporateNumber    String?
+  contactName        String?
+  email              String?
+  phone              String?
+  status             String   @default("new") // new/working/nurturing/qualified/converted/disqualified
+  score              Int?
+  source             String   @default("manual") // doyalist/csv/manual
+  assigneeMemberId   String?
   convertedAccountId String?
-  note              String?  @db.Text
-  raw               Json?
-  isActive          Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  note               String?  @db.Text
+  raw                Json?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@index([organizationId, status])
   @@map("sfa_leads")
@@ -3073,50 +3074,52 @@ model SfaPipeline {
   createdAt      DateTime @default(now())
 
   stages SfaStage[]
+
   @@index([organizationId])
   @@map("sfa_pipelines")
 }
 
 model SfaStage {
-  id          String  @id @default(cuid())
+  id          String      @id @default(cuid())
   pipelineId  String
   pipeline    SfaPipeline @relation(fields: [pipelineId], references: [id], onDelete: Cascade)
   name        String
   order       Int
-  probability Int     @default(0)
-  color       String  @default("#22c55e")
-  isWon       Boolean @default(false)
-  isLost      Boolean @default(false)
+  probability Int         @default(0)
+  color       String      @default("#22c55e")
+  isWon       Boolean     @default(false)
+  isLost      Boolean     @default(false)
 
   @@index([pipelineId])
   @@map("sfa_stages")
 }
 
 model SfaDeal {
-  id               String    @id @default(cuid())
-  organizationId   String
-  accountId        String?
-  contactId        String?
-  name             String
-  amount           BigInt    @default(0)
-  currency         String    @default("JPY")
-  stageId          String?
-  probability      Int       @default(0)
-  startDate        DateTime? // 商談日（開始日）。経過期間の起点に使う
+  id                String    @id @default(cuid())
+  organizationId    String
+  accountId         String?
+  contactId         String?
+  name              String
+  amount            BigInt    @default(0)
+  currency          String    @default("JPY")
+  stageId           String?
+  probability       Int       @default(0)
+  startDate         DateTime? // 商談日（開始日）。経過期間の起点に使う
   expectedCloseDate DateTime?
-  contactName      String?   // 先方担当者名（フリーテキスト。担当者マスタを使わない運用向け）
-  note             String?   @db.Text // 商談メモ
-  status           String    @default("open") // open/won/lost
-  wonAt            DateTime?
-  lostAt           DateTime?
-  lostReason       String?
-  assigneeMemberId String?
-  lastActivityAt   DateTime?
-  isActive         Boolean   @default(true)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  contactName       String? // 先方担当者名（フリーテキスト。担当者マスタを使わない運用向け）
+  note              String?   @db.Text // 商談メモ
+  status            String    @default("open") // open/won/lost
+  wonAt             DateTime?
+  lostAt            DateTime?
+  lostReason        String?
+  assigneeMemberId  String?
+  lastActivityAt    DateTime?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   lineItems SfaLineItem[]
+
   @@index([organizationId, stageId])
   @@index([organizationId, status])
   @@map("sfa_deals")
@@ -3138,7 +3141,7 @@ model SfaLineItem {
 model SfaActivity {
   id             String   @id @default(cuid())
   organizationId String
-  type           String   // call/meeting/email/note
+  type           String // call/meeting/email/note
   accountId      String?
   contactId      String?
   dealId         String?
@@ -3189,6 +3192,7 @@ model ShodanOrganization {
   members      ShodanMember[]
   profile      ShodanCompanyProfile?
   preparations ShodanPreparation[]
+
   @@map("shodan_organizations")
 }
 
@@ -3217,17 +3221,17 @@ model ShodanCompanyProfile {
   id             String             @id @default(cuid())
   organizationId String             @unique
   organization   ShodanOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  companyName    String?            // 自社名
-  url            String?            // 自社URL
+  companyName    String? // 自社名
+  url            String? // 自社URL
   description    String?            @db.Text // 事業内容
   valueProp      String?            @db.Text // 提供価値・強み・USP
   products       String?            @db.Text // 主な商材・サービス
   targetCustomer String?            @db.Text // ターゲット顧客像
   pricingNote    String?            @db.Text // 価格帯・導入条件など
   caseStudies    String?            @db.Text // 導入事例・実績
-  logoPath       String?            // 自社ロゴ（shodan非公開バケットのパス。スライドに合成）
-  brandColors    Json?              // ブランドカラー ["#RRGGBB", ...]（スライドのテーマ色に反映）
-  research       Json?              // 自社URLを解析した結果（任意）
+  logoPath       String? // 自社ロゴ（shodan非公開バケットのパス。スライドに合成）
+  brandColors    Json? // ブランドカラー ["#RRGGBB", ...]（スライドのテーマ色に反映）
+  research       Json? // 自社URLを解析した結果（任意）
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
@@ -3236,24 +3240,24 @@ model ShodanCompanyProfile {
 
 // 商談準備案件。1件 = 1社ぶんの準備。
 model ShodanPreparation {
-  id              String             @id @default(cuid())
-  organizationId  String
-  organization    ShodanOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id                String             @id @default(cuid())
+  organizationId    String
+  organization      ShodanOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   createdByMemberId String?
   // 入力
-  targetUrl       String
-  targetName      String?            // 解析で判明した相手企業名
+  targetUrl         String
+  targetName        String? // 解析で判明した相手企業名
   // 進行状態
-  status          String             @default("processing") // processing / done / failed
-  errorMessage    String?            @db.Text
+  status            String             @default("processing") // processing / done / failed
+  errorMessage      String?            @db.Text
   // 成果物
-  research        Json?              // 深掘り調査（従業員数/マーケ実施状況/オウンドメディア規模/記事更新頻度 等）
-  analysis        Json?              // 現状分析・課題仮説・解決策
-  proposalMarkdown String?           @db.Text // 提案資料（Markdown）
-  slidesJson      Json?              // 提案スライド構成（ProposalSlide[]）
-  slideImages     Json?              // 画像スライド（[{ title, imageUrl, role }]・ドヤスライド方式でgpt-image-2生成）
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  research          Json? // 深掘り調査（従業員数/マーケ実施状況/オウンドメディア規模/記事更新頻度 等）
+  analysis          Json? // 現状分析・課題仮説・解決策
+  proposalMarkdown  String?            @db.Text // 提案資料（Markdown）
+  slidesJson        Json? // 提案スライド構成（ProposalSlide[]）
+  slideImages       Json? // 画像スライド（[{ title, imageUrl, role }]・ドヤスライド方式でgpt-image-2生成）
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   @@index([organizationId, createdAt])
   @@map("shodan_preparations")
@@ -3265,19 +3269,20 @@ model ShodanPreparation {
 // ============================================
 model AdBannerCampaign {
   id          String   @id @default(cuid())
-  userId      String?  // 未ログインゲストは null + guestId
+  userId      String? // 未ログインゲストは null + guestId
   guestId     String?
   name        String
   sourceUrl   String?
   serviceName String?
   appeal      String?  @db.Text
-  brandColors Json?    // ["#7f19e6", ...]
-  logoPath    String?  // Supabase Storage のロゴパス
-  media       String?  // meta / google / line / x ...
+  brandColors Json? // ["#7f19e6", ...]
+  logoPath    String? // Supabase Storage のロゴパス
+  media       String? // meta / google / line / x ...
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   banners AdBannerCreative[]
+
   @@index([userId, createdAt])
   @@index([guestId, createdAt])
   @@map("adbanner_campaign")
@@ -3287,15 +3292,15 @@ model AdBannerCreative {
   id           String           @id @default(cuid())
   campaignId   String
   campaign     AdBannerCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  imagePath    String           // 生成画像 (Supabase Storage)
-  size         String           // 1080x1080 等
+  imagePath    String // 生成画像 (Supabase Storage)
+  size         String // 1080x1080 等
   prompt       String           @db.Text
-  variantLabel String?          // 訴求/トーンのバリエーション
+  variantLabel String? // 訴求/トーンのバリエーション
   generation   Int              @default(1) // 改善世代 (Phase2)
-  parentId     String?          // 元バナー (Phase2)
-  model        String?          // 使用モデル / fallbackUsed
-  feedback     Json?            // { visibility, appeal, cta, fit, brand, total, advice }
-  metrics      Json?            // Phase2: { imp, click, ctr, spend, cv, cpa }
+  parentId     String? // 元バナー (Phase2)
+  model        String? // 使用モデル / fallbackUsed
+  feedback     Json? // { visibility, appeal, cta, fit, brand, total, advice }
+  metrics      Json? // Phase2: { imp, click, ctr, spend, cv, cpa }
   createdAt    DateTime         @default(now())
 
   @@index([campaignId, createdAt])
@@ -3320,6 +3325,7 @@ model AioOrganization {
   prompts AioPrompt[]
   scans   AioScan[]
   results AioResult[]
+
   @@map("aio_organizations")
 }
 
@@ -3348,12 +3354,12 @@ model AioBrandProfile {
   id             String          @id @default(cuid())
   organizationId String          @unique
   organization   AioOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  brandName      String?         // 追跡する自社ブランド名
-  brandUrl       String?         // 自社サイトURL（自社ドメイン引用率の判定に使う）
-  aliases        Json?           // 別名・表記ゆれ ["キャリーミー","CARRY ME"]
-  competitors    Json?           // 競合ブランド名 ["HiPro","lotsful", ...]
-  category       String?         // カテゴリ（例: プロ人材 業務委託マッチング）
-  market         String?         // 市場・地域（例: 日本）
+  brandName      String? // 追跡する自社ブランド名
+  brandUrl       String? // 自社サイトURL（自社ドメイン引用率の判定に使う）
+  aliases        Json? // 別名・表記ゆれ ["キャリーミー","CARRY ME"]
+  competitors    Json? // 競合ブランド名 ["HiPro","lotsful", ...]
+  category       String? // カテゴリ（例: プロ人材 業務委託マッチング）
+  market         String? // 市場・地域（例: 日本）
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
@@ -3366,12 +3372,13 @@ model AioPrompt {
   organizationId String
   organization   AioOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   text           String          @db.Text
-  category       String?         // 任意の分類タグ
+  category       String? // 任意の分類タグ
   isActive       Boolean         @default(true)
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
   results AioResult[]
+
   @@index([organizationId])
   @@map("aio_prompts")
 }
@@ -3382,21 +3389,22 @@ model AioScan {
   organizationId String
   organization   AioOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   status         String          @default("processing") // processing / done / failed
-  engines        Json?           // 実行したエンジン ["chatgpt","gemini","claude","perplexity"]
-  repetitions    Int             @default(3)            // 1プロンプト×1エンジンあたりの反復回数
+  engines        Json? // 実行したエンジン ["chatgpt","gemini","claude","perplexity"]
+  repetitions    Int             @default(3) // 1プロンプト×1エンジンあたりの反復回数
   errorMessage   String?         @db.Text
   // 集計サマリ（このスキャン時点のスナップショット）
-  awarenessPct   Float?          // ブランド認知度（言及した割合 0-100）
-  shareOfVoice   Float?          // SoV（追跡ブランド中の自社シェア 0-100）
-  sentimentPos   Float?          // ポジ割合
+  awarenessPct   Float? // ブランド認知度（言及した割合 0-100）
+  shareOfVoice   Float? // SoV（追跡ブランド中の自社シェア 0-100）
+  sentimentPos   Float? // ポジ割合
   sentimentNeu   Float?
   sentimentNeg   Float?
-  ownCitationPct Float?          // 自社ドメイン引用率
-  summary        Json?           // { perEngine, sov[], citations[], promptBreakdown[] } 全文
+  ownCitationPct Float? // 自社ドメイン引用率
+  summary        Json? // { perEngine, sov[], citations[], promptBreakdown[] } 全文
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
   results AioResult[]
+
   @@index([organizationId, createdAt])
   @@map("aio_scans")
 }
@@ -3410,17 +3418,236 @@ model AioResult {
   scan           AioScan         @relation(fields: [scanId], references: [id], onDelete: Cascade)
   promptId       String
   prompt         AioPrompt       @relation(fields: [promptId], references: [id], onDelete: Cascade)
-  engine         String          // chatgpt / gemini / claude / perplexity
+  engine         String // chatgpt / gemini / claude / perplexity
   iteration      Int             @default(0)
   brandMentioned Boolean         @default(false)
-  brandRank      Int?            // リスト内の自社の位置（1始まり、無ければ null）
-  sentiment      String?         // positive / neutral / negative
-  competitors    Json?           // この回答に出た競合名[]
-  citations      Json?           // 引用URL[]（Perplexity等の検索エンジン）
+  brandRank      Int? // リスト内の自社の位置（1始まり、無ければ null）
+  sentiment      String? // positive / neutral / negative
+  competitors    Json? // この回答に出た競合名[]
+  citations      Json? // 引用URL[]（Perplexity等の検索エンジン）
   answerText     String?         @db.Text // 回答本文（短縮保存）
   createdAt      DateTime        @default(now())
 
   @@index([scanId])
   @@index([organizationId, createdAt])
   @@map("aio_results")
+}
+
+// ============================================================
+// ドヤ面接官（mensetsu）— AIアバターが面接を実施し評価を残す
+// 仕様: reference/services/mensetsu.md
+// 組織スコープ型（aio / sfa と同型）。全APIは lib/mensetsu/access.ts を入口にする。
+// ============================================================
+
+model MensetsuOrganization {
+  id                  String   @id @default(cuid())
+  name                String
+  slug                String   @unique
+  // 組織設定
+  recordVideo         Boolean  @default(false) // 映像収録（既定OFF。音声のみでも評価は成立する）
+  retentionDays       Int      @default(180) // 逐語ログ・録音の保持日数
+  discloseToCandidate Boolean  @default(false) // 応募者本人へのスコア開示
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  members   MensetsuMember[]
+  profiles  MensetsuCompanyProfile[]
+  templates MensetsuTemplate[]
+  sessions  MensetsuSession[]
+  samples   MensetsuAnswerSample[]
+
+  @@map("mensetsu_organizations")
+}
+
+model MensetsuMember {
+  id             String               @id @default(cuid())
+  organizationId String
+  organization   MensetsuOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  role           String               @default("member") // owner / admin / manager / member
+  status         String               @default("ACTIVE") // ACTIVE / PENDING / INACTIVE
+  name           String?
+  inviteEmail    String?
+  inviteToken    String?              @unique
+  acceptedAt     DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("mensetsu_members")
+}
+
+// 企業URL調査の結果。テンプレート生成の材料になる。
+model MensetsuCompanyProfile {
+  id             String               @id @default(cuid())
+  organizationId String
+  organization   MensetsuOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  sourceUrl      String
+  companyName    String?
+  business       String?              @db.Text // 事業内容
+  valueProp      String?              @db.Text // 提供価値
+  culture        String?              @db.Text // カルチャー・行動指針
+  idealProfile   String?              @db.Text // 求める人物像
+  raw            Json? // スクレイプ原文・gBizINFO等の生データ
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  templates MensetsuTemplate[]
+
+  @@index([organizationId])
+  @@map("mensetsu_company_profiles")
+}
+
+// 面接テンプレート（職種×レベル）。構造化面接が既定。
+model MensetsuTemplate {
+  id             String                  @id @default(cuid())
+  organizationId String
+  organization   MensetsuOrganization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  profileId      String?
+  profile        MensetsuCompanyProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  name           String
+  jobTitle       String // 職種
+  level          String                  @default("mid") // newgrad / mid / manager
+  durationMin    Int                     @default(20) // 10 / 20 / 30
+  intro          String?                 @db.Text // 冒頭の挨拶・進め方
+  closing        String?                 @db.Text
+  status         String                  @default("draft") // draft / active / archived
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  questions MensetsuQuestion[]
+  criteria  MensetsuCriterion[]
+  sessions  MensetsuSession[]
+
+  @@index([organizationId])
+  @@map("mensetsu_templates")
+}
+
+model MensetsuQuestion {
+  id            String           @id @default(cuid())
+  templateId    String
+  template      MensetsuTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  ord           Int
+  text          String           @db.Text // 主質問（全応募者に共通）
+  followUpHint  String?          @db.Text // 深掘りの方針（最大2回まで）
+  targetMin     Int              @default(3) // 想定所要分
+  criterionKeys String[]         @default([]) // 紐づく評価軸のkey
+  createdAt     DateTime         @default(now())
+
+  @@index([templateId])
+  @@map("mensetsu_questions")
+}
+
+model MensetsuCriterion {
+  id          String           @id @default(cuid())
+  templateId  String
+  template    MensetsuTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  key         String // 英数キー（question との紐付けに使う）
+  name        String // 評価軸名
+  description String?          @db.Text
+  rubric      Json // { "1": "...", "2": "...", ... "5": "..." }
+  weight      Int              @default(1)
+  ord         Int              @default(0)
+  createdAt   DateTime         @default(now())
+
+  scores MensetsuScore[]
+
+  @@unique([templateId, key])
+  @@index([templateId])
+  @@map("mensetsu_criteria")
+}
+
+// 面接1回分。ワンタイムURLで応募者が入る。
+model MensetsuSession {
+  id             String               @id @default(cuid())
+  organizationId String
+  organization   MensetsuOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  templateId     String
+  template       MensetsuTemplate     @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  token          String   @unique // ワンタイム面接URL
+  candidateName  String?
+  candidateEmail String?
+  expiresAt      DateTime
+
+  status      String    @default("pending") // pending / consented / live / completed / evaluated / expired / aborted
+  // 同意ログ（C1）
+  consentedAt DateTime?
+  consentIp   String?
+  consentUa   String?   @db.Text
+
+  startedAt     DateTime?
+  endedAt       DateTime?
+  currentIndex  Int       @default(0) // 進行中の質問index
+  followUpCount Int       @default(0) // 現質問での深掘り回数
+  recordingPath String? // Supabase Storage のパス
+  purgeAfter    DateTime? // 保持期限（C5のcronが削除する）
+
+  // 評価結果（面接後バッチ）
+  verdict           String? // recommend / conditional / hold / reject
+  overallComment    String?   @db.Text
+  candidateFeedback String?   @db.Text // 応募者向け（別文面）
+  recruiterReport   String?   @db.Text // 採用担当者向け（別文面）
+  evaluatedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  turns  MensetsuTurn[]
+  scores MensetsuScore[]
+
+  @@index([organizationId, status])
+  @@index([templateId])
+  @@map("mensetsu_sessions")
+}
+
+model MensetsuTurn {
+  id          String          @id @default(cuid())
+  sessionId   String
+  session     MensetsuSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  ord         Int
+  speaker     String // interviewer / candidate
+  text        String          @db.Text
+  questionOrd Int? // どの主質問に紐づく発話か
+  startMs     Int?
+  endMs       Int?
+  createdAt   DateTime        @default(now())
+
+  @@index([sessionId, ord])
+  @@map("mensetsu_turns")
+}
+
+model MensetsuScore {
+  id           String            @id @default(cuid())
+  sessionId    String
+  session      MensetsuSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  criterionId  String
+  criterion    MensetsuCriterion @relation(fields: [criterionId], references: [id], onDelete: Cascade)
+  score        Int? // 1-5。判定不能なら null（F2-4: 推測で埋めない）
+  insufficient Boolean           @default(false) // 情報不足
+  rationale    String?           @db.Text
+  quotes       String[]          @default([]) // 根拠となる応募者の発言の引用
+  createdAt    DateTime          @default(now())
+
+  @@unique([sessionId, criterionId])
+  @@index([sessionId])
+  @@map("mensetsu_scores")
+}
+
+// 模範回答ライブラリ（Phase 2 で few-shot に使う）
+model MensetsuAnswerSample {
+  id             String               @id @default(cuid())
+  organizationId String
+  organization   MensetsuOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  criterionKey   String
+  questionText   String               @db.Text
+  answerText     String               @db.Text
+  label          String // good / bad
+  note           String?              @db.Text
+  createdAt      DateTime             @default(now())
+
+  @@index([organizationId, criterionKey])
+  @@map("mensetsu_answer_samples")
 }
