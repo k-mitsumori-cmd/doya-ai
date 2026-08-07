@@ -36,6 +36,31 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   const usable = assertUsable(s)
   if (!usable.ok) return NextResponse.json({ error: usable.reason }, { status: usable.status })
 
+  // --- 発行の上限（未認証で叩ける口なので必須）---
+  // ⚠️ ここは1回叩くごとに OPENAI_API_KEY 課金の Realtime 資格情報が1つ生まれる。
+  //    以前は上限も時間窓も無く、面接URLを持つ者が expiresAt までの14日間
+  //    無制限に発行できたため、共有キーの従量課金とレート制限を枯渇させられた。
+  //
+  //  (1) 回数: 通信断からの再接続を許しつつ、明らかな乱用は止める
+  //  (2) 時間窓: 面接開始から「所要時間＋猶予」を過ぎたら発行しない。
+  //      14日間開きっぱなしの窓を、実際の面接の長さまで縮める。
+  const MAX_ISSUES = 12
+  if (s.tokenIssueCount >= MAX_ISSUES) {
+    return NextResponse.json(
+      { error: '接続の試行回数が上限に達しました。採用ご担当者にお問い合わせください。' },
+      { status: 429 }
+    )
+  }
+  if (s.startedAt) {
+    const graceMs = (s.template.durationMin * 60 + 10 * 60) * 1000
+    if (Date.now() - s.startedAt.getTime() > graceMs) {
+      return NextResponse.json(
+        { error: 'この面接の実施時間を過ぎています。採用ご担当者にお問い合わせください。' },
+        { status: 410 }
+      )
+    }
+  }
+
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
     return NextResponse.json({ error: '音声面接の設定が未完了です（管理者にお問い合わせください）' }, { status: 503 })
@@ -114,7 +139,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: '面接セッションを開始できませんでした。' }, { status: 502 })
   }
 
-  // 面接開始を記録（最初の1回だけ）
+  // 発行回数は毎回加算する（再接続も1回と数える）
   if (!s.startedAt) {
     // 保持期限は実施日から数え直す。発行時点の仮の値のままだと、
     // 同意画面で伝えた「実施から◯日間保管」と実態がずれる。
@@ -123,7 +148,17 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     )
     await prisma.mensetsuSession.update({
       where: { id: s.id },
-      data: { status: 'live', startedAt: new Date(), purgeAfter },
+      data: {
+        status: 'live',
+        startedAt: new Date(),
+        purgeAfter,
+        tokenIssueCount: { increment: 1 },
+      },
+    })
+  } else {
+    await prisma.mensetsuSession.update({
+      where: { id: s.id },
+      data: { tokenIssueCount: { increment: 1 } },
     })
   }
 

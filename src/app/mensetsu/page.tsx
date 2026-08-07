@@ -15,6 +15,7 @@ interface Org {
   role: string
   retentionDays: number
   recordVideo: boolean
+  recordAudio: boolean
 }
 interface Profile {
   id: string
@@ -203,6 +204,33 @@ export default function MensetsuDashboard() {
       }
       setIssuedUrl(data.url)
       setCandidateName('')
+      await load()
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  /**
+   * 組織設定の保存。
+   * ⚠️ recordAudio / retentionDays は応募者に見せる同意文面に直結する。
+   *    ここを変えると次の面接から同意画面の記載も変わる。
+   */
+  const saveSettings = async (patch: Record<string, unknown>) => {
+    setBusy('settings')
+    setError(null)
+    setNotice(null)
+    try {
+      const res = await fetch('/api/mensetsu/organizations/settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patch),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data?.error || '設定の保存に失敗しました')
+        return
+      }
+      setNotice('設定を保存しました')
       await load()
     } finally {
       setBusy(null)
@@ -502,6 +530,53 @@ export default function MensetsuDashboard() {
                   ))}
                 </ul>
               )}
+            </section>
+
+            {/* --- 5. 組織設定 --- */}
+            <section className="mt-6 rounded-lg bg-white p-6 shadow-sm">
+              <h2 className="text-base font-black text-[#0a0f3c]">記録の設定</h2>
+              <p className="mt-1 text-xs font-medium text-[#8a94ad]">
+                ここで決めた内容は、応募者の同意画面にそのまま表示されます。
+              </p>
+
+              <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-lg bg-[#f7faff] p-4">
+                <input
+                  type="checkbox"
+                  checked={!!org.recordAudio}
+                  disabled={busy === 'settings'}
+                  onChange={(e) => void saveSettings({ recordAudio: e.target.checked })}
+                  className="mt-0.5 h-4 w-4 accent-[#0066ff]"
+                />
+                <span>
+                  <span className="block text-sm font-black text-[#0a0f3c]">音声を録音して保存する</span>
+                  <span className="mt-0.5 block text-xs font-medium leading-relaxed text-[#425071]">
+                    既定はオフです。オフでも会話は文字に起こして記録され、評価は行えます。
+                    オンにすると応募者の同意画面に「音声そのものを録音して保存します」が追加されます。
+                  </span>
+                </span>
+              </label>
+
+              <label className="mt-3 block rounded-lg bg-[#f7faff] p-4">
+                <span className="block text-sm font-black text-[#0a0f3c]">記録の保持日数</span>
+                <span className="mt-0.5 block text-xs font-medium leading-relaxed text-[#425071]">
+                  面接を実施した日から数えます。期限を過ぎた記録は毎日の処理で自動的に削除されます。
+                </span>
+                <span className="mt-3 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={1095}
+                    defaultValue={org.retentionDays}
+                    disabled={busy === 'settings'}
+                    onBlur={(e) => {
+                      const v = Number(e.target.value)
+                      if (Number.isFinite(v) && v !== org.retentionDays) void saveSettings({ retentionDays: v })
+                    }}
+                    className="w-28 rounded-lg border border-[#d8e7ff] px-3 py-2 text-sm font-medium outline-none focus:border-[#0066ff]"
+                  />
+                  <span className="text-sm font-bold text-[#425071]">日</span>
+                </span>
+              </label>
             </section>
           </>
         )}

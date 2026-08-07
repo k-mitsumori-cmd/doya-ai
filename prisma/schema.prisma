@@ -3582,12 +3582,16 @@ model MensetsuSession {
   consentIp   String?
   consentUa   String?   @db.Text
 
-  startedAt     DateTime?
-  endedAt       DateTime?
-  currentIndex  Int       @default(0) // 進行中の質問index
-  followUpCount Int       @default(0) // 現質問での深掘り回数
-  recordingPath String? // Supabase Storage のパス
-  purgeAfter    DateTime? // 保持期限（C5のcronが削除する）
+  startedAt       DateTime?
+  endedAt         DateTime?
+  // Realtime の ephemeral token 発行回数。
+  // 未認証で叩ける口なので、1つの面接URLから無制限に資格情報を作られると
+  // 共有APIキーへの従量課金とレート制限の枯渇に直結する。上限判定に使う。
+  tokenIssueCount Int       @default(0)
+  currentIndex    Int       @default(0) // 進行中の質問index
+  followUpCount   Int       @default(0) // 現質問での深掘り回数
+  recordingPath   String? // Supabase Storage のパス
+  purgeAfter      DateTime? // 保持期限（C5のcronが削除する）
 
   // 評価結果（面接後バッチ）
   verdict           String? // recommend / conditional / hold / reject
