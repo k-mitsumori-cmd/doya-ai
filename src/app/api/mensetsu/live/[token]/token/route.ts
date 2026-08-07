@@ -54,32 +54,42 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
 
   let res: Response
   try {
-    res = await fetch('https://api.openai.com/v1/realtime/sessions', {
+    // ⚠️ 旧 `/v1/realtime/sessions`（フラットな body）は廃止され 404 になる。
+    //    現行は `/v1/realtime/client_secrets` で、設定は session の下にネストし、
+    //    音声まわりは audio.input / audio.output に分かれる。2026-08-07 に実機で確認。
+    res = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: REALTIME_MODEL,
-        voice: REALTIME_VOICE,
-        instructions,
-        modalities: ['audio', 'text'],
-        // 応募者の発話を文字起こしして字幕・逐語ログに使う（F1-6, F4-1）
-        input_audio_transcription: { model: 'whisper-1' },
-        // サーバVAD: 応募者が話し始めたらAIの発話を止める（F1-3 バージイン）
-        turn_detection: {
-          type: 'server_vad',
-          threshold: 0.5,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 700,
-          create_response: true,
+        session: {
+          type: 'realtime',
+          model: REALTIME_MODEL,
+          instructions,
+          audio: {
+            input: {
+              // 応募者の発話を文字起こしして字幕・逐語ログに使う（F1-6, F4-1）
+              transcription: { model: 'whisper-1', language: 'ja' },
+              // サーバVAD: 応募者が話し始めたらAIの発話を止める（F1-3 バージイン）
+              turn_detection: {
+                type: 'server_vad',
+                threshold: 0.5,
+                prefix_padding_ms: 300,
+                silence_duration_ms: 700,
+                create_response: true,
+                interrupt_response: true,
+              },
+            },
+            output: { voice: REALTIME_VOICE },
+          },
+          tools: [ADVANCE_TOOL],
+          tool_choice: 'auto',
         },
-        tools: [ADVANCE_TOOL],
-        tool_choice: 'auto',
       }),
     })
-  } catch (e: any) {
+  } catch {
     return NextResponse.json({ error: '音声面接サーバーに接続できませんでした' }, { status: 502 })
   }
 
@@ -93,6 +103,12 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   }
 
   const data = await res.json()
+  // 新形式は { value, expires_at, session } を直接返す（旧形式の client_secret.value ではない）
+  const clientSecret: string | null = data?.value ?? data?.client_secret?.value ?? null
+  if (!clientSecret) {
+    console.error('[mensetsu] realtime: client secret missing', JSON.stringify(data).slice(0, 300))
+    return NextResponse.json({ error: '面接セッションを開始できませんでした。' }, { status: 502 })
+  }
 
   // 面接開始を記録（最初の1回だけ）
   if (!s.startedAt) {
@@ -103,8 +119,8 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   }
 
   return NextResponse.json({
-    clientSecret: data?.client_secret?.value ?? null,
-    expiresAt: data?.client_secret?.expires_at ?? null,
+    clientSecret,
+    expiresAt: data?.expires_at ?? null,
     model: REALTIME_MODEL,
     durationMin: s.template.durationMin,
     questionCount: s.template.questions.length,

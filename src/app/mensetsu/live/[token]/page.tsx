@@ -29,6 +29,21 @@ interface PublicSession {
 
 type Step = 'loading' | 'consent' | 'check' | 'live' | 'done' | 'unavailable'
 
+/**
+ * 応募者の画面にマーケティング用のポップアップ（HubSpot CTA）を出さない。
+ * 面接を受けに来た第三者に自社サービスの営業を出すのは不適切であり、
+ * 面接中に前面に出ると操作を妨げる。トップページと同じ手当てをこの画面にも入れる。
+ */
+const SUPPRESS_MARKETING_CSS = `
+  #hs-web-interactives-top-anchor,
+  [id^='hs-overlay-cta'],
+  iframe[src*='hs-web-interactive'] {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+`
+
 function fmt(sec: number) {
   const m = Math.floor(sec / 60)
   const s = sec % 60
@@ -125,6 +140,7 @@ export default function MensetsuLivePage() {
   if (step === 'loading') {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f2f6ff]">
+      <style dangerouslySetInnerHTML={{ __html: SUPPRESS_MARKETING_CSS }} />
         <p className="text-sm font-bold text-[#425071]">読み込んでいます…</p>
       </main>
     )
@@ -133,6 +149,7 @@ export default function MensetsuLivePage() {
   if (step === 'unavailable') {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f2f6ff] px-5">
+      <style dangerouslySetInnerHTML={{ __html: SUPPRESS_MARKETING_CSS }} />
         <div className="max-w-md rounded-lg bg-white p-8 text-center shadow-sm">
           <span className="material-symbols-outlined text-4xl text-[#425071]">error</span>
           <h1 className="mt-3 text-lg font-black text-[#0a0f3c]">面接を開始できません</h1>
@@ -145,6 +162,7 @@ export default function MensetsuLivePage() {
   if (step === 'done') {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f2f6ff] px-5">
+      <style dangerouslySetInnerHTML={{ __html: SUPPRESS_MARKETING_CSS }} />
         <div className="max-w-md rounded-lg bg-white p-8 text-center shadow-sm">
           <span className="material-symbols-outlined text-4xl text-[#0066ff]">task_alt</span>
           <h1 className="mt-3 text-lg font-black text-[#0a0f3c]">面接は以上です</h1>
@@ -162,6 +180,7 @@ export default function MensetsuLivePage() {
   if (step === 'consent' && session) {
     return (
       <main className="min-h-screen bg-[#f2f6ff] px-5 py-12">
+      <style dangerouslySetInnerHTML={{ __html: SUPPRESS_MARKETING_CSS }} />
         <div className="mx-auto max-w-2xl">
           <p className="text-sm font-black text-[#0066ff]">{session.companyName}</p>
           <h1 className="mt-2 text-2xl font-black leading-snug text-[#0a0f3c]">
@@ -249,6 +268,7 @@ export default function MensetsuLivePage() {
   if (step === 'check' && session) {
     return (
       <main className="min-h-screen bg-[#f2f6ff] px-5 py-12">
+      <style dangerouslySetInnerHTML={{ __html: SUPPRESS_MARKETING_CSS }} />
         <div className="mx-auto max-w-2xl">
           <h1 className="text-2xl font-black text-[#0a0f3c]">準備はよろしいですか</h1>
           <div className="mt-6 rounded-lg bg-white p-6 shadow-sm">
@@ -287,6 +307,7 @@ export default function MensetsuLivePage() {
 
   return (
     <main className="flex min-h-screen flex-col bg-[#0a0f1e]">
+      <style dangerouslySetInnerHTML={{ __html: SUPPRESS_MARKETING_CSS }} />
       {/* 上部バー */}
       <header className="flex items-center justify-between px-5 py-3">
         <div className="flex items-center gap-3">

@@ -41,6 +41,11 @@ export async function generateTemplate(input: GenerateTemplateInput): Promise<{
     '- 質問は行動事実を引き出す形（過去の具体的な経験を尋ねる）を優先する',
     '- 評価軸は5〜7個。各軸に1〜5点の到達基準（ルーブリック）を必ず書く',
     `- 主質問は ${qCount} 問ちょうど`,
+    // 実測: 8問すべてに targetMin:3 を振ってきて合計24分となり、20分の面接で4分ぶんが
+    // 時間切れスキップになった。予算を明示し、算数の答えを先に与えて守らせる。
+    `- **各質問の targetMin の合計は必ず ${Math.max(4, durationMin - 4)} 分以下にすること**`,
+    `  （挨拶・締め・深掘りで ${Math.min(6, Math.max(2, Math.round(durationMin * 0.2)))} 分ほど使うため、主質問に使えるのはこの範囲）`,
+    `  重要な質問に多く配分し、確認程度の質問は1〜2分にする。全問を同じ分数にしないこと`,
     '- 各主質問には「深掘りの方針」を書く（面接AIが最大2回まで追加質問するときの指針）',
     '- ルーブリックは「観察可能な事実」で書く。「意欲が高い」ではなく「自ら課題を定義し、他者を巻き込んで完遂した経験を具体的に説明できる」のように書く',
     '',
@@ -108,6 +113,25 @@ export async function generateTemplate(input: GenerateTemplateInput): Promise<{
     // 実在しない軸を指していたら空にする（採点時の参照切れを防ぐ）
     criterionKeys: (q.criterionKeys || []).filter((k) => validKeys.has(k)),
   }))
+
+  // --- 時間予算の安全網 ---
+  // プロンプトで指示しても守られないことがある（実測で20分の面接に24分ぶんを返してきた）。
+  // 超過したままだと後半の質問が毎回スキップされ、全員に同じ質問を聞くという
+  // 構造化面接の前提が崩れるため、比率を保ったまま予算内へ縮める。
+  const budget = Math.max(4, durationMin - 4)
+  const total = questions.reduce((n, q) => n + q.targetMin, 0)
+  if (total > budget && total > 0) {
+    const ratio = budget / total
+    for (const q of questions) q.targetMin = Math.max(1, Math.round(q.targetMin * ratio))
+    // 丸めで再び超過したら、長いものから1分ずつ削る
+    let after = questions.reduce((n, q) => n + q.targetMin, 0)
+    while (after > budget) {
+      const longest = questions.reduce((a, b) => (b.targetMin > a.targetMin ? b : a))
+      if (longest.targetMin <= 1) break
+      longest.targetMin -= 1
+      after -= 1
+    }
+  }
 
   return {
     template: {

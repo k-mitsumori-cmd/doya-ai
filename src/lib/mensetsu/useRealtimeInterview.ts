@@ -361,7 +361,10 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
       const offer = await pc.createOffer()
       await pc.setLocalDescription(offer)
 
-      const sdpRes = await fetch(`https://api.openai.com/v1/realtime?model=${encodeURIComponent(model)}`, {
+      // 現行のWebRTC接続先。旧 `/v1/realtime?model=` も今のところ通るが、
+      // ephemeral token の発行が `/sessions` → `/client_secrets` に移ったのと同じ流れで
+      // 旧パスは廃止されうるため、GAの `/v1/realtime/calls` を使う。
+      const sdpRes = await fetch(`https://api.openai.com/v1/realtime/calls?model=${encodeURIComponent(model)}`, {
         method: 'POST',
         body: offer.sdp,
         headers: {
