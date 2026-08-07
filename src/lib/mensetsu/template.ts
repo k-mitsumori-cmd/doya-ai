@@ -4,7 +4,7 @@
 // 構造化面接（全応募者に同じ主質問・同じ評価基準）を既定とする。
 // 差別的質問はプロンプト制約（GUARDRAIL_PROMPT）＋生成後の機械チェックの二段で排除する。
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
-import { GUARDRAIL_PROMPT, stripViolations, type GuardrailViolation } from './guardrails'
+import { GUARDRAIL_PROMPT, findViolations, stripViolations, type GuardrailViolation } from './guardrails'
 import { LEVEL_LABELS, type CompanyProfileData, type GeneratedTemplate, type MensetsuLevel } from './types'
 
 export interface GenerateTemplateInput {
@@ -47,6 +47,17 @@ export async function generateTemplate(input: GenerateTemplateInput): Promise<{
     `  （挨拶・締め・深掘りで ${Math.min(6, Math.max(2, Math.round(durationMin * 0.2)))} 分ほど使うため、主質問に使えるのはこの範囲）`,
     `  重要な質問に多く配分し、確認程度の質問は1〜2分にする。全問を同じ分数にしないこと`,
     '- 各主質問には「深掘りの方針」を書く（面接AIが最大2回まで追加質問するときの指針）',
+    '',
+    '【分岐（branches）の設計】',
+    '- 各主質問に、回答の内容で分かれる枝を **2〜3個** 付ける。',
+    '  例: 「マネジメント経験あり」→ 体制と人数を掘る / 「経験なし」→ 主導した範囲を掘る',
+    '- 枝には label（枝の名前）、matchHint（どんな回答ならこの枝か）、',
+    '  text（その枝で尋ねる深掘り質問）を書く。',
+    '- **幹（主質問）は分岐させない。** 全応募者に同じ主質問を同じ順で尋ねることが',
+    '  公正な比較の前提であり、枝だけを回答に応じて変える。',
+    '- 前提が成り立たない回答（例: その領域の経験が全く無い）で、後続の主質問が',
+    '  無意味になる場合のみ skipTo に飛び先の主質問番号(1始まり)を書いてよい。',
+    '  それ以外は skipTo を null にする。飛ばしすぎると比較できなくなる。',
     '- ルーブリックは「観察可能な事実」で書く。「意欲が高い」ではなく「自ら課題を定義し、他者を巻き込んで完遂した経験を具体的に説明できる」のように書く',
     '',
     '【出力するJSONの形式】',
@@ -56,7 +67,10 @@ export async function generateTemplate(input: GenerateTemplateInput): Promise<{
     '      "rubric": { "1": "...", "2": "...", "3": "...", "4": "...", "5": "..." }, "weight": 1 }',
     '  ],',
     '  "questions": [',
-    '    { "text": "主質問", "followUpHint": "深掘りの方針", "targetMin": 3, "criterionKeys": ["key1"] }',
+    '    { "text": "主質問", "followUpHint": "深掘りの方針", "targetMin": 3, "criterionKeys": ["key1"],',
+    '      "branches": [',
+    '        { "label": "枝の名前", "matchHint": "どんな回答ならこの枝か", "text": "深掘り質問", "skipTo": null }',
+    '      ] }',
     '  ],',
     '  "intro": "面接冒頭でAI面接官が話す挨拶と進め方（120字程度）",',
     '  "closing": "面接の締めでAI面接官が話す文面（80字程度）"',
@@ -112,6 +126,17 @@ export async function generateTemplate(input: GenerateTemplateInput): Promise<{
     targetMin: Number.isFinite(q.targetMin) ? Math.max(1, Math.min(10, Number(q.targetMin))) : 3,
     // 実在しない軸を指していたら空にする（採点時の参照切れを防ぐ）
     criterionKeys: (q.criterionKeys || []).filter((k) => validKeys.has(k)),
+    // 分岐。枝の質問も就職差別チェックの対象にする（幹だけ見ても意味がない）
+    branches: (q.branches || [])
+      .filter((b: any) => b && b.label && b.matchHint)
+      .slice(0, 4)
+      .map((b: any) => ({
+        label: String(b.label),
+        matchHint: String(b.matchHint),
+        text: b.text ? String(b.text) : undefined,
+        skipTo: Number.isFinite(Number(b.skipTo)) ? Number(b.skipTo) : null,
+      }))
+      .filter((b: any) => findViolations([b.text || '']).length === 0),
   }))
 
   // --- 時間予算の安全網 ---

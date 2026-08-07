@@ -11,12 +11,21 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+interface Branch {
+  id: string
+  ord: number
+  label: string
+  matchHint: string
+  text: string | null
+  skipToOrd: number | null
+}
 interface Question {
   id?: string
   text: string
   followUpHint: string | null
   targetMin: number
   criterionKeys: string[]
+  branches?: Branch[]
 }
 interface Criterion {
   id: string
@@ -74,6 +83,7 @@ export default function TemplateEditPage() {
           followUpHint: q.followUpHint,
           targetMin: q.targetMin,
           criterionKeys: q.criterionKeys || [],
+          branches: q.branches || [],
         }))
       )
       setCriteria(t.criteria || [])
@@ -139,6 +149,7 @@ export default function TemplateEditPage() {
             followUpHint: q.followUpHint || '',
             targetMin: q.targetMin,
             criterionKeys: q.criterionKeys,
+            branches: q.branches,
           })),
         }),
       })
@@ -300,6 +311,35 @@ export default function TemplateEditPage() {
                       placeholder="深掘りの方針（例: 具体的な行動と、その結果の数値まで聞く）"
                       className="mt-2 w-full rounded-lg border border-[#d8e7ff] px-3 py-2 text-xs font-medium outline-none focus:border-[#0066ff]"
                     />
+                    {/* 分岐（AIが自動生成。回答に応じてどの深掘りをするか） */}
+                    {q.branches && q.branches.length > 0 && (
+                      <div className="mt-2 space-y-1.5 border-l-2 border-[#cfe3ff] pl-3">
+                        <p className="text-[11px] font-black text-[#0066ff]">
+                          回答による分岐（{q.branches.length}）
+                        </p>
+                        {q.branches.map((b) => (
+                          <div key={b.id} className="rounded-lg bg-[#f7faff] px-3 py-2">
+                            <p className="text-xs font-black text-[#0a0f3c]">
+                              {b.label}
+                              {b.skipToOrd != null && (
+                                <span className="ml-2 rounded bg-[#fff2f6] px-1.5 py-0.5 text-[10px] font-black text-[#c2185b]">
+                                  質問{b.skipToOrd + 1}へ飛ぶ
+                                </span>
+                              )}
+                            </p>
+                            <p className="mt-0.5 text-[11px] font-medium text-[#8a94ad]">
+                              条件: {b.matchHint}
+                            </p>
+                            {b.text && (
+                              <p className="mt-1 text-xs font-medium leading-relaxed text-[#425071]">
+                                → {b.text}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="mt-2 flex flex-wrap items-center gap-2">
                       <label className="flex items-center gap-1.5">
                         <span className="text-xs font-black text-[#0a0f3c]">想定</span>

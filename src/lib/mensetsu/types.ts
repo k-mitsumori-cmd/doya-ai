@@ -80,6 +80,15 @@ export interface CompanyProfileData {
 /** 評価軸のルーブリック（1〜5点の各段階の定義） */
 export type Rubric = Record<'1' | '2' | '3' | '4' | '5', string>
 
+/** 主質問にぶら下がる分岐（回答に応じた深掘り・スキップ） */
+export interface GeneratedBranch {
+  label: string
+  matchHint: string
+  text?: string
+  /** 指定があればこの主質問(1始まり)まで飛ばす */
+  skipTo?: number | null
+}
+
 /** テンプレート生成の出力 */
 export interface GeneratedTemplate {
   criteria: Array<{
@@ -94,6 +103,7 @@ export interface GeneratedTemplate {
     followUpHint: string
     targetMin: number
     criterionKeys: string[]
+    branches?: GeneratedBranch[]
   }>
   intro: string
   closing: string

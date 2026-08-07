@@ -99,10 +99,24 @@ export async function POST(req: NextRequest) {
             followUpHint: q.followUpHint || null,
             targetMin: q.targetMin,
             criterionKeys: q.criterionKeys,
+            branches: {
+              create: (q.branches || []).map((b, bi) => ({
+                ord: bi,
+                label: b.label,
+                matchHint: b.matchHint,
+                text: b.text || null,
+                // 生成側は1始まりで返す。内部は0始まりのordに揃える
+                skipToOrd:
+                  b.skipTo && Number.isFinite(Number(b.skipTo)) ? Math.max(0, Number(b.skipTo) - 1) : null,
+              })),
+            },
           })),
         },
       },
-      include: { questions: { orderBy: { ord: 'asc' } }, criteria: { orderBy: { ord: 'asc' } } },
+      include: {
+        questions: { orderBy: { ord: 'asc' }, include: { branches: { orderBy: { ord: 'asc' } } } },
+        criteria: { orderBy: { ord: 'asc' } },
+      },
     })
 
     return NextResponse.json({

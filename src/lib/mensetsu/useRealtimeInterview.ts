@@ -266,9 +266,12 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
   const handleFunctionCall = useCallback(
     async (callId: string, argsJson: string) => {
       let intent: 'follow_up' | 'next' = 'next'
+      let answerSummary = ''
       try {
         const parsed = JSON.parse(argsJson || '{}')
         if (parsed?.intent === 'follow_up') intent = 'follow_up'
+        // 分岐の判定に使う（サーバはこれが無ければ直近の応募者発話で代用する）
+        if (typeof parsed?.answer_summary === 'string') answerSummary = parsed.answer_summary
       } catch {}
 
       let result: any = { action: 'close', should_close: true }
@@ -276,7 +279,7 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
         const res = await fetch(`/api/mensetsu/live/${token}/advance`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ intent }),
+          body: JSON.stringify({ intent, answer_summary: answerSummary }),
         })
         result = await res.json()
       } catch {

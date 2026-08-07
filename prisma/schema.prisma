@@ -3538,10 +3538,37 @@ model MensetsuQuestion {
   followUpHint  String?          @db.Text // 深掘りの方針（最大2回まで）
   targetMin     Int              @default(3) // 想定所要分
   criterionKeys String[]         @default([]) // 紐づく評価軸のkey
+  branches      MensetsuBranch[]
   createdAt     DateTime         @default(now())
 
   @@index([templateId])
   @@map("mensetsu_questions")
+}
+
+/// 主質問にぶら下がる「分岐」。
+/// 回答の内容に応じて、どの深掘りをするか・どこへ飛ぶかを決める。
+///
+/// 幹（主質問）は全員共通のまま、枝だけを分岐させる設計にしている。
+/// 面接は「全員に同じ主質問・同じ基準」が公正性の前提であり、
+/// 商談シナリオのように全体を分岐させると、応募者ごとに聞かれた内容が
+/// 変わって横並びで比較できなくなるため。
+model MensetsuBranch {
+  id         String           @id @default(cuid())
+  questionId String
+  question   MensetsuQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  ord        Int
+  /// 枝の名前（例: 「マネジメント経験あり」）。フロー図に出す
+  label      String
+  /// どんな回答ならこの枝か（回答の分類に使う手がかり）
+  matchHint  String           @db.Text
+  /// この枝で尋ねる深掘り質問。空なら質問せず次へ進む
+  text       String?          @db.Text
+  /// 指定があればこの主質問(ord)まで飛ばす。null なら次の主質問へ
+  skipToOrd  Int?
+  createdAt  DateTime         @default(now())
+
+  @@index([questionId, ord])
+  @@map("mensetsu_branches")
 }
 
 model MensetsuCriterion {

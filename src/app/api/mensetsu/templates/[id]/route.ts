@@ -24,7 +24,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   const template = await prisma.mensetsuTemplate.findFirst({
     where: { id, organizationId: c.organizationId },
     include: {
-      questions: { orderBy: { ord: 'asc' } },
+      questions: { orderBy: { ord: 'asc' }, include: { branches: { orderBy: { ord: 'asc' } } } },
       criteria: { orderBy: { ord: 'asc' } },
       profile: true,
     },
@@ -109,25 +109,40 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     // 分けると createMany の失敗時に質問が0件のまま残り、復元手段が無い。
     await prisma.$transaction([
       prisma.mensetsuQuestion.deleteMany({ where: { templateId: id } }),
-      prisma.mensetsuQuestion.createMany({
-        data: body.questions.map((q: any, i: number) => ({
-          templateId: id,
-          ord: i,
-          text: String(q?.text || ''),
-          followUpHint: q?.followUpHint ? String(q.followUpHint) : null,
-          targetMin: Number.isFinite(Number(q?.targetMin))
-            ? Math.min(600, Math.max(1, Math.round(Number(q.targetMin))))
-            : 3,
-          criterionKeys: Array.isArray(q?.criterionKeys) ? q.criterionKeys.map(String) : [],
-        })),
-      }),
+      // ⚠️ createMany では入れ子を作れないため、分岐を持つ質問は個別に create する。
+      //    一括で置き換えると、AIが作った分岐が保存のたびに消えてしまう。
+      ...body.questions.map((q: any, i: number) =>
+        prisma.mensetsuQuestion.create({
+          data: {
+            templateId: id,
+            ord: i,
+            text: String(q?.text || ''),
+            followUpHint: q?.followUpHint ? String(q.followUpHint) : null,
+            targetMin: Number.isFinite(Number(q?.targetMin))
+              ? Math.min(600, Math.max(1, Math.round(Number(q.targetMin))))
+              : 3,
+            criterionKeys: Array.isArray(q?.criterionKeys) ? q.criterionKeys.map(String) : [],
+            branches: {
+              create: (Array.isArray(q?.branches) ? q.branches : [])
+                .filter((b: any) => b && b.label && b.matchHint)
+                .map((b: any, bi: number) => ({
+                  ord: bi,
+                  label: String(b.label),
+                  matchHint: String(b.matchHint),
+                  text: b.text ? String(b.text) : null,
+                  skipToOrd: Number.isFinite(Number(b.skipToOrd)) ? Number(b.skipToOrd) : null,
+                })),
+            },
+          },
+        })
+      ),
     ])
   }
 
   const template = await prisma.mensetsuTemplate.findUnique({
     where: { id },
     include: {
-      questions: { orderBy: { ord: 'asc' } },
+      questions: { orderBy: { ord: 'asc' }, include: { branches: { orderBy: { ord: 'asc' } } } },
       criteria: { orderBy: { ord: 'asc' } },
     },
   })
