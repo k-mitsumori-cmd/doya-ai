@@ -51,7 +51,16 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
   // 担当者が手で追加した質問も差別的でないか検査する（生成物だけでなく編集後も守る）
   if (Array.isArray(body?.questions)) {
-    const violations = findViolations(body.questions.map((q: any) => String(q?.text || '')))
+    // ⚠️ 幹だけでなく枝の質問も検査する。分岐で尋ねる内容も面接での質問であり、
+    //    ここを見逃すと差別的な質問が枝から入り込む。
+    const texts: string[] = []
+    for (const q of body.questions) {
+      texts.push(String(q?.text || ''))
+      for (const b of Array.isArray(q?.branches) ? q.branches : []) {
+        if (b?.text) texts.push(String(b.text))
+      }
+    }
+    const violations = findViolations(texts)
     if (violations.length > 0) {
       return NextResponse.json(
         {
@@ -124,7 +133,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
             criterionKeys: Array.isArray(q?.criterionKeys) ? q.criterionKeys.map(String) : [],
             branches: {
               create: (Array.isArray(q?.branches) ? q.branches : [])
-                .filter((b: any) => b && b.label && b.matchHint)
+                // 名前と条件が揃っていない枝は保存しない。
+                // 条件が空だと分類器が判断できず、枝に入らないか誤って入るため。
+                .filter((b: any) => b && String(b.label || '').trim() && String(b.matchHint || '').trim())
                 .map((b: any, bi: number) => ({
                   ord: bi,
                   label: String(b.label),

@@ -99,6 +99,45 @@ export default function TemplateEditPage() {
   const update = (i: number, patch: Partial<Question>) =>
     setQuestions((prev) => prev.map((q, idx) => (idx === i ? { ...q, ...patch } : q)))
 
+  /** 分岐の編集。AIが作った枝を担当者が調整できるようにする */
+  const updateBranch = (qi: number, bi: number, patch: Partial<Branch>) =>
+    setQuestions((prev) =>
+      prev.map((q, idx) =>
+        idx === qi
+          ? { ...q, branches: (q.branches || []).map((b, bx) => (bx === bi ? { ...b, ...patch } : b)) }
+          : q
+      )
+    )
+
+  const removeBranch = (qi: number, bi: number) =>
+    setQuestions((prev) =>
+      prev.map((q, idx) =>
+        idx === qi ? { ...q, branches: (q.branches || []).filter((_, bx) => bx !== bi) } : q
+      )
+    )
+
+  const addBranch = (qi: number) =>
+    setQuestions((prev) =>
+      prev.map((q, idx) =>
+        idx === qi
+          ? {
+              ...q,
+              branches: [
+                ...(q.branches || []),
+                {
+                  id: `new-${Date.now()}`,
+                  ord: (q.branches || []).length,
+                  label: '',
+                  matchHint: '',
+                  text: '',
+                  skipToOrd: null,
+                },
+              ],
+            }
+          : q
+      )
+    )
+
   const move = (i: number, dir: -1 | 1) =>
     setQuestions((prev) => {
       const next = [...prev]
@@ -312,31 +351,79 @@ export default function TemplateEditPage() {
                       className="mt-2 w-full rounded-lg border border-[#d8e7ff] px-3 py-2 text-xs font-medium outline-none focus:border-[#0066ff]"
                     />
                     {/* 分岐（AIが自動生成。回答に応じてどの深掘りをするか） */}
+                    {(!q.branches || q.branches.length === 0) && (
+                      <button
+                        onClick={() => addBranch(i)}
+                        className="mt-2 rounded border border-dashed border-[#cfe3ff] px-3 py-1.5 text-[11px] font-black text-[#0066ff]"
+                      >
+                        回答による分岐を追加
+                      </button>
+                    )}
                     {q.branches && q.branches.length > 0 && (
                       <div className="mt-2 space-y-1.5 border-l-2 border-[#cfe3ff] pl-3">
                         <p className="text-[11px] font-black text-[#0066ff]">
                           回答による分岐（{q.branches.length}）
+                          <span className="ml-2 font-medium text-[#8a94ad]">
+                            AIが自動生成したものを編集できます
+                          </span>
                         </p>
-                        {q.branches.map((b) => (
-                          <div key={b.id} className="rounded-lg bg-[#f7faff] px-3 py-2">
-                            <p className="text-xs font-black text-[#0a0f3c]">
-                              {b.label}
-                              {b.skipToOrd != null && (
-                                <span className="ml-2 rounded bg-[#fff2f6] px-1.5 py-0.5 text-[10px] font-black text-[#c2185b]">
-                                  質問{b.skipToOrd + 1}へ飛ぶ
-                                </span>
-                              )}
-                            </p>
-                            <p className="mt-0.5 text-[11px] font-medium text-[#8a94ad]">
-                              条件: {b.matchHint}
-                            </p>
-                            {b.text && (
-                              <p className="mt-1 text-xs font-medium leading-relaxed text-[#425071]">
-                                → {b.text}
-                              </p>
-                            )}
+                        {q.branches.map((b, bi) => (
+                          <div key={b.id} className="rounded-lg bg-[#f7faff] p-3">
+                            <div className="flex items-center gap-2">
+                              <input
+                                value={b.label}
+                                onChange={(e) => updateBranch(i, bi, { label: e.target.value })}
+                                placeholder="枝の名前（例: 経験あり）"
+                                className="flex-1 rounded border border-[#d8e7ff] bg-white px-2 py-1 text-xs font-black text-[#0a0f3c] outline-none focus:border-[#0066ff]"
+                              />
+                              <select
+                                value={b.skipToOrd ?? ''}
+                                onChange={(e) =>
+                                  updateBranch(i, bi, {
+                                    skipToOrd: e.target.value === '' ? null : Number(e.target.value),
+                                  })
+                                }
+                                className="rounded border border-[#d8e7ff] bg-white px-2 py-1 text-[11px] font-bold text-[#425071] outline-none focus:border-[#0066ff]"
+                                title="前提が崩れて後続が無意味になる場合のみ指定してください"
+                              >
+                                <option value="">飛ばさない</option>
+                                {questions.map((_, qi) =>
+                                  qi > i ? (
+                                    <option key={qi} value={qi}>
+                                      質問{qi + 1}へ
+                                    </option>
+                                  ) : null
+                                )}
+                              </select>
+                              <button
+                                onClick={() => removeBranch(i, bi)}
+                                aria-label="この分岐を削除"
+                                className="rounded border border-[#ffd0de] px-1.5 py-1 text-[#c2185b]"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">delete</span>
+                              </button>
+                            </div>
+                            <input
+                              value={b.matchHint}
+                              onChange={(e) => updateBranch(i, bi, { matchHint: e.target.value })}
+                              placeholder="どんな回答ならこの枝か"
+                              className="mt-1.5 w-full rounded border border-[#d8e7ff] bg-white px-2 py-1 text-[11px] font-medium text-[#425071] outline-none focus:border-[#0066ff]"
+                            />
+                            <textarea
+                              value={b.text || ''}
+                              onChange={(e) => updateBranch(i, bi, { text: e.target.value })}
+                              rows={2}
+                              placeholder="この枝で尋ねる深掘り質問（空なら質問せず次へ）"
+                              className="mt-1.5 w-full rounded border border-[#d8e7ff] bg-white px-2 py-1 text-xs font-medium leading-relaxed text-[#0a0f3c] outline-none focus:border-[#0066ff]"
+                            />
                           </div>
                         ))}
+                        <button
+                          onClick={() => addBranch(i)}
+                          className="rounded border border-dashed border-[#cfe3ff] px-3 py-1.5 text-[11px] font-black text-[#0066ff]"
+                        >
+                          分岐を追加
+                        </button>
                       </div>
                     )}
 
