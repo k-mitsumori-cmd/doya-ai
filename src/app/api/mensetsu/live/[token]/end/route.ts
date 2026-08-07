@@ -23,6 +23,12 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   //    5問答えた面接でも 'aborted' に落ちて、逐語ログがあるのに
   //    評価も再開もできない状態になっていた（担当者UIもcronも aborted は拾わない）。
   //    close ルートと cron に合わせ、**発話が残っていれば completed** に倒す。
+  // ⚠️ 一度も開始していない面接を終了扱いにしないこと。
+  //    リンクを開いて閉じただけで面接が死に、応募者が二度と受けられなくなる。
+  if (!s.startedAt) {
+    return NextResponse.json({ ok: true, skipped: 'not_started' })
+  }
+
   const turns = await prisma.mensetsuTurn.count({ where: { sessionId: s.id } })
   const next = turns > 0 ? 'completed' : 'aborted'
 

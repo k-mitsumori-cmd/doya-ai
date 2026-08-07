@@ -527,6 +527,12 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
       //    最後の flushTurns・録音アップロード・完了画面が全て走らない）状態だった。
       if (e.persisted) return
       if (endedRef.current) return
+      // ⚠️ 面接を開始していないなら終了を送らない。
+      //    このフックはページ表示時点でマウントされるため、
+      //    「リンクを開いて眺めただけで閉じた」場合にも beacon が飛び、
+      //    受験前の面接が終了扱いになって二度と受けられなくなっていた
+      //    （実際にテスト用URLが1本これで死んだ）。
+      if (startedAtRef.current === 0) return
       // ⚠️ endedRef は立てない。ここで立てると、復帰後の正規の end() が丸ごと無効化される。
       try {
         const body = new Blob([JSON.stringify({ aborted: true })], { type: 'application/json' })

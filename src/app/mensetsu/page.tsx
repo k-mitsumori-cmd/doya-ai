@@ -260,6 +260,24 @@ export default function MensetsuDashboard() {
     }
   }
 
+  /** 誤って終了扱いになった面接を、受験可能な状態に戻す */
+  const reopenSession = async (id: string) => {
+    setBusy(`reopen-${id}`)
+    setError(null)
+    try {
+      const res = await fetch(`/api/mensetsu/sessions/${id}/close`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data?.error || '戻せませんでした')
+        return
+      }
+      setNotice('受験可能に戻しました。同じURLで受けられます。')
+      await load()
+    } finally {
+      setBusy(null)
+    }
+  }
+
   const evaluate = async (id: string) => {
     setBusy(`eval-${id}`)
     setError(null)
@@ -533,6 +551,16 @@ export default function MensetsuDashboard() {
                         </p>
                       </div>
                       <div className="flex gap-2">
+                        {s.status === 'aborted' && (
+                          <button
+                            onClick={() => reopenSession(s.id)}
+                            disabled={busy === `reopen-${s.id}`}
+                            className="rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff] disabled:opacity-50"
+                            title="受験前に誤って終了扱いになった面接を、同じURLで受けられる状態に戻します"
+                          >
+                            {busy === `reopen-${s.id}` ? '処理中…' : '受験可能に戻す'}
+                          </button>
+                        )}
                         {['pending', 'consented', 'live'].includes(s.status) && (
                           <button
                             onClick={() => closeSession(s.id)}
