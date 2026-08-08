@@ -1,6 +1,7 @@
 # ドヤ見積もりAI（quote）— 要件定義書
 
-> ステータス: **設計のみ / 未実装**（`services.ts` 未登録）
+> ステータス: **実装済み / 本番稼働中**（2026-08-08）
+> 本番: https://doya-ai.surisuta.jp/quote
 > 作成日: 2026-08-06
 > 想定 serviceId: `quote` ／ パス: `/quote`
 > ⚠️ serviceId は要確認。`mitsumori`（見積の素直な romanization）も候補だが、運営者の姓（三森）と衝突して
@@ -279,3 +280,31 @@ UI規約: 日本語UI / Material Symbols（**絵文字アイコン禁止**）/ �
 | ストレージ | Supabase Storage（`src/lib/shodan/storage.ts` 等） |
 | Slack通知 | `src/lib/notifications.ts` |
 | 相場の初期データ | ドヤマーケAIのメディア記事群（施策別・規模別の相場表＝自社の一次情報） |
+
+
+---
+
+## 実装状況（2026-08-08）
+
+| 機能 | 状態 | 実装 |
+|---|---|---|
+| 組織・メンバー | 済 | `src/lib/quote/access.ts` |
+| 発行元情報 | 済 | `/quote/settings` / `api/quote/issuer` |
+| 商材のURL解析 | 済 | `src/lib/quote/analyze.ts:analyzeProduct()` |
+| 品目候補＋相場 | 済 | `analyze.ts:suggestItems()` / `market.ts` |
+| 見積書 CRUD | 済 | `api/quote/documents` |
+| 金額計算（税率別・値引き按分） | 済 | `src/lib/quote/money.ts` |
+| 見積書PDF | 済 | `src/lib/quote/pdf.ts`（puppeteer） |
+| 確定フロー | 済 | PATCH status。manager+ のみ |
+
+### 設計判断（実装時に確定）
+
+- **金額の出所は4層**（自社の公開価格 → 相場マスタ → 競合 → 要見積）。画面に1件ずつ表示する。
+- **`market` を名乗る金額は相場マスタと突き合わせる。** 該当が無ければ根拠なし（`unknown`）へ落とす。
+  プロンプトで「根拠が無ければ空欄」と指示しても、モデルは必ず「それらしい数字を埋める」側へ倒れるため、
+  生成後の機械チェックが要る（mensetsu の分岐分類器と同じ挙動）。
+- **「要見積」の行は合計に含めない。** 0円として足すと総額を誤らせる。PDFにも「要見積」と印字する。
+- **消費税は税率ごとに区分計算し、値引きは税率別小計へ按分する。** 行ごとに丸めると合計が合わない。
+- **下書きPDFには「社内確認用」の透かしを入れる。** AIが出した金額を、人が確認する前に客先へ渡させないため。
+- 相場マスタ（`market.ts`）の出典は**ドヤマーケAIメディアで公開している自社調査データ**。
+  更新するときは出典記事も併せて直すこと。

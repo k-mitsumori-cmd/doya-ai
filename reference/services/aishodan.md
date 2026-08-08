@@ -1,6 +1,7 @@
 # ドヤAI商談（AI商談）— 要件定義書
 
-> ステータス: **設計のみ / 未実装**（`services.ts` 未登録）
+> ステータス: **実装済み / 本番稼働中**（2026-08-08）
+> 本番: https://doya-ai.surisuta.jp/aishodan ／ 商談ルーム `/m/{roomToken}`
 > 作成日: 2026-08-06
 > 想定 serviceId: `aishodan` ／ パス: `/aishodan`
 > ⚠️ 既存の `shodan`（ドヤ商談準備＝商談"前"の企業調査・提案資料生成）とは**別サービス**。混同注意。
@@ -432,3 +433,62 @@ Phase 1 は音声＋アバター込みで完成させるが、**作る順番**�
 | ゲスト（未ログイン）識別 | `adbanner` の guestId Cookie パターン |
 | Slack通知 | `src/lib/notifications.ts` |
 | ストレージ | Supabase Storage（`src/lib/shodan/storage.ts` 等） |
+
+
+---
+
+## 実装状況（2026-08-08）
+
+| 機能 | 状態 | 実装 |
+|---|---|---|
+| 組織・メンバー | 済 | `src/lib/aishodan/access.ts` |
+| URL取り込み・チャンク化 | 済 | `knowledge.ts:crawlProductSite/ingestPages` |
+| 商材プロフィール自動生成 | 済 | `knowledge.ts:generateProfile()` |
+| シナリオ（既定値＋編集） | 済 | `defaults.ts` / `/aishodan/scenarios/[id]` |
+| 公開ルーム発行 | 済 | `api/aishodan/rooms` |
+| 商談ルーム（ゲスト・スマホ対応） | 済 | `/m/[token]` |
+| 音声商談（Realtime WebRTC） | 済 | `useRealtimeMeeting.ts` / `room/[token]/token` |
+| フェーズ進行 | 済 | `engine.ts:advance()` / `room/[token]/advance` |
+| 質疑応答（RAG） | 済 | `knowledge.ts:retrieve()` / `room/[token]/lookup` |
+| スロット抽出 | 済 | `room/[token]/record` |
+| 要約・フィットスコア | 済 | `evaluate.ts` / `room/[token]/end` |
+| Slack通知 | 済 | `room/[token]/end` |
+| ダッシュボード・商談ログ | 済 | `/aishodan` / `/aishodan/sessions` |
+| 日程調整・カレンダー連携 | 未 | Phase 2 |
+| SFA / HubSpot 連携 | 未 | Phase 2 |
+
+### 仕様からの変更（実装時に確定）
+
+**F6 の音声方式を変更した。** 「チャンクSTT（gpt-4o-transcribe）＋ Google Cloud TTS」ではなく、
+**ブラウザ↔OpenAI Realtime を WebRTC で直結**する方式を採る。理由:
+
+- ドヤ面接官（`mensetsu`）で同構成を本番稼働させ、実機で成立を確認済み
+- レイテンシがチャンク方式より構造的に小さい（往復のバッファリングが無い）
+- バージイン（相手が話し始めたらAIが黙る）が server_vad で標準機能として得られる
+- Vercel が WebSocket を保持できない制約は、直結にすることで回避できる（サーバは短命トークンの発行のみ）
+
+### 実装上の要点（信頼性の中核）
+
+- **進行はモデルではなくサーバのフェーズ・ステートマシンが決める**（`engine.ts`）。
+  LLM に任せるとヒアリング前に提案を始める／必須項目を飛ばす。
+  ヒアリングは必須スロットが埋まるまで抜けさせないが、ターン上限は必ず効かせる
+  （答えない相手に無限に粘ると商談が終わらない）。
+- **質問への回答は必ず `lookup_knowledge` を通す。** 根拠が無ければ空を返し、
+  「確認して折り返す」に倒す。答えられなかった質問は `unanswered` で記録し、
+  ホストのナレッジ拡充の優先順位として画面に出す。
+- **価格非開示の設定時は、指示文だけでなく根拠テキストからも金額を除去する。**
+  材料に金額が載っている限り、モデルは読み上げてしまう。
+- **フィットスコアはモデルに出させない。** ICP条件ごとの真偽だけを判定させ、
+  重みの合計はコードで計算する。点数を生成させると根拠と数字が食い違う。
+- **ゲスト向けAPIは roomToken + Cookie guestId + sessionId の三重条件でスコープする**（`session.ts`）。
+  返却は `public.ts` のホワイトリスト経由のみ。
+
+### mensetsu から引き継いだ罠（消さないこと）
+
+1. Realtime のイベント名は新旧2系統ある（`response.audio_transcript.done` /
+   `response.output_audio_transcript.done`）。**後方一致で両方拾う。**
+2. 発話は**開始時刻**で並べる。確定時刻で並べると長い発話が短い相槌より後ろにずれる。
+3. ログ送信は失敗時にキューへ戻す。かつサーバの `saved` 件数と照合する（1回50件で切られる）。
+4. `pagehide` は `persisted=true`（bfcache）と未開始（`startedAtRef===0`）を除外する。
+   除外しないと、リンクを開いて閉じただけで商談が死ぬ。
+5. 中断扱いはクライアントの申告ではなく**サーバが実際の発話数で判断する**。
