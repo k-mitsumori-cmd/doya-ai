@@ -65,7 +65,12 @@ function jpDate(d: Date): string {
   return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
 }
 
-function renderHtml(q: QuotePdfInput): string {
+/**
+ * 見積書のHTMLを組み立てる。
+ * ⚠️ export しているのは、PDF化そのものが Vercel（Linux）でしか動かず、
+ *    レイアウトの確認を手元で行えるようにするため。
+ */
+export function renderQuoteHtml(q: QuotePdfInput): string {
   const totals = calcTotals(
     q.lineItems.map((l) => ({ qty: l.qty, unitPrice: l.unitPrice, taxRate: l.taxRate })),
     q.discountType,
@@ -101,7 +106,12 @@ function renderHtml(q: QuotePdfInput): string {
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   body { margin: 0; font-family: "Noto Sans JP", "Hiragino Sans", sans-serif; color: #16233d; font-size: 10.5pt; }
   .page { position: relative; width: 210mm; min-height: 297mm; padding: 16mm 15mm; }
-  .watermark { position: fixed; top: 45%; left: 0; width: 100%; text-align: center;
+  /* ⚠️ position:fixed はビューポート（1240px）基準になり、A4紙面（210mm≒794px）の
+     中央からずれて右へはみ出す。紙面（.page は position:relative）の中に
+     absolute で置き、紙の幅を基準に中央へ寄せる。
+     絶対配置なので1ページ目にのみ出るが、合計金額が載るのは1ページ目であり、
+     画面側にも下書きの警告を出しているため実用上はこれで足りる。 */
+  .watermark { position: absolute; top: 42%; left: 0; width: 100%; text-align: center;
     font-size: 64pt; font-weight: 800; color: rgba(255,30,114,0.10);
     transform: rotate(-24deg); letter-spacing: 0.1em; pointer-events: none; z-index: 0; }
   .inner { position: relative; z-index: 1; }
@@ -215,7 +225,7 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<Uint8Array
     throw new Error(`puppeteer 初期化失敗: ${err instanceof Error ? err.message : String(err)}`)
   }
 
-  const html = renderHtml(input)
+  const html = renderQuoteHtml(input)
 
   let browser: any
   try {
