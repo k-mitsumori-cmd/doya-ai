@@ -9,6 +9,14 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://doya-ai.surisuta.j
 /**
  * ヒヤリング依頼メール
  */
+/** CSSの色として安全な値だけを通す（#rgb/#rrggbb と英字のみの色名） */
+function sanitizeColor(v?: string | null): string | null {
+  const t = String(v ?? '').trim()
+  if (/^#[0-9a-fA-F]{3}$/.test(t) || /^#[0-9a-fA-F]{6}$/.test(t)) return t
+  if (/^[a-zA-Z]{3,20}$/.test(t)) return t
+  return null
+}
+
 export async function sendSurveyInviteEmail(params: {
   to: string
   respondentName?: string
@@ -19,7 +27,10 @@ export async function sendSurveyInviteEmail(params: {
   shareToken: string
 }) {
   const chatUrl = `${BASE_URL}/interviewx/respond/${params.shareToken}`
-  const brandColor = params.brandColor || '#6366f1'
+  // ⚠️ brandColor は利用者が設定した値がそのまま style 属性に入る。
+  //    エスケープでは属性境界を抜けられるため、**色として妥当な形だけを通す**。
+  //    妥当でなければ既定色に落とす（メールが壊れるより既定色の方がよい）。
+  const brandColor = sanitizeColor(params.brandColor) || '#6366f1'
 
   return sendEmail({
     to: params.to,

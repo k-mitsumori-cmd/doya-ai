@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAishodanContext, hasMinRole, orgSlugFrom } from '@/lib/aishodan/access'
 import { sendEmail } from '@/lib/email'
+import { escapeHtml } from '@/lib/html-escape'
 import { ROLE_HIERARCHY, type AishodanRole } from '@/lib/aishodan/types'
 
 const ROLES: AishodanRole[] = ['owner', 'admin', 'manager', 'member']
@@ -93,9 +94,9 @@ export async function POST(req: NextRequest) {
     subject: `【ドヤAI商談】${c.organizationName} に招待されました`,
     html: `
       <div style="font-family:sans-serif;line-height:1.8;color:#0a0f3c">
-        <p>${c.organizationName} の商談管理（ドヤAI商談）に招待されました。</p>
+        <p>${escapeHtml(c.organizationName)} の商談管理（ドヤAI商談）に招待されました。</p>
         <p>下のリンクを開いてログインすると参加できます。</p>
-        <p><a href="${url}" style="color:#0066ff">${url}</a></p>
+        <p><a href="${escapeHtml(url)}" style="color:#0066ff">${escapeHtml(url)}</a></p>
         <p style="color:#8a94ad;font-size:13px">
           このリンクはあなた専用です。他の方に転送しないでください。<br>
           心当たりがない場合は破棄してください。

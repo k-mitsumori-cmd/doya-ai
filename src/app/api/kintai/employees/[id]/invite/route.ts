@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { escapeHtml } from '@/lib/html-escape'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { sendEmail } from '@/lib/email'
 
@@ -58,14 +59,14 @@ export async function POST(req: NextRequest, ctx: Ctx) {
           </div>
           <h1 style="text-align: center; font-size: 24px; font-weight: 800; color: #1e293b; margin-bottom: 8px;">ドヤ勤怠への招待</h1>
           <p style="text-align: center; color: #64748b; font-size: 15px; margin-bottom: 24px;">
-            <strong style="color: #7f19e6;">${org?.name || '組織'}</strong> に招待されました
+            <strong style="color: #7f19e6;">${escapeHtml(org?.name || '組織')}</strong> に招待されました
           </p>
           <p style="color: #475569; font-size: 14px; line-height: 1.6; margin-bottom: 24px;">
-            ${employee.name} さん、こんにちは！<br>
+            ${escapeHtml(employee.name)} さん、こんにちは！<br>
             以下のボタンをクリックして、ドヤ勤怠に参加してください。
           </p>
           <div style="text-align: center; margin-bottom: 24px;">
-            <a href="${inviteUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #7f19e6, #5b0fb3); color: white; text-decoration: none; border-radius: 999px; font-weight: 700; font-size: 16px;">
+            <a href="${escapeHtml(inviteUrl)}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #7f19e6, #5b0fb3); color: white; text-decoration: none; border-radius: 999px; font-weight: 700; font-size: 16px;">
               組織に参加する
             </a>
           </div>

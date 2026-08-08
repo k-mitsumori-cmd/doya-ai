@@ -5,6 +5,7 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
+import { escapeHtml } from '@/lib/html-escape'
 import { getAioContext, hasMinRole, orgSlugFrom } from '@/lib/aio/access'
 import { ROLE_HIERARCHY } from '@/lib/aio/types'
 import { sendEmail } from '@/lib/email'
@@ -76,7 +77,7 @@ export async function POST(req: NextRequest) {
         <div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 16px 16px;padding:24px">
           <p style="font-weight:700;color:#334155">「${esc(org?.name || '組織')}」のメンバーとして招待されました。</p>
           <p style="color:#64748b">下のボタンからログインして参加してください（リンクの有効期限は48時間）。</p>
-          <a href="${link}" style="display:inline-block;margin-top:12px;background:#7f19e6;color:#fff;font-weight:800;padding:12px 24px;border-radius:9999px;text-decoration:none">招待を受ける</a>
+          <a href="${escapeHtml(link)}" style="display:inline-block;margin-top:12px;background:#7f19e6;color:#fff;font-weight:800;padding:12px 24px;border-radius:9999px;text-decoration:none">招待を受ける</a>
           <p style="color:#94a3b8;font-size:12px;margin-top:16px">${esc(link)}</p>
         </div>
       </div>`,

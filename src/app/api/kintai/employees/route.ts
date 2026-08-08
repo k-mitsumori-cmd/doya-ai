@@ -4,6 +4,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { escapeHtml } from '@/lib/html-escape'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { getKintaiEmployeeLimitByUserPlan } from '@/lib/pricing'
 import { sendEmail } from '@/lib/email'
@@ -162,7 +163,7 @@ export async function POST(req: NextRequest) {
             以下のボタンをクリックして、ドヤ勤怠に参加してください。
           </p>
           <div style="text-align: center; margin-bottom: 24px;">
-            <a href="${inviteUrl}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #7f19e6, #5b0fb3); color: white; text-decoration: none; border-radius: 999px; font-weight: 700; font-size: 16px;">
+            <a href="${escapeHtml(inviteUrl)}" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #7f19e6, #5b0fb3); color: white; text-decoration: none; border-radius: 999px; font-weight: 700; font-size: 16px;">
               組織に参加する
             </a>
           </div>
