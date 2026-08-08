@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
 import { defaultExpiry, nextQuoteNo, recalcDocument } from '@/lib/quote/document'
+import { assertFreeLimit } from '@/lib/plan-limit'
 import type { PriceSource } from '@/lib/quote/types'
 
 export async function GET(req: NextRequest) {
@@ -30,6 +31,13 @@ const VALID_SOURCES: PriceSource[] = ['own_price', 'market', 'competitor', 'manu
 export async function POST(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+
+  // 無料枠の上限（services.ts の「見積書3件まで」を実際に効かせる）
+  const quota = await assertFreeLimit('quoteDocuments', () =>
+    prisma.quoteDocument.count({ where: { organizationId: ctx.organizationId } })
+  )
+  if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 402 })
+
   const body = await req.json().catch(() => ({}))
 
   const title = String(body?.title || '').trim() || 'お見積り'

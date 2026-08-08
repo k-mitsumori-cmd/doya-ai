@@ -7,6 +7,7 @@ export const maxDuration = 300
 import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { assertFreeLimit } from '@/lib/plan-limit'
 import { getMensetsuContext, orgSlugFrom } from '@/lib/mensetsu/access'
 
 /** 推測不能なワンタイムトークン（URLに載るため base64url） */
@@ -45,6 +46,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const ctx = await getMensetsuContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+
+  // 無料枠の上限（services.ts の宣言を実際に効かせる）
+  const quota = await assertFreeLimit('mensetsuSessions', () =>
+    prisma.mensetsuSession.count({ where: { organizationId: ctx.organizationId } })
+  )
+  if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 402 })
 
   const body = await req.json().catch(() => ({}))
   const templateId = String(body?.templateId || '').trim()

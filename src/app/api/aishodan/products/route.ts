@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { getAishodanContext, orgSlugFrom } from '@/lib/aishodan/access'
 import { crawlProductSite, generateProfile, ingestPages } from '@/lib/aishodan/knowledge'
 import { DEFAULT_GUARDRAILS, DEFAULT_ICP, DEFAULT_PERSONA, DEFAULT_PHASES, DEFAULT_SLOTS } from '@/lib/aishodan/defaults'
+import { assertFreeLimit } from '@/lib/plan-limit'
 
 export async function GET(req: NextRequest) {
   const ctx = await getAishodanContext(orgSlugFrom(req))
@@ -28,6 +29,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+
+  // 無料枠の上限（services.ts の「商材1件」を実際に効かせる）
+  // ⚠️ クロール＋LLM生成の前に判定する。後ろに置くと費用だけ発生する。
+  const quota = await assertFreeLimit('aishodanProducts', () =>
+    prisma.aishodanProduct.count({ where: { organizationId: ctx.organizationId } })
+  )
+  if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 402 })
 
   const body = await req.json().catch(() => ({}))
   const rawUrl = String(body?.url || '').trim()

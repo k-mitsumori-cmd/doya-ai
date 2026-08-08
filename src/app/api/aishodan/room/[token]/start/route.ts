@@ -7,6 +7,7 @@ import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { assertRoomUsable, loadRoomByToken, toPublicSession } from '@/lib/aishodan/public'
+import { assertFreeLimit } from '@/lib/plan-limit'
 
 type Ctx = { params: Promise<{ token: string }> | { token: string } }
 
@@ -23,6 +24,27 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   const body = await req.json().catch(() => ({}))
   if (body?.consent !== true) {
     return NextResponse.json({ error: '記録に関する同意が必要です' }, { status: 400 })
+  }
+
+  // 無料枠の上限（services.ts の「商談5件まで」を実際に効かせる）
+  // ⚠️ 判定するのは見込み客ではなく、この部屋を出している契約者のプラン。
+  //    ⚠️ 上限が無いと、公開URLを配った分だけ Realtime の従量課金が青天井になる。
+  const owner = await prisma.aishodanMember.findFirst({
+    where: { organizationId: room.organizationId, status: 'ACTIVE', role: 'owner', userId: { not: null } },
+    select: { userId: true },
+    orderBy: { createdAt: 'asc' },
+  })
+  const quota = await assertFreeLimit(
+    'aishodanSessions',
+    () => prisma.aishodanSession.count({ where: { organizationId: room.organizationId } }),
+    owner?.userId ?? null
+  )
+  if (!quota.ok) {
+    // ⚠️ 見込み客に課金の話を見せない。相手には落ち度がない。
+    return NextResponse.json(
+      { error: '現在この商談ルームはご利用いただけません。お手数ですが担当者までご連絡ください。' },
+      { status: 429 }
+    )
   }
 
   const existingGid = req.cookies.get(GUEST_COOKIE)?.value

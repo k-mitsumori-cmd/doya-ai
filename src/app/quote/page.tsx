@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import MemberPanel from '@/components/org/MemberPanel'
 import { calcTotals, yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource, type ProductProfile, type SuggestedItem } from '@/lib/quote/types'
 
@@ -532,6 +533,11 @@ export default function QuoteDashboard() {
             </button>
           </section>
         )}
+
+        <MemberPanel
+          basePath="/api/quote"
+          description="招待した方は、この組織の商材と見積書を扱えるようになります。"
+        />
 
         {/* --- 見積書一覧 --- */}
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">

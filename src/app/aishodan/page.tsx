@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import MemberPanel from '@/components/org/MemberPanel'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 
 interface Product {
@@ -402,6 +403,11 @@ export default function AishodanDashboard() {
             </div>
           )}
         </section>
+
+        <MemberPanel
+          basePath="/api/aishodan"
+          description="招待した方は、この組織の商材・商談シナリオと商談ログを扱えるようになります。"
+        />
 
         {/* 未回答質問 = ナレッジ拡充の優先順位 */}
         {stats && stats.unanswered.length > 0 && (

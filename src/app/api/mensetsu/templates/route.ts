@@ -6,6 +6,7 @@ export const maxDuration = 300
 // POST /api/mensetsu/templates — 質問セット＋ルーブリックを生成して保存（F3-4）
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { assertFreeLimit } from '@/lib/plan-limit'
 import { getMensetsuContext, orgSlugFrom } from '@/lib/mensetsu/access'
 import { generateTemplate } from '@/lib/mensetsu/template'
 import type { MensetsuLevel } from '@/lib/mensetsu/types'
@@ -29,6 +30,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const ctx = await getMensetsuContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+
+  // 無料枠の上限（services.ts の宣言を実際に効かせる）
+  const quota = await assertFreeLimit('mensetsuTemplates', () =>
+    prisma.mensetsuTemplate.count({ where: { organizationId: ctx.organizationId } })
+  )
+  if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 402 })
 
   const body = await req.json().catch(() => ({}))
   const profileId = String(body?.profileId || '').trim()
