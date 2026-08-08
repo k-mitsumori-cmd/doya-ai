@@ -4105,3 +4105,128 @@ model AishodanOutcome {
 
   @@map("aishodan_outcomes")
 }
+
+// ============================================================
+// ドヤ広告画像AI（adimage）— テキスト込みフルベイク方式
+// 仕様: reference/services/adimage.md
+//
+// ⚠️ userId / guestId(Cookie) スコープ（adbanner 同型。組織スコープではない）
+// ⚠️ Concept（アイデア）と Creative（実寸出力物）を分離しているのが adbanner との最大の差。
+//    1コンセプトから何サイズ書き出しても、改善と課金の単位はコンセプトで数えられる。
+// ============================================================
+
+model AdImageBrand {
+  id          String   @id @default(cuid())
+  userId      String?
+  guestId     String?
+  name        String
+  sourceUrl   String?
+  description String?  @db.Text
+  valueProps  Json?
+  colors      Json?
+  logoPath    String?
+  logoConfig  Json?
+  industry    String?
+  tone        String?
+  ngWords     Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  campaigns AdImageCampaign[]
+
+  @@index([userId, createdAt])
+  @@index([guestId, createdAt])
+  @@map("adimage_brand")
+}
+
+model AdImageCampaign {
+  id         String       @id @default(cuid())
+  brandId    String
+  brand      AdImageBrand @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  userId     String?
+  guestId    String?
+  name       String
+  objective  String?
+  appeal     String?      @db.Text
+  /// 選択した配置キー ["meta.story", ...]
+  placements Json
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  concepts AdImageConcept[]
+
+  @@index([userId, createdAt])
+  @@index([guestId, createdAt])
+  @@map("adimage_campaign")
+}
+
+model AdImageConcept {
+  id             String          @id @default(cuid())
+  campaignId     String
+  campaign       AdImageCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  label          String
+  appealAxis     String
+  tone           String
+  /// { headline, sub, cta } ＝焼き込む文字列。OCR照合の正解データでもある
+  copy           Json
+  compositionKey String
+  /// 生成サイズごとの原本 { "1152x2048": "path" }
+  genPaths       Json
+  /// ⚠️ 完全なプロンプト全文。refine の差分適用の土台になるため必ず保存する
+  visualPrompt   String          @db.Text
+  model          String?
+  generation     Int             @default(1)
+  /// 改善元コンセプト
+  parentId       String?
+  createdAt      DateTime        @default(now())
+
+  creatives AdImageCreative[]
+  feedbacks AdImageFeedback[]
+
+  @@index([campaignId, createdAt])
+  @@map("adimage_concept")
+}
+
+model AdImageCreative {
+  id             String         @id @default(cuid())
+  conceptId      String
+  concept        AdImageConcept @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  placementKey   String
+  /// 目標サイズ "1080x1920"
+  size           String
+  /// 生成サイズ "1152x2048"（縮小のみで書き出したことの記録）
+  genSize        String
+  compositionKey String
+  imagePath      String
+  /// { ocrMatch, extraText, safeAreaOk, retries }
+  verify         Json?
+  /// { textAreaPct, contrast }
+  inspect        Json?
+  createdAt      DateTime       @default(now())
+
+  feedbacks AdImageFeedback[]
+
+  @@index([conceptId])
+  @@index([placementKey])
+  @@map("adimage_creative")
+}
+
+model AdImageFeedback {
+  id         String           @id @default(cuid())
+  conceptId  String
+  concept    AdImageConcept   @relation(fields: [conceptId], references: [id], onDelete: Cascade)
+  creativeId String?
+  creative   AdImageCreative? @relation(fields: [creativeId], references: [id], onDelete: SetNull)
+  /// ai_vision / ai_inspect / user_chip / user_text
+  source     String
+  scores     Json?
+  advice     String?          @db.Text
+  /// ⚠️ 構造化された改善指示。文字列連結だと何を指示したか後から追えない（adbannerの欠陥4）
+  directive  Json?
+  applied    Boolean          @default(false)
+  resultId   String?
+  createdAt  DateTime         @default(now())
+
+  @@index([conceptId, createdAt])
+  @@map("adimage_feedback")
+}

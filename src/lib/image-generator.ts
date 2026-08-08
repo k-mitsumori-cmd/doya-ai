@@ -170,15 +170,41 @@ async function callNanoBananaProPreview(
   })
 }
 
+/**
+ * gpt-image-2 が受け付けるサイズへ正規化する。
+ *
+ * ⚠️ 以前はどんなサイズも 1024x1024 / 1536x1024 / 1024x1536 の3つへ丸めていたが、
+ *    gpt-image-2 は実際には「幅・高さが16の倍数・アスペクト比3:1以内」なら
+ *    任意サイズを受け付ける（2026-08-06 実API検証）。3つに丸めると、
+ *    9:16 のような比率を出したい呼び出し元が後段で切り抜く必要が生まれ、
+ *    焼き込んだ文字が切れる（/adbanner で実際に起きていた）。
+ *
+ *    そこで有効なサイズはそのまま通し、無効なときだけ最も近い有効値へ丸める。
+ *    既存の呼び出し元が渡している3プリセットは全て有効なのでそのまま通過し、
+ *    挙動は変わらない。
+ */
+const GPT_IMAGE_MIN = 512
+const GPT_IMAGE_MAX = 3840
+const GPT_IMAGE_MAX_RATIO = 3
+
 function mapSizeForGptImage2(size: string): GptImageSize {
-  const presets: GptImageSize[] = ['1024x1024', '1024x1536', '1536x1024', 'auto']
-  if ((presets as string[]).includes(size)) return size as GptImageSize
+  if (size === 'auto') return 'auto'
 
   const [wRaw, hRaw] = String(size).split('x').map((v) => Number(v))
-  if (!wRaw || !hRaw) return '1024x1024'
+  if (!Number.isFinite(wRaw) || !Number.isFinite(hRaw) || wRaw <= 0 || hRaw <= 0) return '1024x1024'
 
-  const ratio = wRaw / hRaw
-  if (ratio >= 1.4) return '1536x1024'
-  if (ratio <= 0.7) return '1024x1536'
-  return '1024x1024'
+  // 16の倍数へ丸め、上下限に収める
+  const clamp = (n: number) => Math.min(GPT_IMAGE_MAX, Math.max(GPT_IMAGE_MIN, Math.round(n / 16) * 16))
+  let w = clamp(wRaw)
+  let h = clamp(hRaw)
+
+  // アスペクト比が 3:1 を超えると 400 で拒否される。長辺を詰めて比率を収める。
+  // ⚠️ 短辺を伸ばす方向で合わせると上限3840を超えうるので、長辺側を縮める。
+  if (w / h > GPT_IMAGE_MAX_RATIO) {
+    w = clamp(h * GPT_IMAGE_MAX_RATIO)
+  } else if (h / w > GPT_IMAGE_MAX_RATIO) {
+    h = clamp(w * GPT_IMAGE_MAX_RATIO)
+  }
+
+  return `${w}x${h}` as GptImageSize
 }

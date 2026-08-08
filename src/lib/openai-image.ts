@@ -3,7 +3,7 @@
 // ========================================
 // REST API 直叩き（SDK の typing が gpt-image 系に未対応のため）
 // 参考: https://developers.openai.com/api/docs/models/gpt-image-2
-// メインモデルは gpt-image-2。size=1024x1024/1536x1024/1024x1536, quality=low/medium/high
+// メインモデルは gpt-image-2。size は16の倍数の任意サイズ（3:1以内）, quality=low/medium/high
 // レスポンスは data[0].b64_json（gpt-image-1 と同一形状・実APIで確認済み）。
 // 緊急時は環境変数 OPENAI_IMAGE_MODEL で別モデル(gpt-image-1 等)に切替可能。
 // ========================================
@@ -14,7 +14,11 @@ const OPENAI_IMAGE_ENDPOINT = 'https://api.openai.com/v1/images/generations'
 const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2'
 
 export type GptImageQuality = 'low' | 'medium' | 'high' | 'auto'
-export type GptImageSize = '1024x1024' | '1024x1536' | '1536x1024' | 'auto'
+// gpt-image-2 は3プリセット固定ではなく、幅・高さが16の倍数なら任意サイズを受け付ける
+// （2026-08-06 実API検証。実エラー: "Width and height must both be divisible by 16" /
+//  "The maximum supported aspect ratio is 3:1"）。
+// 有効値への丸めは image-generator.ts:mapSizeForGptImage2() が一元的に担う。
+export type GptImageSize = `${number}x${number}` | 'auto'
 
 export interface GptImageResult {
   b64: string

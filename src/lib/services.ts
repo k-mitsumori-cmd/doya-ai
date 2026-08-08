@@ -1746,6 +1746,52 @@ export const SERVICES: Service[] = [
     isNew: true,
     badge: 'NEW',
   },
+
+  // ----------------------------------------
+  // ドヤ広告画像AI（AdImage）
+  // 仕様: reference/services/adimage.md
+  // ⚠️ 既存 /adbanner（ドヤ広告バナーAI）の次世代版。統合・廃止は別途判断。
+  // ----------------------------------------
+  {
+    id: 'adimage',
+    name: 'ドヤ広告画像AI',
+    shortName: '広告画像',
+    description: 'URLを貼るだけで、媒体・配置ごとにサイズの揃った広告画像が出ます。文字は画像に描き込み済みで、そのまま入稿できます。',
+    longDescription:
+      'サービスURLを入力すると、ブランド情報を読み取ってコピーを作り、Meta・Google・X・LINE・Yahoo! の各配置に合わせた広告画像を一度に制作します。文字は後から重ねるのではなく画像に直接描き込むため、デザインとして一体感があります。出力は目標サイズと同じ比率で生成してから縮小するだけなので、切り抜きによる文字切れが起きません。生成後は指定した文字が正しく描かれたかを自動で検査し、不合格なら作り直します。仕上がりが気に入らないときは、ボタンを押すだけでAIが実際の画像を見て採点し、具体的な改善を反映した次の案を作ります。媒体別に整理したZIPで一括ダウンロードできます。',
+    icon: '🖼️',
+    color: 'lime',
+    gradient: 'from-lime-500 to-green-600',
+    bgGradient: 'from-lime-50 to-green-50',
+    href: '/adimage',
+    dashboardHref: '/adimage',
+    pricingHref: '/adimage',
+    guideHref: '/adimage',
+    features: [
+      'サービスURLからブランド情報とコピーを自動生成',
+      '文字を画像に描き込むフルベイク方式（合成のつぎはぎなし）',
+      '媒体・配置ごとの実寸に切り抜きなしで書き出し',
+      '描かれた文字を自動検査し、不合格なら作り直し',
+      'AIが実際の画像を見て採点・具体的な改善案を提示',
+      'ボタンひとつで改善版を再生成',
+      '媒体別に整理したZIPで一括ダウンロード',
+    ],
+    useCases: [
+      '毎週の広告クリエイティブ差し替えに手が回らない',
+      'デザイナーに頼まず自分で入稿物を揃えたい',
+      '媒体ごとにサイズを作り直すのが面倒',
+    ],
+    pricing: {
+      free: { name: '無料プラン', limit: '1日5コンセプトまで', dailyLimit: 5, price: 0 },
+      pro: { name: 'プロプラン', limit: '1日40コンセプト / 改善無制限 / ZIP一括', dailyLimit: 40, price: 9980 },
+    },
+    status: 'active',
+    category: 'image',
+    order: 31,
+    requiresAuth: false,
+    isNew: true,
+    badge: 'NEW',
+  },
 ]
 
 // ============================================
