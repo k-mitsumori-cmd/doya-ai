@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'AI APIキーが設定されていません' }, { status: 500 })
   }
 
-  const model = 'gemini-2.0-flash'
+  const model = 'gemini-2.5-flash'
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
   try {

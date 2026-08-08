@@ -1101,7 +1101,7 @@ function calculateOverallWebScore(axisScores: Record<string, number>): number {
 async function geminiGenerateJson<T>(prompt: string, maxTokens = 6144): Promise<T> {
   const apiKey = process.env.GOOGLE_GENAI_API_KEY
   if (!apiKey) throw new Error('GOOGLE_GENAI_API_KEY not configured')
-  const models = ['gemini-2.0-flash', 'gemini-1.5-flash']
+  const models = ['gemini-2.5-flash', 'gemini-flash-latest']
   let lastError: Error | null = null
   for (const model of models) {
     try {

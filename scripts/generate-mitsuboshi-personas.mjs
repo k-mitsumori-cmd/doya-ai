@@ -31,7 +31,7 @@ if (!API_KEY) {
   process.exit(1)
 }
 
-const MODEL = process.env.MODEL || 'gemini-2.5-flash-image-preview'
+const MODEL = process.env.MODEL || 'gemini-2.5-flash-image'
 const FORCE = process.env.FORCE === '1' || process.env.FORCE === 'true'
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',').map((s) => s.trim()) : null
 

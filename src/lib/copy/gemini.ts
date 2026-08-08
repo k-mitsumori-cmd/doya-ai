@@ -11,7 +11,7 @@ function getApiKey(): string {
 }
 
 function getFlashModel(): string {
-  return process.env.GEMINI_FLASH_MODEL || 'gemini-2.0-flash'
+  return process.env.GEMINI_FLASH_MODEL || 'gemini-2.5-flash'
 }
 
 async function generateText(prompt: string, temperature = 0.8): Promise<string> {

@@ -1,6 +1,6 @@
 // ============================================
 // ドヤ営業管理（SFA）AI機能（全プラン標準搭載）
-// テキスト生成は @seo/lib/gemini（既定 gemini-2.0-flash、JSONはgeminiGenerateJson）。
+// テキスト生成は @seo/lib/gemini（既定は GEMINI_TEXT_MODEL_DEFAULT、JSONはgeminiGenerateJson）。
 // ============================================
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 

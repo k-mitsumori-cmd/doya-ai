@@ -53,7 +53,7 @@ const KNOWN_ALIASES = ['nano-banana-pro', 'nanobanana-pro', 'nano_banana_pro', '
 const FALLBACK_MODELS = [
   'nano-banana-pro-preview',
   'gemini-3-pro-image-preview',
-  'gemini-2.0-flash-preview-image-generation',
+  'gemini-2.5-flash-image',
 ]
 
 /**

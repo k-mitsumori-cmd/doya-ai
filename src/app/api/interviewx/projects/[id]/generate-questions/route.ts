@@ -131,7 +131,7 @@ ${templateQuestions ? JSON.stringify(templateQuestions, null, 2) : '（テンプ
 
         // ====== Gemini API 呼び出し ======
         const apiKey = getGeminiApiKey()
-        const model = 'gemini-2.0-flash'
+        const model = 'gemini-2.5-flash'
         const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
         const geminiRes = await fetch(endpoint, {

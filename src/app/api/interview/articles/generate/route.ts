@@ -34,7 +34,7 @@ function getModel(): string {
   return (
     process.env.INTERVIEW_GEMINI_MODEL ||
     process.env.GEMINI_TEXT_MODEL ||
-    'gemini-2.0-flash'
+    'gemini-2.5-flash'
   )
 }
 

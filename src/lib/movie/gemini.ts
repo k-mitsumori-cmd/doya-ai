@@ -7,7 +7,7 @@ import { getTemplateById } from './templates'
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? process.env.GOOGLE_GENAI_API_KEY ?? '')
 
-const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
+const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' })
 
 // ---- 商品情報解析 ----
 

@@ -2,7 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-const MODEL = 'gemini-2.0-flash-exp' // Nano Banana Pro (Gemini 2.0 Flash)
+const MODEL = 'gemini-2.5-flash-image' // Nano Banana Pro (Gemini 2.0 Flash)
 
 // ドヤバナーAI branding
 const BRAND_NAME = 'ドヤバナーAI'

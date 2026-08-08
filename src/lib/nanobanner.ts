@@ -20,7 +20,7 @@
 //
 // 【実装】
 // 統一ディスパッチャ: src/lib/image-generator.ts
-// テキスト最適化用 Gemini モデル: gemini-3-pro-preview / gemini-3-flash-preview
+// テキスト最適化用 Gemini モデル: gemini-pro-latest / gemini-3-flash-preview
 //
 // ========================================
 
@@ -245,7 +245,7 @@ function getGeminiTextModel(): string {
 }
 
 // テキスト生成のフォールバックモデル（Gemini 3系を使用）
-const DEFAULT_TEXT_FALLBACKS = ['gemini-3-pro-preview', 'gemini-3-flash-preview'] as const
+const DEFAULT_TEXT_FALLBACKS = ['gemini-pro-latest', 'gemini-3-flash-preview'] as const
 
 // APIキーを取得（複数の環境変数に対応）
 function getApiKey(): string {

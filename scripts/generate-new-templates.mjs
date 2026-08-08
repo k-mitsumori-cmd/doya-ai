@@ -44,7 +44,7 @@ const NEW_TEMPLATE_IDS = [
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 async function generateImage(prompt, apiKey) {
-  const model = 'gemini-2.0-flash-exp'
+  const model = 'gemini-2.5-flash-image'
   const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
   
   const requestBody = {

@@ -78,7 +78,7 @@ ${content.slice(0, 4000)}
 `
 
     const result = await geminiGenerateJson<{ diagrams?: Array<{ title: string; description: string; insertAfterHeading?: string; priority: 'high' | 'medium' | 'low' }> }>({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-pro-latest',
       prompt,
       generationConfig: {
         maxOutputTokens: 4096,

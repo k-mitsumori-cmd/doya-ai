@@ -25,7 +25,7 @@ export async function generateText(prompt: string, userInput: Record<string, str
   }
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-4-turbo-preview',
+    model: 'gpt-4o',
     messages: [
       {
         role: 'system',
@@ -43,16 +43,21 @@ export async function generateText(prompt: string, userInput: Record<string, str
   return response.choices[0]?.message?.content || '';
 }
 
+/**
+ * 画像生成（統一ディスパッチャ経由）
+ *
+ * 以前は dall-e-3 を直接叩いていたが、
+ * (1) dall-e-3 は提供終了（OpenAI APIで404）
+ * (2) 画像生成は必ず generateImageWithFallback を通す規約
+ * の2点により、統一ディスパッチャに委譲する。
+ * 戻り値は data URL（旧実装のホスト済みURLではない）。
+ */
 export async function generateImage(prompt: string): Promise<string> {
-  const openai = getOpenAI();
-  
-  const response = await openai.images.generate({
-    model: 'dall-e-3',
-    prompt: prompt,
-    n: 1,
+  const { generateImageWithFallback } = await import('./image-generator');
+  const result = await generateImageWithFallback({
+    prompt,
     size: '1024x1024',
-    quality: 'standard',
+    quality: 'medium',
   });
-
-  return response.data?.[0]?.url || '';
+  return `data:${result.mimeType};base64,${result.base64}`;
 }

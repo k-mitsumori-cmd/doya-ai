@@ -1,12 +1,12 @@
 // ============================================
-// Gemini 2.0 Flash Text Generation
+// Gemini テキスト生成
 // ============================================
 // カンタンマーケAI用のテキスト生成
 // 参考: https://ai.google.dev/gemini-api/docs/models?hl=ja
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
-// Gemini 2.0 Flash（高速・高品質テキスト生成）
+// テキスト生成モデル（高速・高品質）
 // 参考: https://ai.google.dev/gemini-api/docs/models?hl=ja
 function getPrimaryTextModel(): string {
   return (
@@ -15,14 +15,14 @@ function getPrimaryTextModel(): string {
     process.env.GEMINI_PRO3_MODEL ||
     process.env.GEMINI_PRO_3_MODEL ||
     process.env.GEMINI_TEXT_MODEL ||
-    // 未設定時は Gemini 3 Pro Preview を優先（公式モデルID）
+    // 未設定時は Pro 系の現行エイリアスを優先（モデル廃止に強い）
     // 参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
-    'gemini-3-pro-preview'
+    'gemini-pro-latest'
   )
 }
 
 // フォールバック用モデル
-const GEMINI_FALLBACK_MODEL = 'gemini-1.5-flash'
+const GEMINI_FALLBACK_MODEL = 'gemini-flash-latest'
 
 export interface GeminiTextOptions {
   temperature?: number
@@ -32,7 +32,7 @@ export interface GeminiTextOptions {
 }
 
 /**
- * Gemini 2.0でテキスト生成
+ * Geminiでテキスト生成
  * マーケティング業務に最適化されたシステムプロンプト付き
  */
 export async function generateTextWithGemini(
@@ -85,8 +85,8 @@ export async function generateTextWithGemini(
 - 抽象的な説明ではなく、すぐに使える具体的な文章を提供
 - マーケティングのベストプラクティスに基づいて回答`
 
-  // Gemini 3 Pro Preview → Gemini 3 Flash Preview → 2.0 Flash → 1.5 Flash の順で試す
-  const models = [getPrimaryTextModel(), 'gemini-3-flash-preview', 'gemini-2.0-flash', GEMINI_FALLBACK_MODEL]
+  // Pro(最新) → Gemini 3 Flash Preview → 2.5 Flash → Flash(最新) の順で試す
+  const models = [getPrimaryTextModel(), 'gemini-3-flash-preview', 'gemini-2.5-flash', GEMINI_FALLBACK_MODEL]
   
   for (const model of models) {
     try {

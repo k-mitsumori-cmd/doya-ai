@@ -18,7 +18,7 @@ export async function slashslideGenerateDeck(raw: unknown) {
     process.env.SLIDE_GEMINI_MODEL ||
     process.env.SEO_GEMINI_TEXT_MODEL ||
     GEMINI_TEXT_MODEL_DEFAULT ||
-    'gemini-3-pro-preview'
+    'gemini-pro-latest'
 
   const prompt = buildSlashSlidePrompt(input, theme)
   const deckAny = await geminiGenerateJson<any>(
@@ -78,7 +78,7 @@ export async function generateSlideSpec(input: SlideGenerateRequest): Promise<{ 
     process.env.SLIDE_GEMINI_MODEL ||
     process.env.SEO_GEMINI_TEXT_MODEL ||
     GEMINI_TEXT_MODEL_DEFAULT ||
-    'gemini-3-pro-preview'
+    'gemini-pro-latest'
 
   const prompt = buildSimpleSlidePrompt(input)
   const result = await geminiGenerateJson<{ slides: any[] }>(

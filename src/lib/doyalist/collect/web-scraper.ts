@@ -64,7 +64,7 @@ async function extractWithAI(text: string, url: string): Promise<ScrapedCompanyI
   const GEMINI_API_KEY = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GOOGLE_GENAI_API_KEY
   if (!GEMINI_API_KEY) return null
 
-  const model = 'gemini-2.0-flash'
+  const model = 'gemini-2.5-flash'
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
   const prompt = `以下はWebサイト（${url}）から抽出したテキストです。この企業の情報を構造化してJSON形式で抽出してください。

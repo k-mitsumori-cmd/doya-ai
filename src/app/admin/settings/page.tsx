@@ -9,8 +9,8 @@ export default function AdminSettingsPage() {
   const [settings, setSettings] = useState({
     // API設定
     openaiApiKey: '••••••••••••••••••••••••••••••',
-    openaiModel: 'gpt-4-turbo-preview',
-    dalleModel: 'dall-e-3',
+    openaiModel: 'gpt-4o',
+    dalleModel: 'gpt-image-2',
 
     // 制限設定
     freeDailyLimit: 5,
@@ -108,9 +108,9 @@ export default function AdminSettingsPage() {
                   onChange={(e) => setSettings({ ...settings, openaiModel: e.target.value })}
                   className="input-field"
                 >
-                  <option value="gpt-4-turbo-preview">GPT-4 Turbo (推奨)</option>
-                  <option value="gpt-4">GPT-4</option>
-                  <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                  <option value="gpt-4o">GPT-4o (推奨)</option>
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                  <option value="gemini-pro-latest">Gemini Pro (最新)</option>
                 </select>
               </div>
               <div>
@@ -120,8 +120,8 @@ export default function AdminSettingsPage() {
                   onChange={(e) => setSettings({ ...settings, dalleModel: e.target.value })}
                   className="input-field"
                 >
-                  <option value="dall-e-3">DALL-E 3 (推奨)</option>
-                  <option value="dall-e-2">DALL-E 2</option>
+                  <option value="gpt-image-2">gpt-image-2 (推奨)</option>
+                  <option value="nano-banana-pro-preview">nano-banana-pro-preview</option>
                 </select>
               </div>
             </div>

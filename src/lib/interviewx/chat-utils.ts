@@ -23,7 +23,7 @@ export async function callGeminiJson(
   contents: { role: string; parts: { text: string }[] }[],
 ): Promise<string> {
   const apiKey = getGeminiApiKey()
-  const model = 'gemini-2.0-flash'
+  const model = 'gemini-2.5-flash'
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
   const controller = new AbortController()

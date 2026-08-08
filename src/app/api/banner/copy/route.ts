@@ -104,7 +104,7 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
   // Gemini 3系のみ使用（Gemini 2.5以下は使用しない）
   // 参照: https://ai.google.dev/gemini-api/docs/gemini-3?hl=ja
   // gemini-3-flash-preview は無料枠あり
-  const models = [getPrimaryTextModel(), 'gemini-3-pro-preview', 'gemini-3-flash-preview', GEMINI_FALLBACK_MODEL]
+  const models = [getPrimaryTextModel(), 'gemini-pro-latest', 'gemini-3-flash-preview', GEMINI_FALLBACK_MODEL]
     .filter((v, i, a) => a.indexOf(v) === i) // 重複除去
   let lastError: string | null = null
 

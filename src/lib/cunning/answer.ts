@@ -2,7 +2,7 @@
 // ドヤカンニング 回答生成
 // ============================================
 // 質問 + コンテキスト（商談=ナレッジ / 面接=企業×応募者）→ 要点＋話すスクリプト。
-// 低レイテンシ優先で gemini-2.0-flash、失敗時は gpt-4o にフォールバック。
+// 低レイテンシ優先で Gemini(GEMINI_TEXT_MODEL_DEFAULT)、失敗時は gpt-4o にフォールバック。
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { withTimeout, raceTimeout } from '@/lib/fetch-timeout'
 import { getMode } from './modes'

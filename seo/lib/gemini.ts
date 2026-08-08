@@ -265,9 +265,8 @@ function isNanoBananaFamily(modelId: string): boolean {
     lower === 'nano-banana'
   const isGeminiImageModel =
     lower === 'gemini-3-pro-image-preview' ||
-    lower === 'gemini-2.5-flash-image' ||
-    lower === 'gemini-2.5-flash-preview-image' ||
-    lower === 'gemini-2.0-flash-exp'
+    lower === 'gemini-3-pro-image' ||
+    lower === 'gemini-2.5-flash-image'
   return lower.includes('banana') || lower.includes('image') || isAlias || isGeminiImageModel
 }
 
@@ -429,11 +428,11 @@ function closeIncompleteJson(input: string): string {
 }
 
 // 空のテキストやエラー時のフォールバックモデル（順番に試行）
-// NOTE: gemini-2.0-flash は 2026-03-31 廃止予定のため最後に配置
+// NOTE: モデルIDはGoogle側で予告なく廃止される。追加・変更時は必ず実APIで生存確認すること
 const FALLBACK_MODELS: string[] = [
   'gemini-2.5-flash',
-  'gemini-2.5-pro',
-  'gemini-2.0-flash',
+  'gemini-pro-latest',
+  'gemini-2.5-flash',
 ]
 
 // レート制限(429)やサーバーエラー(5xx)時にリトライ

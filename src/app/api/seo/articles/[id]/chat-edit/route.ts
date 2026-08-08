@@ -131,7 +131,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const model =
       process.env.SEO_GEMINI_TEXT_MODEL_CHAT ||
       process.env.SEO_GEMINI_TEXT_MODEL ||
-      'gemini-3-pro-preview'
+      'gemini-pro-latest'
 
     const out = await geminiGenerateJson<{ proposedMarkdown: string; summary: string }>(
       {

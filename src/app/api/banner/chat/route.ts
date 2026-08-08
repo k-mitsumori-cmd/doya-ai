@@ -8,8 +8,8 @@ const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 /**
  * テキスト生成モデルの優先順位
- * - gemini-2.0-flash が安定かつ高速
- * - gemini-1.5-flash はレガシーだが確実に存在
+ * - gemini-2.5-flash が安定かつ高速
+ * - gemini-flash-latest は常に現行のFlash系を指すエイリアス
  */
 function getTextModels(): string[] {
   const envModel =
@@ -17,7 +17,7 @@ function getTextModels(): string[] {
     process.env.GEMINI_PRO3_MODEL ||
     process.env.GEMINI_TEXT_MODEL ||
     null
-  const defaults = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro']
+  const defaults = ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-pro-latest']
   return envModel ? [envModel, ...defaults] : defaults
 }
 

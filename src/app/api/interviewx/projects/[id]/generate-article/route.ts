@@ -137,7 +137,7 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
           process.env.GEMINI_API_KEY
         if (!apiKey) throw new Error('Gemini APIキーが設定されていません')
 
-        const model = 'gemini-2.0-flash'
+        const model = 'gemini-2.5-flash'
         const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?key=${apiKey.trim()}&alt=sse`
 
         const geminiRes = await fetch(geminiUrl, {

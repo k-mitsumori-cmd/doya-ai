@@ -67,7 +67,7 @@ vercel ls doya-ai --scope=surisutas-projects
 | CSS | Tailwind CSS |
 | アニメーション | Framer Motion |
 | 状態管理 | Zustand |
-| AI (テキスト) | Google Gemini API (gemini-2.0-flash) |
+| AI (テキスト) | Google Gemini API (既定 `gemini-2.5-flash` / Pro系は `gemini-pro-latest`) |
 | AI (画像メイン) | OpenAI gpt-image-2 (ChatGPT Images 2.0) |
 | AI (画像フォールバック) | nano-banana-pro-preview (Gemini 3 Pro Image Preview) |
 | AI (テキスト fallback) | OpenAI (gpt-4o) |
@@ -142,6 +142,21 @@ const result = await generateImageWithFallback({
 })
 // result: { base64, mimeType, model, fallbackUsed, primaryError? }
 ```
+
+### ⚠️ AIモデルIDは腐る（必ず実APIで生存確認する）
+
+Google は Gemini のモデルIDを**予告なく廃止**する。廃止済みIDを呼ぶと 404 `This model ... is no longer available` になり、該当サービスが静かに全滅する（2026-08にコード全体で30箇所以上が該当していた実績あり）。
+
+- モデルIDを追加・変更したら、**必ず実APIで生存確認してからコミットする**
+  ```bash
+  curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/<MODEL>:generateContent" \
+    -H "x-goog-api-key: $GOOGLE_GENAI_API_KEY" -H 'Content-Type: application/json' \
+    -d '{"contents":[{"role":"user","parts":[{"text":"hi"}]}]}'
+  ```
+- 一覧取得: `GET https://generativelanguage.googleapis.com/v1beta/models`（**一覧に載っていても廃止済みの場合がある**ので実呼び出しで確認する）
+- 廃止に強いのは **エイリアス**（`gemini-flash-latest` / `gemini-pro-latest`）。フォールバック鎖の末尾には必ずエイリアスを置く
+- 2026-08 時点で廃止済み: `gemini-2.0-flash` / `gemini-2.0-flash-exp` / `gemini-1.5-*` / `gemini-2.5-pro` / `gemini-3-pro-preview` / `gpt-4-turbo-preview` / `dall-e-3`
+- **APIキーの制限**: Google は 2026-06-19 から「制限なしAPIキー」での Gemini 利用を停止した。キーは Gemini 用に制限されたもの（`AQ.` 形式）を使う
 
 ### テキスト生成（Gemini）
 ```typescript

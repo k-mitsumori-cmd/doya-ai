@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     // 2. Gemini分析
     const apiKey = getGeminiApiKey()
-    const model = 'gemini-2.0-flash'
+    const model = 'gemini-2.5-flash'
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
     const prompt = buildUrlAnalysisPrompt(scraped.content)

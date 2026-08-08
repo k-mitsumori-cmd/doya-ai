@@ -5,8 +5,8 @@ import prisma from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { v4 as uuidv4 } from 'uuid'
 
-// カード生成（質問生成）専用のモデル（gemini-2.0-flashを使用）
-const CARD_GENERATION_MODEL = 'gemini-2.0-flash'
+// カード生成（質問生成）専用のモデル
+const CARD_GENERATION_MODEL = 'gemini-2.5-flash'
 
 /**
  * テスト用スワイプセッション開始API
@@ -202,13 +202,13 @@ JSONのみを出力してください。`
 JSONのみを出力してください。必ず8問すべてを生成してください。`
 
     // 質問生成（エラー時はエラーを返す）
-    // カード生成専用のモデル（gemini-2.0-flash）を使用
+    // カード生成専用のモデルを使用
     let questionData: any
     let aiGenerationError: string | null = null
     
     try {
     const aiResponse = await geminiGenerateText({
-        model: CARD_GENERATION_MODEL, // カード生成はgemini-2.0-flashを使用
+        model: CARD_GENERATION_MODEL, // カード生成は専用モデルを使用
       parts: [{ text: prompt }],
       generationConfig: {
           maxOutputTokens: 1000, // 8問生成するため増やす

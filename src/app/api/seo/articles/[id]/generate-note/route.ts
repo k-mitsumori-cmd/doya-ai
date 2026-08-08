@@ -119,7 +119,7 @@ export async function POST(
 
     // Geminiで生成
     const noteMarkdown = await geminiGenerateText({
-      model: 'gemini-3-pro-preview',
+      model: 'gemini-pro-latest',
       parts: [{ text: prompt }],
       generationConfig: {
         maxOutputTokens: 16000,

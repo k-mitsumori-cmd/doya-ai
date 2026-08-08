@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     }
 
     const apiKey = getGeminiApiKey()
-    const model = process.env.INTERVIEW_GEMINI_MODEL || process.env.GEMINI_TEXT_MODEL || 'gemini-2.0-flash'
+    const model = process.env.INTERVIEW_GEMINI_MODEL || process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash'
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
     const systemPrompt = 'あなたはプロの編集者です。以下の記事に対して、ユーザーの修正指示に従って修正を行ってください。修正した記事全文をMarkdown形式で出力してください。元の記事の構成やトーンはできるだけ維持し、指示された部分のみを修正してください。'

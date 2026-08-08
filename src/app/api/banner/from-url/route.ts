@@ -190,7 +190,7 @@ function coerceJson(text: string): any {
 }
 
 async function callGeminiForJson(prompt: string, apiKey: string): Promise<any> {
-  const models = ['gemini-3-pro-preview', 'gemini-3-flash-preview']
+  const models = ['gemini-pro-latest', 'gemini-3-flash-preview']
   let lastErr: string | null = null
 
   for (const model of models) {

@@ -7,7 +7,7 @@
 import { withTimeout } from '@/lib/fetch-timeout'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-const VISION_MODEL = process.env.DOYA_VISION_MODEL || 'gemini-2.0-flash'
+const VISION_MODEL = process.env.DOYA_VISION_MODEL || 'gemini-2.5-flash'
 
 /** 現在のスライド画像＋修正指示 → gpt-image-2 用の英語プロンプト（忠実再現＋指示反映） */
 export async function reviseSlidePrompt(params: {

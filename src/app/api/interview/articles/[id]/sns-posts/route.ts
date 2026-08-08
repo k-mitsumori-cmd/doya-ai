@@ -28,7 +28,7 @@ function getGeminiApiKey(): string {
 }
 
 function getModel(): string {
-  return process.env.INTERVIEW_GEMINI_MODEL || process.env.GEMINI_TEXT_MODEL || 'gemini-2.0-flash'
+  return process.env.INTERVIEW_GEMINI_MODEL || process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash'
 }
 
 const PLATFORM_SPECS: Record<string, { name: string; maxLength: number; guide: string }> = {
