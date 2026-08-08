@@ -110,9 +110,9 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
               //    「話し終わった」と判定されないようにしている。
               turn_detection: {
                 type: 'server_vad',
-                threshold: 0.68,
+                threshold: 0.78,
                 prefix_padding_ms: 300,
-                silence_duration_ms: 1000,
+                silence_duration_ms: 1100,
                 create_response: true,
                 interrupt_response: true,
               },

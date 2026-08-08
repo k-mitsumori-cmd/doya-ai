@@ -108,9 +108,9 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
               //    AIの発話が止まり、そのたびに最初から言い直す挙動を防ぐため。
               turn_detection: {
                 type: 'server_vad',
-                threshold: 0.68,
+                threshold: 0.78,
                 prefix_padding_ms: 300,
-                silence_duration_ms: 1000,
+                silence_duration_ms: 1100,
                 create_response: true,
                 interrupt_response: true,
               },

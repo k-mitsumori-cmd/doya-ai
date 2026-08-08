@@ -14,6 +14,7 @@
 //    洗い出した挙動（イベント名の世代交代・ログの取りこぼし・離脱時の誤終了・
 //    発話順序の反転）をそのまま引き継いでいる。コメントの警告は消さないこと。
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { isLikelyHallucination } from '@/lib/realtime/hallucination'
 
 export interface TranscriptLine {
   speaker: 'ai' | 'guest'
@@ -42,6 +43,10 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
   const [durationMin, setDurationMin] = useState(15)
   // 画面に出す進行状況。/advance の戻り値で更新する
   const [phaseName, setPhaseName] = useState<string | null>(null)
+  /** 画面の大パネルに出し続けるAIの最新発話。
+   *  ⚠️ 「直近の1発話」で出すと、相手が話した瞬間にAIの発言が消えて
+   *     プレースホルダに戻る（実機で確認）。AI発話だけを別に保持する。 */
+  const [lastAiText, setLastAiText] = useState<string | null>(null)
   const [remainingRequired, setRemainingRequired] = useState<string[]>([])
 
   const pcRef = useRef<RTCPeerConnection | null>(null)
@@ -112,6 +117,10 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
   const pushLine = useCallback((speaker: TranscriptLine['speaker'], text: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
+    // ⚠️ 無音・雑音に対する文字起こしの捏造を捨てる。
+    //    採用すると商談ログ・スロット抽出・適合判定のすべてが汚染され、
+    //    AIがその幻の発言に反応してターンを浪費する（実機で発生）。
+    if (isLikelyHallucination(trimmed, speaker)) return
     // 同じ発話が別イベント経由で二度届くことがある（保険経路との重複）。
     // ⚠️ 件数で判定すると「はい」「なるほど」のような短い相槌が2回目以降まるごと
     //    消える。重複は必ず数百ms以内に届くので、5秒の時間窓に限定する。
@@ -125,6 +134,7 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
     speechStartRef.current[speaker] = 0
     const line: TranscriptLine = { speaker, text: trimmed, at: startedAt }
     setLines((prev) => [...prev, line])
+    if (speaker === 'ai') setLastAiText(trimmed)
     pendingRef.current.push(line)
   }, [])
 
@@ -522,7 +532,7 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
 
   return {
     state, error, lines, level, speaking, listening,
-    elapsedSec, durationMin, phaseName, remainingRequired,
+    elapsedSec, durationMin, phaseName, remainingRequired, lastAiText,
     start, end, sendText, setMicEnabled,
     micAvailable: Boolean(micRef.current),
   }

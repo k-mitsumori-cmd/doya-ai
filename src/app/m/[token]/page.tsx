@@ -135,6 +135,23 @@ export default function AishodanRoomPage() {
     })
   }, [rt])
 
+  /**
+   * テキスト入力を開いたらマイクを自動で切る。
+   * ⚠️ 文字で話す人はマイクを使わないのに音は拾われ続け、
+   *    無音・雑音に対する文字起こしの捏造が商談ログに混ざる（実機で発生）。
+   *    閉じたときにマイクを戻すことはしない。勝手に音を拾い始める方が驚かせる。
+   */
+  const toggleText = useCallback(() => {
+    setShowText((v) => {
+      const next = !v
+      if (next && micOn) {
+        rt.setMicEnabled(false)
+        setMicOn(false)
+      }
+      return next
+    })
+  }, [micOn, rt])
+
   // ---------------- 画面 ----------------
 
   if (step === 'loading') {
@@ -382,7 +399,9 @@ export default function AishodanRoomPage() {
 
               <div className="rounded-2xl border border-[#dfe6f3] border-l-[6px] border-l-[#0066ff] bg-white p-5 shadow-sm lg:p-8">
                 <p className="text-base font-black leading-[1.75] tracking-tight text-[#0a0f3c] lg:text-2xl">
-                  {lastLine?.speaker === 'ai' ? lastLine.text : 'まもなく商談を始めます。'}
+                  {/* ⚠️ 「直近の1発話」で出すと、相手が話した瞬間にAIの発言が消えて
+                       プレースホルダに戻る（実機で確認）。AIの最新発話を保持して出す。 */}
+                  {rt.lastAiText || 'まもなく商談を始めます。'}
                 </p>
               </div>
 
@@ -425,7 +444,7 @@ export default function AishodanRoomPage() {
 
       <footer className="flex shrink-0 items-start justify-center gap-3 border-t border-[#dfe6f3] bg-white px-3 py-3 lg:gap-4">
         <RoundButton onClick={toggleMic} icon={micOn ? 'mic' : 'mic_off'} label={micOn ? 'ミュート' : '解除'} tone={micOn ? 'default' : 'danger'} />
-        <RoundButton onClick={() => setShowText((v) => !v)} icon="keyboard" label="テキスト" tone={showText ? 'active' : 'default'} />
+        <RoundButton onClick={toggleText} icon="keyboard" label="テキスト" tone={showText ? 'active' : 'default'} />
         <RoundButton onClick={() => setSheet(sheet === 'log' ? null : 'log')} icon="forum" label="会話ログ" tone={sheet === 'log' ? 'active' : 'default'} />
         <RoundButton onClick={() => void rt.end()} icon="logout" label="終了" tone="danger" />
       </footer>

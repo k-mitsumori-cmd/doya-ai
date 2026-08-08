@@ -10,6 +10,7 @@
 // なぜ直結か: Vercel Serverless は WebSocket を長時間保持できない。
 // 音声をサーバ中継する構成は成立しないため、ブラウザから直接つなぐ。
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { isLikelyHallucination } from '@/lib/realtime/hallucination'
 
 export interface TranscriptLine {
   speaker: 'interviewer' | 'candidate'
@@ -116,6 +117,10 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
   const pushLine = useCallback((speaker: TranscriptLine['speaker'], text: string) => {
     const trimmed = text.trim()
     if (!trimmed) return
+    // ⚠️ 無音・雑音に対する文字起こしの捏造を捨てる。
+    //    残すと逐語ログが汚れるだけでなく、応募者が言っていないことを
+    //    根拠に採点されうる。
+    if (isLikelyHallucination(trimmed, speaker)) return
     // 同じ発話が別イベント経由で二度届くことがある（保険経路との重複）。
     // ⚠️ 直近20件で判定すると「はい」「そうですね」のような短い定型回答が
     //    2回目以降まるごと消え、無回答として不利に採点されてしまう。
