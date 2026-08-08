@@ -328,3 +328,52 @@ import { z } from 'zod'
 | Stripe apiVersion 型エラー | 型定義と不一致 | `apiVersion: '2023-10-16'` に統一 |
 | doya-ai/ を編集したのに本番に反映されない | Vercel は 09_Cursol/ をデプロイ | `09_Cursol/src/` を編集すること |
 | ゲストで機能が動かない | session チェックで早期 return | ゲスト許可の場合は session チェックを外す |
+
+---
+
+## PDF生成（puppeteer + @sparticuz/chromium）の必須設定
+
+⚠️ **PDF生成ルートを追加したら `next.config.js` の2箇所に必ず追記すること。**
+忘れると**そのルートだけ本番で必ず500になる**。ローカルでは再現しない。
+
+```js
+experimental: {
+  // (1) バンドルしない。webpackが取り込むと __dirname が書き換わり、
+  //     brotliファイルの参照先にビルド時ディレクトリ(/vercel/path0/...)が焼き込まれる
+  serverComponentsExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
+  // (2) バイナリを関数バンドルへ同梱する。実行時に展開されるため
+  //     Next.js の tracing が自動では検出できない
+  outputFileTracingIncludes: {
+    '/api/…/pdf': ['./node_modules/@sparticuz/chromium/bin/**'],
+  },
+}
+```
+
+**症状**: `The input directory "/vercel/path0/node_modules/@sparticuz/chromium/bin" does not exist. Please provide the location of the brotli files.`
+
+**なぜ気づきにくいか**: ローカルには `node_modules` がそのまま見えるため完全に動く。
+2026-08-08 に見積もりAIで発覚するまで、**面接官・広告バナー・adsim のPDFも全て壊れていた**
+（誰も本番でPDFを出していなかった）。**PDFは必ず本番で実際に出して確認すること。**
+
+**確認方法**: `npx next build` 後に
+`.next/server/app/api/…/pdf/route.js.nft.json` の files に `chromium/bin` が4件入っていること。
+
+---
+
+## Realtime（音声）を使うときの必須対策
+
+⚠️ **Whisper系は無音・雑音に対して文章を捏造する。** 動画字幕由来の定型句
+（「ご視聴ありがとうございました」「チャンネル登録お願いします」）が典型。
+
+2026-08-09 の実機テスト（AI商談）で、捏造発話がログに混入し、
+**AIがその幻の発言に反応してターンを消費し、同じ確認を3回繰り返して商談が前に進まなくなった。**
+
+対策は3層必要（1つでは足りない）:
+
+1. `src/lib/realtime/hallucination.ts:isLikelyHallucination()` で定型句を捨てる
+   - ⚠️ これは**ログ・評価にしか効かない**。AIが音声に反応すること自体は
+     OpenAI側で判定されるため止められない
+   - ⚠️ 「はい」等の単独の肯定は弾かないこと。捏造として最多だが正当な返答でもあり、
+     捨てると「答えたのに記録されない」というより重い事故になる
+2. VADのしきい値を上げる（`threshold: 0.78` / `silence_duration_ms: 1100`）
+3. テキスト入力に切り替えたらマイクを自動で切る
