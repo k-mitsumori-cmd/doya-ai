@@ -6,6 +6,7 @@ export const maxDuration = 300
 // ⚠️ 改善指示は文字列連結ではなく、構造化された RefineDirective を
 //    プロンプトの「修正指示」セクションへ差分適用する。
 //    どの指示が効いたかを世代間で追えるようにするため、適用元のfeedbackに resultId を残す。
+import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { assertQuota, getIdentity, ownerWhere } from '@/lib/adimage/access'
@@ -70,7 +71,12 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
 
   const placementKeys = concept.creatives.map((c) => c.placementKey)
   const groups = groupByGenSize(placementKeys)
-  const pathPrefix = `${identity.userId || identity.guestId}/${concept.campaignId}/g${concept.generation + 1}`
+  // ⚠️ 世代番号だけでパスを決めると、同じ親コンセプトから2回改善したときに
+  //    パスが衝突し、uploadPng(upsert:true) が**先に作った画像を上書きする**。
+  //    先の世代のレコードはそのパスを指したままなので、画像だけが黙って差し替わる。
+  //    世代ごとに一意な接尾辞を付けて、過去の世代を不変にする。
+  const runId = randomBytes(4).toString('hex')
+  const pathPrefix = `${identity.userId || identity.guestId}/${concept.campaignId}/g${concept.generation + 1}_${runId}`
   const extraDirectives = directivesToPromptLines(directives)
 
   const genPaths: Record<string, string> = {}

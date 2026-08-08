@@ -196,6 +196,7 @@ export async function suggestItems(input: SuggestInput): Promise<SuggestedItem[]
       let unitPrice = Number.isFinite(Number(i.unitPrice)) ? Math.max(0, Math.round(Number(i.unitPrice))) : null
       let rangeMin = Number.isFinite(Number(i.rangeMin)) ? Math.round(Number(i.rangeMin)) : null
       let rangeMax = Number.isFinite(Number(i.rangeMax)) ? Math.round(Number(i.rangeMax)) : null
+      let sourceRef = String(i.sourceRef || '').slice(0, 300)
 
       // --- 生成後の安全網 ---
       // プロンプトで禁じても、モデルは「空欄で出す」より「それらしい数字を埋める」方へ倒れる。
@@ -208,6 +209,7 @@ export async function suggestItems(input: SuggestInput): Promise<SuggestedItem[]
           priceSource = 'unknown'
           unitPrice = null
           rangeMin = rangeMax = null
+          sourceRef = '相場データに該当がないため要見積'
         } else {
           rangeMin = m.min
           rangeMax = m.max
@@ -215,9 +217,23 @@ export async function suggestItems(input: SuggestInput): Promise<SuggestedItem[]
             // 相場から大きく外れた数字は採用せず、範囲の中央値に寄せる
             unitPrice = Math.round((m.min + m.max) / 2)
           }
+          // ⚠️ 根拠の文言は、実際に採用した相場エントリから作り直す。
+          //    モデルが書いた根拠をそのまま残すと、引き当てた相場と別のものを
+          //    引用してしまい（例: 根拠は「LLMO 15〜50万」なのに表示範囲は「コンサル 20〜100万」）、
+          //    画面上で根拠と数字が食い違う。見積書では致命的。
+          sourceRef = `相場: ${m.itemName} ${m.min.toLocaleString()}〜${m.max.toLocaleString()}円/${m.unit}（出典: ${m.source}）`
         }
       }
       if (priceSource === 'unknown') unitPrice = null
+
+      // ⚠️ 相場以外の行に範囲を残さない。モデルは range に 0 を入れてくるため、
+      //    そのままだと画面に「相場 ¥0〜¥0」と表示される。
+      if (priceSource !== 'market' || !rangeMin || !rangeMax) {
+        rangeMin = priceSource === 'market' ? rangeMin : null
+        rangeMax = priceSource === 'market' ? rangeMax : null
+      }
+      if (rangeMin != null && rangeMin <= 0) rangeMin = null
+      if (rangeMax != null && rangeMax <= 0) rangeMax = null
 
       return {
         itemName: String(i.itemName).slice(0, 120),
@@ -227,7 +243,7 @@ export async function suggestItems(input: SuggestInput): Promise<SuggestedItem[]
         unitPrice,
         taxRate: Number(i.taxRate) === 8 ? 8 : 10,
         priceSource,
-        sourceRef: String(i.sourceRef || '').slice(0, 300),
+        sourceRef,
         rangeMin,
         rangeMax,
       }

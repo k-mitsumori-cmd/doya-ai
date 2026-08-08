@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { yen } from '@/lib/quote/money'
+import { calcTotals, yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource, type ProductProfile, type SuggestedItem } from '@/lib/quote/types'
 
 interface Product {
@@ -190,10 +190,12 @@ export default function QuoteDashboard() {
   }
 
   // 「要見積」の行は合計から除く（0円として足すと総額を誤らせる）
-  const subtotal = items
-    .filter((i) => i.priceSource !== 'unknown' && (i.unitPrice ?? 0) > 0)
-    .reduce((n, i) => n + i.qty * (i.unitPrice ?? 0), 0)
-  const tax = Math.floor((subtotal * 10) / 100)
+  // ⚠️ 税額は必ず calcTotals に通す。ここで 10% 固定で計算すると、
+  //    軽減税率の行が混ざったときに画面の合計とPDFの合計がずれる。
+  const billable = items.filter((i) => i.priceSource !== 'unknown' && (i.unitPrice ?? 0) > 0)
+  const totals = calcTotals(billable.map((i) => ({ qty: i.qty, unitPrice: i.unitPrice ?? 0, taxRate: i.taxRate })))
+  const subtotal = totals.totalExclTax
+  const tax = totals.taxAmount
 
   async function createDocument() {
     if (items.length === 0) return
@@ -494,7 +496,7 @@ export default function QuoteDashboard() {
                 <span>税抜合計</span><span className="font-medium text-slate-900">{yen(subtotal)}</span>
               </div>
               <div className="mt-1 flex items-center justify-between text-sm text-slate-600">
-                <span>消費税（10%）</span><span className="font-medium text-slate-900">{yen(tax)}</span>
+                <span>消費税</span><span className="font-medium text-slate-900">{yen(tax)}</span>
               </div>
               <div className="mt-2 flex items-baseline justify-between border-t border-slate-200 pt-2">
                 <span className="text-sm font-semibold text-slate-900">合計（税込）</span>
