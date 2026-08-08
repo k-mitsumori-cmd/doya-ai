@@ -5,7 +5,7 @@
 >
 > 実装メモ:
 > - 文字起こしは「数秒チャンクをOpenAI音声APIにPOST」する near-realtime 方式（Vercel ServerlessはWS長時間保持不可のため。Google STT streaming直結はPhase 2）。
-> - 回答生成は gemini-2.0-flash 優先 / gpt-4o フォールバック（SSEではなくJSON応答。ストリーミングはPhase 2）。
+> - 回答生成は gemini-2.5-flash 優先 / gpt-4o フォールバック（SSEではなくJSON応答。ストリーミングはPhase 2）。
 > - RAGは pgvector 未導入のため字句バイグラム類似検索（MVP）。embeddingsはPhase 2。
 > - ライブ画面は共有タブの映像を表示し、最新回答を映像下にカンペ表示（テレプロンプター風）。
 > - 本番DBの cunning_* テーブルは手動DDLで作成済み（Vercelはdb pushをスキップするため）。
@@ -64,7 +64,7 @@
 
 - 相手の発話（質問）を検出 → **質問判定** → 回答を即時生成しオーバーレイ表示
 - **質問検出**: finalセグメントに対し軽量判定（疑問符・疑問表現・依頼表現のヒューリスティック＋LLM分類）。雑談・相づちはスキップ
-- **回答生成モデル**: `gemini-2.0-flash`（低レイテンシ優先、`@seo/lib/gemini` の `geminiGenerateText` ラッパー経由）。フォールバック `gpt-4o`（`src/lib/openai.ts`）
+- **回答生成モデル**: `gemini-2.5-flash`（低レイテンシ優先、`@seo/lib/gemini` の `geminiGenerateText` ラッパー経由）。フォールバック `gpt-4o`（`src/lib/openai.ts`）
 - **出力形式**:
   - **要点（一言回答）**: 3秒で読める短文（最優先表示）
   - **詳細（話すスクリプト）**: そのまま読み上げられる2〜4文
@@ -121,7 +121,7 @@
    │    └─ interim/final セグメント
    ├─ 質問検出（ヒューリスティック + 軽量LLM分類）
    ├─ コンテキスト取得（RAG: ナレッジ検索 / 企業情報）
-   ├─ 回答生成（gemini-2.0-flash, ストリーミング / fallback gpt-4o）
+   ├─ 回答生成（gemini-2.5-flash, ストリーミング / fallback gpt-4o）
    └─ WebSocket/SSE で回答を逐次クライアントへ配信
                  │
 [ブラウザ オーバーレイUI]

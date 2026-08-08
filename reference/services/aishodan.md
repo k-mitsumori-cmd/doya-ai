@@ -162,7 +162,7 @@
    - 出力は `{ speech, displayText, showAsset?, nextPhase?, endSession? }` の構造化JSON
 6. 生成文をTTS → アバター発話（Phase 2以降）
 
-- **モデル**: 低レイテンシ必須のため `gemini-2.0-flash`（`@seo/lib/gemini` ラッパー経由）優先 / `gpt-4o` フォールバック。要約・フィット判定はレイテンシ不要のため上位モデル可
+- **モデル**: 低レイテンシ必須のため `gemini-2.5-flash`（`@seo/lib/gemini` ラッパー経由）優先 / `gpt-4o` フォールバック。要約・フィット判定はレイテンシ不要のため上位モデル可
 - **割り込み対応**: ゲストが話し始めたらAI発話を停止（barge-in）
 - **沈黙対応**: N秒無言でAIから促し。M回続けば終了処理
 

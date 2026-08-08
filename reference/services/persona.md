@@ -30,7 +30,7 @@
 
 | メソッド | パス | 説明 | AIモデル |
 |---------|------|------|---------|
-| POST | `/api/persona/generate` | ペルソナ + クリエイティブ + チェックリスト | gemini-2.0-flash → 1.5-flash (fallback) |
+| POST | `/api/persona/generate` | ペルソナ + クリエイティブ + チェックリスト | gemini-2.5-flash → gemini-flash-latest (fallback) |
 | POST | `/api/persona/portrait` | ポートレート画像生成 | gemini-3-pro-image-preview |
 | POST | `/api/persona/banner` | バナー画像生成 | gemini-3-pro-image-preview |
 | POST | `/api/persona/scene` | シーン画像生成 + スケジュール・日記 | gemini-3-pro-image-preview |

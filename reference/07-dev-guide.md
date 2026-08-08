@@ -127,7 +127,7 @@ export async function GET(
 
 ```typescript
 const apiKey = process.env.GOOGLE_GENAI_API_KEY
-const model = 'gemini-2.0-flash'
+const model = 'gemini-2.5-flash'
 const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
 
 const res = await fetch(endpoint, {

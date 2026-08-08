@@ -22,7 +22,7 @@
 | `OPENAI_API_KEY` | OpenAI API キー (fallback) | - |
 | `ASSEMBLYAI_API_KEY` | AssemblyAI キー (文字起こし) | - |
 | `DOYA_BANNER_IMAGE_MODEL` | バナー画像生成モデル | `gemini-3-pro-image-preview` |
-| `SEO_GEMINI_TEXT_MODEL` | SEOテキスト生成モデル | `gemini-2.0-flash` |
+| `SEO_GEMINI_TEXT_MODEL` | SEOテキスト生成モデル | `gemini-2.5-flash` |
 | `SEO_GEMINI_TEXT_MODEL_TITLE_SUGGESTIONS` | タイトル提案モデル | (SEO_GEMINI_TEXT_MODEL) |
 
 ## Supabase / ストレージ

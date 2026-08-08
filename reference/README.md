@@ -26,7 +26,7 @@
 - **DB**: Prisma ORM + PostgreSQL (Supabase)
 - **認証**: NextAuth.js (Google OAuth)
 - **UI**: Tailwind CSS + Framer Motion + Zustand
-- **AI (テキスト)**: Google Gemini (gemini-2.0-flash) / fallback: OpenAI gpt-4o
+- **AI (テキスト)**: Google Gemini (gemini-2.5-flash) / fallback: OpenAI gpt-4o
 - **AI (画像)**: gpt-image-2 (メイン) / nano-banana-pro-preview (フォールバック) — 必ず `src/lib/image-generator.ts` 経由
 - **文字起こし**: AssemblyAI (universal-2)
 - **決済**: Stripe

@@ -119,7 +119,7 @@
 
 ### 3.7 AI機能（全プラン標準搭載 — 最大の差別化）
 
-> テキスト生成は `@seo/lib/gemini` の `geminiGenerateText` / `geminiGenerateJson`（既定 `gemini-2.0-flash`、fallback `gpt-4o`）。画像生成は不要。
+> テキスト生成は `@seo/lib/gemini` の `geminiGenerateText` / `geminiGenerateJson`（既定 `gemini-2.5-flash`、fallback `gpt-4o`）。画像生成は不要。
 
 | 機能 | 内容 | 入力 | 連携元 |
 |------|------|------|--------|
@@ -328,7 +328,7 @@ src/lib/sfa/        access.ts / access-client.ts / types.ts / constants.ts /
 | パフォーマンス | 一覧はページング（既定50, 最大200）。カンバンはステージ別に遅延ロード |
 | データ移行 | CSVインポート（取引先/リード/商談）・エクスポート（BOM付きCSV/Excel） |
 | 監査 | 重要操作（ステージ変更・受注/失注・削除）は `updatedBy`/タイムスタンプ記録。削除は論理削除（`isActive`/`deletedAt`） |
-| AIコスト | スコアリングはバッチ＋キャッシュ。リアルタイム生成は `gemini-2.0-flash` 優先 |
+| AIコスト | スコアリングはバッチ＋キャッシュ。リアルタイム生成は `gemini-2.5-flash` 優先 |
 | 可用性 | Gemini障害時は `gpt-4o` フォールバック |
 
 ---

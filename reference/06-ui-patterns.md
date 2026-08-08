@@ -2630,7 +2630,7 @@ Error: Page not found
 │   メンテナンスメッセージ: [                      ]         │
 │                                                           │
 │ ■ AI モデル設定                                            │
-│   テキスト生成: [gemini-2.0-flash    ▼]                   │
+│   テキスト生成: [gemini-2.5-flash    ▼]                   │
 │   画像生成:     [gpt-image-2         ▼]                   │
 │   画像FB:      [nano-banana-pro-preview ▼]                │
 │                                                           │

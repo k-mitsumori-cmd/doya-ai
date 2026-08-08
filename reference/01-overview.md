@@ -17,7 +17,7 @@
 | CSS | Tailwind CSS | 3.x |
 | アニメーション | Framer Motion | 10.x |
 | 状態管理 | Zustand | 4.4+ |
-| AI (テキスト) | Google Gemini API 直接呼出 | gemini-2.0-flash / 1.5-flash |
+| AI (テキスト) | Google Gemini API 直接呼出 | gemini-2.5-flash / gemini-flash-latest |
 | AI (画像) | Google Gemini 3 Pro Image Preview | gemini-3-pro-image-preview |
 | AI (fallback) | OpenAI API | gpt-4o |
 | 文字起こし | AssemblyAI | universal-2 |
