@@ -3840,3 +3840,268 @@ model QuoteLineItem {
   @@index([documentId, ord])
   @@map("quote_line_items")
 }
+
+// ============================================================
+// ドヤAI商談（aishodan）— アバターが自律的に一次商談を進行する
+// 仕様: reference/services/aishodan.md
+// ⚠️ 既存の shodan（商談"準備"＝事前調査）とは別サービス。混同注意。
+//
+// 音声は mensetsu と同じく **ブラウザ↔OpenAI Realtime を WebRTC で直結**する。
+// （仕様書 F6 の「チャンクSTT＋Google TTS」から変更。mensetsu で実証済みで、
+//   レイテンシとバージインの両方が構造的に優れるため）
+// ============================================================
+
+model AishodanOrganization {
+  id            String   @id @default(cuid())
+  name          String
+  slug          String   @unique
+  /// 商談ログの保持日数
+  retentionDays Int      @default(180)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  members  AishodanMember[]
+  products AishodanProduct[]
+  rooms    AishodanRoom[]
+  sessions AishodanSession[]
+
+  @@map("aishodan_organizations")
+}
+
+model AishodanMember {
+  id             String               @id @default(cuid())
+  organizationId String
+  organization   AishodanOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  role           String               @default("member")
+  status         String               @default("ACTIVE")
+  name           String?
+  inviteEmail    String?
+  inviteToken    String?              @unique
+  acceptedAt     DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("aishodan_members")
+}
+
+/// 売る対象。ここに紐づくナレッジが回答の根拠になる。
+model AishodanProduct {
+  id             String               @id @default(cuid())
+  organizationId String
+  organization   AishodanOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  sourceUrl      String?
+  /// 一言説明・提供価値・ICP・料金・FAQ・話してはいけないこと
+  profile        Json?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  sources   AishodanSource[]
+  chunks    AishodanChunk[]
+  scenarios AishodanScenario[]
+
+  @@index([organizationId])
+  @@map("aishodan_products")
+}
+
+model AishodanSource {
+  id        String          @id @default(cuid())
+  productId String
+  product   AishodanProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// url / manual
+  type      String          @default("url")
+  url       String?
+  title     String?
+  rawText   String          @db.Text
+  createdAt DateTime        @default(now())
+
+  chunks AishodanChunk[]
+
+  @@index([productId])
+  @@map("aishodan_sources")
+}
+
+/// RAGチャンク。MVPは字句バイグラム類似で検索する（pgvector不要・日本語に強い・低レイテンシ）
+model AishodanChunk {
+  id        String          @id @default(cuid())
+  productId String
+  product   AishodanProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sourceId  String
+  source    AishodanSource  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  ord       Int
+  text      String          @db.Text
+  createdAt DateTime        @default(now())
+
+  @@index([productId])
+  @@index([sourceId, ord])
+  @@map("aishodan_chunks")
+}
+
+/// 商談の進め方。フェーズ・ヒアリング項目・ICP・ガードレール。
+model AishodanScenario {
+  id          String          @id @default(cuid())
+  productId   String
+  product     AishodanProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name        String
+  /// [{ key, name, goal, exitCondition, maxTurns }]
+  phases      Json
+  /// [{ key, label, type, required, questionHint }]
+  slots       Json
+  /// { conditions: [{ key, label, weight, match }] }
+  icp         Json
+  /// { pricePolicy, competitorPolicy, prohibitedTopics[], noEvidenceBehavior }
+  guardrails  Json
+  /// { tone, firstPerson, maxCharsPerUtterance }
+  persona     Json?
+  durationMin Int             @default(15)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  rooms AishodanRoom[]
+
+  @@index([productId])
+  @@map("aishodan_scenarios")
+}
+
+/// 公開URLの発行単位。見込み客はこのトークンで入る。
+model AishodanRoom {
+  id             String               @id @default(cuid())
+  organizationId String
+  organization   AishodanOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  scenarioId     String
+  scenario       AishodanScenario     @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  name           String
+  token          String               @unique
+  /// 空なら無期限
+  expiresAt      DateTime?
+  isActive       Boolean              @default(true)
+  /// この部屋で開始できる商談の総数。乱用を止める最後の砦
+  maxSessions    Int                  @default(500)
+  sessionCount   Int                  @default(0)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  sessions AishodanSession[]
+
+  @@index([organizationId])
+  @@map("aishodan_rooms")
+}
+
+model AishodanSession {
+  id             String               @id @default(cuid())
+  organizationId String
+  organization   AishodanOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  roomId         String
+  room           AishodanRoom         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  /// 未ログインの見込み客を識別するCookie値
+  guestId      String
+  guestName    String?
+  guestCompany String?
+  guestEmail   String?
+
+  /// pending / live / completed / evaluated / aborted / expired
+  status       String    @default("pending")
+  /// 現在のフェーズのキー
+  currentPhase String    @default("opening")
+  consentedAt  DateTime?
+  startedAt    DateTime?
+  endedAt      DateTime?
+
+  /// ⚠️ Realtime の ephemeral token 発行回数。未認証で叩ける口なので上限を持つ
+  tokenIssueCount Int @default(0)
+
+  referrer String?
+  utm      Json?
+
+  purgeAfter DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  turns      AishodanTurn[]
+  slotValues AishodanSlotValue[]
+  questions  AishodanQuestion[]
+  outcome    AishodanOutcome?
+
+  @@index([organizationId, status])
+  @@index([roomId])
+  @@index([guestId])
+  @@map("aishodan_sessions")
+}
+
+model AishodanTurn {
+  id        String          @id @default(cuid())
+  sessionId String
+  session   AishodanSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  ord       Int
+  /// ai / guest
+  speaker   String
+  text      String          @db.Text
+  phase     String?
+  /// 発話の開始時刻（ms）。⚠️ 終了時刻で並べると長い発話が後ろにずれる（mensetsuで踏んだ）
+  startMs   Int             @default(0)
+  createdAt DateTime        @default(now())
+
+  questions AishodanQuestion[]
+
+  @@index([sessionId, ord])
+  @@map("aishodan_turns")
+}
+
+/// 見込み客からの質問。根拠が無くて答えられなかったものはFAQ拡充のネタになる。
+model AishodanQuestion {
+  id            String          @id @default(cuid())
+  sessionId     String
+  session       AishodanSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  turnId        String?
+  turn          AishodanTurn?   @relation(fields: [turnId], references: [id], onDelete: SetNull)
+  text          String          @db.Text
+  answerText    String?         @db.Text
+  citedChunkIds String[]        @default([])
+  /// ⚠️ 根拠が無いのに答えを作らせない。答えられなかったことを記録する側に倒す
+  unanswered    Boolean         @default(false)
+  createdAt     DateTime        @default(now())
+
+  @@index([sessionId])
+  @@map("aishodan_questions")
+}
+
+model AishodanSlotValue {
+  id           String          @id @default(cuid())
+  sessionId    String
+  session      AishodanSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  key          String
+  value        String          @db.Text
+  confidence   Float           @default(0.5)
+  sourceTurnId String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@unique([sessionId, key])
+  @@index([sessionId])
+  @@map("aishodan_slot_values")
+}
+
+model AishodanOutcome {
+  id           String          @id @default(cuid())
+  sessionId    String          @unique
+  session      AishodanSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  /// 0-100。⚠️ 参考値であり、最終判断は人が行う
+  fitScore     Int
+  /// hot / warm / cold / unfit
+  verdict      String
+  reason       String          @db.Text
+  summary      Json?
+  nextAction   String?         @db.Text
+  /// 人が上書きしたら記録する（上書きは改善の材料になる）
+  overriddenBy String?
+  overriddenAt DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@map("aishodan_outcomes")
+}

@@ -1700,6 +1700,52 @@ export const SERVICES: Service[] = [
     isNew: true,
     badge: 'NEW',
   },
+
+  // ----------------------------------------
+  // ドヤAI商談（Aishodan）
+  // 仕様: reference/services/aishodan.md
+  // ⚠️ 既存の shodan（ドヤ商談準備＝商談"前"の企業調査）とは別サービス。
+  // ----------------------------------------
+  {
+    id: 'aishodan',
+    name: 'ドヤAI商談',
+    shortName: 'AI商談',
+    description: 'AIが一次商談を代行。サービスURLを入れて発行したURLを開いてもらうだけで、24時間いつでも商談が始まります。',
+    longDescription:
+      '自社サービスのURLを入力すると、サイトを読み取って商材ナレッジと商談シナリオを自動で用意します。発行された商談URLを見込み客が開くと、AIが会社説明・課題のヒアリング・質疑応答・次アクションの提案までを一次商談として進行します。相手の質問には取り込んだ資料を根拠に回答し、根拠が無いことは推測せず「確認して折り返す」と伝えます。商談後は全文ログ・ヒアリング結果・答えられなかった質問・理想顧客像との適合度が残り、次に誰を追うべきかが判断できます。営業担当が同席する必要はなく、スマートフォンからでも商談できます。',
+    icon: '🤝',
+    color: 'blue',
+    gradient: 'from-blue-600 to-cyan-600',
+    bgGradient: 'from-blue-50 to-cyan-50',
+    href: '/aishodan',
+    dashboardHref: '/aishodan',
+    pricingHref: '/aishodan',
+    guideHref: '/aishodan',
+    features: [
+      'サービスURLから商材ナレッジとシナリオを自動生成',
+      'AIアバターが音声で一次商談を進行',
+      '質問には資料を根拠に回答（根拠が無ければ推測しない）',
+      'ヒアリング項目を構造化して自動記録',
+      '理想顧客像との適合度と判定理由',
+      '全文ログと要約、答えられなかった質問の蓄積',
+      'スマートフォン対応・ログイン不要で参加可能',
+    ],
+    useCases: [
+      '問い合わせへの一次対応が追いつかず取りこぼしている',
+      'トップ営業に商談が属人化している',
+      '初回商談の説明品質を揃えたい',
+    ],
+    pricing: {
+      free: { name: '無料プラン', limit: '商材1件 / 商談5件まで', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: '商談無制限 / ログ・適合判定 / チーム招待', dailyLimit: -1, price: 9980 },
+    },
+    status: 'active',
+    category: 'other',
+    order: 30,
+    requiresAuth: true,
+    isNew: true,
+    badge: 'NEW',
+  },
 ]
 
 // ============================================
