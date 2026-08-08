@@ -39,6 +39,29 @@ const nextConfig = {
   // App Router の `page_client-reference-manifest.js` 等が欠落し、実行時に 500 になり得る。
   // そのため tracing は有効（デフォルト）で運用する。
   // （過去に collect-build-traces のスタックオーバーフローが出た場合は Next.js の更新で対応する）
+
+  experimental: {
+    // ------------------------------------------------------------------
+    // PDF生成ルートに Chromium のバイナリを同梱する
+    // ------------------------------------------------------------------
+    // ⚠️ @sparticuz/chromium は実行時に node_modules/@sparticuz/chromium/bin の
+    //    brotli ファイル（chromium.br / fonts.tar.br 等）を展開して使う。
+    //    これは静的 import ではないため Next.js の tracing が検出できず、
+    //    Vercel の関数バンドルから落ちる。結果、本番でだけ
+    //      The input directory ".../@sparticuz/chromium/bin" does not exist.
+    //    が出て PDF が生成できない（2026-08-08 に実機で確認）。
+    //    ⚠️ ローカルでは node_modules がそのまま見えるため再現しない。
+    //       PDF は必ず本番で実際に出して確認すること。
+    //
+    // ⚠️ PDF生成ルートを追加したら、ここにも必ず足すこと。足し忘れると
+    //    そのルートだけ本番で 500 になる。
+    outputFileTracingIncludes: {
+      '/api/quote/documents/[id]/pdf': ['./node_modules/@sparticuz/chromium/bin/**'],
+      '/api/mensetsu/sessions/[id]/pdf': ['./node_modules/@sparticuz/chromium/bin/**'],
+      '/api/adsim/projects/[projectId]/export': ['./node_modules/@sparticuz/chromium/bin/**'],
+      '/api/banner/from-url': ['./node_modules/@sparticuz/chromium/bin/**'],
+    },
+  },
   images: {
     remotePatterns: [
       {
