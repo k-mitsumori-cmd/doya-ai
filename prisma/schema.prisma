@@ -3686,3 +3686,157 @@ model MensetsuAnswerSample {
   @@index([organizationId, criterionKey])
   @@map("mensetsu_answer_samples")
 }
+
+// ============================================================
+// ドヤ見積もりAI（quote）— URL→品目候補＋相場→見積書→PDF
+// 仕様: reference/services/quote.md
+// 組織スコープ型（mensetsu / sfa / aio と同型）
+// ============================================================
+
+model QuoteOrganization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members   QuoteMember[]
+  issuer    QuoteIssuer?
+  products  QuoteProduct[]
+  documents QuoteDocument[]
+
+  @@map("quote_organizations")
+}
+
+model QuoteMember {
+  id             String            @id @default(cuid())
+  organizationId String
+  organization   QuoteOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  role           String            @default("member") // owner / admin / manager / member
+  status         String            @default("ACTIVE")
+  name           String?
+  inviteEmail    String?
+  inviteToken    String?           @unique
+  acceptedAt     DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("quote_members")
+}
+
+/// 見積書に印字する発行者情報。角印やインボイス番号もここ。
+model QuoteIssuer {
+  id             String            @id @default(cuid())
+  organizationId String            @unique
+  organization   QuoteOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  companyName    String
+  postalCode     String?
+  address        String?
+  tel            String?
+  personName     String?
+  /// 適格請求書発行事業者の登録番号（T+13桁）。見積書は適格請求書ではないが記載が一般的
+  invoiceNo      String?
+  logoPath       String?
+  sealPath       String?
+  /// 既定の支払条件・納期・備考
+  paymentTerms   String?           @db.Text
+  deliveryTerms  String?           @db.Text
+  notes          String?           @db.Text
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@map("quote_issuers")
+}
+
+/// 売る対象。URLや資料から理解した内容を持つ。
+model QuoteProduct {
+  id             String            @id @default(cuid())
+  organizationId String
+  organization   QuoteOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  sourceUrl      String?
+  /// 提供形態・課金軸・想定顧客・公開価格など
+  profile        Json?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  documents QuoteDocument[]
+
+  @@index([organizationId])
+  @@map("quote_products")
+}
+
+model QuoteDocument {
+  id             String            @id @default(cuid())
+  organizationId String
+  organization   QuoteOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  productId      String?
+  product        QuoteProduct?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  /// 見積書番号（自動採番）
+  quoteNo       String
+  title         String
+  clientCompany String?
+  clientDept    String?
+  clientPerson  String?
+  issueDate     DateTime @default(now())
+  expiryDate    DateTime
+  paymentTerms  String?  @db.Text
+  deliveryTerms String?  @db.Text
+  notes         String?  @db.Text
+
+  /// 値引き（rate=率 / amount=額）
+  discountType  String?
+  discountValue Int     @default(0)
+
+  /// draft / confirmed / sent
+  /// ⚠️ AIが出した金額をそのまま客先に出させないため、確定は人の明示操作にする
+  status      String    @default("draft")
+  confirmedBy String?
+  confirmedAt DateTime?
+  sentAt      DateTime?
+
+  /// 金額は整数（円）で保持する。浮動小数だと丸め誤差が実害になる
+  totalExclTax Int @default(0)
+  taxAmount    Int @default(0)
+  totalInclTax Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lineItems QuoteLineItem[]
+
+  @@unique([organizationId, quoteNo])
+  @@index([organizationId, status])
+  @@map("quote_documents")
+}
+
+model QuoteLineItem {
+  id          String        @id @default(cuid())
+  documentId  String
+  document    QuoteDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  ord         Int
+  itemName    String
+  spec        String?       @db.Text
+  qty         Int           @default(1)
+  unit        String        @default("式")
+  /// 単価（円・整数）
+  unitPrice   Int           @default(0)
+  /// 税率（10 / 8）
+  taxRate     Int           @default(10)
+  /// 金額の出所。own_price / market / competitor / manual / unknown
+  /// ⚠️ 根拠のない金額を出さないための記録。unknown は「要見積」として空欄表示する
+  priceSource String        @default("manual")
+  sourceRef   String?       @db.Text
+  /// 相場の下限・上限（参考表示用）
+  rangeMin    Int?
+  rangeMax    Int?
+  createdAt   DateTime      @default(now())
+
+  @@index([documentId, ord])
+  @@map("quote_line_items")
+}

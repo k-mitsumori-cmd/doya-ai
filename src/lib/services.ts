@@ -1655,6 +1655,51 @@ export const SERVICES: Service[] = [
     isNew: true,
     badge: 'NEW',
   },
+
+  // ----------------------------------------
+  // ドヤ見積もりAI（Quote）
+  // 仕様: reference/services/quote.md
+  // ----------------------------------------
+  {
+    id: 'quote',
+    name: 'ドヤ見積もりAI',
+    shortName: '見積もり',
+    description: 'サービスURLを入れるだけで、相場つきの見積もり品目が並びます。商談中に編集してその場でPDF。',
+    longDescription:
+      '自社のサービスURLを入力すると、提供形態と課金の軸を読み取り、見積書に載せる品目の候補を相場つきで提示します。金額は「自社サイトの公開価格 → 相場データ → 根拠なし（要見積）」の優先順位で決まり、どこから来た数字かが1件ずつ画面に表示されます。根拠のない金額をAIが作ることはありません。品目の追加・単価の調整・値引きはその場で編集でき、確定した見積書は日本語対応のPDFとして即座に出力できます。商談の途中で「概算いくら？」と聞かれてから、答えを紙にして渡すまでが数分で終わります。',
+    icon: '🧾',
+    color: 'emerald',
+    gradient: 'from-emerald-600 to-teal-600',
+    bgGradient: 'from-emerald-50 to-teal-50',
+    href: '/quote',
+    dashboardHref: '/quote',
+    pricingHref: '/quote',
+    guideHref: '/quote',
+    features: [
+      'サービスURLから商材と課金軸を自動解析',
+      '見積もり品目の候補を相場つきで提示',
+      '金額の出所（自社価格 / 相場 / 要見積）を1件ずつ表示',
+      '商談中にその場で品目・単価・値引きを編集',
+      '日本語対応の見積書PDFを即時出力',
+      '複数税率に対応した区分計算',
+      'チームで見積書を共有・確定フロー',
+    ],
+    useCases: [
+      '商談中に「概算いくら？」と聞かれてすぐ答えたい',
+      '担当者ごとに見積もりの金額感がバラつくのをなくしたい',
+      '見積書の作成に毎回半日かけているのをやめたい',
+    ],
+    pricing: {
+      free: { name: '無料プラン', limit: '見積書3件まで', dailyLimit: -1, price: 0 },
+      pro: { name: 'プロプラン', limit: '見積書無制限 / PDF出力 / チーム共有', dailyLimit: -1, price: 9980 },
+    },
+    status: 'active',
+    category: 'other',
+    order: 29,
+    requiresAuth: true,
+    isNew: true,
+    badge: 'NEW',
+  },
 ]
 
 // ============================================
