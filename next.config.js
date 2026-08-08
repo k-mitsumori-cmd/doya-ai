@@ -42,6 +42,17 @@ const nextConfig = {
 
   experimental: {
     // ------------------------------------------------------------------
+    // Chromium 系はバンドルせず、実体のあるパッケージとして残す
+    // ------------------------------------------------------------------
+    // ⚠️ webpack がこの2つをバンドルすると __dirname が書き換わり、
+    //    @sparticuz/chromium が brotli ファイルを探すパスにビルド時の
+    //    ディレクトリ（/vercel/path0/...）が焼き込まれる。
+    //    実行時にはそのパスは存在しないため、下の
+    //    outputFileTracingIncludes でファイルを同梱しても解決しない。
+    //    （2026-08-08: includes だけ入れた状態でも本番で同じエラーが出た）
+    serverComponentsExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
+
+    // ------------------------------------------------------------------
     // PDF生成ルートに Chromium のバイナリを同梱する
     // ------------------------------------------------------------------
     // ⚠️ @sparticuz/chromium は実行時に node_modules/@sparticuz/chromium/bin の
