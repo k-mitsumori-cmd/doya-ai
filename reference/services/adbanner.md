@@ -1,3 +1,7 @@
+> **⚠️ 提供終了（2026-08-10）。ドヤ広告画像AI（`/adimage`）へ統合しました。**
+> `/adbanner/*` は `/adimage` へ 308 リダイレクトされます。
+> 本書は経緯の記録として残しています。仕様の正本は `adimage.md` です。
+
 # ドヤ広告バナーAI
 
 > 自動マーケティング広告バナーデザインAIツール。広告に特化したバナーを量産し、AIフィードバックと
@@ -283,3 +287,34 @@ nano-banana は gpt-image-2 がAPI障害で完全に落ちた時の最終フォ�
 | 日付 | 内容 |
 |------|------|
 | 2026-06-13 | 初版作成。要件定義（Phase1=量産生成+AI自動フィードバック / Phase2=数値改善ループ）。serviceId=adbanner 確定。未実装 |
+
+
+---
+
+## 統合の記録（2026-08-10）
+
+ドヤ広告画像AI（`/adimage`）へ統合し、提供を終了した。
+
+**実施内容**
+1. adimage に**ロゴ合成を移植**（`src/lib/adimage/logo.ts`）。
+   これが adbanner にあって adimage に無かった唯一の機能だったため、
+   統合の前提として先に埋めた。
+2. `next.config.js` に 308 リダイレクト（`/adbanner` と `/adbanner/:path*` → `/adimage`）
+3. `services.ts` の `HIDDEN_SERVICE_IDS` に追加（**SERVICES 定義は残置**）
+4. sitemap から除外、`seo.ts` の別表記・SEO定義を adimage へ移管
+   （「ドヤ広告バナーAI」の指名検索の受け皿を新サービスへ寄せた）
+5. `scripts/migrate-adbanner-to-adimage.ts` でデータ移行（冪等・2回流して確認）
+   - ⚠️ `guestId` のみのデータは移行していない（Cookieが一致せず本人が到達できないため）
+
+**残してあるもの（ロールバック可能）**
+- `adbanner_campaign` / `adbanner_creative` テーブルと**全データ**
+- `src/app/adbanner/` `src/app/api/adbanner/` `src/lib/adbanner/` のコード
+- `services.ts` の SERVICES エントリ
+
+戻す場合は `HIDDEN_SERVICE_IDS` から `'adbanner'` を外し、
+`next.config.js` のリダイレクトを削除すればよい。
+
+**本番での確認（2026-08-10）**
+- `/adbanner` `/adbanner/dashboard` `/adbanner/pricing` `/adbanner/dashboard/new`
+  すべて 308 → `/adimage`
+- トップページのサービスカード・sitemap・llms.txt から消え、adimage が載っている
