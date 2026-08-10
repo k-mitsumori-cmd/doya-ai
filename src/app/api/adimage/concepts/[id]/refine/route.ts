@@ -12,8 +12,9 @@ import { prisma } from '@/lib/prisma'
 import { assertQuota, getIdentity, ownerWhere } from '@/lib/adimage/access'
 import { directivesToPromptLines, REFINE_CHIPS } from '@/lib/adimage/feedback'
 import { exportToSize, generateBaked } from '@/lib/adimage/generate'
+import { DEFAULT_LOGO_CONFIG, type LogoConfig } from '@/lib/adimage/logo'
 import { findPlacement, groupByGenSize } from '@/lib/adimage/placements'
-import { signedUrl } from '@/lib/adimage/storage'
+import { downloadBuffer, signedUrl } from '@/lib/adimage/storage'
 import type { AdCopy, BrandProfile, RefineDirective } from '@/lib/adimage/types'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
@@ -70,6 +71,13 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   const copy = concept.copy as unknown as AdCopy
 
   const placementKeys = concept.creatives.map((c) => c.placementKey)
+  // ロゴ（登録されていれば書き出し時に合成する）
+  // ⚠️ 読み込みに失敗しても生成は続ける。ロゴが入らないことより画像が出ない方が困る。
+  const logoBuf = brandRow.logoPath ? await downloadBuffer(brandRow.logoPath).catch(() => null) : null
+  const logo = logoBuf
+    ? { buffer: logoBuf, config: ((brandRow.logoConfig as LogoConfig | null) ?? DEFAULT_LOGO_CONFIG) }
+    : null
+
   const groups = groupByGenSize(placementKeys)
   // ⚠️ 世代番号だけでパスを決めると、同じ親コンセプトから2回改善したときに
   //    パスが衝突し、uploadPng(upsert:true) が**先に作った画像を上書きする**。
@@ -100,7 +108,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
         model = result.model
       }
       for (const pl of group.placements) {
-        const { imagePath } = await exportToSize(result.buffer, pl, pathPrefix)
+        const { imagePath } = await exportToSize(result.buffer, pl, pathPrefix, logo)
         creativeRows.push({
           placementKey: pl.key,
           size: `${pl.w}x${pl.h}`,

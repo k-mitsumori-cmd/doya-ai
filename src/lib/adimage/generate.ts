@@ -15,6 +15,7 @@ import { generateImageWithFallback } from '@/lib/image-generator'
 import { buildImagePrompt } from './prompt'
 import { isAcceptable, retryHint, verifyCreative } from './verify'
 import { uploadPng } from './storage'
+import { overlayLogo, type LogoConfig } from './logo'
 import type { CompositionKey, Placement } from './placements'
 import type { AdCopy, BrandProfile, VerifyResult } from './types'
 
@@ -118,12 +119,19 @@ export async function generateBaked(input: GenerateInput): Promise<GenerateResul
 export async function exportToSize(
   genBuffer: Buffer,
   placement: Placement,
-  pathPrefix: string
+  pathPrefix: string,
+  /** ロゴを載せる場合のみ渡す。⚠️ ロゴは唯一「合成」を維持する要素（lib/adimage/logo.ts） */
+  logo?: { buffer: Buffer; config: LogoConfig } | null
 ): Promise<{ imagePath: string; textAreaPct: number | null }> {
-  const out = await sharp(genBuffer)
+  let out = await sharp(genBuffer)
     .resize(placement.w, placement.h, { fit: 'fill' })
     .png()
     .toBuffer()
+
+  // ⚠️ 縮小したあとに載せる。生成サイズで載せてから縮めるとロゴまで縮んで潰れる。
+  if (logo) {
+    out = await overlayLogo(out, logo.buffer, placement.w, placement.h, logo.config)
+  }
 
   const imagePath = `${pathPrefix}/${placement.key.replace(/\./g, '_')}_${placement.w}x${placement.h}.png`
   await uploadPng(imagePath, out)

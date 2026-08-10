@@ -45,7 +45,7 @@ const SERVICE_LOGO: Record<string, string> = {
   sfa: '/sfa/logo.png',
   shodan: '/shodan/logo.png',
   aio: '/aio/logo.png',
-  adbanner: '/adbanner/logo.png',
+  adimage: '/adimage/logo.png',
 }
 
 // ロゴが無いサービス用フォールバック（色タイル + Lucide シンボル）
@@ -72,7 +72,7 @@ const SERVICE_ICON_MAP: Record<string, ServiceMapping> = {
   sfa:       { icon: BarChart3,   iconBg: 'from-green-500 to-lime-600',    hoverBg: 'hover:bg-green-50' },
   shodan:    { icon: Target,      iconBg: 'from-purple-600 to-fuchsia-600', hoverBg: 'hover:bg-purple-50' },
   aio:       { icon: Eye,         iconBg: 'from-purple-600 to-fuchsia-600', hoverBg: 'hover:bg-purple-50' },
-  adbanner:  { icon: Megaphone,   iconBg: 'from-purple-500 to-orange-500',  hoverBg: 'hover:bg-orange-50' },
+  adimage:   { icon: Megaphone,   iconBg: 'from-lime-500 to-green-600',     hoverBg: 'hover:bg-lime-50' },
 }
 
 const FALLBACK_MAPPING: ServiceMapping = {

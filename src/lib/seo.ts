@@ -64,7 +64,12 @@ export const SERVICE_ALIASES: Record<string, string[]> = {
   sfa: ['ドヤ営業管理AI', 'ドヤSFA', 'ドヤ営業', 'Doya SFA'],
   shodan: ['ドヤ商談準備AI', 'ドヤ商談', 'Doya Shodan'],
   aio: ['ドヤAIO AI', 'ドヤ エーアイオー', 'ドヤAEO', 'Doya AIO'],
-  adbanner: ['ドヤ広告バナー', 'ドヤ広告バナーエーアイ', 'Doya Ad Banner AI'],
+  // ⚠️ 旧「ドヤ広告バナーAI」(/adbanner) は /adimage へ統合した（2026-08-10）。
+  //    指名検索の受け皿を新サービスへ寄せるため、旧名の別表記もここへ集約する。
+  adimage: [
+    'ドヤ広告画像', 'ドヤ広告画像エーアイ', 'Doya Ad Image AI',
+    'ドヤ広告バナー', 'ドヤ広告バナーAI', 'ドヤ広告バナーエーアイ', 'Doya Ad Banner AI',
+  ],
 }
 
 export function getServiceAliases(serviceId: string): string[] {
@@ -85,12 +90,13 @@ export const SERVICE_SEO = {
     ogImage: '/og/portal.png',
   },
   
-  // ドヤ広告バナーAI（広告バナーを量産して改善）
-  adbanner: {
-    title: 'ドヤ広告バナーAI | 広告バナーを量産して改善',
+  // ドヤ広告画像AI（媒体別サイズの広告画像を一括制作）
+  // ⚠️ 旧「ドヤ広告バナーAI」(/adbanner) の後継。SEO資産はこちらへ移した（2026-08-10）。
+  adimage: {
+    title: 'ドヤ広告画像AI | 媒体別サイズの広告画像をURLから一括制作',
     description:
-      'サービスURLやブランドカラー・ロゴから、媒体別の広告バナーを一括量産。AIが視認性・訴求・CTA・媒体適合・ブランド整合を自動採点し、改善提案を反映してワンクリック再生成できます。',
-    keywords: ['広告バナー', 'バナー作成', '広告クリエイティブ', 'Meta広告', 'Google広告', 'LINE広告', 'AI バナー', '量産'],
+      'サービスURLを入れるだけで、Meta・Google・X・LINE・Yahoo! の各配置に合わせた広告画像を一括制作。文字は画像に描き込むので、そのまま入稿できます。AIが実際の画像を見て採点し、ボタンひとつで改善版を作ります。',
+    keywords: ['広告画像', '広告バナー', 'バナー作成', '広告クリエイティブ', 'Meta広告', 'Google広告', 'LINE広告', 'AI バナー', '入稿サイズ'],
     ogImage: '/og/portal.png',
   },
 

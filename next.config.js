@@ -183,6 +183,25 @@ const nextConfig = {
         destination: '/doyaslide',
         permanent: true,
       },
+      // ------------------------------------------------------------------
+      // ドヤ広告バナーAI（/adbanner）→ ドヤ広告画像AI（/adimage）へ統合
+      // ------------------------------------------------------------------
+      // adimage は adbanner の次世代版。ロゴ合成まで移植して機能が揃ったため統合した。
+      // ⚠️ 308（恒久）にする。307だと旧URLがインデックスに残り、
+      //    「ドヤ広告バナーAI」の指名検索が新旧に分散する。
+      // ⚠️ adbanner は 2026-06-26 から本番稼働しておりSEO資産がある。
+      //    リダイレクトを先に入れてから registry を外すこと（逆だとリンク切れ）。
+      // ⚠️ DBの adbanner_* とデータは残す（ロールバックの余地を確保）。
+      {
+        source: '/adbanner',
+        destination: '/adimage',
+        permanent: true,
+      },
+      {
+        source: '/adbanner/:path*',
+        destination: '/adimage',
+        permanent: true,
+      },
       // SlashSlide（別ブランドの旧スライド）もドヤスライド（/doyaslide）に統一
       {
         source: '/slashslide/create',

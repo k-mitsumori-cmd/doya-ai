@@ -1813,6 +1813,9 @@ export function getServiceById(id: string): Service | undefined {
 //   - 実体なし（ページ・APIとも未実装）: video / presentation
 //   - 提供終了（2026-08-06 ユーザー判断）: kantan / shindan / logo / opening
 //                                        tenkai / copy / interviewx / lp / adsim / movie / voice
+//   - 後継へ統合（2026-08-10 ユーザー判断）: adbanner → adimage（ドヤ広告画像AI）
+//     ⚠️ /adbanner は next.config.js で /adimage へ 308 リダイレクト済み。
+//        DBの adbanner_* とデータも残してあるので、ここから id を外せば復帰できる。
 // ※ 現時点で coming_soon / maintenance は全て非表示。トップの「開発中」セクションは空になる。
 export const HIDDEN_SERVICE_IDS = new Set([
   // ルート未実装
@@ -1831,6 +1834,8 @@ export const HIDDEN_SERVICE_IDS = new Set([
   'adsim',
   'movie',
   'voice',
+  // 後継サービス（adimage）へ統合
+  'adbanner',
 ])
 
 // アクティブなサービスのみ取得（非公開IDは常に除外）

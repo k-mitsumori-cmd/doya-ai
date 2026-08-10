@@ -14,8 +14,9 @@ import { prisma } from '@/lib/prisma'
 import { assertQuota, ensureGuestId, getIdentity, GUEST_COOKIE, ownerWhere } from '@/lib/adimage/access'
 import { DEFAULT_PLACEMENT_KEYS, findPlacement, groupByGenSize } from '@/lib/adimage/placements'
 import { exportToSize, generateBaked } from '@/lib/adimage/generate'
+import { DEFAULT_LOGO_CONFIG, type LogoConfig } from '@/lib/adimage/logo'
 import { normalizeCopy } from '@/lib/adimage/copy'
-import { signedUrl } from '@/lib/adimage/storage'
+import { downloadBuffer, signedUrl } from '@/lib/adimage/storage'
 import type { AdCopy, BrandProfile } from '@/lib/adimage/types'
 
 export async function GET(req: NextRequest) {
@@ -117,6 +118,13 @@ export async function POST(req: NextRequest) {
     select: { id: true },
   })
 
+  // ロゴ（登録されていれば書き出し時に合成する）
+  // ⚠️ 読み込みに失敗しても生成は続ける。ロゴが入らないことより画像が出ない方が困る。
+  const logoBuf = brandRow.logoPath ? await downloadBuffer(brandRow.logoPath).catch(() => null) : null
+  const logo = logoBuf
+    ? { buffer: logoBuf, config: ((brandRow.logoConfig as LogoConfig | null) ?? DEFAULT_LOGO_CONFIG) }
+    : null
+
   const groups = groupByGenSize(placementKeys)
   const pathPrefix = `${identity.userId || identity.guestId}/${campaign.id}`
 
@@ -148,7 +156,7 @@ export async function POST(req: NextRequest) {
 
       // 同じ生成サイズを共有する配置は、同じ原本から書き出す
       for (const p of group.placements) {
-        const { imagePath } = await exportToSize(result.buffer, p, pathPrefix)
+        const { imagePath } = await exportToSize(result.buffer, p, pathPrefix, logo)
         creativeRows.push({
           placementKey: p.key,
           size: `${p.w}x${p.h}`,

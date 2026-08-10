@@ -61,6 +61,11 @@ export default function AdImagePage() {
   const [selected, setSelected] = useState(0)
   const [copy, setCopy] = useState<AdCopy>({ headline: '', sub: '', cta: '' })
 
+  // ロゴ（本サービスで唯一「合成」する要素）
+  const [logoPos, setLogoPos] = useState('bottom-right')
+  const [logoName, setLogoName] = useState('')
+  const [logoBusy, setLogoBusy] = useState(false)
+
   // 配置
   const [placements, setPlacements] = useState<PlacementRow[]>([])
   const [chips, setChips] = useState<Array<{ key: string; label: string }>>([])
@@ -119,6 +124,36 @@ export default function AdImagePage() {
       setAnalyzing(false)
     }
   }, [appeal, url])
+
+  async function uploadLogo(file: File) {
+    if (!brandId) return
+    setLogoBusy(true)
+    setError('')
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('pos', logoPos)
+      const r = await fetch(`/api/adimage/brands/${brandId}/logo`, { method: 'POST', body: fd })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d?.error || 'ロゴを登録できませんでした')
+      setLogoName(file.name)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'ロゴを登録できませんでした')
+    } finally {
+      setLogoBusy(false)
+    }
+  }
+
+  async function removeLogo() {
+    if (!brandId) return
+    setLogoBusy(true)
+    try {
+      await fetch(`/api/adimage/brands/${brandId}/logo`, { method: 'DELETE' })
+      setLogoName('')
+    } finally {
+      setLogoBusy(false)
+    }
+  }
 
   function pickDraft(i: number) {
     setSelected(i)
@@ -308,6 +343,60 @@ export default function AdImagePage() {
               <CopyField label="サブコピー" limit={16} value={copy.sub} onChange={(v) => setCopy({ ...copy, sub: v })} />
               <CopyField label="CTA" limit={8} value={copy.cta} onChange={(v) => setCopy({ ...copy, cta: v })} />
             </div>
+          </section>
+        )}
+
+        {/* --- ロゴ（任意） --- */}
+        {step !== 'input' && brandId && (
+          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <h2 className="text-base font-bold text-slate-900">ロゴを載せる（任意）</h2>
+            <p className="mt-1 text-sm text-slate-600">
+              ロゴだけは生成AIに描かせず、実際の画像を重ねます。形や色が変わってしまうためです。
+              SNS広告は配信時にアカウント名が出るので、載せなくても成立します。
+            </p>
+            <div className="mt-4 flex flex-wrap items-end gap-3">
+              <label className="text-sm">
+                <span className="mb-1 block text-xs font-semibold text-slate-500">ロゴ画像（3MBまで）</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={logoBusy}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (f) void uploadLogo(f)
+                  }}
+                  className="text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:text-slate-700"
+                />
+              </label>
+              <label className="text-sm">
+                <span className="mb-1 block text-xs font-semibold text-slate-500">置く位置</span>
+                <select
+                  value={logoPos}
+                  onChange={(e) => setLogoPos(e.target.value)}
+                  className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                >
+                  <option value="bottom-right">右下</option>
+                  <option value="bottom-left">左下</option>
+                  <option value="top-right">右上</option>
+                  <option value="top-left">左上</option>
+                  <option value="center-top">上部中央</option>
+                </select>
+              </label>
+              {logoName && (
+                <button
+                  onClick={removeLogo}
+                  disabled={logoBusy}
+                  className="rounded-lg border border-slate-300 px-3 py-2.5 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                >
+                  ロゴを外す
+                </button>
+              )}
+            </div>
+            {logoName && (
+              <p className="mt-2 text-xs text-emerald-700">
+                {logoName} を登録しました。位置を変えたときは、もう一度ロゴを選び直してください。
+              </p>
+            )}
           </section>
         )}
 

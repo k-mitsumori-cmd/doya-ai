@@ -48,7 +48,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // services.ts の pricingHref はLPと同じ値のことがある（例: seo → '/seo'）ため、
   // 実在する料金ページを sitemap から落とさないようここで補う。
   const SERVICES_WITH_PRICING_PAGE = new Set([
-    'adbanner', 'adsim', 'aio', 'banner', 'copy', 'cunning', 'doyalist', 'doyaslide',
+    'adsim', 'aio', 'banner', 'copy', 'cunning', 'doyalist', 'doyaslide',
     'hr', 'interview', 'interviewx', 'kintai', 'lp', 'movie', 'opening', 'persona',
     'promane', 'seo', 'sfa', 'shodan', 'tenkai', 'voice',
   ])
