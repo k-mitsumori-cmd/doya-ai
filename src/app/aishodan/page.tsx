@@ -62,6 +62,10 @@ export default function AishodanDashboard() {
   const [loading, setLoading] = useState(true)
   const [org, setOrg] = useState<{ slug: string; name: string; role: string } | null>(null)
   const [orgName, setOrgName] = useState('')
+  /** 未ログイン。⚠️ 組織が無いのか、そもそもログインしていないのかを区別する。
+   *  区別しないと、未ログインの人に「組織を作成」フォームを見せてしまい、
+   *  押しても401で何も起きない（何が悪いのか分からない画面になる）。 */
+  const [needsLogin, setNeedsLogin] = useState(false)
 
   const [products, setProducts] = useState<Product[]>([])
   const [rooms, setRooms] = useState<Room[]>([])
@@ -80,6 +84,10 @@ export default function AishodanDashboard() {
     setLoading(true)
     try {
       const r = await fetch('/api/aishodan/organizations')
+      if (r.status === 401) {
+        setNeedsLogin(true)
+        return
+      }
       const d = await r.json()
       setOrg(d.current)
       if (d.current) {
@@ -189,6 +197,23 @@ export default function AishodanDashboard() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
         <p className="text-slate-500">読み込み中...</p>
+      </div>
+    )
+  }
+
+  if (needsLogin) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-200">
+          <h1 className="text-xl font-bold text-slate-900">ドヤAI商談</h1>
+          <p className="mt-2 text-sm leading-relaxed text-slate-600">ご利用にはログインが必要です。</p>
+          <a
+            href={`/auth/signin?callbackUrl=${encodeURIComponent('/aishodan')}`}
+            className="mt-5 inline-block w-full rounded-lg bg-[#0066ff] px-4 py-3 text-sm font-semibold text-white"
+          >
+            ログインする
+          </a>
+        </div>
       </div>
     )
   }
