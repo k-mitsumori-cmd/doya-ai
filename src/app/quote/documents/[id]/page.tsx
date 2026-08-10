@@ -10,6 +10,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { withOrg } from '@/components/org/OrgSwitcher'
 import { useParams } from 'next/navigation'
 import { yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource } from '@/lib/quote/types'
@@ -78,7 +79,7 @@ export default function QuoteDocumentPage() {
     if (!id) return
     setLoading(true)
     try {
-      const r = await fetch(`/api/quote/documents/${id}`)
+      const r = await fetch(withOrg('quote', `/api/quote/documents/${id}`))
       const d = await r.json()
       if (!r.ok) throw new Error(d?.error || '読み込みに失敗しました')
       setDoc(d.document)
@@ -111,7 +112,7 @@ export default function QuoteDocumentPage() {
     setSaving(true)
     setError('')
     try {
-      const r = await fetch(`/api/quote/documents/${id}`, {
+      const r = await fetch(withOrg('quote', `/api/quote/documents/${id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -179,7 +180,7 @@ export default function QuoteDocumentPage() {
               {saving ? '保存中...' : '保存'}
             </button>
             <a
-              href={`/api/quote/documents/${doc.id}/pdf`}
+              href={withOrg('quote', `/api/quote/documents/${doc.id}/pdf`)}
               target="_blank"
               rel="noopener"
               className="rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-semibold text-white"

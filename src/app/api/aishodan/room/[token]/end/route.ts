@@ -75,6 +75,28 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   } catch (err) {
     // ⚠️ 評価に失敗しても商談ログは残す。completed のまま置き、後から再評価できる状態にする。
     console.error('[aishodan] evaluate failed', err instanceof Error ? err.message : err)
+    // ⚠️ ここで黙って返すと、ホストは商談が行われたことすら知らないまま
+    //    実際の見込み客が一覧の中で放置される。判定が出ていなくても必ず通知する。
+    try {
+      await postToSlackBlocks('AI商談が完了しました（判定は失敗）', [
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: [
+              `*AI商談が完了しました*（${s.room.organization.name}）`,
+              '⚠️ 適合判定の生成に失敗しました。内容はログからご確認ください。',
+              `相手: ${s.guestCompany || '会社名未取得'} / ${s.guestName || 'お名前未取得'}`,
+              `商材: ${s.room.scenario.product.name}`,
+              s.schedulingClickedAt ? '日程調整: 予約ページを開きました' : '日程調整: 未（こちらから連絡が必要）',
+              `${process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'}/aishodan/sessions/${s.id}`,
+            ].join('\n'),
+          },
+        },
+      ])
+    } catch {
+      /* 通知の失敗で商談ログを落とさない */
+    }
     return NextResponse.json({ status: 'completed', evaluated: false })
   }
 

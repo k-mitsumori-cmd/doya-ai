@@ -86,6 +86,25 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
     }
   }
 
+  // --- 確定後の金額変更を禁じる ---
+  // ⚠️ status ガードは status フィールドしか守っていなかったため、
+  //    確定済み（confirmedBy/confirmedAt 記録済み・PDFの「社内確認用」透かしも消えた）
+  //    見積書の単価を後から書き換えられた。承認の記録が、誰も承認していない金額を
+  //    承認済みとして証明する状態になる。
+  //    金額に関わる変更は下書きに戻してから行わせる。
+  const nextStatus = typeof data.status === 'string' ? (data.status as string) : existing.status
+  const touchesAmounts =
+    Array.isArray(body?.items) || 'discountType' in body || 'discountValue' in body
+  if (touchesAmounts && existing.status !== 'draft' && nextStatus !== 'draft') {
+    return NextResponse.json(
+      {
+        error:
+          '確定済みの見積書の金額は変更できません。金額を直す場合は、いったん下書きに戻してから編集してください。',
+      },
+      { status: 409 }
+    )
+  }
+
   // --- 明細の差し替え ---
   if (Array.isArray(body?.items)) {
     const items = body.items.slice(0, 60).filter((i: any) => i && i.itemName)

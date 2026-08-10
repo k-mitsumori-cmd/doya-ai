@@ -57,6 +57,8 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   return NextResponse.json({
     action: result.action,
     phase: result.phaseName,
+    // クライアントが以降の発話に添えるためのキー
+    phase_key: result.phaseKey,
     goal: result.goal,
     ask_next: result.askNext,
     remaining_required: result.remainingRequired,

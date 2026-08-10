@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { withOrg } from '@/components/org/OrgSwitcher'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 
 interface SessionRow {
@@ -46,7 +47,7 @@ export default function AishodanSessionsPage() {
     setLoading(true)
     try {
       const q = verdict ? `?verdict=${encodeURIComponent(verdict)}` : ''
-      const r = await fetch(`/api/aishodan/sessions${q}`)
+      const r = await fetch(withOrg('aishodan', `/api/aishodan/sessions${q}`))
       const d = await r.json()
       setSessions(d.sessions || [])
     } finally {

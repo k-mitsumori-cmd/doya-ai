@@ -35,6 +35,10 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
       ord: ord++,
       speaker: t.speaker === 'ai' ? 'ai' : 'guest',
       text: String(t.text).slice(0, 8000),
+      // ⚠️ クライアントが発話時点のフェーズを送ってくる。保存時の currentPhase を
+      //    当てると、advance でフェーズが進んだ後にログが届くため、遷移の引き金に
+      //    なった発話が次のフェーズに数えられ、以降の全フェーズが 1/maxTurns から
+      //    始まる（ヒアリングが1ターン早く打ち切られ必須項目を聞き残す）。
       phase: t.phase ? String(t.phase).slice(0, 40) : s.currentPhase,
       // ⚠️ 発話の「開始」時刻。終了時刻で並べると、長いAI発話が短い相槌より後ろにずれる
       startMs: Number.isFinite(Number(t.startMs)) ? Math.max(0, Math.round(Number(t.startMs))) : 0,

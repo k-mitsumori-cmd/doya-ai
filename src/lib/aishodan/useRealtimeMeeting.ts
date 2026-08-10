@@ -20,6 +20,12 @@ export interface TranscriptLine {
   speaker: 'ai' | 'guest'
   text: string
   at: number
+  /** その発話が行われた時点のフェーズ。
+   *  ⚠️ サーバの currentPhase を保存時に当てると、advance でフェーズが進んだ後に
+   *     ログが届くため、遷移の引き金になった発話が「次のフェーズ」に数えられ、
+   *     以降の全フェーズが 1/maxTurns から始まってしまう（ヒアリングが1ターン
+   *     早く打ち切られ、必須項目を聞き残す）。発話時点の値をクライアントで持つ。 */
+  phase?: string | null
 }
 
 export type ConnState = 'idle' | 'requesting_mic' | 'connecting' | 'live' | 'ended' | 'error'
@@ -43,6 +49,8 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
   const [durationMin, setDurationMin] = useState(15)
   // 画面に出す進行状況。/advance の戻り値で更新する
   const [phaseName, setPhaseName] = useState<string | null>(null)
+  /** 現在のフェーズキー。発話に添えるため ref で持つ（描画に使わない） */
+  const phaseKeyRef = useRef<string | null>(null)
   /** 画面の大パネルに出し続けるAIの最新発話。
    *  ⚠️ 「直近の1発話」で出すと、相手が話した瞬間にAIの発言が消えて
    *     プレースホルダに戻る（実機で確認）。AI発話だけを別に保持する。 */
@@ -84,6 +92,7 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
             speaker: l.speaker,
             text: l.text,
             startMs: l.at - startedAtRef.current,
+            phase: l.phase ?? null,
           })),
         }),
       })
@@ -132,7 +141,7 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
 
     const startedAt = speechStartRef.current[speaker] || Date.now()
     speechStartRef.current[speaker] = 0
-    const line: TranscriptLine = { speaker, text: trimmed, at: startedAt }
+    const line: TranscriptLine = { speaker, text: trimmed, at: startedAt, phase: phaseKeyRef.current }
     setLines((prev) => [...prev, line])
     if (speaker === 'ai') setLastAiText(trimmed)
     pendingRef.current.push(line)
@@ -275,12 +284,22 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionId, intent, summary: String(args?.summary || '') }),
         })
-        result = await res.json()
+        // ⚠️ res.ok を必ず見る。410「この商談は終了しています」等でも res.json() は
+        //    成功して {error:'...'} を返すため、確認しないとエラー本文が
+        //    正常な進行結果としてモデルへ渡り、should_close が立たないまま
+        //    AIが見込み客と話し続ける（Realtimeの課金も続く）。
+        if (res.ok) {
+          result = await res.json()
+        }
+        // res.ok でないときは、上の close フォールバックをそのまま使う
       } catch {
         // 進行APIが落ちたら締めに倒す（無限に商談が続くより安全）
       }
 
       if (typeof result?.phase === 'string') setPhaseName(result.phase)
+      // ⚠️ フェーズキーの更新は、この時点より前に積まれた発話には及ばない。
+      //    それが狙い（遷移の引き金になった発話は、それが起きた側のフェーズに数える）。
+      if (typeof result?.phase_key === 'string') phaseKeyRef.current = result.phase_key
       if (Array.isArray(result?.remaining_required)) setRemainingRequired(result.remaining_required)
 
       replyToTool(callId, result)
@@ -517,8 +536,32 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
       if (startedAtRef.current === 0) return
       // ⚠️ endedRef は立てない。ここで立てると復帰後の正規の end() が無効化される。
       try {
-        const body = new Blob([JSON.stringify({ sessionId })], { type: 'application/json' })
-        navigator.sendBeacon?.(api('end'), body)
+        // ⚠️ 先に未送信の発話を送る。これをせずに /end だけ撃つと、
+        //    サーバはその場で評価まで走らせるため、最後のやりとりが
+        //    逐語ログからも適合判定からも落ちる。発話が2件未満と数えられて
+        //    成立した商談が「中断」扱いになることさえある。
+        const pending = pendingRef.current
+        if (pending.length > 0) {
+          pendingRef.current = []
+          navigator.sendBeacon?.(
+            api('turn'),
+            new Blob(
+              [
+                JSON.stringify({
+                  sessionId,
+                  turns: pending.map((l) => ({
+                    speaker: l.speaker,
+                    text: l.text,
+                    startMs: l.at - startedAtRef.current,
+                    phase: l.phase ?? null,
+                  })),
+                }),
+              ],
+              { type: 'application/json' }
+            )
+          )
+        }
+        navigator.sendBeacon?.(api('end'), new Blob([JSON.stringify({ sessionId })], { type: 'application/json' }))
       } catch {
         /* 送れなくても離脱は止められない */
       }

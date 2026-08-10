@@ -131,49 +131,59 @@ export async function POST(req: NextRequest) {
   const genPaths: Record<string, string> = {}
   let visualPrompt = ''
   let model = ''
+  /** 生成できなかった配置。⚠️ 黙って短い結果を返すと、利用者は入稿時まで欠落に気づけない */
+  const failedPlacements: string[] = []
   const creativeRows: Array<{
     placementKey: string; size: string; genSize: string; compositionKey: string
     imagePath: string; verify: any
   }> = []
 
-  try {
-    for (const group of groups) {
-      // 生成サイズを代表する配置でプロンプトを組む
-      const rep = group.placements[0]
-      const result = await generateBaked({
-        brand,
-        copy,
-        tone,
-        placement: rep,
-        composition: group.composition,
-        pathPrefix,
-      })
-      genPaths[group.genKey] = result.genPath
-      if (!visualPrompt) {
-        visualPrompt = result.prompt
-        model = result.model
-      }
+  // ⚠️ グループ単位で捕まえる。1つのサイズが失敗しても残りは作り切り、
+  //    どの配置が作れなかったかを必ず利用者へ返す（黙って短い結果を返さない）。
+  for (const group of groups) {
+    try {
 
-      // 同じ生成サイズを共有する配置は、同じ原本から書き出す
-      for (const p of group.placements) {
-        const { imagePath } = await exportToSize(result.buffer, p, pathPrefix, logo)
-        creativeRows.push({
-          placementKey: p.key,
-          size: `${p.w}x${p.h}`,
-          genSize: result.genSize,
-          compositionKey: group.composition,
-          imagePath,
-          verify: result.verify as any,
+        // 生成サイズを代表する配置でプロンプトを組む
+        const rep = group.placements[0]
+        const result = await generateBaked({
+          brand,
+          copy,
+          tone,
+          placement: rep,
+          composition: group.composition,
+          pathPrefix,
         })
-      }
+        genPaths[group.genKey] = result.genPath
+        if (!visualPrompt) {
+          visualPrompt = result.prompt
+          model = result.model
+        }
+
+        // 同じ生成サイズを共有する配置は、同じ原本から書き出す
+        for (const p of group.placements) {
+          const { imagePath } = await exportToSize(result.buffer, p, pathPrefix, logo)
+          creativeRows.push({
+            placementKey: p.key,
+            size: `${p.w}x${p.h}`,
+            genSize: result.genSize,
+            compositionKey: group.composition,
+            imagePath,
+            verify: result.verify as any,
+          })
+        }
+    } catch (err) {
+      console.error('[adimage] generate failed', group.genKey, err instanceof Error ? err.message : err)
+      for (const fp of group.placements) failedPlacements.push(fp.name)
     }
-  } catch (err) {
-    console.error('[adimage] generate failed', err instanceof Error ? err.message : err)
-    // 途中まで作れていれば、そこまでは保存して返す。全部捨てると費用だけが消える
-    if (creativeRows.length === 0) {
-      await prisma.adImageCampaign.delete({ where: { id: campaign.id } }).catch(() => {})
-      return NextResponse.json({ error: '画像の生成に失敗しました。時間をおいて再度お試しください。' }, { status: 502 })
-    }
+  }
+
+  if (creativeRows.length === 0) {
+    // 1枚も作れなかった。空のキャンペーンを残さない
+    await prisma.adImageCampaign.delete({ where: { id: campaign.id } }).catch(() => {})
+    return NextResponse.json(
+      { error: '画像の生成に失敗しました。時間をおいて再度お試しください。' },
+      { status: 502 }
+    )
   }
 
   const concept = await prisma.adImageConcept.create({
@@ -212,6 +222,9 @@ export async function POST(req: NextRequest) {
     creatives,
     // 2回リトライしても検査に通らなかったものは「要確認」として明示する。黙って出さない
     needsReview: creatives.some((c) => (c.verify as any)?.needsReview),
+    // ⚠️ 作れなかった配置は必ず返す。黙って短い結果を返すと、
+    //    利用者は入稿の直前まで欠落に気づけない。
+    failedPlacements,
   })
   if (newGuestId) {
     res.cookies.set(GUEST_COOKIE, newGuestId, {

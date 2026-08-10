@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { withOrg } from '@/components/org/OrgSwitcher'
 import { useParams } from 'next/navigation'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 
@@ -54,7 +55,7 @@ export default function AishodanSessionDetail() {
     if (!id) return
     setLoading(true)
     try {
-      const r = await fetch(`/api/aishodan/sessions/${id}`)
+      const r = await fetch(withOrg('aishodan', `/api/aishodan/sessions/${id}`))
       const j = await r.json()
       if (!r.ok) throw new Error(j?.error || '読み込みに失敗しました')
       setD(j.session)
@@ -73,7 +74,7 @@ export default function AishodanSessionDetail() {
     if (!id) return
     setSaving(true)
     try {
-      await fetch(`/api/aishodan/sessions/${id}`, {
+      await fetch(withOrg('aishodan', `/api/aishodan/sessions/${id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ verdict }),

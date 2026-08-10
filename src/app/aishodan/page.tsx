@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import OrgSwitcher, { withOrg, type Membership } from '@/components/org/OrgSwitcher'
 import MemberPanel from '@/components/org/MemberPanel'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 
@@ -62,6 +63,7 @@ export default function AishodanDashboard() {
   const [loading, setLoading] = useState(true)
   const [org, setOrg] = useState<{ slug: string; name: string; role: string } | null>(null)
   const [orgName, setOrgName] = useState('')
+  const [memberships, setMemberships] = useState<Membership[]>([])
   /** 未ログイン。⚠️ 組織が無いのか、そもそもログインしていないのかを区別する。
    *  区別しないと、未ログインの人に「組織を作成」フォームを見せてしまい、
    *  押しても401で何も起きない（何が悪いのか分からない画面になる）。 */
@@ -83,19 +85,20 @@ export default function AishodanDashboard() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await fetch('/api/aishodan/organizations')
+      const r = await fetch(withOrg('aishodan', '/api/aishodan/organizations'))
       if (r.status === 401) {
         setNeedsLogin(true)
         return
       }
       const d = await r.json()
       setOrg(d.current)
+      setMemberships(d.memberships || [])
       if (d.current) {
         const [pr, rr, sr, st] = await Promise.all([
-          fetch('/api/aishodan/products').then((x) => x.json()),
-          fetch('/api/aishodan/rooms').then((x) => x.json()),
-          fetch('/api/aishodan/sessions').then((x) => x.json()),
-          fetch('/api/aishodan/stats').then((x) => x.json()),
+          fetch(withOrg('aishodan', '/api/aishodan/products')).then((x) => x.json()),
+          fetch(withOrg('aishodan', '/api/aishodan/rooms')).then((x) => x.json()),
+          fetch(withOrg('aishodan', '/api/aishodan/sessions')).then((x) => x.json()),
+          fetch(withOrg('aishodan', '/api/aishodan/stats')).then((x) => x.json()),
         ])
         setProducts(pr.products || [])
         setRooms(rr.rooms || [])
@@ -116,7 +119,7 @@ export default function AishodanDashboard() {
   async function createOrg() {
     if (!orgName.trim()) return
     setError('')
-    const r = await fetch('/api/aishodan/organizations', {
+    const r = await fetch(withOrg('aishodan', '/api/aishodan/organizations'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: orgName.trim() }),
@@ -134,7 +137,7 @@ export default function AishodanDashboard() {
     setError('')
     setImportResult(null)
     try {
-      const r = await fetch('/api/aishodan/products', {
+      const r = await fetch(withOrg('aishodan', '/api/aishodan/products'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url.trim() }),
@@ -155,7 +158,7 @@ export default function AishodanDashboard() {
     setIssuing(true)
     setError('')
     try {
-      const r = await fetch('/api/aishodan/rooms', {
+      const r = await fetch(withOrg('aishodan', '/api/aishodan/rooms'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ scenarioId }),
@@ -171,7 +174,7 @@ export default function AishodanDashboard() {
   }
 
   async function toggleRoom(room: Room) {
-    await fetch(`/api/aishodan/rooms/${room.id}`, {
+    await fetch(withOrg('aishodan', `/api/aishodan/rooms/${room.id}`), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ isActive: !room.isActive }),
@@ -253,9 +256,17 @@ export default function AishodanDashboard() {
             <h1 className="text-lg font-bold text-slate-900">ドヤAI商談</h1>
             <p className="text-xs text-slate-500">{org.name}</p>
           </div>
-          <Link href="/aishodan/sessions" className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-            商談ログ
-          </Link>
+          <div className="flex items-center gap-3">
+            <OrgSwitcher
+              service="aishodan"
+              memberships={memberships}
+              currentSlug={org.slug}
+              onChange={() => void load()}
+            />
+            <Link href="/aishodan/sessions" className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+              商談ログ
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -433,6 +444,7 @@ export default function AishodanDashboard() {
 
         <MemberPanel
           basePath="/api/aishodan"
+          service="aishodan"
           description="招待した方は、この組織の商材・商談シナリオと商談ログを扱えるようになります。"
         />
 

@@ -10,6 +10,7 @@
 //    体験のためであり、実際の防御は API 側（hasMinRole）が行う。
 
 import { useCallback, useEffect, useState } from 'react'
+import { withOrg } from './OrgSwitcher'
 
 export interface MemberRow {
   id: string
@@ -31,11 +32,13 @@ const ROLE_RANK: Record<string, number> = { owner: 4, admin: 3, manager: 2, memb
 export interface MemberPanelProps {
   /** 例: '/api/quote' */
   basePath: string
+  /** 'quote' / 'aishodan' — ?org= の付与に使う */
+  service: string
   /** 招待された人が何を扱えるようになるかの説明 */
   description: string
 }
 
-export default function MemberPanel({ basePath, description }: MemberPanelProps) {
+export default function MemberPanel({ basePath, service, description }: MemberPanelProps) {
   const [members, setMembers] = useState<MemberRow[]>([])
   const [myRole, setMyRole] = useState('member')
   const [myUserId, setMyUserId] = useState<string | null>(null)
@@ -51,7 +54,7 @@ export default function MemberPanel({ basePath, description }: MemberPanelProps)
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await fetch(`${basePath}/members`)
+      const r = await fetch(withOrg(service, `${basePath}/members`))
       const d = await r.json()
       if (r.ok) {
         setMembers(d.members || [])
@@ -61,7 +64,7 @@ export default function MemberPanel({ basePath, description }: MemberPanelProps)
     } finally {
       setLoading(false)
     }
-  }, [basePath])
+  }, [basePath, service])
 
   useEffect(() => {
     void load()
@@ -74,7 +77,7 @@ export default function MemberPanel({ basePath, description }: MemberPanelProps)
     setNotice('')
     setInviteUrl('')
     try {
-      const r = await fetch(`${basePath}/members`, {
+      const r = await fetch(withOrg(service, `${basePath}/members`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), role }),
@@ -98,7 +101,7 @@ export default function MemberPanel({ basePath, description }: MemberPanelProps)
     setBusy(`role-${id}`)
     setError('')
     try {
-      const r = await fetch(`${basePath}/members/${id}`, {
+      const r = await fetch(withOrg(service, `${basePath}/members/${id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: next }),
@@ -117,7 +120,7 @@ export default function MemberPanel({ basePath, description }: MemberPanelProps)
     setBusy(`member-${id}`)
     setError('')
     try {
-      const r = await fetch(`${basePath}/members/${id}`, { method: 'DELETE' })
+      const r = await fetch(withOrg(service, `${basePath}/members/${id}`), { method: 'DELETE' })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) throw new Error(d?.error || '外せませんでした')
       await load()

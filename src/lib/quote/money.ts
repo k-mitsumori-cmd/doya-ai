@@ -5,6 +5,21 @@
 // ⚠️ 消費税は税率ごとに小計してから端数処理する（税率別の区分計算）。
 //    行ごとに切り捨てると合計が合わず、実務で使えない。
 
+/**
+ * 合計に含める明細か。
+ * ⚠️ この判定は**必ずここだけに置く**。画面・保存・PDFで別々に書いた結果、
+ *    PDFの総額だけが「要見積」行を含み、顧客に届く見積書の合計が
+ *    画面ともDBとも食い違っていた（2026-08-10 のレビューで発覚）。
+ */
+export function isBillableLine(l: { priceSource?: string | null; unitPrice: number }): boolean {
+  return l.priceSource !== 'unknown' && l.unitPrice > 0
+}
+
+/** 合計対象の明細だけを取り出す */
+export function billableLines<T extends { priceSource?: string | null; unitPrice: number }>(lines: T[]): T[] {
+  return lines.filter(isBillableLine)
+}
+
 export interface LineForCalc {
   qty: number
   unitPrice: number

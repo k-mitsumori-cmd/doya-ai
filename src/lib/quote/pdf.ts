@@ -10,7 +10,7 @@
 //     （AIが出した金額を確認前に客先へ出させないための最後の砦）
 //   - 金額が未確定の行は「要見積」と印字し、0円と誤解させない
 
-import { calcTotals } from './money'
+import { billableLines, calcTotals, isBillableLine } from './money'
 
 export interface QuotePdfInput {
   quoteNo: string
@@ -71,8 +71,11 @@ function jpDate(d: Date): string {
  *    レイアウトの確認を手元で行えるようにするため。
  */
 export function renderQuoteHtml(q: QuotePdfInput): string {
+  // ⚠️ 合計は必ず billableLines を通す。ここで全行を渡していたため、
+  //    「要見積」と印字した行の金額がPDFの総額にだけ加算され、
+  //    顧客に届く見積書の合計が画面ともDBとも食い違っていた。
   const totals = calcTotals(
-    q.lineItems.map((l) => ({ qty: l.qty, unitPrice: l.unitPrice, taxRate: l.taxRate })),
+    billableLines(q.lineItems).map((l) => ({ qty: l.qty, unitPrice: l.unitPrice, taxRate: l.taxRate })),
     q.discountType,
     q.discountValue
   )
@@ -81,7 +84,8 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
     .map((l) => {
       // 根拠が無い行は 0円ではなく「要見積」として出す。
       // 0円と印字すると無償提供の意思表示に読めてしまう。
-      const undecided = l.priceSource === 'unknown' || l.unitPrice <= 0
+      // ⚠️ 合計に含めるかの判定と必ず同じ関数を使う（ズレると印字と総額が矛盾する）
+      const undecided = !isBillableLine(l)
       const amount = l.qty * l.unitPrice
       return `<tr>
         <td class="name">${esc(l.itemName)}${l.spec ? `<div class="spec">${nl2br(l.spec)}</div>` : ''}</td>
@@ -201,7 +205,7 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
       ${q.paymentTerms ? `<div class="block"><h2>お支払い条件</h2>${nl2br(q.paymentTerms)}</div>` : ''}
       ${q.notes ? `<div class="block"><h2>備考</h2>${nl2br(q.notes)}</div>` : ''}
       ${
-        q.lineItems.some((l) => l.priceSource === 'unknown' || l.unitPrice <= 0)
+        q.lineItems.some((l) => !isBillableLine(l))
           ? '<div class="block"><h2>ご注意</h2>「要見積」と記載の項目は、要件確定後に別途お見積りいたします。上記合計には含まれておりません。</div>'
           : ''
       }

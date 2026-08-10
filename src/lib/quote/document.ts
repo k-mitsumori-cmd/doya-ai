@@ -2,7 +2,7 @@
 // ドヤ見積もりAI 見積書の共通処理
 // ============================================
 import { prisma } from '@/lib/prisma'
-import { calcTotals } from './money'
+import { billableLines, calcTotals } from './money'
 
 /**
  * 見積番号の採番。Q-YYYYMM-0001 形式。
@@ -31,7 +31,7 @@ export async function recalcDocument(documentId: string): Promise<void> {
   })
   if (!doc) return
   // 「要見積」の行は合計に含めない。0円として足すと総額を誤らせる
-  const billable = doc.lineItems.filter((l) => l.priceSource !== 'unknown' && l.unitPrice > 0)
+  const billable = billableLines(doc.lineItems)
   const t = calcTotals(
     billable.map((l) => ({ qty: l.qty, unitPrice: l.unitPrice, taxRate: l.taxRate })),
     doc.discountType,

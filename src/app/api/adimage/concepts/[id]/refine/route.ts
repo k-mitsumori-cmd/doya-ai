@@ -90,40 +90,50 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   const genPaths: Record<string, string> = {}
   let visualPrompt = ''
   let model = ''
+  /** 生成できなかった配置。⚠️ 黙って短い結果を返すと、利用者は入稿時まで欠落に気づけない */
+  const failedPlacements: string[] = []
   const creativeRows: Array<{
     placementKey: string; size: string; genSize: string; compositionKey: string; imagePath: string; verify: any
   }> = []
 
-  try {
-    for (const group of groups) {
-      const rep = group.placements[0]
-      const result = await generateBaked({
-        brand, copy, tone: concept.tone,
-        placement: rep, composition: group.composition,
-        extraDirectives, pathPrefix,
-      })
-      genPaths[group.genKey] = result.genPath
-      if (!visualPrompt) {
-        visualPrompt = result.prompt
-        model = result.model
-      }
-      for (const pl of group.placements) {
-        const { imagePath } = await exportToSize(result.buffer, pl, pathPrefix, logo)
-        creativeRows.push({
-          placementKey: pl.key,
-          size: `${pl.w}x${pl.h}`,
-          genSize: result.genSize,
-          compositionKey: group.composition,
-          imagePath,
-          verify: result.verify as any,
+  // ⚠️ グループ単位で捕まえる。1つのサイズが失敗しても残りは作り切り、
+  //    どの配置が作れなかったかを必ず利用者へ返す（黙って短い結果を返さない）。
+  for (const group of groups) {
+    try {
+
+        const rep = group.placements[0]
+        const result = await generateBaked({
+          brand, copy, tone: concept.tone,
+          placement: rep, composition: group.composition,
+          extraDirectives, pathPrefix,
         })
-      }
+        genPaths[group.genKey] = result.genPath
+        if (!visualPrompt) {
+          visualPrompt = result.prompt
+          model = result.model
+        }
+        for (const pl of group.placements) {
+          const { imagePath } = await exportToSize(result.buffer, pl, pathPrefix, logo)
+          creativeRows.push({
+            placementKey: pl.key,
+            size: `${pl.w}x${pl.h}`,
+            genSize: result.genSize,
+            compositionKey: group.composition,
+            imagePath,
+            verify: result.verify as any,
+          })
+        }
+    } catch (err) {
+      console.error('[adimage] generate failed', group.genKey, err instanceof Error ? err.message : err)
+      for (const fp of group.placements) failedPlacements.push(fp.name)
     }
-  } catch (err) {
-    console.error('[adimage] refine failed', err instanceof Error ? err.message : err)
-    if (creativeRows.length === 0) {
-      return NextResponse.json({ error: '改善版の生成に失敗しました。時間をおいて再度お試しください。' }, { status: 502 })
-    }
+  }
+
+  if (creativeRows.length === 0) {
+    return NextResponse.json(
+      { error: '改善版の生成に失敗しました。時間をおいて再度お試しください。' },
+      { status: 502 }
+    )
   }
 
   const next = await prisma.adImageConcept.create({
@@ -170,5 +180,6 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     appliedDirectives: directives,
     creatives,
     needsReview: creatives.some((c) => (c.verify as any)?.needsReview),
+    failedPlacements,
   })
 }

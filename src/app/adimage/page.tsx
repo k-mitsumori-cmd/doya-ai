@@ -77,6 +77,8 @@ export default function AdImagePage() {
   const [conceptId, setConceptId] = useState('')
   const [creatives, setCreatives] = useState<Creative[]>([])
   const [needsReview, setNeedsReview] = useState(false)
+  /** 生成できなかった配置。⚠️ 黙って短い結果を出さないための表示 */
+  const [failedPlacements, setFailedPlacements] = useState<string[]>([])
   const [generation, setGeneration] = useState(1)
 
   // 改善
@@ -190,6 +192,7 @@ export default function AdImagePage() {
       setConceptId(d.conceptId)
       setCreatives(d.creatives || [])
       setNeedsReview(Boolean(d.needsReview))
+      setFailedPlacements(d.failedPlacements || [])
       setGeneration(1)
       setStep('result')
     } catch (e) {
@@ -236,6 +239,7 @@ export default function AdImagePage() {
       setConceptId(d.conceptId)
       setCreatives(d.creatives || [])
       setNeedsReview(Boolean(d.needsReview))
+      setFailedPlacements(d.failedPlacements || [])
       setGeneration(d.generation)
       setScores(null)
       setAdvice('')
@@ -462,6 +466,13 @@ export default function AdImagePage() {
                 すべてダウンロード（ZIP）
               </a>
             </div>
+
+            {failedPlacements.length > 0 && (
+              <p className="mt-3 rounded-lg bg-rose-50 px-4 py-2.5 text-sm text-rose-800">
+                次の配置は作成できませんでした: {failedPlacements.join('、')}。
+                お手数ですが、もう一度お試しください。
+              </p>
+            )}
 
             {needsReview && (
               <p className="mt-3 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-900">

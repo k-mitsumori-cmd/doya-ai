@@ -47,6 +47,20 @@ function safeRangeFor(composition: CompositionKey): { min: number; max: number }
 }
 
 export async function verifyCreative(input: VerifyInput): Promise<VerifyResult> {
+  // ⚠️ Visionの応答は自由形式のJSON。どの形で返ってきても**例外を外へ出さない**。
+  //    以前は boxes[].text を検証しておらず、text が無い/数値の箱が来ると
+  //    normalizeForCompare が TypeError を投げ、generateBaked を貫いて
+  //    「生成費用を払った後に502」という最悪の壊れ方をしていた。
+  try {
+    return await verifyCreativeInner(input)
+  } catch (err) {
+    console.error('[adimage] verify failed', err instanceof Error ? err.message : err)
+    // 検査できなかったものを合格にしない。「要確認」で人に判断させる。
+    return { ocrMatch: false, extraText: [], safeAreaOk: true, retries: 0, needsReview: true }
+  }
+}
+
+async function verifyCreativeInner(input: VerifyInput): Promise<VerifyResult> {
   const { pngBase64, copy, composition } = input
   const omitSub = COMPOSITIONS[composition].omit.includes('sub')
 
@@ -95,7 +109,10 @@ export async function verifyCreative(input: VerifyInput): Promise<VerifyResult> 
 
   // --- セーフエリアを侵していないか ---
   const range = safeRangeFor(composition)
-  const boxes = (ocr?.boxes || []).filter((b) => b && Number.isFinite(b.ymin) && Number.isFinite(b.ymax))
+  // ⚠️ text も必ず文字列か確かめる。数値やundefinedが来ると下の正規化で落ちる。
+  const boxes = (ocr?.boxes || []).filter(
+    (b) => b && typeof b.text === 'string' && Number.isFinite(b.ymin) && Number.isFinite(b.ymax)
+  )
   // 指定した文字列に対応する箱だけを見る（混入文字の位置で落とすと二重に罰することになる）
   const targetBoxes = boxes.filter((b) => expectedNorm.some((e) => normalizeForCompare(b.text).includes(e) || e.includes(normalizeForCompare(b.text))))
   const safeAreaOk = targetBoxes.every((b) => b.ymin >= range.min - 0.02 && b.ymax <= range.max + 0.02)

@@ -9,8 +9,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import OrgSwitcher, { withOrg, type Membership } from '@/components/org/OrgSwitcher'
 import MemberPanel from '@/components/org/MemberPanel'
-import { calcTotals, yen } from '@/lib/quote/money'
+import { billableLines, calcTotals, yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource, type ProductProfile, type SuggestedItem } from '@/lib/quote/types'
 
 interface Product {
@@ -41,6 +42,7 @@ export default function QuoteDashboard() {
   const [loading, setLoading] = useState(true)
   const [org, setOrg] = useState<{ slug: string; name: string; role: string } | null>(null)
   const [orgName, setOrgName] = useState('')
+  const [memberships, setMemberships] = useState<Membership[]>([])
   /** 未ログイン。⚠️ 組織が無いのか、そもそもログインしていないのかを区別する。
    *  区別しないと、未ログインの人に「組織を作成」フォームを見せてしまい、
    *  押しても401で何も起きない（何が悪いのか分からない画面になる）。 */
@@ -74,18 +76,19 @@ export default function QuoteDashboard() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await fetch('/api/quote/organizations')
+      const r = await fetch(withOrg('quote', '/api/quote/organizations'))
       if (r.status === 401) {
         setNeedsLogin(true)
         return
       }
       const d = await r.json()
       setOrg(d.current)
+      setMemberships(d.memberships || [])
       if (d.current) {
         const [pr, dr, ir] = await Promise.all([
-          fetch('/api/quote/products').then((x) => x.json()),
-          fetch('/api/quote/documents').then((x) => x.json()),
-          fetch('/api/quote/issuer').then((x) => x.json()),
+          fetch(withOrg('quote', '/api/quote/products')).then((x) => x.json()),
+          fetch(withOrg('quote', '/api/quote/documents')).then((x) => x.json()),
+          fetch(withOrg('quote', '/api/quote/issuer')).then((x) => x.json()),
         ])
         setProducts(pr.products || [])
         setDocs(dr.documents || [])
@@ -106,7 +109,7 @@ export default function QuoteDashboard() {
   async function createOrg() {
     if (!orgName.trim()) return
     setError('')
-    const r = await fetch('/api/quote/organizations', {
+    const r = await fetch(withOrg('quote', '/api/quote/organizations'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: orgName.trim() }),
@@ -124,7 +127,7 @@ export default function QuoteDashboard() {
     setError('')
     setDraftProfile(null)
     try {
-      const r = await fetch('/api/quote/products/analyze', {
+      const r = await fetch(withOrg('quote', '/api/quote/products/analyze'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: url.trim() }),
@@ -144,7 +147,7 @@ export default function QuoteDashboard() {
   async function saveProduct() {
     if (!draftProfile || !productName.trim()) return
     setError('')
-    const r = await fetch('/api/quote/products', {
+    const r = await fetch(withOrg('quote', '/api/quote/products'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: productName.trim(), sourceUrl: draftUrl, profile: draftProfile }),
@@ -166,7 +169,7 @@ export default function QuoteDashboard() {
     setSuggesting(true)
     setError('')
     try {
-      const r = await fetch('/api/quote/documents/suggest', {
+      const r = await fetch(withOrg('quote', '/api/quote/documents/suggest'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -201,7 +204,7 @@ export default function QuoteDashboard() {
   // 「要見積」の行は合計から除く（0円として足すと総額を誤らせる）
   // ⚠️ 税額は必ず calcTotals に通す。ここで 10% 固定で計算すると、
   //    軽減税率の行が混ざったときに画面の合計とPDFの合計がずれる。
-  const billable = items.filter((i) => i.priceSource !== 'unknown' && (i.unitPrice ?? 0) > 0)
+  const billable = billableLines(items.map((i) => ({ ...i, unitPrice: i.unitPrice ?? 0 })))
   const totals = calcTotals(billable.map((i) => ({ qty: i.qty, unitPrice: i.unitPrice ?? 0, taxRate: i.taxRate })))
   const subtotal = totals.totalExclTax
   const tax = totals.taxAmount
@@ -212,7 +215,7 @@ export default function QuoteDashboard() {
     setError('')
     try {
       const product = products.find((p) => p.id === selectedProduct)
-      const r = await fetch('/api/quote/documents', {
+      const r = await fetch(withOrg('quote', '/api/quote/documents'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -295,9 +298,17 @@ export default function QuoteDashboard() {
             <h1 className="text-lg font-bold text-slate-900">ドヤ見積もりAI</h1>
             <p className="text-xs text-slate-500">{org.name}</p>
           </div>
-          <Link href="/quote/settings" className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
-            発行元設定
-          </Link>
+          <div className="flex items-center gap-3">
+            <OrgSwitcher
+              service="quote"
+              memberships={memberships}
+              currentSlug={org.slug}
+              onChange={() => void load()}
+            />
+            <Link href="/quote/settings" className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+              発行元設定
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -563,6 +574,7 @@ export default function QuoteDashboard() {
 
         <MemberPanel
           basePath="/api/quote"
+          service="quote"
           description="招待した方は、この組織の商材と見積書を扱えるようになります。"
         />
 

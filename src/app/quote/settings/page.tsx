@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { withOrg } from '@/components/org/OrgSwitcher'
 
 const FIELDS = [
   { key: 'companyName', label: '会社名', placeholder: '株式会社スリスタ', required: true },
@@ -35,7 +36,7 @@ export default function QuoteSettingsPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await fetch('/api/quote/issuer')
+      const r = await fetch(withOrg('quote', '/api/quote/issuer'))
       const d = await r.json()
       if (d.issuer) {
         const f: Form = {}
@@ -60,7 +61,7 @@ export default function QuoteSettingsPage() {
     setError('')
     setMessage('')
     try {
-      const r = await fetch('/api/quote/issuer', {
+      const r = await fetch(withOrg('quote', '/api/quote/issuer'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

@@ -61,10 +61,22 @@ export async function getQuoteContext(orgSlug?: string): Promise<QuoteContext | 
       })
     : null
   if (!membership) {
+    // ⚠️ 既定の組織は「自分が作った組織」を優先し、次に古い順にする。
+    //    以前は createdAt の降順（最後に入った組織）にしていたため、
+    //    他人の組織に招待されて受諾した瞬間に作業場所が黙って切り替わり、
+    //    自分が作った見積書・商談に一覧からもURLからも到達できなくなっていた
+    //    （組織切替UIも無かったため戻る手段が無い）。
+    membership = await prisma.quoteMember.findFirst({
+      where: { userId, status: 'ACTIVE', role: 'owner' },
+      include: { organization: true },
+      orderBy: { createdAt: 'asc' },
+    })
+  }
+  if (!membership) {
     membership = await prisma.quoteMember.findFirst({
       where: { userId, status: 'ACTIVE' },
       include: { organization: true },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'asc' },
     })
   }
   if (!membership) return null
