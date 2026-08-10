@@ -85,6 +85,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     guestName: s.guestName,
     guestCompany: s.guestCompany,
     knowledgeDigest,
+    hasScheduling: Boolean(cfg.schedulingUrl),
   })
 
   let res: Response

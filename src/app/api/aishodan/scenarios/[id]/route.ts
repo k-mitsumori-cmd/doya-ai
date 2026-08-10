@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAishodanContext, orgSlugFrom } from '@/lib/aishodan/access'
 import { toScenarioConfig } from '@/lib/aishodan/public'
+import { normalizeSchedulingLabel, validateSchedulingUrl } from '@/lib/aishodan/scheduling'
 import type { Guardrails, Icp, Persona, Phase, PricePolicy, Slot } from '@/lib/aishodan/types'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
@@ -124,6 +125,17 @@ export async function PUT(req: NextRequest, ctxParam: Ctx) {
         : 120,
     }
     data.persona = persona as any
+  }
+
+  // 日程調整リンク
+  // ⚠️ 見込み客の画面にボタンとして出る。javascript: 等を弾くため必ず検証を通す。
+  if ('schedulingUrl' in body) {
+    const v = validateSchedulingUrl(body.schedulingUrl)
+    if (!v.ok) return NextResponse.json({ error: v.reason }, { status: 400 })
+    data.schedulingUrl = v.url ?? null
+  }
+  if ('schedulingLabel' in body) {
+    data.schedulingLabel = normalizeSchedulingLabel(body.schedulingLabel)
   }
 
   // 商材プロフィール（「話してはいけないこと」もここで編集する）

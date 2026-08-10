@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     take: 200,
     select: {
       id: true, guestName: true, guestCompany: true, status: true, currentPhase: true,
-      startedAt: true, endedAt: true, createdAt: true,
+      startedAt: true, endedAt: true, createdAt: true, schedulingClickedAt: true,
       room: { select: { name: true } },
       outcome: { select: { fitScore: true, verdict: true } },
       _count: { select: { turns: true } },

@@ -53,6 +53,9 @@ export function toPublicRoom(room: LoadedRoom) {
     durationMin: cfg.durationMin,
     phaseNames: cfg.phases.map((p) => p.name),
     retentionDays: room.organization.retentionDays,
+    // 日程調整ボタン。⚠️ 保存時に https のみへ検証済み（lib/aishodan/scheduling.ts）
+    schedulingUrl: cfg.schedulingUrl,
+    schedulingLabel: cfg.schedulingLabel,
   }
 }
 
@@ -85,6 +88,8 @@ export function toScenarioConfig(scenario: {
   guardrails: unknown
   persona: unknown
   durationMin: number
+  schedulingUrl?: string | null
+  schedulingLabel?: string | null
 }): ScenarioConfig {
   return {
     phases: (Array.isArray(scenario.phases) ? scenario.phases : []) as Phase[],
@@ -97,5 +102,7 @@ export function toScenarioConfig(scenario: {
       ? scenario.persona
       : { tone: '丁寧な敬語', firstPerson: '私', maxCharsPerUtterance: 120 }) as Persona,
     durationMin: scenario.durationMin,
+    schedulingUrl: scenario.schedulingUrl ?? null,
+    schedulingLabel: scenario.schedulingLabel ?? null,
   }
 }

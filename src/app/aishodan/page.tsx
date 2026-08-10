@@ -44,6 +44,8 @@ interface Stats {
   total: number
   evaluated: number
   completionRate: number
+  scheduled: number
+  schedulingRate: number
   avgMin: number
   byVerdict: Record<string, number>
   unanswered: Array<{ id: string; text: string }>
@@ -241,7 +243,7 @@ export default function AishodanDashboard() {
             <Metric label="商談数" value={`${stats.total}件`} />
             <Metric label="完了率" value={`${stats.completionRate}%`} />
             <Metric label="平均所要" value={`${stats.avgMin}分`} />
-            <Metric label="有望" value={`${stats.byVerdict.hot || 0}件`} />
+            <Metric label="日程調整" value={`${stats.scheduled}件 / ${stats.schedulingRate}%`} />
           </section>
         )}
 

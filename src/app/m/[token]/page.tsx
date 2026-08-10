@@ -22,6 +22,9 @@ interface PublicRoom {
   durationMin: number
   phaseNames: string[]
   retentionDays: number
+  /** 日程調整ボタン（ホストが設定していれば出す） */
+  schedulingUrl: string | null
+  schedulingLabel: string | null
 }
 
 type Step = 'loading' | 'consent' | 'check' | 'live' | 'done' | 'unavailable'
@@ -39,6 +42,42 @@ const SUPPRESS_MARKETING_CSS = `
     pointer-events: none !important;
   }
 `
+
+/**
+ * 日程調整ボタン。
+ * ⚠️ URLはサーバ側で https のみに検証済み（lib/aishodan/scheduling.ts）。
+ *    それでも新規タブ＋noopener で開き、遷移先からこのページを触らせない。
+ * ⚠️ 記録は投げっぱなしにする。記録が失敗しても遷移は止めない
+ *    （相手を待たせない。予約に進めないことの方が損失が大きい）。
+ */
+function SchedulingButton({
+  url,
+  label,
+  onClick,
+  variant = 'primary',
+}: {
+  url: string
+  label: string | null
+  onClick: () => void
+  variant?: 'primary' | 'inline'
+}) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={onClick}
+      className={
+        variant === 'primary'
+          ? 'inline-flex items-center gap-2 rounded-lg bg-[#0066ff] px-6 py-3.5 text-sm font-black text-white'
+          : 'inline-flex items-center gap-1.5 rounded-full bg-[#0066ff] px-4 py-2 text-[13px] font-black text-white'
+      }
+    >
+      <span className="material-symbols-outlined text-[18px]">event_available</span>
+      {label || '担当者と日程を決める'}
+    </a>
+  )
+}
 
 function fmt(sec: number) {
   const m = Math.floor(sec / 60)
@@ -128,6 +167,18 @@ export default function AishodanRoomPage() {
     void rt.start()
   }, [rt, sessionId])
 
+  /** 日程調整ボタンが押されたことを記録する（成果指標） */
+  const recordScheduling = useCallback(() => {
+    if (!sessionId) return
+    // 遷移を止めないよう待たない
+    void fetch(`/api/aishodan/room/${token}/scheduling`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId }),
+      keepalive: true,
+    }).catch(() => {})
+  }, [sessionId, token])
+
   const toggleMic = useCallback(() => {
     setMicOn((v) => {
       rt.setMicEnabled(!v)
@@ -181,8 +232,20 @@ export default function AishodanRoomPage() {
           <span className="material-symbols-outlined text-4xl text-[#0066ff]">check_circle</span>
           <h1 className="mt-3 text-xl font-black text-[#0a0f3c]">ありがとうございました</h1>
           <p className="mt-3 text-sm font-medium leading-relaxed text-[#425071]">
-            本日の内容は担当者へ共有いたします。追ってご連絡差し上げますので、少々お待ちください。
+            本日の内容は担当者へ共有いたします。
+            {room?.schedulingUrl
+              ? '続けて、担当者との打ち合わせのご都合をお選びいただけます。'
+              : '追ってご連絡差し上げますので、少々お待ちください。'}
           </p>
+          {room?.schedulingUrl && (
+            <div className="mt-6">
+              <SchedulingButton
+                url={room.schedulingUrl}
+                label={room.schedulingLabel}
+                onClick={recordScheduling}
+              />
+            </div>
+          )}
         </div>
       </main>
     )
@@ -410,6 +473,19 @@ export default function AishodanRoomPage() {
                   <span className="font-black text-[#0a0f3c]">あなた: </span>
                   {lastLine.text}
                 </p>
+              )}
+
+              {/* 日程調整。⚠️ 商談中いつでも押せるようにする。
+                  締めまで隠すと、途中で「では日程を」となった相手が押せない。 */}
+              {room?.schedulingUrl && (
+                <div className="mt-4">
+                  <SchedulingButton
+                    url={room.schedulingUrl}
+                    label={room.schedulingLabel}
+                    onClick={recordScheduling}
+                    variant="inline"
+                  />
+                </div>
               )}
             </div>
           </>

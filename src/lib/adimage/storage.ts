@@ -18,7 +18,23 @@ async function ensureBucket() {
   _ready = true
 }
 
+/**
+ * オブジェクトキーとして安全な形に整える。
+ * ⚠️ supabase-js は `..` を除去しない。生の文字列URLとして fetch へ渡すため、
+ *    URLパーサがドットセグメントを解決し、**別バケットや想定外のパスへ書ける**。
+ *    呼び出し側（access.ts）でもCookieを検証しているが、
+ *    パスを組む側でも独立に潰しておく（片方を外しても抜けないように）。
+ */
+function safeObjectPath(path: string): string {
+  return String(path)
+    .split('/')
+    .map((seg) => seg.replace(/[^A-Za-z0-9._-]/g, '_'))
+    .filter((seg) => seg !== '' && seg !== '.' && seg !== '..')
+    .join('/')
+}
+
 export async function uploadPng(path: string, buffer: Buffer): Promise<string> {
+  path = safeObjectPath(path)
   await ensureBucket()
   const supabase = getSupabaseAdmin()
   const { error } = await supabase.storage.from(BUCKET).upload(path, buffer, {
@@ -32,6 +48,7 @@ export async function uploadPng(path: string, buffer: Buffer): Promise<string> {
 /** 署名付き表示URL（既定1時間） */
 export async function signedUrl(path: string, expiresSec = 3600): Promise<string | null> {
   if (!path) return null
+  path = safeObjectPath(path)
   await ensureBucket()
   const supabase = getSupabaseAdmin()
   const { data } = await supabase.storage.from(BUCKET).createSignedUrl(path, expiresSec)
@@ -40,6 +57,7 @@ export async function signedUrl(path: string, expiresSec = 3600): Promise<string
 
 export async function downloadBuffer(path: string): Promise<Buffer | null> {
   if (!path) return null
+  path = safeObjectPath(path)
   await ensureBucket()
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase.storage.from(BUCKET).download(path)

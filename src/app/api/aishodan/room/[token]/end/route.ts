@@ -105,6 +105,8 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
       `相手: ${s.guestCompany || '会社名未取得'} / ${s.guestName || 'お名前未取得'}`,
       `商材: ${s.room.scenario.product.name}`,
       `判定: ${VERDICT_LABELS[result.verdict]}（${result.fitScore}点）`,
+      // ⚠️ 判定スコアより、日程調整に進んだかの方が事業上の意味が大きい
+      s.schedulingClickedAt ? '日程調整: 予約ページを開きました' : '日程調整: 未（こちらから連絡が必要）',
       result.nextAction ? `次アクション: ${result.nextAction}` : '',
       `${process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'}/aishodan/sessions/${s.id}`,
     ].filter(Boolean)

@@ -94,6 +94,9 @@ export interface ScenarioConfig {
   guardrails: Guardrails
   persona: Persona
   durationMin: number
+  /** 日程調整ページのURL（未設定ならボタンを出さない） */
+  schedulingUrl: string | null
+  schedulingLabel: string | null
 }
 
 export type Verdict = 'hot' | 'warm' | 'cold' | 'unfit'

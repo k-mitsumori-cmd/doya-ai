@@ -19,6 +19,7 @@ interface Detail {
   status: string
   startedAt: string | null
   endedAt: string | null
+  schedulingClickedAt: string | null
   roomName: string
   productName: string
   turns: Array<{ id: string; speaker: string; text: string; phase: string | null }>
@@ -156,6 +157,22 @@ export default function AishodanSessionDetail() {
                 ))}
               </ul>
             )}
+
+            {/* ⚠️ 一次商談の成果はここ。判定スコアより先に目に入る位置に置く。 */}
+            <div className={`mt-4 rounded-xl border p-4 ${
+              d.schedulingClickedAt ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-slate-50'
+            }`}>
+              <p className={`text-sm font-semibold ${d.schedulingClickedAt ? 'text-emerald-800' : 'text-slate-700'}`}>
+                {d.schedulingClickedAt
+                  ? `日程調整に進みました（${new Date(d.schedulingClickedAt).toLocaleString('ja-JP')}）`
+                  : '日程調整には進んでいません'}
+              </p>
+              {!d.schedulingClickedAt && (
+                <p className="mt-1 text-xs text-slate-500">
+                  予約ページを開いていないため、こちらから連絡する必要があります。
+                </p>
+              )}
+            </div>
 
             {d.outcome.nextAction && (
               <div className="mt-4 rounded-xl border border-[#0066ff] bg-[#f2f6ff] p-4">

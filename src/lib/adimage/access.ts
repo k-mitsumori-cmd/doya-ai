@@ -14,6 +14,9 @@ import { prisma } from '@/lib/prisma'
 
 export const GUEST_COOKIE = 'adimage_gid'
 
+/** ゲストIDの形式。randomBytes(16).toString('hex') と一致させること */
+const GUEST_ID_PATTERN = /^[0-9a-f]{32}$/
+
 export type AdImagePlan = 'GUEST' | 'FREE' | 'PRO'
 
 /** 日次のコンセプト生成上限 */
@@ -41,7 +44,15 @@ export async function getIdentity(req: NextRequest): Promise<AdImageIdentity> {
     const u = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } })
     return { userId, guestId: null, plan: isPaid(u?.plan) ? 'PRO' : 'FREE' }
   }
-  const guestId = req.cookies.get(GUEST_COOKIE)?.value || null
+  // ⚠️ Cookie の中身をそのまま信用しない。この値は
+  //    `${identity.userId || identity.guestId}/...` という形で
+  //    Supabase Storage のオブジェクトキーの先頭に入る。
+  //    `../interview` のような値を送られると、supabase-js は `..` を除去せず
+  //    URL パーサが解決してしまい、**別サービスのバケットへ書き込める**
+  //    （service-role キーで upsert される）。
+  //    発行時と同じ形式（16バイトのhex）だけを受け付け、外れたら未設定として扱う。
+  const raw = req.cookies.get(GUEST_COOKIE)?.value
+  const guestId = raw && GUEST_ID_PATTERN.test(raw) ? raw : null
   return { userId: null, guestId, plan: 'GUEST' }
 }
 

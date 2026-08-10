@@ -3958,8 +3958,16 @@ model AishodanScenario {
   /// { tone, firstPerson, maxCharsPerUtterance }
   persona     Json?
   durationMin Int             @default(15)
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+
+  /// 日程調整ページのURL（Calendly / TimeRex / Googleカレンダー予約 など）
+  /// ⚠️ 一次商談の出口は「次アポの確定」。ここが空だと商談が終わっても次につながらない。
+  /// ⚠️ 見込み客の画面にボタンとして出るため、保存時に https のみ許可する。
+  schedulingUrl   String?
+  /// ボタンの文言。空なら既定文言を使う
+  schedulingLabel String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   rooms AishodanRoom[]
 
@@ -4017,6 +4025,11 @@ model AishodanSession {
 
   referrer String?
   utm      Json?
+
+  /// 日程調整ボタンを押した時刻。
+  /// ⚠️ 一次商談の成果はここ。押されたかどうかが分からないと、
+  ///    商談が次につながったのかを誰も判断できない。
+  schedulingClickedAt DateTime?
 
   purgeAfter DateTime?
   createdAt  DateTime  @default(now())

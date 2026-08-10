@@ -24,6 +24,8 @@ interface ScenarioData {
   guardrails: Guardrails
   persona: Persona
   durationMin: number
+  schedulingUrl: string | null
+  schedulingLabel: string | null
 }
 
 export default function AishodanScenarioPage() {
@@ -66,6 +68,8 @@ export default function AishodanScenarioPage() {
         body: JSON.stringify({
           name: s.name,
           durationMin: s.durationMin,
+          schedulingUrl: s.schedulingUrl ?? '',
+          schedulingLabel: s.schedulingLabel ?? '',
           phases: s.phases,
           slots: s.slots,
           icp: s.icp,
@@ -149,6 +153,34 @@ export default function AishodanScenarioPage() {
           </label>
         </section>
 
+        {/* 日程調整 */}
+        <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+          <h2 className="text-sm font-bold text-slate-900">日程調整リンク</h2>
+          <p className="mt-1 text-xs leading-relaxed text-slate-500">
+            設定すると、商談画面に「日程を決める」ボタンが出ます。AIも締めで必ず案内します。
+            一次商談の出口は次アポの確定なので、ここを入れておくと商談が次につながります。
+            Calendly・TimeRex・Googleカレンダーの予約ページなどのURLを貼ってください。
+          </p>
+          <label className="mt-4 block text-sm">
+            <span className="mb-1 block text-xs font-semibold text-slate-500">予約ページのURL（https のみ）</span>
+            <input
+              value={s.schedulingUrl ?? ''}
+              onChange={(e) => patch({ schedulingUrl: e.target.value })}
+              placeholder="https://calendly.com/your-name/30min"
+              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+            />
+          </label>
+          <label className="mt-3 block text-sm">
+            <span className="mb-1 block text-xs font-semibold text-slate-500">ボタンの文言（空なら「担当者と日程を決める」）</span>
+            <input
+              value={s.schedulingLabel ?? ''}
+              onChange={(e) => patch({ schedulingLabel: e.target.value })}
+              placeholder="担当者と日程を決める"
+              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+            />
+          </label>
+        </section>
+
         {/* ガードレール */}
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-sm font-bold text-slate-900">話してよいこと・いけないこと</h2>
@@ -227,6 +259,12 @@ export default function AishodanScenarioPage() {
 
           <label className="mt-4 block text-sm">
             <span className="mb-1 block text-xs font-semibold text-slate-500">触れてほしくない話題（1行に1件）</span>
+            <span className="mb-1 block text-[11px] leading-relaxed text-amber-700">
+              ここに書いた内容はAIへの指示に含まれます。AIが自分から話すことはなく、
+              指示を読み上げないようにもしていますが、相手がしつこく尋ねた場合に
+              漏れる可能性は残ります。具体的な社外秘の事実ではなく、
+              「係争中の案件」「未発表の機能」のような話題の分類で書いてください。
+            </span>
             <textarea
               value={s.guardrails.prohibitedTopics.join('\n')}
               onChange={(e) =>
@@ -446,6 +484,9 @@ export default function AishodanScenarioPage() {
             </label>
             <label className="block text-sm">
               <span className="mb-1 block text-xs font-semibold text-slate-500">話してはいけないこと（1行に1件）</span>
+              <span className="mb-1 block text-[11px] leading-relaxed text-amber-700">
+                同じくAIへの指示に含まれます。社外秘の事実そのものは書かず、話題の分類で書いてください。
+              </span>
               <textarea
                 value={(profile.doNotMention || []).join('\n')}
                 onChange={(e) =>

@@ -11,9 +11,11 @@ export async function GET(req: NextRequest) {
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
-  const [total, evaluated, byVerdict, unanswered, sessions] = await Promise.all([
+  const [total, evaluated, scheduled, byVerdict, unanswered, sessions] = await Promise.all([
     prisma.aishodanSession.count({ where: { organizationId: ctx.organizationId } }),
     prisma.aishodanSession.count({ where: { organizationId: ctx.organizationId, status: 'evaluated' } }),
+    // 一次商談の成果。⚠️ 完了率より、こちらの方が事業上の意味が大きい
+    prisma.aishodanSession.count({ where: { organizationId: ctx.organizationId, schedulingClickedAt: { not: null } } }),
     prisma.aishodanOutcome.groupBy({
       by: ['verdict'],
       where: { session: { organizationId: ctx.organizationId } },
@@ -47,6 +49,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     total,
     evaluated,
+    scheduled,
+    schedulingRate: total > 0 ? Math.round((scheduled / total) * 100) : 0,
     completionRate: total > 0 ? Math.round((evaluated / total) * 100) : 0,
     avgMin,
     byVerdict: Object.fromEntries(byVerdict.map((v) => [v.verdict, v._count.verdict])),

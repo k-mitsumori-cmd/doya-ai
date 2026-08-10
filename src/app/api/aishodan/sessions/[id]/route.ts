@@ -41,6 +41,7 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
       currentPhase: session.currentPhase,
       startedAt: session.startedAt,
       endedAt: session.endedAt,
+      schedulingClickedAt: session.schedulingClickedAt,
       referrer: session.referrer,
       roomName: session.room.name,
       productName: session.room.scenario.product.name,
