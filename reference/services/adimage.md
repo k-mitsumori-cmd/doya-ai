@@ -844,7 +844,7 @@ export type GptImageSize = `${number}x${number}` | 'auto'
 | Visionフィードバック | 済 | `feedback.ts:evaluateCreative()` |
 | 構造化改善（refine） | 済 | `api/adimage/concepts/[id]/refine` |
 | ZIP一括ダウンロード | 済 | `api/adimage/concepts/[id]/export` |
-| ロゴ合成（5.6） | 未 | 「ロゴなし」運用。Phase 2 |
+| ロゴ合成（5.6） | 済 | `lib/adimage/logo.ts` / `api/adimage/brands/[id]/logo`（2026-08-10・adbanner統合に伴い移植） |
 | コントラスト実測（Sharp） | 未 | Vision採点で代替中。Phase 2 |
 | 効果指標の取り込み（AdImageMetric） | 未 | Phase 2（モデルも未作成） |
 
