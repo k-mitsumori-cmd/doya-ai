@@ -8,6 +8,7 @@ import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { assertFreeLimit } from '@/lib/plan-limit'
+import { recordServiceUsage } from '@/lib/service-usage'
 import { getMensetsuContext, orgSlugFrom } from '@/lib/mensetsu/access'
 
 /** 推測不能なワンタイムトークン（URLに載るため base64url） */
@@ -97,6 +98,13 @@ export async function POST(req: NextRequest) {
       status: 'pending',
     },
     select: { id: true, token: true, expiresAt: true, candidateName: true },
+  })
+
+  void recordServiceUsage({
+    userId: ctx.userId,
+    serviceId: 'mensetsu',
+    action: '面接URLを発行',
+    summary: `${template.jobTitle}${session.candidateName ? ` / ${session.candidateName}` : ''}`,
   })
 
   const base = process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'

@@ -10,6 +10,7 @@ import { getAishodanContext, orgSlugFrom } from '@/lib/aishodan/access'
 import { crawlProductSite, generateProfile, ingestPages } from '@/lib/aishodan/knowledge'
 import { DEFAULT_GUARDRAILS, DEFAULT_ICP, DEFAULT_PERSONA, DEFAULT_PHASES, DEFAULT_SLOTS } from '@/lib/aishodan/defaults'
 import { assertFreeLimit } from '@/lib/plan-limit'
+import { recordServiceUsage } from '@/lib/service-usage'
 
 export async function GET(req: NextRequest) {
   const ctx = await getAishodanContext(orgSlugFrom(req))
@@ -96,6 +97,14 @@ export async function POST(req: NextRequest) {
       persona: DEFAULT_PERSONA as any,
       durationMin: 15,
     },
+  })
+
+  void recordServiceUsage({
+    userId: ctx.userId,
+    serviceId: 'aishodan',
+    action: '商材を取り込み',
+    summary: `${name} / ${url.toString()}`,
+    count: chunkCount,
   })
 
   return NextResponse.json({

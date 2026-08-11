@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'react-hot-toast'
 import './globals.css'
 import { Providers } from '@/components/Providers'
+import FeedbackMount from '@/components/feedback/FeedbackMount'
 import { SITE_CONFIG, SERVICE_SEO, generateOrganizationSchema, generateWebSiteSchema } from '@/lib/seo'
 import { GoogleTagManager, GoogleTagManagerNoScript } from '@/components/GoogleTagManager'
 import { GoogleAnalytics } from '@/components/GoogleAnalytics'
@@ -168,6 +169,9 @@ export default function RootLayout({
         <GoogleTagManagerNoScript />
         <Providers>
           {children}
+          {/* 改善点・要望をうかがうカード。無料プランの方に、
+              1 / 5 / 20回目の利用でだけ右下に出る（判定は lib/feedback.ts） */}
+          <FeedbackMount />
           {/* GA4（ドヤマーケと同一プロパティ）: PV計測 + sign_up/purchaseイベント */}
           <GoogleAnalytics />
           <LogoutToastListener />

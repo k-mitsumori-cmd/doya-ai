@@ -146,8 +146,10 @@ model User {
   signupService String? // 登録操作を行ったサービス（例: banner, seo, portal）
   signupSource  String? // 流入経路（例: Google検索 / ドヤマーケ / X / direct）
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  serviceFeedback     ServiceFeedback[]
+  feedbackPromptState FeedbackPromptState?
 }
 
 // ============================================
@@ -4249,4 +4251,52 @@ model AdImageFeedback {
 
   @@index([conceptId, createdAt])
   @@map("adimage_feedback")
+}
+
+// ============================================================
+// 利用者フィードバック（ドヤシリーズ共通）
+// 無料プランの方に、使ったあとで改善点・要望を書いてもらう。
+// ⚠️ 集めることが目的ではなく「開発に反映する」ことが目的なので、
+//    Slack通知と管理画面での一覧までを一組で用意する。
+// ============================================================
+
+model ServiceFeedback {
+  id        String @id @default(cuid())
+  userId    String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// services.ts の id（'quote' / 'aishodan' 等）
+  serviceId String
+
+  /// 満足度 1〜5。⚠️ 任意。必須にすると書いてもらえる数が減る
+  rating Int?
+  /// 改善点・要望の本文
+  text   String @db.Text
+
+  /// 何回目の利用で表示したか（どのタイミングの声かを後から見るため）
+  usageCount Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([serviceId, createdAt])
+  @@index([userId])
+  @@map("service_feedback")
+}
+
+/// 「いつ聞いてよいか」の状態。⚠️ 何度も出すと使い勝手そのものを損なう。
+model FeedbackPromptState {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// 「あとで」を押されたら、この時刻まで出さない
+  snoozeUntil DateTime?
+  /// 直近に表示した時刻。⚠️ サービスを続けて使っても連続で出さないために見る
+  lastShownAt DateTime?
+  /// 「今後は表示しない」を選ばれた。以後は一切出さない
+  optedOut    Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("feedback_prompt_state")
 }

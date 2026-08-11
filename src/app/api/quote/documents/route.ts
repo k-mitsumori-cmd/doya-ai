@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
 import { defaultExpiry, nextQuoteNo, recalcDocument } from '@/lib/quote/document'
 import { assertFreeLimit } from '@/lib/plan-limit'
+import { recordServiceUsage } from '@/lib/service-usage'
 import type { PriceSource } from '@/lib/quote/types'
 
 export async function GET(req: NextRequest) {
@@ -102,5 +103,15 @@ export async function POST(req: NextRequest) {
   if (!doc) return NextResponse.json({ error: '見積書を作成できませんでした' }, { status: 500 })
 
   await recalcDocument(doc.id)
+
+  // 利用記録。⚠️ 失敗しても見積書作成は壊さない（throwしない実装）
+  void recordServiceUsage({
+    userId: ctx.userId,
+    serviceId: 'quote',
+    action: '見積書を作成',
+    summary: `${title}${body?.clientCompany ? ` / ${String(body.clientCompany)}` : ''}`,
+    count: items.length,
+  })
+
   return NextResponse.json({ id: doc.id, quoteNo: doc.quoteNo })
 }

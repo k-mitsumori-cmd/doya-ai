@@ -12,6 +12,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { assertQuota, ensureGuestId, getIdentity, GUEST_COOKIE, ownerWhere } from '@/lib/adimage/access'
+import { recordServiceUsage } from '@/lib/service-usage'
 import { DEFAULT_PLACEMENT_KEYS, findPlacement, groupByGenSize } from '@/lib/adimage/placements'
 import { exportToSize, generateBaked } from '@/lib/adimage/generate'
 import { DEFAULT_LOGO_CONFIG, type LogoConfig } from '@/lib/adimage/logo'
@@ -214,6 +215,15 @@ export async function POST(req: NextRequest) {
       url: await signedUrl(cr.imagePath),
     }))
   )
+
+  // ⚠️ ゲストは userId が無いので記録されない（recordServiceUsage 側で弾かれる）
+  void recordServiceUsage({
+    userId: identity.userId,
+    serviceId: 'adimage',
+    action: '広告画像を生成',
+    summary: `${brand.name} / ${copy.headline}`,
+    count: creatives.length,
+  })
 
   const res = NextResponse.json({
     conceptId: concept.id,

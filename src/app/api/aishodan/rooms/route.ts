@@ -7,6 +7,7 @@ import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAishodanContext, orgSlugFrom } from '@/lib/aishodan/access'
+import { recordServiceUsage } from '@/lib/service-usage'
 
 export async function GET(req: NextRequest) {
   const ctx = await getAishodanContext(orgSlugFrom(req))
@@ -55,6 +56,13 @@ export async function POST(req: NextRequest) {
         ? Math.max(1, Math.min(5000, Math.round(Number(body.maxSessions))))
         : 500,
     },
+  })
+
+  void recordServiceUsage({
+    userId: ctx.userId,
+    serviceId: 'aishodan',
+    action: '商談URLを発行',
+    summary: room.name,
   })
 
   return NextResponse.json({ room: { id: room.id, name: room.name, token: room.token, expiresAt: room.expiresAt } })

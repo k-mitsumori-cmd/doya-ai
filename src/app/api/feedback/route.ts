@@ -1,135 +1,108 @@
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 30
 
+// GET  /api/feedback?service=xxx — 今このサービスで聞いてよいか
+// POST /api/feedback             — 改善点・要望を受け取る／あとで／今後は表示しない
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { postToSlackBlocks } from '@/lib/notifications'
+import { serviceLabelOf } from '@/lib/attribution'
+import { escapeHtml } from '@/lib/html-escape'
+import {
+  markPromptShown,
+  optOutPrompt,
+  shouldPromptFeedback,
+  snoozePrompt,
+} from '@/lib/feedback'
 
-/**
- * POST /api/feedback
- * お問い合わせ・改善依頼（改善提案 / 機能要望 / エラー報告 / その他）を
- * 共通の Slack Webhook へ通知する。全サービス共通の窓口。
- * Body: { category | type, message, page, service, userAgent }
- */
+async function resolveUserId(): Promise<string | undefined> {
+  const session = await getServerSession(authOptions)
+  const id = (session?.user as any)?.id as string | undefined
+  if (id) return id
+  const email = session?.user?.email
+  if (!email) return undefined
+  const u = await prisma.user.findUnique({ where: { email }, select: { id: true } })
+  return u?.id
+}
 
-// 種別ラベル（category 優先、旧 type も後方互換で受ける）
-const CATEGORY_LABELS: Record<string, string> = {
-  improvement: '✨ 改善したほうがいいこと',
-  feature: '💡 追加の機能要望',
-  bug: '🐛 エラー報告',
-  error: '🚨 エラー報告', // 旧エラー画面（error.tsx）からの type:'error' 互換
-  other: '📝 その他',
+export async function GET(req: NextRequest) {
+  const userId = await resolveUserId()
+  // ⚠️ 未ログイン・ゲストには出さない。401ではなく「出さない」で返す
+  //    （画面側でエラー表示にしないため）。
+  if (!userId) return NextResponse.json({ show: false })
+
+  const serviceId = new URL(req.url).searchParams.get('service') || ''
+  const decision = await shouldPromptFeedback(userId, serviceId)
+  if (!decision.show) return NextResponse.json({ show: false })
+
+  // 表示した時点で記録する。⚠️ 送信時ではない。
+  //    送信されなかった場合にも連続表示を防ぐ必要がある。
+  await markPromptShown(userId).catch(() => {})
+
+  return NextResponse.json({
+    show: true,
+    serviceId,
+    serviceLabel: serviceLabelOf(serviceId),
+    usageCount: decision.usageCount ?? 0,
+  })
 }
 
 export async function POST(req: NextRequest) {
-  try {
-    const session = await getServerSession(authOptions)
-    const userEmail = session?.user?.email || '匿名ユーザー'
-    const userName = session?.user?.name || '名前なし'
+  const userId = await resolveUserId()
+  if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
-    const body = await req.json().catch(() => ({}))
-    const {
-      category,
-      type,
-      message,
-      page = '',
-      service = '',
-      userAgent = '',
-      // 旧エラー画面(error.tsx)からの後方互換フィールド
-      error: errorText,
-      description,
-    } = body as {
-      category?: string
-      type?: string
-      message?: string
-      page?: string
-      service?: string
-      userAgent?: string
-      error?: string
-      description?: string
-    }
+  const body = await req.json().catch(() => ({}))
+  const action = String(body?.action || 'submit')
 
-    // 本文は message を優先。無ければ旧形式の description/error から組み立てる
-    let finalMessage = (typeof message === 'string' ? message : '').trim()
-    if (!finalMessage) {
-      const parts: string[] = []
-      if (typeof description === 'string' && description.trim()) parts.push(description.trim())
-      if (typeof errorText === 'string' && errorText.trim()) parts.push(`エラー内容: ${errorText.trim()}`)
-      finalMessage = parts.join('\n\n')
-    }
-
-    if (!finalMessage) {
-      return NextResponse.json({ error: '内容を入力してください' }, { status: 400 })
-    }
-    if (finalMessage.length > 5000) {
-      finalMessage = finalMessage.slice(0, 5000)
-    }
-
-    const key = category || type || 'other'
-    const categoryLabel = CATEGORY_LABELS[key] || CATEGORY_LABELS.other
-
-    // Slack Webhook URL を取得（共通: SystemSetting → 環境変数の順）
-    let webhookUrl: string | null = null
-    try {
-      const setting = await prisma.systemSetting.findUnique({
-        where: { key: 'slack_webhook' },
-      })
-      webhookUrl = (setting?.value as string) || null
-    } catch {}
-    if (!webhookUrl) {
-      webhookUrl = process.env.SLACK_WEBHOOK_URL || null
-    }
-
-    const slackPayload = {
-      text: `📣 お問い合わせ・改善依頼`,
-      blocks: [
-        {
-          type: 'header',
-          text: { type: 'plain_text', text: '📣 お問い合わせ・改善依頼', emoji: true },
-        },
-        {
-          type: 'section',
-          fields: [
-            { type: 'mrkdwn', text: `*種別:*\n${categoryLabel}` },
-            { type: 'mrkdwn', text: `*サービス:*\n${service || '不明'}` },
-            { type: 'mrkdwn', text: `*ユーザー:*\n${userName}` },
-            { type: 'mrkdwn', text: `*メール:*\n${userEmail}` },
-          ],
-        },
-        {
-          type: 'section',
-          text: { type: 'mrkdwn', text: `*内容:*\n${finalMessage.slice(0, 2900)}` },
-        },
-        {
-          type: 'context',
-          elements: [
-            { type: 'mrkdwn', text: `ページ: ${page || 'N/A'}${userAgent ? ` ・ ${userAgent}` : ''}` },
-          ],
-        },
-      ],
-    }
-
-    if (webhookUrl) {
-      try {
-        const r = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(slackPayload),
-        })
-        if (!r.ok) console.error('[feedback] Slack送信失敗', r.status)
-      } catch (e) {
-        console.error('[feedback] Slack送信失敗', e)
-      }
-    } else {
-      console.warn('[feedback] Slack webhook 未設定')
-      console.log('[FEEDBACK]', { userName, userEmail, category: key, page, service, message: finalMessage })
-    }
-
-    return NextResponse.json({ success: true })
-  } catch (e) {
-    console.error('[feedback] エラー', e)
-    return NextResponse.json({ error: '送信に失敗しました' }, { status: 500 })
+  if (action === 'snooze') {
+    await snoozePrompt(userId)
+    return NextResponse.json({ ok: true })
   }
+  if (action === 'opt_out') {
+    await optOutPrompt(userId)
+    return NextResponse.json({ ok: true })
+  }
+
+  const serviceId = String(body?.serviceId || '').slice(0, 60)
+  const text = String(body?.text || '').trim()
+  if (!serviceId) return NextResponse.json({ error: 'サービスが不明です' }, { status: 400 })
+  if (!text) return NextResponse.json({ error: '内容をご記入ください' }, { status: 400 })
+
+  const ratingRaw = Number(body?.rating)
+  const rating = Number.isFinite(ratingRaw) && ratingRaw >= 1 && ratingRaw <= 5 ? Math.round(ratingRaw) : null
+
+  const saved = await prisma.serviceFeedback.create({
+    data: {
+      userId,
+      serviceId,
+      rating,
+      text: text.slice(0, 4000),
+      usageCount: Number.isFinite(Number(body?.usageCount)) ? Math.max(0, Math.round(Number(body.usageCount))) : 0,
+    },
+    select: { id: true },
+  })
+
+  // 送ってもらった以上、開発に反映するのが目的。届いたことが分かる形にする。
+  // ⚠️ 通知の失敗で保存を巻き戻さない（書いてもらった内容を失う方が損失が大きい）。
+  try {
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } })
+    const lines = [
+      `*ご意見が届きました*（${serviceLabelOf(serviceId)}）`,
+      rating ? `満足度: ${'●'.repeat(rating)}${'○'.repeat(5 - rating)}（${rating}/5）` : '満足度: 未回答',
+      `利用回数: ${body?.usageCount ?? '不明'}回目`,
+      `送信者: ${user?.name || user?.email || '不明'}`,
+      '',
+      // ⚠️ 利用者の入力をSlackのmrkdwnへ入れる。整形記号を効かせない
+      escapeHtml(text).slice(0, 1500),
+    ]
+    await postToSlackBlocks('ご意見が届きました', [
+      { type: 'section', text: { type: 'mrkdwn', text: lines.join('\n') } },
+    ])
+  } catch {
+    /* 通知に失敗しても保存は成立している */
+  }
+
+  return NextResponse.json({ ok: true, id: saved.id })
 }
