@@ -22,6 +22,7 @@ interface Detail {
   endedAt: string | null
   schedulingClickedAt: string | null
   roomName: string
+  isPreview: boolean
   productName: string
   turns: Array<{ id: string; speaker: string; text: string; phase: string | null }>
   slots: Array<{ key: string; label: string; required: boolean; value: string | null }>

@@ -3989,9 +3989,16 @@ model AishodanRoom {
   isActive       Boolean              @default(true)
   /// この部屋で開始できる商談の総数。乱用を止める最後の砦
   maxSessions    Int                  @default(500)
-  sessionCount   Int                  @default(0)
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+
+  /// ホストの練習用ルーム。
+  /// ⚠️ 練習は**本番と同じコードパス**を通さないと品質調整の意味がないため、
+  ///    専用の仕組みを作らず通常のルームに印を付ける方式にした。
+  /// ⚠️ 練習の商談は指標・無料枠の数え上げ・Slack通知から除外する。
+  ///    ログは残す（何を話したかを見るのが練習の目的そのもの）。
+  isPreview    Boolean  @default(false)
+  sessionCount Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   sessions AishodanSession[]
 

@@ -17,7 +17,7 @@ interface SessionRow {
   createdAt: string
   startedAt: string | null
   endedAt: string | null
-  room: { name: string }
+  room: { name: string; isPreview: boolean }
   schedulingClickedAt: string | null
   outcome: { fitScore: number; verdict: string } | null
   _count: { turns: number }
@@ -101,6 +101,11 @@ export default function AishodanSessionsPage() {
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    {s.room.isPreview && (
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                        練習
+                      </span>
+                    )}
                     {s.schedulingClickedAt && (
                       <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
                         日程調整済み

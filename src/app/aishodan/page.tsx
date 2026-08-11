@@ -263,6 +263,9 @@ export default function AishodanDashboard() {
               currentSlug={org.slug}
               onChange={() => void load()}
             />
+            <Link href="/aishodan/preview" className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
+              練習する
+            </Link>
             <Link href="/aishodan/sessions" className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">
               商談ログ
             </Link>
@@ -326,6 +329,12 @@ export default function AishodanDashboard() {
                           className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
                         >
                           シナリオを編集
+                        </Link>
+                        <Link
+                          href="/aishodan/preview"
+                          className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
+                        >
+                          練習する
                         </Link>
                         <button
                           onClick={() => issueRoom(p.scenarios[0].id)}

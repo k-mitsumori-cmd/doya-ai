@@ -11,24 +11,28 @@ export async function GET(req: NextRequest) {
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
+  // ⚠️ 練習の商談は指標に混ぜない。混ぜると自分の練習で完了率や日程調整率が
+  //    動いてしまい、数字が事業の実態を表さなくなる。
+  const real = { organizationId: ctx.organizationId, room: { isPreview: false } }
+
   const [total, evaluated, scheduled, byVerdict, unanswered, sessions] = await Promise.all([
-    prisma.aishodanSession.count({ where: { organizationId: ctx.organizationId } }),
-    prisma.aishodanSession.count({ where: { organizationId: ctx.organizationId, status: 'evaluated' } }),
+    prisma.aishodanSession.count({ where: real }),
+    prisma.aishodanSession.count({ where: { ...real, status: 'evaluated' } }),
     // 一次商談の成果。⚠️ 完了率より、こちらの方が事業上の意味が大きい
-    prisma.aishodanSession.count({ where: { organizationId: ctx.organizationId, schedulingClickedAt: { not: null } } }),
+    prisma.aishodanSession.count({ where: { ...real, schedulingClickedAt: { not: null } } }),
     prisma.aishodanOutcome.groupBy({
       by: ['verdict'],
-      where: { session: { organizationId: ctx.organizationId } },
+      where: { session: real },
       _count: { verdict: true },
     }),
     prisma.aishodanQuestion.findMany({
-      where: { session: { organizationId: ctx.organizationId }, unanswered: true },
+      where: { session: real, unanswered: true },
       orderBy: { createdAt: 'desc' },
       take: 30,
       select: { id: true, text: true, createdAt: true },
     }),
     prisma.aishodanSession.findMany({
-      where: { organizationId: ctx.organizationId, startedAt: { not: null }, endedAt: { not: null } },
+      where: { ...real, startedAt: { not: null }, endedAt: { not: null } },
       select: { startedAt: true, endedAt: true, currentPhase: true, status: true },
       take: 500,
     }),

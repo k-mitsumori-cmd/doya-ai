@@ -12,7 +12,9 @@ export async function GET(req: NextRequest) {
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
   const rooms = await prisma.aishodanRoom.findMany({
-    where: { organizationId: ctx.organizationId },
+    // ⚠️ 練習ルームは配布するURLではないので一覧に出さない。
+    //    混ぜると「どれを配ればいいのか」が分からなくなる。
+    where: { organizationId: ctx.organizationId, isPreview: false },
     orderBy: { createdAt: 'desc' },
     include: {
       scenario: { select: { id: true, name: true, product: { select: { name: true } } } },

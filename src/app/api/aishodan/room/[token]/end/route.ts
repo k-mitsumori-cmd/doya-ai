@@ -78,6 +78,8 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     // ⚠️ ここで黙って返すと、ホストは商談が行われたことすら知らないまま
     //    実際の見込み客が一覧の中で放置される。判定が出ていなくても必ず通知する。
     try {
+      // ⚠️ 練習では通知しない（成功時と同じ扱い）
+      if (s.room.isPreview) throw new Error('skip: preview')
       await postToSlackBlocks('AI商談が完了しました（判定は失敗）', [
         {
           type: 'section',
@@ -121,7 +123,9 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   await prisma.aishodanSession.update({ where: { id: s.id }, data: { status: 'evaluated' } })
 
   // ホストへの即時通知。商談が終わったことに気づけないと機会損失になる
+  // ⚠️ 練習では通知しない。自分の練習でSlackが鳴ると、本物の商談の通知が埋もれる。
   try {
+    if (s.room.isPreview) throw new Error('skip: preview')
     const lines = [
       `*AI商談が完了しました*（${s.room.organization.name}）`,
       `相手: ${s.guestCompany || '会社名未取得'} / ${s.guestName || 'お名前未取得'}`,

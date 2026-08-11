@@ -117,13 +117,22 @@ export default function AishodanScenarioPage() {
             <Link href="/aishodan" className="text-xs text-slate-500 hover:underline">← ダッシュボード</Link>
             <h1 className="truncate text-base font-bold text-slate-900">{s.name}</h1>
           </div>
-          <button
-            onClick={save}
-            disabled={saving}
-            className="shrink-0 rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
-          >
-            {saving ? '保存中...' : '保存'}
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {/* ⚠️ 直したら即その場で試せることが、品質調整を回す上で効く */}
+            <Link
+              href="/aishodan/preview"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+            >
+              試す
+            </Link>
+            <button
+              onClick={save}
+              disabled={saving}
+              className="rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+            >
+              {saving ? '保存中...' : '保存'}
+            </button>
+          </div>
         </div>
       </header>
 

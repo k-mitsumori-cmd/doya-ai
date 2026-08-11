@@ -34,11 +34,15 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     select: { userId: true },
     orderBy: { createdAt: 'asc' },
   })
-  const quota = await assertFreeLimit(
-    'aishodanSessions',
-    () => prisma.aishodanSession.count({ where: { organizationId: room.organizationId } }),
-    owner?.userId ?? null
-  )
+  // ⚠️ 練習は無料枠を消費させない。シナリオを詰めるたびに枠が減ると
+  //    「試すと損をする」構造になり、品質調整をしなくなる。
+  const quota = room.isPreview
+    ? { ok: true as const }
+    : await assertFreeLimit(
+        'aishodanSessions',
+        () => prisma.aishodanSession.count({ where: { organizationId: room.organizationId, room: { isPreview: false } } }),
+        owner?.userId ?? null
+      )
   if (!quota.ok) {
     // ⚠️ 見込み客に課金の話を見せない。相手には落ち度がない。
     return NextResponse.json(

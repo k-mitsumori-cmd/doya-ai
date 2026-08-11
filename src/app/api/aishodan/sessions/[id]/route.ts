@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
       slotValues: true,
       questions: { orderBy: { createdAt: 'asc' } },
       outcome: true,
-      room: { select: { name: true, scenario: { include: { product: { select: { name: true } } } } } },
+      room: { select: { name: true, isPreview: true, scenario: { include: { product: { select: { name: true } } } } } },
     },
   })
   if (!session) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
@@ -44,6 +44,7 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
       schedulingClickedAt: session.schedulingClickedAt,
       referrer: session.referrer,
       roomName: session.room.name,
+      isPreview: session.room.isPreview,
       productName: session.room.scenario.product.name,
       turns: session.turns.map((t) => ({ id: t.id, speaker: t.speaker, text: t.text, phase: t.phase })),
       slots: cfg.slots.map((s) => ({
