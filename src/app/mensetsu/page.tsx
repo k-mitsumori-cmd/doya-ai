@@ -97,6 +97,10 @@ export default function MensetsuDashboard() {
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [issuedUrl, setIssuedUrl] = useState<string | null>(null)
   const [candidateName, setCandidateName] = useState('')
+  const [candidateEmail, setCandidateEmail] = useState('')
+  const [sendInviteMail, setSendInviteMail] = useState(true)
+  /** ご案内メールの送信結果。null = 送っていない */
+  const [issuedMail, setIssuedMail] = useState<boolean | null>(null)
   const [selectedTemplate, setSelectedTemplate] = useState('')
   const [members, setMembers] = useState<Member[]>([])
   const [myRole, setMyRole] = useState<string>('member')
@@ -222,7 +226,13 @@ export default function MensetsuDashboard() {
       const res = await fetch('/api/mensetsu/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ templateId: selectedTemplate, candidateName: candidateName.trim() || undefined }),
+        body: JSON.stringify({
+          templateId: selectedTemplate,
+          candidateName: candidateName.trim() || undefined,
+          candidateEmail: candidateEmail.trim() || undefined,
+          // ⚠️ 担当者が選んだときだけ送る。発行＝送信にしない
+          sendEmail: sendInviteMail && !!candidateEmail.trim(),
+        }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -230,7 +240,9 @@ export default function MensetsuDashboard() {
         return
       }
       setIssuedUrl(data.url)
+      setIssuedMail(data.emailSent)
       setCandidateName('')
+      setCandidateEmail('')
       await load()
     } finally {
       setBusy(null)
@@ -565,6 +577,13 @@ export default function MensetsuDashboard() {
                       placeholder="応募者名（任意）"
                       className="rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
                     />
+                    <input
+                      type="email"
+                      value={candidateEmail}
+                      onChange={(e) => setCandidateEmail(e.target.value)}
+                      placeholder="応募者のメールアドレス（任意）"
+                      className="rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                    />
                     <button
                       onClick={issue}
                       disabled={busy === 'issue'}
@@ -573,6 +592,28 @@ export default function MensetsuDashboard() {
                       {busy === 'issue' ? '発行中…' : 'URLを発行'}
                     </button>
                   </div>
+                  {/* ⚠️ メールを入れた面接は、同意画面で本人確認を求める（URLが転送されても
+                       ご本人以外は先へ進めない）。空欄なら確認は行わない */}
+                  {candidateEmail.trim() ? (
+                    <label className="mt-3 flex cursor-pointer items-start gap-2.5">
+                      <input
+                        type="checkbox"
+                        checked={sendInviteMail}
+                        onChange={(e) => setSendInviteMail(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 accent-[#0066ff]"
+                      />
+                      <span className="text-xs font-bold leading-relaxed text-[#425071]">
+                        発行と同時に、応募者へご案内のメールを送る
+                        <span className="mt-0.5 block font-medium text-[#8a94ad]">
+                          メールを登録した面接では、開始前にご本人確認としてメールアドレスの入力をお願いします。
+                        </span>
+                      </span>
+                    </label>
+                  ) : (
+                    <p className="mt-3 text-xs font-medium leading-relaxed text-[#8a94ad]">
+                      メールアドレスを入れておくと、ご案内メールを送れるほか、開始前のご本人確認が有効になります。
+                    </p>
+                  )}
                   {issuedUrl && (
                     <div className="mt-4 rounded-lg bg-[#f7faff] p-4">
                       <p className="text-xs font-black text-[#0066ff]">発行された面接URL</p>
@@ -583,6 +624,14 @@ export default function MensetsuDashboard() {
                       >
                         コピー
                       </button>
+                      {issuedMail === true && (
+                        <p className="mt-3 text-xs font-bold text-[#137333]">応募者へご案内メールを送信しました。</p>
+                      )}
+                      {issuedMail === false && (
+                        <p className="mt-3 text-xs font-bold text-[#a06800]">
+                          ご案内メールを送信できませんでした。上のURLを直接お伝えください。
+                        </p>
+                      )}
                     </div>
                   )}
                 </>

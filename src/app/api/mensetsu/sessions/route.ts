@@ -7,6 +7,8 @@ export const maxDuration = 300
 import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { sendEmail } from '@/lib/email'
+import { escapeHtml } from '@/lib/html-escape'
 import { assertFreeLimit } from '@/lib/plan-limit'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { getMensetsuContext, orgSlugFrom } from '@/lib/mensetsu/access'
@@ -107,10 +109,45 @@ export async function POST(req: NextRequest) {
     summary: `${template.jobTitle}${session.candidateName ? ` / ${session.candidateName}` : ''}`,
   })
 
+  // ⚠️ メール等の外部向けURLに VERCEL_URL を使わないこと（デプロイ保護で弾かれる）
   const base = process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'
-  return NextResponse.json({
-    session,
-    // ⚠️ メール等の外部向けURLに VERCEL_URL を使わないこと（デプロイ保護で弾かれる）
-    url: `${base}/mensetsu/live/${session.token}`,
-  })
+  const url = `${base}/mensetsu/live/${session.token}`
+
+  // ------------------------------------------------------------------
+  // 面接のご案内メール
+  // ------------------------------------------------------------------
+  // ⚠️ 担当者が明示的に「送る」を選んだときだけ送信する。発行のたびに自動送信しない
+  //    （下書きのつもりで発行した面接が応募者に届いてしまう）。
+  let emailSent: boolean | null = null
+  if (candidateEmail && body?.sendEmail === true) {
+    const org = await prisma.mensetsuOrganization.findUnique({
+      where: { id: ctx.organizationId },
+      select: { name: true },
+    })
+    const orgName = org?.name || ''
+    const mail = await sendEmail({
+      to: candidateEmail,
+      subject: `【${orgName}】一次面接（${template.jobTitle}）のご案内`,
+      html: `
+      <div style="font-family:sans-serif;line-height:1.8;color:#0a0f3c">
+        <p>${escapeHtml(candidateName || '')}様</p>
+        <p>${escapeHtml(orgName)} の ${escapeHtml(template.jobTitle)} にご応募いただき、ありがとうございます。</p>
+        <p>一次面接のご案内です。下のリンクをお開きください。</p>
+        <p><a href="${escapeHtml(url)}" style="color:#0066ff">${escapeHtml(url)}</a></p>
+        <ul style="color:#425071;font-size:14px">
+          <li>所要時間は約${template.durationMin}分です。</li>
+          <li>この面接はAIが面接官として実施します。</li>
+          <li>静かな場所で、マイクをお使いいただける環境からご受験ください。</li>
+          <li>${escapeHtml(expiresAt.toLocaleDateString('ja-JP'))} まで有効です。</li>
+        </ul>
+        <p style="color:#8a94ad;font-size:13px">
+          このリンクはご本人専用です。他の方に転送しないでください。<br>
+          お心当たりがない場合は破棄してください。
+        </p>
+      </div>`,
+    })
+    emailSent = mail.success
+  }
+
+  return NextResponse.json({ session, url, emailSent })
 }
