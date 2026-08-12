@@ -25,9 +25,13 @@ interface UseRealtimeInterviewOptions {
   onEnded?: () => void
   /** 組織設定で音声保存が有効なときだけ true。同意していない録音は作らない。 */
   recordAudio?: boolean
+  /** 映像も残すか（組織設定 recordVideo）。
+   *  ⚠️ 既定は false。応募者の映像は保管・削除の負担と法的な重みが音声より大きい。
+   *     有効なときだけカメラを取得し、同意画面にもその旨が出る。 */
+  recordVideo?: boolean
 }
 
-export function useRealtimeInterview({ token, onEnded, recordAudio = false }: UseRealtimeInterviewOptions) {
+export function useRealtimeInterview({ token, onEnded, recordAudio = false, recordVideo = false }: UseRealtimeInterviewOptions) {
   const [state, setState] = useState<ConnState>('idle')
   const [error, setError] = useState<string | null>(null)
   const [lines, setLines] = useState<TranscriptLine[]>([])
@@ -55,6 +59,8 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
   const mixCtxRef = useRef<AudioContext | null>(null)
+  /** 収録用のカメラ映像。⚠️ recordVideo が有効なときだけ取得する */
+  const camRef = useRef<MediaStream | null>(null)
 
   /**
    * 逐語ログはまとめてサーバへ送る（1発話ごとに叩かない）。
@@ -149,14 +155,16 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
     chunksRef.current = []
     if (chunks.length === 0) return
     try {
-      const blob = new Blob(chunks, { type: 'audio/webm' })
+      // 収録した実体に合わせる（映像を含むと video/webm）
+      const blobType = chunks[0]?.type || 'audio/webm'
+      const blob = new Blob(chunks, { type: blobType })
       const res = await fetch(`/api/mensetsu/live/${token}/recording`, { method: 'POST' })
       if (!res.ok) return
       const { signedUrl } = await res.json()
       if (!signedUrl) return
       const put = await fetch(signedUrl, {
         method: 'PUT',
-        headers: { 'Content-Type': 'audio/webm' },
+        headers: { 'Content-Type': blob.type || 'audio/webm' },
         body: blob,
       })
       if (!put.ok) return
@@ -184,6 +192,9 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
       pcRef.current?.close()
     } catch {}
     micRef.current?.getTracks().forEach((t) => t.stop())
+    // ⚠️ 収録用カメラは必ず止める。止め忘れると面接後もランプが点いたままになる
+    camRef.current?.getTracks().forEach((t) => t.stop())
+    camRef.current = null
     try {
       audioCtxRef.current?.close()
     } catch {}
@@ -374,7 +385,8 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
       const audioEl = new Audio()
       audioEl.autoplay = true
       audioElRef.current = audioEl
-      pc.ontrack = (e) => {
+      // ⚠️ 収録でカメラを取りに行くため async。例外はこの中で握りつぶす
+      pc.ontrack = async (e) => {
         audioEl.srcObject = e.streams[0]
         // 音量エンベロープを取り、アバターの口に反映
         try {
@@ -410,11 +422,29 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
             mixCtx.createMediaStreamSource(e.streams[0]).connect(dest) // AI
             if (micRef.current) mixCtx.createMediaStreamSource(micRef.current).connect(dest) // 応募者
 
+            // ⚠️ 映像は組織設定が有効なときだけ。取得できなくても面接は続行する
+            //    （カメラ不許可で面接そのものが始まらない方が損失が大きい）。
+            const tracks: MediaStreamTrack[] = [...dest.stream.getAudioTracks()]
+            if (recordVideo) {
+              try {
+                const cam = await navigator.mediaDevices.getUserMedia({
+                  video: { width: 640, height: 480, frameRate: 15 },
+                })
+                camRef.current = cam
+                tracks.push(...cam.getVideoTracks())
+              } catch {
+                // 映像なしで音声だけ残す
+              }
+            }
+            const recStream = new MediaStream(tracks)
+
             // opus が使えない環境では既定のコーデックに任せる
-            const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-              ? 'audio/webm;codecs=opus'
-              : undefined
-            const rec = new MediaRecorder(dest.stream, {
+            // 映像を含むときは video/webm。含まないときは従来どおり音声のみ
+            const wantVideo = recStream.getVideoTracks().length > 0
+            const mime = wantVideo
+              ? (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus') ? 'video/webm;codecs=vp8,opus' : undefined)
+              : (MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : undefined)
+            const rec = new MediaRecorder(recStream, {
               ...(mime ? { mimeType: mime } : {}),
               audioBitsPerSecond: 32000, // 20分で約5MB。会話の聞き取りには十分
             })
@@ -544,7 +574,7 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
       setState('error')
       setError(e?.message || '接続に失敗しました')
     }
-  }, [cleanup, flushTurns, handleFunctionCall, pushLine, recordAudio, token])
+  }, [cleanup, flushTurns, handleFunctionCall, pushLine, recordAudio, recordVideo, token])
 
   // 経過時間
   useEffect(() => {

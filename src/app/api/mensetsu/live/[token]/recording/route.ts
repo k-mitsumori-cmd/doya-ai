@@ -23,8 +23,9 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   const s = await loadSessionByToken(p.token)
   if (!s) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
   if (!s.consentedAt) return NextResponse.json({ error: '同意が必要です' }, { status: 403 })
-  if (!s.organization.recordAudio) {
-    return NextResponse.json({ error: 'この組織では音声を保存しません' }, { status: 403 })
+  // ⚠️ 音声・映像のどちらかが有効なら発行する。映像だけ有効な設定もありうる
+  if (!s.organization.recordAudio && !s.organization.recordVideo) {
+    return NextResponse.json({ error: 'この組織では録画・録音を保存しません' }, { status: 403 })
   }
   const usable = assertUsable(s)
   if (!usable.ok) return NextResponse.json({ error: usable.reason }, { status: usable.status })
@@ -42,8 +43,8 @@ export async function PATCH(_req: NextRequest, ctx: Ctx) {
   const s = await loadSessionByToken(p.token)
   if (!s) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
   if (!s.consentedAt) return NextResponse.json({ error: '同意が必要です' }, { status: 403 })
-  if (!s.organization.recordAudio) {
-    return NextResponse.json({ error: 'この組織では音声を保存しません' }, { status: 403 })
+  if (!s.organization.recordAudio && !s.organization.recordVideo) {
+    return NextResponse.json({ error: 'この組織では録画・録音を保存しません' }, { status: 403 })
   }
 
   const path = pathFor(s.id)

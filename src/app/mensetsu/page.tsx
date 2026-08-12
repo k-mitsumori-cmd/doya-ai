@@ -760,6 +760,29 @@ export default function MensetsuDashboard() {
                 </span>
               </label>
 
+              <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-lg bg-[#f7faff] p-4">
+                <input
+                  type="checkbox"
+                  checked={!!org.recordVideo}
+                  disabled={busy === 'settings'}
+                  onChange={(e) => void saveSettings({ recordVideo: e.target.checked })}
+                  className="mt-0.5 h-4 w-4 accent-[#0066ff]"
+                />
+                <span>
+                  <span className="block text-sm font-black text-[#0a0f3c]">映像も録画して保存する</span>
+                  <span className="mt-0.5 block text-xs font-medium leading-relaxed text-[#425071]">
+                    既定はオフです。オンにすると面接の開始時に応募者へカメラの使用許可を求め、
+                    映像を保存します。同意画面にも「映像も録画されます」と表示されます。
+                  </span>
+                  {/* ⚠️ 応募者の映像は音声より保管・削除の負担と法的な重みが大きい。
+                       判断材料を担当者に見せてから選ばせる */}
+                  <span className="mt-1 block text-xs font-bold leading-relaxed text-[#a06800]">
+                    評価そのものは音声だけで成立します。映像を残す明確な理由がない場合は、
+                    オフのままにしておくことをおすすめします（保管する個人情報が増えます）。
+                  </span>
+                </span>
+              </label>
+
               <label className="mt-3 block rounded-lg bg-[#f7faff] p-4">
                 <span className="block text-sm font-black text-[#0a0f3c]">記録の保持日数</span>
                 <span className="mt-0.5 block text-xs font-medium leading-relaxed text-[#425071]">

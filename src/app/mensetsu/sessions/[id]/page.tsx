@@ -32,6 +32,50 @@ export default function MensetsuReportPage() {
   const [tab, setTab] = useState<'report' | 'transcript'>('report')
   const [audioUrl, setAudioUrl] = useState<string | null>(null)
   const [audioBusy, setAudioBusy] = useState(false)
+  /** ラベル付け中の発話ID。⚠️ 採点基準そのものを作る操作なので、必ず評価軸を選ばせる */
+  const [labeling, setLabeling] = useState<string | null>(null)
+  const [labelCriterion, setLabelCriterion] = useState('')
+  const [labelBusy, setLabelBusy] = useState(false)
+  const [labelDone, setLabelDone] = useState<Record<string, string>>({})
+  const [labelError, setLabelError] = useState('')
+
+  /**
+   * 応募者の回答を「自社の採点例」として登録する（F4-3）。
+   * ⚠️ ここで貯めた例は、次回以降の採点プロンプトに few-shot として入る。
+   *    貯まるほど自社の基準に寄るが、誤ったラベルは以後の全ての面接を歪める。
+   *    そのため評価軸を必ず選ばせ、就職差別に触れる内容はサーバ側で弾く。
+   */
+  const addSample = useCallback(
+    async (turn: any, label: 'good' | 'bad', questionText: string) => {
+      if (!labelCriterion) {
+        setLabelError('評価軸を選んでください')
+        return
+      }
+      setLabelBusy(true)
+      setLabelError('')
+      try {
+        const r = await fetch('/api/mensetsu/samples', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            criterionKey: labelCriterion,
+            questionText,
+            answerText: turn.text,
+            label,
+          }),
+        })
+        const d = await r.json()
+        if (!r.ok) throw new Error(d?.error || '登録できませんでした')
+        setLabelDone((prev) => ({ ...prev, [turn.id]: label }))
+        setLabeling(null)
+      } catch (e) {
+        setLabelError(e instanceof Error ? e.message : '登録できませんでした')
+      } finally {
+        setLabelBusy(false)
+      }
+    },
+    [labelCriterion]
+  )
 
   // 録音URLは押されたときだけ発行する。15分で失効するため、
   // 画面表示のたびに先読みすると使う頃には切れている。
@@ -308,18 +352,79 @@ export default function MensetsuReportPage() {
             {s.turns.length === 0 ? (
               <p className="text-sm font-medium text-[#425071]">発話ログがありません。</p>
             ) : (
-              s.turns.map((t: any) => (
-                <p key={t.id} className="mb-2.5 text-sm leading-relaxed">
-                  <span
-                    className={
-                      t.speaker === 'interviewer' ? 'font-black text-[#0066ff]' : 'font-black text-[#0a0f3c]'
-                    }
-                  >
-                    {t.speaker === 'interviewer' ? '面接官' : '応募者'}:{' '}
-                  </span>
-                  <span className="font-medium text-[#425071]">{t.text}</span>
-                </p>
-              ))
+              s.turns.map((t: any, i: number) => {
+                // 直前の面接官の発話＝その回答が答えている質問
+                const askedIdx = s.turns.slice(0, i).map((x: any) => x.speaker).lastIndexOf('interviewer')
+                const questionText = askedIdx >= 0 ? s.turns[askedIdx].text : ''
+                const done = labelDone[t.id]
+                return (
+                  <div key={t.id} className="mb-2.5">
+                    <p className="text-sm leading-relaxed">
+                      <span
+                        className={
+                          t.speaker === 'interviewer' ? 'font-black text-[#0066ff]' : 'font-black text-[#0a0f3c]'
+                        }
+                      >
+                        {t.speaker === 'interviewer' ? '面接官' : '応募者'}:{' '}
+                      </span>
+                      <span className="font-medium text-[#425071]">{t.text}</span>
+                    </p>
+
+                    {/* 応募者の回答にだけラベルを付けられる */}
+                    {t.speaker === 'candidate' && (
+                      done ? (
+                        <p className="mt-1 text-[11px] font-bold text-[#137333]">
+                          採点例に登録しました（{done === 'good' ? '良い例' : '良くない例'}）
+                        </p>
+                      ) : labeling === t.id ? (
+                        <div className="mt-1.5 rounded-lg bg-[#f7faff] p-3">
+                          <p className="text-[11px] font-bold text-[#425071]">どの評価軸の例にしますか</p>
+                          <select
+                            value={labelCriterion}
+                            onChange={(e) => setLabelCriterion(e.target.value)}
+                            className="mt-1 w-full rounded-lg border border-[#d8e7ff] px-3 py-2 text-sm outline-none focus:border-[#0066ff]"
+                          >
+                            <option value="">選んでください</option>
+                            {criteria.map((c: any) => (
+                              <option key={c.key} value={c.key}>{c.name}</option>
+                            ))}
+                          </select>
+                          {labelError && <p className="mt-1 text-[11px] font-bold text-[#c5221f]">{labelError}</p>}
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            <button
+                              onClick={() => addSample(t, 'good', questionText)}
+                              disabled={labelBusy}
+                              className="rounded-lg bg-[#137333] px-3 py-1.5 text-xs font-black text-white disabled:opacity-40"
+                            >
+                              良い例として登録
+                            </button>
+                            <button
+                              onClick={() => addSample(t, 'bad', questionText)}
+                              disabled={labelBusy}
+                              className="rounded-lg bg-[#c5221f] px-3 py-1.5 text-xs font-black text-white disabled:opacity-40"
+                            >
+                              良くない例として登録
+                            </button>
+                            <button
+                              onClick={() => { setLabeling(null); setLabelError('') }}
+                              className="rounded-lg border border-[#d8e7ff] px-3 py-1.5 text-xs font-bold text-[#425071]"
+                            >
+                              やめる
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => { setLabeling(t.id); setLabelError('') }}
+                          className="mt-0.5 text-[11px] font-bold text-[#0066ff] hover:underline"
+                        >
+                          この回答を採点例にする
+                        </button>
+                      )
+                    )}
+                  </div>
+                )
+              })
             )}
           </section>
         )}

@@ -78,7 +78,12 @@ export default function MensetsuLivePage() {
   const [avatarCue, setAvatarCue] = useState<'greet' | 'closing' | null>(null)
 
   const onEnded = useCallback(() => setStep('done'), [])
-  const rt = useRealtimeInterview({ token, onEnded, recordAudio: !!session?.recordAudio })
+  const rt = useRealtimeInterview({
+    token,
+    onEnded,
+    recordAudio: !!session?.recordAudio,
+    recordVideo: !!session?.recordVideo,
+  })
 
   /** マイクのミュート。トラックを止めず enabled で切るのは、再開時に再取得が要らないため */
   const toggleMic = useCallback(() => {
