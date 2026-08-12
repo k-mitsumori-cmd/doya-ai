@@ -26,6 +26,9 @@ interface PublicSession {
   recordAudio: boolean
   retentionDays: number
   expired: boolean
+  /** 本人確認のためメールアドレスの入力が必要か（メール自体はサーバから返らない） */
+  requiresEmail: boolean
+  discloseToCandidate: boolean
 }
 
 type Step = 'loading' | 'consent' | 'check' | 'live' | 'done' | 'unavailable'
@@ -60,6 +63,9 @@ export default function MensetsuLivePage() {
   const [message, setMessage] = useState<string | null>(null)
   const [agreed, setAgreed] = useState(false)
   const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  /** 面接後のフィードバック開示（組織設定で有効な場合のみ） */
+  const [feedback, setFeedback] = useState<{ ready: boolean; text?: string } | null>(null)
   const [showCaptions, setShowCaptions] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const logRef = useRef<HTMLDivElement | null>(null)
@@ -188,7 +194,7 @@ export default function MensetsuLivePage() {
       const res = await fetch(`/api/mensetsu/live/${token}/consent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agreed: true, candidateName: name }),
+        body: JSON.stringify({ agreed: true, candidateName: name, candidateEmail: email }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -200,6 +206,30 @@ export default function MensetsuLivePage() {
       setSubmitting(false)
     }
   }
+
+  // 終了画面を開いている間だけ、開示されたフィードバックを確認する。
+  // ⚠️ 評価は面接直後には終わっていない。応募者がURLを開き直したときにも
+  //    表示できるよう、step が done になった時点で毎回取りに行く。
+  useEffect(() => {
+    if (step !== 'done' || !token) return
+    if (session && !session.discloseToCandidate) return
+    let alive = true
+    const load = () => {
+      fetch(`/api/mensetsu/live/${token}/feedback`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (!alive || !d?.disclosed) return
+          setFeedback({ ready: !!d.ready, text: d.feedback })
+        })
+        .catch(() => {})
+    }
+    load()
+    const t = setInterval(load, 20000)
+    return () => {
+      alive = false
+      clearInterval(t)
+    }
+  }, [step, token, session])
 
   const beginInterview = async () => {
     setStep('live')
@@ -231,6 +261,25 @@ export default function MensetsuLivePage() {
   }
 
   if (step === 'done') {
+    // 開示設定がオンなら、評価が終わったフィードバックをお見せする（F5-4）
+    if (feedback?.ready && feedback.text) {
+      return (
+        <main className="min-h-screen bg-[#f2f6ff] px-5 py-12">
+          <style dangerouslySetInnerHTML={{ __html: SUPPRESS_MARKETING_CSS }} />
+          <div className="mx-auto max-w-2xl rounded-lg bg-white p-8 shadow-sm">
+            <span className="material-symbols-outlined text-3xl text-[#0066ff]">task_alt</span>
+            <h1 className="mt-3 text-lg font-black text-[#0a0f3c]">面接のフィードバック</h1>
+            <p className="mt-2 text-xs font-medium leading-relaxed text-[#8a94ad]">
+              お時間をいただきありがとうございました。今回の面接からお伝えできる点をまとめました。
+              選考の結果は追って採用ご担当者よりご連絡いたします。
+            </p>
+            <p className="mt-5 whitespace-pre-wrap text-sm font-medium leading-relaxed text-[#425071]">
+              {feedback.text}
+            </p>
+          </div>
+        </main>
+      )
+    }
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f2f6ff] px-5">
       <style dangerouslySetInnerHTML={{ __html: SUPPRESS_MARKETING_CSS }} />
@@ -309,6 +358,27 @@ export default function MensetsuLivePage() {
               />
             </div>
 
+            {/* ⚠️ 担当者がメールを紐付けている面接だけ本人確認を求める。
+                 URLが転送されても、ご本人以外は先へ進めない（F5-2） */}
+            {session.requiresEmail && (
+              <div className="mt-4">
+                <label className="block text-xs font-black text-[#0a0f3c]">
+                  ご案内をお受け取りになったメールアドレス
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  className="mt-2 w-full rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium text-[#0a0f3c] outline-none focus:border-[#0066ff]"
+                />
+                <p className="mt-1.5 text-xs font-medium text-[#8a94ad]">
+                  ご本人の確認のために入力をお願いしています。
+                </p>
+              </div>
+            )}
+
             <label className="mt-5 flex cursor-pointer items-start gap-3">
               <input
                 type="checkbox"
@@ -325,7 +395,7 @@ export default function MensetsuLivePage() {
 
             <button
               onClick={submitConsent}
-              disabled={!agreed || submitting}
+              disabled={!agreed || submitting || (session.requiresEmail && !email.trim())}
               className="mt-6 w-full rounded-lg bg-[#0066ff] px-6 py-3.5 text-sm font-black text-white transition disabled:cursor-not-allowed disabled:bg-[#b9cdf5]"
             >
               {submitting ? '処理中…' : '同意して次へ'}
@@ -413,6 +483,19 @@ export default function MensetsuLivePage() {
           </span>
         </div>
       </header>
+
+      {/* 通信が切れているあいだの案内（F1-8）。
+          ⚠️ これが無いと、応募者には「AIが黙っている」としか分からず待ち続けてしまう */}
+      {rt.connectionLost && (
+        <div className="shrink-0 bg-[#fff4e0] px-4 py-2.5 text-center">
+          <p className="text-[12px] font-black leading-relaxed text-[#a06800]">
+            通信が不安定になっています。そのままお待ちください。接続が戻り次第、面接を続けます。
+          </p>
+          <p className="mt-0.5 text-[11px] font-medium text-[#a06800]">
+            戻らない場合は3分ほどで面接を終了し、ここまでのご回答を採用ご担当者へお送りします。
+          </p>
+        </div>
+      )}
 
       {/* 本体 */}
       <section className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4 lg:flex-row lg:items-center lg:gap-8 lg:overflow-hidden lg:p-8">

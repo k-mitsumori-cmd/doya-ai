@@ -16,6 +16,7 @@ interface Org {
   retentionDays: number
   recordVideo: boolean
   recordAudio: boolean
+  discloseToCandidate: boolean
 }
 interface Profile {
   id: string
@@ -779,6 +780,31 @@ export default function MensetsuDashboard() {
                   <span className="mt-1 block text-xs font-bold leading-relaxed text-[#a06800]">
                     評価そのものは音声だけで成立します。映像を残す明確な理由がない場合は、
                     オフのままにしておくことをおすすめします（保管する個人情報が増えます）。
+                  </span>
+                </span>
+              </label>
+
+              <label className="mt-3 flex cursor-pointer items-start gap-3 rounded-lg bg-[#f7faff] p-4">
+                <input
+                  type="checkbox"
+                  checked={!!org.discloseToCandidate}
+                  disabled={busy === 'settings'}
+                  onChange={(e) => void saveSettings({ discloseToCandidate: e.target.checked })}
+                  className="mt-0.5 h-4 w-4 accent-[#0066ff]"
+                />
+                <span>
+                  <span className="block text-sm font-black text-[#0a0f3c]">
+                    応募者ご本人にフィードバックを見せる
+                  </span>
+                  <span className="mt-0.5 block text-xs font-medium leading-relaxed text-[#425071]">
+                    既定はオフです。オンにすると、評価が終わったあとに応募者が面接のURLを
+                    開き直すと、強みと改善のご提案をご覧いただけます。
+                  </span>
+                  {/* ⚠️ 開示するのは応募者向けの文面のみ。点数・推薦度・担当者向け
+                       レポートは開示設定に関わらず応募者には出さない */}
+                  <span className="mt-1 block text-xs font-bold leading-relaxed text-[#425071]">
+                    点数と推薦度、採用ご担当者向けのレポートは開示されません。
+                    お伝えするのは強みと改善のご提案の文面だけです。
                   </span>
                 </span>
               </label>

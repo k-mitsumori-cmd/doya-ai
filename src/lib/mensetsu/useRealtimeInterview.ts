@@ -31,6 +31,9 @@ interface UseRealtimeInterviewOptions {
   recordVideo?: boolean
 }
 
+/** 通信が切れたまま何分待つか。超えたら打ち切って部分評価へ回す（F1-8） */
+const DISCONNECT_GRACE_MS = 3 * 60 * 1000
+
 export function useRealtimeInterview({ token, onEnded, recordAudio = false, recordVideo = false }: UseRealtimeInterviewOptions) {
   const [state, setState] = useState<ConnState>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -45,6 +48,8 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false, reco
   const [currentQuestion, setCurrentQuestion] = useState<string | null>(null)
   const [questionNumber, setQuestionNumber] = useState(1)
   const [questionTotal, setQuestionTotal] = useState(0)
+  /** 通信が切れている間だけ true。応募者に「無反応の理由」を見せるために持つ（F1-8） */
+  const [connectionLost, setConnectionLost] = useState(false)
 
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const dcRef = useRef<RTCDataChannel | null>(null)
@@ -55,6 +60,7 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false, reco
   const startedAtRef = useRef<number>(0)
   const pendingRef = useRef<TranscriptLine[]>([])
   const endedRef = useRef(false)
+  const dropTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // 録音（組織設定が有効なときのみ）
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -198,6 +204,10 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false, reco
     try {
       audioCtxRef.current?.close()
     } catch {}
+    if (dropTimerRef.current) {
+      clearTimeout(dropTimerRef.current)
+      dropTimerRef.current = null
+    }
     dcRef.current = null
     pcRef.current = null
     micRef.current = null
@@ -231,6 +241,7 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false, reco
           body: JSON.stringify({ aborted }),
         })
       } catch {}
+      setConnectionLost(false)
       setState('ended')
       onEnded?.()
     },
@@ -333,6 +344,12 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false, reco
     [end, token]
   )
 
+  // ⚠️ start の依存に end を足すと接続処理ごと作り直される。参照だけ最新に保つ
+  const endRef = useRef(end)
+  useEffect(() => {
+    endRef.current = end
+  }, [end])
+
   const start = useCallback(async () => {
     setError(null)
     endedRef.current = false
@@ -379,6 +396,37 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false, reco
     // 3) WebRTC 接続
     try {
       const pc = new RTCPeerConnection()
+
+      // ------------------------------------------------------------------
+      // 通信断からの復帰 / 打ち切り（F1-8）
+      // ------------------------------------------------------------------
+      // ⚠️ WebRTCが切れても画面は何も言わないため、応募者は「AIが黙っている」
+      //    としか分からず、待ち続けるか自分で閉じてしまう。切断を見つけて伝え、
+      //    戻らないまま3分たったら打ち切る。
+      // ⚠️ 打ち切りは aborted ではなく通常終了で送る。end ルートは発話が残って
+      //    いれば completed に倒すので、そこまでの回答で部分評価に回せる。
+      // ⚠️ 'disconnected' は一時的な揺れでも出る。即終了せず猶予を置く。
+      pc.onconnectionstatechange = () => {
+        if (endedRef.current) return
+        const st = pc.connectionState
+        if (st === 'connected') {
+          setConnectionLost(false)
+          if (dropTimerRef.current) {
+            clearTimeout(dropTimerRef.current)
+            dropTimerRef.current = null
+          }
+          return
+        }
+        if (st === 'disconnected' || st === 'failed') {
+          setConnectionLost(true)
+          if (!dropTimerRef.current) {
+            dropTimerRef.current = setTimeout(() => {
+              dropTimerRef.current = null
+              void endRef.current(false)
+            }, DISCONNECT_GRACE_MS)
+          }
+        }
+      }
       pcRef.current = pc
 
       // AIの音声を再生
@@ -640,5 +688,6 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false, reco
     currentQuestion,
     questionNumber,
     questionTotal,
+    connectionLost,
   }
 }

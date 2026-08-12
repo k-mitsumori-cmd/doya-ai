@@ -3642,6 +3642,9 @@ model MensetsuSession {
   @@index([organizationId, status])
   @@index([templateId])
   @@map("mensetsu_sessions")
+  /// 同意画面でのメール照合の失敗回数。
+  /// ⚠️ ワンタイムURLは本人以外の手に渡りうる。総当たりで本人になりすませないよう上限を設ける。
+  consentAttempts Int @default(0)
 }
 
 model MensetsuTurn {
