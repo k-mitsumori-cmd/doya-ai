@@ -31,6 +31,9 @@ interface UseRealtimeInterviewOptions {
   recordVideo?: boolean
 }
 
+/** 沈黙が何ミリ秒続いたら助け舟を出すか（F1-5） */
+const SILENCE_NUDGE_MS = 15000
+
 /** 通信が切れたまま何分待つか。超えたら打ち切って部分評価へ回す（F1-8） */
 const DISCONNECT_GRACE_MS = 3 * 60 * 1000
 
@@ -61,6 +64,11 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false, reco
   const pendingRef = useRef<TranscriptLine[]>([])
   const endedRef = useRef(false)
   const dropTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // 沈黙の検知用。state を見ると interval の中で古い値を掴むので ref で持つ
+  const lastActivityRef = useRef(0)
+  const nudgeCountRef = useRef(0)
+  const speakingRef = useRef(false)
+  const listeningRef = useRef(false)
   // 録音（組織設定が有効なときのみ）
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -350,6 +358,39 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false, reco
     endRef.current = end
   }, [end])
 
+  // ------------------------------------------------------------------
+  // 沈黙時の助け舟（F1-5）
+  // ------------------------------------------------------------------
+  // ⚠️ システムプロンプトに「10秒黙っていたら助け舟を出す」と書くだけでは動かない。
+  //    Realtime のサーバVADは応募者が**話し終えたとき**にしか発話の順番を渡さないため、
+  //    応募者が一度も声を出さないと面接官はいつまでも黙ったままになる。
+  //    こちらから response.create を送って発話の順番を作る。
+  useEffect(() => {
+    if (state !== 'live') return
+    const timer = setInterval(() => {
+      if (endedRef.current) return
+      const dc = dcRef.current
+      if (!dc || dc.readyState !== 'open') return
+      if (speakingRef.current || listeningRef.current) return
+      if (!lastActivityRef.current) return
+      if (Date.now() - lastActivityRef.current < SILENCE_NUDGE_MS) return
+
+      nudgeCountRef.current += 1
+      lastActivityRef.current = Date.now()
+      // 1回目は言い換えて助け舟。2回目以降は無理に粘らず次の質問へ
+      const instructions =
+        nudgeCountRef.current === 1
+          ? '応募者が黙っています。急かさず、いまの質問を別の言い方に言い換えて、答えやすい形でもう一度尋ねてください。'
+          : '応募者から反応がありません。「差し支えなければ次に進みますね」と一言添えて、advance_interview を intent="next" で呼び、次の質問に移ってください。'
+      try {
+        dc.send(JSON.stringify({ type: 'response.create', response: { instructions } }))
+      } catch {
+        // 送れなくても面接は続く。次の周回で再試行される
+      }
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [state])
+
   const start = useCallback(async () => {
     setError(null)
     endedRef.current = false
@@ -537,6 +578,8 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false, reco
             speechStartRef.current.interviewer = Date.now()
           }
           setSpeaking(true)
+          speakingRef.current = true
+          lastActivityRef.current = Date.now()
           return
         }
 
@@ -550,13 +593,21 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false, reco
               speechStartRef.current.candidate = Date.now()
             }
             setListening(true)
+            listeningRef.current = true
+            // 応募者が話し始めたら沈黙の数え直し
+            nudgeCountRef.current = 0
+            lastActivityRef.current = Date.now()
             break
           case 'input_audio_buffer.speech_stopped':
             setListening(false)
+            listeningRef.current = false
+            lastActivityRef.current = Date.now()
             void flushTurns()
             break
           case 'response.done': {
             setSpeaking(false)
+            speakingRef.current = false
+            lastActivityRef.current = Date.now()
             // 保険: transcript イベントを取りこぼしていても、
             // response.done の中身から面接官の発話を拾えるようにする。
             const items = ev?.response?.output ?? []
