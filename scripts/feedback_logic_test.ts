@@ -21,20 +21,21 @@ const D = 86400000
 
 console.log('=== 出すべきとき ===')
 chk('無料 / 初回利用', decide({ plan: 'FREE', usageCount: 1 }).show)
-chk('無料 / 5回目', decide({ plan: 'FREE', usageCount: 5 }).show)
-chk('無料 / 20回目', decide({ plan: 'FREE', usageCount: 20 }).show)
-chk('あとで から15日経過', decide({ plan: 'FREE', usageCount: 5, snoozeUntil: Date.now() - 1 * D }).show)
+chk('無料 / 3回目', decide({ plan: 'FREE', usageCount: 3 }).show)
+chk('無料 / 10回目', decide({ plan: 'FREE', usageCount: 10 }).show)
+chk('あとで から15日経過', decide({ plan: 'FREE', usageCount: 3, snoozeUntil: Date.now() - 1 * D }).show)
 
 console.log('\n=== 出してはいけないとき ===')
 chk('有料プランには出さない', !decide({ plan: 'PRO', usageCount: 1 }).show)
 chk('banner-pro も有料', !decide({ plan: 'banner-pro', usageCount: 1 }).show)
 chk('今後は表示しない を選ばれた', !decide({ plan: 'FREE', usageCount: 1, optedOut: true }).show)
-chk('あとで の期間中', !decide({ plan: 'FREE', usageCount: 5, snoozeUntil: Date.now() + 3 * D }).show)
+chk('あとで の期間中', !decide({ plan: 'FREE', usageCount: 3, snoozeUntil: Date.now() + 3 * D }).show)
 chk('別サービスで3日前に出した（連続表示を防ぐ）', !decide({ plan: 'FREE', usageCount: 1, lastShownAt: Date.now() - 3 * D }).show)
-chk('そのサービスで既に回答済み', !decide({ plan: 'FREE', usageCount: 5, answered: true }).show)
+chk('そのサービスで既に回答済み', !decide({ plan: 'FREE', usageCount: 3, answered: true }).show)
 chk('2回目（しきい値でない）', !decide({ plan: 'FREE', usageCount: 2 }).show)
+chk('4回目（しきい値でない）', !decide({ plan: 'FREE', usageCount: 4 }).show)
 chk('0回（まだ使っていない）', !decide({ plan: 'FREE', usageCount: 0 }).show)
-chk('21回目（通り過ぎたら出さない）', !decide({ plan: 'FREE', usageCount: 21 }).show)
+chk('11回目（通り過ぎたら出さない）', !decide({ plan: 'FREE', usageCount: 11 }).show)
 
 console.log('\n=== 実際にどれくらいの頻度で出るか ===')
 // 無料ユーザーが1サービスを30回使った場合に何回出るか

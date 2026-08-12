@@ -31,18 +31,48 @@ export default function FeedbackPrompt({ serviceId }: { serviceId: string }) {
   useEffect(() => {
     if (!serviceId) return
     let alive = true
-    // ⚠️ 少し待ってから聞く。操作直後に割り込むと邪魔にしかならない。
-    const timer = setTimeout(() => {
+    let shown = false
+
+    const check = () => {
+      if (!alive || shown) return
       fetch(`/api/feedback?service=${encodeURIComponent(serviceId)}`)
         .then((r) => r.json())
         .then((d) => {
-          if (alive && d?.show) setState(d)
+          if (alive && d?.show) {
+            shown = true
+            setState(d)
+          }
         })
         .catch(() => {})
-    }, 4000)
+    }
+
+    // ⚠️ 画面を開いた時に一度だけ見るのでは**出ない**。
+    //    利用回数が増えるのは「使った瞬間」であって画面を開いた瞬間ではないため、
+    //    同じ画面のまま操作するサービス（広告画像の生成・AI商談の商材取り込み等）では
+    //    カウントが 1 になった時にはもう判定が終わっている。
+    //    使い終わったであろう頃に、何度か見に行く必要がある。
+    //
+    // ⚠️ 判定はサーバ側で「出さない」に倒す条件を通っているので、
+    //    何度呼んでも出しすぎにはならない（表示は一度だけ shown で止める）。
+    const first = setTimeout(check, 4000)
+
+    // 生成系は1〜3分かかるものがある。終わった頃を何度か拾う。
+    const interval = setInterval(check, 45000)
+    // 12分ほどで見るのをやめる（開きっぱなしのタブを叩き続けない）
+    const stop = setTimeout(() => clearInterval(interval), 12 * 60000)
+
+    // 別タブで作業して戻ってきたときにも見る
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') check()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+
     return () => {
       alive = false
-      clearTimeout(timer)
+      clearTimeout(first)
+      clearTimeout(stop)
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', onVisible)
     }
   }, [serviceId])
 

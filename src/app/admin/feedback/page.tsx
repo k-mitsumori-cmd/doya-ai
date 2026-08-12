@@ -64,7 +64,7 @@ export default function AdminFeedbackPage() {
         <div className="mx-auto max-w-4xl px-4 py-4">
           <h1 className="text-lg font-bold text-slate-900">改善点・要望</h1>
           <p className="text-xs text-slate-500">
-            無料プランの方が 1 / 5 / 20 回目の利用時に書いてくださった内容です。
+            無料プランの方が 1 / 3 / 10 回目の利用時に書いてくださった内容です。
           </p>
         </div>
       </header>
