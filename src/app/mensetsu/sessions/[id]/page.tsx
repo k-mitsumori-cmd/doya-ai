@@ -38,6 +38,11 @@ export default function MensetsuReportPage() {
   const [labelBusy, setLabelBusy] = useState(false)
   const [labelDone, setLabelDone] = useState<Record<string, string>>({})
   const [labelError, setLabelError] = useState('')
+  /** ドヤHRへの引き渡し */
+  const [hr, setHr] = useState<any>(null)
+  const [hrOrgId, setHrOrgId] = useState('')
+  const [hrBusy, setHrBusy] = useState(false)
+  const [hrMsg, setHrMsg] = useState('')
 
   /**
    * 応募者の回答を「自社の採点例」として登録する（F4-3）。
@@ -122,6 +127,19 @@ export default function MensetsuReportPage() {
     } finally {
       setLoading(false)
     }
+  }, [id])
+
+  // 引き渡し先の候補を読む（採用が決まった方をドヤHRの従業員として登録する）
+  useEffect(() => {
+    if (!id) return
+    fetch(`/api/mensetsu/sessions/${id}/hr-handoff`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d) return
+        setHr(d)
+        if (d.organizations?.[0]) setHrOrgId(d.organizations[0].id)
+      })
+      .catch(() => {})
   }, [id])
 
   useEffect(() => {
@@ -343,6 +361,66 @@ export default function MensetsuReportPage() {
                       {s.candidateFeedback}
                     </p>
                   </div>
+                )}
+              </section>
+            )}
+
+            {/* ドヤHRへの引き渡し。
+                ⚠️ 面接AIが出すのは推薦度であって採用の決定ではない。
+                   担当者が採用を決めたときだけ押す導線にしてある（自動同期はしない）。 */}
+            {hr?.canHandoff && (
+              <section className="mt-4 rounded-lg bg-white p-6 shadow-sm">
+                <h2 className="text-base font-black text-[#0a0f3c]">採用が決まったら</h2>
+                <p className="mt-1 text-xs font-medium leading-relaxed text-[#8a94ad]">
+                  この方をドヤHRの従業員として登録します。AIの判定は関係なく、
+                  採用をご判断されたときにお使いください。
+                </p>
+                {hr.alreadyHandedOff ? (
+                  <p className="mt-3 text-sm font-bold text-[#137333]">ドヤHRへ登録済みです。</p>
+                ) : (
+                  <>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                      <select
+                        value={hrOrgId}
+                        onChange={(e) => setHrOrgId(e.target.value)}
+                        className="flex-1 rounded-lg border border-[#d8e7ff] px-4 py-2.5 text-sm outline-none focus:border-[#0066ff]"
+                      >
+                        {hr.organizations.map((o: any) => (
+                          <option key={o.id} value={o.id}>{o.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={async () => {
+                          setHrBusy(true)
+                          setHrMsg('')
+                          try {
+                            const r = await fetch(`/api/mensetsu/sessions/${id}/hr-handoff`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ hrOrganizationId: hrOrgId }),
+                            })
+                            const d = await r.json()
+                            if (!r.ok) throw new Error(d?.error || '登録できませんでした')
+                            setHr((prev: any) => ({ ...prev, alreadyHandedOff: true }))
+                            setHrMsg('ドヤHRへ登録しました。')
+                          } catch (e) {
+                            setHrMsg(e instanceof Error ? e.message : '登録できませんでした')
+                          } finally {
+                            setHrBusy(false)
+                          }
+                        }}
+                        disabled={hrBusy || !hrOrgId}
+                        className="rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:bg-[#b9cdf5]"
+                      >
+                        {hrBusy ? '登録中…' : 'ドヤHRへ登録'}
+                      </button>
+                    </div>
+                    {hrMsg && <p className="mt-2 text-xs font-bold text-[#425071]">{hrMsg}</p>}
+                    <p className="mt-2 text-[11px] font-medium leading-relaxed text-[#8a94ad]">
+                      お名前とメールアドレスのみを引き渡します。生年月日・性別は面接で
+                      収集していないため登録されません。
+                    </p>
+                  </>
                 )}
               </section>
             )}

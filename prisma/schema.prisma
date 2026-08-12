@@ -3632,8 +3632,12 @@ model MensetsuSession {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  turns  MensetsuTurn[]
-  scores MensetsuScore[]
+  turns        MensetsuTurn[]
+  scores       MensetsuScore[]
+  /// ドヤHRへ引き渡した従業員ID。
+  /// ⚠️ 二重登録を防ぐために持つ。面接AIの判定ではなく、担当者が採用を決めて
+  ///    明示的に押したときだけ入る（自動同期はしない）。
+  hrEmployeeId String?
 
   @@index([organizationId, status])
   @@index([templateId])
