@@ -11,9 +11,12 @@ import { serviceLabelOf } from '@/lib/attribution'
 
 export async function GET(req: NextRequest) {
   const cookieStore = await cookies()
-  const token = cookieStore.get(COOKIE_NAME)?.value
-  const admin = token ? await verifyAdminSession(token) : null
-  if (!admin) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+  // ⚠️ verifyAdminSession は失敗時も { valid: false } という**オブジェクト**を返す。
+  //    戻り値そのものの真偽で判定すると、Cookieに何か値が入っているだけで
+  //    素通りする（署名検証・有効期限・AdminUserの存在確認がすべて無視される）。
+  //    必ず valid を取り出して見ること。他の admin ルートも全てこの書き方。
+  const { valid } = await verifyAdminSession(cookieStore.get(COOKIE_NAME)?.value || null)
+  if (!valid) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
 
   const serviceId = new URL(req.url).searchParams.get('service') || undefined
 
