@@ -48,6 +48,7 @@ interface SessionRow {
   id: string
   token: string
   candidateName: string | null
+  candidateEmail: string | null
   status: string
   verdict: string | null
   expiresAt: string
@@ -101,6 +102,12 @@ export default function MensetsuDashboard() {
   const [sendInviteMail, setSendInviteMail] = useState(true)
   /** ご案内メールの送信結果。null = 送っていない */
   const [issuedMail, setIssuedMail] = useState<boolean | null>(null)
+  /** 一覧から「URLをコピー」した面接。押したことが分かるように印を出す */
+  const [copiedId, setCopiedId] = useState<string | null>(null)
+  /** 一覧から「ご案内メールを送る」を開いている面接 */
+  const [mailingId, setMailingId] = useState<string | null>(null)
+  const [mailingTo, setMailingTo] = useState('')
+  const [mailResult, setMailResult] = useState<{ id: string; ok: boolean; message: string } | null>(null)
   const [selectedTemplate, setSelectedTemplate] = useState('')
   const [members, setMembers] = useState<Member[]>([])
   const [myRole, setMyRole] = useState<string>('member')
@@ -213,6 +220,52 @@ export default function MensetsuDashboard() {
           : `質問${data.template.questions.length}問・評価軸${data.template.criteria.length}個を作成しました。`
       )
       await load()
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  /** 面接URLを組み立てる。メールを使わず手でお渡しする運用のため */
+  const liveUrl = (token: string) => `${window.location.origin}/mensetsu/live/${token}`
+
+  const copyUrl = async (s: SessionRow) => {
+    try {
+      await navigator.clipboard.writeText(liveUrl(s.token))
+      setCopiedId(s.id)
+      setTimeout(() => setCopiedId((c) => (c === s.id ? null : c)), 2500)
+    } catch {
+      // ⚠️ 「詳細画面をご覧ください」と案内しないこと。詳細画面はURLを表示しない。
+      //    コピーできない環境（http・古いブラウザ）でも渡せるよう、URLそのものを出す。
+      setError(`コピーできませんでした。次のURLをお使いください: ${liveUrl(s.token)}`)
+    }
+  }
+
+  const sendInvite = async (s: SessionRow) => {
+    const to = (mailingTo || s.candidateEmail || '').trim()
+    if (!to) return
+    setBusy(`invite-${s.id}`)
+    setMailResult(null)
+    try {
+      const res = await fetch(`/api/mensetsu/sessions/${s.id}/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ candidateEmail: to }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setMailResult({ id: s.id, ok: false, message: data?.error || '送信できませんでした' })
+        return
+      }
+      setMailResult(
+        data.emailSent
+          ? { id: s.id, ok: true, message: `${to} へご案内をお送りしました。` }
+          : { id: s.id, ok: false, message: '送信できませんでした。URLをコピーしてお渡しください。' }
+      )
+      if (data.emailSent) {
+        setMailingId(null)
+        setMailingTo('')
+        await load()
+      }
     } finally {
       setBusy(null)
     }
@@ -668,7 +721,31 @@ export default function MensetsuDashboard() {
                           {s.verdict && ` / ${VERDICT_LABEL[s.verdict] || s.verdict}`}
                         </p>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex flex-wrap gap-2">
+                        {/* 面接のお渡し方は2通り。どちらでも進められる。
+                            ⚠️ 発行直後にしかURLが取れないと、画面を離れた時点で
+                               面接を発行し直すしかなくなる */}
+                        {['pending', 'consented'].includes(s.status) && (
+                          <>
+                            <button
+                              onClick={() => void copyUrl(s)}
+                              className="rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]"
+                              title="面接URLをコピーして、メール以外の方法でお渡しできます"
+                            >
+                              {copiedId === s.id ? 'コピーしました' : 'URLをコピー'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setMailingId(mailingId === s.id ? null : s.id)
+                                setMailingTo(s.candidateEmail || '')
+                                setMailResult(null)
+                              }}
+                              className="rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]"
+                            >
+                              ご案内メール
+                            </button>
+                          </>
+                        )}
                         {s.status === 'aborted' && (
                           <button
                             onClick={() => reopenSession(s.id)}
@@ -705,6 +782,41 @@ export default function MensetsuDashboard() {
                           詳細
                         </Link>
                       </div>
+
+                      {mailingId === s.id && (
+                        <div className="w-full rounded-lg bg-[#f7faff] p-4">
+                          <label className="block text-xs font-black text-[#0a0f3c]">送り先のメールアドレス</label>
+                          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+                            <input
+                              type="email"
+                              value={mailingTo}
+                              onChange={(e) => setMailingTo(e.target.value)}
+                              placeholder="candidate@example.com"
+                              className="flex-1 rounded-lg border border-[#d8e7ff] px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                            />
+                            <button
+                              onClick={() => void sendInvite(s)}
+                              disabled={busy === `invite-${s.id}` || !mailingTo.trim()}
+                              className="rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:bg-[#b9cdf5]"
+                            >
+                              {busy === `invite-${s.id}` ? '送信中…' : '送る'}
+                            </button>
+                          </div>
+                          <p className="mt-2 text-xs font-medium leading-relaxed text-[#8a94ad]">
+                            送信できた場合、この面接は開始前にご本人確認（メールアドレスの入力）が有効になります。
+                            メールを使わずURLをお渡しする場合は「URLをコピー」をお使いください。
+                          </p>
+                          {mailResult?.id === s.id && (
+                            <p
+                              className={`mt-2 text-xs font-bold ${
+                                mailResult.ok ? 'text-[#137333]' : 'text-[#a06800]'
+                              }`}
+                            >
+                              {mailResult.message}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
