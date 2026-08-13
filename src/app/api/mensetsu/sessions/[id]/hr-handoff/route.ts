@@ -16,6 +16,9 @@ import { hasMinRole as hasHrRole } from '@/lib/hr/access'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
 
+/** ドヤHRの雇用形態。/hr/employees/new の選択肢と揃える */
+const EMPLOYMENT_TYPES = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN', 'OTHER']
+
 /** 「山田 太郎」→ { lastName: '山田', firstName: '太郎' } */
 function splitName(full: string): { lastName: string; firstName: string } {
   const t = String(full || '').trim().replace(/[　\s]+/g, ' ')
@@ -85,6 +88,24 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     return NextResponse.json({ error: 'この組織へは登録できません' }, { status: 403 })
   }
 
+  // ⚠️ employmentType の列は plain String なのでDB側では何も弾かれない。
+  //    ここで通した値は /hr の一覧で「その他」にも当たらない未知の値として残る。
+  const employmentType = String(body?.employmentType || 'FULL_TIME')
+  if (!EMPLOYMENT_TYPES.includes(employmentType)) {
+    return NextResponse.json({ error: '雇用形態の指定が正しくありません' }, { status: 400 })
+  }
+
+  // ⚠️ 解釈できない日付を new Date に渡すと Invalid Date になり、
+  //    Prisma が例外を投げて 400 ではなく生の 500 が返る。手前で弾く。
+  let hireDate: Date | null = null
+  if (body?.hireDate) {
+    const d = new Date(String(body.hireDate))
+    if (Number.isNaN(d.getTime())) {
+      return NextResponse.json({ error: '入社日の形式をご確認ください' }, { status: 400 })
+    }
+    hireDate = d
+  }
+
   const { lastName, firstName } = splitName(s.candidateName)
 
   const employee = await prisma.hrEmployee.create({
@@ -94,9 +115,9 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
       firstName,
       email: s.candidateEmail,
       // ⚠️ 生年月日・性別は入れない。面接で収集していない情報をここで作らない
-      employmentType: String(body?.employmentType || 'FULL_TIME'),
+      employmentType,
       status: 'ACTIVE',
-      hireDate: body?.hireDate ? new Date(body.hireDate) : null,
+      hireDate,
       notes: `ドヤ面接官の一次面接から登録（面接ID: ${s.id}）`,
     },
     select: { id: true, lastName: true, firstName: true },

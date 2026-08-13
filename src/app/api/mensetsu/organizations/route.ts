@@ -29,7 +29,6 @@ export async function GET(req: NextRequest) {
       id: true,
       name: true,
       slug: true,
-      recordVideo: true,
       recordAudio: true,
       retentionDays: true,
       discloseToCandidate: true,

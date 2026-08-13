@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 // PATCH /api/mensetsu/organizations/settings — 組織設定（F5-4）
-// ⚠️ recordAudio / recordVideo / retentionDays は応募者への同意文面に直結する。
+// ⚠️ recordAudio / retentionDays は応募者への同意文面に直結する。
 //    変更は admin 以上に限る。
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
@@ -19,7 +19,7 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
   const data: any = {}
   if (typeof body?.recordAudio === 'boolean') data.recordAudio = body.recordAudio
-  if (typeof body?.recordVideo === 'boolean') data.recordVideo = body.recordVideo
+  // ⚠️ recordVideo は受け付けない。映像の収録は廃止した（列は非破壊のため残置）
   if (typeof body?.discloseToCandidate === 'boolean') data.discloseToCandidate = body.discloseToCandidate
   if (Number.isFinite(Number(body?.retentionDays))) {
     // 1日未満・3年超は事故のもと。個人情報を必要以上に持たないための上限でもある。
@@ -37,7 +37,6 @@ export async function PATCH(req: NextRequest) {
       name: true,
       slug: true,
       recordAudio: true,
-      recordVideo: true,
       retentionDays: true,
       discloseToCandidate: true,
     },

@@ -22,7 +22,6 @@ interface PublicSession {
   intro: string | null
   questionCount: number
   consented: boolean
-  recordVideo: boolean
   recordAudio: boolean
   retentionDays: number
   expired: boolean
@@ -88,7 +87,6 @@ export default function MensetsuLivePage() {
     token,
     onEnded,
     recordAudio: !!session?.recordAudio,
-    recordVideo: !!session?.recordVideo,
   })
 
   /** マイクのミュート。トラックを止めず enabled で切るのは、再開時に再取得が要らないため */
@@ -328,7 +326,7 @@ export default function MensetsuLivePage() {
                       あわせて<strong className="font-black text-[#0a0f3c]">音声そのものを録音して保存</strong>します。
                     </>
                   )}
-                  {session.recordVideo ? '映像も録画されます。' : '映像は録画しません。'}
+                  映像は録画しません。
                 </span>
               </li>
               <li className="flex gap-2">

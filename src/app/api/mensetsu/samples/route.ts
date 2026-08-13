@@ -63,7 +63,10 @@ export async function POST(req: NextRequest) {
   if (violations.length > 0) {
     return NextResponse.json(
       {
-        error: `採点例に使えない内容が含まれています（${Array.from(new Set(violations.map((v) => v.label))).join(' / ')}）。選考に用いてはいけない観点です。`,
+        // ⚠️ 「この回答は就職差別だ」と読める文面にしないこと。
+        //    応募者が自発的に触れただけの場合もあり、担当者を責める話ではない。
+        //    採点の参照例にすると以後の全面接に効いてしまう、という理由を書く。
+        error: `${Array.from(new Set(violations.map((v) => v.label))).join(' / ')}に触れているため、採点例には登録できません。採点例は以後の面接すべての採点に影響するため、選考の判断に用いてはいけない観点は含められません。`,
       },
       { status: 400 }
     )

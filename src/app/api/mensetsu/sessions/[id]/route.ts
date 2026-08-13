@@ -5,7 +5,7 @@ export const maxDuration = 300
 // GET /api/mensetsu/sessions/[id] — 評価レポート・逐語ログ（採用担当者向け）
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getMensetsuContext, orgSlugFrom } from '@/lib/mensetsu/access'
+import { getMensetsuContext, hasMinRole, orgSlugFrom } from '@/lib/mensetsu/access'
 import { weightedAverage } from '@/lib/mensetsu/evaluate'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
@@ -56,10 +56,15 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   const p = 'then' in ctx.params ? await ctx.params : ctx.params
   const c = await getMensetsuContext(orgSlugFrom(req))
   if (!c) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  // ⚠️ 同階層の変更系ルートと揃える。応募者の本人確認の設定を書き換える操作なので、
+  //    他の担当者が発行した面接を member が勝手に緩められる状態にしない。
+  if (!hasMinRole(c.role, 'manager')) {
+    return NextResponse.json({ error: '変更する権限がありません' }, { status: 403 })
+  }
 
   const s = await prisma.mensetsuSession.findFirst({
     where: { id: p.id, organizationId: c.organizationId },
-    select: { id: true, startedAt: true, status: true },
+    select: { id: true, startedAt: true, status: true, consentedAt: true, candidateEmail: true },
   })
   if (!s) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
 
@@ -69,7 +74,13 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   }
 
   const body = await req.json().catch(() => ({}))
-  const data: { candidateName?: string | null; candidateEmail?: string | null; consentAttempts?: number } = {}
+  const data: {
+    candidateName?: string | null
+    candidateEmail?: string | null
+    consentAttempts?: number
+    status?: string
+    consentedAt?: Date | null
+  } = {}
 
   if (typeof body?.candidateName === 'string') {
     data.candidateName = body.candidateName.trim() || null
@@ -82,6 +93,22 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     data.candidateEmail = email || null
     // 打ち間違いで積み上がった失敗回数を持ち越さない
     data.consentAttempts = 0
+
+    // ------------------------------------------------------------------
+    // 同意済みの面接は、同意そのものをやり直させる
+    // ------------------------------------------------------------------
+    // ⚠️ 照合は consent の1回しか走らない。同意済み(consented)の面接は
+    //    startedAt が null なのでこの PATCH は通るが、応募者側は
+    //    「同意済み＝機器チェックへ」と分岐するため同意画面が再表示されず、
+    //    変更した宛先での照合が**一度も実行されない**。
+    //    「URLが転送された疑いがあるので宛先を設定して締める」という
+    //    まさにこの操作が、成功表示だけ出して実際には何も守らなかった。
+    //    宛先が実際に変わったときは同意を取り消し、もう一度通してもらう。
+    const changed = (data.candidateEmail || '') !== (s.candidateEmail || '')
+    if (changed && s.consentedAt) {
+      data.status = 'pending'
+      data.consentedAt = null
+    }
   }
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: '変更する内容がありません' }, { status: 400 })
@@ -90,7 +117,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   const session = await prisma.mensetsuSession.update({
     where: { id: s.id },
     data,
-    select: { id: true, candidateName: true, candidateEmail: true },
+    select: { id: true, candidateName: true, candidateEmail: true, status: true },
   })
-  return NextResponse.json({ session })
+  return NextResponse.json({ session, reconsentRequired: data.consentedAt === null })
 }

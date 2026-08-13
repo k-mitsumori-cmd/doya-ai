@@ -18,7 +18,6 @@ export interface PublicSession {
   intro: string | null
   questionCount: number
   consented: boolean
-  recordVideo: boolean
   recordAudio: boolean
   retentionDays: number
   expired: boolean
@@ -38,7 +37,6 @@ export async function loadSessionByToken(token: string) {
         select: {
           id: true,
           name: true,
-          recordVideo: true,
           recordAudio: true,
           retentionDays: true,
           discloseToCandidate: true,
@@ -73,7 +71,6 @@ export function toPublicSession(s: LoadedSession): PublicSession {
     intro: s.template.intro,
     questionCount: s.template.questions.length,
     consented: !!s.consentedAt,
-    recordVideo: s.organization.recordVideo,
     recordAudio: s.organization.recordAudio,
     retentionDays: s.organization.retentionDays,
     expired: s.expiresAt.getTime() < Date.now(),

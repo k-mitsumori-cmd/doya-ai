@@ -59,6 +59,12 @@ export async function POST(req: NextRequest) {
   const templateId = String(body?.templateId || '').trim()
   const candidateName = String(body?.candidateName || '').trim() || null
   const candidateEmail = String(body?.candidateEmail || '').trim() || null
+  // ⚠️ 発行時にも形式を見ること。ここを素通しにすると打ち間違えた宛先で
+  //    ご本人確認が有効になり、応募者は正しいアドレスを入れても一致せず、
+  //    10回で 429 になって受験できなくなる（PATCH で直すまで復旧しない）。
+  if (candidateEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(candidateEmail)) {
+    return NextResponse.json({ error: 'メールアドレスの形式をご確認ください' }, { status: 400 })
+  }
   const validDays = Number.isFinite(Number(body?.validDays)) ? Number(body.validDays) : 14
 
   if (!templateId) return NextResponse.json({ error: 'テンプレートを選んでください' }, { status: 400 })
