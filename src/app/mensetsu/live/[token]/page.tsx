@@ -362,8 +362,11 @@ export default function MensetsuLivePage() {
                  URLが転送されても、ご本人以外は先へ進めない（F5-2） */}
             {session.requiresEmail && (
               <div className="mt-4">
+                {/* ⚠️ 「ご案内メールを受け取ったアドレス」と書かないこと。
+                     ご案内メールの送信は廃止しており、応募者はメールを受け取っていない。
+                     ご応募時にお使いのアドレス、と案内する。 */}
                 <label className="block text-xs font-black text-[#0a0f3c]">
-                  ご案内をお受け取りになったメールアドレス
+                  ご応募の際にお使いのメールアドレス
                 </label>
                 <input
                   type="email"
@@ -373,8 +376,9 @@ export default function MensetsuLivePage() {
                   autoComplete="email"
                   className="mt-2 w-full rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium text-[#0a0f3c] outline-none focus:border-[#0066ff]"
                 />
-                <p className="mt-1.5 text-xs font-medium text-[#8a94ad]">
+                <p className="mt-1.5 text-xs font-medium leading-relaxed text-[#8a94ad]">
                   ご本人の確認のために入力をお願いしています。
+                  ご不明な場合は、面接URLをお送りした採用ご担当者にお問い合わせください。
                 </p>
               </div>
             )}

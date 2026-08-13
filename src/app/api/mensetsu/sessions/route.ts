@@ -7,7 +7,7 @@ export const maxDuration = 300
 import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { interviewUrl, sendInviteMail } from '@/lib/mensetsu/invite-mail'
+import { interviewUrl } from '@/lib/mensetsu/interview-url'
 import { assertFreeLimit } from '@/lib/plan-limit'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { getMensetsuContext, orgSlugFrom } from '@/lib/mensetsu/access'
@@ -108,30 +108,9 @@ export async function POST(req: NextRequest) {
     summary: `${template.jobTitle}${session.candidateName ? ` / ${session.candidateName}` : ''}`,
   })
 
-  const url = interviewUrl(session.token)
-
-  // ------------------------------------------------------------------
-  // 面接のご案内メール
-  // ------------------------------------------------------------------
-  // ⚠️ 担当者が明示的に「送る」を選んだときだけ送信する。発行のたびに自動送信しない
-  //    （下書きのつもりで発行した面接が応募者に届いてしまう）。
-  //    メールを使わず、発行したURLをそのままお渡しして進める運用も想定している。
-  let emailSent: boolean | null = null
-  if (candidateEmail && body?.sendEmail === true) {
-    const org = await prisma.mensetsuOrganization.findUnique({
-      where: { id: ctx.organizationId },
-      select: { name: true },
-    })
-    emailSent = await sendInviteMail({
-      to: candidateEmail,
-      candidateName,
-      organizationName: org?.name || '',
-      jobTitle: template.jobTitle,
-      durationMin: template.durationMin,
-      expiresAt,
-      url,
-    })
-  }
-
-  return NextResponse.json({ session, url, emailSent })
+  // 面接のお渡し方はURLの手渡しのみ。
+  // ⚠️ ご案内メールの送信は廃止した（「届いていない」の切り分けに担当者と応募者の
+  //    双方が時間を取られ、面接そのものが進まなくなるため）。
+  //    candidateEmail は送信用ではなく、開始前のご本人確認に使う。
+  return NextResponse.json({ session, url: interviewUrl(session.token) })
 }

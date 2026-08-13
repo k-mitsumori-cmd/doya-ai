@@ -99,15 +99,12 @@ export default function MensetsuDashboard() {
   const [issuedUrl, setIssuedUrl] = useState<string | null>(null)
   const [candidateName, setCandidateName] = useState('')
   const [candidateEmail, setCandidateEmail] = useState('')
-  const [sendInviteMail, setSendInviteMail] = useState(true)
-  /** ご案内メールの送信結果。null = 送っていない */
-  const [issuedMail, setIssuedMail] = useState<boolean | null>(null)
   /** 一覧から「URLをコピー」した面接。押したことが分かるように印を出す */
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  /** 一覧から「ご案内メールを送る」を開いている面接 */
-  const [mailingId, setMailingId] = useState<string | null>(null)
-  const [mailingTo, setMailingTo] = useState('')
-  const [mailResult, setMailResult] = useState<{ id: string; ok: boolean; message: string } | null>(null)
+  /** ご本人確認用メールの修正パネルを開いている面接 */
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingEmail, setEditingEmail] = useState('')
+  const [editResult, setEditResult] = useState<{ id: string; ok: boolean; message: string } | null>(null)
   const [selectedTemplate, setSelectedTemplate] = useState('')
   const [members, setMembers] = useState<Member[]>([])
   const [myRole, setMyRole] = useState<string>('member')
@@ -240,32 +237,30 @@ export default function MensetsuDashboard() {
     }
   }
 
-  const sendInvite = async (s: SessionRow) => {
-    const to = (mailingTo || s.candidateEmail || '').trim()
-    if (!to) return
-    setBusy(`invite-${s.id}`)
-    setMailResult(null)
+  /** ご本人確認用メールの修正。打ち間違いのままだと応募者が先へ進めなくなる */
+  const updateCandidateEmail = async (s: SessionRow) => {
+    setBusy(`email-${s.id}`)
+    setEditResult(null)
     try {
-      const res = await fetch(`/api/mensetsu/sessions/${s.id}/invite`, {
-        method: 'POST',
+      const res = await fetch(`/api/mensetsu/sessions/${s.id}`, {
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidateEmail: to }),
+        body: JSON.stringify({ candidateEmail: editingEmail.trim() }),
       })
       const data = await res.json()
       if (!res.ok) {
-        setMailResult({ id: s.id, ok: false, message: data?.error || '送信できませんでした' })
+        setEditResult({ id: s.id, ok: false, message: data?.error || '変更できませんでした' })
         return
       }
-      setMailResult(
-        data.emailSent
-          ? { id: s.id, ok: true, message: `${to} へご案内をお送りしました。` }
-          : { id: s.id, ok: false, message: '送信できませんでした。URLをコピーしてお渡しください。' }
-      )
-      if (data.emailSent) {
-        setMailingId(null)
-        setMailingTo('')
-        await load()
-      }
+      setEditResult({
+        id: s.id,
+        ok: true,
+        message: data.session.candidateEmail
+          ? `ご本人確認を ${data.session.candidateEmail} に変更しました。`
+          : 'ご本人確認を行わない設定にしました。',
+      })
+      setEditingId(null)
+      await load()
     } finally {
       setBusy(null)
     }
@@ -283,8 +278,6 @@ export default function MensetsuDashboard() {
           templateId: selectedTemplate,
           candidateName: candidateName.trim() || undefined,
           candidateEmail: candidateEmail.trim() || undefined,
-          // ⚠️ 担当者が選んだときだけ送る。発行＝送信にしない
-          sendEmail: sendInviteMail && !!candidateEmail.trim(),
         }),
       })
       const data = await res.json()
@@ -293,7 +286,6 @@ export default function MensetsuDashboard() {
         return
       }
       setIssuedUrl(data.url)
-      setIssuedMail(data.emailSent)
       setCandidateName('')
       setCandidateEmail('')
       await load()
@@ -634,7 +626,7 @@ export default function MensetsuDashboard() {
                       type="email"
                       value={candidateEmail}
                       onChange={(e) => setCandidateEmail(e.target.value)}
-                      placeholder="応募者のメールアドレス（任意）"
+                      placeholder="ご本人確認用メール（任意・送信しません）"
                       className="rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
                     />
                     <button
@@ -645,28 +637,14 @@ export default function MensetsuDashboard() {
                       {busy === 'issue' ? '発行中…' : 'URLを発行'}
                     </button>
                   </div>
-                  {/* ⚠️ メールを入れた面接は、同意画面で本人確認を求める（URLが転送されても
-                       ご本人以外は先へ進めない）。空欄なら確認は行わない */}
-                  {candidateEmail.trim() ? (
-                    <label className="mt-3 flex cursor-pointer items-start gap-2.5">
-                      <input
-                        type="checkbox"
-                        checked={sendInviteMail}
-                        onChange={(e) => setSendInviteMail(e.target.checked)}
-                        className="mt-0.5 h-4 w-4 accent-[#0066ff]"
-                      />
-                      <span className="text-xs font-bold leading-relaxed text-[#425071]">
-                        発行と同時に、応募者へご案内のメールを送る
-                        <span className="mt-0.5 block font-medium text-[#8a94ad]">
-                          メールを登録した面接では、開始前にご本人確認としてメールアドレスの入力をお願いします。
-                        </span>
-                      </span>
-                    </label>
-                  ) : (
-                    <p className="mt-3 text-xs font-medium leading-relaxed text-[#8a94ad]">
-                      メールアドレスを入れておくと、ご案内メールを送れるほか、開始前のご本人確認が有効になります。
-                    </p>
-                  )}
+                  {/* ⚠️ メールアドレスは送信に使わない。開始前のご本人確認にだけ使う。
+                       入れておくと、URLが転送されてもご本人以外は先へ進めない。
+                       空欄なら確認を行わず、URLを開いた方がそのまま受験できる。 */}
+                  <p className="mt-3 text-xs font-medium leading-relaxed text-[#8a94ad]">
+                    {candidateEmail.trim()
+                      ? 'このメールアドレスに送信は行いません。面接の開始前に、ご本人確認として同じアドレスの入力をお願いする照合先になります。'
+                      : 'メールアドレスを入れておくと、面接の開始前にご本人確認が有効になります。空欄のままでも面接は受けられます。'}
+                  </p>
                   {issuedUrl && (
                     <div className="mt-4 rounded-lg bg-[#f7faff] p-4">
                       <p className="text-xs font-black text-[#0066ff]">発行された面接URL</p>
@@ -677,14 +655,9 @@ export default function MensetsuDashboard() {
                       >
                         コピー
                       </button>
-                      {issuedMail === true && (
-                        <p className="mt-3 text-xs font-bold text-[#137333]">応募者へご案内メールを送信しました。</p>
-                      )}
-                      {issuedMail === false && (
-                        <p className="mt-3 text-xs font-bold text-[#a06800]">
-                          ご案内メールを送信できませんでした。上のURLを直接お伝えください。
-                        </p>
-                      )}
+                      <p className="mt-3 text-xs font-medium leading-relaxed text-[#8a94ad]">
+                        このURLを応募者にお渡しください。面接一覧からいつでもコピーできます。
+                      </p>
                     </div>
                   )}
                 </>
@@ -722,7 +695,7 @@ export default function MensetsuDashboard() {
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">
-                        {/* 面接のお渡し方は2通り。どちらでも進められる。
+                        {/* 面接のお渡し方はURLの手渡しのみ。
                             ⚠️ 発行直後にしかURLが取れないと、画面を離れた時点で
                                面接を発行し直すしかなくなる */}
                         {['pending', 'consented'].includes(s.status) && (
@@ -730,19 +703,20 @@ export default function MensetsuDashboard() {
                             <button
                               onClick={() => void copyUrl(s)}
                               className="rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]"
-                              title="面接URLをコピーして、メール以外の方法でお渡しできます"
+                              title="面接URLをコピーして、応募者にお渡しできます"
                             >
                               {copiedId === s.id ? 'コピーしました' : 'URLをコピー'}
                             </button>
                             <button
                               onClick={() => {
-                                setMailingId(mailingId === s.id ? null : s.id)
-                                setMailingTo(s.candidateEmail || '')
-                                setMailResult(null)
+                                setEditingId(editingId === s.id ? null : s.id)
+                                setEditingEmail(s.candidateEmail || '')
+                                setEditResult(null)
                               }}
-                              className="rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]"
+                              className="rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#425071]"
+                              title="開始前のご本人確認に使うメールアドレスを設定・修正します"
                             >
-                              ご案内メール
+                              ご本人確認
                             </button>
                           </>
                         )}
@@ -783,36 +757,38 @@ export default function MensetsuDashboard() {
                         </Link>
                       </div>
 
-                      {mailingId === s.id && (
+                      {editingId === s.id && (
                         <div className="w-full rounded-lg bg-[#f7faff] p-4">
-                          <label className="block text-xs font-black text-[#0a0f3c]">送り先のメールアドレス</label>
+                          <label className="block text-xs font-black text-[#0a0f3c]">
+                            ご本人確認に使うメールアドレス
+                          </label>
+                          <p className="mt-1 text-xs font-medium leading-relaxed text-[#8a94ad]">
+                            このアドレスに送信は行いません。面接の開始前に応募者へ入力をお願いし、
+                            一致した場合のみ先へ進めます。空にすると確認を行いません。
+                          </p>
                           <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                             <input
                               type="email"
-                              value={mailingTo}
-                              onChange={(e) => setMailingTo(e.target.value)}
+                              value={editingEmail}
+                              onChange={(e) => setEditingEmail(e.target.value)}
                               placeholder="candidate@example.com"
                               className="flex-1 rounded-lg border border-[#d8e7ff] px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
                             />
                             <button
-                              onClick={() => void sendInvite(s)}
-                              disabled={busy === `invite-${s.id}` || !mailingTo.trim()}
+                              onClick={() => void updateCandidateEmail(s)}
+                              disabled={busy === `email-${s.id}`}
                               className="rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:bg-[#b9cdf5]"
                             >
-                              {busy === `invite-${s.id}` ? '送信中…' : '送る'}
+                              {busy === `email-${s.id}` ? '保存中…' : '保存'}
                             </button>
                           </div>
-                          <p className="mt-2 text-xs font-medium leading-relaxed text-[#8a94ad]">
-                            送信できた場合、この面接は開始前にご本人確認（メールアドレスの入力）が有効になります。
-                            メールを使わずURLをお渡しする場合は「URLをコピー」をお使いください。
-                          </p>
-                          {mailResult?.id === s.id && (
+                          {editResult?.id === s.id && (
                             <p
                               className={`mt-2 text-xs font-bold ${
-                                mailResult.ok ? 'text-[#137333]' : 'text-[#a06800]'
+                                editResult.ok ? 'text-[#137333]' : 'text-[#a06800]'
                               }`}
                             >
-                              {mailResult.message}
+                              {editResult.message}
                             </p>
                           )}
                         </div>
