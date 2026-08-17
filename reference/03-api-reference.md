@@ -1,3 +1,10 @@
+> ⚠️ **2026-08-17: 以下7サービスのAPIは提供終了しており、全ハンドラが410を返す。**
+> `/api/movie/*` `/api/voice/*` `/api/tenkai/*` `/api/copy/*`
+> `/api/interviewx/*` `/api/lp/*` `/api/adsim/*` `/api/adbanner/*`
+> 本書に現役APIとして残っている記述は古い。正本は `src/lib/services.ts` の
+> `HIDDEN_SERVICE_IDS` と各ルートの `SERVICE_RETIRED` ガード。
+> ⚠️ `/api/interviewx`（廃止）と `/api/interview`（現役のドヤインタビュー）は別物。
+
 # 03. API リファレンス (全エンドポイント一覧)
 
 ## 共通仕様

@@ -51,6 +51,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'ユーザー情報の取得に失敗しました' }, { status: 404 })
     }
 
+    // ------------------------------------------------------------------
+    // 提供終了サービスのプランは受け付けない
+    // ------------------------------------------------------------------
+    // ⚠️ 統一課金のため、これらの planId は price env が未設定でも
+    //    バナー（＝統一プロプラン）の**実在する価格IDにフォールバックする**。
+    //    つまり `{ planId: 'movie-pro' }` を直接POSTすると決済が成立し、
+    //    畳んだサービスの UserServiceSubscription が作られてしまう。
+    //    価格は統一プランと同じなので過剰請求にはならないが、
+    //    存在しないサービスの契約records が残るので入口で弾く。
+    // ⚠️ 統一プランは 'banner-pro'（現役）なのでここには含めないこと。
+    const retiredPlanPrefixes = ['copy', 'lp', 'voice', 'movie', 'adsim', 'tenkai', 'interviewx']
+    if (retiredPlanPrefixes.includes(String(planId).split('-')[0])) {
+      return NextResponse.json(
+        { error: 'このプランは提供を終了しました。' },
+        { status: 410 }
+      )
+    }
+
     // プランIDからStripe価格IDを取得
     const priceId = getPriceId(planId, billingPeriod)
     if (!priceId) {
