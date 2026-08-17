@@ -48,27 +48,6 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   // ===============================================
-  // 廃止したサービスのAPIを閉じる
-  // ===============================================
-  // ⚠️ next.config.js の 308 リダイレクトは source が '/adbanner' と
-  //    '/adbanner/:path*' なので **'/api/adbanner/*' にはマッチしない**。
-  //    下の SHARED_SKIP_PREFIXES も '/api' を丸ごと飛ばすため、
-  //    統合後も POST /api/adbanner/generate 等が生きたままで、
-  //    URLを知っている第三者が直接叩けば画像生成の費用が発生していた。
-  // ⚠️ ルート実体とDBの adbanner_* は残す（ロールバックの余地を確保する方針）。
-  //    閉じるのは入口だけにして、戻したくなったらこの分岐を外せば復旧できる。
-  // ⚠️ この判定は shouldSkip より必ず手前に置くこと。
-  if (pathname === '/api/adbanner' || pathname.startsWith('/api/adbanner/')) {
-    return NextResponse.json(
-      {
-        error: 'ドヤ広告バナーAIはドヤ広告画像AIに統合されました。/adimage をご利用ください。',
-        movedTo: '/adimage',
-      },
-      { status: 410 }
-    )
-  }
-
-  // ===============================================
   // 三ツ星アプリ（toCシリーズ） — サブドメイン運用
   // ===============================================
   // URL 設計:

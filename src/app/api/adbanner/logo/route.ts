@@ -6,12 +6,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { getAdIdentity, ownerWhere } from '@/lib/adbanner/access'
 import { uploadFile, signedUrl } from '@/lib/adbanner/storage'
+import { ADBANNER_RETIRED, retiredResponse } from '@/lib/adbanner/retired'
 
 const ALLOWED: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }
 const MAX = 5 * 1024 * 1024
 
 // POST /api/adbanner/logo — ロゴ画像をアップロードしてパスと表示URLを返す（multipart/form-data）
 export async function POST(req: NextRequest) {
+  // ⚠️ /adimage へ統合済み。入口だけ閉じる（本体は復旧の余地のため残す）
+  if (ADBANNER_RETIRED) return retiredResponse()
+
   const id = await getAdIdentity(req)
   if (!ownerWhere(id) && id.plan === 'GUEST') {
     // ゲストでもCookie未付与だと所有者特定不可。先にキャンペーン作成を促す。

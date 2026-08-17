@@ -7,13 +7,24 @@ import { NextResponse } from 'next/server'
 //
 // ⚠️ 画面は next.config.js の 308 リダイレクトで到達不能になったが、
 //    リダイレクトの source は `/adbanner` と `/adbanner/:path*` なので
-//    **`/api/adbanner/*` にはマッチしない**。middleware.ts も
-//    SHARED_SKIP_PREFIXES で `/api` を丸ごと飛ばす。
-//    そのため統合後も `POST /api/adbanner/generate` 等は生きたままで、
-//    URLを知っている第三者が直接叩けば画像生成の費用が発生する状態だった。
+//    **`/api/adbanner/*` にはマッチしない**。そのため統合後も
+//    `POST /api/adbanner/generate` 等は生きたままで、URLを知っている
+//    第三者が直接叩けば画像生成の費用が発生する状態だった。
+//
+// ⚠️ middleware での遮断は使えない。この構成では middleware が
+//    **一度も実行されていない**（app が src/ 配下にあるのに middleware.ts が
+//    リポジトリ直下にあり、Next.js に認識されていない）。
 //
 // ⚠️ ルートファイルとDBの adbanner_* は残す（ロールバックの余地を確保する方針）。
-//    止めるのは入口だけにして、戻したくなったらこのガードを外せば復旧できる。
+//    止めるのは入口だけにして、戻したくなったらこのフラグを false にすれば復旧できる。
+
+/**
+ * ⚠️ 型を boolean にしてあるのは意図的。`true` リテラルにすると
+ *    ガード以降が到達不能コードになり、TypeScript が型解決をやめて
+ *    既存の本体コードが大量の型エラーになる（実際にビルドが壊れた）。
+ */
+export const ADBANNER_RETIRED: boolean = true
+
 export function retiredResponse() {
   return NextResponse.json(
     {

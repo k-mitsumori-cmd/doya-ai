@@ -6,9 +6,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { getAdIdentity, ownerWhere, GUEST_COOKIE } from '@/lib/adbanner/access'
+import { ADBANNER_RETIRED, retiredResponse } from '@/lib/adbanner/retired'
 
 // GET /api/adbanner/campaigns — 自分のキャンペーン一覧
 export async function GET(req: NextRequest) {
+  // ⚠️ /adimage へ統合済み。入口だけ閉じる（本体は復旧の余地のため残す）
+  if (ADBANNER_RETIRED) return retiredResponse()
+
   const id = await getAdIdentity(req)
   const where = ownerWhere(id)
   if (!where) return NextResponse.json({ success: true, data: [] }, { headers: { 'Cache-Control': 'no-store' } })
@@ -23,6 +27,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/adbanner/campaigns — キャンペーン作成（ゲストはCookieでguestId付与）
 export async function POST(req: NextRequest) {
+  // ⚠️ /adimage へ統合済み。入口だけ閉じる（本体は復旧の余地のため残す）
+  if (ADBANNER_RETIRED) return retiredResponse()
+
   let id = await getAdIdentity(req)
   const body = await req.json().catch(() => ({}))
   const name = (body.name as string)?.trim() || (body.serviceName as string)?.trim() || '新規キャンペーン'

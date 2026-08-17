@@ -9,11 +9,15 @@ import { generateBanners } from '@/lib/adbanner/generate'
 import { downloadBuffer, signedUrl } from '@/lib/adbanner/storage'
 import { BANNER_SIZES, type AdMedia, type LogoConfig } from '@/lib/adbanner/types'
 import { recordServiceUsage } from '@/lib/service-usage'
+import { ADBANNER_RETIRED, retiredResponse } from '@/lib/adbanner/retired'
 
 const DEFAULT_LOGO_CFG: LogoConfig = { pos: 'bottom-right', maxWidthPct: 22, paddingPct: 4 }
 
 // POST /api/adbanner/generate — N案を一括量産
 export async function POST(req: NextRequest) {
+  // ⚠️ /adimage へ統合済み。入口だけ閉じる（本体は復旧の余地のため残す）
+  if (ADBANNER_RETIRED) return retiredResponse()
+
   const id = await getAdIdentity(req)
   const where = ownerWhere(id)
   if (!where) return NextResponse.json({ success: false, error: '先にキャンペーンを作成してください' }, { status: 400 })

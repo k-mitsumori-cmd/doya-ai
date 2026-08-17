@@ -352,9 +352,31 @@ grep "^model " prisma/schema.prisma
 後継の ドヤ広告画像AI（`/adimage`）へ機能を移植して廃止した（ロゴ合成も移植済み）。
 
 - 画面: `next.config.js` の 308 リダイレクトで `/adimage` へ
-- API: `middleware.ts` で `/api/adbanner/*` を 410 にして閉じている
+- API: 各ルート冒頭の `ADBANNER_RETIRED` ガード（`src/lib/adbanner/retired.ts`）で 410
   - ⚠️ next.config.js のリダイレクトは `/adbanner` と `/adbanner/:path*` にしか
-    マッチせず、`/api/adbanner/*` は素通りする。middleware も `/api` を
-    SHARED_SKIP_PREFIXES で飛ばすため、**統合後もAPIは生きたままだった**
-    （2026-08-17 に塞いだ）。廃止時はページとAPIの両方を確認すること。
+    マッチせず、`/api/adbanner/*` は素通りする。**統合後もAPIは生きたままで、
+    URLを知る第三者が直接叩けば画像生成の費用が発生していた**（2026-08-17 に塞いだ）。
+    サービスを廃止するときはページとAPIの両方を必ず確認すること。
+  - ⚠️ middleware では塞げない。**このリポジトリの middleware は一度も実行されていない**
+    （下記）。
 - ルート実体とDBの `adbanner_*` は残置（ロールバックの余地を確保）
+
+---
+
+## ⚠️ middleware が実行されていない（2026-08-17 発見・未対応）
+
+`middleware.ts` がリポジトリ直下にあるが、このプロジェクトの App Router は
+`src/app` 配下にある。Next.js は `src/` を使う構成では **`src/middleware.ts`** を見るため、
+直下の `middleware.ts` は認識されていない。
+
+証拠: `npx next build` 後の `.next/server/middleware-manifest.json` が `"middleware": {}`。
+
+そのため以下が**一度も動いていない**:
+
+- `MITSUBOSHI_HOSTS` によるサブドメイン振り分け（三ツ星アプリ）
+- 主ドメインの `/nagusame/*` → 三ツ星サブドメインへの 308
+- `SLIDE_HOSTS` によるドヤスライドの別ドメイン配信
+
+⚠️ 直すには `src/middleware.ts` へ移すだけだが、**移した瞬間にこれらの振り分けが
+本番で有効になる**。他ドメインの挙動が変わるため、対象ホストの DNS・Vercel の
+ドメイン設定・env（`MITSUBOSHI_HOSTS` / `SLIDE_HOSTS`）を確認してから行うこと。

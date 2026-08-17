@@ -7,9 +7,13 @@ import { prisma } from '@/lib/prisma'
 import { getAdIdentity, ownerWhere } from '@/lib/adbanner/access'
 import { generateFeedback } from '@/lib/adbanner/feedback'
 import type { AdMedia } from '@/lib/adbanner/types'
+import { ADBANNER_RETIRED, retiredResponse } from '@/lib/adbanner/retired'
 
 // POST /api/adbanner/feedback — 指定バナーにAI自動フィードバック
 export async function POST(req: NextRequest) {
+  // ⚠️ /adimage へ統合済み。入口だけ閉じる（本体は復旧の余地のため残す）
+  if (ADBANNER_RETIRED) return retiredResponse()
+
   const id = await getAdIdentity(req)
   const where = ownerWhere(id)
   if (!where) return NextResponse.json({ success: false, error: '権限がありません' }, { status: 403 })
