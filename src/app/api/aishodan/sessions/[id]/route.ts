@@ -6,7 +6,7 @@ export const maxDuration = 300
 // PATCH /api/aishodan/sessions/[id] — 判定の手動上書き
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getAishodanContext, orgSlugFrom } from '@/lib/aishodan/access'
+import { getAishodanContext, hasMinRole, orgSlugFrom } from '@/lib/aishodan/access'
 import { toScenarioConfig } from '@/lib/aishodan/public'
 import type { Verdict } from '@/lib/aishodan/types'
 
@@ -69,11 +69,21 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
+  // ⚠️ 適合判定は営業の意思決定に使う。同じ判定を作る /re-evaluate は manager 以上を
+  //    要求しているのに、こちらだけ member でも書けた。非対称を解消する。
+  if (!hasMinRole(ctx.role, 'manager')) {
+    return NextResponse.json({ error: '判定を変更する権限がありません' }, { status: 403 })
+  }
+
   const session = await prisma.aishodanSession.findFirst({
     where: { id: p.id, organizationId: ctx.organizationId },
-    select: { id: true, outcome: { select: { id: true } } },
+    select: { id: true, startedAt: true, outcome: { select: { id: true } } },
   })
   if (!session) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
+  // ⚠️ 実施していない商談に架空の判定を作らせない（/re-evaluate と同じ条件）
+  if (!session.startedAt) {
+    return NextResponse.json({ error: 'この商談はまだ実施されていません。' }, { status: 400 })
+  }
 
   const body = await req.json().catch(() => ({}))
   const data: Record<string, unknown> = {}

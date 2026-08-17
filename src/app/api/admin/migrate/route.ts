@@ -13,8 +13,18 @@ export async function POST(request: NextRequest) {
   try {
     // セキュリティチェック（本番環境では環境変数で保護）
     const authHeader = request.headers.get('authorization')
-    const expectedToken = process.env.ADMIN_MIGRATE_TOKEN || 'dev-token'
-    
+    // ⚠️ 既定値を置かないこと。ここは本番DBに対して
+    //    `prisma db push --accept-data-loss` を実行する。'dev-token' のような
+    //    フォールバックがあると、env の設定漏れや削除事故の瞬間に、
+    //    誰でも列削除・データ破壊を起こせる状態になる。未設定なら動かさない。
+    const expectedToken = process.env.ADMIN_MIGRATE_TOKEN
+    if (!expectedToken) {
+      return NextResponse.json(
+        { error: 'ADMIN_MIGRATE_TOKEN が設定されていないため実行できません' },
+        { status: 503 }
+      )
+    }
+
     if (authHeader !== `Bearer ${expectedToken}`) {
       return NextResponse.json(
         { error: 'Unauthorized' },

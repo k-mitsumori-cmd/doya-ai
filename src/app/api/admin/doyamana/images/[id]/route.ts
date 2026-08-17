@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireAdmin } from '@/lib/admin-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,6 +9,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // ⚠️ 管理者APIは各ルートが自分で認証する（middlewareは見ていない）
+  const denied = await requireAdmin()
+  if (denied) return denied
+
   try {
     const { id } = await params
 
@@ -54,6 +59,10 @@ export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // ⚠️ 管理者APIは各ルートが自分で認証する（middlewareは見ていない）
+  const denied = await requireAdmin()
+  if (denied) return denied
+
   try {
     const { id } = await params
     const body = await request.json()
@@ -89,6 +98,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // ⚠️ 管理者APIは各ルートが自分で認証する（middlewareは見ていない）
+  const denied = await requireAdmin()
+  if (denied) return denied
+
   try {
     const { id } = await params
 

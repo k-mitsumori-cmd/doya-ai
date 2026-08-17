@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PROMPTS_V2 } from '@/lib/banner-prompts-v2'
 import { generateBanners } from '@/lib/nanobanner'
+import { requireAdmin } from '@/lib/admin-guard'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -75,6 +76,10 @@ ADDITIONAL INSTRUCTIONS FOR TEMPLATE:
 
 // POST: 新規テンプレートをバッチ生成
 export async function POST(request: NextRequest) {
+  // ⚠️ 管理者APIは各ルートが自分で認証する（middlewareは見ていない）
+  const denied = await requireAdmin()
+  if (denied) return denied
+
   try {
     const body = await request.json().catch(() => ({}))
     const { templateIds, limit = 5 } = body as { templateIds?: string[], limit?: number }
@@ -167,6 +172,10 @@ export async function POST(request: NextRequest) {
 
 // GET: 生成状況を確認
 export async function GET() {
+  // ⚠️ 管理者APIは各ルートが自分で認証する（middlewareは見ていない）
+  const denied = await requireAdmin()
+  if (denied) return denied
+
   try {
     const existingTemplates = await prisma.bannerTemplate.findMany({
       where: { templateId: { in: NEW_TEMPLATE_IDS } },

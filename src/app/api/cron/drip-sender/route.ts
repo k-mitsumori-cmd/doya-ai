@@ -16,12 +16,16 @@ const CRON_SECRET = process.env.CRON_SECRET
 // ============================================
 
 export async function GET(request: Request) {
-  // Cron認証（CRON_SECRET が設定されている場合のみ）
-  if (CRON_SECRET) {
-    const authHeader = request.headers.get('authorization')
-    if (authHeader !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+  // ------------------------------------------------------------------
+  // Cron認証
+  // ------------------------------------------------------------------
+  // ⚠️ 「CRON_SECRET が設定されている場合のみ検証する」にしないこと。
+  //    env の設定漏れや削除事故の瞬間に、このルートが誰でも叩ける状態になる。
+  //    このルートはメール実送信・外部同期・DB書き込みという副作用を持つため、
+  //    未設定なら**動かさない**（他の cron ルートも fail-closed で揃えてある）。
+  const authHeader = request.headers.get('authorization')
+  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const now = new Date()

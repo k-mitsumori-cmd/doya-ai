@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PROMPTS_V2, GENRES } from '@/lib/banner-prompts-v2'
+import { requireAdmin } from '@/lib/admin-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,6 +10,10 @@ const v2PromptsMap = new Map(BANNER_PROMPTS_V2.map(p => [p.id, p]))
 
 // カテゴリ一覧取得（V2プロンプトのgenreを使用）
 export async function GET(request: NextRequest) {
+  // ⚠️ 管理者APIは各ルートが自分で認証する（middlewareは見ていない）
+  const denied = await requireAdmin()
+  if (denied) return denied
+
   try {
     const { searchParams } = new URL(request.url)
     const includeStats = searchParams.get('includeStats') === 'true'

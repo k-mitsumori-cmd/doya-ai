@@ -64,13 +64,25 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
   const s = await prisma.mensetsuSession.findFirst({
     where: { id: p.id, organizationId: c.organizationId },
-    select: { id: true, startedAt: true, status: true, consentedAt: true, candidateEmail: true },
+    select: {
+      id: true, startedAt: true, status: true, consentedAt: true,
+      candidateEmail: true, expiresAt: true,
+    },
   })
   if (!s) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
 
   // ⚠️ 面接が始まったあとに宛先を差し替えない（同意の記録との整合が崩れる）
   if (s.startedAt) {
     return NextResponse.json({ error: '面接が始まっているため変更できません。' }, { status: 409 })
+  }
+  // ⚠️ 期限切れの面接を触らせない。下で status を 'pending' に戻す処理があるため、
+  //    ここを通すと一覧の表示が「未実施」に巻き戻り、担当者は直ったと誤認する。
+  //    実際には assertUsable が expiresAt で弾くので応募者は受験できない。
+  if (s.expiresAt.getTime() < Date.now()) {
+    return NextResponse.json(
+      { error: 'この面接URLは有効期限が切れています。新しく発行してください。' },
+      { status: 400 }
+    )
   }
 
   const body = await req.json().catch(() => ({}))

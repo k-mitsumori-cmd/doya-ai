@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PROMPTS_V2, GENRES } from '@/lib/banner-prompts-v2'
+import { requireAdmin } from '@/lib/admin-guard'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,6 +10,10 @@ const v2PromptsMap = new Map(BANNER_PROMPTS_V2.map(p => [p.id, p]))
 
 // 画像一覧取得（BannerTemplateテーブルを使用、V2プロンプトのgenreを参照）
 export async function GET(request: NextRequest) {
+  // ⚠️ 管理者APIは各ルートが自分で認証する（middlewareは見ていない）
+  const denied = await requireAdmin()
+  if (denied) return denied
+
   try {
     const { searchParams } = new URL(request.url)
     const genre = searchParams.get('category') // フロントエンドからはcategoryとして送られるが、実際はgenre
@@ -108,6 +113,10 @@ export async function GET(request: NextRequest) {
 
 // 画像新規作成
 export async function POST(request: NextRequest) {
+  // ⚠️ 管理者APIは各ルートが自分で認証する（middlewareは見ていない）
+  const denied = await requireAdmin()
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { templateId, industry, category, prompt, size, imageUrl, previewUrl, isFeatured, isActive } = body
@@ -145,6 +154,10 @@ export async function POST(request: NextRequest) {
 
 // 一括操作
 export async function PATCH(request: NextRequest) {
+  // ⚠️ 管理者APIは各ルートが自分で認証する（middlewareは見ていない）
+  const denied = await requireAdmin()
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { action, ids } = body
