@@ -28,6 +28,21 @@ interface OrgMember {
   joinedAt: string
 }
 
+/** 権限の表示名。API の HrMemberRole と対応させること */
+const ROLE_LABELS: Record<string, string> = {
+  OWNER: 'オーナー',
+  ADMIN: '管理者',
+  MANAGER: 'マネージャー',
+  MEMBER: 'メンバー',
+}
+const ROLE_RANK: Record<string, number> = { OWNER: 4, ADMIN: 3, MANAGER: 2, MEMBER: 1 }
+const ROLE_STYLE: Record<string, string> = {
+  OWNER: 'bg-amber-100 text-amber-800',
+  ADMIN: 'bg-purple-100 text-purple-700',
+  MANAGER: 'bg-blue-100 text-blue-700',
+  MEMBER: 'bg-slate-100 text-slate-600',
+}
+
 interface Department {
   id: string
   name: string
@@ -72,6 +87,11 @@ export default function HrSettingsPage() {
     fiscalYearStart: '04',
   })
   const [members, setMembers] = useState<OrgMember[]>([])
+  /** 自分の権限。誰にどの操作を出すかの判断に使う */
+  const [myRole, setMyRole] = useState<string>('MEMBER')
+  const [myMemberId, setMyMemberId] = useState<string>('')
+  const [memberBusy, setMemberBusy] = useState<string | null>(null)
+  const [memberMsg, setMemberMsg] = useState<{ id: string; ok: boolean; text: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
@@ -102,6 +122,8 @@ export default function HrSettingsPage() {
           const data = await settingsRes.json()
           if (data.settings) setSettings(data.settings)
           if (data.members) setMembers(data.members)
+          if (data.myRole) setMyRole(data.myRole)
+          if (data.myMemberId) setMyMemberId(data.myMemberId)
         }
         if (deptRes.ok) {
           const deptData = await deptRes.json()
@@ -138,6 +160,81 @@ export default function HrSettingsPage() {
     }
     fetchSettings()
   }, [])
+
+  /** メンバー一覧を読み直す */
+  const reloadMembers = async () => {
+    const res = await fetch('/api/hr/settings')
+    if (!res.ok) return
+    const d = await res.json()
+    if (d.members) setMembers(d.members)
+  }
+
+  /**
+   * 権限の変更。
+   * ⚠️ APIは自分より上の権限を付与できない。UIでも選択肢を自分の権限までに絞る。
+   */
+  const changeRole = async (member: OrgMember, role: string) => {
+    if (role === member.role) return
+    setMemberBusy(member.id)
+    setMemberMsg(null)
+    try {
+      const res = await fetch(`/api/hr/organization/members/${member.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      })
+      const d = await res.json().catch(() => null)
+      if (!res.ok) {
+        setMemberMsg({ id: member.id, ok: false, text: d?.error || '権限を変更できませんでした' })
+        return
+      }
+      setMemberMsg({
+        id: member.id,
+        ok: true,
+        text: `${member.name || member.email} の権限を「${ROLE_LABELS[role] || role}」に変更しました。`,
+      })
+      await reloadMembers()
+    } finally {
+      setMemberBusy(null)
+    }
+  }
+
+  /**
+   * メンバーの削除。
+   * ⚠️ 取り消せない操作なので必ず確認を挟む。
+   *    APIはオーナーと自分自身の削除を拒否する。
+   */
+  const removeMember = async (member: OrgMember) => {
+    const label = member.name || member.email
+    if (!window.confirm(`${label} をこの組織から外します。よろしいですか。\n\n従業員データは残りますが、この方はドヤHRにアクセスできなくなります。`)) {
+      return
+    }
+    setMemberBusy(member.id)
+    setMemberMsg(null)
+    try {
+      const res = await fetch(`/api/hr/organization/members/${member.id}`, { method: 'DELETE' })
+      const d = await res.json().catch(() => null)
+      if (!res.ok) {
+        setMemberMsg({ id: member.id, ok: false, text: d?.error || 'メンバーを外せませんでした' })
+        return
+      }
+      setMemberMsg({ id: member.id, ok: true, text: `${label} を組織から外しました。` })
+      await reloadMembers()
+    } finally {
+      setMemberBusy(null)
+    }
+  }
+
+  /** メンバーを管理できるか（APIは ADMIN 以上を要求する） */
+  const canManageMembers = ROLE_RANK[myRole] >= ROLE_RANK.ADMIN
+  /**
+   * 付与できる権限。
+   * ⚠️ 自分より上は選ばせない。ADMIN が他人を OWNER に上げられると、
+   *    実質オーナーを増やせてしまう（APIでも拒否している）。
+   */
+  const assignableRoles = ['ADMIN', 'MANAGER', 'MEMBER'].filter(
+    (r) => ROLE_RANK[r] <= ROLE_RANK[myRole]
+  )
 
   const handleSave = async () => {
     setSaving(true)
@@ -176,6 +273,8 @@ export default function HrSettingsPage() {
       if (settingsRes.ok) {
         const settingsData = await settingsRes.json()
         if (settingsData.members) setMembers(settingsData.members)
+        if (settingsData.myRole) setMyRole(settingsData.myRole)
+        if (settingsData.myMemberId) setMyMemberId(settingsData.myMemberId)
       }
     } catch (e: any) {
       toast.error(e.message)
@@ -534,7 +633,8 @@ export default function HrSettingsPage() {
               {members.map((member) => {
                 const avatarColor = getColorByIndex(MEMBER_AVATAR_COLORS, member.name || member.email)
                 return (
-                  <div key={member.id} className="flex items-center justify-between p-3 rounded-2xl bg-slate-50">
+                  <div key={member.id} className="rounded-2xl bg-slate-50">
+                  <div className="flex items-center justify-between p-3">
                     <div className="flex items-center gap-3">
                       <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center text-white text-xs font-bold`}>
                         {member.name?.[0] || member.email[0]}
@@ -544,11 +644,44 @@ export default function HrSettingsPage() {
                         <p className="text-xs text-slate-500">{member.email}</p>
                       </div>
                     </div>
-                    <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${
-                      member.role === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {member.role === 'ADMIN' ? '管理者' : 'メンバー'}
-                    </span>
+                    {/* ⚠️ 権限の変更・削除は管理者以上のみ。
+                         オーナーの行と自分自身の行では操作を出さない
+                         （APIも拒否するが、押せる形で見せない）。 */}
+                    {canManageMembers && member.role !== 'OWNER' && member.id !== myMemberId ? (
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={member.role}
+                          disabled={memberBusy === member.id}
+                          onChange={(e) => void changeRole(member, e.target.value)}
+                          className="px-3 py-1.5 rounded-full text-sm font-bold bg-slate-100 text-slate-700 border-0 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
+                        >
+                          {assignableRoles.map((r) => (
+                            <option key={r} value={r}>{ROLE_LABELS[r]}</option>
+                          ))}
+                        </select>
+                        <button
+                          onClick={() => void removeMember(member)}
+                          disabled={memberBusy === member.id}
+                          title="この組織から外す"
+                          className="w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40"
+                        >
+                          <span className="material-symbols-outlined text-lg">person_remove</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <span className={`px-3 py-1.5 rounded-full text-sm font-bold ${
+                        ROLE_STYLE[member.role] || ROLE_STYLE.MEMBER
+                      }`}>
+                        {ROLE_LABELS[member.role] || member.role}
+                        {member.id === myMemberId && <span className="ml-1 font-normal">（あなた）</span>}
+                      </span>
+                    )}
+                  </div>
+                  {memberMsg?.id === member.id && (
+                    <p className={`px-3 pb-2 text-sm font-bold ${memberMsg.ok ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {memberMsg.text}
+                    </p>
+                  )}
                   </div>
                 )
               })}

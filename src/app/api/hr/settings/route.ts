@@ -39,6 +39,11 @@ export async function GET() {
         fiscalYearStart: org?.fiscalMonth ? String(org.fiscalMonth).padStart(2, '0') : '04',
       },
       members,
+      // ⚠️ 画面が「誰に何を出してよいか」を判断するために要る。
+      //    これが無いと、権限のない人にも権限変更・削除の操作を出してしまう
+      //    （押しても403で弾かれるが、出す方が不親切）。
+      myRole: ctx.role,
+      myMemberId: ctx.memberId,
     })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'Failed' }, { status: 500 })

@@ -9,6 +9,14 @@ import { HrMemberRole } from '@/lib/hr/types'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
 
+const VALID_ROLES: string[] = [
+  HrMemberRole.OWNER,
+  HrMemberRole.ADMIN,
+  HrMemberRole.MANAGER,
+  HrMemberRole.MEMBER,
+]
+const VALID_STATUSES: string[] = ['ACTIVE', 'INVITED', 'SUSPENDED']
+
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
     const hrCtx = await getHrContext()
@@ -38,9 +46,32 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     }
 
     const data: Record<string, any> = {}
-    if (role !== undefined) data.role = role
-    if (status !== undefined) data.status = status
+    if (role !== undefined) {
+      // ⚠️ ロール値を検証せずに保存しない。未知の文字列が入ると
+      //    hasMinRole が 0 扱いになり、以後その人は何もできなくなる。
+      if (!VALID_ROLES.includes(role)) {
+        return NextResponse.json({ error: '権限の指定が正しくありません' }, { status: 400 })
+      }
+      // ⚠️ 自分より上の権限を与えさせない。これが無いと ADMIN が
+      //    他人を OWNER に昇格させ、実質オーナーを増やせてしまう（権限昇格）。
+      if (!hasMinRole(hrCtx.role, role)) {
+        return NextResponse.json(
+          { error: 'ご自身より上の権限は付与できません' },
+          { status: 403 }
+        )
+      }
+      data.role = role
+    }
+    if (status !== undefined) {
+      if (!VALID_STATUSES.includes(status)) {
+        return NextResponse.json({ error: '状態の指定が正しくありません' }, { status: 400 })
+      }
+      data.status = status
+    }
     if (employeeId !== undefined) data.employeeId = employeeId
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: '変更する項目がありません' }, { status: 400 })
+    }
 
     const updated = await prisma.hrOrganizationMember.update({
       where: { id },
