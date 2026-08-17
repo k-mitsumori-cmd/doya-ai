@@ -1,3 +1,9 @@
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+// ⚠️ 画像を何十枚もループ生成する。maxDuration が無いとVercelの既定で
+//    打ち切られ、本番でだけ必ず504になる。
+export const maxDuration = 300
+
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'

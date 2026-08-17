@@ -17,12 +17,12 @@ const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
   '教育・学習': '/banner-samples/cat-education.svg',
   エンタメ: '/banner-samples/cat-other.svg',
   '旅行・グルメ': '/banner-samples/cat-food.svg',
-  認知: '/banner-samples/purpose-lp_hero.png',
+  認知: '/banner-samples/purpose-lp_hero.svg',
   比較: '/banner-samples/purpose-display.svg',
   CV: '/banner-samples/purpose-campaign.svg',
   解説型: '/banner-samples/purpose-webinar.svg',
   比較型: '/banner-samples/purpose-display.svg',
-  一覧型: '/banner-samples/purpose-sns_ad.png',
+  一覧型: '/banner-samples/purpose-sns_ad.svg',
   default: '/banner-samples/cat-other.svg',
 }
 

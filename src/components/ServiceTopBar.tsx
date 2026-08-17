@@ -29,7 +29,15 @@ interface ServiceTopBarProps {
  *    ゲスト画面にもヘッダーが出てしまう。ここで自衛する。
  *    ゲスト経路を増やしたらここにも追加すること。
  */
-const GUEST_PATH_PATTERNS = [/^\/mensetsu\/live\//, /^\/aishodan\/invite\//, /^\/m\//]
+const GUEST_PATH_PATTERNS = [
+  // 応募者が開く面接画面
+  /^\/mensetsu\/live\//,
+  // 招待の受諾画面。まだアカウントが無い方が開くので、
+  // ⚠️ どのサービスの招待でも扱いを揃えること（aishodan だけ隠していた）
+  /^\/[a-z]+\/invite\//,
+  // 見込み客が開く商談ルーム（この layout の外だが、念のため）
+  /^\/m\//,
+]
 
 export function ServiceTopBar({ serviceId, serviceName }: ServiceTopBarProps) {
   const pathname = usePathname() || ''

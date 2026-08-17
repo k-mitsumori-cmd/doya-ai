@@ -43,12 +43,15 @@ const RED_FLAG_PATTERNS: Array<{ re: RegExp; label: string }> = [
   //    「ご両親はご健在ですか」のような**最も典型的な聞き方**を素通ししていた。
   //    家族に関する質問は本人の適性・能力と無関係なので、話題ごと弾く。
   { re: /(父|母|両親|家族|兄弟|姉妹|家庭)の(職業|仕事|勤務先|収入|学歴|状況|構成)/, label: '家族の職業・収入・学歴' },
-  // ⚠️ 「父」「母」を単体で見ないこと。「分母は何を取りましたか」「母国語」「母校」まで
-  //    家族構成として弾いてしまい、テンプレートを保存できなくなる。
-  //    面接官が家族を尋ねるときは必ず敬称が付く（お父様・ご両親）ので、その形に限る。
+  // ⚠️ 「父」「母」を単体の文字で見ないこと。「分母は何を取りましたか」「母国語」
+  //    「母校」まで家族構成として弾き、テンプレートを保存できなくなる。
+  //    かといって敬称必須にすると「父は健在ですか」「母はどちらにお勤めですか」を
+  //    見逃す（実際に見逃していた）。SAFE_COMPOUNDS で業務語を先に外してから、
+  //    主語として使われている形を拾う。
   { re: /(ご)?(家族|両親|兄弟|姉妹)(は|に|について|の方は)/, label: '家族構成' },
   { re: /(お|ご)(父|母)(様|さん|上)/, label: '家族構成' },
-  { re: /(父親|母親)(は|に|について|の)/, label: '家族構成' },
+  { re: /(父親|母親|祖父|祖母)(は|に|について|の)/, label: '家族構成' },
+  { re: /(父|母)(は|が|も)/, label: '家族構成' },
   { re: /(ご)?家族構成|同居|扶養家族/, label: '家族構成' },
   { re: /(持ち家|借家|間取り|住宅事情)/, label: '住宅状況' },
   { re: /宗教|信仰/, label: '宗教' },
@@ -69,6 +72,8 @@ const RED_FLAG_PATTERNS: Array<{ re: RegExp; label: string }> = [
   //    応募者**本人の状況・予定**を尋ねる形に限定する。
   { re: /既婚|未婚|婚約|妊娠/, label: '結婚・出産の予定' },
   { re: /(ご)?結婚(は|を|の|され|して|さ?れる)?(ご)?(予定|時期|されて|されました|していま)/, label: '結婚・出産の予定' },
+  // ⚠️ 「ご結婚は？」のように述語を省く聞き方を見逃していた
+  { re: /(ご)?結婚(は|については)(\s|[?？。、]|$)/, label: '結婚・出産の予定' },
   { re: /(ご)?(結婚|入籍)(のご?予定|される予定|は(いつ|お考え))/, label: '結婚・出産の予定' },
   // 制度の話（設計・運用・導入）ではなく、本人が取得するかを尋ねる形だけ弾く
   { re: /(産休|育休|育児休業)(の|を)?(ご)?(取得|取られ|取る|取り)(予定|の予定|される|ますか|になり)/, label: '結婚・出産の予定' },
@@ -86,13 +91,29 @@ export interface GuardrailViolation {
   label: string
 }
 
+/**
+ * 業務の話で出てくる語を先に外す。
+ * ⚠️ これが無いと「分母は何を取りましたか」「母校での学び」「結婚式場での接客経験」
+ *    まで就職差別として弾き、業種によってはテンプレートを一切保存できなくなる
+ *    （ブライダル・人事職で実際に起きた）。
+ * ⚠️ 逆に外しすぎると本物の差別質問を見逃す。ここに足すのは
+ *    「応募者本人の家庭・属性を尋ねる意味には絶対にならない語」だけにすること。
+ */
+const SAFE_COMPOUNDS =
+  /分母|母校|母国|母語|母集団|母体|母数|母材|母船|酵母|空母|雲母|字母|神父|教父|結婚式|結婚相談|結婚情報|結婚指輪/g
+
+function neutralize(text: string): string {
+  return text.replace(SAFE_COMPOUNDS, '＿')
+}
+
 /** 質問リストを検査し、禁止領域に触れるものを返す */
 export function findViolations(texts: string[]): GuardrailViolation[] {
   const out: GuardrailViolation[] = []
-  for (const text of texts) {
+  for (const raw of texts) {
+    const text = neutralize(raw)
     for (const { re, label } of RED_FLAG_PATTERNS) {
       if (re.test(text)) {
-        out.push({ text, label })
+        out.push({ text: raw, label })
         break
       }
     }
@@ -107,8 +128,9 @@ export function stripViolations<T extends { text: string }>(items: T[]): {
 } {
   const removed: GuardrailViolation[] = []
   const kept = items.filter((item) => {
+    const text = neutralize(item.text)
     for (const { re, label } of RED_FLAG_PATTERNS) {
-      if (re.test(item.text)) {
+      if (re.test(text)) {
         removed.push({ text: item.text, label })
         return false
       }

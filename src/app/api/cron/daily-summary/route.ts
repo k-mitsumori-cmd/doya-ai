@@ -113,8 +113,10 @@ async function resetExpiredSubscriptions() {
 
 export async function GET(request: Request) {
   // Vercel Cron からの呼び出しを認証
-  const authHeader = request.headers.get('authorization')
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  // ⚠️ CRON_SECRET が未設定だとテンプレートが "Bearer undefined" になり、
+    //    その文字列を送れば通ってしまう。未設定なら動かさないこと。
+    const authHeader = request.headers.get('authorization')
+  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

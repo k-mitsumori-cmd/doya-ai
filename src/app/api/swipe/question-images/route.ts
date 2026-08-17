@@ -13,8 +13,8 @@ const FALLBACK_IMAGES = [
   '/banner-samples/cat-ec.svg',
   '/banner-samples/cat-other.svg',
   '/banner-samples/purpose-display.svg',
-  '/banner-samples/purpose-lp_hero.png',
-  '/banner-samples/purpose-sns_ad.png',
+  '/banner-samples/purpose-lp_hero.svg',
+  '/banner-samples/purpose-sns_ad.svg',
 ] as const
 
 function hashString(input: string) {
@@ -33,7 +33,7 @@ function pickFallbackUrls(category: string, count: number) {
   if (key.includes('seo') || key.includes('検索') || key.includes('競合')) pool.push('/banner-samples/cat-it.svg')
   if (key.includes('読者') || key.includes('ターゲット') || key.includes('ペルソナ')) pool.push('/banner-samples/cat-marketing.svg')
   if (key.includes('料金') || key.includes('価格') || key.includes('プラン')) pool.push('/banner-samples/cat-finance.svg')
-  if (key.includes('記事') || key.includes('構成') || key.includes('見出し')) pool.push('/banner-samples/purpose-lp_hero.png')
+  if (key.includes('記事') || key.includes('構成') || key.includes('見出し')) pool.push('/banner-samples/purpose-lp_hero.svg')
 
   if (pool.length === 0) pool.push(...FALLBACK_IMAGES)
 

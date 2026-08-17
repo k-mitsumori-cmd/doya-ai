@@ -45,6 +45,18 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Cannot modify owner' }, { status: 403 })
     }
 
+    // ⚠️ 自分自身の権限・状態は変えられない。
+    //    getHrContext() は status:'ACTIVE' のメンバーしか返さないため、
+    //    自分を SUSPENDED にしたり MEMBER に降格すると、その瞬間から
+    //    ドヤHRの管理操作が一切できなくなり、自力では戻せない
+    //    （DELETE は自己削除を禁じているのに、PATCH だけ素通りだった）。
+    if (target.id === hrCtx.memberId) {
+      return NextResponse.json(
+        { error: 'ご自身の権限・状態は変更できません' },
+        { status: 400 }
+      )
+    }
+
     const data: Record<string, any> = {}
     if (role !== undefined) {
       // ⚠️ ロール値を検証せずに保存しない。未知の文字列が入ると
@@ -65,6 +77,14 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (status !== undefined) {
       if (!VALID_STATUSES.includes(status)) {
         return NextResponse.json({ error: '状態の指定が正しくありません' }, { status: 400 })
+      }
+      // ⚠️ 状態の変更にも権限の上下を効かせる。SUSPENDED にすると相手は
+      //    ドヤHRを一切使えなくなるため、実質的に権限の剥奪と同じ重みがある。
+      if (!hasMinRole(hrCtx.role, target.role as HrMemberRole)) {
+        return NextResponse.json(
+          { error: 'ご自身より上の権限の方は変更できません' },
+          { status: 403 }
+        )
       }
       data.status = status
     }

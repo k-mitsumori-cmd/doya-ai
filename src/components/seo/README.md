@@ -14,8 +14,16 @@
 route handler の重複が7本作られており、こちらは到達可能なURLでしたが
 **画面からは一度も呼ばれていません**でした。両方とも削除済みです。
 
-**スワイプ機能の正本は `src/app/api/swipe/**` と `src/app/seo/swipe/` です。**
-直すときは必ずそちらを編集してください。
+**スワイプ機能の正本は次の2つです。直すときは必ずこちらを編集してください。**
+
+- API: `src/app/api/swipe/**` の **`route.ts` のみ**
+- 画面: `src/app/seo/swipe/page.tsx`
+- コンポーネント: **このディレクトリ直下の `.tsx`**（`src/components/seo/*.tsx`）
+
+⚠️ `src/app/api/swipe/test/` にも `SwipeCard.tsx` / `TinderSwipeCard.tsx` /
+`CompetitorAnalysisTab.tsx` が置かれているが、**それらは使われていない複製**。
+中身も現行と食い違っている。API配下に置かれた `.tsx` はどこからも読まれないので、
+そちらを直しても画面は変わらない。
 
 ## 教訓
 
