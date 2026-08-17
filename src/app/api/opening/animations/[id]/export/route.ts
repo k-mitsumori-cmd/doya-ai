@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { generateExportCode } from '@/lib/opening/gemini'
 import { getTemplateById } from '@/lib/opening/templates'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤオープニングAI')
+
   try {
     const animation = await prisma.openingAnimation.findUnique({
       where: { id: params.id },

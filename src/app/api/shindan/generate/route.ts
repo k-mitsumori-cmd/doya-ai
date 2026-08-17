@@ -14,6 +14,7 @@ import {
   getTodayDateJST,
   isWithinFreeHour,
 } from '@/lib/pricing'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -1383,6 +1384,9 @@ ${competitorSection}
 // 8. POST ハンドラ（SSE ストリーミング版）
 // =============================================
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤWeb診断AI')
+
   let body: any
   try {
     body = await req.json()

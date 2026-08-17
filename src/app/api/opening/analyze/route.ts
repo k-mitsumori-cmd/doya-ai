@@ -6,8 +6,12 @@ import { analyzeSite } from '@/lib/opening/site-analyzer'
 import { generateAnimations } from '@/lib/opening/animation-engine'
 import { TEMPLATES } from '@/lib/opening/templates'
 import { sendErrorNotification } from '@/lib/notifications'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤオープニングAI')
+
   try {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id || null

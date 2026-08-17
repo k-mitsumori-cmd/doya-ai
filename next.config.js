@@ -155,17 +155,11 @@ const nextConfig = {
         destination: '/seo',
         permanent: false,
       },
-      // /kantan は迷いやすいので、ドヤライティングAI（/seo）へ集約
-      {
-        source: '/kantan',
-        destination: '/seo',
-        permanent: false,
-      },
-      {
-        source: '/kantan/:path*',
-        destination: '/seo',
-        permanent: false,
-      },
+      // カンタンマーケAI（/kantan）は提供終了。後継のドヤ記事作成（/seo）へ集約。
+      // ⚠️ 2026-08-17 に正式な提供終了としたので 308（恒久）にする。
+      //    307のままだと旧URLがインデックスに残り続ける。
+      { source: '/kantan', destination: '/seo', permanent: true },
+      { source: '/kantan/:path*', destination: '/seo', permanent: true },
       // 旧スライド（Gemini→Googleスライド型）は廃止し、ドヤスライド（/doyaslide）に統一
       // 廃止済みブランドなので 308（恒久）。307 のままだと旧URLがインデックスに残り、
       // 「ドヤスライド」の指名検索が旧URLと /doyaslide に分散する
@@ -254,6 +248,18 @@ const nextConfig = {
       { source: '/lp/:path*', destination: '/', permanent: true },
       { source: '/adsim', destination: '/', permanent: true },
       { source: '/adsim/:path*', destination: '/', permanent: true },
+      // ------------------------------------------------------------------
+      // 提供終了サービス（2026-08-17・第3陣）
+      // ------------------------------------------------------------------
+      // ドヤWeb診断AI / ドヤロゴ / ドヤオープニングAI
+      // ⚠️ HIDDEN_SERVICE_IDS には元から入っていたが、それは一覧から消えるだけ。
+      //    画面もAPIも直接叩けば動いていた（/api/shindan/generate は有料モデルを呼ぶ）。
+      { source: '/shindan', destination: '/', permanent: true },
+      { source: '/shindan/:path*', destination: '/', permanent: true },
+      { source: '/logo', destination: '/', permanent: true },
+      { source: '/logo/:path*', destination: '/', permanent: true },
+      { source: '/opening', destination: '/', permanent: true },
+      { source: '/opening/:path*', destination: '/', permanent: true },
       // SlashSlide（別ブランドの旧スライド）もドヤスライド（/doyaslide）に統一
       {
         source: '/slashslide/create',

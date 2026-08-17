@@ -6,6 +6,7 @@ import { generatePaletteSet } from '../../../../../LOGO/generator/paletteGenerat
 import { buildExplainPrompt } from '../../../../../LOGO/generator/prompt'
 import { exportProjectToDisk } from '../../../../../LOGO/generator/exportManager'
 import { generateLogoProject } from '../../../../../LOGO/generator/logoGenerator'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -19,6 +20,9 @@ function isReturnMode(v: unknown): v is ReturnMode {
 }
 
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤロゴ')
+
   try {
     const body = await req.json().catch(() => null)
     if (!body || typeof body !== 'object') {
