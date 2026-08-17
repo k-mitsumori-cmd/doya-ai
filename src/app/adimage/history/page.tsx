@@ -6,8 +6,8 @@
 // ⚠️ これまで一問一答の生成画面しか無く、作った広告画像はブラウザを閉じたら
 //    二度と見返せなかった。GET /api/adimage/concepts は実装されていたのに
 //    どの画面からも呼ばれていない状態だった（2026-08-17 に追加）。
-// ⚠️ ゲスト（未ログイン）でも Cookie の guestId で自分の分だけが返る。
-//    サーバ側で ownerWhere() によりスコープされるため、ここでの絞り込みは不要。
+// ⚠️ ログイン必須（2026-08-17〜）。サーバ側で userId にスコープされるため、
+//    ここでの絞り込みは不要。未ログインなら 401 が返るのでログインを促す。
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -54,6 +54,10 @@ export default function AdImageHistoryPage() {
   const load = useCallback(async () => {
     try {
       const res = await fetch('/api/adimage/concepts')
+      if (res.status === 401) {
+        setError('履歴のご確認にはログインが必要です。')
+        return
+      }
       if (!res.ok) {
         setError('履歴を読み込めませんでした')
         return

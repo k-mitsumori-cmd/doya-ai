@@ -7,7 +7,7 @@ export const maxDuration = 300
 //    ここでは必ず生成済みの画像そのものを渡す。
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getIdentity, ownerWhere } from '@/lib/adimage/access'
+import { getIdentity, ownerWhere, requireUser } from '@/lib/adimage/access'
 import { evaluateCreative, REFINE_CHIPS } from '@/lib/adimage/feedback'
 import { downloadBuffer } from '@/lib/adimage/storage'
 import { findPlacement } from '@/lib/adimage/placements'
@@ -18,6 +18,9 @@ type Ctx = { params: Promise<{ id: string }> | { id: string } }
 export async function POST(req: NextRequest, ctxParam: Ctx) {
   const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
   const identity = await getIdentity(req)
+  // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
+  const auth = requireUser(identity)
+  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 })
   const where = ownerWhere(identity)
   if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400 })
 

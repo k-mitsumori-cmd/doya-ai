@@ -6,13 +6,16 @@ export const maxDuration = 300
 // ⚠️ 画像生成の前にコピーを確定させる。全アスペクトで同一コピーを使い、一貫性を保つ。
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { ensureGuestId, getIdentity, GUEST_COOKIE, ownerWhere } from '@/lib/adimage/access'
+import { ensureGuestId, getIdentity, GUEST_COOKIE, ownerWhere, requireUser } from '@/lib/adimage/access'
 import { analyzeBrand } from '@/lib/adimage/brand'
 import { findRiskyExpressions, generateConcepts } from '@/lib/adimage/copy'
 import type { BrandProfile } from '@/lib/adimage/types'
 
 export async function POST(req: NextRequest) {
   const base = await getIdentity(req)
+  // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
+  const auth = requireUser(base)
+  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 })
   const { identity, newGuestId } = ensureGuestId(base)
   const where = ownerWhere(identity)
   if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400 })

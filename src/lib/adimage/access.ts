@@ -1,8 +1,13 @@
 // ============================================
 // ドヤ広告画像AI 認証・ゲスト・プラン上限
 // ============================================
-// ログインユーザーは User.plan（統一プラン）、未ログインは guestId(Cookie) で管理する。
-// 構成は adbanner/access.ts と同型（組織スコープではない）。
+// ⚠️ 2026-08-17 に**ログイン必須**にした。
+//    それまでは未ログインでも guestId(Cookie) で生成できたが、
+//    上限はCookie単位なので**Cookieを消せば何度でも生成できた**。
+//    1コンセプトで複数枚の画像を生成するため、費用が青天井になる経路だった。
+//    ゲスト用のコードは残してあるが `ALLOW_GUEST` で止めている（復活の余地）。
+//
+// ログインユーザーは User.plan（統一プラン）で判定する。組織スコープではない。
 //
 // ⚠️ 課金・改善の単位は「コンセプト」。1コンセプトから何サイズ書き出しても1回と数える。
 //    サイズ単位で数えると、配置を多く選ぶほど不利になり、本サービスの価値と逆行する。
@@ -18,6 +23,13 @@ export const GUEST_COOKIE = 'adimage_gid'
 const GUEST_ID_PATTERN = /^[0-9a-f]{32}$/
 
 export type AdImagePlan = 'GUEST' | 'FREE' | 'PRO'
+
+/**
+ * 未ログインでの利用を許すか。
+ * ⚠️ false のあいだ、ゲスト経路（Cookie発行・GUEST上限）は一切使われない。
+ *    上限がCookie単位で、消せば回避できてしまうため止めている。
+ */
+export const ALLOW_GUEST = false
 
 /** 日次のコンセプト生成上限 */
 export const DAILY_CONCEPT_LIMIT: Record<AdImagePlan, number> = { GUEST: 2, FREE: 5, PRO: 40 }
@@ -51,6 +63,7 @@ export async function getIdentity(req: NextRequest): Promise<AdImageIdentity> {
   //    URL パーサが解決してしまい、**別サービスのバケットへ書き込める**
   //    （service-role キーで upsert される）。
   //    発行時と同じ形式（16バイトのhex）だけを受け付け、外れたら未設定として扱う。
+  if (!ALLOW_GUEST) return { userId: null, guestId: null, plan: 'GUEST' }
   const raw = req.cookies.get(GUEST_COOKIE)?.value
   const guestId = raw && GUEST_ID_PATTERN.test(raw) ? raw : null
   return { userId: null, guestId, plan: 'GUEST' }
@@ -59,6 +72,8 @@ export async function getIdentity(req: NextRequest): Promise<AdImageIdentity> {
 /** Cookie が無いゲストには新規発行する（呼び出し側でレスポンスに載せる） */
 export function ensureGuestId(id: AdImageIdentity): { identity: AdImageIdentity; newGuestId: string | null } {
   if (id.userId || id.guestId) return { identity: id, newGuestId: null }
+  // ⚠️ ログイン必須のあいだは新規のゲストIDを発行しない
+  if (!ALLOW_GUEST) return { identity: id, newGuestId: null }
   const guestId = randomBytes(16).toString('hex')
   return { identity: { ...id, guestId }, newGuestId: guestId }
 }
@@ -105,4 +120,15 @@ export async function assertQuota(id: AdImageIdentity): Promise<{ ok: true } | {
     }
   }
   return { ok: true }
+}
+
+/**
+ * ログインしているか。していなければ返すべきエラーを返す。
+ * ⚠️ 未ログインを弾くのは各APIの責務。`ownerWhere()` が null を返すのを
+ *    そのまま「空の結果」として扱うと、書き込み系APIで
+ *    「識別子が無いのに処理が進む」経路を作りかねない。
+ */
+export function requireUser(id: AdImageIdentity): { ok: true } | { ok: false; reason: string } {
+  if (id.userId) return { ok: true }
+  return { ok: false, reason: 'ご利用にはログインが必要です。' }
 }

@@ -1788,7 +1788,7 @@ export const SERVICES: Service[] = [
     status: 'active',
     category: 'image',
     order: 31,
-    requiresAuth: false,
+    requiresAuth: true,
     isNew: true,
     badge: 'NEW',
   },

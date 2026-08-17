@@ -10,7 +10,7 @@ export const maxDuration = 300
 import sharp from 'sharp'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getIdentity, ownerWhere } from '@/lib/adimage/access'
+import { getIdentity, ownerWhere, requireUser } from '@/lib/adimage/access'
 import { uploadPng } from '@/lib/adimage/storage'
 import { DEFAULT_LOGO_CONFIG, type LogoConfig, type LogoPosition } from '@/lib/adimage/logo'
 
@@ -24,6 +24,9 @@ const MAX_BYTES = 3 * 1024 * 1024
 export async function POST(req: NextRequest, ctxParam: Ctx) {
   const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
   const identity = await getIdentity(req)
+  // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
+  const auth = requireUser(identity)
+  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 })
   const where = ownerWhere(identity)
   if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400 })
 
@@ -73,6 +76,9 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
 export async function DELETE(req: NextRequest, ctxParam: Ctx) {
   const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
   const identity = await getIdentity(req)
+  // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
+  const auth = requireUser(identity)
+  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 })
   const where = ownerWhere(identity)
   if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400 })
 

@@ -11,7 +11,7 @@ export const maxDuration = 300
 //     → 各配置の目標サイズへ純粋な縮小のみで書き出し
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { assertQuota, ensureGuestId, getIdentity, GUEST_COOKIE, ownerWhere } from '@/lib/adimage/access'
+import { assertQuota, ensureGuestId, getIdentity, GUEST_COOKIE, ownerWhere, requireUser } from '@/lib/adimage/access'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { DEFAULT_PLACEMENT_KEYS, findPlacement, groupByGenSize } from '@/lib/adimage/placements'
 import { exportToSize, generateBaked } from '@/lib/adimage/generate'
@@ -22,6 +22,9 @@ import type { AdCopy, BrandProfile } from '@/lib/adimage/types'
 
 export async function GET(req: NextRequest) {
   const identity = await getIdentity(req)
+  // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
+  const auth = requireUser(identity)
+  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 })
   const where = ownerWhere(identity)
   if (!where) return NextResponse.json({ concepts: [] })
 
@@ -64,6 +67,9 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const base = await getIdentity(req)
+  // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
+  const auth = requireUser(base)
+  if (!auth.ok) return NextResponse.json({ error: auth.reason }, { status: 401 })
   const { identity, newGuestId } = ensureGuestId(base)
   const where = ownerWhere(identity)
   if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400 })
