@@ -74,7 +74,6 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
     select: { id: true, outcome: { select: { id: true } } },
   })
   if (!session) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
-  if (!session.outcome) return NextResponse.json({ error: 'まだ判定がありません' }, { status: 400 })
 
   const body = await req.json().catch(() => ({}))
   const data: Record<string, unknown> = {}
@@ -88,6 +87,34 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
   // 誰がいつ上書きしたかを残す。スコアの妥当性を後から検証するために要る
   data.overriddenBy = ctx.userId
   data.overriddenAt = new Date()
+
+  // ------------------------------------------------------------------
+  // 判定がまだ無い商談にも、人が手で判定を入れられるようにする
+  // ------------------------------------------------------------------
+  // ⚠️ 以前は outcome が無いと 400 で拒否していた。評価の生成に失敗した商談
+  //    （モデルID廃止・JSONパース失敗など実際に起きる）は、再評価する手段も
+  //    手で判定を入れる手段も無く、本物の見込み客のデータが一覧の中で
+  //    永久に判定不能のまま放置される状態だった。
+  if (!session.outcome) {
+    if (!data.verdict || !Number.isFinite(Number(data.fitScore))) {
+      return NextResponse.json(
+        { error: 'この商談はまだ判定がありません。判定と適合度をご指定ください。' },
+        { status: 400 }
+      )
+    }
+    const created = await prisma.aishodanOutcome.create({
+      data: {
+        sessionId: session.id,
+        fitScore: Number(data.fitScore),
+        verdict: String(data.verdict),
+        reason: '自動判定が生成できなかったため、担当者が入力しました。',
+        nextAction: (data.nextAction as string) || null,
+        overriddenBy: ctx.userId,
+        overriddenAt: new Date(),
+      },
+    })
+    return NextResponse.json({ outcome: created })
+  }
 
   const outcome = await prisma.aishodanOutcome.update({ where: { id: session.outcome.id }, data })
   return NextResponse.json({ outcome })

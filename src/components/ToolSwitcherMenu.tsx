@@ -45,7 +45,11 @@ const SERVICE_LOGO: Record<string, string> = {
   sfa: '/sfa/logo.png',
   shodan: '/shodan/logo.png',
   aio: '/aio/logo.png',
-  adimage: '/adimage/logo.png',
+  // ⚠️ ここに足すときは public/<service>/logo.png を先に置くこと。
+  //    実体が無いと NextImage が壊れた画像を描き、アイコンにも落ちない
+  //    （onError のフォールバックは無い）。adimage は実体が無いまま
+  //    登録されており、他サービスの画面のツール一覧で画像が割れていた。
+  //    ロゴを用意したらここに追加する。
 }
 
 // ロゴが無いサービス用フォールバック（色タイル + Lucide シンボル）

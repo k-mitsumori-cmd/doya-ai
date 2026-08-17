@@ -569,6 +569,15 @@ model AdImageMetric {
 
 **設計意図**: `Concept`（アイデア）と `Creative`（実寸出力物）を分離したことが adbanner との最大の差。1コンセプトから何サイズ書き出しても、改善の単位・課金の単位は**コンセプト**で数えられる。
 
+> ⚠️ **以下 7.3 / 7.4 は初期設計であり、実装とは異なる**（2026-08-17 確認）。
+> 実装は `src/app/adimage/page.tsx` の一問一答フロー1画面のみで、
+> `dashboard/` `brands/` `campaigns/` の各画面と、`generate` `campaigns` `creatives`
+> `usage` 等のAPIは存在しない。実在するのは
+> `analyze` / `concepts` / `concepts/[id]/{export,feedback,refine}` /
+> `brands/[id]/logo` / `placements`。
+> ⚠️ `GET /api/adimage/concepts`（履歴取得）は実装されているが**画面から呼ばれていない**。
+> そのため生成したコンセプトを後から見返す手段が無い（未対応の既知の穴）。
+
 ### 7.3 API（`src/app/api/adimage/`）
 
 全ルート定型: `runtime='nodejs'` / `dynamic='force-dynamic'` / `maxDuration=300`、レスポンス `{ success, data?, error?, code? }`

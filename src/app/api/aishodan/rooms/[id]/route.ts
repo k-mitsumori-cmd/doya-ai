@@ -13,6 +13,11 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
   const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  // ⚠️ 公開停止・上限変更は配布済みURLの挙動を変える（見込み客が商談に入れなくなる）。
+  //    同じルームの DELETE が admin 以上なのに PATCH だけ member でも通る状態だった。
+  if (!hasMinRole(ctx.role, 'manager')) {
+    return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+  }
 
   const body = await req.json().catch(() => ({}))
   const data: Record<string, unknown> = {}

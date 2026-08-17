@@ -55,7 +55,8 @@
 | ドヤカンニング | `/cunning` | active | ✅ | ✅ 7頁 | ✅ 11件 | ✅ 7モデル | ✅ 統一プラン | ✅ |
 | ドヤ営業管理 | `/sfa` | active | ✅ | ✅ 6頁 | ✅ 9件 | ✅ 11モデル | ✅ 統一プラン | ✅ |
 | ドヤ商談準備 | `/shodan` | active | ✅ | ✅ 9頁 | ✅ 9件 | ✅ 4モデル | ✅ 統一プラン | ✅ |
-| ドヤ広告バナーAI | `/adbanner` | active | ✅ | ✅ 5頁 | ✅ 7件 | ✅ 2モデル | ✅ 統一プラン | ✅ |
+| ~~ドヤ広告バナーAI~~ | ~~`/adbanner`~~ | **廃止** | — | — | — | — | — | — |
+| ドヤ広告画像AI | `/adimage` | active | ✅ | ✅ | ✅ | ✅ | ✅ 統一プラン | ✅ |
 | 旧スライド | `/slide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
 | 旧SlashSlide | `/slashslide` | deprecated | ❌ | 🔗 /doyaslide | 🔗 旧 | ⚠️汎用 | ❌ | 🔗 doyaslide |
 | ドヤHR | `/hr` | active | ✅ | ✅ 14頁 | ✅ 30件 | ✅ 10モデル | ✅ 統一プラン | ❌ |
@@ -341,3 +342,19 @@ grep "^model " prisma/schema.prisma
 | 2026-06-02 | ドヤカンニング (`/cunning`) MVP実装: Web会議のタブ音声→質問検出→回答カンペ。near-realtime文字起こし(OpenAI・whisperフォールバック)、gemini-flash回答、字句RAG、PiPカンペ、想定問答準備。7頁・11API・7モデル(cunning_*)。本番DBは手動DDLで作成。services.ts登録・cunning.md更新 |
 | 2026-06-02 | ドヤスライドを active 化（coming_soon→active、badge 開発中→NEW）。ドヤカンニングは coming_soon のまま |
 | 2026-06-12 | ドヤ営業管理(sfa)・ドヤカンニング(cunning)を active 化。ドヤスライドのプロンプトを「きちんとした企業資料」設計に全面改修（LayerX/スライドランド調査反映・デッキ内配色統一・ページ番号描画・スタイルプレビュー v4-document 焼き直し） |
+
+---
+
+## 廃止したサービス
+
+### ドヤ広告バナーAI（`/adbanner`）— 2026-08-10 に `/adimage` へ統合
+
+後継の ドヤ広告画像AI（`/adimage`）へ機能を移植して廃止した（ロゴ合成も移植済み）。
+
+- 画面: `next.config.js` の 308 リダイレクトで `/adimage` へ
+- API: `middleware.ts` で `/api/adbanner/*` を 410 にして閉じている
+  - ⚠️ next.config.js のリダイレクトは `/adbanner` と `/adbanner/:path*` にしか
+    マッチせず、`/api/adbanner/*` は素通りする。middleware も `/api` を
+    SHARED_SKIP_PREFIXES で飛ばすため、**統合後もAPIは生きたままだった**
+    （2026-08-17 に塞いだ）。廃止時はページとAPIの両方を確認すること。
+- ルート実体とDBの `adbanner_*` は残置（ロールバックの余地を確保）

@@ -44,6 +44,13 @@ const VERDICT_STYLE: Record<string, string> = {
   unfit: 'bg-slate-100 text-slate-500 ring-slate-200',
 }
 
+/**
+ * 手で判定を入れるときの既定の適合度。
+ * ⚠️ AIの点数と混ざらないよう、区分の代表値だけを置く。
+ *    厳密な点数は後から編集できる。
+ */
+const MANUAL_FIT_SCORE: Record<Verdict, number> = { hot: 85, warm: 65, cold: 40, unfit: 15 }
+
 export default function AishodanSessionDetail() {
   const params = useParams<{ id: string }>()
   const id = params?.id
@@ -74,12 +81,51 @@ export default function AishodanSessionDetail() {
   async function override(verdict: Verdict) {
     if (!id) return
     setSaving(true)
+    setError('')
     try {
-      await fetch(withOrg('aishodan', `/api/aishodan/sessions/${id}`), {
+      // ⚠️ 判定がまだ無い商談（自動判定に失敗したもの）は適合度も一緒に送る。
+      //    サーバ側は判定と適合度が揃って初めて新規作成する。
+      const body: Record<string, unknown> = { verdict }
+      if (!d?.outcome) body.fitScore = MANUAL_FIT_SCORE[verdict]
+      const res = await fetch(withOrg('aishodan', `/api/aishodan/sessions/${id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ verdict }),
+        body: JSON.stringify(body),
       })
+      if (!res.ok) {
+        const j = await res.json().catch(() => null)
+        setError(j?.error || '判定を保存できませんでした')
+        return
+      }
+      await load()
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  /** 自動判定をやり直す。生成に失敗した商談を救うための導線 */
+  async function reEvaluate(overwriteManual = false) {
+    if (!id) return
+    setSaving(true)
+    setError('')
+    try {
+      const res = await fetch(withOrg('aishodan', `/api/aishodan/sessions/${id}/re-evaluate`), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overwriteManual }),
+      })
+      const j = await res.json().catch(() => null)
+      if (!res.ok) {
+        // 手入力を上書きしてよいか、一度だけ確かめる
+        if (j?.needsConfirm && !overwriteManual) {
+          if (window.confirm('この商談の判定は担当者が手で入力しています。AIの判定で上書きしますか。')) {
+            await reEvaluate(true)
+          }
+          return
+        }
+        setError(j?.error || '判定を作成できませんでした')
+        return
+      }
       await load()
     } finally {
       setSaving(false)
@@ -184,7 +230,15 @@ export default function AishodanSessionDetail() {
             )}
 
             <div className="mt-5 border-t border-slate-100 pt-4">
-              <p className="text-xs text-slate-500">判定を変える</p>
+              <button
+                onClick={() => void reEvaluate()}
+                disabled={saving}
+                className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+              >
+                自動判定をやり直す
+              </button>
+              {error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
+              <p className="mt-4 text-xs text-slate-500">判定を変える</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(['hot', 'warm', 'cold', 'unfit'] as Verdict[]).map((v) => (
                   <button
@@ -200,8 +254,36 @@ export default function AishodanSessionDetail() {
             </div>
           </section>
         ) : (
-          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            この商談はまだ判定されていません（状態: {SESSION_STATUS_LABELS[d.status] || d.status}）。
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-sm text-amber-900">
+              この商談はまだ判定されていません（状態: {SESSION_STATUS_LABELS[d.status] || d.status}）。
+            </p>
+            {/* ⚠️ 判定の生成は商談終了時の1回きりで、失敗すると作られない。
+                 やり直す導線が無いと、本物の見込み客が判定不能のまま埋もれる。 */}
+            <p className="mt-1 text-xs leading-relaxed text-amber-800">
+              自動判定の作成に失敗した可能性があります。やり直すか、ご自身で判定を入力してください。
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => void reEvaluate()}
+                disabled={saving}
+                className="rounded-lg bg-[#0066ff] px-4 py-2 text-xs font-bold text-white disabled:opacity-40"
+              >
+                {saving ? '処理中…' : '自動判定をやり直す'}
+              </button>
+              <span className="text-xs text-amber-800">または手で入力:</span>
+              {(['hot', 'warm', 'cold', 'unfit'] as Verdict[]).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => override(v)}
+                  disabled={saving}
+                  className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs text-amber-900 hover:bg-amber-100 disabled:opacity-40"
+                >
+                  {VERDICT_LABELS[v]}
+                </button>
+              ))}
+            </div>
+            {error && <p className="mt-2 text-xs font-bold text-red-700">{error}</p>}
           </section>
         )}
 
