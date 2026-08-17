@@ -4,6 +4,14 @@ import { NextResponse } from 'next/server'
 /**
  * Host ベース rewrite middleware
  *
+ * ⚠️ このファイルは **`src/` 配下に置くこと**。
+ *    App Router が `src/app` にある構成では、Next.js はリポジトリ直下の
+ *    `middleware.ts` を認識しない。2026-08-17 までここは直下にあり、
+ *    **middleware が一度も実行されていなかった**（`next build` 後の
+ *    `.next/server/middleware-manifest.json` が `"middleware": {}` になる。
+ *    疑わしいときはここを見れば分かる）。
+ *    そのため下のホスト振り分けは、書かれていただけで機能していなかった。
+ *
  * 複数のサブドメインを同一 Next.js デプロイに相乗りさせるためのルータ。
  * - ドヤスライドを別ドメインで公開する `SLIDE_HOSTS`
  * - 三ツ星アプリ（toCシリーズ）を別サブドメインで公開する `MITSUBOSHI_HOSTS`
@@ -122,5 +130,9 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: '/:path*',
+  // ⚠️ 静的アセットは除外する。middleware は matcher に当たる全リクエストで
+  //    起動するため、含めるとビルド成果物や画像のたびに無駄に実行される。
+  //    除外してもホスト振り分けには影響しない（元々 SHARED_SKIP_PREFIXES で
+  //    素通ししていた対象）。
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }

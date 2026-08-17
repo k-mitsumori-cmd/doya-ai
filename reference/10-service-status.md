@@ -363,20 +363,25 @@ grep "^model " prisma/schema.prisma
 
 ---
 
-## ⚠️ middleware が実行されていない（2026-08-17 発見・未対応）
+## middleware の置き場所（2026-08-17 修正済み）
 
-`middleware.ts` がリポジトリ直下にあるが、このプロジェクトの App Router は
-`src/app` 配下にある。Next.js は `src/` を使う構成では **`src/middleware.ts`** を見るため、
-直下の `middleware.ts` は認識されていない。
+**middleware は `src/middleware.ts` に置くこと。** App Router が `src/app` 配下に
+ある構成では、Next.js はリポジトリ直下の `middleware.ts` を認識しない。
 
-証拠: `npx next build` 後の `.next/server/middleware-manifest.json` が `"middleware": {}`。
-
-そのため以下が**一度も動いていない**:
+2026-08-17 まで直下にあり、**middleware が一度も実行されていなかった**。
+そのため以下は、コードが書かれていただけで機能していなかった:
 
 - `MITSUBOSHI_HOSTS` によるサブドメイン振り分け（三ツ星アプリ）
 - 主ドメインの `/nagusame/*` → 三ツ星サブドメインへの 308
 - `SLIDE_HOSTS` によるドヤスライドの別ドメイン配信
 
-⚠️ 直すには `src/middleware.ts` へ移すだけだが、**移した瞬間にこれらの振り分けが
-本番で有効になる**。他ドメインの挙動が変わるため、対象ホストの DNS・Vercel の
-ドメイン設定・env（`MITSUBOSHI_HOSTS` / `SLIDE_HOSTS`）を確認してから行うこと。
+⚠️ 動いているか疑わしいときは `npx next build` 後の
+`.next/server/middleware-manifest.json` を見る。`"middleware": {}` なら未登録。
+ビルドログに `ƒ Middleware` の行が出るかでも分かる。
+
+⚠️ 移設時点で `MITSUBOSHI_HOSTS` / `SLIDE_HOSTS` は**本番envに未設定**であり、
+コードは env 未設定なら完全 no-op のため、挙動は変わっていない。
+これらを設定すると上の振り分けが**その時点で初めて有効になる**ので、
+設定前に対象ホストの DNS と Vercel のドメイン登録を必ず確認すること。
+（特に `MITSUBOSHI_HOSTS` を設定すると、主ドメインの `/nagusame/*` が
+そのサブドメインへ 308 で飛ぶ。DNSが未設定だと `/nagusame` が死ぬ）
