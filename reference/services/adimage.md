@@ -575,8 +575,10 @@ model AdImageMetric {
 > `usage` 等のAPIは存在しない。実在するのは
 > `analyze` / `concepts` / `concepts/[id]/{export,feedback,refine}` /
 > `brands/[id]/logo` / `placements`。
-> ⚠️ `GET /api/adimage/concepts`（履歴取得）は実装されているが**画面から呼ばれていない**。
-> そのため生成したコンセプトを後から見返す手段が無い（未対応の既知の穴）。
+> ✅ 履歴は `/adimage/history` を追加して解消（2026-08-17）。
+> ⚠️ `GET /api/adimage/concepts` は実装済みなのに**どの画面からも呼ばれておらず**、
+> 作った広告画像はブラウザを閉じたら二度と見返せなかった。
+> APIを足したら画面の導線も同時に足すこと（このプロジェクトで繰り返している型）。
 
 ### 7.3 API（`src/app/api/adimage/`）
 

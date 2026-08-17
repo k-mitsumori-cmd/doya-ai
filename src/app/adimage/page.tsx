@@ -8,6 +8,7 @@
 // 中心的な体験は「URLだけで始まること」なので、他の入力は全て任意にする。
 
 import { useCallback, useEffect, useState } from 'react'
+import Link from 'next/link'
 import { APPEAL_LABELS, type AdCopy, type AppealAxis, type BrandProfile, type RefineDirective } from '@/lib/adimage/types'
 
 interface PlacementRow {
@@ -261,9 +262,19 @@ export default function AdImagePage() {
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-5xl px-4 py-4">
-          <h1 className="text-lg font-bold text-slate-900">ドヤ広告画像AI</h1>
-          <p className="text-xs text-slate-500">サービスURLから、媒体ごとにサイズの揃った広告画像を作ります。</p>
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+          <div>
+            <h1 className="text-lg font-bold text-slate-900">ドヤ広告画像AI</h1>
+            <p className="text-xs text-slate-500">サービスURLから、媒体ごとにサイズの揃った広告画像を作ります。</p>
+          </div>
+          {/* ⚠️ 履歴への導線をここに置くこと。無いと作った画像を見返す手段が
+               画面から消え、実装済みの一覧APIが誰にも使われないまま残る */}
+          <Link
+            href="/adimage/history"
+            className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+          >
+            これまでに作った画像
+          </Link>
         </div>
       </header>
 
