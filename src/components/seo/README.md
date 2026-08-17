@@ -1,30 +1,28 @@
-# ⚠️ このディレクトリの `route.ts` / `page.tsx` は**絶対に実行されない**
+# `src/components/seo/` について
 
-`src/components/` は App Router の外です。Next.js が route/page として認識するのは
-`src/app/` 配下だけなので、ここに置かれた以下の15ファイルは**どれだけ直しても本番に反映されません**。
+ここは**コンポーネント置き場**です。`SwipeCard` / `TinderSwipeCard` /
+`CompetitorAnalysisTab` は実際に使われている正規のコンポーネントなので消さないでください。
 
-```
-page.tsx / start/route.ts / log/route.ts / generate/route.ts
-question-images/route.ts / question-images/generate/route.ts
-celebration-images/route.ts / celebration-images/generate/route.ts
-generate-images/page.tsx / generate-question-images/page.tsx
-test/page.tsx / test/route.ts / test/start/route.ts
-test/question/route.ts / test/finalize/route.ts
-```
+## 過去にあった罠（2026-08-17 に解消済み）
 
-**動いている本物は `src/app/api/swipe/**` と `src/app/seo/swipe/` にあります。**
-スワイプ機能を直すときは、必ずそちらを編集してください。
+このディレクトリには以前 `route.ts` / `page.tsx` が15個ありました。
+`src/components/` は App Router の外なので、Next.js はそれらを route/page として
+認識せず、**一度も実行されていませんでした**。ビルドも型チェックも通るため
+誰も気づかない状態でした。
 
-このディレクトリの `.tsx`（`SwipeCard` / `TinderSwipeCard` / `CompetitorAnalysisTab`）は
-実際に使われている正規のコンポーネントです。**それらは消さないでください。**
+同じ 2026-04-03 の一括操作（`1930245`）で `src/app/seo/template/` 配下にも
+route handler の重複が7本作られており、こちらは到達可能なURLでしたが
+**画面からは一度も呼ばれていません**でした。両方とも削除済みです。
 
-## なぜ残してあるか
+**スワイプ機能の正本は `src/app/api/swipe/**` と `src/app/seo/swipe/` です。**
+直すときは必ずそちらを編集してください。
 
-過去のリファクタの取り残しと見られますが、消すのは破壊的な操作なので、
-内容を確認いただくまで残しています。不要と判断できたら route/page の15ファイルだけ削除してください。
+## 教訓
 
-## 同じ罠
+`route.ts` / `page.tsx` は `src/app/` 配下にしか置けません。
+`middleware.ts` も同じ理由で一度も実行されていませんでした
+（リポジトリ直下にあり、App Router が `src/app` 配下にある構成では
+`src/middleware.ts` でないと認識されない。2026-08-17 に移設して解消）。
 
-`middleware.ts` も同じ理由で一度も実行されていませんでした（リポジトリ直下に置かれており、
-App Router が `src/app` 配下にある構成では `src/middleware.ts` でないと認識されない）。
-2026-08-17 に `src/middleware.ts` へ移設して解消済みです。
+動いているか疑わしいときは `npx next build` の出力を見てください。
+ルートとして認識されていれば一覧に出ます。
