@@ -1,3 +1,9 @@
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+// ⚠️ AI生成を行うルートは maxDuration を必ず入れること。
+//    未指定だとVercelの既定（十数秒）で打ち切られ、長い生成が本番でだけ504になる。
+export const maxDuration = 300
+
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'

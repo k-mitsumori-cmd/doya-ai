@@ -3,14 +3,16 @@ import prisma from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
+// ⚠️ 拡張子は .svg。public/banner-samples/ の実体は全て SVG で、
+//    .png を指していたため本番で 404 になりフォールバック画像が壊れていた。
 const FALLBACK_IMAGES = [
-  '/banner-samples/cat-marketing.png',
-  '/banner-samples/cat-it.png',
-  '/banner-samples/cat-education.png',
-  '/banner-samples/cat-finance.png',
-  '/banner-samples/cat-ec.png',
-  '/banner-samples/cat-other.png',
-  '/banner-samples/purpose-display.png',
+  '/banner-samples/cat-marketing.svg',
+  '/banner-samples/cat-it.svg',
+  '/banner-samples/cat-education.svg',
+  '/banner-samples/cat-finance.svg',
+  '/banner-samples/cat-ec.svg',
+  '/banner-samples/cat-other.svg',
+  '/banner-samples/purpose-display.svg',
   '/banner-samples/purpose-lp_hero.png',
   '/banner-samples/purpose-sns_ad.png',
 ] as const
@@ -28,9 +30,9 @@ function pickFallbackUrls(category: string, count: number) {
   const key = String(category || '').toLowerCase()
   const pool: string[] = []
 
-  if (key.includes('seo') || key.includes('検索') || key.includes('競合')) pool.push('/banner-samples/cat-it.png')
-  if (key.includes('読者') || key.includes('ターゲット') || key.includes('ペルソナ')) pool.push('/banner-samples/cat-marketing.png')
-  if (key.includes('料金') || key.includes('価格') || key.includes('プラン')) pool.push('/banner-samples/cat-finance.png')
+  if (key.includes('seo') || key.includes('検索') || key.includes('競合')) pool.push('/banner-samples/cat-it.svg')
+  if (key.includes('読者') || key.includes('ターゲット') || key.includes('ペルソナ')) pool.push('/banner-samples/cat-marketing.svg')
+  if (key.includes('料金') || key.includes('価格') || key.includes('プラン')) pool.push('/banner-samples/cat-finance.svg')
   if (key.includes('記事') || key.includes('構成') || key.includes('見出し')) pool.push('/banner-samples/purpose-lp_hero.png')
 
   if (pool.length === 0) pool.push(...FALLBACK_IMAGES)

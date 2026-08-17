@@ -7,23 +7,23 @@ export const runtime = 'nodejs'
 
 // カテゴリ別のフォールバック画像マッピング
 const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
-  ビジネス: '/banner-samples/cat-marketing.png',
-  マーケティング: '/banner-samples/cat-marketing.png',
-  テクノロジー: '/banner-samples/cat-it.png',
-  '暮らし・ライフスタイル': '/banner-samples/cat-other.png',
-  '美容・健康': '/banner-samples/cat-beauty.png',
-  '金融・投資': '/banner-samples/cat-finance.png',
-  'EC・通販': '/banner-samples/cat-ec.png',
-  '教育・学習': '/banner-samples/cat-education.png',
-  エンタメ: '/banner-samples/cat-other.png',
-  '旅行・グルメ': '/banner-samples/cat-food.png',
+  ビジネス: '/banner-samples/cat-marketing.svg',
+  マーケティング: '/banner-samples/cat-marketing.svg',
+  テクノロジー: '/banner-samples/cat-it.svg',
+  '暮らし・ライフスタイル': '/banner-samples/cat-other.svg',
+  '美容・健康': '/banner-samples/cat-beauty.svg',
+  '金融・投資': '/banner-samples/cat-finance.svg',
+  'EC・通販': '/banner-samples/cat-ec.svg',
+  '教育・学習': '/banner-samples/cat-education.svg',
+  エンタメ: '/banner-samples/cat-other.svg',
+  '旅行・グルメ': '/banner-samples/cat-food.svg',
   認知: '/banner-samples/purpose-lp_hero.png',
-  比較: '/banner-samples/purpose-display.png',
-  CV: '/banner-samples/purpose-campaign.png',
-  解説型: '/banner-samples/purpose-webinar.png',
-  比較型: '/banner-samples/purpose-display.png',
+  比較: '/banner-samples/purpose-display.svg',
+  CV: '/banner-samples/purpose-campaign.svg',
+  解説型: '/banner-samples/purpose-webinar.svg',
+  比較型: '/banner-samples/purpose-display.svg',
   一覧型: '/banner-samples/purpose-sns_ad.png',
-  default: '/banner-samples/cat-other.png',
+  default: '/banner-samples/cat-other.svg',
 }
 
 // Base64画像データをバイナリに変換して返す
