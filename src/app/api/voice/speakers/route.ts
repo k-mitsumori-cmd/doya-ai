@@ -10,8 +10,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getAllSpeakers } from '@/lib/voice/speakers'
 import { isVoiceProFromUser } from '@/lib/voice/plans'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 export async function GET() {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤボイスAI')
+
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user as any

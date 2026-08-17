@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { checkMovieUsage, getGuestIdFromRequest, MOVIE_GUEST_COOKIE } from '@/lib/movie/access'
 import { getTemplateById } from '@/lib/movie/templates'
 import { v4 as uuidv4 } from 'uuid'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 // ---- プラン判定ヘルパー ----
 
@@ -15,6 +16,9 @@ function isProPlan(plan: string | null | undefined): boolean {
 
 // GET /api/movie/projects - プロジェクト一覧
 export async function GET(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤムービーAI')
+
   try {
     const session = await getServerSession(authOptions)
     const guestId = getGuestIdFromRequest(req)
@@ -55,6 +59,9 @@ export async function GET(req: NextRequest) {
 
 // POST /api/movie/projects - プロジェクト作成
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤムービーAI')
+
   try {
     const session = await getServerSession(authOptions)
     const guestId = getGuestIdFromRequest(req) ?? uuidv4()

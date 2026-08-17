@@ -347,6 +347,28 @@ grep "^model " prisma/schema.prisma
 
 ## 廃止したサービス
 
+### ドヤムービーAI（`/movie`）/ ドヤボイスAI（`/voice`）— 2026-08-17 提供終了
+
+後継サービスは無し。ポータルトップへ集約した。
+
+- 画面: `next.config.js` の 308 リダイレクトで `/` へ
+- API: 各ルート冒頭の `SERVICE_RETIRED` ガード（`src/lib/retired-service.ts`）で 410
+- 一覧: `HIDDEN_SERVICE_IDS` に登録済み
+- ルート実体とDBのデータは残置（ロールバックの余地を確保）
+
+⚠️ 畳む前に本番の利用実績を確認した: `movie_projects` 0件 / `movie_render_jobs` 0件 /
+`VoiceProject` 2件 / `VoiceRecording` 0件。データは消していない。
+
+⚠️ **`HIDDEN_SERVICE_IDS` に入れるだけでは畳んだことにならない。**
+一覧から消えるだけで、画面もAPIも直接叩けば動く。
+畳むときは次の3つを必ずセットで入れること:
+
+1. `HIDDEN_SERVICE_IDS` への登録（一覧・sitemap から除外）
+2. `next.config.js` の 308 リダイレクト（**ページのパスにしかマッチしない**）
+3. API側のガード（`/api/<svc>/*` はリダイレクトの対象外。ここを忘れると
+   URLを知る第三者が直接叩けて費用が発生する。`/adbanner` で実際に起きた）
+
+
 ### ドヤ広告バナーAI（`/adbanner`）— 2026-08-10 に `/adimage` へ統合
 
 後継の ドヤ広告画像AI（`/adimage`）へ機能を移植して廃止した（ロゴ合成も移植済み）。

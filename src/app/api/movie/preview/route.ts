@@ -4,9 +4,13 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getGuestIdFromRequest } from '@/lib/movie/access'
 import type { SceneData } from '@/lib/movie/types'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 // POST /api/movie/preview - プレビュー用データ保存（シーン＋プロジェクト状態更新）
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤムービーAI')
+
   try {
     const body = await req.json()
     const { projectId, scenes } = body as { projectId: string; scenes: SceneData[] }

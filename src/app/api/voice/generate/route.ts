@@ -15,12 +15,16 @@ import { textToSsml } from '@/lib/voice/ssml'
 import { getVoiceMonthlyLimitByUserPlan, getVoiceCharLimitByUserPlan, isWithinFreeHour } from '@/lib/pricing'
 import { isVoicePro, isVoiceLightOrAbove, getVoicePlan } from '@/lib/voice/plans'
 import { uploadVoiceAudio, isStorageAvailable } from '@/lib/voice/storage'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 const VALID_FORMATS = ['mp3', 'wav', 'ogg', 'm4a'] as const
 const VALID_EMOTIONS = ['neutral', 'bright', 'calm', 'serious', 'gentle'] as const
 const VALID_PAUSES = ['short', 'standard', 'long', 'custom'] as const
 
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤボイスAI')
+
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user as any

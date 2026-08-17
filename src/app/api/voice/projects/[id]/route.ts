@@ -10,6 +10,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { deleteVoiceAudio } from '@/lib/voice/storage'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 /**
  * GET — プロジェクト詳細
@@ -18,6 +19,9 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤボイスAI')
+
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user as any
@@ -63,6 +67,9 @@ export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤボイスAI')
+
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user as any
@@ -144,6 +151,9 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤボイスAI')
+
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user as any

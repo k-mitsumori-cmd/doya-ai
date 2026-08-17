@@ -1832,6 +1832,9 @@ export const HIDDEN_SERVICE_IDS = new Set([
   'interviewx',
   'lp',
   'adsim',
+  // 提供終了（2026-08-17）。画面は308でトップへ、APIは410で閉鎖済み。
+  // ⚠️ ここに入れるだけでは一覧から消えるだけで、画面もAPIも直接叩けば動く。
+  //    畳むときは next.config.js のリダイレクトと API 側のガードもセットで入れること。
   'movie',
   'voice',
   // 後継サービス（adimage）へ統合

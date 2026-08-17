@@ -4,9 +4,13 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getRenderJob } from '@/lib/movie/render'
 import { getGuestIdFromRequest } from '@/lib/movie/access'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 // GET /api/movie/render/[jobId]/download
 export async function GET(req: NextRequest, { params }: { params: Promise<{ jobId: string }> }) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤムービーAI')
+
   try {
     const { jobId } = await params
     const job = await getRenderJob(jobId)

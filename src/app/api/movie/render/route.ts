@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import { createRenderJob, renderVideo, failRenderJob } from '@/lib/movie/render'
 import { getGuestIdFromRequest } from '@/lib/movie/access'
 import type { RenderConfig } from '@/lib/movie/types'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 export const maxDuration = 300 // Vercel Pro: 最大300秒
 
@@ -29,6 +30,9 @@ function getMaxDuration(plan: string): number {
 }
 
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤムービーAI')
+
   try {
     const session = await getServerSession(authOptions)
     const guestId = getGuestIdFromRequest(req)

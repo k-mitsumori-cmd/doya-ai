@@ -5,8 +5,12 @@ import { generateScenes } from '@/lib/movie/gemini'
 import { prisma } from '@/lib/prisma'
 import { getGuestIdFromRequest } from '@/lib/movie/access'
 import type { MoviePlan, ProductInfo } from '@/lib/movie/types'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤムービーAI')
+
   try {
     const body = await req.json()
     const { projectId, plan, productInfo, config, duration, aspectRatio, templateId } = body as {

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import type { BgmTrack } from '@/lib/movie/types'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 // ---- プラン判定ヘルパー ----
 
@@ -39,6 +40,9 @@ const BGM_BASE = process.env.MOVIE_BGM_BASE_URL || ''
 
 // GET /api/movie/bgm - プランに応じてBGMをフィルタして返す
 export async function GET(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤムービーAI')
+
   try {
     // ユーザーのプランを取得
     let userPlan = 'FREE'

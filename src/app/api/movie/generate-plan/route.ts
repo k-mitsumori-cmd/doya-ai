@@ -4,10 +4,14 @@ import { authOptions } from '@/lib/auth'
 import { getGuestIdFromRequest } from '@/lib/movie/access'
 import { generatePlansStream } from '@/lib/movie/gemini'
 import type { ProductInfo, MoviePersona } from '@/lib/movie/types'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤムービーAI')
+
   try {
     // 認証チェック（ログインユーザー or ゲスト）
     const session = await getServerSession(authOptions)

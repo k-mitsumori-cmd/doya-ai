@@ -3,9 +3,13 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getGuestIdFromRequest } from '@/lib/movie/access'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 // GET /api/movie/projects/[id]
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤムービーAI')
+
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
@@ -39,6 +43,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 // PUT /api/movie/projects/[id]
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤムービーAI')
+
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)
@@ -88,6 +95,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 // DELETE /api/movie/projects/[id]
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤムービーAI')
+
   try {
     const { id } = await params
     const session = await getServerSession(authOptions)

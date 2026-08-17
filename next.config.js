@@ -203,6 +203,35 @@ const nextConfig = {
         destination: '/adimage',
         permanent: true,
       },
+      // ------------------------------------------------------------------
+      // ドヤムービーAI（/movie）・ドヤボイスAI（/voice）を提供終了
+      // ------------------------------------------------------------------
+      // ⚠️ 後継サービスが無いのでポータルトップへ集約する。
+      // ⚠️ 308（恒久）にする。307だと旧URLがインデックスに残り続ける。
+      // ⚠️ これはページのパスにしかマッチしない。`/api/movie/*` `/api/voice/*` は
+      //    素通りするので、API側は各ルートの SERVICE_RETIRED ガードで閉じてある
+      //    （/adbanner で「画面だけ閉じてAPIが生きていた」を踏んだ）。
+      // ⚠️ DBのデータとルート実体は残置（ロールバックの余地を確保）。
+      {
+        source: '/movie',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/movie/:path*',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/voice',
+        destination: '/',
+        permanent: true,
+      },
+      {
+        source: '/voice/:path*',
+        destination: '/',
+        permanent: true,
+      },
       // SlashSlide（別ブランドの旧スライド）もドヤスライド（/doyaslide）に統一
       {
         source: '/slashslide/create',
