@@ -8,8 +8,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { generatePersonaFromProduct } from '@/lib/copy/gemini'
 import type { ProductInfo } from '@/lib/copy/gemini'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤコピーAI')
+
   try {
     // 認証チェック（ゲストも利用可能だがセッション確認は行う）
     const session = await getServerSession(authOptions)

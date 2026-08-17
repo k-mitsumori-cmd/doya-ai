@@ -14,10 +14,14 @@ import { prisma } from '@/lib/prisma'
 import { checkTenkaiUsage, incrementTenkaiUsage, getTenkaiPlan } from '@/lib/tenkai/access'
 import { generateForPlatform, GenerationOptions } from '@/lib/tenkai/generation-pipeline'
 import { SUPPORTED_PLATFORMS } from '@/lib/tenkai/prompts/system'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 type Ctx = { params: Promise<{ platform: string }> | { platform: string } }
 
 export async function POST(req: NextRequest, ctx: Ctx) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ展開AI')
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {

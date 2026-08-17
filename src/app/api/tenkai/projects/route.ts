@@ -11,11 +11,15 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { incrementProjectCount } from '@/lib/tenkai/access'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 /**
  * GET — プロジェクト一覧（ページネーション、検索、ソート）
  */
 export async function GET(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ展開AI')
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
@@ -125,6 +129,9 @@ export async function GET(req: NextRequest) {
  * POST — プロジェクト新規作成
  */
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ展開AI')
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {

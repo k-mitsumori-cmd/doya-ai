@@ -7,10 +7,14 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { FREE_THEME_IDS, LIGHT_THEME_IDS } from '@/lib/lp/themes'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
 
 export async function GET(req: NextRequest, ctx: Ctx) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤワイヤーフレーム AI')
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
@@ -39,6 +43,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 }
 
 export async function PUT(req: NextRequest, ctx: Ctx) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤワイヤーフレーム AI')
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
@@ -131,6 +138,9 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
 }
 
 export async function DELETE(req: NextRequest, ctx: Ctx) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤワイヤーフレーム AI')
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {

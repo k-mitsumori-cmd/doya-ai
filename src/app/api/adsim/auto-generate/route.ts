@@ -16,6 +16,7 @@ import { simulate } from '@/lib/adsim/simulator'
 import { MediaId } from '@/lib/adsim/benchmark'
 import { generateProposalSections } from '@/lib/adsim/gemini'
 import { SimulationResult } from '@/lib/adsim/simulator'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -31,6 +32,9 @@ function getAdSimMonthlyLimit(plan: string | null | undefined): number {
 }
 
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ広告シミュレーションAI')
+
   try {
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id

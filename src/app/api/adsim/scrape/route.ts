@@ -7,10 +7,14 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import * as cheerio from 'cheerio'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 export const runtime = 'nodejs'
 
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ広告シミュレーションAI')
+
   try {
     const { url } = await req.json()
     if (!url || typeof url !== 'string') {

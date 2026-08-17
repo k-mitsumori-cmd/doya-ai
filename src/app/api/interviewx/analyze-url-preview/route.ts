@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getInterviewXUser, requireAuth } from '@/lib/interviewx/access'
 import { scrapeUrl } from '@/lib/tenkai/scraper'
 import { buildUrlAnalysisPrompt } from '@/lib/interviewx/prompts'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 function getGeminiApiKey(): string {
   const key =
@@ -19,6 +20,9 @@ function getGeminiApiKey(): string {
 }
 
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤヒヤリングAI')
+
   try {
     const { userId } = await getInterviewXUser()
     const authErr = requireAuth(userId)

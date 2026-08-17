@@ -8,10 +8,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { buildChatInterviewerSystemPrompt } from '@/lib/interviewx/prompts'
 import { callGeminiJson, parseAIResponse, buildGeminiContents, extractQAPairsFromChat } from '@/lib/interviewx/chat-utils'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 type RouteParams = { params: Promise<{ token: string }> }
 
 export async function POST(req: NextRequest, { params }: RouteParams) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤヒヤリングAI')
+
   try {
     const { token } = await params
     const body = await req.json()

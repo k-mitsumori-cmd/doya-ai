@@ -12,6 +12,7 @@ import { generateExcelBuffer } from '@/lib/adsim/excel-generator'
 import { generatePptxBuffer } from '@/lib/adsim/pptx-generator'
 import { SimulationResult } from '@/lib/adsim/simulator'
 import { ProposalSection } from '@/lib/adsim/gemini'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -20,6 +21,9 @@ export async function GET(
   req: NextRequest,
   { params }: { params: { projectId: string } }
 ) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ広告シミュレーションAI')
+
   try {
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id

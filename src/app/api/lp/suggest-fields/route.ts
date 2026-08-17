@@ -8,6 +8,7 @@ import { authOptions } from '@/lib/auth'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { buildSuggestFieldsPrompt } from '@/lib/lp/prompts'
 import type { LpProductInfo, LpPurpose } from '@/lib/lp/types'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 interface SuggestFieldsResponse {
   description?: string
@@ -20,6 +21,9 @@ interface SuggestFieldsResponse {
 }
 
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤワイヤーフレーム AI')
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {

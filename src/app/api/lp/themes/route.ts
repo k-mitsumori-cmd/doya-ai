@@ -6,6 +6,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { LP_THEMES, FREE_THEME_IDS, LIGHT_THEME_IDS } from '@/lib/lp/themes'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 function isProPlan(plan: string | null | undefined): boolean {
   const p = String(plan || 'FREE').toUpperCase()
@@ -17,6 +18,9 @@ function isLightOrAbove(plan: string | null | undefined): boolean {
 }
 
 export async function GET() {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤワイヤーフレーム AI')
+
   const session = await getServerSession(authOptions)
   let plan = 'FREE'
 

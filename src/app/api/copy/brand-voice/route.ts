@@ -6,9 +6,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 // GET - ブランドボイス一覧
 export async function GET(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤコピーAI')
+
   try {
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id
@@ -31,6 +35,9 @@ export async function GET(req: NextRequest) {
 
 // POST - ブランドボイス作成/更新
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤコピーAI')
+
   try {
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id
@@ -80,6 +87,9 @@ export async function POST(req: NextRequest) {
 
 // DELETE - ブランドボイス削除
 export async function DELETE(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤコピーAI')
+
   try {
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id

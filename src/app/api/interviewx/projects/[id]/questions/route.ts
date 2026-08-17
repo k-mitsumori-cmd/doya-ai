@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewXUser, requireAuth, checkOwnership, requireDatabase } from '@/lib/interviewx/access'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 type RouteParams = { params: Promise<{ id: string }> }
 
@@ -17,6 +18,9 @@ type RouteParams = { params: Promise<{ id: string }> }
 // PUT — 質問一括更新
 // --------------------------------------------------
 export async function PUT(req: NextRequest, { params }: RouteParams) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤヒヤリングAI')
+
   try {
     const dbErr = requireDatabase()
     if (dbErr) return dbErr

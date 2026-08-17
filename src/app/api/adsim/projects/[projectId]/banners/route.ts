@@ -9,6 +9,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateBanners } from '@/lib/nanobanner'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -28,6 +29,9 @@ export async function POST(
   _req: NextRequest,
   { params }: { params: { projectId: string } }
 ) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ広告シミュレーションAI')
+
   try {
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id

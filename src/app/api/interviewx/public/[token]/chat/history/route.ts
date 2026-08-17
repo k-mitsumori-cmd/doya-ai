@@ -6,10 +6,14 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 type RouteParams = { params: Promise<{ token: string }> }
 
 export async function GET(req: NextRequest, { params }: RouteParams) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤヒヤリングAI')
+
   try {
     const { token } = await params
     const responseId = req.nextUrl.searchParams.get('responseId')

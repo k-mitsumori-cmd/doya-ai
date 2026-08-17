@@ -8,8 +8,12 @@ export const dynamic = 'force-dynamic'
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 export async function GET() {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ展開AI')
+
   const start = Date.now()
   const checks: Record<string, { status: string; latency?: number }> = {}
 

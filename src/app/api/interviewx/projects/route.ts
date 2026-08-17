@@ -9,11 +9,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewXUser, requireAuth, requireDatabase } from '@/lib/interviewx/access'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 // --------------------------------------------------
 // GET — プロジェクト一覧
 // --------------------------------------------------
 export async function GET(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤヒヤリングAI')
+
   try {
     const dbErr = requireDatabase()
     if (dbErr) return dbErr
@@ -78,6 +82,9 @@ export async function GET(req: NextRequest) {
 // POST — プロジェクト新規作成
 // --------------------------------------------------
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤヒヤリングAI')
+
   try {
     const dbErr = requireDatabase()
     if (dbErr) return dbErr

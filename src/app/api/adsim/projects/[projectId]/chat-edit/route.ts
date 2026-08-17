@@ -14,6 +14,7 @@ import { prisma } from '@/lib/prisma'
 import { generateTextWithGemini } from '@/lib/gemini-text'
 import { simulate, SimulationResult } from '@/lib/adsim/simulator'
 import { MediaId } from '@/lib/adsim/benchmark'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -92,6 +93,9 @@ export async function POST(
   req: NextRequest,
   { params }: { params: { projectId: string } }
 ) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ広告シミュレーションAI')
+
   try {
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id

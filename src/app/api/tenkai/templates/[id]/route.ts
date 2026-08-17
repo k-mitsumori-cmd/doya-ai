@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 type Ctx = { params: Promise<{ id: string }> | { id: string } }
 
@@ -22,6 +23,9 @@ async function resolveId(ctx: Ctx): Promise<string> {
  * GET — テンプレート詳細
  */
 export async function GET(req: NextRequest, ctx: Ctx) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ展開AI')
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
@@ -58,6 +62,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
  * PUT — テンプレート更新
  */
 export async function PUT(req: NextRequest, ctx: Ctx) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ展開AI')
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
@@ -115,6 +122,9 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
  * DELETE — テンプレート削除
  */
 export async function DELETE(req: NextRequest, ctx: Ctx) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ展開AI')
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {

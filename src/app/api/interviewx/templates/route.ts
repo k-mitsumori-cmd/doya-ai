@@ -11,11 +11,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewXUser, requireAuth, requireDatabase } from '@/lib/interviewx/access'
 import { PRESET_TEMPLATES } from '@/lib/interviewx/templates-seed'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 // --------------------------------------------------
 // GET — テンプレート一覧
 // --------------------------------------------------
 export async function GET() {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤヒヤリングAI')
+
   try {
     const dbErr = requireDatabase()
     if (dbErr) return dbErr
@@ -71,6 +75,9 @@ export async function GET() {
 // POST — カスタムテンプレート作成
 // --------------------------------------------------
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤヒヤリングAI')
+
   try {
     const dbErr = requireDatabase()
     if (dbErr) return dbErr

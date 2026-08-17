@@ -6,9 +6,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 // GET - プロジェクト詳細（コピー一覧含む）
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤコピーAI')
+
   try {
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id
@@ -42,6 +46,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
 // PUT - プロジェクト更新
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤコピーAI')
+
   try {
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id
@@ -98,6 +105,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
 // DELETE - プロジェクト削除
 export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤコピーAI')
+
   try {
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id

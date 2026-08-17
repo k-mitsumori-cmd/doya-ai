@@ -232,6 +232,28 @@ const nextConfig = {
         destination: '/',
         permanent: true,
       },
+      // ------------------------------------------------------------------
+      // 提供終了サービス（2026-08-17）
+      // ------------------------------------------------------------------
+      // ドヤ展開AI / ドヤコピーAI / ドヤヒヤリングAI /
+      // ドヤワイヤーフレームAI / ドヤ広告シミュレーションAI
+      //
+      // ⚠️ いずれも HIDDEN_SERVICE_IDS には入っていたが、それは一覧から消えるだけで
+      //    画面もAPIも直接叩けば動いていた。畳むには
+      //    (1) HIDDEN登録 (2) このリダイレクト (3) API側のガード の3点が要る。
+      // ⚠️ `/interviewx` は現役の `/interview`（ドヤインタビュー）とは別物。
+      //    パスはセグメント単位で照合されるため /interview は巻き込まれない。
+      // ⚠️ DBのデータとルート実体は残置（ロールバックの余地を確保）。
+      { source: '/tenkai', destination: '/', permanent: true },
+      { source: '/tenkai/:path*', destination: '/', permanent: true },
+      { source: '/copy', destination: '/', permanent: true },
+      { source: '/copy/:path*', destination: '/', permanent: true },
+      { source: '/interviewx', destination: '/', permanent: true },
+      { source: '/interviewx/:path*', destination: '/', permanent: true },
+      { source: '/lp', destination: '/', permanent: true },
+      { source: '/lp/:path*', destination: '/', permanent: true },
+      { source: '/adsim', destination: '/', permanent: true },
+      { source: '/adsim/:path*', destination: '/', permanent: true },
       // SlashSlide（別ブランドの旧スライド）もドヤスライド（/doyaslide）に統一
       {
         source: '/slashslide/create',

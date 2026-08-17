@@ -9,6 +9,7 @@ import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { buildAnalyzeUrlPrompt } from '@/lib/lp/prompts'
 import type { LpProductInfo } from '@/lib/lp/types'
 import * as cheerio from 'cheerio'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 const CHROME_UA =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
@@ -45,6 +46,9 @@ function extractPageInfo(html: string) {
 }
 
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤワイヤーフレーム AI')
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {

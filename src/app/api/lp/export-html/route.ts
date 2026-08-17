@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { generateHtml } from '@/lib/lp/html-export'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 function isProPlan(plan: string | null | undefined): boolean {
   const p = String(plan || 'FREE').toUpperCase()
@@ -14,6 +15,9 @@ function isProPlan(plan: string | null | undefined): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
+  if (SERVICE_RETIRED) return retiredServiceResponse('ドヤワイヤーフレーム AI')
+
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.id) {
