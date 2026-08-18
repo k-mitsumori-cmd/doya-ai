@@ -7,7 +7,7 @@
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Receipt, FileText, Settings, CreditCard, Zap } from 'lucide-react'
+import { Receipt, Settings, CreditCard, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { quoteTheme } from '@/components/sidebar/themes'
@@ -37,8 +37,9 @@ function QuoteSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }:
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const NAV: NavItem[] = [
-    { href: BASE, label: '見積書をつくる', icon: Receipt, hot: true },
-    { href: BASE + '/documents', label: '見積書一覧', icon: FileText },
+    // ⚠️ 見積書一覧はトップ画面内のセクション。/quote/documents というページは
+    //    存在しないので、サイドバーに項目を作らないこと（404になる）。
+    { href: BASE, label: '見積書をつくる・一覧', icon: Receipt, hot: true },
     { href: BASE + '/settings', label: '発行者情報', icon: Settings },
     { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
   ]
