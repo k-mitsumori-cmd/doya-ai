@@ -38,9 +38,9 @@ function QuoteSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }:
 
   const NAV: NavItem[] = [
     { href: BASE, label: '見積書をつくる', icon: Receipt, hot: true },
-    { href: BASE + '/quote/documents', label: '見積書一覧', icon: FileText },
-    { href: BASE + '/quote/settings', label: '発行者情報', icon: Settings },
-    { href: BASE + '/quote/pricing', label: '料金プラン', icon: CreditCard },
+    { href: BASE + '/documents', label: '見積書一覧', icon: FileText },
+    { href: BASE + '/settings', label: '発行者情報', icon: Settings },
+    { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
   ]
 
   const planLabel = (() => {

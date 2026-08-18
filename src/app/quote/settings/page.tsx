@@ -80,7 +80,7 @@ export default function QuoteSettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-50">
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 bg-slate-50">
         {/* ⚠️ 規約(§4.3)ではローディングはドヤくん working */}
         <DoyaKun mood="working" size={88} />
         <p className="text-sm font-bold text-slate-400">読み込んでいます…</p>

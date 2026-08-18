@@ -86,7 +86,7 @@ export default function AishodanSessionsPage() {
 
         <div className="mt-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           {loading ? (
-            <><DoyaKun mood="working" size={72} /><p className="mt-2 text-sm font-bold text-slate-400">読み込んでいます…</p></>
+            <div className="flex flex-col items-center justify-center gap-2 py-6"><DoyaKun mood="working" size={72} /><p className="text-sm font-bold text-slate-400">読み込んでいます…</p></div>
           ) : sessions.length === 0 ? (
             <p className="text-sm text-slate-500">該当する商談はありません。</p>
           ) : (

@@ -38,8 +38,8 @@ function AdImageSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile 
 
   const NAV: NavItem[] = [
     { href: BASE, label: '広告画像をつくる', icon: Megaphone, hot: true },
-    { href: BASE + '/adimage/history', label: 'これまでの画像', icon: History },
-    { href: BASE + '/adimage/pricing', label: '料金プラン', icon: CreditCard },
+    { href: BASE + '/history', label: 'これまでの画像', icon: History },
+    { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
   ]
 
   const planLabel = (() => {

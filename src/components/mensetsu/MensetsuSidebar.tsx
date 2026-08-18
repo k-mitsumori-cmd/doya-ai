@@ -38,8 +38,8 @@ function MensetsuSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
 
   const NAV: NavItem[] = [
     { href: BASE, label: '面接を用意する', icon: UserCheck, hot: true },
-    { href: BASE + '/mensetsu/compare', label: '候補者を比較', icon: Users },
-    { href: BASE + '/mensetsu/pricing', label: '料金プラン', icon: CreditCard },
+    { href: BASE + '/compare', label: '候補者を比較', icon: Users },
+    { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
   ]
 
   const planLabel = (() => {

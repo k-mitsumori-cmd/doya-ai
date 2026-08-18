@@ -7,7 +7,7 @@
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { MessagesSquare, Package, DoorOpen, ClipboardList, CreditCard, Zap } from 'lucide-react'
+import { MessagesSquare, DoorOpen, ClipboardList, CreditCard, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { aishodanTheme } from '@/components/sidebar/themes'
@@ -38,9 +38,9 @@ function AishodanSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
 
   const NAV: NavItem[] = [
     { href: BASE, label: 'ホーム', icon: MessagesSquare, hot: true },
-    { href: BASE + '/aishodan/sessions', label: '商談ログ', icon: ClipboardList },
-    { href: BASE + '/aishodan/preview', label: '練習モード', icon: DoorOpen },
-    { href: BASE + '/aishodan/pricing', label: '料金プラン', icon: CreditCard },
+    { href: BASE + '/sessions', label: '商談ログ', icon: ClipboardList },
+    { href: BASE + '/preview', label: '練習モード', icon: DoorOpen },
+    { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
   ]
 
   const planLabel = (() => {

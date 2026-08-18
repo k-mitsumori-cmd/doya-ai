@@ -3,11 +3,18 @@
 // ドヤAI商談 アプリ枠（AioAppLayout と同型：デスクトップ/モバイルでサイドバーを配置）
 // ⚠️ reference/06-ui-patterns.md §7・§9.2 が正本。独自のヘッダーを作らないこと。
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
+import { isGuestPath } from '@/lib/ui/guest-path'
 import { Menu } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AishodanSidebar from './AishodanSidebar'
 
 export default function AishodanAppLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  // ⚠️ 第三者が開く画面ではアプリ枠を出さない（社内のサービス一覧を見せない）。
+  //    ログイン済みでも面接URLや招待URLを開くことがあるので、セッションだけで判定しない。
+  const guest = isGuestPath(pathname)
+
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -18,6 +25,8 @@ export default function AishodanAppLayout({ children }: { children: React.ReactN
     window.addEventListener('resize', checkMobile)
     return () => window.removeEventListener('resize', checkMobile)
   }, [])
+
+  if (guest) return <>{children}</>
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50">
