@@ -295,3 +295,77 @@ export const adbannerTheme: SidebarTheme = {
   aiBubbleBg: 'bg-purple-600',
   zapColor: 'text-orange-400 fill-orange-400',
 }
+
+// ============================================
+// 新4サービス（2026-08-18 追加）
+// ============================================
+// ⚠️ 色は各サービスの LP の ACCENT（src/app/<svc>/lp-data.ts）と揃えること。
+//    LPとアプリで色が変わると、同じサービスに見えなくなる。
+
+/** ドヤ見積もりAI — ティール（見積もり・数字） */
+export const quoteTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-teal-600 via-teal-700 to-emerald-800',
+  navText: 'text-teal-100/75',
+  navTextIcon: 'text-teal-200/75',
+  sectionText: 'text-teal-200/55',
+  toggleText: 'text-teal-700',
+  toggleHover: 'hover:bg-teal-50',
+  brandingText: 'text-teal-100/35',
+  profileBg: 'bg-teal-900/30',
+  avatarBg: 'bg-teal-600',
+  loginText: 'text-teal-700',
+  loginHover: 'hover:bg-teal-50',
+  aiBubbleBg: 'bg-teal-600',
+  zapColor: 'text-emerald-300 fill-emerald-300',
+}
+
+/** ドヤAI商談 — オレンジ（商談・対話） */
+export const aishodanTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-orange-500 via-orange-600 to-rose-700',
+  navText: 'text-orange-100/75',
+  navTextIcon: 'text-orange-200/75',
+  sectionText: 'text-orange-200/55',
+  toggleText: 'text-orange-600',
+  toggleHover: 'hover:bg-orange-50',
+  brandingText: 'text-orange-100/35',
+  profileBg: 'bg-orange-900/30',
+  avatarBg: 'bg-orange-500',
+  loginText: 'text-orange-600',
+  loginHover: 'hover:bg-orange-50',
+  aiBubbleBg: 'bg-orange-500',
+  zapColor: 'text-amber-300 fill-amber-300',
+}
+
+/** ドヤ広告画像AI — ライム（広告・クリエイティブ） */
+export const adimageTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-lime-600 via-green-600 to-emerald-700',
+  navText: 'text-lime-100/75',
+  navTextIcon: 'text-lime-200/75',
+  sectionText: 'text-lime-200/55',
+  toggleText: 'text-lime-700',
+  toggleHover: 'hover:bg-lime-50',
+  brandingText: 'text-lime-100/35',
+  profileBg: 'bg-green-900/30',
+  avatarBg: 'bg-lime-600',
+  loginText: 'text-lime-700',
+  loginHover: 'hover:bg-lime-50',
+  aiBubbleBg: 'bg-lime-600',
+  zapColor: 'text-lime-300 fill-lime-300',
+}
+
+/** ドヤ面接官 — ブルー（採用・信頼） */
+export const mensetsuTheme: SidebarTheme = {
+  bgGradient: 'bg-gradient-to-b from-blue-700 via-blue-800 to-indigo-900',
+  navText: 'text-blue-100/75',
+  navTextIcon: 'text-blue-200/75',
+  sectionText: 'text-blue-200/55',
+  toggleText: 'text-blue-700',
+  toggleHover: 'hover:bg-blue-50',
+  brandingText: 'text-blue-100/35',
+  profileBg: 'bg-blue-950/40',
+  avatarBg: 'bg-blue-700',
+  loginText: 'text-blue-700',
+  loginHover: 'hover:bg-blue-50',
+  aiBubbleBg: 'bg-blue-700',
+  zapColor: 'text-sky-300 fill-sky-300',
+}

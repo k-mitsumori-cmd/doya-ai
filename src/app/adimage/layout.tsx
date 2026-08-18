@@ -2,7 +2,9 @@ import type { Metadata } from 'next'
 import { buildServiceMetadata } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
-import { ServiceTopBar } from '@/components/ServiceTopBar'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import AdImageAppLayout from '@/components/adimage/AdImageAppLayout'
 import { FAQ } from './lp-data'
 
 // ⚠️ これが無いと canonical がルートlayoutの既定（サイトトップ）のままになり、
@@ -15,7 +17,12 @@ export const metadata: Metadata = buildServiceMetadata('adimage', {
 
 const SVC = getServiceById('adimage')!
 
-export default function AdimageLayout({ children }: { children: React.ReactNode }) {
+// ⚠️ 未ログインではアプリ枠（サイドバー）を被せないこと。
+//    未ログインに見せるのはLPで、サイドバーは要らない。被せると
+//    LPの左に空のサイドバーが出るうえ、doyalist では読み込み表示で
+//    本文がHTMLに入らなくなる事故も起きた。
+export default async function AdimageLayout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession(authOptions)
   return (
     <>
       <LpJsonLd
@@ -26,11 +33,9 @@ export default function AdimageLayout({ children }: { children: React.ReactNode 
         features={SVC.features}
         faq={FAQ}
       />
-      {/* ⚠️ サービスを追加したら必ず共通ヘッダーを入れること。無いとそのサービスに
-           入った利用者が他のツールへ移れず、トップへ戻る導線も無くなる。
-           ゲスト画面（応募者・見込み客が開く経路）では ServiceTopBar 側で自動的に隠れる。 */}
-      <ServiceTopBar serviceId="adimage" serviceName="ドヤ広告画像AI" />
-      {children}
+      {/* ⚠️ ログイン後はサイドバー付きのアプリ枠で包む（reference/06-ui-patterns.md §7）。
+           ToolSwitcherMenu はサイドバーの中にある。独自ヘッダーを作らないこと。 */}
+      {session?.user ? <AdImageAppLayout>{children}</AdImageAppLayout> : children}
     </>
   )
 }
