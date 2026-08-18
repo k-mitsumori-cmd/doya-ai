@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { withOrg } from '@/components/org/OrgSwitcher'
 import { notifyError } from '@/lib/ui/notify'
+import { DoyaKun } from '@/components/lp'
 
 const FIELDS = [
   { key: 'companyName', label: '会社名', placeholder: '株式会社スリスタ', required: true },
@@ -78,7 +79,13 @@ export default function QuoteSettingsPage() {
   }
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center bg-slate-50"><p className="text-slate-500">読み込み中...</p></div>
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-50">
+        {/* ⚠️ 規約(§4.3)ではローディングはドヤくん working */}
+        <DoyaKun mood="working" size={88} />
+        <p className="text-sm font-bold text-slate-400">読み込んでいます…</p>
+      </div>
+    )
   }
 
   return (

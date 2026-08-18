@@ -8,6 +8,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { withOrg } from '@/components/org/OrgSwitcher'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
+import { DoyaKun } from '@/components/lp'
 
 interface SessionRow {
   id: string
@@ -85,7 +86,7 @@ export default function AishodanSessionsPage() {
 
         <div className="mt-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           {loading ? (
-            <p className="text-sm text-slate-500">読み込み中...</p>
+            <><DoyaKun mood="working" size={72} /><p className="mt-2 text-sm font-bold text-slate-400">読み込んでいます…</p></>
           ) : sessions.length === 0 ? (
             <p className="text-sm text-slate-500">該当する商談はありません。</p>
           ) : (

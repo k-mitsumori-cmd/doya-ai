@@ -15,6 +15,7 @@ import { useParams } from 'next/navigation'
 import { yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource } from '@/lib/quote/types'
 import { notifyError } from '@/lib/ui/notify'
+import { DoyaKun } from '@/components/lp'
 
 interface LineItem {
   id: string
@@ -144,7 +145,13 @@ export default function QuoteDocumentPage() {
   }
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center bg-slate-50"><p className="text-slate-500">読み込み中...</p></div>
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-50">
+        {/* ⚠️ 規約(§4.3)ではローディングはドヤくん working */}
+        <DoyaKun mood="working" size={88} />
+        <p className="text-sm font-bold text-slate-400">読み込んでいます…</p>
+      </div>
+    )
   }
   if (!doc) {
     return (

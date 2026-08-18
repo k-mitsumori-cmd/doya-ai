@@ -12,6 +12,7 @@ import { withOrg } from '@/components/org/OrgSwitcher'
 import { useParams } from 'next/navigation'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 import { notifyError } from '@/lib/ui/notify'
+import { DoyaKun } from '@/components/lp'
 
 interface Detail {
   id: string
@@ -134,7 +135,13 @@ export default function AishodanSessionDetail() {
   }
 
   if (loading) {
-    return <div className="flex min-h-screen items-center justify-center bg-slate-50"><p className="text-slate-500">読み込み中...</p></div>
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-slate-50">
+        {/* ⚠️ 規約(§4.3)ではローディングはドヤくん working */}
+        <DoyaKun mood="working" size={88} />
+        <p className="text-sm font-bold text-slate-400">読み込んでいます…</p>
+      </div>
+    )
   }
   if (!d) {
     return (
