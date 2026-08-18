@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { notifyError } from '@/lib/ui/notify'
 
 interface Criterion {
   key: string
@@ -81,7 +82,7 @@ export default function ComparePage() {
     const res = await fetch(`/api/mensetsu/compare?templateId=${encodeURIComponent(templateId)}`)
     const json = await res.json()
     if (!res.ok) {
-      setError(json?.error || '取得できませんでした')
+      notifyError(setError, json?.error || '取得できませんでした')
       setCandidates([])
       return
     }
@@ -130,7 +131,7 @@ export default function ComparePage() {
             <select
               value={templateId}
               onChange={(e) => setTemplateId(e.target.value)}
-              className="mt-5 rounded-lg border border-[#d8e7ff] bg-white px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+              className="mt-5 rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
             >
               {templates.map((t) => (
                 <option key={t.id} value={t.id}>

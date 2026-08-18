@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import MensetsuLp from './Lp'
+import { notifyError } from '@/lib/ui/notify'
 
 interface Org {
   id: string
@@ -163,7 +164,7 @@ export default function MensetsuTool() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data?.error || '組織の作成に失敗しました')
+        notifyError(setError, data?.error || '組織の作成に失敗しました')
         return
       }
       await load()
@@ -184,7 +185,7 @@ export default function MensetsuTool() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data?.error || '解析に失敗しました')
+        notifyError(setError, data?.error || '解析に失敗しました')
         return
       }
       setProfile(data.profile)
@@ -213,7 +214,7 @@ export default function MensetsuTool() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data?.error || '生成に失敗しました')
+        notifyError(setError, data?.error || '生成に失敗しました')
         return
       }
       const removed = data?.removedByGuardrail || []
@@ -239,7 +240,7 @@ export default function MensetsuTool() {
     } catch {
       // ⚠️ 「詳細画面をご覧ください」と案内しないこと。詳細画面はURLを表示しない。
       //    コピーできない環境（http・古いブラウザ）でも渡せるよう、URLそのものを出す。
-      setError(`コピーできませんでした。次のURLをお使いください: ${liveUrl(s.token)}`)
+      notifyError(setError, `コピーできませんでした。次のURLをお使いください: ${liveUrl(s.token)}`)
     }
   }
 
@@ -295,7 +296,7 @@ export default function MensetsuTool() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data?.error || '発行に失敗しました')
+        notifyError(setError, data?.error || '発行に失敗しました')
         return
       }
       setIssuedUrl(data.url)
@@ -324,7 +325,7 @@ export default function MensetsuTool() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data?.error || '設定の保存に失敗しました')
+        notifyError(setError, data?.error || '設定の保存に失敗しました')
         return
       }
       setNotice('設定を保存しました')
@@ -347,7 +348,7 @@ export default function MensetsuTool() {
       const res = await fetch(`/api/mensetsu/sessions/${id}/close`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) {
-        setError(data?.error || '終了処理に失敗しました')
+        notifyError(setError, data?.error || '終了処理に失敗しました')
         return
       }
       setNotice(data.status === 'completed' ? '面接を終了しました（評価できます）' : '面接を終了しました')
@@ -365,7 +366,7 @@ export default function MensetsuTool() {
       const res = await fetch(`/api/mensetsu/sessions/${id}/close`, { method: 'DELETE' })
       const data = await res.json()
       if (!res.ok) {
-        setError(data?.error || '戻せませんでした')
+        notifyError(setError, data?.error || '戻せませんでした')
         return
       }
       setNotice('受験可能に戻しました。同じURLで受けられます。')
@@ -388,7 +389,7 @@ export default function MensetsuTool() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data?.error || '招待に失敗しました')
+        notifyError(setError, data?.error || '招待に失敗しました')
         return
       }
       setInviteEmail('')
@@ -408,7 +409,7 @@ export default function MensetsuTool() {
       const res = await fetch(`/api/mensetsu/members/${id}`, { method: 'DELETE' })
       const data = await res.json()
       if (!res.ok) {
-        setError(data?.error || '外せませんでした')
+        notifyError(setError, data?.error || '外せませんでした')
         return
       }
       await load()
@@ -424,7 +425,7 @@ export default function MensetsuTool() {
       const res = await fetch(`/api/mensetsu/sessions/${id}/evaluate`, { method: 'POST' })
       const data = await res.json()
       if (!res.ok) {
-        setError(data?.error || '評価に失敗しました')
+        notifyError(setError, data?.error || '評価に失敗しました')
         return
       }
       await load()
@@ -482,7 +483,7 @@ export default function MensetsuTool() {
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
                 placeholder="株式会社スリスタ"
-                className="flex-1 rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
               />
               <button
                 onClick={createOrg}
@@ -509,7 +510,7 @@ export default function MensetsuTool() {
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://example.co.jp"
-                  className="flex-1 rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                  className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
                 />
                 <button
                   onClick={analyze}
@@ -551,12 +552,12 @@ export default function MensetsuTool() {
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
                   placeholder="職種（例: フィールドセールス）"
-                  className="rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
                 />
                 <select
                   value={level}
                   onChange={(e) => setLevel(e.target.value)}
-                  className="rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
                 >
                   <option value="newgrad">新卒</option>
                   <option value="mid">中途</option>
@@ -565,7 +566,7 @@ export default function MensetsuTool() {
                 <select
                   value={durationMin}
                   onChange={(e) => setDurationMin(Number(e.target.value))}
-                  className="rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
                 >
                   <option value={10}>10分</option>
                   <option value={20}>20分</option>
@@ -575,7 +576,7 @@ export default function MensetsuTool() {
                   value={focus}
                   onChange={(e) => setFocus(e.target.value)}
                   placeholder="特に見たい点（任意）"
-                  className="rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
                 />
               </div>
               <button
@@ -627,7 +628,7 @@ export default function MensetsuTool() {
                     <select
                       value={selectedTemplate}
                       onChange={(e) => setSelectedTemplate(e.target.value)}
-                      className="flex-1 rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                      className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
                     >
                       {templates.map((t) => (
                         <option key={t.id} value={t.id}>
@@ -639,14 +640,14 @@ export default function MensetsuTool() {
                       value={candidateName}
                       onChange={(e) => setCandidateName(e.target.value)}
                       placeholder="応募者名（任意）"
-                      className="rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                      className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
                     />
                     <input
                       type="email"
                       value={candidateEmail}
                       onChange={(e) => setCandidateEmail(e.target.value)}
                       placeholder="ご本人確認用メール（任意・送信しません）"
-                      className="rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                      className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
                     />
                     <button
                       onClick={issue}
@@ -791,7 +792,7 @@ export default function MensetsuTool() {
                               value={editingEmail}
                               onChange={(e) => setEditingEmail(e.target.value)}
                               placeholder="candidate@example.com"
-                              className="flex-1 rounded-lg border border-[#d8e7ff] px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                              className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
                             />
                             <button
                               onClick={() => void updateCandidateEmail(s)}
@@ -861,12 +862,12 @@ export default function MensetsuTool() {
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
                       placeholder="招待する方のメールアドレス"
-                      className="flex-1 rounded-lg border border-[#d8e7ff] px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                      className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
                     />
                     <select
                       value={inviteRole}
                       onChange={(e) => setInviteRole(e.target.value)}
-                      className="rounded-lg border border-[#d8e7ff] px-3 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                      className="rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
                     >
                       <option value="member">メンバー</option>
                       <option value="manager">マネージャー</option>
@@ -959,7 +960,7 @@ export default function MensetsuTool() {
                       const v = Number(e.target.value)
                       if (Number.isFinite(v) && v !== org.retentionDays) void saveSettings({ retentionDays: v })
                     }}
-                    className="w-28 rounded-lg border border-[#d8e7ff] px-3 py-2 text-sm font-medium outline-none focus:border-[#0066ff]"
+                    className="w-28 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-medium outline-none focus:border-[#0066ff]"
                   />
                   <span className="text-sm font-bold text-[#425071]">日</span>
                 </span>

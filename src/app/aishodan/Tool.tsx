@@ -13,6 +13,7 @@ import OrgSwitcher, { withOrg, type Membership } from '@/components/org/OrgSwitc
 import MemberPanel from '@/components/org/MemberPanel'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 import AishodanLp from './Lp'
+import { notifyError } from '@/lib/ui/notify'
 
 interface Product {
   id: string
@@ -107,7 +108,7 @@ export default function AishodanTool() {
         setStats(st)
       }
     } catch {
-      setError('読み込みに失敗しました')
+      notifyError(setError, '読み込みに失敗しました')
     } finally {
       setLoading(false)
     }
@@ -149,7 +150,7 @@ export default function AishodanTool() {
       setUrl('')
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : '取り込みに失敗しました')
+      notifyError(setError, e instanceof Error ? e.message : '取り込みに失敗しました')
     } finally {
       setImporting(false)
     }
@@ -168,7 +169,7 @@ export default function AishodanTool() {
       if (!r.ok) throw new Error(d?.error || 'ルームを発行できませんでした')
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'ルームを発行できませんでした')
+      notifyError(setError, e instanceof Error ? e.message : 'ルームを発行できませんでした')
     } finally {
       setIssuing(false)
     }
@@ -193,7 +194,7 @@ export default function AishodanTool() {
       setCopied(token)
       setTimeout(() => setCopied(null), 2000)
     } catch {
-      setError('コピーできませんでした。URLを選択してコピーしてください。')
+      notifyError(setError, 'コピーできませんでした。URLを選択してコピーしてください。')
     }
   }
 
@@ -223,7 +224,7 @@ export default function AishodanTool() {
             value={orgName}
             onChange={(e) => setOrgName(e.target.value)}
             placeholder="株式会社スリスタ"
-            className="mt-5 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none"
+            className="mt-5 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none"
           />
           {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
           <button
@@ -287,7 +288,7 @@ export default function AishodanTool() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com/service"
-              className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none"
+              className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none"
             />
             <button
               onClick={importProduct}

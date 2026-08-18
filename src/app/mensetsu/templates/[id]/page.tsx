@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { notifyError } from '@/lib/ui/notify'
 
 interface Branch {
   id: string
@@ -66,7 +67,7 @@ export default function TemplateEditPage() {
       const res = await fetch(`/api/mensetsu/templates/${id}`)
       const json = await res.json()
       if (!res.ok) {
-        setError(json?.error || '取得できませんでした')
+        notifyError(setError, json?.error || '取得できませんでした')
         return
       }
       const t = json.template
@@ -194,7 +195,7 @@ export default function TemplateEditPage() {
       })
       const json = await res.json()
       if (!res.ok) {
-        setError(json?.error || '保存に失敗しました')
+        notifyError(setError, json?.error || '保存に失敗しました')
         if (Array.isArray(json?.violations)) setViolations(json.violations)
         return
       }
@@ -257,7 +258,7 @@ export default function TemplateEditPage() {
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-[#d8e7ff] px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
               />
             </label>
             <label className="block">
@@ -265,7 +266,7 @@ export default function TemplateEditPage() {
               <input
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-[#d8e7ff] px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
               />
             </label>
             <label className="block">
@@ -273,7 +274,7 @@ export default function TemplateEditPage() {
               <select
                 value={durationMin}
                 onChange={(e) => setDurationMin(Number(e.target.value))}
-                className="mt-1.5 w-full rounded-lg border border-[#d8e7ff] px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
               >
                 <option value={10}>10分</option>
                 <option value={20}>20分</option>
@@ -285,7 +286,7 @@ export default function TemplateEditPage() {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-[#d8e7ff] px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
               >
                 <option value="draft">下書き</option>
                 <option value="active">運用中</option>
@@ -303,7 +304,7 @@ export default function TemplateEditPage() {
               value={intro}
               onChange={(e) => setIntro(e.target.value)}
               rows={3}
-              className="mt-1.5 w-full rounded-lg border border-[#d8e7ff] px-4 py-2.5 text-sm font-medium leading-relaxed outline-none focus:border-[#0066ff]"
+              className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium leading-relaxed outline-none focus:border-[#0066ff]"
             />
           </label>
           <label className="mt-3 block">
@@ -312,7 +313,7 @@ export default function TemplateEditPage() {
               value={closing}
               onChange={(e) => setClosing(e.target.value)}
               rows={2}
-              className="mt-1.5 w-full rounded-lg border border-[#d8e7ff] px-4 py-2.5 text-sm font-medium leading-relaxed outline-none focus:border-[#0066ff]"
+              className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium leading-relaxed outline-none focus:border-[#0066ff]"
             />
           </label>
         </section>
@@ -342,13 +343,13 @@ export default function TemplateEditPage() {
                       onChange={(e) => update(i, { text: e.target.value })}
                       rows={2}
                       placeholder="主質問"
-                      className="w-full rounded-lg border border-[#d8e7ff] px-3 py-2 text-sm font-medium leading-relaxed outline-none focus:border-[#0066ff]"
+                      className="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-medium leading-relaxed outline-none focus:border-[#0066ff]"
                     />
                     <input
                       value={q.followUpHint || ''}
                       onChange={(e) => update(i, { followUpHint: e.target.value })}
                       placeholder="深掘りの方針（例: 具体的な行動と、その結果の数値まで聞く）"
-                      className="mt-2 w-full rounded-lg border border-[#d8e7ff] px-3 py-2 text-xs font-medium outline-none focus:border-[#0066ff]"
+                      className="mt-2 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-xs font-medium outline-none focus:border-[#0066ff]"
                     />
                     {/* 分岐（AIが自動生成。回答に応じてどの深掘りをするか） */}
                     {(!q.branches || q.branches.length === 0) && (

@@ -11,6 +11,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { APPEAL_LABELS, type AdCopy, type AppealAxis, type BrandProfile, type RefineDirective } from '@/lib/adimage/types'
 import AdImageLp from './Lp'
+import { notifyError } from '@/lib/ui/notify'
 
 interface PlacementRow {
   key: string
@@ -130,7 +131,7 @@ export default function AdImageTool() {
       if (d.concepts?.[0]) setCopy(d.concepts[0].copy)
       setStep('concepts')
     } catch (e) {
-      setError(e instanceof Error ? e.message : '解析に失敗しました')
+      notifyError(setError, e instanceof Error ? e.message : '解析に失敗しました')
     } finally {
       setAnalyzing(false)
     }
@@ -149,7 +150,7 @@ export default function AdImageTool() {
       if (!r.ok) throw new Error(d?.error || 'ロゴを登録できませんでした')
       setLogoName(file.name)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'ロゴを登録できませんでした')
+      notifyError(setError, e instanceof Error ? e.message : 'ロゴを登録できませんでした')
     } finally {
       setLogoBusy(false)
     }
@@ -205,7 +206,7 @@ export default function AdImageTool() {
       setGeneration(1)
       setStep('result')
     } catch (e) {
-      setError(e instanceof Error ? e.message : '生成に失敗しました')
+      notifyError(setError, e instanceof Error ? e.message : '生成に失敗しました')
     } finally {
       setGenerating(false)
     }
@@ -227,7 +228,7 @@ export default function AdImageTool() {
       setAdvice(d.advice)
       setDirectives(d.directives || [])
     } catch (e) {
-      setError(e instanceof Error ? e.message : '採点に失敗しました')
+      notifyError(setError, e instanceof Error ? e.message : '採点に失敗しました')
     } finally {
       setScoring(false)
     }
@@ -256,7 +257,7 @@ export default function AdImageTool() {
       setSelectedChips([])
       setNote('')
     } catch (e) {
-      setError(e instanceof Error ? e.message : '改善に失敗しました')
+      notifyError(setError, e instanceof Error ? e.message : '改善に失敗しました')
     } finally {
       setRefining(false)
     }
@@ -303,7 +304,7 @@ export default function AdImageTool() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com"
-              className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none"
+              className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none"
             />
             <button
               onClick={analyze}
@@ -317,7 +318,7 @@ export default function AdImageTool() {
             value={appeal}
             onChange={(e) => setAppeal(e.target.value)}
             placeholder="特に伝えたいこと（任意）"
-            className="mt-2 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+            className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
           />
           {brand && (
             <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm">
@@ -402,7 +403,7 @@ export default function AdImageTool() {
                 <select
                   value={logoPos}
                   onChange={(e) => setLogoPos(e.target.value)}
-                  className="rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                  className="rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
                 >
                   <option value="bottom-right">右下</option>
                   <option value="bottom-left">左下</option>
@@ -555,7 +556,7 @@ export default function AdImageTool() {
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="その他の要望（任意）"
-                className="mt-3 w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="mt-3 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
               />
 
               <div className="mt-3 flex flex-wrap gap-2">

@@ -5,6 +5,7 @@
 // ============================================
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
+import { notifyError } from '@/lib/ui/notify'
 
 export default function AishodanInvitePage() {
   const params = useParams<{ token: string }>()
@@ -25,12 +26,12 @@ export default function AishodanInvitePage() {
         const res = await fetch(`/api/aishodan/invite/${token}`)
         const json = await res.json()
         if (!res.ok) {
-          setError(json?.error || '招待が見つかりません')
+          notifyError(setError, json?.error || '招待が見つかりません')
           return
         }
         setInvite(json.invite)
       } catch {
-        setError('通信に失敗しました')
+        notifyError(setError, '通信に失敗しました')
       } finally {
         setLoading(false)
       }
@@ -49,7 +50,7 @@ export default function AishodanInvitePage() {
         return
       }
       if (!res.ok) {
-        setError(json?.error || '参加できませんでした')
+        notifyError(setError, json?.error || '参加できませんでした')
         return
       }
       setDone(true)

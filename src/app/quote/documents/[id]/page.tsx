@@ -14,6 +14,7 @@ import { withOrg } from '@/components/org/OrgSwitcher'
 import { useParams } from 'next/navigation'
 import { yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource } from '@/lib/quote/types'
+import { notifyError } from '@/lib/ui/notify'
 
 interface LineItem {
   id: string
@@ -93,7 +94,7 @@ export default function QuoteDocumentPage() {
       setPaymentTerms(d.document.paymentTerms || '')
       setDeliveryTerms(d.document.deliveryTerms || '')
     } catch (e) {
-      setError(e instanceof Error ? e.message : '読み込みに失敗しました')
+      notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
     } finally {
       setLoading(false)
     }
@@ -136,7 +137,7 @@ export default function QuoteDocumentPage() {
       if (!r.ok) throw new Error(d?.error || '保存に失敗しました')
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : '保存に失敗しました')
+      notifyError(setError, e instanceof Error ? e.message : '保存に失敗しました')
     } finally {
       setSaving(false)
     }
@@ -210,9 +211,9 @@ export default function QuoteDocumentPage() {
           <h2 className="text-sm font-bold text-slate-900">宛先</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <input value={clientCompany} onChange={(e) => setClientCompany(e.target.value)} placeholder="会社名"
-              className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none" />
+              className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none" />
             <input value={clientPerson} onChange={(e) => setClientPerson(e.target.value)} placeholder="ご担当者名"
-              className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none" />
+              className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none" />
           </div>
         </section>
 
@@ -222,21 +223,21 @@ export default function QuoteDocumentPage() {
             {items.map((it, idx) => (
               <div key={it.id || idx} className="rounded-xl border border-slate-200 p-4">
                 <input value={it.itemName} onChange={(e) => updateItem(idx, { itemName: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium focus:border-[#0066ff] focus:outline-none" />
+                  className="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-medium focus:border-[#0066ff] focus:outline-none" />
                 <textarea value={it.spec || ''} onChange={(e) => updateItem(idx, { spec: e.target.value })} rows={2}
                   placeholder="内訳・含まれるもの"
-                  className="mt-2 w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none" />
+                  className="mt-2 w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none" />
                 <div className="mt-3 flex flex-wrap items-end gap-3">
                   <label className="text-xs">
                     <span className="mb-1 block text-slate-500">数量</span>
                     <input value={it.qty} inputMode="numeric"
                       onChange={(e) => updateItem(idx, { qty: Math.max(1, Number(e.target.value.replace(/[^0-9]/g, '')) || 1) })}
-                      className="w-16 rounded-lg border border-slate-300 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none" />
+                      className="w-16 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none" />
                   </label>
                   <label className="text-xs">
                     <span className="mb-1 block text-slate-500">単位</span>
                     <input value={it.unit} onChange={(e) => updateItem(idx, { unit: e.target.value })}
-                      className="w-16 rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-[#0066ff] focus:outline-none" />
+                      className="w-16 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-sm focus:border-[#0066ff] focus:outline-none" />
                   </label>
                   <label className="text-xs">
                     <span className="mb-1 block text-slate-500">単価</span>
@@ -246,7 +247,7 @@ export default function QuoteDocumentPage() {
                         // 人が金額を変えたら出所ラベルも「手入力」に揃える
                         updateItem(idx, { unitPrice: v === '' ? 0 : Number(v), priceSource: 'manual', sourceRef: '手入力' })
                       }}
-                      className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none" />
+                      className="w-28 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none" />
                   </label>
                   <div className="text-xs">
                     <span className="mb-1 block text-slate-500">金額</span>
@@ -273,7 +274,7 @@ export default function QuoteDocumentPage() {
             <label className="text-xs">
               <span className="mb-1 block text-slate-500">値引き</span>
               <select value={discountType} onChange={(e) => setDiscountType(e.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none">
+                className="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none">
                 <option value="">なし</option>
                 <option value="rate">率（%）</option>
                 <option value="amount">金額（円）</option>
@@ -284,7 +285,7 @@ export default function QuoteDocumentPage() {
                 <span className="mb-1 block text-slate-500">{discountType === 'rate' ? '割引率' : '割引額'}</span>
                 <input value={discountValue} inputMode="numeric"
                   onChange={(e) => setDiscountValue(e.target.value.replace(/[^0-9]/g, ''))}
-                  className="w-28 rounded-lg border border-slate-300 px-3 py-2 text-right text-sm focus:border-[#0066ff] focus:outline-none" />
+                  className="w-28 rounded-xl border-2 border-slate-200 px-3 py-2 text-right text-sm focus:border-[#0066ff] focus:outline-none" />
               </label>
             )}
           </div>
@@ -292,18 +293,18 @@ export default function QuoteDocumentPage() {
             <label className="text-xs">
               <span className="mb-1 block text-slate-500">納期</span>
               <textarea value={deliveryTerms} onChange={(e) => setDeliveryTerms(e.target.value)} rows={2}
-                className="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none" />
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none" />
             </label>
             <label className="text-xs">
               <span className="mb-1 block text-slate-500">お支払い条件</span>
               <textarea value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} rows={2}
-                className="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none" />
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none" />
             </label>
           </div>
           <label className="mt-3 block text-xs">
             <span className="mb-1 block text-slate-500">備考</span>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
-              className="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none" />
+              className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none" />
           </label>
         </section>
 

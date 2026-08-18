@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { notifyError } from '@/lib/ui/notify'
 
 const VERDICT_LABEL: Record<string, string> = {
   recommend: '推奨',
@@ -105,7 +106,7 @@ export default function MensetsuReportPage() {
       const res = await fetch(`/api/mensetsu/sessions/${id}/evaluate`, { method: 'POST' })
       const json = await res.json()
       if (!res.ok) {
-        setError(json?.error || '評価に失敗しました')
+        notifyError(setError, json?.error || '評価に失敗しました')
         return
       }
       const r = await fetch(`/api/mensetsu/sessions/${id}`)
@@ -120,7 +121,7 @@ export default function MensetsuReportPage() {
       const res = await fetch(`/api/mensetsu/sessions/${id}`)
       const json = await res.json()
       if (!res.ok) {
-        setError(json?.error || '取得できませんでした')
+        notifyError(setError, json?.error || '取得できませんでした')
         return
       }
       setData(json)
@@ -383,7 +384,7 @@ export default function MensetsuReportPage() {
                       <select
                         value={hrOrgId}
                         onChange={(e) => setHrOrgId(e.target.value)}
-                        className="flex-1 rounded-lg border border-[#d8e7ff] px-4 py-2.5 text-sm outline-none focus:border-[#0066ff]"
+                        className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#0066ff]"
                       >
                         {hr.organizations.map((o: any) => (
                           <option key={o.id} value={o.id}>{o.name}</option>
@@ -460,7 +461,7 @@ export default function MensetsuReportPage() {
                           <select
                             value={labelCriterion}
                             onChange={(e) => setLabelCriterion(e.target.value)}
-                            className="mt-1 w-full rounded-lg border border-[#d8e7ff] px-3 py-2 text-sm outline-none focus:border-[#0066ff]"
+                            className="mt-1 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#0066ff]"
                           >
                             <option value="">選んでください</option>
                             {criteria.map((c: any) => (

@@ -352,7 +352,7 @@ export default function MensetsuLivePage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="山田 太郎"
-                className="mt-2 w-full rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium text-[#0a0f3c] outline-none focus:border-[#0066ff]"
+                className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium text-[#0a0f3c] outline-none focus:border-[#0066ff]"
               />
             </div>
 
@@ -372,7 +372,7 @@ export default function MensetsuLivePage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   autoComplete="email"
-                  className="mt-2 w-full rounded-lg border border-[#d8e7ff] px-4 py-3 text-sm font-medium text-[#0a0f3c] outline-none focus:border-[#0066ff]"
+                  className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium text-[#0a0f3c] outline-none focus:border-[#0066ff]"
                 />
                 <p className="mt-1.5 text-xs font-medium leading-relaxed text-[#8a94ad]">
                   ご本人の確認のために入力をお願いしています。

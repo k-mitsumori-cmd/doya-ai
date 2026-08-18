@@ -11,6 +11,7 @@ import Link from 'next/link'
 import { withOrg } from '@/components/org/OrgSwitcher'
 import { useParams } from 'next/navigation'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
+import { notifyError } from '@/lib/ui/notify'
 
 interface Detail {
   id: string
@@ -68,7 +69,7 @@ export default function AishodanSessionDetail() {
       if (!r.ok) throw new Error(j?.error || '読み込みに失敗しました')
       setD(j.session)
     } catch (e) {
-      setError(e instanceof Error ? e.message : '読み込みに失敗しました')
+      notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
     } finally {
       setLoading(false)
     }
@@ -94,7 +95,7 @@ export default function AishodanSessionDetail() {
       })
       if (!res.ok) {
         const j = await res.json().catch(() => null)
-        setError(j?.error || '判定を保存できませんでした')
+        notifyError(setError, j?.error || '判定を保存できませんでした')
         return
       }
       await load()
@@ -123,7 +124,7 @@ export default function AishodanSessionDetail() {
           }
           return
         }
-        setError(j?.error || '判定を作成できませんでした')
+        notifyError(setError, j?.error || '判定を作成できませんでした')
         return
       }
       await load()

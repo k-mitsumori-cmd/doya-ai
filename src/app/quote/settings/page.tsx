@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { withOrg } from '@/components/org/OrgSwitcher'
+import { notifyError } from '@/lib/ui/notify'
 
 const FIELDS = [
   { key: 'companyName', label: '会社名', placeholder: '株式会社スリスタ', required: true },
@@ -46,7 +47,7 @@ export default function QuoteSettingsPage() {
         setForm(f)
       }
     } catch {
-      setError('読み込みに失敗しました')
+      notifyError(setError, '読み込みに失敗しました')
     } finally {
       setLoading(false)
     }
@@ -70,7 +71,7 @@ export default function QuoteSettingsPage() {
       if (!r.ok) throw new Error(d?.error || '保存に失敗しました')
       setMessage('保存しました')
     } catch (e) {
-      setError(e instanceof Error ? e.message : '保存に失敗しました')
+      notifyError(setError, e instanceof Error ? e.message : '保存に失敗しました')
     } finally {
       setSaving(false)
     }
@@ -104,7 +105,7 @@ export default function QuoteSettingsPage() {
                 value={form[f.key] ?? ''}
                 onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
                 placeholder={f.placeholder}
-                className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
               />
             </label>
           ))}
@@ -122,7 +123,7 @@ export default function QuoteSettingsPage() {
                 onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
                 placeholder={f.placeholder}
                 rows={2}
-                className="w-full resize-none rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
               />
             </label>
           ))}

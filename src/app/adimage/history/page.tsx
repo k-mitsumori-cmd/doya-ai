@@ -11,6 +11,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { notifyError } from '@/lib/ui/notify'
 
 interface Creative {
   id: string
@@ -55,11 +56,11 @@ export default function AdImageHistoryPage() {
     try {
       const res = await fetch('/api/adimage/concepts')
       if (res.status === 401) {
-        setError('履歴のご確認にはログインが必要です。')
+        notifyError(setError, '履歴のご確認にはログインが必要です。')
         return
       }
       if (!res.ok) {
-        setError('履歴を読み込めませんでした')
+        notifyError(setError, '履歴を読み込めませんでした')
         return
       }
       const data = await res.json()
@@ -68,7 +69,7 @@ export default function AdImageHistoryPage() {
       // 最新のものは開いた状態で見せる（1件も開いていないと何があるか分からない）
       if (list[0]) setOpenId(list[0].id)
     } catch {
-      setError('通信に失敗しました。時間をおいてお試しください。')
+      notifyError(setError, '通信に失敗しました。時間をおいてお試しください。')
     } finally {
       setLoading(false)
     }

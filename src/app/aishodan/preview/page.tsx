@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import OrgSwitcher, { withOrg, type Membership } from '@/components/org/OrgSwitcher'
 import { SESSION_STATUS_LABELS } from '@/lib/aishodan/types'
+import { notifyError } from '@/lib/ui/notify'
 
 interface Product {
   id: string
@@ -67,7 +68,7 @@ export default function AishodanPreviewPage() {
         if (first) setScenarioId((prev) => prev || first)
       }
     } catch {
-      setError('読み込みに失敗しました')
+      notifyError(setError, '読み込みに失敗しました')
     } finally {
       setLoading(false)
     }
@@ -90,7 +91,7 @@ export default function AishodanPreviewPage() {
       // ⚠️ 別タブで開く。この画面は残しておき、話した後にすぐログを見返せるようにする。
       window.open(`/m/${d.token}`, '_blank', 'noopener')
     } catch (e) {
-      setError(e instanceof Error ? e.message : '練習を開始できませんでした')
+      notifyError(setError, e instanceof Error ? e.message : '練習を開始できませんでした')
     } finally {
       setStarting(false)
     }
@@ -178,7 +179,7 @@ export default function AishodanPreviewPage() {
                 <select
                   value={scenarioId}
                   onChange={(e) => setScenarioId(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                  className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
                 >
                   {scenarios.map((s) => (
                     <option key={s.id} value={s.id}>

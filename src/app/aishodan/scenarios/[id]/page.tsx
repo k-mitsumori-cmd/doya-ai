@@ -14,6 +14,7 @@ import Link from 'next/link'
 import { withOrg } from '@/components/org/OrgSwitcher'
 import { useParams } from 'next/navigation'
 import { PRICE_POLICY_LABELS, type Guardrails, type Icp, type Persona, type Phase, type PricePolicy, type ProductProfile, type Slot } from '@/lib/aishodan/types'
+import { notifyError } from '@/lib/ui/notify'
 
 interface ScenarioData {
   id: string
@@ -47,7 +48,7 @@ export default function AishodanScenarioPage() {
       if (!r.ok) throw new Error(d?.error || '読み込みに失敗しました')
       setS(d.scenario)
     } catch (e) {
-      setError(e instanceof Error ? e.message : '読み込みに失敗しました')
+      notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
     } finally {
       setLoading(false)
     }
@@ -84,7 +85,7 @@ export default function AishodanScenarioPage() {
       setS(d.scenario)
       setMessage('保存しました')
     } catch (e) {
-      setError(e instanceof Error ? e.message : '保存に失敗しました')
+      notifyError(setError, e instanceof Error ? e.message : '保存に失敗しました')
     } finally {
       setSaving(false)
     }
@@ -148,7 +149,7 @@ export default function AishodanScenarioPage() {
             <input
               value={s.name}
               onChange={(e) => patch({ name: e.target.value })}
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+              className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
             />
           </label>
           <label className="mt-3 block text-sm">
@@ -157,7 +158,7 @@ export default function AishodanScenarioPage() {
               value={s.durationMin}
               inputMode="numeric"
               onChange={(e) => patch({ durationMin: Math.max(5, Math.min(45, Number(e.target.value.replace(/[^0-9]/g, '')) || 15)) })}
-              className="w-24 rounded-lg border border-slate-300 px-4 py-2.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
+              className="w-24 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
             />
             <span className="ml-2 text-xs text-slate-500">5〜45分</span>
           </label>
@@ -177,7 +178,7 @@ export default function AishodanScenarioPage() {
               value={s.schedulingUrl ?? ''}
               onChange={(e) => patch({ schedulingUrl: e.target.value })}
               placeholder="https://calendly.com/your-name/30min"
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+              className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
             />
           </label>
           <label className="mt-3 block text-sm">
@@ -186,7 +187,7 @@ export default function AishodanScenarioPage() {
               value={s.schedulingLabel ?? ''}
               onChange={(e) => patch({ schedulingLabel: e.target.value })}
               placeholder="担当者と日程を決める"
-              className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+              className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
             />
           </label>
         </section>
@@ -286,7 +287,7 @@ export default function AishodanScenarioPage() {
                 })
               }
               rows={4}
-              className="w-full resize-none rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+              className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
             />
           </label>
         </section>
@@ -311,7 +312,7 @@ export default function AishodanScenarioPage() {
                       next[i] = { ...ph, name: e.target.value }
                       patch({ phases: next })
                     }}
-                    className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium focus:border-[#0066ff] focus:outline-none"
+                    className="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-medium focus:border-[#0066ff] focus:outline-none"
                   />
                   <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500">
                     上限
@@ -323,7 +324,7 @@ export default function AishodanScenarioPage() {
                         next[i] = { ...ph, maxTurns: Math.max(1, Math.min(40, Number(e.target.value.replace(/[^0-9]/g, '')) || 1)) }
                         patch({ phases: next })
                       }}
-                      className="w-14 rounded-lg border border-slate-300 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
+                      className="w-14 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
                     />
                   </label>
                 </div>
@@ -336,7 +337,7 @@ export default function AishodanScenarioPage() {
                   }}
                   rows={2}
                   placeholder="このフェーズで達成したいこと"
-                  className="mt-2 w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none"
+                  className="mt-2 w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none"
                 />
               </div>
             ))}
@@ -360,7 +361,7 @@ export default function AishodanScenarioPage() {
                       next[i] = { ...sl, label: e.target.value }
                       patch({ slots: next })
                     }}
-                    className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium focus:border-[#0066ff] focus:outline-none"
+                    className="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-medium focus:border-[#0066ff] focus:outline-none"
                   />
                   <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-slate-600">
                     <input
@@ -390,7 +391,7 @@ export default function AishodanScenarioPage() {
                     patch({ slots: next })
                   }}
                   placeholder="どう聞くかの例"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none"
+                  className="mt-2 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none"
                 />
               </div>
             ))}
@@ -427,7 +428,7 @@ export default function AishodanScenarioPage() {
                       next[i] = { ...c, label: e.target.value }
                       patch({ icp: { conditions: next } })
                     }}
-                    className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium focus:border-[#0066ff] focus:outline-none"
+                    className="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-medium focus:border-[#0066ff] focus:outline-none"
                   />
                   <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500">
                     重み
@@ -439,7 +440,7 @@ export default function AishodanScenarioPage() {
                         next[i] = { ...c, weight: Math.max(0, Math.min(100, Number(e.target.value.replace(/[^0-9]/g, '')) || 0)) }
                         patch({ icp: { conditions: next } })
                       }}
-                      className="w-14 rounded-lg border border-slate-300 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
+                      className="w-14 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
                     />
                   </label>
                 </div>
@@ -451,7 +452,7 @@ export default function AishodanScenarioPage() {
                     patch({ icp: { conditions: next } })
                   }}
                   placeholder="どんな状態なら満たしたと言えるか"
-                  className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none"
+                  className="mt-2 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none"
                 />
               </div>
             ))}
@@ -470,7 +471,7 @@ export default function AishodanScenarioPage() {
               <input
                 value={profile.oneLiner || ''}
                 onChange={(e) => patch({ product: { ...s.product, profile: { ...profile, oneLiner: e.target.value } } })}
-                className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
               />
             </label>
             <label className="block text-sm">
@@ -479,7 +480,7 @@ export default function AishodanScenarioPage() {
                 value={profile.valueProp || ''}
                 onChange={(e) => patch({ product: { ...s.product, profile: { ...profile, valueProp: e.target.value } } })}
                 rows={3}
-                className="w-full resize-none rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
               />
             </label>
             <label className="block text-sm">
@@ -489,7 +490,7 @@ export default function AishodanScenarioPage() {
                 onChange={(e) => patch({ product: { ...s.product, profile: { ...profile, pricing: e.target.value } } })}
                 rows={2}
                 placeholder="サイトに記載が無ければ空のままにしてください"
-                className="w-full resize-none rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
               />
             </label>
             <label className="block text-sm">
@@ -511,7 +512,7 @@ export default function AishodanScenarioPage() {
                   })
                 }
                 rows={3}
-                className="w-full resize-none rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
               />
             </label>
           </div>
@@ -526,7 +527,7 @@ export default function AishodanScenarioPage() {
               <input
                 value={s.persona.tone}
                 onChange={(e) => patch({ persona: { ...s.persona, tone: e.target.value } })}
-                className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
               />
             </label>
             <div className="flex gap-3">
@@ -535,7 +536,7 @@ export default function AishodanScenarioPage() {
                 <input
                   value={s.persona.firstPerson}
                   onChange={(e) => patch({ persona: { ...s.persona, firstPerson: e.target.value } })}
-                  className="w-24 rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                  className="w-24 rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
                 />
               </label>
               <label className="text-sm">
@@ -551,7 +552,7 @@ export default function AishodanScenarioPage() {
                       },
                     })
                   }
-                  className="w-24 rounded-lg border border-slate-300 px-3 py-2.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
+                  className="w-24 rounded-xl border-2 border-slate-200 px-3 py-2.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
                 />
               </label>
             </div>

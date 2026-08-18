@@ -14,6 +14,7 @@ import MemberPanel from '@/components/org/MemberPanel'
 import { billableLines, calcTotals, yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource, type ProductProfile, type SuggestedItem } from '@/lib/quote/types'
 import QuoteLp from './Lp'
+import { notifyError } from '@/lib/ui/notify'
 
 interface Product {
   id: string
@@ -97,7 +98,7 @@ export default function QuoteTool() {
         if ((pr.products || []).length > 0) setSelectedProduct(pr.products[0].id)
       }
     } catch {
-      setError('読み込みに失敗しました')
+      notifyError(setError, '読み込みに失敗しました')
     } finally {
       setLoading(false)
     }
@@ -139,7 +140,7 @@ export default function QuoteTool() {
       setDraftUrl(d.sourceUrl)
       setProductName(d.profile?.companyName || '')
     } catch (e) {
-      setError(e instanceof Error ? e.message : '解析に失敗しました')
+      notifyError(setError, e instanceof Error ? e.message : '解析に失敗しました')
     } finally {
       setAnalyzing(false)
     }
@@ -155,7 +156,7 @@ export default function QuoteTool() {
     })
     const d = await r.json()
     if (!r.ok) {
-      setError(d?.error || '登録に失敗しました')
+      notifyError(setError, d?.error || '登録に失敗しました')
       return
     }
     setDraftProfile(null)
@@ -183,7 +184,7 @@ export default function QuoteTool() {
       if (!r.ok) throw new Error(d?.error || '生成に失敗しました')
       setItems(d.items || [])
     } catch (e) {
-      setError(e instanceof Error ? e.message : '生成に失敗しました')
+      notifyError(setError, e instanceof Error ? e.message : '生成に失敗しました')
     } finally {
       setSuggesting(false)
     }
@@ -231,7 +232,7 @@ export default function QuoteTool() {
       if (!r.ok) throw new Error(d?.error || '作成に失敗しました')
       window.location.href = `/quote/documents/${d.id}`
     } catch (e) {
-      setError(e instanceof Error ? e.message : '作成に失敗しました')
+      notifyError(setError, e instanceof Error ? e.message : '作成に失敗しました')
       setCreating(false)
     }
   }
@@ -263,7 +264,7 @@ export default function QuoteTool() {
             value={orgName}
             onChange={(e) => setOrgName(e.target.value)}
             placeholder="株式会社スリスタ"
-            className="mt-5 w-full rounded-lg border border-slate-300 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none"
+            className="mt-5 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none"
           />
           {error && <p className="mt-3 text-sm text-rose-600">{error}</p>}
           <button
@@ -324,7 +325,7 @@ export default function QuoteTool() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com/service"
-              className="flex-1 rounded-lg border border-slate-300 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none"
+              className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none"
             />
             <button
               onClick={analyze}
@@ -367,7 +368,7 @@ export default function QuoteTool() {
                   value={productName}
                   onChange={(e) => setProductName(e.target.value)}
                   placeholder="商材名（例: SEOコンサルティング）"
-                  className="flex-1 rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                  className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
                 />
                 <button
                   onClick={saveProduct}
@@ -391,7 +392,7 @@ export default function QuoteTool() {
                 <select
                   value={selectedProduct}
                   onChange={(e) => setSelectedProduct(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                  className="w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
                 >
                   {products.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
@@ -403,7 +404,7 @@ export default function QuoteTool() {
                   onChange={(e) => setBudget(e.target.value)}
                   placeholder="1000000"
                   inputMode="numeric"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                  className="w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
                 />
               </label>
               <label className="text-sm">
@@ -412,7 +413,7 @@ export default function QuoteTool() {
                   value={situation}
                   onChange={(e) => setSituation(e.target.value)}
                   placeholder="自社サイトの流入が伸び悩んでいる"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                  className="w-full rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
                 />
               </label>
             </div>
@@ -443,14 +444,14 @@ export default function QuoteTool() {
                         value={it.itemName}
                         onChange={(e) => updateItem(idx, { itemName: e.target.value })}
                         placeholder="品目名"
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium focus:border-[#0066ff] focus:outline-none"
+                        className="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-medium focus:border-[#0066ff] focus:outline-none"
                       />
                       <textarea
                         value={it.spec}
                         onChange={(e) => updateItem(idx, { spec: e.target.value })}
                         placeholder="内訳・含まれるもの"
                         rows={2}
-                        className="w-full resize-none rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none"
+                        className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none"
                       />
                     </div>
                     <button
@@ -468,7 +469,7 @@ export default function QuoteTool() {
                         value={it.qty}
                         onChange={(e) => updateItem(idx, { qty: Math.max(1, Number(e.target.value.replace(/[^0-9]/g, '')) || 1) })}
                         inputMode="numeric"
-                        className="w-16 rounded-lg border border-slate-300 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
+                        className="w-16 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
                       />
                     </label>
                     <label className="text-xs">
@@ -476,7 +477,7 @@ export default function QuoteTool() {
                       <input
                         value={it.unit}
                         onChange={(e) => updateItem(idx, { unit: e.target.value })}
-                        className="w-16 rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                        className="w-16 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-sm focus:border-[#0066ff] focus:outline-none"
                       />
                     </label>
                     <label className="text-xs">
@@ -491,7 +492,7 @@ export default function QuoteTool() {
                         }}
                         placeholder="要見積"
                         inputMode="numeric"
-                        className="w-28 rounded-lg border border-slate-300 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
+                        className="w-28 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
                       />
                     </label>
                     <div className="text-xs">
@@ -541,13 +542,13 @@ export default function QuoteTool() {
                 value={clientCompany}
                 onChange={(e) => setClientCompany(e.target.value)}
                 placeholder="宛先の会社名"
-                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
               />
               <input
                 value={clientPerson}
                 onChange={(e) => setClientPerson(e.target.value)}
                 placeholder="ご担当者名"
-                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
               />
             </div>
             <button
