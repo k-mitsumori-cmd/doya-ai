@@ -246,7 +246,7 @@ export const SERVICES: Service[] = [
     bgGradient: 'from-slate-50 to-gray-50',
     href: '/seo',
     dashboardHref: '/seo',
-    pricingHref: '/seo',
+    pricingHref: '/seo/pricing',
     guideHref: '/seo',
     features: [
       '参考URL解析→要点化（丸写し禁止）',
@@ -415,7 +415,7 @@ export const SERVICES: Service[] = [
     bgGradient: 'from-purple-50 to-purple-100',
     href: '/persona',
     dashboardHref: '/persona',
-    pricingHref: '/persona',
+    pricingHref: '/persona/pricing',
     guideHref: '/persona',
     features: [
       'AIペルソナ自動生成',
