@@ -4,6 +4,9 @@ import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+// ⚠️ AI生成を呼ぶルートは maxDuration を必ず入れること。
+//    未指定だとVercelの既定で打ち切られ、**本番でだけ**504になる。
+export const maxDuration = 300
 
 const BodySchema = z.object({
   keyword: z.string().min(1).max(200).optional(),

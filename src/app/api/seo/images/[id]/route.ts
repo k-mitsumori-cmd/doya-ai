@@ -9,6 +9,10 @@ import { getGuestIdFromRequest, isTrialActive, normalizeSeoPlan, canUseSeoImages
 import sharp from 'sharp'
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+// ⚠️ AI生成を呼ぶルートは maxDuration を必ず入れること。
+//    未指定だとVercelの既定で打ち切られ、**本番でだけ**504になる。
+export const maxDuration = 300
 
 function stripNoTextStatements(raw: string): string {
   const s = String(raw || '')
