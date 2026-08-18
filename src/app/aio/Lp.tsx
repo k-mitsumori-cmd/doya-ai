@@ -1,5 +1,7 @@
 'use client'
 
+import Link from 'next/link'
+
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { signIn } from 'next-auth/react'
@@ -124,6 +126,14 @@ export default function AioLp() {
         ctaLabel="無料で診断する"
         note="無料プランで監視プロンプト3件・週1回スキャンをお試しいただけます"
       />
+
+      {/* ⚠️ 第2CTAをURL診断に使っているため、料金への導線がLPから辿れなかった。
+           実LPは料金を明記する型（同価格帯のセルフサーブSaaSは全社が金額を出している）。 */}
+      <div className="pb-16 text-center">
+        <Link href="/aio/pricing" className="text-sm font-bold text-slate-500 underline-offset-4 hover:text-slate-800 hover:underline">
+          料金プランを見る
+        </Link>
+      </div>
     </LpShell>
   )
 }
