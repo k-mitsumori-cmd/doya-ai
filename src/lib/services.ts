@@ -256,7 +256,7 @@ export const SERVICES: Service[] = [
       'バナー/図解画像生成・リンクチェック',
     ],
     pricing: {
-      free: { name: '無料プラン', limit: 'お試し', dailyLimit: 0, price: 0 },
+      free: { name: '無料プラン', limit: '記事3本/月まで', dailyLimit: 0, price: 0 },
       light: {
         name: 'ライトプラン',
         limit: '月10回まで',
