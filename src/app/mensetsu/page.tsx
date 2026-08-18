@@ -7,6 +7,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import MensetsuLp from './Lp'
 
 interface Org {
   id: string
@@ -111,6 +112,10 @@ export default function MensetsuDashboard() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('member')
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
+  /** 未ログイン。⚠️ 組織が無いのか、そもそもログインしていないのかを区別する。
+   *  区別しないと、未ログインの人に「組織を作成」フォームを見せてしまい、
+   *  押しても401で何も起きない（何が悪いのか分からない画面になる）。 */
+  const [needsLogin, setNeedsLogin] = useState(false)
 
   // ⚠️ useSession の status で fetch をゲートしない（Cookie認証なので未確定でもAPIは応答する）
   const load = useCallback(async () => {
@@ -119,8 +124,10 @@ export default function MensetsuDashboard() {
       const data = await res.json()
       if (res.status === 401) {
         setOrg(null)
+        setNeedsLogin(true)
         return
       }
+      setNeedsLogin(false)
       setOrg(data?.current || null)
       if (data?.current) {
         const [t, s, m] = await Promise.all([
@@ -432,6 +439,12 @@ export default function MensetsuDashboard() {
         <p className="text-sm font-bold text-[#425071]">読み込んでいます…</p>
       </main>
     )
+  }
+
+  // ⚠️ 未ログインの方にはLPを見せる。以前は組織作成フォームを出しており、
+  //    押しても401で何も起きない画面になっていた。
+  if (needsLogin) {
+    return <MensetsuLp />
   }
 
   return (

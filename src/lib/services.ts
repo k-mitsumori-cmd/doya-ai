@@ -1628,7 +1628,7 @@ export const SERVICES: Service[] = [
     bgGradient: 'from-fuchsia-50 to-violet-50',
     href: '/mensetsu',
     dashboardHref: '/mensetsu',
-    pricingHref: '/mensetsu',
+    pricingHref: '/mensetsu/pricing',
     guideHref: '/mensetsu',
     features: [
       '企業URLから質問セット＋評価基準を自動生成',
@@ -1673,7 +1673,7 @@ export const SERVICES: Service[] = [
     bgGradient: 'from-emerald-50 to-teal-50',
     href: '/quote',
     dashboardHref: '/quote',
-    pricingHref: '/quote',
+    pricingHref: '/quote/pricing',
     guideHref: '/quote',
     features: [
       'サービスURLから商材と課金軸を自動解析',
@@ -1719,7 +1719,7 @@ export const SERVICES: Service[] = [
     bgGradient: 'from-blue-50 to-cyan-50',
     href: '/aishodan',
     dashboardHref: '/aishodan',
-    pricingHref: '/aishodan',
+    pricingHref: '/aishodan/pricing',
     guideHref: '/aishodan',
     features: [
       'サービスURLから商材ナレッジとシナリオを自動生成',
@@ -1765,7 +1765,7 @@ export const SERVICES: Service[] = [
     bgGradient: 'from-lime-50 to-green-50',
     href: '/adimage',
     dashboardHref: '/adimage',
-    pricingHref: '/adimage',
+    pricingHref: '/adimage/pricing',
     guideHref: '/adimage',
     features: [
       'サービスURLからブランド情報とコピーを自動生成',

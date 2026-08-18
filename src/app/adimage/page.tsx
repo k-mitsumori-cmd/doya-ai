@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { APPEAL_LABELS, type AdCopy, type AppealAxis, type BrandProfile, type RefineDirective } from '@/lib/adimage/types'
+import AdImageLp from './Lp'
 
 interface PlacementRow {
   key: string
@@ -266,23 +267,10 @@ export default function AdImagePage() {
     return acc
   }, {})
 
+  // ⚠️ 未ログインの方にはLPを見せる。以前は「ログインが必要です」の小さな箱だけで、
+  //    何をするサービスなのか説明する面がどこにも無かった。
   if (needsLogin) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-        <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-200">
-          <h1 className="text-xl font-bold text-slate-900">ドヤ広告画像AI</h1>
-          <p className="mt-2 text-sm leading-relaxed text-slate-600">
-            ご利用にはログインが必要です。
-          </p>
-          <a
-            href={`/auth/signin?callbackUrl=${encodeURIComponent('/adimage')}`}
-            className="mt-5 inline-block w-full rounded-lg bg-[#0066ff] px-4 py-3 text-sm font-semibold text-white"
-          >
-            ログインする
-          </a>
-        </div>
-      </div>
-    )
+    return <AdImageLp />
   }
 
   return (
