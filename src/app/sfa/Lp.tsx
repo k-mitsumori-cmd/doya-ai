@@ -54,6 +54,8 @@ export default function SfaLp() {
         note="Googleアカウントでかんたんに始められます"
         ctaHref={CTA}
         ctaLabel="無料ではじめる"
+        subCtaHref="/sfa/pricing"
+        subCtaLabel="料金を見る"
         visual={<MockWindow title="doya-ai.surisuta.jp/sfa"><SfaPipelineMock /></MockWindow>}
       />
       <HowItWorks title={<>登録して、すぐ使える<br className="md:hidden" />3ステップ</>} lead="難しい初期設定はいりません。組織を作れば、その日から商談を見える化できます。" steps={STEPS} />

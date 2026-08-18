@@ -47,6 +47,8 @@ export default function BannerLandingPage() {
         note="無料プランで月15枚まで・ゲストも1日1回お試し可"
         ctaHref={cta}
         ctaLabel="無料で作る"
+        subCtaHref="/banner/pricing"
+        subCtaLabel="料金を見る"
         visual={<MockWindow title="doya-ai.surisuta.jp/banner"><BannerVariantsMock /></MockWindow>}
       />
       <HowItWorks title={<>選ぶ・生成・書き出しの<br className="md:hidden" />3ステップ</>} lead="テンプレートを選んでAIにまかせるだけ。" steps={STEPS} />
