@@ -22,7 +22,7 @@ import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 
 const MAIN_NAV: NavItem[] = [
-  { href: '/doyaslide', label: '新規作成', icon: Plus, hot: true },
+  { href: '/doyaslide/new', label: '新規作成', icon: Plus, hot: true },
   { href: '/doyaslide/projects', label: 'プロジェクト', icon: LayoutDashboard },
 ]
 
@@ -63,8 +63,8 @@ function DoyaSlideSidebarImpl({
 
   const isActive = (href: string) => {
     // 新規作成（ホーム）: ルート完全一致 or 旧URL /doyaslide/new
-    if (href === '/doyaslide') {
-      return pathname === '/doyaslide' || (pathname?.startsWith('/doyaslide/new') ?? false)
+    if (href === '/doyaslide/new') {
+      return pathname?.startsWith('/doyaslide/new') ?? false
     }
     // プロジェクト: 一覧(/doyaslide/projects) + エディタ(/doyaslide/{id})。new / pricing / ホームでは光らせない
     if (href === '/doyaslide/projects') {
@@ -95,7 +95,7 @@ function DoyaSlideSidebarImpl({
         {/* ロゴ: 展開時は公式ロゴ画像、折りたたみ時はアイコン（横長ロゴは32px枠で潰れるため出し分け） */}
         <div className="px-3 sm:px-4 py-4 flex items-center">
           {showLabel ? (
-            <Link href="/doyaslide" className="block" aria-label="ドヤスライド">
+            <Link href="/doyaslide/new" className="block" aria-label="ドヤスライド">
               <img
                 src="/doyaslide/logo.png"
                 alt="ドヤスライド"

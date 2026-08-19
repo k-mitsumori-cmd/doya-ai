@@ -44,6 +44,7 @@ export default function KintaiLandingPage() {
         ctaLabel="無料ではじめる"
         subCtaHref="/kintai/pricing"
         subCtaLabel="料金を見る"
+        image={{ src: '/kintai/hero.webp', alt: 'ドヤ勤怠の打刻画面' }}
         visual={<MockWindow title="doya-ai.surisuta.jp/kintai"><KintaiClockMock /></MockWindow>}
       />
       <HowItWorks

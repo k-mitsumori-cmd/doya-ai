@@ -51,6 +51,7 @@ export default function MensetsuLp() {
         ctaLabel="無料ではじめる"
         subCtaHref="/mensetsu/pricing"
         subCtaLabel="料金を見る"
+        image={{ src: '/mensetsu/hero.webp', alt: 'ドヤ面接官の面接進行画面' }}
         visual={<MockWindow title="ドヤ面接官"><MensetsuLiveMock /></MockWindow>}
       />
 

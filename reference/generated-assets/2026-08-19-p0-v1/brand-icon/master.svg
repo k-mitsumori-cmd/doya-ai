@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Doya AI polar bear brand icon</title>
+  <desc id="desc">A white polar bear face wearing navy virtual-reality goggles on a blue rounded square.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0877ff"/>
+      <stop offset="1" stop-color="#0057e8"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <g stroke="#061747" stroke-width="36" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="288" cy="330" r="122" fill="#fff"/>
+    <circle cx="736" cy="330" r="122" fill="#fff"/>
+    <circle cx="288" cy="330" r="58" fill="#061747" stroke="none"/>
+    <circle cx="736" cy="330" r="58" fill="#061747" stroke="none"/>
+
+    <path d="M230 444c0-171 126-279 282-279s282 108 282 279v176c0 170-126 279-282 279S230 790 230 620z" fill="#fff"/>
+    <path d="M199 411c0-66 54-120 120-120h386c66 0 120 54 120 120v94c0 86-70 156-156 156h-45c-43 0-83-20-109-54-26 34-66 54-109 54h-47c-88 0-160-72-160-160z" fill="#061747"/>
+    <path d="M234 489c12 81 55 123 127 123h46c44 0 80-21 108-62 28 41 64 62 108 62h45c70 0 112-40 122-117" fill="none" stroke="#00e0ff" stroke-width="30"/>
+
+    <path d="M347 450l62 54-62 54M677 450l-62 54 62 54" fill="none" stroke="#00e0ff" stroke-width="34"/>
+    <path d="M488 450h48M475 495h74" fill="none" stroke="#00e0ff" stroke-width="20"/>
+
+    <path d="M455 690c0-38 26-63 57-63s57 25 57 63c0 37-25 62-57 62s-57-25-57-62z" fill="#061747"/>
+    <path d="M512 750v35c0 31-25 56-56 56-25 0-45-14-54-37M512 785c0 31 25 56 56 56 25 0 45-14 54-37" fill="none"/>
+  </g>
+</svg>

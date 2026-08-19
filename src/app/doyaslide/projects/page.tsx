@@ -73,7 +73,7 @@ export default function DoyaSlideProjectsPage() {
           </div>
         </div>
         <Link
-          href="/doyaslide"
+          href="/doyaslide/new"
           className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black shadow-lg hover:shadow-xl transition-all"
         >
           <span className="material-symbols-outlined">add</span>
@@ -109,7 +109,7 @@ export default function DoyaSlideProjectsPage() {
           <p className="text-lg font-black text-slate-700 mb-1">一緒に最初のスライドを作ろう！</p>
           <p className="text-sm text-slate-400 font-bold mb-6">テーマを入れるだけで、AIが全スライドを画像で作ります</p>
           <Link
-            href="/doyaslide"
+            href="/doyaslide/new"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black shadow-lg"
           >
             <span className="material-symbols-outlined">add</span>

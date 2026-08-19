@@ -5,12 +5,13 @@
 // ============================================
 import React from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Sym, BgDots, SectionHeading } from './primitives'
 
 /** ブラウザ/アプリ風の枠（中に製品モックを入れる） */
 export function MockWindow({ title, children, className = '', floating = true }: { title?: string; children: React.ReactNode; className?: string; floating?: boolean }) {
   return (
-    <div className={`relative rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-2xl shadow-slate-300/40 ${floating ? 'animate-fade-in-up' : ''} ${className}`}>
+    <div data-mock-window className={`relative rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-2xl shadow-slate-300/40 ${floating ? 'animate-fade-in-up' : ''} ${className}`}>
       {/* トップバー */}
       <div className="flex items-center gap-2 px-4 h-10 border-b border-slate-100 bg-slate-50/80">
         <span className="w-3 h-3 rounded-full bg-slate-300" />
@@ -31,7 +32,7 @@ export function MockWindow({ title, children, className = '', floating = true }:
 /** 製品フォワードなヒーロー（左テキスト / 右に製品モック） */
 export function ProductHero({
   eyebrow, title, highlight, subtitle, note, ctaHref, ctaLabel = '無料ではじめる',
-  subCtaHref, subCtaLabel, visual,
+  subCtaHref, subCtaLabel, visual, image,
 }: {
   eyebrow?: string
   title: React.ReactNode
@@ -42,7 +43,13 @@ export function ProductHero({
   ctaLabel?: string
   subCtaHref?: string
   subCtaLabel?: string
-  visual: React.ReactNode
+  /** コード内モック。image を渡した場合はそちらが優先される */
+  visual?: React.ReactNode
+  /**
+   * 実画面キャプチャのヒーロー画像（public/<id>/hero.webp）。
+   * ⚠️ 実体が無いパスを渡すと画像が割れる。置いてから渡すこと。
+   */
+  image?: { src: string; alt: string }
 }) {
   return (
     <section className="relative overflow-hidden">
@@ -76,15 +83,40 @@ export function ProductHero({
           </div>
           {note && <p className="mt-4 text-xs font-bold text-slate-400 animate-fade-in-up" style={{ animationDelay: '0.28s' }}>{note}</p>}
         </div>
-        {/* 製品モック */}
-        <div className="relative animate-fade-in-up" style={{ animationDelay: '0.15s' }}>{visual}</div>
+        {/* 製品ビジュアル: 実画面キャプチャがあれば優先、無ければコード内モック */}
+        <div className="relative animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
+          {image ? (
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_60px_rgba(10,15,60,0.16)]">
+              <Image
+                src={image.src}
+                alt={image.alt}
+                width={1600}
+                height={1000}
+                priority
+                sizes="(max-width: 1024px) 100vw, 560px"
+                className="h-auto w-full"
+              />
+            </div>
+          ) : (
+            visual
+          )}
+        </div>
       </div>
     </section>
   )
 }
 
 /** 交互に並ぶ機能ショーケース（左右入れ替え・製品モック付き） */
-export interface ShowcaseRow { icon: string; title: string; desc: string; bullets?: string[]; visual: React.ReactNode }
+export interface ShowcaseRow {
+  icon: string
+  title: string
+  desc: string
+  bullets?: string[]
+  /** コード内モック。image を渡した場合は image を優先する */
+  visual?: React.ReactNode
+  /** 実画面キャプチャ（public/<id>/shots/*.webp） */
+  image?: { src: string; alt: string }
+}
 export function FeatureShowcase({ eyebrow = 'FEATURES', title, lead, rows }: { eyebrow?: string; title: React.ReactNode; lead?: string; rows: ShowcaseRow[] }) {
   return (
     <section className="relative py-20 md:py-28">
@@ -115,7 +147,20 @@ export function FeatureShowcase({ eyebrow = 'FEATURES', title, lead, rows }: { e
                 )}
               </div>
               {/* 製品モック */}
-              <div className={i % 2 === 1 ? 'md:order-1' : ''}>{r.visual}</div>
+              <div className={i % 2 === 1 ? 'md:order-1' : ''}>
+                {r.image ? (
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_48px_rgba(10,15,60,0.14)]">
+                    <Image
+                      src={r.image.src}
+                      alt={r.image.alt}
+                      width={1280}
+                      height={800}
+                      sizes="(max-width: 768px) 100vw, 560px"
+                      className="h-auto w-full"
+                    />
+                  </div>
+                ) : r.visual}
+              </div>
             </div>
           ))}
         </div>

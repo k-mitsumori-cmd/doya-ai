@@ -49,6 +49,7 @@ export default function BannerLandingPage() {
         ctaLabel="無料で作る"
         subCtaHref="/banner/pricing"
         subCtaLabel="料金を見る"
+        image={{ src: '/banner/hero.webp', alt: 'ドヤバナーAIのバリエーション生成画面' }}
         visual={<MockWindow title="doya-ai.surisuta.jp/banner"><BannerVariantsMock /></MockWindow>}
       />
       <HowItWorks title={<>選ぶ・生成・書き出しの<br className="md:hidden" />3ステップ</>} lead="テンプレートを選んでAIにまかせるだけ。" steps={STEPS} />

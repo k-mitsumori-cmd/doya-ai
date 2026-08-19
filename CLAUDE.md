@@ -316,7 +316,8 @@ src/lib/{service}/           — ユーティリティ・ビジネスロジッ�
 ## ブランドUI規約
 
 - **カラー**: ブランドカラーは `#0066ff`（青）。ドヤマーケAIリブランド(2026-06)で青系パレット（アクセント: `#ff1e72` / `#ffd400` / `#00e0ff` / `#009bff`）に統一。旧 `#7f19e6`（紫）は一部の既存サービス内UIに残存（順次置換）
-- **アイコン**: Material Symbols Outlined／**フォント**: Inter + Noto Sans JP
+- **アイコン**: 新規・移行対象は `lucide-react` を正本とし、`src/components/icons.tsx` の共通ラッパー（24×24 / stroke 1.75 / `currentColor`）を使う。既存LPキット内の Material Symbols は互換維持のため凍結し、新規追加しない。Lucide に意味が無い場合のみカスタムSVG可。絵文字をUIアイコンとして使わない
+- **フォント**: Inter + Noto Sans JP
 - **日本語UI**: ユーザー向けテキストは日本語で記述
 - **画像生成の禁止事項**: Nano Banana 無印（Pro なし）/ Imagen / Gemini 2.x 画像系は使用禁止（必ず上記の統一ディスパッチャ経由）
 

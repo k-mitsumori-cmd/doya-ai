@@ -19,6 +19,7 @@ import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, 
 import { DashboardLayout } from '@/components/DashboardLayout' // New import
 import { FeatureGuide } from '@/components/FeatureGuide'
 import { CheckoutButton } from '@/components/CheckoutButton'
+import { UiIcon, type UiIconName } from '@/components/icons'
 // AIバナーコーチ機能は廃止
 
 // ========================================
@@ -26,63 +27,63 @@ import { CheckoutButton } from '@/components/CheckoutButton'
 // ========================================
 const CATEGORIES = [
   { 
-    value: 'telecom', label: '通信', icon: '📱', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '✓ スマホを持つ手元をメインビジュアルに\n✓ 月額料金・割引額を大きく目立たせる\n✓ 「乗り換え0円」等の数字訴求を配置\n✓ 今すぐ申し込めるCTAボタンを強調',
+    value: 'telecom', label: '通信', icon: 'phone', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
+    description: '・スマホを持つ手元をメインビジュアルに\n・月額料金・割引額を大きく目立たせる\n・「乗り換え0円」等の数字訴求を配置\n・今すぐ申し込めるCTAボタンを強調',
     sample: '/banner-samples/cat-telecom.svg'
   },
   { 
-    value: 'marketing', label: 'マーケ', icon: '📊', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '✓ プロフェッショナルな人物写真を使用\n✓ 実績グラフ・数値データを見せる\n✓ 「導入○○社」等の権威性を強調\n✓ B2B向けの信頼感あるトーン',
+    value: 'marketing', label: 'マーケ', icon: 'chart', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
+    description: '・プロフェッショナルな人物写真を使用\n・実績グラフ・数値データを見せる\n・「導入○○社」等の権威性を強調\n・B2B向けの信頼感あるトーン',
     sample: '/banner-samples/cat-marketing.svg'
   },
   { 
-    value: 'ec', label: 'EC', icon: '🛒', color: '#F97316', bg: 'from-orange-500/10 to-orange-600/10',
-    description: '✓ 商品の質感・細部を大胆にアップ\n✓ セールバッジ・期間限定の赤を効かせる\n✓ 「本日限り」等の緊急性を訴求\n✓ 衝動買いを誘発する配色',
+    value: 'ec', label: 'EC', icon: 'cart', color: '#F97316', bg: 'from-orange-500/10 to-orange-600/10',
+    description: '・商品の質感・細部を大胆にアップ\n・セールバッジ・期間限定の赤を効かせる\n・「本日限り」等の緊急性を訴求\n・衝動買いを誘発する配色',
     sample: '/banner-samples/cat-ec.svg'
   },
   { 
-    value: 'recruit', label: '採用', icon: '👥', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '✓ 笑顔のチームメンバー写真を使用\n✓ 職場の雰囲気が伝わる背景\n✓ 「働きやすさ」を視覚的に表現\n✓ 共感と期待感を高めるコピー',
+    value: 'recruit', label: '採用', icon: 'users', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
+    description: '・笑顔のチームメンバー写真を使用\n・職場の雰囲気が伝わる背景\n・「働きやすさ」を視覚的に表現\n・共感と期待感を高めるコピー',
     sample: '/banner-samples/cat-recruit.svg'
   },
   { 
-    value: 'beauty', label: '美容', icon: '💄', color: '#FBBF24', bg: 'from-amber-400/10 to-amber-500/10',
-    description: '✓ 透明感のある人物アップショット\n✓ 洗練された余白で高級感を演出\n✓ ビフォーアフターを効果的に配置\n✓ 「自分磨き」意欲を刺激するコピー',
+    value: 'beauty', label: '美容', icon: 'sparkle', color: '#FBBF24', bg: 'from-amber-400/10 to-amber-500/10',
+    description: '・透明感のある人物アップショット\n・洗練された余白で高級感を演出\n・ビフォーアフターを効果的に配置\n・「自分磨き」意欲を刺激するコピー',
     sample: '/banner-samples/cat-beauty.svg'
   },
   { 
-    value: 'food', label: '飲食', icon: '🍽️', color: '#F97316', bg: 'from-orange-500/10 to-orange-600/10',
-    description: '✓ 料理の接写で「シズル感」を最大化\n✓ 暖色背景で食欲を刺激\n✓ 湯気・ツヤ等のリアルな質感\n✓ 予約・注文への導線を明確に',
+    value: 'food', label: '飲食', icon: 'food', color: '#F97316', bg: 'from-orange-500/10 to-orange-600/10',
+    description: '・料理の接写で「シズル感」を最大化\n・暖色背景で食欲を刺激\n・湯気・ツヤ等のリアルな質感\n・予約・注文への導線を明確に',
     sample: '/banner-samples/cat-food.svg'
   },
   { 
-    value: 'realestate', label: '不動産', icon: '🏠', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '✓ 開放感のある内装・外観写真\n✓ 落ち着いた青系トーンで誠実さを演出\n✓ 「理想の暮らし」をビジュアル化\n✓ 相談・問い合わせへの安心感',
+    value: 'realestate', label: '不動産', icon: 'home', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
+    description: '・開放感のある内装・外観写真\n・落ち着いた青系トーンで誠実さを演出\n・「理想の暮らし」をビジュアル化\n・相談・問い合わせへの安心感',
     sample: '/banner-samples/cat-realestate.svg'
   },
   { 
-    value: 'education', label: '教育', icon: '📚', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '✓ 真剣に学ぶ姿・明るい光の演出\n✓ 習得スキルをステップ形式で提示\n✓ 「未来への自己投資」感を醸成\n✓ 申し込みハードルを下げるコピー',
+    value: 'education', label: '教育', icon: 'book', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
+    description: '・真剣に学ぶ姿・明るい光の演出\n・習得スキルをステップ形式で提示\n・「未来への自己投資」感を醸成\n・申し込みハードルを下げるコピー',
     sample: '/banner-samples/cat-education.svg'
   },
   { 
-    value: 'finance', label: '金融', icon: '💰', color: '#FBBF24', bg: 'from-amber-400/10 to-amber-500/10',
-    description: '✓ スマホアプリの操作画面イメージ\n✓ 資産増をイメージさせるアイコン\n✓ ダークネイビー×ゴールドの高級感\n✓ 信頼・安心・専門性を強調',
+    value: 'finance', label: '金融', icon: 'finance', color: '#FBBF24', bg: 'from-amber-400/10 to-amber-500/10',
+    description: '・スマホアプリの操作画面イメージ\n・資産増をイメージさせるアイコン\n・ダークネイビー×ゴールドの高級感\n・信頼・安心・専門性を強調',
     sample: '/banner-samples/cat-finance.svg'
   },
   { 
-    value: 'health', label: '医療', icon: '🏥', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '✓ 専門家の優しい表情を見せる\n✓ 清潔感のある青系グラデーション\n✓ 機能性・安全性を視覚的に表現\n✓ 健康課題の解決を具体的に訴求',
+    value: 'health', label: '医療', icon: 'health', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
+    description: '・専門家の優しい表情を見せる\n・清潔感のある青系グラデーション\n・機能性・安全性を視覚的に表現\n・健康課題の解決を具体的に訴求',
     sample: '/banner-samples/cat-health.svg'
   },
   { 
-    value: 'it', label: 'IT', icon: '💻', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '✓ サーバー・ネットワークの抽象光\n✓ デジタル感あるクールなトーン\n✓ 最新技術・スピード感を演出\n✓ 課題解決・効率化を数値で訴求',
+    value: 'it', label: 'IT', icon: 'laptop', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
+    description: '・サーバー・ネットワークの抽象光\n・デジタル感あるクールなトーン\n・最新技術・スピード感を演出\n・課題解決・効率化を数値で訴求',
     sample: '/banner-samples/cat-it.svg'
   },
   { 
-    value: 'other', label: 'その他', icon: '✨', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
-    description: '✓ シンプルで汎用性の高いレイアウト\n✓ どんなコピーも映える余白設計\n✓ 引き算の美学でメッセージを際立たせる\n✓ 業種を問わないモダンなデザイン',
+    value: 'other', label: 'その他', icon: 'sparkle', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
+    description: '・シンプルで汎用性の高いレイアウト\n・どんなコピーも映える余白設計\n・引き算の美学でメッセージを際立たせる\n・業種を問わないモダンなデザイン',
     sample: '/banner-samples/cat-other.svg'
   },
 ]
@@ -443,7 +444,7 @@ const BANNER_INSIGHTS: Record<string, {
         '価値提案を強調したコピー配置',
       ],
       color: 'from-blue-600 to-blue-700',
-      icon: '💡',
+      icon: 'idea',
     },
     {
       type: 'B',
@@ -454,7 +455,7 @@ const BANNER_INSIGHTS: Record<string, {
         '行動を促すダイナミックな構成',
       ],
       color: 'from-orange-500 to-amber-500',
-      icon: '⚡',
+      icon: 'energy',
     },
     {
       type: 'C',
@@ -465,7 +466,7 @@ const BANNER_INSIGHTS: Record<string, {
         '安心感を与えるグリッドレイアウト',
       ],
       color: 'from-slate-700 to-slate-800',
-      icon: '🏆',
+      icon: 'trophy',
     },
   ],
   youtube: [
@@ -478,7 +479,7 @@ const BANNER_INSIGHTS: Record<string, {
         '視線を集める太字ハイライト',
       ],
       color: 'from-blue-700 to-slate-900',
-      icon: '😱',
+      icon: 'sparkle',
     },
     {
       type: 'B',
@@ -489,7 +490,7 @@ const BANNER_INSIGHTS: Record<string, {
         'ドヤバナーブルーの信頼感カラー',
       ],
       color: 'from-blue-600 to-blue-800',
-      icon: '📚',
+      icon: 'book',
     },
     {
       type: 'C',
@@ -500,34 +501,34 @@ const BANNER_INSIGHTS: Record<string, {
         '暖かみのあるオレンジアクセント',
       ],
       color: 'from-orange-500 to-amber-600',
-      icon: '📖',
+      icon: 'book',
     },
   ],
 }
 
 const GENERATION_PHASES = [
-  { label: 'AIが分析中...', icon: '🔍', subtext: 'キーワードとカテゴリを解析' },
-  { label: 'デザイン設計中...', icon: '📐', subtext: 'レイアウトを最適化' },
-  { label: 'A案を生成中', icon: '🎨', subtext: 'ベネフィット訴求デザイン' },
-  { label: 'B案を生成中', icon: '⚡', subtext: '緊急性・限定訴求デザイン' },
-  { label: 'C案を生成中', icon: '🏆', subtext: '信頼性・実績訴求デザイン' },
-  { label: '最終調整中...', icon: '✨', subtext: 'クオリティチェック' },
+  { label: 'AIが分析中...', icon: 'search', subtext: 'キーワードとカテゴリを解析' },
+  { label: 'デザイン設計中...', icon: 'wand', subtext: 'レイアウトを最適化' },
+  { label: 'A案を生成中', icon: 'palette', subtext: 'ベネフィット訴求デザイン' },
+  { label: 'B案を生成中', icon: 'energy', subtext: '緊急性・限定訴求デザイン' },
+  { label: 'C案を生成中', icon: 'trophy', subtext: '信頼性・実績訴求デザイン' },
+  { label: '最終調整中...', icon: 'sparkle', subtext: 'クオリティチェック' },
 ]
 
 // 生成中に表示するTips
 const GENERATION_TIPS = [
-  { icon: '💡', text: 'A/B/Cの3案を比較して、最もパフォーマンスの良いバナーを選びましょう' },
-  { icon: '🎯', text: 'CTAボタンの色や文言を変えると、クリック率が大きく変わります' },
-  { icon: '📊', text: '同じキーワードでも、訴求タイプによって反応が異なります' },
-  { icon: '🔥', text: '緊急性のある文言は、即座のアクションを促します' },
-  { icon: '⭐', text: '実績や数字を入れると、信頼性がアップします' },
-  { icon: '🎨', text: 'バナーの色は、ターゲット層によって最適なものが変わります' },
-  { icon: '📱', text: 'モバイルでの見え方も確認しましょう' },
-  { icon: '🚀', text: '生成されたバナーは、さらに修正指示で調整できます' },
+  { icon: 'idea', text: 'A/B/Cの3案を比較して、最もパフォーマンスの良いバナーを選びましょう' },
+  { icon: 'target', text: 'CTAボタンの色や文言を変えると、クリック率が大きく変わります' },
+  { icon: 'chart', text: '同じキーワードでも、訴求タイプによって反応が異なります' },
+  { icon: 'energy', text: '緊急性のある文言は、即座のアクションを促します' },
+  { icon: 'trophy', text: '実績や数字を入れると、信頼性がアップします' },
+  { icon: 'palette', text: 'バナーの色は、ターゲット層によって最適なものが変わります' },
+  { icon: 'phone', text: 'モバイルでの見え方も確認しましょう' },
+  { icon: 'rocket', text: '生成されたバナーは、さらに修正指示で調整できます' },
 ]
 
 // 生成中のアニメーション用アイコン
-const FLOATING_ICONS = ['🎨', '✨', '🚀', '💫', '🌟', '💎', '🎯', '⚡']
+const FLOATING_ICONS: UiIconName[] = ['palette', 'sparkle', 'rocket', 'wand', 'trophy', 'done', 'target', 'energy']
 
 // 生成時間の統計（ローカル保存）→ 予測時間表示に使用
 type GenStats = {
@@ -542,11 +543,11 @@ const DEFAULT_PREDICT_MS = 55_000
 // 修正（チャット編集）中の“飽きさせない”演出
 // ==============================
 const REFINE_TIPS = [
-  { icon: '🧩', text: 'レイアウトを崩さずに、意図した変更だけを反映しています' },
-  { icon: '🔎', text: '文字の可読性（太さ/コントラスト/背景パネル）を再最適化しています' },
-  { icon: '📏', text: '上下の余白ゼロ・文字のはみ出し防止をチェックしています' },
-  { icon: '🎯', text: 'CTAが“押せそう”に見えるように、立体感と色差を調整しています' },
-  { icon: '🧼', text: '余計な要素を減らして、視線誘導を強くしています' },
+  { icon: 'wand', text: 'レイアウトを崩さずに、意図した変更だけを反映しています' },
+  { icon: 'search', text: '文字の可読性（太さ/コントラスト/背景パネル）を再最適化しています' },
+  { icon: 'check', text: '上下の余白ゼロ・文字のはみ出し防止をチェックしています' },
+  { icon: 'target', text: 'CTAが“押せそう”に見えるように、立体感と色差を調整しています' },
+  { icon: 'sparkle', text: '余計な要素を減らして、視線誘導を強くしています' },
 ]
 
 const REFINE_PHASES = [
@@ -1267,7 +1268,7 @@ export default function BannerDashboard() {
         setImageDescription(s.imageDescription)
       }
       const label = CATEGORIES.find((c) => c.value === category)?.label || category
-      toast.success(`サンプルを切り替えました（${label}×${PURPOSES.find(p => p.value === purpose)?.label || purpose} / ${next + 1}/${pool.length}）`, { icon: '🔁' })
+      toast.success(`サンプルを切り替えました（${label}×${PURPOSES.find(p => p.value === purpose)?.label || purpose} / ${next + 1}/${pool.length}）`)
       return
     }
 
@@ -1283,7 +1284,7 @@ export default function BannerDashboard() {
     setSize(s.size)
     setKeyword(s.keyword)
     setImageDescription(s.imageDescription)
-    toast.success(`サンプルを切り替えました（${next + 1}/${pool.length}）`, { icon: '🔁' })
+    toast.success(`サンプルを切り替えました（${next + 1}/${pool.length}）`)
   }
 
   const handleGenerate = async () => {
@@ -1416,11 +1417,11 @@ export default function BannerDashboard() {
       if (data.error) {
         setError(data.error)
         toast.error('一部のバナー生成に失敗しました', { 
-          icon: '⚠️',
+          icon: <UiIcon name="warning" size={18} />,
           duration: 5000,
         })
       } else {
-        toast.success('バナーが完成しました！', { icon: '🎉' })
+        toast.success('バナーが完成しました！')
       }
     } catch (err: any) {
       if (err?.name === 'AbortError') {
@@ -1428,7 +1429,7 @@ export default function BannerDashboard() {
         toast.error('タイムアウト：サーバが混雑している可能性があります', { duration: 6000 })
       } else {
         setError(err.message)
-        toast.error('生成に失敗しました', { icon: '❌', duration: 5000 })
+        toast.error('生成に失敗しました', { duration: 5000 })
       }
     } finally {
       setIsGenerating(false)
@@ -1494,7 +1495,7 @@ export default function BannerDashboard() {
       setGeneratedBanners(newBanners)
       
       setRefineInstruction('')
-      toast.success('バナーを修正しました！', { icon: '✨' })
+      toast.success('バナーを修正しました！')
 
       // 修正時間を保存（次回以降の予測に使用）
       const actualMs = Date.now() - startedAt
@@ -1715,7 +1716,7 @@ export default function BannerDashboard() {
                             : 'bg-slate-50 text-slate-500 hover:bg-white hover:text-blue-600 hover:shadow-lg border border-transparent hover:border-blue-100'
                         }`}
                       >
-                        <span className={`text-2xl block mb-1 transition-transform group-hover/btn:scale-110 ${isSelected ? 'scale-110' : ''}`}>{cat.icon}</span>
+                        <UiIcon name={cat.icon as UiIconName} size={24} className={`mx-auto mb-1 transition-transform group-hover/btn:scale-110 ${isSelected ? 'scale-110' : ''}`} />
                         <span className="text-[10px] font-black block truncate uppercase tracking-tighter">{cat.label}</span>
                       </button>
                     )
@@ -1926,17 +1927,17 @@ export default function BannerDashboard() {
                   />
                   <div className="flex flex-wrap gap-2 mt-4">
                     {[
-                      { text: '笑顔の人物', icon: '😊' },
-                      { text: 'モダンなオフィス', icon: '🏢' },
-                      { text: 'スマホを操作', icon: '📱' },
-                      { text: '未来的・デジタル', icon: '✨' },
+                      { text: '笑顔の人物', icon: 'user' },
+                      { text: 'モダンなオフィス', icon: 'building' },
+                      { text: 'スマホを操作', icon: 'phone' },
+                      { text: '未来的・デジタル', icon: 'sparkle' },
                     ].map((tag) => (
                       <button
                         key={tag.text}
                         onClick={() => setImageDescription(prev => prev ? `${prev}、${tag.text}` : tag.text)}
                         className="px-4 py-2 bg-white hover:bg-blue-50 text-slate-500 hover:text-blue-600 text-[10px] font-black rounded-xl transition-all border border-slate-200 hover:border-blue-200 shadow-sm flex items-center gap-1.5"
                       >
-                        <span>{tag.icon}</span>
+                        <UiIcon name={tag.icon as UiIconName} size={15} />
                         <span>{tag.text}</span>
                       </button>
                     ))}
@@ -2013,7 +2014,7 @@ export default function BannerDashboard() {
                               }
                               setCustomColors((prev) => uniqStrings([...prev, hex]).slice(0, 8))
                               setColorDraft(hex)
-                              toast.success('カラーを追加しました', { icon: '🎨' })
+                              toast.success('カラーを追加しました')
                             }}
                             className="px-4 py-3 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800"
                           >
@@ -2028,7 +2029,7 @@ export default function BannerDashboard() {
                                 return
                               }
                               setCustomColors((prev) => uniqStrings([...prev, hex]).slice(0, 8))
-                              toast.success('カテゴリ色を追加しました', { icon: '➕' })
+                              toast.success('カテゴリ色を追加しました')
                             }}
                             className="px-4 py-3 rounded-xl bg-white text-gray-700 font-bold hover:bg-gray-100 border border-gray-200"
                           >
@@ -2437,16 +2438,16 @@ export default function BannerDashboard() {
                               {usedModelDisplay ? (
                                 usedModelDisplay.toLowerCase().includes('nano banana') ? (
                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 rounded-full text-[10px] font-bold text-white shadow-lg animate-pulse">
-                                    <span className="text-[12px]">🍌</span> {usedModelDisplay}
+                                    {usedModelDisplay}
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full text-[10px] font-bold text-white shadow-lg">
-                                    <span className="text-[12px]">🤖</span> {usedModelDisplay}
+                                    {usedModelDisplay}
                                   </span>
                                 )
                               ) : (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-gray-500 to-gray-600 rounded-full text-[10px] font-bold text-white shadow-lg">
-                                  <span className="text-[12px]">🤖</span> AI生成
+                                  AI生成
                                 </span>
                               )}
                             </div>
@@ -2477,7 +2478,7 @@ export default function BannerDashboard() {
                               {/* 画像の切り替え時にぱちぱちしないようトランジション追加 */}
                               <img src={banner} alt={`Banner ${i + 1}`} className="w-full h-full object-cover transition-opacity duration-200" />
                               <div className="absolute top-2 left-2 px-2 py-1 bg-white/90 backdrop-blur-md rounded-lg shadow-sm border border-slate-100 flex items-center gap-1.5">
-                                <span className="text-xs">{insight.icon}</span>
+                                <UiIcon name={insight.icon as UiIconName} size={14} />
                                 <span className="text-[9px] font-black text-slate-800 uppercase tracking-tighter">{badge}</span>
                               </div>
                               <div className="absolute inset-0 bg-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -2509,7 +2510,7 @@ export default function BannerDashboard() {
                                 
                                 <div className="relative">
                                   <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
-                                    <span className="text-xl sm:text-2xl">{insight.icon}</span>
+                                    <UiIcon name={insight.icon as UiIconName} size={24} />
                                     <div>
                                       <div className="flex items-center gap-2">
                                         <span className="px-2 py-0.5 bg-white/30 rounded text-[10px] sm:text-xs font-bold text-white">
@@ -2523,7 +2524,7 @@ export default function BannerDashboard() {
                                   </div>
                                   
                                   <h4 className="font-bold text-white text-xs sm:text-sm mb-2">
-                                    💡 このバナーの工夫点
+                                    このバナーの工夫点
                                   </h4>
                                   <ul className="space-y-1.5 sm:space-y-2">
                                     {insight.features.map((feature, idx) => (
@@ -2549,11 +2550,11 @@ export default function BannerDashboard() {
                               {usedModelDisplay ? (
                                 usedModelDisplay.toLowerCase().includes('nano banana') ? (
                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-400 via-orange-400 to-pink-500 rounded-full text-[9px] font-bold text-white shadow">
-                                    <span className="text-[11px]">🍌</span> {usedModelDisplay}
+                                    {usedModelDisplay}
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full text-[9px] font-bold text-white shadow">
-                                    <span className="text-[11px]">🤖</span> {usedModelDisplay}
+                                    {usedModelDisplay}
                                   </span>
                                 )
                               ) : null}
@@ -2737,7 +2738,7 @@ export default function BannerDashboard() {
                                 </div>
 
                                 <div className="mt-3 flex items-center gap-2 text-[12px] font-semibold text-slate-700">
-                                  <span className="text-base leading-none">{REFINE_TIPS[refineTipIndex]?.icon}</span>
+                                  <UiIcon name={REFINE_TIPS[refineTipIndex]?.icon as UiIconName} size={18} />
                                   <span>{REFINE_TIPS[refineTipIndex]?.text}</span>
                                   <span className="ml-auto text-[11px] text-slate-500 font-semibold">
                                     経過 {refineElapsedSec}秒
@@ -2793,7 +2794,7 @@ export default function BannerDashboard() {
               <Link href="/tokushoho" className="hover:text-gray-900 transition-colors">特定商取引法</Link>
             </div>
             <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
-              © 2025 ドヤバナーAI. All rights reserved.
+              (c) 2025 ドヤバナーAI. All rights reserved.
             </p>
           </div>
         </div>
@@ -2836,7 +2837,7 @@ export default function BannerDashboard() {
                   animate={{ y: [0, -14, 0], rotate: [0, 8, 0], opacity: [0.18, 0.38, 0.18] }}
                   transition={{ duration: 4 + (idx % 3), repeat: Infinity, ease: 'easeInOut' }}
                 >
-                  {ic}
+                  <UiIcon name={ic} size={28} />
                 </motion.div>
               ))}
             </div>
@@ -2857,7 +2858,7 @@ export default function BannerDashboard() {
                   <div>
                     <div className="text-sm text-gray-500 font-semibold">生成中</div>
                     <div className="text-lg sm:text-xl font-black text-gray-900">
-                      {GENERATION_PHASES[phaseIndex].icon} {GENERATION_PHASES[phaseIndex].label}
+                      <span className="inline-flex items-center gap-2"><UiIcon name={GENERATION_PHASES[phaseIndex].icon as UiIconName} size={21} />{GENERATION_PHASES[phaseIndex].label}</span>
                     </div>
                   </div>
                 </div>
@@ -2898,7 +2899,7 @@ export default function BannerDashboard() {
                   className="mt-5 rounded-2xl bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200/70 p-4"
                 >
                   <div className="text-sm font-bold text-blue-800 flex items-start gap-2">
-                    <span className="text-lg leading-none">{GENERATION_TIPS[tipIndex].icon}</span>
+                    <UiIcon name={GENERATION_TIPS[tipIndex].icon as UiIconName} size={20} />
                     <span>{GENERATION_TIPS[tipIndex].text}</span>
                   </div>
                 </motion.div>

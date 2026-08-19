@@ -60,6 +60,7 @@ export default function QuoteLp() {
         ctaLabel="無料ではじめる"
         subCtaHref="/quote/pricing"
         subCtaLabel="料金を見る"
+        image={{ src: '/quote/hero.webp', alt: 'ドヤ見積もりAIの見積書編集画面' }}
         visual={<MockWindow title="ドヤ見積もりAI"><QuoteLinesMock /></MockWindow>}
       />
 

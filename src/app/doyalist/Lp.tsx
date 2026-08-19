@@ -5,13 +5,18 @@
 //    実績数値（導入社数・継続率・No.1）は持っていないので書かない。
 // ⚠️ ヒーローのCTAは2個まで。
 import {
-  LpShell, ProductHero, MockWindow, HowItWorks, Benefits, UseCases, FaqSection, CtaBand,
+  LpShell, ProductHero, MockWindow, FeatureShowcase, HowItWorks, Benefits, UseCases, FaqSection, CtaBand, type ShowcaseRow,
 } from '@/components/lp'
 import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
-import { ServiceFeatureMock } from '@/components/lp/ServiceFeatureMock'
+import { DoyalistFilterMock, DoyalistTableMock, DoyalistMessageMock } from './mocks'
 
 const SVC = getServiceById('doyalist')!
+const ROWS: ShowcaseRow[] = [
+  { icon: 'tune', title: '狙う条件を決める', desc: '業種、地域、規模、キーワードから必要な企業像を指定します。', visual: <MockWindow title="検索条件"><DoyalistFilterMock /></MockWindow> },
+  { icon: 'list_alt', title: '出所のある企業情報', desc: '法人情報をもとに候補を整理し、URLがない場合は推測せず明示します。', visual: <MockWindow title="候補企業"><DoyalistTableMock /></MockWindow> },
+  { icon: 'mail', title: '企業別の文面まで', desc: 'リストの相手ごとに、メール・フォーム・電話の叩き台を作ります。', visual: <MockWindow title="営業文面"><DoyalistMessageMock /></MockWindow> },
+]
 
 export default function DoyalistLp() {
   return (
@@ -26,10 +31,13 @@ export default function DoyalistLp() {
         ctaLabel="無料ではじめる"
         subCtaHref="/doyalist/pricing"
         subCtaLabel="料金を見る"
-        visual={<MockWindow title={SVC.name}><ServiceFeatureMock features={SVC.features} /></MockWindow>}
+        image={{ src: '/doyalist/hero.webp', alt: 'ドヤリストの企業候補一覧画面' }}
+        visual={<MockWindow title={SVC.name}><DoyalistTableMock /></MockWindow>}
       />
 
       <UseCases title="こんな場面のためのものです" items={['新規開拓リストを作るのに毎月時間がかかる', 'フォーム営業の文面を量産したい', '開拓メールの文面を考えるのが負担', '電話スクリプトを毎回考え直している']} />
+
+      <FeatureShowcase title="探すところから、声をかけるところまで" lead="情報の出所を明示し、実行に使える文面までつなぎます。" rows={ROWS} />
 
       <HowItWorks title="3ステップで使えます" steps={STEPS} />
 

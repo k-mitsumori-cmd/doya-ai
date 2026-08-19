@@ -49,6 +49,7 @@ export default function AishodanLp() {
         ctaLabel="無料ではじめる"
         subCtaHref="/aishodan/pricing"
         subCtaLabel="料金を見る"
+        image={{ src: '/aishodan/hero.webp', alt: 'ドヤAI商談の商談進行画面' }}
         visual={<MockWindow title="ドヤAI商談"><AishodanTalkMock /></MockWindow>}
       />
 

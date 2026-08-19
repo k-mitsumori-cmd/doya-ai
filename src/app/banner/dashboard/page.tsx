@@ -270,13 +270,13 @@ function BannerTestPageInner() {
   const [loadingProgress, setLoadingProgress] = useState(0)
 
   const LOADING_TIPS = useMemo(() => [
-    { emoji: '🎨', text: 'プロデザイナー品質のテンプレートを準備中...' },
-    { emoji: '✨', text: 'テンプレートは定期的に新作が追加されます' },
-    { emoji: '🚀', text: 'AIが30秒でバナーを自動生成します' },
-    { emoji: '📐', text: '正方形・横長・縦長・ストーリーなど5サイズ対応' },
-    { emoji: '🎯', text: '12ジャンルのテンプレートから好みのスタイルを選択' },
-    { emoji: '💡', text: 'テンプレートを選んでテキストを入力するだけでOK' },
-    { emoji: '🔄', text: '気に入らなければワンクリックで再生成できます' },
+    { text: 'プロデザイナー品質のテンプレートを準備中...' },
+    { text: 'テンプレートは定期的に新作が追加されます' },
+    { text: 'AIが30秒でバナーを自動生成します' },
+    { text: '正方形・横長・縦長・ストーリーなど5サイズ対応' },
+    { text: '12ジャンルのテンプレートから好みのスタイルを選択' },
+    { text: 'テンプレートを選んでテキストを入力するだけでOK' },
+    { text: '気に入らなければワンクリックで再生成できます' },
   ], [])
 
   // ローディングTIPSのローテーション & プログレスバー（高速化）
@@ -1433,8 +1433,8 @@ function BannerTestPageInner() {
         {isTrialActive && (
           <div className="fixed top-12 md:top-0 left-0 md:left-[240px] right-0 z-40 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white py-2 px-3 sm:px-4 flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium shadow-lg">
             <Sparkles className="w-4 h-4 animate-pulse flex-shrink-0" />
-            <span className="hidden sm:inline">🎉 全機能無料トライアル中！</span>
-            <span className="sm:hidden">🎉 トライアル中</span>
+            <span className="hidden sm:inline">全機能無料トライアル中！</span>
+            <span className="sm:hidden">トライアル中</span>
             <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0">
               残り {trialRemainingMinutes}分
             </span>
@@ -1763,7 +1763,7 @@ function BannerTestPageInner() {
                 {[1, 2, 3].map((section) => (
                   <div key={section}>
                     <div className="flex items-center gap-1.5 px-1 sm:px-2 py-1.5">
-                      <span className="text-blue-400 text-xs">▶</span>
+                      <ChevronRight className="h-3 w-3 text-blue-400" />
                       <div className="h-3.5 w-24 bg-gray-700/40 rounded animate-pulse" style={{ animationDelay: `${section * 150}ms` }} />
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
@@ -1788,7 +1788,7 @@ function BannerTestPageInner() {
                 return (
                   <div key={categoryName} className="mb-3">
                     <h3 className="text-xs sm:text-sm font-bold text-gray-400 px-1 sm:px-2 py-1.5 flex items-center gap-1.5">
-                      <span className="text-blue-400">▶</span> {categoryName}
+                      <ChevronRight className="h-4 w-4 text-blue-400" /> {categoryName}
                       <span className="text-gray-600 text-[10px]">({categoryTemplates.length})</span>
                       {isFetchingAll && (
                         <Loader2 className="w-3 h-3 animate-spin text-blue-400/50 ml-1" />
@@ -2164,7 +2164,7 @@ function BannerTestPageInner() {
                     </div>
                     {/* 注釈 */}
                     <p className="text-[9px] sm:text-[10px] text-yellow-500/80 mt-2 text-center">
-                      ⚠️ AIの仕様により、選択したサイズと異なるサイズで生成される場合があります。ご了承ください。
+                      AIの仕様により、選択したサイズと異なるサイズで生成される場合があります。ご了承ください。
                     </p>
                   </div>
                   
@@ -2224,7 +2224,7 @@ function BannerTestPageInner() {
                     <div className="p-3 sm:p-4 bg-gradient-to-r from-purple-900/50 to-pink-900/50 rounded-lg sm:rounded-xl border border-purple-500/50">
                       <div className="flex items-center gap-2 mb-2">
                         <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" />
-                        <span className="text-xs sm:text-sm font-bold text-purple-300">🎉 無料トライアル中</span>
+                        <span className="text-xs sm:text-sm font-bold text-purple-300">無料トライアル中</span>
                         <span className="ml-auto bg-purple-600 px-2 py-0.5 rounded-full text-[10px] font-bold text-white">
                           残り {trialRemainingMinutes}分
                         </span>
@@ -2233,9 +2233,9 @@ function BannerTestPageInner() {
                         全機能（エンタープライズ含む）が無料でお試しいただけます！
                       </p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
-                        <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 全画像解放</span>
-                        <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 月1000枚生成</span>
-                        <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 詳細指示</span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200"><Check className="h-3 w-3" />全画像解放</span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200"><Check className="h-3 w-3" />月1000枚生成</span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200"><Check className="h-3 w-3" />詳細指示</span>
                       </div>
                     </div>
                   )}
@@ -2454,7 +2454,7 @@ function BannerTestPageInner() {
                         </div>
                         <div className="bg-purple-900/30 rounded-lg p-3 border border-purple-700/50">
                           <p className="text-[10px] text-purple-300">
-                            💡 ヒント：「背景を〇〇に」「文字の色を〇〇に」「〇〇を追加」などの指示が効果的です
+                            ヒント：「背景を〇〇に」「文字の色を〇〇に」「〇〇を追加」などの指示が効果的です
                           </p>
                         </div>
                       </div>
@@ -2506,7 +2506,7 @@ function BannerTestPageInner() {
                         {/* ヒント */}
                         <div className="mt-2 p-3 bg-gray-800/50 rounded-lg max-w-sm">
                           <p className="text-xs text-gray-400 text-center">
-                            💡 AIが選択したスタイルを分析し、テキストを反映したバナーを生成しています
+                            AIが選択したスタイルを分析し、テキストを反映したバナーを生成しています
                           </p>
                         </div>
                       </div>
@@ -2550,7 +2550,7 @@ function BannerTestPageInner() {
                   </div>
                   <div>
                     <h2 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold text-white">
-                      🎉 生成完了！
+                      生成完了！
                     </h2>
                     <p className="text-sm text-gray-400">{generatedBanners.length}枚のバナーが生成されました</p>
                   </div>
@@ -2790,7 +2790,7 @@ function BannerTestPageInner() {
         )}
       </AnimatePresence>
 
-      {/* 🎨 生成中モーダル */}
+      {/* 生成中モーダル */}
       <AnimatePresence>
         {showGenerationModal && selectedTemplate && (
           <motion.div
@@ -2855,7 +2855,7 @@ function BannerTestPageInner() {
                       </div>
                     </motion.div>
                     <h2 className="text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white mb-1">
-                      🎨 バナーを生成中...
+                      バナーを生成中...
                     </h2>
                     <motion.p 
                       key={loadingMessage}
@@ -2972,7 +2972,7 @@ function BannerTestPageInner() {
                   {/* 生成中のヒント */}
                   <div className="mt-2 sm:mt-3 md:mt-4 text-center">
                     <p className="text-white/50 text-[9px] sm:text-[10px] md:text-xs px-1">
-                      ✨ AIがバナーを生成中...
+                      AIがバナーを生成中...
                       {customPrompt && '（カスタム指示適用中）'}
                     </p>
                   </div>
@@ -3026,7 +3026,7 @@ function BannerTestPageInner() {
                     transition={{ delay: 0.3 }}
                     className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-2 sm:mb-3"
                   >
-                    🎉 生成完了！
+                    生成完了！
                   </motion.h2>
                   <motion.p
                     initial={{ y: 20, opacity: 0 }}
@@ -3117,7 +3117,7 @@ function BannerTestPageInner() {
         )}
       </AnimatePresence>
 
-      {/* 🔒 ロックモーダル */}
+      {/* ロックモーダル */}
       <AnimatePresence>
         {showLockModal && lockedTemplate && (
           <motion.div
@@ -3256,7 +3256,7 @@ function BannerTestPageInner() {
         )}
       </AnimatePresence>
 
-      {/* 🎨 画像修正モーダル（エンタープライズ限定） */}
+      {/* 画像修正モーダル（エンタープライズ限定） */}
       <AnimatePresence>
         {showEditModal && editingBanner && (
           <motion.div
@@ -3423,7 +3423,7 @@ function BannerTestPageInner() {
               <div className="px-4 sm:px-6 pb-4 sm:pb-6">
                 <div className="p-3 bg-purple-900/30 rounded-lg border border-purple-700/50">
                   <p className="text-xs text-purple-300">
-                    💡 ヒント：具体的な指示ほど正確に反映されます。「もっと明るく」より「背景を白に近い明るさに」のように指定してください。
+                    ヒント：具体的な指示ほど正確に反映されます。「もっと明るく」より「背景を白に近い明るさに」のように指定してください。
                   </p>
                 </div>
               </div>
@@ -3432,7 +3432,7 @@ function BannerTestPageInner() {
         )}
       </AnimatePresence>
 
-      {/* 📝 プロンプト閲覧モーダル（エンタープライズ限定） */}
+      {/* プロンプト閲覧モーダル（エンタープライズ限定） */}
       <AnimatePresence>
         {showPromptModal && viewingPromptBanner && (
           <motion.div
@@ -3547,7 +3547,7 @@ function BannerTestPageInner() {
                   
                   {/* プロンプト活用ヒント */}
                   <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-indigo-900/30 rounded-lg border border-indigo-700/50">
-                    <h5 className="text-[10px] sm:text-xs font-bold text-indigo-300 mb-1.5 sm:mb-2">💡 プロンプト活用のヒント</h5>
+                    <h5 className="text-[10px] sm:text-xs font-bold text-indigo-300 mb-1.5 sm:mb-2">プロンプト活用のヒント</h5>
                     <ul className="text-[10px] sm:text-xs text-indigo-200/80 space-y-0.5 sm:space-y-1">
                       <li>• このプロンプトをベースに修正して新しい画像を生成できます</li>
                       <li>• 色やレイアウトの指示を変更して別バリエーションを作成</li>

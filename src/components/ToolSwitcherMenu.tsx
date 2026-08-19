@@ -43,6 +43,11 @@ const SERVICE_LOGO: Record<string, string> = {
   sfa: '/sfa/logo.png',
   shodan: '/shodan/logo.png',
   aio: '/aio/logo.png',
+  // 2026-08-19 追加。実体は public/<service>/logo.png に配置済み（2016×864・各150KB以下）。
+  mensetsu: '/mensetsu/logo.png',
+  quote: '/quote/logo.png',
+  aishodan: '/aishodan/logo.png',
+  adimage: '/adimage/logo.png',
   // ⚠️ ここに足すときは public/<service>/logo.png を先に置くこと。
   //    実体が無いと NextImage が壊れた画像を描き、アイコンにも落ちない
   //    （onError のフォールバックは無い）。adimage は実体が無いまま
@@ -100,7 +105,7 @@ function ServiceVisual({ id, active = false }: { id: string; active?: boolean })
     return (
       <div
         className={`w-full h-20 rounded-xl bg-white flex items-center justify-center overflow-hidden px-3 py-2 ${
-          active ? 'ring-2 ring-[#7f19e6]/40' : 'ring-1 ring-slate-200'
+          active ? 'ring-2 ring-[#0066ff]/40' : 'ring-1 ring-slate-200'
         }`}
       >
         <NextImage
@@ -118,7 +123,7 @@ function ServiceVisual({ id, active = false }: { id: string; active?: boolean })
   return (
     <div
       className={`w-full h-20 rounded-xl bg-gradient-to-br ${mapping.iconBg} flex items-center justify-center ${
-        active ? 'ring-2 ring-[#7f19e6]/40' : ''
+        active ? 'ring-2 ring-[#0066ff]/40' : ''
       }`}
     >
       <Icon className="w-7 h-7 text-white" strokeWidth={2.25} />
@@ -241,7 +246,7 @@ export function ToolSwitcherMenu({ currentService, showLabel, className }: ToolS
             >
               {/* ヘッダー（固定） */}
               <div className="flex items-center gap-2 px-4 pt-3.5 pb-2.5 flex-shrink-0 border-b border-slate-100">
-                <span className="grid place-items-center w-6 h-6 rounded-md bg-gradient-to-br from-[#7f19e6] to-fuchsia-500 text-white">
+                <span className="grid place-items-center w-6 h-6 rounded-md bg-gradient-to-br from-[#0066ff] to-[#009bff] text-white">
                   <LayoutGrid className="w-3.5 h-3.5" />
                 </span>
                 <div className="leading-tight">
@@ -271,14 +276,14 @@ export function ToolSwitcherMenu({ currentService, showLabel, className }: ToolS
                             return (
                               <div
                                 key={service.id}
-                                className="rounded-2xl p-2.5 bg-gradient-to-br from-[#7f19e6]/[0.08] to-fuchsia-500/[0.05] ring-2 ring-[#7f19e6]/30"
+                                className="rounded-2xl p-2.5 bg-gradient-to-br from-[#0066ff]/[0.08] to-[#00e0ff]/[0.05] ring-2 ring-[#0066ff]/30"
                                 role="menuitem"
                                 aria-current="true"
                               >
                                 <ServiceVisual id={service.id} active />
                                 <div className="flex items-center justify-between gap-1.5 px-0.5 pt-2">
                                   <p className="text-[13px] font-black text-slate-900 truncate min-w-0">{service.name}</p>
-                                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#7f19e6] text-white text-[9px] font-black flex-shrink-0">
+                                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#0066ff] text-white text-[9px] font-black flex-shrink-0">
                                     <Check className="w-2.5 h-2.5" strokeWidth={3} />使用中
                                   </span>
                                 </div>

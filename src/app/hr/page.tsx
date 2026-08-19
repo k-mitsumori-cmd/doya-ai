@@ -44,6 +44,7 @@ export default function HrLandingPage() {
         ctaLabel="無料ではじめる"
         subCtaHref="/hr/pricing"
         subCtaLabel="料金を見る"
+        image={{ src: '/hr/hero.webp', alt: 'ドヤHRの従業員管理画面' }}
         visual={<MockWindow title="doya-ai.surisuta.jp/hr"><HrEmployeesMock /></MockWindow>}
       />
       <HowItWorks title={<>登録から評価まで、<br className="md:hidden" />3ステップ</>} lead="Excelやメールでのバラバラ管理を、ひとつのシステムに集約します。" steps={STEPS} />

@@ -5,13 +5,18 @@
 //    実績数値（導入社数・継続率・No.1）は持っていないので書かない。
 // ⚠️ ヒーローのCTAは2個まで。
 import {
-  LpShell, ProductHero, MockWindow, HowItWorks, Benefits, UseCases, FaqSection, CtaBand,
+  LpShell, ProductHero, MockWindow, FeatureShowcase, HowItWorks, Benefits, UseCases, FaqSection, CtaBand, type ShowcaseRow,
 } from '@/components/lp'
 import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
-import { ServiceFeatureMock } from '@/components/lp/ServiceFeatureMock'
+import { SeoBriefMock, SeoOutlineMock, SeoAuditMock } from './mocks'
 
 const SVC = getServiceById('seo')!
+const ROWS: ShowcaseRow[] = [
+  { icon: 'travel_explore', title: '検索意図を先に整理', desc: 'キーワード・読者・参考URLを入力し、記事が答えるべき問いを決めます。', bullets: ['参考URLは要点化して利用', '読者と目的を記事ごとに指定'], visual: <MockWindow title="記事の条件"><SeoBriefMock /></MockWindow> },
+  { icon: 'account_tree', title: '章ごとに筋を通す', desc: '検索意図をもとにアウトラインを組み、章ごとに書き進めます。', bullets: ['見出しごとの役割を明示', '前後の主張を整合性チェック'], visual: <MockWindow title="アウトライン"><SeoOutlineMock /></MockWindow> },
+  { icon: 'fact_check', title: '公開前に自動監査', desc: '重複・根拠・リンクを確認し、修正が必要な箇所を明示します。', bullets: ['根拠が薄い箇所を検出', 'リンク切れも確認'], visual: <MockWindow title="公開前チェック"><SeoAuditMock /></MockWindow> },
+]
 
 export default function SeoLp() {
   return (
@@ -26,10 +31,13 @@ export default function SeoLp() {
         ctaLabel="無料ではじめる"
         subCtaHref="/seo/pricing"
         subCtaLabel="料金を見る"
-        visual={<MockWindow title={SVC.name}><ServiceFeatureMock features={SVC.features} /></MockWindow>}
+        image={{ src: '/seo/hero.webp', alt: 'ドヤ記事作成のアウトライン生成画面' }}
+        visual={<MockWindow title={SVC.name}><SeoOutlineMock /></MockWindow>}
       />
 
       <UseCases title="こんな場面のためのものです" items={['記事の量産にライターのリソースが足りない', '記事の品質が書き手によってばらつく', '長文にすると話の筋が通らなくなる', '参考記事の丸写しになっていないか不安がある']} />
+
+      <FeatureShowcase title="構成から監査まで、ひとつながりに" lead="白紙から書かず、検索意図と根拠を確認しながら積み上げます。" rows={ROWS} />
 
       <HowItWorks title="3ステップで使えます" steps={STEPS} />
 

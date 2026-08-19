@@ -56,6 +56,7 @@ export default function ShodanLp() {
         ctaLabel="無料ではじめる"
         subCtaHref="/shodan/pricing"
         subCtaLabel="料金を見る"
+        image={{ src: '/shodan/hero.webp', alt: 'ドヤ商談準備の企業調査画面' }}
         visual={<MockWindow title="doya-ai.surisuta.jp/shodan"><ShodanResearchMock /></MockWindow>}
       />
       <HowItWorks title={<>URLを入れるだけの<br className="md:hidden" />3ステップ</>} lead="アポ前の調べ物と資料づくりを、そのまま自動化します。" steps={STEPS} />

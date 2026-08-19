@@ -3,13 +3,18 @@
 // ドヤインタビュー ランディングページ（未ログインの方に見せる面）
 // ⚠️ 構成は国内BtoB SaaS LP15本を調べた最頻の型。実績数値は書かない。
 import {
-  LpShell, ProductHero, MockWindow, HowItWorks, Benefits, UseCases, FaqSection, CtaBand,
-  ServiceFeatureMock,
+  LpShell, ProductHero, MockWindow, FeatureShowcase, HowItWorks, Benefits, UseCases, FaqSection, CtaBand, type ShowcaseRow,
 } from '@/components/lp'
 import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
+import { InterviewUploadMock, InterviewTranscriptMock, InterviewArticleMock } from './mocks'
 
 const SVC = getServiceById('interview')!
+const ROWS: ShowcaseRow[] = [
+  { icon: 'upload_file', title: '録音をそのまま入れる', desc: '音声や動画をアップロードするだけで取材後の作業を始められます。', visual: <MockWindow title="音声アップロード"><InterviewUploadMock /></MockWindow> },
+  { icon: 'record_voice_over', title: '話者ごとに文字へ', desc: '対談でも発言者を分け、誰が何を話したかを追える状態にします。', visual: <MockWindow title="文字起こし"><InterviewTranscriptMock /></MockWindow> },
+  { icon: 'article', title: '媒体に合う記事へ', desc: 'Q&Aやストーリーなど、用途に合う形で編集できるドラフトを作ります。', visual: <MockWindow title="記事ドラフト"><InterviewArticleMock /></MockWindow> },
+]
 
 export default function InterviewLp() {
   return (
@@ -24,10 +29,13 @@ export default function InterviewLp() {
         ctaLabel="無料ではじめる"
         subCtaHref="/interview/pricing"
         subCtaLabel="料金を見る"
-        visual={<MockWindow title={SVC.name}><ServiceFeatureMock features={SVC.features} /></MockWindow>}
+        image={{ src: '/interview/hero.webp', alt: 'ドヤインタビューの話者別文字起こし画面' }}
+        visual={<MockWindow title={SVC.name}><InterviewTranscriptMock /></MockWindow>}
       />
 
       <UseCases title="こんな場面のためのものです" items={['インタビュー音声の文字起こしに時間がかかる', '取材後の記事化に数日かかっている', 'ライターのリソースが足りない', '記事の品質が書き手によってばらつく']} />
+
+      <FeatureShowcase title="録音から記事の叩き台まで" lead="話者分離、構成、校正を一つの流れで進めます。" rows={ROWS} />
 
       <HowItWorks title="3ステップで記事になります" steps={STEPS} />
 

@@ -144,12 +144,12 @@ const SECTION_STATUS_LABELS: Record<string, string> = {
 
 // ワクワク Tips
 const TIPS = [
-  '💡 構成は後から自由に編集できます',
-  '🎨 図解・サムネも自動生成されます',
-  '📊 SEOに最適化された見出し構成を生成中...',
-  '✨ 高品質なコンテンツを目指しています',
-  '🚀 1万字以上の記事も対応可能です',
-  '📝 各セクションは個別に再生成できます',
+  '構成は後から自由に編集できます',
+  '図解・サムネも自動生成されます',
+  'SEOに最適化された見出し構成を生成中...',
+  '高品質なコンテンツを目指しています',
+  '1万字以上の記事も対応可能です',
+  '各セクションは個別に再生成できます',
 ]
 
 function formatMmSs(totalSeconds: number) {
@@ -350,7 +350,7 @@ export default function SeoJobPage() {
       if (!s) return
       try {
         await navigator.clipboard.writeText(s)
-        pushLog({ at: Date.now(), kind: 'success', title: '📋 クリップボードにコピーしました', detail: s.slice(0, 120) })
+        pushLog({ at: Date.now(), kind: 'success', title: 'クリップボードにコピーしました', detail: s.slice(0, 120) })
       } catch {
         pushLog({ at: Date.now(), kind: 'error', title: 'コピーに失敗しました', detail: 'ブラウザの権限を確認してください' })
       }
@@ -457,16 +457,7 @@ export default function SeoJobPage() {
               if (seenResearchEventIdsRef.current.has(id)) continue
               seenResearchEventIdsRef.current.add(id)
               const kind = String(ev?.kind || '')
-              const prefix =
-                kind === 'search' ? '🔎' :
-                kind === 'candidates' ? '🏁' :
-                kind === 'discover' ? '🧭' :
-                kind === 'queue' ? '📥' :
-                kind === 'fetch' ? '🌐' :
-                kind === 'summarize' ? '🧠' :
-                kind === 'store' ? '📚' :
-                kind === 'warn' ? '⚠️' :
-                kind === 'error' ? '🛑' : 'ℹ️'
+              const prefix = kind === 'warn' || kind === 'error' ? '!' : '•'
               const title = `${prefix} ${String(ev?.title || 'リサーチ中…')}`
               const detail = [ev?.detail, ev?.url].filter(Boolean).join('\n')
               pushLog({
@@ -499,7 +490,7 @@ export default function SeoJobPage() {
           let detailInfo = ''
           
           if (step === 'outline') {
-            detailTitle = '📝 記事の構成を設計中...'
+            detailTitle = '記事の構成を設計中...'
             detailInfo = 'SEO・LLMOに最適な見出し構造を分析しています'
           } else if (step === 'sections') {
             if (generatingSections.length > 0) {
@@ -508,26 +499,26 @@ export default function SeoJobPage() {
               const headingText = String(currentSection?.headingPath || `セクション${(currentSection?.index ?? 0) + 1}`)
                 .replace(/^#+\s*/, '')
                 .slice(0, 30)
-              detailTitle = `✍️ 「${headingText}」を執筆中...`
+              detailTitle = `「${headingText}」を執筆中...`
               detailInfo = `完了: ${generatedSections.length}/${sections.length}セクション`
             } else if (pendingSections.length > 0) {
-              detailTitle = '🔄 次のセクション準備中...'
+              detailTitle = '次のセクション準備中...'
               detailInfo = `完了: ${generatedSections.length}/${sections.length}セクション`
             } else {
-              detailTitle = '📊 本文執筆を進行中...'
+              detailTitle = '本文執筆を進行中...'
               detailInfo = `進捗: ${progress}%`
             }
           } else if (step === 'integrate') {
-            detailTitle = '🔗 記事を統合・最終調整中...'
+            detailTitle = '記事を統合・最終調整中...'
             detailInfo = '全セクションを結合し、文章の一貫性を確認しています'
           } else if (step === 'media') {
-            detailTitle = '🎨 バナー・図解を生成中...'
+            detailTitle = 'バナー・図解を生成中...'
             detailInfo = 'AIが記事に合った画像を描画しています'
           } else if (step === 'done') {
-            detailTitle = '✅ 記事生成が完了しました'
+            detailTitle = '記事生成が完了しました'
             detailInfo = 'すべての工程が正常に終了しました'
           } else {
-            detailTitle = `⚙️ 工程「${STEP_LABELS[step] || step}」を実行中...`
+            detailTitle = `工程「${STEP_LABELS[step] || step}」を実行中...`
             detailInfo = `進捗: ${progress}%`
           }
           
@@ -642,25 +633,25 @@ export default function SeoJobPage() {
     const stepCur = String(job.step || '').toLowerCase()
     if (logPrevStepRef.current && logPrevStepRef.current !== stepCur) {
       const stepDetails: Record<string, { icon: string; desc: string }> = {
-        outline: { icon: '📋', desc: 'SEO・LLMOに最適な記事構成を設計します' },
-        sections: { icon: '✍️', desc: '各セクションの本文を順次執筆していきます' },
-        integrate: { icon: '🔗', desc: '全セクションを統合し、文章の一貫性を調整します' },
-        media: { icon: '🎨', desc: 'バナー画像・図解を生成します' },
-        done: { icon: '✅', desc: 'すべての工程が完了しました' },
-        cmp_ref: { icon: '🔍', desc: '参考記事を解析しています' },
-        cmp_candidates: { icon: '📊', desc: '比較対象の候補を収集しています' },
-        cmp_crawl: { icon: '🌐', desc: 'サイトを巡回して情報を収集しています' },
-        cmp_extract: { icon: '📄', desc: '必要な情報を抽出しています' },
-        cmp_sources: { icon: '📚', desc: '出典情報を整形しています' },
-        cmp_tables: { icon: '📈', desc: '比較表を生成しています' },
-        cmp_outline: { icon: '📝', desc: '章立てを生成しています' },
-        cmp_polish: { icon: '✨', desc: '文章を校正しています' },
+        outline: { icon: '', desc: 'SEO・LLMOに最適な記事構成を設計します' },
+        sections: { icon: '', desc: '各セクションの本文を順次執筆していきます' },
+        integrate: { icon: '', desc: '全セクションを統合し、文章の一貫性を調整します' },
+        media: { icon: '', desc: 'バナー画像・図解を生成します' },
+        done: { icon: '', desc: 'すべての工程が完了しました' },
+        cmp_ref: { icon: '', desc: '参考記事を解析しています' },
+        cmp_candidates: { icon: '', desc: '比較対象の候補を収集しています' },
+        cmp_crawl: { icon: '', desc: 'サイトを巡回して情報を収集しています' },
+        cmp_extract: { icon: '', desc: '必要な情報を抽出しています' },
+        cmp_sources: { icon: '', desc: '出典情報を整形しています' },
+        cmp_tables: { icon: '', desc: '比較表を生成しています' },
+        cmp_outline: { icon: '', desc: '章立てを生成しています' },
+        cmp_polish: { icon: '', desc: '文章を校正しています' },
       }
-      const detail = stepDetails[stepCur] || { icon: '⚙️', desc: '' }
+      const detail = stepDetails[stepCur] || { icon: '', desc: '' }
       pushLog({
         at: now,
         kind: 'step',
-        title: `${detail.icon} 工程「${STEP_LABELS[stepCur] || stepCur}」に移行`,
+        title: `工程「${STEP_LABELS[stepCur] || stepCur}」に移行`,
         detail: detail.desc,
       })
     }
@@ -674,7 +665,7 @@ export default function SeoJobPage() {
       pushLog({
         at: now,
         kind: 'info',
-        title: '🚀 記事生成を開始しました',
+        title: '記事生成を開始しました',
         detail: `現在の進捗: ${p}%`,
       })
     } else if (p !== pPrev) {
@@ -685,16 +676,16 @@ export default function SeoJobPage() {
       const currTenth = Math.floor(p / 10)
       if (currTenth > prevTenth || p === 100) {
         const milestoneMessages = [
-          { threshold: 10, icon: '📊', msg: '構成分析中...' },
-          { threshold: 20, icon: '📝', msg: '見出し構造を確定中...' },
-          { threshold: 30, icon: '✍️', msg: '本文執筆開始...' },
-          { threshold: 40, icon: '📖', msg: '本文執筆継続中...' },
-          { threshold: 50, icon: '⚡', msg: '折り返し地点を通過' },
-          { threshold: 60, icon: '📄', msg: '本文執筆後半...' },
-          { threshold: 70, icon: '🔍', msg: 'SEO最適化中...' },
-          { threshold: 80, icon: '🔗', msg: '記事統合・調整中...' },
-          { threshold: 90, icon: '✨', msg: '最終仕上げ中...' },
-          { threshold: 100, icon: '🎉', msg: '記事生成完了！' },
+          { threshold: 10, msg: '構成分析中...' },
+          { threshold: 20, msg: '見出し構造を確定中...' },
+          { threshold: 30, msg: '本文執筆開始...' },
+          { threshold: 40, msg: '本文執筆継続中...' },
+          { threshold: 50, msg: '折り返し地点を通過' },
+          { threshold: 60, msg: '本文執筆後半...' },
+          { threshold: 70, msg: 'SEO最適化中...' },
+          { threshold: 80, msg: '記事統合・調整中...' },
+          { threshold: 90, msg: '最終仕上げ中...' },
+          { threshold: 100, msg: '記事生成完了！' },
         ]
         const milestone = milestoneMessages.find(m => m.threshold === currTenth * 10) || 
                           milestoneMessages.find(m => m.threshold === 100 && p === 100)
@@ -702,7 +693,7 @@ export default function SeoJobPage() {
           pushLog({
             at: now,
             kind: 'progress',
-            title: `${milestone.icon} ${p}% 完了 - ${milestone.msg}`,
+            title: `${p}% 完了 - ${milestone.msg}`,
             detail: diff > 0 ? `+${diff}%` : undefined,
           })
         }
@@ -735,7 +726,7 @@ export default function SeoJobPage() {
           pushLog({
             at: now + i, // 微妙にずらして順序を保証
             kind: 'success',
-            title: `✅ 「${headingText}」の執筆完了`,
+            title: `「${headingText}」の執筆完了`,
             detail: `${currCount}/${sections.length}セクション完了`,
           })
         }
@@ -755,7 +746,7 @@ export default function SeoJobPage() {
       pushLog({
         at: now,
         kind: 'info',
-        title: `✍️ セクション${index}「${headingText}」の執筆開始`,
+        title: `セクション${index}「${headingText}」の執筆開始`,
         detail: `残り${sections.length - generatedSections.length}セクション`,
       })
     }
@@ -1871,7 +1862,7 @@ export default function SeoJobPage() {
                 <div className="w-20 h-20 mx-auto mb-4 rounded-3xl bg-emerald-100 flex items-center justify-center">
                   <PartyPopper className="w-10 h-10 text-emerald-700" />
                 </div>
-                <h2 className="text-2xl font-black text-gray-900">🎉 記事が完成しました！</h2>
+                <h2 className="text-2xl font-black text-gray-900">記事が完成しました！</h2>
                 <p className="text-gray-600 mt-2 font-bold">
                   プレビュー・編集・エクスポートが可能です
                 </p>
@@ -1997,4 +1988,3 @@ export default function SeoJobPage() {
     </main>
   )
 }
-

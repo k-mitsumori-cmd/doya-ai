@@ -73,6 +73,7 @@ export default function AioLp() {
         ctaLabel="無料で診断する"
         subCtaHref="#start"
         subCtaLabel="URLで今すぐ診断"
+        image={{ src: '/aio/hero.webp', alt: 'ドヤAIOのAI可視性ランキング画面' }}
         visual={<MockWindow title="AI可視性ランキング"><AioSovMock /></MockWindow>}
       />
 

@@ -5,13 +5,18 @@
 //    実績数値（導入社数・継続率・No.1）は持っていないので書かない。
 // ⚠️ ヒーローのCTAは2個まで。
 import {
-  LpShell, ProductHero, MockWindow, HowItWorks, Benefits, UseCases, FaqSection, CtaBand,
+  LpShell, ProductHero, MockWindow, FeatureShowcase, HowItWorks, Benefits, UseCases, FaqSection, CtaBand, type ShowcaseRow,
 } from '@/components/lp'
 import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
-import { ServiceFeatureMock } from '@/components/lp/ServiceFeatureMock'
+import { CunningKnowledgeMock, CunningLiveMock, CunningAnswerMock } from './mocks'
 
 const SVC = getServiceById('cunning')!
+const ROWS: ShowcaseRow[] = [
+  { icon: 'menu_book', title: '根拠にする資料を登録', desc: 'サービス資料や想定問答を先に入れ、回答の範囲を決めます。', visual: <MockWindow title="ナレッジ"><CunningKnowledgeMock /></MockWindow> },
+  { icon: 'cast', title: '会話から質問を検出', desc: '会議の発言を文字にし、回答が必要な質問を見つけます。', visual: <MockWindow title="会議モニター"><CunningLiveMock /></MockWindow> },
+  { icon: 'quickreply', title: '要点と根拠を同時に', desc: '最初の一言、話すための補足、参照した資料を同じ画面に出します。', visual: <MockWindow title="回答案"><CunningAnswerMock /></MockWindow> },
+]
 
 export default function CunningLp() {
   return (
@@ -26,10 +31,13 @@ export default function CunningLp() {
         ctaLabel="無料ではじめる"
         subCtaHref="/cunning/pricing"
         subCtaLabel="料金を見る"
-        visual={<MockWindow title={SVC.name}><ServiceFeatureMock features={SVC.features} /></MockWindow>}
+        image={{ src: '/cunning/hero.webp', alt: 'ドヤカンニングの回答支援画面' }}
+        visual={<MockWindow title={SVC.name}><CunningAnswerMock /></MockWindow>}
       />
 
       <UseCases title="こんな場面のためのものです" items={['商談で想定外の質問に即答できない', '採用面接で企業に刺さる回答を準備したい', '応対の質が担当者によって違う', '新任のメンバーが独り立ちしにくい']} />
+
+      <FeatureShowcase title="準備した知識を、会話のその場へ" lead="答えを作り込まず、登録資料から話すための要点を取り出します。" rows={ROWS} />
 
       <HowItWorks title="3ステップで使えます" steps={STEPS} />
 

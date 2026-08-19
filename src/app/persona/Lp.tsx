@@ -5,13 +5,18 @@
 //    実績数値（導入社数・継続率・No.1）は持っていないので書かない。
 // ⚠️ ヒーローのCTAは2個まで。
 import {
-  LpShell, ProductHero, MockWindow, HowItWorks, Benefits, UseCases, FaqSection, CtaBand,
+  LpShell, ProductHero, MockWindow, FeatureShowcase, HowItWorks, Benefits, UseCases, FaqSection, CtaBand, type ShowcaseRow,
 } from '@/components/lp'
 import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
-import { ServiceFeatureMock } from '@/components/lp/ServiceFeatureMock'
+import { PersonaBriefMock, PersonaProfileMock, PersonaPlanMock } from './mocks'
 
 const SVC = getServiceById('persona')!
+const ROWS: ShowcaseRow[] = [
+  { icon: 'inventory_2', title: '商材の条件を入力', desc: '業界・商材・届けたい役割を短く入れれば、検討の起点ができます。', visual: <MockWindow title="商材の条件"><PersonaBriefMock /></MockWindow> },
+  { icon: 'groups', title: '顧客像を1枚に', desc: '目標、悩み、情報源、判断軸を、チームで確認できる形にまとめます。', visual: <MockWindow title="ペルソナシート"><PersonaProfileMock /></MockWindow> },
+  { icon: 'description', title: '施策の指示へ変換', desc: '訴求・導線・懸念・検証項目まで落とし込み、制作の叩き台にできます。', visual: <MockWindow title="施策の要点"><PersonaPlanMock /></MockWindow> },
+]
 
 export default function PersonaLp() {
   return (
@@ -26,10 +31,13 @@ export default function PersonaLp() {
         ctaLabel="無料ではじめる"
         subCtaHref="/persona/pricing"
         subCtaLabel="料金を見る"
-        visual={<MockWindow title={SVC.name}><ServiceFeatureMock features={SVC.features} /></MockWindow>}
+        image={{ src: '/persona/hero.webp', alt: 'ドヤペルソナAIのペルソナシート画面' }}
+        visual={<MockWindow title={SVC.name}><PersonaProfileMock /></MockWindow>}
       />
 
       <UseCases title="こんな場面のためのものです" items={['LPの構成案を考えるのに時間がかかる', '制作会社への指示書をまとめきれない', 'コピーの方向性がチーム内で揃わない', 'ターゲット設定が担当者の勘に頼っている']} />
+
+      <FeatureShowcase title="顧客像を、施策で使える形へ" lead="作って終わりではなく、コピーや導線の判断につなげます。" rows={ROWS} />
 
       <HowItWorks title="3ステップで使えます" steps={STEPS} />
 

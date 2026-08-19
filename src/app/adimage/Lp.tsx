@@ -49,6 +49,7 @@ export default function AdImageLp() {
         ctaLabel="無料ではじめる"
         subCtaHref="/adimage/pricing"
         subCtaLabel="料金を見る"
+        image={{ src: '/adimage/hero.webp', alt: 'ドヤ広告画像AIの媒体別サイズ生成画面' }}
         visual={<MockWindow title="ドヤ広告画像AI"><AdImageGridMock /></MockWindow>}
       />
 

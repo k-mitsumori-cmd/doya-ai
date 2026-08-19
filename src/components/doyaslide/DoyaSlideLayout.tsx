@@ -29,6 +29,9 @@ export default function DoyaSlideLayout({ children }: { children: React.ReactNod
     setMobileMenuOpen(false)
   }, [pathname])
 
+  // 公開LPはアプリ用サイドバーの外で表示する。
+  if (pathname === '/doyaslide') return <>{children}</>
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <Toaster position="top-center" />

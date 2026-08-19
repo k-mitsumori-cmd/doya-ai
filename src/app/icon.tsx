@@ -1,4 +1,13 @@
-import { ImageResponse } from 'next/og'
+// ============================================
+// Site Icon (App Router) — ドヤマーケAI 公式ブランドアイコン
+// ============================================
+// 素材の正本: reference/generated-assets/2026-08-19-p0-v1/brand-icon/master.svg
+// favicon / 汎用アイコン（512px）
+// ⚠️ 旧版は next/og で「青角丸＋ロケット＋AI」を動的生成していたが、
+//    ロケットの図形が分断して破片状にレンダリングされる不具合があったため、
+//    検品済みPNG（icon-512.png）をそのまま返す方式に変更した。
+//    差し替える時は master.svg から書き出し直し、このBase64を入れ替えること。
+//    旧実装は reference/generated-assets/2026-08-19-p0-v1/legacy/ に保存。
 
 export const runtime = 'edge'
 
@@ -9,88 +18,18 @@ export const size = {
 
 export const contentType = 'image/png'
 
-// ============================================
-// Site Icon (App Router)
-// - User-provided design: blue rounded square + rocket + "AI"
-// ============================================
+const PNG_BASE64 =
+  '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'
+
 export default function Icon() {
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          width: '100%',
-          height: '100%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#ffffff',
-        }}
-      >
-        <div
-          style={{
-            width: 420,
-            height: 420,
-            borderRadius: 72,
-            background: 'linear-gradient(180deg, #1674FF 0%, #0B57E3 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            position: 'relative',
-          }}
-        >
-          {/* Rocket */}
-          <svg
-            width="280"
-            height="280"
-            viewBox="0 0 280 280"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-            style={{ position: 'absolute', top: 70, left: 70 }}
-          >
-            {/* Body */}
-            <path
-              d="M170 46c32 22 54 56 58 96-28 4-52 10-78 24l-12-10c7-24 16-48 24-78-8-6-18-12-26-18 10-6 22-12 34-14z"
-              fill="#FFFFFF"
-            />
-            {/* Nose cone */}
-            <path d="M216 54c16 10 28 24 34 40-18-4-34-12-48-22l14-18z" fill="#FFFFFF" />
-            {/* Window */}
-            <circle cx="186" cy="92" r="18" fill="#1674FF" />
-            <circle cx="186" cy="92" r="14" fill="#FFFFFF" />
-            <circle cx="186" cy="92" r="12" fill="#1674FF" />
-            {/* Wing */}
-            <path d="M118 124c-16 2-30 10-40 20l26 26c8-10 14-24 14-46z" fill="#FFFFFF" />
-            {/* Bottom fin */}
-            <path d="M146 196c-20 8-38 6-54-6 8-18 24-34 42-42l12 48z" fill="#FFFFFF" />
-            {/* Flame */}
-            <path
-              d="M104 200c-20 18-26 40-18 58 20-2 38-14 54-34-10 2-22-2-36-24z"
-              fill="#FFFFFF"
-            />
-          </svg>
+  const binary = atob(PNG_BASE64)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
 
-          {/* AI text */}
-          <div
-            style={{
-              position: 'absolute',
-              bottom: 46,
-              width: '100%',
-              textAlign: 'center',
-              color: '#FFFFFF',
-              fontSize: 78,
-              fontWeight: 800,
-              letterSpacing: 1,
-              fontFamily:
-                'ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"',
-            }}
-          >
-            AI
-          </div>
-        </div>
-      </div>
-    ),
-    size
-  )
+  return new Response(bytes, {
+    headers: {
+      'Content-Type': 'image/png',
+      'Cache-Control': 'public, max-age=31536000, immutable',
+    },
+  })
 }
-
-

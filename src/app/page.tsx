@@ -43,6 +43,8 @@ type ServiceCard = {
   status: DisplayStatus
   Icon: LucideIcon
   accent: string
+  /** カードサムネ（public/<id>/card.webp）。無いサービスはアイコン表示にフォールバック */
+  thumb?: string
 }
 
 type Proof = {
@@ -88,6 +90,14 @@ const SERVICE_PRESENTATION: Record<string, { Icon: LucideIcon; accent: string }>
   tenkai: { Icon: Database, accent: '#009bff' },
 }
 
+// カードサムネの実体がある serviceId。
+// ⚠️ public/<id>/card.webp を先に置くこと。実体が無いと画像が割れる（onError フォールバックは無い）。
+const SERVICE_CARD_IMAGE = new Set([
+  'mensetsu', 'quote', 'aishodan', 'adimage',
+  'banner', 'hr', 'kintai', 'sfa', 'shodan', 'aio',
+  'seo', 'interview', 'persona', 'doyalist', 'doyaslide', 'cunning', 'promane',
+])
+
 function toServiceCard(service: (typeof SERVICES)[number]): ServiceCard {
   const pres = SERVICE_PRESENTATION[service.id] || DEFAULT_PRESENTATION
   return {
@@ -97,6 +107,7 @@ function toServiceCard(service: (typeof SERVICES)[number]): ServiceCard {
     status: STATUS_LABEL[service.status],
     Icon: pres.Icon,
     accent: pres.accent,
+    thumb: SERVICE_CARD_IMAGE.has(service.id) ? `/${service.id}/card.webp` : undefined,
   }
 }
 
@@ -616,12 +627,27 @@ function ServiceTile({ service, compact = false }: { service: ServiceCard; compa
         href={service.href}
         className="group flex h-full min-h-[210px] flex-col rounded-lg border border-[#d8e7ff] bg-white p-5 shadow-[0_12px_34px_rgba(10,15,60,0.08)] transition-all hover:-translate-y-0.5 hover:border-[#97c2ff] hover:shadow-[0_18px_52px_rgba(10,15,60,0.13)]"
       >
-        <div className="mb-7 flex items-start justify-between gap-4">
-          <span className="flex h-12 w-12 items-center justify-center rounded-[8px] text-white" style={{ backgroundColor: service.accent }}>
-            <Icon className="h-6 w-6" />
-          </span>
-          <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ${statusClass}`}>{service.status}</span>
-        </div>
+        {service.thumb ? (
+          <div className="relative mb-5 aspect-[8/5] w-full overflow-hidden rounded-[10px] border border-[#e4eeff] bg-[#f2f7ff]">
+            <Image
+              src={service.thumb}
+              alt=""
+              fill
+              sizes="(max-width: 768px) 100vw, 340px"
+              className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            />
+            <span className={`absolute right-2.5 top-2.5 rounded-full px-3 py-1.5 text-[11px] font-black shadow-sm ${statusClass}`}>
+              {service.status}
+            </span>
+          </div>
+        ) : (
+          <div className="mb-7 flex items-start justify-between gap-4">
+            <span className="flex h-12 w-12 items-center justify-center rounded-[8px] text-white" style={{ backgroundColor: service.accent }}>
+              <Icon className="h-6 w-6" />
+            </span>
+            <span className={`rounded-full px-3 py-1.5 text-[11px] font-black ${statusClass}`}>{service.status}</span>
+          </div>
+        )}
         <div className="mt-auto">
           <h3 className={compact ? 'text-lg font-black leading-tight tracking-normal text-[#0a0f3c]' : 'text-xl font-black leading-tight tracking-normal text-[#0a0f3c]'}>
             {service.name}

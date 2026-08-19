@@ -5,13 +5,14 @@
 // 「ドヤプロマネ」で検索してもクロール対象のページが存在せず、指名検索に出られなかった。
 // 未ログインのクローラ／初見ユーザーにはこのLPを返し、ログイン済みはこれまで通りアプリへ入る。
 import {
-  LpShell, Hero, HowItWorks, Benefits, FeatureGrid, UseCases, FaqSection, CtaBand, LpJsonLd,
-  type Step, type Benefit, type Faq,
+  LpShell, ProductHero, MockWindow, FeatureShowcase, HowItWorks, Benefits, UseCases, FaqSection, CtaBand, LpJsonLd,
+  type Step, type Benefit, type Faq, type ShowcaseRow,
 } from '@/components/lp'
 import { getServiceById } from '@/lib/services'
+import { PromaneProjectMock, PromaneBoardMock, PromaneProfitMock } from './mocks'
 
 const SVC = getServiceById('promane')!
-const ACCENT = '#7c5cff'
+const ACCENT = '#009bff'
 const CTA = '/auth/signin?callbackUrl=/promane'
 
 const STEPS: Step[] = [
@@ -24,6 +25,12 @@ const BENEFITS: Benefit[] = [
   { title: '案件の利益率がその場でわかる', desc: '売上と原価（人件費）を突き合わせて、案件ごとの利益をリアルタイムに表示。赤字案件を月末まで気づかない、をなくします。', icon: 'savings' },
   { title: '進捗の遅れが見た目でわかる', desc: 'ガントチャートで全案件のスケジュールを俯瞰。止まっているタスクと期日超過がひと目で判別できます。', icon: 'event_available' },
   { title: 'Excel管理から卒業できる', desc: '案件一覧・工数表・請求管理がバラバラのExcelに散っている状態を、1つのワークスペースにまとめます。', icon: 'table_view' },
+]
+
+const ROWS: ShowcaseRow[] = [
+  { icon: 'add_task', title: '案件の条件を一つに', desc: '売上、期間、担当を登録し、進捗と収支の共通の起点にします。', visual: <MockWindow title="案件登録"><PromaneProjectMock /></MockWindow> },
+  { icon: 'view_kanban', title: '進み具合を見える化', desc: 'タスクをカンバンとガントで確認し、止まっている仕事を把握できます。', visual: <MockWindow title="カンバン"><PromaneBoardMock /></MockWindow> },
+  { icon: 'monitoring', title: '工数から利益を確認', desc: 'メンバーの単価と記録時間から人件費を集計し、見込み利益を表示します。', visual: <MockWindow title="収支レポート"><PromaneProfitMock /></MockWindow> },
 ]
 
 const FAQ: Faq[] = [
@@ -47,7 +54,7 @@ export function PromaneLp() {
         serviceId="promane"
       />
       <LpShell serviceName={SVC.name} icon="donut_small" ctaHref={CTA} accent={ACCENT}>
-        <Hero
+        <ProductHero
           eyebrow="案件管理 × 収支管理"
           title="案件の進捗と利益を、"
           highlight="ひとつの画面で。"
@@ -57,10 +64,12 @@ export function PromaneLp() {
           ctaLabel="無料ではじめる"
           subCtaHref="/promane/pricing"
           subCtaLabel="料金を見る"
+          image={{ src: '/promane/hero.webp', alt: 'ドヤプロマネの案件収支画面' }}
+          visual={<MockWindow title="ドヤプロマネ"><PromaneProfitMock /></MockWindow>}
         />
+        <FeatureShowcase title="進捗と収支を、同じ案件で見る" lead="作業の遅れと利益の変化を別々の表で追わず、一つの画面で確認します。" rows={ROWS} />
         <HowItWorks title="使い方は3ステップ" lead="はじめての案件を登録するまで、だいたい5分です。" steps={STEPS} />
         <Benefits title="ドヤプロマネで変わること" items={BENEFITS} />
-        <FeatureGrid title="主な機能" features={SVC.features} />
         <UseCases items={SVC.useCases || []} />
         <FaqSection items={FAQ} />
         <CtaBand
