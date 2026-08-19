@@ -12,6 +12,7 @@ import Link from 'next/link'
 import { APPEAL_LABELS, type AdCopy, type AppealAxis, type BrandProfile, type RefineDirective } from '@/lib/adimage/types'
 import AdImageLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
+import LoadingProgress from '@/components/LoadingProgress'
 
 interface PlacementRow {
   key: string
@@ -276,6 +277,28 @@ export default function AdImageTool() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
+      {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}
+      <LoadingProgress
+        isLoading={analyzing}
+        operationKey="adimage-analyzing"
+        title="ブランドを読み取っています"
+        subtitle="サービスページから訴求のトーンとコピー案を組み立てています。"
+        tips={['Tip: ロゴを登録すると画像に合成できます', 'Tip: 配置を多く選んでも1コンセプトとして数えます', 'Tip: 気に入らなければAIが採点して作り直します']}
+      />
+      <LoadingProgress
+        isLoading={generating}
+        operationKey="adimage-generating"
+        title="広告画像を生成しています"
+        subtitle="媒体ごとの実寸で、文字を画像に描き込んでいます。"
+        tips={['Tip: 目標比率のまま生成するので文字が切れません', 'Tip: 描かれた文字は自動で検査され、不合格なら作り直します', 'Tip: 媒体別に整理したZIPでまとめて落とせます']}
+      />
+      <LoadingProgress
+        isLoading={refining}
+        operationKey="adimage-refining"
+        title="改善版を作っています"
+        subtitle="AIが出来上がった画像を見て採点し、次の案に反映しています。"
+        tips={['Tip: 気になる点をチップで選ぶほど狙いが伝わります', 'Tip: 改善のたびに履歴として残ります']}
+      />
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <div>
@@ -309,7 +332,7 @@ export default function AdImageTool() {
             <button
               onClick={analyze}
               disabled={analyzing || !url.trim()}
-              className="rounded-lg bg-[#0066ff] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
+              className="rounded-lg bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
             >
               {analyzing ? '解析中...' : 'コピーを作る'}
             </button>
@@ -471,7 +494,7 @@ export default function AdImageTool() {
             <button
               onClick={generate}
               disabled={generating || chosen.length === 0 || !copy.headline || !copy.cta}
-              className="mt-5 w-full rounded-lg bg-[#0066ff] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-40"
+              className="mt-5 w-full rounded-lg bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-40"
             >
               {generating ? '生成中...（1〜2分かかります）' : `広告画像を作る（${chosen.length}配置）`}
             </button>
@@ -570,7 +593,7 @@ export default function AdImageTool() {
                 <button
                   onClick={refine}
                   disabled={refining || (selectedChips.length === 0 && !note.trim() && directives.length === 0)}
-                  className="rounded-lg bg-[#0066ff] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40"
+                  className="rounded-lg bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40"
                 >
                   {refining ? '作り直し中...' : 'この内容で作り直す'}
                 </button>

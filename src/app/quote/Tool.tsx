@@ -16,6 +16,7 @@ import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource, type ProductP
 import QuoteLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
+import LoadingProgress from '@/components/LoadingProgress'
 
 interface Product {
   id: string
@@ -284,6 +285,28 @@ export default function QuoteTool() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
+      {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}
+      <LoadingProgress
+        isLoading={analyzing}
+        operationKey="quote-analyzing"
+        title="サービスを解析しています"
+        subtitle="ページを読み取って、見積もりの品目候補と相場を組み立てています。"
+        tips={['Tip: 品目は後から自由に追加・編集できます', 'Tip: 金額の出所（自社価格 / 相場 / 要見積）が1件ずつ表示されます', 'Tip: 確定するとPDFの「社内確認用」透かしが消えます']}
+      />
+      <LoadingProgress
+        isLoading={creating}
+        operationKey="quote-creating"
+        title="見積書を作成しています"
+        subtitle="品目と税区分を計算して、見積書の形に整えています。"
+        tips={['Tip: 発行者情報を設定しておくと、以後の見積書すべてに反映されます', 'Tip: 確定はマネージャー以上が行えます']}
+      />
+      <LoadingProgress
+        isLoading={suggesting}
+        operationKey="quote-suggest"
+        title="品目の候補を作っています"
+        subtitle="商材と相場から、見積書に載せる品目を組み立てています。"
+        tips={['Tip: 想定予算を入れると、その範囲に寄せた構成になります', 'Tip: 相手の状況を書くほど、刺さる品目が出ます', 'Tip: 出てきた品目は追加・削除・単価変更が自由にできます']}
+      />
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <div>
@@ -333,7 +356,7 @@ export default function QuoteTool() {
             <button
               onClick={analyze}
               disabled={analyzing || !url.trim()}
-              className="rounded-lg bg-[#0066ff] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
+              className="rounded-lg bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
             >
               {analyzing ? '解析中...' : '解析する'}
             </button>
@@ -420,13 +443,21 @@ export default function QuoteTool() {
                 />
               </label>
             </div>
+            {/* ⚠️ ここが本サービスの主役の操作。押すと何が起きるかを添えて、
+                 主要アクションだと分かる見た目にする（AIが動く＝待ち時間が出るボタン） */}
             <button
               onClick={suggest}
               disabled={suggesting || !selectedProduct}
-              className="mt-4 rounded-lg bg-[#0066ff] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] px-7 py-3.5 text-base font-black text-white shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] disabled:translate-y-0 disabled:opacity-40 disabled:shadow-none"
             >
-              {suggesting ? '生成中...' : '品目の候補を出す'}
+              <span className="material-symbols-outlined text-[20px]">
+                {suggesting ? 'hourglass_top' : 'auto_awesome'}
+              </span>
+              {suggesting ? '候補を作っています…' : '品目の候補を出す'}
             </button>
+            <p className="mt-2 text-xs font-bold text-slate-500">
+              相場つきの品目候補をまとめて出します。単価はあとから自由に調整できます。
+            </p>
           </section>
         )}
 
@@ -508,9 +539,27 @@ export default function QuoteTool() {
                       {PRICE_SOURCE_LABEL[it.priceSource]}
                     </span>
                     {it.rangeMin != null && it.rangeMax != null && (
-                      <span className="text-[11px] text-slate-500">
+                      <span className="text-[11px] text-slate-500 font-semibold">
                         相場 {yen(it.rangeMin)}〜{yen(it.rangeMax)}
                       </span>
+                    )}
+                    {/* ⚠️ 空欄の行に金額を自動で埋めない（根拠のない数字を作らないため）。
+                         ただし相場が分かっている行は、押すだけで中央値が入るようにして
+                         「そのまま出せる状態」に近づける。押した時点で出所は手入力になる。 */}
+                    {it.unitPrice == null && it.rangeMin != null && it.rangeMax != null && (
+                      <button
+                        onClick={() => {
+                          const mid = Math.round((it.rangeMin! + it.rangeMax!) / 2)
+                          updateItem(idx, {
+                            unitPrice: mid,
+                            priceSource: 'manual',
+                            sourceRef: `相場の中央値を採用（${yen(it.rangeMin!)}〜${yen(it.rangeMax!)}）`,
+                          })
+                        }}
+                        className="rounded-lg border-2 border-[#0066ff] px-2.5 py-1 text-[11px] font-black text-[#0066ff] transition-colors hover:bg-blue-50"
+                      >
+                        相場で埋める
+                      </button>
                     )}
                   </div>
                   {it.sourceRef && <p className="mt-2 text-[11px] leading-relaxed text-slate-500">根拠: {it.sourceRef}</p>}
@@ -533,6 +582,30 @@ export default function QuoteTool() {
                 <span className="text-sm font-bold text-slate-900">合計（税込）</span>
                 <span className="text-2xl font-bold text-[#0066ff]">{yen(subtotal + tax)}</span>
               </div>
+              {/* ⚠️ 相場が分かっている空欄をまとめて埋める。1件ずつ押させない。
+                   根拠が無い（相場表に無い）行は対象外＝勝手に数字を作らない。 */}
+              {items.some((i) => i.unitPrice == null && i.rangeMin != null && i.rangeMax != null) && (
+                <button
+                  onClick={() => {
+                    setItems((prev) =>
+                      prev.map((it) =>
+                        it.unitPrice == null && it.rangeMin != null && it.rangeMax != null
+                          ? {
+                              ...it,
+                              unitPrice: Math.round((it.rangeMin + it.rangeMax) / 2),
+                              priceSource: 'manual' as const,
+                              sourceRef: `相場の中央値を採用（${yen(it.rangeMin)}〜${yen(it.rangeMax)}）`,
+                            }
+                          : it
+                      )
+                    )
+                  }}
+                  className="mb-3 inline-flex items-center gap-1.5 rounded-xl border-2 border-[#0066ff] px-4 py-2 text-sm font-black text-[#0066ff] transition-colors hover:bg-blue-50"
+                >
+                  <span className="material-symbols-outlined text-[18px]">bolt</span>
+                  相場が分かる品目をまとめて埋める
+                </button>
+              )}
               {items.some((i) => i.priceSource === 'unknown' || !i.unitPrice) && (
                 <p className="mt-2 text-[11px] text-rose-600">
                   「要見積」の品目は合計に含まれていません。
@@ -554,12 +627,76 @@ export default function QuoteTool() {
                 className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
               />
             </div>
+            {/* ⚠️ 作成前に「実際どう見えるか」を出す。作ってから確認では手戻りになる。
+                 金額の計算は画面・PDF・保存値で同じ calcTotals を使うので、ここと最終物はずれない。 */}
+            <div className="mt-5 rounded-2xl border-2 border-slate-200 bg-slate-50 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-slate-500">visibility</span>
+                <span className="text-sm font-black text-slate-700">見積書プレビュー</span>
+                <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                  作成前
+                </span>
+              </div>
+              <div className="rounded-xl bg-white p-5 shadow-sm">
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="text-lg font-black text-slate-900">御見積書</p>
+                    <p className="mt-1 truncate text-sm font-bold text-slate-700">
+                      {clientCompany.trim() || '（宛先の会社名）'} 御中
+                    </p>
+                    {clientPerson.trim() && (
+                      <p className="text-xs font-bold text-slate-500">{clientPerson.trim()} 様</p>
+                    )}
+                  </div>
+                  <div className="shrink-0 text-right text-[11px] font-bold text-slate-500">
+                    {hasIssuer ? '発行者情報あり' : '発行者情報は未設定です'}
+                  </div>
+                </div>
+
+                <div className="mb-4 rounded-lg bg-slate-50 px-4 py-3">
+                  <p className="text-[11px] font-bold text-slate-500">御見積金額（税込）</p>
+                  <p className="text-2xl font-black tabular-nums text-slate-900">{yen(subtotal + tax)}</p>
+                </div>
+
+                <div className="space-y-1.5">
+                  {items.map((it, i) => (
+                    <div key={i} className="flex items-center gap-2 border-b border-slate-100 pb-1.5 last:border-0">
+                      <span className="min-w-0 flex-1 truncate text-xs font-bold text-slate-700">{it.itemName}</span>
+                      <span className="shrink-0 text-[11px] font-bold text-slate-400">
+                        {it.qty}
+                        {it.unit}
+                      </span>
+                      <span className={`shrink-0 text-xs font-black tabular-nums ${it.unitPrice ? 'text-slate-900' : 'text-amber-600'}`}>
+                        {it.unitPrice ? yen(it.qty * it.unitPrice) : '要見積'}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-3 space-y-1 border-t border-slate-200 pt-3 text-xs font-bold">
+                  <div className="flex justify-between text-slate-500">
+                    <span>税抜合計</span>
+                    <span className="tabular-nums text-slate-800">{yen(subtotal)}</span>
+                  </div>
+                  <div className="flex justify-between text-slate-500">
+                    <span>消費税</span>
+                    <span className="tabular-nums text-slate-800">{yen(tax)}</span>
+                  </div>
+                </div>
+              </div>
+              {!hasIssuer && (
+                <p className="mt-2 text-[11px] font-bold text-amber-700">
+                  発行者情報（社名・住所・担当者）を設定すると、PDFに反映されます。
+                </p>
+              )}
+            </div>
+
             <button
               onClick={createDocument}
               disabled={creating || items.length === 0}
-              className="mt-4 w-full rounded-lg bg-[#0066ff] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-40"
+              className="mt-4 w-full rounded-xl bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] px-5 py-4 text-base font-black text-white shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] disabled:translate-y-0 disabled:opacity-40 disabled:shadow-none"
             >
-              {creating ? '作成中...' : '見積書を作成する'}
+              {creating ? '作成しています…' : '見積書を作成する'}
             </button>
           </section>
         )}

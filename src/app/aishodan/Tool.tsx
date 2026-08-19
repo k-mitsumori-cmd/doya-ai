@@ -15,6 +15,7 @@ import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aisho
 import AishodanLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
+import LoadingProgress from '@/components/LoadingProgress'
 
 interface Product {
   id: string
@@ -244,6 +245,14 @@ export default function AishodanTool() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
+      {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}
+      <LoadingProgress
+        isLoading={importing}
+        operationKey="aishodan-import"
+        title="商材を読み取っています"
+        subtitle="サービスページから商材ナレッジと商談シナリオを組み立てています。"
+        tips={['Tip: 資料を足すほど、答えられる質問の範囲が広がります', 'Tip: 根拠が無い質問には推測で答えず記録に残します', 'Tip: シナリオは生成後に編集できます']}
+      />
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
           <div>
@@ -296,7 +305,7 @@ export default function AishodanTool() {
             <button
               onClick={importProduct}
               disabled={importing || !url.trim()}
-              className="rounded-lg bg-[#0066ff] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
+              className="rounded-lg bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
             >
               {importing ? '取り込み中...' : '取り込む'}
             </button>

@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import MensetsuLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
+import LoadingProgress from '@/components/LoadingProgress'
 
 interface Org {
   id: string
@@ -450,6 +451,21 @@ export default function MensetsuTool() {
 
   return (
     <main className="min-h-screen bg-[#f2f6ff] px-5 py-10 lg:px-8">
+      {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}
+      <LoadingProgress
+        isLoading={busy === 'analyze'}
+        operationKey="mensetsu-analyze"
+        title="企業ページを読み取っています"
+        subtitle="事業内容と求める人物像を抽出しています。"
+        tips={['Tip: 採用ページのURLを入れると人物像の精度が上がります', 'Tip: 読み取った内容は後から編集できます']}
+      />
+      <LoadingProgress
+        isLoading={busy === 'generate'}
+        operationKey="mensetsu-generate"
+        title="質問セットを作っています"
+        subtitle="職種とレベルに合わせて、質問と評価軸・ルーブリックを組み立てています。"
+        tips={['Tip: 就職差別につながる質問は生成の時点で除外されます', 'Tip: 全応募者に同じ主質問を当てる構造化面接の方式です', 'Tip: 生成後に質問は自由に編集できます']}
+      />
       <div className="mx-auto max-w-[1100px]">
         <p className="text-sm font-black text-[#0066ff]">ドヤ面接官</p>
         <h1 className="mt-2 text-3xl font-black leading-tight text-[#0a0f3c]">
@@ -515,7 +531,7 @@ export default function MensetsuTool() {
                 <button
                   onClick={analyze}
                   disabled={busy === 'analyze' || !url.trim()}
-                  className="rounded-lg bg-[#0066ff] px-6 py-3 text-sm font-black text-white disabled:bg-[#b9cdf5]"
+                  className="rounded-lg bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-6 py-3 text-sm font-black text-white disabled:bg-[#b9cdf5]"
                 >
                   {busy === 'analyze' ? '読み取り中…' : '読み取る'}
                 </button>
@@ -582,7 +598,7 @@ export default function MensetsuTool() {
               <button
                 onClick={generate}
                 disabled={busy === 'generate' || !jobTitle.trim()}
-                className="mt-4 rounded-lg bg-[#0066ff] px-6 py-3 text-sm font-black text-white disabled:bg-[#b9cdf5]"
+                className="mt-4 rounded-lg bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-6 py-3 text-sm font-black text-white disabled:bg-[#b9cdf5]"
               >
                 {busy === 'generate' ? '生成中…（30秒ほどかかります）' : '質問セットを生成'}
               </button>

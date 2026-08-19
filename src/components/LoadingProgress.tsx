@@ -8,6 +8,16 @@ interface LoadingProgressProps {
   estimatedSeconds?: number;
   /** 平均時間を学習するためのキー（例: banner-from-url / banner-generate / banner-refine） */
   operationKey?: string;
+  /**
+   * 画面に大きく出す見出し（例: 「サービスを解析しています」）。
+   * ⚠️ 何をしているのか分からないまま待たせないための表示。
+   *    省略時は従来どおり汎用のステップ文言だけを出す。
+   */
+  title?: string;
+  /** 見出しの下に出す一文（何を作っているかの補足） */
+  subtitle?: string;
+  /** Tips を差し替える（サービス固有の使いこなしを出したいとき） */
+  tips?: string[];
 }
 
 // 待ち時間中に表示するTips
@@ -65,7 +75,7 @@ function formatSeconds(sec: number) {
   return `${m}分${r.toString().padStart(2, '0')}秒`;
 }
 
-export default function LoadingProgress({ isLoading, estimatedSeconds = 15, operationKey }: LoadingProgressProps) {
+export default function LoadingProgress({ isLoading, estimatedSeconds = 15, operationKey, title, subtitle, tips }: LoadingProgressProps) {
   const [progress, setProgress] = useState(0);
   const [tipIndex, setTipIndex] = useState(0);
   const [currentStep, setCurrentStep] = useState(0);
@@ -176,7 +186,12 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15, oper
 
   if (!isLoading) return null;
 
-  const CurrentTipIcon = loadingTips[tipIndex].icon;
+  // サービス固有の Tips が渡されていればそちらを使う
+  const activeTips = tips && tips.length > 0
+    ? tips.map((t, i) => ({ ...loadingTips[i % loadingTips.length], text: t }))
+    : loadingTips;
+  const safeTipIndex = tipIndex % activeTips.length;
+  const CurrentTipIcon = activeTips[safeTipIndex].icon;
 
   // 平均が無ければ、固定の目安（operationKeyごとのデフォルト）を使用
   const effectiveTotalSec = avgSec ?? baseEstimateSec;
@@ -186,6 +201,14 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15, oper
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[200]">
       <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl border border-white/10">
+        {/* 何をしているのかを最初に大きく出す */}
+        {title && (
+          <div className="text-center mb-5">
+            <h2 className="text-xl font-black text-white leading-snug">{title}</h2>
+            {subtitle && <p className="mt-1.5 text-sm font-bold text-slate-300 leading-relaxed">{subtitle}</p>}
+          </div>
+        )}
+
         {/* 円グラフ風プログレス */}
         <div className="relative w-40 h-40 mx-auto mb-6">
           {/* 背景の円 */}
@@ -268,9 +291,9 @@ export default function LoadingProgress({ isLoading, estimatedSeconds = 15, oper
         {/* Tips表示 */}
         <div className="bg-slate-700/50 rounded-xl p-4 border border-white/5">
           <div className="flex items-center gap-3">
-            <CurrentTipIcon className={`w-6 h-6 ${loadingTips[tipIndex].color} flex-shrink-0`} />
-            <p className="text-gray-300 text-sm leading-relaxed">
-              {loadingTips[tipIndex].text}
+            <CurrentTipIcon className={`w-6 h-6 ${activeTips[safeTipIndex].color} flex-shrink-0`} />
+            <p className="text-gray-300 text-sm font-bold leading-relaxed">
+              {activeTips[safeTipIndex].text}
             </p>
           </div>
         </div>
