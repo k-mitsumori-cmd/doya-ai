@@ -9,6 +9,7 @@
 // ========================================
 
 import { withTimeout } from './fetch-timeout'
+import OpenAI, { toFile } from 'openai'
 
 const OPENAI_IMAGE_ENDPOINT = 'https://api.openai.com/v1/images/generations'
 const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2'
@@ -72,4 +73,59 @@ export async function generateImageGpt(params: {
       revisedPrompt: d?.revised_prompt ? String(d.revised_prompt) : undefined,
     }))
   })
+}
+
+/** 背景の扱い。透過はロゴ・アイコンなど切り抜きが要る用途だけで指定する。 */
+export type GptImageBackground = 'transparent' | 'opaque' | 'auto'
+
+/**
+ * 参照画像つきの編集。gpt-image-2 を優先し、編集未対応環境では gpt-image-1 を使う。
+ *
+ * ⚠️ background の既定は 'opaque'。
+ *    この関数は generateImageWithFallback() から呼ばれる＝ペルソナの人物画像や
+ *    インタビューのサムネイル、バナー生成まで通る共通経路のため、透過を既定にすると
+ *    被写体が切り抜かれた画像が返り、カード表示やJPEG書き出しで破綻する。
+ *    透過が要るのはロゴ・アイコン生成だけなので、その用途から明示的に渡すこと。
+ */
+export async function editImageGpt(params: {
+  prompt: string
+  images: Array<{ base64: string; mimeType: string }>
+  size?: GptImageSize
+  quality?: GptImageQuality
+  background?: GptImageBackground
+}): Promise<GptImageResult & { model: string }> {
+  const apiKey = process.env.OPENAI_API_KEY
+  if (!apiKey) throw new Error('OPENAI_API_KEY が設定されていません')
+  const client = new OpenAI({ apiKey })
+  const uploads = await Promise.all(params.images.map((image, index) => {
+    const ext = image.mimeType.includes('webp') ? 'webp' : image.mimeType.includes('jpeg') ? 'jpg' : 'png'
+    return toFile(Buffer.from(image.base64, 'base64'), `reference-${index + 1}.${ext}`, { type: image.mimeType })
+  }))
+  const quality = params.quality && params.quality !== 'auto' ? params.quality : 'high'
+  const size = ['1024x1024', '1536x1024', '1024x1536', 'auto'].includes(params.size || '')
+    ? params.size as '1024x1024' | '1536x1024' | '1024x1536' | 'auto'
+    : '1024x1024'
+  const background = params.background || 'opaque'
+  const configured = process.env.OPENAI_IMAGE_EDIT_MODEL || OPENAI_IMAGE_MODEL
+  const models = configured === 'gpt-image-1' ? ['gpt-image-1'] : [configured, 'gpt-image-1']
+  let lastError: unknown
+  for (const model of [...new Set(models)]) {
+    try {
+      const response = await client.images.edit({
+        model: model as 'gpt-image-1',
+        image: uploads,
+        prompt: params.prompt,
+        size,
+        quality,
+        background,
+        n: 1,
+      })
+      const b64 = response.data?.[0]?.b64_json
+      if (!b64) throw new Error(`${model} returned no image data`)
+      return { b64, model }
+    } catch (error) {
+      lastError = error
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(String(lastError))
 }

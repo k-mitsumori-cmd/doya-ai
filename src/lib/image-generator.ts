@@ -14,7 +14,7 @@
 //   - レスポンスに画像が含まれない
 // ========================================
 
-import { generateImageGpt, GptImageQuality, GptImageSize } from './openai-image'
+import { editImageGpt, generateImageGpt, GptImageBackground, GptImageQuality, GptImageSize } from './openai-image'
 import { withTimeout } from './fetch-timeout'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
@@ -30,6 +30,12 @@ export interface ImageGenRequest {
   size: string
   quality?: GptImageQuality
   inputImages?: ImageInput[]
+  /**
+   * 参照画像つき編集での背景の扱い。既定は 'opaque'。
+   * ⚠️ 'transparent' はロゴ・アイコンなど切り抜きが要る用途だけで渡すこと。
+   *    人物画像やサムネイルに渡すと被写体が切り抜かれる。
+   */
+  background?: GptImageBackground
   // 以下は Nano Banana Pro Preview 経路でのみ使用
   responseModalities?: string[]
   temperature?: number
@@ -70,9 +76,26 @@ export async function generateImageWithFallback(
     }
   }
 
-  console.log('[image-gen] 入力画像あり → nano-banana-pro-preview を直接使用')
-  const r = await callNanoBananaProPreview(req)
-  return { ...r, fallbackUsed: false }
+  try {
+    const r = await callOpenAIEdit(req)
+    return { ...r, fallbackUsed: false }
+  } catch (e: any) {
+    const msg = e?.message || String(e)
+    console.warn(`[image-gen] OpenAI参照画像編集失敗 → nano-banana-pro-preview にフォールバック: ${msg.slice(0, 200)}`)
+    const r = await callNanoBananaProPreview(req)
+    return { ...r, fallbackUsed: true, primaryError: msg }
+  }
+}
+
+async function callOpenAIEdit(req: ImageGenRequest): Promise<Omit<ImageGenResult, 'fallbackUsed' | 'primaryError'>> {
+  const result = await editImageGpt({
+    prompt: req.prompt,
+    images: req.inputImages || [],
+    size: mapSizeForGptImage2(req.size),
+    quality: req.quality || 'medium',
+    background: req.background,
+  })
+  return { base64: result.b64, mimeType: 'image/png', model: result.model }
 }
 
 async function callOpenAI(
