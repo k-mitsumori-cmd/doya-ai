@@ -252,7 +252,7 @@ export default function MensetsuLivePage() {
         <div className="max-w-md rounded-lg bg-white p-8 text-center shadow-sm">
           <span className="material-symbols-outlined text-4xl text-[#425071]">error</span>
           <h1 className="mt-3 text-lg font-black text-[#0a0f3c]">面接を開始できません</h1>
-          <p className="mt-3 text-sm font-medium leading-relaxed text-[#425071]">{message}</p>
+          <p className="mt-3 text-sm font-semibold leading-relaxed text-[#425071]">{message}</p>
         </div>
       </main>
     )
@@ -265,13 +265,13 @@ export default function MensetsuLivePage() {
         <main className="min-h-screen bg-[#f2f6ff] px-5 py-12">
           <style dangerouslySetInnerHTML={{ __html: SUPPRESS_MARKETING_CSS }} />
           <div className="mx-auto max-w-2xl rounded-lg bg-white p-8 shadow-sm">
-            <span className="material-symbols-outlined text-3xl text-[#0066ff]">task_alt</span>
+            <span className="material-symbols-outlined text-3xl text-[#0066ff] font-medium">task_alt</span>
             <h1 className="mt-3 text-lg font-black text-[#0a0f3c]">面接のフィードバック</h1>
-            <p className="mt-2 text-xs font-medium leading-relaxed text-[#8a94ad]">
+            <p className="mt-2 text-xs font-semibold leading-relaxed text-[#8a94ad]">
               お時間をいただきありがとうございました。今回の面接からお伝えできる点をまとめました。
               選考の結果は追って採用ご担当者よりご連絡いたします。
             </p>
-            <p className="mt-5 whitespace-pre-wrap text-sm font-medium leading-relaxed text-[#425071]">
+            <p className="mt-5 whitespace-pre-wrap text-sm font-semibold leading-relaxed text-[#425071]">
               {feedback.text}
             </p>
           </div>
@@ -284,12 +284,12 @@ export default function MensetsuLivePage() {
         <div className="max-w-md rounded-lg bg-white p-8 text-center shadow-sm">
           <span className="material-symbols-outlined text-4xl text-[#0066ff]">task_alt</span>
           <h1 className="mt-3 text-lg font-black text-[#0a0f3c]">面接は以上です</h1>
-          <p className="mt-3 text-sm font-medium leading-relaxed text-[#425071]">
+          <p className="mt-3 text-sm font-semibold leading-relaxed text-[#425071]">
             お時間をいただきありがとうございました。
             <br />
             結果は追って採用ご担当者よりご連絡いたします。
           </p>
-          <p className="mt-4 text-xs font-medium text-[#8a94ad]">このページは閉じていただいて構いません。</p>
+          <p className="mt-4 text-xs font-semibold text-[#8a94ad]">このページは閉じていただいて構いません。</p>
         </div>
       </main>
     )
@@ -304,13 +304,13 @@ export default function MensetsuLivePage() {
           <h1 className="mt-2 text-2xl font-black leading-snug text-[#0a0f3c]">
             {session.jobTitle} の一次面接
           </h1>
-          <p className="mt-2 text-sm font-medium text-[#425071]">
+          <p className="mt-2 text-sm font-semibold text-[#425071]">
             所要時間 約{session.durationMin}分 / 質問 {session.questionCount}問
           </p>
 
           <div className="mt-6 rounded-lg bg-white p-6 shadow-sm">
             <h2 className="text-base font-black text-[#0a0f3c]">はじめにご確認ください</h2>
-            <ul className="mt-4 space-y-3 text-sm font-medium leading-relaxed text-[#425071]">
+            <ul className="mt-4 space-y-3 text-sm font-semibold leading-relaxed text-[#425071]">
               <li className="flex gap-2">
                 <span className="material-symbols-outlined text-[18px] text-[#0066ff]">smart_toy</span>
                 <span>
@@ -352,7 +352,7 @@ export default function MensetsuLivePage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="山田 太郎"
-                className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium text-[#0a0f3c] outline-none focus:border-[#0066ff]"
+                className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold text-[#0a0f3c] outline-none focus:border-[#0066ff]"
               />
             </div>
 
@@ -372,9 +372,9 @@ export default function MensetsuLivePage() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   autoComplete="email"
-                  className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium text-[#0a0f3c] outline-none focus:border-[#0066ff]"
+                  className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold text-[#0a0f3c] outline-none focus:border-[#0066ff]"
                 />
-                <p className="mt-1.5 text-xs font-medium leading-relaxed text-[#8a94ad]">
+                <p className="mt-1.5 text-xs font-semibold leading-relaxed text-[#8a94ad]">
                   ご本人の確認のために入力をお願いしています。
                   ご不明な場合は、面接URLをお送りした採用ご担当者にお問い合わせください。
                 </p>
@@ -415,7 +415,7 @@ export default function MensetsuLivePage() {
         <div className="mx-auto max-w-2xl">
           <h1 className="text-2xl font-black text-[#0a0f3c]">準備はよろしいですか</h1>
           <div className="mt-6 rounded-lg bg-white p-6 shadow-sm">
-            <ul className="space-y-3 text-sm font-medium leading-relaxed text-[#425071]">
+            <ul className="space-y-3 text-sm font-semibold leading-relaxed text-[#425071]">
               <li className="flex gap-2">
                 <span className="material-symbols-outlined text-[18px] text-[#0066ff]">headphones</span>
                 <span>静かな場所で、イヤホンのご利用をおすすめします（音の回り込みを防げます）。</span>
@@ -493,7 +493,7 @@ export default function MensetsuLivePage() {
           <p className="text-[12px] font-black leading-relaxed text-[#a06800]">
             通信が不安定になっています。そのままお待ちください。接続が戻り次第、面接を続けます。
           </p>
-          <p className="mt-0.5 text-[11px] font-medium text-[#a06800]">
+          <p className="mt-0.5 text-[11px] font-semibold text-[#a06800]">
             戻らない場合は3分ほどで面接を終了し、ここまでのご回答を採用ご担当者へお送りします。
           </p>
         </div>
@@ -510,7 +510,7 @@ export default function MensetsuLivePage() {
           </div>
         ) : rt.state === 'error' ? (
           <div className="flex flex-1 flex-col items-center justify-center px-6 text-center">
-            <span className="material-symbols-outlined text-3xl text-[#8a94ad]">error</span>
+            <span className="material-symbols-outlined text-3xl text-[#8a94ad] font-medium">error</span>
             <p className="mt-2 max-w-sm text-sm font-bold text-[#0a0f3c]">{rt.error}</p>
             <button onClick={beginInterview} className="mt-4 rounded-lg bg-[#0066ff] px-5 py-2.5 text-sm font-black text-white">
               もう一度試す
@@ -562,7 +562,7 @@ export default function MensetsuLivePage() {
               </div>
 
               {showCaptions && lastLine && (
-                <p className="mt-3 line-clamp-3 text-[13px] font-medium leading-relaxed text-[#5b6785] lg:text-sm">
+                <p className="mt-3 line-clamp-3 text-[13px] font-semibold leading-relaxed text-[#5b6785] lg:text-sm">
                   <span className={lastLine.speaker === 'interviewer' ? 'font-black text-[#0066ff]' : 'font-black text-[#0a0f3c]'}>
                     {lastLine.speaker === 'interviewer' ? '面接官' : 'あなた'}:{' '}
                   </span>
@@ -588,7 +588,7 @@ export default function MensetsuLivePage() {
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="文字で回答する場合はこちらに入力"
-            className="flex-1 rounded-full border border-[#dfe6f3] bg-white px-4 py-2.5 text-sm font-medium text-[#0a0f3c] outline-none focus:border-[#0066ff]"
+            className="flex-1 rounded-full border border-[#dfe6f3] bg-white px-4 py-2.5 text-sm font-semibold text-[#0a0f3c] outline-none focus:border-[#0066ff]"
           />
           <button
             type="submit"
@@ -652,15 +652,15 @@ export default function MensetsuLivePage() {
                 })}
               </ol>
             ) : rt.lines.length === 0 ? (
-              <p className="py-6 text-center text-sm font-medium text-[#8a94ad]">まだ会話がありません。</p>
+              <p className="py-6 text-center text-sm font-semibold text-[#8a94ad]">まだ会話がありません。</p>
             ) : (
               <div className="space-y-2.5">
                 {rt.lines.map((l, i) => (
-                  <p key={i} className="text-sm leading-relaxed">
+                  <p key={i} className="text-sm leading-relaxed font-medium">
                     <span className={l.speaker === 'interviewer' ? 'font-black text-[#0066ff]' : 'font-black text-[#0a0f3c]'}>
                       {l.speaker === 'interviewer' ? '面接官' : 'あなた'}:{' '}
                     </span>
-                    <span className="font-medium text-[#425071]">{l.text}</span>
+                    <span className="font-semibold text-[#425071]">{l.text}</span>
                   </p>
                 ))}
               </div>

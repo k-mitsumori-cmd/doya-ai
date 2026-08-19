@@ -64,7 +64,7 @@ export default function AishodanSessionsPage() {
     <div className="min-h-screen bg-slate-50 pb-24">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-4xl px-4 py-4">
-          <Link href="/aishodan" className="text-xs text-slate-500 hover:underline">← ダッシュボード</Link>
+          <Link href="/aishodan" className="text-xs text-slate-500 hover:underline font-semibold">← ダッシュボード</Link>
           <h1 className="text-lg font-bold text-slate-900">商談ログ</h1>
         </div>
       </header>
@@ -88,33 +88,33 @@ export default function AishodanSessionsPage() {
           {loading ? (
             <div className="flex flex-col items-center justify-center gap-2 py-6"><DoyaKun mood="working" size={72} /><p className="text-sm font-bold text-slate-400">読み込んでいます…</p></div>
           ) : sessions.length === 0 ? (
-            <p className="text-sm text-slate-500">該当する商談はありません。</p>
+            <p className="text-sm text-slate-500 font-semibold">該当する商談はありません。</p>
           ) : (
             <div className="divide-y divide-slate-100">
               {sessions.map((s) => (
                 <Link key={s.id} href={`/aishodan/sessions/${s.id}`} className="flex items-center justify-between gap-3 py-3 hover:bg-slate-50">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-900">
+                    <p className="truncate text-sm font-semibold text-slate-900">
                       {s.guestCompany || '会社名未取得'} {s.guestName ? `／ ${s.guestName}` : ''}
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 font-semibold">
                       {new Date(s.createdAt).toLocaleString('ja-JP')} / {s.room.name} / {s._count.turns}発話
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     {s.room.isPreview && (
-                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-500">
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-500">
                         練習
                       </span>
                     )}
                     {s.schedulingClickedAt && (
-                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
+                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
                         日程調整済み
                       </span>
                     )}
                     {s.outcome ? (
                       <>
-                        <span className="text-sm font-semibold text-slate-900">{s.outcome.fitScore}</span>
+                        <span className="text-sm font-bold text-slate-900">{s.outcome.fitScore}</span>
                         <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${VERDICT_STYLE[s.outcome.verdict]}`}>
                           {VERDICT_LABELS[s.outcome.verdict as Verdict]}
                         </span>

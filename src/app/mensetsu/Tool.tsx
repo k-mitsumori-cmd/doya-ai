@@ -455,7 +455,7 @@ export default function MensetsuTool() {
         <h1 className="mt-2 text-3xl font-black leading-tight text-[#0a0f3c]">
           AIが一次面接を実施し、評価まで残す
         </h1>
-        <p className="mt-3 max-w-[62ch] text-sm font-medium leading-relaxed text-[#425071]">
+        <p className="mt-3 max-w-[62ch] text-sm font-semibold leading-relaxed text-[#425071]">
           企業URLから質問セットと評価基準を自動生成し、応募者はURLを開くだけで面接を受けられます。
           判定は「推薦度」であり、<strong className="font-black text-[#0a0f3c]">最終的な選考の判断は必ず人が行います。</strong>
         </p>
@@ -475,7 +475,7 @@ export default function MensetsuTool() {
         {!org ? (
           <section className="mt-8 rounded-lg bg-white p-6 shadow-sm">
             <h2 className="text-base font-black text-[#0a0f3c]">はじめに組織を作成します</h2>
-            <p className="mt-2 text-sm font-medium text-[#425071]">
+            <p className="mt-2 text-sm font-semibold text-[#425071]">
               面接テンプレートや応募者の記録は、この組織単位で管理されます。
             </p>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
@@ -483,7 +483,7 @@ export default function MensetsuTool() {
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
                 placeholder="株式会社スリスタ"
-                className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
               />
               <button
                 onClick={createOrg}
@@ -493,7 +493,7 @@ export default function MensetsuTool() {
                 {busy === 'org' ? '作成中…' : '組織を作成'}
               </button>
             </div>
-            <p className="mt-3 text-xs font-medium text-[#8a94ad]">
+            <p className="mt-3 text-xs font-semibold text-[#8a94ad]">
               ログインしていない場合は、先にログインが必要です。
             </p>
           </section>
@@ -510,7 +510,7 @@ export default function MensetsuTool() {
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   placeholder="https://example.co.jp"
-                  className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                  className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
                 />
                 <button
                   onClick={analyze}
@@ -532,7 +532,7 @@ export default function MensetsuTool() {
                   ].map(([label, value]) => (
                     <div key={label as string} className="rounded-lg bg-[#f7faff] p-4">
                       <dt className="text-xs font-black text-[#0066ff]">{label}</dt>
-                      <dd className="mt-1 text-sm font-medium leading-relaxed text-[#0a0f3c]">
+                      <dd className="mt-1 text-sm font-semibold leading-relaxed text-[#0a0f3c]">
                         {value || <span className="text-[#8a94ad]">（サイトから読み取れませんでした）</span>}
                       </dd>
                     </div>
@@ -552,12 +552,12 @@ export default function MensetsuTool() {
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
                   placeholder="職種（例: フィールドセールス）"
-                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
                 />
                 <select
                   value={level}
                   onChange={(e) => setLevel(e.target.value)}
-                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
                 >
                   <option value="newgrad">新卒</option>
                   <option value="mid">中途</option>
@@ -566,7 +566,7 @@ export default function MensetsuTool() {
                 <select
                   value={durationMin}
                   onChange={(e) => setDurationMin(Number(e.target.value))}
-                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
                 >
                   <option value={10}>10分</option>
                   <option value={20}>20分</option>
@@ -576,7 +576,7 @@ export default function MensetsuTool() {
                   value={focus}
                   onChange={(e) => setFocus(e.target.value)}
                   placeholder="特に見たい点（任意）"
-                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
                 />
               </div>
               <button
@@ -593,7 +593,7 @@ export default function MensetsuTool() {
                     <li key={t.id} className="flex items-center justify-between py-3">
                       <div>
                         <p className="text-sm font-black text-[#0a0f3c]">{t.name}</p>
-                        <p className="text-xs font-medium text-[#425071]">
+                        <p className="text-xs font-semibold text-[#425071]">
                           質問{t._count?.questions ?? 0}問 / 評価軸{t._count?.criteria ?? 0}個 / 面接{t._count?.sessions ?? 0}件
                         </p>
                       </div>
@@ -621,14 +621,14 @@ export default function MensetsuTool() {
                 <h2 className="text-base font-black text-[#0a0f3c]">応募者に面接URLを送る</h2>
               </div>
               {templates.length === 0 ? (
-                <p className="mt-3 text-sm font-medium text-[#425071]">先に質問セットを作成してください。</p>
+                <p className="mt-3 text-sm font-semibold text-[#425071]">先に質問セットを作成してください。</p>
               ) : (
                 <>
                   <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                     <select
                       value={selectedTemplate}
                       onChange={(e) => setSelectedTemplate(e.target.value)}
-                      className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                      className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
                     >
                       {templates.map((t) => (
                         <option key={t.id} value={t.id}>
@@ -640,14 +640,14 @@ export default function MensetsuTool() {
                       value={candidateName}
                       onChange={(e) => setCandidateName(e.target.value)}
                       placeholder="応募者名（任意）"
-                      className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                      className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
                     />
                     <input
                       type="email"
                       value={candidateEmail}
                       onChange={(e) => setCandidateEmail(e.target.value)}
                       placeholder="ご本人確認用メール（任意・送信しません）"
-                      className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-medium outline-none focus:border-[#0066ff]"
+                      className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
                     />
                     <button
                       onClick={issue}
@@ -660,7 +660,7 @@ export default function MensetsuTool() {
                   {/* ⚠️ メールアドレスは送信に使わない。開始前のご本人確認にだけ使う。
                        入れておくと、URLが転送されてもご本人以外は先へ進めない。
                        空欄なら確認を行わず、URLを開いた方がそのまま受験できる。 */}
-                  <p className="mt-3 text-xs font-medium leading-relaxed text-[#8a94ad]">
+                  <p className="mt-3 text-xs font-semibold leading-relaxed text-[#8a94ad]">
                     {candidateEmail.trim()
                       ? 'このメールアドレスに送信は行いません。面接の開始前に、ご本人確認として同じアドレスの入力をお願いする照合先になります。'
                       : 'メールアドレスを入れておくと、面接の開始前にご本人確認が有効になります。空欄のままでも面接は受けられます。'}
@@ -675,7 +675,7 @@ export default function MensetsuTool() {
                       >
                         コピー
                       </button>
-                      <p className="mt-3 text-xs font-medium leading-relaxed text-[#8a94ad]">
+                      <p className="mt-3 text-xs font-semibold leading-relaxed text-[#8a94ad]">
                         このURLを応募者にお渡しください。面接一覧からいつでもコピーできます。
                       </p>
                     </div>
@@ -699,7 +699,7 @@ export default function MensetsuTool() {
                 )}
               </div>
               {sessions.length === 0 ? (
-                <p className="mt-3 text-sm font-medium text-[#425071]">まだ面接はありません。</p>
+                <p className="mt-3 text-sm font-semibold text-[#425071]">まだ面接はありません。</p>
               ) : (
                 <ul className="mt-4 divide-y divide-[#eef3ff]">
                   {sessions.map((s) => (
@@ -709,7 +709,7 @@ export default function MensetsuTool() {
                           {s.candidateName || '（名前未入力）'}
                           <span className="ml-2 text-xs font-bold text-[#425071]">{s.template.jobTitle}</span>
                         </p>
-                        <p className="text-xs font-medium text-[#425071]">
+                        <p className="text-xs font-semibold text-[#425071]">
                           {STATUS_LABEL[s.status] || s.status}
                           {s.verdict && ` / ${VERDICT_LABEL[s.verdict] || s.verdict}`}
                         </p>
@@ -782,7 +782,7 @@ export default function MensetsuTool() {
                           <label className="block text-xs font-black text-[#0a0f3c]">
                             ご本人確認に使うメールアドレス
                           </label>
-                          <p className="mt-1 text-xs font-medium leading-relaxed text-[#8a94ad]">
+                          <p className="mt-1 text-xs font-semibold leading-relaxed text-[#8a94ad]">
                             このアドレスに送信は行いません。面接の開始前に応募者へ入力をお願いし、
                             一致した場合のみ先へ進めます。空にすると確認を行いません。
                           </p>
@@ -792,7 +792,7 @@ export default function MensetsuTool() {
                               value={editingEmail}
                               onChange={(e) => setEditingEmail(e.target.value)}
                               placeholder="candidate@example.com"
-                              className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                              className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
                             />
                             <button
                               onClick={() => void updateCandidateEmail(s)}
@@ -822,7 +822,7 @@ export default function MensetsuTool() {
             {/* --- 5. メンバー --- */}
             <section className="mt-6 rounded-lg bg-white p-6 shadow-sm">
               <h2 className="text-base font-black text-[#0a0f3c]">メンバー</h2>
-              <p className="mt-1 text-xs font-medium text-[#8a94ad]">
+              <p className="mt-1 text-xs font-semibold text-[#8a94ad]">
                 招待した方は、この組織の面接テンプレートと応募者の記録を扱えるようになります。
               </p>
 
@@ -836,7 +836,7 @@ export default function MensetsuTool() {
                           <span className="ml-2 text-[11px] font-bold text-[#8a94ad]">あなた</span>
                         )}
                       </p>
-                      <p className="text-[11px] font-medium text-[#425071]">
+                      <p className="text-[11px] font-semibold text-[#425071]">
                         {ROLE_LABEL[m.role] || m.role}
                         {m.status === 'PENDING' && ' / 招待中'}
                       </p>
@@ -862,12 +862,12 @@ export default function MensetsuTool() {
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
                       placeholder="招待する方のメールアドレス"
-                      className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                      className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
                     />
                     <select
                       value={inviteRole}
                       onChange={(e) => setInviteRole(e.target.value)}
-                      className="rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                      className="rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
                     >
                       <option value="member">メンバー</option>
                       <option value="manager">マネージャー</option>
@@ -888,7 +888,7 @@ export default function MensetsuTool() {
                   )}
                 </>
               ) : (
-                <p className="mt-4 text-xs font-medium text-[#8a94ad]">
+                <p className="mt-4 text-xs font-semibold text-[#8a94ad]">
                   メンバーの招待は管理者以上が行えます。
                 </p>
               )}
@@ -897,7 +897,7 @@ export default function MensetsuTool() {
             {/* --- 6. 組織設定 --- */}
             <section className="mt-6 rounded-lg bg-white p-6 shadow-sm">
               <h2 className="text-base font-black text-[#0a0f3c]">記録の設定</h2>
-              <p className="mt-1 text-xs font-medium text-[#8a94ad]">
+              <p className="mt-1 text-xs font-semibold text-[#8a94ad]">
                 ここで決めた内容は、応募者の同意画面にそのまま表示されます。
               </p>
 
@@ -911,7 +911,7 @@ export default function MensetsuTool() {
                 />
                 <span>
                   <span className="block text-sm font-black text-[#0a0f3c]">音声を録音して保存する</span>
-                  <span className="mt-0.5 block text-xs font-medium leading-relaxed text-[#425071]">
+                  <span className="mt-0.5 block text-xs font-semibold leading-relaxed text-[#425071]">
                     既定はオフです。オフでも会話は文字に起こして記録され、評価は行えます。
                     オンにすると応募者の同意画面に「音声そのものを録音して保存します」が追加されます。
                   </span>
@@ -931,7 +931,7 @@ export default function MensetsuTool() {
                   <span className="block text-sm font-black text-[#0a0f3c]">
                     応募者ご本人にフィードバックを見せる
                   </span>
-                  <span className="mt-0.5 block text-xs font-medium leading-relaxed text-[#425071]">
+                  <span className="mt-0.5 block text-xs font-semibold leading-relaxed text-[#425071]">
                     既定はオフです。オンにすると、評価が終わったあとに応募者が面接のURLを
                     開き直すと、強みと改善のご提案をご覧いただけます。
                   </span>
@@ -946,7 +946,7 @@ export default function MensetsuTool() {
 
               <label className="mt-3 block rounded-lg bg-[#f7faff] p-4">
                 <span className="block text-sm font-black text-[#0a0f3c]">記録の保持日数</span>
-                <span className="mt-0.5 block text-xs font-medium leading-relaxed text-[#425071]">
+                <span className="mt-0.5 block text-xs font-semibold leading-relaxed text-[#425071]">
                   面接を実施した日から数えます。期限を過ぎた記録は毎日の処理で自動的に削除されます。
                 </span>
                 <span className="mt-3 flex items-center gap-2">
@@ -960,7 +960,7 @@ export default function MensetsuTool() {
                       const v = Number(e.target.value)
                       if (Number.isFinite(v) && v !== org.retentionDays) void saveSettings({ retentionDays: v })
                     }}
-                    className="w-28 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-medium outline-none focus:border-[#0066ff]"
+                    className="w-28 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold outline-none focus:border-[#0066ff]"
                   />
                   <span className="text-sm font-bold text-[#425071]">日</span>
                 </span>

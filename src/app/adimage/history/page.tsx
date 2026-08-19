@@ -85,7 +85,7 @@ export default function AdImageHistoryPage() {
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <div>
             <h1 className="text-lg font-bold text-slate-900">これまでに作った広告画像</h1>
-            <p className="text-xs text-slate-500">直近50件を新しい順に表示します。</p>
+            <p className="text-xs text-slate-500 font-semibold">直近50件を新しい順に表示します。</p>
           </div>
           <Link
             href="/adimage"
@@ -98,15 +98,15 @@ export default function AdImageHistoryPage() {
 
       <main className="mx-auto max-w-5xl space-y-4 px-4 py-6">
         {error && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>
         )}
 
         {loading ? (
-          <p className="py-16 text-center text-sm text-slate-500">読み込んでいます…</p>
+          <p className="py-16 text-center text-sm text-slate-500 font-semibold">読み込んでいます…</p>
         ) : concepts.length === 0 ? (
           <div className="rounded-2xl bg-white p-10 text-center shadow-sm ring-1 ring-slate-200">
-            <p className="text-sm text-slate-600">まだ広告画像がありません。</p>
-            <p className="mt-1 text-xs leading-relaxed text-slate-500">
+            <p className="text-sm text-slate-600 font-semibold">まだ広告画像がありません。</p>
+            <p className="mt-1 text-xs leading-relaxed text-slate-500 font-semibold">
               サービスのURLを入れると、媒体ごとにサイズの揃った広告画像を作れます。
             </p>
             <Link
@@ -135,9 +135,9 @@ export default function AdImageHistoryPage() {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-bold text-slate-900">
                       {c.brandName}
-                      <span className="ml-2 text-xs font-normal text-slate-500">{c.label}</span>
+                      <span className="ml-2 text-xs font-normal text-slate-500 font-semibold">{c.label}</span>
                     </p>
-                    <p className="mt-0.5 truncate text-xs text-slate-500">
+                    <p className="mt-0.5 truncate text-xs text-slate-500 font-semibold">
                       {formatDate(c.createdAt)} / {c.creatives.length}点
                       {c.generation > 1 && ` / 改善${c.generation - 1}回目`}
                     </p>
@@ -152,7 +152,7 @@ export default function AdImageHistoryPage() {
                     {c.copy?.headline && (
                       <p className="text-sm font-bold text-slate-900">{c.copy.headline}</p>
                     )}
-                    {c.copy?.sub && <p className="mt-0.5 text-xs text-slate-600">{c.copy.sub}</p>}
+                    {c.copy?.sub && <p className="mt-0.5 text-xs text-slate-600 font-semibold">{c.copy.sub}</p>}
 
                     <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                       {c.creatives.map((cr) => (
@@ -165,13 +165,13 @@ export default function AdImageHistoryPage() {
                               className="w-full bg-slate-100 object-contain"
                             />
                           ) : (
-                            <div className="flex h-40 items-center justify-center bg-slate-100 text-xs text-slate-400">
+                            <div className="flex h-40 items-center justify-center bg-slate-100 text-xs text-slate-400 font-semibold">
                               読み込めませんでした
                             </div>
                           )}
                           <div className="flex items-center justify-between gap-2 px-3 py-2">
                             <div className="min-w-0">
-                              <p className="truncate text-xs font-medium text-slate-900">{cr.placementName}</p>
+                              <p className="truncate text-xs font-semibold text-slate-900">{cr.placementName}</p>
                               <p className="text-[10px] text-slate-500">{cr.media} / {cr.size}</p>
                             </div>
                             {cr.verify?.needsReview ? (
@@ -191,7 +191,7 @@ export default function AdImageHistoryPage() {
                     {c.creatives.length > 0 && (
                       <a
                         href={`/api/adimage/concepts/${c.id}/export`}
-                        className="mt-4 inline-block rounded-lg border border-slate-300 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50"
+                        className="mt-4 inline-block rounded-lg border border-slate-300 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 font-semibold"
                       >
                         すべてダウンロード（ZIP）
                       </a>

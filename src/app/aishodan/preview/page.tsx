@@ -113,10 +113,10 @@ export default function AishodanPreviewPage() {
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
         <div className="w-full max-w-md rounded-2xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-200">
           <h1 className="text-xl font-bold text-slate-900">ドヤAI商談</h1>
-          <p className="mt-2 text-sm text-slate-600">ご利用にはログインが必要です。</p>
+          <p className="mt-2 text-sm text-slate-600 font-semibold">ご利用にはログインが必要です。</p>
           <a
             href={`/auth/signin?callbackUrl=${encodeURIComponent('/aishodan/preview')}`}
-            className="mt-5 inline-block w-full rounded-lg bg-[#0066ff] px-4 py-3 text-sm font-semibold text-white"
+            className="mt-5 inline-block w-full rounded-lg bg-[#0066ff] px-4 py-3 text-sm font-bold text-white"
           >
             ログインする
           </a>
@@ -129,7 +129,7 @@ export default function AishodanPreviewPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50">
         <p className="text-slate-600">先に商材を取り込んでください。</p>
-        <Link href="/aishodan" className="text-sm text-[#0066ff] underline">ダッシュボードへ</Link>
+        <Link href="/aishodan" className="text-sm text-[#0066ff] underline font-semibold">ダッシュボードへ</Link>
       </div>
     )
   }
@@ -141,7 +141,7 @@ export default function AishodanPreviewPage() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-4">
           <div className="min-w-0">
-            <Link href="/aishodan" className="text-xs text-slate-500 hover:underline">← ダッシュボード</Link>
+            <Link href="/aishodan" className="text-xs text-slate-500 hover:underline font-semibold">← ダッシュボード</Link>
             <h1 className="text-lg font-bold text-slate-900">練習モード</h1>
           </div>
           <div className="flex items-center gap-3">
@@ -156,33 +156,33 @@ export default function AishodanPreviewPage() {
       </header>
 
       <main className="mx-auto max-w-3xl space-y-5 px-4 py-6">
-        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>}
+        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
 
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-base font-bold text-slate-900">自分で商談を受けてみる</h2>
-          <p className="mt-1 text-sm leading-relaxed text-slate-600">
+          <p className="mt-1 text-sm leading-relaxed text-slate-600 font-semibold">
             見込み客と同じ画面が開きます。AIの話し方・質問の順番・答えられない質問を、
             実際に話して確かめてください。ここで直したことがそのまま本番に効きます。
           </p>
-          <p className="mt-2 text-xs leading-relaxed text-slate-500">
+          <p className="mt-2 text-xs leading-relaxed text-slate-500 font-semibold">
             練習の商談は、件数の指標にも無料枠の消費にも入りません。Slack通知も飛びません。
             会話ログだけは残るので、あとから見返せます。
           </p>
 
           {scenarios.length === 0 ? (
-            <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm text-amber-900 font-semibold">
               まだ商材がありません。
-              <Link href="/aishodan" className="ml-1 font-semibold underline">ダッシュボード</Link>
+              <Link href="/aishodan" className="ml-1 font-bold underline">ダッシュボード</Link>
               でサービスURLを取り込んでください。
             </p>
           ) : (
             <>
-              <label className="mt-4 block text-sm">
-                <span className="mb-1 block text-xs font-semibold text-slate-500">試すシナリオ</span>
+              <label className="mt-4 block text-sm font-semibold">
+                <span className="mb-1 block text-xs font-bold text-slate-500">試すシナリオ</span>
                 <select
                   value={scenarioId}
                   onChange={(e) => setScenarioId(e.target.value)}
-                  className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                  className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
                 >
                   {scenarios.map((s) => (
                     <option key={s.id} value={s.id}>
@@ -196,14 +196,14 @@ export default function AishodanPreviewPage() {
                 <button
                   onClick={startPractice}
                   disabled={starting || !scenarioId}
-                  className="rounded-lg bg-[#0066ff] px-5 py-3 text-sm font-semibold text-white disabled:opacity-40"
+                  className="rounded-lg bg-[#0066ff] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
                 >
                   {starting ? '準備中...' : '練習を始める（別タブで開きます）'}
                 </button>
                 {scenarioId && (
                   <Link
                     href={`/aishodan/scenarios/${scenarioId}`}
-                    className="rounded-lg border border-slate-300 px-5 py-3 text-sm text-slate-700 hover:bg-slate-50"
+                    className="rounded-lg border border-slate-300 px-5 py-3 text-sm text-slate-700 hover:bg-slate-50 font-semibold"
                   >
                     シナリオを直す
                   </Link>
@@ -215,11 +215,11 @@ export default function AishodanPreviewPage() {
 
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-base font-bold text-slate-900">練習の記録</h2>
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-sm text-slate-600 font-semibold">
             話し終えたらここから会話ログを開いて、AIの受け答えを確認してください。
           </p>
           {sessions.length === 0 ? (
-            <p className="mt-4 text-sm text-slate-500">まだ練習の記録はありません。</p>
+            <p className="mt-4 text-sm text-slate-500 font-semibold">まだ練習の記録はありません。</p>
           ) : (
             <div className="mt-4 divide-y divide-slate-100">
               {sessions.map((s) => (
@@ -229,17 +229,17 @@ export default function AishodanPreviewPage() {
                   className="flex items-center justify-between gap-3 py-3 hover:bg-slate-50"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-900">
+                    <p className="truncate text-sm font-semibold text-slate-900">
                       {new Date(s.createdAt).toLocaleString('ja-JP')}
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 font-semibold">
                       {s._count.turns}発話
                       {s.guestName ? ` / ${s.guestName}` : ''}
                       {s.schedulingClickedAt ? ' / 日程調整を押した' : ''}
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    {s.outcome && <span className="text-sm font-semibold text-slate-900">{s.outcome.fitScore}</span>}
+                    {s.outcome && <span className="text-sm font-bold text-slate-900">{s.outcome.fitScore}</span>}
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-600">
                       {SESSION_STATUS_LABELS[s.status] || s.status}
                     </span>

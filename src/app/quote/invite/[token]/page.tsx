@@ -75,13 +75,13 @@ export default function QuoteInvitePage() {
           <>
             <span className="material-symbols-outlined text-4xl text-[#0066ff]">task_alt</span>
             <h1 className="mt-3 text-lg font-black text-[#0a0f3c]">参加しました</h1>
-            <p className="mt-2 text-sm font-medium text-[#425071]">見積もりの管理画面へ移動します…</p>
+            <p className="mt-2 text-sm font-semibold text-[#425071]">見積もりの管理画面へ移動します…</p>
           </>
         ) : error ? (
           <>
             <span className="material-symbols-outlined text-4xl text-[#8a94ad]">error</span>
             <h1 className="mt-3 text-lg font-black text-[#0a0f3c]">参加できません</h1>
-            <p className="mt-3 text-sm font-medium leading-relaxed text-[#425071]">{error}</p>
+            <p className="mt-3 text-sm font-semibold leading-relaxed text-[#425071]">{error}</p>
           </>
         ) : (
           <>
@@ -89,7 +89,7 @@ export default function QuoteInvitePage() {
             <h1 className="mt-2 text-xl font-black leading-snug text-[#0a0f3c]">
               {invite?.organizationName} に招待されています
             </h1>
-            <p className="mt-3 text-sm font-medium leading-relaxed text-[#425071]">
+            <p className="mt-3 text-sm font-semibold leading-relaxed text-[#425071]">
               権限: <strong className="font-black text-[#0a0f3c]">{invite?.roleLabel}</strong>
               <br />
               参加すると、この組織の商材と見積書を扱えるようになります。
@@ -101,7 +101,7 @@ export default function QuoteInvitePage() {
             >
               {invite?.accepted ? 'この招待は使用済みです' : busy ? '処理中…' : '参加する'}
             </button>
-            <p className="mt-3 text-xs font-medium text-[#8a94ad]">
+            <p className="mt-3 text-xs font-semibold text-[#8a94ad]">
               ログインしていない場合は、参加を押すとログイン画面に移動します。
             </p>
           </>

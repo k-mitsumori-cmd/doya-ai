@@ -109,7 +109,7 @@ export default function AishodanScenarioPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50">
         <p className="text-slate-600">{error || 'シナリオが見つかりません'}</p>
-        <Link href="/aishodan" className="text-sm text-[#0066ff] underline">ダッシュボードに戻る</Link>
+        <Link href="/aishodan" className="text-sm text-[#0066ff] underline font-semibold">ダッシュボードに戻る</Link>
       </div>
     )
   }
@@ -122,21 +122,21 @@ export default function AishodanScenarioPage() {
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
-            <Link href="/aishodan" className="text-xs text-slate-500 hover:underline">← ダッシュボード</Link>
+            <Link href="/aishodan" className="text-xs text-slate-500 hover:underline font-semibold">← ダッシュボード</Link>
             <h1 className="truncate text-base font-bold text-slate-900">{s.name}</h1>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             {/* ⚠️ 直したら即その場で試せることが、品質調整を回す上で効く */}
             <Link
               href="/aishodan/preview"
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 font-semibold"
             >
               試す
             </Link>
             <button
               onClick={save}
               disabled={saving}
-              className="rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+              className="rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-bold text-white disabled:opacity-40"
             >
               {saving ? '保存中...' : '保存'}
             </button>
@@ -145,56 +145,56 @@ export default function AishodanScenarioPage() {
       </header>
 
       <main className="mx-auto max-w-3xl space-y-5 px-4 py-6">
-        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>}
-        {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">{message}</div>}
+        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
+        {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 font-semibold">{message}</div>}
 
         {/* 基本 */}
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-sm font-bold text-slate-900">基本</h2>
-          <label className="mt-3 block text-sm">
-            <span className="mb-1 block text-xs font-semibold text-slate-500">シナリオ名</span>
+          <label className="mt-3 block text-sm font-semibold">
+            <span className="mb-1 block text-xs font-bold text-slate-500">シナリオ名</span>
             <input
               value={s.name}
               onChange={(e) => patch({ name: e.target.value })}
-              className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+              className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
             />
           </label>
-          <label className="mt-3 block text-sm">
-            <span className="mb-1 block text-xs font-semibold text-slate-500">商談時間（分）</span>
+          <label className="mt-3 block text-sm font-semibold">
+            <span className="mb-1 block text-xs font-bold text-slate-500">商談時間（分）</span>
             <input
               value={s.durationMin}
               inputMode="numeric"
               onChange={(e) => patch({ durationMin: Math.max(5, Math.min(45, Number(e.target.value.replace(/[^0-9]/g, '')) || 15)) })}
-              className="w-24 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
+              className="w-24 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
             />
-            <span className="ml-2 text-xs text-slate-500">5〜45分</span>
+            <span className="ml-2 text-xs text-slate-500 font-semibold">5〜45分</span>
           </label>
         </section>
 
         {/* 日程調整 */}
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-sm font-bold text-slate-900">日程調整リンク</h2>
-          <p className="mt-1 text-xs leading-relaxed text-slate-500">
+          <p className="mt-1 text-xs leading-relaxed text-slate-500 font-semibold">
             設定すると、商談画面に「日程を決める」ボタンが出ます。AIも締めで必ず案内します。
             一次商談の出口は次アポの確定なので、ここを入れておくと商談が次につながります。
             Calendly・TimeRex・Googleカレンダーの予約ページなどのURLを貼ってください。
           </p>
-          <label className="mt-4 block text-sm">
-            <span className="mb-1 block text-xs font-semibold text-slate-500">予約ページのURL（https のみ）</span>
+          <label className="mt-4 block text-sm font-semibold">
+            <span className="mb-1 block text-xs font-bold text-slate-500">予約ページのURL（https のみ）</span>
             <input
               value={s.schedulingUrl ?? ''}
               onChange={(e) => patch({ schedulingUrl: e.target.value })}
               placeholder="https://calendly.com/your-name/30min"
-              className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+              className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
             />
           </label>
-          <label className="mt-3 block text-sm">
-            <span className="mb-1 block text-xs font-semibold text-slate-500">ボタンの文言（空なら「担当者と日程を決める」）</span>
+          <label className="mt-3 block text-sm font-semibold">
+            <span className="mb-1 block text-xs font-bold text-slate-500">ボタンの文言（空なら「担当者と日程を決める」）</span>
             <input
               value={s.schedulingLabel ?? ''}
               onChange={(e) => patch({ schedulingLabel: e.target.value })}
               placeholder="担当者と日程を決める"
-              className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+              className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
             />
           </label>
         </section>
@@ -202,10 +202,10 @@ export default function AishodanScenarioPage() {
         {/* ガードレール */}
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-sm font-bold text-slate-900">話してよいこと・いけないこと</h2>
-          <p className="mt-1 text-xs text-slate-500">ここで決めた内容が、そのまま相手への発言を縛ります。</p>
+          <p className="mt-1 text-xs text-slate-500 font-semibold">ここで決めた内容が、そのまま相手への発言を縛ります。</p>
 
           <div className="mt-4">
-            <p className="text-xs font-semibold text-slate-500">価格の扱い</p>
+            <p className="text-xs font-bold text-slate-500">価格の扱い</p>
             <div className="mt-2 space-y-2">
               {(['disclose', 'rough', 'withhold'] as PricePolicy[]).map((v) => (
                 <label key={v} className="flex cursor-pointer items-center gap-2.5">
@@ -215,14 +215,14 @@ export default function AishodanScenarioPage() {
                     onChange={() => patch({ guardrails: { ...s.guardrails, pricePolicy: v } })}
                     className="h-4 w-4 accent-[#0066ff]"
                   />
-                  <span className="text-sm text-slate-800">{PRICE_POLICY_LABELS[v]}</span>
+                  <span className="text-sm text-slate-800 font-semibold">{PRICE_POLICY_LABELS[v]}</span>
                 </label>
               ))}
             </div>
           </div>
 
           <div className="mt-4">
-            <p className="text-xs font-semibold text-slate-500">資料に根拠が無い質問への対応</p>
+            <p className="text-xs font-bold text-slate-500">資料に根拠が無い質問への対応</p>
             <div className="mt-2 space-y-2">
               <label className="flex cursor-pointer items-start gap-2.5">
                 <input
@@ -231,9 +231,9 @@ export default function AishodanScenarioPage() {
                   onChange={() => patch({ guardrails: { ...s.guardrails, noEvidenceBehavior: 'defer' } })}
                   className="mt-1 h-4 w-4 accent-[#0066ff]"
                 />
-                <span className="text-sm text-slate-800">
+                <span className="text-sm text-slate-800 font-semibold">
                   確認して折り返すと伝える
-                  <span className="ml-1 text-xs text-slate-500">（推奨。推測で答えさせない）</span>
+                  <span className="ml-1 text-xs text-slate-500 font-semibold">（推奨。推測で答えさせない）</span>
                 </span>
               </label>
               <label className="flex cursor-pointer items-start gap-2.5">
@@ -243,16 +243,16 @@ export default function AishodanScenarioPage() {
                   onChange={() => patch({ guardrails: { ...s.guardrails, noEvidenceBehavior: 'general' } })}
                   className="mt-1 h-4 w-4 accent-[#0066ff]"
                 />
-                <span className="text-sm text-slate-800">
+                <span className="text-sm text-slate-800 font-semibold">
                   一般論として簡潔に答える
-                  <span className="ml-1 text-xs text-slate-500">（断定はしません）</span>
+                  <span className="ml-1 text-xs text-slate-500 font-semibold">（断定はしません）</span>
                 </span>
               </label>
             </div>
           </div>
 
           <div className="mt-4">
-            <p className="text-xs font-semibold text-slate-500">競合他社への言及</p>
+            <p className="text-xs font-bold text-slate-500">競合他社への言及</p>
             <div className="mt-2 flex gap-4">
               <label className="flex cursor-pointer items-center gap-2">
                 <input
@@ -261,7 +261,7 @@ export default function AishodanScenarioPage() {
                   onChange={() => patch({ guardrails: { ...s.guardrails, competitorPolicy: 'neutral' } })}
                   className="h-4 w-4 accent-[#0066ff]"
                 />
-                <span className="text-sm text-slate-800">中立的な事実のみ述べる</span>
+                <span className="text-sm text-slate-800 font-semibold">中立的な事実のみ述べる</span>
               </label>
               <label className="flex cursor-pointer items-center gap-2">
                 <input
@@ -270,13 +270,13 @@ export default function AishodanScenarioPage() {
                   onChange={() => patch({ guardrails: { ...s.guardrails, competitorPolicy: 'avoid' } })}
                   className="h-4 w-4 accent-[#0066ff]"
                 />
-                <span className="text-sm text-slate-800">触れない</span>
+                <span className="text-sm text-slate-800 font-semibold">触れない</span>
               </label>
             </div>
           </div>
 
-          <label className="mt-4 block text-sm">
-            <span className="mb-1 block text-xs font-semibold text-slate-500">触れてほしくない話題（1行に1件）</span>
+          <label className="mt-4 block text-sm font-semibold">
+            <span className="mb-1 block text-xs font-bold text-slate-500">触れてほしくない話題（1行に1件）</span>
             <span className="mb-1 block text-[11px] leading-relaxed text-amber-700">
               ここに書いた内容はAIへの指示に含まれます。AIが自分から話すことはなく、
               指示を読み上げないようにもしていますが、相手がしつこく尋ねた場合に
@@ -294,7 +294,7 @@ export default function AishodanScenarioPage() {
                 })
               }
               rows={4}
-              className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+              className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
             />
           </label>
         </section>
@@ -302,7 +302,7 @@ export default function AishodanScenarioPage() {
         {/* フェーズ */}
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-sm font-bold text-slate-900">商談の進み方</h2>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 font-semibold">
             上から順に進みます。各フェーズは、目的が達成されるか上限のやりとり数に達すると次へ移ります。
           </p>
           <div className="mt-4 space-y-3">
@@ -319,9 +319,9 @@ export default function AishodanScenarioPage() {
                       next[i] = { ...ph, name: e.target.value }
                       patch({ phases: next })
                     }}
-                    className="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-medium focus:border-[#0066ff] focus:outline-none"
+                    className="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold focus:border-[#0066ff] focus:outline-none"
                   />
-                  <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500">
+                  <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500 font-semibold">
                     上限
                     <input
                       value={ph.maxTurns}
@@ -331,7 +331,7 @@ export default function AishodanScenarioPage() {
                         next[i] = { ...ph, maxTurns: Math.max(1, Math.min(40, Number(e.target.value.replace(/[^0-9]/g, '')) || 1)) }
                         patch({ phases: next })
                       }}
-                      className="w-14 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
+                      className="w-14 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
                     />
                   </label>
                 </div>
@@ -344,7 +344,7 @@ export default function AishodanScenarioPage() {
                   }}
                   rows={2}
                   placeholder="このフェーズで達成したいこと"
-                  className="mt-2 w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none"
+                  className="mt-2 w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none font-semibold"
                 />
               </div>
             ))}
@@ -354,7 +354,7 @@ export default function AishodanScenarioPage() {
         {/* ヒアリング項目 */}
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-sm font-bold text-slate-900">必ず聞くこと</h2>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 font-semibold">
             必須にした項目が埋まるまで、ヒアリングのフェーズを抜けません。増やしすぎると商談が長くなります。
           </p>
           <div className="mt-4 space-y-3">
@@ -368,9 +368,9 @@ export default function AishodanScenarioPage() {
                       next[i] = { ...sl, label: e.target.value }
                       patch({ slots: next })
                     }}
-                    className="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-medium focus:border-[#0066ff] focus:outline-none"
+                    className="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold focus:border-[#0066ff] focus:outline-none"
                   />
-                  <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-slate-600">
+                  <label className="flex shrink-0 cursor-pointer items-center gap-1.5 text-xs text-slate-600 font-semibold">
                     <input
                       type="checkbox"
                       checked={sl.required}
@@ -385,7 +385,7 @@ export default function AishodanScenarioPage() {
                   </label>
                   <button
                     onClick={() => patch({ slots: s.slots.filter((_, j) => j !== i) })}
-                    className="shrink-0 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50"
+                    className="shrink-0 rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 font-semibold"
                   >
                     削除
                   </button>
@@ -398,7 +398,7 @@ export default function AishodanScenarioPage() {
                     patch({ slots: next })
                   }}
                   placeholder="どう聞くかの例"
-                  className="mt-2 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none"
+                  className="mt-2 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none font-semibold"
                 />
               </div>
             ))}
@@ -412,7 +412,7 @@ export default function AishodanScenarioPage() {
                 ],
               })
             }
-            className="mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            className="mt-3 rounded-lg border border-dashed border-slate-300 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 font-semibold"
           >
             項目を追加
           </button>
@@ -421,7 +421,7 @@ export default function AishodanScenarioPage() {
         {/* 理想顧客像 */}
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-sm font-bold text-slate-900">理想の顧客像</h2>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 font-semibold">
             商談後のスコアは、この条件のうち根拠をもって満たせたものの重みの合計です（合計 {totalWeight}点）。
           </p>
           <div className="mt-4 space-y-3">
@@ -435,9 +435,9 @@ export default function AishodanScenarioPage() {
                       next[i] = { ...c, label: e.target.value }
                       patch({ icp: { conditions: next } })
                     }}
-                    className="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-medium focus:border-[#0066ff] focus:outline-none"
+                    className="flex-1 rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold focus:border-[#0066ff] focus:outline-none"
                   />
-                  <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500">
+                  <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-500 font-semibold">
                     重み
                     <input
                       value={c.weight}
@@ -447,7 +447,7 @@ export default function AishodanScenarioPage() {
                         next[i] = { ...c, weight: Math.max(0, Math.min(100, Number(e.target.value.replace(/[^0-9]/g, '')) || 0)) }
                         patch({ icp: { conditions: next } })
                       }}
-                      className="w-14 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
+                      className="w-14 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
                     />
                   </label>
                 </div>
@@ -459,7 +459,7 @@ export default function AishodanScenarioPage() {
                     patch({ icp: { conditions: next } })
                   }}
                   placeholder="どんな状態なら満たしたと言えるか"
-                  className="mt-2 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none"
+                  className="mt-2 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none font-semibold"
                 />
               </div>
             ))}
@@ -469,39 +469,39 @@ export default function AishodanScenarioPage() {
         {/* 商材情報 */}
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-sm font-bold text-slate-900">商材の情報</h2>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-slate-500 font-semibold">
             サイトから自動で作成しました。ここが回答の最上位の根拠になります。誤りがあれば直してください。
           </p>
           <div className="mt-4 space-y-3">
-            <label className="block text-sm">
-              <span className="mb-1 block text-xs font-semibold text-slate-500">一言で</span>
+            <label className="block text-sm font-semibold">
+              <span className="mb-1 block text-xs font-bold text-slate-500">一言で</span>
               <input
                 value={profile.oneLiner || ''}
                 onChange={(e) => patch({ product: { ...s.product, profile: { ...profile, oneLiner: e.target.value } } })}
-                className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
               />
             </label>
-            <label className="block text-sm">
-              <span className="mb-1 block text-xs font-semibold text-slate-500">提供価値</span>
+            <label className="block text-sm font-semibold">
+              <span className="mb-1 block text-xs font-bold text-slate-500">提供価値</span>
               <textarea
                 value={profile.valueProp || ''}
                 onChange={(e) => patch({ product: { ...s.product, profile: { ...profile, valueProp: e.target.value } } })}
                 rows={3}
-                className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
               />
             </label>
-            <label className="block text-sm">
-              <span className="mb-1 block text-xs font-semibold text-slate-500">料金</span>
+            <label className="block text-sm font-semibold">
+              <span className="mb-1 block text-xs font-bold text-slate-500">料金</span>
               <textarea
                 value={profile.pricing || ''}
                 onChange={(e) => patch({ product: { ...s.product, profile: { ...profile, pricing: e.target.value } } })}
                 rows={2}
                 placeholder="サイトに記載が無ければ空のままにしてください"
-                className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
               />
             </label>
-            <label className="block text-sm">
-              <span className="mb-1 block text-xs font-semibold text-slate-500">話してはいけないこと（1行に1件）</span>
+            <label className="block text-sm font-semibold">
+              <span className="mb-1 block text-xs font-bold text-slate-500">話してはいけないこと（1行に1件）</span>
               <span className="mb-1 block text-[11px] leading-relaxed text-amber-700">
                 同じくAIへの指示に含まれます。社外秘の事実そのものは書かず、話題の分類で書いてください。
               </span>
@@ -519,7 +519,7 @@ export default function AishodanScenarioPage() {
                   })
                 }
                 rows={3}
-                className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
               />
             </label>
           </div>
@@ -529,25 +529,25 @@ export default function AishodanScenarioPage() {
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-sm font-bold text-slate-900">話し方</h2>
           <div className="mt-3 space-y-3">
-            <label className="block text-sm">
-              <span className="mb-1 block text-xs font-semibold text-slate-500">口調</span>
+            <label className="block text-sm font-semibold">
+              <span className="mb-1 block text-xs font-bold text-slate-500">口調</span>
               <input
                 value={s.persona.tone}
                 onChange={(e) => patch({ persona: { ...s.persona, tone: e.target.value } })}
-                className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
               />
             </label>
             <div className="flex gap-3">
-              <label className="text-sm">
-                <span className="mb-1 block text-xs font-semibold text-slate-500">一人称</span>
+              <label className="text-sm font-semibold">
+                <span className="mb-1 block text-xs font-bold text-slate-500">一人称</span>
                 <input
                   value={s.persona.firstPerson}
                   onChange={(e) => patch({ persona: { ...s.persona, firstPerson: e.target.value } })}
-                  className="w-24 rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                  className="w-24 rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
                 />
               </label>
-              <label className="text-sm">
-                <span className="mb-1 block text-xs font-semibold text-slate-500">1回の発話の長さ（字）</span>
+              <label className="text-sm font-semibold">
+                <span className="mb-1 block text-xs font-bold text-slate-500">1回の発話の長さ（字）</span>
                 <input
                   value={s.persona.maxCharsPerUtterance}
                   inputMode="numeric"
@@ -559,7 +559,7 @@ export default function AishodanScenarioPage() {
                       },
                     })
                   }
-                  className="w-24 rounded-xl border-2 border-slate-200 px-3 py-2.5 text-right text-sm focus:border-[#0066ff] focus:outline-none"
+                  className="w-24 rounded-xl border-2 border-slate-200 px-3 py-2.5 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
                 />
               </label>
             </div>

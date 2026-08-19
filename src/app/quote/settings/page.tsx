@@ -92,45 +92,45 @@ export default function QuoteSettingsPage() {
     <div className="min-h-screen bg-slate-50 pb-24">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-2xl px-4 py-4">
-          <Link href="/quote" className="text-xs text-slate-500 hover:underline">← 見積もり一覧</Link>
+          <Link href="/quote" className="text-xs text-slate-500 hover:underline font-semibold">← 見積もり一覧</Link>
           <h1 className="text-lg font-bold text-slate-900">発行元設定</h1>
-          <p className="text-xs text-slate-500">見積書に印字される自社情報です。</p>
+          <p className="text-xs text-slate-500 font-semibold">見積書に印字される自社情報です。</p>
         </div>
       </header>
 
       <main className="mx-auto max-w-2xl space-y-4 px-4 py-6">
-        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>}
-        {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">{message}</div>}
+        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
+        {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 font-semibold">{message}</div>}
 
         <section className="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           {FIELDS.map((f) => (
-            <label key={f.key} className="block text-sm">
-              <span className="mb-1 block text-xs font-semibold text-slate-500">
+            <label key={f.key} className="block text-sm font-semibold">
+              <span className="mb-1 block text-xs font-bold text-slate-500">
                 {f.label}{'required' in f && f.required ? '（必須）' : ''}
               </span>
               <input
                 value={form[f.key] ?? ''}
                 onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
                 placeholder={f.placeholder}
-                className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
               />
             </label>
           ))}
         </section>
 
         <section className="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-slate-500 font-semibold">
             以下は新しく見積書を作るときの初期値として使われます。個別の見積書ごとに上書きできます。
           </p>
           {TEXTAREAS.map((f) => (
-            <label key={f.key} className="block text-sm">
-              <span className="mb-1 block text-xs font-semibold text-slate-500">{f.label}</span>
+            <label key={f.key} className="block text-sm font-semibold">
+              <span className="mb-1 block text-xs font-bold text-slate-500">{f.label}</span>
               <textarea
                 value={form[f.key] ?? ''}
                 onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
                 placeholder={f.placeholder}
                 rows={2}
-                className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
               />
             </label>
           ))}
@@ -139,7 +139,7 @@ export default function QuoteSettingsPage() {
         <button
           onClick={save}
           disabled={saving || !form.companyName?.trim()}
-          className="w-full rounded-lg bg-[#0066ff] px-5 py-3.5 text-sm font-semibold text-white disabled:opacity-40"
+          className="w-full rounded-lg bg-[#0066ff] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-40"
         >
           {saving ? '保存中...' : '保存する'}
         </button>

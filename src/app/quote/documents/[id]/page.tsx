@@ -157,7 +157,7 @@ export default function QuoteDocumentPage() {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50">
         <p className="text-slate-600">{error || '見積書が見つかりません'}</p>
-        <Link href="/quote" className="text-sm text-[#0066ff] underline">ダッシュボードに戻る</Link>
+        <Link href="/quote" className="text-sm text-[#0066ff] underline font-semibold">ダッシュボードに戻る</Link>
       </div>
     )
   }
@@ -169,7 +169,7 @@ export default function QuoteDocumentPage() {
       <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-3">
           <div className="min-w-0">
-            <Link href="/quote" className="text-xs text-slate-500 hover:underline">← 見積もり一覧</Link>
+            <Link href="/quote" className="text-xs text-slate-500 hover:underline font-semibold">← 見積もり一覧</Link>
             <h1 className="truncate text-base font-bold text-slate-900">{doc.quoteNo}</h1>
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -183,7 +183,7 @@ export default function QuoteDocumentPage() {
             <button
               onClick={() => save()}
               disabled={saving}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold"
             >
               {saving ? '保存中...' : '保存'}
             </button>
@@ -191,7 +191,7 @@ export default function QuoteDocumentPage() {
               href={withOrg('quote', `/api/quote/documents/${doc.id}/pdf`)}
               target="_blank"
               rel="noopener"
-              className="rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-semibold text-white"
+              className="rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-bold text-white"
             >
               PDF
             </a>
@@ -200,17 +200,17 @@ export default function QuoteDocumentPage() {
       </header>
 
       <main className="mx-auto max-w-4xl space-y-5 px-4 py-6">
-        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>}
+        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
 
         {doc.status === 'draft' && (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 font-semibold">
             この見積書は下書きです。PDFには「社内確認用」の透かしが入ります。内容を確認のうえ確定してください。
           </div>
         )}
         {!issuer && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">
             発行元情報が未設定のためPDFを出力できません。
-            <Link href="/quote/settings" className="ml-1 font-semibold underline">発行元設定</Link>
+            <Link href="/quote/settings" className="ml-1 font-bold underline">発行元設定</Link>
           </div>
         )}
 
@@ -218,9 +218,9 @@ export default function QuoteDocumentPage() {
           <h2 className="text-sm font-bold text-slate-900">宛先</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <input value={clientCompany} onChange={(e) => setClientCompany(e.target.value)} placeholder="会社名"
-              className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none" />
+              className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
             <input value={clientPerson} onChange={(e) => setClientPerson(e.target.value)} placeholder="ご担当者名"
-              className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none" />
+              className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
           </div>
         </section>
 
@@ -230,23 +230,23 @@ export default function QuoteDocumentPage() {
             {items.map((it, idx) => (
               <div key={it.id || idx} className="rounded-xl border border-slate-200 p-4">
                 <input value={it.itemName} onChange={(e) => updateItem(idx, { itemName: e.target.value })}
-                  className="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-medium focus:border-[#0066ff] focus:outline-none" />
+                  className="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold focus:border-[#0066ff] focus:outline-none" />
                 <textarea value={it.spec || ''} onChange={(e) => updateItem(idx, { spec: e.target.value })} rows={2}
                   placeholder="内訳・含まれるもの"
-                  className="mt-2 w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none" />
+                  className="mt-2 w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none font-semibold" />
                 <div className="mt-3 flex flex-wrap items-end gap-3">
-                  <label className="text-xs">
+                  <label className="text-xs font-semibold">
                     <span className="mb-1 block text-slate-500">数量</span>
                     <input value={it.qty} inputMode="numeric"
                       onChange={(e) => updateItem(idx, { qty: Math.max(1, Number(e.target.value.replace(/[^0-9]/g, '')) || 1) })}
-                      className="w-16 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none" />
+                      className="w-16 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
                   </label>
-                  <label className="text-xs">
+                  <label className="text-xs font-semibold">
                     <span className="mb-1 block text-slate-500">単位</span>
                     <input value={it.unit} onChange={(e) => updateItem(idx, { unit: e.target.value })}
-                      className="w-16 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-sm focus:border-[#0066ff] focus:outline-none" />
+                      className="w-16 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
                   </label>
-                  <label className="text-xs">
+                  <label className="text-xs font-semibold">
                     <span className="mb-1 block text-slate-500">単価</span>
                     <input value={it.unitPrice || ''} inputMode="numeric" placeholder="要見積"
                       onChange={(e) => {
@@ -254,11 +254,11 @@ export default function QuoteDocumentPage() {
                         // 人が金額を変えたら出所ラベルも「手入力」に揃える
                         updateItem(idx, { unitPrice: v === '' ? 0 : Number(v), priceSource: 'manual', sourceRef: '手入力' })
                       }}
-                      className="w-28 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none" />
+                      className="w-28 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
                   </label>
-                  <div className="text-xs">
+                  <div className="text-xs font-semibold">
                     <span className="mb-1 block text-slate-500">金額</span>
-                    <span className="block py-1.5 text-sm font-semibold text-slate-900">
+                    <span className="block py-1.5 text-sm font-bold text-slate-900">
                       {it.unitPrice > 0 ? yen(it.qty * it.unitPrice) : '要見積'}
                     </span>
                   </div>
@@ -278,53 +278,53 @@ export default function QuoteDocumentPage() {
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-sm font-bold text-slate-900">値引き・条件</h2>
           <div className="mt-3 flex flex-wrap items-end gap-3">
-            <label className="text-xs">
+            <label className="text-xs font-semibold">
               <span className="mb-1 block text-slate-500">値引き</span>
               <select value={discountType} onChange={(e) => setDiscountType(e.target.value)}
-                className="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none">
+                className="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none font-semibold">
                 <option value="">なし</option>
                 <option value="rate">率（%）</option>
                 <option value="amount">金額（円）</option>
               </select>
             </label>
             {discountType && (
-              <label className="text-xs">
+              <label className="text-xs font-semibold">
                 <span className="mb-1 block text-slate-500">{discountType === 'rate' ? '割引率' : '割引額'}</span>
                 <input value={discountValue} inputMode="numeric"
                   onChange={(e) => setDiscountValue(e.target.value.replace(/[^0-9]/g, ''))}
-                  className="w-28 rounded-xl border-2 border-slate-200 px-3 py-2 text-right text-sm focus:border-[#0066ff] focus:outline-none" />
+                  className="w-28 rounded-xl border-2 border-slate-200 px-3 py-2 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
               </label>
             )}
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <label className="text-xs">
+            <label className="text-xs font-semibold">
               <span className="mb-1 block text-slate-500">納期</span>
               <textarea value={deliveryTerms} onChange={(e) => setDeliveryTerms(e.target.value)} rows={2}
-                className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none" />
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
             </label>
-            <label className="text-xs">
+            <label className="text-xs font-semibold">
               <span className="mb-1 block text-slate-500">お支払い条件</span>
               <textarea value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} rows={2}
-                className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none" />
+                className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
             </label>
           </div>
-          <label className="mt-3 block text-xs">
+          <label className="mt-3 block text-xs font-semibold">
             <span className="mb-1 block text-slate-500">備考</span>
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
-              className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none" />
+              className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
           </label>
         </section>
 
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <div className="space-y-1.5 text-sm">
+          <div className="space-y-1.5 text-sm font-semibold">
             <div className="flex justify-between text-slate-600">
-              <span>税抜合計</span><span className="font-medium text-slate-900">{yen(doc.totalExclTax)}</span>
+              <span>税抜合計</span><span className="font-semibold text-slate-900">{yen(doc.totalExclTax)}</span>
             </div>
             <div className="flex justify-between text-slate-600">
-              <span>消費税</span><span className="font-medium text-slate-900">{yen(doc.taxAmount)}</span>
+              <span>消費税</span><span className="font-semibold text-slate-900">{yen(doc.taxAmount)}</span>
             </div>
             <div className="flex items-baseline justify-between border-t border-slate-200 pt-2">
-              <span className="font-semibold text-slate-900">合計（税込）</span>
+              <span className="font-bold text-slate-900">合計（税込）</span>
               <span className="text-2xl font-bold text-[#0066ff]">{yen(doc.totalInclTax)}</span>
             </div>
           </div>
@@ -336,18 +336,18 @@ export default function QuoteDocumentPage() {
           <div className="mt-5 flex flex-wrap gap-2">
             {doc.status === 'draft' ? (
               <button onClick={() => save({ status: 'confirmed' })} disabled={saving}
-                className="rounded-lg bg-emerald-600 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">
+                className="rounded-lg bg-emerald-600 px-5 py-3 text-sm font-bold text-white disabled:opacity-40">
                 内容を確認して確定する
               </button>
             ) : (
               <button onClick={() => save({ status: 'draft' })} disabled={saving}
-                className="rounded-lg border border-slate-300 px-5 py-3 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                className="rounded-lg border border-slate-300 px-5 py-3 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold">
                 下書きに戻す
               </button>
             )}
             {doc.status === 'confirmed' && (
               <button onClick={() => save({ status: 'sent' })} disabled={saving}
-                className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">
+                className="rounded-lg bg-slate-900 px-5 py-3 text-sm font-bold text-white disabled:opacity-40">
                 送付済みにする
               </button>
             )}

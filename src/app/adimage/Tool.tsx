@@ -280,7 +280,7 @@ export default function AdImageTool() {
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <div>
             <h1 className="text-lg font-bold text-slate-900">ドヤ広告画像AI</h1>
-            <p className="text-xs text-slate-500">サービスURLから、媒体ごとにサイズの揃った広告画像を作ります。</p>
+            <p className="text-xs text-slate-500 font-semibold">サービスURLから、媒体ごとにサイズの揃った広告画像を作ります。</p>
           </div>
           {/* ⚠️ 履歴への導線をここに置くこと。無いと作った画像を見返す手段が
                画面から消え、実装済みの一覧APIが誰にも使われないまま残る */}
@@ -294,7 +294,7 @@ export default function AdImageTool() {
       </header>
 
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
-        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">{error}</div>}
+        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
 
         {/* --- 1. URL入力 --- */}
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
@@ -304,12 +304,12 @@ export default function AdImageTool() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://example.com"
-              className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none"
+              className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
             />
             <button
               onClick={analyze}
               disabled={analyzing || !url.trim()}
-              className="rounded-lg bg-[#0066ff] px-5 py-3 text-sm font-semibold text-white disabled:opacity-40"
+              className="rounded-lg bg-[#0066ff] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
             >
               {analyzing ? '解析中...' : 'コピーを作る'}
             </button>
@@ -318,11 +318,11 @@ export default function AdImageTool() {
             value={appeal}
             onChange={(e) => setAppeal(e.target.value)}
             placeholder="特に伝えたいこと（任意）"
-            className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+            className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
           />
           {brand && (
-            <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm">
-              <p className="font-medium text-slate-900">{brand.name}</p>
+            <div className="mt-4 rounded-xl bg-slate-50 p-4 text-sm font-semibold">
+              <p className="font-semibold text-slate-900">{brand.name}</p>
               {brand.description && <p className="mt-1 text-slate-600">{brand.description}</p>}
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {brand.colors.map((c) => (
@@ -340,7 +340,7 @@ export default function AdImageTool() {
         {step !== 'input' && drafts.length > 0 && (
           <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <h2 className="text-base font-bold text-slate-900">2. コピーを選ぶ</h2>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-slate-600 font-semibold">
               選んだコピーは全サイズ共通で画像に描き込まれます。文字数が多いと崩れやすいため上限を設けています。
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -352,12 +352,12 @@ export default function AdImageTool() {
                     selected === i ? 'border-[#0066ff] bg-[#f2f6ff] ring-1 ring-[#0066ff]' : 'border-slate-200 hover:bg-slate-50'
                   }`}
                 >
-                  <span className="rounded-full bg-slate-900 px-2.5 py-0.5 text-[10px] font-medium text-white">
+                  <span className="rounded-full bg-slate-900 px-2.5 py-0.5 text-[10px] font-semibold text-white">
                     {APPEAL_LABELS[d.appealAxis]}
                   </span>
                   <p className="mt-2 text-base font-bold leading-snug text-slate-900">{d.copy.headline}</p>
-                  <p className="mt-1 text-sm text-slate-600">{d.copy.sub}</p>
-                  <p className="mt-2 inline-block rounded-lg bg-[#0066ff] px-3 py-1 text-xs font-semibold text-white">
+                  <p className="mt-1 text-sm text-slate-600 font-semibold">{d.copy.sub}</p>
+                  <p className="mt-2 inline-block rounded-lg bg-[#0066ff] px-3 py-1 text-xs font-bold text-white">
                     {d.copy.cta}
                   </p>
                   {d.warnings.length > 0 && (
@@ -368,7 +368,7 @@ export default function AdImageTool() {
             </div>
 
             <div className="mt-5 space-y-2">
-              <p className="text-xs font-semibold text-slate-500">文言を直す</p>
+              <p className="text-xs font-bold text-slate-500">文言を直す</p>
               <CopyField label="大見出し" limit={13} value={copy.headline} onChange={(v) => setCopy({ ...copy, headline: v })} />
               <CopyField label="サブコピー" limit={16} value={copy.sub} onChange={(v) => setCopy({ ...copy, sub: v })} />
               <CopyField label="CTA" limit={8} value={copy.cta} onChange={(v) => setCopy({ ...copy, cta: v })} />
@@ -380,13 +380,13 @@ export default function AdImageTool() {
         {step !== 'input' && brandId && (
           <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <h2 className="text-base font-bold text-slate-900">ロゴを載せる（任意）</h2>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-slate-600 font-semibold">
               ロゴだけは生成AIに描かせず、実際の画像を重ねます。形や色が変わってしまうためです。
               SNS広告は配信時にアカウント名が出るので、載せなくても成立します。
             </p>
             <div className="mt-4 flex flex-wrap items-end gap-3">
-              <label className="text-sm">
-                <span className="mb-1 block text-xs font-semibold text-slate-500">ロゴ画像（3MBまで）</span>
+              <label className="text-sm font-semibold">
+                <span className="mb-1 block text-xs font-bold text-slate-500">ロゴ画像（3MBまで）</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -395,15 +395,15 @@ export default function AdImageTool() {
                     const f = e.target.files?.[0]
                     if (f) void uploadLogo(f)
                   }}
-                  className="text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:text-slate-700"
+                  className="text-sm text-slate-700 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-2 file:text-sm file:text-slate-700 font-semibold"
                 />
               </label>
-              <label className="text-sm">
-                <span className="mb-1 block text-xs font-semibold text-slate-500">置く位置</span>
+              <label className="text-sm font-semibold">
+                <span className="mb-1 block text-xs font-bold text-slate-500">置く位置</span>
                 <select
                   value={logoPos}
                   onChange={(e) => setLogoPos(e.target.value)}
-                  className="rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                  className="rounded-xl border-2 border-slate-200 px-3 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
                 >
                   <option value="bottom-right">右下</option>
                   <option value="bottom-left">左下</option>
@@ -416,14 +416,14 @@ export default function AdImageTool() {
                 <button
                   onClick={removeLogo}
                   disabled={logoBusy}
-                  className="rounded-lg border border-slate-300 px-3 py-2.5 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                  className="rounded-lg border border-slate-300 px-3 py-2.5 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold"
                 >
                   ロゴを外す
                 </button>
               )}
             </div>
             {logoName && (
-              <p className="mt-2 text-xs text-emerald-700">
+              <p className="mt-2 text-xs text-emerald-700 font-semibold">
                 {logoName} を登録しました。位置を変えたときは、もう一度ロゴを選び直してください。
               </p>
             )}
@@ -434,13 +434,13 @@ export default function AdImageTool() {
         {step !== 'input' && (
           <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <h2 className="text-base font-bold text-slate-900">3. 出力する配置を選ぶ</h2>
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-1 text-sm text-slate-600 font-semibold">
               同じ比率の配置はまとめて作られるため、多く選んでも生成回数はあまり増えません。
             </p>
             <div className="mt-4 space-y-4">
               {Object.entries(byMedia).map(([media, rows]) => (
                 <div key={media}>
-                  <p className="text-xs font-semibold text-slate-500">{media}</p>
+                  <p className="text-xs font-bold text-slate-500">{media}</p>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {rows.map((p) => (
                       <button
@@ -452,7 +452,7 @@ export default function AdImageTool() {
                             : 'border-slate-300 text-slate-700 hover:bg-slate-50'
                         }`}
                       >
-                        <span className="block font-medium">{p.name}</span>
+                        <span className="block font-semibold">{p.name}</span>
                         <span className="block text-[10px] opacity-70">{p.size}</span>
                       </button>
                     ))}
@@ -471,7 +471,7 @@ export default function AdImageTool() {
             <button
               onClick={generate}
               disabled={generating || chosen.length === 0 || !copy.headline || !copy.cta}
-              className="mt-5 w-full rounded-lg bg-[#0066ff] px-5 py-3.5 text-sm font-semibold text-white disabled:opacity-40"
+              className="mt-5 w-full rounded-lg bg-[#0066ff] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-40"
             >
               {generating ? '生成中...（1〜2分かかります）' : `広告画像を作る（${chosen.length}配置）`}
             </button>
@@ -483,25 +483,25 @@ export default function AdImageTool() {
           <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h2 className="text-base font-bold text-slate-900">
-                広告画像{generation > 1 && <span className="ml-2 text-xs font-normal text-slate-500">改善 {generation - 1} 回目</span>}
+                広告画像{generation > 1 && <span className="ml-2 text-xs font-normal text-slate-500 font-semibold">改善 {generation - 1} 回目</span>}
               </h2>
               <a
                 href={`/api/adimage/concepts/${conceptId}/export`}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50"
+                className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 font-semibold"
               >
                 すべてダウンロード（ZIP）
               </a>
             </div>
 
             {failedPlacements.length > 0 && (
-              <p className="mt-3 rounded-lg bg-rose-50 px-4 py-2.5 text-sm text-rose-800">
+              <p className="mt-3 rounded-lg bg-rose-50 px-4 py-2.5 text-sm text-rose-800 font-semibold">
                 次の配置は作成できませんでした: {failedPlacements.join('、')}。
                 お手数ですが、もう一度お試しください。
               </p>
             )}
 
             {needsReview && (
-              <p className="mt-3 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-900">
+              <p className="mt-3 rounded-lg bg-amber-50 px-4 py-2.5 text-sm text-amber-900 font-semibold">
                 一部の画像で、指定した文字が正しく描かれたかを確認できませんでした。入稿前に文字をご確認ください。
               </p>
             )}
@@ -513,13 +513,13 @@ export default function AdImageTool() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={c.url} alt={c.placementName} className="w-full bg-slate-100 object-contain" />
                   ) : (
-                    <div className="flex h-40 items-center justify-center bg-slate-100 text-xs text-slate-400">
+                    <div className="flex h-40 items-center justify-center bg-slate-100 text-xs text-slate-400 font-semibold">
                       読み込めませんでした
                     </div>
                   )}
                   <div className="flex items-center justify-between gap-2 px-3 py-2">
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-medium text-slate-900">{c.placementName}</p>
+                      <p className="truncate text-xs font-semibold text-slate-900">{c.placementName}</p>
                       <p className="text-[10px] text-slate-500">{c.media} / {c.size}</p>
                     </div>
                     {c.verify?.needsReview ? (
@@ -556,21 +556,21 @@ export default function AdImageTool() {
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="その他の要望（任意）"
-                className="mt-3 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none"
+                className="mt-3 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
               />
 
               <div className="mt-3 flex flex-wrap gap-2">
                 <button
                   onClick={runFeedback}
                   disabled={scoring}
-                  className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                  className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold"
                 >
                   {scoring ? '採点中...' : 'AIに見てもらう'}
                 </button>
                 <button
                   onClick={refine}
                   disabled={refining || (selectedChips.length === 0 && !note.trim() && directives.length === 0)}
-                  className="rounded-lg bg-[#0066ff] px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-40"
+                  className="rounded-lg bg-[#0066ff] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40"
                 >
                   {refining ? '作り直し中...' : 'この内容で作り直す'}
                 </button>
@@ -578,19 +578,19 @@ export default function AdImageTool() {
 
               {scores && (
                 <div className="mt-4 rounded-xl bg-slate-50 p-4">
-                  <div className="flex flex-wrap gap-4 text-sm">
+                  <div className="flex flex-wrap gap-4 text-sm font-semibold">
                     <ScoreItem label="視認性" v={scores.visibility} />
                     <ScoreItem label="訴求力" v={scores.appeal} />
                     <ScoreItem label="行動喚起" v={scores.cta} />
                     <ScoreItem label="配置適合" v={scores.fit} />
                     <ScoreItem label="ブランド" v={scores.brand} />
                   </div>
-                  {advice && <p className="mt-3 text-sm leading-relaxed text-slate-700">{advice}</p>}
+                  {advice && <p className="mt-3 text-sm leading-relaxed text-slate-700 font-semibold">{advice}</p>}
                   {directives.length > 0 && (
                     <ul className="mt-3 space-y-1.5">
                       {directives.map((d, i) => (
-                        <li key={i} className="text-xs leading-relaxed text-slate-600">
-                          <span className="font-semibold text-slate-800">改善案: </span>
+                        <li key={i} className="text-xs leading-relaxed text-slate-600 font-semibold">
+                          <span className="font-bold text-slate-800">改善案: </span>
                           {d.instruction}
                           {d.reason && <span className="text-slate-500">（{d.reason}）</span>}
                         </li>
@@ -618,8 +618,8 @@ function CopyField({
   const over = value.length > limit
   return (
     <label className="block">
-      <span className="mb-1 flex items-baseline justify-between text-xs">
-        <span className="font-semibold text-slate-500">{label}</span>
+      <span className="mb-1 flex items-baseline justify-between text-xs font-semibold">
+        <span className="font-bold text-slate-500">{label}</span>
         <span className={over ? 'text-rose-600' : 'text-slate-400'}>
           {value.length} / {limit}
         </span>
@@ -642,7 +642,7 @@ function ScoreItem({ label, v }: { label: string; v: number }) {
       <p className="text-[11px] text-slate-500">{label}</p>
       <p className="text-lg font-bold text-slate-900">
         {v}
-        <span className="text-xs font-normal text-slate-400"> / 5</span>
+        <span className="text-xs font-normal text-slate-400 font-semibold"> / 5</span>
       </p>
     </div>
   )

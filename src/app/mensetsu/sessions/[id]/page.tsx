@@ -181,7 +181,7 @@ export default function MensetsuReportPage() {
         <h1 className="mt-3 text-2xl font-black text-[#0a0f3c]">
           {s.candidateName || '（名前未入力）'}
         </h1>
-        <p className="mt-1 text-sm font-medium text-[#425071]">
+        <p className="mt-1 text-sm font-semibold text-[#425071]">
           {s.template.jobTitle} / {s.template.durationMin}分 /{' '}
           {s.endedAt ? new Date(s.endedAt).toLocaleString('ja-JP') : '未実施'}
         </p>
@@ -199,7 +199,7 @@ export default function MensetsuReportPage() {
             <span className="rounded-full bg-[#f1f3f4] px-4 py-1.5 text-sm font-black text-[#3c4043]">
               未評価
             </span>
-            <span className="text-sm font-medium text-[#425071]">
+            <span className="text-sm font-semibold text-[#425071]">
               逐語ログ{s.turns.length}件 / この面接はまだ採点していません
             </span>
           </div>
@@ -217,7 +217,7 @@ export default function MensetsuReportPage() {
                 平均スコア {data.average} / 5
               </span>
             )}
-            <p className="w-full text-sm font-medium leading-relaxed text-[#425071]">{s.overallComment}</p>
+            <p className="w-full text-sm font-semibold leading-relaxed text-[#425071]">{s.overallComment}</p>
           </div>
         )}
 
@@ -261,7 +261,7 @@ export default function MensetsuReportPage() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-sm font-black text-[#0a0f3c]">面接の録音</p>
-                <p className="mt-0.5 text-xs font-medium text-[#8a94ad]">
+                <p className="mt-0.5 text-xs font-semibold text-[#8a94ad]">
                   再生用リンクは15分で失効します。ダウンロードして共有しないでください。
                 </p>
               </div>
@@ -286,9 +286,9 @@ export default function MensetsuReportPage() {
           // ⚠️ 未評価の面接で評価軸を「情報不足」で埋めて表示しない。
           //    まだ採点していないだけなのに、AIがそう判定したように見えてしまう。
           <section className="mt-4 rounded-lg bg-white p-8 text-center shadow-sm">
-            <span className="material-symbols-outlined text-3xl text-[#8a94ad]">fact_check</span>
+            <span className="material-symbols-outlined text-3xl text-[#8a94ad] font-medium">fact_check</span>
             <p className="mt-2 text-sm font-black text-[#0a0f3c]">まだ評価していません</p>
-            <p className="mt-1 text-xs font-medium leading-relaxed text-[#425071]">
+            <p className="mt-1 text-xs font-semibold leading-relaxed text-[#425071]">
               {s.turns.length > 0
                 ? `逐語ログ${s.turns.length}件をもとに評価します。数十秒かかります。`
                 : '発話が記録されていないため評価できません。'}
@@ -314,7 +314,7 @@ export default function MensetsuReportPage() {
                       <div>
                         <p className="text-sm font-black text-[#0a0f3c]">{c.name}</p>
                         {c.description && (
-                          <p className="mt-1 text-xs font-medium text-[#425071]">{c.description}</p>
+                          <p className="mt-1 text-xs font-semibold text-[#425071]">{c.description}</p>
                         )}
                       </div>
                       <span className="shrink-0 text-2xl font-black text-[#0066ff]">
@@ -326,14 +326,14 @@ export default function MensetsuReportPage() {
                       </span>
                     </div>
                     {sc?.rationale && (
-                      <p className="mt-3 text-sm font-medium leading-relaxed text-[#425071]">{sc.rationale}</p>
+                      <p className="mt-3 text-sm font-semibold leading-relaxed text-[#425071]">{sc.rationale}</p>
                     )}
                     {sc?.quotes?.length > 0 && (
                       <ul className="mt-3 space-y-1.5">
                         {sc.quotes.map((q: string, i: number) => (
                           <li
                             key={i}
-                            className="border-l-2 border-[#cfe3ff] bg-[#f7faff] px-3 py-2 text-xs font-medium leading-relaxed text-[#0a0f3c]"
+                            className="border-l-2 border-[#cfe3ff] bg-[#f7faff] px-3 py-2 text-xs font-semibold leading-relaxed text-[#0a0f3c]"
                           >
                             「{q}」
                           </li>
@@ -350,7 +350,7 @@ export default function MensetsuReportPage() {
                 {s.recruiterReport && (
                   <div className="rounded-lg bg-white p-5 shadow-sm">
                     <p className="text-xs font-black text-[#0066ff]">採用担当者向け</p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm font-medium leading-relaxed text-[#0a0f3c]">
+                    <p className="mt-2 whitespace-pre-wrap text-sm font-semibold leading-relaxed text-[#0a0f3c]">
                       {s.recruiterReport}
                     </p>
                   </div>
@@ -358,7 +358,7 @@ export default function MensetsuReportPage() {
                 {s.candidateFeedback && (
                   <div className="rounded-lg bg-white p-5 shadow-sm">
                     <p className="text-xs font-black text-[#0066ff]">応募者向け（送付する場合）</p>
-                    <p className="mt-2 whitespace-pre-wrap text-sm font-medium leading-relaxed text-[#0a0f3c]">
+                    <p className="mt-2 whitespace-pre-wrap text-sm font-semibold leading-relaxed text-[#0a0f3c]">
                       {s.candidateFeedback}
                     </p>
                   </div>
@@ -372,7 +372,7 @@ export default function MensetsuReportPage() {
             {hr?.canHandoff && (
               <section className="mt-4 rounded-lg bg-white p-6 shadow-sm">
                 <h2 className="text-base font-black text-[#0a0f3c]">採用が決まったら</h2>
-                <p className="mt-1 text-xs font-medium leading-relaxed text-[#8a94ad]">
+                <p className="mt-1 text-xs font-semibold leading-relaxed text-[#8a94ad]">
                   この方をドヤHRの従業員として登録します。AIの判定は関係なく、
                   採用をご判断されたときにお使いください。
                 </p>
@@ -384,7 +384,7 @@ export default function MensetsuReportPage() {
                       <select
                         value={hrOrgId}
                         onChange={(e) => setHrOrgId(e.target.value)}
-                        className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#0066ff]"
+                        className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm outline-none focus:border-[#0066ff] font-medium"
                       >
                         {hr.organizations.map((o: any) => (
                           <option key={o.id} value={o.id}>{o.name}</option>
@@ -417,7 +417,7 @@ export default function MensetsuReportPage() {
                       </button>
                     </div>
                     {hrMsg && <p className="mt-2 text-xs font-bold text-[#425071]">{hrMsg}</p>}
-                    <p className="mt-2 text-[11px] font-medium leading-relaxed text-[#8a94ad]">
+                    <p className="mt-2 text-[11px] font-semibold leading-relaxed text-[#8a94ad]">
                       お名前とメールアドレスのみを引き渡します。生年月日・性別は面接で
                       収集していないため登録されません。
                     </p>
@@ -429,7 +429,7 @@ export default function MensetsuReportPage() {
         ) : (
           <section className="mt-4 rounded-lg bg-white p-6 shadow-sm">
             {s.turns.length === 0 ? (
-              <p className="text-sm font-medium text-[#425071]">発話ログがありません。</p>
+              <p className="text-sm font-semibold text-[#425071]">発話ログがありません。</p>
             ) : (
               s.turns.map((t: any, i: number) => {
                 // 直前の面接官の発話＝その回答が答えている質問
@@ -438,7 +438,7 @@ export default function MensetsuReportPage() {
                 const done = labelDone[t.id]
                 return (
                   <div key={t.id} className="mb-2.5">
-                    <p className="text-sm leading-relaxed">
+                    <p className="text-sm leading-relaxed font-medium">
                       <span
                         className={
                           t.speaker === 'interviewer' ? 'font-black text-[#0066ff]' : 'font-black text-[#0a0f3c]'
@@ -446,7 +446,7 @@ export default function MensetsuReportPage() {
                       >
                         {t.speaker === 'interviewer' ? '面接官' : '応募者'}:{' '}
                       </span>
-                      <span className="font-medium text-[#425071]">{t.text}</span>
+                      <span className="font-semibold text-[#425071]">{t.text}</span>
                     </p>
 
                     {/* 応募者の回答にだけラベルを付けられる */}
@@ -461,7 +461,7 @@ export default function MensetsuReportPage() {
                           <select
                             value={labelCriterion}
                             onChange={(e) => setLabelCriterion(e.target.value)}
-                            className="mt-1 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#0066ff]"
+                            className="mt-1 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm outline-none focus:border-[#0066ff] font-medium"
                           >
                             <option value="">選んでください</option>
                             {criteria.map((c: any) => (

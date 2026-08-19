@@ -112,7 +112,7 @@ export default function ComparePage() {
           ← ダッシュボード
         </Link>
         <h1 className="mt-3 text-2xl font-black text-[#0a0f3c]">候補者の比較</h1>
-        <p className="mt-2 max-w-[68ch] text-sm font-medium leading-relaxed text-[#425071]">
+        <p className="mt-2 max-w-[68ch] text-sm font-semibold leading-relaxed text-[#425071]">
           同じテンプレートで面接した候補者を並べます。色は<strong className="font-black text-[#0a0f3c]">その軸の中央値との差</strong>で、
           絶対的な良し悪しではありません。
         </p>
@@ -125,13 +125,13 @@ export default function ComparePage() {
         </div>
 
         {templates.length === 0 ? (
-          <p className="mt-6 text-sm font-medium text-[#425071]">テンプレートがまだありません。</p>
+          <p className="mt-6 text-sm font-semibold text-[#425071]">テンプレートがまだありません。</p>
         ) : (
           <>
             <select
               value={templateId}
               onChange={(e) => setTemplateId(e.target.value)}
-              className="mt-5 rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+              className="mt-5 rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
             >
               {templates.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -143,12 +143,12 @@ export default function ComparePage() {
             {error && <p className="mt-4 text-sm font-bold text-[#c2185b]">{error}</p>}
 
             {sorted.length === 0 ? (
-              <p className="mt-6 text-sm font-medium text-[#425071]">
+              <p className="mt-6 text-sm font-semibold text-[#425071]">
                 このテンプレートで評価済みの面接はまだありません。
               </p>
             ) : (
               <div className="mt-5 overflow-x-auto rounded-lg bg-white shadow-sm">
-                <table className="w-full min-w-[720px] border-collapse text-sm">
+                <table className="w-full min-w-[720px] border-collapse text-sm font-medium">
                   <thead>
                     <tr className="border-b border-[#eef3ff]">
                       <th className="sticky left-0 z-10 bg-white px-4 py-3 text-left text-xs font-black text-[#0a0f3c]">
@@ -159,7 +159,7 @@ export default function ComparePage() {
                       {criteria.map((c) => (
                         <th key={c.key} className="px-3 py-3 text-center text-xs font-black text-[#425071]">
                           {c.name}
-                          <span className="mt-0.5 block text-[10px] font-medium text-[#8a94ad]">
+                          <span className="mt-0.5 block text-[10px] font-semibold text-[#8a94ad]">
                             中央値 {medians[c.key] ?? '—'}
                           </span>
                         </th>
@@ -172,7 +172,7 @@ export default function ComparePage() {
                       <tr key={c.id} className="border-b border-[#f5f8ff]">
                         <td className="sticky left-0 z-10 bg-white px-4 py-3">
                           <p className="font-black text-[#0a0f3c]">{c.name || '（名前未入力）'}</p>
-                          <p className="text-[11px] font-medium text-[#8a94ad]">
+                          <p className="text-[11px] font-semibold text-[#8a94ad]">
                             {c.endedAt ? new Date(c.endedAt).toLocaleDateString('ja-JP') : '—'}
                           </p>
                         </td>

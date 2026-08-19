@@ -223,7 +223,7 @@ export default function TemplateEditPage() {
           ← ダッシュボード
         </button>
         <h1 className="mt-3 text-2xl font-black text-[#0a0f3c]">面接テンプレートの編集</h1>
-        <p className="mt-2 text-sm font-medium leading-relaxed text-[#425071]">
+        <p className="mt-2 text-sm font-semibold leading-relaxed text-[#425071]">
           主質問は<strong className="font-black text-[#0a0f3c]">全応募者に同じ内容で尋ねられます</strong>（構造化面接）。
           深掘りは面接官AIが最大2回まで、ここに書いた方針に沿って行います。
         </p>
@@ -234,7 +234,7 @@ export default function TemplateEditPage() {
             {violations.length > 0 && (
               <ul className="mt-3 space-y-2">
                 {violations.map((v, i) => (
-                  <li key={i} className="rounded bg-white px-3 py-2 text-xs font-medium text-[#0a0f3c]">
+                  <li key={i} className="rounded bg-white px-3 py-2 text-xs font-semibold text-[#0a0f3c]">
                     <span className="font-black text-[#c2185b]">{v.label}</span>
                     <span className="mt-0.5 block">{v.text}</span>
                   </li>
@@ -258,7 +258,7 @@ export default function TemplateEditPage() {
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
               />
             </label>
             <label className="block">
@@ -266,7 +266,7 @@ export default function TemplateEditPage() {
               <input
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
-                className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
               />
             </label>
             <label className="block">
@@ -274,7 +274,7 @@ export default function TemplateEditPage() {
               <select
                 value={durationMin}
                 onChange={(e) => setDurationMin(Number(e.target.value))}
-                className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
               >
                 <option value={10}>10分</option>
                 <option value={20}>20分</option>
@@ -286,7 +286,7 @@ export default function TemplateEditPage() {
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium outline-none focus:border-[#0066ff]"
+                className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
               >
                 <option value="draft">下書き</option>
                 <option value="active">運用中</option>
@@ -297,14 +297,14 @@ export default function TemplateEditPage() {
 
           <label className="mt-4 block">
             <span className="text-xs font-black text-[#0a0f3c]">冒頭のあいさつ・進め方</span>
-            <span className="ml-2 text-xs font-medium text-[#8a94ad]">
+            <span className="ml-2 text-xs font-semibold text-[#8a94ad]">
               AIであること・録音されることを必ず含めてください
             </span>
             <textarea
               value={intro}
               onChange={(e) => setIntro(e.target.value)}
               rows={3}
-              className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium leading-relaxed outline-none focus:border-[#0066ff]"
+              className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold leading-relaxed outline-none focus:border-[#0066ff]"
             />
           </label>
           <label className="mt-3 block">
@@ -313,7 +313,7 @@ export default function TemplateEditPage() {
               value={closing}
               onChange={(e) => setClosing(e.target.value)}
               rows={2}
-              className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-medium leading-relaxed outline-none focus:border-[#0066ff]"
+              className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold leading-relaxed outline-none focus:border-[#0066ff]"
             />
           </label>
         </section>
@@ -343,13 +343,13 @@ export default function TemplateEditPage() {
                       onChange={(e) => update(i, { text: e.target.value })}
                       rows={2}
                       placeholder="主質問"
-                      className="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-medium leading-relaxed outline-none focus:border-[#0066ff]"
+                      className="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold leading-relaxed outline-none focus:border-[#0066ff]"
                     />
                     <input
                       value={q.followUpHint || ''}
                       onChange={(e) => update(i, { followUpHint: e.target.value })}
                       placeholder="深掘りの方針（例: 具体的な行動と、その結果の数値まで聞く）"
-                      className="mt-2 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-xs font-medium outline-none focus:border-[#0066ff]"
+                      className="mt-2 w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-xs font-semibold outline-none focus:border-[#0066ff]"
                     />
                     {/* 分岐（AIが自動生成。回答に応じてどの深掘りをするか） */}
                     {(!q.branches || q.branches.length === 0) && (
@@ -364,7 +364,7 @@ export default function TemplateEditPage() {
                       <div className="mt-2 space-y-1.5 border-l-2 border-[#cfe3ff] pl-3">
                         <p className="text-[11px] font-black text-[#0066ff]">
                           回答による分岐（{q.branches.length}）
-                          <span className="ml-2 font-medium text-[#8a94ad]">
+                          <span className="ml-2 font-semibold text-[#8a94ad]">
                             AIが自動生成したものを編集できます
                           </span>
                         </p>
@@ -408,14 +408,14 @@ export default function TemplateEditPage() {
                               value={b.matchHint}
                               onChange={(e) => updateBranch(i, bi, { matchHint: e.target.value })}
                               placeholder="どんな回答ならこの枝か"
-                              className="mt-1.5 w-full rounded border border-[#d8e7ff] bg-white px-2 py-1 text-[11px] font-medium text-[#425071] outline-none focus:border-[#0066ff]"
+                              className="mt-1.5 w-full rounded border border-[#d8e7ff] bg-white px-2 py-1 text-[11px] font-semibold text-[#425071] outline-none focus:border-[#0066ff]"
                             />
                             <textarea
                               value={b.text || ''}
                               onChange={(e) => updateBranch(i, bi, { text: e.target.value })}
                               rows={2}
                               placeholder="この枝で尋ねる深掘り質問（空なら質問せず次へ）"
-                              className="mt-1.5 w-full rounded border border-[#d8e7ff] bg-white px-2 py-1 text-xs font-medium leading-relaxed text-[#0a0f3c] outline-none focus:border-[#0066ff]"
+                              className="mt-1.5 w-full rounded border border-[#d8e7ff] bg-white px-2 py-1 text-xs font-semibold leading-relaxed text-[#0a0f3c] outline-none focus:border-[#0066ff]"
                             />
                           </div>
                         ))}
@@ -437,9 +437,9 @@ export default function TemplateEditPage() {
                           max={10}
                           value={q.targetMin}
                           onChange={(e) => update(i, { targetMin: Number(e.target.value) })}
-                          className="w-16 rounded border border-[#d8e7ff] px-2 py-1 text-xs font-medium outline-none focus:border-[#0066ff]"
+                          className="w-16 rounded border border-[#d8e7ff] px-2 py-1 text-xs font-semibold outline-none focus:border-[#0066ff]"
                         />
-                        <span className="text-xs font-medium text-[#425071]">分</span>
+                        <span className="text-xs font-semibold text-[#425071]">分</span>
                       </label>
                       {criteria.map((c) => (
                         <button
@@ -497,7 +497,7 @@ export default function TemplateEditPage() {
         {/* 評価軸（参照のみ） */}
         <section className="mt-6 rounded-lg bg-white p-6 shadow-sm">
           <h2 className="text-base font-black text-[#0a0f3c]">評価軸とルーブリック</h2>
-          <p className="mt-1 text-xs font-medium text-[#8a94ad]">
+          <p className="mt-1 text-xs font-semibold text-[#8a94ad]">
             採点はこの基準に従って行われます。現在は参照のみです。
           </p>
           <div className="mt-4 space-y-2">
@@ -510,7 +510,7 @@ export default function TemplateEditPage() {
                   <span>
                     <span className="text-sm font-black text-[#0a0f3c]">{c.name}</span>
                     {c.description && (
-                      <span className="mt-0.5 block text-xs font-medium text-[#425071]">{c.description}</span>
+                      <span className="mt-0.5 block text-xs font-semibold text-[#425071]">{c.description}</span>
                     )}
                   </span>
                   <span className="material-symbols-outlined text-[20px] text-[#0066ff]">
@@ -522,7 +522,7 @@ export default function TemplateEditPage() {
                     {['1', '2', '3', '4', '5'].map((n) => (
                       <div key={n} className="flex gap-3 py-1.5">
                         <dt className="w-6 shrink-0 text-sm font-black text-[#0066ff]">{n}</dt>
-                        <dd className="text-xs font-medium leading-relaxed text-[#425071]">
+                        <dd className="text-xs font-semibold leading-relaxed text-[#425071]">
                           {c.rubric?.[n] || '—'}
                         </dd>
                       </div>
@@ -544,7 +544,7 @@ export default function TemplateEditPage() {
           </button>
         </div>
 
-        <p className="mt-6 text-center text-xs font-medium text-[#8a94ad]">
+        <p className="mt-6 text-center text-xs font-semibold text-[#8a94ad]">
           <Link href="/mensetsu" className="text-[#0066ff]">
             ダッシュボードへ戻る
           </Link>
