@@ -29,15 +29,23 @@ export interface QuoteContext {
  * ⚠️ 相場は事業判断に直結する。根拠のない金額を出さないため、
  *    どこから来た数字かを必ず記録し、画面にも表示する。
  */
-export type PriceSource = 'own_price' | 'market' | 'competitor' | 'manual' | 'unknown'
+export type PriceSource = 'own_price' | 'market' | 'competitor' | 'manual' | 'ai_estimate' | 'unknown'
 
 export const PRICE_SOURCE_LABEL: Record<PriceSource, string> = {
   own_price: '自社の公開価格',
   market: '相場データ',
   competitor: '競合の公開価格',
   manual: '手入力',
+  ai_estimate: 'AI推定',
   unknown: '要見積',
 }
+
+/**
+ * ⚠️ `ai_estimate` は、自社価格にも相場表にも無い品目を AI が積算した金額。
+ *    空欄で出さず埋めるのは利便のためだが、**必ず sourceRef に算出の根拠を書かせる**
+ *    （何人日 × 単価、類似作業からの類推、など）。
+ *    画面ではラベルで区別し、そのまま客先に出す前に人が確認できるようにする。
+ */
 
 /** 商材プロフィール（URL調査の結果） */
 export interface ProductProfile {

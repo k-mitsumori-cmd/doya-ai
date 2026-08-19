@@ -39,6 +39,7 @@ const SOURCE_STYLE: Record<PriceSource, string> = {
   market: 'bg-blue-50 text-blue-700 border-blue-200',
   competitor: 'bg-amber-50 text-amber-700 border-amber-200',
   manual: 'bg-slate-100 text-slate-600 border-slate-200',
+  ai_estimate: 'bg-violet-50 text-violet-700 border-violet-200',
   unknown: 'bg-rose-50 text-rose-700 border-rose-200',
 }
 
@@ -291,7 +292,7 @@ export default function QuoteTool() {
         operationKey="quote-analyzing"
         title="サービスを解析しています"
         subtitle="ページを読み取って、見積もりの品目候補と相場を組み立てています。"
-        tips={['Tip: 品目は後から自由に追加・編集できます', 'Tip: 金額の出所（自社価格 / 相場 / 要見積）が1件ずつ表示されます', 'Tip: 確定するとPDFの「社内確認用」透かしが消えます']}
+        tips={['Tip: 品目は後から自由に追加・編集できます', 'Tip: 金額の出所（自社価格 / 相場 / AI推定 / 手入力）が1件ずつ表示されます', 'Tip: 確定するとPDFの「社内確認用」透かしが消えます']}
       />
       <LoadingProgress
         isLoading={creating}

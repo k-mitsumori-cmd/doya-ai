@@ -135,20 +135,24 @@ export async function suggestItems(input: SuggestInput): Promise<SuggestedItem[]
   const prompt = [
     'あなたは法人向けの見積書を作るプロです。以下の商材について、見積書に載せる品目を6〜10件提案してください。',
     '',
-    '【金額の根拠に関する絶対的なルール】',
+    '【金額の決め方】',
     '金額は必ず次の優先順位で決め、どこから取ったかを priceSource に記録してください。',
-    '  1. own_price  … 下の「自社の公開価格」に書かれている金額をそのまま使う（最優先）',
-    '  2. market     … 下の「相場データ」の範囲内から選ぶ（rangeMin/rangeMax も必ず埋める）',
-    '  3. unknown    … 上のどちらにも根拠が無い品目。**unitPrice は必ず null にする**',
+    '  1. own_price   … 下の「自社の公開価格」に書かれている金額をそのまま使う（最優先）',
+    '  2. market      … 下の「相場データ」の範囲内から選ぶ（rangeMin/rangeMax も必ず埋める）',
+    '  3. ai_estimate … 上のどちらにも該当が無い品目。**算出の根拠を示したうえで金額を入れる**',
     '',
-    '**あなたが知っている一般的な金額・推測した金額を書いてはいけません。**',
-    '根拠が無いものは unknown にして空欄で出すのが正解です。空欄は「要見積」として扱われます。',
-    '金額を埋めることより、根拠の無い数字を出さないことの方がはるかに重要です。',
+    '**すべての品目に金額を入れてください。空欄（null）にしないでください。**',
+    'ただし ai_estimate では、数字を思いつきで書かず、必ず積算の過程を sourceRef に書くこと。',
+    '根拠の書けない金額は出さないでください（その場合だけ unknown / null が許されます）。',
     '',
     '【sourceRef の書き方】',
     '- own_price なら「サイト記載: 月額50,000円（スタンダードプラン）」のように引用する',
     '- market なら「相場: SEOコンサルティング 15〜50万円/月」のように書く',
-    '- unknown なら「要件により変動するため要見積」のように理由を書く',
+    '- ai_estimate なら**どう積算したかを必ず書く**。例:',
+    '    「作業3人日 × 8万円/人日 = 24万円」',
+    '    「類似のサイト内部診断（20〜80万円）から、対象30ページ規模として35万円」',
+    '    「初期設定2人日＋教育1人日 = 3人日 × 7万円 = 21万円」',
+    '- 「一般的な相場から」「経験上」のような、検証できない書き方は禁止',
     '',
     '【構成の作り方】',
     '- 初期費用・月額・オプションが混ざるなら、その順に並べる',
@@ -186,7 +190,7 @@ export async function suggestItems(input: SuggestInput): Promise<SuggestedItem[]
     'QuoteItems'
   )
 
-  const valid: PriceSource[] = ['own_price', 'market', 'competitor', 'manual', 'unknown']
+  const valid: PriceSource[] = ['own_price', 'market', 'competitor', 'manual', 'ai_estimate', 'unknown']
 
   return (raw?.items || [])
     .filter((i) => i && i.itemName)
@@ -205,11 +209,15 @@ export async function suggestItems(input: SuggestInput): Promise<SuggestedItem[]
       if (priceSource === 'market') {
         const m = lookupMarket(i.itemName)
         if (!m) {
-          // 相場表に該当が無いのに market を名乗っている＝内部知識で埋めた
-          priceSource = 'unknown'
-          unitPrice = null
+          // 相場表に該当が無いのに market を名乗っている。
+          // ⚠️ 以前はここで金額を捨てて「要見積」にしていたが、空欄だらけで使えないという
+          //    実際の声を受けて、AIの積算として残す方針に変えた（2026-08-19）。
+          //    相場データを引いたわけではないので、ラベルは必ず ai_estimate に落とす。
+          priceSource = 'ai_estimate'
           rangeMin = rangeMax = null
-          sourceRef = '相場データに該当がないため要見積'
+          if (!sourceRef || /相場/.test(sourceRef)) {
+            sourceRef = 'AIの積算（相場データに該当なし）'
+          }
         } else {
           rangeMin = m.min
           rangeMax = m.max
@@ -224,7 +232,20 @@ export async function suggestItems(input: SuggestInput): Promise<SuggestedItem[]
           sourceRef = `相場: ${m.itemName} ${m.min.toLocaleString()}〜${m.max.toLocaleString()}円/${m.unit}（出典: ${m.source}）`
         }
       }
-      if (priceSource === 'unknown') unitPrice = null
+      // ⚠️ unknown でも金額と根拠が揃っていれば、捨てずに AI推定として残す。
+      //    金額が無い／根拠が無いものだけを「要見積」として空欄にする。
+      if (priceSource === 'unknown') {
+        if (unitPrice != null && unitPrice > 0 && sourceRef && sourceRef.trim().length >= 6) {
+          priceSource = 'ai_estimate'
+        } else {
+          unitPrice = null
+        }
+      }
+      // ⚠️ ai_estimate で根拠が無い／薄いものは、数字だけが独り歩きするので採用しない
+      if (priceSource === 'ai_estimate' && (!sourceRef || sourceRef.trim().length < 6)) {
+        priceSource = 'unknown'
+        unitPrice = null
+      }
 
       // ⚠️ 相場以外の行に範囲を残さない。モデルは range に 0 を入れてくるため、
       //    そのままだと画面に「相場 ¥0〜¥0」と表示される。
