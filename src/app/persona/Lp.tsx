@@ -10,12 +10,13 @@ import {
 import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { PersonaBriefMock, PersonaProfileMock, PersonaPlanMock } from './mocks'
+import ServiceDiagram from './diagram'
 
 const SVC = getServiceById('persona')!
 const ROWS: ShowcaseRow[] = [
-  { icon: 'inventory_2', title: '商材の条件を入力', desc: '業界・商材・届けたい役割を短く入れれば、検討の起点ができます。', visual: <MockWindow title="商材の条件"><PersonaBriefMock /></MockWindow> },
-  { icon: 'groups', title: '顧客像を1枚に', desc: '目標、悩み、情報源、判断軸を、チームで確認できる形にまとめます。', visual: <MockWindow title="ペルソナシート"><PersonaProfileMock /></MockWindow> },
-  { icon: 'description', title: '施策の指示へ変換', desc: '訴求・導線・懸念・検証項目まで落とし込み、制作の叩き台にできます。', visual: <MockWindow title="施策の要点"><PersonaPlanMock /></MockWindow> },
+  { icon: 'inventory_2', title: '商材の条件を入力', desc: '業界・商材・届けたい役割を短く入れれば、検討の起点ができます。', visual: <MockWindow title="商材の条件"><PersonaBriefMock /></MockWindow>, image: { src: '/persona/shots/1-input.webp', alt: '商材の条件を入力の画面' } },
+  { icon: 'groups', title: '顧客像を1枚に', desc: '目標、悩み、情報源、判断軸を、チームで確認できる形にまとめます。', visual: <MockWindow title="ペルソナシート"><PersonaProfileMock /></MockWindow>, image: { src: '/persona/shots/2-process.webp', alt: '顧客像を1枚にの画面' } },
+  { icon: 'description', title: '施策の指示へ変換', desc: '訴求・導線・懸念・検証項目まで落とし込み、制作の叩き台にできます。', visual: <MockWindow title="施策の要点"><PersonaPlanMock /></MockWindow>, image: { src: '/persona/shots/3-output.webp', alt: '施策の指示へ変換の画面' } },
 ]
 
 export default function PersonaLp() {
@@ -39,7 +40,7 @@ export default function PersonaLp() {
 
       <FeatureShowcase title="顧客像を、施策で使える形へ" lead="作って終わりではなく、コピーや導線の判断につなげます。" rows={ROWS} />
 
-      <HowItWorks title="3ステップで使えます" steps={STEPS} />
+      <HowItWorks title="3ステップで使えます" steps={STEPS} diagram={<ServiceDiagram steps={STEPS} />}  />
 
       <Benefits title="叩き台が先にあると、速い" lead="ゼロから考えるより、出てきたものを直す方が早く形になります。" items={BENEFITS} />
 

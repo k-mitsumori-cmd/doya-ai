@@ -87,11 +87,12 @@ export function Hero({
 
 // ---------- How it works（3ステップ） ----------
 export interface Step { title: string; desc: string; icon: string }
-export function HowItWorks({ eyebrow = 'HOW IT WORKS', title, lead, steps }: { eyebrow?: string; title: React.ReactNode; lead?: string; steps: Step[] }) {
+export function HowItWorks({ eyebrow = 'HOW IT WORKS', title, lead, steps, diagram }: { eyebrow?: string; title: React.ReactNode; lead?: string; steps: Step[]; diagram?: React.ReactNode }) {
   return (
     <section className="relative py-20 md:py-28 bg-slate-50/70">
       <div className="max-w-6xl mx-auto px-5">
         <SectionHeading eyebrow={eyebrow} title={title} lead={lead} />
+        {diagram}
         <div className="grid md:grid-cols-3 gap-6 md:gap-8">
           {steps.map((s, i) => (
             <div key={s.title} className="relative bg-white rounded-3xl border border-slate-100 p-8 shadow-sm animate-fade-in-up" style={{ animationDelay: `${0.08 * i}s` }}>

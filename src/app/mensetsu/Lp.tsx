@@ -11,6 +11,7 @@ import {
 import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { MensetsuLiveMock, MensetsuScoreMock, MensetsuGuardMock } from './mocks'
+import ServiceDiagram from './diagram'
 
 const SVC = getServiceById('mensetsu')!
 
@@ -20,21 +21,21 @@ const ROWS: ShowcaseRow[] = [
     title: '日程を合わせなくていい',
     desc: '応募者はお渡ししたURLを開くだけで一次面接を受けられます。日程調整の往復が丸ごと不要になり、応募から面接までの日数が縮みます。',
     bullets: ['ログイン不要・都合のよい時間に受験できる', '有効期限つきのURLを1人ずつ発行', '応募時のメールで本人確認もできる'],
-    visual: <MockWindow title="一次面接"><MensetsuLiveMock /></MockWindow>,
+    visual: <MockWindow title="一次面接"><MensetsuLiveMock /></MockWindow>, image: { src: '/mensetsu/shots/1-input.webp', alt: '日程を合わせなくていいの画面' },
   },
   {
     icon: 'balance',
     title: '全員に同じ基準で',
     desc: '構造化面接の方式です。全応募者に同じ主質問・同じ評価基準を当てます。評価軸ごとに点数と、根拠になった発言の引用が残ります。',
     bullets: ['評価軸ごとに1〜5点と発言の引用', '判断できない軸は「情報不足」と明示', '総合は4段階の推薦度（合否ではありません）'],
-    visual: <MockWindow title="評価レポート"><MensetsuScoreMock /></MockWindow>,
+    visual: <MockWindow title="評価レポート"><MensetsuScoreMock /></MockWindow>, image: { src: '/mensetsu/shots/2-process.webp', alt: '全員に同じ基準での画面' },
   },
   {
     icon: 'gavel',
     title: '聞いてはいけない事を聞かない',
     desc: '本籍・家族・信条・結婚の予定など、選考で尋ねてはいけない事項を、質問を作る時点で除外します。応募者が自発的に話した場合も評価の根拠には使いません。',
     bullets: ['厚生労働省「公正な採用選考の基本」に沿った除外', '質問生成・保存・採点例の登録すべてで検査', '除外した理由も担当者に表示'],
-    visual: <MockWindow title="質問のガードレール"><MensetsuGuardMock /></MockWindow>,
+    visual: <MockWindow title="質問のガードレール"><MensetsuGuardMock /></MockWindow>, image: { src: '/mensetsu/shots/3-output.webp', alt: '聞いてはいけない事を聞かないの画面' },
   },
 ]
 
@@ -71,7 +72,7 @@ export default function MensetsuLp() {
         rows={ROWS}
       />
 
-      <HowItWorks title="3ステップで一次面接まで" steps={STEPS} />
+      <HowItWorks title="3ステップで一次面接まで" steps={STEPS} diagram={<ServiceDiagram steps={STEPS} />}  />
 
       <Benefits title="選ばれる理由" items={BENEFITS} />
 

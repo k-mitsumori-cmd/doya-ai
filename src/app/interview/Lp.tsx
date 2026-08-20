@@ -8,12 +8,13 @@ import {
 import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { InterviewUploadMock, InterviewTranscriptMock, InterviewArticleMock } from './mocks'
+import ServiceDiagram from './diagram'
 
 const SVC = getServiceById('interview')!
 const ROWS: ShowcaseRow[] = [
-  { icon: 'upload_file', title: '録音をそのまま入れる', desc: '音声や動画をアップロードするだけで取材後の作業を始められます。', visual: <MockWindow title="音声アップロード"><InterviewUploadMock /></MockWindow> },
-  { icon: 'record_voice_over', title: '話者ごとに文字へ', desc: '対談でも発言者を分け、誰が何を話したかを追える状態にします。', visual: <MockWindow title="文字起こし"><InterviewTranscriptMock /></MockWindow> },
-  { icon: 'article', title: '媒体に合う記事へ', desc: 'Q&Aやストーリーなど、用途に合う形で編集できるドラフトを作ります。', visual: <MockWindow title="記事ドラフト"><InterviewArticleMock /></MockWindow> },
+  { icon: 'upload_file', title: '録音をそのまま入れる', desc: '音声や動画をアップロードするだけで取材後の作業を始められます。', visual: <MockWindow title="音声アップロード"><InterviewUploadMock /></MockWindow>, image: { src: '/interview/shots/1-input.webp', alt: '録音をそのまま入れるの画面' } },
+  { icon: 'record_voice_over', title: '話者ごとに文字へ', desc: '対談でも発言者を分け、誰が何を話したかを追える状態にします。', visual: <MockWindow title="文字起こし"><InterviewTranscriptMock /></MockWindow>, image: { src: '/interview/shots/2-process.webp', alt: '話者ごとに文字への画面' } },
+  { icon: 'article', title: '媒体に合う記事へ', desc: 'Q&Aやストーリーなど、用途に合う形で編集できるドラフトを作ります。', visual: <MockWindow title="記事ドラフト"><InterviewArticleMock /></MockWindow>, image: { src: '/interview/shots/3-output.webp', alt: '媒体に合う記事への画面' } },
 ]
 
 export default function InterviewLp() {
@@ -37,7 +38,7 @@ export default function InterviewLp() {
 
       <FeatureShowcase title="録音から記事の叩き台まで" lead="話者分離、構成、校正を一つの流れで進めます。" rows={ROWS} />
 
-      <HowItWorks title="3ステップで記事になります" steps={STEPS} />
+      <HowItWorks title="3ステップで記事になります" steps={STEPS} diagram={<ServiceDiagram steps={STEPS} />}  />
 
       <Benefits title="選ばれる理由" lead="取材のあとの、一番時間がかかるところを引き受けます。" items={BENEFITS} />
 

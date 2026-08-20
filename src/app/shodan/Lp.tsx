@@ -11,25 +11,26 @@ import {
 } from '@/components/lp'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { ShodanResearchMock, ShodanHypothesisMock, ShodanProposalMock } from './mocks'
+import ServiceDiagram from './diagram'
 
 const ROWS: ShowcaseRow[] = [
   {
     icon: 'travel_explore', title: 'URLを入れるだけで深掘り調査',
     desc: '商談先のURLを貼るだけで、従業員数・マーケ施策・オウンドメディアの規模や更新頻度まで公開情報を自動で収集。アポ前の調べ物がゼロになります。',
     bullets: ['従業員数・マーケ状況を自動収集', 'オウンドメディアの規模と更新頻度を把握', 'PR TIMES等の最新動向もチェック'],
-    visual: <MockWindow title="doya-ai.surisuta.jp/shodan"><ShodanResearchMock /></MockWindow>,
+    visual: <MockWindow title="doya-ai.surisuta.jp/shodan"><ShodanResearchMock /></MockWindow>, image: { src: '/shodan/shots/1-input.webp', alt: 'URLを入れるだけで深掘り調査の画面' },
   },
   {
     icon: 'psychology', title: '課題仮説をAIが立案',
     desc: '集めた情報から現状分析と課題仮説を自動生成。優先度つきで整理されるので、どこを突けば刺さるかが一目でわかります。',
     bullets: ['現状分析から課題を自動抽出', '優先度つきで論点を整理', '担当者ごとの品質のばらつきを抑制'],
-    visual: <MockWindow title="課題仮説"><ShodanHypothesisMock /></MockWindow>,
+    visual: <MockWindow title="課題仮説"><ShodanHypothesisMock /></MockWindow>, image: { src: '/shodan/shots/2-process.webp', alt: '課題仮説をAIが立案の画面' },
   },
   {
     icon: 'description', title: '提案資料を一括生成',
     desc: '現状分析→課題仮説→解決策の型で提案書（Markdown）を一括生成。自社情報を登録すれば、自社の商材・強みに最適化された提案になります。',
     bullets: ['現状分析・課題仮説・解決策を自動構成', 'Markdownでコピーして資料に流用', '自社の商材・強みに最適化'],
-    visual: <MockWindow title="提案資料"><ShodanProposalMock /></MockWindow>,
+    visual: <MockWindow title="提案資料"><ShodanProposalMock /></MockWindow>, image: { src: '/shodan/shots/3-output.webp', alt: '提案資料を一括生成の画面' },
   },
 ]
 
@@ -59,7 +60,7 @@ export default function ShodanLp() {
         image={{ src: '/shodan/hero.webp', alt: 'ドヤ商談準備の企業調査画面' }}
         visual={<MockWindow title="doya-ai.surisuta.jp/shodan"><ShodanResearchMock /></MockWindow>}
       />
-      <HowItWorks title={<>URLを入れるだけの<br className="md:hidden" />3ステップ</>} lead="アポ前の調べ物と資料づくりを、そのまま自動化します。" steps={STEPS} />
+      <HowItWorks title={<>URLを入れるだけの<br className="md:hidden"  />3ステップ</>} lead="アポ前の調べ物と資料づくりを、そのまま自動化します。" steps={STEPS} diagram={<ServiceDiagram steps={STEPS} />} />
       <FeatureShowcase title="商談準備の一連の流れを、そのまま見せます。" lead="リサーチから提案資料づくりまで、ひとつの画面で完結します。" rows={ROWS} />
       <Benefits title="なぜ、商談が変わるのか" items={BENEFITS} />
       {SVC.useCases && <UseCases items={SVC.useCases} />}

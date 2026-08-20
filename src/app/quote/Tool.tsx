@@ -17,6 +17,7 @@ import QuoteLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
 import LoadingProgress from '@/components/LoadingProgress'
+import { EmptyState } from '@/components/EmptyState'
 
 interface Product {
   id: string
@@ -712,7 +713,7 @@ export default function QuoteTool() {
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-base font-bold text-slate-900">見積書</h2>
           {docs.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-500 font-semibold">まだ見積書はありません。</p>
+            <EmptyState kind="not-generated" title="まだ見積書はありません" description="商材と商談条件を入力すると、根拠つきの見積書を作成できます。" />
           ) : (
             <div className="mt-4 divide-y divide-slate-100">
               {docs.map((d) => (

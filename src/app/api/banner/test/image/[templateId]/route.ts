@@ -12,7 +12,8 @@ const MEMORY_CACHE_TTL = 6 * 60 * 60 * 1000 // 6時間（cold start 軽減）
 const MEMORY_CACHE_MAX = 2000
 
 // 静的フォールバック画像（生成中プレースホルダー）
-const FALLBACK_IMAGE = '/banner-samples/generating-placeholder.svg'
+// ⚠️ 実体のあるファイルを指すこと。generating-placeholder.svg は存在せず 404 だった。
+const FALLBACK_IMAGE = '/banner-samples/cat-other.webp'
 
 export async function GET(
   request: NextRequest,

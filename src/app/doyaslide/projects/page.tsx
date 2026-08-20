@@ -5,6 +5,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { EmptyState } from '@/components/EmptyState'
 
 interface SlideThumb {
   id: string
@@ -104,17 +105,8 @@ export default function DoyaSlideProjectsPage() {
           ))}
         </div>
       ) : projects.length === 0 ? (
-        <div className="bg-white rounded-3xl shadow-sm p-16 text-center">
-          <img src="/character/hello.png" alt="" className="w-24 h-24 object-contain mx-auto mb-4" />
-          <p className="text-lg font-black text-slate-700 mb-1">一緒に最初のスライドを作ろう！</p>
-          <p className="text-sm text-slate-400 font-bold mb-6">テーマを入れるだけで、AIが全スライドを画像で作ります</p>
-          <Link
-            href="/doyaslide/new"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black shadow-lg"
-          >
-            <span className="material-symbols-outlined">add</span>
-            最初のスライドを作る
-          </Link>
+        <div className="rounded-3xl bg-white shadow-sm">
+          <EmptyState kind="not-generated" title="最初のスライドを作りましょう" description="テーマを入れるだけで、AIが全スライドを画像で作ります。" action={<Link href="/doyaslide/new" className="inline-flex rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-3 font-black text-white shadow-lg">最初のスライドを作る</Link>} />
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">

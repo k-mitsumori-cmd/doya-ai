@@ -45,7 +45,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
         href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet"
       />
-      <style>{`
+      <style dangerouslySetInnerHTML={{ __html: `
         .interview-root {
           font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
           font-weight: 600;
@@ -80,7 +80,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
         .interview-root .font-bold { font-weight: 800 !important; }
         .interview-root .font-extrabold { font-weight: 900 !important; }
         .interview-root .font-black { font-weight: 900 !important; }
-      `}</style>
+      ` }} />
       <div className="interview-root">
         <InterviewLayout currentPlan={currentPlan} isLoggedIn={isLoggedIn}>
           {children}

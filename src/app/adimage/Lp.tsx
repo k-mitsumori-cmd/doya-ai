@@ -9,6 +9,7 @@ import {
 import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { AdImageGridMock, AdImageVerifyMock, AdImageRefineMock } from './mocks'
+import ServiceDiagram from './diagram'
 
 const SVC = getServiceById('adimage')!
 
@@ -18,21 +19,21 @@ const ROWS: ShowcaseRow[] = [
     title: '媒体別の実寸で、切り抜かずに',
     desc: '目標サイズと同じ比率で生成してから縮小します。正方形から作った画像を縦長に切り抜く、といった処理をしないので、文字が切れません。',
     bullets: ['Meta・Google・X・LINE・Yahoo! の各配置に対応', '目標比率のまま生成するので文字切れが起きない', '媒体別に整理したZIPで一括ダウンロード'],
-    visual: <MockWindow title="媒体別の書き出し"><AdImageGridMock /></MockWindow>,
+    visual: <MockWindow title="媒体別の書き出し"><AdImageGridMock /></MockWindow>, image: { src: '/adimage/shots/1-input.webp', alt: '媒体別の実寸で、切り抜かずにの画面' },
   },
   {
     icon: 'spellcheck',
     title: '文字が正しく出たかを検査する',
     desc: '画像生成AIは文字を崩すことがあります。生成後に描かれた文字を読み取って指定と照合し、合っていなければ自動で作り直します。',
     bullets: ['文字を画像に直接描き込む（後乗せの継ぎはぎなし）', '描かれた文字を読み取って照合', '不合格なら自動で作り直し'],
-    visual: <MockWindow title="文字の検査"><AdImageVerifyMock /></MockWindow>,
+    visual: <MockWindow title="文字の検査"><AdImageVerifyMock /></MockWindow>, image: { src: '/adimage/shots/2-process.webp', alt: '文字が正しく出たかを検査するの画面' },
   },
   {
     icon: 'auto_fix_high',
     title: '気になるところを直せる',
     desc: 'AIが実際に出来上がった画像を見て採点し、具体的な改善点を出します。ボタンを押すだけで、その改善を反映した次の案を作ります。',
     bullets: ['出来上がった画像をAIが見て採点', '具体的な改善点を文章で提示', 'ボタン一つで改善版を再生成'],
-    visual: <MockWindow title="採点と改善"><AdImageRefineMock /></MockWindow>,
+    visual: <MockWindow title="採点と改善"><AdImageRefineMock /></MockWindow>, image: { src: '/adimage/shots/3-output.webp', alt: '気になるところを直せるの画面' },
   },
 ]
 
@@ -69,7 +70,7 @@ export default function AdImageLp() {
         rows={ROWS}
       />
 
-      <HowItWorks title="3ステップで入稿物まで" steps={STEPS} />
+      <HowItWorks title="3ステップで入稿物まで" steps={STEPS} diagram={<ServiceDiagram steps={STEPS} />}  />
 
       <Benefits title="選ばれる理由" items={BENEFITS} />
 

@@ -29,6 +29,7 @@ import { CompletionModal } from '@seo/components/CompletionModal'
 import { patchSeoClientSettings, readSeoClientSettings } from '@seo/lib/clientSettings'
 import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
 import { FeatureGuide } from '@/components/FeatureGuide'
+import { EmptyState } from '@/components/EmptyState'
 
 type SeoSection = {
   id: string
@@ -808,22 +809,9 @@ export default function SeoJobPage() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-md w-full bg-white rounded-3xl p-8 shadow-xl border border-gray-100"
+          className="max-w-xl w-full bg-white rounded-3xl shadow-xl border border-gray-100"
         >
-          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-red-100 flex items-center justify-center">
-            <XCircle className="w-8 h-8 text-red-500" />
-          </div>
-          <h2 className="text-xl font-black text-gray-900 text-center">読み込みに失敗しました</h2>
-          <p className="text-sm text-gray-500 mt-3 text-center">{loadError || '不明なエラー'}</p>
-          <button
-            className="mt-6 w-full py-3 rounded-xl bg-gray-900 text-white font-bold hover:bg-gray-800 transition-colors"
-            onClick={() => {
-              setLoading(true)
-              load({ showLoading: true })
-            }}
-          >
-            再読み込み
-          </button>
+          <EmptyState kind="error" title="読み込みに失敗しました" description={loadError || '不明なエラー'} action={<button className="rounded-xl bg-gray-900 px-8 py-3 font-bold text-white transition-colors hover:bg-gray-800" onClick={() => { setLoading(true); load({ showLoading: true }) }}>再読み込み</button>} />
         </motion.div>
       </main>
     )

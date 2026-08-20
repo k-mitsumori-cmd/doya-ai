@@ -9,6 +9,7 @@ import { useSession } from 'next-auth/react'
 import { motion } from 'framer-motion'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
+import { EmptyState } from '@/components/EmptyState'
 
 interface HistoryItem {
   id: string
@@ -545,39 +546,22 @@ export default function BannerHistoryPage() {
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center py-24 bg-white rounded-3xl border border-gray-100 shadow-sm"
+              className="bg-white rounded-3xl border border-gray-100 shadow-sm"
             >
-              <div className="w-24 h-24 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-slate-100">
-                <ImageIcon className="w-12 h-12 text-slate-300" />
-              </div>
-              <h2 className="text-2xl font-black text-slate-800 mb-3">履歴がありません</h2>
-              <p className="text-slate-500 mb-8 max-w-md mx-auto leading-relaxed">
-                バナーを生成すると、ここに履歴が表示されます。<br />
-                6ヶ月間保存され、いつでも再ダウンロード可能です。
-              </p>
-              <Link href="/banner/dashboard">
-                <button className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-100 hover:scale-105">
-                  最初のバナーを生成する
-                </button>
-              </Link>
+              <EmptyState kind="zero" title="履歴がありません" description="バナーを生成すると、ここに6ヶ月間保存され、いつでも再ダウンロードできます。" action={<Link href="/banner/dashboard" className="inline-flex rounded-2xl bg-blue-600 px-8 py-4 font-black text-white shadow-lg">最初のバナーを生成する</Link>} />
             </motion.div>
           ) : filteredHistory.length === 0 ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm"
+              className="bg-white rounded-3xl border border-gray-100 shadow-sm"
             >
-              <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-5 border border-slate-100">
-                <Search className="w-10 h-10 text-slate-300" />
-              </div>
-              <h2 className="text-xl font-black text-slate-800 mb-2">該当するバナーが見つかりません</h2>
-              <p className="text-slate-500 text-sm mb-6">検索条件を変更して再度お試しください。</p>
-              <button
+              <EmptyState kind="no-results" title="該当するバナーが見つかりません" description="検索条件を変更して再度お試しください。" action={<button
                 onClick={() => { setSearchQuery(''); setPeriodFilter('all') }}
                 className="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-black rounded-2xl transition-all text-sm"
               >
                 条件をリセット
-              </button>
+              </button>} />
             </motion.div>
           ) : (
             <div className="grid grid-cols-1 gap-6 sm:gap-8">

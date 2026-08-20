@@ -10,12 +10,13 @@ import {
 import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { DoyalistFilterMock, DoyalistTableMock, DoyalistMessageMock } from './mocks'
+import ServiceDiagram from './diagram'
 
 const SVC = getServiceById('doyalist')!
 const ROWS: ShowcaseRow[] = [
-  { icon: 'tune', title: '狙う条件を決める', desc: '業種、地域、規模、キーワードから必要な企業像を指定します。', visual: <MockWindow title="検索条件"><DoyalistFilterMock /></MockWindow> },
-  { icon: 'list_alt', title: '出所のある企業情報', desc: '法人情報をもとに候補を整理し、URLがない場合は推測せず明示します。', visual: <MockWindow title="候補企業"><DoyalistTableMock /></MockWindow> },
-  { icon: 'mail', title: '企業別の文面まで', desc: 'リストの相手ごとに、メール・フォーム・電話の叩き台を作ります。', visual: <MockWindow title="営業文面"><DoyalistMessageMock /></MockWindow> },
+  { icon: 'tune', title: '狙う条件を決める', desc: '業種、地域、規模、キーワードから必要な企業像を指定します。', visual: <MockWindow title="検索条件"><DoyalistFilterMock /></MockWindow>, image: { src: '/doyalist/shots/1-input.webp', alt: '狙う条件を決めるの画面' } },
+  { icon: 'list_alt', title: '出所のある企業情報', desc: '法人情報をもとに候補を整理し、URLがない場合は推測せず明示します。', visual: <MockWindow title="候補企業"><DoyalistTableMock /></MockWindow>, image: { src: '/doyalist/shots/2-process.webp', alt: '出所のある企業情報の画面' } },
+  { icon: 'mail', title: '企業別の文面まで', desc: 'リストの相手ごとに、メール・フォーム・電話の叩き台を作ります。', visual: <MockWindow title="営業文面"><DoyalistMessageMock /></MockWindow>, image: { src: '/doyalist/shots/3-output.webp', alt: '企業別の文面までの画面' } },
 ]
 
 export default function DoyalistLp() {
@@ -39,7 +40,7 @@ export default function DoyalistLp() {
 
       <FeatureShowcase title="探すところから、声をかけるところまで" lead="情報の出所を明示し、実行に使える文面までつなぎます。" rows={ROWS} />
 
-      <HowItWorks title="3ステップで使えます" steps={STEPS} />
+      <HowItWorks title="3ステップで使えます" steps={STEPS} diagram={<ServiceDiagram steps={STEPS} />}  />
 
       <Benefits title="リストで終わらせない" lead="作ったリストの相手に、そのまま送れる文面まで用意します。" items={BENEFITS} />
 

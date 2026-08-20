@@ -9,6 +9,7 @@ import {
 import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { AishodanTalkMock, AishodanSlotsMock, AishodanFitMock } from './mocks'
+import ServiceDiagram from './diagram'
 
 const SVC = getServiceById('aishodan')!
 
@@ -18,21 +19,21 @@ const ROWS: ShowcaseRow[] = [
     title: 'AIが音声で一次商談を進める',
     desc: '見込み客はお渡ししたURLを開くだけ。ログインもアプリも要りません。相手のご都合に合わせて、深夜でも土日でも商談が始まります。',
     bullets: ['ログイン不要・スマートフォン対応', '音声でもテキストでも参加できる', '話し始めたらAIはすぐ黙る（かぶらない）'],
-    visual: <MockWindow title="一次商談"><AishodanTalkMock /></MockWindow>,
+    visual: <MockWindow title="一次商談"><AishodanTalkMock /></MockWindow>, image: { src: '/aishodan/shots/1-input.webp', alt: 'AIが音声で一次商談を進めるの画面' },
   },
   {
     icon: 'checklist',
     title: '聞くべきことを取りこぼさない',
     desc: '課題・予算・時期・決裁者といったヒアリング項目を、会話しながら構造化して記録します。取れなかった項目は「未取得」として残るので、次に何を聞けばよいかが分かります。',
     bullets: ['ヒアリング項目を自動で記録', '未取得の項目がひと目で分かる', '全文ログと要約も残る'],
-    visual: <MockWindow title="ヒアリング項目"><AishodanSlotsMock /></MockWindow>,
+    visual: <MockWindow title="ヒアリング項目"><AishodanSlotsMock /></MockWindow>, image: { src: '/aishodan/shots/2-process.webp', alt: '聞くべきことを取りこぼさないの画面' },
   },
   {
     icon: 'insights',
     title: '適合度と、その理由',
     desc: '理想の顧客像と照らして適合度を出します。ただし判定は参考値で、最終的な判断は担当者が行う前提です。日程調整に進んだかどうかも記録されます。',
     bullets: ['理想顧客像との適合度と判定理由', '日程調整のリンクで実際の面談へ', '完了と同時にSlackへ通知'],
-    visual: <MockWindow title="適合度の判定"><AishodanFitMock /></MockWindow>,
+    visual: <MockWindow title="適合度の判定"><AishodanFitMock /></MockWindow>, image: { src: '/aishodan/shots/3-output.webp', alt: '適合度と、その理由の画面' },
   },
 ]
 
@@ -69,7 +70,7 @@ export default function AishodanLp() {
         rows={ROWS}
       />
 
-      <HowItWorks title="3ステップで商談を任せる" steps={STEPS} />
+      <HowItWorks title="3ステップで商談を任せる" steps={STEPS} diagram={<ServiceDiagram steps={STEPS} />}  />
 
       <Benefits title="選ばれる理由" items={BENEFITS} />
 

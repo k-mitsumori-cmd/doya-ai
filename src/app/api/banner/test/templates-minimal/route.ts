@@ -24,8 +24,8 @@ export async function GET(request: NextRequest) {
       category: t.category,
       isFeatured: t.isFeatured || false,
       // フォールバック画像を使用
-      imageUrl: '/banner-samples/cat-it.svg',
-      previewUrl: '/banner-samples/cat-it.svg',
+      imageUrl: '/banner-samples/cat-it.webp',
+      previewUrl: '/banner-samples/cat-it.webp',
     }))
     
     return NextResponse.json({

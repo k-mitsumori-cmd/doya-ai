@@ -10,6 +10,7 @@ import {
 } from '@/components/lp'
 import { getServiceById } from '@/lib/services'
 import { PromaneProjectMock, PromaneBoardMock, PromaneProfitMock } from './mocks'
+import ServiceDiagram from './diagram'
 
 const SVC = getServiceById('promane')!
 const ACCENT = '#009bff'
@@ -28,9 +29,9 @@ const BENEFITS: Benefit[] = [
 ]
 
 const ROWS: ShowcaseRow[] = [
-  { icon: 'add_task', title: '案件の条件を一つに', desc: '売上、期間、担当を登録し、進捗と収支の共通の起点にします。', visual: <MockWindow title="案件登録"><PromaneProjectMock /></MockWindow> },
-  { icon: 'view_kanban', title: '進み具合を見える化', desc: 'タスクをカンバンとガントで確認し、止まっている仕事を把握できます。', visual: <MockWindow title="カンバン"><PromaneBoardMock /></MockWindow> },
-  { icon: 'monitoring', title: '工数から利益を確認', desc: 'メンバーの単価と記録時間から人件費を集計し、見込み利益を表示します。', visual: <MockWindow title="収支レポート"><PromaneProfitMock /></MockWindow> },
+  { icon: 'add_task', title: '案件の条件を一つに', desc: '売上、期間、担当を登録し、進捗と収支の共通の起点にします。', visual: <MockWindow title="案件登録"><PromaneProjectMock /></MockWindow>, image: { src: '/promane/shots/1-input.webp', alt: '案件の条件を一つにの画面' } },
+  { icon: 'view_kanban', title: '進み具合を見える化', desc: 'タスクをカンバンとガントで確認し、止まっている仕事を把握できます。', visual: <MockWindow title="カンバン"><PromaneBoardMock /></MockWindow>, image: { src: '/promane/shots/2-process.webp', alt: '進み具合を見える化の画面' } },
+  { icon: 'monitoring', title: '工数から利益を確認', desc: 'メンバーの単価と記録時間から人件費を集計し、見込み利益を表示します。', visual: <MockWindow title="収支レポート"><PromaneProfitMock /></MockWindow>, image: { src: '/promane/shots/3-output.webp', alt: '工数から利益を確認の画面' } },
 ]
 
 const FAQ: Faq[] = [
@@ -68,7 +69,7 @@ export function PromaneLp() {
           visual={<MockWindow title="ドヤプロマネ"><PromaneProfitMock /></MockWindow>}
         />
         <FeatureShowcase title="進捗と収支を、同じ案件で見る" lead="作業の遅れと利益の変化を別々の表で追わず、一つの画面で確認します。" rows={ROWS} />
-        <HowItWorks title="使い方は3ステップ" lead="はじめての案件を登録するまで、だいたい5分です。" steps={STEPS} />
+        <HowItWorks title="使い方は3ステップ" lead="はじめての案件を登録するまで、だいたい5分です。" steps={STEPS} diagram={<ServiceDiagram steps={STEPS} />}  />
         <Benefits title="ドヤプロマネで変わること" items={BENEFITS} />
         <UseCases items={SVC.useCases || []} />
         <FaqSection items={FAQ} />

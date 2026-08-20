@@ -29,105 +29,105 @@ const CATEGORIES = [
   { 
     value: 'telecom', label: '通信', icon: 'phone', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '・スマホを持つ手元をメインビジュアルに\n・月額料金・割引額を大きく目立たせる\n・「乗り換え0円」等の数字訴求を配置\n・今すぐ申し込めるCTAボタンを強調',
-    sample: '/banner-samples/cat-telecom.svg'
+    sample: '/banner-samples/cat-telecom.webp'
   },
   { 
     value: 'marketing', label: 'マーケ', icon: 'chart', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '・プロフェッショナルな人物写真を使用\n・実績グラフ・数値データを見せる\n・「導入○○社」等の権威性を強調\n・B2B向けの信頼感あるトーン',
-    sample: '/banner-samples/cat-marketing.svg'
+    sample: '/banner-samples/cat-marketing.webp'
   },
   { 
     value: 'ec', label: 'EC', icon: 'cart', color: '#F97316', bg: 'from-orange-500/10 to-orange-600/10',
     description: '・商品の質感・細部を大胆にアップ\n・セールバッジ・期間限定の赤を効かせる\n・「本日限り」等の緊急性を訴求\n・衝動買いを誘発する配色',
-    sample: '/banner-samples/cat-ec.svg'
+    sample: '/banner-samples/cat-ec.webp'
   },
   { 
     value: 'recruit', label: '採用', icon: 'users', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '・笑顔のチームメンバー写真を使用\n・職場の雰囲気が伝わる背景\n・「働きやすさ」を視覚的に表現\n・共感と期待感を高めるコピー',
-    sample: '/banner-samples/cat-recruit.svg'
+    sample: '/banner-samples/cat-recruit.webp'
   },
   { 
     value: 'beauty', label: '美容', icon: 'sparkle', color: '#FBBF24', bg: 'from-amber-400/10 to-amber-500/10',
     description: '・透明感のある人物アップショット\n・洗練された余白で高級感を演出\n・ビフォーアフターを効果的に配置\n・「自分磨き」意欲を刺激するコピー',
-    sample: '/banner-samples/cat-beauty.svg'
+    sample: '/banner-samples/cat-beauty.webp'
   },
   { 
     value: 'food', label: '飲食', icon: 'food', color: '#F97316', bg: 'from-orange-500/10 to-orange-600/10',
     description: '・料理の接写で「シズル感」を最大化\n・暖色背景で食欲を刺激\n・湯気・ツヤ等のリアルな質感\n・予約・注文への導線を明確に',
-    sample: '/banner-samples/cat-food.svg'
+    sample: '/banner-samples/cat-food.webp'
   },
   { 
     value: 'realestate', label: '不動産', icon: 'home', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '・開放感のある内装・外観写真\n・落ち着いた青系トーンで誠実さを演出\n・「理想の暮らし」をビジュアル化\n・相談・問い合わせへの安心感',
-    sample: '/banner-samples/cat-realestate.svg'
+    sample: '/banner-samples/cat-realestate.webp'
   },
   { 
     value: 'education', label: '教育', icon: 'book', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '・真剣に学ぶ姿・明るい光の演出\n・習得スキルをステップ形式で提示\n・「未来への自己投資」感を醸成\n・申し込みハードルを下げるコピー',
-    sample: '/banner-samples/cat-education.svg'
+    sample: '/banner-samples/cat-education.webp'
   },
   { 
     value: 'finance', label: '金融', icon: 'finance', color: '#FBBF24', bg: 'from-amber-400/10 to-amber-500/10',
     description: '・スマホアプリの操作画面イメージ\n・資産増をイメージさせるアイコン\n・ダークネイビー×ゴールドの高級感\n・信頼・安心・専門性を強調',
-    sample: '/banner-samples/cat-finance.svg'
+    sample: '/banner-samples/cat-finance.webp'
   },
   { 
     value: 'health', label: '医療', icon: 'health', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '・専門家の優しい表情を見せる\n・清潔感のある青系グラデーション\n・機能性・安全性を視覚的に表現\n・健康課題の解決を具体的に訴求',
-    sample: '/banner-samples/cat-health.svg'
+    sample: '/banner-samples/cat-health.webp'
   },
   { 
     value: 'it', label: 'IT', icon: 'laptop', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '・サーバー・ネットワークの抽象光\n・デジタル感あるクールなトーン\n・最新技術・スピード感を演出\n・課題解決・効率化を数値で訴求',
-    sample: '/banner-samples/cat-it.svg'
+    sample: '/banner-samples/cat-it.webp'
   },
   { 
     value: 'other', label: 'その他', icon: 'sparkle', color: '#2563EB', bg: 'from-blue-600/10 to-blue-700/10',
     description: '・シンプルで汎用性の高いレイアウト\n・どんなコピーも映える余白設計\n・引き算の美学でメッセージを際立たせる\n・業種を問わないモダンなデザイン',
-    sample: '/banner-samples/cat-other.svg'
+    sample: '/banner-samples/cat-other.webp'
   },
 ]
 
 const PURPOSES = [
   { 
     value: 'sns_ad', label: 'SNS広告', icon: Target, desc: 'FB/IG/X', hot: true,
-    sample: '/banner-samples/purpose-sns_ad.svg',
+    sample: '/banner-samples/purpose-sns_ad.webp',
     color: '#2563EB',
     description: '【スクロール停止】フィード上で指を止めさせる大胆なビジュアルと、3秒で理解できる明快なCTA配置。'
   },
   { 
     value: 'youtube', label: 'YouTube', icon: Play, desc: 'サムネイル', hot: true,
-    sample: '/banner-samples/purpose-youtube.svg',
+    sample: '/banner-samples/purpose-youtube.webp',
     color: '#2563EB',
     description: '【クリック誘発】表情豊かな人物＋強調文字で「見なきゃ損」感を演出。関連動画の中で埋もれないコントラスト設計。'
   },
   { 
     value: 'display', label: 'ディスプレイ', icon: Layout, desc: 'GDN/YDA', hot: false,
-    sample: '/banner-samples/purpose-display.svg',
+    sample: '/banner-samples/purpose-display.webp',
     color: '#2563EB',
     description: '【視認性重視】小さなサイズでも読みやすい太字フォントと、ブランドカラーを活かしたシンプル構成。'
   },
   { 
     value: 'webinar', label: 'ウェビナー', icon: Video, desc: 'セミナー', hot: false,
-    sample: '/banner-samples/purpose-webinar.svg',
+    sample: '/banner-samples/purpose-webinar.webp',
     color: '#2563EB',
     description: '【権威性＋緊急性】登壇者の写真と「参加無料」「残席わずか」で申し込みを後押しするレイアウト。'
   },
   { 
     value: 'lp_hero', label: 'LP', icon: Megaphone, desc: 'ヒーロー', hot: false,
-    sample: '/banner-samples/purpose-lp_hero.svg',
+    sample: '/banner-samples/purpose-lp_hero.webp',
     color: '#2563EB',
     description: '【ファーストビュー】ページを開いた瞬間に価値提案が伝わる、余白を活かした大胆なヘッドライン配置。'
   },
   { 
     value: 'email', label: 'メール', icon: Mail, desc: 'ヘッダー', hot: false,
-    sample: '/banner-samples/purpose-email.svg',
+    sample: '/banner-samples/purpose-email.webp',
     color: '#2563EB',
     description: '【開封後の導線】メール上部で目を引き、本文へスムーズに誘導するシンプルで軽量なデザイン。'
   },
   { 
     value: 'campaign', label: 'セール', icon: Gift, desc: 'キャンペーン', hot: false,
-    sample: '/banner-samples/purpose-campaign.svg',
+    sample: '/banner-samples/purpose-campaign.webp',
     color: '#F97316',
     description: '【衝動喚起】「今だけ」「限定」を強調するバースト装飾と、お得感が一目でわかる価格表示レイアウト。'
   },
@@ -136,51 +136,51 @@ const PURPOSES = [
 // サイズ別のイメージとCTRロジック解説
 const SIZE_INFO: Record<string, { sample: string; description: string }> = {
   '1080x1080': {
-    sample: '/banner-samples/size-1080x1080.svg',
+    sample: '/banner-samples/size-1080x1080.webp',
     description: '【フィード最適】Instagram/Facebookで最も表示面積が大きく、スクロール中に目を引きやすい正方形。'
   },
   '1200x628': {
-    sample: '/banner-samples/size-1200x628.svg',
+    sample: '/banner-samples/size-1200x628.webp',
     description: '【OGP/リンク広告】シェア時のプレビューで情報量と視認性のバランスが最も取れた黄金比率。'
   },
   '1080x1920': {
-    sample: '/banner-samples/size-1080x1920.svg',
+    sample: '/banner-samples/size-1080x1920.webp',
     description: '【ストーリー/リール】全画面表示で没入感MAX。スワイプアップを促す縦型レイアウト。'
   },
   '1280x720': {
-    sample: '/banner-samples/size-1280x720.svg',
+    sample: '/banner-samples/size-1280x720.webp',
     description: '【YouTube HD】関連動画一覧で埋もれない、顔＋テキストのコントラストが効くサムネイル向け。'
   },
   '1920x1080': {
-    sample: '/banner-samples/size-1920x1080.svg',
+    sample: '/banner-samples/size-1920x1080.webp',
     description: '【フルHD】ウェビナーやプレゼン背景に最適。高解像度でプロフェッショナルな印象を与える。'
   },
   '300x250': {
-    sample: '/banner-samples/size-300x250.svg',
+    sample: '/banner-samples/size-300x250.webp',
     description: '【レクタングル】GDN/YDAで最も配信量が多いサイズ。限られたスペースで要点を伝える設計。'
   },
   '728x90': {
-    sample: '/banner-samples/size-728x90.svg',
+    sample: '/banner-samples/size-728x90.webp',
     description: '【リーダーボード】記事上部に表示されるPC向けバナー。ブランド認知に効果的な横長形式。'
   },
   '320x50': {
-    sample: '/banner-samples/size-320x50.svg',
+    sample: '/banner-samples/size-320x50.webp',
     description: '【モバイルバナー】スマホ画面下部に表示。タップしやすいCTAボタン配置が鍵。'
   },
   '1920x600': {
-    sample: '/banner-samples/size-1920x600.svg',
+    sample: '/banner-samples/size-1920x600.webp',
     description: '【LPワイドヒーロー】ファーストビューを占有し、キャッチコピーを最大限に目立たせるワイド形式。'
   },
   '1200x800': {
-    sample: '/banner-samples/size-1200x800.svg',
+    sample: '/banner-samples/size-1200x800.webp',
     description: '【LP標準】バランスの良い3:2比率。メインビジュアルとCTAを自然に配置できる。'
   },
   '600x200': {
-    sample: '/banner-samples/size-600x200.svg',
+    sample: '/banner-samples/size-600x200.webp',
     description: '【メールヘッダー】開封直後に目に入る最初の要素。ブランドロゴとキャンペーン名を明示。'
   },
   '600x300': {
-    sample: '/banner-samples/size-600x300.svg',
+    sample: '/banner-samples/size-600x300.webp',
     description: '【メールバナー】本文中に差し込む訴求画像。クリックを促すボタン風デザインが効果的。'
   },
 }

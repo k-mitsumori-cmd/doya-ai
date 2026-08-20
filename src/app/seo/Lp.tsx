@@ -10,12 +10,13 @@ import {
 import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { SeoBriefMock, SeoOutlineMock, SeoAuditMock } from './mocks'
+import ServiceDiagram from './diagram'
 
 const SVC = getServiceById('seo')!
 const ROWS: ShowcaseRow[] = [
-  { icon: 'travel_explore', title: '検索意図を先に整理', desc: 'キーワード・読者・参考URLを入力し、記事が答えるべき問いを決めます。', bullets: ['参考URLは要点化して利用', '読者と目的を記事ごとに指定'], visual: <MockWindow title="記事の条件"><SeoBriefMock /></MockWindow> },
-  { icon: 'account_tree', title: '章ごとに筋を通す', desc: '検索意図をもとにアウトラインを組み、章ごとに書き進めます。', bullets: ['見出しごとの役割を明示', '前後の主張を整合性チェック'], visual: <MockWindow title="アウトライン"><SeoOutlineMock /></MockWindow> },
-  { icon: 'fact_check', title: '公開前に自動監査', desc: '重複・根拠・リンクを確認し、修正が必要な箇所を明示します。', bullets: ['根拠が薄い箇所を検出', 'リンク切れも確認'], visual: <MockWindow title="公開前チェック"><SeoAuditMock /></MockWindow> },
+  { icon: 'travel_explore', title: '検索意図を先に整理', desc: 'キーワード・読者・参考URLを入力し、記事が答えるべき問いを決めます。', bullets: ['参考URLは要点化して利用', '読者と目的を記事ごとに指定'], visual: <MockWindow title="記事の条件"><SeoBriefMock /></MockWindow>, image: { src: '/seo/shots/1-input.webp', alt: '検索意図を先に整理の画面' } },
+  { icon: 'account_tree', title: '章ごとに筋を通す', desc: '検索意図をもとにアウトラインを組み、章ごとに書き進めます。', bullets: ['見出しごとの役割を明示', '前後の主張を整合性チェック'], visual: <MockWindow title="アウトライン"><SeoOutlineMock /></MockWindow>, image: { src: '/seo/shots/2-process.webp', alt: '章ごとに筋を通すの画面' } },
+  { icon: 'fact_check', title: '公開前に自動監査', desc: '重複・根拠・リンクを確認し、修正が必要な箇所を明示します。', bullets: ['根拠が薄い箇所を検出', 'リンク切れも確認'], visual: <MockWindow title="公開前チェック"><SeoAuditMock /></MockWindow>, image: { src: '/seo/shots/3-output.webp', alt: '公開前に自動監査の画面' } },
 ]
 
 export default function SeoLp() {
@@ -39,7 +40,7 @@ export default function SeoLp() {
 
       <FeatureShowcase title="構成から監査まで、ひとつながりに" lead="白紙から書かず、検索意図と根拠を確認しながら積み上げます。" rows={ROWS} />
 
-      <HowItWorks title="3ステップで使えます" steps={STEPS} />
+      <HowItWorks title="3ステップで使えます" steps={STEPS} diagram={<ServiceDiagram steps={STEPS} />}  />
 
       <Benefits title="書き上げるまでを、途切れさせない" lead="参考記事を丸写しせず、話の筋を保ったまま長文にします。" items={BENEFITS} />
 

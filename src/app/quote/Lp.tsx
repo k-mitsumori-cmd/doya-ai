@@ -20,6 +20,7 @@ import {
 import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { QuoteLinesMock, QuoteTaxMock, QuotePdfMock } from './mocks'
+import ServiceDiagram from './diagram'
 
 const SVC = getServiceById('quote')!
 
@@ -29,21 +30,21 @@ const ROWS: ShowcaseRow[] = [
     title: '金額の出所が1件ずつ見える',
     desc: '「自社サイトの公開価格 → 相場データ → AIの積算」の順で決まります。どれに当たるかが明細ごとに表示され、AIが積算した金額には「作業3人日 × 8万円」のように算出の過程が添えられます。',
     bullets: ['自社価格・相場・AI推定を色分けして表示', '相場は金額の幅で提示（一点の断定をしない）', 'AI推定には必ず積算の根拠が付く'],
-    visual: <MockWindow title="見積明細"><QuoteLinesMock /></MockWindow>,
+    visual: <MockWindow title="見積明細"><QuoteLinesMock /></MockWindow>, image: { src: '/quote/shots/1-input.webp', alt: '金額の出所が1件ずつ見えるの画面' },
   },
   {
     icon: 'calculate',
     title: '複数税率をまたいでも合う',
     desc: '10%と軽減8%が混ざっても、税率の区分ごとに計算します。値引きは区分に按分され、端数の処理も画面とPDFで揃います。',
     bullets: ['税率区分ごとに小計と消費税を算出', '値引きを区分へ按分', '画面・PDF・保存値がすべて一致'],
-    visual: <MockWindow title="税区分の計算"><QuoteTaxMock /></MockWindow>,
+    visual: <MockWindow title="税区分の計算"><QuoteTaxMock /></MockWindow>, image: { src: '/quote/shots/2-process.webp', alt: '複数税率をまたいでも合うの画面' },
   },
   {
     icon: 'picture_as_pdf',
     title: 'そのまま渡せる見積書',
     desc: '日本語フォントを埋め込んだPDFを出力します。社名・住所・担当者・支払条件などの発行者情報を一度設定すれば、以後の見積書すべてに反映されます。',
     bullets: ['日本語対応のPDFを即時出力', '発行者情報は一度設定すれば使い回し', '確定前は「社内確認用」の透かし入り'],
-    visual: <MockWindow title="見積書PDF"><QuotePdfMock /></MockWindow>,
+    visual: <MockWindow title="見積書PDF"><QuotePdfMock /></MockWindow>, image: { src: '/quote/shots/3-output.webp', alt: 'そのまま渡せる見積書の画面' },
   },
 ]
 
@@ -80,7 +81,7 @@ export default function QuoteLp() {
         rows={ROWS}
       />
 
-      <HowItWorks title="3ステップで見積書まで" steps={STEPS} />
+      <HowItWorks title="3ステップで見積書まで" steps={STEPS} diagram={<ServiceDiagram steps={STEPS} />}  />
 
       <Benefits title="選ばれる理由" items={BENEFITS} />
 

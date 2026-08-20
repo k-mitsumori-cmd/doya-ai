@@ -10,12 +10,13 @@ import {
 import { getServiceById } from '@/lib/services'
 import { ACCENT, CTA, STEPS, BENEFITS, FAQ } from './lp-data'
 import { CunningKnowledgeMock, CunningLiveMock, CunningAnswerMock } from './mocks'
+import ServiceDiagram from './diagram'
 
 const SVC = getServiceById('cunning')!
 const ROWS: ShowcaseRow[] = [
-  { icon: 'menu_book', title: '根拠にする資料を登録', desc: 'サービス資料や想定問答を先に入れ、回答の範囲を決めます。', visual: <MockWindow title="ナレッジ"><CunningKnowledgeMock /></MockWindow> },
-  { icon: 'cast', title: '会話から質問を検出', desc: '会議の発言を文字にし、回答が必要な質問を見つけます。', visual: <MockWindow title="会議モニター"><CunningLiveMock /></MockWindow> },
-  { icon: 'quickreply', title: '要点と根拠を同時に', desc: '最初の一言、話すための補足、参照した資料を同じ画面に出します。', visual: <MockWindow title="回答案"><CunningAnswerMock /></MockWindow> },
+  { icon: 'menu_book', title: '根拠にする資料を登録', desc: 'サービス資料や想定問答を先に入れ、回答の範囲を決めます。', visual: <MockWindow title="ナレッジ"><CunningKnowledgeMock /></MockWindow>, image: { src: '/cunning/shots/1-input.webp', alt: '根拠にする資料を登録の画面' } },
+  { icon: 'cast', title: '会話から質問を検出', desc: '会議の発言を文字にし、回答が必要な質問を見つけます。', visual: <MockWindow title="会議モニター"><CunningLiveMock /></MockWindow>, image: { src: '/cunning/shots/2-process.webp', alt: '会話から質問を検出の画面' } },
+  { icon: 'quickreply', title: '要点と根拠を同時に', desc: '最初の一言、話すための補足、参照した資料を同じ画面に出します。', visual: <MockWindow title="回答案"><CunningAnswerMock /></MockWindow>, image: { src: '/cunning/shots/3-output.webp', alt: '要点と根拠を同時にの画面' } },
 ]
 
 export default function CunningLp() {
@@ -39,7 +40,7 @@ export default function CunningLp() {
 
       <FeatureShowcase title="準備した知識を、会話のその場へ" lead="答えを作り込まず、登録資料から話すための要点を取り出します。" rows={ROWS} />
 
-      <HowItWorks title="3ステップで使えます" steps={STEPS} />
+      <HowItWorks title="3ステップで使えます" steps={STEPS} diagram={<ServiceDiagram steps={STEPS} />}  />
 
       <Benefits title="根拠のある答えを、その場で" lead="登録した資料にある事から答えます。無いことは作りません。" items={BENEFITS} />
 

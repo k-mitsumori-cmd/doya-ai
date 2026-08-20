@@ -17,3 +17,4 @@ export {
 export { LpJsonLd } from './LpJsonLd'
 export { MockWindow, ProductHero, FeatureShowcase, type ShowcaseRow } from './showcase'
 export { ServiceFeatureMock } from './ServiceFeatureMock'
+export { ServiceFlowDiagram } from './ServiceFlowDiagram'
