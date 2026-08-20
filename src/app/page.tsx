@@ -161,6 +161,40 @@ const businessPoints = [
   '公開中と開発中を正直に分けることで、期待値のズレを抑えられる。',
 ]
 
+// 自社利用の実績。⚠️ ここに書けるのは「実際に自社の運用で動いている事実」だけ。
+// 各項目は vercel.json の crons に対応する実装があり、検証できるものに限定している。
+// 売上・導入社数など、裏取りできない数値は書かないこと（景表法・信頼の両面で不可）。
+const firstPartyUses = [
+  {
+    service: 'ドヤAIO',
+    href: '/aio',
+    title: '自社ブランドのAI可視性を毎週計測',
+    body: 'ChatGPTやGeminiで自社がどう言及されるかを、毎週月曜に自動スキャンして追っています。',
+    proof: '/api/cron/aio-scan（毎週月曜）',
+  },
+  {
+    service: 'ドヤ記事作成',
+    href: '/seo',
+    title: '自社メディアの検索状況を毎週レポート',
+    body: '公開した記事がどう読まれているかを週次で集計し、次に手を入れる記事を決めています。',
+    proof: '/api/cron/media-seo-report（毎週日曜）',
+  },
+  {
+    service: 'ステップメール基盤',
+    href: '/pricing',
+    title: '見込み客への配信を毎時稼働',
+    body: '登録いただいた方へのステップメールを自動配信し、配信実績と開封率を朝と夜に確認しています。',
+    proof: '/api/cron/drip-sender（毎時）',
+  },
+  {
+    service: 'アクセス解析',
+    href: '/',
+    title: '毎朝、数字を見てから動く',
+    body: '流入と検索順位を毎朝まとめて受け取り、その日の判断材料にしています。',
+    proof: '/api/cron/analytics-report（毎日）',
+  },
+]
+
 const fadeUp = {
   hidden: { opacity: 0, y: 24 },
   show: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.16, 1, 0.3, 1] } },
@@ -210,6 +244,7 @@ export default function DoyaAiHomePage() {
               ['サービス', '#services'],
               ['キャラクター', '#character'],
               ['制作フロー', '#process'],
+              ['自社利用', '#practice'],
               ['勝ち筋', '#business'],
               ['料金', '#pricing'],
             ].map(([label, href]) => (
@@ -447,6 +482,50 @@ export default function DoyaAiHomePage() {
                 />
               </div>
             </motion.div>
+          </div>
+        </section>
+
+        <section id="practice" className="bg-[#f2f6ff] px-5 py-20 lg:px-8 lg:py-28">
+          <div className="mx-auto max-w-[1240px]">
+            <p className="mb-4 text-sm font-black text-[#0066ff]">FIRST-PARTY USE</p>
+            <h2 className="text-4xl font-black leading-[1.12] tracking-normal text-[#0a0f3c] md:text-5xl">
+              作って終わりにせず、
+              <br />
+              自分たちの運用で回しています。
+            </h2>
+            <p className="mt-6 max-w-[62ch] text-base font-medium leading-[1.9] text-[#425071]">
+              導入事例として他社の名前を並べる代わりに、私たち自身がどう使っているかを出します。
+              下の4つは、実際に毎日または毎週、自動で動いている処理です。
+            </p>
+
+            <motion.div
+              variants={gridContainer}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.2 }}
+              className="mt-10 grid gap-3 sm:grid-cols-2"
+            >
+              {firstPartyUses.map((use) => (
+                <motion.div key={use.title} variants={fadeUp}>
+                  <Link
+                    href={use.href}
+                    className="group flex h-full flex-col rounded-lg border border-[#d8e7ff] bg-white p-6 shadow-[0_10px_28px_rgba(10,15,60,0.06)] transition-all hover:-translate-y-0.5 hover:border-[#97c2ff] hover:shadow-[0_18px_52px_rgba(10,15,60,0.12)]"
+                  >
+                    <p className="mb-3 text-xs font-black text-[#0066ff]">{use.service}</p>
+                    <h3 className="text-lg font-black leading-tight tracking-normal text-[#0a0f3c]">{use.title}</h3>
+                    <p className="mt-3 text-sm font-medium leading-relaxed text-[#425071]">{use.body}</p>
+                    <p className="mt-5 border-t border-[#eef4ff] pt-4 font-mono text-[11px] font-bold text-[#7d8ba5]">
+                      {use.proof}
+                    </p>
+                  </Link>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            <p className="mt-8 max-w-[62ch] text-sm font-medium leading-relaxed text-[#7d8ba5]">
+              導入社数や売上の数字は、裏付けを取れるものだけを出す方針です。
+              現時点で公開できる第三者実績がないため、掲載していません。
+            </p>
           </div>
         </section>
 
