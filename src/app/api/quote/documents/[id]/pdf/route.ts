@@ -22,13 +22,10 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
   })
   if (!doc) return NextResponse.json({ error: '見積書が見つかりません' }, { status: 404 })
 
+  // 発行元は未設定でもよい。商談中にその場で出したい場面があるため、
+  // 埋まっていない項目は印字せず、社名だけ手書き用の空欄としてPDFに出す。
+  // ⚠️ ここを必須に戻さないこと（未設定を理由に400を返すとPDFが一切出せなくなる）。
   const issuer = await prisma.quoteIssuer.findUnique({ where: { organizationId: ctx.organizationId } })
-  if (!issuer) {
-    return NextResponse.json(
-      { error: '発行元情報が未設定です。設定画面で自社情報を登録してください。' },
-      { status: 400 }
-    )
-  }
 
   try {
     const pdf = await generateQuotePdf({
@@ -41,12 +38,12 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
       clientDept: doc.clientDept,
       clientPerson: doc.clientPerson,
       issuer: {
-        companyName: issuer.companyName,
-        postalCode: issuer.postalCode,
-        address: issuer.address,
-        tel: issuer.tel,
-        personName: issuer.personName,
-        invoiceNo: issuer.invoiceNo,
+        companyName: issuer?.companyName ?? null,
+        postalCode: issuer?.postalCode ?? null,
+        address: issuer?.address ?? null,
+        tel: issuer?.tel ?? null,
+        personName: issuer?.personName ?? null,
+        invoiceNo: issuer?.invoiceNo ?? null,
       },
       lineItems: doc.lineItems.map((l) => ({
         itemName: l.itemName,

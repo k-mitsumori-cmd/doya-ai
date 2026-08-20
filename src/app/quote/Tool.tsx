@@ -332,11 +332,11 @@ export default function QuoteTool() {
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
         {!hasIssuer && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 font-semibold">
-            見積書に印字する自社情報が未設定です。PDFを出力する前に
+            見積書に印字する自社情報が未設定です。このままでもPDFは出力できます（自社名の欄は空欄になります）。
             <Link href="/quote/settings" className="mx-1 font-bold underline">
               発行元設定
             </Link>
-            を登録してください。
+            を登録すると印字されます。
           </div>
         )}
 
@@ -688,7 +688,7 @@ export default function QuoteTool() {
               </div>
               {!hasIssuer && (
                 <p className="mt-2 text-[11px] font-bold text-amber-700">
-                  発行者情報（社名・住所・担当者）を設定すると、PDFに反映されます。
+                  発行者情報（社名・住所・担当者）は未設定のままでも出力できます。設定するとPDFに印字されます。
                 </p>
               )}
             </div>

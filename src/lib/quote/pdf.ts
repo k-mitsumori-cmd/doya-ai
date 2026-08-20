@@ -22,7 +22,8 @@ export interface QuotePdfInput {
   clientDept: string | null
   clientPerson: string | null
   issuer: {
-    companyName: string
+    /** 未設定でも発行できる。null のときPDFは記入用の空欄として出す */
+    companyName: string | null
     postalCode: string | null
     address: string | null
     tel: string | null
@@ -126,6 +127,9 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
   .to .meta { font-size: 9.5pt; color: #5a678a; margin-top: 2mm; line-height: 1.7; }
   .from { width: 62mm; font-size: 9.5pt; line-height: 1.7; }
   .from .company { font-weight: 700; font-size: 11pt; }
+  /* 発行元未設定のときの記入欄。「未設定」等の文言は顧客が見る書面なので印字しない。 */
+  .from .company.blank { border-bottom: 1px solid #b8c2d6; height: 6mm; }
+  .from .blank-row { border-bottom: 1px solid #d5dced; height: 5mm; margin-top: 1.5mm; }
   .from .row { color: #5a678a; }
   .dates { font-size: 9.5pt; color: #5a678a; text-align: right; margin-bottom: 3mm; line-height: 1.7; }
   .total-box { background: #f2f6ff; border: 1.5px solid #0066ff; border-radius: 3mm;
@@ -170,12 +174,17 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
         </div>
       </div>
       <div class="from">
-        <div class="company">${esc(q.issuer.companyName)}</div>
+        ${q.issuer.companyName
+          ? `<div class="company">${esc(q.issuer.companyName)}</div>`
+          : '<div class="company blank"></div>'}
         ${q.issuer.postalCode ? `<div class="row">〒${esc(q.issuer.postalCode)}</div>` : ''}
         ${q.issuer.address ? `<div class="row">${esc(q.issuer.address)}</div>` : ''}
         ${q.issuer.tel ? `<div class="row">TEL: ${esc(q.issuer.tel)}</div>` : ''}
         ${q.issuer.personName ? `<div class="row">担当: ${esc(q.issuer.personName)}</div>` : ''}
         ${q.issuer.invoiceNo ? `<div class="row">登録番号: ${esc(q.issuer.invoiceNo)}</div>` : ''}
+        ${!q.issuer.companyName && !q.issuer.address && !q.issuer.tel
+          ? '<div class="blank-row"></div><div class="blank-row"></div>'
+          : ''}
       </div>
     </div>
 

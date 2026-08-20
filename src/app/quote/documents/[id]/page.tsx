@@ -208,8 +208,8 @@ export default function QuoteDocumentPage() {
           </div>
         )}
         {!issuer && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">
-            発行元情報が未設定のためPDFを出力できません。
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 font-semibold">
+            発行元情報が未設定です。このままPDFを出力すると、自社名の欄は手書き用の空欄になります。
             <Link href="/quote/settings" className="ml-1 font-bold underline">発行元設定</Link>
           </div>
         )}
