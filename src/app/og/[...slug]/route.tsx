@@ -9,8 +9,12 @@ const size = { width: 1200, height: 630 }
 // ブランド青のOG（2026リブランド）。サービス別データは services.ts から取得。
 const BRAND_GRADIENT = 'linear-gradient(135deg, #0047b3 0%, #0066ff 55%, #3d80ff 100%)'
 
-// 背景素材 public/<id>/og-bg.webp を持つサービス。
+// 背景素材 public/<id>/og-bg.jpg を持つサービス。
 // ⚠️ 実体が無いIDを足すと OG が背景ごと落ちるので、ファイルを置いてから追加すること。
+// ⚠️⚠️ 拡張子は .jpg。next/og の Satori は **WebP を読めない**（"Unsupported image type:
+//      image/webp" を警告に出すだけで例外を投げず、背景が黙って消える）。
+//      2026-08-20 まで og-bg.webp を指しており、17サービス全ての背景が
+//      一度も描画されていなかった。PNG か JPEG 以外を指さないこと。
 const OG_BG_SERVICES = new Set([
   'mensetsu', 'quote', 'aishodan', 'adimage',
   'banner', 'hr', 'kintai', 'sfa', 'shodan', 'aio',
@@ -26,12 +30,14 @@ export async function GET(
 
   const title = svc?.name || 'ドヤマーケAI'
   const subtitle = svc?.description || 'AIで、ビジネスの“ドヤれる”をつくる。'
-  const features = (svc?.features || ['記事生成', 'バナー作成', '営業支援', '資料作成']).slice(0, 4)
+  // 背景素材ありは右カラムが狭く、4つだとフッターに被るので2つに絞る
+  const featureCount = svc && OG_BG_SERVICES.has(svc.id) ? 2 : 4
+  const features = (svc?.features || ['記事生成', 'バナー作成', '営業支援', '資料作成']).slice(0, featureCount)
 
   // サービス別の背景素材があれば敷く（無ければ従来のブランドグラデのみ）
   const bgUrl =
     svc && OG_BG_SERVICES.has(svc.id)
-      ? new URL(`/${svc.id}/og-bg.webp`, request.nextUrl.origin).toString()
+      ? new URL(`/${svc.id}/og-bg.jpg`, request.nextUrl.origin).toString()
       : null
 
   return new ImageResponse(
@@ -43,22 +49,31 @@ export async function GET(
           fontFamily: 'sans-serif',
         }}
       >
-        {/* サービス別の背景素材 */}
+        {/* サービス別の製品画は左カラムに置く（全面に敷くと白文字が読めない） */}
         {bgUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={bgUrl}
             alt=""
-            width={1200}
+            width={520}
             height={630}
-            style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
+            // ⚠️ Satori は objectPosition を無視して中央クロップする。
+            //    そのため素材側を 520x630 に切り出し済みで、ここでは等倍で置くだけにする。
+            style={{ position: 'absolute', left: 0, top: 0, width: '520px', height: '630px' }}
           />
         )}
-        {/* テキストの可読性を担保するための覆い */}
+        {/* テキスト側のパネル。左端はグラデで製品画へ溶かす */}
         {bgUrl && (
           <div style={{
-            position: 'absolute', inset: 0,
-            background: 'linear-gradient(135deg, rgba(0,71,179,0.86) 0%, rgba(0,102,255,0.78) 55%, rgba(61,128,255,0.86) 100%)',
+            position: 'absolute', left: 0, top: 0, width: '760px', height: '630px',
+            // 製品モックは素材の x=45..452 付近にあるので、完全に覆うのは 62%（≒471px）以降にする
+            background: 'linear-gradient(90deg, rgba(0,58,150,0) 0%, rgba(0,58,150,0.18) 48%, rgba(0,71,179,0.92) 62%, #0057db 100%)',
+          }} />
+        )}
+        {bgUrl && (
+          <div style={{
+            position: 'absolute', left: '760px', top: 0, width: '440px', height: '630px',
+            background: 'linear-gradient(135deg, #0057db 0%, #0066ff 60%, #3d80ff 100%)',
           }} />
         )}
         {/* ドットパターン */}
@@ -68,7 +83,14 @@ export async function GET(
           backgroundSize: '60px 60px',
         }} />
 
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '60px', textAlign: 'center' }}>
+        <div style={{
+          display: 'flex', flexDirection: 'column',
+          alignItems: bgUrl ? 'flex-start' : 'center',
+          textAlign: bgUrl ? 'left' : 'center',
+          padding: bgUrl ? '60px 60px 60px 0' : '60px',
+          marginLeft: bgUrl ? '470px' : '0',
+          width: bgUrl ? '730px' : 'auto',
+        }}>
           {/* ブランドタグ */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '28px',
@@ -78,15 +100,15 @@ export async function GET(
             ドヤマーケAI
           </div>
 
-          <div style={{ fontSize: '76px', fontWeight: 800, color: 'white', marginBottom: '18px', letterSpacing: '-0.02em', textShadow: '0 4px 24px rgba(0,0,0,0.25)' }}>
+          <div style={{ fontSize: bgUrl ? '62px' : '76px', fontWeight: 800, color: 'white', marginBottom: '18px', letterSpacing: '-0.02em', textShadow: '0 4px 24px rgba(0,0,0,0.35)' }}>
             {title}
           </div>
 
-          <div style={{ fontSize: '30px', color: 'rgba(255,255,255,0.92)', marginBottom: '40px', maxWidth: '900px', lineHeight: 1.4 }}>
+          <div style={{ fontSize: bgUrl ? '26px' : '30px', color: 'rgba(255,255,255,0.94)', marginBottom: bgUrl ? '30px' : '40px', maxWidth: bgUrl ? '680px' : '900px', lineHeight: 1.45 }}>
             {subtitle.length > 60 ? subtitle.slice(0, 58) + '…' : subtitle}
           </div>
 
-          <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: bgUrl ? 'flex-start' : 'center', maxWidth: bgUrl ? '680px' : '100%' }}>
             {features.map((f, i) => (
               <div key={i} style={{
                 padding: '12px 24px', backgroundColor: 'rgba(255,255,255,0.22)', borderRadius: '50px',
