@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 import { looksLikeQuestion } from '@/lib/cunning/classify'
 import { getMode, MODES_BY_CATEGORY } from '@/lib/cunning/modes'
 import type { CunningMode } from '@/lib/cunning/types'
+import { UiIcon } from '@/components/icons'
 
 interface AnswerCard {
   id: string
@@ -529,8 +530,8 @@ const SILENCE_PEAK = 8
       setRunning(true)
       setStatusMsg(
         entertainment
-          ? '解析中…🎧 相手のコメント・発話にどんどん反応するよ！'
-          : '解析中…🎧 相手の質問を検出したらカンペをポンッと出すよ！'
+          ? '解析中… 相手のコメント・発話にどんどん反応します'
+          : '解析中… 相手の質問を検出したらカンペを表示します'
       )
       startCycle()
 
@@ -567,7 +568,7 @@ const SILENCE_PEAK = 8
           })
           startSelfCycle()
         } catch {
-          toast('自分の声の取り込みはスキップしました（マイク未許可）', { icon: '🎙' })
+          toast('自分の声の取り込みはスキップしました（マイク未許可）', { icon: <UiIcon name="mic" size={18} /> })
         }
       }
 
@@ -627,7 +628,7 @@ const SILENCE_PEAK = 8
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ mode: m }),
     }).catch(() => {})
-    toast(`${getMode(m).icon} ${getMode(m).label}に切替`, { icon: '🔄' })
+    toast(`${getMode(m).label}に切替`, { icon: <UiIcon name="refresh" size={18} /> })
   }
 
   // モード選択プルダウン（ヘッダー/集中モードで共用）。
@@ -760,7 +761,7 @@ const SILENCE_PEAK = 8
                 audioSource === 'tab' ? 'border-[#0B5CFF] bg-blue-50 text-[#0B5CFF]' : 'border-slate-200 text-slate-500'
               }`}
             >
-              🌐 タブ音声（推奨）
+              タブ音声（推奨）
             </button>
             <button
               onClick={() => {
@@ -771,14 +772,14 @@ const SILENCE_PEAK = 8
                 audioSource === 'device' ? 'border-[#0B5CFF] bg-blue-50 text-[#0B5CFF]' : 'border-slate-200 text-slate-500'
               }`}
             >
-              🎙 入力デバイス
+              入力デバイス
             </button>
           </div>
 
           {/* 言語: 文字起こし＆カンペの言語。英語に誤認識されるときは日本語に固定で安定 */}
           <p className="text-xs font-black text-slate-500 mb-2 mt-4">言語</p>
           <div className="flex gap-2">
-            {([['ja', '🇯🇵 日本語'], ['en', '🇺🇸 English'], ['auto', '🌐 自動']] as const).map(([v, label]) => (
+            {([['ja', '日本語'], ['en', 'English'], ['auto', '自動']] as const).map(([v, label]) => (
               <button
                 key={v}
                 onClick={() => setLang(v)}
@@ -801,7 +802,7 @@ const SILENCE_PEAK = 8
                 onChange={(e) => setCaptureSelf(e.target.checked)}
                 className="w-4 h-4 accent-[#0B5CFF]"
               />
-              🎙 自分の声（マイク）も取り込んで字幕・議事録に反映する
+              自分の声（マイク）も取り込んで字幕・議事録に反映する
             </label>
           )}
           {audioSource === 'device' && (
@@ -841,7 +842,7 @@ const SILENCE_PEAK = 8
               {entertainment ? '配信/動画（YouTube等）' : '会議（Meet / Zoom）'}を
               <strong>ブラウザのタブ</strong>で開く（Chrome / Edge 推奨）
             </li>
-            <li>「🎤 ライブ開始」→ 共有ダイアログで<strong>そのタブ</strong>を選択</li>
+            <li>「ライブ開始」→ 共有ダイアログで<strong>そのタブ</strong>を選択</li>
             <li>
               ダイアログ左下の「<strong>タブの音声も共有</strong>」に必ず<strong>チェック</strong>（これが無いと相手の声を解析できません）
             </li>
@@ -945,7 +946,7 @@ const SILENCE_PEAK = 8
                   className="mt-1 px-8 py-4 rounded-full bg-gradient-to-r from-emerald-400 to-green-500 text-white font-black text-xl shadow-xl shadow-green-500/30 hover:scale-[1.03] transition-transform flex items-center gap-2"
                 >
                   <span className="material-symbols-outlined text-3xl">play_circle</span>
-                  🎤 ライブ開始
+                  ライブ開始
                 </button>
               </div>
             )}
@@ -954,7 +955,7 @@ const SILENCE_PEAK = 8
                 <img src={`/character/${modeDef.character}.png`} alt="" className="w-24 h-24 object-contain drop-shadow-lg" />
                 <div className="flex items-center gap-2 bg-white/15 backdrop-blur rounded-full px-4 py-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-                  <p className="font-black text-sm">🎙 入力デバイスから音声取り込み中…</p>
+                  <p className="font-black text-sm">入力デバイスから音声取り込み中…</p>
                 </div>
               </div>
             )}
@@ -967,7 +968,7 @@ const SILENCE_PEAK = 8
               onClick={() => setShowSubs((v) => !v)}
               className="w-full flex items-center justify-between text-[11px] font-black text-slate-400 mb-2"
             >
-              <span>会話の字幕（🟦自分 / ⬜相手）</span>
+              <span>会話の字幕（<span className="mr-0.5 inline-block h-2 w-2 rounded-sm bg-[#0B5CFF] align-[1px]" />自分 / <span className="mx-0.5 inline-block h-2 w-2 rounded-sm bg-slate-300 align-[1px]" />相手）</span>
               <span className="material-symbols-outlined text-base">{showSubs ? 'expand_less' : 'expand_more'}</span>
             </button>
             {showSubs && (
@@ -1002,7 +1003,7 @@ const SILENCE_PEAK = 8
             <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-slate-400">
               <img src="/character/thinking.png" alt="" className="w-16 h-16 object-contain mx-auto mb-2" />
               <p className="font-bold text-sm">
-                {entertainment ? '相手のコメント待ち…！何か来たら全力で返すよ🔥' : '相手が話したらカンペをポンッと出すよ！スタンバイOK👀'}
+                {entertainment ? '相手のコメント待ちです。何か来たら全力で返します' : '相手が話したらカンペを表示します。スタンバイ完了'}
               </p>
             </div>
           ) : (
@@ -1084,7 +1085,7 @@ const SILENCE_PEAK = 8
             {latest ? (
               <>
                 <div style={{ fontSize: 11, fontWeight: 800, color: '#7CC4FF', marginBottom: 6 }}>
-                  💬 {latest.question}
+                  <UiIcon name="note" size={16} className="mr-1 inline align-[-2px]" />{latest.question}
                 </div>
                 {latest.loading ? (
                   <div style={{ color: 'rgba(255,255,255,0.8)', fontWeight: 700 }}>カンペ生成中…</div>
@@ -1139,7 +1140,7 @@ const SILENCE_PEAK = 8
                   onClick={start}
                   className="px-4 py-2 rounded-full bg-gradient-to-r from-[#2D8CFF] to-[#0B5CFF] text-white font-black text-sm"
                 >
-                  🎤 ライブ開始
+                  ライブ開始
                 </button>
               )}
               <button
@@ -1226,7 +1227,7 @@ const SILENCE_PEAK = 8
               {/* 字幕（自分の声が取れているかここで確認できる） */}
               {lines.length > 0 && (
                 <div className="border-t border-white/10 px-3 py-2 max-h-24 overflow-y-auto flex-shrink-0 space-y-1">
-                  <p className="text-[10px] font-black text-white/40">字幕（🟦自分 / ⬜相手）</p>
+                  <p className="text-[10px] font-black text-white/40">字幕（<span className="mr-0.5 inline-block h-1.5 w-1.5 rounded-sm bg-[#0B5CFF] align-[1px]" />自分 / <span className="mx-0.5 inline-block h-1.5 w-1.5 rounded-sm bg-white/40 align-[1px]" />相手）</p>
                   {lines.slice(-6).map((l) => (
                     <div key={l.id} className={`flex ${l.speaker === 'self' ? 'justify-end' : 'justify-start'}`}>
                       <span
@@ -1262,13 +1263,13 @@ const SILENCE_PEAK = 8
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           {/* キラキラ */}
           <div className="pointer-events-none absolute inset-0 overflow-hidden">
-            {['🎉', '✨', '🎊', '⭐', '🎉', '✨'].map((e, i) => (
+            {(['celebrate', 'sparkle', 'trophy', 'star', 'celebrate', 'sparkle'] as const).map((e, i) => (
               <span
                 key={i}
-                className="absolute text-3xl animate-bounce"
+                className="absolute animate-bounce text-[#0B5CFF]"
                 style={{ left: `${10 + i * 15}%`, top: `${8 + (i % 3) * 10}%`, animationDelay: `${i * 0.15}s` }}
               >
-                {e}
+                <UiIcon name={e} size={30} />
               </span>
             ))}
           </div>
@@ -1324,7 +1325,7 @@ const SILENCE_PEAK = 8
                       <ul className="text-sm text-slate-700 font-medium space-y-0.5">
                         {report.todos.map((d, i) => (
                           <li key={i} className="flex items-start gap-1.5">
-                            <span className="text-[#0B5CFF]">✓</span>
+                            <UiIcon name="check" size={14} className="text-[#0B5CFF]" />
                             <span>{d}</span>
                           </li>
                         ))}
@@ -1334,7 +1335,7 @@ const SILENCE_PEAK = 8
                   <div className="grid grid-cols-2 gap-3">
                     {report.good.length > 0 && (
                       <div className="bg-green-50 rounded-xl p-3">
-                        <p className="text-xs font-black text-green-600 mb-1">👍 良かった点</p>
+                        <p className="text-xs font-black text-green-600 mb-1">良かった点</p>
                         <ul className="text-xs text-slate-600 font-bold space-y-0.5 list-disc list-inside">
                           {report.good.map((d, i) => <li key={i}>{d}</li>)}
                         </ul>
@@ -1342,7 +1343,7 @@ const SILENCE_PEAK = 8
                     )}
                     {report.improve.length > 0 && (
                       <div className="bg-amber-50 rounded-xl p-3">
-                        <p className="text-xs font-black text-amber-600 mb-1">💡 改善点</p>
+                        <p className="text-xs font-black text-amber-600 mb-1">改善点</p>
                         <ul className="text-xs text-slate-600 font-bold space-y-0.5 list-disc list-inside">
                           {report.improve.map((d, i) => <li key={i}>{d}</li>)}
                         </ul>

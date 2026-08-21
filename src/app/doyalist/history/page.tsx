@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 import { EmptyState } from '@/components/EmptyState'
+import { UiIcon, type UiIconName } from '@/components/icons'
 
 interface ListSummary {
   id: string
@@ -30,17 +31,17 @@ const CHARS = {
 }
 
 const TABS: { v: 'all' | 'list' | 'form' | 'email' | 'phone'; l: string; icon: string }[] = [
-  { v: 'all', l: 'すべて', icon: '📚' },
-  { v: 'list', l: 'リスト', icon: '📋' },
-  { v: 'form', l: 'フォーム文面', icon: '📝' },
-  { v: 'email', l: 'メール文面', icon: '✉️' },
-  { v: 'phone', l: 'スクリプト', icon: '📞' },
+  { v: 'all', l: 'すべて', icon: 'book' as UiIconName },
+  { v: 'list', l: 'リスト', icon: 'list' as UiIconName },
+  { v: 'form', l: 'フォーム文面', icon: 'note' as UiIconName },
+  { v: 'email', l: 'メール文面', icon: 'mail' as UiIconName },
+  { v: 'phone', l: 'スクリプト', icon: 'phone' as UiIconName },
 ]
 
 const TYPE_LABEL: Record<string, { l: string; color: string; icon: string }> = {
-  form: { l: 'フォーム', color: 'bg-emerald-100 text-emerald-700', icon: '📝' },
-  email: { l: 'メール', color: 'bg-violet-100 text-violet-700', icon: '✉️' },
-  phone: { l: '電話', color: 'bg-amber-100 text-amber-700', icon: '📞' },
+  form: { l: 'フォーム', color: 'bg-emerald-100 text-emerald-700', icon: 'note' as UiIconName },
+  email: { l: 'メール', color: 'bg-violet-100 text-violet-700', icon: 'mail' as UiIconName },
+  phone: { l: '電話', color: 'bg-amber-100 text-amber-700', icon: 'phone' as UiIconName },
 }
 
 export default function HistoryPage() {
@@ -139,7 +140,7 @@ export default function HistoryPage() {
 
       <div className="max-w-7xl mx-auto pb-20">
         <div className="flex items-center gap-3 mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md text-2xl">📚</div>
+          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-500 flex items-center justify-center shadow-md text-white"><UiIcon name="book" size={26} /></div>
           <div>
             <h1 className="text-2xl lg:text-3xl font-black text-[#0a1530]">生成履歴</h1>
             <p className="text-sm font-medium text-slate-500 mt-0.5">これまでに作成したリスト・営業文・メール・スクリプトをまとめて管理できます</p>
@@ -147,9 +148,9 @@ export default function HistoryPage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-          <StatCard icon="📊" label="合計件数" value={stats.total} color="cyan" />
-          <StatCard icon="📅" label="今月の生成" value={stats.thisMonth} color="emerald" />
-          <StatCard icon="🏢" label="累計企業数" value={stats.totalCompanies} color="violet" />
+          <StatCard icon="chart" label="合計件数" value={stats.total} color="cyan" />
+          <StatCard icon="calendar" label="今月の生成" value={stats.thisMonth} color="emerald" />
+          <StatCard icon="building" label="累計企業数" value={stats.totalCompanies} color="violet" />
         </div>
 
         <div className="bg-white rounded-3xl shadow-lg shadow-slate-200/50 border border-slate-200 overflow-hidden">
@@ -179,7 +180,7 @@ export default function HistoryPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="🔍 検索"
+              placeholder="検索"
               className="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:border-[#0a1530] focus:ring-2 focus:ring-cyan-100 min-w-[200px]"
             />
           </div>
@@ -213,13 +214,13 @@ export default function HistoryPage() {
                   {filteredLists.map((l) => (
                     <tr key={`list-${l.id}`} className="hover:bg-slate-50 transition-colors">
                       <td className="px-5 py-3">
-                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-cyan-100 text-cyan-700 text-[10px] font-bold rounded-md">📋 リスト</span>
+                        <span className="inline-flex items-center gap-1 px-2 py-1 bg-cyan-100 text-cyan-700 text-[10px] font-bold rounded-md"><UiIcon name="list" size={11} />リスト</span>
                       </td>
                       <td className="px-5 py-3">
                         <p className="font-bold text-[#0a1530] text-sm">{l.name}</p>
                         <div className="flex flex-wrap gap-1.5 mt-1">
-                          {l.industry && <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">🏢 {l.industry}</span>}
-                          {l.region && <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">📍 {l.region}</span>}
+                          {l.industry && <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded"><UiIcon name="building" size={11} className="inline align-[-1px] mr-0.5" />{l.industry}</span>}
+                          {l.region && <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded"><UiIcon name="target" size={11} className="inline align-[-1px] mr-0.5" />{l.region}</span>}
                         </div>
                       </td>
                       <td className="px-5 py-3 text-center">
@@ -231,9 +232,9 @@ export default function HistoryPage() {
                       </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center justify-center gap-1">
-                          <a href={`/api/doyalist/export?projectId=${l.id}&format=csv`} title="CSVダウンロード" className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs">📥</a>
-                          <a href={`/api/doyalist/export?projectId=${l.id}&format=excel`} title="Excelダウンロード" className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs">📊</a>
-                          <button onClick={() => handleDeleteList(l.id, l.name)} title="削除" aria-label={`${l.name}を削除`} className="p-1.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg text-xs">🗑️</button>
+                          <a href={`/api/doyalist/export?projectId=${l.id}&format=csv`} title="CSVダウンロード" className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg"><UiIcon name="download" size={14} /></a>
+                          <a href={`/api/doyalist/export?projectId=${l.id}&format=excel`} title="Excelダウンロード" className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg"><UiIcon name="chart" size={14} /></a>
+                          <button onClick={() => handleDeleteList(l.id, l.name)} title="削除" aria-label={`${l.name}を削除`} className="p-1.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg"><UiIcon name="trash" size={14} /></button>
                         </div>
                       </td>
                     </tr>
@@ -269,8 +270,8 @@ export default function HistoryPage() {
                         </td>
                         <td className="px-5 py-3">
                           <div className="flex items-center justify-center gap-1">
-                            <button onClick={() => handleCopy(a.body)} title="コピー" className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs">📋</button>
-                            <button onClick={() => handleDeleteApproach(a.id)} title="削除" aria-label="削除" className="p-1.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg text-xs">🗑️</button>
+                            <button onClick={() => handleCopy(a.body)} title="コピー" className="p-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg"><UiIcon name="copy" size={14} /></button>
+                            <button onClick={() => handleDeleteApproach(a.id)} title="削除" aria-label="削除" className="p-1.5 bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg"><UiIcon name="trash" size={14} /></button>
                           </div>
                         </td>
                       </tr>
@@ -286,7 +287,7 @@ export default function HistoryPage() {
   )
 }
 
-function StatCard({ icon, label, value, color }: { icon: string; label: string; value: number; color: string }) {
+function StatCard({ icon, label, value, color }: { icon: UiIconName; label: string; value: number; color: string }) {
   const colorMap: Record<string, string> = {
     cyan: 'bg-cyan-50 text-cyan-700 border-cyan-200',
     emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
@@ -294,8 +295,8 @@ function StatCard({ icon, label, value, color }: { icon: string; label: string; 
   }
   return (
     <div className="bg-white rounded-2xl shadow-md shadow-slate-200/50 border border-slate-200 p-5 flex items-center gap-4">
-      <div className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center text-2xl ${colorMap[color] || colorMap.cyan}`}>
-        {icon}
+      <div className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center ${colorMap[color] || colorMap.cyan}`}>
+        <UiIcon name={icon} size={22} />
       </div>
       <div>
         <p className="text-xs font-bold text-slate-500">{label}</p>

@@ -2,12 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { 
-  MessageCircle, 
-  X, 
-  Send, 
-  Bot, 
-  User, 
+import {
+  MessageCircle,
+  X,
+  Send,
+  Bot,
+  User,
   Sparkles,
   Minimize2,
   Maximize2,
@@ -34,8 +34,7 @@ const suggestedQuestions = [
 ]
 
 const demoResponses: Record<string, string> = {
-  'default': `こんにちは！ドヤバナーAIアシスタントです 👋
-
+  'default': `こんにちは！ドヤバナーAIアシスタントです
 何かお手伝いできることはありますか？バナー制作のコツや、効果的なキャッチコピーの作り方などをご提案します。
 
 よくあるご質問：
@@ -56,37 +55,29 @@ const demoResponses: Record<string, string> = {
 4️⃣ **ターゲットを明確に**
 「忙しいあなたへ」「初心者でも」
 
-💡 ドヤバナーAIのダッシュボードで「AIでコピー提案」を使えば、最適な12パターンを一気に生成できますよ！`,
+ドヤバナーAIのダッシュボードで「AIでコピー提案」を使えば、最適な12パターンを一気に生成できますよ！`,
   'LP': `バナーからLPへの導線設計：
-
-📍 **一貫性を持たせる**
+**一貫性を持たせる**
 バナーの文言とLPのヘッドラインを一致させる
-
-📍 **ターゲットの絞り込み**
+**ターゲットの絞り込み**
 誰向けのバナーか、LPでも明確に
-
-📍 **次のアクションを促す**
+**次のアクションを促す**
 バナーで興味を持ったユーザーに、LPですぐに解決策を提示
 
 ドヤバナーAIなら、LPヒーロー画像専用のバナーも作成可能です！`,
   'SNS': `SNS広告のエンゲージメント向上法：
-
-📱 **スクロールを止める**
+**スクロールを止める**
 最初の3秒でメリットが伝わるビジュアル
-
-🎯 **ターゲットへの呼びかけ**
+**ターゲットへの呼びかけ**
 「〜でお悩みの方へ」など自分事化させる
-
-🔥 **明確なCTA**
+**明確なCTA**
 「詳しくはこちら」「今すぐ予約」など
 
 ドヤバナーAIなら、SNS各プラットフォームに最適なサイズで生成できます！`,
   'ペルソナ': `バナー制作に欠かせないペルソナ分析：
-
-👤 **誰に届けたいか？**
+**誰に届けたいか？**
 年齢、性別、職業、悩み、願望を具体化
-
-💭 **どんな感情を動かしたいか？**
+**どんな感情を動かしたいか？**
 「安心したい」「ワクワクしたい」「得をしたい」
 
 ドヤバナーAIチャットを使えば、ターゲットに合わせた詳細なイメージ説明を一緒に考えられます！`,
@@ -189,9 +180,9 @@ export function AIAssistant() {
         {isOpen && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ 
-              opacity: 1, 
-              y: 0, 
+            animate={{
+              opacity: 1,
+              y: 0,
               scale: 1,
               height: isMinimized ? 'auto' : '600px'
             }}
@@ -210,13 +201,13 @@ export function AIAssistant() {
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                <button 
+                <button
                   onClick={() => setIsMinimized(!isMinimized)}
                   className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                 >
                   {isMinimized ? <Maximize2 className="w-4 h-4 text-white" /> : <Minimize2 className="w-4 h-4 text-white" />}
                 </button>
-                <button 
+                <button
                   onClick={() => setIsOpen(false)}
                   className="p-2 hover:bg-white/20 rounded-lg transition-colors"
                 >
@@ -237,11 +228,11 @@ export function AIAssistant() {
                       className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}
                     >
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                        message.role === 'user' 
-                          ? 'bg-[#635bff]' 
+                        message.role === 'user'
+                          ? 'bg-[#635bff]'
                           : 'bg-gradient-to-br from-[#635bff] to-[#00d4ff]'
                       }`}>
-                        {message.role === 'user' 
+                        {message.role === 'user'
                           ? <User className="w-4 h-4 text-white" />
                           : <Sparkles className="w-4 h-4 text-white" />
                         }
@@ -256,7 +247,7 @@ export function AIAssistant() {
                         </div>
                         {message.role === 'assistant' && (
                           <div className="flex items-center gap-2 mt-1">
-                            <button 
+                            <button
                               onClick={() => handleCopy(message.content, message.id)}
                               className="p-1 hover:bg-gray-200 rounded text-gray-400 hover:text-gray-600"
                             >
@@ -273,7 +264,7 @@ export function AIAssistant() {
                       </div>
                     </motion.div>
                   ))}
-                  
+
                   {isTyping && (
                     <div className="flex gap-3">
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#635bff] to-[#00d4ff] flex items-center justify-center">
@@ -288,7 +279,7 @@ export function AIAssistant() {
                       </div>
                     </div>
                   )}
-                  
+
                   <div ref={messagesEndRef} />
                 </div>
 

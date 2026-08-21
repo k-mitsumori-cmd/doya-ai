@@ -27,6 +27,7 @@ import {
   Lock,
 } from 'lucide-react'
 import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
+import { UiIcon, type UiIconName } from '@/components/icons'
 
 function normalizeUrlInput(raw: string): string | null {
   const s = String(raw || '')
@@ -86,10 +87,10 @@ const AUDIENCE_PRESETS = [
 ] as const
 
 const TONE_OPTIONS = [
-  { id: 'logical', label: '論理的', desc: 'データや根拠を重視', emoji: '📊' },
-  { id: 'friendly', label: 'やさしい', desc: '初心者にも分かりやすく', emoji: '😊' },
-  { id: 'professional', label: '専門的', desc: '業界知識を前提に', emoji: '🎓' },
-  { id: 'casual', label: 'カジュアル', desc: '親しみやすい文体', emoji: '💬' },
+  { id: 'logical', label: '論理的', desc: 'データや根拠を重視', icon: 'chart' as UiIconName },
+  { id: 'friendly', label: 'やさしい', desc: '初心者にも分かりやすく', icon: 'user' as UiIconName },
+  { id: 'professional', label: '専門的', desc: '業界知識を前提に', icon: 'book' as UiIconName },
+  { id: 'casual', label: 'カジュアル', desc: '親しみやすい文体', icon: 'note' as UiIconName },
 ] as const
 
 const CHAR_PRESETS = [
@@ -686,7 +687,7 @@ export default function SeoCreateWizardPage() {
                       autoFocus
                     />
                     <p className="mt-2 text-xs text-gray-400 font-medium">
-                      💡 上位表示したい検索キーワードを入力してください
+                      上位表示したい検索キーワードを入力してください
                     </p>
                   </div>
 
@@ -719,7 +720,7 @@ export default function SeoCreateWizardPage() {
                       <p className="mt-2 text-xs font-bold text-red-600">{titleError}</p>
                     ) : (
                       <p className="mt-2 text-xs text-gray-400 font-medium">
-                        💡 ボタンで候補を生成→クリックでタイトル確定（後から編集もOK）
+                        ボタンで候補を生成→クリックでタイトル確定（後から編集もOK）
                       </p>
                     )}
 
@@ -783,7 +784,7 @@ export default function SeoCreateWizardPage() {
                       className="mt-4 w-full px-5 py-4 rounded-2xl bg-white border-2 border-blue-200 text-slate-900 font-bold text-sm placeholder:text-slate-300 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-200/40 transition-all resize-none"
                     />
                     <p className="mt-2 text-xs font-bold text-blue-700">
-                      ✨ この内容は本文プロンプトに組み込み、オリジナル性が高い記事になるよう反映されます
+                      この内容は本文プロンプトに組み込み、オリジナル性が高い記事になるよう反映されます
                     </p>
                   </div>
 
@@ -817,7 +818,7 @@ export default function SeoCreateWizardPage() {
                       })}
                     </div>
                     <p className="mt-3 text-xs text-gray-400 font-medium">
-                      📝 記事タイプに応じて構成が最適化されます
+                      記事タイプに応じて構成が最適化されます
                     </p>
                   </div>
                 </motion.div>
@@ -879,7 +880,7 @@ export default function SeoCreateWizardPage() {
                   )}
 
                   <p className="text-xs text-gray-400 font-medium">
-                    👤 読者像を設定すると、語り口や具体例が最適化されます
+                    読者像を設定すると、語り口や具体例が最適化されます
                   </p>
                 </motion.div>
               )}
@@ -914,7 +915,7 @@ export default function SeoCreateWizardPage() {
                             }`}
                           >
                             <div className="flex items-center gap-2 mb-1">
-                              <span className="text-lg">{option.emoji}</span>
+                              <UiIcon name={option.icon} size={18} />
                               <p className={`text-sm font-black ${selected ? 'text-blue-600' : 'text-gray-700'}`}>
                                 {option.label}
                               </p>
@@ -1049,7 +1050,7 @@ export default function SeoCreateWizardPage() {
                       </p>
                     ) : (
                       <p className="mt-2 text-xs font-bold text-indigo-700">
-                        ✨ 参考URLが無い場合は空でOK。キーワードと調査結果をベースに記事を作成します
+                        参考URLが無い場合は空でOK。キーワードと調査結果をベースに記事を作成します
                       </p>
                     )}
                   </div>
@@ -1087,7 +1088,7 @@ export default function SeoCreateWizardPage() {
                               className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 text-gray-900 font-bold text-sm placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all resize-none"
                             />
                             <p className="mt-1 text-[10px] text-gray-400">
-                              💡 入れなくても生成できます。入れると網羅性が上がります
+                              入れなくても生成できます。入れると網羅性が上がります
                             </p>
                           </div>
 
@@ -1103,7 +1104,7 @@ export default function SeoCreateWizardPage() {
                               className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 text-gray-900 font-bold text-sm placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all resize-none"
                             />
                             <p className="mt-1 text-[10px] text-gray-400">
-                              💡 一次情報を入れると、他にない記事になります
+                              一次情報を入れると、他にない記事になります
                             </p>
                           </div>
                         </motion.div>
@@ -1313,7 +1314,7 @@ export default function SeoCreateWizardPage() {
 
                 <div className="p-4 rounded-2xl bg-blue-50 border border-blue-100">
                   <p className="text-xs font-bold text-blue-700">
-                    💡 「SEOを本気で強化する」を開くと、関連キーワードや独自情報を追加できます。
+                    「SEOを本気で強化する」を開くと、関連キーワードや独自情報を追加できます。
                     入力しなくても高品質な記事が生成されます。
                   </p>
                 </div>
