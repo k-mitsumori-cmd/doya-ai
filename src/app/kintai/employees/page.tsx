@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { ROLE_LABELS, ROLE_DESCRIPTIONS, EMPLOYMENT_TYPE_LABELS } from '@/lib/kintai/types'
+import { EmptyState } from '@/components/EmptyState'
 
 const DEPT_COLORS = [
   '#7f19e6', '#2563eb', '#0891b2', '#059669', '#d97706',
@@ -249,20 +250,25 @@ export default function EmployeesPage() {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center fade-in-up">
             {employees.length === 0 ? (
-              <>
-                <img src="/kintai/characters/love_大好き.png" alt="" width={120} height={120} className="bear-float mb-4" />
-                <h3 className="text-lg font-bold text-slate-700 mb-1">まだ従業員がいません</h3>
-                <p className="text-sm text-slate-400 mb-6 max-w-xs">最初のメンバーを追加しましょう！</p>
-                <button onClick={openCreate} className="flex items-center gap-1.5 px-5 py-2.5 bg-[#7f19e6] text-white text-sm font-bold rounded-lg hover:bg-[#6a14c2] transition-colors">
-                  <span className="material-symbols-outlined text-lg">person_add</span>最初のメンバーを追加
-                </button>
-              </>
+              <EmptyState
+                kind="zero"
+                title="最初のメンバーを追加しましょう"
+                description="従業員を登録すると、打刻と勤怠の集計がはじまります。"
+                action={
+                  <button onClick={openCreate} className="flex items-center gap-1.5 rounded-lg bg-[#0066ff] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#0057db]">
+                    <span className="material-symbols-outlined text-lg">person_add</span>最初のメンバーを追加
+                  </button>
+                }
+              />
             ) : (
-              <>
-                <img src="/kintai/characters/thinking_考え中.png" alt="" width={80} height={80} className="bear-wiggle mb-3" />
-                <p className="text-slate-600 font-medium">条件に一致する従業員がいません</p>
-                <button onClick={clearAllFilters} className="mt-3 text-sm text-[#7f19e6] hover:underline">フィルターをクリア</button>
-              </>
+              <EmptyState
+                kind="no-results"
+                title="条件に一致する従業員がいません"
+                description="絞り込みを外すと、全員が表示されます。"
+                action={
+                  <button onClick={clearAllFilters} className="text-sm font-bold text-[#0066ff] hover:underline">フィルターをクリア</button>
+                }
+              />
             )}
           </div>
         ) : (

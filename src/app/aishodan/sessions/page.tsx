@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { withOrg } from '@/components/org/OrgSwitcher'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 import { DoyaKun } from '@/components/lp'
+import { EmptyState } from '@/components/EmptyState'
 
 interface SessionRow {
   id: string
@@ -88,7 +89,11 @@ export default function AishodanSessionsPage() {
           {loading ? (
             <div className="flex flex-col items-center justify-center gap-2 py-6"><DoyaKun mood="working" size={72} /><p className="text-sm font-bold text-slate-400">読み込んでいます…</p></div>
           ) : sessions.length === 0 ? (
-            <p className="text-sm text-slate-500 font-semibold">該当する商談はありません。</p>
+            <EmptyState
+              kind="not-generated"
+              title="まだ商談がありません"
+              description="シナリオを用意して商談を開始すると、ログと適合判定がここに残ります。"
+            />
           ) : (
             <div className="divide-y divide-slate-100">
               {sessions.map((s) => (

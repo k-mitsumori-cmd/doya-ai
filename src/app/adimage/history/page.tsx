@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { notifyError } from '@/lib/ui/notify'
+import { EmptyState } from '@/components/EmptyState'
 
 interface Creative {
   id: string
@@ -104,17 +105,17 @@ export default function AdImageHistoryPage() {
         {loading ? (
           <p className="py-16 text-center text-sm text-slate-500 font-semibold">読み込んでいます…</p>
         ) : concepts.length === 0 ? (
-          <div className="rounded-2xl bg-white p-10 text-center shadow-sm ring-1 ring-slate-200">
-            <p className="text-sm text-slate-600 font-semibold">まだ広告画像がありません。</p>
-            <p className="mt-1 text-xs leading-relaxed text-slate-500 font-semibold">
-              サービスのURLを入れると、媒体ごとにサイズの揃った広告画像を作れます。
-            </p>
-            <Link
-              href="/adimage"
-              className="mt-5 inline-block rounded-lg bg-[#0066ff] px-5 py-2.5 text-sm font-bold text-white"
-            >
-              広告画像を作る
-            </Link>
+          <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
+            <EmptyState
+              kind="not-generated"
+              title="最初の広告画像をつくりましょう"
+              description="サービスのURLを入れると、媒体ごとにサイズの揃った広告画像を作れます。"
+              action={
+                <Link href="/adimage" className="inline-block rounded-lg bg-[#0066ff] px-5 py-2.5 text-sm font-bold text-white">
+                  広告画像をつくる
+                </Link>
+              }
+            />
           </div>
         ) : (
           concepts.map((c) => {

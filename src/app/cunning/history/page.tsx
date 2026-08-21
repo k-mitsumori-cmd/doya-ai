@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
+import { EmptyState } from '@/components/EmptyState'
 
 interface SessionRow {
   id: string
@@ -42,9 +43,12 @@ export default function CunningHistoryPage() {
       {loading ? (
         <p className="text-slate-400 font-bold">読み込み中…</p>
       ) : sessions.length === 0 ? (
-        <div className="bg-white rounded-2xl shadow-sm p-12 text-center">
-          <img src="/character/sleep.png" alt="" className="w-20 h-20 object-contain mx-auto mb-3" />
-          <p className="text-slate-400 font-bold">まだセッションがありません</p>
+        <div className="bg-white rounded-2xl shadow-sm">
+          <EmptyState
+            kind="not-generated"
+            title="まだセッションがありません"
+            description="会議を開始すると、相手の質問と回答カンペがここに残ります。"
+          />
         </div>
       ) : (
         <div className="space-y-2">

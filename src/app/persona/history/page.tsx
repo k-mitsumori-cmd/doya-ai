@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Trash2, ExternalLink, Clock, Target } from 'lucide-react'
+import { EmptyState } from '@/components/EmptyState'
 
 interface HistoryItem {
   data: {
@@ -80,19 +81,20 @@ export default function PersonaHistoryPage() {
         </div>
 
         {history.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-slate-800 flex items-center justify-center">
-              <Target className="w-10 h-10 text-slate-600" />
-            </div>
-            <h2 className="text-xl font-bold text-white mb-2">履歴がありません</h2>
-            <p className="text-slate-400 mb-6 text-sm">ペルソナを生成すると、ここに履歴が表示されます</p>
-            <Link
-              href="/persona"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold hover:from-purple-500 hover:to-pink-500 transition-all shadow-lg"
-            >
-              ペルソナを生成する
-            </Link>
-          </div>
+          <EmptyState
+            tone="dark"
+            kind="not-generated"
+            title="最初のペルソナをつくりましょう"
+            description="ペルソナを生成すると、ここに履歴が並びます。"
+            action={
+              <Link
+                href="/persona"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#0066ff] px-6 py-3 font-bold text-white shadow-lg transition-all hover:bg-[#0057db]"
+              >
+                ペルソナを生成する
+              </Link>
+            }
+          />
         ) : (
           <div className="space-y-3">
             {history.map((item, index) => (

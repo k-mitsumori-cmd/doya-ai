@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
+import { EmptyState } from '@/components/EmptyState'
 
 interface Project {
   id: string
@@ -253,26 +254,22 @@ export default function ProjectsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
           >
-            <div className="w-16 h-16 bg-[#7f19e6]/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <span className="material-symbols-outlined text-[#7f19e6] text-3xl">
-                {query ? 'search_off' : 'mic'}
-              </span>
-            </div>
-            <p className="text-slate-900 font-bold mb-1">
-              {query ? '検索結果がありません' : 'まだ記事がありません'}
-            </p>
-            <p className="text-slate-500 text-sm mb-4">
-              {query ? '別のキーワードで試してみてください' : 'インタビュー素材をアップロードして記事を作成しましょう'}
-            </p>
-            {!query && (
-              <Link
-                href="/interview"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#7f19e6] text-white rounded-xl text-sm font-bold hover:bg-[#6b12c9] transition-colors shadow-lg shadow-[#7f19e6]/20"
-              >
-                <span className="material-symbols-outlined text-lg">add</span>
-                記事を作成する
-              </Link>
-            )}
+            <EmptyState
+              kind={query ? 'no-results' : 'not-generated'}
+              title={query ? '検索結果がありません' : '最初の記事をつくりましょう'}
+              description={query ? '別のキーワードで試してみてください。' : 'インタビュー素材をアップロードすると、記事の作成がはじまります。'}
+              action={
+                query ? undefined : (
+                  <Link
+                    href="/interview"
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#0066ff] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#0066ff]/20 transition-colors hover:bg-[#0057db]"
+                  >
+                    <span className="material-symbols-outlined text-lg">add</span>
+                    記事を作成する
+                  </Link>
+                )
+              }
+            />
           </motion.div>
         ) : (
           <motion.div

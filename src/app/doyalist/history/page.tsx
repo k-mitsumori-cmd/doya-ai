@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
+import { EmptyState } from '@/components/EmptyState'
 
 interface ListSummary {
   id: string
@@ -184,14 +185,17 @@ export default function HistoryPage() {
           </div>
 
           {isEmpty ? (
-            <div className="p-12 text-center space-y-4">
-              <img src={CHARS.sleep} alt="" className="w-24 h-24 mx-auto opacity-80" />
-              <p className="text-lg font-bold text-slate-500">該当する履歴がありません</p>
-              <div className="flex gap-2 justify-center flex-wrap">
-                <Link href="/doyalist" className="px-6 py-2.5 bg-[#0a1530] text-white font-bold text-sm rounded-xl hover:bg-[#13234d] transition-all">⚡ リストを作成</Link>
-                <Link href="/doyalist/tools/form" className="px-6 py-2.5 bg-cyan-500 text-white font-bold text-sm rounded-xl hover:bg-cyan-600 transition-all">📝 営業文を作成</Link>
-              </div>
-            </div>
+            <EmptyState
+              kind="no-results"
+              title="該当する履歴がありません"
+              description="条件を変えるか、新しくリストを作成してください。"
+              action={
+                <div className="flex flex-wrap justify-center gap-2">
+                  <Link href="/doyalist" className="rounded-xl bg-[#0a1530] px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#13234d]">リストを作成</Link>
+                  <Link href="/doyalist/tools/form" className="rounded-xl bg-[#0066ff] px-6 py-2.5 text-sm font-bold text-white transition-all hover:bg-[#0057db]">営業文を作成</Link>
+                </div>
+              }
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
