@@ -16,6 +16,21 @@ function safeReturnPath(raw: unknown): string | null {
   return v.split('?')[0]!.split('#')[0]! || null
 }
 
+/**
+ * 決済後の戻り先を「そのサービスのトップ」に正規化する。
+ * 料金ページや深い画面に戻さないことで、支払い直後の誤解と二重同期を防ぐ。
+ */
+function serviceHomeFromPath(path: string | null): string | null {
+  if (!path) return null
+  const seg = path.split('/').filter(Boolean)[0]
+  if (!seg) return null
+  // サービスではない入口（共通料金表・比較ページ）はトップへ
+  if (seg === 'pricing' || seg === 'all-in-one') return '/'
+  // インタビューだけ実質の入口が /interview/projects
+  if (seg === 'interview') return '/interview/projects'
+  return `/${seg}`
+}
+
 function getStripeKeyMode(): 'test' | 'live' | 'unknown' {
   const key = String(process.env.STRIPE_SECRET_KEY || '').trim()
   if (key.startsWith('sk_test_')) return 'test'
@@ -141,7 +156,14 @@ export async function POST(request: NextRequest) {
           : service === 'interview'
             ? '/interview/projects'
             : '/'
-    const successPath = requestedReturnTo || fallbackPath
+    // ⚠️ 戻り先は「申し込んだ画面」そのものではなく、そのサービスのトップにする。
+    //    (1) 料金ページに戻すと、多くのページが currentPlan を 'FREE' 固定/未指定で
+    //        描いているため、支払い直後に「無料プラン」＋アップグレードCTAが並び、
+    //        「反映されていない」と誤解させて再申込＝二重契約を誘発する。
+    //    (2) /banner/url や /seo/pricing は独自の success ハンドラを持っており、
+    //        ルートレイアウトの StripeSuccessSync と二重に同期・モーダル表示が走る。
+    //    サービスのトップに戻せば、利用者は「すぐ使える画面」に着地する。
+    const successPath = serviceHomeFromPath(requestedReturnTo) || fallbackPath
     const cancelPath = `${requestedReturnTo || (service === 'seo' ? '/seo/pricing' : service === 'banner' ? '/banner' : service === 'interview' ? '/interview/projects' : '/pricing')}?payment=cancelled`
 
     // 成功URLにプラン情報/Checkout Session IDを追加（決済直後にアプリ側で同期して即反映させる）

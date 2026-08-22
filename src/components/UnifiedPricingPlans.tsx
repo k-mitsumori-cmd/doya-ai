@@ -58,6 +58,10 @@ export function UnifiedPricingPlans({
   const features = svc.features || []
   const plan = (currentPlan || '').toUpperCase()
   const isPro = plan === 'PRO' || plan === 'BUNDLE' || plan === 'ENTERPRISE'
+  // ⚠️ currentPlan は任意プロップで、渡していない/'FREE' 固定の呼び出し元がある。
+  //    分からないまま「反映されていないのでは」と疑わせる導線を出すと逆効果なので、
+  //    プランが確実に分かっている画面でだけ救済ボタンを見せる。
+  const planKnown = Boolean(currentPlan)
 
   const resyncPlan = async () => {
     setResyncing(true)
@@ -75,8 +79,10 @@ export function UnifiedPricingPlans({
         )
         return
       }
-      setResyncMessage('プランを反映しました。画面を更新します。')
+      // ⚠️ ここで setState してもリロードが先に走るため文言は描画されない。
+      //    反映できたら黙って画面を更新する（更新後の表示が結果そのもの）。
       window.location.reload()
+      return
     } catch {
       setResyncMessage('反映できませんでした。お手数ですがお問い合わせください。')
     } finally {
@@ -257,7 +263,7 @@ export function UnifiedPricingPlans({
              どのサービスからでも契約できるのに、救済はバナー専用画面にしか無く、
              他サービスから契約した方は自力で直せなかった（2026-08）。
              料金表は全サービスに出るので、ここに置けば必ず届く。 */}
-      {authStatus === 'authenticated' && !isPro && (
+      {authStatus === 'authenticated' && planKnown && !isPro && (
         <div className="mt-6 text-center">
           <button
             type="button"

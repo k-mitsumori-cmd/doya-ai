@@ -37,7 +37,10 @@ export function CheckoutButton({
 
     // 未ログインの場合はログインページへ
     if (status === 'unauthenticated') {
-      const service = planId.split('-')[0]
+      // ⚠️ ここも planId から推測してはいけない（統一プランでは必ず 'banner' になる）。
+      //    未ログインの方がカンタンマーケの料金ページで押すと、ログイン後に
+      //    ドヤバナーAIへ着地してしまう。今いる画面から決めた originService を使う。
+      const service = originService
       if (service === 'banner') {
         router.push(`/auth/signin?callbackUrl=${encodeURIComponent(loginCallbackUrl || '/banner')}`)
       } else {
