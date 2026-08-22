@@ -318,11 +318,11 @@ export default function SettingsPage() {
               </p>
             </div>
             <a
-              href="mailto:support@surisuta.jp?subject=ドヤリストに関するお問い合わせ"
+              href="mailto:k-mitsumori@surisuta.jp?subject=ドヤリストに関するお問い合わせ"
               className="inline-flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 text-white font-black text-sm rounded-xl shadow-lg shadow-cyan-500/30 transition-all active:scale-95"
             >
               <span className="material-symbols-outlined">mail</span>
-              support@surisuta.jp
+              k-mitsumori@surisuta.jp
             </a>
           </div>
           <div className="mt-4 pt-4 border-t border-cyan-100 grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px]">

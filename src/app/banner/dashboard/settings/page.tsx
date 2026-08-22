@@ -267,7 +267,7 @@ export default function SettingsPage() {
         {/* フッター情報 */}
         <footer className="text-center text-xs text-slate-400 font-bold py-8">
           <p>© 2026 株式会社スリスタ</p>
-          <p className="mt-1">お問い合わせ: support@surisuta.jp</p>
+          <p className="mt-1">お問い合わせ: k-mitsumori@surisuta.jp</p>
         </footer>
       </div>
 

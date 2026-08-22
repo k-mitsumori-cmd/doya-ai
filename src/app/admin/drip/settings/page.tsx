@@ -197,7 +197,7 @@ export default function DripSettingsPage() {
                   type="email"
                   value={settings.replyTo}
                   onChange={(e) => updateField('replyTo', e.target.value)}
-                  placeholder="例: support@surisuta.jp"
+                  placeholder="例: k-mitsumori@surisuta.jp"
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:border-violet-500/50 transition-colors"
                 />
               </div>

@@ -654,7 +654,7 @@ export default function DoyaAiHomePage() {
                 <Sparkles className="h-4 w-4" />
                 無料で始める
               </Link>
-              <a href="mailto:support@surisuta.jp" className="inline-flex items-center justify-center gap-2 rounded-full border border-[#bfd7ff] px-8 py-4 text-sm font-black text-[#0a0f3c] transition-all hover:-translate-y-0.5 hover:border-[#0066ff] hover:text-[#0066ff]">
+              <a href="mailto:k-mitsumori@surisuta.jp" className="inline-flex items-center justify-center gap-2 rounded-full border border-[#bfd7ff] px-8 py-4 text-sm font-black text-[#0a0f3c] transition-all hover:-translate-y-0.5 hover:border-[#0066ff] hover:text-[#0066ff]">
                 <CircleDot className="h-4 w-4" />
                 相談する
               </a>
@@ -678,7 +678,7 @@ export default function DoyaAiHomePage() {
             <Link href="/terms" className="transition-colors hover:text-[#0066ff]">利用規約</Link>
             <Link href="/privacy" className="transition-colors hover:text-[#0066ff]">プライバシー</Link>
             <Link href="/tokushoho" className="transition-colors hover:text-[#0066ff]">特定商取引法</Link>
-            <a href="mailto:support@surisuta.jp" className="transition-colors hover:text-[#0066ff]">お問い合わせ</a>
+            <a href="mailto:k-mitsumori@surisuta.jp" className="transition-colors hover:text-[#0066ff]">お問い合わせ</a>
           </div>
           <p className="max-w-[260px] text-center text-xs font-bold leading-relaxed text-[#7d8baa] md:text-right">
             2026 ドヤマーケAI / 株式会社スリスタ
