@@ -11,6 +11,9 @@ import { FAQ } from './lp-data'
 //    検索エンジンからは「トップページの重複」に見えて一切拾われない。
 //    サービスを追加したら必ず buildServiceMetadata を入れること。
 export const metadata: Metadata = buildServiceMetadata('mensetsu', {
+  // 開発中のため検索結果に出さない（2026-08-23）。
+  // 公開する時はこの1行と services.ts の HIDDEN_SERVICE_IDS を一緒に外す。
+  noindex: true,
   tagline: 'AIアバターが一次面接を実施し、評価レポートまで作る',
   keywords: ['AI 面接', '一次面接 自動化', '採用 効率化', '構造化面接', 'AI 面接官', '採用 AI', '面接 評価'],
 })

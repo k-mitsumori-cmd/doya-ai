@@ -11,6 +11,9 @@ import { FAQ } from './lp-data'
 //    検索エンジンからは「トップページの重複」に見えて一切拾われない。
 //    サービスを追加したら必ず buildServiceMetadata を入れること。
 export const metadata: Metadata = buildServiceMetadata('quote', {
+  // 開発中のため検索結果に出さない（2026-08-23）。
+  // 公開する時はこの1行と services.ts の HIDDEN_SERVICE_IDS を一緒に外す。
+  noindex: true,
   tagline: 'URLを入れるだけで相場つきの見積もり品目。商談中に編集してその場でPDF',
   keywords: ['見積書 作成', 'AI 見積もり', '見積書 テンプレート', '相場 見積もり', '見積書 PDF', '商談 見積もり', 'インボイス 見積書'],
 })
