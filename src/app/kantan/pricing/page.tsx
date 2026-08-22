@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { UNIFIED_PRO_PLAN_ID } from '@/lib/unified-plan'
 import { useSession } from 'next-auth/react'
 import { ArrowLeft, Sparkles, Crown, Zap, Star, Building2, CheckCircle2, ChevronRight, Rocket, Cpu, ArrowRight, HelpCircle, Clock, Users, FileText, BarChart3, Lightbulb } from 'lucide-react'
 import { KANTAN_PRICING, getAnnualMonthlyPrice } from '@/lib/pricing'
@@ -161,8 +162,10 @@ export default function KantanPricingPage() {
                         </button>
                       </a>
                     ) : (
+                      /* ⚠️ 'kantan-pro' は checkout の priceMap に無く 400 になっていた
+                          （＝このボタンからは一度も申し込めなかった）。統一プランに固定する。 */
                       <CheckoutButton
-                        planId={plan.id}
+                        planId={UNIFIED_PRO_PLAN_ID}
                         className={`w-full py-4 ${
                           isPopular
                             ? 'bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-white shadow-lg shadow-cyan-500/25'

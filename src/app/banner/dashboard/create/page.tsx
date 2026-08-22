@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useRef, useState, useEffect } from 'react'
+import { UNIFIED_PRO_PLAN_ID } from '@/lib/unified-plan'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -2347,13 +2348,15 @@ export default function BannerDashboard() {
                     </div>
                   ) : (
                     <div className="mt-3 flex justify-center">
+                      {/* 以前は有料ユーザーに banner-enterprise（¥49,800の価格ID）を出していた。
+                          エンタープライズは廃止済みで価格設定も無いため、統一プランに固定する。 */}
                       <CheckoutButton
-                        planId={isPaidUser ? 'banner-enterprise' : 'banner-pro'}
+                        planId={UNIFIED_PRO_PLAN_ID}
                         loginCallbackUrl="/banner/dashboard"
                         className="px-4 py-2 rounded-xl text-sm"
                         variant="secondary"
                       >
-                        {isPaidUser ? 'エンタープライズにアップグレード' : 'プロプランへアップグレード'}
+                        プロプランへアップグレード
                       </CheckoutButton>
                     </div>
                   )}

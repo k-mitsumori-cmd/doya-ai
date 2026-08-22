@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
+import { UNIFIED_PRO_PRICE_LABEL, UNIFIED_PRO_PLAN_ID } from '@/lib/unified-plan'
 import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import { useSession } from 'next-auth/react'
 import { Check, X, Sparkles } from 'lucide-react'
@@ -176,8 +176,10 @@ export default function AdSimPricingPage() {
                       {p.cta}
                     </Link>
                   ) : (
+                    /* ⚠️ 'adsim-pro' は提供終了プランとして checkout が 410 で弾くため、
+                        このボタンは押しても決済に進めなかった。統一プランに固定する。 */
                     <CheckoutButton
-                      planId={p.planId!}
+                      planId={UNIFIED_PRO_PLAN_ID}
                       loginCallbackUrl="/adsim/pricing"
                       variant={p.highlight ? 'secondary' : 'primary'}
                       className={`block w-full rounded-xl px-4 py-3 text-center text-sm font-black transition ${
