@@ -65,10 +65,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  const serviceId = String(body?.serviceId || '').slice(0, 60)
-  const text = String(body?.text || '').trim()
+  // ------------------------------------------------------------------
+  // 送信元は2つある。**どちらのキー名も受け取ること。**
+  // ------------------------------------------------------------------
+  //  A) 利用後アンケート  FeedbackPrompt.tsx      → { serviceId, text, rating, usageCount }
+  //  B) サイドバーの問い合わせ SidebarHelpContact.tsx → { service, message, category, page }
+  //
+  // ⚠️ かつて A のキーしか読んでいなかったため、B は常に 400「サービスが不明です」で弾かれ、
+  //    全21サービスのサイドバーに置いた「お問い合わせ・改善依頼」が
+  //    **一度も運営に届いていなかった**（ServiceFeedback 0件で確認）。
+  //    フォームを増やすときは、必ずここで受け口を合わせること。
+  const serviceId = String(body?.serviceId || body?.service || '').slice(0, 60)
+  const text = String(body?.text || body?.message || '').trim()
+  const category = String(body?.category || '').slice(0, 40)
+  const page = String(body?.page || '').slice(0, 200)
   if (!serviceId) return NextResponse.json({ error: 'サービスが不明です' }, { status: 400 })
   if (!text) return NextResponse.json({ error: '内容をご記入ください' }, { status: 400 })
+
+  // 種別・発生画面は保存列が無いので本文の先頭に残す（後から辿れるようにする）
+  const CATEGORY_LABELS: Record<string, string> = {
+    improvement: '改善したほうがいいこと',
+    feature: '追加の機能要望',
+    bug: 'エラー報告',
+    other: 'その他',
+  }
+  const categoryLabel = category ? CATEGORY_LABELS[category] || category : ''
+  const storedText = [
+    categoryLabel ? `【${categoryLabel}】` : '',
+    page ? `（${page}）` : '',
+    categoryLabel || page ? '\n' : '',
+    text,
+  ].join('')
 
   const ratingRaw = Number(body?.rating)
   const rating = Number.isFinite(ratingRaw) && ratingRaw >= 1 && ratingRaw <= 5 ? Math.round(ratingRaw) : null
@@ -78,7 +105,7 @@ export async function POST(req: NextRequest) {
       userId,
       serviceId,
       rating,
-      text: text.slice(0, 4000),
+      text: storedText.slice(0, 4000),
       usageCount: Number.isFinite(Number(body?.usageCount)) ? Math.max(0, Math.round(Number(body.usageCount))) : 0,
     },
     select: { id: true },
@@ -88,16 +115,17 @@ export async function POST(req: NextRequest) {
   // ⚠️ 通知の失敗で保存を巻き戻さない（書いてもらった内容を失う方が損失が大きい）。
   try {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } })
+    const title = categoryLabel ? `お問い合わせが届きました（${categoryLabel}）` : 'ご意見が届きました'
     const lines = [
-      `*ご意見が届きました*（${serviceLabelOf(serviceId)}）`,
-      rating ? `満足度: ${'●'.repeat(rating)}${'○'.repeat(5 - rating)}（${rating}/5）` : '満足度: 未回答',
-      `利用回数: ${body?.usageCount ?? '不明'}回目`,
+      `*${title}*（${serviceLabelOf(serviceId)}）`,
+      rating ? `満足度: ${'●'.repeat(rating)}${'○'.repeat(5 - rating)}（${rating}/5）` : null,
+      page ? `画面: ${page}` : null,
       `送信者: ${user?.name || user?.email || '不明'}`,
       '',
       // ⚠️ 利用者の入力をSlackのmrkdwnへ入れる。整形記号を効かせない
       escapeHtml(text).slice(0, 1500),
-    ]
-    await postToSlackBlocks('ご意見が届きました', [
+    ].filter((l): l is string => l !== null)
+    await postToSlackBlocks(title, [
       { type: 'section', text: { type: 'mrkdwn', text: lines.join('\n') } },
     ])
   } catch {

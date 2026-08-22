@@ -90,7 +90,7 @@ export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContac
             <span className="flex flex-col items-start leading-tight min-w-0">
               <span className="text-[13px] font-black text-gray-900">お問い合わせ・改善依頼</span>
               <span className="inline-flex items-center gap-1 mt-0.5 text-[10px] font-black text-[#7f19e6]">
-                追加機能要望募集中 🙌
+                追加機能要望募集中
               </span>
             </span>
           )}
@@ -137,7 +137,7 @@ export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContac
                   </div>
                   <div>
                     <h3 className="text-lg font-black text-gray-900">お問い合わせ・改善依頼</h3>
-                    <p className="text-xs font-bold text-[#7f19e6]">追加機能要望募集中 🙌</p>
+                    <p className="text-xs font-bold text-[#7f19e6]">追加機能要望募集中</p>
                   </div>
                 </div>
                 <p className="text-sm text-gray-500 mb-4">

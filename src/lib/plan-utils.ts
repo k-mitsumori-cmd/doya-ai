@@ -37,6 +37,32 @@ export function planLabel(tier: PlanTier): string {
   }
 }
 
+/** 階層の強さ。higherPlan の比較に使う。 */
+const TIER_RANK: Record<PlanTier, number> = {
+  GUEST: 0,
+  FREE: 1,
+  LIGHT: 2,
+  PRO: 3,
+  ENTERPRISE: 4,
+}
+
+/**
+ * 2つのプラン文字列のうち**上位**の tier を返す。
+ *
+ * なぜ必要か（2026-08 障害）:
+ *   統一プランの権利は User.plan が唯一の真実だが、UserServiceSubscription.plan を
+ *   優先して読む古い経路が残っている（session.user.seoPlan など）。消費側は
+ *   `user.seoPlan || user.plan` の形で書かれており **'FREE' は truthy** なので、
+ *   サービス行の書き込みが1つでも失敗すると、User.plan が PRO でもそのサービスだけ
+ *   無料に落ちる。上位採用にしておけば、行が古くても・欠けていても権利を失わない。
+ *   逆に管理画面で個別サービスにだけ上位プランを付与したケースも失われない。
+ */
+export function higherPlan(a: unknown, b: unknown): PlanTier {
+  const ta = tierFrom(a ?? 'FREE')
+  const tb = tierFrom(b ?? 'FREE')
+  return TIER_RANK[ta] >= TIER_RANK[tb] ? ta : tb
+}
+
 /**
  * PlanTierに対応するバッジ情報（text + CSSクラス）を返す。
  */

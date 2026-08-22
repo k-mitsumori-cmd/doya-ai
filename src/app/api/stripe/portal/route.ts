@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { createCustomerPortalSession } from '@/lib/stripe'
+import { createCustomerPortalSession, resolveBillingCustomerId } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 
 // ========================================
@@ -33,13 +33,23 @@ export async function GET(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { stripeCustomerId: true },
+      select: { id: true, stripeCustomerId: true },
     })
 
-    if (!user?.stripeCustomerId) {
+    // ⚠️ DBの顧客IDだけを見ない。顧客が分裂していると「契約はあるのにポータルが空」になり、
+    //    null のままだとポータル自体が開けない（reference/11-billing-spec.md）。
+    const customerId = await resolveBillingCustomerId({
+      email: session.user.email,
+      stripeCustomerId: user?.stripeCustomerId,
+    })
+
+    if (!customerId) {
       const u = new URL('/banner/dashboard/plan', request.url)
       u.searchParams.set('portal', 'missing')
       return NextResponse.redirect(u)
+    }
+    if (user?.id && customerId !== user.stripeCustomerId) {
+      await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customerId } }).catch(() => {})
     }
 
     const baseUrl = String(process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin)
@@ -48,7 +58,7 @@ export async function GET(request: NextRequest) {
     const returnTo = safeReturnPath(request.nextUrl.searchParams.get('returnTo'))
 
     const portalSession = await createCustomerPortalSession({
-      customerId: user.stripeCustomerId,
+      customerId,
       returnUrl: `${baseUrl}${returnTo}`,
     })
 
@@ -74,14 +84,22 @@ export async function POST(request: NextRequest) {
     // ユーザーのStripe Customer IDを取得
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { stripeCustomerId: true },
+      select: { id: true, stripeCustomerId: true },
     })
 
-    if (!user?.stripeCustomerId) {
+    const customerId = await resolveBillingCustomerId({
+      email: session.user.email,
+      stripeCustomerId: user?.stripeCustomerId,
+    })
+
+    if (!customerId) {
       return NextResponse.json(
         { error: 'サブスクリプションが見つかりません' },
         { status: 404 }
       )
+    }
+    if (user?.id && customerId !== user.stripeCustomerId) {
+      await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customerId } }).catch(() => {})
     }
 
     const baseUrl = String(process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin)
@@ -92,7 +110,7 @@ export async function POST(request: NextRequest) {
 
     // カスタマーポータルセッション作成
     const portalSession = await createCustomerPortalSession({
-      customerId: user.stripeCustomerId,
+      customerId,
       returnUrl: `${baseUrl}${returnTo}`,
     })
 

@@ -5,6 +5,7 @@ import { prisma, withRetry } from './prisma';
 import { sendEventNotification } from './notifications';
 import { readAttributionFromCookies } from './attribution';
 import { enrollUserInDripSequences } from './drip-enroll';
+import { higherPlan } from './plan-utils';
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,
@@ -89,18 +90,29 @@ export const authOptions: NextAuthOptions = {
             (session.user as any).role = dbUser.role || 'USER';
             (session.user as any).plan = dbUser.plan || 'FREE';
             
+            // ------------------------------------------------------------------
             // サービス別プランをセッションに載せる
+            // ------------------------------------------------------------------
+            // ⚠️ 必ず User.plan との**上位**を採る（reference/11-billing-spec.md）。
+            //    消費側は `user.seoPlan || user.plan` の形で書かれており **'FREE' は truthy** なので、
+            //    UserServiceSubscription の行が古い/欠けていると、User.plan が PRO でも
+            //    そのサービスだけ無料に落ちる（2026-08 の障害はこの経路で顕在化した）。
+            //    上位採用なら、行が壊れても権利を失わず、管理画面での個別付与も失われない。
             const byService = Object.fromEntries(
               dbUser.serviceSubscriptions.map((s) => [s.serviceId, s.plan])
             )
-            ;(session.user as any).bannerPlan = byService['banner'] || 'FREE'
+            const svcPlan = (serviceId: string) => higherPlan(dbUser.plan, byService[serviceId])
+            ;(session.user as any).bannerPlan = svcPlan('banner')
             // SEOプランは 'writing' または 'seo' サービスIDを参照（後方互換性）
-            ;(session.user as any).seoPlan = byService['writing'] || byService['seo'] || undefined
-            ;(session.user as any).kantanPlan = byService['kantan'] || undefined
-            ;(session.user as any).interviewPlan = byService['interview'] || undefined
-            ;(session.user as any).openingPlan = byService['opening'] || undefined
-            ;(session.user as any).doyalistPlan = byService['doyalist'] || undefined
-            ;(session.user as any).kintaiPlan = byService['kintai'] || undefined
+            ;(session.user as any).seoPlan = higherPlan(
+              dbUser.plan,
+              byService['writing'] || byService['seo']
+            )
+            ;(session.user as any).kantanPlan = svcPlan('kantan')
+            ;(session.user as any).interviewPlan = svcPlan('interview')
+            ;(session.user as any).openingPlan = svcPlan('opening')
+            ;(session.user as any).doyalistPlan = svcPlan('doyalist')
+            ;(session.user as any).kintaiPlan = svcPlan('kintai')
             // 初回ログイン時刻（1時間生成し放題の判定用）
             ;(session.user as any).firstLoginAt = dbUser.firstLoginAt?.toISOString() || null
           }

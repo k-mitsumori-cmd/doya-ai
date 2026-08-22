@@ -287,6 +287,33 @@ export async function findActiveLikeSubscriptions(params: {
 }
 
 /** サブスクリプションから planId を解決する（metadata優先＝checkoutが実際に要求した値） */
+/**
+ * カスタマーポータルを開くべき Stripe 顧客IDを決める。
+ *
+ * ⚠️ DB の `User.stripeCustomerId` をそのまま使ってはいけない。
+ *    Checkout は customer_email で都度 Customer を作るため顧客が分裂し、
+ *    DB 側の顧客には契約が無い（＝ポータルを開いても契約が1件も出てこない）ことがある。
+ *    Webhook 停止中に契約した方は null のままでポータル自体が開けない。
+ *    生きている契約の持ち主を正として返す。
+ * 仕様: reference/11-billing-spec.md
+ */
+export async function resolveBillingCustomerId(params: {
+  email?: string | null
+  stripeCustomerId?: string | null
+}): Promise<string | null> {
+  try {
+    const live = await findActiveLikeSubscriptions(params)
+    if (live.length === 0) return params.stripeCustomerId || null
+    // 保存済みの顧客が実際に契約を持っているならそれを優先（既存の見え方を変えない）
+    if (params.stripeCustomerId && live.some((s) => s.customerId === params.stripeCustomerId)) {
+      return params.stripeCustomerId
+    }
+    return live[0]!.customerId || params.stripeCustomerId || null
+  } catch {
+    return params.stripeCustomerId || null
+  }
+}
+
 export function resolvePlanIdFromSubscription(subscription: {
   metadata?: Record<string, string> | null
   items: { data: Array<{ price: { id: string } }> }
