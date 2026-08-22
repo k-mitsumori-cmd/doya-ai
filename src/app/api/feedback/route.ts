@@ -8,6 +8,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { postToSlackBlocks } from '@/lib/notifications'
+import { notifyAlert } from '@/lib/alert'
 import { serviceLabelOf } from '@/lib/attribution'
 import { escapeHtml } from '@/lib/html-escape'
 import {
@@ -79,6 +80,26 @@ export async function POST(req: NextRequest) {
   const text = String(body?.text || body?.message || '').trim()
   const category = String(body?.category || '').slice(0, 40)
   const page = String(body?.page || '').slice(0, 200)
+  // ------------------------------------------------------------------
+  // 受け口が合っていない送信を検知する
+  // ------------------------------------------------------------------
+  // ⚠️ 2026-08-11〜08-22 の12日間、サイドバーの問い合わせが 400 で弾かれ続けたのに
+  //    運営側には何の痕跡も残らなかった（失敗は利用者の画面にしか出ない）。
+  //    「本文は書かれているのに、こちらが読めるキーで届いていない」＝実装のズレなので、
+  //    利用者の入力ミスと区別して必ず通知する。0件が正常か異常か分からない状態にしない。
+  const looksLikeUnknownForm =
+    !serviceId && Object.keys(body || {}).some((k) => !['action', 'serviceId', 'service'].includes(k))
+  if (looksLikeUnknownForm) {
+    notifyAlert({
+      level: 'critical',
+      title: 'お問い合わせフォームの送信が受け取れていません（キー不一致の可能性）',
+      context: '利用者には「送信に失敗しました」と表示され、内容は保存も通知もされていません',
+      detail: `受信したキー: ${Object.keys(body || {}).join(', ') || '(なし)'}`,
+      dedupKey: 'feedback-payload-mismatch',
+      cooldownMs: 6 * 3600_000,
+    }).catch(() => {})
+  }
+
   if (!serviceId) return NextResponse.json({ error: 'サービスが不明です' }, { status: 400 })
   if (!text) return NextResponse.json({ error: '内容をご記入ください' }, { status: 400 })
 
