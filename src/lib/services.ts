@@ -1630,22 +1630,19 @@ export function getServiceById(id: string): Service | undefined {
   return SERVICES.find(service => service.id === id)
 }
 
-// 対外的に出さないサービスID（共通除外リスト）。
-// トップページ・sitemap・llms.txt・ServiceNav の全てがこのリストを参照するため、
-// ここに id を足すだけで「サービスカード・サイトマップ・LLM向け一覧」から一括で消える。
+// 提供終了・実体なしのサービスID。
+// 「もう使えない」ものなので、対外的な一覧からも、ログイン後のツール切替からも消す。
 // 定義（SERVICES 本体）・ページ・API・DB は残すので、id をここから外せばそのまま復帰できる。
 // ⚠️ 消したい時に SERVICES 配列ごと削除しないこと（戻せなくなる）。
 //
-// 除外理由の内訳:
+// 内訳:
 //   - 実体なし（ページ・APIとも未実装）: video / presentation
 //   - 提供終了（2026-08-06 ユーザー判断）: kantan / shindan / logo / opening
 //                                        tenkai / copy / interviewx / lp / adsim / movie / voice
-//   - 開発中（2026-08-23 ユーザー確認）: mensetsu / quote / aishodan / adimage
 //   - 後継へ統合（2026-08-10 ユーザー判断）: adbanner → adimage（ドヤ広告画像AI）
 //     ⚠️ /adbanner は next.config.js で /adimage へ 308 リダイレクト済み。
 //        DBの adbanner_* とデータも残してあるので、ここから id を外せば復帰できる。
-// ※ 現時点で coming_soon / maintenance は全て非表示。トップの「開発中」セクションは空になる。
-export const HIDDEN_SERVICE_IDS = new Set([
+export const RETIRED_SERVICE_IDS = new Set([
   // ルート未実装
   'video',
   'presentation',
@@ -1666,18 +1663,42 @@ export const HIDDEN_SERVICE_IDS = new Set([
   'voice',
   // 後継サービス（adimage）へ統合
   'adbanner',
-  // 開発中のため対外的に出さない（2026-08-23 ユーザー確認）
-  // status は 'active' のままにしてある。ログイン後の ToolSwitcher や直リンクでは
-  // 従来どおり使えるので、開発・検証はこれまでと同じようにできる。
-  // 公開する時はここから id を4つ外すだけでよい（layout.tsx の noindex も一緒に外すこと）。
+])
+
+// 開発中につき対外的な面にだけ出さないサービスID（2026-08-23 ユーザー確認）。
+// 提供終了とは違い「動くが、まだ外に出さない」もの。
+// トップ・sitemap・llms.txt・公開LP（/all-in-one）からは消えるが、
+// ログイン後のツール切替・サイドバーの他サービス一覧・直リンクでは従来どおり使える。
+// 公開する時はここから id を外し、各 layout.tsx の noindex も一緒に外すこと。
+export const UNLISTED_SERVICE_IDS = new Set([
   'mensetsu',
   'quote',
   'aishodan',
   'adimage',
 ])
 
-// アクティブなサービスのみ取得（非公開IDは常に除外）
+// 対外的に出さないサービスID（共通除外リスト）＝ 提供終了 ＋ 開発中。
+// トップページ・sitemap・llms.txt・公開LP がこのリストを参照するため、
+// ここに含まれる id は「外から見えるどの一覧にも出ない」。
+// ⚠️ ログイン後のアプリ内ナビは getActiveServices() を使う（開発中のものは出る）。
+export const HIDDEN_SERVICE_IDS = new Set([
+  ...Array.from(RETIRED_SERVICE_IDS),
+  ...Array.from(UNLISTED_SERVICE_IDS),
+])
+
+// アクティブなサービスのみ取得（提供終了は常に除外）。
+// ⚠️ 開発中（UNLISTED_SERVICE_IDS）は**含まれる**。ログイン後のツール切替・
+//    サイドバーの他サービス一覧など「使う人向け」の導線はこちらを使う。
+//    対外的な一覧（トップ・sitemap・公開LP）は getPublicServices() を使うこと。
 export function getActiveServices(): Service[] {
+  return SERVICES
+    .filter(s => s.status === 'active' && !RETIRED_SERVICE_IDS.has(s.id))
+    .sort((a, b) => a.order - b.order)
+}
+
+// 対外的に見せてよいサービスのみ取得（提供終了＋開発中を除外）。
+// 公開LP・料金ページのサービス一覧など、未ログインの人の目に触れる場所はこちら。
+export function getPublicServices(): Service[] {
   return SERVICES
     .filter(s => s.status === 'active' && !HIDDEN_SERVICE_IDS.has(s.id))
     .sort((a, b) => a.order - b.order)

@@ -8,7 +8,7 @@ import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import { usePathname } from 'next/navigation'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import { TrialBadge, TrialNote, useTrialEligible } from '@/components/TrialCallout'
-import { getServiceById, getActiveServices } from '@/lib/services'
+import { getServiceById, getPublicServices } from '@/lib/services'
 import {
   UNIFIED_PRO_PRICE_LABEL,
   UNIFIED_PRO_PLAN_ID,
@@ -92,7 +92,12 @@ export function UnifiedPricingPlans({
   const isFree = !isPro && plan === 'FREE'
 
   // 「使い放題」の価値づけ：全公開サービスの単体プロ料金の合計（＝個別契約したら相当）
-  const activeServices = getActiveServices()
+  // ⚠️ 開発中のサービスは公開一覧に出さないが、そのサービス自身の料金ページでは
+  //    「自分がプロに含まれない」ように見えてしまうため、現在のサービスだけは必ず足す。
+  const publicServices = getPublicServices()
+  const activeServices = publicServices.some(s => s.id === svc.id)
+    ? publicServices
+    : [...publicServices, svc].sort((a, b) => a.order - b.order)
   const serviceCount = activeServices.length
   const totalProValue = activeServices.reduce((sum, s) => sum + (s.pricing?.pro?.price || 0), 0)
 

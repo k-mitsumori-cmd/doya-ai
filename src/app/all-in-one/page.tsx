@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getActiveServices } from '@/lib/services'
+import { getPublicServices } from '@/lib/services'
 import { UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
 import {
   LpShell, Hero, HowItWorks, Benefits, FaqSection, CtaBand, Sym, SectionHeading,
@@ -38,7 +38,8 @@ const FAQ: Faq[] = [
 ]
 
 export default function AllInOnePage() {
-  const services = getActiveServices()
+  // 未ログインの人が見る公開LPなので、開発中のサービスは出さない
+  const services = getPublicServices()
   const count = services.length
   const totalProValue = services.reduce((sum, s) => sum + (s.pricing?.pro?.price || 0), 0)
 

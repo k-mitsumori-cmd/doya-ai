@@ -12,7 +12,7 @@ import { FAQ } from './lp-data'
 //    サービスを追加したら必ず buildServiceMetadata を入れること。
 export const metadata: Metadata = buildServiceMetadata('aishodan', {
   // 開発中のため検索結果に出さない（2026-08-23）。
-  // 公開する時はこの1行と services.ts の HIDDEN_SERVICE_IDS を一緒に外す。
+  // 公開する時はこの1行と services.ts の UNLISTED_SERVICE_IDS を一緒に外す。
   noindex: true,
   tagline: 'AIが音声で一次商談を進行し、適合度の判定まで残す',
   keywords: ['AI 商談', '一次対応 自動化', 'インサイドセールス AI', '商談 自動化', 'AI 営業', 'リード対応 AI', '商談 ログ'],
