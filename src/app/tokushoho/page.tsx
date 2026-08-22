@@ -54,7 +54,7 @@ export default function TokushohoPage() {
               <tr>
                 <th className="py-4 pr-4 text-left text-sm font-bold text-gray-900 align-top">メールアドレス</th>
                 <td className="py-4 text-sm text-gray-700">
-                  k-mitsumori@surisuta.jp
+                  info@surisuta.jp
                 </td>
               </tr>
               <tr>

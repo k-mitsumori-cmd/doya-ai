@@ -270,7 +270,7 @@ export default function PricingPage() {
                   {/* CTA */}
                   {plan.key === 'enterprise' ? (
                     <a
-                      href="mailto:k-mitsumori@surisuta.jp"
+                      href="mailto:info@surisuta.jp"
                       className={`block w-full py-3 text-center rounded-xl text-sm font-bold bg-gradient-to-r ${plan.gradient} text-white shadow-lg transition-all hover:shadow-xl`}
                     >
                       {plan.cta}
@@ -331,7 +331,7 @@ export default function PricingPage() {
           </p>
           <div className="flex items-center justify-center gap-4">
             <a
-              href="mailto:k-mitsumori@surisuta.jp"
+              href="mailto:info@surisuta.jp"
               className="flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-slate-900 text-sm font-bold shadow-lg hover:shadow-xl transition-all"
             >
               <span className="material-symbols-outlined text-lg">mail</span>

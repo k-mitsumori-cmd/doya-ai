@@ -217,7 +217,7 @@ export default function AdSimPricingPage() {
                     </Link>
                   ) : p.id === 'enterprise' ? (
                     <a
-                      href="mailto:k-mitsumori@surisuta.jp?subject=ドヤ広告シミュレーションAI Enterprise問い合わせ"
+                      href="mailto:info@surisuta.jp?subject=ドヤ広告シミュレーションAI Enterprise問い合わせ"
                       className="block rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-slate-700 transition hover:border-[#0017C1] hover:text-[#0017C1]"
                     >
                       {p.cta}

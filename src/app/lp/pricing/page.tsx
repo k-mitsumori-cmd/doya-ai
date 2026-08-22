@@ -29,7 +29,7 @@ export default function LpPricingPage() {
           <p className="text-white font-bold mb-2">ご不明な点はお気軽にどうぞ</p>
           <p className="text-sm text-slate-500 mb-4">プランの詳細やカスタム対応についてご相談ください。</p>
           <a
-            href="mailto:k-mitsumori@surisuta.jp"
+            href="mailto:info@surisuta.jp"
             className="inline-flex items-center gap-2 bg-lp-primary/20 hover:bg-lp-primary/30 text-lp-primary px-6 py-3 rounded-lg font-bold transition-all text-sm"
           >
             メールで相談する

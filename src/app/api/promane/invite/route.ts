@@ -217,7 +217,7 @@ function buildInviteEmailHtml(args: {
         <tr><td style="padding:24px 32px;background-color:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;">
           <p style="color:#94a3b8;font-size:11px;margin:0;line-height:1.6;">
             このメールに心当たりがない場合は無視してください。<br>
-            お問い合わせ: <a href="mailto:k-mitsumori@surisuta.jp" style="color:#3b82f6;">k-mitsumori@surisuta.jp</a>
+            お問い合わせ: <a href="mailto:info@surisuta.jp" style="color:#3b82f6;">info@surisuta.jp</a>
           </p>
           <p style="color:#cbd5e1;font-size:10px;margin:12px 0 0;">© スリスタ株式会社 / ドヤAI</p>
         </td></tr>

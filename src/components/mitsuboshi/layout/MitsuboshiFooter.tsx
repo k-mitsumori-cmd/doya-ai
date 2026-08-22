@@ -32,7 +32,7 @@ export function MitsuboshiFooter() {
           <Link href="/nagusame/pricing" className="hover:text-mitsuboshi-champagne">
             プラン
           </Link>
-          <a href="mailto:k-mitsumori@surisuta.jp" className="hover:text-mitsuboshi-champagne">
+          <a href="mailto:info@surisuta.jp" className="hover:text-mitsuboshi-champagne">
             お問い合わせ
           </a>
         </div>

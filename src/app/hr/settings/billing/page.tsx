@@ -289,7 +289,7 @@ export default function BillingPage() {
             </p>
           </div>
           <button
-            onClick={() => window.open('mailto:k-mitsumori@surisuta.jp?subject=ドヤHR プランのご相談', '_blank')}
+            onClick={() => window.open('mailto:info@surisuta.jp?subject=ドヤHR プランのご相談', '_blank')}
             className="flex-shrink-0 px-5 py-2.5 bg-slate-100 text-slate-700 rounded-full text-sm font-bold hover:bg-slate-200 transition-all"
           >
             <span className="material-symbols-outlined text-sm align-middle mr-1">mail</span>
