@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireBannerAdmin } from '@/lib/banner-admin-guard'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PROMPTS_V2, BannerPromptV2 } from '@/lib/banner-prompts-v2'
 
@@ -14,6 +15,11 @@ export const dynamic = 'force-dynamic'
 
 // POST: 指定されたプロンプトIDから画像を生成
 export async function POST(request: NextRequest) {
+  // ⚠️ テンプレートを壊せる保守API。管理者以外は通さない
+  //    （認証が無いまま本番に出ており、DELETE 1回で全件消える状態だった）
+  const denied = requireBannerAdmin(request)
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { promptIds, batchSize = 5 } = body
@@ -151,6 +157,11 @@ export async function POST(request: NextRequest) {
 
 // GET: 生成状況を確認
 export async function GET(request: NextRequest) {
+  // ⚠️ テンプレートを壊せる保守API。管理者以外は通さない
+  //    （認証が無いまま本番に出ており、DELETE 1回で全件消える状態だった）
+  const denied = requireBannerAdmin(request)
+  if (denied) return denied
+
   try {
     // DBから生成済みテンプレートを取得
     const generatedTemplates = await prisma.bannerTemplate.findMany({

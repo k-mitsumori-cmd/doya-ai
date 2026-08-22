@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireBannerAdmin } from '@/lib/banner-admin-guard'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -10,6 +11,11 @@ export const dynamic = 'force-dynamic'
  * POST: 画像URLとメタデータを受け取り、DBに保存
  */
 export async function POST(request: NextRequest) {
+  // ⚠️ テンプレートを壊せる保守API。管理者以外は通さない
+  //    （認証が無いまま本番に出ており、DELETE 1回で全件消える状態だった）
+  const denied = requireBannerAdmin(request)
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { 

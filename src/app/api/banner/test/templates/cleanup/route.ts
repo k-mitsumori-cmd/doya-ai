@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireBannerAdmin } from '@/lib/banner-admin-guard'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -6,6 +7,11 @@ export const dynamic = 'force-dynamic'
 
 // DELETE: エラープレースホルダーURLを持つテンプレートを削除
 export async function DELETE(request: NextRequest) {
+  // ⚠️ テンプレートを壊せる保守API。管理者以外は通さない
+  //    （認証が無いまま本番に出ており、DELETE 1回で全件消える状態だった）
+  const denied = requireBannerAdmin(request)
+  if (denied) return denied
+
   try {
     // エラープレースホルダーURLを持つテンプレートを検索
     const errorTemplates = await prisma.bannerTemplate.findMany({
@@ -51,6 +57,11 @@ export async function DELETE(request: NextRequest) {
 
 // GET: エラープレースホルダーURLを持つテンプレートの数を取得
 export async function GET(request: NextRequest) {
+  // ⚠️ テンプレートを壊せる保守API。管理者以外は通さない
+  //    （認証が無いまま本番に出ており、DELETE 1回で全件消える状態だった）
+  const denied = requireBannerAdmin(request)
+  if (denied) return denied
+
   try {
     const errorCount = await prisma.bannerTemplate.count({
       where: {

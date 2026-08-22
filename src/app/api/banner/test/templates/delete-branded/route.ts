@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { requireBannerAdmin } from '@/lib/banner-admin-guard'
 import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
@@ -30,6 +31,11 @@ const BRANDED_TEMPLATE_IDS = [
 ]
 
 export async function DELETE(request: Request) {
+  // ⚠️ テンプレートを壊せる保守API。管理者以外は通さない
+  //    （認証が無いまま本番に出ており、DELETE 1回で全件消える状態だった）
+  const denied = requireBannerAdmin(request)
+  if (denied) return denied
+
   try {
     // リクエストボディからIDリストを取得（指定がなければデフォルトリストを使用）
     let targetIds = BRANDED_TEMPLATE_IDS
@@ -87,7 +93,12 @@ export async function DELETE(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  // ⚠️ テンプレートを壊せる保守API。管理者以外は通さない
+  //    （認証が無いまま本番に出ており、DELETE 1回で全件消える状態だった）
+  const denied = requireBannerAdmin(request)
+  if (denied) return denied
+
   try {
     // 削除対象のテンプレートを検索（プレビュー用）
     const templatesToDelete = await prisma.bannerTemplate.findMany({

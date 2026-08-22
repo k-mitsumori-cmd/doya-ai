@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireBannerAdmin } from '@/lib/banner-admin-guard'
 import { generateBanners } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
 import { BANNER_TEMPLATE_PROMPTS, generateMoreVariations } from '../route'
@@ -8,6 +9,11 @@ export const maxDuration = 600 // 10分（大量生成のため）
 
 // POST: 全テンプレートの画像を一括生成してDBに保存
 export async function POST(request: NextRequest) {
+  // ⚠️ テンプレートを壊せる保守API。管理者以外は通さない
+  //    （認証が無いまま本番に出ており、DELETE 1回で全件消える状態だった）
+  const denied = requireBannerAdmin(request)
+  if (denied) return denied
+
   try {
     const body = await request.json()
     const { 

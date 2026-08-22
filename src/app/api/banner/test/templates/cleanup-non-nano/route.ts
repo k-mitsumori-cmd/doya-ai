@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireBannerAdmin } from '@/lib/banner-admin-guard'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -10,7 +11,12 @@ export const dynamic = 'force-dynamic'
  * Nano Banana Proで生成された画像は base64 data URL（data:image/...）で格納される。
  * それ以外（null、空、プレースホルダー、外部URL等）は非Nano Banana Proとみなす。
  */
-export async function GET() {
+export async function GET(request: Request) {
+  // ⚠️ テンプレートを壊せる保守API。管理者以外は通さない
+  //    （認証が無いまま本番に出ており、DELETE 1回で全件消える状態だった）
+  const denied = requireBannerAdmin(request)
+  if (denied) return denied
+
   try {
     const allTemplates = await prisma.bannerTemplate.findMany({
       select: {
@@ -56,7 +62,12 @@ export async function GET() {
 /**
  * DELETE: Nano Banana Proで生成されていないテンプレートを一括削除
  */
-export async function DELETE() {
+export async function DELETE(request: Request) {
+  // ⚠️ テンプレートを壊せる保守API。管理者以外は通さない
+  //    （認証が無いまま本番に出ており、DELETE 1回で全件消える状態だった）
+  const denied = requireBannerAdmin(request)
+  if (denied) return denied
+
   try {
     // まず対象を特定
     const allTemplates = await prisma.bannerTemplate.findMany({
