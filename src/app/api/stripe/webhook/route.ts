@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { headers } from 'next/headers'
-import { constructWebhookEvent, getPlanIdFromStripePriceId, stripe, ALL_SERVICE_IDS } from '@/lib/stripe'
+import {
+  constructWebhookEvent,
+  stripe,
+  ALL_SERVICE_IDS,
+  resolvePlanIdFromSubscription,
+  planTierFromPlanId,
+  findActiveLikeSubscriptions,
+} from '@/lib/stripe'
 import { prisma, withRetry } from '@/lib/prisma'
 import { sendEventNotification } from '@/lib/notifications'
 import Stripe from 'stripe'
@@ -121,6 +128,54 @@ export async function POST(request: NextRequest) {
 // イベントハンドラー
 // ========================================
 
+type WebhookUser = { id: string; email: string | null; name: string | null; plan: string }
+
+const USER_SELECT = { id: true, email: true, name: true, plan: true } as const
+
+/**
+ * サブスクリプションからユーザーを特定する（reference/11-billing-spec.md INV-6 / R-1）。
+ *
+ * `stripeCustomerId` 単独で引くと、顧客レコードが分裂している場合
+ * （checkout は customer_email で都度 Customer を作るため必ず起きうる）に
+ * **ユーザーが見つからず解約や更新が反映されない**。
+ * metadata → customerId → Stripe顧客のメール、の順に3段で救済する。
+ */
+async function findUserForSubscription(subscription: Stripe.Subscription): Promise<WebhookUser | null> {
+  const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id
+
+  // 1) checkout が subscription_data.metadata に入れている userId（最も確実）
+  const metaUserId = subscription.metadata?.userId
+  if (metaUserId) {
+    const byId = await prisma.user.findUnique({ where: { id: metaUserId }, select: USER_SELECT })
+    if (byId) return byId
+  }
+
+  // 2) DB に保存済みの customerId
+  if (customerId) {
+    const byCustomer = await prisma.user.findFirst({ where: { stripeCustomerId: customerId }, select: USER_SELECT })
+    if (byCustomer) return byCustomer
+  }
+
+  // 3) Stripe 顧客のメールで引き当てる（顧客分裂の救済）
+  if (customerId) {
+    try {
+      const customer = await stripe.customers.retrieve(customerId)
+      const email = (customer as any)?.email as string | undefined
+      if (email) {
+        const byEmail = await prisma.user.findFirst({
+          where: { email: { equals: email, mode: 'insensitive' } },
+          select: USER_SELECT,
+        })
+        if (byEmail) return byEmail
+      }
+    } catch (e: any) {
+      console.error(`[Webhook] customer retrieve failed: ${customerId}`, e?.message)
+    }
+  }
+
+  return null
+}
+
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const userId = session.client_reference_id || session.metadata?.userId
   const customerId = session.customer as string
@@ -158,31 +213,21 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 }
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata?.userId
-  if (!userId) {
-    // Customer IDからユーザーを検索
-    const customerId = subscription.customer as string
-    const user = await prisma.user.findFirst({
-      where: { stripeCustomerId: customerId },
-    })
-    if (user) {
-      await updateUserSubscription(user.id, subscription)
-    } else {
-      console.error(`[Webhook] subscription.created: user not found for customer ${customerId}, subscription ${subscription.id} — subscription will NOT be recorded`)
-    }
+  const user = await findUserForSubscription(subscription)
+  if (!user) {
+    console.error(
+      `[Webhook] subscription.created: user not found for subscription ${subscription.id} — subscription will NOT be recorded`
+    )
     return
   }
-  await updateUserSubscription(userId, subscription)
+  await updateUserSubscription(user.id, subscription)
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  const customerId = subscription.customer as string
-  const user = await prisma.user.findFirst({
-    where: { stripeCustomerId: customerId },
-  })
+  const user = await findUserForSubscription(subscription)
 
   if (!user) {
-    console.error(`User not found for customer: ${customerId}`)
+    console.error(`[Webhook] subscription.updated: user not found for subscription ${subscription.id}`)
     return
   }
 
@@ -199,15 +244,44 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   await updateUserSubscription(user.id, subscription)
 }
 
+const TIER_RANK: Record<string, number> = { FREE: 0, LIGHT: 1, PRO: 2, BUNDLE: 3, ENTERPRISE: 4 }
+
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const customerId = subscription.customer as string
-  const user = await prisma.user.findFirst({
-    where: { stripeCustomerId: customerId },
-  })
+  const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id
+  const user = await findUserForSubscription(subscription)
 
   if (!user) {
-    console.error(`User not found for customer: ${customerId}`)
+    console.error(`[Webhook] subscription.deleted: user not found for subscription ${subscription.id}`)
     return
+  }
+
+  // ------------------------------------------------------------------
+  // 誤ダウングレード防止（reference/11-billing-spec.md R-2）
+  // ------------------------------------------------------------------
+  // 二重契約が起きたユーザーが片方を解約すると、残っている有効な契約を
+  // 無視して FREE に落ちてしまう（＝支払っているのに使えない）。
+  // 他に生きている契約があれば、そちらで再反映して終了する。
+  // 照会に失敗したときは従来どおり FREE に落とす（挙動を悪化させない）。
+  try {
+    const remaining = (
+      await findActiveLikeSubscriptions({ email: user.email, stripeCustomerId: customerId })
+    ).filter((s) => s.id !== subscription.id)
+
+    if (remaining.length > 0) {
+      remaining.sort(
+        (a, b) => (TIER_RANK[planTierFromPlanId(b.planId)] ?? 0) - (TIER_RANK[planTierFromPlanId(a.planId)] ?? 0)
+      )
+      const keep = remaining[0]!
+      console.warn(
+        `[Webhook] subscription.deleted: user=${user.id} には他に有効な契約が残っているため FREE に落とさない ` +
+          `(deleted=${subscription.id} / keep=${keep.id}(${keep.status}))`
+      )
+      const live = await stripe.subscriptions.retrieve(keep.id)
+      await updateUserSubscription(user.id, live)
+      return
+    }
+  } catch (e: any) {
+    console.error(`[Webhook] subscription.deleted: 残存契約の照会に失敗（FREEへ落とします） user=${user.id}`, e?.message)
   }
 
   // プランをフリーに戻す（DB接続エラー時はリトライ）
@@ -277,24 +351,11 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 // ========================================
 // どのサービスから課金しても、全サービスが同じプランになる
 async function updateUserSubscription(userId: string, subscription: Stripe.Subscription) {
-  const priceId = subscription.items.data[0]?.price.id
-  const planIdFromPrice = getPlanIdFromStripePriceId(priceId)
-  const planIdFromMeta = subscription.metadata?.planId || null
-  const planId = String(planIdFromPrice || planIdFromMeta || '')
-
-  // プランレベルを判定
-  let userPlan = 'PRO' // 有料プランのデフォルト
-  if (planId === 'bundle') {
-    userPlan = 'BUNDLE'
-  } else if (planId.endsWith('-enterprise')) {
-    userPlan = 'ENTERPRISE'
-  } else if (planId.endsWith('-pro') || planId === 'banner-basic') {
-    userPlan = 'PRO'
-  } else if (planId.endsWith('-light') || planId.endsWith('-starter')) {
-    userPlan = 'LIGHT'
-  } else if (!planId) {
-    userPlan = 'FREE'
-  }
+  // 階層判定は planTierFromPlanId() ただ一つに集約する（reference/11-billing-spec.md INV-4）。
+  // かつて webhook / sync / sync-latest がそれぞれ独自にif文を持っており、
+  // '-starter' や 'bundle' の扱いが経路ごとに食い違っていた。
+  const { planId, priceId } = resolvePlanIdFromSubscription(subscription as any)
+  const userPlan = planTierFromPlanId(planId)
 
   // グローバルプランを更新（DB接続エラー時はリトライ）
   await withRetry(() => prisma.user.update({

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { stripe, getPlanIdFromStripePriceId, ALL_SERVICE_IDS } from '@/lib/stripe'
+import { stripe, ALL_SERVICE_IDS, resolvePlanIdFromSubscription, planTierFromPlanId } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import { sendEventNotification } from '@/lib/notifications'
 
@@ -66,24 +66,11 @@ export async function POST(request: NextRequest) {
     })
 
     const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-    const priceId = subscription.items.data[0]?.price.id || null
-    const planIdFromPrice = getPlanIdFromStripePriceId(priceId)
-    const planIdFromMeta = (subscription.metadata?.planId as any) || null
-    const planId = String(planIdFromPrice || planIdFromMeta || '')
-
-    // プランレベルを判定
-    let userPlan = 'PRO' // 有料プランのデフォルト
-    if (planId === 'bundle') {
-      userPlan = 'BUNDLE'
-    } else if (planId.endsWith('-enterprise')) {
-      userPlan = 'ENTERPRISE'
-    } else if (planId.endsWith('-pro') || planId === 'banner-basic') {
-      userPlan = 'PRO'
-    } else if (planId.endsWith('-light')) {
-      userPlan = 'LIGHT'
-    } else if (!planId) {
-      userPlan = 'FREE'
-    }
+    // 階層判定は planTierFromPlanId() ただ一つに集約する（reference/11-billing-spec.md INV-4）。
+    // 以前はここに独自のif文があり、'-starter'（hr-starter 等）を LIGHT ではなく
+    // PRO と判定していた＝webhook 経由と sync 経由で結果が食い違っていた。
+    const { planId, priceId } = resolvePlanIdFromSubscription(subscription as any)
+    const userPlan = planTierFromPlanId(planId)
 
     // グローバルプランを更新
     await prisma.user.update({

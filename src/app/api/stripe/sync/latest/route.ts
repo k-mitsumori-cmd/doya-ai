@@ -7,6 +7,7 @@ import {
   resolvePlanIdFromSubscription,
   planTierFromPlanId,
   ALL_SERVICE_IDS,
+  ACTIVE_LIKE_STATUSES,
 } from '@/lib/stripe'
 import { sendEventNotification } from '@/lib/notifications'
 
@@ -21,8 +22,6 @@ import { sendEventNotification } from '@/lib/notifications'
 //    全サービスが同じ価格IDを共有するため価格→planId の逆引きが 'seo-pro' を返し、
 //    プロ契約者が1人も一致せず常に 404 を返していた（＝「プラン再同期」ボタンが無効）。
 //    サービスを問わず階層（PRO/LIGHT/ENTERPRISE）だけで判定する。
-
-const ACTIVE_LIKE = new Set(['active', 'trialing', 'past_due'])
 
 const TIER_RANK: Record<string, number> = { FREE: 0, LIGHT: 1, PRO: 2, BUNDLE: 3, ENTERPRISE: 4 }
 
@@ -59,7 +58,7 @@ export async function POST(_req: NextRequest) {
     for (const cid of customerIds) {
       const subs = await stripe.subscriptions.list({ customer: cid, status: 'all', limit: 100 })
       for (const s of subs.data) {
-        if (!ACTIVE_LIKE.has(String(s.status))) continue
+        if (!ACTIVE_LIKE_STATUSES.has(String(s.status))) continue
         const { planId, priceId } = resolvePlanIdFromSubscription(s as any)
         const tier = planTierFromPlanId(planId)
         if (tier === 'FREE') continue
@@ -78,7 +77,10 @@ export async function POST(_req: NextRequest) {
     const priceId = best.priceId
     const bestPlanId = best.planId
     const customerId = best.customerId
-    const userPlan = best.tier === 'BUNDLE' ? 'PRO' : best.tier
+    // User.plan は階層をそのまま持ち、サービス行だけ BUNDLE→PRO に落とす。
+    // （webhook / sync と同じ規約。以前はここだけ User.plan にも PRO を書いていた）
+    const userPlan = best.tier
+    const servicePlan = best.tier === 'BUNDLE' ? 'PRO' : best.tier
 
     // DBへ反映
     const before = await prisma.user.findUnique({ where: { id: user.id }, select: { plan: true, name: true } })
@@ -101,7 +103,7 @@ export async function POST(_req: NextRequest) {
         create: {
           userId: user.id,
           serviceId,
-          plan: userPlan,
+          plan: servicePlan,
           stripeSubscriptionId: subscription.id,
           stripePriceId: priceId || undefined,
           stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
@@ -110,7 +112,7 @@ export async function POST(_req: NextRequest) {
           lastUsageReset: new Date(),
         },
         update: {
-          plan: userPlan,
+          plan: servicePlan,
           stripeSubscriptionId: subscription.id,
           stripePriceId: priceId || undefined,
           stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),

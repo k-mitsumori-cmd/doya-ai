@@ -14,7 +14,11 @@ import { notifyAlert } from '@/lib/alert'
  * - その日に有料契約したアカウントを一覧で通知
  * - 課金されているのに DB が FREE の方を検出（＝反映漏れ。2026-08 に2名発生）
  * - 同一メールの重複契約（＝過剰請求）を検出
+ * - 有料なのに UserServiceSubscription が揃っていない（障害#5 と同じ状態）を検出
+ * - Stripe に契約が無いのに DB が有料のまま（＝過剰付与）を検出
  * - 本番 Webhook エンドポイントの登録・購読イベントを点検
+ *
+ * 仕様の正本: reference/11-billing-spec.md
  *
  * 認証: Authorization: Bearer ${CRON_SECRET}
  * 手動実行: ?window=168 で直近7日分を対象にできる
@@ -67,6 +71,18 @@ export async function GET(request: NextRequest) {
         cooldownMs: 12 * 3600_000,
       })
     }
+    if (audit.serviceDrift.length > 0) {
+      await notifyAlert({
+        level: 'critical',
+        title: `有料なのにサービス別プランが揃っていない利用者が ${audit.serviceDrift.length} 名います`,
+        context: '一部サービスだけ無料扱いになっています（2026-08 障害#5 と同じ状態）',
+        detail: audit.serviceDrift
+          .map((d) => `${d.email} / User.plan=${d.userPlan} / 未反映: ${d.broken.join(', ')}`)
+          .join('\n'),
+        dedupKey: 'billing-service-plan-drift',
+        cooldownMs: 12 * 3600_000,
+      })
+    }
     if (audit.duplicates.length > 0) {
       await notifyAlert({
         level: 'critical',
@@ -83,6 +99,8 @@ export async function GET(request: NextRequest) {
       new: audit.newInWindow.length,
       live: audit.subscriptions.length,
       mismatched: audit.mismatched.length,
+      serviceDrift: audit.serviceDrift.length,
+      overGranted: audit.overGranted.length,
       duplicates: audit.duplicates.length,
       webhookOk: audit.webhookOk,
     })

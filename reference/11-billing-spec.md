@@ -156,6 +156,15 @@ if (planTierFromPlanId(planId) !== 'FREE') { ... }
 7. FREE → 有料 の遷移なら Slack 通知（INV-7）
 ```
 
+### 4.1.1 Webhook でのユーザー特定（3段フォールバック）
+
+`customer.subscription.*` は `client_reference_id` を持たないため、ユーザーを自力で引き当てる必要がある。
+`findUserForSubscription()`（`webhook/route.ts`）が唯一の手段。**個別に `findFirst({ stripeCustomerId })` を書かないこと。**
+
+1. `subscription.metadata.userId`（checkout が `subscription_data.metadata` に必ず入れている）
+2. DB の `User.stripeCustomerId`
+3. Stripe 顧客のメール → `User.email`（顧客分裂の救済／INV-6）
+
 ### 4.2 冪等性
 
 - 全経路が **upsert / 絶対値の更新**のみ（インクリメントや差分適用をしない）ので、何度実行しても同じ結果になる。
@@ -190,6 +199,10 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
 | `unpaid` | **FREE** | ダンニングが尽きた終端。ここで落とさないと未入金のまま PRO が残る |
 | `canceled` | **FREE** | 期間終了時の解約 / トライアル終了時に支払方法なし（`missing_payment_method: 'cancel'`） |
 | `incomplete` / `incomplete_expired` | 変更しない | 実際に開始していない。トライアル資格判定でも履歴に数えない |
+
+> **解約イベントで FREE に落とす前に、他に生きている契約が無いことを必ず確認する。**
+> 二重契約の片方を解約したときに、残っている有効な契約を無視して FREE に落とすと
+> 「支払っているのに使えない」状態になる（`handleSubscriptionDeleted()` の残存契約チェック）。
 
 「生きている契約」= **`active` / `trialing` / `past_due`**（`ACTIVE_LIKE`）。
 この集合は `stripe.ts` / `sync/latest` / `billing-audit` の3箇所に定義があるが**必ず同じ内容にすること**。
@@ -250,6 +263,8 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
 | 検出項目 | 条件 | 通知 |
 |---------|------|------|
 | **反映漏れ** | Stripe に生きた契約があるのに DB が `FREE` / ユーザー未登録 | `<!channel>` + `notifyAlert(critical)` |
+| **サービス別プランのズレ** | `User.plan` は有料なのに `ALL_SERVICE_IDS` の行が揃っていない（INV-2 違反） | `<!channel>` + `notifyAlert(critical)` |
+| **過剰付与** | Stripe に生きた契約が無いのに DB が有料のまま（解約の反映漏れ／手動付与） | Slack レポートのみ（運営の手動付与で誤検知しうるため critical にしない） |
 | **二重契約** | 同一メールに生きた契約が2本以上 | 同上 |
 | **Webhook 異常** | 期待URLが未登録 / `enabled` でない / 必須イベント未購読 | 同上（AI修復手順つき） |
 | 新規契約 | 直近24h（月曜は168hも併記） | 通常通知 |
@@ -269,10 +284,10 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
 
 | ID | 内容 | 影響 | 状態 |
 |----|------|------|------|
-| **R-1** | `customer.subscription.updated` / `.deleted` のユーザー特定が `stripeCustomerId` **単独**。顧客分裂（§2.3）で別顧客の契約だと**ユーザーが見つからず解約が反映されない** | 解約したのに PRO のまま | 未対応 |
-| **R-2** | `handleSubscriptionDeleted()` は「他に生きている契約があるか」を確認せずに FREE に落とす | 二重契約の片方を解約した瞬間、残った有効契約があるのに FREE に落ちる | 未対応 |
-| **R-3** | 日次監査の反映漏れ判定は `User.plan` しか見ておらず、`UserServiceSubscription` 行のズレ（INV-2 違反）を検出しない | 障害#5 と同じ状態が再発しても監査が沈黙する | 未対応 |
-| **R-4** | Webhook 受信イベントの記録テーブルが無い | 「Webhook が届いていたか」を事後に検証できない | 未対応 |
+| **R-1** | Webhook のユーザー特定が `stripeCustomerId` **単独**だった。顧客分裂（§2.3）で別顧客の契約だと**ユーザーが見つからず解約が反映されない** | 解約したのに PRO のまま | **対応済**: `findUserForSubscription()` が metadata.userId → customerId → Stripe顧客のメール の3段で解決 |
+| **R-2** | `handleSubscriptionDeleted()` が「他に生きている契約があるか」を確認せずに FREE に落としていた | 二重契約の片方を解約した瞬間、残った有効契約があるのに FREE に落ちる | **対応済**: 残存契約があれば FREE にせず、最上位の契約で再反映する（照会失敗時は従来どおり FREE） |
+| **R-3** | 日次監査の反映漏れ判定が `User.plan` しか見ておらず、`UserServiceSubscription` 行のズレ（INV-2 違反）を検出しなかった | 障害#5 と同じ状態が再発しても監査が沈黙する | **対応済**: `serviceDrift`（INV-2違反）と `overGranted`（過剰付与）を追加 |
+| **R-4** | Webhook 受信イベントの記録テーブルが無い | 「Webhook が届いていたか」を事後に検証できない | 未対応（§4.2 の冪等性で実害は出ていない） |
 | **R-5** | `checkout/route.ts` の `priceMap` は提供終了サービスの planId も解決してしまう（価格が統一なので過剰請求にはならないが契約レコードは残る）。`retiredPlanPrefixes` で入口を塞いでいるだけ | 直POSTで不要な契約レコードが作られる | 緩和済み |
 | **R-6** | `STRIPE_PRICE_*` の個別 env が未設定のため全サービスが banner の価格を共有している。将来サービス別価格を導入すると `getPlanIdFromStripePriceId()` の逆引き結果が変わる | 階層判定は壊れないが、planId 表示が変わる | 設計上の前提 |
 

@@ -267,7 +267,11 @@ src/lib/{service}/           — ユーティリティ・ビジネスロジッ�
 
 ## 課金・トライアルの仕組み（billing — 複数ファイル横断の中核）
 
-料金判定の唯一の真実は `User.plan`。Stripe の状態はここに集約される。billing を触る前に全体像を把握すること。
+料金判定の唯一の真実は `User.plan`。Stripe の状態はここに集約される。
+
+> ⚠️ **課金の正本は `reference/11-billing-spec.md`。billing に触る前に必ず読むこと。**
+> 不変条件（INV-1〜12）・反映4経路・状態遷移・監視・変更時チェックリスト・障害ランブックを集約している。
+> 以下は要約であり、食い違う場合は 11-billing-spec.md が優先。
 
 - **プラン付与フロー**: Checkout → `src/app/api/stripe/webhook/route.ts`（`checkout.session.completed` / `customer.subscription.*`）の `updateUserSubscription()` が `User.plan` と全 `UserServiceSubscription` を同期。決済直後の即時反映は `src/app/api/stripe/sync/route.ts`（成功URLの `session_id` から同期）。**どちらも subscription status ではなく planId で判定**するため `trialing` でも即 PRO。
 - **統一プラン**: 実売は無料 / プロ ¥9,980 の2つ。プロの planId は `UNIFIED_PRO_PLAN_ID = 'banner-pro'`（`src/lib/unified-plan.ts`、`isPaidPlan()` もここが単一ソース）。checkout は `src/app/api/stripe/checkout/route.ts` → `createCheckoutSession()`（`src/lib/stripe.ts`）。
