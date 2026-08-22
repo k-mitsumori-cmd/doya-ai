@@ -166,8 +166,12 @@ model UserServiceSubscription {
   // プラン情報
   plan String @default("FREE") // FREE | PRO | ENTERPRISE
 
-  // Stripe（サービス別サブスク）
-  stripeSubscriptionId   String?   @unique
+  // Stripe（統一課金: 1つの契約を全サービス行が共有する）
+  // ⚠️ かつて @unique が付いていたが、統一プランでは同じ subscriptionId を
+  //    全サービス行に書くため2件目以降が P2002 で失敗し、
+  //    **banner 以外がプロにならない**状態になっていた（webhook側は catch で握り潰し）。
+  //    サービス別サブスクは廃止済みなので一意制約は外す。
+  stripeSubscriptionId   String?
   stripePriceId          String?
   stripeCurrentPeriodEnd DateTime?
 
