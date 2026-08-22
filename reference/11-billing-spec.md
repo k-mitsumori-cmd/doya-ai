@@ -75,7 +75,16 @@ banner, seo, interview, persona, kantan, copy, voice, movie, lp, opening,
 shindan, tenkai, interviewx, logo, video, presentation, adsim, hr, doyaslide
 ```
 
-> **サービスを追加したら必ずこの配列に足す。** 足し忘れると、そのサービスだけ既存契約者が無料のままになる。
+> **サービスを追加したら必ずこの配列に足す。** 足し忘れると、そのサービスの
+> `UserServiceSubscription` 行が作られず、使用量カウンタが回らない。
+>
+> ⚠️ **配列を拡張した直後は、既存契約者に新サービスの行が存在しない。**
+> 日次監査の `serviceDrift`（§8.2）が「行が無い」として全有料利用者を一度に報告する。
+> これは誤検知ではなく実態なので、拡張時は次のどちらかで解消すること。
+> 1. 各利用者が「プランを再同期」を押す（`/api/stripe/sync/latest` が全件 upsert する）
+> 2. 運営が backfill スクリプトを流す（`npx tsx scripts/<name>.ts` で全有料ユーザーに upsert）
+>
+> 権利判定は `User.plan` 単一参照（INV-1）なので、行が無くても**無料に落ちることはない**。
 
 ### 2.3 Stripe 顧客が分裂する理由（重要）
 
@@ -310,7 +319,7 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
 | 検出項目 | 条件 | 通知 |
 |---------|------|------|
 | **反映漏れ** | Stripe に生きた契約があるのに DB が `FREE` / ユーザー未登録 | `<!channel>` + `notifyAlert(critical)` |
-| **サービス別プランのズレ** | `User.plan` は有料なのに `ALL_SERVICE_IDS` の行が揃っていない（INV-2 違反） | `<!channel>` + `notifyAlert(critical)` |
+| **サービス別プランのズレ** | `User.plan` は有料なのに `ALL_SERVICE_IDS` の行が揃っていない（値違い or 行が無い＝INV-2 違反） | `<!channel>` + `notifyAlert(critical)`。dedupKey `billing-service-plan-drift`／12時間クールダウンなので1日1通に集約される |
 | **過剰付与** | Stripe に生きた契約が無いのに DB が有料のまま（解約の反映漏れ／手動付与） | Slack レポートのみ（運営の手動付与で誤検知しうるため critical にしない） |
 | **二重契約** | 同一メールに生きた契約が2本以上 | 同上 |
 | **Webhook 異常** | 期待URLが未登録 / `enabled` でない / 必須イベント未購読 | 同上（AI修復手順つき） |

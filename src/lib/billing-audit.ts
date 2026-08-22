@@ -12,7 +12,13 @@
  *   DB との差分・二重契約・Webhook エンドポイントの存在まで点検して Slack に出す。
  *   Webhook が死んでも、この経路は生き続ける。
  */
-import { stripe, resolvePlanIdFromSubscription, planTierFromPlanId, ALL_SERVICE_IDS } from '@/lib/stripe'
+import {
+  stripe,
+  resolvePlanIdFromSubscription,
+  planTierFromPlanId,
+  ALL_SERVICE_IDS,
+  ACTIVE_LIKE_STATUSES,
+} from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 
 export const BILLING_WEBHOOK_EXPECTED_URL =

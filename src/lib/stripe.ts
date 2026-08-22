@@ -199,11 +199,32 @@ export const STRIPE_PRICE_IDS = {
 // ========================================
 // 全サービスIDリスト（統一課金で更新対象となる全サービス）
 // ========================================
+/**
+ * 「生きている契約」の Stripe status（権利判定の正本）。
+ *
+ * - past_due を含める: 決済リトライ中に締め出すと、カード更新前の正規のお客様が使えなくなる。
+ * - unpaid を含めない: ダンニングが尽きた終端＝未入金。ここで PRO を残すと未払いのまま使える。
+ * - incomplete / incomplete_expired を含めない: カード入力途中の放棄で契約が成立していない。
+ *
+ * ⚠️ 各所で new Set([...]) を書き直さないこと。かつて4箇所にコピーされ、
+ *    /api/stripe/subscription/status だけ unpaid を含む別定義になっていた。
+ * 仕様: reference/11-billing.md §2.3
+ */
+export const ACTIVE_LIKE_STATUSES: ReadonlySet<string> = new Set(['active', 'trialing', 'past_due'])
+
+/**
+ * 統一課金の伝播先サービスID。**`src/lib/services.ts` の SERVICES と揃えること。**
+ * ここに無いサービスは UserServiceSubscription の行が作られず、使用量カウンタも回らない。
+ * （権利判定自体は User.plan 単一参照なので、漏れても無料に落ちることはない）
+ */
 export const ALL_SERVICE_IDS = [
   'banner', 'seo', 'interview', 'persona', 'kantan',
   'copy', 'voice', 'movie', 'lp', 'opening',
   'shindan', 'tenkai', 'interviewx', 'logo', 'video', 'presentation',
   'adsim', 'hr', 'doyaslide',
+  // 以下は services.ts にあるのに伝播先から漏れていたサービス（2026-08 追加）
+  'kintai', 'doyalist', 'cunning', 'promane', 'sfa', 'shodan',
+  'aio', 'adbanner', 'mensetsu', 'quote', 'aishodan', 'adimage',
 ] as const
 
 // ========================================
@@ -246,7 +267,6 @@ export async function findActiveLikeSubscriptions(params: {
   email?: string | null
   stripeCustomerId?: string | null
 }): Promise<Array<{ id: string; status: string; customerId: string; priceId: string | null; planId: string }>> {
-  const ACTIVE_LIKE = new Set(['active', 'trialing', 'past_due'])
   const customerIds = new Set<string>()
   if (params.stripeCustomerId) customerIds.add(params.stripeCustomerId)
   if (params.email) {
@@ -258,7 +278,7 @@ export async function findActiveLikeSubscriptions(params: {
   for (const cid of customerIds) {
     const subs = await stripe.subscriptions.list({ customer: cid, status: 'all', limit: 100 })
     for (const s of subs.data) {
-      if (!ACTIVE_LIKE.has(String(s.status))) continue
+      if (!ACTIVE_LIKE_STATUSES.has(String(s.status))) continue
       const { planId, priceId } = resolvePlanIdFromSubscription(s as any)
       out.push({ id: s.id, status: String(s.status), customerId: cid, priceId, planId })
     }
