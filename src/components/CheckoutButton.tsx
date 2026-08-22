@@ -56,6 +56,17 @@ export function CheckoutButton({
       const data = await response.json()
 
       if (!response.ok) {
+        // すでに契約が有効: 二重課金を防ぐためサーバが決済を中断した。
+        // その場でプランを再同期し、画面を最新化して終わる（利用者に不安を残さない）。
+        if (data?.code === 'ALREADY_SUBSCRIBED') {
+          toast.loading('ご契約を確認しました。プランを反映しています…', { id: 'already-subscribed' })
+          try {
+            await fetch('/api/stripe/sync/latest', { method: 'POST' })
+          } catch {}
+          toast.success('すでにご契約済みです。プランを反映しました', { id: 'already-subscribed' })
+          window.location.reload()
+          return
+        }
         // 代表的な設定ミス（Stripeのtest/live不一致）は分かりやすい文言で出す
         if (data?.code === 'STRIPE_MODE_MISMATCH') {
           throw new Error(data.error || '決済設定（Stripeのモード）が一致していません。管理者にお問い合わせください。')

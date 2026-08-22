@@ -216,6 +216,67 @@ export function getServiceIdFromPlanId(planId: PlanId): ServiceId {
   return (planId.split('-')[0] as ServiceId) || 'bundle'
 }
 
+/**
+ * planId（'banner-pro' 等）→ ユーザーのプラン階層。
+ *
+ * ⚠️ 統一課金では全サービスが**同じ Stripe 価格ID**を共有するため、
+ *    `getPlanIdFromStripePriceId()` は価格から見て最初に一致した planId
+ *    （例: banner-pro の価格でも 'seo-pro'）を返す。よって
+ *    **planId の接頭辞（サービス名）で契約を絞り込んではいけない**。
+ *    判定に使ってよいのは末尾の階層（-pro/-light/-enterprise）だけ。
+ *    ここを間違えて 'banner-' で絞り込んでいたため、プロ契約者の
+ *    再同期が常に 404 になっていた（2026-08 障害）。
+ */
+export function planTierFromPlanId(planId: string | null | undefined): 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE' | 'BUNDLE' {
+  const id = String(planId || '')
+  if (!id) return 'FREE'
+  if (id === 'bundle') return 'BUNDLE'
+  if (id.endsWith('-enterprise')) return 'ENTERPRISE'
+  if (id.endsWith('-light') || id.endsWith('-starter')) return 'LIGHT'
+  // -pro / banner-basic / banner-business など有料の既定は PRO
+  return 'PRO'
+}
+
+/**
+ * そのメール／顧客に紐づく「生きている」サブスクリプションを全部返す。
+ * checkout は customer_email で都度 Customer を作るため顧客が分裂しうるので、
+ * 必ずメール横断で見る。二重契約ガードと再同期・監査で共用する。
+ */
+export async function findActiveLikeSubscriptions(params: {
+  email?: string | null
+  stripeCustomerId?: string | null
+}): Promise<Array<{ id: string; status: string; customerId: string; priceId: string | null; planId: string }>> {
+  const ACTIVE_LIKE = new Set(['active', 'trialing', 'past_due'])
+  const customerIds = new Set<string>()
+  if (params.stripeCustomerId) customerIds.add(params.stripeCustomerId)
+  if (params.email) {
+    const customers = await stripe.customers.list({ email: params.email, limit: 100 })
+    for (const c of customers.data) customerIds.add(c.id)
+  }
+
+  const out: Array<{ id: string; status: string; customerId: string; priceId: string | null; planId: string }> = []
+  for (const cid of customerIds) {
+    const subs = await stripe.subscriptions.list({ customer: cid, status: 'all', limit: 100 })
+    for (const s of subs.data) {
+      if (!ACTIVE_LIKE.has(String(s.status))) continue
+      const { planId, priceId } = resolvePlanIdFromSubscription(s as any)
+      out.push({ id: s.id, status: String(s.status), customerId: cid, priceId, planId })
+    }
+  }
+  return out
+}
+
+/** サブスクリプションから planId を解決する（metadata優先＝checkoutが実際に要求した値） */
+export function resolvePlanIdFromSubscription(subscription: {
+  metadata?: Record<string, string> | null
+  items: { data: Array<{ price: { id: string } }> }
+}): { planId: string; priceId: string | null } {
+  const priceId = subscription.items.data[0]?.price.id || null
+  const fromMeta = subscription.metadata?.planId || null
+  const fromPrice = getPlanIdFromStripePriceId(priceId)
+  return { planId: String(fromMeta || fromPrice || ''), priceId }
+}
+
 export function getPlanIdFromStripePriceId(priceId: string | null | undefined): PlanId | null {
   if (!priceId) return null
   const entries: Array<[PlanId, { monthly: string; yearly: string }]> = [

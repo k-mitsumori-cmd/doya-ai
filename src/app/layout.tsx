@@ -7,6 +7,7 @@ import { SITE_CONFIG, SERVICE_SEO, generateOrganizationSchema, generateWebSiteSc
 import { GoogleTagManager, GoogleTagManagerNoScript } from '@/components/GoogleTagManager'
 import { GoogleAnalytics } from '@/components/GoogleAnalytics'
 import LogoutToastListener from '@/components/LogoutToastListener'
+import StripeSuccessSync from '@/components/StripeSuccessSync'
 
 // ============================================
 // ルートメタデータ（ポータル全体）
@@ -175,6 +176,8 @@ export default function RootLayout({
           {/* GA4（ドヤマーケと同一プロパティ）: PV計測 + sign_up/purchaseイベント */}
           <GoogleAnalytics />
           <LogoutToastListener />
+          {/* Stripe決済からの戻りを全サービス共通で検知してプランを即時反映（Webhook不達の保険） */}
+          <StripeSuccessSync />
           <Toaster
             position="top-center"
             toastOptions={{

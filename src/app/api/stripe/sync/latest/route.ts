@@ -2,25 +2,29 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { stripe, getPlanIdFromStripePriceId, getServiceIdFromPlanId } from '@/lib/stripe'
+import {
+  stripe,
+  resolvePlanIdFromSubscription,
+  planTierFromPlanId,
+  ALL_SERVICE_IDS,
+} from '@/lib/stripe'
+import { sendEventNotification } from '@/lib/notifications'
 
 // ========================================
 // Stripe再同期（session_id が無い/リダイレクト未経由の救済）
 // ========================================
 // POST /api/stripe/sync/latest
-// - ユーザーemailからStripe Customerを特定（DBのstripeCustomerId優先）
-// - アクティブ系サブスクを取得して、最も上位のbannerプランをDBへ反映
+// - ユーザーemailからStripe Customerを特定（DBのstripeCustomerId優先・メール横断）
+// - アクティブ系サブスクを取得して、最上位プランを**全サービス**へ反映（統一課金）
+//
+// ⚠️ 以前はここで planId が 'banner-' で始まる契約だけを拾っていたが、統一課金では
+//    全サービスが同じ価格IDを共有するため価格→planId の逆引きが 'seo-pro' を返し、
+//    プロ契約者が1人も一致せず常に 404 を返していた（＝「プラン再同期」ボタンが無効）。
+//    サービスを問わず階層（PRO/LIGHT/ENTERPRISE）だけで判定する。
 
-const ACTIVE_LIKE = new Set(['active', 'trialing', 'past_due', 'unpaid'])
+const ACTIVE_LIKE = new Set(['active', 'trialing', 'past_due'])
 
-function pickBestBannerPlan(planIds: Array<string | null | undefined>) {
-  const ids = planIds.filter(Boolean).map(String)
-  if (ids.some((p) => p === 'banner-enterprise')) return 'banner-enterprise'
-  if (ids.some((p) => p === 'banner-pro')) return 'banner-pro'
-  if (ids.some((p) => p === 'banner-basic' || p === 'banner-starter' || p === 'banner-business')) return 'banner-basic'
-  if (ids.some((p) => p === 'banner-light')) return 'banner-light'
-  return null
-}
+const TIER_RANK: Record<string, number> = { FREE: 0, LIGHT: 1, PRO: 2, BUNDLE: 3, ENTERPRISE: 4 }
 
 export async function POST(_req: NextRequest) {
   try {
@@ -33,43 +37,52 @@ export async function POST(_req: NextRequest) {
     })
     if (!user?.id || !user.email) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-    // Customer特定（DB優先 → Stripe検索）
-    let customerId = user.stripeCustomerId || null
-    if (!customerId) {
-      const customers = await stripe.customers.list({ email: user.email, limit: 10 })
-      const c = customers.data?.[0]
-      customerId = c?.id || null
-    }
-    if (!customerId) {
+    // Customer特定（DB優先 → メール横断で全顧客）
+    // checkout は customer_email で都度 Customer を作るため、同一メールで顧客が分裂しうる。
+    // 1件だけ見ると「契約はあるのに見つからない」が起きるので全部見る。
+    const customerIds = new Set<string>()
+    if (user.stripeCustomerId) customerIds.add(user.stripeCustomerId)
+    const listed = await stripe.customers.list({ email: user.email, limit: 100 })
+    for (const c of listed.data) customerIds.add(c.id)
+    if (customerIds.size === 0) {
       return NextResponse.json({ error: 'Stripe customer not found' }, { status: 404 })
     }
 
-    // サブスク取得（all→フィルタ）
-    const subs = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 20 })
-    const activeSubs = subs.data.filter((s) => ACTIVE_LIKE.has(String(s.status)))
-
-    // bannerの候補を抽出
-    const candidates = activeSubs
-      .map((s) => {
-        const priceId = s.items.data[0]?.price.id || null
-        const planIdFromPrice = getPlanIdFromStripePriceId(priceId)
-        const planIdFromMeta = (s.metadata?.planId as any) || null
-        const planId = (planIdFromPrice || planIdFromMeta) as any
-        return { subscription: s, priceId, planId }
-      })
-      .filter((x) => typeof x.planId === 'string' && String(x.planId).startsWith('banner-'))
-
-    const bestPlanId = pickBestBannerPlan(candidates.map((c) => c.planId))
-    if (!bestPlanId) {
-      return NextResponse.json({ error: 'No active banner subscription found' }, { status: 404 })
+    // 全顧客のアクティブ系サブスクを集める
+    const candidates: Array<{
+      subscription: Awaited<ReturnType<typeof stripe.subscriptions.retrieve>>
+      priceId: string | null
+      planId: string
+      tier: string
+      customerId: string
+    }> = []
+    for (const cid of customerIds) {
+      const subs = await stripe.subscriptions.list({ customer: cid, status: 'all', limit: 100 })
+      for (const s of subs.data) {
+        if (!ACTIVE_LIKE.has(String(s.status))) continue
+        const { planId, priceId } = resolvePlanIdFromSubscription(s as any)
+        const tier = planTierFromPlanId(planId)
+        if (tier === 'FREE') continue
+        candidates.push({ subscription: s as any, priceId, planId, tier, customerId: cid })
+      }
     }
 
-    // bestPlanId に一致するsubscriptionを選ぶ（なければ先頭）
-    const best = candidates.find((c) => c.planId === bestPlanId) || candidates[0]
+    if (candidates.length === 0) {
+      return NextResponse.json({ error: 'No active subscription found' }, { status: 404 })
+    }
+
+    // 最上位の階層を採用
+    candidates.sort((a, b) => (TIER_RANK[b.tier] ?? 0) - (TIER_RANK[a.tier] ?? 0))
+    const best = candidates[0]!
     const subscription = best.subscription
     const priceId = best.priceId
+    const bestPlanId = best.planId
+    const customerId = best.customerId
+    const userPlan = best.tier === 'BUNDLE' ? 'PRO' : best.tier
 
     // DBへ反映
+    const before = await prisma.user.findUnique({ where: { id: user.id }, select: { plan: true, name: true } })
+
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -77,31 +90,45 @@ export async function POST(_req: NextRequest) {
         stripeSubscriptionId: subscription.id,
         stripePriceId: priceId || undefined,
         stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-        plan: bestPlanId === 'banner-enterprise' ? 'ENTERPRISE' : bestPlanId === 'banner-light' ? 'LIGHT' : 'PRO',
+        plan: userPlan,
       },
     })
 
-    const serviceId = getServiceIdFromPlanId(bestPlanId as any)
-    await prisma.userServiceSubscription.upsert({
-      where: { userId_serviceId: { userId: user.id, serviceId } },
-      create: {
-        userId: user.id,
-        serviceId,
-        plan: bestPlanId === 'banner-enterprise' ? 'ENTERPRISE' : bestPlanId === 'banner-light' ? 'LIGHT' : 'PRO',
-        stripeSubscriptionId: subscription.id,
-        stripePriceId: priceId || undefined,
-        stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-        dailyUsage: 0,
-        monthlyUsage: 0,
-        lastUsageReset: new Date(),
-      },
-      update: {
-        plan: bestPlanId === 'banner-enterprise' ? 'ENTERPRISE' : bestPlanId === 'banner-light' ? 'LIGHT' : 'PRO',
-        stripeSubscriptionId: subscription.id,
-        stripePriceId: priceId || undefined,
-        stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-      },
-    })
+    // 統一課金: 全サービスを同じプランに揃える
+    for (const serviceId of ALL_SERVICE_IDS) {
+      await prisma.userServiceSubscription.upsert({
+        where: { userId_serviceId: { userId: user.id, serviceId } },
+        create: {
+          userId: user.id,
+          serviceId,
+          plan: userPlan,
+          stripeSubscriptionId: subscription.id,
+          stripePriceId: priceId || undefined,
+          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+          dailyUsage: 0,
+          monthlyUsage: 0,
+          lastUsageReset: new Date(),
+        },
+        update: {
+          plan: userPlan,
+          stripeSubscriptionId: subscription.id,
+          stripePriceId: priceId || undefined,
+          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+        },
+      }).catch((e: any) => {
+        console.error(`[Stripe Sync latest] upsert failed: user=${user.id} service=${serviceId}`, e?.message)
+      })
+    }
+
+    // Webhook不達でも運営が気づけるよう、ここでも課金通知を出す（FREE→有料の遷移時のみ）
+    if (before?.plan === 'FREE' && userPlan !== 'FREE') {
+      sendEventNotification({
+        type: 'subscription',
+        userEmail: user.email,
+        userName: before?.name,
+        details: `手動再同期でプラン反映（${bestPlanId} / ${subscription.status} / sub: ${subscription.id}）※Webhook不達の可能性あり`,
+      }).catch(() => {})
+    }
 
     return NextResponse.json({
       ok: true,

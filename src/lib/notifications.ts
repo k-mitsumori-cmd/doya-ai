@@ -134,6 +134,11 @@ async function postToSlack(text: string): Promise<void> {
   await postSlackPayload({ text })
 }
 
+/** プレーンテキストで運用チャンネルに投稿する（課金監査レポート等） */
+export async function postPlainToSlack(text: string): Promise<void> {
+  await postToSlack(text)
+}
+
 /**
  * Block Kit 形式で投稿する。
  * `text` は通知バナー／未対応クライアント向けのフォールバックなので必ず渡すこと。

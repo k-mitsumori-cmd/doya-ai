@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { stripe, getPlanIdFromStripePriceId, ALL_SERVICE_IDS } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
+import { sendEventNotification } from '@/lib/notifications'
 
 // ========================================
 // Stripe決済直後の同期（Webhook遅延/不達の保険）
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, email: true, stripeCustomerId: true },
+      select: { id: true, email: true, name: true, plan: true, stripeCustomerId: true },
     })
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
@@ -120,6 +121,17 @@ export async function POST(request: NextRequest) {
       }).catch((e: any) => {
         console.error(`[Stripe Sync] Failed to upsert service subscription: user=${user.id} service=${serviceId}`, e?.message)
       })
+    }
+
+    // 課金通知は Webhook ハンドラにしか無く、Webhook が不達だと運営が誰も気づけない。
+    // 決済直後の同期経路からも通知する（FREE→有料の遷移時のみ）。
+    if (user.plan === 'FREE' && userPlan !== 'FREE') {
+      sendEventNotification({
+        type: 'subscription',
+        userEmail: user.email,
+        userName: user.name,
+        details: `決済直後の同期でプラン反映（${planId || 'unknown'} / ${subscription.status} / sub: ${subscription.id}）`,
+      }).catch(() => {})
     }
 
     return NextResponse.json({

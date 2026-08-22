@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { createCheckoutSession, STRIPE_PRICE_IDS } from '@/lib/stripe'
+import { createCheckoutSession, STRIPE_PRICE_IDS, findActiveLikeSubscriptions } from '@/lib/stripe'
 import { UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
 import { isTrialEligible } from '@/lib/trial'
 import { prisma } from '@/lib/prisma'
@@ -76,6 +76,36 @@ export async function POST(request: NextRequest) {
         { error: '無効なプランIDです' },
         { status: 400 }
       )
+    }
+
+    // ------------------------------------------------------------------
+    // 二重契約ガード
+    // ------------------------------------------------------------------
+    // 反映が見えないと利用者は「申し込めていない」と思ってもう一度申し込む。
+    // その2回目は「既存契約あり」と判定されてトライアルが付かず**即時に満額課金**される。
+    // （2026-08 に実際に発生: 2分差で trialing と active の2契約・¥9,980 の誤課金）
+    // 生きている契約がある場合は決済させず、409 で呼び出し側に再同期させる。
+    try {
+      const existing = await findActiveLikeSubscriptions({
+        email: session.user.email,
+        stripeCustomerId: dbUser.stripeCustomerId,
+      })
+      if (existing.length > 0) {
+        const s = existing[0]!
+        return NextResponse.json(
+          {
+            code: 'ALREADY_SUBSCRIBED',
+            error:
+              'すでにご契約が有効です。二重のご請求を防ぐため決済を中断しました。プランの反映が見えない場合は画面を再読み込みしてください。',
+            status: s.status,
+            subscriptionId: s.id,
+          },
+          { status: 409 }
+        )
+      }
+    } catch (e: any) {
+      // 照会失敗で決済を止めない（機会損失を作らない）。二重契約の検知は日次監査で拾う。
+      console.error('[Checkout] duplicate-subscription check failed:', e?.message)
     }
 
     // ベースURL（環境変数が未設定でも現ドメインで成立させる）
