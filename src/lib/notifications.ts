@@ -185,6 +185,27 @@ const EVENT_LABEL: Record<EventType, string> = {
   payment_failed: '支払い失敗',
 }
 
+/**
+ * 全員を呼び出す（@channel）べきイベント。
+ *
+ * ⚠️ かつては**すべての通知**が @channel だった。ログイン1件ごとに全員が
+ *    呼ばれるため通知が日常の背景音になり、本当に見てほしい異常
+ *    （課金の反映漏れ・Webhook停止）が埋もれて2か月気づかれなかった。
+ *    人を呼ぶのは「今すぐ人が動かないと損が出る」ものだけに絞る。
+ *      - payment_failed … 入金できていない。放置すると解約に至る
+ *      - cancellation   … 解約。理由を追う必要がある
+ *    入金や申し込みは「良い知らせ」で、見逃しても損が出ないので呼ばない。
+ */
+const CHANNEL_PING: Record<EventType, boolean> = {
+  signup: false,
+  login: false,
+  trial_start: false,
+  subscription: false,
+  payment: false,
+  cancellation: true,
+  payment_failed: true,
+}
+
 export async function sendEventNotification(event: {
   type: EventType
   userEmail?: string | null
@@ -198,7 +219,7 @@ export async function sendEventNotification(event: {
     const who = event.userName || event.userEmail || '不明'
 
     const lines = [
-      `<!channel>`,
+      ...(CHANNEL_PING[event.type] ? ['<!channel>'] : []),
       `${emoji} *[${label}]* ${now}`,
       `- ユーザー: ${who}${event.userEmail ? ` (${event.userEmail})` : ''}`,
     ]
@@ -366,7 +387,6 @@ export async function sendDailySummary(): Promise<void> {
   const serviceLines = formatServiceUsageLines(serviceStats)
 
   const lines = [
-    `<!channel>`,
     `📊 *[日次レポート]* ${dateStr}`,
     ``,
     greeting,
@@ -462,7 +482,6 @@ export async function sendWeeklySummary(): Promise<void> {
   const greeting = getWeeklyGreeting(weekNewUsers.length, weekGenerations, paidUsersList.length)
 
   const lines = [
-    `<!channel>`,
     `📅 *[週次レポート]* ${weekStr}`,
     ``,
     greeting,
@@ -560,7 +579,6 @@ export async function sendMonthlySummary(): Promise<void> {
   const greeting = getMonthlyGreeting(monthNewUsers.length, monthGenerations, paidUsersList.length)
 
   const lines = [
-    `<!channel>`,
     `📆 *[月次レポート]* ${lastMonthName}`,
     ``,
     greeting,
