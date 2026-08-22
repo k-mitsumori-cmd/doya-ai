@@ -325,7 +325,7 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
         `・${s.email || s.customerId} ｜ Stripe: ${s.tier}(${s.status}) ｜ DB: ${s.dbUserFound ? s.dbPlan : 'ユーザー未登録'} ｜ sub: ${s.id}`
       )
     }
-    lines.push('・対処: 本人が /banner/dashboard/plan の「プランを再同期」を押すか、運営で反映してください。')
+    lines.push('・対処: 本人にいずれかの料金ページ（例 /pricing）で「課金状態を確認してプランを反映する」を押してもらうか、運営で反映してください。')
   }
 
   if (audit.duplicates.length > 0) {
@@ -342,7 +342,7 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
     for (const d of audit.serviceDrift) {
       lines.push(`・${d.email || '不明'} ｜ User.plan=${d.userPlan}（期待 ${d.expected}）｜ 未反映: ${d.broken.join(', ')}`)
     }
-    lines.push('・対処: 本人に「プランを再同期」を押してもらうか、運営で全サービス行を反映してください。')
+    lines.push('・対処: 本人に料金ページの「課金状態を確認してプランを反映する」を押してもらうか、運営で全サービス行を反映してください。')
   }
 
   if (audit.overGranted.length > 0) {

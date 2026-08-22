@@ -1,6 +1,8 @@
 'use client'
 
 import type { CSSProperties } from 'react'
+import { useState } from 'react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import { usePathname } from 'next/navigation'
@@ -40,6 +42,14 @@ export function UnifiedPricingPlans({
   const returnTo = pathname || `/${serviceId}/pricing`
   const trialEligible = useTrialEligible()
 
+  // 決済済みなのに反映されていない方の自己回復。押しても二重課金にはならない
+  // （/api/stripe/sync/latest は Stripe を読んで DB に写すだけ）。
+  // ⚠️ 未ログインの初回訪問者に出すと「反映？何のこと？」となるので、
+  //    ログイン済みかつ無料プランの方にだけ見せる。
+  const { status: authStatus } = useSession()
+  const [resyncing, setResyncing] = useState(false)
+  const [resyncMessage, setResyncMessage] = useState<string | null>(null)
+
   const svc = getServiceById(serviceId)
   if (!svc) return null
 
@@ -48,6 +58,31 @@ export function UnifiedPricingPlans({
   const features = svc.features || []
   const plan = (currentPlan || '').toUpperCase()
   const isPro = plan === 'PRO' || plan === 'BUNDLE' || plan === 'ENTERPRISE'
+
+  const resyncPlan = async () => {
+    setResyncing(true)
+    setResyncMessage(null)
+    try {
+      const res = await fetch('/api/stripe/sync/latest', { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setResyncMessage(
+          res.status === 401
+            ? 'ログインしてからお試しください。'
+            : res.status === 404
+              ? '有効なご契約が見つかりませんでした。お心当たりがある場合はお問い合わせください。'
+              : data?.error || '反映できませんでした。お手数ですがお問い合わせください。'
+        )
+        return
+      }
+      setResyncMessage('プランを反映しました。画面を更新します。')
+      window.location.reload()
+    } catch {
+      setResyncMessage('反映できませんでした。お手数ですがお問い合わせください。')
+    } finally {
+      setResyncing(false)
+    }
+  }
   const isFree = !isPro && plan === 'FREE'
 
   // 「使い放題」の価値づけ：全公開サービスの単体プロ料金の合計（＝個別契約したら相当）
@@ -216,6 +251,31 @@ export function UnifiedPricingPlans({
           </a>
         </div>
       </div>
+
+      {/* ===== 決済済みなのに反映されない時の救済 =====
+          ⚠️ この導線はかつて /banner/dashboard/plan にしか無かった。統一プランは
+             どのサービスからでも契約できるのに、救済はバナー専用画面にしか無く、
+             他サービスから契約した方は自力で直せなかった（2026-08）。
+             料金表は全サービスに出るので、ここに置けば必ず届く。 */}
+      {authStatus === 'authenticated' && !isPro && (
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={resyncPlan}
+            disabled={resyncing}
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-300 bg-white px-5 py-2.5 text-xs font-black text-slate-700 transition hover:border-slate-400 hover:bg-slate-50 disabled:opacity-60"
+          >
+            {resyncing ? '確認しています…' : '課金状態を確認してプランを反映する'}
+          </button>
+          <p className="mx-auto mt-2 max-w-md text-[11px] font-bold leading-relaxed text-slate-400">
+            お支払い済みなのにプランが切り替わらない場合のみ押してください。
+            重複してお申し込みいただく必要はありません。
+          </p>
+          {resyncMessage && (
+            <p className="mt-2 text-xs font-bold text-slate-600">{resyncMessage}</p>
+          )}
+        </div>
+      )}
 
       {/* プラン管理・解約 */}
       <div className="mt-4 text-center">

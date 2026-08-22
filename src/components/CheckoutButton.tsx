@@ -28,6 +28,13 @@ export function CheckoutButton({
   const [isLoading, setIsLoading] = useState(false)
 
   const handleCheckout = async () => {
+    // 今いる画面から「どのサービスから申し込んだか」を決める。
+    // ⚠️ planId から推測してはいけない。統一プランでは全サービスが 'banner-pro' を
+    //    使うため、planId 由来だと必ず banner になってしまう。
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : ''
+    const firstSegment = currentPath.split('/').filter(Boolean)[0] || ''
+    const originService = firstSegment && firstSegment !== 'pricing' ? firstSegment : planId.split('-')[0]
+
     // 未ログインの場合はログインページへ
     if (status === 'unauthenticated') {
       const service = planId.split('-')[0]
@@ -50,6 +57,11 @@ export function CheckoutButton({
         body: JSON.stringify({
           planId,
           billingPeriod,
+          // ⚠️ 統一プランでは全サービスが同じ planId('banner-pro') を使うため、
+          //    planId から戻り先を推測すると**どのサービスから申し込んでも
+          //    ドヤバナーAIに飛ばされる**。今いる画面を渡して元の場所へ戻す。
+          returnTo: currentPath || undefined,
+          serviceId: originService,
         }),
       })
 

@@ -6,6 +6,16 @@ import { UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
 import { isTrialEligible } from '@/lib/trial'
 import { prisma } from '@/lib/prisma'
 
+/** 同一オリジン内のパスだけを戻り先として許可する（オープンリダイレクト防止） */
+function safeReturnPath(raw: unknown): string | null {
+  const v = String(raw || '').trim()
+  if (!v) return null
+  if (!v.startsWith('/')) return null
+  if (v.startsWith('//')) return null
+  // クエリやハッシュは落とす（success/session_id を後から付けるため）
+  return v.split('?')[0]!.split('#')[0]! || null
+}
+
 function getStripeKeyMode(): 'test' | 'live' | 'unknown' {
   const key = String(process.env.STRIPE_SECRET_KEY || '').trim()
   if (key.startsWith('sk_test_')) return 'test'
@@ -41,6 +51,8 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const { planId, billingPeriod = 'monthly' } = body
+    const requestedReturnTo = safeReturnPath(body?.returnTo)
+    const requestedServiceId = String(body?.serviceId || '').replace(/[^a-z0-9-]/gi, '').slice(0, 40)
 
     // セッションの user.id が欠ける/揺れる環境でも確実に userId を取得する
     const dbUser = await prisma.user.findUnique({
@@ -113,9 +125,15 @@ export async function POST(request: NextRequest) {
       .trim()
       .replace(/\/+$/, '')
     
-    // サービスに応じたリダイレクトURL
-    const service = planId.split('-')[0] // 'seo-pro' -> 'seo'
-    const successPath =
+    // ------------------------------------------------------------------
+    // 決済後の戻り先
+    // ------------------------------------------------------------------
+    // ⚠️ 以前は planId から推測していた（'seo-pro' → /seo）。統一プランでは
+    //    全サービスが同じ planId('banner-pro') を使うため、**どのサービスから
+    //    申し込んでも ドヤバナーAI に飛ばされる**状態だった。
+    //    呼び出し元が渡してきた画面（同一オリジンのパスのみ）へ戻す。
+    const service = requestedServiceId || planId.split('-')[0]
+    const fallbackPath =
       service === 'seo'
         ? '/seo'
         : service === 'banner'
@@ -123,14 +141,8 @@ export async function POST(request: NextRequest) {
           : service === 'interview'
             ? '/interview/projects'
             : '/'
-    const cancelPath =
-      service === 'seo'
-        ? '/seo/pricing?payment=cancelled'
-        : service === 'banner'
-          ? '/banner?payment=cancelled'
-          : service === 'interview'
-            ? '/interview/projects?payment=cancelled'
-            : '/pricing?payment=cancelled'
+    const successPath = requestedReturnTo || fallbackPath
+    const cancelPath = `${requestedReturnTo || (service === 'seo' ? '/seo/pricing' : service === 'banner' ? '/banner' : service === 'interview' ? '/interview/projects' : '/pricing')}?payment=cancelled`
 
     // 成功URLにプラン情報/Checkout Session IDを追加（決済直後にアプリ側で同期して即反映させる）
     // NOTE: {CHECKOUT_SESSION_ID} はStripeが自動で実IDに置換する
