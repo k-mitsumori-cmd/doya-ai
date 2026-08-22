@@ -131,6 +131,53 @@ if (planTierFromPlanId(planId) !== 'FREE') { ... }
 | `*-light` / `*-starter` | `LIGHT` |
 | 上記以外の有料（`*-pro` / `banner-basic` / `banner-business`） | `PRO` |
 
+### 3.4 tier 正規化の入口（ここ以外に階層判定を書かない）
+
+過去の販売形態の名残で、DB・セッション・Stripe には複数のプラン文字列が混在する
+（`PRO` / `BASIC` / `STARTER` / `BUSINESS` / `BUNDLE` / `banner-pro` / `hr-starter` …）。
+正規化の入口は**用途別に2つだけ**。
+
+| 関数 | 入力 | 用途 |
+|------|------|------|
+| `planTierFromPlanId(planId)`（`src/lib/stripe.ts`） | **Stripe 由来の planId**（`banner-pro` 等） | 契約 → 階層。反映4経路と監査はすべてこれ（INV-4） |
+| `tierFrom(raw)`（`src/lib/plan-utils.ts`） | **DB / セッションのプラン文字列** | 表示・上限判定 |
+
+有料か否かの一行判定は `isPaidPlan(plan)`（`src/lib/unified-plan.ts`）。`FREE` と `GUEST` 以外が有料。
+
+> ⚠️ **罠: `src/lib/plan-utils.ts` の `tierFromPlanId()` を使ってはいけない。**
+> 利用箇所0の死にコードだが、`*-starter` を **PRO** と判定し（`planTierFromPlanId` は LIGHT）、
+> `bundle` も扱わない。名前が紛らわしいので、planId から階層を出すときは
+> **必ず `stripe.ts` の `planTierFromPlanId()`** を import すること。
+
+---
+
+### 3.5 権利判定（どこを見て「有料」と判断するか）
+
+#### サーバー側
+
+```
+User.plan → isPaidPlan() / 各サービスの上限テーブル
+```
+
+**これ以外を一次ソースにしない**（INV-1）。
+
+#### セッション（NextAuth）側
+
+`src/lib/auth.ts` の `session()` コールバックが毎回 DB から読み、`session.user` に載せる。
+
+- `session.user.plan` — `User.plan`（正）
+- `session.user.bannerPlan` / `seoPlan` / `kantanPlan` / `interviewPlan` / `openingPlan`
+  — `UserServiceSubscription` の行から作る**派生値**
+
+> ⚠️ **これらの派生値は `User.plan` との上位採用にすること（R-7）。**
+> 消費側は `user.seoPlan || user.plan` の形で書かれており **`'FREE'` は truthy** なので、
+> サービス行が古い `FREE` のままだと `User.plan` が PRO でもそのサービスだけ無料に落ちる。
+> INV-2 が破れた瞬間に権利が消える構造になっている。
+
+#### クライアント側
+
+`useSession()` の値は**表示にだけ**使う。上限の強制は必ずサーバーで行う。
+
 ---
 
 ## 4. 書き込み経路（4系統・すべて同じ結果になること）
@@ -288,6 +335,8 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
 | **R-2** | `handleSubscriptionDeleted()` が「他に生きている契約があるか」を確認せずに FREE に落としていた | 二重契約の片方を解約した瞬間、残った有効契約があるのに FREE に落ちる | **対応済**: 残存契約があれば FREE にせず、最上位の契約で再反映する（照会失敗時は従来どおり FREE） |
 | **R-3** | 日次監査の反映漏れ判定が `User.plan` しか見ておらず、`UserServiceSubscription` 行のズレ（INV-2 違反）を検出しなかった | 障害#5 と同じ状態が再発しても監査が沈黙する | **対応済**: `serviceDrift`（INV-2違反）と `overGranted`（過剰付与）を追加 |
 | **R-4** | Webhook 受信イベントの記録テーブルが無い | 「Webhook が届いていたか」を事後に検証できない | 未対応（§4.2 の冪等性で実害は出ていない） |
+| **R-7** | セッションのサービス別プラン（`seoPlan` 等）が `UserServiceSubscription` の行だけから作られており、`User.plan` との上位採用になっていない。消費側が `x || plan` 形式で `'FREE'` が truthy なため、行が古いとそのサービスだけ無料に落ちる | INV-2 が破れると権利が消える | 未対応（`src/lib/auth.ts` の `session()` で `User.plan` との上位採用にする） |
+| **R-8** | `src/lib/plan-utils.ts` の `tierFromPlanId()` が `planTierFromPlanId()` と食い違う（`*-starter`→PRO / `bundle` 未対応）。現在は利用箇所0 | 誤って使うと階層判定が壊れる | 未対応（§3.4 で使用禁止を明記。削除が望ましい） |
 | **R-5** | `checkout/route.ts` の `priceMap` は提供終了サービスの planId も解決してしまう（価格が統一なので過剰請求にはならないが契約レコードは残る）。`retiredPlanPrefixes` で入口を塞いでいるだけ | 直POSTで不要な契約レコードが作られる | 緩和済み |
 | **R-6** | `STRIPE_PRICE_*` の個別 env が未設定のため全サービスが banner の価格を共有している。将来サービス別価格を導入すると `getPlanIdFromStripePriceId()` の逆引き結果が変わる | 階層判定は壊れないが、planId 表示が変わる | 設計上の前提 |
 
@@ -404,3 +453,26 @@ curl -s -H "Authorization: Bearer $CRON_SECRET" \
 | `src/app/layout.tsx` | `<StripeSuccessSync />` の設置場所（INV-8） |
 | `prisma/schema.prisma` | `User` / `UserServiceSubscription` |
 | `vercel.json` | `cron: /api/cron/billing-audit`（`0 23 * * *` = JST 8:00） |
+
+---
+
+## 14. 環境変数
+
+| 変数 | 用途 |
+|------|------|
+| `STRIPE_SECRET_KEY` | Stripe API キー（`sk_live_` / `sk_test_`） |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Checkout 用の公開鍵。**secret と同じモードに揃える** |
+| `STRIPE_WEBHOOK_SECRET` | Webhook 署名検証。**Webhook を再作成したら必ず更新＋再デプロイ** |
+| `STRIPE_PRICE_BANNER_PRO_MONTHLY` | **統一プロプランの実価格**。他サービスの `STRIPE_PRICE_*_PRO_MONTHLY` はこれにフォールバックする（§3.2） |
+| `STRIPE_PRICE_BANNER_LIGHT_MONTHLY` / `STRIPE_PRICE_BANNER_ENTERPRISE_MONTHLY` | 旧ライト / エンタープライズ |
+| `STRIPE_PORTAL_CONFIGURATION_ID` | カスタマーポータル設定。未設定なら metadata `app=doya-ai` の設定を再利用/作成 |
+| `STRIPE_PRODUCT_BANNER_ID` | ポータルのプラン変更候補を絞る商品ID |
+| `STRIPE_WEBHOOK_EXPECTED_URL` | 監査が期待する Webhook URL（既定 `https://doya-ai.surisuta.jp/api/stripe/webhook`） |
+| `CRON_SECRET` | cron の Bearer 認証 |
+| `NEXT_PUBLIC_APP_URL` | success / cancel URL の組み立て（未設定ならリクエスト元 origin） |
+
+> ⚠️ **`STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` / `STRIPE_WEBHOOK_SECRET` は
+> 必ず同じモード（live / test）で揃える。** 揃っていないと Checkout が
+> 「A similar object exists in live mode」で失敗する（`checkout/route.ts` が
+> `STRIPE_MODE_MISMATCH` として案内する）。
+> Vercel の環境変数は**再デプロイするまで本番に反映されない**（`git commit --allow-empty`）。
