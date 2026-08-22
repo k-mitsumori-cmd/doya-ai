@@ -20,6 +20,7 @@ import {
   ACTIVE_LIKE_STATUSES,
 } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
+import { getManualGrantEmails } from '@/lib/billing-manual-grants'
 
 export const BILLING_WEBHOOK_EXPECTED_URL =
   process.env.STRIPE_WEBHOOK_EXPECTED_URL || 'https://doya-ai.surisuta.jp/api/stripe/webhook'
@@ -177,8 +178,12 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
       endedAt: s.ended_at ? new Date(s.ended_at * 1000) : null,
     }))
 
+  const manualGrantEmailsEarly = await getManualGrantEmails()
+
   // 課金されているのに DB が FREE / ユーザーが見つからない＝反映漏れ
-  const mismatched = subscriptions.filter((s) => !s.dbUserFound || s.dbPlan === 'FREE' || s.dbPlan === null)
+  const mismatched = subscriptions
+    .filter((s) => !s.dbUserFound || s.dbPlan === 'FREE' || s.dbPlan === null)
+    .filter((s) => !manualGrantEmailsEarly.has(String(s.email || '').toLowerCase()))
 
   // 同一メールで生きている契約が2本以上＝二重契約（過剰請求）
   const byEmail = new Map<string, AuditSubscription[]>()
@@ -202,6 +207,8 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
     .map((u) => u.id)
   const uniquePaidUserIds = Array.from(new Set(paidUserIds))
 
+  const manualGrantEmails = await getManualGrantEmails()
+
   const serviceDrift: BillingAudit['serviceDrift'] = []
   if (uniquePaidUserIds.length > 0) {
     const rows = await prisma.userServiceSubscription.findMany({
@@ -219,7 +226,7 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
       const expected = dbUser.plan === 'BUNDLE' ? 'PRO' : dbUser.plan
       const rowsOfUser = byUser.get(dbUser.id) || new Map<string, string>()
       const broken = ALL_SERVICE_IDS.filter((sid) => (rowsOfUser.get(sid) ?? 'MISSING') !== expected)
-      if (broken.length > 0) {
+      if (broken.length > 0 && !manualGrantEmails.has(String(sub.email || '').toLowerCase())) {
         serviceDrift.push({ email: sub.email, userPlan: dbUser.plan, expected, broken: [...broken] })
       }
     }
@@ -235,6 +242,7 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
   })
   const overGranted = paidInDb
     .filter((u) => !u.email || !liveEmails.has(String(u.email).toLowerCase()))
+    .filter((u) => !manualGrantEmails.has(String(u.email || '').toLowerCase()))
     .map((u) => ({ email: u.email, plan: u.plan }))
 
   const webhook = await checkWebhookEndpoint()

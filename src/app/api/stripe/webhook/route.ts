@@ -9,6 +9,8 @@ import {
   findActiveLikeSubscriptions,
 } from '@/lib/stripe'
 import { prisma, withRetry } from '@/lib/prisma'
+import { isManualGrant } from '@/lib/billing-manual-grants'
+import { higherPlan } from '@/lib/plan-utils'
 import { sendEventNotification } from '@/lib/notifications'
 import Stripe from 'stripe'
 
@@ -355,7 +357,27 @@ async function updateUserSubscription(userId: string, subscription: Stripe.Subsc
   // かつて webhook / sync / sync-latest がそれぞれ独自にif文を持っており、
   // '-starter' や 'bundle' の扱いが経路ごとに食い違っていた。
   const { planId, priceId } = resolvePlanIdFromSubscription(subscription as any)
-  const userPlan = planTierFromPlanId(planId)
+  let userPlan: string = planTierFromPlanId(planId)
+
+  // ------------------------------------------------------------------
+  // 手動付与の保護（reference/11-billing-spec.md）
+  // ------------------------------------------------------------------
+  // ⚠️ ここは Stripe の価格から算出した階層で User.plan を**上書き**する。
+  //    そのため運営が手で付けた上位プラン（例: 請求は¥9,980だがDBはENTERPRISE）は、
+  //    次回請求の customer.subscription.updated で**静かに消える**。
+  //    billing_manual_grants に登録されたアカウントに限り、DBの方が上位なら下げない。
+  const current = await prisma.user
+    .findUnique({ where: { id: userId }, select: { email: true, plan: true } })
+    .catch(() => null)
+  if (current && (await isManualGrant(current.email))) {
+    const keep = higherPlan(current.plan, userPlan)
+    if (keep !== userPlan) {
+      console.warn(
+        `[Webhook] 手動付与のため降格しない: user=${userId} DB=${current.plan} / Stripe算出=${userPlan} → ${keep}`
+      )
+      userPlan = keep
+    }
+  }
 
   // グローバルプランを更新（DB接続エラー時はリトライ）
   await withRetry(() => prisma.user.update({
