@@ -150,20 +150,37 @@ export async function postToSlackBlocks(text: string, blocks: unknown[]): Promis
 // ========================================
 // イベント通知（ログイン・課金・解約等）
 // ========================================
-type EventType = 'signup' | 'login' | 'subscription' | 'cancellation' | 'payment_failed'
+// ⚠️ 「無料の新規会員登録」と「有料プランの申し込み」と「実際の入金」は
+//    別のイベントとして扱う。混ざると売上の見込みが立たない。
+//     - signup       … 無料会員登録（お金は発生しない）
+//     - trial_start  … 初月無料でプロプランに申し込み（この時点では未入金）
+//     - subscription … 無料期間なしでプロプランに申し込み
+//     - payment      … 実際に入金された（トライアル終了後の初回課金・毎月の更新）
+type EventType =
+  | 'signup'
+  | 'login'
+  | 'trial_start'
+  | 'subscription'
+  | 'payment'
+  | 'cancellation'
+  | 'payment_failed'
 
 const EVENT_EMOJI: Record<EventType, string> = {
   signup: ':tada:',
   login: ':door:',
+  trial_start: ':hourglass_flowing_sand:',
   subscription: ':credit_card:',
+  payment: ':moneybag:',
   cancellation: ':wave:',
   payment_failed: ':warning:',
 }
 
 const EVENT_LABEL: Record<EventType, string> = {
-  signup: '新規登録',
+  signup: '無料会員登録',
   login: 'ログイン',
-  subscription: '課金',
+  trial_start: '無料トライアル開始',
+  subscription: '有料プラン申し込み',
+  payment: '入金',
   cancellation: '解約',
   payment_failed: '支払い失敗',
 }

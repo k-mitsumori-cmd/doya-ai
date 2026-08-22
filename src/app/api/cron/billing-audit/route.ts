@@ -3,7 +3,12 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
-import { runBillingAudit, formatBillingAuditMessage } from '@/lib/billing-audit'
+import {
+  runBillingAudit,
+  formatBillingAuditMessage,
+  runMonthlyRevenue,
+  formatMonthlyRevenueMessage,
+} from '@/lib/billing-audit'
 import { postPlainToSlack } from '@/lib/notifications'
 import { notifyAlert } from '@/lib/alert'
 
@@ -45,6 +50,15 @@ export async function GET(request: NextRequest) {
     if (isMonday && overrideWindow === 0) {
       const weekly = await runBillingAudit(24 * 7)
       await postPlainToSlack(formatBillingAuditMessage(weekly, { windowLabel: '直近7日' }))
+    }
+
+    // 毎月1日は前月の売上も報告する。
+    // ⚠️ 売上は「契約数 × 単価」ではなく **実際に入金された請求書** から出す。
+    //    トライアル中は1円も入っていないため、混ぜると売上を過大に見積もる。
+    const isFirstOfMonth = jstNow.getUTCDate() === 1
+    if ((isFirstOfMonth && overrideWindow === 0) || url.searchParams.get('monthly') === '1') {
+      const revenue = await runMonthlyRevenue()
+      await postPlainToSlack(formatMonthlyRevenueMessage(revenue))
     }
 
     // 重大な異常はアラート基盤にも流す（専用チャンネル/デデュープ付き）

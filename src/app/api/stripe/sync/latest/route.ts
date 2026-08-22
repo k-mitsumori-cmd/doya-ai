@@ -124,11 +124,12 @@ export async function POST(_req: NextRequest) {
 
     // Webhook不達でも運営が気づけるよう、ここでも課金通知を出す（FREE→有料の遷移時のみ）
     if (before?.plan === 'FREE' && userPlan !== 'FREE') {
+      const notice = subscriptionNotice(subscription as any)
       sendEventNotification({
-        type: 'subscription',
+        type: notice.type,
         userEmail: user.email,
         userName: before?.name,
-        details: `手動再同期でプラン反映（${bestPlanId} / ${subscription.status} / sub: ${subscription.id}）※Webhook不達の可能性あり`,
+        details: `${notice.text} ｜ 手動再同期で反映（${bestPlanId} / sub: ${subscription.id}）※Webhook不達の可能性あり`,
       }).catch(() => {})
     }
 
@@ -146,4 +147,18 @@ export async function POST(_req: NextRequest) {
   }
 }
 
-
+/** 通知文面の共通ヘルパー（無料トライアルと即課金を必ず区別する） */
+function subscriptionNotice(sub: { status: string; trial_end: number | null; current_period_end: number; items: any }) {
+  const yen = (n: number) => `¥${Number(n || 0).toLocaleString('ja-JP')}`
+  const jstDate = (ms: number) =>
+    new Date(ms).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' })
+  const amount = sub.items?.data?.[0]?.price?.unit_amount ?? 0
+  const isTrial = sub.status === 'trialing' && Boolean(sub.trial_end)
+  return {
+    type: (isTrial ? 'trial_start' : 'subscription') as 'trial_start' | 'subscription',
+    text: isTrial
+      ? `プロプラン（初月無料・30日）｜ ${jstDate(sub.trial_end! * 1000)} まで無料 ｜ ` +
+        `初回請求 ${jstDate(sub.current_period_end * 1000)} に ${yen(amount)}（現時点の入金はありません）`
+      : `プロプラン（無料期間なし）｜ ${yen(amount)} を請求 ｜ 次回請求 ${jstDate(sub.current_period_end * 1000)}`,
+  }
+}

@@ -127,6 +127,19 @@ export async function POST(request: NextRequest) {
 }
 
 // ========================================
+// 表示ヘルパー（通知文面で使う）
+// ========================================
+const yen = (n: number) => `¥${Number(n || 0).toLocaleString('ja-JP')}`
+/** UNIXミリ秒 → 日本時間の「YYYY年M月D日」 */
+const jstDate = (ms: number) =>
+  new Date(ms).toLocaleDateString('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  })
+
+// ========================================
 // イベントハンドラー
 // ========================================
 
@@ -205,13 +218,27 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
     await updateUserSubscription(userId, subscription)
   }
 
-  // 課金通知
-  sendEventNotification({
-    type: 'subscription',
-    userEmail: user.email,
-    userName: user.name,
-    details: `チェックアウト完了（subscription: ${subscriptionId || 'N/A'}）`,
-  }).catch(() => {})
+  // ------------------------------------------------------------------
+  // 申し込み通知（無料トライアルか、即課金かを必ず区別する）
+  // ------------------------------------------------------------------
+  // ⚠️ 「申し込み＝売上」ではない。初月無料の方はこの時点で1円も入金されていない。
+  //    区別せずに通知すると、売上の見込みが立たず、入金遅れにも気づけない。
+  if (subscriptionId) {
+    const sub = await stripe.subscriptions.retrieve(subscriptionId).catch(() => null)
+    if (sub) {
+      const amount = sub.items.data[0]?.price.unit_amount ?? 0
+      const isTrial = sub.status === 'trialing' && Boolean(sub.trial_end)
+      sendEventNotification({
+        type: isTrial ? 'trial_start' : 'subscription',
+        userEmail: user.email,
+        userName: user.name,
+        details: isTrial
+          ? `プロプラン（初月無料・30日）｜ ${jstDate(sub.trial_end! * 1000)} まで無料 ｜ ` +
+            `初回請求 ${jstDate(sub.current_period_end * 1000)} に ${yen(amount)}（現時点の入金はありません）`
+          : `プロプラン（無料期間なし）｜ ${yen(amount)} を請求 ｜ 次回請求 ${jstDate(sub.current_period_end * 1000)}`,
+      }).catch(() => {})
+    }
+  }
 }
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
@@ -332,6 +359,41 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   console.log(`Payment succeeded for invoice: ${invoice.id}`)
+
+  // ------------------------------------------------------------------
+  // 入金通知（ここが唯一「本当にお金が入った」瞬間）
+  // ------------------------------------------------------------------
+  // ⚠️ トライアル開始時にも金額0円の請求書が発行される。これを通知すると
+  //    「課金された」と誤認するので、実際に入金があったものだけ通知する。
+  const paid = invoice.amount_paid || 0
+  if (paid <= 0) return
+
+  const customerId = invoice.customer as string
+  const user = customerId
+    ? await prisma.user.findFirst({ where: { stripeCustomerId: customerId }, select: { email: true, name: true } })
+    : null
+
+  // 初回の入金か、毎月の更新かを区別する（トライアル明けの初課金を見逃さないため）
+  const reason = String(invoice.billing_reason || '')
+  const label =
+    reason === 'subscription_create'
+      ? '初回'
+      : reason === 'subscription_cycle'
+        ? '継続（月次更新）'
+        : reason === 'subscription_update'
+          ? 'プラン変更に伴う請求'
+          : reason || '不明'
+
+  const nextAt = invoice.lines?.data?.[0]?.period?.end
+  sendEventNotification({
+    type: 'payment',
+    userEmail: user?.email || invoice.customer_email,
+    userName: user?.name,
+    details:
+      `${yen(paid)} が入金されました（${label}）` +
+      (nextAt ? ` ｜ 次回請求 ${jstDate(nextAt * 1000)}` : '') +
+      ` ｜ invoice: ${invoice.id}`,
+  }).catch(() => {})
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {

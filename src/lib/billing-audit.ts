@@ -362,3 +362,115 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
 
   return lines.filter((l) => l !== undefined).join('\n')
 }
+
+// ============================================
+// 月次の売上レポート
+// ============================================
+// なぜ Stripe を直接読むか: DB には「入金の事実」が無い（プランしか持っていない）。
+// 売上は請求書（invoice）の実入金額が唯一の正本。
+// ⚠️ 「契約数 × ¥9,980」で売上を出さないこと。トライアル中は1円も入っていない。
+
+export type MonthlyRevenue = {
+  label: string
+  paidCount: number
+  paidTotal: number
+  refundTotal: number
+  netTotal: number
+  newSubscriptions: number
+  canceled: number
+  activeCount: number
+  trialingCount: number
+  /** トライアル中の方が、いつ・いくら売上になるか */
+  upcoming: Array<{ email: string | null; at: Date; amount: number }>
+}
+
+/** JSTでの「前月1日0:00」と「当月1日0:00」を返す */
+function jstMonthRange(now = new Date()): { since: Date; until: Date; label: string } {
+  const jst = new Date(now.getTime() + 9 * 3600_000)
+  const y = jst.getUTCFullYear()
+  const m = jst.getUTCMonth()
+  // JSTの月初 = UTCでは前日15:00
+  const until = new Date(Date.UTC(y, m, 1, 0, 0, 0) - 9 * 3600_000)
+  const since = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0) - 9 * 3600_000)
+  const prev = new Date(Date.UTC(y, m - 1, 1))
+  return { since, until, label: `${prev.getUTCFullYear()}年${prev.getUTCMonth() + 1}月` }
+}
+
+export async function runMonthlyRevenue(now = new Date()): Promise<MonthlyRevenue> {
+  const { since, until, label } = jstMonthRange(now)
+
+  // 前月に発行され、実際に入金された請求書を集める
+  const invoices: any[] = []
+  let startingAfter: string | undefined
+  for (let page = 0; page < 20; page++) {
+    const res: any = await stripe.invoices.list({
+      created: { gte: Math.floor(since.getTime() / 1000), lt: Math.floor(until.getTime() / 1000) },
+      limit: 100,
+      ...(startingAfter ? { starting_after: startingAfter } : {}),
+    })
+    invoices.push(...res.data)
+    if (!res.has_more || res.data.length === 0) break
+    startingAfter = res.data[res.data.length - 1].id
+  }
+  const paid = invoices.filter((i) => i.status === 'paid' && (i.amount_paid || 0) > 0)
+  const paidTotal = paid.reduce((sum, i) => sum + (i.amount_paid || 0), 0)
+  const refundTotal = paid.reduce((sum, i) => sum + (i.post_payment_credit_notes_amount || 0), 0)
+
+  // 契約の現況
+  const all = await listAllSubscriptions()
+  const live = all.filter((s) => ACTIVE_LIKE_STATUSES.has(String(s.status)))
+  const activeCount = live.filter((s) => s.status === 'active').length
+  const trialingCount = live.filter((s) => s.status === 'trialing').length
+  const newSubscriptions = all.filter(
+    (s) => s.created * 1000 >= since.getTime() && s.created * 1000 < until.getTime()
+  ).length
+  const canceled = all.filter(
+    (s) => s.ended_at && s.ended_at * 1000 >= since.getTime() && s.ended_at * 1000 < until.getTime()
+  ).length
+
+  // トライアル中の方がいつ売上になるか（見込みの根拠）
+  const upcoming = live
+    .filter((s) => s.status === 'trialing')
+    .map((s) => ({
+      email: (typeof s.customer === 'object' ? (s.customer?.email as string | undefined) : null) || null,
+      at: new Date(s.current_period_end * 1000),
+      amount: s.items?.data?.[0]?.price?.unit_amount ?? 0,
+    }))
+    .sort((a, b) => a.at.getTime() - b.at.getTime())
+
+  return {
+    label,
+    paidCount: paid.length,
+    paidTotal,
+    refundTotal,
+    netTotal: paidTotal - refundTotal,
+    newSubscriptions,
+    canceled,
+    activeCount,
+    trialingCount,
+    upcoming,
+  }
+}
+
+export function formatMonthlyRevenueMessage(r: MonthlyRevenue): string {
+  const lines: string[] = []
+  lines.push(`:chart_with_upwards_trend: *[月次売上レポート/${r.label}]*`)
+  lines.push('')
+  lines.push(`*${r.label}の売上: ${yen(r.netTotal)}*`)
+  lines.push(`・入金 ${r.paidCount}件 ｜ 合計 ${yen(r.paidTotal)}`)
+  if (r.refundTotal > 0) lines.push(`・返金 -${yen(r.refundTotal)}`)
+  lines.push('')
+  lines.push(`*契約の現況*`)
+  lines.push(`・課金中: ${r.activeCount}件（毎月 ${yen(r.activeCount * 9980)} の見込み）`)
+  lines.push(`・無料トライアル中: ${r.trialingCount}件（**まだ売上ではありません**）`)
+  lines.push(`・${r.label}の新規申し込み: ${r.newSubscriptions}件 ｜ 解約: ${r.canceled}件`)
+
+  if (r.upcoming.length > 0) {
+    lines.push('')
+    lines.push(`*トライアルが終わって売上になる予定*`)
+    for (const u of r.upcoming) {
+      lines.push(`・${u.email || '不明'}: ${jstDate(u.at)} に ${yen(u.amount)}`)
+    }
+  }
+  return lines.join('\n')
+}
