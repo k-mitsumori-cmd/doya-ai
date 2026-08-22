@@ -132,25 +132,46 @@ export async function POST(req: NextRequest) {
     select: { id: true },
   })
 
-  // 送ってもらった以上、開発に反映するのが目的。届いたことが分かる形にする。
-  // ⚠️ 通知の失敗で保存を巻き戻さない（書いてもらった内容を失う方が損失が大きい）。
-  try {
-    const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, name: true } })
-    const title = categoryLabel ? `お問い合わせが届きました（${categoryLabel}）` : 'ご意見が届きました'
-    const lines = [
-      `*${title}*（${serviceLabelOf(serviceId)}）`,
-      rating ? `満足度: ${'●'.repeat(rating)}${'○'.repeat(5 - rating)}（${rating}/5）` : null,
-      page ? `画面: ${page}` : null,
-      `送信者: ${user?.name || user?.email || '不明'}`,
-      '',
-      // ⚠️ 利用者の入力をSlackのmrkdwnへ入れる。整形記号を効かせない
-      escapeHtml(text).slice(0, 1500),
-    ].filter((l): l is string => l !== null)
-    await postToSlackBlocks(title, [
-      { type: 'section', text: { type: 'mrkdwn', text: lines.join('\n') } },
-    ])
-  } catch {
-    /* 通知に失敗しても保存は成立している */
+  // ------------------------------------------------------------------
+  // 届いたら**必ず** Slack に出す
+  // ------------------------------------------------------------------
+  // ⚠️ 以前はここが `catch {}` で、Slack への送信が失敗すると
+  //    保存はされているのに誰にも知らされないまま終わっていた。
+  //    通知の失敗で保存を巻き戻さないのは正しいが、**黙るのは駄目**。
+  //    1回リトライし、それでも駄目ならアラート経路（別 webhook 解決）へ回して、
+  //    最低限「問い合わせが届いたが通知できなかった」ことは必ず残す。
+  const user = await prisma.user
+    .findUnique({ where: { id: userId }, select: { email: true, name: true } })
+    .catch(() => null)
+  const title = categoryLabel ? `お問い合わせが届きました（${categoryLabel}）` : 'ご意見が届きました'
+  const lines = [
+    `*${title}*（${serviceLabelOf(serviceId)}）`,
+    rating ? `満足度: ${'●'.repeat(rating)}${'○'.repeat(5 - rating)}（${rating}/5）` : null,
+    page ? `画面: ${page}` : null,
+    `送信者: ${user?.name || user?.email || '不明'}`,
+    '',
+    // ⚠️ 利用者の入力をSlackのmrkdwnへ入れる。整形記号を効かせない
+    escapeHtml(text).slice(0, 1500),
+  ].filter((l): l is string => l !== null)
+  const blocks = [{ type: 'section', text: { type: 'mrkdwn', text: lines.join('\n') } }]
+
+  let notified = false
+  for (let attempt = 0; attempt < 2 && !notified; attempt++) {
+    try {
+      await postToSlackBlocks(title, blocks)
+      notified = true
+    } catch (e: any) {
+      console.error(`[Feedback] Slack通知に失敗 (${attempt + 1}/2):`, e?.message)
+    }
+  }
+  if (!notified) {
+    await notifyAlert({
+      level: 'critical',
+      title: 'お問い合わせが届きましたが Slack 通知に失敗しました',
+      context: `内容は保存済み（ServiceFeedback id: ${saved.id}）。管理画面から確認してください`,
+      detail: lines.join('\n'),
+      dedupKey: `feedback-notify-failed:${saved.id}`,
+    }).catch(() => {})
   }
 
   return NextResponse.json({ ok: true, id: saved.id })

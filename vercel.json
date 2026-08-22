@@ -33,6 +33,10 @@
       "schedule": "0 0 * * 1"
     },
     {
+      "path": "/api/cron/feedback-report",
+      "schedule": "5 0 * * 1"
+    },
+    {
       "path": "/api/cron/monthly-summary",
       "schedule": "0 0 1 * *"
     },
