@@ -80,9 +80,9 @@ export default function TokushohoPage() {
               <tr>
                 <th className="py-4 pr-4 text-left text-sm font-bold text-gray-900 align-top">販売価格</th>
                 <td className="py-4 text-sm text-gray-700">
-                  各サービスの料金ページに記載の通り。<br />
-                  月額プラン: ¥2,980〜¥49,800（税込）<br />
-                  <span className="text-xs text-gray-500">※プランにより異なります。詳細は各サービスの料金ページをご確認ください。</span>
+                  無料プラン: ¥0<br />
+                  プロプラン: 月額 ¥9,980（税込）<br />
+                  <span className="text-xs text-gray-500">※全サービス共通の統一プランです。プロプラン1つで全サービスをご利用いただけます。</span>
                 </td>
               </tr>
               <tr>

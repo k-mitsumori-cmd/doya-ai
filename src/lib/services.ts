@@ -1,3 +1,4 @@
+import { UNIFIED_PRO_PRICE } from './unified-plan'
 // ============================================
 // ドヤAIポータル サービス定義
 // ============================================
@@ -41,10 +42,11 @@ export interface Service {
   
   // 料金
   pricing: {
+    // ⚠️ 統一プランは「無料 / プロ¥9,980」の2つだけ。
+    //    light / enterprise の枠は廃止した（価格設定が無いものを載せない）。
+    //    拡張のご相談は ENTERPRISE_CONTACT_MAILTO の問い合わせ導線で受ける。
     free: ServicePricing
-    light?: ServicePricing
     pro: ServicePricing
-    enterprise?: ServicePricing
   }
   
   // 状態
@@ -154,26 +156,12 @@ export const SERVICES: Service[] = [
         dailyLimit: 15,
         price: 0
       },
-      light: {
-        name: 'ライトプラン',
-        limit: '月50枚まで',
-        dailyLimit: 50,
-        price: 2980,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_BANNER_LIGHT_PRICE_ID,
-      },
       pro: {
         name: 'プロプラン',
         limit: '月150枚まで',
         dailyLimit: 150,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_BANNER_PRO_PRICE_ID,
-      },
-      enterprise: {
-        name: 'エンタープライズ',
-        limit: '月1000枚まで',
-        dailyLimit: 1000,
-        price: 49800,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_BANNER_ENTERPRISE_PRICE_ID,
       },
     },
     status: 'active',
@@ -220,7 +208,7 @@ export const SERVICES: Service[] = [
         name: 'プロプラン',
         limit: '（暫定）',
         dailyLimit: -1,
-        price: 0,
+        price: UNIFIED_PRO_PRICE,
       },
     },
     status: 'maintenance',
@@ -257,18 +245,11 @@ export const SERVICES: Service[] = [
     ],
     pricing: {
       free: { name: '無料プラン', limit: '記事3本/月まで', dailyLimit: 0, price: 0 },
-      light: {
-        name: 'ライトプラン',
-        limit: '月10回まで',
-        dailyLimit: 10,
-        price: 2980,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_SEO_LIGHT_PRICE_ID,
-      },
       pro: {
         name: 'プロプラン',
         limit: '月30回まで',
         dailyLimit: 30,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
       },
     },
     status: 'active',
@@ -317,18 +298,11 @@ export const SERVICES: Service[] = [
         dailyLimit: 5,
         price: 0,
       },
-      light: {
-        name: 'ライトプラン',
-        limit: '月60分まで',
-        dailyLimit: 60,
-        price: 2980,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_INTERVIEW_LIGHT_PRICE_ID,
-      },
       pro: {
         name: 'プロプラン',
         limit: '1日30回まで',
         dailyLimit: 30,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_INTERVIEW_PRO_PRICE_ID,
       },
     },
@@ -378,18 +352,11 @@ export const SERVICES: Service[] = [
         dailyLimit: 3,
         price: 0,
       },
-      light: {
-        name: 'ライトプラン',
-        limit: '1日10回まで',
-        dailyLimit: 10,
-        price: 2980,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_SHINDAN_LIGHT_PRICE_ID,
-      },
       pro: {
         name: 'プロプラン',
         limit: '1日20回まで',
         dailyLimit: 20,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_SHINDAN_PRO_PRICE_ID,
       },
     },
@@ -430,18 +397,11 @@ export const SERVICES: Service[] = [
         dailyLimit: 5,
         price: 0,
       },
-      light: {
-        name: 'ライトプラン',
-        limit: '1日15回まで',
-        dailyLimit: 15,
-        price: 2980,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PERSONA_LIGHT_PRICE_ID,
-      },
       pro: {
         name: 'プロプラン',
         limit: '1日30回まで',
         dailyLimit: 30,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PERSONA_PRO_PRICE_ID,
       },
     },
@@ -489,26 +449,12 @@ export const SERVICES: Service[] = [
         dailyLimit: 0,
         price: 0,
       },
-      light: {
-        name: 'ライトプラン',
-        limit: '月10ページまで',
-        dailyLimit: 10,
-        price: 2980,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_LP_LIGHT_PRICE_ID,
-      },
       pro: {
         name: 'Proプラン',
         limit: '月30ページまで',
         dailyLimit: -1,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_LP_PRO_PRICE_ID,
-      },
-      enterprise: {
-        name: 'Enterpriseプラン',
-        limit: '月200ページまで',
-        dailyLimit: -1,
-        price: 49800,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_LP_ENTERPRISE_PRICE_ID,
       },
     },
     status: 'coming_soon',
@@ -606,15 +552,8 @@ export const SERVICES: Service[] = [
         name: 'プロプラン',
         limit: '月200回まで',
         dailyLimit: -1,
-        price: 9800,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_TENKAI_PRO_PRICE_ID,
-      },
-      enterprise: {
-        name: 'エンタープライズ',
-        limit: '無制限',
-        dailyLimit: -1,
-        price: 29800,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_TENKAI_ENTERPRISE_PRICE_ID,
       },
     },
     status: 'coming_soon',
@@ -662,26 +601,12 @@ export const SERVICES: Service[] = [
         dailyLimit: 10,
         price: 0,
       },
-      light: {
-        name: 'ライトプラン',
-        limit: '月50回まで',
-        dailyLimit: 50,
-        price: 2980,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_COPY_LIGHT_PRICE_ID,
-      },
       pro: {
         name: 'プロプラン',
         limit: '月200回まで',
         dailyLimit: 200,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_COPY_PRO_PRICE_ID,
-      },
-      enterprise: {
-        name: 'エンタープライズ',
-        limit: '月1,000回まで',
-        dailyLimit: 1000,
-        price: 49800,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_COPY_ENTERPRISE_PRICE_ID,
       },
     },
     status: 'coming_soon',
@@ -730,18 +655,11 @@ export const SERVICES: Service[] = [
         dailyLimit: 3,
         price: 0,
       },
-      light: {
-        name: 'ライトプラン',
-        limit: '1日15回まで',
-        dailyLimit: 15,
-        price: 2980,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_OPENING_LIGHT_PRICE_ID,
-      },
       pro: {
         name: 'プロプラン',
         limit: '1日30回まで',
         dailyLimit: 30,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_OPENING_PRO_PRICE_ID,
       },
     },
@@ -793,26 +711,12 @@ export const SERVICES: Service[] = [
         dailyLimit: 10,
         price: 0,
       },
-      light: {
-        name: 'ライトプラン',
-        limit: '月50回まで',
-        dailyLimit: 50,
-        price: 2980,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_VOICE_LIGHT_PRICE_ID,
-      },
       pro: {
         name: 'プロプラン',
         limit: '月200回まで',
         dailyLimit: 200,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_VOICE_PRO_PRICE_ID,
-      },
-      enterprise: {
-        name: 'エンタープライズ',
-        limit: '月1,000回まで',
-        dailyLimit: 1000,
-        price: 49800,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_VOICE_ENTERPRISE_PRICE_ID,
       },
     },
     status: 'coming_soon',
@@ -907,26 +811,12 @@ export const SERVICES: Service[] = [
         dailyLimit: 3,
         price: 0,
       },
-      light: {
-        name: 'ライトプラン',
-        limit: '月10件まで',
-        dailyLimit: 10,
-        price: 2980,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_INTERVIEWX_LIGHT_PRICE_ID,
-      },
       pro: {
         name: 'プロプラン',
         limit: '月30件まで',
         dailyLimit: 30,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_INTERVIEWX_PRO_PRICE_ID,
-      },
-      enterprise: {
-        name: 'エンタープライズ',
-        limit: '無制限',
-        dailyLimit: -1,
-        price: 49800,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_INTERVIEWX_ENTERPRISE_PRICE_ID,
       },
     },
     status: 'coming_soon',
@@ -977,26 +867,12 @@ export const SERVICES: Service[] = [
         dailyLimit: 0,
         price: 0,
       },
-      light: {
-        name: 'ライトプラン',
-        limit: '月10本まで',
-        dailyLimit: 10,
-        price: 2980,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_MOVIE_LIGHT_PRICE_ID,
-      },
       pro: {
         name: 'プロプラン',
         limit: '月30本まで',
         dailyLimit: -1,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_MOVIE_PRO_PRICE_ID,
-      },
-      enterprise: {
-        name: 'エンタープライズ',
-        limit: '月200本まで',
-        dailyLimit: -1,
-        price: 49800,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_MOVIE_ENTERPRISE_PRICE_ID,
       },
     },
     status: 'coming_soon',
@@ -1050,15 +926,8 @@ export const SERVICES: Service[] = [
         name: 'プロプラン',
         limit: '無制限・PPTX出力',
         dailyLimit: -1,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_ADSIM_PRO_PRICE_ID,
-      },
-      enterprise: {
-        name: 'エンタープライズ',
-        limit: '複数ブランド・チーム共有',
-        dailyLimit: -1,
-        price: 49800,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_ADSIM_ENTERPRISE_PRICE_ID,
       },
     },
     status: 'coming_soon',
@@ -1107,26 +976,12 @@ export const SERVICES: Service[] = [
         dailyLimit: 3,
         price: 0,
       },
-      light: {
-        name: 'スタータープラン',
-        limit: '従業員30名まで',
-        dailyLimit: 30,
-        price: 4980,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_HR_STARTER_PRICE_ID,
-      },
       pro: {
         name: 'プロプラン',
         limit: '従業員100名まで',
         dailyLimit: -1,
-        price: 14800,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_HR_PRO_PRICE_ID,
-      },
-      enterprise: {
-        name: 'エンタープライズ',
-        limit: '無制限',
-        dailyLimit: -1,
-        price: 49800,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_HR_ENTERPRISE_PRICE_ID,
       },
     },
     status: 'active',
@@ -1176,26 +1031,12 @@ export const SERVICES: Service[] = [
         dailyLimit: -1,
         price: 0,
       },
-      light: {
-        name: 'スタータープラン',
-        limit: '従業員30名まで',
-        dailyLimit: -1,
-        price: 2980,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_KINTAI_STARTER_PRICE_ID,
-      },
       pro: {
         name: 'プロプラン',
         limit: '従業員100名まで',
         dailyLimit: -1,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_KINTAI_PRO_PRICE_ID,
-      },
-      enterprise: {
-        name: 'エンタープライズ',
-        limit: '無制限',
-        dailyLimit: -1,
-        price: 49800,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_KINTAI_ENTERPRISE_PRICE_ID,
       },
     },
     status: 'active',
@@ -1248,15 +1089,8 @@ export const SERVICES: Service[] = [
         name: 'プロ',
         limit: '月5,000社 / 営業文ツール月500回',
         dailyLimit: 5000,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_DOYALIST_PRO_PRICE_ID,
-      },
-      enterprise: {
-        name: 'エンタープライズ',
-        limit: '無制限',
-        dailyLimit: -1,
-        price: 49800,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_DOYALIST_ENTERPRISE_PRICE_ID,
       },
     },
     status: 'active',
@@ -1309,7 +1143,7 @@ export const SERVICES: Service[] = [
         name: 'プロプラン',
         limit: '月150枚 / プロジェクト無制限',
         dailyLimit: -1,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_DOYASLIDE_PRO_PRICE_ID,
       },
     },
@@ -1362,7 +1196,7 @@ export const SERVICES: Service[] = [
         name: 'プロプラン',
         limit: '月20時間 / ナレッジ無制限',
         dailyLimit: -1,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
       },
     },
     status: 'active',
@@ -1416,15 +1250,8 @@ export const SERVICES: Service[] = [
         name: 'プロ',
         limit: '無制限',
         dailyLimit: -1,
-        price: 4980,
+        price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PROMANE_PRO_PRICE_ID,
-      },
-      enterprise: {
-        name: 'エンタープライズ',
-        limit: '無制限+SSO',
-        dailyLimit: -1,
-        price: 19800,
-        stripePriceId: process.env.NEXT_PUBLIC_STRIPE_PROMANE_ENTERPRISE_PRICE_ID,
       },
     },
     status: 'active',
@@ -1471,7 +1298,7 @@ export const SERVICES: Service[] = [
         name: 'プロプラン',
         limit: '50名 / 無制限',
         dailyLimit: -1,
-        price: 9980,
+        price: UNIFIED_PRO_PRICE,
       },
     },
     status: 'active',
@@ -1515,7 +1342,7 @@ export const SERVICES: Service[] = [
     ],
     pricing: {
       free: { name: '無料プラン', limit: '企業調査 月5件まで（提案資料の生成はプロ）', dailyLimit: -1, price: 0 },
-      pro: { name: 'プロプラン', limit: '提案資料・スライド生成 / 無制限 / チーム招待', dailyLimit: -1, price: 9980 },
+      pro: { name: 'プロプラン', limit: '提案資料・スライド生成 / 無制限 / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
     status: 'active',
     category: 'other',
@@ -1558,7 +1385,7 @@ export const SERVICES: Service[] = [
     ],
     pricing: {
       free: { name: '無料プラン', limit: 'プロンプト3件 / 週1回スキャン / 認知度のみ閲覧', dailyLimit: -1, price: 0 },
-      pro: { name: 'プロプラン', limit: 'スキャン無制限 / SoV・引用元・改善アクションも閲覧 / チーム招待', dailyLimit: -1, price: 9980 },
+      pro: { name: 'プロプラン', limit: 'スキャン無制限 / SoV・引用元・改善アクションも閲覧 / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
     status: 'active',
     category: 'other',
@@ -1601,7 +1428,7 @@ export const SERVICES: Service[] = [
     ],
     pricing: {
       free: { name: '無料プラン', limit: 'ゲスト3枚/日・無料9枚/日', dailyLimit: 9, price: 0 },
-      pro: { name: 'プロプラン', limit: '60枚/日・全サイズ・改善', dailyLimit: 60, price: 9980 },
+      pro: { name: 'プロプラン', limit: '60枚/日・全サイズ・改善', dailyLimit: 60, price: UNIFIED_PRO_PRICE },
     },
     status: 'active',
     category: 'image',
@@ -1646,7 +1473,7 @@ export const SERVICES: Service[] = [
     ],
     pricing: {
       free: { name: '無料プラン', limit: 'テンプレート1件 / 面接3件まで', dailyLimit: -1, price: 0 },
-      pro: { name: 'プロプラン', limit: '面接無制限 / 評価レポート / チーム招待', dailyLimit: -1, price: 9980 },
+      pro: { name: 'プロプラン', limit: '面接無制限 / 評価レポート / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
     status: 'active',
     category: 'other',
@@ -1691,7 +1518,7 @@ export const SERVICES: Service[] = [
     ],
     pricing: {
       free: { name: '無料プラン', limit: '見積書3件まで', dailyLimit: -1, price: 0 },
-      pro: { name: 'プロプラン', limit: '見積書無制限 / PDF出力 / チーム共有', dailyLimit: -1, price: 9980 },
+      pro: { name: 'プロプラン', limit: '見積書無制限 / PDF出力 / チーム共有', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
     status: 'active',
     category: 'other',
@@ -1737,7 +1564,7 @@ export const SERVICES: Service[] = [
     ],
     pricing: {
       free: { name: '無料プラン', limit: '商材1件 / 商談5件まで', dailyLimit: -1, price: 0 },
-      pro: { name: 'プロプラン', limit: '商談無制限 / ログ・適合判定 / チーム招待', dailyLimit: -1, price: 9980 },
+      pro: { name: 'プロプラン', limit: '商談無制限 / ログ・適合判定 / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
     status: 'active',
     category: 'other',
@@ -1783,7 +1610,7 @@ export const SERVICES: Service[] = [
     ],
     pricing: {
       free: { name: '無料プラン', limit: '1日5コンセプトまで', dailyLimit: 5, price: 0 },
-      pro: { name: 'プロプラン', limit: '1日40コンセプト / 改善無制限 / ZIP一括', dailyLimit: 40, price: 9980 },
+      pro: { name: 'プロプラン', limit: '1日40コンセプト / 改善無制限 / ZIP一括', dailyLimit: 40, price: UNIFIED_PRO_PRICE },
     },
     status: 'active',
     category: 'image',
@@ -1864,10 +1691,13 @@ export function isServiceAvailable(serviceId: string): boolean {
 }
 
 // 1日の使用上限を取得
+// ⚠️ 'light' は統一プランで廃止。旧呼び出しが残っていても壊れないよう受けるが、
+//    プロと同じ扱いにする（無料に落とすと有料の方の権利が消える）。
 export function getDailyLimit(serviceId: string, plan: 'free' | 'light' | 'pro'): number {
   const service = getServiceById(serviceId)
   if (!service) return 0
-  const pricing = service.pricing[plan]
+  const key = plan === 'light' ? 'pro' : plan
+  const pricing = service.pricing[key]
   if (!pricing) return service.pricing.free.dailyLimit
   return pricing.dailyLimit
 }
@@ -1876,7 +1706,8 @@ export function getDailyLimit(serviceId: string, plan: 'free' | 'light' | 'pro')
 export function getMonthlyPrice(serviceId: string, plan: 'free' | 'light' | 'pro'): number {
   const service = getServiceById(serviceId)
   if (!service) return 0
-  const pricing = service.pricing[plan]
+  const key = plan === 'light' ? 'pro' : plan
+  const pricing = service.pricing[key]
   if (!pricing) return 0
   return pricing.price
 }

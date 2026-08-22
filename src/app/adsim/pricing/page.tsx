@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
+import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import { useSession } from 'next-auth/react'
 import { Check, X, Sparkles } from 'lucide-react'
 import { CheckoutButton } from '@/components/CheckoutButton'
@@ -46,31 +48,10 @@ const PLANS: Plan[] = [
     highlight: false,
   },
   {
-    id: 'light',
-    planId: 'adsim-light',
-    name: 'Light',
-    price: '¥2,980',
-    period: '/月',
-    badge: 'ライト',
-    description: '個人運用者・小規模代理店向け',
-    features: [
-      { text: '広告提案 月15プロジェクトまで', ok: true },
-      { text: 'AI 数値シミュレーション', ok: true },
-      { text: '提案文10セクション 自動生成', ok: true },
-      { text: 'PDF / PPTX / Excel 全形式出力', ok: true },
-      { text: 'NanoBanana バナー生成 月10回まで（30枚）', ok: true },
-      { text: 'バナー画像 ダウンロード可', ok: true },
-      { text: 'チャットで数値編集 月100回まで', ok: true },
-      { text: 'ロゴ差し替え', ok: true },
-    ],
-    cta: 'ライトプランを選ぶ',
-    highlight: false,
-  },
-  {
     id: 'pro',
     planId: 'adsim-pro',
     name: 'Pro',
-    price: '¥9,980',
+    price: UNIFIED_PRO_PRICE_LABEL,
     period: '/月',
     badge: 'プロ',
     description: '本格運用したい代理店・運用者向け',
@@ -86,27 +67,6 @@ const PLANS: Plan[] = [
     ],
     cta: 'プロプランを選ぶ',
     highlight: true,
-  },
-  {
-    id: 'enterprise',
-    planId: 'adsim-enterprise',
-    name: 'Enterprise',
-    price: '¥49,800',
-    period: '/月',
-    badge: 'エンプラ',
-    description: '法人・チーム利用向け',
-    features: [
-      { text: '広告提案 月500プロジェクトまで', ok: true },
-      { text: 'NanoBanana バナー生成 月150回まで（450枚）', ok: true },
-      { text: 'チャットで数値編集 月3,000回まで', ok: true },
-      { text: '複数ブランド管理', ok: true },
-      { text: 'チーム共有・コメント', ok: true },
-      { text: '専任サポート + SLA 保証', ok: true },
-      { text: 'カスタム業界ベンチマーク対応', ok: true },
-      { text: 'API 提供 (近日)', ok: true },
-    ],
-    cta: 'お問い合わせ',
-    highlight: false,
   },
 ]
 
@@ -215,13 +175,6 @@ export default function AdSimPricingPage() {
                     >
                       {p.cta}
                     </Link>
-                  ) : p.id === 'enterprise' ? (
-                    <a
-                      href="mailto:info@surisuta.jp?subject=ドヤ広告シミュレーションAI Enterprise問い合わせ"
-                      className="block rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-center text-sm font-black text-slate-700 transition hover:border-[#0017C1] hover:text-[#0017C1]"
-                    >
-                      {p.cta}
-                    </a>
                   ) : (
                     <CheckoutButton
                       planId={p.planId!}
@@ -295,6 +248,22 @@ export default function AdSimPricingPage() {
             </div>
           </dl>
         </div>
+      </div>
+
+      {/* さらなる拡張（エンタープライズ枠は廃止・金額は出さず問い合わせのみ）
+          ⚠️ 金額を書かないこと。現在エンタープライズの価格設定は無く、
+             特定商取引法ページの記載（無料 / プロ¥9,980）と矛盾する。 */}
+      <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-slate-200 bg-slate-50 px-6 py-5 text-center">
+        <p className="text-sm font-black text-slate-800">さらに機能を拡張したい方へ</p>
+        <p className="mt-1.5 text-xs font-bold leading-relaxed text-slate-500">
+          生成上限の引き上げ、チームでのご利用、独自機能の追加など、プロプランの範囲を超えるご要望は個別に承ります。
+        </p>
+        <a
+          href={ENTERPRISE_CONTACT_MAILTO}
+          className="mt-3 inline-flex items-center rounded-full border border-slate-300 bg-white px-5 py-2.5 text-xs font-black text-slate-700 transition hover:border-slate-400 hover:bg-slate-100"
+        >
+          お問い合わせ
+        </a>
       </div>
     </div>
   )

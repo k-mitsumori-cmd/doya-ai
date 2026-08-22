@@ -12,7 +12,7 @@ import LoadingProgress from '@/components/LoadingProgress'
 import UpgradeSuccessModal from '@/components/UpgradeSuccessModal'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
 import { FreeHourPopup } from '@/components/FreeHourPopup'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, isWithinFreeHour } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, ENTERPRISE_CONTACT_MAILTO, isWithinFreeHour } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 
 const DEFAULT_FREE_SIZE = '1080x1080'
@@ -887,29 +887,22 @@ function BannerUrlAutoPageInner() {
                   </div>
                 </div>
 
-                {/* Enterprise */}
-                <div className={`rounded-2xl border p-4 ${bannerPlanTier === 'ENTERPRISE' ? 'border-blue-600 bg-blue-50' : 'border-slate-200 bg-white'}`}>
+                {/* さらなる拡張（エンタープライズ枠は廃止・金額は出さず問い合わせのみ）
+                    ⚠️ 現在エンタープライズの価格設定は無い。金額を書くと売っていない
+                       価格を提示することになり、特商法の記載とも矛盾する。 */}
+                <div className="rounded-2xl border border-slate-200 bg-white p-4">
                   <p className="text-xs font-black text-slate-500">Enterprise</p>
-                  <p className="mt-1 text-lg font-black text-slate-900">エンタープライズ</p>
-                  <p className="mt-2 text-sm font-black text-slate-900">月額 ¥49,800</p>
+                  <p className="mt-1 text-lg font-black text-slate-900">さらに拡張したい方へ</p>
                   <p className="mt-2 text-[11px] text-slate-600 font-bold leading-relaxed">
-                    月{BANNER_PRICING.enterpriseLimit || 1000}枚まで生成 / 大量運用向け
+                    生成上限の引き上げ、チームでのご利用、独自機能の追加など、
+                    プロプランの範囲を超えるご要望は個別に承ります。
                   </p>
                   <div className="mt-3 grid gap-2">
-                    {bannerPlanTier === 'ENTERPRISE' ? (
-                      <button disabled className="w-full py-3 rounded-2xl bg-slate-200 text-slate-600 font-black text-sm cursor-not-allowed">現在のプラン</button>
-                    ) : (
-                      <CheckoutButton planId="banner-enterprise" loginCallbackUrl="/banner" className="w-full py-3 rounded-2xl text-sm">
-                        {bannerPlanTier === 'PRO' ? 'エンタープライズにアップグレード' : 'エンタープライズを始める'}
-                      </CheckoutButton>
-                    )}
                     <a
-                      href={HIGH_USAGE_CONTACT_URL}
-                      target={HIGH_USAGE_CONTACT_URL.startsWith('http') ? '_blank' : undefined}
-                      rel={HIGH_USAGE_CONTACT_URL.startsWith('http') ? 'noreferrer' : undefined}
+                      href={ENTERPRISE_CONTACT_MAILTO}
                       className="inline-flex items-center justify-center w-full px-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 font-black hover:bg-slate-100 transition-colors text-sm"
                     >
-                      さらに上限UPの相談（マーケティング施策を丸投げする）
+                      お問い合わせ
                     </a>
                   </div>
                 </div>

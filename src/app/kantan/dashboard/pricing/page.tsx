@@ -1,6 +1,7 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
+import { UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
 import Link from 'next/link'
 import { useState, useEffect } from 'react'
 import { 
@@ -388,7 +389,7 @@ export default function KantanPricingPage() {
                 <div className="grid md:grid-cols-3 gap-6">
                   <div>
                     <p className="text-sm text-gray-500 mb-1">月額料金</p>
-                    <p className="text-2xl font-black text-gray-800">¥4,980</p>
+                    <p className="text-2xl font-black text-gray-800">{UNIFIED_PRO_PRICE_LABEL}</p>
                     <p className="text-xs text-gray-400">税込</p>
                   </div>
                   <div>

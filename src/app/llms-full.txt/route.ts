@@ -41,7 +41,7 @@ export function GET() {
       lines.push(...s.useCases.map(u => `- ${u}`))
       lines.push('')
     }
-    const plans = [s.pricing.free, s.pricing.light, s.pricing.pro, s.pricing.enterprise].filter(Boolean)
+    const plans = [s.pricing.free, s.pricing.pro].filter(Boolean)
     if (plans.length) {
       lines.push('料金プラン:')
       lines.push(...plans.map(p => `- ${p!.name}: ${p!.price === 0 ? '無料' : `月額${p!.price.toLocaleString()}円`}（${p!.limit}）`))

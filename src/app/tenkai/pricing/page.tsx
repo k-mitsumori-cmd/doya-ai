@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
+import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -33,30 +35,9 @@ const PLANS = [
     gradient: 'from-slate-400 to-slate-500',
   },
   {
-    key: 'light',
-    name: 'ライト',
-    price: '¥2,980',
-    period: '/月',
-    description: '個人クリエイター向け',
-    features: [
-      { text: '月50回の生成', included: true },
-      { text: '5プラットフォーム対応', included: true },
-      { text: 'テキスト・URL入力', included: true },
-      { text: '全テンプレート', included: true },
-      { text: 'ブランドボイス（3つ）', included: true },
-      { text: 'YouTube入力', included: true },
-      { text: 'カスタムテンプレート', included: true },
-      { text: 'API アクセス', included: false },
-      { text: '優先サポート', included: false },
-    ],
-    cta: 'アップグレード',
-    popular: false,
-    gradient: 'from-blue-400 to-blue-500',
-  },
-  {
     key: 'pro',
     name: 'Pro',
-    price: '¥9,980',
+    price: UNIFIED_PRO_PRICE_LABEL,
     period: '/月',
     description: 'ビジネスで本格活用',
     features: [
@@ -73,27 +54,6 @@ const PLANS = [
     cta: 'アップグレード',
     popular: true,
     gradient: 'from-blue-500 to-indigo-600',
-  },
-  {
-    key: 'enterprise',
-    name: 'Enterprise',
-    price: '¥49,800',
-    period: '/月',
-    description: '大規模チーム向け',
-    features: [
-      { text: '無制限の生成', included: true },
-      { text: '全9プラットフォーム対応', included: true },
-      { text: '全入力方式対応', included: true },
-      { text: '全テンプレート', included: true },
-      { text: 'ブランドボイス（無制限）', included: true },
-      { text: 'チーム管理', included: true },
-      { text: 'カスタムAPI', included: true },
-      { text: 'SSO対応', included: true },
-      { text: '専任サポート', included: true },
-    ],
-    cta: 'お問い合わせ',
-    popular: false,
-    gradient: 'from-slate-700 to-slate-900',
   },
 ] as const
 
@@ -267,15 +227,10 @@ export default function PricingPage() {
                   {plan.popular && <TrialNote tone="light" className="mb-4" />}
                   {!plan.popular && <div className="mb-4" />}
 
-                  {/* CTA */}
-                  {plan.key === 'enterprise' ? (
-                    <a
-                      href="mailto:info@surisuta.jp"
-                      className={`block w-full py-3 text-center rounded-xl text-sm font-bold bg-gradient-to-r ${plan.gradient} text-white shadow-lg transition-all hover:shadow-xl`}
-                    >
-                      {plan.cta}
-                    </a>
-                  ) : isCurrentPlan ? (
+                  {/* CTA
+                      ⚠️ エンタープライズ枠は廃止（金額設定が無いため）。
+                         問い合わせ導線はプラン表の下にまとめて置いている。 */}
+                  {isCurrentPlan ? (
                     <div className="w-full py-3 text-center rounded-xl text-sm font-bold bg-slate-100 text-slate-400 cursor-default">
                       現在のプラン
                     </div>

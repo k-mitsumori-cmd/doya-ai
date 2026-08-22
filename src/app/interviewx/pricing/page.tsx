@@ -1,6 +1,8 @@
 'use client'
 
 import { Check, X } from 'lucide-react'
+import { UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
+import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import { TrialBadge, TrialNote } from '@/components/TrialCallout'
 
 const PLANS = [
@@ -24,30 +26,10 @@ const PLANS = [
     cta: '無料で試す',
   },
   {
-    id: 'interviewx-light',
-    name: 'ライト',
-    price: 2980,
-    priceLabel: '¥2,980',
-    period: '/月（税込）',
-    description: '個人・小規模チーム向け',
-    color: 'blue',
-    features: [
-      { text: '月10プロジェクトまで', included: true },
-      { text: 'AI質問生成', included: true },
-      { text: 'AIチャットヒヤリング', included: true },
-      { text: 'AI要約生成', included: true },
-      { text: 'HTML/Markdownエクスポート', included: true },
-      { text: 'メール通知', included: true },
-      { text: 'URL事前調査', included: true },
-      { text: 'ブランドカスタマイズ', included: false },
-    ],
-    cta: 'ライトプランを始める',
-  },
-  {
     id: 'interviewx-pro',
     name: 'プロ',
     price: 9980,
-    priceLabel: '¥9,980',
+    priceLabel: UNIFIED_PRO_PRICE_LABEL,
     period: '/月（税込）',
     description: '本格的なヒヤリング運用に',
     popular: true,
@@ -63,26 +45,6 @@ const PLANS = [
       { text: 'ブランドカスタマイズ', included: true },
     ],
     cta: 'プロプランを始める',
-  },
-  {
-    id: 'interviewx-enterprise',
-    name: 'エンタープライズ',
-    price: 49800,
-    priceLabel: '¥49,800',
-    period: '/月（税込）',
-    description: '大規模チーム・法人向け',
-    color: 'slate',
-    features: [
-      { text: '無制限プロジェクト', included: true },
-      { text: 'AI質問生成', included: true },
-      { text: 'AIチャットヒヤリング', included: true },
-      { text: 'AI要約生成', included: true },
-      { text: 'HTML/Markdownエクスポート', included: true },
-      { text: 'メール通知', included: true },
-      { text: 'URL事前調査', included: true },
-      { text: 'ブランドカスタマイズ・専任サポート', included: true },
-    ],
-    cta: 'お問い合わせ',
   },
 ]
 
@@ -194,6 +156,22 @@ export default function PricingPage() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* さらなる拡張（エンタープライズ枠は廃止・金額は出さず問い合わせのみ）
+          ⚠️ 金額を書かないこと。現在エンタープライズの価格設定は無く、
+             特定商取引法ページの記載（無料 / プロ¥9,980）と矛盾する。 */}
+      <div className="mx-auto mt-10 max-w-3xl rounded-2xl border border-slate-200 bg-slate-50 px-6 py-5 text-center">
+        <p className="text-sm font-black text-slate-800">さらに機能を拡張したい方へ</p>
+        <p className="mt-1.5 text-xs font-bold leading-relaxed text-slate-500">
+          生成上限の引き上げ、チームでのご利用、独自機能の追加など、プロプランの範囲を超えるご要望は個別に承ります。
+        </p>
+        <a
+          href={ENTERPRISE_CONTACT_MAILTO}
+          className="mt-3 inline-flex items-center rounded-full border border-slate-300 bg-white px-5 py-2.5 text-xs font-black text-slate-700 transition hover:border-slate-400 hover:bg-slate-100"
+        >
+          お問い合わせ
+        </a>
       </div>
     </div>
   )

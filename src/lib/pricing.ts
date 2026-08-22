@@ -1,3 +1,4 @@
+import { UNIFIED_PRO_PRICE, UNIFIED_PRO_PRICE_LABEL } from './unified-plan'
 // ========================================
 // 料金・プラン設定（統一管理）
 // ========================================
@@ -89,8 +90,10 @@ export const KANTAN_PRICING: ServicePricing = {
     {
       id: 'kantan-pro',
       name: 'プロ',
-      price: 4980,
-      priceLabel: '¥4,980',
+      // ⚠️ 統一プラン（無料 / プロ¥9,980）に合わせる。ここだけ別価格にすると
+      //    サービスごとに料金が違って見え、特商法ページの記載とも矛盾する。
+      price: UNIFIED_PRO_PRICE,
+      priceLabel: UNIFIED_PRO_PRICE_LABEL,
       period: '/月（税込）',
       description: 'マーケ業務を劇的効率化',
       popular: true,
@@ -886,6 +889,13 @@ export function getOpeningDailyLimitByUserPlan(plan: string | null | undefined):
 export const HIGH_USAGE_CONTACT_URL =
   process.env.NEXT_PUBLIC_HIGH_USAGE_CONTACT_URL ||
   'https://doyamarke.surisuta.jp/contact'
+
+// エンタープライズ相当のご相談（**金額は提示しない**・問い合わせ導線のみ）
+// ⚠️ 現在エンタープライズの価格設定は無い。金額を書くと「売っていない価格」を
+//    提示することになり、特定商取引法ページの記載（無料 / プロ¥9,980）とも矛盾する。
+//    枠を復活させるときは、必ず特商法ページと同時に更新すること。
+export const ENTERPRISE_CONTACT_MAILTO =
+  'mailto:info@surisuta.jp?subject=' + encodeURIComponent('ドヤマーケAI 機能拡張のご相談')
 
 // 改善要望/不具合/問い合わせ導線（アプリ内から共通で利用）
 export const SUPPORT_CONTACT_URL =

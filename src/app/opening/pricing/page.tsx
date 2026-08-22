@@ -3,6 +3,8 @@
 import { motion } from 'framer-motion'
 import { Check, X, Zap } from 'lucide-react'
 import { TrialBadge, TrialNote } from '@/components/TrialCallout'
+import { UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
+import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 
 const PLANS = [
   {
@@ -24,26 +26,8 @@ const PLANS = [
     popular: false,
   },
   {
-    name: 'ライト',
-    price: '¥2,980',
-    period: '/月（税込）',
-    features: [
-      { text: '1日15回まで生成', included: true },
-      { text: '全6テンプレート', included: true },
-      { text: 'テキスト編集', included: true },
-      { text: 'コードコピー', included: true },
-      { text: '履歴保存（無制限）', included: true },
-      { text: 'カラー・タイミング編集', included: true },
-      { text: 'ZIPダウンロード', included: false },
-      { text: '透かしなし', included: false },
-    ],
-    cta: 'ライトプランを始める',
-    href: '/opening',
-    popular: false,
-  },
-  {
     name: 'プロ',
-    price: '¥9,980',
+    price: UNIFIED_PRO_PRICE_LABEL,
     period: '/月（税込）',
     features: [
       { text: '1日30回まで生成', included: true },
@@ -69,7 +53,7 @@ export default function PricingPage() {
         <p className="text-white/50">あなたに合ったプランをお選びください</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {PLANS.map((plan) => (
           <motion.div
             key={plan.name}
@@ -122,6 +106,20 @@ export default function PricingPage() {
             </a>
           </motion.div>
         ))}
+      </div>
+
+      {/* さらなる拡張（金額は提示しない・問い合わせのみ） */}
+      <div className="mt-10 rounded-2xl border border-white/10 bg-white/5 px-6 py-5 text-center">
+        <p className="text-sm font-black text-white">さらに機能を拡張したい方へ</p>
+        <p className="mt-1.5 text-xs font-bold leading-relaxed text-white/50">
+          生成上限の引き上げ、チームでのご利用、独自機能の追加など、プロプランの範囲を超えるご要望は個別に承ります。
+        </p>
+        <a
+          href={ENTERPRISE_CONTACT_MAILTO}
+          className="mt-3 inline-flex items-center rounded-full border border-white/20 bg-white/10 px-5 py-2.5 text-xs font-black text-white transition hover:bg-white/20"
+        >
+          お問い合わせ
+        </a>
       </div>
     </div>
   )

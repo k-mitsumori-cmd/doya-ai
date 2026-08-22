@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
+import { ENTERPRISE_CONTACT_MAILTO } from '@/lib/pricing'
 import { usePathname } from 'next/navigation'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import { TrialBadge, TrialNote, useTrialEligible } from '@/components/TrialCallout'
@@ -193,6 +194,26 @@ export function UnifiedPricingPlans({
           <Link href="/all-in-one" className="inline-flex items-center gap-1.5 text-sm font-black transition hover:underline" style={{ color: BRAND }}>
             統一プランの詳細を見る<Sym name="arrow_forward" size={16} />
           </Link>
+        </div>
+      </div>
+
+      {/* ===== エンタープライズ（金額は提示しない・問い合わせ導線のみ） =====
+          ⚠️ 金額を書かないこと。現在エンタープライズの価格設定は無く、
+             売っていない価格を出すと表示と実態がずれる（特商法の記載とも矛盾する）。 */}
+      <div className="max-w-4xl mx-auto mt-8">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-6 py-5 text-center">
+          <p className="text-sm font-black text-slate-800">さらに機能を拡張したい方へ</p>
+          <p className="mt-1.5 text-xs font-bold leading-relaxed text-slate-500">
+            生成上限の引き上げ、チームでのご利用、独自機能の追加など、
+            プロプランの範囲を超えるご要望は個別に承ります。
+          </p>
+          <a
+            href={ENTERPRISE_CONTACT_MAILTO}
+            className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-slate-300 bg-white px-5 py-2.5 text-xs font-black text-slate-700 transition hover:border-slate-400 hover:bg-slate-100"
+          >
+            <Sym name="mail" size={16} />
+            お問い合わせ
+          </a>
         </div>
       </div>
 

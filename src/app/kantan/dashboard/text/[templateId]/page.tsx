@@ -93,7 +93,7 @@ const SAMPLE_INPUTS: Record<string, Record<string, string>> = {
     productName: 'AIマーケティングツール「カンタンマーケAI」',
     description: 'LP構成案4時間→10分、バナーコピー40案を1分で生成できるAIツール',
     targetAudience: 'マーケティング業務を効率化したい中小企業のマーケター',
-    price: '月額4,980円〜',
+    price: '月額9,980円（税込）',
     differentiator: 'Gemini 2.0搭載、チャット形式でブラッシュアップ可能、68種類以上のAIエージェント',
   },
   'lp-headline': {

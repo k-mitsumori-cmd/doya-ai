@@ -57,7 +57,7 @@ const PLAN_FEATURES = [
 // コスト指標（詳細説明付き）
 const COST_METRICS = [
   { label: '初期費用', value: '0円', description: '導入時の設定費用、サポート費用は無料。' },
-  { label: '月額基本料', value: '¥9,800〜', description: 'プランに応じた固定月額。Proプランは¥4,980/月。' },
+  { label: '月額基本料', value: '¥9,980', description: '統一プラン（無料 / プロ¥9,980）。1契約で全サービスのプロ機能が使えます。' },
   { label: '従量課金', value: '1アクション ¥0.5〜', description: 'AI生成1回あたりのコスト。大量利用でさらに割引。' },
   { label: '無料期間', value: '14日間', description: '全機能を14日間無料でお試し可能。クレジットカード不要。' },
   { label: '年間契約割引', value: '20% OFF', description: '年間契約で月額料金が20%割引になります。' },
