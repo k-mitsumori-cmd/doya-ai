@@ -837,15 +837,17 @@ export async function GET(request: NextRequest) {
     let dbError: string | null = null
     try {
       dbTemplates = await prisma.bannerTemplate.findMany({
+        // ⚠️ ここに imageUrl の contains 条件を足さないこと。
+        //    imageUrl は base64 データURI（平均1.79MB・全348件で608MB）が入っており、
+        //    LIKE '%...%' を書くと Postgres が TOAST を全件展開して走査する。
+        //    実測: この条件があるだけで count が 590ms → 21,849ms になっていた
+        //    （しかも placehold.co を含む行は 0件で、1件も除外していなかった）。
+        //    プレースホルダー画像は配信側（/api/banner/test/image/[templateId]）が
+        //    フォールバックで処理する。
         where: {
           isActive: true,
           imageUrl: {
             not: null,
-          },
-          NOT: {
-            imageUrl: {
-              contains: 'placehold.co',
-            },
           },
         },
         select: {
@@ -871,10 +873,11 @@ export async function GET(request: NextRequest) {
     let dbTotalCount = dbTemplates.length + offset // フォールバック
     try {
       dbTotalCount = await prisma.bannerTemplate.count({
+        // ⚠️ contains 条件を足さないこと（上と同じ理由。count は LIMIT が効かないぶん
+        //    影響が大きく、実測 21.8秒 かかっていた）
         where: {
           isActive: true,
           imageUrl: { not: null },
-          NOT: { imageUrl: { contains: 'placehold.co' } },
         },
       })
     } catch { /* countエラーはフォールバック値で続行 */ }
