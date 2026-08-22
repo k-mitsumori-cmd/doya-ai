@@ -18,6 +18,7 @@
 | [08-environment.md](./08-environment.md) | 環境変数一覧・セットアップ手順 |
 | [09-bootstrap.md](./09-bootstrap.md) | バナーテンプレート一括生成 (Bootstrap) |
 | [10-service-status.md](./10-service-status.md) | サービスステータス一元管理 (実装状態・課金・ドキュメント) |
+| [11-billing-spec.md](./11-billing-spec.md) | **課金仕様の正本**（不変条件・反映4経路・状態遷移・監視・ランブック・変更チェックリスト） |
 
 ## クイックリファレンス
 
@@ -39,6 +40,8 @@
 **正本は `src/lib/services.ts` の `SERVICES` 配列**（id / 名前 / href / status / 料金）。ここに一覧表は持たない（drift防止）。実装状態のサマリは [10-service-status.md](./10-service-status.md) を参照。
 
 ### 課金: 統一プラン方式
+**課金に触る前に必ず [11-billing-spec.md](./11-billing-spec.md) を読むこと**（2026-08 に「課金済みなのに無料プランのまま」が2名・約2か月続いた障害の再発防止）。
+
 無料 / プロ **¥9,980** の2プランのみ。1契約で全サービスのPRO利用可（個別課金・バンドル販売は廃止）。判定は `User.plan` 単一参照、定義は `src/lib/unified-plan.ts` / `UnifiedPricingPlans`。
 
 ### ブランドカラー
