@@ -1,5 +1,6 @@
 'use client'
 
+import { templateImageUrl } from '@/lib/banner-template-storage'
 import { Suspense, useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Play, ImageIcon, Maximize2, X, Upload, User, Image as ImageLucide, Square, RectangleHorizontal, RectangleVertical, Crown, Menu, Lock, LogIn, FileText, Copy, Check } from 'lucide-react'
@@ -534,27 +535,20 @@ function BannerTestPageInner() {
   const templateOffsetRef = useRef(0)
 
   // サムネイル用URL（WebP + リサイズ、1x ディスプレイ用）
-  const thumbUrl = useCallback((url: string) => {
-    if (!url) return url
-    const sep = url.includes('?') ? '&' : '?'
-    return `${url}${sep}w=300&fmt=webp`
-  }, [])
+  // ⚠️ URLの組み立ては templateImageUrl に一本化している。Storage の画像は
+  //    ?w= を足すのではなくファイル名を差し替える（?w= は無視され原寸が返ってしまう）。
+  const thumbUrl = useCallback((url: string) => templateImageUrl(url, 300), [])
 
   // サムネイル srcSet（Retina/DPR 2x で w=600 を自動選択、1x はそのまま）
   const thumbSrcSet = useCallback((url: string) => {
     if (!url) return ''
-    const sep = url.includes('?') ? '&' : '?'
-    return `${url}${sep}w=300&fmt=webp 1x, ${url}${sep}w=600&fmt=webp 2x`
+    return `${templateImageUrl(url, 300)} 1x, ${templateImageUrl(url, 600)} 2x`
   }, [])
 
   // ヒーロー画像用URL（WebP + 段階的リサイズ）
   // tier='lo' → w=300 (サムネと同URL = キャッシュヒットで即時表示)、tier='hi' → w=1280 を裏で取得して差し替え
   const heroUrl = useCallback((url: string | null | undefined, tier: 'lo' | 'hi' = 'hi') => {
-    if (!url) return url || ''
-    if (url.startsWith('data:')) return url
-    const sep = url.includes('?') ? '&' : '?'
-    const w = tier === 'lo' ? 300 : 1280
-    return `${url}${sep}w=${w}&fmt=webp`
+    return templateImageUrl(url, tier === 'lo' ? 300 : 1280)
   }, [])
 
   // キャッシュから失敗テンプレートを除外するヘルパー
@@ -703,9 +697,7 @@ function BannerTestPageInner() {
       const link = document.createElement('link')
       link.rel = 'preload'
       link.as = 'image'
-      link.href = imageUrl.startsWith('data:')
-        ? imageUrl
-        : `${imageUrl}${imageUrl.includes('?') ? '&' : '?'}w=1280&fmt=webp`
+      link.href = templateImageUrl(imageUrl, 1280)
       link.setAttribute('fetchpriority', 'high')
       document.head.appendChild(link)
     } catch (e) {

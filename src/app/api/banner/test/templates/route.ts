@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireBannerAdmin } from '@/lib/banner-admin-guard'
+import { hasPreparedVariants } from '@/lib/banner-template-storage'
 import { BANNER_PROMPTS_V2 } from '@/lib/banner-prompts-v2'
 
 // generateBannersはPOSTでのみ使用するため、動的インポートに変更
@@ -858,6 +859,7 @@ export async function GET(request: NextRequest) {
           category: true,
           updatedAt: true,
           sortOrder: true,
+          imageUrl: true,
           ...(minimal ? {} : { prompt: true }),
         },
         take: limit,
@@ -913,7 +915,12 @@ export async function GET(request: NextRequest) {
     // DBテンプレートをV2プロンプト情報と結合して返す（生成済み）
     const readyTemplates = dbTemplates.map((t) => {
       // キャッシュバスター廃止: CDN immutable キャッシュを活用
-      const imageApiUrl = `/api/banner/test/image/${t.templateId}`
+      // 事前サムネイルがある Storage の画像は、配信ルートを挟まず直接その URL を返す。
+      // ⚠️ imageUrl 列を select しても重くならないのは、498件すべてが短いURLになった後だから。
+      //    base64 が残っている状態でこれをやると1.79MB×件数を読むことになる。
+      const imageApiUrl = hasPreparedVariants(t.imageUrl)
+        ? (t.imageUrl as string)
+        : `/api/banner/test/image/${t.templateId}`
       const v2Prompt = v2PromptsMap.get(t.templateId)
       const fullPrompt = v2Prompt?.fullPrompt || t.prompt || ''
 
