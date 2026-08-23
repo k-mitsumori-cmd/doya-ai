@@ -1,0 +1,64 @@
+{
+  "version": "2026-08-23-remake-1",
+  "scope": {
+    "total": 150,
+    "pass": 117,
+    "remake": 33
+  },
+  "result": {
+    "status": "completed_qa",
+    "remade": 33,
+    "retained": 117,
+    "secondaryCorrections": [
+      "beauty-cosme-09",
+      "health-fitness-10",
+      "it-saas-08",
+      "recruit-career-02",
+      "finance-insurance-06",
+      "event-media-03"
+    ],
+    "completedAt": "2026-08-23T21:52:36+09:00"
+  },
+  "rubric": [
+    "reference-level commercial composition and hierarchy",
+    "natural human anatomy, expression, interaction, and material rendering",
+    "concept-to-copy semantic match",
+    "avoid generic AI stock-photo and floating-object collage patterns",
+    "verbatim Japanese copy exactly once with no pseudo-writing"
+  ],
+  "targets": [
+    {"templateId":"beauty-cosme-09","reason":"Generic clinic stock scene and synthetic diagnostic props weaken the product-editorial quality."},
+    {"templateId":"fashion-apparel-06","reason":"Repeated synthetic portrait panels and near-identical skin rendering feel AI-generated."},
+    {"templateId":"fashion-apparel-10","reason":"Catalog lineup uses overly uniform model rendering and staged floating spacing."},
+    {"templateId":"food-beverage-02","reason":"Exaggerated perfect smiles and dense food collage read as AI campaign imagery."},
+    {"templateId":"ec-sale-02","reason":"Ambiguous numeral treatment and disconnected clock/parcel props lack finished retail clarity."},
+    {"templateId":"ec-sale-06","reason":"Surprised shopper pose and floating product clutter are a generic AI sale-ad pattern."},
+    {"templateId":"ec-sale-10","reason":"Generic lifestyle portrait collage makes the coupon message feel synthetic and weak."},
+    {"templateId":"health-fitness-02","reason":"Smiling trio has stock-photo staging and synthetic facial consistency."},
+    {"templateId":"health-fitness-08","reason":"Diet-box split layout and fitness portrait use a generic AI wellness formula."},
+    {"templateId":"health-fitness-10","reason":"Multi-panel gym montage repeats synthetic athletes and staged expressions."},
+    {"templateId":"medical-healthcare-02","reason":"Telemedicine phone scene is over-clean, staged, and visually interchangeable with AI stock."},
+    {"templateId":"medical-healthcare-06","reason":"Screening consultation scene relies on generic synthetic doctor-patient imagery."},
+    {"templateId":"medical-healthcare-07","reason":"Plastic dental model and brush rendering feel artificial and product-demo-like."},
+    {"templateId":"it-saas-04","reason":"Night family-like scene does not clearly communicate attendance aggregation and feels semantically mismatched."},
+    {"templateId":"it-saas-06","reason":"FAQ portrait and notebook props are disconnected and look like generic AI office stock."},
+    {"templateId":"it-saas-08","reason":"Dashboard meeting scene uses a generic presenter-and-screen AI composition."},
+    {"templateId":"education-seminar-03","reason":"Two-person dialogue scene has synthetic faces and staged seminar-stock framing."},
+    {"templateId":"education-seminar-07","reason":"Paired speaker portraits feel generated and lack authentic editorial specificity."},
+    {"templateId":"education-seminar-10","reason":"Leadership portraits look synthetic and too similar to generic conference advertising."},
+    {"templateId":"recruit-career-02","reason":"Pink team collage uses uniformly cheerful synthetic staff and repetitive framing."},
+    {"templateId":"recruit-career-06","reason":"Caregiving scene feels staged, over-clean, and emotionally generic."},
+    {"templateId":"recruit-career-07","reason":"Executive portrait trio has dramatic but synthetic facial and lighting treatment."},
+    {"templateId":"recruit-career-09","reason":"Designer scene has generic AI people and weak proof of real product work."},
+    {"templateId":"recruit-career-10","reason":"Apparel-store staff montage uses repetitive AI人物 and catalog-like staging."},
+    {"templateId":"finance-insurance-05","reason":"Advisor-couple stock scene is generic and undermines trust for a mortgage comparison ad."},
+    {"templateId":"finance-insurance-06","reason":"Family-planning collage is over-staged and uses familiar AI finance-ad imagery."},
+    {"templateId":"finance-insurance-07","reason":"Heroic young businessman portrait is a generic AI investment cliché."},
+    {"templateId":"finance-insurance-09","reason":"Pensive woman and family-photo collage are synthetic and emotionally generic."},
+    {"templateId":"finance-insurance-10","reason":"Older couple at table is conventional AI insurance stock with limited design authorship."},
+    {"templateId":"travel-tourism-07","reason":"Theme-park selfie uses highly polished synthetic faces and an implausibly perfect scene."},
+    {"templateId":"event-media-03","reason":"Creator montage repeats synthetic people and workshop clichés."},
+    {"templateId":"event-media-10","reason":"Conference speakers are convincing at thumbnail size but synthetic in facial detail and staging."},
+    {"templateId":"lifestyle-pet-07","reason":"Father-daughter gift scene has synthetic faces and stock-photo emotional staging."}
+  ]
+}

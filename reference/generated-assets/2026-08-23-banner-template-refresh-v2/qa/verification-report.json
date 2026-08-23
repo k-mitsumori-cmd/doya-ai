@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "checkedAt": "2026-08-23T12:57:30.640Z",
+  "counts": {
+    "manifest": 150,
+    "completedQa": 150,
+    "webp": 150,
+    "uniqueWebpSha256": 150,
+    "rawPng": 150,
+    "references": 150,
+    "genres": 15,
+    "contactSheets": 15,
+    "comparisonSheets": 15
+  },
+  "expectedDimensions": "1200x628 WebP",
+  "failures": []
+}
