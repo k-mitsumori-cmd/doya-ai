@@ -29,6 +29,8 @@ async function generateBatch(startIndex, endIndex) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        // 2026-08-22 にこのAPIは管理者限定になった。スクリプトは Bearer で通す。
+        ...(process.env.CRON_SECRET ? { Authorization: `Bearer ${process.env.CRON_SECRET}` } : {}),
       },
       body: JSON.stringify({
         generateAll: false,

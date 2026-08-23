@@ -21,8 +21,16 @@ const FALLBACK_IMAGE = '/banner-samples/cat-other.webp'
 // 用意していない幅（0=原寸、1280超）は原寸を返す。
 const STORAGE_VARIANT_WIDTHS = [300, 600, 1280]
 
+// -wNNN.webp を実際に置いてある置き場だけ。
+// ⚠️ ここに載っていないURLを書き換えると、存在しないファイルへ飛ばして
+//    画像が出ないまま終わる（/templates/add は任意のURLを受け付けるため、
+//    外部URLのテンプレートが1件でもあると壊れる）。
+//    投入スクリプトで PREFIX を増やしたら、ここにも足すこと。
+const VARIANT_READY_PREFIXES = ['/banner-templates/v2-2026-08-23/', '/banner-templates/legacy-2026-08-24/']
+
 function storageVariantUrl(imageUrl: string, resizeWidth: number): string {
   if (!resizeWidth) return imageUrl
+  if (!VARIANT_READY_PREFIXES.some((p) => imageUrl.includes(p))) return imageUrl
   const width = STORAGE_VARIANT_WIDTHS.find((w) => resizeWidth <= w)
   if (!width) return imageUrl
   return imageUrl.replace(/\.webp(\?.*)?$/i, `-w${width}.webp$1`)
@@ -144,8 +152,11 @@ export async function GET(
     if (imageUrl.startsWith('https://') || imageUrl.startsWith('http://')) {
       const target = storageVariantUrl(imageUrl, resizeWidth)
       const res = NextResponse.redirect(target)
-      // リダイレクト自体もCDNに載せる（載せないと毎回Vercelまで往復する）
-      res.headers.set('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, immutable')
+      // リダイレクト自体もCDNに載せる（載せないと毎回Vercelまで往復する）。
+      // ⚠️ ただし immutable にはしない。飛ばし先は可変のDB列（imageUrl）から作っており、
+      //    Storageへの移行や置き場の変更でURLが変わる。1年不変で焼くと、
+      //    変えた後もCDNとブラウザが古い場所を指し続ける。
+      res.headers.set('Cache-Control', 'public, max-age=600, s-maxage=86400, stale-while-revalidate=604800')
       return res
     }
 

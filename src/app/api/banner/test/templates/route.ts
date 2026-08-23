@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireBannerAdmin } from '@/lib/banner-admin-guard'
 import { BANNER_PROMPTS_V2 } from '@/lib/banner-prompts-v2'
 
 // generateBannersはPOSTでのみ使用するため、動的インポートに変更
@@ -861,10 +862,12 @@ export async function GET(request: NextRequest) {
         },
         take: limit,
         skip: offset,
-        // ⚠️ isFeatured だけだと同値内の順序が Postgres 任せになり、
-        //    take=30 の先読みで「最初に見える4枚」が毎回変わる。
-        //    sortOrder を第2キーに置いて確定させる（既定1000=従来分は後段）。
-        orderBy: [{ isFeatured: 'desc' }, { sortOrder: 'asc' }],
+        // ⚠️ 3つ揃えて初めて「全順序」になる。1つでも欠けると同値の行の順番が
+        //    Postgres 任せになり、ダッシュボードの limit=100&offset=N ページングで
+        //    同じ行が二度来たり、一度も来ない行が出る（＝ギャラリーから消える）。
+        //    従来分348件は sortOrder が既定1000で全部同じ値なので、
+        //    templateId の最終タイブレークが無いと実際に取りこぼしていた。
+        orderBy: [{ isFeatured: 'desc' }, { sortOrder: 'asc' }, { templateId: 'asc' }],
       })
 
       console.log(`[Templates API] Fetched ${dbTemplates.length} active templates (offset=${offset}, limit=${limit}) in ${Date.now() - startTime}ms`)
@@ -979,6 +982,12 @@ export async function GET(request: NextRequest) {
 
 // POST: テンプレートのバナーを生成（初期データ生成用）
 export async function POST(request: NextRequest) {
+  // ⚠️ 有料の画像生成を回すAPI。generateAll:true で200件超を一気に生成するため、
+  //    認証が無いと外部から費用を垂れ流せる。兄弟ルート（add/bootstrap/cleanup等）は
+  //    2026-08-22 に塞いだが、この親ルートのPOSTだけ取り残されていた。
+  const denied = requireBannerAdmin(request)
+  if (denied) return denied
+
   try {
     // 動的インポート（sharpの初期化エラーを回避）
     const { generateBanners } = await import('@/lib/nanobanner')

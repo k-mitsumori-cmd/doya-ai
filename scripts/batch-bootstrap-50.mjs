@@ -107,7 +107,9 @@ async function main() {
 
     const result = await fetchJson(bootstrapUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json',
+        // 2026-08-22 にこのAPIは管理者限定になった。スクリプトは Bearer で通す。
+        ...(process.env.CRON_SECRET ? { Authorization: `Bearer ${process.env.CRON_SECRET}` } : {}) },
       body: JSON.stringify({
         generateAll: false,
         templateIds: batchIds,
