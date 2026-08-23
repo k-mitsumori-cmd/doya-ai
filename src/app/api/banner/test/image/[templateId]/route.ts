@@ -62,6 +62,15 @@ export async function GET(
 
   const staticFallbackUrl = FALLBACK_IMAGE
 
+  // 差し替え用プレースホルダーへの逃げ道。
+  // ⚠️ 必ず no-store を付ける。DBが一時的に落ちている間の応答をCDNが掴むと、
+  //    DBが復旧した後も見本の代わりに同じ絵が並び続ける（2026-08-24に実際に発生）。
+  const fallback = () => {
+    const res = NextResponse.redirect(new URL(staticFallbackUrl, request.url))
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
+    return res
+  }
+
   try {
     // DBから画像を取得
     const template = await prisma.bannerTemplate.findUnique({
@@ -75,14 +84,14 @@ export async function GET(
       (imageUrl.includes('placehold.co') && imageUrl.includes('Error'))
 
     if (needsFallback) {
-      return NextResponse.redirect(new URL(staticFallbackUrl, request.url))
+      return fallback()
     }
 
     // base64画像の場合
     if (imageUrl.startsWith('data:image/')) {
       const matches = imageUrl.match(/^data:image\/(\w+);base64,(.+)$/)
       if (!matches) {
-        return NextResponse.redirect(new URL(staticFallbackUrl, request.url))
+        return fallback()
       }
 
       const [, , base64Data] = matches
@@ -145,9 +154,9 @@ export async function GET(
       return NextResponse.redirect(new URL(imageUrl, request.url))
     }
 
-    return NextResponse.redirect(new URL(staticFallbackUrl, request.url))
+    return fallback()
   } catch (err: any) {
     console.error(`[Image API] Error for ${templateId}:`, err.message)
-    return NextResponse.redirect(new URL(staticFallbackUrl, request.url))
+    return fallback()
   }
 }
