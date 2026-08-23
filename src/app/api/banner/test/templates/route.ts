@@ -856,11 +856,15 @@ export async function GET(request: NextRequest) {
           industry: true,
           category: true,
           updatedAt: true,
+          sortOrder: true,
           ...(minimal ? {} : { prompt: true }),
         },
         take: limit,
         skip: offset,
-        orderBy: { isFeatured: 'desc' },
+        // ⚠️ isFeatured だけだと同値内の順序が Postgres 任せになり、
+        //    take=30 の先読みで「最初に見える4枚」が毎回変わる。
+        //    sortOrder を第2キーに置いて確定させる（既定1000=従来分は後段）。
+        orderBy: [{ isFeatured: 'desc' }, { sortOrder: 'asc' }],
       })
 
       console.log(`[Templates API] Fetched ${dbTemplates.length} active templates (offset=${offset}, limit=${limit}) in ${Date.now() - startTime}ms`)

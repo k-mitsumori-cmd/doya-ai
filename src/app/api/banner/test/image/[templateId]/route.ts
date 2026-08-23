@@ -15,6 +15,19 @@ const MEMORY_CACHE_MAX = 2000
 // ⚠️ 実体のあるファイルを指すこと。generating-placeholder.svg は存在せず 404 だった。
 const FALLBACK_IMAGE = '/banner-samples/cat-other.webp'
 
+
+// Storage に置いた事前生成サムネイルのURLを組み立てる。
+// 例: .../beauty-cosme-01.webp + w=300 → .../beauty-cosme-01-w300.webp
+// 用意していない幅（0=原寸、1280超）は原寸を返す。
+const STORAGE_VARIANT_WIDTHS = [300, 600, 1280]
+
+function storageVariantUrl(imageUrl: string, resizeWidth: number): string {
+  if (!resizeWidth) return imageUrl
+  const width = STORAGE_VARIANT_WIDTHS.find((w) => resizeWidth <= w)
+  if (!width) return imageUrl
+  return imageUrl.replace(/\.webp(\?.*)?$/i, `-w${width}.webp$1`)
+}
+
 export async function GET(
   request: NextRequest,
   ctx: { params: Promise<{ templateId: string }> | { templateId: string } }
@@ -115,9 +128,16 @@ export async function GET(
       })
     }
 
-    // 外部URLの場合はリダイレクト
+    // 外部URL（Supabase Storage）の場合はリダイレクト。
+    // ⚠️ base64 と違いここでは sharp を通さない。投入時に w=300/600/1280 の
+    //    WebP を作って一緒に置いてあるので、要求幅に一番近いものへ振り分ける。
+    //    実行時変換が無くなり、CDNがそのまま返せる。
     if (imageUrl.startsWith('https://') || imageUrl.startsWith('http://')) {
-      return NextResponse.redirect(imageUrl)
+      const target = storageVariantUrl(imageUrl, resizeWidth)
+      const res = NextResponse.redirect(target)
+      // リダイレクト自体もCDNに載せる（載せないと毎回Vercelまで往復する）
+      res.headers.set('Cache-Control', 'public, max-age=31536000, s-maxage=31536000, immutable')
+      return res
     }
 
     // ローカルパスの場合はリダイレクト

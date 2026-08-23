@@ -1039,6 +1039,11 @@ model BannerTemplate {
   isFeatured Boolean @default(false) // 初期表示用のヒーロー画像として使用
   isActive   Boolean @default(true)
 
+  // 並び順（小さいほど先）。既定1000は「順序指定なし＝従来分」。
+  // ⚠️ 一覧APIは take=30 の先読みなので、ここが未指定だと Postgres が
+  //    どの30件を返すか不定になり「最初に見える4枚」が固定できない。
+  sortOrder Int @default(1000)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -1046,6 +1051,7 @@ model BannerTemplate {
   @@index([category])
   @@index([isFeatured])
   @@index([isActive])
+  @@index([isFeatured, sortOrder])
   @@map("banner_template")
 }
 
