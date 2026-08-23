@@ -1475,12 +1475,14 @@ export const SERVICES: Service[] = [
       free: { name: '無料プラン', limit: 'テンプレート1件 / 面接3件まで', dailyLimit: -1, price: 0 },
       pro: { name: 'プロプラン', limit: '面接無制限 / 評価レポート / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
-    status: 'active',
+    status: 'coming_soon',
+    // 開発中。対外的には出さず（UNLISTED_SERVICE_IDS）、社内ではベータとして使う。
+    badge: 'BETA',
     category: 'other',
     order: 28,
     requiresAuth: true,
+    // 開発中の間は NEW ではなく BETA を出す（上の badge）
     isNew: true,
-    badge: 'NEW',
   },
 
   // ----------------------------------------
@@ -1520,12 +1522,14 @@ export const SERVICES: Service[] = [
       free: { name: '無料プラン', limit: '見積書3件まで', dailyLimit: -1, price: 0 },
       pro: { name: 'プロプラン', limit: '見積書無制限 / PDF出力 / チーム共有', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
-    status: 'active',
+    status: 'coming_soon',
+    // 開発中。対外的には出さず（UNLISTED_SERVICE_IDS）、社内ではベータとして使う。
+    badge: 'BETA',
     category: 'other',
     order: 29,
     requiresAuth: true,
+    // 開発中の間は NEW ではなく BETA を出す（上の badge）
     isNew: true,
-    badge: 'NEW',
   },
 
   // ----------------------------------------
@@ -1566,12 +1570,14 @@ export const SERVICES: Service[] = [
       free: { name: '無料プラン', limit: '商材1件 / 商談5件まで', dailyLimit: -1, price: 0 },
       pro: { name: 'プロプラン', limit: '商談無制限 / ログ・適合判定 / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
-    status: 'active',
+    status: 'coming_soon',
+    // 開発中。対外的には出さず（UNLISTED_SERVICE_IDS）、社内ではベータとして使う。
+    badge: 'BETA',
     category: 'other',
     order: 30,
     requiresAuth: true,
+    // 開発中の間は NEW ではなく BETA を出す（上の badge）
     isNew: true,
-    badge: 'NEW',
   },
 
   // ----------------------------------------
@@ -1612,12 +1618,14 @@ export const SERVICES: Service[] = [
       free: { name: '無料プラン', limit: '1日5コンセプトまで', dailyLimit: 5, price: 0 },
       pro: { name: 'プロプラン', limit: '1日40コンセプト / 改善無制限 / ZIP一括', dailyLimit: 40, price: UNIFIED_PRO_PRICE },
     },
-    status: 'active',
+    status: 'coming_soon',
+    // 開発中。対外的には出さず（UNLISTED_SERVICE_IDS）、社内ではベータとして使う。
+    badge: 'BETA',
     category: 'image',
     order: 31,
     requiresAuth: true,
+    // 開発中の間は NEW ではなく BETA を出す（上の badge）
     isNew: true,
-    badge: 'NEW',
   },
 ]
 
@@ -1692,7 +1700,11 @@ export const HIDDEN_SERVICE_IDS = new Set([
 //    対外的な一覧（トップ・sitemap・公開LP）は getPublicServices() を使うこと。
 export function getActiveServices(): Service[] {
   return SERVICES
-    .filter(s => s.status === 'active' && !RETIRED_SERVICE_IDS.has(s.id))
+    .filter(s => !RETIRED_SERVICE_IDS.has(s.id))
+    // ⚠️ 開発中（UNLISTED_SERVICE_IDS）は status が 'coming_soon' でも**残す**。
+    //    実際に動いていて開発・検証に使うので、ここから外すとログイン後の
+    //    ツール切替から消え、URL直打ちでしか行けなくなる（2026-08-23にやった）。
+    .filter(s => s.status === 'active' || s.status === 'beta' || UNLISTED_SERVICE_IDS.has(s.id))
     .sort((a, b) => a.order - b.order)
 }
 

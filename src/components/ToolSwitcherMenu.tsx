@@ -272,6 +272,9 @@ export function ToolSwitcherMenu({ currentService, showLabel, className }: ToolS
                           const hoverBg = (SERVICE_ICON_MAP[service.id] || FALLBACK_MAPPING).hoverBg
                           const isCurrent = service.id === currentService
                           const isNew = service.badge === 'NEW' || service.isNew
+                          // 開発中のサービスは「動くが未完成」であることが分かるようにする。
+                          // 対外的な一覧には出していないので、これが見えるのは中の人だけ。
+                          const isBeta = service.badge === 'BETA'
                           if (isCurrent) {
                             return (
                               <div
@@ -283,8 +286,13 @@ export function ToolSwitcherMenu({ currentService, showLabel, className }: ToolS
                                 <ServiceVisual id={service.id} active />
                                 <div className="flex items-center justify-between gap-1.5 px-0.5 pt-2">
                                   <p className="text-[13px] font-black text-slate-900 truncate min-w-0">{service.name}</p>
-                                  <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#0066ff] text-white text-[9px] font-black flex-shrink-0">
-                                    <Check className="w-2.5 h-2.5" strokeWidth={3} />使用中
+                                  <span className="flex items-center gap-1 flex-shrink-0">
+                                    {isBeta && (
+                                      <span className="px-1 py-px rounded bg-amber-500 text-white text-[8px] font-black leading-none">BETA</span>
+                                    )}
+                                    <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-[#0066ff] text-white text-[9px] font-black">
+                                      <Check className="w-2.5 h-2.5" strokeWidth={3} />使用中
+                                    </span>
                                   </span>
                                 </div>
                               </div>
@@ -301,7 +309,10 @@ export function ToolSwitcherMenu({ currentService, showLabel, className }: ToolS
                               <ServiceVisual id={service.id} />
                               <div className="flex items-center gap-1.5 px-0.5 pt-2">
                                 <p className="text-[13px] font-black text-slate-800 truncate min-w-0">{service.name}</p>
-                                {isNew && (
+                                {isBeta && (
+                                  <span className="px-1 py-px rounded bg-amber-500 text-white text-[8px] font-black leading-none flex-shrink-0">BETA</span>
+                                )}
+                                {isNew && !isBeta && (
                                   <span className="px-1 py-px rounded bg-rose-500 text-white text-[8px] font-black leading-none flex-shrink-0">NEW</span>
                                 )}
                               </div>
