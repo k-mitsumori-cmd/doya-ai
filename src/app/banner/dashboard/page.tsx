@@ -163,7 +163,7 @@ function DashboardSkeleton() {
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
                 {[...Array(4)].map((_, i) => (
-                  <div key={i} className="aspect-[16/10] rounded bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden relative">
+                  <div key={i} className="aspect-[1200/628] rounded bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden relative">
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gray-700/20 to-transparent animate-[shimmer_2s_infinite]" style={{ backgroundSize: '200% 100%', animationDelay: `${(section * 4 + i) * 100}ms` }} />
                   </div>
                 ))}
@@ -1777,7 +1777,7 @@ function BannerTestPageInner() {
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5 sm:gap-2">
                       {[...Array(4)].map((_, i) => (
-                        <div key={i} className="aspect-[16/10] rounded bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden relative flex flex-col items-center justify-center gap-1.5">
+                        <div key={i} className="aspect-[1200/628] rounded bg-gradient-to-br from-gray-800 to-gray-900 overflow-hidden relative flex flex-col items-center justify-center gap-1.5">
                           <Loader2 className="w-5 h-5 animate-spin text-gray-500" />
                           <div className="w-12 h-0.5 bg-gray-700 rounded-full overflow-hidden">
                             <div className="h-full bg-gray-500 rounded-full animate-[progressGrow_4s_ease-out_forwards]" />
@@ -1829,7 +1829,7 @@ function BannerTestPageInner() {
                                 window.scrollTo({ top: 0, behavior: 'smooth' })
                               }
                             }}
-                            className={`group relative aspect-[16/10] rounded overflow-hidden ${
+                            className={`group relative aspect-[1200/628] rounded overflow-hidden ${
                               template.isPending
                                 ? 'cursor-default ring-1 ring-gray-800/30 opacity-60'
                                 : isLocked
@@ -1909,7 +1909,7 @@ function BannerTestPageInner() {
                       {(hiddenCount > 0 || isFetchingAll) && (
                         <button
                           onClick={() => loadMoreTemplates(categoryName)}
-                          className="group relative aspect-[16/10] rounded overflow-hidden cursor-pointer border-2 border-dashed border-gray-600 hover:border-blue-500 bg-gray-800/80 hover:bg-gray-800 transition-all flex items-center justify-center"
+                          className="group relative aspect-[1200/628] rounded overflow-hidden cursor-pointer border-2 border-dashed border-gray-600 hover:border-blue-500 bg-gray-800/80 hover:bg-gray-800 transition-all flex items-center justify-center"
                         >
                           {isFetchingAll && hiddenCount === 0 ? (
                             <div className="text-center w-full px-3 sm:px-4">
@@ -1968,7 +1968,7 @@ function BannerTestPageInner() {
                           window.scrollTo({ top: 0, behavior: 'smooth' })
                         }
                       }}
-                      className={`group relative aspect-[16/10] rounded overflow-hidden ${
+                      className={`group relative aspect-[1200/628] rounded overflow-hidden ${
                         template.isPending
                           ? 'cursor-default ring-1 ring-gray-800/30 opacity-60'
                           : isLocked
@@ -2045,7 +2045,7 @@ function BannerTestPageInner() {
                 {(filterHiddenCount > 0 || isFetchingAll) && (
                   <button
                     onClick={() => loadMoreTemplates(activeFilter)}
-                    className="group relative aspect-[16/10] rounded overflow-hidden cursor-pointer border-2 border-dashed border-gray-600 hover:border-blue-500 bg-gray-800/80 hover:bg-gray-800 transition-all flex items-center justify-center"
+                    className="group relative aspect-[1200/628] rounded overflow-hidden cursor-pointer border-2 border-dashed border-gray-600 hover:border-blue-500 bg-gray-800/80 hover:bg-gray-800 transition-all flex items-center justify-center"
                   >
                     {isFetchingAll && filterHiddenCount === 0 ? (
                       <div className="text-center w-full px-3 sm:px-4">
