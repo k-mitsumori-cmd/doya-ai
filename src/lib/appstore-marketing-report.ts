@@ -27,16 +27,29 @@ const SNAPSHOT_KEY = 'appstore_marketing_snapshot'
 const SEARCH_LIMIT = 200
 const CHART_LIMIT = 100
 
-function appId(): string {
-  return (process.env.APPSTORE_APP_ID || DEFAULT_APP_ID).trim()
+/** 対象アプリ1件ぶんの設定。呪い日記が既定、ゆるせん等は呼び出し側から渡す */
+export type MarketingTarget = {
+  appLabel: string
+  appId: string
+  country: string
+  keywords: string[]
+  snapshotKey: string
 }
-function country(): string {
-  return (process.env.APPSTORE_MARKETING_COUNTRY || DEFAULT_COUNTRY).trim()
-}
-function keywords(): string[] {
-  const raw = process.env.APPSTORE_MARKETING_KEYWORDS
-  if (!raw || !raw.trim()) return DEFAULT_KEYWORDS
-  return raw.split(',').map((k) => k.trim()).filter(Boolean)
+
+function resolveTarget(opts: Partial<MarketingTarget> = {}): MarketingTarget {
+  const envKeywords = process.env.APPSTORE_MARKETING_KEYWORDS
+  return {
+    appLabel: opts.appLabel || '呪い日記',
+    appId: (opts.appId || process.env.APPSTORE_APP_ID || DEFAULT_APP_ID).trim(),
+    country: (opts.country || process.env.APPSTORE_MARKETING_COUNTRY || DEFAULT_COUNTRY).trim(),
+    keywords:
+      opts.keywords && opts.keywords.length > 0
+        ? opts.keywords
+        : envKeywords && envKeywords.trim()
+          ? envKeywords.split(',').map((k) => k.trim()).filter(Boolean)
+          : DEFAULT_KEYWORDS,
+    snapshotKey: opts.snapshotKey || SNAPSHOT_KEY,
+  }
 }
 
 function jstDateStr(): string {
@@ -55,15 +68,15 @@ type AppInfo = {
   version: string
 }
 
-async function lookupApp(): Promise<AppInfo | null> {
-  const url = `https://itunes.apple.com/lookup?id=${appId()}&country=${country()}`
+async function lookupApp(t: MarketingTarget): Promise<AppInfo | null> {
+  const url = `https://itunes.apple.com/lookup?id=${t.appId}&country=${t.country}`
   const res = await fetch(url)
   if (!res.ok) return null
   const json = (await res.json()) as any
   const r = json?.results?.[0]
   if (!r) return null
   return {
-    name: r.trackName || '呪い日記',
+    name: r.trackName || t.appLabel,
     genreName: r.primaryGenreName || '',
     genreId: String(r.primaryGenreId || ''),
     rating: Number(r.averageUserRating) || 0,
@@ -73,38 +86,38 @@ async function lookupApp(): Promise<AppInfo | null> {
 }
 
 /** キーワード検索での掲載順位（該当なしは null） */
-async function searchRank(keyword: string): Promise<number | null> {
-  const url = `https://itunes.apple.com/search?term=${encodeURIComponent(keyword)}&country=${country()}&entity=software&limit=${SEARCH_LIMIT}`
+async function searchRank(t: MarketingTarget, keyword: string): Promise<number | null> {
+  const url = `https://itunes.apple.com/search?term=${encodeURIComponent(keyword)}&country=${t.country}&entity=software&limit=${SEARCH_LIMIT}`
   const res = await fetch(url)
   if (!res.ok) return null
   const json = (await res.json()) as any
   const ids: string[] = (json?.results || []).map((x: any) => String(x.trackId))
-  const idx = ids.indexOf(appId())
+  const idx = ids.indexOf(t.appId)
   return idx === -1 ? null : idx + 1
 }
 
 /** 総合チャート順位（無料アプリTOP。該当なしは null） */
-async function overallChartRank(): Promise<number | null> {
-  const url = `https://itunes.apple.com/${country()}/rss/topfreeapplications/limit=${CHART_LIMIT}/json`
+async function overallChartRank(t: MarketingTarget): Promise<number | null> {
+  const url = `https://itunes.apple.com/${t.country}/rss/topfreeapplications/limit=${CHART_LIMIT}/json`
   const res = await fetch(url)
   if (!res.ok) return null
   const json = (await res.json()) as any
   const entries: any[] = json?.feed?.entry || []
   const ids = entries.map((e) => e?.id?.attributes?.['im:id'])
-  const idx = ids.indexOf(appId())
+  const idx = ids.indexOf(t.appId)
   return idx === -1 ? null : idx + 1
 }
 
 /** カテゴリ別チャート順位（該当なしは null） */
-async function categoryChartRank(genreId: string): Promise<number | null> {
+async function categoryChartRank(t: MarketingTarget, genreId: string): Promise<number | null> {
   if (!genreId) return null
-  const url = `https://itunes.apple.com/${country()}/rss/topfreeapplications/limit=${CHART_LIMIT}/genre=${genreId}/json`
+  const url = `https://itunes.apple.com/${t.country}/rss/topfreeapplications/limit=${CHART_LIMIT}/genre=${genreId}/json`
   const res = await fetch(url)
   if (!res.ok) return null
   const json = (await res.json()) as any
   const entries: any[] = json?.feed?.entry || []
   const ids = entries.map((e) => e?.id?.attributes?.['im:id'])
-  const idx = ids.indexOf(appId())
+  const idx = ids.indexOf(t.appId)
   return idx === -1 ? null : idx + 1
 }
 
@@ -119,8 +132,8 @@ type Snapshot = {
   keywords: Record<string, number | null>
 }
 
-async function loadSnapshot(): Promise<Snapshot | null> {
-  const row = await prisma.systemSetting.findUnique({ where: { key: SNAPSHOT_KEY } })
+async function loadSnapshot(key: string): Promise<Snapshot | null> {
+  const row = await prisma.systemSetting.findUnique({ where: { key } })
   if (!row?.value) return null
   try {
     return JSON.parse(row.value) as Snapshot
@@ -129,11 +142,11 @@ async function loadSnapshot(): Promise<Snapshot | null> {
   }
 }
 
-async function saveSnapshot(snap: Snapshot): Promise<void> {
+async function saveSnapshot(key: string, snap: Snapshot): Promise<void> {
   await prisma.systemSetting.upsert({
-    where: { key: SNAPSHOT_KEY },
+    where: { key },
     update: { value: JSON.stringify(snap) },
-    create: { key: SNAPSHOT_KEY, value: JSON.stringify(snap) },
+    create: { key, value: JSON.stringify(snap) },
   })
 }
 
@@ -200,30 +213,31 @@ export type MarketingReportResult = {
 }
 
 export async function sendAppStoreMarketingReport(
-  opts: { deliver?: boolean } = {},
+  opts: { deliver?: boolean } & Partial<MarketingTarget> = {},
 ): Promise<MarketingReportResult> {
   const deliver = opts.deliver !== false
+  const t = resolveTarget(opts)
   const date = jstDateStr()
-  const info = await lookupApp()
+  const info = await lookupApp(t)
   const genreId = info?.genreId || '6012' // 既定=ライフスタイル
 
   // 各種順位を並行取得
-  const kws = keywords()
+  const kws = t.keywords
   const [overall, category, ...kwRanks] = await Promise.all([
-    overallChartRank(),
-    categoryChartRank(genreId),
-    ...kws.map((k) => searchRank(k)),
+    overallChartRank(t),
+    categoryChartRank(t, genreId),
+    ...kws.map((k) => searchRank(t, k)),
   ])
   const keywordRanks: Record<string, number | null> = {}
   kws.forEach((k, i) => {
     keywordRanks[k] = kwRanks[i]
   })
 
-  const prev = await loadSnapshot()
+  const prev = await loadSnapshot(t.snapshotKey)
 
   // ---- メッセージ整形 ----
   const lines: string[] = []
-  lines.push(`呪い日記 アプリマーケ日次レポート（${date}）`)
+  lines.push(`${t.appLabel} アプリマーケ日次レポート（${date}）`)
   lines.push('────────────────')
 
   lines.push('■ ストア評価')
@@ -244,7 +258,7 @@ export async function sendAppStoreMarketingReport(
   )
   lines.push('')
 
-  lines.push(`■ キーワード検索順位（${country()}）`)
+  lines.push(`■ キーワード検索順位（${t.country}）`)
   for (const k of kws) {
     const cur = keywordRanks[k]
     const label = cur === null ? '圏外' : `${cur}位`
@@ -266,7 +280,7 @@ export async function sendAppStoreMarketingReport(
     category,
     keywords: keywordRanks,
   }
-  await saveSnapshot(snap)
+  await saveSnapshot(t.snapshotKey, snap)
 
   return {
     date,

@@ -105,10 +105,11 @@ export type CountryReportResult = {
 }
 
 export async function sendAppStoreCountryReport(
-  opts: { date?: string; deliver?: boolean } = {},
+  opts: { date?: string; deliver?: boolean; appId?: string; appLabel?: string } = {},
 ): Promise<CountryReportResult> {
   const deliver = opts.deliver !== false
-  const appId = appStoreAppId()
+  const appId = opts.appId || appStoreAppId()
+  const appLabel = opts.appLabel || '呪い日記'
   const token = makeJwt()
   const latest = await getLatestDailyRows(token, opts.date)
 
@@ -116,7 +117,7 @@ export async function sendAppStoreCountryReport(
     const d = opts.date || jstDate(1)
     if (deliver)
       await postSlack(
-      `呪い日記 App Store 国別レポート（${d} 分）\n────────────────\n記録された売上・ダウンロードはありませんでした（0件、またはApple側の集計待ち）。`,
+      `${appLabel} App Store 国別レポート（${d} 分）\n────────────────\n記録された売上・ダウンロードはありませんでした（0件、またはApple側の集計待ち）。`,
     )
     return { reportDate: null, countries: [] }
   }
@@ -137,7 +138,7 @@ export async function sendAppStoreCountryReport(
 
   // ---- メッセージ ----
   const lines: string[] = []
-  lines.push(`呪い日記 App Store 国別レポート（${latest.reportDate} 分）`)
+  lines.push(`${appLabel} App Store 国別レポート（${latest.reportDate} 分）`)
   lines.push('────────────────')
   lines.push(`合計: DL ${fmtInt(totalDl)}件／課金 ${fmtYen(totalRev)}`)
   lines.push('')

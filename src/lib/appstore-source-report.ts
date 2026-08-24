@@ -289,10 +289,11 @@ function sourceLabel(s: string): string {
  * レポート未生成時は「生成待ち」ノートを投稿して pending を返す（crash しない）。
  */
 export async function sendAppStoreSourceReport(
-  opts: { deliver?: boolean } = {},
+  opts: { deliver?: boolean; appId?: string; appLabel?: string } = {},
 ): Promise<SourceReportResult> {
   const deliver = opts.deliver !== false
-  const appId = appStoreAppId()
+  const appId = opts.appId || appStoreAppId()
+  const appLabel = opts.appLabel || '呪い日記'
   const token = makeJwt()
 
   // 1) ONGOING の analyticsReportRequest を選ぶ
@@ -311,7 +312,7 @@ export async function sendAppStoreSourceReport(
       requests.map((r) => ({ id: r.id, accessType: r.attributes?.accessType })),
     )
     if (deliver) await postSlack(
-      '呪い日記 流入経路レポート: ONGOING の Analytics Report Request が見つかりません（要確認）。',
+      `${appLabel} 流入経路レポート: ONGOING の Analytics Report Request が見つかりません（要確認）。`,
     )
     return { status: 'no-request', processingDate: null, bySourceType: {}, topReferrerDomains: [] }
   }
@@ -326,7 +327,7 @@ export async function sendAppStoreSourceReport(
   if (!eng) {
     if (deliver)
       await postSlack(
-        '呪い日記 流入経路レポート: 「App Store Discovery and Engagement Standard」の日次データがまだ生成されていません（Apple 側で生成待ち・1〜2 日）。',
+        `${appLabel} 流入経路レポート: 「App Store Discovery and Engagement Standard」の日次データがまだ生成されていません（Apple 側で生成待ち・1〜2 日）。`,
       )
     return { status: 'pending', processingDate: null, bySourceType: {}, topReferrerDomains: [] }
   }
@@ -359,7 +360,7 @@ export async function sendAppStoreSourceReport(
 
   // ---- メッセージ整形 ----
   const lines: string[] = []
-  lines.push(`呪い日記 流入経路（Source Type）日次レポート（${processingDate} 分）`)
+  lines.push(`${appLabel} 流入経路（Source Type）日次レポート（${processingDate} 分）`)
   lines.push('────────────────')
 
   const sorted = [...bySourceType.entries()].sort((a, b) => b[1].downloads - a[1].downloads)

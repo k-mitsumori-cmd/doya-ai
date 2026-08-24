@@ -21,13 +21,9 @@ import { buildContentScheduleSection } from '@/lib/sns-schedule-report'
 // 対象は環境変数 ANALYTICS_REPORT_TARGETS（JSON配列）、
 // YouTube は YOUTUBE_CHANNELS（JSON配列: "@handle" or "UC..."）で定義
 //
-// YOUTUBE_CHANNELS の現行メンバー（IDは改名に強いのでゲーム系はUC指定）:
-//   @mitsumori_ai                 ミツモリ
-//   @免許はまだない_旅人ミツモリ   旅人ミツモリ
-//   UCxfO6w6rf-jzF2IFl34NQSA      ノロッピー@呪い日記（@noroi_nikki）
-//   UCuWdi7IEVypvhApM-b5_t4A      Curse Diary（@thecursediary / 呪い日記 英語）
-//   UCsOC1bRqk36MMJCEwHmFlhw      エンマ@ゆるせん公式（@yurusen_app）
-//   UCoOB-sCUoY_fs8GNRQtvtKg      Enma | Yurusen Official（@yurusenglobal / ゆるせん 英語）
+// YOUTUBE_CHANNELS はミツモリ個人系のみ。呪い日記/ゆるせんの4チャンネルは
+// 各アプリの「朝刊」（noroi-morning-digest / yurusen-morning-digest）側で
+// 扱うため、ここには入れない（同じ数字が朝2回出るのを避ける）。
 // ============================================
 
 export type ReportTarget = {
