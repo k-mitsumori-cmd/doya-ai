@@ -215,6 +215,35 @@ export function UnifiedPricingPlans({
         </div>
       </div>
 
+      {/* ===== 活用事例・ロゴ掲載キャンペーン ===== */}
+      {/* ⚠️ 掲載は「30分の取材」と「ロゴ掲載」の両方にご協力いただく条件。
+           片方だけで6ヶ月無料になると読めないよう、文言を削らないこと。 */}
+      <div className="mx-auto mt-10 max-w-4xl">
+        <div className="rounded-2xl border-2 border-dashed border-[#bfd7ff] bg-white px-6 py-6 sm:px-8">
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <span className="inline-flex items-center rounded-full bg-[#0066ff]/10 px-2.5 py-1 text-[11px] font-black tracking-wide text-[#0066ff]">
+                活用事例・ロゴ掲載キャンペーン
+              </span>
+              <p className="mt-2.5 text-lg font-black leading-snug text-slate-900">
+                30分の取材とロゴ掲載で、<span className="text-[#0066ff]">6ヶ月無料</span>。
+              </p>
+              <p className="mt-1.5 text-sm font-semibold leading-relaxed text-slate-600">
+                オンラインで30分ほど活用状況をうかがい、御社のロゴ・サービスロゴを
+                当サイトに掲載させていただける方が対象です。
+              </p>
+            </div>
+            <Link
+              href="/campaign/case-study"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#0066ff] px-6 py-3.5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-[#0052cc]"
+            >
+              申し込みフォームへ
+              <Sym name="arrow_forward" size={18} />
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* ===== プロで解放される全サービス（使い放題の可視化） ===== */}
       <div className="max-w-4xl mx-auto mt-10">
         <p className="text-center text-sm font-black text-slate-500 mb-4">

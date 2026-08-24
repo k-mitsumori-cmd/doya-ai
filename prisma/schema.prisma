@@ -3642,19 +3642,19 @@ model MensetsuSession {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  turns        MensetsuTurn[]
-  scores       MensetsuScore[]
+  turns           MensetsuTurn[]
+  scores          MensetsuScore[]
   /// ドヤHRへ引き渡した従業員ID。
   /// ⚠️ 二重登録を防ぐために持つ。面接AIの判定ではなく、担当者が採用を決めて
   ///    明示的に押したときだけ入る（自動同期はしない）。
-  hrEmployeeId String?
+  hrEmployeeId    String?
+  /// 同意画面でのメール照合の失敗回数。
+  /// ⚠️ ワンタイムURLは本人以外の手に渡りうる。総当たりで本人になりすませないよう上限を設ける。
+  consentAttempts Int             @default(0)
 
   @@index([organizationId, status])
   @@index([templateId])
   @@map("mensetsu_sessions")
-  /// 同意画面でのメール照合の失敗回数。
-  /// ⚠️ ワンタイムURLは本人以外の手に渡りうる。総当たりで本人になりすませないよう上限を設ける。
-  consentAttempts Int @default(0)
 }
 
 model MensetsuTurn {
@@ -4316,4 +4316,36 @@ model FeedbackPromptState {
   updatedAt DateTime @updatedAt
 
   @@map("feedback_prompt_state")
+}
+
+// 活用事例／ロゴ掲載キャンペーンの申込
+// 30分ほどの取材と、企業ロゴ・サービスロゴの掲載にご協力いただいた方を6ヶ月無料にする。
+// ⚠️ Slack通知が落ちても申込を失わないよう、必ずここに残してから通知する。
+model CaseStudyApplication {
+  id           String  @id @default(cuid())
+  companyName  String
+  contactName  String
+  email        String
+  serviceUrl   String?
+  // 利用中のドヤAIサービス（複数）
+  usingService String?
+  // 掲載可否の内訳
+  allowLogo    Boolean @default(true)
+  allowName    Boolean @default(true)
+  // 取材の希望（日程感・オンライン可否など自由記述）
+  preferredAt  String?
+  note         String? @db.Text
+
+  // 申込時にログインしていれば紐づける（未ログインでも申し込める）
+  userId String?
+
+  // 運営側の進行状況: new / contacted / scheduled / done / declined
+  status String @default("new")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("case_study_application")
 }
