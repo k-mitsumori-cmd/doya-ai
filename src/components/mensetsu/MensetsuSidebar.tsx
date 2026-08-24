@@ -7,7 +7,7 @@
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { UserCheck, Users, CreditCard, Zap } from 'lucide-react'
+import { UserCheck, Users, CreditCard, Zap, Settings } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { mensetsuTheme } from '@/components/sidebar/themes'
@@ -39,6 +39,7 @@ function MensetsuSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
   const NAV: NavItem[] = [
     { href: BASE, label: '面接を用意する', icon: UserCheck, hot: true },
     { href: BASE + '/compare', label: '候補者を比較', icon: Users },
+    { href: BASE + '/settings', label: '設定', icon: Settings },
     { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
   ]
 
