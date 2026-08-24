@@ -10,7 +10,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import OrgSwitcher, { withOrg, type Membership } from '@/components/org/OrgSwitcher'
-import MemberPanel from '@/components/org/MemberPanel'
 import { billableLines, calcTotals, yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource, type ProductProfile, type SuggestedItem } from '@/lib/quote/types'
 import QuoteLp from './Lp'
@@ -703,11 +702,8 @@ export default function QuoteTool() {
           </section>
         )}
 
-        <MemberPanel
-          basePath="/api/quote"
-          service="quote"
-          description="招待した方は、この組織の商材と見積書を扱えるようになります。"
-        />
+        {/* ⚠️ メンバー招待は /quote/settings に移した。日常的に見るのは見積書一覧なので、
+             その上に「年に数回しか触らない招待」を置かないこと。 */}
 
         {/* --- 見積書一覧 --- */}
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">

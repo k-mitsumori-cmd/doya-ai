@@ -8,6 +8,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { withOrg } from '@/components/org/OrgSwitcher'
+import MemberPanel from '@/components/org/MemberPanel'
 import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
 
@@ -139,10 +140,17 @@ export default function QuoteSettingsPage() {
         <button
           onClick={save}
           disabled={saving || !form.companyName?.trim()}
-          className="w-full rounded-lg bg-[#0066ff] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-40"
+          className="w-full rounded-lg bg-[#0066ff] px-5 py-3.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
         >
           {saving ? '保存中...' : '保存する'}
         </button>
+
+        {/* メンバー招待。トップ（見積書一覧の上）にあったものをここへ移した。 */}
+        <MemberPanel
+          basePath="/api/quote"
+          service="quote"
+          description="招待した方は、この組織の商材と見積書を扱えるようになります。"
+        />
       </main>
     </div>
   )
