@@ -5,6 +5,7 @@ import { Providers } from '@/components/Providers'
 import FeedbackMount from '@/components/feedback/FeedbackMount'
 import { SITE_CONFIG, SERVICE_SEO, generateOrganizationSchema, generateWebSiteSchema } from '@/lib/seo'
 import { GoogleTagManager, GoogleTagManagerNoScript } from '@/components/GoogleTagManager'
+import { UserStateSignal } from '@/components/UserStateSignal'
 import { GoogleAnalytics } from '@/components/GoogleAnalytics'
 import LogoutToastListener from '@/components/LogoutToastListener'
 import StripeSuccessSync from '@/components/StripeSuccessSync'
@@ -175,6 +176,9 @@ export default function RootLayout({
           <FeedbackMount />
           {/* GA4（ドヤマーケと同一プロパティ）: PV計測 + sign_up/purchaseイベント */}
           <GoogleAnalytics />
+          {/* ログイン状態を dataLayer に流す。GTM側で「ログイン済みには
+              HubSpotのポップアップを出さない」除外条件を書くために必要 */}
+          <UserStateSignal />
           <LogoutToastListener />
           {/* Stripe決済からの戻りを全サービス共通で検知してプランを即時反映（Webhook不達の保険） */}
           <StripeSuccessSync />
