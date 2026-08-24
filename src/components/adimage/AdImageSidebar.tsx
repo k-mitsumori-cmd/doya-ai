@@ -71,7 +71,7 @@ function AdImageSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile 
   return (
     <>
       <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={adimageTheme}>
-        <SidebarLogoSection icon={Megaphone} title="ドヤ広告画像AI" showLabel={showLabel} />
+        <SidebarLogoSection icon={Megaphone} title="ドヤ広告画像AI" showLabel={showLabel} logoSrc="/adimage/logo.png" />
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <nav className="py-4 sm:py-6 px-3 space-y-1">
