@@ -10,7 +10,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import OrgSwitcher, { withOrg, type Membership } from '@/components/org/OrgSwitcher'
-import MemberPanel from '@/components/org/MemberPanel'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 import AishodanLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
@@ -451,11 +450,9 @@ export default function AishodanTool() {
           )}
         </section>
 
-        <MemberPanel
-          basePath="/api/aishodan"
-          service="aishodan"
-          description="招待した方は、この組織の商材・商談シナリオと商談ログを扱えるようになります。"
-        />
+        {/* ⚠️ メンバー招待は /aishodan/settings に移した。「直近の商談」と
+             「その場で答えられなかった質問」の間に挟まっていて、日々見る内容の
+             真ん中で読む流れが切れていた。ここには戻さないこと。 */}
 
         {/* 未回答質問 = ナレッジ拡充の優先順位 */}
         {stats && stats.unanswered.length > 0 && (

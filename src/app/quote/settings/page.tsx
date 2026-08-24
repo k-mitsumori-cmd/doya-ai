@@ -1,9 +1,9 @@
 'use client'
 
 // ============================================
-// ドヤ見積もりAI 発行者情報
+// ドヤ見積もりAI 設定
 // ============================================
-// 見積書に印字される自社情報。ここが空だとPDFを出せない。
+// 発行者情報（見積書に印字される自社情報。ここが空だとPDFを出せない）とメンバー招待。
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -94,12 +94,14 @@ export default function QuoteSettingsPage() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-2xl px-4 py-4">
           <Link href="/quote" className="text-xs text-slate-500 hover:underline font-semibold">← 見積もり一覧</Link>
-          <h1 className="text-lg font-bold text-slate-900">発行者情報</h1>
-          <p className="text-xs text-slate-500 font-semibold">見積書に印字される自社情報です。</p>
+          <h1 className="text-lg font-bold text-slate-900">設定</h1>
+          <p className="text-xs text-slate-500 font-semibold">発行者情報とメンバーを管理します。</p>
         </div>
       </header>
 
       <main className="mx-auto max-w-2xl space-y-4 px-4 py-6">
+        <h2 className="text-base font-bold text-slate-900">発行者情報</h2>
+        <p className="-mt-2 text-xs font-semibold text-slate-500">見積書に印字される自社情報です。</p>
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
         {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 font-semibold">{message}</div>}
 

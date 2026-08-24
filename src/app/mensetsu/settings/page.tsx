@@ -8,6 +8,7 @@
 //    日常の作業のたびにスクロールで通過させられる。
 
 import { useCallback, useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { notifyError } from '@/lib/ui/notify'
 
@@ -49,6 +50,8 @@ export default function MensetsuSettingsPage() {
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('member')
   const [inviteUrl, setInviteUrl] = useState('')
+  // ⚠️ 自分の行に名前が無いと「（名前未設定）」になる。ログイン中の名前で埋める。
+  const { data: session } = useSession()
 
   // ⚠️ useSession の status で fetch をゲートしない（Cookie認証なので未確定でもAPIは応答する）
   const load = useCallback(async () => {
@@ -166,7 +169,7 @@ export default function MensetsuSettingsPage() {
             <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
               <div className="min-w-0">
                 <p className="truncate text-sm font-black text-[#0a0f3c]">
-                  {m.name || m.inviteEmail || '（名前未設定）'}
+                  {m.name || (m.userId && m.userId === myUserId ? session?.user?.name : null) || m.inviteEmail || '（名前未設定）'}
                   {m.userId && m.userId === myUserId && (
                     <span className="ml-2 text-[11px] font-bold text-[#8a94ad]">あなた</span>
                   )}

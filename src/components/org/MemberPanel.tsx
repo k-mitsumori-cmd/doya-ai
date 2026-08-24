@@ -10,6 +10,7 @@
 //    体験のためであり、実際の防御は API 側（hasMinRole）が行う。
 
 import { useCallback, useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { withOrg } from './OrgSwitcher'
 
 export interface MemberRow {
@@ -42,6 +43,9 @@ export default function MemberPanel({ basePath, service, description }: MemberPa
   const [members, setMembers] = useState<MemberRow[]>([])
   const [myRole, setMyRole] = useState('member')
   const [myUserId, setMyUserId] = useState<string | null>(null)
+  // ⚠️ メンバー行に名前が入っていないことがある（招待経由ではなくオーナー自身が作った場合）。
+  //    自分の行だけは、ログイン中の名前で埋めて「（名前未設定）」を見せない。
+  const { data: session } = useSession()
   const [loading, setLoading] = useState(true)
 
   const [email, setEmail] = useState('')
@@ -152,7 +156,7 @@ export default function MemberPanel({ basePath, service, description }: MemberPa
               <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-slate-900">
-                    {m.name || m.inviteEmail || '（名前未設定）'}
+                    {m.name || (isMe ? session?.user?.name : null) || m.inviteEmail || '（名前未設定）'}
                     {isMe && <span className="ml-2 text-[11px] text-slate-500">あなた</span>}
                   </p>
                   <p className="text-[11px] text-slate-500">
