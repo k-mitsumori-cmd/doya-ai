@@ -20,6 +20,14 @@ import { buildContentScheduleSection } from '@/lib/sns-schedule-report'
 //
 // 対象は環境変数 ANALYTICS_REPORT_TARGETS（JSON配列）、
 // YouTube は YOUTUBE_CHANNELS（JSON配列: "@handle" or "UC..."）で定義
+//
+// YOUTUBE_CHANNELS の現行メンバー（IDは改名に強いのでゲーム系はUC指定）:
+//   @mitsumori_ai                 ミツモリ
+//   @免許はまだない_旅人ミツモリ   旅人ミツモリ
+//   UCxfO6w6rf-jzF2IFl34NQSA      ノロッピー@呪い日記（@noroi_nikki）
+//   UCuWdi7IEVypvhApM-b5_t4A      Curse Diary（@thecursediary / 呪い日記 英語）
+//   UCsOC1bRqk36MMJCEwHmFlhw      エンマ@ゆるせん公式（@yurusen_app）
+//   UCoOB-sCUoY_fs8GNRQtvtKg      Enma | Yurusen Official（@yurusenglobal / ゆるせん 英語）
 // ============================================
 
 export type ReportTarget = {
@@ -706,7 +714,7 @@ async function fetchYtChannel(channel: string, snapshot: YtSnapshot): Promise<Yt
     const plRes = await ytGet('playlistItems', {
       part: 'contentDetails',
       playlistId: uploadsPlaylist,
-      maxResults: '10',
+      maxResults: '50', // videos.list は50件までまとめて引ける。24本予約しても取りこぼさない
     })
     const videoIds = (plRes.items || [])
       .map((i: any) => i.contentDetails?.videoId)
