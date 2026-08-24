@@ -109,7 +109,10 @@ export type EngagementResult = {
   d1Retention: number | null
 }
 
-export async function sendNoroiEngagementReport(): Promise<EngagementResult> {
+export async function sendNoroiEngagementReport(
+  opts: { deliver?: boolean } = {},
+): Promise<EngagementResult> {
+  const deliver = opts.deliver !== false
   const day = jstDate(1) // 前日（完全な1日）
   const { startUtc, endUtc } = jstDayRangeUtc(day)
 
@@ -191,7 +194,7 @@ export async function sendNoroiEngagementReport(): Promise<EngagementResult> {
   lines.push('')
   lines.push('※ DAUは daily_grants（その日アプリを開いた記録）ベースの近似。課金は自前DB実測。')
 
-  await postSlack(lines.join('\n'))
+  if (deliver) await postSlack(lines.join('\n'))
 
   return {
     day,

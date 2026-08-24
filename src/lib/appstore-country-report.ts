@@ -42,7 +42,7 @@ const COUNTRY_NAMES: Record<string, string> = {
   IT: 'イタリア',
 }
 
-function countryLabel(code: string): string {
+export function countryLabel(code: string): string {
   return COUNTRY_NAMES[code] ? `${COUNTRY_NAMES[code]}(${code})` : code || '不明'
 }
 
@@ -105,15 +105,17 @@ export type CountryReportResult = {
 }
 
 export async function sendAppStoreCountryReport(
-  opts: { date?: string } = {},
+  opts: { date?: string; deliver?: boolean } = {},
 ): Promise<CountryReportResult> {
+  const deliver = opts.deliver !== false
   const appId = appStoreAppId()
   const token = makeJwt()
   const latest = await getLatestDailyRows(token, opts.date)
 
   if (!latest) {
     const d = opts.date || jstDate(1)
-    await postSlack(
+    if (deliver)
+      await postSlack(
       `呪い日記 App Store 国別レポート（${d} 分）\n────────────────\n記録された売上・ダウンロードはありませんでした（0件、またはApple側の集計待ち）。`,
     )
     return { reportDate: null, countries: [] }
@@ -158,6 +160,6 @@ export async function sendAppStoreCountryReport(
   lines.push('')
   lines.push('※ 課金額は各国通貨を当日レートで円換算。DLは新規インストール。')
 
-  await postSlack(lines.join('\n'))
+  if (deliver) await postSlack(lines.join('\n'))
   return { reportDate: latest.reportDate, countries: results }
 }

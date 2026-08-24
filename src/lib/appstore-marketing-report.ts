@@ -193,9 +193,16 @@ export type MarketingReportResult = {
   overall: number | null
   category: number | null
   keywords: Record<string, number | null>
+  /** カテゴリ表示名（例: ライフスタイル）。取得できなければ null */
+  genreName: string | null
+  /** 前回スナップショット（順位の増減計算用） */
+  prev: Snapshot | null
 }
 
-export async function sendAppStoreMarketingReport(): Promise<MarketingReportResult> {
+export async function sendAppStoreMarketingReport(
+  opts: { deliver?: boolean } = {},
+): Promise<MarketingReportResult> {
+  const deliver = opts.deliver !== false
   const date = jstDateStr()
   const info = await lookupApp()
   const genreId = info?.genreId || '6012' // 既定=ライフスタイル
@@ -248,7 +255,7 @@ export async function sendAppStoreMarketingReport(): Promise<MarketingReportResu
     '※ 検索順位はiTunes Search APIベース（実App Store検索と細部が異なる場合あり）。圏外=検索200位／チャート100位以内に該当なし。',
   )
 
-  await postSlack(lines.join('\n'))
+  if (deliver) await postSlack(lines.join('\n'))
 
   // ---- スナップショット保存 ----
   const snap: Snapshot = {
@@ -268,5 +275,7 @@ export async function sendAppStoreMarketingReport(): Promise<MarketingReportResu
     overall,
     category,
     keywords: keywordRanks,
+    genreName: info?.genreName || null,
+    prev,
   }
 }

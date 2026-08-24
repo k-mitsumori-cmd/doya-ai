@@ -65,16 +65,21 @@ export type AppStoreReportResult = {
   grossJpy: number
   proceedsJpy: number
   purchaseUnits: number
+  /** 前日の実績（前日比の計算用。取得できなければ null） */
+  prev: { downloads: number; grossJpy: number; proceedsJpy: number } | null
+  prevDate: string | null
 }
 
 /**
  * 直近の取得可能日（1〜3日前）の App Store 日次データを集計し、
  * 前日比つきのわかりやすいメッセージで Slack に通知する。
  * @param opts.date 明示日付（YYYY-MM-DD）。手動テスト用。未指定なら自動で最新日を探す
+ * @param opts.deliver false なら Slack に送らず集計結果だけ返す（朝刊ダイジェストから呼ぶ用）
  */
 export async function sendAppStoreReport(
-  opts: { date?: string } = {},
+  opts: { date?: string; deliver?: boolean } = {},
 ): Promise<AppStoreReportResult> {
+  const deliver = opts.deliver !== false
   const appId = appStoreAppId()
   const token = makeJwt()
 
@@ -83,18 +88,27 @@ export async function sendAppStoreReport(
   // 直近日ともデータ無し（アカウント全体で売上0の日は ASC が 404）→ 0件レポート
   if (!latest) {
     const first = opts.date ?? jstDate(1)
-    await postSlack(
-      buildDailyMessage({
+    if (deliver)
+      await postSlack(
+        buildDailyMessage({
         appLabel: '呪い日記',
         reportDate: first,
         today: zeroDailyStats(),
         prev: null,
         prevDate: null,
-        skuLabel,
-        noData: true,
-      }),
-    )
-    return { reportDate: null, downloads: 0, grossJpy: 0, proceedsJpy: 0, purchaseUnits: 0 }
+          skuLabel,
+          noData: true,
+        }),
+      )
+    return {
+      reportDate: null,
+      downloads: 0,
+      grossJpy: 0,
+      proceedsJpy: 0,
+      purchaseUnits: 0,
+      prev: null,
+      prevDate: null,
+    }
   }
 
   const today = await aggregateToDailyStats(aggregateSales(latest.rows, appId))
@@ -104,16 +118,17 @@ export async function sendAppStoreReport(
   const prevAgg = await getDailyAggregateForDate(token, prevDate, appId)
   const prev = prevAgg ? await aggregateToDailyStats(prevAgg) : null
 
-  await postSlack(
-    buildDailyMessage({
-      appLabel: '呪い日記',
-      reportDate: latest.reportDate,
-      today,
-      prev,
-      prevDate: prev ? prevDate : null,
-      skuLabel,
-    }),
-  )
+  if (deliver)
+    await postSlack(
+      buildDailyMessage({
+        appLabel: '呪い日記',
+        reportDate: latest.reportDate,
+        today,
+        prev,
+        prevDate: prev ? prevDate : null,
+        skuLabel,
+      }),
+    )
 
   return {
     reportDate: latest.reportDate,
@@ -121,5 +136,9 @@ export async function sendAppStoreReport(
     grossJpy: today.grossJpy,
     proceedsJpy: today.proceedsJpy,
     purchaseUnits: today.purchaseUnits,
+    prev: prev
+      ? { downloads: prev.downloads, grossJpy: prev.grossJpy, proceedsJpy: prev.proceedsJpy }
+      : null,
+    prevDate: prev ? prevDate : null,
   }
 }

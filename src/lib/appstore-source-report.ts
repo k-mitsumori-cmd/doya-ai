@@ -65,6 +65,76 @@ async function ascGetAll(token: string, urlOrPath: string): Promise<JsonResource
 // ---------- TSV の列アクセス（大文字小文字・ゆらぎ吸収） ----------
 
 /** row から候補名（case-insensitive・部分一致含む）で最初に一致した値を返す */
+/**
+ * 指定カテゴリのレポートから名前が一致するものを選び、最新（または指定日）の DAILY
+ * インスタンスの全セグメントを取得してパース済みの行を返す。
+ * まだ生成されていなければ null。
+ */
+async function loadDailyRows(
+  token: string,
+  requestId: string,
+  category: string,
+  namePattern: RegExp,
+  wantDate?: string,
+): Promise<{ reportName: string; processingDate: string; rows: Record<string, string>[]; header: string } | null> {
+  const reports = await ascGetAll(
+    token,
+    `/v1/analyticsReportRequests/${requestId}/reports?filter[category]=${category}&limit=200`,
+  )
+  const target = reports.find((r) => namePattern.test(String(r.attributes?.name || '')))
+  if (!target) {
+    console.warn(
+      `[appstore-source-report] ${category} に ${namePattern} 該当レポートなし:`,
+      reports.map((r) => r.attributes?.name),
+    )
+    return null
+  }
+  const reportName = String(target.attributes?.name || target.id)
+
+  const instances = await ascGetAll(
+    token,
+    `/v1/analyticsReports/${target.id}/instances?filter[granularity]=DAILY&limit=200`,
+  )
+  const daily = instances
+    .filter((i) => (i.attributes?.granularity || '').toUpperCase() === 'DAILY')
+    .sort((a, b) =>
+      String(b.attributes?.processingDate || '').localeCompare(
+        String(a.attributes?.processingDate || ''),
+      ),
+    )
+  const inst = wantDate
+    ? daily.find((i) => String(i.attributes?.processingDate || '') === wantDate)
+    : daily[0]
+  if (!inst) return null
+  const processingDate = String(inst.attributes?.processingDate || '')
+
+  const segments = await ascGetAll(token, `/v1/analyticsReportInstances/${inst.id}/segments?limit=200`)
+  const rows: Record<string, string>[] = []
+  let header = ''
+  for (const seg of segments) {
+    const url = seg.attributes?.url
+    if (!url) continue
+    // segment.url は署名付きURL → 認証ヘッダは付けない
+    const res = await fetch(url)
+    if (!res.ok) {
+      console.warn(`[appstore-source-report] segment ダウンロード失敗 ${res.status}: ${url}`)
+      continue
+    }
+    const buf = Buffer.from(await res.arrayBuffer())
+    let tsv: string
+    try {
+      tsv = gunzipSync(buf).toString('utf8')
+    } catch {
+      // 稀に非圧縮で返る場合の保険
+      tsv = buf.toString('utf8')
+    }
+    if (!header) header = tsv.split('\n')[0] || ''
+    rows.push(...parseTsv(tsv))
+  }
+  if (segments.length === 0) return null
+  return { reportName, processingDate, rows, header }
+}
+
 function pick(row: Record<string, string>, candidates: string[]): string | undefined {
   const keys = Object.keys(row)
   for (const cand of candidates) {
@@ -82,11 +152,27 @@ function pick(row: Record<string, string>, candidates: string[]): string | undef
 }
 
 // ---------- 集計 ----------
+//
+// 実データ（2026-08 実測）の構造:
+//   Discovery and Engagement Standard … Date/Event/Page Type/Source Type/Engagement Type/
+//                                       Device/Platform Version/Territory/Counts/Unique Counts
+//                                       Event は Impression / Page view / Tap
+//   App Downloads Standard（COMMERCE） … Date/Download Type/App Version/Device/Platform Version/
+//                                       Source Type/Page Type/Pre-Order/Territory/Counts
+//                                       Download Type は First-time download / Redownload
+//
+// つまり「表示・閲覧」と「ダウンロード」は別レポートで、どちらも Counts 列に値が入る
+// イベント型の縦持ち。以前は 1 レポートに Downloads 列がある前提で読んでいたため
+// DL が常に 0 になっていた。
 
 type SourceAgg = {
   impressions: number
   ppViews: number
+  taps: number
+  /** 初回ダウンロード（新規インストール） */
   downloads: number
+  /** 再ダウンロード（同一Apple IDの入れ直し） */
+  redownloads: number
 }
 
 export type SourceReportResult = {
@@ -97,37 +183,65 @@ export type SourceReportResult = {
   reportName?: string
 }
 
-const IMPRESSION_COLS = ['Impressions', 'Impressions Unique Device', 'Total Impressions']
-const PP_VIEW_COLS = ['Product Page Views', 'Product Page Views Unique Device', 'Page Views']
-const DOWNLOAD_COLS = ['Total Downloads', 'Downloads', 'First-Time Downloads', 'Redownloads']
+function emptyAgg(): SourceAgg {
+  return { impressions: 0, ppViews: 0, taps: 0, downloads: 0, redownloads: 0 }
+}
+
 const SOURCE_TYPE_COLS = ['Source Type', 'SourceType']
-// Web Referrer のドメイン内訳に使える可能性のある列（存在すれば利用）
+const COUNTS_COLS = ['Counts', 'Count']
+const EVENT_COLS = ['Event']
+const DOWNLOAD_TYPE_COLS = ['Download Type', 'DownloadType']
+// Web referrer のドメイン内訳に使える可能性のある列（Standard には無い。Detailed 用の保険）
 const REFERRER_DOMAIN_COLS = ['Referrer Domain', 'Domain Referrer', 'Web Referrer', 'Domain']
 
-function aggregateSegmentRows(
+function getAgg(map: Map<string, SourceAgg>, sourceType: string): SourceAgg {
+  const key = sourceType.trim() || 'Unavailable'
+  const cur = map.get(key) || emptyAgg()
+  map.set(key, cur)
+  return cur
+}
+
+/** Discovery and Engagement（Event × Counts）を Source Type 別に積む */
+function aggregateEngagementRows(
   rows: Record<string, string>[],
   bySourceType: Map<string, SourceAgg>,
   byDomain: Map<string, number>,
 ): void {
   for (const row of rows) {
     const sourceType = (pick(row, SOURCE_TYPE_COLS) || 'Unavailable').trim() || 'Unavailable'
-    const impressions = num(pick(row, IMPRESSION_COLS))
-    const ppViews = num(pick(row, PP_VIEW_COLS))
-    const downloads = num(pick(row, DOWNLOAD_COLS))
+    const event = (pick(row, EVENT_COLS) || '').trim().toLowerCase()
+    const counts = num(pick(row, COUNTS_COLS))
+    if (counts === 0) continue
 
-    const cur = bySourceType.get(sourceType) || { impressions: 0, ppViews: 0, downloads: 0 }
-    cur.impressions += impressions
-    cur.ppViews += ppViews
-    cur.downloads += downloads
-    bySourceType.set(sourceType, cur)
+    const agg = getAgg(bySourceType, sourceType)
+    if (event.startsWith('impression')) agg.impressions += counts
+    else if (event.startsWith('page view')) agg.ppViews += counts
+    else if (event.startsWith('tap')) agg.taps += counts
 
-    // Web Referrer のドメイン内訳（列が存在する場合のみ）
+    // Detailed レポートを使う場合のみドメイン列が存在する
     if (/web\s*referrer/i.test(sourceType)) {
       const domain = (pick(row, REFERRER_DOMAIN_COLS) || '').trim()
       if (domain && domain.toLowerCase() !== sourceType.toLowerCase()) {
-        byDomain.set(domain, (byDomain.get(domain) || 0) + (downloads || ppViews || impressions))
+        byDomain.set(domain, (byDomain.get(domain) || 0) + counts)
       }
     }
+  }
+}
+
+/** App Downloads（Download Type × Counts）を Source Type 別に積む */
+function aggregateDownloadRows(
+  rows: Record<string, string>[],
+  bySourceType: Map<string, SourceAgg>,
+): void {
+  for (const row of rows) {
+    const sourceType = (pick(row, SOURCE_TYPE_COLS) || 'Unavailable').trim() || 'Unavailable'
+    const dlType = (pick(row, DOWNLOAD_TYPE_COLS) || '').trim().toLowerCase()
+    const counts = num(pick(row, COUNTS_COLS))
+    if (counts === 0) continue
+
+    const agg = getAgg(bySourceType, sourceType)
+    if (dlType.startsWith('redownload')) agg.redownloads += counts
+    else agg.downloads += counts
   }
 }
 
@@ -161,7 +275,10 @@ const SOURCE_LABELS: Record<string, string> = {
   Unavailable: '不明',
 }
 function sourceLabel(s: string): string {
-  return SOURCE_LABELS[s] ?? s
+  if (SOURCE_LABELS[s]) return SOURCE_LABELS[s]
+  // 実データは 'App Store search' のように小文字混じりで来るため大小を無視して引き直す
+  const hit = Object.keys(SOURCE_LABELS).find((k) => k.toLowerCase() === s.toLowerCase())
+  return hit ? SOURCE_LABELS[hit] : s
 }
 
 // ---------- メイン ----------
@@ -171,7 +288,10 @@ function sourceLabel(s: string): string {
  * 取得し、Source Type（流入経路）別に集計して Slack 通知する。
  * レポート未生成時は「生成待ち」ノートを投稿して pending を返す（crash しない）。
  */
-export async function sendAppStoreSourceReport(): Promise<SourceReportResult> {
+export async function sendAppStoreSourceReport(
+  opts: { deliver?: boolean } = {},
+): Promise<SourceReportResult> {
+  const deliver = opts.deliver !== false
   const appId = appStoreAppId()
   const token = makeJwt()
 
@@ -190,114 +310,47 @@ export async function sendAppStoreSourceReport(): Promise<SourceReportResult> {
       '[appstore-source-report] ONGOING analyticsReportRequest が見つかりません。',
       requests.map((r) => ({ id: r.id, accessType: r.attributes?.accessType })),
     )
-    await postSlack(
+    if (deliver) await postSlack(
       '呪い日記 流入経路レポート: ONGOING の Analytics Report Request が見つかりません（要確認）。',
     )
     return { status: 'no-request', processingDate: null, bySourceType: {}, topReferrerDomains: [] }
   }
 
-  // 2) Discovery and Engagement レポートを選ぶ
-  const reports = await ascGetAll(
+  // 2) 表示・閲覧（Discovery and Engagement）を読む
+  const eng = await loadDailyRows(
     token,
-    `/v1/analyticsReportRequests/${ongoing.id}/reports?filter[category]=APP_STORE_ENGAGEMENT&limit=200`,
+    ongoing.id,
+    'APP_STORE_ENGAGEMENT',
+    /discovery and engagement standard/i,
   )
-  const engagementReports = reports.filter(
-    (r) => (r.attributes?.category || '').toUpperCase() === 'APP_STORE_ENGAGEMENT',
-  )
-  const target =
-    engagementReports.find((r) =>
-      /discovery and engagement/i.test(String(r.attributes?.name || '')),
-    ) ||
-    engagementReports[0] ||
-    reports[0]
-
-  if (!target) {
-    console.warn(
-      '[appstore-source-report] 対象レポートが見つかりません。利用可能なレポート一覧:',
-      reports.map((r) => ({ name: r.attributes?.name, category: r.attributes?.category })),
-    )
-    await postSlack(
-      '呪い日記 流入経路レポート: 「Discovery and Engagement」レポートがまだ生成されていません（Apple 側で生成待ち・1〜2 日）。',
-    )
+  if (!eng) {
+    if (deliver)
+      await postSlack(
+        '呪い日記 流入経路レポート: 「App Store Discovery and Engagement Standard」の日次データがまだ生成されていません（Apple 側で生成待ち・1〜2 日）。',
+      )
     return { status: 'pending', processingDate: null, bySourceType: {}, topReferrerDomains: [] }
   }
-  const reportName = String(target.attributes?.name || target.id)
+  const reportName = eng.reportName
+  const processingDate = eng.processingDate
 
-  // 3) 最新の DAILY インスタンスを選ぶ
-  const instances = await ascGetAll(
+  // 3) ダウンロード（COMMERCE / App Downloads）を同じ日付で読む。
+  //    Source Type 別の DL 数はこちらにしか無い（Engagement 側には Downloads 列が存在しない）。
+  const dl = await loadDailyRows(
     token,
-    `/v1/analyticsReports/${target.id}/instances?filter[granularity]=DAILY&limit=200`,
+    ongoing.id,
+    'COMMERCE',
+    /app downloads standard/i,
+    processingDate,
   )
-  const dailyInstances = instances
-    .filter((i) => (i.attributes?.granularity || '').toUpperCase() === 'DAILY')
-    .sort((a, b) =>
-      String(b.attributes?.processingDate || '').localeCompare(
-        String(a.attributes?.processingDate || ''),
-      ),
-    )
-  const latest = dailyInstances[0]
-  if (!latest) {
-    console.warn(
-      `[appstore-source-report] "${reportName}" に DAILY インスタンスがまだありません（生成待ち）。`,
-    )
-    await postSlack(
-      `呪い日記 流入経路レポート: 「${reportName}」の日次データがまだ生成されていません（Apple 側で生成待ち・1〜2 日）。`,
-    )
-    return {
-      status: 'pending',
-      processingDate: null,
-      bySourceType: {},
-      topReferrerDomains: [],
-      reportName,
-    }
-  }
-  const processingDate = String(latest.attributes?.processingDate || '')
-
-  // 4) segments を取得して gzip TSV をダウンロード・パース
-  const segments = await ascGetAll(
-    token,
-    `/v1/analyticsReportInstances/${latest.id}/segments?limit=200`,
-  )
-  if (segments.length === 0) {
-    await postSlack(
-      `呪い日記 流入経路レポート（${processingDate}）: セグメント（データ本体）がまだ準備できていません（生成待ち）。`,
-    )
-    return {
-      status: 'pending',
-      processingDate,
-      bySourceType: {},
-      topReferrerDomains: [],
-      reportName,
-    }
-  }
 
   const bySourceType = new Map<string, SourceAgg>()
   const byDomain = new Map<string, number>()
-  let headerSample = ''
-  for (const seg of segments) {
-    const url = seg.attributes?.url
-    if (!url) continue
-    // segment.url は署名付きURL → 認証ヘッダは付けない
-    const res = await fetch(url)
-    if (!res.ok) {
-      console.warn(`[appstore-source-report] segment ダウンロード失敗 ${res.status}: ${url}`)
-      continue
-    }
-    const buf = Buffer.from(await res.arrayBuffer())
-    let tsv: string
-    try {
-      tsv = gunzipSync(buf).toString('utf8')
-    } catch {
-      // 稀に非圧縮で返る場合の保険
-      tsv = buf.toString('utf8')
-    }
-    if (!headerSample) headerSample = tsv.split('\n')[0] || ''
-    const rows = parseTsv(tsv)
-    aggregateSegmentRows(rows, bySourceType, byDomain)
-  }
+  aggregateEngagementRows(eng.rows, bySourceType, byDomain)
+  if (dl) aggregateDownloadRows(dl.rows, bySourceType)
 
-  // 列名は best-effort のため、実データの見出し行をログに残す（初回データ後の調整用）
-  console.log(`[appstore-source-report] report="${reportName}" date=${processingDate} header=${headerSample}`)
+  console.log(
+    `[appstore-source-report] date=${processingDate} engagement="${eng.header}" downloads="${dl?.header ?? '(なし)'}"`,
+  )
 
   const topReferrerDomains = [...byDomain.entries()]
     .map(([domain, downloads]) => ({ domain, downloads }))
@@ -314,15 +367,19 @@ export async function sendAppStoreSourceReport(): Promise<SourceReportResult> {
     lines.push('この日の流入データはありませんでした。')
   } else {
     const totalDl = sorted.reduce((s, [, v]) => s + v.downloads, 0)
+    const totalRedl = sorted.reduce((s, [, v]) => s + v.redownloads, 0)
     for (const [src, agg] of sorted) {
       const share = totalDl > 0 ? Math.round((agg.downloads / totalDl) * 1000) / 10 : 0
-      lines.push(
-        `${sourceLabel(src)}: 表示 ${fmt(agg.impressions)} / ページ閲覧 ${fmt(agg.ppViews)} / DL ${fmt(agg.downloads)}` +
-          (totalDl > 0 ? `（DL比 ${share}%）` : ''),
-      )
+      const parts = [`表示 ${fmt(agg.impressions)}`, `ページ閲覧 ${fmt(agg.ppViews)}`]
+      if (agg.taps > 0) parts.push(`タップ ${fmt(agg.taps)}`)
+      parts.push(`初回DL ${fmt(agg.downloads)}` + (totalDl > 0 ? `（DL比 ${share}%）` : ''))
+      if (agg.redownloads > 0) parts.push(`再DL ${fmt(agg.redownloads)}`)
+      lines.push(`${sourceLabel(src)}: ${parts.join(' / ')}`)
     }
     lines.push('')
-    lines.push(`DL合計: ${fmt(totalDl)}`)
+    lines.push(
+      `初回DL合計: ${fmt(totalDl)}` + (totalRedl > 0 ? `（ほかに再DL ${fmt(totalRedl)}）` : ''),
+    )
   }
 
   if (topReferrerDomains.length > 0) {
@@ -334,9 +391,11 @@ export async function sendAppStoreSourceReport(): Promise<SourceReportResult> {
   }
 
   lines.push('')
-  lines.push('※ Analytics Reports API（Discovery and Engagement）の集計。列名は実データに合わせ調整余地あり。')
+  lines.push(
+    '※ 表示・閲覧は「Discovery and Engagement」、DLは「App Downloads」（いずれも Standard）の集計。',
+  )
 
-  await postSlack(lines.join('\n'))
+  if (deliver) await postSlack(lines.join('\n'))
 
   const bySourceTypeObj: Record<string, SourceAgg> = {}
   for (const [k, v] of bySourceType) bySourceTypeObj[k] = v
