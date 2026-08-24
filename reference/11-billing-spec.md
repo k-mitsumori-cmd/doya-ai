@@ -395,6 +395,25 @@ curl -s -H "Authorization: Bearer $CRON_SECRET" \
 
 ---
 
+### 10.5 活用事例・ロゴ掲載キャンペーンの6ヶ月無料を付与する
+
+申込は `/campaign/case-study` → Slack通知（`CaseStudyApplication` に保存）。
+**付与は手動**。取材の日程が確定してから行う（申し込んだだけでは付けない）。
+
+手順:
+
+1. 管理画面 `/admin/users` で対象ユーザーを開き、`plan` を **PRO** にする
+2. **`billing_manual_grants` に対象のメールアドレスを追加する**
+   （`SystemSetting.key = 'billing_manual_grants'` か環境変数 `BILLING_MANUAL_GRANT_EMAILS`）
+   ⚠️ これを忘れると2つ壊れる:
+   - 日次監査が「過剰付与」として毎日 critical で鳴り、本物の異常が埋もれる
+   - Stripe契約がある人の場合、**次回請求の webhook で PRO が静かに剥がれる**
+3. `CaseStudyApplication.status` を `done` にし、**付与日と終了予定日を控える**
+
+⚠️ **終了日を自動で管理する仕組みは無い。** 6ヶ月後に、
+`billing_manual_grants` からメールを外し、`plan` を FREE に戻す作業が必要。
+放置すると無期限で無料のままになる。件数が増えるならリマインドの実装を検討すること。
+
 ## 11. 変更時チェックリスト
 
 ### 11.1 課金コードを変更するとき
