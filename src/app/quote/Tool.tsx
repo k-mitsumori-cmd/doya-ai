@@ -276,7 +276,7 @@ export default function QuoteTool() {
           <button
             onClick={createOrg}
             disabled={!orgName.trim()}
-            className="mt-4 w-full rounded-lg bg-[#0066ff] px-4 py-3 text-sm font-bold text-white disabled:opacity-40"
+            className="mt-4 w-full rounded-lg bg-[#0066ff] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
           >
             組織を作成する
           </button>
@@ -323,7 +323,7 @@ export default function QuoteTool() {
               onChange={() => void load()}
             />
             <Link href="/quote/settings" className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 font-semibold">
-              発行元設定
+              発行者情報
             </Link>
           </div>
         </div>
@@ -334,7 +334,7 @@ export default function QuoteTool() {
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 font-semibold">
             見積書に印字する自社情報が未設定です。このままでもPDFは出力できます（自社名の欄は空欄になります）。
             <Link href="/quote/settings" className="mx-1 font-bold underline">
-              発行元設定
+              発行者情報
             </Link>
             を登録すると印字されます。
           </div>
@@ -358,7 +358,7 @@ export default function QuoteTool() {
             <button
               onClick={analyze}
               disabled={analyzing || !url.trim()}
-              className="rounded-lg bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
+              className="rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
             >
               {analyzing ? '解析中...' : '解析する'}
             </button>
@@ -401,7 +401,7 @@ export default function QuoteTool() {
                 <button
                   onClick={saveProduct}
                   disabled={!productName.trim()}
-                  className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40"
+                  className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
                 >
                   商材として保存
                 </button>
@@ -450,7 +450,7 @@ export default function QuoteTool() {
             <button
               onClick={suggest}
               disabled={suggesting || !selectedProduct}
-              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] px-7 py-3.5 text-base font-black text-white shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] disabled:translate-y-0 disabled:opacity-40 disabled:shadow-none"
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#0066ff] hover:bg-[#0052cc] px-7 py-3.5 text-base font-black text-white shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
             >
               <span className="material-symbols-outlined text-[20px]">
                 {suggesting ? 'hourglass_top' : 'auto_awesome'}
@@ -696,7 +696,7 @@ export default function QuoteTool() {
             <button
               onClick={createDocument}
               disabled={creating || items.length === 0}
-              className="mt-4 w-full rounded-xl bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] px-5 py-4 text-base font-black text-white shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] disabled:translate-y-0 disabled:opacity-40 disabled:shadow-none"
+              className="mt-4 w-full rounded-xl bg-[#0066ff] hover:bg-[#0052cc] px-5 py-4 text-base font-black text-white shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
             >
               {creating ? '作成しています…' : '見積書を作成する'}
             </button>

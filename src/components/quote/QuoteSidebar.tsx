@@ -39,7 +39,7 @@ function QuoteSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }:
   const NAV: NavItem[] = [
     // ⚠️ 見積書一覧はトップ画面内のセクション。/quote/documents というページは
     //    存在しないので、サイドバーに項目を作らないこと（404になる）。
-    { href: BASE, label: '見積書をつくる・一覧', icon: Receipt, hot: true },
+    { href: BASE, label: '見積書をつくる', icon: Receipt, hot: true },
     { href: BASE + '/settings', label: '発行者情報', icon: Settings },
     { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
   ]

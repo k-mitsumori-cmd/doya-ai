@@ -504,7 +504,7 @@ export default function MensetsuTool() {
               <button
                 onClick={createOrg}
                 disabled={busy === 'org' || !orgName.trim()}
-                className="rounded-lg bg-[#0066ff] px-6 py-3 text-sm font-black text-white disabled:bg-[#b9cdf5]"
+                className="rounded-lg bg-[#0066ff] px-6 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
               >
                 {busy === 'org' ? '作成中…' : '組織を作成'}
               </button>
@@ -531,7 +531,7 @@ export default function MensetsuTool() {
                 <button
                   onClick={analyze}
                   disabled={busy === 'analyze' || !url.trim()}
-                  className="rounded-lg bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-6 py-3 text-sm font-black text-white disabled:bg-[#b9cdf5]"
+                  className="rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-6 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
                 >
                   {busy === 'analyze' ? '読み取り中…' : '読み取る'}
                 </button>
@@ -598,7 +598,7 @@ export default function MensetsuTool() {
               <button
                 onClick={generate}
                 disabled={busy === 'generate' || !jobTitle.trim()}
-                className="mt-4 rounded-lg bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-6 py-3 text-sm font-black text-white disabled:bg-[#b9cdf5]"
+                className="mt-4 rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-6 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
               >
                 {busy === 'generate' ? '生成中…（30秒ほどかかります）' : '質問セットを生成'}
               </button>
@@ -668,7 +668,7 @@ export default function MensetsuTool() {
                     <button
                       onClick={issue}
                       disabled={busy === 'issue'}
-                      className="rounded-lg bg-[#0066ff] px-6 py-3 text-sm font-black text-white disabled:bg-[#b9cdf5]"
+                      className="rounded-lg bg-[#0066ff] px-6 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
                     >
                       {busy === 'issue' ? '発行中…' : 'URLを発行'}
                     </button>
@@ -780,7 +780,7 @@ export default function MensetsuTool() {
                           <button
                             onClick={() => evaluate(s.id)}
                             disabled={busy === `eval-${s.id}`}
-                            className="rounded-lg bg-[#0066ff] px-4 py-2 text-xs font-black text-white disabled:bg-[#b9cdf5]"
+                            className="rounded-lg bg-[#0066ff] px-4 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
                           >
                             {busy === `eval-${s.id}` ? '評価中…' : '評価する'}
                           </button>
@@ -813,7 +813,7 @@ export default function MensetsuTool() {
                             <button
                               onClick={() => void updateCandidateEmail(s)}
                               disabled={busy === `email-${s.id}`}
-                              className="rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:bg-[#b9cdf5]"
+                              className="rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
                             >
                               {busy === `email-${s.id}` ? '保存中…' : '保存'}
                             </button>
@@ -892,7 +892,7 @@ export default function MensetsuTool() {
                     <button
                       onClick={invite}
                       disabled={busy === 'invite' || !inviteEmail.trim()}
-                      className="rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:bg-[#b9cdf5]"
+                      className="rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
                     >
                       {busy === 'invite' ? '送信中…' : '招待する'}
                     </button>

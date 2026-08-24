@@ -311,7 +311,7 @@ export default function AdImageTool() {
             href="/adimage/history"
             className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
           >
-            これまでに作った画像
+            これまでの画像
           </Link>
         </div>
       </header>
@@ -319,9 +319,25 @@ export default function AdImageTool() {
       <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
 
+        {/* ⚠️ 2〜4のセクションは入力が進むまで描画されない。この行が無いと
+             初回は「1.」だけの画面になり、全部で何工程あるのか分からなくなる。 */}
+        <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-bold text-slate-400">
+          {['サービスのURLを入れる', 'コピーを選ぶ', '出力する配置を選ぶ', '受け取る'].map((label, i) => (
+            <li key={label} className="flex items-center gap-2">
+              <span className={i === 0 || (i === 1 && !!brand) || (i === 2 && drafts.length > 0) || (i === 3 && creatives.length > 0) ? 'text-[#0066ff]' : ''}>
+                {i + 1}. {label}
+              </span>
+              {i < 3 && <span aria-hidden="true">›</span>}
+            </li>
+          ))}
+        </ol>
+
         {/* --- 1. URL入力 --- */}
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-base font-bold text-slate-900">1. サービスのURLを入れる</h2>
+          <p className="mt-1 text-xs font-semibold text-slate-500">
+            ページを読み取って、広告のコピー案を作ります。このあと配置を選ぶと、媒体ごとの入稿サイズで画像が揃います。
+          </p>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <input
               value={url}
@@ -332,9 +348,9 @@ export default function AdImageTool() {
             <button
               onClick={analyze}
               disabled={analyzing || !url.trim()}
-              className="rounded-lg bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
+              className="rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
             >
-              {analyzing ? '解析中...' : 'コピーを作る'}
+              {analyzing ? '読み取り中...' : '広告コピーを作る'}
             </button>
           </div>
           <input
@@ -439,7 +455,7 @@ export default function AdImageTool() {
                 <button
                   onClick={removeLogo}
                   disabled={logoBusy}
-                  className="rounded-lg border border-slate-300 px-3 py-2.5 text-xs text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold"
+                  className="rounded-lg border border-slate-300 px-3 py-2.5 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0 font-semibold"
                 >
                   ロゴを外す
                 </button>
@@ -494,7 +510,7 @@ export default function AdImageTool() {
             <button
               onClick={generate}
               disabled={generating || chosen.length === 0 || !copy.headline || !copy.cta}
-              className="mt-5 w-full rounded-lg bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3.5 text-sm font-bold text-white disabled:opacity-40"
+              className="mt-5 w-full rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
             >
               {generating ? '生成中...（1〜2分かかります）' : `広告画像を作る（${chosen.length}配置）`}
             </button>
@@ -586,14 +602,14 @@ export default function AdImageTool() {
                 <button
                   onClick={runFeedback}
                   disabled={scoring}
-                  className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold"
+                  className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0 font-semibold"
                 >
                   {scoring ? '採点中...' : 'AIに見てもらう'}
                 </button>
                 <button
                   onClick={refine}
                   disabled={refining || (selectedChips.length === 0 && !note.trim() && directives.length === 0)}
-                  className="rounded-lg bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-40"
+                  className="rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
                 >
                   {refining ? '作り直し中...' : 'この内容で作り直す'}
                 </button>

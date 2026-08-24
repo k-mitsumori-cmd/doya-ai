@@ -1,7 +1,7 @@
 'use client'
 
 // ============================================
-// ドヤ見積もりAI 発行元設定
+// ドヤ見積もりAI 発行者情報
 // ============================================
 // 見積書に印字される自社情報。ここが空だとPDFを出せない。
 
@@ -93,7 +93,7 @@ export default function QuoteSettingsPage() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-2xl px-4 py-4">
           <Link href="/quote" className="text-xs text-slate-500 hover:underline font-semibold">← 見積もり一覧</Link>
-          <h1 className="text-lg font-bold text-slate-900">発行元設定</h1>
+          <h1 className="text-lg font-bold text-slate-900">発行者情報</h1>
           <p className="text-xs text-slate-500 font-semibold">見積書に印字される自社情報です。</p>
         </div>
       </header>

@@ -234,7 +234,7 @@ export default function AishodanTool() {
           <button
             onClick={createOrg}
             disabled={!orgName.trim()}
-            className="mt-4 w-full rounded-lg bg-[#0066ff] px-4 py-3 text-sm font-bold text-white disabled:opacity-40"
+            className="mt-4 w-full rounded-lg bg-[#0066ff] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
           >
             組織を作成する
           </button>
@@ -266,12 +266,9 @@ export default function AishodanTool() {
               currentSlug={org.slug}
               onChange={() => void load()}
             />
-            <Link href="/aishodan/preview" className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 font-semibold">
-              練習する
-            </Link>
-            <Link href="/aishodan/sessions" className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 font-semibold">
-              商談ログ
-            </Link>
+            {/* ⚠️ 「練習モード」「商談ログ」はサイドバーにある。ここに同じ導線を
+                 並べると同じ場所へ行くボタンが2つになるので置かないこと。
+                 商材カード側の「練習する」はその商材で練習する別の導線。 */}
           </div>
         </div>
       </header>
@@ -305,7 +302,7 @@ export default function AishodanTool() {
             <button
               onClick={importProduct}
               disabled={importing || !url.trim()}
-              className="rounded-lg bg-gradient-to-r from-[#0066ff] via-[#7c3aed] to-[#ec4899] shadow-lg shadow-blue-500/30 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:opacity-40"
+              className="rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
             >
               {importing ? '取り込み中...' : '取り込む'}
             </button>
@@ -342,7 +339,7 @@ export default function AishodanTool() {
                         <button
                           onClick={() => issueRoom(p.scenarios[0].id)}
                           disabled={issuing}
-                          className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-40"
+                          className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
                         >
                           商談URLを発行
                         </button>
