@@ -119,7 +119,7 @@ export default function AishodanSessionsPage() {
                     )}
                     {s.outcome ? (
                       <>
-                        <span className="text-sm font-bold text-slate-900">{s.outcome.fitScore}</span>
+                        <span className="text-sm font-bold text-slate-900" title={`適合スコア ${s.outcome.fitScore} / 100`}><span className="mr-1 text-[11px] font-semibold text-slate-500">適合</span>{s.outcome.fitScore}</span>
                         <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium ${VERDICT_STYLE[s.outcome.verdict]}`}>
                           {VERDICT_LABELS[s.outcome.verdict as Verdict]}
                         </span>

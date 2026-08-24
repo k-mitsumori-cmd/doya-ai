@@ -239,7 +239,7 @@ export default function AishodanPreviewPage() {
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
-                    {s.outcome && <span className="text-sm font-bold text-slate-900">{s.outcome.fitScore}</span>}
+                    {s.outcome && <span className="text-sm font-bold text-slate-900" title={`適合スコア ${s.outcome.fitScore} / 100`}><span className="mr-1 text-[11px] font-semibold text-slate-500">適合</span>{s.outcome.fitScore}</span>}
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] text-slate-600">
                       {SESSION_STATUS_LABELS[s.status] || s.status}
                     </span>
