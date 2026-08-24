@@ -19,14 +19,22 @@ export const NOROI_DIGEST_CONFIG: DigestConfig = {
   appId: NOROI_APP_ID,
   webhookEnvs: ['SLACK_APPSTORE_WEBHOOK_URL'],
   fetchSales: () => sendAppStoreReport({ deliver: false }),
-  fetchEngagement: () => sendNoroiEngagementReport({ deliver: false }),
+  fetchEngagement: async () => {
+    const e = await sendNoroiEngagementReport({ deliver: false })
+    return {
+      ...e,
+      actions: [
+        { label: '日記', value: e.diaryPosts, unit: '件' },
+        { label: 'ガチャ', value: e.gachaDraws, unit: '回' },
+      ],
+    }
+  },
   marketingSnapshotKey: 'appstore_marketing_snapshot',
   youtubeSnapshotKey: 'noroi_digest_youtube_snapshot',
   youtubeChannels: [
     { id: 'UCxfO6w6rf-jzF2IFl34NQSA', label: 'ノロッピー@呪い日記' },
     { id: 'UCuWdi7IEVypvhApM-b5_t4A', label: 'Curse Diary（英語）' },
   ],
-  engagementLabels: { posts: '日記', draws: 'ガチャ' },
 }
 
 export type { DigestResult }

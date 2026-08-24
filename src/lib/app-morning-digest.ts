@@ -37,8 +37,8 @@ export type EngagementLike = {
   dau: number
   newUsers: number
   totalUsers: number
-  diaryPosts: number
-  gachaDraws: number
+  /** アプリ固有の行動指標。表示順にそのまま並べる（呪い日記=日記/ガチャ、ゆるせん=綴じ/裁き…） */
+  actions: { label: string; value: number; unit: string }[]
   revenueJpy: number
   purchaseCount: number
   d1Retention: number | null
@@ -65,8 +65,6 @@ export type DigestConfig = {
   youtubeChannels: { id: string; label: string }[]
   /** YouTube スナップショットの SystemSetting キー（アプリごとに分ける） */
   youtubeSnapshotKey: string
-  /** 「日記/ガチャ」など、アプリ内指標の項目名 */
-  engagementLabels?: { posts: string; draws: string }
 }
 
 // ---------- 小物 ----------
@@ -366,8 +364,11 @@ export async function sendAppMorningDigest(
     L.push(
       `　DAU ${fmtInt(engagement.dau)}人／新規 ${fmtInt(engagement.newUsers)}人／累計 ${fmtInt(engagement.totalUsers)}人`,
     )
-    const el = cfg.engagementLabels ?? { posts: '日記', draws: 'ガチャ' }
-    L.push(`　${el.posts} ${fmtInt(engagement.diaryPosts)}件／${el.draws} ${fmtInt(engagement.gachaDraws)}回`)
+    if (engagement.actions.length > 0) {
+      L.push(
+        `　${engagement.actions.map((a) => `${a.label} ${fmtInt(a.value)}${a.unit}`).join('／')}`,
+      )
+    }
     const ret = engagement.d1Retention === null ? '—' : `${engagement.d1Retention}%`
     L.push(
       `　課金 ${fmtYen(engagement.revenueJpy)}（${fmtInt(engagement.purchaseCount)}件）／D1継続 ${ret}`,

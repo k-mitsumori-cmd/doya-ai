@@ -1,4 +1,5 @@
 import { sendYurusenAppStoreReport, YURUSEN_APP_ID } from '@/lib/yurusen-appstore-report'
+import { fetchYurusenEngagement } from '@/lib/yurusen-engagement'
 import { sendAppMorningDigest, type DigestConfig, type DigestResult } from '@/lib/app-morning-digest'
 
 // ============================================
@@ -8,10 +9,8 @@ import { sendAppMorningDigest, type DigestConfig, type DigestResult } from '@/li
 // 呪い日記の朝刊と同じ粒度に揃えるため、DL/売上に加えて
 // 流入経路・国別・ストア/順位・SNS を載せる。
 //
-// 未接続: アプリ内の動き（DAU/投稿/課金など）。呪い日記は自前Supabaseから取っているが、
-//   ゆるせん側は接続情報が未設定のため省略している。
-//   YURUSEN_SUPABASE_URL / YURUSEN_SUPABASE_SERVICE_ROLE_KEY を用意し、
-//   noroi-engagement-report.ts と同様のクエリを書けば有効化できる。
+// アプリ内の動き（DAU/綴じた人/裁き/ガチャ/川柳/課金）は自前Supabaseから集計する。
+//   接続は YURUSEN_SUPABASE_URL / YURUSEN_SUPABASE_SERVICE_ROLE_KEY（集計は yurusen-engagement.ts）。
 //
 // 通知先: SLACK_YURUSEN_APPSTORE_WEBHOOK_URL（未設定は SLACK_APPSTORE_WEBHOOK_URL）
 // ============================================
@@ -35,9 +34,7 @@ export const YURUSEN_DIGEST_CONFIG: DigestConfig = {
   appId: YURUSEN_APP_ID,
   webhookEnvs: ['SLACK_YURUSEN_APPSTORE_WEBHOOK_URL', 'SLACK_APPSTORE_WEBHOOK_URL'],
   fetchSales: () => sendYurusenAppStoreReport({ deliver: false }),
-  // fetchEngagement は未接続（下の注記を朝刊に出す）
-  engagementNote:
-    'アプリ内の指標（DAU・投稿・課金）は未接続です。YURUSEN_SUPABASE_URL / YURUSEN_SUPABASE_SERVICE_ROLE_KEY を設定すると出せます。',
+  fetchEngagement: fetchYurusenEngagement,
   marketingKeywords: YURUSEN_KEYWORDS,
   marketingSnapshotKey: 'yurusen_marketing_snapshot',
   youtubeSnapshotKey: 'yurusen_digest_youtube_snapshot',
