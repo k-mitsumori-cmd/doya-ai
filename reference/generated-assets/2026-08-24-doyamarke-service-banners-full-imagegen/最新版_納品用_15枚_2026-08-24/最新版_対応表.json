@@ -1,0 +1,24 @@
+{
+  "status": "LATEST",
+  "updated_at": "2026-08-24T03:00:00+09:00",
+  "count": 15,
+  "dimensions": "1600x900",
+  "images_directory": "画像_15枚",
+  "items": [
+    { "no": 1, "service": "ドヤ記事作成", "file": "画像_15枚/01_ドヤ記事作成.png" },
+    { "no": 2, "service": "ドヤリスト", "file": "画像_15枚/02_ドヤリスト.png" },
+    { "no": 3, "service": "ドヤHR", "file": "画像_15枚/03_ドヤHR.png" },
+    { "no": 4, "service": "ドヤ勤怠", "file": "画像_15枚/04_ドヤ勤怠.png" },
+    { "no": 5, "service": "ドヤプロマネ", "file": "画像_15枚/05_ドヤプロマネ.png" },
+    { "no": 6, "service": "ドヤスライド", "file": "画像_15枚/06_ドヤスライド.png" },
+    { "no": 7, "service": "ドヤカンニング", "file": "画像_15枚/07_ドヤカンニング.png" },
+    { "no": 8, "service": "ドヤ営業管理", "file": "画像_15枚/08_ドヤ営業管理.png" },
+    { "no": 9, "service": "ドヤ商談準備", "file": "画像_15枚/09_ドヤ商談準備.png" },
+    { "no": 10, "service": "ドヤAIO", "file": "画像_15枚/10_ドヤAIO.png" },
+    { "no": 11, "service": "ドヤ広告画像AI", "file": "画像_15枚/11_ドヤ広告画像AI.png" },
+    { "no": 12, "service": "ドヤインタビュー", "file": "画像_15枚/12_ドヤインタビュー.png" },
+    { "no": 13, "service": "ドヤペルソナAI", "file": "画像_15枚/13_ドヤペルソナAI.png" },
+    { "no": 14, "service": "ドヤ面接官", "file": "画像_15枚/14_ドヤ面接官.png" },
+    { "no": 15, "service": "ドヤ見積もりAI", "file": "画像_15枚/15_ドヤ見積もりAI.png" }
+  ]
+}

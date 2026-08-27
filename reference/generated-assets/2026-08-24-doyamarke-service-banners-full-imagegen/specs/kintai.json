@@ -1,0 +1,108 @@
+{
+  "service": {
+    "name": "ドヤ勤怠",
+    "official_url": "https://doya-ai.surisuta.jp/kintai",
+    "category": "HR Tech / attendance",
+    "primary_color": "#06B6D4",
+    "secondary_color": "#0F172A"
+  },
+  "research": {
+    "checked_at": "2026-08-24T00:00:00+09:00",
+    "service_summary": "PC・スマートフォンからの打刻、勤務時間の自動集計、休暇・残業・打刻修正の申請承認を一画面で扱うクラウド勤怠サービス。",
+    "target_user": "少人数から勤怠管理を整えたい中小企業",
+    "main_problem": "打刻・集計・申請承認が別々で、手計算やメール対応が発生する。",
+    "main_benefit": "打刻から月次集計、申請承認までをブラウザで一元化する。",
+    "confirmed_features": [
+      "ワンクリック打刻",
+      "勤怠を自動集計",
+      "申請・承認をオンライン化"
+    ],
+    "confirmed_ui_elements": [
+      "ワンクリック打刻",
+      "勤怠を自動集計",
+      "申請・承認をオンライン化"
+    ],
+    "official_logo_reference": "public/kintai/logo.png",
+    "official_screenshot_reference": "public/kintai/hero.webp",
+    "sources": [
+      "https://doya-ai.surisuta.jp/kintai",
+      "src/app/kintai",
+      "src/lib/services.ts"
+    ]
+  },
+  "banner": {
+    "aspect_ratio": "16:9",
+    "type": "BtoB SaaS advertising banner",
+    "cta": "無料ではじめる",
+    "headline": [
+      "勤怠管理を、",
+      "シンプルに。"
+    ],
+    "support_copy": [
+      "打刻・自動集計・申請承認をオールインワン。",
+      "従業員5名まで無料。"
+    ],
+    "feature_chips": [
+      "ワンクリック打刻",
+      "勤怠を自動集計",
+      "申請・承認をオンライン化"
+    ]
+  },
+  "layout": {
+    "composition": "copy left 38%; product UI centered/right 52%; mascot far right lower corner; CTA left bottom",
+    "headline_position": "copy left 38%",
+    "product_ui_position": " product UI centered/right 52%",
+    "mascot_position": " mascot far right lower corner",
+    "cta_position": " CTA left bottom",
+    "white_space": "generous"
+  },
+  "mascot": {
+    "use": true,
+    "pose": "腕時計を確認しながら打刻カードにチェックを入れる",
+    "props": [
+      "腕時計",
+      "打刻カード"
+    ],
+    "expression": "alert and cheerful",
+    "size": "secondary visual"
+  },
+  "product_ui": {
+    "use_real_product_reference": true,
+    "main_screen": "打刻画面",
+    "important_components": [
+      "ワンクリック打刻",
+      "勤怠を自動集計",
+      "申請・承認をオンライン化"
+    ],
+    "do_not_invent_features": true
+  },
+  "typography": {
+    "headline_font": "Japanese Gothic ExtraBold",
+    "body_font": "Japanese Gothic Regular",
+    "horizontal_scale": "100%",
+    "prohibit_condensed_text": true,
+    "prohibit_stretched_text": true,
+    "max_headline_lines": 2,
+    "max_body_lines": 2,
+    "prefer_line_break_over_compression": true
+  },
+  "visual_style": {
+    "keywords": [
+      "BtoB SaaS",
+      "clean",
+      "professional",
+      "modern",
+      "product-led",
+      "Japanese SaaS",
+      "minimal"
+    ],
+    "avoid": [
+      "game advertising",
+      "fantasy",
+      "excessive neon",
+      "AI template",
+      "Canva template",
+      "mascot dominated composition"
+    ]
+  }
+}

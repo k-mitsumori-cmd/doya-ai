@@ -1,0 +1,85 @@
+{
+  "audit_version": "v3-logo-final",
+  "date": "2026-08-24",
+  "source_audit": "qa/logo-audit-v3-pre-edit.json",
+  "method": "Visual comparison of each selected full-resolution banner against public/<service-id>/logo.png after built-in Codex generation or precise-object editing",
+  "important_note": "Logo fidelity is visually audited against the official PNG. The logo is part of the generated or edited raster artwork and is not claimed to be byte-identical to the standalone source file.",
+  "summary": {
+    "total": 15,
+    "visual_logo_pass": 15,
+    "visual_logo_fail": 0,
+    "unchanged_pass": 11,
+    "corrected_with_built_in_codex_edit": 4,
+    "corrected_ids": [
+      "promane",
+      "doyaslide",
+      "interview",
+      "persona"
+    ]
+  },
+  "final_items": [
+    { "id": "seo", "service": "ドヤ記事作成", "decision": "PASS_AFTER_CONTENT_EDIT", "selected_raw": "images/seo-v2-content.png" },
+    { "id": "doyalist", "service": "ドヤリスト", "decision": "PASS", "selected_raw": "images/doyalist.png" },
+    { "id": "hr", "service": "ドヤHR", "decision": "PASS", "selected_raw": "images/hr.png" },
+    { "id": "kintai", "service": "ドヤ勤怠", "decision": "PASS", "selected_raw": "images/kintai.png" },
+    {
+      "id": "promane",
+      "service": "ドヤプロマネ",
+      "decision": "PASS_AFTER_EDIT",
+      "selected_raw": "images/promane-v2-logo.png",
+      "verified_components": [
+        "wide horizontal official silhouette",
+        "white bear pointing",
+        "multiple project-management dashboards",
+        "dark navy, blue, cyan and white official palette",
+        "ドヤプロマネ lettering and footer strip"
+      ]
+    },
+    {
+      "id": "doyaslide",
+      "service": "ドヤスライド",
+      "decision": "PASS_AFTER_CONTENT_EDIT",
+      "selected_raw": "images/doyaslide-v3-content.png",
+      "verified_components": [
+        "wide horizontal official silhouette",
+        "white bear and presentation panels",
+        "dark navy and blue-purple official palette",
+        "ドヤスライド lettering",
+        "small SaaS presentation copy"
+      ]
+    },
+    { "id": "cunning", "service": "ドヤカンニング", "decision": "PASS", "selected_raw": "images/cunning-v3.png" },
+    { "id": "sfa", "service": "ドヤ営業管理", "decision": "PASS", "selected_raw": "images/sfa.png" },
+    { "id": "shodan", "service": "ドヤ商談準備", "decision": "PASS", "selected_raw": "images/shodan.png" },
+    { "id": "aio", "service": "ドヤAIO", "decision": "PASS", "selected_raw": "images/aio-v3.png" },
+    { "id": "adimage", "service": "ドヤ広告画像AI", "decision": "PASS", "selected_raw": "images/adimage.png" },
+    {
+      "id": "interview",
+      "service": "ドヤインタビュー",
+      "decision": "PASS_AFTER_EDIT",
+      "selected_raw": "images/interview-v2-logo.png",
+      "verified_components": [
+        "compact official badge silhouette",
+        "white bear holding red microphone",
+        "orange waveform field",
+        "black-orange code header and gear",
+        "stacked ドヤインタビュー lettering"
+      ]
+    },
+    {
+      "id": "persona",
+      "service": "ドヤペルソナAI",
+      "decision": "PASS_AFTER_EDIT",
+      "selected_raw": "images/persona-v3-logo.png",
+      "verified_components": [
+        "compact dark navy official badge",
+        "white bear and multiple purple persona cards",
+        "blue-purple analytics UI accents",
+        "ドヤペルソナAI lettering",
+        "small official footer line"
+      ]
+    },
+    { "id": "mensetsu", "service": "ドヤ面接官", "decision": "PASS_AFTER_CONTENT_EDIT", "selected_raw": "images/mensetsu-v2-content.png" },
+    { "id": "quote", "service": "ドヤ見積もりAI", "decision": "PASS_AFTER_CONTENT_EDIT", "selected_raw": "images/quote-v2-content.png" }
+  ]
+}

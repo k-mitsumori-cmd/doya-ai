@@ -1,0 +1,108 @@
+{
+  "service": {
+    "name": "ドヤ商談準備",
+    "official_url": "https://doya-ai.surisuta.jp/shodan",
+    "category": "Sales research",
+    "primary_color": "#0D9488",
+    "secondary_color": "#0F172A"
+  },
+  "research": {
+    "checked_at": "2026-08-24T00:00:00+09:00",
+    "service_summary": "商談先URLから公開情報を調査し、現状分析、課題仮説、解決策、提案資料までを生成する商談準備サービス。",
+    "target_user": "法人営業・提案担当者",
+    "main_problem": "アポ前の企業調査と提案資料づくりに毎回時間がかかる。",
+    "main_benefit": "URL一本から調査・仮説・解決策・提案資料まで一気通貫で作る。",
+    "confirmed_features": [
+      "URLで深掘り調査",
+      "課題仮説をAIが立案",
+      "提案資料を一括生成"
+    ],
+    "confirmed_ui_elements": [
+      "URLで深掘り調査",
+      "課題仮説をAIが立案",
+      "提案資料を一括生成"
+    ],
+    "official_logo_reference": "public/shodan/logo.png",
+    "official_screenshot_reference": "public/shodan/hero.webp",
+    "sources": [
+      "https://doya-ai.surisuta.jp/shodan",
+      "src/app/shodan",
+      "src/lib/services.ts"
+    ]
+  },
+  "banner": {
+    "aspect_ratio": "16:9",
+    "type": "BtoB SaaS advertising banner",
+    "cta": "無料ではじめる",
+    "headline": [
+      "商談準備を、",
+      "URL1本で。"
+    ],
+    "support_copy": [
+      "URLから企業リサーチと課題仮説を自動生成。",
+      "解決策・提案資料まで一気通貫。"
+    ],
+    "feature_chips": [
+      "URLで深掘り調査",
+      "課題仮説をAIが立案",
+      "提案資料を一括生成"
+    ]
+  },
+  "layout": {
+    "composition": "copy left 36%; stacked UI panels right; mascot seated between panels and copy; CTA left bottom",
+    "headline_position": "copy left 36%",
+    "product_ui_position": " stacked UI panels right",
+    "mascot_position": " mascot seated between panels and copy",
+    "cta_position": " CTA left bottom",
+    "white_space": "generous"
+  },
+  "mascot": {
+    "use": true,
+    "pose": "ノートPCで企業サイトを分析し、片手で企業分析レポートを確認する",
+    "props": [
+      "ノートPC",
+      "企業分析レポート"
+    ],
+    "expression": "analytical and ready",
+    "size": "secondary visual"
+  },
+  "product_ui": {
+    "use_real_product_reference": true,
+    "main_screen": "企業調査画面",
+    "important_components": [
+      "URLで深掘り調査",
+      "課題仮説をAIが立案",
+      "提案資料を一括生成"
+    ],
+    "do_not_invent_features": true
+  },
+  "typography": {
+    "headline_font": "Japanese Gothic ExtraBold",
+    "body_font": "Japanese Gothic Regular",
+    "horizontal_scale": "100%",
+    "prohibit_condensed_text": true,
+    "prohibit_stretched_text": true,
+    "max_headline_lines": 2,
+    "max_body_lines": 2,
+    "prefer_line_break_over_compression": true
+  },
+  "visual_style": {
+    "keywords": [
+      "BtoB SaaS",
+      "clean",
+      "professional",
+      "modern",
+      "product-led",
+      "Japanese SaaS",
+      "minimal"
+    ],
+    "avoid": [
+      "game advertising",
+      "fantasy",
+      "excessive neon",
+      "AI template",
+      "Canva template",
+      "mascot dominated composition"
+    ]
+  }
+}

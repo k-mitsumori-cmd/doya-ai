@@ -1,0 +1,108 @@
+{
+  "service": {
+    "name": "ドヤペルソナAI",
+    "official_url": "https://doya-ai.surisuta.jp/persona",
+    "category": "Marketing strategy",
+    "primary_color": "#9333EA",
+    "secondary_color": "#0F172A"
+  },
+  "research": {
+    "checked_at": "2026-08-24T00:00:00+09:00",
+    "service_summary": "商材と業界から年齢・職種・課題・情報源・判断軸を含むペルソナを生成し、訴求や導線の指示へ変換するサービス。",
+    "target_user": "LP・広告・コンテンツを設計するマーケティングチーム",
+    "main_problem": "ターゲット像が担当者の勘に依存し、制作指示が揃わない。",
+    "main_benefit": "顧客像を一枚に整理し、コピーや導線の判断材料に変換する。",
+    "confirmed_features": [
+      "商材の条件を入力",
+      "顧客像を1枚に",
+      "施策の指示へ変換"
+    ],
+    "confirmed_ui_elements": [
+      "商材の条件を入力",
+      "顧客像を1枚に",
+      "施策の指示へ変換"
+    ],
+    "official_logo_reference": "public/persona/logo.png",
+    "official_screenshot_reference": "public/persona/hero.webp",
+    "sources": [
+      "https://doya-ai.surisuta.jp/persona",
+      "src/app/persona",
+      "src/lib/services.ts"
+    ]
+  },
+  "banner": {
+    "aspect_ratio": "16:9",
+    "type": "BtoB SaaS advertising banner",
+    "cta": "無料ではじめる",
+    "headline": [
+      "「誰に向けて作るか」を、",
+      "30秒で1枚に。"
+    ],
+    "support_copy": [
+      "商材と業界から顧客像を1枚に整理。",
+      "訴求・導線・検証項目まで施策に変換。"
+    ],
+    "feature_chips": [
+      "商材の条件を入力",
+      "顧客像を1枚に",
+      "施策の指示へ変換"
+    ]
+  },
+  "layout": {
+    "composition": "copy left 38%; tall profile UI right 55%; mascot between copy and profile cards; CTA left bottom",
+    "headline_position": "copy left 38%",
+    "product_ui_position": " tall profile UI right 55%",
+    "mascot_position": " mascot between copy and profile cards",
+    "cta_position": " CTA left bottom",
+    "white_space": "generous"
+  },
+  "mascot": {
+    "use": true,
+    "pose": "複数の顧客プロフィールカードを比較し、重要な属性に付箋を貼る",
+    "props": [
+      "顧客プロフィールカード",
+      "付箋"
+    ],
+    "expression": "thoughtful and insightful",
+    "size": "secondary visual"
+  },
+  "product_ui": {
+    "use_real_product_reference": true,
+    "main_screen": "ペルソナシート画面",
+    "important_components": [
+      "商材の条件を入力",
+      "顧客像を1枚に",
+      "施策の指示へ変換"
+    ],
+    "do_not_invent_features": true
+  },
+  "typography": {
+    "headline_font": "Japanese Gothic ExtraBold",
+    "body_font": "Japanese Gothic Regular",
+    "horizontal_scale": "100%",
+    "prohibit_condensed_text": true,
+    "prohibit_stretched_text": true,
+    "max_headline_lines": 2,
+    "max_body_lines": 2,
+    "prefer_line_break_over_compression": true
+  },
+  "visual_style": {
+    "keywords": [
+      "BtoB SaaS",
+      "clean",
+      "professional",
+      "modern",
+      "product-led",
+      "Japanese SaaS",
+      "minimal"
+    ],
+    "avoid": [
+      "game advertising",
+      "fantasy",
+      "excessive neon",
+      "AI template",
+      "Canva template",
+      "mascot dominated composition"
+    ]
+  }
+}

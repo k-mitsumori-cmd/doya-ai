@@ -1,0 +1,108 @@
+{
+  "service": {
+    "name": "ドヤインタビュー",
+    "official_url": "https://doya-ai.surisuta.jp/interview",
+    "category": "Content / transcription",
+    "primary_color": "#3B82F6",
+    "secondary_color": "#0F172A"
+  },
+  "research": {
+    "checked_at": "2026-08-24T00:00:00+09:00",
+    "service_summary": "音声や動画をアップロードし、話者分離付き文字起こしから構成・記事ドラフトまで作るインタビュー記事生成サービス。",
+    "target_user": "取材記事を制作する編集者・広報・マーケター",
+    "main_problem": "取材後の文字起こし・構成・記事化に数日かかる。",
+    "main_benefit": "録音から話者別文字起こし、媒体に合う記事ドラフトまで進める。",
+    "confirmed_features": [
+      "録音をそのまま入れる",
+      "話者ごとに文字へ",
+      "媒体に合う記事へ"
+    ],
+    "confirmed_ui_elements": [
+      "録音をそのまま入れる",
+      "話者ごとに文字へ",
+      "媒体に合う記事へ"
+    ],
+    "official_logo_reference": "public/interview/logo.png",
+    "official_screenshot_reference": "public/interview/hero.webp",
+    "sources": [
+      "https://doya-ai.surisuta.jp/interview",
+      "src/app/interview",
+      "src/lib/services.ts"
+    ]
+  },
+  "banner": {
+    "aspect_ratio": "16:9",
+    "type": "BtoB SaaS advertising banner",
+    "cta": "無料ではじめる",
+    "headline": [
+      "取材の録音から、",
+      "記事の形まで。"
+    ],
+    "support_copy": [
+      "音声を話者ごとに文字起こし。",
+      "媒体に合う記事ドラフトまで自動生成。"
+    ],
+    "feature_chips": [
+      "録音をそのまま入れる",
+      "話者ごとに文字へ",
+      "媒体に合う記事へ"
+    ]
+  },
+  "layout": {
+    "composition": "product UI left 56%; copy right; mascot lower center holding microphone toward UI; CTA right bottom",
+    "headline_position": "product UI left 56%",
+    "product_ui_position": " copy right",
+    "mascot_position": " mascot lower center holding microphone toward UI",
+    "cta_position": " CTA right bottom",
+    "white_space": "generous"
+  },
+  "mascot": {
+    "use": true,
+    "pose": "インタビューマイクを持ち、もう一方の手で話者別トランスクリプトを確認する",
+    "props": [
+      "インタビューマイク",
+      "トランスクリプトカード"
+    ],
+    "expression": "engaged and personable",
+    "size": "secondary visual"
+  },
+  "product_ui": {
+    "use_real_product_reference": true,
+    "main_screen": "話者別文字起こし画面",
+    "important_components": [
+      "録音をそのまま入れる",
+      "話者ごとに文字へ",
+      "媒体に合う記事へ"
+    ],
+    "do_not_invent_features": true
+  },
+  "typography": {
+    "headline_font": "Japanese Gothic ExtraBold",
+    "body_font": "Japanese Gothic Regular",
+    "horizontal_scale": "100%",
+    "prohibit_condensed_text": true,
+    "prohibit_stretched_text": true,
+    "max_headline_lines": 2,
+    "max_body_lines": 2,
+    "prefer_line_break_over_compression": true
+  },
+  "visual_style": {
+    "keywords": [
+      "BtoB SaaS",
+      "clean",
+      "professional",
+      "modern",
+      "product-led",
+      "Japanese SaaS",
+      "minimal"
+    ],
+    "avoid": [
+      "game advertising",
+      "fantasy",
+      "excessive neon",
+      "AI template",
+      "Canva template",
+      "mascot dominated composition"
+    ]
+  }
+}

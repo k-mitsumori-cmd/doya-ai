@@ -1,0 +1,127 @@
+{
+  "created_at": "2026-08-24T00:00:00+09:00",
+  "count": 15,
+  "mode": "built-in image generation for mascot plus deterministic composition of official logo, real UI and Japanese typography",
+  "items": [
+    {
+      "id": "seo",
+      "name": "ドヤ記事作成",
+      "spec": "specs/seo.json",
+      "official_url": "https://doya-ai.surisuta.jp/seo",
+      "screenshot": "public/seo/hero.webp",
+      "logo": "public/seo/logo.png"
+    },
+    {
+      "id": "doyalist",
+      "name": "ドヤリスト",
+      "spec": "specs/doyalist.json",
+      "official_url": "https://doya-ai.surisuta.jp/doyalist",
+      "screenshot": "public/doyalist/hero.webp",
+      "logo": "public/doyalist/logo.png"
+    },
+    {
+      "id": "hr",
+      "name": "ドヤHR",
+      "spec": "specs/hr.json",
+      "official_url": "https://doya-ai.surisuta.jp/hr",
+      "screenshot": "public/hr/hero.webp",
+      "logo": "public/hr/logo.png"
+    },
+    {
+      "id": "kintai",
+      "name": "ドヤ勤怠",
+      "spec": "specs/kintai.json",
+      "official_url": "https://doya-ai.surisuta.jp/kintai",
+      "screenshot": "public/kintai/hero.webp",
+      "logo": "public/kintai/logo.png"
+    },
+    {
+      "id": "promane",
+      "name": "ドヤプロマネ",
+      "spec": "specs/promane.json",
+      "official_url": "https://doya-ai.surisuta.jp/promane",
+      "screenshot": "public/promane/hero.webp",
+      "logo": "public/promane/logo.png"
+    },
+    {
+      "id": "doyaslide",
+      "name": "ドヤスライド",
+      "spec": "specs/doyaslide.json",
+      "official_url": "https://doya-ai.surisuta.jp/doyaslide",
+      "screenshot": "public/doyaslide/hero.webp",
+      "logo": "public/doyaslide/logo.png"
+    },
+    {
+      "id": "cunning",
+      "name": "ドヤカンニング",
+      "spec": "specs/cunning.json",
+      "official_url": "https://doya-ai.surisuta.jp/cunning",
+      "screenshot": "public/cunning/hero.webp",
+      "logo": "public/cunning/logo.png"
+    },
+    {
+      "id": "sfa",
+      "name": "ドヤ営業管理",
+      "spec": "specs/sfa.json",
+      "official_url": "https://doya-ai.surisuta.jp/sfa",
+      "screenshot": "public/sfa/hero.webp",
+      "logo": "public/sfa/logo.png"
+    },
+    {
+      "id": "shodan",
+      "name": "ドヤ商談準備",
+      "spec": "specs/shodan.json",
+      "official_url": "https://doya-ai.surisuta.jp/shodan",
+      "screenshot": "public/shodan/hero.webp",
+      "logo": "public/shodan/logo.png"
+    },
+    {
+      "id": "aio",
+      "name": "ドヤAIO",
+      "spec": "specs/aio.json",
+      "official_url": "https://doya-ai.surisuta.jp/aio",
+      "screenshot": "public/aio/hero.webp",
+      "logo": "public/aio/logo.png"
+    },
+    {
+      "id": "adimage",
+      "name": "ドヤ広告画像AI",
+      "spec": "specs/adimage.json",
+      "official_url": "https://doya-ai.surisuta.jp/adimage",
+      "screenshot": "public/adimage/hero.webp",
+      "logo": "public/adimage/logo.png"
+    },
+    {
+      "id": "interview",
+      "name": "ドヤインタビュー",
+      "spec": "specs/interview.json",
+      "official_url": "https://doya-ai.surisuta.jp/interview",
+      "screenshot": "public/interview/hero.webp",
+      "logo": "public/interview/logo.png"
+    },
+    {
+      "id": "persona",
+      "name": "ドヤペルソナAI",
+      "spec": "specs/persona.json",
+      "official_url": "https://doya-ai.surisuta.jp/persona",
+      "screenshot": "public/persona/hero.webp",
+      "logo": "public/persona/logo.png"
+    },
+    {
+      "id": "mensetsu",
+      "name": "ドヤ面接官",
+      "spec": "specs/mensetsu.json",
+      "official_url": "https://doya-ai.surisuta.jp/mensetsu",
+      "screenshot": "public/mensetsu/hero.webp",
+      "logo": "public/mensetsu/logo.png"
+    },
+    {
+      "id": "quote",
+      "name": "ドヤ見積もりAI",
+      "spec": "specs/quote.json",
+      "official_url": "https://doya-ai.surisuta.jp/quote",
+      "screenshot": "public/quote/hero.webp",
+      "logo": "public/quote/logo.png"
+    }
+  ]
+}

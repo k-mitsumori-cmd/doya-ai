@@ -1,0 +1,108 @@
+{
+  "service": {
+    "name": "ドヤ広告画像AI",
+    "official_url": "https://doya-ai.surisuta.jp/adimage",
+    "category": "Creative automation / MarTech",
+    "primary_color": "#FB7185",
+    "secondary_color": "#0F172A"
+  },
+  "research": {
+    "checked_at": "2026-08-24T00:00:00+09:00",
+    "service_summary": "サービスURLからブランド情報とコピーを読み取り、媒体別比率の広告画像を生成し、文字検査・採点・改善・ZIP出力まで行うサービス。",
+    "target_user": "広告クリエイティブを継続運用するマーケター",
+    "main_problem": "媒体別サイズの作り分けと文字確認、改善作業が重い。",
+    "main_benefit": "媒体ごとの入稿サイズを一括生成し、検査・採点・改善まで自動化する。",
+    "confirmed_features": [
+      "媒体別の実寸出力",
+      "文字を自動検査",
+      "AIで採点・改善"
+    ],
+    "confirmed_ui_elements": [
+      "媒体別の実寸出力",
+      "文字を自動検査",
+      "AIで採点・改善"
+    ],
+    "official_logo_reference": "public/adimage/logo.png",
+    "official_screenshot_reference": "public/adimage/hero.webp",
+    "sources": [
+      "https://doya-ai.surisuta.jp/adimage",
+      "src/app/adimage",
+      "src/lib/services.ts"
+    ]
+  },
+  "banner": {
+    "aspect_ratio": "16:9",
+    "type": "BtoB SaaS advertising banner",
+    "cta": "無料ではじめる",
+    "headline": [
+      "URLを貼るだけで、",
+      "入稿できる広告画像。"
+    ],
+    "support_copy": [
+      "URLから媒体別の広告画像を一括生成。",
+      "文字検査・採点・改善・ZIP出力まで。"
+    ],
+    "feature_chips": [
+      "媒体別の実寸出力",
+      "文字を自動検査",
+      "AIで採点・改善"
+    ]
+  },
+  "layout": {
+    "composition": "copy left; product UI grid right 60%; mascot lower right operating design board; CTA left bottom",
+    "headline_position": "copy left",
+    "product_ui_position": " product UI grid right 60%",
+    "mascot_position": " mascot lower right operating design board",
+    "cta_position": " CTA left bottom",
+    "white_space": "generous"
+  },
+  "mascot": {
+    "use": true,
+    "pose": "デザインボード上で広告クリエイティブを編集し、カラースウォッチを選ぶ",
+    "props": [
+      "デザインボード",
+      "カラースウォッチ"
+    ],
+    "expression": "creative and focused",
+    "size": "secondary visual"
+  },
+  "product_ui": {
+    "use_real_product_reference": true,
+    "main_screen": "媒体別サイズ生成画面",
+    "important_components": [
+      "媒体別の実寸出力",
+      "文字を自動検査",
+      "AIで採点・改善"
+    ],
+    "do_not_invent_features": true
+  },
+  "typography": {
+    "headline_font": "Japanese Gothic ExtraBold",
+    "body_font": "Japanese Gothic Regular",
+    "horizontal_scale": "100%",
+    "prohibit_condensed_text": true,
+    "prohibit_stretched_text": true,
+    "max_headline_lines": 2,
+    "max_body_lines": 2,
+    "prefer_line_break_over_compression": true
+  },
+  "visual_style": {
+    "keywords": [
+      "BtoB SaaS",
+      "clean",
+      "professional",
+      "modern",
+      "product-led",
+      "Japanese SaaS",
+      "minimal"
+    ],
+    "avoid": [
+      "game advertising",
+      "fantasy",
+      "excessive neon",
+      "AI template",
+      "Canva template",
+      "mascot dominated composition"
+    ]
+  }
+}

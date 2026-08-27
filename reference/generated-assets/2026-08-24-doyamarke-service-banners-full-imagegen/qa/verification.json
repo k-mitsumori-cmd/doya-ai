@@ -1,0 +1,803 @@
+{
+  "created_at": "2026-08-24T01:24:20.293Z",
+  "scope": "15 full-banner images created with built-in Codex image generation",
+  "count": 15,
+  "check_count": 158,
+  "failure_count": 0,
+  "status": "PASS",
+  "visual_feedback": "qa/feedback-audit-v2-final.json",
+  "official_logo_audit": "qa/logo-audit-v3-final.json",
+  "user_content_corrections": "qa/content-correction-audit-v4-final.json",
+  "checks": [
+    {
+      "id": "seo",
+      "check": "raw_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "seo",
+      "check": "raw_is_landscape_16_9",
+      "pass": true
+    },
+    {
+      "id": "seo",
+      "check": "final_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "seo",
+      "check": "final_dimensions_1600x900",
+      "pass": true
+    },
+    {
+      "id": "seo",
+      "check": "json_spec_exists",
+      "pass": true
+    },
+    {
+      "id": "seo",
+      "check": "official_references_exist",
+      "pass": true
+    },
+    {
+      "id": "doyalist",
+      "check": "raw_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "doyalist",
+      "check": "raw_is_landscape_16_9",
+      "pass": true
+    },
+    {
+      "id": "doyalist",
+      "check": "final_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "doyalist",
+      "check": "final_dimensions_1600x900",
+      "pass": true
+    },
+    {
+      "id": "doyalist",
+      "check": "json_spec_exists",
+      "pass": true
+    },
+    {
+      "id": "doyalist",
+      "check": "official_references_exist",
+      "pass": true
+    },
+    {
+      "id": "hr",
+      "check": "raw_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "hr",
+      "check": "raw_is_landscape_16_9",
+      "pass": true
+    },
+    {
+      "id": "hr",
+      "check": "final_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "hr",
+      "check": "final_dimensions_1600x900",
+      "pass": true
+    },
+    {
+      "id": "hr",
+      "check": "json_spec_exists",
+      "pass": true
+    },
+    {
+      "id": "hr",
+      "check": "official_references_exist",
+      "pass": true
+    },
+    {
+      "id": "kintai",
+      "check": "raw_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "kintai",
+      "check": "raw_is_landscape_16_9",
+      "pass": true
+    },
+    {
+      "id": "kintai",
+      "check": "final_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "kintai",
+      "check": "final_dimensions_1600x900",
+      "pass": true
+    },
+    {
+      "id": "kintai",
+      "check": "json_spec_exists",
+      "pass": true
+    },
+    {
+      "id": "kintai",
+      "check": "official_references_exist",
+      "pass": true
+    },
+    {
+      "id": "promane",
+      "check": "raw_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "promane",
+      "check": "raw_is_landscape_16_9",
+      "pass": true
+    },
+    {
+      "id": "promane",
+      "check": "final_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "promane",
+      "check": "final_dimensions_1600x900",
+      "pass": true
+    },
+    {
+      "id": "promane",
+      "check": "json_spec_exists",
+      "pass": true
+    },
+    {
+      "id": "promane",
+      "check": "official_references_exist",
+      "pass": true
+    },
+    {
+      "id": "doyaslide",
+      "check": "raw_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "doyaslide",
+      "check": "raw_is_landscape_16_9",
+      "pass": true
+    },
+    {
+      "id": "doyaslide",
+      "check": "final_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "doyaslide",
+      "check": "final_dimensions_1600x900",
+      "pass": true
+    },
+    {
+      "id": "doyaslide",
+      "check": "json_spec_exists",
+      "pass": true
+    },
+    {
+      "id": "doyaslide",
+      "check": "official_references_exist",
+      "pass": true
+    },
+    {
+      "id": "cunning",
+      "check": "raw_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "cunning",
+      "check": "raw_is_landscape_16_9",
+      "pass": true
+    },
+    {
+      "id": "cunning",
+      "check": "final_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "cunning",
+      "check": "final_dimensions_1600x900",
+      "pass": true
+    },
+    {
+      "id": "cunning",
+      "check": "json_spec_exists",
+      "pass": true
+    },
+    {
+      "id": "cunning",
+      "check": "official_references_exist",
+      "pass": true
+    },
+    {
+      "id": "sfa",
+      "check": "raw_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "sfa",
+      "check": "raw_is_landscape_16_9",
+      "pass": true
+    },
+    {
+      "id": "sfa",
+      "check": "final_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "sfa",
+      "check": "final_dimensions_1600x900",
+      "pass": true
+    },
+    {
+      "id": "sfa",
+      "check": "json_spec_exists",
+      "pass": true
+    },
+    {
+      "id": "sfa",
+      "check": "official_references_exist",
+      "pass": true
+    },
+    {
+      "id": "shodan",
+      "check": "raw_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "shodan",
+      "check": "raw_is_landscape_16_9",
+      "pass": true
+    },
+    {
+      "id": "shodan",
+      "check": "final_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "shodan",
+      "check": "final_dimensions_1600x900",
+      "pass": true
+    },
+    {
+      "id": "shodan",
+      "check": "json_spec_exists",
+      "pass": true
+    },
+    {
+      "id": "shodan",
+      "check": "official_references_exist",
+      "pass": true
+    },
+    {
+      "id": "aio",
+      "check": "raw_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "aio",
+      "check": "raw_is_landscape_16_9",
+      "pass": true
+    },
+    {
+      "id": "aio",
+      "check": "final_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "aio",
+      "check": "final_dimensions_1600x900",
+      "pass": true
+    },
+    {
+      "id": "aio",
+      "check": "json_spec_exists",
+      "pass": true
+    },
+    {
+      "id": "aio",
+      "check": "official_references_exist",
+      "pass": true
+    },
+    {
+      "id": "adimage",
+      "check": "raw_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "adimage",
+      "check": "raw_is_landscape_16_9",
+      "pass": true
+    },
+    {
+      "id": "adimage",
+      "check": "final_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "adimage",
+      "check": "final_dimensions_1600x900",
+      "pass": true
+    },
+    {
+      "id": "adimage",
+      "check": "json_spec_exists",
+      "pass": true
+    },
+    {
+      "id": "adimage",
+      "check": "official_references_exist",
+      "pass": true
+    },
+    {
+      "id": "interview",
+      "check": "raw_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "interview",
+      "check": "raw_is_landscape_16_9",
+      "pass": true
+    },
+    {
+      "id": "interview",
+      "check": "final_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "interview",
+      "check": "final_dimensions_1600x900",
+      "pass": true
+    },
+    {
+      "id": "interview",
+      "check": "json_spec_exists",
+      "pass": true
+    },
+    {
+      "id": "interview",
+      "check": "official_references_exist",
+      "pass": true
+    },
+    {
+      "id": "persona",
+      "check": "raw_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "persona",
+      "check": "raw_is_landscape_16_9",
+      "pass": true
+    },
+    {
+      "id": "persona",
+      "check": "final_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "persona",
+      "check": "final_dimensions_1600x900",
+      "pass": true
+    },
+    {
+      "id": "persona",
+      "check": "json_spec_exists",
+      "pass": true
+    },
+    {
+      "id": "persona",
+      "check": "official_references_exist",
+      "pass": true
+    },
+    {
+      "id": "mensetsu",
+      "check": "raw_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "mensetsu",
+      "check": "raw_is_landscape_16_9",
+      "pass": true
+    },
+    {
+      "id": "mensetsu",
+      "check": "final_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "mensetsu",
+      "check": "final_dimensions_1600x900",
+      "pass": true
+    },
+    {
+      "id": "mensetsu",
+      "check": "json_spec_exists",
+      "pass": true
+    },
+    {
+      "id": "mensetsu",
+      "check": "official_references_exist",
+      "pass": true
+    },
+    {
+      "id": "quote",
+      "check": "raw_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "quote",
+      "check": "raw_is_landscape_16_9",
+      "pass": true
+    },
+    {
+      "id": "quote",
+      "check": "final_png_decodes",
+      "pass": true
+    },
+    {
+      "id": "quote",
+      "check": "final_dimensions_1600x900",
+      "pass": true
+    },
+    {
+      "id": "quote",
+      "check": "json_spec_exists",
+      "pass": true
+    },
+    {
+      "id": "quote",
+      "check": "official_references_exist",
+      "pass": true
+    },
+    {
+      "id": "seo",
+      "check": "final_visual_feedback_approved",
+      "pass": true
+    },
+    {
+      "id": "seo",
+      "check": "selected_raw_matches_feedback",
+      "pass": true
+    },
+    {
+      "id": "doyalist",
+      "check": "final_visual_feedback_approved",
+      "pass": true
+    },
+    {
+      "id": "doyalist",
+      "check": "selected_raw_matches_feedback",
+      "pass": true
+    },
+    {
+      "id": "hr",
+      "check": "final_visual_feedback_approved",
+      "pass": true
+    },
+    {
+      "id": "hr",
+      "check": "selected_raw_matches_feedback",
+      "pass": true
+    },
+    {
+      "id": "kintai",
+      "check": "final_visual_feedback_approved",
+      "pass": true
+    },
+    {
+      "id": "kintai",
+      "check": "selected_raw_matches_feedback",
+      "pass": true
+    },
+    {
+      "id": "promane",
+      "check": "final_visual_feedback_approved",
+      "pass": true
+    },
+    {
+      "id": "promane",
+      "check": "selected_raw_matches_feedback",
+      "pass": true
+    },
+    {
+      "id": "doyaslide",
+      "check": "final_visual_feedback_approved",
+      "pass": true
+    },
+    {
+      "id": "doyaslide",
+      "check": "selected_raw_matches_feedback",
+      "pass": true
+    },
+    {
+      "id": "cunning",
+      "check": "final_visual_feedback_approved",
+      "pass": true
+    },
+    {
+      "id": "cunning",
+      "check": "selected_raw_matches_feedback",
+      "pass": true
+    },
+    {
+      "id": "sfa",
+      "check": "final_visual_feedback_approved",
+      "pass": true
+    },
+    {
+      "id": "sfa",
+      "check": "selected_raw_matches_feedback",
+      "pass": true
+    },
+    {
+      "id": "shodan",
+      "check": "final_visual_feedback_approved",
+      "pass": true
+    },
+    {
+      "id": "shodan",
+      "check": "selected_raw_matches_feedback",
+      "pass": true
+    },
+    {
+      "id": "aio",
+      "check": "final_visual_feedback_approved",
+      "pass": true
+    },
+    {
+      "id": "aio",
+      "check": "selected_raw_matches_feedback",
+      "pass": true
+    },
+    {
+      "id": "adimage",
+      "check": "final_visual_feedback_approved",
+      "pass": true
+    },
+    {
+      "id": "adimage",
+      "check": "selected_raw_matches_feedback",
+      "pass": true
+    },
+    {
+      "id": "interview",
+      "check": "final_visual_feedback_approved",
+      "pass": true
+    },
+    {
+      "id": "interview",
+      "check": "selected_raw_matches_feedback",
+      "pass": true
+    },
+    {
+      "id": "persona",
+      "check": "final_visual_feedback_approved",
+      "pass": true
+    },
+    {
+      "id": "persona",
+      "check": "selected_raw_matches_feedback",
+      "pass": true
+    },
+    {
+      "id": "mensetsu",
+      "check": "final_visual_feedback_approved",
+      "pass": true
+    },
+    {
+      "id": "mensetsu",
+      "check": "selected_raw_matches_feedback",
+      "pass": true
+    },
+    {
+      "id": "quote",
+      "check": "final_visual_feedback_approved",
+      "pass": true
+    },
+    {
+      "id": "quote",
+      "check": "selected_raw_matches_feedback",
+      "pass": true
+    },
+    {
+      "id": "seo",
+      "check": "final_official_logo_visual_audit_passed",
+      "pass": true
+    },
+    {
+      "id": "seo",
+      "check": "logo_audit_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "doyalist",
+      "check": "final_official_logo_visual_audit_passed",
+      "pass": true
+    },
+    {
+      "id": "doyalist",
+      "check": "logo_audit_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "hr",
+      "check": "final_official_logo_visual_audit_passed",
+      "pass": true
+    },
+    {
+      "id": "hr",
+      "check": "logo_audit_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "kintai",
+      "check": "final_official_logo_visual_audit_passed",
+      "pass": true
+    },
+    {
+      "id": "kintai",
+      "check": "logo_audit_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "promane",
+      "check": "final_official_logo_visual_audit_passed",
+      "pass": true
+    },
+    {
+      "id": "promane",
+      "check": "logo_audit_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "doyaslide",
+      "check": "final_official_logo_visual_audit_passed",
+      "pass": true
+    },
+    {
+      "id": "doyaslide",
+      "check": "logo_audit_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "cunning",
+      "check": "final_official_logo_visual_audit_passed",
+      "pass": true
+    },
+    {
+      "id": "cunning",
+      "check": "logo_audit_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "sfa",
+      "check": "final_official_logo_visual_audit_passed",
+      "pass": true
+    },
+    {
+      "id": "sfa",
+      "check": "logo_audit_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "shodan",
+      "check": "final_official_logo_visual_audit_passed",
+      "pass": true
+    },
+    {
+      "id": "shodan",
+      "check": "logo_audit_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "aio",
+      "check": "final_official_logo_visual_audit_passed",
+      "pass": true
+    },
+    {
+      "id": "aio",
+      "check": "logo_audit_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "adimage",
+      "check": "final_official_logo_visual_audit_passed",
+      "pass": true
+    },
+    {
+      "id": "adimage",
+      "check": "logo_audit_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "interview",
+      "check": "final_official_logo_visual_audit_passed",
+      "pass": true
+    },
+    {
+      "id": "interview",
+      "check": "logo_audit_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "persona",
+      "check": "final_official_logo_visual_audit_passed",
+      "pass": true
+    },
+    {
+      "id": "persona",
+      "check": "logo_audit_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "mensetsu",
+      "check": "final_official_logo_visual_audit_passed",
+      "pass": true
+    },
+    {
+      "id": "mensetsu",
+      "check": "logo_audit_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "quote",
+      "check": "final_official_logo_visual_audit_passed",
+      "pass": true
+    },
+    {
+      "id": "quote",
+      "check": "logo_audit_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "doyaslide",
+      "check": "requested_content_correction_passed",
+      "pass": true
+    },
+    {
+      "id": "doyaslide",
+      "check": "content_correction_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "seo",
+      "check": "requested_content_correction_passed",
+      "pass": true
+    },
+    {
+      "id": "seo",
+      "check": "content_correction_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "mensetsu",
+      "check": "requested_content_correction_passed",
+      "pass": true
+    },
+    {
+      "id": "mensetsu",
+      "check": "content_correction_selected_raw_matches_manifest",
+      "pass": true
+    },
+    {
+      "id": "quote",
+      "check": "requested_content_correction_passed",
+      "pass": true
+    },
+    {
+      "id": "quote",
+      "check": "content_correction_selected_raw_matches_manifest",
+      "pass": true
+    }
+  ]
+}

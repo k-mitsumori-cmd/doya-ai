@@ -1,0 +1,108 @@
+{
+  "service": {
+    "name": "ドヤプロマネ",
+    "official_url": "https://doya-ai.surisuta.jp/promane",
+    "category": "Project management",
+    "primary_color": "#4F46E5",
+    "secondary_color": "#0F172A"
+  },
+  "research": {
+    "checked_at": "2026-08-24T00:00:00+09:00",
+    "service_summary": "ガントチャートとカンバンで進捗を管理し、作業時間とメンバー単価から人件費・利益を可視化する案件管理サービス。",
+    "target_user": "複数案件を持つ制作会社・中小チーム",
+    "main_problem": "進捗と工数・収支を別々に管理し、案件利益を把握しにくい。",
+    "main_benefit": "同じ案件画面で進捗・工数・人件費・利益を確認できる。",
+    "confirmed_features": [
+      "案件の条件を一つに",
+      "進み具合を見える化",
+      "工数から利益を確認"
+    ],
+    "confirmed_ui_elements": [
+      "案件の条件を一つに",
+      "進み具合を見える化",
+      "工数から利益を確認"
+    ],
+    "official_logo_reference": "public/promane/logo.png",
+    "official_screenshot_reference": "public/promane/hero.webp",
+    "sources": [
+      "https://doya-ai.surisuta.jp/promane",
+      "src/app/promane",
+      "src/lib/services.ts"
+    ]
+  },
+  "banner": {
+    "aspect_ratio": "16:9",
+    "type": "BtoB SaaS advertising banner",
+    "cta": "無料ではじめる",
+    "headline": [
+      "案件の進捗と利益を、",
+      "ひとつの画面で。"
+    ],
+    "support_copy": [
+      "ガント・カンバンで進捗を見える化。",
+      "工数から人件費と見込み利益を自動集計。"
+    ],
+    "feature_chips": [
+      "案件の条件を一つに",
+      "進み具合を見える化",
+      "工数から利益を確認"
+    ]
+  },
+  "layout": {
+    "composition": "copy left; two overlapping UI panels right; mascot in front of panel lower center; CTA left bottom",
+    "headline_position": "copy left",
+    "product_ui_position": " two overlapping UI panels right",
+    "mascot_position": " mascot in front of panel lower center",
+    "cta_position": " CTA left bottom",
+    "white_space": "generous"
+  },
+  "mascot": {
+    "use": true,
+    "pose": "大きなガントチャートを指示棒で説明し、遅延箇所を示す",
+    "props": [
+      "ガントチャート",
+      "指示棒"
+    ],
+    "expression": "decisive and calm",
+    "size": "secondary visual"
+  },
+  "product_ui": {
+    "use_real_product_reference": true,
+    "main_screen": "案件収支画面",
+    "important_components": [
+      "案件の条件を一つに",
+      "進み具合を見える化",
+      "工数から利益を確認"
+    ],
+    "do_not_invent_features": true
+  },
+  "typography": {
+    "headline_font": "Japanese Gothic ExtraBold",
+    "body_font": "Japanese Gothic Regular",
+    "horizontal_scale": "100%",
+    "prohibit_condensed_text": true,
+    "prohibit_stretched_text": true,
+    "max_headline_lines": 2,
+    "max_body_lines": 2,
+    "prefer_line_break_over_compression": true
+  },
+  "visual_style": {
+    "keywords": [
+      "BtoB SaaS",
+      "clean",
+      "professional",
+      "modern",
+      "product-led",
+      "Japanese SaaS",
+      "minimal"
+    ],
+    "avoid": [
+      "game advertising",
+      "fantasy",
+      "excessive neon",
+      "AI template",
+      "Canva template",
+      "mascot dominated composition"
+    ]
+  }
+}

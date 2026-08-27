@@ -1,0 +1,69 @@
+{
+  "audit_version": "v4-final",
+  "audited_at": "2026-08-24T02:40:00+09:00",
+  "scope": "Four user-requested message and product-UI corrections",
+  "method": "Visual inspection of each built-in Codex full-raster edit at native output size, followed by 1600x900 delivery verification.",
+  "summary": {
+    "requested": 4,
+    "passed": 4,
+    "failed": 0,
+    "regenerated_with_built_in_codex": 4
+  },
+  "final_items": [
+    {
+      "id": "doyaslide",
+      "service": "ドヤスライド",
+      "decision": "PASS",
+      "selected_raw": "images/doyaslide-v3-content.png",
+      "request": "Make the product UI look more clearly like presentation slides.",
+      "acceptance": [
+        "left slide thumbnail rail",
+        "top presentation toolbar",
+        "large 16:9 slide canvas",
+        "business slide containing title, image, bar chart and donut chart"
+      ]
+    },
+    {
+      "id": "seo",
+      "service": "ドヤ記事作成",
+      "decision": "PASS",
+      "selected_raw": "images/seo-v2-content.png",
+      "request": "Replace technical search-intent and long-form consistency copy with a short, immediately understandable article-creation message.",
+      "headline": ["SEO記事を、", "AIでかんたん作成。"],
+      "acceptance": [
+        "keyword input is visible",
+        "article structure generation is visible",
+        "body generation is visible",
+        "article draft preview is visible"
+      ]
+    },
+    {
+      "id": "mensetsu",
+      "service": "ドヤ面接官",
+      "decision": "PASS",
+      "selected_raw": "images/mensetsu-v2-content.png",
+      "request": "Position the service as delegating the complete first interview to AI, not scheduling it.",
+      "headline": ["一次面接を、", "AIに丸ごとお任せ。"],
+      "acceptance": [
+        "no calendar or scheduling message",
+        "AI interviewer is visibly conducting the interview",
+        "live interview status is visible",
+        "evidence-based evaluation panel is visible"
+      ]
+    },
+    {
+      "id": "quote",
+      "service": "ドヤ見積もりAI",
+      "decision": "PASS",
+      "selected_raw": "images/quote-v2-content.png",
+      "request": "Show an estimated price immediately on screen instead of printing paper.",
+      "headline": ["「概算いくら？」を、", "その場ですぐ表示。"],
+      "acceptance": [
+        "large digital estimated price is the primary visual",
+        "line-item rationale remains visible",
+        "mascot holds a tablet instead of paper",
+        "no PDF, printer or paper-output message"
+      ]
+    }
+  ]
+}

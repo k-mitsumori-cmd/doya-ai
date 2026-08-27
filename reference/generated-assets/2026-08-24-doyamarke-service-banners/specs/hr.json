@@ -1,0 +1,108 @@
+{
+  "service": {
+    "name": "ドヤHR",
+    "official_url": "https://doya-ai.surisuta.jp/hr",
+    "category": "HR Tech / talent management",
+    "primary_color": "#7C3AED",
+    "secondary_color": "#0F172A"
+  },
+  "research": {
+    "checked_at": "2026-08-24T00:00:00+09:00",
+    "service_summary": "従業員データベース、組織図、MBO評価、1on1記録をまとめ、AIが評価コメント作成を支援するタレントマネジメントサービス。",
+    "target_user": "中小企業の人事担当者・部門マネージャー",
+    "main_problem": "従業員情報・組織図・評価がExcelやメールに分散している。",
+    "main_benefit": "人材情報と評価を一元化し、AIで評価コメント作成の負担を軽くする。",
+    "confirmed_features": [
+      "顔写真中心の従業員DB",
+      "組織図を自動生成",
+      "AIが人事評価を支援"
+    ],
+    "confirmed_ui_elements": [
+      "顔写真中心の従業員DB",
+      "組織図を自動生成",
+      "AIが人事評価を支援"
+    ],
+    "official_logo_reference": "public/hr/logo.png",
+    "official_screenshot_reference": "public/hr/hero.webp",
+    "sources": [
+      "https://doya-ai.surisuta.jp/hr",
+      "src/app/hr",
+      "src/lib/services.ts"
+    ]
+  },
+  "banner": {
+    "aspect_ratio": "16:9",
+    "type": "BtoB SaaS advertising banner",
+    "cta": "無料ではじめる",
+    "headline": [
+      "人を活かすのは、",
+      "AIとデータ。"
+    ],
+    "support_copy": [
+      "従業員DB・組織図・人事評価を一元管理。",
+      "AIが評価コメントの作成まで支援。"
+    ],
+    "feature_chips": [
+      "顔写真中心の従業員DB",
+      "組織図を自動生成",
+      "AIが人事評価を支援"
+    ]
+  },
+  "layout": {
+    "composition": "product UI left 54%; copy right; mascot lower right presenting toward UI; CTA right bottom",
+    "headline_position": "product UI left 54%",
+    "product_ui_position": " copy right",
+    "mascot_position": " mascot lower right presenting toward UI",
+    "cta_position": " CTA right bottom",
+    "white_space": "generous"
+  },
+  "mascot": {
+    "use": true,
+    "pose": "組織図ボードの横に立ち、指示棒でチーム構造をプレゼンする",
+    "props": [
+      "組織図ボード",
+      "指示棒"
+    ],
+    "expression": "professional and warm",
+    "size": "secondary visual"
+  },
+  "product_ui": {
+    "use_real_product_reference": true,
+    "main_screen": "従業員データベース画面",
+    "important_components": [
+      "顔写真中心の従業員DB",
+      "組織図を自動生成",
+      "AIが人事評価を支援"
+    ],
+    "do_not_invent_features": true
+  },
+  "typography": {
+    "headline_font": "Japanese Gothic ExtraBold",
+    "body_font": "Japanese Gothic Regular",
+    "horizontal_scale": "100%",
+    "prohibit_condensed_text": true,
+    "prohibit_stretched_text": true,
+    "max_headline_lines": 2,
+    "max_body_lines": 2,
+    "prefer_line_break_over_compression": true
+  },
+  "visual_style": {
+    "keywords": [
+      "BtoB SaaS",
+      "clean",
+      "professional",
+      "modern",
+      "product-led",
+      "Japanese SaaS",
+      "minimal"
+    ],
+    "avoid": [
+      "game advertising",
+      "fantasy",
+      "excessive neon",
+      "AI template",
+      "Canva template",
+      "mascot dominated composition"
+    ]
+  }
+}

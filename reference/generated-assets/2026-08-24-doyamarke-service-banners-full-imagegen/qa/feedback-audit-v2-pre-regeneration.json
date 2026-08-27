@@ -1,0 +1,297 @@
+{
+  "audit": {
+    "date": "2026-08-24",
+    "scope": "15 built-in Codex full-image-generated BtoB SaaS banners",
+    "method": [
+      "1600x900 final PNG visual inspection at original resolution",
+      "comparison with each service JSON specification",
+      "comparison with public/<service>/hero.webp official UI reference",
+      "comparison with public/<service>/logo.png official logo reference",
+      "copy, line-break, feature-chip and CTA verification",
+      "brand mascot pose, dominance and cropping review",
+      "fictional-feature and misleading-UI review"
+    ],
+    "decision_rule": "Any incorrect or missing required copy, misleading or unconfirmed UI, major logo divergence, mascot-dominated composition, or damaging crop is REGENERATE. Minor spacing or intentional edge bleed without meaning loss is ACCEPT_WITH_NOTES.",
+    "score_dimensions": {
+      "copy_accuracy": 25,
+      "official_ui_fidelity": 20,
+      "official_logo_fidelity": 10,
+      "typography_legibility": 15,
+      "saas_visual_hierarchy": 15,
+      "mascot_relevance_and_restraint": 10,
+      "cta_and_conversion_clarity": 5
+    },
+    "summary": {
+      "total": 15,
+      "accept": 9,
+      "accept_with_notes": 3,
+      "regenerate": 3,
+      "regenerate_ids": [
+        "cunning",
+        "aio",
+        "persona"
+      ]
+    }
+  },
+  "items": [
+    {
+      "id": "seo",
+      "service": "ドヤ記事作成",
+      "score": 94,
+      "decision": "ACCEPT",
+      "copy_match": "PASS",
+      "official_ui_match": "PASS: the four-step search-intent composition screen matches the official hero reference",
+      "issues": [],
+      "strengths": [
+        "Exact two-line headline and support copy",
+        "All three feature chips and CTA are present",
+        "Product UI remains the largest visual",
+        "Tablet and stylus pose supports the service"
+      ]
+    },
+    {
+      "id": "doyalist",
+      "service": "ドヤリスト",
+      "score": 92,
+      "decision": "ACCEPT",
+      "copy_match": "PASS",
+      "official_ui_match": "PASS: candidate-company table and example rows match the official hero reference",
+      "issues": [],
+      "strengths": [
+        "Exact headline, support copy, chips and CTA",
+        "Magnifying-glass and envelope pose is service-specific",
+        "Teal accent and table UI create clear Sales Tech recognition"
+      ]
+    },
+    {
+      "id": "hr",
+      "service": "ドヤHR",
+      "score": 95,
+      "decision": "ACCEPT",
+      "copy_match": "PASS",
+      "official_ui_match": "PASS: employee database cards match the official hero reference",
+      "issues": [],
+      "strengths": [
+        "Strong reversal of the series layout with UI left and copy right",
+        "Organization-chart prop adds meaning without obscuring UI",
+        "Exact copy and strong CTA separation"
+      ]
+    },
+    {
+      "id": "kintai",
+      "service": "ドヤ勤怠",
+      "score": 92,
+      "decision": "ACCEPT",
+      "copy_match": "PASS",
+      "official_ui_match": "PASS: clock-in screen and timing labels match the official hero reference",
+      "issues": [],
+      "strengths": [
+        "Immediate recognition of clock-in action",
+        "Exact copy and feature chips",
+        "Cyan CTA has adequate contrast and whitespace"
+      ]
+    },
+    {
+      "id": "promane",
+      "service": "ドヤプロマネ",
+      "score": 95,
+      "decision": "ACCEPT",
+      "copy_match": "PASS",
+      "official_ui_match": "PASS: profitability and Gantt views are consistent with the official hero reference",
+      "issues": [],
+      "strengths": [
+        "Two related UI panels communicate progress and profit together",
+        "Mascot points to the delay location as specified",
+        "Balanced product-led hierarchy"
+      ]
+    },
+    {
+      "id": "doyaslide",
+      "service": "ドヤスライド",
+      "score": 92,
+      "decision": "ACCEPT",
+      "copy_match": "PASS",
+      "official_ui_match": "PASS: four generated slide pages match the official hero structure",
+      "issues": [],
+      "strengths": [
+        "Headline and blue emphasis are clear at ad-viewing distance",
+        "Slide grid is the dominant product proof",
+        "Presentation prop and pointer support the product story"
+      ]
+    },
+    {
+      "id": "cunning",
+      "service": "ドヤカンニング",
+      "score": 76,
+      "decision": "REGENERATE",
+      "copy_match": "PASS",
+      "official_ui_match": "PASS: answer-assist panel content follows the official hero reference",
+      "issues": [
+        {
+          "severity": "MAJOR",
+          "category": "saas_visual_hierarchy",
+          "detail": "The headset mascot occupies most of the right third and is visually stronger than the product UI, violating the requirement that the SaaS screen be the hero."
+        },
+        {
+          "severity": "MEDIUM",
+          "category": "composition",
+          "detail": "The UI panel is pushed behind the mascot and loses usable reading area."
+        }
+      ],
+      "regeneration_requirements": [
+        "Rebuild the full image with the official UI occupying at least 55 percent of the canvas",
+        "Reduce mascot to no more than about 22 percent of canvas height",
+        "Keep the headset and cue-card pose but move it outside the UI reading area",
+        "Preserve every exact Japanese phrase and the pink CTA"
+      ]
+    },
+    {
+      "id": "sfa",
+      "service": "ドヤ営業管理",
+      "score": 88,
+      "decision": "ACCEPT_WITH_NOTES",
+      "copy_match": "PASS",
+      "official_ui_match": "PASS: the multi-column opportunity board matches the official hero reference",
+      "issues": [
+        {
+          "severity": "LOW",
+          "category": "mascot_cropping",
+          "detail": "The action mascot is intentionally cropped to an upper-body vignette near the top edge. Meaning remains clear and no required copy or UI is hidden."
+        }
+      ],
+      "strengths": [
+        "Official kanban UI is the dominant visual",
+        "Receiving-column action is immediately understandable",
+        "Exact copy, chips and CTA"
+      ]
+    },
+    {
+      "id": "shodan",
+      "service": "ドヤ商談準備",
+      "score": 92,
+      "decision": "ACCEPT",
+      "copy_match": "PASS",
+      "official_ui_match": "PASS: company research and AI summary panels match the official hero reference",
+      "issues": [],
+      "strengths": [
+        "URL-based research proposition is instantly legible",
+        "Laptop and report pose is relevant",
+        "UI, copy, chips and CTA have clean separation"
+      ]
+    },
+    {
+      "id": "aio",
+      "service": "ドヤAIO",
+      "score": 72,
+      "decision": "REGENERATE",
+      "copy_match": "PASS",
+      "official_ui_match": "FAIL: the ranking panel matches the official reference, but an additional four-AI comparison panel is not present in the supplied official hero image",
+      "issues": [
+        {
+          "severity": "MAJOR",
+          "category": "unconfirmed_ui",
+          "detail": "A second comparison panel with ChatGPT, Claude, Gemini and Perplexity is visually presented as product UI without an official screenshot reference."
+        },
+        {
+          "severity": "MEDIUM",
+          "category": "mascot_cropping",
+          "detail": "The mascot is cut off at the lower canvas edge, reducing finish quality."
+        }
+      ],
+      "regeneration_requirements": [
+        "Use only the official AI visibility ranking UI as product UI",
+        "Do not add an unreferenced second dashboard or vendor-logo row",
+        "Keep the full mascot visible and secondary",
+        "Retain the mandatory CTA 無料で診断する"
+      ]
+    },
+    {
+      "id": "adimage",
+      "service": "ドヤ広告画像AI",
+      "score": 91,
+      "decision": "ACCEPT",
+      "copy_match": "PASS",
+      "official_ui_match": "PASS: media-size output grid and sample creative text match the official hero reference",
+      "issues": [],
+      "strengths": [
+        "Editor pose and swatches support the creative-generation benefit",
+        "Coral accent differentiates the service while retaining series structure",
+        "Exact copy, chips and CTA"
+      ]
+    },
+    {
+      "id": "interview",
+      "service": "ドヤインタビュー",
+      "score": 87,
+      "decision": "ACCEPT_WITH_NOTES",
+      "copy_match": "PASS",
+      "official_ui_match": "PASS: speaker-separated transcript content matches the official hero reference",
+      "issues": [
+        {
+          "severity": "LOW",
+          "category": "mascot_scale",
+          "detail": "The microphone mascot is large and near the visual center, but the transcript UI remains larger and readable."
+        }
+      ],
+      "strengths": [
+        "Strong service-specific interview pose",
+        "Exact copy, chips and CTA",
+        "Clear transcription-to-article story"
+      ]
+    },
+    {
+      "id": "persona",
+      "service": "ドヤペルソナAI",
+      "score": 70,
+      "decision": "REGENERATE",
+      "copy_match": "PASS",
+      "official_ui_match": "FAIL: the main persona card follows the official reference, but added profile cards with star ratings are not present in the official hero image",
+      "issues": [
+        {
+          "severity": "CRITICAL",
+          "category": "misleading_unconfirmed_ui",
+          "detail": "Added star-rated profile cards resemble recruiting or candidate scoring and can misrepresent a marketing-persona product."
+        },
+        {
+          "severity": "MEDIUM",
+          "category": "product_clarity",
+          "detail": "The invented card cluster competes with the real persona sheet and weakens the single-page persona benefit."
+        }
+      ],
+      "regeneration_requirements": [
+        "Show only one official-style persona sheet as the product hero",
+        "Remove all star ratings, candidate cards and recruiting visual language",
+        "Keep the sticky-note analysis pose but reduce mascot scale",
+        "Preserve every exact Japanese phrase and CTA"
+      ]
+    },
+    {
+      "id": "mensetsu",
+      "service": "ドヤ面接官",
+      "score": 93,
+      "decision": "ACCEPT",
+      "copy_match": "PASS",
+      "official_ui_match": "PASS: AI first-interview screen and question panel match the official hero reference",
+      "issues": [],
+      "strengths": [
+        "Interviewer jacket and tablet pose are service-specific",
+        "Human final-decision support copy is legible",
+        "Exact headline, chips and CTA"
+      ]
+    },
+    {
+      "id": "quote",
+      "service": "ドヤ見積もりAI",
+      "score": 92,
+      "decision": "ACCEPT",
+      "copy_match": "PASS",
+      "official_ui_match": "PASS: quotation rows, source labels and total match the official hero reference",
+      "issues": [],
+      "strengths": [
+        "Calculator and quotation pose communicates the service instantly",
+        "Official UI remains dominant",
+        "Exact copy, chips and CTA"
+      ]
+    }
+  ]
+}

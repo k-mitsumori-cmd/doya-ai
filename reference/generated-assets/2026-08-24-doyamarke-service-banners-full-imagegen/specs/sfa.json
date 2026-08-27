@@ -1,0 +1,108 @@
+{
+  "service": {
+    "name": "ドヤ営業管理",
+    "official_url": "https://doya-ai.surisuta.jp/sfa",
+    "category": "Sales Tech / SFA",
+    "primary_color": "#F97316",
+    "secondary_color": "#0F172A"
+  },
+  "research": {
+    "checked_at": "2026-08-24T00:00:00+09:00",
+    "service_summary": "取引先、商談パイプライン、タスク、売上ダッシュボードに絞り、設定不要で始められる中小チーム向けSFA。",
+    "target_user": "Excel管理から移行したい中小営業チーム",
+    "main_problem": "重いSFAは定着せず、Excelでは商談状況が共有しにくい。",
+    "main_benefit": "必要な営業管理機能だけを、設定不要の一画面にまとめる。",
+    "confirmed_features": [
+      "商談をカンバン管理",
+      "取引先を一元管理",
+      "売上ダッシュボード"
+    ],
+    "confirmed_ui_elements": [
+      "商談をカンバン管理",
+      "取引先を一元管理",
+      "売上ダッシュボード"
+    ],
+    "official_logo_reference": "public/sfa/logo.png",
+    "official_screenshot_reference": "public/sfa/hero.webp",
+    "sources": [
+      "https://doya-ai.surisuta.jp/sfa",
+      "src/app/sfa",
+      "src/lib/services.ts"
+    ]
+  },
+  "banner": {
+    "aspect_ratio": "16:9",
+    "type": "BtoB SaaS advertising banner",
+    "cta": "無料ではじめる",
+    "headline": [
+      "営業管理を、",
+      "シンプルに。"
+    ],
+    "support_copy": [
+      "取引先・商談・タスク・売上を一元管理。",
+      "設定不要でその日から使える、かんたんSFA。"
+    ],
+    "feature_chips": [
+      "商談をカンバン管理",
+      "取引先を一元管理",
+      "売上ダッシュボード"
+    ]
+  },
+  "layout": {
+    "composition": "headline top left; wide product UI across bottom 68%; mascot upper right moving a card; CTA left middle",
+    "headline_position": "headline top left",
+    "product_ui_position": " wide product UI across bottom 68%",
+    "mascot_position": " mascot upper right moving a card",
+    "cta_position": " CTA left middle",
+    "white_space": "generous"
+  },
+  "mascot": {
+    "use": true,
+    "pose": "商談ボード上のカードを受注列へ移動している",
+    "props": [
+      "商談ボード",
+      "オレンジの進捗カード"
+    ],
+    "expression": "confident and upbeat",
+    "size": "secondary visual"
+  },
+  "product_ui": {
+    "use_real_product_reference": true,
+    "main_screen": "商談パイプライン画面",
+    "important_components": [
+      "商談をカンバン管理",
+      "取引先を一元管理",
+      "売上ダッシュボード"
+    ],
+    "do_not_invent_features": true
+  },
+  "typography": {
+    "headline_font": "Japanese Gothic ExtraBold",
+    "body_font": "Japanese Gothic Regular",
+    "horizontal_scale": "100%",
+    "prohibit_condensed_text": true,
+    "prohibit_stretched_text": true,
+    "max_headline_lines": 2,
+    "max_body_lines": 2,
+    "prefer_line_break_over_compression": true
+  },
+  "visual_style": {
+    "keywords": [
+      "BtoB SaaS",
+      "clean",
+      "professional",
+      "modern",
+      "product-led",
+      "Japanese SaaS",
+      "minimal"
+    ],
+    "avoid": [
+      "game advertising",
+      "fantasy",
+      "excessive neon",
+      "AI template",
+      "Canva template",
+      "mascot dominated composition"
+    ]
+  }
+}

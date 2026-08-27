@@ -95,6 +95,10 @@
     {
       "path": "/api/cron/yurusen-morning-digest",
       "schedule": "25 1 * * *"
+    },
+    {
+      "path": "/api/cron/spend-report",
+      "schedule": "10 22 * * *"
     }
   ]
 }

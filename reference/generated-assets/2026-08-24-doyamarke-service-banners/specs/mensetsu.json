@@ -1,0 +1,108 @@
+{
+  "service": {
+    "name": "ドヤ面接官",
+    "official_url": "https://doya-ai.surisuta.jp/mensetsu",
+    "category": "HR Tech / AI interview",
+    "primary_color": "#F97316",
+    "secondary_color": "#0F172A"
+  },
+  "research": {
+    "checked_at": "2026-08-24T00:00:00+09:00",
+    "service_summary": "AIが構造化された一次面接を音声で実施し、評価軸ごとのスコアと根拠引用を残す採用支援サービス。最終判断は人が行う。",
+    "target_user": "一次面接の母数と評価品質を両立したい採用担当者",
+    "main_problem": "日程調整が重く、面接官ごとに質問と評価がばらつく。",
+    "main_benefit": "応募者がURLから受けられる一次面接と、同じ評価軸の根拠付きレポートを提供する。",
+    "confirmed_features": [
+      "日程を合わせなくていい",
+      "全員に同じ基準で",
+      "NG質問を自動ブロック"
+    ],
+    "confirmed_ui_elements": [
+      "日程を合わせなくていい",
+      "全員に同じ基準で",
+      "NG質問を自動ブロック"
+    ],
+    "official_logo_reference": "public/mensetsu/logo.png",
+    "official_screenshot_reference": "public/mensetsu/hero.webp",
+    "sources": [
+      "https://doya-ai.surisuta.jp/mensetsu",
+      "src/app/mensetsu",
+      "src/lib/services.ts"
+    ]
+  },
+  "banner": {
+    "aspect_ratio": "16:9",
+    "type": "BtoB SaaS advertising banner",
+    "cta": "無料ではじめる",
+    "headline": [
+      "一次面接の日程調整を、",
+      "まるごと無くす。"
+    ],
+    "support_copy": [
+      "AIが一次面接を実施し、根拠付きで評価。",
+      "応募者はURLを開くだけ。最終判断は人が行う。"
+    ],
+    "feature_chips": [
+      "日程を合わせなくていい",
+      "全員に同じ基準で",
+      "NG質問を自動ブロック"
+    ]
+  },
+  "layout": {
+    "composition": "headline top left; product UI right 56%; mascot lower left in interviewer pose; CTA left middle",
+    "headline_position": "headline top left",
+    "product_ui_position": " product UI right 56%",
+    "mascot_position": " mascot lower left in interviewer pose",
+    "cta_position": " CTA left middle",
+    "white_space": "generous"
+  },
+  "mascot": {
+    "use": true,
+    "pose": "面接官風のネイビージャケットを白いパーカーの上に着て、タブレットの評価シートを確認する",
+    "props": [
+      "タブレット",
+      "面接評価シート"
+    ],
+    "expression": "fair, calm and professional",
+    "size": "secondary visual"
+  },
+  "product_ui": {
+    "use_real_product_reference": true,
+    "main_screen": "面接進行画面",
+    "important_components": [
+      "日程を合わせなくていい",
+      "全員に同じ基準で",
+      "NG質問を自動ブロック"
+    ],
+    "do_not_invent_features": true
+  },
+  "typography": {
+    "headline_font": "Japanese Gothic ExtraBold",
+    "body_font": "Japanese Gothic Regular",
+    "horizontal_scale": "100%",
+    "prohibit_condensed_text": true,
+    "prohibit_stretched_text": true,
+    "max_headline_lines": 2,
+    "max_body_lines": 2,
+    "prefer_line_break_over_compression": true
+  },
+  "visual_style": {
+    "keywords": [
+      "BtoB SaaS",
+      "clean",
+      "professional",
+      "modern",
+      "product-led",
+      "Japanese SaaS",
+      "minimal"
+    ],
+    "avoid": [
+      "game advertising",
+      "fantasy",
+      "excessive neon",
+      "AI template",
+      "Canva template",
+      "mascot dominated composition"
+    ]
+  }
+}

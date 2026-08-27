@@ -1,0 +1,108 @@
+{
+  "service": {
+    "name": "ドヤリスト",
+    "official_url": "https://doya-ai.surisuta.jp/doyalist",
+    "category": "Sales intelligence",
+    "primary_color": "#0D9488",
+    "secondary_color": "#0F172A"
+  },
+  "research": {
+    "checked_at": "2026-08-24T00:00:00+09:00",
+    "service_summary": "条件に合う法人情報を企業リストに整理し、企業別のフォーム営業文・メール・電話スクリプトまで作る営業支援サービス。",
+    "target_user": "新規開拓を行う営業・マーケティング担当者",
+    "main_problem": "営業リスト作成と企業別の文面作成に時間がかかる。",
+    "main_benefit": "出所のある企業情報から、実行に使う文面まで一気通貫で用意する。",
+    "confirmed_features": [
+      "狙う条件を決める",
+      "出所のある企業情報",
+      "企業別の文面まで"
+    ],
+    "confirmed_ui_elements": [
+      "狙う条件を決める",
+      "出所のある企業情報",
+      "企業別の文面まで"
+    ],
+    "official_logo_reference": "public/doyalist/logo.png",
+    "official_screenshot_reference": "public/doyalist/hero.webp",
+    "sources": [
+      "https://doya-ai.surisuta.jp/doyalist",
+      "src/app/doyalist",
+      "src/lib/services.ts"
+    ]
+  },
+  "banner": {
+    "aspect_ratio": "16:9",
+    "type": "BtoB SaaS advertising banner",
+    "cta": "無料ではじめる",
+    "headline": [
+      "営業リストを作って、",
+      "送る文面まで。"
+    ],
+    "support_copy": [
+      "法人情報から企業リストを作成。",
+      "メール・フォーム・電話の文面まで用意。"
+    ],
+    "feature_chips": [
+      "狙う条件を決める",
+      "出所のある企業情報",
+      "企業別の文面まで"
+    ]
+  },
+  "layout": {
+    "composition": "headline top left; product UI right 58%; mascot between copy and UI; CTA left bottom",
+    "headline_position": "headline top left",
+    "product_ui_position": " product UI right 58%",
+    "mascot_position": " mascot between copy and UI",
+    "cta_position": " CTA left bottom",
+    "white_space": "generous"
+  },
+  "mascot": {
+    "use": true,
+    "pose": "虫眼鏡で企業リストを確認し、反対の手に営業メールの封筒を持つ",
+    "props": [
+      "虫眼鏡",
+      "営業メールの封筒"
+    ],
+    "expression": "confident and helpful",
+    "size": "secondary visual"
+  },
+  "product_ui": {
+    "use_real_product_reference": true,
+    "main_screen": "企業候補一覧画面",
+    "important_components": [
+      "狙う条件を決める",
+      "出所のある企業情報",
+      "企業別の文面まで"
+    ],
+    "do_not_invent_features": true
+  },
+  "typography": {
+    "headline_font": "Japanese Gothic ExtraBold",
+    "body_font": "Japanese Gothic Regular",
+    "horizontal_scale": "100%",
+    "prohibit_condensed_text": true,
+    "prohibit_stretched_text": true,
+    "max_headline_lines": 2,
+    "max_body_lines": 2,
+    "prefer_line_break_over_compression": true
+  },
+  "visual_style": {
+    "keywords": [
+      "BtoB SaaS",
+      "clean",
+      "professional",
+      "modern",
+      "product-led",
+      "Japanese SaaS",
+      "minimal"
+    ],
+    "avoid": [
+      "game advertising",
+      "fantasy",
+      "excessive neon",
+      "AI template",
+      "Canva template",
+      "mascot dominated composition"
+    ]
+  }
+}

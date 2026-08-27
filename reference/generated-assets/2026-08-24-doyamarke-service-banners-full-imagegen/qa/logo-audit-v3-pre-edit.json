@@ -1,0 +1,71 @@
+{
+  "audit_version": "v3-logo-pre-edit",
+  "date": "2026-08-24",
+  "scope": "Official-logo fidelity audit for all 15 final banners",
+  "reference_pattern": "public/<service-id>/logo.png",
+  "criteria": [
+    "service-name glyph structure",
+    "official color palette",
+    "official mascot presence and pose",
+    "outer silhouette and aspect ratio",
+    "surrounding UI, code, waveform or product-specific decorations",
+    "punctuation and AI suffix",
+    "no invented icon-only or text-only simplification"
+  ],
+  "summary": {
+    "total": 15,
+    "pass": 11,
+    "edit_required": 4,
+    "edit_required_ids": [
+      "promane",
+      "doyaslide",
+      "interview",
+      "persona"
+    ]
+  },
+  "items": [
+    { "id": "seo", "service": "ドヤ記事作成", "decision": "PASS", "note": "Square official mascot/article-workspace logo structure and blue-green-white palette are retained." },
+    { "id": "doyalist", "service": "ドヤリスト", "decision": "PASS", "note": "Wide official mascot and blue Sales Tech logo structure are retained." },
+    { "id": "hr", "service": "ドヤHR", "decision": "PASS", "note": "Wide mascot, HR cards and cyan-green HR suffix are retained." },
+    { "id": "kintai", "service": "ドヤ勤怠", "decision": "PASS", "note": "Official clock mascot, purple wordmark and 勤怠管理 subline are retained." },
+    {
+      "id": "promane",
+      "service": "ドヤプロマネ",
+      "decision": "EDIT_REQUIRED",
+      "severity": "CRITICAL",
+      "issue": "The official wide mascot-plus-dashboard logo was replaced by an invented shield and plain text wordmark.",
+      "required_fix": "Insert the complete official horizontal logo including mascot, multiple management dashboards, dark navy outer silhouette and ドヤプロマネ lettering. Remove the shield logo."
+    },
+    {
+      "id": "doyaslide",
+      "service": "ドヤスライド",
+      "decision": "EDIT_REQUIRED",
+      "severity": "CRITICAL",
+      "issue": "The official wide mascot-and-slide-workspace logo was simplified to a speech-bubble icon and text.",
+      "required_fix": "Insert the complete official horizontal logo including mascot, slide UI panels, dark navy container and small SaaS presentation copy. Remove the simplified icon wordmark."
+    },
+    { "id": "cunning", "service": "ドヤカンニング", "decision": "PASS", "note": "Official orange-yellow-black wide logo, mascot, gear and code-window silhouette are retained after regeneration." },
+    { "id": "sfa", "service": "ドヤ営業管理", "decision": "PASS", "note": "Official wide mascot, sales dashboard and blue wordmark structure are retained." },
+    { "id": "shodan", "service": "ドヤ商談準備", "decision": "PASS", "note": "Official orange-black wide logo with mascot, report props and 商談準備 subword is retained." },
+    { "id": "aio", "service": "ドヤAIO", "decision": "PASS", "note": "Official wide mascot, AI tiles, analytics panels and white-blue-purple wordmark are retained after regeneration." },
+    { "id": "adimage", "service": "ドヤ広告画像AI", "decision": "PASS", "note": "Official wide mascot, creative-device panels and AI suffix colors are retained." },
+    {
+      "id": "interview",
+      "service": "ドヤインタビュー",
+      "decision": "EDIT_REQUIRED",
+      "severity": "MAJOR",
+      "issue": "The logo lacks the full official bear-with-microphone and orange waveform badge composition and reads as a simplified horizontal wordmark.",
+      "required_fix": "Insert the complete official compact logo including microphone-holding bear, orange waveform field, black-orange code header and stacked ドヤインタビュー lettering."
+    },
+    {
+      "id": "persona",
+      "service": "ドヤペルソナAI",
+      "decision": "EDIT_REQUIRED",
+      "severity": "CRITICAL",
+      "issue": "The official dark navy persona-card and mascot badge was replaced by an unrelated cloud-code icon and plain text.",
+      "required_fix": "Insert the complete official compact logo including bear, multiple purple persona cards, dark navy badge, ドヤペルソナAI lettering and the official small footer line. Remove the cloud icon wordmark."
+    },
+    { "id": "mensetsu", "service": "ドヤ面接官", "decision": "PASS", "note": "Official wide candidate-and-interviewer scene, navy frame and pink-blue accent details are retained." },
+    { "id": "quote", "service": "ドヤ見積もりAI", "decision": "PASS", "note": "Official wide quotation mascot, document props and blue wordmark are retained." }
+  ]
+}

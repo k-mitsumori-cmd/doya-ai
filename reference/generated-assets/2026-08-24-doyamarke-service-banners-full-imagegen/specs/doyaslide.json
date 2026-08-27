@@ -1,0 +1,108 @@
+{
+  "service": {
+    "name": "ドヤスライド",
+    "official_url": "https://doya-ai.surisuta.jp/doyaslide",
+    "category": "AI presentation",
+    "primary_color": "#2563EB",
+    "secondary_color": "#0F172A"
+  },
+  "research": {
+    "checked_at": "2026-08-24T00:00:00+09:00",
+    "service_summary": "テーマ・用途・枚数・スタイルから資料構成を作り、全ページを画像として生成し、ページ修正とPDF出力まで行うプレゼン資料作成サービス。",
+    "target_user": "営業・提案資料を短時間で作りたい担当者",
+    "main_problem": "資料の構成と各ページのデザインをゼロから作る時間がない。",
+    "main_benefit": "テーマ入力から構成設計、全ページ生成、PDF出力まで進める。",
+    "confirmed_features": [
+      "用途とテーマを入力",
+      "資料の流れを設計",
+      "全ページを画像で生成"
+    ],
+    "confirmed_ui_elements": [
+      "用途とテーマを入力",
+      "資料の流れを設計",
+      "全ページを画像で生成"
+    ],
+    "official_logo_reference": "public/doyaslide/logo.png",
+    "official_screenshot_reference": "public/doyaslide/hero.webp",
+    "sources": [
+      "https://doya-ai.surisuta.jp/doyaslide",
+      "src/app/doyaslide",
+      "src/lib/services.ts"
+    ]
+  },
+  "banner": {
+    "aspect_ratio": "16:9",
+    "type": "BtoB SaaS advertising banner",
+    "cta": "無料ではじめる",
+    "headline": [
+      "テーマを入れたら、",
+      "全ページができている。"
+    ],
+    "support_copy": [
+      "構成からビジュアルまで全ページを画像生成。",
+      "ページ修正とPDF書き出しも一つの画面で。"
+    ],
+    "feature_chips": [
+      "用途とテーマを入力",
+      "資料の流れを設計",
+      "全ページを画像で生成"
+    ]
+  },
+  "layout": {
+    "composition": "headline centered upper left; product UI spans lower 64%; mascot left foreground; CTA upper left under copy",
+    "headline_position": "headline centered upper left",
+    "product_ui_position": " product UI spans lower 64%",
+    "mascot_position": " mascot left foreground",
+    "cta_position": " CTA upper left under copy",
+    "white_space": "generous"
+  },
+  "mascot": {
+    "use": true,
+    "pose": "大きなプレゼンページを掲げ、レーザーポインターで見せ場を指す",
+    "props": [
+      "大きなプレゼン資料",
+      "レーザーポインター"
+    ],
+    "expression": "proud and energetic",
+    "size": "secondary visual"
+  },
+  "product_ui": {
+    "use_real_product_reference": true,
+    "main_screen": "プレゼン編集画面（左サムネイル、中央の16:9スライドキャンバス、上部ツールバー）",
+    "important_components": [
+      "スライドサムネイル一覧",
+      "16:9編集キャンバス",
+      "タイトル・図表・画像を含む完成スライド"
+    ],
+    "do_not_invent_features": true
+  },
+  "typography": {
+    "headline_font": "Japanese Gothic ExtraBold",
+    "body_font": "Japanese Gothic Regular",
+    "horizontal_scale": "100%",
+    "prohibit_condensed_text": true,
+    "prohibit_stretched_text": true,
+    "max_headline_lines": 2,
+    "max_body_lines": 2,
+    "prefer_line_break_over_compression": true
+  },
+  "visual_style": {
+    "keywords": [
+      "BtoB SaaS",
+      "clean",
+      "professional",
+      "modern",
+      "product-led",
+      "Japanese SaaS",
+      "minimal"
+    ],
+    "avoid": [
+      "game advertising",
+      "fantasy",
+      "excessive neon",
+      "AI template",
+      "Canva template",
+      "mascot dominated composition"
+    ]
+  }
+}

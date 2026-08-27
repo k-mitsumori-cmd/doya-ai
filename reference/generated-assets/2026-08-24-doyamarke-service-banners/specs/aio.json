@@ -1,0 +1,108 @@
+{
+  "service": {
+    "name": "ドヤAIO",
+    "official_url": "https://doya-ai.surisuta.jp/aio",
+    "category": "AEO / AI visibility analytics",
+    "primary_color": "#8B5CF6",
+    "secondary_color": "#0F172A"
+  },
+  "research": {
+    "checked_at": "2026-08-24T00:00:00+09:00",
+    "service_summary": "ChatGPT・Gemini・Claude・Perplexityでのブランド言及、引用、順位、Share of Voiceを測定するAI可視性サービス。",
+    "target_user": "ブランド・広報・SEO/AEO担当者",
+    "main_problem": "AI検索上で自社が言及・引用されているか、競合と比較できない。",
+    "main_benefit": "4つのAIでの言及率・SoV・引用元を可視化し、改善行動につなげる。",
+    "confirmed_features": [
+      "4つのAIで言及率測定",
+      "競合とSoVを比較",
+      "引用元ドメインを把握"
+    ],
+    "confirmed_ui_elements": [
+      "4つのAIで言及率測定",
+      "競合とSoVを比較",
+      "引用元ドメインを把握"
+    ],
+    "official_logo_reference": "public/aio/logo.png",
+    "official_screenshot_reference": "public/aio/hero.webp",
+    "sources": [
+      "https://doya-ai.surisuta.jp/aio",
+      "src/app/aio",
+      "src/lib/services.ts"
+    ]
+  },
+  "banner": {
+    "aspect_ratio": "16:9",
+    "type": "BtoB SaaS advertising banner",
+    "cta": "無料で診断する",
+    "headline": [
+      "そのブランド、",
+      "AIは推してる？"
+    ],
+    "support_copy": [
+      "4つのAIで言及・引用・順位を測定。",
+      "URLから競合とのAI可視性を比較。"
+    ],
+    "feature_chips": [
+      "4つのAIで言及率測定",
+      "競合とSoVを比較",
+      "引用元ドメインを把握"
+    ]
+  },
+  "layout": {
+    "composition": "headline top center-left; two UI cards split across lower half; mascot lower left analyzing; CTA upper left",
+    "headline_position": "headline top center-left",
+    "product_ui_position": " two UI cards split across lower half",
+    "mascot_position": " mascot lower left analyzing",
+    "cta_position": " CTA upper left",
+    "white_space": "generous"
+  },
+  "mascot": {
+    "use": true,
+    "pose": "複数の検索結果カードと分析グラフを見比べ、虫眼鏡で引用元を確認する",
+    "props": [
+      "検索結果カード",
+      "分析グラフ"
+    ],
+    "expression": "curious and analytical",
+    "size": "secondary visual"
+  },
+  "product_ui": {
+    "use_real_product_reference": true,
+    "main_screen": "AI可視性ランキング画面",
+    "important_components": [
+      "4つのAIで言及率測定",
+      "競合とSoVを比較",
+      "引用元ドメインを把握"
+    ],
+    "do_not_invent_features": true
+  },
+  "typography": {
+    "headline_font": "Japanese Gothic ExtraBold",
+    "body_font": "Japanese Gothic Regular",
+    "horizontal_scale": "100%",
+    "prohibit_condensed_text": true,
+    "prohibit_stretched_text": true,
+    "max_headline_lines": 2,
+    "max_body_lines": 2,
+    "prefer_line_break_over_compression": true
+  },
+  "visual_style": {
+    "keywords": [
+      "BtoB SaaS",
+      "clean",
+      "professional",
+      "modern",
+      "product-led",
+      "Japanese SaaS",
+      "minimal"
+    ],
+    "avoid": [
+      "game advertising",
+      "fantasy",
+      "excessive neon",
+      "AI template",
+      "Canva template",
+      "mascot dominated composition"
+    ]
+  }
+}

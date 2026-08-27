@@ -1,0 +1,613 @@
+{
+  "verified_at": "2026-08-24T00:00:00+09:00",
+  "scope": "15 final banner PNGs, 15 JSON specs, official logo/UI path existence, cleaned generated mascot PNGs",
+  "passed": 92,
+  "failed": 0,
+  "checks": [
+    {
+      "ok": true,
+      "label": "manifest count",
+      "details": "15"
+    },
+    {
+      "ok": true,
+      "label": "manifest item length",
+      "details": "15"
+    },
+    {
+      "ok": true,
+      "label": "seo format",
+      "details": "png"
+    },
+    {
+      "ok": true,
+      "label": "seo dimensions",
+      "details": "1600x900"
+    },
+    {
+      "ok": true,
+      "label": "seo spec aspect",
+      "details": "16:9"
+    },
+    {
+      "ok": true,
+      "label": "seo official URL",
+      "details": "https://doya-ai.surisuta.jp/seo"
+    },
+    {
+      "ok": true,
+      "label": "seo no invented features",
+      "details": "true"
+    },
+    {
+      "ok": true,
+      "label": "seo mascot alpha",
+      "details": "png/true"
+    },
+    {
+      "ok": true,
+      "label": "doyalist format",
+      "details": "png"
+    },
+    {
+      "ok": true,
+      "label": "doyalist dimensions",
+      "details": "1600x900"
+    },
+    {
+      "ok": true,
+      "label": "doyalist spec aspect",
+      "details": "16:9"
+    },
+    {
+      "ok": true,
+      "label": "doyalist official URL",
+      "details": "https://doya-ai.surisuta.jp/doyalist"
+    },
+    {
+      "ok": true,
+      "label": "doyalist no invented features",
+      "details": "true"
+    },
+    {
+      "ok": true,
+      "label": "doyalist mascot alpha",
+      "details": "png/true"
+    },
+    {
+      "ok": true,
+      "label": "hr format",
+      "details": "png"
+    },
+    {
+      "ok": true,
+      "label": "hr dimensions",
+      "details": "1600x900"
+    },
+    {
+      "ok": true,
+      "label": "hr spec aspect",
+      "details": "16:9"
+    },
+    {
+      "ok": true,
+      "label": "hr official URL",
+      "details": "https://doya-ai.surisuta.jp/hr"
+    },
+    {
+      "ok": true,
+      "label": "hr no invented features",
+      "details": "true"
+    },
+    {
+      "ok": true,
+      "label": "hr mascot alpha",
+      "details": "png/true"
+    },
+    {
+      "ok": true,
+      "label": "kintai format",
+      "details": "png"
+    },
+    {
+      "ok": true,
+      "label": "kintai dimensions",
+      "details": "1600x900"
+    },
+    {
+      "ok": true,
+      "label": "kintai spec aspect",
+      "details": "16:9"
+    },
+    {
+      "ok": true,
+      "label": "kintai official URL",
+      "details": "https://doya-ai.surisuta.jp/kintai"
+    },
+    {
+      "ok": true,
+      "label": "kintai no invented features",
+      "details": "true"
+    },
+    {
+      "ok": true,
+      "label": "kintai mascot alpha",
+      "details": "png/true"
+    },
+    {
+      "ok": true,
+      "label": "promane format",
+      "details": "png"
+    },
+    {
+      "ok": true,
+      "label": "promane dimensions",
+      "details": "1600x900"
+    },
+    {
+      "ok": true,
+      "label": "promane spec aspect",
+      "details": "16:9"
+    },
+    {
+      "ok": true,
+      "label": "promane official URL",
+      "details": "https://doya-ai.surisuta.jp/promane"
+    },
+    {
+      "ok": true,
+      "label": "promane no invented features",
+      "details": "true"
+    },
+    {
+      "ok": true,
+      "label": "promane mascot alpha",
+      "details": "png/true"
+    },
+    {
+      "ok": true,
+      "label": "doyaslide format",
+      "details": "png"
+    },
+    {
+      "ok": true,
+      "label": "doyaslide dimensions",
+      "details": "1600x900"
+    },
+    {
+      "ok": true,
+      "label": "doyaslide spec aspect",
+      "details": "16:9"
+    },
+    {
+      "ok": true,
+      "label": "doyaslide official URL",
+      "details": "https://doya-ai.surisuta.jp/doyaslide"
+    },
+    {
+      "ok": true,
+      "label": "doyaslide no invented features",
+      "details": "true"
+    },
+    {
+      "ok": true,
+      "label": "doyaslide mascot alpha",
+      "details": "png/true"
+    },
+    {
+      "ok": true,
+      "label": "cunning format",
+      "details": "png"
+    },
+    {
+      "ok": true,
+      "label": "cunning dimensions",
+      "details": "1600x900"
+    },
+    {
+      "ok": true,
+      "label": "cunning spec aspect",
+      "details": "16:9"
+    },
+    {
+      "ok": true,
+      "label": "cunning official URL",
+      "details": "https://doya-ai.surisuta.jp/cunning"
+    },
+    {
+      "ok": true,
+      "label": "cunning no invented features",
+      "details": "true"
+    },
+    {
+      "ok": true,
+      "label": "cunning mascot alpha",
+      "details": "png/true"
+    },
+    {
+      "ok": true,
+      "label": "sfa format",
+      "details": "png"
+    },
+    {
+      "ok": true,
+      "label": "sfa dimensions",
+      "details": "1600x900"
+    },
+    {
+      "ok": true,
+      "label": "sfa spec aspect",
+      "details": "16:9"
+    },
+    {
+      "ok": true,
+      "label": "sfa official URL",
+      "details": "https://doya-ai.surisuta.jp/sfa"
+    },
+    {
+      "ok": true,
+      "label": "sfa no invented features",
+      "details": "true"
+    },
+    {
+      "ok": true,
+      "label": "sfa mascot alpha",
+      "details": "png/true"
+    },
+    {
+      "ok": true,
+      "label": "shodan format",
+      "details": "png"
+    },
+    {
+      "ok": true,
+      "label": "shodan dimensions",
+      "details": "1600x900"
+    },
+    {
+      "ok": true,
+      "label": "shodan spec aspect",
+      "details": "16:9"
+    },
+    {
+      "ok": true,
+      "label": "shodan official URL",
+      "details": "https://doya-ai.surisuta.jp/shodan"
+    },
+    {
+      "ok": true,
+      "label": "shodan no invented features",
+      "details": "true"
+    },
+    {
+      "ok": true,
+      "label": "shodan mascot alpha",
+      "details": "png/true"
+    },
+    {
+      "ok": true,
+      "label": "aio format",
+      "details": "png"
+    },
+    {
+      "ok": true,
+      "label": "aio dimensions",
+      "details": "1600x900"
+    },
+    {
+      "ok": true,
+      "label": "aio spec aspect",
+      "details": "16:9"
+    },
+    {
+      "ok": true,
+      "label": "aio official URL",
+      "details": "https://doya-ai.surisuta.jp/aio"
+    },
+    {
+      "ok": true,
+      "label": "aio no invented features",
+      "details": "true"
+    },
+    {
+      "ok": true,
+      "label": "aio mascot alpha",
+      "details": "png/true"
+    },
+    {
+      "ok": true,
+      "label": "adimage format",
+      "details": "png"
+    },
+    {
+      "ok": true,
+      "label": "adimage dimensions",
+      "details": "1600x900"
+    },
+    {
+      "ok": true,
+      "label": "adimage spec aspect",
+      "details": "16:9"
+    },
+    {
+      "ok": true,
+      "label": "adimage official URL",
+      "details": "https://doya-ai.surisuta.jp/adimage"
+    },
+    {
+      "ok": true,
+      "label": "adimage no invented features",
+      "details": "true"
+    },
+    {
+      "ok": true,
+      "label": "adimage mascot alpha",
+      "details": "png/true"
+    },
+    {
+      "ok": true,
+      "label": "interview format",
+      "details": "png"
+    },
+    {
+      "ok": true,
+      "label": "interview dimensions",
+      "details": "1600x900"
+    },
+    {
+      "ok": true,
+      "label": "interview spec aspect",
+      "details": "16:9"
+    },
+    {
+      "ok": true,
+      "label": "interview official URL",
+      "details": "https://doya-ai.surisuta.jp/interview"
+    },
+    {
+      "ok": true,
+      "label": "interview no invented features",
+      "details": "true"
+    },
+    {
+      "ok": true,
+      "label": "interview mascot alpha",
+      "details": "png/true"
+    },
+    {
+      "ok": true,
+      "label": "persona format",
+      "details": "png"
+    },
+    {
+      "ok": true,
+      "label": "persona dimensions",
+      "details": "1600x900"
+    },
+    {
+      "ok": true,
+      "label": "persona spec aspect",
+      "details": "16:9"
+    },
+    {
+      "ok": true,
+      "label": "persona official URL",
+      "details": "https://doya-ai.surisuta.jp/persona"
+    },
+    {
+      "ok": true,
+      "label": "persona no invented features",
+      "details": "true"
+    },
+    {
+      "ok": true,
+      "label": "persona mascot alpha",
+      "details": "png/true"
+    },
+    {
+      "ok": true,
+      "label": "mensetsu format",
+      "details": "png"
+    },
+    {
+      "ok": true,
+      "label": "mensetsu dimensions",
+      "details": "1600x900"
+    },
+    {
+      "ok": true,
+      "label": "mensetsu spec aspect",
+      "details": "16:9"
+    },
+    {
+      "ok": true,
+      "label": "mensetsu official URL",
+      "details": "https://doya-ai.surisuta.jp/mensetsu"
+    },
+    {
+      "ok": true,
+      "label": "mensetsu no invented features",
+      "details": "true"
+    },
+    {
+      "ok": true,
+      "label": "mensetsu mascot alpha",
+      "details": "png/true"
+    },
+    {
+      "ok": true,
+      "label": "quote format",
+      "details": "png"
+    },
+    {
+      "ok": true,
+      "label": "quote dimensions",
+      "details": "1600x900"
+    },
+    {
+      "ok": true,
+      "label": "quote spec aspect",
+      "details": "16:9"
+    },
+    {
+      "ok": true,
+      "label": "quote official URL",
+      "details": "https://doya-ai.surisuta.jp/quote"
+    },
+    {
+      "ok": true,
+      "label": "quote no invented features",
+      "details": "true"
+    },
+    {
+      "ok": true,
+      "label": "quote mascot alpha",
+      "details": "png/true"
+    }
+  ],
+  "files": [
+    {
+      "id": "seo",
+      "filename": "seo.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 434619,
+      "sha256": "03b3c54ca8f5ff2dfd51f9b24bce12e1abc2d1a06218f17d871efa14b61d500f"
+    },
+    {
+      "id": "doyalist",
+      "filename": "doyalist.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 441012,
+      "sha256": "2d09d729edf3753cb8c21db8e91a51ca1ea1a4e45f4509cb24e12938298e5c25"
+    },
+    {
+      "id": "hr",
+      "filename": "hr.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 518496,
+      "sha256": "c92e4c09fff98046aeeb27efdc552993ce2a4166cb5b99f23e402fcfa923f14e"
+    },
+    {
+      "id": "kintai",
+      "filename": "kintai.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 511869,
+      "sha256": "4bf13e1d972602fc0be65c6035e75e777ec6864cf5292963bf0c3cbb434f6e3e"
+    },
+    {
+      "id": "promane",
+      "filename": "promane.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 445213,
+      "sha256": "8aa4a30e08a2fefe99d73614b4bb2535c1c3a6236e7973e001f20f6923792cea"
+    },
+    {
+      "id": "doyaslide",
+      "filename": "doyaslide.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 428784,
+      "sha256": "64b20b98748517486bb4a639b5c68da7e021c476d861239cbc45ea198d3798ed"
+    },
+    {
+      "id": "cunning",
+      "filename": "cunning.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 486070,
+      "sha256": "9e74da2a7da9492c4b3456cddf50bb86cdbc95a28278cb3d0b2f664db38c520c"
+    },
+    {
+      "id": "sfa",
+      "filename": "sfa.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 506457,
+      "sha256": "b0a49dee1d0e6e4b08e60a9d2fb6dca8d612ec65b175743ea15b8406a82b4202"
+    },
+    {
+      "id": "shodan",
+      "filename": "shodan.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 553652,
+      "sha256": "6a52688e0128e57f007ec0c2b0c8abdd1c1df4eeea110bead4a9cf944e1af18e"
+    },
+    {
+      "id": "aio",
+      "filename": "aio.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 512041,
+      "sha256": "8d70525775810bfe4306c66b9a012051528fb4b079006bfc3f024a89b4b70dab"
+    },
+    {
+      "id": "adimage",
+      "filename": "adimage.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 553007,
+      "sha256": "d96e3f020aba3316b260bc2517386d68ef756848337c1a5ef0a21f8bb9b62df5"
+    },
+    {
+      "id": "interview",
+      "filename": "interview.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 425652,
+      "sha256": "5cf5d7232dd9cb43c6dc3f0250c5fba1a04f876fd38e187236d9efd0fbd770a4"
+    },
+    {
+      "id": "persona",
+      "filename": "persona.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 392516,
+      "sha256": "fa6f6c933cca3a743d24e730f8972e70ad741126f3683c939a799e3c8993e7e4"
+    },
+    {
+      "id": "mensetsu",
+      "filename": "mensetsu.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 609755,
+      "sha256": "f284e40fc9f7e9f3afa143c266cecac200ee87bbadd7451c9b825dbbd3e0285d"
+    },
+    {
+      "id": "quote",
+      "filename": "quote.png",
+      "width": 1600,
+      "height": 900,
+      "bytes": 584048,
+      "sha256": "c4b51609e2bac30b6dced4fbc678efbb332555ef062e8e8e7bb67efdf78dbd31"
+    }
+  ],
+  "visual_review": {
+    "status": "passed after targeted corrections",
+    "reviewed": [
+      "all 15 banners via contact sheet",
+      "seo full-size",
+      "hr full-size",
+      "sfa full-size",
+      "interview full-size",
+      "persona full-size",
+      "promane full-size",
+      "shodan full-size",
+      "aio full-size",
+      "mensetsu full-size"
+    ],
+    "corrected": [
+      "seo headline overflow",
+      "seo mascot padding",
+      "hr mascot/CTA overlap",
+      "interview mascot/CTA overlap",
+      "aio mascot/CTA overlap",
+      "persona excess secondary UI"
+    ]
+  }
+}

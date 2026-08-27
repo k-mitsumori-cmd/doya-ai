@@ -1,0 +1,102 @@
+{
+  "audit_version": "v2-final",
+  "date": "2026-08-24",
+  "source_feedback": "qa/feedback-audit-v2-pre-regeneration.json",
+  "generation_mode": "built-in Codex image generation for full-image regeneration plus built-in precise-object editing for official-logo corrections",
+  "post_generation_text_overlay": false,
+  "summary": {
+    "total_services": 15,
+    "approved_final_images": 15,
+    "unchanged_after_audit": 12,
+    "full_image_regenerated": 3,
+    "official_logo_strict_edits": 4,
+    "failed_final_images": 0,
+    "regenerated_ids": [
+      "cunning",
+      "aio",
+      "persona"
+    ]
+  },
+  "final_decisions": [
+    { "id": "seo", "service": "ドヤ記事作成", "score": 97, "decision": "APPROVED_AFTER_USER_CONTENT_EDIT", "selected_raw": "images/seo-v2-content.png" },
+    { "id": "doyalist", "service": "ドヤリスト", "score": 92, "decision": "APPROVED", "selected_raw": "images/doyalist.png" },
+    { "id": "hr", "service": "ドヤHR", "score": 95, "decision": "APPROVED", "selected_raw": "images/hr.png" },
+    { "id": "kintai", "service": "ドヤ勤怠", "score": 92, "decision": "APPROVED", "selected_raw": "images/kintai.png" },
+    { "id": "promane", "service": "ドヤプロマネ", "score": 96, "decision": "APPROVED_AFTER_LOGO_EDIT", "selected_raw": "images/promane-v2-logo.png" },
+    { "id": "doyaslide", "service": "ドヤスライド", "score": 97, "decision": "APPROVED_AFTER_USER_CONTENT_EDIT", "selected_raw": "images/doyaslide-v3-content.png" },
+    { "id": "cunning", "service": "ドヤカンニング", "score": 94, "decision": "APPROVED_AFTER_REGENERATION", "selected_raw": "images/cunning-v3.png" },
+    { "id": "sfa", "service": "ドヤ営業管理", "score": 88, "decision": "APPROVED_WITH_LOW_SEVERITY_NOTE", "selected_raw": "images/sfa.png" },
+    { "id": "shodan", "service": "ドヤ商談準備", "score": 92, "decision": "APPROVED", "selected_raw": "images/shodan.png" },
+    { "id": "aio", "service": "ドヤAIO", "score": 95, "decision": "APPROVED_AFTER_REGENERATION", "selected_raw": "images/aio-v3.png" },
+    { "id": "adimage", "service": "ドヤ広告画像AI", "score": 91, "decision": "APPROVED", "selected_raw": "images/adimage.png" },
+    { "id": "interview", "service": "ドヤインタビュー", "score": 93, "decision": "APPROVED_AFTER_LOGO_EDIT", "selected_raw": "images/interview-v2-logo.png" },
+    { "id": "persona", "service": "ドヤペルソナAI", "score": 97, "decision": "APPROVED_AFTER_REGENERATION_AND_LOGO_EDIT", "selected_raw": "images/persona-v3-logo.png" },
+    { "id": "mensetsu", "service": "ドヤ面接官", "score": 97, "decision": "APPROVED_AFTER_USER_CONTENT_EDIT", "selected_raw": "images/mensetsu-v2-content.png" },
+    { "id": "quote", "service": "ドヤ見積もりAI", "score": 97, "decision": "APPROVED_AFTER_USER_CONTENT_EDIT", "selected_raw": "images/quote-v2-content.png" }
+  ],
+  "regeneration_history": [
+    {
+      "id": "cunning",
+      "original_failure": [
+        "mascot dominated the SaaS UI",
+        "UI lost visual priority"
+      ],
+      "rejected_attempt": "rejected/feedback-round2/cunning-v2-logo-pose-fail.png",
+      "rejected_attempt_reason": [
+        "official orange logo was recolored blue",
+        "headset listening pose was not sufficiently visible"
+      ],
+      "accepted_image": "images/cunning-v3.png",
+      "final_verification": [
+        "official orange/yellow/black wide logo retained",
+        "single official answer-assist UI is the largest visual",
+        "small full-body mascot has clear over-ear headset and boom microphone",
+        "headline, support copy, three chips and CTA are present"
+      ]
+    },
+    {
+      "id": "aio",
+      "original_failure": [
+        "unconfirmed second comparison dashboard was invented",
+        "mascot was cropped at the bottom"
+      ],
+      "rejected_attempt": "rejected/feedback-round2/aio-v2-logo-fail.png",
+      "rejected_attempt_reason": [
+        "official graffiti logo was simplified to text only"
+      ],
+      "accepted_image": "images/aio-v3.png",
+      "final_verification": [
+        "complete official-style graffiti logo with bear and AI tiles retained",
+        "only one official AI visibility ranking UI is shown",
+        "no vendor-logo comparison row or second dashboard",
+        "full mascot and CTA 無料で診断する are visible"
+      ]
+    },
+    {
+      "id": "persona",
+      "original_failure": [
+        "unconfirmed star-rated profile cards implied recruiting or candidate scoring",
+        "multiple cards diluted the single persona-sheet proposition"
+      ],
+      "accepted_image": "images/persona-v3-logo.png",
+      "final_verification": [
+        "one official-style persona sheet only",
+        "no star ratings, candidate cards or hiring language",
+        "small mascot adds a sticky note to the persona sheet",
+        "headline, support copy, three chips and CTA are present"
+      ]
+    }
+  ],
+  "remaining_notes": [
+    {
+      "id": "sfa",
+      "severity": "LOW",
+      "note": "The action mascot uses an intentional upper-body edge vignette; no copy or product UI is obscured."
+    },
+    {
+      "id": "interview",
+      "severity": "LOW",
+      "note": "The interview mascot is relatively large, but the official transcript UI remains larger and fully readable."
+    }
+  ]
+}
