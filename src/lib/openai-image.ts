@@ -35,11 +35,14 @@ export async function generateImageGpt(params: {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) throw new Error('OPENAI_API_KEY が設定されていません')
 
-  // gpt-image-2 は quality=low/medium/high のみ（auto 非対応）。auto/未指定は high に寄せる
+  // gpt-image-2 は quality=low/medium/high のみ（auto 非対応）。auto/未指定は medium に寄せる
+  // （2026-08-27 実測: high は medium の約2.8倍の時間・4.3倍の単価で、仕上がりの差は採用判断に足りなかった）
   const quality: Exclude<GptImageQuality, 'auto'> =
-    params.quality && params.quality !== 'auto' ? params.quality : 'high'
+    params.quality && params.quality !== 'auto' ? params.quality : 'medium'
 
-  // gpt-image-2 の high・1536x1024 は並列時に実測 123〜145秒。短すぎると abort→nano-banana に落ちて画質が下がる。
+  // gpt-image-2 の 1536x1024 は並列時に実測 medium 約60秒 / high 123〜145秒。
+  // 既定は medium だが high 指定の呼び出しも通せるよう、タイムアウトは high 基準のまま据え置く
+  //（短すぎると abort→nano-banana に落ちて画質が下がる）。
   // ただし 200秒だと、サイト解析等の前処理(〜90秒)と合算してフロント Abort(290秒)/maxDuration(300秒)を超えうるため、
   // 通常完了する 145秒より十分余裕を持たせつつ上限を 170秒に設定（stuck時は nano-banana へ早めにフォールバック）。
   // タイムアウトは本文読み取り(json/text)まで覆う（withTimeout 内で完結）。
@@ -101,7 +104,7 @@ export async function editImageGpt(params: {
     const ext = image.mimeType.includes('webp') ? 'webp' : image.mimeType.includes('jpeg') ? 'jpg' : 'png'
     return toFile(Buffer.from(image.base64, 'base64'), `reference-${index + 1}.${ext}`, { type: image.mimeType })
   }))
-  const quality = params.quality && params.quality !== 'auto' ? params.quality : 'high'
+  const quality = params.quality && params.quality !== 'auto' ? params.quality : 'medium'
   const size = ['1024x1024', '1536x1024', '1024x1536', 'auto'].includes(params.size || '')
     ? params.size as '1024x1024' | '1536x1024' | '1024x1536' | 'auto'
     : '1024x1024'
