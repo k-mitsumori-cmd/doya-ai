@@ -77,19 +77,19 @@ export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContac
       <div className={`${isCollapsed ? 'px-2' : 'px-3'} pb-2`}>
         <button
           onClick={() => setShowModal(true)}
-          className={`group/contact w-full flex items-center gap-2.5 rounded-xl bg-white text-gray-800 shadow-sm ring-1 ring-black/5 hover:ring-[#7f19e6]/40 hover:shadow-md transition-all ${
+          className={`group/contact w-full flex items-center gap-2.5 rounded-xl bg-white text-gray-800 shadow-sm ring-1 ring-black/5 hover:ring-[#0066ff]/40 hover:shadow-md transition-all ${
             isCollapsed ? 'justify-center p-2.5' : 'px-3 py-2.5'
           }`}
           title={isCollapsed ? 'お問い合わせ・改善依頼' : undefined}
           type="button"
         >
-          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#7f19e6] to-fuchsia-500 text-white shadow-sm">
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-[#0066ff] to-[#009bff] text-white shadow-sm">
             <MessageSquarePlus className="w-[18px] h-[18px]" />
           </span>
           {!isCollapsed && showLabel && (
             <span className="flex flex-col items-start leading-tight min-w-0">
               <span className="text-[13px] font-black text-gray-900">お問い合わせ・改善依頼</span>
-              <span className="inline-flex items-center gap-1 mt-0.5 text-[10px] font-black text-[#7f19e6]">
+              <span className="inline-flex items-center gap-1 mt-0.5 text-[10px] font-black text-[#0066ff]">
                 追加機能要望募集中
               </span>
             </span>
@@ -116,14 +116,24 @@ export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContac
                 <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center">
                   <CheckCircle2 className="w-8 h-8 text-emerald-600" />
                 </div>
-                <h3 className="text-lg font-black text-gray-900 mb-1">送信しました！</h3>
-                <p className="text-sm text-gray-500">
-                  貴重なご意見ありがとうございます。<br />
-                  いただいた内容は今後の改善に活用させていただきます。
-                </p>
+                <h3 className="text-lg font-black text-gray-900 mb-1">送信しました</h3>
+                {/* ⚠️ エラー報告だけは「改善に活用します」で終わらせない。
+                     不具合を知らせた方は「直るのか」「連絡が来るのか」を知りたい。
+                     調査して結果をご連絡する、と明示する。 */}
+                {category === 'bug' ? (
+                  <p className="text-sm leading-relaxed text-gray-500">
+                    ご報告ありがとうございます。<br />
+                    内容を確認のうえ調査し、結果を改めてご連絡いたします。
+                  </p>
+                ) : (
+                  <p className="text-sm leading-relaxed text-gray-500">
+                    貴重なご意見ありがとうございます。<br />
+                    いただいた内容は今後の改善に活用させていただきます。
+                  </p>
+                )}
                 <button
                   onClick={close}
-                  className="mt-6 px-6 py-2.5 rounded-full bg-[#7f19e6] text-white text-sm font-bold hover:bg-[#6b14c4] transition-colors"
+                  className="mt-6 px-6 py-2.5 rounded-full bg-[#0066ff] text-white text-sm font-bold hover:bg-[#0052cc] transition-colors"
                   type="button"
                 >
                   閉じる
@@ -133,11 +143,11 @@ export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContac
               <>
                 <div className="flex items-center gap-3 mb-1">
                   <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                    <MessageSquarePlus className="w-6 h-6 text-[#7f19e6]" />
+                    <MessageSquarePlus className="w-6 h-6 text-[#0066ff]" />
                   </div>
                   <div>
                     <h3 className="text-lg font-black text-gray-900">お問い合わせ・改善依頼</h3>
-                    <p className="text-xs font-bold text-[#7f19e6]">追加機能要望募集中</p>
+                    <p className="text-xs font-bold text-[#0066ff]">追加機能要望募集中</p>
                   </div>
                 </div>
                 <p className="text-sm text-gray-500 mb-4">
@@ -156,7 +166,7 @@ export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContac
                         type="button"
                         className={`flex items-center gap-2 p-2.5 rounded-xl border text-left transition-colors ${
                           selected
-                            ? 'border-[#7f19e6] bg-purple-50 ring-1 ring-[#7f19e6]'
+                            ? 'border-[#0066ff] bg-purple-50 ring-1 ring-[#0066ff]'
                             : 'border-gray-200 hover:border-purple-200 hover:bg-purple-50/50'
                         }`}
                       >
@@ -174,7 +184,7 @@ export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContac
                   rows={5}
                   maxLength={5000}
                   placeholder="内容をご記入ください。例：◯◯の画面に△△ボタンがあると便利です／□□でエラーが出ました 等"
-                  className="w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#7f19e6] focus:outline-none focus:ring-1 focus:ring-[#7f19e6] resize-none"
+                  className="w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-[#0066ff] focus:outline-none focus:ring-1 focus:ring-[#0066ff] resize-none"
                 />
 
                 {status === 'error' && (
@@ -185,7 +195,7 @@ export function SidebarHelpContact({ showLabel, isCollapsed }: SidebarHelpContac
                   onClick={submit}
                   disabled={!message.trim() || status === 'sending'}
                   type="button"
-                  className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-full bg-[#7f19e6] text-white text-sm font-black shadow-lg shadow-purple-500/25 hover:bg-[#6b14c4] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="mt-4 w-full flex items-center justify-center gap-2 py-3 rounded-full bg-[#0066ff] text-white text-sm font-black shadow-lg shadow-purple-500/25 hover:bg-[#0052cc] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {status === 'sending' ? (
                     <>

@@ -1,13 +1,17 @@
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
 // ============================================================
-// Claude Sonnet 4.6 — プライマリLLM
+// Claude Haiku 4.5 — プライマリLLM
 // ============================================================
-// SEOパイプラインのテキスト/JSON生成はすべてClaude Sonnet 4.6を経由する。
+// SEOパイプラインのテキスト/JSON生成はすべてClaudeを経由する。
 // Geminiは画像生成専用、およびClaudeがダウンした場合のフォールバックとして残す。
-// SEO_CLAUDE_MODEL で任意のモデルを指定可能（例: claude-opus-4-6）
-const CLAUDE_MODEL_DEFAULT = process.env.SEO_CLAUDE_MODEL || 'claude-sonnet-4-6'
-// Claude Sonnet 4.6 の最大出力トークン数
+//
+// 2026-08-27: コスト優先で Sonnet 4.6 → Haiku 4.5 に変更（本人判断）。
+// ⚠️ 長文記事の構成力・日本語の自然さは Sonnet より落ちる。記事の品質が
+//    許容できない場合は、デプロイせずに環境変数 SEO_CLAUDE_MODEL で
+//    'claude-sonnet-5' などへ戻せるようにしてある。
+const CLAUDE_MODEL_DEFAULT = process.env.SEO_CLAUDE_MODEL || 'claude-haiku-4-5-20251001'
+// 最大出力トークン数
 const CLAUDE_MAX_OUTPUT_TOKENS = 16384
 
 // ============================================================

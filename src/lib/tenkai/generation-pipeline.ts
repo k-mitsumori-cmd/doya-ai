@@ -6,7 +6,8 @@ import { validateOutput } from './validation'
 import { injectBrandVoice, BrandVoiceConfig } from './brand-voice'
 import { PLATFORM_PROMPTS } from './prompts/system'
 
-const CLAUDE_MODEL = process.env.TENKAI_CLAUDE_MODEL || 'claude-sonnet-4-5-20250929'
+// 2026-08-27: コスト優先で Haiku へ（提供終了済みサービスだが、実行経路は残っている）
+const CLAUDE_MODEL = process.env.TENKAI_CLAUDE_MODEL || 'claude-haiku-4-5-20251001'
 const MAX_RETRIES = 2
 const MAX_PROMPT_LENGTH = 30_000 // リトライ時のプロンプト肥大化を防止
 

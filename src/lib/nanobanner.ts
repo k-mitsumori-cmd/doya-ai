@@ -1018,6 +1018,9 @@ async function generateSingleBanner(
   const result = await generateImageWithFallback({
     prompt: fullPrompt,
     size,
+    // ⚠️ フォールバック（Gemini）は size を読めない。比率を明示しないと
+    //    必ず1:1で返り、下の contain で左右に帯が出る。
+    aspectRatio,
     quality: 'medium',
     inputImages,
     responseModalities: ['IMAGE'],
@@ -1055,6 +1058,13 @@ async function generateSingleBanner(
         }
       } catch { /* ignore */ }
 
+      // ⚠️ ここで帯（余白）が焼き込まれる。生成側が目標比率で返していれば
+      //    上の fill 経路に入るので、ここに来る時点で「比率が合っていない」。
+      //    利用者からは「比率を選んでも1:1になって横に余白が出る」と見える。
+      console.warn(
+        `[nanobanner] 生成画像の比率が目標と一致しないため余白を入れます: ` +
+          `生成 ${originalWidth}x${originalHeight} / 目標 ${w_num}x${h_num} / model=${result.model}`
+      )
       resized = await sharp(imageBuffer)
         .resize({ width: w_num, height: h_num, fit: 'contain', background: bgColor })
         .png()

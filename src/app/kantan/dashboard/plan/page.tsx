@@ -455,7 +455,7 @@ export default function KantanPlanPage() {
                 {/* 右：プラン情報 */}
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1 lg:mb-2">
-                    <h2 className="text-sm lg:text-lg font-bold text-gray-800">スモールチーム向け〜エンタープライズ対応</h2>
+                    <h2 className="text-sm lg:text-lg font-bold text-gray-800">スモールチームから大規模まで</h2>
                     <button className="text-gray-400 hover:text-gray-600 hidden sm:block">
                       <span className="text-lg">•••</span>
                     </button>

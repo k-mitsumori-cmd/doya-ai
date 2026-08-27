@@ -49,7 +49,7 @@ function getPlanTier(usage: Usage | null): string {
 }
 
 function planLabel(tier: string): string {
-  if (tier === 'ENTERPRISE') return 'エンタープライズ'
+  if (tier === 'ENTERPRISE') return 'プロ' // 統一プランで廃止。旧データはプロとして表示する
   if (tier === 'PRO' || tier === 'LIGHT') return 'プロ'
   return '無料'
 }

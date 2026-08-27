@@ -932,7 +932,7 @@ export default function SeoCreateWizardPage() {
                     <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">
                       文字数目安
                       <span className="ml-2 text-[10px] font-bold text-gray-400 normal-case">
-                        ({userPlan === 'GUEST' ? 'ゲスト' : userPlan === 'FREE' ? '無料' : userPlan === 'PRO' ? 'プロ' : 'エンタープライズ'}プラン: 最大{charLimit.toLocaleString()}字)
+                        ({userPlan === 'GUEST' ? 'ゲスト' : userPlan === 'FREE' ? '無料' : userPlan === 'PRO' ? 'プロ' : 'プロ'}プラン: 最大{charLimit.toLocaleString()}字)
                       </span>
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">

@@ -1004,7 +1004,7 @@ function BannerTestPageInner() {
             <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold">
               残り {trialRemainingMinutes}分
             </span>
-            <span className="hidden sm:inline text-white/80">- エンタープライズ機能をお試しください</span>
+            <span className="hidden sm:inline text-white/80">- すべての機能をお試しください</span>
           </div>
         )}
         
@@ -1732,7 +1732,7 @@ function BannerTestPageInner() {
                         </span>
                       </div>
                       <p className="text-[10px] sm:text-xs text-purple-200/80">
-                        全機能（エンタープライズ含む）が無料でお試しいただけます！
+                        すべての機能が無料でお試しいただけます。
                       </p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 全画像解放</span>
@@ -1849,7 +1849,7 @@ function BannerTestPageInner() {
                         <div className="flex items-center gap-3">
                           <Lock className="w-5 h-5 text-purple-400" />
                           <div>
-                            <p className="text-sm text-gray-300">エンタープライズプラン限定機能</p>
+                            <p className="text-sm text-gray-300">プロプラン限定機能</p>
                             <p className="text-xs text-gray-500 mt-1">
                               詳細な生成指示を入力して、より細かくバナーをカスタマイズできます
                             </p>

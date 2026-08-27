@@ -28,6 +28,14 @@ export interface ImageInput {
 export interface ImageGenRequest {
   prompt: string
   size: string
+  /**
+   * Gemini（nano-banana-pro-preview）へ渡す比率。
+   * ⚠️ Gemini は size を受け取れず、指定が無いと**必ず1:1で返す**。
+   *    size だけ渡してフォールバックすると正方形の絵になり、呼び出し元が
+   *    目標サイズへ contain で収めるため左右に帯が出る（2026-08-27 利用者報告）。
+   *    未指定なら size から算出する。
+   */
+  aspectRatio?: string
   quality?: GptImageQuality
   inputImages?: ImageInput[]
   /**
@@ -144,12 +152,17 @@ async function callNanoBananaProPreview(
   }
   parts.push({ text: req.prompt })
 
+  // ⚠️ aspectRatio を渡さないと Gemini は必ず 1:1 で返す。
+  //    呼び出し元は size を渡しているので、そこから対応する比率へ寄せて必ず送る。
+  const aspectRatio = toGeminiAspectRatio(req.size, req.aspectRatio)
+
   const body = {
     contents: [{ role: 'user', parts }],
     generationConfig: {
       responseModalities: req.responseModalities || ['IMAGE'],
       temperature: typeof req.temperature === 'number' ? req.temperature : 0.4,
       candidateCount: 1,
+      imageConfig: { aspectRatio },
     },
     safetySettings: req.safetySettings || DEFAULT_SAFETY_SETTINGS,
   }
@@ -206,6 +219,34 @@ async function callNanoBananaProPreview(
  *    既存の呼び出し元が渡している3プリセットは全て有効なのでそのまま通過し、
  *    挙動は変わらない。
  */
+
+/**
+ * Gemini の imageConfig.aspectRatio が受け付ける値へ寄せる。
+ * ⚠️ 対応外の文字列を渡すと 400 になるので、必ずこの表の中から選ぶ。
+ */
+const GEMINI_ASPECT_RATIOS: Array<{ label: string; value: number }> = [
+  { label: '1:1', value: 1 },
+  { label: '2:3', value: 2 / 3 },
+  { label: '3:2', value: 3 / 2 },
+  { label: '3:4', value: 3 / 4 },
+  { label: '4:3', value: 4 / 3 },
+  { label: '4:5', value: 4 / 5 },
+  { label: '5:4', value: 5 / 4 },
+  { label: '9:16', value: 9 / 16 },
+  { label: '16:9', value: 16 / 9 },
+  { label: '21:9', value: 21 / 9 },
+]
+
+export function toGeminiAspectRatio(size: string, explicit?: string): string {
+  if (explicit && GEMINI_ASPECT_RATIOS.some((r) => r.label === explicit)) return explicit
+  const [w, h] = String(size).split('x').map(Number)
+  if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return '1:1'
+  const target = w / h
+  return GEMINI_ASPECT_RATIOS.reduce((best, r) =>
+    Math.abs(r.value - target) < Math.abs(best.value - target) ? r : best
+  ).label
+}
+
 const GPT_IMAGE_MIN = 512
 const GPT_IMAGE_MAX = 3840
 const GPT_IMAGE_MAX_RATIO = 3

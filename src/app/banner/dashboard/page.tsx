@@ -1439,7 +1439,7 @@ function BannerTestPageInner() {
             <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0">
               残り {trialRemainingMinutes}分
             </span>
-            <span className="hidden md:inline text-white/80">- エンタープライズ機能をお試しください</span>
+            <span className="hidden md:inline text-white/80">- すべての機能をお試しください</span>
           </div>
         )}
         
@@ -1712,7 +1712,8 @@ function BannerTestPageInner() {
                 { key: 'すべて' as PlanFilterType, label: 'すべて', color: 'bg-white text-black', inactive: 'bg-gray-800/60 text-gray-300 hover:bg-gray-700 hover:text-white' },
                 { key: 'FREE' as PlanFilterType, label: 'ログイン(Free)', color: 'bg-emerald-500 text-white', inactive: 'bg-gray-800/60 text-emerald-400 hover:bg-emerald-900/40 hover:text-emerald-300' },
                 { key: 'PRO' as PlanFilterType, label: 'プロプラン(PRO)', color: 'bg-amber-500 text-white', inactive: 'bg-gray-800/60 text-amber-400 hover:bg-amber-900/40 hover:text-amber-300' },
-                { key: 'ENTERPRISE' as PlanFilterType, label: 'エンタープライズ', color: 'bg-purple-500 text-white', inactive: 'bg-gray-800/60 text-purple-400 hover:bg-purple-900/40 hover:text-purple-300' },
+                // ⚠️ エンタープライズは統一プランで廃止した枠。利用者に見せない。
+                //    内部的な PlanType としては残っている（トライアル中の全解放判定に使う）。
               ]).map((tab) => (
                 <button
                   key={tab.key}
@@ -2231,7 +2232,7 @@ function BannerTestPageInner() {
                         </span>
                       </div>
                       <p className="text-[10px] sm:text-xs text-purple-200/80">
-                        全機能（エンタープライズ含む）が無料でお試しいただけます！
+                        すべての機能が無料でお試しいただけます。
                       </p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200"><Check className="h-3 w-3" />全画像解放</span>
@@ -2416,7 +2417,7 @@ function BannerTestPageInner() {
                         <div className="flex items-center gap-3">
                           <Lock className="w-5 h-5 text-purple-400" />
                           <div>
-                            <p className="text-sm text-gray-300">エンタープライズプラン限定機能</p>
+                            <p className="text-sm text-gray-300">プロプラン限定機能</p>
                             <p className="text-xs text-gray-500 mt-1">
                               詳細な生成指示を入力して、より細かくバナーをカスタマイズできます
                             </p>

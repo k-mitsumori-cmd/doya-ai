@@ -48,6 +48,11 @@ function openai(): OpenAI {
   return _openai
 }
 
+// ⚠️ ここはコスト削減の対象にしない。ドヤAIOは「ChatGPT / Gemini / Claude /
+//    Perplexity で自社がどう言及されるか」を測るサービスで、この Claude は
+//    **計測対象のエンジン**。安いモデルに落とすと回答も引用も変わり、
+//    利用者に返す言及率・SoV の数字そのものが変わってしまう。
+//    2026-08-27 に他サービスを Haiku へ寄せた際も、ここだけ据え置いた。
 const CLAUDE_MODEL = process.env.AIO_CLAUDE_MODEL || 'claude-sonnet-4-6'
 
 /** プロンプトを1エンジンに1回投げる。失敗時は例外（呼び出し元で個別ハンドリング）。 */
