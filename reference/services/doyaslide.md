@@ -41,7 +41,7 @@
   - **メイン: `gpt-image-2`**（OpenAI / `src/lib/openai-image.ts`、`OPENAI_IMAGE_MODEL` で上書き可）
   - **フォールバック: `nano-banana-pro-preview`**（Gemini 3 Pro Image系）
 - サイズは比率に応じて `1536x1024`(横) / `1024x1024`(正方形) / `1024x1536`(縦)（`ASPECT_TO_SIZE`）
-- 品質: 本番スライド=`high`、スタイルプレビュー=`high`（gpt-image-2 は `auto` 非対応）
+- 品質: 本番スライド=`medium`、スタイルプレビュー=`medium`（gpt-image-2 は `auto` 非対応）。2026-08-27 に high から変更（実測で high は約2.8倍の時間・4.3倍の単価、仕上がりの差は採用判断に足りなかった）
 - 構成テキスト（Gemini）は `@seo/lib/gemini` 系ではなく `src/lib/doyaslide/` 内で組み立て
 
 ## スタイルプリセット（12種 = ビジネス系6 + 遊び系6、2026-06-12 再拡張）

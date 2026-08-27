@@ -74,9 +74,15 @@ export async function POST(req: NextRequest) {
 
     // maxDuration(300s) で強制終了されると生成中スライドが固まるため、締切前に新規生成を打ち切る
     const startedAt = Date.now()
-    // gpt-image-2 medium は1枚~60秒（旧 high は~145秒）かかるため、1回の関数では1波だけ着手（締切100秒）。
-    // 残りはクライアント自動継続ループが次の呼び出しで処理する（300秒の強制終了を避けつつ gpt-image-2 を完走）。
-    const START_DEADLINE_MS = Number(process.env.DOYA_GEN_DEADLINE_MS) || 100000
+    // 1回の関数では1波だけ着手し、残りはクライアント自動継続ループが次の呼び出しで処理する。
+    // 締切は「maxDuration(300秒) − 1枚の最悪所要」から逆算する。最悪は
+    //   gpt-image-2 のタイムアウト170秒(DOYA_IMAGE_TIMEOUT_MS)
+    // ＋ nano-banana フォールバック45秒(DOYA_FALLBACK_TIMEOUT_MS)
+    // ＋ アップロード30秒(DOYA_UPLOAD_TIMEOUT_MS) = 245秒。300−245=55秒が上限で、前処理の分を見て45秒。
+    // ⚠️ 100秒だった頃は high の1波が約145秒かかることで結果的に2波目が塞がれていた。
+    //    medium(約60秒)に下げた時点でその暗黙の歯止めが消え、2波目が走ると300秒を超えて
+    //    強制終了→releaseMonthlySlides未実行（枠が返らない）＋projectがgenerating固着になる。
+    const START_DEADLINE_MS = Number(process.env.DOYA_GEN_DEADLINE_MS) || 45000
     let errorCount = 0
     let timedOut = 0
     await mapWithConcurrency(slidesToGen, 4, async (slide) => {

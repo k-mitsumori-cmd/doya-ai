@@ -75,7 +75,7 @@ function EditorInner() {
   const doneCount = slides.filter((s) => s.imageUrl).length
   const total = slides.length
   const allDone = total > 0 && doneCount === total
-  // 残り時間: 並列生成なので「波数 × 1波の所要(≈150秒)」で見積もり、経過でカウントダウン。
+  // 残り時間: 並列生成なので「波数 × 1波の所要(SEC_PER_WAVE=70秒)」で見積もり、経過でカウントダウン。
   // 旧実装は「枚数×11秒」で過小見積り(3枚=33秒)だった。
   const remainingSlides = Math.max(0, total - doneCount)
   const estTotalSec = estimateGenSeconds(remainingSlides)
