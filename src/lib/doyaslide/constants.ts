@@ -530,8 +530,13 @@ export const SEC_PER_SLIDE = 11
 
 /** サーバ側の並列生成数（src/app/api/doyaslide/generate の mapWithConcurrency と一致させる） */
 export const GEN_CONCURRENCY = 4
-/** 1波（並列1セット）あたりの生成目安秒数。gpt-image-2 high ≈ 約145秒 */
-export const SEC_PER_WAVE = 150
+/**
+ * 1波（並列1セット）あたりの生成目安秒数。
+ * 2026-08-27 に quality を high → medium へ変更（1024x1024 実測で high 152秒 / medium 55秒 = 約2.8倍差）。
+ * 1536x1024 の medium は未実測のため、high 実測145秒を同比率で割った値に余裕を持たせて 70 とする。
+ * 表示用ETAにのみ使う値なので、過大なら「待たされた感」、過小なら「終わらない感」になる。実測が取れたら更新する。
+ */
+export const SEC_PER_WAVE = 70
 
 /**
  * 残り枚数 → 完成までの目安秒数。

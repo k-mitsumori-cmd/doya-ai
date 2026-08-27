@@ -77,7 +77,7 @@ export async function composeSlideImage(
         aspectRatio: project.aspectRatio,
       })
 
-  const img = await generateImageWithFallback({ prompt, size, quality: 'high' })
+  const img = await generateImageWithFallback({ prompt, size, quality: 'medium' })
   const normalized = await normalizeGeneratedSlide(img.base64, img.mimeType, project.aspectRatio)
 
   // I/O は全てタイムアウトで保護（無いと接続滞留でワーカーが無限ブロック→関数強制終了→凍結）

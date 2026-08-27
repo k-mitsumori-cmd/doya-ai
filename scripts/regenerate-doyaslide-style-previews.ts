@@ -65,7 +65,7 @@ async function main() {
           pageNumber: slide.index,
         })
         const started = Date.now()
-        const img = await generateImageWithFallback({ prompt, size: '1536x1024', quality: 'high' })
+        const img = await generateImageWithFallback({ prompt, size: '1536x1024', quality: 'medium' })
         await uploadStylePreview(job.style, img.base64, job.page)
         done++
         console.log(

@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
             pageNumber: slide.index,
             aspectRatio: 'wide',
           })
-          const img = await generateImageWithFallback({ prompt, size: '1536x1024', quality: 'high' })
+          const img = await generateImageWithFallback({ prompt, size: '1536x1024', quality: 'medium' })
           const normalized = await normalizeGeneratedSlide(img.base64, img.mimeType, 'wide')
           return await uploadStylePreview(style, normalized.base64, page)
         } catch (e: any) {
