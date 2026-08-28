@@ -7,7 +7,7 @@
 // 「URL入力 → 品目候補 → 編集 → 見積書作成」までを1画面で完結させる。
 // 迷わせないため、未完了のステップだけを開いた状態にする。
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import OrgSwitcher, { withOrg, type Membership } from '@/components/org/OrgSwitcher'
 import { billableLines, calcTotals, yen } from '@/lib/quote/money'
@@ -70,6 +70,10 @@ export default function QuoteTool() {
   const [budget, setBudget] = useState('')
   const [suggesting, setSuggesting] = useState(false)
   const [items, setItems] = useState<SuggestedItem[]>([])
+  // 品目カードの登場演出をやり直すための世代番号。
+  // ⚠️ 候補を出し直した時だけ増やす。編集のたびに増やすと key が変わって
+  //    入力中の要素が作り直され、フォーカスと変換中の文字が飛ぶ。
+  const [revealSeq, setRevealSeq] = useState(0)
 
   // 見積書作成
   const [clientCompany, setClientCompany] = useState('')
@@ -186,6 +190,7 @@ export default function QuoteTool() {
       const d = await r.json()
       if (!r.ok) throw new Error(d?.error || '生成に失敗しました')
       setItems(d.items || [])
+      setRevealSeq((n) => n + 1)
     } catch (e) {
       notifyError(setError, e instanceof Error ? e.message : '生成に失敗しました')
     } finally {
@@ -472,7 +477,13 @@ export default function QuoteTool() {
 
             <div className="mt-4 space-y-3">
               {items.map((it, idx) => (
-                <div key={idx} className="rounded-xl border border-slate-200 p-4">
+                <div
+                  // 世代番号を key に混ぜて、出し直しのたびに演出を再生させる
+                  key={`${revealSeq}-${idx}`}
+                  className={`rounded-xl border border-slate-200 p-4 ${revealSeq > 0 ? 'animate-quote-item' : ''}`}
+                  // 上から順に少しずつ遅らせる。長い一覧で待たされないよう上限を設ける
+                  style={revealSeq > 0 ? ({ '--stagger': `${Math.min(idx, 9) * 55}ms` } as CSSProperties) : undefined}
+                >
                   <div className="flex items-start gap-3">
                     <div className="flex-1 space-y-2">
                       <input

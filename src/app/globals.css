@@ -341,6 +341,23 @@
 .animate-fade-in-down { animation: fadeInDown 0.5s ease-out forwards; }
 .animate-scale-in { animation: scaleIn 0.3s ease-out forwards; }
 .animate-slide-in-right { animation: slideInRight 0.5s ease-out forwards; }
+
+/* 見積もりの品目カードが「グッ」と出てくる登場演出。
+   下からせり上がりながら、行き過ぎて戻る(overshoot)ので手応えが出る。
+   ⚠️ 並び順に遅延をかけるので、--stagger を各要素の style で渡すこと。 */
+@keyframes quoteItemPop {
+  0%   { opacity: 0; transform: translateY(18px) scale(0.94); }
+  60%  { opacity: 1; transform: translateY(-3px) scale(1.012); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-quote-item {
+  opacity: 0;
+  animation: quoteItemPop 0.42s cubic-bezier(0.22, 1.2, 0.36, 1) forwards;
+  animation-delay: var(--stagger, 0ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-quote-item { opacity: 1; animation: none; }
+}
 .animate-float { animation: float 3s ease-in-out infinite; }
 .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 
