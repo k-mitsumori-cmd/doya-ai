@@ -185,7 +185,7 @@ export default function KantanDashboardPage() {
                     </p>
                   </div>
                 </div>
-                <Link href="/auth/signin?service=kantan" className="w-full sm:w-auto">
+                <Link href="/auth/signin?service=kantan&callbackUrl=/kantan/dashboard" className="w-full sm:w-auto">
                   <button className="w-full sm:w-auto px-8 py-3 bg-white text-blue-600 text-sm font-black rounded-xl hover:bg-blue-50 transition-colors shadow-lg">
                     今すぐログイン
                   </button>

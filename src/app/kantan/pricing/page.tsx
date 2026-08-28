@@ -250,7 +250,7 @@ export default function KantanPricingPage() {
             <p className="text-white/40 mb-10 text-lg">
               ログインすると1日10回まで無料でお試しいただけます
             </p>
-            <Link href="/auth/signin?service=kantan">
+            <Link href="/auth/signin?service=kantan&callbackUrl=/kantan/dashboard">
               <button className="group relative px-12 py-5 overflow-hidden rounded-2xl font-black text-xl transition-all duration-500 hover:scale-105">
                 <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 via-emerald-500 to-teal-500" />
                 <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 via-emerald-400 to-teal-400 opacity-0 group-hover:opacity-100 transition-opacity" />

@@ -8,7 +8,7 @@ export default async function ClientsPage({ params }: { params: Promise<{ worksp
   const session = await requirePromaneAuth();
   const { workspaceSlug } = await params;
   const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) redirect("/login");
+  if (!workspace) redirect("/promane"); // ワークスペースが無い/権限が無い時は入口へ（/login は存在しない）
 
   const clients = await prisma.promaneClient.findMany({
     where: { workspaceId: workspace.id },

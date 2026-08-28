@@ -833,7 +833,7 @@ ${inputValue}
                     🆓 お試しモード：残り <strong className="text-blue-600">{guestRemainingCount}回</strong>
                   </p>
                 </div>
-                <Link href="/auth/signin?service=kantan">
+                <Link href="/auth/signin?service=kantan&callbackUrl=/kantan/dashboard">
                   <button className="w-full sm:w-auto px-3 lg:px-4 py-1.5 lg:py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs lg:text-sm font-medium rounded-lg transition-colors">
                     ログインで10回/日に！
                   </button>

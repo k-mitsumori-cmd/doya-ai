@@ -8,9 +8,9 @@ export default async function TimesheetPage({ params }: { params: Promise<{ work
   const session = await requirePromaneAuth();
   const { workspaceSlug } = await params;
   const workspace = await getWorkspaceBySlug(workspaceSlug, session.user!.id!);
-  if (!workspace) redirect("/login");
+  if (!workspace) redirect("/promane"); // ワークスペースが無い/権限が無い時は入口へ（/login は存在しない）
   const member = await getCurrentMember(workspace.id, session.user!.id!);
-  if (!member) redirect("/login");
+  if (!member) redirect("/promane"); // ワークスペースが無い/権限が無い時は入口へ（/login は存在しない）
 
   const timeEntries = await prisma.promaneTimeEntry.findMany({
     where: { memberId: member.id },
