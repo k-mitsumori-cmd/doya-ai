@@ -39,7 +39,7 @@ export default function BannerLandingPage() {
   const cta = session ? '/banner' : '/auth/signin?callbackUrl=/banner'
 
   return (
-    <LpShell serviceName="ドヤバナーAI" icon="image" ctaHref={cta} ctaLabel="無料で作る" accent={ACCENT}>
+    <LpShell serviceName="ドヤバナーAI" icon="image" ctaHref={cta} loginHref="/auth/signin?callbackUrl=/banner" ctaLabel="無料で作る" accent={ACCENT}>
       <ProductHero
         eyebrow="バナー生成AI"
         title="プロ品質のバナーを、"

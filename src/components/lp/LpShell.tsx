@@ -46,7 +46,10 @@ export function BrandMark({ serviceName, icon, size = 'md' }: { serviceName: str
 
 export function LpShell({ serviceName, icon, ctaHref, ctaLabel = 'はじめる', accent, loginHref, children }: LpShellProps) {
   // ログイン後に「今いたサービス」へ戻す。CTAが既に callbackUrl 付きならそれを使う。
-  const signinHref = loginHref || (ctaHref.startsWith('/auth/signin') ? ctaHref : '/auth/signin')
+  // ⚠️ 前方一致だけで判定しない。'/auth/signin?service=xxx' のように callbackUrl を
+  //    持たないCTAを通すと、signin側の既定('/seo')が効いて記事作成へ着地する。
+  const signinHref =
+    loginHref || (ctaHref.startsWith('/auth/signin') && ctaHref.includes('callbackUrl=') ? ctaHref : '/auth/signin')
   return (
     <div className="min-h-screen relative bg-white text-slate-900 overflow-x-hidden" style={accentVars(accent)}>
       {/* Header */}

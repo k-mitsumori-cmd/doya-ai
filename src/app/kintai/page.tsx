@@ -34,7 +34,7 @@ const ROWS: ShowcaseRow[] = [
 
 export default function KintaiLandingPage() {
   return (
-    <LpShell serviceName="ドヤ勤怠" icon="schedule" ctaHref={CTA} ctaLabel="無料ではじめる" accent={ACCENT}>
+    <LpShell serviceName="ドヤ勤怠" icon="schedule" ctaHref={CTA} loginHref="/auth/signin?callbackUrl=/kintai/dashboard" ctaLabel="無料ではじめる" accent={ACCENT}>
       <ProductHero
         eyebrow="クラウド勤怠管理"
         title="勤怠管理を、"
