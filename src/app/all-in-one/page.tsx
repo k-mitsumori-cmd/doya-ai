@@ -44,7 +44,7 @@ export default function AllInOnePage() {
   const totalProValue = services.reduce((sum, s) => sum + (s.pricing?.pro?.price || 0), 0)
 
   return (
-    <LpShell serviceName="統一プラン" icon="all_inclusive" ctaHref="/banner" ctaLabel="無料ではじめる" accent={ACCENT}>
+    <LpShell serviceName="統一プラン" icon="all_inclusive" ctaHref="/banner" loginHref="/auth/signin?callbackUrl=/banner" ctaLabel="無料ではじめる" accent={ACCENT}>
       <Hero
         eyebrow="統一プラン"
         title="その1契約で、"

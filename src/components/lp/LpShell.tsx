@@ -15,6 +15,13 @@ export interface LpShellProps {
   ctaHref: string
   /** ヘッダーCTAの文言 */
   ctaLabel?: string
+  /**
+   * ヘッダー「ログイン」の遷移先。
+   * 未指定なら ctaHref が /auth/signin?callbackUrl=... のときそれを流用する。
+   * ⚠️ ここを素の '/auth/signin' にすると、signin 側の既定 callbackUrl('/seo') が効いて
+   *    ログイン後に別サービス（ドヤ記事作成）へ飛ぶ。CTAが署名URLでないLPは明示すること。
+   */
+  loginHref?: string
   /** サービス別アクセント色 */
   accent?: string
   children: React.ReactNode
@@ -37,7 +44,9 @@ export function BrandMark({ serviceName, icon, size = 'md' }: { serviceName: str
   )
 }
 
-export function LpShell({ serviceName, icon, ctaHref, ctaLabel = 'はじめる', accent, children }: LpShellProps) {
+export function LpShell({ serviceName, icon, ctaHref, ctaLabel = 'はじめる', accent, loginHref, children }: LpShellProps) {
+  // ログイン後に「今いたサービス」へ戻す。CTAが既に callbackUrl 付きならそれを使う。
+  const signinHref = loginHref || (ctaHref.startsWith('/auth/signin') ? ctaHref : '/auth/signin')
   return (
     <div className="min-h-screen relative bg-white text-slate-900 overflow-x-hidden" style={accentVars(accent)}>
       {/* Header */}
@@ -47,7 +56,7 @@ export function LpShell({ serviceName, icon, ctaHref, ctaLabel = 'はじめる',
             <BrandMark serviceName={serviceName} icon={icon} />
           </Link>
           <nav className="flex items-center gap-2">
-            <Link href="/auth/signin" className="hidden sm:inline-flex px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors">
+            <Link href={signinHref} className="hidden sm:inline-flex px-4 py-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors">
               ログイン
             </Link>
             <Link

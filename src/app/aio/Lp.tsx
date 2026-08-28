@@ -63,7 +63,7 @@ export default function AioLp() {
   }
 
   return (
-    <LpShell serviceName="ドヤAIO" icon="query_stats" ctaHref={CTA} ctaLabel="無料で診断する" accent={ACCENT}>
+    <LpShell serviceName="ドヤAIO" icon="query_stats" ctaHref={CTA} loginHref="/auth/signin?callbackUrl=/aio" ctaLabel="無料で診断する" accent={ACCENT}>
       <ProductHero
         eyebrow="AI可視性 / AEO"
         title="そのブランド、"

@@ -34,7 +34,7 @@ const ROWS: ShowcaseRow[] = [
 
 export default function HrLandingPage() {
   return (
-    <LpShell serviceName="ドヤHR" icon="groups" ctaHref={CTA} ctaLabel="無料ではじめる" accent={ACCENT}>
+    <LpShell serviceName="ドヤHR" icon="groups" ctaHref={CTA} loginHref="/auth/signin?callbackUrl=/hr/dashboard" ctaLabel="無料ではじめる" accent={ACCENT}>
       <ProductHero
         eyebrow="タレントマネジメント"
         title="人を活かすのは、"
