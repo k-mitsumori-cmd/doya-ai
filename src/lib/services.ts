@@ -1727,9 +1727,13 @@ export function getServicesByCategory(category: ServiceCategory): Service[] {
 }
 
 // サービスが利用可能かチェック
+// ⚠️ status だけで判定しない。提供終了しても各エントリの status は 'active' のまま
+//    残っている（adbanner 等。復帰できるよう定義ごと保持しているため）ので、
+//    RETIRED を先に弾かないと畳んだサービスが「利用可能」と判定される。
 export function isServiceAvailable(serviceId: string): boolean {
   const service = getServiceById(serviceId)
-  return service?.status === 'active' || service?.status === 'beta'
+  if (!service || RETIRED_SERVICE_IDS.has(service.id)) return false
+  return service.status === 'active' || service.status === 'beta'
 }
 
 // 1日の使用上限を取得
