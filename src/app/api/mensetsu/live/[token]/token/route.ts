@@ -104,11 +104,12 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
               // 応募者の発話を文字起こしして字幕・逐語ログに使う（F1-6, F4-1）
               transcription: { model: 'whisper-1', language: 'ja' },
               // サーバVAD: 応募者が話し終わったら面接官の番にする
-              // ⚠️ interrupt_response は false。true だと応募者の相づちや物音で
-              //    面接官の発話が中断され、中断された応答は途中から再開できないため
-              //    次の応答で**質問を最初から言い直す**。「勝手に質問が繰り返される」
-              //    「話している途中で次に進む」の直接の原因だった（2026-08-31）。
-              //    クライアント側でも面接官の発話中はマイクを閉じており、二重に防ぐ。
+              // ⚠️ interrupt_response は true に戻した（2026-08-31）。
+              //    「質問が最初から言い直される」対策として false にしたところ、
+              //    面接官が一切喋らなくなる事象が本番で発生したため差し戻し。
+              //    OpenAI側は false を200で受け付ける（検証済み）ので設定拒否ではなく、
+              //    応答の生成が進まなくなる別の要因がある。原因が特定できるまで戻さないこと。
+              //    言い直しの抑制は、下の instructions 側の指示で行う。
               // ⚠️ しきい値が高いのは、生活音・キーボード・同席者の声を拾わないため。
               //    silence_duration も長めにして、少し考えて間が空いただけで
               //    「話し終わった」と判定されないようにしている。
@@ -118,7 +119,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
                 prefix_padding_ms: 300,
                 silence_duration_ms: 1100,
                 create_response: true,
-                interrupt_response: false,
+                interrupt_response: true,
               },
             },
             output: { voice: REALTIME_VOICE },
