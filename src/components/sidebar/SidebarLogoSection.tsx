@@ -11,6 +11,7 @@ export function SidebarLogoSection({
   showLabel,
   logoSrc,
   logoClassName = 'h-9 w-auto',
+  logoAspect,
 }: {
   icon: React.ElementType
   title: string
@@ -26,6 +27,8 @@ export function SidebarLogoSection({
    *    幅いっぱいに出したいサービスは 'w-full h-auto' を渡すこと。
    */
   logoClassName?: string
+  /** ロゴ画像の縦横比（width/height）。next/image のレイアウト計算に使う */
+  logoAspect?: { width: number; height: number }
 }) {
   return (
     <div className="px-3 sm:px-4 py-3 sm:py-4 flex items-center gap-2">
@@ -43,7 +46,14 @@ export function SidebarLogoSection({
             className="overflow-hidden min-w-0"
           >
             {logoSrc ? (
-              <NextImage src={logoSrc} alt={title} width={240} height={103} priority className={`${logoClassName} max-w-full object-contain object-left`} />
+              <NextImage
+                src={logoSrc}
+                alt={title}
+                width={logoAspect?.width ?? 240}
+                height={logoAspect?.height ?? 103}
+                priority
+                className={`${logoClassName} max-w-full object-contain object-left`}
+              />
             ) : (
               <h1 className="text-xl sm:text-lg font-black text-white tracking-tighter leading-none">{title}</h1>
             )}
