@@ -42,7 +42,10 @@ interface UseRealtimeMeetingOptions {
  * 沈黙が何ミリ秒続いたら助け舟を出すか。
  * ⚠️ 短いと考えている最中に畳みかける。長いと止まったように見える。
  */
-const SILENCE_NUDGE_MS = 15000
+// ⚠️ 短くしないこと。相手は画面のボタンを読んだり考えたりしている。
+//    15秒にしていたところ「考えている最中に勝手に進む」と実際に指摘された。
+//    商談で30秒の沈黙は珍しくない。止まって見えるより、待つ方を選ぶ。
+const SILENCE_NUDGE_MS = 45000
 
 export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = false }: UseRealtimeMeetingOptions) {
   const [state, setState] = useState<ConnState>('idle')
@@ -589,10 +592,16 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
 
       nudgeCountRef.current += 1
       lastActivityRef.current = Date.now()
+      // ⚠️ 1回目で話題を進めてはいけない。考えている最中に打ち切ることになる。
+      //    まず「お考え中でしたら」と一言添えるだけにし、
+      //    それでも無反応が続いたときに初めて次へ進む。
       const instructions =
         nudgeCountRef.current === 1
-          ? '相手から反応がありません。返事を待たずに、そのまま次の話題へ進めてください。同じ質問を繰り返さないこと。'
-          : '相手から反応が無い状態が続いています。advance_meeting を intent="next" で呼び、次のフェーズへ進めてください。'
+          ? 'しばらく相手の発言がありません。急かさず、「お考え中でしたらそのままで大丈夫です」と一言添えたうえで、'
+            + '直前の質問を別の言い方で一度だけ言い換えてください。話題を先に進めてはいけません。'
+          : nudgeCountRef.current === 2
+            ? '相手からの反応がまだありません。「もしお答えづらければ、次に進んでも大丈夫です」と伝え、返事を待ってください。'
+            : '相手から反応が無い状態が続いています。advance_meeting を intent="next" で呼び、次のフェーズへ進めてください。'
       try {
         dc.send(JSON.stringify({ type: 'response.create', response: { instructions } }))
       } catch {

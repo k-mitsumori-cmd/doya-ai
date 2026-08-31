@@ -7,6 +7,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { assertSessionUsable, loadGuestSession } from '@/lib/aishodan/session'
+import { DEFAULT_SLOTS } from '@/lib/aishodan/defaults'
 import { toScenarioConfig } from '@/lib/aishodan/public'
 import { advance } from '@/lib/aishodan/engine'
 
@@ -57,14 +58,22 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   // 次に聞く項目のワンタップ回答候補。声で答えるのが面倒な相手向けに画面へ出す。
   // ⚠️ 必須が残っていればそれを優先し、無ければ任意の未回答から拾う。
   //    埋まった項目の候補を出し続けると、同じことを二度聞いているように見える。
+  // ⚠️ シナリオは**作成時点の項目定義をDBに保存**している。
+  //    choices を後から追加しても、既存シナリオには入っていないため
+  //    ボタンが1つも出ない。保存値に無ければ既定の項目から補う。
+  const fallbackChoices = new Map(DEFAULT_SLOTS.map((d) => [d.key, d.choices || []]))
+  const choicesFor = (sl: { key: string; choices?: string[] }) =>
+    sl.choices?.length ? sl.choices : fallbackChoices.get(sl.key) || []
+
   const nextSlot =
     cfg.slots.find((sl) => sl.required && !filled.has(sl.key)) ||
     cfg.slots.find((sl) => !filled.has(sl.key))
+  const nextChoices = nextSlot ? choicesFor(nextSlot) : []
 
   return NextResponse.json({
     // 画面のワンタップ回答ボタン用
-    quick_replies: nextSlot?.choices?.length
-      ? { slotKey: nextSlot.key, label: nextSlot.label, choices: nextSlot.choices.slice(0, 5) }
+    quick_replies: nextSlot && nextChoices.length
+      ? { slotKey: nextSlot.key, label: nextSlot.label, choices: nextChoices.slice(0, 5) }
       : null,
     action: result.action,
     phase: result.phaseName,
