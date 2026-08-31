@@ -102,6 +102,12 @@ export default function AdImageTool() {
   const [scores, setScores] = useState<Scores | null>(null)
   /** 採点のたびに増やし、key に混ぜて登場演出を再生させる */
   const [feedbackSeq, setFeedbackSeq] = useState(0)
+  /** 同じサイズで何パターン作るか（1 or 3） */
+  const [variations, setVariations] = useState(1)
+  /** 自分で書いたプロンプト。空なら自動組み立て */
+  const [customPrompt, setCustomPrompt] = useState('')
+  /** 生成が完了した直後だけ出す「完成しました」 */
+  const [justFinished, setJustFinished] = useState(false)
   const [advice, setAdvice] = useState('')
   const [directives, setDirectives] = useState<RefineDirective[]>([])
   const [selectedChips, setSelectedChips] = useState<string[]>([])
@@ -237,6 +243,8 @@ export default function AdImageTool() {
           brandId,
           copy,
           placements: chosen,
+          variations,
+          customPrompt: customPrompt.trim() || undefined,
           label: draft?.label,
           appealAxis: draft?.appealAxis,
           tone: draft?.tone,
@@ -251,6 +259,8 @@ export default function AdImageTool() {
       setFailedPlacements(d.failedPlacements || [])
       setGeneration(1)
       setStep('result')
+      setJustFinished(true)
+      window.setTimeout(() => setJustFinished(false), 6000)
     } catch (e) {
       notifyError(setError, e instanceof Error ? e.message : '生成に失敗しました')
     } finally {
@@ -559,12 +569,61 @@ export default function AdImageTool() {
               </p>
             )}
 
+            {/* ⚠️ 同じサイズで見比べたいという要望。構図を変えて3枚作る。
+                 枚数の枠も3倍消費するので、その旨を明示する。 */}
+            <div className="mt-5 flex flex-wrap gap-2">
+              {[1, 3].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setVariations(n)}
+                  className={`rounded-xl border-2 px-5 py-3 text-sm font-black transition ${
+                    variations === n
+                      ? 'border-[#0066ff] bg-[#f2f6ff] text-[#0066ff]'
+                      : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  {n === 1 ? '1パターン' : '3パターン（構図違い）'}
+                </button>
+              ))}
+            </div>
+            {variations === 3 && (
+              <p className="mt-2 text-xs font-bold text-amber-700">
+                1サイズにつき3枚作ります。時間も枚数の消費も3倍になります。
+              </p>
+            )}
+
+            {/* 上級者向け: プロンプトを自分で書く */}
+            <details className="mt-4 rounded-xl bg-slate-50 p-4">
+              <summary className="cursor-pointer text-sm font-black text-slate-700">
+                プロンプトを自分で書く（上級者向け）
+              </summary>
+              <p className="mt-2 text-xs font-semibold leading-relaxed text-slate-600">
+                入力すると、こちらで組み立てているプロンプト（文字の指定・禁止事項・配置ルールを含む）を
+                <strong>完全に置き換えます</strong>。文字化けや余計な文字の混入もそのまま出るのでご注意ください。
+                空にすれば自動組み立てに戻ります。
+              </p>
+              <textarea
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                rows={8}
+                placeholder="例: Japanese web ad banner, 1:1. …（英語でも日本語でも可）"
+                className="mt-3 w-full resize-y rounded-xl border-2 border-slate-200 px-4 py-3 font-mono text-xs focus:border-[#0066ff] focus:outline-none"
+              />
+              {customPrompt.trim() && (
+                <p className="mt-2 text-xs font-black text-amber-700">
+                  自動組み立てを使わず、この内容で生成します
+                </p>
+              )}
+            </details>
+
             <button
               onClick={generate}
               disabled={generating || chosen.length === 0 || !copy.headline || !copy.cta}
               className="mt-5 w-full rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
             >
-              {generating ? '生成中...（1〜2分かかります）' : `広告画像を作る（${chosen.length}配置）`}
+              {generating
+                ? '生成中...（1〜2分かかります）'
+                : `広告画像を作る（${chosen.length}配置${variations > 1 ? ` × ${variations}パターン = ${chosen.length * variations}枚` : ''}）`}
             </button>
           </section>
         )}
@@ -599,6 +658,14 @@ export default function AdImageTool() {
 
             {/* ⚠️ 3列だと1枚320px程度にしかならず、焼き込んだ文字が読めない。
                  入稿前に文字を確認する画面なので2列までにし、押せば原寸で開くようにする。 */}
+            {justFinished && (
+              <div className="animate-ai-feedback mt-4 rounded-2xl bg-[#e6f7ee] p-5 text-center ring-2 ring-[#7ddaa8]">
+                <p className="text-2xl font-black text-[#0a6b3d]">完成しました</p>
+                <p className="mt-1 text-sm font-bold text-[#0a6b3d]">
+                  下のAIフィードバックで採点すると、直すべき点が分かります
+                </p>
+              </div>
+            )}
             <p className="mt-4 text-xs font-semibold text-slate-500">
               画像をクリックすると原寸で開きます。入稿前に文字をご確認ください。
             </p>
@@ -637,16 +704,22 @@ export default function AdImageTool() {
               <button
                 onClick={runFeedback}
                 disabled={scoring}
-                className="animate-ai-button w-full rounded-2xl px-6 py-6 text-center text-xl font-black text-white shadow-xl transition hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 sm:text-2xl"
+                /* ⚠️ 常時アニメーションだと、押した後に動いているのかが分からない。
+                     待機中は止めて落ち着かせ、処理中だけ虹色を流す。 */
+                className={`w-full rounded-2xl px-6 py-6 text-center text-xl font-black text-white shadow-xl transition hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:hover:translate-y-0 sm:text-2xl ${
+                  scoring ? 'animate-ai-button' : ''
+                }`}
                 style={{
-                  backgroundImage:
-                    'linear-gradient(90deg, #0066ff, #7f19e6, #ff1e72, #ffd400, #00e0ff, #0066ff)',
+                  backgroundImage: scoring
+                    ? 'linear-gradient(90deg, #0066ff, #7f19e6, #ff1e72, #ffd400, #00e0ff, #0066ff)'
+                    : 'linear-gradient(90deg, #0066ff, #7f19e6, #ff1e72)',
+                  opacity: scoring ? 1 : undefined,
                 }}
               >
                 {scoring ? (
                   <span className="inline-flex items-center gap-3">
                     <span className="h-5 w-5 animate-spin rounded-full border-[3px] border-white/40 border-t-white" />
-                    AIが画像を見ています…
+                    AIが画像を見ています…（20〜40秒）
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-3">

@@ -12,6 +12,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { assertQuota, ensureGuestId, getIdentity, GUEST_COOKIE, ownerWhere, requireUser } from '@/lib/adimage/access'
+import type { CompositionKey } from '@/lib/adimage/placements'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { DEFAULT_PLACEMENT_KEYS, findPlacement, groupByGenSize } from '@/lib/adimage/placements'
 import { exportToSize, generateBaked } from '@/lib/adimage/generate'
@@ -77,7 +78,9 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
 
   // ⚠️ 枚数の枠は**生成を始める前に**見る。走らせてから弾くと課金だけ発生する。
-  const requestedImages = Array.isArray(body?.placements) ? body.placements.length : 1
+  const requestedVariations = Math.max(1, Math.min(3, Number(body?.variations) || 1))
+  const requestedImages =
+    (Array.isArray(body?.placements) ? body.placements.length : 1) * requestedVariations
   const quota = await assertQuota(identity, requestedImages)
   if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 429 })
 
@@ -135,7 +138,25 @@ export async function POST(req: NextRequest) {
     ? { buffer: logoBuf, config: ((brandRow.logoConfig as LogoConfig | null) ?? DEFAULT_LOGO_CONFIG) }
     : null
 
-  const groups = groupByGenSize(placementKeys)
+  // ⚠️ 同じサイズで見比べたいという要望に応えるための「3パターン」。
+  //    構図を変えて同じサイズを複数回作る。枚数の枠もそのぶん消費する。
+  const variations = Math.max(1, Math.min(3, Number(body?.variations) || 1))
+  // 利用者が自分で書いたプロンプト（上級者向け）。空なら自動組み立て
+  const customPrompt = String(body?.customPrompt || '').slice(0, 4000)
+
+  const baseGroups = groupByGenSize(placementKeys)
+  // 3パターンは構図を変えて作る。同じ構図で回しても似た絵しか出ない
+  const VARIATION_COMPOSITIONS: CompositionKey[] = ['hero-center', 'split-left', 'vertical-stack']
+  const groups =
+    variations === 1
+      ? baseGroups
+      : baseGroups.flatMap((g) =>
+          Array.from({ length: variations }, (_, i) => ({
+            ...g,
+            genKey: `${g.genKey}#${i + 1}`,
+            composition: VARIATION_COMPOSITIONS[i % VARIATION_COMPOSITIONS.length],
+          }))
+        )
   const pathPrefix = `${identity.userId || identity.guestId}/${campaign.id}`
 
   const genPaths: Record<string, string> = {}
@@ -162,6 +183,7 @@ export async function POST(req: NextRequest) {
           placement: rep,
           composition: group.composition,
           pathPrefix,
+          customPrompt: customPrompt || undefined,
         })
         genPaths[group.genKey] = result.genPath
         if (!visualPrompt) {
