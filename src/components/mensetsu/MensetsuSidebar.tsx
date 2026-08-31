@@ -72,7 +72,7 @@ function MensetsuSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
   return (
     <>
       <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={mensetsuTheme}>
-        <SidebarLogoSection icon={UserCheck} title="ドヤ面接官" showLabel={showLabel} logoSrc="/mensetsu/logo.png" logoHeightClassName="h-20" />
+        <SidebarLogoSection icon={UserCheck} title="ドヤ面接官" showLabel={showLabel} logoSrc="/mensetsu/logo.png" logoClassName="w-full h-auto" />
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <nav className="py-4 sm:py-6 px-3 space-y-1">
