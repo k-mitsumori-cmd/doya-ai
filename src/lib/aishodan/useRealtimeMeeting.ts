@@ -299,8 +299,8 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
           if (res.ok) result = await res.json()
         } catch {}
         if (Array.isArray(result?.remaining_required)) setRemainingRequired(result.remaining_required)
-      // 候補が無いフェーズ（クロージング等）では消す。前の質問の候補を残さない
-      setQuickReplies(result?.quick_replies ?? null)
+        // 候補が無いフェーズ（クロージング等）では消す。前の質問の候補を残さない
+        setQuickReplies(result?.quick_replies ?? null)
         replyToTool(callId, result)
         return
       }
@@ -601,6 +601,37 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
     }, 3000)
     return () => clearInterval(timer)
   }, [state])
+
+  // ------------------------------------------------------------------
+  // 開始直後にワンタップ回答の候補を取りに行く
+  // ------------------------------------------------------------------
+  // ⚠️ 候補は advance/record の戻り値でしか更新されず、それはAIが関数を
+  //    呼ぶまで走らない。つまり商談が始まってしばらくボタンが1つも出なかった。
+  //    intent='stay' は進行を変えないので、開始時に一度だけ問い合わせる。
+  useEffect(() => {
+    if (state !== 'live') return
+    let aborted = false
+    ;(async () => {
+      try {
+        const res = await fetch(api('advance'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, intent: 'stay' }),
+        })
+        if (!res.ok || aborted) return
+        const d = await res.json()
+        if (aborted) return
+        setQuickReplies(d?.quick_replies ?? null)
+        if (typeof d?.phase === 'string') setPhaseName(d.phase)
+        if (Array.isArray(d?.remaining_required)) setRemainingRequired(d.remaining_required)
+      } catch {
+        // 取れなくても商談は続く。AIが関数を呼んだ時点で候補が入る
+      }
+    })()
+    return () => {
+      aborted = true
+    }
+  }, [state, api, sessionId])
 
   // 経過時間
   useEffect(() => {
