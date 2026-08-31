@@ -21,8 +21,6 @@ export interface PublicSession {
   recordAudio: boolean
   retentionDays: number
   expired: boolean
-  /** 本人確認のためメールアドレスの入力が必要か。⚠️ メール自体は返さない */
-  requiresEmail: boolean
   /** 面接後に本人へフィードバックを開示する設定か */
   discloseToCandidate: boolean
 }
@@ -74,9 +72,6 @@ export function toPublicSession(s: LoadedSession): PublicSession {
     recordAudio: s.organization.recordAudio,
     retentionDays: s.organization.retentionDays,
     expired: s.expiresAt.getTime() < Date.now(),
-    // ⚠️ 「入力が必要か」という真偽値だけ返す。登録されたメールそのものは返さない
-    //    （URLを拾った第三者に応募者のメールを教えてしまう）
-    requiresEmail: !!s.candidateEmail,
     discloseToCandidate: s.organization.discloseToCandidate,
   }
 }

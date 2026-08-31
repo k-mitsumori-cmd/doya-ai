@@ -26,7 +26,6 @@ interface PublicSession {
   retentionDays: number
   expired: boolean
   /** 本人確認のためメールアドレスの入力が必要か（メール自体はサーバから返らない） */
-  requiresEmail: boolean
   discloseToCandidate: boolean
 }
 
@@ -62,7 +61,6 @@ export default function MensetsuLivePage() {
   const [message, setMessage] = useState<string | null>(null)
   const [agreed, setAgreed] = useState(false)
   const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
   /** 面接後のフィードバック開示（組織設定で有効な場合のみ） */
   const [feedback, setFeedback] = useState<{ ready: boolean; text?: string } | null>(null)
   const [showCaptions, setShowCaptions] = useState(true)
@@ -192,7 +190,7 @@ export default function MensetsuLivePage() {
       const res = await fetch(`/api/mensetsu/live/${token}/consent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agreed: true, candidateName: name, candidateEmail: email }),
+        body: JSON.stringify({ agreed: true, candidateName: name }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -356,31 +354,6 @@ export default function MensetsuLivePage() {
               />
             </div>
 
-            {/* ⚠️ 担当者がメールを紐付けている面接だけ本人確認を求める。
-                 URLが転送されても、ご本人以外は先へ進めない（F5-2） */}
-            {session.requiresEmail && (
-              <div className="mt-4">
-                {/* ⚠️ 「ご案内メールを受け取ったアドレス」と書かないこと。
-                     ご案内メールの送信は廃止しており、応募者はメールを受け取っていない。
-                     ご応募時にお使いのアドレス、と案内する。 */}
-                <label className="block text-xs font-black text-[#0a0f3c]">
-                  ご応募の際にお使いのメールアドレス
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  autoComplete="email"
-                  className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold text-[#0a0f3c] outline-none focus:border-[#0066ff]"
-                />
-                <p className="mt-1.5 text-xs font-semibold leading-relaxed text-[#8a94ad]">
-                  ご本人の確認のために入力をお願いしています。
-                  ご不明な場合は、面接URLをお送りした採用ご担当者にお問い合わせください。
-                </p>
-              </div>
-            )}
-
             <label className="mt-5 flex cursor-pointer items-start gap-3">
               <input
                 type="checkbox"
@@ -397,7 +370,7 @@ export default function MensetsuLivePage() {
 
             <button
               onClick={submitConsent}
-              disabled={!agreed || submitting || (session.requiresEmail && !email.trim())}
+              disabled={!agreed || submitting}
               className="mt-6 w-full rounded-lg bg-[#0066ff] px-6 py-3.5 text-sm font-black text-white transition disabled:cursor-not-allowed disabled:bg-[#b9cdf5]"
             >
               {submitting ? '処理中…' : '同意して次へ'}

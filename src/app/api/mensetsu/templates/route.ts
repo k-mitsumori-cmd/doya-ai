@@ -22,6 +22,11 @@ export async function GET(req: NextRequest) {
     orderBy: { updatedAt: 'desc' },
     include: {
       _count: { select: { questions: true, criteria: true, sessions: true } },
+      // ⚠️ 一覧でも質問と評価軸の中身を返す。件数だけだと「編集」を開かないと
+      //    何を聞く面接なのか分からず、送る前に内容を確かめられなかった。
+      //    本文は長いので、一覧では text と評価軸名だけに絞って返す。
+      questions: { orderBy: { ord: 'asc' }, select: { id: true, ord: true, text: true, targetMin: true } },
+      criteria: { orderBy: { ord: 'asc' }, select: { id: true, name: true } },
     },
   })
   return NextResponse.json({ templates })

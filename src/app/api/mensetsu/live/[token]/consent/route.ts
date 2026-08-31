@@ -25,39 +25,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   const name = String(body?.candidateName || '').trim()
 
-  // ------------------------------------------------------------------
-  // 受験者メールの照合（F5-2）
-  // ------------------------------------------------------------------
-  // ⚠️ ワンタイムURLは転送・盗み見で本人以外の手に渡りうる。担当者がメールを
-  //    紐付けている面接では、本人しか知り得ない情報で一致を確認する。
-  //    メールが未登録の面接（担当者が任意項目を空にした場合）は照合しない。
-  if (s.candidateEmail) {
-    // ⚠️ 総当たり対策。上限を超えたら以後は受け付けない
-    if (s.consentAttempts >= 10) {
-      return NextResponse.json(
-        { error: '確認の回数が上限に達しました。採用ご担当者にお問い合わせください。' },
-        { status: 429 }
-      )
-    }
-    const input = String(body?.candidateEmail || '').trim().toLowerCase()
-    if (input !== s.candidateEmail.trim().toLowerCase()) {
-      await prisma.mensetsuSession.update({
-        where: { id: s.id },
-        data: { consentAttempts: { increment: 1 } },
-      })
-      // ⚠️ 登録されているメールをエラー文に出さないこと（第三者に教えることになる）
-      // ⚠️ 「ご案内をお送りした」と書かないこと。ご案内メールの送信は廃止しており、
-      //    応募者はメールを受け取っていない（存在しないメールを探させてしまう）。
-      return NextResponse.json(
-        {
-          error:
-            'ご応募の際のメールアドレスと一致しません。ご確認のうえ、'
-            + 'ご不明な場合は面接URLをお送りした採用ご担当者にお問い合わせください。',
-        },
-        { status: 403 }
-      )
-    }
-  }
+  // ⚠️ 以前はここで「ご本人確認用メール」の照合を行っていたが、
+  //    採用担当者と応募者の双方にとって手順が分かりにくく、
+  //    2026-08-31 に機能ごと廃止した（DBの列は復帰の余地のため残してある）。
 
   const updated = await prisma.mensetsuSession.update({
     where: { id: s.id },

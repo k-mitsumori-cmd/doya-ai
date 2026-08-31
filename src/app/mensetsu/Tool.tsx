@@ -37,12 +37,14 @@ interface Template {
   durationMin: number
   status: string
   _count?: { questions: number; criteria: number; sessions: number }
+  /** 一覧で中身を見せるための質問と評価軸（編集を開かなくても確かめられるように） */
+  questions?: Array<{ id: string; ord: number; text: string; targetMin: number }>
+  criteria?: Array<{ id: string; name: string }>
 }
 interface SessionRow {
   id: string
   token: string
   candidateName: string | null
-  candidateEmail: string | null
   status: string
   verdict: string | null
   expiresAt: string
@@ -84,14 +86,11 @@ export default function MensetsuTool() {
   const [templates, setTemplates] = useState<Template[]>([])
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [issuedUrl, setIssuedUrl] = useState<string | null>(null)
+  /** 発行直後のコピーボタンを押したことが分かるようにする */
+  const [issuedCopied, setIssuedCopied] = useState(false)
   const [candidateName, setCandidateName] = useState('')
-  const [candidateEmail, setCandidateEmail] = useState('')
   /** 一覧から「URLをコピー」した面接。押したことが分かるように印を出す */
   const [copiedId, setCopiedId] = useState<string | null>(null)
-  /** ご本人確認用メールの修正パネルを開いている面接 */
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editingEmail, setEditingEmail] = useState('')
-  const [editResult, setEditResult] = useState<{ id: string; ok: boolean; message: string } | null>(null)
   const [selectedTemplate, setSelectedTemplate] = useState('')
   /** 未ログイン。⚠️ 組織が無いのか、そもそもログインしていないのかを区別する。
    *  区別しないと、未ログインの人に「組織を作成」フォームを見せてしまい、
@@ -221,42 +220,6 @@ export default function MensetsuTool() {
     }
   }
 
-  /** ご本人確認用メールの修正。打ち間違いのままだと応募者が先へ進めなくなる */
-  const updateCandidateEmail = async (s: SessionRow) => {
-    setBusy(`email-${s.id}`)
-    setEditResult(null)
-    try {
-      const res = await fetch(`/api/mensetsu/sessions/${s.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ candidateEmail: editingEmail.trim() }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setEditResult({ id: s.id, ok: false, message: data?.error || '変更できませんでした' })
-        return
-      }
-      const base = data.session.candidateEmail
-        ? `ご本人確認を ${data.session.candidateEmail} に変更しました。`
-        : 'ご本人確認を行わない設定にしました。'
-      // 同意済みの面接は同意からやり直しになる。担当者が知らないと
-      // 「応募者がもう一度同意画面から始めている」ことに驚く
-      setEditResult({
-        id: s.id,
-        ok: true,
-        message: data.reconsentRequired
-          ? `${base} 同意済みでしたので、応募者にはもう一度同意画面からお進みいただきます。`
-          : base,
-      })
-      // ⚠️ ここで setEditingId(null) しないこと。成功メッセージはこのパネルの
-      //    中に描画しているため、閉じると一瞬も表示されず、
-      //    打ち間違いを直せたのかどうか担当者に分からない（失敗時だけ見える状態だった）。
-      await load()
-    } finally {
-      setBusy(null)
-    }
-  }
-
   const issue = async () => {
     if (!selectedTemplate) return
     setBusy('issue')
@@ -268,7 +231,6 @@ export default function MensetsuTool() {
         body: JSON.stringify({
           templateId: selectedTemplate,
           candidateName: candidateName.trim() || undefined,
-          candidateEmail: candidateEmail.trim() || undefined,
         }),
       })
       const data = await res.json()
@@ -278,7 +240,6 @@ export default function MensetsuTool() {
       }
       setIssuedUrl(data.url)
       setCandidateName('')
-      setCandidateEmail('')
       await load()
     } finally {
       setBusy(null)
@@ -519,113 +480,161 @@ export default function MensetsuTool() {
               </button>
 
               {templates.length > 0 && (
-                <ul className="mt-5 divide-y divide-[#eef3ff]">
+                <ul className="mt-5 space-y-3">
                   {templates.map((t) => (
-                    <li key={t.id} className="flex items-center justify-between py-3">
-                      <div>
-                        <p className="text-sm font-black text-[#0a0f3c]">{t.name}</p>
-                        <p className="text-xs font-semibold text-[#425071]">
-                          質問{t._count?.questions ?? 0}問 / 評価軸{t._count?.criteria ?? 0}個 / 面接{t._count?.sessions ?? 0}件
-                        </p>
+                    <li key={t.id} className="rounded-xl bg-[#f7faff] p-4 ring-1 ring-[#e3edff]">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-base font-black text-[#0a0f3c]">{t.name}</p>
+                          <p className="text-xs font-semibold text-[#425071]">
+                            {t.durationMin}分 / 質問{t._count?.questions ?? 0}問 / 評価軸{t._count?.criteria ?? 0}個 / 面接{t._count?.sessions ?? 0}件
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {/* ⚠️ これは状態の表示であって押せるものではない。隣の「編集」と
+                               同じ角丸の枠にすると、押せるボタンに見えてしまう。 */}
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ${
+                              t.status === 'draft'
+                                ? 'bg-amber-50 text-amber-800 ring-amber-200'
+                                : t.status === 'active'
+                                  ? 'bg-emerald-50 text-emerald-800 ring-emerald-200'
+                                  : 'bg-slate-100 text-slate-500 ring-slate-200'
+                            }`}
+                          >
+                            {t.status === 'draft' ? '下書き' : t.status === 'active' ? '運用中' : '保管'}
+                          </span>
+                          <Link
+                            href={`/mensetsu/templates/${t.id}`}
+                            className="rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 text-xs font-black text-[#0066ff]"
+                          >
+                            編集
+                          </Link>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        {/* ⚠️ これは状態の表示であって押せるものではない。隣の「編集」と
-                             同じ角丸の枠にすると、押せるボタンに見えてしまう。 */}
-                        <span
-                          className={`rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ${
-                            t.status === 'draft'
-                              ? 'bg-amber-50 text-amber-800 ring-amber-200'
-                              : t.status === 'active'
-                                ? 'bg-emerald-50 text-emerald-800 ring-emerald-200'
-                                : 'bg-slate-100 text-slate-500 ring-slate-200'
-                          }`}
-                        >
-                          {t.status === 'draft' ? '下書き' : t.status === 'active' ? '運用中' : '保管'}
-                        </span>
-                        <Link
-                          href={`/mensetsu/templates/${t.id}`}
-                          className="rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]"
-                        >
-                          編集
-                        </Link>
-                      </div>
+
+                      {/* ⚠️ 質問の中身は「編集」を開かないと見えなかった。
+                           送る前に何を聞く面接なのか確かめられないのは危ないので、
+                           ここに全問そのまま出す（折りたたまない）。 */}
+                      {t.questions && t.questions.length > 0 && (
+                        <ol className="mt-4 space-y-2 border-t border-[#e3edff] pt-4">
+                          {t.questions.map((q, qi) => (
+                            <li key={q.id} className="flex gap-2.5">
+                              <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#0066ff] text-[11px] font-black text-white">
+                                {qi + 1}
+                              </span>
+                              <p className="text-sm font-semibold leading-relaxed text-[#0a0f3c]">
+                                {q.text}
+                                <span className="ml-2 text-xs font-bold text-[#8a94ad]">約{q.targetMin}分</span>
+                              </p>
+                            </li>
+                          ))}
+                        </ol>
+                      )}
+
+                      {t.criteria && t.criteria.length > 0 && (
+                        <div className="mt-4 border-t border-[#e3edff] pt-3">
+                          <p className="text-xs font-black text-[#425071]">評価軸</p>
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {t.criteria.map((c) => (
+                              <span
+                                key={c.id}
+                                className="rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-[#425071] ring-1 ring-[#d8e7ff]"
+                              >
+                                {c.name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>
               )}
             </section>
 
-            {/* --- 3. 面接URL発行 --- */}
-            <section className="mt-6 rounded-lg bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0066ff] text-xs font-black text-white">3</span>
-                <h2 className="text-base font-black text-[#0a0f3c]">応募者に面接URLを送る</h2>
+            {/* --- 3. 面接URL発行 ---
+                 ⚠️ ここまで来れば担当者の作業は完了。手順の終点だと分かるよう、
+                    他のセクションより大きく・強く見せる（枠・余白・文字とも） */}
+            <section className="mt-8 rounded-2xl bg-white p-6 shadow-md ring-2 ring-[#0066ff] sm:p-9">
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#0066ff] text-base font-black text-white">3</span>
+                <div>
+                  <h2 className="text-xl font-black text-[#0a0f3c] sm:text-2xl">応募者に面接URLを送る</h2>
+                  <p className="mt-0.5 text-sm font-bold text-[#0066ff]">URLを送れたら、ここで完了です</p>
+                </div>
               </div>
               {templates.length === 0 ? (
                 <p className="mt-3 text-sm font-semibold text-[#425071]">先に質問セットを作成してください。</p>
               ) : (
                 <>
-                  <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                    <select
-                      value={selectedTemplate}
-                      onChange={(e) => setSelectedTemplate(e.target.value)}
-                      className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
-                    >
-                      {templates.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name}
-                          {t.status === 'draft' ? '（下書き）' : t.status === 'archived' ? '（保管）' : ''}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      value={candidateName}
-                      onChange={(e) => setCandidateName(e.target.value)}
-                      placeholder="応募者名（必須）"
-                      className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
-                    />
-                    <input
-                      type="email"
-                      value={candidateEmail}
-                      onChange={(e) => setCandidateEmail(e.target.value)}
-                      placeholder="ご本人確認用メール（任意・送信しません）"
-                      className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
-                    />
-                    <button
-                      onClick={issue}
-                      // ⚠️ 応募者名は必須。空のまま発行すると「誰の面接か分からないURL」ができ、
-                      //    あとで候補者を比較できなくなる。
-                      disabled={busy === 'issue' || !candidateName.trim()}
-                      className="rounded-lg bg-[#0066ff] px-6 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
-                    >
-                      {busy === 'issue' ? '発行中…' : 'URLを発行'}
-                    </button>
+                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-black text-[#425071]">質問セット</span>
+                      <select
+                        value={selectedTemplate}
+                        onChange={(e) => setSelectedTemplate(e.target.value)}
+                        className="w-full rounded-xl border-2 border-slate-200 px-4 py-3.5 text-base font-semibold outline-none focus:border-[#0066ff]"
+                      >
+                        {templates.map((t) => (
+                          <option key={t.id} value={t.id}>
+                            {t.name}
+                            {t.status === 'draft' ? '（下書き）' : t.status === 'archived' ? '（保管）' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="block">
+                      <span className="mb-1.5 block text-xs font-black text-[#425071]">応募者名（必須）</span>
+                      <input
+                        value={candidateName}
+                        onChange={(e) => setCandidateName(e.target.value)}
+                        placeholder="山田 太郎"
+                        className="w-full rounded-xl border-2 border-slate-200 px-4 py-3.5 text-base font-semibold outline-none focus:border-[#0066ff]"
+                      />
+                    </label>
                   </div>
+                  {/* ⚠️ 横一列の大きなボタン。ここが手順の終点なので、
+                       他の操作と同じ大きさにしないこと */}
+                  <button
+                    onClick={issue}
+                    // ⚠️ 応募者名は必須。空のまま発行すると「誰の面接か分からないURL」ができ、
+                    //    あとで候補者を比較できなくなる。
+                    disabled={busy === 'issue' || !candidateName.trim()}
+                    className="mt-5 w-full rounded-xl bg-[#0066ff] px-6 py-5 text-lg font-black text-white shadow-lg transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:bg-slate-200 sm:text-xl"
+                  >
+                    {busy === 'issue' ? '発行中…' : '面接URLを発行する'}
+                  </button>
                   {templates.find((t) => t.id === selectedTemplate)?.status === 'draft' && (
                     <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
                       下書きの質問セットを選んでいます。このまま発行すると、応募者は未完成の質問で面接を受けます。
                     </p>
                   )}
-                  {/* ⚠️ メールアドレスは送信に使わない。開始前のご本人確認にだけ使う。
-                       入れておくと、URLが転送されてもご本人以外は先へ進めない。
-                       空欄なら確認を行わず、URLを開いた方がそのまま受験できる。 */}
-                  <p className="mt-3 text-xs font-semibold leading-relaxed text-[#8a94ad]">
-                    {candidateEmail.trim()
-                      ? 'このメールアドレスに送信は行いません。面接の開始前に、ご本人確認として同じアドレスの入力をお願いする照合先になります。'
-                      : 'メールアドレスを入れておくと、面接の開始前にご本人確認が有効になります。空欄のままでも面接は受けられます。'}
-                  </p>
                   {issuedUrl && (
-                    <div className="mt-4 rounded-lg bg-[#f7faff] p-4">
-                      <p className="text-xs font-black text-[#0066ff]">発行された面接URL</p>
-                      <p className="mt-1 break-all text-sm font-bold text-[#0a0f3c]">{issuedUrl}</p>
+                    <div className="mt-6 rounded-2xl bg-[#eaf3ff] p-6 ring-2 ring-[#0066ff] sm:p-7">
+                      <p className="text-lg font-black text-[#0a0f3c] sm:text-xl">
+                        面接URLを発行しました
+                      </p>
+                      <p className="mt-1 text-base font-black text-[#0066ff] sm:text-lg">
+                        下のURLをコピーして、応募者にお送りください
+                      </p>
+                      <p className="mt-4 break-all rounded-xl bg-white px-4 py-4 text-base font-bold text-[#0a0f3c] ring-1 ring-[#d8e7ff]">
+                        {issuedUrl}
+                      </p>
+                      {/* ⚠️ ここが最後の操作。小さいボタンにすると見落とされる */}
                       <button
-                        onClick={() => navigator.clipboard?.writeText(issuedUrl)}
-                        className="mt-3 rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#0066ff]"
+                        onClick={() => {
+                          navigator.clipboard?.writeText(issuedUrl)
+                          setIssuedCopied(true)
+                          window.setTimeout(() => setIssuedCopied(false), 2000)
+                        }}
+                        className="mt-4 w-full rounded-xl bg-[#0066ff] px-6 py-4 text-base font-black text-white shadow-lg transition hover:bg-[#0052cc] sm:text-lg"
                       >
-                        コピー
+                        {issuedCopied ? 'コピーしました' : 'URLをコピーする'}
                       </button>
-                      <p className="mt-3 text-xs font-semibold leading-relaxed text-[#8a94ad]">
-                        このURLを応募者にお渡しください。面接一覧からいつでもコピーできます。
+                      <p className="mt-4 text-sm font-semibold leading-relaxed text-[#425071]">
+                        応募者はこのURLを開くだけで面接を受けられます。ログインは不要です。
+                        URLは下の面接一覧からいつでもコピーし直せます。
                       </p>
                     </div>
                   )}
@@ -676,17 +685,6 @@ export default function MensetsuTool() {
                             >
                               {copiedId === s.id ? 'コピーしました' : 'URLをコピー'}
                             </button>
-                            <button
-                              onClick={() => {
-                                setEditingId(editingId === s.id ? null : s.id)
-                                setEditingEmail(s.candidateEmail || '')
-                                setEditResult(null)
-                              }}
-                              className="rounded-lg border border-[#d8e7ff] px-4 py-2 text-xs font-black text-[#425071]"
-                              title="開始前のご本人確認に使うメールアドレスを設定・修正します"
-                            >
-                              ご本人確認
-                            </button>
                           </>
                         )}
                         {s.status === 'aborted' && (
@@ -726,42 +724,6 @@ export default function MensetsuTool() {
                         </Link>
                       </div>
 
-                      {editingId === s.id && (
-                        <div className="w-full rounded-lg bg-[#f7faff] p-4">
-                          <label className="block text-xs font-black text-[#0a0f3c]">
-                            ご本人確認に使うメールアドレス
-                          </label>
-                          <p className="mt-1 text-xs font-semibold leading-relaxed text-[#8a94ad]">
-                            このアドレスに送信は行いません。面接の開始前に応募者へ入力をお願いし、
-                            一致した場合のみ先へ進めます。空にすると確認を行いません。
-                          </p>
-                          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                            <input
-                              type="email"
-                              value={editingEmail}
-                              onChange={(e) => setEditingEmail(e.target.value)}
-                              placeholder="candidate@example.com"
-                              className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
-                            />
-                            <button
-                              onClick={() => void updateCandidateEmail(s)}
-                              disabled={busy === `email-${s.id}`}
-                              className="rounded-lg bg-[#0066ff] px-6 py-2.5 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
-                            >
-                              {busy === `email-${s.id}` ? '保存中…' : '保存'}
-                            </button>
-                          </div>
-                          {editResult?.id === s.id && (
-                            <p
-                              className={`mt-2 text-xs font-bold ${
-                                editResult.ok ? 'text-[#137333]' : 'text-[#a06800]'
-                              }`}
-                            >
-                              {editResult.message}
-                            </p>
-                          )}
-                        </div>
-                      )}
                     </li>
                   ))}
                 </ul>
