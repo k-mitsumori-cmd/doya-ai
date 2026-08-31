@@ -240,21 +240,18 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<Uint8Array
     throw new Error(`puppeteer 初期化失敗: ${err instanceof Error ? err.message : String(err)}`)
   }
 
-  // ⚠️ Lambda用Chromiumには日本語フォントが1つも無い。
-  //    登録しないと、CSSで指定していても日本語が**すべて空白**で出力される
-  //    （ローカルのmacOSはヒラギノがあるので再現せず、本番でだけ壊れる）。
-  //    登録すると使ったグリフがPDFへサブセット埋め込みされるので、
-  //    閲覧側の端末にフォントが無くても正しく表示される。
-  await registerJapaneseFonts(chromium, 'quote/pdf')
-
   const html = renderQuoteHtml(input)
 
   let browser: any
   try {
+    // ⚠️ 先に executablePath を解決する。ここで fonts.tar.br が /tmp/fonts へ
+    //    展開されるので、その後に日本語フォントを置かないと消えうる。
+    const executablePath = await chromium.executablePath()
+    await registerJapaneseFonts(chromium, 'quote/pdf')
     browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: { width: 1240, height: 1754 },
-      executablePath: await chromium.executablePath(),
+      executablePath,
       headless: chromium.headless,
     })
     const page = await browser.newPage()

@@ -427,14 +427,14 @@ export async function generatePdfBuffer(input: PdfInput): Promise<Uint8Array> {
     throw new Error(`puppeteer 初期化失敗: ${err instanceof Error ? err.message : String(err)}`)
   }
 
-  // ⚠️ Lambda用Chromiumには日本語フォントが無い。登録しないと日本語が全て空白になる
-  await registerJapaneseFonts(chromium, 'adsim/pdf')
-
   const html = renderHtml(input)
 
   let browser: any
   try {
+    // ⚠️ 先に executablePath を解決する。ここで fonts.tar.br が /tmp/fonts へ
+    //    展開されるので、その後に日本語フォントを置かないと消えうる。
     const executablePath = await chromium.executablePath()
+    await registerJapaneseFonts(chromium, 'adsim/pdf')
     browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: { width: 1240, height: 1754 }, // A4 @ 150dpi
