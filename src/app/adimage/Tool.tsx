@@ -54,6 +54,12 @@ export default function AdImageTool() {
   const [error, setError] = useState('')
 
   // 入力
+  /**
+   * 入力したサービスURL。
+   * ⚠️ 履歴画面へ移動して戻るとコンポーネントが作り直され、入力が消えていた。
+   *    打ち直させるのは無駄なので sessionStorage に持たせる。
+   *    タブを閉じれば消える（localStorage にはしない。他人の端末に残さない）。
+   */
   const [url, setUrl] = useState('')
   const [appeal, setAppeal] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
@@ -74,6 +80,11 @@ export default function AdImageTool() {
   const [placements, setPlacements] = useState<PlacementRow[]>([])
   const [chips, setChips] = useState<Array<{ key: string; label: string }>>([])
   const [unsupported, setUnsupported] = useState<Array<{ name: string; size: string; ratio: string }>>([])
+  /**
+   * 出力する配置。
+   * ⚠️ 既定は1枚だけ。多く選ぶほど生成に時間がかかるので、
+   *    increase は利用者が明示的に選んだぶんだけにする。
+   */
   const [chosen, setChosen] = useState<string[]>([])
 
   // 生成結果
@@ -99,7 +110,9 @@ export default function AdImageTool() {
       .then((r) => r.json())
       .then((d) => {
         setPlacements(d.placements || [])
-        setChosen(d.defaults || [])
+        // ⚠️ 既定は1枚。サーバの defaults をそのまま入れると複数枚が最初から
+        //    選ばれた状態になり、初回から生成が長くかかる
+        setChosen((d.defaults || []).slice(0, 1))
         setChips(d.chips || [])
         setUnsupported(d.unsupported || [])
       })
@@ -173,8 +186,37 @@ export default function AdImageTool() {
     if (drafts[i]) setCopy(drafts[i].copy)
   }
 
+  const URL_KEY = 'adimage:url'
+  // 復元は初回だけ
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem(URL_KEY)
+      if (saved) setUrl(saved)
+    } catch {
+      // プライベートモード等で読めなくても動作に影響は無い
+    }
+  }, [])
+  useEffect(() => {
+    try {
+      if (url) sessionStorage.setItem(URL_KEY, url)
+      else sessionStorage.removeItem(URL_KEY)
+    } catch {
+      /* ignore */
+    }
+  }, [url])
+
+  /** 一度に出せる配置の上限。⚠️ 増やすと maxDuration(300秒) に収まらなくなる */
+  const MAX_PLACEMENTS = 10
+
   function togglePlacement(key: string) {
-    setChosen((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]))
+    setChosen((prev) => {
+      if (prev.includes(key)) return prev.filter((k) => k !== key)
+      if (prev.length >= MAX_PLACEMENTS) {
+        notifyError(setError, `一度に選べるのは${MAX_PLACEMENTS}枚までです`)
+        return prev
+      }
+      return [...prev, key]
+    })
   }
 
   const generate = useCallback(async () => {
@@ -300,7 +342,7 @@ export default function AdImageTool() {
         tips={['Tip: 気になる点をチップで選ぶほど狙いが伝わります', 'Tip: 改善のたびに履歴として残ります']}
       />
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <div>
             <h1 className="text-lg font-bold text-slate-900">ドヤ広告画像AI</h1>
             <p className="text-xs text-slate-500 font-semibold">サービスURLから、媒体ごとにサイズの揃った広告画像を作ります。</p>
@@ -316,7 +358,7 @@ export default function AdImageTool() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl space-y-6 px-4 py-6">
+      <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
 
         {/* ⚠️ 2〜4のセクションは入力が進むまで描画されない。この行が無いと
@@ -474,7 +516,13 @@ export default function AdImageTool() {
           <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <h2 className="text-base font-bold text-slate-900">3. 出力する配置を選ぶ</h2>
             <p className="mt-1 text-sm text-slate-600 font-semibold">
-              同じ比率の配置はまとめて作られるため、多く選んでも生成回数はあまり増えません。
+              同じ比率の配置はまとめて作られます。
+            </p>
+            <p className="mt-2 rounded-lg bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-900 ring-1 ring-amber-200">
+              ⚠️ 枚数が多ければ多いほど時間がかかります（1枚あたり40〜90秒）。まずは1枚でお試しください。
+            </p>
+            <p className="mt-2 text-xs font-bold text-slate-500">
+              選択中 {chosen.length} / {MAX_PLACEMENTS}枚（上限）
             </p>
             <div className="mt-4 space-y-4">
               {Object.entries(byMedia).map(([media, rows]) => (
@@ -545,12 +593,19 @@ export default function AdImageTool() {
               </p>
             )}
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {/* ⚠️ 3列だと1枚320px程度にしかならず、焼き込んだ文字が読めない。
+                 入稿前に文字を確認する画面なので2列までにし、押せば原寸で開くようにする。 */}
+            <p className="mt-4 text-xs font-semibold text-slate-500">
+              画像をクリックすると原寸で開きます。入稿前に文字をご確認ください。
+            </p>
+            <div className="mt-2 grid gap-5 sm:grid-cols-2">
               {creatives.map((c) => (
                 <div key={c.id} className="overflow-hidden rounded-xl border border-slate-200">
                   {c.url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={c.url} alt={c.placementName} className="w-full bg-slate-100 object-contain" />
+                    <a href={c.url} target="_blank" rel="noopener noreferrer" title="クリックで原寸表示">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={c.url} alt={c.placementName} className="w-full cursor-zoom-in bg-slate-100 object-contain" />
+                    </a>
                   ) : (
                     <div className="flex h-40 items-center justify-center bg-slate-100 text-xs text-slate-400 font-semibold">
                       読み込めませんでした

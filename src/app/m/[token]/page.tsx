@@ -103,6 +103,8 @@ export default function AishodanRoomPage() {
   const [micOn, setMicOn] = useState(true)
   const [showText, setShowText] = useState(false)
   const [draft, setDraft] = useState('')
+  /** 直近でワンタップ送信した選択肢。二度押しを防ぐ */
+  const [sentQuick, setSentQuick] = useState<string | null>(null)
   const [sheet, setSheet] = useState<'agenda' | 'log' | null>(null)
   const startedRef = useRef(false)
 
@@ -204,6 +206,13 @@ export default function AishodanRoomPage() {
   }, [micOn, rt])
 
   // ---------------- 画面 ----------------
+
+  // ⚠️ 質問が切り替わったら送信済みの印を消す。
+  //    消さないと、次の質問で同じ文言の選択肢が押せないままになる。
+  const quickSlotKey = rt.quickReplies?.slotKey ?? null
+  useEffect(() => {
+    setSentQuick(null)
+  }, [quickSlotKey])
 
   if (step === 'loading') {
     return (
@@ -510,6 +519,33 @@ export default function AishodanRoomPage() {
           </>
         )}
       </section>
+
+      {/* ワンタップ回答。
+           ⚠️ 声で答えるのが面倒な相手のための入口なので、テキスト欄を開いていなくても出す。
+              押したら即送信し、選び直しの余地は残さない（商談中に迷わせない）。 */}
+      {rt.state === 'live' && rt.quickReplies && rt.quickReplies.choices.length > 0 && (
+        <div className="mx-auto w-full max-w-3xl shrink-0 px-4 pb-2">
+          <p className="mb-1.5 text-[11px] font-black text-[#8a94ad]">
+            {rt.quickReplies.label}：タップで答えられます
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {rt.quickReplies.choices.map((c) => (
+              <button
+                key={c}
+                type="button"
+                onClick={() => {
+                  // 送信できたら候補を消す。同じ答えを二度押させない
+                  if (rt.sendText(c)) setSentQuick(c)
+                }}
+                disabled={sentQuick === c}
+                className="w-full rounded-xl border-2 border-[#d8e7ff] bg-white px-4 py-3 text-left text-sm font-bold text-[#0a0f3c] transition hover:border-[#0066ff] hover:bg-[#f7faff] disabled:opacity-40"
+              >
+                {sentQuick === c ? `${c}（送信しました）` : c}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {showText && (
         <form

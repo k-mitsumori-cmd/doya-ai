@@ -54,7 +54,18 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     })
   }
 
+  // 次に聞く項目のワンタップ回答候補。声で答えるのが面倒な相手向けに画面へ出す。
+  // ⚠️ 必須が残っていればそれを優先し、無ければ任意の未回答から拾う。
+  //    埋まった項目の候補を出し続けると、同じことを二度聞いているように見える。
+  const nextSlot =
+    cfg.slots.find((sl) => sl.required && !filled.has(sl.key)) ||
+    cfg.slots.find((sl) => !filled.has(sl.key))
+
   return NextResponse.json({
+    // 画面のワンタップ回答ボタン用
+    quick_replies: nextSlot?.choices?.length
+      ? { slotKey: nextSlot.key, label: nextSlot.label, choices: nextSlot.choices.slice(0, 5) }
+      : null,
     action: result.action,
     phase: result.phaseName,
     // クライアントが以降の発話に添えるためのキー

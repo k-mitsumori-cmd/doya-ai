@@ -61,6 +61,11 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
    *     プレースホルダに戻る（実機で確認）。AI発話だけを別に保持する。 */
   const [lastAiText, setLastAiText] = useState<string | null>(null)
   const [remainingRequired, setRemainingRequired] = useState<string[]>([])
+  /**
+   * いま聞かれている項目のワンタップ回答候補。
+   * ⚠️ 声で答えるのが面倒な相手向け。押すとそのまま発言として送る。
+   */
+  const [quickReplies, setQuickReplies] = useState<{ slotKey: string; label: string; choices: string[] } | null>(null)
 
   const pcRef = useRef<RTCPeerConnection | null>(null)
   const dcRef = useRef<RTCDataChannel | null>(null)
@@ -282,6 +287,8 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
           if (res.ok) result = await res.json()
         } catch {}
         if (Array.isArray(result?.remaining_required)) setRemainingRequired(result.remaining_required)
+      // 候補が無いフェーズ（クロージング等）では消す。前の質問の候補を残さない
+      setQuickReplies(result?.quick_replies ?? null)
         replyToTool(callId, result)
         return
       }
@@ -314,6 +321,8 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
       //    それが狙い（遷移の引き金になった発話は、それが起きた側のフェーズに数える）。
       if (typeof result?.phase_key === 'string') phaseKeyRef.current = result.phase_key
       if (Array.isArray(result?.remaining_required)) setRemainingRequired(result.remaining_required)
+      // 候補が無いフェーズ（クロージング等）では消す。前の質問の候補を残さない
+      setQuickReplies(result?.quick_replies ?? null)
 
       replyToTool(callId, result)
 
@@ -589,7 +598,7 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
   }, [api, cleanup, sessionId])
 
   return {
-    state, error, lines, level, speaking, listening,
+    state, error, lines, level, speaking, listening, quickReplies,
     elapsedSec, durationMin, phaseName, remainingRequired, lastAiText,
     start, end, sendText, setMicEnabled,
     /** 相手が話してよいターンか（AIの発話中は false） */

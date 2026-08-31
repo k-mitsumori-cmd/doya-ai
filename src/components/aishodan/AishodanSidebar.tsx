@@ -73,7 +73,7 @@ function AishodanSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
   return (
     <>
       <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={aishodanTheme}>
-        <SidebarLogoSection icon={MessagesSquare} title="ドヤAI商談" showLabel={showLabel} logoSrc="/aishodan/logo.png" />
+        <SidebarLogoSection icon={MessagesSquare} title="ドヤAI商談" showLabel={showLabel} logoSrc="/aishodan/logo-sidebar.png" logoClassName="w-full h-auto" logoAspect={{ width: 1966, height: 568 }} />
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <nav className="py-4 sm:py-6 px-3 space-y-1">

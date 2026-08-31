@@ -72,7 +72,7 @@ function AioSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapsed, 
   return (
     <>
       <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={aioTheme}>
-        <SidebarLogoSection icon={Eye} title="ドヤAIO" subtitle={orgName || orgSlug} showLabel={showLabel} logoSrc="/aio/logo.png" />
+        <SidebarLogoSection icon={Eye} title="ドヤAIO" subtitle={orgName || orgSlug} showLabel={showLabel} logoSrc="/aio/logo-sidebar.png" logoClassName="w-full h-auto" logoAspect={{ width: 1962, height: 694 }} />
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <nav className="py-4 sm:py-6 px-3 space-y-1">

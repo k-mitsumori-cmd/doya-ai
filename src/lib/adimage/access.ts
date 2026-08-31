@@ -34,6 +34,18 @@ export const ALLOW_GUEST = false
 /** 日次のコンセプト生成上限 */
 export const DAILY_CONCEPT_LIMIT: Record<AdImagePlan, number> = { GUEST: 2, FREE: 5, PRO: 40 }
 
+/**
+ * 画像枚数の上限。
+ * ⚠️ コンセプト数とは別に**枚数でも**縛る。1コンセプトから何枚でも書き出せるため、
+ *    コンセプト数だけで縛ると無料でも実質無制限に画像が作れてしまう（課金理由が無くなる）。
+ * ⚠️ PRO は1回あたり10枚の上限（MAX_PLACEMENTS_PER_RUN）で守るため、日次・月次は置かない。
+ */
+export const DAILY_IMAGE_LIMIT: Record<AdImagePlan, number | null> = { GUEST: 2, FREE: 3, PRO: null }
+export const MONTHLY_IMAGE_LIMIT: Record<AdImagePlan, number | null> = { GUEST: 5, FREE: 15, PRO: null }
+
+/** 一度の生成で出せる配置の上限。⚠️ 増やすと maxDuration(300秒) に収まらない */
+export const MAX_PLACEMENTS_PER_RUN = 10
+
 export interface AdImageIdentity {
   userId: string | null
   guestId: string | null
@@ -107,7 +119,56 @@ export async function conceptsToday(id: AdImageIdentity): Promise<number> {
   })
 }
 
-export async function assertQuota(id: AdImageIdentity): Promise<{ ok: true } | { ok: false; reason: string }> {
+/** JST 当月1日0時の UTC Date */
+export function jstStartOfMonthUtc(): Date {
+  const jst = new Date(Date.now() + 9 * 3600_000)
+  return new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), 1, 0, 0, 0) - 9 * 3600_000)
+}
+
+/** 期間内に生成した画像の枚数 */
+async function imagesSince(id: AdImageIdentity, since: Date): Promise<number> {
+  const where = ownerWhere(id)
+  if (!where) return 0
+  return prisma.adImageCreative.count({
+    where: { concept: { campaign: where }, createdAt: { gte: since } },
+  })
+}
+
+/**
+ * 生成してよいか。
+ * @param requestedImages これから作る枚数。枠を超える生成を**始める前に**弾く。
+ */
+export async function assertQuota(
+  id: AdImageIdentity,
+  requestedImages = 1
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  // 1回あたりの枚数（全プラン共通）
+  if (requestedImages > MAX_PLACEMENTS_PER_RUN) {
+    return { ok: false, reason: `一度に生成できるのは${MAX_PLACEMENTS_PER_RUN}枚までです。` }
+  }
+
+  // 枚数の上限（無料プランのみ）
+  const dailyImages = DAILY_IMAGE_LIMIT[id.plan]
+  const monthlyImages = MONTHLY_IMAGE_LIMIT[id.plan]
+  if (dailyImages != null) {
+    const usedToday = await imagesSince(id, jstStartOfTodayUtc())
+    if (usedToday + requestedImages > dailyImages) {
+      return {
+        ok: false,
+        reason: `無料プランは1日${dailyImages}枚までです（本日${usedToday}枚）。プロプランにご登録いただくと上限が広がります。`,
+      }
+    }
+  }
+  if (monthlyImages != null) {
+    const usedMonth = await imagesSince(id, jstStartOfMonthUtc())
+    if (usedMonth + requestedImages > monthlyImages) {
+      return {
+        ok: false,
+        reason: `無料プランは月${monthlyImages}枚までです（今月${usedMonth}枚）。プロプランにご登録いただくと上限が広がります。`,
+      }
+    }
+  }
+
   const used = await conceptsToday(id)
   const limit = DAILY_CONCEPT_LIMIT[id.plan]
   if (used >= limit) {

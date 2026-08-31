@@ -74,10 +74,13 @@ export async function POST(req: NextRequest) {
   const where = ownerWhere(identity)
   if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400 })
 
-  const quota = await assertQuota(identity)
+  const body = await req.json().catch(() => ({}))
+
+  // ⚠️ 枚数の枠は**生成を始める前に**見る。走らせてから弾くと課金だけ発生する。
+  const requestedImages = Array.isArray(body?.placements) ? body.placements.length : 1
+  const quota = await assertQuota(identity, requestedImages)
   if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 429 })
 
-  const body = await req.json().catch(() => ({}))
   const brandId = String(body?.brandId || '')
   if (!brandId) return NextResponse.json({ error: 'ブランドを指定してください' }, { status: 400 })
 

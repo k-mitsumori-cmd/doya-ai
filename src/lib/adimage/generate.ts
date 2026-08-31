@@ -20,10 +20,14 @@ import type { CompositionKey, Placement } from './placements'
 import type { AdCopy, BrandProfile, VerifyResult } from './types'
 
 /**
- * リトライ上限。⚠️ maxDuration=300 を超えないため2回まで。
+ * リトライ上限。
+ * ⚠️ 2026-08-31 に 2 → 1 へ。生成が遅いという指摘を受け、待ち時間を優先した。
+ *    1枚あたり最大3回だった生成が2回になり、最悪の所要時間がおよそ2/3になる。
+ *    代わりに、文字が崩れたまま出る確率は上がる（検査自体は残している）。
+ * ⚠️ maxDuration=300 を超えないため、これ以上増やさないこと。
  * medium品質で1枚あたり実測38〜93秒なので、3回目を回すと確実に破綻する。
  */
-const MAX_RETRIES = 2
+const MAX_RETRIES = 1
 
 export interface GenerateInput {
   brand: BrandProfile
