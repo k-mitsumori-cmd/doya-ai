@@ -109,7 +109,7 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
 <style>
   @page { size: A4; margin: 0; }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body { margin: 0; font-family: "Noto Sans JP", "Hiragino Sans", sans-serif; color: #16233d; font-size: 10.5pt; }
+  body { margin: 0; font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif; color: #16233d; font-size: 10.5pt; }
   .page { position: relative; width: 210mm; min-height: 297mm; padding: 16mm 15mm; }
   /* ⚠️ position:fixed はビューポート（1240px）基準になり、A4紙面（210mm≒794px）の
      中央からずれて右へはみ出す。紙面（.page は position:relative）の中に
@@ -226,6 +226,30 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
 </body></html>`
 }
 
+
+/**
+ * PDF用の日本語フォントを Chromium に登録する。
+ * 同梱物は assets/fonts/（OFL）。README にいきさつを書いてある。
+ * ⚠️ 失敗しても PDF 生成自体は続ける。フォントが無ければ日本語は消えるが、
+ *    ここで throw すると PDF がまったく出せなくなり、かえって被害が大きい。
+ */
+async function registerJapaneseFonts(chromium: any): Promise<void> {
+  const path = await import('node:path')
+  const fs = await import('node:fs')
+  for (const file of ['NotoSansJP-Regular.ttf', 'NotoSansJP-Bold.ttf']) {
+    const abs = path.join(process.cwd(), 'assets', 'fonts', file)
+    try {
+      if (!fs.existsSync(abs)) {
+        console.error('[quote/pdf] font missing', abs)
+        continue
+      }
+      await chromium.font(abs)
+    } catch (err) {
+      console.error('[quote/pdf] font register failed', file, err instanceof Error ? err.message : err)
+    }
+  }
+}
+
 export async function generateQuotePdf(input: QuotePdfInput): Promise<Uint8Array> {
   let puppeteer: any
   let chromium: any
@@ -237,6 +261,13 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<Uint8Array
   } catch (err) {
     throw new Error(`puppeteer 初期化失敗: ${err instanceof Error ? err.message : String(err)}`)
   }
+
+  // ⚠️ Lambda用Chromiumには日本語フォントが1つも無い。
+  //    登録しないと、CSSで指定していても日本語が**すべて空白**で出力される
+  //    （ローカルのmacOSはヒラギノがあるので再現せず、本番でだけ壊れる）。
+  //    登録すると使ったグリフがPDFへサブセット埋め込みされるので、
+  //    閲覧側の端末にフォントが無くても正しく表示される。
+  await registerJapaneseFonts(chromium)
 
   const html = renderQuoteHtml(input)
 

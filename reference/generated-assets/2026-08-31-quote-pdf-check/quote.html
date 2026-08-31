@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif; color: #16233d; font-size: 10.5pt; }
+  .page { position: relative; width: 210mm; min-height: 297mm; padding: 16mm 15mm; }
+  /* ⚠️ position:fixed はビューポート（1240px）基準になり、A4紙面（210mm≒794px）の
+     中央からずれて右へはみ出す。紙面（.page は position:relative）の中に
+     absolute で置き、紙の幅を基準に中央へ寄せる。
+     絶対配置なので1ページ目にのみ出るが、合計金額が載るのは1ページ目であり、
+     画面側にも下書きの警告を出しているため実用上はこれで足りる。 */
+  .watermark { position: absolute; top: 42%; left: 0; width: 100%; text-align: center;
+    font-size: 64pt; font-weight: 800; color: rgba(255,30,114,0.10);
+    transform: rotate(-24deg); letter-spacing: 0.1em; pointer-events: none; z-index: 0; }
+  .inner { position: relative; z-index: 1; }
+  h1 { font-size: 22pt; letter-spacing: 0.28em; text-align: center; margin: 0 0 10mm; font-weight: 700; }
+  .head { display: flex; justify-content: space-between; gap: 12mm; margin-bottom: 8mm; }
+  .to { flex: 1; }
+  .to .company { font-size: 14pt; font-weight: 700; border-bottom: 1.5px solid #16233d; padding-bottom: 2mm; }
+  .to .meta { font-size: 9.5pt; color: #5a678a; margin-top: 2mm; line-height: 1.7; }
+  .from { width: 62mm; font-size: 9.5pt; line-height: 1.7; }
+  .from .company { font-weight: 700; font-size: 11pt; }
+  /* 発行元未設定のときの記入欄。「未設定」等の文言は顧客が見る書面なので印字しない。 */
+  .from .company.blank { border-bottom: 1px solid #b8c2d6; height: 6mm; }
+  .from .blank-row { border-bottom: 1px solid #d5dced; height: 5mm; margin-top: 1.5mm; }
+  .from .row { color: #5a678a; }
+  .dates { font-size: 9.5pt; color: #5a678a; text-align: right; margin-bottom: 3mm; line-height: 1.7; }
+  .total-box { background: #f2f6ff; border: 1.5px solid #0066ff; border-radius: 3mm;
+    padding: 5mm 6mm; margin-bottom: 7mm; display: flex; align-items: baseline; justify-content: space-between; }
+  .total-box .label { font-size: 11pt; font-weight: 700; }
+  .total-box .value { font-size: 20pt; font-weight: 800; color: #0066ff; }
+  table.items { width: 100%; border-collapse: collapse; margin-bottom: 6mm; }
+  table.items th { background: #16233d; color: #fff; font-size: 9.5pt; font-weight: 600; padding: 2.5mm 3mm; text-align: left; }
+  table.items td { border-bottom: 1px solid #dbe3f2; padding: 3mm; vertical-align: top; font-size: 10pt; }
+  table.items td.num { text-align: right; white-space: nowrap; }
+  table.items td.unit { text-align: center; white-space: nowrap; color: #5a678a; }
+  table.items .spec { font-size: 8.5pt; color: #5a678a; margin-top: 1mm; line-height: 1.6; }
+  .tbd { color: #ff1e72; font-weight: 600; }
+  .summary { width: 78mm; margin-left: auto; }
+  .summary table { width: 100%; border-collapse: collapse; }
+  .summary th { text-align: left; padding: 2mm 3mm; font-size: 9.5pt; font-weight: 500; color: #5a678a; }
+  .summary td { text-align: right; padding: 2mm 3mm; font-size: 10pt; white-space: nowrap; }
+  .summary tr.grand th, .summary tr.grand td { border-top: 1.5px solid #16233d; font-weight: 800; font-size: 12pt; color: #16233d; padding-top: 3mm; }
+  .notes { margin-top: 8mm; border-top: 1px solid #dbe3f2; padding-top: 4mm; font-size: 9.5pt; line-height: 1.8; }
+  .notes h2 { font-size: 10pt; margin: 0 0 1.5mm; color: #5a678a; font-weight: 600; }
+  .notes .block { margin-bottom: 4mm; }
+  .foot { margin-top: 10mm; text-align: center; font-size: 8pt; color: #9aa7c2; }
+</style></head><body>
+<div class="page">
+  
+  <div class="inner">
+    <h1>御 見 積 書</h1>
+
+    <div class="dates">
+      見積番号: Q-202608-0002<br>
+      発行日: 2026年8月31日<br>
+      有効期限: 2026年9月30日
+    </div>
+
+    <div class="head">
+      <div class="to">
+        <div class="company">株式会社スリスタ 御中</div>
+        <div class="meta">
+          マーケティング部<br>
+          三森 捷暉 様<br>
+          下記のとおりお見積り申し上げます。
+        </div>
+      </div>
+      <div class="from">
+        <div class="company">株式会社スリスタ</div>
+        <div class="row">〒150-0001</div>
+        <div class="row">東京都渋谷区神宮前1-2-3 スリスタビル5F</div>
+        <div class="row">TEL: 03-1234-5678</div>
+        <div class="row">担当: 営業部 三森</div>
+        <div class="row">登録番号: T1234567890123</div>
+        
+      </div>
+    </div>
+
+    <div class="total-box">
+      <span class="label">御見積金額（税込）</span>
+      <span class="value">¥956,868</span>
+    </div>
+
+    <table class="items">
+      <thead><tr>
+        <th style="width:52%">品目</th><th style="width:9%">数量</th>
+        <th style="width:11%">単位</th><th style="width:14%">単価</th><th style="width:14%">金額</th>
+      </tr></thead>
+      <tbody><tr>
+        <td class="name">ドヤマーケAI 統一プラン 6ヶ月<div class="spec">全18サービスのAI SaaSをPROで利用。記事作成・バナー・面接官などを含む。</div></td>
+        <td class="num">6</td>
+        <td class="unit">月</td>
+        <td class="num">¥9,980</td>
+        <td class="num">¥59,880</td>
+      </tr><tr>
+        <td class="name">SEO記事作成 3本×6ヶ月<div class="spec">SEO+LLMO対応の記事を1本5,000字で納品。</div></td>
+        <td class="num">18</td>
+        <td class="unit">本</td>
+        <td class="num">¥45,000</td>
+        <td class="num">¥810,000</td>
+      </tr><tr>
+        <td class="name">初期設定・オンボーディング<div class="spec">「要見積」の行が合計に入らないことの確認用。</div></td>
+        <td class="num">1</td>
+        <td class="unit">式</td>
+        <td class="num"><span class="tbd">要見積</span></td>
+        <td class="num"><span class="tbd">要見積</span></td>
+      </tr></tbody>
+    </table>
+
+    <div class="summary"><table>
+      <tr><th>小計</th><td>¥869,880</td></tr>
+      
+      <tr><th>税抜合計</th><td>¥869,880</td></tr>
+      <tr><th>消費税（10%）</th><td>¥86,988</td></tr>
+      <tr class="grand"><th>合計</th><td>¥956,868</td></tr>
+    </table></div>
+
+    <div class="notes">
+      <div class="block"><h2>納期</h2>ご発注後、5営業日以内</div>
+      <div class="block"><h2>お支払い条件</h2>月末締め翌月末払い</div>
+      <div class="block"><h2>備考</h2>本見積の有効期限は発行日から30日間です。</div>
+      <div class="block"><h2>ご注意</h2>「要見積」と記載の項目は、要件確定後に別途お見積りいたします。上記合計には含まれておりません。</div>
+    </div>
+
+    <div class="foot">ドヤマーケAI お見積り</div>
+  </div>
+</div>
+</body></html>

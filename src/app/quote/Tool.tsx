@@ -12,6 +12,7 @@ import Link from 'next/link'
 import OrgSwitcher, { withOrg, type Membership } from '@/components/org/OrgSwitcher'
 import { billableLines, calcTotals, yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource, type ProductProfile, type SuggestedItem } from '@/lib/quote/types'
+import { Sparkles } from 'lucide-react'
 import QuoteLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
@@ -70,6 +71,8 @@ export default function QuoteTool() {
   const [budget, setBudget] = useState('')
   const [suggesting, setSuggesting] = useState(false)
   const [items, setItems] = useState<SuggestedItem[]>([])
+  // AIで数量・単価を埋めている行のindex（同時に複数押せるようSetで持つ）
+  const [estimating, setEstimating] = useState<Set<number>>(new Set())
   // 品目カードの登場演出をやり直すための世代番号。
   // ⚠️ 候補を出し直した時だけ増やす。編集のたびに増やすと key が変わって
   //    入力中の要素が作り直され、フォーカスと変換中の文字が飛ぶ。
@@ -209,6 +212,48 @@ export default function QuoteTool() {
       ...prev,
       { itemName: '', spec: '', qty: 1, unit: '式', unitPrice: 0, taxRate: 10, priceSource: 'manual', sourceRef: '', rangeMin: null, rangeMax: null },
     ])
+  }
+
+  // 品目名からAIで内訳・数量・単価を埋める。
+  // ⚠️ 品目名と、人が既に手で入れた単価は上書きしない。
+  //    AIボタンで人の入力を消すと、押すのが怖い機能になる。
+  async function estimateRow(idx: number) {
+    const it = items[idx]
+    const name = (it?.itemName || '').trim()
+    if (!name) {
+      notifyError(setError, '先に品目名を入力してください')
+      return
+    }
+    setEstimating((prev) => new Set(prev).add(idx))
+    try {
+      const r = await fetch(withOrg('quote', '/api/quote/documents/estimate-item'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itemName: name, spec: it.spec || undefined, productId: selectedProduct || undefined }),
+      })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d?.error || '生成に失敗しました')
+      const ai = d.item as SuggestedItem
+      updateItem(idx, {
+        spec: ai.spec || it.spec,
+        qty: ai.qty,
+        unit: ai.unit,
+        unitPrice: ai.unitPrice,
+        taxRate: ai.taxRate,
+        priceSource: ai.priceSource,
+        sourceRef: ai.sourceRef,
+        rangeMin: ai.rangeMin,
+        rangeMax: ai.rangeMax,
+      })
+    } catch (e) {
+      notifyError(setError, e instanceof Error ? e.message : '生成に失敗しました')
+    } finally {
+      setEstimating((prev) => {
+        const n = new Set(prev)
+        n.delete(idx)
+        return n
+      })
+    }
   }
 
   // 「要見積」の行は合計から除く（0円として足すと総額を誤らせる）
@@ -500,12 +545,33 @@ export default function QuoteTool() {
                         className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none font-semibold"
                       />
                     </div>
-                    <button
-                      onClick={() => removeItem(idx)}
-                      className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 font-semibold"
-                    >
-                      削除
-                    </button>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      {/* 品目名を打った直後に押す想定。数量・単価・内訳をまとめて埋める */}
+                      <button
+                        onClick={() => void estimateRow(idx)}
+                        disabled={estimating.has(idx) || !it.itemName.trim()}
+                        title={it.itemName.trim() ? '品目名から数量と単価をAIが入れます' : '先に品目名を入力してください'}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-[#0066ff] px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-300"
+                      >
+                        {estimating.has(idx) ? (
+                          <>
+                            <span className="h-3 w-3 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                            作成中
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-3.5 w-3.5" />
+                            AIで入力
+                          </>
+                        )}
+                      </button>
+                      <button
+                        onClick={() => removeItem(idx)}
+                        className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-600 hover:bg-slate-50 font-semibold"
+                      >
+                        削除
+                      </button>
+                    </div>
                   </div>
 
                   <div className="mt-3 flex flex-wrap items-end gap-3">

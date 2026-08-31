@@ -10,6 +10,7 @@ export function SidebarLogoSection({
   subtitleClassName,
   showLabel,
   logoSrc,
+  logoHeightClassName = 'h-9',
 }: {
   icon: React.ElementType
   title: string
@@ -18,6 +19,8 @@ export function SidebarLogoSection({
   showLabel: boolean
   // 指定すると、展開時にアイコン＋テキストの代わりに公式ロゴ画像を表示する（折りたたみ時はアイコン）
   logoSrc?: string
+  /** ロゴの表示高さ（Tailwind の h-*）。横長ロゴのサービスは大きくする */
+  logoHeightClassName?: string
 }) {
   return (
     <div className="px-3 sm:px-4 py-4 sm:py-5 flex items-center gap-2">
@@ -35,7 +38,7 @@ export function SidebarLogoSection({
             className="overflow-hidden min-w-0"
           >
             {logoSrc ? (
-              <NextImage src={logoSrc} alt={title} width={240} height={103} priority className="h-9 w-auto max-w-full object-contain object-left" />
+              <NextImage src={logoSrc} alt={title} width={240} height={103} priority className={`${logoHeightClassName} w-auto max-w-full object-contain object-left`} />
             ) : (
               <h1 className="text-xl sm:text-lg font-black text-white tracking-tighter leading-none">{title}</h1>
             )}

@@ -73,7 +73,7 @@ function QuoteSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }:
   return (
     <>
       <SidebarShell isCollapsed={isCollapsed} isMobile={isMobile} theme={quoteTheme}>
-        <SidebarLogoSection icon={Receipt} title="ドヤ見積もりAI" showLabel={showLabel} logoSrc="/quote/logo.png" />
+        <SidebarLogoSection icon={Receipt} title="ドヤ見積もりAI" showLabel={showLabel} logoSrc="/quote/logo.png" logoHeightClassName="h-14" />
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <nav className="py-4 sm:py-6 px-3 space-y-1">
