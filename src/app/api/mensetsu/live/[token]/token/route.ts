@@ -103,9 +103,13 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
             input: {
               // 応募者の発話を文字起こしして字幕・逐語ログに使う（F1-6, F4-1）
               transcription: { model: 'whisper-1', language: 'ja' },
-              // サーバVAD: 応募者が話し始めたらAIの発話を止める（F1-3 バージイン）
-              // ⚠️ しきい値を上げているのは、生活音・キーボード・同席者の声のような
-              //    短い物音でAIの発話が止まり、そのたびに質問を最初から言い直す挙動を防ぐため。
+              // サーバVAD: 応募者が話し終わったら面接官の番にする
+              // ⚠️ interrupt_response は false。true だと応募者の相づちや物音で
+              //    面接官の発話が中断され、中断された応答は途中から再開できないため
+              //    次の応答で**質問を最初から言い直す**。「勝手に質問が繰り返される」
+              //    「話している途中で次に進む」の直接の原因だった（2026-08-31）。
+              //    クライアント側でも面接官の発話中はマイクを閉じており、二重に防ぐ。
+              // ⚠️ しきい値が高いのは、生活音・キーボード・同席者の声を拾わないため。
               //    silence_duration も長めにして、少し考えて間が空いただけで
               //    「話し終わった」と判定されないようにしている。
               turn_detection: {
@@ -114,7 +118,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
                 prefix_padding_ms: 300,
                 silence_duration_ms: 1100,
                 create_response: true,
-                interrupt_response: true,
+                interrupt_response: false,
               },
             },
             output: { voice: REALTIME_VOICE },

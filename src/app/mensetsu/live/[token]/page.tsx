@@ -503,8 +503,28 @@ export default function MensetsuLivePage() {
                 />
               </div>
               <p className="mt-2 text-sm font-black text-[#0a0f3c]">AI面接官</p>
-              <p className="text-[11px] font-bold text-[#8a94ad]">{statusLabel}</p>
               <Waveform level={rt.level} speaking={rt.speaking} listening={rt.listening} />
+
+              {/* ⚠️ どちらのターンか一目で分かるようにする。
+                   面接官の発話中はマイクが閉じており、話しかけても届かない。
+                   それが分からないと「無視された」と感じて話し続けてしまい、
+                   結果として質問の繰り返しに見える挙動につながっていた。 */}
+              <div
+                className={`mt-3 w-full rounded-xl px-4 py-3 text-center ring-2 transition-colors ${
+                  rt.speaking
+                    ? 'bg-[#fff4e5] text-[#8a5a00] ring-[#ffcf8a]'
+                    : 'bg-[#e6f7ee] text-[#0a6b3d] ring-[#7ddaa8]'
+                }`}
+              >
+                <p className="text-base font-black leading-tight lg:text-lg">
+                  {rt.speaking ? 'いまは面接官が話しています' : 'あなたが話すターンです'}
+                </p>
+                <p className="mt-1 text-xs font-bold leading-relaxed">
+                  {rt.speaking
+                    ? '話し終わるまでお待ちください（マイクはオフになっています）'
+                    : 'そのままお話しください'}
+                </p>
+              </div>
             </div>
 
             {/* 質問・発言 */}
@@ -576,7 +596,15 @@ export default function MensetsuLivePage() {
 
       {/* 操作バー（スマホでも押しやすい丸ボタン） */}
       <footer className="flex shrink-0 items-start justify-center gap-3 border-t border-[#dfe6f3] bg-white px-3 py-3 lg:gap-4">
-        <RoundButton onClick={toggleMic} icon={micOn ? 'mic' : 'mic_off'} label={micOn ? 'ミュート' : '解除'} tone={micOn ? 'default' : 'danger'} />
+        {/* ⚠️ 面接官の発話中はマイクが自動で閉じるので、ここでは操作させない。
+             押せてしまうと「解除したのに声が届かない」という混乱になる。 */}
+        <RoundButton
+          onClick={toggleMic}
+          icon={rt.speaking ? 'mic_off' : micOn ? 'mic' : 'mic_off'}
+          label={rt.speaking ? '相手の番' : micOn ? 'ミュート' : '解除'}
+          tone={rt.speaking ? 'default' : micOn ? 'default' : 'danger'}
+          disabled={rt.speaking}
+        />
         <RoundButton onClick={toggleCamera} icon={cameraOn ? 'videocam' : 'videocam_off'} label="カメラ" tone={cameraOn ? 'active' : 'default'} />
         <RoundButton onClick={() => setShowText((v) => !v)} icon="keyboard" label="テキスト" tone={showText ? 'active' : 'default'} />
         <RoundButton onClick={() => setSheet(sheet === 'log' ? null : 'log')} icon="forum" label="会話ログ" tone={sheet === 'log' ? 'active' : 'default'} />
@@ -660,11 +688,13 @@ function RoundButton({
   icon,
   label,
   tone = 'default',
+  disabled = false,
 }: {
   onClick: () => void
   icon: string
   label: string
   tone?: 'default' | 'active' | 'danger'
+  disabled?: boolean
 }) {
   const style =
     tone === 'danger'
@@ -673,7 +703,11 @@ function RoundButton({
         ? 'bg-[#e8f0ff] text-[#0066ff]'
         : 'bg-[#f4f6fa] text-[#425071]'
   return (
-    <button onClick={onClick} className="flex w-16 flex-col items-center gap-1">
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="flex w-16 flex-col items-center gap-1 disabled:cursor-not-allowed disabled:opacity-45"
+    >
       <span className={`flex h-12 w-12 items-center justify-center rounded-full ${style}`}>
         <span className="material-symbols-outlined text-[22px]">{icon}</span>
       </span>

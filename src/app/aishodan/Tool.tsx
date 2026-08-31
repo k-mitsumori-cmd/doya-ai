@@ -313,7 +313,8 @@ export default function AishodanTool() {
           {products.length > 0 && (
             <div className="mt-5 divide-y divide-slate-100">
               {products.map((p) => (
-                <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div key={p.id} className="py-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-slate-900">{p.name}</p>
                     <p className="text-xs text-slate-500 font-semibold">
@@ -335,16 +336,20 @@ export default function AishodanTool() {
                         >
                           練習する
                         </Link>
-                        <button
-                          onClick={() => issueRoom(p.scenarios[0].id)}
-                          disabled={issuing}
-                          className="rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
-                        >
-                          商談URLを発行
-                        </button>
                       </>
                     )}
                   </div>
+                  </div>
+                  {/* ⚠️ 商談URLの発行が手順の終点。他の操作と同じ大きさにしない */}
+                  {p.scenarios[0] && (
+                    <button
+                      onClick={() => issueRoom(p.scenarios[0].id)}
+                      disabled={issuing}
+                      className="mt-3 w-full rounded-xl bg-[#0066ff] px-6 py-4 text-base font-black text-white shadow-lg transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:bg-slate-200 sm:text-lg"
+                    >
+                      {issuing ? '発行中…' : '商談URLを発行する'}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -377,16 +382,22 @@ export default function AishodanTool() {
                       {room.isActive ? '公開中' : '停止中'}
                     </span>
                   </div>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <code className="min-w-0 flex-1 truncate rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 font-semibold">
+                  {/* ⚠️ ここが最後の操作。コピーして送れば完了だと分かるように大きく出す */}
+                  <div className="mt-3 rounded-xl bg-[#eaf3ff] p-4 ring-2 ring-[#0066ff]">
+                    <p className="text-base font-black text-[#0066ff]">
+                      このURLをコピーして、相手にお送りください
+                    </p>
+                    <p className="mt-2 break-all rounded-lg bg-white px-3 py-3 text-sm font-bold text-[#0a0f3c] ring-1 ring-[#d8e7ff]">
                       {roomUrl(room.token)}
-                    </code>
+                    </p>
                     <button
                       onClick={() => copyUrl(room.token)}
-                      className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 font-semibold"
+                      className="mt-3 w-full rounded-xl bg-[#0066ff] px-6 py-3.5 text-base font-black text-white shadow-lg transition hover:bg-[#0052cc]"
                     >
-                      {copied === room.token ? 'コピーしました' : 'URLをコピー'}
+                      {copied === room.token ? 'コピーしました' : 'URLをコピーする'}
                     </button>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
                     <a
                       href={roomUrl(room.token)}
                       target="_blank"

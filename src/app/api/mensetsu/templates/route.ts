@@ -46,7 +46,8 @@ export async function POST(req: NextRequest) {
   const profileId = String(body?.profileId || '').trim()
   const jobTitle = String(body?.jobTitle || '').trim()
   const level = (LEVELS.includes(body?.level) ? body.level : 'mid') as MensetsuLevel
-  const durationMin = [10, 20, 30].includes(Number(body?.durationMin)) ? Number(body.durationMin) : 20
+  // ⚠️ 既定は10分。20分は受ける側の負担が大きく、最後まで持たないという声を受けて短くした（2026-08-31）
+  const durationMin = [10, 20, 30].includes(Number(body?.durationMin)) ? Number(body.durationMin) : 10
   const focus = String(body?.focus || '').trim() || undefined
 
   if (!jobTitle) return NextResponse.json({ error: '職種を入力してください' }, { status: 400 })

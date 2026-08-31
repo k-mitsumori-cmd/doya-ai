@@ -104,16 +104,19 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
           audio: {
             input: {
               transcription: { model: 'whisper-1', language: 'ja' },
-              // サーバVAD: 相手が話し始めたらAIの発話を止める（バージイン）
-              // ⚠️ しきい値を上げているのは、生活音・キーボード・同席者の声のような短い物音で
-              //    AIの発話が止まり、そのたびに最初から言い直す挙動を防ぐため。
+              // サーバVAD: 相手が話し終わったらAIの番にする
+              // ⚠️ interrupt_response は false。true だと相手の相づちや物音でAIの発話が
+              //    中断され、中断された応答は途中から再開できないため次の応答で
+              //    **最初から言い直す**。面接側と同じ不具合が起きていた（2026-08-31）。
+              //    クライアント側でもAIの発話中はマイクを閉じており、二重に防ぐ。
+              // ⚠️ しきい値が高いのは、生活音・キーボード・同席者の声を拾わないため。
               turn_detection: {
                 type: 'server_vad',
                 threshold: 0.78,
                 prefix_padding_ms: 300,
                 silence_duration_ms: 1100,
                 create_response: true,
-                interrupt_response: true,
+                interrupt_response: false,
               },
             },
             output: { voice: REALTIME_VOICE },

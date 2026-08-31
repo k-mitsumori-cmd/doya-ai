@@ -32,7 +32,10 @@ interface UseRealtimeInterviewOptions {
 //    アップロードに失敗して**音声ごと無言で消える**事故が起きていた。
 
 /** 沈黙が何ミリ秒続いたら助け舟を出すか（F1-5） */
-const SILENCE_NUDGE_MS = 15000
+// 沈黙が続いたときに助け舟を出すまでの待ち時間。
+// ⚠️ 短くすると、応募者が考えている最中に面接官が話し出して急かす形になる。
+//    面接では10秒程度の沈黙は普通に起きるので、余裕を持たせる。
+const SILENCE_NUDGE_MS = 20000
 
 /** 通信が切れたまま何分待つか。超えたら打ち切って部分評価へ回す（F1-8） */
 const DISCONNECT_GRACE_MS = 3 * 60 * 1000
@@ -45,7 +48,7 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
   const [speaking, setSpeaking] = useState(false)
   const [listening, setListening] = useState(false)
   const [elapsedSec, setElapsedSec] = useState(0)
-  const [durationMin, setDurationMin] = useState(20)
+  const [durationMin, setDurationMin] = useState(10)
   // 画面に大きく出すための「いま尋ねている質問」。
   // 初回は /token の firstQuestion、以降は /advance の戻り値で更新する。
   const [currentQuestion, setCurrentQuestion] = useState<string | null>(null)
@@ -68,6 +71,9 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
   const lastActivityRef = useRef(0)
   const nudgeCountRef = useRef(0)
   const speakingRef = useRef(false)
+  /** 応募者が自分でミュートしたか。面接官の発話終了時に誤って開けないよう覚えておく */
+  const userMutedRef = useRef(false)
+  const [userMuted, setUserMuted] = useState(false)
   const listeningRef = useRef(false)
   // 録音（組織設定が有効なときのみ）
   const recorderRef = useRef<MediaRecorder | null>(null)
@@ -255,10 +261,31 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
    * 呼び直すとブラウザが再度許可を求めたり、WebRTCの再ネゴが必要になるため。
    */
   const setMicEnabled = useCallback((enabled: boolean) => {
+    userMutedRef.current = !enabled
+    setUserMuted(!enabled)
     micRef.current?.getAudioTracks().forEach((t) => {
-      t.enabled = enabled
+      // ⚠️ 面接官が話している間は、手動でONにしてもマイクは開けない。
+      //    開けてしまうと割り込みが起き、質問が最初から言い直される。
+      t.enabled = enabled && !speakingRef.current
     })
   }, [])
+
+  // ------------------------------------------------------------------
+  // 面接官が話している間はマイクを閉じる（ターン制御）
+  // ------------------------------------------------------------------
+  // ⚠️ これが無いと、応募者が相づちを打っただけでサーバVADが「割り込み」と判定し、
+  //    面接官の発話が中断される。中断された応答は途中から再開できないため、
+  //    次の応答で**質問を最初から言い直す**。実際に「勝手に質問が繰り返される」
+  //    「話している途中で次に進む」という形で表面化していた。
+  //    根本の対策はマイクを物理的に閉じて、割り込みを起こさせないこと。
+  useEffect(() => {
+    const tracks = micRef.current?.getAudioTracks()
+    if (!tracks) return
+    const shouldOpen = !speaking && !userMutedRef.current
+    tracks.forEach((t) => {
+      t.enabled = shouldOpen
+    })
+  }, [speaking])
 
   /**
    * テキストで回答する（音声が使えない環境・騒がしい場所・聞き取り精度が不安なとき用）。
@@ -708,6 +735,9 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
     level,
     speaking,
     listening,
+    /** 応募者が話してよいターンか（面接官の発話中は false） */
+    canSpeak: !speaking,
+    userMuted,
     elapsedSec,
     durationMin,
     start,

@@ -44,9 +44,14 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
   const [lines, setLines] = useState<TranscriptLine[]>([])
   const [level, setLevel] = useState(0)
   const [speaking, setSpeaking] = useState(false)
+  /** 相手が自分でミュートしたか。AIの発話終了時に誤って開けないよう覚えておく */
+  const userMutedRef = useRef(false)
+  /** setMicEnabled から同期的に参照するため、speaking を ref にも持つ */
+  const speakingRef = useRef(false)
+  const [userMuted, setUserMuted] = useState(false)
   const [listening, setListening] = useState(false)
   const [elapsedSec, setElapsedSec] = useState(0)
-  const [durationMin, setDurationMin] = useState(15)
+  const [durationMin, setDurationMin] = useState(10)
   // 画面に出す進行状況。/advance の戻り値で更新する
   const [phaseName, setPhaseName] = useState<string | null>(null)
   /** 現在のフェーズキー。発話に添えるため ref で持つ（描画に使わない） */
@@ -191,10 +196,28 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
    * 呼び直すとブラウザが再度許可を求め、WebRTCの再ネゴも要るため。
    */
   const setMicEnabled = useCallback((enabled: boolean) => {
+    userMutedRef.current = !enabled
+    setUserMuted(!enabled)
     micRef.current?.getAudioTracks().forEach((t) => {
-      t.enabled = enabled
+      // ⚠️ AIが話している間は、手動でONにしてもマイクは開けない。
+      //    開けると割り込みが起き、説明が最初から言い直される。
+      t.enabled = enabled && !speakingRef.current
     })
   }, [])
+
+  // ------------------------------------------------------------------
+  // AIが話している間はマイクを閉じる（ターン制御）
+  // ------------------------------------------------------------------
+  // ⚠️ 相づちを打っただけでサーバVADが「割り込み」と判定してAIの発話を中断し、
+  //    次の応答で説明を最初から繰り返す。マイクを閉じて割り込ませないのが根本対策。
+  useEffect(() => {
+    const tracks = micRef.current?.getAudioTracks()
+    if (!tracks) return
+    const shouldOpen = !speaking && !userMutedRef.current
+    tracks.forEach((t) => {
+      t.enabled = shouldOpen
+    })
+  }, [speaking])
 
   /** データチャネルに function の実行結果を返し、続きを話させる */
   const replyToTool = useCallback((callId: string, output: unknown) => {
@@ -433,6 +456,7 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
         if (t.endsWith('audio.delta')) {
           if (!speechStartRef.current.ai) speechStartRef.current.ai = Date.now()
           setSpeaking(true)
+          speakingRef.current = true
           return
         }
 
@@ -450,6 +474,7 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
             break
           case 'response.done': {
             setSpeaking(false)
+            speakingRef.current = false
             // 保険: transcript イベントを取りこぼしていても、
             // response.done の中身からAIの発話を拾えるようにする。
             const items = ev?.response?.output ?? []
@@ -577,6 +602,9 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
     state, error, lines, level, speaking, listening,
     elapsedSec, durationMin, phaseName, remainingRequired, lastAiText,
     start, end, sendText, setMicEnabled,
+    /** 相手が話してよいターンか（AIの発話中は false） */
+    canSpeak: !speaking,
+    userMuted,
     micAvailable: Boolean(micRef.current),
   }
 }

@@ -3526,7 +3526,7 @@ model MensetsuTemplate {
   name           String
   jobTitle       String // 職種
   level          String                  @default("mid") // newgrad / mid / manager
-  durationMin    Int                     @default(20) // 10 / 20 / 30
+  durationMin    Int                     @default(10) // 10 / 20 / 30（既定は10分。20分は長すぎるという声を受け 2026-08-31 に変更）
   intro          String?                 @db.Text // 冒頭の挨拶・進め方
   closing        String?                 @db.Text
   status         String                  @default("draft") // draft / active / archived
@@ -3976,7 +3976,7 @@ model AishodanScenario {
   guardrails  Json
   /// { tone, firstPerson, maxCharsPerUtterance }
   persona     Json?
-  durationMin Int             @default(15)
+  durationMin Int             @default(10)
 
   /// 日程調整ページのURL（Calendly / TimeRex / Googleカレンダー予約 など）
   /// ⚠️ 一次商談の出口は「次アポの確定」。ここが空だと商談が終わっても次につながらない。

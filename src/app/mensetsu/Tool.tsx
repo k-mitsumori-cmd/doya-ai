@@ -81,7 +81,7 @@ export default function MensetsuTool() {
 
   const [jobTitle, setJobTitle] = useState('')
   const [level, setLevel] = useState('mid')
-  const [durationMin, setDurationMin] = useState(20)
+  const [durationMin, setDurationMin] = useState(10)
   const [focus, setFocus] = useState('')
   const [templates, setTemplates] = useState<Template[]>([])
   const [sessions, setSessions] = useState<SessionRow[]>([])

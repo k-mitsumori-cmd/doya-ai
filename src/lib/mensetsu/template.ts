@@ -16,9 +16,13 @@ export interface GenerateTemplateInput {
   focus?: string
 }
 
-/** 所要時間から主質問の本数を決める（深掘り2回ぶんの余白を見込む） */
+/**
+ * 所要時間から主質問の本数を決める（深掘り2回ぶんの余白を見込む）
+ * ⚠️ 1問あたり、主質問＋深掘り2回で約2分かかる。本数を欲張ると
+ *    時間切れで最後の質問が聞けないまま終わる。10分なら4問が上限。
+ */
 function questionCountFor(durationMin: number): number {
-  if (durationMin <= 10) return 5
+  if (durationMin <= 10) return 4
   if (durationMin <= 20) return 8
   return 12
 }

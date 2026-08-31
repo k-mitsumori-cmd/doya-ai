@@ -96,7 +96,7 @@ async function main() {
     candidateName: '山田 太郎',
     interviewedAt: new Date('2026-08-31'),
     durationMin: 28,
-    verdict: 'pass',
+    verdict: 'recommend',
     average: 4.2,
     overallComment: '設計の意図を自分の言葉で説明できており、実務での判断力が確認できました。',
     recruiterReport: '次の面接では、チーム間の調整経験を深掘りすることを推奨します。',
