@@ -11,6 +11,7 @@
 
 import { SimulationResult } from './simulator'
 import { ProposalSection } from './gemini'
+import { registerJapaneseFonts, PDF_FONT_STACK } from '@/lib/pdf/japanese-font'
 
 export interface PdfInput {
   clientName: string
@@ -87,7 +88,7 @@ function renderHtml(input: PdfInput): string {
   @page { size: A4; margin: 18mm 16mm; }
   * { box-sizing: border-box; }
   body {
-    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans CJK JP", "Noto Sans JP", "Yu Gothic", sans-serif;
+    font-family: ${PDF_FONT_STACK};
     color: #1f2937;
     margin: 0;
     line-height: 1.85;
@@ -425,6 +426,9 @@ export async function generatePdfBuffer(input: PdfInput): Promise<Uint8Array> {
   } catch (err) {
     throw new Error(`puppeteer 初期化失敗: ${err instanceof Error ? err.message : String(err)}`)
   }
+
+  // ⚠️ Lambda用Chromiumには日本語フォントが無い。登録しないと日本語が全て空白になる
+  await registerJapaneseFonts(chromium, 'adsim/pdf')
 
   const html = renderHtml(input)
 

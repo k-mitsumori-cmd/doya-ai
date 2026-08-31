@@ -68,14 +68,21 @@ const nextConfig = {
     // ⚠️ PDF生成ルートを追加したら、ここにも必ず足すこと。足し忘れると
     //    そのルートだけ本番で 500 になる。
     outputFileTracingIncludes: {
-      // ⚠️ フォントも同梱する。Lambda用Chromiumには日本語フォントが無く、
-      //    入れないとPDFの日本語が全て空白になる（assets/fonts/README.md 参照）
+      // ⚠️ 日本語フォントも必ず同梱する。Lambda用Chromiumには日本語フォントが無く、
+      //    入れるのを忘れるとPDFの日本語が全て空白になる（assets/fonts/README.md 参照）。
+      //    banner/from-url はページから色を取るだけで文字を描画しないため不要。
       '/api/quote/documents/[id]/pdf': [
         './node_modules/@sparticuz/chromium/bin/**',
         './assets/fonts/*.ttf',
       ],
-      '/api/mensetsu/sessions/[id]/pdf': ['./node_modules/@sparticuz/chromium/bin/**'],
-      '/api/adsim/projects/[projectId]/export': ['./node_modules/@sparticuz/chromium/bin/**'],
+      '/api/mensetsu/sessions/[id]/pdf': [
+        './node_modules/@sparticuz/chromium/bin/**',
+        './assets/fonts/*.ttf',
+      ],
+      '/api/adsim/projects/[projectId]/export': [
+        './node_modules/@sparticuz/chromium/bin/**',
+        './assets/fonts/*.ttf',
+      ],
       '/api/banner/from-url': ['./node_modules/@sparticuz/chromium/bin/**'],
     },
   },

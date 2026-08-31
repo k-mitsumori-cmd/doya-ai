@@ -7,6 +7,7 @@
 // 起動パターンは src/lib/adsim/pdf-generator.ts を踏襲。
 
 import { VERDICT_LABELS, type Verdict } from './types'
+import { registerJapaneseFonts, PDF_FONT_STACK } from '@/lib/pdf/japanese-font'
 
 export interface ReportPdfInput {
   companyName: string
@@ -51,7 +52,8 @@ const VERDICT_COLOR: Record<string, string> = {
   reject: '#c5221f',
 }
 
-function renderHtml(d: ReportPdfInput): string {
+// 検証スクリプト(scripts/check-quote-pdf-font.ts)からも呼ぶため export する
+export function renderHtml(d: ReportPdfInput): string {
   const dateStr = d.interviewedAt
     ? new Intl.DateTimeFormat('ja-JP', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Asia/Tokyo' }).format(
         d.interviewedAt
@@ -99,7 +101,7 @@ function renderHtml(d: ReportPdfInput): string {
 <html lang="ja"><head><meta charset="utf-8">
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: "Noto Sans JP", "Hiragino Sans", sans-serif; color: #0a0f3c; }
+  body { margin: 0; font-family: ${PDF_FONT_STACK}; color: #0a0f3c; }
   .sheet { padding: 18mm 16mm; }
   h1 { font-size: 20pt; margin: 0 0 2mm; letter-spacing: -0.01em; }
   h2 { font-size: 12pt; margin: 8mm 0 3mm; padding-bottom: 2mm; border-bottom: 2px solid #0066ff; }
@@ -185,6 +187,9 @@ export async function generateReportPdf(input: ReportPdfInput): Promise<Uint8Arr
   } catch (err) {
     throw new Error(`puppeteer 初期化失敗: ${err instanceof Error ? err.message : String(err)}`)
   }
+
+  // ⚠️ Lambda用Chromiumには日本語フォントが無い。登録しないと日本語が全て空白になる
+  await registerJapaneseFonts(chromium, 'mensetsu/pdf')
 
   const html = renderHtml(input)
 
