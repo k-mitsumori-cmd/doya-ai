@@ -23,7 +23,10 @@ export function SidebarLogoSection({
   logoHeightClassName?: string
 }) {
   return (
-    <div className="px-3 sm:px-4 py-4 sm:py-5 flex items-center gap-2">
+    // ⚠️ ロゴは横長。サイドバー幅240px − 左右余白32px = 188px が実寸の上限で、
+    //    h-20(80px) がその幅をちょうど使い切る高さ（縦横比 2016:864）。
+    //    これ以上上げても max-w-full で頭打ちになり、かえって小さく見える。
+    <div className="px-3 sm:px-4 py-3 sm:py-4 flex items-center gap-2">
       {(!showLabel || !logoSrc) && (
         <div className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0 shadow-sm backdrop-blur-md">
           <Icon className="w-5 h-5 sm:w-5 sm:h-5 text-white" />
