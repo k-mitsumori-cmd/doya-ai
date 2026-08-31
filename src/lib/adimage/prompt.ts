@@ -29,10 +29,16 @@ export interface BuildPromptInput {
   composition: CompositionKey
   /** 再生成時に足す修正指示 */
   extraDirectives?: string[]
+  /**
+   * 見た目の参考にするデザイン（ドヤバナーAIのテンプレートのプロンプト）。
+   * ⚠️ 参考にするのは**配色・質感・レイアウトの雰囲気だけ**。
+   *    テンプレート側の文言や商材はこちらのコピーで上書きされる。
+   */
+  designRefPrompt?: string
 }
 
 export function buildImagePrompt(input: BuildPromptInput): string {
-  const { brand, copy, tone, placement, composition, extraDirectives = [] } = input
+  const { brand, copy, tone, placement, composition, extraDirectives = [], designRefPrompt } = input
   const comp = COMPOSITIONS[composition]
   const omitSub = comp.omit.includes('sub')
 
@@ -60,6 +66,16 @@ export function buildImagePrompt(input: BuildPromptInput): string {
     colors.length > 0 ? `配色: ${colors.join(' / ')} を基調にする` : '',
     brand.description ? `サービス内容: ${brand.description}` : '',
     '',
+    // 2.5 デザインの参考
+    designRefPrompt
+      ? [
+          '■ 見た目の参考（このテイストに寄せる）:',
+          `  ${designRefPrompt.replace(/\n/g, ' ').slice(0, 700)}`,
+          '  ⚠️ 参考にするのは配色・質感・レイアウトの雰囲気だけ。',
+          '     描く文字は下で指定するものだけを使い、参考側の文言や商材は一切描かないこと。',
+          '',
+        ].join('\n')
+      : '',
     // 3. 全面デザイン指示
     '■ 全体:',
     '  画面全体をデザインで埋めること。上下や左右に白い余白帯を作らず、背景を四辺の端まで到達させる。',

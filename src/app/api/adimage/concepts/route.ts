@@ -144,6 +144,19 @@ export async function POST(req: NextRequest) {
   // 利用者が自分で書いたプロンプト（上級者向け）。空なら自動組み立て
   const customPrompt = String(body?.customPrompt || '').slice(0, 4000)
 
+  // 見た目の参考に選ばれたデザイン（ドヤバナーAIのテンプレート）
+  // ⚠️ テンプレートのプロンプトは「デザイン要素のみ」で、商材や文言は含まない。
+  //    そのまま混ぜても、こちらのコピーが上書きされる心配は無い。
+  let designRefPrompt = ''
+  const designRefId = String(body?.designRefId || '')
+  if (designRefId) {
+    const t = await prisma.bannerTemplate.findUnique({
+      where: { templateId: designRefId },
+      select: { prompt: true, isActive: true },
+    })
+    if (t?.isActive) designRefPrompt = t.prompt || ''
+  }
+
   const baseGroups = groupByGenSize(placementKeys)
   // 3パターンは構図を変えて作る。同じ構図で回しても似た絵しか出ない
   const VARIATION_COMPOSITIONS: CompositionKey[] = ['hero-center', 'split-left', 'vertical-stack']
@@ -184,6 +197,7 @@ export async function POST(req: NextRequest) {
           composition: group.composition,
           pathPrefix,
           customPrompt: customPrompt || undefined,
+          designRefPrompt: designRefPrompt || undefined,
         })
         genPaths[group.genKey] = result.genPath
         if (!visualPrompt) {

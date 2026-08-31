@@ -44,6 +44,8 @@ export interface GenerateInput {
    *    利用者の責任になるため、画面側で「上級者向け」と明示すること。
    */
   customPrompt?: string
+  /** 見た目の参考にするテンプレートのプロンプト */
+  designRefPrompt?: string
   /** 保存パスの接頭辞 */
   pathPrefix: string
 }
@@ -60,7 +62,7 @@ export interface GenerateResult {
 }
 
 export async function generateBaked(input: GenerateInput): Promise<GenerateResult> {
-  const { brand, copy, tone, placement, composition, extraDirectives = [], pathPrefix, customPrompt } = input
+  const { brand, copy, tone, placement, composition, extraDirectives = [], pathPrefix, customPrompt, designRefPrompt } = input
   const genSize = `${placement.genW}x${placement.genH}`
 
   let directives = [...extraDirectives]
@@ -72,7 +74,7 @@ export async function generateBaked(input: GenerateInput): Promise<GenerateResul
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const prompt = customPrompt?.trim()
       ? customPrompt.trim()
-      : buildImagePrompt({ brand, copy, tone, placement, composition, extraDirectives: directives })
+      : buildImagePrompt({ brand, copy, tone, placement, composition, extraDirectives: directives, designRefPrompt })
     lastPrompt = prompt
 
     const result = await generateImageWithFallback({

@@ -108,6 +108,14 @@ export default function AdImageTool() {
   const [customPrompt, setCustomPrompt] = useState('')
   /** 生成が完了した直後だけ出す「完成しました」 */
   const [justFinished, setJustFinished] = useState(false)
+  /**
+   * デザインの参考候補（ドヤバナーAIのテンプレートを流用）。
+   * ⚠️ 選ばなくても生成できる。必須にすると手数が増えるだけ。
+   */
+  const [designRefs, setDesignRefs] = useState<Array<{ id: string; industry: string; imageUrl: string; matched: boolean }>>([])
+  const [designRefId, setDesignRefId] = useState('')
+  const [refsMatched, setRefsMatched] = useState(0)
+  const [showAllRefs, setShowAllRefs] = useState(false)
   const [advice, setAdvice] = useState('')
   const [directives, setDirectives] = useState<RefineDirective[]>([])
   const [selectedChips, setSelectedChips] = useState<string[]>([])
@@ -215,6 +223,28 @@ export default function AdImageTool() {
   }, [url])
 
   /** 一度に出せる配置の上限。⚠️ 増やすと maxDuration(300秒) に収まらなくなる */
+  // ⚠️ ブランドが確定してから引く。業種で並べ替えるため brandId が要る
+  useEffect(() => {
+    if (!brandId) return
+    let aborted = false
+    ;(async () => {
+      try {
+        const r = await fetch(`/api/adimage/design-refs?brandId=${encodeURIComponent(brandId)}`)
+        if (!r.ok || aborted) return
+        const d = await r.json()
+        if (aborted) return
+        setDesignRefs(d.refs || [])
+        setRefsMatched(Number(d.matchedCount) || 0)
+      } catch {
+        // 取れなくても生成はできる（参考なしで作る）
+      }
+    })()
+    return () => {
+      aborted = true
+    }
+  }, [brandId])
+
+  /** 一度に出せる配置の上限。⚠️ 増やすと maxDuration(300秒) に収まらなくなる */
   const MAX_PLACEMENTS = 10
 
   function togglePlacement(key: string) {
@@ -245,6 +275,7 @@ export default function AdImageTool() {
           placements: chosen,
           variations,
           customPrompt: customPrompt.trim() || undefined,
+          designRefId: designRefId || undefined,
           label: draft?.label,
           appealAxis: draft?.appealAxis,
           tone: draft?.tone,
@@ -266,7 +297,7 @@ export default function AdImageTool() {
     } finally {
       setGenerating(false)
     }
-  }, [appeal, brandId, chosen, copy, customPrompt, drafts, selected, variations])
+  }, [appeal, brandId, chosen, copy, customPrompt, designRefId, drafts, selected, variations])
 
   const runFeedback = useCallback(async () => {
     if (!conceptId) return
@@ -522,6 +553,63 @@ export default function AdImageTool() {
                 {logoName} を登録しました。位置を変えたときは、もう一度ロゴを選び直してください。
               </p>
             )}
+          </section>
+        )}
+
+        {/* --- デザインの参考を選ぶ ---
+             ⚠️ ドヤバナーAIのテンプレート498枚をそのまま流用している。
+                広告画像AI用に別のデザイン資産を作らない（二重に持たない）。 */}
+        {step !== 'input' && designRefs.length > 0 && (
+          <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <h2 className="text-base font-bold text-slate-900">デザインの雰囲気を選ぶ（任意）</h2>
+            <p className="mt-1 text-sm font-semibold text-slate-600">
+              ドヤバナーAIのテンプレートから、このサイトに合いそうなものを並べています。
+              選ぶと、その配色・質感・レイアウトに寄せて生成します。
+              {refsMatched > 0
+                ? `（業種が近いもの ${refsMatched}件を先頭に表示）`
+                : '（業種を絞り込めなかったため、全件を表示しています）'}
+            </p>
+
+            <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+              {(showAllRefs ? designRefs : designRefs.slice(0, 12)).map((r) => (
+                <button
+                  key={r.id}
+                  onClick={() => setDesignRefId((prev) => (prev === r.id ? '' : r.id))}
+                  className={`overflow-hidden rounded-xl border-2 text-left transition ${
+                    designRefId === r.id
+                      ? 'border-[#0066ff] ring-2 ring-[#0066ff]'
+                      : 'border-slate-200 hover:border-slate-400'
+                  }`}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={r.imageUrl} alt={r.industry} loading="lazy" className="aspect-[1200/628] w-full bg-slate-100 object-cover" />
+                  <span className="block truncate px-2 py-1.5 text-[10px] font-bold text-slate-600">
+                    {designRefId === r.id ? '選択中 / ' : ''}
+                    {r.industry}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => setShowAllRefs((v) => !v)}
+                className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
+              >
+                {showAllRefs ? '先頭12件だけ表示' : `すべて表示（${designRefs.length}件）`}
+              </button>
+              {designRefId && (
+                <button
+                  onClick={() => setDesignRefId('')}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
+                >
+                  選択を解除する
+                </button>
+              )}
+              <span className="text-xs font-bold text-slate-500">
+                {designRefId ? '選んだ雰囲気に寄せて生成します' : '選ばなくても生成できます'}
+              </span>
+            </div>
           </section>
         )}
 
