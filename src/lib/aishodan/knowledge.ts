@@ -13,8 +13,23 @@ import { chunkText } from '@/lib/cunning/rag'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import type { ProductProfile } from './types'
 
-const HINT_PATHS = ['/service', '/services', '/price', '/pricing', '/plan', '/plans', '/about', '/company', '/faq', '/case', '/cases']
-const MAX_PAGES = 8
+/**
+ * 優先して読むパス。ここに当たるものから先に取り込む。
+ * ⚠️ **ここに当たらないリンクも読むこと。** 以前は当たるものだけを辿っており、
+ *    サービスのパスが /quote /mensetsu のような固有名のサイトでは
+ *    1ページも追加で取れず、トップページだけで商談に臨むことになっていた。
+ *    実際に「サービスの強みが何も答えられない」という形で表面化した（2026-08-31）。
+ */
+const HINT_PATHS = ['/service', '/services', '/price', '/pricing', '/plan', '/plans', '/about', '/company', '/faq', '/case', '/cases', '/feature', '/product', '/solution']
+
+/** 読んでも商談の役に立たないパス。件数を食うだけなので除く */
+const SKIP_PATH_PATTERNS = [
+  /^\/api\//, /^\/auth\//, /^\/_next\//, /^\/admin\//, /^\/login/, /^\/signup/,
+  /^\/terms/, /^\/privacy/, /^\/tokushoho/, /^\/legal/, /^\/contact/,
+  /\.(png|jpe?g|webp|gif|svg|ico|css|js|pdf|zip|xml|txt)$/i,
+]
+
+const MAX_PAGES = 14
 const MAX_CHARS_PER_PAGE = 12000
 
 function extractTitle(html: string): string | undefined {
@@ -42,17 +57,26 @@ export async function crawlProductSite(sourceUrl: string): Promise<CrawledPage[]
     })
   }
 
-  const paths = new Set<string>()
+  // ⚠️ 優先パスと、それ以外の内部リンクを分けて集める。
+  //    優先パスを先に読み切り、枠が余ったら他のページで埋める。
+  const hinted: string[] = []
+  const others: string[] = []
+  const seenPaths = new Set<string>()
   if (topHtml) {
-    const re = /href=["'](\/[^"'#?]*)/gi
+    const re = /href=["'](\/[^"'#?\s]*)/gi
     let m: RegExpExecArray | null
     while ((m = re.exec(topHtml)) !== null) {
-      if (HINT_PATHS.some((h) => m![1].toLowerCase().startsWith(h))) paths.add(m[1])
-      if (paths.size >= 30) break
+      const path = m[1].replace(/\/$/, '') || '/'
+      if (path === '/' || seenPaths.has(path)) continue
+      if (SKIP_PATH_PATTERNS.some((r) => r.test(path))) continue
+      seenPaths.add(path)
+      if (HINT_PATHS.some((h) => path.toLowerCase().startsWith(h))) hinted.push(path)
+      else others.push(path)
+      if (seenPaths.size >= 80) break
     }
   }
 
-  for (const path of Array.from(paths)) {
+  for (const path of [...hinted, ...others]) {
     if (pages.length >= MAX_PAGES) break
     const url = new URL(path, base).toString()
     if (pages.some((p) => p.url === url)) continue
