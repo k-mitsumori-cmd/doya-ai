@@ -71,6 +71,8 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
   const lastActivityRef = useRef(0)
   const nudgeCountRef = useRef(0)
   const speakingRef = useRef(false)
+  /** 最初の response.create を送ったか。二重送信を防ぐ */
+  const kickedOffRef = useRef(false)
   /** 応募者が自分でミュートしたか。面接官の発話終了時に誤って開けないよう覚えておく */
   const userMutedRef = useRef(false)
   const [userMuted, setUserMuted] = useState(false)
@@ -399,6 +401,9 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
   }, [state])
 
   const start = useCallback(async () => {
+    // ⚠️ 再接続で start をやり直したとき、前回の送信済みフラグが残っていると
+    //    AIが話し始めない。ここで必ず戻す。
+    kickedOffRef.current = false
     setError(null)
     endedRef.current = false
 
@@ -654,12 +659,29 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
       startedAtRef.current = Date.now()
       setState('live')
 
-      // 面接官から話し始めてもらう
-      setTimeout(() => {
-        if (dc.readyState === 'open') {
+      // ⚠️ 固定のsetTimeoutで送ってはいけない。データチャネルの開通が遅れると
+      //    送信されないまま終わり、AIが一度も話さない（プレースホルダのまま固まる）。
+      //    実際に「まもなく商談を始めます」から進まない事象として起きた（2026-08-31）。
+      //    開通を待って送り、開通済みなら即送る。二重送信は kickedOff で防ぐ。
+      const kickOff = () => {
+        if (kickedOffRef.current) return
+        if (dc.readyState !== 'open') return
+        kickedOffRef.current = true
+        try {
           dc.send(JSON.stringify({ type: 'response.create' }))
+        } catch {
+          kickedOffRef.current = false
         }
-      }, 400)
+      }
+      dc.addEventListener('open', kickOff)
+      // 既に開いている場合に備えて一度試す
+      kickOff()
+      // 保険: 何らかの理由で open が来なくても、開通していれば送る
+      const kickTimer = setInterval(() => {
+        if (kickedOffRef.current) { clearInterval(kickTimer); return }
+        kickOff()
+      }, 500)
+      window.setTimeout(() => clearInterval(kickTimer), 15000)
     } catch (e: any) {
       cleanup()
       setState('error')

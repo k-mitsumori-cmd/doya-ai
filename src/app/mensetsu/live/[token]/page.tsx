@@ -70,7 +70,12 @@ export default function MensetsuLivePage() {
   // 会議UIの操作状態
   const [micOn, setMicOn] = useState(true)
   const [cameraOn, setCameraOn] = useState(false)
-  const [showText, setShowText] = useState(false)
+  /**
+   * テキスト入力欄。
+   * ⚠️ 既定で開いておく。声で答えるのが面倒な人が多く、
+   *    毎回キーボードボタンを探させるのは余計な一手間になる（2026-08-31）。
+   */
+  const [showText, setShowText] = useState(true)
   const [draft, setDraft] = useState('')
   const [sheet, setSheet] = useState<null | 'agenda' | 'log'>(null)
   const selfVideoRef = useRef<HTMLVideoElement | null>(null)

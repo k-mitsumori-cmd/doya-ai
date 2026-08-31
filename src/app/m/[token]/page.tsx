@@ -101,7 +101,12 @@ export default function AishodanRoomPage() {
   const [submitting, setSubmitting] = useState(false)
 
   const [micOn, setMicOn] = useState(true)
-  const [showText, setShowText] = useState(false)
+  /**
+   * テキスト入力欄。
+   * ⚠️ 既定で開いておく。声で答えるのが面倒な人が多く、
+   *    毎回キーボードボタンを探させるのは余計な一手間になる（2026-08-31）。
+   */
+  const [showText, setShowText] = useState(true)
   const [draft, setDraft] = useState('')
   /** 直近でワンタップ送信した選択肢。二度押しを防ぐ */
   const [sentQuick, setSentQuick] = useState<string | null>(null)

@@ -350,6 +350,43 @@
   60%  { opacity: 1; transform: translateY(-3px) scale(1.012); }
   100% { opacity: 1; transform: translateY(0) scale(1); }
 }
+/* AIフィードバックの結果が「パッと」出てくる演出。
+   ⚠️ 採点は数十秒待たされる。出た瞬間が分かる動きが無いと、
+      待った甲斐が伝わらず、そのまま見落とされる。 */
+@keyframes aiFeedbackPop {
+  0%   { opacity: 0; transform: translateY(14px) scale(0.97); }
+  55%  { opacity: 1; transform: translateY(-4px) scale(1.015); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-ai-feedback {
+  opacity: 0;
+  animation: aiFeedbackPop 0.5s cubic-bezier(0.22, 1.2, 0.36, 1) forwards;
+  animation-delay: var(--stagger, 0ms);
+}
+/* スコアバーが0から伸びる */
+@keyframes aiScoreBar {
+  from { width: 0%; }
+  to   { width: var(--score-w, 0%); }
+}
+.animate-score-bar {
+  animation: aiScoreBar 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation-delay: var(--stagger, 0ms);
+}
+/* ボタンの虹色グラデーションをゆっくり流す */
+@keyframes aiButtonSheen {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+.animate-ai-button {
+  background-size: 200% 100%;
+  animation: aiButtonSheen 4s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-ai-feedback { opacity: 1; animation: none; }
+  .animate-score-bar { animation: none; width: var(--score-w, 0%); }
+  .animate-ai-button { animation: none; }
+}
+
 .animate-quote-item {
   opacity: 0;
   animation: quoteItemPop 0.42s cubic-bezier(0.22, 1.2, 0.36, 1) forwards;

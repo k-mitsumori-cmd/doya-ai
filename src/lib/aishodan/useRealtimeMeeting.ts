@@ -38,6 +38,12 @@ interface UseRealtimeMeetingOptions {
   textOnly?: boolean
 }
 
+/**
+ * 沈黙が何ミリ秒続いたら助け舟を出すか。
+ * ⚠️ 短いと考えている最中に畳みかける。長いと止まったように見える。
+ */
+const SILENCE_NUDGE_MS = 15000
+
 export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = false }: UseRealtimeMeetingOptions) {
   const [state, setState] = useState<ConnState>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -48,6 +54,12 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
   const userMutedRef = useRef(false)
   /** setMicEnabled から同期的に参照するため、speaking を ref にも持つ */
   const speakingRef = useRef(false)
+  /** 最初の response.create を送ったか。二重送信を防ぐ */
+  const kickedOffRef = useRef(false)
+  const listeningRef = useRef(false)
+  /** 最後に何かが起きた時刻。沈黙の判定に使う */
+  const lastActivityRef = useRef(0)
+  const nudgeCountRef = useRef(0)
   const [userMuted, setUserMuted] = useState(false)
   const [listening, setListening] = useState(false)
   const [elapsedSec, setElapsedSec] = useState(0)
@@ -335,6 +347,9 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
   )
 
   const start = useCallback(async () => {
+    // ⚠️ 再接続で start をやり直したとき、前回の送信済みフラグが残っていると
+    //    AIが話し始めない。ここで必ず戻す。
+    kickedOffRef.current = false
     setError(null)
     endedRef.current = false
 
@@ -466,14 +481,20 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
           case 'input_audio_buffer.speech_started':
             if (!speechStartRef.current.guest) speechStartRef.current.guest = Date.now()
             setListening(true)
+            listeningRef.current = true
+            nudgeCountRef.current = 0
+            lastActivityRef.current = Date.now()
             break
           case 'input_audio_buffer.speech_stopped':
             setListening(false)
+            listeningRef.current = false
+            lastActivityRef.current = Date.now()
             void flushTurns()
             break
           case 'response.done': {
             setSpeaking(false)
             speakingRef.current = false
+            lastActivityRef.current = Date.now()
             // 保険: transcript イベントを取りこぼしていても、
             // response.done の中身からAIの発話を拾えるようにする。
             const items = ev?.response?.output ?? []
@@ -519,16 +540,67 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
       startedAtRef.current = Date.now()
       setState('live')
 
-      // AIから話し始めてもらう
-      setTimeout(() => {
-        if (dc.readyState === 'open') dc.send(JSON.stringify({ type: 'response.create' }))
-      }, 400)
+      // ⚠️ 固定のsetTimeoutで送ってはいけない。データチャネルの開通が遅れると
+      //    送信されないまま終わり、AIが一度も話さない（プレースホルダのまま固まる）。
+      //    実際に「まもなく商談を始めます」から進まない事象として起きた（2026-08-31）。
+      //    開通を待って送り、開通済みなら即送る。二重送信は kickedOff で防ぐ。
+      const kickOff = () => {
+        if (kickedOffRef.current) return
+        if (dc.readyState !== 'open') return
+        kickedOffRef.current = true
+        try {
+          dc.send(JSON.stringify({ type: 'response.create' }))
+        } catch {
+          kickedOffRef.current = false
+        }
+      }
+      dc.addEventListener('open', kickOff)
+      // 既に開いている場合に備えて一度試す
+      kickOff()
+      // 保険: 何らかの理由で open が来なくても、開通していれば送る
+      const kickTimer = setInterval(() => {
+        if (kickedOffRef.current) { clearInterval(kickTimer); return }
+        kickOff()
+      }, 500)
+      window.setTimeout(() => clearInterval(kickTimer), 15000)
     } catch (e: any) {
       cleanup()
       setState('error')
       setError(e?.message || '接続に失敗しました')
     }
   }, [api, cleanup, flushTurns, handleFunctionCall, pushLine, sessionId, textOnly])
+
+  // ------------------------------------------------------------------
+  // 沈黙時の助け舟
+  // ------------------------------------------------------------------
+  // ⚠️ これが無いと商談が永久に止まる。AIは冒頭で「始めてよろしいですか」と
+  //    同意を求めて待つが、サーバVADは相手が**話し終えたとき**しか順番を渡さない。
+  //    マイクが小さい・環境音が少ないなどでVADが発火しないと、AIは黙ったまま。
+  //    実際に「これから商談を始めます から一向に進まない」という形で起きた（2026-08-31）。
+  //    面接側には同じ仕組みが元からあったが、商談側だけ入っていなかった。
+  useEffect(() => {
+    if (state !== 'live') return
+    if (!lastActivityRef.current) lastActivityRef.current = Date.now()
+    const timer = setInterval(() => {
+      const dc = dcRef.current
+      if (!dc || dc.readyState !== 'open') return
+      if (speakingRef.current || listeningRef.current) return
+      if (Date.now() - lastActivityRef.current < SILENCE_NUDGE_MS) return
+
+      nudgeCountRef.current += 1
+      lastActivityRef.current = Date.now()
+      const instructions =
+        nudgeCountRef.current === 1
+          ? '相手から反応がありません。返事を待たずに、そのまま次の話題へ進めてください。同じ質問を繰り返さないこと。'
+          : '相手から反応が無い状態が続いています。advance_meeting を intent="next" で呼び、次のフェーズへ進めてください。'
+      try {
+        dc.send(JSON.stringify({ type: 'response.create', response: { instructions } }))
+      } catch {
+        // 送れなくても次の周回で再試行される
+      }
+    }, 3000)
+    return () => clearInterval(timer)
+  }, [state])
 
   // 経過時間
   useEffect(() => {

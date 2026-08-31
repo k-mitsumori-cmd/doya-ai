@@ -7,7 +7,8 @@
 //   → ボタンひとつで改善する
 // 中心的な体験は「URLだけで始まること」なので、他の入力は全て任意にする。
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { APPEAL_LABELS, type AdCopy, type AppealAxis, type BrandProfile, type RefineDirective } from '@/lib/adimage/types'
 import AdImageLp from './Lp'
@@ -99,6 +100,8 @@ export default function AdImageTool() {
   // 改善
   const [scoring, setScoring] = useState(false)
   const [scores, setScores] = useState<Scores | null>(null)
+  /** 採点のたびに増やし、key に混ぜて登場演出を再生させる */
+  const [feedbackSeq, setFeedbackSeq] = useState(0)
   const [advice, setAdvice] = useState('')
   const [directives, setDirectives] = useState<RefineDirective[]>([])
   const [selectedChips, setSelectedChips] = useState<string[]>([])
@@ -269,6 +272,7 @@ export default function AdImageTool() {
       if (!r.ok) throw new Error(d?.error || '採点に失敗しました')
       setScores(d.scores)
       setAdvice(d.advice)
+      setFeedbackSeq((n) => n + 1)
       setDirectives(d.directives || [])
     } catch (e) {
       notifyError(setError, e instanceof Error ? e.message : '採点に失敗しました')
@@ -626,72 +630,148 @@ export default function AdImageTool() {
               ))}
             </div>
 
-            {/* 改善 */}
-            <div className="mt-6 border-t border-slate-100 pt-5">
-              <h3 className="text-sm font-bold text-slate-900">気になるところを直す</h3>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {chips.map((c) => (
-                  <button
-                    key={c.key}
-                    onClick={() =>
-                      setSelectedChips((prev) => (prev.includes(c.key) ? prev.filter((k) => k !== c.key) : [...prev, c.key]))
-                    }
-                    className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
-                      selectedChips.includes(c.key)
-                        ? 'border-[#0066ff] bg-[#0066ff] text-white'
-                        : 'border-slate-300 text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-              <input
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="その他の要望（任意）"
-                className="mt-3 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
-              />
+            {/* --- AIフィードバック ---
+                 ⚠️ このサービスの中心はここ。作って終わりではなく、AIに見てもらって
+                    直すのが価値なので、他のどのボタンより大きく・目立たせる。 */}
+            <div className="mt-8 border-t border-slate-100 pt-6">
+              <button
+                onClick={runFeedback}
+                disabled={scoring}
+                className="animate-ai-button w-full rounded-2xl px-6 py-6 text-center text-xl font-black text-white shadow-xl transition hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0 sm:text-2xl"
+                style={{
+                  backgroundImage:
+                    'linear-gradient(90deg, #0066ff, #7f19e6, #ff1e72, #ffd400, #00e0ff, #0066ff)',
+                }}
+              >
+                {scoring ? (
+                  <span className="inline-flex items-center gap-3">
+                    <span className="h-5 w-5 animate-spin rounded-full border-[3px] border-white/40 border-t-white" />
+                    AIが画像を見ています…
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-3">
+                    <Sparkles className="h-7 w-7" />
+                    AIフィードバックをもらう
+                  </span>
+                )}
+              </button>
+              <p className="mt-2 text-center text-xs font-bold text-slate-500">
+                視認性・訴求力・行動喚起・配置適合・ブランド整合の5つで採点し、直すべき点を出します
+              </p>
 
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button
-                  onClick={runFeedback}
-                  disabled={scoring}
-                  className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0 font-semibold"
-                >
-                  {scoring ? '採点中...' : 'AIに見てもらう'}
-                </button>
-                <button
-                  onClick={refine}
-                  disabled={refining || (selectedChips.length === 0 && !note.trim() && directives.length === 0)}
-                  className="rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
-                >
-                  {refining ? '作り直し中...' : 'この内容で作り直す'}
-                </button>
-              </div>
-
+              {/* 採点結果。⚠️ 待たされた末に出るので、出た瞬間が分かるよう順に現れる */}
               {scores && (
-                <div className="mt-4 rounded-xl bg-slate-50 p-4">
-                  <div className="flex flex-wrap gap-4 text-sm font-semibold">
-                    <ScoreItem label="視認性" v={scores.visibility} />
-                    <ScoreItem label="訴求力" v={scores.appeal} />
-                    <ScoreItem label="行動喚起" v={scores.cta} />
-                    <ScoreItem label="配置適合" v={scores.fit} />
-                    <ScoreItem label="ブランド" v={scores.brand} />
+                <div
+                  key={feedbackSeq}
+                  className="animate-ai-feedback mt-6 rounded-2xl bg-gradient-to-br from-[#f7faff] to-[#fef6ff] p-6 ring-2 ring-[#d8e7ff]"
+                >
+                  <div className="flex flex-wrap items-end justify-between gap-3">
+                    <p className="text-lg font-black text-[#0a0f3c]">AIの採点</p>
+                    <p className="text-3xl font-black leading-none text-[#0066ff]">
+                      {scores.total}
+                      <span className="ml-1 text-base font-black text-[#8a94ad]">/ 5</span>
+                    </p>
                   </div>
-                  {advice && <p className="mt-3 text-sm leading-relaxed text-slate-700 font-semibold">{advice}</p>}
+
+                  <div className="mt-5 space-y-3">
+                    {[
+                      ['視認性', scores.visibility],
+                      ['訴求力', scores.appeal],
+                      ['行動喚起', scores.cta],
+                      ['配置適合', scores.fit],
+                      ['ブランド整合', scores.brand],
+                    ].map(([label, v], idx) => (
+                      <div key={label as string} className="animate-ai-feedback" style={{ ['--stagger' as string]: `${idx * 70}ms` } as CSSProperties}>
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-sm font-black text-[#425071]">{label}</span>
+                          <span className="text-sm font-black text-[#0a0f3c]">{v} / 5</span>
+                        </div>
+                        <div className="mt-1 h-2.5 w-full overflow-hidden rounded-full bg-white ring-1 ring-[#e3edff]">
+                          <div
+                            className="animate-score-bar h-full rounded-full"
+                            style={{
+                              ['--score-w' as string]: `${(Number(v) / 5) * 100}%`,
+                              ['--stagger' as string]: `${idx * 70 + 120}ms`,
+                              backgroundImage: 'linear-gradient(90deg, #0066ff, #00e0ff)',
+                            } as CSSProperties}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {advice && (
+                    <p
+                      className="animate-ai-feedback mt-5 rounded-xl bg-white p-4 text-sm font-semibold leading-relaxed text-[#0a0f3c] ring-1 ring-[#e3edff]"
+                      style={{ ['--stagger' as string]: '420ms' } as CSSProperties}
+                    >
+                      {advice}
+                    </p>
+                  )}
+
                   {directives.length > 0 && (
-                    <ul className="mt-3 space-y-1.5">
-                      {directives.map((d, i) => (
-                        <li key={i} className="text-xs leading-relaxed text-slate-600 font-semibold">
-                          <span className="font-bold text-slate-800">改善案: </span>
-                          {d.instruction}
-                          {d.reason && <span className="text-slate-500">（{d.reason}）</span>}
-                        </li>
-                      ))}
-                    </ul>
+                    <div
+                      className="animate-ai-feedback mt-4"
+                      style={{ ['--stagger' as string]: '500ms' } as CSSProperties}
+                    >
+                      <p className="text-sm font-black text-[#425071]">直すべき点</p>
+                      <ul className="mt-2 space-y-2">
+                        {directives.map((d, i2) => (
+                          <li key={i2} className="rounded-xl bg-white p-3 text-sm font-semibold leading-relaxed text-[#0a0f3c] ring-1 ring-[#e3edff]">
+                            {d.instruction}
+                            {d.reason && <span className="block text-xs font-bold text-[#8a94ad]">（{d.reason}）</span>}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-3 text-xs font-bold text-[#0066ff]">
+                        この内容はそのまま作り直しに反映されます
+                      </p>
+                    </div>
                   )}
                 </div>
+              )}
+
+              {/* 追加の要望。⚠️ AIの指摘だけで足りるならここは触らなくてよい */}
+              <details className="mt-5 rounded-xl bg-slate-50 p-4">
+                <summary className="cursor-pointer text-sm font-black text-slate-700">
+                  自分でも直したいところを指定する（任意）
+                </summary>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {chips.map((c) => (
+                    <button
+                      key={c.key}
+                      onClick={() =>
+                        setSelectedChips((prev) => (prev.includes(c.key) ? prev.filter((k) => k !== c.key) : [...prev, c.key]))
+                      }
+                      className={`rounded-full border px-3.5 py-1.5 text-sm transition ${
+                        selectedChips.includes(c.key)
+                          ? 'border-[#0066ff] bg-[#0066ff] text-white'
+                          : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  placeholder="その他の要望（任意）"
+                  className="mt-3 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold"
+                />
+              </details>
+
+              <button
+                onClick={refine}
+                disabled={refining || (selectedChips.length === 0 && !note.trim() && directives.length === 0)}
+                className="mt-5 w-full rounded-2xl bg-[#0066ff] px-6 py-5 text-lg font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-[#0052cc] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:translate-y-0 sm:text-xl"
+              >
+                {refining ? '作り直し中…（1〜2分かかります）' : 'この内容で作り直す'}
+              </button>
+              {!scores && directives.length === 0 && (
+                <p className="mt-2 text-center text-xs font-bold text-slate-500">
+                  先に「AIフィードバックをもらう」を押すと、指摘を反映して作り直せます
+                </p>
               )}
             </div>
           </section>
