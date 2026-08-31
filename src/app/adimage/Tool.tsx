@@ -266,7 +266,7 @@ export default function AdImageTool() {
     } finally {
       setGenerating(false)
     }
-  }, [appeal, brandId, chosen, copy, drafts, selected])
+  }, [appeal, brandId, chosen, copy, customPrompt, drafts, selected, variations])
 
   const runFeedback = useCallback(async () => {
     if (!conceptId) return
