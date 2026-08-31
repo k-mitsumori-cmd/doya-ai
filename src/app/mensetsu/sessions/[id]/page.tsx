@@ -206,18 +206,29 @@ export default function MensetsuReportPage() {
         )}
 
         {s.verdict && (
-          <div className="mt-5 flex flex-wrap items-center gap-4 rounded-lg bg-white p-6 shadow-sm">
-            <span
-              className={`rounded-full px-4 py-1.5 text-sm font-black ${VERDICT_STYLE[s.verdict] || 'bg-slate-100 text-slate-700'}`}
-            >
-              {VERDICT_LABEL[s.verdict] || s.verdict}
-            </span>
-            {data.average != null && (
-              <span className="text-sm font-bold text-[#0a0f3c]">
-                平均スコア {data.average} / 5
+          /* ⚠️ 結果は一目で読めることが最優先。以前は判定も平均も本文と同じ
+               文字サイズで並んでいて、どれが結論なのか分からなかった。 */
+          <div className="mt-5 rounded-2xl bg-white p-6 shadow-sm ring-2 ring-[#d8e7ff] sm:p-8">
+            <div className="flex flex-wrap items-center gap-4">
+              {data.average != null && (
+                <div className="rounded-2xl bg-[#f7faff] px-6 py-4">
+                  <p className="text-xs font-black text-[#425071]">平均スコア</p>
+                  <p className="mt-1 text-5xl font-black leading-none text-[#0066ff] sm:text-6xl">
+                    {data.average}
+                    <span className="ml-1 text-2xl font-black text-[#8a94ad]">/ 5</span>
+                  </p>
+                  <p className="mt-1.5 text-sm font-black text-[#425071]">
+                    5段階中 {data.average}
+                  </p>
+                </div>
+              )}
+              <span
+                className={`rounded-2xl px-6 py-4 text-2xl font-black sm:text-3xl ${VERDICT_STYLE[s.verdict] || 'bg-slate-100 text-slate-700'}`}
+              >
+                {VERDICT_LABEL[s.verdict] || s.verdict}
               </span>
-            )}
-            <p className="w-full text-sm font-semibold leading-relaxed text-[#425071]">{s.overallComment}</p>
+            </div>
+            <p className="mt-5 text-base font-semibold leading-relaxed text-[#425071]">{s.overallComment}</p>
           </div>
         )}
 

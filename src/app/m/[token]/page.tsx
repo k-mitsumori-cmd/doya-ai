@@ -444,11 +444,11 @@ export default function AishodanRoomPage() {
                 }`}
               >
                 <p className="text-base font-black leading-tight lg:text-lg">
-                  {rt.speaking ? 'いまは担当が話しています' : 'あなたが話すターンです'}
+                  {rt.speaking ? 'いま担当が話しています' : 'あなたが話すターンです'}
                 </p>
                 <p className="mt-1 text-xs font-bold leading-relaxed">
                   {rt.speaking
-                    ? '話し終わるまでお待ちください（マイクはオフになっています）'
+                    ? '途中で話しかけていただいても大丈夫です'
                     : 'そのままお話しください'}
                 </p>
               </div>
@@ -538,15 +538,8 @@ export default function AishodanRoomPage() {
       )}
 
       <footer className="flex shrink-0 items-start justify-center gap-3 border-t border-[#dfe6f3] bg-white px-3 py-3 lg:gap-4">
-        {/* ⚠️ 担当の発話中はマイクが自動で閉じるので操作させない。
-             押せると「解除したのに声が届かない」という混乱になる。 */}
-        <RoundButton
-          onClick={toggleMic}
-          icon={rt.speaking ? 'mic_off' : micOn ? 'mic' : 'mic_off'}
-          label={rt.speaking ? '相手の番' : micOn ? 'ミュート' : '解除'}
-          tone={rt.speaking ? 'default' : micOn ? 'default' : 'danger'}
-          disabled={rt.speaking}
-        />
+        {/* ⚠️ 担当の発話中もマイクは開けておく。先に答えても中断は起きない。 */}
+        <RoundButton onClick={toggleMic} icon={micOn ? 'mic' : 'mic_off'} label={micOn ? 'ミュート' : '解除'} tone={micOn ? 'default' : 'danger'} />
         <RoundButton onClick={toggleText} icon="keyboard" label="テキスト" tone={showText ? 'active' : 'default'} />
         <RoundButton onClick={() => setSheet(sheet === 'log' ? null : 'log')} icon="forum" label="会話ログ" tone={sheet === 'log' ? 'active' : 'default'} />
         <RoundButton onClick={() => void rt.end()} icon="logout" label="終了" tone="danger" />

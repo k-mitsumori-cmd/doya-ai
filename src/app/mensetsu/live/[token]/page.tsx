@@ -517,11 +517,11 @@ export default function MensetsuLivePage() {
                 }`}
               >
                 <p className="text-base font-black leading-tight lg:text-lg">
-                  {rt.speaking ? 'いまは面接官が話しています' : 'あなたが話すターンです'}
+                  {rt.speaking ? 'いま面接官が話しています' : 'あなたが話すターンです'}
                 </p>
                 <p className="mt-1 text-xs font-bold leading-relaxed">
                   {rt.speaking
-                    ? '話し終わるまでお待ちください（マイクはオフになっています）'
+                    ? '質問は左に表示されています。読んで先に答えていただいても大丈夫です'
                     : 'そのままお話しください'}
                 </p>
               </div>
@@ -596,15 +596,9 @@ export default function MensetsuLivePage() {
 
       {/* 操作バー（スマホでも押しやすい丸ボタン） */}
       <footer className="flex shrink-0 items-start justify-center gap-3 border-t border-[#dfe6f3] bg-white px-3 py-3 lg:gap-4">
-        {/* ⚠️ 面接官の発話中はマイクが自動で閉じるので、ここでは操作させない。
-             押せてしまうと「解除したのに声が届かない」という混乱になる。 */}
-        <RoundButton
-          onClick={toggleMic}
-          icon={rt.speaking ? 'mic_off' : micOn ? 'mic' : 'mic_off'}
-          label={rt.speaking ? '相手の番' : micOn ? 'ミュート' : '解除'}
-          tone={rt.speaking ? 'default' : micOn ? 'default' : 'danger'}
-          disabled={rt.speaking}
-        />
+        {/* ⚠️ 面接官の発話中もマイクは開けておく。質問文が画面に出ているので、
+             読んで先に答えたい応募者がいる。先に答えても中断は起きない。 */}
+        <RoundButton onClick={toggleMic} icon={micOn ? 'mic' : 'mic_off'} label={micOn ? 'ミュート' : '解除'} tone={micOn ? 'default' : 'danger'} />
         <RoundButton onClick={toggleCamera} icon={cameraOn ? 'videocam' : 'videocam_off'} label="カメラ" tone={cameraOn ? 'active' : 'default'} />
         <RoundButton onClick={() => setShowText((v) => !v)} icon="keyboard" label="テキスト" tone={showText ? 'active' : 'default'} />
         <RoundButton onClick={() => setSheet(sheet === 'log' ? null : 'log')} icon="forum" label="会話ログ" tone={sheet === 'log' ? 'active' : 'default'} />

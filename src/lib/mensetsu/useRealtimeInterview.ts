@@ -264,28 +264,15 @@ export function useRealtimeInterview({ token, onEnded, recordAudio = false }: Us
     userMutedRef.current = !enabled
     setUserMuted(!enabled)
     micRef.current?.getAudioTracks().forEach((t) => {
-      // ⚠️ 面接官が話している間は、手動でONにしてもマイクは開けない。
-      //    開けてしまうと割り込みが起き、質問が最初から言い直される。
-      t.enabled = enabled && !speakingRef.current
+      t.enabled = enabled
     })
   }, [])
 
-  // ------------------------------------------------------------------
-  // 面接官が話している間はマイクを閉じる（ターン制御）
-  // ------------------------------------------------------------------
-  // ⚠️ これが無いと、応募者が相づちを打っただけでサーバVADが「割り込み」と判定し、
-  //    面接官の発話が中断される。中断された応答は途中から再開できないため、
-  //    次の応答で**質問を最初から言い直す**。実際に「勝手に質問が繰り返される」
-  //    「話している途中で次に進む」という形で表面化していた。
-  //    根本の対策はマイクを物理的に閉じて、割り込みを起こさせないこと。
-  useEffect(() => {
-    const tracks = micRef.current?.getAudioTracks()
-    if (!tracks) return
-    const shouldOpen = !speaking && !userMutedRef.current
-    tracks.forEach((t) => {
-      t.enabled = shouldOpen
-    })
-  }, [speaking])
+  // ⚠️ 以前はここで「AIの発話中はマイクを閉じる」処理を入れていたが撤回した（2026-08-31）。
+  //    画面には質問文が出ているので、読んで先に答えたい人がいる。閉じると答えられない。
+  //    質問が言い直される問題は turn_detection の interrupt_response: false で解決済みで、
+  //    発話中に答えても**中断されず、そのまま回答として積まれる**。ミュートは不要。
+
 
   /**
    * テキストで回答する（音声が使えない環境・騒がしい場所・聞き取り精度が不安なとき用）。

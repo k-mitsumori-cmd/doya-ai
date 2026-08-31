@@ -199,25 +199,15 @@ export function useRealtimeMeeting({ roomToken, sessionId, onEnded, textOnly = f
     userMutedRef.current = !enabled
     setUserMuted(!enabled)
     micRef.current?.getAudioTracks().forEach((t) => {
-      // ⚠️ AIが話している間は、手動でONにしてもマイクは開けない。
-      //    開けると割り込みが起き、説明が最初から言い直される。
-      t.enabled = enabled && !speakingRef.current
+      t.enabled = enabled
     })
   }, [])
 
-  // ------------------------------------------------------------------
-  // AIが話している間はマイクを閉じる（ターン制御）
-  // ------------------------------------------------------------------
-  // ⚠️ 相づちを打っただけでサーバVADが「割り込み」と判定してAIの発話を中断し、
-  //    次の応答で説明を最初から繰り返す。マイクを閉じて割り込ませないのが根本対策。
-  useEffect(() => {
-    const tracks = micRef.current?.getAudioTracks()
-    if (!tracks) return
-    const shouldOpen = !speaking && !userMutedRef.current
-    tracks.forEach((t) => {
-      t.enabled = shouldOpen
-    })
-  }, [speaking])
+  // ⚠️ 以前はここで「AIの発話中はマイクを閉じる」処理を入れていたが撤回した（2026-08-31）。
+  //    画面には質問文が出ているので、読んで先に答えたい人がいる。閉じると答えられない。
+  //    質問が言い直される問題は turn_detection の interrupt_response: false で解決済みで、
+  //    発話中に答えても**中断されず、そのまま回答として積まれる**。ミュートは不要。
+
 
   /** データチャネルに function の実行結果を返し、続きを話させる */
   const replyToTool = useCallback((callId: string, output: unknown) => {

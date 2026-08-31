@@ -17,6 +17,8 @@ interface Criterion {
   weight: number
 }
 interface Candidate {
+  templateName?: string
+  jobTitle?: string
   id: string
   name: string | null
   verdict: string | null
@@ -55,7 +57,9 @@ function cellStyle(v: number | null, median: number | null): string {
 
 export default function ComparePage() {
   const [templates, setTemplates] = useState<TemplateRow[]>([])
-  const [templateId, setTemplateId] = useState('')
+  // ⚠️ 既定は「すべて」。以前は最初のテンプレートを選ぶまで何も出ず、
+  //    「選ばないと表示されない」状態だった。
+  const [templateId, setTemplateId] = useState('all')
   const [criteria, setCriteria] = useState<Criterion[]>([])
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [medians, setMedians] = useState<Record<string, number | null>>({})
@@ -69,7 +73,6 @@ export default function ComparePage() {
         const json = await res.json()
         const list: TemplateRow[] = json?.templates || []
         setTemplates(list)
-        if (list[0]) setTemplateId(list[0].id)
       } finally {
         setLoading(false)
       }
@@ -77,7 +80,6 @@ export default function ComparePage() {
   }, [])
 
   const load = useCallback(async () => {
-    if (!templateId) return
     setError(null)
     const res = await fetch(`/api/mensetsu/compare?templateId=${encodeURIComponent(templateId)}`)
     const json = await res.json()
@@ -133,6 +135,7 @@ export default function ComparePage() {
               onChange={(e) => setTemplateId(e.target.value)}
               className="mt-5 rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
             >
+              <option value="all">すべて（全職種を横断して順位を出す）</option>
               {templates.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
@@ -142,11 +145,76 @@ export default function ComparePage() {
 
             {error && <p className="mt-4 text-sm font-bold text-[#c2185b]">{error}</p>}
 
+            {templateId === 'all' && (
+              <p className="mt-3 text-xs font-semibold leading-relaxed text-[#8a94ad]">
+                ⚠️ 職種をまたぐと評価軸そのものが違うため、横並びにできるのは「平均スコア」と「判定」だけです。
+                評価軸ごとの点数を見比べたいときは、上の欄で職種を選んでください。
+              </p>
+            )}
+
             {sorted.length === 0 ? (
               <p className="mt-6 text-sm font-semibold text-[#425071]">
-                このテンプレートで評価済みの面接はまだありません。
+                評価済みの面接はまだありません。
               </p>
             ) : (
+              <>
+              {/* ⚠️ 表だけだと誰が上位なのか一目で分からない。
+                   順位・平均スコア・判定を大きなカードで先に見せる。 */}
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {sorted.map((c, i) => (
+                  <div
+                    key={c.id}
+                    className={`rounded-2xl bg-white p-5 shadow-sm ring-2 ${
+                      i === 0 ? 'ring-[#0066ff]' : 'ring-[#e8eefb]'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate text-lg font-black text-[#0a0f3c]">
+                          {c.name || '（名前未入力）'}
+                        </p>
+                        {c.jobTitle && (
+                          <p className="truncate text-xs font-bold text-[#8a94ad]">{c.jobTitle}</p>
+                        )}
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-full px-3 py-1 text-sm font-black ${
+                          i === 0 ? 'bg-[#0066ff] text-white' : 'bg-[#eef3ff] text-[#425071]'
+                        }`}
+                      >
+                        {i + 1}位
+                      </span>
+                    </div>
+
+                    <div className="mt-4 rounded-xl bg-[#f7faff] px-4 py-3">
+                      <p className="text-xs font-black text-[#425071]">平均スコア</p>
+                      <p className="mt-0.5 text-3xl font-black leading-none text-[#0066ff]">
+                        {c.average ?? '—'}
+                        <span className="ml-1 text-base font-black text-[#8a94ad]">/ 5</span>
+                      </p>
+                      <p className="mt-1 text-xs font-bold text-[#8a94ad]">5段階中 {c.average ?? '—'}</p>
+                    </div>
+
+                    {c.verdict && (
+                      <span
+                        className={`mt-3 inline-block rounded-full px-3 py-1.5 text-sm font-black ${
+                          VERDICT_STYLE[c.verdict] || 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {VERDICT_LABEL[c.verdict] || c.verdict}
+                      </span>
+                    )}
+
+                    <Link
+                      href={`/mensetsu/sessions/${c.id}`}
+                      className="mt-4 block rounded-xl border-2 border-[#d8e7ff] py-2.5 text-center text-sm font-black text-[#0066ff]"
+                    >
+                      評価の詳細を見る
+                    </Link>
+                  </div>
+                ))}
+              </div>
+
               <div className="mt-5 overflow-x-auto rounded-lg bg-white shadow-sm">
                 <table className="w-full min-w-[720px] border-collapse text-sm font-medium">
                   <thead>
@@ -214,6 +282,7 @@ export default function ComparePage() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </>
         )}

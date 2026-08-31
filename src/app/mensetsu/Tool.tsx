@@ -76,8 +76,6 @@ export default function MensetsuTool() {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
 
-  const [url, setUrl] = useState('')
-  const [profile, setProfile] = useState<Profile | null>(null)
 
   const [jobTitle, setJobTitle] = useState('')
   const [level, setLevel] = useState('mid')
@@ -149,28 +147,6 @@ export default function MensetsuTool() {
     }
   }
 
-  const analyze = async () => {
-    if (!url.trim()) return
-    setBusy('analyze')
-    setError(null)
-    try {
-      const res = await fetch('/api/mensetsu/company/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim() }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        notifyError(setError, data?.error || '解析に失敗しました')
-        return
-      }
-      setProfile(data.profile)
-      setNotice(`${data.pageCount}ページを読み取りました`)
-    } finally {
-      setBusy(null)
-    }
-  }
-
   const generate = async () => {
     if (!jobTitle.trim()) return
     setBusy('generate')
@@ -181,7 +157,6 @@ export default function MensetsuTool() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          profileId: profile?.id,
           jobTitle: jobTitle.trim(),
           level,
           durationMin,
@@ -329,13 +304,6 @@ export default function MensetsuTool() {
     <main className="min-h-screen bg-[#f2f6ff] px-5 py-10 lg:px-8">
       {/* ⚠️ AI処理中は全画面で「何をしているか」を出す。無言で待たせない */}
       <LoadingProgress
-        isLoading={busy === 'analyze'}
-        operationKey="mensetsu-analyze"
-        title="企業ページを読み取っています"
-        subtitle="事業内容と求める人物像を抽出しています。"
-        tips={['Tip: 採用ページのURLを入れると人物像の精度が上がります', 'Tip: 読み取った内容は後から編集できます']}
-      />
-      <LoadingProgress
         isLoading={busy === 'generate'}
         operationKey="mensetsu-generate"
         title="質問セットを作っています"
@@ -391,52 +359,10 @@ export default function MensetsuTool() {
           </section>
         ) : (
           <>
-            {/* --- 1. 企業URL調査 --- */}
+            {/* --- 1. 質問セット生成 --- */}
             <section className="mt-8 rounded-lg bg-white p-6 shadow-sm">
               <div className="flex items-center gap-2">
                 <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0066ff] text-xs font-black text-white">1</span>
-                <h2 className="text-base font-black text-[#0a0f3c]">企業URLを読み取る</h2>
-              </div>
-              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-                <input
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  placeholder="https://example.co.jp"
-                  className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
-                />
-                <button
-                  onClick={analyze}
-                  disabled={busy === 'analyze' || !url.trim()}
-                  className="rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-6 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
-                >
-                  {busy === 'analyze' ? '読み取り中…' : '読み取る'}
-                </button>
-              </div>
-
-              {profile && (
-                <dl className="mt-5 grid gap-3 sm:grid-cols-2">
-                  {[
-                    ['会社名', profile.companyName],
-                    ['事業内容', profile.business],
-                    ['提供価値', profile.valueProp],
-                    ['カルチャー', profile.culture],
-                    ['求める人物像', profile.idealProfile],
-                  ].map(([label, value]) => (
-                    <div key={label as string} className="rounded-lg bg-[#f7faff] p-4">
-                      <dt className="text-xs font-black text-[#0066ff]">{label}</dt>
-                      <dd className="mt-1 text-sm font-semibold leading-relaxed text-[#0a0f3c]">
-                        {value || <span className="text-[#8a94ad]">（サイトから読み取れませんでした）</span>}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              )}
-            </section>
-
-            {/* --- 2. 質問セット生成 --- */}
-            <section className="mt-6 rounded-lg bg-white p-6 shadow-sm">
-              <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0066ff] text-xs font-black text-white">2</span>
                 <h2 className="text-base font-black text-[#0a0f3c]">質問セットと評価基準を作る</h2>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -455,15 +381,11 @@ export default function MensetsuTool() {
                   <option value="mid">中途</option>
                   <option value="manager">マネージャー</option>
                 </select>
-                <select
-                  value={durationMin}
-                  onChange={(e) => setDurationMin(Number(e.target.value))}
-                  className="rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
-                >
-                  <option value={10}>10分</option>
-                  <option value={20}>20分</option>
-                  <option value={30}>30分</option>
-                </select>
+                {/* ⚠️ 面接は10分に固定。20分・30分は受ける側が最後まで持たず、
+                     選べること自体が迷いを生むため選択肢を外した（2026-08-31） */}
+                <div className="flex items-center rounded-xl bg-[#f7faff] px-4 py-3 text-sm font-black text-[#425071] ring-1 ring-[#e3edff]">
+                  10分の面接
+                </div>
                 <input
                   value={focus}
                   onChange={(e) => setFocus(e.target.value)}
@@ -642,7 +564,10 @@ export default function MensetsuTool() {
               )}
             </section>
 
-            {/* --- 4. 面接一覧 --- */}
+            {/* --- 3. 面接一覧 ---
+                 ⚠️ 終わった面接（評価済み）がいちばん見たい情報。
+                    未実施の行と同じ大きさで並べると埋もれるので、
+                    評価済みは大きなカードで先に出す。 */}
             <section className="mt-6 rounded-lg bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-base font-black text-[#0a0f3c]">面接一覧</h2>
@@ -656,11 +581,44 @@ export default function MensetsuTool() {
                   </Link>
                 )}
               </div>
+              {/* 終わった面接: 結果を大きく見せる */}
+              {sessions.filter((s) => s.status === 'evaluated').length > 0 && (
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  {sessions
+                    .filter((s) => s.status === 'evaluated')
+                    .map((s) => (
+                      <Link
+                        key={s.id}
+                        href={`/mensetsu/sessions/${s.id}`}
+                        className="block rounded-2xl bg-[#f7faff] p-5 ring-2 ring-[#d8e7ff] transition hover:ring-[#0066ff]"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-lg font-black text-[#0a0f3c]">
+                              {s.candidateName || '（名前未入力）'}
+                            </p>
+                            <p className="truncate text-xs font-bold text-[#8a94ad]">{s.template.jobTitle}</p>
+                          </div>
+                          {s.verdict && (
+                            <span className="shrink-0 rounded-full bg-[#0066ff] px-3 py-1.5 text-sm font-black text-white">
+                              {VERDICT_LABEL[s.verdict] || s.verdict}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-4 text-sm font-black text-[#0066ff]">評価が完了しています</p>
+                        <p className="mt-1 text-xs font-bold text-[#8a94ad]">
+                          押すと平均スコアと評価軸ごとの結果を見られます
+                        </p>
+                      </Link>
+                    ))}
+                </div>
+              )}
+
               {sessions.length === 0 ? (
                 <p className="mt-3 text-sm font-semibold text-[#425071]">まだ面接はありません。</p>
               ) : (
                 <ul className="mt-4 divide-y divide-[#eef3ff]">
-                  {sessions.map((s) => (
+                  {sessions.filter((s) => s.status !== 'evaluated').map((s) => (
                     <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                       <div>
                         <p className="text-sm font-black text-[#0a0f3c]">
