@@ -18,6 +18,7 @@ import { DEFAULT_PLACEMENT_KEYS, findPlacement, groupByGenSize } from '@/lib/adi
 import { exportToSize, generateBaked } from '@/lib/adimage/generate'
 import { DEFAULT_LOGO_CONFIG, type LogoConfig } from '@/lib/adimage/logo'
 import { normalizeCopy } from '@/lib/adimage/copy'
+import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { downloadBuffer, signedUrl } from '@/lib/adimage/storage'
 import type { AdCopy, BrandProfile } from '@/lib/adimage/types'
 
@@ -70,31 +71,60 @@ export async function GET(req: NextRequest) {
 /**
  * テンプレートのプロンプトから「作風」だけを取り出す。
  *
- * ⚠️ **丸ごと混ぜてはいけない。** テンプレートの本文はこういう構造になっている:
- *   Concept:     題材そのもの（例「琥珀色の美容液、石の台座」）
- *   Style:       作風（これだけが欲しい）
- *   Composition: 「Wide 1.91:1 banner」など**比率が固定で書かれている**
- *   Typography:  文字の指定（こちらで別途指定している）
- *   Avoid:       避けたい表現（そのまま使える）
+ * ⚠️ テンプレートには**2つの形式が混在している**（実測: 構造化150枚 / 平文348枚）。
+ *   A) 構造化: Concept/Style/Composition/Typography/Avoid の行区切り
+ *   B) 平文  : 英語の説明文が1〜2段落（Style行は無い）
  *
- * 丸ごと渡していたため、
- *   - 貴社のサービスではなくテンプレートの題材が描かれる
- *   - 正方形や縦長を作りたいのに 1.91:1 と指示が衝突する
- * という形で「全然違う画像」になっていた（2026-09-01）。
+ * ⚠️ どちらも**丸ごと渡してはいけない**。題材（何を描くか）と、
+ *    Aでは比率（Wide 1.91:1 banner）まで書かれており、
+ *    渡すと「テンプレートの題材が描かれる」「比率が衝突する」事故になる。
+ *
+ * ⚠️ Aだけを想定した抽出にすると、Bの348枚では空文字になり
+ *    **デザイン指定が丸ごと無視される**（2026-09-01にこれで作風が全く効かなかった）。
+ *    そのためBはLLMで作風だけに言い換える。失敗時は空にする（誤った指定を渡さない）。
  */
-function extractStyleOnly(prompt: string): string {
+async function extractStyleOnly(prompt: string): Promise<string> {
   const pick = (label: string) => {
     const m = prompt.match(new RegExp(`^${label}:\\s*(.+)$`, 'mi'))
     return m?.[1]?.trim() || ''
   }
   const style = pick('Style')
   const avoid = pick('Avoid')
-  return [
-    style ? `作風: ${style}` : '',
-    avoid ? `避けること: ${avoid}` : '',
-  ]
-    .filter(Boolean)
-    .join('\n')
+
+  // A) 構造化形式。そのまま使える
+  if (style) {
+    return [`作風: ${style}`, avoid ? `避けること: ${avoid}` : ''].filter(Boolean).join('\n')
+  }
+
+  // B) 平文形式。題材が混ざっているので、作風だけに言い換えてもらう
+  try {
+    const r = await geminiGenerateJson<{ style?: string }>(
+      {
+        prompt: [
+          '次は広告バナーの生成指示です。ここから「作風」だけを抜き出してください。',
+          '',
+          '【抜き出すもの】配色・色調・光・質感・余白の取り方・文字の組み方の傾向・全体の雰囲気',
+          '【捨てるもの】描かれている題材（人物・物・場所・業種）、具体的な文言、画面比率、サイズ',
+          '',
+          '⚠️ 題材を一切含めないこと。「女性が」「オフィスで」のような描写は捨てる。',
+          '⚠️ 60〜120字程度の日本語1文にまとめる。',
+          '',
+          '出力するJSON: { "style": "作風の説明" }',
+          '',
+          '【元の指示】',
+          prompt.slice(0, 1500),
+        ].join('\n'),
+        model: GEMINI_TEXT_MODEL_DEFAULT,
+      },
+      'AdImageStyle'
+    )
+    const derived = String(r?.style || '').trim()
+    return derived ? `作風: ${derived.slice(0, 300)}` : ''
+  } catch (e) {
+    // ⚠️ 失敗したら空を返す。中途半端な文字列を渡すと題材が混ざる
+    console.error('[adimage] 作風の抽出に失敗', e instanceof Error ? e.message : e)
+    return ''
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -185,7 +215,7 @@ export async function POST(req: NextRequest) {
       where: { templateId: designRefId },
       select: { prompt: true, isActive: true },
     })
-    if (t?.isActive) designRefPrompt = extractStyleOnly(t.prompt || '')
+    if (t?.isActive) designRefPrompt = await extractStyleOnly(t.prompt || '')
   }
 
   const baseGroups = groupByGenSize(placementKeys)
