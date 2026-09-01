@@ -69,10 +69,11 @@ export function buildImagePrompt(input: BuildPromptInput): string {
     // 2.5 デザインの参考
     designRefPrompt
       ? [
-          '■ 見た目の参考（このテイストに寄せる）:',
-          `  ${designRefPrompt.replace(/\n/g, ' ').slice(0, 700)}`,
-          '  ⚠️ 参考にするのは配色・質感・レイアウトの雰囲気だけ。',
-          '     描く文字は下で指定するものだけを使い、参考側の文言や商材は一切描かないこと。',
+          '■ 作風の指定（この作風で描くこと）:',
+          ...designRefPrompt.split('\n').map((l) => `  ${l}`),
+          '  ⚠️ ここで指定しているのは**作風（質感・配色の方向性・レイアウトの気配）だけ**。',
+          `     描く題材は上の「${brand.name}」の商材であり、作風の説明に出てくる物や場面を描いてはいけない。`,
+          `     画面比率も上で指定した ${placement.genW}×${placement.genH} に従うこと。`,
           '',
         ].join('\n')
       : '',

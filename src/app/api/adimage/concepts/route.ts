@@ -66,6 +66,37 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ concepts: withUrls })
 }
 
+
+/**
+ * テンプレートのプロンプトから「作風」だけを取り出す。
+ *
+ * ⚠️ **丸ごと混ぜてはいけない。** テンプレートの本文はこういう構造になっている:
+ *   Concept:     題材そのもの（例「琥珀色の美容液、石の台座」）
+ *   Style:       作風（これだけが欲しい）
+ *   Composition: 「Wide 1.91:1 banner」など**比率が固定で書かれている**
+ *   Typography:  文字の指定（こちらで別途指定している）
+ *   Avoid:       避けたい表現（そのまま使える）
+ *
+ * 丸ごと渡していたため、
+ *   - 貴社のサービスではなくテンプレートの題材が描かれる
+ *   - 正方形や縦長を作りたいのに 1.91:1 と指示が衝突する
+ * という形で「全然違う画像」になっていた（2026-09-01）。
+ */
+function extractStyleOnly(prompt: string): string {
+  const pick = (label: string) => {
+    const m = prompt.match(new RegExp(`^${label}:\\s*(.+)$`, 'mi'))
+    return m?.[1]?.trim() || ''
+  }
+  const style = pick('Style')
+  const avoid = pick('Avoid')
+  return [
+    style ? `作風: ${style}` : '',
+    avoid ? `避けること: ${avoid}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
+}
+
 export async function POST(req: NextRequest) {
   const base = await getIdentity(req)
   // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
@@ -154,7 +185,7 @@ export async function POST(req: NextRequest) {
       where: { templateId: designRefId },
       select: { prompt: true, isActive: true },
     })
-    if (t?.isActive) designRefPrompt = t.prompt || ''
+    if (t?.isActive) designRefPrompt = extractStyleOnly(t.prompt || '')
   }
 
   const baseGroups = groupByGenSize(placementKeys)
