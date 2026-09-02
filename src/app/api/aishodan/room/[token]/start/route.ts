@@ -41,7 +41,16 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     : await assertFreeLimit(
         'aishodanSessions',
         () => prisma.aishodanSession.count({ where: { organizationId: room.organizationId, room: { isPreview: false } } }),
-        owner?.userId ?? null
+        owner?.userId ?? null,
+        // ⚠️ 商談1件ごとに Realtime の通話料が発生する。有料プランにも月次の上限が要る
+        (since) =>
+          prisma.aishodanSession.count({
+            where: {
+              organizationId: room.organizationId,
+              room: { isPreview: false },
+              createdAt: { gte: since },
+            },
+          })
       )
   if (!quota.ok) {
     // ⚠️ 見込み客に課金の話を見せない。相手には落ち度がない。

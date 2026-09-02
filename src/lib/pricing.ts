@@ -1537,7 +1537,8 @@ export const INTERVIEWX_PRICING: ServicePricing = {
   freeLimit: 3,
   lightLimit: 10,
   proLimit: 50,
-  enterpriseLimit: -1,
+  // ⚠️ 無制限にしない。文字起こしは分単位の従量課金で、長尺ほど実費が伸びる
+  enterpriseLimit: 500,
   historyDays: { free: 30, pro: -1 },
   plans: [
     {
@@ -1630,7 +1631,8 @@ export const HR_PRICING: ServicePricing = {
   freeLimit: 5,
   lightLimit: 30,
   proLimit: 100,
-  enterpriseLimit: -1,
+  // ⚠️ 無制限にしない
+  enterpriseLimit: 1000,
   historyDays: {
     free: 90,
     pro: -1,
@@ -1747,7 +1749,8 @@ export const KINTAI_PRICING: ServicePricing = {
   freeLimit: 5,
   lightLimit: 30,
   proLimit: 100,
-  enterpriseLimit: -1,
+  // ⚠️ 無制限にしない
+  enterpriseLimit: 1000,
   historyDays: {
     free: 90,
     pro: -1,
@@ -1869,7 +1872,7 @@ export const DOYALIST_PRICING: ServicePricing = {
   freeLimit: 10,       // 月10社収集
   lightLimit: 100,     // 月100社
   proLimit: 500,       // 月500社
-  enterpriseLimit: -1, // 無制限
+  enterpriseLimit: 5000, // ⚠️ 無制限にしない（gBizINFO収集とAI整形の実費が出る）
   historyDays: {
     free: 30,
     pro: -1,

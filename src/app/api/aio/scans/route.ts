@@ -10,7 +10,11 @@ import { runAndPersistScan } from '@/lib/aio/run'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { recordServiceUsage } from '@/lib/service-usage'
 
+// スキャン頻度の上限（組織単位）。⚠️ services.ts の表示文言と必ず合わせること
 const FREE_SCANS_PER_WEEK = 1
+/** ⚠️ 有料も無制限にしない。1回で4エンジン×プロンプト数だけ実費が出る */
+const PRO_SCANS_PER_MONTH = 30
+const ENTERPRISE_SCANS_PER_MONTH = 200
 
 // GET /api/aio/scans — スキャン履歴（軽量）
 export async function GET(req: NextRequest) {
@@ -43,7 +47,10 @@ export async function POST(req: NextRequest) {
   if (!profile?.brandName) return NextResponse.json({ error: '先に追跡ブランドを設定してください' }, { status: 400 })
   if (prompts.length === 0) return NextResponse.json({ error: '監視プロンプトを1件以上登録してください' }, { status: 400 })
 
-  // プラン制限（無料は週1回）
+  // プラン制限
+  // 無料は「週1回」、有料は「月◯回」で数える。
+  // ⚠️ 有料も無制限にしない。1スキャンで4つのAIエンジンにプロンプト数だけ問い合わせるため、
+  //    登録プロンプトが多いほど1回の実費が膨らむ。頻度を縛らないと費用が青天井になる。
   const paid = isPaidPlan(user?.plan)
   if (!paid) {
     const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
@@ -52,7 +59,26 @@ export async function POST(req: NextRequest) {
     })
     if (recent >= FREE_SCANS_PER_WEEK) {
       return NextResponse.json(
-        { error: '無料プランは週1回までスキャンできます。プロプランで頻度無制限になります。', code: 'LIMIT' },
+        { error: '無料プランは週1回までスキャンできます。プロプランにご登録いただくと上限が広がります。', code: 'LIMIT' },
+        { status: 402 }
+      )
+    }
+  } else {
+    const limit =
+      String(user?.plan || '').toUpperCase() === 'ENTERPRISE'
+        ? ENTERPRISE_SCANS_PER_MONTH
+        : PRO_SCANS_PER_MONTH
+    const since = new Date(); since.setDate(1); since.setHours(0, 0, 0, 0)
+    const usedThisMonth = await prisma.aioScan.count({
+      where: { organizationId: ctx.organizationId, createdAt: { gte: since }, status: { not: 'failed' } },
+    })
+    if (usedThisMonth >= limit) {
+      // ⚠️ 既に支払っている方に「プロにご登録を」と返さないこと
+      return NextResponse.json(
+        {
+          error: `今月のスキャン上限（${limit}回）に達しました。来月1日に枠が戻ります。追加をご希望の場合はお問い合わせよりご相談ください。`,
+          code: 'LIMIT',
+        },
         { status: 402 }
       )
     }

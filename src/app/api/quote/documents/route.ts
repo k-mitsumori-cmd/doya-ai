@@ -34,8 +34,14 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
   // 無料枠の上限（services.ts の「見積書3件まで」を実際に効かせる）
-  const quota = await assertFreeLimit('quoteDocuments', () =>
-    prisma.quoteDocument.count({ where: { organizationId: ctx.organizationId } })
+  const quota = await assertFreeLimit(
+    'quoteDocuments',
+    () => prisma.quoteDocument.count({ where: { organizationId: ctx.organizationId } }),
+    undefined,
+    (since) =>
+      prisma.quoteDocument.count({
+        where: { organizationId: ctx.organizationId, createdAt: { gte: since } },
+      })
   )
   if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 402 })
 

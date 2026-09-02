@@ -50,8 +50,15 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
   // 無料枠の上限（services.ts の宣言を実際に効かせる）
-  const quota = await assertFreeLimit('mensetsuSessions', () =>
-    prisma.mensetsuSession.count({ where: { organizationId: ctx.organizationId } })
+  // ⚠️ 面接1件ごとに Realtime の通話料が発生する。有料プランにも月次の上限が要る
+  const quota = await assertFreeLimit(
+    'mensetsuSessions',
+    () => prisma.mensetsuSession.count({ where: { organizationId: ctx.organizationId } }),
+    undefined,
+    (since) =>
+      prisma.mensetsuSession.count({
+        where: { organizationId: ctx.organizationId, createdAt: { gte: since } },
+      })
   )
   if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 402 })
 

@@ -13,7 +13,11 @@ function isPaidPlan(plan?: string | null): boolean {
   const p = (plan || 'FREE').toUpperCase()
   return p !== 'FREE' && p !== 'GUEST'
 }
+// 月次の上限（組織単位）。⚠️ services.ts の表示文言と必ず合わせること
 const FREE_MONTHLY_LIMIT = 5
+/** ⚠️ 有料も無制限にしない。1件ごとに巡回とAIの実費が出る */
+const PRO_MONTHLY_LIMIT = 50
+const ENTERPRISE_MONTHLY_LIMIT = 300
 
 function normalizeUrl(input: string): string | null {
   let s = (input || '').trim()
@@ -51,9 +55,16 @@ export async function POST(req: NextRequest) {
   const targetUrl = normalizeUrl(body.url as string)
   if (!targetUrl) return NextResponse.json({ error: '有効なURLを入力してください' }, { status: 400 })
 
-  // プラン制限（無料は月5件まで／組織単位）
+  // プラン制限（組織単位・月次）
+  // ⚠️ 有料プランにも上限を置く。1件ごとにサイト巡回とAI呼び出しの実費が出るため、
+  //    無制限にすると月額を上回る使われ方を止められない。
   const user = await prisma.user.findUnique({ where: { id: ctx.userId }, select: { plan: true } })
-  if (!isPaidPlan(user?.plan)) {
+  {
+    const limit = isPaidPlan(user?.plan)
+      ? String(user?.plan || '').toUpperCase() === 'ENTERPRISE'
+        ? ENTERPRISE_MONTHLY_LIMIT
+        : PRO_MONTHLY_LIMIT
+      : FREE_MONTHLY_LIMIT
     const since = new Date(); since.setDate(1); since.setHours(0, 0, 0, 0)
     // done（成功）＋ 実行中(processing で stale でないもの) を数える。
     // - 同時POSTでも作成直後から枠を占有し抜け道を塞ぐ
@@ -70,11 +81,12 @@ export async function POST(req: NextRequest) {
         ],
       },
     })
-    if (usedThisMonth >= FREE_MONTHLY_LIMIT) {
-      return NextResponse.json(
-        { error: `無料プランは月${FREE_MONTHLY_LIMIT}件までです。プロプランで無制限にご利用いただけます。`, code: 'LIMIT' },
-        { status: 402 }
-      )
+    if (usedThisMonth >= limit) {
+      // ⚠️ 既に支払っている方に「プロにご登録を」と返さないこと
+      const reason = isPaidPlan(user?.plan)
+        ? `今月の上限（${limit}件）に達しました。来月1日に枠が戻ります。追加をご希望の場合はお問い合わせよりご相談ください。`
+        : `無料プランは月${limit}件までです。プロプランにご登録いただくと上限が広がります。`
+      return NextResponse.json({ error: reason, code: 'LIMIT' }, { status: 402 })
     }
   }
 

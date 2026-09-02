@@ -1342,7 +1342,7 @@ export const SERVICES: Service[] = [
     ],
     pricing: {
       free: { name: '無料プラン', limit: '企業調査 月5件まで（提案資料の生成はプロ）', dailyLimit: -1, price: 0 },
-      pro: { name: 'プロプラン', limit: '提案資料・スライド生成 / 無制限 / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+      pro: { name: 'プロプラン', limit: '企業調査 月50件 / 提案資料・スライド生成 / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
     status: 'active',
     category: 'other',
@@ -1385,7 +1385,7 @@ export const SERVICES: Service[] = [
     ],
     pricing: {
       free: { name: '無料プラン', limit: 'プロンプト3件 / 週1回スキャン / 認知度のみ閲覧', dailyLimit: -1, price: 0 },
-      pro: { name: 'プロプラン', limit: 'スキャン無制限 / SoV・引用元・改善アクションも閲覧 / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+      pro: { name: 'プロプラン', limit: 'スキャン 月30回 / SoV・引用元・改善アクションも閲覧 / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
     status: 'active',
     category: 'other',
@@ -1473,7 +1473,7 @@ export const SERVICES: Service[] = [
     ],
     pricing: {
       free: { name: '無料プラン', limit: 'テンプレート1件 / 面接3件まで', dailyLimit: -1, price: 0 },
-      pro: { name: 'プロプラン', limit: '面接無制限 / 評価レポート / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+      pro: { name: 'プロプラン', limit: '面接 月30件 / 評価レポート / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
     status: 'coming_soon',
     // 開発中。対外的には出さず（UNLISTED_SERVICE_IDS）、社内ではベータとして使う。
@@ -1520,7 +1520,7 @@ export const SERVICES: Service[] = [
     ],
     pricing: {
       free: { name: '無料プラン', limit: '見積書3件まで', dailyLimit: -1, price: 0 },
-      pro: { name: 'プロプラン', limit: '見積書無制限 / PDF出力 / チーム共有', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+      pro: { name: 'プロプラン', limit: '見積書 月100件 / PDF出力 / チーム共有', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
     status: 'coming_soon',
     // 開発中。対外的には出さず（UNLISTED_SERVICE_IDS）、社内ではベータとして使う。
@@ -1568,7 +1568,7 @@ export const SERVICES: Service[] = [
     ],
     pricing: {
       free: { name: '無料プラン', limit: '商材1件 / 商談5件まで', dailyLimit: -1, price: 0 },
-      pro: { name: 'プロプラン', limit: '商談無制限 / ログ・適合判定 / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
+      pro: { name: 'プロプラン', limit: '商談 月30件 / ログ・適合判定 / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
     status: 'coming_soon',
     // 開発中。対外的には出さず（UNLISTED_SERVICE_IDS）、社内ではベータとして使う。
