@@ -106,11 +106,13 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     placementKey: string; size: string; genSize: string; compositionKey: string; imagePath: string; verify: any
   }> = []
 
+  // ⚠️ グループは**並列**で回す。順番だと1枚約40秒×グループ数となり、
+  //    枚数が多いと maxDuration(300秒) を超えて画面が止まる。
   // ⚠️ グループ単位で捕まえる。1つのサイズが失敗しても残りは作り切り、
   //    どの配置が作れなかったかを必ず利用者へ返す（黙って短い結果を返さない）。
-  for (const group of groups) {
-    try {
-
+  const settled = await Promise.all(
+    groups.map(async (group) => {
+      try {
         const rep = group.placements[0]
         // ⚠️ **元の作風と構図を必ず引き継ぐこと。**
         //    以前は extraDirectives（修正指示の文章）だけを渡し、
@@ -123,14 +125,10 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
           designRefPrompt: concept.designRefStyle || undefined,
           extraDirectives, pathPrefix,
         })
-        genPaths[group.genKey] = result.genPath
-        if (!visualPrompt) {
-          visualPrompt = result.prompt
-          model = result.model
-        }
+        const rows: typeof creativeRows = []
         for (const pl of group.placements) {
           const { imagePath } = await exportToSize(result.buffer, pl, pathPrefix, logo)
-          creativeRows.push({
+          rows.push({
             placementKey: pl.key,
             size: `${pl.w}x${pl.h}`,
             genSize: result.genSize,
@@ -141,10 +139,26 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
             verify: result.verify as any,
           })
         }
-    } catch (err) {
-      console.error('[adimage] generate failed', group.genKey, err instanceof Error ? err.message : err)
-      for (const fp of group.placements) failedPlacements.push(fp.name)
+        return { group, result, rows }
+      } catch (err) {
+        console.error('[adimage] generate failed', group.genKey, err instanceof Error ? err.message : err)
+        return { group, result: null, rows: [] }
+      }
+    })
+  )
+
+  // ⚠️ 結果は groups の順に取り込む。並列でも並び順が入れ替わらないようにする
+  for (const r of settled) {
+    if (!r.result) {
+      for (const fp of r.group.placements) failedPlacements.push(fp.name)
+      continue
     }
+    genPaths[r.group.genKey] = r.result.genPath
+    if (!visualPrompt) {
+      visualPrompt = r.result.prompt
+      model = r.result.model
+    }
+    creativeRows.push(...r.rows)
   }
 
   if (creativeRows.length === 0) {

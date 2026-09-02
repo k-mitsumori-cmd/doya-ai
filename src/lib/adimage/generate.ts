@@ -164,7 +164,8 @@ export async function generateBaked(input: GenerateInput): Promise<GenerateResul
 
   if (!lastBuffer) throw new Error('画像を生成できませんでした')
 
-  // ⚠️ 原本も同じ理由で上書きされる。構図を混ぜてパスを分ける
+  // ⚠️ 原本も上書きされる。構図を混ぜてパスを分ける。
+  //    並列で回すため、同じパスだと同時に書き込んで競合する
   const genPath = `${pathPrefix}/gen_${genSize}_${composition}.png`
   await uploadPng(genPath, lastBuffer)
 

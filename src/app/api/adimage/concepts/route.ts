@@ -253,11 +253,16 @@ export async function POST(req: NextRequest) {
     imagePath: string; verify: any
   }> = []
 
+  // ⚠️ グループは**並列**で回す。
+  //    順番に回すと1枚あたり約40秒 × グループ数となり、3パターンを選んだだけで
+  //    検査の再生成を挟むと maxDuration(300秒) を超えて 504 になる
+  //    （画面は「仕上げ中…」のまま止まる。2026-09-02 に実際に発生）。
+  //    グループ同士に依存は無いので、待ち時間は最も遅い1枚ぶんで済む。
   // ⚠️ グループ単位で捕まえる。1つのサイズが失敗しても残りは作り切り、
   //    どの配置が作れなかったかを必ず利用者へ返す（黙って短い結果を返さない）。
-  for (const group of groups) {
-    try {
-
+  const settled = await Promise.all(
+    groups.map(async (group) => {
+      try {
         // 生成サイズを代表する配置でプロンプトを組む
         const rep = group.placements[0]
         const result = await generateBaked({
@@ -268,24 +273,23 @@ export async function POST(req: NextRequest) {
           // ⚠️ テンプレートから読み取れた構図を優先する。
           //    配置ごとの既定（placements.ts）は「サイズに対する無難な型」でしかなく、
           //    選んだ見本の構図を反映しないと、色だけ合って配置が別物になる。
-          composition: designRefComposition || group.composition,
+          // ⚠️ ただし「3パターン」を選んだときは、構図を変えることが目的なので
+          //    見本の構図で上書きしない（作風は designRefPrompt 側で効かせる）。
+          //    上書きしていたため、見本を選ぶと3枚ともほぼ同じ絵になっていた。
+          composition: variations > 1 ? group.composition : designRefComposition || group.composition,
           pathPrefix,
           customPrompt: customPrompt || undefined,
           designRefPrompt: designRefPrompt || undefined,
         })
-        genPaths[group.genKey] = result.genPath
-        if (!visualPrompt) {
-          visualPrompt = result.prompt
-          model = result.model
-        }
 
         // 同じ生成サイズを共有する配置は、同じ原本から書き出す
+        const rows: typeof creativeRows = []
         for (const p of group.placements) {
           // ⚠️ 3パターン時は配置キーが同じなので、パターン識別子を渡さないと
           //    同じパスへ上書きされ最後の1枚しか残らない
           const variantKey = variations > 1 ? group.composition : undefined
           const { imagePath } = await exportToSize(result.buffer, p, pathPrefix, logo, variantKey)
-          creativeRows.push({
+          rows.push({
             placementKey: p.key,
             size: `${p.w}x${p.h}`,
             genSize: result.genSize,
@@ -294,10 +298,26 @@ export async function POST(req: NextRequest) {
             verify: result.verify as any,
           })
         }
-    } catch (err) {
-      console.error('[adimage] generate failed', group.genKey, err instanceof Error ? err.message : err)
-      for (const fp of group.placements) failedPlacements.push(fp.name)
+        return { group, result, rows }
+      } catch (err) {
+        console.error('[adimage] generate failed', group.genKey, err instanceof Error ? err.message : err)
+        return { group, result: null, rows: [] }
+      }
+    })
+  )
+
+  // ⚠️ 結果は groups の順に取り込む。並列でも並び順が入れ替わらないようにする
+  for (const r of settled) {
+    if (!r.result) {
+      for (const fp of r.group.placements) failedPlacements.push(fp.name)
+      continue
     }
+    genPaths[r.group.genKey] = r.result.genPath
+    if (!visualPrompt) {
+      visualPrompt = r.result.prompt
+      model = r.result.model
+    }
+    creativeRows.push(...r.rows)
   }
 
   if (creativeRows.length === 0) {
