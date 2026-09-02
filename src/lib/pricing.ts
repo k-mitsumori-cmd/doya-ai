@@ -1383,33 +1383,35 @@ export function getCurrentMonthJST(): string {
 }
 
 // ========================================
-// 初回ログイン後1時間生成し放題の判定
+// 初回ログイン後1時間生成し放題（**廃止済み・2026-09-02**）
 // ========================================
-/** 1時間生成し放題の有効期間（ミリ秒）：デフォルト1時間 */
+// ⚠️ 廃止した理由:
+//    アカウントを作り直すだけで何度でも「無制限」に入れてしまい、
+//    従量課金APIの費用を止める手段が無かった。
+//
+// ⚠️ 呼び出し側（バナー/コピー/ワイヤーフレーム/ペルソナ/Web診断/ボイス/ムービー/SEO の
+//    計20箇所）は**あえて残している**。判定がここで常に false になるため、
+//    上限の除外もUIの案内も自動的に無効になる。
+//    復活させる場合はこの2関数を戻すだけでよい。
+//    ⚠️ 呼び出し側を消して回ると、戻すときに漏れが出る。
+
+/** 1時間生成し放題の有効期間（ミリ秒）。⚠️ 廃止済みのため判定には使われない */
 export const FREE_HOUR_DURATION_MS = 60 * 60 * 1000
 
 /**
- * 初回ログインから1時間以内かどうかを判定
- * @param firstLoginAt - ISO文字列 or Date or null
- * @returns true なら「1時間生成し放題」が有効
+ * 初回ログインから1時間以内かどうか。
+ * ⚠️ 廃止済みのため常に false を返す（＝1時間無制限は誰にも適用されない）。
  */
-export function isWithinFreeHour(firstLoginAt: string | Date | null | undefined): boolean {
-  if (!firstLoginAt) return false
-  const loginTime = typeof firstLoginAt === 'string' ? new Date(firstLoginAt) : firstLoginAt
-  if (isNaN(loginTime.getTime())) return false
-  const elapsed = Date.now() - loginTime.getTime()
-  return elapsed >= 0 && elapsed < FREE_HOUR_DURATION_MS
+export function isWithinFreeHour(_firstLoginAt: string | Date | null | undefined): boolean {
+  return false
 }
 
 /**
- * 1時間生成し放題の残り時間（ミリ秒）。0以下なら終了済み
+ * 1時間生成し放題の残り時間（ミリ秒）。
+ * ⚠️ 廃止済みのため常に 0（＝UIの残り時間表示は出ない）。
  */
-export function getFreeHourRemainingMs(firstLoginAt: string | Date | null | undefined): number {
-  if (!firstLoginAt) return 0
-  const loginTime = typeof firstLoginAt === 'string' ? new Date(firstLoginAt) : firstLoginAt
-  if (isNaN(loginTime.getTime())) return 0
-  const remaining = FREE_HOUR_DURATION_MS - (Date.now() - loginTime.getTime())
-  return Math.max(0, remaining)
+export function getFreeHourRemainingMs(_firstLoginAt: string | Date | null | undefined): number {
+  return 0
 }
 
 // ========================================
