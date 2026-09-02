@@ -22,6 +22,7 @@ import {
   SidebarUserProfile,
   SidebarLogoutDialog,
   useSidebarState,
+  SidebarUsagePanel,
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
@@ -30,7 +31,10 @@ const BASE = '/quote'
 
 function QuoteSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }: SidebarProps) {
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
+  // ⚠️ セッション確定前は plan が既定値になり、一瞬だけゲスト扱いの表示が出てしまう。
+  //    表示だけを止める（fetch は止めない。Cookie認証なので未確定でも応答する）
+  const sessionReady = sessionStatus !== 'loading'
   const { isCollapsed, showLabel, toggle } = useSidebarState({ controlledIsCollapsed: c, onToggle, forceExpanded, isMobile })
   const isLoggedIn = !!session?.user
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
@@ -91,7 +95,9 @@ function QuoteSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile }:
           </nav>
 
           {/* プラン案内。⚠️ 金額の正本は unified-plan.ts。ここに別の数字を書かない */}
-          {!isPro && (isMobile || !isCollapsed) && (
+          {/* 作った数と残り。数字は /api/usage/quote から受け取るだけ */}
+          <SidebarUsagePanel service="quote" show={sessionReady && (isMobile || !isCollapsed)} />
+          {sessionReady && !isPro && (isMobile || !isCollapsed) && (
             <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">

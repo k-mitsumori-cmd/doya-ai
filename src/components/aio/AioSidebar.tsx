@@ -19,6 +19,7 @@ import {
   SidebarUserProfile,
   SidebarLogoutDialog,
   useSidebarState,
+  SidebarUsagePanel,
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
@@ -30,7 +31,10 @@ interface Props extends SidebarProps {
 
 function AioSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapsed, onToggle, forceExpanded, isMobile }: Props) {
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
+  // ⚠️ セッション確定前は plan が既定値になり、一瞬だけゲスト扱いの表示が出てしまう。
+  //    表示だけを止める（fetch は止めない。Cookie認証なので未確定でも応答する）
+  const sessionReady = sessionStatus !== 'loading'
   const { isCollapsed, showLabel, toggle } = useSidebarState({ controlledIsCollapsed, onToggle, forceExpanded, isMobile })
   const isLoggedIn = !!session?.user
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
@@ -83,7 +87,9 @@ function AioSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapsed, 
           </nav>
 
           {/* プランバナー */}
-          {(isMobile || !isCollapsed) && (
+          {/* 作った数と残り。数字は /api/usage/aio から受け取るだけ */}
+          <SidebarUsagePanel service="aio" show={sessionReady && (isMobile || !isCollapsed)} />
+          {sessionReady && (isMobile || !isCollapsed) && (
             <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md relative overflow-hidden">
               <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-2">

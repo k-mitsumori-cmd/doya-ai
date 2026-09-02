@@ -31,6 +31,7 @@ import {
   useSidebarState,
   useFreeHour,
   formatRemainingTime,
+  SidebarUsagePanel,
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
 
@@ -53,7 +54,9 @@ function DashboardSidebarImpl({
   onTourOpen,
 }: SidebarProps & { onTourOpen?: () => void }) {
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
+  // ⚠️ 表示だけを止める（fetch は止めない。Cookie認証なので未確定でも応答する）
+  const sessionReady = sessionStatus !== 'loading'
   const { isCollapsed, showLabel, toggle, expand } = useSidebarState({ controlledIsCollapsed, onToggle, forceExpanded, isMobile })
   const isLoggedIn = !!session?.user
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
@@ -160,6 +163,8 @@ function DashboardSidebarImpl({
   const SidebarBanner = () => {
     if (isFreeHourActive && freeHourRemainingMs > 0) return null
     if (!showLabel) return null
+    // ⚠️ セッション確定前は plan が既定値になり、一瞬だけゲスト扱いの表示が出てしまう
+    if (!sessionReady) return null
 
     return (
       <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md relative overflow-hidden group">
@@ -246,6 +251,8 @@ function DashboardSidebarImpl({
         <FreeHourCampaignBanner />
 
         {/* Side Banner（プラン案内） */}
+        {/* 作った数と残り。数字は /api/usage/banner から受け取るだけ */}
+        <SidebarUsagePanel service="banner" show={sessionReady && (isMobile || !isCollapsed)} />
         <SidebarBanner />
 
         <ToolSwitcherMenu currentService="banner" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 sm:px-4 pb-2" />
