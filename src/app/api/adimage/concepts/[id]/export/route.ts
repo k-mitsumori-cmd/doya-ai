@@ -33,13 +33,30 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
 
   // 画像を先に全部取ってから固める（ストリーム途中で失敗すると壊れたZIPが届く）
   const files: Array<{ name: string; buf: Buffer }> = []
+  /** ZIP内の名前の重複を防ぐ */
+  const used = new Map<string, number>()
   for (const cr of concept.creatives) {
     const buf = await downloadBuffer(cr.imagePath)
     if (!buf) continue
     const pl = findPlacement(cr.placementKey)
     const media = (pl?.media || 'other').replace(/[^\w\-一-龠ぁ-んァ-ヶ!]/g, '')
     const name = (pl?.name || cr.placementKey).replace(/[\/\\:*?"<>|]/g, '_')
-    files.push({ name: `${media}/${name}_${cr.size}.png`, buf })
+    // ⚠️ 3パターン生成では同じ配置が複数あるため、名前が衝突する。
+    //    ZIP内で同名が並ぶと展開時に上書きされ、1枚しか残らない。
+    let entry = `${media}/${name}_${cr.size}.png`
+    if (used.has(entry)) {
+      const n = (used.get(entry) || 1) + 1
+      used.set(entry, n)
+      entry = `${media}/${name}_${cr.size}_${cr.compositionKey || n}.png`
+      // それでも重なるなら連番で必ず一意にする
+      let i = 2
+      while (used.has(entry)) {
+        entry = `${media}/${name}_${cr.size}_${cr.compositionKey || ''}${i}.png`
+        i++
+      }
+    }
+    used.set(entry, 1)
+    files.push({ name: entry, buf })
   }
   if (files.length === 0) {
     return NextResponse.json({ error: '画像を読み込めませんでした' }, { status: 502 })

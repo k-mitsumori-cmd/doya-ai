@@ -281,7 +281,10 @@ export async function POST(req: NextRequest) {
 
         // 同じ生成サイズを共有する配置は、同じ原本から書き出す
         for (const p of group.placements) {
-          const { imagePath } = await exportToSize(result.buffer, p, pathPrefix, logo)
+          // ⚠️ 3パターン時は配置キーが同じなので、パターン識別子を渡さないと
+          //    同じパスへ上書きされ最後の1枚しか残らない
+          const variantKey = variations > 1 ? group.composition : undefined
+          const { imagePath } = await exportToSize(result.buffer, p, pathPrefix, logo, variantKey)
           creativeRows.push({
             placementKey: p.key,
             size: `${p.w}x${p.h}`,

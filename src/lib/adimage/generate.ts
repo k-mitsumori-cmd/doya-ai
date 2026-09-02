@@ -164,7 +164,8 @@ export async function generateBaked(input: GenerateInput): Promise<GenerateResul
 
   if (!lastBuffer) throw new Error('画像を生成できませんでした')
 
-  const genPath = `${pathPrefix}/gen_${genSize}.png`
+  // ⚠️ 原本も同じ理由で上書きされる。構図を混ぜてパスを分ける
+  const genPath = `${pathPrefix}/gen_${genSize}_${composition}.png`
   await uploadPng(genPath, lastBuffer)
 
   return { genPath, genSize, prompt: lastPrompt, model: lastModel, verify: lastVerify, buffer: lastBuffer }
@@ -181,7 +182,13 @@ export async function exportToSize(
   placement: Placement,
   pathPrefix: string,
   /** ロゴを載せる場合のみ渡す。⚠️ ロゴは唯一「合成」を維持する要素（lib/adimage/logo.ts） */
-  logo?: { buffer: Buffer; config: LogoConfig } | null
+  logo?: { buffer: Buffer; config: LogoConfig } | null,
+  /**
+   * 同じ配置を複数パターン書き出すときの識別子。
+   * ⚠️ これが無いと3パターンが**同じパスに上書き**され、最後の1枚しか残らない。
+   *    実際に「3パターンを選んだのにZIPに1枚しか入らない」形で起きていた（2026-09-02）。
+   */
+  variantKey?: string
 ): Promise<{ imagePath: string; textAreaPct: number | null }> {
   let out = await sharp(genBuffer)
     .resize(placement.w, placement.h, { fit: 'fill' })
@@ -193,7 +200,8 @@ export async function exportToSize(
     out = await overlayLogo(out, logo.buffer, placement.w, placement.h, logo.config)
   }
 
-  const imagePath = `${pathPrefix}/${placement.key.replace(/\./g, '_')}_${placement.w}x${placement.h}.png`
+  const suffix = variantKey ? `_${variantKey}` : ''
+  const imagePath = `${pathPrefix}/${placement.key.replace(/\./g, '_')}_${placement.w}x${placement.h}${suffix}.png`
   await uploadPng(imagePath, out)
 
   return { imagePath, textAreaPct: null }
