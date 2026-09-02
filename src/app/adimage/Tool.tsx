@@ -50,6 +50,12 @@ interface Scores {
 
 type Step = 'input' | 'concepts' | 'result'
 
+/**
+ * 見本を一度に何枚ずつ出すか。
+ * ⚠️ 大きくしすぎない。498枚を一度に出すと画像の読み込みが殺到して画面が固まる。
+ */
+const REFS_PAGE_SIZE = 30
+
 export default function AdImageTool() {
   const [step, setStep] = useState<Step>('input')
   const [error, setError] = useState('')
@@ -122,7 +128,12 @@ export default function AdImageTool() {
   const [designRefs, setDesignRefs] = useState<Array<{ id: string; industry: string; imageUrl: string; matched: boolean }>>([])
   const [designRefId, setDesignRefId] = useState('')
   const [refsMatched, setRefsMatched] = useState(0)
-  const [showAllRefs, setShowAllRefs] = useState(false)
+  /**
+   * 見本を何枚まで表示しているか。
+   * ⚠️ 一度に全部（498枚）出すと、画像が一斉に読み込まれて画面が固まる。
+   *    「下へ」で30枚ずつ足していく。
+   */
+  const [refsShown, setRefsShown] = useState(REFS_PAGE_SIZE)
   const [advice, setAdvice] = useState('')
   const [directives, setDirectives] = useState<RefineDirective[]>([])
   const [selectedChips, setSelectedChips] = useState<string[]>([])
@@ -241,6 +252,9 @@ export default function AdImageTool() {
         const d = await r.json()
         if (aborted) return
         setDesignRefs(d.refs || [])
+        // ⚠️ 見本が入れ替わったら表示枚数も戻す。前のサイトの「下へ」が残ると、
+        //    新しい一覧がいきなり大量に開いてしまう
+        setRefsShown(REFS_PAGE_SIZE)
         setRefsMatched(Number(d.matchedCount) || 0)
       } catch {
         // 取れなくても生成はできる（参考なしで作る）
@@ -588,7 +602,7 @@ export default function AdImageTool() {
             </p>
 
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {(showAllRefs ? designRefs : designRefs.slice(0, 12)).map((r) => (
+              {designRefs.slice(0, refsShown).map((r) => (
                 <button
                   key={r.id}
                   onClick={() => setDesignRefId((prev) => (prev === r.id ? '' : r.id))}
@@ -608,13 +622,27 @@ export default function AdImageTool() {
               ))}
             </div>
 
-            <div className="mt-3 flex flex-wrap items-center gap-3">
-              <button
-                onClick={() => setShowAllRefs((v) => !v)}
-                className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
-              >
-                {showAllRefs ? '先頭12件だけ表示' : `すべて表示（${designRefs.length}件）`}
-              </button>
+            <p className="mt-3 text-xs font-bold text-slate-500">
+              {Math.min(refsShown, designRefs.length)} / {designRefs.length}件を表示中
+            </p>
+
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              {refsShown < designRefs.length && (
+                <button
+                  onClick={() => setRefsShown((n) => n + REFS_PAGE_SIZE)}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
+                >
+                  下へ（あと{Math.min(REFS_PAGE_SIZE, designRefs.length - refsShown)}枚）
+                </button>
+              )}
+              {refsShown > REFS_PAGE_SIZE && (
+                <button
+                  onClick={() => setRefsShown(REFS_PAGE_SIZE)}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-black text-slate-700 hover:bg-slate-50"
+                >
+                  先頭に戻す
+                </button>
+              )}
               {designRefId && (
                 <button
                   onClick={() => setDesignRefId('')}
