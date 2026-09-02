@@ -302,6 +302,8 @@ export default function AdImageTool() {
       setPreviousGeneration(null)
       setJustFinished(true)
       window.setTimeout(() => setJustFinished(false), 6000)
+      // サイドバーの残枚数を取り直させる（画面は移動しないので合図が要る）
+      window.dispatchEvent(new Event('adimage:generated'))
     } catch (e) {
       notifyError(setError, e instanceof Error ? e.message : '生成に失敗しました')
     } finally {
@@ -357,6 +359,8 @@ export default function AdImageTool() {
       setDirectives([])
       setSelectedChips([])
       setNote('')
+      // 改善でも枚数は増える
+      window.dispatchEvent(new Event('adimage:generated'))
     } catch (e) {
       notifyError(setError, e instanceof Error ? e.message : '改善に失敗しました')
     } finally {

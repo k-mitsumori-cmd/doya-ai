@@ -126,7 +126,7 @@ export function jstStartOfMonthUtc(): Date {
 }
 
 /** 期間内に生成した画像の枚数 */
-async function imagesSince(id: AdImageIdentity, since: Date): Promise<number> {
+export async function imagesSince(id: AdImageIdentity, since: Date): Promise<number> {
   const where = ownerWhere(id)
   if (!where) return 0
   return prisma.adImageCreative.count({
