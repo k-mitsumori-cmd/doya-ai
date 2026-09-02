@@ -29,6 +29,8 @@ export interface BuildPromptInput {
   composition: CompositionKey
   /** 再生成時に足す修正指示 */
   extraDirectives?: string[]
+  /** 参考画像を実際に添えているか。添えている場合は文言を変える */
+  hasRefImage?: boolean
   /**
    * 見た目の参考にするデザイン（ドヤバナーAIのテンプレートのプロンプト）。
    * ⚠️ 参考にするのは**配色・質感・レイアウトの雰囲気だけ**。
@@ -38,7 +40,7 @@ export interface BuildPromptInput {
 }
 
 export function buildImagePrompt(input: BuildPromptInput): string {
-  const { brand, copy, tone, placement, composition, extraDirectives = [], designRefPrompt } = input
+  const { brand, copy, tone, placement, composition, extraDirectives = [], designRefPrompt, hasRefImage } = input
   const comp = COMPOSITIONS[composition]
   const omitSub = comp.omit.includes('sub')
 
@@ -69,10 +71,16 @@ export function buildImagePrompt(input: BuildPromptInput): string {
     // 2.5 デザインの参考
     designRefPrompt
       ? [
-          '■ 作風の指定（最優先・他の指示より優先すること）:',
+          hasRefImage
+            ? '■ 作風の指定（**添付した参考画像の見た目に寄せること**・最優先）:'
+            : '■ 作風の指定（最優先・他の指示より優先すること）:',
+          hasRefImage
+            ? '  添付画像は「こういう見た目にしたい」という見本。写真の使い方・要素の配置・'
+              + '文字の質感・配色の関係を、できるかぎり写し取ること。'
+            : '',
           ...designRefPrompt.split('\n').map((l) => `  ${l}`),
           '  ⚠️ ここで指定しているのは**作風（質感・配色の方向性・レイアウトの気配）だけ**。',
-          `     描く題材は上の「${brand.name}」の商材であり、作風の説明に出てくる物や場面を描いてはいけない。`,
+          `     描く題材は上の「${brand.name}」の商材であり、参考の題材（写っている人物・物・場所）をそのまま描いてはいけない。`,
           `     画面比率も上で指定した ${placement.genW}×${placement.genH} に従うこと。`,
           '  ⚠️ この作風は、下の「文字の描き方」「配置ルール」より優先する。',
           '     作風と矛盾する装飾（不要なべた塗りの帯、過剰な立体文字、金色の光沢など）は加えないこと。',

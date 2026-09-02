@@ -44,8 +44,14 @@ export interface GenerateInput {
    *    利用者の責任になるため、画面側で「上級者向け」と明示すること。
    */
   customPrompt?: string
-  /** 見た目の参考にするテンプレートのプロンプト */
+  /** 見た目の参考にするテンプレートのプロンプト（作風の文章） */
   designRefPrompt?: string
+  /**
+   * 見た目の参考にする**画像そのもの**（ドヤバナーAIのテンプレート）。
+   * ⚠️ 文章だけでは写真の有無や配置が伝わらず、選んだ見本と全く違う絵になる。
+   *    ドヤバナーAI(nanobanner.ts:970)と同じく画像を直接渡す。
+   */
+  designRefImage?: { mimeType: string; base64: string }
   /** 保存パスの接頭辞 */
   pathPrefix: string
 }
@@ -61,8 +67,21 @@ export interface GenerateResult {
   buffer: Buffer
 }
 
+
+/**
+ * フォールバック(Gemini)に渡す比率のラベル。
+ * ⚠️ これを渡さないと必ず1:1で返り、縦長・横長が作れない
+ *    （ドヤバナーAI で実際に起きた。nanobanner.ts:1022 参照）
+ */
+function aspectLabel(p: Placement): string {
+  const r = p.genW / p.genH
+  if (r > 1.05) return 'landscape (horizontal)'
+  if (r < 0.95) return 'portrait (vertical)'
+  return 'square'
+}
+
 export async function generateBaked(input: GenerateInput): Promise<GenerateResult> {
-  const { brand, copy, tone, placement, composition, extraDirectives = [], pathPrefix, customPrompt, designRefPrompt } = input
+  const { brand, copy, tone, placement, composition, extraDirectives = [], pathPrefix, customPrompt, designRefPrompt, designRefImage } = input
   const genSize = `${placement.genW}x${placement.genH}`
 
   let directives = [...extraDirectives]
@@ -74,7 +93,11 @@ export async function generateBaked(input: GenerateInput): Promise<GenerateResul
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const prompt = customPrompt?.trim()
       ? customPrompt.trim()
-      : buildImagePrompt({ brand, copy, tone, placement, composition, extraDirectives: directives, designRefPrompt })
+      : buildImagePrompt({
+          brand, copy, tone, placement, composition,
+          extraDirectives: directives, designRefPrompt,
+          hasRefImage: !!designRefImage,
+        })
     lastPrompt = prompt
 
     const result = await generateImageWithFallback({
@@ -83,17 +106,50 @@ export async function generateBaked(input: GenerateInput): Promise<GenerateResul
       // ⚠️ medium を既定にする。high は実測93秒かかり、複数案を回すと maxDuration に収まらない。
       //    文字の可読性は medium で十分に確保できている。
       quality: 'medium',
+      // ⚠️ 参考画像を渡すと編集APIに切り替わり、受けるサイズが
+      //    1024x1024 / 1536x1024 / 1024x1536 の3つに限られる（openai-image.ts:108）。
+      //    そのため戻りは目標比率と違いうる。下で必ず比率を揃え直すこと。
+      ...(designRefImage ? { inputImages: [designRefImage] } : {}),
+      // ⚠️ フォールバック(Gemini)は size を読まない。比率を渡さないと1:1で返る
+      //    （nanobanner.ts:1022 と同じ理由）
+      ...(designRefImage ? { aspectRatio: aspectLabel(placement) } : {}),
     })
     lastModel = result.fallbackUsed ? `${result.model}(fallback)` : result.model
 
     const raw = Buffer.from(result.base64, 'base64')
-    // フォールバック先は指定サイズを返さないことがあるため、原本の段階で生成サイズへ揃える。
-    // ⚠️ ここも cover ではなく contain + 背景延長にはせず、fill（比率はほぼ同一なので歪みは無視できる）
+    // 戻りが指定サイズと違うことがあるため、原本の段階で生成サイズへ揃える。
+    // ⚠️ **fill を無条件で使ってはいけない。** 比率がほぼ同じときだけ許される。
+    //    参照画像を渡すと編集APIの3サイズ（1024x1024 / 1536x1024 / 1024x1536）でしか
+    //    返らず、たとえばストーリーズ(9:16)に対して 2:3 が返る。
+    //    そこで fill すると縦に引き伸ばされ、顔も文字も歪む。
+    // ⚠️ cover も使わない。切り取ると見出しやCTAが欠ける（前身 /adbanner の失敗）。
+    //    比率が離れているときは contain で全体を残し、余白は端の色で埋める。
     const meta = await sharp(raw).metadata()
-    const buffer =
-      meta.width === placement.genW && meta.height === placement.genH
-        ? raw
-        : await sharp(raw).resize(placement.genW, placement.genH, { fit: 'fill' }).png().toBuffer()
+    let buffer: Buffer
+    if (meta.width === placement.genW && meta.height === placement.genH) {
+      buffer = raw
+    } else {
+      const srcRatio = (meta.width || 1) / (meta.height || 1)
+      const dstRatio = placement.genW / placement.genH
+      const ratioDiff = Math.abs(srcRatio - dstRatio) / dstRatio
+      if (ratioDiff < 0.05) {
+        // 比率がほぼ同じ。引き伸ばしても目に見える歪みは出ない
+        buffer = await sharp(raw).resize(placement.genW, placement.genH, { fit: 'fill' }).png().toBuffer()
+      } else {
+        // 比率が違う。切らずに収め、余白は画像の主要色で埋める（白帯を作らない）
+        let bg = { r: 255, g: 255, b: 255, alpha: 1 }
+        try {
+          const { dominant } = await sharp(raw).stats()
+          if (dominant) bg = { r: dominant.r, g: dominant.g, b: dominant.b, alpha: 1 }
+        } catch {
+          /* 取れなければ白のまま */
+        }
+        buffer = await sharp(raw)
+          .resize(placement.genW, placement.genH, { fit: 'contain', background: bg })
+          .png()
+          .toBuffer()
+      }
+    }
     lastBuffer = buffer
 
     const verify = await verifyCreative({

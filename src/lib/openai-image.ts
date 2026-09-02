@@ -90,6 +90,25 @@ export type GptImageBackground = 'transparent' | 'opaque' | 'auto'
  *    被写体が切り抜かれた画像が返り、カード表示やJPEG書き出しで破綻する。
  *    透過が要るのはロゴ・アイコン生成だけなので、その用途から明示的に渡すこと。
  */
+
+/**
+ * 編集API（images.edit）が受けられるサイズへ寄せる。
+ * ⚠️ 黙って正方形に落とさないこと。縦長を頼まれて正方形を返すと、
+ *    呼び出し側がどう頑張っても（引き伸ばせば歪み、切れば文字が欠ける）救えない。
+ */
+function pickEditSize(requested?: string): '1024x1024' | '1536x1024' | '1024x1536' | 'auto' {
+  const allowed = ['1024x1024', '1536x1024', '1024x1536', 'auto'] as const
+  if (requested && (allowed as readonly string[]).includes(requested)) {
+    return requested as '1024x1024' | '1536x1024' | '1024x1536' | 'auto'
+  }
+  const m = (requested || '').match(/^(\d+)x(\d+)$/)
+  if (!m) return '1024x1024'
+  const ratio = Number(m[1]) / Number(m[2])
+  if (ratio > 1.15) return '1536x1024' // 横長
+  if (ratio < 0.87) return '1024x1536' // 縦長
+  return '1024x1024'
+}
+
 export async function editImageGpt(params: {
   prompt: string
   images: Array<{ base64: string; mimeType: string }>
@@ -105,9 +124,12 @@ export async function editImageGpt(params: {
     return toFile(Buffer.from(image.base64, 'base64'), `reference-${index + 1}.${ext}`, { type: image.mimeType })
   }))
   const quality = params.quality && params.quality !== 'auto' ? params.quality : 'medium'
-  const size = ['1024x1024', '1536x1024', '1024x1536', 'auto'].includes(params.size || '')
-    ? params.size as '1024x1024' | '1536x1024' | '1024x1536' | 'auto'
-    : '1024x1024'
+  // ⚠️ 編集APIは 1024x1024 / 1536x1024 / 1024x1536 の3つしか受けない（生成APIと違う）。
+  //    以前はここで**黙って 1024x1024 に落としていた**ため、
+  //    プロンプトが「縦長1152x2048」と言っているのにAPIには「正方形」と渡り、
+  //    ストーリーズを作ろうとすると必ず正方形が返っていた（2026-09-02に実測）。
+  //    対応外のサイズが来たら、比率が最も近いものへ割り当てる。
+  const size = pickEditSize(params.size)
   const background = params.background || 'opaque'
   const configured = process.env.OPENAI_IMAGE_EDIT_MODEL || OPENAI_IMAGE_MODEL
   const models = configured === 'gpt-image-1' ? ['gpt-image-1'] : [configured, 'gpt-image-1']

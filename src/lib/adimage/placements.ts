@@ -16,7 +16,19 @@
 //   実エラー: "Width and height must both be divisible by 16"
 //             "The maximum supported aspect ratio is 3:1"
 
-export type CompositionKey = 'vertical-stack' | 'hero-center' | 'split-left' | 'compact'
+// ⚠️ ドヤバナーAIは11種以上のレイアウト型を持ち、それが仕上がりの安定に効いている
+//    （nanobanner.ts:1160 DIVERSE_CREATIVE_PRESETS）。
+//    こちらは4種しかなく、構図を指示できていなかったため毎回まとまりが変わっていた。
+//    バナーAI側の型を、この画面の書き方（10分割セーフエリア）に合わせて移植する。
+export type CompositionKey =
+  | 'vertical-stack'
+  | 'hero-center'
+  | 'split-left'
+  | 'compact'
+  | 'photo-overlay'
+  | 'type-hero'
+  | 'panel-side'
+  | 'editorial-vertical'
 
 export interface Placement {
   key: string
