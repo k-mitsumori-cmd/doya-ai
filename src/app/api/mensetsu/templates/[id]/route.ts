@@ -106,7 +106,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   const data: any = {}
   if (typeof body?.name === 'string') data.name = body.name.trim()
   if (typeof body?.jobTitle === 'string') data.jobTitle = body.jobTitle.trim()
-  if ([10, 20, 30].includes(Number(body?.durationMin))) data.durationMin = Number(body.durationMin)
+  // ⚠️ 面接は10分固定。20分・30分は受ける側が最後まで持たないため受け付けない。
+  //    画面から消しても、APIが受けたままだと古いクライアントや直叩きで戻ってしまう。
+  if (Number(body?.durationMin) === 10) data.durationMin = 10
   if (typeof body?.intro === 'string') data.intro = body.intro
   if (typeof body?.closing === 'string') data.closing = body.closing
   if (['draft', 'active', 'archived'].includes(body?.status)) data.status = body.status

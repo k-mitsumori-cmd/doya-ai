@@ -54,7 +54,8 @@ export default function TemplateEditPage() {
 
   const [name, setName] = useState('')
   const [jobTitle, setJobTitle] = useState('')
-  const [durationMin, setDurationMin] = useState(20)
+  /** ⚠️ 面接は10分固定。ここを変えると想定合計の判定もズレる */
+  const [durationMin, setDurationMin] = useState(10)
   const [status, setStatus] = useState('draft')
   const [intro, setIntro] = useState('')
   const [closing, setClosing] = useState('')
@@ -73,7 +74,8 @@ export default function TemplateEditPage() {
       const t = json.template
       setName(t.name || '')
       setJobTitle(t.jobTitle || '')
-      setDurationMin(t.durationMin || 20)
+      // ⚠️ 既存の20分・30分の質問セットも10分として扱う（固定に揃えたため）
+      setDurationMin(10)
       setStatus(t.status || 'draft')
       setIntro(t.intro || '')
       setClosing(t.closing || '')
@@ -269,18 +271,15 @@ export default function TemplateEditPage() {
                 className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
               />
             </label>
-            <label className="block">
+            {/* ⚠️ 面接は10分に固定。20分・30分は受ける側が最後まで持たず、
+                 選べること自体が迷いを生むため選択肢を外した（2026-08-31）。
+                 生成フォーム側は当時直したが、この編集画面が残っていた。 */}
+            <div className="block">
               <span className="text-xs font-black text-[#0a0f3c]">面接時間</span>
-              <select
-                value={durationMin}
-                onChange={(e) => setDurationMin(Number(e.target.value))}
-                className="mt-1.5 w-full rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
-              >
-                <option value={10}>10分</option>
-                <option value={20}>20分</option>
-                <option value={30}>30分</option>
-              </select>
-            </label>
+              <div className="mt-1.5 flex w-full items-center rounded-xl bg-[#f7faff] px-4 py-2.5 text-sm font-black text-[#425071] ring-1 ring-[#e3edff]">
+                10分の面接
+              </div>
+            </div>
             <label className="block">
               <span className="text-xs font-black text-[#0a0f3c]">状態</span>
               <select
