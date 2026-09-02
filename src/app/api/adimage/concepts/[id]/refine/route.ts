@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { assertQuota, getIdentity, ownerWhere, requireUser } from '@/lib/adimage/access'
 import { directivesToPromptLines, REFINE_CHIPS } from '@/lib/adimage/feedback'
+import { extractRefPalette } from '@/lib/adimage/ref-palette'
 import { exportToSize, generateBaked } from '@/lib/adimage/generate'
 import { DEFAULT_LOGO_CONFIG, type LogoConfig } from '@/lib/adimage/logo'
 import { findPlacement, groupByGenSize } from '@/lib/adimage/placements'
@@ -110,6 +111,18 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   //    枚数が多いと maxDuration(300秒) を超えて画面が止まる。
   // ⚠️ グループ単位で捕まえる。1つのサイズが失敗しても残りは作り切り、
   //    どの配置が作れなかったかを必ず利用者へ返す（黙って短い結果を返さない）。
+  // ⚠️ 見本の配色も引き継ぐ。文章（designRefStyle）だけでは色が決まらず、
+  //    改善のたびに見本から離れていく
+  let designRefColors: string[] = []
+  if (concept.designRefId) {
+    const t = await prisma.bannerTemplate.findUnique({
+      where: { templateId: concept.designRefId },
+      select: { previewUrl: true, imageUrl: true },
+    })
+    const refUrl = t?.previewUrl || t?.imageUrl
+    if (refUrl) designRefColors = await extractRefPalette(refUrl)
+  }
+
   const settled = await Promise.all(
     groups.map(async (group) => {
       try {
@@ -123,6 +136,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
           placement: rep,
           composition: (concept.compositionKey as any) || group.composition,
           designRefPrompt: concept.designRefStyle || undefined,
+          designRefColors: designRefColors.length ? designRefColors : undefined,
           extraDirectives, pathPrefix,
         })
         const rows: typeof creativeRows = []

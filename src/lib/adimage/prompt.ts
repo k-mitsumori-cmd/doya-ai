@@ -37,10 +37,15 @@ export interface BuildPromptInput {
    *    テンプレート側の文言や商材はこちらのコピーで上書きされる。
    */
   designRefPrompt?: string
+  /**
+   * 見本の画像から抜き出した実際の配色（16進）。
+   * ⚠️ 言葉だけでは「鮮烈な赤」が何色か決まらない。数値で渡すと外れなくなる。
+   */
+  designRefColors?: string[]
 }
 
 export function buildImagePrompt(input: BuildPromptInput): string {
-  const { brand, copy, tone, placement, composition, extraDirectives = [], designRefPrompt, hasRefImage } = input
+  const { brand, copy, tone, placement, composition, extraDirectives = [], designRefPrompt, designRefColors = [], hasRefImage } = input
   const comp = COMPOSITIONS[composition]
   const omitSub = comp.omit.includes('sub')
 
@@ -65,7 +70,14 @@ export function buildImagePrompt(input: BuildPromptInput): string {
     // 2. ブランド・トーン・配色
     `ブランド: ${brand.name}${brand.industry ? `（${brand.industry}）` : ''}`,
     `雰囲気: ${tone}`,
-    colors.length > 0 ? `配色: ${colors.join(' / ')} を基調にする` : '',
+    // ⚠️ 見本を選んでいるときにブランド色を「基調にする」と言うと、
+    //    下の作風（見本の配色）と正面から食い違い、見本が反映されなくなる。
+    //    見本があるときは、ブランド色は差し色の扱いに落とす。
+    colors.length > 0
+      ? designRefPrompt
+        ? `ブランド色: ${colors.join(' / ')}（ロゴやCTAなどの差し色として少量だけ使う。画面の基調は下の作風に従うこと）`
+        : `配色: ${colors.join(' / ')} を基調にする`
+      : '',
     brand.description ? `サービス内容: ${brand.description}` : '',
     '',
     // 2.5 デザインの参考
@@ -79,6 +91,9 @@ export function buildImagePrompt(input: BuildPromptInput): string {
               + '文字の質感・配色の関係を、できるかぎり写し取ること。'
             : '',
           ...designRefPrompt.split('\n').map((l) => `  ${l}`),
+          designRefColors.length > 0
+            ? `  配色: ${designRefColors.join(' / ')} —— これは見本から実測した色。この色そのものを画面の基調に使うこと。`
+            : '',
           '  ⚠️ ここで指定しているのは**作風（質感・配色の方向性・レイアウトの気配）だけ**。',
           `     描く題材は上の「${brand.name}」の商材であり、参考の題材（写っている人物・物・場所）をそのまま描いてはいけない。`,
           `     画面比率も上で指定した ${placement.genW}×${placement.genH} に従うこと。`,

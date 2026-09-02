@@ -16,6 +16,7 @@ import { assertQuota, ensureGuestId, getIdentity, GUEST_COOKIE, ownerWhere, requ
 import type { CompositionKey } from '@/lib/adimage/placements'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { DEFAULT_PLACEMENT_KEYS, findPlacement, groupByGenSize } from '@/lib/adimage/placements'
+import { extractRefPalette } from '@/lib/adimage/ref-palette'
 import { exportToSize, generateBaked } from '@/lib/adimage/generate'
 import { DEFAULT_LOGO_CONFIG, type LogoConfig } from '@/lib/adimage/logo'
 import { normalizeCopy } from '@/lib/adimage/copy'
@@ -199,6 +200,8 @@ export async function POST(req: NextRequest) {
   let designRefPrompt = ''
   // ⚠️ 構図を渡さないと、色だけ合っていて配置が毎回変わる絵になる
   let designRefComposition: CompositionKey | null = null
+  /** 見本の画像から実測した配色。⚠️ 文章だけでは色が決まらず、見本が反映されない */
+  let designRefColors: string[] = []
   const designRefId = String(body?.designRefId || '')
   if (designRefId) {
     const t = await prisma.bannerTemplate.findUnique({
@@ -225,6 +228,10 @@ export async function POST(req: NextRequest) {
       //    ストーリーズ(9:16)では比率差18.5%の帯が残る（実測）。
       //    画像は事前解析（analyze-banner-templates.ts）で読み取り済みで、
       //    その結果を上の文章として渡す方が崩れず結果も良かった。
+      // ⚠️ ただし配色だけは文章では決まらない（「鮮烈な赤」が何色か特定できない）。
+      //    画像から直接数えて16進で渡す。追加のAPIは使わないので費用は出ない。
+      const refUrl = t.previewUrl || t.imageUrl
+      if (refUrl) designRefColors = await extractRefPalette(refUrl)
     }
   }
 
@@ -280,6 +287,7 @@ export async function POST(req: NextRequest) {
           pathPrefix,
           customPrompt: customPrompt || undefined,
           designRefPrompt: designRefPrompt || undefined,
+          designRefColors: designRefColors.length ? designRefColors : undefined,
         })
 
         // 同じ生成サイズを共有する配置は、同じ原本から書き出す

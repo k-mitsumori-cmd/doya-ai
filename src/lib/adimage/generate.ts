@@ -46,6 +46,8 @@ export interface GenerateInput {
   customPrompt?: string
   /** 見た目の参考にするテンプレートのプロンプト（作風の文章） */
   designRefPrompt?: string
+  /** 見本から実測した配色（16進）。言葉だけでは色が決まらないため */
+  designRefColors?: string[]
   /** 保存パスの接頭辞 */
   pathPrefix: string
 }
@@ -75,7 +77,7 @@ function aspectLabel(p: Placement): string {
 }
 
 export async function generateBaked(input: GenerateInput): Promise<GenerateResult> {
-  const { brand, copy, tone, placement, composition, extraDirectives = [], pathPrefix, customPrompt, designRefPrompt } = input
+  const { brand, copy, tone, placement, composition, extraDirectives = [], pathPrefix, customPrompt, designRefPrompt, designRefColors } = input
   const genSize = `${placement.genW}x${placement.genH}`
 
   let directives = [...extraDirectives]
@@ -89,7 +91,7 @@ export async function generateBaked(input: GenerateInput): Promise<GenerateResul
       ? customPrompt.trim()
       : buildImagePrompt({
           brand, copy, tone, placement, composition,
-          extraDirectives: directives, designRefPrompt,
+          extraDirectives: directives, designRefPrompt, designRefColors,
           hasRefImage: false,
         })
     lastPrompt = prompt
