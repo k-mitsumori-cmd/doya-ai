@@ -272,7 +272,7 @@ export const BANNER_PRICING: ServicePricing = {
   serviceIcon: '🎨',
   // NOTE: 生成「枚数」ベースで管理（1回の生成で複数枚作れるため）
   // NOTE: バナーAIのみ月間上限（guestLimit/freeLimit/proLimit/enterpriseLimit は月間値）
-  guestLimit: 3,         // ゲスト: 月3枚
+  guestLimit: 0,         // ⚠️ ログイン必須（2026-09-02）。上限をCookie内のカウンタで持っており、消せば無制限に生成できたため
   freeLimit: 15,         // 無料会員: 月15枚
   lightLimit: 50,        // LIGHT: 月50枚
   proLimit: 150,         // PRO: 月150枚
@@ -369,7 +369,7 @@ export const PERSONA_PRICING: ServicePricing = {
   serviceId: 'persona',
   serviceName: 'ドヤペルソナAI',
   serviceIcon: '🎯',
-  guestLimit: 2,      // ゲスト: 1日2回
+  guestLimit: 0,      // ⚠️ ログイン必須（2026-09-02）。実装は未ログインを無制限扱いにしており、この数字は効いていなかった
   freeLimit: 5,       // ログイン無料: 1日5回
   lightLimit: 15,     // LIGHT: 1日15回
   proLimit: 30,       // PRO: 1日30回

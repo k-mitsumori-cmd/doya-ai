@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireBannerAdmin } from '@/lib/banner-admin-guard'
 import { generateBanners } from '@/lib/nanobanner'
 
 export const runtime = 'nodejs'
@@ -183,6 +184,12 @@ ${subTitle ? `・サブタイトル：「${subTitle}」` : ''}
 }
 
 export async function POST(request: NextRequest) {
+  // ⚠️ 1回で最大10枚の画像を生成する（＝そのまま従量課金）。
+  //    認証が無いまま本番に出ており、URLを知っていれば誰でも費用を発生させられた。
+  //    同じ名前空間の templates/* は守られていたが、ここだけ漏れていた（2026-09-02）。
+  const denied = requireBannerAdmin(request)
+  if (denied) return denied
+
   try {
     const body = (await request.json()) as TestGenerateRequest
     const {

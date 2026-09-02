@@ -61,6 +61,19 @@ export async function POST(request: NextRequest) {
     // セッションチェック
     const session = await getServerSession(authOptions)
     const isGuest = !session
+
+    // ⚠️ 未ログインの画像生成は禁止（2026-09-02）。
+    //    ゲストの月次上限はカウンタごとCookieに入れていたため、
+    //    Cookieを消す・シークレットウィンドウを開くだけで無制限に生成できた。
+    //    画像生成は1枚ごとに従量課金が発生するので、実費が青天井になる。
+    //    ⚠️ 下のゲスト用の分岐は消していない。ログイン必須に戻す判断があり得るため。
+    if (isGuest) {
+      return NextResponse.json(
+        { error: 'バナーの生成にはログインが必要です。無料で登録いただけます。', code: 'LOGIN_REQUIRED' },
+        { status: 401 }
+      )
+    }
+
     const currentMonth = getCurrentMonthJST() // 月次管理用 "YYYY-MM"
 
     // IPアドレスを取得

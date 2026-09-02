@@ -1416,6 +1416,16 @@ export async function POST(request: NextRequest) {
     const disableLimits = process.env.DOYA_DISABLE_LIMITS === '1'
     const session = await getServerSession(authOptions)
     const isGuest = !session
+
+    // ⚠️ 未ログインの画像生成は禁止（2026-09-02）。理由は banner/generate と同じ。
+    //    ゲストの上限はCookie内のカウンタで、消せば回避できていた。
+    if (isGuest) {
+      return NextResponse.json(
+        { error: 'バナーの生成にはログインが必要です。無料で登録いただけます。', code: 'LOGIN_REQUIRED' },
+        { status: 401 }
+      )
+    }
+
     const currentMonth = getCurrentMonthJST() // 月次管理用 "YYYY-MM"
     const userId = !isGuest ? ((session?.user as any)?.id as string | undefined) : undefined
 

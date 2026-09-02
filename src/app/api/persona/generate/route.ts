@@ -298,8 +298,14 @@ export async function POST(req: NextRequest) {
         }
       }
     } else {
-      // ゲスト: 無制限アクセス
-      isUnlimited = true
+      // ⚠️ 未ログインは禁止（2026-09-02）。
+      //    ここは `isUnlimited = true` になっており、**未ログインだと完全に無制限**だった。
+      //    宣言上のゲスト枠（1日2回）はどこにも効いておらず、
+      //    URLを知っていれば誰でもAIの実費を無制限に発生させられる状態だった。
+      return NextResponse.json(
+        { error: 'ペルソナの生成にはログインが必要です。無料で登録いただけます。', code: 'LOGIN_REQUIRED' },
+        { status: 401 }
+      )
     }
 
     // 制限チェック
