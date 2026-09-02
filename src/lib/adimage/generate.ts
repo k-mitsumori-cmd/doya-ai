@@ -46,12 +46,6 @@ export interface GenerateInput {
   customPrompt?: string
   /** 見た目の参考にするテンプレートのプロンプト（作風の文章） */
   designRefPrompt?: string
-  /**
-   * 見た目の参考にする**画像そのもの**（ドヤバナーAIのテンプレート）。
-   * ⚠️ 文章だけでは写真の有無や配置が伝わらず、選んだ見本と全く違う絵になる。
-   *    ドヤバナーAI(nanobanner.ts:970)と同じく画像を直接渡す。
-   */
-  designRefImage?: { mimeType: string; base64: string }
   /** 保存パスの接頭辞 */
   pathPrefix: string
 }
@@ -81,7 +75,7 @@ function aspectLabel(p: Placement): string {
 }
 
 export async function generateBaked(input: GenerateInput): Promise<GenerateResult> {
-  const { brand, copy, tone, placement, composition, extraDirectives = [], pathPrefix, customPrompt, designRefPrompt, designRefImage } = input
+  const { brand, copy, tone, placement, composition, extraDirectives = [], pathPrefix, customPrompt, designRefPrompt } = input
   const genSize = `${placement.genW}x${placement.genH}`
 
   let directives = [...extraDirectives]
@@ -96,7 +90,7 @@ export async function generateBaked(input: GenerateInput): Promise<GenerateResul
       : buildImagePrompt({
           brand, copy, tone, placement, composition,
           extraDirectives: directives, designRefPrompt,
-          hasRefImage: !!designRefImage,
+          hasRefImage: false,
         })
     lastPrompt = prompt
 
@@ -106,13 +100,9 @@ export async function generateBaked(input: GenerateInput): Promise<GenerateResul
       // ⚠️ medium を既定にする。high は実測93秒かかり、複数案を回すと maxDuration に収まらない。
       //    文字の可読性は medium で十分に確保できている。
       quality: 'medium',
-      // ⚠️ 参考画像を渡すと編集APIに切り替わり、受けるサイズが
-      //    1024x1024 / 1536x1024 / 1024x1536 の3つに限られる（openai-image.ts:108）。
-      //    そのため戻りは目標比率と違いうる。下で必ず比率を揃え直すこと。
-      ...(designRefImage ? { inputImages: [designRefImage] } : {}),
       // ⚠️ フォールバック(Gemini)は size を読まない。比率を渡さないと1:1で返る
       //    （nanobanner.ts:1022 と同じ理由）
-      ...(designRefImage ? { aspectRatio: aspectLabel(placement) } : {}),
+      aspectRatio: aspectLabel(placement),
     })
     lastModel = result.fallbackUsed ? `${result.model}(fallback)` : result.model
 

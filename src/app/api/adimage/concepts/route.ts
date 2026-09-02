@@ -70,77 +70,48 @@ export async function GET(req: NextRequest) {
 
 
 /**
- * テンプレートのプロンプトから「作風」だけを取り出す。
+ * テンプレートの見た目を、生成に使える形で取り出す。
  *
- * ⚠️ テンプレートには**2つの形式が混在している**（実測: 構造化150枚 / 平文348枚）。
- *   A) 構造化: Concept/Style/Composition/Typography/Avoid の行区切り
- *   B) 平文  : 英語の説明文が1〜2段落（Style行は無い）
+ * ⚠️ **prompt から取ってはいけない。** テンプレートの prompt はサムネイルを
+ *    説明していない。構造化テンプレ150枚の Style は10種類の定型文の使い回しで、
+ *    「写真を使っているか」すら実物と合わない。
+ *    実例: 女性2人の写真が主役のテンプレに `typography as image`（文字が主役）と
+ *    `porcelain stock-model face を避けよ`（人物写真を避けよ）が入っていた。
+ *    これを渡していたため、写真が消えて巨大な文字だけの絵になっていた（2026-09-02）。
  *
- * ⚠️ どちらも**丸ごと渡してはいけない**。題材（何を描くか）と、
- *    Aでは比率（Wide 1.91:1 banner）まで書かれており、
- *    渡すと「テンプレートの題材が描かれる」「比率が衝突する」事故になる。
- *
- * ⚠️ Aだけを想定した抽出にすると、Bの348枚では空文字になり
- *    **デザイン指定が丸ごと無視される**（2026-09-01にこれで作風が全く効かなかった）。
- *    そのためBはLLMで作風だけに言い換える。失敗時は空にする（誤った指定を渡さない）。
+ * → scripts/analyze-banner-templates.ts が**画像そのものを見て**読み取った結果を
+ *   DBに保存してあるので、それを使う。
  */
-async function extractStyleOnly(
-  prompt: string
-): Promise<{ style: string; composition: CompositionKey | null }> {
-  const pick = (label: string) => {
-    const m = prompt.match(new RegExp(`^${label}:\\s*(.+)$`, 'mi'))
-    return m?.[1]?.trim() || ''
-  }
-  const style = pick('Style')
-  const avoid = pick('Avoid')
+function buildDesignRef(t: {
+  derivedStyle: string | null
+  derivedComposition: string | null
+  derivedUsesPhoto: boolean | null
+}): { style: string; composition: CompositionKey | null } {
+  if (!t.derivedStyle) return { style: '', composition: null }
 
-  // A) 構造化形式。作風はそのまま使えるが、構図は書かれていないので推定に回す
-  if (style) {
-    return {
-      style: [`作風: ${style}`, avoid ? `避けること: ${avoid}` : ''].filter(Boolean).join('\n'),
-      composition: null,
-    }
-  }
+  const VALID: CompositionKey[] = [
+    'photo-overlay',
+    'panel-side',
+    'editorial-vertical',
+    'type-hero',
+    'hero-center',
+  ]
+  const composition = VALID.includes((t.derivedComposition || '') as CompositionKey)
+    ? (t.derivedComposition as CompositionKey)
+    : null
 
-  // B) 平文形式。題材が混ざっているので、作風だけに言い換えてもらう
-  try {
-    const r = await geminiGenerateJson<{ style?: string; composition?: string }>(
-      {
-        prompt: [
-          '次は広告バナーの生成指示です。ここから「作風」と「構図の型」を読み取ってください。',
-          '',
-          '【style に入れるもの】配色・色調・光・質感・余白の取り方・文字の組み方の傾向・全体の雰囲気',
-          '【style に入れないもの】描かれている題材（人物・物・場所・業種）、具体的な文言、画面比率',
-          '⚠️ 題材を一切含めないこと。「女性が」「オフィスで」のような描写は捨てる。',
-          '⚠️ 60〜120字程度の日本語1文にまとめる。',
-          '',
-          '【composition】次から**最も近いものを1つ**選ぶ:',
-          '  photo-overlay      … 写真を全面に敷き、その上に文字を重ねている',
-          '  panel-side         … 片側が単色パネルで文字、もう片側が写真',
-          '  editorial-vertical … 雑誌の誌面のように余白が大きく、写真と文字を重ねない',
-          '  type-hero          … 文字が主役で、背景は控えめ',
-          '  hero-center        … 中央に文字を集めた素直な構成',
-          '⚠️ 写真を使っているかどうかを必ず見ること。ここを外すと全く違う絵になる。',
-          '',
-          '出力するJSON: { "style": "作風の説明", "composition": "上のいずれか" }',
-          '',
-          '【元の指示】',
-          prompt.slice(0, 1500),
-        ].join('\n'),
-        model: GEMINI_TEXT_MODEL_DEFAULT,
-      },
-      'AdImageStyle'
-    )
-    const derived = String(r?.style || '').trim()
-    const VALID: CompositionKey[] = ['photo-overlay', 'panel-side', 'editorial-vertical', 'type-hero', 'hero-center']
-    const comp = VALID.includes(String(r?.composition || '') as CompositionKey)
-      ? (String(r?.composition) as CompositionKey)
-      : null
-    return { style: derived ? `作風: ${derived.slice(0, 300)}` : '', composition: comp }
-  } catch (e) {
-    // ⚠️ 失敗したら空を返す。中途半端な文字列を渡すと題材が混ざる
-    console.error('[adimage] 作風の抽出に失敗', e instanceof Error ? e.message : e)
-    return { style: '', composition: null }
+  // ⚠️ 写真の有無は必ず明示する。ここが抜けると、写真主体の見本を選んだのに
+  //    図形と文字だけの絵が出る（実機で発生）。
+  const photoLine =
+    t.derivedUsesPhoto === true
+      ? '写真: 実写の写真を主要な要素として使うこと。イラストや図形で代用しない。'
+      : t.derivedUsesPhoto === false
+        ? '写真: 実写の写真は使わず、図形・イラスト・文字で構成すること。'
+        : ''
+
+  return {
+    style: [`作風: ${t.derivedStyle}`, photoLine].filter(Boolean).join('\n'),
+    composition,
   }
 }
 
@@ -226,44 +197,34 @@ export async function POST(req: NextRequest) {
   // ⚠️ テンプレートのプロンプトは「デザイン要素のみ」で、商材や文言は含まない。
   //    そのまま混ぜても、こちらのコピーが上書きされる心配は無い。
   let designRefPrompt = ''
-  let designRefImage: { mimeType: string; base64: string } | undefined
   // ⚠️ 構図を渡さないと、色だけ合っていて配置が毎回変わる絵になる
   let designRefComposition: CompositionKey | null = null
   const designRefId = String(body?.designRefId || '')
   if (designRefId) {
     const t = await prisma.bannerTemplate.findUnique({
       where: { templateId: designRefId },
-      select: { prompt: true, isActive: true, imageUrl: true, previewUrl: true },
+      select: {
+        isActive: true,
+        imageUrl: true,
+        previewUrl: true,
+        derivedStyle: true,
+        derivedComposition: true,
+        derivedUsesPhoto: true,
+      },
     })
     if (t?.isActive) {
-      const ex = await extractStyleOnly(t.prompt || '')
+      const ex = buildDesignRef(t)
       designRefPrompt = ex.style
       designRefComposition = ex.composition
-
-      // ⚠️ **画像そのものを渡すのが本命。** 文章だけでは写真の有無・配置・
-      //    文字の質感が伝わらず、選んだ見本と全く違う絵になる（2026-09-01に実機で確認）。
-      //    ドヤバナーAI(nanobanner.ts:970)が同じ方式で運用できている。
-      const refUrl = t.imageUrl || t.previewUrl
-      if (refUrl) {
-        try {
-          const res = await fetch(refUrl)
-          if (res.ok) {
-            const buf = Buffer.from(await res.arrayBuffer())
-            // ⚠️ 参照画像は縮小して渡す。原寸だとリクエストが重く、
-            //    作風の伝達に解像度は要らない
-            const small = await sharp(buf)
-              .resize({ width: 768, height: 768, fit: 'inside', withoutEnlargement: true })
-              .png()
-              .toBuffer()
-            designRefImage = { mimeType: 'image/png', base64: small.toString('base64') }
-          } else {
-            console.error('[adimage] 参照画像を取得できません', res.status, refUrl)
-          }
-        } catch (e) {
-          // 取れなくても作風の文章だけで生成は続行する
-          console.error('[adimage] 参照画像の取得に失敗', e instanceof Error ? e.message : e)
-        }
+      if (!ex.style) {
+        // ⚠️ 未解析のテンプレートは参考にしない。prompt から取ると実物と違う指示になる
+        console.warn('[adimage] 未解析のテンプレートが選ばれました', designRefId)
       }
+
+      // ⚠️ 参照画像は**生成時には渡さない**。編集APIは3サイズしか受けず、
+      //    ストーリーズ(9:16)では比率差18.5%の帯が残る（実測）。
+      //    画像は事前解析（analyze-banner-templates.ts）で読み取り済みで、
+      //    その結果を上の文章として渡す方が崩れず結果も良かった。
     }
   }
 
@@ -311,7 +272,6 @@ export async function POST(req: NextRequest) {
           pathPrefix,
           customPrompt: customPrompt || undefined,
           designRefPrompt: designRefPrompt || undefined,
-          designRefImage,
         })
         genPaths[group.genKey] = result.genPath
         if (!visualPrompt) {
