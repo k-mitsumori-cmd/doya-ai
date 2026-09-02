@@ -795,7 +795,15 @@ export default function AdImageTool() {
                             { label: '改善後', c: after },
                           ].map(({ label, c }) => (
                             <div key={label} className="overflow-hidden rounded-xl bg-white ring-1 ring-[#e3edff]">
-                              <p className="px-3 py-1.5 text-[11px] font-black text-[#425071]">{label}</p>
+                              <div className="flex items-center justify-between gap-2 px-3 py-1.5">
+                                <span className="text-[11px] font-black text-[#425071]">{label}</span>
+                                {/* 検査結果は改善後だけ出す。前のものに付けても直しようがない */}
+                                {label === '改善後' && c.verify?.needsReview ? (
+                                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] text-amber-700">要確認</span>
+                                ) : label === '改善後' && c.verify?.ocrMatch ? (
+                                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-700">文字OK</span>
+                                ) : null}
+                              </div>
                               {c.url ? (
                                 <a href={c.url} target="_blank" rel="noopener noreferrer" title="クリックで原寸表示">
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -811,9 +819,15 @@ export default function AdImageTool() {
                     )
                   })}
                 </div>
+                <p className="mt-4 text-xs font-semibold text-[#8a94ad]">
+                  画像をクリックすると原寸で開きます。ダウンロードは上の「すべてダウンロード（ZIP）」からどうぞ。
+                </p>
               </div>
             )}
 
+            {/* ⚠️ 比較を出しているときは、この一覧を出さない。
+                 同じ改善後の画像が下にもう一度並び、3枚に見えてしまう（2026-09-02の指摘）。 */}
+            {previousCreatives.length === 0 && (
             <div className="mt-2 grid gap-5 sm:grid-cols-2">
               {creatives.map((c) => (
                 <div key={c.id} className="overflow-hidden rounded-xl border border-slate-200">
@@ -841,6 +855,7 @@ export default function AdImageTool() {
                 </div>
               ))}
             </div>
+            )}
 
             {/* --- AIフィードバック ---
                  ⚠️ このサービスの中心はここ。作って終わりではなく、AIに見てもらって
