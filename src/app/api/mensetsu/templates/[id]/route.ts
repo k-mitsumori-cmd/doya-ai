@@ -2,8 +2,9 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-// GET   /api/mensetsu/templates/[id] — テンプレート取得
-// PATCH /api/mensetsu/templates/[id] — 質問・評価軸の編集（F3-5）
+// GET    /api/mensetsu/templates/[id] — テンプレート取得
+// PATCH  /api/mensetsu/templates/[id] — 質問・評価軸の編集（F3-5）
+// DELETE /api/mensetsu/templates/[id] — 質問セットの削除
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getMensetsuContext, hasMinRole, orgSlugFrom } from '@/lib/mensetsu/access'
@@ -158,4 +159,29 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     },
   })
   return NextResponse.json({ template })
+}
+
+/**
+ * 質問セットを削除する。
+ * ⚠️ **道連れが大きい。** onDelete: Cascade により、質問・評価軸だけでなく
+ *    この質問セットで実施した**面接の記録（逐語ログ・評価）まで消える**。
+ *    復旧手段は無いので、管理者以上に限り、件数を返して画面で必ず確認させる。
+ */
+export async function DELETE(req: NextRequest, ctx: Ctx) {
+  const { id } = await paramsOf(ctx)
+  const c = await getMensetsuContext(orgSlugFrom(req))
+  if (!c) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  if (!hasMinRole(c.role, 'admin')) {
+    return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+  }
+
+  // ⚠️ id だけで引かない。必ず所有者条件と併用する（他組織のものを消させない）
+  const t = await prisma.mensetsuTemplate.findFirst({
+    where: { id, organizationId: c.organizationId },
+    select: { id: true, _count: { select: { sessions: true } } },
+  })
+  if (!t) return NextResponse.json({ error: '質問セットが見つかりません' }, { status: 404 })
+
+  await prisma.mensetsuTemplate.delete({ where: { id: t.id } })
+  return NextResponse.json({ ok: true, deletedSessions: t._count.sessions })
 }

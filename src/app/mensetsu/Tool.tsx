@@ -77,6 +77,12 @@ export default function MensetsuTool() {
   const [notice, setNotice] = useState<string | null>(null)
 
 
+  /** 会社情報。⚠️ 未登録だと質問セットが一般論になる */
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [companyUrl, setCompanyUrl] = useState('')
+  /** 削除中の対象ID。⚠️ 連打で二重に消しにいかないよう、押した行だけ止める */
+  const [deletingId, setDeletingId] = useState('')
+
   const [jobTitle, setJobTitle] = useState('')
   const [level, setLevel] = useState('mid')
   const [durationMin, setDurationMin] = useState(10)
@@ -109,12 +115,17 @@ export default function MensetsuTool() {
       setOrg(data?.current || null)
       if (data?.current) {
         // ⚠️ メンバーはこの画面では使わない（/mensetsu/settings が自分で取得する）
-        const [t, s] = await Promise.all([
+        const [t, s, c] = await Promise.all([
           fetch('/api/mensetsu/templates').then((r) => r.json()),
           fetch('/api/mensetsu/sessions').then((r) => r.json()),
+          fetch('/api/mensetsu/company').then((r) => r.json()),
         ])
         setTemplates(t?.templates || [])
         setSessions(s?.sessions || [])
+        setProfile(c?.profile || null)
+        // ⚠️ 入力欄には登録済みのURLを入れておく。空だと「未登録なのか
+        //    登録済みなのに空なのか」が分からない
+        if (c?.profile?.sourceUrl) setCompanyUrl(c.profile.sourceUrl)
         if (t?.templates?.[0]) setSelectedTemplate(t.templates[0].id)
       }
     } finally {
@@ -125,6 +136,68 @@ export default function MensetsuTool() {
   useEffect(() => {
     void load()
   }, [load])
+
+  /**
+   * 会社サイトを読み取って会社情報を登録する。
+   * ⚠️ ここが未登録だと、質問セットが自社の事業・カルチャーを踏まえない
+   *    一般論になる。画面の一番上に置いて、最初にやることだと分かるようにする。
+   */
+  const analyzeCompany = async () => {
+    if (!companyUrl.trim()) return
+    setBusy('company')
+    setError(null)
+    setNotice(null)
+    try {
+      const res = await fetch('/api/mensetsu/company/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: companyUrl.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || '会社サイトを読み取れませんでした')
+      setProfile(data.profile)
+      setNotice(`会社情報を更新しました（${data.pageCount}ページを読み取り）`)
+    } catch (e) {
+      notifyError(setError, e instanceof Error ? e.message : '会社サイトを読み取れませんでした')
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  /**
+   * 質問セットを削除する。
+   * ⚠️ 質問・評価軸だけでなく、この質問セットで実施した**面接の記録まで**消える。
+   *    元に戻せないので、何が何件消えるかを出してから聞く。
+   */
+  const deleteTemplate = async (t: Template) => {
+    const n = t._count?.sessions ?? 0
+    const warn = [
+      `質問セット「${t.name}」を削除します。`,
+      '',
+      '次のものも一緒に消えます。元に戻せません。',
+      `・質問 ${t._count?.questions ?? 0}問 / 評価軸 ${t._count?.criteria ?? 0}個`,
+      n > 0 ? `・この質問セットで実施した面接 ${n}件の記録（逐語ログ・評価）` : '',
+      n > 0 ? '・発行済みの面接URLは開けなくなります' : '',
+    ]
+      .filter(Boolean)
+      .join('\n')
+    if (!window.confirm(warn)) return
+
+    setDeletingId(t.id)
+    setError(null)
+    try {
+      const res = await fetch(`/api/mensetsu/templates/${t.id}`, { method: 'DELETE' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data?.error || '削除できませんでした')
+      await load()
+    } catch (e) {
+      notifyError(setError, e instanceof Error ? e.message : '削除できませんでした')
+    } finally {
+      setDeletingId('')
+    }
+  }
+
+  const canDelete = org?.role === 'owner' || org?.role === 'admin'
 
   const createOrg = async () => {
     if (!orgName.trim()) return
@@ -359,6 +432,70 @@ export default function MensetsuTool() {
           </section>
         ) : (
           <>
+            {/* --- 0. 会社情報 ---
+                 ⚠️ ここが未登録だと質問セットが一般論になる。
+                    以前は入力欄がどこにも無く、解析APIは呼ばれていなかった。 */}
+            <section className="mt-8 rounded-lg bg-white p-6 shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#0066ff] text-xs font-black text-white">0</span>
+                <h2 className="text-base font-black text-[#0a0f3c]">会社のURLを登録する</h2>
+              </div>
+              <p className="mt-2 text-sm font-semibold text-[#425071]">
+                自社サイトを読み取って、事業内容・提供価値・カルチャー・求める人物像をまとめます。
+                ここを登録しておくと、下の質問セットが自社に合った内容になります。
+              </p>
+
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <input
+                  value={companyUrl}
+                  onChange={(e) => setCompanyUrl(e.target.value)}
+                  placeholder="https://example.co.jp"
+                  className="flex-1 rounded-xl border-2 border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#0066ff]"
+                />
+                <button
+                  onClick={analyzeCompany}
+                  disabled={busy === 'company' || !companyUrl.trim()}
+                  className="rounded-lg bg-[#0066ff] px-6 py-3 text-sm font-black text-white transition hover:bg-[#0052cc] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:hover:bg-slate-200"
+                >
+                  {busy === 'company'
+                    ? '読み取り中…'
+                    : profile
+                      ? '読み取り直す'
+                      : '会社情報を読み取る'}
+                </button>
+              </div>
+
+              {profile ? (
+                <div className="mt-4 rounded-xl bg-[#f7faff] p-4 ring-1 ring-[#e3edff]">
+                  <p className="text-sm font-black text-[#0a0f3c]">
+                    {profile.companyName || '登録済み'}
+                  </p>
+                  <p className="mt-1 break-all text-xs font-semibold text-[#8a94ad]">
+                    {profile.sourceUrl}
+                  </p>
+                  <dl className="mt-3 space-y-2">
+                    {[
+                      ['事業内容', profile.business],
+                      ['提供価値', profile.valueProp],
+                      ['カルチャー', profile.culture],
+                      ['求める人物像', profile.idealProfile],
+                    ]
+                      .filter(([, v]) => v)
+                      .map(([k, v]) => (
+                        <div key={k as string}>
+                          <dt className="text-xs font-black text-[#425071]">{k}</dt>
+                          <dd className="text-sm font-semibold leading-relaxed text-[#0a0f3c]">{v}</dd>
+                        </div>
+                      ))}
+                  </dl>
+                </div>
+              ) : (
+                <p className="mt-3 rounded-lg bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-900 ring-1 ring-amber-200">
+                  まだ会社情報が登録されていません。このままでも質問セットは作れますが、内容が一般的なものになります。
+                </p>
+              )}
+            </section>
+
             {/* --- 1. 質問セット生成 --- */}
             <section className="mt-8 rounded-lg bg-white p-6 shadow-sm">
               <div className="flex items-center gap-2">
@@ -432,6 +569,16 @@ export default function MensetsuTool() {
                           >
                             編集
                           </Link>
+                          {/* ⚠️ 面接の記録まで消える操作。隣の「編集」と見た目を分ける（赤） */}
+                          {canDelete && (
+                            <button
+                              onClick={() => deleteTemplate(t)}
+                              disabled={deletingId === t.id}
+                              className="rounded-lg border border-rose-300 bg-white px-4 py-2 text-xs font-black text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              {deletingId === t.id ? '削除中…' : '削除'}
+                            </button>
+                          )}
                         </div>
                       </div>
 
