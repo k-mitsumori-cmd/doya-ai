@@ -183,7 +183,7 @@ function AdImageSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile 
                 <p className="text-xs font-black text-white">現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}</p>
               </div>
               <p className="text-[10px] text-white/85 font-bold leading-relaxed mb-2">
-                プロプラン ¥9,980/月で1日40コンセプト。改善は無制限、ZIP一括もできます<TrialInlineSuffix />
+                プロプラン ¥9,980/月で1日50枚・月300枚まで。ZIP一括もできます<TrialInlineSuffix />
               </p>
               <Link
                 href="/adimage/pricing"

@@ -38,10 +38,12 @@ export const DAILY_CONCEPT_LIMIT: Record<AdImagePlan, number> = { GUEST: 2, FREE
  * 画像枚数の上限。
  * ⚠️ コンセプト数とは別に**枚数でも**縛る。1コンセプトから何枚でも書き出せるため、
  *    コンセプト数だけで縛ると無料でも実質無制限に画像が作れてしまう（課金理由が無くなる）。
- * ⚠️ PRO は1回あたり10枚の上限（MAX_PLACEMENTS_PER_RUN）で守るため、日次・月次は置かない。
+ * ⚠️ PRO にも上限を置く。1回10枚の制限だけでは日に何度でも回せてしまい、
+ *    画像生成は1枚ごとに従量課金が発生するため、月額を上回る使われ方を止められない。
+ *    月300枚は medium 品質でおよそ $18 相当で、月額9,980円の範囲に収まる想定。
  */
-export const DAILY_IMAGE_LIMIT: Record<AdImagePlan, number | null> = { GUEST: 2, FREE: 3, PRO: null }
-export const MONTHLY_IMAGE_LIMIT: Record<AdImagePlan, number | null> = { GUEST: 5, FREE: 15, PRO: null }
+export const DAILY_IMAGE_LIMIT: Record<AdImagePlan, number | null> = { GUEST: 2, FREE: 3, PRO: 50 }
+export const MONTHLY_IMAGE_LIMIT: Record<AdImagePlan, number | null> = { GUEST: 5, FREE: 15, PRO: 300 }
 
 /** 一度の生成で出せる配置の上限。⚠️ 増やすと maxDuration(300秒) に収まらない */
 export const MAX_PLACEMENTS_PER_RUN = 10
@@ -135,6 +137,24 @@ export async function imagesSince(id: AdImageIdentity, since: Date): Promise<num
 }
 
 /**
+ * 枚数の上限に達したときの文面。
+ * ⚠️ プロプランの方に「プロにご登録を」と返さないこと（既に払っている）。
+ */
+function limitMessage(
+  plan: AdImagePlan,
+  period: string,
+  limit: number,
+  used: number,
+  usedLabel: string
+): string {
+  const head = `${plan === 'PRO' ? 'プロプラン' : '無料プラン'}は${period}${limit}枚までです（${usedLabel}${used}枚）。`
+  if (plan === 'PRO') {
+    return head + 'たくさんお使いいただく場合は、お問い合わせより枠の追加をご相談ください。'
+  }
+  return head + 'プロプランにご登録いただくと上限が広がります。'
+}
+
+/**
  * 生成してよいか。
  * @param requestedImages これから作る枚数。枠を超える生成を**始める前に**弾く。
  */
@@ -153,19 +173,13 @@ export async function assertQuota(
   if (dailyImages != null) {
     const usedToday = await imagesSince(id, jstStartOfTodayUtc())
     if (usedToday + requestedImages > dailyImages) {
-      return {
-        ok: false,
-        reason: `無料プランは1日${dailyImages}枚までです（本日${usedToday}枚）。プロプランにご登録いただくと上限が広がります。`,
-      }
+      return { ok: false, reason: limitMessage(id.plan, '1日', dailyImages, usedToday, '本日') }
     }
   }
   if (monthlyImages != null) {
     const usedMonth = await imagesSince(id, jstStartOfMonthUtc())
     if (usedMonth + requestedImages > monthlyImages) {
-      return {
-        ok: false,
-        reason: `無料プランは月${monthlyImages}枚までです（今月${usedMonth}枚）。プロプランにご登録いただくと上限が広がります。`,
-      }
+      return { ok: false, reason: limitMessage(id.plan, '月', monthlyImages, usedMonth, '今月') }
     }
   }
 
