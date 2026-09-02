@@ -29,6 +29,7 @@ interface Room {
   token: string
   isActive: boolean
   expiresAt: string | null
+  createdAt: string
   sessionCount: number
   maxSessions: number
   scenario: { id: string; name: string; product: { name: string } }
@@ -73,6 +74,8 @@ export default function AishodanTool() {
   const [needsLogin, setNeedsLogin] = useState(false)
 
   const [products, setProducts] = useState<Product[]>([])
+  /** 削除中の対象ID。⚠️ 連打で二重に消しにいかないよう、押した行だけ止める */
+  const [deletingId, setDeletingId] = useState('')
   const [rooms, setRooms] = useState<Room[]>([])
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
@@ -176,6 +179,80 @@ export default function AishodanTool() {
     }
   }
 
+  /**
+   * 商材を削除する。
+   * ⚠️ ナレッジ・シナリオ・商談URL・**実施済みの商談ログ**まで道連れで消える。
+   *    元に戻せないので、何が消えるかを具体的に出してから聞く。
+   */
+  async function deleteProduct(prod: Product) {
+    const rooms = prod.scenarios.length > 0 ? '発行済みの商談URL' : ''
+    const warn = [
+      `「${prod.name}」を削除します。`,
+      '',
+      '次のものも一緒に消えます。元に戻せません。',
+      `・ナレッジ ${prod._count.chunks}件 / 取り込んだ ${prod._count.sources}ページ`,
+      '・シナリオ',
+      rooms && `・${rooms}（配布済みのURLは開けなくなります）`,
+      '・この商材で実施した商談の記録',
+    ]
+      .filter(Boolean)
+      .join('\n')
+    if (!window.confirm(warn)) return
+
+    setDeletingId(prod.id)
+    setError('')
+    try {
+      const r = await fetch(withOrg('aishodan', `/api/aishodan/products/${prod.id}`), {
+        method: 'DELETE',
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(d?.error || '削除できませんでした')
+      await load()
+    } catch (e) {
+      notifyError(setError, e instanceof Error ? e.message : '削除できませんでした')
+    } finally {
+      setDeletingId('')
+    }
+  }
+
+  /**
+   * 商談URLを削除する。
+   * ⚠️ 配布済みのURLが開けなくなり、その商談の記録も消える。
+   */
+  async function deleteRoom(room: Room) {
+    const warn = [
+      `商談URL「${room.name}」を削除します。`,
+      // ⚠️ 名前は同じものが並ぶ。URLと発行日まで出さないと取り違える
+      roomUrl(room.token),
+      `（${new Date(room.createdAt).toLocaleString('ja-JP')} 発行）`,
+      '',
+      '・配布済みのURLは開けなくなります',
+      room._count.sessions > 0
+        ? `・この商談URLで実施した ${room._count.sessions}件の記録も消えます`
+        : '',
+      '',
+      '元に戻せません。',
+    ]
+      .filter(Boolean)
+      .join('\n')
+    if (!window.confirm(warn)) return
+
+    setDeletingId(room.id)
+    setError('')
+    try {
+      const r = await fetch(withOrg('aishodan', `/api/aishodan/rooms/${room.id}`), {
+        method: 'DELETE',
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(d?.error || '削除できませんでした')
+      await load()
+    } catch (e) {
+      notifyError(setError, e instanceof Error ? e.message : '削除できませんでした')
+    } finally {
+      setDeletingId('')
+    }
+  }
+
   async function toggleRoom(room: Room) {
     await fetch(withOrg('aishodan', `/api/aishodan/rooms/${room.id}`), {
       method: 'PATCH',
@@ -184,6 +261,13 @@ export default function AishodanTool() {
     })
     await load()
   }
+
+  /**
+   * 削除できる権限があるか。
+   * ⚠️ APIは admin 以上を要求する。権限が無い人にボタンを見せると、
+   *    押しても403になるだけで何が悪いのか分からない画面になる。
+   */
+  const canDelete = org?.role === 'owner' || org?.role === 'admin'
 
   function roomUrl(token: string) {
     return typeof window !== 'undefined' ? `${window.location.origin}/m/${token}` : `/m/${token}`
@@ -338,6 +422,16 @@ export default function AishodanTool() {
                         </Link>
                       </>
                     )}
+                    {/* ⚠️ 道連れが大きいので、他の操作と見た目を分ける（赤・枠線） */}
+                    {canDelete && (
+                    <button
+                      onClick={() => deleteProduct(p)}
+                      disabled={deletingId === p.id}
+                      className="rounded-lg border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {deletingId === p.id ? '削除中…' : '削除'}
+                    </button>
+                    )}
                   </div>
                   </div>
                   {/* ⚠️ 商談URLの発行が手順の終点。他の操作と同じ大きさにしない */}
@@ -370,7 +464,13 @@ export default function AishodanTool() {
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-slate-900">{room.name}</p>
                       <p className="text-xs text-slate-500 font-semibold">
-                        {room.scenario.product.name} / 実施 {room._count.sessions}件
+                        {/* ⚠️ 同じ商材から発行すると名前が全く同じになる。
+                             発行日を出さないと、どれがどれだか見分けられない */}
+                        {new Date(room.createdAt).toLocaleString('ja-JP', {
+                          year: 'numeric', month: '2-digit', day: '2-digit',
+                          hour: '2-digit', minute: '2-digit',
+                        })}
+                        発行 / 実施 {room._count.sessions}件
                         {room.expiresAt && ` / ${new Date(room.expiresAt).toLocaleDateString('ja-JP')}まで`}
                       </p>
                     </div>
@@ -412,6 +512,16 @@ export default function AishodanTool() {
                     >
                       {room.isActive ? '公開を停止' : '公開する'}
                     </button>
+                    {/* ⚠️ 配布済みURLが死ぬ操作。他と見た目を分ける（赤・枠線） */}
+                    {canDelete && (
+                    <button
+                      onClick={() => deleteRoom(room)}
+                      disabled={deletingId === room.id}
+                      className="ml-auto rounded-lg border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-700 transition hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {deletingId === room.id ? '削除中…' : 'このURLを削除'}
+                    </button>
+                    )}
                   </div>
                 </div>
               ))}
