@@ -88,7 +88,14 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   //    世代ごとに一意な接尾辞を付けて、過去の世代を不変にする。
   const runId = randomBytes(4).toString('hex')
   const pathPrefix = `${identity.userId || identity.guestId}/${concept.campaignId}/g${concept.generation + 1}_${runId}`
-  const extraDirectives = directivesToPromptLines(directives)
+  // ⚠️ 「改善」であって「作り直し」ではない。この一言が無いと、
+  //    修正指示を口実に構図も配色も総取り替えした別物が返ってくる（2026-09-02）。
+  const KEEP_BASE = [
+    'これは前回作った画像の**改善**です。作り直しではありません。',
+    '前回の構図・配色・写真の使い方・全体の雰囲気は**そのまま保つ**こと。',
+    '下の指摘に関係する部分だけを直し、それ以外は変えないこと。',
+  ]
+  const extraDirectives = [...KEEP_BASE, ...directivesToPromptLines(directives)]
 
   const genPaths: Record<string, string> = {}
   let visualPrompt = ''
@@ -105,9 +112,15 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     try {
 
         const rep = group.placements[0]
+        // ⚠️ **元の作風と構図を必ず引き継ぐこと。**
+        //    以前は extraDirectives（修正指示の文章）だけを渡し、
+        //    構図は配置ごとの既定に戻り、デザイン参考は渡していなかった。
+        //    そのため「改善」を押すと元と似ても似つかない絵が出ていた（2026-09-02）。
         const result = await generateBaked({
           brand, copy, tone: concept.tone,
-          placement: rep, composition: group.composition,
+          placement: rep,
+          composition: (concept.compositionKey as any) || group.composition,
+          designRefPrompt: concept.designRefStyle || undefined,
           extraDirectives, pathPrefix,
         })
         genPaths[group.genKey] = result.genPath
@@ -121,7 +134,9 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
             placementKey: pl.key,
             size: `${pl.w}x${pl.h}`,
             genSize: result.genSize,
-            compositionKey: group.composition,
+            // ⚠️ 実際に使った構図を記録する。group.composition（サイズ既定）を
+            //    書くと、次の改善でまた別の構図に戻ってしまう
+            compositionKey: (concept.compositionKey as string) || group.composition,
             imagePath,
             verify: result.verify as any,
           })
@@ -147,6 +162,9 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
       tone: concept.tone,
       copy: concept.copy as any,
       compositionKey: concept.compositionKey,
+      // ⚠️ 次の改善でも失わないよう引き継ぐ
+      designRefId: concept.designRefId,
+      designRefStyle: concept.designRefStyle,
       genPaths: genPaths as any,
       visualPrompt,
       model,
@@ -177,11 +195,27 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     }))
   )
 
+  // ⚠️ 改善前の画像も返す。返さないと画面から元が消えてしまい、
+  //    良くなったのか悪くなったのかを判断できない（2026-09-02の指摘）。
+  const previousCreatives = await Promise.all(
+    (concept.creatives || []).map(async (cr: any) => ({
+      id: cr.id,
+      placementKey: cr.placementKey,
+      placementName: findPlacement(cr.placementKey)?.name ?? cr.placementKey,
+      media: findPlacement(cr.placementKey)?.media ?? '',
+      size: cr.size,
+      verify: cr.verify,
+      url: await signedUrl(cr.imagePath),
+    }))
+  )
+
   return NextResponse.json({
     conceptId: next.id,
     generation: next.generation,
     appliedDirectives: directives,
     creatives,
+    previousCreatives,
+    previousGeneration: concept.generation,
     needsReview: creatives.some((c) => (c.verify as any)?.needsReview),
     failedPlacements,
   })

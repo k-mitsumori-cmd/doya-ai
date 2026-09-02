@@ -4225,6 +4225,11 @@ model AdImageConcept {
   genPaths       Json
   /// ⚠️ 完全なプロンプト全文。refine の差分適用の土台になるため必ず保存する
   visualPrompt   String          @db.Text
+  /// 選ばれたデザイン参考（banner_template.templateId）と、そこから読み取った作風。
+  /// ⚠️ 保存しないと「改善」で作風と構図が失われ、まったく別の絵になる。
+  ///    実際に改善のたびに別物が出ていた（2026-09-02）。
+  designRefId    String?
+  designRefStyle String?         @db.Text
   model          String?
   generation     Int             @default(1)
   /// 改善元コンセプト

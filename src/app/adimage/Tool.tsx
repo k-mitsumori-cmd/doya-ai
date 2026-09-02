@@ -109,6 +109,13 @@ export default function AdImageTool() {
   /** 生成が完了した直後だけ出す「完成しました」 */
   const [justFinished, setJustFinished] = useState(false)
   /**
+   * 改善前の画像。
+   * ⚠️ 改善すると元が画面から消え、良くなったのか判断できなかった（2026-09-02）。
+   *    改善後は必ず前後を並べる。
+   */
+  const [previousCreatives, setPreviousCreatives] = useState<Creative[]>([])
+  const [previousGeneration, setPreviousGeneration] = useState<number | null>(null)
+  /**
    * デザインの参考候補（ドヤバナーAIのテンプレートを流用）。
    * ⚠️ 選ばなくても生成できる。必須にすると手数が増えるだけ。
    */
@@ -290,6 +297,9 @@ export default function AdImageTool() {
       setFailedPlacements(d.failedPlacements || [])
       setGeneration(1)
       setStep('result')
+      // 新しく作り直したので、前回との比較は消す
+      setPreviousCreatives([])
+      setPreviousGeneration(null)
       setJustFinished(true)
       window.setTimeout(() => setJustFinished(false), 6000)
     } catch (e) {
@@ -335,6 +345,9 @@ export default function AdImageTool() {
       const d = await r.json()
       if (!r.ok) throw new Error(d?.error || '改善に失敗しました')
       setConceptId(d.conceptId)
+      // ⚠️ setCreatives より先に入れる。順序を逆にすると一瞬だけ前後が同じに見える
+      setPreviousCreatives(d.previousCreatives || [])
+      setPreviousGeneration(typeof d.previousGeneration === 'number' ? d.previousGeneration : null)
       setCreatives(d.creatives || [])
       setNeedsReview(Boolean(d.needsReview))
       setFailedPlacements(d.failedPlacements || [])
@@ -757,6 +770,50 @@ export default function AdImageTool() {
             <p className="mt-4 text-xs font-semibold text-slate-500">
               画像をクリックすると原寸で開きます。入稿前に文字をご確認ください。
             </p>
+            {/* 改善したときは前後を並べる。
+                 ⚠️ 元が消えると、良くなったのか悪くなったのか判断できない。 */}
+            {previousCreatives.length > 0 && (
+              <div className="mt-4 rounded-2xl bg-[#f7faff] p-5 ring-2 ring-[#d8e7ff]">
+                <p className="text-base font-black text-[#0a0f3c]">改善の前後をくらべる</p>
+                <p className="mt-1 text-xs font-bold text-[#8a94ad]">
+                  左が改善前{previousGeneration ? `（${previousGeneration}回目）` : ''}、右が改善後です。
+                  気に入らなければ、もう一度フィードバックして直せます。
+                </p>
+                <div className="mt-4 space-y-5">
+                  {previousCreatives.map((before) => {
+                    // 同じ配置どうしで並べる。対応が無いものは出さない
+                    const after = creatives.find((c) => c.placementKey === before.placementKey)
+                    if (!after) return null
+                    return (
+                      <div key={before.placementKey}>
+                        <p className="mb-2 text-xs font-black text-[#425071]">
+                          {before.placementName}（{before.size}）
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          {[
+                            { label: '改善前', c: before },
+                            { label: '改善後', c: after },
+                          ].map(({ label, c }) => (
+                            <div key={label} className="overflow-hidden rounded-xl bg-white ring-1 ring-[#e3edff]">
+                              <p className="px-3 py-1.5 text-[11px] font-black text-[#425071]">{label}</p>
+                              {c.url ? (
+                                <a href={c.url} target="_blank" rel="noopener noreferrer" title="クリックで原寸表示">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={c.url} alt={label} className="w-full cursor-zoom-in bg-slate-100 object-contain" />
+                                </a>
+                              ) : (
+                                <div className="flex h-32 items-center justify-center text-xs text-slate-400">読み込めません</div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="mt-2 grid gap-5 sm:grid-cols-2">
               {creatives.map((c) => (
                 <div key={c.id} className="overflow-hidden rounded-xl border border-slate-200">

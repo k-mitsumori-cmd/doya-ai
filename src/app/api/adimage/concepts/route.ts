@@ -316,6 +316,10 @@ export async function POST(req: NextRequest) {
       compositionKey: groups[0]?.composition ?? 'hero-center',
       genPaths: genPaths as any,
       visualPrompt,
+      // ⚠️ 改善（refine）で引き継ぐために必ず保存する。
+      //    保存しないと改善のたびに作風と構図が失われ、別物の絵になる。
+      designRefId: designRefId || null,
+      designRefStyle: designRefPrompt || null,
       model,
       generation: 1,
       creatives: { create: creativeRows },
