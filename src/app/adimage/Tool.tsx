@@ -812,7 +812,14 @@ export default function AdImageTool() {
                   気に入らなければ、もう一度フィードバックして直せます。
                 </p>
                 <div className="mt-4 space-y-5">
-                  {previousCreatives.map((before) => {
+                  {/* ⚠️ 同じ配置の creative が複数あることがある（3パターン生成）。
+                       placementKey で find すると全部が同じ「改善後」を指し、
+                       同じ行が何度も並ぶ。出す前に配置ごとに1件へ寄せる。 */}
+                  {previousCreatives
+                    .filter(
+                      (b, i, arr) => arr.findIndex((x) => x.placementKey === b.placementKey) === i
+                    )
+                    .map((before) => {
                     // 同じ配置どうしで並べる。対応が無いものは出さない
                     const after = creatives.find((c) => c.placementKey === before.placementKey)
                     if (!after) return null

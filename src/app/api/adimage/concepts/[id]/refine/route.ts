@@ -29,9 +29,6 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   const where = ownerWhere(identity)
   if (!where) return NextResponse.json({ error: '利用者を識別できませんでした' }, { status: 400 })
 
-  const quota = await assertQuota(identity)
-  if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 429 })
-
   const concept = await prisma.adImageConcept.findFirst({
     where: { id: p.id, campaign: where },
     include: {
@@ -74,7 +71,11 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   }
   const copy = concept.copy as unknown as AdCopy
 
-  const placementKeys = concept.creatives.map((c) => c.placementKey)
+  // ⚠️ 重複を必ず落とす。「3パターン」で作ったコンセプトは、同じ配置の creative を
+  //    パターン数ぶん持っている。そのまま groupByGenSize に渡すと同じ配置が
+  //    N個入ったグループになり、1枚生成したものを同じパスへN回書き出して
+  //    **中身が同じ creative がN行**できる（ZIPもN枚、枚数の枠もN倍消費）。
+  const placementKeys = [...new Set(concept.creatives.map((c) => c.placementKey))]
   // ロゴ（登録されていれば書き出し時に合成する）
   // ⚠️ 読み込みに失敗しても生成は続ける。ロゴが入らないことより画像が出ない方が困る。
   const logoBuf = brandRow.logoPath ? await downloadBuffer(brandRow.logoPath).catch(() => null) : null
@@ -83,6 +84,12 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     : null
 
   const groups = groupByGenSize(placementKeys)
+
+  // ⚠️ 枠の判定は**実際に作る枚数**で行う。既定の1枚で見ていたため、
+  //    残り2枚の人が改善を押すと3枚以上作れて上限を超えていた。
+  //    生成を始める前に見ること（走らせてから弾くと課金だけ発生する）。
+  const quota = await assertQuota(identity, groups.length)
+  if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 429 })
   // ⚠️ 世代番号だけでパスを決めると、同じ親コンセプトから2回改善したときに
   //    パスが衝突し、uploadPng(upsert:true) が**先に作った画像を上書きする**。
   //    先の世代のレコードはそのパスを指したままなので、画像だけが黙って差し替わる。

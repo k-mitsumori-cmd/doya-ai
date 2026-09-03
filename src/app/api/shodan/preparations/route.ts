@@ -6,18 +6,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
 import { researchCompany } from '@/lib/shodan/research'
-import { effectivePrepStatus, PREP_STALE_MS } from '@/lib/shodan/types'
+import { effectivePrepStatus, PREP_STALE_MS, SHODAN_MONTHLY_LIMIT } from '@/lib/shodan/types'
+import { jstStartOfMonthUtc } from '@/lib/plan-limit'
 
 // 統一プラン：有料判定
 function isPaidPlan(plan?: string | null): boolean {
   const p = (plan || 'FREE').toUpperCase()
   return p !== 'FREE' && p !== 'GUEST'
 }
-// 月次の上限（組織単位）。⚠️ services.ts の表示文言と必ず合わせること
-const FREE_MONTHLY_LIMIT = 5
-/** ⚠️ 有料も無制限にしない。1件ごとに巡回とAIの実費が出る */
-const PRO_MONTHLY_LIMIT = 50
-const ENTERPRISE_MONTHLY_LIMIT = 300
+// ⚠️ 上限の正本は lib/shodan/types.ts。ここに数字を書かない
+//    （サイドバーの表示も同じ定義を読む）
 
 function normalizeUrl(input: string): string | null {
   let s = (input || '').trim()
@@ -62,10 +60,13 @@ export async function POST(req: NextRequest) {
   {
     const limit = isPaidPlan(user?.plan)
       ? String(user?.plan || '').toUpperCase() === 'ENTERPRISE'
-        ? ENTERPRISE_MONTHLY_LIMIT
-        : PRO_MONTHLY_LIMIT
-      : FREE_MONTHLY_LIMIT
-    const since = new Date(); since.setDate(1); since.setHours(0, 0, 0, 0)
+        ? SHODAN_MONTHLY_LIMIT.ENTERPRISE
+        : SHODAN_MONTHLY_LIMIT.PRO
+      : SHODAN_MONTHLY_LIMIT.FREE
+    // ⚠️ 月の区切りは JST。サーバのローカル時刻（Vercelでは UTC）で数えると、
+    //    毎月1日の 0:00〜9:00 JST に実行したぶんが前月に計上され、
+    //    サイドバーの表示（JST基準）と食い違う。
+    const since = jstStartOfMonthUtc()
     // done（成功）＋ 実行中(processing で stale でないもの) を数える。
     // - 同時POSTでも作成直後から枠を占有し抜け道を塞ぐ
     // - failed は非消費／タイムアウトで詰まった stale processing も除外（GETされず放置されても無料枠を恒久消費しない）

@@ -127,12 +127,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
 
-  // ⚠️ 枚数の枠は**生成を始める前に**見る。走らせてから弾くと課金だけ発生する。
   const requestedVariations = Math.max(1, Math.min(3, Number(body?.variations) || 1))
-  const requestedImages =
-    (Array.isArray(body?.placements) ? body.placements.length : 1) * requestedVariations
-  const quota = await assertQuota(identity, requestedImages)
-  if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 429 })
 
   const brandId = String(body?.brandId || '')
   if (!brandId) return NextResponse.json({ error: 'ブランドを指定してください' }, { status: 400 })
@@ -158,6 +153,13 @@ export async function POST(req: NextRequest) {
   if (placementKeys.length === 0) {
     return NextResponse.json({ error: '配置を選択してください' }, { status: 400 })
   }
+
+  // ⚠️ 枚数の枠は**生成を始める前に**見る。走らせてから弾くと課金だけ発生する。
+  // ⚠️ 数えるのは検証後の placementKeys。以前は body.placements.length で数えていたため、
+  //    placements を空配列で送ると requestedImages=0 で枠を素通りし、
+  //    そのあと既定の配置（3件）×パターン数ぶん実際に生成・課金されていた。
+  const quota = await assertQuota(identity, placementKeys.length * requestedVariations)
+  if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 429 })
 
   const brand: BrandProfile = {
     name: brandRow.name,

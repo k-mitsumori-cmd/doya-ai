@@ -21,6 +21,8 @@ import {
 } from '@/lib/pricing'
 import { FREE_LIMITS, PRO_MONTHLY_LIMITS, ENTERPRISE_MONTHLY_LIMITS } from '@/lib/plan-limit'
 import { isPaidPlan } from '@/lib/unified-plan'
+import { AIO_FREE_SCANS_PER_WEEK, AIO_SCANS_PER_MONTH } from '@/lib/aio/types'
+import { PREP_STALE_MS, SHODAN_MONTHLY_LIMIT } from '@/lib/shodan/types'
 
 /** 1本の枠。limit が null なら上限なし */
 export interface UsageMeter {
@@ -92,11 +94,18 @@ async function orgIdsOf(
   model: 'mensetsuMember' | 'aishodanMember' | 'quoteMember' | 'shodanMember' | 'aioMember',
   userId: string
 ): Promise<string[]> {
-  const rows = await (prisma as any)[model].findMany({
+  // ⚠️ **1組織ぶんだけ返す。** 上限の判定（assertFreeLimit 等）は常に
+  //    「いま見ている組織」1件で行うため、所属する全組織を合算して表示すると、
+  //    2組織に2件ずつある人が「4 / 3 使い切りました」と出るのに
+  //    どちらの組織でもまだ作れる、という食い違いが起きる。
+  // ⚠️ 組織の選択はサービスごとの画面が持っており、サイドバーからは分からない。
+  //    最初に参加した1件（=多くの人にとって唯一の組織）で代表させる。
+  const row = await (prisma as any)[model].findFirst({
     where: { userId, status: 'ACTIVE' },
+    orderBy: { createdAt: 'asc' },
     select: { organizationId: true },
   })
-  return rows.map((r: any) => r.organizationId)
+  return row ? [row.organizationId] : []
 }
 
 /** 組織スコープ型の共通処理（無料=累計 / 有料=月次。plan-limit.ts の判定と同じ形） */
@@ -285,14 +294,29 @@ export async function getUsageSummary(
       const total = orgIds.length
         ? await prisma.shodanPreparation.count({ where: { organizationId: { in: orgIds } } })
         : 0
+      // ⚠️ 数え方をルート（api/shodan/preparations）と必ず揃える。
+      //    失敗した調査や、止まったままの processing を含めて数えていたため、
+      //    APIはまだ受け付けるのに画面だけ「使い切りました」と赤くなっていた。
+      const staleBefore = new Date(Date.now() - PREP_STALE_MS)
       const used = orgIds.length
         ? await prisma.shodanPreparation.count({
-            where: { organizationId: { in: orgIds }, createdAt: { gte: jstStartOfMonthUtc() } },
+            where: {
+              organizationId: { in: orgIds },
+              createdAt: { gte: jstStartOfMonthUtc() },
+              OR: [
+                { status: 'done' },
+                { status: 'researched' },
+                { status: 'processing', updatedAt: { gte: staleBefore } },
+              ],
+            },
           })
         : 0
-      // ⚠️ 上限は api/shodan/preparations/route.ts が正本
       const p = String(plan || 'FREE').toUpperCase()
-      const limit = isPaidPlan(p) ? (p === 'ENTERPRISE' ? 300 : 50) : 5
+      const limit = isPaidPlan(p)
+        ? p === 'ENTERPRISE'
+          ? SHODAN_MONTHLY_LIMIT.ENTERPRISE
+          : SHODAN_MONTHLY_LIMIT.PRO
+        : SHODAN_MONTHLY_LIMIT.FREE
       return {
         title: '調べた企業',
         unit: '件',
@@ -327,7 +351,7 @@ export async function getUsageSummary(
           unit: '回',
           total,
           planLabel,
-          meters: [{ label: '直近7日', used, limit: 1 }],
+          meters: [{ label: '直近7日', used, limit: AIO_FREE_SCANS_PER_WEEK }],
         }
       }
       const used = orgIds.length
@@ -344,7 +368,13 @@ export async function getUsageSummary(
         unit: '回',
         total,
         planLabel,
-        meters: [{ label: '今月', used, limit: p === 'ENTERPRISE' ? 200 : 30 }],
+        meters: [
+          {
+            label: '今月',
+            used,
+            limit: p === 'ENTERPRISE' ? AIO_SCANS_PER_MONTH.ENTERPRISE : AIO_SCANS_PER_MONTH.PRO,
+          },
+        ],
       }
     }
 

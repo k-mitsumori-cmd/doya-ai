@@ -5,16 +5,20 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAioContext, orgSlugFrom } from '@/lib/aio/access'
-import { availableEngines, effectiveScanStatus, type EngineId } from '@/lib/aio/types'
+import {
+  AIO_FREE_SCANS_PER_WEEK,
+  AIO_SCANS_PER_MONTH,
+  availableEngines,
+  effectiveScanStatus,
+  type EngineId,
+} from '@/lib/aio/types'
+import { jstStartOfMonthUtc } from '@/lib/plan-limit'
 import { runAndPersistScan } from '@/lib/aio/run'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { recordServiceUsage } from '@/lib/service-usage'
 
-// スキャン頻度の上限（組織単位）。⚠️ services.ts の表示文言と必ず合わせること
-const FREE_SCANS_PER_WEEK = 1
-/** ⚠️ 有料も無制限にしない。1回で4エンジン×プロンプト数だけ実費が出る */
-const PRO_SCANS_PER_MONTH = 30
-const ENTERPRISE_SCANS_PER_MONTH = 200
+// ⚠️ 上限の正本は lib/aio/types.ts。ここに数字を書かない
+//    （サイドバーの表示も同じ定義を読む）
 
 // GET /api/aio/scans — スキャン履歴（軽量）
 export async function GET(req: NextRequest) {
@@ -57,7 +61,7 @@ export async function POST(req: NextRequest) {
     const recent = await prisma.aioScan.count({
       where: { organizationId: ctx.organizationId, createdAt: { gte: weekAgo }, status: { not: 'failed' } },
     })
-    if (recent >= FREE_SCANS_PER_WEEK) {
+    if (recent >= AIO_FREE_SCANS_PER_WEEK) {
       return NextResponse.json(
         { error: '無料プランは週1回までスキャンできます。プロプランにご登録いただくと上限が広がります。', code: 'LIMIT' },
         { status: 402 }
@@ -66,9 +70,12 @@ export async function POST(req: NextRequest) {
   } else {
     const limit =
       String(user?.plan || '').toUpperCase() === 'ENTERPRISE'
-        ? ENTERPRISE_SCANS_PER_MONTH
-        : PRO_SCANS_PER_MONTH
-    const since = new Date(); since.setDate(1); since.setHours(0, 0, 0, 0)
+        ? AIO_SCANS_PER_MONTH.ENTERPRISE
+        : AIO_SCANS_PER_MONTH.PRO
+    // ⚠️ 月の区切りは JST。サーバのローカル時刻（Vercelでは UTC）で数えると、
+    //    毎月1日の 0:00〜9:00 JST に実行したぶんが前月に計上され、
+    //    サイドバーの表示（JST基準）と食い違う。
+    const since = jstStartOfMonthUtc()
     const usedThisMonth = await prisma.aioScan.count({
       where: { organizationId: ctx.organizationId, createdAt: { gte: since }, status: { not: 'failed' } },
     })

@@ -96,3 +96,12 @@ export interface Recommendation {
   detail: string
   priority: 'high' | 'medium' | 'low'
 }
+
+// ============================================
+// スキャン頻度の上限（組織単位）
+// ============================================
+// ⚠️ ここが正本。ルート（api/aio/scans）とサイドバーの表示
+//    （lib/usage-summary.ts）の両方がここを読む。
+// ⚠️ 有料も無制限にしない。1回で4エンジン×プロンプト数の実費が出る。
+export const AIO_FREE_SCANS_PER_WEEK = 1
+export const AIO_SCANS_PER_MONTH = { PRO: 30, ENTERPRISE: 200 } as const

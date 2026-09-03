@@ -117,3 +117,12 @@ export interface CompanyAnalysis {
   talkingPoints: string[] // 商談で刺さる論点
   firstMessage: string // 最初の一言（アイスブレイク〜本題への入り）
 }
+
+// ============================================
+// 企業調査の月次上限（組織単位）
+// ============================================
+// ⚠️ ここが正本。ルート（api/shodan/preparations）とサイドバーの表示
+//    （lib/usage-summary.ts）の両方がここを読む。数字を2箇所に書くと
+//    「表示は残っているのに弾かれる」状態になる。
+// ⚠️ 有料も無制限にしない。1件ごとに巡回とAIの実費が出る。
+export const SHODAN_MONTHLY_LIMIT = { FREE: 5, PRO: 50, ENTERPRISE: 300 } as const
