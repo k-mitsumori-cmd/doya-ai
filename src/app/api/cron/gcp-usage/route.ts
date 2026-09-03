@@ -1,3 +1,16 @@
+/**
+ * GCP 利用量の Slack 通知。
+ *
+ * ⚠ **2026-09-03 に cron から外した。** 「あまり機能していない」との判断で、
+ *   毎朝の自動送信を止めた（`vercel.json` から該当エントリを削除）。
+ *   ルートは残してあるので、必要になったら vercel.json へ戻すだけで復活する。
+ *
+ * ⚠ **GCP の数字自体は失われていない。** 朝7時の支出レポート
+ *   （`/api/cron/spend-report` → `src/lib/spend-report.ts`）が
+ *   同じ `fetchGCPUsageReport()` を呼んでおり、そちらには載り続ける。
+ *   このファイルを消すと支出レポートが壊れるわけではないが、
+ *   単独で見たいときの手掛かりが無くなるので残す。
+ */
 import { NextResponse } from 'next/server'
 import { sendGCPUsageReport, sendErrorNotification } from '@/lib/notifications'
 import { withRetry } from '@/lib/prisma'
