@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 // ============================================
-// 呪い日記「朝刊」・毎朝（JST 10:00 = 01:00 UTC）
+// 呪い日記「朝刊」・毎朝（JST 9:00 = 00:00 UTC）
 // 売上/DL・アプリ内の動き・流入経路・国別・ストア/順位・SNS を1通にまとめて Slack 通知。
 // 旧: appstore-report / appstore-marketing-report / noroi-engagement-report /
 //     appstore-country-report / appstore-source-report の5通を統合したもの。

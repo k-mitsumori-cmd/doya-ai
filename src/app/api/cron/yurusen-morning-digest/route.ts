@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 // ============================================
-// ゆるせん「朝刊」・毎朝（JST 10:25 = 01:25 UTC）
+// ゆるせん「朝刊」・毎朝（JST 9:25 = 00:25 UTC）
 // 売上/DL・流入経路・国別・ストア/順位・SNS を1通にまとめて Slack 通知。
 // 旧 yurusen-appstore-report（DL/売上のみ）を置き換え、呪い日記と同じ粒度に揃えたもの。
 // アプリ内の動き（DAU等）は接続情報が未設定のため現在は省略（朝刊に注記が出る）。
