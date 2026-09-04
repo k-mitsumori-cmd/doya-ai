@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireBannerAdmin } from '@/lib/banner-admin-guard'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import {
+  getBannerMonthlyLimitByUserPlan,
+  shouldResetMonthlyUsage,
+} from '@/lib/pricing'
 import { generateBanners } from '@/lib/nanobanner'
 
 export const runtime = 'nodejs'
@@ -184,11 +190,21 @@ ${subTitle ? `・サブタイトル：「${subTitle}」` : ''}
 }
 
 export async function POST(request: NextRequest) {
-  // ⚠️ 1回で最大10枚の画像を生成する（＝そのまま従量課金）。
-  //    認証が無いまま本番に出ており、URLを知っていれば誰でも費用を発生させられた。
-  //    同じ名前空間の templates/* は守られていたが、ここだけ漏れていた（2026-09-02）。
-  const denied = requireBannerAdmin(request)
-  if (denied) return denied
+  // ⚠️ このルートは名前に反して**一般利用者の導線**（/banner/dashboard の
+  //    「選んで生成」）から呼ばれる。同じ名前空間の templates/* が保守APIなので
+  //    2026-09-02 に requireBannerAdmin を付けたが、それは誤りで、
+  //    一般利用者全員が「この操作には管理者権限が必要です」で止まった。
+  //    管理者ガードではなく、本家 /api/banner/generate と同じ
+  //    「ログイン必須 ＋ 月次の枚数上限」で守る。
+  // ⚠️ 1回で最大10枚の画像を生成する（＝そのまま従量課金）。無認証には戻さないこと。
+  const session = await getServerSession(authOptions)
+  const userId = (session?.user as any)?.id as string | undefined
+  if (!userId) {
+    return NextResponse.json(
+      { error: 'バナーの生成にはログインが必要です。無料で登録いただけます。', code: 'LOGIN_REQUIRED' },
+      { status: 401 }
+    )
+  }
 
   try {
     const body = (await request.json()) as TestGenerateRequest
@@ -222,6 +238,41 @@ export async function POST(request: NextRequest) {
     else if (industry.includes('教育') || industry.includes('スクール')) category = 'education'
 
     const targetCount = Math.max(1, Math.min(10, Math.floor(count || 10)))
+
+    // ⚠️ 枚数の枠は**生成を始める前に**見る。走らせてから弾くと課金だけ発生する。
+    //    枠は本家 /api/banner/generate と同じ（serviceId='banner' の月次）を共有する。
+    //    別枠にすると、こちらから回すだけで上限を二重に使えてしまう。
+    const disableLimits =
+      process.env.DOYA_DISABLE_LIMITS === '1' || process.env.BANNER_DISABLE_LIMITS === '1'
+    let sub = await prisma.userServiceSubscription.findUnique({
+      where: { userId_serviceId: { userId, serviceId: 'banner' } },
+    })
+    if (!sub) {
+      const u = await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } })
+      sub = await prisma.userServiceSubscription.create({
+        data: { userId, serviceId: 'banner', plan: u?.plan || 'FREE' },
+      })
+    }
+    // ⚠️ リセットは「次に生成したとき」に行う遅延方式。月をまたいだ直後は
+    //    古い数字が残っているので、ここで0に均してから数える。
+    const monthlyUsed = shouldResetMonthlyUsage(sub.lastUsageReset) ? 0 : sub.monthlyUsage || 0
+    const monthlyLimit = getBannerMonthlyLimitByUserPlan(sub.plan)
+
+    if (!disableLimits && monthlyLimit !== -1 && monthlyUsed + targetCount > monthlyLimit) {
+      return NextResponse.json(
+        {
+          error: `今月の生成枚数の上限（${monthlyLimit}枚）に達しました。`,
+          code: 'MONTHLY_LIMIT_REACHED',
+          usage: {
+            monthlyLimit,
+            monthlyUsed,
+            monthlyRemaining: Math.max(0, monthlyLimit - monthlyUsed),
+          },
+          upgradeUrl: '/banner/pricing',
+        },
+        { status: 429 }
+      )
+    }
 
     // 複数のバリエーションを生成（同じ入力でも異なるプロンプト）
     const banners: string[] = []
@@ -280,6 +331,23 @@ export async function POST(request: NextRequest) {
 
     if (banners.length === 0) {
       return NextResponse.json({ error: 'バナーの生成に失敗しました' }, { status: 500 })
+    }
+
+    // ⚠️ 成功したぶんだけ加算する。失敗した枚数まで枠を消費させない。
+    //    ここを忘れると、こちらの導線から回した生成が枠に載らず、
+    //    上限がまるごと素通りになる。
+    if (!disableLimits) {
+      try {
+        await prisma.userServiceSubscription.update({
+          where: { userId_serviceId: { userId, serviceId: 'banner' } },
+          data: shouldResetMonthlyUsage(sub.lastUsageReset)
+            ? { monthlyUsage: banners.length, lastUsageReset: new Date() }
+            : { monthlyUsage: { increment: banners.length } },
+        })
+      } catch (e) {
+        console.error('[banner/test/generate] 使用回数の加算に失敗', e)
+        // 加算に失敗しても生成自体は成功しているので落とさない
+      }
     }
 
     return NextResponse.json({
