@@ -1,3 +1,5 @@
+import { getServiceById } from '@/lib/services'
+import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤHR LP コンテンツ（page.tsx の表示と layout.tsx の JSON-LD で共有）
 import type { Step, Benefit, Faq } from '@/components/lp'
 
@@ -13,11 +15,11 @@ export const STEPS: Step[] = [
 export const BENEFITS: Benefit[] = [
   { icon: 'inventory_2', title: 'バラバラの管理を一元化', desc: 'Excelやメールに散らばった従業員情報・評価・1on1記録を、ひとつのデータベースにまとめて管理できます。' },
   { icon: 'edit_note', title: '評価の手間を軽くする', desc: 'AIが評価コメントを下書きするから、書き出しに悩む時間を短縮。評価の型が揃い、担当者ごとのばらつきも抑えられます。' },
-  { icon: 'trending_up', title: '小さく始めて広げられる', desc: '従業員5名までは永久無料。人数が増えても、スターター・プロへ段階的にアップグレードできます。' },
+  { icon: 'trending_up', title: '小さく始めて広げられる', desc: '従業員5名までは永久無料。人数が増えても、プロプランへアップグレードできます。' },
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: '従業員5名までは永久無料でご利用いただけます。従業員データベース・組織図・MBO評価・1on1記録に加え、AI機能も月3回までお試しいただけます。' },
+  { q: '無料で使えますか？', a: `無料プランは${getServiceById('hr')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('hr')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
   { q: '料金プランを教えてください。', a: '無料プランとプロプラン（月額9,980円・税込）の2つです。プロプランはドヤマーケAIの統一プランで、1契約で全サービスのプロ機能をご利用いただけます。さらに拡張が必要な場合は個別にご相談を承ります。' },
   { q: 'Excelで管理しているデータを移行できますか？', a: 'CSVの一括インポート／エクスポートに対応しています。既存の従業員リストを取り込んで、そのまま使い始められます。' },
   { q: 'AIは何をしてくれますか？', a: '人事評価のコメントをAIが下書きします。ゼロから書く負担を減らし、評価の粒度を揃えるサポートをします。最終的な内容はご担当者が確認・調整いただけます。' },

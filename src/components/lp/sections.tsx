@@ -5,6 +5,8 @@
 // 実績数値・導入企業ロゴ・顧客の声など「事実でない証拠」は作らない方針。
 // ============================================
 import React from 'react'
+import Image from 'next/image'
+import { Workflow } from './renewal/Renewal'
 import Link from 'next/link'
 import { Sym, BgDots, SectionHeading } from './primitives'
 import { DoyaKun, type Mood } from './DoyaKun'
@@ -88,30 +90,7 @@ export function Hero({
 // ---------- How it works（3ステップ） ----------
 export interface Step { title: string; desc: string; icon: string }
 export function HowItWorks({ eyebrow = 'HOW IT WORKS', title, lead, steps, diagram }: { eyebrow?: string; title: React.ReactNode; lead?: string; steps: Step[]; diagram?: React.ReactNode }) {
-  return (
-    <section className="relative py-20 md:py-28 bg-slate-50/70">
-      <div className="max-w-6xl mx-auto px-5">
-        <SectionHeading eyebrow={eyebrow} title={title} lead={lead} />
-        {diagram}
-        <div className="grid md:grid-cols-3 gap-6 md:gap-8">
-          {steps.map((s, i) => (
-            <div key={s.title} className="relative bg-white rounded-3xl border border-slate-100 p-8 shadow-sm animate-fade-in-up" style={{ animationDelay: `${0.08 * i}s` }}>
-              <div className="flex items-center gap-3 mb-4">
-                <span className="grid place-items-center w-11 h-11 rounded-2xl text-white font-black shadow-md"
-                  style={{ background: 'linear-gradient(135deg, #0066ff, var(--lp-accent))' }}>{i + 1}</span>
-                <Sym name={s.icon} size={26} className="text-slate-300" />
-              </div>
-              <h3 className="text-xl font-black text-slate-900 mb-2">{s.title}</h3>
-              <p className="text-sm text-slate-500 font-medium leading-relaxed">{s.desc}</p>
-              {i < steps.length - 1 && (
-                <Sym name="arrow_forward" size={22} className="hidden md:block absolute top-1/2 -right-5 -translate-y-1/2 text-slate-300 z-10" />
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )
+  return <Workflow title={title} lead={lead} steps={steps} />
 }
 
 // ---------- Benefits（価値提案 3枚） ----------
@@ -209,13 +188,13 @@ export function FaqSection({ title = 'よくある質問', items }: { title?: Re
 // ---------- CTA band（最終導線） ----------
 export function CtaBand({ title, subtitle, ctaHref, ctaLabel = '無料ではじめる', note, mood = 'jump' }: { title: React.ReactNode; subtitle?: string; ctaHref: string; ctaLabel?: string; note?: string; mood?: Mood }) {
   return (
-    <section className="relative py-20 md:py-28">
+    <section className="doya-cta-band relative py-20 md:py-28">
       <div className="max-w-5xl mx-auto px-5">
         <div className="relative overflow-hidden rounded-[2.5rem] px-6 py-16 md:py-20 text-center text-white"
           style={{ background: 'linear-gradient(135deg, #0047b3, #0066ff 55%, var(--lp-accent))' }}>
           <div className="absolute inset-0 opacity-20 bg-dots-pattern bg-dots" aria-hidden="true" />
           <div className="relative z-10">
-            <div className="flex justify-center mb-6"><DoyaKun mood={mood} size={104} /></div>
+            <div className="flex justify-center mb-6"><Image className="doya-cta-bear" src="/renewal/bear-success.webp" alt="ドヤくん" width={180} height={180} /></div>
             <h2 className="text-3xl md:text-5xl font-black tracking-tight leading-tight">{title}</h2>
             {subtitle && <p className="mt-4 text-base md:text-lg font-bold text-white/85 max-w-xl mx-auto">{subtitle}</p>}
             <div className="mt-9">

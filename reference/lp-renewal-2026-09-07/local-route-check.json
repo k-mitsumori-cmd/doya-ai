@@ -1,0 +1,170 @@
+{
+  "base": "http://localhost:3107",
+  "checkedAt": "2026-09-07T12:42:00.194Z",
+  "results": [
+    {
+      "id": "top",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "banner",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/banner",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "seo",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/seo",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "interview",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/interview",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "persona",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/persona",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "hr",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/hr",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "kintai",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/kintai",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "doyalist",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/doyalist",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "promane",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/promane",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "doyaslide",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/doyaslide",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "cunning",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/cunning",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "sfa",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/sfa",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "shodan",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/shodan",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "aio",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/aio",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "mensetsu",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/mensetsu",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "quote",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/quote",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "aishodan",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/aishodan",
+      "noindex": false,
+      "pass": true
+    },
+    {
+      "id": "adimage",
+      "status": 200,
+      "renewal": true,
+      "h1Count": 1,
+      "canonical": "https://doya-ai.surisuta.jp/adimage",
+      "noindex": false,
+      "pass": true
+    }
+  ],
+  "passed": 18,
+  "total": 18
+}

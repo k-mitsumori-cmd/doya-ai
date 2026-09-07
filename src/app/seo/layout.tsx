@@ -38,9 +38,7 @@ export default async function SeoLayout({ children }: { children: React.ReactNod
         category="BusinessApplication"
         features={SVC.features}
       />
-      <SeoAppLayout currentPlan={currentPlan as any} isLoggedIn={isLoggedIn} firstLoginAt={firstLoginAt}>
-        {children}
-      </SeoAppLayout>
+      {isLoggedIn ? <SeoAppLayout currentPlan={currentPlan as any} isLoggedIn={isLoggedIn} firstLoginAt={firstLoginAt}>{children}</SeoAppLayout> : children}
     </>
   )
 }

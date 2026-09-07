@@ -4,6 +4,7 @@
 // 製品ビジュアルはコード内モック（実機能の様子を表す・PIIなし・捏造の実績数値は使わない）。
 // ============================================
 import React from 'react'
+import { RenewalHero } from './renewal/Renewal'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Sym, BgDots, SectionHeading } from './primitives'
@@ -51,59 +52,7 @@ export function ProductHero({
    */
   image?: { src: string; alt: string }
 }) {
-  return (
-    <section className="relative overflow-hidden">
-      <BgDots />
-      <div className="absolute -top-40 -right-20 w-[640px] h-[640px] rounded-full pointer-events-none"
-        style={{ background: 'radial-gradient(closest-side, rgba(0,102,255,0.12), transparent)' }} aria-hidden="true" />
-      <div className="relative z-10 max-w-6xl mx-auto px-5 pt-14 pb-20 md:pt-20 grid lg:grid-cols-2 gap-12 lg:gap-10 items-center">
-        {/* テキスト */}
-        <div className="text-center lg:text-left">
-          {eyebrow && (
-            <span className="inline-flex items-center gap-1.5 text-xs md:text-sm font-black tracking-wide mb-5 px-3.5 py-1.5 rounded-full animate-fade-in-up"
-              style={{ color: 'var(--lp-accent)', background: 'color-mix(in srgb, var(--lp-accent) 12%, transparent)' }}>
-              <Sym name="bolt" size={16} />{eyebrow}
-            </span>
-          )}
-          <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-[1.12] text-slate-900 animate-fade-in-up" style={{ animationDelay: '0.05s' }}>
-            {title}
-            {highlight && (<><br className="hidden sm:block" /><span className="text-transparent bg-clip-text" style={{ backgroundImage: 'linear-gradient(90deg, #0066ff, var(--lp-accent))' }}>{highlight}</span></>)}
-          </h1>
-          <p className="mt-6 text-lg md:text-xl text-slate-600 font-bold leading-relaxed animate-fade-in-up max-w-xl lg:max-w-none mx-auto" style={{ animationDelay: '0.12s' }}>{subtitle}</p>
-          <div className="mt-9 flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-3 animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-            <Link href={ctaHref} className="inline-flex items-center gap-2 px-8 py-4 text-white font-black text-lg rounded-2xl shadow-lg transition-all hover:-translate-y-1 active:scale-[0.97]"
-              style={{ background: '#0066ff', boxShadow: '0 12px 30px rgba(0,102,255,0.32)' }}>
-              <Sym name="rocket_launch" size={22} />{ctaLabel}
-            </Link>
-            {subCtaHref && subCtaLabel && (
-              <Link href={subCtaHref} className="inline-flex items-center gap-1.5 px-6 py-4 font-bold text-slate-600 rounded-2xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all">
-                {subCtaLabel}<Sym name="arrow_forward" size={18} />
-              </Link>
-            )}
-          </div>
-          {note && <p className="mt-4 text-xs font-bold text-slate-400 animate-fade-in-up" style={{ animationDelay: '0.28s' }}>{note}</p>}
-        </div>
-        {/* 製品ビジュアル: 実画面キャプチャがあれば優先、無ければコード内モック */}
-        <div className="relative animate-fade-in-up" style={{ animationDelay: '0.15s' }}>
-          {image ? (
-            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_24px_60px_rgba(10,15,60,0.16)]">
-              <Image
-                src={image.src}
-                alt={image.alt}
-                width={1600}
-                height={1000}
-                priority
-                sizes="(max-width: 1024px) 100vw, 560px"
-                className="h-auto w-full"
-              />
-            </div>
-          ) : (
-            visual
-          )}
-        </div>
-      </div>
-    </section>
-  )
+  return <RenewalHero {...{ eyebrow, title, highlight, subtitle, note, ctaHref, ctaLabel, subCtaHref, subCtaLabel, visual, image }} />
 }
 
 /** 交互に並ぶ機能ショーケース（左右入れ替え・製品モック付き） */
@@ -124,9 +73,9 @@ export function FeatureShowcase({ eyebrow = 'FEATURES', title, lead, rows }: { e
         <SectionHeading eyebrow={eyebrow} title={title} lead={lead} />
         <div className="space-y-16 md:space-y-24">
           {rows.map((r, i) => (
-            <div key={i} className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+            <div key={i} className="doya-feature-row grid md:grid-cols-2 gap-8 md:gap-12 items-center">
               {/* テキスト（偶数は左、奇数は右） */}
-              <div className={i % 2 === 1 ? 'md:order-2' : ''}>
+              <div className={i % 2 === 1 ? 'md:order-2' : ''}><div className="doya-feature-number">FEATURE {String(i + 1).padStart(2, '0')}</div>
                 <div className="w-12 h-12 rounded-2xl grid place-items-center mb-4"
                   style={{ background: 'color-mix(in srgb, var(--lp-accent) 12%, transparent)', color: 'var(--lp-accent)' }}>
                   <Sym name={r.icon} size={26} />
@@ -148,7 +97,7 @@ export function FeatureShowcase({ eyebrow = 'FEATURES', title, lead, rows }: { e
               </div>
               {/* 製品モック */}
               <div className={i % 2 === 1 ? 'md:order-1' : ''}>
-                {r.image ? (
+                {r.visual ? r.visual : r.image ? (
                   <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_48px_rgba(10,15,60,0.14)]">
                     <Image
                       src={r.image.src}

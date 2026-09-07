@@ -1,3 +1,5 @@
+import { getServiceById } from '@/lib/services'
+import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤAIO LP コンテンツ（page.tsx の表示と layout.tsx の JSON-LD で共有）
 import type { Step, Benefit, Faq } from '@/components/lp'
 
@@ -21,7 +23,7 @@ export const FAQ: Faq[] = [
   { q: '対応しているAIは何ですか？', a: 'ChatGPT・Gemini・Claude・Perplexityの4つに対応しています。同じ質問群を各AIに反復で投げ、回答内容を横断で比較します。' },
   { q: '何を測定できますか？', a: '自社ブランドの言及率、Share of Voice（競合比較）、AIが根拠にしている引用元ドメイン、ブランドへの論調（ポジ/ネガ）、プロンプト別の言及頻度（◯回中△回）、認知度・SoVの時系列推移などを測定します。' },
   { q: '監視する質問は自分で作る必要がありますか？', a: 'いいえ。URLを入力すると、AIが自動でサービス名を判定し、監視するプロンプトを用意します。登録後に質問を追加・編集することも可能です。' },
-  { q: '無料で試せますか？', a: '無料プランでは、監視プロンプト3件・週1回のスキャン・認知度の閲覧までお試しいただけます。スキャン無制限とSoV・引用元・改善アクションの閲覧、チーム招待はプロプラン（月額9,980円）の機能です。' },
+  { q: '無料で試せますか？', a: `無料プランは${getServiceById('aio')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('aio')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
   { q: 'チームで使えますか？', a: 'メンバー招待と組織スコープに対応しています（プロプラン）。データは組織ごとに分離され、権限の範囲内でのみアクセスできます。' },
   { q: '入力した情報は安全に扱われますか？', a: '各データは組織スコープで他組織から分離されます。ログインユーザーの権限の範囲内でのみアクセスできます。' },
 ]

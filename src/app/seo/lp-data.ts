@@ -1,3 +1,5 @@
+import { getServiceById } from '@/lib/services'
+import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤ記事作成 LPコンテンツ（Lp.tsx の表示と layout の JSON-LD で共有）
 // ⚠️ 実績数値（導入社数・順位改善率など）は持っていないので書かない。
 import type { Step, Benefit, Faq } from '@/components/lp'
@@ -18,7 +20,7 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: '無料プランで月3本まで記事を作成できます。プロプラン（月額9,980円）で上限が広がり、ドヤシリーズの他サービスもすべてお使いいただけます。' },
+  { q: '無料で使えますか？', a: `無料プランは${getServiceById('seo')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('seo')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
   { q: '参考URLの内容をそのまま使いますか？', a: 'いいえ。参考URLは要点に落としてから構成の材料にします。原文をそのまま持ってくる処理は入れていません。' },
   { q: 'LLMO（AI検索）にも効きますか？', a: '検索意図のクラスタからアウトラインを作り、結論を先に置く構成にしています。AIに引用されやすい形を意識した作りです。' },
   { q: '書いた記事はどこに出せますか？', a: '本文はエディタで編集でき、テキスト・Markdown・HTML・JSONで書き出せます。note向けの書き出しにも対応しています。' },

@@ -1,3 +1,5 @@
+import { getServiceById } from '@/lib/services'
+import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤ見積もりAI LPコンテンツ（page.tsx の表示と layout.tsx の JSON-LD で共有）
 // ⚠️ 文言を変えるときは両方に効く。JSON-LD と画面がずれないよう、ここを唯一の出所にする。
 import type { Step, Benefit, Faq } from '@/components/lp'
@@ -18,7 +20,7 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: '無料プランで見積書を3件まで作成できます。プロプラン（月額9,980円）で無制限になり、ドヤシリーズの他サービスもすべてお使いいただけます。' },
+  { q: '無料で使えますか？', a: `無料プランは${getServiceById('quote')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('quote')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
   { q: '出てくる金額はどこから来ていますか？', a: '優先順位は「自社サイトに公開されている価格 → 業界の相場データ → AIの積算」です。どれに当たるかは1件ずつ画面に表示されます。AIが積算した場合は「作業3人日 × 8万円/人日」のように算出の過程が添えられるので、妥当かどうかをご確認いただけます。' },
   { q: 'PDFは日本語で出ますか？', a: 'はい。日本語フォントを埋め込んだPDFを出力します。社名・住所・担当者などの発行者情報も設定できます。' },
   { q: 'チームで使えますか？', a: '組織を作ってメンバーを招待できます。見積書は組織で共有され、確定はマネージャー以上に限定されます。' },

@@ -1,3 +1,5 @@
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import type { Metadata } from 'next'
 import { buildServiceMetadata, SERVICE_SEO } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
@@ -10,7 +12,8 @@ export const metadata: Metadata = buildServiceMetadata('persona', {
 
 const SVC = getServiceById('persona')!
 
-export default function PersonaLayout({ children }: { children: React.ReactNode }) {
+export default async function PersonaLayout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession(authOptions)
   return (
     <>
       <LpJsonLd
@@ -20,7 +23,7 @@ export default function PersonaLayout({ children }: { children: React.ReactNode 
         category="BusinessApplication"
         features={SVC.features}
       />
-      <PersonaAppLayout>{children}</PersonaAppLayout>
+      {session?.user ? <PersonaAppLayout>{children}</PersonaAppLayout> : children}
     </>
   )
 }

@@ -27,7 +27,7 @@ export default function DoyalistLp() {
         title="営業リストを作って、"
         highlight="送る文面まで。"
         subtitle="条件を決めるだけで法人情報から企業リストを作り、フォーム営業文・メール・電話スクリプトまで用意できます。"
-        note="無料プランで月3プロジェクトまでお試しいただけます。クレジットカードの登録は不要です。"
+        note="無料プランからお試しいただけます。クレジットカードの登録は不要です。"
         ctaHref={CTA}
         ctaLabel="無料ではじめる"
         subCtaHref="/doyalist/pricing"

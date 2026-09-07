@@ -1,3 +1,5 @@
+import { getServiceById } from '@/lib/services'
+import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤカンニング LPコンテンツ
 // ⚠️ 「相手に知られず」等、後ろめたさを煽る書き方をしないこと。
 //    自分の準備を助ける道具として書く。
@@ -19,7 +21,7 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: '無料プランで月60分・ナレッジ1件までお試しいただけます。プロプラン（月額9,980円）で月20時間・ナレッジ無制限になります。' },
+  { q: '無料で使えますか？', a: `無料プランは${getServiceById('cunning')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('cunning')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
   { q: '相手の音声はどう扱われますか？', a: '質問の検出と回答案の生成に使います。ご利用の前に、会議の相手に録音・記録の扱いをご確認ください。地域や業種によっては同意が必要です。' },
   { q: '商談以外にも使えますか？', a: '商談モードのほかに面接モードがあります。応募先の企業に合わせた回答の準備に使えます。' },
   { q: 'ブラウザだけで動きますか？', a: 'はい。タブ音声を渡す形なので、専用アプリのインストールは不要です。' },

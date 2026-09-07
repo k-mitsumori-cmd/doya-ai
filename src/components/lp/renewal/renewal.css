@@ -1,0 +1,1397 @@
+.doya-renewal {
+  --doya-blue: #0066ff;
+  --doya-ink: #101b3e;
+  --doya-lime: #d5ff54;
+  color: var(--doya-ink);
+  background: #fff;
+  font-family: Inter, "Noto Sans JP", sans-serif;
+  overflow: clip;
+}
+.doya-renewal * {
+  box-sizing: border-box;
+}
+.doya-renewal :is(a, button, summary):focus-visible {
+  outline: 3px solid #ff1e72;
+  outline-offset: 5px;
+}
+.doya-renewal section {
+  scroll-margin-top: 90px;
+}
+.doya-renewal :is(h1, h2, h3) {
+  text-wrap: balance;
+}
+.doya-renewal p {
+  line-height: 1.9;
+}
+.doya-section-inner {
+  max-width: 1240px;
+  padding: 0 40px;
+  margin: auto;
+}
+.doya-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  font-weight: 800;
+  color: #0066ff;
+  margin-bottom: 22px;
+}
+.doya-renewal h2 {
+  font-size: clamp(28px, 3.1vw, 46px);
+  font-weight: 900;
+  line-height: 1.45;
+  letter-spacing: -0.045em;
+  white-space: pre-line;
+}
+.doya-hero {
+  background: #f6f9ff;
+  position: relative;
+}
+.doya-hero-inner {
+  max-width: 1360px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: 1fr 1.12fr;
+  gap: 32px;
+  align-items: center;
+  padding: 80px 40px 72px;
+}
+.doya-hero-copy {
+  position: relative;
+  z-index: 2;
+}
+.doya-hero h1 {
+  font-size: clamp(34px, 3.8vw, 56px);
+  font-weight: 900;
+  line-height: 1.42;
+  letter-spacing: -0.065em;
+  margin: 0;
+}
+.doya-hero h1 em {
+  font-style: normal;
+  background: linear-gradient(100deg, #0055df, #009bff);
+  background-clip: text;
+  color: transparent;
+}
+.doya-lead {
+  font-size: 17px;
+  margin: 24px 0 30px;
+  color: #4b5a72;
+  max-width: 560px;
+  font-weight: 500;
+}
+.doya-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.doya-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  border-radius: 100px;
+  padding: 17px 28px;
+  background: #0066ff;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.4;
+  transition:
+    transform 0.25s,
+    box-shadow 0.25s;
+  box-shadow: 0 6px 0 #0049b9;
+}
+.doya-button:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 0 #0049b9;
+}
+.doya-button:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #0049b9;
+}
+.doya-button svg,
+.doya-text-link svg {
+  transition: transform 0.25s;
+}
+.doya-button:hover svg,
+.doya-text-link:hover svg {
+  transform: translateX(4px);
+}
+.doya-secondary {
+  background: white;
+  color: #182342;
+  border: 1px solid #d8e0f0;
+  box-shadow: 0 5px 0 #e1e8f5;
+}
+.doya-secondary:hover {
+  box-shadow: 0 9px 0 #e1e8f5;
+}
+.doya-small {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  color: #66748e;
+  font-size: 12px;
+  margin-top: 24px;
+}
+.doya-small a {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 7px;
+  text-decoration: underline;
+}
+.doya-hero-stage {
+  position: relative;
+  padding: 52px 18px 70px;
+  isolation: isolate;
+  min-width: 0;
+}
+.doya-hero-stage:before {
+  content: "";
+  position: absolute;
+  inset: 0 -10px 25px;
+  z-index: -1;
+  border-radius: 46% 54% 35% 65% / 49% 33% 67% 51%;
+  background: linear-gradient(
+    145deg,
+    #d5f6ff,
+    #bfdaff 40%,
+    #d2e2ff 75%,
+    #ecdeff
+  );
+}
+.doya-product-display {
+  transform: rotate(-3deg);
+  transition: transform 0.45s;
+  filter: drop-shadow(0 22px 22px #183e8420);
+}
+.doya-hero-stage:hover .doya-product-display {
+  transform: rotate(0) translateY(-7px);
+}
+.doya-product-display [data-mock-window] {
+  animation: none;
+  box-shadow: none;
+  min-height: 260px;
+}
+.doya-product-display img {
+  width: 100%;
+  border-radius: 16px;
+}
+.doya-stage-label {
+  position: absolute;
+  top: 9px;
+  left: 22px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  border: 1px solid #fff;
+  background: #ffffffd9;
+  border-radius: 100px;
+  padding: 12px 19px;
+  transform: rotate(-4deg);
+  z-index: 2;
+}
+.doya-stage-label > span {
+  width: 8px;
+  height: 8px;
+  background: #00ba78;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px #d6fcef;
+}
+.doya-hero-bear {
+  position: absolute;
+  bottom: -13px;
+  right: -12px;
+  width: 210px;
+  height: 210px;
+  object-fit: contain;
+  filter: drop-shadow(0 10px 10px #244fa91b);
+  animation: doya-float 5s ease-in-out infinite;
+  z-index: 3;
+}
+.doya-status-chip {
+  position: absolute;
+  bottom: 46px;
+  left: -15px;
+  background: #fff;
+  box-shadow: 0 12px 32px #29427e20;
+  border-radius: 14px;
+  padding: 16px 20px;
+  font-weight: 800;
+  font-size: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  transform: rotate(2deg);
+  z-index: 2;
+}
+.doya-status-chip svg {
+  background: #d6ffeb;
+  color: #009964;
+  border-radius: 50%;
+  padding: 2px;
+  width: 24px;
+  height: 24px;
+}
+.doya-demo-label {
+  position: absolute;
+  bottom: 5px;
+  left: 30px;
+  color: #697b98;
+  font-size: 12px;
+}
+.doya-value-strip {
+  display: flex;
+  justify-content: center;
+  gap: 60px;
+  border-top: 1px solid #dfe8fa;
+  background: white;
+  padding: 27px 24px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.doya-value-strip span {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.doya-value-strip svg {
+  color: #0066ff;
+}
+.doya-motion-toggle {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 42;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #c8d5ef;
+  background: #ffffffef;
+  color: #536382;
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 100px;
+}
+.doya-workflow {
+  padding: 90px 0;
+  background:
+    radial-gradient(ellipse at 95% 5%, #00baff77, transparent 45%),
+    linear-gradient(120deg, #10246e, #0058e5 70%, #008cfc);
+  color: #fff;
+}
+.doya-workflow-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 25px;
+  margin-bottom: 40px;
+}
+.doya-workflow-heading .doya-eyebrow {
+  color: #9ce7ff;
+}
+.doya-workflow-heading p {
+  color: #cbdfff;
+  margin-top: 15px;
+  max-width: 680px;
+}
+.doya-workflow-heading img {
+  width: 180px;
+  height: 180px;
+  object-fit: contain;
+  animation: doya-float 5.5s ease-in-out infinite;
+}
+.doya-step-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.doya-step-tabs button {
+  display: flex;
+  gap: 16px;
+  text-align: left;
+  align-items: center;
+  padding: 20px;
+  border-radius: 15px;
+  background: #ffffff12;
+  border: 1px solid #ffffff50;
+  transition:
+    background 0.3s,
+    transform 0.3s;
+  font-weight: 800;
+  font-size: 15px;
+}
+.doya-step-tabs b {
+  font-size: 22px;
+  opacity: 0.8;
+}
+.doya-step-tabs svg {
+  margin-left: auto;
+  flex-shrink: 0;
+}
+.doya-step-tabs button[aria-selected="true"] {
+  background: var(--doya-lime);
+  border-color: var(--doya-lime);
+  color: #132955;
+  transform: translateY(-4px);
+}
+.doya-step-panel {
+  background: #fff;
+  color: #172545;
+  border-radius: 25px;
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 30px;
+  padding: 40px;
+  min-height: 335px;
+  overflow: hidden;
+  align-items: center;
+}
+.doya-step-content,
+.doya-step-image {
+  animation: doya-enter 0.4s ease both;
+}
+.doya-step-number {
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  color: #0066ff;
+  font-weight: 800;
+}
+.doya-step-content h3 {
+  font-size: 26px;
+  line-height: 1.5;
+  font-weight: 900;
+  margin: 12px 0;
+}
+.doya-step-content p {
+  color: #5b6880;
+  font-size: 16px;
+}
+.doya-step-indicator {
+  display: flex;
+  gap: 7px;
+  margin: 22px 0 14px;
+}
+.doya-step-indicator span {
+  height: 5px;
+  width: 48px;
+  background: #e2eafa;
+  border-radius: 10px;
+}
+.doya-step-indicator .is-done {
+  background: #0066ff;
+}
+.doya-step-content .doya-step-hint {
+  font-size: 12px;
+  color: #7786a0;
+}
+.doya-step-image {
+  background: #f0f5ff;
+  border: 1px solid #dce7f9;
+  border-radius: 14px;
+  overflow: hidden;
+  min-width: 0;
+}
+.doya-step-image img {
+  width: 100%;
+  height: auto;
+}
+.doya-step-image span {
+  display: block;
+  text-align: right;
+  font-size: 12px;
+  padding: 7px 12px;
+  color: #73829b;
+}
+.doya-renewal .doya-feature-row {
+  padding: 40px;
+  background: #f6f9ff;
+  border-radius: 28px;
+}
+.doya-renewal .doya-feature-row:nth-child(even) {
+  background: #effaff;
+}
+.doya-renewal .doya-feature-row h3 {
+  line-height: 1.55;
+}
+.doya-renewal .doya-feature-row [data-mock-window] {
+  animation: none;
+  transition: transform 0.4s;
+  box-shadow: 0 20px 30px #15327213;
+}
+.doya-renewal .doya-feature-row:hover [data-mock-window] {
+  transform: translateY(-6px);
+}
+.doya-feature-number {
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  font-weight: 800;
+  color: #0066ff;
+  margin-bottom: 20px;
+}
+.doya-resources {
+  padding: 95px 0;
+  background: #f1f5ff;
+}
+.doya-resource-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 25px;
+  margin-bottom: 40px;
+}
+.doya-resource-heading p {
+  font-size: 15px;
+  color: #5b6880;
+  margin-top: 14px;
+}
+.doya-text-link {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-weight: 800;
+  color: #0066ff;
+  white-space: nowrap;
+}
+.doya-resource-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 25px;
+}
+.doya-resource {
+  background: white;
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid #dfe7f4;
+}
+.doya-book-stage {
+  height: 245px;
+  display: grid;
+  place-items: center;
+  background: #dce9ff;
+  perspective: 900px;
+  overflow: hidden;
+}
+.doya-resource-1 .doya-book-stage {
+  background: #d5f9ef;
+}
+.doya-resource-2 .doya-book-stage {
+  background: #fff4bb;
+}
+.doya-book {
+  width: 160px;
+  height: 201px;
+  background: linear-gradient(140deg, #0078ff, #003cb9);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 16px 18px 24px;
+  border-left: 5px solid #1d3d82;
+  border-radius: 2px 7px 7px 2px;
+  box-shadow:
+    8px 12px 0 #a6c0ef,
+    13px 20px 23px #1b499b35;
+  transform: rotate(-9deg) rotateY(-10deg);
+  transition:
+    transform 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.5),
+    box-shadow 0.5s;
+}
+.doya-book span {
+  font-size: 8px;
+  letter-spacing: 0.11em;
+  font-weight: 800;
+}
+.doya-book strong {
+  font-size: 23px;
+  font-weight: 900;
+  line-height: 1.45;
+}
+.doya-book small {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+}
+.doya-resource-1 .doya-book {
+  background: linear-gradient(140deg, #04bca0, #007f78);
+  border-color: #0a6265;
+  box-shadow:
+    8px 12px 0 #9bd8c7,
+    13px 20px 23px #166f5b35;
+  transform: rotate(7deg) rotateY(-10deg);
+}
+.doya-resource-2 .doya-book {
+  background: linear-gradient(140deg, #182956, #365ac2);
+  transform: rotate(-5deg) rotateY(-10deg);
+}
+.doya-resource:hover .doya-book,
+.doya-resource:focus-visible .doya-book {
+  transform: translateY(-13px) rotate(0) rotateY(0) scale(1.06);
+}
+.doya-resource-caption {
+  padding: 23px;
+}
+.doya-resource-caption h3 {
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+.doya-resource-caption p {
+  font-size: 14px;
+  margin: 10px 0;
+  color: #65748c;
+}
+.doya-resource-caption > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #0066ff;
+  font-size: 14px;
+  font-weight: 800;
+  margin-top: 20px;
+}
+.doya-directory {
+  padding: 100px 0;
+}
+.doya-directory > .doya-section-inner > p {
+  margin-top: 15px;
+  color: #5e6c84;
+}
+.doya-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 34px;
+}
+.doya-filter button {
+  padding: 12px 22px;
+  border-radius: 100px;
+  border: 1px solid #d6e1f3;
+  font-size: 14px;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+.doya-filter button[aria-pressed="true"] {
+  background: #172957;
+  color: white;
+  border-color: #172957;
+}
+.doya-directory .doya-result-count {
+  font-size: 13px;
+  margin: 20px 0 14px;
+}
+.doya-service-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.doya-service-card {
+  display: flex;
+  flex-direction: column;
+  padding: 28px;
+  border: 1px solid #dce6f5;
+  border-radius: 21px;
+  transition:
+    transform 0.25s,
+    box-shadow 0.25s;
+  background: linear-gradient(150deg, #fff, #f7faff);
+  animation: doya-enter 0.35s ease both;
+  position: relative;
+}
+.doya-service-card:hover {
+  transform: translateY(-7px);
+  box-shadow: 0 16px 30px #254f9512;
+  border-color: #7eb3ff;
+}
+.doya-service-card img {
+  border-radius: 13px;
+  object-fit: contain;
+  margin-bottom: 18px;
+}
+.doya-service-card h3 {
+  font-size: 20px;
+  font-weight: 900;
+}
+.doya-service-card p {
+  font-size: 14px;
+  color: #596b84;
+  margin: 12px 0 22px;
+  flex: 1;
+}
+.doya-service-card > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #0066ff;
+  font-size: 13px;
+  font-weight: 800;
+}
+.doya-pricing {
+  background: #f0f8ff;
+  padding: 80px 0;
+}
+.doya-pricing > .doya-section-inner {
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  gap: 50px;
+  align-items: center;
+}
+.doya-pricing p {
+  margin-top: 18px;
+  color: #566784;
+  white-space: pre-line;
+}
+.doya-price-card {
+  background: white;
+  border-radius: 25px;
+  padding: 40px;
+  text-align: center;
+  border: 1px solid #d6e7ff;
+}
+.doya-price-card > span {
+  font-size: 15px;
+  font-weight: 700;
+}
+.doya-price-card strong {
+  display: block;
+  font-size: 60px;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1.5;
+}
+.doya-price-card p {
+  font-size: 13px;
+  margin: 0 0 22px;
+}
+.doya-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: #ffffffed;
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid #e8edf7;
+}
+.doya-header-inner {
+  max-width: 1360px;
+  margin: auto;
+  padding: 0 30px;
+  height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.doya-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #152752;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.06em;
+}
+.doya-header-brand img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+}
+.doya-header nav {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.doya-header nav .doya-button {
+  padding: 12px 21px;
+  font-size: 14px;
+  box-shadow: none;
+}
+.doya-footer {
+  background: #112247;
+  color: #fff;
+  padding: 65px 0 25px;
+}
+.doya-footer-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 35px;
+}
+.doya-footer h2 {
+  font-size: 24px;
+}
+.doya-footer p {
+  font-size: 13px;
+  color: #b1bfd8;
+  max-width: 390px;
+  margin-top: 15px;
+}
+.doya-footer nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 40px;
+  font-size: 13px;
+}
+.doya-footer nav a:hover {
+  text-decoration: underline;
+}
+.doya-copyright {
+  margin-top: 50px !important;
+  border-top: 1px solid #ffffff25;
+  padding-top: 22px;
+  max-width: none !important;
+  font-size: 11px !important;
+}
+.doya-home-hero {
+  background: linear-gradient(#f3f8ff, #f8faff);
+  text-align: center;
+  padding: 65px 25px 0;
+  overflow: hidden;
+}
+.doya-home-hero h1 {
+  font-size: clamp(38px, 5vw, 70px);
+  font-weight: 900;
+  line-height: 1.4;
+  letter-spacing: -0.06em;
+}
+.doya-home-hero h1 em {
+  color: #0066ff;
+  font-style: normal;
+}
+.doya-home-hero p {
+  font-size: 17px;
+  color: #5a6c88;
+  margin: 23px auto;
+  max-width: 700px;
+}
+.doya-home-hero .doya-actions {
+  justify-content: center;
+}
+.doya-home-team {
+  position: relative;
+  max-width: 840px;
+  height: 345px;
+  margin: 25px auto 0;
+}
+.doya-home-team > img {
+  width: 660px;
+  height: 400px;
+  object-fit: contain;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 0;
+}
+.doya-role-badge {
+  position: absolute;
+  z-index: 2;
+  background: white;
+  border: 1px solid #d8e5ff;
+  border-radius: 100px;
+  padding: 12px 21px;
+  font-weight: 800;
+  font-size: 14px;
+  box-shadow: 0 6px 0 #dde7fc;
+  animation: doya-float 4s ease-in-out infinite;
+}
+.doya-role-badge:nth-of-type(1) {
+  top: 65px;
+  left: 0;
+}
+.doya-role-badge:nth-of-type(2) {
+  top: 180px;
+  right: 0;
+  animation-delay: -1s;
+}
+.doya-role-badge:nth-of-type(3) {
+  top: 265px;
+  left: 40px;
+  animation-delay: -2s;
+}
+.doya-visible {
+  animation: doya-enter 0.65s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.doya-renewal .text-xs {
+  font-size: 12px;
+}
+.doya-renewal .text-sm {
+  font-size: 14px;
+}
+.doya-renewal main > section:not(.doya-hero):not(.doya-home-hero) {
+  position: relative;
+}
+.doya-renewal details {
+  transition: box-shadow 0.2s;
+}
+.doya-renewal details[open] {
+  box-shadow: 0 8px 24px #15346a0d;
+}
+.doya-renewal details[open] > div {
+  animation: doya-enter 0.25s ease both;
+}
+.doya-renewal .doya-cta-bear {
+  width: 180px;
+  height: 180px;
+  object-fit: contain;
+  animation: doya-float 5s ease-in-out infinite;
+}
+.doya-renewal .doya-cta-band {
+  background: #f7faff;
+}
+.doya-motion-paused * {
+  animation-play-state: paused !important;
+  transition: none !important;
+}
+.doya-motion-paused .doya-hero-stage:hover .doya-product-display,
+.doya-motion-paused .doya-resource:hover .doya-book {
+  transform: none !important;
+}
+@keyframes doya-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -9px;
+  }
+}
+@keyframes doya-enter {
+  from {
+    opacity: 0.25;
+    translate: 0 18px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@media (min-width: 1450px) {
+  .doya-hero-inner {
+    padding-top: 100px;
+    padding-bottom: 95px;
+  }
+  .doya-hero-stage {
+    padding-bottom: 90px;
+  }
+  .doya-hero-bear {
+    width: 245px;
+    height: 245px;
+  }
+}
+@media (max-width: 1000px) {
+  .doya-header nav {
+    gap: 16px;
+  }
+  .doya-header nav > a:not(.doya-button) {
+    display: none;
+  }
+  .doya-hero-inner {
+    padding: 55px 30px;
+    gap: 25px;
+  }
+  .doya-hero h1 {
+    font-size: 38px;
+  }
+  .doya-hero-bear {
+    width: 160px;
+    height: 160px;
+  }
+  .doya-actions {
+    gap: 10px;
+  }
+  .doya-button {
+    padding: 15px 20px;
+    font-size: 14px;
+    gap: 12px;
+  }
+  .doya-value-strip {
+    gap: 24px;
+    font-size: 12px;
+  }
+  .doya-step-tabs button {
+    padding: 16px 12px;
+    font-size: 13px;
+    gap: 10px;
+  }
+  .doya-service-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .doya-section-inner {
+    padding: 0 22px;
+  }
+  .doya-header-inner {
+    height: 67px;
+    padding: 0 16px;
+    gap: 10px;
+  }
+  .doya-header-brand {
+    font-size: 16px;
+    letter-spacing: -0.055em;
+  }
+  .doya-header-brand img {
+    width: 30px;
+    height: 30px;
+  }
+  .doya-header nav .doya-button {
+    font-size: 12px;
+    padding: 10px 14px;
+    gap: 5px;
+  }
+  .doya-header nav .doya-button svg {
+    width: 15px;
+  }
+  .doya-hero-inner {
+    grid-template-columns: 1fr;
+    padding: 40px 23px 35px;
+    gap: 24px;
+  }
+  .doya-hero h1 {
+    font-size: 38px;
+    line-height: 1.43;
+  }
+  .doya-eyebrow {
+    margin-bottom: 17px;
+    font-size: 12px;
+  }
+  .doya-lead {
+    font-size: 15px;
+    margin: 19px 0 25px;
+  }
+  .doya-small {
+    font-size: 11px;
+    line-height: 1.6;
+    margin-top: 22px;
+  }
+  .doya-hero-stage {
+    padding: 45px 10px 55px;
+    margin: 0;
+    min-height: 300px;
+  }
+  .doya-hero-bear {
+    width: 145px;
+    height: 145px;
+    right: -10px;
+    bottom: -8px;
+  }
+  .doya-stage-label {
+    font-size: 11px;
+    padding: 9px 14px;
+    left: 9px;
+    top: 3px;
+  }
+  .doya-status-chip {
+    font-size: 11px;
+    padding: 12px;
+    left: -5px;
+    bottom: 35px;
+    max-width: 240px;
+  }
+  .doya-demo-label {
+    font-size: 10px;
+    left: 5px;
+  }
+  .doya-value-strip {
+    gap: 13px;
+    padding: 22px 13px;
+    justify-content: space-around;
+  }
+  .doya-value-strip span {
+    font-size: 10px;
+    line-height: 1.7;
+    max-width: 105px;
+    flex-direction: column;
+    text-align: center;
+    gap: 6px;
+  }
+  .doya-workflow,
+  .doya-resources,
+  .doya-directory {
+    padding: 60px 0;
+  }
+  .doya-workflow-heading {
+    gap: 10px;
+    margin-bottom: 25px;
+  }
+  .doya-workflow-heading h2 {
+    font-size: 27px;
+  }
+  .doya-workflow-heading > img {
+    width: 90px;
+    height: 120px;
+  }
+  .doya-workflow-heading p {
+    font-size: 13px;
+  }
+  .doya-step-tabs {
+    gap: 6px;
+  }
+  .doya-step-tabs button {
+    flex-direction: column;
+    align-items: start;
+    gap: 6px;
+    padding: 12px 9px;
+    font-size: 11px;
+    border-radius: 10px;
+  }
+  .doya-step-tabs b {
+    font-size: 19px;
+  }
+  .doya-step-tabs svg {
+    display: none;
+  }
+  .doya-step-panel {
+    grid-template-columns: 1fr;
+    padding: 22px;
+    gap: 20px;
+    border-radius: 18px;
+  }
+  .doya-step-content h3 {
+    font-size: 22px;
+  }
+  .doya-step-content p {
+    font-size: 14px;
+  }
+  .doya-step-image img {
+    min-height: 130px;
+    object-fit: contain;
+  }
+  .doya-resource-heading {
+    display: block;
+    margin-bottom: 30px;
+  }
+  .doya-resource-heading p {
+    font-size: 14px;
+  }
+  .doya-text-link {
+    margin-top: 20px;
+    font-size: 14px;
+  }
+  .doya-resource-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  .doya-resource {
+    display: grid;
+    grid-template-columns: 0.8fr 1.2fr;
+    align-items: center;
+    border-radius: 16px;
+  }
+  .doya-book-stage {
+    height: 205px;
+  }
+  .doya-book {
+    width: 104px;
+    height: 143px;
+    padding: 14px 12px 12px 16px;
+  }
+  .doya-book strong {
+    font-size: 16px;
+  }
+  .doya-book span,
+  .doya-book small {
+    font-size: 6px;
+  }
+  .doya-book svg {
+    width: 23px;
+    height: 23px;
+  }
+  .doya-resource-caption {
+    padding: 18px;
+  }
+  .doya-resource-caption h3 {
+    font-size: 15px;
+  }
+  .doya-resource-caption p {
+    font-size: 12px;
+  }
+  .doya-resource-caption > span {
+    font-size: 12px;
+  }
+  .doya-filter {
+    gap: 7px;
+    margin-top: 25px;
+  }
+  .doya-filter button {
+    font-size: 12px;
+    padding: 9px 13px;
+  }
+  .doya-service-grid {
+    gap: 12px;
+  }
+  .doya-service-card {
+    padding: 18px 15px;
+    border-radius: 16px;
+  }
+  .doya-service-card img {
+    width: 42px;
+    height: 42px;
+    margin-bottom: 14px;
+  }
+  .doya-service-card h3 {
+    font-size: 15px;
+  }
+  .doya-service-card p {
+    font-size: 12px;
+    margin-top: 9px;
+    margin-bottom: 16px;
+  }
+  .doya-service-card > span {
+    font-size: 11px;
+  }
+  .doya-pricing {
+    padding: 60px 0;
+  }
+  .doya-pricing > .doya-section-inner {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+  .doya-pricing h2 {
+    font-size: 27px;
+  }
+  .doya-pricing p {
+    font-size: 14px;
+  }
+  .doya-price-card {
+    padding: 27px 20px;
+  }
+  .doya-price-card strong {
+    font-size: 52px;
+  }
+  .doya-footer {
+    padding: 45px 0 70px;
+  }
+  .doya-footer-top {
+    display: block;
+  }
+  .doya-footer nav {
+    margin-top: 25px;
+    gap: 17px;
+    font-size: 12px;
+  }
+  .doya-home-hero {
+    padding: 42px 22px 0;
+  }
+  .doya-home-hero h1 {
+    font-size: 40px;
+  }
+  .doya-home-hero p {
+    font-size: 14px;
+  }
+  .doya-home-team {
+    height: 250px;
+    margin-top: 20px;
+  }
+  .doya-home-team > img {
+    width: 390px;
+    max-width: none;
+    height: 270px;
+    top: 15px;
+  }
+  .doya-role-badge {
+    font-size: 10px;
+    padding: 7px 12px;
+  }
+  .doya-role-badge:nth-of-type(1) {
+    top: 30px;
+    left: -5px;
+  }
+  .doya-role-badge:nth-of-type(2) {
+    top: 123px;
+    right: -10px;
+  }
+  .doya-role-badge:nth-of-type(3) {
+    top: 202px;
+    left: -3px;
+  }
+  .doya-renewal .doya-feature-row {
+    padding: 25px 20px;
+    border-radius: 20px;
+  }
+  .doya-renewal .doya-feature-row h3 {
+    font-size: 24px;
+  }
+  .doya-renewal .doya-cta-bear {
+    width: 135px;
+    height: 135px;
+  }
+  .doya-renewal .doya-cta-band h2 {
+    font-size: 30px;
+  }
+  .doya-motion-toggle {
+    font-size: 10px;
+    padding: 6px 9px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .doya-renewal * {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+  .doya-renewal :is(a, button):hover,
+  .doya-renewal .doya-resource:hover .doya-book,
+  .doya-renewal .doya-hero-stage:hover .doya-product-display {
+    transform: none !important;
+  }
+}
+.doya-home-use {
+  background: #f5f9ff;
+  padding: 90px 0;
+}
+.doya-home-use > .doya-section-inner > p {
+  margin-top: 20px;
+  color: #576d8a;
+}
+.doya-journey {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 30px;
+  margin-top: 40px;
+}
+.doya-journey a {
+  background: white;
+  border: 1px solid #dce8fa;
+  border-radius: 23px;
+  padding: 30px;
+  position: relative;
+  transition: transform 0.3s;
+}
+.doya-journey a:hover {
+  transform: translateY(-7px);
+}
+.doya-journey a > span {
+  position: absolute;
+  right: 25px;
+  top: 22px;
+  font-weight: 900;
+  font-size: 40px;
+  color: #deebff;
+}
+.doya-journey img {
+  border-radius: 16px;
+  margin-bottom: 22px;
+}
+.doya-journey h3 {
+  font-size: 23px;
+  font-weight: 900;
+}
+.doya-journey p {
+  font-size: 14px;
+  margin: 10px 0 22px;
+  color: #5c6e85;
+}
+.doya-journey b {
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  color: #0066ff;
+}
+.doya-home-use .doya-journey-note {
+  font-size: 12px;
+}
+.doya-home-use h2 {
+  white-space: pre-line;
+}
+@media (max-width: 760px) {
+  .doya-home-use {
+    padding: 60px 0;
+  }
+  .doya-journey {
+    grid-template-columns: 1fr;
+    gap: 15px;
+    margin-top: 25px;
+  }
+  .doya-journey a {
+    padding: 24px;
+  }
+  .doya-journey img {
+    width: 45px;
+    height: 45px;
+    margin-bottom: 15px;
+  }
+  .doya-journey h3 {
+    font-size: 21px;
+  }
+}
+/* Keep the existing consultation campaign available without covering the LP. */
+body:has(.doya-renewal:not(.doya-consult-open)) #hs-overlay-cta-317051970234 {
+  display: none !important;
+}
+.doya-consult-toggle {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 45;
+  background: #142a56;
+  color: white;
+  border: 1px solid #fff;
+  border-radius: 100px;
+  padding: 11px 20px;
+  box-shadow: 0 4px 16px #152e5e25;
+  font-size: 12px;
+  font-weight: 700;
+}
+.doya-consult-open .doya-consult-toggle {
+  bottom: 190px;
+}
+.doya-home-team {
+  height: 385px;
+}
+.doya-home-team > img {
+  height: 385px;
+}
+@media (max-width: 760px) {
+  .doya-home-team {
+    height: 255px;
+  }
+  .doya-home-team > img {
+    height: 255px;
+    top: 0;
+  }
+  .doya-consult-toggle {
+    font-size: 11px;
+    padding: 8px 13px;
+  }
+  .doya-consult-open .doya-consult-toggle {
+    bottom: 185px;
+  }
+}
+.doya-product-display [data-mock-window] > .relative {
+  max-height: 330px;
+  overflow: hidden;
+}
+.doya-hero-stage:before {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--lp-accent, #0066ff) 17%, #fff),
+    #bfdaff 45%,
+    #d2e2ff 80%,
+    #e6eeff
+  );
+}
+.doya-workflow-partner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.doya-workflow-partner img {
+  width: 250px;
+  height: 250px;
+  object-fit: contain;
+  animation: doya-float 5s ease-in-out infinite;
+}
+@media (max-width: 760px) {
+  .doya-workflow-partner img {
+    width: 150px;
+    height: 150px;
+  }
+}

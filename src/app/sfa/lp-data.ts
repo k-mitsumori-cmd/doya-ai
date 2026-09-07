@@ -1,3 +1,5 @@
+import { getServiceById } from '@/lib/services'
+import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤ営業管理（SFA）LP コンテンツ（page.tsx の表示と layout.tsx の JSON-LD で共有）
 import type { Step, Benefit, Faq } from '@/components/lp'
 
@@ -17,7 +19,7 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: '無料プランで3名まで、取引先・商談を各50件まで管理できます。より多くのメンバーや件数が必要な場合はプロプラン（月額9,980円）で50名・無制限になります。' },
+  { q: '無料で使えますか？', a: `無料プランは${getServiceById('sfa')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('sfa')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
   { q: 'Salesforceなどとの違いは？', a: '多機能なSFAは中小チームには重すぎることがあります。ドヤ営業管理は取引先・商談パイプライン・タスク・売上ダッシュボードに絞った、設定不要で安いシンプルなSFAです。' },
   { q: 'チームで使えますか？', a: 'メンバー招待と権限管理（owner / admin / manager / member）に対応しています。商談情報は組織ごとに分離され、権限の範囲内でのみアクセスできます。' },
   { q: 'データはCSVで出せますか？', a: '取引先・商談のCSV出力に対応しています。既存の集計や他ツールへの取り込みにもそのまま活用いただけます。' },

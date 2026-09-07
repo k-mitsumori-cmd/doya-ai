@@ -1,3 +1,5 @@
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import type { Metadata } from 'next'
 import { buildServiceMetadata } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
@@ -11,7 +13,8 @@ export const metadata: Metadata = buildServiceMetadata('cunning', {
 
 const SVC = getServiceById('cunning')!
 
-export default function CunningLayout({ children }: { children: React.ReactNode }) {
+export default async function CunningLayout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession(authOptions)
   return (
     <>
       <LpJsonLd
@@ -21,7 +24,7 @@ export default function CunningLayout({ children }: { children: React.ReactNode 
         category="BusinessApplication"
         features={SVC.features}
       />
-      <CunningLayoutShell>{children}</CunningLayoutShell>
+      {session?.user ? <CunningLayoutShell>{children}</CunningLayoutShell> : children}
     </>
   )
 }

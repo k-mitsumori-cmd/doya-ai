@@ -1,3 +1,5 @@
+import { getServiceById } from '@/lib/services'
+import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤAI商談 LPコンテンツ（page.tsx の表示と layout.tsx の JSON-LD で共有）
 import type { Step, Benefit, Faq } from '@/components/lp'
 
@@ -17,7 +19,7 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: '無料プランで商材1件・商談5件までお試しいただけます。プロプラン（月額9,980円）で商談が無制限になります。' },
+  { q: '無料で使えますか？', a: `無料プランは${getServiceById('aishodan')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('aishodan')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
   { q: '見込み客はログインが必要ですか？', a: '不要です。お渡しするURLを開くだけで参加できます。スマートフォンにも対応しています。' },
   { q: 'AIが答えられない質問はどうなりますか？', a: '推測では答えません。答えられなかった質問は記録として残るので、資料に足していくほど回答できる範囲が広がります。' },
   { q: '商談の内容は残りますか？', a: '全文ログと要約、ヒアリング項目、適合度の判定理由が残ります。判定は参考値で、最終的な判断は担当者が行う前提の作りです。' },

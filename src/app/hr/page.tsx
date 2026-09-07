@@ -58,7 +58,7 @@ export default function HrLandingPage() {
         subtitle="従業員5名まで永久無料。クレジットカード不要で今すぐ始められます。"
         ctaHref={CTA}
         ctaLabel="無料ではじめる"
-        note="人数が増えても、スターター・プロへ段階的にアップグレードできます"
+        note="人数が増えても、プロプランへアップグレードできます"
       />
     </LpShell>
   )

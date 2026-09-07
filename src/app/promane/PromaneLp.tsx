@@ -78,7 +78,7 @@ export function PromaneLp() {
           subtitle="ドヤプロマネは無料ではじめられます。"
           ctaHref={CTA}
           ctaLabel="無料ではじめる"
-          note="プロプラン（月額9,980円）ならドヤマーケAIの全ツールが使い放題"
+          note="プロプラン（月額9,980円・税込）は全サービス共通。サービスごとに利用上限があります。"
         />
       </LpShell>
     </>

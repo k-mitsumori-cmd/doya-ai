@@ -1475,8 +1475,8 @@ export const SERVICES: Service[] = [
       free: { name: '無料プラン', limit: 'テンプレート1件 / 面接3件まで', dailyLimit: -1, price: 0 },
       pro: { name: 'プロプラン', limit: '面接 月30件 / 評価レポート / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
-    status: 'coming_soon',
-    // 開発中。対外的には出さず（UNLISTED_SERVICE_IDS）、社内ではベータとして使う。
+    status: 'active',
+    // 2026-09-07: 17サービスのLP公開依頼に合わせて公開。
     badge: 'BETA',
     category: 'other',
     order: 28,
@@ -1522,8 +1522,8 @@ export const SERVICES: Service[] = [
       free: { name: '無料プラン', limit: '見積書3件まで', dailyLimit: -1, price: 0 },
       pro: { name: 'プロプラン', limit: '見積書 月100件 / PDF出力 / チーム共有', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
-    status: 'coming_soon',
-    // 開発中。対外的には出さず（UNLISTED_SERVICE_IDS）、社内ではベータとして使う。
+    status: 'active',
+    // 2026-09-07: 17サービスのLP公開依頼に合わせて公開。
     badge: 'BETA',
     category: 'other',
     order: 29,
@@ -1570,8 +1570,8 @@ export const SERVICES: Service[] = [
       free: { name: '無料プラン', limit: '商材1件 / 商談5件まで', dailyLimit: -1, price: 0 },
       pro: { name: 'プロプラン', limit: '商談 月30件 / ログ・適合判定 / チーム招待', dailyLimit: -1, price: UNIFIED_PRO_PRICE },
     },
-    status: 'coming_soon',
-    // 開発中。対外的には出さず（UNLISTED_SERVICE_IDS）、社内ではベータとして使う。
+    status: 'active',
+    // 2026-09-07: 17サービスのLP公開依頼に合わせて公開。
     badge: 'BETA',
     category: 'other',
     order: 30,
@@ -1618,8 +1618,8 @@ export const SERVICES: Service[] = [
       free: { name: '無料プラン', limit: '1日5コンセプトまで', dailyLimit: 5, price: 0 },
       pro: { name: 'プロプラン', limit: '1日40コンセプト / 改善無制限 / ZIP一括', dailyLimit: 40, price: UNIFIED_PRO_PRICE },
     },
-    status: 'coming_soon',
-    // 開発中。対外的には出さず（UNLISTED_SERVICE_IDS）、社内ではベータとして使う。
+    status: 'active',
+    // 2026-09-07: 17サービスのLP公開依頼に合わせて公開。
     badge: 'BETA',
     category: 'image',
     order: 31,
@@ -1678,12 +1678,7 @@ export const RETIRED_SERVICE_IDS = new Set([
 // トップ・sitemap・llms.txt・公開LP（/all-in-one）からは消えるが、
 // ログイン後のツール切替・サイドバーの他サービス一覧・直リンクでは従来どおり使える。
 // 公開する時はここから id を外し、各 layout.tsx の noindex も一緒に外すこと。
-export const UNLISTED_SERVICE_IDS = new Set([
-  'mensetsu',
-  'quote',
-  'aishodan',
-  'adimage',
-])
+export const UNLISTED_SERVICE_IDS = new Set<string>([]) // 2026-09-07: 全17サービスLP公開
 
 // 対外的に出さないサービスID（共通除外リスト）＝ 提供終了 ＋ 開発中。
 // トップページ・sitemap・llms.txt・公開LP がこのリストを参照するため、

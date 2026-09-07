@@ -1,0 +1,23 @@
+{
+  "date": "2026-09-07",
+  "mode": "built-in image_gen",
+  "reference": "/Users/mitsumori_katsuki/Code/09_Cursol/public/character/hello.png",
+  "assets": [
+    {
+      "file": "bear-hero.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent website hero mascot, requested 1536x1536 square. Input image 1 is the character identity reference. Create a premium playful 3D vinyl toy render of this exact recognizable white polar bear: rounded ears with navy inner ears, little tuft of hair, cyan and royal-blue VR goggles with a glossy very dark navy lens showing two cyan upward-chevron happy eyes, small navy nose and joyful friendly open mouth, white hoodie with blue drawstrings and blue </> code symbol, navy accents. Full body with short rounded legs. Bear confidently waves one paw to viewer while holding a blue laptop with the other arm. Match character identity carefully but create the requested new pose and 3D medium. Cheerful professional B2B SaaS mascot, soft clean studio highlights, premium white vinyl, saturated blue and cyan details, subtle contact shadow only. Centered isolated figure, fully visible with generous margin, no clipping. Background must be actual transparent alpha, no backdrop, no drawn checkerboard. No text, words, interface, logos, graphic background motifs, extra objects or watermark. The hoodie code symbol is retained from reference."
+    },
+    {
+      "file": "bear-teamwork.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent wide website teamwork illustration, requested 1536x1024. Input image 1 is the exact character identity reference. Create a group of THREE premium playful 3D vinyl toy polar bear mascots faithfully based on this reference. All retain white fur, round navy-inner ears, hair tuft, cyan and royal-blue VR goggles with dark navy lens and cyan happy upward-chevron eyes, small navy nose, cheerful smile, white hoodie with royal blue </> code symbol and blue drawstrings, navy accents, short rounded legs. Arrange full-body trio standing together in a cooperative friendly team in a balanced wide composition, all faces and feet visible with margin. Left bear holds a small creative design card with simple colored shapes, center bear holds a blue laptop, right bear holds a neat clipboard. Distinguish roles with very subtle cyan, yellow and pink secondary accessories respectively, while keeping all goggles and hoodies recognizably blue-white. Premium polished 3D vinyl toy render with soft studio highlights and light contact shadows. Cheerful professional B2B SaaS feeling. Background must be real transparent alpha, no backdrop or drawn checkerboard. No writing, words, text, app interface, background decoration or watermark. Retain only the existing hoodie code symbol and simple shape marks on props."
+    },
+    {
+      "file": "bear-success.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent website success mascot, requested 1024x1024 square. Input image 1 is the character identity reference. Create a premium playful 3D vinyl toy render of this exact recognizable white polar bear: rounded navy-inner ears, small hair tuft, cyan and royal-blue VR goggles with glossy very dark navy lens and two cyan upward-chevron happy eyes, small navy nose and joyful friendly open smile, white hoodie with blue drawstrings and blue </> code symbol, navy trim. Full body with short rounded legs. The bear happily presents a neat white clipboard with a blue edge, holding it proudly toward the viewer; on the clipboard is ONE large simple cyan checkmark, no writing or other graphics. Other paw gestures to the checkmark. Premium polished soft white vinyl toy, clean studio light, saturated blue and cyan, cheerful professional B2B SaaS tone. Centered isolated complete figure with margin, all ears, paws and feet visible. Background must be genuinely transparent alpha, empty transparent area around subject, no backdrop and no glow, no drawn checkerboard. Only a faint contact shadow directly beneath feet. No text, words, interface, background graphic motifs, extra props, or watermark. Existing hoodie code symbol retained."
+    }
+  ],
+  "notes": [
+    "Exactly one built-in call per asset; no variants, fallback, editing or resizes.",
+    "Hero and success look transparent with small white edge artifacts; teamwork includes a visible studio gradient/glow despite transparent request. Inspect actual alpha before using."
+  ]
+}

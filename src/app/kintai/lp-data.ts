@@ -1,3 +1,5 @@
+import { getServiceById } from '@/lib/services'
+import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤ勤怠 LP コンテンツ（page.tsx の表示と layout.tsx の JSON-LD で共有）
 import type { Step, Benefit, Faq } from '@/components/lp'
 
@@ -13,11 +15,11 @@ export const STEPS: Step[] = [
 export const BENEFITS: Benefit[] = [
   { icon: 'bolt', title: '導入がとにかく速い', desc: '複雑な初期設定は不要。アカウントを作ってすぐに打刻を始められます。中小チームでも迷わず使えるシンプルな画面です。' },
   { icon: 'verified', title: '集計ミスがなくなる', desc: '残業・深夜・休日の計算を自動化。就業ルールに沿って締め処理まで一気通貫なので、Excel手入力のミスや二度手間をなくします。' },
-  { icon: 'savings', title: '無料から始められる', desc: '従業員5名までは無料。規模に合わせてスタータープラン・プロプランへ拡張できます。高価な勤怠システムからの乗り換えにも。' },
+  { icon: 'savings', title: '無料から始められる', desc: '従業員5名までは無料。規模に合わせてプロプランへ拡張できます。高価な勤怠システムからの乗り換えにも。' },
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: '従業員5名までなら無料プランでずっとお使いいただけます。打刻・集計・申請承認の基本機能をそのままご利用いただけます。' },
+  { q: '無料で使えますか？', a: `無料プランは${getServiceById('kintai')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('kintai')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
   { q: '料金プランを教えてください。', a: '無料プランとプロプラン（月額9,980円・税込）の2つです。プロプランはドヤマーケAIの統一プランで、1契約で全サービスのプロ機能をご利用いただけます。さらに拡張が必要な場合は個別にご相談を承ります。' },
   { q: 'スマホから打刻できますか？', a: 'PC・スマートフォンの両方に対応しています。ブラウザからワンクリックで出退勤を記録でき、専用アプリのインストールは不要です。' },
   { q: '残業や深夜・休日の計算はできますか？', a: '就業ルールを設定すれば、残業・深夜・休日出勤を自動で判定・集計します。日次・月次の勤務時間もリアルタイムに把握できます。' },

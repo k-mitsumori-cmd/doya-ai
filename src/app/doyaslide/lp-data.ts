@@ -1,3 +1,5 @@
+import { getServiceById } from '@/lib/services'
+import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 import type { Benefit, Faq, Step } from '@/components/lp'
 
 export const ACCENT = '#009bff'
@@ -16,7 +18,7 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: '無料プランで月3プロジェクト・20枚まで作成できます。' },
+  { q: '無料で使えますか？', a: `無料プランは${getServiceById('doyaslide')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('doyaslide')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
   { q: 'どの形式で書き出せますか？', a: 'PNG画像のZIPとPDFに対応しています。' },
   { q: '生成後に修正できますか？', a: 'はい。ページごとに会話で修正を指示し、以前の版へ戻すこともできます。' },
   { q: 'ロゴを入れられますか？', a: 'はい。アップロードしたロゴの位置と大きさを設定し、全ページに反映できます。' },

@@ -1,3 +1,5 @@
+import { getServiceById } from '@/lib/services'
+import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤ広告画像AI LPコンテンツ（page.tsx の表示と layout.tsx の JSON-LD で共有）
 import type { Step, Benefit, Faq } from '@/components/lp'
 
@@ -17,7 +19,7 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: '無料プランでは画像を1日3枚・月15枚まで作成できます。プロプラン（月額9,980円）では1日50枚・月300枚まで広がり、ZIP一括ダウンロードもご利用いただけます。' },
+  { q: '無料で使えますか？', a: `無料プランは${getServiceById('adimage')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('adimage')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
   { q: '1コンセプトとは何ですか？', a: 'コピーと画像の組み合わせ1案のことです。1つのコンセプトから何サイズ書き出しても1回と数えるので、配置を多く選んでも不利になりません。' },
   { q: '仕上がりが気に入らないときは？', a: 'ボタンを押すだけでAIが実際の画像を見て採点し、具体的な改善を反映した次の案を作ります。' },
   { q: '作ったものは後から見られますか？', a: '履歴画面から直近50件を配置ごとに見返せます。ZIPの再ダウンロードもできます。' },

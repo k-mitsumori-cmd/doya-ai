@@ -82,9 +82,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
         .interview-root .font-black { font-weight: 900 !important; }
       ` }} />
       <div className="interview-root">
-        <InterviewLayout currentPlan={currentPlan} isLoggedIn={isLoggedIn}>
-          {children}
-        </InterviewLayout>
+        {isLoggedIn ? <InterviewLayout currentPlan={currentPlan} isLoggedIn={isLoggedIn}>{children}</InterviewLayout> : children}
       </div>
     </>
   )

@@ -1,3 +1,5 @@
+import { getServiceById } from '@/lib/services'
+import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤインタビュー LPコンテンツ
 // ⚠️ 実績数値（導入社数・短縮率など）は持っていないので書かない。
 import type { Step, Benefit, Faq } from '@/components/lp'
@@ -18,7 +20,7 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: '無料プランでお試しいただけます。プロプラン（月額9,980円）で上限が広がり、ドヤシリーズの他サービスもすべてお使いいただけます。' },
+  { q: '無料で使えますか？', a: `無料プランは${getServiceById('interview')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('interview')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
   { q: '長い取材音声でも大丈夫ですか？', a: '5GBを超えるファイルにも対応しています。長時間の対談や複数人の座談会でもお使いいただけます。' },
   { q: '出てきた記事はそのまま公開できますか？', a: 'ドラフトとしてお使いください。事実確認と最終的な文章の調整は、公開前にご確認いただく前提です。' },
   { q: '話者が複数いても分けられますか？', a: 'はい。話者分離に対応しており、誰の発言かが分かる形で文字起こしされます。' },

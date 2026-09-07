@@ -1,3 +1,5 @@
+import { getServiceById } from '@/lib/services'
+import { UNIFIED_PRO_PRICE } from '@/lib/unified-plan'
 // ドヤリスト LPコンテンツ
 // ⚠️ 外部の検索APIは使わない方針（gBizINFO が出所）。「ネット中から集める」等と書かないこと。
 import type { Step, Benefit, Faq } from '@/components/lp'
@@ -18,7 +20,7 @@ export const BENEFITS: Benefit[] = [
 ]
 
 export const FAQ: Faq[] = [
-  { q: '無料で使えますか？', a: '無料プランで月3プロジェクト・1プロジェクトあたり20社まで作成できます。プロプラン（月額9,980円）で広がります。' },
+  { q: '無料で使えますか？', a: `無料プランは${getServiceById('doyalist')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('doyalist')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
   { q: '企業情報の出所はどこですか？', a: 'gBizINFO（経済産業省の法人情報データベース）です。外部の検索サービスを使った収集は行っていません。' },
   { q: 'ウェブサイトが載っていない企業はどうなりますか？', a: '「登録URLなし」として表示します。推測でURLを埋めることはしません。' },
   { q: '作った文面はそのまま送れますか？', a: '叩き台としてお使いください。相手先に合わせて確認・調整いただく前提です。' },
