@@ -1,6 +1,6 @@
 {
   "base": "https://doya-ai.surisuta.jp",
-  "createdAt": "2026-09-07T13:01:24.743Z",
+  "createdAt": "2026-09-07T15:14:49.814Z",
   "checks": [
     {
       "name": "Workflow click changes active step",

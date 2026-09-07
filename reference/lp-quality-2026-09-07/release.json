@@ -1,0 +1,16 @@
+{
+  "lpCommit": "ddfa0d84",
+  "lpDeployment": "https://doya-lt2sesb31-surisutas-projects.vercel.app",
+  "lpStatus": "Ready",
+  "lpInteractionChecks": 50,
+  "routes": 18,
+  "layoutCases": 90,
+  "accessibilityCases": 36,
+  "accessibilityViolations": 0,
+  "newCapturePairs": 36,
+  "newImages": 72,
+  "beforeOriginalsPreserved": 134,
+  "comparisonLocalChecks": 8,
+  "comparisonUrl": "https://doya-ai.surisuta.jp/renewal-comparison/index.html",
+  "comparisonPublication": "Pending final deployment verification"
+}

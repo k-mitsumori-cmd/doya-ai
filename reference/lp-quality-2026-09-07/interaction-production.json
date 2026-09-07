@@ -1,0 +1,68 @@
+{
+  "base": "https://doya-ai.surisuta.jp",
+  "checkedAt": "2026-09-07T15:14:16.301Z",
+  "checks": [
+    {
+      "name": "Mobile navigation opens with 5 usable links",
+      "pass": true
+    },
+    {
+      "name": "Escape closes menu and restores focus",
+      "pass": true
+    },
+    {
+      "name": "Anchor navigation closes menu",
+      "pass": true
+    },
+    {
+      "name": "Native preview dialog opens",
+      "pass": true
+    },
+    {
+      "name": "Background scroll is locked",
+      "pass": true
+    },
+    {
+      "name": "Original-size preview is scrollable",
+      "pass": true
+    },
+    {
+      "name": "Dialog Escape restores opener focus",
+      "pass": true
+    },
+    {
+      "name": "Mock controls are inert illustrations",
+      "pass": true
+    },
+    {
+      "name": "Workflow preview follows selected step",
+      "pass": true
+    },
+    {
+      "name": "Workflow supports keyboard",
+      "pass": true
+    },
+    {
+      "name": "Homepage title identifies category",
+      "pass": true
+    },
+    {
+      "name": "Homepage has no literal newline escapes",
+      "pass": true
+    },
+    {
+      "name": "AIO clearly explains login-first flow without discarded input",
+      "pass": true
+    },
+    {
+      "name": "AIO final CTA follows pricing",
+      "pass": true
+    },
+    {
+      "name": "Desktop hero preview opens at readable size",
+      "pass": true
+    }
+  ],
+  "passed": 15,
+  "total": 15
+}

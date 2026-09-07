@@ -30,10 +30,20 @@
 - SKIP_DB_PUSH=1 npm run build 成功。DB反映を実行せず、型検査も別途実施。
 - 認証後の生成API、課金、DB変更、外部への送信は対象外。
 
-詳細は audit-summary-local.json と interaction-local.json。全画像・DOM測定は before/ と final-local/ にローカル保存。公開後の証拠を追記します。
+詳細は audit-summary-local.json と interaction-local.json。全画像・DOM測定は before/ と final-local-v2/ にローカル保存。公開後の証拠を追記します。
 
 ## 参照した基準
 
 - [Next.js 14のスタイル管理](https://nextjs.org/docs/14/app/building-your-application/styling/css-modules)
 - [W3C: 文字のコントラスト](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)
 - [W3C: 操作対象の大きさ](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html)
+
+## LP公開確認（2026-09-08）
+
+公開コミット ddfa0d84。本番デプロイ doya-lt2sesb31-surisutas-projects.vercel.app はReady、独自ドメインへの割り当てを確認。公開版で既存35項目＋追加15項目の操作、18ルートを確認しました。
+
+補足：HubSpotが正規の相談リンクに計測パラメータを追加するため、URLの検証は正しいドメインとパスで照合しています。FAQのテストもモバイルメニューと区別して本文内を対象にしています。
+
+## 比較画像の更新
+
+公開版から36組・72枚を再撮影し、全PNGのハッシュとデコードを確認。旧版の元画像134枚と公開用before画像を保持しています。前回公開直後の画像は別フォルダに保存済み。比較ビューのローカル8項目（144画像の到達確認を含む）を通過しました。
