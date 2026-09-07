@@ -2,10 +2,6 @@
 
 import Link from 'next/link'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { signIn } from 'next-auth/react'
-import toast from 'react-hot-toast'
 import { getServiceById } from '@/lib/services'
 import {
   LpShell, ProductHero, MockWindow, FeatureShowcase, HowItWorks, Benefits, UseCases, FaqSection, CtaBand,
@@ -47,21 +43,6 @@ const ROWS: ShowcaseRow[] = [
 // ⚠️ Entry.tsx にも同じJSXが残っているが、そちらは未ログインでは到達しない。
 //    文言を直すときは**このファイル**を直すこと。
 export default function AioLp() {
-  // ⚠️ LP内のURLクイックスタートは未ログインでも押せる。押した時点でログインへ送る。
-  //    入力を消さずにログイン後へ戻せるよう、callbackUrl は /aio に固定する。
-  const [serviceUrl, setServiceUrl] = useState('')
-  const [creating, setCreating] = useState(false)
-  const authed = false
-
-  const start = () => {
-    if (!serviceUrl.trim()) {
-      toast.error('URLを入力してください')
-      return
-    }
-    setCreating(true)
-    signIn('google', { callbackUrl: '/aio' })
-  }
-
   return (
     <LpShell serviceName="ドヤAIO" icon="query_stats" ctaHref={CTA} loginHref="/auth/signin?callbackUrl=/aio" ctaLabel="無料で診断する" accent={ACCENT}>
       <ProductHero
@@ -73,42 +54,16 @@ export default function AioLp() {
         ctaHref={CTA}
         ctaLabel="無料で診断する"
         subCtaHref="#start"
-        subCtaLabel="URLで今すぐ診断"
+        subCtaLabel="診断の始め方"
         image={{ src: '/aio/hero.webp', alt: 'ドヤAIOのAI可視性ランキング画面' }}
         visual={<MockWindow title="AI可視性ランキング"><AioSovMock /></MockWindow>}
       />
 
-      {/* URLクイックスタート（既存の quick-start ロジックを温存） */}
-      <section id="start" className="relative -mt-6 md:-mt-10 pb-4">
-        <div className="max-w-xl mx-auto px-5">
-          <div className="bg-white rounded-3xl shadow-xl border border-slate-100 p-5 sm:p-6"
-            style={{ boxShadow: '0 18px 48px rgba(0,102,255,0.12)' }}>
-            <label className="block text-left text-sm font-black text-slate-700 mb-2">分析したいサービスのURL</label>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <input
-                value={serviceUrl}
-                onChange={(e) => setServiceUrl(e.target.value)}
-                placeholder="例: https://doya-ai.surisuta.jp"
-                inputMode="url"
-                onKeyDown={(e) => e.key === 'Enter' && start()}
-                className="flex-1 rounded-xl border-2 border-slate-200 focus:border-[color:var(--lp-accent)] outline-none px-4 py-3 font-bold transition-colors"
-              />
-              <button
-                onClick={start}
-                disabled={creating}
-                className="shrink-0 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl text-white font-black shadow-lg transition-all hover:-translate-y-0.5 disabled:opacity-50 active:scale-[0.97]"
-                style={{ background: 'linear-gradient(135deg, #0066ff, var(--lp-accent))', boxShadow: '0 10px 24px rgba(0,102,255,0.28)' }}
-              >
-                <Sym name={creating ? 'hourglass_top' : 'search'} size={20} />
-                {creating ? '判定中…' : '調べる'}
-              </button>
-            </div>
-            <p className="text-left text-xs font-bold text-slate-400 mt-2">
-              {authed
-                ? 'URLを入れて「調べる」を押すと、AIが自動でセットアップしてスキャンします。'
-                : 'Googleアカウントでログインすると無料で診断できます。'}
-            </p>
-          </div>
+      <section id="start" className="doya-ai-start">
+        <div>
+          <h2>無料の診断は、ログインから。</h2>
+          <p>ログイン後に、分析したいサービスのURLとブランド情報を登録できます。</p>
+          <Link href={CTA} className="doya-button">ログインして診断を始める<Sym name="arrow_forward" size={20} /></Link>
         </div>
       </section>
 

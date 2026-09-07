@@ -109,8 +109,8 @@ const path = require("path");
         getComputedStyle(e).animationName === "none",
     ),
   );
-  await page.$eval("details summary", (e) => e.click());
-  assert("FAQ opens", await page.$eval("details", (e) => e.open));
+  await page.$eval("main details summary", (e) => e.click());
+  assert("FAQ opens", await page.$eval("main details", (e) => e.open));
   await page.goto(base + "/", { waitUntil: "networkidle2" });
   assert(
     "All 17 services listed",
@@ -159,9 +159,12 @@ const path = require("path");
     "Consultation points directly to the existing verified form",
     await page.$eval(
       ".doya-consult-toggle",
-      (e) =>
-        e.href ===
-        "https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1",
+      (e) => {
+        const url = new URL(e.href);
+        // HubSpot legitimately appends analytics parameters after page load.
+        return url.origin === "https://doyamarke.surisuta.jp" &&
+          url.pathname === "/download/base02_doyamarke-free-1";
+      },
     ),
   );
 

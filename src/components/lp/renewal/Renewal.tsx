@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { SERVICES, HIDDEN_SERVICE_IDS } from "@/lib/services";
 import { UNIFIED_PRO_PRICE } from "@/lib/unified-plan";
+import { ProductPreview } from "./ProductPreview";
 import type { Step } from "../sections";
 import "./renewal.css";
 
@@ -104,7 +105,7 @@ export function RenewalHero(props: {
         <div className="doya-hero-copy">
           <span className="doya-eyebrow">
             <Sparkles size={16} />
-            {service?.name || props.eyebrow || "ドヤマーケAI"}
+            {props.eyebrow || service?.name || "ドヤマーケAI"}
           </span>
           <h1>
             {props.title}
@@ -128,7 +129,9 @@ export function RenewalHero(props: {
           </div>
           <p className="doya-small">
             <Check size={15} />
-            無料プランからお試しいただけます
+            {service
+              ? `無料プラン：${service.pricing.free.limit}`
+              : "無料プランからお試しいただけます"}
             {props.subCtaHref && (
               <Link href={props.subCtaHref}>
                 {props.subCtaLabel || "詳しく見る"} <ArrowRight size={13} />
@@ -141,10 +144,15 @@ export function RenewalHero(props: {
             <span />
             {service?.shortName || "あなたの仕事"}の頼れるパートナー
           </div>
-          <div className="doya-product-display">
+          <ProductPreview
+            className="doya-product-display"
+            src={service ? `/${service.id}/hero.webp` : props.image?.src}
+            alt={`${name}の画面`}
+          >
             {props.visual ||
               (props.image && (
                 <Image
+                  unoptimized
                   src={props.image.src}
                   alt={props.image.alt}
                   width={1600}
@@ -153,12 +161,13 @@ export function RenewalHero(props: {
                   sizes="(max-width: 800px) 100vw, 650px"
                 />
               ))}
-          </div>
+          </ProductPreview>
           <div className="doya-status-chip">
             <Check size={17} />
             次の作業が、見えてきます。
           </div>
           <Image
+            unoptimized
             className="doya-hero-bear"
             src="/renewal/bear-hero.webp"
             alt="作業をお手伝いするドヤくん"
@@ -166,21 +175,20 @@ export function RenewalHero(props: {
             height={420}
             priority
           />
-          <span className="doya-demo-label">画面は操作イメージです</span>
         </div>
       </div>
       <div className="doya-value-strip">
         <span>
           <MousePointer2 size={18} />
-          使いたい業務から始める
+          必要な業務から選ぶ
         </span>
         <span>
           <Layers size={18} />
-          1つのアカウントで使える
+          1アカウントで利用
         </span>
         <span>
           <ShieldCheck size={18} />
-          確認・判断はあなたの手で
+          確認して業務に活用
         </span>
       </div>
     </section>
@@ -212,6 +220,7 @@ export function Workflow({
             </p>
           </div>
           <Image
+            unoptimized
             src="/renewal/bear-success.webp"
             alt="完成を知らせるドヤくん"
             width={190}
@@ -284,19 +293,25 @@ export function Workflow({
             </p>
           </div>
           {service ? (
-            <div className="doya-step-image" key={`${service.id}-${active}`}>
+            <ProductPreview
+              className="doya-step-image"
+              key={`${service.id}-${active}`}
+              src={`/${service.id}/shots/${["1-input", "2-process", "3-output"][Math.min(active, 2)]}.webp`}
+              alt={`${steps[active].title}の画面`}
+            >
               <Image
+                unoptimized
                 src={`/${service.id}/shots/${["1-input", "2-process", "3-output"][Math.min(active, 2)]}.webp`}
                 alt={`${steps[active].title}の操作イメージ`}
                 width={1280}
                 height={800}
                 sizes="(max-width: 800px) 95vw, 640px"
               />
-              <span>操作イメージ</span>
-            </div>
+            </ProductPreview>
           ) : (
             <div className="doya-workflow-partner">
               <Image
+                unoptimized
                 src="/renewal/bear-hero.webp"
                 alt="作業をご案内するドヤくん"
                 width={250}
@@ -446,6 +461,7 @@ export function ServiceDirectory({ compact = false }: { compact?: boolean }) {
           {shown.map((s) => (
             <Link href={s.href} key={s.id} className="doya-service-card">
               <Image
+                unoptimized
                 src={`/renewal/icons/${s.id}.webp`}
                 alt=""
                 width={52}

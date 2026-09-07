@@ -171,7 +171,7 @@ export function FaqSection({ title = 'よくある質問', items }: { title?: Re
             <details key={i} className="group bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
               <summary className="flex items-center justify-between gap-4 cursor-pointer list-none p-5">
                 <span className="flex items-start gap-3 font-black text-slate-900">
-                  <span className="shrink-0 font-black" style={{ color: 'var(--lp-accent)' }}>Q.</span>
+                  <span className="shrink-0 font-black" style={{ color: 'var(--lp-accent-ink, var(--lp-accent))' }}>Q.</span>
                   {f.q}
                 </span>
                 <Sym name="expand_more" size={24} className="shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
@@ -194,7 +194,7 @@ export function CtaBand({ title, subtitle, ctaHref, ctaLabel = '無料ではじ�
           style={{ background: 'linear-gradient(135deg, #0047b3, #0066ff 55%, var(--lp-accent))' }}>
           <div className="absolute inset-0 opacity-20 bg-dots-pattern bg-dots" aria-hidden="true" />
           <div className="relative z-10">
-            <div className="flex justify-center mb-6"><Image className="doya-cta-bear" src="/renewal/bear-success.webp" alt="ドヤくん" width={180} height={180} /></div>
+            <div className="flex justify-center mb-6"><Image unoptimized className="doya-cta-bear" src="/renewal/bear-success.webp" alt="ドヤくん" width={180} height={180} /></div>
             <h2 className="text-3xl md:text-5xl font-black tracking-tight leading-tight">{title}</h2>
             {subtitle && <p className="mt-4 text-base md:text-lg font-bold text-white/85 max-w-xl mx-auto">{subtitle}</p>}
             <div className="mt-9">

@@ -5,6 +5,7 @@
 // ============================================
 import React from 'react'
 import { RenewalHero } from './renewal/Renewal'
+import { ProductPreview } from './renewal/ProductPreview'
 import Link from 'next/link'
 import Image from 'next/image'
 import { Sym, BgDots, SectionHeading } from './primitives'
@@ -12,7 +13,9 @@ import { Sym, BgDots, SectionHeading } from './primitives'
 /** ブラウザ/アプリ風の枠（中に製品モックを入れる） */
 export function MockWindow({ title, children, className = '', floating = true }: { title?: string; children: React.ReactNode; className?: string; floating?: boolean }) {
   return (
-    <div data-mock-window className={`relative rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-2xl shadow-slate-300/40 ${floating ? 'animate-fade-in-up' : ''} ${className}`}>
+    <div data-mock-window role="img" aria-label={`${title || "製品画面"}の操作イメージ`} className={`relative rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-2xl shadow-slate-300/40 ${floating ? 'animate-fade-in-up' : ''} ${className}`}>
+      {/* React 18 requires an empty HTML attribute; newer React typings declare inert as boolean. */}
+      <div aria-hidden="true" inert={'' as unknown as boolean}>
       {/* トップバー */}
       <div className="flex items-center gap-2 px-4 h-10 border-b border-slate-100 bg-slate-50/80">
         <span className="w-3 h-3 rounded-full bg-slate-300" />
@@ -25,7 +28,8 @@ export function MockWindow({ title, children, className = '', floating = true }:
         )}
       </div>
       {/* 中身 */}
-      <div className="relative">{children}</div>
+      <div className="relative doya-mock-content">{children}</div>
+      </div>
     </div>
   )
 }
@@ -96,7 +100,7 @@ export function FeatureShowcase({ eyebrow = 'FEATURES', title, lead, rows }: { e
                 )}
               </div>
               {/* 製品モック */}
-              <div className={i % 2 === 1 ? 'md:order-1' : ''}>
+              <ProductPreview className={i % 2 === 1 ? 'md:order-1' : ''} src={r.image?.src} alt={`${r.title}の画面`}>
                 {r.visual ? r.visual : r.image ? (
                   <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_48px_rgba(10,15,60,0.14)]">
                     <Image
@@ -109,7 +113,7 @@ export function FeatureShowcase({ eyebrow = 'FEATURES', title, lead, rows }: { e
                     />
                   </div>
                 ) : r.visual}
-              </div>
+              </ProductPreview>
             </div>
           ))}
         </div>

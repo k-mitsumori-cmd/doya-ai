@@ -23,7 +23,7 @@ export default function HomePage() {
       <section className="doya-home-hero">
         <span className="doya-eyebrow">
           <Sparkles size={16} />
-          あなたのチームに、AIという仲間を。
+          制作・営業・業務管理を支える17のAIツール
         </span>
         <h1>
           その仕事、
@@ -43,13 +43,14 @@ export default function HomePage() {
             仕事に合うAIを見つける <ArrowRight size={20} />
           </a>
           <a href="#doya-resources" className="doya-button doya-secondary">
-            3点セットを見る <ArrowRight size={18} />
+            無料の資料3点を見る <ArrowRight size={18} />
           </a>
         </div>
         <div className="doya-home-team">
           <Image
             src="/renewal/bear-teamwork.webp"
             alt="制作・営業・チームの仕事を手伝うドヤくんたち"
+            unoptimized
             width={660}
             height={440}
             priority
@@ -63,11 +64,11 @@ export default function HomePage() {
       <div className="doya-value-strip">
         <span>
           <Check size={18} />
-          無料プランからスタート
+          無料から始める
         </span>
         <span>
           <Layers size={18} />
-          1つのアカウントで利用
+          1アカウントで利用
         </span>
         <span>
           <MousePointer2 size={18} />
@@ -78,7 +79,7 @@ export default function HomePage() {
       <section className="doya-home-use">
         <div className="doya-section-inner">
           <span className="doya-eyebrow">A DAY WITH DOYA</span>
-          <h2>仕事の流れに、\n得意なAIをひとつずつ。</h2>
+          <h2>仕事の流れに、<br />得意なAIをひとつずつ。</h2>
           <p>
             たとえば、新しいサービスを広めたい日。
             <br />
@@ -103,9 +104,10 @@ export default function HomePage() {
               },
             ].map((s, i) => (
               <Link key={s.id} href={`/${s.id}`}>
-                <span>0{i + 1}</span>
+                <span aria-hidden="true">0{i + 1}</span>
                 <Image
                   src={`/renewal/icons/${s.id}.webp`}
+                  unoptimized
                   alt=""
                   width={60}
                   height={60}

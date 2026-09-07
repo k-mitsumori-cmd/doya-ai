@@ -25,7 +25,7 @@ export default function CunningLp() {
       <ProductHero
         eyebrow="ドヤマーケAI"
         title="想定外の質問にも、"
-        highlight="言葉に詰まらない。"
+        highlight="根拠を見ながら答える。"
         subtitle="Web会議の相手の発言から質問を見つけ、登録した資料を根拠にした回答案を画面に出します。"
         note="無料プランで月60分までお試しいただけます。クレジットカードの登録は不要です。"
         ctaHref={CTA}

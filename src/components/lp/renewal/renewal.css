@@ -134,7 +134,7 @@
   gap: 6px;
   align-items: center;
   flex-wrap: wrap;
-  color: #66748e;
+  color: #53627c;
   font-size: 12px;
   margin-top: 24px;
 }
@@ -164,18 +164,18 @@
     #ecdeff
   );
 }
-.doya-product-display {
+.doya-product-display > [data-mock-window] {
   transform: rotate(-3deg);
   transition: transform 0.45s;
   filter: drop-shadow(0 22px 22px #183e8420);
 }
-.doya-hero-stage:hover .doya-product-display {
+.doya-hero-stage:hover .doya-product-display > [data-mock-window] {
   transform: rotate(0) translateY(-7px);
 }
 .doya-product-display [data-mock-window] {
   animation: none;
   box-shadow: none;
-  min-height: 260px;
+  min-height: 220px;
 }
 .doya-product-display img {
   width: 100%;
@@ -390,7 +390,7 @@
 }
 .doya-step-content .doya-step-hint {
   font-size: 12px;
-  color: #7786a0;
+  color: #53627c;
 }
 .doya-step-image {
   background: #f0f5ff;
@@ -403,12 +403,12 @@
   width: 100%;
   height: auto;
 }
-.doya-step-image span {
+.doya-step-image > .doya-preview-caption > span {
   display: block;
   text-align: right;
   font-size: 12px;
   padding: 7px 12px;
-  color: #73829b;
+  color: #52627c;
 }
 .doya-renewal .doya-feature-row {
   padding: 40px;
@@ -1239,7 +1239,10 @@
   }
   .doya-renewal :is(a, button):hover,
   .doya-renewal .doya-resource:hover .doya-book,
-  .doya-renewal .doya-hero-stage:hover .doya-product-display {
+  .doya-renewal
+    .doya-hero-stage:hover
+    .doya-product-display
+    > [data-mock-window] {
     transform: none !important;
   }
 }
@@ -1274,7 +1277,7 @@
   top: 22px;
   font-weight: 900;
   font-size: 40px;
-  color: #deebff;
+  color: #7089b0;
 }
 .doya-journey img {
   border-radius: 16px;
@@ -1359,7 +1362,7 @@ body:has(.doya-renewal) #hs-overlay-cta-317051970234 {
     padding: 8px 13px;
   }
 }
-.doya-product-display [data-mock-window] > .relative {
+.doya-product-display .doya-mock-content {
   max-height: 330px;
   overflow: hidden;
 }
@@ -1401,4 +1404,498 @@ body:has(.doya-renewal) #hs-overlay-cta-317051970234 {
 
 .doya-home-hero h1 em span {
   display: inline-block;
+}
+
+/* Quality pass: readable content, inspectable previews, and complete mobile navigation. */
+.doya-renewal [style*="--lp-accent:"] {
+  --lp-accent-ink: color-mix(in srgb, var(--lp-accent) 52%, #102143);
+}
+.doya-renewal :is(.text-slate-300, .text-slate-400, .text-slate-500) {
+  color: #52627c;
+}
+.doya-renewal .doya-resources :is(.doya-eyebrow, .doya-text-link) {
+  color: #0056d6;
+}
+.doya-renewal :is(.doya-feature-row, .doya-step-panel) > * {
+  min-width: 0;
+}
+.doya-renewal .doya-feature-row :is(h3, p, li) {
+  overflow-wrap: anywhere;
+}
+.doya-renewal main:focus {
+  outline: none;
+}
+.doya-skip-link {
+  position: fixed;
+  top: 8px;
+  left: 16px;
+  z-index: 100;
+  padding: 14px 22px;
+  background: #fff;
+  border: 2px solid #0056d6;
+  color: #0056d6;
+  border-radius: 10px;
+  transform: translateY(-160%);
+}
+.doya-skip-link:focus {
+  transform: none;
+}
+.doya-header-brand {
+  min-width: 0;
+}
+.doya-header-brand img {
+  flex-shrink: 0;
+}
+.doya-header .doya-desktop-nav {
+  margin-left: auto;
+}
+.doya-header .doya-desktop-nav > a {
+  white-space: nowrap;
+}
+.doya-mobile-menu {
+  display: none;
+}
+.doya-preview {
+  min-width: 0;
+}
+.doya-preview-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 46px;
+  padding: 5px 2px;
+  color: #52627c;
+  font-size: 12px;
+}
+.doya-preview-caption > span {
+  padding: 0 8px;
+}
+.doya-preview-caption button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 10px;
+  color: #0056d6;
+  font-weight: 700;
+  border-radius: 8px;
+}
+.doya-preview-caption button:hover {
+  background: #e6efff;
+}
+.doya-preview-dialog {
+  position: fixed;
+  inset: 0;
+  width: min(1200px, 95vw);
+  max-width: 95vw;
+  max-height: 92dvh;
+  margin: auto;
+  padding: 0;
+  border: 1px solid #c8d7ed;
+  border-radius: 20px;
+  background: #fff;
+  color: #142443;
+  box-shadow: 0 30px 100px #071a5355;
+  overflow: hidden;
+}
+.doya-preview-dialog::backdrop {
+  background: #0b173bd9;
+  backdrop-filter: blur(5px);
+}
+.doya-preview-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e3eafa;
+}
+.doya-preview-toolbar p {
+  margin-right: auto;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: left;
+}
+.doya-preview-toolbar p span {
+  display: block;
+  font-size: 12px;
+  color: #52627c;
+  font-weight: 400;
+}
+.doya-preview-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px;
+  border-radius: 10px;
+  background: #edf3fd;
+  color: #142443;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.doya-preview-canvas {
+  max-height: 76dvh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: #f6f8fc;
+}
+.doya-preview-canvas img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 0;
+}
+.doya-preview-canvas.is-actual-size img {
+  width: 1280px;
+  max-width: none;
+}
+body:has(.doya-preview-dialog[open]) {
+  overflow: hidden;
+}
+.doya-hero-stage {
+  padding-bottom: 100px;
+}
+.doya-hero-bear {
+  width: 175px;
+  height: 175px;
+  bottom: -5px;
+  right: -10px;
+  pointer-events: none;
+}
+.doya-status-chip {
+  bottom: 42px;
+  padding: 12px 16px;
+  font-size: 13px;
+}
+.doya-step-image .doya-preview-caption {
+  padding: 0 8px;
+}
+.doya-step-image .doya-preview-caption span {
+  display: inline;
+}
+.doya-mock-content {
+  pointer-events: none;
+}
+
+.doya-renewal [data-mock-window] .opacity-80 {
+  opacity: 1;
+}
+.doya-renewal [data-mock-window] :is(.text-emerald-600, .text-green-600) {
+  color: #08744f;
+}
+.doya-renewal [data-mock-window] .text-cyan-600 {
+  color: #0e6e88;
+}
+.doya-renewal [data-mock-window] .text-orange-600 {
+  color: #b94308;
+}
+.doya-renewal [data-mock-window] :is(.text-rose-500, .text-rose-600) {
+  color: #be1640;
+}
+.doya-renewal [data-mock-window] .text-amber-600 {
+  color: #98600a;
+}
+.doya-renewal [data-mock-window] .bg-emerald-600 {
+  background: #08744f;
+}
+.doya-renewal [data-mock-window] [style*="color: rgb(22, 163, 74)"],
+.doya-renewal [data-mock-window] [style*="color:#16a34a"],
+.doya-renewal [data-mock-window] [style*="color: #16a34a"] {
+  color: #08744f !important;
+}
+.doya-renewal [data-mock-window] [style*="color: rgb(2, 132, 199)"],
+.doya-renewal [data-mock-window] [style*="color:#0284c7"],
+.doya-renewal [data-mock-window] [style*="color: #0284c7"] {
+  color: #07689e !important;
+}
+
+.doya-ai-start {
+  padding: 32px 22px 48px;
+  background: #f6f9ff;
+}
+.doya-ai-start > div {
+  max-width: 700px;
+  margin: auto;
+  padding: 28px;
+  border: 1px solid #d3e0f5;
+  border-radius: 20px;
+  background: white;
+}
+.doya-ai-start h2 {
+  font-size: 22px;
+}
+.doya-ai-start p {
+  margin: 12px 0 20px;
+  color: #52627c;
+  font-size: 15px;
+}
+@media (max-width: 1000px) {
+  .doya-mobile-menu {
+    display: block;
+    position: static;
+    flex-shrink: 0;
+  }
+  .doya-mobile-menu summary {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    cursor: pointer;
+    list-style: none;
+    border: 1px solid #d6e0f0;
+    border-radius: 12px;
+    color: #142443;
+    background: #fff;
+  }
+  .doya-mobile-menu summary::-webkit-details-marker {
+    display: none;
+  }
+  .doya-mobile-menu .doya-menu-close {
+    display: none;
+  }
+  .doya-mobile-menu[open] .doya-menu-open {
+    display: none;
+  }
+  .doya-mobile-menu[open] .doya-menu-close {
+    display: block;
+  }
+  .doya-header .doya-mobile-menu nav {
+    position: absolute;
+    top: 100%;
+    left: 12px;
+    right: 12px;
+    display: grid;
+    gap: 0;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #d6e0f0;
+    border-radius: 0 0 18px 18px;
+    box-shadow: 0 22px 38px #13285225;
+  }
+  .doya-header .doya-mobile-menu nav > a {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    min-height: 48px;
+    border-radius: 8px;
+  }
+  .doya-mobile-menu nav a:hover {
+    background: #edf4ff;
+  }
+  .doya-hero-inner {
+    grid-template-columns: 1fr;
+    max-width: 760px;
+  }
+  .doya-hero-copy {
+    max-width: 650px;
+  }
+  .doya-hero-stage {
+    max-width: 650px;
+    width: 100%;
+    justify-self: center;
+  }
+}
+@media (max-width: 760px) {
+  .doya-header-inner {
+    gap: 8px;
+  }
+  .doya-header-brand {
+    font-size: 14px;
+    line-height: 1.3;
+    gap: 5px;
+  }
+  .doya-header-brand img {
+    width: 28px;
+    height: 28px;
+  }
+  .doya-header-brand span {
+    max-width: 138px;
+  }
+  .doya-header nav .doya-button {
+    min-height: 44px;
+    padding: 10px 12px;
+  }
+  .doya-header nav .doya-button svg {
+    display: none;
+  }
+  .doya-hero-stage {
+    padding: 43px 0 78px;
+  }
+  .doya-product-display > [data-mock-window] {
+    transform: none;
+  }
+  .doya-hero-stage:hover .doya-product-display > [data-mock-window] {
+    transform: none;
+  }
+  .doya-hero-bear {
+    width: 112px;
+    height: 112px;
+    bottom: -3px;
+    right: -8px;
+  }
+  .doya-status-chip {
+    font-size: 11px;
+    left: 0;
+    bottom: 25px;
+    max-width: calc(100% - 96px);
+    padding: 10px;
+  }
+  .doya-stage-label {
+    transform: none;
+    left: 0;
+  }
+  .doya-small {
+    font-size: 12px;
+  }
+  .doya-small a {
+    min-height: 36px;
+    margin-left: 0;
+    padding: 6px 4px;
+  }
+  .doya-value-strip span {
+    font-size: 11px;
+    max-width: 110px;
+  }
+  .doya-workflow-heading {
+    align-items: flex-start;
+  }
+  .doya-workflow-heading > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .doya-workflow-heading > img {
+    width: 72px;
+    height: 90px;
+    flex-shrink: 0;
+  }
+  .doya-workflow-heading h2 {
+    font-size: 25px;
+  }
+  .doya-step-tabs button {
+    font-size: 12px;
+    min-height: 92px;
+  }
+  .doya-service-grid {
+    grid-template-columns: 1fr;
+  }
+  .doya-service-card {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 0 15px;
+    padding: 22px;
+  }
+  .doya-service-card img {
+    grid-row: 1 / 4;
+    width: 48px;
+    height: 48px;
+    margin: 0;
+  }
+  .doya-service-card h3 {
+    font-size: 18px;
+  }
+  .doya-service-card p {
+    font-size: 14px;
+    margin-bottom: 15px;
+  }
+  .doya-service-card > span {
+    grid-column: 2;
+    font-size: 12px;
+  }
+  .doya-filter button {
+    min-height: 44px;
+  }
+  .doya-motion-toggle {
+    min-height: 44px;
+    font-size: 11px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+  }
+  .doya-consult-toggle {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    bottom: max(10px, env(safe-area-inset-bottom));
+  }
+  .doya-preview-toolbar {
+    padding: 8px;
+    gap: 6px;
+  }
+  .doya-preview-toolbar p {
+    font-size: 13px;
+  }
+  .doya-preview-toolbar button span {
+    display: none;
+  }
+  .doya-preview-toolbar button {
+    min-width: 44px;
+  }
+  .doya-preview-toolbar button[aria-pressed]::after {
+    content: none;
+  }
+  .doya-preview-dialog {
+    border-radius: 14px;
+  }
+  .doya-preview-caption {
+    font-size: 12px;
+  }
+  .doya-footer nav a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+}
+@media (max-width: 360px) {
+  .doya-header-brand span {
+    max-width: 106px;
+  }
+  .doya-header-brand {
+    font-size: 12px;
+  }
+  .doya-header nav .doya-button {
+    font-size: 11px;
+    padding: 10px;
+  }
+  .doya-hero h1 {
+    font-size: 29px;
+  }
+  .doya-workflow-heading > img {
+    display: none;
+  }
+  .doya-resource {
+    grid-template-columns: 105px 1fr;
+  }
+  .doya-resource-caption {
+    padding: 14px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .doya-hero-stage:hover .doya-product-display > [data-mock-window],
+  .doya-renewal .doya-feature-row:hover [data-mock-window] {
+    transform: none;
+  }
+}
+.doya-motion-paused
+  .doya-hero-stage:hover
+  .doya-product-display
+  > [data-mock-window],
+.doya-motion-paused .doya-feature-row:hover [data-mock-window] {
+  transform: none;
+}
+
+.doya-product-display > .doya-preview-caption {
+  justify-content: flex-start;
+  gap: 18px;
+}
+.doya-preview-toolbar button[aria-pressed] {
+  position: relative;
+}
+
+.doya-header .doya-mobile-menu:not([open]) nav {
+  display: none;
+}
+.doya-value-strip span {
+  text-wrap: balance;
 }

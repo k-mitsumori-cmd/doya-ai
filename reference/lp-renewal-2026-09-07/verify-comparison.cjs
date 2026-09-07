@@ -8,7 +8,11 @@ check('18 services including top',await page.$$eval('#service option',els=>els.l
 await page.select('#service','banner');await page.select('#device','mobile');await page.select('#mode','swipe');
 check('Mobile slider mode',await page.$eval('#comparison',e=>e.className==='mobile')&&await page.$eval('#pair',e=>getComputedStyle(e).display==='none'));
 await page.$eval('#range',e=>{e.value='25';e.dispatchEvent(new Event('input',{bubbles:true}))});
-check('Slider changes image clipping',await page.$eval('#newSwipe',e=>e.style.clipPath.includes('25%')));
+check('Slider changes image clipping',await page.$eval('#newSwipe',e=>e.style.clipPath.includes('75%')));
+await page.$eval('#range',e=>{e.value='100';e.dispatchEvent(new Event('input',{bubbles:true}))});
+check('100 percent shows the new version',await page.$eval('#newSwipe',e=>e.style.clipPath.includes('0%')));
+await page.reload({waitUntil:'networkidle2'});
+check('Service and device survive reload',await page.$eval('#service',e=>e.value==='banner')&&await page.$eval('#device',e=>e.value==='mobile'));
 await page.select('#mode','full');
 check('Full-page before/after images selected',await page.$eval('#before',e=>e.src.endsWith('banner-mobile-full.jpg'))&&await page.$eval('#after',e=>e.src.endsWith('banner-mobile-full.jpg')));
 await page.setViewport({width:390,height:844});

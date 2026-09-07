@@ -25,7 +25,7 @@ export default function PersonaLp() {
       <ProductHero
         eyebrow="ドヤマーケAI"
         title="「誰に向けて作るか」を、"
-        highlight="30秒で1枚に。"
+        highlight="施策に使える1枚に。"
         subtitle="商材と業界を入れるだけで、年齢・職種・課題・情報収集の仕方まで、施策に使える粒度のペルソナが出ます。"
         note="無料プランで1日5件までお試しいただけます。クレジットカードの登録は不要です。"
         ctaHref={CTA}

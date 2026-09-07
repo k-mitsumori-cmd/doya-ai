@@ -55,7 +55,7 @@ export function SectionHeading({ eyebrow, title, lead, align = 'center' }: { eye
       {eyebrow && (
         <span
           className="inline-block text-xs font-black tracking-widest uppercase mb-3 px-3 py-1 rounded-full"
-          style={{ color: 'var(--lp-accent)', background: 'color-mix(in srgb, var(--lp-accent) 12%, transparent)' }}
+          style={{ color: 'var(--lp-accent-ink, var(--lp-accent))', background: 'color-mix(in srgb, var(--lp-accent) 12%, transparent)' }}
         >
           {eyebrow}
         </span>

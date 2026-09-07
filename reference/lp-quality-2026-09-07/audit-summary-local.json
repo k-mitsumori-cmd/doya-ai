@@ -1,0 +1,168 @@
+{
+  "checkedAt": "2026-09-07T14:58:14.279Z",
+  "base": "http://localhost:3107",
+  "pages": 18,
+  "widths": [
+    1440,
+    1024,
+    768,
+    390,
+    320
+  ],
+  "layoutCases": 90,
+  "accessibilityCases": 36,
+  "a11yEngine": "axe-core",
+  "browser": "Chrome headless",
+  "a11yTags": [
+    "wcag2a",
+    "wcag2aa",
+    "wcag21aa",
+    "wcag22aa"
+  ],
+  "results": [
+    {
+      "id": "seo",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "top",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "banner",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "interview",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "persona",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "hr",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "kintai",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "doyalist",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "promane",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "doyaslide",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "sfa",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "cunning",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "shodan",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "aio",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "mensetsu",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "quote",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "aishodan",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    },
+    {
+      "id": "adimage",
+      "status": 200,
+      "pageErrors": [],
+      "layoutIssues": 0,
+      "accessibilityViolations": 0,
+      "finalCTAAfterPricing": true
+    }
+  ]
+}

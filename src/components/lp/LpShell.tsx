@@ -7,6 +7,9 @@ import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import { RenewalFrame, ResourcePack, PriceSummary } from "./renewal/Renewal";
 import Link from "next/link";
+import { CtaBand } from "./sections";
+import { MobileNavigation } from "./renewal/MobileNavigation";
+import { SERVICES } from "@/lib/services";
 import { Sym, accentVars } from "./primitives";
 
 export interface LpShellProps {
@@ -75,10 +78,17 @@ export function LpShell({
       ? ctaHref
       : ctaHref);
   const sections = React.Children.toArray(children);
-  const closing = sections.length > 1 ? sections.pop() : null;
+  const closingIndex = sections.findIndex(
+    (child) => React.isValidElement(child) && child.type === CtaBand,
+  );
+  const closing = closingIndex >= 0 ? sections.splice(closingIndex, 1) : null;
+  const service = SERVICES.find((s) => s.name === serviceName);
   return (
     <RenewalFrame serviceName={serviceName}>
       <div style={accentVars(accent)}>
+        <a className="doya-skip-link" href="#doya-main">
+          本文へスキップ
+        </a>
         <header className="doya-header">
           <div className="doya-header-inner">
             <Link
@@ -86,10 +96,20 @@ export function LpShell({
               className="doya-header-brand"
               aria-label="ドヤマーケAI トップ"
             >
-              <Image src="/character/hello.png" width={40} height={40} alt="" />
+              <Image
+                src={
+                  service
+                    ? `/renewal/icons/${service.id}.webp`
+                    : "/character/hello.png"
+                }
+                width={40}
+                height={40}
+                alt=""
+                unoptimized
+              />
               <span>{serviceName}</span>
             </Link>
-            <nav aria-label="メインナビゲーション">
+            <nav className="doya-desktop-nav" aria-label="メインナビゲーション">
               <Link href="/#doya-services">サービス</Link>
               <a href="#doya-how">使い方</a>
               <a href="#doya-resources">資料</a>
@@ -100,9 +120,10 @@ export function LpShell({
                 <ArrowRight size={16} />
               </Link>
             </nav>
+            <MobileNavigation loginHref={signinHref} />
           </div>
         </header>
-        <main>
+        <main id="doya-main" tabIndex={-1}>
           {sections}
           <ResourcePack />
           <PriceSummary />

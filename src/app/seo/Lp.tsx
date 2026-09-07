@@ -25,7 +25,7 @@ export default function SeoLp() {
       <ProductHero
         eyebrow="ドヤマーケAI"
         title="検索意図から組み立てて、"
-        highlight="長文でも破綻しない。"
+        highlight="長文も、筋の通る記事へ。"
         subtitle="キーワードと参考URLを入れると、検索意図に沿ったアウトラインを作り、章ごとに整合性を確かめながら書き上げます。"
         note="無料プランで月3本までお試しいただけます。クレジットカードの登録は不要です。"
         ctaHref={CTA}

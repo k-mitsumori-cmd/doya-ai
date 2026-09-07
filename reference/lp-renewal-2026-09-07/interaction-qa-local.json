@@ -1,6 +1,6 @@
 {
   "base": "http://localhost:3107",
-  "createdAt": "2026-09-07T12:52:17.710Z",
+  "createdAt": "2026-09-07T15:03:40.857Z",
   "checks": [
     {
       "name": "Workflow click changes active step",
