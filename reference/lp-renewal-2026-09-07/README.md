@@ -43,3 +43,13 @@
 ## 復旧
 
 変更前のソースは f3e803d4。変更前の本番デプロイは doya-95m1vsl77-surisutas-projects.vercel.app（着手時にReady・Productionを確認）。必要な場合はVercelの対象プロジェクトと現状を再確認してロールバックする。
+
+## 保存した生成素材
+
+| 用途 | Web用ファイル |
+|---|---|
+| ヒーロー | [bear-hero.webp](../../public/renewal/bear-hero.webp) |
+| チーム | [bear-teamwork.webp](../../public/renewal/bear-teamwork.webp) |
+| 完了の案内 | [bear-success.webp](../../public/renewal/bear-success.webp) |
+
+[内蔵image_genの生成プロンプト](image-prompts.json)。元PNGは `/Users/mitsumori_katsuki/Code/doya-renewal-assets-20260907/` に保持しています。

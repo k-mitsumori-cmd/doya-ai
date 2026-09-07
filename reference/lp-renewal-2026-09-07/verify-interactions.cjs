@@ -230,8 +230,8 @@ const path = require("path");
     JSON.stringify(out, null, 2),
   );
   console.log(JSON.stringify({ passed: out.passed, total: out.total, errors }));
-  await browser.close();
-  process.exitCode = checks.some((c) => !c.pass) ? 1 : 0;
+  await Promise.race([browser.close(), new Promise(resolve => setTimeout(() => { browser.process()?.kill('SIGTERM'); resolve(); }, 8000))]);
+  process.exit(checks.some((c) => !c.pass) ? 1 : 0);
 })().catch((e) => {
   console.error(e);
   process.exitCode = 1;

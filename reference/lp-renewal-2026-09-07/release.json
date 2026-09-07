@@ -8,5 +8,19 @@
     "routeChecks": "18/18"
   },
   "finalRefinements": "Mobile heading wraps, direct consultation link, paused reveal visibility",
-  "comparison": "Final production captures will replace the initial publication captures before comparison publication."
+  "comparison": {
+    "url": "https://doya-ai.surisuta.jp/renewal-comparison/index.html",
+    "images": 144,
+    "localChecks": "6/6",
+    "source": "Final production LP captures, 18 pages x 2 viewports",
+    "originalBeforeHashes": "134/134 matched"
+  },
+  "lpRelease": {
+    "commit": "a9f279cd",
+    "deployment": "https://doya-i612n0vl5-surisutas-projects.vercel.app",
+    "deploymentId": "dpl_8R37rLoQkSneLqZAV9mCpdQk7DQJ",
+    "status": "Ready",
+    "routes": "18/18",
+    "interactions": "35/35"
+  }
 }

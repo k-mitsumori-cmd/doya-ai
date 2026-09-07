@@ -1,0 +1,149 @@
+{
+  "base": "https://doya-ai.surisuta.jp",
+  "createdAt": "2026-09-07T13:01:24.743Z",
+  "checks": [
+    {
+      "name": "Workflow click changes active step",
+      "pass": true
+    },
+    {
+      "name": "Workflow panel changes",
+      "pass": true
+    },
+    {
+      "name": "Workflow supports keyboard arrows",
+      "pass": true
+    },
+    {
+      "name": "Workflow Home returns to first step",
+      "pass": true
+    },
+    {
+      "name": "Resource cover moves on hover",
+      "pass": true
+    },
+    {
+      "name": "Reduced motion disables bear animation",
+      "pass": true
+    },
+    {
+      "name": "Pause button pauses bear motion",
+      "pass": true
+    },
+    {
+      "name": "Paused reveal remains fully visible",
+      "pass": true
+    },
+    {
+      "name": "FAQ opens",
+      "pass": true
+    },
+    {
+      "name": "All 17 services listed",
+      "pass": true
+    },
+    {
+      "name": "Sales filter has six services",
+      "pass": true
+    },
+    {
+      "name": "All 17 service icons decode",
+      "pass": true
+    },
+    {
+      "name": "Consultation points directly to the existing verified form",
+      "pass": true
+    },
+    {
+      "name": "top mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "banner mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "seo mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "interview mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "persona mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "hr mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "kintai mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "doyalist mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "promane mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "doyaslide mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "cunning mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "sfa mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "shodan mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "aio mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "mensetsu mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "quote mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "aishodan mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "adimage mobile layout has no overflow and one H1",
+      "pass": true
+    },
+    {
+      "name": "overview resource has all 17 service sections",
+      "pass": true
+    },
+    {
+      "name": "getting-started resource has all 17 service sections",
+      "pass": true
+    },
+    {
+      "name": "checklist resource has all 17 service sections",
+      "pass": true
+    },
+    {
+      "name": "No first-party JavaScript errors",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "passed": 35,
+  "total": 35
+}

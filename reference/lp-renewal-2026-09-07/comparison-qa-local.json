@@ -1,0 +1,33 @@
+{
+  "base": "http://localhost:8107",
+  "checkedAt": "2026-09-07T13:03:38.979Z",
+  "checks": [
+    {
+      "name": "18 services including top",
+      "pass": true
+    },
+    {
+      "name": "Mobile slider mode",
+      "pass": true
+    },
+    {
+      "name": "Slider changes image clipping",
+      "pass": true
+    },
+    {
+      "name": "Full-page before/after images selected",
+      "pass": true
+    },
+    {
+      "name": "Comparison fits mobile",
+      "pass": true
+    },
+    {
+      "name": "All 144 comparison images return HTTP 200",
+      "pass": true
+    }
+  ],
+  "bad": [],
+  "passed": 6,
+  "total": 6
+}
