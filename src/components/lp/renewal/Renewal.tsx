@@ -36,7 +36,6 @@ export function RenewalFrame({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(false);
-  const [consult, setConsult] = useState(false);
   useEffect(() => {
     const root = ref.current;
     if (!root || !("IntersectionObserver" in window)) return;
@@ -59,17 +58,18 @@ export function RenewalFrame({
     <RenewalContext.Provider value={serviceName}>
       <div
         ref={ref}
-        className={`doya-renewal ${paused ? "doya-motion-paused" : ""} ${consult ? "doya-consult-open" : ""}`}
+        className={`doya-renewal ${paused ? "doya-motion-paused" : ""}`}
         data-renewal="2026-09"
       >
         {children}
-        <button
+        <a
           className="doya-consult-toggle"
-          onClick={() => setConsult(!consult)}
-          aria-expanded={consult}
+          href="https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1"
+          target="_blank"
+          rel="noreferrer"
         >
-          {consult ? "相談案内を閉じる" : "無料相談のご案内"}
-        </button>
+          無料相談のご案内
+        </a>
         <button
           className="doya-motion-toggle"
           onClick={() => setPaused(!paused)}

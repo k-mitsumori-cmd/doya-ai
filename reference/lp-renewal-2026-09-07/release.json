@@ -1,0 +1,12 @@
+{
+  "initialRelease": {
+    "commit": "70d96f3e",
+    "deployment": "https://doya-r2n4i0tcf-surisutas-projects.vercel.app",
+    "deploymentId": "dpl_3FZB4nbNCjGrpvwPKjRS2EoNgMC9",
+    "status": "Ready",
+    "productionAlias": "https://doya-ai.surisuta.jp",
+    "routeChecks": "18/18"
+  },
+  "finalRefinements": "Mobile heading wraps, direct consultation link, paused reveal visibility",
+  "comparison": "Final production captures will replace the initial publication captures before comparison publication."
+}

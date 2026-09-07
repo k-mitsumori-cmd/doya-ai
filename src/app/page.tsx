@@ -28,7 +28,10 @@ export default function HomePage() {
         <h1>
           その仕事、
           <br />
-          <em>ドヤくんとやってみよう。</em>
+          <em>
+            <span>ドヤくんと</span>
+            <span>やってみよう。</span>
+          </em>
         </h1>
         <p>
           バナーも、記事も、商談準備も。

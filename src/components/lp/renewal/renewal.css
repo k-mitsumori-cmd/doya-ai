@@ -897,7 +897,7 @@
     gap: 25px;
   }
   .doya-hero h1 {
-    font-size: 38px;
+    font-size: 32px;
   }
   .doya-hero-bear {
     width: 160px;
@@ -955,7 +955,7 @@
     gap: 24px;
   }
   .doya-hero h1 {
-    font-size: 38px;
+    font-size: 32px;
     line-height: 1.43;
   }
   .doya-eyebrow {
@@ -1181,7 +1181,7 @@
     padding: 42px 22px 0;
   }
   .doya-home-hero h1 {
-    font-size: 40px;
+    font-size: 34px;
   }
   .doya-home-hero p {
     font-size: 14px;
@@ -1323,7 +1323,7 @@
   }
 }
 /* Keep the existing consultation campaign available without covering the LP. */
-body:has(.doya-renewal:not(.doya-consult-open)) #hs-overlay-cta-317051970234 {
+body:has(.doya-renewal) #hs-overlay-cta-317051970234 {
   display: none !important;
 }
 .doya-consult-toggle {
@@ -1339,9 +1339,6 @@ body:has(.doya-renewal:not(.doya-consult-open)) #hs-overlay-cta-317051970234 {
   box-shadow: 0 4px 16px #152e5e25;
   font-size: 12px;
   font-weight: 700;
-}
-.doya-consult-open .doya-consult-toggle {
-  bottom: 190px;
 }
 .doya-home-team {
   height: 385px;
@@ -1360,9 +1357,6 @@ body:has(.doya-renewal:not(.doya-consult-open)) #hs-overlay-cta-317051970234 {
   .doya-consult-toggle {
     font-size: 11px;
     padding: 8px 13px;
-  }
-  .doya-consult-open .doya-consult-toggle {
-    bottom: 185px;
   }
 }
 .doya-product-display [data-mock-window] > .relative {
@@ -1394,4 +1388,17 @@ body:has(.doya-renewal:not(.doya-consult-open)) #hs-overlay-cta-317051970234 {
     width: 150px;
     height: 150px;
   }
+}
+/* Pausing decorative motion must never leave newly revealed content dimmed. */
+.doya-motion-paused .doya-visible,
+.doya-motion-paused .doya-step-content,
+.doya-motion-paused .doya-step-image,
+.doya-motion-paused .doya-service-card {
+  animation: none !important;
+  opacity: 1;
+  translate: none;
+}
+
+.doya-home-hero h1 em span {
+  display: inline-block;
 }

@@ -96,6 +96,19 @@ const path = require("path");
       (e) => getComputedStyle(e).animationPlayState === "paused",
     ),
   );
+  await page.$eval(".doya-pricing", (e) =>
+    e.scrollIntoView({ behavior: "instant", block: "center" }),
+  );
+  await wait(150);
+  assert(
+    "Paused reveal remains fully visible",
+    await page.$eval(
+      ".doya-pricing",
+      (e) =>
+        getComputedStyle(e).opacity === "1" &&
+        getComputedStyle(e).animationName === "none",
+    ),
+  );
   await page.$eval("details summary", (e) => e.click());
   assert("FAQ opens", await page.$eval("details", (e) => e.open));
   await page.goto(base + "/", { waitUntil: "networkidle2" });
@@ -110,10 +123,48 @@ const path = require("path");
     await page.$$eval(".doya-service-card", (els) => els.length === 6),
   );
   const iconCheck = await page.evaluate(async () => {
-    const ids = ['banner','seo','interview','persona','hr','kintai','doyalist','promane','doyaslide','cunning','sfa','shodan','aio','mensetsu','quote','aishodan','adimage'];
-    return Promise.all(ids.map(id => new Promise(resolve => { const image = new Image(); image.onload = () => resolve(true); image.onerror = () => resolve(false); image.src = '/renewal/icons/' + id + '.webp'; })));
+    const ids = [
+      "banner",
+      "seo",
+      "interview",
+      "persona",
+      "hr",
+      "kintai",
+      "doyalist",
+      "promane",
+      "doyaslide",
+      "cunning",
+      "sfa",
+      "shodan",
+      "aio",
+      "mensetsu",
+      "quote",
+      "aishodan",
+      "adimage",
+    ];
+    return Promise.all(
+      ids.map(
+        (id) =>
+          new Promise((resolve) => {
+            const image = new Image();
+            image.onload = () => resolve(true);
+            image.onerror = () => resolve(false);
+            image.src = "/renewal/icons/" + id + ".webp";
+          }),
+      ),
+    );
   });
-  assert('All 17 service icons decode', iconCheck.every(Boolean));
+  assert("All 17 service icons decode", iconCheck.every(Boolean));
+  assert(
+    "Consultation points directly to the existing verified form",
+    await page.$eval(
+      ".doya-consult-toggle",
+      (e) =>
+        e.href ===
+        "https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1",
+    ),
+  );
+
   const ids = [
     "",
     "banner",

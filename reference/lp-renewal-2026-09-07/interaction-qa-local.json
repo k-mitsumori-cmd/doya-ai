@@ -1,6 +1,6 @@
 {
   "base": "http://localhost:3107",
-  "createdAt": "2026-09-07T12:41:13.137Z",
+  "createdAt": "2026-09-07T12:52:17.710Z",
   "checks": [
     {
       "name": "Workflow click changes active step",
@@ -31,6 +31,10 @@
       "pass": true
     },
     {
+      "name": "Paused reveal remains fully visible",
+      "pass": true
+    },
+    {
       "name": "FAQ opens",
       "pass": true
     },
@@ -44,6 +48,10 @@
     },
     {
       "name": "All 17 service icons decode",
+      "pass": true
+    },
+    {
+      "name": "Consultation points directly to the existing verified form",
       "pass": true
     },
     {
@@ -136,6 +144,6 @@
     }
   ],
   "errors": [],
-  "passed": 33,
-  "total": 33
+  "passed": 35,
+  "total": 35
 }
