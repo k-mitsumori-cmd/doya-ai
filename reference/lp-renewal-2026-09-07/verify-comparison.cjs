@@ -10,7 +10,7 @@ check('Mobile slider mode',await page.$eval('#comparison',e=>e.className==='mobi
 await page.$eval('#range',e=>{e.value='25';e.dispatchEvent(new Event('input',{bubbles:true}))});
 check('Slider changes image clipping',await page.$eval('#newSwipe',e=>e.style.clipPath.includes('75%')));
 await page.$eval('#range',e=>{e.value='100';e.dispatchEvent(new Event('input',{bubbles:true}))});
-check('100 percent shows the new version',await page.$eval('#newSwipe',e=>e.style.clipPath.includes('0%')));
+check('100 percent shows the new version',await page.$eval('#newSwipe',e=>e.style.clipPath.endsWith(' 0%)')));
 await page.reload({waitUntil:'networkidle2'});
 check('Service and device survive reload',await page.$eval('#service',e=>e.value==='banner')&&await page.$eval('#device',e=>e.value==='mobile'));
 await page.select('#mode','full');

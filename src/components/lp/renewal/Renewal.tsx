@@ -105,7 +105,9 @@ export function RenewalHero(props: {
         <div className="doya-hero-copy">
           <span className="doya-eyebrow">
             <Sparkles size={16} />
-            {props.eyebrow || service?.name || "ドヤマーケAI"}
+            {props.eyebrow && props.eyebrow !== "ドヤマーケAI"
+              ? props.eyebrow
+              : service?.name || "ドヤマーケAI"}
           </span>
           <h1>
             {props.title}
@@ -128,10 +130,14 @@ export function RenewalHero(props: {
             </a>
           </div>
           <p className="doya-small">
-            <Check size={15} />
-            {service
-              ? `無料プラン：${service.pricing.free.limit}`
-              : "無料プランからお試しいただけます"}
+            <span className="doya-free-limit">
+              <Check size={15} aria-hidden="true" />
+              <span>
+                {service
+                  ? `無料プラン：${service.pricing.free.limit}`
+                  : "無料プランからお試しいただけます"}
+              </span>
+            </span>
             {props.subCtaHref && (
               <Link href={props.subCtaHref}>
                 {props.subCtaLabel || "詳しく見る"} <ArrowRight size={13} />

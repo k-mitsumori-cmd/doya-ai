@@ -1899,3 +1899,17 @@ body:has(.doya-preview-dialog[open]) {
 .doya-value-strip span {
   text-wrap: balance;
 }
+
+.doya-free-limit {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+}
+.doya-free-limit > svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+.doya-free-limit > span {
+  min-width: 0;
+}
