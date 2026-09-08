@@ -1,0 +1,51 @@
+[
+  {
+    "id": "hr",
+    "pass": true,
+    "text": "01\n従業員を登録\n02\n評価をオンライン化\n03\n評価内容を確認",
+    "overflow": false,
+    "clipped": false
+  },
+  {
+    "id": "promane",
+    "pass": true,
+    "text": "01\n案件を登録\n02\n進捗・収支を整理\n03\n状況を確認",
+    "overflow": false,
+    "clipped": false
+  },
+  {
+    "id": "persona",
+    "pass": true,
+    "text": "01\n商材の条件を入力\n02\n顧客像を整理\n03\n訴求を確認",
+    "overflow": false,
+    "clipped": false
+  },
+  {
+    "id": "quote",
+    "pass": true,
+    "text": "01\nサービスURLを入力\n02\n見積もりを作成\n03\n金額・範囲を確認",
+    "overflow": false,
+    "clipped": false
+  },
+  {
+    "id": "mensetsu",
+    "pass": true,
+    "text": "01\n企業URLを入力\n02\n面接URLを発行\n03\nレポートを確認",
+    "overflow": false,
+    "clipped": false
+  },
+  {
+    "id": "aishodan",
+    "pass": true,
+    "text": "01\n商材を登録\n02\n商談URLを発行\n03\n結果を確認",
+    "overflow": false,
+    "clipped": false
+  },
+  {
+    "id": "adimage",
+    "pass": true,
+    "text": "01\n商品URLを入力\n02\n広告画像を作成\n03\n仕上がりを確認",
+    "overflow": false,
+    "clipped": false
+  }
+]
