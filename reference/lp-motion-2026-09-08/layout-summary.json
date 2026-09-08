@@ -1,0 +1,18 @@
+{
+  "base": "http://localhost:3107",
+  "checkedAt": "2026-09-08T01:51:56.453Z",
+  "pages": 18,
+  "widths": [
+    1440,
+    1024,
+    768,
+    390,
+    320
+  ],
+  "layouts": 90,
+  "axeCases": 36,
+  "violations": 0,
+  "clipped": 0,
+  "overflow": 0,
+  "browserErrors": 0
+}

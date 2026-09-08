@@ -24,8 +24,10 @@ import {
 import { SERVICES, HIDDEN_SERVICE_IDS } from "@/lib/services";
 import { UNIFIED_PRO_PRICE } from "@/lib/unified-plan";
 import { ProductPreview } from "./ProductPreview";
+import { MotionContext, ServiceMotion } from "./HeroMotion";
 import type { Step } from "../sections";
 import "./renewal.css";
+import "./hero-motion.css";
 
 export const RenewalContext = createContext("");
 export function RenewalFrame({
@@ -57,29 +59,32 @@ export function RenewalFrame({
   }, []);
   return (
     <RenewalContext.Provider value={serviceName}>
-      <div
-        ref={ref}
-        className={`doya-renewal ${paused ? "doya-motion-paused" : ""}`}
-        data-renewal="2026-09"
-      >
-        {children}
-        <a
-          className="doya-consult-toggle"
-          href="https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1"
-          target="_blank"
-          rel="noreferrer"
+      <MotionContext.Provider value={paused}>
+        <div
+          ref={ref}
+          className={`doya-renewal ${paused ? "doya-motion-paused" : ""}`}
+          data-renewal="2026-09"
+          data-fv-motion="2026-09-08"
         >
-          無料相談のご案内
-        </a>
-        <button
-          className="doya-motion-toggle"
-          onClick={() => setPaused(!paused)}
-          aria-pressed={paused}
-        >
-          {paused ? <Play size={14} /> : <Pause size={14} />}
-          {paused ? "動きを再開" : "動きを止める"}
-        </button>
-      </div>
+          {children}
+          <a
+            className="doya-consult-toggle"
+            href="https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1"
+            target="_blank"
+            rel="noreferrer"
+          >
+            無料相談のご案内
+          </a>
+          <button
+            className="doya-motion-toggle"
+            onClick={() => setPaused(!paused)}
+            aria-pressed={paused}
+          >
+            {paused ? <Play size={14} /> : <Pause size={14} />}
+            {paused ? "動きを再開" : "動きを止める"}
+          </button>
+        </div>
+      </MotionContext.Provider>
     </RenewalContext.Provider>
   );
 }
@@ -146,6 +151,11 @@ export function RenewalHero(props: {
           </p>
         </div>
         <div className="doya-hero-stage">
+          <div className="doya-stage-energy" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+          </div>
           <div className="doya-stage-label">
             <span />
             {service?.shortName || "あなたの仕事"}の頼れるパートナー
@@ -168,10 +178,7 @@ export function RenewalHero(props: {
                 />
               ))}
           </ProductPreview>
-          <div className="doya-status-chip">
-            <Check size={17} />
-            次の作業が、見えてきます。
-          </div>
+          {service && <ServiceMotion id={service.id} />}
           <Image
             unoptimized
             className="doya-hero-bear"

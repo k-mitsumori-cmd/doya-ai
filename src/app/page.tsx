@@ -9,6 +9,7 @@ import {
   MousePointer2,
 } from "lucide-react";
 import { LpShell, CtaBand, HowItWorks } from "@/components/lp";
+import { HomeMotionScene } from "@/components/lp/renewal/HeroMotion";
 import { ServiceDirectory } from "@/components/lp/renewal/Renewal";
 
 export default function HomePage() {
@@ -20,45 +21,39 @@ export default function HomePage() {
       ctaLabel="サービスを選ぶ"
       loginHref="/auth/signin"
     >
-      <section className="doya-home-hero">
-        <span className="doya-eyebrow">
-          <Sparkles size={16} />
-          制作・営業・業務管理を支える17のAIツール
-        </span>
-        <h1>
-          その仕事、
-          <br />
-          <em>
-            <span>ドヤくんと</span>
-            <span>やってみよう。</span>
-          </em>
-        </h1>
-        <p>
-          バナーも、記事も、商談準備も。
-          <br />
-          手が回らなかった仕事を、得意なAIと一緒に進められます。
-        </p>
-        <div className="doya-actions">
-          <a href="#doya-services" className="doya-button">
-            仕事に合うAIを見つける <ArrowRight size={20} />
-          </a>
-          <a href="#doya-resources" className="doya-button doya-secondary">
-            無料の資料3点を見る <ArrowRight size={18} />
-          </a>
-        </div>
-        <div className="doya-home-team">
-          <Image
-            src="/renewal/bear-teamwork.webp"
-            alt="制作・営業・チームの仕事を手伝うドヤくんたち"
-            unoptimized
-            width={660}
-            height={440}
-            priority
-            sizes="(max-width: 760px) 390px, 660px"
-          />
-          <span className="doya-role-badge">つくる仕事、お手伝いします。</span>
-          <span className="doya-role-badge">商談の準備、お任せください。</span>
-          <span className="doya-role-badge">チームの仕事を、ひとつに。</span>
+      <section className="doya-home-hero doya-home-cinematic">
+        <div className="doya-home-composition">
+          <div className="doya-home-copy">
+            <span className="doya-eyebrow">
+              <Sparkles size={16} />
+              制作・営業・業務管理を支える17のAIツール
+            </span>
+            <h1>
+              その仕事、
+              <br />
+              <em>
+                <span>ドヤくんと</span>
+                <span>やってみよう。</span>
+              </em>
+            </h1>
+            <p>
+              バナーも、記事も、商談準備も。
+              <br />
+              手が回らなかった仕事を、得意なAIと一緒に進められます。
+            </p>
+            <div className="doya-actions">
+              <a href="#doya-services" className="doya-button">
+                仕事に合うAIを見つける <ArrowRight size={20} />
+              </a>
+              <a href="#doya-resources" className="doya-button doya-secondary">
+                無料の資料3点を見る <ArrowRight size={18} />
+              </a>
+            </div>
+            <div className="doya-home-signature">
+              <span>17</span>の得意を、あなたのチームに。
+            </div>
+          </div>
+          <HomeMotionScene />
         </div>
       </section>
       <div className="doya-value-strip">
@@ -79,7 +74,11 @@ export default function HomePage() {
       <section className="doya-home-use">
         <div className="doya-section-inner">
           <span className="doya-eyebrow">A DAY WITH DOYA</span>
-          <h2>仕事の流れに、<br />得意なAIをひとつずつ。</h2>
+          <h2>
+            仕事の流れに、
+            <br />
+            得意なAIをひとつずつ。
+          </h2>
           <p>
             たとえば、新しいサービスを広めたい日。
             <br />

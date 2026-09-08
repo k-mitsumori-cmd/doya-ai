@@ -1,0 +1,1104 @@
+/* First-view choreography: fast arrival, sustained product motion, no loading gate. */
+.doya-home-cinematic {
+  position: relative;
+  isolation: isolate;
+  padding: 72px 40px 50px;
+  background: #f4f8ff;
+}
+.doya-home-cinematic::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse at 80% 50%, #d6eaff 0, transparent 55%),
+    linear-gradient(115deg, #fff9 20%, #e6edff66);
+}
+.doya-home-composition {
+  max-width: 1300px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 24px;
+  align-items: center;
+  text-align: left;
+}
+.doya-home-copy {
+  position: relative;
+  z-index: 2;
+  padding: 12px 0 36px;
+}
+.doya-home-cinematic h1 {
+  font-size: clamp(42px, 4.5vw, 65px);
+  line-height: 1.36;
+  margin: 26px 0 0;
+  letter-spacing: -0.06em;
+}
+.doya-home-cinematic h1 em span {
+  display: block;
+}
+.doya-home-cinematic p {
+  margin: 26px 0;
+  max-width: 490px;
+  font-size: 16px;
+  line-height: 1.95;
+}
+.doya-home-cinematic .doya-actions {
+  justify-content: flex-start;
+}
+.doya-home-cinematic .doya-button {
+  padding: 17px 23px;
+  font-size: 15px;
+  gap: 12px;
+}
+.doya-home-cinematic .doya-secondary {
+  background: #fff9;
+}
+.doya-home-signature {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  color: #526888;
+  font-size: 12px;
+  margin-top: 33px;
+}
+.doya-home-signature > span {
+  font-size: 28px;
+  color: #0066ff;
+  font-weight: 850;
+  letter-spacing: -0.04em;
+}
+.doya-home-copy > *,
+.doya-hero-copy > * {
+  animation: doya-copy-arrive 0.85s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.doya-home-copy h1,
+.doya-hero-copy h1 {
+  animation-delay: 0.08s;
+}
+.doya-home-copy p,
+.doya-hero-copy .doya-lead {
+  animation-delay: 0.16s;
+}
+.doya-home-copy .doya-actions,
+.doya-hero-copy .doya-actions {
+  animation-delay: 0.24s;
+}
+.doya-home-copy h1 em,
+.doya-hero-copy h1 em {
+  background: linear-gradient(
+    105deg,
+    #0066ff 10%,
+    #0056d8 35%,
+    #087b91 50%,
+    #0066ff 70%
+  );
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: doya-ink-flow 9s ease-in-out infinite;
+}
+.doya-motion-scene {
+  height: 590px;
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+}
+.doya-scene-heading {
+  position: absolute;
+  left: 35px;
+  right: 35px;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #345476;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  font-weight: 800;
+}
+.doya-scene-heading > span:first-child {
+  width: 7px;
+  height: 7px;
+  background: #0066ff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px #0066ff10;
+}
+.doya-scene-count {
+  margin-left: auto;
+  border: 1px solid #b9d0f0;
+  padding: 5px 8px;
+  border-radius: 20px;
+  letter-spacing: 0.09em;
+}
+.doya-orbit-field {
+  position: absolute;
+  inset: 45px 0 55px;
+  z-index: -1;
+  pointer-events: none;
+}
+.doya-orbit {
+  position: absolute;
+  border: 1px solid #80aeed55;
+  border-radius: 50%;
+  inset: 25px;
+  transform: rotate(-18deg);
+}
+.doya-orbit::before {
+  content: "";
+  position: absolute;
+  left: 15%;
+  top: 12%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #2187ff;
+  box-shadow: 0 0 20px #0066ff55;
+}
+.doya-orbit-one {
+  animation: doya-orbit-turn 24s linear infinite;
+}
+.doya-orbit-two {
+  inset: 65px -15px;
+  border-style: dashed;
+  animation: doya-orbit-turn 32s linear reverse infinite;
+}
+.doya-orbit-three {
+  inset: 95px 30px 45px;
+  background: #dcebff77;
+  border: 0;
+  animation: doya-energy-breathe 6s ease-in-out infinite;
+}
+.doya-spark {
+  --angle: calc(var(--i) * 45deg);
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #2474dc;
+  left: 50%;
+  top: 50%;
+  transform: rotate(var(--angle)) translateX(245px);
+  animation: doya-spark-travel 7s calc(var(--i) * -0.8s) ease-in-out infinite;
+}
+.doya-flying-tool {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fffffff2;
+  padding: 9px 14px 9px 9px;
+  border: 1px solid #fff;
+  border-radius: 17px;
+  box-shadow:
+    0 12px 28px #315c9717,
+    inset 0 0 0 1px #c4d9f455;
+  font-size: 12px;
+  font-weight: 800;
+  z-index: 3;
+  animation:
+    doya-tool-arrive 1.1s cubic-bezier(0.16, 1, 0.3, 1) both,
+    doya-tool-float 6s 1.1s ease-in-out infinite;
+}
+.doya-flying-tool img {
+  width: 45px;
+  height: 45px;
+}
+.doya-flying-tool-one {
+  top: 84px;
+  left: 8px;
+  --tilt: -9deg;
+}
+.doya-flying-tool-two {
+  top: 272px;
+  left: -9px;
+  --tilt: 6deg;
+  animation-delay: 0.15s, 1.25s;
+}
+.doya-flying-tool-three {
+  top: 359px;
+  right: -4px;
+  --tilt: 8deg;
+  animation-delay: 0.3s, 1.4s;
+}
+.doya-scene-output {
+  position: absolute;
+  top: 55px;
+  right: 30px;
+  width: 270px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #d3e3fb;
+  border-radius: 18px;
+  box-shadow:
+    0 24px 50px #2d62a71f,
+    8px 8px 0 #b3d3ff40;
+  z-index: 2;
+  animation:
+    doya-screen-arrive 1.2s cubic-bezier(0.16, 1, 0.3, 1) both,
+    doya-output-float 7s 1.2s ease-in-out infinite;
+}
+.doya-output-label {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  color: var(--scene-color);
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.07em;
+  padding-bottom: 10px;
+}
+.doya-output-label > span {
+  margin-left: auto;
+  color: #596b85;
+  font-size: 9px;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+.doya-output-frames {
+  position: relative;
+  aspect-ratio: 1.6;
+  border: 1px solid #e6edf7;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f4f7fc;
+}
+.doya-output-frame {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(15px) scale(0.96);
+  transition:
+    opacity 0.65s,
+    transform 0.85s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.doya-output-frame.is-active {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+.doya-output-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.doya-output-title {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  font-weight: 800;
+  color: #233e63;
+  font-size: 12px;
+  padding-top: 11px;
+}
+.doya-output-title svg {
+  color: var(--scene-color);
+  flex-shrink: 0;
+}
+.doya-team-arrival {
+  position: absolute;
+  top: 220px;
+  left: 4%;
+  width: 94%;
+  animation: doya-team-arrive 1.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  z-index: 2;
+  pointer-events: none;
+}
+.doya-scene-bears {
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 18px 18px #3762a715);
+  animation: doya-team-float 6s 1.3s ease-in-out infinite;
+}
+.doya-scene-message {
+  position: absolute;
+  top: 498px;
+  left: 50%;
+  translate: -50% 0;
+  white-space: nowrap;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  color: #fff;
+  background: #133979;
+  border: 1px solid #4779c6;
+  padding: 12px 19px;
+  border-radius: 50px;
+  box-shadow: 0 10px 25px #163b7f25;
+  font-size: 12px;
+  font-weight: 700;
+  z-index: 4;
+  animation: doya-message-arrive 1.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.doya-scene-selector {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.doya-scene-selector button {
+  position: relative;
+  border-bottom: 2px solid #c8d8ee;
+  padding: 12px 7px;
+  min-height: 44px;
+  font-size: 10px;
+  color: #486185;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.doya-scene-selector button > span {
+  font-size: 9px;
+}
+.doya-scene-selector button[aria-pressed="true"] {
+  color: #0058d8;
+  border-color: #0066ff;
+  font-weight: 800;
+}
+.doya-scene-selector .doya-scene-replay {
+  padding: 10px;
+  min-width: 38px;
+}
+.doya-hero-stage {
+  perspective: 1100px;
+}
+.doya-hero-stage::before {
+  animation: doya-energy-breathe 7s ease-in-out infinite;
+}
+.doya-stage-energy {
+  position: absolute;
+  inset: 5px -8px 50px;
+  z-index: -1;
+  pointer-events: none;
+  border: 1px solid
+    color-mix(in srgb, var(--lp-accent, #0066ff) 22%, transparent);
+  border-radius: 50%;
+  animation: doya-orbit-turn 28s linear infinite;
+}
+.doya-stage-energy > i {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  background: var(--lp-accent, #0066ff);
+  box-shadow: 0 0 18px
+    color-mix(in srgb, var(--lp-accent, #0066ff) 35%, transparent);
+}
+.doya-stage-energy > i:nth-child(1) {
+  top: 15%;
+  left: 13%;
+}
+.doya-stage-energy > i:nth-child(2) {
+  top: 70%;
+  right: 4%;
+  width: 7px;
+  height: 7px;
+}
+.doya-stage-energy > i:nth-child(3) {
+  bottom: 1%;
+  left: 44%;
+  width: 5px;
+  height: 5px;
+}
+.doya-hero-stage .doya-product-display > [data-mock-window] {
+  animation:
+    doya-product-arrive 1.15s cubic-bezier(0.16, 1, 0.3, 1) both,
+    doya-product-hover 8.4s 1.15s ease-in-out infinite;
+}
+.doya-hero-stage .doya-product-display > [data-mock-window]::after {
+  content: "";
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    #fff7 48%,
+    transparent 65%
+  );
+  transform: translateX(-120%);
+  animation: doya-screen-sweep 8.4s 1.2s ease-in-out infinite;
+}
+.doya-hero-stage .doya-product-display > [data-mock-window] {
+  position: relative;
+  overflow: hidden;
+}
+.doya-hero-stage .doya-stage-label {
+  animation:
+    doya-label-arrive 1s cubic-bezier(0.16, 1, 0.3, 1) both,
+    doya-float 5s 1s ease-in-out infinite;
+}
+.doya-hero-stage .doya-hero-bear {
+  animation:
+    doya-bear-arrive 1.2s cubic-bezier(0.16, 1, 0.3, 1) both,
+    doya-team-float 5s 1.2s ease-in-out infinite;
+  bottom: 10px;
+}
+.doya-service-motion {
+  position: relative;
+  z-index: 3;
+  margin-top: 18px;
+  margin-right: 90px;
+}
+.doya-motion-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 5px;
+  background: #ffffffef;
+  border: 1px solid #cbdcf3;
+  border-radius: 13px;
+  box-shadow: 0 12px 24px #244e8410;
+}
+.doya-motion-steps button {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  min-height: 72px;
+  padding: 10px 8px;
+  font-size: 10px;
+  text-align: left;
+  color: #4c607d;
+  border-radius: 8px;
+  overflow: hidden;
+  transition:
+    background 0.4s,
+    color 0.4s;
+  line-height: 1.5;
+}
+.doya-motion-steps button[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--lp-accent, #0066ff) 8%, white);
+  color: var(--lp-accent-ink, #0055cc);
+  font-weight: 800;
+}
+.doya-motion-step-number {
+  display: flex;
+  align-items: center;
+  height: 14px;
+  color: var(--lp-accent-ink, #0055cc);
+  font-size: 10px;
+  font-weight: 800;
+}
+.doya-step-timer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--lp-accent, #0066ff);
+  transform-origin: left;
+  animation: doya-step-progress 4.2s linear both;
+}
+.doya-motion-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 10px 3px 0;
+  font-size: 9px;
+  color: #405876;
+}
+.doya-motion-note > span,
+.doya-motion-note a,
+.doya-motion-note button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.doya-motion-note a,
+.doya-motion-note button {
+  min-height: 24px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.doya-service-orbit {
+  display: none;
+}
+.doya-hero-stage {
+  padding-bottom: 45px;
+}
+.doya-motion-scene.is-resting *,
+.doya-motion-scene.is-resting *::before,
+.doya-service-motion.is-resting * {
+  animation-play-state: paused;
+}
+.doya-renewal .doya-motion-steps button:focus-visible,
+.doya-scene-selector button:focus-visible {
+  outline: 3px solid #e32174;
+  outline-offset: 3px;
+}
+@keyframes doya-copy-arrive {
+  from {
+    opacity: 0.3;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes doya-ink-flow {
+  0%,
+  100% {
+    background-position: 0 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+@keyframes doya-orbit-turn {
+  to {
+    transform: rotate(342deg);
+  }
+}
+@keyframes doya-energy-breathe {
+  0%,
+  100% {
+    transform: scale(0.96) rotate(-3deg);
+  }
+  50% {
+    transform: scale(1.035) rotate(3deg);
+  }
+}
+@keyframes doya-spark-travel {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: rotate(var(--angle)) translateX(215px) scale(0.7);
+  }
+  50% {
+    opacity: 0.85;
+    transform: rotate(calc(var(--angle) + 12deg)) translateX(255px) scale(1);
+  }
+}
+@keyframes doya-tool-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(45px) rotate(calc(var(--tilt) * 3)) scale(0.5);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(var(--tilt)) scale(1);
+  }
+}
+@keyframes doya-tool-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(var(--tilt));
+  }
+  50% {
+    transform: translateY(-16px) rotate(calc(var(--tilt) * -0.4));
+  }
+}
+@keyframes doya-screen-arrive {
+  from {
+    opacity: 0.2;
+    transform: perspective(900px) translate(55px, 35px) rotateY(-25deg)
+      rotate(8deg) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: perspective(900px) translate(0, 0) rotateY(-6deg) rotate(4deg)
+      scale(1);
+  }
+}
+@keyframes doya-output-float {
+  0%,
+  100% {
+    transform: perspective(900px) translateY(0) rotateY(-6deg) rotate(4deg);
+  }
+  50% {
+    transform: perspective(900px) translateY(-10px) rotateY(2deg) rotate(1deg);
+  }
+}
+@keyframes doya-team-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(90px) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes doya-team-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-1deg);
+  }
+  50% {
+    transform: translateY(-12px) rotate(1deg);
+  }
+}
+@keyframes doya-message-arrive {
+  0%,
+  35% {
+    opacity: 0;
+    transform: translateY(24px) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+@keyframes doya-product-arrive {
+  from {
+    opacity: 0.1;
+    transform: translate(45px, 35px) rotateY(-14deg) rotateX(7deg) rotate(5deg)
+      scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0) rotateY(-4deg) rotate(-3deg) scale(1);
+  }
+}
+@keyframes doya-product-hover {
+  0%,
+  100% {
+    transform: translateY(0) rotateY(-4deg) rotate(-3deg);
+  }
+  50% {
+    transform: translateY(-13px) rotateY(3deg) rotate(-1deg);
+  }
+}
+@keyframes doya-screen-sweep {
+  0%,
+  40% {
+    transform: translateX(-120%);
+  }
+  65%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+@keyframes doya-label-arrive {
+  from {
+    opacity: 0.2;
+    transform: translate(-25px, -15px) rotate(-12deg);
+  }
+  to {
+    opacity: 1;
+    transform: translate(0, 0) rotate(-4deg);
+  }
+}
+@keyframes doya-bear-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(45px) rotate(10deg) scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(-1deg) scale(1);
+  }
+}
+@keyframes doya-step-progress {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@media (max-width: 1100px) and (min-width: 1001px) {
+  .doya-home-composition {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .doya-home-cinematic {
+    padding-inline: 30px;
+  }
+  .doya-home-cinematic h1 {
+    font-size: 48px;
+  }
+  .doya-scene-output {
+    right: 0;
+    width: 235px;
+  }
+  .doya-flying-tool-one {
+    left: 0;
+    top: 60px;
+  }
+  .doya-flying-tool-two {
+    left: 0;
+    top: 265px;
+  }
+  .doya-flying-tool-three {
+    top: 405px;
+    right: 0;
+  }
+  .doya-team-arrival {
+    top: 250px;
+  }
+}
+@media (max-width: 1000px) {
+  .doya-home-cinematic {
+    padding: 48px 24px 30px;
+  }
+  .doya-home-composition {
+    grid-template-columns: 1fr;
+    gap: 0;
+    max-width: 690px;
+    text-align: center;
+  }
+  .doya-home-copy {
+    padding: 0;
+  }
+  .doya-home-cinematic h1 {
+    font-size: 52px;
+  }
+  .doya-home-cinematic h1 em span {
+    display: inline;
+  }
+  .doya-home-cinematic p {
+    margin-inline: auto;
+  }
+  .doya-home-cinematic .doya-actions,
+  .doya-home-signature {
+    justify-content: center;
+  }
+  .doya-home-signature {
+    margin-top: 24px;
+  }
+  .doya-motion-scene {
+    width: 100%;
+    max-width: 600px;
+    margin: 28px auto 0;
+  }
+  .doya-service-motion {
+    margin-right: 90px;
+  }
+}
+@media (max-width: 600px) {
+  .doya-home-cinematic {
+    padding: 32px 20px 25px;
+  }
+  .doya-home-cinematic .doya-eyebrow {
+    font-size: 10px;
+    gap: 5px;
+  }
+  .doya-home-cinematic .doya-eyebrow svg {
+    width: 13px;
+  }
+  .doya-home-cinematic h1 {
+    font-size: 39px;
+    margin-top: 20px;
+    line-height: 1.35;
+  }
+  .doya-home-cinematic h1 em span {
+    display: block;
+  }
+  .doya-home-cinematic p {
+    font-size: 13px;
+    line-height: 1.9;
+    margin: 20px 0;
+  }
+  .doya-home-cinematic .doya-actions {
+    gap: 11px;
+  }
+  .doya-home-cinematic .doya-button {
+    font-size: 13px;
+    padding: 15px 18px;
+    min-height: 48px;
+    width: 100%;
+    max-width: 320px;
+  }
+  .doya-home-signature {
+    display: none;
+  }
+  .doya-motion-scene {
+    height: 432px;
+    margin-top: 30px;
+  }
+  .doya-scene-heading {
+    top: 0;
+    left: 0;
+    right: 0;
+    font-size: 8px;
+  }
+  .doya-scene-output {
+    width: 190px;
+    right: 2px;
+    top: 40px;
+    padding: 9px;
+    border-radius: 13px;
+  }
+  .doya-output-label {
+    font-size: 8px;
+    padding-bottom: 7px;
+  }
+  .doya-output-label > span {
+    font-size: 8px;
+  }
+  .doya-output-title {
+    font-size: 10px;
+    padding-top: 7px;
+  }
+  .doya-flying-tool {
+    padding: 6px 9px 6px 5px;
+    font-size: 10px;
+    gap: 4px;
+    border-radius: 13px;
+  }
+  .doya-flying-tool img {
+    width: 34px;
+    height: 34px;
+  }
+  .doya-flying-tool-one {
+    top: 53px;
+    left: 0;
+  }
+  .doya-flying-tool-two {
+    top: 181px;
+    left: -4px;
+  }
+  .doya-flying-tool-three {
+    top: 277px;
+    right: -2px;
+  }
+  .doya-team-arrival {
+    top: 180px;
+    width: 105%;
+    left: -2.5%;
+  }
+  .doya-scene-message {
+    top: 342px;
+    padding: 9px 12px;
+    font-size: 10px;
+  }
+  .doya-scene-selector {
+    bottom: 0;
+    gap: 2px;
+  }
+  .doya-scene-selector button {
+    font-size: 9px;
+    gap: 4px;
+    padding: 12px 4px;
+  }
+  .doya-scene-selector button > span {
+    font-size: 8px;
+  }
+  .doya-orbit-field {
+    inset: 50px -5px 55px;
+  }
+  .doya-orbit-two {
+    inset: 40px -10px;
+  }
+  .doya-spark {
+    display: none;
+  }
+  .doya-service-motion {
+    margin: 17px -3px 0;
+  }
+  .doya-motion-steps {
+    margin-right: 0;
+  }
+  .doya-motion-steps button {
+    padding: 8px 5px;
+    font-size: 9px;
+    min-height: 69px;
+  }
+  .doya-motion-note {
+    max-width: calc(100% - 68px);
+    font-size: 8px;
+    gap: 0;
+  }
+  .doya-hero-stage .doya-hero-bear {
+    bottom: -25px;
+    width: 90px;
+    height: 90px;
+    right: -8px;
+  }
+  .doya-hero-stage {
+    padding-bottom: 27px;
+  }
+  .doya-stage-energy {
+    inset: 5px 0 60px;
+  }
+}
+@media (max-width: 360px) {
+  .doya-home-cinematic {
+    padding-inline: 16px;
+  }
+  .doya-home-cinematic h1 {
+    font-size: 34px;
+  }
+  .doya-home-cinematic .doya-eyebrow {
+    font-size: 8.5px;
+  }
+  .doya-scene-output {
+    width: 165px;
+    right: 0;
+  }
+  .doya-flying-tool-one {
+    top: 38px;
+  }
+  .doya-flying-tool {
+    font-size: 9px;
+  }
+  .doya-flying-tool img {
+    width: 28px;
+    height: 28px;
+  }
+  .doya-team-arrival {
+    top: 187px;
+  }
+  .doya-motion-scene {
+    height: 410px;
+  }
+  .doya-scene-message {
+    top: 315px;
+  }
+  .doya-flying-tool-three {
+    top: 267px;
+  }
+  .doya-scene-selector button {
+    font-size: 8px;
+    gap: 3px;
+  }
+}
+/* Pausing must freeze CSS, pseudo elements and the scene timers together. */
+.doya-motion-paused *,
+.doya-motion-paused *::before,
+.doya-motion-paused *::after {
+  animation-play-state: paused !important;
+  transition: none !important;
+}
+.doya-motion-paused .doya-home-copy > *,
+.doya-motion-paused .doya-hero-copy > * {
+  animation: none !important;
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .doya-renewal *,
+  .doya-renewal *::before,
+  .doya-renewal *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .doya-output-frame {
+    transform: none;
+  }
+  .doya-team-arrival,
+  .doya-scene-bears,
+  .doya-flying-tool,
+  .doya-scene-output,
+  .doya-hero-stage .doya-product-display > [data-mock-window] {
+    transform: none !important;
+  }
+  .doya-hero-stage .doya-product-display > [data-mock-window]::after {
+    display: none;
+  }
+  .doya-step-timer {
+    transform: scaleX(1);
+  }
+}
+
+/* Keep the gradient on a block so multi-line Japanese text paints in every browser. */
+.doya-home-cinematic h1 em {
+  display: block;
+}
+@media (min-width: 1001px) {
+  .doya-motion-scene {
+    height: 610px;
+  }
+  .doya-team-arrival {
+    top: 180px;
+    left: 6%;
+    width: 88%;
+  }
+  .doya-scene-message {
+    top: 505px;
+  }
+}
+.doya-scene-selector {
+  z-index: 5;
+}
+@media (max-width: 600px) {
+  .doya-home-cinematic h1 {
+    font-size: 35px;
+  }
+  .doya-home-cinematic .doya-secondary {
+    padding-block: 11px;
+    min-height: 44px;
+    box-shadow: none;
+  }
+  .doya-motion-scene {
+    height: 370px;
+    margin-top: 25px;
+  }
+  .doya-team-arrival {
+    top: 112px;
+    width: 100%;
+    left: 0;
+  }
+  .doya-scene-message {
+    top: 285px;
+  }
+  .doya-flying-tool-two {
+    top: 156px;
+  }
+  .doya-flying-tool-three {
+    top: 244px;
+  }
+  .doya-scene-output {
+    width: 170px;
+    top: 35px;
+  }
+}
+@media (max-width: 360px) {
+  .doya-home-cinematic h1 {
+    font-size: 32px;
+  }
+  .doya-team-arrival {
+    top: 118px;
+  }
+  .doya-scene-message {
+    top: 270px;
+  }
+  .doya-flying-tool-three {
+    top: 233px;
+  }
+}
+.doya-hero-stage:has(.doya-service-motion.is-resting) *,
+.doya-hero-stage:has(.doya-service-motion.is-resting)::before,
+.doya-hero-stage:has(.doya-service-motion.is-resting) *::after {
+  animation-play-state: paused;
+}
+.doya-motion-paused
+  :is(
+    .doya-team-arrival,
+    .doya-scene-message,
+    .doya-flying-tool,
+    .doya-scene-output,
+    .doya-hero-bear
+  ),
+.doya-motion-paused .doya-product-display > [data-mock-window] {
+  opacity: 1 !important;
+}
+.doya-hero.doya-visible,
+.doya-home-hero.doya-visible {
+  animation: none;
+}
+
+.doya-output-title {
+  padding: 0 0 10px;
+}
+@media (min-width: 601px) {
+  .doya-service-motion {
+    margin-right: 165px;
+  }
+}
+@media (max-width: 600px) {
+  .doya-output-title {
+    padding-bottom: 7px;
+  }
+}

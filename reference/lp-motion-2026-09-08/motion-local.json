@@ -1,0 +1,273 @@
+{
+  "base": "http://localhost:3107",
+  "checkedAt": "2026-09-08T01:56:44.398Z",
+  "checks": [
+    {
+      "name": "top: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "top: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "top: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "banner: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "banner: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "banner: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "seo: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "seo: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "seo: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "interview: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "interview: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "interview: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "persona: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "persona: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "persona: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "hr: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "hr: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "hr: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "kintai: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "kintai: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "kintai: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "doyalist: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "doyalist: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "doyalist: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "promane: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "promane: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "promane: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "doyaslide: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "doyaslide: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "doyaslide: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "cunning: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "cunning: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "cunning: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "sfa: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "sfa: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "sfa: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "shodan: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "shodan: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "shodan: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "aio: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "aio: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "aio: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "mensetsu: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "mensetsu: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "mensetsu: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "quote: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "quote: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "quote: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "aishodan: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "aishodan: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "aishodan: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "adimage: new motion version and HTTP 200",
+      "pass": true
+    },
+    {
+      "name": "adimage: scene advances automatically",
+      "pass": true
+    },
+    {
+      "name": "adimage: animated mobile layout stays within viewport",
+      "pass": true
+    },
+    {
+      "name": "Orbit visibly changes position",
+      "pass": true
+    },
+    {
+      "name": "Global pause freezes orbit and automatic screen changes",
+      "pass": true
+    },
+    {
+      "name": "Paused headline remains visible",
+      "pass": true
+    },
+    {
+      "name": "Resume restarts screen changes",
+      "pass": true
+    },
+    {
+      "name": "Keyboard selection remains selected without automatic takeover",
+      "pass": true
+    },
+    {
+      "name": "Local replay restarts the sequence",
+      "pass": true
+    },
+    {
+      "name": "Offscreen scene stops its timer",
+      "pass": true
+    },
+    {
+      "name": "Reduced motion disables CSS animation and automatic changes",
+      "pass": true
+    },
+    {
+      "name": "Service pause freezes product, shine, progress and step",
+      "pass": true
+    },
+    {
+      "name": "Animated product still opens native full-size preview",
+      "pass": true
+    },
+    {
+      "name": "Service steps support keyboard selection",
+      "pass": true
+    },
+    {
+      "name": "No browser runtime errors",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "passed": 66,
+  "total": 66
+}
