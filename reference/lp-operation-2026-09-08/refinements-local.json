@@ -1,0 +1,37 @@
+{
+  "checkedAt": "2026-09-08T10:00:19.612Z",
+  "checks": [
+    {
+      "name": "Six SFA bars are visible",
+      "pass": true
+    },
+    {
+      "name": "SFA chart fits at 1440px",
+      "pass": true
+    },
+    {
+      "name": "SFA chart fits at 1024px",
+      "pass": true
+    },
+    {
+      "name": "SFA chart fits at 768px",
+      "pass": true
+    },
+    {
+      "name": "SFA chart fits at 390px",
+      "pass": true
+    },
+    {
+      "name": "SFA chart fits at 320px",
+      "pass": true
+    },
+    {
+      "name": "Paused typing shows complete input",
+      "pass": true
+    },
+    {
+      "name": "Refined view has no accessibility violations",
+      "pass": true
+    }
+  ]
+}

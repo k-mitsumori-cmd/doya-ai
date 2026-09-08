@@ -1,6 +1,6 @@
 {
   "base": "http://localhost:3107",
-  "checkedAt": "2026-09-08T01:53:49.893Z",
+  "checkedAt": "2026-09-08T09:54:10.790Z",
   "checks": [
     {
       "name": "Mobile navigation opens with 5 usable links",

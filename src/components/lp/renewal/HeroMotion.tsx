@@ -9,13 +9,15 @@ import {
   type CSSProperties,
 } from "react";
 import Image from "next/image";
+import { DemoScreen, DEMOS } from "./OperationDemo";
+import { ProductPreview } from "./ProductPreview";
 import { ArrowUpRight, Check, Play, Sparkles } from "lucide-react";
 
 export const MotionContext = createContext(false);
 const PERIOD = 4200;
 
 /** Stop work when the scene is offscreen, the tab is hidden, or motion is disabled. */
-function useScene(length: number) {
+function useScene(length: number, suspended = false) {
   const paused = useContext(MotionContext);
   const ref = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(true);
@@ -43,7 +45,8 @@ function useScene(length: number) {
       observer.disconnect();
     };
   }, []);
-  const running = visible && !paused && !reduced && !hidden && !manual;
+  const running =
+    visible && !paused && !reduced && !hidden && !manual && !suspended;
   useEffect(() => {
     if (!running) return;
     const timer = window.setTimeout(
@@ -88,8 +91,9 @@ const featured = [
 ];
 
 export function HomeMotionScene() {
-  const scene = useScene(featured.length);
-  const current = featured[scene.active];
+  const scene = useScene(featured.length * 3);
+  const serviceIndex = Math.floor(scene.active / 3);
+  const current = featured[serviceIndex];
   return (
     <div
       ref={scene.ref}
@@ -157,24 +161,11 @@ export function HomeMotionScene() {
           <span>{current.task}</span>
           <Check size={16} />
         </div>
-        <div className="doya-output-frames">
-          {featured.map((item, index) => (
-            <div
-              key={item.id}
-              className={`doya-output-frame ${scene.active === index ? "is-active" : ""}`}
-              aria-hidden={scene.active !== index}
-            >
-              <Image
-                src={`/${item.id}/shots/3-output.webp`}
-                alt={`${item.name}の出力イメージ`}
-                width={1280}
-                height={800}
-                unoptimized
-                priority={index === 0}
-              />
-            </div>
-          ))}
-        </div>
+        <DemoScreen
+          id={current.id}
+          active={scene.active % 3}
+          running={scene.running}
+        />
       </div>
       <div className="doya-team-arrival">
         <Image
@@ -195,8 +186,8 @@ export function HomeMotionScene() {
           <button
             key={item.id}
             type="button"
-            aria-pressed={scene.active === i}
-            onClick={() => scene.choose(i)}
+            aria-pressed={serviceIndex === i}
+            onClick={() => scene.choose(i * 3)}
           >
             <span>{String(i + 1).padStart(2, "0")}</span>
             {item.name}
@@ -217,67 +208,60 @@ export function HomeMotionScene() {
   );
 }
 
-const stages: Record<string, [string, string, string]> = {
-  banner: ["訴求を入力", "バナー案を作成", "デザインを確認"],
-  seo: ["テーマを入力", "構成・本文を作成", "記事を確認"],
-  interview: ["音声をアップロード", "内容を記事に整理", "原稿を確認"],
-  persona: ["商材の条件を入力", "顧客像を整理", "訴求を確認"],
-  hr: ["従業員を登録", "評価をオンライン化", "評価内容を確認"],
-  kintai: ["勤怠を記録", "勤務状況を整理", "集計を確認"],
-  doyalist: ["条件を指定", "企業情報を整理", "リストを確認"],
-  promane: ["案件を登録", "進捗・収支を整理", "状況を確認"],
-  doyaslide: ["内容を入力", "スライドを作成", "資料を確認"],
-  cunning: ["資料を登録", "会話から質問を検出", "根拠を確認"],
-  sfa: ["案件を登録", "営業情報を整理", "進捗を確認"],
-  shodan: ["企業を指定", "商談情報を整理", "提案の切り口を確認"],
-  aio: ["サイトを指定", "AI検索の状況を分析", "改善案を確認"],
-  mensetsu: ["企業URLを入力", "面接URLを発行", "レポートを確認"],
-  quote: ["サービスURLを入力", "見積もりを作成", "金額・範囲を確認"],
-  aishodan: ["商材を登録", "商談URLを発行", "結果を確認"],
-  adimage: ["商品URLを入力", "広告画像を作成", "仕上がりを確認"],
-};
-
-export function ServiceMotion({ id }: { id: string }) {
-  const scene = useScene(3);
-  const labels = stages[id] || ["条件を入力", "AIと進める", "内容を確認"];
+export function ServiceMotion({ id, name }: { id: string; name: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const scene = useScene(3, expanded);
+  const labels = DEMOS[id].labels;
   return (
     <div
       ref={scene.ref}
-      className={`doya-service-motion ${scene.running ? "is-running" : "is-resting"}`}
+      className={`doya-service-presentation ${scene.running ? "is-running" : "is-resting"}`}
       data-scene={id}
       data-frame={scene.active}
     >
-      <div className="doya-motion-steps" aria-label="操作の流れのデモ">
-        {labels.map((label, i) => (
-          <button
-            key={label}
-            type="button"
-            onClick={() => scene.choose(i)}
-            aria-pressed={scene.active === i}
-          >
-            <span className="doya-motion-step-number">
-              {scene.active > i ? <Check size={12} /> : `0${i + 1}`}
-            </span>
-            <span>{label}</span>
-            {scene.active === i && (
-              <i key={scene.active} className="doya-step-timer" />
-            )}
-          </button>
-        ))}
-      </div>
-      <div className="doya-motion-note">
-        <span>
-          <Sparkles size={13} /> 操作の流れをアニメーションで紹介
-        </span>
-        {scene.manual ? (
-          <button type="button" onClick={scene.replay}>
-            <Play size={12} /> 再生
-          </button>
-        ) : (
-          <a href="#doya-how">
-            詳しい使い方 <ArrowUpRight size={13} />
-          </a>
-        )}
+      <ProductPreview
+        className="doya-product-display"
+        alt={`${name}：${labels[scene.active]}`}
+        onOpenChange={setExpanded}
+        expandedContent={
+          <DemoScreen id={id} active={scene.active} running={false} expanded />
+        }
+      >
+        <DemoScreen id={id} active={scene.active} running={scene.running} />
+      </ProductPreview>
+      <div className="doya-service-motion">
+        <div className="doya-motion-steps" aria-label="操作の流れのデモ">
+          {labels.map((label, i) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => scene.choose(i)}
+              aria-pressed={scene.active === i}
+            >
+              <span className="doya-motion-step-number">
+                {scene.active > i ? <Check size={12} /> : `0${i + 1}`}
+              </span>
+              <span>{label}</span>
+              {scene.active === i && (
+                <i key={scene.active} className="doya-step-timer" />
+              )}
+            </button>
+          ))}
+        </div>
+        <div className="doya-motion-note">
+          <span>
+            <Sparkles size={13} /> カーソルと画面で使い方を紹介
+          </span>
+          {scene.manual ? (
+            <button type="button" onClick={scene.replay}>
+              <Play size={12} /> 再生
+            </button>
+          ) : (
+            <a href="#doya-how">
+              詳しい使い方 <ArrowUpRight size={13} />
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );

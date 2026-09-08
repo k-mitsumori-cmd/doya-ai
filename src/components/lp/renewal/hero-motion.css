@@ -37,7 +37,7 @@
 .doya-home-cinematic h1 em span {
   display: block;
 }
-.doya-home-cinematic p {
+.doya-home-cinematic .doya-home-copy > p {
   margin: 26px 0;
   max-width: 490px;
   font-size: 16px;
@@ -527,7 +527,7 @@
 }
 .doya-motion-scene.is-resting *,
 .doya-motion-scene.is-resting *::before,
-.doya-service-motion.is-resting * {
+.doya-service-presentation.is-resting * {
   animation-play-state: paused;
 }
 .doya-renewal .doya-motion-steps button:focus-visible,
@@ -757,7 +757,7 @@
   .doya-home-cinematic h1 em span {
     display: inline;
   }
-  .doya-home-cinematic p {
+  .doya-home-cinematic .doya-home-copy > p {
     margin-inline: auto;
   }
   .doya-home-cinematic .doya-actions,
@@ -795,7 +795,7 @@
   .doya-home-cinematic h1 em span {
     display: block;
   }
-  .doya-home-cinematic p {
+  .doya-home-cinematic .doya-home-copy > p {
     font-size: 13px;
     line-height: 1.9;
     margin: 20px 0;
@@ -1068,9 +1068,9 @@
     top: 233px;
   }
 }
-.doya-hero-stage:has(.doya-service-motion.is-resting) *,
-.doya-hero-stage:has(.doya-service-motion.is-resting)::before,
-.doya-hero-stage:has(.doya-service-motion.is-resting) *::after {
+.doya-hero-stage:has(.doya-service-presentation.is-resting) *,
+.doya-hero-stage:has(.doya-service-presentation.is-resting)::before,
+.doya-hero-stage:has(.doya-service-presentation.is-resting) *::after {
   animation-play-state: paused;
 }
 .doya-motion-paused

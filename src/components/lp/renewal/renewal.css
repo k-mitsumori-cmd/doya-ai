@@ -765,7 +765,7 @@
   color: #0066ff;
   font-style: normal;
 }
-.doya-home-hero p {
+.doya-home-hero > p {
   font-size: 17px;
   color: #5a6c88;
   margin: 23px auto;
@@ -1183,7 +1183,7 @@
   .doya-home-hero h1 {
     font-size: 34px;
   }
-  .doya-home-hero p {
+  .doya-home-hero > p {
     font-size: 14px;
   }
   .doya-home-team {

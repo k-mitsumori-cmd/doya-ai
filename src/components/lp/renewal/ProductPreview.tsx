@@ -10,11 +10,15 @@ export function ProductPreview({
   src,
   alt,
   className = "",
+  expandedContent,
+  onOpenChange,
 }: {
   children: ReactNode;
   src?: string;
   alt: string;
   className?: string;
+  expandedContent?: ReactNode;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [actualSize, setActualSize] = useState(false);
@@ -23,11 +27,12 @@ export function ProductPreview({
       {children}
       <div className="doya-preview-caption">
         <span>操作イメージ</span>
-        {src && (
+        {(src || expandedContent) && (
           <button
             type="button"
             onClick={() => {
               setActualSize(false);
+              onOpenChange?.(true);
               dialog.current?.showModal();
             }}
             aria-label={`${alt}を拡大する`}
@@ -36,9 +41,10 @@ export function ProductPreview({
           </button>
         )}
       </div>
-      {src && (
+      {(src || expandedContent) && (
         <dialog
           ref={dialog}
+          onClose={() => onOpenChange?.(false)}
           className="doya-preview-dialog"
           aria-label={alt}
           onClick={(e) => {
@@ -73,13 +79,16 @@ export function ProductPreview({
               tabIndex={0}
               aria-label="操作画面。原寸表示ではスクロールできます。"
             >
-              <Image
-                src={src}
-                alt={alt}
-                width={1280}
-                height={800}
-                unoptimized
-              />
+              {expandedContent ||
+                (src && (
+                  <Image
+                    src={src}
+                    alt={alt}
+                    width={1280}
+                    height={800}
+                    unoptimized
+                  />
+                ))}
             </div>
           </div>
         </dialog>

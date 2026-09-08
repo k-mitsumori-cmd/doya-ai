@@ -1,0 +1,311 @@
+.doya-operation-demo {
+  border: 1px solid #cbdcf1;
+  border-radius: 16px;
+  background: #fff;
+  overflow: hidden;
+  text-align: left;
+}
+.doya-demo-chrome {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 12px;
+  border-bottom: 1px solid #e2eaf5;
+  background: #f7faff;
+}
+.doya-demo-chrome > span {
+  width: 7px;
+  height: 7px;
+  background: #cfdaea;
+  border-radius: 50%;
+}
+.doya-demo-chrome b {
+  margin-left: 8px;
+  font-size: 11px;
+  color: #304664;
+  font-weight: 700;
+}
+.doya-demo-chrome small {
+  margin-left: auto;
+  color: #536783;
+  font-size: 9px;
+}
+.doya-demo-canvas {
+  position: relative;
+  aspect-ratio: 560 / 340;
+  background: #f6f9fd;
+  overflow: hidden;
+}
+.doya-demo-scale {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 560px;
+  height: 340px;
+  transform: scale(var(--demo-scale));
+  transform-origin: top left;
+}
+.doya-demo-native {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(22px) scale(0.97);
+  transition:
+    opacity 0.45s,
+    transform 0.6s cubic-bezier(0.16, 1, 0.3, 1),
+    visibility 0.45s;
+}
+.doya-demo-native.is-active {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+.doya-demo-native > div {
+  width: 100%;
+  flex-shrink: 0;
+  transform: scale(var(--content-fit, 1));
+  transform-origin: center;
+}
+.doya-operation-demo[data-service="adimage"]
+  .doya-demo-native[data-stage="0"]
+  > div
+  > .grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.doya-demo-native .border:not([class*="border-"]) {
+  border-color: #dce5f2;
+}
+.doya-operation-demo[data-service="sfa"]
+  .doya-demo-native[data-stage="2"]
+  .h-24
+  > div {
+  height: 100%;
+  justify-content: flex-end;
+}
+.doya-demo-gesture {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.doya-demo-pointer {
+  position: absolute;
+  left: var(--target-x);
+  top: var(--target-y);
+  color: #143a79;
+  filter: drop-shadow(0 3px 3px #10284640);
+  animation: doya-cursor-operate 4.2s ease-in-out both;
+}
+.doya-demo-focus {
+  position: absolute;
+  left: var(--target-x);
+  top: var(--target-y);
+  translate: -55% -55%;
+  width: var(--target-w);
+  height: var(--target-h);
+  border: 2px solid #428aff;
+  border-radius: 8px;
+  background: #0066ff05;
+  animation: doya-focus-operate 4.2s ease both;
+}
+.doya-demo-click {
+  position: absolute;
+  left: var(--target-x);
+  top: var(--target-y);
+  translate: -50% -50%;
+  width: 30px;
+  height: 30px;
+  border: 2px solid #1674ff;
+  border-radius: 50%;
+  animation: doya-click-operate 4.2s ease-out both;
+}
+.doya-demo-native.is-active .doya-demo-typed {
+  width: fit-content;
+  max-width: 100%;
+  animation: doya-demo-type 1.5s 0.4s steps(18, end) both;
+}
+.doya-demo-loading {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  font-size: 12px;
+  color: #536783;
+}
+.doya-demo-retry {
+  display: block;
+  margin: 8px auto;
+  min-height: 44px;
+  padding: 8px 16px;
+  color: #0059da;
+  text-decoration: underline;
+}
+.doya-operation-demo.is-held *,
+.doya-operation-demo.is-held *::after {
+  animation-play-state: paused;
+}
+.doya-operation-demo.is-expanded .doya-demo-native {
+  transition: none;
+}
+.doya-operation-demo.is-held .doya-demo-typed,
+.doya-operation-demo.is-expanded .doya-demo-typed {
+  animation: none !important;
+  clip-path: none;
+}
+.doya-service-presentation {
+  min-width: 0;
+}
+.doya-product-display > .doya-operation-demo {
+  animation:
+    doya-product-arrive 1.15s cubic-bezier(0.16, 1, 0.3, 1) both,
+    doya-product-hover 8.4s 1.15s ease-in-out infinite;
+  box-shadow: 0 22px 40px #24528d20;
+}
+.doya-preview-canvas > .doya-operation-demo {
+  border: 0;
+  border-radius: 0;
+}
+.doya-preview-canvas.is-actual-size > .doya-operation-demo {
+  width: 1280px;
+  max-width: none;
+}
+.doya-scene-output .doya-operation-demo {
+  border-radius: 8px;
+}
+.doya-scene-output .doya-demo-chrome {
+  height: 24px;
+  gap: 3px;
+  padding-inline: 5px;
+}
+.doya-scene-output .doya-demo-chrome > span {
+  width: 4px;
+  height: 4px;
+}
+.doya-scene-output .doya-demo-chrome b {
+  font-size: 8px;
+  margin-left: 3px;
+}
+.doya-scene-output .doya-demo-chrome small {
+  display: none;
+}
+.doya-scene-output .doya-demo-pointer {
+  width: 20px;
+  height: 20px;
+}
+.doya-scene-output .doya-demo-focus {
+  border-width: 1px;
+  border-radius: 4px;
+}
+.doya-scene-output .doya-demo-click {
+  width: 20px;
+  height: 20px;
+}
+@keyframes doya-cursor-operate {
+  0% {
+    opacity: 0;
+    transform: translate(70px, 50px);
+  }
+  12% {
+    opacity: 1;
+  }
+  34%,
+  48% {
+    transform: translate(0, 0) scale(1);
+  }
+  52% {
+    transform: translate(0, 0) scale(0.8);
+  }
+  60%,
+  85% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(18px, 12px);
+    opacity: 0;
+  }
+}
+@keyframes doya-focus-operate {
+  0%,
+  28% {
+    opacity: 0;
+  }
+  38%,
+  78% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes doya-click-operate {
+  0%,
+  47% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(0.2);
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+@keyframes doya-demo-type {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@media (max-width: 600px) {
+  .doya-demo-chrome {
+    height: 30px;
+    gap: 4px;
+    padding-inline: 8px;
+  }
+  .doya-demo-chrome b {
+    font-size: 9px;
+    margin-left: 4px;
+  }
+  .doya-demo-chrome small {
+    font-size: 8px;
+  }
+  .doya-demo-pointer {
+    width: 22px;
+    height: 22px;
+  }
+  .doya-scene-output .doya-demo-chrome > span {
+    display: none;
+  }
+  .doya-scene-output .doya-demo-chrome b {
+    font-size: 7px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .doya-operation-demo *,
+  .doya-product-display > .doya-operation-demo {
+    animation: none !important;
+    transition: none !important;
+  }
+  .doya-demo-native .border:not([class*="border-"]) {
+    border-color: #dce5f2;
+  }
+  .doya-operation-demo[data-service="sfa"]
+    .doya-demo-native[data-stage="2"]
+    .h-24
+    > div {
+    height: 100%;
+    justify-content: flex-end;
+  }
+  .doya-demo-gesture {
+    display: none;
+  }
+}

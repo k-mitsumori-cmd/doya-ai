@@ -1,0 +1,854 @@
+{
+  "base": "http://localhost:3107",
+  "checkedAt": "2026-09-08T09:56:50.408Z",
+  "checks": [
+    {
+      "name": "banner 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "banner 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "banner 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "banner: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "banner: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "seo 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "seo 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "seo 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "seo: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "seo: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "interview 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "interview 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "interview 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "interview: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "interview: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "persona 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "persona 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "persona 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "persona: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "persona: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "hr 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "hr 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "hr 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "hr: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "hr: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "kintai 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "kintai 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "kintai 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "kintai: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "kintai: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "doyalist 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "doyalist 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "doyalist 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "doyalist: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "doyalist: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "promane 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "promane 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "promane 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "promane: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "promane: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "doyaslide 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "doyaslide 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "doyaslide 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "doyaslide: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "doyaslide: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "cunning 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "cunning 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "cunning 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "cunning: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "cunning: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "sfa 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "sfa 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "sfa 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "sfa: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "sfa: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "shodan 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "shodan 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "shodan 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "shodan: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "shodan: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "aio 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "aio 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "aio 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "aio: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "aio: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "mensetsu 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "mensetsu 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "mensetsu 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "mensetsu: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "mensetsu: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "quote 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "quote 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "quote 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "quote: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "quote: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "aishodan 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "aishodan 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "aishodan 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "aishodan: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "aishodan: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "adimage 1: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "adimage 2: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "adimage 3: correct screen, inert and contained",
+      "pass": true
+    },
+    {
+      "name": "adimage: three different operation screens",
+      "pass": true
+    },
+    {
+      "name": "adimage: mobile does not overflow",
+      "pass": true
+    },
+    {
+      "name": "Automatic progression changes visible screen content",
+      "pass": true
+    },
+    {
+      "name": "Cursor moves within the operation screen",
+      "pass": true
+    },
+    {
+      "name": "Pause stops both cursor and screen switching",
+      "pass": true
+    },
+    {
+      "name": "Expanded view shows the selected screen",
+      "pass": true
+    },
+    {
+      "name": "Expanded native view supports original-size scrolling",
+      "pass": true
+    },
+    {
+      "name": "Escape restores preview button focus",
+      "pass": true
+    },
+    {
+      "name": "Reduced motion keeps screen still and hides cursor",
+      "pass": true
+    },
+    {
+      "name": "Homepage service 1 loads its native operation screen",
+      "pass": true
+    },
+    {
+      "name": "Homepage service 2 loads its native operation screen",
+      "pass": true
+    },
+    {
+      "name": "Homepage service 3 loads its native operation screen",
+      "pass": true
+    },
+    {
+      "name": "No browser errors",
+      "pass": true
+    }
+  ],
+  "frames": [
+    {
+      "id": "banner",
+      "index": 0,
+      "step": "0",
+      "text": "category\n業種テンプレートを選ぶ\nwifi\n通信・回線\nshopping_bag\nEC・通販\nbadge\n採用・求人\nspa\n美容・サロン\nrestaurant\n飲食・グルメ\nschool\nスクール・教育\npalette\nブランドカラー\nを反映",
+      "heading": "業種を選ぶ",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "banner",
+      "index": 1,
+      "step": "1",
+      "text": "auto_awesome\nAIが3案を同時生成\nA / B / C\n案A\n\n初回限定 30%OFF\n\n今だけのはじめての方へ\n\n詳しく見る\n案B\n\n新生活を、軽やかに。\n\n春の新作コレクション\n\nいますぐ購入\n案C\n\nプロが選ぶ品質を\n\n無料トライアル受付中\n\n無料で試す\ntouch_app\n気に入った案を選んで書き出し",
+      "heading": "バナー案を見る",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "banner",
+      "index": 2,
+      "step": "2",
+      "text": "aspect_ratio\nサイズプリセット＆書き出し\n正方形\n1:1\n横長\n1.91:1\n縦長\n4:5\nストーリー\n9:16\nimage\n高品質PNGで書き出し\ndownload\n書き出す",
+      "heading": "サイズを選んで出力",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "seo",
+      "index": 0,
+      "step": "0",
+      "text": "記事の条件\n\nBtoB マーケティング AI活用\n\n読者: マーケ責任者\n目的: 比較検討\nlink\n参考URL 3件を要点化",
+      "heading": "記事の条件を入力",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "seo",
+      "index": 1,
+      "step": "1",
+      "text": "検索意図から構成を作成中\n\n4 / 4\n1\nAI活用で変わる業務\n2\n導入前に決めること\n3\nツール選定の比較軸\n4\n小さく始める手順",
+      "heading": "構成を確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "seo",
+      "index": 2,
+      "step": "2",
+      "text": "公開前チェック\n\ncheck_circle\n主張の整合性\n確認済み\ncheck_circle\n参考情報との重複\n問題なし\ncheck_circle\n根拠が薄い箇所\n2件を修正\ncheck_circle\nリンク切れ\n0件",
+      "heading": "公開前にチェック",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "interview",
+      "index": 0,
+      "step": "0",
+      "text": "upload_file\n\n取材音声をアップロード\n\nMP3・M4A・MP4 / 長時間ファイル対応",
+      "heading": "音声をアップロード",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "interview",
+      "index": 1,
+      "step": "1",
+      "text": "話者を分けて文字起こし\n\n処理中\n\n聞き手\n\n導入前は何が一番の課題でしたか。\n\n話し手\n\n問い合わせ後の一次対応に時間がかかっていました。\n\n聞き手\n\n運用はどのように変わりましたか。",
+      "heading": "文字起こしを確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "interview",
+      "index": 2,
+      "step": "2",
+      "text": "導入事例ドラフト\n\nQ&A形式\n\n一次対応を整え、顧客との対話に集中できる体制へ\n\nQ. 導入前の課題を教えてください。\n\nA. 問い合わせの整理に時間がかかり、提案準備が後回しになっていました。",
+      "heading": "記事を確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "persona",
+      "index": 0,
+      "step": "0",
+      "text": "商材と届けたい相手\n\n商材: 法人向け業務支援SaaS\n業界: IT・Webサービス\n想定役割: 部門責任者\nペルソナを組み立てる",
+      "heading": "商材の条件を入力",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "persona",
+      "index": 1,
+      "step": "1",
+      "text": "佐藤\n\n佐藤 美咲\n\n事業会社 マーケティング責任者\n\n目標\n\n少人数で施策を増やす\n\n悩み\n\n制作指示が属人化\n\n情報源\n\n検索・業界メディア\n\n判断軸\n\n導入負荷と再現性",
+      "heading": "顧客像を確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "persona",
+      "index": 2,
+      "step": "2",
+      "text": "description\n施策に使う要点\n\n訴求\n\n作業時間ではなく判断時間を増やす\n\n導線\n\n比較記事から無料体験へ\n\n懸念\n\n既存業務への組み込みやすさ\n\n検証\n\n初回作成までの完了率",
+      "heading": "施策の要点を見る",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "hr",
+      "index": 0,
+      "step": "0",
+      "text": "groups\n従業員データベース\n24名\nadd\n追加\nsearch\n名前・部署で検索\n佐\n\n佐藤 花子\n\n営業部・主任\n\nA\n田\n\n田中 大輔\n\n開発部・リーダー\n\nS\n鈴\n\n鈴木 美咲\n\n人事部・担当\n\nB\n高\n\n高橋 健\n\nマーケ・主任\n\nA",
+      "heading": "従業員を選ぶ",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "hr",
+      "index": 1,
+      "step": "1",
+      "text": "代\n\n代表取締役\n\nCEO\n\n営\n\n営業部長\n\n開\n\n開発部長\n\n管\n\n管理部長",
+      "heading": "組織図を見る",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "hr",
+      "index": 2,
+      "step": "2",
+      "text": "assignment\n人事評価（MBO）\n目標達成度\n88\n行動評価\n74\nスキル\n92\nauto_awesome\nAIが評価コメントを下書き\n\n今期は新規開拓で目標を大きく上回り、チーム内の連携も主導しました。次期はマネジメント面での…\n\nrefresh\n再生成",
+      "heading": "人事評価を確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "kintai",
+      "index": 0,
+      "step": "0",
+      "text": "佐\n\n佐藤 花子\n\n営業部・主任\n\n勤務中\n\n2026年7月24日（金）\n\n09:02:47\n\n本日の勤務時間 0:02\n\nlogin\n出勤\n09:02 打刻済み\nlogout\n退勤\nタップで打刻",
+      "heading": "出勤を打刻",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "kintai",
+      "index": 1,
+      "step": "1",
+      "text": "bar_chart\n勤怠集計\n2026年7月\ndownload\nCSV\n日付\n出勤\n退勤\n実働\n残業\n7/21（月）\n09:00\n18:03\n8:03\n0:03\n7/22（火）\n08:55\n19:41\n9:46\n1:41\n7/23（水）\n09:02\n18:00\n7:58\n—\n7/24（木）\n08:58\n20:12\n10:14\n2:12\n7/25（金）\n09:01\n17:30\n7:29\n—\n\n実働合計\n\n43:30\n\n残業\n\n3:56\n\n出勤日数\n\n5日",
+      "heading": "勤怠を集計",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "kintai",
+      "index": 2,
+      "step": "2",
+      "text": "task_alt\n申請・承認\n2件 未処理\n田\n\n田中 大輔 ・開発部\n\n有給休暇｜7/28（月） 終日\n\n承認待ち\n承認\n却下\n鈴\n\n鈴木 美咲 ・人事部\n\n残業申請｜7/24（木） 2:00\n\ncheck_circle\n承認済み\n高\n\n高橋 健 ・マーケ\n\n打刻修正｜7/23（水） 退勤\n\n承認待ち\n承認\n却下",
+      "heading": "申請を確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "doyalist",
+      "index": 0,
+      "step": "0",
+      "text": "企業リストの条件\n\n業種\n\n情報サービス\n\n地域\n\n東京都\n\n従業員規模\n\n50〜300名\n\nキーワード\n\n採用強化\n\n条件から候補を探す",
+      "heading": "検索条件を指定",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "doyalist",
+      "index": 1,
+      "step": "1",
+      "text": "候補企業\n\n法人情報を確認済み\nサンプルテック株式会社\n情報サービス\n東京都\n青空デジタル株式会社\nWeb制作\n神奈川県\nみらい業務研究所\nコンサルティング\n東京都",
+      "heading": "企業リストを見る",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "doyalist",
+      "index": 2,
+      "step": "2",
+      "text": "mail\n企業別の営業文面\n\nメール\n\n貴社の採用強化に関する取り組みを拝見し、候補者対応の初動を整える方法をご案内したくご連絡しました。\n\nフォーム文\n電話スクリプト\nCSV出力",
+      "heading": "営業文面を確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "promane",
+      "index": 0,
+      "step": "0",
+      "text": "新しい案件\n\n案件名\n\n新サービスサイト制作\n\n売上予定\n\n1,200,000円\n\n開始日\n\n8月20日\n\n納期\n\n10月31日",
+      "heading": "案件を入力",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "promane",
+      "index": 1,
+      "step": "1",
+      "text": "未着手\n\n要件整理\n素材確認\n\n進行中\n\n画面設計\n原稿作成\n\n確認待ち\n\nトップページ",
+      "heading": "タスクを整理",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "promane",
+      "index": 2,
+      "step": "2",
+      "text": "案件の収支\n\n利益率 50%\n売上\n1,200,000円\n人件費\n520,000円\nその他原価\n80,000円\n見込み利益\n600,000円\n\nschedule\n記録した工数から人件費を自動集計",
+      "heading": "収支を確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "doyaslide",
+      "index": 0,
+      "step": "0",
+      "text": "新しい資料\n\nテーマ\n\n新規事業の社内提案資料\n\n提案書\n営業資料\nSNS",
+      "heading": "テーマを入力",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "doyaslide",
+      "index": 1,
+      "step": "1",
+      "text": "構成を設計中\n\n5ページ\n1\n課題の整理\n2\n提案の全体像\n3\n実行ステップ\n4\n検証指標\n5\n次のアクション",
+      "heading": "構成を確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "doyaslide",
+      "index": 2,
+      "step": "2",
+      "text": "01\n\n課題\n\n02\n\n提案\n\n03\n\n実行\n\n04\n\n検証\n\ncheck_circle\n同じ配色とレイアウト規則で生成済み",
+      "heading": "スライドを見る",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "cunning",
+      "index": 0,
+      "step": "0",
+      "text": "会議で使う資料\n\ndescription\nサービス概要.pdf\n登録済み\ndescription\n料金・プラン.pdf\n登録済み\ndescription\n導入手順.pdf\n登録済み",
+      "heading": "資料を登録",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "cunning",
+      "index": 1,
+      "step": "1",
+      "text": "会議の質問を検出\n\n接続中\n「導入後、最初に必要な設定はどこまでですか？」\n\n質問として検出し、登録資料を検索しています",
+      "heading": "会話から質問を検出",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "cunning",
+      "index": 2,
+      "step": "2",
+      "text": "まず伝える要点\n\n初期設定は担当者と利用目的の登録から始められます。\n\n話すための補足\n\n既存データの取り込みがある場合も、段階的に設定できます。まず小さなチームから開始できます。\n\nmenu_book\n根拠: 導入手順.pdf",
+      "heading": "回答と根拠を確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "sfa",
+      "index": 0,
+      "step": "0",
+      "text": "view_kanban\n商談パイプライン\n7件・¥1,120万\nリード\n2\n\n山田製作所\n\n¥80万\n佐\n\nみらい商事\n\n¥120万\n田\n商談中\n2\n\n青空フーズ\n\n¥250万\n鈴\n\n大地建設\n\n¥60万\n高\n提案\n1\n\nさくら物流\n\n¥340万\n佐\n受注\n2\n\nひかり工業\n\n¥180万\n田\n\n結ソリューションズ\n\n¥90万\n鈴",
+      "heading": "商談を選ぶ",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "sfa",
+      "index": 1,
+      "step": "1",
+      "text": "apartment\n取引先\n18社\nadd\n追加\nsearch\n会社名・担当者で検索\nさ\n\nさくら物流\n\n担当: 佐藤・商談3件\n\n¥340万\n\n提案\n青\n\n青空フーズ\n\n担当: 鈴木・商談2件\n\n¥250万\n\n商談中\nひ\n\nひかり工業\n\n担当: 田中・商談1件\n\n¥180万\n\n受注\nみ\n\nみらい商事\n\n担当: 高橋・商談1件\n\n¥120万\n\nリード",
+      "heading": "顧客情報を見る",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "sfa",
+      "index": 2,
+      "step": "2",
+      "text": "monitoring\n売上ダッシュボード\n\n今月売上\n\n¥270万\n\n+18%\n\n進行中の商談\n\n12件\n\n¥1,120万\n\n受注率\n\n42%\n\n+6pt\n\n月次売上推移\n単位: 万円\n2月\n3月\n4月\n5月\n6月\n7月",
+      "heading": "営業状況を確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "shodan",
+      "index": 0,
+      "step": "0",
+      "text": "travel_explore\n企業調査レポート\ncheck_circle\n調査完了\ndomain\n会社名\n株式会社みらい製作所\nlink\nURL\nmirai-seisaku.example.jp\ngroups\n従業員数\n約120名\ncampaign\nマーケ実施状況\nリスティング・SNS運用あり\narticle\nオウンドメディア\n記事48本／技術ブログ\nupdate\n更新頻度\n月4〜6本（直近3ヶ月）\nauto_awesome\nAIサマリー\n\nBtoB製造業。オウンドメディアは運用中だが更新が不定期で、リード獲得の導線が…",
+      "heading": "企業情報を見る",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "shodan",
+      "index": 1,
+      "step": "1",
+      "text": "psychology\n課題仮説\n3件\n優先度高\n\nメディア更新が不定期でリードが伸び悩む\n\n記事数はあるが導線設計と更新体制に課題\n\n優先度中\n\n問い合わせ後のフォロー導線が弱い\n\nCTAはあるが資料DL・ナーチャリング未整備\n\n優先度中\n\n技術の強みが顧客言語で伝わっていない\n\n製品説明が専門用語中心で訴求が届きにくい",
+      "heading": "課題仮説を確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "shodan",
+      "index": 2,
+      "step": "2",
+      "text": "description\n提案資料（Markdown）\ncontent_copy\nコピー\n\n株式会社みらい製作所 様 ご提案\n\n##\n現状分析\n\n-\nオウンドメディアは運用中だが更新が不定期\n-\nリスティング流入はあるが受け皿が弱い\n\n##\n課題仮説\n\n-\n更新体制の属人化でコンテンツが停滞\n-\n問い合わせ後のフォロー導線が未整備\n\n##\n解決策\n\n-\n編集カレンダーとAI下書きで更新を仕組み化\n-\n資料DL・ステップ配信でリードを育成",
+      "heading": "提案資料を見る",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "aio",
+      "index": 0,
+      "step": "0",
+      "text": "hub\n4エンジン言及率\nsmart_toy\nChatGPT\n87%\n26/30回\nauto_awesome\nGemini\n70%\n21/30回\npsychology\nClaude\n60%\n18/30回\ntravel_explore\nPerplexity\n80%\n24/30回",
+      "heading": "AI別の状況を見る",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "aio",
+      "index": 1,
+      "step": "1",
+      "text": "leaderboard\nAI可視性ランキング\nShare of Voice\nworkspace_premium\n自社ブランド\n42%\n競合A\n26%\n競合B\n18%\n競合C\n9%\nその他\n5%\n\nforum\n「おすすめのAIバナー作成ツールは？」など30プロンプトの集計",
+      "heading": "競合シェアを比較",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "aio",
+      "index": 2,
+      "step": "2",
+      "text": "link\n引用元ドメイン\nAIが根拠にしたサイト\npublic\n\nexample-media.jp\n\n比較メディア\n\n12回\npublic\n\nnote.example.com\n\nブログ記事\n\n8回\npublic\n\njp.wikipedia-example.org\n\n百科事典\n\n6回\nverified\n\nown-brand.example.jp\n\n自社サイト\n\n5回\npublic\n\nreview-example.net\n\nレビュー\n\n4回",
+      "heading": "引用元を確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "mensetsu",
+      "index": 0,
+      "step": "0",
+      "text": "support_agent\n一次面接\n12:34\nperson\n\n面接官\n\nvideocam_off\n\n質問 3 / 12\n\n直近で担当された案件のうち、もっとも難しかったものと、その進め方を教えてください。",
+      "heading": "面接を進める",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "mensetsu",
+      "index": 1,
+      "step": "1",
+      "text": "課題設定力\n4/5\n実行・遂行力\n5/5\n協働・巻き込み\n3/5\n学習と再現性\n情報不足\n\n判断できない軸は推測で埋めず「情報不足」と出します",
+      "heading": "評価を確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "mensetsu",
+      "index": 2,
+      "step": "2",
+      "text": "check_circle\n\n前職での役割と成果を教えてください\n\ncheck_circle\n\nチームで意見が割れたときの進め方は\n\nblock\n\nご家族は何をされていますか\n\n除外: 家族構成\nblock\n\nご結婚のご予定はありますか\n\n除外: 結婚・出産の予定\n\n選考で尋ねてはいけない事項は質問を作る時点で除外します",
+      "heading": "質問の基準を見る",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "quote",
+      "index": 0,
+      "step": "0",
+      "text": "receipt_long\n御見積書\n金額の出所つき\n\nサイト初期構築\n\n自社価格\n×1\n¥480,000\n\nSEO記事制作（月10本）\n\n相場\n×12\n¥80,000\n\n運用ディレクション\n\n自社価格\n×12\n¥120,000\n\n広告運用代行\n\n要見積\n×12\n要見積\n小計（税抜）\n¥3,840,000\n\n根拠が無い項目は金額を作らず「要見積」で空欄のまま残します",
+      "heading": "見積明細を確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "quote",
+      "index": 1,
+      "step": "1",
+      "text": "10%対象\n¥3,720,000 / 税 ¥372,000\n8%対象（軽減）\n¥120,000 / 税 ¥9,600\n合計（税込）\n¥4,221,600",
+      "heading": "税・値引きを確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "quote",
+      "index": 2,
+      "step": "2",
+      "text": "御見積書\n\nNo. Q-2026-0142\n\n株式会社サンプル\n\n東京都◯◯区◯◯ 1-2-3\n\n御見積金額\n\n¥4,221,600\n\nverified\n日本語フォント埋め込み済み",
+      "heading": "PDFを書き出す",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "aishodan",
+      "index": 0,
+      "step": "0",
+      "text": "forum\n一次商談\n実施中\n\n本日はお時間をいただきありがとうございます。まず御社の現在の課題からお聞かせください。\n\n問い合わせは来るのですが、一次対応が追いつかず取りこぼしていて。\n\n月にどのくらいのお問い合わせがありますか。\n\n30件くらいです。\n\nmic\n音声で進行・テキストでも参加できます",
+      "heading": "AIと商談を進める",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "aishodan",
+      "index": 1,
+      "step": "1",
+      "text": "check_circle\n課題\n一次対応が追いつかず取りこぼし\ncheck_circle\n月間問い合わせ数\n約30件\nradio_button_unchecked\n想定予算\n未取得\ncheck_circle\n導入時期\n3か月以内\nradio_button_unchecked\n決裁者\n未取得",
+      "heading": "ヒアリングを整理",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "aishodan",
+      "index": 2,
+      "step": "2",
+      "text": "適合度\n\n78\n\n条件付き推奨\n\n課題と提供価値が合致。導入時期も近い。予算と決裁者が未取得のため、次回で確認が必要。\n\nevent_available\n日程調整: 予約ページを開きました\n\n判定は参考値です。最終的な判断は担当者が行います",
+      "heading": "商談結果を確認",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "adimage",
+      "index": 0,
+      "step": "0",
+      "text": "wallpaper\n媒体別の書き出し\n切り抜きなし\n\n見積もりを、その場で。\n\n無料ではじめる\nMeta\n1080×1080\n\n見積もりを、その場で。\n\n無料ではじめる\nGoogle\n1200×628\n\n見積もりを、その場で。\n\n無料ではじめる\nX\n1600×900\n\n見積もりを、その場で。\n\n無料ではじめる\nLINE\n1080×1920",
+      "heading": "媒体別の画像を見る",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "adimage",
+      "index": 1,
+      "step": "1",
+      "text": "Meta 正方形\ncheck\n文字OK\nGoogle レスポンシブ\ncheck\n文字OK\nX 横長\ncheck\n文字OK\nLINE 縦長\nrefresh\n作り直し\n\n描かれた文字を読み取って照合し、不合格なら自動で作り直します",
+      "heading": "文字をチェック",
+      "contentFits": true,
+      "inert": true
+    },
+    {
+      "id": "adimage",
+      "index": 2,
+      "step": "2",
+      "text": "AIによる採点\n72/100\n見出しの読みやすさ\n85\n余白のバランス\n60\nボタンの目立ち方\n55\n\n見出し周りの余白を広げ、ボタンの面積を1.3倍にすると視認性が上がります",
+      "heading": "改善点を確認",
+      "contentFits": true,
+      "inert": true
+    }
+  ],
+  "errors": [],
+  "passed": 96,
+  "total": 96
+}

@@ -25,6 +25,7 @@ import { SERVICES, HIDDEN_SERVICE_IDS } from "@/lib/services";
 import { UNIFIED_PRO_PRICE } from "@/lib/unified-plan";
 import { ProductPreview } from "./ProductPreview";
 import { MotionContext, ServiceMotion } from "./HeroMotion";
+import { DEMOS } from "./OperationDemo";
 import type { Step } from "../sections";
 import "./renewal.css";
 import "./hero-motion.css";
@@ -65,6 +66,7 @@ export function RenewalFrame({
           className={`doya-renewal ${paused ? "doya-motion-paused" : ""}`}
           data-renewal="2026-09"
           data-fv-motion="2026-09-08"
+          data-operation-demo="2026-09-08"
         >
           {children}
           <a
@@ -160,25 +162,28 @@ export function RenewalHero(props: {
             <span />
             {service?.shortName || "あなたの仕事"}の頼れるパートナー
           </div>
-          <ProductPreview
-            className="doya-product-display"
-            src={service ? `/${service.id}/hero.webp` : props.image?.src}
-            alt={`${name}の画面`}
-          >
-            {props.visual ||
-              (props.image && (
-                <Image
-                  unoptimized
-                  src={props.image.src}
-                  alt={props.image.alt}
-                  width={1600}
-                  height={1000}
-                  priority
-                  sizes="(max-width: 800px) 100vw, 650px"
-                />
-              ))}
-          </ProductPreview>
-          {service && <ServiceMotion id={service.id} />}
+          {service && DEMOS[service.id] ? (
+            <ServiceMotion id={service.id} name={name} />
+          ) : (
+            <ProductPreview
+              className="doya-product-display"
+              src={service ? `/${service.id}/hero.webp` : props.image?.src}
+              alt={`${name}の画面`}
+            >
+              {props.visual ||
+                (props.image && (
+                  <Image
+                    unoptimized
+                    src={props.image.src}
+                    alt={props.image.alt}
+                    width={1600}
+                    height={1000}
+                    priority
+                    sizes="(max-width: 800px) 100vw, 650px"
+                  />
+                ))}
+            </ProductPreview>
+          )}
           <Image
             unoptimized
             className="doya-hero-bear"
