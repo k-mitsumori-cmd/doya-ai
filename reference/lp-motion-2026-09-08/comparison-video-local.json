@@ -1,6 +1,6 @@
 {
   "base": "http://localhost:3107",
-  "checkedAt": "2026-09-08T02:16:15.381Z",
+  "checkedAt": "2026-09-08T10:11:19.530Z",
   "checks": [
     {
       "name": "top desktop: recorded animation plays",

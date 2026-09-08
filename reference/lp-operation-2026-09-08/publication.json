@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-09-08T10:09:01.558195+00:00",
+  "sourceCommit": "54223b2e",
+  "deploymentId": "dpl_69MHzS8QP38nPWNTTeKshpSzC17M",
+  "deploymentUrl": "https://doya-a1htyyml9-surisutas-projects.vercel.app",
+  "status": "Ready",
+  "productionUrl": "https://doya-ai.surisuta.jp",
+  "publicOperationChecks": {
+    "passed": 97,
+    "total": 97
+  },
+  "localLayoutChecks": 90,
+  "localAccessibilityChecks": 36,
+  "localRegressionChecks": 50,
+  "comparisonFinalProof": "External delivery: comparison/operation-publication-verification.json",
+  "comparisonImages": 144,
+  "newAfterCaptures": 72,
+  "preservedBeforeFiles": 214,
+  "comparisonVideos": 4,
+  "localComparisonChecks": 15
+}

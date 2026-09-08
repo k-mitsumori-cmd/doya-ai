@@ -1,57 +1,55 @@
 {
   "base": "https://doya-ai.surisuta.jp",
-  "capturedAt": "2026-09-08T02:04:49.375Z",
+  "capturedAt": "2026-09-08T10:06:46.471Z",
   "kind": "Actual unauthenticated LP browser recording, no audio",
   "records": [
     {
       "id": "top",
       "device": "desktop",
+      "durationSeconds": 17.8,
       "viewport": [
         1440,
         1000
       ],
       "url": "https://doya-ai.surisuta.jp/",
       "file": "top-desktop.webm",
-      "bytes": 2497960,
-      "durationSeconds": 18.88
+      "bytes": 3042399
     },
     {
       "id": "top",
       "device": "mobile",
+      "durationSeconds": 20.2,
       "viewport": [
         390,
         844
       ],
       "url": "https://doya-ai.surisuta.jp/",
       "file": "top-mobile.webm",
-      "bytes": 2946320,
-      "durationSeconds": 17.88
+      "bytes": 2733124
     },
     {
       "id": "banner",
       "device": "desktop",
+      "durationSeconds": 17.52,
       "viewport": [
         1440,
         1000
       ],
       "url": "https://doya-ai.surisuta.jp/banner",
       "file": "banner-desktop.webm",
-      "bytes": 2556060,
-      "durationSeconds": 17.24
+      "bytes": 2286332
     },
     {
       "id": "banner",
       "device": "mobile",
+      "durationSeconds": 17.2,
       "viewport": [
         390,
         844
       ],
       "url": "https://doya-ai.surisuta.jp/banner",
       "file": "banner-mobile.webm",
-      "bytes": 2610089,
-      "durationSeconds": 17.24
+      "bytes": 1660296
     }
-  ],
-  "sourceCommit": "f988db4d",
-  "note": "Homepage and banner motion is identical in 244e9866; that later commit only corrects captions on seven other services."
+  ]
 }
