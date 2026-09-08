@@ -1,0 +1,34 @@
+[
+  {
+    "id": "top-desktop",
+    "pass": true,
+    "duration": 18.88,
+    "time": 1.319331,
+    "width": 1152,
+    "height": 800
+  },
+  {
+    "id": "top-mobile",
+    "pass": true,
+    "duration": 17.88,
+    "time": 1.320806,
+    "width": 390,
+    "height": 844
+  },
+  {
+    "id": "banner-desktop",
+    "pass": true,
+    "duration": 17.24,
+    "time": 1.31266,
+    "width": 1152,
+    "height": 800
+  },
+  {
+    "id": "banner-mobile",
+    "pass": true,
+    "duration": 17.24,
+    "time": 1.317868,
+    "width": 390,
+    "height": 844
+  }
+]

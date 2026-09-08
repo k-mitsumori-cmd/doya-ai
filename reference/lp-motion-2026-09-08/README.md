@@ -27,3 +27,11 @@ Publication verification is recorded in `release.json` after deployment. The com
 The preceding quality revision is archived as `after-quality-20260908-0015` under the external comparison artifact folder. New static captures pause motion through the actual page control after the entrance and image decoding; video captures retain the animation. Static images do not claim to reproduce motion.
 
 Browser recording: `DOYA_QA_URL=https://doya-ai.surisuta.jp node reference/lp-motion-2026-09-08/record-motion.cjs`. Recordings are remuxed into seekable WebM files without re-encoding.
+
+## Final content check
+
+The motion captions were cross-checked against each service's existing LP workflow. HR now describes employee registration and evaluation; Persona, Promane, Quote, Mensetsu, AI Shodan and Adimage use the corresponding input or administrator action. All seven revised caption sets fit at 320 px. The motion implementation is unchanged by this copy correction.
+
+Public animation verification: 66/66 on the motion release. Four browser recordings (17–19 seconds) were inspected at multiple frames and played successfully with finite duration in a browser.
+
+Comparison capture initially timed out while decoding lazy images. The capture now explicitly loads LP images before taking the full-page screenshot, checks loaded dimensions, and runs sequentially with HTTP retries. Failed first-pass records are retained outside the final manifest; only successful captures are published.

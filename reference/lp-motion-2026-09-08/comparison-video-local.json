@@ -1,0 +1,37 @@
+{
+  "base": "http://localhost:3107",
+  "checkedAt": "2026-09-08T02:16:15.381Z",
+  "checks": [
+    {
+      "name": "top desktop: recorded animation plays",
+      "pass": true
+    },
+    {
+      "name": "top mobile: recorded animation plays",
+      "pass": true
+    },
+    {
+      "name": "banner desktop: recorded animation plays",
+      "pass": true
+    },
+    {
+      "name": "banner mobile: recorded animation plays",
+      "pass": true
+    },
+    {
+      "name": "Other services use the correct live link and hide unrelated video",
+      "pass": true
+    },
+    {
+      "name": "Video comparison fits mobile",
+      "pass": true
+    },
+    {
+      "name": "No comparison JavaScript errors",
+      "pass": true
+    }
+  ],
+  "errors": [],
+  "passed": 7,
+  "total": 7
+}

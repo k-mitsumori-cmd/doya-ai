@@ -1,0 +1,29 @@
+{
+  "verifiedAt": "2026-09-08T02:16:07.325937+00:00",
+  "productionUrl": "https://doya-ai.surisuta.jp",
+  "motionCommit": "f988db4d",
+  "motionDeployment": "https://doya-elqrm4gdy-surisutas-projects.vercel.app",
+  "motionDeploymentId": "dpl_GLuSUmDc9Cymcq3gnFRb5ikX7uBX",
+  "copyCommit": "244e9866",
+  "copyDeployment": "https://doya-jn2leuz81-surisutas-projects.vercel.app",
+  "copyDeploymentId": "dpl_8Z8mjZjSzSywwggej9sAjtnYmtyu",
+  "status": "Ready",
+  "motionChecks": {
+    "local": "66/66",
+    "production": "66/66"
+  },
+  "layoutChecks": {
+    "viewports": 90,
+    "axeCases": 36,
+    "violations": 0
+  },
+  "regressionChecks": "50/50 local",
+  "copyChecks": "7/7 local and production",
+  "videos": "4/4 local playback checks; public LP recordings",
+  "comparisonStatus": "36 pairs / 72 refreshed images + 4 videos built; publication verified separately in the external motion-publication-verification.json",
+  "originalPreservation": {
+    "pngFiles": 134,
+    "allFiles": 214,
+    "hashMismatches": 0
+  }
+}

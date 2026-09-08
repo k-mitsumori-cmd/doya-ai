@@ -1,6 +1,6 @@
 {
-  "base": "http://localhost:8107",
-  "checkedAt": "2026-09-07T15:16:50.802Z",
+  "base": "http://localhost:3107",
+  "checkedAt": "2026-09-08T02:16:13.344Z",
   "checks": [
     {
       "name": "18 services including top",
