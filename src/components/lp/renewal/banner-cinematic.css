@@ -331,6 +331,11 @@
   .doya-atelier-camera img {
     object-position: 85% 54%;
   }
+  [data-cinematic-service="aio"] .doya-atelier-camera img,
+  [data-cinematic-service="quote"] .doya-atelier-camera img,
+  [data-cinematic-service="aishodan"] .doya-atelier-camera img {
+    object-position: 100% 54%;
+  }
   .doya-atelier::after {
     inset: 280px 0 auto;
     height: 115px;

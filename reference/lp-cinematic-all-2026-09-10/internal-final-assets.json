@@ -1,40 +1,5 @@
 [
   {
-    "id": "seo",
-    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-6d016b09-d339-461a-b681-689858304d6b.png",
-    "target": "public/renewal/cinematic/seo-20260910-v1.webp"
-  },
-  {
-    "id": "interview",
-    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-f96e32de-37b4-4e1d-b7c3-5b5b301634c7.png",
-    "target": "public/renewal/cinematic/interview-20260910-v1.webp"
-  },
-  {
-    "id": "persona",
-    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-5f23653b-f3f9-47f1-84f0-21ee9ab74f77.png",
-    "target": "public/renewal/cinematic/persona-20260910-v1.webp"
-  },
-  {
-    "id": "hr",
-    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-17d5ffa1-1277-42ab-8d4b-a44e214b0358.png",
-    "target": "public/renewal/cinematic/hr-20260910-v1.webp"
-  },
-  {
-    "id": "kintai",
-    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-c9ba06ec-6425-4ebb-9c50-a9f6762f46d2.png",
-    "target": "public/renewal/cinematic/kintai-20260910-v1.webp"
-  },
-  {
-    "id": "promane",
-    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-c7f09354-e671-43cc-84e0-bde47c498253.png",
-    "target": "public/renewal/cinematic/promane-20260910-v1.webp"
-  },
-  {
-    "id": "doyaslide",
-    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-6883ad9b-93c9-4726-b703-8a7f3d43629a.png",
-    "target": "public/renewal/cinematic/doyaslide-20260910-v1.webp"
-  },
-  {
     "id": "doyalist",
     "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-a2db0094-885a-425d-b797-3681e754cb92.png",
     "target": "public/renewal/cinematic/doyalist-20260910-v1.webp",
