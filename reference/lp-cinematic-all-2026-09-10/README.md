@@ -40,6 +40,7 @@ public/renewal-comparison/cinematic.htmlに17サービスのセレクター、9�
 - 変更したTSXのESLint成功、TypeScript成功。
 - 本番ビルド成功（SKIP_DB_PUSH=1）。9画像未生成のため、ビルド成功だけでは完了・公開可能と扱わない。
 - operation-51-frames.json：全17サービス×3段階の切り替え、ネイティブ画面の読込、横はみ出しなしを実ブラウザで確認。
+- preview-http.json：全17比較用ルートのHTTP 200、サービス固有FV、h1が1件、SAMEORIGIN・noindex・canonicalを確認。旧版2種類×端末2種類×17サービスの保存画像68件が存在。AIOのログイン導線もHTMLで確認。これは未生成9枚のFV画像の表示確認とは別。
 - スマホ390pxで広告画像デモを拡大し、ダイアログが画面内に収まることとEscapeで閉じることを確認。
 - pending-api-jobs.jsonl：承認待ちのGPT Image 2.5 Sunburst・1536×1024・high・9枚のAPI生成計画。dry-runのみで有料呼び出しは未実行。
 
