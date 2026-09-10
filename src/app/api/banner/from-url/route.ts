@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, shouldResetMonthlyUsage, getCurrentMonthJST, isWithinFreeHour } from '@/lib/pricing'
-import { isFirstServiceUse, notifyFirstServiceUse } from '@/lib/service-usage'
+import { isFirstServiceUse, notifyFirstServiceUse, notifyServiceActivity } from '@/lib/service-usage'
 import crypto from 'crypto'
 import sharp from 'sharp'
 
@@ -1710,6 +1710,7 @@ export async function POST(request: NextRequest) {
               },
             })),
           })
+          if (!isFirstUse) await notifyServiceActivity({ userId, serviceId: 'banner', action: 'バナー生成' })
           if (isFirstUse) {
             await notifyFirstServiceUse({
               userId,
@@ -1734,6 +1735,8 @@ export async function POST(request: NextRequest) {
         Array.isArray(result.banners) ? result.banners.filter((b) => typeof b === 'string' && b.startsWith('data:image/')).length : desiredCount
       )
     )
+
+    if (isGuest || !userId) await notifyServiceActivity({ serviceId: 'banner', action: 'URLからバナー生成', count: chargedCount })
 
     // ゲストの場合: Cookie を更新
     if (!disableLimits && isGuest && guestUsage) {

@@ -77,23 +77,23 @@ export async function sendErrorNotification(data: ErrorNotificationData): Promis
 
 function formatErrorMessage(data: ErrorNotificationData): string {
   const lines: string[] = []
-  lines.push(`*[API Error]* ${data.timestamp}`)
-  if (data.pathname) lines.push(`- path: ${data.pathname}`)
-  if (data.httpStatus) lines.push(`- status: ${data.httpStatus}`)
-  if (data.requestMethod) lines.push(`- method: ${data.requestMethod}`)
-  if (data.requestUrl) lines.push(`- url: ${data.requestUrl}`)
-  if (data.userId || data.userEmail) lines.push(`- user: ${data.userId || ''} ${data.userEmail || ''}`.trim())
+  lines.push(`*【ドヤAI・要対応】処理中にエラーが発生しました*\n発生時刻：${data.timestamp}\n対応：発生箇所と下記のエラーを確認してください。\n\n*調査用の詳細*`)
+  if (data.pathname) lines.push(`- 発生した画面・処理: ${data.pathname}`)
+  if (data.httpStatus) lines.push(`- HTTP応答コード: ${data.httpStatus}`)
+  if (data.requestMethod) lines.push(`- リクエストの種類: ${data.requestMethod}`)
+  if (data.requestUrl) lines.push(`- 対象URL: ${data.requestUrl}`)
+  if (data.userId || data.userEmail) lines.push(`- 調査用ユーザー識別子: ${data.userId || ''} ${data.userEmail || ''}`.trim())
   lines.push('')
-  lines.push(`*message*`)
+  lines.push(`*システムが返したエラー*`)
   lines.push(truncate(data.errorMessage, 1800))
   if (data.requestBody) {
     lines.push('')
-    lines.push(`*requestBody*`)
+    lines.push(`*調査用：送信データ*`)
     lines.push(truncate(data.requestBody, 1200))
   }
   if (data.errorStack) {
     lines.push('')
-    lines.push(`*stack*`)
+    lines.push(`*調査用：処理の経路*`)
     lines.push(truncate(data.errorStack, 1800))
   }
   return lines.join('\n')
@@ -176,13 +176,13 @@ const EVENT_EMOJI: Record<EventType, string> = {
 }
 
 const EVENT_LABEL: Record<EventType, string> = {
-  signup: '無料会員登録',
+  signup: '無料会員が登録しました（入金はありません）',
   login: 'ログイン',
-  trial_start: '無料トライアル開始',
-  subscription: '有料プラン申し込み',
-  payment: '入金',
+  trial_start: '無料体験が始まりました（まだ入金はありません）',
+  subscription: '有料プランの申込がありました（入金は別通知で確認）',
+  payment: '決済が完了しました',
   cancellation: '解約',
-  payment_failed: '支払い失敗',
+  payment_failed: '支払いに失敗しました・決済状況の確認が必要です',
 }
 
 /**
@@ -220,7 +220,7 @@ export async function sendEventNotification(event: {
 
     const lines = [
       ...(CHANNEL_PING[event.type] ? ['<!channel>'] : []),
-      `${emoji} *[${label}]* ${now}`,
+      `${emoji} *【ドヤAI】${label}*\n発生時刻：${now}（日本時間）`,
       `- ユーザー: ${who}${event.userEmail ? ` (${event.userEmail})` : ''}`,
     ]
     if (event.details) lines.push(`- ${event.details}`)

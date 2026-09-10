@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 /**
- * 相互ヘルスチェック（Vercel Cron・5分毎）。ドヤAI 自身と 呪い日記(noroi) の
+ * 相互ヘルスチェック（Vercel Cron・5分毎）。稼働中の8サービスの
  * 公開 /api/health を外形監視し、応答遅延・依存(DB)障害・到達不可(ダウン)を Slack 通知。
  * 09_Cursol と noroi が相互に相手を叩くことで、片方が完全ダウンしても他方が検知できる。
  * 認証: Authorization: Bearer ${CRON_SECRET}。
@@ -15,7 +15,7 @@ export const maxDuration = 60
 const LATENCY_WARN_MS = Math.max(500, Number(process.env.HEALTH_LATENCY_WARN_MS) || 4000)
 const FETCH_TIMEOUT_MS = 15_000
 
-type Target = { name: string; url: string; key: string }
+type Target = { name: string; url: string; key: string; webhookUrl?: string }
 
 const TARGETS: Target[] = [
   {
@@ -27,30 +27,36 @@ const TARGETS: Target[] = [
     name: '呪い日記',
     url: process.env.NOROI_HEALTH_URL || 'https://game.surisuta.jp/noroi/api/health',
     key: 'noroi',
+    webhookUrl: process.env.SLACK_APPSTORE_WEBHOOK_URL,
   },
   {
     name: 'ゆるせん',
     url: process.env.YURUSEN_HEALTH_URL || 'https://game.surisuta.jp/yurusen/api/health',
     key: 'yurusen',
+    webhookUrl: process.env.SLACK_YURUSEN_APPSTORE_WEBHOOK_URL,
   },
+  { name: '推しにマイル', key: 'oshi-mile', url: 'https://game.surisuta.jp/oshimile/api/health', webhookUrl: process.env.SLACK_OSHI_ERROR_WEBHOOK_URL },
+  { name: 'ヒトリジメ', key: 'hitorijime', url: 'https://game.surisuta.jp/hitorijime', webhookUrl: process.env.SLACK_HITORIJIME_ERROR_WEBHOOK_URL },
+  { name: '旅行ツール', key: 'travel-tools', url: 'https://mitsumoritravel.surisuta.jp', webhookUrl: process.env.SLACK_TRAVEL_ERROR_WEBHOOK_URL },
+  { name: 'X投稿管理', key: 'x-worker', url: 'https://x-harness-worker.k-mitsumori.workers.dev/api/health' },
+  { name: 'LINE配信管理', key: 'line-worker', url: 'https://line-crm-worker.k-mitsumori.workers.dev/docs' },
 ]
 
 async function checkTarget(t: Target): Promise<{ name: string; ok: boolean; rtt: number; status?: number }> {
   const startedAt = Date.now()
   try {
-    const ctrl = new AbortController()
-    const to = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS)
-    const res = await fetch(t.url, { signal: ctrl.signal, cache: 'no-store' })
-    clearTimeout(to)
+    const res = await fetch(t.url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), cache: 'no-store' })
     const rtt = Date.now() - startedAt
-    const body = (await res.json().catch(() => null)) as Record<string, unknown> | null
+    await res.body?.cancel().catch(() => {})
 
     if (!res.ok) {
       await notifyAlert({
+        systemName: t.name,
+        webhookUrl: t.webhookUrl,
         level: 'critical',
         title: `${t.name}: ヘルスチェック異常（依存障害の可能性）`,
         context: t.url,
-        detail: `/api/health が HTTP ${res.status}。body=${JSON.stringify(body ?? {}).slice(0, 400)}`,
+        detail: `公開URLが HTTP ${res.status} を返しました。対象のサーバーとデプロイ状況を確認してください。`,
         dedupKey: `health-status-${t.key}`,
         cooldownMs: 10 * 60_000,
         extra: { 往復ms: rtt },
@@ -61,11 +67,8 @@ async function checkTarget(t: Target): Promise<{ name: string; ok: boolean; rtt:
       // 2回目も閾値超過のときだけ「本当の遅延」として通知する。
       let rtt2 = rtt
       try {
-        const ctrl2 = new AbortController()
-        const to2 = setTimeout(() => ctrl2.abort(), FETCH_TIMEOUT_MS)
         const s2 = Date.now()
-        const res2 = await fetch(t.url, { signal: ctrl2.signal, cache: 'no-store' })
-        clearTimeout(to2)
+        const res2 = await fetch(t.url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS), cache: 'no-store' })
         await res2.body?.cancel().catch(() => {})
         if (res2.ok) rtt2 = Date.now() - s2 // 2回目が異常応答なら1回目の値で判断
       } catch {
@@ -73,6 +76,8 @@ async function checkTarget(t: Target): Promise<{ name: string; ok: boolean; rtt:
       }
       if (rtt2 > LATENCY_WARN_MS) {
         await notifyAlert({
+        systemName: t.name,
+        webhookUrl: t.webhookUrl,
           level: 'warn',
           title: `${t.name}: 応答遅延を検知`,
           context: t.url,
@@ -85,10 +90,12 @@ async function checkTarget(t: Target): Promise<{ name: string; ok: boolean; rtt:
     return { name: t.name, ok: res.ok, rtt, status: res.status }
   } catch (e) {
     await notifyAlert({
+        systemName: t.name,
+        webhookUrl: t.webhookUrl,
       level: 'critical',
       title: `${t.name}: 到達不可（ダウンの可能性）`,
       context: t.url,
-      detail: `/api/health へ到達できません: ${(e instanceof Error ? e.message : String(e)).slice(0, 200)}`,
+      detail: `公開URLに接続できませんでした。対象のサーバー・DNS・デプロイ状況を確認してください。`,
       dedupKey: `health-down-${t.key}`,
       cooldownMs: 10 * 60_000,
     })

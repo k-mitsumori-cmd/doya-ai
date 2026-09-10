@@ -95,6 +95,10 @@
     {
       "path": "/api/cron/spend-report",
       "schedule": "10 22 * * *"
+    },
+    {
+      "path": "/api/cron/service-downloads",
+      "schedule": "15 0 * * *"
     }
   ]
 }

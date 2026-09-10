@@ -1,0 +1,154 @@
+{
+  "deployment": "dpl_BMXgtAhmUMphvNBkL8hhpJFW6gML",
+  "previousBase": "dpl_BkSZhjUQPzbBQggrmLnYsFuEb1Zk",
+  "files": [
+    {
+      "file": "next.config.js",
+      "sha256": "2f60f9d350656d021da50a6312eb7bca098eaa9ac1f8337813d8377633863a91",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "package-lock.json",
+      "sha256": "93da3263bc32c38a99527801fa9c8423940c81fb06653e1c70cc464b1096b6cb",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "package.json",
+      "sha256": "905ac93c303e11e28eb33966c6a628cc899335bd7eccf1f17c745f244b8bd7f0",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/app/api/banner/from-url/route.ts",
+      "sha256": "f38e3999dd9e8dded2eb3500fdf821d6a731da961b090090678d2d55bee489ce",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/app/api/banner/generate/route.ts",
+      "sha256": "840fca6585aeb0a915663da6f9bbcd43881400a50b4b30364809568c1b1205b2",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/app/api/cron/health-alert/route.ts",
+      "sha256": "b733259f9f9a1e37aef2b8804521a6fc47a67f544e036714ec0c3755a8fdb6ef",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/app/error.tsx",
+      "sha256": "07039438a40be137a544b74e700aa4907f39c285873f8ec4d1eeaefda8d3aaef",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/app/layout.tsx",
+      "sha256": "b63c804f10d53a3477c86912536d9b7d17633c89ca90e5ac31c04a919a627037",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/lib/alert.ts",
+      "sha256": "20318a7f5e26e4cef3e839128cf396f5bf75a2c88cf6a4a026bfabebc2d9d009",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/lib/app-morning-digest.ts",
+      "sha256": "83463a92be9a419a5037257867c76548b40b320180d246fd1a175b0eb110648d",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/lib/appstore-source-report.ts",
+      "sha256": "76f2d832d1b80fbed2cf51e05f140ee3009760e4d36708b4fb93dd03a7ba8743",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/lib/notifications.ts",
+      "sha256": "146b3e10500eb6c749ab63ac8af63fc6b15b5d2d6c87ff36cb997b8959d411db",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/lib/service-usage.ts",
+      "sha256": "066f3016fc67458b7d2c5a29a950fa2fd01fc1cadfd72f75940e990099f6bdc0",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "vercel.json",
+      "sha256": "edd93491ce069f247712eaa507f234488a7e1f99015baa4035233d1dd895dfb8",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/app/api/cron/service-downloads/route.ts",
+      "sha256": "8d055f71a0c6d369b1c513c83465f651968b8e30a6e90c874715c6708a436105",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/app/api/operational-error/route.ts",
+      "sha256": "7b8d0f30609415849fb06a9c4795807c28afe910039586607ca5f12fc6387308",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/app/api/service-activity/route.ts",
+      "sha256": "097087d2cce161463dcc31d845ac74255240a6d70a074d0648d797d2bd48722e",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/components/RuntimeErrorReporter.tsx",
+      "sha256": "a72174b250172f46f97dd4ef8c0b62a82613298945a2daeb3bdded92f85cd5de",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/instrumentation.ts",
+      "sha256": "2409b0e3c4a4787f808e29c953e0198e5d93ccf867fb70de31795945e62e0fb0",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/lib/heisha-runtime-alert.ts",
+      "sha256": "827aeed701b6eb61af134ec223f274937d2e8ca705dd28e35af4b84c5e4b31a4",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/lib/oshi-acquisition-report.ts",
+      "sha256": "2ff93e4fcfe76463786160a1b0d31aed52bada18151c28d49f5a8dc36bc43a3d",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/lib/runtime-alert.ts",
+      "sha256": "a6b4bbb6261e9276b912240b71218ba79aa354d5fbbf5b3c9495dc689b041abc",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/lib/service-download-report.ts",
+      "sha256": "10aeee13222653f8e8b955045eca9bcf46d5d3915f3242816d35d2dcc11be9b5",
+      "source": "verified previous deployment worktree",
+      "rootMatches": true
+    },
+    {
+      "file": "src/lib/spend-report.ts",
+      "sha256": "122580d7b4d7fc7cf0671c62701370537bc561c7452dfc757f0c68f45d517d04",
+      "source": "root source for remove-gemini-spend-notification deployment"
+    },
+    {
+      "file": "src/app/api/cron/gcp-usage/route.ts",
+      "sha256": "93742bdff7359758dd470b181094a1e805a26e8d94d106f55c062613aa1a112e",
+      "source": "root source for remove-gemini-spend-notification deployment"
+    }
+  ]
+}

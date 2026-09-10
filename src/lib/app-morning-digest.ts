@@ -95,7 +95,7 @@ function rankDelta(cur: number | null, prev: number | null | undefined): string 
   return '（→）'
 }
 function rankLabel(r: number | null): string {
-  return r === null ? '圏外' : `${r}位`
+  return r === null ? '未掲載または取得できず' : `${r}位`
 }
 /** 2026-08-23 → 8/23 */
 function md(d: string | null): string {
@@ -207,7 +207,7 @@ function buildHeadline(h: Highlights): string[] {
 
   // 1行目: DL と売上
   if (h.dl === 0 && h.gross === 0) {
-    L.push('きのうは 新規ダウンロード・売上ともにありませんでした。')
+    L.push('集計対象日はダウンロード・売上ともにありませんでした。')
   } else {
     const dlPart =
       h.dlDiff === null
@@ -215,7 +215,7 @@ function buildHeadline(h: Highlights): string[] {
         : `ダウンロード${fmtInt(h.dl)}件（${delta(h.dlDiff)}）`
     const grossPart =
       h.grossDiff === null ? `売上${fmtYen(h.gross)}` : `売上${fmtYen(h.gross)}（${deltaYen(h.grossDiff)}）`
-    L.push(`きのうは ${dlPart}・${grossPart}。`)
+    L.push(`下記の集計対象日は ${dlPart}・${grossPart}。`)
   }
 
   // 2行目: 良かったことを拾う（最大2つ。無ければ書かない）
@@ -327,7 +327,7 @@ export async function sendAppMorningDigest(
   L.push(`■ ${cfg.appLabel} 朝刊　${md(jstToday())}（${jstWeekday()}）`)
   L.push('')
   L.push(
-    ...buildHeadline({
+    ...(sales?.reportDate ? buildHeadline({
       dl: sales?.downloads ?? 0,
       dlDiff: sales?.prev ? sales.downloads - sales.prev.downloads : null,
       gross: sales?.grossJpy ?? 0,
@@ -336,25 +336,25 @@ export async function sendAppMorningDigest(
       rankUp,
       ytViewsDelta: ytTotalDelta,
       newUsers: engagement?.newUsers ?? null,
-    }),
+    }) : ['ダウンロード・売上は未集計または取得できていません（0件とは扱いません）。']),
   )
 
   // --- ダウンロード・売上 ---
-  if (sales) {
+  if (sales?.reportDate) {
     L.push('')
     L.push(`■ ダウンロード・売上（${md(sales.reportDate)}分）`)
     if (sales.prev) {
       L.push(
-        `　DL ${fmtInt(sales.downloads)}件（前日 ${fmtInt(sales.prev.downloads)} → ${delta(sales.downloads - sales.prev.downloads)}）`,
+        `　ダウンロード ${fmtInt(sales.downloads)}件（前日 ${fmtInt(sales.prev.downloads)} → ${delta(sales.downloads - sales.prev.downloads)}）`,
       )
       L.push(
         `　売上 ${fmtYen(sales.grossJpy)} 税込（前日 ${fmtYen(sales.prev.grossJpy)} → ${deltaYen(sales.grossJpy - sales.prev.grossJpy)}）`,
       )
     } else {
-      L.push(`　DL ${fmtInt(sales.downloads)}件`)
+      L.push(`　ダウンロード ${fmtInt(sales.downloads)}件`)
       L.push(`　売上 ${fmtYen(sales.grossJpy)} 税込`)
     }
-    L.push(`　手取り ${fmtYen(sales.proceedsJpy)}／購入 ${fmtInt(sales.purchaseUnits)}件`)
+    L.push(`　Apple手数料等控除後の収益 ${fmtYen(sales.proceedsJpy)}／アプリ内購入 ${fmtInt(sales.purchaseUnits)}件`)
   }
 
   // --- アプリ内の動き ---
@@ -362,7 +362,7 @@ export async function sendAppMorningDigest(
     L.push('')
     L.push(`■ アプリ内の動き（${md(engagement.day)}分）`)
     L.push(
-      `　DAU ${fmtInt(engagement.dau)}人／新規 ${fmtInt(engagement.newUsers)}人／累計 ${fmtInt(engagement.totalUsers)}人`,
+      `　1日に利用した人 ${fmtInt(engagement.dau)}人／新規 ${fmtInt(engagement.newUsers)}人／累計 ${fmtInt(engagement.totalUsers)}人`,
     )
     if (engagement.actions.length > 0) {
       L.push(
@@ -371,7 +371,7 @@ export async function sendAppMorningDigest(
     }
     const ret = engagement.d1Retention === null ? '—' : `${engagement.d1Retention}%`
     L.push(
-      `　課金 ${fmtYen(engagement.revenueJpy)}（${fmtInt(engagement.purchaseCount)}件）／D1継続 ${ret}`,
+      `　課金 ${fmtYen(engagement.revenueJpy)}（${fmtInt(engagement.purchaseCount)}件）／新規登録の翌日も利用した割合 ${ret}`,
     )
   }
 
@@ -388,7 +388,7 @@ export async function sendAppMorningDigest(
       L.push('■ 流入経路')
       L.push('　Apple 側でデータ生成待ちです（通常1〜2日）。')
     } else {
-      L.push(`■ 流入経路（${md(source.processingDate)}分）`)
+      L.push(`■ 流入経路（Apple処理日 ${md(source.processingDate)}）`)
       if (sortedSources.length === 0) {
         L.push('　この日の流入データはありませんでした。')
       } else {
@@ -399,9 +399,9 @@ export async function sendAppMorningDigest(
               const share = Math.round((agg.downloads / totalSourceDl) * 100)
               return `${sourceJa(src)} ${fmtInt(agg.downloads)}件（${share}%）`
             })
-          L.push(`　初回DL: ${parts.join('／')}`)
+          L.push(`　初回ダウンロード: ${parts.join('／')}`)
         } else {
-          L.push('　初回DLはこの日ありませんでした。')
+          L.push(source.downloadsAvailable ? '　取得した経路別レポートの初回ダウンロードは0件でした。' : '　経路別ダウンロードはAppleの集計待ちです（0件とは扱いません）。')
         }
         // 見られ方（表示→閲覧）は DL が無い日でも動きが分かるので併記する
         const seen = sortedSources
@@ -426,12 +426,12 @@ export async function sendAppMorningDigest(
     L.push(`■ 国別（${md(country.reportDate)}分）`)
     const top = country.countries
       .slice(0, 5)
-      .map((c) => `${countryLabel(c.code)} DL${fmtInt(c.downloads)}／${fmtYen(c.revenueJpy)}`)
+      .map((c) => `${countryLabel(c.code)} ダウンロード${fmtInt(c.downloads)}／${fmtYen(c.revenueJpy)}`)
     L.push(`　${top.join('　')}`)
     if (country.countries.length > 5) {
       const rest = country.countries.slice(5)
       L.push(
-        `　ほか${rest.length}カ国 DL${fmtInt(rest.reduce((s, r) => s + r.downloads, 0))}／${fmtYen(rest.reduce((s, r) => s + r.revenueJpy, 0))}`,
+        `　ほか${rest.length}カ国 ダウンロード${fmtInt(rest.reduce((s, r) => s + r.downloads, 0))}／${fmtYen(rest.reduce((s, r) => s + r.revenueJpy, 0))}`,
       )
     }
   }
@@ -439,7 +439,8 @@ export async function sendAppMorningDigest(
   // --- ストア・順位 ---
   if (marketing) {
     L.push('')
-    L.push('■ ストア・順位')
+    L.push('■ ストア評価・検索結果の参考順位')
+    L.push('　指定キーワードをApple公開検索APIで確認した参考値です。実際の利用者の検索語・流入数ではありません。')
     L.push(
       `　評価 ★${marketing.rating.toFixed(1)}（${fmtInt(marketing.reviewCount)}件${marketing.prev ? ` ${delta(marketing.reviewCount - marketing.prev.reviewCount)}` : ''}）`,
     )
@@ -460,7 +461,7 @@ export async function sendAppMorningDigest(
           .join('　')}`,
       )
     }
-    if (out > 0) L.push(`　（ほか${out}語は圏外）`)
+    if (out > 0) L.push(`　（ほか${out}語は検索結果内に未掲載、または取得できませんでした）`)
   }
 
   // --- SNS ---
@@ -498,7 +499,7 @@ export async function sendAppMorningDigest(
 function sourceJa(s: string): string {
   const map: Record<string, string> = {
     'App Store Search': 'App Store検索',
-    'App Store Browse': 'ブラウズ',
+    'App Store Browse': 'おすすめ・一覧',
     'App Referrer': 'アプリ経由',
     'Web Referrer': 'Web経由',
     'Institutional Purchase': '法人一括',

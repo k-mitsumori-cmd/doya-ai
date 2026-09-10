@@ -5,7 +5,7 @@ import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, shouldResetMonthlyUsage, getCurrentMonthJST, isWithinFreeHour } from '@/lib/pricing'
 import { sendErrorNotification } from '@/lib/notifications'
-import { isFirstServiceUse, notifyFirstServiceUse } from '@/lib/service-usage'
+import { isFirstServiceUse, notifyFirstServiceUse, notifyServiceActivity } from '@/lib/service-usage'
 import crypto from 'crypto'
 
 // Vercel上で画像生成が長引くことがあるため、実行時間上限を引き上げる
@@ -367,6 +367,7 @@ export async function POST(request: NextRequest) {
               },
             })),
           })
+          if (!isFirstUse) await notifyServiceActivity({ userId, serviceId: 'banner', action: 'バナー生成' })
           if (isFirstUse) {
             await notifyFirstServiceUse({
               userId,
@@ -381,6 +382,8 @@ export async function POST(request: NextRequest) {
         // 履歴保存失敗でも生成自体は成功しているので落とさない
       }
     }
+
+    if (!userId) await notifyServiceActivity({ serviceId: 'banner', action: 'バナー生成', count: desiredCount })
 
     // 成功時のみ使用回数を加算（画像枚数ベース・月間）
     const chargedCount = Math.max(1, Math.min(desiredCount, Array.isArray(result.banners) ? result.banners.length : desiredCount))

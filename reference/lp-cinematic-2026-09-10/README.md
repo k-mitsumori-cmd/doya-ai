@@ -31,3 +31,9 @@
 - モーション軽減はCSSとイベント分岐を確認。OS設定を切り替えた実機テストは行っていない。
 
 公開状態は publication.json の確認記録を参照。
+
+## 直前公開版の保持
+
+公開確認で、Gitのmainより新しいCLIデプロイ `dpl_BMXgtAhmUMphvNBkL8hhpJFW6gML`（remove-gemini-spend-notification）を検出した。その基底は `dpl_BkSZhjUQPzbBQggrmLnYsFuEb1Zk`。初回のGit連動デプロイ `dpl_6cwwKwZfkfWDTWMoyEfFJFvRUiUy` は公開前にキャンセルし、既存機能が戻らないようにした。
+
+前回の通知改善で検証された作業ツリーと現在の元リポジトリの一致を確認し、通知・エラー監視関連23ファイル、直近のGemini費用通知停止に関する2ファイルを今回の作業ツリーへ保持した。`next.config.js` は既存の instrumentationHook と今回の限定的なLP埋め込み設定を両方保持する。元リポジトリの未コミットファイルには書き込んでいない。照合記録は preserved-production-source.json。

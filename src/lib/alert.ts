@@ -124,6 +124,8 @@ type Extra = Record<string, string | number | boolean | null | undefined>
  */
 export async function notifyAlert(opts: {
   title: string
+  systemName?: string
+  webhookUrl?: string
   detail?: string
   context?: string
   level?: AlertLevel
@@ -136,11 +138,11 @@ export async function notifyAlert(opts: {
   const { title, detail, context, level = 'warn', extra, dedupKey, cooldownMs = 10 * 60_000, aiRepair } = opts
   if (dedupKey && !shouldSend(`alert:${dedupKey}`, cooldownMs)) return
 
-  const webhook = await getAlertWebhook()
+  const webhook = opts.webhookUrl || await getAlertWebhook()
   if (!webhook) return
 
   const env = process.env.VERCEL_ENV || process.env.NODE_ENV || 'unknown'
-  const label = level === 'critical' ? '重大' : '警告'
+  const label = level === 'critical' ? '要対応・重大' : '要確認'
   const extraFields = extra
     ? Object.entries(extra)
         .filter(([, v]) => v !== undefined && v !== null && v !== '')
@@ -153,7 +155,7 @@ export async function notifyAlert(opts: {
   const blocks: unknown[] = [
     {
       type: 'header',
-      text: { type: 'plain_text', text: `ドヤAI アラート[${label}] ${title}`.slice(0, 150), emoji: false },
+      text: { type: 'plain_text', text: `【${opts.systemName || 'ドヤAI'}・${label}】${title}`.slice(0, 150), emoji: false },
     },
     {
       type: 'section',
@@ -186,10 +188,11 @@ export async function notifyAlert(opts: {
 
   try {
     const res = await fetch(webhook, {
+      signal: AbortSignal.timeout(5000),
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        text: `ドヤAI アラート[${label}] ${title}: ${detail ?? ''}`.slice(0, 200),
+        text: `【${opts.systemName || 'ドヤAI'}・${label}】${title}: ${detail ?? ''}`.slice(0, 200),
         blocks,
       }),
     })

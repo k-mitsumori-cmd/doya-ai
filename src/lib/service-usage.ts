@@ -1,3 +1,4 @@
+import { waitUntil } from '@vercel/functions'
 // ============================================
 // サービス利用トラッキング（サーバー専用）
 // ============================================
@@ -54,10 +55,15 @@ function truncate(s: string, max: number): string {
  * 失敗しても呼び出し元の処理は絶対に壊さない（throw しない）ので、
  * 生成成功後に `void` で投げっぱなしにしてもよい。
  */
-export async function recordServiceUsage(opts: ServiceUsageOptions): Promise<void> {
+export function recordServiceUsage(opts: ServiceUsageOptions): Promise<void> {
+  const task = recordServiceUsageImpl(opts)
+  try { waitUntil(task) } catch { /* Local execution has no Vercel context. */ }
+  return task
+}
+async function recordServiceUsageImpl(opts: ServiceUsageOptions): Promise<void> {
   const userId = opts.userId
   // Generation.userId は必須のためゲストは記録できない（件数は各サービスのゲスト上限で管理されている）
-  if (!userId) return
+  if (!userId) { await notifyServiceActivity(opts); return }
 
   try {
     const serviceId = opts.serviceId
@@ -86,6 +92,8 @@ export async function recordServiceUsage(opts: ServiceUsageOptions): Promise<voi
         action: opts.action,
         summary: opts.summary,
       })
+    } else {
+      await notifyServiceActivity(opts)
     }
   } catch (e) {
     console.error('[Usage] recordServiceUsage failed:', opts.serviceId, e instanceof Error ? e.message : e)
@@ -179,7 +187,7 @@ export async function notifyFirstServiceUse(opts: {
     const blocks: unknown[] = [
       {
         type: 'header',
-        text: { type: 'plain_text', text: `🚀 初回利用：${label}`, emoji: true },
+        text: { type: 'plain_text', text: `【初めての利用】${label}`, emoji: true },
       },
       {
         type: 'section',
@@ -187,7 +195,7 @@ export async function notifyFirstServiceUse(opts: {
           { type: 'mrkdwn', text: `*ユーザー*\n${who}${user?.email ? `\n${user.email}` : ''}` },
           { type: 'mrkdwn', text: `*プラン*\n${planLabel}` },
           { type: 'mrkdwn', text: `*登録日*\n${signupLine}` },
-          { type: 'mrkdwn', text: `*獲得元*\n${acquisition}` },
+          { type: 'mrkdwn', text: `*登録したサービス・流入元*\n${acquisition}` },
         ],
       },
       {
@@ -215,4 +223,18 @@ export async function notifyFirstServiceUse(opts: {
   } catch (e) {
     console.error('[Usage] notifyFirstServiceUse failed:', serviceId, e instanceof Error ? e.message : e)
   }
+}
+
+/** Only the action and count are sent; input/output contents are omitted. */
+export async function notifyServiceActivity(opts: Pick<ServiceUsageOptions, 'serviceId' | 'action' | 'count' | 'userId'>): Promise<void> {
+  try {
+    const text = [
+      `${process.env.VERCEL_ENV === 'production' ? '' : '【テスト】'}【利用されました】${serviceLabelOf(opts.serviceId)}`,
+      `行われた操作：${opts.action || 'サービス利用'}`,
+      `この操作で記録された件数：${opts.count ?? 1}件`,
+      `利用区分：${opts.userId ? 'ログイン利用' : 'ゲスト利用'}`,
+      `日時：${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}（日本時間）`,
+    ].join('\n');
+    await postToSlackBlocks(text, [{ type: 'section', text: { type: 'plain_text', text } }]);
+  } catch (error) { console.error('[Usage] notification failed', error); }
 }

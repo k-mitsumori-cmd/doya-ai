@@ -50,6 +50,7 @@ async function ascGetAll(token: string, urlOrPath: string): Promise<JsonResource
     guard++
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+      signal: AbortSignal.timeout(10000),
     })
     if (!res.ok) {
       const text = await res.text().catch(() => '')
@@ -113,12 +114,11 @@ async function loadDailyRows(
   let header = ''
   for (const seg of segments) {
     const url = seg.attributes?.url
-    if (!url) continue
+    if (!url) throw new Error("Apple report segment URL missing")
     // segment.url は署名付きURL → 認証ヘッダは付けない
-    const res = await fetch(url)
+    const res = await fetch(url, { signal: AbortSignal.timeout(10000) })
     if (!res.ok) {
-      console.warn(`[appstore-source-report] segment ダウンロード失敗 ${res.status}: ${url}`)
-      continue
+      throw new Error(`Apple report segment HTTP ${res.status}`)
     }
     const buf = Buffer.from(await res.arrayBuffer())
     let tsv: string
@@ -181,6 +181,9 @@ export type SourceReportResult = {
   bySourceType: Record<string, SourceAgg>
   topReferrerDomains: Array<{ domain: string; downloads: number }>
   reportName?: string
+  engagementDates?: string[]
+  downloadDates?: string[]
+  downloadsAvailable?: boolean
 }
 
 function emptyAgg(): SourceAgg {
@@ -373,13 +376,13 @@ export async function sendAppStoreSourceReport(
       const share = totalDl > 0 ? Math.round((agg.downloads / totalDl) * 1000) / 10 : 0
       const parts = [`表示 ${fmt(agg.impressions)}`, `ページ閲覧 ${fmt(agg.ppViews)}`]
       if (agg.taps > 0) parts.push(`タップ ${fmt(agg.taps)}`)
-      parts.push(`初回DL ${fmt(agg.downloads)}` + (totalDl > 0 ? `（DL比 ${share}%）` : ''))
+      parts.push(dl ? `初回ダウンロード ${fmt(agg.downloads)}件` + (totalDl > 0 ? `（全体の ${share}%）` : '') : '初回ダウンロード：Appleの集計待ち')
       if (agg.redownloads > 0) parts.push(`再DL ${fmt(agg.redownloads)}`)
       lines.push(`${sourceLabel(src)}: ${parts.join(' / ')}`)
     }
     lines.push('')
     lines.push(
-      `初回DL合計: ${fmt(totalDl)}` + (totalRedl > 0 ? `（ほかに再DL ${fmt(totalRedl)}）` : ''),
+      (dl ? `初回ダウンロード合計: ${fmt(totalDl)}件` : 'ダウンロード数は集計待ちです。0件とは扱いません。') + (totalRedl > 0 ? `（ほかに再DL ${fmt(totalRedl)}）` : ''),
     )
   }
 
@@ -407,5 +410,8 @@ export async function sendAppStoreSourceReport(
     bySourceType: bySourceTypeObj,
     topReferrerDomains,
     reportName,
+    engagementDates: [...new Set(eng.rows.map(row => row.Date).filter(Boolean))].sort(),
+    downloadDates: [...new Set((dl?.rows ?? []).map(row => row.Date).filter(Boolean))].sort(),
+    downloadsAvailable: dl !== null,
   }
 }

@@ -1,3 +1,4 @@
+import RuntimeErrorReporter from '@/components/RuntimeErrorReporter';
 import type { Metadata, Viewport } from 'next'
 import { Toaster } from 'react-hot-toast'
 import './globals.css'
@@ -170,7 +171,7 @@ export default function RootLayout({
         {/* Google Tag Manager (noscript) */}
         <GoogleTagManagerNoScript />
         <Providers>
-          {children}
+          <RuntimeErrorReporter />{children}
           {/* 改善点・要望をうかがうカード。無料プランの方に、
               1 / 5 / 20回目の利用でだけ右下に出る（判定は lib/feedback.ts） */}
           <FeedbackMount />
