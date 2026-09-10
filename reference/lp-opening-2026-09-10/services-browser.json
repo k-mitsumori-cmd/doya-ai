@@ -1,0 +1,250 @@
+[
+  {
+    "copy": [
+      "そのひらめきに、",
+      "目を奪う表現を。"
+    ],
+    "id": "banner",
+    "width": 1280,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "copy": [
+      "伝えたい想いを、",
+      "届く記事へ。"
+    ],
+    "id": "seo",
+    "width": 1280,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "copy": [
+      "語られた言葉に、",
+      "物語の輪郭を。"
+    ],
+    "id": "interview",
+    "width": 1280,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "copy": [
+      "届けたい人を、",
+      "もっと深く。"
+    ],
+    "id": "persona",
+    "width": 1280,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "copy": [
+      "人の可能性を、",
+      "組織の力へ。"
+    ],
+    "id": "hr",
+    "width": 1280,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "copy": [
+      "日々の時間を、",
+      "働くゆとりへ。"
+    ],
+    "id": "kintai",
+    "width": 1280,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "copy": [
+      "次の出会いを、",
+      "事業の一歩に。"
+    ],
+    "id": "doyalist",
+    "width": 1280,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "columnsFit": true,
+    "copy": [
+      "チームの想いを、",
+      "進む力へ。"
+    ],
+    "id": "promane",
+    "width": 390,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "columnsFit": true,
+    "copy": [
+      "その考えに、",
+      "伝わるかたちを。"
+    ],
+    "id": "doyaslide",
+    "width": 390,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "columnsFit": true,
+    "copy": [
+      "大切な対話に、",
+      "知識の支えを。"
+    ],
+    "id": "cunning",
+    "width": 390,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "columnsFit": true,
+    "copy": [
+      "ひとつの商談を、",
+      "次の可能性へ。"
+    ],
+    "id": "sfa",
+    "width": 390,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "columnsFit": true,
+    "copy": [
+      "会う前の準備が、",
+      "対話を変える。"
+    ],
+    "id": "shodan",
+    "width": 390,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "columnsFit": true,
+    "copy": [
+      "新しい検索に、",
+      "見つかる一歩を。"
+    ],
+    "id": "aio",
+    "width": 390,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "columnsFit": true,
+    "copy": [
+      "ひとりの言葉に、",
+      "向き合う採用を。"
+    ],
+    "id": "mensetsu",
+    "width": 390,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "columnsFit": true,
+    "copy": [
+      "仕事の価値を、",
+      "伝わる見積へ。"
+    ],
+    "id": "quote",
+    "width": 390,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "columnsFit": true,
+    "copy": [
+      "いつもの対話を、",
+      "商談の一歩へ。"
+    ],
+    "id": "aishodan",
+    "width": 390,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  },
+  {
+    "columnsFit": true,
+    "copy": [
+      "届けたい価値に、",
+      "目を引く一枚を。"
+    ],
+    "id": "adimage",
+    "width": 390,
+    "after": {
+      "h1": 1,
+      "inert": false,
+      "overflow": false,
+      "overlay": false
+    }
+  }
+]

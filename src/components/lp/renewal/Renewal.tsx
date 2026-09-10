@@ -27,6 +27,7 @@ import { ProductPreview } from "./ProductPreview";
 import { MotionContext, ServiceMotion } from "./HeroMotion";
 import { DEMOS } from "./OperationDemo";
 import { BannerCinematicHero } from "./BannerCinematicHero";
+import { OpeningCurtain, OPENING_COPY } from "./OpeningCurtain";
 import type { Step } from "../sections";
 import "./renewal.css";
 import "./hero-motion.css";
@@ -40,6 +41,12 @@ export function RenewalFrame({
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const serviceId = SERVICES.find(
+    (service) => service.name === serviceName,
+  )?.id;
+  const hasOpening = Boolean(serviceId && OPENING_COPY[serviceId]);
+  const [covered, setCovered] = useState(hasOpening);
   const [paused, setPaused] = useState(false);
   useEffect(() => {
     const root = ref.current;
@@ -61,7 +68,7 @@ export function RenewalFrame({
   }, []);
   return (
     <RenewalContext.Provider value={serviceName}>
-      <MotionContext.Provider value={paused}>
+      <MotionContext.Provider value={paused || covered}>
         <div
           ref={ref}
           className={`doya-renewal ${paused ? "doya-motion-paused" : ""}`}
@@ -69,23 +76,38 @@ export function RenewalFrame({
           data-fv-motion="2026-09-08"
           data-operation-demo="2026-09-08"
         >
-          {children}
-          <a
-            className="doya-consult-toggle"
-            href="https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1"
-            target="_blank"
-            rel="noreferrer"
+          <div
+            ref={contentRef}
+            className={`doya-intro-content ${covered ? "doya-intro-covered" : ""}`}
           >
-            無料相談のご案内
-          </a>
-          <button
-            className="doya-motion-toggle"
-            onClick={() => setPaused(!paused)}
-            aria-pressed={paused}
-          >
-            {paused ? <Play size={14} /> : <Pause size={14} />}
-            {paused ? "動きを再開" : "動きを止める"}
-          </button>
+            {children}
+            <a
+              className="doya-consult-toggle"
+              href="https://doyamarke.surisuta.jp/download/base02_doyamarke-free-1"
+              target="_blank"
+              rel="noreferrer"
+            >
+              無料相談のご案内
+            </a>
+            <button
+              className="doya-motion-toggle"
+              onClick={() => setPaused(!paused)}
+              aria-pressed={paused}
+            >
+              {paused ? <Play size={14} /> : <Pause size={14} />}
+              {paused ? "動きを再開" : "動きを止める"}
+            </button>
+          </div>
+          {hasOpening && serviceId && (
+            <OpeningCurtain
+              key={serviceId}
+              serviceId={serviceId}
+              serviceName={serviceName}
+              paused={paused}
+              onCoverChange={setCovered}
+              contentRef={contentRef}
+            />
+          )}
         </div>
       </MotionContext.Provider>
     </RenewalContext.Provider>

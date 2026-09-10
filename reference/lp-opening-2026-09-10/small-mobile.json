@@ -1,0 +1,65 @@
+[
+  {
+    "columnsFit": true,
+    "fontLoaded": true,
+    "id": "banner",
+    "size": [
+      320,
+      568
+    ]
+  },
+  {
+    "columnsFit": true,
+    "fontLoaded": true,
+    "id": "seo",
+    "size": [
+      320,
+      568
+    ]
+  },
+  {
+    "columnsFit": true,
+    "fontLoaded": false,
+    "id": "interview",
+    "size": [
+      320,
+      568
+    ]
+  },
+  {
+    "columnsFit": true,
+    "fontLoaded": true,
+    "id": "persona",
+    "size": [
+      320,
+      568
+    ]
+  },
+  {
+    "columnsFit": true,
+    "fontLoaded": true,
+    "id": "hr",
+    "size": [
+      320,
+      568
+    ]
+  },
+  {
+    "columnsFit": true,
+    "fontLoaded": true,
+    "id": "kintai",
+    "size": [
+      320,
+      568
+    ]
+  },
+  {
+    "columnsFit": true,
+    "fontLoaded": true,
+    "id": "doyalist",
+    "size": [
+      320,
+      568
+    ]
+  }
+]
