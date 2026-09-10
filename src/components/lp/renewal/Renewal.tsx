@@ -26,7 +26,8 @@ import { UNIFIED_PRO_PRICE } from "@/lib/unified-plan";
 import { ProductPreview } from "./ProductPreview";
 import { MotionContext, ServiceMotion } from "./HeroMotion";
 import { DEMOS } from "./OperationDemo";
-import { BannerCinematicHero } from "./BannerCinematicHero";
+import { ServiceCinematicHero } from "./ServiceCinematicHero";
+import { CINEMATIC_SCENES } from "./cinematic-scenes";
 import { OpeningCurtain, OPENING_COPY } from "./OpeningCurtain";
 import type { Step } from "../sections";
 import "./renewal.css";
@@ -129,9 +130,14 @@ export function RenewalHero(props: {
 }) {
   const name = useContext(RenewalContext);
   const service = SERVICES.find((s) => s.name === name);
-  if (service?.id === "banner") {
+  if (service && CINEMATIC_SCENES[service.id]) {
     return (
-      <BannerCinematicHero {...props} freeLimit={service.pricing.free.limit} />
+      <ServiceCinematicHero
+        {...props}
+        serviceId={service.id}
+        serviceName={service.name}
+        freeLimit={service.pricing.free.limit}
+      />
     );
   }
   return (

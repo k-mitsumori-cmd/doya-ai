@@ -63,7 +63,7 @@ export default function AioLp() {
         <div>
           <h2>無料の診断は、ログインから。</h2>
           <p>ログイン後に、分析したいサービスのURLとブランド情報を登録できます。</p>
-          <Link href={CTA} className="doya-button">ログインして診断を始める<Sym name="arrow_forward" size={20} /></Link>
+          <Link href="/auth/signin?callbackUrl=/aio" className="doya-button">ログインして診断を始める<Sym name="arrow_forward" size={20} /></Link>
         </div>
       </section>
 

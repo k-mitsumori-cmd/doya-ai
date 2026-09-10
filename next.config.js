@@ -152,6 +152,14 @@ const nextConfig = {
           { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
         ],
       },
+      {
+        source: '/renewal-preview/:service',
+        headers: [
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+          { key: 'X-Robots-Tag', value: 'noindex, follow' },
+        ],
+      },
       // ------------------------------------------------------------------
       // ログイン後のアプリ画面を検索結果から外す（X-Robots-Tag）
       // ------------------------------------------------------------------
