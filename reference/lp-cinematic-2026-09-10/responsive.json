@@ -1,0 +1,37 @@
+[
+  {
+    "copyFits": true,
+    "h1Count": 1,
+    "heroImageLoaded": true,
+    "overflow": false,
+    "width": 320
+  },
+  {
+    "copyFits": true,
+    "h1Count": 1,
+    "heroImageLoaded": true,
+    "overflow": false,
+    "width": 390
+  },
+  {
+    "copyFits": true,
+    "h1Count": 1,
+    "heroImageLoaded": true,
+    "overflow": false,
+    "width": 760
+  },
+  {
+    "copyFits": true,
+    "h1Count": 1,
+    "heroImageLoaded": true,
+    "overflow": false,
+    "width": 1024
+  },
+  {
+    "copyFits": true,
+    "h1Count": 1,
+    "heroImageLoaded": true,
+    "overflow": false,
+    "width": 1440
+  }
+]

@@ -26,6 +26,7 @@ import { UNIFIED_PRO_PRICE } from "@/lib/unified-plan";
 import { ProductPreview } from "./ProductPreview";
 import { MotionContext, ServiceMotion } from "./HeroMotion";
 import { DEMOS } from "./OperationDemo";
+import { BannerCinematicHero } from "./BannerCinematicHero";
 import type { Step } from "../sections";
 import "./renewal.css";
 import "./hero-motion.css";
@@ -106,6 +107,11 @@ export function RenewalHero(props: {
 }) {
   const name = useContext(RenewalContext);
   const service = SERVICES.find((s) => s.name === name);
+  if (service?.id === "banner") {
+    return (
+      <BannerCinematicHero {...props} freeLimit={service.pricing.free.limit} />
+    );
+  }
   return (
     <section className="doya-hero">
       <div className="doya-hero-inner">

@@ -1,0 +1,30 @@
+[
+  {
+    "baseline": "original",
+    "device": "desktop",
+    "frameFits": true,
+    "frameWidth": "1440px",
+    "src": "before/banner-desktop-full.jpg"
+  },
+  {
+    "baseline": "original",
+    "device": "mobile",
+    "frameFits": true,
+    "frameWidth": "390px",
+    "src": "before/banner-mobile-full.jpg"
+  },
+  {
+    "baseline": "previous",
+    "device": "desktop",
+    "frameFits": true,
+    "frameWidth": "1440px",
+    "src": "archive/20260908/banner-desktop-full.jpg"
+  },
+  {
+    "baseline": "previous",
+    "device": "mobile",
+    "frameFits": true,
+    "frameWidth": "390px",
+    "src": "archive/20260908/banner-mobile-full.jpg"
+  }
+]

@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow">
+<title>ドヤバナーAI | 旧版と動く新版を全体比較</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef2f7;color:#192945;font-family:Arial,'Noto Sans JP',sans-serif}header{background:#fff;padding:24px 32px;border-bottom:1px solid #d6dfed}h1{font-size:25px;margin:14px 0 10px}p{font-size:13px;line-height:1.9;color:#52627a;margin:8px 0}a{color:#0059e3;text-underline-offset:4px}main{padding:20px 28px}.controls{display:flex;gap:16px;flex-wrap:wrap;align-items:end;margin-bottom:20px}label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:700}select,button{font:inherit;min-height:44px;padding:10px 14px;border:1px solid #c4d1e5;border-radius:6px;background:#fff;color:#192945}.open{display:inline-flex;align-items:center;min-height:44px;padding:10px 20px;background:#0059e3;color:#fff;border-radius:6px;text-decoration:none;font-size:13px}.pair{display:grid;grid-template-columns:1fr 1fr;gap:18px}.pane{min-width:0;background:#fff;border:1px solid #cfd9e8;border-radius:9px;overflow:hidden}.pane h2{font-size:15px;display:flex;gap:8px;justify-content:space-between;align-items:center;margin:0;padding:15px 18px;border-bottom:1px solid #dce3ef}.badge{font-size:10px;font-weight:500;color:#52627a}.frame{height:72vh;min-height:380px;position:relative;background:#f7f9fc}.old{overflow:auto;overscroll-behavior:contain}.old img{display:block;width:100%;height:auto;margin:auto}.new{overflow:hidden}.new iframe{display:block;position:absolute;top:0;left:0;transform-origin:0 0;border:0;background:#fff}.pane footer{padding:12px 18px;font-size:12px;border-top:1px solid #dce3ef}.mobile .old img{max-width:390px}.mobile .new iframe{left:50%;margin-left:-195px}.note{margin:18px 0}.error{padding:24px;color:#b21d32}:focus-visible{outline:3px solid #e72570;outline-offset:3px}@media(max-width:650px){header{padding:20px}main{padding:14px}h1{font-size:21px}.pair{gap:8px}.pane h2{font-size:12px;padding:12px 10px;flex-wrap:wrap}.badge{font-size:9px}.pane footer{padding:10px;font-size:10px}.frame{height:68vh;min-height:350px}.controls{gap:10px}select{max-width:100%;font-size:12px}.open{font-size:12px}}
+</style>
+</head>
+<body>
+<header><a href="index.html?service=banner&amp;device=desktop&amp;mode=pair">全サービスの新旧比較へ</a><h1>旧版と、動く新版を。ページ全体で比較。</h1><p>左は保存済みのページ画像、右は現在のドヤバナーAIのLPです。それぞれの枠内をスクロールして、下まで比較できます。</p></header>
+<main>
+<div class="controls">
+<label>比較する旧版<select id="baseline"><option value="original">リニューアル前（9月7日）</option><option value="previous">今回のFV変更前（9月8日）</option></select></label>
+<label>表示端末<select id="device"><option value="desktop">PC</option><option value="mobile">スマートフォン</option></select></label>
+<button id="replay" type="button">新版を読み込み直して演出を見る</button>
+<a class="open" href="/banner/landing" target="_blank" rel="noreferrer">新版を大きく開く</a>
+</div>
+<div class="pair" id="pair">
+<section class="pane"><h2><span id="oldTitle">リニューアル前</span><span class="badge">保存画像</span></h2><div class="frame old" tabindex="0" aria-label="旧版のページ全体。枠内でスクロールできます。"><img id="oldImage" alt="ドヤバナーAIの旧版ページ全体"></div><footer><a id="oldOpen" target="_blank" rel="noreferrer">旧版の画像を大きく開く</a></footer></section>
+<section class="pane"><h2>画像・演出を刷新した新版<span class="badge">実際に動くLP</span></h2><div class="frame new" id="newFrame"><iframe id="newPage" title="ドヤバナーAIの新しいLP。枠内で操作・スクロールできます。" src="/banner/landing" loading="eager"></iframe></div><footer>ズーム演出・操作デモ・画面の拡大に対応</footer></section>
+</div>
+<p class="note">PCは1440px、スマートフォンは390pxの幅で表示し、比較枠に合わせて縮小しています。旧版は撮影時点の保存画像のため、画像内のボタンは操作できません。新版の表示内容は公開LPの更新に応じて変わります。</p>
+</main>
+<script>
+const $=id=>document.getElementById(id);let device='desktop';
+function sizeFrame(){const width=device==='mobile'?390:1440,host=$('newFrame'),scale=Math.min(1,host.clientWidth/width),frame=$('newPage');frame.style.width=width+'px';frame.style.height=(host.clientHeight/scale)+'px';frame.style.transform='scale('+scale+')';frame.style.left=device==='mobile'&&host.clientWidth>390?'50%':'0';frame.style.marginLeft=device==='mobile'&&host.clientWidth>390?'-195px':'0';}
+function update(){device=$('device').value;const base=$('baseline').value;const src=(base==='previous'?'archive/20260908/':'before/')+'banner-'+device+'-full.jpg';$('oldImage').src=src;$('oldOpen').href=src;$('oldTitle').textContent=base==='previous'?'FV変更前（9月8日）':'リニューアル前（9月7日）';$('pair').className='pair '+device;sizeFrame();history.replaceState(null,'','?'+new URLSearchParams({baseline:base,device}));}
+const params=new URLSearchParams(location.search);for(const id of ['baseline','device'])if([...$(id).options].some(o=>o.value===params.get(id)))$(id).value=params.get(id);
+$('baseline').addEventListener('change',update);$('device').addEventListener('change',update);$('replay').addEventListener('click',()=>{$('newPage').src='/banner/landing';});new ResizeObserver(sizeFrame).observe($('newFrame'));update();
+</script>
+</body></html>

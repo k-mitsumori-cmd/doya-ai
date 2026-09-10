@@ -143,6 +143,14 @@ const nextConfig = {
           },
         ],
       },
+      // Public LP comparison can embed this presentation within this site only.
+      {
+        source: '/banner/landing',
+        headers: [
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+        ],
+      },
       // ------------------------------------------------------------------
       // ログイン後のアプリ画面を検索結果から外す（X-Robots-Tag）
       // ------------------------------------------------------------------
