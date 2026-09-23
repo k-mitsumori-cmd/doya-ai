@@ -37,6 +37,7 @@ export default function ClockPage() {
   const [status, setStatus] = useState<ClockStatus>('not_clocked_in')
   const [records, setRecords] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [acting, setActing] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -50,14 +51,20 @@ export default function ClockPage() {
   }, [])
 
   const fetchRecords = useCallback(async () => {
+    setLoading(true)
     try {
       const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
       const res = await fetch(`/api/kintai/clock?date=${today}`)
       const data = await res.json()
-      setRecords(data.records || [])
+      if (!res.ok || !Array.isArray(data.records) || !Array.isArray(data.activeShiftRecords) ||
+        !['not_clocked_in', 'working', 'on_break', 'clocked_out'].includes(data.clockStatus)) {
+        throw new Error('打刻状態を確認できません')
+      }
+      setRecords(data.activeShiftRecords || data.records || [])
       setStatus(data.clockStatus || 'not_clocked_in')
+      setLoadError(false)
     } catch {
-      console.error('Failed to fetch records')
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
@@ -197,6 +204,14 @@ export default function ClockPage() {
         <p className="text-slate-500 font-bold text-sm">読み込み中...</p>
       </div>
     )
+  }
+
+  if (loadError) {
+    return <div role="alert" className="mx-auto flex min-h-[60vh] max-w-md flex-col items-center justify-center gap-4 px-4 text-center">
+      <p className="text-lg font-bold text-slate-800">打刻状態を確認できませんでした</p>
+      <p className="text-sm text-slate-600">打刻を再送せず、現在の状態を読み直してください。</p>
+      <button type="button" onClick={fetchRecords} className="rounded-xl bg-purple-600 px-5 py-3 font-bold text-white hover:bg-purple-700">状態を再確認</button>
+    </div>
   }
 
   return (

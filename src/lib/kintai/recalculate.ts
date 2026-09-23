@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { calculateDailyAttendance } from './attendance'
+import { recordsForWorkday } from './shift-records'
 
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000
 
@@ -26,10 +27,11 @@ export async function recalculateDayForEmployee(
   const jstDayStart = new Date(dateOnly.getTime() - JST_OFFSET_MS)
   const jstDayEnd = new Date(jstDayStart.getTime() + 86400000)
 
-  const records = await db.kintaiClockRecord.findMany({
-    where: { employeeId, timestamp: { gte: jstDayStart, lt: jstDayEnd } },
+  const allRecords = await db.kintaiClockRecord.findMany({
+    where: { employeeId, timestamp: { gte: jstDayStart, lt: new Date(jstDayEnd.getTime() + 86400000) } },
     orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
   })
+  const records = recordsForWorkday(allRecords, jstDayStart, jstDayEnd)
 
   if (records.length === 0) return null
 

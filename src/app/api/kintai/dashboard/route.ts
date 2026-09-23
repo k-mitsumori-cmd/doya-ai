@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext } from '@/lib/kintai/access'
 import { getClockStatusFromRecords as getClockStatus } from '@/lib/kintai/format'
+import { recordsWithCarryover } from '@/lib/kintai/shift-records'
 
 export async function GET() {
   try {
@@ -26,9 +27,9 @@ export async function GET() {
     const monthStart = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), 1) - jstOffset)
     const monthEnd = new Date(Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth() + 1, 1) - jstOffset)
 
-    const [todayRecords, monthAttendances, recentRequests, employee] = await Promise.all([
+    const [recentRecords, monthAttendances, recentRequests, employee] = await Promise.all([
       prisma.kintaiClockRecord.findMany({
-        where: { employeeId: ctx.employeeId, timestamp: { gte: todayStart, lt: todayEnd } },
+        where: { employeeId: ctx.employeeId, timestamp: { gte: new Date(todayStart.getTime() - 86400000), lt: todayEnd } },
         orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
       }),
       prisma.kintaiAttendance.findMany({
@@ -46,6 +47,7 @@ export async function GET() {
       }),
     ])
 
+    const todayRecords = recordsWithCarryover(recentRecords, todayStart)
     const clockStatus = getClockStatus(todayRecords)
     const todayDate = Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), jstNow.getUTCDate())
     const todayAttendance = monthAttendances.find((a) => new Date(a.date).getTime() === todayDate)
@@ -65,8 +67,8 @@ export async function GET() {
       monthlySummary: summary,
       recentRequests,
     })
-  } catch (e) {
-    console.error('[kintai/dashboard] Error:', (e as any)?.message, (e as any)?.code)
-    return NextResponse.json({ error: 'ダッシュボードの取得に失敗しました', detail: String((e as any)?.message || '').substring(0, 200) }, { status: 500 })
+  } catch {
+    console.error('[kintai/dashboard] failed')
+    return NextResponse.json({ error: 'ダッシュボードの取得に失敗しました' }, { status: 500 })
   }
 }

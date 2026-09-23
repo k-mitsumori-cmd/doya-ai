@@ -1,5 +1,6 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript');
 function load(file,deps){const exported={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../../',file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:exported,Date,URL,console,require:n=>{if(n in deps)return deps[n];throw Error(n)}});return exported}
+const shift=load('src/lib/kintai/shift-records.ts',{});
 const types=load('src/lib/kintai/types.ts',{});
 (async()=>{const results=[];
 for(const mode of ['active','disable-patch','disable-delete','membership-inactive','disabled-clock_out','disabled-break_start','disabled-break_end']){
@@ -15,7 +16,7 @@ for(const mode of ['active','disable-patch','disable-delete','membership-inactiv
  const access=load('src/lib/kintai/access.ts',{'next-auth':{getServerSession:async()=>({user:{id:actor}})},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma},'./types':types});
  const deps={'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/kintai/access':access};
  const edit=load('src/app/api/kintai/employees/[id]/route.ts',deps);
- const clock=load('src/app/api/kintai/clock/route.ts',{...deps,'@/lib/kintai/recalculate':{recalculateDayForEmployee:()=>{throw Error('Unexpected recalculation')}},'@/lib/service-usage':{recordServiceUsage:async()=>{}}});
+ const clock=load('src/app/api/kintai/clock/route.ts',{...deps,'@/lib/kintai/shift-records':shift,'@/lib/kintai/recalculate':{recalculateDayForEmployee:()=>{throw Error('Unexpected recalculation')}},'@/lib/service-usage':{recordServiceUsage:async()=>{}}});
  let disableStatus=null;
  if(mode==='disable-patch'||mode==='disable-delete'||mode.startsWith('disabled-')){
   const req={json:async()=>({isActive:false})},ctx={params:Promise.resolve({id:'emp'})};

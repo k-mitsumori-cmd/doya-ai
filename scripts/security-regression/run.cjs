@@ -55,6 +55,11 @@ if (seoEntitlementsLedger.error || seoEntitlementsLedger.status !== 0) {
   console.error('Security regression failed: verify-seo-entitlements-ledger.cjs');
   process.exit(1);
 }
+const kintaiOvernight = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-overnight.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiOvernight.error || kintaiOvernight.status !== 0) {
+  console.error('Security regression failed: verify-kintai-overnight.cjs');
+  process.exit(1);
+}
 const interviewUsageMonth = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-usage-month.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewUsageMonth.error || interviewUsageMonth.status !== 0) {
   console.error('Security regression failed: verify-interview-usage-month.cjs');
