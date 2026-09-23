@@ -111,7 +111,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
     // 生成開始・プロジェクト削除と直列化する。処理中の外部ジョブのファイルは消さない。
     const outcome = await prisma.$transaction(async tx => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${material.projectId}))`
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${material.projectId}))`
       const current = await tx.interviewMaterial.findUnique({
         where: { id }, select: { id: true, projectId: true, status: true, filePath: true },
       })

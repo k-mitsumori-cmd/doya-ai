@@ -19,7 +19,7 @@ let countCalls = 0, findCalls = 0, retentionDeletes = 0, retentionQueues = 0
 let activeProcessing = false
 let candidates = [{ id: 'old-project' }], currentUpdatedAt = new Date(0), concurrentEdit = false
 const retentionTx = {
-  $queryRaw: async () => [{}],
+  $executeRaw: async () => 1,
   interviewMaterial: { count: async () => activeProcessing ? 1 : 0 },
   interviewProject: {
     findUnique: async () => ({ id: 'old-project', userId: 'owner', guestId: null, updatedAt: currentUpdatedAt }),
@@ -51,7 +51,7 @@ const disabledRoute = routeFor(false)
 const enabledRoute = routeFor(true)
 let queueFailure = true, projectDeleteCalls = 0, queuedCalls = 0
 const deleteTx = {
-  $queryRaw: async () => [{}],
+  $executeRaw: async () => 1,
   interviewMaterial: { count: async () => activeProcessing ? 1 : 0 },
   systemSetting: { create: async () => { queuedCalls++; if (queueFailure) throw Error('queue unavailable') } },
   interviewProject: { delete: async () => { projectDeleteCalls++; return {} } },

@@ -258,7 +258,7 @@ export async function POST(req: NextRequest) {
 
         // 同じプロジェクトの版番号採番と関連更新を一緒に確定する。
         const { draft, nextVersion } = await prisma.$transaction(async (tx) => {
-          await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${projectId}))`
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${projectId}))`
           const maxVersion = await tx.interviewDraft.aggregate({
             where: { projectId },
             _max: { version: true },

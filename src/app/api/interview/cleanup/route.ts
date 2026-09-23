@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     for (const candidate of expiredProjects) {
       try {
         const deleted = await prisma.$transaction(async tx => {
-          await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${candidate.id}))`
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${candidate.id}))`
           const project = await tx.interviewProject.findUnique({
             where: { id: candidate.id },
             select: { id: true, userId: true, guestId: true, updatedAt: true },

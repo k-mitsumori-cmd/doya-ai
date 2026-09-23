@@ -48,7 +48,7 @@ const prisma = {
     let staged = false;
     const tx = {
       ...prisma,
-      $queryRaw: async () => { locks++; return [{}]; },
+      $executeRaw: async () => { locks++; return 1; },
       interviewDraft: {
         ...prisma.interviewDraft,
         create: async () => { staged = true; return { id: `d${drafts + 1}` }; },

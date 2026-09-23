@@ -13,7 +13,7 @@ const systemSetting = {
   delete: async ({ where }) => { if (!rows.has(where.key)) throw Error('missing'); rows.delete(where.key) },
 }
 const tx = {
-  $queryRaw: async () => [{}], systemSetting,
+  $executeRaw: async () => 1, systemSetting,
   interviewTranscription: {
     findFirst: async ({ where }) => transcripts.find(x => x.materialId === where.materialId && x.status === where.status) || null,
     create: async ({ data }) => { const row = { ...data, id: `t${++sequence}` }; transcripts.push(row); return row },

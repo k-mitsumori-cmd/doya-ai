@@ -6,7 +6,7 @@ let ownerDenied = false
 const material = { id: 'm1', projectId: 'p1', status: 'UPLOADED', filePath: 'owner/p1/123_file.mp3',
   project: { userId: 'owner', guestId: null } }
 const tx = {
-  $queryRaw: async () => { lockCalls++; return [{}] },
+  $executeRaw: async () => { lockCalls++; return 1 },
   interviewMaterial: {
     findUnique: async () => ({ id: 'm1', projectId: 'p1', status, filePath: material.filePath }),
     delete: async () => { deleteCalls++; return {} },
