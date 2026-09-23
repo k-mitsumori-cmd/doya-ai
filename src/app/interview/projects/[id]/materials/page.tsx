@@ -132,6 +132,7 @@ export default function MaterialsPage() {
   const [transcribing, setTranscribing] = useState<Map<string, TranscriptionProgress>>(new Map())
   const [elapsedTick, setElapsedTick] = useState(0) // 経過時間更新用
   const [tipIndex, setTipIndex] = useState(0)
+  const [confirmingMaterialId, setConfirmingMaterialId] = useState<string | null>(null)
   const uploadSpeedRef = useRef<Map<string, { startTime: number; lastLoaded: number; speed: number }>>(new Map())
 
   // プロジェクトと素材一覧を取得
@@ -536,6 +537,27 @@ export default function MaterialsPage() {
       await fetchProject()
     } catch {
       alert('通信エラーで素材を削除できませんでした。時間をおいて再試行してください。')
+    }
+  }
+
+  const confirmPendingUpload = async (materialId: string) => {
+    if (confirmingMaterialId) return
+    setConfirmingMaterialId(materialId)
+    try {
+      const response = await fetch('/api/interview/materials/confirm', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ materialId }),
+      })
+      const result = await response.json().catch(() => null)
+      if (!response.ok || !result?.success) throw new Error(result?.error || 'アップロードを確認できませんでした')
+      setMaterials((previous) => previous.map((material) => material.id === materialId
+        ? { ...material, status: 'COMPLETED', fileSize: result.material?.fileSize ?? material.fileSize }
+        : material))
+      await fetchProject()
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '通信エラーでアップロードを確認できませんでした')
+    } finally {
+      setConfirmingMaterialId(null)
     }
   }
 
@@ -1269,11 +1291,20 @@ export default function MaterialsPage() {
                               {m.error || 'エラー'}
                             </span>
                           )}
+                          {m.status === 'UPLOADED' && (
+                            <span className="text-[10px] sm:text-[11px] text-amber-700 font-bold bg-amber-100 px-2 sm:px-2.5 py-0.5 rounded-full">アップロード確認待ち</span>
+                          )}
                         </div>
                       </div>
 
                       {/* デスクトップ: 削除ボタンのみ横に表示 */}
                       <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+                        {m.status === 'UPLOADED' && (
+                          <button type="button" onClick={() => confirmPendingUpload(m.id)} disabled={confirmingMaterialId !== null}
+                            className="px-4 py-2.5 text-xs font-bold text-amber-800 bg-amber-100 rounded-xl hover:bg-amber-200 disabled:opacity-50">
+                            {confirmingMaterialId === m.id ? '確認中…' : 'アップロードを確認'}
+                          </button>
+                        )}
                         {/* 素材自体がERRORの場合の再アップロードボタン */}
                         {m.status === 'ERROR' && (
                           <motion.button
@@ -1287,7 +1318,7 @@ export default function MaterialsPage() {
                           </motion.button>
                         )}
                         {(m.type === 'audio' || m.type === 'video') &&
-                          (m.status === 'COMPLETED' || m.status === 'ERROR') &&
+                          (m.status === 'COMPLETED' || (m.status === 'ERROR' && m.transcriptionStatus === 'ERROR')) &&
                           m.transcriptionStatus !== 'COMPLETED' &&
                           m.transcriptionStatus !== 'PROCESSING' &&
                           !isTranscribing && (
@@ -1331,6 +1362,12 @@ export default function MaterialsPage() {
 
                     {/* モバイル: アクションボタンを下に配置 */}
                     <div className="flex sm:hidden items-center gap-2 mt-3 pl-14">
+                      {m.status === 'UPLOADED' && (
+                        <button type="button" onClick={() => confirmPendingUpload(m.id)} disabled={confirmingMaterialId !== null}
+                          className="px-3 py-2 text-xs font-bold text-amber-800 bg-amber-100 rounded-lg disabled:opacity-50">
+                          {confirmingMaterialId === m.id ? '確認中…' : 'アップロードを確認'}
+                        </button>
+                      )}
                       {m.status === 'ERROR' && (
                         <motion.button
                           onClick={() => fileInputRef.current?.click()}
@@ -1342,7 +1379,7 @@ export default function MaterialsPage() {
                         </motion.button>
                       )}
                       {(m.type === 'audio' || m.type === 'video') &&
-                        (m.status === 'COMPLETED' || m.status === 'ERROR') &&
+                        (m.status === 'COMPLETED' || (m.status === 'ERROR' && m.transcriptionStatus === 'ERROR')) &&
                         m.transcriptionStatus !== 'COMPLETED' &&
                         m.transcriptionStatus !== 'PROCESSING' &&
                         !isTranscribing && (
