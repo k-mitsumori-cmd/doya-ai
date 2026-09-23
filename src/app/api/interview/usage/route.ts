@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { getInterviewLimitsByPlan } from '@/lib/pricing'
 import { interviewJstMonthStartUtc } from '@/lib/interview/month'
+import { getInterviewTranscriptionUsage } from '@/lib/interview/transcription-budget'
+import { normalizePlan } from '@/lib/interview/access'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,30 +19,29 @@ export async function GET() {
       return NextResponse.json({ success: false, error: '未認証' }, { status: 401 })
     }
 
-    // 素材の作成日ではなく、文字起こし完了に伴う最終更新日で当月分を数える。
-    const monthStart = interviewJstMonthStartUtc()
-
-    // 今月の文字起こし済み素材の合計duration(秒)を集計
-    const result = await prisma.interviewMaterial.aggregate({
-      _sum: { duration: true },
-      where: {
-        project: { userId: user.id },
-        status: 'COMPLETED',
-        updatedAt: { gte: monthStart },
-      },
-    })
-
-    const totalSeconds = result._sum.duration || 0
-    const usedMinutes = Math.ceil(totalSeconds / 60)
-
     // プラン別の上限分数
     const plan = user.interviewPlan || user.plan || 'FREE'
-    const limits = getInterviewLimitsByPlan(plan)
-    const limitMinutes = limits.transcriptionMinutes
+    let usedMinutes: number, limitMinutes: number, reservedMinutes = 0
+    if (process.env.INTERVIEW_TRANSCRIPTION_QUOTA_ENABLED === '1') {
+      const usage = await getInterviewTranscriptionUsage({ userId: user.id, guestId: null, plan: normalizePlan(plan) })
+      usedMinutes = Math.ceil(usage.usedSeconds / 60)
+      reservedMinutes = Math.ceil(usage.reservedSeconds / 60)
+      limitMinutes = usage.limitSeconds < 0 ? -1 : Math.ceil(usage.limitSeconds / 60)
+    } else {
+      // 素材の作成日ではなく、文字起こし完了に伴う最終更新日で当月分を数える。
+      const monthStart = interviewJstMonthStartUtc()
+      const result = await prisma.interviewMaterial.aggregate({
+        _sum: { duration: true },
+        where: { project: { userId: user.id }, status: 'COMPLETED', updatedAt: { gte: monthStart } },
+      })
+      usedMinutes = Math.ceil((result._sum.duration || 0) / 60)
+      limitMinutes = getInterviewLimitsByPlan(plan).transcriptionMinutes
+    }
 
     return NextResponse.json({
       success: true,
       usedMinutes,
+      reservedMinutes,
       limitMinutes,
       plan: String(plan).toUpperCase(),
     })

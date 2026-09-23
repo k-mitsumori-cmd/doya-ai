@@ -35,6 +35,16 @@ if (interviewMediaDuration.error || interviewMediaDuration.status !== 0) {
   console.error('Security regression failed: verify-interview-media-duration.cjs');
   process.exit(1);
 }
+const interviewTranscriptionBudget = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-transcription-budget.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewTranscriptionBudget.error || interviewTranscriptionBudget.status !== 0) {
+  console.error('Security regression failed: verify-interview-transcription-budget.cjs');
+  process.exit(1);
+}
+const interviewTranscriptionAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-transcription-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewTranscriptionAdmission.error || interviewTranscriptionAdmission.status !== 0) {
+  console.error('Security regression failed: verify-interview-transcription-admission.cjs');
+  process.exit(1);
+}
 const bannerAdmissionRoute = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-admission-route.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (bannerAdmissionRoute.error || bannerAdmissionRoute.status !== 0) {
   console.error('Security regression failed: verify-banner-admission-route.cjs');

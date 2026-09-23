@@ -50,7 +50,7 @@ const nextConfig = {
     //    実行時にはそのパスは存在しないため、下の
     //    outputFileTracingIncludes でファイルを同梱しても解決しない。
     //    （2026-08-08: includes だけ入れた状態でも本番で同じエラーが出た）
-  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
+  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core', 'mediainfo.js'],
 
     // ------------------------------------------------------------------
     // PDF生成ルートに Chromium のバイナリを同梱する
@@ -67,6 +67,9 @@ const nextConfig = {
     // ⚠️ PDF生成ルートを追加したら、ここにも必ず足すこと。足し忘れると
     //    そのルートだけ本番で 500 になる。
   outputFileTracingIncludes: {
+      // MediaInfo は実行時に WebAssembly をファイルから読むため、両文字起こし関数に同梱する。
+      '/api/interview/materials/[id]/transcribe': ['./node_modules/mediainfo.js/dist/MediaInfoModule.wasm'],
+      '/api/interview/materials/[id]/transcribe-stream': ['./node_modules/mediainfo.js/dist/MediaInfoModule.wasm'],
       // ⚠️ 日本語フォントも必ず同梱する。Lambda用Chromiumには日本語フォントが無く、
       //    入れるのを忘れるとPDFの日本語が全て空白になる（assets/fonts/README.md 参照）。
       //    banner/from-url はページから色を取るだけで文字を描画しないため不要。

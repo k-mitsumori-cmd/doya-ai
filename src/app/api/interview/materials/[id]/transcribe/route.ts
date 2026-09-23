@@ -14,6 +14,8 @@ import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { transcribeFromUrl } from '@/lib/interview/transcription'
 import { getInterviewGuestLimits } from '@/lib/pricing'
+import { inspectInterviewMediaDuration } from '@/lib/interview/media-duration'
+import { reserveInterviewTranscription, settleInterviewTranscription, releaseInterviewTranscription } from '@/lib/interview/transcription-budget'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const materialId = await resolveId(ctx)
 
   try {
-    const { userId } = await getInterviewUser()
+    const { userId, plan } = await getInterviewUser()
     const guestId = !userId ? getGuestIdFromRequest(req) : null
 
     // 素材取得
@@ -60,8 +62,46 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       )
     }
 
-    // ゲストユーザーの文字起こし上限チェック
-    if (!userId && guestId) {
+    const quotaEnabled = process.env.INTERVIEW_TRANSCRIPTION_QUOTA_ENABLED === '1'
+    // 既に処理中なら同じ処理に戻る。再接続で利用枠を二重に取らない。
+    const existingProcessing = await prisma.interviewTranscription.findFirst({
+      where: { materialId, status: 'PROCESSING' },
+    })
+    if (existingProcessing && !quotaEnabled) {
+      return NextResponse.json({
+        success: true,
+        transcriptionId: existingProcessing.id,
+        status: 'PROCESSING',
+        message: '文字起こしは既に処理中です',
+      })
+    }
+
+    let reserved = false
+    let transcription: { id: string } | undefined
+    if (quotaEnabled) {
+      let mediaSeconds: number
+      try {
+        mediaSeconds = await inspectInterviewMediaDuration(material.filePath, material.fileSize)
+      } catch {
+        return NextResponse.json({ success: false, error: '音声の長さを確認できません。対応形式のファイルで再試行してください。', code: 'MEDIA_DURATION_UNAVAILABLE' }, { status: 422 })
+      }
+      const admission = await reserveInterviewTranscription({ userId, guestId, plan }, { id: materialId, projectId: material.project.id }, mediaSeconds)
+      if (admission.state === 'limit') {
+        return NextResponse.json({ success: false, error: `今月の文字起こし残り時間を超えるファイルです。`, code: 'TRANSCRIPTION_LIMIT', limitExceeded: true, actionUrl: '/interview/pricing', usedMinutes: Math.ceil(admission.usedSeconds / 60), limitMinutes: Math.ceil(admission.limitSeconds / 60) }, { status: 429 })
+      }
+      if (admission.state === 'too-long') {
+        return NextResponse.json({ success: false, error: `1回の文字起こしは${Math.ceil(admission.maxSeconds / 60)}分までです。`, code: 'TRANSCRIPTION_TOO_LONG' }, { status: 400 })
+      }
+      if (admission.state === 'unavailable') {
+        return NextResponse.json({ success: false, error: '文字起こしの利用状況を確認できません。しばらくしてから再試行してください。' }, { status: 503 })
+      }
+      if (admission.state === 'processing' || admission.state === 'completed') {
+        return NextResponse.json({ success: true, transcriptionId: admission.transcriptionId, status: admission.state === 'processing' ? 'PROCESSING' : 'COMPLETED' })
+      }
+      transcription = { id: admission.transcriptionId }
+      reserved = true
+    } else if (!userId && guestId) {
+      // 旧処理経路。新しい利用台帳の本番検証が終わるまで維持する。
       const guestLimits = getInterviewGuestLimits()
       const limitSeconds = guestLimits.transcriptionMinutes * 60 // 5分 = 300秒
 
@@ -86,44 +126,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       }
     }
 
-    // 既に処理中の文字起こしがあるかチェック
-    const existingProcessing = await prisma.interviewTranscription.findFirst({
-      where: {
-        materialId,
-        status: 'PROCESSING',
-      },
-    })
-
-    if (existingProcessing) {
-      return NextResponse.json({
-        success: true,
-        transcriptionId: existingProcessing.id,
-        status: 'PROCESSING',
-        message: '文字起こしは既に処理中です',
+    if (!quotaEnabled) {
+      // 過去のERROR文字起こしを削除（リトライ可能にする）
+      await prisma.interviewTranscription.deleteMany({ where: { materialId, status: 'ERROR' } })
+      transcription = await prisma.interviewTranscription.create({
+        data: { projectId: material.project.id, materialId: material.id, text: '', status: 'PROCESSING', provider: null },
       })
+      await prisma.interviewMaterial.update({ where: { id: materialId }, data: { status: 'PROCESSING' } })
     }
-
-    // 過去のERROR文字起こしを削除（リトライ可能にする）
-    await prisma.interviewTranscription.deleteMany({
-      where: { materialId, status: 'ERROR' },
-    })
-
-    // 文字起こしレコードを先に作成 (PROCESSING)
-    const transcription = await prisma.interviewTranscription.create({
-      data: {
-        projectId: material.project.id,
-        materialId: material.id,
-        text: '',
-        status: 'PROCESSING',
-        provider: null,
-      },
-    })
-
-    // 素材ステータスも更新
-    await prisma.interviewMaterial.update({
-      where: { id: materialId },
-      data: { status: 'PROCESSING' },
-    })
+    if (!transcription) throw new Error('Transcription start unavailable')
 
     // リクエストボディからオプション取得
     let language: string | undefined
@@ -150,30 +161,17 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       }
 
       // 結果を保存
-      await prisma.interviewTranscription.update({
-        where: { id: transcription.id },
-        data: {
-          text: result.text,
-          segments: result.segments as any,
-          summary: result.summary,
-          provider: result.provider,
-          confidence: result.confidence,
-          status: 'COMPLETED',
-        },
-      })
-
-      await prisma.interviewMaterial.update({
-        where: { id: materialId },
-        data: {
-          status: 'COMPLETED',
-          duration: durationSeconds > 0 ? durationSeconds : null,
-        },
-      })
-
-      // プロジェクトステータスも更新
-      await prisma.interviewProject.update({
-        where: { id: material.project.id },
-        data: { status: 'EDITING' },
+      await prisma.$transaction(async tx => {
+        if (reserved) await settleInterviewTranscription(tx, materialId, transcription.id)
+        await tx.interviewTranscription.update({
+          where: { id: transcription.id },
+          data: { text: result.text, segments: result.segments as any, summary: result.summary,
+            provider: result.provider, confidence: result.confidence, status: 'COMPLETED' },
+        })
+        await tx.interviewMaterial.update({
+          where: { id: materialId }, data: { status: 'COMPLETED', duration: durationSeconds > 0 ? durationSeconds : null },
+        })
+        await tx.interviewProject.update({ where: { id: material.project.id }, data: { status: 'EDITING' } })
       })
 
       const durationMinutes = durationSeconds > 0 ? Math.ceil(durationSeconds / 60) : null
@@ -192,17 +190,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       // 文字起こし失敗
       console.error('[interview] Transcription failed:', transcribeError?.message)
 
-      await prisma.interviewTranscription.update({
-        where: { id: transcription.id },
-        data: { status: 'ERROR' },
-      })
-
-      await prisma.interviewMaterial.update({
-        where: { id: materialId },
-        data: {
-          status: 'ERROR',
-          error: transcribeError?.message || '文字起こしに失敗しました',
-        },
+      await prisma.$transaction(async tx => {
+        if (reserved) await releaseInterviewTranscription(tx, materialId, transcription.id)
+        await tx.interviewTranscription.update({ where: { id: transcription.id }, data: { status: 'ERROR' } })
+        await tx.interviewMaterial.update({ where: { id: materialId }, data: { status: 'ERROR', error: transcribeError?.message || '文字起こしに失敗しました' } })
       })
 
       return NextResponse.json(

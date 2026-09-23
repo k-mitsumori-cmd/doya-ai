@@ -22,6 +22,8 @@ const route = load('src/app/api/interview/usage/route.ts', {
   } } } },
   '@/lib/pricing': { getInterviewLimitsByPlan: () => ({ transcriptionMinutes: 150 }) },
   '@/lib/interview/month': { interviewJstMonthStartUtc },
+  '@/lib/interview/transcription-budget': { getInterviewTranscriptionUsage: async () => ({ usedSeconds: 61, reservedSeconds: 30, limitSeconds: 150 * 60 }) },
+  '@/lib/interview/access': { normalizePlan: () => 'PRO' },
 })
 
 route.GET().then(response => {
