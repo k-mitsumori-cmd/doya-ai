@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { enqueueInterviewProjectStoragePurge } from '@/lib/interview/storage-purge-queue'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -34,12 +35,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, dryRun: true, eligibleCount, withStorageCount })
     }
 
-    // 1回の実行で大量に削除せず、古いものから少数ずつ処理する。
+    if (process.env.INTERVIEW_RETENTION_DELETE_ENABLED !== '1' || req.nextUrl.searchParams.get('execute') !== '1') {
+      return NextResponse.json(
+        { success: false, error: '保存期間による削除は有効化されていません', code: 'RETENTION_DELETE_NOT_ENABLED' },
+        { status: 409 }
+      )
+    }
+
+    // 実行許可後も少数ずつ処理し、各削除とストレージ再試行記録を原子的に確定する。
     const expiredProjects = await prisma.interviewProject.findMany({
       where: eligible,
       orderBy: { updatedAt: 'asc' },
-      take: 100,
-      select: { id: true, materials: { where: { filePath: { not: null } }, select: { id: true }, take: 1 } },
+      take: 10,
+      select: { id: true },
     })
 
     if (expiredProjects.length === 0) {
@@ -50,31 +58,33 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // DBのCASCADEだけではSupabase Storageのオブジェクトが残る。
-    // 耐久的な再試行キューが入るまで、添付ファイルを含む一括削除を拒否する。
-    if (expiredProjects.some(project => project.materials.length > 0)) {
-      return NextResponse.json(
-        { success: false, error: '添付ファイル付きプロジェクトの自動削除は安全確認中です', code: 'STORAGE_PURGE_REQUIRED' },
-        { status: 409 }
-      )
+    let deletedCount = 0, skippedCount = 0, failedCount = 0
+    for (const candidate of expiredProjects) {
+      try {
+        const deleted = await prisma.$transaction(async tx => {
+          const project = await tx.interviewProject.findUnique({
+            where: { id: candidate.id },
+            select: { id: true, userId: true, guestId: true, updatedAt: true },
+          })
+          if (!project || project.updatedAt >= thirtyDaysAgo) return false
+          await enqueueInterviewProjectStoragePurge(tx, project)
+          const result = await tx.interviewProject.deleteMany({ where: { id: candidate.id, ...eligible } })
+          if (!result.count) throw new Error('Project changed during cleanup')
+          return true
+        })
+        if (deleted) deletedCount++
+        else skippedCount++
+      } catch {
+        failedCount++
+      }
     }
 
-    const projectIds = expiredProjects.map((p) => p.id)
-
-    // カスケード削除（InterviewProject に onDelete: Cascade が設定されている関連テーブル）
-    // InterviewMaterial, InterviewTranscription, InterviewDraft, InterviewReview
-    const result = await prisma.interviewProject.deleteMany({
-      // 一覧取得後に編集されたプロジェクトは削除しない。
-      where: { id: { in: projectIds }, ...eligible },
-    })
-
-    console.log(`[interview-cleanup] Deleted ${result.count} projects inactive for 30 days`)
+    console.warn('[interview-cleanup] result', { deletedCount, skippedCount, failedCount })
 
     return NextResponse.json({
-      success: true,
-      message: `${result.count}件のプロジェクトを削除しました`,
-      deletedCount: result.count,
-    })
+      success: failedCount === 0,
+      deletedCount, skippedCount, failedCount,
+    }, { status: failedCount ? 503 : 200 })
   } catch (error) {
     console.error('Cleanup error:', error)
     return NextResponse.json(
