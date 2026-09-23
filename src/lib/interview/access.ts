@@ -42,7 +42,9 @@ export async function getInterviewUser(): Promise<{
  */
 export function getGuestIdFromRequest(req: NextRequest): string | null {
   const v = req.cookies.get(INTERVIEW_GUEST_COOKIE)?.value
-  return v && v.trim() ? v.trim() : null
+  const guestId = v?.trim()
+  // UUIDs and the older timestamp_hex fallback contain only these characters.
+  return guestId && /^[A-Za-z0-9_-]{1,128}$/.test(guestId) ? guestId : null
 }
 
 /**

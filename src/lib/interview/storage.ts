@@ -188,6 +188,9 @@ export function buildStoragePath(opts: {
   fileName: string
 }): string {
   const owner = opts.userId || `guest_${opts.guestId || 'anon'}`
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(owner) || !/^[A-Za-z0-9_-]{1,128}$/.test(opts.projectId)) {
+    throw new Error('不正なストレージ識別子です')
+  }
   const safeFileName = opts.fileName.replace(/[^a-zA-Z0-9._-]/g, '_')
   const timestamp = Date.now()
   return `${owner}/${opts.projectId}/${timestamp}_${safeFileName}`

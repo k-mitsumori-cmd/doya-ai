@@ -8,6 +8,12 @@ const storage = load('src/lib/interview/storage.ts', {
     remove: async () => ({ error: storageError ? { message: 'private path and provider detail' } : null }),
   }) } }) },
 }, { process: { env: { SUPABASE_URL: 'https://example.test', SUPABASE_SERVICE_ROLE_KEY: 'synthetic' } }, console: { error: message => storageLogs.push(message) } })
+const access = load('src/lib/interview/access.ts', {
+  'next/server': { NextResponse: { json: () => ({}) } },
+  'next-auth': { getServerSession: async () => null },
+  '@/lib/auth': { authOptions: {} },
+  '@/lib/prisma': { prisma: {} },
+})
 
 let countCalls = 0, findCalls = 0, deleteCalls = 0
 let candidates = [{ id: 'old-project', materials: [] }]
@@ -48,6 +54,12 @@ const projectRoute = load('src/app/api/interview/projects/[id]/route.ts', {
 const request = (url, authorization) => ({ nextUrl: new URL(url), headers: { get: name => name === 'authorization' ? authorization : null } })
 
 ;(async () => {
+  const cookie = value => ({ cookies: { get: () => ({ value }) } })
+  assert.equal(access.getGuestIdFromRequest(cookie('123e4567-e89b-12d3-a456-426614174000')), '123e4567-e89b-12d3-a456-426614174000')
+  assert.equal(access.getGuestIdFromRequest(cookie('1750000000000_abcd')), '1750000000000_abcd')
+  assert.equal(access.getGuestIdFromRequest(cookie('../other')), null)
+  assert.match(storage.buildStoragePath({ guestId: '123e4567-e89b-12d3-a456-426614174000', projectId: 'project-1', fileName: 'test.png' }), /^guest_123e4567-e89b-12d3-a456-426614174000\/project-1\//)
+  assert.throws(() => storage.buildStoragePath({ guestId: '../other', projectId: 'project-1', fileName: 'test.png' }), /不正なストレージ識別子/)
   await assert.rejects(() => storage.deleteFile('private/customer/file.mp3'), /ファイル削除に失敗/)
   assert.deepEqual(storageLogs, ['[interview] File delete failed'])
   storageError = false
