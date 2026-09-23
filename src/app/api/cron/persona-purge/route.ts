@@ -12,6 +12,11 @@ export async function GET(request: Request) {
   }
   try {
     const result = await purgeDeletedPersonaImages(prisma)
+    console.log('[persona-purge] result', {
+      processed: result.processed,
+      completed: result.completed,
+      failed: result.failed,
+    })
     return Response.json({ ok: result.failed === 0, ...result }, { status: result.failed ? 503 : 200 })
   } catch {
     return Response.json({ error: 'Persona cleanup unavailable' }, { status: 503 })

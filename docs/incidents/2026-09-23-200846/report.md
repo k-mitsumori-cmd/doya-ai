@@ -57,3 +57,10 @@
 - 新デプロイ `dpl_3p7ab5PpVirU2zPokoGForT7TAPr` でも `/api/cron/persona-purge` が HTTP 200 で、23:30:40 JST に同じ指紋の通知を送信した。
 - `stackLineCount: 7`、`stackExternalLocation: true`、`stackScriptLocation: true` だったが、呼び出し元はまだ `unparsed`。内部以外の位置表記とスクリプト拡張子はスタック内にある。ただし両者が同一フレームかは現診断からは分からない。元のエラー原因・影響は未特定のまま。
 - 安全なファイル名抽出を、位置番号の後に記号があるバンドル形式にも対応させた。次回は「内部以外のスクリプト位置」の有無を真偽値で記録する。原文・パスは保存しない。
+
+## 23:45 JST の自然発生ログ
+
+- `/api/cron/persona-purge` は HTTP 200 で、23:45:40 JST に同じ指紋の通知を送信した。`stackExternalLocation: true`、`stackScriptLocation: true` だが `stackExternalScriptLocation: false`。スタック内のスクリプト位置は通知器自身または内部フレームに限られ、元の呼び出し元をその文字列から抽出できない。
+- リポジトリのソース中にある固定 `console.error` 第一引数640件を、ローカルの2つの `NEXTAUTH_SECRET` 設定で同じ指紋計算にかけたが一致しなかった。本番の秘密値との一致は未確認であり、依存ライブラリ起源と断定はできない。
+- 画面・データへの影響および通知の真因は未特定。HTTP 200 をもって復旧済みとは判断しない。
+- 次回の定期処理から、削除対象の処理件数・成功件数・失敗件数だけを安全な集計ログとして残す。通知の有無と実際の削除処理を照合し、対象IDや画像パスは記録しない。
