@@ -48,6 +48,29 @@ function errorFamily(args: unknown[]): string {
   return 'unclassified';
 }
 
+/** Fixed categories only: never retain or deliver stack frames or console text. */
+function safeFrameKinds(stack: string | undefined): string[] {
+  return (stack?.split('\n').slice(2, 10) ?? []).map(line => {
+    if (/node:internal|\binternal\//.test(line)) return 'node-internal';
+    if (/\bprisma\b/i.test(line)) return 'prisma';
+    if (/\bnext-auth\b|\bnext\/dist\b/i.test(line)) return 'next';
+    if (/\b@vercel\b|\bvercel\/dist\b/i.test(line)) return 'vercel';
+    if (/\bwebpack-internal\b|\b__webpack_require__\b/i.test(line)) return 'bundler';
+    if (/\b(?:native|<anonymous>|anonymous)\b/.test(line)) return 'anonymous';
+    if (/\b\.next\/server\b|\b\/var\/task\b/.test(line)) return 'app-bundle';
+    return 'other';
+  });
+}
+
+function stringLengthBucket(value: unknown): string {
+  if (typeof value !== 'string') return 'non-string';
+  if (value.length === 0) return 'empty';
+  if (value.length <= 32) return '1-32';
+  if (value.length <= 128) return '33-128';
+  if (value.length <= 512) return '129-512';
+  return '513+';
+}
+
 function errorFingerprint(source: string, args: unknown[]): string {
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) return createHash('sha256').update(source).digest('hex').slice(0, 24);
@@ -100,7 +123,7 @@ function isDeprecationWarning(args: unknown[]): boolean {
 }
 
 /** Forward operational failures only. Never serialize console arguments or user input. */
-export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string; firstArgKind?: string; family?: string; stackState?: string; stackLineCount?: number; stackHasLocation?: boolean; stackExternalLocation?: boolean; stackScriptLocation?: boolean; stackExternalScriptLocation?: boolean; stackTraceLimit?: number } = {}): Promise<void> {
+export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string; firstArgKind?: string; firstArgLength?: string; family?: string; stackState?: string; stackLineCount?: number; stackHasLocation?: boolean; stackExternalLocation?: boolean; stackScriptLocation?: boolean; stackExternalScriptLocation?: boolean; stackTraceLimit?: number; frameKinds?: string[] } = {}): Promise<void> {
   if (process.env.VERCEL_ENV !== 'production') return;
   const key = source.replace(/[<>&]/g, '').slice(0, 180);
   const signature = options.signature && /^[a-f0-9]{24}$/.test(options.signature)
@@ -141,10 +164,13 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
       const stackState = ['missing', 'unparsed', 'parsed'].includes(options.stackState ?? '') ? options.stackState : 'unknown';
       const stackLineCount = Number.isSafeInteger(options.stackLineCount) ? Math.max(0, Math.min(20, options.stackLineCount!)) : 0;
       const stackTraceLimit = Number.isSafeInteger(options.stackTraceLimit) ? Math.max(0, Math.min(100, options.stackTraceLimit!)) : -1;
+      const firstArgLength = ['non-string', 'empty', '1-32', '33-128', '129-512', '513+'].includes(options.firstArgLength ?? '') ? options.firstArgLength : 'unknown';
+      const frameKinds = (options.frameKinds ?? []).filter(kind =>
+        ['node-internal', 'prisma', 'next', 'vercel', 'bundler', 'anonymous', 'app-bundle', 'other'].includes(kind)).slice(0, 8);
       // This line contains no console arguments, error messages, stacks or request data.
       // It is written only for an actual delivery attempt, after deduplication.
       console.warn('[runtime-alert] delivery', {
-        incidentId, source: key, fingerprint: signature, argumentCount, firstArgKind, family, stackState,
+        incidentId, source: key, fingerprint: signature, argumentCount, firstArgKind, firstArgLength, family, stackState, frameKinds,
         stackLineCount, stackHasLocation: options.stackHasLocation === true,
         stackExternalLocation: options.stackExternalLocation === true,
         stackScriptLocation: options.stackScriptLocation === true,
@@ -193,6 +219,7 @@ export function installRuntimeAlerts(): void {
     const stackState = !stack ? 'missing' : source === 'サーバー処理（詳細はログ）' ? 'unparsed' : 'parsed';
     const task = reportRuntimeFailure(source, {
       argumentCount: args.length, firstArgKind: argumentKind(args[0]), family: errorFamily(args), stackState,
+      firstArgLength: stringLengthBucket(args[0]), frameKinds: safeFrameKinds(stack),
       stackLineCount: stack?.split('\n').length ?? 0,
       stackHasLocation: /:\d{1,7}:\d{1,7}/.test(stack ?? ''),
       stackExternalLocation: (stack?.split('\n').slice(2).some(line => !line.includes('node:internal') && /:\d{1,7}:\d{1,7}/.test(line))) ?? false,
