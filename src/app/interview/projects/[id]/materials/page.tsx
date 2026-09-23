@@ -127,6 +127,7 @@ export default function MaterialsPage() {
   const [materials, setMaterials] = useState<MaterialItem[]>([])
   const [uploads, setUploads] = useState<Map<string, UploadingFile>>(new Map())
   const [loading, setLoading] = useState(true)
+  const [projectError, setProjectError] = useState(false)
   const [projectTitle, setProjectTitle] = useState('')
   const [dragOver, setDragOver] = useState(false)
   const [transcribing, setTranscribing] = useState<Map<string, TranscriptionProgress>>(new Map())
@@ -140,19 +141,21 @@ export default function MaterialsPage() {
     try {
       const res = await fetch(`/api/interview/projects/${projectId}`)
       const data = await res.json()
-      if (data.success) {
-        setProjectTitle(data.project.title)
-        setMaterials(
-          data.project.materials.map((m: any) => ({
-            ...m,
-            transcriptionStatus: data.project.transcriptions?.find(
-              (t: any) => t.materialId === m.id
-            )?.status,
-          }))
-        )
+      if (!res.ok || data.success !== true || !data.project || !Array.isArray(data.project.materials)) {
+        throw new Error('素材一覧を取得できません')
       }
+      setProjectTitle(data.project.title)
+      setMaterials(
+        data.project.materials.map((m: any) => ({
+          ...m,
+          transcriptionStatus: data.project.transcriptions?.find(
+            (t: any) => t.materialId === m.id
+          )?.status,
+        }))
+      )
+      setProjectError(false)
     } catch {
-      // エラーは無視
+      setProjectError(true)
     } finally {
       setLoading(false)
     }
@@ -555,6 +558,7 @@ export default function MaterialsPage() {
         : material))
       await fetchProject()
     } catch (error) {
+      await fetchProject()
       alert(error instanceof Error ? error.message : '通信エラーでアップロードを確認できませんでした')
     } finally {
       setConfirmingMaterialId(null)
@@ -1199,6 +1203,13 @@ export default function MaterialsPage() {
           )}
         </div>
 
+        {projectError && (
+          <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
+            素材一覧を読み込めませんでした。表示中の素材がある場合は更新前の情報です。
+            <button type="button" onClick={fetchProject} className="ml-3 underline">再試行</button>
+          </div>
+        )}
+
         {loading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -1211,6 +1222,8 @@ export default function MaterialsPage() {
               </div>
             ))}
           </div>
+        ) : projectError && materials.length === 0 ? (
+          <div className="rounded-2xl border border-red-100 bg-white p-8 text-center text-sm font-bold text-slate-500">素材を表示できません</div>
         ) : materials.length === 0 ? (
           <motion.div
             className="text-center py-16 bg-gradient-to-b from-slate-50 to-white rounded-2xl border-2 border-dashed border-slate-200"
