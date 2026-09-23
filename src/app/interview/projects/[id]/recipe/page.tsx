@@ -46,6 +46,7 @@ export default function RecipeSelectionPage() {
 
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loading, setLoading] = useState(true)
+  const [listError, setListError] = useState(false)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [customInstructions, setCustomInstructions] = useState('')
   const [displayFormat, setDisplayFormat] = useState('MONOLOGUE')
@@ -53,11 +54,12 @@ export default function RecipeSelectionPage() {
 
   useEffect(() => {
     fetch('/api/interview/recipes')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success) setRecipes(data.recipes || [])
+      .then(async (response) => {
+        const data = await response.json().catch(() => null)
+        if (!response.ok || !data?.success || !Array.isArray(data.recipes)) throw new Error('Recipe list unavailable')
+        setRecipes(data.recipes)
       })
-      .catch(console.error)
+      .catch(() => setListError(true))
       .finally(() => setLoading(false))
   }, [])
 
@@ -139,6 +141,11 @@ export default function RecipeSelectionPage() {
                   <div className="h-3 bg-slate-100 rounded w-3/4" />
                 </div>
               ))}
+            </div>
+          ) : listError ? (
+            <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+              スキル一覧を読み込めませんでした。
+              <button type="button" onClick={() => window.location.reload()} className="ml-2 font-bold underline underline-offset-2">再読み込み</button>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

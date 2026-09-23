@@ -54,14 +54,16 @@ export default function InterviewSettingsPage() {
 
   const [stats, setStats] = useState<UsageStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const [statsError, setStatsError] = useState(false)
   const [activeTab, setActiveTab] = useState<TabType>('account')
 
   const isLoggedIn = !!session?.user
 
   useEffect(() => {
     fetch('/api/interview/projects')
-      .then((r) => r.json())
-      .then((data) => {
+      .then(async (response) => {
+        const data = await response.json().catch(() => null)
+        if (!response.ok || !data?.success || !Array.isArray(data.projects)) throw new Error('Interview stats unavailable')
         if (data.success) {
           const pjs = data.projects || []
           setStats({
@@ -72,7 +74,7 @@ export default function InterviewSettingsPage() {
           })
         }
       })
-      .catch(console.error)
+      .catch(() => setStatsError(true))
       .finally(() => setLoading(false))
   }, [])
 
@@ -411,6 +413,10 @@ export default function InterviewSettingsPage() {
                       <div className="h-4 bg-slate-100 rounded w-2/3" />
                     </div>
                   ))}
+                </div>
+              ) : statsError ? (
+                <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+                  利用状況を読み込めませんでした。時間をおいて再読み込みしてください。
                 </div>
               ) : stats ? (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

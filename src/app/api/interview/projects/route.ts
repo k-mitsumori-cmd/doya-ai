@@ -24,7 +24,7 @@ import {
  */
 export async function GET(req: NextRequest) {
   const dbErr = requireDatabase()
-  if (dbErr) return NextResponse.json({ success: true, projects: [] })
+  if (dbErr) return dbErr
 
   try {
     const { userId } = await getInterviewUser()
@@ -93,9 +93,9 @@ export async function GET(req: NextRequest) {
         }
       }),
     })
-  } catch (e: any) {
+  } catch {
     return NextResponse.json(
-      { success: false, error: e?.message || 'プロジェクト一覧の取得に失敗しました', projects: [] },
+      { success: false, error: 'プロジェクト一覧の取得に失敗しました', projects: [] },
       { status: 500 }
     )
   }

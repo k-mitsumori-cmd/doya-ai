@@ -100,6 +100,7 @@ export default function InterviewTool() {
 
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
+  const [projectListError, setProjectListError] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [uploads, setUploads] = useState<Map<string, UploadingFile>>(new Map())
   const [tipIndex, setTipIndex] = useState(0)
@@ -116,11 +117,13 @@ export default function InterviewTool() {
       return
     }
     fetch('/api/interview/projects')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success) setProjects(data.projects || [])
+      .then(async (response) => {
+        const data = await response.json().catch(() => null)
+        if (!response.ok || !data?.success || !Array.isArray(data.projects)) throw new Error('Project list unavailable')
+        setProjects(data.projects)
+        setProjectListError(false)
       })
-      .catch(console.error)
+      .catch(() => setProjectListError(true))
       .finally(() => setLoading(false))
   }, [session])
 
@@ -325,7 +328,10 @@ export default function InterviewTool() {
       // プロジェクト一覧を更新
       const refreshRes = await fetch('/api/interview/projects')
       const refreshData = await refreshRes.json()
-      if (refreshData.success) setProjects(refreshData.projects || [])
+      if (refreshRes.ok && refreshData.success && Array.isArray(refreshData.projects)) {
+        setProjects(refreshData.projects)
+        setProjectListError(false)
+      }
 
       // 5秒後にアップロード表示を消す
       setTimeout(() => {
@@ -976,6 +982,11 @@ export default function InterviewTool() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : projectListError ? (
+          <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">
+            プロジェクト一覧を読み込めませんでした。
+            <button type="button" onClick={() => window.location.reload()} className="ml-2 font-bold underline underline-offset-2">再読み込み</button>
           </div>
         ) : recentProjects.length === 0 ? (
           <div className="bg-white rounded-xl p-6 sm:p-12 border border-slate-200 text-center">

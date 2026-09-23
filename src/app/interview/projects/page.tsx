@@ -55,6 +55,7 @@ const cardVariants = {
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
+  const [listError, setListError] = useState(false)
   const [filter, setFilter] = useState<string>('ALL')
   const [query, setQuery] = useState('')
   const [generatingThumbnail, setGeneratingThumbnail] = useState<string | null>(null)
@@ -75,11 +76,12 @@ export default function ProjectsPage() {
 
   useEffect(() => {
     fetch('/api/interview/projects')
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.success) setProjects(data.projects || [])
+      .then(async (response) => {
+        const data = await response.json().catch(() => null)
+        if (!response.ok || !data?.success || !Array.isArray(data.projects)) throw new Error('Project list unavailable')
+        setProjects(data.projects)
       })
-      .catch(console.error)
+      .catch(() => setListError(true))
       .finally(() => setLoading(false))
   }, [])
 
@@ -247,6 +249,13 @@ export default function ProjectsPage() {
                 </div>
               </div>
             ))}
+          </div>
+        ) : listError ? (
+          <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center text-sm text-amber-900">
+            記事一覧を読み込めませんでした。時間をおいて再度お試しください。
+            <button type="button" onClick={() => window.location.reload()} className="ml-3 font-bold underline underline-offset-2">
+              再読み込み
+            </button>
           </div>
         ) : filtered.length === 0 ? (
           <motion.div

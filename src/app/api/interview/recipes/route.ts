@@ -46,7 +46,7 @@ async function ensurePresetRecipes(): Promise<void> {
  */
 export async function GET(req: NextRequest) {
   const dbErr = requireDatabase()
-  if (dbErr) return NextResponse.json({ success: true, recipes: [] })
+  if (dbErr) return dbErr
 
   try {
     await ensurePresetRecipes()
@@ -84,9 +84,9 @@ export async function GET(req: NextRequest) {
         createdAt: r.createdAt.toISOString(),
       })),
     })
-  } catch (e: any) {
+  } catch {
     return NextResponse.json(
-      { success: false, error: e?.message || 'レシピ一覧取得に失敗しました' },
+      { success: false, error: 'レシピ一覧取得に失敗しました' },
       { status: 500 }
     )
   }

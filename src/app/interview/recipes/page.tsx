@@ -61,6 +61,7 @@ export default function RecipeManagementPage() {
   const { data: session, status: sessionStatus } = useSession()
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [loading, setLoading] = useState(true)
+  const [listError, setListError] = useState(false)
   const [filterCategory, setFilterCategory] = useState<string | null>(null)
   const [showOnlyCustom, setShowOnlyCustom] = useState(false)
   const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null)
@@ -90,9 +91,11 @@ export default function RecipeManagementPage() {
     try {
       const res = await fetch('/api/interview/recipes')
       const data = await res.json()
-      if (data.success) setRecipes(data.recipes || [])
+      if (!res.ok || !data?.success || !Array.isArray(data.recipes)) throw new Error('Recipe list unavailable')
+      setRecipes(data.recipes)
+      setListError(false)
     } catch {
-      // ignore
+      setListError(true)
     } finally {
       setLoading(false)
     }
@@ -360,6 +363,11 @@ export default function RecipeManagementPage() {
             {loading ? (
               <div className="p-4 space-y-3">
                 {[1,2,3].map(i => <div key={i} className="h-12 bg-slate-100 rounded-lg animate-pulse" />)}
+              </div>
+            ) : listError ? (
+              <div role="alert" className="p-6 text-center text-sm text-amber-900 bg-amber-50">
+                スキル一覧を読み込めませんでした。
+                <button type="button" onClick={fetchRecipes} className="ml-2 font-bold underline underline-offset-2">再試行</button>
               </div>
             ) : filtered.length === 0 ? (
               <div className="p-6 text-center">
