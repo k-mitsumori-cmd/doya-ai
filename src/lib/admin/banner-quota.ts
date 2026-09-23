@@ -7,9 +7,9 @@ type BannerSubscription = {
 } | null
 
 /** Match the banner generation API: the subscription plan and the current JST month. */
-export function summarizeBannerMonthlyQuota(subscription: BannerSubscription) {
-  // The generator creates a FREE subscription when one does not exist.
-  const limit = getBannerMonthlyLimitByUserPlan(subscription?.plan ?? 'FREE')
+export function summarizeBannerMonthlyQuota(subscription: BannerSubscription, accountPlan: string | null = 'FREE') {
+  // First generation creates a subscription from the account's current plan.
+  const limit = getBannerMonthlyLimitByUserPlan(subscription?.plan ?? accountPlan)
   const used = subscription && !shouldResetMonthlyUsage(subscription.lastUsageReset)
     ? Math.max(0, subscription.monthlyUsage)
     : 0

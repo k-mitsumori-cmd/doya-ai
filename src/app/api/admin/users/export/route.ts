@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
           dailyUsage: sub.dailyUsage,
           monthlyUsage: sub.monthlyUsage,
         })),
-        bannerMonthlyQuota: summarizeBannerMonthlyQuota(user.serviceSubscriptions.find((sub: any) => sub.serviceId === 'banner') ?? null),
+        bannerMonthlyQuota: summarizeBannerMonthlyQuota(user.serviceSubscriptions.find((sub: any) => sub.serviceId === 'banner') ?? null, user.plan),
       }))
 
       return new NextResponse(JSON.stringify(jsonData, null, 2), {
@@ -110,8 +110,8 @@ export async function GET(request: NextRequest) {
         user.plan,
         user.role,
         user._count.generations,
-        bannerSub?.plan || 'FREE',
-        summarizeBannerMonthlyQuota(bannerSub ?? null).used,
+        bannerSub?.plan || user.plan || 'FREE',
+        summarizeBannerMonthlyQuota(bannerSub ?? null, user.plan).used,
         user.createdAt.toISOString().split('T')[0],
         user.updatedAt.toISOString().split('T')[0],
       ]
@@ -151,7 +151,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'エクスポートに失敗しました' }, { status: 500 })
   }
 }
-
-
 
 

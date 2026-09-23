@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
       stripeSubscriptionId: user.stripeSubscriptionId,
       stripeInfo: stripeInfoMap[user.id] || null,
       totalGenerations: user._count.generations,
-      bannerQuota: summarizeBannerMonthlyQuota(user.serviceSubscriptions.find((sub: any) => sub.serviceId === 'banner') ?? null),
+      bannerQuota: summarizeBannerMonthlyQuota(user.serviceSubscriptions.find((sub: any) => sub.serviceId === 'banner') ?? null, user.plan),
       // サービス別の情報
       serviceSubscriptions: user.serviceSubscriptions.map((sub: any) => ({
         id: sub.id,

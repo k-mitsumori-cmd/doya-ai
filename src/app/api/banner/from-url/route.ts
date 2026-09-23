@@ -6,6 +6,7 @@ import { authOptions } from '@/lib/auth'
 import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, shouldResetMonthlyUsage, getCurrentMonthJST, isWithinFreeHour } from '@/lib/pricing'
+import { reserveBannerMonthlyImages, releaseBannerMonthlyImages, type BannerReservation } from '@/lib/banner/monthly-quota'
 import { isFirstServiceUse, notifyFirstServiceUse, notifyServiceActivity } from '@/lib/service-usage'
 import crypto from 'crypto'
 import sharp from 'sharp'
@@ -1406,9 +1407,13 @@ export async function POST(request: NextRequest) {
 
     const currentMonth = getCurrentMonthJST() // 月次管理用 "YYYY-MM"
     const userId = !isGuest ? ((session?.user as any)?.id as string | undefined) : undefined
+    if (!userId) return NextResponse.json({ error: '再度ログインしてください。', code: 'LOGIN_REQUIRED' }, { status: 401 })
 
     const body = (await request.json()) as FromUrlRequest
     const targetUrl = safeTrim(body?.targetUrl || body?.target_url, 2000)
+    if (!targetUrl || !isValidHttpUrl(targetUrl)) {
+      return NextResponse.json({ error: 'URLが不正です（https://〜 を入力してください）' }, { status: 400 })
+    }
     const baseImageRaw =
       typeof (body as any)?.baseImage === 'string'
         ? (body as any).baseImage
@@ -1419,10 +1424,13 @@ export async function POST(request: NextRequest) {
     const appPurpose = safeTrim(body?.purpose, 32) || 'sns_ad'
     const requestedCountRaw = Number(body?.count)
     const requestedCount = Number.isFinite(requestedCountRaw) ? Math.floor(requestedCountRaw) : 3
-    const planRaw = !isGuest
-      ? String((session?.user as any)?.bannerPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
-      : 'GUEST'
-    const isPaidUser = !isGuest && (planRaw === 'LIGHT' || planRaw === 'PRO' || planRaw === 'ENTERPRISE')
+    const bannerSub = !disableLimits ? await prisma.userServiceSubscription.findUnique({
+      where: { userId_serviceId: { userId, serviceId: 'banner' } },
+      select: { monthlyUsage: true, lastUsageReset: true, plan: true },
+    }) : null
+    const accountPlan = !disableLimits && !bannerSub ? await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } }) : null
+    const planRaw = String(bannerSub?.plan || accountPlan?.plan || (session?.user as any)?.plan || 'FREE').toUpperCase()
+    const isPaidUser = !isGuest && ['LIGHT', 'PRO', 'ENTERPRISE', 'BUNDLE', 'BASIC', 'STARTER', 'BUSINESS'].includes(planRaw)
 
     // 1時間生成し放題の判定（セッションから firstLoginAt を取得）
     const firstLoginAt = (session?.user as any)?.firstLoginAt
@@ -1434,14 +1442,11 @@ export async function POST(request: NextRequest) {
     // - 有料または1時間生成し放題中：1〜10枚、サイズ指定可（範囲チェック）
     // ==============================
     const canUseUnlimited = isPaidUser || isFreeHourActive
-    const desiredCount = canUseUnlimited
+    let desiredCount = canUseUnlimited
       ? Math.max(1, Math.min(10, requestedCount || 3))
       : Math.max(1, Math.min(3, requestedCount || 3))
     const size = canUseUnlimited ? (isValidSizeString(requestedSizeRaw) ? requestedSizeRaw : '1080x1080') : '1080x1080'
 
-    if (!targetUrl || !isValidHttpUrl(targetUrl)) {
-      return NextResponse.json({ error: 'URLが不正です（https://〜 を入力してください）' }, { status: 400 })
-    }
     if (!isNanobannerConfigured()) {
       return NextResponse.json({ error: 'バナー生成APIが設定されていません。管理者にお問い合わせください。' }, { status: 503 })
     }
@@ -1472,33 +1477,20 @@ export async function POST(request: NextRequest) {
       } else {
         // 1時間生成し放題中は月次上限チェックをスキップ
         if (!isFreeHourActive) {
-          const monthlyLimit = getBannerMonthlyLimitByUserPlan(planRaw)
-          if (userId && monthlyLimit !== -1) {
-            const sub = await prisma.userServiceSubscription.findUnique({
-              where: { userId_serviceId: { userId, serviceId: 'banner' } },
-              select: { monthlyUsage: true, lastUsageReset: true, plan: true },
-            })
-            // 月が変わっていたらリセット（日本時間基準）
-            let used = sub?.monthlyUsage || 0
-            if (shouldResetMonthlyUsage(sub?.lastUsageReset)) {
-              used = 0
-              // DBもリセット（非同期で更新、エラーは握りつぶす）
-              prisma.userServiceSubscription.update({
-                where: { userId_serviceId: { userId, serviceId: 'banner' } },
-                data: { monthlyUsage: 0, lastUsageReset: new Date() },
-              }).catch(() => {})
-            }
-            if (used + desiredCount > monthlyLimit) {
-              return NextResponse.json(
-                {
-                  error: '今月の生成上限に達しました。',
-                  code: 'MONTHLY_LIMIT_REACHED',
-                  usage: { monthlyLimit, monthlyUsed: used, monthlyRemaining: Math.max(0, monthlyLimit - used) },
-                  upgradeUrl: planRaw === 'FREE' ? '/banner' : (HIGH_USAGE_CONTACT_URL || '/banner'),
-                },
-                { status: 429 }
-              )
-            }
+          const actualPlan = planRaw
+          const monthlyLimit = getBannerMonthlyLimitByUserPlan(actualPlan)
+          const used = shouldResetMonthlyUsage(bannerSub?.lastUsageReset) ? 0 : bannerSub?.monthlyUsage || 0
+          const previewCount = Math.min(desiredCount, isPaidUser ? 10 : 3)
+          if (monthlyLimit >= 0 && used + previewCount > monthlyLimit) {
+            return NextResponse.json(
+              {
+                error: '今月の生成上限に達しました。',
+                code: 'MONTHLY_LIMIT_REACHED',
+                usage: { monthlyLimit, monthlyUsed: used, monthlyRemaining: Math.max(0, monthlyLimit - used) },
+                upgradeUrl: actualPlan === 'FREE' ? '/banner/pricing' : (HIGH_USAGE_CONTACT_URL || '/banner/pricing'),
+              },
+              { status: 429 }
+            )
           }
         }
       }
@@ -1623,7 +1615,35 @@ export async function POST(request: NextRequest) {
 
     // keyword は履歴/メタ用途。なければ title を採用（customImagePromptを使うので生成品質には影響しない）
     const keywordForMeta = safeTrim(meta.title, 80) || 'URL自動生成'
-    const result = await generateBanners(category || 'other', keywordForMeta, size, options as any, desiredCount)
+    let reservation: BannerReservation | null = null
+    if (!disableLimits) {
+      let claim
+      try { claim = await reserveBannerMonthlyImages(userId, desiredCount) }
+      catch {
+        console.error('URL banner quota reservation unavailable')
+        return NextResponse.json({ error: '生成枠を確認できませんでした。時間をおいて再試行してください。' }, { status: 503 })
+      }
+      if (claim.state === 'limit') return NextResponse.json({
+        error: '今月の生成上限に達しました。', code: 'MONTHLY_LIMIT_REACHED', usage: claim.usage,
+        upgradeUrl: claim.plan === 'FREE' ? '/banner/pricing' : (HIGH_USAGE_CONTACT_URL || '/banner/pricing'),
+      }, { status: 429 })
+      reservation = claim.reservation
+      desiredCount = reservation.count
+      usageInfo = reservation.usage
+    }
+    let result: Awaited<ReturnType<typeof generateBanners>>
+    try { result = await generateBanners(category || 'other', keywordForMeta, size, options as any, desiredCount) }
+    catch (error) {
+      if (reservation) await releaseBannerMonthlyImages(reservation, reservation.count).catch(() => console.error('URL banner quota release failed'))
+      throw error
+    }
+    const generatedImageCount = Array.isArray(result.banners)
+      ? result.banners.filter((banner) => typeof banner === 'string' && banner.startsWith('data:image/')).length
+      : 0
+    if (generatedImageCount === 0) {
+      if (reservation) await releaseBannerMonthlyImages(reservation, reservation.count).catch(() => console.error('URL banner quota release failed'))
+      return NextResponse.json({ error: result.error || 'バナーの生成に失敗しました。再試行してください。' }, { status: 500 })
+    }
 
     // ==============================
     // 履歴保存（ログインユーザーのみ / DB）
@@ -1688,13 +1708,8 @@ export async function POST(request: NextRequest) {
     // ==============================
     // 使用回数加算（画像枚数ベース）
     // ==============================
-    const chargedCount = Math.max(
-      1,
-      Math.min(
-        desiredCount,
-        Array.isArray(result.banners) ? result.banners.filter((b) => typeof b === 'string' && b.startsWith('data:image/')).length : desiredCount
-      )
-    )
+    const chargedCount = Math.min(desiredCount, generatedImageCount)
+    let quotaSettlementFailed = false
 
     if (isGuest || !userId) await notifyServiceActivity({ serviceId: 'banner', action: 'URLからバナー生成', count: chargedCount })
 
@@ -1710,16 +1725,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // ログインユーザーの場合: DB を更新（月間のみ）
-    if (!disableLimits && !isGuest && userId) {
-      try {
-        await prisma.userServiceSubscription.update({
-          where: { userId_serviceId: { userId, serviceId: 'banner' } },
-          data: { monthlyUsage: { increment: chargedCount } },
-        }).catch(() => {})
-      } catch (e: any) {
-        console.error('from-url usage increment failed:', e)
-      }
+    // 予約した枚数のうち、実際に完成しなかった分だけ戻す。
+    if (reservation) {
+      try { usageInfo = await releaseBannerMonthlyImages(reservation, reservation.count - chargedCount) }
+      catch { quotaSettlementFailed = true; console.error('URL banner quota settlement failed') }
     }
 
     // レスポンス
@@ -1745,7 +1754,7 @@ export async function POST(request: NextRequest) {
       usedModel: result.usedModel || undefined,
       usedModelDisplay: result.usedModel ? getModelDisplayName(result.usedModel) : undefined,
       usage: usageInfo || undefined,
-      warning: result.error || undefined,
+      warning: result.error || (quotaSettlementFailed ? '生成枚数の反映を確認できませんでした。残り枚数を再読み込みしてください。' : undefined),
     })
 
     // ゲストの場合: Cookie をセット
@@ -1765,4 +1774,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: e?.message || 'URLからの自動生成に失敗しました' }, { status: 500 })
   }
 }
-

@@ -3,7 +3,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, shouldResetMonthlyUsage, getCurrentMonthJST, isWithinFreeHour } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getCurrentMonthJST } from '@/lib/pricing'
+import { reserveBannerMonthlyImages, releaseBannerMonthlyImages, type BannerReservation } from '@/lib/banner/monthly-quota'
 import { sendErrorNotification } from '@/lib/notifications'
 import { isFirstServiceUse, notifyFirstServiceUse, notifyServiceActivity } from '@/lib/service-usage'
 import crypto from 'crypto'
@@ -146,14 +147,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`Banner generation request - Category: ${category}, Purpose: ${purpose}, Size: ${size}, Guest: ${isGuest}`)
-    if (companyName) console.log(`Company: ${companyName}`)
-    if (imageDescription) console.log(`Image description: ${imageDescription.slice(0, 50)}...`)
-    if (logoImage) console.log('Logo image provided')
-    if (personImage) console.log('Person image provided')
-    if (Array.isArray(personImages) && personImages.length > 0) console.log(`Person images: ${personImages.length}`)
-    if (Array.isArray(referenceImages) && referenceImages.length > 0) console.log(`Reference images: ${referenceImages.length}`)
-    if (Array.isArray(brandColors) && brandColors.length > 0) console.log(`Brand colors: ${brandColors.length}`)
+    // Request text and uploaded image details are private; do not log them.
 
     // #RGB/#RRGGBB を正規化
     const normalizeHex = (v: string): string | null => {
@@ -200,6 +194,7 @@ export async function POST(request: NextRequest) {
     // ==============================
     let usageInfo: null | { monthlyLimit: number; monthlyUsed: number; monthlyRemaining: number } = null
     let guestUsage: GuestMonthlyUsage | null = null
+    let reservation: BannerReservation | null = null
 
     // 生成枚数（サーバ側で厳密に強制する：フロント改ざん対策）
     // - デフォルト3枚
@@ -232,84 +227,29 @@ export async function POST(request: NextRequest) {
         monthlyRemaining: monthlyLimit === -1 ? -1 : Math.max(0, monthlyLimit - monthlyUsed),
       }
     } else if (!disableLimits && !isGuest) {
-      if (userId) {
-        try {
-          // ユーザーの firstLoginAt を取得して「1時間生成し放題」かどうか判定
-          const userRecord = await prisma.user.findUnique({
-            where: { id: userId },
-            select: { firstLoginAt: true },
-          })
-          const isFreeHourActive = isWithinFreeHour(userRecord?.firstLoginAt)
-
-          const current = await prisma.userServiceSubscription.upsert({
-            where: { userId_serviceId: { userId, serviceId: 'banner' } },
-            create: {
-              userId,
-              serviceId: 'banner',
-              plan: 'FREE',
-              dailyUsage: 0,
-              monthlyUsage: 0,
-              lastUsageReset: new Date(),
-            },
-            update: {},
-          })
-
-          // 月が変わっていたらmonthlyUsageをリセット（日本時間基準）
-          const needsMonthlyReset = shouldResetMonthlyUsage(current.lastUsageReset)
-
-          const normalized = needsMonthlyReset
-            ? await prisma.userServiceSubscription.update({
-                where: { id: current.id },
-                data: {
-                  monthlyUsage: 0,
-                  lastUsageReset: new Date(),
-                },
-              })
-            : current
-
-          const plan = String(normalized.plan || 'FREE').toUpperCase()
-          const isPaidPlan = plan === 'LIGHT' || plan === 'PRO' || plan === 'ENTERPRISE'
-
-          // 1時間生成し放題中は最大10枚まで許可（有料と同等）
-          desiredCount = Math.max(1, Math.min((isPaidPlan || isFreeHourActive) ? 10 : 3, requestedCount || 3))
-          // NOTE: 生成上限は「画像枚数」ベース（月間）
-          const monthlyLimit = getBannerMonthlyLimitByUserPlan(plan)
-
-          // 1時間生成し放題中は月次上限チェックをスキップ
-          if (!isFreeHourActive && monthlyLimit !== -1 && normalized.monthlyUsage + desiredCount > monthlyLimit) {
-            const errorMessage = isPaidPlan
-              ? '今月の生成上限に達しました。上限をさらにUPしたい場合は「マーケティング施策を丸投げする」からご相談ください。'
-              : '今月の生成上限に達しました。上位プランにアップグレードしてください。'
-            return NextResponse.json(
-              {
-                error: errorMessage,
-                code: 'MONTHLY_LIMIT_REACHED',
-                usage: {
-                  monthlyLimit,
-                  monthlyUsed: normalized.monthlyUsage,
-                  monthlyRemaining: Math.max(0, monthlyLimit - normalized.monthlyUsage),
-                },
-                upgradeUrl: isPaidPlan ? (HIGH_USAGE_CONTACT_URL || '/banner') : '/banner',
-              },
-              { status: 429 }
-            )
-          }
-
-          usageInfo = {
-            monthlyLimit: isFreeHourActive ? -1 : monthlyLimit, // 1時間中は無制限扱い
-            monthlyUsed: normalized.monthlyUsage,
-            monthlyRemaining: (isFreeHourActive || monthlyLimit === -1) ? -1 : Math.max(0, monthlyLimit - normalized.monthlyUsage),
-          }
-        } catch (e: any) {
-          console.error('Banner usage limit check failed (Prisma error):', e)
-          // データベースエラー時は制限を緩和して生成を続行（ユーザー体験を優先）
-          // usageInfo は null のまま
-        }
+      if (!userId) return NextResponse.json({ error: '再度ログインしてください。', code: 'LOGIN_REQUIRED' }, { status: 401 })
+      let claim
+      try { claim = await reserveBannerMonthlyImages(userId, requestedCount || 3) }
+      catch {
+        console.error('Banner quota reservation unavailable')
+        return NextResponse.json({ error: '生成枠を確認できませんでした。時間をおいて再試行してください。' }, { status: 503 })
       }
+      if (claim.state === 'limit') {
+        const paid = claim.plan !== 'FREE'
+        return NextResponse.json({
+          error: paid ? '今月の生成上限に達しました。追加の生成枠についてご相談ください。' : '今月の生成上限に達しました。プランをご確認ください。',
+          code: 'MONTHLY_LIMIT_REACHED', usage: claim.usage,
+          upgradeUrl: paid ? (HIGH_USAGE_CONTACT_URL || '/banner/pricing') : '/banner/pricing',
+        }, { status: 429 })
+      }
+      reservation = claim.reservation
+      desiredCount = reservation.count
+      usageInfo = reservation.usage
     }
 
     // バナー生成
-    const result = await generateBanners(
+    let result: Awaited<ReturnType<typeof generateBanners>>
+    try { result = await generateBanners(
       category,
       keyword.trim(),
       size || '1080x1080',
@@ -317,11 +257,18 @@ export async function POST(request: NextRequest) {
       // 無料/ゲストは原則3枚固定。有料のみ最大10まで。
       // プラン判定は usageInfo の dailyLimit と session から推定しているが、ここでは desiredCount を採用する。
       desiredCount
-    )
+    ) } catch (error) {
+      if (reservation) await releaseBannerMonthlyImages(reservation, reservation.count).catch(() => console.error('Banner quota release failed'))
+      throw error
+    }
 
-    if (result.error && result.banners.length === 0) {
+    const generatedImageCount = Array.isArray(result.banners)
+      ? result.banners.filter((banner) => typeof banner === 'string' && banner.startsWith('data:image/')).length
+      : 0
+    if (generatedImageCount === 0) {
+      if (reservation) await releaseBannerMonthlyImages(reservation, reservation.count).catch(() => console.error('Banner quota release failed'))
       return NextResponse.json(
-        { error: result.error },
+        { error: result.error || 'バナーの生成に失敗しました。再試行してください。' },
         { status: 500 }
       )
     }
@@ -386,7 +333,8 @@ export async function POST(request: NextRequest) {
     if (!userId) await notifyServiceActivity({ serviceId: 'banner', action: 'バナー生成', count: desiredCount })
 
     // 成功時のみ使用回数を加算（画像枚数ベース・月間）
-    const chargedCount = Math.max(1, Math.min(desiredCount, Array.isArray(result.banners) ? result.banners.length : desiredCount))
+    const chargedCount = Math.min(desiredCount, generatedImageCount)
+    let quotaSettlementFailed = false
     if (!disableLimits && isGuest && guestUsage) {
       guestUsage = { date: currentMonth, count: guestUsage.date === currentMonth ? guestUsage.count + chargedCount : chargedCount }
       if (usageInfo) {
@@ -396,33 +344,15 @@ export async function POST(request: NextRequest) {
           monthlyRemaining: usageInfo.monthlyLimit === -1 ? -1 : Math.max(0, usageInfo.monthlyLimit - guestUsage.count),
         }
       }
-    } else if (!disableLimits && !isGuest) {
-      if (userId) {
-        try {
-          const updated = await prisma.userServiceSubscription.update({
-            where: { userId_serviceId: { userId, serviceId: 'banner' } },
-            data: {
-              monthlyUsage: { increment: chargedCount },
-            },
-          })
-          if (usageInfo) {
-            usageInfo = {
-              monthlyLimit: usageInfo.monthlyLimit,
-              monthlyUsed: updated.monthlyUsage,
-              monthlyRemaining: Math.max(0, usageInfo.monthlyLimit - updated.monthlyUsage),
-            }
-          }
-        } catch (e: any) {
-          console.error('Banner usage increment failed:', e)
-          // 生成自体は成功しているので、ここでは失敗させない
-        }
-      }
+    } else if (!disableLimits && reservation) {
+      try { usageInfo = await releaseBannerMonthlyImages(reservation, reservation.count - chargedCount) }
+      catch { quotaSettlementFailed = true; console.error('Banner quota settlement failed') }
     }
 
     const res = NextResponse.json({
       banners: result.banners,
       isGuest,
-      warning: result.error, // 一部失敗した場合の警告
+      warning: result.error || (quotaSettlementFailed ? '生成枚数の反映を確認できませんでした。残り枚数を再読み込みしてください。' : undefined),
       usage: usageInfo || undefined,
       usedModel: result.usedModel || undefined,
       usedModelDisplay: result.usedModel ? getModelDisplayName(result.usedModel) : undefined,

@@ -12,7 +12,9 @@ function harness(auth=true){const exports={},calls=[];let reads=0,model=0,browse
  if(name==='@/lib/net/safe-browser')return{SAFE_BROWSER_ARGS:[],installSafeBrowserRequests:async()=>{browser++;throw Error('Browser must not run');}};
  if(name==='@/lib/nanobanner')return{isNanobannerConfigured:()=>true,generateBanners:async()=>{model++;throw Error('Model must not run');}};
  if(name==='@/lib/pricing')return{getCurrentMonthJST:()=> '2026-09',isWithinFreeHour:()=>true};
- if(name==='@/lib/prisma'||name==='@/lib/service-usage')return{};
+ if(name==='@/lib/banner/monthly-quota')return{reserveBannerMonthlyImages:async()=>{throw Error('Quota must not run before safe URL rejection')},releaseBannerMonthlyImages:async()=>{throw Error('No reservation to release')}};
+ if(name==='@/lib/prisma')return{prisma:{userServiceSubscription:{findUnique:async()=>null},user:{findUnique:async()=>({plan:'FREE'})}}};
+ if(name==='@/lib/service-usage')return{};
  if(name==='crypto')return{};
  if(name==='sharp')return()=>{throw Error('Unexpected image processing');};
  throw Error('Unexpected dependency '+name);
