@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { getInterviewLimitsByPlan } from '@/lib/pricing'
+import { interviewJstMonthStartUtc } from '@/lib/interview/month'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -16,9 +17,8 @@ export async function GET() {
       return NextResponse.json({ success: false, error: '未認証' }, { status: 401 })
     }
 
-    // 今月の開始日
-    const now = new Date()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    // 素材の作成日ではなく、文字起こし完了に伴う最終更新日で当月分を数える。
+    const monthStart = interviewJstMonthStartUtc()
 
     // 今月の文字起こし済み素材の合計duration(秒)を集計
     const result = await prisma.interviewMaterial.aggregate({
@@ -26,7 +26,7 @@ export async function GET() {
       where: {
         project: { userId: user.id },
         status: 'COMPLETED',
-        createdAt: { gte: monthStart },
+        updatedAt: { gte: monthStart },
       },
     })
 
