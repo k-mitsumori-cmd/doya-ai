@@ -29,7 +29,7 @@ export async function GET() {
 
     const [recentRecords, monthAttendances, recentRequests, employee] = await Promise.all([
       prisma.kintaiClockRecord.findMany({
-        where: { employeeId: ctx.employeeId, timestamp: { gte: new Date(todayStart.getTime() - 86400000), lt: todayEnd } },
+        where: { employeeId: ctx.employeeId, timestamp: { gte: new Date(todayStart.getTime() - 86400000), lt: new Date(Math.min(todayEnd.getTime(), now.getTime() + 1000)) } },
         orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
       }),
       prisma.kintaiAttendance.findMany({

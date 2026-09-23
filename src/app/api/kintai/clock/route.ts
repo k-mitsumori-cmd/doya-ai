@@ -53,7 +53,10 @@ export async function GET(req: NextRequest) {
       orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
     })
     const records = allRecords.filter(record => record.timestamp >= dayStart)
-    const activeShiftRecords = recordsWithCarryover(allRecords, dayStart)
+    // Correction records may carry a later time today; they must not advance the live clock state.
+    const activeShiftRecords = recordsWithCarryover(
+      allRecords.filter(record => record.timestamp.getTime() <= now.getTime() + 1000), dayStart,
+    )
 
     // clockStatus を算出
     let clockStatus = 'not_clocked_in'
@@ -123,7 +126,7 @@ export async function POST(req: NextRequest) {
       const recentRecords = await tx.kintaiClockRecord.findMany({
         where: {
           employeeId: ctx.employeeId,
-          timestamp: { gte: new Date(todayStart.getTime() - 86400000), lt: todayEnd },
+          timestamp: { gte: new Date(todayStart.getTime() - 86400000), lt: new Date(Math.min(todayEnd.getTime(), now.getTime() + 1000)) },
         },
         orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
       })

@@ -184,6 +184,9 @@ async function applyClockFix(
   const dayEnd = new Date(dayStart.getTime() + 86400000)
   const [h, m] = details.correctedTime!.split(':').map(Number)
   const correctedTimestamp = new Date(dayStart.getTime() + (h * 60 + m) * 60000)
+  if (correctedTimestamp.getTime() > Date.now()) {
+    throw new InvalidCorrection('未来の時刻には打刻を訂正できません。')
+  }
   const records = await db.kintaiClockRecord.findMany({
     where: { employeeId, ...(details.recordId ? { id: details.recordId } : {}), type: details.clockType!, timestamp: { gte: dayStart, lt: dayEnd } },
     orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],

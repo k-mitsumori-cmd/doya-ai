@@ -8,6 +8,7 @@ class FixedDate extends Date { constructor(...args) { super(...(args.length ? ar
 let records = [{ id: 'in', type: 'clock_in', timestamp: new Date('2026-09-20T23:00:00+09:00'), createdAt: new Date('2026-09-20T23:00:00+09:00') }];
 let saved = null;
 let leaveChecks = 0;
+let leaveActive = true;
 const findRecords = async ({ where }) => records.filter(record => record.timestamp >= where.timestamp.gte && record.timestamp < where.timestamp.lt);
 const db = {
   $queryRaw: async () => [{ id: 'e1' }],
@@ -16,7 +17,7 @@ const db = {
     create: async ({ data }) => { const record = { id: `r${records.length}`, createdAt: new Date(data.timestamp), ...data }; records.push(record); return record; },
   },
   kintaiAttendance: {
-    findFirst: async () => { leaveChecks++; return { status: 'paid_leave' }; },
+    findFirst: async () => { leaveChecks++; return leaveActive ? { status: 'paid_leave' } : null; },
     findMany: async () => [],
     upsert: async ({ create }) => { saved = create; return create; },
   },
@@ -72,5 +73,15 @@ const dashboard = load('src/app/api/kintai/dashboard/route.ts', {
   assert.deepEqual(Array.from(attributed, record => record.id), ['m1', 'm2']);
   assert.equal(shift.jstWorkdayDate(crossMonth[1].timestamp).toISOString(), '2026-10-01T00:00:00.000Z');
   assert.deepEqual(Array.from(shift.recordsWithCarryover(crossMonth, monthEnd), record => record.id), ['m2', 'm3']);
+  records.push({ id: 'future', type: 'clock_in', timestamp: new Date('2026-09-21T18:00:00+09:00'), createdAt: new Date('2026-09-21T01:00:00+09:00') });
+  response = await clock.GET({ url: 'https://offline.invalid/api/kintai/clock?date=2026-09-21' });
+  const futureBody = await response.json();
+  assert.equal(futureBody.records.length, 2, 'date records still expose later corrections');
+  assert.equal(futureBody.clockStatus, 'clocked_out', 'future correction cannot advance live status');
+  assert.equal((await (await dashboard.GET()).json()).clockStatus, 'clocked_out');
+  leaveActive = false;
+  response = await clock.POST({ json: async () => ({ type: 'clock_in' }), headers: new Headers() });
+  assert.equal(response.status, 200, 'future correction must not block a real clock-in');
+  assert.equal(records.at(-1).timestamp.getTime(), now.getTime() + 1, 'real clock-in cannot be shifted to future correction time');
   console.log('PASS Kintai overnight: prior-day shift remains active, next-day clock-out recalculates workday, leave and duplicates are safe');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -65,6 +65,11 @@ if (kintaiOvernightCorrection.error || kintaiOvernightCorrection.status !== 0) {
   console.error('Security regression failed: verify-kintai-overnight-correction.cjs');
   process.exit(1);
 }
+const kintaiCorrectionAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-correction-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiCorrectionAdmission.error || kintaiCorrectionAdmission.status !== 0) {
+  console.error('Security regression failed: verify-kintai-correction-admission.cjs');
+  process.exit(1);
+}
 const interviewUsageMonth = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-usage-month.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewUsageMonth.error || interviewUsageMonth.status !== 0) {
   console.error('Security regression failed: verify-interview-usage-month.cjs');

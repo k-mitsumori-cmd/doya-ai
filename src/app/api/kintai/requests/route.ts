@@ -75,6 +75,18 @@ export async function POST(req: NextRequest) {
       if (!details?.date) return NextResponse.json({ error: '対象日は必須です' }, { status: 400 })
       if (!details?.clockType) return NextResponse.json({ error: '打刻種別を選択してください' }, { status: 400 })
       if (!details?.correctedTime) return NextResponse.json({ error: '修正後の時刻を入力してください' }, { status: 400 })
+      const validDate = typeof details.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(details.date)
+      const dateOnly = validDate ? new Date(`${details.date}T00:00:00Z`) : null
+      const validTime = typeof details.correctedTime === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(details.correctedTime)
+      if (!dateOnly || !Number.isFinite(dateOnly.getTime()) || dateOnly.toISOString().slice(0, 10) !== details.date ||
+          !validTime || !['clock_in', 'clock_out', 'break_start', 'break_end'].includes(details.clockType)) {
+        return NextResponse.json({ error: '打刻訂正の日時・種別をご確認ください。' }, { status: 400 })
+      }
+      const [hour, minute] = details.correctedTime.split(':').map(Number)
+      const correctedTimestamp = new Date(dateOnly.getTime() - 9 * 3600000 + (hour * 60 + minute) * 60000)
+      if (correctedTimestamp.getTime() > Date.now()) {
+        return NextResponse.json({ error: '未来の時刻には打刻を訂正できません。' }, { status: 400 })
+      }
     }
     if (type === 'leave') {
       if (!details?.startDate) return NextResponse.json({ error: '開始日は必須です' }, { status: 400 })
@@ -92,7 +104,7 @@ export async function POST(req: NextRequest) {
       if (!details?.date) return NextResponse.json({ error: '対象日は必須です' }, { status: 400 })
       if (!details?.hours && !details?.minutes) return NextResponse.json({ error: '残業時間を入力してください' }, { status: 400 })
     }
-    if (!reason?.trim()) {
+    if (typeof reason !== 'string' || !reason.trim()) {
       return NextResponse.json({ error: '理由を入力してください' }, { status: 400 })
     }
 
