@@ -68,6 +68,16 @@ export default function SfaDealsPage() {
   const [deals, setDeals] = useState<Deal[]>([])
   const [accounts, setAccounts] = useState<Account[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
+  const [dealsLoading, setDealsLoading] = useState(true)
+  const [dealsError, setDealsError] = useState(false)
+  const [tasksError, setTasksError] = useState(false)
+  const [accountsError, setAccountsError] = useState(false)
+  const [activitiesError, setActivitiesError] = useState(false)
+  const [activitiesLoading, setActivitiesLoading] = useState(false)
+  const dealsRequest = useRef<AbortController | null>(null)
+  const tasksRequest = useRef<AbortController | null>(null)
+  const accountsRequest = useRef<AbortController | null>(null)
+  const activitiesRequest = useRef<AbortController | null>(null)
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [amount, setAmount] = useState('')
@@ -77,27 +87,88 @@ export default function SfaDealsPage() {
 
   const load = useCallback(() => {
     if (!ready) return
-    fetch('/api/sfa/deals', sfaInit(orgSlug))
-      .then((r) => r.json())
-      .then((d) => {
-        setStages(d.stages || [])
-        setDeals(d.deals || [])
+    dealsRequest.current?.abort()
+    const controller = new AbortController()
+    dealsRequest.current = controller
+    setDealsLoading(true)
+    setDealsError(false)
+    fetch('/api/sfa/deals', sfaInit(orgSlug, { signal: controller.signal }))
+      .then(async (r) => {
+        if (!r.ok) throw new Error('商談の取得に失敗しました')
+        const d = await r.json()
+        if (!Array.isArray(d.stages) || !Array.isArray(d.deals)) throw new Error('商談の応答形式が不正です')
+        return d as { stages: Stage[]; deals: Deal[] }
       })
-      .catch(() => {})
+      .then((d) => { if (!controller.signal.aborted) { setStages(d.stages); setDeals(d.deals) } })
+      .catch(() => { if (!controller.signal.aborted) setDealsError(true) })
+      .finally(() => { if (!controller.signal.aborted) setDealsLoading(false) })
   }, [ready, orgSlug])
   const loadTasks = useCallback(() => {
     if (!ready) return
-    fetch('/api/sfa/tasks', sfaInit(orgSlug))
-      .then((r) => r.json())
-      .then((d) => setTasks(d.tasks || []))
-      .catch(() => {})
+    tasksRequest.current?.abort()
+    const controller = new AbortController()
+    tasksRequest.current = controller
+    setTasksError(false)
+    fetch('/api/sfa/tasks', sfaInit(orgSlug, { signal: controller.signal }))
+      .then(async (r) => {
+        if (!r.ok) throw new Error('タスクの取得に失敗しました')
+        const d = await r.json()
+        if (!Array.isArray(d.tasks)) throw new Error('タスクの応答形式が不正です')
+        return d as { tasks: Task[] }
+      })
+      .then((d) => { if (!controller.signal.aborted) setTasks(d.tasks) })
+      .catch(() => { if (!controller.signal.aborted) setTasksError(true) })
   }, [ready, orgSlug])
+  const loadAccounts = useCallback(() => {
+    if (!ready) return
+    accountsRequest.current?.abort()
+    const controller = new AbortController()
+    accountsRequest.current = controller
+    setAccountsError(false)
+    fetch('/api/sfa/accounts', sfaInit(orgSlug, { signal: controller.signal }))
+      .then(async (r) => {
+        if (!r.ok) throw new Error('取引先の取得に失敗しました')
+        const d = await r.json()
+        if (!Array.isArray(d.accounts)) throw new Error('取引先の応答形式が不正です')
+        return d as { accounts: Account[] }
+      })
+      .then((d) => { if (!controller.signal.aborted) setAccounts(d.accounts) })
+      .catch(() => { if (!controller.signal.aborted) setAccountsError(true) })
+  }, [ready, orgSlug])
+  const loadActivities = useCallback((dealId: string) => {
+    activitiesRequest.current?.abort()
+    const controller = new AbortController()
+    activitiesRequest.current = controller
+    setActivitiesLoading(true)
+    setActivitiesError(false)
+    fetch(withOrg(`/api/sfa/activities?dealId=${encodeURIComponent(dealId)}`, orgSlug), sfaInit(orgSlug, { signal: controller.signal }))
+      .then(async (r) => {
+        if (!r.ok) throw new Error('活動の取得に失敗しました')
+        const d = await r.json()
+        if (!Array.isArray(d.activities)) throw new Error('活動の応答形式が不正です')
+        return d as { activities: SfaActivityRow[] }
+      })
+      .then((d) => { if (!controller.signal.aborted) setDetailActs(d.activities) })
+      .catch(() => { if (!controller.signal.aborted) setActivitiesError(true) })
+      .finally(() => { if (!controller.signal.aborted) setActivitiesLoading(false) })
+  }, [orgSlug])
   useEffect(() => {
     if (!ready) return
+    setStages([])
+    setDeals([])
+    setTasks([])
+    setAccounts([])
+    setDealsLoading(true)
     load()
     loadTasks()
-    fetch('/api/sfa/accounts', sfaInit(orgSlug)).then((r) => r.json()).then((d) => setAccounts(d.accounts || [])).catch(() => {})
-  }, [ready, orgSlug, load, loadTasks])
+    loadAccounts()
+    return () => {
+      dealsRequest.current?.abort()
+      tasksRequest.current?.abort()
+      accountsRequest.current?.abort()
+      activitiesRequest.current?.abort()
+    }
+  }, [ready, orgSlug, load, loadTasks, loadAccounts])
 
   const create = async () => {
     if (!name.trim()) return
@@ -317,10 +388,7 @@ export default function SfaDealsPage() {
     setNewTaskTitle('')
     setNewTaskDue('')
     // 活動タイムライン（この商談のみ）
-    fetch(withOrg(`/api/sfa/activities?dealId=${d.id}`, orgSlug), sfaInit(orgSlug))
-      .then((r) => r.json())
-      .then((x) => setDetailActs(x.activities || []))
-      .catch(() => {})
+    loadActivities(d.id)
   }
 
   const saveDetail = async () => {
@@ -390,10 +458,7 @@ export default function SfaDealsPage() {
       if (!res.ok) throw new Error(d.error)
       setActSubject('')
       // タイムライン再取得 + 一覧の lastActivityAt 反映
-      fetch(withOrg(`/api/sfa/activities?dealId=${detail.id}`, orgSlug), sfaInit(orgSlug))
-        .then((r) => r.json())
-        .then((x) => setDetailActs(x.activities || []))
-        .catch(() => {})
+      loadActivities(detail.id)
       load()
     } catch (e: any) {
       toast.error(e.message)
@@ -433,6 +498,19 @@ export default function SfaDealsPage() {
           </button>
         </div>
       </div>
+
+      {(dealsError || tasksError || accountsError) && (
+        <div role="alert" className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800 space-y-2">
+          {dealsError && <p>商談を読み込めませんでした。表示中の商談がある場合は更新前の情報です。</p>}
+          {tasksError && <p>タスクを読み込めませんでした。表示中のタスクがある場合は更新前の情報です。</p>}
+          {accountsError && <p>取引先を読み込めませんでした。選択肢がある場合は更新前の情報です。</p>}
+          <div className="flex flex-wrap gap-2">
+            {dealsError && <button type="button" onClick={load} className="rounded-lg bg-white px-3 py-1.5 text-red-800 border border-red-200">商談を再試行</button>}
+            {tasksError && <button type="button" onClick={loadTasks} className="rounded-lg bg-white px-3 py-1.5 text-red-800 border border-red-200">タスクを再試行</button>}
+            {accountsError && <button type="button" onClick={loadAccounts} className="rounded-lg bg-white px-3 py-1.5 text-red-800 border border-red-200">取引先を再試行</button>}
+          </div>
+        </div>
+      )}
 
       {open && (
         <div className="bg-white rounded-2xl shadow-sm p-5 mb-4 grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
@@ -583,7 +661,7 @@ export default function SfaDealsPage() {
           )
         })}
         {stages.length === 0 && (
-          <p className="text-slate-400 font-bold">{ready ? 'パイプラインを読み込み中…' : '読み込み中…'}</p>
+          <p className="text-slate-400 font-bold">{dealsError ? '商談を表示できません' : dealsLoading || !ready ? 'パイプラインを読み込み中…' : '商談ステージはありません'}</p>
         )}
       </div>
 
@@ -730,7 +808,7 @@ export default function SfaDealsPage() {
                 <button onClick={addDetailTask} disabled={taskBusy || !newTaskTitle.trim()} className="px-4 py-2 rounded-xl bg-green-600 text-white font-black text-sm disabled:opacity-50">追加</button>
               </div>
               <div className="space-y-1.5">
-                {detailTasks.length === 0 && <p className="text-xs font-bold text-slate-300">タスクはまだありません</p>}
+                {detailTasks.length === 0 && !tasksError && <p className="text-xs font-bold text-slate-300">タスクはまだありません</p>}
                 {detailTasks.map((t) => (
                   <div key={t.id} className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2">
                     <button
@@ -771,7 +849,13 @@ export default function SfaDealsPage() {
                 <button onClick={addActivity} disabled={actBusy || !actSubject.trim()} className="px-4 py-2 rounded-xl bg-green-600 text-white font-black text-sm disabled:opacity-50">追加</button>
               </div>
               <div className="space-y-1.5">
-                {detailActs.length === 0 && <p className="text-xs font-bold text-slate-300">活動はまだ記録されていません</p>}
+                {activitiesError && (
+                  <div role="alert" className="text-xs font-bold text-red-700">
+                    活動を読み込めませんでした。<button type="button" onClick={() => loadActivities(detail.id)} className="underline">再試行</button>
+                  </div>
+                )}
+                {activitiesLoading && <p className="text-xs font-bold text-slate-400">活動を読み込み中…</p>}
+                {detailActs.length === 0 && !activitiesError && !activitiesLoading && <p className="text-xs font-bold text-slate-300">活動はまだ記録されていません</p>}
                 {detailActs.map((a) => (
                   <div key={a.id} className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2">
                     <span className="text-[10px] font-black text-white bg-slate-400 rounded px-1.5 py-0.5 flex-shrink-0">
