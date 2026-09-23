@@ -7,9 +7,10 @@ const projects = Array.from({ length: 50 }, (_, i) => ({
 }))
 let owner = 'owner-1'
 let countCalls = 0
+let listCalls = 0
 const prisma = {
   interviewProject: {
-    findMany: async ({ where, take }) => { assert.equal(JSON.stringify(where), JSON.stringify(owner ? { userId: owner } : { guestId: 'guest-1' })); assert.equal(take, 50); return projects },
+    findMany: async ({ where, take }) => { assert.equal(JSON.stringify(where), JSON.stringify(owner ? { userId: owner } : { guestId: 'guest-1' })); assert.equal(take, 50); listCalls++; return projects },
     count: async ({ where }) => { assert.equal(JSON.stringify(where), JSON.stringify(owner ? { userId: owner } : { guestId: 'guest-1' })); countCalls++; return 73 },
   },
   interviewDraft: { count: async ({ where }) => { assert.equal(JSON.stringify(where.project.is), JSON.stringify(owner ? { userId: owner } : { guestId: 'guest-1' })); countCalls++; return 140 } },
@@ -31,13 +32,15 @@ const route = load('src/app/api/interview/projects/route.ts', {
   assert.equal(ordinary.body.projects.length, 50)
   assert.equal(ordinary.body.stats, undefined)
   assert.equal(countCalls, 0)
+  assert.equal(listCalls, 1)
   for (const expectedOwner of ['owner-1', null]) {
     owner = expectedOwner
-    const response = await route.GET({ nextUrl: new URL('https://test.example/api/interview/projects?includeStats=1') })
+    const response = await route.GET({ nextUrl: new URL('https://test.example/api/interview/projects?statsOnly=1') })
     assert.equal(response.status, 200)
-    assert.equal(response.body.projects.length, 50)
+    assert.equal(response.body.projects, undefined)
     assert.equal(JSON.stringify(response.body.stats), JSON.stringify({ totalProjects: 73, totalDrafts: 140, totalMaterials: 80 }))
   }
   assert.equal(countCalls, 6)
+  assert.equal(listCalls, 1)
   console.log('PASS interview settings counts all owner records beyond the 50-item list cap')
 })().catch(error => { console.error(error); process.exitCode = 1 })

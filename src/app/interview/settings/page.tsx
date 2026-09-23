@@ -60,7 +60,7 @@ export default function InterviewSettingsPage() {
   const isLoggedIn = !!session?.user
 
   useEffect(() => {
-    fetch('/api/interview/projects?includeStats=1')
+    fetch('/api/interview/projects?statsOnly=1')
       .then(async (response) => {
         const data = await response.json().catch(() => null)
         if (!response.ok || !data?.success || !data.stats || !Number.isSafeInteger(data.stats.totalProjects) || !Number.isSafeInteger(data.stats.totalDrafts) || !Number.isSafeInteger(data.stats.totalMaterials)) throw new Error('Interview stats unavailable')
