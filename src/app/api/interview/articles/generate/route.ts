@@ -192,8 +192,8 @@ export async function POST(req: NextRequest) {
         })
 
         if (!geminiRes.ok) {
-          const errText = await geminiRes.text()
-          console.error('[interview] Gemini API error:', geminiRes.status, errText)
+          await geminiRes.body?.cancel()
+          console.error('[interview] Gemini API error status:', geminiRes.status)
           controller.enqueue(sseEvent({
             type: 'error',
             message: `AI API エラー (${geminiRes.status})`,
@@ -304,11 +304,11 @@ export async function POST(req: NextRequest) {
         }))
 
         controller.close()
-      } catch (e: any) {
+      } catch {
         if (!cancelled) {
-          console.error('[interview] generate error:', e?.message)
+          console.error('[interview] article generation failed')
           try {
-            controller.enqueue(sseEvent({ type: 'error', message: e?.message || '記事生成に失敗しました' }))
+            controller.enqueue(sseEvent({ type: 'error', message: '記事生成に失敗しました。時間をおいて再試行してください。' }))
           } catch {
             // controller already closed
           }

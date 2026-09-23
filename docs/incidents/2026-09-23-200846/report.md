@@ -51,3 +51,8 @@
 - デプロイ `dpl_Ehf1z9v54iG63qxVvc5uqo1XhzzU` 上の `/api/cron/persona-purge` が HTTP 200 のまま、23:15:42 JST に同じ指紋の通知を送信した。
 - `stackState: unparsed`、`stackLineCount: 7`、`stackHasLocation: true`、`stackTraceLimit: 10`。元の `console.error` は文字列1件で、Vercelのエラーレベルログには同時刻の詳細がない。スタック中の位置がアプリ由来か `node:internal` 由来かは未確定。
 - クエリ文字列付きのバンドルファイル位置も安全なファイル名だけで解析できるようにし、次回は内部以外の位置情報とスクリプト拡張子の有無を真偽値で記録する。原因と利用者影響は引き続き未特定で、解消済みとは判断しない。
+
+## 23:30 JST の自然発生ログ
+
+- 新デプロイ `dpl_3p7ab5PpVirU2zPokoGForT7TAPr` でも `/api/cron/persona-purge` が HTTP 200 で、23:30:40 JST に同じ指紋の通知を送信した。
+- `stackLineCount: 7`、`stackExternalLocation: true`、`stackScriptLocation: true` だったが、呼び出し元はまだ `unparsed`。内部以外の位置表記とスクリプト拡張子はスタック内にある。ただし両者が同一フレームかは現診断からは分からない。元のエラー原因・影響は未特定のまま。
