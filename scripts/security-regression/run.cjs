@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const adminBannerQuota = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-banner-quota.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (adminBannerQuota.error || adminBannerQuota.status !== 0) {
+  console.error('Security regression failed: verify-admin-banner-quota.cjs');
+  process.exit(1);
+}
 const navigation = spawnSync(process.execPath, [path.join(__dirname, 'verify-active-service-navigation.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (navigation.error || navigation.status !== 0) {
   console.error('Security regression failed: verify-active-service-navigation.cjs');

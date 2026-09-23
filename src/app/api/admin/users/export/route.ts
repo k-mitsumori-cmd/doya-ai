@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
+import { summarizeBannerMonthlyQuota } from '@/lib/admin/banner-quota'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -41,6 +42,7 @@ export async function GET(request: NextRequest) {
             plan: true,
             dailyUsage: true,
             monthlyUsage: true,
+            lastUsageReset: true,
           },
         },
         _count: {
@@ -72,6 +74,7 @@ export async function GET(request: NextRequest) {
           dailyUsage: sub.dailyUsage,
           monthlyUsage: sub.monthlyUsage,
         })),
+        bannerMonthlyQuota: summarizeBannerMonthlyQuota(user.serviceSubscriptions.find((sub: any) => sub.serviceId === 'banner') ?? null),
       }))
 
       return new NextResponse(JSON.stringify(jsonData, null, 2), {
@@ -91,7 +94,7 @@ export async function GET(request: NextRequest) {
       'ロール',
       '総生成数',
       'バナーAIプラン',
-      'バナーAI今日の使用数',
+      'バナーAI今月の使用枚数',
       '登録日',
       '更新日',
       ...(includeStripe ? ['Stripe顧客ID', 'Stripeサブスクリプション終了日'] : []),
@@ -108,7 +111,7 @@ export async function GET(request: NextRequest) {
         user.role,
         user._count.generations,
         bannerSub?.plan || 'FREE',
-        bannerSub?.dailyUsage || 0,
+        summarizeBannerMonthlyQuota(bannerSub ?? null).used,
         user.createdAt.toISOString().split('T')[0],
         user.updatedAt.toISOString().split('T')[0],
       ]
@@ -148,7 +151,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'エクスポートに失敗しました' }, { status: 500 })
   }
 }
-
 
 
 

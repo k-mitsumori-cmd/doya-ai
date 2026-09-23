@@ -43,6 +43,7 @@ interface User {
   stripeSubscriptionId: string | null
   stripeInfo: StripeInfo | null
   totalGenerations: number
+  bannerQuota: { used: number; limit: number; remaining: number | null }
   serviceSubscriptions: ServiceSubscription[]
   services: string[]
 }
@@ -51,13 +52,12 @@ interface User {
 // バナーAIとライティングAIは同じプランで連動
 const COMPLETE_PACK_PLANS: Record<string, { 
   label: string
-  bannerLimit: number
   writingLimit: number
   color: string
 }> = {
-  FREE: { label: 'おためし', bannerLimit: 9, writingLimit: 1, color: 'gray' },
-  PRO: { label: 'プロ', bannerLimit: 50, writingLimit: 5, color: 'amber' },
-  ENTERPRISE: { label: 'エンタープライズ', bannerLimit: 500, writingLimit: 50, color: 'rose' },
+  FREE: { label: 'おためし', writingLimit: 1, color: 'gray' },
+  PRO: { label: 'プロ', writingLimit: 5, color: 'amber' },
+  ENTERPRISE: { label: 'エンタープライズ', writingLimit: 50, color: 'rose' },
 }
 
 // サービス別の表示設定（プランは共通）
@@ -77,15 +77,14 @@ const PLAN_STYLES: Record<string, { bg: string; text: string; border: string; la
 const PLAN_OPTIONS = ['FREE', 'LIGHT', 'PRO', 'ENTERPRISE']
 
 // 残り生成可能数を計算（共通プラン）
-function getRemainingGenerations(serviceId: string, plan: string, dailyUsage: number): number {
+function getRemainingGenerations(plan: string, dailyUsage: number): number {
   const planConfig = COMPLETE_PACK_PLANS[plan] || COMPLETE_PACK_PLANS.FREE
-  const limit = serviceId === 'banner' ? planConfig.bannerLimit : planConfig.writingLimit
-  return Math.max(0, limit - dailyUsage)
+  return Math.max(0, planConfig.writingLimit - dailyUsage)
 }
 
-function getDailyLimit(serviceId: string, plan: string): number {
+function getDailyLimit(plan: string): number {
   const planConfig = COMPLETE_PACK_PLANS[plan] || COMPLETE_PACK_PLANS.FREE
-  return serviceId === 'banner' ? planConfig.bannerLimit : planConfig.writingLimit
+  return planConfig.writingLimit
 }
 
 const containerVariants = {
@@ -133,6 +132,7 @@ export default function AdminUsersPage() {
       
       const data = await response.json()
       setUsers(data)
+      setEditingUser(previous => previous ? data.find((user: User) => user.id === previous.id) ?? null : null)
     } catch (error) {
       console.error('Users fetch error:', error)
       toast.error('ユーザー一覧の取得に失敗しました')
@@ -605,17 +605,13 @@ export default function AdminUsersPage() {
                     {/* バナー残り生成数 列 */}
                     <td className="px-6 py-4">
                       {(() => {
-                        const bannerSub = user.serviceSubscriptions?.find((s) => s.serviceId === 'banner')
-                        const currentPlan = bannerSub?.plan || user.plan || 'FREE'
-                        const dailyUsage = bannerSub?.dailyUsage || 0
-                        const remaining = getRemainingGenerations('banner', currentPlan, dailyUsage)
-                        const limit = getDailyLimit('banner', currentPlan)
+                        const { remaining, limit } = user.bannerQuota
                         return (
                           <div className="flex items-center gap-1">
-                            <span className={`text-lg font-bold ${remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {remaining}
+                            <span className={`text-lg font-bold ${remaining === null || remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {remaining === null ? '無制限' : remaining}
                             </span>
-                            <span className="text-white/30 text-xs">/ {limit}枚</span>
+                            {limit >= 0 && <span className="text-white/30 text-xs">/ {limit}枚・今月</span>}
                           </div>
                         )
                       })()}
@@ -628,8 +624,8 @@ export default function AdminUsersPage() {
                         const writingSub = user.serviceSubscriptions?.find((s) => s.serviceId === 'writing')
                         const currentPlan = bannerSub?.plan || user.plan || 'FREE'
                         const dailyUsage = writingSub?.dailyUsage || 0
-                        const remaining = getRemainingGenerations('writing', currentPlan, dailyUsage)
-                        const limit = getDailyLimit('writing', currentPlan)
+                        const remaining = getRemainingGenerations(currentPlan, dailyUsage)
+                        const limit = getDailyLimit(currentPlan)
                         return (
                           <div className="flex items-center gap-1">
                             <span className={`text-lg font-bold ${remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -815,13 +811,13 @@ export default function AdminUsersPage() {
                     const currentPlan = bannerSub?.plan || editingUser.plan || 'FREE'
                     const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
                     
-                    const bannerUsage = bannerSub?.dailyUsage || 0
-                    const bannerRemaining = getRemainingGenerations('banner', currentPlan, bannerUsage)
-                    const bannerLimit = getDailyLimit('banner', currentPlan)
+                    const bannerUsage = editingUser.bannerQuota.used
+                    const bannerRemaining = editingUser.bannerQuota.remaining
+                    const bannerLimit = editingUser.bannerQuota.limit
                     
                     const writingUsage = writingSub?.dailyUsage || 0
-                    const writingRemaining = getRemainingGenerations('writing', currentPlan, writingUsage)
-                    const writingLimit = getDailyLimit('writing', currentPlan)
+                    const writingRemaining = getRemainingGenerations(currentPlan, writingUsage)
+                    const writingLimit = getDailyLimit(currentPlan)
                     
                     return (
                       <>
@@ -837,9 +833,6 @@ export default function AdminUsersPage() {
                                 return
                               }
                               await handleUpdateCompletePlan(editingUser.id, e.target.value)
-                              await fetchUsers()
-                              const updated = users.find((u) => u.id === editingUser.id)
-                              if (updated) setEditingUser(updated)
                             }}
                             disabled={isSaving}
                             className={`w-full px-4 py-3 rounded-xl appearance-none cursor-pointer outline-none transition-all disabled:opacity-50 border ${planStyle.bg} ${planStyle.text} ${planStyle.border}`}
@@ -860,13 +853,13 @@ export default function AdminUsersPage() {
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <p className="text-xs text-white/40 mb-1">本日の残り</p>
-                              <p className={`text-xl font-bold ${bannerRemaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                {bannerRemaining}<span className="text-xs text-white/40 ml-1">/ {bannerLimit}枚</span>
+                              <p className="text-xs text-white/40 mb-1">今月の残り</p>
+                              <p className={`text-xl font-bold ${bannerRemaining === null || bannerRemaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {bannerRemaining === null ? '無制限' : bannerRemaining}{bannerLimit >= 0 && <span className="text-xs text-white/40 ml-1">/ {bannerLimit}枚</span>}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-white/40 mb-1">本日の使用</p>
+                              <p className="text-xs text-white/40 mb-1">今月の使用</p>
                               <p className="text-xl font-bold text-white">
                                 {bannerUsage}<span className="text-xs text-white/40 ml-1">枚</span>
                               </p>
@@ -874,16 +867,13 @@ export default function AdminUsersPage() {
                           </div>
                           <button
                             onClick={async () => {
-                              await handleResetUsage(editingUser.id, 'banner', 'daily')
-                              await fetchUsers()
-                              const updated = users.find((u) => u.id === editingUser.id)
-                              if (updated) setEditingUser(updated)
+                              await handleResetUsage(editingUser.id, 'banner', 'monthly')
                             }}
                             disabled={isSaving || !bannerSub}
                             title={bannerSub ? '使用回数をリセット' : 'サブスクリプション未作成のためリセット不可'}
                             className="w-full mt-2 px-3 py-1.5 text-xs bg-violet-500/20 text-violet-400 rounded-lg hover:bg-violet-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                           >
-                            🔄 使用回数をリセット
+                            🔄 今月の使用枚数をリセット
                           </button>
                         </div>
                         
@@ -910,9 +900,6 @@ export default function AdminUsersPage() {
                           <button
                             onClick={async () => {
                               await handleResetUsage(editingUser.id, 'writing', 'daily')
-                              await fetchUsers()
-                              const updated = users.find((u) => u.id === editingUser.id)
-                              if (updated) setEditingUser(updated)
                             }}
                             disabled={isSaving || !writingSub}
                             title={writingSub ? '使用回数をリセット' : 'サブスクリプション未作成のためリセット不可'}
@@ -1018,8 +1005,6 @@ export default function AdminUsersPage() {
                               if (res.ok) {
                                 toast.success('解約予約を取り消しました')
                                 await fetchUsers()
-                                const updated = users.find((u) => u.id === editingUser.id)
-                                if (updated) setEditingUser(updated)
                               } else {
                                 toast.error('操作に失敗しました')
                               }
@@ -1046,8 +1031,6 @@ export default function AdminUsersPage() {
                               if (res.ok) {
                                 toast.success('キャンセル予約しました')
                                 await fetchUsers()
-                                const updated = users.find((u) => u.id === editingUser.id)
-                                if (updated) setEditingUser(updated)
                               } else {
                                 toast.error('キャンセルに失敗しました')
                               }
@@ -1074,8 +1057,6 @@ export default function AdminUsersPage() {
                             if (res.ok) {
                               toast.success('サブスクリプションをキャンセルしました')
                               await fetchUsers()
-                              const updated = users.find((u) => u.id === editingUser.id)
-                              if (updated) setEditingUser(updated)
                             } else {
                               toast.error('キャンセルに失敗しました')
                             }

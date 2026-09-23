@@ -4,6 +4,8 @@ import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { findActiveLikeSubscriptions, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
 import { syncUnifiedBilling } from '@/lib/billing-sync'
 import { prisma } from '@/lib/prisma'
+import { summarizeBannerMonthlyQuota } from '@/lib/admin/banner-quota'
+import { shouldResetDailyUsage, shouldResetMonthlyUsage } from '@/lib/pricing'
 import Stripe from 'stripe'
 
 // cookies() を使用するため、静的最適化を無効化
@@ -95,6 +97,7 @@ export async function GET(request: NextRequest) {
       stripeSubscriptionId: user.stripeSubscriptionId,
       stripeInfo: stripeInfoMap[user.id] || null,
       totalGenerations: user._count.generations,
+      bannerQuota: summarizeBannerMonthlyQuota(user.serviceSubscriptions.find((sub: any) => sub.serviceId === 'banner') ?? null),
       // サービス別の情報
       serviceSubscriptions: user.serviceSubscriptions.map((sub: any) => ({
         id: sub.id,
@@ -166,7 +169,15 @@ export async function PATCH(req: NextRequest) {
       if (resetMonthlyUsage) updateData.monthlyUsage = 0
       if (typeof setDailyUsage === 'number') updateData.dailyUsage = setDailyUsage
       if (typeof setMonthlyUsage === 'number') updateData.monthlyUsage = setMonthlyUsage
-      if (resetDailyUsage || resetMonthlyUsage) updateData.lastUsageReset = new Date()
+      if (resetDailyUsage || resetMonthlyUsage || typeof setDailyUsage === 'number' || typeof setMonthlyUsage === 'number') {
+        // Both counters share one reset timestamp. Preserve only counters that
+        // belong to the current JST day/month before moving that timestamp.
+        if (existing) {
+          if (updateData.dailyUsage === undefined && shouldResetDailyUsage(existing.lastUsageReset)) updateData.dailyUsage = 0
+          if (updateData.monthlyUsage === undefined && shouldResetMonthlyUsage(existing.lastUsageReset)) updateData.monthlyUsage = 0
+        }
+        updateData.lastUsageReset = new Date()
+      }
 
       if (existing) {
         await prisma.userServiceSubscription.update({
