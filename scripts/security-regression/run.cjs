@@ -25,6 +25,11 @@ if (interviewMaterialDelete.error || interviewMaterialDelete.status !== 0) {
   console.error('Security regression failed: verify-interview-material-delete.cjs');
   process.exit(1);
 }
+const interviewUploadConfirm = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-upload-confirm.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewUploadConfirm.error || interviewUploadConfirm.status !== 0) {
+  console.error('Security regression failed: verify-interview-upload-confirm.cjs');
+  process.exit(1);
+}
 const interviewArticleLimit = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-article-limit.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewArticleLimit.error || interviewArticleLimit.status !== 0) {
   console.error('Security regression failed: verify-interview-article-limit.cjs');

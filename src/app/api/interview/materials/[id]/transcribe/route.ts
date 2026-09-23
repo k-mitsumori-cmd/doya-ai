@@ -56,10 +56,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       )
     }
 
-    if (!material.filePath) {
+    if (!material.filePath || !material.fileUrl) {
       return NextResponse.json(
-        { success: false, error: 'ファイルがアップロードされていません' },
-        { status: 400 }
+        { success: false, error: 'アップロードの完了を確認できません。素材一覧から再確認してください。' },
+        { status: 409 }
       )
     }
 

@@ -3,7 +3,9 @@ const { load } = require('./load-typescript.cjs')
 
 let storageError = true
 const storageLogs = []
+let pathId = 0
 const storage = load('src/lib/interview/storage.ts', {
+  'node:crypto': { randomUUID: () => `unique-${++pathId}` },
   '@supabase/supabase-js': { createClient: () => ({ storage: { from: () => ({
     remove: async () => ({ error: storageError ? { message: 'private path and provider detail' } : null }),
   }) } }) },
@@ -72,7 +74,10 @@ const request = (url, authorization) => ({ nextUrl: new URL(url), headers: { get
   assert.equal(access.getGuestIdFromRequest(cookie('123e4567-e89b-12d3-a456-426614174000')), '123e4567-e89b-12d3-a456-426614174000')
   assert.equal(access.getGuestIdFromRequest(cookie('1750000000000_abcd')), '1750000000000_abcd')
   assert.equal(access.getGuestIdFromRequest(cookie('../other')), null)
-  assert.match(storage.buildStoragePath({ guestId: '123e4567-e89b-12d3-a456-426614174000', projectId: 'project-1', fileName: 'test.png' }), /^guest_123e4567-e89b-12d3-a456-426614174000\/project-1\//)
+  const firstPath = storage.buildStoragePath({ guestId: '123e4567-e89b-12d3-a456-426614174000', projectId: 'project-1', fileName: 'test.png' })
+  const secondPath = storage.buildStoragePath({ guestId: '123e4567-e89b-12d3-a456-426614174000', projectId: 'project-1', fileName: 'test.png' })
+  assert.match(firstPath, /^guest_123e4567-e89b-12d3-a456-426614174000\/project-1\//)
+  assert.notEqual(firstPath, secondPath)
   assert.throws(() => storage.buildStoragePath({ guestId: '../other', projectId: 'project-1', fileName: 'test.png' }), /不正なストレージ識別子/)
   await assert.rejects(() => storage.deleteFile('private/customer/file.mp3'), /ファイル削除に失敗/)
   assert.deepEqual(storageLogs, ['[interview] File delete failed'])

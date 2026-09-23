@@ -51,7 +51,14 @@ export const ALLOWED_EXTENSIONS = new Set([
 // Supabase プラン上限: Free=50MB, Pro=5GB
 export function getMaxFileSize(): number {
   const envMb = process.env.INTERVIEW_MAX_FILE_SIZE_MB
-  if (envMb) return parseInt(envMb, 10) * 1024 * 1024
+  if (envMb !== undefined) {
+    const mb = Number(envMb)
+    const bytes = mb * 1024 * 1024
+    if (!Number.isFinite(mb) || mb <= 0 || !Number.isSafeInteger(bytes)) {
+      throw new Error('INTERVIEW_MAX_FILE_SIZE_MB の設定が不正です')
+    }
+    return bytes
+  }
   return 5 * 1024 * 1024 * 1024 // デフォルト 5GB (Supabase Pro)
 }
 

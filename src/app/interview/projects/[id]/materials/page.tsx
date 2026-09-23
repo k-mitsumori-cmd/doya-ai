@@ -339,7 +339,6 @@ export default function MaterialsPage() {
             formData.append('', file, file.name)
 
             xhr.open('PUT', signedUrl)
-            xhr.setRequestHeader('x-upsert', 'true')
             xhr.send(formData)
           })
           break // 成功したらループを抜ける

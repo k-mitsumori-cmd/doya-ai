@@ -5,7 +5,7 @@ let providerCalls = 0
 let durationCalls = 0
 let processing = null
 const material = { id: 'm1', projectId: 'p1', project: { id: 'p1', userId: 'u1', guestId: null },
-  type: 'audio', filePath: 'private/audio.wav', fileSize: 1024n, mimeType: 'audio/wav' }
+  type: 'audio', filePath: 'private/audio.wav', fileUrl: 'https://storage.example.test/signed', fileSize: 1024n, mimeType: 'audio/wav' }
 const prisma = {
   interviewMaterial: { findUnique: async () => material },
   interviewTranscription: { findFirst: async () => processing },
@@ -38,6 +38,15 @@ const stream = load('src/app/api/interview/materials/[id]/transcribe-stream/rout
 const context = { params: Promise.resolve({ id: 'm1' }) }
 
 ;(async () => {
+  material.fileUrl = null
+  const unconfirmed = await post.POST({ json: async () => ({}) }, context)
+  assert.equal(unconfirmed.status, 409)
+  const unconfirmedStream = await stream.GET({}, context)
+  assert.match(await unconfirmedStream.text(), /アップロードの完了を確認できません/)
+  assert.equal(durationCalls, 0)
+  assert.equal(providerCalls, 0)
+  material.fileUrl = 'https://storage.example.test/signed'
+
   const blocked = await post.POST({ json: async () => ({}) }, context)
   assert.equal(blocked.status, 429)
   assert.equal(blocked.body.code, 'TRANSCRIPTION_LIMIT')

@@ -10,6 +10,7 @@
 // 3. クライアント → API: アップロード完了通知 → DB保存
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { randomUUID } from 'node:crypto'
 
 const BUCKET_NAME = process.env.INTERVIEW_STORAGE_BUCKET || 'interview-materials'
 
@@ -144,24 +145,15 @@ export async function getFileMetadata(
   storagePath: string
 ): Promise<{ size: number; mimeType: string } | null> {
   const supabase = getSupabaseAdmin()
-
-  // list で該当パスのファイルを探す
-  const parts = storagePath.split('/')
-  const fileName = parts.pop()!
-  const folder = parts.join('/')
-
-  const { data, error } = await supabase.storage
-    .from(BUCKET_NAME)
-    .list(folder, { search: fileName, limit: 1 })
-
-  if (error || !data || data.length === 0) {
-    return null
-  }
-
-  const file = data[0]
+  // 部分一致の一覧検索では、似た名前の別ファイルを誤認し得る。
+  const { data: file, error } = await supabase.storage.from(BUCKET_NAME).info(storagePath)
+  if (error?.status === 404) return null
+  if (error || !file) throw new Error('ストレージのファイル情報を確認できません')
+  const size = file.size ?? file.metadata?.size
+  if (!Number.isSafeInteger(size) || size <= 0) throw new Error('ストレージのファイルサイズが不正です')
   return {
-    size: file.metadata?.size ?? 0,
-    mimeType: file.metadata?.mimetype ?? 'application/octet-stream',
+    size,
+    mimeType: file.contentType || file.metadata?.mimetype || 'application/octet-stream',
   }
 }
 
@@ -204,7 +196,7 @@ export async function purgeInterviewProjectStorageBatch(prefix: string): Promise
 
 /**
  * ストレージパスの生成
- * 形式: {userId|guest_{guestId}}/{projectId}/{timestamp}_{fileName}
+ * 形式: {userId|guest_{guestId}}/{projectId}/{timestamp}_{randomId}_{fileName}
  */
 export function buildStoragePath(opts: {
   userId?: string | null
@@ -216,7 +208,7 @@ export function buildStoragePath(opts: {
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(owner) || !/^[A-Za-z0-9_-]{1,128}$/.test(opts.projectId)) {
     throw new Error('不正なストレージ識別子です')
   }
-  const safeFileName = opts.fileName.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const safeFileName = opts.fileName.replace(/[^a-zA-Z0-9._-]/g, '_').slice(0, 200)
   const timestamp = Date.now()
-  return `${owner}/${opts.projectId}/${timestamp}_${safeFileName}`
+  return `${owner}/${opts.projectId}/${timestamp}_${randomUUID()}_${safeFileName}`
 }

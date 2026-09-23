@@ -3,7 +3,7 @@ const { load } = require('./load-typescript.cjs')
 
 class TerminalError extends Error {}
 const material = { id: 'm1', projectId: 'p1', project: { id: 'p1', userId: 'u1', guestId: null },
-  type: 'audio', filePath: 'private/audio.wav', fileSize: 1024n, mimeType: 'audio/wav' }
+  type: 'audio', filePath: 'private/audio.wav', fileUrl: 'https://storage.example.test/signed', fileSize: 1024n, mimeType: 'audio/wav' }
 let externalJobId = null
 let status = 'PROCESSING'
 let admission = { state: 'started', transcriptionId: 't1' }

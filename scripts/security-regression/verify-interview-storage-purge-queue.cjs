@@ -32,6 +32,7 @@ const fileOps = {
   remove: async paths => { if (removalFailure) return { error: {} }; paths.forEach(path => objects.delete(path)); return { error: null } },
 }
 const storage = load('src/lib/interview/storage.ts', {
+  'node:crypto': { randomUUID: () => 'test-uuid' },
   '@supabase/supabase-js': { createClient: () => ({ storage: {
     getBucket: async () => ({ data: { public: publicBucket } }),
     from: () => fileOps,

@@ -96,8 +96,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           return
         }
 
-        if (!material.filePath) {
-          sendEvent('fail', { message: 'ファイルがアップロードされていません' })
+        if (!material.filePath || !material.fileUrl) {
+          sendEvent('fail', { message: 'アップロードの完了を確認できません。素材一覧から再確認してください。' })
           controller.close()
           return
         }

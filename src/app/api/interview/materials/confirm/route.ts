@@ -9,21 +9,24 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getInterviewUser, getGuestIdFromRequest, requireDatabase } from '@/lib/interview/access'
-import { getFileMetadata, getSignedFileUrl } from '@/lib/interview/storage'
+import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
+import { ensureBucket, getDetectedMaxFileSize, getFileMetadata, getSignedFileUrl } from '@/lib/interview/storage'
+import { getMaxFileSize } from '@/lib/interview/types'
+import { getInterviewGuestLimits, getInterviewLimitsByPlan } from '@/lib/pricing'
+import { enqueueInterviewMaterialStoragePurge } from '@/lib/interview/storage-purge-queue'
 
 export async function POST(req: NextRequest) {
   const dbErr = requireDatabase()
   if (dbErr) return dbErr
 
   try {
-    const { userId } = await getInterviewUser()
+    const { userId, plan } = await getInterviewUser()
     const guestId = !userId ? getGuestIdFromRequest(req) : null
 
-    const body = await req.json()
-    const { materialId } = body as { materialId: string }
+    const body = await req.json().catch(() => null)
+    const materialId = body?.materialId
 
-    if (!materialId) {
+    if (typeof materialId !== 'string' || !materialId) {
       return NextResponse.json(
         { success: false, error: 'materialId は必須です' },
         { status: 400 }
@@ -44,11 +47,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 所有者チェック
-    if (userId && material.project.userId !== userId) {
-      return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
-    }
-    if (!userId && guestId && material.project.guestId !== guestId) {
-      return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
+    const ownerErr = checkOwnership(material.project, userId, guestId)
+    if (ownerErr) return ownerErr
+    if (material.status !== 'UPLOADED' && material.status !== 'COMPLETED') {
+      return NextResponse.json({ success: false, error: 'この素材のアップロード確認はできません' }, { status: 409 })
     }
 
     // Supabase Storage でファイルの存在確認
@@ -68,12 +70,30 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    await ensureBucket()
+    const planMax = (userId ? getInterviewLimitsByPlan(plan) : getInterviewGuestLimits()).uploadSizeLimit
+    const storageMax = Math.min(getDetectedMaxFileSize(), getMaxFileSize())
+    const maxSize = planMax > 0 ? Math.min(planMax, storageMax) : storageMax
+    if (metadata.size > maxSize) {
+      await prisma.$transaction(async (tx) => {
+        const rejected = await tx.interviewMaterial.updateMany({
+          where: { id: material.id, status: 'UPLOADED', fileUrl: null },
+          data: { status: 'ERROR', error: 'ファイルサイズがプランの上限を超えています' },
+        })
+        if (rejected.count) await enqueueInterviewMaterialStoragePurge(tx, {
+          id: material.id, projectId: material.projectId, filePath: storagePath,
+          userId: material.project.userId, guestId: material.project.guestId,
+        })
+      })
+      return NextResponse.json({ success: false, error: '実際のファイルサイズがアップロード上限を超えています。', code: 'UPLOAD_LIMIT_REACHED' }, { status: 413 })
+    }
+
     // 署名付きURLを取得してDBに保存
     const fileUrl = await getSignedFileUrl(storagePath, 7 * 24 * 3600) // 7日間有効
 
     // DBステータス更新
-    await prisma.interviewMaterial.update({
-      where: { id: materialId },
+    const updated = await prisma.interviewMaterial.updateMany({
+      where: { id: materialId, status: { in: ['UPLOADED', 'COMPLETED'] } },
       data: {
         status: 'COMPLETED',
         fileUrl,
@@ -83,6 +103,7 @@ export async function POST(req: NextRequest) {
           : (material.mimeType || metadata.mimeType),
       },
     })
+    if (!updated.count) return NextResponse.json({ success: false, error: '素材の状態が変更されました。再読み込みしてください。' }, { status: 409 })
 
     return NextResponse.json({
       success: true,
@@ -95,11 +116,11 @@ export async function POST(req: NextRequest) {
         status: 'COMPLETED',
       },
     })
-  } catch (e: any) {
-    console.error('[interview] confirm error:', e?.message)
+  } catch {
+    console.error('[interview] upload confirmation failed')
     return NextResponse.json(
-      { success: false, error: e?.message || 'アップロード確認に失敗しました' },
-      { status: 500 }
+      { success: false, error: 'アップロードを確認できませんでした。しばらくしてから再試行してください。', code: 'UPLOAD_CONFIRM_UNAVAILABLE' },
+      { status: 503 }
     )
   }
 }

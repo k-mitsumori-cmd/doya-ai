@@ -34,13 +34,11 @@ export async function POST(req: NextRequest) {
     }
 
     // リクエストボディ
-    const body = await req.json()
-    const { projectId, fileName, mimeType, fileSize } = body as {
-      projectId: string
-      fileName: string
-      mimeType: string
-      fileSize: number
-    }
+    const body = await req.json().catch(() => null)
+    const projectId = body?.projectId
+    const fileName = body?.fileName
+    const mimeType = body?.mimeType
+    const fileSize = body?.fileSize
 
     // バリデーション
     if (typeof projectId !== 'string' || !projectId || typeof fileName !== 'string' || !fileName || typeof mimeType !== 'string' || !mimeType) {
