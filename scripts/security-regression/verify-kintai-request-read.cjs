@@ -6,7 +6,7 @@ function fixture(o={}){
  let employeeFilter,claimed=0;
  const db={kintaiRequest:{findUnique:async()=>o.missing?null:request,findMany:async()=>[],updateMany:async()=>{claimed++;return{count:1}}},kintaiEmployee:{findUnique:async({where})=>({organizationId:'org',departmentId:where.id==='viewer'?(o.viewerDept===undefined?'dep':o.viewerDept):(o.targetDept===undefined?'dep':o.targetDept)}),findMany:async({where})=>{employeeFilter=where;return[]}}};
  const prisma={...db,$transaction:fn=>fn(db)};
- const mocks={'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/kintai/access':{getKintaiContext:async()=>o.anonymous?null:context,hasMinRole:(role,min)=>(ranks[role]??0)>=ranks[min]},'@/lib/kintai/recalculate':{recalculateDayForEmployee:async()=>{}}};
+ const mocks={'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/kintai/access':{getKintaiContext:async()=>o.anonymous?null:context,hasMinRole:(role,min)=>(ranks[role]??0)>=ranks[min]},'@/lib/kintai/shift-records':{openShiftStart:()=>null},'@/lib/kintai/recalculate':{recalculateDayForEmployee:async()=>{}}};
  const detail=load('src/app/api/kintai/requests/[id]/route.ts',mocks),list=load('src/app/api/kintai/requests/route.ts',mocks);
  return{get:()=>detail.GET(new Request('http://offline.invalid'),{params:Promise.resolve({id:'r'})}),approve:()=>detail.PATCH({json:async()=>({status:'approved'})},{params:Promise.resolve({id:'r'})}),list:()=>list.GET(new Request('http://offline.invalid')),filter:()=>employeeFilter,claimed:()=>claimed};
 }

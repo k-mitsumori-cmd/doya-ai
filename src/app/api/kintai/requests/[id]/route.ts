@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import type { Prisma } from '@prisma/client'
 import { recalculateDayForEmployee } from '@/lib/kintai/recalculate'
+import { openShiftStart } from '@/lib/kintai/shift-records'
 
 class RequestConflict extends Error {}
 class InvalidCorrection extends Error {}
@@ -204,6 +205,18 @@ async function applyClockFix(
       employeeId, type: details.clockType!, timestamp: correctedTimestamp,
       source: 'manual', isModified: true,
     } })
+  }
+  // An event just after midnight can close yesterday's shift. Refresh its workday
+  // before the calendar day so the approved correction updates the actual total.
+  if (details.clockType !== 'clock_in') {
+    const precedingRecords = await db.kintaiClockRecord.findMany({
+      where: { employeeId, timestamp: { gte: new Date(dayStart.getTime() - 86400000), lt: correctedTimestamp } },
+      orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+    })
+    const previousShift = openShiftStart(precedingRecords)
+    if (previousShift && previousShift.timestamp < dayStart) {
+      await recalculateDayForEmployee(employeeId, organizationId, new Date(dateOnly.getTime() - 86400000), db)
+    }
   }
   await recalculateDayForEmployee(employeeId, organizationId, dateOnly, db)
 }
