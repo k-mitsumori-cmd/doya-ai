@@ -35,6 +35,26 @@ if (interviewArticleLimit.error || interviewArticleLimit.status !== 0) {
   console.error('Security regression failed: verify-interview-article-limit.cjs');
   process.exit(1);
 }
+const seoArticleAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-article-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (seoArticleAdmission.error || seoArticleAdmission.status !== 0) {
+  console.error('Security regression failed: verify-seo-article-admission.cjs');
+  process.exit(1);
+}
+const seoTemplateAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-template-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (seoTemplateAdmission.error || seoTemplateAdmission.status !== 0) {
+  console.error('Security regression failed: verify-seo-template-admission.cjs');
+  process.exit(1);
+}
+const seoCreateAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-create-route-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (seoCreateAdmission.error || seoCreateAdmission.status !== 0) {
+  console.error('Security regression failed: verify-seo-create-route-admission.cjs');
+  process.exit(1);
+}
+const seoEntitlementsLedger = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-entitlements-ledger.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (seoEntitlementsLedger.error || seoEntitlementsLedger.status !== 0) {
+  console.error('Security regression failed: verify-seo-entitlements-ledger.cjs');
+  process.exit(1);
+}
 const interviewUsageMonth = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-usage-month.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewUsageMonth.error || interviewUsageMonth.status !== 0) {
   console.error('Security regression failed: verify-interview-usage-month.cjs');

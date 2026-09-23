@@ -4,17 +4,9 @@ import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { SeoCreateArticleInputSchema } from '@seo/lib/types'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
-import {
-  ensureGuestId,
-  getGuestIdFromRequest,
-  isTrialActive,
-  jstDayRange,
-  normalizeSeoPlan,
-  seoDailyArticleLimit,
-  setGuestCookie,
-} from '@/lib/seoAccess'
+import { isTrialActive, normalizeSeoPlan } from '@/lib/seoAccess'
+import { createSeoArticleWithinLimit, SeoArticleQuotaError } from '@/lib/seo-article-admission'
 import { getSeoCharLimitByUserPlan } from '@/lib/pricing'
-import { notifyApiError } from '@/lib/errorHandler'
 
 /**
  * スワイプ結果から記事を生成するAPI
@@ -29,8 +21,9 @@ export async function POST(req: NextRequest) {
     const trial = isTrialActive(user?.firstLoginAt || null)
     const trialActive = !!userId && trial.active
 
-    let guestId = !userId ? getGuestIdFromRequest(req) : null
-    if (!userId && !guestId) guestId = ensureGuestId()
+    if (!userId) {
+      return NextResponse.json({ code: 'SEO_ARTICLE_LIMIT', error: '記事を生成するにはログインしてください。' }, { status: 429 })
+    }
 
     const body = await req.json().catch(() => ({}))
     const { sessionId, finalConditions, primaryInfo } = body
@@ -49,32 +42,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 権限チェック
-    if (
-      (userId && swipeSession.userId !== userId) ||
-      (!userId && swipeSession.guestId !== guestId)
-    ) {
+    if (swipeSession.userId !== userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
-    }
-
-    // 使用制限チェック
-    if (!trialActive) {
-      if (userId) {
-        const limit = seoDailyArticleLimit(plan)
-        if (limit >= 0) {
-          const { start, end } = jstDayRange(new Date())
-          const used = await (prisma as any).seoArticle.count({
-            where: { userId, createdAt: { gte: start, lt: end } },
-          })
-          if (used >= limit) {
-            return NextResponse.json(
-              {
-                error: `1日の生成上限（${limit}件）に達しました。プランをアップグレードするか、明日再度お試しください。`,
-              },
-              { status: 429 }
-            )
-          }
-        }
-      }
     }
 
     // スワイプ結果から記事生成パラメータを構築
@@ -136,7 +105,7 @@ export async function POST(req: NextRequest) {
     const validated = SeoCreateArticleInputSchema.parse(articleInput)
 
     // 文字数制限チェック
-    const charLimit = getSeoCharLimitByUserPlan(plan, trialActive)
+    const charLimit = getSeoCharLimitByUserPlan(trialActive ? 'PRO' : plan)
     if (targetChars > charLimit) {
       return NextResponse.json(
         {
@@ -147,54 +116,42 @@ export async function POST(req: NextRequest) {
     }
 
     // 記事を作成
-    const seoArticle = (prisma as any).seoArticle as any
-    const article = await seoArticle.create({
-      data: {
-        userId: userId || null,
-        guestId: !userId ? guestId : null,
+    const { article, job } = await createSeoArticleWithinLimit({
+      userId, guestId: null, plan, trialActive, createJob: true,
+      articleData: {
         ...validated,
+        referenceImages: validated.referenceImages ?? undefined,
       },
-    })
-
-    // スワイプセッションに記事IDを保存
-    await prisma.swipeSession.update({
-      where: { sessionId },
-      data: {
-        finalConditions: finalConditions as any,
-        primaryInfo: primaryInfo as any,
-        generatedArticleId: article.id,
-        updatedAt: new Date(),
-      },
-    })
-
-    // ジョブを作成して生成を開始
-    const seoJob = (prisma as any).seoJob as any
-    const job = await seoJob.create({
-      data: {
-        articleId: article.id,
-        status: 'queued',
-        progress: 0,
-        step: 'init',
+      afterCreate: async (tx, created) => {
+        await tx.swipeSession.update({
+          where: { sessionId },
+          data: {
+            finalConditions: finalConditions as any,
+            primaryInfo: primaryInfo as any,
+            generatedArticleId: created.id,
+            updatedAt: new Date(),
+          },
+        })
       },
     })
 
     const res = NextResponse.json({
       success: true,
       articleId: article.id,
-      jobId: job.id,
+      jobId: job!.id,
     })
 
-    if (!userId && !guestId) {
-      setGuestCookie(res, ensureGuestId())
-    }
-
     return res
-  } catch (error: any) {
-    console.error('[swipe/generate] error:', error)
-    await notifyApiError(error, req, 500, { endpoint: 'POST /api/swipe/generate' })
+  } catch (error: unknown) {
+    if (error instanceof SeoArticleQuotaError) {
+      return NextResponse.json({ code: 'SEO_ARTICLE_LIMIT',
+        error: error.guest ? '記事を生成するにはログインしてください。' : `今月の生成回数の上限に達しました（${error.limit}回/月）。プランをアップグレードすると増やせます。`,
+      }, { status: 429 })
+    }
+    console.error('[seo/template/generate] failed')
     return NextResponse.json(
-      { error: error?.message || 'Internal server error' },
-      { status: 500 }
+      { error: '記事の作成に失敗しました。時間をおいて再試行してください。' },
+      { status: 503 }
     )
   }
 }

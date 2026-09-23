@@ -3,12 +3,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
+import { getSeoArticleMonthlyUsage } from '@/lib/seo-article-admission'
 import {
   SEO_GUEST_COOKIE,
   canUseSeoImages,
   getGuestIdFromRequest,
   isTrialActive,
-  jstMonthRange,
   normalizeSeoPlan,
   seoMonthlyArticleLimit,
   seoGuestTotalArticleLimit,
@@ -29,8 +29,6 @@ export async function GET(_req: NextRequest) {
     const trial = isTrialActive(user?.firstLoginAt || null)
     const trialActive = isLoggedIn && trial.active
 
-    const { start, end } = jstMonthRange(new Date())
-
     // 生成回数（記事）: GUEST=累計1、ログイン=月次上限（トライアル中は無制限）
     let usedArticlesThisMonth = 0
     let usedArticlesTotal = 0
@@ -44,9 +42,7 @@ export async function GET(_req: NextRequest) {
       remainingArticles = -1
     } else if (isLoggedIn) {
       articleLimit = seoMonthlyArticleLimit(plan)
-      usedArticlesThisMonth = await (prisma as any).seoArticle.count({
-        where: { userId: String(user.id), createdAt: { gte: start, lt: end } },
-      })
+      usedArticlesThisMonth = await getSeoArticleMonthlyUsage(prisma, String(user.id))
       remainingArticles = Math.max(0, articleLimit - usedArticlesThisMonth)
     } else {
       articleLimit = seoGuestTotalArticleLimit()
@@ -88,27 +84,8 @@ export async function GET(_req: NextRequest) {
       canUseChatEdit: imagesAllowed,
       canUseSeoImages: imagesAllowed,
     })
-  } catch (e: any) {
-    console.error('[seo entitlements] failed', { error: e?.message || 'unknown error', stack: e?.stack })
-    // エラー時は安全なデフォルト値を返す
-    return NextResponse.json({
-      success: true,
-      isLoggedIn: false,
-      plan: 'FREE',
-      canUseChatEdit: false,
-      canUseSeoImages: false,
-      limits: {
-        articlesPerMonth: 0,
-        articlesTotalGuest: 0,
-        imagesAllowed: false,
-      },
-      usage: {
-        articlesThisMonth: 0,
-        articlesTotalGuest: 0,
-      },
-      remaining: {
-        articles: 0,
-      },
-    })
+  } catch {
+    console.error('[seo entitlements] failed')
+    return NextResponse.json({ success: false, error: '利用状況を確認できません。時間をおいて再試行してください。' }, { status: 503 })
   }
 }

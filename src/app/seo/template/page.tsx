@@ -41,6 +41,7 @@ const CHAR_PRESETS = [
   { value: 3000, label: '3,000字', desc: 'コンパクト', minPlan: 'GUEST' },
   { value: 5000, label: '5,000字', desc: '要点を絞った', minPlan: 'GUEST' },
   { value: 10000, label: '10,000字', desc: '標準的なSEO', minPlan: 'FREE' },
+  { value: 15000, label: '15,000字', desc: 'ライト向け', minPlan: 'LIGHT' },
   { value: 20000, label: '20,000字', desc: '網羅性の高い', minPlan: 'PRO' },
   { value: 30000, label: '30,000字', desc: '徹底解説', minPlan: 'ENTERPRISE' },
   { value: 50000, label: '50,000字', desc: '超大型', minPlan: 'ENTERPRISE' },
@@ -153,13 +154,19 @@ export default function SeoTestPage() {
   const [error, setError] = useState<string | null>(null)
 
   // entitlements（残り記事数）
-  const [entitlements, setEntitlements] = useState<{ remaining?: { articles?: number }; limits?: { articlesPerMonth?: number }; plan?: string } | null>(null)
+  const [entitlements, setEntitlements] = useState<{ remaining?: { articles?: number }; limits?: { articlesPerMonth?: number }; plan?: string; trial?: { active?: boolean } } | null>(null)
+  const [entitlementError, setEntitlementError] = useState(false)
+  const [entitlementRetry, setEntitlementRetry] = useState(0)
   useEffect(() => {
+    let active = true
+    setEntitlements(null)
+    setEntitlementError(false)
     fetch('/api/seo/entitlements', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((j) => { if (j?.success) setEntitlements(j) })
-      .catch(() => {})
-  }, [])
+      .then((r) => { if (!r.ok) throw new Error('利用状況を確認できません'); return r.json() })
+      .then((j) => { if (!j?.success) throw new Error('利用状況を確認できません'); if (active) setEntitlements(j) })
+      .catch(() => { if (active) setEntitlementError(true) })
+    return () => { active = false }
+  }, [entitlementRetry])
 
   const isLoggedIn = !!session?.user?.email
   const userPlan = useMemo(() => {
@@ -167,9 +174,10 @@ export default function SeoTestPage() {
     const p = String((session?.user as any)?.seoPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
     if (p === 'ENTERPRISE') return 'ENTERPRISE'
     if (p === 'PRO') return 'PRO'
+    if (p === 'LIGHT') return 'LIGHT'
     return 'FREE'
   }, [session, isLoggedIn])
-  const charLimit = CHAR_LIMITS[userPlan] || 10000
+  const charLimit = entitlements?.trial?.active ? CHAR_LIMITS.PRO : CHAR_LIMITS[userPlan] || 10000
 
   // テンプレート選択時に値セット
   const handleSelectTemplate = useCallback((template: ArticleTemplate) => {
@@ -286,6 +294,12 @@ export default function SeoTestPage() {
               </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap justify-end">
+              {entitlementError && (
+                <button type="button" onClick={() => setEntitlementRetry((current) => current + 1)}
+                  className="rounded-lg bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 hover:bg-amber-100">
+                  利用状況を確認できません。再試行
+                </button>
+              )}
               {entitlements && (() => {
                 const remaining = entitlements.remaining?.articles
                 const limit = entitlements.limits?.articlesPerMonth
@@ -752,7 +766,7 @@ export default function SeoTestPage() {
                         {/* 文字数 */}
                         <div>
                           <label className="block text-base font-black text-slate-800 mb-3">文字数</label>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-7 gap-2">
                             {CHAR_PRESETS.map((p) => {
                               const selected = targetChars === p.value
                               const disabled = p.value > charLimit

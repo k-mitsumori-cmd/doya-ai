@@ -8,15 +8,9 @@ import { prisma } from '@/lib/prisma'
 import { SeoCreateArticleInputSchema } from '@seo/lib/types'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import {
-  ensureGuestId,
-  getGuestIdFromRequest,
-  isTrialActive,
-  jstMonthRange,
-  normalizeSeoPlan,
-  seoMonthlyArticleLimit,
-  seoGuestTotalArticleLimit,
-  setGuestCookie,
+  ensureGuestId, getGuestIdFromRequest, isTrialActive, normalizeSeoPlan, setGuestCookie,
 } from '@/lib/seoAccess'
+import { createSeoArticleWithinLimit, SeoArticleQuotaError } from '@/lib/seo-article-admission'
 import { getSeoCharLimitByUserPlan } from '@/lib/pricing'
 import { recordServiceUsage } from '@/lib/service-usage'
 
@@ -64,36 +58,6 @@ export async function POST(req: NextRequest) {
     let guestId = !userId ? getGuestIdFromRequest(req) : null
     if (!userId && !guestId) guestId = ensureGuestId()
 
-    // 使用制限（トライアル中は無制限）
-    if (!trialActive) {
-      if (userId) {
-        const limit = seoMonthlyArticleLimit(plan)
-        if (limit >= 0) {
-          const { start, end } = jstMonthRange(new Date())
-          const used = await (prisma as any).seoArticle.count({
-            where: { userId, createdAt: { gte: start, lt: end } },
-          })
-          if (used >= limit) {
-            return NextResponse.json(
-              { success: false, error: `今月の生成回数の上限に達しました（${limit}回/月）。プランをアップグレードすると増やせます。` },
-              { status: 429 }
-            )
-          }
-        }
-      } else {
-        const limit = seoGuestTotalArticleLimit()
-        const used = guestId ? await (prisma as any).seoArticle.count({ where: { guestId } }) : 0
-        if (used >= limit) {
-          const res = NextResponse.json(
-            { success: false, error: `ゲストは${limit}回まで作成できます。ログインすると継続して使えます。` },
-            { status: 429 }
-          )
-          if (guestId) setGuestCookie(res, guestId)
-          return res
-        }
-      }
-    }
-
     const body = await req.json()
     const input = SeoCreateArticleInputSchema.parse(body)
     const createJob = body?.createJob !== false
@@ -117,14 +81,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const seoArticle = (prisma as any).seoArticle as any
-    const seoJob = (prisma as any).seoJob as any
-
-    const article = await seoArticle.create({
-      data: {
+    const { article, job } = await createSeoArticleWithinLimit({
+      userId: userId || null, guestId, plan, trialActive, createJob,
+      articleData: {
         status: createJob ? 'RUNNING' : 'DRAFT',
-        userId: userId || null,
-        guestId: userId ? null : guestId,
         title: input.title,
         keywords: input.keywords as any,
         persona: input.persona || null,
@@ -136,7 +96,7 @@ export async function POST(req: NextRequest) {
         llmoOptions: (input.llmoOptions ?? undefined) as any,
         // 新機能：依頼テキストと参考画像
         requestText: input.requestText || null,
-        referenceImages: input.referenceImages || null,
+        referenceImages: input.referenceImages ?? undefined,
         autoBundle: (body.autoBundle ?? true) as boolean, // 追加
         // 比較記事（調査型）
         mode: (input.mode ?? 'standard') as any,
@@ -152,7 +112,7 @@ export async function POST(req: NextRequest) {
       action: createJob ? '記事生成ジョブ開始' : '記事作成（下書き）',
       summary: input.title || (Array.isArray(input.keywords) ? input.keywords.join('・') : ''),
       input: { title: input.title, keywords: input.keywords, targetChars: input.targetChars, mode: input.mode ?? 'standard' },
-    })
+    }).catch(() => console.warn('[seo] usage tracking unavailable'))
 
     if (!createJob) {
       const res = NextResponse.json({ success: true, articleId: article.id, jobId: null })
@@ -160,12 +120,15 @@ export async function POST(req: NextRequest) {
       return res
     }
 
-    // 分割生成ジョブを作って記事ページ側でadvanceする
-    const job = await seoJob.create({ data: { articleId: article.id, status: 'queued', step: 'init', progress: 0 } })
-    const res = NextResponse.json({ success: true, articleId: article.id, jobId: job.id })
+    const res = NextResponse.json({ success: true, articleId: article.id, jobId: job!.id })
     if (!userId && guestId) setGuestCookie(res, guestId)
     return res
   } catch (e: any) {
+    if (e instanceof SeoArticleQuotaError) {
+      return NextResponse.json({ success: false, code: 'SEO_ARTICLE_LIMIT',
+        error: e.guest ? '記事を生成するにはログインしてください。' : `今月の生成回数の上限に達しました（${e.limit}回/月）。プランをアップグレードすると増やせます。`,
+      }, { status: 429 })
+    }
     // バリデーションエラーの詳細を返す
     if (e?.name === 'ZodError') {
       const issues = e.issues?.map((issue: any) => ({
@@ -184,14 +147,10 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
-    console.error('POST /api/seo/articles error:', e)
+    console.error('POST /api/seo/articles failed')
     return NextResponse.json(
-      { 
-        success: false, 
-        error: e?.message || '不明なエラー',
-        stack: process.env.NODE_ENV === 'development' ? e?.stack : undefined,
-      },
-      { status: 400 }
+      { success: false, error: '記事の作成に失敗しました。時間をおいて再試行してください。' },
+      { status: 503 }
     )
   }
 }
@@ -295,4 +254,3 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: false, error: '管理処理を完了できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
-

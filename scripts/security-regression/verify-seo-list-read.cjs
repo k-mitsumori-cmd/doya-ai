@@ -12,7 +12,7 @@ function fixture(userId, guestId, fail=false) {
     '@/lib/seo-article-list':{parseSeoListQuery:()=>({}),readSeoArticleList:async(tx,owner)=>{const rows=await tx.seoArticle.findMany({where:owner});return{articles:rows.map(row=>({...row,jobs:row.jobs.map(load('seo/lib/job-response.ts').publicSeoJob)})),nextCursor:null,counts:{total:rows.length},matched:rows.length}}},
     'next/server':{NextResponse:Response},
     'next-auth':{getServerSession:async()=>userId?{user:{id:userId}}:null},
-    '@/lib/auth':{}, '@seo/lib/types':{},
+    '@/lib/auth':{}, '@seo/lib/types':{}, '@/lib/seo-article-admission':{},
     '@seo/lib/bootstrap':{ensureSeoSchema:async()=>{}},
     '@/lib/seoAccess':{getGuestIdFromRequest:()=>guestId,ensureGuestId:()=> 'new-guest',setGuestCookie:()=>cookie++},
     '@/lib/pricing':{}, '@/lib/service-usage':{},
