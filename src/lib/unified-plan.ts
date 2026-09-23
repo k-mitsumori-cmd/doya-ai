@@ -40,7 +40,7 @@ export const UNIFIED_PLAN_COPY = {
   freeName: '無料プラン',
   proName: 'プロプラン',
   freeTagline: 'まずは無料でお試し',
-  proTagline: '1契約で全サービスのプロ機能が使い放題',
+  proTagline: '1契約で全サービスのプロ機能を利用可能',
   proNote: 'プロプランを1つ契約すると、ドヤAIの全サービスでプロ機能（上限アップ）が使えるようになります。',
 } as const
 // 初月無料トライアルの訴求UIは src/components/TrialCallout.tsx に集約（TrialBadge / TrialNote / TrialCallout）。

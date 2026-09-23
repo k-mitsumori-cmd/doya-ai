@@ -19,7 +19,7 @@ export default function AioPricingPage() {
           <div className="flex justify-center mb-2"><DoyaKun mood="love" size={96} /></div>
           <h1 className="text-3xl font-black text-slate-900">料金プラン</h1>
           <p className="mt-2 text-slate-500 font-bold max-w-xl mx-auto">
-            無料で毎月お試し。プロプラン1つで、ドヤAIの全サービスのプロ機能が使い放題になります。
+            無料で毎月お試し。プロプラン1つで、ドヤAIの全サービスのプロ機能をプラン別の上限内で利用できます。
           </p>
         </div>
         <UnifiedPricingPlans serviceId="aio" currentPlan={currentPlan} />

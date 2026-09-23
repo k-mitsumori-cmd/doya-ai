@@ -36,7 +36,7 @@ export default function InterviewPricingPage() {
           </h1>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg">
             まずは無料で。AIインタビューで魅力的なコンテンツづくりを始めましょう。
-            プロプランなら、ドヤAIの全サービスがまとめて使い放題になります。
+            プロプランなら、ドヤAIの全サービスでプロ機能を利用できます。各サービスにはプラン別の利用上限があります。
           </p>
         </section>
 

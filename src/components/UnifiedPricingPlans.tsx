@@ -26,7 +26,7 @@ function Sym({ name, size = 20, className = '', fill = false, style }: { name: s
 
 /**
  * 全サービス共通の「無料 / プロ(¥9,980)」2プラン料金表（統一プラン）。
- * 「1契約で全サービス使い放題」を主役にした購入喚起デザイン。
+ * 「1契約で全サービスのプロ機能を利用」を主役にした購入喚起デザイン。
  * 上限・機能は services.ts（単一ソース）から、価格は統一プラン設定から読む。
  */
 export function UnifiedPricingPlans({
@@ -91,7 +91,7 @@ export function UnifiedPricingPlans({
   }
   const isFree = !isPro && plan === 'FREE'
 
-  // 「使い放題」の価値づけ：全公開サービスの単体プロ料金の合計（＝個別契約したら相当）
+  // 全サービス利用の価値づけ：全公開サービスの単体プロ料金の合計（＝個別契約したら相当）
   // ⚠️ 開発中のサービスは公開一覧に出さないが、そのサービス自身の料金ページでは
   //    「自分がプロに含まれない」ように見えてしまうため、現在のサービスだけは必ず足す。
   const publicServices = getPublicServices()
@@ -103,7 +103,7 @@ export function UnifiedPricingPlans({
 
   return (
     <section className={className || ''}>
-      {/* ===== 価値ヘッダー：1契約で全サービス使い放題 ===== */}
+      {/* ===== 価値ヘッダー：1契約で全サービスのプロ機能を利用 ===== */}
       <div className="relative overflow-hidden rounded-[2rem] mb-8 px-6 py-9 text-center text-white"
         style={{ background: `linear-gradient(135deg, #0047b3, ${BRAND} 55%, #3d80ff)` }}>
         <div className="absolute inset-0 opacity-15" style={{ backgroundImage: 'radial-gradient(circle at 20% 20%, white 1.5px, transparent 1.5px)', backgroundSize: '28px 28px' }} aria-hidden="true" />
@@ -112,7 +112,7 @@ export function UnifiedPricingPlans({
             <Sym name="all_inclusive" size={16} />統一プラン
           </span>
           <h2 className="text-3xl md:text-4xl font-black tracking-tight leading-tight">
-            プロ1つで、<span style={{ color: '#ffd400' }}>{serviceCount}サービス</span>ぜんぶ使い放題。
+            プロ1つで、<span style={{ color: '#ffd400' }}>{serviceCount}サービス</span>のプロ機能を利用。
           </h2>
           <p className="mt-3 text-sm md:text-base font-bold text-white/85">
             ドヤAIの全ツールのプロ機能が、月々{UNIFIED_PRO_PRICE_LABEL}で。個別契約も、組み合わせも不要です。
@@ -163,7 +163,7 @@ export function UnifiedPricingPlans({
           style={{ background: `linear-gradient(150deg, ${BRAND}, #0047b3 70%, #6d28d9)`, boxShadow: '0 24px 60px -12px rgba(0,102,255,0.5)' }}>
           <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full px-4 py-1.5 text-[11px] font-black text-white shadow-lg whitespace-nowrap"
             style={{ background: `linear-gradient(90deg, ${ACCENT}, #ff5c1e)` }}>
-            使い放題！めっちゃお得
+            全サービスのプロ機能を利用
           </div>
 
           <div className="mb-1 flex items-center gap-1.5 text-sm font-black text-white/85">
@@ -176,11 +176,11 @@ export function UnifiedPricingPlans({
           </div>
           <TrialNote tone="dark" className="mb-4" />
 
-          {/* 使い放題の強調 */}
+          {/* 全サービスのプロ機能を利用できることを強調 */}
           <div className="mb-4 rounded-2xl bg-white/12 px-4 py-3 flex items-center gap-3">
             <span className="grid place-items-center w-9 h-9 rounded-xl shrink-0" style={{ background: '#ffd400', color: '#0047b3' }}><Sym name="all_inclusive" size={20} fill /></span>
             <div>
-              <p className="text-sm font-black leading-tight">全{serviceCount}サービスのプロ機能が使い放題</p>
+              <p className="text-sm font-black leading-tight">全{serviceCount}サービスのプロ機能が使える</p>
               <p className="text-[11px] font-bold text-white/75">このサービスの上限：{proLimit}</p>
             </div>
           </div>
@@ -244,11 +244,11 @@ export function UnifiedPricingPlans({
         </div>
       </div>
 
-      {/* ===== プロで解放される全サービス（使い放題の可視化） ===== */}
+      {/* ===== プロで解放される全サービス ===== */}
       <div className="max-w-4xl mx-auto mt-10">
         <p className="text-center text-sm font-black text-slate-500 mb-4">
           <Sym name="lock_open" size={16} className="align-middle mr-1" style={{ color: BRAND }} />
-          プロプラン1つで、この{serviceCount}サービスすべてが使い放題に
+          プロプラン1つで、この{serviceCount}サービスすべてのプロ機能を利用可能に
         </p>
         <div className="flex flex-wrap justify-center gap-2">
           {activeServices.map((s) => {

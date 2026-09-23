@@ -283,7 +283,7 @@ export const SERVICES: Service[] = [
       'AI記事ドラフト生成（リアルタイムストリーミング）',
       '校正・校閲（誤字脱字・表記揺れ修正）',
       'プラットフォーム別タイトル提案',
-      '5GB超の大容量ファイル対応',
+      'プランに応じて最大5GBのファイルに対応',
     ],
     useCases: [
       'インタビュー音声の文字起こしに時間がかかる',
@@ -294,13 +294,13 @@ export const SERVICES: Service[] = [
     pricing: {
       free: {
         name: '無料プラン',
-        limit: '1日5回まで',
+        limit: '記事生成・再生成 合計1日5回まで',
         dailyLimit: 5,
         price: 0,
       },
       pro: {
         name: 'プロプラン',
-        limit: '1日30回まで',
+        limit: '記事生成・再生成 合計1日30回まで',
         dailyLimit: 30,
         price: UNIFIED_PRO_PRICE,
         stripePriceId: process.env.NEXT_PUBLIC_STRIPE_INTERVIEW_PRO_PRICE_ID,

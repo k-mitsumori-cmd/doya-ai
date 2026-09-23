@@ -43,7 +43,7 @@ export default function PromanePricingPage() {
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-gray-600">
             プロジェクト管理をもっとシンプルに。まずは無料で始めて、必要になったらプロプランへ。
-            プロプランなら、すべてのドヤAIサービスがまとめて使い放題になります。
+            プロプランなら、すべてのドヤAIサービスのプロ機能をプラン別の上限内で利用できます。
           </p>
         </div>
       </section>

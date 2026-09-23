@@ -20,7 +20,7 @@ export default function HrPricingPage() {
             </Link>
             <h1 className="text-3xl font-black text-slate-900">料金プラン</h1>
             <p className="mt-2 text-slate-500 font-bold max-w-xl mx-auto">
-              ドヤHR は5名まで永久無料。プロプラン1つで、ドヤAIの全サービスのプロ機能が使い放題になります。
+              ドヤHR は5名まで永久無料。プロプラン1つで、ドヤAIの全サービスのプロ機能をプラン別の上限内で利用できます。
             </p>
           </div>
 
