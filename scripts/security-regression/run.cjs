@@ -30,6 +30,11 @@ if (interviewUsageMonth.error || interviewUsageMonth.status !== 0) {
   console.error('Security regression failed: verify-interview-usage-month.cjs');
   process.exit(1);
 }
+const interviewMediaDuration = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-media-duration.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewMediaDuration.error || interviewMediaDuration.status !== 0) {
+  console.error('Security regression failed: verify-interview-media-duration.cjs');
+  process.exit(1);
+}
 const bannerAdmissionRoute = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-admission-route.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (bannerAdmissionRoute.error || bannerAdmissionRoute.status !== 0) {
   console.error('Security regression failed: verify-banner-admission-route.cjs');
