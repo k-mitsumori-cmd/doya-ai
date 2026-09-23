@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   }
   try {
     const result = await purgeDeletedPersonaImages(prisma)
-    console.log('[persona-purge] result', {
+    console.warn('[persona-purge] result', {
       processed: result.processed,
       completed: result.completed,
       failed: result.failed,
