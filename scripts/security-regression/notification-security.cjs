@@ -82,7 +82,7 @@ async function main(){
     const logs=[],diagnostics=[],notifications=[],tasks=[];
     const runtime=load('src/lib/runtime-alert.ts',{'./slack-voice':{voicePayload:x=>x},'@vercel/functions':{waitUntil:p=>tasks.push(p)},'./alert':{getAlertWebhook:async()=>'https://mock.invalid'},'./runtime-alert-limit':{claimRuntimeAlert:async()=>({state:'allowed'}),releaseRuntimeAlertClaim:async()=>{}}},{VERCEL_ENV:'production'},{console:{error:(...a)=>logs.push(a),warn:(...a)=>diagnostics.push(a)},fetch:async(u,o)=>{notifications.push(o.body);return {ok:true};}});
     runtime.exports.installRuntimeAlerts();runtime.ctx.console.error(...args);await Promise.all(tasks);
-    assert.equal(logs.length,1);assert.equal(notifications.length,count);assert.equal(diagnostics.length,count);assert(!JSON.stringify(notifications).includes('private-canary'));assert(!JSON.stringify(diagnostics).includes('private-canary'));if(count){const d=diagnostics[0][1];assert.match(d.incidentId,/^[0-9a-f-]{36}$/);assert.equal(d.argumentCount,args.length);assert.equal(d.firstArgKind,args[0] instanceof Error?'error':typeof args[0]);assert.equal(d.family,name==='next-auth family'?'next-auth':name==='warning with separate error'?'warning':'unclassified');assert(notifications[0].includes(d.incidentId));assert.equal(d.errorTypes.length,args.filter(x=>x instanceof Error).length);}pass(name);
+    assert.equal(logs.length,1);assert.equal(notifications.length,count);assert.equal(diagnostics.length,count);assert(!JSON.stringify(notifications).includes('private-canary'));assert(!JSON.stringify(diagnostics).includes('private-canary'));if(count){const d=diagnostics[0][1];assert.match(d.incidentId,/^[0-9a-f-]{36}$/);assert.equal(d.argumentCount,args.length);assert.equal(d.firstArgKind,args[0] instanceof Error?'error':typeof args[0]);assert.equal(d.family,name==='next-auth family'?'next-auth':name==='warning with separate error'?'warning':'unclassified');assert(['missing','unparsed','parsed'].includes(d.stackState));assert(notifications[0].includes(d.incidentId));assert.equal(d.errorTypes.length,args.filter(x=>x instanceof Error).length);}pass(name);
   }
 
   function tracedRuntime(env={},hook='https://mock.invalid',ok=true,DateImpl=Date,onHook=()=>{}) {
@@ -91,6 +91,10 @@ async function main(){
     return {...mod,diagnostics,sends,logs,tasks};
   }
   const trace=tracedRuntime({VERCEL_URL:'doya-synthetic.vercel.app',VERCEL_DEPLOYMENT_ID:'dpl_Synthetic123'});
+  assert.equal(trace.exports.safeRuntimeSource('Error\n    at console.error (virtual-frame)\n    at callback (anonymous)\n    at handler (/var/task/.next/server/chunks/12345.js:18:72)'), '12345.js:18:72');
+  assert.equal(trace.exports.safeRuntimeSource('Error\n    at console.error (virtual-frame)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)'), 'サーバー処理（詳細はログ）');
+  assert(!trace.exports.safeRuntimeSource('Error\n    at console.error (virtual-frame)\n    at handler (/var/task/private-canary/12345.js:18:72)').includes('private-canary'));
+  pass('Runtime source skips virtual frames and retains only bounded static file locations');
   await trace.exports.reportRuntimeFailure('fixed-source',{clientReported:true});await trace.exports.reportRuntimeFailure('fixed-source',{clientReported:true});
   assert.equal(trace.sends.length,1);assert.equal(trace.diagnostics.length,1);assert.equal(trace.diagnostics[0][1].source,'fixed-source');assert(trace.sends[0].text.includes(trace.diagnostics[0][1].incidentId));assert(trace.sends[0].text.includes('doya-synthetic.vercel.app'));assert(trace.sends[0].text.includes('dpl_Synthetic123'));assert(trace.sends[0].text.includes('未検証'));pass('Deduped client report includes matching incident ID and validated deployment');
   const malformed=tracedRuntime({VERCEL_URL:'doya.vercel.app?private-canary',VERCEL_DEPLOYMENT_ID:'dpl_abc\nprivate-canary'});

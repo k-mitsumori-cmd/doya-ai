@@ -68,6 +68,16 @@ function errorFingerprint(source: string, args: unknown[]): string {
     .update(args.slice(0, 3).map(normalize).join('\0')).digest('hex').slice(0, 24);
 }
 
+/** A stack can start with a virtual/bundler frame. Search later frames for a static file location. */
+export function safeRuntimeSource(stack: string | undefined): string {
+  for (const line of stack?.split('\n').slice(2, 10) ?? []) {
+    if (line.includes('node:internal')) continue;
+    const match = line.match(/(?:^|[/\\(\s])([A-Za-z0-9_.-]{1,100}\.[cm]?[jt]s):(\d{1,7}):(\d{1,7})(?:\)|\s|$)/);
+    if (match) return `${match[1]}:${match[2]}:${match[3]}`;
+  }
+  return 'サーバー処理（詳細はログ）';
+}
+
 /** Node.js deprecations are logged for maintenance, without paging operators. */
 function isDeprecationWarning(args: unknown[]): boolean {
   // Do not hide a separate error attached to a warning message.
@@ -81,7 +91,7 @@ function isDeprecationWarning(args: unknown[]): boolean {
 }
 
 /** Forward operational failures only. Never serialize console arguments or user input. */
-export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string; firstArgKind?: string; family?: string } = {}): Promise<void> {
+export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string; firstArgKind?: string; family?: string; stackState?: string } = {}): Promise<void> {
   if (process.env.VERCEL_ENV !== 'production') return;
   const key = source.replace(/[<>&]/g, '').slice(0, 180);
   const signature = options.signature && /^[a-f0-9]{24}$/.test(options.signature)
@@ -119,10 +129,11 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
       const types = (options.errorTypes ?? []).filter(type => safeErrorTypes.includes(type)).slice(0, 10);
       const firstArgKind = ['string', 'number', 'boolean', 'bigint', 'symbol', 'function', 'undefined', 'null', 'error', 'object'].includes(options.firstArgKind ?? '') ? options.firstArgKind : 'unknown';
       const family = ['next-auth', 'prisma', 'supabase', 'warning', 'unclassified'].includes(options.family ?? '') ? options.family : 'unclassified';
+      const stackState = ['missing', 'unparsed', 'parsed'].includes(options.stackState ?? '') ? options.stackState : 'unknown';
       // This line contains no console arguments, error messages, stacks or request data.
       // It is written only for an actual delivery attempt, after deduplication.
       console.warn('[runtime-alert] delivery', {
-        incidentId, source: key, fingerprint: signature, argumentCount, firstArgKind, family, errorTypes: types,
+        incidentId, source: key, fingerprint: signature, argumentCount, firstArgKind, family, stackState, errorTypes: types,
         occurredAt: new Date(now).toISOString(),
         ...(deployment.host ? { deploymentHost: deployment.host } : {}),
         ...(deployment.id ? { deploymentId: deployment.id } : {}),
@@ -161,9 +172,10 @@ export function installRuntimeAlerts(): void {
     originalError(...args);
     if (sending.getStore() || isEmptyConsoleCall(args) || isDeprecationWarning(args)) return;
     // Capture our own call site; the original error may contain private text.
-    const frame = new Error().stack?.split('\n').slice(2).find(line => !line.includes('node:internal'));
-    const source = frame?.match(/([^/\s()]+\.[cm]?[jt]s):\d+:\d+/)?.[0] ?? 'サーバー処理（詳細はログ）';
-    const task = reportRuntimeFailure(source, { argumentCount: args.length, firstArgKind: argumentKind(args[0]), family: errorFamily(args), errorTypes: errorTypes(args), signature: errorFingerprint(source, args) });
+    const stack = new Error().stack;
+    const source = safeRuntimeSource(stack);
+    const stackState = !stack ? 'missing' : source === 'サーバー処理（詳細はログ）' ? 'unparsed' : 'parsed';
+    const task = reportRuntimeFailure(source, { argumentCount: args.length, firstArgKind: argumentKind(args[0]), family: errorFamily(args), stackState, errorTypes: errorTypes(args), signature: errorFingerprint(source, args) });
     try { waitUntil(task); } catch { void task; }
   };
 }
