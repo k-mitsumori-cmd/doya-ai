@@ -75,3 +75,8 @@
 
 - 00:15:40 JSTにも `/api/cron/persona-purge` から同じ指紋の通知が1件発生し、リクエストはHTTP 200だった。通知が継続しているため、原因は未解明。
 - `console.log` による処理件数は0:00、0:15ともにVercel CLIから取得できなかった。同じリクエストの `console.warn` は取得できるため、個人情報を含まない `processed`・`completed`・`failed` の集計行だけを警告レベルで出すよう変更。次の自然実行で取得できるか確認する。
+
+## 00:30 JST の自然実行
+
+- デプロイ `dpl_DK8wbo3MbhAXQTSNbLHVbg1FrzuR` の `/api/cron/persona-purge` は HTTP 200。新しい集計ログを取得でき、`processed: 0, completed: 0, failed: 0` だった。
+- 同じリクエストのログには従来の指紋の通知を確認できなかった。ただし、この1回の不再発は過去の通知の原因特定や復旧の証明にはならない。次回以降の自然実行も確認する。
