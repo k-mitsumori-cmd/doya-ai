@@ -77,6 +77,10 @@ export async function ensureBucket(): Promise<void> {
     }
   }
 
+  if (!_detectedMaxBytes) {
+    throw new Error('Bucket のファイルサイズ上限を確認できませんでした')
+  }
+
   _bucketReady = true
 }
 

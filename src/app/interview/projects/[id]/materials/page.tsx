@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ============================================
-// 5GB超ファイル対応 — 直接アップロードUI
+// プラン別のファイルサイズ上限に対応した直接アップロードUI
 // ============================================
 // フロー:
 // 1. ファイル選択 (ドラッグ&ドロップ / ボタン)
@@ -719,7 +719,7 @@ export default function MaterialsPage() {
             <h3 className="relative z-10 text-xl font-black mb-2 text-slate-900">
               {dragOver ? 'ここにドロップ！' : 'ファイルをドラッグ&ドロップ'}
             </h3>
-            <p className="relative z-10 text-slate-500 text-sm mb-4">または下のボタンから選択（最大5GB・1回の文字起こしは約3時間まで）</p>
+            <p className="relative z-10 text-slate-500 text-sm mb-4">または下のボタンから選択（1件の上限: ゲスト100MB・無料500MB・LIGHT 1GB・PRO 2GB・Enterprise 5GB。ストレージ設定によって小さくなる場合があります）</p>
 
             {/* 対応フォーマットバッジ */}
             <div className="relative z-10 flex flex-wrap justify-center gap-1.5 mb-6">

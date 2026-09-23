@@ -568,7 +568,7 @@ export default function InterviewSettingsPage() {
               <div className="text-sm text-slate-700 space-y-2.5">
                 {[
                   { icon: 'check_circle', text: '対応ファイル形式: MP3, WAV, M4A, MP4, MOV, WEBM, PDF, TXT, DOCX' },
-                  { icon: 'cloud_upload', text: '最大ファイルサイズ: 5GB（Supabase Storage 経由）' },
+                  { icon: 'cloud_upload', text: 'ファイル1件の上限: ゲスト100MB / 無料500MB / LIGHT 1GB / PRO 2GB / Enterprise 5GB（ストレージ側の上限も適用）' },
                 ].map((item, i) => (
                   <motion.div
                     key={i}

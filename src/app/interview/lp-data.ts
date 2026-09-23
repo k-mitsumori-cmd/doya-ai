@@ -8,7 +8,7 @@ export const ACCENT = '#f97316' // オレンジ（音声・対話）
 export const CTA = '/auth/signin?callbackUrl=/interview'
 
 export const STEPS: Step[] = [
-  { icon: 'upload_file', title: '音声・動画を入れる', desc: '取材の録音をそのままアップロードします。5GBを超える大きなファイルにも対応しています。' },
+  { icon: 'upload_file', title: '音声・動画を入れる', desc: '取材の録音をそのままアップロードします。ファイル1件の上限はプランごとに異なります。' },
   { icon: 'record_voice_over', title: '文字起こしされる', desc: '話者を分けて文字に起こします。誰の発言かが分かる状態で残ります。' },
   { icon: 'article', title: '記事の形にする', desc: 'Q&A・ストーリー・プレスリリースなど、書き方を選んで記事のドラフトを作ります。' },
 ]
@@ -21,7 +21,7 @@ export const BENEFITS: Benefit[] = [
 
 export const FAQ: Faq[] = [
   { q: '無料で使えますか？', a: `無料プランは${getServiceById('interview')!.pricing.free.limit}ご利用いただけます。プロプランは月額${UNIFIED_PRO_PRICE.toLocaleString('ja-JP')}円（税込）で、${getServiceById('interview')!.pricing.pro.limit}ご利用いただけます。1つの契約で全サービスのプロプランが使えます。` },
-  { q: '長い取材音声でも大丈夫ですか？', a: '5GBを超えるファイルにも対応しています。長時間の対談や複数人の座談会でもお使いいただけます。' },
+  { q: '長い取材音声でも大丈夫ですか？', a: 'ファイル1件の上限はゲスト100MB・無料500MB・LIGHT 1GB・PRO 2GB・Enterprise 5GBです。ストレージ側の設定でさらに小さくなる場合があります。文字起こしは1回の長さと月間の残り時間にも上限があります。' },
   { q: '出てきた記事はそのまま公開できますか？', a: 'ドラフトとしてお使いください。事実確認と最終的な文章の調整は、公開前にご確認いただく前提です。' },
   { q: '話者が複数いても分けられますか？', a: 'はい。話者分離に対応しており、誰の発言かが分かる形で文字起こしされます。' },
 ]
