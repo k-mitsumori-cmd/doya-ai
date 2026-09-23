@@ -320,6 +320,7 @@ export default function GeneratePage() {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false)
   const contentRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const inFlightRef = useRef(false)
 
   // Auto-scroll
   useEffect(() => {
@@ -329,11 +330,13 @@ export default function GeneratePage() {
   }, [generatedText, status])
 
   const startGeneration = async () => {
+    if (inFlightRef.current) return
     if (!recipeId) {
       setError('スキルが選択されていません。前の画面に戻ってスキルを選択してください。')
       setStatus('error')
       return
     }
+    inFlightRef.current = true
 
     setStatus('generating')
     setGeneratedText('')
@@ -448,13 +451,22 @@ export default function GeneratePage() {
       }
       setError(e.message || '記事生成に失敗しました')
       setStatus('error')
+    } finally {
+      inFlightRef.current = false
     }
   }
 
   const cancelGeneration = () => { abortRef.current?.abort() }
 
   useEffect(() => {
-    if (recipeId && status === 'idle') startGeneration()
+    if (recipeId && status === 'idle') {
+      const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined
+      if (navigation?.type === 'reload') {
+        setProgress('ページを再読み込みしました。再生成する場合はボタンを押してください。')
+        return
+      }
+      startGeneration()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -682,6 +694,14 @@ export default function GeneratePage() {
         {/* ── Main Canvas ── */}
         <main className="flex-1 p-3 sm:p-6 md:p-8 pb-24 md:pb-8 overflow-y-auto relative" ref={contentRef}>
           {/* Error display */}
+          {status === 'idle' && recipeId && (
+            <div className="max-w-[850px] mx-auto bg-white rounded-xl px-5 py-4 text-sm border border-blue-200 mb-6 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-slate-700">{progress || '記事生成の準備ができました。'}</p>
+              <button onClick={startGeneration} className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">
+                記事生成を開始
+              </button>
+            </div>
+          )}
           {status === 'error' && (
             <div className="max-w-[850px] mx-auto bg-red-50 text-red-600 rounded-xl px-5 py-4 text-sm border border-red-200 mb-6">
               <div className="flex items-start gap-2">

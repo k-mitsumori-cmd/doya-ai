@@ -31,15 +31,35 @@ let providerCalls = 0;
 let drafts = 0;
 let refunds = 0;
 let failProvider = false;
+let failProjectUpdate = false;
+let failUsageTracking = false;
+let holdProvider = false;
+let providerEntered = () => {};
+let locks = 0;
 let claimedIdentity;
 const prisma = {
   interviewProject: {
     findUnique: async () => ({ id: 'p1', userId: 'u1', title: 'Test', transcriptions: [{ text: 'material' }], materials: [] }),
-    update: async () => ({}),
+    update: async () => { if (failProjectUpdate) throw new Error('update failed'); return {}; },
   },
   interviewRecipe: { findUnique: async () => ({ id: 'r1', name: 'Test', editingGuidelines: '', category: 'GENERAL' }), update: async () => ({}) },
-  interviewDraft: { aggregate: async () => ({ _max: { version: drafts } }), create: async () => ({ id: `d${++drafts}` }) },
+  interviewDraft: { aggregate: async () => ({ _max: { version: drafts } }) },
+  $transaction: async (fn) => {
+    let staged = false;
+    const tx = {
+      ...prisma,
+      $queryRaw: async () => { locks++; return [{}]; },
+      interviewDraft: {
+        ...prisma.interviewDraft,
+        create: async () => { staged = true; return { id: `d${drafts + 1}` }; },
+      },
+    };
+    const result = await fn(tx);
+    if (staged) drafts++;
+    return result;
+  },
 };
+assert.match(fs.readFileSync(path.join(__dirname, '../../src/app/api/interview/articles/generate/route.ts'), 'utf8'), /pg_advisory_xact_lock\(hashtext\(\$\{projectId\}\)\)/);
 const { POST } = load('src/app/api/interview/articles/generate/route.ts', {
   'next/server': {},
   '@/lib/prisma': { prisma },
@@ -50,16 +70,20 @@ const { POST } = load('src/app/api/interview/articles/generate/route.ts', {
     requireDatabase: () => null,
   },
   '@/lib/interview/prompts': { buildArticlePrompt: () => 'prompt' },
-  '@/lib/service-usage': { recordServiceUsage: async () => {} },
+  '@/lib/service-usage': { recordServiceUsage: async () => { if (failUsageTracking) throw new Error('tracking failed'); } },
   '@/lib/interview/article-budget': {
     claimArticleBudget: async (identity) => { claimedIdentity = identity; return admission; },
     refundArticleBudget: async () => { refunds++; },
   },
 }, {
-  TextEncoder, TextDecoder, ReadableStream,
+  TextEncoder, TextDecoder, ReadableStream, AbortController,
   process: { env: { GEMINI_API_KEY: 'test-key' } },
-  fetch: async () => {
+  fetch: async (_url, init) => {
     providerCalls++;
+    if (holdProvider) return new Promise((_resolve, reject) => {
+      providerEntered();
+      init.signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+    });
     if (failProvider) return new Response('provider failed', { status: 500 });
     return new Response('data: {"candidates":[{"content":{"parts":[{"text":"article"}]}}]}\n\n');
   },
@@ -91,7 +115,31 @@ async function events() {
   assert.equal(output.at(-1).type, 'done');
   assert.equal(refunds, 1);
   assert.equal(drafts, 1);
+  assert.equal(locks, 1);
   assert.equal(claimedIdentity.userId, 'u1');
   assert.equal(claimedIdentity.plan, 'FREE');
-  console.log('PASS interview article limit: blocked before provider, failed attempt refunded, saved article counted');
+  failProjectUpdate = true;
+  output = await events();
+  assert.equal(output.at(-1).type, 'error');
+  assert.equal(refunds, 2);
+  assert.equal(drafts, 1);
+  failProjectUpdate = false;
+  output = await events();
+  assert.equal(output.at(-1).type, 'done');
+  assert.equal(output.at(-1).version, 2);
+  assert.equal(drafts, 2);
+  failUsageTracking = true;
+  output = await events();
+  assert.equal(output.at(-1).type, 'done');
+  assert.equal(output.at(-1).version, 3);
+  assert.equal(drafts, 3);
+  holdProvider = true;
+  const entered = new Promise((resolve) => { providerEntered = resolve; });
+  const cancelledResponse = await POST(request());
+  await entered;
+  await cancelledResponse.body.cancel();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(refunds, 3);
+  assert.equal(drafts, 3);
+  console.log('PASS interview article limit: blocked before provider, failed attempt refunded, atomic draft save and versioning');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

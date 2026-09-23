@@ -50,6 +50,8 @@ export async function POST(req: NextRequest) {
     return encoder.encode(`data: ${JSON.stringify(data)}\n\n`)
   }
 
+  let cancelled = false
+  const providerAbort = new AbortController()
   const stream = new ReadableStream({
     async start(controller) {
       let claim: ArticleClaim | null = null
@@ -172,6 +174,7 @@ export async function POST(req: NextRequest) {
 
         const geminiRes = await fetch(endpoint, {
           method: 'POST',
+          signal: providerAbort.signal,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
@@ -240,6 +243,7 @@ export async function POST(req: NextRequest) {
         }
 
         // ====== 記事をDBに保存 ======
+        if (cancelled) return
         if (!fullText.trim()) {
           controller.enqueue(sseEvent({ type: 'error', message: '記事本文を生成できませんでした。再試行してください。' }))
           controller.close()
@@ -247,41 +251,38 @@ export async function POST(req: NextRequest) {
         }
         controller.enqueue(sseEvent({ type: 'progress', step: '記事を保存中...' }))
 
-        // 既存ドラフトの最大バージョンを取得
-        const maxVersion = await prisma.interviewDraft.aggregate({
-          where: { projectId },
-          _max: { version: true },
-        })
-        const nextVersion = (maxVersion._max?.version || 0) + 1
-
-        const draft = await prisma.interviewDraft.create({
-          data: {
-            projectId,
-            version: nextVersion,
-            title: project.title,
-            content: fullText,
-            displayFormat: displayFormat || 'MONOLOGUE',
-            wordCount: fullText.length,
-            readingTime: Math.ceil(fullText.length / 600),
-            status: 'DRAFT',
-          },
+        // 同じプロジェクトの版番号採番と関連更新を一緒に確定する。
+        const { draft, nextVersion } = await prisma.$transaction(async (tx) => {
+          await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${projectId}))`
+          const maxVersion = await tx.interviewDraft.aggregate({
+            where: { projectId },
+            _max: { version: true },
+          })
+          if (cancelled) throw new Error('Generation cancelled')
+          const nextVersion = (maxVersion._max?.version || 0) + 1
+          const draft = await tx.interviewDraft.create({
+            data: {
+              projectId,
+              version: nextVersion,
+              title: project.title,
+              content: fullText,
+              displayFormat: displayFormat || 'MONOLOGUE',
+              wordCount: fullText.length,
+              readingTime: Math.ceil(fullText.length / 600),
+              status: 'DRAFT',
+            },
+          })
+          await tx.interviewProject.update({
+            where: { id: projectId },
+            data: { recipeId, status: 'EDITING' },
+          })
+          await tx.interviewRecipe.update({
+            where: { id: recipeId },
+            data: { usageCount: { increment: 1 } },
+          })
+          return { draft, nextVersion }
         })
         draftSaved = true
-
-        // プロジェクトにレシピを紐付け＋ステータス更新
-        await prisma.interviewProject.update({
-          where: { id: projectId },
-          data: {
-            recipeId: recipeId,
-            status: 'EDITING',
-          },
-        })
-
-        // レシピの使用回数をインクリメント
-        await prisma.interviewRecipe.update({
-          where: { id: recipeId },
-          data: { usageCount: { increment: 1 } },
-        })
 
         await recordServiceUsage({
           userId,
@@ -290,6 +291,9 @@ export async function POST(req: NextRequest) {
           summary: project.title || '',
           input: { projectId, recipeId, displayFormat },
           metadata: { wordCount: fullText.length, version: nextVersion },
+        }).catch(() => {
+          // Article is already committed; a metrics/notification outage cannot turn it into a failed generation.
+          console.warn('[interview] usage tracking unavailable')
         })
 
         controller.enqueue(sseEvent({
@@ -301,16 +305,22 @@ export async function POST(req: NextRequest) {
 
         controller.close()
       } catch (e: any) {
-        console.error('[interview] generate error:', e?.message)
-        try {
-          controller.enqueue(sseEvent({ type: 'error', message: e?.message || '記事生成に失敗しました' }))
-        } catch {
-          // controller already closed
+        if (!cancelled) {
+          console.error('[interview] generate error:', e?.message)
+          try {
+            controller.enqueue(sseEvent({ type: 'error', message: e?.message || '記事生成に失敗しました' }))
+          } catch {
+            // controller already closed
+          }
+          controller.close()
         }
-        controller.close()
       } finally {
         if (claim && !draftSaved) await refundArticleBudget(claim)
       }
+    },
+    cancel() {
+      cancelled = true
+      providerAbort.abort()
     },
   })
 
