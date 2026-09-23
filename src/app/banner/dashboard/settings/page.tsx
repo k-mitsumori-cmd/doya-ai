@@ -7,7 +7,7 @@ import { User, Mail, Shield, CreditCard, LogOut, AlertTriangle, Check, Loader2, 
 import { Toaster, toast } from 'react-hot-toast'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import { AccountSummaryCard } from '@/components/AccountSummaryCard'
@@ -45,6 +45,8 @@ export default function SettingsPage() {
     return 'FREE' as const
   })()
   const isPaidUser = bannerPlanTier === 'LIGHT' || bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
+  const planLabel = bannerPlanTier === 'LIGHT' ? 'ライト' : bannerPlanTier === 'ENTERPRISE' ? 'エンタープライズ' : bannerPlanTier === 'PRO' ? 'プロ' : isLoggedIn ? '無料' : 'ゲスト'
+  const monthlyLimit = getBannerMonthlyLimitByUserPlan(bannerPlanTier)
 
   const [subscriptionStatusError, setSubscriptionStatusError] = useState('')
   // 停止日時はサーバーで確認できた値だけを表示する。
@@ -146,7 +148,7 @@ export default function SettingsPage() {
         {/* アカウント情報（最上部） */}
         <AccountSummaryCard
           serviceName="ドヤバナーAI"
-          planLabel={isPaidUser ? 'プロ' : isLoggedIn ? '無料' : 'ゲスト'}
+          planLabel={planLabel}
           isLoggedIn={isLoggedIn}
           user={session?.user || null}
           loginHref="/auth/signin?callbackUrl=/banner/dashboard/settings"
@@ -163,10 +165,10 @@ export default function SettingsPage() {
             <div className={`px-4 py-2 rounded-xl font-black text-sm ${
               isPaidUser ? 'bg-blue-100 text-blue-800' : 'bg-slate-100 text-slate-600'
             }`}>
-              {isPaidUser ? 'プロ' : isLoggedIn ? '無料' : 'ゲスト'}
+              {planLabel}
             </div>
             <p className="text-sm text-slate-600 font-bold">
-              月{isPaidUser ? BANNER_PRICING.proLimit : isLoggedIn ? BANNER_PRICING.freeLimit : BANNER_PRICING.guestLimit}枚まで生成可能
+              {isLoggedIn ? monthlyLimit < 0 ? '生成枚数の上限なし' : `月${monthlyLimit}枚まで生成可能` : '生成にはログインが必要です'}
             </p>
           </div>
 
@@ -378,4 +380,3 @@ export default function SettingsPage() {
     </DashboardLayout>
   )
 }
-

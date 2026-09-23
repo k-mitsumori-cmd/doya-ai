@@ -843,7 +843,7 @@ function BannerUrlAutoPageInner() {
                   <p className="mt-1 text-lg font-black text-slate-900">{BANNER_PRICING.plans.find((p) => p.id === 'banner-free')?.name || 'おためしプラン'}</p>
                   <p className="mt-2 text-sm font-black text-slate-900">¥0</p>
                   <p className="mt-2 text-[11px] text-slate-600 font-bold leading-relaxed">
-                    ログインで月{BANNER_PRICING.freeLimit}枚まで（ゲストは月{BANNER_PRICING.guestLimit}枚まで）
+                    ログインすると月{BANNER_PRICING.freeLimit}枚まで。生成にはログインが必要です。
                   </p>
                   <div className="mt-3">
                     {bannerPlanTier === 'FREE' ? (
@@ -926,5 +926,4 @@ function BannerUrlAutoPageInner() {
     </div>
   )
 }
-
 

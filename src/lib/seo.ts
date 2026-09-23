@@ -145,7 +145,7 @@ export const SERVICE_SEO = {
       },
       pricing: {
         title: '料金プラン | ドヤライティングAI',
-        description: `無料プランはゲスト1日${SEO_PRICING.guestLimit}回、ログイン後1日${SEO_PRICING.freeLimit}回まで。プロプランは1日${SEO_PRICING.proLimit}回まで。月額${SEO_PRICING.plans[1].priceLabel}。`,
+        description: `記事生成にはログインが必要です。無料プランは月${SEO_PRICING.freeLimit}回まで、プロプランは月${SEO_PRICING.proLimit}回まで。プロプランは月額¥${(SEO_PRICING.plans.find((plan) => plan.id === 'seo-pro')?.price ?? 9980).toLocaleString('ja-JP')}。`,
       },
       guide: {
         title: '使い方 | ドヤライティングAI',
@@ -176,7 +176,7 @@ export const SERVICE_SEO = {
       },
       pricing: {
         title: '料金プラン | ドヤバナーAI',
-        description: `無料プランはゲスト月${BANNER_PRICING.guestLimit}枚、ログイン後月${BANNER_PRICING.freeLimit}枚まで。プロプランは月${BANNER_PRICING.proLimit}枚まで生成可能。月額${BANNER_PRICING.plans[1].priceLabel}。`,
+        description: `バナー生成にはログインが必要です。無料プランは月${BANNER_PRICING.freeLimit}枚まで、プロプランは月${BANNER_PRICING.proLimit}枚まで。プロプランは月額¥${(BANNER_PRICING.plans.find((plan) => plan.id === 'banner-pro')?.price ?? 9980).toLocaleString('ja-JP')}。`,
       },
       guide: {
         title: '使い方ガイド | ドヤバナーAI',
@@ -212,7 +212,7 @@ export const SERVICE_SEO = {
       },
       pricing: {
         title: '料金プラン | ドヤオープニングAI',
-        description: '無料プランは1日3回まで（3テンプレート）。プロプランは1日30回、全6テンプレート利用可能。月額¥2,980。',
+        description: `無料プランは1日3回まで（3テンプレート）。プロプランは1日30回、全6テンプレート利用可能。月額¥${(getServiceById('opening')?.pricing.pro.price ?? 9980).toLocaleString('ja-JP')}。`,
       },
       guide: {
         title: '使い方ガイド | ドヤオープニングAI',
@@ -326,7 +326,7 @@ export function generateSoftwareApplicationSchema(service: 'seo' | 'banner' | 'k
         '@type': 'Offer',
         price: '0',
         priceCurrency: 'JPY',
-        description: `無料プラン（ゲスト1日${pricing.guestLimit}回まで）`,
+        description: `ログイン後の無料プラン（月${pricing.freeLimit}回まで）`,
       },
     },
     banner: {
@@ -336,7 +336,7 @@ export function generateSoftwareApplicationSchema(service: 'seo' | 'banner' | 'k
         '@type': 'Offer',
         price: '0',
         priceCurrency: 'JPY',
-        description: `無料プラン（ゲスト1日${pricing.guestLimit}回まで）`,
+        description: `ログイン後の無料プラン（月${pricing.freeLimit}枚まで）`,
       },
     },
     kantan: {

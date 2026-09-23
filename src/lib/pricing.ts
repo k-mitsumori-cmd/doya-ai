@@ -290,7 +290,7 @@ export const BANNER_PRICING: ServicePricing = {
       period: '',
       description: '月15枚まで生成できます',
       features: [
-        { text: 'ゲスト: 月3枚まで', included: true },
+        { text: 'ログイン必須（ゲストは生成不可）', included: true },
         { text: 'ログイン: 月15枚まで', included: true },
         { text: 'サイズ: 1080×1080固定', included: true },
         { text: '同時生成: 最大3枚', included: true },
@@ -386,7 +386,7 @@ export const PERSONA_PRICING: ServicePricing = {
       period: '',
       description: 'まずはペルソナ生成を体験',
       features: [
-        { text: 'ゲスト: 1日2回まで', included: true },
+        { text: 'ログイン必須（ゲストは生成不可）', included: true },
         { text: 'ログイン: 1日5回まで', included: true },
         { text: 'ペルソナ + クリエイティブ生成', included: true },
         { text: 'ポートレート画像生成', included: true },
@@ -403,7 +403,7 @@ export const PERSONA_PRICING: ServicePricing = {
       description: 'ペルソナ生成を日常的に活用',
       color: 'blue',
       features: [
-        { text: '1日15回まで生成', included: true },
+        { text: '1日30回まで生成', included: true },
         { text: 'バナー画像生成', included: true },
         { text: '広告コピー + LP構成案', included: true },
         { text: '履歴保存（無制限）', included: true },
