@@ -85,7 +85,7 @@ const { POST } = load('src/app/api/interview/articles/generate/route.ts', {
       init.signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
     });
     if (failProvider) return new Response('provider failed', { status: 500 });
-    return new Response('data: {"candidates":[{"content":{"parts":[{"text":"article"}]}}]}\n\n');
+    return new Response('data: {"candidates":[{"content":{"parts":[{"text":"article"},{"text":" end"}]}}]}');
   },
 });
 
@@ -113,6 +113,7 @@ async function events() {
   failProvider = false;
   output = await events();
   assert.equal(output.at(-1).type, 'done');
+  assert.equal(output.at(-1).wordCount, 11);
   assert.equal(refunds, 1);
   assert.equal(drafts, 1);
   assert.equal(locks, 1);

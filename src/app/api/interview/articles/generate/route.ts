@@ -213,6 +213,24 @@ export async function POST(req: NextRequest) {
 
         const decoder = new TextDecoder()
         let buffer = ''
+        const consumeLine = (line: string) => {
+          if (!line.startsWith('data: ')) return
+          const jsonStr = line.slice(6).trim()
+          if (!jsonStr || jsonStr === '[DONE]') return
+          try {
+            const parsed = JSON.parse(jsonStr)
+            const parts = parsed?.candidates?.[0]?.content?.parts
+            const text = Array.isArray(parts)
+              ? parts.map((part) => typeof part?.text === 'string' ? part.text : '').join('')
+              : ''
+            if (text) {
+              fullText += text
+              controller.enqueue(sseEvent({ type: 'chunk', text }))
+            }
+          } catch {
+            // Ignore malformed provider events without exposing their content.
+          }
+        }
 
         while (true) {
           const { done, value } = await reader.read()
@@ -224,23 +242,10 @@ export async function POST(req: NextRequest) {
           const lines = buffer.split('\n')
           buffer = lines.pop() || '' // 最後の不完全な行をバッファに戻す
 
-          for (const line of lines) {
-            if (!line.startsWith('data: ')) continue
-            const jsonStr = line.slice(6).trim()
-            if (!jsonStr || jsonStr === '[DONE]') continue
-
-            try {
-              const parsed = JSON.parse(jsonStr)
-              const text = parsed?.candidates?.[0]?.content?.parts?.[0]?.text
-              if (text) {
-                fullText += text
-                controller.enqueue(sseEvent({ type: 'chunk', text }))
-              }
-            } catch {
-              // JSON パース失敗は無視 (不完全なチャンク)
-            }
-          }
+          for (const line of lines) consumeLine(line)
         }
+        buffer += decoder.decode()
+        for (const line of buffer.split('\n')) consumeLine(line)
 
         // ====== 記事をDBに保存 ======
         if (cancelled) return
