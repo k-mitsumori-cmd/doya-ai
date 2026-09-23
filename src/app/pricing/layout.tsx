@@ -6,7 +6,7 @@ import { SITE_CONFIG, SITE_ALTERNATE_NAMES } from '@/lib/seo'
 export const metadata: Metadata = {
   // absolute でルートlayoutの template（` | ドヤマーケAI`）の二重付与を防ぐ
   title: { absolute: `料金プラン｜${SITE_CONFIG.name}` },
-  description: `${SITE_CONFIG.name}の料金プラン。無料プランで試せて、プロプラン（月額9,980円）なら記事生成・広告バナー・営業リスト・人事・勤怠・SFA・資料作成まで全ツールが使い放題です。`,
+  description: `${SITE_CONFIG.name}の料金プラン。無料プランで試せて、プロプラン（月額9,980円）なら記事生成・広告バナー・営業リスト・人事・勤怠・SFA・資料作成まで全ツールのプロ機能をプラン別の上限内で利用できます。`,
   keywords: [SITE_CONFIG.name, ...SITE_ALTERNATE_NAMES, `${SITE_CONFIG.name} 料金`, '料金プラン', '統一プラン', 'AI SaaS 料金'],
   alternates: { canonical: '/pricing' },
   openGraph: {
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     url: `${SITE_CONFIG.url}/pricing`,
     siteName: SITE_CONFIG.name,
     title: `料金プラン｜${SITE_CONFIG.name}`,
-    description: `無料プランで試せて、プロプラン（月額9,980円）なら${SITE_CONFIG.name}の全ツールが使い放題です。`,
+    description: `無料プランで試せて、プロプラン（月額9,980円）なら${SITE_CONFIG.name}の全ツールのプロ機能をプラン別の上限内で利用できます。`,
     images: [{ url: `${SITE_CONFIG.url}/og/portal.png`, width: 1200, height: 630, alt: `料金プラン - ${SITE_CONFIG.name}` }],
   },
 }

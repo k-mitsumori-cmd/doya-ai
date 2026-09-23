@@ -519,7 +519,7 @@ export function buildServiceSubMetadata(
   const description =
     opts?.description || sectionDescription ||
     (kind === 'pricing'
-      ? `${svc.name}の料金プラン。無料プランで試せて、プロプラン（月額9,980円）ならドヤマーケAIの全ツールが使い放題です。`
+      ? `${svc.name}の料金プラン。無料プランで試せて、プロプラン（月額9,980円）ならドヤマーケAIの全ツールでプロ機能を利用できます。各サービスに利用上限があります。`
       : kind === 'guide'
         ? `${svc.name}の使い方ガイド。基本の流れとコツを解説します。`
         : `${svc.name}の管理画面です。`)

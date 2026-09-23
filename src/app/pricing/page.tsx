@@ -17,7 +17,7 @@ function PricingContent() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-black text-slate-900 mb-4">料金プラン</h1>
           <p className="text-lg text-slate-600">
-            プロプラン1つで、ドヤAIの全サービスのプロ機能が使い放題になります。
+            プロプラン1つで、ドヤAIの全サービスのプロ機能をプラン別の上限内で利用できます。
           </p>
         </div>
 

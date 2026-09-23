@@ -129,7 +129,7 @@ export default function UnifiedPlanPromo({
 
           <h2 className="mt-4 text-2xl font-black leading-snug text-gray-900 sm:text-3xl">
             このプロプラン、実は
-            <span style={{ color: BRAND }}>“全サービス”使い放題。</span>
+            <span style={{ color: BRAND }}>“全サービス”のプロ機能。</span>
           </h2>
 
           <p className="mt-3 text-base leading-relaxed text-gray-600 sm:text-lg">
@@ -168,8 +168,8 @@ export default function UnifiedPlanPromo({
           <div className="mt-6">
             <p className="mb-2 text-xs font-semibold text-gray-500">
               {currentServiceId
-                ? `このサービス ＋ ほか${otherCount}個のツールが使い放題`
-                : `全${ACTIVE_SERVICES.length}サービスが使い放題`}
+                ? `このサービス ＋ ほか${otherCount}個のツールでプロ機能を利用可能`
+                : `全${ACTIVE_SERVICES.length}サービスでプロ機能を利用可能`}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2.5 lg:justify-start">
               {ACTIVE_SERVICES.map((s) => {

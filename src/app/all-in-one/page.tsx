@@ -9,9 +9,9 @@ import {
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 
 export const metadata: Metadata = {
-  title: '統一プラン｜プロ1つで全サービスのプロ機能が使い放題',
+  title: '統一プラン｜プロ1つで全サービスのプロ機能を利用',
   description:
-    'プロプランを1つ契約するだけで、ドヤAIの全サービスのプロ機能が使い放題。記事・バナー・営業リスト・人事・勤怠・SFAなど、B2Bに必要なAIツールが月々¥9,980でまるごと揃う統一プラン。',
+    'プロプランを1つ契約するだけで、ドヤAIの全サービスのプロ機能をプラン別の上限内で利用できます。記事・バナー・営業リスト・人事・勤怠・SFAなど、B2Bに必要なAIツールが月々¥9,980でまるごと揃う統一プラン。',
   alternates: { canonical: '/all-in-one' },
 }
 
@@ -20,11 +20,11 @@ const ACCENT = '#ff1e72'
 const STEPS: Step[] = [
   { icon: 'workspace_premium', title: 'プロを1つ契約', desc: 'お好きなサービスのプロプランを1つ契約するだけ。難しい組み合わせや個別契約は不要です。' },
   { icon: 'lock_open', title: '全サービスが自動で解放', desc: '同じアカウントで、ドヤAIの全サービスのプロ機能（上限アップ）が自動的に使えるようになります。' },
-  { icon: 'all_inclusive', title: '追加課金なしで使い放題', desc: '追加料金は一切なし。すべてのサービスのプロを、心ゆくまで使い倒せます。' },
+  { icon: 'all_inclusive', title: '追加契約なしで利用', desc: 'サービスごとの追加契約は不要。各サービスのプロ機能をプラン別の上限内で利用できます。' },
 ]
 
 const BENEFITS: Benefit[] = [
-  { icon: 'apps', title: '全サービス使い放題', desc: 'バナー・記事・営業リスト・人事・勤怠・SFA・資料作成まで、すべてのプロが1契約で使えます。' },
+  { icon: 'apps', title: '全サービスのプロ機能', desc: 'バナー・記事・営業リスト・人事・勤怠・SFA・資料作成まで、すべてのプロが1契約で使えます。' },
   { icon: 'trending_up', title: 'サービスは増え続ける', desc: '新サービスが追加されても追加料金なし。早く入るほど、受け取れる価値はどんどん大きくなります。' },
   { icon: 'account_circle', title: 'アカウントも請求も1つ', desc: 'すべて同じアカウントで利用。ログインも請求もまとまり、運用がシンプルになります。' },
 ]
@@ -49,7 +49,7 @@ export default function AllInOnePage() {
         eyebrow="統一プラン"
         title="その1契約で、"
         highlight="ぜんぶ使える。"
-        subtitle={`ドヤAIの全${count}サービスのプロ機能が、月々${UNIFIED_PRO_PRICE_LABEL}で使い放題。個別契約も、組み合わせも要りません。`}
+        subtitle={`ドヤAIの全${count}サービスのプロ機能を、月々${UNIFIED_PRO_PRICE_LABEL}で利用できます。各サービスに利用上限があります。`}
         note="まずは無料で。クレジットカード不要ではじめられます"
         ctaHref="/banner"
         ctaLabel="無料ではじめる"
@@ -71,13 +71,13 @@ export default function AllInOnePage() {
         </section>
       )}
 
-      <HowItWorks title={<>契約はシンプル、<br className="md:hidden" />使える範囲は無限大。</>} lead="たった3ステップで、全サービスが使い放題になります。" steps={STEPS} />
+      <HowItWorks title={<>契約はシンプル、<br className="md:hidden" />使えるサービスが広がる。</>} lead="たった3ステップで、全サービスのプロ機能を利用できます。" steps={STEPS} />
       <Benefits title="統一プランが選ばれる理由" items={BENEFITS} />
 
       {/* 1契約で使える全サービス */}
       <section id="services" className="relative py-20 md:py-28 bg-slate-50/70 scroll-mt-16">
         <div className="max-w-6xl mx-auto px-5">
-          <SectionHeading eyebrow="ALL SERVICES" title={<>1契約で使える{count}サービス</>} lead="すべてのプロ機能が、追加課金なしで使い放題に。" />
+          <SectionHeading eyebrow="ALL SERVICES" title={<>1契約で使える{count}サービス</>} lead="すべてのプロ機能を、プラン別の上限内で利用できます。" />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {services.map((s, i) => (
               <Link key={s.id} href={s.dashboardHref}
