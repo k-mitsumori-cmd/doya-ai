@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 
@@ -788,13 +789,13 @@ export default function HrSettingsPage() {
                 </p>
               </div>
             </div>
-            <a
+            <Link
               href="/hr/evaluations"
               className="mt-4 inline-flex items-center gap-1 text-sm font-bold text-blue-600 hover:text-blue-700"
             >
               <span className="material-symbols-outlined text-lg">arrow_forward</span>
               評価期間を作成する
-            </a>
+            </Link>
           </div>
         </div>
 

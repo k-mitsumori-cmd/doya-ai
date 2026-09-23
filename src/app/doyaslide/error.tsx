@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 export default function DoyaSlideError({
@@ -24,12 +25,12 @@ export default function DoyaSlideError({
         >
           再試行する
         </button>
-        <a
+        <Link
           href="/doyaslide"
           className="px-6 py-2.5 border border-slate-300 text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-colors"
         >
           トップへ戻る
-        </a>
+        </Link>
       </div>
       <a
         href={SUPPORT_CONTACT_URL}

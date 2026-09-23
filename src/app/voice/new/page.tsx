@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { useSession, signIn } from 'next-auth/react'
 import { Mic, Play, Pause, Download, Settings2, ChevronDown, Loader2, AlertCircle, LogIn, Lock, ArrowRight } from 'lucide-react'
 import { getAllSpeakers, getFreeSpeakers } from '@/lib/voice/speakers'
@@ -218,7 +219,7 @@ function NewVoicePageInner() {
           {!isPro && (
             <p className="text-xs text-slate-400">
               無料プランは1,000文字まで。
-              <a href="/voice/pricing" className="text-violet-600 font-bold hover:underline">Proにアップグレード</a>
+              <Link href="/voice/pricing" className="text-violet-600 font-bold hover:underline">Proにアップグレード</Link>
               で5,000文字まで対応。
             </p>
           )}

@@ -348,7 +348,7 @@ export default function EditProjectPage() {
         {!isPro && allSpeakers.length > freeSpeakers.length && (
           <p className="text-xs text-slate-400 mt-3">
             +{allSpeakers.length - freeSpeakers.length}種のキャラクターは
-            <a href="/voice/pricing" className="text-violet-600 font-bold hover:underline ml-0.5">Proプラン</a>
+            <Link href="/voice/pricing" className="text-violet-600 font-bold hover:underline ml-0.5">Proプラン</Link>
             で利用可能
           </p>
         )}
