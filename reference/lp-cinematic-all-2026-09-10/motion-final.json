@@ -1,0 +1,20 @@
+[
+  {
+    "animation": "atelier-camera",
+    "camera": "matrix(1.65, 0, 0, 1.65, 0, 0)",
+    "opening": "writing",
+    "paused": "paused"
+  },
+  {
+    "animation": "atelier-camera",
+    "camera": "matrix(1, 0, 0, 1, 0, 0)",
+    "headlineOpacity": "1",
+    "opening": null,
+    "paused": "running"
+  },
+  {
+    "camera": "matrix(1.44666, 0, 0, 1.44666, 0, 0)",
+    "paused": "running",
+    "replay": true
+  }
+]

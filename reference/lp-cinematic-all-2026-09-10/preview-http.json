@@ -1,0 +1,291 @@
+[
+  {
+    "service": "banner",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  },
+  {
+    "service": "seo",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  },
+  {
+    "service": "interview",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  },
+  {
+    "service": "persona",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  },
+  {
+    "service": "hr",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  },
+  {
+    "service": "kintai",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  },
+  {
+    "service": "doyalist",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  },
+  {
+    "service": "promane",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  },
+  {
+    "service": "doyaslide",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  },
+  {
+    "service": "cunning",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  },
+  {
+    "service": "sfa",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  },
+  {
+    "service": "shodan",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  },
+  {
+    "service": "aio",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": true
+  },
+  {
+    "service": "mensetsu",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  },
+  {
+    "service": "quote",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  },
+  {
+    "service": "aishodan",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  },
+  {
+    "service": "adimage",
+    "status": 200,
+    "serviceMarker": true,
+    "h1Count": 1,
+    "sameOrigin": true,
+    "frameAncestors": "frame-ancestors 'self'",
+    "noindex": true,
+    "oldImages": {
+      "before-desktop": true,
+      "before-mobile": true,
+      "after-desktop": true,
+      "after-mobile": true
+    },
+    "canonical": true,
+    "aioSignInLink": null
+  }
+]

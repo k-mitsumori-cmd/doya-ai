@@ -1,0 +1,90 @@
+[
+  {
+    "cta": "/auth/signin?callbackUrl=/banner",
+    "h1": 1,
+    "headline": "そのアイデアを、目を引くバナーに。",
+    "height": 900,
+    "image": "/renewal/banner-atelier-20260910-v1.webp",
+    "loaded": true,
+    "overflow": false,
+    "service": "banner",
+    "width": 1280
+  },
+  {
+    "cta": "/auth/signin?callbackUrl=/seo",
+    "h1": 1,
+    "headline": "その知見を、読まれる記事に。",
+    "height": 900,
+    "image": "/renewal/cinematic/seo-20260910-v1.webp",
+    "loaded": true,
+    "overflow": false,
+    "service": "seo",
+    "width": 1280
+  },
+  {
+    "cta": "/auth/signin?callbackUrl=/interview",
+    "h1": 1,
+    "headline": "語られた想いを、伝わる物語に。",
+    "height": 900,
+    "image": "/renewal/cinematic/interview-20260910-v1.webp",
+    "loaded": true,
+    "overflow": false,
+    "service": "interview",
+    "width": 1280
+  },
+  {
+    "cta": "/auth/signin?callbackUrl=/persona",
+    "h1": 1,
+    "headline": "届けたい人を、もっと鮮明に。",
+    "height": 900,
+    "image": "/renewal/cinematic/persona-20260910-v1.webp",
+    "loaded": true,
+    "overflow": false,
+    "service": "persona",
+    "width": 1280
+  },
+  {
+    "cta": "/hr/dashboard",
+    "h1": 1,
+    "headline": "一人ひとりの力を、組織の可能性に。",
+    "height": 900,
+    "image": "/renewal/cinematic/hr-20260910-v1.webp",
+    "loaded": true,
+    "overflow": false,
+    "service": "hr",
+    "width": 1280
+  },
+  {
+    "cta": "/kintai/dashboard",
+    "h1": 1,
+    "headline": "日々の時間を、働くゆとりへ。",
+    "height": 900,
+    "image": "/renewal/cinematic/kintai-20260910-v1.webp",
+    "loaded": true,
+    "overflow": false,
+    "service": "kintai",
+    "width": 1280
+  },
+  {
+    "cta": "/auth/signin?callbackUrl=/promane",
+    "h1": 1,
+    "headline": "チームの仕事を、ひとつの流れに。",
+    "height": 900,
+    "image": "/renewal/cinematic/promane-20260910-v1.webp",
+    "loaded": true,
+    "overflow": false,
+    "service": "promane",
+    "width": 1280
+  },
+  {
+    "cta": "/auth/signin?callbackUrl=/doyaslide/new",
+    "h1": 1,
+    "headline": "その考えを、伝わる資料に。",
+    "height": 900,
+    "image": "/renewal/cinematic/doyaslide-20260910-v1.webp",
+    "loaded": true,
+    "overflow": false,
+    "service": "doyaslide",
+    "width": 1280
+  }
+]

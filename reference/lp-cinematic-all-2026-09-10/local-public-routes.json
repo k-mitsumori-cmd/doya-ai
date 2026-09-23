@@ -1,0 +1,155 @@
+[
+  {
+    "service": "banner",
+    "url": "/banner",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/banner-atelier-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 169218
+  },
+  {
+    "service": "seo",
+    "url": "/seo",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/seo-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 168706
+  },
+  {
+    "service": "interview",
+    "url": "/interview",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/interview-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 171852
+  },
+  {
+    "service": "persona",
+    "url": "/persona",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/persona-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 124894
+  },
+  {
+    "service": "hr",
+    "url": "/hr",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/hr-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 172510
+  },
+  {
+    "service": "kintai",
+    "url": "/kintai",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/kintai-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 183186
+  },
+  {
+    "service": "doyalist",
+    "url": "/doyalist",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/doyalist-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 176326
+  },
+  {
+    "service": "promane",
+    "url": "/promane",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/promane-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 166188
+  },
+  {
+    "service": "doyaslide",
+    "url": "/doyaslide",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/doyaslide-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 159272
+  },
+  {
+    "service": "cunning",
+    "url": "/cunning",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/cunning-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 148024
+  },
+  {
+    "service": "sfa",
+    "url": "/sfa",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/sfa-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 147816
+  },
+  {
+    "service": "shodan",
+    "url": "/shodan",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/shodan-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 119404
+  },
+  {
+    "service": "aio",
+    "url": "/aio",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/aio-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 150670
+  },
+  {
+    "service": "mensetsu",
+    "url": "/mensetsu",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/mensetsu-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 143410
+  },
+  {
+    "service": "quote",
+    "url": "/quote",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/quote-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 151082
+  },
+  {
+    "service": "aishodan",
+    "url": "/aishodan",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/aishodan-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 158384
+  },
+  {
+    "service": "adimage",
+    "url": "/adimage",
+    "status": 200,
+    "fv": true,
+    "asset": "/renewal/cinematic/adimage-20260910-v1.webp",
+    "assetMatches": true,
+    "bytes": 185458
+  }
+]

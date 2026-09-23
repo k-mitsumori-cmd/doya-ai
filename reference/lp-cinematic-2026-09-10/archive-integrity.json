@@ -1,0 +1,22 @@
+[
+  {
+    "file": "banner-desktop-full.jpg",
+    "sha256": "3c833b0bdb7e6e6388fb842186a8f0fc678325f382d282f871e8afb434eb9371",
+    "matchesPrevious": true
+  },
+  {
+    "file": "banner-desktop-hero.webp",
+    "sha256": "5820aefe5e911e26be7b3035b086a6265a05aabf27f6b165d8c83985df95814f",
+    "matchesPrevious": true
+  },
+  {
+    "file": "banner-mobile-full.jpg",
+    "sha256": "d8b22cd5a576dc2eb84592d0505db65195f9008b25490053aa7ad3c0ae01eb70",
+    "matchesPrevious": true
+  },
+  {
+    "file": "banner-mobile-hero.webp",
+    "sha256": "8273cc2086372f4bbf62906dadcd503eebfc2140f3cb3a7969aa4312a4c18e57",
+    "matchesPrevious": true
+  }
+]

@@ -1,0 +1,285 @@
+@font-face {
+  font-family: "Doya Opening Brush";
+  src: url("/renewal/fonts/doya-opening-brush-v1.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+.doya-intro-content {
+  display: contents;
+}
+.doya-intro-covered *,
+.doya-intro-covered *::before,
+.doya-intro-covered *::after {
+  animation-play-state: paused !important;
+}
+.doya-opening {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  isolation: isolate;
+  color: #fff;
+  overflow: hidden;
+  animation: doya-opening-failsafe 0s 5s forwards;
+}
+.doya-opening-panel {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: calc(50% + 1px);
+  background: #0055ed;
+  will-change: transform;
+}
+.doya-opening-left {
+  left: 0;
+}
+.doya-opening-right {
+  right: 0;
+}
+.doya-opening-composition {
+  position: absolute;
+  inset: 0;
+}
+.doya-opening-brand {
+  position: absolute;
+  left: clamp(24px, 4vw, 72px);
+  top: max(30px, env(safe-area-inset-top));
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+}
+.doya-opening-brand-line {
+  width: 28px;
+  height: 1px;
+  background: currentColor;
+}
+.doya-opening-words {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 4vw, 66px);
+  padding: 86px 20px 115px;
+}
+.doya-opening-column {
+  font-family: "Doya Opening Brush", "YuMincho", serif;
+  font-size: clamp(30px, 6.2vh, 70px);
+  font-size: clamp(24px, 6.2svh, 70px);
+  font-weight: 400;
+  line-height: 1.3;
+  letter-spacing: 0.12em;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  opacity: 0;
+  clip-path: inset(0 0 100% 0);
+  transform: translateY(-12px);
+}
+.doya-opening-column:nth-child(2) {
+  margin-top: 80px;
+}
+.doya-opening[data-phase="writing"] .doya-opening-column {
+  animation: doya-brush-reveal 1.15s calc(0.08s + var(--column) * 0.32s)
+    cubic-bezier(0.22, 0.75, 0.2, 1) both;
+}
+.doya-opening-signature {
+  position: absolute;
+  bottom: 58px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+.doya-opening-signature span:first-child {
+  font-size: 12px;
+  letter-spacing: 0.16em;
+  font-weight: 600;
+}
+.doya-opening-signature span:last-child {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  opacity: 0.7;
+}
+.doya-opening-progress {
+  position: absolute;
+  left: 50%;
+  bottom: 29px;
+  width: 60px;
+  height: 1px;
+  transform: translateX(-50%);
+  background: #ffffff40;
+  overflow: hidden;
+}
+.doya-opening-progress i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #fff;
+  transform: scaleX(0);
+  transform-origin: left;
+}
+.doya-opening[data-phase="writing"] .doya-opening-progress i {
+  animation: doya-opening-progress 2.2s linear both;
+}
+.doya-opening-skip {
+  position: absolute;
+  right: clamp(20px, 4vw, 64px);
+  bottom: max(26px, env(safe-area-inset-bottom));
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 12px;
+  color: #fff;
+  background: transparent;
+  border: 1px solid #ffffff70;
+  border-radius: 0;
+  font-size: 12px;
+}
+.doya-opening-skip:hover {
+  background: #ffffff20;
+}
+.doya-opening-skip:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 5px;
+}
+.doya-opening[data-phase="opening"] .doya-opening-left {
+  animation: doya-curtain-left 0.95s cubic-bezier(0.76, 0, 0.18, 1) both;
+}
+.doya-opening[data-phase="opening"] .doya-opening-right {
+  animation: doya-curtain-right 0.95s cubic-bezier(0.76, 0, 0.18, 1) both;
+}
+.doya-opening[data-phase="opening"] .doya-opening-column {
+  opacity: 1;
+  clip-path: inset(0);
+  transform: none;
+}
+.doya-opening[data-phase="opening"] .doya-opening-composition {
+  animation: doya-opening-vanish 0.42s ease-in both;
+}
+.doya-opening[data-phase="opening"] .doya-opening-skip {
+  opacity: 0;
+}
+.doya-opening-replay {
+  position: fixed;
+  left: 12px;
+  bottom: max(64px, calc(env(safe-area-inset-bottom) + 58px));
+  z-index: 42;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #c8d5ef;
+  border-radius: 100px;
+  background: #fffffff2;
+  color: #536382;
+  font-size: 11px;
+}
+.doya-opening-replay:disabled {
+  display: none;
+}
+.doya-opening-replay:focus-visible {
+  outline: 2px solid #0055ed;
+  outline-offset: 3px;
+}
+@keyframes doya-brush-reveal {
+  to {
+    opacity: 1;
+    clip-path: inset(0);
+    transform: translateY(0);
+  }
+}
+@keyframes doya-opening-progress {
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes doya-curtain-left {
+  to {
+    transform: translateX(-101%);
+  }
+}
+@keyframes doya-curtain-right {
+  to {
+    transform: translateX(101%);
+  }
+}
+@keyframes doya-opening-vanish {
+  to {
+    opacity: 0;
+    transform: scale(1.06);
+    filter: blur(3px);
+  }
+}
+@keyframes doya-opening-failsafe {
+  to {
+    visibility: hidden;
+    pointer-events: none;
+  }
+}
+@media (max-width: 600px) {
+  .doya-opening-words {
+    padding-bottom: 140px;
+    gap: 25px;
+  }
+  .doya-opening-column {
+    font-size: clamp(28px, 5.8svh, 52px);
+  }
+  .doya-opening-signature {
+    bottom: 89px;
+  }
+  .doya-opening-progress {
+    bottom: 68px;
+  }
+  .doya-opening-skip {
+    bottom: max(14px, env(safe-area-inset-bottom));
+    right: 16px;
+  }
+}
+@media (max-height: 520px) {
+  .doya-opening-words {
+    padding: 50px 20px 55px;
+    gap: 30px;
+  }
+  .doya-opening-column {
+    font-size: 5.5svh;
+  }
+  .doya-opening-column:nth-child(2) {
+    margin-top: 30px;
+  }
+  .doya-opening-signature {
+    left: 25px;
+    bottom: 24px;
+    transform: none;
+    align-items: flex-start;
+  }
+  .doya-opening-progress {
+    bottom: 20px;
+  }
+}
+@media (max-width: 600px) and (min-height: 521px) and (max-height: 700px) {
+  .doya-opening-column {
+    font-size: 5.5svh;
+  }
+  .doya-opening-column:nth-child(2) {
+    margin-top: 40px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .doya-opening,
+  .doya-opening-replay {
+    display: none !important;
+  }
+  .doya-intro-covered *,
+  .doya-intro-covered *::before,
+  .doya-intro-covered *::after {
+    animation-play-state: running !important;
+  }
+}

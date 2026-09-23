@@ -1,0 +1,83 @@
+[
+  {
+    "id": "doyalist",
+    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-a2db0094-885a-425d-b797-3681e754cb92.png",
+    "target": "public/renewal/cinematic/doyalist-20260910-v1.webp",
+    "width": 1672,
+    "height": 941,
+    "bytes": 176326,
+    "mode": "built-in image_gen"
+  },
+  {
+    "id": "cunning",
+    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-d7ed203f-4fb2-405f-83da-1b5f69ecfa65.png",
+    "target": "public/renewal/cinematic/cunning-20260910-v1.webp",
+    "width": 1672,
+    "height": 941,
+    "bytes": 148024,
+    "mode": "built-in image_gen"
+  },
+  {
+    "id": "sfa",
+    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-e57bb10c-a0f7-41d7-83b6-1e0861b1981f.png",
+    "target": "public/renewal/cinematic/sfa-20260910-v1.webp",
+    "width": 1672,
+    "height": 941,
+    "bytes": 147816,
+    "mode": "built-in image_gen"
+  },
+  {
+    "id": "shodan",
+    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-0f6e796d-3773-4804-aa55-46bab713b1df.png",
+    "target": "public/renewal/cinematic/shodan-20260910-v1.webp",
+    "width": 1672,
+    "height": 941,
+    "bytes": 119404,
+    "mode": "built-in image_gen"
+  },
+  {
+    "id": "aio",
+    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-918bc591-7c29-484d-9864-2e626e8f47c5.png",
+    "target": "public/renewal/cinematic/aio-20260910-v1.webp",
+    "width": 1672,
+    "height": 941,
+    "bytes": 150670,
+    "mode": "built-in image_gen"
+  },
+  {
+    "id": "mensetsu",
+    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-1bbea5aa-3c51-4d8b-9315-8558a7ff449d.png",
+    "target": "public/renewal/cinematic/mensetsu-20260910-v1.webp",
+    "width": 1672,
+    "height": 941,
+    "bytes": 143410,
+    "mode": "built-in image_gen"
+  },
+  {
+    "id": "quote",
+    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-5d70b826-1ea6-4ef0-a4fa-5896ee2a7272.png",
+    "target": "public/renewal/cinematic/quote-20260910-v1.webp",
+    "width": 1672,
+    "height": 941,
+    "bytes": 151082,
+    "mode": "built-in image_gen"
+  },
+  {
+    "id": "aishodan",
+    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-e25b791d-9599-4fce-a62b-7770833bf9e6.png",
+    "target": "public/renewal/cinematic/aishodan-20260910-v1.webp",
+    "width": 1672,
+    "height": 941,
+    "bytes": 158384,
+    "mode": "built-in image_gen"
+  },
+  {
+    "id": "adimage",
+    "source": "/Users/mitsumori_katsuki/.codex/generated_images/01a07baa-005b-7c83-938c-b9d133eafa05/exec-2bb92fa6-c8d2-43d1-b248-452d6a832c14.png",
+    "target": "public/renewal/cinematic/adimage-20260910-v1.webp",
+    "width": 1672,
+    "height": 941,
+    "bytes": 185458,
+    "mode": "built-in image_gen"
+  }
+]

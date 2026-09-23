@@ -1,0 +1,11 @@
+{
+  "productionDeployment": "dpl_2rm7R8NuahQfGp5zYXxuchFPAqRB",
+  "productionCommit": "e5a0049493f7d0dbbca67aae3998efd8eacfa8eb",
+  "remoteMain": "e5a0049493f7d0dbbca67aae3998efd8eacfa8eb",
+  "sameBaseline": true,
+  "apiGenerationUsed": false,
+  "generationMode": "built-in image_gen only",
+  "dedicatedHeroImages": 17,
+  "newImages": 16,
+  "remaining": 0
+}

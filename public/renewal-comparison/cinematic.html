@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="ja">
+<head><script>if(location.protocol==="file:")location.replace("https://doya-ai.surisuta.jp/renewal-comparison/cinematic.html"+location.search)</script>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow">
+<title>全17サービス | 旧版と新しいFVを全体比較</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef2f7;color:#192945;font-family:Arial,'Noto Sans JP',sans-serif}header{background:#fff;padding:24px 32px;border-bottom:1px solid #d6dfed}h1{font-size:25px;margin:14px 0 10px}p{font-size:13px;line-height:1.9;color:#52627a;margin:8px 0}a{color:#0059e3;text-underline-offset:4px}main{padding:20px 28px}.controls{display:flex;gap:16px;flex-wrap:wrap;align-items:end;margin-bottom:20px}label{display:flex;flex-direction:column;gap:7px;font-size:12px;font-weight:700}select,button{font:inherit;min-height:44px;padding:10px 14px;border:1px solid #c4d1e5;border-radius:6px;background:#fff;color:#192945}.open{display:inline-flex;align-items:center;min-height:44px;padding:10px 20px;background:#0059e3;color:#fff;border-radius:6px;text-decoration:none;font-size:13px}.pair{display:grid;grid-template-columns:1fr 1fr;gap:18px}.pane{min-width:0;background:#fff;border:1px solid #cfd9e8;border-radius:9px;overflow:hidden}.pane h2{font-size:15px;display:flex;gap:8px;justify-content:space-between;align-items:center;margin:0;padding:15px 18px;border-bottom:1px solid #dce3ef}.badge{font-size:10px;font-weight:500;color:#52627a}.frame{height:72vh;min-height:380px;position:relative;background:#f7f9fc}.old{overflow:auto;overscroll-behavior:contain}.old img{display:block;width:100%;height:auto;margin:auto}.new{overflow:hidden}.new iframe{display:block;position:absolute;top:0;left:0;transform-origin:0 0;border:0;background:#fff}.pane footer{padding:12px 18px;font-size:12px;border-top:1px solid #dce3ef}.mobile .old img{max-width:390px}.mobile .new iframe{left:50%;margin-left:-195px}.note{margin:18px 0}.error{padding:24px;color:#b21d32}:focus-visible{outline:3px solid #e72570;outline-offset:3px}@media(max-width:650px){header{padding:20px}main{padding:14px}h1{font-size:21px}.pair{gap:8px}.pane h2{font-size:12px;padding:12px 10px;flex-wrap:wrap}.badge{font-size:9px}.pane footer{padding:10px;font-size:10px}.frame{height:68vh;min-height:350px}.controls{gap:10px}select{max-width:100%;font-size:12px}.open{font-size:12px}}
+</style>
+</head>
+<body>
+<header><a href="index.html?service=banner&amp;device=desktop&amp;mode=pair">全サービスの新旧比較へ</a><h1>旧版と、動く新版を。ページ全体で比較。</h1><p>左は保存済みのページ画像、右は生成画像とFV演出を刷新した現在のLPです。17サービスを切り替えて確認できます。それぞれの枠内をスクロールして、下まで比較できます。</p></header>
+<main>
+<div class="controls"><label>サービス<select id="service"><option value="banner">ドヤバナーAI</option><option value="seo">ドヤ記事作成</option><option value="interview">ドヤインタビュー</option><option value="persona">ドヤペルソナAI</option><option value="hr">ドヤHR</option><option value="kintai">ドヤ勤怠</option><option value="doyalist">ドヤリスト</option><option value="promane">ドヤプロマネ</option><option value="doyaslide">ドヤスライド</option><option value="cunning">ドヤカンニング</option><option value="sfa">ドヤ営業管理</option><option value="shodan">ドヤ商談準備</option><option value="aio">ドヤAIO</option><option value="mensetsu">ドヤ面接官</option><option value="quote">ドヤ見積もりAI</option><option value="aishodan">ドヤAI商談</option><option value="adimage">ドヤ広告画像AI</option></select></label>
+<label>比較する旧版<select id="baseline"><option value="original">リニューアル前（9月7日）</option><option value="previous">FV本体の変更前（9月8日）</option></select></label>
+<label>表示端末<select id="device"><option value="desktop">PC</option><option value="mobile">スマートフォン</option></select></label>
+<button id="replay" type="button">新版を読み込み直して演出を見る</button>
+<a class="open" id="liveOpen" href="/renewal-preview/banner" target="_blank" rel="noreferrer">新版を大きく開く</a>
+</div>
+<div class="pair" id="pair">
+<section class="pane"><h2><span id="oldTitle">リニューアル前</span><span class="badge">保存画像</span></h2><div class="frame old" tabindex="0" aria-label="旧版のページ全体。枠内でスクロールできます。"><img id="oldImage" alt="ドヤバナーAIの旧版ページ全体"></div><footer><a id="oldOpen" target="_blank" rel="noreferrer">旧版の画像を大きく開く</a></footer></section>
+<section class="pane"><h2>新しいFV・動く操作デモ<span class="badge">実際に動くLP</span></h2><div class="frame new" id="newFrame"><iframe id="newPage" title="ドヤバナーAIの新しいLP。枠内で操作・スクロールできます。" src="/renewal-preview/banner" loading="eager"></iframe></div><footer>青い幕と縦書き筆文字のオープニング・ズーム演出・操作デモに対応</footer></section>
+</div>
+<p class="note">PCは1440px、スマートフォンは390pxの幅で表示し、比較枠に合わせて縮小しています。旧版は撮影時点の保存画像のため、画像内のボタンは操作できません。右側はログイン状態にかかわらず公開LPと同じ内容を表示する比較用プレビューです。各サービスの公開LPにも同じFVを反映しています。</p>
+</main>
+<script>
+const names={"banner": "ドヤバナーAI", "seo": "ドヤ記事作成", "interview": "ドヤインタビュー", "persona": "ドヤペルソナAI", "hr": "ドヤHR", "kintai": "ドヤ勤怠", "doyalist": "ドヤリスト", "promane": "ドヤプロマネ", "doyaslide": "ドヤスライド", "cunning": "ドヤカンニング", "sfa": "ドヤ営業管理", "shodan": "ドヤ商談準備", "aio": "ドヤAIO", "mensetsu": "ドヤ面接官", "quote": "ドヤ見積もりAI", "aishodan": "ドヤAI商談", "adimage": "ドヤ広告画像AI"};
+const $=id=>document.getElementById(id);let device='desktop',currentService='';
+function sizeFrame(){const width=device==='mobile'?390:1440,host=$('newFrame'),scale=Math.min(1,host.clientWidth/width),frame=$('newPage');frame.style.width=width+'px';frame.style.height=(host.clientHeight/scale)+'px';frame.style.transform='scale('+scale+')';frame.style.left=device==='mobile'&&host.clientWidth>390?'50%':'0';frame.style.marginLeft=device==='mobile'&&host.clientWidth>390?'-195px':'0';}
+function update(){device=$('device').value;const service=$('service').value,base=$('baseline').value;const src=(base==='previous'?'after/':'before/')+service+'-'+device+'-full.jpg';$('oldImage').src=src;$('oldImage').alt=names[service]+'の旧版ページ全体';$('oldOpen').href=src;$('oldTitle').textContent=base==='previous'?'FV変更前（9月8日）':'リニューアル前（9月7日）';$('pair').className='pair '+device;$('newPage').title=names[service]+'の新しいLP。枠内で操作・スクロールできます。';$('liveOpen').href='/renewal-preview/'+service;if(currentService!==service){$('newPage').src='/renewal-preview/'+service;currentService=service;}sizeFrame();history.replaceState(null,'','?'+new URLSearchParams({service,baseline:base,device}));}
+const params=new URLSearchParams(location.search);for(const id of ['service','baseline','device'])if([...$(id).options].some(o=>o.value===params.get(id)))$(id).value=params.get(id);
+for(const id of ['service','baseline','device'])$(id).addEventListener('change',update);
+$('replay').addEventListener('click',()=>{$('newPage').src='/renewal-preview/'+currentService;});new ResizeObserver(sizeFrame).observe($('newFrame'));update();
+</script>
+</body></html>

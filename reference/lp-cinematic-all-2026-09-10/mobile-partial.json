@@ -1,0 +1,58 @@
+[
+  {
+    "headlineFits": true,
+    "loaded": true,
+    "overflow": false,
+    "service": "banner",
+    "width": 390
+  },
+  {
+    "headlineFits": true,
+    "loaded": true,
+    "overflow": false,
+    "service": "seo",
+    "width": 390
+  },
+  {
+    "headlineFits": true,
+    "loaded": true,
+    "overflow": false,
+    "service": "interview",
+    "width": 390
+  },
+  {
+    "headlineFits": true,
+    "loaded": true,
+    "overflow": false,
+    "service": "persona",
+    "width": 390
+  },
+  {
+    "headlineFits": true,
+    "loaded": true,
+    "overflow": false,
+    "service": "hr",
+    "width": 390
+  },
+  {
+    "headlineFits": true,
+    "loaded": true,
+    "overflow": false,
+    "service": "kintai",
+    "width": 390
+  },
+  {
+    "headlineFits": true,
+    "loaded": true,
+    "overflow": false,
+    "service": "promane",
+    "width": 390
+  },
+  {
+    "headlineFits": true,
+    "loaded": true,
+    "overflow": false,
+    "service": "doyaslide",
+    "width": 390
+  }
+]
