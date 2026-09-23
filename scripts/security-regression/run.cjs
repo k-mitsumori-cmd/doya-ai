@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const serviceMetadata = spawnSync(process.execPath, [path.join(__dirname, 'verify-service-metadata.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (serviceMetadata.error || serviceMetadata.status !== 0) {
+  console.error('Security regression failed: verify-service-metadata.cjs');
+  process.exit(1);
+}
 const adminBannerQuota = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-banner-quota.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (adminBannerQuota.error || adminBannerQuota.status !== 0) {
   console.error('Security regression failed: verify-admin-banner-quota.cjs');

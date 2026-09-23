@@ -429,6 +429,8 @@ export function buildServiceMetadata(
     canonicalPath?: string
     /** タイトル全体の上書き（サブページ用。指定時は `${name}｜${tagline}` を使わない） */
     titleOverride?: string
+    /** サブページ固有の説明文。HTML/OG/Twitterに同じ文言を使う */
+    descriptionOverride?: string
     /** ログイン後のアプリ画面など、検索結果に出したくないページ */
     noindex?: boolean
   }
@@ -445,7 +447,7 @@ export function buildServiceMetadata(
   // ルートlayoutの title.template は「親がtitleを持つ入れ子」では下層まで届かず、
   // /banner はサイト名が付くのに /banner/pricing は付かない、という不揃いが起きるため。
   const title = { absolute: `${headline} | ${SITE_CONFIG.name}` }
-  const description = svc.longDescription || svc.description
+  const description = opts?.descriptionOverride || svc.longDescription || svc.description
   const canonical = opts?.canonicalPath || svc.href
   const ogImage = `${SITE_CONFIG.url}${opts?.ogPath || `/og/${svc.id}`}`
   // 指名検索の受け皿として、サービス名と表記ゆれを keywords の先頭に必ず置く
@@ -513,8 +515,9 @@ export function buildServiceSubMetadata(
   const label = opts?.label || SUB_PAGE_LABEL[kind]
   const path = opts?.path || (kind === 'pricing' ? svc.pricingHref : kind === 'guide' ? svc.guideHref : svc.dashboardHref)
 
+  const sectionDescription = (SERVICE_SEO as Record<string, { sections?: Record<string, { description?: string }> }>)[serviceId]?.sections?.[kind]?.description
   const description =
-    opts?.description ||
+    opts?.description || sectionDescription ||
     (kind === 'pricing'
       ? `${svc.name}の料金プラン。無料プランで試せて、プロプラン（月額9,980円）ならドヤマーケAIの全ツールが使い放題です。`
       : kind === 'guide'
@@ -532,6 +535,7 @@ export function buildServiceSubMetadata(
 
   return buildServiceMetadata(serviceId, {
     titleOverride: `${label}｜${svc.name}`,
+    descriptionOverride: description,
     canonicalPath: path,
     keywords: [`${svc.name} ${label}`, `${svc.name} 料金`, `${svc.name} 使い方`],
   })
