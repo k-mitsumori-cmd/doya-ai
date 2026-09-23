@@ -77,11 +77,12 @@ async function main(){
     ['node deprecation',['(node:4) [DEP0169] DeprecationWarning: url.parse()'],0],['plain deprecation',['DeprecationWarning: old API'],0],
     ['error deprecation',[Object.assign(new Error('old API'),{name:'DeprecationWarning'})],0],['real error',[new Error('private-canary')],1],
     ['zero arguments',[],0],['empty values',[null,undefined,' \n'],0],['empty Error is still an error',[new Error('')],1],['object is still reported',[{private:'private-canary'}],1],['custom Error name redacted',[Object.assign(new Error('private-canary'),{name:'private-canary'})],1],
-    ['warning with separate error',['DeprecationWarning: old API',new Error('real failure')],1],['mention within error',['Failure reading DeprecationWarning: example'],1]]){
+    ['warning with separate error',['DeprecationWarning: old API',new Error('real failure')],1],['mention within error',['Failure reading DeprecationWarning: example'],1],
+    ['next-auth family',['[next-auth][error][CLIENT_FETCH_ERROR]'],1]]){
     const logs=[],diagnostics=[],notifications=[],tasks=[];
     const runtime=load('src/lib/runtime-alert.ts',{'./slack-voice':{voicePayload:x=>x},'@vercel/functions':{waitUntil:p=>tasks.push(p)},'./alert':{getAlertWebhook:async()=>'https://mock.invalid'},'./runtime-alert-limit':{claimRuntimeAlert:async()=>({state:'allowed'}),releaseRuntimeAlertClaim:async()=>{}}},{VERCEL_ENV:'production'},{console:{error:(...a)=>logs.push(a),warn:(...a)=>diagnostics.push(a)},fetch:async(u,o)=>{notifications.push(o.body);return {ok:true};}});
     runtime.exports.installRuntimeAlerts();runtime.ctx.console.error(...args);await Promise.all(tasks);
-    assert.equal(logs.length,1);assert.equal(notifications.length,count);assert.equal(diagnostics.length,count);assert(!JSON.stringify(notifications).includes('private-canary'));assert(!JSON.stringify(diagnostics).includes('private-canary'));if(count){const d=diagnostics[0][1];assert.match(d.incidentId,/^[0-9a-f-]{36}$/);assert.equal(d.argumentCount,args.length);assert(notifications[0].includes(d.incidentId));assert.equal(d.errorTypes.length,args.filter(x=>x instanceof Error).length);}pass(name);
+    assert.equal(logs.length,1);assert.equal(notifications.length,count);assert.equal(diagnostics.length,count);assert(!JSON.stringify(notifications).includes('private-canary'));assert(!JSON.stringify(diagnostics).includes('private-canary'));if(count){const d=diagnostics[0][1];assert.match(d.incidentId,/^[0-9a-f-]{36}$/);assert.equal(d.argumentCount,args.length);assert.equal(d.firstArgKind,args[0] instanceof Error?'error':typeof args[0]);assert.equal(d.family,name==='next-auth family'?'next-auth':name==='warning with separate error'?'warning':'unclassified');assert(notifications[0].includes(d.incidentId));assert.equal(d.errorTypes.length,args.filter(x=>x instanceof Error).length);}pass(name);
   }
 
   function tracedRuntime(env={},hook='https://mock.invalid',ok=true,DateImpl=Date,onHook=()=>{}) {

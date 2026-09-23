@@ -30,6 +30,24 @@ function errorTypes(args: unknown[]): string[] {
   });
 }
 
+function argumentKind(value: unknown): string {
+  if (value === null) return 'null';
+  if (value instanceof Error) return 'error';
+  const kind = typeof value;
+  return ['string', 'number', 'boolean', 'bigint', 'symbol', 'function', 'undefined'].includes(kind) ? kind : 'object';
+}
+
+/** A fixed, private-safe hint; never put the console argument itself in delivery diagnostics. */
+function errorFamily(args: unknown[]): string {
+  const first = args[0];
+  if (typeof first !== 'string') return 'unclassified';
+  if (/^\[next-auth\]/i.test(first)) return 'next-auth';
+  if (/^(?:PrismaClient|prisma:)/i.test(first)) return 'prisma';
+  if (/^(?:Supabase|Postgrest|StorageApiError)/i.test(first)) return 'supabase';
+  if (/^(?:ExperimentalWarning|DeprecationWarning|Warning:)/i.test(first)) return 'warning';
+  return 'unclassified';
+}
+
 function errorFingerprint(source: string, args: unknown[]): string {
   const secret = process.env.NEXTAUTH_SECRET;
   if (!secret) return createHash('sha256').update(source).digest('hex').slice(0, 24);
@@ -63,7 +81,7 @@ function isDeprecationWarning(args: unknown[]): boolean {
 }
 
 /** Forward operational failures only. Never serialize console arguments or user input. */
-export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string } = {}): Promise<void> {
+export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string; firstArgKind?: string; family?: string } = {}): Promise<void> {
   if (process.env.VERCEL_ENV !== 'production') return;
   const key = source.replace(/[<>&]/g, '').slice(0, 180);
   const signature = options.signature && /^[a-f0-9]{24}$/.test(options.signature)
@@ -99,10 +117,12 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
       const deployment = deploymentDetails();
       const argumentCount = Number.isSafeInteger(options.argumentCount) && options.argumentCount! >= 0 ? options.argumentCount : 0;
       const types = (options.errorTypes ?? []).filter(type => safeErrorTypes.includes(type)).slice(0, 10);
+      const firstArgKind = ['string', 'number', 'boolean', 'bigint', 'symbol', 'function', 'undefined', 'null', 'error', 'object'].includes(options.firstArgKind ?? '') ? options.firstArgKind : 'unknown';
+      const family = ['next-auth', 'prisma', 'supabase', 'warning', 'unclassified'].includes(options.family ?? '') ? options.family : 'unclassified';
       // This line contains no console arguments, error messages, stacks or request data.
       // It is written only for an actual delivery attempt, after deduplication.
       console.warn('[runtime-alert] delivery', {
-        incidentId, source: key, fingerprint: signature, argumentCount, errorTypes: types,
+        incidentId, source: key, fingerprint: signature, argumentCount, firstArgKind, family, errorTypes: types,
         occurredAt: new Date(now).toISOString(),
         ...(deployment.host ? { deploymentHost: deployment.host } : {}),
         ...(deployment.id ? { deploymentId: deployment.id } : {}),
@@ -143,7 +163,7 @@ export function installRuntimeAlerts(): void {
     // Capture our own call site; the original error may contain private text.
     const frame = new Error().stack?.split('\n').slice(2).find(line => !line.includes('node:internal'));
     const source = frame?.match(/([^/\s()]+\.[cm]?[jt]s):\d+:\d+/)?.[0] ?? 'サーバー処理（詳細はログ）';
-    const task = reportRuntimeFailure(source, { argumentCount: args.length, errorTypes: errorTypes(args), signature: errorFingerprint(source, args) });
+    const task = reportRuntimeFailure(source, { argumentCount: args.length, firstArgKind: argumentKind(args[0]), family: errorFamily(args), errorTypes: errorTypes(args), signature: errorFingerprint(source, args) });
     try { waitUntil(task); } catch { void task; }
   };
 }
