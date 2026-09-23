@@ -20,6 +20,11 @@ if (interviewStorageQueue.error || interviewStorageQueue.status !== 0) {
   console.error('Security regression failed: verify-interview-storage-purge-queue.cjs');
   process.exit(1);
 }
+const interviewMaterialDelete = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-material-delete.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewMaterialDelete.error || interviewMaterialDelete.status !== 0) {
+  console.error('Security regression failed: verify-interview-material-delete.cjs');
+  process.exit(1);
+}
 const interviewArticleLimit = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-article-limit.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewArticleLimit.error || interviewArticleLimit.status !== 0) {
   console.error('Security regression failed: verify-interview-article-limit.cjs');
@@ -43,6 +48,16 @@ if (interviewTranscriptionBudget.error || interviewTranscriptionBudget.status !=
 const interviewTranscriptionAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-transcription-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewTranscriptionAdmission.error || interviewTranscriptionAdmission.status !== 0) {
   console.error('Security regression failed: verify-interview-transcription-admission.cjs');
+  process.exit(1);
+}
+const interviewTranscriptionRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-transcription-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewTranscriptionRecovery.error || interviewTranscriptionRecovery.status !== 0) {
+  console.error('Security regression failed: verify-interview-transcription-recovery.cjs');
+  process.exit(1);
+}
+const interviewTranscriptionProvider = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-transcription-provider.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewTranscriptionProvider.error || interviewTranscriptionProvider.status !== 0) {
+  console.error('Security regression failed: verify-interview-transcription-provider.cjs');
   process.exit(1);
 }
 const bannerAdmissionRoute = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-admission-route.cjs')], { stdio: 'inherit', timeout: 60000 });

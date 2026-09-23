@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { enqueueInterviewProjectStoragePurge } from '@/lib/interview/storage-purge-queue'
+import { preserveInterviewTranscriptionUsageBeforeDelete } from '@/lib/interview/transcription-budget'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -62,11 +63,14 @@ export async function POST(req: NextRequest) {
     for (const candidate of expiredProjects) {
       try {
         const deleted = await prisma.$transaction(async tx => {
+          await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${candidate.id}))`
           const project = await tx.interviewProject.findUnique({
             where: { id: candidate.id },
             select: { id: true, userId: true, guestId: true, updatedAt: true },
           })
           if (!project || project.updatedAt >= thirtyDaysAgo) return false
+          if (await tx.interviewMaterial.count({ where: { projectId: candidate.id, status: 'PROCESSING' } })) return false
+          await preserveInterviewTranscriptionUsageBeforeDelete(tx, project)
           await enqueueInterviewProjectStoragePurge(tx, project)
           const result = await tx.interviewProject.deleteMany({ where: { id: candidate.id, ...eligible } })
           if (!result.count) throw new Error('Project changed during cleanup')

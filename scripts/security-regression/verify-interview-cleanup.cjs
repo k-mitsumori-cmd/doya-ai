@@ -16,8 +16,11 @@ const access = load('src/lib/interview/access.ts', {
 })
 
 let countCalls = 0, findCalls = 0, retentionDeletes = 0, retentionQueues = 0
+let activeProcessing = false
 let candidates = [{ id: 'old-project' }], currentUpdatedAt = new Date(0), concurrentEdit = false
 const retentionTx = {
+  $queryRaw: async () => [{}],
+  interviewMaterial: { count: async () => activeProcessing ? 1 : 0 },
   interviewProject: {
     findUnique: async () => ({ id: 'old-project', userId: 'owner', guestId: null, updatedAt: currentUpdatedAt }),
     deleteMany: async ({ where }) => { assert.equal(where.id, 'old-project'); assert(where.updatedAt.lt instanceof Date); retentionDeletes++; return { count: concurrentEdit ? 0 : 1 } },
@@ -41,12 +44,15 @@ const prisma = {
 const routeFor = enabled => load('src/app/api/interview/cleanup/route.ts', {
   'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
   '@/lib/prisma': { __esModule: true, default: prisma },
+  '@/lib/interview/transcription-budget': { preserveInterviewTranscriptionUsageBeforeDelete: async () => {} },
   '@/lib/interview/storage-purge-queue': { enqueueInterviewProjectStoragePurge: async (tx, project) => { assert.equal(tx, retentionTx); assert.equal(project.id, 'old-project'); await tx.systemSetting.create() } },
 }, { process: { env: { CRON_SECRET: 'synthetic-secret', ...(enabled ? { INTERVIEW_RETENTION_DELETE_ENABLED: '1' } : {}) } } })
 const disabledRoute = routeFor(false)
 const enabledRoute = routeFor(true)
 let queueFailure = true, projectDeleteCalls = 0, queuedCalls = 0
 const deleteTx = {
+  $queryRaw: async () => [{}],
+  interviewMaterial: { count: async () => activeProcessing ? 1 : 0 },
   systemSetting: { create: async () => { queuedCalls++; if (queueFailure) throw Error('queue unavailable') } },
   interviewProject: { delete: async () => { projectDeleteCalls++; return {} } },
 }
@@ -56,6 +62,7 @@ const projectRoute = load('src/app/api/interview/projects/[id]/route.ts', {
     findUnique: async () => ({ id: 'old-project', userId: 'owner', guestId: null }),
   }, $transaction: async fn => fn(deleteTx) } },
   '@/lib/interview/access': { requireDatabase: () => null, getInterviewUser: async () => ({ userId: 'owner' }), checkOwnership: () => null },
+  '@/lib/interview/transcription-budget': { preserveInterviewTranscriptionUsageBeforeDelete: async () => {} },
   '@/lib/interview/storage-purge-queue': { enqueueInterviewProjectStoragePurge: async (tx, project) => { assert.equal(tx, deleteTx); assert.equal(project.id, 'old-project'); await tx.systemSetting.create() } },
 })
 const request = (url, authorization) => ({ nextUrl: new URL(url), headers: { get: name => name === 'authorization' ? authorization : null } })
@@ -80,6 +87,10 @@ const request = (url, authorization) => ({ nextUrl: new URL(url), headers: { get
   assert.equal(deleted.body.fileCleanupPending, true)
   assert.equal(queuedCalls, 2)
   assert.equal(projectDeleteCalls, 1)
+  activeProcessing = true
+  assert.equal((await projectRoute.DELETE({}, ctx)).status, 409)
+  assert.equal(queuedCalls, 2)
+  activeProcessing = false
   const base = 'https://test.example/api/interview/cleanup'
   assert.equal((await disabledRoute.POST(request(base + '?dryRun=1', 'Bearer wrong'))).status, 401)
   assert.equal(countCalls + findCalls + retentionDeletes, 0)
@@ -99,6 +110,11 @@ const request = (url, authorization) => ({ nextUrl: new URL(url), headers: { get
   assert.equal(cleanup.body.deletedCount, 1)
   assert.equal(retentionQueues, 1)
   assert.equal(retentionDeletes, 1)
+  activeProcessing = true
+  const busy = await enabledRoute.POST(request(base + '?execute=1', 'Bearer synthetic-secret'))
+  assert.equal(busy.body.skippedCount, 1)
+  assert.equal(retentionDeletes, 1)
+  activeProcessing = false
   currentUpdatedAt = new Date()
   const changed = await enabledRoute.POST(request(base + '?execute=1', 'Bearer synthetic-secret'))
   assert.equal(changed.body.skippedCount, 1)

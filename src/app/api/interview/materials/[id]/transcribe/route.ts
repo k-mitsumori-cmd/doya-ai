@@ -10,9 +10,10 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300 // 5分 (Vercel Pro) — AssemblyAI のポーリングもこの時間内で完了する必要あり。長尺ファイルはタイムアウトの可能性あり
 
 import { NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
-import { transcribeFromUrl } from '@/lib/interview/transcription'
+import { transcribeFromUrl, transcribeExistingJob, InterviewTranscriptionTerminalError } from '@/lib/interview/transcription'
 import { getInterviewGuestLimits } from '@/lib/pricing'
 import { inspectInterviewMediaDuration } from '@/lib/interview/media-duration'
 import { reserveInterviewTranscription, settleInterviewTranscription, releaseInterviewTranscription } from '@/lib/interview/transcription-budget'
@@ -78,6 +79,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     let reserved = false
     let transcription: { id: string } | undefined
+    let resumeJobId: string | null = null
+    let submissionMarker: string | null = null
     if (quotaEnabled) {
       let mediaSeconds: number
       try {
@@ -95,11 +98,27 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       if (admission.state === 'unavailable') {
         return NextResponse.json({ success: false, error: '文字起こしの利用状況を確認できません。しばらくしてから再試行してください。' }, { status: 503 })
       }
-      if (admission.state === 'processing' || admission.state === 'completed') {
-        return NextResponse.json({ success: true, transcriptionId: admission.transcriptionId, status: admission.state === 'processing' ? 'PROCESSING' : 'COMPLETED' })
+      if (admission.state === 'completed') {
+        return NextResponse.json({ success: true, transcriptionId: admission.transcriptionId, status: 'COMPLETED' })
       }
       transcription = { id: admission.transcriptionId }
       reserved = true
+      if (admission.state === 'processing' && admission.externalJobId?.startsWith('submitting:')) {
+        return NextResponse.json({ success: false, code: 'TRANSCRIPTION_SUBMISSION_UNKNOWN',
+          error: '送信状態を確認できません。サポートにお問い合わせください。' }, { status: 503 })
+      }
+      resumeJobId = admission.state === 'processing' ? admission.externalJobId || null : null
+      if (!resumeJobId) {
+        // Claim the submission step so the POST and SSE entrypoints cannot create two provider jobs.
+        submissionMarker = `submitting:${randomUUID()}`
+        const claimed = await prisma.interviewTranscription.updateMany({
+          where: { id: transcription.id, status: 'PROCESSING', externalJobId: null },
+          data: { externalJobId: submissionMarker },
+        })
+        if (claimed.count !== 1) {
+          return NextResponse.json({ success: true, transcriptionId: transcription.id, status: 'PROCESSING' })
+        }
+      }
     } else if (!userId && guestId) {
       // 旧処理経路。新しい利用台帳の本番検証が終わるまで維持する。
       const guestLimits = getInterviewGuestLimits()
@@ -146,12 +165,25 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }
 
     // 文字起こし実行 (URL ベース — Vercel はファイルに触れない)
+    let submitStarted = false
     try {
-      const result = await transcribeFromUrl({
+      const result = resumeJobId ? await transcribeExistingJob(resumeJobId, 210_000) : await transcribeFromUrl({
         storagePath: material.filePath,
         mimeType: material.mimeType || 'audio/mpeg',
         fileSize: Number(material.fileSize || 0),
         language,
+        ...(reserved ? { maxWaitMs: 210_000 } : {}),
+        ...(reserved ? {
+          onBeforeSubmit: () => { submitStarted = true },
+          onJobSubmitted: async (jobId: string) => {
+            const saved = await prisma.interviewTranscription.updateMany({
+              where: { id: transcription.id, status: 'PROCESSING', externalJobId: submissionMarker },
+              data: { externalJobId: jobId },
+            })
+            if (saved.count !== 1) throw new Error('Transcription job ID persistence failed')
+            resumeJobId = jobId
+          },
+        } : {}),
       })
 
       // duration計算: segmentsの最後のendか、AssemblyAIのaudio_durationから取得
@@ -188,18 +220,57 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       })
     } catch (transcribeError: any) {
       // 文字起こし失敗
-      console.error('[interview] Transcription failed:', transcribeError?.message)
+      console.error('[interview] Transcription failed')
 
-      await prisma.$transaction(async tx => {
-        if (reserved) await releaseInterviewTranscription(tx, materialId, transcription.id)
+      if (reserved) {
+        const saved = await prisma.interviewTranscription.findUnique({
+          where: { id: transcription.id }, select: { status: true, externalJobId: true },
+        }).catch(() => null)
+        if (saved?.status === 'COMPLETED') {
+          return NextResponse.json({ success: true, transcriptionId: transcription.id, status: 'COMPLETED' })
+        }
+        if (!(transcribeError instanceof InterviewTranscriptionTerminalError)) {
+          if (saved?.externalJobId && !saved.externalJobId.startsWith('submitting:')) {
+            return NextResponse.json({ success: true, transcriptionId: transcription.id, status: 'PROCESSING',
+              resumeUrl: `/interview/projects/${material.project.id}/transcribe?materialId=${materialId}` })
+          }
+          if (submitStarted) {
+            return NextResponse.json({ success: false, code: 'TRANSCRIPTION_SUBMISSION_UNKNOWN',
+              error: '送信状態を確認できません。サポートにお問い合わせください。' }, { status: 503 })
+          }
+        }
+      }
+
+      const markedError = await prisma.$transaction(async tx => {
+        if (reserved) {
+          await releaseInterviewTranscription(tx, materialId, transcription.id)
+          const changed = await tx.interviewTranscription.updateMany({
+            where: { id: transcription.id, status: 'PROCESSING' }, data: { status: 'ERROR' },
+          })
+          if (!changed.count) return false
+          await tx.interviewMaterial.updateMany({
+            where: { id: materialId, status: 'PROCESSING' },
+            data: { status: 'ERROR', error: '文字起こしに失敗しました。時間をおいて再試行してください。' },
+          })
+          return true
+        }
         await tx.interviewTranscription.update({ where: { id: transcription.id }, data: { status: 'ERROR' } })
-        await tx.interviewMaterial.update({ where: { id: materialId }, data: { status: 'ERROR', error: transcribeError?.message || '文字起こしに失敗しました' } })
+        await tx.interviewMaterial.update({ where: { id: materialId }, data: { status: 'ERROR', error: '文字起こしに失敗しました。時間をおいて再試行してください。' } })
+        return true
       })
+      if (!markedError && reserved) {
+        const latest = await prisma.interviewTranscription.findUnique({
+          where: { id: transcription.id }, select: { status: true },
+        }).catch(() => null)
+        if (latest?.status === 'COMPLETED') {
+          return NextResponse.json({ success: true, transcriptionId: transcription.id, status: 'COMPLETED' })
+        }
+      }
 
       return NextResponse.json(
         {
           success: false,
-          error: transcribeError?.message || '文字起こしに失敗しました',
+          error: '文字起こしに失敗しました。時間をおいて再試行してください。',
           transcriptionId: transcription.id,
           hint: getErrorHint(transcribeError),
         },
@@ -207,9 +278,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       )
     }
   } catch (e: any) {
-    console.error('[interview] transcribe error:', e?.message)
+    console.error('[interview] transcribe error')
     return NextResponse.json(
-      { success: false, error: e?.message || '文字起こしの開始に失敗しました' },
+      { success: false, error: '文字起こしの開始に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }

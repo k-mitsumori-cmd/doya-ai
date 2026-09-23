@@ -4,12 +4,17 @@ const { load } = require('./load-typescript.cjs')
 const now = new Date('2026-09-24T00:00:00.000Z')
 const rows = new Map()
 let batchMode = 'files', batchCalls = 0
+let fileDeleteCalls = 0, fileDeleteFails = false
 const queue = load('src/lib/interview/storage-purge-queue.ts', {
   './storage': { purgeInterviewProjectStorageBatch: async prefix => {
     assert.equal(prefix, 'owner/project-1')
     batchCalls++
     if (batchMode === 'failure') throw Error('private provider detail')
     return batchMode === 'empty'
+  }, deleteFile: async path => {
+    assert.equal(path, 'owner/project-1/123_file.mp3')
+    fileDeleteCalls++
+    if (fileDeleteFails) throw Error('private provider detail')
   } },
 })
 const db = { systemSetting: {
@@ -72,6 +77,24 @@ const cron = load('src/app/api/cron/interview-storage-purge/route.ts', {
   assert.equal(result.failed, 1)
   assert.equal(rows.size, 1)
   assert.equal((await queue.purgeQueuedInterviewStorage(db, new Date(now.getTime() + 60_000))).processed, 0)
+
+  rows.clear()
+  await assert.rejects(() => queue.enqueueInterviewMaterialStoragePurge(db,
+    { id: 'm1', projectId: 'project-1', filePath: 'other/project-1/123_file.mp3', userId: 'owner', guestId: null }, now))
+  await queue.enqueueInterviewMaterialStoragePurge(db,
+    { id: 'm1', projectId: 'project-1', filePath: 'owner/project-1/123_file.mp3', userId: 'owner', guestId: null }, now)
+  fileDeleteFails = true
+  result = await queue.purgeQueuedInterviewStorage(db, now)
+  assert.equal(result.failed, 1)
+  assert.equal(rows.size, 1)
+  fileDeleteFails = false
+  result = await queue.purgeQueuedInterviewStorage(db, new Date(now.getTime() + 5 * 60 * 1000 + 1))
+  assert.equal(result.pending, 1)
+  assert.equal(rows.size, 1)
+  result = await queue.purgeQueuedInterviewStorage(db, new Date(now.getTime() + 3 * 60 * 60 * 1000 + 1))
+  assert.equal(result.finalized, 1)
+  assert.equal(rows.size, 0)
+  assert.equal(fileDeleteCalls, 3)
 
   await assert.rejects(() => storage.purgeInterviewProjectStorageBatch('../other'))
   publicBucket = true

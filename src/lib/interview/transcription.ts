@@ -16,6 +16,8 @@ interface TranscriptionResult {
   confidence: number | null
 }
 
+export class InterviewTranscriptionTerminalError extends Error {}
+
 const ASSEMBLYAI_BASE_URL = 'https://api.assemblyai.com/v2'
 
 /**
@@ -27,6 +29,9 @@ export async function transcribeFromUrl(opts: {
   mimeType: string
   fileSize: number
   language?: string
+  maxWaitMs?: number
+  onBeforeSubmit?: () => void
+  onJobSubmitted?: (jobId: string) => Promise<void>
 }): Promise<TranscriptionResult> {
   const { storagePath, fileSize } = opts
   const apiKey = process.env.ASSEMBLYAI_API_KEY
@@ -38,11 +43,22 @@ export async function transcribeFromUrl(opts: {
   console.log(`[interview] 文字起こし開始: ${sizeMB}MB, mime=${opts.mimeType}`)
 
   // 1. AssemblyAI にジョブ送信
+  opts.onBeforeSubmit?.()
   const transcriptId = await submitJob(fileUrl, opts.language, apiKey)
-  console.log(`[interview] AssemblyAI ジョブ送信完了: id=${transcriptId}`)
+  await opts.onJobSubmitted?.(transcriptId)
+  console.log('[interview] AssemblyAI ジョブ送信完了')
+
+  return transcribeExistingJob(transcriptId, opts.maxWaitMs)
+}
+
+/** Resume a provider job whose ID was durably saved before the previous worker stopped. */
+export async function transcribeExistingJob(transcriptId: string, maxWaitMs?: number): Promise<TranscriptionResult> {
+  const apiKey = process.env.ASSEMBLYAI_API_KEY
+  if (!apiKey) throw new Error('ASSEMBLYAI_API_KEY が設定されていません')
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(transcriptId)) throw new Error('文字起こしジョブIDが不正です')
 
   // 2. ポーリングで完了を待つ
-  const result = await pollTranscript(transcriptId, apiKey)
+  const result = await pollTranscript(transcriptId, apiKey, maxWaitMs)
   console.log(`[interview] AssemblyAI 完了: duration=${result.audio_duration}s, utterances=${result.utterances?.length || 0}`)
 
   // 3. 結果をパース
@@ -86,7 +102,7 @@ export async function transcribeFromUrl(opts: {
 
   const text = result.text || ''
   if (!text) {
-    throw new Error('文字起こし結果が空です。音声ファイルを確認してください。')
+    throw new InterviewTranscriptionTerminalError('文字起こし結果が空です。音声ファイルを確認してください。')
   }
 
   return {
@@ -161,7 +177,7 @@ async function pollTranscript(
     if (data.status === 'completed') return data
 
     if (data.status === 'error') {
-      throw new Error(`AssemblyAI 文字起こし失敗: ${data.error || '不明なエラー'}`)
+      throw new InterviewTranscriptionTerminalError(`AssemblyAI 文字起こし失敗: ${data.error || '不明なエラー'}`)
     }
 
     const elapsed = Math.round((Date.now() - startTime) / 1000)

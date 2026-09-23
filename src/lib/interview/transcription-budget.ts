@@ -84,6 +84,23 @@ async function baselineSeconds(tx: Prisma.TransactionClient, identity: Identity,
   return seconds
 }
 
+/** Material and project deletion must preserve completed usage before removing source rows. */
+export async function preserveInterviewTranscriptionUsageBeforeDelete(
+  tx: Prisma.TransactionClient,
+  owner: { userId: string | null; guestId: string | null },
+  now = new Date(),
+): Promise<void> {
+  if (process.env.INTERVIEW_TRANSCRIPTION_QUOTA_ENABLED !== '1') return
+  const identity: Identity = { ...owner, plan: 'FREE' }
+  const config = identityKey(identity, now)
+  if (!config) throw new Error('Transcription identity unavailable')
+  await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('interview-transcription'), hashtext(${config.quotaKey}))`
+  if (await tx.systemSetting.findUnique({ where: { key: config.quotaKey }, select: { value: true } })) return
+  const usedSeconds = await baselineSeconds(tx, identity, config.monthStart)
+  await tx.systemSetting.create({ data: { key: config.quotaKey,
+    value: JSON.stringify({ usedSeconds, reservedSeconds: 0 }) } })
+}
+
 /** Reserve verified media seconds and create the processing row in one transaction. */
 export async function reserveInterviewTranscription(identity: Identity, material: Material, seconds: number, now = new Date()): Promise<TranscriptionAdmission> {
   const config = identityKey(identity, now)
@@ -93,6 +110,7 @@ export async function reserveInterviewTranscription(identity: Identity, material
   const key = reservationKey(material.id)
   try {
     return await prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${material.projectId}))`
       await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('interview-transcription'), hashtext(${config.quotaKey}))`
       const existing = await tx.interviewTranscription.findFirst({
         where: { materialId: material.id, status: 'PROCESSING' }, orderBy: { createdAt: 'desc' },
@@ -149,6 +167,8 @@ export async function settleInterviewTranscription(tx: Prisma.TransactionClient,
   const reservation = parseReservation(row.value)
   if (reservation.transcriptionId !== transcriptionId) throw new Error('Transcription reservation mismatch')
   await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('interview-transcription'), hashtext(${reservation.quotaKey}))`
+  const currentRow = await tx.systemSetting.findUnique({ where: { key }, select: { value: true } })
+  if (!currentRow || currentRow.value !== row.value) throw new Error('Transcription reservation changed')
   const quotaRow = await tx.systemSetting.findUnique({ where: { key: reservation.quotaKey }, select: { value: true } })
   if (!quotaRow) throw new Error('Transcription quota missing')
   const quota = parseQuota(quotaRow.value)
@@ -169,6 +189,8 @@ export async function releaseInterviewTranscription(tx: Prisma.TransactionClient
   const reservation = parseReservation(row.value)
   if (reservation.transcriptionId !== transcriptionId) return
   await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('interview-transcription'), hashtext(${reservation.quotaKey}))`
+  const currentRow = await tx.systemSetting.findUnique({ where: { key }, select: { value: true } })
+  if (!currentRow || currentRow.value !== row.value) return
   const quotaRow = await tx.systemSetting.findUnique({ where: { key: reservation.quotaKey }, select: { value: true } })
   if (!quotaRow) throw new Error('Transcription quota missing')
   const quota = parseQuota(quotaRow.value)

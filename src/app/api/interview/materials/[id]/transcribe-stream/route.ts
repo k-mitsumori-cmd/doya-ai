@@ -388,7 +388,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
         controller.close()
       } catch (err: any) {
-        console.error('[interview] transcribe-stream error:', err?.message)
+        console.error('[interview] transcribe-stream error')
 
         if (quotaEnabled && budgetTranscriptionId) {
           const completed = await prisma.interviewTranscription.findUnique({
@@ -418,12 +418,12 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         try {
           await prisma.$transaction(async tx => {
             if (quotaEnabled && budgetTranscriptionId) await releaseInterviewTranscription(tx, materialId, budgetTranscriptionId)
-            await tx.interviewMaterial.updateMany({ where: { id: materialId, status: 'PROCESSING' }, data: { status: 'ERROR', error: err?.message || '文字起こしに失敗しました' } })
+            await tx.interviewMaterial.updateMany({ where: { id: materialId, status: 'PROCESSING' }, data: { status: 'ERROR', error: '文字起こしに失敗しました。時間をおいて再試行してください。' } })
             await tx.interviewTranscription.updateMany({ where: { materialId, status: 'PROCESSING' }, data: { status: 'ERROR' } })
           })
         } catch {}
 
-        sendEvent('fail', { message: err?.message || '文字起こしに失敗しました' })
+        sendEvent('fail', { message: '文字起こしに失敗しました。時間をおいて再試行してください。' })
         controller.close()
       }
     },

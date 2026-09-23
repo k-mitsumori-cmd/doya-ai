@@ -8,7 +8,9 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
-import { deleteFile, getSignedFileUrl } from '@/lib/interview/storage'
+import { getSignedFileUrl } from '@/lib/interview/storage'
+import { enqueueInterviewMaterialStoragePurge } from '@/lib/interview/storage-purge-queue'
+import { preserveInterviewTranscriptionUsageBeforeDelete } from '@/lib/interview/transcription-budget'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -107,15 +109,27 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     const ownerErr = checkOwnership(material.project, userId, guestId)
     if (ownerErr) return ownerErr
 
-    // ストレージからファイル削除
-    if (material.filePath) {
-      await deleteFile(material.filePath)
-    }
-
-    // DB削除 (CASCADE で transcriptions も削除される)
-    await prisma.interviewMaterial.delete({ where: { id } })
-
-    return NextResponse.json({ success: true })
+    // 生成開始・プロジェクト削除と直列化する。処理中の外部ジョブのファイルは消さない。
+    const outcome = await prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${material.projectId}))`
+      const current = await tx.interviewMaterial.findUnique({
+        where: { id }, select: { id: true, projectId: true, status: true, filePath: true },
+      })
+      if (!current || current.projectId !== material.projectId) return 'missing' as const
+      if (current.status === 'PROCESSING') return 'processing' as const
+      await preserveInterviewTranscriptionUsageBeforeDelete(tx, material.project)
+      if (current.filePath) {
+        await enqueueInterviewMaterialStoragePurge(tx, {
+          id, projectId: current.projectId, filePath: current.filePath,
+          userId: material.project.userId, guestId: material.project.guestId,
+        })
+      }
+      await tx.interviewMaterial.delete({ where: { id } })
+      return 'deleted' as const
+    })
+    if (outcome === 'missing') return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
+    if (outcome === 'processing') return NextResponse.json({ success: false, error: '文字起こし中は素材を削除できません。完了後に再試行してください。' }, { status: 409 })
+    return NextResponse.json({ success: true, fileCleanupPending: true })
   } catch (e: any) {
     return NextResponse.json(
       { success: false, error: e?.message || '削除に失敗しました' },

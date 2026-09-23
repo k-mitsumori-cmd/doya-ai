@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { enqueueInterviewProjectStoragePurge } from '@/lib/interview/storage-purge-queue'
+import { preserveInterviewTranscriptionUsageBeforeDelete } from '@/lib/interview/transcription-budget'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -215,10 +216,16 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     if (ownerErr) return ownerErr
 
     // 再試行可能なストレージ削除記録とDB削除を同じトランザクションで確定する。
-    await prisma.$transaction(async tx => {
+    const deleted = await prisma.$transaction(async tx => {
+      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${id}))`
+      const processing = await tx.interviewMaterial.count({ where: { projectId: id, status: 'PROCESSING' } })
+      if (processing > 0) return false
+      await preserveInterviewTranscriptionUsageBeforeDelete(tx, project)
       await enqueueInterviewProjectStoragePurge(tx, project)
       await tx.interviewProject.delete({ where: { id } })
+      return true
     })
+    if (!deleted) return NextResponse.json({ success: false, error: '文字起こし中はプロジェクトを削除できません。完了後に再試行してください。' }, { status: 409 })
 
     return NextResponse.json({ success: true, fileCleanupPending: true })
   } catch {

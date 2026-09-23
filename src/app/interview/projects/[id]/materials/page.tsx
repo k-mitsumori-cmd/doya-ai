@@ -528,10 +528,15 @@ export default function MaterialsPage() {
   const deleteMaterial = async (materialId: string) => {
     if (!confirm('この素材を削除しますか？')) return
     try {
-      await fetch(`/api/interview/materials/${materialId}`, { method: 'DELETE' })
+      const response = await fetch(`/api/interview/materials/${materialId}`, { method: 'DELETE' })
+      if (!response.ok) {
+        const result = await response.json().catch(() => null)
+        alert(result?.error || '素材を削除できませんでした。時間をおいて再試行してください。')
+        return
+      }
       await fetchProject()
     } catch {
-      // ignore
+      alert('通信エラーで素材を削除できませんでした。時間をおいて再試行してください。')
     }
   }
 
@@ -1042,6 +1047,15 @@ export default function MaterialsPage() {
                     </div>
                   )}
                 </div>
+
+                {info.status === 'processing' && (
+                  <button
+                    onClick={() => router.push(`/interview/projects/${projectId}/transcribe?materialId=${encodeURIComponent(id)}`)}
+                    className="mb-3 rounded-lg bg-[#7f19e6] px-3 py-2 text-xs font-bold text-white hover:bg-[#6b12c9]"
+                  >
+                    進捗を見る・処理を再開する
+                  </button>
+                )}
 
                 {/* エラー表示 */}
                 {info.status === 'error' && info.error && (

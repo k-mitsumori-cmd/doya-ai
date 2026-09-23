@@ -4,7 +4,7 @@ const path = require('node:path')
 const { load } = require('./load-typescript.cjs')
 
 const rows = new Map(), transcripts = [], materials = new Map([['m1', 'COMPLETED'], ['m2', 'COMPLETED'], ['m3', 'COMPLETED']])
-let sequence = 0, baselineCalls = 0
+let sequence = 0, baselineCalls = 0, baselineDuration = 0
 const systemSetting = {
   findUnique: async ({ where }) => rows.has(where.key) ? { value: rows.get(where.key) } : null,
   upsert: async ({ where, create, update }) => { rows.set(where.key, rows.has(where.key) ? update.value : create.value) },
@@ -19,7 +19,7 @@ const tx = {
     create: async ({ data }) => { const row = { ...data, id: `t${++sequence}` }; transcripts.push(row); return row },
   },
   interviewMaterial: {
-    aggregate: async () => { baselineCalls++; return { _sum: { duration: 0 } } },
+    aggregate: async () => { baselineCalls++; return { _sum: { duration: baselineDuration } } },
     updateMany: async ({ where, data }) => { const current = materials.get(where.id); if (!where.status.in.includes(current)) return { count: 0 }; materials.set(where.id, data.status); return { count: 1 } },
   },
 }
@@ -30,7 +30,7 @@ const budget = load('src/lib/interview/transcription-budget.ts', {
   '@/lib/prisma': { prisma },
   '@/lib/pricing': { INTERVIEW_PRICING: { maxSingleTranscriptionMinutes: 180 }, getInterviewLimitsByPlan: () => ({ transcriptionMinutes: 30 }), getInterviewGuestLimits: () => ({ transcriptionMinutes: 5 }) },
   './month': month,
-})
+}, { process: { env: { INTERVIEW_TRANSCRIPTION_QUOTA_ENABLED: '1' } } })
 const source = fs.readFileSync(path.join(__dirname, '../../src/lib/interview/transcription-budget.ts'), 'utf8')
 assert.match(source, /pg_advisory_xact_lock\(hashtext\('interview-transcription'\), hashtext\(\$\{config\.quotaKey\}\)\)/)
 const identity = { userId: 'owner', guestId: null, plan: 'FREE' }
@@ -51,6 +51,12 @@ const at = new Date('2026-09-24T00:00:00.000Z')
   assert.deepEqual(JSON.parse(JSON.stringify(await budget.getInterviewTranscriptionUsage(identity, at))), { usedSeconds: 1201, reservedSeconds: 0, limitSeconds: 1800 })
   assert.equal((await budget.reserveInterviewTranscription(identity, { id: 'm3', projectId: 'p1' }, 10801, at)).state, 'too-long')
   assert.equal(baselineCalls, 1)
+  baselineDuration = 240
+  const secondOwner = { userId: 'other-owner', guestId: null, plan: 'FREE' }
+  await budget.preserveInterviewTranscriptionUsageBeforeDelete(tx, secondOwner, at)
+  baselineDuration = 0 // Source rows were deleted after the ledger was persisted.
+  assert.equal((await budget.getInterviewTranscriptionUsage(secondOwner, at)).usedSeconds, 240)
+  assert.equal(baselineCalls, 2)
   const nextMonth = await budget.getInterviewTranscriptionUsage(identity, new Date('2026-09-30T15:00:00.000Z'))
   assert.equal(nextMonth.usedSeconds, 0)
   console.log('PASS interview transcription reserves verified seconds, blocks excess, settles once and refunds failed work')

@@ -25,6 +25,7 @@ const globals = { process: { env: { INTERVIEW_TRANSCRIPTION_QUOTA_ENABLED: '1', 
   TextEncoder, ReadableStream, fetch: async () => { providerCalls++; throw Error('provider should not run') } }
 const post = load('src/app/api/interview/materials/[id]/transcribe/route.ts', {
   ...shared,
+  'node:crypto': { randomUUID: () => 'uuid' },
   'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
   '@/lib/interview/transcription': { transcribeFromUrl: async () => { providerCalls++; throw Error('provider should not run') } },
 }, globals)
