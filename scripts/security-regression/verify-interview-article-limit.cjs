@@ -31,6 +31,7 @@ let providerCalls = 0;
 let drafts = 0;
 let refunds = 0;
 let failProvider = false;
+let invalidKey = false;
 let failProjectUpdate = false;
 let failUsageTracking = false;
 let holdProvider = false;
@@ -78,13 +79,16 @@ const { POST } = load('src/app/api/interview/articles/generate/route.ts', {
 }, {
   TextEncoder, TextDecoder, ReadableStream, AbortController,
   process: { env: { GEMINI_API_KEY: 'test-key' } },
-  fetch: async (_url, init) => {
+  fetch: async (url, init) => {
     providerCalls++;
+    assert.doesNotMatch(url, /key=/);
+    assert.equal(init.headers['x-goog-api-key'], 'test-key');
     if (holdProvider) return new Promise((_resolve, reject) => {
       providerEntered();
       init.signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
     });
     if (failProvider) return new Response('provider failed', { status: 500 });
+    if (invalidKey) return new Response(JSON.stringify({ error: { status: 'INVALID_ARGUMENT', message: 'API key not valid. Please pass a valid API key.' } }), { status: 400, headers: { 'content-type': 'application/json' } });
     return new Response('data: {"candidates":[{"content":{"parts":[{"text":"article"},{"text":" end"}]}}]}');
   },
 });
@@ -111,10 +115,16 @@ async function events() {
   assert.equal(drafts, 0);
 
   failProvider = false;
+  invalidKey = true;
+  output = await events();
+  assert.equal(output.at(-1).code, 'ARTICLE_PROVIDER_CONFIGURATION');
+  assert.equal(refunds, 2);
+  assert.equal(drafts, 0);
+  invalidKey = false;
   output = await events();
   assert.equal(output.at(-1).type, 'done');
   assert.equal(output.at(-1).wordCount, 11);
-  assert.equal(refunds, 1);
+  assert.equal(refunds, 2);
   assert.equal(drafts, 1);
   assert.equal(locks, 1);
   assert.equal(claimedIdentity.userId, 'u1');
@@ -122,7 +132,7 @@ async function events() {
   failProjectUpdate = true;
   output = await events();
   assert.equal(output.at(-1).type, 'error');
-  assert.equal(refunds, 2);
+  assert.equal(refunds, 3);
   assert.equal(drafts, 1);
   failProjectUpdate = false;
   output = await events();
@@ -140,7 +150,7 @@ async function events() {
   await entered;
   await cancelledResponse.body.cancel();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  assert.equal(refunds, 3);
+  assert.equal(refunds, 4);
   assert.equal(drafts, 3);
   console.log('PASS interview article limit: blocked before provider, failed attempt refunded, atomic draft save and versioning');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

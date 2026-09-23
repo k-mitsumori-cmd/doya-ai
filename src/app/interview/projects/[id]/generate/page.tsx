@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 // ── Inline formatting ──
 function renderInline(text: string): ReactNode {
@@ -313,6 +314,7 @@ export default function GeneratePage() {
   const [wordCount, setWordCount] = useState(0)
   const [error, setError] = useState('')
   const [limitReached, setLimitReached] = useState(false)
+  const [providerConfigurationError, setProviderConfigurationError] = useState(false)
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null)
   const [showCelebration, setShowCelebration] = useState(false)
   const [proofScore, setProofScore] = useState<number | null>(null)
@@ -342,6 +344,7 @@ export default function GeneratePage() {
     setGeneratedText('')
     setError('')
     setLimitReached(false)
+    setProviderConfigurationError(false)
     setProgress('接続中...')
     setThumbnailUrl(null)
     setShowCelebration(false)
@@ -431,6 +434,7 @@ export default function GeneratePage() {
                 receivedError = true
                 setError(event.message)
                 setLimitReached(event.code === 'ARTICLE_LIMIT')
+                setProviderConfigurationError(event.code === 'ARTICLE_PROVIDER_CONFIGURATION')
                 setStatus('error')
                 break
             }
@@ -710,6 +714,7 @@ export default function GeneratePage() {
                   <p className="font-medium mb-1">エラーが発生しました</p>
                   <p className="text-red-500">{error}</p>
                   {limitReached && <a href="/interview/pricing" className="mt-3 inline-block font-semibold text-blue-700 underline">プランを見る</a>}
+                  {providerConfigurationError && <a href={SUPPORT_CONTACT_URL} target="_blank" rel="noreferrer" className="mt-3 inline-block font-semibold text-blue-700 underline">サポートに問い合わせる</a>}
                 </div>
               </div>
             </div>

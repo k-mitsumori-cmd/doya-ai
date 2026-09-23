@@ -170,12 +170,12 @@ export async function POST(req: NextRequest) {
         // ====== Gemini ストリーミング API 呼び出し ======
         const apiKey = getGeminiApiKey()
         const model = getModel()
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse&key=${apiKey}`
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:streamGenerateContent?alt=sse`
 
         const geminiRes = await fetch(endpoint, {
           method: 'POST',
           signal: providerAbort.signal,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
@@ -192,11 +192,20 @@ export async function POST(req: NextRequest) {
         })
 
         if (!geminiRes.ok) {
-          await geminiRes.body?.cancel()
-          console.error('[interview] Gemini API error status:', geminiRes.status)
+          let invalidKey = false
+          try {
+            const providerError = await geminiRes.json()
+            invalidKey = geminiRes.status === 400 &&
+              typeof providerError?.error?.message === 'string' &&
+              /API key not valid/i.test(providerError.error.message)
+          } catch { /* Provider error format is not guaranteed. */ }
+          console.error(invalidKey ? '[interview] Gemini API key invalid' : `[interview] Gemini API error status: ${geminiRes.status}`)
           controller.enqueue(sseEvent({
             type: 'error',
-            message: `AI API エラー (${geminiRes.status})`,
+            ...(invalidKey ? {
+              code: 'ARTICLE_PROVIDER_CONFIGURATION',
+              message: '記事生成の接続設定に問題があります。サポートにお問い合わせください。',
+            } : { message: `AI API エラー (${geminiRes.status})` }),
           }))
           controller.close()
           return
