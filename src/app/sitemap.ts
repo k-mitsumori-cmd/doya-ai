@@ -41,9 +41,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ]
 
-  // 実在するガイドページを持つサービス（services.ts の guideHref は未実装でも値が入っている）
-  // ここに無いサービスの guideHref は 404 になるため sitemap に載せない
-  const SERVICES_WITH_GUIDE = new Set(['adsim', 'copy', 'lp', 'movie', 'opening', 'voice'])
+  // 独立したガイドページを持つサービス。ほかの guideHref はLP兼用の場合があるため、
+  // 独立ページとして sitemap に追加しない。
+  const SERVICES_WITH_GUIDE = new Set(['adsim', 'banner', 'copy', 'lp', 'movie', 'opening', 'voice'])
   // 実在する /{id}/pricing を持つサービス。
   // services.ts の pricingHref はLPと同じ値のことがある（例: seo → '/seo'）ため、
   // 実在する料金ページを sitemap から落とさないようここで補う。
@@ -109,4 +109,3 @@ export default function sitemap(): MetadataRoute.Sitemap {
     return true
   })
 }
-

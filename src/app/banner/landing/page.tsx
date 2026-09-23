@@ -54,6 +54,9 @@ export default function BannerLandingPage() {
         visual={<MockWindow title="doya-ai.surisuta.jp/banner"><BannerVariantsMock /></MockWindow>}
       />
       <HowItWorks title={<>選ぶ・生成・書き出しの<br className="md:hidden"  />3ステップ</>} lead="テンプレートを選んでAIにまかせるだけ。" steps={STEPS} diagram={<ServiceDiagram steps={STEPS} />} />
+      <div className="mx-auto max-w-6xl px-5 pb-10 text-center">
+        <a href="/banner/guide" className="text-sm font-bold text-blue-700 underline underline-offset-4 hover:text-blue-900">詳しい使い方ガイドを見る</a>
+      </div>
       <FeatureShowcase title="広告バナーづくりを、そのまま見せます。" lead="業種選びからA/B/C 3案生成、書き出しまで。必要な機能をひとつの画面に。" rows={ROWS} />
       <Benefits title="なぜ、バナーづくりが速くなるのか" items={BENEFITS} />
       {SVC.useCases && <UseCases items={SVC.useCases} />}
