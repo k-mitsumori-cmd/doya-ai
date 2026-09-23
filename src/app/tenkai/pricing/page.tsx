@@ -281,8 +281,8 @@ export default function PricingPage() {
             大規模チームでの導入をお考えですか？
           </h2>
           <p className="text-sm text-slate-300 mb-6 max-w-lg mx-auto">
-            Enterprise プランでは、無制限の生成、チーム管理、SSO対応、専任サポートをご利用いただけます。
-            お気軽にお問い合わせください。
+            Enterprise プランの利用条件やチームでの運用、サポート内容は個別にご案内します。
+            ご希望を添えてお問い合わせください。
           </p>
           <div className="flex items-center justify-center gap-4">
             <a

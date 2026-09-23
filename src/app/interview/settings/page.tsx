@@ -95,13 +95,13 @@ export default function InterviewSettingsPage() {
       transcription: `${INTERVIEW_PRICING.transcriptionMinutes.free}分/月`, upload: '500MB',
       generation: `${INTERVIEW_PRICING.freeLimit}回/日`,
       features: ['AI記事生成', 'スキル選択', '校正・タイトル提案', '30日間の履歴保存'],
-      missingFeatures: ['ファクトチェック', '翻訳（10言語）', 'SNS投稿文生成', '優先サポート', '無制限の履歴保存'],
+      missingFeatures: ['ファクトチェック', '翻訳（10言語）', 'SNS投稿文生成', '優先サポート'],
     },
     PRO: {
       label: 'PRO プラン', badge: 'PRO', badgeColor: 'bg-[#7f19e6] text-white',
       transcription: `${INTERVIEW_PRICING.transcriptionMinutes.pro}分/月`, upload: '2GB',
       generation: `${INTERVIEW_PRICING.proLimit}回/日`,
-      features: ['AI記事生成', 'スキル選択', '校正・タイトル提案', 'ファクトチェック', '翻訳（10言語）', 'SNS投稿文生成', '優先サポート', '無制限の履歴保存'],
+      features: ['AI記事生成', 'スキル選択', '校正・タイトル提案', 'ファクトチェック', '翻訳（10言語）', 'SNS投稿文生成', 'データ保存（30日間）', '優先サポート'],
       missingFeatures: ['大規模チーム運用', '専任サポート'],
     },
     LIGHT: {
@@ -109,13 +109,13 @@ export default function InterviewSettingsPage() {
       transcription: `${INTERVIEW_PRICING.transcriptionMinutes.light}分/月`, upload: '1GB',
       generation: `${INTERVIEW_PRICING.lightLimit}回/日`,
       features: ['AI記事生成', 'スキル選択', 'ファクトチェック', '翻訳', 'SNS投稿文生成', '30日間の履歴保存'],
-      missingFeatures: ['優先サポート', '無制限の履歴保存'],
+      missingFeatures: ['優先サポート'],
     },
     ENTERPRISE: {
       label: 'ENTERPRISE プラン', badge: 'ENTERPRISE', badgeColor: 'bg-slate-900 text-white',
       transcription: `${INTERVIEW_PRICING.transcriptionMinutes.enterprise}分/月`, upload: '5GB',
       generation: `${INTERVIEW_PRICING.enterpriseLimit}回/日`,
-      features: ['全機能利用可能', '大規模チーム運用', '専任サポート', '無制限の履歴保存'],
+      features: ['全機能利用可能', '大規模チーム運用', 'データ保存（30日間）', '専任サポート'],
       missingFeatures: [],
     },
     GUEST: {
