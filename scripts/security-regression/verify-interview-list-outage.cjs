@@ -38,7 +38,7 @@ function route(file, unavailable) {
     const outage = await route(file, true).GET({});
     assert.equal(outage.status, 503);
     assert.equal(outage.body.success, false);
-    const empty = await route(file, false).GET({});
+    const empty = await route(file, false).GET({ nextUrl: new URL('https://test.example/api/interview/projects') });
     assert.equal(empty.status, 200);
     assert.equal(empty.body.success, true);
     assert.equal(empty.body[key].length, 0);

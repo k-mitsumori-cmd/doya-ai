@@ -60,16 +60,15 @@ export default function InterviewSettingsPage() {
   const isLoggedIn = !!session?.user
 
   useEffect(() => {
-    fetch('/api/interview/projects')
+    fetch('/api/interview/projects?includeStats=1')
       .then(async (response) => {
         const data = await response.json().catch(() => null)
-        if (!response.ok || !data?.success || !Array.isArray(data.projects)) throw new Error('Interview stats unavailable')
+        if (!response.ok || !data?.success || !data.stats || !Number.isSafeInteger(data.stats.totalProjects) || !Number.isSafeInteger(data.stats.totalDrafts) || !Number.isSafeInteger(data.stats.totalMaterials)) throw new Error('Interview stats unavailable')
         if (data.success) {
-          const pjs = data.projects || []
           setStats({
-            totalProjects: pjs.length,
-            totalDrafts: pjs.reduce((sum: number, p: any) => sum + (p.draftCount || p._count?.drafts || 0), 0),
-            totalMaterials: pjs.reduce((sum: number, p: any) => sum + (p.materialCount || p._count?.materials || 0), 0),
+            totalProjects: data.stats.totalProjects,
+            totalDrafts: data.stats.totalDrafts,
+            totalMaterials: data.stats.totalMaterials,
             storageUsedMb: 0,
           })
         }

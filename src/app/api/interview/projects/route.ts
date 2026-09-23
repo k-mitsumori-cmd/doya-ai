@@ -27,8 +27,9 @@ export async function GET(req: NextRequest) {
     const { userId } = await getInterviewUser()
     const guestId = !userId ? getGuestIdFromRequest(req) : null
 
+    const includeStats = req.nextUrl.searchParams.get('includeStats') === '1'
     if (!userId && !guestId) {
-      return NextResponse.json({ success: true, projects: [] })
+      return NextResponse.json({ success: true, projects: [], ...(includeStats ? { stats: { totalProjects: 0, totalDrafts: 0, totalMaterials: 0 } } : {}) })
     }
 
     const where = userId
@@ -60,8 +61,15 @@ export async function GET(req: NextRequest) {
       },
     })
 
+    const stats = includeStats ? await Promise.all([
+      prisma.interviewProject.count({ where }),
+      prisma.interviewDraft.count({ where: { project: { is: where } } }),
+      prisma.interviewMaterial.count({ where: { project: { is: where } } }),
+    ]) : null
+
     return NextResponse.json({
       success: true,
+      ...(stats ? { stats: { totalProjects: stats[0], totalDrafts: stats[1], totalMaterials: stats[2] } } : {}),
       projects: projects.map((p) => {
         const latestDraft = p.drafts?.[0]
         const latestTranscription = p.transcriptions?.[0]
