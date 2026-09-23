@@ -43,6 +43,7 @@ interface TranscriptionProgress {
   fileSize: number | null
   status: 'starting' | 'processing' | 'completed' | 'error'
   error?: string
+  limitReached?: boolean
   durationMinutes?: number | null
 }
 
@@ -476,9 +477,15 @@ export default function MaterialsPage() {
         setTranscribing((prev) => {
           const next = new Map(prev)
           const info = next.get(materialId)
-          if (info) next.set(materialId, { ...info, status: 'error', error: data.error || 'ゲストの文字起こし上限（5分）に達しました。無料登録で月30分に拡大できます。' })
+          if (info) next.set(materialId, { ...info, status: 'error', limitReached: true,
+            error: data.error || '文字起こしの上限に達しました。プランを確認してください。' })
           return next
         })
+        return
+      }
+
+      if (data.success && data.status === 'PROCESSING') {
+        await fetchProject()
         return
       }
 
@@ -1043,7 +1050,7 @@ export default function MaterialsPage() {
                       <span className="material-symbols-outlined text-base flex-shrink-0 mt-0.5 sm:mt-0">error</span>
                       <p className="break-words">{info.error}</p>
                     </div>
-                    <button
+                    {!info.limitReached && <button
                       onClick={() => {
                         // 進捗パネルから削除して再実行
                         setTranscribing((prev) => {
@@ -1057,7 +1064,15 @@ export default function MaterialsPage() {
                     >
                       <span className="material-symbols-outlined text-sm">refresh</span>
                       再試行
-                    </button>
+                    </button>}
+                    {info.limitReached && (
+                      <button
+                        onClick={() => router.push('/interview/pricing')}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-[#7f19e6] text-white rounded-lg text-xs font-medium hover:bg-[#6b12c9] transition-colors shadow-sm shrink-0 self-start sm:self-auto"
+                      >
+                        プランと無料体験を見る
+                      </button>
+                    )}
                   </div>
                 )}
 

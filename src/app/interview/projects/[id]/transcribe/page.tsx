@@ -62,6 +62,7 @@ export default function TranscribePage() {
   const [elapsed, setElapsed] = useState(0)
   const [segments, setSegments] = useState<TranscriptionSegment[]>([])
   const [errorMessage, setErrorMessage] = useState('')
+  const [limitReached, setLimitReached] = useState(false)
   const [transcriptionId, setTranscriptionId] = useState<string | null>(null)
   const [durationMinutes, setDurationMinutes] = useState<number | null>(null)
   const [fullText, setFullText] = useState('')
@@ -218,6 +219,7 @@ export default function TranscribePage() {
       // 非再試行エラー — 最終エラーとして表示、再接続しない
       isCompleteRef.current = true
       setErrorMessage(data.message || '文字起こしに失敗しました')
+      setLimitReached(data.code === 'TRANSCRIPTION_LIMIT' || data.limitExceeded === true)
       setCurrentStep('error')
       eventSource.close()
     })
@@ -699,13 +701,22 @@ export default function TranscribePage() {
               </div>
             </div>
             <div className="flex gap-3">
-              <button
-                onClick={() => window.location.reload()}
-                className="flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-white bg-[#7f19e6] hover:bg-[#6b12c9] transition-colors"
-              >
-                <span className="material-symbols-outlined text-[18px]">refresh</span>
-                もう一度試す
-              </button>
+              {limitReached ? (
+                <button
+                  onClick={() => router.push('/interview/pricing')}
+                  className="flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-white bg-[#7f19e6] hover:bg-[#6b12c9] transition-colors"
+                >
+                  プランと無料体験を見る
+                </button>
+              ) : (
+                <button
+                  onClick={() => window.location.reload()}
+                  className="flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-white bg-[#7f19e6] hover:bg-[#6b12c9] transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[18px]">refresh</span>
+                  もう一度試す
+                </button>
+              )}
               <button
                 onClick={() => router.push(`/interview/projects/${projectId}`)}
                 className="flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
