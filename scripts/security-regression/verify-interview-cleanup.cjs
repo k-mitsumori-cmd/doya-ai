@@ -41,15 +41,18 @@ const route = load('src/app/api/interview/cleanup/route.ts', {
   'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
   '@/lib/prisma': { __esModule: true, default: prisma },
 }, { process: { env: { CRON_SECRET: 'synthetic-secret' } } })
-let projectFileFailure = true, projectDeleteCalls = 0
+let queueFailure = true, projectDeleteCalls = 0, queuedCalls = 0
+const deleteTx = {
+  systemSetting: { create: async () => { queuedCalls++; if (queueFailure) throw Error('queue unavailable') } },
+  interviewProject: { delete: async () => { projectDeleteCalls++; return {} } },
+}
 const projectRoute = load('src/app/api/interview/projects/[id]/route.ts', {
   'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
   '@/lib/prisma': { prisma: { interviewProject: {
-    findUnique: async () => ({ id: 'old-project', userId: 'owner', materials: [{ filePath: 'private/customer/file.mp3' }] }),
-    delete: async () => { projectDeleteCalls++; return {} },
-  } } },
+    findUnique: async () => ({ id: 'old-project', userId: 'owner', guestId: null }),
+  }, $transaction: async fn => fn(deleteTx) } },
   '@/lib/interview/access': { requireDatabase: () => null, getInterviewUser: async () => ({ userId: 'owner' }), checkOwnership: () => null },
-  '@/lib/interview/storage': { deleteFile: async () => { if (projectFileFailure) throw Error('storage failed') } },
+  '@/lib/interview/storage-purge-queue': { enqueueInterviewProjectStoragePurge: async (tx, project) => { assert.equal(tx, deleteTx); assert.equal(project.id, 'old-project'); await tx.systemSetting.create() } },
 })
 const request = (url, authorization) => ({ nextUrl: new URL(url), headers: { get: name => name === 'authorization' ? authorization : null } })
 
@@ -67,8 +70,11 @@ const request = (url, authorization) => ({ nextUrl: new URL(url), headers: { get
   const ctx = { params: Promise.resolve({ id: 'old-project' }) }
   assert.equal((await projectRoute.DELETE({}, ctx)).status, 500)
   assert.equal(projectDeleteCalls, 0)
-  projectFileFailure = false
-  assert.equal((await projectRoute.DELETE({}, ctx)).status, 200)
+  queueFailure = false
+  const deleted = await projectRoute.DELETE({}, ctx)
+  assert.equal(deleted.status, 200)
+  assert.equal(deleted.body.fileCleanupPending, true)
+  assert.equal(queuedCalls, 2)
   assert.equal(projectDeleteCalls, 1)
   const base = 'https://test.example/api/interview/cleanup'
   assert.equal((await route.POST(request(base + '?dryRun=1', 'Bearer wrong'))).status, 401)

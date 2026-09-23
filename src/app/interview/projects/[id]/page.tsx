@@ -646,7 +646,7 @@ export default function ProjectOverviewPage() {
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-5">
               <p className="text-xs text-red-600 flex items-start gap-2">
                 <span className="material-symbols-outlined text-sm mt-0.5">error</span>
-                <span>全ての素材・文字起こし・記事ドラフトも削除されます。この操作は取り消せません。</span>
+                <span>記事などのデータは削除され、保管ファイルも順次削除されます。この操作は取り消せません。</span>
               </p>
             </div>
             <div className="flex gap-3">

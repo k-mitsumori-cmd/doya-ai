@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
-import { deleteFile } from '@/lib/interview/storage'
+import { enqueueInterviewProjectStoragePurge } from '@/lib/interview/storage-purge-queue'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -204,9 +204,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
     const project = await prisma.interviewProject.findUnique({
       where: { id },
-      include: {
-        materials: { select: { filePath: true } },
-      },
+      select: { id: true, userId: true, guestId: true },
     })
 
     if (!project) {
@@ -216,20 +214,16 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     const ownerErr = checkOwnership(project, userId, guestId)
     if (ownerErr) return ownerErr
 
-    // ストレージからファイル削除
-    for (const m of project.materials) {
-      if (m.filePath) {
-        await deleteFile(m.filePath)
-      }
-    }
+    // 再試行可能なストレージ削除記録とDB削除を同じトランザクションで確定する。
+    await prisma.$transaction(async tx => {
+      await enqueueInterviewProjectStoragePurge(tx, project)
+      await tx.interviewProject.delete({ where: { id } })
+    })
 
-    // DB削除 (CASCADE で materials, transcriptions, drafts, reviews も削除)
-    await prisma.interviewProject.delete({ where: { id } })
-
-    return NextResponse.json({ success: true })
-  } catch (e: any) {
+    return NextResponse.json({ success: true, fileCleanupPending: true })
+  } catch {
     return NextResponse.json(
-      { success: false, error: e?.message || '削除に失敗しました' },
+      { success: false, error: '削除に失敗しました' },
       { status: 500 }
     )
   }

@@ -15,6 +15,11 @@ if (interviewCleanup.error || interviewCleanup.status !== 0) {
   console.error('Security regression failed: verify-interview-cleanup.cjs');
   process.exit(1);
 }
+const interviewStorageQueue = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-storage-purge-queue.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewStorageQueue.error || interviewStorageQueue.status !== 0) {
+  console.error('Security regression failed: verify-interview-storage-purge-queue.cjs');
+  process.exit(1);
+}
 const interviewArticleLimit = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-article-limit.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewArticleLimit.error || interviewArticleLimit.status !== 0) {
   console.error('Security regression failed: verify-interview-article-limit.cjs');

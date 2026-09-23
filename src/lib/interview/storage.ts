@@ -177,6 +177,27 @@ export async function deleteFile(storagePath: string): Promise<void> {
   }
 }
 
+/** Delete one bounded batch under a project-owned namespace. Retry by listing from offset zero. */
+export async function purgeInterviewProjectStorageBatch(prefix: string): Promise<boolean> {
+  if (!/^[A-Za-z0-9_-]{1,128}\/[A-Za-z0-9_-]{1,128}$/.test(prefix)) {
+    throw new Error('不正なストレージ識別子です')
+  }
+  const bucket = getSupabaseAdmin().storage
+  const { data: details, error: bucketError } = await bucket.getBucket(BUCKET_NAME)
+  if (bucketError || !details || details.public) throw new Error('非公開バケットを確認できません')
+  const files = bucket.from(BUCKET_NAME)
+  const { data, error } = await files.list(prefix, { limit: 100, offset: 0 })
+  if (error || !data) throw new Error('ストレージ一覧を取得できません')
+  if (data.length === 0) return true
+  const paths = data.map(item => {
+    if (!item.id || !/^[A-Za-z0-9._-]{1,255}$/.test(item.name)) throw new Error('予期しないストレージ項目です')
+    return `${prefix}/${item.name}`
+  })
+  const removed = await files.remove(paths)
+  if (removed.error) throw new Error('ストレージ削除に失敗しました')
+  return false
+}
+
 /**
  * ストレージパスの生成
  * 形式: {userId|guest_{guestId}}/{projectId}/{timestamp}_{fileName}
