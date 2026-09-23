@@ -79,14 +79,14 @@ async function main(){
     ['zero arguments',[],0],['empty values',[null,undefined,' \n'],0],['empty Error is still an error',[new Error('')],1],['object is still reported',[{private:'private-canary'}],1],['custom Error name redacted',[Object.assign(new Error('private-canary'),{name:'private-canary'})],1],
     ['warning with separate error',['DeprecationWarning: old API',new Error('real failure')],1],['mention within error',['Failure reading DeprecationWarning: example'],1]]){
     const logs=[],diagnostics=[],notifications=[],tasks=[];
-    const runtime=load('src/lib/runtime-alert.ts',{'./slack-voice':{voicePayload:x=>x},'@vercel/functions':{waitUntil:p=>tasks.push(p)},'./alert':{getAlertWebhook:async()=>'https://mock.invalid'}},{VERCEL_ENV:'production'},{console:{error:(...a)=>logs.push(a),warn:(...a)=>diagnostics.push(a)},fetch:async(u,o)=>{notifications.push(o.body);return {ok:true};}});
+    const runtime=load('src/lib/runtime-alert.ts',{'./slack-voice':{voicePayload:x=>x},'@vercel/functions':{waitUntil:p=>tasks.push(p)},'./alert':{getAlertWebhook:async()=>'https://mock.invalid'},'./runtime-alert-limit':{claimRuntimeAlert:async()=>({state:'allowed'}),releaseRuntimeAlertClaim:async()=>{}}},{VERCEL_ENV:'production'},{console:{error:(...a)=>logs.push(a),warn:(...a)=>diagnostics.push(a)},fetch:async(u,o)=>{notifications.push(o.body);return {ok:true};}});
     runtime.exports.installRuntimeAlerts();runtime.ctx.console.error(...args);await Promise.all(tasks);
     assert.equal(logs.length,1);assert.equal(notifications.length,count);assert.equal(diagnostics.length,count);assert(!JSON.stringify(notifications).includes('private-canary'));assert(!JSON.stringify(diagnostics).includes('private-canary'));if(count){const d=diagnostics[0][1];assert.match(d.incidentId,/^[0-9a-f-]{36}$/);assert.equal(d.argumentCount,args.length);assert(notifications[0].includes(d.incidentId));assert.equal(d.errorTypes.length,args.filter(x=>x instanceof Error).length);}pass(name);
   }
 
   function tracedRuntime(env={},hook='https://mock.invalid',ok=true,DateImpl=Date,onHook=()=>{}) {
     const diagnostics=[],sends=[],logs=[],tasks=[];
-    const mod=load('src/lib/runtime-alert.ts',{'./slack-voice':{voicePayload:x=>x},'@vercel/functions':{waitUntil:p=>tasks.push(p)},'./alert':{getAlertWebhook:async()=>{onHook();return hook}}},{VERCEL_ENV:'production',...env},{Date:DateImpl,console:{error:(...a)=>logs.push(a),warn:(...a)=>diagnostics.push(a)},fetch:async(u,o)=>{sends.push(JSON.parse(o.body));return {ok,status:ok?200:503}}});
+    const mod=load('src/lib/runtime-alert.ts',{'./slack-voice':{voicePayload:x=>x},'@vercel/functions':{waitUntil:p=>tasks.push(p)},'./alert':{getAlertWebhook:async()=>{onHook();return hook}},'./runtime-alert-limit':{claimRuntimeAlert:async()=>({state:'allowed'}),releaseRuntimeAlertClaim:async()=>{}}},{VERCEL_ENV:'production',...env},{Date:DateImpl,console:{error:(...a)=>logs.push(a),warn:(...a)=>diagnostics.push(a)},fetch:async(u,o)=>{sends.push(JSON.parse(o.body));return {ok,status:ok?200:503}}});
     return {...mod,diagnostics,sends,logs,tasks};
   }
   const trace=tracedRuntime({VERCEL_URL:'doya-synthetic.vercel.app',VERCEL_DEPLOYMENT_ID:'dpl_Synthetic123'});
@@ -100,6 +100,44 @@ async function main(){
   class WarningClock extends Date {constructor(...args){super(...(args.length?args:[warningClock]));}static now(){return warningClock}}
   const delayed=tracedRuntime({},'https://mock.invalid',true,WarningClock,()=>{warningClock+=120000});await delayed.exports.reportRuntimeFailure('fixed-source');assert.equal(delayed.diagnostics[0][1].occurredAt,new Date(occurredAt).toISOString());assert(delayed.sends[0].text.includes(new Date(occurredAt).toLocaleString('ja-JP',{timeZone:'Asia/Tokyo'})));pass('Occurrence time stays fixed while webhook discovery is delayed');
   const emptyInternal=tracedRuntime();emptyInternal.exports.installRuntimeAlerts();await new Promise(resolve=>{process.nextTick(emptyInternal.ctx.console.error);process.nextTick(resolve)});await Promise.all(emptyInternal.tasks);assert.equal(emptyInternal.logs.length,1);assert.equal(emptyInternal.sends.length,0);assert.equal(emptyInternal.diagnostics.length,0);pass('Empty internal callback preserves original log without sending an unknown-source alert');
+
+  // Server alerts need the same atomic budget across isolated Vercel instances.
+  const serverRows=new Map();let serverClock=Date.parse('2026-09-23T11:08:45Z');
+  class ServerClock extends Date {static now(){return serverClock}}
+  const serverPrisma={
+    $queryRaw:async(sql,...params)=>{
+      const statement=sql.join('?');assert(statement.includes('ON CONFLICT ("key") DO UPDATE'));assert(statement.includes('WHEN "SystemSetting"."value" ~'));
+      const [,key,value,now]=params;assert(/^server-error:v1:[a-f0-9]{24}$/.test(key));
+      if(Number(serverRows.get(key))>now)return [];
+      serverRows.set(key,value);return [{key}];
+    },
+    $executeRaw:async(sql,...params)=>{assert(sql.join('?').includes('DELETE FROM "SystemSetting"'));const [key,value]=params;if(serverRows.get(key)===value){serverRows.delete(key);return 1}return 0}
+  };
+  const makeServerLimiter=()=>load('src/lib/runtime-alert-limit.ts',{'./prisma':{prisma:serverPrisma}},{},{Date:ServerClock}).exports;
+  const serverSignature='a'.repeat(24);
+  const serverClaims=await Promise.all(Array.from({length:30},()=>makeServerLimiter().claimRuntimeAlert(serverSignature)));
+  assert.equal(serverClaims.filter(x=>x.state==='allowed').length,1);assert.equal(serverClaims.filter(x=>x.state==='limited').length,29);pass('30 server instances share one atomic alert claim');
+  assert.equal((await makeServerLimiter().claimRuntimeAlert('bad')).state,'unavailable');pass('malformed server fingerprint rejected');
+  serverClock+=600001;
+  const renewed=await makeServerLimiter().claimRuntimeAlert(serverSignature);assert.equal(renewed.state,'allowed');
+  await makeServerLimiter().releaseRuntimeAlertClaim(serverClaims.find(x=>x.state==='allowed'));
+  assert.equal((await makeServerLimiter().claimRuntimeAlert(serverSignature)).state,'limited');
+  await makeServerLimiter().releaseRuntimeAlertClaim(renewed);
+  assert.equal((await makeServerLimiter().claimRuntimeAlert(serverSignature)).state,'allowed');pass('expiry and exact-claim release protect a newer alert');
+  const serverWarnings=[];
+  const unavailableServer=load('src/lib/runtime-alert-limit.ts',{'./prisma':{prisma:{$queryRaw:async()=>{throw Error('private-canary')}}}},{},{console:{warn:(...args)=>serverWarnings.push(args)}}).exports;
+  assert.equal((await unavailableServer.claimRuntimeAlert('b'.repeat(24))).state,'unavailable');assert(!JSON.stringify(serverWarnings).includes('private-canary'));pass('server throttle outage does not leak DB error');
+  const sharedServerNotifications=[],sharedServerClaims=new Set();
+  const runServerInstance=async message=>{
+    const tasks=[];
+    const runtime=load('src/lib/runtime-alert.ts',{
+      './slack-voice':{voicePayload:x=>x},'@vercel/functions':{waitUntil:p=>tasks.push(p)},'./alert':{getAlertWebhook:async()=>'https://mock.invalid'},
+      './runtime-alert-limit':{claimRuntimeAlert:async signature=>{if(sharedServerClaims.has(signature))return {state:'limited'};sharedServerClaims.add(signature);return {state:'allowed'}},releaseRuntimeAlertClaim:async()=>{}}
+    },{VERCEL_ENV:'production',NEXTAUTH_SECRET:'test-secret'},{console:{error(){},warn(){}},fetch:async(u,o)=>{sharedServerNotifications.push(o.body);return {ok:true}}});
+    runtime.exports.installRuntimeAlerts();runtime.ctx.console.error(message);await Promise.all(tasks);
+  };
+  await Promise.all(Array.from({length:11},(_,i)=>runServerInstance(`private-canary ${i}`)));
+  assert.equal(sharedServerNotifications.length,1);assert.equal(sharedServerClaims.size,1);assert(!JSON.stringify(sharedServerNotifications).includes('private-canary'));pass('generic source burst is one private-safe alert and one DB key across 11 instances');
 
   let writes=0;
   const ops=load('src/app/api/operations/configure/route.ts',{'next/server':responseMock,'@/lib/operational-json':json,'@/lib/service-operations-data':{OPS_SERVICES:[{key:'doya'}]},'@/lib/service-operations-state':{readOps:async()=>null,writeOps:async()=>writes++,sendOps:async()=>{throw Error('Unexpected send');}},'@/lib/service-operations-links':{safeLandingUrl:()=>true}},{SLACK_OPS_SECRET:'test-ops'}).exports;

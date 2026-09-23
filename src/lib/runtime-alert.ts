@@ -1,7 +1,7 @@
 import { voicePayload } from './slack-voice';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { waitUntil } from '@vercel/functions';
-import { randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 
 const sending = new AsyncLocalStorage<boolean>();
 const recent = new Map<string, number>();
@@ -30,6 +30,26 @@ function errorTypes(args: unknown[]): string[] {
   });
 }
 
+function errorFingerprint(source: string, args: unknown[]): string {
+  const secret = process.env.NEXTAUTH_SECRET;
+  if (!secret) return createHash('sha256').update(source).digest('hex').slice(0, 24);
+  const normalize = (value: unknown): string => {
+    let raw = '';
+    try {
+      if (typeof value === 'string') raw = value;
+      else if (value instanceof Error) raw = `${value.name}:${value.message}`;
+      else return typeof value;
+    } catch { return 'unreadable'; }
+    return raw.slice(0, 512)
+      .replace(/https?:\/\/\S+/gi, '[url]')
+      .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi, '[email]')
+      .replace(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi, '[id]')
+      .replace(/\b\d+\b/g, '[number]');
+  };
+  return createHmac('sha256', secret).update(source).update('\0')
+    .update(args.slice(0, 3).map(normalize).join('\0')).digest('hex').slice(0, 24);
+}
+
 /** Node.js deprecations are logged for maintenance, without paging operators. */
 function isDeprecationWarning(args: unknown[]): boolean {
   // Do not hide a separate error attached to a warning message.
@@ -43,17 +63,38 @@ function isDeprecationWarning(args: unknown[]): boolean {
 }
 
 /** Forward operational failures only. Never serialize console arguments or user input. */
-export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[] } = {}): Promise<void> {
+export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string } = {}): Promise<void> {
   if (process.env.VERCEL_ENV !== 'production') return;
   const key = source.replace(/[<>&]/g, '').slice(0, 180);
+  const signature = options.signature && /^[a-f0-9]{24}$/.test(options.signature)
+    ? options.signature : createHash('sha256').update(key).digest('hex').slice(0, 24);
+  // Source-level budget keeps the DB key set bounded by call sites. The finer
+  // message fingerprint is diagnostic only; it never contains the raw message.
+  const budgetKey = createHash('sha256').update(key).digest('hex').slice(0, 24);
+  const localKey = options.clientReported ? key : budgetKey;
   const now = Date.now();
-  if (now - (recent.get(key) ?? 0) < 600000) return;
+  if (now - (recent.get(localKey) ?? 0) < 600000) return;
   if (recent.size >= 200) recent.delete(recent.keys().next().value!);
-  recent.set(key, now);
+  recent.set(localKey, now);
   await sending.run(true, async () => {
+    let sharedClaim: import('./runtime-alert-limit').RuntimeAlertClaim | undefined;
     try {
+      if (!options.clientReported) {
+        try {
+          const { claimRuntimeAlert } = await import('./runtime-alert-limit');
+          sharedClaim = await claimRuntimeAlert(budgetKey);
+          if (sharedClaim.state === 'limited') return;
+        } catch { /* DB throttle failure must not hide a server error. */ }
+      }
       const url = await (await import('./alert')).getAlertWebhook();
-      if (!url) { recent.delete(key); originalError('[runtime-alert] destination missing'); return; }
+      if (!url) {
+        recent.delete(localKey);
+        if (sharedClaim?.state === 'allowed') {
+          try { await (await import('./runtime-alert-limit')).releaseRuntimeAlertClaim(sharedClaim); } catch { /* Keep the original delivery failure visible. */ }
+        }
+        originalError('[runtime-alert] destination missing');
+        return;
+      }
       const incidentId = randomUUID();
       const deployment = deploymentDetails();
       const argumentCount = Number.isSafeInteger(options.argumentCount) && options.argumentCount! >= 0 ? options.argumentCount : 0;
@@ -61,7 +102,7 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
       // This line contains no console arguments, error messages, stacks or request data.
       // It is written only for an actual delivery attempt, after deduplication.
       console.warn('[runtime-alert] delivery', {
-        incidentId, source: key, argumentCount, errorTypes: types,
+        incidentId, source: key, fingerprint: signature, argumentCount, errorTypes: types,
         occurredAt: new Date(now).toISOString(),
         ...(deployment.host ? { deploymentHost: deployment.host } : {}),
         ...(deployment.id ? { deploymentId: deployment.id } : {}),
@@ -75,14 +116,21 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
           `発生箇所：${key}`,
           `発生日時：${new Date(now).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}（日本時間）`,
           `照合ID：${incidentId}`,
+          `照合指紋：${signature}`,
           ...(deployment.host ? [`配信元：https://${deployment.host}`] : []),
           ...(deployment.id ? [`デプロイID：${deployment.id}`] : []),
           '確認すること：この時刻のサーバーログを確認し、失敗した処理の原因を調べてください。',
-          options.clientReported ? '端末報告は種類ごとに全実行環境で10分間まとめます。' : '同じ箇所の通知は、この実行環境では10分間まとめます。'
+          options.clientReported ? '端末報告は種類ごとに全実行環境で10分間まとめます。' : '同じ発生箇所の通知は、全実行環境で10分間まとめます。'
         ].join('\n') })), signal: AbortSignal.timeout(5000),
       });
       if (!response.ok) throw new Error(`Slack HTTP ${response.status}`);
-    } catch { recent.delete(key); originalError('[runtime-alert] Slack delivery failed'); }
+    } catch {
+      recent.delete(localKey);
+      if (sharedClaim?.state === 'allowed') {
+        try { await (await import('./runtime-alert-limit')).releaseRuntimeAlertClaim(sharedClaim); } catch { /* Keep the original delivery failure visible. */ }
+      }
+      originalError('[runtime-alert] Slack delivery failed');
+    }
   });
 }
 
@@ -95,7 +143,7 @@ export function installRuntimeAlerts(): void {
     // Capture our own call site; the original error may contain private text.
     const frame = new Error().stack?.split('\n').slice(2).find(line => !line.includes('node:internal'));
     const source = frame?.match(/([^/\s()]+\.[cm]?[jt]s):\d+:\d+/)?.[0] ?? 'サーバー処理（詳細はログ）';
-    const task = reportRuntimeFailure(source, { argumentCount: args.length, errorTypes: errorTypes(args) });
+    const task = reportRuntimeFailure(source, { argumentCount: args.length, errorTypes: errorTypes(args), signature: errorFingerprint(source, args) });
     try { waitUntil(task); } catch { void task; }
   };
 }
