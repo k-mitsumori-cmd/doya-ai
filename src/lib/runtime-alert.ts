@@ -91,7 +91,7 @@ function isDeprecationWarning(args: unknown[]): boolean {
 }
 
 /** Forward operational failures only. Never serialize console arguments or user input. */
-export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string; firstArgKind?: string; family?: string; stackState?: string } = {}): Promise<void> {
+export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string; firstArgKind?: string; family?: string; stackState?: string; stackLineCount?: number; stackHasLocation?: boolean; stackTraceLimit?: number } = {}): Promise<void> {
   if (process.env.VERCEL_ENV !== 'production') return;
   const key = source.replace(/[<>&]/g, '').slice(0, 180);
   const signature = options.signature && /^[a-f0-9]{24}$/.test(options.signature)
@@ -130,10 +130,13 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
       const firstArgKind = ['string', 'number', 'boolean', 'bigint', 'symbol', 'function', 'undefined', 'null', 'error', 'object'].includes(options.firstArgKind ?? '') ? options.firstArgKind : 'unknown';
       const family = ['next-auth', 'prisma', 'supabase', 'warning', 'unclassified'].includes(options.family ?? '') ? options.family : 'unclassified';
       const stackState = ['missing', 'unparsed', 'parsed'].includes(options.stackState ?? '') ? options.stackState : 'unknown';
+      const stackLineCount = Number.isSafeInteger(options.stackLineCount) ? Math.max(0, Math.min(20, options.stackLineCount!)) : 0;
+      const stackTraceLimit = Number.isSafeInteger(options.stackTraceLimit) ? Math.max(0, Math.min(100, options.stackTraceLimit!)) : -1;
       // This line contains no console arguments, error messages, stacks or request data.
       // It is written only for an actual delivery attempt, after deduplication.
       console.warn('[runtime-alert] delivery', {
-        incidentId, source: key, fingerprint: signature, argumentCount, firstArgKind, family, stackState, errorTypes: types,
+        incidentId, source: key, fingerprint: signature, argumentCount, firstArgKind, family, stackState,
+        stackLineCount, stackHasLocation: options.stackHasLocation === true, stackTraceLimit, errorTypes: types,
         occurredAt: new Date(now).toISOString(),
         ...(deployment.host ? { deploymentHost: deployment.host } : {}),
         ...(deployment.id ? { deploymentId: deployment.id } : {}),
@@ -175,7 +178,13 @@ export function installRuntimeAlerts(): void {
     const stack = new Error().stack;
     const source = safeRuntimeSource(stack);
     const stackState = !stack ? 'missing' : source === 'サーバー処理（詳細はログ）' ? 'unparsed' : 'parsed';
-    const task = reportRuntimeFailure(source, { argumentCount: args.length, firstArgKind: argumentKind(args[0]), family: errorFamily(args), stackState, errorTypes: errorTypes(args), signature: errorFingerprint(source, args) });
+    const task = reportRuntimeFailure(source, {
+      argumentCount: args.length, firstArgKind: argumentKind(args[0]), family: errorFamily(args), stackState,
+      stackLineCount: stack?.split('\n').length ?? 0,
+      stackHasLocation: /:\d{1,7}:\d{1,7}/.test(stack ?? ''),
+      stackTraceLimit: (Error as ErrorConstructor & { stackTraceLimit?: number }).stackTraceLimit,
+      errorTypes: errorTypes(args), signature: errorFingerprint(source, args),
+    });
     try { waitUntil(task); } catch { void task; }
   };
 }
