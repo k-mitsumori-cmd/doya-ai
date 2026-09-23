@@ -12,10 +12,7 @@ import {
   getGuestIdFromRequest,
   ensureGuestId,
   setGuestCookie,
-  isTrialActive,
-  interviewDailyLimit,
   interviewGuestTotalLimit,
-  jstDayRange,
   requireDatabase,
 } from '@/lib/interview/access'
 
@@ -109,7 +106,7 @@ export async function POST(req: NextRequest) {
   if (dbErr) return dbErr
 
   try {
-    const { userId, plan, firstLoginAt } = await getInterviewUser()
+    const { userId } = await getInterviewUser()
     let guestId = !userId ? getGuestIdFromRequest(req) : null
 
     // ゲストIDがない場合は新規発行
@@ -117,34 +114,15 @@ export async function POST(req: NextRequest) {
       guestId = ensureGuestId()
     }
 
-    // 利用制限チェック
-    const trialActive = !!userId && isTrialActive(firstLoginAt)
-    if (!trialActive) {
-      if (userId) {
-        const limit = interviewDailyLimit(plan)
-        if (limit >= 0) {
-          const { start, end } = jstDayRange()
-          const used = await prisma.interviewProject.count({
-            where: { userId, createdAt: { gte: start, lt: end } },
-          })
-          if (used >= limit) {
-            return NextResponse.json(
-              { success: false, error: `本日のプロジェクト作成上限 (${limit}件/日) に達しました` },
-              { status: 429 }
-            )
-          }
-        }
-      } else {
-        const limit = interviewGuestTotalLimit()
-        const used = await prisma.interviewProject.count({
-          where: { guestId: guestId! },
-        })
-        if (used >= limit) {
-          return NextResponse.json(
-            { success: false, error: 'ゲスト利用の上限に達しました。ログインすると追加利用できます。', code: 'GUEST_LIMIT' },
-            { status: 429 }
-          )
-        }
+    // 日次の生成枠は記事保存時に消費する。プロジェクト作成は枠に含めない。
+    if (!userId) {
+      const limit = interviewGuestTotalLimit()
+      const used = await prisma.interviewProject.count({ where: { guestId: guestId! } })
+      if (used >= limit) {
+        return NextResponse.json(
+          { success: false, error: 'ゲスト利用の上限に達しました。ログインすると追加利用できます。', code: 'GUEST_LIMIT' },
+          { status: 429 }
+        )
       }
     }
 

@@ -21,8 +21,10 @@ export async function getInterviewUser(): Promise<{
   const user: any = session?.user || null
   const userId = String(user?.id || '').trim() || null
 
-  let plan: InterviewPlanCode = 'FREE'
-  if (user?.interviewPlan) {
+  let plan: InterviewPlanCode = userId ? 'FREE' : 'GUEST'
+  if (!userId) {
+    plan = 'GUEST'
+  } else if (user?.interviewPlan) {
     plan = normalizePlan(user.interviewPlan)
   } else if (user?.plan) {
     plan = normalizePlan(user.plan)
@@ -68,37 +70,11 @@ export function setGuestCookie(res: NextResponse, guestId: string): void {
  */
 export function normalizePlan(raw: any): InterviewPlanCode {
   const s = String(raw || '').toUpperCase().trim()
-  if (s === 'PRO') return 'PRO'
-  if (s === 'ENTERPRISE') return 'ENTERPRISE'
-  if (s === 'LIGHT') return 'LIGHT'
-  if (s === 'FREE') return 'FREE'
-  return 'GUEST'
-}
-
-/**
- * 1時間トライアルが有効か判定
- */
-export function isTrialActive(firstLoginAtIso: string | null | undefined): boolean {
-  const iso = String(firstLoginAtIso || '').trim()
-  if (!iso) return false
-  const start = Date.parse(iso)
-  if (!Number.isFinite(start)) return false
-  return Date.now() < start + 60 * 60 * 1000
-}
-
-/**
- * 日次利用上限（プロジェクト作成数/日）
- * -1 = 無制限
- */
-export function interviewDailyLimit(plan: InterviewPlanCode): number {
-  switch (plan) {
-    case 'ENTERPRISE': return -1
-    case 'PRO':        return 30
-    case 'LIGHT':      return 10
-    case 'FREE':       return 5
-    case 'GUEST':      return 3
-    default:           return 3
-  }
+  if (s.includes('ENTERPRISE')) return 'ENTERPRISE'
+  if (['PRO', 'BASIC', 'STARTER', 'BUSINESS', 'BUNDLE'].some((tier) => s.includes(tier))) return 'PRO'
+  if (s.includes('LIGHT')) return 'LIGHT'
+  if (s === 'GUEST') return 'GUEST'
+  return 'FREE'
 }
 
 /**
@@ -156,18 +132,4 @@ export function requireDatabase(): NextResponse | null {
     )
   }
   return null
-}
-
-/**
- * JST基準の日次範囲 (既存のseoAccessと同じロジック)
- */
-export function jstDayRange(now = new Date()): { start: Date; end: Date } {
-  const ms = now.getTime()
-  const jst = new Date(ms + 9 * 60 * 60 * 1000)
-  const startJst = new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), jst.getUTCDate(), 0, 0, 0))
-  const endJst = new Date(startJst.getTime() + 24 * 60 * 60 * 1000)
-  return {
-    start: new Date(startJst.getTime() - 9 * 60 * 60 * 1000),
-    end: new Date(endJst.getTime() - 9 * 60 * 60 * 1000),
-  }
 }

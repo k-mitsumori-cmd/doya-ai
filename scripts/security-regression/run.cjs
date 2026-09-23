@@ -5,6 +5,11 @@ if (interviewListOutage.error || interviewListOutage.status !== 0) {
   console.error('Security regression failed: verify-interview-list-outage.cjs');
   process.exit(1);
 }
+const interviewArticleLimit = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-article-limit.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewArticleLimit.error || interviewArticleLimit.status !== 0) {
+  console.error('Security regression failed: verify-interview-article-limit.cjs');
+  process.exit(1);
+}
 const bannerAdmissionRoute = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-admission-route.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (bannerAdmissionRoute.error || bannerAdmissionRoute.status !== 0) {
   console.error('Security regression failed: verify-banner-admission-route.cjs');

@@ -312,6 +312,7 @@ export default function GeneratePage() {
   const [draftId, setDraftId] = useState<string | null>(null)
   const [wordCount, setWordCount] = useState(0)
   const [error, setError] = useState('')
+  const [limitReached, setLimitReached] = useState(false)
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null)
   const [showCelebration, setShowCelebration] = useState(false)
   const [proofScore, setProofScore] = useState<number | null>(null)
@@ -337,6 +338,7 @@ export default function GeneratePage() {
     setStatus('generating')
     setGeneratedText('')
     setError('')
+    setLimitReached(false)
     setProgress('接続中...')
     setThumbnailUrl(null)
     setShowCelebration(false)
@@ -368,6 +370,8 @@ export default function GeneratePage() {
 
       const decoder = new TextDecoder()
       let buffer = ''
+      let receivedDone = false
+      let receivedError = false
 
       while (true) {
         const { done, value } = await reader.read()
@@ -392,6 +396,7 @@ export default function GeneratePage() {
                 setGeneratedText((prev) => prev + event.text)
                 break
               case 'done': {
+                receivedDone = true
                 const eid = event.draftId
                 setDraftId(eid)
                 setWordCount(event.wordCount)
@@ -420,7 +425,9 @@ export default function GeneratePage() {
                 break
               }
               case 'error':
+                receivedError = true
                 setError(event.message)
+                setLimitReached(event.code === 'ARTICLE_LIMIT')
                 setStatus('error')
                 break
             }
@@ -430,7 +437,9 @@ export default function GeneratePage() {
         }
       }
 
-      if (status === 'generating') setStatus('done')
+      if (!receivedDone && !receivedError) {
+        throw new Error('記事生成が途中で終了しました。再試行してください。')
+      }
     } catch (e: any) {
       if (e.name === 'AbortError') {
         setStatus('idle')
@@ -680,6 +689,7 @@ export default function GeneratePage() {
                 <div className="flex-1">
                   <p className="font-medium mb-1">エラーが発生しました</p>
                   <p className="text-red-500">{error}</p>
+                  {limitReached && <a href="/interview/pricing" className="mt-3 inline-block font-semibold text-blue-700 underline">プランを見る</a>}
                 </div>
               </div>
             </div>

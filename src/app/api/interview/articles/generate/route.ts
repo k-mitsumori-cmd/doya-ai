@@ -20,6 +20,7 @@ import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { buildArticlePrompt } from '@/lib/interview/prompts'
 import { recordServiceUsage } from '@/lib/service-usage'
+import { claimArticleBudget, refundArticleBudget, type ArticleClaim } from '@/lib/interview/article-budget'
 
 function getGeminiApiKey(): string {
   const key =
@@ -51,9 +52,11 @@ export async function POST(req: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      let claim: ArticleClaim | null = null
+      let draftSaved = false
       try {
         // ====== 認証 ======
-        const { userId } = await getInterviewUser()
+        const { userId, plan } = await getInterviewUser()
         const guestId = !userId ? getGuestIdFromRequest(req) : null
 
         const body = await req.json()
@@ -124,6 +127,16 @@ export async function POST(req: NextRequest) {
           controller.close()
           return
         }
+
+        const admission = await claimArticleBudget({ userId, guestId, plan })
+        if (admission.state !== 'allowed') {
+          controller.enqueue(sseEvent(admission.state === 'limit'
+            ? { type: 'error', code: 'ARTICLE_LIMIT', message: `本日の記事生成上限（${admission.limit}回）に達しました。`, upgradePath: '/interview/pricing' }
+            : { type: 'error', message: '利用状況を確認できません。しばらくしてから再試行してください。' }))
+          controller.close()
+          return
+        }
+        claim = admission.claim
 
         controller.enqueue(sseEvent({ type: 'progress', step: 'AI記事を生成中...' }))
 
@@ -227,6 +240,11 @@ export async function POST(req: NextRequest) {
         }
 
         // ====== 記事をDBに保存 ======
+        if (!fullText.trim()) {
+          controller.enqueue(sseEvent({ type: 'error', message: '記事本文を生成できませんでした。再試行してください。' }))
+          controller.close()
+          return
+        }
         controller.enqueue(sseEvent({ type: 'progress', step: '記事を保存中...' }))
 
         // 既存ドラフトの最大バージョンを取得
@@ -248,6 +266,7 @@ export async function POST(req: NextRequest) {
             status: 'DRAFT',
           },
         })
+        draftSaved = true
 
         // プロジェクトにレシピを紐付け＋ステータス更新
         await prisma.interviewProject.update({
@@ -289,6 +308,8 @@ export async function POST(req: NextRequest) {
           // controller already closed
         }
         controller.close()
+      } finally {
+        if (claim && !draftSaved) await refundArticleBudget(claim)
       }
     },
   })

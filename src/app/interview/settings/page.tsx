@@ -83,7 +83,8 @@ export default function InterviewSettingsPage() {
     const globalPlan = String((user as any)?.plan || '').toUpperCase()
     const p = interviewPlan || globalPlan || (isLoggedIn ? 'FREE' : 'GUEST')
     if (p === 'ENTERPRISE') return 'ENTERPRISE'
-    if (p === 'PRO') return 'PRO'
+    if (p === 'PRO' || p === 'BUNDLE' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return 'PRO'
+    if (p === 'LIGHT') return 'LIGHT'
     if (p === 'FREE') return 'FREE'
     return isLoggedIn ? 'FREE' : 'GUEST'
   }, [user, isLoggedIn])
@@ -102,6 +103,13 @@ export default function InterviewSettingsPage() {
       generation: `${INTERVIEW_PRICING.proLimit}回/日`,
       features: ['AI記事生成', 'スキル選択', '校正・タイトル提案', 'ファクトチェック', '翻訳（10言語）', 'SNS投稿文生成', '優先サポート', '無制限の履歴保存'],
       missingFeatures: ['大規模チーム運用', '専任サポート'],
+    },
+    LIGHT: {
+      label: 'LIGHT プラン', badge: 'LIGHT', badgeColor: 'bg-blue-100 text-blue-700',
+      transcription: `${INTERVIEW_PRICING.transcriptionMinutes.light}分/月`, upload: '1GB',
+      generation: `${INTERVIEW_PRICING.lightLimit}回/日`,
+      features: ['AI記事生成', 'スキル選択', 'ファクトチェック', '翻訳', 'SNS投稿文生成', '30日間の履歴保存'],
+      missingFeatures: ['優先サポート', '無制限の履歴保存'],
     },
     ENTERPRISE: {
       label: 'ENTERPRISE プラン', badge: 'ENTERPRISE', badgeColor: 'bg-slate-900 text-white',
