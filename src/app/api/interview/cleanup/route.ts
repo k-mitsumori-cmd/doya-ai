@@ -27,8 +27,11 @@ export async function POST(req: NextRequest) {
 
     // 運用前の件数確認。データや識別子は返さず、削除処理もしない。
     if (req.nextUrl.searchParams.get('dryRun') === '1') {
-      const eligibleCount = await prisma.interviewProject.count({ where: eligible })
-      return NextResponse.json({ success: true, dryRun: true, eligibleCount })
+      const [eligibleCount, withStorageCount] = await Promise.all([
+        prisma.interviewProject.count({ where: eligible }),
+        prisma.interviewProject.count({ where: { ...eligible, materials: { some: { filePath: { not: null } } } } }),
+      ])
+      return NextResponse.json({ success: true, dryRun: true, eligibleCount, withStorageCount })
     }
 
     // 1回の実行で大量に削除せず、古いものから少数ずつ処理する。

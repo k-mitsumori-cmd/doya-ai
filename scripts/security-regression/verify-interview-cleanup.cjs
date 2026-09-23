@@ -12,7 +12,7 @@ const storage = load('src/lib/interview/storage.ts', {
 let countCalls = 0, findCalls = 0, deleteCalls = 0
 let candidates = [{ id: 'old-project', materials: [] }]
 const prisma = { interviewProject: {
-  count: async ({ where }) => { assert(where.updatedAt.lt instanceof Date); countCalls++; return 123 },
+  count: async ({ where }) => { assert(where.updatedAt.lt instanceof Date); countCalls++; return where.materials ? 34 : 123 },
   findMany: async ({ where, orderBy, take, select }) => {
     assert(where.updatedAt.lt instanceof Date)
     assert.equal(orderBy.updatedAt, 'asc')
@@ -64,7 +64,8 @@ const request = (url, authorization) => ({ nextUrl: new URL(url), headers: { get
   const preview = await route.POST(request(base + '?dryRun=1', 'Bearer synthetic-secret'))
   assert.equal(preview.status, 200)
   assert.equal(preview.body.eligibleCount, 123)
-  assert.equal(countCalls, 1)
+  assert.equal(preview.body.withStorageCount, 34)
+  assert.equal(countCalls, 2)
   assert.equal(findCalls + deleteCalls, 0)
   const cleanup = await route.POST(request(base, 'Bearer synthetic-secret'))
   assert.equal(cleanup.status, 200)
