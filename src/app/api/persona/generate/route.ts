@@ -5,14 +5,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { safeFetchText } from '@/lib/net/safe-fetch'
+import { createHash, randomUUID } from 'crypto'
+import { reservePersonaProject, settlePersonaProject } from '@/lib/persona/project-ledger'
+import { includedPersonaImages } from '@/lib/persona/image-entitlements'
+import { parsePersonaResult, PersonaResultValidationError, type PersonaResult } from '@/lib/persona/result-schema'
 import { recordServiceUsage } from '@/lib/service-usage'
-import {
-  PERSONA_PRICING,
-  getPersonaDailyLimitByUserPlan,
-  shouldResetDailyUsage,
-  getTodayDateJST,
-  isWithinFreeHour,
-} from '@/lib/pricing'
+
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -57,44 +56,15 @@ function extractHeadings(html: string): string[] {
   return headings.slice(0, 10)
 }
 
-// JSON修復ユーティリティ
-function repairJson(str: string): string {
-  let jsonStr = str.trim()
-  
-  // コードブロック除去
-  const jsonMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/)
-  if (jsonMatch) jsonStr = jsonMatch[1].trim()
-  
-  // 先頭/末尾の余分なテキストを除去
-  const firstBrace = jsonStr.indexOf('{')
-  const lastBrace = jsonStr.lastIndexOf('}')
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    jsonStr = jsonStr.slice(firstBrace, lastBrace + 1)
-  }
-  
-  // 閉じ括弧を補完
-  const openBraces = (jsonStr.match(/{/g) || []).length
-  const closeBraces = (jsonStr.match(/}/g) || []).length
-  const openBrackets = (jsonStr.match(/\[/g) || []).length
-  const closeBrackets = (jsonStr.match(/]/g) || []).length
-  
-  // 配列が閉じていない場合
-  if (openBrackets > closeBrackets) {
-    jsonStr += ']'.repeat(openBrackets - closeBrackets)
-  }
-  // オブジェクトが閉じていない場合
-  if (openBraces > closeBraces) {
-    jsonStr += '}'.repeat(openBraces - closeBraces)
-  }
-  
-  // 末尾のカンマを修正
-  jsonStr = jsonStr.replace(/,\s*([}\]])/g, '$1')
-  
-  return jsonStr
+// Remove an optional enclosing code fence, but never fabricate missing brackets or rewrite string contents.
+function unwrapJson(str: string): string {
+  const trimmed = str.trim()
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/)
+  return fenced ? fenced[1] : trimmed
 }
 
 // Gemini JSON生成
-async function geminiGenerateJson<T>(prompt: string): Promise<T> {
+async function geminiGenerateJson(prompt: string): Promise<PersonaResult> {
   const apiKey = process.env.GOOGLE_GENAI_API_KEY
   if (!apiKey) throw new Error('GOOGLE_GENAI_API_KEY not configured')
 
@@ -107,6 +77,7 @@ async function geminiGenerateJson<T>(prompt: string): Promise<T> {
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
         {
           method: 'POST',
+          signal: AbortSignal.timeout(100000),
           headers: {
             'Content-Type': 'application/json',
             'x-goog-api-key': apiKey,
@@ -123,8 +94,7 @@ async function geminiGenerateJson<T>(prompt: string): Promise<T> {
       )
 
       if (!res.ok) {
-        const errText = await res.text()
-        throw new Error(`Gemini API error: ${res.status} - ${errText.slice(0, 200)}`)
+        throw new Error(`Gemini API error: ${res.status}`)
       }
 
       const data = await res.json()
@@ -134,18 +104,13 @@ async function geminiGenerateJson<T>(prompt: string): Promise<T> {
         throw new Error('Empty response from Gemini')
       }
       
-      // JSON修復と解析
-      const jsonStr = repairJson(text)
-      
-      try {
-        return JSON.parse(jsonStr) as T
-      } catch (parseErr) {
-        console.error('JSON parse error, raw text:', text.slice(0, 500))
-        throw new Error(`JSON parse failed: ${(parseErr as Error).message}`)
-      }
+      let value: unknown
+      try { value = JSON.parse(unwrapJson(text)) }
+      catch { throw new PersonaResultValidationError() }
+      return parsePersonaResult(value)
     } catch (e) {
       lastError = e as Error
-      console.warn(`Model ${model} failed:`, e)
+      console.warn('Persona model attempt failed', { model, code: e instanceof PersonaResultValidationError ? 'INVALID_RESULT' : 'PROVIDER_FAILED' })
       continue
     }
   }
@@ -153,95 +118,13 @@ async function geminiGenerateJson<T>(prompt: string): Promise<T> {
   throw lastError || new Error('All models failed')
 }
 
-// レスポンス型
-interface PersonaResult {
-  persona: {
-    name: string
-    age: number
-    gender: string
-    occupation: string
-    income: string
-    location: string
-    familyStructure: string
-    lifestyle: string
-    industry: string
-    companySize: string
-    challenges: string[]
-    goals: string[]
-    mediaUsage: string[]
-    purchaseMotivation: string[]
-    objections: string[]
-    personalityTraits: string[]
-    dayInLife: string
-    quote: string
-    painPoints: Array<{ point: string; episode: string; imagePrompt?: string }>
-    alternativeMethods: Array<{ method: string; dissatisfaction: string }>
-    informationGathering: Array<{ source: string; behavior: string }>
-    triggerEvents: string[]
-    resonatingMessages: string[]
-    innerVoice: string[]
-    schedule: Array<{
-      time: string
-      activity: string
-      detail: string
-      mood: string
-      imagePrompt?: string
-    }>
-    diary: {
-      title: string
-      content: string
-      weather: string
-      imageScenes: string[]
-    }
-  }
-  deepDive: {
-    objectionAnalysis: Array<{ objection: string; reassurance: string }>
-    adoptionStory: {
-      trigger: string
-      competitors: string[]
-      consultedPeople: string
-      trialActivities: string
-      decidingFactor: string
-      timeline: Array<{ phase: string; description: string; imagePrompt?: string }>
-    }
-    dayWithService: string
-  }
-  summary: {
-    oneLiner: string
-    topChallenges: Array<{ rank: number; challenge: string; episode: string }>
-    alternativesDissatisfaction: Array<{ alternative: string; dissatisfaction: string }>
-    customerJourney: Array<{ phase: string; description: string }>
-    decidingFactors: string[]
-    catchphrases: string[]
-    contentIdeas: Array<{ title: string; description: string }>
-  }
-  creatives: {
-    catchphrases: string[]
-    lpStructure: {
-      hero: string
-      problem: string
-      solution: string
-      benefits: string[]
-      cta: string
-    }
-    adCopy: {
-      google: string[]
-      meta: string[]
-    }
-    emailDraft: {
-      subject: string
-      body: string
-    }
-  }
-  marketingChecklist: {
-    category: string
-    items: { task: string; priority: 'high' | 'medium' | 'low' }[]
-  }[]
-}
-
 export async function POST(req: NextRequest) {
+  let reservation: { userId: string; id: string; leaseToken: string } | null = null
   try {
-    const body = await req.json()
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力内容を確認してください。' }, { status: 400 })
+    }
     const { url, additionalInfo, serviceName, existingPersona, modifications } = body
 
     // 修正モード: existingPersona + modifications がある場合
@@ -250,77 +133,26 @@ export async function POST(req: NextRequest) {
     if (!isModifyMode && (!url || typeof url !== 'string')) {
       return NextResponse.json({ error: 'URLが必要です' }, { status: 400 })
     }
+    if (url != null && (typeof url !== 'string' || url.length > 8192)) {
+      return NextResponse.json({ error: 'URLの入力内容を確認してください。' }, { status: 400 })
+    }
 
     // 認証チェック
     const session = await getServerSession(authOptions)
     const userId = session?.user?.id
-    let dailyLimit = PERSONA_PRICING.guestLimit
-    let usedToday = 0
-    let isUnlimited = false
-    let isGuest = !userId
-
-    if (userId) {
-      // ログインユーザー
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: { plan: true, firstLoginAt: true },
-      })
-
-      if (user) {
-        // 初回ログイン1時間無制限
-        if (isWithinFreeHour(user.firstLoginAt)) {
-          isUnlimited = true
-        }
-
-        dailyLimit = getPersonaDailyLimitByUserPlan(user.plan)
-        if (dailyLimit < 0) isUnlimited = true
-
-        // UserServiceSubscription で使用回数管理
-        let sub = await prisma.userServiceSubscription.findUnique({
-          where: { userId_serviceId: { userId, serviceId: 'persona' } },
-        })
-
-        if (!sub) {
-          sub = await prisma.userServiceSubscription.create({
-            data: { userId, serviceId: 'persona', plan: user.plan || 'FREE' },
-          })
-        }
-
-        // 日次リセット
-        if (shouldResetDailyUsage(sub.lastUsageReset)) {
-          await prisma.userServiceSubscription.update({
-            where: { id: sub.id },
-            data: { dailyUsage: 0, lastUsageReset: new Date() },
-          })
-          usedToday = 0
-        } else {
-          usedToday = sub.dailyUsage || 0
-        }
-      }
-    } else {
-      // ⚠️ 未ログインは禁止（2026-09-02）。
-      //    ここは `isUnlimited = true` になっており、**未ログインだと完全に無制限**だった。
-      //    宣言上のゲスト枠（1日2回）はどこにも効いておらず、
-      //    URLを知っていれば誰でもAIの実費を無制限に発生させられる状態だった。
-      return NextResponse.json(
-        { error: 'ペルソナの生成にはログインが必要です。無料で登録いただけます。', code: 'LOGIN_REQUIRED' },
-        { status: 401 }
-      )
+    if (!userId) return NextResponse.json({ error: 'ペルソナの生成にはログインが必要です。', code: 'LOGIN_REQUIRED' }, { status: 401 })
+    const requestKey = body.requestKey ?? randomUUID()
+    if (typeof requestKey !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(requestKey)) {
+      return NextResponse.json({ error: '生成要求のIDを確認してください。' }, { status: 400 })
     }
-
-    // 制限チェック
-    if (!isUnlimited && usedToday >= dailyLimit) {
-      return NextResponse.json(
-        {
-          error: `本日の生成上限（${dailyLimit}回）に達しました`,
-          limitReached: true,
-          isGuest,
-          usedToday,
-          dailyLimit,
-        },
-        { status: 429 }
-      )
-    }
+    const inputHash = createHash('sha256').update(JSON.stringify({ url, additionalInfo, serviceName, existingPersona, modifications })).digest('hex')
+    const attempt = await reservePersonaProject(prisma, { userId, requestKey, inputHash, sourceUrl: url ?? null })
+    if (attempt.state === 'unauthorized') return NextResponse.json({ error: '再度ログインしてください。', code: 'LOGIN_REQUIRED' }, { status: 401 })
+    if (attempt.state === 'limit') return NextResponse.json({ error: `本日の生成上限（${attempt.limit}回）に達しました`, code: 'DAILY_LIMIT_REACHED', limitReached: true, isGuest: false, usedToday: attempt.used, dailyLimit: attempt.limit, resetAt: attempt.resetAt, upgradeUrl: '/persona/pricing' }, { status: 429 })
+    if (attempt.state === 'conflict' || attempt.state === 'deleted') return NextResponse.json({ error: 'この生成要求は再利用できません。新しい生成を開始してください。', code: 'REQUEST_CONFLICT' }, { status: 409 })
+    if (attempt.state === 'pending') return NextResponse.json({ error: '同じペルソナを生成中です。しばらくしてから再度お試しください。', code: 'GENERATION_PENDING' }, { status: 409 })
+    if (attempt.state === 'cached') return NextResponse.json({ success: true, data: parsePersonaResult(attempt.project.data), projectId: attempt.project.id, includedImages: attempt.project.includedImages, meta: { url, isGuest: false } })
+    reservation = { userId, id: attempt.project.id, leaseToken: attempt.project.leaseToken }
 
     let prompt: string
     let meta: Record<string, string> = {}
@@ -346,15 +178,15 @@ ${JSON.stringify(existingPersona, null, 2)}
 ${modifications}`
     } else {
       // ===== 新規生成モード =====
-      let html = ''
-      try {
-        const fetchRes = await fetch(url, {
-          headers: { 'User-Agent': 'DoyaPersonaBot/1.0' },
-          signal: AbortSignal.timeout(10000),
-        })
-        html = await fetchRes.text()
-      } catch (e) {
-        return NextResponse.json({ error: 'URLからコンテンツを取得できませんでした' }, { status: 400 })
+      const html = await safeFetchText(url, {
+        timeoutMs: 10000,
+        maxBytes: 2 * 1024 * 1024,
+        maxRedirects: 3,
+      })
+      if (!html) {
+        await settlePersonaProject(prisma, userId, reservation.id, reservation.leaseToken, { failureCode: 'INVALID_RESULT' })
+        reservation = null
+        return NextResponse.json({ error: 'URLからコンテンツを取得できませんでした。公開されたWebページのURLをご確認ください。' }, { status: 400 })
       }
 
       meta = extractMetaTags(html)
@@ -521,14 +353,14 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}`
 - 重要: 必ず有効なJSONのみを出力してください。マークダウンや説明文は不要です。
 `
 
-    const result = await geminiGenerateJson<PersonaResult>(prompt)
+    const result = await geminiGenerateJson(prompt)
 
-    // 使用回数を更新
-    if (userId) {
-      await prisma.userServiceSubscription.updateMany({
-        where: { userId, serviceId: 'persona' },
-        data: { dailyUsage: { increment: 1 } },
-      })
+    const includedImages = includedPersonaImages(result)
+    const projectId = reservation.id
+    const saved = await settlePersonaProject(prisma, userId, projectId, reservation.leaseToken, { data: result })
+    if (!saved) throw new Error('Persona generation lease no longer active')
+    reservation = null
+    try {
       await recordServiceUsage({
         userId,
         serviceId: 'persona',
@@ -536,27 +368,32 @@ ${serviceName ? `## サービス名\n${serviceName}` : ''}`
         summary: url || serviceName || '',
         input: { url, serviceName, isModifyMode },
       })
-    }
+    } catch { console.warn('Persona activity recording failed after result was saved') }
 
     const response = NextResponse.json({
       success: true,
       data: result,
+      projectId,
+      includedImages,
       meta: {
         url,
         title: meta.title,
-        usedToday: usedToday + 1,
-        dailyLimit,
-        isGuest,
+        usedToday: attempt.used,
+        dailyLimit: attempt.limit,
+        isGuest: false,
       },
     })
 
     return response
   } catch (error) {
-    console.error('Persona generation error:', error)
+    if (reservation) {
+      try { await settlePersonaProject(prisma, reservation.userId, reservation.id, reservation.leaseToken, { failureCode: error instanceof PersonaResultValidationError ? 'INVALID_RESULT' : 'PROVIDER_FAILED' }) }
+      catch { console.error('Persona reservation settlement failed') }
+    }
+    console.error('Persona generation failed', { code: error instanceof PersonaResultValidationError ? 'INVALID_RESULT' : 'PROVIDER_FAILED' })
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'ペルソナ生成中にエラーが発生しました' },
+      { error: 'ペルソナ生成中にエラーが発生しました。しばらくしてから再度お試しください。' },
       { status: 500 }
     )
   }
 }
-

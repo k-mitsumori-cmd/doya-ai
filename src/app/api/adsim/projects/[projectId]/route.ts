@@ -8,7 +8,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
-export async function GET(_req: NextRequest, { params }: { params: { projectId: string } }) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ projectId: string }> }) {
+  const params = await props.params;
   // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
   if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ広告シミュレーションAI')
 
@@ -65,7 +66,8 @@ export async function GET(_req: NextRequest, { params }: { params: { projectId: 
   }
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { projectId: string } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ projectId: string }> }) {
+  const params = await props.params;
   // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
   if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ広告シミュレーションAI')
 
@@ -99,7 +101,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { projectId:
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { projectId: string } }) {
+export async function DELETE(_req: NextRequest, props: { params: Promise<{ projectId: string }> }) {
+  const params = await props.params;
   // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
   if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ広告シミュレーションAI')
 

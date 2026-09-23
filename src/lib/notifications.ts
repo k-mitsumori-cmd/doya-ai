@@ -1,3 +1,6 @@
+import { dailyOperationsSection } from './service-operations-daily';
+import { recordReportDelivered } from './service-operations-state';
+import { voicePayload } from './slack-voice';
 import { prisma, withRetry } from './prisma'
 import { fetchGCPUsageReport } from './gcp-usage'
 import { serviceLabelOf } from './attribution'
@@ -53,9 +56,9 @@ export async function sendErrorNotification(data: ErrorNotificationData): Promis
         await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+          body: JSON.stringify(voicePayload({
             text: `${formatErrorMessage(data)}\n\n*AIへの修正依頼（コピペ用）*\n\`\`\`${aiPrompt.slice(0, 2800)}\`\`\``,
-          }),
+          })),
         })
       }
     }
@@ -77,23 +80,23 @@ export async function sendErrorNotification(data: ErrorNotificationData): Promis
 
 function formatErrorMessage(data: ErrorNotificationData): string {
   const lines: string[] = []
-  lines.push(`*[API Error]* ${data.timestamp}`)
-  if (data.pathname) lines.push(`- path: ${data.pathname}`)
-  if (data.httpStatus) lines.push(`- status: ${data.httpStatus}`)
-  if (data.requestMethod) lines.push(`- method: ${data.requestMethod}`)
-  if (data.requestUrl) lines.push(`- url: ${data.requestUrl}`)
-  if (data.userId || data.userEmail) lines.push(`- user: ${data.userId || ''} ${data.userEmail || ''}`.trim())
+  lines.push(`*【ドヤAI・要対応】処理中にエラーが発生しました*\n発生時刻：${data.timestamp}\n対応：発生箇所と下記のエラーを確認してください。\n\n*調査用の詳細*`)
+  if (data.pathname) lines.push(`- 発生した画面・処理: ${data.pathname}`)
+  if (data.httpStatus) lines.push(`- HTTP応答コード: ${data.httpStatus}`)
+  if (data.requestMethod) lines.push(`- リクエストの種類: ${data.requestMethod}`)
+  if (data.requestUrl) lines.push(`- 対象URL: ${data.requestUrl}`)
+  if (data.userId || data.userEmail) lines.push(`- 調査用ユーザー識別子: ${data.userId || ''} ${data.userEmail || ''}`.trim())
   lines.push('')
-  lines.push(`*message*`)
+  lines.push(`*システムが返したエラー*`)
   lines.push(truncate(data.errorMessage, 1800))
   if (data.requestBody) {
     lines.push('')
-    lines.push(`*requestBody*`)
+    lines.push(`*調査用：送信データ*`)
     lines.push(truncate(data.requestBody, 1200))
   }
   if (data.errorStack) {
     lines.push('')
-    lines.push(`*stack*`)
+    lines.push(`*調査用：処理の経路*`)
     lines.push(truncate(data.errorStack, 1800))
   }
   return lines.join('\n')
@@ -122,7 +125,7 @@ async function postSlackPayload(payload: Record<string, unknown>): Promise<void>
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(voicePayload(payload)),
   })
   if (!res.ok) {
     const body = await res.text().catch(() => '')
@@ -176,13 +179,13 @@ const EVENT_EMOJI: Record<EventType, string> = {
 }
 
 const EVENT_LABEL: Record<EventType, string> = {
-  signup: '無料会員登録',
+  signup: '無料会員が登録しました（入金はありません）',
   login: 'ログイン',
-  trial_start: '無料トライアル開始',
-  subscription: '有料プラン申し込み',
-  payment: '入金',
+  trial_start: '無料体験が始まりました（まだ入金はありません）',
+  subscription: '有料プランの申込がありました（入金は別通知で確認）',
+  payment: '決済が完了しました',
   cancellation: '解約',
-  payment_failed: '支払い失敗',
+  payment_failed: '支払いに失敗しました・決済状況の確認が必要です',
 }
 
 /**
@@ -208,6 +211,7 @@ const CHANNEL_PING: Record<EventType, boolean> = {
 
 export async function sendEventNotification(event: {
   type: EventType
+  userId?: string
   userEmail?: string | null
   userName?: string | null
   details?: string
@@ -220,9 +224,13 @@ export async function sendEventNotification(event: {
 
     const lines = [
       ...(CHANNEL_PING[event.type] ? ['<!channel>'] : []),
-      `${emoji} *[${label}]* ${now}`,
+      `${emoji} *【ドヤAI】${label}*\n発生時刻：${now}（日本時間）`,
       `- ユーザー: ${who}${event.userEmail ? ` (${event.userEmail})` : ''}`,
     ]
+    if (event.type === 'signup' && event.userId) {
+      const userUrl = `https://doya-ai.surisuta.jp/admin/users?userId=${encodeURIComponent(event.userId)}`
+      lines.push(`- ユーザーURL：<${userUrl}|このユーザーの登録情報を開く>（管理者ログインが必要）`)
+    }
     if (event.details) lines.push(`- ${event.details}`)
 
     await postToSlack(lines.join('\n'))
@@ -425,7 +433,8 @@ export async function sendDailySummary(): Promise<void> {
       : ['  - (生成なし)']),
   ]
 
-  await postToSlack(lines.join('\n'))
+  await postToSlack(lines.join('\n') + await dailyOperationsSection('doya'))
+  await recordReportDelivered('doya-daily')
 }
 
 // ========================================
@@ -771,7 +780,7 @@ async function postDripToSlack(text: string): Promise<void> {
   const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(voicePayload({ text })),
   })
   if (!res.ok) {
     const body = await res.text().catch(() => '')

@@ -8,14 +8,14 @@ import { getUserId } from '@/lib/doyaslide/access'
 import { reserveMonthlySlides, releaseMonthlySlides, quotaExceededMessage } from '@/lib/doyaslide/limits'
 import { composeSlideImage, type ComposeProject } from '@/lib/doyaslide/generate'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 // POST /api/doyaslide/slides/[id]/regenerate — 単一スライド再生成
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
     const userId = await getUserId()
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
 
     const slide = await prisma.doyaSlideSlide.findUnique({
       where: { id: p.id },

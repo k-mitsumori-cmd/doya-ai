@@ -1,5 +1,6 @@
 "use client";
 
+import { parsePromaneIntegerInput } from "@/lib/promane/time-input";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 // 注: updateMemberRate Server Action は Server Components renderエラー/チャンクキャッシュの
@@ -49,15 +50,11 @@ export function MemberList({
   // string で保持すれば "-3000" がそのまま残り、Save時に validation 可能
   const [rateInput, setRateInput] = useState("0");
   const [inviteOpen, setInviteOpen] = useState(false);
-  const rate = parseInt(rateInput);
-  const rateValid = Number.isFinite(rate) && rate >= 0 && rate <= 9999999999;
-  const rateError = !Number.isFinite(rate)
-    ? "数値で入力してください"
-    : rate < 0
-      ? "時間単価は 0以上を入力してください"
-      : rate > 9999999999
-        ? "時間単価が大きすぎます"
-        : null;
+  let rate = 0;
+  let rateError: string | null = null;
+  try { rate = parsePromaneIntegerInput(rateInput, "時間単価", false) }
+  catch (error) { rateError = error instanceof Error ? error.message : "時間単価を確認してください" }
+  const rateValid = rateError === null;
 
   async function handleSaveRate(memberId: string) {
     // クライアント側 事前バリデーション (rateInput文字列から parseしてチェック)
@@ -156,9 +153,8 @@ export function MemberList({
                           value={rateInput}
                           onChange={(e) => {
                             // string で生入力を保持 (絶対値化バグの根本対処)
-                            // 数字とマイナス記号のみ許可（マイナスは保存時に拒否）
-                            const raw = e.target.value.replace(/[^0-9-]/g, "");
-                            setRateInput(raw);
+                            // 入力を変換せず保持し、小数や文字は検証で拒否する。
+                            setRateInput(e.target.value);
                           }}
                           className={`h-9 w-28 text-right text-[14px] font-black rounded-xl ${
                             !rateValid ? "border-2 border-rose-500 bg-rose-50 text-rose-700" : ""

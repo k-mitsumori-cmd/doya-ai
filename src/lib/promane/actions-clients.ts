@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requirePromaneAuthAction, getWorkspaceBySlug } from "@/lib/promane/auth";
+import { requirePromaneAuthAction, requireWritableWorkspace } from "@/lib/promane/auth";
 import { revalidatePath } from "next/cache";
 
 export async function createClient(workspaceSlug: string, data: {
@@ -13,8 +13,7 @@ export async function createClient(workspaceSlug: string, data: {
   note?: string;
 }) {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
-  if (!workspace) throw new Error("ワークスペースにアクセスできません");
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
   // バリデーション
   if (!data.name?.trim()) throw new Error("会社名は必須です");
@@ -48,8 +47,7 @@ export async function updateClient(workspaceSlug: string, clientId: string, data
   note?: string | null;
 }) {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
-  if (!workspace) throw new Error("ワークスペースにアクセスできません");
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
   // セキュリティ: clientId が本当に自分の workspace に属するか確認 (IDOR防止)
   const existing = await prisma.promaneClient.findFirst({
@@ -76,8 +74,7 @@ export async function updateClient(workspaceSlug: string, clientId: string, data
 
 export async function deleteClient(workspaceSlug: string, clientId: string) {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
-  if (!workspace) throw new Error("ワークスペースにアクセスできません");
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
   // セキュリティ: workspace 所属確認 (IDOR防止)
   const existing = await prisma.promaneClient.findFirst({

@@ -23,11 +23,12 @@ export async function GET(req: NextRequest) {
     const departmentId = url.searchParams.get('departmentId') || ''
     const status = url.searchParams.get('status') || ''
     const employmentType = url.searchParams.get('employmentType') || ''
-    const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'))
-    const pageSize = Math.min(
-      MAX_PAGE_SIZE,
-      Math.max(1, parseInt(url.searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE)))
-    )
+    const page = Number(url.searchParams.get('page') || '1')
+    const requestedPageSize = Number(url.searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE))
+    if (!Number.isInteger(page) || page < 1 || page > 1000000 || !Number.isInteger(requestedPageSize) || requestedPageSize < 1) {
+      return NextResponse.json({ error: 'ページ番号・件数が不正です' }, { status: 400 })
+    }
+    const pageSize = Math.min(MAX_PAGE_SIZE, requestedPageSize)
 
     const where: any = { organizationId: ctx.organizationId }
 
@@ -51,7 +52,7 @@ export async function GET(req: NextRequest) {
         include: {
           department: { select: { id: true, name: true, code: true } },
         },
-        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }],
+        orderBy: [{ lastName: 'asc' }, { firstName: 'asc' }, { id: 'asc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),

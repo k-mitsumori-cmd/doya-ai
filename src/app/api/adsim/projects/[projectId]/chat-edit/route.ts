@@ -89,10 +89,8 @@ function getChatMonthlyLimit(plan: string | null | undefined): number {
   return 20 // FREE
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: { projectId: string } }
-) {
+export async function POST(req: NextRequest, props: { params: Promise<{ projectId: string }> }) {
+  const params = await props.params;
   // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
   if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ広告シミュレーションAI')
 

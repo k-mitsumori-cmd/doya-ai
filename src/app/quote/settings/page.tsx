@@ -32,24 +32,34 @@ type Form = Record<string, string>
 export default function QuoteSettingsPage() {
   const [form, setForm] = useState<Form>({})
   const [loading, setLoading] = useState(true)
+  const [loaded, setLoaded] = useState(false)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoaded(false)
+    setError('')
+    setMessage('')
     try {
       const r = await fetch(withOrg('quote', '/api/quote/issuer'))
       const d = await r.json()
-      if (d.issuer) {
-        const f: Form = {}
-        for (const k of [...FIELDS.map((x) => x.key), ...TEXTAREAS.map((x) => x.key)]) {
-          f[k] = d.issuer[k] ?? ''
-        }
-        setForm(f)
+      if (!r.ok) throw new Error(d?.error || '読み込みに失敗しました')
+      if (!d || !Object.prototype.hasOwnProperty.call(d, 'issuer') ||
+          (d.issuer !== null && (typeof d.issuer !== 'object' || Array.isArray(d.issuer) || typeof d.issuer.companyName !== 'string'))) {
+        throw new Error('発行者情報を確認できませんでした')
       }
-    } catch {
-      notifyError(setError, '読み込みに失敗しました')
+      const f: Form = {}
+      for (const k of [...FIELDS.map((x) => x.key), ...TEXTAREAS.map((x) => x.key)]) {
+        const value = d.issuer?.[k]
+        if (value != null && typeof value !== 'string') throw new Error('発行者情報を確認できませんでした')
+        f[k] = value ?? ''
+      }
+      setForm(f)
+      setLoaded(true)
+    } catch (e) {
+      notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
     } finally {
       setLoading(false)
     }
@@ -60,6 +70,7 @@ export default function QuoteSettingsPage() {
   }, [load])
 
   async function save() {
+    if (!loaded || loading || saving) return
     setSaving(true)
     setError('')
     setMessage('')
@@ -103,6 +114,11 @@ export default function QuoteSettingsPage() {
         <h2 className="text-base font-bold text-slate-900">発行者情報</h2>
         <p className="-mt-2 text-xs font-semibold text-slate-500">見積書に印字される自社情報です。</p>
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
+        {!loaded && (
+          <button type="button" onClick={() => void load()} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold">
+            発行者情報を再読み込みする
+          </button>
+        )}
         {message && <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700 font-semibold">{message}</div>}
 
         <section className="space-y-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
@@ -112,6 +128,7 @@ export default function QuoteSettingsPage() {
                 {f.label}{'required' in f && f.required ? '（必須）' : ''}
               </span>
               <input
+                disabled={!loaded || saving}
                 value={form[f.key] ?? ''}
                 onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
                 placeholder={f.placeholder}
@@ -129,6 +146,7 @@ export default function QuoteSettingsPage() {
             <label key={f.key} className="block text-sm font-semibold">
               <span className="mb-1 block text-xs font-bold text-slate-500">{f.label}</span>
               <textarea
+                disabled={!loaded || saving}
                 value={form[f.key] ?? ''}
                 onChange={(e) => setForm((p) => ({ ...p, [f.key]: e.target.value }))}
                 placeholder={f.placeholder}
@@ -141,7 +159,7 @@ export default function QuoteSettingsPage() {
 
         <button
           onClick={save}
-          disabled={saving || !form.companyName?.trim()}
+          disabled={!loaded || saving || !form.companyName?.trim()}
           className="w-full rounded-lg bg-[#0066ff] px-5 py-3.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
         >
           {saving ? '保存中...' : '保存する'}

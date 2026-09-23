@@ -5,17 +5,18 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { saveSlideImages, SlideImageConflict } from '@/lib/shodan/save-slide-images'
 import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
 import { generateSlideImage, type StoredSlide } from '@/lib/shodan/slide-image'
 import { signedUrl } from '@/lib/shodan/storage'
 import type { ProposalSlide } from '@/lib/shodan/types'
 import { isPaidPlan } from '@/lib/unified-plan'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 // POST /api/shodan/preparations/[id]/slides/regenerate — 1スライドを修正指示つきで再生成
 export async function POST(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const sctx = await getShodanContext(orgSlugFrom(req))
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
@@ -46,10 +47,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
   try {
     const img = await generateSlideImage(sctx.userId, prep.id, slides[index], index, { extra: instruction, brand })
-    images[index] = img
-    await prisma.shodanPreparation.update({ where: { id: prep.id }, data: { slideImages: images as any } })
+    await saveSlideImages(prep.id, sctx.organizationId, prep.slidesJson, images, [{ index, image: img }])
     return NextResponse.json({ success: true, data: { index, image: { title: img.title, role: img.role, imageUrl: await signedUrl(img.imagePath) } } })
   } catch (e: any) {
+    if (e instanceof SlideImageConflict) return NextResponse.json({ error: e.message }, { status: 409 })
     console.error('[shodan/slides/regenerate]', e?.message)
     return NextResponse.json({ error: '再生成に失敗しました' }, { status: 500 })
   }

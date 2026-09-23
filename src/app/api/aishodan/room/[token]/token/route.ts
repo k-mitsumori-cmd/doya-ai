@@ -21,13 +21,13 @@ import { ADVANCE_TOOL, LOOKUP_TOOL, RECORD_TOOL, buildSalesInstructions } from '
 import { retrieve } from '@/lib/aishodan/knowledge'
 import type { ProductProfile } from '@/lib/aishodan/types'
 
-type Ctx = { params: Promise<{ token: string }> | { token: string } }
+type Ctx = { params: Promise<{ token: string }> }
 
 const REALTIME_MODEL = process.env.AISHODAN_REALTIME_MODEL || process.env.MENSETSU_REALTIME_MODEL || 'gpt-realtime'
 const REALTIME_VOICE = process.env.AISHODAN_REALTIME_VOICE || 'alloy'
 
 export async function POST(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const body = await req.json().catch(() => ({}))
   const s = await loadGuestSession(req, p.token, String(body?.sessionId || ''))
   if (!s) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
@@ -43,12 +43,17 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   //    レート制限を枯渇させられる。
   // ⚠️ 判定と加算を分けると、並列リクエストが全て同じ値を読んで上限を突破できる。
   //    updateMany の条件付き加算で席を予約し、更新件数0なら上限到達とみなす。
+  const sessionScope = { id: s.id, organizationId: s.organizationId, roomId: s.roomId, guestId: s.guestId }
   const MAX_ISSUES = 12
   const reserved = await prisma.aishodanSession.updateMany({
-    where: { id: s.id, tokenIssueCount: { lt: MAX_ISSUES } },
+    where: { ...sessionScope, status: { in: ['pending', 'live'] }, endedAt: null, consentedAt: { not: null }, tokenIssueCount: { lt: MAX_ISSUES } },
     data: { tokenIssueCount: { increment: 1 } },
   })
   if (reserved.count === 0) {
+    const current = await loadGuestSession(req, p.token, s.id)
+    if (!current) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
+    const allowed = assertSessionUsable(current)
+    if (!allowed.ok) return NextResponse.json({ error: allowed.reason }, { status: allowed.status })
     return NextResponse.json(
       { error: '接続の試行回数が上限に達しました。お手数ですが担当者までご連絡ください。' },
       { status: 429 }
@@ -149,14 +154,23 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   if (!s.startedAt) {
     // 保持期限は実施日から数え直す。発行時点の仮の値のままだと、
     // 同意画面で伝えた「実施から◯日間保管」と実態がずれる。
-    await prisma.aishodanSession.update({
-      where: { id: s.id },
+    await prisma.aishodanSession.updateMany({
+      where: { ...sessionScope, status: { in: ['pending', 'live'] }, startedAt: null, endedAt: null, consentedAt: { not: null } },
       data: {
         status: 'live',
         startedAt: new Date(),
         purgeAfter: new Date(Date.now() + Math.max(1, s.room.organization.retentionDays) * 24 * 60 * 60 * 1000),
       },
     })
+  }
+
+  // 外部API待機中に終了・同意撤回・部屋停止になっていたら資格情報を返さない。
+  const current = await loadGuestSession(req, p.token, s.id)
+  if (!current) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
+  const allowed = assertSessionUsable(current)
+  if (!allowed.ok) return NextResponse.json({ error: allowed.reason }, { status: allowed.status })
+  if (!current.startedAt || current.status !== 'live') {
+    return NextResponse.json({ error: '商談の状態が変わりました。再読み込みしてご確認ください。' }, { status: 409 })
   }
 
   return NextResponse.json({

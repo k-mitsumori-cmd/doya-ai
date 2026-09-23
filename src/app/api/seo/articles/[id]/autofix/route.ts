@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
 export const runtime = 'nodejs'
@@ -11,7 +12,7 @@ const BodySchema = z.object({
 })
 
 function normalizeNewlines(s: string) {
-  return String(s || '').replace(/\r\n/g, '\n')
+  return String(s || '').replace(/\r\n/g, '\n');
 }
 
 function hasHeading(md: string, heading: string) {
@@ -94,14 +95,16 @@ function applyFix(mdRaw: string, fix: z.infer<typeof BodySchema>['fix']) {
   return md
 }
 
-export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
+    const owner = await getSeoArticleOwner(req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
     await ensureSeoSchema()
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const id = p.id
     const body = BodySchema.parse(await req.json().catch(() => ({})))
 
-    const article = await (prisma as any).seoArticle.findUnique({ where: { id } })
+    const article = await (prisma as any).seoArticle.findFirst({ where: { id, ...owner } })
     if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
 
     const before = String(article.finalMarkdown || '')
@@ -111,7 +114,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
 
     await (prisma as any).seoArticle.update({
-      where: { id },
+      where: { id, ...owner },
       data: { finalMarkdown: after, updatedAt: new Date() },
     })
 

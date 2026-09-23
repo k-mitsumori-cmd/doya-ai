@@ -99,7 +99,7 @@ export async function GET(request: Request) {
     for (const org of targets) {
       try {
         // 反復回数は共通。定期スキャンは全組織同条件で実行する。
-        const r = await runAndPersistScan(org.id)
+        const r = await runAndPersistScan(org.id, { scheduled: true })
         if (r.status === 'done') success++
         else failed++
         results.push({ organizationId: org.id, slug: org.slug, status: r.status, error: r.error })

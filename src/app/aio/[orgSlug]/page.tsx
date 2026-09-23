@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { aioGet, aioSend } from '@/lib/aio/client'
-import { ENGINE_LABEL, type EngineId } from '@/lib/aio/types'
+import { readAioDashboard } from '@/lib/aio/dashboard'
+import { aioSend } from '@/lib/aio/client'
+import { AIO_MAX_PROMPTS_PER_SCAN, ENGINE_LABEL, type EngineId, type ScanSummary } from '@/lib/aio/types'
 import { DoyaKun, sym, type Mood } from '@/components/aio/ui'
 import toast from 'react-hot-toast'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts'
@@ -13,9 +14,10 @@ type Tab = 'visibility' | 'sov' | 'citations' | 'recommend'
 
 interface ScanRow { id: string; status: string; awarenessPct: number | null; shareOfVoice: number | null; ownCitationPct: number | null; createdAt: string }
 interface Summary {
+  coverage?: ScanSummary['coverage']
   totalRuns: number; brandRuns: number; awarenessPct: number; shareOfVoice: number; ownCitationPct: number
   sentiment: { positive: number; neutral: number; negative: number }
-  perEngine: { engine: EngineId; awarenessPct: number }[]
+  perEngine: { engine: EngineId; awarenessPct: number | null }[]
   sov: { brand: string; mentions: number; pct: number; isOwn: boolean }[]
   citations: { domain: string; count: number; channel: string; isOwn: boolean }[]
   promptBreakdown: { promptId: string; text: string; perEngine: { engine: EngineId; mentioned: number; total: number }[]; samples?: { engine: EngineId; answer: string; brandMentioned: boolean; competitors: string[] }[] }[]
@@ -26,6 +28,11 @@ const PURPLE = '#7f19e6'
 
 export default function AioDashboard() {
   const { orgSlug } = useParams<{ orgSlug: string }>()
+  return <OrganizationDashboard key={orgSlug} orgSlug={orgSlug} />
+}
+
+function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
+  const loadSequence = useRef(0)
   const searchParams = useSearchParams()
   const autoScanTriggered = useRef(false)
   const [tab, setTab] = useState<Tab>('visibility')
@@ -45,59 +52,42 @@ export default function AioDashboard() {
   const [isPaid, setIsPaid] = useState(false)
 
   const load = async () => {
+    const sequence = ++loadSequence.current
     setError(null)
+    setLoading(true)
     try {
-      // ブランドプロフィール・プロンプトはダッシュボードの設定アラート/台詞の判定に使う
-      const [scanRes, profRes, promptRes, meRes] = await Promise.all([
-        aioGet<{ items: ScanRow[] }>('/api/aio/scans', orgSlug),
-        aioGet<{ profile: any }>('/api/aio/brand-profile', orgSlug).catch(() => ({ profile: null })),
-        aioGet<{ prompts: { text?: string; isActive?: boolean }[] }>('/api/aio/prompts', orgSlug).catch(() => ({ prompts: [] as { text?: string; isActive?: boolean }[] })),
-        aioGet<{ plan?: string }>('/api/aio/me', orgSlug).catch(() => ({ plan: 'FREE' })),
-      ])
-      const plan = (meRes.plan || 'FREE').toUpperCase()
+      const data = await readAioDashboard(orgSlug)
+      if (sequence !== loadSequence.current) return
+      const plan = data.plan.toUpperCase()
       setIsPaid(plan !== 'FREE' && plan !== 'GUEST')
-      setBrandName(profRes.profile?.brandName || null)
-      const active = (promptRes.prompts || []).filter((p) => p.isActive !== false)
+      setBrandName(data.profile?.brandName || null)
+      const active = data.prompts.filter(p => p.isActive !== false)
       setActivePrompts(active.length)
-      setPromptTexts(active.map((p) => p.text || '').filter(Boolean))
-
-      const items = scanRes.items || []
-      setScans(items)
-      // createdAt 降順で並べ替えてから最新の done を選ぶ（古いスナップショットが混ざるのを防ぐ）
-      const doneDesc = items
-        .filter((s) => s.status === 'done')
-        .slice()
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      const latest = doneDesc[0]
-      const prev = doneDesc[1]
-      // 直近スキャン（done/failed 問わず最新）が失敗かどうか
-      const newestOverall = items
-        .slice()
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
-      setLastFailed(newestOverall?.status === 'failed')
-      // 前回比デルタ（2件以上 done があるとき）
-      if (latest && prev) {
-        setDeltas({
-          awareness: Math.round(((latest.awarenessPct ?? 0) - (prev.awarenessPct ?? 0)) * 10) / 10,
-          sov: Math.round(((latest.shareOfVoice ?? 0) - (prev.shareOfVoice ?? 0)) * 10) / 10,
-          citation: Math.round(((latest.ownCitationPct ?? 0) - (prev.ownCitationPct ?? 0)) * 10) / 10,
-        })
-      } else {
-        setDeltas(null)
-      }
-      if (latest) {
-        const det = await aioGet<{ scan: any }>(`/api/aio/scans/${latest.id}`, orgSlug)
-        setSummary(det.scan?.summary || null)
-      } else {
-        setSummary(null)
-      }
+      setPromptTexts(active.map(p => p.text || '').filter(Boolean))
+      setScans(data.items)
+      setLastFailed(data.lastFailed)
+      const { latest, prev } = data
+      setDeltas(latest && prev ? {
+        awareness: Math.round(((latest.awarenessPct ?? 0) - (prev.awarenessPct ?? 0)) * 10) / 10,
+        sov: Math.round(((latest.shareOfVoice ?? 0) - (prev.shareOfVoice ?? 0)) * 10) / 10,
+        citation: Math.round(((latest.ownCitationPct ?? 0) - (prev.ownCitationPct ?? 0)) * 10) / 10,
+      } : null)
+      setSummary(data.summary)
     } catch (e: any) {
-      setError(e?.message || 'データの読み込みに失敗しました')
-    } finally { setLoading(false) }
+      if (sequence === loadSequence.current) setError(e?.message || 'データの読み込みに失敗しました')
+    } finally {
+      if (sequence === loadSequence.current) setLoading(false)
+    }
   }
-  useEffect(() => { load() }, [orgSlug]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    load()
+    return () => { loadSequence.current++ }
+  }, [orgSlug]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const tooManyPrompts = (activePrompts ?? 0) > AIO_MAX_PROMPTS_PER_SCAN
 
   const runScan = async () => {
+    if (tooManyPrompts) return
     setRunning(true)
     setError(null)
     toast.loading('スキャン中…（数分かかります）', { id: 'scan' })
@@ -109,7 +99,7 @@ export default function AioDashboard() {
       const msg = e?.message || 'スキャンに失敗しました'
       toast.error(msg, { id: 'scan' })
       setError(msg)
-    } finally { setRunning(false) }
+    } finally { setRunning(false); window.dispatchEvent(new Event('aio:usage-changed')) }
   }
 
   const trend = useMemo(
@@ -124,12 +114,12 @@ export default function AioDashboard() {
   // ?scan=1 は quick-start 直後の「今すぐスキャンして」という明示要求。
   // 既存doneの有無に関わらず1回だけ実行し、リロードでの二重実行を防ぐためURLからscanを除去する。
   useEffect(() => {
-    if (loading || autoScanTriggered.current) return
+    if (loading || error || tooManyPrompts || autoScanTriggered.current) return
     if (searchParams.get('scan') !== '1') return
     autoScanTriggered.current = true
     if (typeof window !== 'undefined') window.history.replaceState(null, '', `/aio/${encodeURIComponent(orgSlug)}`)
     if (!running) runScan()
-  }, [loading, running, searchParams]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [loading, running, searchParams, error, tooManyPrompts]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loading) return <DashboardSkeleton />
   // スキャン実行中は（既存結果の有無に関わらず）派手な進捗演出を表示。前回結果は消さない＝失敗しても残る
@@ -189,27 +179,46 @@ export default function AioDashboard() {
         <div className="text-rose-800 font-black text-sm">前回のスキャンは失敗しました</div>
         <p className="text-xs font-bold text-rose-700/80 mt-1 break-words">APIキーの未設定やタイムアウトの可能性があります。もう一度スキャンを実行してください。</p>
       </div>
-      <button onClick={runScan} disabled={running}
+      <button onClick={runScan} disabled={running || tooManyPrompts}
         className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 text-white font-black text-xs hover:bg-rose-700 transition-colors disabled:opacity-50">
         {sym('refresh', 16)}再スキャン
       </button>
     </div>
   ) : null
 
+  const coverageBanner = summary?.coverage && summary.coverage.failed > 0 ? (
+    <div role="status" className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-900">
+      <p className="font-black">一部の回答を測定できませんでした</p>
+      <p>予定 {summary.coverage.attempted} 回のうち、成功 {summary.coverage.succeeded} 回・未測定 {summary.coverage.failed} 回です。数値と改善提案は成功した回答のみを対象としています。未測定は「言及なし」や0点を意味しません。</p>
+      <p>外部AIの応答や測定処理に失敗した可能性があります。測定条件が異なるため、過去の数値との単純比較はできません。必要に応じて残りの利用枠を確認して再スキャンしてください。</p>
+    </div>
+  ) : null
+
+  const promptLimitBanner = tooManyPrompts ? (
+    <div role="alert" className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+      <p>有効な質問が{activePrompts}件あります。1回の測定は{AIO_MAX_PROMPTS_PER_SCAN}件までです。先頭の質問だけを測定することはありません。</p>
+      <Link href={`/aio/${encodeURIComponent(orgSlug)}/prompts`} className="font-bold underline">監視プロンプトで対象を選び直す</Link>
+    </div>
+  ) : null
+
   const RunButton = (
-    <button onClick={runScan} disabled={running}
+    <button onClick={runScan} disabled={running || tooManyPrompts}
       className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black shadow-lg shadow-purple-500/25 hover:-translate-y-0.5 transition-all disabled:opacity-50">
       <span className="material-symbols-outlined text-[20px]">{running ? 'hourglass_top' : 'play_arrow'}</span>
       {running ? 'スキャン中…' : 'スキャン実行'}
     </button>
   )
 
+  if (!summary && error) return <div className="max-w-2xl mx-auto p-6">{errorBanner}</div>
+
   if (!summary) {
     return (
       <div className="max-w-2xl mx-auto p-6">
         {errorBanner}
         {failedBanner}
+      {coverageBanner}
         {setupBanner}
+        {promptLimitBanner}
         <div className="text-center">
           <div className="flex justify-center mt-6"><DoyaKun mood={doya.mood} size={120} /></div>
           <div className="inline-block mt-3 rounded-2xl bg-purple-50 border border-purple-100 px-4 py-2 text-sm font-bold text-purple-800">{doya.message}</div>
@@ -249,7 +258,9 @@ export default function AioDashboard() {
 
       {errorBanner}
       {failedBanner}
+      {coverageBanner}
       {setupBanner}
+        {promptLimitBanner}
 
       {/* タブ */}
       <div className="flex gap-1 border-b border-slate-200 mb-5 overflow-x-auto">
@@ -470,7 +481,7 @@ function VisibilityTab({ summary, trend, delta, brandName }: { summary: Summary;
           {summary.perEngine.map((e) => (
             <div key={e.engine} className="text-center bg-slate-50 rounded-xl py-2">
               <p className="text-[11px] font-bold text-slate-400">{ENGINE_LABEL[e.engine] || e.engine}</p>
-              <p className="text-lg font-black text-slate-800">{e.awarenessPct}%</p>
+              <p className="text-lg font-black text-slate-800">{e.awarenessPct === null ? '未測定' : `${e.awarenessPct}%`}</p>
             </div>
           ))}
         </div>
@@ -541,6 +552,7 @@ function PromptBreakdown({ summary, brandName }: { summary: Summary; brandName?:
     <div className="space-y-2">
       {summary.promptBreakdown.map((p) => {
         const open = openId === p.promptId
+        const totalMeasured = p.perEngine.reduce((a, e) => a + e.total, 0)
         const totalMentioned = p.perEngine.reduce((a, e) => a + e.mentioned, 0)
         const hasSamples = (p.samples?.length || 0) > 0
         return (
@@ -553,7 +565,7 @@ function PromptBreakdown({ summary, brandName }: { summary: Summary; brandName?:
                 {p.perEngine.map((e) => (
                   <span key={e.engine} title={ENGINE_LABEL[e.engine] || e.engine}
                     className={`text-[11px] font-black px-1.5 py-0.5 rounded ${e.mentioned > 0 ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-400'}`}>
-                    {(ENGINE_LABEL[e.engine] || e.engine).slice(0, 2)} {e.mentioned}/{e.total}
+                    {(ENGINE_LABEL[e.engine] || e.engine).slice(0, 2)} {e.total === 0 ? '未測定' : `${e.mentioned}/${e.total}`}
                   </span>
                 ))}
               </span>
@@ -561,7 +573,7 @@ function PromptBreakdown({ summary, brandName }: { summary: Summary; brandName?:
             {open && (
               <div className="px-3 pb-3 pt-1 bg-slate-50/60 border-t border-slate-100 space-y-3">
                 <p className="text-[11px] font-bold text-slate-400">
-                  {totalMentioned > 0 ? `このプロンプトで自社が ${totalMentioned} 回言及されました。` : 'このプロンプトでは自社はまだ言及されていません。下の回答に挙がっているのが競合です。'}
+                  {totalMeasured === 0 ? 'このプロンプトは測定できませんでした。言及の有無は判定できません。' : totalMentioned > 0 ? `このプロンプトで自社が ${totalMentioned} 回言及されました。` : 'このプロンプトでは自社はまだ言及されていません。下の回答に挙がっているのが競合です。'}
                 </p>
                 {hasSamples ? p.samples!.map((s, i) => (
                   <div key={i} className="bg-white rounded-lg border border-slate-200 p-3">

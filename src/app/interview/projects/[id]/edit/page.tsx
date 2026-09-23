@@ -289,6 +289,12 @@ export default function EditPage() {
   const [wordCount, setWordCount] = useState(0)
   const [saving, setSaving] = useState(false)
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve())
+  const saveSequenceRef = useRef(0)
+  const draftVersionsRef = useRef<Record<string, string>>({})
+  const unsavedRef = useRef(false)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [loading, setLoading] = useState(true)
   const [projectInfo, setProjectInfo] = useState<any>(null)
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -395,10 +401,12 @@ export default function EditPage() {
       return
     }
 
+    let active = true
     fetch(`/api/interview/articles/${draftId}`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.success) {
+        if (active && data.success) {
+          draftVersionsRef.current[data.draft.id] = data.draft.updatedAt
           setContent(data.draft.content)
           setTitle(data.draft.title || '')
           setWordCount(data.draft.wordCount || data.draft.content.length)
@@ -409,31 +417,80 @@ export default function EditPage() {
         }
       })
       .catch(console.error)
-      .finally(() => setLoading(false))
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
   }, [draftId, fetchDraft])
 
-  const autoSave = useCallback(async (newContent: string) => {
+  useEffect(() => {
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!unsavedRef.current) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', beforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload)
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      ++saveSequenceRef.current
+    }
+  }, [draftId])
+
+  const autoSave = useCallback(async (newContent: string, newTitle: string = title) => {
     if (!draftId) return
+    unsavedRef.current = true
+    setHasUnsavedChanges(true)
+    const sequence = ++saveSequenceRef.current
     setSaving(true)
-    try {
-      await fetch(`/api/interview/articles/${draftId}`, {
+    setLastSaved(null)
+    setSaveError(null)
+    const task = saveQueueRef.current.then(async () => {
+      const expectedUpdatedAt = draftVersionsRef.current[draftId]
+      if (!expectedUpdatedAt) throw new Error('記事の更新情報がありません。入力をコピーして保管してから記事を開き直してください。')
+      const res = await fetch(`/api/interview/articles/${draftId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newContent, title }),
+        body: JSON.stringify({ content: newContent, title: newTitle, expectedUpdatedAt }),
       })
-      setLastSaved(new Date())
-    } catch {
-      // ignore
-    } finally {
-      setSaving(false)
-    }
+      const result = await res.json()
+      if (!res.ok || result?.success !== true || result?.draft?.id !== draftId || typeof result?.draft?.updatedAt !== 'string') {
+        throw new Error(result?.error || '保存に失敗しました。入力を残したまま再試行してください。')
+      }
+      draftVersionsRef.current[draftId] = result.draft.updatedAt
+      if (sequence === saveSequenceRef.current) {
+        unsavedRef.current = false
+        setHasUnsavedChanges(false)
+        setLastSaved(new Date())
+      }
+    }).catch((error: unknown) => {
+      if (sequence === saveSequenceRef.current) {
+        setSaveError(error instanceof Error ? error.message : '保存に失敗しました。再試行してください。')
+      }
+    }).finally(() => {
+      if (sequence === saveSequenceRef.current) setSaving(false)
+    })
+    saveQueueRef.current = task
+    await task
   }, [draftId, title])
 
   const handleContentChange = (newContent: string) => {
+    unsavedRef.current = true
+    setHasUnsavedChanges(true)
+    ++saveSequenceRef.current
+    setLastSaved(null)
     setContent(newContent)
     setWordCount(newContent.length)
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => autoSave(newContent), 2000)
+  }
+
+  const handleTitleChange = (newTitle: string) => {
+    unsavedRef.current = true
+    setHasUnsavedChanges(true)
+    ++saveSequenceRef.current
+    setLastSaved(null)
+    setTitle(newTitle)
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => autoSave(content, newTitle), 2000)
   }
 
   const handleSave = async () => {
@@ -924,7 +981,9 @@ ${htmlBody}
                       <span className="material-symbols-outlined text-[14px]">schedule</span>
                       約{Math.ceil(wordCount / 600)}分
                     </span>
-                    {lastSaved && !saving && (
+                    {saveError && <span role="alert" className="text-red-600">{saveError}</span>}
+                    {hasUnsavedChanges && !saving && !saveError && <span role="status" className="text-amber-700">未保存</span>}
+                    {lastSaved && !saving && !saveError && (
                       <>
                         <span>·</span>
                         <span className="flex items-center gap-1">
@@ -1142,7 +1201,7 @@ ${htmlBody}
                     <input
                       type="text"
                       value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      onChange={(e) => handleTitleChange(e.target.value)}
                       placeholder="記事タイトルを入力..."
                       className="w-full text-xl sm:text-2xl md:text-3xl font-black tracking-tight text-slate-900 outline-none placeholder:text-slate-300 leading-[1.3] mb-6 sm:mb-8 pb-4 sm:pb-6 border-b-2 border-slate-100"
                     />
@@ -1162,7 +1221,7 @@ ${htmlBody}
                     <input
                       type="text"
                       value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      onChange={(e) => handleTitleChange(e.target.value)}
                       placeholder="記事タイトルを入力..."
                       className="w-full text-2xl font-extrabold tracking-tight text-slate-900 outline-none placeholder:text-slate-300"
                     />
@@ -1576,7 +1635,7 @@ ${htmlBody}
                               </div>
                             ) : (
                               <button
-                                onClick={() => setTitle(t.title)}
+                                onClick={() => handleTitleChange(t.title)}
                                 className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-bold transition-colors"
                               >
                                 <span className="material-symbols-outlined text-[14px]">done</span>

@@ -61,24 +61,38 @@ export async function POST(req: NextRequest) {
     if (!isNaN(d.getTime())) occurredAt = d
   }
 
-  const activity = await prisma.sfaActivity.create({
-    data: {
-      organizationId: ctx.organizationId,
-      type,
-      subject: subject?.slice(0, 200) || null,
-      body: bodyText?.slice(0, 4000) || null,
-      accountId,
-      dealId,
-      contactId,
-      occurredAt,
-      memberId: ctx.memberId,
-    },
-  })
+  try {
+    const activity = await prisma.$transaction(async (tx) => {
+      const created = await tx.sfaActivity.create({
+        data: {
+          organizationId: ctx.organizationId,
+          type,
+          subject: subject?.slice(0, 200) || null,
+          body: bodyText?.slice(0, 4000) || null,
+          accountId,
+          dealId,
+          contactId,
+          occurredAt,
+          memberId: ctx.memberId,
+        },
+      })
 
-  // 商談に紐づく活動なら lastActivityAt を更新（停滞判定の起点）
-  if (dealId) {
-    await prisma.sfaDeal.update({ where: { id: dealId }, data: { lastActivityAt: occurredAt } }).catch(() => {})
+      // 条件付き更新により、古い活動や更新順の逆転で最終活動日を戻さない。
+      if (dealId) {
+        await tx.sfaDeal.updateMany({
+          where: {
+            id: dealId,
+            organizationId: ctx.organizationId,
+            OR: [{ lastActivityAt: null }, { lastActivityAt: { lt: occurredAt } }],
+          },
+          data: { lastActivityAt: occurredAt },
+        })
+      }
+      return created
+    })
+
+    return NextResponse.json({ activity })
+  } catch {
+    return NextResponse.json({ error: '活動を保存できませんでした。もう一度お試しください。' }, { status: 500 })
   }
-
-  return NextResponse.json({ activity })
 }

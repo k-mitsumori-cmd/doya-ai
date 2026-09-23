@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { callGeminiImageAPI } from '@/lib/resolve-image-model'
+import { resolvePersonaImageInput, generateAndSavePersonaImage } from '@/lib/persona/image-generation'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,31 +12,18 @@ export const maxDuration = 300
 
 export async function POST(req: NextRequest) {
   try {
-    // 認証チェック（画像生成はコストが高いため認証必須）
     const session = await getServerSession(authOptions)
-    const userEmail = session?.user?.email || 'guest'
-
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: '画像生成にはログインが必要です。', code: 'LOGIN_REQUIRED' }, { status: 401 })
     }
 
-    console.log(`[persona/scene] user=${userEmail} - scene generation request`)
-
-    const body = await req.json()
-    const { scenePrompt, persona } = body
-
-    if (!scenePrompt) {
-      return NextResponse.json({ error: 'シーンの説明が必要です' }, { status: 400 })
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力内容を確認してください。' }, { status: 400 })
     }
-
-    if (!persona) {
-      return NextResponse.json({ error: 'ペルソナ情報が必要です' }, { status: 400 })
-    }
-
-    const apiKey = process.env.GOOGLE_GENAI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: 'APIキーが設定されていません' }, { status: 500 })
-    }
+    const resolved = await resolvePersonaImageInput(session.user.id, body, 'scene')
+    if ('response' in resolved) return resolved.response
+    const { persona, scenePrompt } = resolved.input
 
     const { age, gender, occupation, name, personalityTraits, lifestyle } = persona
 
@@ -94,32 +81,11 @@ Output a single high-quality lifestyle photograph.
       ],
     }
 
-    const { response } = await callGeminiImageAPI(apiKey, requestBody)
-
-    const result = await response.json()
-
-    // 画像データを抽出
-    const parts = result?.candidates?.[0]?.content?.parts
-    if (!Array.isArray(parts)) {
-      return NextResponse.json({ error: '画像データが見つかりません' }, { status: 500 })
-    }
-
-    for (const part of parts) {
-      const inline = part?.inlineData || part?.inline_data
-      if (inline?.data && typeof inline.data === 'string') {
-        const mimeType = inline?.mimeType || 'image/png'
-        return NextResponse.json({
-          success: true,
-          image: `data:${mimeType};base64,${inline.data}`,
-        })
-      }
-    }
-
-    return NextResponse.json({ error: '画像の抽出に失敗しました' }, { status: 500 })
+    return await generateAndSavePersonaImage(resolved.input, requestBody)
   } catch (error) {
     console.error('Scene generation error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'シーン画像生成中にエラーが発生しました' },
+      { error: 'シーン画像生成中にエラーが発生しました' },
       { status: 500 }
     )
   }

@@ -15,10 +15,10 @@ import { getAishodanContext, hasMinRole, orgSlugFrom } from '@/lib/aishodan/acce
 import { toScenarioConfig } from '@/lib/aishodan/public'
 import { evaluateSession } from '@/lib/aishodan/evaluate'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function POST(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
   // 判定は営業の意思決定に使う。やり直しはマネージャー以上に限る
@@ -37,6 +37,9 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   if (!s) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
   if (!s.startedAt) {
     return NextResponse.json({ error: 'この商談はまだ実施されていません。' }, { status: 400 })
+  }
+  if (!s.endedAt || !['completed', 'evaluated'].includes(s.status)) {
+    return NextResponse.json({ error: '自動判定は商談が終了してから実行してください。' }, { status: 409 })
   }
   // ⚠️ 人が手で直した判定をAIで上書きしない。上書きするなら明示的に指示させる。
   if (s.outcome?.overriddenAt) {

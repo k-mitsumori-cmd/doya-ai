@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import sharp from 'sharp'
+import { safeFetchResource } from '@/lib/net/safe-fetch'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -35,12 +36,8 @@ async function getPlaceholderWebp(): Promise<Buffer> {
 
 async function fetchAsBuffer(url: string, timeoutMs = 5000): Promise<Buffer | null> {
   try {
-    const controller = new AbortController()
-    const t = setTimeout(() => controller.abort(), timeoutMs)
-    const res = await fetch(url, { redirect: 'follow', signal: controller.signal })
-    clearTimeout(t)
-    if (!res.ok) return null
-    return Buffer.from(await res.arrayBuffer())
+    const resource = await safeFetchResource(url, { accept: 'image/*', timeoutMs, maxBytes: 4 * 1024 * 1024 })
+    return resource?.body ?? null
   } catch {
     return null
   }
@@ -57,7 +54,20 @@ export async function GET(req: NextRequest) {
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
     const w = Math.min(Math.max(Number(searchParams.get('w')) || 320, 40), 640)
 
-    const cacheKey = `${id}-${w}`
+    const g = await prisma.generation.findFirst({
+      where: {
+        id,
+        userId,
+        serviceId: 'banner',
+        outputType: 'IMAGE',
+      },
+      select: { output: true },
+    })
+
+    // Ownership and continued existence must be checked even on a warm cache.
+    if (!g) return NextResponse.json({ error: 'not found' }, { status: 404 })
+
+    const cacheKey = `${userId}:${id}:${w}`
     const cached = THUMB_CACHE.get(cacheKey)
     if (cached && Date.now() - cached.ts < THUMB_CACHE_TTL_MS) {
       const etag = `W/"hist-thumb-${id}-${w}"`
@@ -80,15 +90,6 @@ export async function GET(req: NextRequest) {
       })
     }
 
-    const g = await prisma.generation.findFirst({
-      where: {
-        id,
-        userId,
-        serviceId: 'banner',
-        outputType: 'IMAGE',
-      },
-      select: { output: true },
-    })
 
     const out = typeof g?.output === 'string' ? g.output : ''
     // dataURL / URL の両方に対応（壊れていてもプレースホルダを返す）

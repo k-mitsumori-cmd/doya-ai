@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
   if (SERVICE_RETIRED) return retiredServiceResponse('ドヤオープニングAI')
 
@@ -22,7 +23,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
   if (SERVICE_RETIRED) return retiredServiceResponse('ドヤオープニングAI')
 

@@ -6,7 +6,8 @@ import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 const STALE_THRESHOLD_MS = 5 * 60 * 1000 // 5分
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
   if (SERVICE_RETIRED) return retiredServiceResponse('ドヤオープニングAI')
 
@@ -47,7 +48,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
   if (SERVICE_RETIRED) return retiredServiceResponse('ドヤオープニングAI')
 

@@ -12,10 +12,10 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 async function resolveId(ctx: Ctx): Promise<string> {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   return p.id
 }
 

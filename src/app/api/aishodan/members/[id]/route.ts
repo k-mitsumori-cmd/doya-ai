@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { getAishodanContext, hasMinRole, orgSlugFrom } from '@/lib/aishodan/access'
 import { ROLE_HIERARCHY, type AishodanRole } from '@/lib/aishodan/types'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 const ROLES: AishodanRole[] = ['admin', 'manager', 'member']
 
 async function load(id: string, organizationId: string) {
@@ -21,7 +21,7 @@ async function load(id: string, organizationId: string) {
 }
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const c = await getAishodanContext(orgSlugFrom(req))
   if (!c) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
   if (!hasMinRole(c.role, 'admin')) {
@@ -53,7 +53,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 }
 
 export async function DELETE(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const c = await getAishodanContext(orgSlugFrom(req))
   if (!c) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
   if (!hasMinRole(c.role, 'admin')) {

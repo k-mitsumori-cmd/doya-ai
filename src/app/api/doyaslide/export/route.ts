@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
         }
       })
     )
-    const images = results.filter((x): x is { index: number; buf: Buffer } => x !== null)
+    const images = results.filter((x): x is NonNullable<typeof x> => x !== null)
     if (images.length === 0) {
       return NextResponse.json(
         { error: `画像の取得に失敗しました${errorSuffix('all slide image fetches failed')}` },

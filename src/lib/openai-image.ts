@@ -31,6 +31,7 @@ export async function generateImageGpt(params: {
   size?: GptImageSize
   quality?: GptImageQuality
   n?: number
+  timeoutMs?: number
 }): Promise<GptImageResult[]> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) throw new Error('OPENAI_API_KEY が設定されていません')
@@ -46,7 +47,7 @@ export async function generateImageGpt(params: {
   // ただし 200秒だと、サイト解析等の前処理(〜90秒)と合算してフロント Abort(290秒)/maxDuration(300秒)を超えうるため、
   // 通常完了する 145秒より十分余裕を持たせつつ上限を 170秒に設定（stuck時は nano-banana へ早めにフォールバック）。
   // タイムアウトは本文読み取り(json/text)まで覆う（withTimeout 内で完結）。
-  const timeoutMs = Number(process.env.DOYA_IMAGE_TIMEOUT_MS) || 170000
+  const timeoutMs = params.timeoutMs ?? (Number(process.env.DOYA_IMAGE_TIMEOUT_MS) || 170000)
   return withTimeout(OPENAI_IMAGE_MODEL, timeoutMs, async (signal) => {
     const res = await fetch(OPENAI_IMAGE_ENDPOINT, {
       method: 'POST',

@@ -1,3 +1,4 @@
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { calculateDailyAttendance } from './attendance'
 
@@ -6,26 +7,40 @@ const JST_OFFSET_MS = 9 * 60 * 60 * 1000
 export async function recalculateDayForEmployee(
   employeeId: string,
   organizationId: string,
-  dateOnly: Date
-) {
+  dateOnly: Date,
+  db?: Prisma.TransactionClient
+): Promise<import('@prisma/client').KintaiAttendance | null> {
+  // 通常打刻・訂正承認からはロック取得済みのtxを受け取る。
+  // 単独の再計算も同じ従業員ロックを取得し、読取から保存までを一体化する。
+  if (!db) {
+    return prisma.$transaction(async (tx) => {
+      const employees = await tx.$queryRaw<Array<{ id: string }>>`
+        SELECT id FROM kintai_employees
+        WHERE id = ${employeeId} AND "organizationId" = ${organizationId}
+        FOR NO KEY UPDATE
+      `
+      if (employees.length !== 1) return null
+      return recalculateDayForEmployee(employeeId, organizationId, dateOnly, tx)
+    })
+  }
   const jstDayStart = new Date(dateOnly.getTime() - JST_OFFSET_MS)
   const jstDayEnd = new Date(jstDayStart.getTime() + 86400000)
 
-  const records = await prisma.kintaiClockRecord.findMany({
+  const records = await db.kintaiClockRecord.findMany({
     where: { employeeId, timestamp: { gte: jstDayStart, lt: jstDayEnd } },
-    orderBy: { timestamp: 'asc' },
+    orderBy: [{ timestamp: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
   })
 
   if (records.length === 0) return null
 
-  const employee = await prisma.kintaiEmployee.findUnique({
+  const employee = await db.kintaiEmployee.findUnique({
     where: { id: employeeId },
     include: { workRule: true },
   })
 
   let workRule = employee?.workRule ?? null
   if (!workRule) {
-    workRule = await prisma.kintaiWorkRule.findFirst({
+    workRule = await db.kintaiWorkRule.findFirst({
       where: { organizationId },
       orderBy: { createdAt: 'asc' },
     })
@@ -34,7 +49,7 @@ export async function recalculateDayForEmployee(
   const result = calculateDailyAttendance(records, workRule, jstDayStart)
   const status = !result.clockOut ? 'clock_missing' : result.lateMinutes > 0 ? 'late' : 'normal'
 
-  const updated = await prisma.kintaiAttendance.upsert({
+  const updated = await db.kintaiAttendance.upsert({
     where: { employeeId_date: { employeeId, date: dateOnly } },
     update: {
       clockIn: result.clockIn,

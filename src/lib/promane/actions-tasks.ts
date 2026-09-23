@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requirePromaneAuthAction, getWorkspaceBySlug } from "@/lib/promane/auth";
+import { requirePromaneAuthAction, requireWritableWorkspace } from "@/lib/promane/auth";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -34,8 +34,7 @@ export async function createTask(workspaceSlug: string, data: {
   dueDate?: string;
 }) {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
-  if (!workspace) throw new Error("ワークスペースにアクセスできません");
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
   if (!data.title?.trim()) throw new Error("タスク名は必須です");
   if (!data.projectId) throw new Error("projectId は必須です");
@@ -46,6 +45,19 @@ export async function createTask(workspaceSlug: string, data: {
     select: { id: true },
   });
   if (!project) throw new Error("プロジェクトが見つかりません");
+
+  if (data.assigneeId) {
+    const member = await prisma.promaneMember.findFirst({
+      where: { id: data.assigneeId, workspaceId: workspace.id, isActive: true }, select: { id: true },
+    });
+    if (!member) throw new Error("担当者がワークスペースに所属していません");
+  }
+  if (data.parentId) {
+    const parent = await prisma.promaneTask.findFirst({
+      where: { id: data.parentId, projectId: data.projectId }, select: { id: true },
+    });
+    if (!parent) throw new Error("親タスクが同じプロジェクトに存在しません");
+  }
 
   // 日付バリデーション
   const { startDate, dueDate } = validateDates(data.startDate, data.dueDate);
@@ -85,8 +97,7 @@ export async function updateTask(workspaceSlug: string, taskId: string, data: {
   order?: number;
 }) {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
-  if (!workspace) throw new Error("ワークスペースにアクセスできません");
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
   // セキュリティ: タスクが自分のworkspaceに属するか確認 (IDOR防止)
   const existing = await prisma.promaneTask.findFirst({
@@ -94,6 +105,13 @@ export async function updateTask(workspaceSlug: string, taskId: string, data: {
     select: { startDate: true, dueDate: true, projectId: true },
   });
   if (!existing) throw new Error("タスクが見つかりません");
+
+  if (data.assigneeId) {
+    const member = await prisma.promaneMember.findFirst({
+      where: { id: data.assigneeId, workspaceId: workspace.id, isActive: true }, select: { id: true },
+    });
+    if (!member) throw new Error("担当者がワークスペースに所属していません");
+  }
 
   // 部分更新で日付の整合性を保証
   if (data.startDate !== undefined || data.dueDate !== undefined) {
@@ -126,8 +144,7 @@ export async function updateTask(workspaceSlug: string, taskId: string, data: {
 
 export async function deleteTask(workspaceSlug: string, taskId: string) {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
-  if (!workspace) throw new Error("ワークスペースにアクセスできません");
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
   // セキュリティ: workspace所属確認 (IDOR防止)
   const existing = await prisma.promaneTask.findFirst({
@@ -142,8 +159,7 @@ export async function deleteTask(workspaceSlug: string, taskId: string) {
 
 export async function moveTask(workspaceSlug: string, taskId: string, newStatus: string, newOrder: number) {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
-  if (!workspace) throw new Error("ワークスペースにアクセスできません");
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
   // セキュリティ: workspace所属確認 (IDOR防止)
   const existing = await prisma.promaneTask.findFirst({
@@ -167,8 +183,7 @@ export async function moveTask(workspaceSlug: string, taskId: string, newStatus:
  */
 export async function repairInvalidTaskDates(workspaceSlug: string): Promise<{ repaired: number }> {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
-  if (!workspace) throw new Error("ワークスペースにアクセスできません");
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId, true);
 
   const tasks = await prisma.promaneTask.findMany({
     where: {

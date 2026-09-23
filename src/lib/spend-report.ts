@@ -22,7 +22,6 @@
 // ============================================
 
 import { getServiceUsageStats, postPlainToSlack } from '@/lib/notifications'
-import { fetchGCPUsageReport } from '@/lib/gcp-usage'
 
 /** 円換算のレート。gcp-usage.ts と同じ値に揃える */
 const USD_TO_JPY = 150
@@ -260,33 +259,15 @@ export async function buildSpendReport(now = new Date()): Promise<SpendReport> {
     fetchOpenAICost(monthStart, todayStart).catch(() => ({ label: 'OpenAI API', money: null } as CostLine)),
   ])
 
-  // Gemini は既存の推定をそのまま使う（GCP の課金APIではなく呼び出し数からの推定）
-  let gemini: CostLine = { label: 'Gemini API', money: null, note: '取得できず' }
-  let geminiMonth: CostLine = { label: 'Gemini API', money: null }
-  try {
-    const gcp = await fetchGCPUsageReport()
-    if (gcp.error) errors.push(`GCP: ${gcp.error}`)
-    gemini = {
-      label: 'Gemini API',
-      money: { usd: gcp.estimatedCost.geminiApiUsd, jpy: gcp.estimatedCost.geminiApiJpy },
-      note: '呼び出し数からの推定',
-    }
-    geminiMonth = {
-      label: 'Gemini API',
-      money: { usd: gcp.monthly.estimatedCost.totalUsd, jpy: gcp.monthly.estimatedCost.totalJpy },
-      note: '推定',
-    }
-  } catch (e: any) {
-    errors.push(`Gemini の集計に失敗: ${e?.message ?? e}`)
-  }
+  // 2026-09-10: Gemini 費用の通知停止に伴い、表示用の GCP 利用量取得も行わない。
 
   const { usage, errors: usageErrors } = await fetchAppUsage(yesterdayStart, todayStart)
   errors.push(...usageErrors)
 
   return {
     dateLabel,
-    costs: [anthropic, openai, gemini],
-    monthCosts: [anthropicMonth, openaiMonth, geminiMonth],
+    costs: [anthropic, openai],
+    monthCosts: [anthropicMonth, openaiMonth],
     usage,
     fixed: fetchFixedCosts(),
     errors,

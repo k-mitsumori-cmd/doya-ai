@@ -1,3 +1,4 @@
+import { timeEntryBelongsToProject } from "@/lib/promane/time-entry-project";
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -28,7 +29,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ worksp
     let laborCost = 0;
     let totalMinutes = 0;
     members.forEach((member) => {
-      const minutes = member.timeEntries.filter((te) => te.taskId && taskIds.includes(te.taskId)).reduce((sum, te) => sum + safe(te.duration), 0);
+      const minutes = member.timeEntries.filter((te) => timeEntryBelongsToProject(te, project.id, taskIds)).reduce((sum, te) => sum + safe(te.duration), 0);
       totalMinutes += minutes;
       laborCost += (minutes / 60) * safe(member.hourlyRate);
     });
@@ -37,20 +38,19 @@ export default async function ReportsPage({ params }: { params: Promise<{ worksp
     const totalCost = laborCost + expenseCost;
     const revenue = safe(project.contractAmount);
     const profit = revenue - totalCost;
-    // 利益率を -100% 〜 100% でクランプ
     const rawRate = revenue > 0 ? (profit / revenue) * 100 : 0;
-    const profitRate = Math.min(100, Math.max(-100, rawRate));
+    const profitRate = rawRate;
     return {
-      name: project.name, clientName: project.client?.name || "—", status: project.status,
+      id: project.id, clientId: project.clientId, name: project.name, clientName: project.client?.name || "—", status: project.status,
       revenue, laborCost: Math.round(laborCost), expenseCost,
       totalCost: Math.round(totalCost), profit: Math.round(profit), profitRate, totalMinutes,
     };
   });
 
-  const clientSummary = new Map<string, { revenue: number; cost: number; projects: number }>();
+  const clientSummary = new Map<string | null, { name: string; revenue: number; cost: number; projects: number }>();
   projectReports.forEach((pr) => {
-    const existing = clientSummary.get(pr.clientName) || { revenue: 0, cost: 0, projects: 0 };
-    clientSummary.set(pr.clientName, { revenue: existing.revenue + pr.revenue, cost: existing.cost + pr.totalCost, projects: existing.projects + 1 });
+    const existing = clientSummary.get(pr.clientId) || { name: pr.clientName, revenue: 0, cost: 0, projects: 0 };
+    clientSummary.set(pr.clientId, { name: pr.clientName, revenue: existing.revenue + pr.revenue, cost: existing.cost + pr.totalCost, projects: existing.projects + 1 });
   });
 
   const chartData = projectReports.map((pr) => ({
@@ -101,7 +101,7 @@ export default async function ReportsPage({ params }: { params: Promise<{ worksp
                 </thead>
                 <tbody>
                   {projectReports.map((pr) => (
-                    <tr key={pr.name} className="border-b border-gray-50 hover:bg-blue-50/40 transition-colors">
+                    <tr key={pr.id} className="border-b border-gray-50 hover:bg-blue-50/40 transition-colors">
                       <td className="px-6 py-4 text-[15px] font-black text-gray-900">{pr.name}</td>
                       <td className="px-4 py-4 text-[14px] font-bold text-gray-500">{pr.clientName}</td>
                       <td className="px-4 py-4 text-right text-[15px] font-black text-gray-900">{formatCurrency(pr.revenue)}</td>
@@ -153,12 +153,12 @@ export default async function ReportsPage({ params }: { params: Promise<{ worksp
                   </tr>
                 </thead>
                 <tbody>
-                  {Array.from(clientSummary.entries()).map(([name, data]) => {
+                  {Array.from(clientSummary.entries()).map(([clientId, data]) => {
                     const profit = data.revenue - data.cost;
                     const rate = data.revenue > 0 ? (profit / data.revenue) * 100 : 0;
                     return (
-                      <tr key={name} className="border-b border-gray-50 hover:bg-blue-50/40 transition-colors">
-                        <td className="px-6 py-4 text-[15px] font-black text-gray-900">{name}</td>
+                      <tr key={clientId ?? "unassigned"} className="border-b border-gray-50 hover:bg-blue-50/40 transition-colors">
+                        <td className="px-6 py-4 text-[15px] font-black text-gray-900">{data.name}</td>
                         <td className="px-4 py-4 text-right text-[15px] font-black text-gray-700">{data.projects}</td>
                         <td className="px-4 py-4 text-right text-[15px] font-black text-gray-900">{formatCurrency(data.revenue)}</td>
                         <td className="px-4 py-4 text-right text-[14px] font-bold text-gray-600">{formatCurrency(data.cost)}</td>

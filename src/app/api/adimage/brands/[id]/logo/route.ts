@@ -14,7 +14,7 @@ import { getIdentity, ownerWhere, requireUser } from '@/lib/adimage/access'
 import { uploadPng } from '@/lib/adimage/storage'
 import { DEFAULT_LOGO_CONFIG, type LogoConfig, type LogoPosition } from '@/lib/adimage/logo'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 const POSITIONS: LogoPosition[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'center-top']
 
@@ -22,7 +22,7 @@ const POSITIONS: LogoPosition[] = ['top-left', 'top-right', 'bottom-left', 'bott
 const MAX_BYTES = 3 * 1024 * 1024
 
 export async function POST(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const identity = await getIdentity(req)
   // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
   const auth = requireUser(identity)
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
 }
 
 export async function DELETE(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const identity = await getIdentity(req)
   // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
   const auth = requireUser(identity)

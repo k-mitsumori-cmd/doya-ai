@@ -8,10 +8,10 @@ import { prisma } from '@/lib/prisma'
 import { getMensetsuContext, hasMinRole, orgSlugFrom } from '@/lib/mensetsu/access'
 import { weightedAverage } from '@/lib/mensetsu/evaluate'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function GET(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const c = await getMensetsuContext(orgSlugFrom(req))
   if (!c) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
@@ -25,7 +25,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           criteria: { orderBy: { ord: 'asc' } },
         },
       },
-      turns: { orderBy: { ord: 'asc' } },
+      // 分割送信の到着順ではなく発話時刻で並べる。時刻不明は末尾で記録順を保持。
+      turns: { orderBy: [{ startMs: { sort: 'asc', nulls: 'last' } }, { ord: 'asc' }, { id: 'asc' }] },
       scores: { include: { criterion: true } },
     },
   })
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const c = await getMensetsuContext(orgSlugFrom(req))
   if (!c) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
   // ⚠️ 同階層の変更系ルートと揃える。応募者の本人確認の設定を書き換える操作なので、

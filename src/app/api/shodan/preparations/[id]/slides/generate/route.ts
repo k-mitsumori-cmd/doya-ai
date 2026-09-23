@@ -4,6 +4,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { saveSlideImages, SlideImageConflict } from '@/lib/shodan/save-slide-images'
 import { getShodanContext, orgSlugFrom } from '@/lib/shodan/access'
 import { generateSlideImage, type StoredSlide, type SlideBrand } from '@/lib/shodan/slide-image'
 import { signedUrl } from '@/lib/shodan/storage'
@@ -11,11 +12,11 @@ import { raceTimeout } from '@/lib/fetch-timeout'
 import type { ProposalSlide } from '@/lib/shodan/types'
 import { isPaidPlan } from '@/lib/unified-plan'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 // POST /api/shodan/preparations/[id]/slides/generate — 提案スライドを画像として一括生成
 export async function POST(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const sctx = await getShodanContext(orgSlugFrom(req))
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const slides = (prep.slidesJson as unknown as ProposalSlide[] | null) || []
   if (!slides.length) return NextResponse.json({ error: '先に提案資料の構成を生成してください' }, { status: 400 })
 
-  const list = slides.slice(0, 8)
+  const list = slides
   // 既存(整列)を引き継ぎ、slidesJson と同じ索引・同じ長さに正規化（未生成は imagePath:null）
   const existing = (prep.slideImages as unknown as StoredSlide[] | null) || []
   const images: StoredSlide[] = list.map((s, i) => (existing[i]?.imagePath ? existing[i] : { title: s.title, imagePath: existing[i]?.imagePath ?? null }))
@@ -66,12 +67,17 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }
     await Promise.all(Array.from({ length: Math.min(concurrency, batch.length) }, worker))
 
-    // 書き込み前に最新を再取得してマージ（別タブ等の同時実行で、先に成功した枠をnullで上書きしない）
-    const fresh = await prisma.shodanPreparation.findUnique({ where: { id: prep.id }, select: { slideImages: true } })
-    const latest = (fresh?.slideImages as unknown as StoredSlide[] | null) || []
-    const merged: StoredSlide[] = images.map((im, i) => (im.imagePath ? im : latest[i]?.imagePath ? latest[i] : im))
-    await prisma.shodanPreparation.update({ where: { id: prep.id }, data: { slideImages: merged as any } })
-    images.splice(0, images.length, ...merged)
+    const changes = batch.filter((index) => images[index]?.imagePath).map((index) => ({ index, image: images[index] }))
+    if (changes.length > 0) {
+      try {
+        const merged = await saveSlideImages(prep.id, sctx.organizationId, prep.slidesJson, existing, changes)
+        images.splice(0, images.length, ...merged.slice(0, list.length))
+      } catch (e) {
+        if (e instanceof SlideImageConflict) return NextResponse.json({ error: e.message }, { status: 409 })
+        console.error('[shodan/slides] save failed', (e as Error)?.message)
+        return NextResponse.json({ error: 'スライド画像の保存に失敗しました。再読み込みしてご確認ください。' }, { status: 500 })
+      }
+    }
   }
 
   const successCount = images.filter((x) => x.imagePath).length

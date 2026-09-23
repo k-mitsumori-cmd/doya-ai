@@ -1,5 +1,6 @@
 "use client";
 
+import { parsePromaneDuration, parsePromaneWorkDate, promaneToday, formatPromaneWorkDate } from "@/lib/promane/time-input";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createTimeEntry, deleteTimeEntry } from "@/lib/promane/actions-time-entries";
@@ -16,8 +17,8 @@ import { useConfirm } from "@/components/promane/confirm-dialog";
 type EntryItem = { id: string; taskId: string | null; duration: number; date: string; note: string | null; taskTitle: string | null; projectName: string | null };
 type ProjectWithTasks = { id: string; name: string; tasks: { id: string; title: string }[] };
 
-export function TimesheetView({ workspaceSlug, memberId, entries, projects }: {
-  workspaceSlug: string; memberId: string; entries: EntryItem[]; projects: ProjectWithTasks[];
+export function TimesheetView({ workspaceSlug, memberId, entries, projects, totalCount, totalMinutes, periodLabel }: {
+  workspaceSlug: string; memberId: string; entries: EntryItem[]; projects: ProjectWithTasks[]; totalCount: number; totalMinutes: number; periodLabel: string;
 }) {
   const router = useRouter();
   const [showForm, setShowForm] = useState(false);
@@ -25,26 +26,22 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects }: {
   const [selectedProject, setSelectedProject] = useState("");
   const { confirm, ConfirmDialog } = useConfirm();
   const selectedProjectTasks = projects.find((p) => p.id === selectedProject)?.tasks || [];
-  const totalMinutes = entries.reduce((sum, e) => sum + e.duration, 0);
+
 
   async function handleAdd(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
     const form = new FormData(e.currentTarget);
-    const hours = parseFloat(form.get("hours") as string) || 0;
-    const minutes = parseFloat(form.get("minutes") as string) || 0;
-    const duration = Math.round(hours * 60 + minutes);
-    if (duration < 0) {
-      toast.error("時間は 0以上を入力してください");
-      setLoading(false);
-      return;
-    }
     try {
+      const duration = parsePromaneDuration(form.get("hours"), form.get("minutes"));
+      const date = String(form.get("date") || "");
+      parsePromaneWorkDate(date);
       await createTimeEntry(workspaceSlug, {
+        projectId: selectedProject || undefined,
         taskId: (form.get("taskId") as string) || undefined,
         memberId,
         duration,
-        date: form.get("date") as string,
+        date,
         note: (form.get("note") as string) || undefined,
       });
       toast.success("作業時間を記録したよ！");
@@ -81,9 +78,9 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects }: {
       <div className="flex items-center justify-between mb-6 animate-slide-up stagger-1">
         <div className="flex items-center gap-3">
           <div className="rounded-2xl bg-cyan-100 px-4 py-2">
-            <span className="text-[16px] font-black text-cyan-700">⏱ 合計 {formatDuration(totalMinutes)}</span>
+            <span className="text-[16px] font-black text-cyan-700">{periodLabel}の合計 {formatDuration(totalMinutes)}</span>
           </div>
-          <span className="text-[14px] font-bold text-gray-400">直近50件</span>
+          <span className="text-[14px] font-bold text-gray-400">全{totalCount}件 · このページ{entries.length}件</span>
         </div>
         <Button onClick={() => setShowForm(!showForm)} className="rounded-full h-12 px-7 text-[15px] font-black shadow-lg bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 hover:scale-105 active:scale-95 transition-all">
           <Plus className="mr-2 h-5 w-5" />
@@ -108,7 +105,7 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects }: {
               </div>
               <div>
                 <Label className="text-[13px] font-bold text-gray-500 mb-1.5 block">📋 タスク</Label>
-                <Select name="taskId">
+                <Select key={selectedProject} name="taskId">
                   <SelectTrigger className="h-12 rounded-2xl font-bold bg-gray-50"><SelectValue placeholder="選択..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">なし</SelectItem>
@@ -120,15 +117,15 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects }: {
             <div className="grid grid-cols-4 gap-4">
               <div>
                 <Label className="text-[13px] font-bold text-gray-500 mb-1.5 block">⏰ 時間</Label>
-                <Input name="hours" type="number" min="0" placeholder="1" className="h-12 rounded-2xl font-bold bg-gray-50 text-center text-[18px]" />
+                <Input name="hours" type="number" min="0" step="1" placeholder="1" className="h-12 rounded-2xl font-bold bg-gray-50 text-center text-[18px]" />
               </div>
               <div>
                 <Label className="text-[13px] font-bold text-gray-500 mb-1.5 block">⏰ 分</Label>
-                <Input name="minutes" type="number" min="0" max="59" placeholder="30" className="h-12 rounded-2xl font-bold bg-gray-50 text-center text-[18px]" />
+                <Input name="minutes" type="number" min="0" step="1" max="59" placeholder="30" className="h-12 rounded-2xl font-bold bg-gray-50 text-center text-[18px]" />
               </div>
               <div>
                 <Label className="text-[13px] font-bold text-gray-500 mb-1.5 block">📅 日付</Label>
-                <Input name="date" type="date" defaultValue={new Date().toISOString().split("T")[0]} required className="h-12 rounded-2xl font-bold bg-gray-50" />
+                <Input name="date" type="date" defaultValue={promaneToday()} required className="h-12 rounded-2xl font-bold bg-gray-50" />
               </div>
               <div>
                 <Label className="text-[13px] font-bold text-gray-500 mb-1.5 block">📝 メモ</Label>
@@ -146,8 +143,8 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects }: {
         {entries.length === 0 ? (
           <div className="py-24 text-center">
             <Image src="/character/sleep.png" alt="" width={120} height={120} className="mx-auto animate-float" unoptimized />
-            <p className="mt-4 text-[20px] font-black text-gray-400">まだ記録がないよ〜</p>
-            <p className="text-[15px] text-gray-300 font-bold mt-1">今日の作業時間を記録してみよう！</p>
+            <p className="mt-4 text-[20px] font-black text-gray-400">この表示条件の記録はありません</p>
+            <p className="text-[15px] text-gray-300 font-bold mt-1">期間を変更するか、新しい作業時間を記録してください。</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
@@ -167,7 +164,7 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects }: {
                   </div>
                 </div>
                 <span className="text-[14px] font-bold text-gray-400">
-                  📅 {new Date(entry.date).toLocaleDateString("ja-JP")}
+                  📅 {formatPromaneWorkDate(entry.date)}
                 </span>
                 <button onClick={() => handleDelete(entry.id)} className="p-2 rounded-xl text-gray-300 hover:text-red-500 hover:bg-red-50 transition-all">
                   <Trash2 className="h-4 w-4" />

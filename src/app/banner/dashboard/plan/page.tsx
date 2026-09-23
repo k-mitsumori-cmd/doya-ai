@@ -147,47 +147,32 @@ export default function BannerPlanPage() {
     }
   }
 
-  // Stripeから解約予定日を取得
+  const [subscriptionStatusError, setSubscriptionStatusError] = useState('')
+  // 停止日時はサーバーで確認できた値だけを表示する。
   useEffect(() => {
+    setCancelMode(null)
+    setCancelScheduledAt(null)
+    setSubscriptionStatusError('')
     if (!isLoggedIn) return
     let cancelled = false
     ;(async () => {
       try {
         const res = await fetch('/api/stripe/subscription/status?serviceId=banner', { cache: 'no-store' })
-        const json = await res.json().catch(() => ({}))
+        const json = await res.json()
+        if (!res.ok || json.ok !== true) throw new Error(json.error || '契約状態を確認できませんでした。再読み込みしてください。')
         if (cancelled) return
-        if (res.ok && json.cancelAtPeriodEnd && json.currentPeriodEnd) {
-          setCancelScheduledAt(new Date(Number(json.currentPeriodEnd) * 1000))
+        if (json.cancelAtPeriodEnd && json.currentPeriodEnd) {
+          const date = new Date(Number(json.currentPeriodEnd) * 1000)
+          if (Number.isNaN(date.getTime())) throw new Error('停止日時を確認できませんでした。')
+          setCancelScheduledAt(date)
           setCancelMode('period_end')
-        } else {
-          // localStorageのフォールバック
-          try {
-            const raw = localStorage.getItem('banner:cancelScheduledAt')
-            if (raw) {
-              const d = new Date(raw)
-              if (!Number.isNaN(d.getTime())) {
-                setCancelScheduledAt(d)
-                setCancelMode('period_end')
-              }
-            }
-          } catch {}
         }
-      } catch {
-        // localStorageのフォールバック
-        try {
-          const raw = localStorage.getItem('banner:cancelScheduledAt')
-          if (raw) {
-            const d = new Date(raw)
-            if (!Number.isNaN(d.getTime())) {
-              setCancelScheduledAt(d)
-              setCancelMode('period_end')
-            }
-          }
-        } catch {}
+      } catch (e: any) {
+        if (!cancelled) setSubscriptionStatusError(e?.message || '契約状態を確認できませんでした。再読み込みしてください。')
       }
     })()
     return () => { cancelled = true }
-  }, [isLoggedIn])
+  }, [isLoggedIn, session?.user?.email])
 
   const handleSyncPlan = async () => {
     if (isGuest) {
@@ -301,6 +286,7 @@ export default function BannerPlanPage() {
         <DashboardSidebar />
       </div>
       <Toaster position="top-center" />
+      {subscriptionStatusError && <p role="alert" className="p-4 text-red-700 bg-red-50">{subscriptionStatusError}</p>}
       <div className="md:pl-[240px] transition-all duration-200">
         {/* ========================================
             Header - Doya Banner Style

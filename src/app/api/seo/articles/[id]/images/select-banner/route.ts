@@ -1,3 +1,4 @@
+import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
@@ -9,12 +10,14 @@ export const runtime = 'nodejs'
  */
 export async function POST(
   req: NextRequest,
-  ctx: { params: Promise<{ id: string }> | { id: string } }
+  ctx: { params: Promise<{ id: string }> }
 ) {
-  const params = 'then' in ctx.params ? await ctx.params : ctx.params
+  const params = await ctx.params
   const articleId = params.id
 
   try {
+    const owner = await getSeoArticleOwner(req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
     const body = await req.json()
     const imageId = String(body.imageId || '')
     if (!imageId) {
@@ -23,7 +26,7 @@ export async function POST(
 
     // 対象画像が存在し、この記事のBANNERであることを確認
     const image = await (prisma as any).seoImage.findFirst({
-      where: { id: imageId, articleId, kind: 'BANNER' },
+      where: { id: imageId, articleId, kind: 'BANNER', article: owner },
     })
     if (!image) {
       return NextResponse.json({ success: false, error: 'Banner not found' }, { status: 404 })
@@ -31,7 +34,7 @@ export async function POST(
 
     // createdAtを現在時刻に更新して「最新」にする
     await (prisma as any).seoImage.update({
-      where: { id: imageId },
+      where: { id: imageId, articleId, kind: 'BANNER', article: owner },
       data: { createdAt: new Date() },
     })
 

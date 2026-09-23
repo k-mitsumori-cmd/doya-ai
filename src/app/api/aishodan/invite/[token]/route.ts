@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { resolveUserId } from '@/lib/aishodan/access'
 
-type Ctx = { params: Promise<{ token: string }> | { token: string } }
+type Ctx = { params: Promise<{ token: string }> }
 
 const ROLE_LABEL: Record<string, string> = {
   owner: 'オーナー',
@@ -33,7 +33,7 @@ async function load(token: string) {
 }
 
 export async function GET(_req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const m = await load(p.token)
   if (!m) return NextResponse.json({ error: '招待が見つかりません' }, { status: 404 })
 
@@ -49,7 +49,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
 }
 
 export async function POST(_req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const userId = await resolveUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 

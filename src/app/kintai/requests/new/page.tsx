@@ -42,6 +42,12 @@ function NewRequestContent() {
   const [fixDate, setFixDate] = useState('')
   const [fixClockType, setFixClockType] = useState('clock_in')
   const [fixTime, setFixTime] = useState('')
+  const [fixRecords, setFixRecords] = useState<Array<{ id: string; type: string; timestamp: string }>>([])
+  const [fixRecordId, setFixRecordId] = useState('')
+  const [recordsDate, setRecordsDate] = useState('')
+  const [recordsError, setRecordsError] = useState('')
+  const matchingRecords = recordsDate === fixDate ? fixRecords.filter(r => r.type === fixClockType) : []
+  const selectedRecord = matchingRecords.find(r => r.id === fixRecordId) || (matchingRecords.length === 1 ? matchingRecords[0] : undefined)
   const [reason, setReason] = useState('')
 
   // leave form
@@ -71,18 +77,31 @@ function NewRequestContent() {
   }, [searchParams])
 
   useEffect(() => {
+    let active = true
+    setRecordsDate('')
+    setRecordsError('')
+    setFixRecordId('')
+    setOrigClockIn(null)
+    setOrigClockOut(null)
     if (fixDate && type === 'clock_fix') {
-      fetch(`/api/kintai/clock?date=${fixDate}`)
-        .then(r => r.json())
+      fetch(`/api/kintai/clock?date=${encodeURIComponent(fixDate)}`)
+        .then(async r => {
+          if (!r.ok) throw new Error('打刻を取得できませんでした。日付を選び直して再試行してください。')
+          return r.json()
+        })
         .then(d => {
+          if (!active) return
           const recs = d.records || []
+          setFixRecords(recs)
+          setRecordsDate(fixDate)
           const cin = recs.find((r: any) => r.type === 'clock_in')
           const cout = recs.find((r: any) => r.type === 'clock_out')
           setOrigClockIn(cin ? new Date(cin.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }) : null)
           setOrigClockOut(cout ? new Date(cout.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' }) : null)
         })
-        .catch(() => {})
+        .catch(e => { if (active) setRecordsError(e.message || '打刻の取得に失敗しました') })
     }
+    return () => { active = false }
   }, [fixDate, type])
 
   const selectType = (key: string) => {
@@ -119,12 +138,17 @@ function NewRequestContent() {
     if (type === 'clock_fix') {
       if (!fixDate) { setError('対象日を入力してください'); return }
       if (!fixTime) { setError('修正後時刻を入力してください'); return }
+      if (recordsDate !== fixDate) { setError(recordsError || '打刻を読み込み中です。しばらくお待ちください。'); return }
+      if (matchingRecords.length > 0 && !selectedRecord) { setError('訂正する打刻を選択してください'); return }
+      if (selectedRecord) { details.recordId = selectedRecord.id; details.expectedTimestamp = selectedRecord.timestamp }
       details.date = fixDate
       details.clockType = fixClockType
       details.correctedTime = fixTime
     } else if (type === 'leave') {
       if (!leaveStart) { setError('開始日を入力してください'); return }
       if (!leaveEnd) { setError('終了日を入力してください'); return }
+      const days = (new Date(leaveEnd + 'T00:00:00Z').getTime() - new Date(leaveStart + 'T00:00:00Z').getTime()) / 86400000 + 1
+      if (!Number.isFinite(days) || days < 1 || days > 366) { setError('開始日から終了日までを366日以内で指定してください'); return }
       details.startDate = leaveStart
       details.endDate = leaveEnd
       details.leaveType = leaveType
@@ -338,7 +362,7 @@ function NewRequestContent() {
               </label>
               <select
                 value={fixClockType}
-                onChange={(e) => setFixClockType(e.target.value)}
+                onChange={(e) => { setFixClockType(e.target.value); setFixRecordId('') }}
                 className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white"
               >
                 {Object.entries(CLOCK_TYPE_LABELS).map(([k, v]) => (
@@ -346,6 +370,18 @@ function NewRequestContent() {
                 ))}
               </select>
             </div>
+
+            {recordsError && <p role="alert" className="text-sm text-red-600">{recordsError}</p>}
+            {matchingRecords.length > 0 && (
+              <div>
+                <label htmlFor="fix-record" className="block text-sm font-medium text-slate-700 mb-1.5">訂正する打刻</label>
+                <select id="fix-record" value={selectedRecord?.id || ''} onChange={e => setFixRecordId(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white">
+                  <option value="">選択してください</option>
+                  {matchingRecords.map((record, index) => <option key={record.id} value={record.id}>{index + 1}回目：{new Date(record.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Tokyo' })}</option>)}
+                </select>
+              </div>
+            )}
+            {recordsDate === fixDate && fixDate && matchingRecords.length === 0 && <p className="text-sm text-slate-600">この種別の打刻はありません。指定時刻の打刻を追加します。</p>}
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-1.5 flex items-center gap-1">
@@ -365,6 +401,7 @@ function NewRequestContent() {
             {/* ===== Leave form ===== */}
             {type === 'leave' && (
               <div className="space-y-4">
+                <p className="text-sm text-slate-600">開始日から終了日までの各日を終日休暇・欠勤として登録します。休日は自動除外されません。対象日だけを指定してください（1件366日以内）。打刻・勤怠がある日は承認できません。</p>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">休暇種別</label>
                   <select value={leaveType} onChange={(e) => setLeaveType(e.target.value)} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl bg-white">

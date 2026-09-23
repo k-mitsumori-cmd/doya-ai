@@ -7,7 +7,7 @@ import { escapeHtml } from '@/lib/html-escape'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { sendEmail } from '@/lib/email'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
 
     const employee = await prisma.kintaiEmployee.findFirst({
       where: { id: p.id, organizationId: kctx.organizationId },

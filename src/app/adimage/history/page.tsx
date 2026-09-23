@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { notifyError } from '@/lib/ui/notify'
 import { EmptyState } from '@/components/EmptyState'
+import ExportDownload from '@/components/adimage/ExportDownload'
 
 interface Creative {
   id: string
@@ -190,12 +191,7 @@ export default function AdImageHistoryPage() {
                     </div>
 
                     {c.creatives.length > 0 && (
-                      <a
-                        href={`/api/adimage/concepts/${c.id}/export`}
-                        className="mt-4 inline-block rounded-lg border border-slate-300 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 font-semibold"
-                      >
-                        すべてダウンロード（ZIP）
-                      </a>
+                      <ExportDownload key={c.id} conceptId={c.id} />
                     )}
                   </div>
                 )}

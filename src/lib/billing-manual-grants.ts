@@ -24,7 +24,7 @@ export const MANUAL_GRANTS_SETTING_KEY = 'billing_manual_grants'
 let cache: { at: number; emails: Set<string> } | null = null
 const CACHE_MS = 60_000
 
-function parse(raw: string | null | undefined): string[] {
+export function parseManualGrantEmails(raw: string | null | undefined): string[] {
   const v = String(raw || '').trim()
   if (!v) return []
   if (v.startsWith('[')) {
@@ -43,13 +43,13 @@ export async function getManualGrantEmails(): Promise<Set<string>> {
   if (cache && Date.now() - cache.at < CACHE_MS) return cache.emails
 
   const emails = new Set<string>()
-  for (const e of parse(process.env.BILLING_MANUAL_GRANT_EMAILS)) {
+  for (const e of parseManualGrantEmails(process.env.BILLING_MANUAL_GRANT_EMAILS)) {
     const t = e.trim().toLowerCase()
     if (t) emails.add(t)
   }
   try {
     const row = await prisma.systemSetting.findUnique({ where: { key: MANUAL_GRANTS_SETTING_KEY } })
-    for (const e of parse(row?.value)) {
+    for (const e of parseManualGrantEmails(row?.value)) {
       const t = e.trim().toLowerCase()
       if (t) emails.add(t)
     }

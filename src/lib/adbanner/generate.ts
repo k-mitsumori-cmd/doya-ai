@@ -66,7 +66,7 @@ async function genOne(input: GenerateInput, idx: number): Promise<GeneratedCreat
   if (!res?.base64) return null
   const raw = Buffer.from(res.base64, 'base64')
   // 媒体の実寸へリサイズ（cover）
-  let buf = await sharp(raw).resize(sz.w, sz.h, { fit: 'cover' }).png().toBuffer()
+  let buf: Buffer = await sharp(raw).resize(sz.w, sz.h, { fit: 'cover' }).png().toBuffer()
   // ロゴ合成
   if (input.logo && input.logoCfg) buf = await overlayLogo(buf, input.logo, sz.w, sz.h, input.logoCfg)
 

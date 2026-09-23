@@ -43,7 +43,7 @@ export default async function ProjectDetailPage({
 
   const members = await prisma.promaneMember.findMany({
     where: { workspaceId: workspace.id },
-    include: { timeEntries: { where: { taskId: { in: project.tasks.map((t) => t.id) } } } },
+    include: { timeEntries: { where: { OR: [{ projectId: project.id }, { projectId: null, taskId: { in: project.tasks.map((t) => t.id) } }] } } },
   });
 
   let laborCost = 0;

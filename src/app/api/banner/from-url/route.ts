@@ -1,10 +1,12 @@
+import { safeFetchText, safeFetchResource } from '@/lib/net/safe-fetch'
+import { installSafeBrowserRequests, SAFE_BROWSER_ARGS } from '@/lib/net/safe-browser'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, shouldResetMonthlyUsage, getCurrentMonthJST, isWithinFreeHour } from '@/lib/pricing'
-import { isFirstServiceUse, notifyFirstServiceUse } from '@/lib/service-usage'
+import { isFirstServiceUse, notifyFirstServiceUse, notifyServiceActivity } from '@/lib/service-usage'
 import crypto from 'crypto'
 import sharp from 'sharp'
 
@@ -601,23 +603,18 @@ async function extractPaletteViaHeadlessComputedStyles(targetUrl: string, timeou
   }
 
   let browser: any
+  let disposeRequests: (() => void) | undefined
   try {
     const executablePath = await chromium.executablePath()
     browser = await puppeteer.launch({
-      args: chromium.args,
+      args: [...chromium.args, ...SAFE_BROWSER_ARGS],
       defaultViewport: { width: 1200, height: 800 },
       executablePath,
-      headless: chromium.headless,
+      headless: 'shell',
     })
     const page = await browser.newPage()
 
-    // 高速化（画像/フォントはブロック）
-    await page.setRequestInterception(true)
-    page.on('request', (req: any) => {
-      const type = req.resourceType()
-      if (type === 'image' || type === 'font' || type === 'media') return req.abort()
-      return req.continue()
-    })
+    disposeRequests = await installSafeBrowserRequests(page)
 
     await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs })
 
@@ -753,6 +750,7 @@ async function extractPaletteViaHeadlessComputedStyles(targetUrl: string, timeou
   } catch {
     return []
   } finally {
+    disposeRequests?.()
     try {
       await browser?.close?.()
     } catch {
@@ -928,23 +926,18 @@ async function analyzeSiteVisualViaHeadless(targetUrl: string, timeoutMs = 16_00
 
   const viewport = { width: 1200, height: 800 }
   let browser: any
+  let disposeRequests: (() => void) | undefined
   try {
     const executablePath = await chromium.executablePath()
     browser = await puppeteer.launch({
-      args: chromium.args,
+      args: [...chromium.args, ...SAFE_BROWSER_ARGS],
       defaultViewport: viewport,
       executablePath,
-      headless: chromium.headless,
+      headless: 'shell',
     })
     const page = await browser.newPage()
 
-    // 高速化（フォント/メディアはブロック、画像は許可して“見え方”を取る）
-    await page.setRequestInterception(true)
-    page.on('request', (req: any) => {
-      const type = req.resourceType()
-      if (type === 'font' || type === 'media') return req.abort()
-      return req.continue()
-    })
+    disposeRequests = await installSafeBrowserRequests(page)
 
     // まずはレンダリング
     try {
@@ -953,7 +946,7 @@ async function analyzeSiteVisualViaHeadless(targetUrl: string, timeoutMs = 16_00
       await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: timeoutMs }).catch(() => {})
     }
     // CSS適用・レイアウト安定待ち（短め）
-    await page.waitForTimeout(900).catch(() => {})
+    await new Promise(resolve => setTimeout(resolve, 900))
 
     const pageInfo: any = await page.evaluate(() => {
       const w = window.innerWidth
@@ -1174,6 +1167,7 @@ async function analyzeSiteVisualViaHeadless(targetUrl: string, timeoutMs = 16_00
       people: '不明',
     }
   } finally {
+    disposeRequests?.()
     try {
       await browser?.close?.()
     } catch {
@@ -1299,17 +1293,9 @@ function rgbToHex(r: number, g: number, b: number): string {
 async function fetchImageAsReferenceDataUrl(url: string, timeoutMs = 7000): Promise<string | null> {
   // 参照画像としてモデルに渡す用に軽量化（dataURL化）
   try {
-    const controller = new AbortController()
-    const t = setTimeout(() => controller.abort(), timeoutMs)
-    const res = await fetch(url, {
-      method: 'GET',
-      redirect: 'follow',
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DoyaBannerAI/1.0)' },
-      signal: controller.signal,
-    })
-    clearTimeout(t)
-    if (!res.ok) return null
-    const buf = Buffer.from(await res.arrayBuffer())
+    const resource = await safeFetchResource(url, { accept: 'image/*', timeoutMs, maxBytes: 4 * 1024 * 1024 })
+    if (!resource) return null
+    const buf = resource.body
 
     // 画像が巨大な場合でもサーバ負荷/速度を抑えるため縮小
     const out = await sharp(buf)
@@ -1331,17 +1317,9 @@ async function extractPaletteFromImages(urls: string[], timeoutMs = 6000): Promi
   const colors: string[] = []
   for (const u of urls) {
     try {
-      const controller = new AbortController()
-      const t = setTimeout(() => controller.abort(), timeoutMs)
-      const res = await fetch(u, {
-        method: 'GET',
-        redirect: 'follow',
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; DoyaBannerAI/1.0)' },
-        signal: controller.signal,
-      })
-      clearTimeout(t)
-      if (!res.ok) continue
-      const buf = Buffer.from(await res.arrayBuffer())
+      const resource = await safeFetchResource(u, { accept: 'image/*', timeoutMs, maxBytes: 4 * 1024 * 1024 })
+      if (!resource) continue
+      const buf = resource.body
       // 小さくしてから統計（高速化）
       const stats = await sharp(buf).resize(128, 128, { fit: 'inside' }).stats()
       const d = (stats as any)?.dominant
@@ -1526,28 +1504,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // URL からHTML取得
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 12_000)
-    let html = ''
-    try {
-      const res = await fetch(targetUrl, {
-        method: 'GET',
-        redirect: 'follow',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; DoyaBannerAI/1.0; +https://doya-ai.vercel.app)',
-          'Accept': 'text/html,application/xhtml+xml',
-        },
-        signal: controller.signal,
-      })
-      html = await res.text()
-      if (!res.ok) {
-        return NextResponse.json({ error: `URLの取得に失敗しました（status=${res.status}）` }, { status: 400 })
-      }
-    } catch (e: any) {
-      return NextResponse.json({ error: `URLの取得に失敗しました（${e?.message || 'timeout'}）` }, { status: 400 })
-    } finally {
-      clearTimeout(timeout)
+    // URL/DNS/redirect検証と本文上限を共通の固定IPトランスポートへ委譲。
+    const html = await safeFetchText(targetUrl, { timeoutMs: 12000 })
+    if (html === null) {
+      return NextResponse.json({ error: 'URLを安全に取得できませんでした。URLを確認してください。' }, { status: 422 })
     }
 
     const meta = extractMeta(html)
@@ -1710,6 +1670,7 @@ export async function POST(request: NextRequest) {
               },
             })),
           })
+          if (!isFirstUse) await notifyServiceActivity({ userId, serviceId: 'banner', action: 'バナー生成' })
           if (isFirstUse) {
             await notifyFirstServiceUse({
               userId,
@@ -1734,6 +1695,8 @@ export async function POST(request: NextRequest) {
         Array.isArray(result.banners) ? result.banners.filter((b) => typeof b === 'string' && b.startsWith('data:image/')).length : desiredCount
       )
     )
+
+    if (isGuest || !userId) await notifyServiceActivity({ serviceId: 'banner', action: 'URLからバナー生成', count: chargedCount })
 
     // ゲストの場合: Cookie を更新
     if (!disableLimits && isGuest && guestUsage) {
@@ -1802,5 +1765,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: e?.message || 'URLからの自動生成に失敗しました' }, { status: 500 })
   }
 }
-
 

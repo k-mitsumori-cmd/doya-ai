@@ -8,10 +8,10 @@ import { prisma } from '@/lib/prisma'
 import { getMensetsuContext, orgSlugFrom } from '@/lib/mensetsu/access'
 import { runEvaluation } from '@/lib/mensetsu/run-evaluation'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function POST(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const c = await getMensetsuContext(orgSlugFrom(req))
   if (!c) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 

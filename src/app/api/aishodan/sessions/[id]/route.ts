@@ -10,10 +10,10 @@ import { getAishodanContext, hasMinRole, orgSlugFrom } from '@/lib/aishodan/acce
 import { toScenarioConfig } from '@/lib/aishodan/public'
 import type { Verdict } from '@/lib/aishodan/types'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function GET(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
 const VERDICTS: Verdict[] = ['hot', 'warm', 'cold', 'unfit']
 
 export async function PATCH(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 

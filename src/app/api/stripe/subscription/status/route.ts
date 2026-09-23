@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { stripe, getPlanIdFromStripePriceId } from '@/lib/stripe'
+import { stripe, findActiveLikeSubscriptions, resolvePlanIdFromSubscription } from '@/lib/stripe'
 
 export const dynamic = 'force-dynamic'
 
@@ -41,43 +41,42 @@ export async function GET(request: NextRequest) {
     })
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-    let subscriptionId =
-      user.serviceSubscriptions?.[0]?.stripeSubscriptionId || user.stripeSubscriptionId || null
-
-    // DBに無い場合、Customerから探索（読み取りのみ）
-    if (!subscriptionId && user.stripeCustomerId) {
-      const subs = await stripe.subscriptions.list({ customer: user.stripeCustomerId, status: 'all', limit: 20 })
-      const activeSubs = subs.data.filter((s) => ACTIVE_LIKE.has(String(s.status)))
-      const candidate = activeSubs.find((s) => {
-        const priceId = s.items.data[0]?.price.id
-        const planIdFromPrice = getPlanIdFromStripePriceId(priceId)
-        const planIdFromMeta = (s.metadata?.planId as any) || null
-        const planId = String(planIdFromPrice || planIdFromMeta || '')
-        const metaService = String((s.metadata?.serviceId as any) || '').trim()
-        if (metaService && metaService === serviceId) return true
-        if (planId && planId.startsWith(`${serviceId}-`)) return true
-        return false
-      })
-      subscriptionId = candidate?.id || activeSubs[0]?.id || null
+    const live = await findActiveLikeSubscriptions({ email: user.email, stripeCustomerId: user.stripeCustomerId })
+    if (live.length > 1) {
+      return NextResponse.json({
+        ok: false,
+        code: 'MULTIPLE_SUBSCRIPTIONS',
+        error: '複数の契約が見つかったため、単一の停止日時を表示できません。契約内容をお問い合わせください。',
+      }, { status: 409 })
     }
-
-    if (!subscriptionId) {
-      return NextResponse.json({ ok: true, hasSubscription: false })
+    // unpaidは継続可能契約の探索対象外だが、保存済みの支払停止状態は確認する。
+    const savedId = user.serviceSubscriptions?.[0]?.stripeSubscriptionId || user.stripeSubscriptionId
+    const subscriptionId = live[0]?.id || savedId
+    if (!subscriptionId) return NextResponse.json({ ok: true, hasSubscription: false })
+    let sub
+    try {
+      sub = await stripe.subscriptions.retrieve(subscriptionId)
+    } catch (e: any) {
+      if (live.length === 0 && e?.code === 'resource_missing') {
+        return NextResponse.json({ ok: true, hasSubscription: false })
+      }
+      throw e
     }
-
-    const sub = await stripe.subscriptions.retrieve(subscriptionId)
-    const priceId = sub.items.data[0]?.price.id || null
-    const planIdFromPrice = getPlanIdFromStripePriceId(priceId)
-    const planIdFromMeta = (sub.metadata?.planId as any) || null
-
+    if (!ACTIVE_LIKE.has(String(sub.status))) return NextResponse.json({ ok: true, hasSubscription: false })
+    const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id
+    const expectedCustomerId = live[0]?.customerId || user.stripeCustomerId
+    if (!expectedCustomerId || customerId !== expectedCustomerId) {
+      return NextResponse.json({ error: '契約情報の一致を確認できませんでした。' }, { status: 409 })
+    }
+    const { planId, priceId } = resolvePlanIdFromSubscription(sub)
     return NextResponse.json({
       ok: true,
       hasSubscription: true,
       subscriptionId: sub.id,
       status: sub.status,
       cancelAtPeriodEnd: sub.cancel_at_period_end,
-      currentPeriodEnd: sub.current_period_end, // unix seconds
-      planId: planIdFromPrice || planIdFromMeta || null,
+      currentPeriodEnd: sub.current_period_end,
+      planId: planId || null,
       priceId,
     })
   } catch (e: any) {

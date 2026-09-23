@@ -3,14 +3,13 @@ import { headers } from 'next/headers'
 import {
   constructWebhookEvent,
   stripe,
-  ALL_SERVICE_IDS,
+  ACTIVE_LIKE_STATUSES,
   resolvePlanIdFromSubscription,
   planTierFromPlanId,
   findActiveLikeSubscriptions,
 } from '@/lib/stripe'
 import { prisma, withRetry } from '@/lib/prisma'
-import { isManualGrant } from '@/lib/billing-manual-grants'
-import { higherPlan } from '@/lib/plan-utils'
+import { syncUnifiedBilling } from '@/lib/billing-sync'
 import { sendEventNotification } from '@/lib/notifications'
 import Stripe from 'stripe'
 
@@ -22,7 +21,7 @@ import Stripe from 'stripe'
 
 export async function POST(request: NextRequest) {
   const body = await request.text()
-  const headersList = headers()
+  const headersList = await headers()
   const signature = headersList.get('stripe-signature')
 
   if (!signature) {
@@ -290,7 +289,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
   // 二重契約が起きたユーザーが片方を解約すると、残っている有効な契約を
   // 無視して FREE に落ちてしまう（＝支払っているのに使えない）。
   // 他に生きている契約があれば、そちらで再反映して終了する。
-  // 照会に失敗したときは従来どおり FREE に落とす（挙動を悪化させない）。
+  // 照会失敗時は変更せずエラーを返し、Stripeの再送で再確認する。
   try {
     const remaining = (
       await findActiveLikeSubscriptions({ email: user.email, stripeCustomerId: customerId })
@@ -310,51 +309,19 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       return
     }
   } catch (e: any) {
-    console.error(`[Webhook] subscription.deleted: 残存契約の照会に失敗（FREEへ落とします） user=${user.id}`, e?.message)
+    console.error(`[Webhook] subscription.deleted: 残存契約の照会に失敗（プラン変更を中止） user=${user.id}`, e?.message)
+    throw e
   }
 
-  // プランをフリーに戻す（DB接続エラー時はリトライ）
-  await withRetry(() => prisma.user.update({
-    where: { id: user.id },
-    data: {
-      plan: 'FREE',
-      stripeSubscriptionId: null,
-      stripePriceId: null,
-      stripeCurrentPeriodEnd: null,
-    },
-  }))
-
-  // 解約通知
-  sendEventNotification({
-    type: 'cancellation',
-    userEmail: user.email,
-    userName: user.name,
-    details: `プラン: ${user.plan} → FREE`,
-  }).catch(() => {})
-
-  // 統一課金: 全サービスをFREEに戻す
-  for (const serviceId of ALL_SERVICE_IDS) {
-    await prisma.userServiceSubscription.update({
-      where: { userId_serviceId: { userId: user.id, serviceId } },
-      data: {
-        plan: 'FREE',
-        stripeSubscriptionId: null,
-        stripePriceId: null,
-        stripeCurrentPeriodEnd: null,
-      },
-    }).catch((e: any) => {
-      if (e?.code !== 'P2025') {
-        console.error(`[Webhook] Failed to reset service subscription: user=${user.id} service=${serviceId}`, e?.message)
-      }
-    })
-  }
-
-  // HR固有: HrOrganization.planもFREEにリセット
-  await syncHrOrganizationPlan(user.id, 'FREE').catch((e: any) => {
-    console.error(`[Webhook] Failed to sync HrOrganization.plan on cancellation: user=${user.id}`, e?.message)
+  const synced = await syncUnifiedBilling({
+    userId: user.id, plan: 'FREE', stripeSubscriptionId: null,
+    stripePriceId: null, stripeCurrentPeriodEnd: null,
   })
-
-  console.log(`Subscription canceled for user: ${user.id} (all services reset to FREE)`)
+  sendEventNotification({
+    type: 'cancellation', userEmail: user.email, userName: user.name,
+    details: `プラン: ${synced.previousPlan} → ${synced.userPlan}`,
+  }).catch(() => {})
+  console.log(`Subscription canceled for user: ${user.id} (plan: ${synced.userPlan})`)
 }
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
@@ -415,99 +382,16 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 // ========================================
 // どのサービスから課金しても、全サービスが同じプランになる
 async function updateUserSubscription(userId: string, subscription: Stripe.Subscription) {
-  // 階層判定は planTierFromPlanId() ただ一つに集約する（reference/11-billing-spec.md INV-4）。
-  // かつて webhook / sync / sync-latest がそれぞれ独自にif文を持っており、
-  // '-starter' や 'bundle' の扱いが経路ごとに食い違っていた。
+  // incomplete/paused等の契約をイベントだけで有料化しない。
+  if (!ACTIVE_LIKE_STATUSES.has(String(subscription.status))) return
   const { planId, priceId } = resolvePlanIdFromSubscription(subscription as any)
-  let userPlan: string = planTierFromPlanId(planId)
-
-  // ------------------------------------------------------------------
-  // 手動付与の保護（reference/11-billing-spec.md）
-  // ------------------------------------------------------------------
-  // ⚠️ ここは Stripe の価格から算出した階層で User.plan を**上書き**する。
-  //    そのため運営が手で付けた上位プラン（例: 請求は¥9,980だがDBはENTERPRISE）は、
-  //    次回請求の customer.subscription.updated で**静かに消える**。
-  //    billing_manual_grants に登録されたアカウントに限り、DBの方が上位なら下げない。
-  const current = await prisma.user
-    .findUnique({ where: { id: userId }, select: { email: true, plan: true } })
-    .catch(() => null)
-  if (current && (await isManualGrant(current.email))) {
-    const keep = higherPlan(current.plan, userPlan)
-    if (keep !== userPlan) {
-      console.warn(
-        `[Webhook] 手動付与のため降格しない: user=${userId} DB=${current.plan} / Stripe算出=${userPlan} → ${keep}`
-      )
-      userPlan = keep
-    }
-  }
-
-  // グローバルプランを更新（DB接続エラー時はリトライ）
-  await withRetry(() => prisma.user.update({
-    where: { id: userId },
-    data: {
-      plan: userPlan,
-      stripeSubscriptionId: subscription.id,
-      stripePriceId: priceId,
-      stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-    },
-  }))
-
-  // 統一課金: 全サービスを同じプランに更新
-  const servicePlan = userPlan === 'BUNDLE' ? 'PRO' : userPlan
-  for (const serviceId of ALL_SERVICE_IDS) {
-    await prisma.userServiceSubscription.upsert({
-      where: { userId_serviceId: { userId, serviceId } },
-      create: {
-        userId,
-        serviceId,
-        plan: servicePlan,
-        stripeSubscriptionId: subscription.id,
-        stripePriceId: priceId,
-        stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-        dailyUsage: 0,
-        monthlyUsage: 0,
-        lastUsageReset: new Date(),
-      },
-      update: {
-        plan: servicePlan,
-        stripeSubscriptionId: subscription.id,
-        stripePriceId: priceId,
-        stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-      },
-    }).catch((e: any) => {
-      console.error(`[Webhook] Failed to upsert service subscription: user=${userId} service=${serviceId}`, e?.message)
-    })
-  }
-
-  // HR固有: UserServiceSubscription(serviceId:'hr') が更新されたら
-  // ユーザーがOWNERの HrOrganization.plan も同期する
-  await syncHrOrganizationPlan(userId, servicePlan).catch((e: any) => {
-    console.error(`[Webhook] Failed to sync HrOrganization.plan: user=${userId}`, e?.message)
+  const resolvedPlan = planTierFromPlanId(planId)
+  if (resolvedPlan === 'FREE') throw new Error('Unable to resolve subscription plan')
+  const synced = await syncUnifiedBilling({
+    userId, plan: resolvedPlan,
+    stripeCustomerId: typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id,
+    stripeSubscriptionId: subscription.id, stripePriceId: priceId,
+    stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
   })
-
-  console.log(`Updated subscription for user ${userId}: ${userPlan} — all services: ${servicePlan} (${subscription.status})`)
-}
-
-// ========================================
-// HR組織プラン同期
-// ========================================
-// ユーザーがOWNERである全HrOrganization.planをUserServiceSubscriptionの値と同期
-async function syncHrOrganizationPlan(userId: string, plan: string) {
-  // hr-starter → STARTER, hr-pro → PRO, hr-enterprise → ENTERPRISE のマッピングは
-  // servicePlan が既に LIGHT/PRO/ENTERPRISE/FREE なのでそのまま使える
-  const ownerships = await prisma.hrOrganizationMember.findMany({
-    where: { userId, role: 'OWNER', status: 'ACTIVE' },
-    select: { organizationId: true },
-  })
-
-  for (const membership of ownerships) {
-    // LIGHT → STARTER にマッピング（HrOrganization.plan は STARTER を使用）
-    const hrPlan = plan === 'LIGHT' ? 'STARTER' : plan
-    await prisma.hrOrganization.update({
-      where: { id: membership.organizationId },
-      data: { plan: hrPlan },
-    }).catch((e: any) => {
-      console.error(`[Webhook] Failed to update HrOrganization.plan: org=${membership.organizationId}`, e?.message)
-    })
-  }
+  console.log(`Updated subscription for user ${userId}: ${synced.userPlan} (${subscription.status})`)
 }

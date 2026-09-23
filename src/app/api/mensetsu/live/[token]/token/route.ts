@@ -19,13 +19,13 @@ import { assertUsable, loadSessionByToken } from '@/lib/mensetsu/public'
 import { ADVANCE_TOOL, buildInterviewerInstructions } from '@/lib/mensetsu/interview'
 import { LEVEL_LABELS, type MensetsuLevel } from '@/lib/mensetsu/types'
 
-type Ctx = { params: Promise<{ token: string }> | { token: string } }
+type Ctx = { params: Promise<{ token: string }> }
 
 const REALTIME_MODEL = process.env.MENSETSU_REALTIME_MODEL || 'gpt-realtime'
 const REALTIME_VOICE = process.env.MENSETSU_REALTIME_VOICE || 'alloy'
 
 export async function POST(_req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const s = await loadSessionByToken(p.token)
   if (!s) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
 

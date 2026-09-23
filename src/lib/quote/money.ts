@@ -66,15 +66,28 @@ export function calcTotals(
     discountAmount = Math.min(rawTotal, Math.max(0, round(discountValue)))
   }
 
-  const ratio = rawTotal > 0 ? (rawTotal - discountAmount) / rawTotal : 1
+  // 割引後の整数円を税率別に配る。小数の比率を掛けると、
+  // 単一税率でも15円が14.999...円となり1円失われる。
+  const totalExclTax = rawTotal - discountAmount
+  const denominator = BigInt(rawTotal || 1)
+  const allocations = Object.entries(subtotalByRate).map(([rateStr, sub]) => {
+    const numerator = BigInt(sub) * BigInt(totalExclTax)
+    return {
+      rate: Number(rateStr),
+      amount: Number(numerator / denominator),
+      remainder: numerator % denominator,
+    }
+  })
+  // 切り捨てで余った円を剰余の大きい税率から1円ずつ配る。
+  // 同じ剰余なら税率の低い順とし、明細順序に依存させない。
+  allocations.sort((a, b) => a.remainder === b.remainder
+    ? a.rate - b.rate : a.remainder > b.remainder ? -1 : 1)
+  const remaining = totalExclTax - allocations.reduce((sum, a) => sum + a.amount, 0)
   const taxByRate: Record<number, number> = {}
-  let totalExclTax = 0
-  for (const [rateStr, sub] of Object.entries(subtotalByRate)) {
-    const rate = Number(rateStr)
-    const afterDiscount = round(sub * ratio)
-    totalExclTax += afterDiscount
-    taxByRate[rate] = round((afterDiscount * rate) / 100)
-  }
+  allocations.forEach((a, index) => {
+    const afterDiscount = a.amount + (index < remaining ? 1 : 0)
+    taxByRate[a.rate] = round((afterDiscount * a.rate) / 100)
+  })
 
   const taxAmount = Object.values(taxByRate).reduce((a, b) => a + b, 0)
   return {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { stripe } from '@/lib/stripe'
+import { stripe, findActiveLikeSubscriptions, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 
 // ========================================
@@ -38,43 +38,30 @@ export async function POST(request: NextRequest) {
 
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-    // まずDBから取得を試みる
-    let subscriptionId =
-      user.serviceSubscriptions?.[0]?.stripeSubscriptionId || user.stripeSubscriptionId || null
-
-    // DBにない場合、Stripeから直接顧客のサブスクリプションを検索
-    if (!subscriptionId && user.stripeCustomerId) {
-      try {
-        const subscriptions = await stripe.subscriptions.list({
-          customer: user.stripeCustomerId,
-          status: 'active',
-          limit: 10,
-        })
-        // serviceId に一致するサブスクリプションを探す（metadata優先、次にplanId）
-        const matched = subscriptions.data.find((sub) => {
-          const priceId = sub.items.data[0]?.price.id || ''
-          const productId = sub.items.data[0]?.price.product as string || ''
-          const metaService = String(sub.metadata?.serviceId || '')
-          const metaPlanId = String(sub.metadata?.planId || '')
-          if (metaService && metaService === serviceId) return true
-          if (metaPlanId && metaPlanId.startsWith(`${serviceId}-`)) return true
-          // 最後のフォールバック（旧データ互換）：priceId/productId に serviceId が含まれている
-          return priceId.includes(serviceId) || productId.includes(serviceId)
-        })
-        subscriptionId = matched?.id || subscriptions.data[0]?.id || null
-      } catch (e) {
-        console.error('Failed to fetch subscriptions from Stripe:', e)
-      }
+    // 統一契約はサービス名や古いDB参照で絞らず、現在の契約を横断して探す。
+    const live = await findActiveLikeSubscriptions({ email: session.user.email, stripeCustomerId: user.stripeCustomerId })
+    if (live.length === 0) {
+      return NextResponse.json({ error: '継続できる契約が見つかりません。すでに契約が終了している可能性があります。' }, { status: 404 })
     }
-
-    if (!subscriptionId) {
-      return NextResponse.json({ error: 'Subscription not found' }, { status: 404 })
+    if (live.length > 1) {
+      return NextResponse.json({
+        code: 'MULTIPLE_SUBSCRIPTIONS',
+        error: '複数の契約が見つかりました。二重のご請求を防ぐため自動で継続していません。継続する契約の確認をお問い合わせください。',
+      }, { status: 409 })
     }
-
-    // 解約予約を取り消す（cancel_at_period_end を false に戻す）
-    const updated = await stripe.subscriptions.update(subscriptionId, {
-      cancel_at_period_end: false,
-    })
+    const subscriptionId = live[0]!.id
+    const current = await stripe.subscriptions.retrieve(subscriptionId)
+    const customerId = typeof current.customer === 'string' ? current.customer : current.customer?.id
+    if (customerId !== live[0]!.customerId || !ACTIVE_LIKE_STATUSES.has(current.status)) {
+      return NextResponse.json({ error: '契約の状態が変更されました。再読み込みしてご確認ください。' }, { status: 409 })
+    }
+    // 再送時は、すでに継続中なら変更せず現在の状態を返す。
+    const updated = current.cancel_at_period_end
+      ? await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: false })
+      : current
+    if (updated.cancel_at_period_end || !ACTIVE_LIKE_STATUSES.has(updated.status)) {
+      return NextResponse.json({ error: '解約取り消しを確認できませんでした。契約状態を再確認してください。' }, { status: 502 })
+    }
 
     // localStorageの解約日時キャッシュをクリアするためにフラグを返す
     return NextResponse.json({

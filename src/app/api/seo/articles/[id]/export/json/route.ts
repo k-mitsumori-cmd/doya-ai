@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
 export const runtime = 'nodejs'
@@ -22,11 +23,13 @@ function markdownToPlainText(md: string): string {
   return s
 }
 
-export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const owner = await getSeoArticleOwner(_req)
+  if (!owner) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
   await ensureSeoSchema()
-  const id = ctx.params.id
-  const article = await (prisma as any).seoArticle.findUnique({
-    where: { id },
+  const id = (await ctx.params).id
+  const article = await (prisma as any).seoArticle.findFirst({
+    where: { id, ...owner },
     select: { id: true, title: true, keywords: true, persona: true, tone: true, targetChars: true, finalMarkdown: true, outline: true },
   })
   if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })

@@ -8,7 +8,7 @@ import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
 import type { LeadStatus } from '@/lib/sfa/types'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 const LEAD_STATUSES: LeadStatus[] = ['new', 'working', 'nurturing', 'qualified', 'converted', 'disqualified']
 
@@ -21,7 +21,7 @@ async function owned(orgId: string, id: string) {
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   const c = await getSfaContext(orgSlugFrom(req))
   if (!c) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const lead = await owned(c.organizationId, p.id)
   if (!lead) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
 
@@ -44,7 +44,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 export async function DELETE(req: NextRequest, ctx: Ctx) {
   const c = await getSfaContext(orgSlugFrom(req))
   if (!c) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const lead = await owned(c.organizationId, p.id)
   if (!lead) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   await prisma.sfaLead.update({ where: { id: lead.id }, data: { isActive: false } })

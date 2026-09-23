@@ -1,0 +1,9 @@
+const assert=require('node:assert/strict'),{load}=require('./load-typescript.cjs');
+(async()=>{
+ let primaryTimeout,fallbackTimeout,usedSignal;const timeouts={withTimeout:async(_label,ms,fn)=>{fallbackTimeout=ms;return fn(new AbortController().signal)}};
+ const generator=load('src/lib/image-generator.ts',{'./openai-image':{generateImageGpt:async params=>{primaryTimeout=params.timeoutMs;throw Error('synthetic failure')},editImageGpt:async()=>{throw Error('Unexpected edit')}},'./fetch-timeout':timeouts},{process:{env:{GOOGLE_GENAI_API_KEY:'synthetic',DOYA_FALLBACK_TIMEOUT_MS:'999999'}},fetch:async(_url,options)=>{usedSignal=options.signal;return Response.json({candidates:[{content:{parts:[{inlineData:{mimeType:'image/png',data:'synthetic'}}]}}]})}});
+ const adapter=load('src/lib/resolve-image-model.ts',{'./image-generator':generator});
+ await adapter.callGeminiImageAPI('',{contents:[{parts:[{text:'Synthetic'}]}]},{primaryTimeoutMs:150000,fallbackTimeoutMs:45000});assert.equal(primaryTimeout,150000);assert.equal(fallbackTimeout,45000);assert.ok(usedSignal instanceof AbortSignal);console.log('PASS Persona provider deadlines reach primary and fallback despite environment overrides');
+ let bounded;const openai=load('src/lib/openai-image.ts',{'./fetch-timeout':{withTimeout:async(_label,ms,fn)=>{bounded=ms;return fn(new AbortController().signal)}},openai:{}},{process:{env:{OPENAI_API_KEY:'synthetic',DOYA_IMAGE_TIMEOUT_MS:'999999'}},fetch:async(_url,options)=>{assert.ok(options.signal instanceof AbortSignal);return Response.json({data:[{b64_json:'synthetic'}]})}});
+ await openai.generateImageGpt({prompt:'Synthetic',timeoutMs:150000});assert.equal(bounded,150000);await openai.generateImageGpt({prompt:'Existing caller'});assert.equal(bounded,999999);console.log('PASS primary fetch receives bounded abort signal; existing callers preserve prior timeout behavior');
+})().catch(e=>{console.error(e);process.exitCode=1});

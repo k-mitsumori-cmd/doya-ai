@@ -159,7 +159,10 @@ export async function POST(req: NextRequest) {
   //    placements を空配列で送ると requestedImages=0 で枠を素通りし、
   //    そのあと既定の配置（3件）×パターン数ぶん実際に生成・課金されていた。
   const quota = await assertQuota(identity, placementKeys.length * requestedVariations)
-  if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 429 })
+  if (!quota.ok) {
+    const { ok: _ok, reason, ...details } = quota
+    return NextResponse.json({ error: reason, ...details }, { status: 429, headers: { 'Cache-Control': 'no-store' } })
+  }
 
   const brand: BrandProfile = {
     name: brandRow.name,

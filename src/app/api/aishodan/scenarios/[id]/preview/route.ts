@@ -14,13 +14,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAishodanContext, orgSlugFrom } from '@/lib/aishodan/access'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 /** 練習ルームの有効期間。⚠️ 期限切れなら作り直すので、短くても困らない */
 const PREVIEW_DAYS = 30
 
 export async function POST(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 

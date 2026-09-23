@@ -1,0 +1,6 @@
+const assert=require('node:assert/strict'),{load,check}=require('./load-typescript.cjs');const {cunningReportStatus,cunningReportFingerprint}=load('src/lib/cunning/report-freshness.ts');
+(async()=>{
+for(const [report,current,expected] of [[{sourceFingerprint:'a'},'a','current'],[{sourceFingerprint:'a'},'b','outdated'],[{},'a','unverified'],[null,'a','unverified'],[{sourceFingerprint:1},'a','unverified'],[{sourceFingerprint:'a'},null,'unverified']])await check('report status '+JSON.stringify([report,current]),()=>assert.equal(cunningReportStatus(report,current),expected));
+await check('empty snapshot does not imply current',async()=>{assert.equal(await cunningReportFingerprint({$queryRaw:async()=>[]},'u','s',new Date()),null)});
+await check('fingerprint query scopes owner revision and explicit UTC',async()=>{let sql,params;const r=await cunningReportFingerprint({$queryRaw:async(parts,...values)=>{sql=parts.join('?');params=values;return[{fingerprint:'hash'}]}},'u','s',new Date(0));assert.equal(r,'hash');assert.equal(params[0],'s');assert.equal(params[1],'u');assert.equal(params[2].getTime(),0);assert(sql.includes("AT TIME ZONE 'UTC'"));assert(sql.includes('sha256'));assert(sql.includes("status <> 'deleted'"))});
+})().catch(e=>{console.error(e);process.exitCode=1});

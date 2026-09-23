@@ -42,6 +42,7 @@ type SeoSection = {
 }
 
 type SeoJob = {
+  supersededAt?: string | null
   id: string
   status: string
   step: string
@@ -549,13 +550,37 @@ export default function SeoJobPage() {
     isPollingRef.current = false
   }, [jobId, pushLog])
 
+  const [cancelling, setCancelling] = useState(false)
+  const cancellingRef = useRef(false)
+  const cancelJob = useCallback(async () => {
+    if (cancellingRef.current || job?.supersededAt) return
+    if (!confirm('ジョブをキャンセルしますか？（途中成果物は残ります）')) return
+    cancellingRef.current = true
+    setCancelling(true)
+    setActionError(null)
+    try {
+      const response = await fetch(`/api/seo/jobs/${jobId}/cancel`, { method: 'POST' })
+      const result = await response.json()
+      if (!response.ok || result?.success !== true) throw new Error(result?.error || 'キャンセルできませんでした')
+      if (result?.job?.id !== jobId || !['cancelled', 'done'].includes(result?.job?.status)) throw new Error('キャンセル結果を確認できませんでした。再読み込みしてください。')
+      await load({ showLoading: false })
+    } catch (e: any) {
+      setActionError(e?.message || 'キャンセルできませんでした')
+    } finally {
+      cancellingRef.current = false
+      setCancelling(false)
+    }
+  }, [jobId, job?.supersededAt, load])
+
   const advanceOnce = useCallback(async () => {
-    if (busy) return
+    if (busy || cancellingRef.current || job?.supersededAt) return
     setBusy(true)
     try {
       setActionError(null)
-      if (job?.status === 'paused') {
-        await fetch(`/api/seo/jobs/${jobId}/resume`, { method: 'POST', keepalive: true })
+      if (job?.status === 'paused' || job?.status === 'error') {
+        const resumed = await fetch(`/api/seo/jobs/${jobId}/resume`, { method: 'POST', keepalive: true })
+        const resumeResult = await resumed.json()
+        if (!resumed.ok || resumeResult?.success !== true) throw new Error(resumeResult?.error || '再開できませんでした')
       }
       const res = await fetch(`/api/seo/jobs/${jobId}/advance`, { method: 'POST', keepalive: true })
       let json: any = null
@@ -571,16 +596,18 @@ export default function SeoJobPage() {
         return
       }
       await load({ showLoading: false })
+    } catch (e: any) {
+      setActionError(e?.message || '生成を進められませんでした')
     } finally {
       setBusy(false)
     }
-  }, [busy, jobId, load, job?.status])
+  }, [busy, jobId, load, job?.status, job?.supersededAt])
 
   useEffect(() => {
     load({ showLoading: true })
     const t = setInterval(() => {
       const j = jobRef.current
-      if (j && (j.status === 'done' || j.status === 'error' || j.status === 'cancelled')) return
+      if (j && (j.supersededAt || j.status === 'done' || j.status === 'error' || j.status === 'cancelled')) return
       load({ showLoading: false })
     }, 4000)
     return () => clearInterval(t)
@@ -589,7 +616,7 @@ export default function SeoJobPage() {
   // 長文生成は10分以上かかることもあるため、タブ移動/バックグラウンドでも進行が止まりにくいように補助ループを回す
   // NOTE: ブラウザは非表示タブでタイマーを間引くので、周期を長めにして“継続的に叩く機会”を作る
   useEffect(() => {
-    const isTerminal = job?.status === 'done' || job?.status === 'error' || job?.status === 'cancelled'
+    const isTerminal = !!job?.supersededAt || job?.status === 'paused' || job?.status === 'done' || job?.status === 'error' || job?.status === 'cancelled'
     if (!job || isTerminal) return
 
     let disposed = false
@@ -609,7 +636,7 @@ export default function SeoJobPage() {
       disposed = true
       if (timer) clearTimeout(timer)
     }
-  }, [job?.id, job?.status, advanceOnce])
+  }, [job?.id, job?.status, job?.supersededAt, advanceOnce])
 
   useEffect(() => {
     setCompletionPopupEnabled(readSeoClientSettings().completionPopupEnabled)
@@ -778,7 +805,7 @@ export default function SeoJobPage() {
 
   // 自動で工程を進め続ける（UIで停止/再開は提供しない）
   useEffect(() => {
-    if (!job) return
+    if (!job || job.supersededAt || job.status === 'paused') return
     if (job.status === 'done' || job.status === 'error' || job.status === 'cancelled') return
     const t = setTimeout(() => {
       advanceOnce()
@@ -813,6 +840,29 @@ export default function SeoJobPage() {
         >
           <EmptyState kind="error" title="読み込みに失敗しました" description={loadError || '不明なエラー'} action={<button className="rounded-xl bg-gray-900 px-8 py-3 font-bold text-white transition-colors hover:bg-gray-800" onClick={() => { setLoading(true); load({ showLoading: true }) }}>再読み込み</button>} />
         </motion.div>
+      </main>
+    )
+  }
+
+  if (job.supersededAt || ['paused', 'cancelled', 'error'].includes(job.status)) {
+    const replaced = !!job.supersededAt
+    const cancelled = job.status === 'cancelled'
+    const failed = job.status === 'error'
+    return (
+      <main className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
+        <section className="w-full max-w-xl rounded-2xl bg-white p-8 shadow-sm" aria-labelledby="job-stopped-title">
+          <h1 id="job-stopped-title" className="text-xl font-bold text-slate-900">
+            {replaced ? '新しい生成に置き換えられました' : cancelled ? '生成をキャンセルしました' : failed ? '生成を停止しました' : '生成を一時停止しています'}
+          </h1>
+          <p className="mt-3 text-slate-600">
+            {replaced ? 'このジョブの処理は終了しています。記事画面から最新の生成状況を確認してください。' : cancelled ? '途中の成果物は記事画面で確認できます。' : '再開すると、途中の状態から生成を続けます。'}
+          </p>
+          <div className="mt-6 flex flex-wrap gap-3">
+            {!replaced && !cancelled && <button disabled={busy} onClick={() => void advanceOnce()} className="rounded-lg bg-blue-600 px-5 py-3 font-bold text-white disabled:opacity-50">{busy ? '再開しています…' : '生成を再開する'}</button>}
+            <Link href={`/seo/articles/${encodeURIComponent(job.articleId)}`} prefetch={false} className="rounded-lg border px-5 py-3 font-bold text-blue-700">記事画面で状況を確認する</Link>
+          </div>
+          {(actionError || (failed && job.error)) && <p role="alert" className="mt-4 text-red-700">{actionError || job.error}</p>}
+        </section>
       </main>
     )
   }
@@ -1800,19 +1850,10 @@ export default function SeoJobPage() {
 
                   <button
                     className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-red-50 text-red-700 border border-red-100 font-black hover:bg-red-100/60 transition-all"
-                    onClick={async () => {
-                      if (!confirm('ジョブをキャンセルしますか？（途中成果物は残ります）')) return
-                      setActionError(null)
-                      try {
-                        await fetch(`/api/seo/jobs/${jobId}/cancel`, { method: 'POST' })
-                        await load({ showLoading: false })
-                      } catch (e: any) {
-                        setActionError(e?.message || '失敗しました')
-                      }
-                    }}
-                    disabled={busy || job.status === 'cancelled'}
+                    onClick={() => void cancelJob()}
+                    disabled={cancelling}
                   >
-                    キャンセル
+                    {cancelling ? 'キャンセルしています…' : 'キャンセル'}
                   </button>
                 </>
               )}

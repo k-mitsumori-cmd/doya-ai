@@ -108,6 +108,16 @@ export default function SeoTool() {
   const [query, setQuery] = useState('')
   const [activeStatus, setActiveStatus] = useState<'ALL' | 'RUNNING' | 'DONE' | 'DRAFT' | 'ERROR'>('ALL')
   const isLoadingRef = useRef(false)
+  const listEpoch = useRef(0)
+  const retryMoreRef = useRef(false)
+  const [refreshStep, setRefreshStep] = useState(0)
+  const listAbort = useRef<AbortController | null>(null)
+  const loadedPages = useRef(1)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [moreLoading, setMoreLoading] = useState(false)
+  const [moreError, setMoreError] = useState<string | null>(null)
+  const [matched, setMatched] = useState(0)
+  const [counts, setCounts] = useState({ total: 0, running: 0, done: 0, draft: 0 })
   const [welcomeOpen, setWelcomeOpen] = useState(false)
   const [welcomePlan, setWelcomePlan] = useState<string>('')
 
@@ -151,69 +161,77 @@ export default function SeoTool() {
     window.history.replaceState({}, '', url.pathname + url.search)
   }, [])
 
-  async function load(opts?: { showLoading?: boolean }) {
-    // 二重呼び出し防止
-    if (isLoadingRef.current) return
+  async function load(opts?: { showLoading?: boolean; more?: boolean }) {
+    if (isLoadingRef.current || (opts?.more && !nextCursor)) return
     isLoadingRef.current = true
-
-    if (opts?.showLoading) {
-      setLoading(true)
-      setError(null)
-    }
+    const epoch = listEpoch.current
+    const controller = new AbortController()
+    listAbort.current = controller
+    const timeout = setTimeout(() => controller.abort(), 15000)
+    if (opts?.showLoading) { setLoading(true); setError(null) }
+    if (opts?.more) setMoreLoading(true)
+    setMoreError(null)
     try {
-      const res = await fetch('/api/seo/articles', { cache: 'no-store' })
-      const json = await res.json()
-      if (!res.ok || json.success === false) {
-        throw new Error(json.error || `API Error: ${res.status}`)
+      let cursor: string | null = opts?.more ? nextCursor : null
+      const rows: SeoArticleRow[] = []
+      let json: any
+      const pages = opts?.more ? 1 : loadedPages.current
+      for (let page = 0; page < pages; page++) {
+        const params = new URLSearchParams({ q: query.trim(), status: activeStatus })
+        if (cursor) params.set('cursor', cursor)
+        const res = await fetch(`/api/seo/articles?${params}`, { cache: 'no-store', signal: controller.signal })
+        json = await res.json()
+        if (!res.ok || json.success === false) throw new Error(json.error || '記事一覧を取得できませんでした')
+        if (!Array.isArray(json.articles) || !(json.nextCursor === null || typeof json.nextCursor === 'string') || !json.counts || !Number.isFinite(json.matched)) throw new Error('記事一覧の形式を確認できませんでした')
+        rows.push(...json.articles)
+        cursor = json.nextCursor
+        if (!cursor) break
       }
-      setArticles(json.articles || [])
-      if (opts?.showLoading) setError(null)
+      if (epoch !== listEpoch.current) return
+      setArticles(previous => {
+        const combined = opts?.more ? [...previous, ...rows] : rows
+        return [...new Map(combined.map(row => [row.id, row])).values()]
+      })
+      setNextCursor(cursor)
+      setCounts(json.counts)
+      setMatched(json.matched)
+      if (opts?.more) loadedPages.current++
+      setError(null)
     } catch (e: any) {
-      // ポーリング中はエラーで既存データを消さない
-      if (opts?.showLoading) {
-        setArticles([])
-        setError(e?.message || '読み込みに失敗しました')
-      }
+      if (epoch !== listEpoch.current) return
+      const message = e?.name === 'AbortError' ? '取得に時間がかかっています。再試行してください。' : e?.message || '読み込みに失敗しました'
+      if (opts?.showLoading) setError(message)
+      else { retryMoreRef.current = !!opts?.more; setMoreError(message) }
+    } finally {
+      clearTimeout(timeout)
+      if (epoch === listEpoch.current) { isLoadingRef.current = false; setLoading(false); setMoreLoading(false) }
     }
-    if (opts?.showLoading) setLoading(false)
-    isLoadingRef.current = false
   }
 
-  // 生成中の記事があるかどうか
-  const hasRunning = useMemo(() => articles.some(a => a.status === 'RUNNING'), [articles])
-
+  const hasRunning = counts.running > 0
   useEffect(() => {
-    load({ showLoading: true })
-  }, [])
+    listEpoch.current++
+    listAbort.current?.abort()
+    isLoadingRef.current = false
+    loadedPages.current = 1
+    setArticles([])
+    setNextCursor(null)
+    setLoading(true)
+    setMoreLoading(false)
+    setError(null)
+    setMoreError(null)
+    const timer = setTimeout(() => load({ showLoading: true }), 250)
+    return () => { clearTimeout(timer); listEpoch.current++; listAbort.current?.abort() }
+  }, [query, activeStatus, refreshStep])
 
-  // 生成中の記事がある場合のみポーリング
+  // Refresh every loaded page, so polling cannot discard older articles already opened.
   useEffect(() => {
     if (!hasRunning) return
-    const t = setInterval(() => load(), 6000)
-    return () => clearInterval(t)
-  }, [hasRunning])
+    const timer = setInterval(() => load(), 6000)
+    return () => clearInterval(timer)
+  }, [hasRunning, query, activeStatus])
 
-  const counts = useMemo(() => {
-    const total = articles.length
-    const running = articles.filter((a) => a.status === 'RUNNING').length
-    const done = articles.filter((a) => a.status === 'DONE' || a.status === 'EXPORTED').length
-    const draft = articles.filter((a) => a.status === 'DRAFT').length
-    return { total, running, done, draft }
-  }, [articles])
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    const statusOk = (status: string) => {
-      const st = String(status || '').toUpperCase()
-      if (activeStatus === 'ALL') return true
-      if (activeStatus === 'DONE') return st === 'DONE' || st === 'EXPORTED'
-      return st === activeStatus
-    }
-    return articles
-      .filter((a) => statusOk(a.status))
-      .filter((a) => (!q ? true : a.title.toLowerCase().includes(q) || (a.keywords || []).some(k => k.toLowerCase().includes(q))))
-      .sort((a, b) => new Date(b.updatedAt || b.createdAt).getTime() - new Date(a.updatedAt || a.createdAt).getTime())
-  }, [articles, query, activeStatus])
+  const filtered = articles
 
   const topicChips = useMemo(() => {
     const counts = new Map<string, number>()
@@ -275,6 +293,7 @@ export default function SeoTool() {
       }
       // 成功: stateから該当記事を除去
       setArticles((prev) => prev.filter((a) => a.id !== articleId))
+      setRefreshStep(step => step + 1)
     } catch (e: any) {
       setActionError(e?.message || '記事の削除に失敗しました')
     } finally {
@@ -466,7 +485,7 @@ export default function SeoTool() {
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border border-gray-100 text-[11px] font-bold text-gray-600">
-                直近3ヶ月分のみ表示（データ保持容量の都合上、それ以前は自動削除されます）
+                作成日時が新しい記事から最大50件を表示しています
               </span>
               <FeatureGuide
                 featureId="seo.generatedList"
@@ -497,6 +516,7 @@ export default function SeoTool() {
           <Search className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
           <input
             className="w-full pl-11 pr-4 py-3 rounded-xl border border-gray-100 bg-white text-gray-900 placeholder:text-gray-400 text-sm focus:outline-none focus:border-blue-500 shadow-sm transition-all"
+            maxLength={200}
             placeholder="タイトル・キーワードで検索..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -510,6 +530,7 @@ export default function SeoTool() {
         </div>
       )}
 
+      {!loading && !error && <p className="mb-3 text-sm text-gray-500">{matched}件中 {articles.length}件を表示 · 作成日時の新しい順</p>}
       {/* Article Cards */}
       <div className="space-y-3">
         {loading ? (
@@ -534,8 +555,8 @@ export default function SeoTool() {
             <div className="w-20 h-20 rounded-3xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
               <FileText className="w-10 h-10 text-gray-200" />
             </div>
-            <h3 className="text-lg font-black text-gray-900 mb-2">まだ記事はありません</h3>
-            <p className="text-sm text-gray-400 font-bold mb-6">最初の1本を作りましょう</p>
+            <h3 className="text-lg font-black text-gray-900 mb-2">{query.trim() || activeStatus !== 'ALL' ? '条件に一致する記事はありません' : 'まだ記事はありません'}</h3>
+            <p className="text-sm text-gray-400 font-bold mb-6">{query.trim() || activeStatus !== 'ALL' ? '検索語やステータスを変更してください。' : '最初の1本を作りましょう'}</p>
             <Link href="/seo/create">
               <button className="h-12 px-8 rounded-xl bg-blue-600 text-white text-sm font-black shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-colors inline-flex items-center gap-2">
                 <Plus className="w-5 h-5" />
@@ -681,6 +702,8 @@ export default function SeoTool() {
         )}
       </div>
 
+      {moreError && <p role="alert" className="mt-4 text-sm text-red-700">{moreError} <button className="underline" onClick={() => load(retryMoreRef.current ? { more: true } : { showLoading: true })}>再試行する</button></p>}
+      {!loading && !error && nextCursor && <div className="mt-6 text-center"><button className="px-6 py-3 rounded-xl border bg-white font-bold disabled:opacity-50" disabled={moreLoading} onClick={() => load({ more: true })}>{moreLoading ? '読み込み中…' : '記事の続きを読み込む'}</button></div>}
       {/* Welcome / Upgrade Success Modal */}
       <AnimatePresence>
         {welcomeOpen && (

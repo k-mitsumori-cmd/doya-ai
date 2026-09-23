@@ -1,4 +1,4 @@
-import type { KintaiClockRecord, KintaiWorkRule, KintaiAttendance } from '@prisma/client'
+import type { KintaiClockRecord, KintaiWorkRule } from '@prisma/client'
 
 export function calculateDailyAttendance(
   records: KintaiClockRecord[],
@@ -14,62 +14,90 @@ export function calculateDailyAttendance(
   earlyLeaveMinutes: number
   nightMinutes: number
 } {
-  const clockIns = records.filter(r => r.type === 'clock_in')
-  const clockOuts = records.filter(r => r.type === 'clock_out')
-  const breakStarts = records.filter(r => r.type === 'break_start')
-  const breakEnds = records.filter(r => r.type === 'break_end')
+  const minuteMs = 60000
+  const dayMs = 86400000
+  const jstOffset = 9 * 60 * minuteMs
+  const ordered = records
+    .map(record => ({ type: record.type, time: new Date(record.timestamp).getTime(),
+      created: record.createdAt ? new Date(record.createdAt).getTime() : 0, id: record.id || '' }))
+    .filter(record => Number.isFinite(record.time))
+    .sort((a, b) => a.time - b.time || a.created - b.created || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
 
-  if (clockIns.length === 0) {
+  let firstClockIn: Date | null = null
+  let lastClockOut: Date | null = null
+  let shiftOpen = false
+  let workStart: number | null = null
+  let breakStart: number | null = null
+  let shiftBreakMs = 0
+  let totalBreakMs = 0
+  let shiftWork: Array<[number, number]> = []
+  const completedWork: Array<[number, number]> = []
+
+  // 種別ごとの配列番号ではなく、実際の時系列で勤務と休憩を対応づける。
+  // 未退勤の勤務は完了分の集計へ混ぜず、重複・孤立打刻は区間を増やさない。
+  for (const record of ordered) {
+    const time = record.time
+    if (record.type === 'clock_in' && !shiftOpen) {
+      if (!firstClockIn) firstClockIn = new Date(time)
+      shiftOpen = true
+      workStart = time
+      breakStart = null
+      shiftBreakMs = 0
+      shiftWork = []
+    } else if (record.type === 'break_start' && shiftOpen && breakStart === null) {
+      if (workStart !== null) shiftWork.push([workStart, time])
+      workStart = null
+      breakStart = time
+    } else if (record.type === 'break_end' && shiftOpen && breakStart !== null) {
+      shiftBreakMs += time - breakStart
+      breakStart = null
+      workStart = time
+    } else if (record.type === 'clock_out' && shiftOpen) {
+      if (workStart !== null) shiftWork.push([workStart, time])
+      if (breakStart !== null) shiftBreakMs += time - breakStart
+      completedWork.push(...shiftWork)
+      totalBreakMs += shiftBreakMs
+      lastClockOut = new Date(time)
+      shiftOpen = false
+      workStart = null
+      breakStart = null
+    }
+  }
+  if (shiftOpen) lastClockOut = null
+  if (!firstClockIn) {
     return { clockIn: null, clockOut: null, breakMinutes: 0, workMinutes: 0, overtimeMinutes: 0, lateMinutes: 0, earlyLeaveMinutes: 0, nightMinutes: 0 }
   }
 
-  const firstClockIn = new Date(clockIns[0].timestamp)
-  const lastClockOut = clockOuts.length > 0 ? new Date(clockOuts[clockOuts.length - 1].timestamp) : null
-
-  let breakMinutes = 0
-  for (let i = 0; i < Math.min(breakStarts.length, breakEnds.length); i++) {
-    breakMinutes += Math.round((new Date(breakEnds[i].timestamp).getTime() - new Date(breakStarts[i].timestamp).getTime()) / 60000)
-  }
-
-  let totalWorkMs = 0
-  for (let i = 0; i < clockIns.length; i++) {
-    const inTime = new Date(clockIns[i].timestamp).getTime()
-    const outTime = i < clockOuts.length ? new Date(clockOuts[i].timestamp).getTime() : null
-    if (outTime) {
-      totalWorkMs += outTime - inTime
+  const workMinutes = Math.round(completedWork.reduce((sum, [start, end]) => sum + end - start, 0) / minuteMs)
+  const breakMinutes = Math.round(totalBreakMs / minuteMs)
+  let nightMs = 0
+  for (const [start, end] of completedWork) {
+    // 各JST暦日の00:00〜05:00、22:00〜24:00との重なりだけを計上する。
+    const firstDay = Math.floor((start + jstOffset) / dayMs) * dayMs - jstOffset
+    for (let day = firstDay; day < end; day += dayMs) {
+      for (const [nightStart, nightEnd] of [[day, day + 5 * 60 * minuteMs], [day + 22 * 60 * minuteMs, day + dayMs]]) {
+        nightMs += Math.max(0, Math.min(end, nightEnd) - Math.max(start, nightStart))
+      }
     }
   }
-  let workMinutes = Math.max(0, Math.round(totalWorkMs / 60000) - breakMinutes)
+  const nightMinutes = Math.round(nightMs / minuteMs)
 
   const wStart = workRule?.workStart || '09:00'
   const wEnd = workRule?.workEnd || '18:00'
-  const wBreak = workRule?.breakMinutes || 60
+  const wBreak = workRule?.breakMinutes ?? 60
   const [startH, startM] = wStart.split(':').map(Number)
   const [endH, endM] = wEnd.split(':').map(Number)
-  const scheduledMinutes = (endH * 60 + endM) - (startH * 60 + startM) - wBreak
-
+  const startMinutes = startH * 60 + startM
+  let endMinutes = endH * 60 + endM
+  if (endMinutes < startMinutes) endMinutes += 1440
+  const scheduledMinutes = Math.max(0, endMinutes - startMinutes - wBreak)
   const overtimeMinutes = Math.max(0, workMinutes - scheduledMinutes)
-
-  const JST_OFFSET_MS = 9 * 60 * 60 * 1000
-  const getJSTHours = (d: Date) => new Date(d.getTime() + JST_OFFSET_MS).getUTCHours()
-  const getJSTMinutes = (d: Date) => new Date(d.getTime() + JST_OFFSET_MS).getUTCMinutes()
-
-  const scheduledStart = new Date(date.getTime() + (startH * 60 + startM) * 60000)
-  const lateMinutes = firstClockIn > scheduledStart ? Math.round((firstClockIn.getTime() - scheduledStart.getTime()) / 60000) : 0
-
-  let earlyLeaveMinutes = 0
-  if (lastClockOut) {
-    const scheduledEnd = new Date(date.getTime() + (endH * 60 + endM) * 60000)
-    earlyLeaveMinutes = lastClockOut < scheduledEnd ? Math.round((scheduledEnd.getTime() - lastClockOut.getTime()) / 60000) : 0
-  }
-
-  let nightMinutes = 0
-  if (lastClockOut) {
-    const outH = getJSTHours(lastClockOut)
-    const outM = getJSTMinutes(lastClockOut)
-    if (outH >= 22) nightMinutes += (outH - 22) * 60 + outM
-    if (outH < 5) nightMinutes += outH * 60 + outM
-  }
+  const scheduledStart = new Date(date.getTime() + startMinutes * minuteMs)
+  const lateMinutes = Math.max(0, Math.round((firstClockIn.getTime() - scheduledStart.getTime()) / minuteMs))
+  const scheduledEnd = new Date(date.getTime() + endMinutes * minuteMs)
+  const earlyLeaveMinutes = lastClockOut
+    ? Math.max(0, Math.round((scheduledEnd.getTime() - lastClockOut.getTime()) / minuteMs))
+    : 0
 
   return {
     clockIn: firstClockIn,

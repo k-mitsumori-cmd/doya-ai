@@ -3,7 +3,7 @@
 // ============================================
 // 生成画像で空けておいたセーフゾーンに、アップロード済みロゴを最後に合成する。
 // AIにロゴを描かせない＝文字化け/崩れを根絶し、全スライドで同じ位置・サイズに統一。
-import sharp from 'sharp'
+import sharp, { type OverlayOptions } from 'sharp'
 import { LOGO_SIZE_RATIO } from './constants'
 import type { LogoPosition, LogoSize } from './types'
 
@@ -43,7 +43,7 @@ export async function compositeLogo(
   const left = computeLeft(opts.position, W, lw, margin)
   const top = computeTop(opts.position, H, lh, margin)
 
-  const layers: sharp.OverlayOptions[] = []
+  const layers: OverlayOptions[] = []
 
   // 視認性確保のための背景チップ（角丸の半透明白）
   if (opts.backingChip) {

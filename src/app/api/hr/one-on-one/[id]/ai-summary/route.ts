@@ -7,11 +7,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
+import { canAccessOneOnOne, getOneOnOneViewer, canViewManagerNotes } from '@/lib/hr/one-on-one-access'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { buildOneOnOneSummaryPrompt } from '@/lib/hr/prompts'
 import { checkAiUsageLimit, incrementAiUsage } from '@/lib/hr/billing'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const id = p.id
 
     const oneOnOne = await prisma.hrOneOnOne.findFirst({
@@ -42,6 +43,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     if (!oneOnOne) {
       return NextResponse.json({ error: '1on1 record not found' }, { status: 404 })
+    }
+    if (!(await canAccessOneOnOne(hrCtx, oneOnOne))) {
+      return NextResponse.json({ error: 'この1on1記録にアクセスする権限がありません' }, { status: 403 })
+    }
+    if (!canViewManagerNotes(await getOneOnOneViewer(hrCtx), oneOnOne)) {
+      return NextResponse.json({ error: '上司メモを含む要約の利用権限がありません' }, { status: 403 })
+    }
+    if (oneOnOne.status === 'COMPLETED') {
+      return NextResponse.json({ error: '完了済みの1on1は要約を更新できません' }, { status: 409 })
     }
 
     if (!oneOnOne.managerNotes && !oneOnOne.employeeNotes) {
@@ -72,7 +82,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     })
 
     await prisma.hrOneOnOne.update({
-      where: { id },
+      where: { id, status: { not: 'COMPLETED' }, updatedAt: oneOnOne.updatedAt },
       data: { aiSummary },
     })
 
@@ -81,6 +91,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true, aiSummary })
   } catch (e: any) {
+    if (e?.code === 'P2025') return NextResponse.json({ error: '要約中に1on1が更新されました。内容を確認して再試行してください。' }, { status: 409 })
     return NextResponse.json(
       { error: e?.message || 'Failed to generate AI summary' },
       { status: 500 }

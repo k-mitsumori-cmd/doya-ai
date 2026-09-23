@@ -60,36 +60,41 @@ export function SidebarUsagePanel({
   service,
   show,
   refreshEvent,
+  organizationSlug,
 }: {
   service: string
   show: boolean
   refreshEvent?: string
+  organizationSlug?: string
 }) {
-  const [summary, setSummary] = useState<Summary | null>(null)
+  const requestUrl = `/api/usage/${service}${organizationSlug ? `?org=${encodeURIComponent(organizationSlug)}` : ''}`
+  const [loaded, setLoaded] = useState<{ url: string; summary: Summary | null } | null>(null)
+  const summary = loaded?.url === requestUrl ? loaded.summary : null
 
   useEffect(() => {
     let alive = true
+    let sequence = 0
     const load = () => {
+      const current = ++sequence
       // ⚠️ useSession の status でゲートしない。Cookie認証なので未確定でも応答する
-      fetch(`/api/usage/${service}`, { cache: 'no-store' })
+      fetch(requestUrl, { cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : null))
         .then((d) => {
-          if (alive) setSummary(d?.summary || null)
+          if (alive && current === sequence) setLoaded({ url: requestUrl, summary: d?.summary || null })
         })
         .catch(() => {
-          /* 表示だけの機能なので黙って諦める */
+          if (alive && current === sequence) setLoaded({ url: requestUrl, summary: null })
         })
     }
     load()
-    if (!refreshEvent) return () => {
-      alive = false
-    }
-    window.addEventListener(refreshEvent, load)
+    window.addEventListener('focus', load)
+    if (refreshEvent) window.addEventListener(refreshEvent, load)
     return () => {
       alive = false
-      window.removeEventListener(refreshEvent, load)
+      window.removeEventListener('focus', load)
+      if (refreshEvent) window.removeEventListener(refreshEvent, load)
     }
-  }, [service, refreshEvent])
+  }, [requestUrl, refreshEvent])
 
   if (!show || !summary) return null
 

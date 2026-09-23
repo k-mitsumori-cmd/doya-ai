@@ -1,5 +1,13 @@
 'use client'
 
+import { createCunningRecordingClient, CunningRecordingError } from '@/lib/cunning/recording-client'
+import { createFinalAudioRetry } from '@/lib/cunning/final-audio-retry'
+import { createPendingWork } from '@/lib/cunning/pending-work'
+import { createAudioWindowClient, type AudioWindowHandle } from '@/lib/cunning/audio-window-client'
+import { recordingAllowance } from '@/lib/cunning/allowance-client'
+
+import { showServiceLimit } from '@/lib/service-limit-ui'
+
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams } from 'next/navigation'
@@ -11,6 +19,9 @@ import type { CunningMode } from '@/lib/cunning/types'
 import { UiIcon } from '@/components/icons'
 
 interface AnswerCard {
+  language?: 'ja' | 'en' | 'auto'
+  finalTranscriptId?: string
+  contextTranscriptIds?: string[]
   id: string
   question: string
   summary: string
@@ -25,6 +36,8 @@ interface TranscriptLine {
   speaker: 'remote' | 'self'
 }
 interface CunningReport {
+  sourceCoverage?: { transcripts: number; answers: number }
+  incompleteInput?: boolean
   title: string
   summary: string
   decisions: string[]
@@ -60,10 +73,17 @@ export default function CunningLivePage() {
   const params = useParams()
   const sessionId = params.sessionId as string
 
+  const [allowanceState, setAllowanceState] = useState<'loading' | 'ready' | 'error' | 'limit'>('loading')
+  const [allowanceRetry, setAllowanceRetry] = useState(0)
+  const [sessionState, setSessionState] = useState<'loading' | 'ready' | 'ended' | 'error'>('loading')
+  const [savingIssue, setSavingIssue] = useState(false)
+  const [incompleteAudio, setIncompleteAudio] = useState(false)
+  const [, refreshAudioRetry] = useState(0)
   const [running, setRunning] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [lines, setLines] = useState<TranscriptLine[]>([])
   const [answers, setAnswers] = useState<AnswerCard[]>([])
+  const [transcriptionIssue, setTranscriptionIssue] = useState<{ message: string; limit: boolean } | null>(null)
   const [statusMsg, setStatusMsg] = useState('「ライブ開始」で会議タブの音声共有を許可してください')
   const [showSubs, setShowSubs] = useState(true)
   const [manualQ, setManualQ] = useState('')
@@ -106,12 +126,34 @@ export default function CunningLivePage() {
   const peakRef = useRef(0) // 現在の録音窓の音量ピーク（無音チャンク除外用）
   const levelTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const pipWindowRef = useRef<Window | null>(null) // 最新のPiPウィンドウ（アンマウント時に確実に閉じる）
-  const remainingSecRef = useRef<number | null>(null) // 当月の残り利用秒（-1/未取得は null=無制限扱い）
+  const remainingSecRef = useRef<number | null>(null) // 確認済みの残り利用秒（null は取得待ち、-1 は無制限）
   const modeRef = useRef<CunningMode>('sales') // 最新モード（録音ループのクロージャから参照）
   const langRef = useRef<'ja' | 'en' | 'auto'>('ja') // 最新の言語設定（録音ループ・回答生成のクロージャから参照）
+  const remoteAudioOrderRef = useRef(Promise.resolve())
+  const selfAudioOrderRef = useRef(Promise.resolve())
+  const pendingTranscriptIdsRef = useRef<string[]>([])
   const pendingRef = useRef('') // 集計中の発話（区切れ目で確定して回答）
+  const finishingRef = useRef(false)
   const endedRef = useRef(false) // 終了処理の二重起動ガード
   const hasContentRef = useRef(false) // 字幕or回答が1つでもあるか（議事録を出すか判定）
+  const durationBaseRef = useRef(0)
+  const workRef = useRef(createPendingWork())
+  const finalAudioRetryRef = useRef(createFinalAudioRetry(workRef.current, () => refreshAudioRetry(n => n + 1)))
+  const recordersRef = useRef(new Set<MediaRecorder>())
+  const flushRef = useRef<() => void>(() => {})
+  const startedRef = useRef(false)
+  const startingRef = useRef(false)
+  const recordingVersionRef = useRef(1)
+  const recordingClientRef = useRef<ReturnType<typeof createCunningRecordingClient> | null>(null)
+  const windowClientRef = useRef<ReturnType<typeof createAudioWindowClient> | null>(null)
+  const nextWindowRef = useRef<{ remote?: AudioWindowHandle; self?: AudioWindowHandle }>({})
+  const finalWindowAnswerRef = useRef<(id?: string) => Promise<void>>(async () => {})
+  const finalWindowAnsweredRef = useRef(false)
+  const finalAnswerLanguageRef = useRef<'ja' | 'en' | 'auto' | null>(null)
+  const [retryingWindows, setRetryingWindows] = useState(false)
+  const finishRef = useRef<() => Promise<void>>(async () => {})
+  const mountedRef = useRef(true)
+  const nativeStartedAt = useRef(0)
   const elapsedRef = useRef(0) // 最新の経過秒（クロージャから参照）
 
 // 無音判定の閾値（getByteTimeDomainData の 128 からの最大偏差）。これ未満の窓は送らない。
@@ -119,7 +161,11 @@ const SILENCE_PEAK = 8
 
   const stopAll = useCallback(() => {
     runningRef.current = false
+    windowClientRef.current?.stop()
     setRunning(false)
+    for (const recorder of recordersRef.current) {
+      try { if (recorder.state !== 'inactive') recorder.stop() } catch { workRef.current.fail() }
+    }
     streamRef.current?.getTracks().forEach((t) => t.stop())
     audioStreamRef.current?.getTracks().forEach((t) => t.stop())
     if (videoRef.current) videoRef.current.srcObject = null
@@ -127,8 +173,7 @@ const SILENCE_PEAK = 8
     levelTimerRef.current = null
     audioCtxRef.current?.close().catch(() => {})
     audioCtxRef.current = null
-    peakRef.current = 0
-    pendingRef.current = ''
+    if (recordingVersionRef.current !== 2) peakRef.current = 0
     streamRef.current = null
     audioStreamRef.current = null
     // 自分の声(マイク)側も停止
@@ -137,7 +182,7 @@ const SILENCE_PEAK = 8
     selfLevelTimerRef.current = null
     selfAudioCtxRef.current?.close().catch(() => {})
     selfAudioCtxRef.current = null
-    selfPeakRef.current = 0
+    if (recordingVersionRef.current !== 2) selfPeakRef.current = 0
     selfStreamRef.current = null
     setCaptureKind(null)
   }, [])
@@ -145,16 +190,47 @@ const SILENCE_PEAK = 8
   // 終了処理の一本化：停止ボタン・画面共有停止・上限オートストップのどれでも
   // 「終了→議事録＋評価」を必ず実行する（共有を先に止めても議事録が出る）。
   const finishSession = useCallback(async () => {
-    if (endedRef.current) return
+    if (endedRef.current || finishingRef.current) return
+    finishingRef.current = true
+    try {
     endedRef.current = true
     stopAll()
     setFocusMode(false) // 集中モードを閉じてから議事録を出す
     setStatusMsg('停止しました')
-    await fetch(`/api/cunning/sessions/${sessionId}`, {
+    setSessionState('ended')
+    setSavingIssue(false)
+    try {
+    setStatusMsg('最後の音声と回答を保存しています')
+    if (recordingVersionRef.current === 2) await recordingClientRef.current?.stop()
+    await workRef.current.drain()
+    if (windowClientRef.current) {
+      const finalized = await windowClientRef.current.finish()
+      workRef.current.resolve('window-audio')
+      await finalWindowAnswerRef.current(finalized.finalTranscripts.find(t => t.speaker === 'remote')?.transcriptId)
+    }
+    if (recordingVersionRef.current !== 2) flushRef.current()
+    const complete = await workRef.current.drain()
+    setIncompleteAudio(!complete)
+    if (complete) setTranscriptionIssue(null)
+    if (finalAudioRetryRef.current.hasPending()) {
+      endedRef.current = false
+      setStatusMsg('最後の音声の再送が必要です')
+      return
+    }
+    if (recordingVersionRef.current !== 2) {
+    const saved = await fetch(`/api/cunning/sessions/${sessionId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ end: true, addSeconds: elapsedRef.current % 30 }),
-    }).catch(() => {})
+      body: JSON.stringify({ end: true, totalSeconds: durationBaseRef.current + elapsedRef.current }),
+    })
+    if (!saved.ok) throw new Error('終了情報の保存に失敗しました')
+    }
+    setStatusMsg('停止しました')
+    } catch {
+      endedRef.current = false
+      setSavingIssue(true)
+      return
+    }
     if (!hasContentRef.current) return // 中身が無ければ議事録は出さない
     setReport(null)
     setReportOpen(true)
@@ -163,7 +239,7 @@ const SILENCE_PEAK = 8
       const res = await fetch(`/api/cunning/sessions/${sessionId}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ force: true, language: langRef.current }),
+        body: JSON.stringify({ force: true, language: langRef.current, incompleteInput: workRef.current.hasFailures() }),
       })
       const d = await res.json()
       if (res.ok) setReport(d.report)
@@ -172,7 +248,12 @@ const SILENCE_PEAK = 8
     } finally {
       setReportLoading(false)
     }
+    } finally {
+      finishingRef.current = false
+      if (mountedRef.current) refreshAudioRetry(n => n + 1)
+    }
   }, [stopAll, sessionId])
+  finishRef.current = finishSession
 
   // 字幕/回答の有無・経過秒を ref に同期（クロージャから最新値を参照）
   useEffect(() => {
@@ -200,40 +281,61 @@ const SILENCE_PEAK = 8
     }
   }, [focusMode, running, captureKind])
 
-  // セッションのモードを取得（トリガー挙動・表示の切替）
+  // Load the saved cumulative baseline before any recording starts.
   useEffect(() => {
+    let active = true
+    setSessionState('loading')
     fetch(`/api/cunning/sessions/${sessionId}`, { cache: 'no-store' })
-      .then((r) => r.json())
+      .then(async (r) => { if (!r.ok) throw new Error('Session unavailable'); return r.json() })
       .then((d) => {
-        if (d?.session?.mode) {
-          setMode(d.session.mode)
-          modeRef.current = d.session.mode
-        }
+        if (!active) return
+        if (!Number.isSafeInteger(d?.session?.durationSec) || d.session.durationSec < 0) throw new Error('Invalid duration')
+        recordingVersionRef.current = d.session.recordingVersion === 2 ? 2 : 1
+        durationBaseRef.current = d.session.durationSec
+        setSessionState(d.session.status === 'active' ? 'ready' : 'ended')
+        if (d.session.mode) { setMode(d.session.mode); modeRef.current = d.session.mode }
       })
-      .catch(() => {})
+      .catch(() => { if (active) setSessionState('error') })
+    return () => { active = false }
   }, [sessionId])
 
-  // 当月の残り利用時間を取得（セッション中のオートストップ判定用）
+  // 確認失敗や旧レスポンスで録音を許可しない。権限ダイアログはクリック直後に開く。
   useEffect(() => {
-    fetch('/api/cunning/usage', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => {
-        if (typeof d?.remainingMinutes === 'number' && d.remainingMinutes !== -1) {
-          remainingSecRef.current = d.remainingMinutes * 60
-        }
+    let active = true
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 10000)
+    remainingSecRef.current = null
+    setAllowanceState('loading')
+    fetch('/api/cunning/usage', { cache: 'no-store', signal: controller.signal })
+      .then(async (r) => {
+        if (!r.ok) throw new Error('利用状況を取得できませんでした')
+        return recordingAllowance(await r.json())
       })
-      .catch(() => {})
-  }, [])
+      .then((seconds) => {
+        if (!active) return
+        remainingSecRef.current = seconds
+        setAllowanceState(seconds === 0 ? 'limit' : 'ready')
+      })
+      .catch(() => {
+        if (active) setAllowanceState('error')
+      })
+      .finally(() => clearTimeout(timeout))
+    return () => { active = false; clearTimeout(timeout); controller.abort() }
+  }, [sessionId, allowanceRetry])
 
   // アンマウント時に停止＋セッション終了＋PiPを閉じる
   useEffect(() => {
+    mountedRef.current = true
     return () => {
+      mountedRef.current = false
       stopAll()
       pipWindowRef.current?.close()
+      if (recordingVersionRef.current === 2) { void recordingClientRef.current?.stop().catch(() => {}); return }
+      if (!startedRef.current) return
       fetch(`/api/cunning/sessions/${sessionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ end: true }),
+        body: JSON.stringify({ end: true, totalSeconds: durationBaseRef.current + elapsedRef.current }),
         keepalive: true,
       }).catch(() => {})
     }
@@ -245,28 +347,54 @@ const SILENCE_PEAK = 8
     if (!running) return
     let n = elapsedRef.current
     const t = setInterval(() => {
+      if (recordingVersionRef.current === 2) {
+        n = Math.max(0, Math.floor((performance.now() - nativeStartedAt.current) / 1000))
+        elapsedRef.current = n
+        setElapsed(n)
+        return
+      }
       n += 1
+      elapsedRef.current = n
       setElapsed(n) // 純粋なstate更新のみ
       if (n % 30 === 0) {
         fetch(`/api/cunning/sessions/${sessionId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ addSeconds: 30 }),
-        }).catch(() => {})
+          body: JSON.stringify({ totalSeconds: durationBaseRef.current + n }),
+        }).then((r) => { if (!r.ok) throw new Error('Time save failed') }).catch(() => {
+          if (endedRef.current) return // Final cumulative save supersedes an earlier heartbeat.
+          stopAll()
+          setSessionState('ended')
+          setSavingIssue(true)
+        })
       }
       // 当月の残り利用時間に達したらオートストップ（上限超過の青天井防止）→ 議事録まで出す
-      if (remainingSecRef.current != null && n >= remainingSecRef.current) {
-        toast.error('今月の利用時間の上限に達しました。プロにアップグレードしてください')
+      if (remainingSecRef.current != null && remainingSecRef.current !== -1 && n >= remainingSecRef.current) {
+        showServiceLimit('/api/cunning/sessions', 403, { code: 'LIMIT' })
         void finishSession()
       }
     }, 1000)
     return () => clearInterval(t)
-  }, [running, sessionId, finishSession])
+  }, [running, sessionId, finishSession, stopAll])
 
-  const requestAnswer = useCallback(
-    async (question: string, opts: { force?: boolean } = {}) => {
+  const transcriptionFailed = useCallback((status: number, data: { error?: string; code?: string }) => {
+    const message = data.error || '処理に失敗しました。しばらくしてからお試しください。'
+    setTranscriptionIssue({ message, limit: data.code === 'LIMIT' })
+    if ([401, 403, 404, 409].includes(status)) {
+      stopAll()
+      setStatusMsg(message)
+      if (recordingVersionRef.current === 2 && startedRef.current) void finishRef.current()
+    }
+  }, [stopAll])
+
+  const performAnswer = useCallback(
+    async (question: string, opts: { force?: boolean; finalTranscriptId?: string; contextTranscriptIds?: string[]; language?: 'ja' | 'en' | 'auto' } = {}) => {
       const q = question.trim()
       if (!q) return
+      if (recordingVersionRef.current === 2 && !opts.finalTranscriptId && !runningRef.current) {
+        setTranscriptionIssue({ message: '通常の回答生成は録音中のみ利用できます。', limit: false })
+        return
+      }
       // 二重発火ガード（自動検出時のみ。手動/再生成は force で常に実行）
       if (!opts.force) {
         const n = normQ(q)
@@ -274,9 +402,10 @@ const SILENCE_PEAK = 8
       }
       lastQRef.current = { q, t: Date.now() }
 
+      const answerLanguage = opts.language ?? langRef.current
       const cardId = `a-${Date.now()}-${Math.round(Math.random() * 1e6)}`
       setAnswers((prev) => [
-        { id: cardId, question: q, summary: '', script: '', sources: [], loading: true },
+        { id: cardId, question: q, language: answerLanguage, finalTranscriptId: opts.finalTranscriptId, contextTranscriptIds: opts.contextTranscriptIds, summary: '', script: '', sources: [], loading: true },
         ...prev,
       ])
       try {
@@ -286,12 +415,15 @@ const SILENCE_PEAK = 8
           body: JSON.stringify({
             sessionId,
             question: q,
+            ...(recordingVersionRef.current === 2 ? { recordingToken: recordingClientRef.current?.token(), finalTranscriptId: opts.finalTranscriptId, contextTranscriptIds: opts.contextTranscriptIds } : {}),
             recentTranscript: recentRef.current.slice(-4).join(' / '),
-            language: langRef.current,
+            language: answerLanguage,
           }),
         })
         const d = await res.json()
-        if (!res.ok) throw new Error(d.error || '回答生成に失敗しました')
+        if (!res.ok) { transcriptionFailed(res.status, d); throw new Error(d.error || '回答生成に失敗しました') }
+        hasContentRef.current = true
+        if (opts.finalTranscriptId) workRef.current.resolve(`answer:${opts.finalTranscriptId}`)
         setAnswers((prev) =>
           prev.map((c) =>
             c.id === cardId
@@ -299,57 +431,169 @@ const SILENCE_PEAK = 8
               : c
           )
         )
+        return true
       } catch (e: any) {
+        workRef.current.fail(opts.finalTranscriptId ? `answer:${opts.finalTranscriptId}` : undefined)
         setAnswers((prev) =>
-          prev.map((c) => (c.id === cardId ? { ...c, summary: '⚠️ ' + e.message, script: '', loading: false } : c))
+          prev.map((c) => (c.id === cardId ? { ...c, summary: '回答生成に失敗しました: ' + e.message, script: '', loading: false } : c))
         )
+        return false
       }
     },
-    [sessionId]
+    [sessionId, transcriptionFailed]
   )
+
+  const requestAnswer = useCallback((question: string, opts: { force?: boolean; finalTranscriptId?: string; contextTranscriptIds?: string[]; language?: 'ja' | 'en' | 'auto' } = {}) =>
+    workRef.current.track(performAnswer(question, opts)), [performAnswer])
 
   // 集計中の発話を「ひとまとまりの質問/発話」として確定し、トリガー該当なら回答
   const flushUtterance = useCallback(() => {
     const u = pendingRef.current.trim()
     pendingRef.current = ''
+    pendingTranscriptIdsRef.current = []
     if (u.length < 4) return
     const anyTrigger = getMode(modeRef.current).trigger === 'any'
     const shouldReply = anyTrigger ? u.length >= 5 : looksLikeQuestion(u)
     if (shouldReply) requestAnswer(u)
   }, [requestAnswer])
+  flushRef.current = flushUtterance
+
+  finalWindowAnswerRef.current = async (finalTranscriptId) => {
+    if (finalWindowAnsweredRef.current || !finalTranscriptId) return
+    const question = pendingRef.current.trim()
+    const ids = pendingTranscriptIdsRef.current.filter(id => id !== finalTranscriptId)
+    if (ids.length > 64) throw new Error('保存された発話が多いため、最後の回答をまとめられませんでした')
+    if (question && (getMode(modeRef.current).trigger === 'any' || looksLikeQuestion(question))) {
+      finalAnswerLanguageRef.current ??= langRef.current
+      const saved = await requestAnswer(question, { force: true, finalTranscriptId, contextTranscriptIds: ids, language: finalAnswerLanguageRef.current })
+      if (!saved) throw new Error('最後の回答を保存できませんでした')
+    }
+    finalWindowAnsweredRef.current = true
+    pendingRef.current = ''; pendingTranscriptIdsRef.current = []
+  }
+
+  const startWindowCycle = useCallback((speaker: 'remote' | 'self') => {
+    const client = windowClientRef.current
+    if (!client || !runningRef.current) return
+    const failed = (error: unknown) => {
+      workRef.current.fail('window-audio')
+      setTranscriptionIssue({ message: error instanceof Error ? error.message : '音声を保存できませんでした。この画面で再試行してください。', limit: false })
+      stopAll()
+      void finishRef.current()
+    }
+    const task = (async () => {
+      const handle = nextWindowRef.current[speaker] ?? client.reserve(speaker)
+      nextWindowRef.current[speaker] = undefined
+      await client.ready(handle)
+      const stream = speaker === 'self' ? selfStreamRef.current : audioStreamRef.current
+      if (!runningRef.current || !stream || stream.getTracks().every(t => t.readyState === 'ended')) return
+      const peak = speaker === 'self' ? selfPeakRef : peakRef
+      const analysed = !!(speaker === 'self' ? selfAudioCtxRef.current : audioCtxRef.current)
+      const language = langRef.current
+      const parts: BlobPart[] = []
+      let recorder: MediaRecorder
+      try { recorder = new MediaRecorder(stream, { mimeType: mimeRef.current }) } catch { recorder = new MediaRecorder(stream) }
+      let settle: () => void = () => {}
+      const stopped = new Promise<void>(resolve => { settle = resolve })
+      recorder.ondataavailable = event => { if (event.data?.size) parts.push(event.data) }
+      recorder.onstop = () => {
+        recordersRef.current.delete(recorder)
+        const silent = analysed && peak.current < SILENCE_PEAK
+        peak.current = 0
+        if (runningRef.current) startWindowCycle(speaker)
+        const blob = new Blob(parts, { type: mimeRef.current })
+        if (!blob.size && !silent) {
+          workRef.current.fail()
+          failed(new Error('録音データを取得できませんでした。この音声は再送できないため、保存完了として扱っていません。'))
+          settle(); return
+        }
+        void client.submit(handle, silent ? null : blob, language).catch(failed).finally(settle)
+      }
+      recorder.onerror = () => {
+        workRef.current.fail()
+        recordersRef.current.delete(recorder)
+        failed(new Error('録音中にエラーが発生しました。音声が保存されていない可能性があります。'))
+        settle()
+      }
+      client.begin(handle)
+      recordersRef.current.add(recorder)
+      workRef.current.track(stopped)
+      try { recorder.start() } catch (error) { recordersRef.current.delete(recorder); settle(); throw error }
+      const next = client.reserve(speaker)
+      nextWindowRef.current[speaker] = next
+      workRef.current.track(client.ready(next).catch(failed))
+      setTimeout(() => { if (recorder.state !== 'inactive') recorder.stop() }, WINDOW_MS)
+    })()
+    workRef.current.track(task.catch(failed))
+  }, [stopAll])
 
   const sendChunk = useCallback(
-    async (blob: Blob) => {
-      if (blob.size < 1200) return // ほぼ無音
+    async (blob: Blob, final = false, originalLanguage?: string) => {
+      if (blob.size === 0) return // Short final utterances must not be discarded by byte size.
+      const previous = remoteAudioOrderRef.current
+      let release: () => void = () => {}
+      remoteAudioOrderRef.current = new Promise<void>(resolve => { release = resolve })
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 75000)
       try {
         const fd = new FormData()
         fd.append('audio', blob, 'chunk.webm')
         fd.append('sessionId', sessionId)
-        fd.append('language', langRef.current)
-        const res = await fetch('/api/cunning/transcribe', { method: 'POST', body: fd })
+        fd.append('language', originalLanguage ?? langRef.current)
+        if (recordingVersionRef.current === 2) {
+          fd.append('recordingToken', recordingClientRef.current?.token() || '')
+          fd.append('final', final ? '1' : '0')
+        }
+        const res = await fetch('/api/cunning/transcribe', { method: 'POST', body: fd, signal: controller.signal })
         const d = await res.json()
-        if (!res.ok) return
+        await previous
+        if (!res.ok) {
+          transcriptionFailed(res.status, d)
+          if (final && recordingVersionRef.current === 2) throw new Error('Final audio upload failed')
+          workRef.current.fail(); return
+        }
         const text = (d.text || '').trim()
+        if (recordingVersionRef.current === 2 && final) {
+          const fullQuestion = (pendingRef.current + ' ' + text).trim()
+          const contextTranscriptIds = [...pendingTranscriptIdsRef.current]
+          pendingRef.current = ''
+          pendingTranscriptIdsRef.current = []
+          if (text) {
+            hasContentRef.current = true
+            setLines(prev => [...prev.slice(-80), { id: d.transcriptId, text, speaker: 'remote' }])
+            recentRef.current.push(text)
+          }
+          const anyTrigger = getMode(modeRef.current).trigger === 'any'
+          if (fullQuestion && (anyTrigger || looksLikeQuestion(fullQuestion))) await requestAnswer(fullQuestion, { force: true, finalTranscriptId: d.transcriptId, contextTranscriptIds })
+          return
+        }
         if (!text) return
         if (text === lastLineRef.current) return // 直前と同一の窓は重複除去
         lastLineRef.current = text
+        hasContentRef.current = true
         setLines((prev) => [...prev.slice(-80), { id: `l-${Date.now()}-${prev.length}`, text, speaker: 'remote' }])
         recentRef.current.push(text)
         // 窓をまたいだ断片を集計バッファに連結（区切れ目で確定）
+        if (recordingVersionRef.current === 2 && d.transcriptId) pendingTranscriptIdsRef.current.push(d.transcriptId)
         pendingRef.current = (pendingRef.current + ' ' + text).trim()
         // 文末/疑問が完成 or ビジネスで質問成立 or 長すぎ → ポーズを待たず即確定（スピード優先）
         const businessQ = getMode(modeRef.current).trigger !== 'any' && looksLikeQuestion(text)
-        if (looksComplete(text) || businessQ || pendingRef.current.length > 200) {
+        if (!(recordingVersionRef.current === 2 && !runningRef.current) &&
+            (looksComplete(text) || businessQ || pendingRef.current.length > 200 || pendingTranscriptIdsRef.current.length >= 16)) {
           flushUtterance()
         }
       } catch {
-        /* 1チャンクの失敗は無視して継続 */
-      }
+        await previous
+        if (!(final && recordingVersionRef.current === 2)) workRef.current.fail()
+        setTranscriptionIssue({ message: '一部の音声を保存できませんでした。議事録には保存できた内容だけが含まれます。', limit: false })
+        if (final && recordingVersionRef.current === 2) throw new Error('Final audio upload failed')
+      } finally { clearTimeout(timeout); release() }
     },
-    [sessionId, flushUtterance]
+    [sessionId, flushUtterance, transcriptionFailed, requestAnswer]
   )
 
   const startCycle = useCallback(() => {
+    if (windowClientRef.current) { startWindowCycle('remote'); return }
     const stream = audioStreamRef.current
     if (!stream || !runningRef.current) return
     let rec: MediaRecorder
@@ -358,11 +602,15 @@ const SILENCE_PEAK = 8
     } catch {
       rec = new MediaRecorder(stream)
     }
+    let settle: () => void = () => {}
+    const stopped = new Promise<void>((resolve) => { settle = resolve })
     const parts: BlobPart[] = []
     rec.ondataavailable = (e) => {
       if (e.data && e.data.size) parts.push(e.data)
     }
     rec.onstop = () => {
+      recordersRef.current.delete(rec)
+      void (async () => {
       // 窓のピーク音量を確定してからリセット（startCycleより前に読む）
       const peak = peakRef.current
       peakRef.current = 0
@@ -373,40 +621,66 @@ const SILENCE_PEAK = 8
         if (pendingRef.current.trim()) flushUtterance()
         return
       }
-      void sendChunk(blob)
+      const final = !runningRef.current
+      const language = langRef.current
+      if (final && recordingVersionRef.current === 2) await finalAudioRetryRef.current.run('remote', () => sendChunk(blob, true, language))
+      else await sendChunk(blob, final)
+      })().catch(() => workRef.current.fail()).finally(settle)
     }
+    rec.onerror = () => { workRef.current.fail(); recordersRef.current.delete(rec); settle() }
     if (!runningRef.current || stream.getTracks().every((t) => t.readyState === 'ended')) return
-    rec.start()
+    recordersRef.current.add(rec)
+    workRef.current.track(stopped)
+    try { rec.start() } catch (error) { recordersRef.current.delete(rec); workRef.current.fail(); settle(); throw error }
     setTimeout(() => {
       if (rec.state !== 'inactive') rec.stop()
     }, WINDOW_MS)
-  }, [sendChunk, flushUtterance])
+  }, [sendChunk, flushUtterance, startWindowCycle])
 
   // 自分(マイク)のチャンク → 文字起こしして字幕に表示（回答トリガーはしない）
   const sendSelfChunk = useCallback(
-    async (blob: Blob) => {
-      if (blob.size < 1200) return
+    async (blob: Blob, final = false, originalLanguage?: string) => {
+      if (blob.size === 0) return
+      const previous = selfAudioOrderRef.current
+      let release: () => void = () => {}
+      selfAudioOrderRef.current = new Promise<void>(resolve => { release = resolve })
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 75000)
       try {
         const fd = new FormData()
         fd.append('audio', blob, 'self.webm')
         fd.append('sessionId', sessionId)
         fd.append('speaker', 'self')
-        fd.append('language', langRef.current)
-        const res = await fetch('/api/cunning/transcribe', { method: 'POST', body: fd })
+        fd.append('language', originalLanguage ?? langRef.current)
+        if (recordingVersionRef.current === 2) {
+          fd.append('recordingToken', recordingClientRef.current?.token() || '')
+          fd.append('final', final ? '1' : '0')
+        }
+        const res = await fetch('/api/cunning/transcribe', { method: 'POST', body: fd, signal: controller.signal })
         const d = await res.json()
-        if (!res.ok) return
+        await previous
+        if (!res.ok) {
+          transcriptionFailed(res.status, d)
+          if (final && recordingVersionRef.current === 2) throw new Error('Final audio upload failed')
+          workRef.current.fail(); return
+        }
         const text = (d.text || '').trim()
         if (!text) return
+        hasContentRef.current = true
         setLines((prev) => [...prev.slice(-80), { id: `s-${Date.now()}-${prev.length}`, text, speaker: 'self' }])
       } catch {
-        /* 失敗は無視 */
-      }
+        await previous
+        if (!(final && recordingVersionRef.current === 2)) workRef.current.fail()
+        setTranscriptionIssue({ message: '一部の音声を保存できませんでした。議事録には保存できた内容だけが含まれます。', limit: false })
+        if (final && recordingVersionRef.current === 2) throw new Error('Final audio upload failed')
+      } finally { clearTimeout(timeout); release() }
     },
-    [sessionId]
+    [sessionId, transcriptionFailed]
   )
 
   // 自分の声の録音ループ（独立した無音ゲート）
   const startSelfCycle = useCallback(() => {
+    if (windowClientRef.current) { startWindowCycle('self'); return }
     const stream = selfStreamRef.current
     if (!stream || !runningRef.current) return
     let rec: MediaRecorder
@@ -415,24 +689,35 @@ const SILENCE_PEAK = 8
     } catch {
       rec = new MediaRecorder(stream)
     }
+    let settle: () => void = () => {}
+    const stopped = new Promise<void>((resolve) => { settle = resolve })
     const parts: BlobPart[] = []
     rec.ondataavailable = (e) => {
       if (e.data && e.data.size) parts.push(e.data)
     }
     rec.onstop = () => {
+      recordersRef.current.delete(rec)
+      void (async () => {
       const peak = selfPeakRef.current
       selfPeakRef.current = 0
       if (runningRef.current) startSelfCycle()
       const blob = new Blob(parts, { type: mimeRef.current })
       if (selfAudioCtxRef.current && peak < SILENCE_PEAK) return // 自分が話していない窓は送らない
-      void sendSelfChunk(blob)
+      const final = !runningRef.current
+      const language = langRef.current
+      if (final && recordingVersionRef.current === 2) await finalAudioRetryRef.current.run('self', () => sendSelfChunk(blob, true, language))
+      else await sendSelfChunk(blob, final)
+      })().catch(() => workRef.current.fail()).finally(settle)
     }
+    rec.onerror = () => { workRef.current.fail(); recordersRef.current.delete(rec); settle() }
     if (!runningRef.current || stream.getTracks().every((t) => t.readyState === 'ended')) return
-    rec.start()
+    recordersRef.current.add(rec)
+    workRef.current.track(stopped)
+    try { rec.start() } catch (error) { recordersRef.current.delete(rec); workRef.current.fail(); settle(); throw error }
     setTimeout(() => {
       if (rec.state !== 'inactive') rec.stop()
     }, WINDOW_MS)
-  }, [sendSelfChunk])
+  }, [sendSelfChunk, startWindowCycle])
 
   // 入力デバイス一覧を取得（ラベル取得のため一度マイク許可が要る）
   const loadDevices = async () => {
@@ -451,7 +736,10 @@ const SILENCE_PEAK = 8
   }
 
   const start = async () => {
+    if (sessionState !== 'ready' || startedRef.current || startingRef.current) return
+    if (allowanceState !== 'ready' || remainingSecRef.current === null || remainingSecRef.current === 0) return
     try {
+      startingRef.current = true
       endedRef.current = false // 新しいセッション開始：終了ガードをリセット
       mimeRef.current = pickMime()
       let endTracks: MediaStreamTrack[] = []
@@ -461,6 +749,7 @@ const SILENCE_PEAK = 8
         const s = await navigator.mediaDevices.getUserMedia({
           audio: deviceId ? { deviceId: { exact: deviceId } } : true,
         })
+        if (!mountedRef.current) { s.getTracks().forEach(t => t.stop()); return }
         streamRef.current = s
         audioStreamRef.current = s
         if (videoRef.current) videoRef.current.srcObject = null
@@ -478,6 +767,7 @@ const SILENCE_PEAK = 8
         } catch {
           /* 未対応ブラウザは無視 */
         }
+        if (!mountedRef.current) { display.getTracks().forEach(t => t.stop()); return }
         streamRef.current = display
         const audioTracks = display.getAudioTracks()
         if (audioTracks.length === 0) {
@@ -526,6 +816,40 @@ const SILENCE_PEAK = 8
       }
       endTracks.forEach((t) => t.addEventListener('ended', onEnded))
 
+      if (recordingVersionRef.current === 2) {
+        if (!recordingClientRef.current) recordingClientRef.current = createCunningRecordingClient(sessionId, {
+          requestKey: crypto.randomUUID(),
+          onStop: () => {
+            stopAll()
+            if (mountedRef.current && startedRef.current && !endedRef.current) void finishRef.current()
+          },
+          onError: error => {
+            if (!mountedRef.current) return
+            setTranscriptionIssue({ message: error.message, limit: error instanceof CunningRecordingError && error.code === 'LIMIT' })
+            if (error instanceof CunningRecordingError && error.code === 'LIMIT') showServiceLimit('/api/cunning/sessions', error.status || 403, { code: 'LIMIT' })
+          },
+        })
+        await recordingClientRef.current.start()
+        if (!mountedRef.current || endedRef.current || recordingClientRef.current.remainingMs() <= 0 || endTracks.some(t => t.readyState === 'ended')) {
+          await recordingClientRef.current.stop()
+          return
+        }
+        windowClientRef.current = createAudioWindowClient(sessionId, recordingClientRef.current.token()!, {
+          onChange: () => { if (mountedRef.current) refreshAudioRetry(n => n + 1) },
+          onResult: ({ text, transcriptId, speaker }) => {
+            if (!mountedRef.current || !text.trim()) return
+            hasContentRef.current = true
+            setLines(prev => prev.some(line => line.id === transcriptId) ? prev : [...prev.slice(-80), { id: transcriptId, text, speaker }])
+            if (speaker !== 'remote') return
+            recentRef.current.push(text)
+            pendingRef.current = (pendingRef.current + ' ' + text).trim()
+            pendingTranscriptIdsRef.current.push(transcriptId)
+            if (runningRef.current && (looksComplete(text) || looksLikeQuestion(text) || pendingRef.current.length > 200 || pendingTranscriptIdsRef.current.length >= 16)) flushUtterance()
+          },
+        })
+        nativeStartedAt.current = performance.now()
+      }
+      startedRef.current = true
       runningRef.current = true
       setRunning(true)
       setStatusMsg(
@@ -539,6 +863,7 @@ const SILENCE_PEAK = 8
       if (captureSelf && audioSource === 'tab') {
         try {
           const mic = await navigator.mediaDevices.getUserMedia({ audio: true })
+          if (!runningRef.current) { mic.getTracks().forEach((t) => t.stop()); return }
           selfStreamRef.current = mic
           try {
             const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
@@ -576,6 +901,11 @@ const SILENCE_PEAK = 8
       // オーバーレイ自体は必ず開く（enterFocus内でrequestFullscreenの失敗は握り潰し）。
       enterFocus()
     } catch (e: any) {
+      if (e instanceof CunningRecordingError && e.code === 'LIMIT') showServiceLimit('/api/cunning/sessions', e.status || 403, { code: 'LIMIT' })
+      if (recordingVersionRef.current === 2 && recordingClientRef.current?.token()) {
+        await recordingClientRef.current.stop().catch(() => setSavingIssue(true))
+        setSessionState('ended')
+      }
       const name = e?.name || ''
       if (name === 'OverconstrainedError' || name === 'NotFoundError') {
         toast.error('選択した入力デバイスが見つかりません。「更新」で選び直してください')
@@ -585,6 +915,8 @@ const SILENCE_PEAK = 8
         toast.error('音声の取り込みを開始できませんでした')
       }
       stopAll()
+    } finally {
+      startingRef.current = false
     }
   }
 
@@ -672,10 +1004,10 @@ const SILENCE_PEAK = 8
       const res = await fetch('/api/cunning/prep', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId }),
+        body: JSON.stringify({ sessionId, ...(recordingVersionRef.current === 2 ? { recordingToken: recordingClientRef.current?.token() } : {}) }),
       })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error || '生成に失敗しました')
+      if (!res.ok) { transcriptionFailed(res.status, d); throw new Error(d.error || '生成に失敗しました') }
       setPrep(d.items || [])
     } catch (e: any) {
       toast.error(e.message)
@@ -684,12 +1016,63 @@ const SILENCE_PEAK = 8
     }
   }
 
+  const retryFinalAudio = async () => {
+    if (windowClientRef.current) {
+      if (retryingWindows || finishingRef.current) return
+      setRetryingWindows(true)
+      setStatusMsg('保存できなかった音声を再送しています')
+      try {
+        await windowClientRef.current.retry()
+        endedRef.current = false
+        await finishRef.current()
+        if (!windowClientRef.current.hasPending() && !workRef.current.hasFailures()) setTranscriptionIssue(null)
+      } finally { setRetryingWindows(false) }
+      return
+    }
+    if (finalAudioRetryRef.current.isBusy()) return
+    setStatusMsg('最後の音声を再送しています')
+    await finalAudioRetryRef.current.retry()
+    if (!finalAudioRetryRef.current.hasPending()) {
+      if (!workRef.current.hasFailures()) setTranscriptionIssue(null)
+      endedRef.current = false
+      await finishRef.current()
+    } else setStatusMsg('音声を保存できませんでした。処理中の場合は時間をおいて再試行してください')
+  }
+
   const mm = String(Math.floor(elapsed / 60)).padStart(2, '0')
   const ss = String(elapsed % 60).padStart(2, '0')
   const latest = answers[0]
 
   return (
     <div className="p-4 lg:p-6 max-w-6xl mx-auto">
+      {!!windowClientRef.current?.failedCount() && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <p>保存できていない音声があります。この画面を閉じると、保持している音声を再送できなくなります。</p>
+        <p>処理中の場合は5分30秒ほど待って再試行してください。再受付は録音停止後15分以内です。</p>
+        <button type="button" disabled={retryingWindows || finishingRef.current} onClick={() => void retryFinalAudio()} className="mt-2 font-bold underline disabled:opacity-50">保存できなかった音声を再送する</button>
+      </div>}
+      {finalAudioRetryRef.current.failedCount() > 0 && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <p>最後の音声を保存できていません。この画面を閉じると再送できなくなります。</p>
+        <p>処理が継続中の場合は、停止から5分30秒ほど待って再試行してください。再受付は停止後15分以内です。</p>
+        <button type="button" disabled={finalAudioRetryRef.current.isBusy()} onClick={() => void retryFinalAudio()} className="mt-2 font-bold underline disabled:opacity-50">最後の音声を再送する</button>
+      </div>}
+      {transcriptionIssue && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <p>{transcriptionIssue.message}</p>
+        {transcriptionIssue.limit && <Link href="/cunning/pricing" className="font-bold underline">プランと利用上限を確認する</Link>}
+      </div>}
+      {allowanceState !== 'ready' && <div role={allowanceState === 'loading' ? 'status' : 'alert'} className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+        {allowanceState === 'loading' && <p>利用可能な時間を確認しています。</p>}
+        {allowanceState === 'error' && <><p>利用状況を確認できないため、録音を開始できません。</p><button type="button" onClick={() => setAllowanceRetry((n) => n + 1)} className="mt-2 font-bold underline">再試行する</button></>}
+        {allowanceState === 'limit' && <><p>今月の利用時間の上限に達しました。</p><Link href="/cunning/pricing" className="font-bold underline">プランと利用上限を確認する</Link></>}
+      </div>}
+      {sessionState !== 'ready' && <div role="status" className="mb-4 rounded-xl border border-slate-200 p-4 text-sm">
+        {sessionState === 'loading' && 'セッションを確認しています。'}
+        {sessionState === 'error' && <><p>セッションを取得できませんでした。</p><button onClick={() => window.location.reload()} className="font-bold underline">再読み込みする</button></>}
+        {sessionState === 'ended' && <><p>このセッションの録音は終了しています。</p><Link href="/cunning" className="font-bold underline">新しいセッションを作成する</Link></>}
+      </div>}
+      {savingIssue && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
+        <p>録音を停止しましたが、最後の音声・回答・利用時間・終了情報の保存を確認できませんでした。この画面を閉じずに再試行してください。</p>
+        <button onClick={() => void finishSession()} className="mt-2 font-bold underline">終了情報を保存し直す</button>
+      </div>}
       {/* ヘッダー */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -698,7 +1081,7 @@ const SILENCE_PEAK = 8
           </Link>
           <div className="flex items-center gap-2">
             {running && <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />}
-            <span className="font-black text-slate-800">{running ? '解析中' : '待機中'}</span>
+            <span className="font-black text-slate-800">{running ? '解析中' : sessionState === 'ended' ? '録音終了' : '待機中'}</span>
             <span className="text-sm font-mono font-bold text-slate-500">
               {mm}:{ss}
             </span>
@@ -937,12 +1320,15 @@ const SILENCE_PEAK = 8
               <div className="absolute inset-0 flex flex-col items-center justify-center text-white/80 gap-3 px-4">
                 <img src={`/character/${modeDef.character}.png`} alt="" className="w-20 h-20 object-contain drop-shadow-lg" />
                 <p className="font-bold text-xs text-center text-white/70 max-w-sm">
-                  {modeDef.icon} {modeDef.label}・準備OK！下のボタンで
-                  {audioSource === 'device' ? '入力デバイスから取り込み開始' : '会議/配信タブを共有して開始'}
+                  {sessionState === 'ended' ? '録音は終了しました。保存状況は画面上部で確認できます。' : <>
+                    {modeDef.icon} {modeDef.label}・準備OK！下のボタンで
+                    {audioSource === 'device' ? '入力デバイスから取り込み開始' : '会議/配信タブを共有して開始'}
+                  </>}
                 </p>
                 {/* 開始ボタンを中央に・緑で目立たせる（青のガイド/モードチップと色で区別） */}
                 <button
                   onClick={start}
+                  disabled={allowanceState !== 'ready' || sessionState !== 'ready'}
                   className="mt-1 px-8 py-4 rounded-full bg-gradient-to-r from-emerald-400 to-green-500 text-white font-black text-xl shadow-xl shadow-green-500/30 hover:scale-[1.03] transition-transform flex items-center gap-2"
                 >
                   <span className="material-symbols-outlined text-3xl">play_circle</span>
@@ -974,7 +1360,7 @@ const SILENCE_PEAK = 8
             {showSubs && (
               <div className="space-y-1.5 max-h-40 overflow-y-auto">
                 {lines.length === 0 ? (
-                  <p className="text-slate-500 text-sm font-bold">音声待機中…</p>
+                  <p className="text-slate-500 text-sm font-bold">{sessionState === 'ended' ? '文字起こしの保存結果はまだありません。' : '音声待機中…'}</p>
                 ) : (
                   lines.map((l) => (
                     <div key={l.id} className={`flex ${l.speaker === 'self' ? 'justify-end' : 'justify-start'}`}>
@@ -1061,7 +1447,7 @@ const SILENCE_PEAK = 8
                             <span className="material-symbols-outlined text-sm">content_copy</span>コピー
                           </button>
                           <button
-                            onClick={() => requestAnswer(a.question, { force: true })}
+                            onClick={() => requestAnswer(a.question, { force: true, finalTranscriptId: a.finalTranscriptId, contextTranscriptIds: a.contextTranscriptIds, language: a.finalTranscriptId ? a.language : undefined })}
                             className="text-xs font-black text-slate-500 hover:text-[#0B5CFF] flex items-center gap-1"
                           >
                             <span className="material-symbols-outlined text-sm">refresh</span>もう一度
@@ -1138,6 +1524,7 @@ const SILENCE_PEAK = 8
               ) : (
                 <button
                   onClick={start}
+                  disabled={allowanceState !== 'ready' || sessionState !== 'ready'}
                   className="px-4 py-2 rounded-full bg-gradient-to-r from-[#2D8CFF] to-[#0B5CFF] text-white font-black text-sm"
                 >
                   ライブ開始
@@ -1258,6 +1645,7 @@ const SILENCE_PEAK = 8
         </div>
       )}
 
+      {(incompleteAudio || report?.incompleteInput) && <p role="alert" className="my-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">一部の音声または回答を保存できませんでした。議事録は保存できた内容に基づいています。</p>}
       {/* 終了時の議事録＋評価モーダル（派手な演出） */}
       {reportOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -1282,10 +1670,11 @@ const SILENCE_PEAK = 8
                   className="w-20 h-20 object-contain animate-bounce"
                 />
                 <h2 className="text-xl font-black text-slate-900 mt-2">
-                  {reportLoading ? '議事録を作成中…' : 'おつかれさま！議事録ができたよ'}
+                  {reportLoading ? '議事録を作成しています' : report ? '議事録を作成しました' : '議事録を作成できませんでした'}
                 </h2>
               </div>
 
+              {(incompleteAudio || report?.incompleteInput) && <p role="alert" className="mb-3 text-sm text-amber-700">一部の音声または回答が欠けています。保存できた内容のみの議事録です。</p>}
               {reportLoading ? (
                 <p className="text-center text-slate-400 font-bold text-sm mt-4">
                   会話を振り返って要約・評価しています…
@@ -1302,6 +1691,7 @@ const SILENCE_PEAK = 8
                     {report.feedback && <p className="text-sm font-bold mt-2 opacity-95">{report.feedback}</p>}
                   </div>
 
+                  {report.sourceCoverage && <p className="mb-3 text-xs text-slate-500">対象: 発話{report.sourceCoverage.transcripts}件・回答{report.sourceCoverage.answers}件</p>}
                   {report.summary && (
                     <div>
                       <p className="text-xs font-black text-slate-400 mb-1">議事録（要約）</p>

@@ -1,3 +1,4 @@
+import { timeEntryBelongsToProject } from "@/lib/promane/time-entry-project";
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -185,7 +186,7 @@ async function getDashboardData(workspaceId: string) {
     let laborCost = 0;
     members.forEach((member) => {
       const memberTime = member.timeEntries
-        .filter((te) => te.taskId && taskIds.includes(te.taskId))
+        .filter((te) => timeEntryBelongsToProject(te, project.id, taskIds))
         .reduce((sum, te) => sum + safeNum(te.duration), 0);
       laborCost += (memberTime / 60) * safeNum(member.hourlyRate);
     });
@@ -193,9 +194,8 @@ async function getDashboardData(workspaceId: string) {
     const expenseCost = project.expenses.reduce((sum, e) => sum + safeNum(e.amount), 0);
     const totalProjectCost = laborCost + expenseCost;
     const profit = revenue - totalProjectCost;
-    // 利益率: 売上0=0, 100%超えは100%にクランプ (会計上 100%超えは原価マイナスを意味する)
     const rawRate = revenue > 0 ? (profit / revenue) * 100 : 0;
-    const profitRate = Math.min(100, Math.max(-100, rawRate));
+    const profitRate = rawRate;
     totalRevenue += revenue;
     totalCost += totalProjectCost;
     return { ...project, revenue, totalProjectCost, profit, profitRate, progress, doneTasks, totalTasks };

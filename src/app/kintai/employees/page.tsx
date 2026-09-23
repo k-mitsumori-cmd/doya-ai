@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { ROLE_LABELS, ROLE_DESCRIPTIONS, EMPLOYMENT_TYPE_LABELS } from '@/lib/kintai/types'
 import { EmptyState } from '@/components/EmptyState'
 
@@ -35,6 +35,8 @@ export default function EmployeesPage() {
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState({ name: '', nameKana: '', email: '', departmentId: '', workRuleId: '', employmentType: 'full_time', hireDate: '', role: 'employee' })
   const [saving, setSaving] = useState(false)
+  const togglingRef = useRef(new Set<string>())
+  const [togglingIds, setTogglingIds] = useState(new Set<string>())
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [currentUserRole, setCurrentUserRole] = useState('employee')
 
@@ -97,14 +99,33 @@ export default function EmployeesPage() {
   }
 
   const toggleActive = async (emp: any) => {
+    if (togglingRef.current.has(emp.id)) return
     const action = emp.isActive ? '無効化' : '有効化'
     if (!window.confirm(`${emp.name}を${action}しますか？`)) return
-    await fetch(`/api/kintai/employees/${emp.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isActive: !emp.isActive }),
-    })
-    fetchAll()
+    togglingRef.current.add(emp.id)
+    setTogglingIds(new Set(togglingRef.current))
+    try {
+      const res = await fetch(`/api/kintai/employees/${emp.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !emp.isActive }),
+      })
+      const result = await res.json().catch(() => null)
+      if (!res.ok) {
+        alert(typeof result?.error === 'string' ? result.error : `${action}できませんでした。もう一度お試しください。`)
+        return
+      }
+      if (result?.employee?.id !== emp.id || typeof result.employee.isActive !== 'boolean') {
+        alert('更新結果を確認できませんでした。画面を再読み込みして状態をご確認ください。')
+        return
+      }
+      setEmployees(previous => previous.map(row => row.id === emp.id ? { ...row, ...result.employee } : row))
+    } catch {
+      alert('通信エラーが発生しました。画面を再読み込みして状態をご確認ください。')
+    } finally {
+      togglingRef.current.delete(emp.id)
+      setTogglingIds(new Set(togglingRef.current))
+    }
   }
 
   const filtered = useMemo(() => {
@@ -353,7 +374,9 @@ export default function EmployeesPage() {
                           </button>
                           <button
                             onClick={() => toggleActive(emp)}
-                            className={`p-1.5 rounded-lg transition-colors ${emp.isActive ? 'text-green-500 hover:text-slate-500 hover:bg-slate-100' : 'text-slate-400 hover:text-green-500 hover:bg-green-50'}`}
+                            disabled={togglingIds.has(emp.id)}
+                            aria-busy={togglingIds.has(emp.id)}
+                            className={`p-1.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-wait ${emp.isActive ? 'text-green-500 hover:text-slate-500 hover:bg-slate-100' : 'text-slate-400 hover:text-green-500 hover:bg-green-50'}`}
                             title={emp.isActive ? '無効化する' : '有効化する'}
                           >
                             <span className="material-symbols-outlined text-lg">{emp.isActive ? 'toggle_on' : 'toggle_off'}</span>

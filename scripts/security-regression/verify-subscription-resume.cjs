@@ -1,0 +1,10 @@
+const assert=require('node:assert/strict');const {load,check,results}=require('./load-typescript.cjs');
+(async()=>{
+for(const scenario of ['active','trialing','past_due','already-resumed','none','multiple','lookup-error','ended','wrong-customer','update-failure','unchanged'])await check('resume '+scenario,async()=>{
+ let writes=0,retrieves=[];
+ const current={id:'new',customer:'split',status:scenario==='ended'?'canceled':['trialing','past_due'].includes(scenario)?scenario:'active',cancel_at_period_end:scenario!=='already-resumed',current_period_end:2000000000};if(scenario==='wrong-customer')current.customer='foreign';
+ const api=load('src/app/api/stripe/subscription/resume/route.ts',{'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{email:'synthetic@example.invalid'}})},'@/lib/auth':{},'@/lib/prisma':{prisma:{user:{findUnique:async()=>({id:'u',stripeCustomerId:'old',stripeSubscriptionId:'stale',serviceSubscriptions:[{stripeSubscriptionId:'stale'}]})}}},'@/lib/stripe':{ACTIVE_LIKE_STATUSES:new Set(['active','trialing','past_due']),findActiveLikeSubscriptions:async()=>{if(scenario==='lookup-error')throw Error('offline');return scenario==='none'?[]:scenario==='multiple'?[{id:'a'},{id:'b'}]:[{id:'new',customerId:'split'}]},stripe:{subscriptions:{retrieve:async id=>{retrieves.push(id);return current},update:async id=>{writes++;assert.equal(id,'new');if(scenario==='update-failure')throw Error('offline');return{...current,cancel_at_period_end:scenario==='unchanged'}}}}}});
+ const res=await api.POST({json:async()=>({serviceId:'banner'})});const ok=['active','trialing','past_due','already-resumed'].includes(scenario);assert.equal(res.status,ok?200:scenario==='none'?404:['multiple','ended','wrong-customer'].includes(scenario)?409:scenario==='unchanged'?502:500);assert.equal(writes,['active','trialing','past_due','update-failure','unchanged'].includes(scenario)?1:0);assert.ok(!retrieves.includes('stale'));if(ok)assert.equal((await res.json()).cancelAtPeriodEnd,false);
+});
+console.log(JSON.stringify({passed:results.length,results},null,2));
+})().catch(e=>{console.error(e);process.exitCode=1});

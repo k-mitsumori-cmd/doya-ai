@@ -22,14 +22,17 @@ import {
   SidebarUsagePanel,
 } from '@/components/sidebar'
 import type { NavItem, SidebarProps } from '@/components/sidebar'
+import { isPaidPlan } from '@/lib/unified-plan'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 
 interface Props extends SidebarProps {
   orgSlug: string
   orgName?: string
+  organizationPlan?: string | null
+  isOwner?: boolean
 }
 
-function AioSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapsed, onToggle, forceExpanded, isMobile }: Props) {
+function AioSidebarImpl({ orgSlug, orgName, organizationPlan, isOwner = true, isCollapsed: controlledIsCollapsed, onToggle, forceExpanded, isMobile }: Props) {
   const pathname = usePathname()
   const { data: session, status: sessionStatus } = useSession()
   // ⚠️ セッション確定前は plan が既定値になり、一瞬だけゲスト扱いの表示が出てしまう。
@@ -49,6 +52,8 @@ function AioSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapsed, 
   ]
 
   const planLabel = (() => {
+    if (organizationPlan === null) return '確認できません'
+    if (organizationPlan !== undefined) return organizationPlan.toUpperCase() === 'ENTERPRISE' ? 'ENTERPRISE' : isPaidPlan(organizationPlan) ? 'PRO' : 'FREE'
     if (!isLoggedIn) return 'GUEST'
     const p = String((session?.user as any)?.plan || 'FREE').toUpperCase()
     if (p === 'ENTERPRISE') return 'ENTERPRISE'
@@ -88,7 +93,7 @@ function AioSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapsed, 
 
           {/* プランバナー */}
           {/* 作った数と残り。数字は /api/usage/aio から受け取るだけ */}
-          <SidebarUsagePanel service="aio" show={sessionReady && (isMobile || !isCollapsed)} />
+          <SidebarUsagePanel service="aio" organizationSlug={orgSlug} refreshEvent="aio:usage-changed" show={sessionReady && (isMobile || !isCollapsed)} />
           {sessionReady && (isMobile || !isCollapsed) && (
             <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md relative overflow-hidden">
               <div className="relative z-10">
@@ -96,11 +101,15 @@ function AioSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapsed, 
                   <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
                     <Zap className="w-4 h-4 text-fuchsia-600 fill-fuchsia-600" />
                   </div>
-                  <p className="text-xs font-black text-white">現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}</p>
+                  <p className="text-xs font-black text-white">{organizationPlan !== undefined ? '組織のプラン' : '現在'}：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}</p>
                 </div>
-                <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-90 mb-2">プロプラン ¥9,980/月<TrialInlineSuffix />でSoV・引用元・改善アクションも閲覧</p>
+                <p className="text-[10px] text-purple-100 font-bold leading-relaxed opacity-90 mb-2">
+                  {organizationPlan === null ? '組織の契約情報を確認できません。管理者にお問い合わせください。' : !isOwner && planLabel === 'FREE' ? '利用枠の拡大は組織オーナーにご相談ください。' : planLabel === 'PRO' || planLabel === 'ENTERPRISE'
+                    ? 'ご利用中のプランの内容をご確認いただけます。'
+                    : <>プロプラン ¥9,980/月<TrialInlineSuffix />でSoV・引用元・改善アクションも閲覧</>}
+                </p>
                 <Link href="/aio/pricing" className="w-full py-2 bg-white text-fuchsia-700 text-[11px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md block text-center">
-                  プロにアップグレード
+                  {!isOwner || organizationPlan === null || planLabel === 'PRO' || planLabel === 'ENTERPRISE' ? 'プランを確認する' : 'プロにアップグレード'}
                 </Link>
               </div>
             </div>

@@ -2,6 +2,11 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
+import { personaBrowserStorage } from '@/lib/persona/browser-storage'
+import { savePersonaRecord, savePersonaImage, savedPersonaPath } from '@/lib/persona/history-records'
+import { includedPersonaImages } from '@/lib/persona/image-entitlements'
+import { isPersonaDisplayData, hasValidPersonaImages } from '@/lib/persona/display-data'
+import PersonaUsagePanel from '@/components/persona/PersonaUsagePanel'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles,
@@ -202,23 +207,31 @@ function toFriendlyError(e: unknown, res?: Response | null): string {
   return 'エラーが発生しました'
 }
 
-export default function PersonaTool() {
-  const { data: session } = useSession()
+export type PersonaRestoredRecord = {
+  id: string
+  data: unknown
+  sourceUrl?: string | null
+  timestamp: number
+  portrait?: string
+  sceneImages?: Record<string, string>
+}
 
-  // プランに基づく使用制限表示
-  const usageLimitInfo = useMemo(() => {
-    if (!session?.user) {
-      return { planLabel: 'ゲスト', limit: '2回/日', color: 'text-gray-500 bg-gray-100' }
-    }
-    const plan = String((session.user as any)?.personaPlan || (session.user as any)?.plan || 'FREE').toUpperCase()
-    if (plan === 'PRO' || plan === 'BASIC' || plan === 'STARTER' || plan === 'BUSINESS' || plan === 'BUNDLE' || plan === 'ENTERPRISE') {
-      return { planLabel: 'PRO', limit: '30回/日', color: 'text-purple-700 bg-purple-100' }
-    }
-    if (plan === 'LIGHT') {
-      return { planLabel: 'LIGHT', limit: '15回/日', color: 'text-blue-700 bg-blue-100' }
-    }
-    return { planLabel: 'FREE', limit: '5回/日', color: 'text-gray-600 bg-gray-100' }
-  }, [session])
+export default function PersonaTool({ initialRecord }: { initialRecord?: PersonaRestoredRecord } = {}) {
+  const { data: session, status } = useSession()
+  const userId = session?.user?.id
+  if (status !== 'authenticated' || !userId) return <p role="status" className="p-6">{status === 'loading' ? 'ログイン状態を確認しています。' : 'ペルソナを利用するにはログインしてください。'}</p>
+  return <AccountPersonaTool key={`${userId}:${initialRecord?.id || ''}`} userId={userId} initialRecord={initialRecord} />
+}
+
+function AccountPersonaTool({ userId, initialRecord }: { userId: string; initialRecord?: PersonaRestoredRecord }) {
+  const accountStorage = useMemo(() => personaBrowserStorage(userId), [userId])
+  const textRequest = useRef<symbol | null>(null)
+  const generationAttempt = useRef<{ input: string; key: string } | null>(null)
+  const alive = useRef(true)
+  useEffect(() => {
+    alive.current = true
+    return () => { alive.current = false; textRequest.current = null }
+  }, [])
 
   const [url, setUrl] = useState('')
   const [serviceName, setServiceName] = useState('')
@@ -226,7 +239,32 @@ export default function PersonaTool() {
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [generatedData, setGeneratedData] = useState<GeneratedData | null>(null)
+  const [accessWarning, setAccessWarning] = useState('')
+  const [generatedData, updateGeneratedData] = useState<GeneratedData | null>(null)
+  const currentPersona = useRef<GeneratedData | null>(null)
+  const currentRecordId = useRef<string | null>(null)
+  const currentServerRecord = useRef(false)
+  const imageAttempts = useRef<Record<string, { projectId: string; intent: string; key: string }>>({})
+  // Only a text generation requested in this mounted screen may start automatic images.
+  const autoGenerateFor = useRef<GeneratedData | null>(null)
+  const imageRequests = useRef<Record<string, symbol>>({})
+  const scenePrompts = useRef<Record<string, string>>({})
+  const scenePending = useRef<Set<string>>(new Set())
+  const setGeneratedData = useCallback((data: GeneratedData | null) => {
+    currentPersona.current = data
+    currentRecordId.current = null
+    currentServerRecord.current = false
+    setAccessWarning('')
+    imageAttempts.current = {}
+    imageRequests.current = {}
+    scenePrompts.current = {}
+    scenePending.current = new Set()
+    setSceneErrors({})
+    updateGeneratedData(data)
+    setPortraitLoading(false)
+    setSceneLoading({})
+  }, [])
+  useEffect(() => () => { currentPersona.current = null; imageRequests.current = {} }, [])
   const [portraitImage, setPortraitImage] = useState<string | null>(null)
   const [portraitLoading, setPortraitLoading] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
@@ -234,12 +272,21 @@ export default function PersonaTool() {
   const [modificationInput, setModificationInput] = useState('')
   const [modifying, setModifying] = useState(false)
   const [sceneImages, setSceneImages] = useState<Record<string, string>>({})
+  const [sceneErrors, setSceneErrors] = useState<Record<string, string>>({})
   const [sceneLoading, setSceneLoading] = useState<Record<string, boolean>>({})
   const [exporting, setExporting] = useState(false)
   const [loadingPhase, setLoadingPhase] = useState(0)
   const [candidateIdx, setCandidateIdx] = useState(0)
   const portraitAutoTriggered = useRef(false)
   const sceneAutoTriggered = useRef(false)
+  const [imageGenerationRequest, setImageGenerationRequest] = useState(0)
+  const requestMissingImages = () => {
+    if (!alive.current || !generatedData || currentPersona.current !== generatedData || textRequest.current || portraitLoading || Object.values(sceneLoading).some(Boolean) || autoGenerateFor.current === generatedData) return
+    autoGenerateFor.current = generatedData
+    portraitAutoTriggered.current = false
+    sceneAutoTriggered.current = false
+    setImageGenerationRequest(value => value + 1)
+  }
   const resumeRef = useRef<HTMLDivElement>(null)
   const loadingRef = useRef<HTMLDivElement>(null)
 
@@ -269,22 +316,137 @@ export default function PersonaTool() {
 
   // ローカルストレージから履歴読み込み
   useEffect(() => {
-    const stored = localStorage.getItem('doya_persona_last')
-    if (stored) {
-      try {
+    if (initialRecord) {
+      if (!isPersonaDisplayData(initialRecord.data) || !hasValidPersonaImages(initialRecord)) {
+        setError('保存されたペルソナの形式を読み込めませんでした。元の履歴は削除していません。')
+        return
+      }
+      autoGenerateFor.current = null
+      setGeneratedData(initialRecord.data as GeneratedData)
+      currentRecordId.current = initialRecord.id
+      currentServerRecord.current = true
+      let restoredUrl = initialRecord.sourceUrl || ''
+      if (initialRecord.sourceUrl == null) {
+        try {
+          const rows = JSON.parse(accountStorage.getItem('doya_persona_history') || '[]')
+          const cached = Array.isArray(rows) ? rows.find(row => row?.id === initialRecord.id) : null
+          if (typeof cached?.url === 'string') restoredUrl = cached.url
+        } catch { /* Server restoration remains usable when browser storage is unavailable. */ }
+      }
+      setUrl(restoredUrl)
+      setPortraitImage(initialRecord.portrait || null)
+      setSceneImages(initialRecord.sceneImages || {})
+      return
+    }
+    try {
+      const stored = accountStorage.getItem('doya_persona_last')
+      if (stored) {
         const parsed = JSON.parse(stored)
+        if (parsed?.serverStored === true) {
+          const path = savedPersonaPath(parsed)
+          if (path) window.location.replace(path)
+          else setError('保存済み履歴の情報が無効です。履歴一覧から開き直してください。')
+          return
+        }
         if (parsed.data) {
+          if (!isPersonaDisplayData(parsed.data) || !hasValidPersonaImages(parsed)) throw new Error('Invalid saved persona')
+          autoGenerateFor.current = null
           setGeneratedData(parsed.data)
+          currentRecordId.current = typeof parsed.id === 'string' ? parsed.id : null
+          if (typeof parsed.url === 'string') setUrl(parsed.url)
           setPortraitImage(parsed.portrait || null)
           if (parsed.sceneImages) setSceneImages(parsed.sceneImages)
         }
-      } catch {}
+      }
+    } catch { setError('このブラウザの保存データを読み込めませんでした。') }
+  }, [accountStorage, setGeneratedData, initialRecord])
+
+  // A deletion in another tab must invalidate displayed data and late responses here too.
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      // Removing a browser copy does not delete a server-owned project.
+      if (currentServerRecord.current) return
+      if (event.storageArea !== window.localStorage) return
+      const historyChanged = accountStorage.isKey(event.key, 'doya_persona_history')
+      const lastChanged = accountStorage.isKey(event.key, 'doya_persona_last')
+      if (event.key !== null && !historyChanged && !lastChanged) return
+      try {
+        const id = currentRecordId.current
+        let removed = event.key === null || (historyChanged && event.newValue === null)
+        if (!removed && id && historyChanged) {
+          const rows = JSON.parse(event.newValue || '[]')
+          removed = Array.isArray(rows) && !rows.some(row => row?.id === id)
+        }
+        if (!removed && lastChanged && event.newValue === null) {
+          const old = JSON.parse(event.oldValue || 'null')
+          removed = Boolean(old && (id ? old.id === id : currentPersona.current && JSON.stringify(old.data) === JSON.stringify(currentPersona.current)))
+        }
+        if (!removed) return
+        textRequest.current = null
+        autoGenerateFor.current = null
+        setGeneratedData(null)
+        setPortraitImage(null)
+        setSceneImages({})
+        setUrl('')
+        setModificationInput('')
+        setLoading(false)
+        setModifying(false)
+        setError('別のタブで履歴が削除されたため、表示をクリアしました。')
+      } catch { /* A malformed event must not erase the displayed unsaved work. */ }
     }
-  }, [])
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [accountStorage, setGeneratedData, initialRecord])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    let pending = false
+    const verifySavedAccess = async () => {
+      const id = currentRecordId.current
+      const version = currentPersona.current
+      if (pending || document.hidden || !currentServerRecord.current || !id || !version || textRequest.current) return
+      pending = true
+      const isCurrent = () => !controller.signal.aborted && currentServerRecord.current && currentRecordId.current === id && currentPersona.current === version && !textRequest.current
+      try {
+        const response = await fetch(`/api/persona/projects/${id}`, {
+          method: 'HEAD', cache: 'no-store', signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]),
+        })
+        if (!isCurrent()) return
+        if (response.status === 401 || response.status === 404) {
+          autoGenerateFor.current = null
+          setGeneratedData(null)
+          setPortraitImage(null)
+          setSceneImages({})
+          setUrl('')
+          setModificationInput('')
+          setError(response.status === 401 ? '再度ログインしてください。' : '保存済み履歴が削除されたため、表示をクリアしました。')
+          return
+        }
+        if (!response.ok) throw new Error('Access unconfirmed')
+        setAccessWarning('')
+      } catch {
+        if (isCurrent()) setAccessWarning('保存済み履歴の状態を確認できませんでした。通信が回復すると再確認します。')
+      } finally { pending = false }
+    }
+    const onSavedStorage = (event: StorageEvent) => {
+      if (event.key === null || accountStorage.isKey(event.key, 'doya_persona_history') || accountStorage.isKey(event.key, 'doya_persona_last')) void verifySavedAccess()
+    }
+    window.addEventListener('focus', verifySavedAccess)
+    window.addEventListener('storage', onSavedStorage)
+    document.addEventListener('visibilitychange', verifySavedAccess)
+    const timer = window.setInterval(verifySavedAccess, 60000)
+    return () => {
+      controller.abort()
+      window.clearInterval(timer)
+      window.removeEventListener('focus', verifySavedAccess)
+      window.removeEventListener('storage', onSavedStorage)
+      document.removeEventListener('visibilitychange', verifySavedAccess)
+    }
+  }, [accountStorage, setGeneratedData])
 
   // ペルソナ生成後にポートレートを自動生成
   useEffect(() => {
-    if (generatedData?.persona && !portraitImage && !portraitLoading && !portraitAutoTriggered.current) {
+    if (autoGenerateFor.current === generatedData && generatedData?.persona && !portraitImage && !portraitLoading && !portraitAutoTriggered.current) {
       portraitAutoTriggered.current = true
       const timer = setTimeout(() => {
         handleGeneratePortrait()
@@ -294,87 +456,35 @@ export default function PersonaTool() {
     if (!generatedData) {
       portraitAutoTriggered.current = false
     }
-  }, [generatedData, portraitImage, portraitLoading])
+  }, [generatedData, portraitImage, portraitLoading, imageGenerationRequest])
 
   // シーン画像の自動生成
   useEffect(() => {
-    if (!generatedData?.persona || sceneAutoTriggered.current) return
-    const schedule = generatedData.persona.schedule
-    const diary = generatedData.persona.diary
-    const painPoints = generatedData.persona.painPoints
-    const adoptionTimeline = generatedData.deepDive?.adoptionStory?.timeline
-    if (!schedule && !diary && !painPoints && !adoptionTimeline) return
-
+    if (!generatedData?.persona || autoGenerateFor.current !== generatedData || sceneAutoTriggered.current) return
     sceneAutoTriggered.current = true
+    const timers: ReturnType<typeof setTimeout>[] = []
     let delay = 1500
-
-    // スケジュール画像
-    if (schedule) {
-      schedule.forEach((item, idx) => {
-        if (item.imagePrompt) {
-          const key = `schedule-${idx}`
-          if (!sceneImages[key]) {
-            setTimeout(() => handleGenerateScene(item.imagePrompt!, key), delay)
-            delay += 3000
-          }
-        }
-      })
+    for (const slot of includedPersonaImages(generatedData)) {
+      if (slot.kind !== 'scene' || !slot.prompt || sceneImages[slot.key]) continue
+      timers.push(setTimeout(() => handleGenerateScene(slot.prompt!, slot.key), delay))
+      delay += 3000
     }
-
-    // 日記画像
-    if (diary?.imageScenes) {
-      diary.imageScenes.forEach((scene, idx) => {
-        const key = `diary-${idx}`
-        if (!sceneImages[key]) {
-          setTimeout(() => handleGenerateScene(scene, key), delay)
-          delay += 3000
-        }
-      })
-    }
-
-    // ペインポイント画像
-    if (painPoints) {
-      painPoints.forEach((pp, idx) => {
-        if (pp.imagePrompt) {
-          const key = `painpoint-${idx}`
-          if (!sceneImages[key]) {
-            setTimeout(() => handleGenerateScene(pp.imagePrompt!, key), delay)
-            delay += 3000
-          }
-        }
-      })
-    }
-
-    // 導入ストーリー画像
-    if (adoptionTimeline) {
-      adoptionTimeline.forEach((step, idx) => {
-        if (step.imagePrompt) {
-          const key = `adoption-${idx}`
-          if (!sceneImages[key]) {
-            setTimeout(() => handleGenerateScene(step.imagePrompt!, key), delay)
-            delay += 3000
-          }
-        }
-      })
-    }
-
-    // まとめセクション用ヒーロー画像
-    if (generatedData.summary) {
-      const key = 'summary-hero'
-      if (!sceneImages[key]) {
-        const heroPrompt = `Professional portrait photo of a ${generatedData.persona.age}-year-old Japanese ${generatedData.persona.gender === '男性' ? 'man' : 'woman'} who works as ${generatedData.persona.occupation}, confident and professional, standing in a modern office, warm lighting, editorial magazine style`
-        setTimeout(() => handleGenerateScene(heroPrompt, key), delay)
-        delay += 3000
-      }
-    }
-  }, [generatedData])
+    return () => timers.forEach(clearTimeout)
+  }, [generatedData, imageGenerationRequest])
 
   const handleGenerate = async () => {
+    if (!alive.current || textRequest.current) return
     if (!url.trim()) {
       setError('URLを入力してください')
       return
     }
 
+    const input = JSON.stringify({ url, serviceName, additionalInfo })
+    if (generationAttempt.current?.input !== input) generationAttempt.current = { input, key: crypto.randomUUID() }
+    const requestKey = generationAttempt.current.key
+    const request = Symbol('generate')
+    textRequest.current = request
+    const isCurrent = () => alive.current && textRequest.current === request
     setLoading(true)
     setError('')
     setPortraitError('')
@@ -389,7 +499,7 @@ export default function PersonaTool() {
       res = await fetch('/api/persona/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, serviceName, additionalInfo }),
+        body: JSON.stringify({ url, serviceName, additionalInfo, requestKey }),
       })
 
       const raw = await res.text()
@@ -401,6 +511,7 @@ export default function PersonaTool() {
       }
 
       if (!res.ok) {
+        if (isCurrent() && data?.code === 'REQUEST_CONFLICT') generationAttempt.current = null
         const msg =
           (data && (data.error || data.message)) ||
           (raw && raw.slice(0, 200)) ||
@@ -408,26 +519,40 @@ export default function PersonaTool() {
         throw new Error(msg)
       }
 
-      if (!data?.data || !data?.data?.persona) {
+      if (!isPersonaDisplayData(data?.data)) {
         throw new Error('ペルソナデータの取得に失敗しました。もう一度お試しください。')
       }
 
+      if (!isCurrent()) return
+      generationAttempt.current = null
+      autoGenerateFor.current = data.data
       setGeneratedData(data.data)
 
-      localStorage.setItem('doya_persona_last', JSON.stringify({ data: data.data, url, timestamp: Date.now() }))
-
-      const history = JSON.parse(localStorage.getItem('doya_persona_history') || '[]')
-      history.unshift({ data: data.data, url, timestamp: Date.now() })
-      localStorage.setItem('doya_persona_history', JSON.stringify(history.slice(0, 20)))
+      try {
+        const record = { id: typeof data.projectId === 'string' ? data.projectId : crypto.randomUUID(), serverStored: typeof data.projectId === 'string', data: data.data, url, timestamp: Date.now() }
+        currentRecordId.current = record.id
+        currentServerRecord.current = record.serverStored
+        savePersonaRecord(accountStorage, record)
+      } catch { setError(typeof data.projectId === 'string' ? 'ペルソナはサーバーに保存しましたが、このブラウザのコピーを保存できませんでした。保存済み履歴から開き直せます。' : '生成は完了しましたが、このブラウザに履歴を保存できませんでした。画面を閉じる前に結果をダウンロードしてください。') }
     } catch (e) {
-      setError(toFriendlyError(e, res))
+      if (isCurrent()) setError(toFriendlyError(e, res))
     } finally {
-      setLoading(false)
+      if (isCurrent()) { textRequest.current = null; setLoading(false) }
     }
   }
 
   const handleGeneratePortrait = async () => {
-    if (!generatedData?.persona) return
+    if (!generatedData?.persona || currentPersona.current !== generatedData) return
+    const recordId = currentRecordId.current
+    if (!recordId) { setPortraitError('この履歴にはサーバーの保存情報がありません。新しくペルソナを生成してください。'); return }
+    const intent = portraitImage ? 'regenerate' : 'included'
+    if (imageAttempts.current.portrait?.projectId !== recordId || imageAttempts.current.portrait?.intent !== intent) {
+      imageAttempts.current.portrait = { projectId: recordId, intent, key: crypto.randomUUID() }
+    }
+    const attempt = imageAttempts.current.portrait
+    const request = Symbol('portrait')
+    imageRequests.current.portrait = request
+    const isCurrent = () => currentPersona.current === generatedData && imageRequests.current.portrait === request
 
     setPortraitLoading(true)
     setPortraitError('')
@@ -436,7 +561,7 @@ export default function PersonaTool() {
       res = await fetch('/api/persona/portrait', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ persona: generatedData.persona }),
+        body: JSON.stringify({ projectId: recordId, slotKey: 'portrait', intent, requestKey: attempt.key }),
       })
 
       const raw = await res.text()
@@ -447,71 +572,85 @@ export default function PersonaTool() {
         data = null
       }
 
+      if (!isCurrent()) return
       if (!res.ok || !data) {
         throw new Error(data?.error || 'ポートレート生成に失敗しました')
       }
 
       if (data.success && data.image) {
+        delete imageAttempts.current.portrait
         setPortraitImage(data.image)
-        const stored = JSON.parse(localStorage.getItem('doya_persona_last') || '{}')
-        stored.portrait = data.image
-        localStorage.setItem('doya_persona_last', JSON.stringify(stored))
+        try {
+          savePersonaImage(accountStorage, recordId, generatedData, { portrait: data.image })
+        } catch { setPortraitError('画像はサーバーに保存しましたが、このブラウザのコピーを更新できませんでした。保存済み履歴から開き直せます。') }
       } else {
         throw new Error(data.error || 'ポートレート画像の取得に失敗しました')
       }
     } catch (e) {
-      setPortraitError(toFriendlyError(e, res))
+      if (isCurrent()) setPortraitError(toFriendlyError(e, res))
     } finally {
-      setPortraitLoading(false)
+      if (isCurrent()) setPortraitLoading(false)
     }
   }
 
   const handleGenerateScene = useCallback(async (scenePrompt: string, sceneKey: string) => {
+    if (!generatedData?.persona || currentPersona.current !== generatedData) return
+    const recordId = currentRecordId.current
+    if (!recordId) { setSceneErrors(prev => ({ ...prev, [sceneKey]: 'この履歴にはサーバーの保存情報がありません。新しくペルソナを生成してください。' })); return }
+    const intent = sceneImages[sceneKey] ? 'regenerate' : 'included'
+    if (imageAttempts.current[sceneKey]?.projectId !== recordId || imageAttempts.current[sceneKey]?.intent !== intent) {
+      imageAttempts.current[sceneKey] = { projectId: recordId, intent, key: crypto.randomUUID() }
+    }
+    const attempt = imageAttempts.current[sceneKey]
+    const requestKey = `scene:${sceneKey}`
+    if (scenePending.current.has(requestKey)) return
+    scenePending.current.add(requestKey)
+    scenePrompts.current[sceneKey] = scenePrompt
+    setSceneErrors(prev => ({ ...prev, [sceneKey]: '' }))
+    const request = Symbol(requestKey)
+    imageRequests.current[requestKey] = request
+    const isCurrent = () => currentPersona.current === generatedData && imageRequests.current[requestKey] === request
     setSceneLoading(prev => ({ ...prev, [sceneKey]: true }))
+    let res: Response | null = null
     try {
-      const res = await fetch('/api/persona/scene', {
+      res = await fetch('/api/persona/scene', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          scenePrompt,
-          persona: generatedData?.persona
-            ? {
-                age: generatedData.persona.age,
-                gender: generatedData.persona.gender,
-                occupation: generatedData.persona.occupation,
-                name: generatedData.persona.name,
-                personalityTraits: generatedData.persona.personalityTraits,
-                lifestyle: generatedData.persona.lifestyle,
-              }
-            : undefined,
-        }),
+        body: JSON.stringify({ projectId: recordId, slotKey: sceneKey, intent, requestKey: attempt.key }),
       })
 
       const raw = await res.text()
       let data: any = null
       try { data = raw ? JSON.parse(raw) : null } catch { data = null }
 
-      if (data?.success && data?.image) {
-        setSceneImages(prev => {
-          const updated = { ...prev, [sceneKey]: data.image }
-          try {
-            const stored = JSON.parse(localStorage.getItem('doya_persona_last') || '{}')
-            stored.sceneImages = updated
-            localStorage.setItem('doya_persona_last', JSON.stringify(stored))
-          } catch {}
-          return updated
-        })
+      if (!isCurrent()) return
+      if (!res.ok || !data?.success || typeof data?.image !== 'string' || !data.image) throw new Error('シーン画像を生成できませんでした。')
+      if (data.image) {
+        delete imageAttempts.current[sceneKey]
+        setSceneImages(prev => isCurrent() ? { ...prev, [sceneKey]: data.image } : prev)
+        try {
+          savePersonaImage(accountStorage, recordId, generatedData, { sceneImages: { [sceneKey]: data.image } })
+        } catch { setError('画像はサーバーに保存しましたが、このブラウザのコピーを更新できませんでした。保存済み履歴から開き直せます。') }
       }
     } catch (e) {
-      console.error('Scene generation error:', e)
+      if (isCurrent()) setSceneErrors(prev => isCurrent() ? { ...prev, [sceneKey]: toFriendlyError(e, res) } : prev)
     } finally {
-      setSceneLoading(prev => ({ ...prev, [sceneKey]: false }))
+      if (isCurrent()) {
+        scenePending.current.delete(requestKey)
+        setSceneLoading(prev => isCurrent() ? { ...prev, [sceneKey]: false } : prev)
+      }
     }
-  }, [generatedData])
+  }, [generatedData, accountStorage, sceneImages])
 
   // ペルソナ変更
   const handleModify = async () => {
-    if (!generatedData || !modificationInput.trim() || modifying) return
+    if (!alive.current || textRequest.current || !generatedData || currentPersona.current !== generatedData || !modificationInput.trim() || modifying) return
+    const input = JSON.stringify({ existingPersona: generatedData, modifications: modificationInput })
+    if (generationAttempt.current?.input !== input) generationAttempt.current = { input, key: crypto.randomUUID() }
+    const requestKey = generationAttempt.current.key
+    const request = Symbol('modify')
+    textRequest.current = request
+    const isCurrent = () => alive.current && textRequest.current === request
 
     setModifying(true)
     setError('')
@@ -525,6 +664,7 @@ export default function PersonaTool() {
         body: JSON.stringify({
           existingPersona: generatedData,
           modifications: modificationInput,
+          requestKey,
         }),
       })
 
@@ -533,28 +673,37 @@ export default function PersonaTool() {
       try { data = raw ? JSON.parse(raw) : null } catch { data = null }
 
       if (!res.ok) {
+        if (isCurrent() && data?.code === 'REQUEST_CONFLICT') generationAttempt.current = null
         const msg = (data && (data.error || data.message)) || 'ペルソナ変更に失敗しました'
         throw new Error(msg)
       }
 
-      if (!data?.data?.persona) {
+      if (!isPersonaDisplayData(data?.data)) {
         throw new Error('変更後のペルソナデータの取得に失敗しました')
       }
 
+      if (!isCurrent() || currentPersona.current !== generatedData) return
+      generationAttempt.current = null
       // 画像リセット・再生成
       setPortraitImage(null)
       setSceneImages({})
       portraitAutoTriggered.current = false
       sceneAutoTriggered.current = false
 
+      autoGenerateFor.current = data.data
       setGeneratedData(data.data)
       setModificationInput('')
 
-      localStorage.setItem('doya_persona_last', JSON.stringify({ data: data.data, url, timestamp: Date.now() }))
+      try {
+        const record = { id: typeof data.projectId === 'string' ? data.projectId : crypto.randomUUID(), serverStored: typeof data.projectId === 'string', data: data.data, url, timestamp: Date.now() }
+        currentRecordId.current = record.id
+        currentServerRecord.current = record.serverStored
+        savePersonaRecord(accountStorage, record)
+      } catch { setError(typeof data.projectId === 'string' ? '変更結果はサーバーに保存しましたが、このブラウザのコピーを保存できませんでした。保存済み履歴から開き直せます。' : '変更は完了しましたが、このブラウザに保存できませんでした。画面を閉じる前に結果をダウンロードしてください。') }
     } catch (e) {
-      setError(toFriendlyError(e, res))
+      if (isCurrent()) setError(toFriendlyError(e, res))
     } finally {
-      setModifying(false)
+      if (isCurrent()) { textRequest.current = null; setModifying(false) }
     }
   }
 
@@ -673,6 +822,17 @@ export default function PersonaTool() {
         </div>
       )
     }
+    if (sceneErrors[sceneKey]) {
+      return (
+        <div className={`rounded-lg border border-red-200 bg-red-50 p-3 flex flex-col items-center justify-center gap-2 export-hide ${className}`}>
+          <p role="alert" className="text-xs text-red-700">{sceneErrors[sceneKey]}</p>
+          <button type="button" className="rounded bg-white px-3 py-2 text-sm text-purple-700 border border-purple-200" onClick={() => {
+            const prompt = scenePrompts.current[sceneKey]
+            if (prompt) void handleGenerateScene(prompt, sceneKey)
+          }}>この画像を再試行する</button>
+        </div>
+      )
+    }
     return null
   }
 
@@ -681,6 +841,7 @@ export default function PersonaTool() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50/30">
       <div className="max-w-6xl mx-auto p-4 lg:p-8">
+        <PersonaUsagePanel refreshKey={`${loading}-${modifying}-${portraitLoading}-${Object.keys(sceneImages).length}-${Object.values(sceneLoading).filter(Boolean).length}`} />
         {/* Header */}
         <div className="mb-6 flex items-start justify-between">
           <div>
@@ -691,9 +852,6 @@ export default function PersonaTool() {
             <p className="text-gray-500 text-sm">URLからマーケティングペルソナを自動生成</p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <span className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold rounded-lg ${usageLimitInfo.color}`}>
-              {usageLimitInfo.planLabel}: {usageLimitInfo.limit}
-            </span>
             <a
               href={`/api/stripe/portal?returnTo=${encodeURIComponent('/persona')}`}
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
@@ -779,6 +937,7 @@ export default function PersonaTool() {
             )}
           </button>
 
+          {accessWarning && <p role="status" className="rounded-lg bg-amber-50 p-4 text-sm text-amber-900">{accessWarning}</p>}
           {error && (
             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-start gap-3">
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
@@ -929,6 +1088,12 @@ export default function PersonaTool() {
         {/* ===== Results ===== */}
         {generatedData && persona && (
           <div className="space-y-6">
+            {autoGenerateFor.current !== generatedData && (
+              <div className="rounded-xl border border-purple-200 bg-purple-50 p-4 export-hide">
+                <p className="text-sm text-gray-700">履歴の閲覧では画像を自動生成しません。必要な場合は、未保存の画像を生成できます。ボタンを押すと画像生成を実行します。</p>
+                <button type="button" onClick={requestMissingImages} disabled={loading || modifying || portraitLoading || Object.values(sceneLoading).some(Boolean)} className="mt-3 rounded-lg bg-purple-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">不足している画像を生成する</button>
+              </div>
+            )}
             {/* ペルソナ変更入力エリア */}
             <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
               <h3 className="text-sm font-bold text-gray-800 mb-2 flex items-center gap-2">

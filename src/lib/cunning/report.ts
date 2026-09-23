@@ -40,10 +40,10 @@ export async function generateReport(p: BuildReportParams): Promise<CunningRepor
   ]
   if (p.personaNote) lines.push(`前提/設定: ${p.personaNote}`)
 
-  lines.push('', '--- 相手の発話（時系列）---')
-  lines.push(p.transcripts.slice(-60).join('\n') || '(記録なし)')
+  lines.push('', '--- 会話の発話（時系列・話者別）---')
+  lines.push(p.transcripts.join('\n') || '(記録なし)')
   lines.push('', '--- こちらが用意した回答カンペ ---')
-  p.answers.slice(-40).forEach((a, i) => {
+  p.answers.forEach((a, i) => {
     lines.push(`${i + 1}. Q「${a.question}」→ ${a.summary}｜${a.script}`)
   })
   const langLine =
@@ -77,16 +77,17 @@ export async function generateReport(p: BuildReportParams): Promise<CunningRepor
     { prompt: lines.join('\n'), model: GEMINI_TEXT_MODEL_DEFAULT },
     'CunningReport'
   )
-  // 値の正規化（欠落/型ズレに耐える）
+  // Invalid provider output must not be persisted as an empty report or a zero score.
+  const requiredText = ['title', 'summary', 'scoreLabel', 'feedback'] as const
+  const requiredLists = ['decisions', 'todos', 'good', 'improve'] as const
+  if (!r || requiredText.some((key) => typeof r[key] !== 'string' || !r[key].trim()) ||
+      requiredLists.some((key) => !Array.isArray(r[key]) || r[key].some((item) => typeof item !== 'string')) ||
+      typeof r.score !== 'number' || !Number.isFinite(r.score) || r.score < 0 || r.score > 100) {
+    throw new Error('議事録の生成結果が不完全です。再試行してください。')
+  }
   return {
-    title: r?.title || def.label,
-    summary: r?.summary || '',
-    decisions: Array.isArray(r?.decisions) ? r.decisions : [],
-    todos: Array.isArray(r?.todos) ? r.todos : [],
-    score: typeof r?.score === 'number' ? Math.max(0, Math.min(100, Math.round(r.score))) : 0,
-    scoreLabel: r?.scoreLabel || scoreLabel,
-    feedback: r?.feedback || '',
-    good: Array.isArray(r?.good) ? r.good : [],
-    improve: Array.isArray(r?.improve) ? r.improve : [],
+    title: r.title.trim(), summary: r.summary.trim(), decisions: r.decisions, todos: r.todos,
+    score: Math.round(r.score), scoreLabel: r.scoreLabel.trim(), feedback: r.feedback.trim(),
+    good: r.good, improve: r.improve,
   }
 }

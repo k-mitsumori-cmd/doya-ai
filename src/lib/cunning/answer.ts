@@ -133,22 +133,33 @@ export async function generateAnswer(p: BuildAnswerParams): Promise<CunningAnswe
 
   let raw = ''
   let model = GEMINI_TEXT_MODEL_DEFAULT
+  let primarySettled = false
+  const primary = geminiGenerateText({
+    model: GEMINI_TEXT_MODEL_DEFAULT,
+    parts: [{ text: prompt }],
+    generationConfig: { temperature: 0.5 },
+  }).finally(() => { primarySettled = true })
   try {
     raw = await raceTimeout(
       'gemini answer',
       20000,
-      geminiGenerateText({
-        model: GEMINI_TEXT_MODEL_DEFAULT,
-        parts: [{ text: prompt }],
-        generationConfig: { temperature: 0.5 },
-      })
+      primary
     )
   } catch (e) {
-    console.warn('[cunning/answer] gemini失敗、gpt-4oにフォールバック:', (e as any)?.message)
-    raw = await gpt4oFallback(prompt)
+    console.warn('[cunning/answer] Gemini処理に失敗したため代替モデルを試行します')
+    try {
+      raw = await gpt4oFallback(prompt)
+    } catch {
+      // The timeout wrapper does not cancel Gemini. Do not unlock a retry while
+      // that operation may still be running; expose no provider error contents.
+      throw Object.assign(new Error('Answer generation failed'), { cunningAnswerMayBeRunning: !primarySettled })
+    }
     model = 'gpt-4o'
   }
 
   const { summary, script } = parseAnswer(raw)
+  if (!primarySettled && !summary.trim() && !script.trim()) {
+    throw Object.assign(new Error('Answer generation incomplete'), { cunningAnswerMayBeRunning: true })
+  }
   return { summary, script, sources, model }
 }

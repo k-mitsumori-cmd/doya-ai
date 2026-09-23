@@ -7,7 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 /**
  * PATCH /api/promane/members/[id]/rate
@@ -24,7 +24,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'ログインセッションが切れています' }, { status: 401 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const { id: memberId } = p
 
     const body = await req.json().catch(() => ({}))
@@ -34,20 +34,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'workspaceSlug と memberId は必須です' }, { status: 400 })
     }
 
-    // ⭐ 数値バリデーション (絶対値化せず、明示的に拒否)
-    if (typeof hourlyRate !== 'number' || !Number.isFinite(hourlyRate)) {
-      return NextResponse.json({ error: '時間単価は数値で入力してください' }, { status: 400 })
+    if (typeof hourlyRate !== 'number' || !Number.isSafeInteger(hourlyRate) || hourlyRate < 0 || hourlyRate > 2_147_483_647) {
+      return NextResponse.json({ error: '時間単価は0〜2,147,483,647円の整数で入力してください' }, { status: 400 })
     }
-    if (hourlyRate < 0) {
-      return NextResponse.json(
-        { error: '時間単価は 0以上を入力してください（負値は保存できません）' },
-        { status: 400 }
-      )
-    }
-    if (hourlyRate > 9_999_999_999) {
-      return NextResponse.json({ error: '時間単価が大きすぎます' }, { status: 400 })
-    }
-    const rate = Math.floor(hourlyRate)
+    const rate = hourlyRate
 
     // ワークスペース所属 + 権限確認
     const workspace = await prisma.promaneWorkspace.findFirst({
@@ -78,22 +68,16 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'メンバーが見つかりません' }, { status: 404 })
     }
 
-    // 最終防御: Math.max(0, ...) で念のため負値を完全排除
-    const finalRate = Math.max(0, rate)
-    if (finalRate !== rate) {
-      console.warn(`[promane/rate] 異常値検知: ${rate} → ${finalRate}`)
-    }
-
     await prisma.promaneMember.update({
       where: { id: memberId },
-      data: { hourlyRate: finalRate },
+      data: { hourlyRate: rate },
     })
 
-    return NextResponse.json({ success: true, hourlyRate: finalRate })
+    return NextResponse.json({ success: true, hourlyRate: rate })
   } catch (e: any) {
-    console.error('[promane/members/rate]', e)
+    console.error('[promane/members/rate] failed')
     return NextResponse.json(
-      { error: e?.message || '時間単価の更新に失敗しました' },
+      { error: '時間単価の更新に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }

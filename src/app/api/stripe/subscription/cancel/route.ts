@@ -126,13 +126,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const primary = succeeded[0]!
+    const primaryCustomerId = live.find(s => s.id === primary.subscriptionId)?.customerId
+
     // DBも更新しておく（顧客が分裂していた場合は、実在する顧客IDへ寄せる）
     try {
       await prisma.user.update({
         where: { id: user.id },
         data: {
-          stripeSubscriptionId: succeeded[0]!.subscriptionId,
-          ...(live[0]?.customerId ? { stripeCustomerId: live[0].customerId } : {}),
+          stripeSubscriptionId: primary.subscriptionId,
+          ...(primaryCustomerId ? { stripeCustomerId: primaryCustomerId } : {}),
         },
       })
     } catch {}
@@ -145,9 +148,16 @@ export async function POST(request: NextRequest) {
         detail: `user=${user.email}\n${JSON.stringify(results)}`,
         dedupKey: `cancel-partial-failure:${user.id}`,
       }).catch(() => {})
+      return NextResponse.json({
+        ok: false,
+        code: 'CANCELLATION_INCOMPLETE',
+        error: '一部の契約を解約できませんでした。解約は完了しておらず、課金が続く可能性があります。再度解約をお試しいただき、解消しない場合はお問い合わせください。',
+        canceledCount: succeeded.length,
+        failedCount: results.length - succeeded.length,
+        results,
+      }, { status: 502 })
     }
 
-    const primary = succeeded[0]!
     return NextResponse.json({
       ok: true,
       mode,

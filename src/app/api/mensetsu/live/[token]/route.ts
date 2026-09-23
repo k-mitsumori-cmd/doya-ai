@@ -7,10 +7,10 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { loadSessionByToken, toPublicSession } from '@/lib/mensetsu/public'
 
-type Ctx = { params: Promise<{ token: string }> | { token: string } }
+type Ctx = { params: Promise<{ token: string }> }
 
 export async function GET(_req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const s = await loadSessionByToken(p.token)
   if (!s) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
   return NextResponse.json({ session: toPublicSession(s) })

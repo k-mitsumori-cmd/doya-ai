@@ -270,17 +270,37 @@ export async function findActiveLikeSubscriptions(params: {
   const customerIds = new Set<string>()
   if (params.stripeCustomerId) customerIds.add(params.stripeCustomerId)
   if (params.email) {
-    const customers = await stripe.customers.list({ email: params.email, limit: 100 })
-    for (const c of customers.data) customerIds.add(c.id)
+    let cursor: string | undefined
+    const cursors = new Set<string>()
+    while (true) {
+      const customers = await stripe.customers.list({ email: params.email, limit: 100, ...(cursor ? { starting_after: cursor } : {}) })
+      for (const c of customers.data) customerIds.add(c.id)
+      if (!customers.has_more) break
+      const next = customers.data[customers.data.length - 1]?.id
+      if (!next || cursors.has(next)) throw new Error('Customer pagination did not advance')
+      cursors.add(next)
+      cursor = next
+    }
   }
 
   const out: Array<{ id: string; status: string; customerId: string; priceId: string | null; planId: string }> = []
+  const subscriptionIds = new Set<string>()
   for (const cid of customerIds) {
-    const subs = await stripe.subscriptions.list({ customer: cid, status: 'all', limit: 100 })
-    for (const s of subs.data) {
-      if (!ACTIVE_LIKE_STATUSES.has(String(s.status))) continue
-      const { planId, priceId } = resolvePlanIdFromSubscription(s as any)
-      out.push({ id: s.id, status: String(s.status), customerId: cid, priceId, planId })
+    let cursor: string | undefined
+    const cursors = new Set<string>()
+    while (true) {
+      const subs = await stripe.subscriptions.list({ customer: cid, status: 'all', limit: 100, ...(cursor ? { starting_after: cursor } : {}) })
+      for (const s of subs.data) {
+        if (!ACTIVE_LIKE_STATUSES.has(String(s.status)) || subscriptionIds.has(s.id)) continue
+        const { planId, priceId } = resolvePlanIdFromSubscription(s as any)
+        subscriptionIds.add(s.id)
+        out.push({ id: s.id, status: String(s.status), customerId: cid, priceId, planId })
+      }
+      if (!subs.has_more) break
+      const next = subs.data[subs.data.length - 1]?.id
+      if (!next || cursors.has(next)) throw new Error('Subscription pagination did not advance')
+      cursors.add(next)
+      cursor = next
     }
   }
   return out

@@ -1,0 +1,7 @@
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),crypto=require('node:crypto'),assert=require('node:assert/strict');const {load,check,results}=require('./load-typescript.cjs');
+(async()=>{const dir=fs.mkdtempSync(path.join(os.tmpdir(),'doya-boundary-')),base=path.join(dir,'storage');fs.mkdirSync(base);fs.writeFileSync(path.join(dir,'outside'),'PRIVATE');fs.writeFileSync(path.join(base,'inside'),'image');fs.symlinkSync(path.join(dir,'outside'),path.join(base,'link'));fs.symlinkSync(dir,path.join(base,'linked-dir'));
+try{const lib=load('seo/lib/storage.ts',{'node:fs':fs,'node:path':path,'node:crypto':crypto},{process:{cwd:()=>base,env:{SEO_STORAGE_DIR:base}}});
+for(const value of ['../outside',path.join(dir,'outside'),'link','linked-dir/outside','', 'a\\b'])await check('reject read '+value,async()=>{await assert.rejects(lib.readFileAsBuffer(value))});
+for(const value of ['inside',path.join(base,'inside')])await check('allow stored relative or absolute path '+value,async()=>{assert.equal((await lib.readFileAsBuffer(value)).toString(),'image')});
+await check('reject saving through external directory symlink',async()=>{await assert.rejects(lib.saveBase64ToFile({base64:'AA==',filename:'image.png',subdir:'linked-dir'}));assert.equal(fs.readdirSync(dir).length,2)});
+console.log(JSON.stringify({passed:results.length,results},null,2));}finally{fs.rmSync(dir,{recursive:true,force:true})}})().catch(e=>{console.error(e);process.exitCode=1});

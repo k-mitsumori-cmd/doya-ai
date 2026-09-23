@@ -168,6 +168,7 @@ export default function MensetsuReportPage() {
   }
 
   const s = data.session
+  const canEvaluate = !!s.startedAt && !!s.endedAt && ['completed', 'evaluated'].includes(s.status)
   const criteria: any[] = s.template?.criteria || []
   const scoreByCriterion = new Map<string, any>(s.scores.map((x: any) => [x.criterionId, x]))
 
@@ -300,11 +301,13 @@ export default function MensetsuReportPage() {
             <span className="material-symbols-outlined text-3xl text-[#8a94ad] font-medium">fact_check</span>
             <p className="mt-2 text-sm font-black text-[#0a0f3c]">まだ評価していません</p>
             <p className="mt-1 text-xs font-semibold leading-relaxed text-[#425071]">
-              {s.turns.length > 0
+              {!canEvaluate
+                ? '評価は面接が終了してから実行できます。'
+                : s.turns.length > 0
                 ? `逐語ログ${s.turns.length}件をもとに評価します。数十秒かかります。`
                 : '発話が記録されていないため評価できません。'}
             </p>
-            {s.turns.length > 0 && (
+            {canEvaluate && s.turns.length > 0 && (
               <button
                 onClick={runEvaluate}
                 disabled={evaluating}

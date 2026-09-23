@@ -1,0 +1,4 @@
+
+All-project export repair (2026-09-23, local only): settings now requests a single authenticated streamed ZIP containing owned archived and zero-company projects; the per-project CSV serializer is shared. HTTP/content/ZIP preparation errors are shown without claiming OS download completion. Synthetic ZIP/owner/error/UI regression and full build passed. Very large historical exports and production authenticated flow are not yet verified. Evidence: docs/audits/2026-09-23-doyalist-export/report.md.
+
+Production update 2026-09-23: the ZIP export code is live in `dpl_4VYkNiY94VqpJHtuJoSSY2NuTi18`; the unauthenticated endpoint returns 401. The 17-service public browser sweep passed. A signed-in export of real customer data and very large exports have not been run; local synthetic ZIP/ownership/error tests are the current behavioral evidence.

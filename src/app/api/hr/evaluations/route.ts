@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
+import { getEvaluationReader } from '@/lib/hr/evaluation-access'
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@/lib/hr/constants'
 
 export async function GET(req: NextRequest) {
@@ -15,6 +16,9 @@ export async function GET(req: NextRequest) {
     if (!ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const reader = await getEvaluationReader(ctx)
+    if (!reader) return NextResponse.json({ error: '評価を閲覧する権限がありません' }, { status: 403 })
 
     const url = req.nextUrl
     const periodId = url.searchParams.get('periodId') || ''
@@ -26,7 +30,10 @@ export async function GET(req: NextRequest) {
       Math.max(1, parseInt(url.searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE)))
     )
 
-    const where: any = {}
+    const where: any = { period: { is: { organizationId: ctx.organizationId } } }
+    if (reader.employeeId !== null) {
+      where.OR = [{ employeeId: reader.employeeId }, { evaluatorId: reader.employeeId }]
+    }
 
     if (periodId) {
       where.periodId = periodId
@@ -98,6 +105,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const reader = await getEvaluationReader(ctx)
+    if (!reader || reader.employeeId !== null) {
+      return NextResponse.json({ error: '評価の作成はオーナー・管理者のみ実行できます' }, { status: 403 })
+    }
+
     const body = await req.json()
     const { periodId, employeeId, evaluatorId, goals, competencies } = body
 
@@ -117,6 +129,13 @@ export async function POST(req: NextRequest) {
     })
     if (!employee) {
       return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
+    }
+
+    if (evaluatorId) {
+      const evaluator = await prisma.hrEmployee.findFirst({
+        where: { id: evaluatorId, organizationId: ctx.organizationId }, select: { id: true },
+      })
+      if (!evaluator) return NextResponse.json({ error: '評価者が同じ組織に存在しません' }, { status: 400 })
     }
 
     const existing = await prisma.hrEvaluation.findFirst({

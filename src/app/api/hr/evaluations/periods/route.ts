@@ -5,6 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { getEvaluationReadWhere } from '@/lib/hr/evaluation-access'
 import { prisma } from '@/lib/prisma'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
@@ -16,10 +17,12 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const evaluationWhere = await getEvaluationReadWhere(ctx)
+
     const periods = await prisma.hrEvaluationPeriod.findMany({
       where: { organizationId: ctx.organizationId },
       include: {
-        _count: { select: { evaluations: true } },
+        _count: { select: { evaluations: { where: evaluationWhere } } },
       },
       orderBy: { startDate: 'desc' },
     })

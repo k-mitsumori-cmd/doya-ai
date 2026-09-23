@@ -439,7 +439,7 @@ export async function generatePdfBuffer(input: PdfInput): Promise<Uint8Array> {
       args: chromium.args,
       defaultViewport: { width: 1240, height: 1754 }, // A4 @ 150dpi
       executablePath,
-      headless: chromium.headless,
+      headless: 'shell',
     })
     const page = await browser.newPage()
     // networkidle0 だと OG image 取得失敗時に詰まるので domcontentloaded に

@@ -1,3 +1,4 @@
+import { timeEntryBelongsToProject } from "@/lib/promane/time-entry-project";
 import { requirePromaneAuth, getWorkspaceBySlug } from "@/lib/promane/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
@@ -29,7 +30,7 @@ export default async function ProjectsPage({ params }: { params: Promise<{ works
   // メンバー時給参照用
   const members = await prisma.promaneMember.findMany({
     where: { workspaceId: workspace.id },
-    include: { timeEntries: { select: { duration: true, taskId: true } } },
+    include: { timeEntries: { select: { duration: true, taskId: true, projectId: true } } },
   });
 
   // 安全な数値正規化 (負値/NaN を 0 にクランプ)
@@ -42,7 +43,7 @@ export default async function ProjectsPage({ params }: { params: Promise<{ works
     const taskIds = p.tasks.map((t) => t.id);
     let laborCost = 0;
     for (const m of members) {
-      const min = m.timeEntries.filter((te) => te.taskId && taskIds.includes(te.taskId)).reduce((s, te) => s + safe(te.duration), 0);
+      const min = m.timeEntries.filter((te) => timeEntryBelongsToProject(te, p.id, taskIds)).reduce((s, te) => s + safe(te.duration), 0);
       laborCost += (min / 60) * safe(m.hourlyRate);
     }
     // 経費は負値を 0 にクランプ (会計的に経費マイナスは異常)
@@ -50,9 +51,8 @@ export default async function ProjectsPage({ params }: { params: Promise<{ works
     const totalCost = laborCost + expenseCost;
     const revenue = safe(p.contractAmount);
     const profit = revenue - totalCost;
-    // 利益率は -100% 〜 100% でクランプ
     const rawRate = revenue > 0 ? (profit / revenue) * 100 : 0;
-    const profitRate = Math.min(100, Math.max(-100, rawRate));
+    const profitRate = rawRate;
     // ユニーク担当者
     const assignees = Array.from(new Set(p.tasks.map((t) => t.assignee?.displayName).filter(Boolean) as string[]));
     return { ...p, done, total, progress, totalCost, profit, profitRate, assignees };

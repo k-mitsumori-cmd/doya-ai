@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ensureSeoSchema } from '@seo/lib/bootstrap'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { safeFetchText } from '@/lib/net/safe-fetch'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { z } from 'zod'
 
@@ -8,7 +10,7 @@ export const maxDuration = 60
 
 const BodySchema = z.object({
   // 参考記事（URL/貼り付け/ファイル）のいずれか
-  url: z.string().url().optional(),
+  url: z.string().url().max(8192).optional(),
   text: z.string().max(300_000).optional(),
   titleHint: z.string().max(200).optional(),
 })
@@ -45,7 +47,8 @@ function extractHeadingsFromText(text: string): { h2: string[]; h3: string[] } {
 
 export async function POST(req: NextRequest) {
   try {
-    await ensureSeoSchema()
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
     const body = BodySchema.parse(await req.json())
     if (!body.url && !body.text) {
       return NextResponse.json({ success: false, error: 'url または text が必要です' }, { status: 400 })
@@ -57,16 +60,8 @@ export async function POST(req: NextRequest) {
 
     if (url) {
       // 軽量に本文抽出（HTML想定）
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'User-Agent':
-            'Mozilla/5.0 (compatible; DoyaSeoBot/1.0; +https://example.invalid) AppleWebKit/537.36 (KHTML, like Gecko)',
-          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        },
-        cache: 'no-store',
-      })
-      const html = await res.text()
+      const html = await safeFetchText(url, { timeoutMs: 10000 })
+      if (html === null) return NextResponse.json({ success: false, error: '参考URLを取得できませんでした' }, { status: 422 })
       if (!title) {
         const m = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)
         if (m) title = String(m[1]).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200)
@@ -126,8 +121,8 @@ export async function POST(req: NextRequest) {
       template,
       usedModel: model,
     })
-  } catch (e: any) {
-    return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 400 })
+  } catch {
+    return NextResponse.json({ success: false, error: '参考記事の入力を確認してください' }, { status: 400 })
   }
 }
 

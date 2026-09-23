@@ -5,7 +5,9 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
+import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 
@@ -21,22 +23,30 @@ type CheckItem = {
   after?: string
 }
 
-function safeJson(text: string) {
-  try {
-    return JSON.parse(text)
-  } catch {
-    return null
-  }
-}
+const CheckResultSchema = z.object({
+  items: z.array(z.object({
+    id: z.string().min(1),
+    category: z.enum(['regulation', 'copy', 'fact']),
+    severity: z.enum(['error', 'warning', 'info']),
+    title: z.string().min(1),
+    description: z.string(),
+    location: z.string().optional(),
+    suggestion: z.string().optional(),
+    before: z.string().optional(),
+    after: z.string().optional(),
+  })).max(30),
+})
 
-export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
+export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
+    const owner = await getSeoArticleOwner(_req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
     await ensureSeoSchema()
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const articleId = p.id
 
-    const article = await (prisma as any).seoArticle.findUnique({
-      where: { id: articleId },
+    const article = await (prisma as any).seoArticle.findFirst({
+      where: { id: articleId, ...owner },
       include: { references: { orderBy: { createdAt: 'asc' } } },
     })
     if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
@@ -88,16 +98,18 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
       generationConfig: { temperature: 0.2, maxOutputTokens: 2800 },
     })
 
-    const items = Array.isArray(out?.items) ? out.items : []
-
-    // UI復元用に保存（schemaはbootstrapで追加）
+    const parsed = CheckResultSchema.safeParse(out)
+    if (!parsed.success) return NextResponse.json({ success: false, error: 'チェック結果を読み取れませんでした。再度お試しください。' }, { status: 502 })
+    const { items } = parsed.data
     try {
-      await (prisma as any).seoArticle.update({
-        where: { id: articleId },
+      await prisma.seoArticle.update({
+        where: { id: articleId, ...owner, updatedAt: article.updatedAt },
         data: { checkResults: items },
       })
-    } catch {
-      // ignore（保存失敗でもチェック結果は返す）
+    } catch (e: any) {
+      return NextResponse.json({ success: false, error: e?.code === 'P2025'
+        ? 'チェック中に記事が変更されました。現在の内容で再度チェックしてください。'
+        : 'チェック結果を保存できませんでした。再度お試しください。' }, { status: e?.code === 'P2025' ? 409 : 500 })
     }
 
     return NextResponse.json({ success: true, items })

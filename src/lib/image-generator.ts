@@ -26,6 +26,8 @@ export interface ImageInput {
 }
 
 export interface ImageGenRequest {
+  primaryTimeoutMs?: number
+  fallbackTimeoutMs?: number
   prompt: string
   size: string
   /**
@@ -117,6 +119,7 @@ async function callOpenAI(
     size,
     quality,
     n: 1,
+    timeoutMs: req.primaryTimeoutMs,
   })
 
   const first = results[0]
@@ -168,7 +171,7 @@ async function callNanoBananaProPreview(
   }
 
   // フォールバックは短めに（primaryで時間を使った後なので全体が長引かないように）。本文読み取りまでタイムアウトで覆う。
-  const timeoutMs = Number(process.env.DOYA_FALLBACK_TIMEOUT_MS) || 45000
+  const timeoutMs = req.fallbackTimeoutMs ?? (Number(process.env.DOYA_FALLBACK_TIMEOUT_MS) || 45000)
   return withTimeout(NANO_BANANA_PRO_PREVIEW_MODEL, timeoutMs, async (signal) => {
     const res = await fetch(endpoint, {
       method: 'POST',
@@ -250,6 +253,12 @@ export function toGeminiAspectRatio(size: string, explicit?: string): string {
 const GPT_IMAGE_MIN = 512
 const GPT_IMAGE_MAX = 3840
 const GPT_IMAGE_MAX_RATIO = 3
+// ⚠️ gpt-image-2 には「最小画素数」の下限がある（1024x1024 相当）。
+//    これを下回ると 400 `Invalid size '...'. Requested resolution is below the current
+//    minimum pixel budget.` で**必ず**失敗する。
+//    バナーは 1000x260 のように面積の小さい指定が普通なので、下限を満たすまで拡大しないと
+//    毎回フォールバックが発動し、比率の違う画像に余白を足したものが利用者に渡る（2026-09-18 調査）。
+const GPT_IMAGE_MIN_PIXELS = 1024 * 1024
 
 function mapSizeForGptImage2(size: string): GptImageSize {
   if (size === 'auto') return 'auto'
@@ -257,18 +266,42 @@ function mapSizeForGptImage2(size: string): GptImageSize {
   const [wRaw, hRaw] = String(size).split('x').map((v) => Number(v))
   if (!Number.isFinite(wRaw) || !Number.isFinite(hRaw) || wRaw <= 0 || hRaw <= 0) return '1024x1024'
 
-  // 16の倍数へ丸め、上下限に収める
-  const clamp = (n: number) => Math.min(GPT_IMAGE_MAX, Math.max(GPT_IMAGE_MIN, Math.round(n / 16) * 16))
-  let w = clamp(wRaw)
-  let h = clamp(hRaw)
+  const round16 = (n: number) => Math.round(n / 16) * 16
+  const clamp = (n: number) => Math.min(GPT_IMAGE_MAX, Math.max(GPT_IMAGE_MIN, round16(n)))
 
-  // アスペクト比が 3:1 を超えると 400 で拒否される。長辺を詰めて比率を収める。
-  // ⚠️ 短辺を伸ばす方向で合わせると上限3840を超えうるので、長辺側を縮める。
-  if (w / h > GPT_IMAGE_MAX_RATIO) {
-    w = clamp(h * GPT_IMAGE_MAX_RATIO)
-  } else if (h / w > GPT_IMAGE_MAX_RATIO) {
-    h = clamp(w * GPT_IMAGE_MAX_RATIO)
+  // ⚠️ 先に各辺を丸めて下限512に張り付かせると**比率が壊れる**。
+  //    旧実装では 1000x260（3.85:1）が 1008x512（1.97:1）になっていた。
+  //    比率を先に確定し、その比率のまま最小画素数を満たす大きさへ拡大してから丸める。
+  let ratio = wRaw / hRaw
+  // アスペクト比が 3:1 を超えると 400 で拒否されるため、比率側を丸める。
+  if (ratio > GPT_IMAGE_MAX_RATIO) ratio = GPT_IMAGE_MAX_RATIO
+  if (ratio < 1 / GPT_IMAGE_MAX_RATIO) ratio = 1 / GPT_IMAGE_MAX_RATIO
+
+  // 「w/h = ratio かつ w*h = MIN_PIXELS」を満たす基準サイズ
+  let h = Math.sqrt(GPT_IMAGE_MIN_PIXELS / ratio)
+  let w = h * ratio
+
+  // 元指定がすでに下限より大きければ、その面積を尊重して拡大する
+  const requestedPixels = wRaw * hRaw
+  if (requestedPixels > GPT_IMAGE_MIN_PIXELS) {
+    const scale = Math.sqrt(requestedPixels / (w * h))
+    w *= scale
+    h *= scale
   }
 
-  return `${w}x${h}` as GptImageSize
+  let W = clamp(w)
+  let H = clamp(h)
+
+  // 16px丸めで下限をわずかに割ることがあるので、最後に長辺を伸ばして必ず満たす
+  for (let i = 0; i < 64 && W * H < GPT_IMAGE_MIN_PIXELS; i++) {
+    if (W >= H) {
+      if (W >= GPT_IMAGE_MAX) break
+      W = Math.min(GPT_IMAGE_MAX, W + 16)
+    } else {
+      if (H >= GPT_IMAGE_MAX) break
+      H = Math.min(GPT_IMAGE_MAX, H + 16)
+    }
+  }
+
+  return `${W}x${H}` as GptImageSize
 }

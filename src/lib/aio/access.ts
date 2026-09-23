@@ -51,6 +51,8 @@ export async function getAioContext(orgSlug?: string): Promise<AioContext | null
         include: { organization: true },
       })
     : null
+  // 明示された組織で認可できない場合、別の所属組織に切り替えない。
+  if (orgSlug && !membership) return null
   if (!membership) {
     membership = await prisma.aioMember.findFirst({
       where: { userId, status: 'ACTIVE' },

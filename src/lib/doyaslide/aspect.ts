@@ -15,7 +15,7 @@
 //   2. 16:9 にするために必要な分を、その余白の範囲内だけ削る
 //   3. 足りない分は左右に「端の色をそのまま伸ばす」形で足して 16:9 にする
 //   → どの回でも文字・図解が切れない（余白が足りなければ削らない）
-import sharp from 'sharp'
+import sharp, { type Sharp } from 'sharp'
 import type { AspectRatio } from './types'
 
 export const WIDE_OUTPUT_WIDTH = 1920
@@ -87,7 +87,7 @@ export async function normalizeGeneratedSlide(
     return { buffer: input, base64, mimeType }
   }
 
-  const toResult = async (pipeline: sharp.Sharp): Promise<NormalizedSlideImage> => {
+  const toResult = async (pipeline: Sharp): Promise<NormalizedSlideImage> => {
     const buffer = await pipeline
       .resize(WIDE_OUTPUT_WIDTH, WIDE_OUTPUT_HEIGHT, { fit: 'fill' })
       .png()

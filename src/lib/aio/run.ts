@@ -5,23 +5,22 @@
 // scans/route.ts（手動実行）と cron/aio-scan（定期実行）の両方から呼ぶ。
 // ============================================
 import { prisma } from '@/lib/prisma'
-import { availableEngines, SCAN_STALE_MS, type EngineId } from '@/lib/aio/types'
+import { availableEngines, SCAN_STALE_MS, AIO_MAX_PROMPTS_PER_SCAN, type EngineId } from '@/lib/aio/types'
 import { executeScan } from '@/lib/aio/scan'
+import { getAioBilling } from '@/lib/aio/billing'
+import { scanQuota } from '@/lib/aio/quota'
 
 // 反復回数はプランで差別化しない（無料・プロ共通）。
 // プランの差は「調査回数（スキャン頻度）」と「閲覧できる範囲」で付ける。
 const DEFAULT_REPETITIONS = 3
-
-// 1スキャンのコスト暴発を防ぐハードキャップ。
-// 実行ジョブ総数 = 使用プロンプト数 × エンジン数 × 反復。これを超えないようプロンプト件数を頭打ちにする。
-// （無料はプロンプト登録3件・有料は無制限登録だが、1スキャンで投げる件数はここで制限する）
-const MAX_PROMPTS_PER_SCAN = 30
 
 export interface RunAndPersistOptions {
   // 実行エンジン（未指定なら利用可能なもの全部）
   engines?: EngineId[]
   // 反復回数（未指定なら共通の既定値）
   repetitions?: number
+  // Scheduled scans require a paid organization owner at reservation time.
+  scheduled?: boolean
 }
 
 export interface RunAndPersistResult {
@@ -38,7 +37,7 @@ export interface RunAndPersistResult {
  * 1組織ぶんのスキャンを実行して永続化する。
  * 前提: 呼び出し側でブランドプロフィール設定済み・アクティブプロンプト1件以上を確認していること。
  * （未設定でも内部でチェックして failed を返すのでクラッシュはしない）
- * プラン制限（無料は週1回など）は呼び出し側の責務。ここでは行わない。
+ * 組織オーナーのプラン・利用枠を実行予約と同じトランザクションで確認する。
  */
 export async function runAndPersistScan(
   organizationId: string,
@@ -46,7 +45,7 @@ export async function runAndPersistScan(
 ): Promise<RunAndPersistResult> {
   const [profile, prompts] = await Promise.all([
     prisma.aioBrandProfile.findUnique({ where: { organizationId } }),
-    // 古い順で安定化（MAX_PROMPTS_PER_SCAN で先頭N件に絞るため、毎回同じ順序になるよう orderBy 必須）
+    // 安定した順序で全アクティブ質問を測定する。
     prisma.aioPrompt.findMany({ where: { organizationId, isActive: true }, orderBy: { createdAt: 'asc' } }),
   ])
   if (!profile?.brandName) {
@@ -56,20 +55,9 @@ export async function runAndPersistScan(
     return { id: '', status: 'failed', error: 'アクティブな監視プロンプトがありません' }
   }
 
-  // 同一組織で既にスキャン実行中なら二重実行を拒否（連打・cron重複によるコスト暴発防止）。
-  // maxDuration(300s)で打ち切られた幽霊processingは stale 扱いで除外し、再実行を妨げない。
-  const inflight = await prisma.aioScan.findFirst({
-    where: { organizationId, status: 'processing', updatedAt: { gte: new Date(Date.now() - SCAN_STALE_MS) } },
-    select: { id: true },
-  })
-  if (inflight) {
-    return { id: inflight.id, status: 'failed', error: 'すでにスキャンを実行中です。完了までお待ちください。', code: 'INFLIGHT' }
-  }
-
-  // コスト上限: 1スキャンで投げるプロンプトは MAX_PROMPTS_PER_SCAN 件まで（超過分は次回以降）。
-  const cappedPrompts = prompts.length > MAX_PROMPTS_PER_SCAN ? prompts.slice(0, MAX_PROMPTS_PER_SCAN) : prompts
-  if (cappedPrompts.length < prompts.length) {
-    console.warn(`[aio/run] org=${organizationId} プロンプト${prompts.length}件中 上限${MAX_PROMPTS_PER_SCAN}件のみスキャン`)
+  if (prompts.length > AIO_MAX_PROMPTS_PER_SCAN) {
+    return { id: '', status: 'failed', code: 'PROMPT_LIMIT',
+      error: `有効な質問が${prompts.length}件あります。1回のスキャンは${AIO_MAX_PROMPTS_PER_SCAN}件までです。監視プロンプト画面で対象外の質問を無効にしてください。スキャン枠は消費していません。` }
   }
 
   // エンジン：利用可能なもの ∩ リクエスト（未指定なら全部）
@@ -86,15 +74,45 @@ export async function runAndPersistScan(
   }
   const repetitions = opts.repetitions ?? DEFAULT_REPETITIONS
 
-  // 1) processing でスキャンレコードを作成
-  const scan = await prisma.aioScan.create({
-    data: {
-      organizationId,
-      status: 'processing',
-      engines: engines as any,
-      repetitions,
-    },
+  // Reserve under the organization row lock. Never hold this lock during AI calls.
+  const reservation = await prisma.$transaction(async (tx) => {
+    const organizations = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM aio_organizations WHERE id = ${organizationId} FOR NO KEY UPDATE
+    `
+    if (!organizations.length) return { kind: 'missing' } as const
+    const cutoff = new Date(Date.now() - SCAN_STALE_MS)
+    const inflight = await tx.aioScan.findFirst({
+      where: { organizationId, status: 'processing', updatedAt: { gte: cutoff } },
+      select: { id: true },
+    })
+    if (inflight) return { kind: 'inflight', inflight } as const
+    // Expired executions must not later overwrite a replacement scan's history.
+    await tx.aioScan.updateMany({
+      where: { organizationId, status: 'processing', updatedAt: { lt: cutoff } },
+      data: { status: 'failed', errorMessage: 'スキャンの実行期限を超過しました' },
+    })
+    const payer = await getAioBilling(tx, organizationId)
+    if (!payer) return { kind: 'billing' } as const
+    const quota = scanQuota(payer.plan)
+    if (opts.scheduled && !quota.paid) return { kind: 'unpaid' } as const
+    const used = await tx.aioScan.count({
+      where: { organizationId, createdAt: { gte: quota.since }, status: { not: 'failed' } },
+    })
+    if (used >= quota.limit) return { kind: 'limit', error: quota.error } as const
+    const scan = await tx.aioScan.create({
+      data: { organizationId, status: 'processing', engines: engines as any, repetitions },
+    })
+    return { kind: 'reserved', scan } as const
   })
+  if (reservation.kind === 'missing') return { id: '', status: 'failed', error: '組織が見つかりません' }
+  if (reservation.kind === 'inflight') return {
+    id: reservation.inflight.id, status: 'failed', code: 'INFLIGHT',
+    error: 'すでにスキャンを実行中です。完了までお待ちください。',
+  }
+  if (reservation.kind === 'billing') return { id: '', status: 'failed', code: 'BILLING_OWNER', error: '組織の契約情報を確認できません。組織オーナーにお問い合わせください。' }
+  if (reservation.kind === 'unpaid') return { id: '', status: 'failed', code: 'PAID_REQUIRED', error: '定期スキャンは有料プランの組織で利用できます。' }
+  if (reservation.kind === 'limit') return { id: '', status: 'failed', code: 'LIMIT', error: reservation.error }
+  const scan = reservation.scan
 
   try {
     // 2) 純ロジックでスキャン実行
@@ -106,62 +124,50 @@ export async function runAndPersistScan(
         competitors: (profile.competitors as string[]) || [],
         category: profile.category,
       },
-      cappedPrompts.map((p) => ({ id: p.id, text: p.text })),
+      prompts.map((p) => ({ id: p.id, text: p.text })),
       engines,
       repetitions
     )
 
-    // 3) 個別ラン結果を保存（部分永続化の取りこぼしを防ぐため try/catch）
-    try {
-      await prisma.aioResult.createMany({
+    // Claim completion and persist observations together. A stale/deleted scan cannot revive.
+    const s = out.summary
+    const saved = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.aioScan.updateMany({
+        where: { id: scan.id, organizationId, status: 'processing',
+          updatedAt: { gte: new Date(Date.now() - SCAN_STALE_MS) } },
+        data: {
+          status: 'done', awarenessPct: s.awarenessPct, shareOfVoice: s.shareOfVoice,
+          sentimentPos: s.sentiment.positive, sentimentNeu: s.sentiment.neutral,
+          sentimentNeg: s.sentiment.negative, ownCitationPct: s.ownCitationPct,
+          summary: { ...s, recommendations: out.recommendations } as any,
+        },
+      })
+      if (claimed.count !== 1) return false
+      await tx.aioResult.createMany({
         data: out.runs.map((r) => ({
-          organizationId,
-          scanId: scan.id,
-          promptId: r.promptId,
-          engine: r.engine,
-          iteration: r.iteration,
-          brandMentioned: r.brandMentioned,
-          brandRank: r.brandRank,
-          sentiment: r.sentiment,
-          competitors: r.competitors as any,
-          citations: r.citations as any,
+          organizationId, scanId: scan.id, promptId: r.promptId,
+          engine: r.engine, iteration: r.iteration, brandMentioned: r.brandMentioned,
+          brandRank: r.brandRank, sentiment: r.sentiment,
+          competitors: r.competitors as any, citations: r.citations as any,
           answerText: r.answerText,
         })),
       })
-    } catch (persistErr: any) {
-      // 生の例外メッセージ(接続文字列/スキーマ等を含みうる)はDBに保存せず汎用文言のみ。詳細はサーバログのみ。
-      console.error('[aio/run] createMany failed', persistErr?.message)
-      await prisma.aioScan
-        .update({
-          where: { id: scan.id },
-          data: { status: 'failed', errorMessage: '個別結果の保存に失敗しました' },
-        })
-        .catch(() => {})
-      return { id: scan.id, status: 'failed', error: '個別結果の保存に失敗しました' }
-    }
-
-    // 4) サマリを保存して done に
-    const s = out.summary
-    const updated = await prisma.aioScan.update({
-      where: { id: scan.id },
-      data: {
-        status: 'done',
-        awarenessPct: s.awarenessPct,
-        shareOfVoice: s.shareOfVoice,
-        sentimentPos: s.sentiment.positive,
-        sentimentNeu: s.sentiment.neutral,
-        sentimentNeg: s.sentiment.negative,
-        ownCitationPct: s.ownCitationPct,
-        summary: { ...s, recommendations: out.recommendations } as any,
-      },
+      return true
     })
-    return { id: updated.id, status: 'done', summary: s, recommendations: out.recommendations }
+    if (!saved) {
+      await prisma.aioScan.updateMany({
+        where: { id: scan.id, organizationId, status: 'processing' },
+        data: { status: 'failed', errorMessage: 'スキャンの実行期限を超過しました' },
+      })
+      return { id: scan.id, status: 'failed', code: 'EXPIRED', error: 'スキャンの実行期限を超過しました。再実行してください。' }
+    }
+    return { id: scan.id, status: 'done', summary: s, recommendations: out.recommendations }
   } catch (e: any) {
     // 生の例外メッセージはDB保存・クライアント返却しない（内部情報漏えい防止）。詳細はサーバログのみ。
     console.error('[aio/run] failed', e?.message)
     await prisma.aioScan
-      .update({
-        where: { id: scan.id },
+      .updateMany({
+        where: { id: scan.id, organizationId, status: 'processing' },
         data: { status: 'failed', errorMessage: 'スキャンに失敗しました' },
       })
       .catch(() => {})

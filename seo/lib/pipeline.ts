@@ -1,11 +1,17 @@
-import { prisma } from '@/lib/prisma'
-import { geminiGenerateJson, geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
-import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { completeSeoJob } from '@seo/lib/complete-job'
+import { executionPrisma as prisma, seoExecutionContext, executionChecked } from '@seo/lib/execution-context'
+import { acquireSeoJobExecution, releaseSeoJobExecution, SeoExecutionLostError } from '@seo/lib/job-execution'
+import { geminiGenerateJson as uncheckedJson, geminiGenerateText as uncheckedText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { geminiGenerateImagePng as uncheckedImage, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { fetchAndExtract } from '@seo/lib/extract'
 import { SeoCreateArticleInput, SeoOutline, SeoOutlineSchema } from '@seo/lib/types'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { guessArticleGenreJa, buildArticleBannerPrompt } from '@seo/lib/bannerPlan'
 import { hasSerpApiKey, serpapiSearchGoogle } from '@seo/lib/serpapi'
+
+const geminiGenerateJson = executionChecked(uncheckedJson)
+const geminiGenerateText = executionChecked(uncheckedText)
+const geminiGenerateImagePng = executionChecked(uncheckedImage)
 
 type ResearchEvent = {
   id: string
@@ -3237,7 +3243,9 @@ async function integrate(jobId: string) {
     },
   })
   if (!job) throw new Error('job not found')
+  if (job.status !== 'running') return
   const article = job.article
+  const activeArticleWhere = { id: article.id, userId: article.userId, guestId: article.guestId, jobs: { some: { id: jobId, status: 'running' } } }
   const isComparison = String(article.mode || '').toLowerCase() === 'comparison_research'
   const sections = job.sections
   const memo = article.memo?.content
@@ -3612,13 +3620,13 @@ async function integrate(jobId: string) {
   }
 
   await p.seoArticle.update({
-    where: { id: article.id },
-    data: { finalMarkdown, status: 'DONE' },
+    where: activeArticleWhere,
+    data: { finalMarkdown, status: 'RUNNING' },
   })
 
   if (isComparison) {
     // 校正・表現調整を比較記事の明示ステップとして表示（実処理は統合の後段で自然に効く）
-    await p.seoJob.update({ where: { id: jobId }, data: { step: 'cmp_polish', progress: 90, status: 'running' } })
+    await p.seoJob.update({ where: { id: jobId, status: 'running' }, data: { step: 'cmp_polish', progress: 90, status: 'running' } })
   }
 
   // 自動で素材生成（バナーは必須 / 図解は有料のみ）: 失敗しても本文完成は優先する
@@ -3650,7 +3658,7 @@ async function integrate(jobId: string) {
           out.push('')
           out.push(...lines.slice(i))
           await p.seoArticle.update({
-            where: { id: article.id },
+            where: activeArticleWhere,
             data: { finalMarkdown: out.join('\n') },
           })
         }
@@ -3661,7 +3669,7 @@ async function integrate(jobId: string) {
       // 図解は有料のみ（従来通り）
       const canUseImages = await canUseSeoImagesForArticle(article)
       if (canUseImages) {
-        await p.seoJob.update({ where: { id: jobId }, data: { step: 'media', progress: 92, status: 'running' } })
+        await p.seoJob.update({ where: { id: jobId, status: 'running' }, data: { step: 'media', progress: 92, status: 'running' } })
 
         // 1. 本文から図解を提案させる
         const headings = finalMarkdown.match(/^#{1,3}\s+.+$/gm) || []
@@ -3846,10 +3854,7 @@ async function integrate(jobId: string) {
     // ignore (best-effort)
   }
 
-  await p.seoJob.update({
-    where: { id: jobId },
-    data: { status: 'done', step: 'done', progress: 100, finishedAt: new Date() },
-  })
+  await completeSeoJob(jobId, article.id, { userId: article.userId, guestId: article.guestId })
 }
 
 export async function researchAndStore(
@@ -3969,14 +3974,31 @@ export async function researchAndStore(
   return { stored }
 }
 
-export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
+export async function advanceSeoJob(jobId: string, expectedOwner?: { userId: string | null; guestId?: string }): Promise<{ jobId: string }> {
+  const job = await prisma.seoJob.findUnique({ where: { id: jobId }, include: { article: true } })
+  if (!job) throw new Error('job not found')
+  if (expectedOwner && (job.article.userId !== expectedOwner.userId || (expectedOwner.userId === null && job.article.guestId !== expectedOwner.guestId))) return { jobId }
+  if (!['queued', 'running'].includes(job.status)) return { jobId }
+  const execution = await acquireSeoJobExecution(jobId, job.articleId, { userId: job.article.userId, guestId: job.article.guestId })
+  if (!execution) return { jobId }
+  try {
+    return await seoExecutionContext.run(execution, () => advanceOwnedSeoJob(jobId))
+  } catch (error) {
+    if (error instanceof SeoExecutionLostError) return { jobId }
+    throw error
+  } finally {
+    await releaseSeoJobExecution(execution)
+  }
+}
+
+async function advanceOwnedSeoJob(jobId: string): Promise<{ jobId: string }> {
   const p = prisma as any
   const job = await p.seoJob.findUnique({
     where: { id: jobId },
     include: { article: true, sections: true },
   })
   if (!job) throw new Error('job not found')
-  if (job.status === 'done') return { jobId }
+  if (job.status === 'done' || job.status === 'error') return { jobId }
   if (job.status === 'paused' || job.status === 'cancelled') return { jobId }
 
   try {
@@ -3991,6 +4013,7 @@ export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
         include: { sections: true },
       })
       if (!currentJob) throw new Error('job not found')
+      if (['paused', 'cancelled', 'done', 'error'].includes(currentJob.status)) return { jobId }
 
       const remaining = (currentJob.sections || []).filter(
         (s: any) => s.status !== 'reviewed' || !s.content || !s.content.trim()
@@ -4005,15 +4028,9 @@ export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
       try {
         await generateSection(jobId)
       } catch (sectionErr: any) {
-        // セクション生成エラーでも、次のセクションを試みる（ただし、連続エラーは避ける）
+        // 同じ失敗を同一リクエストで繰り返さず、外側の失敗処理へ渡す。
         console.error(`[seo generateSection] failed for job ${jobId}:`, sectionErr?.message)
-        // エラーは極力起こさず、完走を優先（ログだけ残して継続）
-        await pushResearchEvent(jobId, {
-          at: Date.now(),
-          kind: 'warn',
-          title: 'セクション生成に失敗しました（自動で継続）',
-          detail: sectionErr?.message || 'unknown error',
-        })
+        throw sectionErr
       }
 
       iteration++
@@ -4024,6 +4041,7 @@ export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
       where: { id: jobId },
       include: { sections: true },
     })
+    if (!finalCheck || ['paused', 'cancelled', 'done', 'error'].includes(finalCheck.status)) return { jobId }
     const stillRemaining = (finalCheck?.sections || []).filter(
       (s: any) => s.status !== 'reviewed' || !s.content || !s.content.trim()
     )
@@ -4039,7 +4057,11 @@ export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
       return { jobId }
     }
 
-    await p.seoJob.update({ where: { id: jobId }, data: { step: 'integrate', progress: 85, status: 'running' } })
+    const integrationClaim = await p.seoJob.updateMany({
+      where: { id: jobId, status: { in: ['queued', 'running'] }, updatedAt: finalCheck.updatedAt },
+      data: { step: 'integrate', progress: 85, status: 'running' },
+    })
+    if (integrationClaim.count !== 1) return { jobId }
     await integrate(jobId)
     return { jobId }
   } catch (e: any) {
@@ -4048,10 +4070,11 @@ export async function advanceSeoJob(jobId: string): Promise<{ jobId: string }> {
     const prevError = String(job.error || '').trim()
     const isSameError = prevError && prevError === msg.trim()
     const newStatus = isSameError ? 'error' : 'running'
-    await p.seoJob.update({
-      where: { id: jobId },
+    const failureUpdate = await p.seoJob.updateMany({
+      where: { id: jobId, status: { in: ['queued', 'running'] } },
       data: { status: newStatus, step: String(job.step || 'sections'), error: msg },
     })
+    if (failureUpdate.count !== 1) return { jobId }
     if (isSameError) {
       await pushResearchEvent(jobId, {
         at: Date.now(),

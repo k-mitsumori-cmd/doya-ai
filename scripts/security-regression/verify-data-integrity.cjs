@@ -1,0 +1,14 @@
+const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),assert=require('node:assert/strict');
+const root=path.resolve(__dirname,'../..');const ts=require(path.join(root,'node_modules/typescript'));let results=[];
+function load(file,mocks={},globals={}){let exports={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(process.env.DOYA_TEST_BASELINE && fs.existsSync(path.join(process.env.DOYA_TEST_BASELINE,file)) ? path.join(process.env.DOYA_TEST_BASELINE,file) : path.join(root,file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,esModuleInterop:true}}).outputText,{exports,require:n=>{if(n in mocks)return mocks[n];throw Error('Unmocked '+n)},URL,Request,Response,Headers,Buffer,Date,Set,Map,Error,process:{env:{}},console:{log(){},warn(){},error(){}},...globals},{filename:file});return exports}
+const check=async(name,fn)=>{await fn();results.push(name);console.log('PASS '+name)};
+async function tenantTests(){for(const [service,fn] of [['sfa','getSfaContext'],['shodan','getShodanContext'],['aio','getAioContext'],['mensetsu','getMensetsuContext'],['quote','getQuoteContext'],['aishodan','getAishodanContext']]){
+ let user={id:'u1'},calls=[];let rows=[{id:'m1',userId:'u1',status:'ACTIVE',organizationId:'org1',role:'owner',organization:{slug:'own',name:'Own'}},{id:'m2',userId:'u1',status:'INACTIVE',organizationId:'org2',role:'owner',organization:{slug:'removed'}},{id:'m3',userId:'other',status:'ACTIVE',organizationId:'org3',role:'owner',organization:{slug:'foreign'}}];
+ const api=load(`src/lib/${service}/access.ts`,{'next-auth':{getServerSession:async()=>user?{user}:null},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:{user:{findUnique:async()=>({id:'u1'})},[service+'Member']:{findFirst:async q=>{calls.push(q);return rows.find(r=>Object.entries(q.where).every(([k,v])=>k==='organization'?r.organization.slug===v.slug:r[k]===v))??null}}}},'./constants':{DEFAULT_STAGES:[]},'./types':{ROLE_HIERARCHY:{owner:3,admin:2,member:1}}});
+ await check(service+' explicit foreign or inactive org never falls back',async()=>{for(const slug of ['foreign','removed','missing']){calls=[];assert.equal(await api[fn](slug),null);assert.equal(calls.length,1)}});
+ await check(service+' own org and implicit default retained',async()=>{assert.equal((await api[fn]('own')).organizationId,'org1');assert.equal((await api[fn]()).organizationId,'org1')});
+ await check(service+' unauthenticated requests avoid membership queries',async()=>{user=null;calls=[];assert.equal(await api[fn]('own'),null);assert.equal(calls.length,0)});
+}}
+async function main(){await tenantTests();console.log(JSON.stringify({passed:results.length,networkRequests:0,productionWrites:0,results},null,2))}
+if(require.main===module)main().catch(e=>{console.error(e);process.exitCode=1});
+module.exports={load,check,results};

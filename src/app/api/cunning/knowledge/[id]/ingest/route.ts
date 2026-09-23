@@ -8,7 +8,7 @@ import { getUserId } from '@/lib/cunning/access'
 import { chunkText } from '@/lib/cunning/rag'
 import { scrapeUrl } from '@/lib/cunning/scraper'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 // POST /api/cunning/knowledge/[id]/ingest — テキスト/URLを取り込み（チャンク化して保存）
 // body: { type: 'text'|'url', text?: string, url?: string, label?: string }
@@ -16,7 +16,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   try {
     const userId = await getUserId()
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
 
     const base = await prisma.cunningKnowledgeBase.findUnique({
       where: { id: p.id },

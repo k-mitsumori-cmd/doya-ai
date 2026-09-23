@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
 // PUT: セクションの内容を直接編集
-export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
+export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const params = 'then' in ctx.params ? await ctx.params : ctx.params
+    const params = await ctx.params
     const id = params.id
     const { content } = await req.json()
 

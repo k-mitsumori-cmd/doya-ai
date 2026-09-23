@@ -9,10 +9,10 @@ import { prisma } from '@/lib/prisma'
 import { getAishodanContext, orgSlugFrom } from '@/lib/aishodan/access'
 import { ingestManual } from '@/lib/aishodan/knowledge'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function GET(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
 }
 
 export async function POST(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 

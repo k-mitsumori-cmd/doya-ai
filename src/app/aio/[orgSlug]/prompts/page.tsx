@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { aioGet, aioSend } from '@/lib/aio/client'
+import { AIO_MAX_PROMPTS_PER_SCAN } from '@/lib/aio/types'
+import Link from 'next/link'
 import { PageHeader } from '@/components/aio/ui'
 import toast from 'react-hot-toast'
 
@@ -54,6 +56,12 @@ export default function AioPromptsPage() {
   return (
     <div className="max-w-2xl mx-auto p-6">
       <PageHeader icon="quiz" title="監視プロンプト" subtitle="AIに投げて言及をチェックする質問を登録します" />
+
+      {!loading && <div className="mb-5 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm text-purple-900">
+        <p>有効な質問：{prompts.filter(p => p.isActive).length}件 ／ 1回の測定は最大{AIO_MAX_PROMPTS_PER_SCAN}件</p>
+        <p>有効な質問をすべて測定します。上限を超える場合は、今回測定しない質問のスイッチを無効にしてください。登録した質問は残ります。</p>
+        <Link href={`/aio/${encodeURIComponent(orgSlug)}`} className="font-bold underline">ダッシュボードに戻る</Link>
+      </div>}
 
       <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-5">
         <div className="flex gap-2">

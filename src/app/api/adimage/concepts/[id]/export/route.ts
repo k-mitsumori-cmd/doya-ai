@@ -11,10 +11,18 @@ import { getIdentity, ownerWhere, requireUser } from '@/lib/adimage/access'
 import { downloadBuffer } from '@/lib/adimage/storage'
 import { findPlacement } from '@/lib/adimage/placements'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function GET(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  try {
+    return await exportConcept(req, ctxParam)
+  } catch {
+    return NextResponse.json({ error: '一括ダウンロードの準備に失敗しました。時間をおいて再試行してください。' }, { status: 502, headers: { 'Cache-Control': 'no-store' } })
+  }
+}
+
+async function exportConcept(req: NextRequest, ctxParam: Ctx) {
+  const p = await ctxParam.params
   const identity = await getIdentity(req)
   // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
   const auth = requireUser(identity)
@@ -35,9 +43,13 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
   const files: Array<{ name: string; buf: Buffer }> = []
   /** ZIP内の名前の重複を防ぐ */
   const used = new Map<string, number>()
+  const missing: string[] = []
   for (const cr of concept.creatives) {
-    const buf = await downloadBuffer(cr.imagePath)
-    if (!buf) continue
+    const buf = await downloadBuffer(cr.imagePath).catch(() => null)
+    if (!buf?.length) {
+      missing.push(`${findPlacement(cr.placementKey)?.name || cr.placementKey}（${cr.size}）`)
+      continue
+    }
     const pl = findPlacement(cr.placementKey)
     const media = (pl?.media || 'other').replace(/[^\w\-一-龠ぁ-んァ-ヶ!]/g, '')
     const name = (pl?.name || cr.placementKey).replace(/[\/\\:*?"<>|]/g, '_')
@@ -58,8 +70,19 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
     used.set(entry, 1)
     files.push({ name: entry, buf })
   }
-  if (files.length === 0) {
-    return NextResponse.json({ error: '画像を読み込めませんでした' }, { status: 502 })
+  const allowPartial = new URL(req.url).searchParams.get('partial') === '1'
+  if (missing.length > 0 && (!allowPartial || files.length === 0)) {
+    return NextResponse.json({
+      error: `${concept.creatives.length}枚中${missing.length}枚を取得できませんでした。再試行してください。`,
+      code: 'EXPORT_IMAGES_UNAVAILABLE',
+      totalCount: concept.creatives.length,
+      availableCount: files.length,
+      missingCount: missing.length,
+    }, { status: 502, headers: { 'Cache-Control': 'no-store' } })
+  }
+  if (missing.length > 0) {
+    const notice = `一部の画像のみを保存しています。\n対象${concept.creatives.length}枚 / 保存${files.length}枚 / 取得失敗${missing.length}枚\n\n取得できなかった画像：\n${missing.join('\n')}\n\n履歴画面から再試行できます。\n`
+    files.push({ name: '取得できなかった画像.txt', buf: Buffer.from(notice, 'utf8') })
   }
 
   const zip = await new Promise<Buffer>((resolve, reject) => {
@@ -69,16 +92,18 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
     archive.on('error', reject)
     archive.on('end', () => resolve(Buffer.concat(chunks)))
     for (const f of files) archive.append(f.buf, { name: f.name })
-    void archive.finalize()
+    void archive.finalize().catch(reject)
   })
 
   // ⚠️ ファイル名に日本語が入ると環境によって壊れる。ASCIIのフォールバックと RFC5987 の両方を出す
-  const asciiName = `adimage_${concept.id}.zip`
-  const utf8Name = encodeURIComponent(`${concept.campaign.brand.name}_広告画像_${concept.label}.zip`)
+  const asciiName = `adimage_${concept.id}${missing.length ? '_partial' : ''}.zip`
+  const utf8Name = encodeURIComponent(`${concept.campaign.brand.name}_広告画像_${concept.label}${missing.length ? '_一部のみ' : ''}.zip`)
 
   return new NextResponse(new Uint8Array(zip), {
     headers: {
       'Content-Type': 'application/zip',
+      'X-Export-Missing-Count': String(missing.length),
+      'X-Export-Image-Count': String(concept.creatives.length - missing.length),
       'Content-Disposition': `attachment; filename="${asciiName}"; filename*=UTF-8''${utf8Name}`,
       'Cache-Control': 'no-store',
     },

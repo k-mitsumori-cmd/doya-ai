@@ -10,10 +10,10 @@ import { prisma } from '@/lib/prisma'
 import { getMensetsuContext, hasMinRole, orgSlugFrom } from '@/lib/mensetsu/access'
 import { findViolations } from '@/lib/mensetsu/guardrails'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 async function paramsOf(ctx: Ctx) {
-  return 'then' in ctx.params ? await ctx.params : ctx.params
+  return await ctx.params
 }
 
 export async function GET(req: NextRequest, ctx: Ctx) {

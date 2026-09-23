@@ -9,11 +9,11 @@ import { effectivePrepStatus } from '@/lib/shodan/types'
 import { signedUrl } from '@/lib/shodan/storage'
 import type { StoredSlide } from '@/lib/shodan/slide-image'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 // GET /api/shodan/preparations/[id] — 詳細（成果物フル）
 export async function GET(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const sctx = await getShodanContext(orgSlugFrom(req))
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
 // DELETE /api/shodan/preparations/[id]
 export async function DELETE(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const sctx = await getShodanContext(orgSlugFrom(req))
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 

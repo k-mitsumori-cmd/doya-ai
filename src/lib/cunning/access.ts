@@ -16,5 +16,9 @@ export async function getUserId(): Promise<string | null> {
     })
     userId = dbUser?.id
   }
-  return userId || null
+  if (!userId) return null
+  // A signed session can outlive account deletion. Never authorize orphaned
+  // Cunning records from the session ID alone.
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true } })
+  return user?.id || null
 }

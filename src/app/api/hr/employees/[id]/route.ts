@@ -5,10 +5,12 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { getEvaluationReadWhere } from '@/lib/hr/evaluation-access'
 import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
+import { getOneOnOneReadWhere, getOneOnOneViewer, filterOneOnOneFields } from '@/lib/hr/one-on-one-access'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function GET(req: NextRequest, ctx: Ctx) {
   try {
@@ -17,8 +19,11 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const id = p.id
+
+    const evaluationWhere = await getEvaluationReadWhere(hrCtx)
+    const oneOnOneWhere = await getOneOnOneReadWhere(hrCtx)
 
     const employee = await prisma.hrEmployee.findFirst({
       where: { id, organizationId: hrCtx.organizationId },
@@ -26,11 +31,13 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         department: { select: { id: true, name: true, code: true } },
         histories: { orderBy: { effectiveDate: 'desc' }, take: 20 },
         evaluations: {
+          where: evaluationWhere,
           include: { period: { select: { id: true, name: true } } },
           orderBy: { createdAt: 'desc' },
           take: 10,
         },
         oneOnOnesAsEmployee: {
+          where: oneOnOneWhere,
           include: {
             manager: { select: { id: true, firstName: true, lastName: true } },
           },
@@ -44,7 +51,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
     }
 
-    return NextResponse.json({ success: true, employee })
+    const viewer = await getOneOnOneViewer(hrCtx)
+    return NextResponse.json({ success: true, employee: { ...employee, oneOnOnesAsEmployee: employee.oneOnOnesAsEmployee.map(record => filterOneOnOneFields(record, viewer)) } })
   } catch (e: any) {
     return NextResponse.json(
       { error: e?.message || 'Failed to fetch employee' },
@@ -65,7 +73,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const id = p.id
 
     const existing = await prisma.hrEmployee.findFirst({
@@ -183,7 +191,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const id = p.id
 
     const existing = await prisma.hrEmployee.findFirst({

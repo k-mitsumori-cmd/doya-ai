@@ -13,7 +13,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
-type Ctx = { params: Promise<{ projectId: string }> | { projectId: string } }
+type Ctx = { params: Promise<{ projectId: string }> }
 
 export async function GET(req: NextRequest, ctx: Ctx) {
   // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     }
     const userId = session.user.id
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const projectId = p.projectId
 
     // プロジェクト所有者確認

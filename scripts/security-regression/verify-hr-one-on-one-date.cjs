@@ -1,0 +1,13 @@
+process.env.TZ = 'Asia/Tokyo';
+const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),assert=require('node:assert/strict');
+const {load,check,results}=require('./load-typescript.cjs');
+let writes=[];
+const api=load('src/app/api/hr/one-on-one/route.ts',{'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{id:'u'}})},'@/lib/auth':{},'@/lib/hr/access':{getHrContext:async()=>({role:'ADMIN',organizationId:'org'})},'@/lib/hr/one-on-one-access':{getOneOnOneViewer:async()=>({employeeId:null})},'@/lib/hr/constants':{},'@/lib/prisma':{prisma:{hrEmployee:{findFirst:async()=>({id:'e'})},hrOneOnOne:{create:async({data})=>{writes.push(data);return{id:'new',...data}}}}}});
+const source=fs.readFileSync('src/app/hr/one-on-one/page.tsx','utf8'),ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let code;
+function visit(n){if(ts.isFunctionDeclaration(n)&&n.name?.text==='handleCreateRecord')code=n.getText(ast);ts.forEachChild(n,visit)}visit(ast);
+(async()=>{
+for(const scheduledAt of [undefined,null,'2026-09-20T10:30:00+09:00'])await check('API date '+scheduledAt,async()=>{const r=await api.POST({json:async()=>({employeeId:'e',managerId:'m',scheduledAt})});assert.equal(r.status,200);assert.equal((await r.json()).oneOnOne.scheduledAt,scheduledAt?'2026-09-20T01:30:00.000Z':null)});
+for(const scheduledAt of ['bad','',123,'2026-09-20T10:30:00','2026-99-99T10:30:00Z'])await check('invalid API date '+scheduledAt,async()=>{const before=writes.length;assert.equal((await api.POST({json:async()=>({employeeId:'e',managerId:'m',scheduledAt})})).status,400);assert.equal(writes.length,before)});
+for(const [scheduledDate,scheduledTime,expected]of [['','',null],['2026-09-20','','reject'],['','10:30','reject'],['2026-09-20','10:30','2026-09-20T01:30:00.000Z']])await check('create UI '+scheduledDate+'/'+scheduledTime,async()=>{let posted,errors=[];const fn=vm.runInNewContext(ts.transpileModule('('+code+')',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText,{Date,canCreate:true,selectedEmployee:'e',selectedManager:'m',scheduledDate,scheduledTime,selectedDuration:30,setCreating(){},toast:{error:e=>errors.push(e)},fetch:async(u,opts)=>{posted=JSON.parse(opts.body);return api.POST({json:async()=>posted})},router:{push(){}},setShowNewModal(){},fetchRecords(){}});await fn();if(expected==='reject'){assert.equal(posted,undefined);assert.equal(errors.length,1)}else{assert.equal(posted.scheduledAt,expected);assert.equal(errors.length,0)}});
+console.log(JSON.stringify({passed:results.length,results},null,2));
+})().catch(e=>{console.error(e);process.exitCode=1});

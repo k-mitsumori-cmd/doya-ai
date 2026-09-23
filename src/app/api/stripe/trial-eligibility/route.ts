@@ -24,7 +24,7 @@ export async function GET() {
     const eligible = await isTrialEligible({ email: session.user.email, stripeCustomerId: user?.stripeCustomerId })
     return NextResponse.json({ eligible }, { headers: { 'Cache-Control': 'no-store' } })
   } catch {
-    // 判定不能時は訴求を出さない側（false）に倒す（再契約者への誤表示を防ぐ）
-    return NextResponse.json({ eligible: false }, { headers: { 'Cache-Control': 'no-store' } })
+    // 表示上は訴求を抑止するが、対象外ではなく判定不能として返す。
+    return NextResponse.json({ eligible: false, code: 'TRIAL_CHECK_UNAVAILABLE' }, { status: 503, headers: { 'Cache-Control': 'no-store' } })
   }
 }

@@ -7,6 +7,7 @@ const TABS = [
   { key: 'pending', label: '未承認' },
   { key: 'approved', label: '承認済' },
   { key: 'rejected', label: '却下' },
+  { key: 'withdrawn', label: '取下げ・取消' },
 ]
 
 function timeAgo(dateStr: string): string {
@@ -28,6 +29,8 @@ export default function ApprovalsPage() {
   const [requests, setRequests] = useState<any[]>([])
   const [allCounts, setAllCounts] = useState<Record<string, number>>({ pending: 0, approved: 0, rejected: 0 })
   const [loading, setLoading] = useState(true)
+  const [actionError, setActionError] = useState('')
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [tab, setTab] = useState('pending')
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [rejectComment, setRejectComment] = useState('')
@@ -57,31 +60,41 @@ export default function ApprovalsPage() {
   useEffect(() => { fetchRequests(tab) }, [tab, fetchRequests])
 
   const approve = async (id: string) => {
-    if (!window.confirm('この申請を承認しますか？')) return
+    const request = requests.find(r => r.id === id)
+    const message = request?.type === 'leave'
+      ? 'この休暇申請を承認しますか？開始日から終了日までの全日が対象です。休日は自動除外されません。勤怠・打刻が登録済みの場合は承認されません。'
+      : 'この申請を承認しますか？'
+    if (!window.confirm(message)) return
     try {
-      await fetch(`/api/kintai/requests/${id}`, {
+      setActionError('')
+      const response = await fetch(`/api/kintai/requests/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'approved' }),
       })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || '承認に失敗しました')
       setActionFeedback(prev => ({ ...prev, [id]: { type: 'approved', message: '承認しました' } }))
       setTimeout(() => {
         setActionFeedback(prev => { const n = { ...prev }; delete n[id]; return n })
         fetchRequests(tab)
         setAllCounts(prev => ({ ...prev, pending: Math.max(0, prev.pending - 1), approved: prev.approved + 1 }))
       }, 1500)
-    } catch { alert('承認に失敗しました') }
+    } catch (error) { setActionError(error instanceof Error ? error.message : '承認に失敗しました') }
   }
 
   const reject = async () => {
     if (!rejectingId) return
     const id = rejectingId
     try {
-      await fetch(`/api/kintai/requests/${id}`, {
+      setActionError('')
+      const response = await fetch(`/api/kintai/requests/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'rejected', reviewerComment: rejectComment }),
       })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || '却下に失敗しました')
       setRejectingId(null)
       setRejectComment('')
       setActionFeedback(prev => ({ ...prev, [id]: { type: 'rejected', message: '却下しました' } }))
@@ -90,7 +103,28 @@ export default function ApprovalsPage() {
         fetchRequests(tab)
         setAllCounts(prev => ({ ...prev, pending: Math.max(0, prev.pending - 1), rejected: prev.rejected + 1 }))
       }, 1500)
-    } catch { alert('却下に失敗しました') }
+    } catch (error) { setActionError(error instanceof Error ? error.message : '却下に失敗しました') }
+  }
+
+  const cancelLeave = async (id: string) => {
+    if (cancellingId) return
+    const reason = window.prompt('休暇を取り消す理由を入力してください（必須・2000文字以内）。')
+    if (reason === null) return
+    if (!reason.trim() || reason.length > 2000) { setActionError('取消理由を1〜2000文字で入力してください。'); return }
+    if (!window.confirm('承認済み休暇を取り消しますか？この申請で作成した休暇実績を削除し、申請履歴と取消理由は残します。日程変更は取消後に本人が再申請してください。')) return
+    setCancellingId(id)
+    setActionError('')
+    try {
+      const response = await fetch(`/api/kintai/requests/${id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'withdrawn', reviewerComment: reason.trim() }),
+      })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || '取消に失敗しました')
+      fetchRequests(tab)
+      setAllCounts(prev => ({ ...prev, withdrawn: (prev.withdrawn || 0) + 1 }))
+    } catch (error) { setActionError(error instanceof Error ? error.message : '取消に失敗しました') }
+    finally { setCancellingId(null) }
   }
 
   const formatDetails = (r: any) => {
@@ -102,7 +136,8 @@ export default function ApprovalsPage() {
       return { summary: `${dateStr} ${clockLabel}を ${time} に修正`, isDetailed: true }
     }
     if (r.type === 'leave' && d) {
-      return { summary: `${d.startDate || ''} 〜 ${d.endDate || ''} ${d.leaveType || '休暇'}`, isDetailed: true }
+      const leaveLabel: Record<string, string> = { paid: '有給休暇', special: '特別休暇', unpaid: '欠勤' }
+      return { summary: `${d.startDate || ''} 〜 ${d.endDate || ''} ${leaveLabel[d.leaveType] || '休暇'}`, isDetailed: true }
     }
     if (r.type === 'overtime' && d) {
       return { summary: `${d.date || ''} ${d.hours || ''}時間 残業申請`, isDetailed: true }
@@ -114,6 +149,7 @@ export default function ApprovalsPage() {
 
   return (
     <>
+      {actionError && <p role="alert" className="m-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{actionError}</p>}
 
       <div className="p-4 lg:p-6 max-w-5xl mx-auto space-y-4">
         {/* Header */}
@@ -244,6 +280,12 @@ export default function ApprovalsPage() {
                         )}
                       </div>
 
+                      {r.status === 'withdrawn' && r.details?.leaveCancellation && (
+                        <p className="text-sm text-slate-600">取消理由: {r.details.leaveCancellation.reason}</p>
+                      )}
+                      {r.status === 'approved' && r.type === 'leave' && (
+                        <button disabled={cancellingId !== null} onClick={() => cancelLeave(r.id)} className="rounded-lg border border-red-300 px-4 py-2 text-sm text-red-700 disabled:opacity-50">{cancellingId === r.id ? '取消中...' : '休暇の承認を取り消す'}</button>
+                      )}
                       {/* Action buttons */}
                       {tab === 'pending' && !feedback && (
                         <div className="flex flex-col gap-2 shrink-0">

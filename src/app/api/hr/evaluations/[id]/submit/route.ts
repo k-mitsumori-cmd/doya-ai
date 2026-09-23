@@ -7,8 +7,9 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
+import { canReadEvaluation } from '@/lib/hr/evaluation-access'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const id = p.id
 
     const evaluation = await prisma.hrEvaluation.findFirst({
@@ -39,6 +40,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
+    if (!(await canReadEvaluation(hrCtx, evaluation))) {
+      return NextResponse.json({ error: 'この評価を操作する権限がありません' }, { status: 403 })
+    }
+
     if (evaluation.status === 'FINALIZED') {
       return NextResponse.json(
         { error: 'Evaluation is already finalized' },
@@ -47,7 +52,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }
 
     const updated = await prisma.hrEvaluation.update({
-      where: { id },
+      where: { id, status: { not: 'FINALIZED' } },
       data: {
         status: 'SUBMITTED',
         submittedAt: new Date(),
@@ -63,6 +68,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: any) {
+    if (e?.code === 'P2025') {
+      return NextResponse.json({ error: '評価が確定または変更されています。再読み込みして状態をご確認ください。' }, { status: 409 })
+    }
     return NextResponse.json(
       { error: e?.message || 'Failed to submit evaluation' },
       { status: 500 }

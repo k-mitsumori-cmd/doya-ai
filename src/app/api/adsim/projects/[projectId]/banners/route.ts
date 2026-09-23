@@ -25,10 +25,8 @@ function getBannerMonthlyLimit(plan: string | null | undefined): number {
   return 3 // FREE: 月3回 = 月9枚
 }
 
-export async function POST(
-  _req: NextRequest,
-  { params }: { params: { projectId: string } }
-) {
+export async function POST(_req: NextRequest, props: { params: Promise<{ projectId: string }> }) {
+  const params = await props.params;
   // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
   if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ広告シミュレーションAI')
 

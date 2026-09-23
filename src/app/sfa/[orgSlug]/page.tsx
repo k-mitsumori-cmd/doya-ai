@@ -1,59 +1,97 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { sfaInit } from '@/lib/sfa/client'
+import { isSfaSummary, summaryYen, type SfaSummary } from '@/lib/sfa/summary'
 import { Character } from '@/components/promane/character'
 
-interface Deal { id: string; amount: number; probability: number; status: string; stageId: string | null; lastActivityAt: string | null }
 interface Task { id: string; title: string; status: string; dueDate: string | null }
 
 const STALE_DAYS = 14
-const yen = (n: number) => '¥' + Math.round(n || 0).toLocaleString('ja-JP')
+const yen = summaryYen
 
 export default function SfaDashboard() {
   const orgSlug = (useParams().orgSlug as string) || ''
+  return <SfaDashboardContent key={orgSlug} orgSlug={orgSlug} />
+}
+
+function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
   const ready = !!orgSlug
   const base = `/sfa/${orgSlug}`
-  const [deals, setDeals] = useState<Deal[]>([])
+  const [summary, setSummary] = useState<SfaSummary | null>(null)
+  const [summaryError, setSummaryError] = useState('')
+  const [summaryLoading, setSummaryLoading] = useState(true)
+  const [retry, setRetry] = useState(0)
+  const [taskError, setTaskError] = useState('')
+  const [tasksLoaded, setTasksLoaded] = useState(false)
+  const [hasMoreTasks, setHasMoreTasks] = useState(false)
+  const alive = useRef(true)
+  const taskSequence = useRef(0)
+  const taskRequest = useRef<AbortController | null>(null)
+  const adding = useRef(false)
+  const pending = useRef(new Set<string>())
+  const [pendingIds, setPendingIds] = useState(new Set<string>())
+  useEffect(() => { alive.current = true; return () => { alive.current = false; taskSequence.current++; taskRequest.current?.abort() } }, [])
+  useEffect(() => {
+    if (!ready) return
+    let active = true
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 15000)
+    setSummaryLoading(true)
+    setSummaryError('')
+    fetch('/api/sfa/summary', sfaInit(orgSlug, { signal: controller.signal }))
+      .then(async r => {
+        const d = await r.json()
+        if (!r.ok || !isSfaSummary(d.summary)) throw new Error('営業状況を取得できませんでした。')
+        if (active) setSummary(d.summary)
+      }).catch(() => { if (active) setSummaryError('営業状況を取得できませんでした。再試行してください。') })
+      .finally(() => { clearTimeout(timer); if (active) setSummaryLoading(false) })
+    return () => { active = false; controller.abort(); clearTimeout(timer) }
+  }, [ready, orgSlug, retry])
   const [tasks, setTasks] = useState<Task[]>([])
   const [newTask, setNewTask] = useState('')
   const [busy, setBusy] = useState(false)
 
   const loadTasks = useCallback(() => {
     if (!ready) return
-    fetch('/api/sfa/tasks', sfaInit(orgSlug)).then((r) => r.json()).then((d) => setTasks(d.tasks || [])).catch(() => {})
+    const sequence = ++taskSequence.current
+    taskRequest.current?.abort()
+    const controller = new AbortController()
+    taskRequest.current = controller
+    const timer = setTimeout(() => controller.abort(), 15000)
+    setTaskError('')
+    fetch('/api/sfa/tasks', sfaInit(orgSlug, { signal: controller.signal })).then(async r => {
+      const d = await r.json()
+      if (!r.ok || !Array.isArray(d.tasks)) throw new Error('タスク取得失敗')
+      if (alive.current && sequence === taskSequence.current) { setTasks(d.tasks); setHasMoreTasks(d.hasMore === true); setTasksLoaded(true) }
+    }).catch(() => { if (alive.current && sequence === taskSequence.current) setTaskError('タスクを取得できませんでした。再試行してください。') }).finally(() => clearTimeout(timer))
   }, [ready, orgSlug])
 
   useEffect(() => {
     if (!ready) return
-    fetch('/api/sfa/deals', sfaInit(orgSlug)).then((r) => r.json()).then((d) => setDeals(d.deals || [])).catch(() => {})
     loadTasks()
   }, [ready, orgSlug, loadTasks])
 
-  // 売上集計
-  const open = deals.filter((d) => d.status === 'open')
-  const openTotal = open.reduce((s, d) => s + d.amount, 0)
-  const weighted = open.reduce((s, d) => s + (d.amount * d.probability) / 100, 0)
-  const wonTotal = deals.filter((d) => d.status === 'won').reduce((s, d) => s + d.amount, 0)
-  const staleCount = open.filter(
-    (d) => d.lastActivityAt && Date.now() - new Date(d.lastActivityAt).getTime() > STALE_DAYS * 86400000
-  ).length
-  const openTasks = tasks.filter((t) => t.status !== 'done')
+  const staleCount = summary?.staleCount || 0
+  const openTaskCount = summary?.openTaskCount
 
   // ドヤくん（公式マスコット）のひとこと — 状況に応じて表情(mood)と台詞が変化
   const doya: { mood: 'hello' | 'thinking' | 'point' | 'success' | 'thumbsup'; message: string } = (() => {
-    if (deals.length === 0) return { mood: 'hello', message: 'まずは「商談」を登録してみよう！カンバンで案件を見える化できるよ' }
+    if (summaryError) return { mood: 'thinking', message: '営業状況の取得に失敗しました。再試行してください。' }
+    if (!summary || summaryLoading) return { mood: 'thinking', message: '営業状況を確認しています。' }
+    if (summary.totalCount === 0) return { mood: 'hello', message: 'まずは「商談」を登録してみよう！カンバンで案件を見える化できるよ' }
     if (staleCount > 0) return { mood: 'thinking', message: `${staleCount}件の商談が${STALE_DAYS}日以上動いてないみたい…フォローのチャンスだよ！` }
-    if (openTasks.length > 0) return { mood: 'point', message: `未完了タスクが${openTasks.length}件あるよ。下のリストから片付けていこう！` }
-    if (wonTotal > 0) return { mood: 'success', message: `受注合計 ${yen(wonTotal)}！この調子で行こう〜` }
-    return { mood: 'thumbsup', message: `パイプラインは確度加重で ${yen(weighted)}。いい感じだよ！` }
+    if (summary.openTaskCount > 0) return { mood: 'point', message: `未完了タスクが${summary.openTaskCount}件あるよ。下のリストから片付けていこう！` }
+    if (BigInt(summary.wonTotal) > 0n) return { mood: 'success', message: `受注合計 ${yen(summary.wonTotal)}！この調子で行こう〜` }
+    return { mood: 'thumbsup', message: `パイプラインは確度加重で ${yen(summary.weighted)}。いい感じだよ！` }
   })()
 
   const addTask = async () => {
-    if (!newTask.trim()) return
+    if (!newTask.trim() || adding.current) return
+    adding.current = true
     setBusy(true)
     try {
       const res = await fetch('/api/sfa/tasks', sfaInit(orgSlug, {
@@ -63,27 +101,40 @@ export default function SfaDashboard() {
       }))
       const d = await res.json()
       if (!res.ok) throw new Error(d.error)
+      if (!alive.current) return
       setNewTask('')
+      setRetry(n => n + 1)
       loadTasks()
     } catch (e: any) {
-      toast.error(e.message)
+      if (alive.current) toast.error(e.message)
     } finally {
-      setBusy(false)
+      adding.current = false
+      if (alive.current) setBusy(false)
     }
   }
 
   const toggleTask = async (t: Task) => {
+    if (pending.current.has(t.id)) return
+    pending.current.add(t.id)
+    setPendingIds(new Set(pending.current))
     const next = t.status === 'done' ? 'open' : 'done'
-    setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: next } : x)))
     try {
       const res = await fetch(`/api/sfa/tasks/${t.id}`, sfaInit(orgSlug, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: next }),
       }))
-      if (!res.ok) throw new Error()
+      if (!res.ok) throw new Error('タスクを更新できませんでした。再試行してください。')
+      if (!alive.current) return
+      // A list request started before this write must not restore the old status.
+      taskSequence.current++
+      taskRequest.current?.abort()
+      setTasks(prev => prev.map(x => x.id === t.id ? { ...x, status: next } : x))
+      setRetry(n => n + 1)
     } catch {
-      loadTasks()
+      if (alive.current) toast.error('タスクを更新できませんでした。再試行してください。')
+    } finally {
+      pending.current.delete(t.id)
+      if (alive.current) setPendingIds(new Set(pending.current))
     }
   }
 
@@ -118,23 +169,28 @@ export default function SfaDashboard() {
 
         {/* 売上サマリー */}
         <h2 className="font-black text-slate-700 mb-3">売上サマリー</h2>
+        {summaryError && <div role="alert" className="mb-3 rounded-xl bg-red-50 p-3 text-sm text-red-800">
+          {summaryError}{summary && ' 以下は前回取得時の値です。'}
+          <button onClick={() => setRetry(n => n + 1)} disabled={summaryLoading} className="ml-3 underline">再試行</button>
+        </div>}
+        {summaryLoading && <p role="status" className="mb-3 text-sm text-slate-500">集計を取得しています…</p>}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="bg-white rounded-2xl shadow-sm p-4">
             <p className="text-xs font-bold text-slate-500 mb-1">進行中パイプライン</p>
-            <p className="text-2xl font-black text-slate-900 leading-none">{yen(openTotal)}</p>
+            <p className="text-2xl font-black text-slate-900 leading-none break-all">{summary ? yen(summary.openTotal) : '—'}</p>
           </div>
           <div className="bg-white rounded-2xl shadow-sm p-4">
             <p className="text-xs font-bold text-slate-500 mb-1">確度加重</p>
-            <p className="text-2xl font-black text-green-600 leading-none">{yen(weighted)}</p>
+            <p className="text-2xl font-black text-green-600 leading-none break-all">{summary ? yen(summary.weighted) : '—'}</p>
           </div>
           <div className="bg-white rounded-2xl shadow-sm p-4">
             <p className="text-xs font-bold text-slate-500 mb-1">受注合計</p>
-            <p className="text-2xl font-black text-emerald-600 leading-none">{yen(wonTotal)}</p>
+            <p className="text-2xl font-black text-emerald-600 leading-none break-all">{summary ? yen(summary.wonTotal) : '—'}</p>
           </div>
           <div className="bg-white rounded-2xl shadow-sm p-4">
             <p className="text-xs font-bold text-slate-500 mb-1">進行中の商談</p>
-            <p className="text-2xl font-black text-slate-900 leading-none">
-              {open.length}
+            <p className="text-2xl font-black text-slate-900 leading-none break-all">
+              {summary?.openCount ?? '—'}
               {staleCount > 0 && <span className="ml-1 text-xs font-black text-red-500 align-middle">停滞{staleCount}</span>}
             </p>
           </div>
@@ -145,7 +201,7 @@ export default function SfaDashboard() {
           <div className="bg-white rounded-2xl shadow-sm p-5">
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-black text-slate-700">タスク</h2>
-              <span className="text-xs font-bold text-slate-400">未完了 {openTasks.length}</span>
+              <span className="text-xs font-bold text-slate-400">未完了 {openTaskCount ?? '—'}</span>
             </div>
             <div className="flex gap-2 mb-3">
               <input
@@ -159,8 +215,11 @@ export default function SfaDashboard() {
                 追加
               </button>
             </div>
+            {hasMoreTasks && <Link href={`${base}/tasks`} className="mb-2 block text-sm text-green-700 underline">最初の{tasks.length}件を表示中。すべてのタスクを見る</Link>}
             <div className="space-y-1.5 max-h-72 overflow-y-auto">
-              {tasks.length === 0 && <p className="text-sm font-bold text-slate-300 text-center py-6">タスクはありません</p>}
+              {taskError && <p role="alert" className="text-sm text-red-700">{taskError}<button onClick={loadTasks} className="ml-2 underline">再試行</button></p>}
+              {!tasksLoaded && !taskError && <p>タスクを取得しています…</p>}
+              {tasksLoaded && !taskError && tasks.length === 0 && <p className="text-sm font-bold text-slate-300 text-center py-6">タスクはありません</p>}
               {tasks.map((t) => {
                 const due = fmtDue(t.dueDate)
                 const done = t.status === 'done'
@@ -168,6 +227,8 @@ export default function SfaDashboard() {
                   <button
                     key={t.id}
                     onClick={() => toggleTask(t)}
+                    disabled={pendingIds.has(t.id)}
+                    aria-busy={pendingIds.has(t.id)}
                     className="w-full flex items-center gap-2.5 p-2.5 rounded-xl hover:bg-slate-50 transition-colors text-left"
                   >
                     <span className={`material-symbols-outlined text-[20px] ${done ? 'text-green-600' : 'text-slate-300'}`}>

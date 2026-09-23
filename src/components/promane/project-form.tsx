@@ -1,7 +1,9 @@
 "use client";
 
+import { parsePromaneIntegerInput, parsePromaneWorkDate, validatePromaneProjectText } from "@/lib/promane/time-input";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showServiceLimit } from "@/lib/service-limit-ui";
 import { createProject, updateProject } from "@/lib/promane/actions-projects";
 import { Button } from "@/components/promane/ui/button";
 import { Input } from "@/components/promane/ui/input";
@@ -56,22 +58,25 @@ export function ProjectForm({
       setError("案件名を入力してください");
       return;
     }
-    const contractAmount = parseInt(form.get("contractAmount") as string) || 0;
-    if (contractAmount < 0) { setError("契約金額は 0以上の値を入力してください"); return; }
-    const estimatedHours = parseInt(form.get("estimatedHours") as string);
-    if (Number.isFinite(estimatedHours) && estimatedHours < 0) { setError("見積工数は 0以上の値を入力してください"); return; }
-    const monthlyAmount = billingType === "monthly" ? (parseInt(form.get("monthlyAmount") as string) || 0) : undefined;
-    if (monthlyAmount != null && monthlyAmount < 0) { setError("月額は 0以上の値を入力してください"); return; }
-    const hourlyRate = billingType === "hourly" ? (parseInt(form.get("hourlyRate") as string) || 0) : undefined;
-    if (hourlyRate != null && hourlyRate < 0) { setError("時給は 0以上の値を入力してください"); return; }
+    let contractAmount: number;
+    let estimatedHours: number | undefined;
+    let monthlyAmount: number | undefined;
+    let hourlyRate: number | undefined;
+    try {
+      contractAmount = parsePromaneIntegerInput(form.get("contractAmount"), "契約金額");
+      const hours = form.get("estimatedHours");
+      estimatedHours = hours === '' ? undefined : parsePromaneIntegerInput(hours, "見積工数");
+      monthlyAmount = billingType === "monthly" ? parsePromaneIntegerInput(form.get("monthlyAmount"), "月額") : undefined;
+      hourlyRate = billingType === "hourly" ? parsePromaneIntegerInput(form.get("hourlyRate"), "時給") : undefined;
+    } catch (error) { setError(error instanceof Error ? error.message : "入力値を確認してください"); return; }
     const startDate = (form.get("startDate") as string) || undefined;
     const endDate = (form.get("endDate") as string) || undefined;
-    if (startDate && endDate && new Date(endDate) < new Date(startDate)) {
-      setError("納期は開始日以降を指定してください");
-      return;
-    }
+    try {
+      const start = startDate ? parsePromaneWorkDate(startDate) : null;
+      const end = endDate ? parsePromaneWorkDate(endDate) : null;
+      if (start && end && end < start) throw new Error("納期は開始日以降を指定してください");
+    } catch (error) { setError(error instanceof Error ? error.message : "日付を確認してください"); return; }
 
-    setLoading(true);
     const data = {
       name,
       clientId: (form.get("clientId") as string) || undefined,
@@ -87,15 +92,28 @@ export function ProjectForm({
       tags: (form.get("tags") as string) || undefined,
     };
 
+    try { validatePromaneProjectText(data) }
+    catch (error) { setError(error instanceof Error ? error.message : "入力を確認してください"); return; }
+
+    setLoading(true);
     try {
       if (project) {
-        await updateProject(workspaceSlug, project.id, data);
+        await updateProject(workspaceSlug, project.id, {
+          ...data,
+          clientId: data.clientId ?? null,
+          description: data.description ?? null,
+          estimatedHours: data.estimatedHours ?? null,
+          startDate: data.startDate ?? null,
+          endDate: data.endDate ?? null,
+          tags: data.tags ?? null,
+        });
         toast.success("プロジェクトを更新しました", {
           icon: <Image src="/character/success.png" alt="" width={28} height={28} unoptimized />,
         });
         router.push(`/promane/${workspaceSlug}/projects/${project.id}`);
       } else {
         const created = await createProject(workspaceSlug, data);
+        if ("error" in created) { showServiceLimit("/api/promane/projects", 403, created); setError(created.error); return; }
         toast.success("プロジェクトを作成しました", {
           icon: <Image src="/character/jump.png" alt="" width={28} height={28} unoptimized />,
         });
@@ -183,27 +201,27 @@ export function ProjectForm({
             </div>
             <div className="space-y-2">
               <Label htmlFor="contractAmount">契約金額（円）</Label>
-              <Input id="contractAmount" name="contractAmount" type="number" min="0" max="9999999999" step="1" defaultValue={project?.contractAmount || ""} />
+              <Input id="contractAmount" name="contractAmount" type="number" min="0" max="2147483647" step="1" defaultValue={project?.contractAmount || ""} />
             </div>
           </div>
 
           {billingType === "monthly" && (
             <div className="space-y-2">
               <Label htmlFor="monthlyAmount">月額金額（円）</Label>
-              <Input id="monthlyAmount" name="monthlyAmount" type="number" min="0" max="9999999999" step="1" defaultValue={project?.monthlyAmount || ""} />
+              <Input id="monthlyAmount" name="monthlyAmount" type="number" min="0" max="2147483647" step="1" defaultValue={project?.monthlyAmount || ""} />
             </div>
           )}
 
           {billingType === "hourly" && (
             <div className="space-y-2">
               <Label htmlFor="hourlyRate">案件時間単価（円/h）</Label>
-              <Input id="hourlyRate" name="hourlyRate" type="number" min="0" max="9999999999" step="1" defaultValue={project?.hourlyRate || ""} />
+              <Input id="hourlyRate" name="hourlyRate" type="number" min="0" max="2147483647" step="1" defaultValue={project?.hourlyRate || ""} />
             </div>
           )}
 
           <div className="space-y-2">
             <Label htmlFor="estimatedHours">見積工数（時間）</Label>
-            <Input id="estimatedHours" name="estimatedHours" type="number" min="0" max="9999999999" step="1" defaultValue={project?.estimatedHours || ""} />
+            <Input id="estimatedHours" name="estimatedHours" type="number" min="0" max="2147483647" step="1" defaultValue={project?.estimatedHours || ""} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">

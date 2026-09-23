@@ -1,3 +1,4 @@
+import { voicePayload } from './slack-voice';
 import { GoogleAuth } from 'google-auth-library'
 import { prisma } from '@/lib/prisma'
 import { buildContentScheduleSection } from '@/lib/sns-schedule-report'
@@ -212,7 +213,7 @@ async function postSlack(text: string): Promise<void> {
   const res = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(voicePayload({ text })),
   })
   if (!res.ok) {
     throw new Error(`Slack webhook error: ${res.status} ${await res.text().catch(() => '')}`)

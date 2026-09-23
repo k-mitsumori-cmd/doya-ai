@@ -21,6 +21,9 @@ import { DashboardLayout } from '@/components/DashboardLayout' // New import
 import { FeatureGuide } from '@/components/FeatureGuide'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import { UiIcon, type UiIconName } from '@/components/icons'
+import BannerLimitModal from '@/components/banner/BannerLimitModal'
+import { useBannerQuota } from '@/components/banner/useBannerQuota'
+import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
 // AIバナーコーチ機能は廃止
 
 // ========================================
@@ -897,6 +900,9 @@ export default function BannerDashboard() {
 
   // 生成枚数（デフォルト3 / 有料は最大10）
   const [generateCount, setGenerateCount] = useState<number>(3)
+  // 月次上限に達したときのアップセルモーダル（429 / MONTHLY_LIMIT_REACHED）
+  const [limitModal, setLimitModal] = useState<{ open: boolean; used?: number; limit?: number; message?: string; upgradeUrl?: string }>({ open: false })
+  const quota = useBannerQuota(setLimitModal)
 
   const readFileAsDataUrl = async (file: File): Promise<string> => {
     const maxBytes = 6 * 1024 * 1024 // 6MB
@@ -1051,17 +1057,13 @@ export default function BannerDashboard() {
   const [userUsageCount, setUserUsageCount] = useState(0)
   const userDailyLimit = getBannerDailyLimitByUserPlan(bannerPlan)
   const userRemaining = Math.max(0, userDailyLimit - userUsageCount)
-  const remainingCount = isGuest ? guestRemaining : userRemaining
+  const remainingCount = isGuest ? guestRemaining : quota.usage?.limit == null ? Infinity : Math.max(0, quota.usage.limit - quota.usage.used)
 
   useEffect(() => {
-    // 無料/ゲストは3枚固定
-    if (!isPaidUser) {
-      if (generateCount !== 3) setGenerateCount(3)
-      return
-    }
-    // 有料は 3..10
-    if (generateCount < 3) setGenerateCount(3)
-    if (generateCount > 10) setGenerateCount(10)
+    // Keep the last one or two monthly credits usable; the API allows counts from one.
+    const max = isPaidUser ? 10 : 3
+    if (generateCount < 1) setGenerateCount(1)
+    if (generateCount > max) setGenerateCount(max)
   }, [isPaidUser, generateCount])
   
   // タブ状態（バックグラウンドでも進行するが、閉じる/更新すると中断される可能性が高い）
@@ -1095,7 +1097,7 @@ export default function BannerDashboard() {
     parseInt(customWidth) >= 100 && parseInt(customWidth) <= 4096 &&
     parseInt(customHeight) >= 100 && parseInt(customHeight) <= 4096
   )
-  const canGenerate = category && keyword.trim() && remainingCount > 0 && isValidCustomSize
+  const canGenerate = category && keyword.trim() && (isGuest ? remainingCount > 0 : true) && isValidCustomSize
 
   const sizeInfo = useMemo(() => {
     const [wStr, hStr] = effectiveSize.split('x')
@@ -1291,22 +1293,8 @@ export default function BannerDashboard() {
   const handleGenerate = async () => {
     if (!canGenerate) return
 
-    // 上限に達している場合はプロプランへ誘導
-    if (remainingCount <= 0) {
-      if (isPaidUser) {
-        toast.error('今月の生成上限に達しました。', { duration: 6000 })
-        // PROは「上限UP相談」導線を下に表示（自動遷移はしない）
-      } else {
-        toast.error('今月の生成上限に達しました。プロプランにアップグレードしてください。', { duration: 6000 })
-        try {
-          const upgradeUrl = '/banner'
-          window.open(upgradeUrl, '_self')
-        } catch {}
-      }
-      return
-    }
-    
     setError('')
+    if (!(await quota.check(generateCount))) return
     setIsGenerating(true)
     // 生成開始時に既存バナーを消さない（消すと画面が「パチパチ」しやすい）
     // 新しい結果が返ってきたタイミングで上書きする
@@ -1372,12 +1360,28 @@ export default function BannerDashboard() {
       const parsed = await safeReadJson(response)
       const data = parsed.data || {}
       if (!parsed.ok) {
+        // ⚠️ 上限到達はエラーではなく「一番アップグレードに近い瞬間」。
+        //    赤いトーストで流さず、プランと初月無料を出すモーダルで受け止める。
+        if (parsed.status === 429 && data?.code === 'MONTHLY_LIMIT_REACHED') {
+          quota.acceptLimit(data?.usage)
+          setLimitModal({
+            open: true,
+            used: data?.usage?.monthlyUsed,
+            limit: data?.usage?.monthlyLimit,
+            message: data?.error,
+            upgradeUrl: data?.upgradeUrl,
+          })
+          setIsGenerating(false)
+          setProgress(0)
+          return
+        }
         const msg = data?.error || data?.message || normalizeNonJsonApiError(parsed.status, parsed.text)
         throw new Error(msg)
       }
       
       setProgress(100)
       await new Promise(r => setTimeout(r, 500))
+      void quota.refresh()
       setGeneratedBanners(data.banners || [])
       setGeneratedCopies(Array.isArray(data.copies) ? data.copies : [])
       setUsedModelDisplay(data.usedModelDisplay || null)
@@ -1530,6 +1534,17 @@ export default function BannerDashboard() {
       <div className="text-gray-900 relative">
         {/* Page Background Accent */}
         <div className="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-blue-50/50 to-transparent pointer-events-none -z-10" />
+
+        {/* 月次上限のアップセルモーダル（429 / MONTHLY_LIMIT_REACHED） */}
+        <BannerQuotaNotice quota={quota} />
+        <BannerLimitModal
+          isOpen={limitModal.open}
+          onClose={() => setLimitModal({ open: false })}
+          monthlyUsed={limitModal.used}
+          monthlyLimit={limitModal.limit}
+          message={limitModal.message}
+          upgradeUrl={limitModal.upgradeUrl}
+        />
         
         <Toaster 
           position="top-center" 
@@ -2089,17 +2104,17 @@ export default function BannerDashboard() {
                   <div className="text-right">
                     <p className="text-xs font-black text-slate-900 tabular-nums">{generateCount}枚</p>
                     <p className="text-[10px] text-slate-400 font-bold">
-                      {isPaidUser ? '最大10枚' : '無料は3枚固定'}
+                      {isPaidUser ? '最大10枚' : '無料は1〜3枚'}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-3 flex items-center gap-2">
-                  {[3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                     <button
                       key={n}
                       type="button"
-                      disabled={!isPaidUser && n !== 3}
+                      disabled={!isPaidUser && n > 3}
                       onClick={() => setGenerateCount(n)}
                       className={`px-3 py-2 rounded-xl text-xs font-black border transition-colors ${
                         generateCount === n
@@ -2295,7 +2310,7 @@ export default function BannerDashboard() {
 
               <button
                 onClick={handleGenerate}
-                disabled={isGenerating || !canGenerate}
+                disabled={isGenerating || quota.checking || !canGenerate}
                 className={`group w-full py-4 sm:py-6 rounded-[2rem] font-black text-base sm:text-xl transition-all flex items-center justify-center gap-2 sm:gap-4 relative overflow-hidden active:scale-[0.98] ${
                   canGenerate && !isGenerating
                     ? 'bg-slate-900 text-white shadow-2xl shadow-slate-900/30 hover:shadow-blue-600/40 hover:bg-blue-600'
@@ -2327,7 +2342,7 @@ export default function BannerDashboard() {
                 )}
               </button>
 
-              {!isGenerating && remainingCount <= 0 && (
+              {isGuest && !isGenerating && remainingCount <= 0 && (
                 <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm text-center font-medium">
                   <div className="font-black">今月の生成上限に達しました。</div>
 

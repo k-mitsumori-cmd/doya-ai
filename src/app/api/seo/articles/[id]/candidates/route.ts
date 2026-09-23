@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
-import { getGuestIdFromRequest } from '@/lib/seoAccess'
+import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
 
 const AddCandidateSchema = z.object({
-  name: z.string().min(1).max(100),
+  name: z.string().trim().min(1).max(100),
   websiteUrl: z.string().url().optional(),
   pricing: z.string().max(200).optional(),
   features: z.array(z.string().max(100)).max(10).optional(),
@@ -36,19 +34,18 @@ function uniqCandidatesByName(items: any[]): any[] {
 }
 
 // GET: 現在の候補一覧を取得
-export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
+    const owner = await getSeoArticleOwner(_req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
     await ensureSeoSchema()
-    const id = ctx.params.id
-    const session = await getServerSession(authOptions)
-    const user: any = session?.user || null
-    const userId = String(user?.id || '').trim()
-    const guestId = getGuestIdFromRequest(_req)
+    const id = (await ctx.params).id
 
-    const article = await (prisma as any).seoArticle.findUnique({
-      where: { id },
+    const article = await (prisma as any).seoArticle.findFirst({
+      where: { id, ...owner },
       select: {
         id: true,
+        updatedAt: true,
         userId: true,
         guestId: true,
         mode: true,
@@ -58,17 +55,6 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
     })
 
     if (!article) {
-      return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
-    }
-
-    // 所有者チェック
-    const articleUserId = String(article.userId || '').trim()
-    const articleGuestId = String(article.guestId || '').trim()
-    const canAccess =
-      (userId && articleUserId && articleUserId === userId) ||
-      (guestId && articleGuestId && articleGuestId === guestId)
-
-    if (!canAccess) {
       return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     }
 
@@ -82,24 +68,25 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
       count: candidates.length,
     })
   } catch (e: any) {
+    if (e?.code === 'P2025') return NextResponse.json({ success: false, error: '記事が更新されたか、アクセス権が変わりました。再読み込みしてから操作してください。' }, { status: 409 })
+    if (e?.name === 'SyntaxError' || e?.name === 'ZodError') return NextResponse.json({ success: false, error: '入力形式が正しくありません' }, { status: 400 })
     return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 500 })
   }
 }
 
 // POST: 候補を追加
-export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
+    const owner = await getSeoArticleOwner(req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
     await ensureSeoSchema()
-    const id = ctx.params.id
-    const session = await getServerSession(authOptions)
-    const user: any = session?.user || null
-    const userId = String(user?.id || '').trim()
-    const guestId = getGuestIdFromRequest(req)
+    const id = (await ctx.params).id
 
-    const article = await (prisma as any).seoArticle.findUnique({
-      where: { id },
+    const article = await (prisma as any).seoArticle.findFirst({
+      where: { id, ...owner },
       select: {
         id: true,
+        updatedAt: true,
         userId: true,
         guestId: true,
         mode: true,
@@ -109,17 +96,6 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
     })
 
     if (!article) {
-      return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
-    }
-
-    // 所有者チェック
-    const articleUserId = String(article.userId || '').trim()
-    const articleGuestId = String(article.guestId || '').trim()
-    const canAccess =
-      (userId && articleUserId && articleUserId === userId) ||
-      (guestId && articleGuestId && articleGuestId === guestId)
-
-    if (!canAccess) {
       return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     }
 
@@ -139,38 +115,40 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
 
     const merged = uniqCandidatesByName([...existing, ...newCandidates])
 
-    // DBを更新
-    await (prisma as any).seoArticle.update({
-      where: { id },
-      data: {
-        comparisonCandidates: merged as any,
-        // 比較モードでなければ有効化
-        mode: article.mode === 'comparison_research' ? article.mode : 'comparison_research',
-      },
-    })
-
-    // regenerate=true の場合、新しいジョブを作成して再生成
-    let newJobId: string | null = null
-    if (body.regenerate) {
-      const job = await (prisma as any).seoJob.create({
+    const newJobId = await prisma.$transaction(async (tx) => {
+      await tx.seoArticle.update({
+        where: { id, ...owner, updatedAt: article.updatedAt },
         data: {
-          articleId: id,
-          status: 'queued',
-          step: 'init',
-          progress: 0,
+          comparisonCandidates: merged as any,
+          mode: 'comparison_research',
+          updatedAt: new Date(Math.max(Date.now(), new Date(article.updatedAt).getTime() + 1)),
         },
       })
-      newJobId = job.id
-    }
+      if (!body.regenerate) return null
+      await tx.seoJob.updateMany({
+        where: { articleId: id, supersededAt: null },
+        data: { supersededAt: new Date(), executionToken: null, executionExpiresAt: null },
+      })
+      await tx.seoJob.updateMany({
+        where: { articleId: id, status: { in: ['queued', 'running', 'paused', 'error'] } },
+        data: { status: 'cancelled', executionToken: null, executionExpiresAt: null, finishedAt: new Date(), error: '新しい再生成ジョブに置き換えられました' },
+      })
+      const job = await tx.seoJob.create({
+        data: { articleId: id, status: 'queued', step: 'init', progress: 0 },
+      })
+      return job.id
+    })
 
     return NextResponse.json({
       success: true,
       candidates: merged,
       count: merged.length,
-      addedCount: newCandidates.length,
+      addedCount: merged.length - uniqCandidatesByName(existing).length,
       jobId: newJobId,
     })
   } catch (e: any) {
+    if (e?.code === 'P2025') return NextResponse.json({ success: false, error: '記事が更新されたか、アクセス権が変わりました。再読み込みしてから操作してください。' }, { status: 409 })
+    if (e?.name === 'SyntaxError' || e?.name === 'ZodError') return NextResponse.json({ success: false, error: '入力形式が正しくありません' }, { status: 400 })
     if (e?.name === 'ZodError') {
       return NextResponse.json({ success: false, error: '入力形式が正しくありません', details: e.errors }, { status: 400 })
     }
@@ -179,24 +157,23 @@ export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
 }
 
 // DELETE: 候補を削除
-export async function DELETE(req: NextRequest, ctx: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
+    const owner = await getSeoArticleOwner(req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
     await ensureSeoSchema()
-    const id = ctx.params.id
-    const session = await getServerSession(authOptions)
-    const user: any = session?.user || null
-    const userId = String(user?.id || '').trim()
-    const guestId = getGuestIdFromRequest(req)
+    const id = (await ctx.params).id
 
-    const { candidateName } = await req.json()
-    if (!candidateName || typeof candidateName !== 'string') {
+    const { candidateName } = z.object({ candidateName: z.string().trim().min(1).max(100) }).parse(await req.json())
+    if (!candidateName) {
       return NextResponse.json({ success: false, error: 'candidateName is required' }, { status: 400 })
     }
 
-    const article = await (prisma as any).seoArticle.findUnique({
-      where: { id },
+    const article = await (prisma as any).seoArticle.findFirst({
+      where: { id, ...owner },
       select: {
         id: true,
+        updatedAt: true,
         userId: true,
         guestId: true,
         comparisonCandidates: true,
@@ -207,24 +184,13 @@ export async function DELETE(req: NextRequest, ctx: { params: { id: string } }) 
       return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     }
 
-    // 所有者チェック
-    const articleUserId = String(article.userId || '').trim()
-    const articleGuestId = String(article.guestId || '').trim()
-    const canAccess =
-      (userId && articleUserId && articleUserId === userId) ||
-      (guestId && articleGuestId && articleGuestId === guestId)
-
-    if (!canAccess) {
-      return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
-    }
-
     const existing = Array.isArray(article.comparisonCandidates) ? article.comparisonCandidates : []
     const targetKey = candidateName.trim().toLowerCase()
     const filtered = existing.filter((c: any) => String(c?.name || '').trim().toLowerCase() !== targetKey)
 
     await (prisma as any).seoArticle.update({
-      where: { id },
-      data: { comparisonCandidates: filtered as any },
+      where: { id, ...owner, updatedAt: article.updatedAt },
+      data: { comparisonCandidates: filtered as any, updatedAt: new Date(Math.max(Date.now(), new Date(article.updatedAt).getTime() + 1)) },
     })
 
     return NextResponse.json({
@@ -234,6 +200,8 @@ export async function DELETE(req: NextRequest, ctx: { params: { id: string } }) 
       removedCount: existing.length - filtered.length,
     })
   } catch (e: any) {
+    if (e?.code === 'P2025') return NextResponse.json({ success: false, error: '記事が更新されたか、アクセス権が変わりました。再読み込みしてから操作してください。' }, { status: 409 })
+    if (e?.name === 'SyntaxError' || e?.name === 'ZodError') return NextResponse.json({ success: false, error: '入力形式が正しくありません' }, { status: 400 })
     return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 500 })
   }
 }

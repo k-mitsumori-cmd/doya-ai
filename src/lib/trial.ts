@@ -19,28 +19,39 @@ function isRealSubscriptionStatus(status: string): boolean {
  * トライアル対象なら true。
  * - メール／customerId いずれからも Stripe 顧客が見つからない（完全な新規）→ true
  * - メールに紐づくいずれかの顧客に実サブスク履歴あり → false（既存/再契約者）
- * - 照会失敗時 → false（安全側。過剰付与＝trial cycling を防ぐ）
+ * - 照会失敗時 → 例外。対象外と区別し、無料期間なしの決済を作らない。
  */
 export async function isTrialEligible(params: {
   email?: string | null
   stripeCustomerId?: string | null
 }): Promise<boolean> {
-  try {
-    const customerIds = new Set<string>()
-    if (params.stripeCustomerId) customerIds.add(params.stripeCustomerId)
-    if (params.email) {
-      const customers = await stripe.customers.list({ email: params.email, limit: 100 })
+  const customerIds = new Set<string>()
+  if (params.stripeCustomerId) customerIds.add(params.stripeCustomerId)
+  if (params.email) {
+    let cursor: string | undefined
+    const seen = new Set<string>()
+    while (true) {
+      const customers = await stripe.customers.list({ email: params.email, limit: 100, ...(cursor ? { starting_after: cursor } : {}) })
       for (const c of customers.data) customerIds.add(c.id)
+      if (!customers.has_more) break
+      const next = customers.data[customers.data.length - 1]?.id
+      if (!next || seen.has(next)) throw new Error('Trial customer pagination did not advance')
+      seen.add(next)
+      cursor = next
     }
-    // 顧客レコードが1件も無い＝完全な新規ユーザー
-    if (customerIds.size === 0) return true
-
-    for (const cid of customerIds) {
-      const subs = await stripe.subscriptions.list({ customer: cid, status: 'all', limit: 100 })
-      if (subs.data.some((s) => isRealSubscriptionStatus(s.status))) return false
-    }
-    return true
-  } catch {
-    return false
   }
+  for (const cid of customerIds) {
+    let cursor: string | undefined
+    const seen = new Set<string>()
+    while (true) {
+      const subs = await stripe.subscriptions.list({ customer: cid, status: 'all', limit: 100, ...(cursor ? { starting_after: cursor } : {}) })
+      if (subs.data.some(s => isRealSubscriptionStatus(s.status))) return false
+      if (!subs.has_more) break
+      const next = subs.data[subs.data.length - 1]?.id
+      if (!next || seen.has(next)) throw new Error('Trial subscription pagination did not advance')
+      seen.add(next)
+      cursor = next
+    }
+  }
+  return true
 }

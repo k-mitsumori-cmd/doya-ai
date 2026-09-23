@@ -1,11 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
+import { personaBrowserStorage } from '@/lib/persona/browser-storage'
+import { deletePersonaRecord, clearPersonaRecords, selectPersonaRecord, savedPersonaPath } from '@/lib/persona/history-records'
 import { Trash2, ExternalLink, Clock, Target } from 'lucide-react'
 import { EmptyState } from '@/components/EmptyState'
+import PersonaServerHistory from '@/components/persona/PersonaServerHistory'
+import { isPersonaDisplayData, hasValidPersonaImages } from '@/lib/persona/display-data'
 
 interface HistoryItem {
+  id?: string
+  serverStored?: boolean
+  sceneImages?: Record<string, string>
   data: {
     persona: {
       name: string
@@ -20,25 +28,54 @@ interface HistoryItem {
 }
 
 export default function PersonaHistoryPage() {
+  const { data: session, status } = useSession()
+  const userId = session?.user?.id
+  if (status !== 'authenticated' || !userId) return <p role="status" className="p-6">{status === 'loading' ? 'ログイン状態を確認しています。' : '履歴を表示するにはログインしてください。'}</p>
+  return <AccountHistory key={userId} userId={userId} />
+}
+
+function AccountHistory({ userId }: { userId: string }) {
+  const accountStorage = useMemo(() => personaBrowserStorage(userId), [userId])
+  const [error, setError] = useState('')
   const [history, setHistory] = useState<HistoryItem[]>([])
 
+  const refreshHistory = () => {
+    try {
+      const parsed = JSON.parse(accountStorage.getItem('doya_persona_history') || '[]')
+      if (!Array.isArray(parsed)) throw new Error('Invalid history')
+      const readable = parsed.filter(item => item && isPersonaDisplayData(item.data) && hasValidPersonaImages(item) && Number.isFinite(item.timestamp) && typeof item.url === 'string')
+      setHistory(readable)
+      setError(readable.length === parsed.length ? '' : `${parsed.length - readable.length}件の履歴は形式を読み込めませんでした。元の保存データは削除していません。`)
+    } catch { setError('このブラウザの履歴を読み込めませんでした。') }
+  }
+
   useEffect(() => {
-    const stored = localStorage.getItem('doya_persona_history')
-    if (stored) {
-      try {
-        setHistory(JSON.parse(stored))
-      } catch {}
+    refreshHistory()
+    const onStorage = (event: StorageEvent) => {
+      if (event.storageArea === window.localStorage && (event.key === null || accountStorage.isKey(event.key, 'doya_persona_history'))) refreshHistory()
     }
-  }, [])
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [accountStorage])
 
   const deleteItem = (index: number) => {
-    const newHistory = history.filter((_, i) => i !== index)
-    setHistory(newHistory)
-    localStorage.setItem('doya_persona_history', JSON.stringify(newHistory))
+    try {
+      deletePersonaRecord(accountStorage, history[index])
+      setError('')
+      refreshHistory()
+    } catch { setError('履歴を削除できませんでした。ブラウザの保存設定をご確認ください。') }
   }
 
   const loadItem = (item: HistoryItem) => {
-    localStorage.setItem('doya_persona_last', JSON.stringify(item))
+    if (item.serverStored === true) {
+      if (savedPersonaPath(item)) return true
+      setError('保存済み履歴の情報が無効です。上の保存済み履歴から開き直してください。')
+      return false
+    }
+    try {
+      selectPersonaRecord(accountStorage, item)
+      return true
+    } catch { setError('ペルソナを読み込む準備ができませんでした。履歴が削除されたか、ブラウザに保存できない可能性があります。一覧を再読み込みしてください。'); return false }
   }
 
   const formatDate = (timestamp: number) => {
@@ -53,39 +90,46 @@ export default function PersonaHistoryPage() {
   }
 
   const clearAll = () => {
-    if (confirm('すべての履歴を削除しますか？')) {
-      setHistory([])
-      localStorage.removeItem('doya_persona_history')
+    if (confirm('このブラウザの履歴をすべて削除しますか？ アカウントの保存済み履歴は削除されません。')) {
+      try {
+        clearPersonaRecords(accountStorage)
+        setHistory([])
+        setError('')
+      } catch { setError('履歴を削除できませんでした。ブラウザの保存設定をご確認ください。') }
     }
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/30 p-4 lg:p-8">
       <div className="max-w-4xl mx-auto">
+        <h1 className="mb-6 text-2xl font-black text-white">生成履歴</h1>
+        <PersonaServerHistory userId={userId} onLocalChange={refreshHistory} />
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-black text-white flex items-center gap-3">
+            <h2 className="text-xl font-black text-white flex items-center gap-3">
               <Clock className="w-7 h-7 text-purple-400" />
-              生成履歴
-            </h1>
-            <p className="text-slate-400 text-sm mt-1">過去に生成したペルソナの一覧</p>
+              このブラウザの履歴
+            </h2>
+            <p className="text-slate-400 text-sm mt-1">直近のコピーを最大20件保存しています。ここでコピーを削除しても、アカウントの保存済み履歴は削除されません。</p>
           </div>
           {history.length > 0 && (
             <button
               onClick={clearAll}
               className="px-4 py-2 text-sm text-red-400 hover:text-red-300 hover:bg-red-900/20 rounded-lg transition-colors"
             >
-              すべて削除
+              コピーをすべて削除
             </button>
           )}
         </div>
 
-        {history.length === 0 ? (
+        {error && <p role="alert" className="mb-4 text-red-400">{error}</p>}
+        <p className="mb-4 text-sm text-slate-400">以前の共通保存形式の履歴は、所有者を確認できないため表示されません。</p>
+        {history.length === 0 && !error ? (
           <EmptyState
             tone="dark"
             kind="not-generated"
-            title="最初のペルソナをつくりましょう"
-            description="ペルソナを生成すると、ここに履歴が並びます。"
+            title="このブラウザには履歴がありません"
+            description="保存済みのペルソナは、上の「アカウントの保存済み履歴」から開けます。"
             action={
               <Link
                 href="/persona"
@@ -110,7 +154,7 @@ export default function PersonaHistoryPage() {
                         <img src={item.portrait} alt="" className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-2xl text-slate-600">
-                          👤
+                          <Target className="w-6 h-6" />
                         </div>
                       )}
                     </div>
@@ -134,8 +178,8 @@ export default function PersonaHistoryPage() {
                     <p className="text-xs text-slate-500">{formatDate(item.timestamp)}</p>
                     <div className="flex items-center gap-2 sm:mt-2 ml-auto sm:ml-0">
                       <Link
-                        href="/persona"
-                        onClick={() => loadItem(item)}
+                        href={savedPersonaPath(item) || '/persona'}
+                        onClick={(event) => { if (!loadItem(item)) event.preventDefault() }}
                         className="p-2 text-purple-400 hover:bg-purple-900/30 rounded-lg transition-colors"
                         title="読み込む"
                       >
@@ -144,7 +188,7 @@ export default function PersonaHistoryPage() {
                       <button
                         onClick={() => deleteItem(index)}
                         className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-900/30 rounded-lg transition-colors"
-                        title="削除"
+                        title="このブラウザのコピーを削除"
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>

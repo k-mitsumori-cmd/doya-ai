@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "baseUrl": "http://localhost:3030",
+  "capture": {
+    "sourceDisplay": 1,
+    "sourceSize": "3024x1964",
+    "crop": "3024:1700:0:112",
+    "outputSize": "1920x1080",
+    "fps": 30,
+    "uiZoomPercent": 75
+  },
+  "services": [
+    { "order": 1, "id": "banner", "name": "ドヤバナーAI", "tier": "public", "route": "/banner/dashboard/create", "captureSeconds": 90 },
+    { "order": 2, "id": "seo", "name": "ドヤ記事作成", "tier": "public", "route": "/seo/create", "captureSeconds": 42 },
+    { "order": 3, "id": "interview", "name": "ドヤインタビュー", "tier": "public", "route": "/interview/projects/new", "captureSeconds": 35 },
+    { "order": 4, "id": "persona", "name": "ドヤペルソナAI", "tier": "public", "route": "/persona", "captureSeconds": 35 },
+    { "order": 5, "id": "hr", "name": "ドヤHR", "tier": "public", "route": "/hr/dashboard", "captureSeconds": 30 },
+    { "order": 6, "id": "kintai", "name": "ドヤ勤怠", "tier": "public", "route": "/kintai/clock", "captureSeconds": 30 },
+    { "order": 7, "id": "doyalist", "name": "ドヤリスト", "tier": "public", "route": "/doyalist", "captureSeconds": 35 },
+    { "order": 8, "id": "promane", "name": "ドヤプロマネ", "tier": "public", "route": "/promane", "captureSeconds": 30 },
+    { "order": 9, "id": "doyaslide", "name": "ドヤスライド", "tier": "public", "route": "/doyaslide/new", "captureSeconds": 38 },
+    { "order": 10, "id": "cunning", "name": "ドヤカンニング", "tier": "public", "route": "/cunning", "captureSeconds": 35 },
+    { "order": 11, "id": "sfa", "name": "ドヤ営業管理", "tier": "public", "route": "/sfa", "captureSeconds": 30 },
+    { "order": 12, "id": "shodan", "name": "ドヤ商談準備", "tier": "public", "route": "/shodan", "captureSeconds": 35 },
+    { "order": 13, "id": "aio", "name": "ドヤAIO", "tier": "public", "route": "/aio", "captureSeconds": 35 },
+    { "order": 14, "id": "mensetsu", "name": "ドヤ面接官", "tier": "internal-review", "route": "/mensetsu", "captureSeconds": 32 },
+    { "order": 15, "id": "quote", "name": "ドヤ見積もりAI", "tier": "internal-review", "route": "/quote", "captureSeconds": 32 },
+    { "order": 16, "id": "aishodan", "name": "ドヤAI商談", "tier": "internal-review", "route": "/aishodan/preview", "captureSeconds": 35 },
+    { "order": 17, "id": "adimage", "name": "ドヤ広告画像AI", "tier": "internal-review", "route": "/adimage", "captureSeconds": 35 }
+  ]
+}

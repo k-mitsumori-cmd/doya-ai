@@ -9,7 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { FREE_THEME_IDS, LIGHT_THEME_IDS } from '@/lib/lp/themes'
 import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function GET(req: NextRequest, ctx: Ctx) {
   // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const { id } = p
 
     const project = await prisma.lpProject.findFirst({
@@ -52,7 +52,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const { id } = p
 
     const existing = await prisma.lpProject.findFirst({
@@ -147,7 +147,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const { id } = p
 
     const existing = await prisma.lpProject.findFirst({

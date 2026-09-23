@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
+import { findActiveLikeSubscriptions, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
+import { syncUnifiedBilling } from '@/lib/billing-sync'
 import { prisma } from '@/lib/prisma'
 import Stripe from 'stripe'
 
@@ -135,43 +137,22 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'userId is required' }, { status: 400 })
     }
 
-    // ユーザー基本情報の更新（プランはユーザーテーブルと両サービスに同時適用）
-    if (plan !== undefined || role !== undefined) {
-      await prisma.user.update({
-        where: { id: userId },
-        data: {
-          ...(plan !== undefined && { plan }),
-          ...(role !== undefined && { role }),
-        },
-      })
-      
-      // プランが変更された場合、両サービスのサブスクリプションも同じプランに更新
-      if (plan !== undefined) {
-        const serviceIds = ['banner', 'writing']
-        for (const svcId of serviceIds) {
-          const existing = await prisma.userServiceSubscription.findUnique({
-            where: { userId_serviceId: { userId, serviceId: svcId } },
-          })
-          
-          if (existing) {
-            await prisma.userServiceSubscription.update({
-              where: { id: existing.id },
-              data: { plan },
-            })
-          } else {
-            // サブスクリプションが存在しない場合は作成
-            await prisma.userServiceSubscription.create({
-              data: {
-                userId,
-                serviceId: svcId,
-                plan,
-                dailyUsage: 0,
-                monthlyUsage: 0,
-              },
-            })
-          }
-        }
-      }
+    // 旧UIの servicePlan 指定も統一プランとして反映する。サービス個別課金は廃止済み。
+    const requestedPlan = plan ?? servicePlan
+    const validPlans = ['FREE', 'LIGHT', 'PRO', 'BUNDLE', 'ENTERPRISE']
+    if (requestedPlan !== undefined && !validPlans.includes(requestedPlan)) {
+      return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
+    }
+    if (plan !== undefined && servicePlan !== undefined && plan !== servicePlan) {
+      return NextResponse.json({ error: 'Conflicting plans' }, { status: 400 })
+    }
+    if (role !== undefined && !['USER', 'ADMIN'].includes(role)) {
+      return NextResponse.json({ error: 'Invalid role' }, { status: 400 })
+    }
+    if (requestedPlan !== undefined) {
+      await syncUnifiedBilling({ userId, plan: requestedPlan, role, preserveManualGrant: false })
+    } else if (role !== undefined) {
+      await prisma.user.update({ where: { id: userId }, data: { role } })
     }
 
     // サービス別プラン・使用回数の更新（個別サービスの設定用）
@@ -181,7 +162,6 @@ export async function PATCH(req: NextRequest) {
       })
 
       const updateData: any = {}
-      if (servicePlan !== undefined) updateData.plan = servicePlan
       if (resetDailyUsage) updateData.dailyUsage = 0
       if (resetMonthlyUsage) updateData.monthlyUsage = 0
       if (typeof setDailyUsage === 'number') updateData.dailyUsage = setDailyUsage
@@ -193,13 +173,13 @@ export async function PATCH(req: NextRequest) {
           where: { id: existing.id },
           data: updateData,
         })
-      } else if (servicePlan) {
+      } else if (requestedPlan) {
         // 存在しない場合は作成
         await prisma.userServiceSubscription.create({
           data: {
             userId,
             serviceId,
-            plan: servicePlan,
+            plan: requestedPlan === 'BUNDLE' ? 'PRO' : requestedPlan,
             dailyUsage: 0,
             monthlyUsage: 0,
           },
@@ -270,40 +250,26 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 })
     }
 
-    // Stripeサブスクリプションがあればキャンセル
-    if (user.stripeSubscriptionId) {
+    // 契約照会・停止に失敗した場合はアカウントを残す。課金中の顧客を孤立させない。
+    const live = await findActiveLikeSubscriptions({ email: user.email, stripeCustomerId: user.stripeCustomerId })
+    const ids = new Set(live.map((subscription) => subscription.id))
+    if (user.stripeSubscriptionId && !ids.has(user.stripeSubscriptionId)) {
       try {
-        await stripe.subscriptions.cancel(user.stripeSubscriptionId)
-      } catch (e) {
-        console.error('Stripe subscription cancel error:', e)
-        // Stripeエラーでも削除は続行
+        const stored = await stripe.subscriptions.retrieve(user.stripeSubscriptionId)
+        if (ACTIVE_LIKE_STATUSES.has(String(stored.status))) ids.add(stored.id)
+      } catch (error: any) {
+        if (error?.code !== 'resource_missing') throw error
       }
     }
+    for (const subscriptionId of ids) await stripe.subscriptions.cancel(subscriptionId)
 
-    // 関連データを削除（カスケード削除されない場合）
-    // サービスサブスクリプション
-    await prisma.userServiceSubscription.deleteMany({
-      where: { userId },
-    })
-
-    // 生成履歴
-    await prisma.generation.deleteMany({
-      where: { userId },
-    })
-
-    // セッション
-    await prisma.session.deleteMany({
-      where: { userId },
-    })
-
-    // アカウント（OAuth連携）
-    await prisma.account.deleteMany({
-      where: { userId },
-    })
-
-    // ユーザー本体を削除
-    await prisma.user.delete({
-      where: { id: userId },
+    // 部分削除を防ぐ。外部のStripe操作はトランザクションの外に置く。
+    await prisma.$transaction(async (tx) => {
+      await tx.userServiceSubscription.deleteMany({ where: { userId } })
+      await tx.generation.deleteMany({ where: { userId } })
+      await tx.session.deleteMany({ where: { userId } })
+      await tx.account.deleteMany({ where: { userId } })
+      await tx.user.delete({ where: { id: userId } })
     })
 
     return NextResponse.json({ 

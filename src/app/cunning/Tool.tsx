@@ -1,11 +1,14 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { showServiceLimit } from '@/lib/service-limit-ui'
+
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { MODES, MODE_IDS, getMode } from '@/lib/cunning/modes'
 import type { CunningMode } from '@/lib/cunning/types'
+import { recordingAllowance } from '@/lib/cunning/allowance-client'
 
 interface KB { id: string; name: string; _count: { chunks: number } }
 interface Company { id: string; companyName: string | null; url: string }
@@ -28,6 +31,9 @@ export default function CunningTool() {
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [usage, setUsage] = useState<any>(null)
+  const [usageError, setUsageError] = useState(false)
+  const usageRequest = useRef(0)
+  const usageAbort = useRef<AbortController | null>(null)
   const [kbId, setKbId] = useState('')
   const [companyId, setCompanyId] = useState('')
   const [applicantId, setApplicantId] = useState('')
@@ -37,15 +43,33 @@ export default function CunningTool() {
   const def = getMode(mode)
 
   const load = () => {
+    const request = ++usageRequest.current
+    usageAbort.current?.abort()
     fetch('/api/cunning/knowledge', { cache: 'no-store' }).then((r) => r.json()).then((d) => setKbs(d.bases || [])).catch(() => {})
     fetch('/api/cunning/company', { cache: 'no-store' }).then((r) => r.json()).then((d) => setCompanies(d.profiles || [])).catch(() => {})
     fetch('/api/cunning/profiles', { cache: 'no-store' }).then((r) => r.json()).then((d) => setApplicants(d.profiles || [])).catch(() => {})
     fetch('/api/cunning/sessions', { cache: 'no-store' }).then((r) => r.json()).then((d) => setSessions(d.sessions || [])).catch(() => {})
-    fetch('/api/cunning/usage', { cache: 'no-store' }).then((r) => r.json()).then(setUsage).catch(() => {})
+    setUsage(null)
+    setUsageError(false)
+    const controller = new AbortController()
+    usageAbort.current = controller
+    const timeout = setTimeout(() => controller.abort(), 15000)
+    fetch('/api/cunning/usage', { cache: 'no-store', signal: controller.signal }).then(async (r) => {
+      if (!r.ok) throw new Error('usage unavailable')
+      const data = await r.json()
+      recordingAllowance(data)
+      return data
+    }).then(data => { if (request === usageRequest.current) setUsage(data) })
+      .catch(() => { if (request === usageRequest.current) setUsageError(true) })
+      .finally(() => clearTimeout(timeout))
   }
-  useEffect(load, [])
+  useEffect(() => {
+    load()
+    return () => { usageRequest.current++; usageAbort.current?.abort() }
+  }, [])
 
   const start = async () => {
+    if (!usage || starting || usage.remainingSeconds === 0) return
     setStarting(true)
     try {
       const res = await fetch('/api/cunning/sessions', {
@@ -60,6 +84,14 @@ export default function CunningTool() {
         }),
       })
       const d = await res.json()
+      if (res.status === 403) {
+        load()
+        if (d.code === 'LIMIT') {
+          showServiceLimit('/api/cunning/sessions', res.status, d)
+          setStarting(false)
+          return
+        }
+      }
       if (!res.ok) throw new Error(d.error || 'セッションを開始できませんでした')
       router.push(`/cunning/live/${d.session.id}`)
     } catch (e: any) {
@@ -68,7 +100,7 @@ export default function CunningTool() {
     }
   }
 
-  const remaining = usage?.remainingMinutes
+  const remaining = usage?.remainingSeconds
   const overLimit = typeof remaining === 'number' && remaining !== -1 && remaining <= 0
 
   return (
@@ -89,6 +121,7 @@ export default function CunningTool() {
             <span>
               今月の利用 {usage.usedMinutes ?? 0}分
               {usage.limits.maxMinutesPerMonth === -1 ? '' : ` / ${usage.limits.maxMinutesPerMonth}分`}
+              {usage.reservedSeconds > 0 ? `（録音中に確保 ${usage.reservedSeconds}秒）` : ''}
             </span>
           </div>
         )}
@@ -205,6 +238,7 @@ export default function CunningTool() {
           </label>
           <textarea
             value={personaNote}
+            maxLength={1000}
             onChange={(e) => setPersonaNote(e.target.value)}
             rows={2}
             placeholder={
@@ -214,7 +248,7 @@ export default function CunningTool() {
             }
             className="w-full rounded-xl border border-slate-200 px-4 py-3 font-medium text-sm"
           />
-          <p className="text-[11px] text-slate-400 font-bold mt-1">回答・想定問答にこの設定を反映します</p>
+          <p className="text-[11px] text-slate-400 font-bold mt-1">回答・想定問答にこの設定を反映します（{personaNote.length} / 1,000文字）</p>
         </div>
 
         {/* キャラの吹き出し（ポップな後押し） */}
@@ -227,11 +261,13 @@ export default function CunningTool() {
 
         <button
           onClick={start}
-          disabled={starting || overLimit}
+          disabled={starting || overLimit || !usage}
           className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#2D8CFF] to-[#0B5CFF] text-white font-black text-lg shadow-lg shadow-blue-500/30 hover:shadow-xl transition-all disabled:opacity-50"
         >
-          {overLimit ? (
-            '今月の利用上限に達しました'
+          {!usage ? (
+            usageError ? '利用状況を確認できませんでした' : '利用状況を確認中…'
+          ) : overLimit ? (
+            usage.reservedSeconds > 0 ? '別の録音で利用時間を確保しています' : '今月の利用上限に達しました'
           ) : starting ? (
             '開始中…'
           ) : (
@@ -241,6 +277,8 @@ export default function CunningTool() {
             </span>
           )}
         </button>
+        {(usageError || (overLimit && usage?.reservedSeconds > 0)) && <button type="button" onClick={load} className="mt-3 w-full rounded-xl border border-slate-300 p-3 font-bold text-slate-700">利用状況を再確認する</button>}
+        {overLimit && !usage?.reservedSeconds && <button type="button" onClick={() => showServiceLimit('/api/cunning/sessions', 403, { code: 'LIMIT' })} className="mt-3 w-full rounded-xl bg-violet-700 p-3 font-bold text-white">プラン・利用条件を確認する</button>}
         <p className="text-center text-xs text-slate-400 font-bold mt-2">
           開始後、会議/配信タブの音声共有を許可してください（Chrome/Edge推奨）
         </p>
@@ -255,7 +293,7 @@ export default function CunningTool() {
                   key={s.id}
                   href={`/cunning/history/${s.id}`}
                   className="flex items-center justify-between bg-white rounded-xl px-4 py-3 shadow-sm hover:shadow-md transition-all"
-                >
+        >
                   <div className="flex items-center gap-3 min-w-0">
                     <span>{getMode(s.mode).icon}</span>
                     <span className="font-bold text-slate-700 truncate">{s.title}</span>

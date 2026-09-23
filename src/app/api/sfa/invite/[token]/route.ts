@@ -7,12 +7,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-type Ctx = { params: Promise<{ token: string }> | { token: string } }
+type Ctx = { params: Promise<{ token: string }> }
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000
 
 // GET /api/sfa/invite/[token] — 招待の検証
 export async function GET(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const member = await prisma.sfaMember.findUnique({ where: { inviteToken: p.token }, include: { organization: true } })
   if (!member || member.status !== 'PENDING') {
     return NextResponse.json({ error: '招待が見つからないか、既に承諾済みです' }, { status: 404 })
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
 // POST /api/sfa/invite/[token] — 承諾して参加
 export async function POST(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const session = await getServerSession(authOptions)
   let userId = (session?.user as any)?.id as string | undefined
   const userName = session?.user?.name || null

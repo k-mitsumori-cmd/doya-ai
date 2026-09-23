@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
@@ -64,6 +64,7 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [usage, setUsage] = useState(null as Usage | null)
   const [exporting, setExporting] = useState(false)
+  const exportingRef = useRef(false)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -88,30 +89,37 @@ export default function SettingsPage() {
   }
 
   const handleExportAll = async () => {
+    if (exportingRef.current) return
+    exportingRef.current = true
     setExporting(true)
     const tid = toast.loading('全プロジェクトをエクスポート中...')
     try {
-      const res = await fetch('/api/doyalist/projects')
-      const data = await res.json()
-      const projects: any[] = Array.isArray(data) ? data : data?.projects || []
-      if (projects.length === 0) {
-        toast.error('エクスポートするプロジェクトがありません', { id: tid })
-        return
-      }
-      for (const p of projects) {
-        const url = `/api/doyalist/export?projectId=${p.id}&format=csv`
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 310000)
+      try {
+        const res = await fetch('/api/doyalist/export-all', { cache: 'no-store', signal: controller.signal })
+        if (!res.ok) {
+          const error = await res.json().catch(() => ({}))
+          throw new Error(error.error || 'エクスポートを準備できませんでした')
+        }
+        if (!res.headers.get('Content-Type')?.includes('application/zip')) throw new Error('エクスポートの形式を確認できませんでした')
+        const blob = await res.blob()
+        const magic = new Uint8Array(await blob.slice(0, 4).arrayBuffer())
+        if (blob.size < 22 || magic[0] !== 0x50 || magic[1] !== 0x4b) throw new Error('エクスポートが途中で終了しました。再試行してください')
+        const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `${p.name || p.id}.csv`
+        a.download = 'doyalist-all-projects.zip'
         document.body.appendChild(a)
         a.click()
-        document.body.removeChild(a)
-        await new Promise((r) => setTimeout(r, 300))
-      }
-      toast.success(`${projects.length}件のCSVをダウンロードしました`, { id: tid })
+        a.remove()
+        setTimeout(() => URL.revokeObjectURL(url), 60000)
+        toast.success('CSVをまとめたZIPを準備しました。保存先をご確認ください', { id: tid })
+      } finally { clearTimeout(timeout) }
     } catch (e: any) {
       toast.error(e?.message || 'エクスポートに失敗しました', { id: tid })
     } finally {
+      exportingRef.current = false
       setExporting(false)
     }
   }
@@ -281,7 +289,7 @@ export default function SettingsPage() {
                 データ管理
               </p>
               <p className="text-[11px] text-slate-500 mb-3 leading-relaxed">
-                すべてのプロジェクトの企業データをCSVで一括ダウンロードできます
+                アーカイブ済み・企業0件を含む全プロジェクトのCSVを、1つのZIPにまとめます
               </p>
               <button
                 onClick={handleExportAll}
@@ -296,7 +304,7 @@ export default function SettingsPage() {
                 ) : (
                   <>
                     <span className="material-symbols-outlined text-base">download</span>
-                    全件エクスポート（CSV）
+                    全件エクスポート（ZIP）
                   </>
                 )}
               </button>

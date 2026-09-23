@@ -8,6 +8,7 @@
 // ⚠️ 数え方はサービスごとに違う（累計・月次・日次、テーブルも別）。
 //    追加するときは必ず、実際に上限判定しているコードと同じ数え方にすること。
 import { prisma } from '@/lib/prisma'
+import { getPersonaUsage } from '@/lib/persona/usage'
 import {
   BANNER_PRICING,
   DOYALIST_PRICING,
@@ -21,7 +22,6 @@ import {
 } from '@/lib/pricing'
 import { FREE_LIMITS, PRO_MONTHLY_LIMITS, ENTERPRISE_MONTHLY_LIMITS } from '@/lib/plan-limit'
 import { isPaidPlan } from '@/lib/unified-plan'
-import { AIO_FREE_SCANS_PER_WEEK, AIO_SCANS_PER_MONTH } from '@/lib/aio/types'
 import { PREP_STALE_MS, SHODAN_MONTHLY_LIMIT } from '@/lib/shodan/types'
 
 /** 1本の枠。limit が null なら上限なし */
@@ -184,20 +184,22 @@ export async function getUsageSummary(
     }
 
     case 'banner': {
-      // ⚠️ 累計は出さない。バナーの生成履歴は Generation に入っておらず、
-      //    数えると常に0になって「1枚も作っていない」と誤解される
+      // Match the subscription row used by the generation endpoints, including legacy plans.
+      const sub = await prisma.userServiceSubscription.findUnique({
+        where: { userId_serviceId: { userId, serviceId: 'banner' } },
+        select: { plan: true, monthlyUsage: true, lastUsageReset: true },
+      })
+      const bannerPlan = sub?.plan || plan || 'FREE'
       return {
         title: '作ったバナー',
         unit: '枚',
         total: null,
-        planLabel,
-        meters: [
-          {
-            label: '今月',
-            used: await subscriptionUsage(userId, 'banner', 'monthly'),
-            limit: norm(getBannerMonthlyLimitByUserPlan(plan) ?? BANNER_PRICING.freeLimit),
-          },
-        ],
+        planLabel: planLabelOf(bannerPlan),
+        meters: [{
+          label: '今月',
+          used: !sub || shouldResetMonthlyUsage(sub.lastUsageReset) ? 0 : sub.monthlyUsage || 0,
+          limit: norm(getBannerMonthlyLimitByUserPlan(bannerPlan) ?? BANNER_PRICING.freeLimit),
+        }],
       }
     }
 
@@ -218,18 +220,11 @@ export async function getUsageSummary(
     }
 
     case 'persona': {
+      const usage = await getPersonaUsage(prisma, userId)
+      if (!usage) return null
       return {
-        title: '作ったペルソナ',
-        unit: '件',
-        total: null,
-        planLabel,
-        meters: [
-          {
-            label: '今日',
-            used: await subscriptionUsage(userId, 'persona', 'daily'),
-            limit: norm(getPersonaDailyLimitByUserPlan(plan) ?? PERSONA_PRICING.freeLimit),
-          },
-        ],
+        title: '作ったペルソナ', unit: '件', total: null, planLabel: usage.planLabel,
+        meters: [{ label: '今日（処理中を含む）', used: usage.text.used + usage.text.reserved, limit: norm(usage.text.limit) }],
       }
     }
 
@@ -326,57 +321,8 @@ export async function getUsageSummary(
       }
     }
 
-    case 'aio': {
-      const orgIds = await orgIdsOf('aioMember', userId)
-      const total = orgIds.length
-        ? await prisma.aioScan.count({
-            where: { organizationId: { in: orgIds }, status: { not: 'failed' } },
-          })
-        : 0
-      const p = String(plan || 'FREE').toUpperCase()
-      if (!isPaidPlan(p)) {
-        // 無料は「週1回」。ここだけ週で数える
-        const weekAgo = new Date(Date.now() - 7 * 24 * 3600_000)
-        const used = orgIds.length
-          ? await prisma.aioScan.count({
-              where: {
-                organizationId: { in: orgIds },
-                status: { not: 'failed' },
-                createdAt: { gte: weekAgo },
-              },
-            })
-          : 0
-        return {
-          title: '実行したスキャン',
-          unit: '回',
-          total,
-          planLabel,
-          meters: [{ label: '直近7日', used, limit: AIO_FREE_SCANS_PER_WEEK }],
-        }
-      }
-      const used = orgIds.length
-        ? await prisma.aioScan.count({
-            where: {
-              organizationId: { in: orgIds },
-              status: { not: 'failed' },
-              createdAt: { gte: jstStartOfMonthUtc() },
-            },
-          })
-        : 0
-      return {
-        title: '実行したスキャン',
-        unit: '回',
-        total,
-        planLabel,
-        meters: [
-          {
-            label: '今月',
-            used,
-            limit: p === 'ENTERPRISE' ? AIO_SCANS_PER_MONTH.ENTERPRISE : AIO_SCANS_PER_MONTH.PRO,
-          },
-        ],
-      }
-    }
+    // AIO requires an authorized organization; /api/usage/aio resolves it explicitly.
+    case 'aio': return null
 
     case 'doyalist': {
       const p = String(plan || 'FREE').toUpperCase()

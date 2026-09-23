@@ -9,7 +9,7 @@ import { compositeLogo, fetchBuffer } from '@/lib/doyaslide/logo'
 import { uploadComposedImage } from '@/lib/doyaslide/storage'
 import type { LogoPosition, LogoSize } from '@/lib/doyaslide/types'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 // PUT /api/doyaslide/projects/[id]/logo-config — ロゴ位置/サイズ変更 → 全スライド再合成
 // 注意: logoUrl はここでは受け付けない（SSRF防止。ロゴ設定は assets/logo アップロード経由のみ）
@@ -17,7 +17,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
   try {
     const userId = await getUserId()
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
 
     const project = await prisma.doyaSlideProject.findFirst({ where: { id: p.id, userId } })
     if (!project) return NextResponse.json({ error: '見つかりません' }, { status: 404 })

@@ -501,9 +501,7 @@ export default function SeoCreateWizardPage() {
 
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) {
-        if (res.status === 429) {
-          setShowUpgradePopup(true) // アップグレード提案ポップアップを表示
-        } else if (res.status === 401) {
+        if (res.status === 401) {
           setErrorCta({ label: 'ログインする', href: '/auth/signin' })
         }
         throw new Error(json?.error || `エラーが発生しました (${res.status})`)

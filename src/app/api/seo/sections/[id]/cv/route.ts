@@ -9,9 +9,9 @@ import { prisma } from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 
 // POST: セクションをCV強化
-export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const id = ctx.params.id
+    const id = (await ctx.params).id
     const { articleId, headingPath } = await req.json()
 
     const section = await prisma.seoSection.findUnique({ where: { id } })

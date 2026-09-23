@@ -1,0 +1,7 @@
+/reference/
+/docs/
+.env*
+*.log
+.next/
+.git/
+doya-ai/

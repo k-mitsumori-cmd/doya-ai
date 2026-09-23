@@ -1,0 +1,8 @@
+const assert=require('node:assert/strict'),{z}=require('zod');const {load,check,results}=require('./load-typescript.cjs');
+(async()=>{
+for(const route of ['memo','outline'])for(const identity of ['owner','other','guest','other-guest','anonymous'])for(const kind of ['user','guest'])await check(route+' '+identity+' '+kind,async()=>{
+const row={id:'article',userId:kind==='user'?'u':null,guestId:'g'};let writes=0;const matches=w=>Object.entries(w).every(([k,v])=>row[k]===v);
+const api=load('src/app/api/seo/articles/[id]/'+route+'/route.ts',{'next/server':{NextResponse:Response},zod:{z},'next-auth':{getServerSession:async()=>['owner','other'].includes(identity)?{user:{id:identity==='owner'?'u':'x'}}:null},'@/lib/auth':{},'@/lib/seoAccess':{getGuestIdFromRequest:()=>identity==='guest'?'g':identity==='other-guest'?'x':null},'@seo/lib/bootstrap':{ensureSeoSchema:async()=>{}},'@/lib/prisma':{prisma:{seoArticle:{findUnique:async()=>row,update:async({where,data})=>{if(!matches(where))throw{code:'P2025'};writes++;if(route==='memo'){assert.equal(data.memo.upsert.create.content,'new');assert.equal(data.memo.upsert.update.content,'new');return{memo:{content:'new'}}}assert.equal(data.outline,'new');return row}}}}});
+const res=await api.POST({json:async()=>({content:'new',outline:'new'})},{params:Promise.resolve({id:'article'})});const allowed=identity==='owner'&&kind==='user'||identity==='guest'&&kind==='guest';assert.equal(res.status,allowed?200:route==='outline'?403:identity==='anonymous'?401:404);assert.equal(writes,allowed?1:0);
+});console.log(JSON.stringify({passed:results.length,results},null,2));
+})().catch(e=>{console.error(e);process.exitCode=1});

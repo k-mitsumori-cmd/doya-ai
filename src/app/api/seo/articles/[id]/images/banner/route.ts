@@ -1,3 +1,4 @@
+import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
@@ -9,13 +10,15 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
-export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
-  const params = 'then' in ctx.params ? await ctx.params : ctx.params
+export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const params = await ctx.params
   const articleId = params.id
 
   try {
+    const owner = await getSeoArticleOwner(_req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
     await ensureSeoSchema()
-    const article = await (prisma as any).seoArticle.findUnique({ where: { id: articleId } })
+    const article = await (prisma as any).seoArticle.findFirst({ where: { id: articleId, ...owner } })
     if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
 
     await ensureSeoStorage()

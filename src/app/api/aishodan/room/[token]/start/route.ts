@@ -9,12 +9,12 @@ import { prisma } from '@/lib/prisma'
 import { assertRoomUsable, loadRoomByToken, toPublicSession } from '@/lib/aishodan/public'
 import { assertFreeLimit } from '@/lib/plan-limit'
 
-type Ctx = { params: Promise<{ token: string }> | { token: string } }
+type Ctx = { params: Promise<{ token: string }> }
 
 const GUEST_COOKIE = 'aishodan_gid'
 
 export async function POST(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const room = await loadRoomByToken(p.token)
   if (!room) return NextResponse.json({ error: '商談ルームが見つかりません' }, { status: 404 })
 

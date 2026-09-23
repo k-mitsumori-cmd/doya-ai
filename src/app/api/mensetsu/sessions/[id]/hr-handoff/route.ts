@@ -14,7 +14,7 @@ import { getMensetsuContext, hasMinRole, orgSlugFrom } from '@/lib/mensetsu/acce
 import { HrMemberRole } from '@/lib/hr/types'
 import { hasMinRole as hasHrRole } from '@/lib/hr/access'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 /** ドヤHRの雇用形態。/hr/employees/new の選択肢と揃える */
 const EMPLOYMENT_TYPES = ['FULL_TIME', 'PART_TIME', 'CONTRACT', 'INTERN', 'OTHER']
@@ -41,7 +41,7 @@ async function writableHrOrgs(userId: string) {
 }
 
 export async function GET(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const ctx = await getMensetsuContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
 }
 
 export async function POST(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const ctx = await getMensetsuContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
   if (!hasMinRole(ctx.role, 'manager')) {

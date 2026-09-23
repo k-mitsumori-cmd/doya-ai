@@ -6,11 +6,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAioContext, hasMinRole, orgSlugFrom } from '@/lib/aio/access'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 // PATCH /api/aio/prompts/[id] — 編集/有効切替（manager+）
 export async function PATCH(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const sctx = await getAioContext(orgSlugFrom(req))
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   if (!hasMinRole(sctx.role, 'manager')) return NextResponse.json({ error: '編集権限がありません' }, { status: 403 })
@@ -31,7 +31,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
 // DELETE /api/aio/prompts/[id]（manager+）
 export async function DELETE(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const sctx = await getAioContext(orgSlugFrom(req))
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   if (!hasMinRole(sctx.role, 'manager')) return NextResponse.json({ error: '編集権限がありません' }, { status: 403 })

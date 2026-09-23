@@ -11,10 +11,10 @@ import { weightedAverage } from '@/lib/mensetsu/evaluate'
 import { generateReportPdf } from '@/lib/mensetsu/pdf'
 import { LEVEL_LABELS, type MensetsuLevel, type Verdict } from '@/lib/mensetsu/types'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function GET(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const c = await getMensetsuContext(orgSlugFrom(req))
   if (!c) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
@@ -27,7 +27,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       organization: { select: { name: true } },
       template: { include: { criteria: { orderBy: { ord: 'asc' } } } },
       scores: { include: { criterion: true } },
-      turns: { orderBy: { ord: 'asc' } },
+      // 分割送信の到着順ではなく発話時刻で並べる。時刻不明は末尾で記録順を保持。
+      turns: { orderBy: [{ startMs: { sort: 'asc', nulls: 'last' } }, { ord: 'asc' }, { id: 'asc' }] },
     },
   })
   if (!s) return NextResponse.json({ error: '見つかりません' }, { status: 404 })

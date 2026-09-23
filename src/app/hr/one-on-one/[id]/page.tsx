@@ -15,7 +15,15 @@ interface OneOnOneData {
   managerNote: string
   sharedNote: string
   actionItems: any[]
+  canViewManagerNotes: boolean
   status: string
+}
+
+function localInputDate(value: string): string | undefined {
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) return undefined
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
 export default function OneOnOneDetailPage() {
@@ -29,22 +37,30 @@ export default function OneOnOneDetailPage() {
 
   useEffect(() => {
     if (!id) return
+    let active = true
+    setLoading(true)
+    setError(null)
+    setRecord(null)
     async function fetchRecord() {
       try {
         const res = await fetch(`/api/hr/one-on-one/${id}`)
         if (!res.ok) throw new Error('1on1データの取得に失敗しました')
         const data = await res.json()
-        setRecord(data.oneOnOne ?? data.record ?? data)
+        const nextRecord = data.oneOnOne ?? data.record ?? data
+        if (nextRecord?.id !== id) throw new Error('取得した1on1データを確認できませんでした')
+        if (active) setRecord(nextRecord)
       } catch (e: any) {
-        setError(e.message)
+        if (active) setError(e.message)
       } finally {
-        setLoading(false)
+        if (active) setLoading(false)
       }
     }
     fetchRecord()
+    return () => { active = false }
   }, [id])
 
   const handleSave = async (payload: any) => {
+    if (payload.recordId && payload.recordId !== id) throw new Error('表示中の記録が切り替わりました。再読み込みしてください。')
     const res = await fetch(`/api/hr/one-on-one/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -52,10 +68,12 @@ export default function OneOnOneDetailPage() {
     })
     if (!res.ok) throw new Error('保存に失敗しました')
     const data = await res.json()
-    setRecord(data.oneOnOne ?? data.record ?? data)
+    const savedRecord = data.oneOnOne ?? data.record ?? data
+    if (savedRecord?.id !== id) throw new Error('保存結果を確認できませんでした。再読み込みして内容を確認してください。')
+    setRecord(previous => previous?.id === id ? { ...previous, ...savedRecord } : previous)
   }
 
-  if (loading) {
+  if (loading || (record !== null && record.id !== id)) {
     return (
       <div className="p-6 lg:p-10 max-w-4xl mx-auto">
         <div className="animate-pulse space-y-4">
@@ -96,10 +114,12 @@ export default function OneOnOneDetailPage() {
         <h1 className="text-3xl font-black text-slate-900 mb-6">1on1詳細</h1>
 
         <OneOnOneForm
+          key={record.id}
           recordId={record.id}
+          canViewManagerNotes={record.canViewManagerNotes === true}
           employeeId={record.employeeId}
           employeeName={record.employeeName}
-          initialDate={record.date ? record.date.slice(0, 16) : undefined}
+          initialDate={record.date ? localInputDate(record.date) : undefined}
           initialDuration={record.duration}
           initialAgenda={record.agenda}
           initialManagerNote={record.managerNote}

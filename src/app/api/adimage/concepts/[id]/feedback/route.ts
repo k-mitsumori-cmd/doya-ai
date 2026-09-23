@@ -13,10 +13,10 @@ import { downloadBuffer } from '@/lib/adimage/storage'
 import { findPlacement } from '@/lib/adimage/placements'
 import type { AdCopy } from '@/lib/adimage/types'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function POST(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const identity = await getIdentity(req)
   // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
   const auth = requireUser(identity)

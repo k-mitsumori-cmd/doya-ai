@@ -29,9 +29,11 @@ export type GuestSession = NonNullable<Awaited<ReturnType<typeof loadGuestSessio
 
 /** 商談を続けてよい状態か */
 export function assertSessionUsable(s: GuestSession): { ok: true } | { ok: false; reason: string; status: number } {
-  if (s.status === 'aborted') return { ok: false, reason: 'この商談は終了しています。', status: 410 }
-  if (s.status === 'evaluated' || s.status === 'completed') {
-    return { ok: false, reason: 'この商談は終了しています。', status: 410 }
+  if (s.endedAt || !['pending', 'live'].includes(s.status)) {
+    return { ok: false, reason: 'この商談は終了しているか、利用できない状態です。', status: 410 }
+  }
+  if (s.room.isActive === false) {
+    return { ok: false, reason: 'この商談ルームは公開を終了しています。', status: 410 }
   }
   if (!s.consentedAt) return { ok: false, reason: '先に同意が必要です。', status: 403 }
   if (s.room.expiresAt && s.room.expiresAt.getTime() < Date.now()) {

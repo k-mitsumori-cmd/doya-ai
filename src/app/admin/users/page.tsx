@@ -142,6 +142,8 @@ export default function AdminUsersPage() {
   }
 
   useEffect(() => {
+    const userId = new URLSearchParams(window.location.search).get('userId')
+    if (userId) setSearchQuery(userId)
     fetchUsers()
   }, [])
 
@@ -162,6 +164,7 @@ export default function AdminUsersPage() {
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       searchQuery === '' ||
+      user.id === searchQuery ||
       (user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
       (user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
     const matchesPlan = planFilter === 'all' || user.plan === planFilter

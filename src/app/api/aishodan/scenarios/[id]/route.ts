@@ -10,7 +10,7 @@ import { toScenarioConfig } from '@/lib/aishodan/public'
 import { normalizeSchedulingLabel, validateSchedulingUrl } from '@/lib/aishodan/scheduling'
 import type { Guardrails, Icp, Persona, Phase, PricePolicy, Slot } from '@/lib/aishodan/types'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 /** シナリオは商材経由でしか組織に紐づかない。所有チェックはここに集約する */
 async function loadOwned(scenarioId: string, organizationId: string) {
@@ -21,7 +21,7 @@ async function loadOwned(scenarioId: string, organizationId: string) {
 }
 
 export async function GET(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
 const PRICE_POLICIES: PricePolicy[] = ['disclose', 'rough', 'withhold']
 
 export async function PUT(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 

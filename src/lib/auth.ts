@@ -6,8 +6,10 @@ import { sendEventNotification } from './notifications';
 import { readAttributionFromCookies } from './attribution';
 import { enrollUserInDripSequences } from './drip-enroll';
 import { higherPlan } from './plan-utils';
+import { authLogger } from './auth-logger';
 
 export const authOptions: NextAuthOptions = {
+  logger: authLogger,
   adapter: PrismaAdapter(prisma) as any,
   providers: [
     GoogleProvider({
@@ -43,6 +45,7 @@ export const authOptions: NextAuthOptions = {
             // 新規登録通知
             sendEventNotification({
               type: 'signup',
+              userId: user.id,
               userEmail: user.email,
               userName: user.name,
               details: `サービス: ${attr.serviceLabel} ｜ 流入経路: ${attr.source}`,
@@ -156,6 +159,7 @@ export const authOptions: NextAuthOptions = {
         // 新規登録通知（どのサービスから獲得したか＋流入経路つき）
         sendEventNotification({
           type: 'signup',
+              userId: user.id,
           userEmail: user.email,
           userName: user.name,
           details: `サービス: ${attr.serviceLabel} ｜ 流入経路: ${attr.source}`,

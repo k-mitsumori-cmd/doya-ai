@@ -10,11 +10,11 @@ import type { CompanyResearch } from '@/lib/shodan/types'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { recordServiceUsage } from '@/lib/service-usage'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 // POST /api/shodan/preparations/[id]/generate — リサーチ済み案件から「分析→提案資料」を生成
 export async function POST(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const sctx = await getShodanContext(orgSlugFrom(req))
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
@@ -45,12 +45,23 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const analysis = await analyzeCompany(research, own)
     const proposalMarkdown = await generateProposal(research, analysis, own)
-    const slides = await generateSlides(research, analysis, own).catch(() => [])
+    const slides = await generateSlides(research, analysis, own)
+    if (typeof proposalMarkdown !== 'string' || !proposalMarkdown.trim() || !Array.isArray(slides) || !slides.length ||
+        slides.some((slide) => !slide || typeof slide.title !== 'string' || !slide.title.trim())) {
+      throw new Error('提案資料の本文またはスライド構成を取得できませんでした')
+    }
 
-    await prisma.shodanPreparation.update({
-      where: { id: prep.id },
-      data: { analysis: analysis as any, proposalMarkdown, slidesJson: slides as any, status: 'done', errorMessage: null },
+    const saved = await prisma.shodanPreparation.updateMany({
+      where: { id: prep.id, organizationId: sctx.organizationId, updatedAt: prep.updatedAt },
+      data: {
+        analysis: analysis as any, proposalMarkdown, slidesJson: slides as any, slideImages: [],
+        status: 'done', errorMessage: null,
+        updatedAt: new Date(Math.max(Date.now(), prep.updatedAt.getTime() + 1)),
+      },
     })
+    if (saved.count !== 1) {
+      return NextResponse.json({ error: '資料が別の操作で変更されました。再読み込みしてご確認ください。' }, { status: 409 })
+    }
     await recordServiceUsage({
       userId: sctx.userId,
       serviceId: 'shodan',
@@ -64,11 +75,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ id: prep.id, status: 'done' })
   } catch (e: any) {
     console.error('[shodan/generate] failed', e?.message)
-    // リサーチは残すため status は 'researched' のまま（再生成可能）。エラーのみ記録。
-    await prisma.shodanPreparation.update({
-      where: { id: prep.id },
+    // 開始時から未変更の資料だけに失敗を記録。既存の本文・画像・状態は保持する。
+    await prisma.shodanPreparation.updateMany({
+      where: { id: prep.id, organizationId: sctx.organizationId, updatedAt: prep.updatedAt },
       data: { errorMessage: (e?.message || '提案生成に失敗しました').slice(0, 500) },
     }).catch(() => {})
-    return NextResponse.json({ id: prep.id, status: 'researched', error: '提案資料の生成に失敗しました。再生成をお試しください。' }, { status: 500 })
+    return NextResponse.json({ id: prep.id, error: '提案資料の生成に失敗しました。再生成をお試しください。' }, { status: 500 })
   }
 }

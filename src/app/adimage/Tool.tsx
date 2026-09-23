@@ -7,11 +7,12 @@
 //   → ボタンひとつで改善する
 // 中心的な体験は「URLだけで始まること」なので、他の入力は全て任意にする。
 
-import { useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { APPEAL_LABELS, type AdCopy, type AppealAxis, type BrandProfile, type RefineDirective } from '@/lib/adimage/types'
 import AdImageLp from './Lp'
+import ExportDownload from '@/components/adimage/ExportDownload'
 import { notifyError } from '@/lib/ui/notify'
 import LoadingProgress from '@/components/LoadingProgress'
 
@@ -70,6 +71,8 @@ export default function AdImageTool() {
   const [url, setUrl] = useState('')
   const [appeal, setAppeal] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
+  const [useManualText, setUseManualText] = useState(false)
+  const [manualText, setManualText] = useState('')
 
   // 解析結果
   const [brandId, setBrandId] = useState('')
@@ -97,6 +100,8 @@ export default function AdImageTool() {
   // 生成結果
   const [generating, setGenerating] = useState(false)
   const [conceptId, setConceptId] = useState('')
+  const imageOperation = useRef({ revision: 0, busy: false, feedback: 0 })
+  useEffect(() => () => { imageOperation.current.revision += 1 }, [])
   const [creatives, setCreatives] = useState<Creative[]>([])
   const [needsReview, setNeedsReview] = useState(false)
   /** 生成できなかった配置。⚠️ 黙って短い結果を出さないための表示 */
@@ -159,19 +164,24 @@ export default function AdImageTool() {
 
   const analyze = useCallback(async () => {
     if (!url.trim()) return
+    if (useManualText && manualText.trim().length < 50) {
+      setError('サービスの説明を50文字以上で入力してください。')
+      return
+    }
     setAnalyzing(true)
     setError('')
     try {
       const r = await fetch('/api/adimage/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim(), appeal: appeal.trim() || undefined }),
+        body: JSON.stringify({ url: url.trim(), appeal: appeal.trim() || undefined, ...(useManualText ? { manualText: manualText.trim() } : {}) }),
       })
       if (r.status === 401) {
         setNeedsLogin(true)
         return
       }
       const d = await r.json()
+      if (!r.ok && d?.canUseManualInput) setUseManualText(true)
       if (!r.ok) throw new Error(d?.error || '解析に失敗しました')
       setBrandId(d.brandId)
       setBrand(d.brand)
@@ -184,7 +194,7 @@ export default function AdImageTool() {
     } finally {
       setAnalyzing(false)
     }
-  }, [appeal, url])
+  }, [appeal, url, useManualText, manualText])
 
   async function uploadLogo(file: File) {
     if (!brandId) return
@@ -280,7 +290,12 @@ export default function AdImageTool() {
   }
 
   const generate = useCallback(async () => {
-    if (!brandId || chosen.length === 0) return
+    if (!brandId || chosen.length === 0 || imageOperation.current.busy) return
+    const revision = ++imageOperation.current.revision
+    imageOperation.current.busy = true
+    const isCurrent = () => imageOperation.current.revision === revision
+    setScoring(false)
+    setAdvice('')
     setGenerating(true)
     setError('')
     setScores(null)
@@ -304,6 +319,7 @@ export default function AdImageTool() {
         }),
       })
       const d = await r.json()
+      if (!isCurrent()) return
       if (!r.ok) throw new Error(d?.error || '生成に失敗しました')
       setConceptId(d.conceptId)
       setCreatives(d.creatives || [])
@@ -315,18 +331,21 @@ export default function AdImageTool() {
       setPreviousCreatives([])
       setPreviousGeneration(null)
       setJustFinished(true)
-      window.setTimeout(() => setJustFinished(false), 6000)
+      window.setTimeout(() => { if (isCurrent()) setJustFinished(false) }, 6000)
       // サイドバーの残枚数を取り直させる（画面は移動しないので合図が要る）
       window.dispatchEvent(new Event('adimage:generated'))
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '生成に失敗しました')
+      if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : '生成に失敗しました')
     } finally {
-      setGenerating(false)
+      if (isCurrent()) { imageOperation.current.busy = false; setGenerating(false) }
     }
   }, [appeal, brandId, chosen, copy, customPrompt, designRefId, drafts, selected, variations])
 
   const runFeedback = useCallback(async () => {
-    if (!conceptId) return
+    if (!conceptId || imageOperation.current.busy) return
+    const revision = imageOperation.current.revision
+    const feedback = ++imageOperation.current.feedback
+    const isCurrent = () => imageOperation.current.revision === revision && imageOperation.current.feedback === feedback
     setScoring(true)
     setError('')
     try {
@@ -336,20 +355,25 @@ export default function AdImageTool() {
         body: JSON.stringify({ chips: selectedChips, note: note.trim() || undefined }),
       })
       const d = await r.json()
+      if (!isCurrent()) return
       if (!r.ok) throw new Error(d?.error || '採点に失敗しました')
       setScores(d.scores)
       setAdvice(d.advice)
       setFeedbackSeq((n) => n + 1)
       setDirectives(d.directives || [])
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '採点に失敗しました')
+      if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : '採点に失敗しました')
     } finally {
-      setScoring(false)
+      if (isCurrent()) setScoring(false)
     }
   }, [conceptId, note, selectedChips])
 
   const refine = useCallback(async () => {
-    if (!conceptId) return
+    if (!conceptId || imageOperation.current.busy) return
+    const revision = ++imageOperation.current.revision
+    imageOperation.current.busy = true
+    const isCurrent = () => imageOperation.current.revision === revision
+    setScoring(false)
     setRefining(true)
     setError('')
     try {
@@ -359,6 +383,7 @@ export default function AdImageTool() {
         body: JSON.stringify({ chips: selectedChips, note: note.trim() || undefined }),
       })
       const d = await r.json()
+      if (!isCurrent()) return
       if (!r.ok) throw new Error(d?.error || '改善に失敗しました')
       setConceptId(d.conceptId)
       // ⚠️ setCreatives より先に入れる。順序を逆にすると一瞬だけ前後が同じに見える
@@ -376,9 +401,9 @@ export default function AdImageTool() {
       // 改善でも枚数は増える
       window.dispatchEvent(new Event('adimage:generated'))
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '改善に失敗しました')
+      if (isCurrent()) notifyError(setError, e instanceof Error ? e.message : '改善に失敗しました')
     } finally {
-      setRefining(false)
+      if (isCurrent()) { imageOperation.current.busy = false; setRefining(false) }
     }
   }, [conceptId, note, selectedChips])
 
@@ -471,6 +496,19 @@ export default function AdImageTool() {
               {analyzing ? '読み取り中...' : '広告コピーを作る'}
             </button>
           </div>
+          <label className="mt-3 flex items-center gap-2 text-sm font-semibold text-slate-700">
+            <input type="checkbox" checked={useManualText} disabled={analyzing} onChange={(e) => setUseManualText(e.target.checked)} />
+            サイトの代わりにサービス説明を入力する
+          </label>
+          {useManualText && (
+            <div className="mt-3">
+              <label htmlFor="adimage-service-description" className="text-sm font-semibold text-slate-700">サービスの説明（50〜14,000文字）</label>
+              <textarea id="adimage-service-description" value={manualText} onChange={(e) => setManualText(e.target.value)} disabled={analyzing} maxLength={14000} rows={6}
+                placeholder="サービス名、提供内容、対象のお客様、特徴を入力してください。"
+                className="mt-2 w-full rounded-xl border-2 border-slate-200 px-4 py-3 text-sm focus:border-[#0066ff] focus:outline-none" />
+              <p className="mt-1 text-xs text-slate-500">入力した内容をもとに広告コピーを作成します。</p>
+            </div>
+          )}
           <input
             value={appeal}
             onChange={(e) => setAppeal(e.target.value)}
@@ -751,7 +789,7 @@ export default function AdImageTool() {
 
             <button
               onClick={generate}
-              disabled={generating || chosen.length === 0 || !copy.headline || !copy.cta}
+              disabled={generating || refining || chosen.length === 0 || !copy.headline || !copy.cta}
               className="mt-5 w-full rounded-lg bg-[#0066ff] hover:bg-[#0052cc] shadow-lg shadow-[#0066ff]/25 transition-all hover:-translate-y-0.5 hover:shadow-xl active:scale-[0.98] px-5 py-3.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
             >
               {generating
@@ -768,12 +806,7 @@ export default function AdImageTool() {
               <h2 className="text-base font-bold text-slate-900">
                 広告画像{generation > 1 && <span className="ml-2 text-xs font-normal text-slate-500 font-semibold">改善 {generation - 1} 回目</span>}
               </h2>
-              <a
-                href={`/api/adimage/concepts/${conceptId}/export`}
-                className="rounded-lg border border-slate-300 px-3 py-2 text-xs text-slate-700 hover:bg-slate-50 font-semibold"
-              >
-                すべてダウンロード（ZIP）
-              </a>
+              <ExportDownload key={conceptId} conceptId={conceptId} />
             </div>
 
             {failedPlacements.length > 0 && (
@@ -902,7 +935,7 @@ export default function AdImageTool() {
             <div className="mt-8 border-t border-slate-100 pt-6">
               <button
                 onClick={runFeedback}
-                disabled={scoring}
+                disabled={scoring || generating || refining}
                 /* ⚠️ 常時アニメーションだと、押した後に動いているのかが分からない。
                      待機中は止めて落ち着かせ、処理中だけ虹色を流す。 */
                 className={`w-full rounded-2xl px-6 py-6 text-center text-xl font-black text-white shadow-xl transition hover:-translate-y-0.5 hover:shadow-2xl active:scale-[0.99] disabled:cursor-not-allowed disabled:hover:translate-y-0 sm:text-2xl ${
@@ -941,7 +974,7 @@ export default function AdImageTool() {
                     <p className="text-lg font-black text-[#0a0f3c]">AIの採点</p>
                     <p className="text-3xl font-black leading-none text-[#0066ff]">
                       {scores.total}
-                      <span className="ml-1 text-base font-black text-[#8a94ad]">/ 5</span>
+                      <span className="ml-1 text-base font-black text-[#8a94ad]">/ 25</span>
                     </p>
                   </div>
 
@@ -1035,7 +1068,7 @@ export default function AdImageTool() {
 
               <button
                 onClick={refine}
-                disabled={refining || (selectedChips.length === 0 && !note.trim() && directives.length === 0)}
+                disabled={refining || generating || (selectedChips.length === 0 && !note.trim() && directives.length === 0)}
                 className="mt-5 w-full rounded-2xl bg-[#0066ff] px-6 py-5 text-lg font-black text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-[#0052cc] hover:shadow-xl active:scale-[0.99] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:hover:translate-y-0 sm:text-xl"
               >
                 {refining ? '作り直し中…（1〜2分かかります）' : 'この内容で作り直す'}

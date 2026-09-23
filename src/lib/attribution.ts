@@ -24,7 +24,7 @@ export async function readAttributionFromCookies(): Promise<Attribution> {
   let source = '不明'
   try {
     const { cookies } = await import('next/headers')
-    const jar = cookies()
+    const jar = await cookies()
 
     const svc = jar.get(LAST_SVC_COOKIE)?.value || null
     service = svc && /^[a-z0-9_-]{1,32}$/.test(svc) ? svc : null

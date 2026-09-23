@@ -5,10 +5,11 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { validDepartmentParent } from '@/lib/department-integrity'
 import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
@@ -22,7 +23,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const id = p.id
 
     const existing = await prisma.hrDepartment.findFirst({
@@ -37,6 +38,18 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     if (parentId === id) {
       return NextResponse.json({ error: 'Cannot set self as parent' }, { status: 400 })
+    }
+
+    if (parentId && !(await validDepartmentParent(id, parentId, (parent) =>
+      prisma.hrDepartment.findFirst({
+        where: { id: parent, organizationId: hrCtx.organizationId }, select: { id: true, parentId: true },
+      })
+    ))) return NextResponse.json({ error: '同じ組織の循環しない親部署を指定してください' }, { status: 400 })
+    if (managerId) {
+      const manager = await prisma.hrEmployee.findFirst({
+        where: { id: managerId, organizationId: hrCtx.organizationId }, select: { id: true },
+      })
+      if (!manager) return NextResponse.json({ error: '責任者が同じ組織に存在しません' }, { status: 400 })
     }
 
     const data: Record<string, any> = {}
@@ -73,7 +86,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const id = p.id
 
     const existing = await prisma.hrDepartment.findFirst({

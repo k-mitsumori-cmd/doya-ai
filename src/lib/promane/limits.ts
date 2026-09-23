@@ -4,6 +4,7 @@
 // ドヤAI 統一プラン方式に準拠
 // 詳細は doyalist/limits.ts / kintai と同じパターン
 
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { tierFrom, type PlanTier } from "@/lib/plan-utils";
 
@@ -47,9 +48,11 @@ export const PROMANE_LIMITS: Record<PlanTier, PromaneLimits> = {
   },
 };
 
+type LimitReader = Pick<Prisma.TransactionClient, "user" | "promaneProject">;
+
 /** ユーザーのプラン階層を取得 */
-export async function getUserPromaneTier(userId: string): Promise<PlanTier> {
-  const user = await prisma.user.findUnique({
+export async function getUserPromaneTier(userId: string, db: LimitReader = prisma): Promise<PlanTier> {
+  const user = await db.user.findUnique({
     where: { id: userId },
     select: { plan: true },
   });
@@ -57,14 +60,14 @@ export async function getUserPromaneTier(userId: string): Promise<PlanTier> {
 }
 
 /** ユーザーの上限情報を取得 */
-export async function getUserPromaneLimits(userId: string): Promise<PromaneLimits> {
-  const tier = await getUserPromaneTier(userId);
+export async function getUserPromaneLimits(userId: string, db: LimitReader = prisma): Promise<PromaneLimits> {
+  const tier = await getUserPromaneTier(userId, db);
   return PROMANE_LIMITS[tier];
 }
 
 /** ユーザーの全workspaceでのプロジェクト総数 */
-export async function countUserProjects(userId: string): Promise<number> {
-  return prisma.promaneProject.count({
+export async function countUserProjects(userId: string, db: LimitReader = prisma): Promise<number> {
+  return db.promaneProject.count({
     where: { workspace: { members: { some: { userId, isActive: true } } } },
   });
 }

@@ -264,3 +264,107 @@ src/lib/cunning/
 3. `prisma/schema.prisma` に `cunning_*` モデル追加 → `npx prisma generate`
 4. 統一プラン判定は `User.plan` 単一参照（[[project_unified_plan_2plan]]）。個別Stripe ServiceId は追加しない方針
 5. 画像生成を使う場合は `generateImageWithFallback()` 経由（本サービスでは画像生成は基本不要）
+
+## 2026-09-20 ローカル補修メモ（本番未反映）
+
+- 議事録生成は保存済みの発話・回答を全件対象とし、createdAt・id順で入力する。先頭200/100件の取得制限と末尾60/40件の入力制限は廃止。
+- 議事録JSONの`sourceCoverage`に対象の発話数・回答数を保持し、結果画面・履歴に表示する。旧形式で件数不明の場合は再生成を案内する。
+- 保存失敗がある場合の`incompleteInput`は再生成でも保持する。生成結果の必須項目・型・スコアを検証し、不正結果では既存議事録を上書きしない。
+- 録音終了時は最終音声・回答保存を待ってから終了情報と議事録を保存する。45秒で待ち合わせが完了しない場合は再試行を案内する。
+- 利用時間の送信は累計`totalSeconds`。ロック内で保存済み値との最大値を採用し、再送を二重加算しない。ただしサーバー計測・月跨ぎ配分・複数端末での予約は未完了。
+- 非常に長い会話の分割生成、実AIによる品質、全画面の通し検証は継続対象。関連する全体修正と公開前確認を終えるまで先行公開しない。
+- 検証根拠: `docs/audits/2026-09-20-loop-246/`〜`2026-09-20-loop-248/`。
+
+
+第264巡: セッション作成はオブジェクト/既知mode/型・長さ(title120、補足1000、ID128)を検証し400で案内。3参照IDはid+userIdの存在確認後だけ保存、不在/所有外は同じ404。補足欄に1000文字制限/文字数表示を追加。実DB4グループ合格、本番未反映。server recording/month split/cross-device reservation（253）は別途未完了。
+
+
+第253巡継続: recording-ledger.tsのサーバー時間台帳を実装（API/UI未接続）。Userロック、60秒予約、停止時返却、期限切れ精算、JST月配賦、再送tokenを実DB11群で確認。通信断は最終予約期限まで最大60秒分を計上する設計。旧使用数移行/切替/最終音声/画面は未完了のため、まだ有効化しない。本番未反映。
+
+
+第253巡・旧使用量引継ぎ: leaseのない旧durationSecを元のJST開始月に取込み、再実行は二重計上せず増加分だけ反映。削除済み使用も維持、新leaseのms/予約は変更しない。実DB7群＋台帳11群再合格。API/UI未切替、旧PATCH併用は未解決。DOYA_DISABLE_LIMITSのサーバー設定も台帳に反映済み。
+
+
+第253巡・予約込みusage: サーバー台帳read helperで経過精算/期限切れ/当月used+reserved/次月JST resetを計算、整数表示の二重切上げも防止。実DB7群＋既存11/7群合格。API未接続。残枠0でも自分の予約で継続中の録音を誤拒否しないよう、token付き音声受付と同時切替が必須。
+
+
+第253巡・録音API: recordingVersion列（既定1）を追加し、新台帳はversion2のみ開始可。認証付きrecording POSTでstart/heartbeat/stopを処理し、旧PATCHの時間/endはversion2に対し409拒否。通常作成UIはまだ1で移行未完了。stop/期限切れ/更新時上限でSessionもendedに統一。実API+DB7群、台帳12/usage7/legacy7群合格。新列DDL先行が公開前必須。本番未適用。
+
+
+第253巡・音声受付: version2 transcribeは録音tokenで受付、停止後finalはremote/self各1回・15秒猶予。受付済み処理はstop後保存、delete後保存拒否を実DB6群で確認。providerエラー生本文をログに出さない。final受付は単発で失敗時の再試行/cache未実装。新UI/最後の回答/送信中の順序確認は未完了、version1一般利用を維持。本番未反映。
+
+
+第253巡・最終回答: 新transcribeが最終マーカー/保存IDを返し、answerは同じ所有セッションの最終remote本文から終了後120秒以内に1試行だけ生成可能。クライアントの質問差替え/並列重複/重複transcriptを防止。実DB回答6群＋音声6群、標準150本/型検査/build合格。finalの失敗再試行/成功結果再取得、新UI/usage/prep/切替は未完了。本番未反映。追加2列は253 migrationへ記載。
+
+
+第253巡・最終回答の復旧: 成功済み結果は最終transcriptのunique FKで結び、期限後も所有者/tokenを検証してAI再実行なしで返す。確定した失敗は該当claimだけ解除し120秒受付内の再試行を許可。古いclaim/不正token/保存済み回答は解除不可。タイムアウト後も元AIが未完了の場合はclaimを維持。実DB回答11群合格。プロセスクラッシュ等の未完了claim復旧、新UIと録音全通しは残件。本番未反映。
+
+
+第253巡・削除中の遅延保存: Userが先に削除されると回答/音声/議事録の遅延保存を拒否するようUserロック・存在確認を追加。古い認証IDも実在User照合で拒否。実DB回答12/音声8/認証議事録4群合格。既存孤立データ清掃は別途残件、本番未反映。
+
+
+第253巡・最終音声再試行: 初回15秒猶予、同一音声bytes/言語だけ終了後120秒以内・最大3試行。処理中は拒否し確定失敗後にclaim解除。成功/無音は保存済みtranscriptを返しAI再実行なし。最終transcriptはchannel別部分unique index。最後の回答は録音終了/最終transcript作成の遅い方から120秒まで。追加6列/indexはローカルのみ、UI再送/クラッシュ復旧/本番反映は残件。
+
+
+第253巡・usage接続: 月次使用量/開始判定をサーバー台帳へ接続し確保中の秒数も控除。usage取得失敗時は開始不可・再確認可、残1秒は使用可能。確保中と消費上限の案内を分離。native prepは録音tokenを検証し自分の予約で動作する。新録音UI/旧新切替は未完了。新テーブルDDL先行必須、本番未反映。
+
+
+第253巡・録音クライアント制御: active応答へvalidForMsを追加し、録音controllerが通信時間を差し引きmonotonic時計で期限を管理。開始重複/遅い応答/停止再試行/通信失敗を12ケース、実DB19群で確認。まだliveページ未接続で、新UI全通しや旧新切替は未完了。本番未反映。
+
+
+第253巡・live version2接続: 許可後録音/heartbeat/停止精算、token付き音声・回答・prep、最終音声IDを回答へ接続。最後の未確定前半も保存済みIDを最大16件照合して結合。正常経路ブラウザ5群・実DB回答15群合格。一般作成はまだversion1。再送UI/応答順序/旧新切替/実機通し等は未完了、本番未反映。
+
+
+第253巡・応答順序: upload並列・画面反映はチャネル別送信順。停止後に遅れて届く前半を最終回答に保持（最大64保存ID）。DB受付時刻audioReceivedAtを追加し、前半照合と議事録/fingerprintに使用。実DB35群と順序逆転ブラウザ5群合格。新列はローカルのみ適用。受付順そのものの逆転、履歴カーソル順、再送UI、旧新切替等は未完了。本番未反映。
+
+
+履歴順序補修（2026-09-20、ローカルのみ）: 文字起こし一覧/続き取得を議事録と同じ音声受付時刻順（旧行は保存時刻）へ統一。同時刻は保存時刻/idで安定化。発話ページカーソルはsessionId/改訂時刻を持ち、遅れた発話保存等で更新された場合は409と読み直し導線を表示。初回の件数/本文/改訂はRepeatableReadで整合。専用DB10群、画面コールバック8群、模擬HTTP付き実ブラウザ6群合格。本番反映/全サービス完了は未実施。
+
+### 第283巡・最終音声の処理中断（ローカル補修）
+
+version2の最終音声は、受付済みの同じhashに限り、停止後15分・最大3試行まで再送可能。処理権は330秒で回収でき、保存時にも現在のclaimedAtを確認して古い処理の結果を拒否する。初回15秒受付は維持。再送UI/通常窓の順序・停止後到着対応は未完了で、version2新規作成を一般有効化していない。本番未反映。検証は `docs/audits/2026-09-20-loop-283/report.md`。
+
+### 第284巡・最終音声の再送UI（ローカル補修）
+
+version2で失敗した最後の音声は、元Blob/言語をページ内に保持して話者別に再送する。未保存の最終音声がある間は議事録へ進まず、回復した音声だけ失敗状態を解除する。ページを閉じた後の復旧は未対応。通常窓の停止後到着/sequence管理は残るため新規version2は未有効化。本番未反映。実React画面・合成MediaRecorder/HTTPのChrome検証は `docs/audits/2026-09-20-loop-284/report.md`。
+
+
+### 第285巡・音声窓の予約台帳（API/UI未接続）
+
+CunningAudioWindowで録音中の事前予約と話者別sequenceを保持し、停止後も既存予約を受け付ける基盤を追加。hash固定・最大3試行・330秒claim回収と保存時照合・15分回復期間・成功キャッシュを実DB8群で検証。3500ms窓と先読み1枠で予約数を制限。新テーブルSQLはローカルのみ。API/画面/履歴順/最終回答・議事録の完了判定への接続が残るため、通常窓の欠落問題を解消済みとは扱わない。新規version2は未有効化。詳細は `docs/audits/2026-09-20-loop-285/report.md`。
+
+
+### 第286巡・音声窓API（UI未接続）
+
+予約/終了確定APIと予約音声のアップロードAPIを追加。全窓保存と停止確認前は確定できず、議事録APIも未保存/未確定を拒否する。予約が議事録生成中に追加された場合は改訂CASで保存拒否。同時刻予約は議事録/fingerprintでsequence順へ整列し、全窓確定から最終回答の受付期間を確保。実DB・合成AI9群と従来台帳/回答/議事録回帰を検証。UI・発話履歴・旧API混在防止・実録音・本番反映は未完了。`docs/audits/2026-09-20-loop-286/report.md`。
+
+
+### 第287巡・新旧音声方式の混在拒否（ローカルのみ）
+
+lease.audioProtocolを最初の許可された音声受付/窓予約で原子的に固定する。旧native方式のprovider実行中でも新予約を拒否し、windows方式の旧音声API呼出はprovider前に拒否。実DB/API6群（10回の競合を含む）、旧最終音声/新窓API・台帳の回帰を確認。追加列は287/migration.sql、本番未適用。既存worker排出とUI接続は残件。`docs/audits/2026-09-20-loop-287/report.md`。
+
+
+### 第288巡・窓クライアント（Live未接続）
+
+音声の事前予約・話者別順序・元Blob/言語保持・同一要求の再送・未使用予約の無音確定・全窓確定照合を行うaudio-window-clientを追加。標準9群、実API/ローカルDBとの接続4群を検証。Live MediaRecorderとの組み込み、実ブラウザ録音、本番反映はまだ実施していない。`docs/audits/2026-09-20-loop-288/report.md`。
+
+
+### 第289巡・Live画面を窓方式へ接続（ローカル）
+
+version2 Liveは開始前予約・先読み・通常/最終音声保持再送・全窓確定→最後の回答→議事録へ接続済み。失敗時停止、終了処理の排他、保存待ち中の再送無効化、終了後ラベルを補修。実Chrome/React・合成音声/HTTPで4パターン各7項目合格。実マイク長時間・UI+実DB全通し・離脱復旧・64件超の未確定発話・履歴sequence・最終回答クラッシュ回復は残件。本番未反映、新規version2一般作成は未有効化。`docs/audits/2026-09-20-loop-289/report.md`。
+
+
+### 第290巡・Liveから実API/DBまでの検証
+
+録音中の通常回答が未追跡の発話を二重作成し、窓の終了確定を妨げる不具合を実Chrome/実API/PG18で再現・補修。version2の質問は回答履歴に保存し、音声発話を重複作成しない。通常終了・保存応答紛失・provider失敗の3ケース各10条件で、全窓保存/2回答/議事録/使用秒精算を確認。認証と音声機器・AIは合成。実録音/離脱復旧/履歴sequence/最終回答クラッシュ/本番反映は残件。`docs/audits/2026-09-20-loop-290/report.md`。
+
+
+第291巡（ローカルのみ）: 最終回答は入力/context/言語をhash固定し、330秒claim・15分回復・最大3試行を実装。保存時claim照合で旧workerを拒否し、カード再試行の言語を固定。実DB5群/言語2条件/実Chrome応答紛失10条件・build合格。DDL291未本番適用、再試行後表示とreload復元は残件。証拠: docs/audits/2026-09-20-loop-291/report.md。
+
+Pass292 (local only): final-answer failure retains pending input and stops report creation; retry preserves language and only successful saving completes finalization. Recovery resolves only the matching answer failure. Chrome/API/PG test confirms one complete report after retry; auth/media/AI synthetic. 165 regressions, types and Next build passed. Existing incomplete reports, reload and production release remain open. Evidence: docs/audits/2026-09-20-loop-292/report.md.
+
+History fix (2026-09-23, local only): transcript history and cursor v3 use audio-window sequence after receipt time, matching report ordering. Isolated PG18 verified206 rows across4 pages, no omission/duplication, owner isolation and cursor rejection; full build passed. Production preflight confirms cunning_audio_windows still absent, so migration285 must precede deployment. Evidence: docs/audits/2026-09-23-history-order/report.md.
+
+Production DB update 2026-09-23: migrations253,285,287,291 applied. Read-only postflight found the lease/window tables and answer columns, restrictive RLS/no browser SELECT. Code rollout and real-session cutover remain pending. Evidence: docs/audits/2026-09-23-history-order/production-app-schema-report.json.
+
+Latest production status 2026-09-23: new code deployment `dpl_4VYkNiY94VqpJHtuJoSSY2NuTi18` is live; public route and unauthenticated API boundary passed. Real microphone/tab capture, long-running session, reload final-input restoration and 64+ pending transcript context are still unverified/unresolved. Do not equate the public smoke with a real-session pass.

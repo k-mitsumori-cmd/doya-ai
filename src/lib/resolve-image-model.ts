@@ -127,7 +127,8 @@ export async function resolveImageModel(apiKey: string): Promise<string[]> {
  */
 export async function callGeminiImageAPI(
   _apiKey: string,
-  requestBody: Record<string, any>
+  requestBody: Record<string, any>,
+  timeouts: { primaryTimeoutMs?: number; fallbackTimeoutMs?: number; size?: string } = {}
 ): Promise<{ response: Response; model: string }> {
   // requestBody から prompt と入力画像を抽出
   const contents = (requestBody as any)?.contents
@@ -159,8 +160,9 @@ export async function callGeminiImageAPI(
   )
 
   const result = await generateImageWithFallback({
+    ...timeouts,
     prompt,
-    size: '1024x1024',
+    size: timeouts.size || '1024x1024',
     quality: 'medium',
     inputImages,
     responseModalities: (requestBody as any)?.generationConfig?.responseModalities,

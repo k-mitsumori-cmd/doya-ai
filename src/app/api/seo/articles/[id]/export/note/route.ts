@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 
 /**
  * note記事向けに最適化されたMarkdownをエクスポート
@@ -10,13 +11,13 @@ import { prisma } from '@/lib/prisma'
  * - リンクは [テキスト](URL) 形式
  * - 箇条書きは - を使用
  */
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
-    const article = await (prisma as any).seoArticle.findUnique({
-      where: { id: params.id },
+    const owner = await getSeoArticleOwner(_req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
+    const article = await (prisma as any).seoArticle.findFirst({
+      where: { id: params.id, ...owner },
       select: { title: true, finalMarkdown: true },
     })
 

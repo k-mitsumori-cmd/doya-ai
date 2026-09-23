@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "prisma generate && node ./scripts/db-push-if-db-url.mjs && next build",
+  "buildCommand": "npm run build",
   "functions": {
     "src/app/api/adsim/projects/[projectId]/export/route.ts": {
       "maxDuration": 300,
@@ -95,6 +95,38 @@
     {
       "path": "/api/cron/spend-report",
       "schedule": "10 22 * * *"
+    },
+    {
+      "path": "/api/cron/service-downloads",
+      "schedule": "15 0 * * *"
+    },
+    {
+      "path": "/api/cron/service-operations?mode=daily",
+      "schedule": "50 21 * * *"
+    },
+    {
+      "path": "/api/cron/service-operations?mode=watch",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/service-operations?mode=reviews",
+      "schedule": "5 */4 * * *"
+    },
+    {
+      "path": "/api/cron/service-operations?mode=cost",
+      "schedule": "30 22 * * *"
+    },
+    {
+      "path": "/api/cron/service-operations?mode=weekly",
+      "schedule": "40 0 * * 1"
+    },
+    {
+      "path": "/api/cron/service-operations?mode=travel",
+      "schedule": "35 0 * * *"
+    },
+    {
+      "path": "/api/cron/persona-purge",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

@@ -10,6 +10,7 @@
 // 「初月無料」が出ることを防ぐ（サーバの fail-closed と整合）。新規/未ログインは確定後すぐ表示される。
 // ============================================
 import { useEffect, useState } from 'react'
+import { useSession } from 'next-auth/react'
 import { Gift, Sparkles } from 'lucide-react'
 import { UNIFIED_TRIAL_DAYS } from '@/lib/unified-plan'
 
@@ -22,42 +23,40 @@ export const TRIAL_SUBTEXT = `期間中はいつでも解約でき、料金は�
 
 type Tone = 'light' | 'dark'
 
-// ---- eligibility（セッション中1回だけ取得してキャッシュ） ----
-let _cache: boolean | null = null
-let _inflight: Promise<boolean> | null = null
-function fetchEligibility(): Promise<boolean> {
-  if (_cache !== null) return Promise.resolve(_cache)
-  if (_inflight) return _inflight
-  // 非2xx・ネットワークエラーは fail-closed（false）。既存顧客への誤表示を防ぐ（サーバと整合）。
-  _inflight = fetch('/api/stripe/trial-eligibility')
-    .then((r) => (r.ok ? r.json() : { eligible: false }))
-    .then((d) => {
-      _cache = d?.eligible === true
-      return _cache
+// Cache only confirmed responses, scoped to account and plan. Unknown eligibility stays hidden.
+const eligibilityCache = new Map<string, { value: boolean; expires: number }>()
+const eligibilityRequests = new Map<string, Promise<boolean>>()
+function fetchEligibility(key: string): Promise<boolean> {
+  const cached = eligibilityCache.get(key)
+  if (cached && cached.expires > Date.now()) return Promise.resolve(cached.value)
+  const pending = eligibilityRequests.get(key)
+  if (pending) return pending
+  const request = fetch('/api/stripe/trial-eligibility', { cache: 'no-store' })
+    .then(async (r) => {
+      if (!r.ok) return false
+      const data = await r.json()
+      const value = data?.eligible === true
+      eligibilityCache.set(key, { value, expires: Date.now() + 60000 })
+      return value
     })
-    .catch(() => {
-      _cache = false
-      return false
-    })
-    .finally(() => {
-      _inflight = null
-    })
-  return _inflight
+    .catch(() => false)
+    .finally(() => eligibilityRequests.delete(key))
+  eligibilityRequests.set(key, request)
+  return request
 }
 
-/** トライアル対象なら true。既定は非表示(false)、対象と確定したときだけ true（誤表示防止）。 */
 export function useTrialEligible(): boolean {
-  const [eligible, setEligible] = useState<boolean>(_cache ?? false)
+  const { data: session, status } = useSession()
+  const user = session?.user as { id?: string; email?: string; plan?: string } | undefined
+  const key = status === 'loading' ? '' : status === 'authenticated' ? `${user?.id || user?.email}:${user?.plan}` : 'guest'
+  const [result, setResult] = useState<{ key: string; eligible: boolean }>({ key: '', eligible: false })
   useEffect(() => {
+    if (!key) return
     let mounted = true
-    fetchEligibility().then((e) => {
-      if (mounted) setEligible(e)
-    })
-    return () => {
-      mounted = false
-    }
-  }, [])
-  return eligible
+    fetchEligibility(key).then((eligible) => { if (mounted) setResult({ key, eligible }) })
+    return () => { mounted = false }
+  }, [key])
+  return !!key && result.key === key && result.eligible
 }
 
 /**

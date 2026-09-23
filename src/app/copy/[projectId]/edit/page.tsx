@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, use } from 'react';
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
@@ -22,7 +22,8 @@ interface CopyProject {
   copies: CopyItem[]
 }
 
-export default function CopyEditPage({ params }: { params: { projectId: string } }) {
+export default function CopyEditPage(props: { params: Promise<{ projectId: string }> }) {
+  const params = use(props.params);
   const { data: session } = useSession()
   const router = useRouter()
   const [project, setProject] = useState<CopyProject | null>(null)

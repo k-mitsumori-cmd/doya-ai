@@ -2,42 +2,16 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { ensureSeoStorage, readFileAsBuffer, saveBase64ToFile } from '@seo/lib/storage'
+import { readFileAsBuffer } from '@seo/lib/storage'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
-import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
-import { getGuestIdFromRequest, isTrialActive, normalizeSeoPlan, canUseSeoImages } from '@/lib/seoAccess'
+import { getGuestIdFromRequest } from '@/lib/seoAccess'
 import sharp from 'sharp'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-// ⚠️ AI生成を呼ぶルートは maxDuration を必ず入れること。
-//    未指定だとVercelの既定で打ち切られ、**本番でだけ**504になる。
-export const maxDuration = 300
-
-function stripNoTextStatements(raw: string): string {
-  const s = String(raw || '')
-  if (!s) return s
-  const lines = s.replace(/\r\n/g, '\n').split('\n')
-  const filtered = lines.filter((line) => {
-    const t = line.trim()
-    if (!t) return true
-    // 「文字を入れない」「文字は入れない」「NO TEXT」系を含む行を除去
-    if (/文字.*入れない/i.test(t)) return false
-    if (/NO TEXT/i.test(t)) return false
-    // 「ネガティブスペース」「余白を確保」を含む行を除去
-    if (/ネガティブスペース/i.test(t)) return false
-    if (/後から文字を載せ/i.test(t)) return false
-    if (/余白.*確保/i.test(t)) return false
-    // 「参考：後から載せる…」パターン
-    if (/参考.*後から載せる.*コピー/i.test(t)) return false
-    return true
-  })
-  return filtered.join('\n').replace(/\n{3,}/g, '\n\n').trim()
-}
-
-export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   await ensureSeoSchema()
-  const id = ctx.params.id
+  const id = (await ctx.params).id
   const session = await getServerSession(authOptions)
   const user: any = session?.user || null
   const userId = String(user?.id || '')
@@ -54,7 +28,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
       return NextResponse.json({ success: false, error: 'forbidden' }, { status: 403 })
     }
   } else {
-    if (!guestId || String(img?.article?.guestId || '') !== guestId) {
+    if (img?.article?.userId || !guestId || String(img?.article?.guestId || '') !== guestId) {
       return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
     }
   }
@@ -63,42 +37,12 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
   try {
     buf = await readFileAsBuffer(img.filePath)
   } catch (e: any) {
-    // Vercel等サーバレスではファイル永続できない場合があるため、必要なら再生成して復元
-    const code = String(e?.code || '')
-    const msg = String(e?.message || '')
-    const missing = code === 'ENOENT' || /no such file or directory/i.test(msg)
-    const plan = normalizeSeoPlan(user?.seoPlan || user?.plan || (userId ? 'FREE' : 'GUEST'))
-    const trial = isTrialActive(user?.firstLoginAt || null)
-    const trialActive = !!userId && trial.active
-    const kind = String(img.kind || '').toUpperCase()
-    const imagesAllowed = canUseSeoImages({ isLoggedIn: !!userId, plan, trialActive })
-
-    // バナーは「一覧サムネ必須」のため、所有者であれば復元を許可（図解はPRO/ENT or trial）
-    const canRegenMissing = kind === 'BANNER' ? true : imagesAllowed
-
-    if (!missing || !canRegenMissing) {
-      return NextResponse.json(
-        { success: false, error: missing ? '画像ファイルが見つかりません（再生成が必要です）' : msg || '画像の読み込みに失敗しました' },
-        { status: 404 }
-      )
-    }
-
-    await ensureSeoStorage()
-    const aspectRatio = kind === 'BANNER' ? '16:9' : '1:1'
-    const prompt = stripNoTextStatements(String(img.prompt || ''))
-    const gen = await geminiGenerateImagePng({
-      prompt,
-      aspectRatio: aspectRatio as any,
-      imageSize: '2K',
-      model: GEMINI_IMAGE_MODEL_DEFAULT,
-    })
-    const filename = `seo_${String(img.articleId)}_${Date.now()}_${kind.toLowerCase()}.png`
-    const saved = await saveBase64ToFile({ base64: gen.dataBase64, filename, subdir: 'images' })
-    await (prisma as any).seoImage.update({
-      where: { id },
-      data: { filePath: saved.relativePath, mimeType: gen.mimeType || 'image/png', prompt },
-    })
-    buf = Buffer.from(gen.dataBase64, 'base64')
+    const missing = e?.code === 'ENOENT'
+    return NextResponse.json({
+      success: false,
+      code: missing ? 'IMAGE_FILE_MISSING' : 'IMAGE_READ_FAILED',
+      error: missing ? '保存済みの画像が見つかりません。画像を再生成する場合は再生成操作を行ってください。' : '画像を読み込めませんでした。時間をおいて再度お試しください。',
+    }, { status: missing ? 404 : 500, headers: { 'Cache-Control': 'private, no-store' } })
   }
   // サムネイルモード: ?thumb=1 で半分サイズのJPEGに変換（一覧表示の高速化用）
   const isThumb = _req.nextUrl.searchParams.get('thumb') === '1'
@@ -113,7 +57,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
       return new NextResponse(new Uint8Array(thumbBuf), {
         headers: {
           'Content-Type': 'image/jpeg',
-          'Cache-Control': 'public, max-age=31536000, immutable',
+          'Cache-Control': 'private, no-store',
         },
       })
     } catch {
@@ -126,7 +70,7 @@ export async function GET(_req: NextRequest, ctx: { params: { id: string } }) {
   return new NextResponse(body, {
     headers: {
       'Content-Type': img.mimeType || 'image/png',
-      'Cache-Control': 'public, max-age=31536000, immutable',
+      'Cache-Control': 'private, no-store',
     },
   })
 }

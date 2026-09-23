@@ -30,10 +30,14 @@ export async function runEvaluation(sessionId: string): Promise<RunEvaluationRes
           criteria: { orderBy: { ord: 'asc' } },
         },
       },
-      turns: { orderBy: { ord: 'asc' } },
+      // 分割送信の到着順ではなく発話時刻で並べる。時刻不明は末尾で記録順を保持。
+      turns: { orderBy: [{ startMs: { sort: 'asc', nulls: 'last' } }, { ord: 'asc' }, { id: 'asc' }] },
     },
   })
   if (!session) return { ok: false, reason: '見つかりません', status: 404 }
+  if (!session.startedAt || !session.endedAt || !['completed', 'evaluated'].includes(session.status)) {
+    return { ok: false, reason: '評価は面接が終了してから実行してください。', status: 409 }
+  }
   if (session.turns.length === 0) {
     return { ok: false, reason: '発話ログが無いため評価できません', status: 400 }
   }

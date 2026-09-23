@@ -17,13 +17,13 @@ import { evaluateSession } from '@/lib/aishodan/evaluate'
 import { postToSlackBlocks } from '@/lib/notifications'
 import { VERDICT_LABELS } from '@/lib/aishodan/types'
 
-type Ctx = { params: Promise<{ token: string }> | { token: string } }
+type Ctx = { params: Promise<{ token: string }> }
 
 /** これ未満の発話数なら、商談が成立したとは見なさない */
 const MIN_GUEST_TURNS = 2
 
 export async function POST(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const body = await req.json().catch(() => ({}))
   const s = await loadGuestSession(req, p.token, String(body?.sessionId || ''))
   if (!s) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
@@ -35,18 +35,32 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
 
   const guestTurns = await prisma.aishodanTurn.count({ where: { sessionId: s.id, speaker: 'guest' } })
 
-  if (guestTurns < MIN_GUEST_TURNS) {
-    await prisma.aishodanSession.update({
-      where: { id: s.id },
-      data: { status: 'aborted', endedAt: new Date() },
-    })
-    return NextResponse.json({ status: 'aborted' })
-  }
-
-  await prisma.aishodanSession.update({
-    where: { id: s.id },
-    data: { status: 'completed', endedAt: new Date() },
+  const nextStatus = guestTurns < MIN_GUEST_TURNS ? 'aborted' : 'completed'
+  // 読取時点で未終了でも、同時要求が先に終了させる場合がある。
+  // 未終了の行を実際に更新できた1要求だけが評価と通知へ進む。
+  const claimed = await prisma.aishodanSession.updateMany({
+    where: {
+      id: s.id,
+      organizationId: s.organizationId,
+      roomId: s.roomId,
+      guestId: s.guestId,
+      status: 'live',
+      startedAt: { not: null },
+      endedAt: null,
+    },
+    data: { status: nextStatus, endedAt: new Date() },
   })
+  if (claimed.count !== 1) {
+    const current = await prisma.aishodanSession.findFirst({
+      where: { id: s.id, organizationId: s.organizationId, roomId: s.roomId, guestId: s.guestId },
+      select: { status: true, endedAt: true },
+    })
+    if (current?.endedAt) {
+      return NextResponse.json({ status: current.status, alreadyEnded: true })
+    }
+    return NextResponse.json({ error: '商談の状態が変わりました。再読み込みしてご確認ください。' }, { status: 409 })
+  }
+  if (nextStatus === 'aborted') return NextResponse.json({ status: 'aborted' })
 
   const cfg = toScenarioConfig(s.room.scenario)
   const [turns, slotValues, unanswered] = await Promise.all([

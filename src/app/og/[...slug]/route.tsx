@@ -21,10 +21,8 @@ const OG_BG_SERVICES = new Set([
   'seo', 'interview', 'persona', 'doyalist', 'doyaslide', 'cunning', 'promane',
 ])
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { slug: string[] } }
-) {
+export async function GET(request: NextRequest, props: { params: Promise<{ slug: string[] }> }) {
+  const params = await props.params;
   const raw = params.slug?.[0]?.replace(/\.(png|jpg|jpeg)$/i, '') || 'portal'
   const svc = getServiceById(raw)
 

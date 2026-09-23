@@ -8,13 +8,23 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { loadSessionByToken } from '@/lib/mensetsu/public'
 
-type Ctx = { params: Promise<{ token: string }> | { token: string } }
+type Ctx = { params: Promise<{ token: string }> }
 
 const MAX_TURNS_PER_CALL = 50
 const MAX_TEXT_LEN = 5000
 
+// 任意の時刻・質問番号は、不明を0へ変換しない。
+// 壊れた補助情報があっても発話本文は保存し、不明な値はNULLとして扱う。
+function optionalNonnegativeInt(value: unknown): number | null {
+  if (value == null || (typeof value === 'string' && value.trim() === '')) return null
+  if (typeof value !== 'number' && typeof value !== 'string') return null
+  const number = typeof value === 'number' ? value : Number(value)
+  return Number.isSafeInteger(number) && number >= 0 && number <= 2147483647 ? number : null
+}
+
+
 export async function POST(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const s = await loadSessionByToken(p.token)
   if (!s) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
   if (!s.consentedAt) return NextResponse.json({ error: '同意が必要です' }, { status: 403 })
@@ -52,9 +62,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   //    評価AIもこのログを根拠に読むため、順序が狂うと採点が歪む。
   const rows = incoming
     .filter((t: any) => t && typeof t.text === 'string' && t.text.trim())
+    .map((t: any) => ({
+      ...t,
+      startMs: optionalNonnegativeInt(t.startMs),
+      endMs: optionalNonnegativeInt(t.endMs),
+      questionOrd: optionalNonnegativeInt(t.questionOrd),
+    }))
     .sort((a: any, b: any) => {
-      const av = Number.isFinite(Number(a?.startMs)) ? Number(a.startMs) : Number.MAX_SAFE_INTEGER
-      const bv = Number.isFinite(Number(b?.startMs)) ? Number(b.startMs) : Number.MAX_SAFE_INTEGER
+      const av = a.startMs ?? Number.MAX_SAFE_INTEGER
+      const bv = b.startMs ?? Number.MAX_SAFE_INTEGER
       return av - bv
     })
     .map((t: any) => ({
@@ -62,9 +78,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       ord: ord++,
       speaker: t.speaker === 'interviewer' ? 'interviewer' : 'candidate',
       text: String(t.text).slice(0, MAX_TEXT_LEN),
-      questionOrd: Number.isFinite(Number(t.questionOrd)) ? Number(t.questionOrd) : null,
-      startMs: Number.isFinite(Number(t.startMs)) ? Number(t.startMs) : null,
-      endMs: Number.isFinite(Number(t.endMs)) ? Number(t.endMs) : null,
+      questionOrd: t.questionOrd,
+      startMs: t.startMs,
+      endMs: t.endMs,
     }))
 
   if (rows.length === 0) return NextResponse.json({ saved: 0 })

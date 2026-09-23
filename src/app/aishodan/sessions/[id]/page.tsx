@@ -156,6 +156,8 @@ export default function AishodanSessionDetail() {
   const conditions: Array<{ label: string; met: boolean; weight: number; note: string }> = summary.conditions || []
   const unanswered = d.questions.filter((q) => q.unanswered)
 
+  const canEvaluate = !!d.startedAt && !!d.endedAt && ['completed', 'evaluated'].includes(d.status)
+
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
       <header className="border-b border-slate-200 bg-white">
@@ -240,7 +242,7 @@ export default function AishodanSessionDetail() {
             <div className="mt-5 border-t border-slate-100 pt-4">
               <button
                 onClick={() => void reEvaluate()}
-                disabled={saving}
+                disabled={saving || !canEvaluate}
                 className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
               >
                 自動判定をやり直す
@@ -269,12 +271,14 @@ export default function AishodanSessionDetail() {
             {/* ⚠️ 判定の生成は商談終了時の1回きりで、失敗すると作られない。
                  やり直す導線が無いと、本物の見込み客が判定不能のまま埋もれる。 */}
             <p className="mt-1 text-xs leading-relaxed text-amber-800 font-semibold">
-              自動判定の作成に失敗した可能性があります。やり直すか、ご自身で判定を入力してください。
+              {canEvaluate
+                ? '自動判定の作成に失敗した可能性があります。やり直すか、ご自身で判定を入力してください。'
+                : '自動判定は商談が終了してから実行できます。'}
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <button
                 onClick={() => void reEvaluate()}
-                disabled={saving}
+                disabled={saving || !canEvaluate}
                 className="rounded-lg bg-[#0066ff] px-4 py-2 text-xs font-bold text-white disabled:opacity-40"
               >
                 {saving ? '処理中…' : '自動判定をやり直す'}

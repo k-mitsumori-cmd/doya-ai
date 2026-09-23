@@ -169,11 +169,6 @@ export default function InterviewTool() {
       })
       const projectData = await projectRes.json()
       if (!projectData.success) {
-        if (projectRes.status === 429) {
-          setUpsellLimitType('generation')
-          setUpsellIsGuest(projectData.code === 'GUEST_LIMIT')
-          setUpsellOpen(true)
-        }
         throw new Error(projectData.error || 'プロジェクト作成失敗')
       }
 

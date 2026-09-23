@@ -12,14 +12,19 @@ export const metadata = {
 
 type Params = { orgSlug: string }
 
-export default async function ShodanOrgLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode
-  params: Promise<Params> | Params
-}) {
-  const p = 'then' in (params as any) ? await (params as Promise<Params>) : (params as Params)
+export default async function ShodanOrgLayout(
+  props: {
+    children: React.ReactNode
+    params: Promise<Params>
+  }
+) {
+  const params = await props.params;
+
+  const {
+    children
+  } = props;
+
+  const p = params
   const orgSlug = decodeURIComponent(p.orgSlug)
 
   const ctx = await getShodanContext(orgSlug)

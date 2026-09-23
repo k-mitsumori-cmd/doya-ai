@@ -10,7 +10,7 @@
 //    広告画像そのものが出てこない方が困る。
 //
 // 実装は前身 /adbanner の logo-overlay.ts を引き継いだ。
-import sharp from 'sharp'
+import sharp, { type OverlayOptions } from 'sharp'
 
 export type LogoPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center-top'
 
@@ -87,7 +87,7 @@ export async function overlayLogo(
     // ⚠️ 背景が暗いとロゴ（多くは濃色）が沈んで読めなくなる。
     //    暗い場所に置くときだけ白い下敷きを敷く。常に敷くと白背景で四角が浮く。
     const light = await isRegionLight(base, left, top, lw, lh)
-    const layers: sharp.OverlayOptions[] = []
+    const layers: OverlayOptions[] = []
     if (!light) {
       const plateW = lw + pad
       const plateH = lh + pad

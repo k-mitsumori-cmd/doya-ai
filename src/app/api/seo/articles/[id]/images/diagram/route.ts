@@ -1,3 +1,4 @@
+import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
@@ -13,11 +14,13 @@ const BodySchema = z.object({
   description: z.string().min(1).max(2000),
 })
 
-export async function POST(req: NextRequest, ctx: { params: { id: string } }) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
+    const owner = await getSeoArticleOwner(req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
     await ensureSeoSchema()
-    const articleId = ctx.params.id
-    const article = await (prisma as any).seoArticle.findUnique({ where: { id: articleId } })
+    const articleId = (await ctx.params).id
+    const article = await (prisma as any).seoArticle.findFirst({ where: { id: articleId, ...owner } })
     if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
 
     const body = BodySchema.parse(await req.json())

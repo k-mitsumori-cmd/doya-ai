@@ -16,7 +16,7 @@ import { generateForPlatform, GenerationOptions } from '@/lib/tenkai/generation-
 import { SUPPORTED_PLATFORMS } from '@/lib/tenkai/prompts/system'
 import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
-type Ctx = { params: Promise<{ platform: string }> | { platform: string } }
+type Ctx = { params: Promise<{ platform: string }> }
 
 export async function POST(req: NextRequest, ctx: Ctx) {
   // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }
     const userId = session.user.id
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const platform = p.platform
 
     if (!SUPPORTED_PLATFORMS.includes(platform)) {

@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ documents })
 }
 
-const VALID_SOURCES: PriceSource[] = ['own_price', 'market', 'competitor', 'manual', 'unknown']
+const VALID_SOURCES: PriceSource[] = ['own_price', 'market', 'competitor', 'manual', 'ai_estimate', 'unknown']
 
 export async function POST(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
@@ -46,6 +46,12 @@ export async function POST(req: NextRequest) {
   if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 402 })
 
   const body = await req.json().catch(() => ({}))
+
+  for (const [field, label] of [['notes', '備考'], ['paymentTerms', '支払条件'], ['deliveryTerms', '納期']] as const) {
+    if (body?.[field] != null && String(body[field]).length > 2000) {
+      return NextResponse.json({ error: `${label}は2,000文字以内で入力してください。入力内容は保存されていません。` }, { status: 400 })
+    }
+  }
 
   const title = String(body?.title || '').trim() || 'お見積り'
   const items: any[] = Array.isArray(body?.items) ? body.items.slice(0, 60) : []
@@ -67,48 +73,53 @@ export async function POST(req: NextRequest) {
   for (let attempt = 0; attempt < 5; attempt++) {
     const quoteNo = await nextQuoteNo(ctx.organizationId)
     try {
-      doc = await prisma.quoteDocument.create({
-        data: {
-          organizationId: ctx.organizationId,
-          productId,
-          quoteNo,
-          title: title.slice(0, 200),
-          clientCompany: body?.clientCompany ? String(body.clientCompany).slice(0, 200) : null,
-          clientDept: body?.clientDept ? String(body.clientDept).slice(0, 200) : null,
-          clientPerson: body?.clientPerson ? String(body.clientPerson).slice(0, 200) : null,
-          expiryDate: body?.expiryDate ? new Date(body.expiryDate) : defaultExpiry(),
-          paymentTerms: body?.paymentTerms ? String(body.paymentTerms).slice(0, 2000) : issuer?.paymentTerms ?? null,
-          deliveryTerms: body?.deliveryTerms ? String(body.deliveryTerms).slice(0, 2000) : issuer?.deliveryTerms ?? null,
-          notes: body?.notes ? String(body.notes).slice(0, 2000) : issuer?.notes ?? null,
-          lineItems: {
-            create: items
-              .filter((i) => i && i.itemName)
-              .map((i, idx) => ({
-                ord: idx,
-                itemName: String(i.itemName).slice(0, 200),
-                spec: i.spec ? String(i.spec).slice(0, 1000) : null,
-                qty: Number.isFinite(Number(i.qty)) ? Math.max(1, Math.round(Number(i.qty))) : 1,
-                unit: String(i.unit || '式').slice(0, 12),
-                unitPrice: Number.isFinite(Number(i.unitPrice)) ? Math.max(0, Math.round(Number(i.unitPrice))) : 0,
-                taxRate: Number(i.taxRate) === 8 ? 8 : 10,
-                priceSource: VALID_SOURCES.includes(i.priceSource) ? i.priceSource : 'manual',
-                sourceRef: i.sourceRef ? String(i.sourceRef).slice(0, 1000) : null,
-                rangeMin: Number.isFinite(Number(i.rangeMin)) ? Math.round(Number(i.rangeMin)) : null,
-                rangeMax: Number.isFinite(Number(i.rangeMax)) ? Math.round(Number(i.rangeMax)) : null,
-              })),
+      doc = await prisma.$transaction(async (tx) => {
+        const created = await tx.quoteDocument.create({
+          data: {
+            organizationId: ctx.organizationId,
+            productId,
+            quoteNo,
+            title: title.slice(0, 200),
+            clientCompany: body?.clientCompany ? String(body.clientCompany).slice(0, 200) : null,
+            clientDept: body?.clientDept ? String(body.clientDept).slice(0, 200) : null,
+            clientPerson: body?.clientPerson ? String(body.clientPerson).slice(0, 200) : null,
+            expiryDate: body?.expiryDate ? new Date(body.expiryDate) : defaultExpiry(),
+            paymentTerms: body?.paymentTerms ? String(body.paymentTerms).slice(0, 2000) : issuer?.paymentTerms ?? null,
+            deliveryTerms: body?.deliveryTerms ? String(body.deliveryTerms).slice(0, 2000) : issuer?.deliveryTerms ?? null,
+            notes: body?.notes ? String(body.notes).slice(0, 2000) : issuer?.notes ?? null,
+            lineItems: {
+              create: items
+                .filter((i) => i && i.itemName)
+                .map((i, idx) => ({
+                  ord: idx,
+                  itemName: String(i.itemName).slice(0, 200),
+                  spec: i.spec ? String(i.spec).slice(0, 1000) : null,
+                  qty: Number.isFinite(Number(i.qty)) ? Math.max(1, Math.round(Number(i.qty))) : 1,
+                  unit: String(i.unit || '式').slice(0, 12),
+                  unitPrice: Number.isFinite(Number(i.unitPrice)) ? Math.max(0, Math.round(Number(i.unitPrice))) : 0,
+                  taxRate: Number(i.taxRate) === 8 ? 8 : 10,
+                  priceSource: VALID_SOURCES.includes(i.priceSource) ? i.priceSource : 'manual',
+                  sourceRef: i.sourceRef ? String(i.sourceRef).slice(0, 1000) : null,
+                  rangeMin: Number.isFinite(Number(i.rangeMin)) ? Math.round(Number(i.rangeMin)) : null,
+                  rangeMax: Number.isFinite(Number(i.rangeMax)) ? Math.round(Number(i.rangeMax)) : null,
+                })),
+            },
           },
-        },
-        select: { id: true, quoteNo: true },
+          select: { id: true, quoteNo: true },
+        })
+        await recalcDocument(created.id, tx)
+        return created
       })
       break
     } catch (err: any) {
       // P2002 = unique制約違反。採番が競合しただけなのでやり直す
-      if (err?.code !== 'P2002') throw err
+      if (err?.code !== 'P2002') {
+        return NextResponse.json({ error: '見積書を作成できませんでした。再読み込みして状態をご確認ください。' }, { status: 500 })
+      }
     }
   }
   if (!doc) return NextResponse.json({ error: '見積書を作成できませんでした' }, { status: 500 })
 
-  await recalcDocument(doc.id)
 
   // 利用記録。⚠️ 失敗しても見積書作成は壊さない（throwしない実装）
   void recordServiceUsage({

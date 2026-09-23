@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
@@ -15,7 +15,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
 
     // Organization scoping: verify the work rule belongs to the caller's org
     const existing = await prisma.kintaiWorkRule.findFirst({
@@ -53,7 +53,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
 
     // Organization scoping: verify the work rule belongs to the caller's org
     const existingRule = await prisma.kintaiWorkRule.findFirst({

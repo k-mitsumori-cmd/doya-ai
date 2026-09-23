@@ -11,7 +11,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
-import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
+import { HIGH_USAGE_CONTACT_URL, BANNER_PRICING } from '@/lib/pricing'
 import SidebarTour from '@/components/SidebarTour'
 import MobileTourPopup, { BANNER_TOUR_SLIDES } from '@/components/MobileTourPopup'
 import { markLogoutToastPending } from '@/components/LogoutToastListener'
@@ -182,7 +182,7 @@ function DashboardSidebarImpl({
           <p className="text-[10px] text-blue-100 font-bold leading-relaxed opacity-80">
             {bannerPlanLabel === 'PRO' || bannerPlanLabel === 'ENTERPRISE'
               ? <>さらに上限UP：要相談</>
-              : <>プロ（¥9,980/月<TrialInlineSuffix />）で生成し放題に</>}
+              : <>プロ（¥9,980/月<TrialInlineSuffix />）で月{BANNER_PRICING.proLimit}枚まで</>}
           </p>
           {bannerPlanLabel === 'PRO' || bannerPlanLabel === 'ENTERPRISE' ? (
             <a

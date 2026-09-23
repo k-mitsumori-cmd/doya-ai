@@ -14,10 +14,10 @@ import { toScenarioConfig } from '@/lib/aishodan/public'
 import { retrieve } from '@/lib/aishodan/knowledge'
 import type { ProductProfile } from '@/lib/aishodan/types'
 
-type Ctx = { params: Promise<{ token: string }> | { token: string } }
+type Ctx = { params: Promise<{ token: string }> }
 
 export async function POST(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const body = await req.json().catch(() => ({}))
   const s = await loadGuestSession(req, p.token, String(body?.sessionId || ''))
   if (!s) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })

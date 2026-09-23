@@ -139,3 +139,36 @@ src/lib/promane/
 - フィードバック → Slack 通知: `/api/promane/feedback`
 - 使い方: `/promane/[workspaceSlug]/help`
 - 設定: `/promane/[workspaceSlug]/settings`
+
+
+第269巡・ローカル補修: タイムシートに月別/全期間の絞り込みと50件単位のページ送りを追加。合計は表示ページではなく対象期間全体。所属/計数/本文はRepeatableRead、ページカーソルは月と本人memberに結び付ける。実DB5群/模擬readを用いた実ブラウザ6群/標準155本とビルド合格。本番未反映。詳細: docs/audits/2026-09-20-loop-269/report.md。
+
+
+第270巡・ローカル補修: 時間記録の日付は実在するYYYY-MM-DDのみ受け付け、UTC午前0時で保存。既定の「今日」はJST、保存日表示は端末timezoneでずれない。時間は非負整数分、画面の分は0〜59、DB Int範囲を超える値や小数を丸めず拒否。0分は既存仕様どおり。既存データは変更しない。本番未反映。docs/audits/2026-09-20-loop-270/report.md。
+
+
+第271巡・ローカル補修: 経費HTTP追加/削除はowner/admin/memberの有効所属を必須とし、閲覧専用/未知roleを拒否。HTTP/Server Action/画面で非負整数円（DB Int範囲）、日付、カテゴリ、説明を共通検証。小数を切り捨てない。既定日はJST、表示はdate-only。本番未反映。docs/audits/2026-09-20-loop-271/report.md。
+
+### 第273巡・案件編集の空欄と日付（ローカル補修）
+
+案件編集で顧客・説明・見積工数・開始日・納期・タグを空にした場合はnullとして消去する。Server Actionの省略フィールドは既存値を保持する。新規・更新の日付は実在するYYYY-MM-DDに限定し、部分更新は既存の日付と比較して逆転を拒否する。実DB/模擬ブラウザの証拠は `docs/audits/2026-09-20-loop-273/report.md`。本番未反映。
+
+### 第274巡・案件文字数と選択肢（ローカル補修）
+
+作成/更新/UIで案件名200文字、説明5000文字、タグ500文字を共通検証。超過時は切り詰めず保存拒否。状態8種・請求方式4種の既存選択肢を許可する。省略による部分更新保持と明示空欄解除は維持。証拠は `docs/audits/2026-09-20-loop-274/report.md`。同時案件作成による枠超過は模擬環境で再現し、未修正。本番未反映。
+
+### 第275巡・案件作成上限の競合（ローカル補修）
+
+案件作成は所属・顧客・操作ユーザーのプラン・全参加workspace件数・保存をSerializableで処理する。P2034は最大3試行まで再判定し、上限到達はLIMITを返す。前巡の同時作成枠超過はローカル実DBで補修確認済み。本番未反映。証拠は `docs/audits/2026-09-20-loop-275/report.md`。課金オーナー/招待参加/重複送信/他書込の競合は残件。
+
+### 第276巡・案件の日付同時編集（ローカル補修）
+
+updateProjectもSerializableで既存値取得・検証・保存を行い、P2034時は最大3試行で最新値を検証し直す。矛盾する日付の同時変更は一方を拒否し、矛盾しない変更は双方保持することをローカル実DBで確認。本番未反映。同一フィールドの古い画面からの上書き警告は未対応。証拠は `docs/audits/2026-09-20-loop-276/report.md`。
+
+### 第277巡・管理用修復の競合（ローカル補修）
+
+修復は読み取り時の金額・日付と現在値が一致する場合だけ条件付き更新する。途中の訂正/削除はスキップし、実更新件数だけ計上する。実DBで訂正保護・削除・無関係な説明の保持・再実行を確認。本番未反映。証拠は `docs/audits/2026-09-20-loop-277/report.md`。
+
+Production DB update 2026-09-23: migration219 applied after local backup; all three existing time entries now have projectId and postflight found no missing schema. Code rollout/owner billing checks remain pending. Evidence: docs/audits/2026-09-23-history-order/production-app-schema-report.json.
+
+Latest production status 2026-09-23: code deployment `dpl_4VYkNiY94VqpJHtuJoSSY2NuTi18` is live; public route and unauthenticated boundary passed. Signed-in time-entry, project ownership and billing scenarios still require production-like end-to-end validation.

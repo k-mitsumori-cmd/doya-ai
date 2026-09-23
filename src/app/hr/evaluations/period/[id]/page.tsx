@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 
 interface Period {
+  canManageEvaluations: boolean
   id: string
   name: string
   startDate: string
@@ -100,6 +101,7 @@ export default function EvaluationPeriodDetailPage() {
   const evalByEmployee = new Map(evaluations.map((e) => [e.employeeId, e]))
 
   const handleCreate = async (employeeId: string) => {
+    if (!period?.canManageEvaluations) return
     setCreatingFor(employeeId)
     try {
       const res = await fetch('/api/hr/evaluations', {
@@ -122,6 +124,7 @@ export default function EvaluationPeriodDetailPage() {
   }
 
   const handleStatus = async (status: string) => {
+    if (!period?.canManageEvaluations) return
     setUpdatingStatus(true)
     try {
       const res = await fetch(`/api/hr/evaluations/periods/${id}`, {
@@ -196,7 +199,7 @@ export default function EvaluationPeriodDetailPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {period.status === 'DRAFT' && (
+            {period.canManageEvaluations && period.status === 'DRAFT' && (
               <button
                 onClick={() => handleStatus('OPEN')}
                 disabled={updatingStatus}
@@ -206,7 +209,7 @@ export default function EvaluationPeriodDetailPage() {
                 評価を開始する
               </button>
             )}
-            {(period.status === 'OPEN' || period.status === 'IN_REVIEW') && (
+            {period.canManageEvaluations && (period.status === 'OPEN' || period.status === 'IN_REVIEW') && (
               <button
                 onClick={() => handleStatus('CLOSED')}
                 disabled={updatingStatus}
@@ -218,7 +221,7 @@ export default function EvaluationPeriodDetailPage() {
             )}
           </div>
         </div>
-        {period.status === 'DRAFT' && (
+        {period.canManageEvaluations && period.status === 'DRAFT' && (
           <p className="mt-3 text-xs text-amber-600 bg-amber-50 rounded-xl px-3 py-2">
             「準備中」の評価期間はダッシュボードの「進行中の評価」に集計されません。各メンバーの評価を作成し、「評価を開始する」を押すと進行中になります。
           </p>
@@ -275,7 +278,7 @@ export default function EvaluationPeriodDetailPage() {
                         <span className="material-symbols-outlined text-base">edit_note</span>
                         評価を開く
                       </Link>
-                    ) : (
+                    ) : period.canManageEvaluations ? (
                       <button
                         onClick={() => handleCreate(emp.id)}
                         disabled={creatingFor === emp.id}
@@ -284,7 +287,7 @@ export default function EvaluationPeriodDetailPage() {
                         <span className="material-symbols-outlined text-base">add</span>
                         {creatingFor === emp.id ? '作成中...' : '評価を作成'}
                       </button>
-                    )}
+                    ) : <span className="text-xs text-slate-500">表示できる評価はありません</span>}
                   </div>
                 </motion.div>
               )

@@ -7,8 +7,9 @@ import { shodanGet, shodanSend } from '@/lib/shodan/client'
 import { DoyaKun, sym } from '@/components/shodan/ui'
 import type { ProposalSlide } from '@/lib/shodan/types'
 import toast from 'react-hot-toast'
+import { completeSlideImages } from '@/lib/shodan/complete-slide-images'
 
-type SlideImage = { title: string; imageUrl: string; role?: string }
+type SlideImage = { title: string; imageUrl: string | null; role?: string }
 type Prep = { id: string; targetName: string | null; slidesJson: ProposalSlide[] | null; slideImages: SlideImage[] | null }
 
 export default function ShodanSlidesEditPage() {
@@ -22,16 +23,21 @@ export default function ShodanSlidesEditPage() {
   const [active, setActive] = useState(0)
   const [pdfBusy, setPdfBusy] = useState(false)
 
-  const urlToDataUrl = (url: string) => fetch(url).then((r) => r.blob()).then((b) => new Promise<string>((res, rej) => {
+  const urlToDataUrl = (url: string) => fetch(url).then((r) => {
+    if (!r.ok) throw new Error('画像の取得に失敗しました。再読み込みしてからお試しください。')
+    return r.blob()
+  }).then((b) => new Promise<string>((res, rej) => {
     const fr = new FileReader(); fr.onload = () => res(fr.result as string); fr.onerror = rej; fr.readAsDataURL(b)
   }))
-  const imgSize = (dataUrl: string) => new Promise<{ w: number; h: number }>((res) => {
-    const im = new window.Image(); im.onload = () => res({ w: im.naturalWidth, h: im.naturalHeight }); im.onerror = () => res({ w: 1536, h: 1024 }); im.src = dataUrl
+  const imgSize = (dataUrl: string) => new Promise<{ w: number; h: number }>((res, rej) => {
+    const im = new window.Image(); im.onload = () => res({ w: im.naturalWidth, h: im.naturalHeight }); im.onerror = () => rej(new Error('画像を読み込めませんでした。再読み込みしてからお試しください。')); im.src = dataUrl
   })
 
   const downloadPdf = async () => {
-    const imgs = (prep?.slideImages || []).filter((s) => s.imageUrl)
-    if (!imgs.length) { toast.error('ダウンロードできる画像がありません'); return }
+    if (pdfBusy || Object.values(busy).some(Boolean)) return
+    let imgs: SlideImage[]
+    try { imgs = completeSlideImages(prep?.slidesJson, prep?.slideImages) }
+    catch (e) { toast.error((e as Error).message); return }
     setPdfBusy(true)
     try {
       const { jsPDF } = await import('jspdf')
@@ -46,7 +52,7 @@ export default function ShodanSlidesEditPage() {
         doc.addImage(dataUrl, 'PNG', (pw - dw) / 2, (ph - dh) / 2, dw, dh)
       }
       doc.save(`提案資料_${(prep?.targetName || 'slides').replace(/[\\/:*?"<>|]/g, '')}.pdf`)
-    } catch (e: any) { toast.error('PDFの作成に失敗しました') } finally { setPdfBusy(false) }
+    } catch (e: any) { toast.error(e?.message || 'PDFの作成に失敗しました') } finally { setPdfBusy(false) }
   }
 
   useEffect(() => {
@@ -73,6 +79,10 @@ export default function ShodanSlidesEditPage() {
   if (!prep) return <div className="p-10 text-center"><DoyaKun mood="thinking" size={88} /><p className="mt-2 text-slate-400 font-bold">読み込み中…</p></div>
 
   const slides = prep.slideImages || []
+  const totalSlides = prep.slidesJson?.length || 0
+  const readySlides = (prep.slidesJson || []).filter((_, index) => !!slides[index]?.imageUrl?.trim()).length
+  const missingSlides = totalSlides - readySlides
+  const complete = totalSlides > 0 && missingSlides === 0 && slides.length === totalSlides
 
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto">
@@ -86,10 +96,24 @@ export default function ShodanSlidesEditPage() {
           <p className="text-sm font-bold text-slate-400 mt-0.5">{prep.targetName || ''}・各スライドに指示を入れて再生成できます。</p>
         </div>
         {slides.some((s) => s.imageUrl) && (
-          <button onClick={downloadPdf} disabled={pdfBusy}
+          <button onClick={downloadPdf} disabled={!complete || pdfBusy || Object.values(busy).some(Boolean)}
             className="inline-flex items-center gap-1.5 px-5 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-sm shadow-lg shadow-purple-500/25 hover:-translate-y-0.5 transition-all disabled:opacity-60">
             {sym(pdfBusy ? 'progress_activity' : 'picture_as_pdf', 18)}{pdfBusy ? 'PDF作成中…' : 'PDFでダウンロード'}
           </button>
+        )}
+      </div>
+
+      <div role="status" className="mb-5 rounded-xl border border-purple-200 bg-purple-50 px-4 py-3 text-sm text-purple-950">
+        <p className="font-bold">画像の生成状況：{readySlides} / {totalSlides}枚{missingSlides > 0 ? `（残り${missingSlides}枚）` : ''}</p>
+        {!complete && (
+          <>
+            <p className="mt-1 text-xs leading-relaxed">{missingSlides > 0
+              ? '全スライドの画像が揃うとPDFをダウンロードできます。'
+              : '構成と画像が揃っていません。商談準備ページで資料をご確認ください。'}</p>
+            <Link href={`/shodan/${encodeURIComponent(orgSlug)}/p/${id}`} className="mt-2 inline-block font-bold text-purple-700 underline">
+              商談準備ページで{totalSlides > 0 ? '画像生成を続ける' : '資料を作成する'}
+            </Link>
+          </>
         )}
       </div>
 

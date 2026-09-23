@@ -1,3 +1,4 @@
+import { parsePromaneExpense, PromaneExpenseInputError } from '@/lib/promane/time-input'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -6,14 +7,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-
-function validateAmount(v: number | undefined | null, field: string): number {
-  if (v == null || v === 0) return 0
-  if (!Number.isFinite(v)) throw new Error(`${field}は数値で入力してください`)
-  if (v < 0) throw new Error(`${field}は 0以上の値を入力してください`)
-  if (v > 9_999_999_999) throw new Error(`${field}が大きすぎます`)
-  return Math.floor(v)
-}
 
 /**
  * POST /api/promane/expenses
@@ -28,15 +21,17 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json().catch(() => ({}))
-    const { workspaceSlug, projectId, category, amount, description, date } = body || {}
+    const { workspaceSlug, projectId } = body || {}
 
-    if (!workspaceSlug || !projectId) {
+    if (typeof workspaceSlug !== 'string' || !workspaceSlug.trim() || workspaceSlug.length > 200) {
       return NextResponse.json({ error: 'workspaceSlug と projectId は必須です' }, { status: 400 })
     }
 
+    const validated = parsePromaneExpense(body)
+
     // WS所属確認 + IDOR防止
     const workspace = await prisma.promaneWorkspace.findFirst({
-      where: { slug: workspaceSlug, members: { some: { userId, isActive: true } } },
+      where: { slug: workspaceSlug, members: { some: { userId, isActive: true, role: { in: ['owner', 'admin', 'member'] } } } },
       select: { id: true },
     })
     if (!workspace) return NextResponse.json({ error: 'ワークスペースにアクセスできません' }, { status: 403 })
@@ -47,24 +42,16 @@ export async function POST(req: NextRequest) {
     })
     if (!project) return NextResponse.json({ error: 'プロジェクトが見つかりません' }, { status: 404 })
 
-    const validatedAmount = validateAmount(amount, '金額')
-
     const expense = await prisma.promaneExpense.create({
-      data: {
-        projectId,
-        category: category || 'other',
-        amount: validatedAmount,
-        description: String(description || '').slice(0, 500),
-        date: date ? new Date(date) : new Date(),
-      },
+      data: validated,
     })
 
     return NextResponse.json({ success: true, expense })
   } catch (e: any) {
-    console.error('[promane/expenses][POST]', e)
+    if (!(e instanceof PromaneExpenseInputError)) console.error('[promane/expenses][POST] failed')
     return NextResponse.json(
-      { error: e?.message || '経費の追加に失敗しました' },
-      { status: e?.message?.includes('0以上') || e?.message?.includes('必須') ? 400 : 500 }
+      { error: e instanceof PromaneExpenseInputError ? e.message : '経費の追加に失敗しました。時間をおいて再試行してください。' },
+      { status: e instanceof PromaneExpenseInputError ? 400 : 500 }
     )
   }
 }
@@ -83,7 +70,7 @@ export async function DELETE(req: NextRequest) {
     if (!workspaceSlug || !id) return NextResponse.json({ error: 'workspaceSlug と id は必須' }, { status: 400 })
 
     const workspace = await prisma.promaneWorkspace.findFirst({
-      where: { slug: workspaceSlug, members: { some: { userId, isActive: true } } },
+      where: { slug: workspaceSlug, members: { some: { userId, isActive: true, role: { in: ['owner', 'admin', 'member'] } } } },
       select: { id: true },
     })
     if (!workspace) return NextResponse.json({ error: 'アクセス権なし' }, { status: 403 })
@@ -97,7 +84,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.promaneExpense.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    console.error('[promane/expenses][DELETE]', e)
-    return NextResponse.json({ error: e?.message || '削除に失敗しました' }, { status: 500 })
+    console.error('[promane/expenses][DELETE] failed')
+    return NextResponse.json({ error: '削除に失敗しました。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

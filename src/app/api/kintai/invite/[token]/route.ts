@@ -6,11 +6,11 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-type Ctx = { params: Promise<{ token: string }> | { token: string } }
+type Ctx = { params: Promise<{ token: string }> }
 
 export async function GET(req: NextRequest, ctx: Ctx) {
   try {
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const member = await prisma.kintaiMember.findFirst({
       where: { inviteToken: p.token, status: 'PENDING' },
       include: {
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'ユーザー情報の取得に失敗しました' }, { status: 400 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const member = await prisma.kintaiMember.findFirst({
       where: { inviteToken: p.token, status: 'PENDING' },
       include: { organization: { select: { name: true } } },

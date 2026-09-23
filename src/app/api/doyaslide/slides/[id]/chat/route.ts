@@ -12,11 +12,11 @@ import { raceTimeout } from '@/lib/fetch-timeout'
 import { composeSlideImage, type ComposeProject } from '@/lib/doyaslide/generate'
 
 // POST /api/doyaslide/slides/[id]/chat — チャットで指示 → 再生成方式で修正
-export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
     const userId = await getUserId()
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
 
     const body = await req.json().catch(() => ({}))
     const message = (body.message as string)?.trim()

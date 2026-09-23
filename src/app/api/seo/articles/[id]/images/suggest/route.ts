@@ -1,3 +1,4 @@
+import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 // ⚠️ AI生成を行うルートは maxDuration を必ず入れること。
@@ -22,13 +23,13 @@ const SuggestSchema = z.object({
   })).describe('提案する図解のリスト'),
 })
 
-export async function POST(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function POST(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
-    const article = await (prisma as any).seoArticle.findUnique({
-      where: { id: params.id },
+    const owner = await getSeoArticleOwner(_req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
+    const article = await (prisma as any).seoArticle.findFirst({
+      where: { id: params.id, ...owner },
       select: {
         title: true,
         outline: true,

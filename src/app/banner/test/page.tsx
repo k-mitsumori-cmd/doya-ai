@@ -7,6 +7,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Toaster, toast } from 'react-hot-toast'
 import DashboardSidebar from '@/components/DashboardSidebar'
 import Image from 'next/image'
+import BannerLimitModal from '@/components/banner/BannerLimitModal'
+import { useBannerQuota } from '@/components/banner/useBannerQuota'
+import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
 
 type BannerTemplate = {
   id: string
@@ -116,6 +119,8 @@ function BannerTestPageInner() {
   const [selectedTemplate, setSelectedTemplate] = useState<BannerTemplate | null>(null)
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [limitModal, setLimitModal] = useState<{ open: boolean; used?: number; limit?: number; message?: string; upgradeUrl?: string }>({ open: false })
+  const quota = useBannerQuota(setLimitModal)
   const [generatedBanners, setGeneratedBanners] = useState<GeneratedBanner[]>([])
   const [selectedBanner, setSelectedBanner] = useState<GeneratedBanner | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -165,8 +170,6 @@ function BannerTestPageInner() {
   const [lockModalType, setLockModalType] = useState<LockType>(null)
   const [lockedTemplate, setLockedTemplate] = useState<BannerTemplate | null>(null)
   
-  // 今日の生成数（ローカルストレージから取得）
-  const [todayGenerationCount, setTodayGenerationCount] = useState(0)
   
   // トライアル状態（ログイン後1時間は全機能解放）
   const [isTrialActive, setIsTrialActive] = useState(false)
@@ -284,26 +287,6 @@ function BannerTestPageInner() {
   
   const planLimits = useMemo(() => PLAN_LIMITS[userPlan] || PLAN_LIMITS.FREE, [userPlan])
   
-  // 今日の生成数をローカルストレージから読み込み
-  useEffect(() => {
-    const today = new Date().toISOString().split('T')[0]
-    const stored = localStorage.getItem('bannerGenerationCount')
-    if (stored) {
-      try {
-        const data = JSON.parse(stored)
-        if (data.date === today) {
-          setTodayGenerationCount(data.count || 0)
-        } else {
-          // 日付が変わったらリセット
-          localStorage.setItem('bannerGenerationCount', JSON.stringify({ date: today, count: 0 }))
-          setTodayGenerationCount(0)
-        }
-      } catch {
-        setTodayGenerationCount(0)
-      }
-    }
-  }, [])
-  
   // 画像のロック状態を判定する関数
   const getImageLockType = useCallback((template: BannerTemplate, indexInGenre: number): LockType => {
     // PRO以上は全解放
@@ -341,19 +324,9 @@ function BannerTestPageInner() {
     setShowLockModal(true)
   }, [])
   
-  // 1日の生成上限チェック
-  const isOverDailyLimit = useMemo(() => {
-    return todayGenerationCount >= planConfig.dailyLimit
-  }, [todayGenerationCount, planConfig.dailyLimit])
-  
-  // 生成数を更新する関数
-  const incrementGenerationCount = useCallback((count: number) => {
-    const today = new Date().toISOString().split('T')[0]
-    const newCount = todayGenerationCount + count
-    setTodayGenerationCount(newCount)
-    localStorage.setItem('bannerGenerationCount', JSON.stringify({ date: today, count: newCount }))
-  }, [todayGenerationCount])
-  
+  const monthlyLimit = quota.usage?.limit ?? -1
+  const isOverMonthlyLimit = monthlyLimit >= 0 && (quota.usage?.used ?? 0) >= monthlyLimit
+
   // ファイルアップロードハンドラ
   const handleLogoUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -856,6 +829,7 @@ function BannerTestPageInner() {
       return
     }
 
+    if (!(await quota.check(generateCount))) return
     setIsGenerating(true)
     setGeneratedBanners([])
     setGenerationProgress(0)
@@ -902,6 +876,19 @@ function BannerTestPageInner() {
       const result = await res.json()
 
       if (!res.ok) {
+        // 上限到達はエラーではなくアップグレードの分岐点。モーダルで受け止める。
+        if (res.status === 429 && result?.code === 'MONTHLY_LIMIT_REACHED') {
+          quota.acceptLimit(result?.usage)
+          setLimitModal({
+            open: true,
+            used: result?.usage?.monthlyUsed,
+            limit: result?.usage?.monthlyLimit,
+            message: result?.error,
+            upgradeUrl: result?.upgradeUrl,
+          })
+          setIsGenerating(false)
+          return
+        }
         throw new Error(result.error || '生成に失敗しました')
       }
 
@@ -914,12 +901,10 @@ function BannerTestPageInner() {
           prompt: result.prompts?.[idx] || '',
           createdAt: new Date(),
         }))
+        void quota.refresh()
         setGeneratedBanners(banners)
         setGenerationComplete(true)
         clearInterval(messageInterval)
-        
-        // 生成数をカウントアップ
-        incrementGenerationCount(banners.length)
         
         // 完了演出を3秒表示してからモーダルを閉じる
         setTimeout(() => {
@@ -953,6 +938,15 @@ function BannerTestPageInner() {
 
   return (
     <div className="min-h-screen bg-black text-white flex">
+      {/* 月次上限のアップセルモーダル（429 / MONTHLY_LIMIT_REACHED） */}
+      <BannerLimitModal
+        isOpen={limitModal.open}
+        onClose={() => setLimitModal({ open: false })}
+        monthlyUsed={limitModal.used}
+        monthlyLimit={limitModal.limit}
+        message={limitModal.message}
+        upgradeUrl={limitModal.upgradeUrl}
+      />
       {/* PC用サイドバー（モバイルでは完全に非表示） */}
       <div className="hidden md:block">
         <DashboardSidebar isMobile={false} />
@@ -1736,40 +1730,13 @@ function BannerTestPageInner() {
                       </p>
                       <div className="mt-2 flex flex-wrap gap-1.5">
                         <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 全画像解放</span>
-                        <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 月1000枚生成</span>
+                        <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 生成枠は使用状況をご確認ください</span>
                         <span className="px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200">✓ 詳細指示</span>
                       </div>
                     </div>
                   )}
                   
-                  {/* 今日の生成状況 */}
-                  <div className="p-3 sm:p-4 bg-gray-800/50 rounded-lg sm:rounded-xl border border-gray-700">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs sm:text-sm font-bold text-gray-300">今日の生成状況</span>
-                      <span className={`text-xs sm:text-sm font-bold ${
-                        isOverDailyLimit ? 'text-red-400' : todayGenerationCount > planConfig.dailyLimit * 0.8 ? 'text-yellow-400' : 'text-green-400'
-                      }`}>
-                        {todayGenerationCount} / {planConfig.dailyLimit}枚
-                        {isTrialActive && <span className="text-purple-400 ml-1">(トライアル)</span>}
-                      </span>
-                    </div>
-                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
-                      <div 
-                        className={`h-full transition-all duration-300 ${
-                          isTrialActive ? 'bg-gradient-to-r from-purple-500 to-pink-500' :
-                          isOverDailyLimit ? 'bg-red-500' : todayGenerationCount > planConfig.dailyLimit * 0.8 ? 'bg-yellow-500' : 'bg-green-500'
-                        }`}
-                        style={{ width: `${Math.min((todayGenerationCount / planConfig.dailyLimit) * 100, 100)}%` }}
-                      />
-                    </div>
-                    <p className="text-[10px] text-gray-500 mt-1.5">
-                      {isTrialActive ? 'トライアル' : planConfig.label}：1日{planConfig.dailyLimit}枚まで生成可能
-                      {!isTrialActive && currentPlan !== 'ENTERPRISE' && (
-                        <> / <a href="/banner/dashboard/plan" className="text-amber-400 hover:underline">上限を増やす</a></>
-                      )}
-                    </p>
-                  </div>
-                  
+                  <BannerQuotaNotice quota={quota} />
                   {/* ロゴ・人物写真アップロード */}
                   <div>
                     <label className="text-xs sm:text-sm font-bold mb-2 block">ロゴ / 人物写真（任意）</label>
@@ -1945,23 +1912,23 @@ function BannerTestPageInner() {
                         </div>
                       </div>
                     </div>
-                  ) : isOverDailyLimit ? (
+                  ) : isOverMonthlyLimit ? (
                     <div className="w-full py-3 sm:py-4 bg-gray-700 text-white rounded-lg sm:rounded-xl text-center">
                       <div className="flex items-center justify-center gap-2 text-red-400 font-bold text-sm sm:text-base">
                         <Lock className="w-4 h-4 sm:w-5 sm:h-5" />
-                        本日の生成上限（{planConfig.dailyLimit}枚）に達しました
+                        今月の生成上限（{monthlyLimit}枚）に達しました
                       </div>
                       <p className="text-xs text-gray-400 mt-1">
-                        明日0時にリセットされます
+                        来月1日にリセットされます
                         {currentPlan !== 'ENTERPRISE' && (
-                          <> / <a href="/banner/dashboard/plan" className="text-amber-400 hover:underline">プランをアップグレード</a></>
+                          <> / <button type="button" onClick={() => quota.usage && quota.showLimit(quota.usage)} className="text-amber-400 hover:underline">プランの詳細を見る</button></>
                         )}
                       </p>
                     </div>
                   ) : (
                     <button
                       onClick={handleGenerate}
-                      disabled={!serviceName.trim()}
+                      disabled={!serviceName.trim() || quota.checking}
                       className="w-full py-3 sm:py-4 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white font-bold rounded-lg sm:rounded-xl transition-colors flex items-center justify-center gap-2 text-sm sm:text-base"
                     >
                       <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -2793,6 +2760,7 @@ function BannerTestPageInner() {
                         return
                       }
                       
+                      if (!(await quota.check(1))) return
                       setIsEditing(true)
                       try {
                         // 修正APIを呼び出し
@@ -2811,6 +2779,14 @@ function BannerTestPageInner() {
                         })
                         
                         const result = await res.json()
+                        if (!res.ok) {
+                          if (res.status === 429 && result?.code === 'MONTHLY_LIMIT_REACHED') {
+                            quota.acceptLimit(result?.usage)
+                            setLimitModal({ open: true, used: result?.usage?.monthlyUsed, limit: result?.usage?.monthlyLimit, message: result?.error, upgradeUrl: result?.upgradeUrl })
+                            return
+                          }
+                          throw new Error(result.error || '修正に失敗しました')
+                        }
                         
                         if (result.banners && result.banners.length > 0) {
                           // 修正された画像を追加
@@ -2824,7 +2800,7 @@ function BannerTestPageInner() {
                           setEditingBanner(newBanner)
                           setEditPrompt('')
                           toast.success('画像を修正しました！')
-                          incrementGenerationCount(1)
+                          void quota.refresh()
                         } else {
                           throw new Error(result.error || '修正に失敗しました')
                         }
@@ -2835,7 +2811,7 @@ function BannerTestPageInner() {
                         setIsEditing(false)
                       }
                     }}
-                    disabled={isEditing || !editPrompt.trim()}
+                    disabled={isEditing || quota.checking || !editPrompt.trim()}
                     className="mt-4 w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 disabled:from-gray-600 disabled:to-gray-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed"
                   >
                     {isEditing ? (

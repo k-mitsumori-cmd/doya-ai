@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
   // ステージ所有確認（指定が無ければ先頭ステージ）
   let stageId = (body.stageId as string) || null
   let probability = 0
+  let status: 'open' | 'won' | 'lost' = 'open'
   const stage = stageId
     ? await prisma.sfaStage.findUnique({ where: { id: stageId }, include: { pipeline: true } })
     : await prisma.sfaStage.findFirst({
@@ -56,7 +57,9 @@ export async function POST(req: NextRequest) {
   if (stage && stage.pipeline.organizationId === ctx.organizationId) {
     stageId = stage.id
     probability = stage.probability
+    status = stage.isWon ? 'won' : stage.isLost ? 'lost' : 'open'
   } else {
+    if (stageId) return NextResponse.json({ error: '不正なステージです' }, { status: 400 })
     stageId = null
   }
 
@@ -75,6 +78,7 @@ export async function POST(req: NextRequest) {
     if (!isNaN(d.getTime())) startDate = d
   }
 
+  const now = new Date()
   const deal = await prisma.sfaDeal.create({
     data: {
       organizationId: ctx.organizationId,
@@ -84,9 +88,11 @@ export async function POST(req: NextRequest) {
       probability,
       accountId,
       assigneeMemberId: ctx.memberId,
-      status: 'open',
+      status,
+      wonAt: status === 'won' ? now : null,
+      lostAt: status === 'lost' ? now : null,
       startDate,
-      lastActivityAt: new Date(),
+      lastActivityAt: now,
     },
   })
   await recordServiceUsage({

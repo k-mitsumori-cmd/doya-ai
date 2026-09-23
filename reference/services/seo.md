@@ -116,3 +116,19 @@ src/lib/pricing.ts           # SEO_PRICING
 - **サイドバー**: `DashboardSidebar` (Banner/SEO共有)
 - サイドバーナビ: 「新規記事作成」「生成記事一覧」
 - **カラー**: slate / blue
+
+
+## 記事一覧・検索（2026-09-20 第265巡、ローカル）
+
+最新50件で打ち切らず、作成日時/id降順で続き取得。タイトル/キーワード部分一致と状態検索はサーバーで全所有記事に適用。合計/生成中/完成は全所有記事の集計、検索一致数と表示数を別に表示。ゲストは未移管の自分の記事のみ。続き失敗は現在の一覧を保持して再試行、検索変更時は旧応答を破棄する。詳細はdocs/audits/2026-09-20-loop-265/report.md。本番未反映。
+
+
+第268巡（ローカル）: ensureSeoSchemaは通常要求でDDLを実行せず、SEO9テーブル/102列の存在を読み取り確認する。成功60秒cache、失敗時は次要求で再確認。2026-09-20本番カタログ確認でSeoJob.executionToken/executionExpiresAt/supersededAtが未導入。docs/audits/2026-09-20-loop-268/migration.sqlをコード公開前に適用し、read-only preflightを再実行する必要がある。今回本番DDL未適用。型/制約/indexと稼働ジョブ切替は別途確認。
+
+### 第281巡・実行leaseの時刻（ローカル補修）
+
+実行期限の保存と比較はDB実時刻をUTCのtimestampへ明示変換する。DB接続のTimeZoneが違っても期限/排他/回収が変わらないことを、UTC・東京・米国の実PostgreSQL接続で確認。新しい実行資格コード・関連DDLは本番未反映。旧workerの停止確認と280の切替処理は別途必要。証拠は `docs/audits/2026-09-20-loop-281/report.md`。
+
+Production DB update 2026-09-23: migration268 added job lease columns; the separate 280 data cutover was NOT applied, old worker drain not proven, and new code was not deployed. Evidence: docs/audits/2026-09-23-history-order/production-app-schema-report.json.
+
+Latest production status 2026-09-23 (supersedes the prior cutover/code state): new code deployment `dpl_4VYkNiY94VqpJHtuJoSSY2NuTi18` is live. After the drain interval and read-only checks (no active execution leases, no recent SEO API requests/job updates), loop280 cutover marked one older job superseded. Postflight: older unsuperseded/resumable 0, active leases 0; the queued 10/running 31 status rows were preserved and are not counted as complete. Public SEO route and Twitter-image PNG passed HTTP checks. Signed-in job creation/resume/provider failure recovery remains unverified. Evidence: `docs/audits/2026-09-23-history-order/release-gates.md`.

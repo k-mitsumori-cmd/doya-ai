@@ -5,11 +5,9 @@
  *   毎朝の自動送信を止めた（`vercel.json` から該当エントリを削除）。
  *   ルートは残してあるので、必要になったら vercel.json へ戻すだけで復活する。
  *
- * ⚠ **GCP の数字自体は失われていない。** 朝7時の支出レポート
- *   （`/api/cron/spend-report` → `src/lib/spend-report.ts`）が
- *   同じ `fetchGCPUsageReport()` を呼んでおり、そちらには載り続ける。
- *   このファイルを消すと支出レポートが壊れるわけではないが、
- *   単独で見たいときの手掛かりが無くなるので残す。
+ * 2026-09-10: 毎朝7:10の支出レポートからも Gemini 費用表示と
+ *   GCP 利用量取得を削除。自動通知では利用しない。
+ *   このルートは認証付きの手動取得用として残す。
  */
 import { NextResponse } from 'next/server'
 import { sendGCPUsageReport, sendErrorNotification } from '@/lib/notifications'

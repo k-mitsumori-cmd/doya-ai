@@ -5,11 +5,12 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { getEvaluationReadWhere, getEvaluationReader } from '@/lib/hr/evaluation-access'
 import { prisma } from '@/lib/prisma'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function GET(req: NextRequest, ctx: Ctx) {
   try {
@@ -18,13 +19,16 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const id = p.id
+
+    const evaluationWhere = await getEvaluationReadWhere(hrCtx)
+    const reader = await getEvaluationReader(hrCtx)
 
     const period = await prisma.hrEvaluationPeriod.findFirst({
       where: { id, organizationId: hrCtx.organizationId },
       include: {
-        _count: { select: { evaluations: true } },
+        _count: { select: { evaluations: { where: evaluationWhere } } },
       },
     })
     if (!period) {
@@ -35,6 +39,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       success: true,
       period: {
         ...period,
+        canManageEvaluations: !!reader && reader.employeeId === null,
         evaluationTemplate: period.evaluationTemplate as any,
         evaluationCount: period._count.evaluations,
       },
@@ -63,7 +68,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const id = p.id
 
     const existing = await prisma.hrEvaluationPeriod.findFirst({
@@ -100,7 +105,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const id = p.id
 
     const existing = await prisma.hrEvaluationPeriod.findFirst({

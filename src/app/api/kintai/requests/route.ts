@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
       })
       if (myEmp?.departmentId) {
         const deptEmps = await prisma.kintaiEmployee.findMany({
-          where: { departmentId: myEmp.departmentId },
+          where: { organizationId: ctx.organizationId, departmentId: myEmp.departmentId },
           select: { id: true },
         })
         where.employeeId = { in: deptEmps.map((e) => e.id) }
@@ -79,7 +79,14 @@ export async function POST(req: NextRequest) {
     if (type === 'leave') {
       if (!details?.startDate) return NextResponse.json({ error: '開始日は必須です' }, { status: 400 })
       if (!details?.endDate) return NextResponse.json({ error: '終了日は必須です' }, { status: 400 })
-      if (details.startDate > details.endDate) return NextResponse.json({ error: '開始日は終了日より前にしてください' }, { status: 400 })
+      const start = new Date(details.startDate + 'T00:00:00Z')
+      const end = new Date(details.endDate + 'T00:00:00Z')
+      if (!['paid', 'special', 'unpaid'].includes(details.leaveType) ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(details.startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(details.endDate) ||
+          !Number.isFinite(+start) || !Number.isFinite(+end) || start.toISOString().slice(0, 10) !== details.startDate || end.toISOString().slice(0, 10) !== details.endDate || end < start) {
+        return NextResponse.json({ error: '休暇の種別・日付範囲をご確認ください。' }, { status: 400 })
+      }
+      if ((+end - +start) / 86400000 + 1 > 366) return NextResponse.json({ error: '1件の休暇申請は366日以内で指定してください。' }, { status: 400 })
     }
     if (type === 'overtime') {
       if (!details?.date) return NextResponse.json({ error: '対象日は必須です' }, { status: 400 })
@@ -89,11 +96,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '理由を入力してください' }, { status: 400 })
     }
 
+    const savedDetails = { ...(details || {}) }
+    delete savedDetails.leaveCancellation
     const request = await prisma.kintaiRequest.create({
       data: {
         employeeId: ctx.employeeId,
         type,
-        details: details || {},
+        details: savedDetails,
         reason: reason || null,
         status: 'pending',
       },

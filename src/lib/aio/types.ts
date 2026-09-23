@@ -66,6 +66,11 @@ export interface RunExtract {
 
 // ---- スキャン集計サマリ（AioScan.summary に保存） ----
 export interface ScanSummary {
+  // Successful observations only. Optional coverage preserves legacy saved summaries.
+  coverage?: {
+    attempted: number; succeeded: number; failed: number
+    failures: { promptId: string; engine: EngineId; iteration: number }[]
+  }
   totalRuns: number
   brandRuns: number // 自社が言及されたラン数
   awarenessPct: number
@@ -73,7 +78,7 @@ export interface ScanSummary {
   sentiment: { positive: number; neutral: number; negative: number }
   ownCitationPct: number
   // エンジン別の認知度（推移チャート用の当日値）
-  perEngine: { engine: EngineId; awarenessPct: number }[]
+  perEngine: { engine: EngineId; awarenessPct: number | null }[]
   // Share of Voice（自社＋競合）
   sov: { brand: string; mentions: number; pct: number; isOwn: boolean }[]
   // 上位の引用ドメイン
@@ -103,5 +108,7 @@ export interface Recommendation {
 // ⚠️ ここが正本。ルート（api/aio/scans）とサイドバーの表示
 //    （lib/usage-summary.ts）の両方がここを読む。
 // ⚠️ 有料も無制限にしない。1回で4エンジン×プロンプト数の実費が出る。
+// Registered prompts may exceed this; every active prompt must fit in one scan.
+export const AIO_MAX_PROMPTS_PER_SCAN = 30
 export const AIO_FREE_SCANS_PER_WEEK = 1
 export const AIO_SCANS_PER_MONTH = { PRO: 30, ENTERPRISE: 200 } as const

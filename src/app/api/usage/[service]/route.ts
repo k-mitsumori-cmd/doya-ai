@@ -9,12 +9,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getAioContext, orgSlugFrom } from '@/lib/aio/access'
+import { getAioUsage } from '@/lib/aio/usage'
 import { getUsageSummary } from '@/lib/usage-summary'
 
-type Ctx = { params: Promise<{ service: string }> | { service: string } }
+type Ctx = { params: Promise<{ service: string }> }
 
 export async function GET(_req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const service = String(p.service || '').trim()
 
   try {
@@ -29,9 +31,16 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     })
     if (!user) return NextResponse.json({ signedIn: false })
 
+    if (service === 'aio') {
+      const aio = await getAioContext(orgSlugFrom(_req))
+      if (!aio) return NextResponse.json({ error: '組織にアクセスできません', summary: null }, { status: 403 })
+      const summary = await getAioUsage(aio.organizationId)
+      if (!summary) return NextResponse.json({ error: '組織の契約情報を確認できません', summary: null }, { status: 409 })
+      return NextResponse.json({ signedIn: true, summary }, { headers: { 'Cache-Control': 'private, no-store' } })
+    }
     const summary = await getUsageSummary(service, user.id, user.plan)
     if (!summary) return NextResponse.json({ signedIn: true, summary: null })
-    return NextResponse.json({ signedIn: true, summary })
+    return NextResponse.json({ signedIn: true, summary }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (e) {
     console.error('[usage]', service, e instanceof Error ? e.message : e)
     // ⚠️ 表示だけの機能なので、失敗してもサイドバーは壊さない

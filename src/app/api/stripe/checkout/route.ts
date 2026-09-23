@@ -131,8 +131,12 @@ export async function POST(request: NextRequest) {
         )
       }
     } catch (e: any) {
-      // 照会失敗で決済を止めない（機会損失を作らない）。二重契約の検知は日次監査で拾う。
+      // 既存契約を確認できない状態では、二重契約を防ぐため決済を作らない。
       console.error('[Checkout] duplicate-subscription check failed:', e?.message)
+      return NextResponse.json({
+        code: 'SUBSCRIPTION_CHECK_UNAVAILABLE',
+        error: '現在の契約状況を確認できませんでした。二重のご請求を防ぐため決済を開始していません。時間をおいて再度お試しください。',
+      }, { status: 503 })
     }
 
     // ベースURL（環境変数が未設定でも現ドメインで成立させる）
@@ -177,10 +181,17 @@ export async function POST(request: NextRequest) {
     //  (b) 新規顧客のみ（メール横断で実サブスク履歴を照会。trial cycling防止）
     const trialablePlan =
       billingPeriod === 'monthly' && !planId.includes('enterprise') && planId !== 'bundle'
-    const trialDays =
-      trialablePlan && (await isTrialEligible({ email: session.user.email, stripeCustomerId: dbUser.stripeCustomerId }))
-        ? UNIFIED_TRIAL_DAYS
-        : undefined
+    let trialDays: number | undefined
+    if (trialablePlan) {
+      try {
+        if (await isTrialEligible({ email: session.user.email, stripeCustomerId: dbUser.stripeCustomerId })) trialDays = UNIFIED_TRIAL_DAYS
+      } catch {
+        return NextResponse.json({
+          code: 'TRIAL_CHECK_UNAVAILABLE',
+          error: '無料期間の対象か確認できなかったため、決済を開始していません。時間をおいて再度お試しください。',
+        }, { status: 503 })
+      }
+    }
 
     // Checkout Session作成
     const checkoutSession = await createCheckoutSession({

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { syncUnifiedBilling } from '@/lib/billing-sync'
 import { prisma } from '@/lib/prisma'
 import {
   stripe,
   resolvePlanIdFromSubscription,
   planTierFromPlanId,
-  ALL_SERVICE_IDS,
   ACTIVE_LIKE_STATUSES,
 } from '@/lib/stripe'
 import { sendEventNotification } from '@/lib/notifications'
@@ -79,48 +79,12 @@ export async function POST(_req: NextRequest) {
     const customerId = best.customerId
     // User.plan は階層をそのまま持ち、サービス行だけ BUNDLE→PRO に落とす。
     // （webhook / sync と同じ規約。以前はここだけ User.plan にも PRO を書いていた）
-    const userPlan = best.tier
-    const servicePlan = best.tier === 'BUNDLE' ? 'PRO' : best.tier
-
-    // DBへ反映
     const before = await prisma.user.findUnique({ where: { id: user.id }, select: { plan: true, name: true } })
-
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        stripeCustomerId: customerId,
-        stripeSubscriptionId: subscription.id,
-        stripePriceId: priceId || undefined,
-        stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-        plan: userPlan,
-      },
+    const { userPlan } = await syncUnifiedBilling({
+      userId: user.id, plan: best.tier,
+      stripeCustomerId: customerId, stripeSubscriptionId: subscription.id,
+      stripePriceId: priceId, stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
     })
-
-    // 統一課金: 全サービスを同じプランに揃える
-    for (const serviceId of ALL_SERVICE_IDS) {
-      await prisma.userServiceSubscription.upsert({
-        where: { userId_serviceId: { userId: user.id, serviceId } },
-        create: {
-          userId: user.id,
-          serviceId,
-          plan: servicePlan,
-          stripeSubscriptionId: subscription.id,
-          stripePriceId: priceId || undefined,
-          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-          dailyUsage: 0,
-          monthlyUsage: 0,
-          lastUsageReset: new Date(),
-        },
-        update: {
-          plan: servicePlan,
-          stripeSubscriptionId: subscription.id,
-          stripePriceId: priceId || undefined,
-          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-        },
-      }).catch((e: any) => {
-        console.error(`[Stripe Sync latest] upsert failed: user=${user.id} service=${serviceId}`, e?.message)
-      })
-    }
 
     // Webhook不達でも運営が気づけるよう、ここでも課金通知を出す（FREE→有料の遷移時のみ）
     if (before?.plan === 'FREE' && userPlan !== 'FREE') {

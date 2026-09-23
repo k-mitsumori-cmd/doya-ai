@@ -11,12 +11,19 @@ export async function GET(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
-  const tasks = await prisma.sfaTask.findMany({
+  const page = Number(req.nextUrl?.searchParams.get('page') || '1')
+  if (!Number.isSafeInteger(page) || page < 1 || page > 1000000) {
+    return NextResponse.json({ error: 'ページ番号が不正です' }, { status: 400 })
+  }
+  const pageSize = 200
+  const rows = await prisma.sfaTask.findMany({
     where: { organizationId: ctx.organizationId },
-    orderBy: [{ status: 'asc' }, { dueDate: 'asc' }, { createdAt: 'desc' }],
-    take: 200,
+    orderBy: [{ status: 'desc' }, { dueDate: 'asc' }, { createdAt: 'desc' }, { id: 'asc' }],
+    skip: (page - 1) * pageSize,
+    take: pageSize + 1,
     select: { id: true, title: true, status: true, dueDate: true, dealId: true, createdAt: true },
   })
+  const tasks = rows.slice(0, pageSize)
 
   // dealId → 商談名（SfaTask に Prisma リレーションは無いため1クエリで引き当て）
   const dealIds = Array.from(new Set(tasks.map((t) => t.dealId).filter((v): v is string => !!v)))
@@ -29,7 +36,7 @@ export async function GET(req: NextRequest) {
   const dealName = new Map(deals.map((d) => [d.id, d.name]))
 
   return NextResponse.json(
-    { tasks: tasks.map((t) => ({ ...t, dealName: t.dealId ? dealName.get(t.dealId) || null : null })) },
+    { tasks: tasks.map((t) => ({ ...t, dealName: t.dealId ? dealName.get(t.dealId) || null : null })), page, hasMore: rows.length > pageSize },
     { headers: { 'Cache-Control': 'no-store' } }
   )
 }

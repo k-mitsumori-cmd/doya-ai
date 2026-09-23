@@ -56,6 +56,7 @@ const SOURCE_STYLE: Record<string, string> = {
   market: 'bg-blue-50 text-blue-700 border-blue-200',
   competitor: 'bg-amber-50 text-amber-700 border-amber-200',
   manual: 'bg-slate-100 text-slate-600 border-slate-200',
+  ai_estimate: 'bg-violet-50 text-violet-700 border-violet-200',
   unknown: 'bg-rose-50 text-rose-700 border-rose-200',
 }
 
@@ -110,14 +111,15 @@ export default function QuoteDocumentPage() {
   }
 
   async function save(extra: Record<string, unknown> = {}) {
-    if (!id) return
+    if (!id || !doc || saving) return
+    if (doc.status !== 'draft' && !['draft', 'sent'].includes(String(extra.status))) return
     setSaving(true)
     setError('')
     try {
       const r = await fetch(withOrg('quote', `/api/quote/documents/${id}`), {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: JSON.stringify(doc.status !== 'draft' ? { status: extra.status } : {
           clientCompany,
           clientPerson,
           discountType: discountType || null,
@@ -136,7 +138,19 @@ export default function QuoteDocumentPage() {
       })
       const d = await r.json()
       if (!r.ok) throw new Error(d?.error || '保存に失敗しました')
-      await load()
+      if (!d.document || d.document.id !== id) {
+        throw new Error('保存結果を確認できませんでした。画面を再読み込みして状態をご確認ください。')
+      }
+      // 保存応答に再計算済みの内容が含まれるため、再取得の成否に依存しない。
+      setDoc(d.document)
+      setItems(d.document.lineItems || [])
+      setClientCompany(d.document.clientCompany || '')
+      setClientPerson(d.document.clientPerson || '')
+      setDiscountType(d.document.discountType || '')
+      setDiscountValue(d.document.discountValue ? String(d.document.discountValue) : '')
+      setNotes(d.document.notes || '')
+      setPaymentTerms(d.document.paymentTerms || '')
+      setDeliveryTerms(d.document.deliveryTerms || '')
     } catch (e) {
       notifyError(setError, e instanceof Error ? e.message : '保存に失敗しました')
     } finally {
@@ -163,6 +177,17 @@ export default function QuoteDocumentPage() {
   }
 
   const hasUndecided = items.some((i) => i.priceSource === 'unknown' || i.unitPrice <= 0)
+  const hasUnsavedChanges =
+    clientCompany !== (doc.clientCompany || '') ||
+    clientPerson !== (doc.clientPerson || '') ||
+    discountType !== (doc.discountType || '') ||
+    discountValue !== (doc.discountValue ? String(doc.discountValue) : '') ||
+    notes !== (doc.notes || '') ||
+    paymentTerms !== (doc.paymentTerms || '') ||
+    deliveryTerms !== (doc.deliveryTerms || '') ||
+    JSON.stringify(items) !== JSON.stringify(doc.lineItems || [])
+  const pdfUnavailable = saving || hasUnsavedChanges || Boolean(error)
+
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24">
@@ -182,30 +207,45 @@ export default function QuoteDocumentPage() {
             </span>
             <button
               onClick={() => save()}
-              disabled={saving}
+              disabled={saving || doc.status !== 'draft'}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40 font-semibold"
             >
               {saving ? '保存中...' : '保存'}
             </button>
-            <a
+            {pdfUnavailable ? (
+              <button disabled aria-describedby="quote-pdf-status"
+                className="rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-bold text-white opacity-40">
+                PDF
+              </button>
+            ) : <a
               href={withOrg('quote', `/api/quote/documents/${doc.id}/pdf`)}
               target="_blank"
               rel="noopener"
               className="rounded-lg bg-[#0066ff] px-4 py-2 text-sm font-bold text-white"
             >
               PDF
-            </a>
+            </a>}
           </div>
         </div>
       </header>
 
       <main className="mx-auto max-w-4xl space-y-5 px-4 py-6">
         {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
+        {pdfUnavailable && (
+          <p id="quote-pdf-status" role="status" className="text-sm font-semibold text-amber-800">
+            {saving ? '保存中です。完了するとPDFを開けます。'
+              : error ? 'PDFを開く前に、保存をやり直すか画面を再読み込みして状態をご確認ください。'
+              : '未保存の変更があります。保存してからPDFを開いてください。'}
+          </p>
+        )}
 
         {doc.status === 'draft' && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 font-semibold">
             この見積書は下書きです。PDFには「社内確認用」の透かしが入ります。内容を確認のうえ確定してください。
           </div>
+        )}
+        {doc.status !== 'draft' && (
+          <p className="text-sm text-slate-600">内容を編集する場合は、下の「下書きに戻す」を押してください。</p>
         )}
         {!issuer && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 font-semibold">
@@ -217,9 +257,9 @@ export default function QuoteDocumentPage() {
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           <h2 className="text-sm font-bold text-slate-900">宛先</h2>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            <input value={clientCompany} onChange={(e) => setClientCompany(e.target.value)} placeholder="会社名"
+            <input disabled={saving || doc.status !== 'draft'} value={clientCompany} onChange={(e) => setClientCompany(e.target.value)} placeholder="会社名"
               className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
-            <input value={clientPerson} onChange={(e) => setClientPerson(e.target.value)} placeholder="ご担当者名"
+            <input disabled={saving || doc.status !== 'draft'} value={clientPerson} onChange={(e) => setClientPerson(e.target.value)} placeholder="ご担当者名"
               className="rounded-xl border-2 border-slate-200 px-4 py-2.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
           </div>
         </section>
@@ -229,26 +269,26 @@ export default function QuoteDocumentPage() {
           <div className="mt-3 space-y-3">
             {items.map((it, idx) => (
               <div key={it.id || idx} className="rounded-xl border border-slate-200 p-4">
-                <input value={it.itemName} onChange={(e) => updateItem(idx, { itemName: e.target.value })}
+                <input disabled={saving || doc.status !== 'draft'} value={it.itemName} onChange={(e) => updateItem(idx, { itemName: e.target.value })}
                   className="w-full rounded-xl border-2 border-slate-200 px-3 py-2 text-sm font-semibold focus:border-[#0066ff] focus:outline-none" />
-                <textarea value={it.spec || ''} onChange={(e) => updateItem(idx, { spec: e.target.value })} rows={2}
+                <textarea disabled={saving || doc.status !== 'draft'} value={it.spec || ''} onChange={(e) => updateItem(idx, { spec: e.target.value })} rows={2}
                   placeholder="内訳・含まれるもの"
                   className="mt-2 w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-xs text-slate-600 focus:border-[#0066ff] focus:outline-none font-semibold" />
                 <div className="mt-3 flex flex-wrap items-end gap-3">
                   <label className="text-xs font-semibold">
                     <span className="mb-1 block text-slate-500">数量</span>
-                    <input value={it.qty} inputMode="numeric"
+                    <input disabled={saving || doc.status !== 'draft'} value={it.qty} inputMode="numeric"
                       onChange={(e) => updateItem(idx, { qty: Math.max(1, Number(e.target.value.replace(/[^0-9]/g, '')) || 1) })}
                       className="w-16 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
                   </label>
                   <label className="text-xs font-semibold">
                     <span className="mb-1 block text-slate-500">単位</span>
-                    <input value={it.unit} onChange={(e) => updateItem(idx, { unit: e.target.value })}
+                    <input disabled={saving || doc.status !== 'draft'} value={it.unit} onChange={(e) => updateItem(idx, { unit: e.target.value })}
                       className="w-16 rounded-xl border-2 border-slate-200 px-2 py-1.5 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
                   </label>
                   <label className="text-xs font-semibold">
                     <span className="mb-1 block text-slate-500">単価</span>
-                    <input value={it.unitPrice || ''} inputMode="numeric" placeholder="要見積"
+                    <input disabled={saving || doc.status !== 'draft'} value={it.unitPrice || ''} inputMode="numeric" placeholder="要見積"
                       onChange={(e) => {
                         const v = e.target.value.replace(/[^0-9]/g, '')
                         // 人が金額を変えたら出所ラベルも「手入力」に揃える
@@ -280,7 +320,7 @@ export default function QuoteDocumentPage() {
           <div className="mt-3 flex flex-wrap items-end gap-3">
             <label className="text-xs font-semibold">
               <span className="mb-1 block text-slate-500">値引き</span>
-              <select value={discountType} onChange={(e) => setDiscountType(e.target.value)}
+              <select disabled={saving || doc.status !== 'draft'} value={discountType} onChange={(e) => setDiscountType(e.target.value)}
                 className="rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none font-semibold">
                 <option value="">なし</option>
                 <option value="rate">率（%）</option>
@@ -290,7 +330,7 @@ export default function QuoteDocumentPage() {
             {discountType && (
               <label className="text-xs font-semibold">
                 <span className="mb-1 block text-slate-500">{discountType === 'rate' ? '割引率' : '割引額'}</span>
-                <input value={discountValue} inputMode="numeric"
+                <input disabled={saving || doc.status !== 'draft'} value={discountValue} inputMode="numeric"
                   onChange={(e) => setDiscountValue(e.target.value.replace(/[^0-9]/g, ''))}
                   className="w-28 rounded-xl border-2 border-slate-200 px-3 py-2 text-right text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
               </label>
@@ -299,18 +339,27 @@ export default function QuoteDocumentPage() {
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-semibold">
               <span className="mb-1 block text-slate-500">納期</span>
-              <textarea value={deliveryTerms} onChange={(e) => setDeliveryTerms(e.target.value)} rows={2}
+              <span className={`mb-1 block text-xs ${deliveryTerms.length > 2000 ? 'text-rose-600' : 'text-slate-500'}`} role="status">
+                {deliveryTerms.length} / 2,000文字{deliveryTerms.length > 2000 ? '：上限を超えています。内容を短くしてから保存してください。' : ''}
+              </span>
+              <textarea disabled={saving || doc.status !== 'draft'} value={deliveryTerms} onChange={(e) => setDeliveryTerms(e.target.value)} rows={2}
                 className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
             </label>
             <label className="text-xs font-semibold">
               <span className="mb-1 block text-slate-500">お支払い条件</span>
-              <textarea value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} rows={2}
+              <span className={`mb-1 block text-xs ${paymentTerms.length > 2000 ? 'text-rose-600' : 'text-slate-500'}`} role="status">
+                {paymentTerms.length} / 2,000文字{paymentTerms.length > 2000 ? '：上限を超えています。内容を短くしてから保存してください。' : ''}
+              </span>
+              <textarea disabled={saving || doc.status !== 'draft'} value={paymentTerms} onChange={(e) => setPaymentTerms(e.target.value)} rows={2}
                 className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
             </label>
           </div>
           <label className="mt-3 block text-xs font-semibold">
             <span className="mb-1 block text-slate-500">備考</span>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
+              <span className={`mb-1 block text-xs ${notes.length > 2000 ? 'text-rose-600' : 'text-slate-500'}`} role="status">
+                {notes.length} / 2,000文字{notes.length > 2000 ? '：上限を超えています。内容を短くしてから保存してください。' : ''}
+              </span>
+            <textarea disabled={saving || doc.status !== 'draft'} value={notes} onChange={(e) => setNotes(e.target.value)} rows={3}
               className="w-full resize-none rounded-xl border-2 border-slate-200 px-3 py-2 text-sm focus:border-[#0066ff] focus:outline-none font-semibold" />
           </label>
         </section>

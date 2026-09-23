@@ -8,6 +8,9 @@ import LoadingProgress from '@/components/LoadingProgress'
 import { Send, Sparkles, Bot, User, Wand2, Image as ImageIcon, Download, MessageSquare, ArrowRight, Settings, Menu, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
+import BannerLimitModal from '@/components/banner/BannerLimitModal'
+import { useBannerQuota } from '@/components/banner/useBannerQuota'
+import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
 
 type ChatMsg = {
   id: string
@@ -164,6 +167,8 @@ export default function BannerChatPage() {
   ])
   const [isThinking, setIsThinking] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [limitModal, setLimitModal] = useState<{ open: boolean; used?: number; limit?: number; message?: string; upgradeUrl?: string }>({ open: false })
+  const quota = useBannerQuota(setLimitModal)
   const [isRefining, setIsRefining] = useState(false)
   const [proposedSpec, setProposedSpec] = useState<BannerSpec | null>(null)
   const [generatedBanners, setGeneratedBanners] = useState<string[]>([])
@@ -193,12 +198,10 @@ export default function BannerChatPage() {
   const isProUser = !isGuest && bannerPlan === 'PRO'
 
   useEffect(() => {
-    if (!isProUser) {
-      if (generateCount !== 3) setGenerateCount(3)
-      return
-    }
-    if (generateCount < 3) setGenerateCount(3)
-    if (generateCount > 10) setGenerateCount(10)
+    // Keep the last one or two monthly credits usable; the API allows counts from one.
+    const max = isProUser ? 10 : 3
+    if (generateCount < 1) setGenerateCount(1)
+    if (generateCount > max) setGenerateCount(max)
   }, [isProUser, generateCount])
 
   const summary = useMemo(() => {
@@ -273,6 +276,7 @@ export default function BannerChatPage() {
 
   const handleGenerate = async () => {
     if (!proposedSpec || isGenerating) return
+    if (!(await quota.check(generateCount))) return
     setIsGenerating(true)
     setGeneratedBanners([])
     setSelectedBannerIndex(0)
@@ -302,7 +306,23 @@ export default function BannerChatPage() {
       })
       const parsed = await safeReadJson(res)
       const data = parsed.data || {}
-      if (!parsed.ok) throw new Error(data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || '生成に失敗しました')
+      if (!parsed.ok) {
+        // 上限到達はエラーではなくアップグレードの分岐点。モーダルで受け止める。
+        if (parsed.status === 429 && data?.code === 'MONTHLY_LIMIT_REACHED') {
+          quota.acceptLimit(data?.usage)
+          setLimitModal({
+            open: true,
+            used: data?.usage?.monthlyUsed,
+            limit: data?.usage?.monthlyLimit,
+            message: data?.error,
+            upgradeUrl: data?.upgradeUrl,
+          })
+          setIsGenerating(false)
+          return
+        }
+        throw new Error(data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || '生成に失敗しました')
+      }
+      void quota.refresh()
       setGeneratedBanners(Array.isArray(data.banners) ? data.banners : [])
       setSelectedBannerIndex(0)
       pushAssistant('生成できました。気になる案をダウンロードして使えます。')
@@ -417,6 +437,15 @@ export default function BannerChatPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-gray-900">
+      {/* 月次上限のアップセルモーダル（429 / MONTHLY_LIMIT_REACHED） */}
+      <BannerLimitModal
+        isOpen={limitModal.open}
+        onClose={() => setLimitModal({ open: false })}
+        monthlyUsed={limitModal.used}
+        monthlyLimit={limitModal.limit}
+        message={limitModal.message}
+        upgradeUrl={limitModal.upgradeUrl}
+      />
       {/* デスクトップのみサイドバー表示 */}
       <div className="hidden md:block">
         <DashboardSidebar />
@@ -510,6 +539,7 @@ export default function BannerChatPage() {
         </header>
 
         <div className="max-w-6xl mx-auto px-2 sm:px-6 py-2 sm:py-8">
+          <BannerQuotaNotice quota={quota} />
 
           <div className="grid lg:grid-cols-[1fr_360px] gap-4">
             {/* Chat */}
@@ -789,11 +819,11 @@ export default function BannerChatPage() {
                           <p className="text-xs font-black text-slate-900 tabular-nums whitespace-nowrap">{generateCount}枚</p>
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2">
-                          {[3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
                             <button
                               key={n}
                               type="button"
-                              disabled={!isProUser && n !== 3}
+                              disabled={!isProUser && n > 3}
                               onClick={() => setGenerateCount(n)}
                               className={`px-3 py-2 rounded-xl text-xs font-black border transition-colors ${
                                 generateCount === n
@@ -814,7 +844,7 @@ export default function BannerChatPage() {
 
                       <button
                         onClick={handleGenerate}
-                        disabled={isThinking || isGenerating}
+                        disabled={isThinking || isGenerating || quota.checking}
                         className="w-full px-6 py-5 rounded-2xl bg-blue-600 text-white font-black text-sm shadow-xl shadow-blue-200 hover:bg-blue-700 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
                       >
                         <Sparkles className="w-5 h-5" />

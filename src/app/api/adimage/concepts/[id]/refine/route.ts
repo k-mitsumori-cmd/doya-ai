@@ -18,10 +18,10 @@ import { findPlacement, groupByGenSize } from '@/lib/adimage/placements'
 import { downloadBuffer, signedUrl } from '@/lib/adimage/storage'
 import type { AdCopy, BrandProfile, RefineDirective } from '@/lib/adimage/types'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function POST(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const identity = await getIdentity(req)
   // ⚠️ ログイン必須。未ログインは識別子が無く、以降のスコープ条件が成立しない
   const auth = requireUser(identity)
@@ -88,8 +88,11 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   // ⚠️ 枠の判定は**実際に作る枚数**で行う。既定の1枚で見ていたため、
   //    残り2枚の人が改善を押すと3枚以上作れて上限を超えていた。
   //    生成を始める前に見ること（走らせてから弾くと課金だけ発生する）。
-  const quota = await assertQuota(identity, groups.length)
-  if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 429 })
+  const quota = await assertQuota(identity, placementKeys.length)
+  if (!quota.ok) {
+    const { ok: _ok, reason, ...details } = quota
+    return NextResponse.json({ error: reason, ...details }, { status: 429, headers: { 'Cache-Control': 'no-store' } })
+  }
   // ⚠️ 世代番号だけでパスを決めると、同じ親コンセプトから2回改善したときに
   //    パスが衝突し、uploadPng(upsert:true) が**先に作った画像を上書きする**。
   //    先の世代のレコードはそのパスを指したままなので、画像だけが黙って差し替わる。

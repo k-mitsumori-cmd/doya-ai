@@ -1,4 +1,4 @@
-import { assertUrlSafe, htmlToText } from '@/lib/net/safe-fetch'
+import { safeFetchText, htmlToText } from '@/lib/net/safe-fetch'
 
 interface ScrapedCompanyInfo {
   companyName?: string
@@ -14,7 +14,7 @@ interface ScrapedCompanyInfo {
   industry?: string
 }
 
-// SSRF対策は共有実装 @/lib/net/safe-fetch の assertUrlSafe に一本化（IPv4-mapped IPv6/CGNAT対応）
+// DNS検証だけでなく接続時のIP固定・redirect検証・本文上限も共有実装に委ねる。
 
 export async function scrapeCompanyWebsite(url: string, prefetchedHtml?: string): Promise<ScrapedCompanyInfo | null> {
   try {
@@ -23,29 +23,9 @@ export async function scrapeCompanyWebsite(url: string, prefetchedHtml?: string)
       // 呼び出し側で（SSRF安全に）取得済みのHTMLがあれば再取得しない
       html = prefetchedHtml
     } else {
-      const { url: validatedUrl } = await assertUrlSafe(url)
-
-      const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 10000)
-
-      const response = await fetch(validatedUrl.toString(), {
-        signal: controller.signal,
-        redirect: 'manual', // リダイレクト先の再検証が必要なため自動追跡しない
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; DoyaListBot/1.0)',
-          'Accept': 'text/html,application/xhtml+xml',
-        },
-      })
-      clearTimeout(timeout)
-
-      // 3xxリダイレクトは追跡しない（SSRF防止）
-      if (response.status >= 300 && response.status < 400) {
-        console.warn(`Redirect not followed for SSRF safety: ${url}`)
-        return null
-      }
-
-      if (!response.ok) return null
-      html = await response.text()
+      const fetched = await safeFetchText(url, { timeoutMs: 10000 })
+      if (fetched === null) return null
+      html = fetched
     }
 
     // 共有の htmlToText に一本化（AI処理用に先頭5000字へ制限）
@@ -54,8 +34,8 @@ export async function scrapeCompanyWebsite(url: string, prefetchedHtml?: string)
     // Use AI to extract structured data
     const extracted = await extractWithAI(text, url)
     return extracted
-  } catch (error) {
-    console.error(`Scrape error for ${url}:`, error)
+  } catch {
+    console.error('[doyalist] Website extraction failed')
     return null
   }
 }

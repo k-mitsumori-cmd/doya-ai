@@ -64,6 +64,8 @@ export async function getAishodanContext(orgSlug?: string): Promise<AishodanCont
         include: { organization: true },
       })
     : null
+  // 明示された組織で認可できない場合、別の所属組織に切り替えない。
+  if (orgSlug && !membership) return null
   if (!membership) {
     // ⚠️ 既定の組織は「自分が作った組織」を優先し、次に古い順にする。
     //    以前は createdAt の降順（最後に入った組織）にしていたため、

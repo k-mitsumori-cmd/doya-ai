@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { z } from 'zod'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
-import { ensureGuestId, getGuestIdFromRequest, setGuestCookie } from '@/lib/seoAccess'
+import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
+import { setGuestCookie } from '@/lib/seoAccess'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -18,90 +17,46 @@ const BodySchema = z
   })
   .strict()
 
-export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
-  const params = 'then' in ctx.params ? await ctx.params : ctx.params
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const params = await ctx.params
   const articleId = String(params.id || '').trim()
   
   try {
+    const owner = await getSeoArticleOwner(req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
     await ensureSeoSchema()
 
     if (!articleId) return NextResponse.json({ success: false, error: 'invalid id' }, { status: 400 })
 
-    const session = await getServerSession(authOptions)
-    const user: any = session?.user || null
-    const userId = String(user?.id || '').trim()
-
-    let guestId = getGuestIdFromRequest(req)
-    if (!userId && !guestId) guestId = ensureGuestId()
-
-    const bodyRaw = await req.json().catch(() => ({}))
-    const body = BodySchema.parse(bodyRaw)
-
-    const p = prisma as any
-    const article = await p.seoArticle.findUnique({ where: { id: articleId } })
-    if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
-
-    // 所有者チェック（ユーザー/ゲストで分離）
-    const articleUserId = String(article?.userId || '').trim()
-    const articleGuestId = String(article?.guestId || '').trim()
-    const canWriteByUser = !!userId && !!articleUserId && articleUserId === userId
-    const canWriteByGuest = !!guestId && !!articleGuestId && articleGuestId === guestId
-    if (!canWriteByUser && !canWriteByGuest) {
-      return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
-    }
-
-    // 再生成時は既存セクションがあると新しいジョブに紐づかず詰まるため、基本はリセット
-    if (body.resetSections) {
-      try {
-        await p.seoSection.deleteMany({ where: { articleId } })
-      } catch (e: any) {
-        // データベース接続エラーをログに記録
-        if (e?.message?.includes('MaxClientsInSessionMode') || e?.message?.includes('max clients reached')) {
-          console.error('[seo jobs] database connection pool exhausted', { articleId, error: e?.message })
-        }
-        // ignore
-      }
-      // 途中成果物は残して良いが、完成本文は再生成の邪魔になるのでクリア
-      try {
-        await p.seoArticle.update({
-          where: { id: articleId },
-          data: { status: 'RUNNING', finalMarkdown: null },
-        })
-      } catch (e: any) {
-        if (e?.message?.includes('MaxClientsInSessionMode') || e?.message?.includes('max clients reached')) {
-          console.error('[seo jobs] database connection pool exhausted', { articleId, error: e?.message })
-        }
-        // ignore
-      }
-    } else {
-      // resetしない場合でも、ジョブ起動としてはRUNNINGにする
-      try {
-        await p.seoArticle.update({ where: { id: articleId }, data: { status: 'RUNNING' } })
-      } catch (e: any) {
-        if (e?.message?.includes('MaxClientsInSessionMode') || e?.message?.includes('max clients reached')) {
-          console.error('[seo jobs] database connection pool exhausted', { articleId, error: e?.message })
-        }
-        // ignore
-      }
-    }
-
-    const job = await p.seoJob.create({
-      data: {
-        articleId,
-        status: 'queued',
-        step: 'init',
-        progress: 0,
-        error: null,
-        cursor: 0,
-        meta: null,
-      },
+    const body = BodySchema.parse(await req.json())
+    const job = await prisma.$transaction(async (tx) => {
+      // Claim the owned parent before resetting content or creating the new job.
+      await tx.seoArticle.update({
+        where: { id: articleId, ...owner },
+        data: { status: 'RUNNING', ...(body.resetSections ? { finalMarkdown: null } : {}) },
+        select: { id: true },
+      })
+      await tx.seoJob.updateMany({
+        where: { articleId: articleId, supersededAt: null },
+        data: { supersededAt: new Date(), executionToken: null, executionExpiresAt: null },
+      })
+      await tx.seoJob.updateMany({
+        where: { articleId: articleId, status: { in: ['queued', 'running', 'paused', 'error'] } },
+        data: { status: 'cancelled', executionToken: null, executionExpiresAt: null, finishedAt: new Date(), error: '新しい再生成ジョブに置き換えられました' },
+      })
+      if (body.resetSections) await tx.seoSection.deleteMany({ where: { articleId } })
+      return tx.seoJob.create({
+        data: { articleId, status: 'queued', step: 'init', progress: 0, error: null, cursor: 0 },
+      })
     })
 
     const res = NextResponse.json({ success: true, jobId: job.id, articleId, autoStart: body.autoStart })
     // ゲストの場合はcookieを継続
-    if (!userId && guestId) setGuestCookie(res, guestId)
+    if ('guestId' in owner) setGuestCookie(res, owner.guestId)
     return res
   } catch (e: any) {
+    if (e?.code === 'P2025') return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
+    if (e instanceof SyntaxError) return NextResponse.json({ success: false, error: '入力形式が正しくありません' }, { status: 400 })
     // バリデーションエラーの詳細を返す
     if (e?.name === 'ZodError') {
       const issues = e.issues?.map((issue: any) => ({
@@ -129,7 +84,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       )
     }
     console.error('[seo jobs] failed', { articleId, error: msg, stack: e?.stack })
-    return NextResponse.json({ success: false, error: msg }, { status: 400 })
+    return NextResponse.json({ success: false, error: '再生成を開始できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
 

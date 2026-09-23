@@ -116,8 +116,7 @@ export async function POST(req: NextRequest) {
       })
     } catch (e: any) {
       console.error('[doyalist/collect] API error', e)
-      // 失敗時は空プロジェクトを削除
-      try { await prisma.doyalistProject.delete({ where: { id: projectId } }) } catch {}
+      // 再収集先には既存企業・アプローチがあり得るため、失敗で削除しない。
       return NextResponse.json(
         { error: '企業データの取得に失敗しました。しばらく経ってから再試行してください。' },
         { status: 502 }
@@ -127,8 +126,7 @@ export async function POST(req: NextRequest) {
     const collected = collectedResult.companies
 
     if (collected.length === 0) {
-      // 空プロジェクトを削除して履歴に残さない
-      try { await prisma.doyalistProject.delete({ where: { id: projectId } }) } catch {}
+      // 0件は検索結果であり、既存プロジェクトを削除する指示ではない。
       // APIが応答していたかどうかで原因を区別
       if (!collectedResult.apiOk) {
         return NextResponse.json(

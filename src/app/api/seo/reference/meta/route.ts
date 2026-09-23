@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ensureSeoSchema } from '@seo/lib/bootstrap'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { safeFetchText } from '@/lib/net/safe-fetch'
 import { z } from 'zod'
 
 export const runtime = 'nodejs'
 
 const BodySchema = z.object({
-  urls: z.array(z.string().url()).min(1).max(30),
+  urls: z.array(z.string().url().max(8192)).min(1).max(30),
 })
 
 function stripTags(html: string): string {
@@ -58,40 +60,25 @@ async function fetchMeta(url: string): Promise<{
   ok: boolean
   error?: string
 }> {
-  const controller = new AbortController()
-  const timeoutMs = 9000
-  const t = setTimeout(() => controller.abort(), timeoutMs)
-  try {
-    const res = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'User-Agent':
-          'Mozilla/5.0 (compatible; DoyaSeoBot/1.0; +https://example.invalid) AppleWebKit/537.36 (KHTML, like Gecko)',
-        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      },
-      signal: controller.signal,
-      cache: 'no-store',
-    })
-    const html = await res.text()
-    const title = extractTitle(html)
-    const ogImage = extractOgImage(html)
-    return { url, host: hostOf(url), title, ogImage, ok: res.ok }
-  } catch (e: any) {
-    const msg = e?.name === 'AbortError' ? 'timeout' : e?.message || 'fetch failed'
-    return { url, host: hostOf(url), title: null, ogImage: null, ok: false, error: msg }
-  } finally {
-    clearTimeout(t)
-  }
+  const html = await safeFetchText(url, { timeoutMs: 9000 })
+  if (html === null) return { url, host: hostOf(url), title: null, ogImage: null, ok: false, error: 'URLを取得できませんでした' }
+  return { url, host: hostOf(url), title: extractTitle(html), ogImage: extractOgImage(html), ok: true }
+
 }
 
 export async function POST(req: NextRequest) {
   try {
-    await ensureSeoSchema()
+    const session = await getServerSession(authOptions)
+    if (!session?.user?.id) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
     const body = BodySchema.parse(await req.json())
-    const items = await Promise.all(body.urls.map((u) => fetchMeta(u)))
+    const items: Awaited<ReturnType<typeof fetchMeta>>[] = []
+    // Preserve input order while bounding per-request outbound concurrency.
+    for (let i = 0; i < body.urls.length; i += 5) {
+      items.push(...await Promise.all(body.urls.slice(i, i + 5).map(fetchMeta)))
+    }
     return NextResponse.json({ success: true, items })
-  } catch (e: any) {
-    return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 400 })
+  } catch {
+    return NextResponse.json({ success: false, error: '参考URLを確認してください' }, { status: 400 })
   }
 }
 

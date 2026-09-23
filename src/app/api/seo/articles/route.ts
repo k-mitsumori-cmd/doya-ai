@@ -1,3 +1,6 @@
+import { requireAdmin } from '@/lib/admin-guard'
+import { Prisma } from '@prisma/client'
+import { parseSeoListQuery, readSeoArticleList } from '@/lib/seo-article-list'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -23,46 +26,17 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   try {
     await ensureSeoSchema()
-    const seoArticle = (prisma as any).seoArticle as any
     const session = await getServerSession(authOptions)
     const user: any = session?.user || null
     const userId = String(user?.id || '').trim()
     const guestId = !userId ? getGuestIdFromRequest(req) : null
-    // 生成記事は3ヶ月（約90日）まで保持
-    const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
-
-    // 古い記事は削除（RUNNINGは除外して安全側）
-    try {
-      await seoArticle.deleteMany({
-        where: {
-          createdAt: { lt: cutoff },
-          status: { not: 'RUNNING' },
-        },
-      })
-    } catch {
-      // 失敗しても一覧表示自体は止めない
-    }
-
-    const where: any = { createdAt: { gte: cutoff } }
-    if (userId) where.userId = userId
-    else if (guestId) where.guestId = guestId
-    else where.id = '__none__'
-
-    const articles = await seoArticle.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-      include: {
-        jobs: { orderBy: { createdAt: 'desc' }, take: 1 },
-        // 一覧サムネ用（最新バナー1枚だけ）
-        images: {
-          where: { kind: 'BANNER' },
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
-      },
-    })
-    const res = NextResponse.json({ success: true, articles })
+    let query: ReturnType<typeof parseSeoListQuery>
+    try { query = parseSeoListQuery(new URL(req.url).searchParams) }
+    catch { return NextResponse.json({ success: false, error: '検索条件または取得位置が不正です。一覧を読み直してください。' }, { status: 400 }) }
+    const owner = userId ? { userId } : guestId ? { userId: null, guestId } : null
+    const result = owner ? await prisma.$transaction(tx => readSeoArticleList(tx, owner, query), { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead })
+      : { articles: [], nextCursor: null, counts: { total: 0, running: 0, done: 0, draft: 0 }, matched: 0 }
+    const res = NextResponse.json({ success: true, ...result }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
     if (!userId && !guestId) {
       const newGuest = ensureGuestId()
       setGuestCookie(res, newGuest)
@@ -71,7 +45,7 @@ export async function GET(req: NextRequest) {
   } catch (e: any) {
     // DB未反映/接続不可でも画面側が404にならないよう、明示的にJSONエラーを返す
     return NextResponse.json(
-      { success: false, error: e?.message || 'DBエラー（スキーマ未反映の可能性）', articles: [] },
+      { success: false, error: '記事一覧を取得できませんでした。時間をおいて再試行してください。', articles: [] },
       { status: 500 }
     )
   }
@@ -267,18 +241,9 @@ const NEW_BANNER_PROMPT = `あなたは成果の出る広告バナーを専門�
  */
 export async function PATCH(req: NextRequest) {
   try {
+    const denied = await requireAdmin()
+    if (denied) return denied
     await ensureSeoSchema()
-    
-    // 管理者認証
-    const session = await getServerSession(authOptions)
-    const user: any = session?.user || null
-    const email = String(user?.email || '').toLowerCase()
-    
-    // 管理者メールアドレスのチェック
-    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase())
-    if (!adminEmails.includes(email)) {
-      return NextResponse.json({ success: false, error: '管理者権限が必要です' }, { status: 403 })
-    }
 
     const body = await req.json().catch(() => ({}))
     const action = body.action || 'preview'
@@ -326,8 +291,8 @@ export async function PATCH(req: NextRequest) {
       message: `${oldBanners.length}件のバナーが更新対象です。action: "execute" で更新を実行してください。`,
     })
   } catch (e: any) {
-    console.error('migrate-prompts error:', e)
-    return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 500 })
+    console.error('migrate-prompts failed')
+    return NextResponse.json({ success: false, error: '管理処理を完了できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
 

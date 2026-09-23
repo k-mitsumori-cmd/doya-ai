@@ -73,6 +73,9 @@ model User {
 
   // 生成履歴
   generations Generation[]
+  personaProjects PersonaProject[]
+  personaImageUsageDays PersonaImageUsageDay[]
+  personaUsageDays PersonaUsageDay[]
 
   // SEO記事生成（ドヤ記事作成）
   seoArticles       SeoArticle[]
@@ -409,6 +412,7 @@ model SeoArticle {
   // 途中成果物
   outline       String? @db.Text
   finalMarkdown String? @db.Text
+  checkResults  Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -489,6 +493,10 @@ model SeoJob {
   // 途中再開用
   cursor Int   @default(0) // 次に生成するセクションindex
   meta   Json? // 進捗ログ/各ステップのカーソル等（JSON）
+
+  executionToken     String?
+  executionExpiresAt DateTime?
+  supersededAt       DateTime?
 
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
@@ -2585,6 +2593,7 @@ model PromaneProject {
   client         PromaneClient?   @relation(fields: [clientId], references: [id], onDelete: SetNull)
   tasks          PromaneTask[]
   expenses       PromaneExpense[]
+  timeEntries    PromaneTimeEntry[]
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
@@ -2620,6 +2629,8 @@ model PromaneTask {
 model PromaneTimeEntry {
   id        String        @id @default(cuid())
   taskId    String?
+  projectId String?
+  project   PromaneProject? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   memberId  String
   duration  Int
   date      DateTime
@@ -2630,6 +2641,7 @@ model PromaneTimeEntry {
   updatedAt DateTime      @updatedAt
 
   @@index([memberId])
+  @@index([projectId])
   @@map("promane_time_entries")
 }
 
@@ -2887,6 +2899,7 @@ model CunningSession {
   report             Json? // 終了時に生成する議事録＋評価（summary/decisions/todos/score/feedback/good/improve）
   status             String    @default("active") // active / ended
   durationSec        Int       @default(0) // 文字起こし時間（使用量計上の単位）
+  recordingVersion   Int       @default(1) // 1: legacy cumulative client; 2: server lease protocol
   startedAt          DateTime  @default(now())
   endedAt            DateTime?
   createdAt          DateTime  @default(now())
@@ -2894,10 +2907,52 @@ model CunningSession {
 
   transcripts CunningTranscript[]
   answers     CunningAnswer[]
+  recordingLease CunningRecordingLease?
+  usageAllocations CunningUsageAllocation[]
+  audioWindows CunningAudioWindow[]
 
   @@index([userId])
   @@index([userId, createdAt])
   @@map("cunning_sessions")
+}
+
+// Server-side recording accounting. API/UI cutover is a separate release gate.
+model CunningRecordingLease {
+  sessionId String @id
+  session CunningSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId String
+  token String @unique @default(uuid())
+  requestKey String
+  startedAt DateTime
+  audioProtocol String? // Selected atomically by the first audio admission/reservation.
+  settledThrough DateTime
+  expiresAt DateTime
+  stoppedAt DateTime?
+  finalRemoteAcceptedAt DateTime?
+  finalSelfAcceptedAt DateTime?
+  finalAnswerClaimedAt DateTime?
+  finalAnswerInputHash String?
+  finalAnswerAttempts Int @default(0)
+  finalRemoteInputHash String?
+  finalSelfInputHash String?
+  finalRemoteClaimedAt DateTime?
+  finalSelfClaimedAt DateTime?
+  finalRemoteAttempts Int @default(0)
+  finalSelfAttempts Int @default(0)
+  @@index([userId, stoppedAt])
+  @@map("cunning_recording_leases")
+}
+
+model CunningUsageAllocation {
+  sessionId String
+  session CunningSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId String
+  monthStart DateTime
+  usedMs BigInt @default(0)
+  reservedMs BigInt @default(0)
+  @@id([sessionId, monthStart])
+  @@index([userId, monthStart])
+  @@map("cunning_usage_allocations")
 }
 
 model CunningTranscript {
@@ -2907,6 +2962,10 @@ model CunningTranscript {
   speaker   String? // remote（相手）/ self（自分）
   text      String         @db.Text
   isFinal   Boolean        @default(true)
+  audioReceivedAt DateTime?
+  recordingFinal Boolean  @default(false)
+  finalAnswer CunningAnswer? @relation("CunningFinalAnswer")
+  audioWindow CunningAudioWindow?
   startMs   Int?
   endMs     Int?
   createdAt DateTime       @default(now())
@@ -2915,11 +2974,35 @@ model CunningTranscript {
   @@map("cunning_transcripts")
 }
 
+// Reserved during capture; uploads may arrive after the recording lease stops.
+model CunningAudioWindow {
+  id String @id @default(uuid())
+  sessionId String
+  session CunningSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  recordingToken String
+  speaker String
+  sequence Int
+  requestKey String
+  reservedAt DateTime
+  inputHash String?
+  claimToken String?
+  claimedAt DateTime?
+  attempts Int @default(0)
+  transcriptId String? @unique
+  transcript CunningTranscript? @relation(fields: [transcriptId], references: [id], onDelete: Restrict)
+
+  @@unique([sessionId, recordingToken, speaker, sequence], map: "cunning_audio_window_sequence_key")
+  @@unique([sessionId, recordingToken, speaker, requestKey], map: "cunning_audio_window_request_key")
+  @@map("cunning_audio_windows")
+}
+
 model CunningAnswer {
   id           String         @id @default(cuid())
   sessionId    String
   session      CunningSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   questionText String         @db.Text
+  finalTranscriptId String? @unique
+  finalTranscript CunningTranscript? @relation("CunningFinalAnswer", fields: [finalTranscriptId], references: [id], onDelete: Cascade)
   summary      String         @db.Text // 要点（一言回答）
   script       String         @db.Text // 話すスクリプト
   sources      Json? // 参照した根拠チップ
@@ -3412,7 +3495,7 @@ model AioScan {
   id             String          @id @default(cuid())
   organizationId String
   organization   AioOrganization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  status         String          @default("processing") // processing / done / failed
+  status         String          @default("processing") // processing / done / failed / deleted (content removed, usage retained)
   engines        Json? // 実行したエンジン ["chatgpt","gemini","claude","perplexity"]
   repetitions    Int             @default(3) // 1プロンプト×1エンジンあたりの反復回数
   errorMessage   String?         @db.Text
@@ -4365,4 +4448,81 @@ model CaseStudyApplication {
   @@index([status])
   @@index([createdAt])
   @@map("case_study_application")
+}
+
+// Persona server-owned revisions and durable image reservations.
+// Deliberately has no User/Project FK: survives account deletion until storage is empty.
+model PersonaImagePurgeTask {
+  projectId String @id
+  readyAt DateTime
+  attemptedAt DateTime?
+  @@index([readyAt])
+  @@map("persona_image_purge_tasks")
+}
+
+model PersonaProject {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  requestKey String
+  inputHash String
+  sourceUrl String?
+  status String @default("pending")
+  data Json?
+  includedImages Json?
+  usageDay DateTime
+  leaseToken String
+  leaseExpiresAt DateTime
+  failureCode String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  images PersonaImageJob[]
+  deletedAt DateTime?
+  imagesPurgedAt DateTime?
+  imagesPurgeAttemptedAt DateTime?
+  @@unique([userId, requestKey])
+  @@index([userId, usageDay, status], map: "persona_projects_user_day_status")
+  @@map("persona_projects")
+}
+
+model PersonaImageJob {
+  id String @id @default(uuid())
+  projectId String
+  project PersonaProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  requestKey String
+  inputHash String
+  slotKey String
+  kind String
+  intent String
+  status String @default("pending")
+  usageDay DateTime
+  leaseToken String
+  leaseExpiresAt DateTime
+  outputRef String?
+  failureCode String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([projectId, requestKey])
+  @@index([projectId, usageDay, intent, status], map: "persona_image_jobs_project_day_intent_status")
+  @@map("persona_image_jobs")
+}
+
+model PersonaImageUsageDay {
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day DateTime
+  reserved Int @default(0)
+  used Int @default(0)
+  @@id([userId, day])
+  @@map("persona_image_usage_days")
+}
+
+model PersonaUsageDay {
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day DateTime
+  reserved Int @default(0)
+  used Int @default(0)
+  @@id([userId, day])
+  @@map("persona_usage_days")
 }

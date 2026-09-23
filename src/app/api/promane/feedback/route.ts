@@ -1,3 +1,4 @@
+import { applyContextComment } from '../../../../lib/slack-context-comment';
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
         const r = await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(slackPayload),
+          body: JSON.stringify(applyContextComment(slackPayload)),
         })
         if (!r.ok) {
           console.error('[promane/feedback] Slack webhook failed', r.status)

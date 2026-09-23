@@ -9,10 +9,10 @@ import { prisma } from '@/lib/prisma'
 import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
 import { generateQuotePdf } from '@/lib/quote/pdf'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function GET(req: NextRequest, ctxParam: Ctx) {
-  const p = 'then' in ctxParam.params ? await ctxParam.params : ctxParam.params
+  const p = await ctxParam.params
   const ctx = await getQuoteContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 

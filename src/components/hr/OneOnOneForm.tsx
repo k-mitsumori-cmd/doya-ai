@@ -2,7 +2,7 @@
 
 import toast from 'react-hot-toast'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import AiInsightPanel from './AiInsightPanel'
 
@@ -39,6 +39,7 @@ interface OneOnOneFormProps {
   initialSharedNote?: string
   initialActionItems?: ActionItem[]
   readOnly?: boolean
+  canViewManagerNotes?: boolean
   onSave?: (data: any) => void
 }
 
@@ -46,13 +47,14 @@ export default function OneOnOneForm({
   recordId,
   employeeId,
   employeeName = '',
-  initialDate = new Date().toISOString().slice(0, 16),
+  initialDate = '',
   initialDuration = 30,
   initialAgenda = [],
   initialManagerNote = '',
   initialSharedNote = '',
   initialActionItems = [],
   readOnly = false,
+  canViewManagerNotes = false,
   onSave,
 }: OneOnOneFormProps) {
   const [date, setDate] = useState(initialDate)
@@ -72,6 +74,9 @@ export default function OneOnOneForm({
   const [aiResult, setAiResult] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)
+  const aiLoadingRef = useRef(false)
+  const editingDisabled = readOnly || saving || aiLoading
 
   // Agenda handlers
   const addAgenda = () => {
@@ -100,9 +105,14 @@ export default function OneOnOneForm({
   }
 
   const handleAiSummary = async () => {
+    if (readOnly || !canViewManagerNotes || savingRef.current || aiLoadingRef.current) return
+    aiLoadingRef.current = true
     setAiLoading(true)
     setAiResult(null)
     try {
+      if (recordId && !(await handleSave())) {
+        throw new Error('入力内容を保存できなかったため、要約を開始しませんでした。保存内容をご確認ください。')
+      }
       const url = recordId
         ? `/api/hr/one-on-one/${recordId}/ai-summary`
         : '/api/hr/one-on-one/ai-summary'
@@ -113,31 +123,34 @@ export default function OneOnOneForm({
           recordId,
           employeeId,
           agenda,
-          managerNote,
+          ...(canViewManagerNotes ? { managerNote } : {}),
           sharedNote,
           actionItems,
         }),
       })
-      if (!res.ok) throw new Error('AI要約の生成に失敗しました')
       const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'AI要約の生成に失敗しました')
       setAiResult(data.aiSummary || data.summary || data.result || '')
     } catch (e: any) {
       setAiResult(`エラー: ${e.message}`)
     } finally {
+      aiLoadingRef.current = false
       setAiLoading(false)
     }
   }
 
   const handleSave = async () => {
+    if (readOnly || savingRef.current) return false
+    savingRef.current = true
     setSaving(true)
     try {
       const payload = {
         recordId,
         employeeId,
-        date,
+        date: date ? new Date(date).toISOString() : null,
         duration,
         agenda,
-        managerNote,
+        ...(canViewManagerNotes ? { managerNote } : {}),
         sharedNote,
         actionItems,
       }
@@ -145,7 +158,7 @@ export default function OneOnOneForm({
         await onSave(payload)
       } else {
         const url = recordId ? `/api/hr/one-on-one/${recordId}` : '/api/hr/one-on-one'
-        const method = recordId ? 'PUT' : 'POST'
+        const method = recordId ? 'PATCH' : 'POST'
         const res = await fetch(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
@@ -153,11 +166,19 @@ export default function OneOnOneForm({
         })
         if (!res.ok) throw new Error('保存に失敗しました')
       }
+      return true
     } catch (e: any) {
       toast.error(e.message)
+      return false
     } finally {
+      savingRef.current = false
       setSaving(false)
     }
+  }
+
+  const handleManualSave = async () => {
+    if (aiLoadingRef.current) return false
+    return handleSave()
   }
 
   return (
@@ -181,7 +202,7 @@ export default function OneOnOneForm({
               type="datetime-local"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              disabled={readOnly}
+              disabled={editingDisabled}
               className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
             />
           </div>
@@ -190,7 +211,7 @@ export default function OneOnOneForm({
             <select
               value={duration}
               onChange={(e) => setDuration(parseInt(e.target.value))}
-              disabled={readOnly}
+              disabled={editingDisabled}
               className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
             >
               <option value={15}>15分</option>
@@ -214,6 +235,7 @@ export default function OneOnOneForm({
             <button
               type="button"
               onClick={addAgenda}
+              disabled={editingDisabled}
               className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 hover:shadow-lg transition-all"
             >
               <span className="material-symbols-outlined text-lg">add_circle</span>
@@ -237,14 +259,14 @@ export default function OneOnOneForm({
                     type="text"
                     value={item.topic}
                     onChange={(e) => updateAgenda(item.id, 'topic', e.target.value)}
-                    disabled={readOnly}
+                    disabled={editingDisabled}
                     className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 mb-2"
                     placeholder="トピックを入力"
                   />
                   <select
                     value={item.category}
                     onChange={(e) => updateAgenda(item.id, 'category', e.target.value)}
-                    disabled={readOnly}
+                    disabled={editingDisabled}
                     className="px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-base font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
                   >
                     {AGENDA_CATEGORIES.map((c) => (
@@ -258,6 +280,7 @@ export default function OneOnOneForm({
                   <button
                     type="button"
                     onClick={() => removeAgenda(item.id)}
+                    disabled={editingDisabled}
                     aria-label="アジェンダを削除"
                     className="text-slate-400 hover:text-red-500 transition-colors mt-2"
                   >
@@ -283,25 +306,25 @@ export default function OneOnOneForm({
           <textarea
             value={sharedNote}
             onChange={(e) => setSharedNote(e.target.value)}
-            disabled={readOnly}
+            disabled={editingDisabled}
             rows={4}
             className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 resize-none"
             placeholder="1on1の内容を記録..."
           />
         </div>
-        <div>
+        {canViewManagerNotes && <div>
           <label className="block text-sm font-bold text-slate-700 mb-1">
-            上司メモ（上司のみ閲覧可）
+            上司メモ（担当上司・管理者のみ閲覧可）
           </label>
           <textarea
             value={managerNote}
             onChange={(e) => setManagerNote(e.target.value)}
-            disabled={readOnly}
+            disabled={editingDisabled}
             rows={3}
             className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 resize-none"
             placeholder="部下には見えないメモ..."
           />
-        </div>
+        </div>}
       </div>
 
       {/* Action Items */}
@@ -315,6 +338,7 @@ export default function OneOnOneForm({
             <button
               type="button"
               onClick={addAction}
+              disabled={editingDisabled}
               className="flex items-center gap-1 px-3 py-1.5 bg-sky-50 text-sky-600 rounded-lg text-sm font-semibold hover:bg-sky-100 transition-colors"
             >
               <span className="material-symbols-outlined text-lg">add</span>
@@ -334,8 +358,8 @@ export default function OneOnOneForm({
               <div className="flex gap-3 items-start p-3 bg-slate-50 rounded-xl border border-slate-100">
                 <button
                   type="button"
-                  onClick={() => !readOnly && updateAction(item.id, 'done', !item.done)}
-                  disabled={readOnly}
+                  onClick={() => !editingDisabled && updateAction(item.id, 'done', !item.done)}
+                  disabled={editingDisabled}
                   className="mt-1.5"
                 >
                   <span className={`material-symbols-outlined text-xl ${item.done ? 'text-emerald-500' : 'text-slate-300'}`}
@@ -350,7 +374,7 @@ export default function OneOnOneForm({
                       type="text"
                       value={item.content}
                       onChange={(e) => updateAction(item.id, 'content', e.target.value)}
-                      disabled={readOnly}
+                      disabled={editingDisabled}
                       className={`w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 ${item.done ? 'line-through text-slate-400' : ''}`}
                       placeholder="アクションアイテムを入力"
                     />
@@ -360,7 +384,7 @@ export default function OneOnOneForm({
                       type="date"
                       value={item.dueDate}
                       onChange={(e) => updateAction(item.id, 'dueDate', e.target.value)}
-                      disabled={readOnly}
+                      disabled={editingDisabled}
                       className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100"
                     />
                   </div>
@@ -369,6 +393,7 @@ export default function OneOnOneForm({
                   <button
                     type="button"
                     onClick={() => removeAction(item.id)}
+                    disabled={editingDisabled}
                     aria-label="アクションアイテムを削除"
                     className="text-slate-400 hover:text-red-500 transition-colors mt-1.5"
                   >
@@ -382,7 +407,7 @@ export default function OneOnOneForm({
       </div>
 
       {/* AI Summary */}
-      {!readOnly && (
+      {!readOnly && canViewManagerNotes && (
         <div className="bg-white rounded-3xl shadow-md p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
@@ -392,7 +417,7 @@ export default function OneOnOneForm({
             <button
               type="button"
               onClick={handleAiSummary}
-              disabled={aiLoading}
+              disabled={editingDisabled}
               className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full text-base font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
             >
               {aiLoading ? (
@@ -404,7 +429,9 @@ export default function OneOnOneForm({
             </button>
           </div>
           {(aiLoading || aiResult) && (
-            <AiInsightPanel loading={aiLoading} content={aiResult || ''} />
+            aiResult?.startsWith('エラー:')
+              ? <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">{aiResult}</p>
+              : <AiInsightPanel loading={aiLoading} content={aiResult || ''} />
           )}
         </div>
       )}
@@ -414,8 +441,8 @@ export default function OneOnOneForm({
         <div className="flex justify-end gap-3">
           <button
             type="button"
-            onClick={handleSave}
-            disabled={saving}
+            onClick={handleManualSave}
+            disabled={editingDisabled}
             className="flex items-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full text-base font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-lg">save</span>

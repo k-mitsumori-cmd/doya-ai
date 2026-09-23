@@ -12,10 +12,10 @@ import { advance } from '@/lib/mensetsu/interview'
 import { chooseBranch } from '@/lib/mensetsu/branch'
 import { prisma as db } from '@/lib/prisma'
 
-type Ctx = { params: Promise<{ token: string }> | { token: string } }
+type Ctx = { params: Promise<{ token: string }> }
 
 export async function POST(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const s = await loadSessionByToken(p.token)
   if (!s) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
   if (!s.consentedAt) return NextResponse.json({ error: '同意が必要です' }, { status: 403 })

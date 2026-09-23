@@ -7,13 +7,13 @@ import { prisma } from '@/lib/prisma'
 import { getShodanContext, hasMinRole, orgSlugFrom } from '@/lib/shodan/access'
 import { ROLE_HIERARCHY } from '@/lib/shodan/types'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 const rank = (role: string) => ROLE_HIERARCHY[role] ?? 0
 const EDITABLE_ROLES = ['member', 'manager', 'admin']
 
 // PATCH /api/shodan/members/[id] — 権限変更（admin+）
 export async function PATCH(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const sctx = await getShodanContext(orgSlugFrom(req))
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   if (!hasMinRole(sctx.role, 'admin')) return NextResponse.json({ error: '権限がありません' }, { status: 403 })
@@ -39,7 +39,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
 // DELETE /api/shodan/members/[id] — メンバー削除/招待取消（admin+）
 export async function DELETE(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const sctx = await getShodanContext(orgSlugFrom(req))
   if (!sctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   if (!hasMinRole(sctx.role, 'admin')) return NextResponse.json({ error: '権限がありません' }, { status: 403 })

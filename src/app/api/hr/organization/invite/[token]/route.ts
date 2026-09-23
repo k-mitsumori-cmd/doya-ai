@@ -7,11 +7,11 @@ import { prisma } from '@/lib/prisma'
 
 // GET /api/hr/organization/invite/[token]
 // 招待情報を取得（認証不要 — 招待ページ表示用）
-type Ctx = { params: Promise<{ token: string }> | { token: string } }
+type Ctx = { params: Promise<{ token: string }> }
 
 export async function GET(req: NextRequest, ctx: Ctx) {
   try {
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const token = p.token
 
     if (!token) {

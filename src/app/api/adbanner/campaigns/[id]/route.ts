@@ -8,14 +8,14 @@ import { getAdIdentity, ownerWhere } from '@/lib/adbanner/access'
 import { signedUrl } from '@/lib/adbanner/storage'
 import { ADBANNER_RETIRED, retiredResponse } from '@/lib/adbanner/retired'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 // GET /api/adbanner/campaigns/[id] — 詳細（バナーに署名付きURLを付与）
 export async function GET(req: NextRequest, ctx: Ctx) {
   // ⚠️ /adimage へ統合済み。入口だけ閉じる（本体は復旧の余地のため残す）
   if (ADBANNER_RETIRED) return retiredResponse()
 
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const id = await getAdIdentity(req)
   const where = ownerWhere(id)
   if (!where) return NextResponse.json({ success: false, error: '見つかりません' }, { status: 404 })
@@ -49,7 +49,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
   // ⚠️ /adimage へ統合済み。入口だけ閉じる（本体は復旧の余地のため残す）
   if (ADBANNER_RETIRED) return retiredResponse()
 
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const id = await getAdIdentity(req)
   const where = ownerWhere(id)
   if (!where) return NextResponse.json({ success: false, error: '権限がありません' }, { status: 403 })

@@ -29,7 +29,11 @@ function getRequestSummary(r: any): string {
   }
   if (r.type === 'leave' && r.details) {
     const d = r.details as any
-    if (d.startDate) return `${formatDateJa(d.startDate)}〜`
+    if (d.startDate && d.endDate) {
+      const label: Record<string, string> = { paid: '有給休暇', special: '特別休暇', unpaid: '欠勤' }
+      return `${d.startDate} 〜 ${d.endDate} ${label[d.leaveType] || '休暇'}`
+    }
+    if (d.startDate) return `${d.startDate}（終了日を確認してください）`
   }
   return ''
 }
@@ -79,18 +83,20 @@ export default function RequestsPage() {
   const withdraw = async (id: string) => {
     if (!window.confirm('この申請を取り下げますか？')) return
     try {
-      await fetch(`/api/kintai/requests/${id}`, {
+      const response = await fetch(`/api/kintai/requests/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'withdrawn' }),
       })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || '取下げに失敗しました')
       fetchRequests(tab)
       fetch('/api/kintai/requests')
         .then((r) => r.json())
         .then((d) => setAllRequests(d.requests || []))
         .catch(() => {})
-    } catch {
-      alert('取下げに失敗しました')
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '取下げに失敗しました')
     }
   }
 
@@ -207,6 +213,10 @@ export default function RequestsPage() {
                         <StatusBadge status={r.status} />
                       </div>
 
+                      {r.type === 'leave' && r.status === 'approved' && <p className="mt-2 text-xs text-slate-600">日程変更は管理者に承認取消を依頼し、取消後に本人が再申請してください。</p>}
+                      {r.type === 'leave' && r.status === 'withdrawn' && r.details?.leaveCancellation && (
+                        <div className="mt-2 text-xs text-slate-600"><p>承認取消: {r.details.leaveCancellation.reason}</p><Link href="/kintai/requests/new?type=leave" className="underline">自分の休暇を新規申請する</Link></div>
+                      )}
                       {summary && (
                         <p className="text-xs text-[#7f19e6] mt-1 font-medium">{summary}</p>
                       )}

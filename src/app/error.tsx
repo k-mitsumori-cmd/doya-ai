@@ -1,5 +1,6 @@
 'use client'
 
+import { reportBrowserError } from '@/components/RuntimeErrorReporter'
 import { useEffect } from 'react'
 import Link from 'next/link'
 import { Home, RefreshCw, Sparkles, AlertTriangle } from 'lucide-react'
@@ -13,6 +14,7 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
+    reportBrowserError('render')
     // 本番環境ではエラーを外部サービスに送信することも可能
     console.error('Application error:', error)
   }, [error])

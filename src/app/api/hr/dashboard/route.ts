@@ -3,8 +3,10 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextResponse } from 'next/server'
+import { getEvaluationReadWhere } from '@/lib/hr/evaluation-access'
 import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
+import { getOneOnOneReadWhere } from '@/lib/hr/one-on-one-access'
 
 export async function GET() {
   try {
@@ -12,6 +14,9 @@ export async function GET() {
     if (!ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const evaluationWhere = await getEvaluationReadWhere(ctx)
+    const oneOnOneWhere = await getOneOnOneReadWhere(ctx)
 
     const orgId = ctx.organizationId
 
@@ -23,21 +28,21 @@ export async function GET() {
         prisma.hrEvaluationPeriod.findMany({
           where: { organizationId: orgId, status: { in: ['OPEN', 'IN_REVIEW'] } },
           include: {
-            evaluations: { select: { id: true, status: true } },
+            evaluations: { where: evaluationWhere, select: { id: true, status: true } },
           },
           orderBy: { startDate: 'desc' },
           take: 5,
         }),
         prisma.hrOneOnOne.count({
           where: {
-            organizationId: orgId,
+            ...oneOnOneWhere,
             conductedAt: {
               gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
             },
           },
         }),
         prisma.hrOneOnOne.findMany({
-          where: { organizationId: orgId },
+          where: oneOnOneWhere,
           include: {
             employee: { select: { lastName: true, firstName: true } },
           },

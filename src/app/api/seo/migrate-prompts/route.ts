@@ -1,6 +1,5 @@
+import { requireAdmin } from '@/lib/admin-guard'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
@@ -51,18 +50,9 @@ const NEW_BANNER_PROMPT = `あなたは成果の出る広告バナーを専門�
  */
 export async function POST(req: NextRequest) {
   try {
+    const denied = await requireAdmin()
+    if (denied) return denied
     await ensureSeoSchema()
-    
-    // 管理者認証（必要に応じて調整）
-    const session = await getServerSession(authOptions)
-    const user: any = session?.user || null
-    const email = String(user?.email || '').toLowerCase()
-    
-    // 管理者メールアドレスのチェック（環境変数または固定値）
-    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase())
-    if (!adminEmails.includes(email)) {
-      return NextResponse.json({ success: false, error: '管理者権限が必要です' }, { status: 403 })
-    }
 
     // 古いプロンプトを含むBANNER画像を検索
     const oldBanners = await (prisma as any).seoImage.findMany({
@@ -104,24 +94,17 @@ export async function POST(req: NextRequest) {
       ids: oldBanners.map((b: any) => b.id),
     })
   } catch (e: any) {
-    console.error('migrate-prompts error:', e)
-    return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 500 })
+    console.error('migrate-prompts failed')
+    return NextResponse.json({ success: false, error: '管理処理を完了できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
 
 // 更新対象の確認用（実行前のプレビュー）
 export async function GET(req: NextRequest) {
   try {
+    const denied = await requireAdmin()
+    if (denied) return denied
     await ensureSeoSchema()
-    
-    const session = await getServerSession(authOptions)
-    const user: any = session?.user || null
-    const email = String(user?.email || '').toLowerCase()
-    
-    const adminEmails = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim().toLowerCase())
-    if (!adminEmails.includes(email)) {
-      return NextResponse.json({ success: false, error: '管理者権限が必要です' }, { status: 403 })
-    }
 
     // 古いプロンプトを含むBANNER画像を検索（プレビュー）
     const oldBanners = await (prisma as any).seoImage.findMany({
@@ -147,8 +130,8 @@ export async function GET(req: NextRequest) {
       message: `${oldBanners.length}件のバナーが更新対象です。POSTリクエストで更新を実行してください。`,
     })
   } catch (e: any) {
-    console.error('migrate-prompts preview error:', e)
-    return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 500 })
+    console.error('migrate-prompts preview failed')
+    return NextResponse.json({ success: false, error: '管理処理を完了できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
 

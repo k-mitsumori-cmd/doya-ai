@@ -258,7 +258,10 @@ function EditorInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ version }),
       })
-      if (!res.ok) throw new Error('巻き戻しに失敗しました')
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        throw new Error(data?.error || '巻き戻しに失敗しました')
+      }
       toast.success(`v${version} に戻しました`)
       await reload()
       loadVersions(selected.id)

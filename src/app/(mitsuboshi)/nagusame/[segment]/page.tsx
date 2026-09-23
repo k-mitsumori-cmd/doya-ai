@@ -6,14 +6,15 @@ import { NagusameRoom } from '@/components/mitsuboshi/nagusame/NagusameRoom'
 import { NAGUSAME_SEGMENTS, resolveSegment } from '@/lib/mitsuboshi/nagusame/segments'
 
 interface Params {
-  params: { segment: string }
+  params: Promise<{ segment: string }>
 }
 
 export function generateStaticParams() {
   return Object.values(NAGUSAME_SEGMENTS).map((s) => ({ segment: s.slug }))
 }
 
-export function generateMetadata({ params }: Params): Metadata {
+export async function generateMetadata(props: Params): Promise<Metadata> {
+  const params = await props.params;
   const seg = resolveSegment(params.segment)
   return {
     title: seg.displayName,
@@ -21,7 +22,8 @@ export function generateMetadata({ params }: Params): Metadata {
   }
 }
 
-export default function NagusameSegmentPage({ params }: Params) {
+export default async function NagusameSegmentPage(props: Params) {
+  const params = await props.params;
   const segment = resolveSegment(params.segment)
 
   if (!segment.published) {

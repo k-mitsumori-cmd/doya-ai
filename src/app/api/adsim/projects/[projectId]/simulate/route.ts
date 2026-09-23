@@ -12,7 +12,8 @@ import { simulate } from '@/lib/adsim/simulator'
 import { MediaId } from '@/lib/adsim/benchmark'
 import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
-export async function POST(_req: NextRequest, { params }: { params: { projectId: string } }) {
+export async function POST(_req: NextRequest, props: { params: Promise<{ projectId: string }> }) {
+  const params = await props.params;
   // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
   if (SERVICE_RETIRED) return retiredServiceResponse('ドヤ広告シミュレーションAI')
 

@@ -81,10 +81,11 @@ export async function executeScan(
   }
 
   // 2) 実行＋構造化（同時実行は6まで）
-  const runs = await pMap(jobs, 6, async (job): Promise<ScanRunRow> => {
+  const outcomes = await pMap(jobs, 6, async (job): Promise<ScanRunRow | null> => {
     try {
       const groundingHits = mode === 'search' ? hitsByPrompt.get(job.prompt.id) : undefined
       const ans = await askEngine(job.engine, job.prompt.text, { groundingHits })
+      if (!ans.text.trim()) throw new Error('EMPTY_ANSWER')
       const ext = await analyzeAnswer({
         answerText: ans.text,
         brandName: brand.brandName,
@@ -100,22 +101,21 @@ export async function executeScan(
         answerText: ans.text.slice(0, 2000),
       }
     } catch (e: any) {
-      // 1ラン失敗は欠測扱い（言及なし）。スキャン全体は止めない。
-      return {
-        promptId: job.prompt.id,
-        engine: job.engine,
-        iteration: job.iteration,
-        brandMentioned: false,
-        brandRank: null,
-        sentiment: null,
-        competitors: [],
-        citations: [],
-        answerText: '',
-      }
+      // Missing observations must never count as negative brand observations.
+      return null
     }
   })
 
+  const runs = outcomes.filter((r): r is ScanRunRow => r !== null)
+  if (runs.length === 0) throw new Error('NO_SUCCESSFUL_MEASUREMENTS')
   const summary = aggregate(brand, prompts, engines, runs)
+  summary.coverage = {
+    attempted: jobs.length,
+    succeeded: runs.length,
+    failed: jobs.length - runs.length,
+    failures: jobs.flatMap((job, index) => outcomes[index] === null
+      ? [{ promptId: job.prompt.id, engine: job.engine, iteration: job.iteration }] : []),
+  }
   // 競合名の名寄せ（表記ゆれ・ドメイン↔社名を統合）→ SoVを再計算
   summary.sov = await canonicalizeSov(summary.sov, brand)
   summary.shareOfVoice = summary.sov.find((s) => s.isOwn)?.pct ?? summary.shareOfVoice
@@ -214,7 +214,7 @@ function aggregate(
   const perEngine = engines.map((engine) => {
     const er = runs.filter((r) => r.engine === engine)
     const m = er.filter((r) => r.brandMentioned).length
-    return { engine, awarenessPct: er.length ? round1((m / er.length) * 100) : 0 }
+    return { engine, awarenessPct: er.length ? round1((m / er.length) * 100) : null }
   })
 
   // Share of Voice の母数（HubSpot式）:
@@ -367,7 +367,7 @@ const pct = (a: number, b: number) => (b ? round1((a / b) * 100) : 0)
 async function buildRecommendations(brand: ScanBrand, summary: ScanSummary): Promise<Recommendation[]> {
   const topCitations = summary.citations.slice(0, 5).map((c) => `${c.domain}(${c.count})`).join(', ')
   const weakPrompts = summary.promptBreakdown
-    .filter((p) => p.perEngine.every((e) => e.mentioned === 0))
+    .filter((p) => p.perEngine.some((e) => e.total > 0) && p.perEngine.every((e) => e.mentioned === 0))
     .map((p) => p.text)
     .slice(0, 5)
 

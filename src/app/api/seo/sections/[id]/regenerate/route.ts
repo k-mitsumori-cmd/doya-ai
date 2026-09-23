@@ -6,9 +6,9 @@ export const runtime = 'nodejs'
 export const maxDuration = 120
 
 // POST: セクションを再生成
-export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const params = 'then' in ctx.params ? await ctx.params : ctx.params
+    const params = await ctx.params
     const id = params.id
     const body = await req.json().catch(() => ({}))
 

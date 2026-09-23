@@ -1,4 +1,4 @@
-import { UNIFIED_PRO_PRICE, UNIFIED_PRO_PRICE_LABEL } from './unified-plan'
+import { UNIFIED_PRO_PRICE, UNIFIED_PRO_PRICE_LABEL, isPaidPlan } from './unified-plan'
 // ========================================
 // 料金・プラン設定（統一管理）
 // ========================================
@@ -371,7 +371,7 @@ export const PERSONA_PRICING: ServicePricing = {
   serviceIcon: '🎯',
   guestLimit: 0,      // ⚠️ ログイン必須（2026-09-02）。実装は未ログインを無制限扱いにしており、この数字は効いていなかった
   freeLimit: 5,       // ログイン無料: 1日5回
-  lightLimit: 15,     // LIGHT: 1日15回
+  lightLimit: 30,     // 旧LIGHTも統一PROとして1日30回
   proLimit: 30,       // PRO: 1日30回
   historyDays: {
     free: 7,
@@ -434,12 +434,7 @@ export const PERSONA_PRICING: ServicePricing = {
 // Persona: user.plan から日次上限を決定
 export function getPersonaDailyLimitByUserPlan(plan: string | null | undefined): number {
   if (process.env.DOYA_DISABLE_LIMITS === '1' || process.env.PERSONA_DISABLE_LIMITS === '1') return -1
-  const p = String(plan || 'FREE').toUpperCase()
-  if (p === 'BUNDLE') return PERSONA_PRICING.proLimit
-  if (p === 'ENTERPRISE') return PERSONA_PRICING.proLimit
-  if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return PERSONA_PRICING.proLimit
-  if (p === 'LIGHT') return PERSONA_PRICING.lightLimit ?? 15
-  return PERSONA_PRICING.freeLimit
+  return isPaidPlan(plan) ? PERSONA_PRICING.proLimit : PERSONA_PRICING.freeLimit
 }
 
 // ========================================

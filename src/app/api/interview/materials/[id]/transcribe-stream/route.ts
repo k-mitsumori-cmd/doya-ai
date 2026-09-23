@@ -31,10 +31,10 @@ const POLL_INTERVAL_MS = 5000        // 固定5秒間隔 (バックオフしな�
 const MAX_POLL_DURATION_MS = 270_000 // 4分30秒 (maxDuration=5分に余裕を持たせる)
 const SEGMENT_STREAM_DELAY_MS = 80   // セグメント送信間隔
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 async function resolveId(ctx: Ctx): Promise<string> {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   return p.id
 }
 

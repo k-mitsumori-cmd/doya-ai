@@ -63,6 +63,8 @@ export async function getMensetsuContext(orgSlug?: string): Promise<MensetsuCont
         include: { organization: true },
       })
     : null
+  // 明示された組織で認可できない場合、別の所属組織に切り替えない。
+  if (orgSlug && !membership) return null
   if (!membership) {
     membership = await prisma.mensetsuMember.findFirst({
       where: { userId, status: 'ACTIVE' },

@@ -193,7 +193,7 @@ export async function exportToSize(
    */
   variantKey?: string
 ): Promise<{ imagePath: string; textAreaPct: number | null }> {
-  let out = await sharp(genBuffer)
+  let out: Buffer = await sharp(genBuffer)
     .resize(placement.w, placement.h, { fit: 'fill' })
     .png()
     .toBuffer()

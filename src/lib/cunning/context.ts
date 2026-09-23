@@ -8,6 +8,8 @@ import { getMode } from './modes'
 import type { ApplicantProfileLite, CompanyProfileLite, CunningMode } from './types'
 
 export interface SessionContext {
+  status: string
+  recordingVersion: number
   mode: CunningMode
   knowledgeBaseId: string | null // sales: 所有確認済みのナレッジID（チャンク取得は呼び出し側）
   company: CompanyProfileLite | null
@@ -20,7 +22,7 @@ export async function resolveSessionContext(
   sessionId: string
 ): Promise<SessionContext | null> {
   const session = await prisma.cunningSession.findUnique({ where: { id: sessionId } })
-  if (!session || session.userId !== userId) return null
+  if (!session || session.userId !== userId || session.status === 'deleted') return null
 
   const def = getMode(session.mode)
   const mode: CunningMode = def.id
@@ -49,5 +51,5 @@ export async function resolveSessionContext(
       }
     }
   }
-  return { mode, knowledgeBaseId, company, applicant, personaNote: session.personaNote || null }
+  return { status: session.status, recordingVersion: session.recordingVersion, mode, knowledgeBaseId, company, applicant, personaNote: session.personaNote || null }
 }

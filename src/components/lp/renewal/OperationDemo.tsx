@@ -257,7 +257,7 @@ export function DemoScreen({
             className="doya-demo-scale"
             style={{ "--demo-scale": scale } as CSSProperties}
             aria-hidden="true"
-            inert={"" as unknown as boolean}
+            inert
           >
             {recipe.screens.map((name, i) => {
               const Screen = screenModule[name];

@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { z } from 'zod'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
-import { getGuestIdFromRequest } from '@/lib/seoAccess'
+import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 
 export const runtime = 'nodejs'
@@ -79,8 +77,8 @@ function replaceSection(markdown: string, startLine: number, endLine: number, ne
   return [...before, newContent, ...after].join('\n')
 }
 
-export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
-  const params = 'then' in ctx.params ? await ctx.params : ctx.params
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const params = await ctx.params
   const articleId = String(params.id || '').trim()
   
   if (!articleId) {
@@ -88,31 +86,16 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   try {
+    const owner = await getSeoArticleOwner(req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
     await ensureSeoSchema()
-    
-    const session = await getServerSession(authOptions)
-    const user: any = session?.user || null
-    const userId = String(user?.id || '').trim()
-    const guestId = getGuestIdFromRequest(req)
-
-    if (!userId && !guestId) {
-      return NextResponse.json({ success: false, error: 'ログインまたはゲストIDが必要です' }, { status: 401 })
-    }
 
     const bodyRaw = await req.json().catch(() => ({}))
     const body = BodySchema.parse(bodyRaw)
 
     const p = prisma as any
-    const article = await p.seoArticle.findUnique({ where: { id: articleId } })
+    const article = await p.seoArticle.findFirst({ where: { id: articleId, ...owner } })
     if (!article) {
-      return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
-    }
-
-    // 所有者チェック
-    const articleUserId = String(article?.userId || '').trim()
-    const articleGuestId = String(article?.guestId || '').trim()
-    const canWrite = (!!userId && articleUserId === userId) || (!!guestId && articleGuestId === guestId)
-    if (!canWrite) {
       return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     }
 
@@ -173,8 +156,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const newMarkdown = replaceSection(finalMarkdown, section.startLine, section.endLine, revised.trim())
 
     await p.seoArticle.update({
-      where: { id: articleId },
-      data: { finalMarkdown: newMarkdown },
+      where: { id: articleId, ...owner, updatedAt: article.updatedAt, finalMarkdown: article.finalMarkdown },
+      data: { finalMarkdown: newMarkdown, updatedAt: new Date(Math.max(Date.now(), new Date(article.updatedAt).getTime() + 1)) },
     })
 
     return NextResponse.json({
@@ -184,6 +167,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       message: `「${body.sectionHeading}」を修正しました`,
     })
   } catch (e: any) {
+    if (e?.code === 'P2025') return NextResponse.json({ success: false, error: '編集中に記事またはアクセス権が変更されました。再読み込みしてから編集してください。' }, { status: 409 })
     if (e?.name === 'ZodError') {
       return NextResponse.json(
         { success: false, error: 'バリデーションエラー', details: e.issues },

@@ -24,8 +24,7 @@ export async function GET() {
       where: {
         userId,
         status: { not: 'archived' },
-        // 0社プロジェクトは履歴に出さない（過去の失敗データもここでフィルタ）
-        companies: { some: {} },
+        // 失敗した0社のプロジェクトも、枠を消費するため履歴から整理可能にする。
       },
       include: {
         _count: { select: { companies: true, approaches: true } },

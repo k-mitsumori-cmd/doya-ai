@@ -1,3 +1,5 @@
+import { prisma } from '@/lib/prisma'
+import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 import { NextRequest, NextResponse } from 'next/server'
 import { advanceSeoJob } from '@seo/lib/pipeline'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
@@ -7,15 +9,20 @@ export const dynamic = 'force-dynamic'
 // Vercel Pro: 長文生成（統合・追記）のためタイムアウトを延長
 export const maxDuration = 300
 
-export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
-  const params = 'then' in ctx.params ? await ctx.params : ctx.params
+export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const params = await ctx.params
   const id = params.id
   
   try {
+    const owner = await getSeoArticleOwner(_req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
     await ensureSeoSchema()
-    await advanceSeoJob(id)
+    const job = await prisma.seoJob.findFirst({ where: { id, article: owner }, select: { id: true } })
+    if (!job) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
+    await advanceSeoJob(id, owner)
     return NextResponse.json({ success: true })
   } catch (e: any) {
+    if (e?.code === 'P2025') return NextResponse.json({ success: false, error: 'ジョブの状態またはアクセス権が変わりました。再読み込みしてください。' }, { status: 409 })
     const msg = e?.message || '不明なエラー'
     const m = String(msg || '')
     const hint = (() => {

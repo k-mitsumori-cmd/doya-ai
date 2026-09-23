@@ -4,59 +4,37 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { callGeminiImageAPI } from '@/lib/resolve-image-model'
+import { resolvePersonaImageInput, generateAndSavePersonaImage } from '@/lib/persona/image-generation'
+import { PERSONA_BANNER_SIZES as BANNER_SIZES, resolvePersonaBannerSize } from '@/lib/persona/banner-size'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
-// バナーサイズプリセット
-const BANNER_SIZES: Record<string, { width: number; height: number; label: string }> = {
-  'google-responsive': { width: 1200, height: 628, label: 'Google レスポンシブ' },
-  'google-square': { width: 1200, height: 1200, label: 'Google スクエア' },
-  'google-landscape': { width: 1200, height: 900, label: 'Google 横長' },
-  'meta-feed': { width: 1080, height: 1080, label: 'Meta フィード' },
-  'meta-story': { width: 1080, height: 1920, label: 'Meta ストーリー' },
-  'twitter': { width: 1200, height: 675, label: 'Twitter/X' },
-  'youtube': { width: 1280, height: 720, label: 'YouTube サムネイル' },
-  'display-leaderboard': { width: 728, height: 90, label: 'リーダーボード' },
-  'display-rectangle': { width: 300, height: 250, label: 'レクタングル' },
-  'display-skyscraper': { width: 160, height: 600, label: 'スカイスクレイパー' },
-}
-
 export async function POST(req: NextRequest) {
   try {
-    // セッション取得（認証不要だがログに記録）
     const session = await getServerSession(authOptions)
-    const userEmail = session?.user?.email || 'guest'
-    console.log(`[persona/banner] user=${userEmail} - banner generation request`)
-
-    const body = await req.json()
-    const { persona, serviceName, catchphrase, sizeKey, customWidth, customHeight } = body
-
-    if (!persona || !catchphrase) {
-      return NextResponse.json({ error: 'ペルソナとキャッチコピーが必要です' }, { status: 400 })
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: '画像生成にはログインが必要です。', code: 'LOGIN_REQUIRED' }, { status: 401 })
     }
 
-    const apiKey = process.env.GOOGLE_GENAI_API_KEY
-    if (!apiKey) {
-      return NextResponse.json({ error: 'APIキーが設定されていません' }, { status: 500 })
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力内容を確認してください。' }, { status: 400 })
+    }
+    const resolved = await resolvePersonaImageInput(session.user.id, body, 'banner')
+    if ('response' in resolved) return resolved.response
+    const { persona } = resolved.input
+    const { serviceName, catchphrase } = body
+    if (typeof catchphrase !== 'string' || !catchphrase.trim() || catchphrase.length > 2000 ||
+        (serviceName != null && (typeof serviceName !== 'string' || serviceName.length > 300))) {
+      return NextResponse.json({ error: 'キャッチコピーと画像サイズを確認してください。' }, { status: 400 })
     }
 
-    // サイズ決定
-    let width = 1200
-    let height = 628
-    let sizeLabel = 'カスタム'
-
-    if (sizeKey && BANNER_SIZES[sizeKey]) {
-      const preset = BANNER_SIZES[sizeKey]
-      width = preset.width
-      height = preset.height
-      sizeLabel = preset.label
-    } else if (customWidth && customHeight) {
-      width = Math.min(2048, Math.max(200, Number(customWidth)))
-      height = Math.min(2048, Math.max(200, Number(customHeight)))
-    }
+    let size: { width: number; height: number; label: string }
+    try { size = resolvePersonaBannerSize(body) }
+    catch { return NextResponse.json({ error: '有効なサイズを選択してください。カスタムサイズは縦横それぞれ200〜2048の整数で指定してください。' }, { status: 400 }) }
+    const { width, height, label: sizeLabel } = size
 
     const { name, age, gender, occupation, challenges, goals } = persona
 
@@ -89,6 +67,7 @@ ${serviceName ? `Brand/Service: ${serviceName}` : ''}
 5. Eye-catching for the target persona
 6. Include a clear CTA button area
 7. Fill entire canvas - NO letterboxing or empty margins
+8. The final image will be center-cropped to the specified aspect ratio. Keep all text, logos and the CTA inside the central safe area matching that aspect ratio; use expendable background only outside it.
 
 === STYLE GUIDELINES ===
 - Modern, clean design suitable for Japanese market
@@ -120,35 +99,11 @@ Single high-quality banner image at exactly ${width}x${height} pixels.
       ],
     }
 
-    const { response } = await callGeminiImageAPI(apiKey, requestBody)
-
-    const result = await response.json()
-
-    // 画像データを抽出
-    const parts = result?.candidates?.[0]?.content?.parts
-    if (!Array.isArray(parts)) {
-      return NextResponse.json({ error: '画像データが見つかりません' }, { status: 500 })
-    }
-
-    for (const part of parts) {
-      const inline = part?.inlineData || part?.inline_data
-      if (inline?.data && typeof inline.data === 'string') {
-        const mimeType = inline?.mimeType || 'image/png'
-        const res = NextResponse.json({
-          success: true,
-          image: `data:${mimeType};base64,${inline.data}`,
-          size: { width, height, label: sizeLabel },
-        })
-
-        return res
-      }
-    }
-
-    return NextResponse.json({ error: '画像の抽出に失敗しました' }, { status: 500 })
+    return await generateAndSavePersonaImage(resolved.input, requestBody, { size }, { width, height })
   } catch (error) {
     console.error('Banner generation error:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'バナー生成中にエラーが発生しました' },
+      { error: 'バナー生成中にエラーが発生しました' },
       { status: 500 }
     )
   }

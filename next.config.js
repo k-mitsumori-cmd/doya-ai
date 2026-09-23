@@ -41,7 +41,6 @@ const nextConfig = {
   // そのため tracing は有効（デフォルト）で運用する。
   // （過去に collect-build-traces のスタックオーバーフローが出た場合は Next.js の更新で対応する）
 
-  experimental: {
     // ------------------------------------------------------------------
     // Chromium 系はバンドルせず、実体のあるパッケージとして残す
     // ------------------------------------------------------------------
@@ -51,7 +50,7 @@ const nextConfig = {
     //    実行時にはそのパスは存在しないため、下の
     //    outputFileTracingIncludes でファイルを同梱しても解決しない。
     //    （2026-08-08: includes だけ入れた状態でも本番で同じエラーが出た）
-    serverComponentsExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
+  serverExternalPackages: ['@sparticuz/chromium', 'puppeteer-core'],
 
     // ------------------------------------------------------------------
     // PDF生成ルートに Chromium のバイナリを同梱する
@@ -67,7 +66,7 @@ const nextConfig = {
     //
     // ⚠️ PDF生成ルートを追加したら、ここにも必ず足すこと。足し忘れると
     //    そのルートだけ本番で 500 になる。
-    outputFileTracingIncludes: {
+  outputFileTracingIncludes: {
       // ⚠️ 日本語フォントも必ず同梱する。Lambda用Chromiumには日本語フォントが無く、
       //    入れるのを忘れるとPDFの日本語が全て空白になる（assets/fonts/README.md 参照）。
       //    banner/from-url はページから色を取るだけで文字を描画しないため不要。
@@ -85,7 +84,6 @@ const nextConfig = {
       ],
       '/api/banner/from-url': ['./node_modules/@sparticuz/chromium/bin/**'],
     },
-  },
   images: {
     remotePatterns: [
       {
@@ -108,7 +106,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   
   // セキュリティヘッダー
@@ -141,6 +139,22 @@ const nextConfig = {
             key: 'Referrer-Policy',
             value: 'origin-when-cross-origin',
           },
+        ],
+      },
+      // Public LP comparison can embed this presentation within this site only.
+      {
+        source: '/banner/landing',
+        headers: [
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+        ],
+      },
+      {
+        source: '/renewal-preview/:service',
+        headers: [
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+          { key: 'X-Robots-Tag', value: 'noindex, follow' },
         ],
       },
       // ------------------------------------------------------------------

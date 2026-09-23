@@ -203,7 +203,7 @@ export function renderQuoteHtml(q: QuotePdfInput): string {
     </table>
 
     <div class="summary"><table>
-      <tr><th>小計</th><td>${yen(totals.totalExclTax + totals.discountAmount)}</td></tr>
+      <tr><th>小計</th><td>${yen(Object.values(totals.subtotalByRate).reduce((sum, subtotal) => sum + subtotal, 0))}</td></tr>
       ${totals.discountAmount > 0 ? `<tr><th>値引き</th><td>-${yen(totals.discountAmount)}</td></tr>` : ''}
       <tr><th>税抜合計</th><td>${yen(totals.totalExclTax)}</td></tr>
       ${taxRows}
@@ -252,7 +252,7 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<Uint8Array
       args: chromium.args,
       defaultViewport: { width: 1240, height: 1754 },
       executablePath,
-      headless: chromium.headless,
+      headless: 'shell',
     })
     const page = await browser.newPage()
     await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 30000 })

@@ -13,7 +13,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
-type Ctx = { params: Promise<{ outputId: string }> | { outputId: string } }
+type Ctx = { params: Promise<{ outputId: string }> }
 
 export async function POST(req: NextRequest, ctx: Ctx) {
   // ⚠️ 提供終了。入口だけ閉じる（本体とデータは復旧の余地のため残す）
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }
     const userId = session.user.id
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const outputId = p.outputId
 
     const body = await req.json()
@@ -150,9 +150,9 @@ function convertToHtml(platform: string, content: Record<string, unknown>): stri
 function convertToPlainText(platform: string, content: Record<string, unknown>): string {
   switch (platform) {
     case 'note':
-      return `${content.title || ''}\n\n${((content.body as string) || '').replace(/[#*_`]/g, '')}`
+      return `${content.title || ''}\n\n${((content.body as string) || '').replace(/[#*_`]/g, '')}`;
     case 'blog':
-      return `${(content.seo as Record<string, unknown>)?.title || ''}\n\n${((content.body_markdown as string) || '').replace(/[#*_`]/g, '')}`
+      return `${(content.seo as Record<string, unknown>)?.title || ''}\n\n${((content.body_markdown as string) || '').replace(/[#*_`]/g, '')}`;
     case 'x':
       return ((content.tweets as Record<string, unknown>[]) || []).map((t) => t.text).join('\n\n')
     case 'instagram':
@@ -177,5 +177,5 @@ function escapeHtml(text: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
+    .replace(/"/g, '&quot;');
 }

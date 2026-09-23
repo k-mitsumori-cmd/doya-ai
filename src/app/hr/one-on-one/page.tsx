@@ -2,7 +2,7 @@
 
 import toast from 'react-hot-toast'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -48,23 +48,46 @@ export default function OneOnOnePage() {
   const [scheduledTime, setScheduledTime] = useState('')
   const [selectedDuration, setSelectedDuration] = useState(30)
   const [creating, setCreating] = useState(false)
+  const [canCreate, setCanCreate] = useState(false)
+  const [creationManagerId, setCreationManagerId] = useState<string | null>(null)
+
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(0)
+  const [listError, setListError] = useState('')
+  const [employeePage, setEmployeePage] = useState(0)
+  const [employeeHasMore, setEmployeeHasMore] = useState(false)
+  const [employeeLoading, setEmployeeLoading] = useState(false)
+  const [employeeError, setEmployeeError] = useState('')
+  const recordSequence = useRef(0)
+  const employeeSequence = useRef(0)
 
   useEffect(() => {
     fetchRecords()
     fetchEmployees()
+    return () => { recordSequence.current++; employeeSequence.current++ }
   }, [])
 
-  async function fetchRecords() {
+  async function fetchRecords(nextPage = 1) {
+    const sequence = ++recordSequence.current
+    setLoading(true)
+    setListError('')
     try {
-      const res = await fetch('/api/hr/one-on-one')
+      const res = await fetch(`/api/hr/one-on-one?page=${nextPage}`)
       if (!res.ok) throw new Error()
       const data = await res.json()
+      if (!Array.isArray(data.items) || data.page !== nextPage || !Number.isInteger(data.totalPages)) throw new Error()
+      if (sequence !== recordSequence.current) return
+      setPage(nextPage)
+      setTotalPages(data.totalPages)
+      setCanCreate(data.canCreateOneOnOne === true)
+      setCreationManagerId(data.creationManagerId || null)
+      if (data.creationManagerId) setSelectedManager(data.creationManagerId)
       const items = (data.items ?? data.records ?? []).map((o: any) => ({
         id: o.id,
         employeeId: o.employeeId,
         employeeName: o.employee ? `${o.employee.lastName} ${o.employee.firstName}` : '',
         employeePhotoUrl: o.employee?.photoUrl || null,
-        date: o.conductedAt || o.scheduledAt || o.createdAt,
+        date: o.conductedAt || o.scheduledAt || '',
         duration: o.duration || 0,
         status: o.status,
         agendaCount: Array.isArray(o.agenda) ? o.agenda.length : 0,
@@ -72,24 +95,38 @@ export default function OneOnOnePage() {
       }))
       setRecords(items)
     } catch {
-      // API not ready
+      if (sequence === recordSequence.current) setListError('1on1の一覧を取得できませんでした。再読み込みしてください。')
     } finally {
-      setLoading(false)
+      if (sequence === recordSequence.current) setLoading(false)
     }
   }
 
-  async function fetchEmployees() {
+  async function fetchEmployees(nextPage = 1) {
+    const sequence = ++employeeSequence.current
+    setEmployeeLoading(true)
+    setEmployeeError('')
     try {
-      const res = await fetch('/api/hr/employees')
-      if (res.ok) {
-        const data = await res.json()
-        setEmployees(data.items ?? data.employees ?? [])
-      }
-    } catch {}
+      const res = await fetch(`/api/hr/employees?page=${nextPage}&pageSize=100`)
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      if (!Array.isArray(data.items) || data.page !== nextPage || !Number.isInteger(data.totalPages)) throw new Error()
+      if (sequence !== employeeSequence.current) return
+      setEmployees(previous => nextPage === 1 ? data.items : [...new Map([...previous, ...data.items].map(emp => [emp.id, emp])).values()])
+      setEmployeePage(nextPage)
+      setEmployeeHasMore(nextPage < data.totalPages)
+    } catch {
+      if (sequence === employeeSequence.current) setEmployeeError('従業員を取得できませんでした。選択肢がすべて表示されていない可能性があります。')
+    } finally {
+      if (sequence === employeeSequence.current) setEmployeeLoading(false)
+    }
   }
 
   async function handleCreateRecord() {
-    if (!selectedEmployee || !selectedManager) return
+    if (!canCreate || !selectedEmployee || !selectedManager) return
+    if (!!scheduledDate !== !!scheduledTime) {
+      toast.error('日付と時間を両方入力してください。未定の場合は両方を空欄にしてください。')
+      return
+    }
     setCreating(true)
     try {
       const res = await fetch('/api/hr/one-on-one', {
@@ -100,7 +137,7 @@ export default function OneOnOnePage() {
           managerId: selectedManager,
           scheduledAt: scheduledDate && scheduledTime
             ? new Date(`${scheduledDate}T${scheduledTime}`).toISOString()
-            : new Date().toISOString(),
+            : null,
           duration: selectedDuration,
         }),
       })
@@ -129,15 +166,18 @@ export default function OneOnOnePage() {
             <h1 className="text-3xl font-black text-slate-900">1on1</h1>
             <p className="text-sm text-slate-500 mt-1">1対1ミーティングの記録を管理</p>
           </div>
-          <button
+          {canCreate && <button
             onClick={() => setShowNewModal(true)}
             className="flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white rounded-full text-base font-bold shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:bg-emerald-700 transition-all"
           >
             <span className="material-symbols-outlined text-lg">add</span>
             1on1を記録
-          </button>
+          </button>}
         </div>
 
+        {listError && <div role="alert" className="mb-4 p-4 bg-red-50 text-red-700 rounded-xl">
+          {listError} <button onClick={() => fetchRecords(page)} disabled={loading} className="underline">再読み込み</button>
+        </div>}
         {/* Records List */}
         {loading ? (
           <div className="space-y-3">
@@ -224,7 +264,7 @@ export default function OneOnOnePage() {
               )
             })}
           </motion.div>
-        ) : (
+        ) : !listError ? (
           <div className="bg-white rounded-3xl shadow-lg p-12 text-center">
             <motion.img
               src="/hr/characters/present_プレゼン.png"
@@ -240,7 +280,7 @@ export default function OneOnOnePage() {
             <p className="text-base text-slate-500 mb-6 max-w-md mx-auto">
               AIが会話の要約とアクションアイテムを自動生成します。
             </p>
-            <motion.button
+            {canCreate && <motion.button
               onClick={() => setShowNewModal(true)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -248,21 +288,27 @@ export default function OneOnOnePage() {
             >
               <span className="material-symbols-outlined text-lg">add</span>
               1on1を記録する
-            </motion.button>
+            </motion.button>}
+            {!canCreate && <p className="text-sm text-slate-500">1on1の作成は担当上司・管理者に依頼してください。</p>}
           </div>
-        )}
+        ) : null}
+        {totalPages > 0 && <nav aria-label="1on1一覧のページ" className="flex items-center justify-center gap-4 mt-6">
+          <button disabled={loading || page <= 1} onClick={() => fetchRecords(page - 1)} className="px-4 py-2 bg-white rounded-xl disabled:opacity-40">前へ</button>
+          <span>{page} / {totalPages}ページ</span>
+          <button disabled={loading || page >= totalPages} onClick={() => fetchRecords(page + 1)} className="px-4 py-2 bg-white rounded-xl disabled:opacity-40">次へ</button>
+        </nav>}
 
         {/* FAB */}
-        <button
+        {canCreate && <button
           onClick={() => setShowNewModal(true)}
           className="fixed bottom-6 right-6 w-14 h-14 bg-emerald-600 text-white rounded-full shadow-xl shadow-emerald-500/30 flex items-center justify-center hover:bg-emerald-700 hover:shadow-2xl transition-all z-40"
           aria-label="1on1を記録"
         >
           <span className="material-symbols-outlined text-3xl">add</span>
-        </button>
+        </button>}
 
         {/* New 1on1 Modal */}
-        {showNewModal && (
+        {showNewModal && canCreate && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/30" onClick={() => setShowNewModal(false)} />
             <motion.div
@@ -272,6 +318,11 @@ export default function OneOnOnePage() {
             >
               <h2 className="text-lg font-bold text-slate-900 mb-4">1on1を記録</h2>
               <div className="space-y-4">
+                {employeeLoading && <p role="status">従業員を読み込み中...</p>}
+                {employeeError && <p role="alert" className="text-red-700">{employeeError}</p>}
+                {(employeeHasMore || employeeError) && <button type="button" disabled={employeeLoading} onClick={() => fetchEmployees(employeePage + 1)} className="text-blue-700 underline disabled:opacity-40">
+                  {employeeError ? '従業員の読み込みを再試行' : `従業員をさらに読み込む（現在${employees.length}名）`}
+                </button>}
                 <div>
                   <label className="block text-sm font-bold text-slate-700 mb-1">対象の従業員（部下）</label>
                   <select
@@ -280,7 +331,7 @@ export default function OneOnOnePage() {
                     className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                   >
                     <option value="">選択してください</option>
-                    {employees.map((emp: any) => (
+                    {employees.filter((emp: any) => emp.id !== creationManagerId).map((emp: any) => (
                       <option key={emp.id} value={emp.id}>
                         {emp.lastName} {emp.firstName}
                       </option>
@@ -291,17 +342,20 @@ export default function OneOnOnePage() {
                   <label className="block text-sm font-bold text-slate-700 mb-1">上司（面談者）</label>
                   <select
                     value={selectedManager}
+                    disabled={!!creationManagerId}
                     onChange={(e) => setSelectedManager(e.target.value)}
                     className="w-full px-4 py-3 bg-slate-50 border-b-2 border-slate-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                   >
                     <option value="">選択してください</option>
-                    {employees.filter((e: any) => e.id !== selectedEmployee).map((emp: any) => (
+                    {creationManagerId && <option value={creationManagerId}>自分（担当上司）</option>}
+                    {!creationManagerId && employees.filter((e: any) => e.id !== selectedEmployee).map((emp: any) => (
                       <option key={emp.id} value={emp.id}>
                         {emp.lastName} {emp.firstName}
                       </option>
                     ))}
                   </select>
                 </div>
+                <p className="text-sm text-slate-500">日時は任意です。未定の場合は日付・時間を両方空欄にしてください。</p>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold text-slate-700 mb-1">日付</label>

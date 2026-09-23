@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { sfaInit } from '@/lib/sfa/client'
@@ -35,15 +35,36 @@ export default function SfaTasksPage() {
   const [title, setTitle] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [busy, setBusy] = useState(false)
+  const pendingRef = useRef(new Set<string>())
+  const [pendingIds, setPendingIds] = useState<Set<string>>(new Set())
+  const [loadedPage, setLoadedPage] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [listLoading, setListLoading] = useState(false)
+  const [listError, setListError] = useState<string | null>(null)
+  const loadSequenceRef = useRef(0)
 
-  const load = useCallback(() => {
+  const load = useCallback(async (page = 1) => {
     if (!ready) return
-    fetch('/api/sfa/tasks', sfaInit(orgSlug))
-      .then((r) => r.json())
-      .then((d) => setTasks(d.tasks || []))
-      .catch(() => {})
+    const sequence = ++loadSequenceRef.current
+    setListLoading(true)
+    setListError(null)
+    try {
+      const res = await fetch(`/api/sfa/tasks?page=${page}`, sfaInit(orgSlug))
+      const data = await res.json()
+      if (!res.ok || !Array.isArray(data.tasks) || data.page !== page || typeof data.hasMore !== 'boolean') {
+        throw new Error(data.error || 'タスク一覧を取得できませんでした')
+      }
+      if (sequence !== loadSequenceRef.current) return
+      setTasks(prev => page === 1 ? data.tasks : [...prev, ...data.tasks.filter((t: Task) => !prev.some(p => p.id === t.id))])
+      setLoadedPage(page)
+      setHasMore(data.hasMore)
+    } catch (error) {
+      if (sequence === loadSequenceRef.current) setListError(error instanceof Error ? error.message : 'タスク一覧を取得できませんでした')
+    } finally {
+      if (sequence === loadSequenceRef.current) setListLoading(false)
+    }
   }, [ready, orgSlug])
-  useEffect(() => { load() }, [load])
+  useEffect(() => { setTasks([]); setLoadedPage(0); setHasMore(false); load(); return () => { ++loadSequenceRef.current } }, [load])
 
   // ===== 活動タイムライン（活動ページをタスクに統合） =====
   const [acts, setActs] = useState<SfaActivityRow[]>([])
@@ -107,42 +128,57 @@ export default function SfaTasksPage() {
     }
   }
 
-  const toggle = async (t: Task) => {
-    setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, status: x.status === 'done' ? 'open' : 'done' } : x)))
+  const updateTask = async (t: Task, patch: { status?: string; dueDate?: string }) => {
+    if (pendingRef.current.has(t.id)) return
+    pendingRef.current.add(t.id)
+    setPendingIds(new Set(pendingRef.current))
     try {
-      const res = await fetch(`/api/sfa/tasks/${t.id}`, sfaInit(orgSlug, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) }))
-      if (!res.ok) throw new Error()
+      const res = await fetch(`/api/sfa/tasks/${t.id}`, sfaInit(orgSlug, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch),
+      }))
+      const result = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(result?.error || '更新に失敗しました')
+      const updated = result?.task
+      if (!updated || updated.id !== t.id || !['open', 'done'].includes(updated.status) ||
+          !(updated.dueDate === null || (typeof updated.dueDate === 'string' && Number.isFinite(new Date(updated.dueDate).getTime())))) {
+        throw new Error('更新結果を確認できませんでした。再読み込みして状態をご確認ください。')
+      }
+      setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, ...updated } : x))
       load()
-    } catch {
-      toast.error('更新に失敗しました')
-      load()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '更新結果を確認できませんでした。再読み込みして状態をご確認ください。')
+    } finally {
+      pendingRef.current.delete(t.id)
+      setPendingIds(new Set(pendingRef.current))
     }
   }
 
+  const toggle = async (t: Task) => {
+    await updateTask(t, { status: t.status === 'done' ? 'open' : 'done' })
+  }
+
   const remove = async (t: Task) => {
-    setTasks((prev) => prev.filter((x) => x.id !== t.id))
+    if (pendingRef.current.has(t.id)) return
+    pendingRef.current.add(t.id)
+    setPendingIds(new Set(pendingRef.current))
     try {
-      await fetch(`/api/sfa/tasks/${t.id}`, sfaInit(orgSlug, { method: 'DELETE' }))
-    } catch {
+      const res = await fetch(`/api/sfa/tasks/${t.id}`, sfaInit(orgSlug, { method: 'DELETE' }))
+      const result = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(result?.error || '削除に失敗しました')
+      if (result?.ok !== true) throw new Error('削除結果を確認できませんでした。再読み込みして状態をご確認ください。')
+      setTasks((prev) => prev.filter((x) => x.id !== t.id))
       load()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '削除結果を確認できませんでした。再読み込みして状態をご確認ください。')
+    } finally {
+      pendingRef.current.delete(t.id)
+      setPendingIds(new Set(pendingRef.current))
     }
   }
 
   // 期日のインライン変更（'' でクリア）
   const changeDue = async (t: Task, value: string) => {
-    setTasks((prev) => prev.map((x) => (x.id === t.id ? { ...x, dueDate: value || null } : x)))
-    try {
-      const res = await fetch(`/api/sfa/tasks/${t.id}`, sfaInit(orgSlug, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dueDate: value }),
-      }))
-      if (!res.ok) throw new Error()
-      load()
-    } catch {
-      toast.error('期日の変更に失敗しました')
-      load()
-    }
+    await updateTask(t, { dueDate: value })
   }
 
   // 'YYYY-MM-DD'（<input type="date"> 用、ローカル日付）
@@ -159,6 +195,7 @@ export default function SfaTasksPage() {
     <div key={t.id} className="bg-white rounded-xl shadow-sm p-3.5 flex items-center gap-3">
       <button
         onClick={() => toggle(t)}
+        disabled={pendingIds.has(t.id)}
         className={`w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
           t.status === 'done' ? 'bg-green-500 border-green-500 text-white' : 'border-slate-300 hover:border-green-500'
         }`}
@@ -178,6 +215,7 @@ export default function SfaTasksPage() {
       </div>
       <input
         type="date"
+        disabled={pendingIds.has(t.id)}
         value={toDateInput(t.dueDate)}
         onChange={(e) => changeDue(t, e.target.value)}
         title="締め切り日"
@@ -185,7 +223,7 @@ export default function SfaTasksPage() {
           isOverdue(t) ? 'border-red-300 text-red-600 bg-red-50' : 'border-slate-200 text-slate-600'
         }`}
       />
-      <button onClick={() => remove(t)} className="text-slate-300 hover:text-red-500 flex-shrink-0">
+      <button onClick={() => remove(t)} disabled={pendingIds.has(t.id)} aria-busy={pendingIds.has(t.id)} aria-label="タスクを削除" className="text-slate-300 hover:text-red-500 flex-shrink-0 disabled:opacity-40">
         <span className="material-symbols-outlined text-[20px]">delete</span>
       </button>
     </div>
@@ -211,7 +249,7 @@ export default function SfaTasksPage() {
       </div>
 
       <div className="space-y-2">
-        {open.length === 0 && done.length === 0 && (
+        {open.length === 0 && done.length === 0 && loadedPage > 0 && !listLoading && !listError && (
           <div className="bg-white rounded-2xl shadow-sm p-10 text-center text-slate-400 font-bold">タスクがありません。上から追加しましょう。</div>
         )}
         {open.map(row)}
@@ -221,6 +259,14 @@ export default function SfaTasksPage() {
             {done.map(row)}
           </>
         )}
+      </div>
+
+      <div className="mt-4 space-y-2 text-sm">
+        {listLoading && <p role="status">タスクを読み込んでいます…</p>}
+        {listError && <p role="alert" className="text-red-600">{listError}。表示内容が最新でない可能性があります。</p>}
+        {loadedPage > 0 && <p className="text-slate-500">{tasks.length}件を表示中{hasMore ? '（続きがあります）' : ''}</p>}
+        <button onClick={() => load()} disabled={listLoading} className="rounded-lg border px-3 py-2 disabled:opacity-50">一覧を再読み込み</button>
+        {hasMore && <button onClick={() => load(loadedPage + 1)} disabled={listLoading || !!listError} className="ml-2 rounded-lg border px-3 py-2 disabled:opacity-50">次の200件を表示</button>}
       </div>
 
       {/* ===== 活動タイムライン（旧・活動ページを統合。タスクと同じ操作感） ===== */}

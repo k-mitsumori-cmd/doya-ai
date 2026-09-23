@@ -19,9 +19,9 @@ const FALLBACK_IMAGE = '/banner-samples/cat-other.webp'
 
 export async function GET(
   request: NextRequest,
-  ctx: { params: Promise<{ templateId: string }> | { templateId: string } }
+  ctx: { params: Promise<{ templateId: string }> }
 ) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const { templateId } = p
 
   if (!templateId) {

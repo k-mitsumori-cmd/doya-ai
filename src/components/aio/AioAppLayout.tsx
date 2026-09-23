@@ -6,7 +6,7 @@ import AioSidebar from './AioSidebar'
 import { Menu } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
-export default function AioAppLayout({ orgSlug, orgName, children }: { orgSlug: string; orgName?: string; children: React.ReactNode }) {
+export default function AioAppLayout({ orgSlug, orgName, organizationPlan, isOwner, children }: { orgSlug: string; orgName?: string; organizationPlan?: string | null; isOwner?: boolean; children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
@@ -22,7 +22,7 @@ export default function AioAppLayout({ orgSlug, orgName, children }: { orgSlug: 
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       {/* Desktop Sidebar */}
       <div className="hidden md:flex">
-        <AioSidebar orgSlug={orgSlug} orgName={orgName} isCollapsed={sidebarCollapsed} onToggle={(c) => setSidebarCollapsed(c)} />
+        <AioSidebar organizationPlan={organizationPlan} isOwner={isOwner} orgSlug={orgSlug} orgName={orgName} isCollapsed={sidebarCollapsed} onToggle={(c) => setSidebarCollapsed(c)} />
       </div>
 
       {/* Mobile overlay */}
@@ -38,7 +38,7 @@ export default function AioAppLayout({ orgSlug, orgName, children }: { orgSlug: 
         {mobileMenuOpen && (
           <motion.div initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }} transition={{ duration: 0.2, ease: 'easeOut' }}
             className="fixed inset-y-0 left-0 z-50 md:hidden">
-            <AioSidebar orgSlug={orgSlug} orgName={orgName} forceExpanded isMobile onToggle={() => setMobileMenuOpen(false)} />
+            <AioSidebar organizationPlan={organizationPlan} isOwner={isOwner} orgSlug={orgSlug} orgName={orgName} forceExpanded isMobile onToggle={() => setMobileMenuOpen(false)} />
           </motion.div>
         )}
       </AnimatePresence>

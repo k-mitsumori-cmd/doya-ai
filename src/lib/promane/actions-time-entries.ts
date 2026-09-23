@@ -1,30 +1,28 @@
 "use server";
 
+import { parsePromaneWorkDate, validatePromaneMinutes, parsePromaneExpense, validatePromaneInteger } from "./time-input";
 import { prisma } from "@/lib/prisma";
-import { requirePromaneAuthAction, getWorkspaceBySlug } from "@/lib/promane/auth";
+import { requirePromaneAuthAction, requireWritableWorkspace } from "@/lib/promane/auth";
 import { revalidatePath } from "next/cache";
 
 /** 数値バリデーション */
 function validateAmount(v: number | undefined | null, field: string): number {
-  if (v == null || v === 0) return 0;
-  if (!Number.isFinite(v)) throw new Error(`${field}は数値で入力してください`);
-  if (v < 0) throw new Error(`${field}は 0以上の値を入力してください`);
-  if (v > 9_999_999_999) throw new Error(`${field}が大きすぎます`);
-  return Math.floor(v);
+  return validatePromaneInteger(v, field);
 }
 
 export async function createTimeEntry(workspaceSlug: string, data: {
   taskId?: string;
+  projectId?: string;
   memberId: string;
   duration: number; // 分
   date: string;
   note?: string;
 }) {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
-  if (!workspace) throw new Error("ワークスペースにアクセスできません");
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
-  const duration = validateAmount(data.duration, "稼働時間");
+  const duration = validatePromaneMinutes(data.duration);
+  const workDate = parsePromaneWorkDate(data.date);
   if (!data.memberId) throw new Error("memberIdは必須です");
 
   // セキュリティ: memberIdが自分のworkspaceか確認 (IDOR防止)
@@ -34,21 +32,32 @@ export async function createTimeEntry(workspaceSlug: string, data: {
   });
   if (!member) throw new Error("メンバーが見つかりません");
 
+  let projectId = data.projectId || null;
+  if (projectId) {
+    const project = await prisma.promaneProject.findFirst({
+      where: { id: projectId, workspaceId: workspace.id }, select: { id: true },
+    });
+    if (!project) throw new Error("プロジェクトが見つかりません");
+  }
+
   // セキュリティ: taskIdが指定されていれば自分のworkspaceのものか確認
   if (data.taskId) {
     const task = await prisma.promaneTask.findFirst({
       where: { id: data.taskId, project: { workspaceId: workspace.id } },
-      select: { id: true },
+      select: { id: true, projectId: true },
     });
     if (!task) throw new Error("タスクが見つかりません");
+    if (projectId && task.projectId !== projectId) throw new Error("選択したプロジェクトのタスクを指定してください");
+    projectId = task.projectId;
   }
 
   const entry = await prisma.promaneTimeEntry.create({
     data: {
       taskId: data.taskId || null,
+      projectId,
       memberId: data.memberId,
       duration,
-      date: new Date(data.date),
+      date: workDate,
       note: data.note?.slice(0, 1000) || null,
     },
   });
@@ -59,8 +68,7 @@ export async function createTimeEntry(workspaceSlug: string, data: {
 
 export async function deleteTimeEntry(workspaceSlug: string, entryId: string) {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
-  if (!workspace) throw new Error("ワークスペースにアクセスできません");
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
   // セキュリティ: workspace所属確認 (IDOR防止)
   const existing = await prisma.promaneTimeEntry.findFirst({
@@ -81,11 +89,9 @@ export async function createExpense(workspaceSlug: string, data: {
   date: string;
 }) {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
-  if (!workspace) throw new Error("ワークスペースにアクセスできません");
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
-  if (!data.projectId) throw new Error("projectIdは必須です");
-  const amount = validateAmount(data.amount, "金額");
+  const validated = parsePromaneExpense(data);
 
   // セキュリティ: projectIdが自分のworkspaceか確認 (IDOR防止)
   const project = await prisma.promaneProject.findFirst({
@@ -95,13 +101,7 @@ export async function createExpense(workspaceSlug: string, data: {
   if (!project) throw new Error("プロジェクトが見つかりません");
 
   const expense = await prisma.promaneExpense.create({
-    data: {
-      projectId: data.projectId,
-      category: data.category,
-      amount,
-      description: data.description?.slice(0, 500) || "",
-      date: new Date(data.date),
-    },
+    data: validated,
   });
 
   revalidatePath(`/promane/${workspaceSlug}/projects/${data.projectId}`);
@@ -110,8 +110,7 @@ export async function createExpense(workspaceSlug: string, data: {
 
 export async function deleteExpense(workspaceSlug: string, expenseId: string, projectId: string) {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
-  if (!workspace) throw new Error("ワークスペースにアクセスできません");
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
   // セキュリティ: workspace所属確認 (IDOR防止)
   const existing = await prisma.promaneExpense.findFirst({
@@ -126,8 +125,7 @@ export async function deleteExpense(workspaceSlug: string, expenseId: string, pr
 
 export async function updateMemberRate(workspaceSlug: string, memberId: string, hourlyRate: number) {
   const { userId } = await requirePromaneAuthAction();
-  const workspace = await getWorkspaceBySlug(workspaceSlug, userId);
-  if (!workspace) throw new Error("ワークスペースにアクセスできません");
+  const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
   // セキュリティ: 操作者がowner/adminか確認 + 対象が自WSのメンバーか
   const myMember = await prisma.promaneMember.findFirst({

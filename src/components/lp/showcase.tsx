@@ -14,8 +14,7 @@ import { Sym, BgDots, SectionHeading } from './primitives'
 export function MockWindow({ title, children, className = '', floating = true }: { title?: string; children: React.ReactNode; className?: string; floating?: boolean }) {
   return (
     <div data-mock-window role="img" aria-label={`${title || "製品画面"}の操作イメージ`} className={`relative rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-2xl shadow-slate-300/40 ${floating ? 'animate-fade-in-up' : ''} ${className}`}>
-      {/* React 18 requires an empty HTML attribute; newer React typings declare inert as boolean. */}
-      <div aria-hidden="true" inert={'' as unknown as boolean}>
+      <div aria-hidden="true" inert>
       {/* トップバー */}
       <div className="flex items-center gap-2 px-4 h-10 border-b border-slate-100 bg-slate-50/80">
         <span className="w-3 h-3 rounded-full bg-slate-300" />

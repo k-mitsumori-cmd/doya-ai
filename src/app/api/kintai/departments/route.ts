@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
+import { validDepartmentParent } from '@/lib/department-integrity'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 
@@ -33,6 +34,18 @@ export async function POST(req: NextRequest) {
 
     const { name, parentId, managerId } = await req.json()
     if (!name) return NextResponse.json({ error: '部署名は必須です' }, { status: 400 })
+
+    if (parentId && !(await validDepartmentParent(undefined, parentId, (parent) =>
+      prisma.kintaiDepartment.findFirst({
+        where: { id: parent, organizationId: ctx.organizationId }, select: { id: true, parentId: true },
+      })
+    ))) return NextResponse.json({ error: '同じ組織の循環しない親部署を指定してください' }, { status: 400 })
+    if (managerId) {
+      const manager = await prisma.kintaiEmployee.findFirst({
+        where: { id: managerId, organizationId: ctx.organizationId }, select: { id: true },
+      })
+      if (!manager) return NextResponse.json({ error: '責任者が同じ組織に存在しません' }, { status: 400 })
+    }
 
     const dept = await prisma.kintaiDepartment.create({
       data: {

@@ -14,6 +14,7 @@ interface EvaluationData {
   selfComment: string
   managerComment: string
   overallScore: number
+  ratingField: 'selfRating' | 'managerRating' | 'finalRating'
   status: 'DRAFT' | 'SELF_REVIEW' | 'MANAGER_REVIEW' | 'FINALIZED'
   isManager: boolean
 }
@@ -53,7 +54,7 @@ export default function EvaluationDetailPage() {
     if (!res.ok) throw new Error('保存に失敗しました')
     // Refresh data
     const data = await res.json()
-    setEvaluation(data.evaluation ?? data)
+    setEvaluation((previous) => ({ ...previous, ...(data.evaluation ?? data) }))
   }
 
   if (loading) {
@@ -107,6 +108,7 @@ export default function EvaluationDetailPage() {
           initialOverallScore={evaluation.overallScore}
           status={evaluation.status}
           isManager={evaluation.isManager}
+          ratingField={evaluation.ratingField}
           onSave={handleSave}
         />
       </motion.div>

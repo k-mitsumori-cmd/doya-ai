@@ -7,11 +7,12 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
+import { canReadEvaluation } from '@/lib/hr/evaluation-access'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { buildEvaluationCommentPrompt } from '@/lib/hr/prompts'
 import { checkAiUsageLimit, incrementAiUsage } from '@/lib/hr/billing'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const p = 'then' in ctx.params ? await ctx.params : ctx.params
+    const p = await ctx.params
     const id = p.id
 
     const evaluation = await prisma.hrEvaluation.findFirst({
@@ -46,6 +47,13 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }
     if (evaluation.period.organizationId !== hrCtx.organizationId) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    if (!(await canReadEvaluation(hrCtx, evaluation))) {
+      return NextResponse.json({ error: 'この評価を操作する権限がありません' }, { status: 403 })
+    }
+    if (evaluation.status === 'FINALIZED') {
+      return NextResponse.json({ error: '確定済みの評価は変更できません' }, { status: 409 })
     }
 
     // AI使用量制限チェック
@@ -73,7 +81,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     })
 
     await prisma.hrEvaluation.update({
-      where: { id },
+      where: { id, status: { not: 'FINALIZED' }, updatedAt: evaluation.updatedAt },
       data: { aiComment },
     })
 
@@ -82,6 +90,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true, aiComment })
   } catch (e: any) {
+    if (e?.code === 'P2025') {
+      return NextResponse.json({ error: '生成中に評価が変更されました。再読み込みして内容を確認してください。' }, { status: 409 })
+    }
     return NextResponse.json(
       { error: e?.message || 'Failed to generate AI comment' },
       { status: 500 }

@@ -200,7 +200,7 @@ export async function generateReportPdf(input: ReportPdfInput): Promise<Uint8Arr
       args: chromium.args,
       defaultViewport: { width: 1240, height: 1754 }, // A4 @150dpi
       executablePath,
-      headless: chromium.headless,
+      headless: 'shell',
     })
     const page = await browser.newPage()
     await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 30000 })

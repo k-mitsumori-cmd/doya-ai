@@ -5,6 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { validDepartmentParent } from '@/lib/department-integrity'
 import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
 
@@ -114,6 +115,18 @@ export async function POST(req: NextRequest) {
       if (existing) {
         return NextResponse.json({ error: 'Department code already exists' }, { status: 400 })
       }
+    }
+
+    if (parentId && !(await validDepartmentParent(undefined, parentId, (parent) =>
+      prisma.hrDepartment.findFirst({
+        where: { id: parent, organizationId: ctx.organizationId }, select: { id: true, parentId: true },
+      })
+    ))) return NextResponse.json({ error: '同じ組織の循環しない親部署を指定してください' }, { status: 400 })
+    if (managerId) {
+      const manager = await prisma.hrEmployee.findFirst({
+        where: { id: managerId, organizationId: ctx.organizationId }, select: { id: true },
+      })
+      if (!manager) return NextResponse.json({ error: '責任者が同じ組織に存在しません' }, { status: 400 })
     }
 
     const department = await prisma.hrDepartment.create({

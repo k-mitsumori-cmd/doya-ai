@@ -1,25 +1,22 @@
+import { publicSeoJob } from '@seo/lib/job-response'
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
-import { getGuestIdFromRequest } from '@/lib/seoAccess'
+import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
-  const params = 'then' in ctx.params ? await ctx.params : ctx.params
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const params = await ctx.params
   const id = params.id
   
   try {
+    const owner = await getSeoArticleOwner(_req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
     await ensureSeoSchema()
-    const session = await getServerSession(authOptions)
-    const user: any = session?.user || null
-    const userId = String(user?.id || '').trim()
-    const guestId = !userId ? getGuestIdFromRequest(_req) : null
-    const article = await (prisma as any).seoArticle.findUnique({
-      where: { id },
+    const article = await prisma.seoArticle.findFirst({
+      where: { id, ...owner },
       include: {
         jobs: { orderBy: { createdAt: 'desc' } },
         sections: { orderBy: { index: 'asc' } },
@@ -32,16 +29,6 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       },
     })
     if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
-    // 所有者チェック（ユーザー/ゲストで分離）
-    if (userId) {
-      if (String(article.userId || '') !== userId) {
-        return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
-      }
-    } else {
-      if (!guestId || String(article.guestId || '') !== guestId) {
-        return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
-      }
-    }
     // 比較記事の場合は候補数も含める
     const comparisonCandidates = Array.isArray(article.comparisonCandidates) ? article.comparisonCandidates : []
     const comparisonConfig = article.comparisonConfig || null
@@ -51,6 +38,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
       success: true,
       article: {
         ...article,
+        jobs: (article.jobs || []).map(publicSeoJob),
         comparisonCount,
         comparisonCandidates,
         comparisonConfig,
@@ -66,54 +54,31 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
   }
 }
 
-export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
-  const params = 'then' in ctx.params ? await ctx.params : ctx.params
+export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const params = await ctx.params
   const id = params.id
 
   try {
+    const owner = await getSeoArticleOwner(_req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
     await ensureSeoSchema()
-    const session = await getServerSession(authOptions)
-    const user: any = session?.user || null
-    const userId = String(user?.id || '').trim()
-    const guestId = !userId ? getGuestIdFromRequest(_req) : null
-
-    // 記事を取得して所有者チェック
-    const article = await (prisma as any).seoArticle.findUnique({
-      where: { id },
-      select: { id: true, userId: true, guestId: true },
-    })
-    if (!article) {
-      return NextResponse.json({ success: false, error: '記事が見つかりません' }, { status: 404 })
-    }
-
-    // 所有者チェック
-    if (userId) {
-      if (String(article.userId || '') !== userId) {
-        return NextResponse.json({ success: false, error: '記事が見つかりません' }, { status: 404 })
-      }
-    } else {
-      if (!guestId || String(article.guestId || '') !== guestId) {
-        return NextResponse.json({ success: false, error: '記事が見つかりません' }, { status: 404 })
-      }
-    }
-
-    // 関連レコードを削除してから記事を削除
-    await (prisma as any).$transaction(async (tx: any) => {
-      // 関連テーブルを削除（存在する場合）
-      try { await tx.seoJob.deleteMany({ where: { articleId: id } }) } catch {}
-      try { await tx.seoSection.deleteMany({ where: { articleId: id } }) } catch {}
-      try { await tx.seoReference.deleteMany({ where: { articleId: id } }) } catch {}
-      try { await tx.seoAuditReport.deleteMany({ where: { articleId: id } }) } catch {}
-      try { await tx.seoUserMemo.deleteMany({ where: { articleId: id } }) } catch {}
-      try { await tx.seoImage.deleteMany({ where: { articleId: id } }) } catch {}
-      try { await tx.seoLinkCheckResult.deleteMany({ where: { articleId: id } }) } catch {}
-      try { await tx.seoKnowledgeItem.deleteMany({ where: { articleId: id } }) } catch {}
-      // 記事本体を削除
-      await tx.seoArticle.delete({ where: { id } })
+    await prisma.$transaction(async (tx) => {
+      // Lock the owned parent before deleting children; a concurrent claim must serialize here.
+      await tx.seoArticle.update({ where: { id, ...owner }, data: { updatedAt: new Date() }, select: { id: true } })
+      await tx.seoJob.deleteMany({ where: { articleId: id } })
+      await tx.seoSection.deleteMany({ where: { articleId: id } })
+      await tx.seoReference.deleteMany({ where: { articleId: id } })
+      await tx.seoAuditReport.deleteMany({ where: { articleId: id } })
+      await tx.seoUserMemo.deleteMany({ where: { articleId: id } })
+      await tx.seoImage.deleteMany({ where: { articleId: id } })
+      await tx.seoLinkCheckResult.deleteMany({ where: { articleId: id } })
+      await tx.seoKnowledgeItem.deleteMany({ where: { articleId: id } })
+      await tx.seoArticle.delete({ where: { id, ...owner } })
     })
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
+    if (e?.code === 'P2025') return NextResponse.json({ success: false, error: '記事が見つかりません' }, { status: 404 })
     const msg = e?.message || '不明なエラー'
     console.error('[seo article delete] failed', { articleId: id, msg, error: e })
     return NextResponse.json(

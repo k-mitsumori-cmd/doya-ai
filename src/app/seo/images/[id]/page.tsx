@@ -8,7 +8,8 @@ import { canUseSeoImages, isTrialActive, normalizeSeoPlan } from '@/lib/seoAcces
 
 export const runtime = 'nodejs'
 
-export default async function SeoImageDetailPage({ params }: { params: { id: string } }) {
+export default async function SeoImageDetailPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   await ensureSeoSchema()
   const id = params.id
   const session = await getServerSession(authOptions)

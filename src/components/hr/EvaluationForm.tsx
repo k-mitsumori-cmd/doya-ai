@@ -2,7 +2,8 @@
 
 import toast from 'react-hot-toast'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import type { EvaluationRatingField } from '@/lib/hr/evaluation-access'
 import { motion, AnimatePresence } from 'framer-motion'
 import AiInsightPanel from './AiInsightPanel'
 
@@ -24,8 +25,9 @@ interface EvaluationFormProps {
   initialSelfComment?: string
   initialManagerComment?: string
   initialOverallScore?: number
-  status?: 'DRAFT' | 'SELF_REVIEW' | 'MANAGER_REVIEW' | 'FINALIZED'
+  status?: string
   isManager?: boolean
+  ratingField?: EvaluationRatingField
   onSave?: (data: any) => void
 }
 
@@ -69,6 +71,7 @@ export default function EvaluationForm({
   initialOverallScore = 0,
   status = 'DRAFT',
   isManager = false,
+  ratingField = 'selfRating',
   onSave,
 }: EvaluationFormProps) {
   const [goals, setGoals] = useState<Goal[]>(
@@ -82,8 +85,11 @@ export default function EvaluationForm({
   const [aiResult, setAiResult] = useState<string | null>(null)
   const [aiLoading, setAiLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)
+  const aiLoadingRef = useRef(false)
 
   const isReadOnly = status === 'FINALIZED'
+  const editingDisabled = isReadOnly || saving || aiLoading
 
   const addGoal = () => {
     setGoals([
@@ -102,9 +108,15 @@ export default function EvaluationForm({
   }
 
   const handleAiComment = async () => {
+    if (savingRef.current || aiLoadingRef.current || saving || aiLoading || isReadOnly) return
+    aiLoadingRef.current = true
     setAiLoading(true)
     setAiResult(null)
     try {
+      if (evaluationId && !(await handleSave())) {
+        setAiResult('エラー: 評価を保存できなかったため、AI生成は実行していません。入力内容を確認して保存をやり直してください。')
+        return
+      }
       const url = evaluationId
         ? `/api/hr/evaluations/${evaluationId}/ai-comment`
         : '/api/hr/evaluations/ai-comment'
@@ -120,32 +132,35 @@ export default function EvaluationForm({
           overallScore,
         }),
       })
-      if (!res.ok) throw new Error('AI生成に失敗しました')
       const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'AI生成に失敗しました')
       setAiResult(data.aiComment || data.comment || data.result || '')
     } catch (e: any) {
       setAiResult(`エラー: ${e.message}`)
     } finally {
+      aiLoadingRef.current = false
       setAiLoading(false)
     }
   }
 
   const handleSave = async () => {
+    if (savingRef.current || saving || isReadOnly) return false
+    savingRef.current = true
     setSaving(true)
     try {
       const payload = {
         evaluationId,
         employeeId,
         goals,
-        selfComment,
-        managerComment,
+        ...(ratingField !== 'managerRating' ? { selfComment } : {}),
+        ...(ratingField !== 'selfRating' ? { managerComment } : {}),
         overallScore,
       }
       if (onSave) {
         await onSave(payload)
       } else {
         const url = evaluationId ? `/api/hr/evaluations/${evaluationId}` : '/api/hr/evaluations'
-        const method = evaluationId ? 'PUT' : 'POST'
+        const method = evaluationId ? 'PATCH' : 'POST'
         const res = await fetch(url, {
           method,
           headers: { 'Content-Type': 'application/json' },
@@ -153,11 +168,19 @@ export default function EvaluationForm({
         })
         if (!res.ok) throw new Error('保存に失敗しました')
       }
+      return true
     } catch (e: any) {
       toast.error(e.message)
+      return false
     } finally {
+      savingRef.current = false
       setSaving(false)
     }
+  }
+
+  const handleManualSave = async () => {
+    if (aiLoadingRef.current) return false
+    return handleSave()
   }
 
   const totalWeight = goals.reduce((sum, g) => sum + (g.weight || 0), 0)
@@ -188,10 +211,7 @@ export default function EvaluationForm({
                 status === 'MANAGER_REVIEW' ? 'bg-blue-100 text-blue-700' :
                 'bg-emerald-100 text-emerald-700'
               }`}>
-                {status === 'DRAFT' ? '下書き' :
-                 status === 'SELF_REVIEW' ? '自己評価中' :
-                 status === 'MANAGER_REVIEW' ? '上司評価中' :
-                 '確定済み'}
+                {({ DRAFT: '下書き', SELF_REVIEW: '自己評価中', SELF_EVALUATION: '自己評価中', MANAGER_REVIEW: '上司評価中', SUBMITTED: '提出済み', REVIEWED: '評価済み', FINALIZED: '確定済み' } as Record<string, string>)[status] || '状態不明'}
               </span>
             </div>
           </div>
@@ -225,6 +245,7 @@ export default function EvaluationForm({
               <button
                 type="button"
                 onClick={addGoal}
+                disabled={editingDisabled}
                 className="flex items-center gap-1 px-3 py-1.5 bg-sky-50 text-sky-600 rounded-lg text-base font-bold hover:bg-sky-100 transition-colors"
               >
                 <span className="material-symbols-outlined text-lg">add</span>
@@ -250,6 +271,7 @@ export default function EvaluationForm({
                     <button
                       type="button"
                       onClick={() => removeGoal(goal.id)}
+                      disabled={editingDisabled}
                       aria-label="目標を削除"
                       className="text-slate-400 hover:text-red-500 transition-colors"
                     >
@@ -264,7 +286,7 @@ export default function EvaluationForm({
                       type="text"
                       value={goal.title}
                       onChange={(e) => updateGoal(goal.id, 'title', e.target.value)}
-                      disabled={isReadOnly}
+                      disabled={editingDisabled}
                       className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base font-medium focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500"
                       placeholder="目標タイトルを入力"
                     />
@@ -274,7 +296,7 @@ export default function EvaluationForm({
                     <textarea
                       value={goal.description}
                       onChange={(e) => updateGoal(goal.id, 'description', e.target.value)}
-                      disabled={isReadOnly}
+                      disabled={editingDisabled}
                       rows={2}
                       className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
                       placeholder="目標の詳細を入力"
@@ -288,7 +310,7 @@ export default function EvaluationForm({
                       max={100}
                       value={goal.weight}
                       onChange={(e) => updateGoal(goal.id, 'weight', parseInt(e.target.value) || 0)}
-                      disabled={isReadOnly}
+                      disabled={editingDisabled}
                       className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-lg font-bold text-center focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500"
                     />
                   </div>
@@ -297,7 +319,7 @@ export default function EvaluationForm({
                     <StarInput
                       value={goal.score}
                       onChange={(v) => updateGoal(goal.id, 'score', v)}
-                      disabled={isReadOnly}
+                      disabled={editingDisabled}
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -305,7 +327,7 @@ export default function EvaluationForm({
                     <textarea
                       value={goal.result}
                       onChange={(e) => updateGoal(goal.id, 'result', e.target.value)}
-                      disabled={isReadOnly}
+                      disabled={editingDisabled}
                       rows={2}
                       className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
                       placeholder="達成結果を記入"
@@ -329,7 +351,7 @@ export default function EvaluationForm({
           <textarea
             value={selfComment}
             onChange={(e) => setSelfComment(e.target.value)}
-            disabled={isReadOnly}
+            disabled={editingDisabled || ratingField === 'managerRating'}
             rows={4}
             className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
             placeholder="この評価期間の振り返りを記入してください..."
@@ -341,7 +363,7 @@ export default function EvaluationForm({
             <textarea
               value={managerComment}
               onChange={(e) => setManagerComment(e.target.value)}
-              disabled={isReadOnly}
+              disabled={editingDisabled}
               rows={4}
               className="w-full px-3 py-3 bg-white border border-slate-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:border-sky-400 disabled:bg-slate-100 disabled:text-slate-500 resize-none"
               placeholder="部下への評価コメントを記入してください..."
@@ -354,9 +376,9 @@ export default function EvaluationForm({
       <div className="bg-white rounded-3xl shadow-md p-6">
         <h3 className="text-lg font-black text-slate-900 mb-3 flex items-center gap-2">
           <span className="material-symbols-outlined text-sky-500">stars</span>
-          総合評価
+          {ratingField === 'selfRating' ? '自己評価の総合点' : ratingField === 'managerRating' ? '上司評価の総合点' : '最終評価の総合点'}
         </h3>
-        <StarInput value={overallScore} onChange={setOverallScore} disabled={isReadOnly} />
+        <StarInput value={overallScore} onChange={setOverallScore} disabled={editingDisabled} />
       </div>
 
       {/* AI Comment Generation */}
@@ -370,7 +392,7 @@ export default function EvaluationForm({
             <button
               type="button"
               onClick={handleAiComment}
-              disabled={aiLoading}
+              disabled={saving || aiLoading}
               className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-full text-base font-bold hover:shadow-lg hover:shadow-purple-500/20 transition-all disabled:opacity-50"
             >
               {aiLoading ? (
@@ -381,6 +403,7 @@ export default function EvaluationForm({
               {aiLoading ? '生成中...' : 'AIコメント生成'}
             </button>
           </div>
+          <p className="mt-3 text-sm text-slate-500">現在の入力内容を保存してから、AIコメントを生成します。</p>
           {(aiLoading || aiResult) && (
             <AiInsightPanel loading={aiLoading} content={aiResult || ''} />
           )}
@@ -392,8 +415,8 @@ export default function EvaluationForm({
         <div className="flex justify-end gap-3">
           <button
             type="button"
-            onClick={handleSave}
-            disabled={saving}
+            onClick={handleManualSave}
+            disabled={saving || aiLoading}
             className="flex items-center gap-2 px-6 py-3.5 bg-blue-600 text-white rounded-full text-base font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all disabled:opacity-50"
           >
             <span className="material-symbols-outlined text-lg">save</span>

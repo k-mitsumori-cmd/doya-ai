@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict'),{load}=require('./load-typescript.cjs')
+const modes=load('src/lib/cunning/modes.ts'),input=load('src/lib/cunning/session-input.ts',{'./modes':modes})
+let code;let actor='owner',allow=true,writes=[],notifications=0,lookups=[]
+const model={findFirst:async({where})=>{lookups.push(where);return where.userId==='owner'&&where.id==='owned'?{id:'owned'}:null}}
+const api=load('src/app/api/cunning/sessions/route.ts',{'next/server':{NextResponse:{json:(d,i)=>new Response(JSON.stringify(d),i)}},'@/lib/cunning/history-cursor':{},'@/lib/prisma':{prisma:{cunningKnowledgeBase:model,cunningCompanyProfile:model,cunningApplicantProfile:model,cunningSession:{create:async({data})=>{writes.push(data);return{id:'saved',...data}}}}},'@/lib/cunning/access':{getUserId:async()=>actor},'@/lib/cunning/limits':{canStartSession:async()=>({ok:allow,code})},'@/lib/cunning/session-input':input,'@/lib/service-usage':{recordServiceUsage:async()=>notifications++}})
+const run=body=>api.POST({json:async()=>body})
+;(async()=>{
+for(const body of [null,[],true,'string',{title:3},{title:{}},{title:'x'.repeat(121)},{personaNote:[]},{personaNote:'x'.repeat(1001)},{mode:3},{mode:'__proto__'},{mode:'unknown'},{knowledgeBaseId:{}},{companyProfileId:[]},{applicantProfileId:1},{knowledgeBaseId:'x'.repeat(129)}])assert.equal((await run(body)).status,400)
+assert.equal((await api.POST({json:async()=>{throw Error('json')}})).status,400);assert.equal(writes.length,0);assert.equal(lookups.length,0);assert.equal(notifications,0);console.log('PASS malformed inputs return400 before reference lookups, writes or notifications')
+for(const field of ['knowledgeBaseId','companyProfileId','applicantProfileId']){assert.equal((await run({[field]:'foreign'})).status,404);assert.equal((await run({[field]:'missing'})).status,404)}assert.equal(writes.length,0);assert.ok(lookups.every(q=>q.userId==='owner'));console.log('PASS all three references require ownership and reject missing/foreign without creating a session')
+assert.equal((await run({title:' Test ',personaNote:' note ',knowledgeBaseId:'owned',companyProfileId:'owned',applicantProfileId:'owned'})).status,200);assert.equal(writes[0].title,'Test');assert.equal(writes[0].personaNote,'note');assert.equal(writes[0].mode,'sales');assert.equal(notifications,1)
+for(const mode of modes.MODE_IDS)assert.equal((await run({mode})).status,200);console.log('PASS owned references, defaults, trimming and every supported mode create successfully')
+const before=writes.length;actor=null;assert.equal((await run({})).status,401);actor='owner';allow=false;assert.equal((await run({})).status,403);assert.equal(writes.length,before);console.log('PASS authentication and existing allowance gate retained')
+for(const value of ['LIMIT','RECORDING_RESERVED']){code=value;const response=await run({});assert.equal(response.status,403);const body=await response.json();assert.equal(body.code,value);assert.equal(body.upgradeUrl,value==='LIMIT'?'/cunning/pricing':undefined)}console.log('PASS consumed quota offers pricing but recording reservations do not');
+})().catch(e=>{console.error(e);process.exitCode=1})

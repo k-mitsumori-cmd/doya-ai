@@ -158,41 +158,64 @@ function limitMessage(
  * 生成してよいか。
  * @param requestedImages これから作る枚数。枠を超える生成を**始める前に**弾く。
  */
+export interface AdImageQuotaDenied {
+  ok: false
+  reason: string
+  code: 'REQUEST_IMAGE_LIMIT' | 'DAILY_IMAGE_LIMIT' | 'MONTHLY_IMAGE_LIMIT' | 'DAILY_CONCEPT_LIMIT'
+  limitReached: boolean
+  diagnosticId: string
+  usage: { period: 'request' | 'day' | 'month'; unit: 'image' | 'concept'; limit: number; used: number; requested: number }
+  resetAt: string | null
+}
+
+function quotaDenied(
+  reason: string, code: AdImageQuotaDenied['code'], plan: AdImagePlan,
+  usage: AdImageQuotaDenied['usage']
+): AdImageQuotaDenied {
+  let resetAt: string | null = null
+  if (usage.period === 'day') resetAt = new Date(jstStartOfTodayUtc().getTime() + 86400000).toISOString()
+  if (usage.period === 'month') {
+    const jst = new Date(jstStartOfMonthUtc().getTime() + 9 * 3600000)
+    resetAt = new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth() + 1, 1) - 9 * 3600000).toISOString()
+  }
+  const diagnosticId = randomBytes(12).toString('hex')
+  // No identity, brand, prompt, URL, cookies or exception payloads. An expected
+  // allowance rejection is informational, not console.error / a runtime incident.
+  console.info('[adimage] quota denied', { diagnosticId, code, plan, ...usage, resetAt })
+  return { ok: false, reason, code, limitReached: usage.period !== 'request', diagnosticId, usage, resetAt }
+}
+
 export async function assertQuota(
   id: AdImageIdentity,
   requestedImages = 1
-): Promise<{ ok: true } | { ok: false; reason: string }> {
-  // 1回あたりの枚数（全プラン共通）
+): Promise<{ ok: true } | AdImageQuotaDenied> {
   if (requestedImages > MAX_PLACEMENTS_PER_RUN) {
-    return { ok: false, reason: `一度に生成できるのは${MAX_PLACEMENTS_PER_RUN}枚までです。` }
+    return quotaDenied(`一度に生成できるのは${MAX_PLACEMENTS_PER_RUN}枚までです。配置やパターン数を減らしてください。`,
+      'REQUEST_IMAGE_LIMIT', id.plan, { period: 'request', unit: 'image', limit: MAX_PLACEMENTS_PER_RUN, used: 0, requested: requestedImages })
   }
-
-  // 枚数の上限（無料プランのみ）
   const dailyImages = DAILY_IMAGE_LIMIT[id.plan]
   const monthlyImages = MONTHLY_IMAGE_LIMIT[id.plan]
   if (dailyImages != null) {
     const usedToday = await imagesSince(id, jstStartOfTodayUtc())
     if (usedToday + requestedImages > dailyImages) {
-      return { ok: false, reason: limitMessage(id.plan, '1日', dailyImages, usedToday, '本日') }
+      return quotaDenied(limitMessage(id.plan, '1日', dailyImages, usedToday, '本日'), 'DAILY_IMAGE_LIMIT', id.plan,
+        { period: 'day', unit: 'image', limit: dailyImages, used: usedToday, requested: requestedImages })
     }
   }
   if (monthlyImages != null) {
     const usedMonth = await imagesSince(id, jstStartOfMonthUtc())
     if (usedMonth + requestedImages > monthlyImages) {
-      return { ok: false, reason: limitMessage(id.plan, '月', monthlyImages, usedMonth, '今月') }
+      return quotaDenied(limitMessage(id.plan, '月', monthlyImages, usedMonth, '今月'), 'MONTHLY_IMAGE_LIMIT', id.plan,
+        { period: 'month', unit: 'image', limit: monthlyImages, used: usedMonth, requested: requestedImages })
     }
   }
-
   const used = await conceptsToday(id)
   const limit = DAILY_CONCEPT_LIMIT[id.plan]
   if (used >= limit) {
-    return {
-      ok: false,
-      reason:
-        id.plan === 'PRO'
-          ? '本日の生成上限に達しました。明日また実行できます。'
-          : 'お試しの上限に達しました。プロプランにご登録いただくと制限なくご利用いただけます。',
-    }
+    return quotaDenied(id.plan === 'PRO'
+      ? '本日の生成上限に達しました。明日また実行できます。'
+      : '本日の生成上限に達しました。明日また実行できます。プロプランで上限を増やせます。',
+      'DAILY_CONCEPT_LIMIT', id.plan, { period: 'day', unit: 'concept', limit, used, requested: 1 })
   }
   return { ok: true }
 }

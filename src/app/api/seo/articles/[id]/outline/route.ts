@@ -13,8 +13,8 @@ const BodySchema = z.object({
   outline: z.string().max(50000).optional(),
 })
 
-export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
-  const params = 'then' in ctx.params ? await ctx.params : ctx.params
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const params = await ctx.params
   const id = params.id
   
   try {
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         return NextResponse.json({ success: false, error: '権限がありません' }, { status: 403 })
       }
     } else {
-      if (!guestId || String(article.guestId || '') !== guestId) {
+      if (article.userId || !guestId || String(article.guestId || '') !== guestId) {
         return NextResponse.json({ success: false, error: '権限がありません' }, { status: 403 })
       }
     }
@@ -45,12 +45,13 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const outline = body.outline || ''
     
     await (prisma as any).seoArticle.update({
-      where: { id },
+      where: { id, ...(userId ? { userId } : { userId: null, guestId }) },
       data: { outline },
     })
     
     return NextResponse.json({ success: true })
   } catch (e: any) {
+    if (e?.code === 'P2025') return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     // バリデーションエラーの詳細を返す
     if (e?.name === 'ZodError') {
       const issues = e.issues?.map((issue: any) => ({

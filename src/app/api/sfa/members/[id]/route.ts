@@ -7,7 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getSfaContext, hasMinRole, orgSlugFrom } from '@/lib/sfa/access'
 import { ROLE_HIERARCHY } from '@/lib/sfa/types'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 const ASSIGNABLE_ROLES = ['member', 'manager', 'admin']
 const rank = (role: string) => ROLE_HIERARCHY[role] ?? 0
 
@@ -32,7 +32,7 @@ async function loadTarget(req: NextRequest, id: string) {
 
 // PATCH /api/sfa/members/[id] — 権限（ロール）変更
 export async function PATCH(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const r = await loadTarget(req, p.id)
   if ('error' in r) return r.error
 
@@ -55,7 +55,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
 // DELETE /api/sfa/members/[id] — メンバー削除 / 招待取消
 export async function DELETE(req: NextRequest, ctx: Ctx) {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const r = await loadTarget(req, p.id)
   if ('error' in r) return r.error
 

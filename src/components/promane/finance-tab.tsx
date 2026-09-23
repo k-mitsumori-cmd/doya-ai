@@ -1,5 +1,6 @@
 "use client";
 
+import { parsePromaneExpense, parsePromaneYenInput, promaneToday, formatPromaneWorkDate } from "@/lib/promane/time-input";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/promane/ui/card";
@@ -52,25 +53,16 @@ export function FinanceTab({
     e.preventDefault();
     setLoading(true);
     const form = new FormData(e.currentTarget);
-    const amount = parseInt(form.get("amount") as string) || 0;
-    // クライアント側 事前バリデーション
-    if (amount < 0) {
-      toast.error("金額は 0以上の値を入力してください", { duration: 5000 });
-      setLoading(false);
-      return;
-    }
     try {
+      const validated = parsePromaneExpense({ projectId, category: form.get("category"), amount: parsePromaneYenInput(form.get("amount")), description: form.get("description"), date: form.get("date") });
       // Server Action → API ルート (Server Components renderエラー回避)
       const res = await fetch("/api/promane/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workspaceSlug,
-          projectId,
-          category: form.get("category") as string,
-          amount,
-          description: form.get("description") as string,
-          date: form.get("date") as string,
+          ...validated,
+          date: validated.date.toISOString().slice(0, 10),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -183,16 +175,16 @@ export function FinanceTab({
                 </div>
                 <div>
                   <Label className="text-xs">金額</Label>
-                  <Input name="amount" type="number" min="0" max="9999999999" step="1" placeholder="100000" required />
+                  <Input name="amount" type="number" min="0" max="2147483647" step="1" placeholder="100000" required />
                 </div>
               </div>
               <div>
                 <Label className="text-xs">説明</Label>
-                <Input name="description" placeholder="外注デザイン費用" required />
+                <Input name="description" maxLength={500} placeholder="外注デザイン費用" required />
               </div>
               <div>
                 <Label className="text-xs">日付</Label>
-                <Input name="date" type="date" defaultValue={new Date().toISOString().split("T")[0]} required />
+                <Input name="date" type="date" defaultValue={promaneToday()} required />
               </div>
               <Button type="submit" size="sm" disabled={loading}>
                 {loading ? "追加中..." : "追加"}
@@ -211,7 +203,7 @@ export function FinanceTab({
                       <span className="font-medium">{expense.description}</span>
                       <span className="ml-2 text-gray-500">
                         {EXPENSE_CATEGORY_LABELS[expense.category]} ・{" "}
-                        {new Date(expense.date).toLocaleDateString("ja-JP")}
+                        {formatPromaneWorkDate(expense.date)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">

@@ -70,3 +70,15 @@ export async function getCurrentMember(workspaceId: string, userId: string) {
     where: { workspaceId_userId: { workspaceId, userId } },
   })
 }
+
+/** Server Action用。閲覧用の所属確認と、更新・管理の権限確認を分離する。 */
+export async function requireWritableWorkspace(slug: string, userId: string, adminOnly = false) {
+  const workspace = await getWorkspaceBySlug(slug, userId)
+  if (!workspace) throw new Error('ワークスペースにアクセスできません')
+  const member = workspace.members.find((m) => m.userId === userId && m.isActive)
+  const allowedRoles = adminOnly ? ['owner', 'admin'] : ['owner', 'admin', 'member']
+  if (!member || !allowedRoles.includes(member.role)) {
+    throw new Error(adminOnly ? 'この操作はオーナー・管理者のみ実行できます' : '閲覧専用のため変更できません')
+  }
+  return workspace
+}

@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { randomUUID } from 'node:crypto'
 
 type SaveBase64Args = {
   base64: string
@@ -50,12 +51,17 @@ export async function ensureSeoStorage() {
   }
 }
 
+function assertInside(base: string, candidate: string) {
+  if (candidate !== base && !candidate.startsWith(base + path.sep)) throw new Error('Path is outside SEO storage')
+}
+
 function getAbsolutePath(relOrAbs: string) {
-  const base = ensuredBaseDir || getBaseDir()
-  const p = String(relOrAbs || '')
-  if (!p) return path.join(base, 'images', 'missing')
-  if (path.isAbsolute(p)) return p
-  return path.join(base, p)
+  const base = path.resolve(ensuredBaseDir || getBaseDir())
+  const input = String(relOrAbs || '')
+  if (!input || input.includes('\\') || input.includes('\0')) throw new Error('Invalid storage path')
+  const target = path.resolve(base, input)
+  assertInside(base, target)
+  return target
 }
 
 function stripDataUrlPrefix(b64: string) {
@@ -69,21 +75,31 @@ export async function saveBase64ToFile({ base64, filename, subdir }: SaveBase64A
   const base = ensuredBaseDir || getBaseDir()
   const safeSubdir = (subdir || '').trim()
   const relDir = safeSubdir ? safeSubdir : ''
-  const absDir = safeSubdir ? path.join(base, safeSubdir) : base
+  if (safeSubdir.includes('\\') || safeSubdir.includes('\0')) throw new Error('Invalid storage directory')
+  if (!filename || filename !== path.basename(filename) || /[\\/]/.test(filename) || filename === '.' || filename === '..') throw new Error('Invalid storage filename')
+  const absDir = path.resolve(base, safeSubdir)
+  const basePath = path.resolve(base)
+  if (absDir !== basePath && !absDir.startsWith(basePath + path.sep)) throw new Error('Invalid storage directory')
   fs.mkdirSync(absDir, { recursive: true })
+  assertInside(fs.realpathSync(base), fs.realpathSync(absDir))
 
   const clean = stripDataUrlPrefix(base64)
   const buf = Buffer.from(clean, 'base64')
-  const absPath = path.join(absDir, filename)
-  fs.writeFileSync(absPath, buf)
+  const extension = path.extname(filename)
+  const storedFilename = `${path.basename(filename, extension)}_${randomUUID()}${extension}`
+  const absPath = path.join(absDir, storedFilename)
+  fs.writeFileSync(absPath, buf, { flag: 'wx' })
 
-  const relativePath = relDir ? path.posix.join(relDir.replace(/\\/g, '/'), filename) : filename
+  const relativePath = relDir ? path.posix.join(relDir.replace(/\\/g, '/'), storedFilename) : storedFilename
   return { absolutePath: absPath, relativePath }
 }
 
 export async function readFileAsBuffer(relOrAbsPath: string) {
   await ensureSeoStorage()
   const abs = getAbsolutePath(relOrAbsPath)
-  return fs.promises.readFile(abs)
+  const base = await fs.promises.realpath(ensuredBaseDir || getBaseDir())
+  const target = await fs.promises.realpath(abs)
+  assertInside(base, target)
+  return fs.promises.readFile(target)
 }
 

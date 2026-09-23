@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { getGuestIdFromRequest } from '@/lib/seoAccess'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
 export const runtime = 'nodejs'
@@ -10,22 +13,28 @@ const BodySchema = z.object({
   content: z.string().max(20000),
 })
 
-export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
-  const params = 'then' in ctx.params ? await ctx.params : ctx.params
+export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const params = await ctx.params
   const id = params.id
   
   try {
+    const session = await getServerSession(authOptions)
+    const userId = String((session?.user as any)?.id || '').trim()
+    const guestId = !userId ? getGuestIdFromRequest(req) : null
+    if (!userId && !guestId) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
+    const owner = userId ? { userId } : { userId: null, guestId }
     await ensureSeoSchema()
     const body = BodySchema.parse(await req.json())
     const content = body.content || ''
 
-    const memo = await (prisma as any).seoUserMemo.upsert({
-      where: { articleId: id },
-      create: { articleId: id, content },
-      update: { content },
+    const article = await (prisma as any).seoArticle.update({
+      where: { id, ...owner },
+      data: { memo: { upsert: { create: { content }, update: { content } } } },
+      select: { memo: true },
     })
-    return NextResponse.json({ success: true, memo })
+    return NextResponse.json({ success: true, memo: article.memo })
   } catch (e: any) {
+    if (e?.code === 'P2025') return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     // バリデーションエラーの詳細を返す
     if (e?.name === 'ZodError') {
       const issues = e.issues?.map((issue: any) => ({

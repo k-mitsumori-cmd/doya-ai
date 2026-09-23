@@ -10,10 +10,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 async function resolveId(ctx: Ctx): Promise<string> {
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   return p.id
 }
 
@@ -111,6 +111,19 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     if (ownerErr) return ownerErr
 
     const body = await req.json()
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ success: false, error: '保存内容が不正です' }, { status: 400 })
+    }
+    if (typeof body.expectedUpdatedAt !== 'string') {
+      return NextResponse.json({ success: false, error: '記事の更新情報がありません。入力をコピーして保管してから記事を開き直してください。' }, { status: 428 })
+    }
+    const expectedUpdatedAt = new Date(body.expectedUpdatedAt)
+    if (!Number.isFinite(expectedUpdatedAt.getTime())) {
+      return NextResponse.json({ success: false, error: '記事の更新情報が不正です' }, { status: 400 })
+    }
+    if (draft.updatedAt.getTime() !== expectedUpdatedAt.getTime()) {
+      return NextResponse.json({ success: false, error: '別の画面で記事が更新されています。入力をコピーして保管してから最新版を確認してください。', code: 'EDIT_CONFLICT' }, { status: 409 })
+    }
     const allowedFields = [
       'title', 'lead', 'content', 'displayFormat',
       'seoTitle', 'seoDescription', 'socialTitle', 'socialDescription',
@@ -123,12 +136,14 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     }
 
     // contentが更新された場合はwordCountも更新
-    if (data.content) {
+    if (typeof data.content === 'string') {
       data.wordCount = data.content.length
       data.readingTime = Math.ceil(data.content.length / 600)
     }
 
-    const updated = await prisma.interviewDraft.update({ where: { id }, data })
+    // 同じミリ秒内の更新も、次回保存から区別できる更新日時にする。
+    data.updatedAt = new Date(Math.max(Date.now(), expectedUpdatedAt.getTime() + 1))
+    const updated = await prisma.interviewDraft.update({ where: { id, updatedAt: expectedUpdatedAt }, data })
 
     return NextResponse.json({
       success: true,
@@ -140,6 +155,9 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: any) {
+    if (e?.code === 'P2025') {
+      return NextResponse.json({ success: false, error: '記事が更新または削除されました。入力をコピーして保管してから最新版を確認してください。', code: 'EDIT_CONFLICT' }, { status: 409 })
+    }
     return NextResponse.json(
       { success: false, error: e?.message || '保存に失敗しました' },
       { status: 500 }

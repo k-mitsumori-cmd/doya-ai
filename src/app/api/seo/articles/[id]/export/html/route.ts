@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 import { markdownToHtmlBasic } from '@seo/lib/markdown'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 
 export const runtime = 'nodejs'
 
-export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> | { id: string } }) {
+export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  const owner = await getSeoArticleOwner(_req)
+  if (!owner) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
   await ensureSeoSchema()
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const id = p.id
-  const article = await (prisma as any).seoArticle.findUnique({ where: { id } })
+  const article = await (prisma as any).seoArticle.findFirst({ where: { id, ...owner } })
   if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
   const md = article.finalMarkdown || ''
   const body = markdownToHtmlBasic(md)

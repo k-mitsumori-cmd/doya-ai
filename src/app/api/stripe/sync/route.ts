@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { stripe, ALL_SERVICE_IDS, resolvePlanIdFromSubscription, planTierFromPlanId } from '@/lib/stripe'
+import { stripe, ACTIVE_LIKE_STATUSES, resolvePlanIdFromSubscription, planTierFromPlanId } from '@/lib/stripe'
+import { syncUnifiedBilling } from '@/lib/billing-sync'
 import { prisma } from '@/lib/prisma'
 import { sendEventNotification } from '@/lib/notifications'
 
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
     // 別ユーザーのcheckoutを誤って同期しない最低限のガード
     // - client_reference_id は createCheckoutSession で userId を入れている
     const ref = String(checkout.client_reference_id || '').trim()
-    const customerEmail = String((checkout.customer_email as any) || '').trim()
+    const customerEmail = String(checkout.customer_email || checkout.customer_details?.email || '').trim()
     // 古い決済で ref が email になっている/空のケースも救済しつつ、他人の決済は弾く
     if (ref && ref !== user.id && ref !== String(user.email || '').trim()) {
       return NextResponse.json({ error: 'Checkout session does not match user' }, { status: 403 })
@@ -56,59 +57,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Checkout session email does not match user' }, { status: 403 })
     }
 
-    // Customer IDを保存（Webhookが遅延してもポータル等が使える）
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        stripeCustomerId: customerId,
-        stripeSubscriptionId: subscriptionId,
-      },
-    })
-
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-    // 階層判定は planTierFromPlanId() ただ一つに集約する（reference/11-billing-spec.md INV-4）。
-    // 以前はここに独自のif文があり、'-starter'（hr-starter 等）を LIGHT ではなく
-    // PRO と判定していた＝webhook 経由と sync 経由で結果が食い違っていた。
-    const { planId, priceId } = resolvePlanIdFromSubscription(subscription as any)
-    const userPlan = planTierFromPlanId(planId)
-
-    // グローバルプランを更新
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        plan: userPlan,
-        stripeSubscriptionId: subscription.id,
-        stripePriceId: priceId,
-        stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-      },
-    })
-
-    // 統一課金: 全サービスを同じプランに更新（Webhook遅延の保険）
-    const servicePlan = userPlan === 'BUNDLE' ? 'PRO' : userPlan
-    for (const serviceId of ALL_SERVICE_IDS) {
-      await prisma.userServiceSubscription.upsert({
-        where: { userId_serviceId: { userId: user.id, serviceId } },
-        create: {
-          userId: user.id,
-          serviceId,
-          plan: servicePlan,
-          stripeSubscriptionId: subscription.id,
-          stripePriceId: priceId,
-          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-          dailyUsage: 0,
-          monthlyUsage: 0,
-          lastUsageReset: new Date(),
-        },
-        update: {
-          plan: servicePlan,
-          stripeSubscriptionId: subscription.id,
-          stripePriceId: priceId,
-          stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
-        },
-      }).catch((e: any) => {
-        console.error(`[Stripe Sync] Failed to upsert service subscription: user=${user.id} service=${serviceId}`, e?.message)
-      })
+    // 識別情報が空の旧Checkoutも、Stripe顧客のメール一致を確認できた場合のみ救済。
+    if (!ref && !customerEmail) {
+      const customer = await stripe.customers.retrieve(customerId)
+      if (customer.deleted || !customer.email || customer.email.trim().toLowerCase() !== user.email?.trim().toLowerCase()) {
+        return NextResponse.json({ error: 'Checkout session does not match user' }, { status: 403 })
+      }
     }
+    if (checkout.status !== 'complete') {
+      return NextResponse.json({ error: '決済が完了していません' }, { status: 409 })
+    }
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+    if (!ACTIVE_LIKE_STATUSES.has(String(subscription.status))) {
+      return NextResponse.json({ error: 'この契約は有効ではありません。現在の契約を再同期してください。' }, { status: 409 })
+    }
+    const subscriptionCustomerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id
+    if (subscriptionCustomerId !== customerId || (subscription.metadata?.userId && subscription.metadata.userId !== user.id)) {
+      return NextResponse.json({ error: 'Subscription does not match user' }, { status: 403 })
+    }
+    const { planId, priceId } = resolvePlanIdFromSubscription(subscription as any)
+    const resolvedPlan = planTierFromPlanId(planId)
+    if (resolvedPlan === 'FREE') return NextResponse.json({ error: '契約プランを確認できませんでした。再度同期してください。' }, { status: 409 })
+    const { userPlan } = await syncUnifiedBilling({
+      userId: user.id, plan: resolvedPlan,
+      stripeCustomerId: customerId, stripeSubscriptionId: subscription.id,
+      stripePriceId: priceId, stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+    })
 
     // 課金通知は Webhook ハンドラにしか無く、Webhook が不達だと運営が誰も気づけない。
     // 決済直後の同期経路からも通知する（FREE→有料の遷移時のみ）。

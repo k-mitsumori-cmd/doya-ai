@@ -52,8 +52,11 @@ const elapsedLabel = (d: Deal): string | null => {
   if (!d.startDate) return null
   const start = new Date(d.startDate)
   if (isNaN(start.getTime())) return null
-  const closedAt = d.status !== 'open' ? d.wonAt || d.lostAt : null
+  if (!['open', 'won', 'lost'].includes(d.status)) return null
+  const closedAt = d.status === 'won' ? d.wonAt : d.status === 'lost' ? d.lostAt : null
+  if (d.status !== 'open' && !closedAt) return null
   const end = closedAt ? new Date(closedAt) : new Date()
+  if (isNaN(end.getTime())) return null
   const days = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 86400000))
   return d.status === 'open' ? `${days}日経過` : `${days}日で決着`
 }

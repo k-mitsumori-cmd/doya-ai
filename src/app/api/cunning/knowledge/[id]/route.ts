@@ -6,13 +6,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
 
-type Ctx = { params: Promise<{ id: string }> | { id: string } }
+type Ctx = { params: Promise<{ id: string }> }
 
 // GET /api/cunning/knowledge/[id] — 詳細（チャンク一覧）
 export async function GET(req: NextRequest, ctx: Ctx) {
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const base = await prisma.cunningKnowledgeBase.findUnique({
     where: { id: p.id },
     include: {
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 export async function DELETE(req: NextRequest, ctx: Ctx) {
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
-  const p = 'then' in ctx.params ? await ctx.params : ctx.params
+  const p = await ctx.params
   const base = await prisma.cunningKnowledgeBase.findUnique({ where: { id: p.id }, select: { userId: true } })
   if (!base || base.userId !== userId) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
 

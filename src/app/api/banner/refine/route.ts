@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import sharp from 'sharp'
 import { sendErrorNotification } from '@/lib/notifications'
+import { resolveImageModel } from '@/lib/resolve-image-model'
 
 /** 画像を1024x1024以内に縮小してAPIに送れるサイズにする（nanobanner.tsの巨大バンドル回避） */
 async function compressForApi(dataUrl: string): Promise<string> {
@@ -129,8 +130,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
     const img = parseDataUrl(compressed)
 
     const prompt = createEditPrompt(instruction, category, size)
-    const preferred = getNanoBananaImageModel()
-    const modelsToTry = Array.from(new Set([preferred, getImageFallbackModel(), LAST_RESORT_IMAGE_MODEL]))
+    // ⚠️ 環境変数 DOYA_BANNER_IMAGE_MODEL には "nano-banana-pro" という**エイリアス**が入っている。
+    //    これは実在の Gemini モデルIDではないため、生のまま models/{id}:generateContent に渡すと
+    //    毎回 404 になり、1往復を捨てたうえで console.error → Slackにエラー通知が飛んでいた（2026-09-18 調査）。
+    //    resolveImageModel() は ListModels API で実モデルIDへ解決し、失敗時もフォールバック列を返す。
+    //    ここに getNanoBananaImageModel()（生値）を混ぜ戻さないこと。エイリアスが再びAPIへ流れる。
+    const resolved = await resolveImageModel(apiKey).catch(() => [] as string[])
+    const modelsToTry = Array.from(
+      new Set([...resolved, getImageFallbackModel(), LAST_RESORT_IMAGE_MODEL])
+    )
     let lastError: any = null
 
     for (const model of modelsToTry) {
@@ -179,7 +187,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
         return NextResponse.json({
           success: true,
           refinedImage,
-          message: `Nano Banana Pro で画像を修正しました（model: ${model}${model === preferred ? '' : ' / fallback'}）`,
+          message: `Nano Banana Pro で画像を修正しました（model: ${model}${model === modelsToTry[0] ? '' : ' / fallback'}）`,
         })
       } catch (e: any) {
         lastError = e

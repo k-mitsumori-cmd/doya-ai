@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -33,7 +33,10 @@ import Link from 'next/link'
  */
 export default function SeoRichEditPage() {
   const params = useParams<{ id: string }>()
-  const articleId = params.id
+  return <SeoRichEditor key={params.id} articleId={params.id} />
+}
+
+function SeoRichEditor({ articleId }: { articleId: string }) {
   const router = useRouter()
   const editorRef = useRef<HTMLDivElement>(null)
 
@@ -52,34 +55,43 @@ export default function SeoRichEditPage() {
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [hasUnsaved, setHasUnsaved] = useState(false)
 
+  const savingRef = useRef(false)
+  const contentRef = useRef(content)
+  contentRef.current = content
+
   // 自動保存タイマー
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null)
   const saveRef = useRef<(isAutoSave?: boolean) => Promise<void>>(async () => {})
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/seo/articles/${articleId}`, { cache: 'no-store' })
-      const json = await res.json()
-      if (!res.ok || json?.success === false) {
-        throw new Error(json?.error || `エラー: ${res.status}`)
-      }
-      const art = json.article
-      setArticle(art)
-      const md = art?.finalMarkdown || ''
-      setContent(md)
-      setOriginalContent(md)
-    } catch (e: any) {
-      setError(e?.message || '読み込みに失敗しました')
-    } finally {
-      setLoading(false)
-    }
-  }, [articleId])
-
   useEffect(() => {
-    load()
-  }, [load])
+    let active = true
+    const load = async () => {
+      setLoading(true)
+      setError(null)
+      try {
+        const res = await fetch(`/api/seo/articles/${articleId}`, { cache: 'no-store' })
+        const json = await res.json()
+        if (!active) return
+        if (!res.ok || json?.success === false) {
+          throw new Error(json?.error || `エラー: ${res.status}`)
+        }
+        const art = json.article
+        if (json?.success !== true || art?.id !== articleId || (art.finalMarkdown != null && typeof art.finalMarkdown !== 'string')) {
+          throw new Error('記事の読み込み結果を確認できませんでした。再読み込みしてください。')
+        }
+        setArticle(art)
+        const md = art?.finalMarkdown || ''
+        setContent(md)
+        setOriginalContent(md)
+      } catch (e: any) {
+        if (active) setError(e?.message || '読み込みに失敗しました')
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+    void load()
+    return () => { active = false }
+  }, [articleId])
 
   // 変更検知
   useEffect(() => {
@@ -117,7 +129,8 @@ export default function SeoRichEditPage() {
 
   // 保存
   const save = async (isAutoSave = false) => {
-    if (saving) return
+    if (savingRef.current) return
+    savingRef.current = true
     setSaving(true)
     setSaved(false)
     setError(null)
@@ -131,14 +144,23 @@ export default function SeoRichEditPage() {
       if (!res.ok || json?.success === false) {
         throw new Error(json?.error || '保存に失敗しました')
       }
-      setOriginalContent(content)
-      setSaved(true)
+      if (json?.success !== true || json?.article?.id !== articleId || typeof json?.article?.finalMarkdown !== 'string') {
+        throw new Error('保存結果を確認できませんでした。入力を保持したまま再度保存してください。')
+      }
+      const persisted = json.article.finalMarkdown
+      setOriginalContent(persisted)
+      if (contentRef.current === content) {
+        contentRef.current = persisted
+        setContent(persisted)
+        setSaved(true)
+      }
       if (!isAutoSave) {
         setTimeout(() => setSaved(false), 3000)
       }
     } catch (e: any) {
       setError(e?.message || '保存に失敗しました')
     } finally {
+      savingRef.current = false
       setSaving(false)
     }
   }
@@ -235,7 +257,7 @@ export default function SeoRichEditPage() {
               未保存
             </span>
           )}
-          {saved && (
+          {saved && !hasUnsaved && !error && (
             <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
               <CheckCircle2 className="w-3 h-3" />
               保存しました
