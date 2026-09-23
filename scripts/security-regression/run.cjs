@@ -10,6 +10,11 @@ if (interviewStats.error || interviewStats.status !== 0) {
   console.error('Security regression failed: verify-interview-stats.cjs');
   process.exit(1);
 }
+const interviewCleanup = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-cleanup.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewCleanup.error || interviewCleanup.status !== 0) {
+  console.error('Security regression failed: verify-interview-cleanup.cjs');
+  process.exit(1);
+}
 const interviewArticleLimit = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-article-limit.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewArticleLimit.error || interviewArticleLimit.status !== 0) {
   console.error('Security regression failed: verify-interview-article-limit.cjs');

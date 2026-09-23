@@ -171,7 +171,9 @@ export async function deleteFile(storagePath: string): Promise<void> {
     .remove([storagePath])
 
   if (error) {
-    console.error(`[interview] File delete failed: ${storagePath}`, error.message)
+    // Keep the database record for retry; never put a private object path in logs.
+    console.error('[interview] File delete failed')
+    throw new Error('ファイル削除に失敗しました')
   }
 }
 

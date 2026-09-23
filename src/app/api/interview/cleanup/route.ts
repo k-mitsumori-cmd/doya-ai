@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 /**
- * 30日経過したプロジェクトとその関連データを削除するクリーンアップAPI
+ * 最終更新から30日経過したプロジェクトとその関連データを削除するクリーンアップAPI
  * Vercel Cron や外部スケジューラから定期的に呼び出す
  * Authorization: Bearer <CRON_SECRET> で保護
  */
@@ -22,13 +22,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: '認証エラー' }, { status: 401 })
     }
 
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const eligible = { updatedAt: { lt: thirtyDaysAgo } }
 
-    // 30日以上前のプロジェクトを検索
+    // 運用前の件数確認。データや識別子は返さず、削除処理もしない。
+    if (req.nextUrl.searchParams.get('dryRun') === '1') {
+      const eligibleCount = await prisma.interviewProject.count({ where: eligible })
+      return NextResponse.json({ success: true, dryRun: true, eligibleCount })
+    }
+
+    // 1回の実行で大量に削除せず、古いものから少数ずつ処理する。
     const expiredProjects = await prisma.interviewProject.findMany({
-      where: { createdAt: { lt: thirtyDaysAgo } },
-      select: { id: true, title: true, createdAt: true },
+      where: eligible,
+      orderBy: { updatedAt: 'asc' },
+      take: 100,
+      select: { id: true, materials: { where: { filePath: { not: null } }, select: { id: true }, take: 1 } },
     })
 
     if (expiredProjects.length === 0) {
@@ -39,15 +47,25 @@ export async function POST(req: NextRequest) {
       })
     }
 
+    // DBのCASCADEだけではSupabase Storageのオブジェクトが残る。
+    // 耐久的な再試行キューが入るまで、添付ファイルを含む一括削除を拒否する。
+    if (expiredProjects.some(project => project.materials.length > 0)) {
+      return NextResponse.json(
+        { success: false, error: '添付ファイル付きプロジェクトの自動削除は安全確認中です', code: 'STORAGE_PURGE_REQUIRED' },
+        { status: 409 }
+      )
+    }
+
     const projectIds = expiredProjects.map((p) => p.id)
 
     // カスケード削除（InterviewProject に onDelete: Cascade が設定されている関連テーブル）
     // InterviewMaterial, InterviewTranscription, InterviewDraft, InterviewReview
     const result = await prisma.interviewProject.deleteMany({
-      where: { id: { in: projectIds } },
+      // 一覧取得後に編集されたプロジェクトは削除しない。
+      where: { id: { in: projectIds }, ...eligible },
     })
 
-    console.log(`[interview-cleanup] Deleted ${result.count} projects older than 30 days`)
+    console.log(`[interview-cleanup] Deleted ${result.count} projects inactive for 30 days`)
 
     return NextResponse.json({
       success: true,
@@ -57,7 +75,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Cleanup error:', error)
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'クリーンアップ処理中にエラーが発生しました' },
+      { success: false, error: 'クリーンアップ処理中にエラーが発生しました' },
       { status: 500 }
     )
   }

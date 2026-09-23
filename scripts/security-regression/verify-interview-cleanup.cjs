@@ -1,0 +1,83 @@
+const assert = require('node:assert/strict')
+const { load } = require('./load-typescript.cjs')
+
+let storageError = true
+const storageLogs = []
+const storage = load('src/lib/interview/storage.ts', {
+  '@supabase/supabase-js': { createClient: () => ({ storage: { from: () => ({
+    remove: async () => ({ error: storageError ? { message: 'private path and provider detail' } : null }),
+  }) } }) },
+}, { process: { env: { SUPABASE_URL: 'https://example.test', SUPABASE_SERVICE_ROLE_KEY: 'synthetic' } }, console: { error: message => storageLogs.push(message) } })
+
+let countCalls = 0, findCalls = 0, deleteCalls = 0
+let candidates = [{ id: 'old-project', materials: [] }]
+const prisma = { interviewProject: {
+  count: async ({ where }) => { assert(where.updatedAt.lt instanceof Date); countCalls++; return 123 },
+  findMany: async ({ where, orderBy, take, select }) => {
+    assert(where.updatedAt.lt instanceof Date)
+    assert.equal(orderBy.updatedAt, 'asc')
+    assert.equal(take, 100)
+    assert.equal(select.id, true)
+    assert.equal(select.title, undefined)
+    assert.equal(select.materials.take, 1)
+    assert.equal(select.materials.where.filePath.not, null)
+    findCalls++
+    return candidates
+  },
+  deleteMany: async ({ where }) => {
+    assert.deepEqual(Array.from(where.id.in), ['old-project'])
+    assert(where.updatedAt.lt instanceof Date)
+    deleteCalls++
+    return { count: 0 } // A concurrent edit can make the recheck exclude the project.
+  },
+} }
+const route = load('src/app/api/interview/cleanup/route.ts', {
+  'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
+  '@/lib/prisma': { __esModule: true, default: prisma },
+}, { process: { env: { CRON_SECRET: 'synthetic-secret' } } })
+let projectFileFailure = true, projectDeleteCalls = 0
+const projectRoute = load('src/app/api/interview/projects/[id]/route.ts', {
+  'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
+  '@/lib/prisma': { prisma: { interviewProject: {
+    findUnique: async () => ({ id: 'old-project', userId: 'owner', materials: [{ filePath: 'private/customer/file.mp3' }] }),
+    delete: async () => { projectDeleteCalls++; return {} },
+  } } },
+  '@/lib/interview/access': { requireDatabase: () => null, getInterviewUser: async () => ({ userId: 'owner' }), checkOwnership: () => null },
+  '@/lib/interview/storage': { deleteFile: async () => { if (projectFileFailure) throw Error('storage failed') } },
+})
+const request = (url, authorization) => ({ nextUrl: new URL(url), headers: { get: name => name === 'authorization' ? authorization : null } })
+
+;(async () => {
+  await assert.rejects(() => storage.deleteFile('private/customer/file.mp3'), /ファイル削除に失敗/)
+  assert.deepEqual(storageLogs, ['[interview] File delete failed'])
+  storageError = false
+  await storage.deleteFile('private/customer/file.mp3')
+  const ctx = { params: Promise.resolve({ id: 'old-project' }) }
+  assert.equal((await projectRoute.DELETE({}, ctx)).status, 500)
+  assert.equal(projectDeleteCalls, 0)
+  projectFileFailure = false
+  assert.equal((await projectRoute.DELETE({}, ctx)).status, 200)
+  assert.equal(projectDeleteCalls, 1)
+  const base = 'https://test.example/api/interview/cleanup'
+  assert.equal((await route.POST(request(base + '?dryRun=1', 'Bearer wrong'))).status, 401)
+  assert.equal(countCalls + findCalls + deleteCalls, 0)
+  const preview = await route.POST(request(base + '?dryRun=1', 'Bearer synthetic-secret'))
+  assert.equal(preview.status, 200)
+  assert.equal(preview.body.eligibleCount, 123)
+  assert.equal(countCalls, 1)
+  assert.equal(findCalls + deleteCalls, 0)
+  const cleanup = await route.POST(request(base, 'Bearer synthetic-secret'))
+  assert.equal(cleanup.status, 200)
+  assert.equal(cleanup.body.deletedCount, 0)
+  assert.equal(findCalls, 1)
+  assert.equal(deleteCalls, 1)
+  candidates = [{ id: 'old-project', materials: [{ id: 'material-1' }] }]
+  const blocked = await route.POST(request(base, 'Bearer synthetic-secret'))
+  assert.equal(blocked.status, 409)
+  assert.equal(blocked.body.code, 'STORAGE_PURGE_REQUIRED')
+  assert.equal(deleteCalls, 1)
+  candidates = []
+  assert.equal((await route.POST(request(base, 'Bearer synthetic-secret'))).body.deletedCount, 0)
+  assert.equal(deleteCalls, 1)
+  console.log('PASS interview cleanup preview is read-only, deletion is bounded and rechecks inactivity')
+})().catch(error => { console.error(error); process.exitCode = 1 })

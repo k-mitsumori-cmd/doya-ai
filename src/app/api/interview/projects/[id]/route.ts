@@ -219,7 +219,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     // ストレージからファイル削除
     for (const m of project.materials) {
       if (m.filePath) {
-        await deleteFile(m.filePath).catch(() => {})
+        await deleteFile(m.filePath)
       }
     }
 
