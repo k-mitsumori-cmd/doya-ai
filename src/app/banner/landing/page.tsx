@@ -45,7 +45,7 @@ export default function BannerLandingPage() {
         title="プロ品質のバナーを、"
         highlight="AIで自動生成。"
         subtitle="業種を選んでAIにおまかせ。A/B/Cの3案を数分で。デザイン知識がなくても、効果的な広告バナーが作れます。"
-        note="無料プランで月15枚まで・ゲストも1日1回お試し可"
+        note="無料登録で月15枚まで生成できます"
         ctaHref={cta}
         ctaLabel="無料で作る"
         subCtaHref="/banner/pricing"

@@ -167,7 +167,7 @@ export const SERVICES: Service[] = [
     status: 'active',
     category: 'image',
     order: 2,
-    requiresAuth: false,  // ゲストも1日1回まで利用可
+    requiresAuth: true,  // バナー生成APIはログイン必須
     isNew: true,
   },
 
