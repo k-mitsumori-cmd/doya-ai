@@ -3,6 +3,9 @@ import { purgeDeletedPersonaImageBatch } from './image-storage'
 
 /** Workers last at most 300s. Also wait one hour beyond every recorded image lease. */
 export async function purgeDeletedPersonaImages(db: PrismaClient, now = new Date()) {
+  const leaseUntil = new Date(now.getTime() + 10 * 60 * 1000)
+  const leaseCutoff = new Date(now.getTime() - 10 * 60 * 1000)
+  const retryAt = new Date(now.getTime() + 5 * 60 * 1000)
   // A database DELETE trigger records these before project/user cascades remove the rows.
   // Reserve one slot for orphaned namespaces while keeping capacity for ordinary deletions.
   const orphaned = await db.personaImagePurgeTask.findMany({
@@ -13,6 +16,7 @@ export async function purgeDeletedPersonaImages(db: PrismaClient, now = new Date
   const eligible = {
     deletedAt: { lte: cutoff }, imagesPurgedAt: null,
     images: { none: { leaseExpiresAt: { gt: cutoff } } },
+    OR: [{ imagesPurgeAttemptedAt: null }, { imagesPurgeAttemptedAt: { lte: leaseCutoff } }],
   }
   const targets = await db.personaProject.findMany({
     where: eligible,
@@ -22,22 +26,33 @@ export async function purgeDeletedPersonaImages(db: PrismaClient, now = new Date
   let completed = 0, failed = 0, processed = 0
   for (const task of orphaned) {
     const claimed = await db.personaImagePurgeTask.updateMany({
-      where: { projectId: task.projectId, readyAt: { lte: now } }, data: { attemptedAt: now },
+      where: { projectId: task.projectId, readyAt: task.readyAt },
+      data: { attemptedAt: now, readyAt: leaseUntil },
     })
     if (!claimed.count) continue
     processed++
     try {
       if (await db.personaProject.count({ where: { id: task.projectId } })) {
+        await db.personaImagePurgeTask.updateMany({
+          where: { projectId: task.projectId, readyAt: leaseUntil }, data: { readyAt: retryAt },
+        })
         failed++
         continue
       }
       if (await purgeDeletedPersonaImageBatch(task.projectId)) {
         const removed = await db.personaImagePurgeTask.deleteMany({
-          where: { projectId: task.projectId, readyAt: task.readyAt },
+          where: { projectId: task.projectId, readyAt: leaseUntil },
         })
         completed += removed.count
+      } else {
+        await db.personaImagePurgeTask.updateMany({
+          where: { projectId: task.projectId, readyAt: leaseUntil }, data: { readyAt: retryAt },
+        })
       }
     } catch {
+      await db.personaImagePurgeTask.updateMany({
+        where: { projectId: task.projectId, readyAt: leaseUntil }, data: { readyAt: retryAt },
+      }).catch(() => {})
       failed++
     }
   }
@@ -51,7 +66,12 @@ export async function purgeDeletedPersonaImages(db: PrismaClient, now = new Date
     try {
       if (await purgeDeletedPersonaImageBatch(project.id)) {
         const saved = await db.personaProject.updateMany({
-          where: { id: project.id, ...eligible }, data: { imagesPurgedAt: now },
+          where: {
+            id: project.id, deletedAt: { lte: cutoff }, imagesPurgedAt: null,
+            imagesPurgeAttemptedAt: now,
+            images: { none: { leaseExpiresAt: { gt: cutoff } } },
+          },
+          data: { imagesPurgedAt: now },
         })
         completed += saved.count
       }

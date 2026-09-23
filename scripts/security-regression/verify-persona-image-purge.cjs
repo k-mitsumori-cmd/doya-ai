@@ -19,4 +19,34 @@ for(const auth of ['', 'Bearer undefined','Bearer wrong'])assert.equal((await ro
 assert.equal(invoked,0);mode='';assert.equal((await route.GET(new Request('https://test',{headers:{authorization:'Bearer synthetic'}}))).status,200);mode='fail';assert.equal((await route.GET(new Request('https://test',{headers:{authorization:'Bearer synthetic'}}))).status,503)
 assert.deepEqual(resultLogs.map(x=>[x.label,x.result.processed,x.result.completed,x.result.failed]),[['[persona-purge] result',1,0,0],['[persona-purge] result',1,0,1]])
 globals.process.env.CRON_SECRET='';assert.equal((await route.GET(new Request('https://test',{headers:{authorization:'Bearer '}}))).status,401);console.log('PASS cron rejects missing/wrong secret and surfaces cleanup failure')
+const now=new Date('2026-09-24T00:00:00.000Z');let task={projectId:p,readyAt:new Date(now.getTime()-1000),attemptedAt:null},purges=0,empty=false
+const queueDb={personaImagePurgeTask:{
+  findMany:async({where})=>task&&task.readyAt<=where.readyAt.lte?[{...task}]:[],
+  updateMany:async({where,data})=>{if(!task||task.projectId!==where.projectId||task.readyAt.getTime()!==where.readyAt.getTime())return{count:0};task={...task,...data};return{count:1}},
+  deleteMany:async({where})=>{if(!task||task.projectId!==where.projectId||task.readyAt.getTime()!==where.readyAt.getTime())return{count:0};task=null;return{count:1}},
+},personaProject:{findMany:async()=>[],count:async()=>0}}
+const queuePurge=load('src/lib/persona/image-purge.ts',{'./image-storage':{purgeDeletedPersonaImageBatch:async()=>{purges++;return empty}}}).purgeDeletedPersonaImages
+const parallel=await Promise.all([queuePurge(queueDb,now),queuePurge(queueDb,now)])
+assert.equal(parallel.reduce((sum,result)=>sum+result.processed,0),1)
+assert.equal(purges,1)
+assert.equal(task.readyAt.getTime(),now.getTime()+5*60*1000)
+assert.equal((await queuePurge(queueDb,new Date(now.getTime()+60*1000))).processed,0)
+empty=true
+assert.equal((await queuePurge(queueDb,new Date(now.getTime()+15*60*1000))).completed,1)
+assert.equal(task,null)
+console.log('PASS persona orphan purge leases across concurrent workers and retries unfinished batches')
+let project={id:p,imagesPurgeAttemptedAt:null,imagesPurgedAt:null},projectPurges=0,projectEmpty=false
+const projectDb={personaImagePurgeTask:{findMany:async()=>[]},personaProject:{
+  findMany:async({where})=>project&&!project.imagesPurgedAt&&(!project.imagesPurgeAttemptedAt||project.imagesPurgeAttemptedAt<=where.OR[1].imagesPurgeAttemptedAt.lte)?[{id:p}]:[],
+  updateMany:async({where,data})=>{if(!project||project.imagesPurgedAt)return{count:0};if(data.imagesPurgedAt){if(project.imagesPurgeAttemptedAt?.getTime()!==where.imagesPurgeAttemptedAt.getTime())return{count:0}}else if(project.imagesPurgeAttemptedAt&&project.imagesPurgeAttemptedAt>where.OR[1].imagesPurgeAttemptedAt.lte)return{count:0};project={...project,...data};return{count:1}},
+}}
+const projectPurge=load('src/lib/persona/image-purge.ts',{'./image-storage':{purgeDeletedPersonaImageBatch:async()=>{projectPurges++;return projectEmpty}}}).purgeDeletedPersonaImages
+const competing=await Promise.all([projectPurge(projectDb,now),projectPurge(projectDb,now)])
+assert.equal(competing.reduce((sum,result)=>sum+result.processed,0),1)
+assert.equal(projectPurges,1)
+assert.equal((await projectPurge(projectDb,new Date(now.getTime()+60*1000))).processed,0)
+projectEmpty=true
+assert.equal((await projectPurge(projectDb,new Date(now.getTime()+11*60*1000))).completed,1)
+assert.ok(project.imagesPurgedAt)
+console.log('PASS persona project purge leases across concurrent workers and confirms empty namespace later')
 })().catch(e=>{console.error(e);process.exitCode=1})
