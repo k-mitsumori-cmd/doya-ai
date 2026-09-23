@@ -25,7 +25,6 @@ import {
   CreditCard,
   ArrowRight,
   Info,
-  Check,
   X,
   AlertTriangle,
   CalendarClock
@@ -631,26 +630,13 @@ export default function BannerPlanPage() {
                 <X className="w-5 h-5" />
               </button>
               <div className="text-center">
-                <Sparkles className="w-12 h-12 text-blue-500 mx-auto mb-4" />
-                <h3 className="text-2xl font-black text-slate-900 mb-2">ちょっと待ってください！</h3>
-                <p className="text-slate-600 font-bold mb-6">本当に解約しますか？有料プランにはこんなメリットがあります。</p>
-                <ul className="text-left space-y-3 mb-8">
-                  <li className="flex items-center gap-3 text-slate-700 font-bold">
-                    <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                    <span className="flex-1">高品質なバナー生成（月最大{BANNER_PRICING.proLimit}〜{BANNER_PRICING.enterpriseLimit}枚）</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-slate-700 font-bold">
-                    <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                    <span className="flex-1">自由なサイズ指定（無料版は1080×1080固定）</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-slate-700 font-bold">
-                    <Check className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                    <span className="flex-1">優先サポートで安心</span>
-                  </li>
-                </ul>
-                <p className="text-sm text-slate-500 mb-6">
-                  解約後、再度アップグレードすることも可能です！
-                </p>
+                <AlertTriangle className="w-12 h-12 text-amber-500 mx-auto mb-4" />
+                <h3 className="text-2xl font-black text-slate-900 mb-2">有料プランの解約を確認</h3>
+                <div className="text-left rounded-2xl bg-amber-50 border border-amber-200 p-4 mb-6 space-y-2 text-sm font-bold text-slate-700">
+                  <p>この操作はバナーだけの解約ではありません。このアカウントで確認された有効な有料契約をすべて、各契約の次回更新日で解約予約します。</p>
+                  <p>停止後はドヤバナーを含む統一プラン対象サービスの有料枠・有料機能が使えなくなります。無料枠での利用は続けられます。</p>
+                  <p>停止日時までは有料機能を利用できます。予約後の日時は契約画面で確認してください。</p>
+                </div>
                 <div className="flex flex-col gap-3">
                   <button
                     onClick={() => setShowCancelConfirm(false)}
@@ -664,7 +650,7 @@ export default function BannerPlanPage() {
                     className="w-full py-3 rounded-xl bg-slate-100 text-slate-700 font-black hover:bg-slate-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     {isCanceling && <Loader2 className="w-4 h-4 animate-spin" />}
-                    それでも解約する
+                    有料契約を解約予約する
                   </button>
                 </div>
               </div>
