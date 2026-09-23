@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 interface TranscriptionSegment {
   index: number
@@ -63,6 +64,7 @@ export default function TranscribePage() {
   const [segments, setSegments] = useState<TranscriptionSegment[]>([])
   const [errorMessage, setErrorMessage] = useState('')
   const [limitReached, setLimitReached] = useState(false)
+  const [needsSupport, setNeedsSupport] = useState(false)
   const [transcriptionId, setTranscriptionId] = useState<string | null>(null)
   const [durationMinutes, setDurationMinutes] = useState<number | null>(null)
   const [fullText, setFullText] = useState('')
@@ -220,6 +222,7 @@ export default function TranscribePage() {
       isCompleteRef.current = true
       setErrorMessage(data.message || '文字起こしに失敗しました')
       setLimitReached(data.code === 'TRANSCRIPTION_LIMIT' || data.limitExceeded === true)
+      setNeedsSupport(data.code === 'TRANSCRIPTION_SUBMISSION_UNKNOWN')
       setCurrentStep('error')
       eventSource.close()
     })
@@ -701,7 +704,16 @@ export default function TranscribePage() {
               </div>
             </div>
             <div className="flex gap-3">
-              {limitReached ? (
+              {needsSupport ? (
+                <a
+                  href={SUPPORT_CONTACT_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-white bg-[#7f19e6] hover:bg-[#6b12c9] transition-colors"
+                >
+                  サポートに問い合わせる
+                </a>
+              ) : limitReached ? (
                 <button
                   onClick={() => router.push('/interview/pricing')}
                   className="flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-white bg-[#7f19e6] hover:bg-[#6b12c9] transition-colors"
