@@ -26,13 +26,12 @@ import type { TranscriptionSegment } from '@/lib/interview/types'
 
 const ASSEMBLYAI_BASE_URL = 'https://api.assemblyai.com/v2'
 
-// ポーリング設定 — Vercelの5分制限内で最大限ポーリングする
+// ポーリング設定 — Vercelの5分制限内に保存処理の時間を残す
 // ※ 1回の文字起こし上限: 約3時間（180分）
-//   POLL_INTERVAL=5s × MAX_POLL_DURATION=4m30s/回 × 自動再接続最大10回 ≒ 45分のポーリング
+//   POLL_INTERVAL=5s × MAX_POLL_DURATION=3m30s/回 × 自動再接続最大10回 ≒ 35分のポーリング
 //   AssemblyAI処理速度（実時間の1/4〜1/5）→ 約3時間が実質上限
 const POLL_INTERVAL_MS = 5000        // 固定5秒間隔 (バックオフしない)
-const MAX_POLL_DURATION_MS = 270_000 // 4分30秒 (maxDuration=5分に余裕を持たせる)
-const SEGMENT_STREAM_DELAY_MS = 80   // セグメント送信間隔
+const MAX_POLL_DURATION_MS = 210_000 // 3分30秒。大量のセグメントとDB保存に時間を残す
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -198,6 +197,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           sendEvent('status', { step: 'analyzing', message: '再接続中... 文字起こしを継続します', elapsed: 0, reconnected: true })
         } else {
           // ===== 新規: ジョブを送信 =====
+          let submissionMarker: string | null = null
 
           // 過去ERRORを削除
           if (!quotaEnabled) await prisma.interviewTranscription.deleteMany({ where: { materialId, status: 'ERROR' } })
@@ -208,7 +208,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           if (quotaEnabled) {
             if (!existingTranscription || existingTranscription.id !== budgetTranscriptionId) throw new Error('Transcription reservation mismatch')
             transcription = existingTranscription
-            const submissionMarker = `submitting:${randomUUID()}`
+            submissionMarker = `submitting:${randomUUID()}`
             const claimed = await prisma.interviewTranscription.updateMany({
               where: { id: transcription.id, status: 'PROCESSING', externalJobId: null },
               data: { externalJobId: submissionMarker },
@@ -260,10 +260,17 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           assemblyAiId = submitData.id
 
           // AssemblyAIジョブIDをDBに保存 (再接続用)
-          await prisma.interviewTranscription.update({
-            where: { id: transcription.id },
-            data: { externalJobId: assemblyAiId },
-          })
+          const saved = quotaEnabled
+            ? await prisma.interviewTranscription.updateMany({
+                where: { id: transcription.id, status: 'PROCESSING', externalJobId: submissionMarker },
+                data: { externalJobId: assemblyAiId },
+              })
+            : await prisma.interviewTranscription.update({
+                where: { id: transcription.id }, data: { externalJobId: assemblyAiId },
+              })
+          if (quotaEnabled && 'count' in saved && saved.count !== 1) {
+            throw new Error('Transcription job ID persistence failed')
+          }
           ambiguousSubmission = false
         }
 
@@ -328,7 +335,6 @@ export async function GET(req: NextRequest, ctx: Ctx) {
             }
             segments.push(seg)
             sendEvent('segment', { index: i, ...seg })
-            await new Promise(r => setTimeout(r, SEGMENT_STREAM_DELAY_MS))
           }
         } else if (pollResult.words && pollResult.words.length > 0) {
           let segStart = pollResult.words[0].start / 1000
@@ -349,7 +355,6 @@ export async function GET(req: NextRequest, ctx: Ctx) {
               }
               segments.push(seg)
               sendEvent('segment', { index: segments.length - 1, ...seg })
-              await new Promise(r => setTimeout(r, SEGMENT_STREAM_DELAY_MS))
               segText = ''
               if (!isLast) segStart = pollResult.words[i + 1].start / 1000
             }
