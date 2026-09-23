@@ -56,3 +56,4 @@
 
 - 新デプロイ `dpl_3p7ab5PpVirU2zPokoGForT7TAPr` でも `/api/cron/persona-purge` が HTTP 200 で、23:30:40 JST に同じ指紋の通知を送信した。
 - `stackLineCount: 7`、`stackExternalLocation: true`、`stackScriptLocation: true` だったが、呼び出し元はまだ `unparsed`。内部以外の位置表記とスクリプト拡張子はスタック内にある。ただし両者が同一フレームかは現診断からは分からない。元のエラー原因・影響は未特定のまま。
+- 安全なファイル名抽出を、位置番号の後に記号があるバンドル形式にも対応させた。次回は「内部以外のスクリプト位置」の有無を真偽値で記録する。原文・パスは保存しない。

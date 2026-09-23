@@ -75,12 +75,14 @@ export function safeRuntimeSource(stack: string | undefined): string {
     const match = line.match(/(?:^|[/\\(\s])([A-Za-z0-9_.-]{1,100}\.[cm]?[jt]s):(\d{1,7}):(\d{1,7})(?:\)|\s|$)/);
     if (match) return `${match[1]}:${match[2]}:${match[3]}`;
     // Bundler frames may add a query string between the script name and location.
-    const location = line.match(/:(\d{1,7}):(\d{1,7})(?:\)|\s|$)/);
+    const location = line.match(/:(\d{1,7}):(\d{1,7})(?!\d)/);
     if (!location) continue;
     const basename = line.slice(0, location.index).split(/[/\\]/).pop()?.split('?')[0] ?? '';
     if (/^[A-Za-z0-9_.-]{1,100}\.[cm]?[jt]sx?$/.test(basename)) {
       return `${basename}:${location[1]}:${location[2]}`;
     }
+    const embedded = line.match(/(?:^|[^A-Za-z0-9_.-])([A-Za-z0-9_.-]{1,100}\.[cm]?[jt]sx?)(?:\?[^:\s()]*)?:(\d{1,7}):(\d{1,7})/);
+    if (embedded) return `${embedded[1]}:${embedded[2]}:${embedded[3]}`;
   }
   return 'サーバー処理（詳細はログ）';
 }
@@ -98,7 +100,7 @@ function isDeprecationWarning(args: unknown[]): boolean {
 }
 
 /** Forward operational failures only. Never serialize console arguments or user input. */
-export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string; firstArgKind?: string; family?: string; stackState?: string; stackLineCount?: number; stackHasLocation?: boolean; stackExternalLocation?: boolean; stackScriptLocation?: boolean; stackTraceLimit?: number } = {}): Promise<void> {
+export async function reportRuntimeFailure(source: string, options: { clientReported?: boolean; argumentCount?: number; errorTypes?: string[]; signature?: string; firstArgKind?: string; family?: string; stackState?: string; stackLineCount?: number; stackHasLocation?: boolean; stackExternalLocation?: boolean; stackScriptLocation?: boolean; stackExternalScriptLocation?: boolean; stackTraceLimit?: number } = {}): Promise<void> {
   if (process.env.VERCEL_ENV !== 'production') return;
   const key = source.replace(/[<>&]/g, '').slice(0, 180);
   const signature = options.signature && /^[a-f0-9]{24}$/.test(options.signature)
@@ -146,6 +148,7 @@ export async function reportRuntimeFailure(source: string, options: { clientRepo
         stackLineCount, stackHasLocation: options.stackHasLocation === true,
         stackExternalLocation: options.stackExternalLocation === true,
         stackScriptLocation: options.stackScriptLocation === true,
+        stackExternalScriptLocation: options.stackExternalScriptLocation === true,
         stackTraceLimit, errorTypes: types,
         occurredAt: new Date(now).toISOString(),
         ...(deployment.host ? { deploymentHost: deployment.host } : {}),
@@ -194,6 +197,8 @@ export function installRuntimeAlerts(): void {
       stackHasLocation: /:\d{1,7}:\d{1,7}/.test(stack ?? ''),
       stackExternalLocation: (stack?.split('\n').slice(2).some(line => !line.includes('node:internal') && /:\d{1,7}:\d{1,7}/.test(line))) ?? false,
       stackScriptLocation: /\.[cm]?[jt]sx?(?:\?[^\s():]*)?:\d{1,7}:\d{1,7}/.test(stack ?? ''),
+      stackExternalScriptLocation: (stack?.split('\n').slice(2).some(line =>
+        !line.includes('node:internal') && /\.[cm]?[jt]sx?(?:\?[^\s():]*)?:\d{1,7}:\d{1,7}/.test(line))) ?? false,
       stackTraceLimit: (Error as ErrorConstructor & { stackTraceLimit?: number }).stackTraceLimit,
       errorTypes: errorTypes(args), signature: errorFingerprint(source, args),
     });
