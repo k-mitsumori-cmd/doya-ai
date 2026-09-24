@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const aishodanProductAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-aishodan-product-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (aishodanProductAdmission.error || aishodanProductAdmission.status !== 0) {
+  console.error('Security regression failed: verify-aishodan-product-admission.cjs');
+  process.exit(1);
+}
 const mensetsuSessionAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-mensetsu-session-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (mensetsuSessionAtomic.error || mensetsuSessionAtomic.status !== 0) {
   console.error('Security regression failed: verify-mensetsu-session-atomic.cjs');

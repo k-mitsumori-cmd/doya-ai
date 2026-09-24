@@ -13,6 +13,7 @@ const data = { products: rows('product', 251), rooms: rows('room', 251), session
 function matches(row, where) {
   if (row.organizationId !== where.organizationId) return false
   if (where.id && row.id !== where.id) return false
+  if (where.name?.not && row.name === where.name.not) return false
   if (where.isPreview !== undefined && row.isPreview !== where.isPreview) return false
   if (where.room?.isPreview !== undefined && row.isPreview !== where.room.isPreview) return false
   if (where.outcome?.verdict && row.outcome.verdict !== where.outcome.verdict) return false

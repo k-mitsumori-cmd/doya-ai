@@ -91,6 +91,7 @@ export default function AishodanTool() {
   const [url, setUrl] = useState('')
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<string | null>(null)
+  const [importIssue, setImportIssue] = useState<{ message: string; upgradeUrl?: string } | null>(null)
 
   const [issuing, setIssuing] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
@@ -207,6 +208,8 @@ export default function AishodanTool() {
     setImporting(true)
     setError('')
     setImportResult(null)
+    setImportIssue(null)
+    let upgradeUrl: string | undefined
     try {
       const r = await fetch(withOrg('aishodan', '/api/aishodan/products'), {
         method: 'POST',
@@ -214,12 +217,17 @@ export default function AishodanTool() {
         body: JSON.stringify({ url: url.trim() }),
       })
       const d = await r.json()
-      if (!r.ok) throw new Error(d?.error || '取り込みに失敗しました')
+      if (!r.ok) {
+        if (r.status === 402 && d?.code === 'LIMIT_REACHED' && d?.upgradeUrl === '/aishodan/pricing') upgradeUrl = d.upgradeUrl
+        throw new Error(d?.error || '取り込みに失敗しました')
+      }
       setImportResult(`「${d.product.name}」を取り込みました（${d.pageCount}ページ / ${d.chunkCount}件のナレッジ）`)
       setUrl('')
       await load()
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '取り込みに失敗しました')
+      const message = e instanceof Error ? e.message : '取り込みに失敗しました'
+      setImportIssue({ message, upgradeUrl })
+      notifyError(setError, message)
     } finally {
       setImporting(false)
     }
@@ -459,6 +467,12 @@ export default function AishodanTool() {
               {importing ? '取り込み中...' : '取り込む'}
             </button>
           </div>
+          {importIssue && (
+            <div role="alert" className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+              <p>{importIssue.message}</p>
+              {importIssue.upgradeUrl && <Link href={importIssue.upgradeUrl} className="mt-2 inline-block text-blue-700 underline">プロプランの料金と30日間無料の対象条件を確認する</Link>}
+            </div>
+          )}
           {importResult && (
             <p className="mt-3 rounded-lg bg-emerald-50 px-4 py-2.5 text-sm text-emerald-700 font-semibold">{importResult}</p>
           )}
