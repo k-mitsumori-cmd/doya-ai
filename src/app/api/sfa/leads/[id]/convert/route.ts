@@ -21,7 +21,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   if (!lead || lead.organizationId !== c.organizationId || !lead.isActive) {
     return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   }
-  if (lead.status === 'converted') {
+  if (lead.status === 'converted' || lead.convertedAccountId) {
     return NextResponse.json({ error: '既に転換済みです' }, { status: 409 })
   }
 
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       // 同じリードの同時転換と、確認後の無効化を条件付き更新で検出する。
       // 後続の作成が失敗すれば、この予約も同じトランザクションで戻る。
       const claimed = await tx.sfaLead.updateMany({
-        where: { id: lead.id, organizationId: c.organizationId, isActive: true, status: { not: 'converted' } },
+        where: { id: lead.id, organizationId: c.organizationId, isActive: true, status: { not: 'converted' }, convertedAccountId: null },
         data: { status: 'converted' },
       })
       if (claimed.count !== 1) return null

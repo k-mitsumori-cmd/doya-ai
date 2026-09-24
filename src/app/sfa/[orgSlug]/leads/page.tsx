@@ -279,15 +279,15 @@ export default function SfaLeadsPage() {
                     <button onClick={() => scoreLead(l)} disabled={scoringId === l.id} className="text-xs font-black text-[#7f19e6] hover:underline flex items-center gap-0.5 disabled:opacity-50">
                       <span className="material-symbols-outlined text-[14px]">auto_awesome</span>{scoringId === l.id ? 'AI判定中…' : 'AIスコア'}
                     </button>
-                    {l.status !== 'converted' ? (
+                    {l.status !== 'converted' && !l.convertedAccountId ? (
                       <button onClick={() => convert(l)} className="text-xs font-black text-green-700 hover:underline flex items-center gap-0.5">
                         <span className="material-symbols-outlined text-[14px]">swap_horiz</span>取引先に転換
                       </button>
                     ) : (
                       <span className="text-xs font-bold text-slate-400">転換済</span>
                     )}
-                    <select value={l.status} onChange={(e) => setStatus(l, e.target.value as LeadStatus)} className="ml-auto text-[11px] font-bold rounded-lg border border-slate-200 px-2 py-1 bg-slate-50">
-                      {STATUS_ORDER.map((s) => <option key={s} value={s}>{LEAD_STATUS_LABEL[s]}</option>)}
+                    <select value={l.status} disabled={l.status === 'converted' || !!l.convertedAccountId} onChange={(e) => setStatus(l, e.target.value as LeadStatus)} className="ml-auto text-[11px] font-bold rounded-lg border border-slate-200 px-2 py-1 bg-slate-50 disabled:opacity-60">
+                      {STATUS_ORDER.filter((s) => s !== 'converted' || l.status === 'converted').map((s) => <option key={s} value={s}>{LEAD_STATUS_LABEL[s]}</option>)}
                     </select>
                   </div>
                 </div>

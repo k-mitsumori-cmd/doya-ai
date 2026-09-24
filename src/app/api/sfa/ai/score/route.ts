@@ -13,13 +13,15 @@ export async function POST(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
-  const body = await req.json().catch(() => ({}))
-  const leadId = (body.leadId as string)?.trim()
+  const body = await req.json().catch(() => null)
+  const leadId = body && typeof body === 'object' && !Array.isArray(body) && typeof body.leadId === 'string'
+    ? body.leadId.trim()
+    : ''
   if (!leadId) return NextResponse.json({ error: 'leadId は必須です' }, { status: 400 })
 
   // IDOR対策：ID直指定の後に organizationId 一致を確認
   const lead = await prisma.sfaLead.findUnique({ where: { id: leadId } })
-  if (!lead || lead.organizationId !== ctx.organizationId) {
+  if (!lead || lead.organizationId !== ctx.organizationId || !lead.isActive) {
     return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   }
 
