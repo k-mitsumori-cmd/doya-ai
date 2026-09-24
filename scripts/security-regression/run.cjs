@@ -230,6 +230,16 @@ if (secondaryOnboarding.error || secondaryOnboarding.status !== 0) {
   console.error('Security regression failed: verify-secondary-onboarding.cjs');
   process.exit(1);
 }
+const hrKintaiOnboarding = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-kintai-onboarding.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrKintaiOnboarding.error || hrKintaiOnboarding.status !== 0) {
+  console.error('Security regression failed: verify-hr-kintai-onboarding.cjs');
+  process.exit(1);
+}
+const kintaiInviteAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-invite-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiInviteAtomic.error || kintaiInviteAtomic.status !== 0) {
+  console.error('Security regression failed: verify-kintai-invite-atomic.cjs');
+  process.exit(1);
+}
 const sfaLeadsPagination = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-leads-pagination.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaLeadsPagination.error || sfaLeadsPagination.status !== 0) {
   console.error('Security regression failed: verify-sfa-leads-pagination.cjs');

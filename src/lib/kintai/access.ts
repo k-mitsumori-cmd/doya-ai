@@ -41,61 +41,37 @@ export async function getOrCreateOrganization(
   employeeName: string,
   email: string
 ) {
-  const existing = await prisma.kintaiMember.findFirst({
-    where: { userId, status: 'ACTIVE' },
-    include: { organization: true },
-  })
-  if (existing) return existing.organization
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const existing = await tx.kintaiMember.findFirst({
+          where: { userId, status: 'ACTIVE' },
+          include: { organization: true },
+        })
+        if (existing) return existing.organization
 
-  const slug = orgName.toLowerCase().replace(/[^a-z0-9　-鿿]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
-  const existingSlug = await prisma.kintaiOrganization.findUnique({ where: { slug } })
-  const finalSlug = existingSlug ? `${slug}-${Date.now()}` : slug
-
-  const org = await prisma.kintaiOrganization.create({
-    data: {
-      name: orgName,
-      slug: finalSlug,
-    },
-  })
-
-  const member = await prisma.kintaiMember.create({
-    data: {
-      organizationId: org.id,
-      userId,
-      role: 'system_admin',
-      status: 'ACTIVE',
-      acceptedAt: new Date(),
-    },
-  })
-
-  await prisma.kintaiEmployee.create({
-    data: {
-      organizationId: org.id,
-      memberId: member.id,
-      name: employeeName,
-      email,
-      employmentType: 'full_time',
-    },
-  })
-
-  // Create default work rule
-  await prisma.kintaiWorkRule.create({
-    data: {
-      organizationId: org.id,
-      name: '標準（9:00-18:00）',
-      workStart: '09:00',
-      workEnd: '18:00',
-      breakMinutes: 60,
-    },
-  })
-
-  // Create default departments
-  const deptNames = ['営業部', '開発部', '総務部', '人事部']
-  for (const name of deptNames) {
-    await prisma.kintaiDepartment.create({
-      data: { organizationId: org.id, name },
-    })
+        const base = orgName.toLowerCase().replace(/[^a-z0-9　-鿿]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
+        const existingSlug = await tx.kintaiOrganization.findUnique({ where: { slug: base } })
+        const slug = existingSlug || attempt > 0 ? `${base}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` : base
+        const org = await tx.kintaiOrganization.create({ data: { name: orgName, slug } })
+        const member = await tx.kintaiMember.create({
+          data: { organizationId: org.id, userId, role: 'system_admin', status: 'ACTIVE', acceptedAt: new Date() },
+        })
+        await tx.kintaiEmployee.create({
+          data: { organizationId: org.id, memberId: member.id, name: employeeName, email, employmentType: 'full_time' },
+        })
+        await tx.kintaiWorkRule.create({
+          data: { organizationId: org.id, name: '標準（9:00-18:00）', workStart: '09:00', workEnd: '18:00', breakMinutes: 60 },
+        })
+        for (const name of ['営業部', '開発部', '総務部', '人事部']) {
+          await tx.kintaiDepartment.create({ data: { organizationId: org.id, name } })
+        }
+        return org
+      }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+    } catch (error) {
+      const code = (error as { code?: string })?.code
+      if (attempt === 2 || (code !== 'P2034' && code !== 'P2002')) throw error
+    }
   }
-
-  return org
+  throw new Error('Organization creation retry exhausted')
 }

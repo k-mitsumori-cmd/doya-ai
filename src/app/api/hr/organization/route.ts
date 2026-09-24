@@ -17,25 +17,31 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const body = await req.json()
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
     const { name, slug, industry, size } = body
-
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
+    if (typeof name !== 'string' || name.trim().length === 0) {
       return NextResponse.json({ error: 'name is required' }, { status: 400 })
     }
+    if (slug != null && (typeof slug !== 'string' || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug))) {
+      return NextResponse.json({ error: 'slugの形式が正しくありません' }, { status: 400 })
+    }
+    if ((industry != null && typeof industry !== 'string') || (size != null && typeof size !== 'string')) {
+      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
 
-    const org = await getOrCreateOrganization(userId, name.trim(), {
-      slug,
-      industry,
-      size,
+    const org = await getOrCreateOrganization(userId, name.trim().slice(0, 120), {
+      slug: slug || undefined,
+      industry: industry?.trim().slice(0, 100) || undefined,
+      size: size?.trim().slice(0, 50) || undefined,
     })
 
     return NextResponse.json({ success: true, organization: org })
-  } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message || 'Failed to create organization' },
-      { status: 500 }
-    )
+  } catch (e) {
+    console.error('[hr/organization] Error:', e)
+    return NextResponse.json({ error: '組織の作成に失敗しました' }, { status: 500 })
   }
 }
 

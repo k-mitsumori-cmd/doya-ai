@@ -39,7 +39,7 @@
 
 ## 2. 組織の初回作成（`getOrCreateOrganization` / `POST /api/kintai/organization`）
 
-`POST /api/kintai/organization`　body: `{ name, employeeName }`（両方必須・無ければ400）
+`POST /api/kintai/organization`　body: `{ name, employeeName }`（両方とも空でない文字列が必須。名前は120文字、氏名は80文字まで保存）
 
 作成時の自動セットアップ:
 1. slug 生成（`name` を小文字化＋記号→ハイフン、英数・全角漢字以外を除去。衝突時は `-{timestamp}` 付与、空なら `org-{timestamp}`）
@@ -50,6 +50,7 @@
 6. **既定の部署** `営業部 / 開発部 / 総務部 / 人事部` を作成
 
 > 既に ACTIVE メンバーがある場合は新規作成せず既存組織を返す（冪等）。
+> 組織、メンバー、従業員、就業ルール、部署は同一トランザクションで保存し、途中失敗時は全件ロールバックする。同時作成の競合は再試行する。
 
 ---
 
@@ -211,12 +212,12 @@ nightMinutes     = 退勤時刻(JST)が 22時以降: (h-22)*60+m ／ 5時未満:
 - GET: `PENDING` の `KintaiMember` を token で検索 → `{ organizationName, employeeName, email, role }`（無ければ404）
 - POST（ログイン必須）:
   1. session から userId 解決（無ければ email から User を引く）
-  2. 同組織に別メンバーシップがあれば削除（`@@unique([organizationId,userId])` 対策）
-  3. その userId の他組織 ACTIVE を `INACTIVE` 化（＝同時 ACTIVE は1組織）
-  4. 当該メンバーを `userId=本人 / status:'ACTIVE' / inviteToken=null / acceptedAt=now` に更新
+  2. 招待に従業員レコードがあることと、ログイン中のメールが招待先メールと一致することを確認
+  3. 同組織に既存メンバーシップがある場合は409を返し、既存の従業員データを削除しない
+  4. 他組織 ACTIVE の非活性化と招待メンバーの有効化を同一トランザクションで保存（＝同時 ACTIVE は1組織）
   5. `{ success, organizationId, organizationName }`
   - `P2002` → 「既にこの組織に所属しています」
-- 招待メール一致の保証は「メールに届いたトークンを本人が踏む」前提（トークンは UUID）
+- 招待トークンは UUID。受諾時は招待先メールとの一致をサーバーで検証し、不一致は403。
 
 ---
 

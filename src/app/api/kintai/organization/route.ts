@@ -15,14 +15,18 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
     }
 
-    const body = await req.json()
-    const { name, employeeName } = body
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
+    const name = typeof body.name === 'string' ? body.name.trim() : ''
+    const employeeName = typeof body.employeeName === 'string' ? body.employeeName.trim() : ''
     if (!name || !employeeName) {
       return NextResponse.json({ error: '組織名と氏名は必須です' }, { status: 400 })
     }
 
     const email = session?.user?.email || ''
-    const org = await getOrCreateOrganization(userId, name, employeeName, email)
+    const org = await getOrCreateOrganization(userId, name.slice(0, 120), employeeName.slice(0, 80), email)
 
     return NextResponse.json({ organization: org })
   } catch (e) {
