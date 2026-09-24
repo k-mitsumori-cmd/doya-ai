@@ -2,9 +2,10 @@
 
 // ドヤスライド 新規作成ウィザード（本体）。
 // /doyaslide（ホーム）と /doyaslide/new（旧URLのエイリアス）の両方からこのコンポーネントを描画する。
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useSession } from 'next-auth/react'
 import toast from 'react-hot-toast'
 import {
   DOC_TYPES,
@@ -49,6 +50,7 @@ function frameClass(a: Aspect) {
 
 export default function NewDoyaSlideWizard() {
   const router = useRouter()
+  const { status: authStatus } = useSession()
   const [title, setTitle] = useState('')
   const [titleEdited, setTitleEdited] = useState(false)
   const [docType, setDocType] = useState('proposal')
@@ -64,27 +66,39 @@ export default function NewDoyaSlideWizard() {
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [projectLimitMessage, setProjectLimitMessage] = useState<string | null>(null)
+  const [projectUpgradeUrl, setProjectUpgradeUrl] = useState<string | null>(null)
+  const [loginRequired, setLoginRequired] = useState(false)
   const [funIdx, setFunIdx] = useState(0)
   const [elapsed, setElapsed] = useState(0)
   const [previews, setPreviews] = useState<Record<string, string[]>>({})
   const [previewPage, setPreviewPage] = useState(0)
   const fetchedStyles = useRef<Set<string>>(new Set())
 
-  useEffect(() => {
-    let active = true
-    fetch('/api/doyaslide/usage', { cache: 'no-store' })
-      .then((response) => response.json())
-      .then((data) => {
-        if (!active) return
-        const limit = data?.limits?.maxProjects
-        const used = data?.usage?.projects
-        if (typeof limit === 'number' && limit >= 0 && typeof used === 'number' && used >= limit) {
-          setProjectLimitMessage(`今月のプロジェクト作成数が上限（${limit}件）に達しました。`)
-        }
-      })
-      .catch(() => {})
-    return () => { active = false }
+  const refreshUsage = useCallback(async () => {
+    const response = await fetch('/api/doyaslide/usage', { cache: 'no-store' })
+    if (!response.ok) throw new Error('利用状況を確認できませんでした')
+    const data = await response.json()
+    if (data?.tier === 'GUEST') {
+      setLoginRequired(true)
+      return
+    }
+    const limit = data?.limits?.maxProjects
+    const used = data?.usage?.projects
+    if (typeof limit !== 'number' || typeof used !== 'number') throw new Error('利用状況を確認できませんでした')
+    setLoginRequired(false)
+    if (limit >= 0 && used >= limit) {
+      setProjectLimitMessage(`今月のプロジェクト作成数が上限（${limit}件）に達しました。`)
+      setProjectUpgradeUrl(data?.tier === 'FREE' ? '/doyaslide/pricing' : null)
+    } else {
+      setProjectLimitMessage(null)
+      setProjectUpgradeUrl(null)
+    }
   }, [])
+
+  useEffect(() => {
+    if (authStatus !== 'authenticated') return
+    void refreshUsage().catch(() => {})
+  }, [authStatus, refreshUsage])
 
   const loadPreview = (s: string): Promise<void> => {
     if (previews[s] || fetchedStyles.current.has(s)) return Promise.resolve()
@@ -193,6 +207,7 @@ export default function NewDoyaSlideWizard() {
   }
 
   const submit = async () => {
+    if (authStatus !== 'authenticated' || loginRequired) return
     if (!title.trim()) {
       toast.error('テーマ（タイトル）を入力してください')
       return
@@ -214,8 +229,10 @@ export default function NewDoyaSlideWizard() {
         }),
       })
       const pData = await pRes.json()
-      if (pRes.status === 403) {
+      if (pRes.status === 401) setLoginRequired(true)
+      if (pRes.status === 403 && pData?.code === 'LIMIT_REACHED') {
         setProjectLimitMessage(typeof pData?.error === 'string' ? pData.error : '今月のプロジェクト作成数が上限に達しました。')
+        setProjectUpgradeUrl(pData?.upgradeUrl === '/doyaslide/pricing' ? pData.upgradeUrl : null)
       }
       if (!pRes.ok) throw new Error(typeof pData?.error === 'string' ? pData.error : JSON.stringify(pData?.error) || '作成に失敗しました')
       const projectId = pData?.project?.id
@@ -292,6 +309,12 @@ export default function NewDoyaSlideWizard() {
         プロジェクト一覧
       </Link>
       <h1 className="text-3xl font-black text-slate-900 mb-3">スライドを作る</h1>
+      {(authStatus === 'unauthenticated' || loginRequired) && (
+        <div role="alert" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
+          <span>スライドを作成するにはログインが必要です。</span>
+          <Link href="/auth/signin?callbackUrl=/doyaslide/new" className="rounded-full bg-blue-600 px-4 py-2 text-xs font-black text-white">ログインして始める</Link>
+        </div>
+      )}
       <DoyaChar mood="hello" size={64} bubble="テーマを決めるだけ！迷ったら「サンプルを入れる」でOK 👇" className="mb-5" />
 
       <div className="space-y-5">
@@ -597,9 +620,10 @@ export default function NewDoyaSlideWizard() {
         {projectLimitMessage && (
           <div className="max-w-3xl mx-auto mb-2 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800">
             <span>{projectLimitMessage}</span>
-            <Link href="/doyaslide/pricing" className="shrink-0 rounded-full bg-blue-600 px-3 py-1.5 text-xs font-black text-white">
-              プランを見る
-            </Link>
+            <div className="flex shrink-0 items-center gap-2">
+              <button onClick={() => void refreshUsage().catch(() => toast.error('利用状況を更新できませんでした'))} className="rounded-full border border-amber-400 px-3 py-1.5 text-xs font-black">利用状況を更新</button>
+              {projectUpgradeUrl && <Link href={projectUpgradeUrl} target="_blank" rel="noopener noreferrer" className="rounded-full bg-blue-600 px-3 py-1.5 text-xs font-black text-white">プランを見る</Link>}
+            </div>
           </div>
         )}
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
@@ -608,7 +632,7 @@ export default function NewDoyaSlideWizard() {
           </p>
           <button
             onClick={submit}
-            disabled={busy || Boolean(projectLimitMessage)}
+            disabled={busy || Boolean(projectLimitMessage) || authStatus !== 'authenticated' || loginRequired}
             className="flex-1 sm:flex-none sm:min-w-[300px] flex items-center justify-center gap-2 px-8 py-3.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full text-base font-black shadow-lg shadow-blue-500/25 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-60"
           >
             <span className="material-symbols-outlined">auto_awesome</span>

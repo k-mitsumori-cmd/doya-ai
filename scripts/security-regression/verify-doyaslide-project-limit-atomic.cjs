@@ -4,6 +4,7 @@ const { load } = require('./load-typescript.cjs');
 const projects = [];
 let ledger = null;
 let transactions = 0;
+let accountExists = true;
 let lockTail = Promise.resolve();
 const projectStore = {
   count: async ({ where }) => projects.filter((project) => project.createdAt >= where.createdAt.gte).length,
@@ -20,7 +21,7 @@ const subscriptionStore = {
     return ledger;
   },
 };
-const tx = { $queryRaw: async () => [{ id: 'user' }], doyaSlideProject: projectStore, userServiceSubscription: subscriptionStore };
+const tx = { $queryRaw: async () => accountExists ? [{ id: 'user' }] : [], doyaSlideProject: projectStore, userServiceSubscription: subscriptionStore };
 const prisma = {
   doyaSlideProject: projectStore,
   userServiceSubscription: subscriptionStore,
@@ -76,11 +77,19 @@ const post = (body) => route.POST({ json: async () => body });
     stylePreset: 'corporate',
   })));
   assert.deepEqual(responses.map((response) => response.status).sort(), [201, 201, 201, 403]);
+  const limitResponse = await responses.find((response) => response.status === 403).json();
+  assert.equal(limitResponse.code, 'LIMIT_REACHED');
+  assert.equal(limitResponse.limit, 3);
+  assert.equal(limitResponse.upgradeUrl, '/doyaslide/pricing');
   assert.equal(projects.length, 4, 'an older project must not consume this month’s three slots');
   assert.ok(projects.filter((project) => project.title).every((project) => project.title.startsWith('Project')));
   assert.equal(await limits.countProjects('user'), 3);
   projects.splice(1, 3);
   assert.equal(await limits.countProjects('user'), 3, 'deletion must not restore this month’s used slots');
   assert.equal((await post({ title: 'Fifth' })).status, 403);
+  accountExists = false;
+  const missingAccount = await post({ title: 'Missing account' });
+  assert.equal(missingAccount.status, 500, 'a deleted account is not a plan limit');
+  assert.equal((await missingAccount.json()).code, undefined);
   console.log('PASS DoyaSlide projects: JST month, deleted-project ledger, and concurrent free limit');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

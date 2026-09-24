@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
       ? await prisma.doyaSlideProject.create({ data })
       : await prisma.$transaction(async (tx) => {
         const users = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`
-        if (users.length === 0) return null
+        if (users.length === 0) throw new Error('DoyaSlide account not found')
         const now = new Date()
         const [existing, ledger] = await Promise.all([
           tx.doyaSlideProject.count({ where: { userId, createdAt: { gte: monthStart(now) } } }),
@@ -92,7 +92,12 @@ export async function POST(req: NextRequest) {
       })
     if (!project) {
       return NextResponse.json(
-        { error: `今月のプロジェクト作成数が上限（${limits.maxProjects}件）に達しています。プロにアップグレードするか、来月までお待ちください。` },
+        {
+          error: `今月のプロジェクト作成数が上限（${limits.maxProjects}件）に達しています。プロプランではプロジェクト数の上限なく作成できます。`,
+          code: 'LIMIT_REACHED',
+          limit: limits.maxProjects,
+          upgradeUrl: '/doyaslide/pricing',
+        },
         { status: 403 }
       )
     }
