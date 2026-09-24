@@ -53,7 +53,7 @@ export default function BannerPlanPage() {
     if (!p || p === 'GUEST') return 'GUEST' as const
     // 既存環境の揺れに耐える（例: BANNER_PRO / PRO_MONTHLY / BASIC / STARTER / BUSINESS など）
     if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
-    if (p.includes('PRO') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
+    if (p.includes('PRO') || p.includes('BUNDLE') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
     if (p.includes('LIGHT')) return 'LIGHT' as const
     if (p.includes('FREE')) return 'FREE' as const
     // 不明だがログイン済みの場合はFREE扱い（安全側）
@@ -65,11 +65,12 @@ export default function BannerPlanPage() {
   const isLight = !isGuest && bannerPlanTier === 'LIGHT'
   const isPaid = !isGuest && (isLight || isPro || isEnterprise)
 
-  const [totalBanners, setTotalBanners] = useState(0)
-  const [usageCount, setUsageCount] = useState(0)
+  const [totalBanners, setTotalBanners] = useState<number | null>(null)
+  const [usageCount, setUsageCount] = useState<number | null>(null)
+  const [serverMonthlyLimit, setServerMonthlyLimit] = useState<number | null>(null)
+  const [statsError, setStatsError] = useState(false)
   const [isCanceling, setIsCanceling] = useState(false)
   const [isSyncingPlan, setIsSyncingPlan] = useState(false)
-  const [statsLoaded, setStatsLoaded] = useState(false)
   const [cancelScheduledAt, setCancelScheduledAt] = useState<Date | null>(null)
   const [cancelMode, setCancelMode] = useState<'period_end' | 'immediate' | null>(null)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
@@ -205,9 +206,14 @@ export default function BannerPlanPage() {
     if (status === 'loading') return
     
     const loadStats = async () => {
+      setStatsError(false)
+      setUsageCount(null)
+      setTotalBanners(null)
+      setServerMonthlyLimit(null)
       if (isGuest) {
         // ゲストはlocalStorageから取得（月次）
         try {
+          setTotalBanners(0)
           const currentMonth = new Date().toISOString().slice(0, 7) // YYYY-MM
           const u = getGuestUsage('banner')
           // 月次比較（旧YYYY-MM-DD形式にも対応）
@@ -221,48 +227,57 @@ export default function BannerPlanPage() {
             setTotalBanners(total)
           }
         } catch {
-          setUsageCount(0)
-          setTotalBanners(0)
+          setUsageCount(null)
+          setTotalBanners(null)
+          setStatsError(true)
         }
       } else {
         // ログインユーザーはAPIから取得
         try {
           const res = await fetch('/api/banner/stats')
-          if (res.ok) {
-            const data = await res.json()
-            setTotalBanners(data.totalBanners || 0)
-            setUsageCount(data.monthlyUsage || 0)
+          if (!res.ok) throw new Error('統計の取得に失敗しました')
+          const data = await res.json()
+          if (!Number.isFinite(data.totalBanners) || !Number.isFinite(data.monthlyUsage) || !Number.isFinite(data.monthlyLimit)) {
+            throw new Error('統計の形式が正しくありません')
           }
+          setTotalBanners(data.totalBanners)
+          setUsageCount(data.monthlyUsage)
+          setServerMonthlyLimit(data.monthlyLimit)
         } catch {
-          setTotalBanners(0)
-          setUsageCount(0)
+          setTotalBanners(null)
+          setUsageCount(null)
+          setServerMonthlyLimit(null)
+          setStatsError(true)
         }
       }
-      setStatsLoaded(true)
     }
     
     loadStats()
   }, [isGuest, status])
 
   // ログイン時は「プラン階層」で月間上限を決める（plan文字列の揺れに強い）
-  const monthlyLimit = isGuest ? BANNER_PRICING.guestLimit : getBannerMonthlyLimitByUserPlan(bannerPlanTier)
-  const remaining = Math.max(0, monthlyLimit - usageCount)
+  const monthlyLimit = isGuest ? BANNER_PRICING.guestLimit : statsError ? null : serverMonthlyLimit ?? getBannerMonthlyLimitByUserPlan(bannerPlanTier)
+  const remaining = usageCount === null || monthlyLimit === null ? null : Math.max(0, monthlyLimit - usageCount)
 
-  const savedMinutes = totalBanners * ESTIMATED_TIME_SAVED_PER_BANNER_MIN
+  const savedMinutes = (totalBanners ?? 0) * ESTIMATED_TIME_SAVED_PER_BANNER_MIN
   const savedHours = Math.floor(savedMinutes / 60)
   const savedCost = Math.floor((savedMinutes / 60) * HOURLY_DESIGNER_RATE_JPY)
 
   const estimateBasisText = `根拠：\n- 1枚あたりの制作時間を ${ESTIMATED_TIME_SAVED_PER_BANNER_MIN} 分と仮定\n- デザイナー時給を ${HOURLY_DESIGNER_RATE_JPY.toLocaleString()} 円と仮定\n\n計算：\n- 推定削減時間 = 累計生成枚数 × ${ESTIMATED_TIME_SAVED_PER_BANNER_MIN} 分 ÷ 60\n- 推定コスト削減 = 推定削減時間（時間）× ${HOURLY_DESIGNER_RATE_JPY.toLocaleString()} 円`
 
   const currentPlanLabel =
-    isGuest ? 'ゲスト' : isPaid ? 'プロ' : '無料'
+    isGuest ? 'ゲスト' : isEnterprise ? 'エンタープライズ' : isPro ? 'プロ' : isLight ? 'ライト' : '無料'
 
   const planBadge =
-    isPaid
-      ? { text: 'PRO', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
-      : isGuest
-        ? { text: 'GUEST', cls: 'bg-gray-200 text-gray-700' }
-        : { text: 'FREE', cls: 'bg-blue-100 text-blue-700' }
+    isEnterprise
+      ? { text: 'ENTERPRISE', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
+      : isPro
+        ? { text: 'PRO', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
+        : isLight
+          ? { text: 'LIGHT', cls: 'bg-orange-500 text-white shadow-sm shadow-orange-500/20' }
+          : isGuest
+            ? { text: 'GUEST', cls: 'bg-gray-200 text-gray-700' }
+            : { text: 'FREE', cls: 'bg-blue-100 text-blue-700' }
 
   // 契約管理 / 課金開始は「リンク遷移」＋CheckoutButtonに統一（確実にStripeへ遷移）
 
@@ -351,14 +366,15 @@ export default function BannerPlanPage() {
                       </div>
                       <h2 className="text-2xl font-black text-slate-800">{currentPlanLabel}</h2>
                       <p className="text-sm text-slate-500 mt-2 font-medium">
-                        月間上限: <span className="font-bold text-slate-800">{monthlyLimit}</span> 枚 / 今月の残り: <span className="font-bold text-blue-600">{remaining}</span> 枚
+                        月間上限: <span className="font-bold text-slate-800">{monthlyLimit ?? '確認できません'}</span>{monthlyLimit === null ? '' : ' 枚'} / 今月の残り: <span className="font-bold text-blue-600">{remaining ?? '確認できません'}</span>{remaining === null ? '' : ' 枚'}
                       </p>
                     </div>
 
                     <div className="text-right">
                       {isPaid ? (
-                        <div className="text-3xl font-black text-slate-800 tracking-tighter">
-                          ¥9,980<span className="text-sm text-slate-400 font-bold ml-1">/mo</span>
+                        <div className="text-right">
+                          <p className="text-lg font-black text-slate-800">有料プラン</p>
+                          <p className="text-xs text-slate-500">請求額は契約内容をご確認ください</p>
                         </div>
                       ) : (
                         <div className="text-3xl font-black text-slate-800 tracking-tighter">
@@ -367,6 +383,13 @@ export default function BannerPlanPage() {
                       )}
                     </div>
                   </div>
+
+                  {statsError && (
+                    <div role="alert" className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+                      使用状況を取得できませんでした。時間をおいて再読み込みしてください。
+                      <button type="button" onClick={() => window.location.reload()} className="ml-2 underline">再読み込み</button>
+                    </div>
+                  )}
 
                   {/* CTA */}
                   <div className="mt-8 flex flex-col sm:flex-row gap-3">
@@ -500,7 +523,7 @@ export default function BannerPlanPage() {
                         </span>
                       </div>
                       <p className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tighter">
-                        {savedHours}<span className="text-sm text-slate-400 font-bold ml-1">時間</span>
+                        {totalBanners === null ? '—' : savedHours}<span className="text-sm text-slate-400 font-bold ml-1">{totalBanners === null ? '' : '時間'}</span>
                       </p>
                     </div>
                     <div className="rounded-3xl border border-gray-100 p-4 sm:p-6 bg-white hover:border-blue-100 hover:shadow-md transition-all group">
@@ -509,7 +532,7 @@ export default function BannerPlanPage() {
                       </div>
                       <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">累計生成枚数</p>
                       <p className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tighter">
-                        {totalBanners}<span className="text-sm text-slate-400 font-bold ml-1">枚</span>
+                        {totalBanners ?? '—'}<span className="text-sm text-slate-400 font-bold ml-1">{totalBanners === null ? '' : '枚'}</span>
                       </p>
                     </div>
                     <div className="rounded-3xl border border-gray-100 p-4 sm:p-6 bg-white hover:border-blue-100 hover:shadow-md transition-all group">
@@ -529,7 +552,7 @@ export default function BannerPlanPage() {
                         </span>
                       </div>
                       <p className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tighter">
-                        ¥{savedCost.toLocaleString()}
+                        {totalBanners === null ? '—' : `¥${savedCost.toLocaleString()}`}
                       </p>
                     </div>
                   </div>
