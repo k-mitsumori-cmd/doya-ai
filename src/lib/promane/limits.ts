@@ -48,7 +48,7 @@ export const PROMANE_LIMITS: Record<PlanTier, PromaneLimits> = {
   },
 };
 
-type LimitReader = Pick<Prisma.TransactionClient, "user" | "promaneProject">;
+type LimitReader = Pick<Prisma.TransactionClient, "user" | "promaneProject" | "promaneWorkspace">;
 
 /** ユーザーのプラン階層を取得 */
 export async function getUserPromaneTier(userId: string, db: LimitReader = prisma): Promise<PlanTier> {
@@ -72,11 +72,9 @@ export async function countUserProjects(userId: string, db: LimitReader = prisma
   });
 }
 
-/** ユーザーがメンバーになっているWS数 */
-export async function countUserWorkspaces(userId: string): Promise<number> {
-  return prisma.promaneMember.count({
-    where: { userId, isActive: true },
-  });
+/** 作成枠は自分が所有するWSだけを数え、招待先の所属は消費しない */
+export async function countUserWorkspaces(userId: string, db: LimitReader = prisma): Promise<number> {
+  return db.promaneWorkspace.count({ where: { userId } });
 }
 
 /** 残り作成可能数 (-1 = 無制限) */

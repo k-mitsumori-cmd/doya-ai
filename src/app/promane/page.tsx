@@ -75,7 +75,14 @@ export default async function PromaneEntryPage({
   // 0個でも招待もなければ自動作成
   if (memberships.length === 0 && pendingInvites.length === 0) {
     const ws = await getOrCreateWorkspace(userId)
-    redirect(`/promane/${ws.slug}`)
+    if (ws) redirect(`/promane/${ws.slug}`)
+    return (
+      <main className="mx-auto max-w-xl p-8 text-center">
+        <h1 className="text-xl font-bold">ワークスペースにアクセスできません</h1>
+        <p className="mt-3 text-gray-600">所有するワークスペースの利用権限が無効です。管理者にご確認ください。</p>
+        <Link href="https://doyamarke.surisuta.jp/contact" className="mt-4 inline-block font-bold text-blue-700 underline">お問い合わせ</Link>
+      </main>
+    )
   }
 
   // 複数 or 招待あり → セレクターUI

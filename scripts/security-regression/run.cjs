@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const promaneWorkspaceAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-promane-workspace-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (promaneWorkspaceAdmission.error || promaneWorkspaceAdmission.status !== 0) {
+  console.error('Security regression failed: verify-promane-workspace-admission.cjs');
+  process.exit(1);
+}
 const mensetsuTemplateAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-mensetsu-template-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (mensetsuTemplateAdmission.error || mensetsuTemplateAdmission.status !== 0) {
   console.error('Security regression failed: verify-mensetsu-template-admission.cjs');

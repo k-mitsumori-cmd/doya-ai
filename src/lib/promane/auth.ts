@@ -2,6 +2,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
+import crypto from 'crypto'
 
 /**
  * ページ用: 未ログインなら /auth/signin にリダイレクト
@@ -29,27 +30,30 @@ export async function requirePromaneAuthAction() {
 }
 
 export async function getOrCreateWorkspace(userId: string) {
-  const membership = await prisma.promaneMember.findFirst({
-    where: { userId, isActive: true },
-    include: { workspace: true },
-    orderBy: { createdAt: 'asc' },
-  })
-  if (membership) return membership.workspace
+  return prisma.$transaction(async (tx) => {
+    const users = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`
+    if (users.length === 0) throw new Error('Promane account not found')
 
-  const user = await prisma.user.findUnique({ where: { id: userId } })
-  return prisma.promaneWorkspace.create({
-    data: {
-      userId,
-      name: 'マイワークスペース',
-      slug: `ws-${userId.slice(0, 8)}`,
-      members: {
-        create: {
-          userId,
-          role: 'owner',
-          displayName: user?.name || 'オーナー',
-        },
+    const membership = await tx.promaneMember.findFirst({
+      where: { userId, isActive: true },
+      include: { workspace: true },
+      orderBy: { createdAt: 'asc' },
+    })
+    if (membership) return membership.workspace
+
+    // 所有WSのアクセス権が無効化されている場合は勝手に再有効化しない。
+    const owned = await tx.promaneWorkspace.findFirst({ where: { userId }, orderBy: { createdAt: 'asc' } })
+    if (owned) return null
+
+    const user = await tx.user.findUnique({ where: { id: userId }, select: { name: true } })
+    return tx.promaneWorkspace.create({
+      data: {
+        userId,
+        name: 'マイワークスペース',
+        slug: `ws-${crypto.randomBytes(8).toString('hex')}`,
+        members: { create: { userId, role: 'owner', displayName: user?.name || 'オーナー' } },
       },
-    },
+    })
   })
 }
 

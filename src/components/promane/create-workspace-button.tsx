@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/promane/ui/button'
 import { Input } from '@/components/promane/ui/input'
 import { Plus, X } from 'lucide-react'
@@ -12,10 +13,12 @@ export function CreateWorkspaceButton() {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [creating, setCreating] = useState(false)
+  const [limitNotice, setLimitNotice] = useState<{ message: string; href: string; label: string } | null>(null)
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault()
     if (!name.trim()) return
+    setLimitNotice(null)
     setCreating(true)
     try {
       const res = await fetch('/api/promane/workspaces/create', {
@@ -25,6 +28,14 @@ export function CreateWorkspaceButton() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
+        if (data?.code === 'LIMIT_REACHED') {
+          setLimitNotice({
+            message: data.error || 'ワークスペースの作成上限に達しました。',
+            href: data.upgradeUrl || data.contactUrl || '/promane/pricing',
+            label: data.upgradeUrl ? 'プランと料金を見る' : 'お問い合わせ',
+          })
+          return
+        }
         toast.error(data?.error || '作成に失敗しました', { duration: 6000 })
         return
       }
@@ -42,7 +53,7 @@ export function CreateWorkspaceButton() {
   return (
     <>
       <Button
-        onClick={() => setOpen(true)}
+        onClick={() => { setLimitNotice(null); setOpen(true) }}
         className="rounded-full h-11 px-5 text-[14px] font-black bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-md hover:scale-105 transition-all"
       >
         <Plus className="mr-1.5 h-4 w-4" />
@@ -76,6 +87,14 @@ export function CreateWorkspaceButton() {
               />
               <p className="text-[11px] text-gray-400 font-bold mt-1">作成後、設定からスラッグも変更できます</p>
             </div>
+            {limitNotice && (
+              <div role="alert" className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                <p className="font-bold">{limitNotice.message}</p>
+                <Link href={limitNotice.href} className="mt-2 inline-block font-bold underline underline-offset-2">
+                  {limitNotice.label} →
+                </Link>
+              </div>
+            )}
             <div className="flex justify-end gap-2">
               <Button type="button" onClick={() => setOpen(false)} variant="outline" className="rounded-full font-black">
                 キャンセル
