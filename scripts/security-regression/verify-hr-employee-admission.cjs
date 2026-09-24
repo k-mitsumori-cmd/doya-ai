@@ -1,5 +1,8 @@
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
+const fs = require('node:fs')
+const vm = require('node:vm')
+const ts = require('typescript')
 
 ;(async () => {
   await check('employee admission locks organization and blocks at its active quota', async () => {
@@ -74,6 +77,50 @@ const { load, check, results } = require('./load-typescript.cjs')
     assert.equal(data.code, 'HR_ORG_EMPLOYEE_LIMIT')
     assert.equal(data.limitNotice.upgradeUrl, undefined)
     assert.match(data.limitNotice.contactUrl, /contact/)
+  })
+
+  await check('new employee photo uploads only after admission and is attached to the saved employee', async () => {
+    const source = fs.readFileSync('src/app/hr/employees/new/page.tsx', 'utf8')
+    const ast = ts.createSourceFile('new-page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
+    let handler
+    function visit(node) {
+      if (ts.isVariableDeclaration(node) && node.name.getText(ast) === 'handleSubmit') handler = node.initializer.getText(ast)
+      ts.forEachChild(node, visit)
+    }
+    visit(ast)
+    assert.ok(handler)
+    for (const mode of ['limit', 'saved']) {
+      const calls = []
+      const destinations = []
+      const env = {
+        form: { lastName: '山田', firstName: '太郎' },
+        photoFile: new Blob(['photo']),
+        FormData,
+        setSaving() {}, setLimitNotice() {}, setSubmitted() {},
+        router: { push: path => destinations.push(path) },
+        toast: { success() {}, error() {} },
+        setTimeout: fn => fn(),
+        fetch: async (path, options) => {
+          calls.push(path)
+          if (path === '/api/hr/employees') return Response.json(mode === 'limit'
+            ? { code: 'HR_ORG_EMPLOYEE_LIMIT', error: '上限', upgradeUrl: '/hr/pricing' }
+            : { employee: { id: 'e' } }, { status: mode === 'limit' ? 403 : 200 })
+          if (path === '/api/hr/upload') return Response.json({ url: 'https://example.com/photo.png' })
+          if (path === '/api/hr/employees/e') {
+            assert.deepEqual(JSON.parse(options.body), { photoUrl: 'https://example.com/photo.png' })
+            return Response.json({ success: true })
+          }
+          throw Error(`Unexpected fetch ${path}`)
+        },
+      }
+      const js = ts.transpileModule(`(${handler})`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText
+      const submit = vm.runInNewContext(js, env)
+      await submit({ preventDefault() {} })
+      assert.deepEqual(calls, mode === 'limit'
+        ? ['/api/hr/employees']
+        : ['/api/hr/employees', '/api/hr/upload', '/api/hr/employees/e'])
+      if (mode === 'saved') assert.deepEqual(destinations, ['/hr/employees'])
+    }
   })
 
   console.log(JSON.stringify({ passed: results.length, results }, null, 2))

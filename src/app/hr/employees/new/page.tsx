@@ -79,29 +79,11 @@ export default function NewEmployeePage() {
         throw new Error('姓名は必須項目です')
       }
 
-      // Upload photo first if present
-      let photoUrl: string | undefined
-      if (photoFile) {
-        const formData = new FormData()
-        formData.append('file', photoFile)
-        const uploadRes = await fetch('/api/hr/upload', {
-          method: 'POST',
-          body: formData,
-        })
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json()
-          photoUrl = uploadData.url
-        }
-      }
-
-      // Create employee
+      // 上限確認と登録を先に確定し、上限到達時に写真だけ保存されるのを防ぐ。
       const res = await fetch('/api/hr/employees', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          photoUrl,
-        }),
+        body: JSON.stringify(form),
       })
 
       if (!res.ok) {
@@ -115,6 +97,34 @@ export default function NewEmployeePage() {
           return
         }
         throw new Error(errData.error || '従業員の登録に失敗しました')
+      }
+      const created = await res.json().catch(() => null)
+      const employeeId = created?.employee?.id
+      if (!employeeId || typeof employeeId !== 'string') {
+        toast.error('登録結果を確認できませんでした。従業員一覧で確認してください。')
+        router.push('/hr/employees')
+        return
+      }
+
+      if (photoFile) {
+        try {
+          const formData = new FormData()
+          formData.append('file', photoFile)
+          const uploadRes = await fetch('/api/hr/upload', { method: 'POST', body: formData })
+          if (!uploadRes.ok) throw new Error('写真のアップロードに失敗しました')
+          const uploadData = await uploadRes.json()
+          if (typeof uploadData.url !== 'string' || !uploadData.url) throw new Error('写真のURLを確認できません')
+          const attachRes = await fetch(`/api/hr/employees/${encodeURIComponent(employeeId)}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ photoUrl: uploadData.url }),
+          })
+          if (!attachRes.ok) throw new Error('写真の保存に失敗しました')
+        } catch {
+          toast.error('従業員は登録済みですが、写真を保存できませんでした。編集画面から再試行してください。')
+          router.push(`/hr/employees/${encodeURIComponent(employeeId)}/edit`)
+          return
+        }
       }
 
       toast.success('従業員を登録しました')
