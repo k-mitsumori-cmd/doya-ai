@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const orgFetch = spawnSync(process.execPath, [path.join(__dirname, 'verify-org-fetch.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (orgFetch.error || orgFetch.status !== 0) {
+  console.error('Security regression failed: verify-org-fetch.cjs');
+  process.exit(1);
+}
 const aishodanSessionList = spawnSync(process.execPath, [path.join(__dirname, 'verify-aishodan-session-list.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (aishodanSessionList.error || aishodanSessionList.status !== 0) {
   console.error('Security regression failed: verify-aishodan-session-list.cjs');

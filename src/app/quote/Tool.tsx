@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import OrgSwitcher, { clearSelectedOrg, reconcileSelectedOrg, withOrg, type Membership } from '@/components/org/OrgSwitcher'
+import { fetchOrgJson } from '@/lib/org-fetch'
 import { billableLines, calcTotals, yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource, type ProductProfile, type SuggestedItem } from '@/lib/quote/types'
 import { Sparkles } from 'lucide-react'
@@ -107,17 +108,20 @@ export default function QuoteTool() {
       setMemberships(memberships)
       if (d.current) {
         const [pr, dr, ir] = await Promise.all([
-          fetch(withOrg('quote', '/api/quote/products')).then((x) => x.json()),
-          fetch(withOrg('quote', '/api/quote/documents')).then((x) => x.json()),
-          fetch(withOrg('quote', '/api/quote/issuer')).then((x) => x.json()),
+          fetchOrgJson(withOrg('quote', '/api/quote/products')),
+          fetchOrgJson(withOrg('quote', '/api/quote/documents')),
+          fetchOrgJson(withOrg('quote', '/api/quote/issuer')),
         ])
+        if (!Array.isArray(pr.products) || !Array.isArray(dr.documents) || !Object.prototype.hasOwnProperty.call(ir, 'issuer')) {
+          throw new Error('組織のデータを確認できませんでした')
+        }
         setProducts(pr.products || [])
         setDocs(dr.documents || [])
         setHasIssuer(Boolean(ir.issuer))
         if ((pr.products || []).length > 0) setSelectedProduct(pr.products[0].id)
       }
-    } catch {
-      notifyError(setError, '読み込みに失敗しました')
+    } catch (e) {
+      notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
     } finally {
       setLoading(false)
     }

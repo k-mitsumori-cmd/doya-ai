@@ -10,6 +10,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import OrgSwitcher, { clearSelectedOrg, reconcileSelectedOrg, withOrg, type Membership } from '@/components/org/OrgSwitcher'
+import { fetchOrgJson } from '@/lib/org-fetch'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 import AishodanLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
@@ -110,18 +111,21 @@ export default function AishodanTool() {
       setMemberships(memberships)
       if (d.current) {
         const [pr, rr, sr, st] = await Promise.all([
-          fetch(withOrg('aishodan', '/api/aishodan/products')).then((x) => x.json()),
-          fetch(withOrg('aishodan', '/api/aishodan/rooms')).then((x) => x.json()),
-          fetch(withOrg('aishodan', '/api/aishodan/sessions')).then((x) => x.json()),
-          fetch(withOrg('aishodan', '/api/aishodan/stats')).then((x) => x.json()),
+          fetchOrgJson(withOrg('aishodan', '/api/aishodan/products')),
+          fetchOrgJson(withOrg('aishodan', '/api/aishodan/rooms')),
+          fetchOrgJson(withOrg('aishodan', '/api/aishodan/sessions')),
+          fetchOrgJson<Stats>(withOrg('aishodan', '/api/aishodan/stats')),
         ])
+        if (!Array.isArray(pr.products) || !Array.isArray(rr.rooms) || !Array.isArray(sr.sessions)) {
+          throw new Error('組織のデータを確認できませんでした')
+        }
         setProducts(pr.products || [])
         setRooms(rr.rooms || [])
         setSessions(sr.sessions || [])
         setStats(st)
       }
-    } catch {
-      notifyError(setError, '読み込みに失敗しました')
+    } catch (e) {
+      notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
     } finally {
       setLoading(false)
     }

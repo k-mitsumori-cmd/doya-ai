@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import OrgSwitcher, { clearSelectedOrg, reconcileSelectedOrg, withOrg, type Membership } from '@/components/org/OrgSwitcher'
+import { fetchOrgJson } from '@/lib/org-fetch'
 import { SESSION_STATUS_LABELS } from '@/lib/aishodan/types'
 import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
@@ -67,18 +68,21 @@ export default function AishodanPreviewPage() {
       setMemberships(memberships)
       if (d.current) {
         const [pr, sr] = await Promise.all([
-          fetch(withOrg('aishodan', '/api/aishodan/products')).then((x) => x.json()),
+          fetchOrgJson(withOrg('aishodan', '/api/aishodan/products')),
           // 練習の商談だけを見る
-          fetch(withOrg('aishodan', '/api/aishodan/sessions?scope=preview')).then((x) => x.json()),
+          fetchOrgJson(withOrg('aishodan', '/api/aishodan/sessions?scope=preview')),
         ])
+        if (!Array.isArray(pr.products) || !Array.isArray(sr.sessions)) {
+          throw new Error('組織のデータを確認できませんでした')
+        }
         const ps: Product[] = pr.products || []
         setProducts(ps)
         setSessions(sr.sessions || [])
         const first = ps.find((p) => p.scenarios.length > 0)?.scenarios[0]?.id
         if (first) setScenarioId((prev) => prev || first)
       }
-    } catch {
-      notifyError(setError, '読み込みに失敗しました')
+    } catch (e) {
+      notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
     } finally {
       setLoading(false)
     }
