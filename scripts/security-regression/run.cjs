@@ -195,6 +195,21 @@ if (sfaLeadsPagination.error || sfaLeadsPagination.status !== 0) {
   console.error('Security regression failed: verify-sfa-leads-pagination.cjs');
   process.exit(1);
 }
+const sfaActivitiesPagination = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-activities-pagination.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaActivitiesPagination.error || sfaActivitiesPagination.status !== 0) {
+  console.error('Security regression failed: verify-sfa-activities-pagination.cjs');
+  process.exit(1);
+}
+const sfaActivityRelations = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-activity-relations.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaActivityRelations.error || sfaActivityRelations.status !== 0) {
+  console.error('Security regression failed: verify-sfa-activity-relations.cjs');
+  process.exit(1);
+}
+const sfaActivitiesUi = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-activities-ui.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaActivitiesUi.error || sfaActivitiesUi.status !== 0) {
+  console.error('Security regression failed: verify-sfa-activities-ui.cjs');
+  process.exit(1);
+}
 const sfaLeadsUi = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-leads-ui.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaLeadsUi.error || sfaLeadsUi.status !== 0) {
   console.error('Security regression failed: verify-sfa-leads-ui.cjs');

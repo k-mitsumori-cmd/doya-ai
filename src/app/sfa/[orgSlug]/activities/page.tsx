@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { sfaInit } from '@/lib/sfa/client'
@@ -35,15 +35,45 @@ export default function SfaActivitiesPage() {
   const [subject, setSubject] = useState('')
   const [body, setBody] = useState('')
   const [busy, setBusy] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [totalCount, setTotalCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [retryCursor, setRetryCursor] = useState<string | null>(null)
+  const requestRef = useRef<AbortController | null>(null)
 
-  const load = useCallback(() => {
+  const load = useCallback(async (cursor?: string) => {
     if (!ready) return
-    fetch('/api/sfa/activities', sfaInit(orgSlug))
-      .then((r) => r.json())
-      .then((d) => setActivities(d.activities || []))
-      .catch(() => {})
+    requestRef.current?.abort()
+    const controller = new AbortController()
+    requestRef.current = controller
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const url = cursor ? `/api/sfa/activities?cursor=${encodeURIComponent(cursor)}` : '/api/sfa/activities'
+      const res = await fetch(url, sfaInit(orgSlug, { signal: controller.signal }))
+      const data = await res.json()
+      if (!res.ok || !Array.isArray(data.activities) || typeof data.totalCount !== 'number' ||
+          !(data.nextCursor === null || typeof data.nextCursor === 'string')) {
+        throw new Error(data.error || '活動を取得できませんでした')
+      }
+      if (controller.signal.aborted) return
+      setActivities((previous) => cursor
+        ? [...previous, ...data.activities.filter((activity: Activity) => !previous.some((item) => item.id === activity.id))]
+        : data.activities)
+      setNextCursor(data.nextCursor)
+      setTotalCount(data.totalCount)
+      setRetryCursor(null)
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setLoadError(error instanceof Error ? error.message : '活動を取得できませんでした')
+        setRetryCursor(cursor || null)
+      }
+    } finally {
+      if (!controller.signal.aborted) setLoading(false)
+    }
   }, [ready, orgSlug])
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load(); return () => { requestRef.current?.abort() } }, [load])
 
   const create = async () => {
     if (!subject.trim() && !body.trim()) return
@@ -84,7 +114,7 @@ export default function SfaActivitiesPage() {
 
       {/* タイムライン */}
       <div className="space-y-2">
-        {activities.length === 0 ? (
+        {activities.length === 0 && !loading && !loadError ? (
           <div className="bg-white rounded-2xl shadow-sm p-10 text-center text-slate-400 font-bold">活動がありません。上から記録しましょう。</div>
         ) : (
           activities.map((a) => (
@@ -102,6 +132,12 @@ export default function SfaActivitiesPage() {
             </div>
           ))
         )}
+      </div>
+      <div className="mt-4 space-y-2 text-sm">
+        {loading && <p role="status">活動を読み込んでいます…</p>}
+        {loadError && <p role="alert" className="text-red-600">{loadError}。<button type="button" onClick={() => load(retryCursor || undefined)} className="underline">再試行</button></p>}
+        {!loading && !loadError && <p className="text-slate-500">{activities.length} / {totalCount}件を表示</p>}
+        {nextCursor && <button type="button" onClick={() => load(nextCursor)} disabled={loading} className="rounded-lg border px-3 py-2 disabled:opacity-50">次の200件を表示</button>}
       </div>
     </div>
   )

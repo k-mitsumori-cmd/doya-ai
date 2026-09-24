@@ -12,7 +12,7 @@ for(const c of cases){
   const matches=where.id==='deal'&&where.organizationId==='org'&&where.OR.some(p=>p.lastActivityAt===null?latest===null:latest!==null&&latest<new Date(p.lastActivityAt.lt));
   if(matches)latest=new Date(data.lastActivityAt);return {count:matches?1:0};
  }}};
- const prisma={sfaDeal:{findUnique:async({where})=>where.id==='deal'?{organizationId:'org'}:null},$transaction:fn=>{const result=queue.then(async()=>{const saved={latest,activities:[...activities]};try{return await fn(tx)}catch(e){latest=saved.latest;activities=saved.activities;rollbacks++;throw e}});queue=result.catch(()=>{});return result}};
+ const prisma={sfaDeal:{findUnique:async({where})=>where.id==='deal'?{organizationId:'org',isActive:true}:null},$transaction:fn=>{const result=queue.then(async()=>{const saved={latest,activities:[...activities]};try{return await fn(tx)}catch(e){latest=saved.latest;activities=saved.activities;rollbacks++;throw e}});queue=result.catch(()=>{});return result}};
  const deps={'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/sfa/access':{getSfaContext:async()=>({organizationId:'org',memberId:'member'}),orgSlugFrom:()=> 'org'}};
  const exported={};vm.runInNewContext(code,{exports:exported,Date,URL,require:n=>{if(n in deps)return deps[n];throw Error(n)}});
  const responses=await Promise.all(c.dates.map(day=>exported.POST({json:async()=>({subject:'synthetic',dealId:c.noDeal?undefined:'deal',occurredAt:iso(String(day).padStart(2,'0'))})})));

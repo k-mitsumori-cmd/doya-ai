@@ -99,6 +99,9 @@ export default function SfaDealsPage() {
   const [accountsLoading, setAccountsLoading] = useState(true)
   const [activitiesError, setActivitiesError] = useState(false)
   const [activitiesLoading, setActivitiesLoading] = useState(false)
+  const [activitiesCursor, setActivitiesCursor] = useState<string | null>(null)
+  const [activitiesTotal, setActivitiesTotal] = useState(0)
+  const [activitiesRetryCursor, setActivitiesRetryCursor] = useState<string | null>(null)
   const dealsRequest = useRef<AbortController | null>(null)
   const moreDealsRequest = useRef<AbortController | null>(null)
   const tasksRequest = useRef<AbortController | null>(null)
@@ -202,21 +205,36 @@ export default function SfaDealsPage() {
       .catch(() => { if (!controller.signal.aborted) setAccountsError(true) })
       .finally(() => { if (!controller.signal.aborted) setAccountsLoading(false) })
   }, [ready, orgSlug])
-  const loadActivities = useCallback((dealId: string) => {
+  const loadActivities = useCallback((dealId: string, cursor?: string) => {
     activitiesRequest.current?.abort()
     const controller = new AbortController()
     activitiesRequest.current = controller
     setActivitiesLoading(true)
     setActivitiesError(false)
-    fetch(withOrg(`/api/sfa/activities?dealId=${encodeURIComponent(dealId)}`, orgSlug), sfaInit(orgSlug, { signal: controller.signal }))
+    const path = `/api/sfa/activities?dealId=${encodeURIComponent(dealId)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`
+    return fetch(withOrg(path, orgSlug), sfaInit(orgSlug, { signal: controller.signal }))
       .then(async (r) => {
         if (!r.ok) throw new Error('活動の取得に失敗しました')
         const d = await r.json()
-        if (!Array.isArray(d.activities)) throw new Error('活動の応答形式が不正です')
-        return d as { activities: SfaActivityRow[] }
+        if (!Array.isArray(d.activities) || typeof d.totalCount !== 'number' ||
+            !(d.nextCursor === null || typeof d.nextCursor === 'string')) throw new Error('活動の応答形式が不正です')
+        return d as { activities: SfaActivityRow[]; totalCount: number; nextCursor: string | null }
       })
-      .then((d) => { if (!controller.signal.aborted) setDetailActs(d.activities) })
-      .catch(() => { if (!controller.signal.aborted) setActivitiesError(true) })
+      .then((d) => {
+        if (controller.signal.aborted) return
+        setDetailActs((previous) => cursor
+          ? [...previous, ...d.activities.filter((activity) => !previous.some((item) => item.id === activity.id))]
+          : d.activities)
+        setActivitiesCursor(d.nextCursor)
+        setActivitiesTotal(d.totalCount)
+        setActivitiesRetryCursor(null)
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setActivitiesError(true)
+          setActivitiesRetryCursor(cursor || null)
+        }
+      })
       .finally(() => { if (!controller.signal.aborted) setActivitiesLoading(false) })
   }, [orgSlug])
   useEffect(() => {
@@ -462,6 +480,8 @@ export default function SfaDealsPage() {
       note: d.note || '',
     })
     setDetailActs([])
+    setActivitiesCursor(null)
+    setActivitiesTotal(0)
     setActSubject('')
     setNewTaskTitle('')
     setNewTaskDue('')
@@ -953,7 +973,7 @@ export default function SfaDealsPage() {
               <div className="space-y-1.5">
                 {activitiesError && (
                   <div role="alert" className="text-xs font-bold text-red-700">
-                    活動を読み込めませんでした。<button type="button" onClick={() => loadActivities(detail.id)} className="underline">再試行</button>
+                    活動を読み込めませんでした。<button type="button" onClick={() => loadActivities(detail.id, activitiesRetryCursor || undefined)} className="underline">再試行</button>
                   </div>
                 )}
                 {activitiesLoading && <p className="text-xs font-bold text-slate-400">活動を読み込み中…</p>}
@@ -967,6 +987,8 @@ export default function SfaDealsPage() {
                     <span className="text-[11px] font-black text-slate-400 flex-shrink-0">{fmtShortDate(a.occurredAt)}</span>
                   </div>
                 ))}
+                {!activitiesLoading && !activitiesError && <p className="text-xs text-slate-500">{detailActs.length} / {activitiesTotal}件を表示</p>}
+                {activitiesCursor && <button type="button" onClick={() => loadActivities(detail.id, activitiesCursor)} disabled={activitiesLoading} className="rounded-lg border px-3 py-2 text-xs disabled:opacity-50">次の200件を表示</button>}
               </div>
             </div>
           </div>

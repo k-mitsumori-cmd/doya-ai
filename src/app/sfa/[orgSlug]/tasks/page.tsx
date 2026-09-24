@@ -71,15 +71,45 @@ export default function SfaTasksPage() {
   const [actType, setActType] = useState<ActivityType>('note')
   const [actSubject, setActSubject] = useState('')
   const [actBusy, setActBusy] = useState(false)
+  const [actsCursor, setActsCursor] = useState<string | null>(null)
+  const [actsTotal, setActsTotal] = useState(0)
+  const [actsLoading, setActsLoading] = useState(true)
+  const [actsError, setActsError] = useState<string | null>(null)
+  const [actsRetryCursor, setActsRetryCursor] = useState<string | null>(null)
+  const actsRequest = useRef<AbortController | null>(null)
 
-  const loadActs = useCallback(() => {
+  const loadActs = useCallback(async (cursor?: string) => {
     if (!ready) return
-    fetch('/api/sfa/activities', sfaInit(orgSlug))
-      .then((r) => r.json())
-      .then((d) => setActs(d.activities || []))
-      .catch(() => {})
+    actsRequest.current?.abort()
+    const controller = new AbortController()
+    actsRequest.current = controller
+    setActsLoading(true)
+    setActsError(null)
+    try {
+      const url = cursor ? `/api/sfa/activities?cursor=${encodeURIComponent(cursor)}` : '/api/sfa/activities'
+      const res = await fetch(url, sfaInit(orgSlug, { signal: controller.signal }))
+      const data = await res.json()
+      if (!res.ok || !Array.isArray(data.activities) || typeof data.totalCount !== 'number' ||
+          !(data.nextCursor === null || typeof data.nextCursor === 'string')) {
+        throw new Error(data.error || '活動を取得できませんでした')
+      }
+      if (controller.signal.aborted) return
+      setActs((previous) => cursor
+        ? [...previous, ...data.activities.filter((activity: SfaActivityRow) => !previous.some((item) => item.id === activity.id))]
+        : data.activities)
+      setActsCursor(data.nextCursor)
+      setActsTotal(data.totalCount)
+      setActsRetryCursor(null)
+    } catch (error) {
+      if (!controller.signal.aborted) {
+        setActsError(error instanceof Error ? error.message : '活動を取得できませんでした')
+        setActsRetryCursor(cursor || null)
+      }
+    } finally {
+      if (!controller.signal.aborted) setActsLoading(false)
+    }
   }, [ready, orgSlug])
-  useEffect(() => { loadActs() }, [loadActs])
+  useEffect(() => { loadActs(); return () => { actsRequest.current?.abort() } }, [loadActs])
 
   const addActivity = async () => {
     if (!actSubject.trim()) return
@@ -293,7 +323,7 @@ export default function SfaTasksPage() {
         </div>
 
         <div className="space-y-2">
-          {acts.length === 0 && (
+          {acts.length === 0 && !actsLoading && !actsError && (
             <div className="bg-white rounded-2xl shadow-sm p-8 text-center text-slate-400 font-bold">活動はまだ記録されていません。</div>
           )}
           {acts.map((a) => (
@@ -305,6 +335,12 @@ export default function SfaTasksPage() {
               <span className="text-[11px] font-black text-slate-400 flex-shrink-0">{fmtActDate(a.occurredAt)}</span>
             </div>
           ))}
+        </div>
+        <div className="mt-3 space-y-2 text-sm">
+          {actsLoading && <p role="status">活動を読み込んでいます…</p>}
+          {actsError && <p role="alert" className="text-red-600">{actsError}。<button type="button" onClick={() => loadActs(actsRetryCursor || undefined)} className="underline">再試行</button></p>}
+          {!actsLoading && !actsError && <p className="text-slate-500">{acts.length} / {actsTotal}件を表示</p>}
+          {actsCursor && <button type="button" onClick={() => loadActs(actsCursor)} disabled={actsLoading} className="rounded-lg border px-3 py-2 disabled:opacity-50">次の200件を表示</button>}
         </div>
       </div>
     </div>
