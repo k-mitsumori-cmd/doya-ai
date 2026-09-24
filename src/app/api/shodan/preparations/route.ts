@@ -34,14 +34,42 @@ function normalizeUrl(input: string): string | null {
 export async function GET(req: NextRequest) {
   const ctx = await getShodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
-  const rows = await prisma.shodanPreparation.findMany({
-    where: { organizationId: ctx.organizationId },
-    orderBy: { createdAt: 'desc' },
-    select: { id: true, targetUrl: true, targetName: true, status: true, createdAt: true, updatedAt: true },
-    take: 100,
-  })
-  const items = rows.map((r) => ({ ...r, status: effectivePrepStatus(r.status, r.updatedAt) }))
-  return NextResponse.json({ items }, { headers: { 'Cache-Control': 'no-store' } })
+  const { searchParams } = new URL(req.url)
+  const select = { id: true, targetUrl: true, targetName: true, status: true, createdAt: true, updatedAt: true } as const
+  const where = { organizationId: ctx.organizationId }
+  const watch = searchParams.get('watch')
+  if (searchParams.has('watch')) {
+    const ids = watch?.split(',') || []
+    if (!ids.length || ids.length > 100 || ids.some((id) => !id || id.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(id))) {
+      return NextResponse.json({ error: '更新対象が正しくありません' }, { status: 400 })
+    }
+    const rows = await prisma.shodanPreparation.findMany({ where: { ...where, id: { in: ids } }, select })
+    const items = rows.map((row) => ({ ...row, status: effectivePrepStatus(row.status, row.updatedAt) }))
+    return NextResponse.json({ items }, { headers: { 'Cache-Control': 'private, no-store' } })
+  }
+  const cursor = searchParams.get('cursor')
+  if (searchParams.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  if (cursor && !await prisma.shodanPreparation.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  const [rows, total] = await Promise.all([
+    prisma.shodanPreparation.findMany({
+      where,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      select,
+      take: 101,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    }),
+    prisma.shodanPreparation.count({ where }),
+  ])
+  const items = rows.slice(0, 100).map((row) => ({ ...row, status: effectivePrepStatus(row.status, row.updatedAt) }))
+  return NextResponse.json({
+    items,
+    total,
+    nextCursor: rows.length > 100 ? items[items.length - 1].id : null,
+  }, { headers: { 'Cache-Control': 'private, no-store' } })
 }
 
 // POST /api/shodan/preparations — URLを起点に「リサーチ→分析→提案」を一括実行

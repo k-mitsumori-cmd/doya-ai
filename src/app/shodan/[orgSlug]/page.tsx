@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { shodanGet, shodanSend } from '@/lib/shodan/client'
+import { appendPreparationPage, mergePreparationUpdates, parsePreparationPage, type PreparationPage } from '@/lib/shodan/preparation-pages'
 import { DoyaKun, sym } from '@/components/shodan/ui'
 import toast from 'react-hot-toast'
 
@@ -21,19 +22,36 @@ export default function ShodanListPage() {
   const orgSlug = decodeURIComponent(String(params.orgSlug))
   const [items, setItems] = useState<Item[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [moreError, setMoreError] = useState<string | null>(null)
+  const [moreLoading, setMoreLoading] = useState(false)
+  const [refreshError, setRefreshError] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [total, setTotal] = useState(0)
   const [hasProfile, setHasProfile] = useState<boolean | null>(null)
   const requestSeq = useRef(0)
+  const itemsRef = useRef<Item[] | null>(null)
+  itemsRef.current = items
   const invalidateRequests = useCallback(() => { requestSeq.current++ }, [])
 
   const load = useCallback(() => {
     const seq = ++requestSeq.current
     setItems(null)
     setLoadError(null)
+    setMoreError(null)
+    setMoreLoading(false)
+    setRefreshError(false)
+    setNextCursor(null)
+    setTotal(0)
     setHasProfile(null)
-    shodanGet<{ items: Item[] }>('/api/shodan/preparations', orgSlug)
+    shodanGet<PreparationPage<Item>>('/api/shodan/preparations', orgSlug)
       .then((d) => {
-        if (!Array.isArray(d.items)) throw new Error('Invalid preparations response')
-        if (requestSeq.current === seq) setItems(d.items)
+        const page = parsePreparationPage(d)
+        const rows = appendPreparationPage([], page, page.total)
+        if (requestSeq.current === seq) {
+          setItems(rows)
+          setNextCursor(page.nextCursor)
+          setTotal(page.total)
+        }
       })
       .catch(() => {
         if (requestSeq.current === seq) setLoadError('商談準備一覧を読み込めませんでした。時間をおいて再試行してください。')
@@ -47,14 +65,41 @@ export default function ShodanListPage() {
     return invalidateRequests
   }, [load, invalidateRequests])
 
+  const loadMore = async () => {
+    if (!nextCursor || !items || moreLoading) return
+    const seq = requestSeq.current
+    setMoreLoading(true)
+    setMoreError(null)
+    try {
+      const page = parsePreparationPage(await shodanGet<PreparationPage<Item>>(`/api/shodan/preparations?cursor=${encodeURIComponent(nextCursor)}`, orgSlug))
+      const merged = appendPreparationPage(itemsRef.current || [], page, total)
+      if (requestSeq.current !== seq) return
+      setItems(merged)
+      setNextCursor(page.nextCursor)
+    } catch {
+      if (requestSeq.current === seq) setMoreError('続きの読み込みに失敗しました。再試行するか一覧を更新してください。')
+    } finally {
+      if (requestSeq.current === seq) setMoreLoading(false)
+    }
+  }
+
   // 調査中(processing)の案件がある間だけ自動更新（完了で停止。researchedは操作待ちの安定状態なので除外）
   useEffect(() => {
-    if (!items?.some((x) => x.status === 'processing')) return
+    const processingIds = items?.filter((x) => x.status === 'processing').map((x) => x.id) || []
+    if (!processingIds.length) return
     const t = setInterval(() => {
       const seq = requestSeq.current
-      shodanGet<{ items: Item[] }>('/api/shodan/preparations', orgSlug)
-        .then((d) => { if (requestSeq.current === seq && Array.isArray(d.items)) setItems(d.items) })
-        .catch(() => {})
+      const chunks: string[][] = []
+      for (let i = 0; i < processingIds.length; i += 100) chunks.push(processingIds.slice(i, i + 100))
+      Promise.all(chunks.map((ids) => shodanGet<{ items: Item[] }>(`/api/shodan/preparations?watch=${ids.join(',')}`, orgSlug)))
+        .then((pages) => {
+          if (pages.some((page) => !Array.isArray(page.items))) throw new Error('Invalid preparation status response')
+          if (requestSeq.current !== seq) return
+          setRefreshError(false)
+          const updates = pages.flatMap((page) => page.items)
+          setItems((prev) => prev ? mergePreparationUpdates(prev, updates) : prev)
+        })
+        .catch(() => { if (requestSeq.current === seq) setRefreshError(true) })
     }, 5000)
     return () => clearInterval(t)
   }, [items, orgSlug])
@@ -63,7 +108,12 @@ export default function ShodanListPage() {
     if (!confirm('この商談準備を削除しますか？')) return
     try {
       await shodanSend(`/api/shodan/preparations/${id}`, orgSlug, 'DELETE')
+      requestSeq.current++
+      setMoreLoading(false)
+      setMoreError(null)
       setItems((prev) => (prev || []).filter((x) => x.id !== id))
+      setTotal((prev) => Math.max(0, prev - 1))
+      if (nextCursor === id) setNextCursor(items?.filter((item) => item.id !== id).at(-1)?.id || null)
     } catch (e: any) { toast.error(e.message) }
   }
 
@@ -92,6 +142,8 @@ export default function ShodanListPage() {
           <DoyaKun mood="point" size={64} className="!absolute -bottom-1 right-3" float={false} />
         </Link>
       )}
+
+      {refreshError && <p role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">調査状況を自動更新できませんでした。一覧を更新すると最新の状態を確認できます。 <button onClick={load} className="underline">一覧を更新</button></p>}
 
       {loadError ? (
         <div role="alert" className="rounded-3xl border border-rose-200 bg-rose-50 px-6 py-8 text-center">
@@ -151,6 +203,16 @@ export default function ShodanListPage() {
               </div>
             )
           })}
+          {nextCursor && (
+            <div className="space-y-2 pt-3 text-center">
+              <p className="text-xs font-bold text-slate-500">{items.length} / {total}件を表示</p>
+              {moreError && <p role="alert" className="text-sm font-bold text-rose-700">{moreError}</p>}
+              <div className="flex justify-center gap-3">
+                <button onClick={loadMore} disabled={moreLoading} className="rounded-xl border border-purple-300 bg-white px-5 py-2.5 text-sm font-black text-purple-700 disabled:opacity-50">{moreLoading ? '読み込み中…' : moreError ? '再試行' : 'さらに表示'}</button>
+                {moreError && <button onClick={load} className="rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-black text-slate-700">一覧を更新</button>}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
