@@ -63,11 +63,28 @@ export default function NewDoyaSlideWizard() {
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [projectLimitMessage, setProjectLimitMessage] = useState<string | null>(null)
   const [funIdx, setFunIdx] = useState(0)
   const [elapsed, setElapsed] = useState(0)
   const [previews, setPreviews] = useState<Record<string, string[]>>({})
   const [previewPage, setPreviewPage] = useState(0)
   const fetchedStyles = useRef<Set<string>>(new Set())
+
+  useEffect(() => {
+    let active = true
+    fetch('/api/doyaslide/usage', { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((data) => {
+        if (!active) return
+        const limit = data?.limits?.maxProjects
+        const used = data?.usage?.projects
+        if (typeof limit === 'number' && limit >= 0 && typeof used === 'number' && used >= limit) {
+          setProjectLimitMessage(`今月のプロジェクト作成数が上限（${limit}件）に達しました。`)
+        }
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
 
   const loadPreview = (s: string): Promise<void> => {
     if (previews[s] || fetchedStyles.current.has(s)) return Promise.resolve()
@@ -197,6 +214,9 @@ export default function NewDoyaSlideWizard() {
         }),
       })
       const pData = await pRes.json()
+      if (pRes.status === 403) {
+        setProjectLimitMessage(typeof pData?.error === 'string' ? pData.error : '今月のプロジェクト作成数が上限に達しました。')
+      }
       if (!pRes.ok) throw new Error(typeof pData?.error === 'string' ? pData.error : JSON.stringify(pData?.error) || '作成に失敗しました')
       const projectId = pData?.project?.id
       if (!projectId) throw new Error('プロジェクトの作成に失敗しました（IDが取得できません）')
@@ -574,13 +594,21 @@ export default function NewDoyaSlideWizard() {
 
       {/* sticky CTA */}
       <div className="fixed bottom-0 left-0 right-0 md:left-60 z-30 bg-white/85 backdrop-blur border-t border-slate-200 px-4 py-3">
+        {projectLimitMessage && (
+          <div className="max-w-3xl mx-auto mb-2 flex items-center justify-between gap-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800">
+            <span>{projectLimitMessage}</span>
+            <Link href="/doyaslide/pricing" className="shrink-0 rounded-full bg-blue-600 px-3 py-1.5 text-xs font-black text-white">
+              プランを見る
+            </Link>
+          </div>
+        )}
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
           <p className="text-xs font-bold text-slate-500 hidden sm:block">
             {aspect === 'wide' ? '横' : aspect === 'square' ? '正方形' : '縦'}・{slideCount}枚 / {currentStyle?.label}スタイル
           </p>
           <button
             onClick={submit}
-            disabled={busy}
+            disabled={busy || Boolean(projectLimitMessage)}
             className="flex-1 sm:flex-none sm:min-w-[300px] flex items-center justify-center gap-2 px-8 py-3.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full text-base font-black shadow-lg shadow-blue-500/25 hover:shadow-xl hover:-translate-y-0.5 active:scale-95 transition-all disabled:opacity-60"
           >
             <span className="material-symbols-outlined">auto_awesome</span>
