@@ -72,5 +72,14 @@ const post = () => route.POST({ json: async () => ({ projectId: 'project-1', cou
   assert.equal(await limits.countMonthlyCompanies('user'), 100, 'actual gbizinfo rows must count toward the quota');
   assert.match(payloads[1].warning, /残り枠/);
   assert.equal(collectorCalls, 2);
+  const removed = companies.pop();
+  const partial = await post();
+  assert.equal(partial.status, 403);
+  assert.equal((await partial.json()).code, 'MONTHLY_REQUEST_EXCEEDS_REMAINING');
+  companies.push(removed);
+  const exhausted = await post();
+  assert.equal(exhausted.status, 403);
+  assert.equal((await exhausted.json()).code, 'MONTHLY_LIMIT_REACHED');
+  assert.equal(collectorCalls, 2, 'both quota errors must stop before external collection');
   console.log('PASS Doyalist collection: JST month, actual source count, concurrent cap, exact created rows');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

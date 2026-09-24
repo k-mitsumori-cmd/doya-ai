@@ -52,19 +52,18 @@ export async function POST(req: NextRequest) {
     const limits = await getUserDoyalistLimits(userId)
     if (limits.maxCompaniesPerMonth === 0) {
       return NextResponse.json(
-        { error: '現在のプランでは企業生成を利用できません' },
+        { error: '現在のプランでは企業生成を利用できません', code: 'MONTHLY_LIMIT_REACHED' },
         { status: 403 }
       )
     }
     if (limits.maxCompaniesPerMonth > 0) {
       const used = await countMonthlyCompanies(userId)
       if (used + count > limits.maxCompaniesPerMonth) {
+        const available = Math.max(0, limits.maxCompaniesPerMonth - used)
         return NextResponse.json(
           {
-            error: `月間上限（${limits.maxCompaniesPerMonth}社）を超えます。残り${Math.max(
-              0,
-              limits.maxCompaniesPerMonth - used
-            )}社まで生成可能です`,
+            error: `月間上限（${limits.maxCompaniesPerMonth}社）を超えます。残り${available}社まで生成可能です`,
+            code: available === 0 ? 'MONTHLY_LIMIT_REACHED' : 'MONTHLY_REQUEST_EXCEEDS_REMAINING',
           },
           { status: 403 }
         )
@@ -203,7 +202,7 @@ export async function POST(req: NextRequest) {
       })
     if (created.length === 0) {
       return NextResponse.json(
-        { error: `月間上限（${limits.maxCompaniesPerMonth}社）に達しました。${limits.maxCompaniesPerMonth <= 100 ? 'プロにアップグレードすると枠が広がります。' : '追加枠をご希望の場合はお問い合わせください。'}` },
+        { error: `月間上限（${limits.maxCompaniesPerMonth}社）に達しました。${limits.maxCompaniesPerMonth <= 100 ? 'プロにアップグレードすると枠が広がります。' : '追加枠をご希望の場合はお問い合わせください。'}`, code: 'MONTHLY_LIMIT_REACHED' },
         { status: 403 }
       )
     }

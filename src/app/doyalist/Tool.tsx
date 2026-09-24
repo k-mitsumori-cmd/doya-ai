@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useSession } from 'next-auth/react'
+import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES, AREAS as AREA_LIST, SIZES } from '@/lib/doyalist/constants'
 import { AREA_TO_PREFECTURES } from '@/lib/doyalist/collect/prefecture-codes'
@@ -90,6 +91,7 @@ export default function DoyalistTool() {
   const [savedListId, setSavedListId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [errorHint, setErrorHint] = useState<string | null>(null)
+  const [showQuotaPricing, setShowQuotaPricing] = useState(false)
 
   // AI変換タグ
   const [expanding, setExpanding] = useState(false)
@@ -210,7 +212,7 @@ export default function DoyalistTool() {
   const handleGenerate = async () => {
     if (!session?.user) { toast.error('ログインしてください'); return }
     setGenerating(true); setCompanies([]); setVisibleCount(PAGE_SIZE)
-    setErrorMsg(null); setErrorHint(null)
+    setErrorMsg(null); setErrorHint(null); setShowQuotaPricing(false)
     const tid = toast.loading('リストを抽出中...')
     try {
       const pid = await createProject()
@@ -232,6 +234,7 @@ export default function DoyalistTool() {
         const msg = data?.error || `リスト抽出に失敗しました（${res.status}）`
         toast.error(msg, { id: tid, duration: 6000 })
         setErrorMsg(msg)
+        setShowQuotaPricing(res.status === 403 && ['MONTHLY_LIMIT_REACHED', 'MONTHLY_REQUEST_EXCEEDS_REMAINING'].includes(data?.code))
         setErrorHint(data?.hint || (res.status === 422
           ? 'AI変換タグの一部を OFF にする / 業界・地域を変えると改善する可能性があります'
           : res.status === 502
@@ -505,9 +508,14 @@ export default function DoyalistTool() {
                     {errorHint && (
                       <p className="text-xs text-rose-600 mt-1 leading-relaxed inline-flex items-start gap-1"><span className="material-symbols-outlined text-sm">lightbulb</span>{errorHint}</p>
                     )}
+                    {showQuotaPricing && (
+                      <Link href="/doyalist/pricing" className="mt-2 inline-flex rounded-full bg-blue-600 px-4 py-2 text-xs font-black text-white">
+                        プラン・料金を見る
+                      </Link>
+                    )}
                   </div>
                   <button
-                    onClick={() => { setErrorMsg(null); setErrorHint(null) }}
+                    onClick={() => { setErrorMsg(null); setErrorHint(null); setShowQuotaPricing(false) }}
                     className="text-rose-400 hover:text-rose-600 text-xl flex-shrink-0"
                     aria-label="閉じる"
                   >×</button>
