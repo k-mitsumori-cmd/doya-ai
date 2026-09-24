@@ -24,22 +24,28 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     })
     if (!base || base.userId !== userId) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
 
-    const body = await req.json().catch(() => ({}))
-    const type = body.type === 'url' ? 'url' : 'text'
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body) || !['url', 'text'].includes(body.type)) {
+      return NextResponse.json({ error: '取り込み種別を確認してください' }, { status: 400 })
+    }
+    if (body.label != null && typeof body.label !== 'string') {
+      return NextResponse.json({ error: 'ラベルの形式が正しくありません' }, { status: 400 })
+    }
+    const type = body.type
 
     let rawText = ''
     let sourceUrl: string | null = null
-    let sourceLabel: string = (body.label as string)?.slice(0, 120) || ''
+    let sourceLabel: string = typeof body.label === 'string' ? body.label.slice(0, 120) : ''
 
     if (type === 'url') {
-      const url = (body.url as string)?.trim()
+      const url = typeof body.url === 'string' ? body.url.trim() : ''
       if (!url) return NextResponse.json({ error: 'URLを入力してください' }, { status: 400 })
       const scraped = await scrapeUrl(url)
       rawText = scraped.text
       sourceUrl = scraped.url
       sourceLabel = sourceLabel || scraped.title
     } else {
-      rawText = (body.text as string)?.trim() || ''
+      rawText = typeof body.text === 'string' ? body.text.trim() : ''
       if (!rawText) return NextResponse.json({ error: 'テキストを入力してください' }, { status: 400 })
       sourceLabel = sourceLabel || '手入力テキスト'
     }

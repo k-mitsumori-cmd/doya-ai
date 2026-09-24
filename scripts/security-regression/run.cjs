@@ -255,6 +255,11 @@ if (doyaslideBatchAccounting.error || doyaslideBatchAccounting.status !== 0) {
   console.error('Security regression failed: verify-doyaslide-batch-accounting.cjs');
   process.exit(1);
 }
+const serviceInputTypes = spawnSync(process.execPath, [path.join(__dirname, 'verify-service-input-types.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (serviceInputTypes.error || serviceInputTypes.status !== 0) {
+  console.error('Security regression failed: verify-service-input-types.cjs');
+  process.exit(1);
+}
 const kintaiInviteAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-invite-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (kintaiInviteAtomic.error || kintaiInviteAtomic.status !== 0) {
   console.error('Security regression failed: verify-kintai-invite-atomic.cjs');

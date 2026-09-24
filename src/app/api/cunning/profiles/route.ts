@@ -23,12 +23,19 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
-  const body = await req.json().catch(() => ({}))
-  const name = (body.name as string)?.trim() || 'マイプロフィール'
+  const body = await req.json().catch(() => null)
+  if (!body || typeof body !== 'object' || Array.isArray(body)
+    || (body.id != null && typeof body.id !== 'string')
+    || (body.name != null && typeof body.name !== 'string')
+    || (body.resume != null && typeof body.resume !== 'string')
+    || (body.motivation != null && typeof body.motivation !== 'string')) {
+    return NextResponse.json({ error: 'プロフィールの入力形式を確認してください' }, { status: 400 })
+  }
+  const name = typeof body.name === 'string' ? body.name.trim() || 'マイプロフィール' : 'マイプロフィール'
   const data = {
     name: name.slice(0, 120),
-    resume: (body.resume as string)?.slice(0, 8000) || null,
-    motivation: (body.motivation as string)?.slice(0, 4000) || null,
+    resume: typeof body.resume === 'string' ? body.resume.slice(0, 8000) || null : null,
+    motivation: typeof body.motivation === 'string' ? body.motivation.slice(0, 4000) || null : null,
   }
 
   if (body.id) {

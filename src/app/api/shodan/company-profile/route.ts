@@ -24,14 +24,22 @@ export async function PUT(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   if (!hasMinRole(ctx.role, 'manager')) return NextResponse.json({ error: '自社情報の編集権限がありません' }, { status: 403 })
 
-  const body = await req.json().catch(() => ({}))
+  const body = await req.json().catch(() => null)
+  if (!body || typeof body !== 'object' || Array.isArray(body)
+    || ![...FIELDS, 'logoPath', 'brandColors'].some((field) => Object.prototype.hasOwnProperty.call(body, field))
+    || FIELDS.some((field) => body[field] != null && typeof body[field] !== 'string')
+    || (body.logoPath != null && typeof body.logoPath !== 'string')
+    || (body.brandColors != null && (!Array.isArray(body.brandColors)
+      || body.brandColors.some((color: unknown) => typeof color !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(color))))) {
+    return NextResponse.json({ error: '自社情報の入力形式を確認してください' }, { status: 400 })
+  }
   const data: Record<string, any> = {}
   for (const f of FIELDS) {
     const v = body[f]
     data[f] = typeof v === 'string' ? v.trim().slice(0, 4000) || null : null
   }
   // ロゴパス（自前アップロード形式のみ許可）
-  const rawLogo = (body.logoPath as string)?.trim()
+  const rawLogo = typeof body.logoPath === 'string' ? body.logoPath.trim() : ''
   data.logoPath = rawLogo && /^shodan\/logos\/[a-z0-9-]+\/[0-9a-fA-F-]{36}\.(png|jpg|webp)$/.test(rawLogo) ? rawLogo : null
   // ブランドカラー（#RRGGBB を最大4色）
   data.brandColors = Array.isArray(body.brandColors)

@@ -14,8 +14,9 @@ export async function POST(req: NextRequest) {
     const userId = await getUserId()
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
-    const body = await req.json().catch(() => ({}))
-    const url = (body.url as string)?.trim()
+    const body = await req.json().catch(() => null)
+    const url = body && typeof body === 'object' && !Array.isArray(body) && typeof body.url === 'string'
+      ? body.url.trim() : ''
     if (!url) return NextResponse.json({ error: 'URLを入力してください' }, { status: 400 })
 
     const { extract, rawText } = await analyzeCompanyUrl(url)

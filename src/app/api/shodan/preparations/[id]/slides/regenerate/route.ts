@@ -26,9 +26,14 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: 'スライド資料の生成はプロプランの機能です。', code: 'PLAN' }, { status: 402 })
   }
 
-  const body = await req.json().catch(() => ({}))
-  const index = Number(body.index)
-  const instruction = (body.instruction as string)?.trim()?.slice(0, 500) || undefined
+  const body = await req.json().catch(() => null)
+  if (!body || typeof body !== 'object' || Array.isArray(body)
+    || typeof body.index !== 'number' || !Number.isSafeInteger(body.index)
+    || (body.instruction != null && typeof body.instruction !== 'string')) {
+    return NextResponse.json({ error: 'スライドの指定または修正指示を確認してください' }, { status: 400 })
+  }
+  const index = body.index
+  const instruction = typeof body.instruction === 'string' ? body.instruction.trim().slice(0, 500) || undefined : undefined
 
   const prep = await prisma.shodanPreparation.findFirst({ where: { id: p.id, organizationId: sctx.organizationId } })
   if (!prep) return NextResponse.json({ error: '見つかりません' }, { status: 404 })

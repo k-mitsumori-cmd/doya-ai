@@ -15,8 +15,9 @@ export async function POST(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
-  const body = await req.json().catch(() => ({}))
-  const dealId = (body.dealId as string)?.trim()
+  const body = await req.json().catch(() => null)
+  const dealId = body && typeof body === 'object' && !Array.isArray(body) && typeof body.dealId === 'string'
+    ? body.dealId.trim() : ''
   if (!dealId) return NextResponse.json({ error: 'dealId は必須です' }, { status: 400 })
 
   // IDOR対策

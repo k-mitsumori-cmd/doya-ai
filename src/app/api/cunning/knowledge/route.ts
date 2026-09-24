@@ -41,12 +41,18 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  const body = await req.json().catch(() => ({}))
-  const name = (body.name as string)?.trim()
+  const body = await req.json().catch(() => null)
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return NextResponse.json({ error: '入力内容を確認してください' }, { status: 400 })
+  }
+  const name = typeof body.name === 'string' ? body.name.trim() : ''
   if (!name) return NextResponse.json({ error: '名前を入力してください' }, { status: 400 })
+  if (body.description != null && typeof body.description !== 'string') {
+    return NextResponse.json({ error: '説明の形式が正しくありません' }, { status: 400 })
+  }
 
   const base = await prisma.cunningKnowledgeBase.create({
-    data: { userId, name: name.slice(0, 120), description: (body.description as string)?.slice(0, 500) || null },
+    data: { userId, name: name.slice(0, 120), description: typeof body.description === 'string' ? body.description.slice(0, 500) || null : null },
   })
   return NextResponse.json({ base })
 }
