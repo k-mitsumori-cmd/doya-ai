@@ -45,10 +45,17 @@ export async function POST(req: NextRequest) {
   const userId = await resolveUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
-  const body = await req.json().catch(() => ({}))
-  const name = String(body?.name || '').trim()
+  const body = await req.json().catch(() => null)
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+  }
+  const name = typeof body.name === 'string' ? body.name.trim() : ''
   if (!name) return NextResponse.json({ error: '組織名を入力してください' }, { status: 400 })
 
-  const org = await getOrCreateOrganization(userId, name, body?.memberName)
+  if (body.memberName != null && typeof body.memberName !== 'string') {
+    return NextResponse.json({ error: '氏名の形式が正しくありません' }, { status: 400 })
+  }
+  const memberName = typeof body.memberName === 'string' ? body.memberName.trim().slice(0, 80) || undefined : undefined
+  const org = await getOrCreateOrganization(userId, name.slice(0, 120), memberName)
   return NextResponse.json({ organization: { id: org.id, name: org.name, slug: org.slug } })
 }

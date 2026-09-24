@@ -101,28 +101,27 @@ export async function listMemberships(): Promise<{ slug: string; name: string; r
 
 /** 初回オンボーディング：組織＋オーナーを作成（冪等） */
 export async function getOrCreateOrganization(userId: string, orgName: string, memberName?: string) {
-  const existing = await prisma.mensetsuMember.findFirst({
-    where: { userId, status: 'ACTIVE' },
-    include: { organization: true },
-  })
-  if (existing) return existing.organization
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const existing = await tx.mensetsuMember.findFirst({
+          where: { userId, status: 'ACTIVE' }, include: { organization: true },
+        })
+        if (existing) return existing.organization
 
-  // slugはASCIIのみ（URL/HTTPヘッダ安全）。日本語社名は空になるため org-<timestamp> にフォールバック
-  const base =
-    orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
-  const dup = await prisma.mensetsuOrganization.findUnique({ where: { slug: base } })
-  const slug = dup ? `${base}-${Date.now()}` : base
-
-  const org = await prisma.mensetsuOrganization.create({ data: { name: orgName, slug } })
-  await prisma.mensetsuMember.create({
-    data: {
-      organizationId: org.id,
-      userId,
-      role: 'owner',
-      status: 'ACTIVE',
-      name: memberName || null,
-      acceptedAt: new Date(),
-    },
-  })
-  return org
+        const base = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
+        const dup = await tx.mensetsuOrganization.findUnique({ where: { slug: base } })
+        const slug = dup ? `${base}-${Date.now()}` : base
+        const org = await tx.mensetsuOrganization.create({ data: { name: orgName, slug } })
+        await tx.mensetsuMember.create({
+          data: { organizationId: org.id, userId, role: 'owner', status: 'ACTIVE', name: memberName || null, acceptedAt: new Date() },
+        })
+        return org
+      }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+    } catch (error) {
+      const code = (error as { code?: string })?.code
+      if (attempt === 2 || (code !== 'P2034' && code !== 'P2002')) throw error
+    }
+  }
+  throw new Error('Organization creation retry exhausted')
 }
