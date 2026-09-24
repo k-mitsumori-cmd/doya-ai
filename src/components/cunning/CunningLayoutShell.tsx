@@ -13,15 +13,22 @@ export default function CunningLayoutShell({ children }: { children: React.React
   const pathname = usePathname()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [plan, setPlan] = useState<string>('FREE')
+  const [plan, setPlan] = useState<string | undefined>()
 
   useEffect(() => {
+    let active = true
+    setPlan(undefined)
     if (session?.user) {
       fetch('/api/cunning/usage', { cache: 'no-store' })
-        .then((r) => r.json())
-        .then((d) => setPlan(d.plan || 'FREE'))
-        .catch(() => {})
+        .then(async (response) => {
+          if (!response.ok) throw new Error('プランを確認できませんでした')
+          const data = await response.json()
+          if (typeof data.plan !== 'string') throw new Error('プランの応答が不正です')
+          if (active) setPlan(data.plan)
+        })
+        .catch(() => { if (active) setPlan(undefined) })
     }
+    return () => { active = false }
   }, [session])
 
   useEffect(() => {

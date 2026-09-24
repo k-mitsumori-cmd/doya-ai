@@ -58,11 +58,11 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
   ]
 
   const planLabel = (() => {
-    if (!plan && !isLoggedIn) return 'GUEST'
-    const p = String(plan || 'FREE').toUpperCase()
+    if (!plan) return isLoggedIn ? '未確認' : 'GUEST'
+    const p = plan.toUpperCase()
     if (p === 'ENTERPRISE') return 'ENTERPRISE'
     if (['PRO', 'BUSINESS', 'STARTER', 'LIGHT', 'BASIC'].includes(p)) return 'PRO'
-    return 'FREE'
+    return p === 'FREE' ? 'FREE' : '未確認'
   })()
 
   const isActive = (href: string) => (href === base ? pathname === base : (pathname?.startsWith(href) ?? false))
@@ -151,7 +151,7 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
             </div>
           </nav>
 
-          {sessionReady && (isMobile || !isCollapsed) && planLabel !== 'PRO' && planLabel !== 'ENTERPRISE' && (
+          {sessionReady && (isMobile || !isCollapsed) && (planLabel === 'FREE' || planLabel === 'GUEST') && (
             <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md relative overflow-hidden">
               <div className="hidden md:block relative z-10">
                 <div className="flex items-center gap-2 mb-2">
@@ -183,7 +183,7 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
           loginCallbackUrl="/sfa"
           onLogout={() => setIsLogoutDialogOpen(true)}
           renderExtra={() => (
-            <p className="text-[11px] font-bold text-white/60 truncate">{planLabel === 'GUEST' ? 'ゲスト' : `${planLabel} プラン`}</p>
+            <p className="text-[11px] font-bold text-white/60 truncate">{planLabel === 'GUEST' ? 'ゲスト' : planLabel === '未確認' ? 'プラン未確認' : `${planLabel} プラン`}</p>
           )}
         />
         <SidebarCollapseToggle isCollapsed={isCollapsed} onToggle={toggle} isMobile={isMobile} theme={sfaTheme} />

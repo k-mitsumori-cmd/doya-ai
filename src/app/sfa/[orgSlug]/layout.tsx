@@ -16,21 +16,29 @@ export default function SfaOrgLayout({ children }: { children: React.ReactNode }
   const orgSlug = (params.orgSlug as string) || ''
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const [plan, setPlan] = useState<string>('FREE')
+  const [plan, setPlan] = useState<string | undefined>()
   const [memberships, setMemberships] = useState<Membership[]>([])
 
   // プラン/所属ワークスペースを取得（認証はCookieでサーバ側が処理するため orgSlug だけで実行）。
   // クライアントの useSession status に依存させない＝statusがloadingでも確実に取得・反映する。
   useEffect(() => {
     if (!orgSlug) return
+    let active = true
+    setPlan(undefined)
+    setMemberships([])
     fetch('/api/sfa/usage', sfaInit(orgSlug))
-      .then((r) => r.json())
-      .then((d) => {
-        setPlan(d.plan || 'FREE')
-        setMemberships(d.memberships || [])
+      .then(async (response) => {
+        if (!response.ok) throw new Error('プランを確認できませんでした')
+        return response.json()
       })
-      .catch(() => {})
+      .then((d) => {
+        if (!active) return
+        setPlan(typeof d.plan === 'string' ? d.plan : undefined)
+        setMemberships(Array.isArray(d.memberships) ? d.memberships : [])
+      })
+      .catch(() => { if (active) setPlan(undefined) })
     // ※ クライアント側の自動リダイレクトは行わない（認証/スコープは各APIが401で強制）。
+    return () => { active = false }
   }, [orgSlug])
 
   useEffect(() => {
