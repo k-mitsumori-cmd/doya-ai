@@ -33,9 +33,12 @@ export async function POST(req: NextRequest) {
     const userId = await getUserId()
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
-    const body = await req.json().catch(() => ({}))
-    const { projectId, onlyPending } = body
-    if (!projectId) return NextResponse.json({ error: 'projectIdは必須です' }, { status: 400 })
+    const body = await req.json().catch(() => null)
+    const projectId = body && typeof body === 'object' && !Array.isArray(body) ? body.projectId : null
+    const onlyPending = body && typeof body === 'object' && !Array.isArray(body) ? body.onlyPending : undefined
+    if (typeof projectId !== 'string' || !projectId.trim() || (onlyPending !== undefined && typeof onlyPending !== 'boolean')) {
+      return NextResponse.json({ error: '有効なprojectIdとonlyPendingを指定してください' }, { status: 400 })
+    }
 
     const project = await prisma.doyaSlideProject.findFirst({
       where: { id: projectId, userId },
@@ -46,7 +49,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '先に構成を作成してください' }, { status: 400 })
     }
 
+    // 関数の最大実行時間は300秒。6分以内に始まった生成は稼働中と扱い、重複起動しない。
+    const staleGenerating = project.status === 'generating'
+      && project.updatedAt.getTime() < Date.now() - 6 * 60 * 1000
+    if (project.status === 'generating' && !staleGenerating) {
+      return NextResponse.json({ error: '画像の生成中です。完了後にお試しください。' }, { status: 409 })
+    }
+
     const targets = onlyPending ? project.slides.filter((s) => !s.imageUrl) : project.slides
+    if (!staleGenerating && targets.some((s) => s.status === 'generating')) {
+      return NextResponse.json({ error: '画像の生成中です。完了後にお試しください。' }, { status: 409 })
+    }
 
     // 生成対象が無ければ何もしない（上限チェックも不要）
     if (targets.length === 0) {
@@ -61,87 +74,109 @@ export async function POST(req: NextRequest) {
     }
     const slidesToGen = targets.slice(0, granted)
     const skipped = targets.length - slidesToGen.length
+    let successCount = 0
+    let released = 0
+    try {
 
-    await prisma.doyaSlideProject.update({ where: { id: projectId }, data: { status: 'generating' } })
+      await prisma.doyaSlideProject.update({
+        where: { id: projectId, userId, status: project.status, updatedAt: project.updatedAt },
+        data: { status: 'generating' },
+      })
 
-    // 前回の強制終了などで 'generating' のまま残った対象を pending に正規化（1クエリ・再凍結防止）
-    await prisma.doyaSlideSlide.updateMany({
-      where: { id: { in: slidesToGen.map((s) => s.id) }, status: 'generating' },
-      data: { status: 'pending' },
-    })
-
-    const cp: ComposeProject = project as any
-
-    // maxDuration(300s) で強制終了されると生成中スライドが固まるため、締切前に新規生成を打ち切る
-    const startedAt = Date.now()
-    // 1回の関数では1波だけ着手し、残りはクライアント自動継続ループが次の呼び出しで処理する。
-    // 締切は「maxDuration(300秒) − 1枚の最悪所要」から逆算する。最悪は
-    //   gpt-image-2 のタイムアウト170秒(DOYA_IMAGE_TIMEOUT_MS)
-    // ＋ nano-banana フォールバック45秒(DOYA_FALLBACK_TIMEOUT_MS)
-    // ＋ アップロード30秒(DOYA_UPLOAD_TIMEOUT_MS) = 245秒。300−245=55秒が上限で、前処理の分を見て45秒。
-    // ⚠️ 100秒だった頃は high の1波が約145秒かかることで結果的に2波目が塞がれていた。
-    //    medium(約60秒)に下げた時点でその暗黙の歯止めが消え、2波目が走ると300秒を超えて
-    //    強制終了→releaseMonthlySlides未実行（枠が返らない）＋projectがgenerating固着になる。
-    const START_DEADLINE_MS = Number(process.env.DOYA_GEN_DEADLINE_MS) || 45000
-    let errorCount = 0
-    let timedOut = 0
-    await mapWithConcurrency(slidesToGen, 4, async (slide) => {
-      if (Date.now() - startedAt > START_DEADLINE_MS) {
-        // 締切超過: 開始しない。対象は事前に pending 正規化済みなのでそのまま残し、再実行で続行（クレジットは後で返金）
-        timedOut++
-        return
+      // 前回の強制終了などで 'generating' のまま残った対象を pending に正規化（1クエリ・再凍結防止）
+      if (staleGenerating) {
+        await prisma.doyaSlideSlide.updateMany({
+          where: { id: { in: slidesToGen.map((s) => s.id) }, status: 'generating' },
+          data: { status: 'pending' },
+        })
       }
-      try {
-        await prisma.doyaSlideSlide.update({ where: { id: slide.id }, data: { status: 'generating' } })
-        const r = await composeSlideImage(userId, cp, slide)
-        // 既に画像があるスライドの再生成は +1、初回は現バージョン(1)を採番
-        const nextVersion = slide.imageUrl ? (slide.version || 1) + 1 : (slide.version || 1)
-        // 画像確定とバージョン記録を原子化（片方だけ成功＝課金/状態不整合を防ぐ）
-        await prisma.$transaction([
-          prisma.doyaSlideSlide.update({
-            where: { id: slide.id },
-            data: { rawImageUrl: r.rawImageUrl, imageUrl: r.imageUrl, version: nextVersion, status: 'done', model: r.model },
-          }),
-          prisma.doyaSlideVersion.create({
-            data: {
-              slideId: slide.id,
-              version: nextVersion,
-              imageUrl: r.imageUrl,
-              rawImageUrl: r.rawImageUrl,
-              prompt: slide.visualPrompt,
-            },
-          }),
-        ])
-      } catch (e: any) {
-        errorCount++
-        console.error('[doyaslide/generate] slide failed', slide.index, e?.message)
-        await prisma.doyaSlideSlide.update({ where: { id: slide.id }, data: { status: 'error' } }).catch(() => {})
-      }
-    })
 
-    // 失敗分＋時間切れで未生成の分のクレジットを戻す
-    await releaseMonthlySlides(userId, errorCount + timedOut)
+      const cp: ComposeProject = project as any
 
-    const slides = await prisma.doyaSlideSlide.findMany({ where: { projectId }, orderBy: { index: 'asc' } })
-    // 1枚も生成できていない場合のみ error。既存の完成分があれば completed（未完分は再実行で続行可能）
-    const anyDone = slides.some((s) => s.imageUrl)
-    await prisma.doyaSlideProject.update({
-      where: { id: projectId },
-      data: { status: anyDone ? 'completed' : 'error' },
-    })
+      // maxDuration(300s) で強制終了されると生成中スライドが固まるため、締切前に新規生成を打ち切る
+      const startedAt = Date.now()
+      // 1回の関数では1波だけ着手し、残りはクライアント自動継続ループが次の呼び出しで処理する。
+      // 締切は「maxDuration(300秒) − 1枚の最悪所要」から逆算する。最悪は
+      //   gpt-image-2 のタイムアウト170秒(DOYA_IMAGE_TIMEOUT_MS)
+      // ＋ nano-banana フォールバック45秒(DOYA_FALLBACK_TIMEOUT_MS)
+      // ＋ アップロード30秒(DOYA_UPLOAD_TIMEOUT_MS) = 245秒。300−245=55秒が上限で、前処理の分を見て45秒。
+      // ⚠️ 100秒だった頃は high の1波が約145秒かかることで結果的に2波目が塞がれていた。
+      //    medium(約60秒)に下げた時点でその暗黙の歯止めが消え、2波目が走ると300秒を超えて
+      //    強制終了→releaseMonthlySlides未実行（枠が返らない）＋projectがgenerating固着になる。
+      const START_DEADLINE_MS = Number(process.env.DOYA_GEN_DEADLINE_MS) || 45000
+      let errorCount = 0
+      let timedOut = 0
+      await mapWithConcurrency(slidesToGen, 4, async (slide) => {
+        if (Date.now() - startedAt > START_DEADLINE_MS) {
+          // 締切超過: 開始しない。対象は事前に pending 正規化済みなのでそのまま残し、再実行で続行（クレジットは後で返金）
+          timedOut++
+          return
+        }
+        try {
+          await prisma.doyaSlideSlide.update({
+            where: { id: slide.id, version: slide.version, imageUrl: slide.imageUrl, visualPrompt: slide.visualPrompt, status: slide.status === 'generating' ? 'pending' : slide.status },
+            data: { status: 'generating' },
+          })
+          const r = await composeSlideImage(userId, cp, slide)
+          // 既に画像があるスライドの再生成は +1、初回は現バージョン(1)を採番
+          const nextVersion = slide.imageUrl ? (slide.version || 1) + 1 : (slide.version || 1)
+          // 画像確定とバージョン記録を原子化（片方だけ成功＝課金/状態不整合を防ぐ）
+          await prisma.$transaction([
+            prisma.doyaSlideSlide.update({
+              where: { id: slide.id, version: slide.version, imageUrl: slide.imageUrl, visualPrompt: slide.visualPrompt, status: 'generating' },
+              data: { rawImageUrl: r.rawImageUrl, imageUrl: r.imageUrl, version: nextVersion, status: 'done', model: r.model },
+            }),
+            prisma.doyaSlideVersion.create({
+              data: {
+                slideId: slide.id,
+                version: nextVersion,
+                imageUrl: r.imageUrl,
+                rawImageUrl: r.rawImageUrl,
+                prompt: slide.visualPrompt,
+              },
+            }),
+          ])
+          successCount++
+        } catch (e: any) {
+          errorCount++
+          console.error('[doyaslide/generate] slide failed', slide.index, e?.message)
+          await prisma.doyaSlideSlide.updateMany({
+            where: { id: slide.id, version: slide.version, imageUrl: slide.imageUrl, visualPrompt: slide.visualPrompt, status: 'generating' },
+            data: { status: 'error' },
+          }).catch(() => {})
+        }
+      })
 
-    await recordServiceUsage({
-      userId,
-      serviceId: 'doyaslide',
-      action: 'スライド画像生成',
-      summary: project.title || '',
-      count: Math.max(0, targets.length - errorCount),
-      input: { projectId, targets: targets.length },
-      metadata: { errorCount, skipped, timedOut },
-    })
+      // 失敗分＋時間切れで未生成の分のクレジットを戻す
+      released = errorCount + timedOut
+      await releaseMonthlySlides(userId, released)
 
-    return NextResponse.json({ slides, errorCount, skipped, timedOut, limit })
+      const slides = await prisma.doyaSlideSlide.findMany({ where: { projectId }, orderBy: { index: 'asc' } })
+      // 1枚も生成できていない場合のみ error。既存の完成分があれば completed（未完分は再実行で続行可能）
+      const anyDone = slides.some((s) => s.imageUrl)
+      await prisma.doyaSlideProject.update({
+        where: { id: projectId },
+        data: { status: anyDone ? 'completed' : 'error' },
+      })
+
+      await recordServiceUsage({
+        userId,
+        serviceId: 'doyaslide',
+        action: 'スライド画像生成',
+        summary: project.title || '',
+        count: successCount,
+        input: { projectId, targets: targets.length },
+        metadata: { errorCount, skipped, timedOut },
+      })
+
+      return NextResponse.json({ slides, errorCount, skipped, timedOut, limit })
+    } catch (e) {
+      const unaccounted = Math.max(0, granted - successCount - released)
+      if (unaccounted > 0) await releaseMonthlySlides(userId, unaccounted)
+      throw e
+    }
   } catch (e: any) {
+    if (e?.code === 'P2025') return NextResponse.json({ error: 'スライドが変更されました。再読み込みしてお試しください。' }, { status: 409 })
     console.error('[doyaslide/generate]', e?.message)
     return NextResponse.json({ error: '生成に失敗しました' }, { status: 500 })
   }

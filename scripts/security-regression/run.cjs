@@ -245,6 +245,16 @@ if (teamInviteDelivery.error || teamInviteDelivery.status !== 0) {
   console.error('Security regression failed: verify-team-invite-delivery.cjs');
   process.exit(1);
 }
+const doyaslideRegeneration = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-regeneration-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyaslideRegeneration.error || doyaslideRegeneration.status !== 0) {
+  console.error('Security regression failed: verify-doyaslide-regeneration-atomic.cjs');
+  process.exit(1);
+}
+const doyaslideBatchAccounting = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-batch-accounting.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyaslideBatchAccounting.error || doyaslideBatchAccounting.status !== 0) {
+  console.error('Security regression failed: verify-doyaslide-batch-accounting.cjs');
+  process.exit(1);
+}
 const kintaiInviteAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-invite-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (kintaiInviteAtomic.error || kintaiInviteAtomic.status !== 0) {
   console.error('Security regression failed: verify-kintai-invite-atomic.cjs');
