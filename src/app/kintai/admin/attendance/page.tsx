@@ -16,6 +16,8 @@ export default function AdminAttendancePage() {
   const [departments, setDepartments] = useState<any[]>([])
   const [deptFilter, setDeptFilter] = useState('')
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
     fetch('/api/kintai/departments')
@@ -25,13 +27,22 @@ export default function AdminAttendancePage() {
   }, [])
 
   useEffect(() => {
+    const controller = new AbortController()
     setLoading(true)
-    fetch(`/api/kintai/attendance/admin?date=${date}`)
-      .then(r => r.json())
-      .then(d => setEmployees(d.employees || []))
-      .catch(() => setEmployees([]))
-      .finally(() => setLoading(false))
-  }, [date])
+    setLoadError(false)
+    setEmployees([])
+    fetch(`/api/kintai/attendance/admin?date=${date}`, { signal: controller.signal, cache: 'no-store' })
+      .then(async r => {
+        if (!r.ok) throw new Error('Attendance request failed')
+        const data = await r.json()
+        if (!Array.isArray(data.employees)) throw new Error('Invalid attendance response')
+        return data.employees
+      })
+      .then(data => { if (!controller.signal.aborted) setEmployees(data) })
+      .catch(() => { if (!controller.signal.aborted) setLoadError(true) })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+    return () => controller.abort()
+  }, [date, retryCount])
 
   const prevDay = () => { const d = new Date(date); d.setDate(d.getDate() - 1); setDate(d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })) }
   const nextDay = () => { const d = new Date(date); d.setDate(d.getDate() + 1); setDate(d.toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })) }
@@ -152,6 +163,11 @@ export default function AdminAttendancePage() {
           <div className="flex flex-col items-center justify-center py-16 gap-4">
             <img src="/kintai/characters/thinking_考え中.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
             <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          </div>
+        ) : loadError ? (
+          <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
+            <p className="font-bold text-red-800">勤怠データを読み込めませんでした。時間をおいて再試行してください。</p>
+            <button onClick={() => setRetryCount(count => count + 1)} className="mt-4 rounded-lg border border-red-300 bg-white px-5 py-2 text-sm font-bold text-red-700 hover:bg-red-100">再試行</button>
           </div>
         ) : (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">

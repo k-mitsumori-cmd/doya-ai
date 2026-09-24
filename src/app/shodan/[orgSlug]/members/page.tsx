@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { shodanGet, shodanSend } from '@/lib/shodan/client'
 import { ROLE_LABEL, type ShodanRole } from '@/lib/shodan/types'
@@ -16,18 +16,31 @@ export default function ShodanMembersPage() {
   const params = useParams<{ orgSlug: string }>()
   const orgSlug = decodeURIComponent(String(params.orgSlug))
   const [members, setMembers] = useState<Member[] | null>(null)
+  const [loadError, setLoadError] = useState(false)
   const [myRole, setMyRole] = useState<ShodanRole>('member')
+  const requestSeq = useRef(0)
+  const invalidateRequests = useCallback(() => { requestSeq.current++ }, [])
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<ShodanRole>('member')
   const [inviting, setInviting] = useState(false)
   const [inviteUrl, setInviteUrl] = useState('')
 
-  const load = () => {
+  const load = useCallback(() => {
+    const seq = ++requestSeq.current
+    setMembers(null)
+    setMyRole('member')
+    setLoadError(false)
     shodanGet<{ members: Member[]; myRole: ShodanRole }>('/api/shodan/members', orgSlug)
-      .then((d) => { setMembers(d.members); setMyRole(d.myRole) })
-      .catch((e) => { toast.error(e.message); setMembers([]) })
-  }
-  useEffect(load, [orgSlug])
+      .then((d) => {
+        if (!Array.isArray(d.members) || !d.myRole) throw new Error('Invalid members response')
+        if (requestSeq.current === seq) { setMembers(d.members); setMyRole(d.myRole) }
+      })
+      .catch(() => { if (requestSeq.current === seq) setLoadError(true) })
+  }, [orgSlug])
+  useEffect(() => {
+    load()
+    return invalidateRequests
+  }, [load, invalidateRequests])
 
   const canManage = myRole === 'admin' || myRole === 'owner'
 
@@ -80,7 +93,12 @@ export default function ShodanMembersPage() {
       )}
 
       <div className="rounded-3xl bg-white border border-slate-200 shadow-sm overflow-hidden">
-        {members === null ? (
+        {loadError ? (
+          <div role="alert" className="p-8 text-center">
+            <p className="font-bold text-rose-700">メンバー一覧を読み込めませんでした。時間をおいて再試行してください。</p>
+            <button onClick={load} className="mt-4 rounded-xl border border-rose-300 px-5 py-2 text-sm font-bold text-rose-700 hover:bg-rose-50">再試行</button>
+          </div>
+        ) : members === null ? (
           <div className="p-8 text-center text-slate-400 font-bold">読み込み中…</div>
         ) : (
           members.map((m) => (
