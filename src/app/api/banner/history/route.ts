@@ -46,10 +46,6 @@ function isProFromSession(session: any): boolean {
   return !!(globalPlan && isPaid(globalPlan))
 }
 
-// クリーンアップ頻度を抑えてレスポンスを軽くする（サーバレスでも一定効果）
-const lastCleanupAtByUser = new Map<string, number>()
-const CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000 // 6時間
-
 async function toJpegThumbDataUrl(output: unknown): Promise<string | null> {
   const s = typeof output === 'string' ? output : ''
   if (!s) return null
@@ -97,30 +93,13 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // historyDays=-1 は無制限。それ以外は指定日数分だけ保存（有料ユーザーでも180日を超えた履歴は削除）
+    // プラン別の閲覧期間。GET時に履歴は削除しない（プラン変更後のデータ消失を防ぐ）。
     const cutoffDate = new Date()
     if (historyDays > 0) {
       cutoffDate.setDate(cutoffDate.getDate() - historyDays)
     } else {
-      // -1（無制限）: 十分に古い日付を設定して全履歴を返す
-      cutoffDate.setFullYear(2020, 0, 1)
-    }
-    
-    // バックグラウンドで古いデータを削除（非同期・エラーでも続行）
-    const now = Date.now()
-    const last = lastCleanupAtByUser.get(userId) || 0
-    if (now - last > CLEANUP_INTERVAL_MS) {
-      lastCleanupAtByUser.set(userId, now)
-      prisma.generation
-        .deleteMany({
-          where: {
-            userId,
-            serviceId: 'banner',
-            outputType: 'IMAGE',
-            createdAt: { lt: cutoffDate },
-          },
-        })
-        .catch((e) => console.error('[banner history] cleanup failed:', e))
+      // -1（無制限）: 保存済みの全履歴を返す
+      cutoffDate.setTime(0)
     }
 
     // 単一バッチの画像だけ返す（履歴一覧を軽くするため）
@@ -326,5 +305,4 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: '削除に失敗しました' }, { status: 500 })
   }
 }
-
 

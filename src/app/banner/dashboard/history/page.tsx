@@ -112,7 +112,7 @@ export default function BannerHistoryPage() {
   }, [history, searchQuery, periodFilter])
 
   const LOADING_TIPS = [
-    '作ったバナーは6ヶ月間いつでも再DLできます（有料プラン）',
+    '有料プランでは保存済みのバナーをいつでも再ダウンロードできます',
     '同じ訴求でも「数字」「限定」「無料」で反応が変わります',
     '画像が多いほど履歴の集計に少し時間がかかります',
     '重いときは一度更新すると改善する場合があります',
@@ -517,7 +517,7 @@ export default function BannerHistoryPage() {
                 <h2 className="text-2xl sm:text-3xl font-black text-white mb-4">履歴 &amp; 再ダウンロード</h2>
                 
                 <p className="text-blue-100 mb-8 max-w-lg mx-auto leading-relaxed text-sm sm:text-base">
-                  PROプランなら、生成したバナーを<strong className="text-white">3ヶ月間</strong>保存。<br />
+                  有料プランなら、生成したバナーを<strong className="text-white">期限なく</strong>保存。<br />
                   いつでも確認・再ダウンロードできます。
                 </p>
                 
@@ -548,7 +548,7 @@ export default function BannerHistoryPage() {
               animate={{ opacity: 1, y: 0 }}
               className="bg-white rounded-3xl border border-gray-100 shadow-sm"
             >
-              <EmptyState kind="zero" title="履歴がありません" description="バナーを生成すると、ここに6ヶ月間保存され、いつでも再ダウンロードできます。" action={<Link href="/banner/dashboard" className="inline-flex rounded-2xl bg-blue-600 px-8 py-4 font-black text-white shadow-lg">最初のバナーを生成する</Link>} />
+              <EmptyState kind="zero" title="履歴がありません" description="生成したバナーをここから再ダウンロードできます。閲覧できる期間はプランによって異なります。" action={<Link href="/banner/dashboard" className="inline-flex rounded-2xl bg-blue-600 px-8 py-4 font-black text-white shadow-lg">最初のバナーを生成する</Link>} />
             </motion.div>
           ) : filteredHistory.length === 0 ? (
             <motion.div

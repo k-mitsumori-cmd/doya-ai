@@ -5,10 +5,6 @@ import { BANNER_PRICING } from '@/lib/pricing'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-// クリーンアップ頻度を抑えてレスポンスを軽くする（サーバレスでも一定効果）
-let lastGalleryCleanupAt = 0
-const GALLERY_CLEANUP_INTERVAL_MS = 6 * 60 * 60 * 1000 // 6時間
-
 function parseIntParam(v: string | null, fallback: number) {
   const n = Number(v)
   return Number.isFinite(n) ? n : fallback
@@ -25,25 +21,10 @@ export async function GET(request: NextRequest) {
     const take = Math.min(Math.max(takeRaw, 1), 60)
     const cursor = searchParams.get('cursor') || undefined
 
-    // ギャラリー/履歴は直近3ヶ月のみ保持（DB肥大化防止）
+    // 公開ギャラリーには直近3ヶ月分を表示する。閲覧時に利用者の履歴を削除しない。
     const retentionDays = 90
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - retentionDays)
-
-    const now = Date.now()
-    // 最初のページ取得時のみ、かつ一定間隔でだけクリーンアップ
-    if (!cursor && now - lastGalleryCleanupAt > GALLERY_CLEANUP_INTERVAL_MS) {
-      lastGalleryCleanupAt = now
-      prisma.generation
-        .deleteMany({
-          where: {
-            serviceId: 'banner',
-            outputType: 'IMAGE',
-            createdAt: { lt: cutoffDate },
-          },
-        })
-        .catch((e) => console.error('Gallery cleanup failed:', e))
-    }
 
     // IMPORTANT: generation.output (dataURL) は巨大なので、一覧では絶対に取得しない
     // -> select で必要最小限に絞って、タイムアウト/メモリ増を回避する
@@ -103,5 +84,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'ギャラリーの取得に失敗しました' }, { status: 500 })
   }
 }
-
 

@@ -78,7 +78,7 @@ export default function StatsPage() {
   const [isStale, setIsStale] = useState(false)
 
   const LOADING_TIPS = [
-    '統計は直近6ヶ月分の履歴から集計しています',
+    '統計は読み込んだ履歴から集計しています',
     'A/B/Cを作り分けると勝ちパターンが見つかりやすいです',
     'YouTubeは「短い強い言葉＋表情」で伸びやすいです',
     '表示が重い場合は少し待ってから再試行してください',
@@ -343,7 +343,7 @@ export default function StatsPage() {
               <h2 className="text-2xl font-black text-slate-800 mb-3">有料プラン限定機能</h2>
               <p className="text-slate-500 mb-8 max-w-md mx-auto leading-relaxed">
                 パフォーマンス分析は有料プラン限定です。<br />
-                プランをアップグレードすると、6ヶ月分の<br />
+                プランをアップグレードすると、保存済みバナーの<br />
                 生成統計・削減効果を確認できます。
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">

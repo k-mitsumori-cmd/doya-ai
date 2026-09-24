@@ -24,8 +24,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const body = await req.json().catch(() => ({}))
     if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: '入力が不正です' }, { status: 400 })
     const acceptIncomplete = body.acceptIncomplete === true
-    // Expired recording leases are settled before checking whether recovery has ended.
-    if (acceptIncomplete) await readCunningRecordingUsage(prisma, userId)
+    // A crashed recorder may leave the session active until its lease is read.
+    // Settle it before deciding whether the history page may offer partial recovery.
+    const preflight = await prisma.cunningSession.findUnique({ where: { id: p.id }, select: { userId: true, recordingVersion: true, status: true } })
+    if (preflight?.userId === userId && preflight.recordingVersion === 2 && preflight.status === 'active') {
+      await readCunningRecordingUsage(prisma, userId)
+    }
 
     // Capture inputs and reserve a generation revision while content writers are excluded.
     // No provider work runs while this row is locked.
