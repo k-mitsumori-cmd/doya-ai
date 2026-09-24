@@ -152,18 +152,15 @@ export default function RecipeManagementPage() {
         editingGuidelines: formGuidelines.trim() || null,
       }
 
-      if (editingId) {
-        await fetch(`/api/interview/recipes/${editingId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        })
-      } else {
-        await fetch('/api/interview/recipes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
-        })
+      const res = await fetch(editingId ? `/api/interview/recipes/${editingId}` : '/api/interview/recipes', {
+        method: editingId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        alert(data.error || '保存に失敗しました')
+        return
       }
 
       setShowModal(false)
@@ -210,18 +207,19 @@ export default function RecipeManagementPage() {
     setAiGenerating(true)
 
     try {
-      const res = await fetch('/api/interview/recipes/generate', {
+      const res = await fetch('/api/interview/recipes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sampleTexts: [aiSampleText],
-          name: aiName || aiPreview.name || '',
+          name: aiName.trim() || aiPreview.name || '自動生成レシピ',
+          description: aiPreview.description || null,
           category: aiCategory || aiPreview.category || 'custom',
-          autoSave: true,
+          editingGuidelines: aiPreview.editingGuidelines || null,
+          proposals: Array.isArray(aiPreview.structure) ? aiPreview.structure : [],
         }),
       })
       const data = await res.json()
-      if (data.success) {
+      if (res.ok && data.success) {
         setShowAiModal(false)
         setAiSampleText('')
         setAiName('')

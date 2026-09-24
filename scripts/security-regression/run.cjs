@@ -90,6 +90,11 @@ if (interviewArticleLimit.error || interviewArticleLimit.status !== 0) {
   console.error('Security regression failed: verify-interview-article-limit.cjs');
   process.exit(1);
 }
+const interviewRecipeInput = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-recipe-input.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewRecipeInput.error || interviewRecipeInput.status !== 0) {
+  console.error('Security regression failed: verify-interview-recipe-input.cjs');
+  process.exit(1);
+}
 const seoArticleAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-article-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (seoArticleAdmission.error || seoArticleAdmission.status !== 0) {
   console.error('Security regression failed: verify-seo-article-admission.cjs');

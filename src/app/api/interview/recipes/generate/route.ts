@@ -39,12 +39,23 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const body = await req.json()
-    const sampleTexts: string[] = body.sampleTexts || []
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)
+      || !Array.isArray(body.sampleTexts) || body.sampleTexts.length === 0
+      || body.sampleTexts.length > 3 || body.sampleTexts.some((text: unknown) => typeof text !== 'string')
+      || (body.name != null && typeof body.name !== 'string')
+      || (body.category != null && typeof body.category !== 'string')
+      || (body.autoSave != null && typeof body.autoSave !== 'boolean')) {
+      return NextResponse.json(
+        { success: false, error: '入力形式を確認してください' },
+        { status: 400 }
+      )
+    }
+    const sampleTexts: string[] = body.sampleTexts
     const recipeName: string = body.name || ''
     const category: string = body.category || 'custom'
 
-    if (sampleTexts.length === 0 || !sampleTexts[0]?.trim()) {
+    if (!sampleTexts.some((text) => text.trim())) {
       return NextResponse.json(
         { success: false, error: 'サンプル記事を1つ以上入力してください' },
         { status: 400 }
@@ -55,7 +66,7 @@ export async function POST(req: NextRequest) {
     const model = getModel()
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
-    const samplesText = sampleTexts
+    const samplesText = sampleTexts.filter((text) => text.trim())
       .slice(0, 3) // 最大3記事
       .map((text, i) => `=== サンプル記事 ${i + 1} ===\n${text.slice(0, 15000)}`)
       .join('\n\n')
