@@ -1,14 +1,32 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 
 export default function KintaiPricingPage() {
-  const [userPlan, setUserPlan] = useState<string>('FREE')
-  useEffect(() => {
-    fetch('/api/kintai/usage').then(r => r.json()).then(d => setUserPlan(d.plan || 'FREE')).catch(() => {})
+  const [userPlan, setUserPlan] = useState<string | null>(null)
+  const [planError, setPlanError] = useState(false)
+  const loadPlan = useCallback(async () => {
+    setPlanError(false)
+    try {
+      const response = await fetch('/api/kintai/usage', { cache: 'no-store' })
+      if (!response.ok) throw new Error('プランを確認できませんでした')
+      const data = await response.json()
+      if (data.organizationId === null) {
+        setUserPlan(null)
+        return
+      }
+      if (typeof data.plan !== 'string') throw new Error('プランの応答が不正です')
+      setUserPlan(data.plan)
+    } catch {
+      setUserPlan(null)
+      setPlanError(true)
+    }
   }, [])
+  useEffect(() => {
+    void loadPlan()
+  }, [loadPlan])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
@@ -53,13 +71,14 @@ export default function KintaiPricingPage() {
         </div>
 
         {/* Plans grid (統一プラン: 無料 / プロ¥9,980) */}
+        {planError && <div role="alert" className="mb-6 rounded-xl bg-rose-50 p-4 text-sm font-bold text-rose-700">現在のプランを確認できませんでした。<button type="button" onClick={() => void loadPlan()} className="ml-2 underline">再読み込み</button></div>}
         <UnifiedPricingPlans serviceId="kintai" currentPlan={userPlan} className="my-12" />
 
         {/* Trial notice */}
         <div className="text-center mb-8">
           <p className="text-sm text-slate-500">
             <span className="material-symbols-outlined text-sm align-middle mr-1">info</span>
-            全プラン14日間の無料トライアル付き（クレジットカード不要）
+            新規の月額プロプラン対象者は30日間無料。対象可否は申込時に確認できます。
           </p>
         </div>
 

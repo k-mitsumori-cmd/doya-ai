@@ -51,6 +51,9 @@ export async function GET() {
     })
   } catch (e) {
     console.error('[kintai/usage] Error:', e)
-    return NextResponse.json({ organizationId: null })
+    return NextResponse.json(
+      { error: '利用状況を確認できませんでした。再試行してください。' },
+      { status: 503, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } }
+    )
   }
 }

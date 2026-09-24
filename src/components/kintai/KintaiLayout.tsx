@@ -1,7 +1,7 @@
 'use client'
 
 import { useSession, signOut } from 'next-auth/react'
-import { useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import KintaiSidebar from './KintaiSidebar'
@@ -24,33 +24,52 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
   const pathname = usePathname()
   const [usage, setUsage] = useState<UsageData | null>(null)
   const [hasOrg, setHasOrg] = useState<boolean | null>(null)
+  const [usageError, setUsageError] = useState(false)
+  const usageRequest = useRef(0)
 
   const isLandingPage = pathname === '/kintai'
   const isPricingPage = pathname === '/kintai/pricing'
   const isInvitePage = pathname?.startsWith('/kintai/invite')
   const isPublicPage = isLandingPage || isPricingPage || isInvitePage
 
+  const loadUsage = useCallback(async () => {
+    const request = ++usageRequest.current
+    setHasOrg(null)
+    setUsage(null)
+    setUsageError(false)
+    try {
+      const response = await fetch('/api/kintai/usage', { cache: 'no-store' })
+      if (!response.ok) throw new Error('利用状況を確認できませんでした')
+      const data: UsageData = await response.json()
+      if (data.organizationId !== null && typeof data.organizationId !== 'string') throw new Error('利用状況の応答が不正です')
+      if (request !== usageRequest.current) return
+      setUsage(data.organizationId ? data : null)
+      setHasOrg(Boolean(data.organizationId))
+    } catch {
+      if (request === usageRequest.current) setUsageError(true)
+    }
+  }, [])
+
   useEffect(() => {
+    const requestCounter = usageRequest
     if (session?.user) {
-      fetch('/api/kintai/usage')
-        .then((r) => r.json())
-        .then((data: UsageData) => {
-          if (data.organizationId) {
-            setHasOrg(true)
-            setUsage(data)
-          } else {
-            setHasOrg(false)
-          }
-        })
-        .catch(() => setHasOrg(false))
+      void loadUsage()
     } else if (status === 'unauthenticated') {
+      requestCounter.current++
+      setUsage(null)
+      setUsageError(false)
       setHasOrg(false)
     }
-  }, [session, status])
+    return () => { requestCounter.current++ }
+  }, [session, status, loadUsage])
 
   // Public pages render children directly
   if (isPublicPage) {
     return <>{children}</>
+  }
+
+  if (usageError && session?.user) {
+    return <div role="alert" className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center"><p className="font-bold text-rose-700">勤怠情報を取得できませんでした。組織の状態は変更されていません。</p><button type="button" onClick={() => void loadUsage()} className="rounded-xl bg-[#7f19e6] px-5 py-3 font-bold text-white">再読み込み</button></div>
   }
 
   // Loading state
