@@ -76,6 +76,7 @@ export default function MensetsuTool() {
   const [orgName, setOrgName] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [templateUpgrade, setTemplateUpgrade] = useState<{ message: string; url: string } | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [moreError, setMoreError] = useState<string | null>(null)
   const [moreLoading, setMoreLoading] = useState(false)
@@ -291,6 +292,7 @@ export default function MensetsuTool() {
     if (!jobTitle.trim()) return
     setBusy('generate')
     setError(null)
+    setTemplateUpgrade(null)
     setNotice(null)
     try {
       const res = await fetch('/api/mensetsu/templates', {
@@ -305,6 +307,9 @@ export default function MensetsuTool() {
       })
       const data = await res.json()
       if (!res.ok) {
+        if (res.status === 402 && data?.code === 'LIMIT_REACHED' && data?.upgradeUrl === '/mensetsu/pricing') {
+          setTemplateUpgrade({ message: data?.error || '生成に失敗しました', url: data.upgradeUrl })
+        }
         notifyError(setError, data?.error || '生成に失敗しました')
         return
       }
@@ -478,6 +483,7 @@ export default function MensetsuTool() {
         {error && (
           <div className="mt-5 rounded-lg border border-[#ffd0de] bg-[#fff2f6] p-4 text-sm font-bold text-[#c2185b]">
             {error}
+            {templateUpgrade?.message === error && <p className="mt-2"><Link href={templateUpgrade.url} className="text-[#0066ff] underline">プロプランの料金と30日間無料の対象条件を確認する</Link></p>}
           </div>
         )}
         {notice && (
