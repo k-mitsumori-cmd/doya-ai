@@ -101,6 +101,7 @@ export default function MensetsuTool() {
   const sessionsRef = useRef(sessions)
   sessionsRef.current = sessions
   const [issuedUrl, setIssuedUrl] = useState<string | null>(null)
+  const [issueLimit, setIssueLimit] = useState<{ message: string; url: string } | null>(null)
   /** 発行直後のコピーボタンを押したことが分かるようにする */
   const [issuedCopied, setIssuedCopied] = useState(false)
   const [candidateName, setCandidateName] = useState('')
@@ -338,6 +339,7 @@ export default function MensetsuTool() {
     if (!selectedTemplate) return
     setBusy('issue')
     setError(null)
+    setIssueLimit(null)
     try {
       const res = await fetch('/api/mensetsu/sessions', {
         method: 'POST',
@@ -349,12 +351,17 @@ export default function MensetsuTool() {
       })
       const data = await res.json()
       if (!res.ok) {
+        if (res.status === 402 && data?.code === 'LIMIT_REACHED' && data?.upgradeUrl === '/mensetsu/pricing') {
+          setIssueLimit({ message: data.error, url: data.upgradeUrl })
+        }
         notifyError(setError, data?.error || '発行に失敗しました')
         return
       }
       setIssuedUrl(data.url)
       setCandidateName('')
       await load()
+    } catch (cause) {
+      notifyError(setError, cause instanceof Error ? cause.message : '通信に失敗しました。時間をおいてもう一度お試しください。')
     } finally {
       setBusy(null)
     }
@@ -749,6 +756,12 @@ export default function MensetsuTool() {
                   >
                     {busy === 'issue' ? '発行中…' : '面接URLを発行する'}
                   </button>
+                  {issueLimit && error === issueLimit.message && (
+                    <div role="alert" className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
+                      <p>{issueLimit.message}</p>
+                      <Link href={issueLimit.url} className="mt-2 inline-block text-blue-700 underline">プロプランの料金と30日間無料の対象条件を確認する</Link>
+                    </div>
+                  )}
                   {templates.find((t) => t.id === selectedTemplate)?.status === 'draft' && (
                     <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-900 ring-1 ring-amber-200">
                       下書きの質問セットを選んでいます。このまま発行すると、応募者は未完成の質問で面接を受けます。

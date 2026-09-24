@@ -8,7 +8,7 @@ import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { interviewUrl } from '@/lib/mensetsu/interview-url'
-import { assertFreeLimit } from '@/lib/plan-limit'
+import { assertFreeLimit, FREE_LIMITS, jstStartOfMonthUtc } from '@/lib/plan-limit'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { getMensetsuContext, orgSlugFrom } from '@/lib/mensetsu/access'
 
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
   // 無料枠の上限（services.ts の宣言を実際に効かせる）
   // ⚠️ 面接1件ごとに Realtime の通話料が発生する。有料プランにも月次の上限が要る
-  const quota = await assertFreeLimit(
+  const checkQuota = () => assertFreeLimit(
     'mensetsuSessions',
     () => prisma.mensetsuSession.count({ where: { organizationId: ctx.organizationId } }),
     undefined,
@@ -77,7 +77,15 @@ export async function POST(req: NextRequest) {
         where: { organizationId: ctx.organizationId, createdAt: { gte: since } },
       })
   )
-  if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 402 })
+  const quotaResponse = (checked: Awaited<ReturnType<typeof checkQuota>>) => NextResponse.json({
+    error: checked.reason,
+    code: 'LIMIT_REACHED',
+    used: checked.used,
+    limit: checked.limit,
+    ...(checked.limit === FREE_LIMITS.mensetsuSessions ? { upgradeUrl: '/mensetsu/pricing' } : {}),
+  }, { status: 402 })
+  const quota = await checkQuota()
+  if (!quota.ok) return quotaResponse(quota)
 
   const body = await req.json().catch(() => ({}))
   const templateId = String(body?.templateId || '').trim()
@@ -117,19 +125,46 @@ export async function POST(req: NextRequest) {
     Date.now() + Math.max(1, org?.retentionDays ?? 180) * 24 * 60 * 60 * 1000
   )
 
-  const session = await prisma.mensetsuSession.create({
-    data: {
-      organizationId: ctx.organizationId,
-      templateId,
-      token: newToken(),
-      candidateName,
-      candidateEmail,
-      expiresAt,
-      purgeAfter,
-      status: 'pending',
-    },
-    select: { id: true, token: true, expiresAt: true, candidateName: true },
-  })
+  let result: { kind: 'created'; session: { id: string; token: string; expiresAt: Date; candidateName: string | null } } | { kind: 'limit' } | null = null
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      result = await prisma.$transaction(async (tx) => {
+        const used = await tx.mensetsuSession.count({
+          where: {
+            organizationId: ctx.organizationId,
+            ...(quota.limit === FREE_LIMITS.mensetsuSessions ? {} : { createdAt: { gte: jstStartOfMonthUtc() } }),
+          },
+        })
+        if (quota.limit !== undefined && used >= quota.limit) return { kind: 'limit' } as const
+        const session = await tx.mensetsuSession.create({
+          data: {
+            organizationId: ctx.organizationId,
+            templateId,
+            token: newToken(),
+            candidateName,
+            candidateEmail,
+            expiresAt,
+            purgeAfter,
+            status: 'pending',
+          },
+          select: { id: true, token: true, expiresAt: true, candidateName: true },
+        })
+        return { kind: 'created', session } as const
+      }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+      break
+    } catch (error: any) {
+      if ((error?.code === 'P2034' || error?.code === 'P2002') && attempt < 4) continue
+      console.error('[mensetsu/sessions] creation failed', error?.code || 'unknown')
+      return NextResponse.json({ error: '面接URLを発行できませんでした。時間をおいてもう一度お試しください。' }, { status: 503 })
+    }
+  }
+  if (result?.kind === 'limit') {
+    const latestQuota = await checkQuota()
+    if (latestQuota.ok) return NextResponse.json({ error: 'プラン情報が更新されました。再読み込みしてからもう一度お試しください。' }, { status: 409 })
+    return quotaResponse(latestQuota)
+  }
+  if (!result) return NextResponse.json({ error: '面接URLを発行できませんでした。時間をおいてもう一度お試しください。' }, { status: 503 })
+  const session = result.session
 
   void recordServiceUsage({
     userId: ctx.userId,
