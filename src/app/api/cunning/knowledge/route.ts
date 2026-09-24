@@ -30,17 +30,6 @@ export async function POST(req: NextRequest) {
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
-  const limits = await getCunningLimits(userId)
-  if (limits.maxKnowledgeBases !== -1) {
-    const count = await prisma.cunningKnowledgeBase.count({ where: { userId } })
-    if (count >= limits.maxKnowledgeBases) {
-      return NextResponse.json(
-        { error: `ナレッジベースは${limits.maxKnowledgeBases}個までです。プロにアップグレードしてください。` },
-        { status: 403 }
-      )
-    }
-  }
-
   const body = await req.json().catch(() => null)
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return NextResponse.json({ error: '入力内容を確認してください' }, { status: 400 })
@@ -51,8 +40,26 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '説明の形式が正しくありません' }, { status: 400 })
   }
 
-  const base = await prisma.cunningKnowledgeBase.create({
-    data: { userId, name: name.slice(0, 120), description: typeof body.description === 'string' ? body.description.slice(0, 500) || null : null },
+  const data = { userId, name: name.slice(0, 120), description: typeof body.description === 'string' ? body.description.slice(0, 500) || null : null }
+  const limits = await getCunningLimits(userId)
+  if (limits.maxKnowledgeBases === -1) {
+    const base = await prisma.cunningKnowledgeBase.create({ data })
+    return NextResponse.json({ base })
+  }
+
+  // 同じ利用者の同時作成を直列化し、件数確認と作成を1トランザクションに収める。
+  const base = await prisma.$transaction(async (tx) => {
+    const users = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`
+    if (users.length === 0) return null
+    const count = await tx.cunningKnowledgeBase.count({ where: { userId } })
+    if (count >= limits.maxKnowledgeBases) return null
+    return tx.cunningKnowledgeBase.create({ data })
   })
+  if (!base) {
+    return NextResponse.json(
+      { error: `ナレッジベースは${limits.maxKnowledgeBases}個までです。プロにアップグレードしてください。` },
+      { status: 403 }
+    )
+  }
   return NextResponse.json({ base })
 }
