@@ -7,7 +7,7 @@
 // 設定を全部埋めないと始められない作りにすると、最初の商談に到達しない。
 // URLを1本入れれば、既定のシナリオまで自動で用意される。
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import OrgSwitcher, { clearSelectedOrg, reconcileSelectedOrg, withOrg, type Membership } from '@/components/org/OrgSwitcher'
 import { fetchOrgJson } from '@/lib/org-fetch'
@@ -16,6 +16,7 @@ import AishodanLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
 import LoadingProgress from '@/components/LoadingProgress'
+import { appendAishodanPage, parseAishodanPage } from '@/lib/aishodan/list-pages'
 
 interface Product {
   id: string
@@ -78,6 +79,12 @@ export default function AishodanTool() {
   /** 削除中の対象ID。⚠️ 連打で二重に消しにいかないよう、押した行だけ止める */
   const [deletingId, setDeletingId] = useState('')
   const [rooms, setRooms] = useState<Room[]>([])
+  const [productCursor, setProductCursor] = useState<string | null>(null)
+  const [roomCursor, setRoomCursor] = useState<string | null>(null)
+  const [productTotal, setProductTotal] = useState(0)
+  const [roomTotal, setRoomTotal] = useState(0)
+  const [loadingMore, setLoadingMore] = useState<'products' | 'rooms' | null>(null)
+  const loadVersion = useRef(0)
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
 
@@ -90,11 +97,22 @@ export default function AishodanTool() {
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
+    const version = ++loadVersion.current
     setLoading(true)
+    setError('')
+    setNeedsLogin(false)
+    setOrg(null)
+    setProducts([])
+    setRooms([])
+    setSessions([])
+    setStats(null)
+    setProductCursor(null)
+    setRoomCursor(null)
+    setLoadingMore(null)
     try {
       const r = await fetch('/api/aishodan/organizations')
       if (r.status === 401) {
-        setNeedsLogin(true)
+        if (version === loadVersion.current) setNeedsLogin(true)
         return
       }
       if (!r.ok) throw new Error('組織一覧を取得できませんでした')
@@ -107,8 +125,6 @@ export default function AishodanTool() {
         if (scopedData?.current) d = scopedData
         else clearSelectedOrg('aishodan')
       }
-      setOrg(d.current)
-      setMemberships(memberships)
       if (d.current) {
         const [pr, rr, sr, st] = await Promise.all([
           fetchOrgJson(withOrg('aishodan', '/api/aishodan/products')),
@@ -116,20 +132,56 @@ export default function AishodanTool() {
           fetchOrgJson(withOrg('aishodan', '/api/aishodan/sessions')),
           fetchOrgJson<Stats>(withOrg('aishodan', '/api/aishodan/stats')),
         ])
-        if (!Array.isArray(pr.products) || !Array.isArray(rr.rooms) || !Array.isArray(sr.sessions)) {
+        if (!Array.isArray(sr.sessions)) {
           throw new Error('組織のデータを確認できませんでした')
         }
-        setProducts(pr.products || [])
-        setRooms(rr.rooms || [])
+        const productPage = parseAishodanPage<Product>(pr, 'products', 100)
+        const roomPage = parseAishodanPage<Room>(rr, 'rooms', 100)
+        if (version !== loadVersion.current) return
+        setOrg(d.current)
+        setMemberships(memberships)
+        setProducts(productPage.items)
+        setProductCursor(productPage.nextCursor)
+        setProductTotal(productPage.total)
+        setRooms(roomPage.items)
+        setRoomCursor(roomPage.nextCursor)
+        setRoomTotal(roomPage.total)
         setSessions(sr.sessions || [])
         setStats(st)
+      } else if (version === loadVersion.current) {
+        setMemberships(memberships)
       }
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
+      if (version === loadVersion.current) notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
     } finally {
-      setLoading(false)
+      if (version === loadVersion.current) setLoading(false)
     }
   }, [])
+
+  async function loadMore(kind: 'products' | 'rooms') {
+    const cursor = kind === 'products' ? productCursor : roomCursor
+    if (!cursor || loadingMore) return
+    const version = loadVersion.current
+    setLoadingMore(kind)
+    setError('')
+    try {
+      const data = await fetchOrgJson(withOrg('aishodan', `/api/aishodan/${kind}?cursor=${encodeURIComponent(cursor)}`))
+      if (version !== loadVersion.current) return
+      if (kind === 'products') {
+        const page = parseAishodanPage<Product>(data, kind, 100)
+        setProducts(appendAishodanPage(products, page, productTotal))
+        setProductCursor(page.nextCursor)
+      } else {
+        const page = parseAishodanPage<Room>(data, kind, 100)
+        setRooms(appendAishodanPage(rooms, page, roomTotal))
+        setRoomCursor(page.nextCursor)
+      }
+    } catch (e) {
+      if (version === loadVersion.current) notifyError(setError, e instanceof Error ? e.message : '続きを取得できませんでした')
+    } finally {
+      if (version === loadVersion.current) setLoadingMore(null)
+    }
+  }
 
   useEffect(() => {
     void load()
@@ -312,6 +364,10 @@ export default function AishodanTool() {
     return <AishodanLp />
   }
 
+  if (!org && error) {
+    return <div role="alert" className="mx-auto max-w-md p-8 text-center text-sm font-semibold text-rose-700">{error}<button type="button" onClick={() => void load()} className="mt-4 block w-full rounded-lg bg-blue-600 px-4 py-2 font-bold text-white">再読み込みする</button></div>
+  }
+
   if (!org) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
@@ -461,6 +517,7 @@ export default function AishodanTool() {
               ))}
             </div>
           )}
+          {productCursor && <button type="button" onClick={() => void loadMore('products')} disabled={loadingMore !== null} className="mt-4 rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 disabled:opacity-50">{loadingMore === 'products' ? '読み込み中…' : `商材をさらに表示（${products.length}/${productTotal}件）`}</button>}
         </section>
 
         {/* 2. 商談ルーム */}
@@ -539,6 +596,7 @@ export default function AishodanTool() {
                 </div>
               ))}
             </div>
+            {roomCursor && <button type="button" onClick={() => void loadMore('rooms')} disabled={loadingMore !== null} className="mt-4 rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 disabled:opacity-50">{loadingMore === 'rooms' ? '読み込み中…' : `商談URLをさらに表示（${rooms.length}/${roomTotal}件）`}</button>}
           </section>
         )}
 

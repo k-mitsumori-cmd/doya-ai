@@ -12,18 +12,29 @@ import { recordServiceUsage } from '@/lib/service-usage'
 export async function GET(req: NextRequest) {
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
-  const rooms = await prisma.aishodanRoom.findMany({
+  const { searchParams } = new URL(req.url)
+  const cursor = searchParams.get('cursor')
+  if (searchParams.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  const where = { organizationId: ctx.organizationId, isPreview: false }
+  if (cursor && !await prisma.aishodanRoom.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  const [rows, total] = await Promise.all([prisma.aishodanRoom.findMany({
     // ⚠️ 練習ルームは配布するURLではないので一覧に出さない。
     //    混ぜると「どれを配ればいいのか」が分からなくなる。
-    where: { organizationId: ctx.organizationId, isPreview: false },
-    orderBy: { createdAt: 'desc' },
+    where,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     include: {
       scenario: { select: { id: true, name: true, product: { select: { name: true } } } },
       _count: { select: { sessions: true } },
     },
-    take: 100,
-  })
-  return NextResponse.json({ rooms })
+    take: 101,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+  }), prisma.aishodanRoom.count({ where })])
+  const rooms = rows.slice(0, 100)
+  return NextResponse.json({ rooms, total, nextCursor: rows.length > 100 ? rooms[99].id : null }, { headers: { 'Cache-Control': 'private, no-store' } })
 }
 
 export async function POST(req: NextRequest) {
