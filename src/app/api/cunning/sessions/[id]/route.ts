@@ -38,6 +38,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     })
     if (!session || session.userId !== userId || session.status === 'deleted') return NextResponse.json({ error: '見つかりません' }, { status: 404 })
     if (liveView) {
+      const recordingLease = session.recordingVersion === 2 ? await tx.cunningRecordingLease.findUnique({
+        where: { sessionId: p.id }, select: { stoppedAt: true },
+      }) : null
       const liveHistory = {
         transcripts: await readRecentCunningTranscripts(tx, userId, p.id, 81),
         answers: (await tx.cunningAnswer.findMany({
@@ -48,6 +51,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ session: {
         id: session.id, durationSec: session.durationSec, status: session.status,
         recordingVersion: session.recordingVersion, mode: session.mode, liveHistory,
+        interruptedRecording: session.status === 'active' && !!recordingLease && !recordingLease.stoppedAt,
       } }, { headers: { 'Cache-Control': 'no-store' } })
     }
     const transcripts = await readCunningTranscripts(tx, userId, p.id, 501)

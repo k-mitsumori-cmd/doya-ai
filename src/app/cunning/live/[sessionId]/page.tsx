@@ -316,10 +316,12 @@ const SILENCE_PEAK = 8
         setHistoryIncomplete(restored.hasMore)
         hasContentRef.current = restored.lines.length > 0 || restored.answers.length > 0
         recentRef.current = restored.lines.filter(line => line.speaker === 'remote').slice(-12).map(line => line.text)
+        let interrupted = d.session.interruptedRecording === true
         try {
-          setInterruptedRecording(sessionStorage.getItem(`cunning-live-recording:${sessionId}`) === '1')
+          interrupted ||= sessionStorage.getItem(`cunning-live-recording:${sessionId}`) === '1'
           if (d.session.status !== 'active') sessionStorage.removeItem(`cunning-live-recording:${sessionId}`)
         } catch { /* storage unavailable */ }
+        setInterruptedRecording(interrupted)
         setSessionState(d.session.status === 'active' ? 'ready' : 'ended')
         if (d.session.mode) { setMode(d.session.mode); modeRef.current = d.session.mode }
       })
