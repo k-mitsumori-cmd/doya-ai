@@ -187,6 +187,11 @@ function SeoRichEditor({ articleId }: { articleId: string }) {
   // Markdownをシンプルなプレビューに変換
   const renderPreview = (md: string): string => {
     let html = md
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;')
       .replace(/^### (.+)$/gm, '<h3 class="text-lg font-bold text-gray-900 mt-6 mb-3">$1</h3>')
       .replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold text-gray-900 mt-8 mb-4 border-l-4 border-blue-500 pl-3">$1</h2>')
       .replace(/^# (.+)$/gm, '<h1 class="text-2xl font-bold text-gray-900 mt-8 mb-4 border-b border-gray-200 pb-2">$1</h1>')

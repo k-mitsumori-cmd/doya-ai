@@ -15,6 +15,11 @@ if (seoSectionOwner.error || seoSectionOwner.status !== 0) {
   console.error('Security regression failed: verify-seo-section-owner.cjs');
   process.exit(1);
 }
+const seoEditorPreview = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-editor-preview.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (seoEditorPreview.error || seoEditorPreview.status !== 0) {
+  console.error('Security regression failed: verify-seo-editor-preview.cjs');
+  process.exit(1);
+}
 const orgFetch = spawnSync(process.execPath, [path.join(__dirname, 'verify-org-fetch.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (orgFetch.error || orgFetch.status !== 0) {
   console.error('Security regression failed: verify-org-fetch.cjs');
