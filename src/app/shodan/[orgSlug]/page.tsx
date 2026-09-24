@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { shodanGet, shodanSend } from '@/lib/shodan/client'
@@ -20,19 +20,41 @@ export default function ShodanListPage() {
   const params = useParams<{ orgSlug: string }>()
   const orgSlug = decodeURIComponent(String(params.orgSlug))
   const [items, setItems] = useState<Item[] | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [hasProfile, setHasProfile] = useState<boolean | null>(null)
+  const requestSeq = useRef(0)
+  const invalidateRequests = useCallback(() => { requestSeq.current++ }, [])
 
-  const load = () => {
-    shodanGet<{ items: Item[] }>('/api/shodan/preparations', orgSlug).then((d) => setItems(d.items)).catch((e) => { toast.error(e.message); setItems([]) })
-    shodanGet<{ profile: any }>('/api/shodan/company-profile', orgSlug).then((d) => setHasProfile(!!d.profile)).catch(() => setHasProfile(null))
-  }
-  useEffect(load, [orgSlug])
+  const load = useCallback(() => {
+    const seq = ++requestSeq.current
+    setItems(null)
+    setLoadError(null)
+    setHasProfile(null)
+    shodanGet<{ items: Item[] }>('/api/shodan/preparations', orgSlug)
+      .then((d) => {
+        if (!Array.isArray(d.items)) throw new Error('Invalid preparations response')
+        if (requestSeq.current === seq) setItems(d.items)
+      })
+      .catch(() => {
+        if (requestSeq.current === seq) setLoadError('商談準備一覧を読み込めませんでした。時間をおいて再試行してください。')
+      })
+    shodanGet<{ profile: any }>('/api/shodan/company-profile', orgSlug)
+      .then((d) => { if (requestSeq.current === seq) setHasProfile(!!d.profile) })
+      .catch(() => { if (requestSeq.current === seq) setHasProfile(null) })
+  }, [orgSlug])
+  useEffect(() => {
+    load()
+    return invalidateRequests
+  }, [load, invalidateRequests])
 
   // 調査中(processing)の案件がある間だけ自動更新（完了で停止。researchedは操作待ちの安定状態なので除外）
   useEffect(() => {
     if (!items?.some((x) => x.status === 'processing')) return
     const t = setInterval(() => {
-      shodanGet<{ items: Item[] }>('/api/shodan/preparations', orgSlug).then((d) => setItems(d.items)).catch(() => {})
+      const seq = requestSeq.current
+      shodanGet<{ items: Item[] }>('/api/shodan/preparations', orgSlug)
+        .then((d) => { if (requestSeq.current === seq && Array.isArray(d.items)) setItems(d.items) })
+        .catch(() => {})
     }, 5000)
     return () => clearInterval(t)
   }, [items, orgSlug])
@@ -71,7 +93,12 @@ export default function ShodanListPage() {
         </Link>
       )}
 
-      {items === null ? (
+      {loadError ? (
+        <div role="alert" className="rounded-3xl border border-rose-200 bg-rose-50 px-6 py-8 text-center">
+          <p className="font-bold text-rose-800">{loadError}</p>
+          <button onClick={load} className="mt-4 rounded-xl bg-white border border-rose-300 px-5 py-2 text-sm font-black text-rose-700 hover:bg-rose-100">再試行</button>
+        </div>
+      ) : items === null ? (
         <div className="py-20 text-center"><DoyaKun mood="thinking" size={72} /><p className="mt-2 text-slate-400 font-bold">読み込み中…</p></div>
       ) : items.length === 0 ? (
         <div className="rounded-3xl border-2 border-dashed border-purple-200 bg-white py-12 px-6 text-center">
