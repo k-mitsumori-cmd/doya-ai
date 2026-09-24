@@ -20,6 +20,11 @@ if (seoEditorPreview.error || seoEditorPreview.status !== 0) {
   console.error('Security regression failed: verify-seo-editor-preview.cjs');
   process.exit(1);
 }
+const mensetsuTemplateAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-mensetsu-template-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (mensetsuTemplateAtomic.error || mensetsuTemplateAtomic.status !== 0) {
+  console.error('Security regression failed: verify-mensetsu-template-atomic.cjs');
+  process.exit(1);
+}
 const orgFetch = spawnSync(process.execPath, [path.join(__dirname, 'verify-org-fetch.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (orgFetch.error || orgFetch.status !== 0) {
   console.error('Security regression failed: verify-org-fetch.cjs');

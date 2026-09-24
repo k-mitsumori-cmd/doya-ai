@@ -113,13 +113,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   if (typeof body?.closing === 'string') data.closing = body.closing
   if (['draft', 'active', 'archived'].includes(body?.status)) data.status = body.status
 
-  await prisma.mensetsuTemplate.update({ where: { id }, data })
-
   // 質問の全置換（順序の入れ替え・削除を素直に扱うため）
-  if (Array.isArray(body?.questions)) {
-    // 削除と再作成は必ず1つのトランザクションで。
-    // 分けると createMany の失敗時に質問が0件のまま残り、復元手段が無い。
-    await prisma.$transaction([
+  // 基本情報も質問と同じトランザクションで保存する。質問の作成失敗時に名前だけ残さない。
+  const questionWrites = Array.isArray(body?.questions)
+    ? [
       prisma.mensetsuQuestion.deleteMany({ where: { templateId: id } }),
       // ⚠️ createMany では入れ子を作れないため、分岐を持つ質問は個別に create する。
       //    一括で置き換えると、AIが作った分岐が保存のたびに消えてしまう。
@@ -150,8 +147,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
           },
         })
       ),
-    ])
-  }
+    ] : []
+  await prisma.$transaction([
+    prisma.mensetsuTemplate.update({ where: { id, organizationId: c.organizationId }, data }),
+    ...questionWrites,
+  ])
 
   const template = await prisma.mensetsuTemplate.findUnique({
     where: { id },
