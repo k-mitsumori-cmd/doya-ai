@@ -1,48 +1,47 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useCallback, useEffect, useState } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 
 type PlanId = 'FREE' | 'PRO' | 'ENTERPRISE'
 
-function normalizePlan(rawTier: unknown): PlanId {
+function normalizePlan(rawTier: unknown): PlanId | null {
   const s = String(rawTier || '').toUpperCase()
   if (s.includes('ENTERPRISE')) return 'ENTERPRISE'
   // 統一プラン方式: PRO / LIGHT / BUSINESS / STARTER / BASIC は全て PRO 扱い
   if (s.includes('PRO') || s.includes('LIGHT') || s.includes('BUSINESS') || s.includes('STARTER') || s.includes('BASIC')) return 'PRO'
-  return 'FREE'
+  return s === 'FREE' ? 'FREE' : null
 }
 
 export default function PricingPage() {
-  const { data: session } = useSession()
-  const [currentPlan, setCurrentPlan] = useState<PlanId>('FREE')
+  const [currentPlan, setCurrentPlan] = useState<PlanId | null>(null)
+  const [planError, setPlanError] = useState(false)
+
+  const loadPlan = useCallback(async () => {
+    setPlanError(false)
+    try {
+      const response = await fetch('/api/doyalist/usage', { cache: 'no-store' })
+      if (response.status === 401) {
+        setCurrentPlan(null)
+        return
+      }
+      if (!response.ok) throw new Error('プランを確認できませんでした')
+      const data = await response.json()
+      const planRaw = data?.plan
+      const tier = typeof planRaw === 'object' && planRaw !== null ? planRaw.tier || planRaw.raw : planRaw
+      const verifiedPlan = normalizePlan(tier)
+      if (!verifiedPlan) throw new Error('プランの応答が不正です')
+      setCurrentPlan(verifiedPlan)
+    } catch {
+      setCurrentPlan(null)
+      setPlanError(true)
+    }
+  }, [])
 
   useEffect(() => {
-    fetch('/api/doyalist/usage')
-      .then((r) => r.json())
-      .then((d) => {
-        // 1) API から tier 取得（最優先・DBから最新値）
-        const planRaw: any = d?.plan
-        const apiTier = typeof planRaw === 'object' && planRaw !== null
-          ? planRaw.tier || planRaw.raw
-          : planRaw
-        // 2) NextAuth セッションの user.plan も予備
-        const sessionPlan = (session?.user as any)?.plan
-        // 3) 両方を見て、より上位のプランを採用（ダウングレード誤表示防止）
-        const apiPlan = normalizePlan(apiTier)
-        const sessPlan = normalizePlan(sessionPlan)
-        const priority = { FREE: 0, PRO: 1, ENTERPRISE: 2 }
-        const best: PlanId = priority[apiPlan] >= priority[sessPlan] ? apiPlan : sessPlan
-        setCurrentPlan(best)
-      })
-      .catch(() => {
-        // API失敗時はセッションだけで判定
-        const sessionPlan = (session?.user as any)?.plan
-        setCurrentPlan(normalizePlan(sessionPlan))
-      })
-  }, [session])
+    void loadPlan()
+  }, [loadPlan])
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -65,6 +64,7 @@ export default function PricingPage() {
         </div>
 
         {/* ===== Unified Pricing Plans (無料 / プロ ¥9,980) ===== */}
+        {planError && <div role="alert" className="mb-6 rounded-xl bg-rose-50 p-4 text-sm font-bold text-rose-700">現在のプランを確認できませんでした。<button type="button" onClick={() => void loadPlan()} className="ml-2 underline">再読み込み</button></div>}
         <UnifiedPricingPlans serviceId="doyalist" currentPlan={currentPlan} className="my-12" />
 
         {/* ===== FAQ ===== */}
