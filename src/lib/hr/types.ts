@@ -83,6 +83,7 @@ export interface HrContext {
   organizationId: string
   role: HrMemberRole
   memberId: string
+  employeeId?: string | null
 }
 
 export interface HrApiResponse<T = unknown> {

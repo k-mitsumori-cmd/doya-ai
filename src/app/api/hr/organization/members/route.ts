@@ -4,7 +4,7 @@ export const maxDuration = 300
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getHrContext } from '@/lib/hr/access'
+import { getHrContext, hasMinRole } from '@/lib/hr/access'
 
 export async function GET() {
   try {
@@ -14,7 +14,10 @@ export async function GET() {
     }
 
     const members = await prisma.hrOrganizationMember.findMany({
-      where: { organizationId: ctx.organizationId },
+      where: {
+        organizationId: ctx.organizationId,
+        ...(!hasMinRole(ctx.role, 'ADMIN') ? { id: ctx.memberId } : {}),
+      },
       include: {
         user: {
           select: {

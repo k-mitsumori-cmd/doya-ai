@@ -58,6 +58,7 @@ export async function GET() {
       organizationId: ctx.organizationId,
       canManageBilling: ctx.role === HrMemberRole.OWNER,
       canManageEmployees: hasMinRole(ctx.role, HrMemberRole.ADMIN),
+      hasLinkedEmployee: Boolean(ctx.employeeId),
     })
   } catch {
     return NextResponse.json({ error: '使用状況を取得できませんでした。再読み込みしてください。' }, { status: 503 })

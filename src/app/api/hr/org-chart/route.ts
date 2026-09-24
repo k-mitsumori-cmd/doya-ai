@@ -4,7 +4,7 @@ export const maxDuration = 300
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getHrContext } from '@/lib/hr/access'
+import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { OrgChartNode } from '@/lib/hr/types'
 
 function buildOrgTree(
@@ -51,7 +51,11 @@ export async function GET() {
         orderBy: { sortOrder: 'asc' },
       }),
       prisma.hrEmployee.findMany({
-        where: { organizationId: ctx.organizationId, status: 'ACTIVE' },
+        where: {
+          organizationId: ctx.organizationId,
+          status: 'ACTIVE',
+          ...(!hasMinRole(ctx.role, 'MANAGER') ? { id: ctx.employeeId || { in: [] } } : {}),
+        },
         select: {
           id: true,
           firstName: true,

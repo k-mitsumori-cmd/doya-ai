@@ -32,6 +32,9 @@ export async function GET(req: NextRequest) {
     const pageSize = Math.min(MAX_PAGE_SIZE, requestedPageSize)
 
     const where: any = { organizationId: ctx.organizationId }
+    if (!hasMinRole(ctx.role, HrMemberRole.MANAGER)) {
+      where.id = ctx.employeeId || { in: [] }
+    }
 
     if (search) {
       where.OR = [

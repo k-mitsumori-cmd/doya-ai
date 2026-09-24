@@ -22,6 +22,7 @@ export default function EmployeesPage() {
   const [sortKey, setSortKey] = useState<SortKey>('name')
   const [showImport, setShowImport] = useState(false)
   const [canManageEmployees, setCanManageEmployees] = useState(false)
+  const [hasLinkedEmployee, setHasLinkedEmployee] = useState<boolean | null>(null)
 
   async function fetchData() {
     try {
@@ -33,6 +34,7 @@ export default function EmployeesPage() {
       if (usageRes.ok) {
         const usage = await usageRes.json()
         setCanManageEmployees(usage.canManageEmployees === true)
+        setHasLinkedEmployee(usage.hasLinkedEmployee === true)
       }
       if (empRes.ok) {
         const empData = await empRes.json()
@@ -77,7 +79,7 @@ export default function EmployeesPage() {
               <span className="ml-3 text-lg font-bold text-slate-400">全 {employees.length} 名</span>
             )}
           </h1>
-          <p className="text-sm text-slate-500 mt-1">組織のメンバーを管理</p>
+          <p className="text-sm text-slate-500 mt-1">{canManageEmployees ? '組織のメンバーを管理' : 'あなたの従業員情報を確認'}</p>
         </div>
         {canManageEmployees && <div className="flex items-center gap-2">
           <button
@@ -151,9 +153,15 @@ export default function EmployeesPage() {
             animate={{ y: [0, -10, 0] }}
             transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
           />
-          <h3 className="text-xl font-black text-slate-900 mb-2">チームのメンバーを登録しましょう！</h3>
+          <h3 className="text-xl font-black text-slate-900 mb-2">
+            {canManageEmployees ? 'チームのメンバーを登録しましょう！' : '従業員情報を表示できません'}
+          </h3>
           <p className="text-base text-slate-500 mb-6 max-w-md mx-auto">
-            従業員を追加して、タレントマネジメントを始めましょう。
+            {canManageEmployees
+              ? '従業員を追加して、タレントマネジメントを始めましょう。'
+              : hasLinkedEmployee === false
+                ? 'アカウントに従業員情報が紐付いていません。組織の管理者に確認してください。'
+                : '従業員情報が見つかりません。組織の管理者に確認してください。'}
           </p>
           {canManageEmployees ? <div className="flex flex-col items-center gap-4">
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -172,7 +180,7 @@ export default function EmployeesPage() {
               <span className="material-symbols-outlined text-lg">upload_file</span>
               CSVで一括登録
             </button>
-          </div> : <p className="mt-4 text-sm text-slate-500">従業員の登録は管理者が行います。</p>}
+          </div> : null}
         </motion.div>
       ) : (
         <EmployeeGrid employees={sortedEmployees} departments={departments} />

@@ -22,6 +22,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
     const p = await ctx.params
     const id = p.id
+    if (!hasMinRole(hrCtx.role, HrMemberRole.MANAGER) && hrCtx.employeeId !== id) {
+      return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
+    }
 
     const evaluationWhere = await getEvaluationReadWhere(hrCtx)
     const oneOnOneWhere = await getOneOnOneReadWhere(hrCtx)

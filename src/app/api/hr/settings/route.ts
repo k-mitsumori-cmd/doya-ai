@@ -16,7 +16,10 @@ export async function GET() {
     })
 
     const memberships = await prisma.hrOrganizationMember.findMany({
-      where: { organizationId: ctx.organizationId },
+      where: {
+        organizationId: ctx.organizationId,
+        ...(!hasMinRole(ctx.role, 'ADMIN') ? { id: ctx.memberId } : {}),
+      },
       include: { user: { select: { name: true, email: true, image: true } } },
       orderBy: { createdAt: 'asc' },
     })

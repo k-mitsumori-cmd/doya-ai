@@ -20,6 +20,7 @@ export async function getHrContext(): Promise<HrContext | null> {
     organizationId: membership.organizationId,
     role: membership.role as HrMemberRole,
     memberId: membership.id,
+    employeeId: membership.employeeId,
   }
 }
 
