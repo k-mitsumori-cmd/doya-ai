@@ -110,5 +110,28 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
   const badEmail = await POST({ json: async () => ({ email: 'not-an-address', role: 'OWNER' }) });
   assert.equal(badEmail.status, 400);
   assert.equal(sent, 1);
+  for (const [role, plan, expectedField] of [
+    ['OWNER', 'FREE', 'upgradeUrl'],
+    ['ADMIN', 'PRO', 'contactUrl'],
+  ]) {
+    const limited = load('src/app/api/hr/organization/invite/route.ts', {
+      'next/server': { NextResponse: Response },
+      'next-auth': { getServerSession: async () => ({ user: { id: 'owner-1' } }) },
+      '@/lib/auth': { authOptions: {} },
+      '@/lib/prisma': { prisma: {} },
+      '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'org-1', userId: 'owner-1', role }), hasMinRole: () => true },
+      '@/lib/hr/types': { HrMemberRole: { OWNER: 'OWNER', ADMIN: 'ADMIN', MEMBER: 'MEMBER' } },
+      '@/lib/hr/billing': { checkMemberLimit: async () => 'メンバー枠の上限です', getOrgPlan: async () => plan },
+      '@/lib/hr/email': { sendInvitationEmail: async () => { throw Error('email must not be sent') } },
+      '@/lib/hr/audit': { logAudit: async () => {} },
+      crypto: require('node:crypto'),
+    });
+    const denied = await limited.POST({ json: async () => ({ email: 'invited@example.com' }) });
+    assert.equal(denied.status, 403);
+    const payload = await denied.json();
+    assert.equal(payload.code, 'HR_ORG_MEMBER_LIMIT');
+    assert.ok(payload[expectedField]);
+    assert.equal(payload.canManageBilling, role === 'OWNER');
+  }
   console.log('PASS HR invitation: matching account required, old elevated role rejected, atomic claim, role injection ignored');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

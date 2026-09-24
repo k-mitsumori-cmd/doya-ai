@@ -109,6 +109,7 @@ export default function HrSettingsPage() {
   const [saving, setSaving] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviting, setInviting] = useState(false)
+  const [inviteLimitNotice, setInviteLimitNotice] = useState<{ message: string; upgradeUrl?: string; contactUrl?: string; canManageBilling: boolean } | null>(null)
   const [departments, setDepartments] = useState<Department[]>([])
   const [showDeptModal, setShowDeptModal] = useState(false)
   const [newDeptName, setNewDeptName] = useState('')
@@ -320,7 +321,17 @@ export default function HrSettingsPage() {
         body: JSON.stringify({ email: inviteEmail }),
       })
       const data = await res.json()
+      if (res.status === 403 && data.code === 'HR_ORG_MEMBER_LIMIT') {
+        setInviteLimitNotice({
+          message: data.error || 'メンバー数の上限に達しています。',
+          upgradeUrl: data.upgradeUrl,
+          contactUrl: data.contactUrl,
+          canManageBilling: data.canManageBilling === true,
+        })
+        return
+      }
       if (!res.ok) throw new Error(data.error || '招待の送信に失敗しました')
+      setInviteLimitNotice(null)
       setInviteEmail('')
       toast.success('招待を送信しました')
       if (data.inviteUrl) {
@@ -653,6 +664,19 @@ export default function HrSettingsPage() {
               {inviting ? '送信中...' : '招待'}
             </button>
           </div>}
+
+          {inviteLimitNotice && (
+            <div role="alert" className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+              <p className="font-bold">{inviteLimitNotice.message}</p>
+              {inviteLimitNotice.canManageBilling && inviteLimitNotice.upgradeUrl && (
+                <Link href={inviteLimitNotice.upgradeUrl} className="mt-2 inline-block font-bold underline">プランを確認する</Link>
+              )}
+              {inviteLimitNotice.canManageBilling && inviteLimitNotice.contactUrl && (
+                <a href={inviteLimitNotice.contactUrl} className="mt-2 inline-block font-bold underline">追加枠を相談する</a>
+              )}
+              {!inviteLimitNotice.canManageBilling && <p className="mt-2">組織のオーナーにプランの変更を依頼してください。</p>}
+            </div>
+          )}
 
           {/* Invite URL（メール招待後に表示） */}
           {canManageMembers && inviteUrl && (

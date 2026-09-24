@@ -8,7 +8,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
-import { checkMemberLimit } from '@/lib/hr/billing'
+import { checkMemberLimit, getOrgPlan } from '@/lib/hr/billing'
 import { sendInvitationEmail } from '@/lib/hr/email'
 import { logAudit } from '@/lib/hr/audit'
 import { randomBytes } from 'crypto'
@@ -41,7 +41,14 @@ export async function POST(req: NextRequest) {
     // メンバー数制限チェック
     const memberLimitError = await checkMemberLimit(ctx.organizationId)
     if (memberLimitError) {
-      return NextResponse.json({ error: memberLimitError, code: 'HR_ORG_MEMBER_LIMIT', canManageBilling: ctx.role === HrMemberRole.OWNER }, { status: 403 })
+      const plan = await getOrgPlan(ctx.organizationId)
+      const canUpgrade = !['PRO', 'BUNDLE', 'ENTERPRISE'].includes(plan.toUpperCase())
+      return NextResponse.json({
+        error: memberLimitError,
+        code: 'HR_ORG_MEMBER_LIMIT',
+        canManageBilling: ctx.role === HrMemberRole.OWNER,
+        ...(canUpgrade ? { upgradeUrl: '/hr/pricing' } : { contactUrl: 'https://doyamarke.surisuta.jp/contact' }),
+      }, { status: 403 })
     }
 
     // 画面はメンバー招待のみ。リクエスト本文から管理者・オーナー権限を指定させない。
