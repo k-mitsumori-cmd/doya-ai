@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { REQUEST_TYPE_LABELS, REQUEST_STATUS_LABELS, CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
+import { appendKintaiRequestPage, fetchKintaiRequestPage } from '@/lib/kintai/load-requests'
 
 const TABS = [
   { key: '', label: 'すべて' },
@@ -44,41 +45,63 @@ function getInitials(name: string): string {
 }
 
 export default function RequestsPage() {
-  const [allRequests, setAllRequests] = useState<any[]>([])
   const [requests, setRequests] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [moreLoading, setMoreLoading] = useState(false)
+  const [moreError, setMoreError] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [total, setTotal] = useState(0)
+  const [counts, setCounts] = useState<Record<string, number>>({})
   const [tab, setTab] = useState('')
+  const tabRef = useRef(tab)
+  const requestSeq = useRef(0)
+  const invalidateRequests = useCallback(() => { requestSeq.current++ }, [])
+  useEffect(() => { tabRef.current = tab }, [tab])
 
-  const fetchRequests = (status: string) => {
+  const load = useCallback(() => {
+    if (tabRef.current !== tab) return
+    const seq = ++requestSeq.current
     setLoading(true)
-    const qs = status ? `?status=${status}` : ''
-    fetch(`/api/kintai/requests${qs}`)
-      .then((r) => r.json())
-      .then((d) => {
-        const reqs = d.requests || []
-        setRequests(reqs)
-        if (!status) setAllRequests(reqs)
+    setLoadError(false)
+    setMoreLoading(false)
+    setMoreError(false)
+    setNextCursor(null)
+    fetchKintaiRequestPage<any>(tab)
+      .then((page) => {
+        const rows = appendKintaiRequestPage([], page, page.total)
+        if (requestSeq.current !== seq) return
+        setRequests(rows)
+        setNextCursor(page.nextCursor)
+        setTotal(page.total)
+        setCounts(page.counts)
       })
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }
+      .catch(() => { if (requestSeq.current === seq) setLoadError(true) })
+      .finally(() => { if (requestSeq.current === seq) setLoading(false) })
+  }, [tab])
 
   useEffect(() => {
-    fetch('/api/kintai/requests')
-      .then((r) => r.json())
-      .then((d) => setAllRequests(d.requests || []))
-      .catch(() => {})
-  }, [])
+    load()
+    return invalidateRequests
+  }, [load, invalidateRequests])
 
-  useEffect(() => { fetchRequests(tab) }, [tab])
-
-  const tabCounts = useMemo(() => {
-    const counts: Record<string, number> = { '': allRequests.length }
-    allRequests.forEach((r) => {
-      counts[r.status] = (counts[r.status] || 0) + 1
-    })
-    return counts
-  }, [allRequests])
+  const loadMore = async () => {
+    if (!nextCursor || moreLoading) return
+    const seq = requestSeq.current
+    setMoreLoading(true)
+    setMoreError(false)
+    try {
+      const page = await fetchKintaiRequestPage<any>(tab, nextCursor)
+      const merged = appendKintaiRequestPage(requests, page, total)
+      if (requestSeq.current !== seq) return
+      setRequests(merged)
+      setNextCursor(page.nextCursor)
+    } catch {
+      if (requestSeq.current === seq) setMoreError(true)
+    } finally {
+      if (requestSeq.current === seq) setMoreLoading(false)
+    }
+  }
 
   const withdraw = async (id: string) => {
     if (!window.confirm('この申請を取り下げますか？')) return
@@ -90,11 +113,7 @@ export default function RequestsPage() {
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || '取下げに失敗しました')
-      fetchRequests(tab)
-      fetch('/api/kintai/requests')
-        .then((r) => r.json())
-        .then((d) => setAllRequests(d.requests || []))
-        .catch(() => {})
+      load()
     } catch (error) {
       alert(error instanceof Error ? error.message : '取下げに失敗しました')
     }
@@ -125,7 +144,7 @@ export default function RequestsPage() {
         {/* Tabs with counts */}
         <div className="flex gap-1 bg-slate-100 rounded-xl p-1">
           {TABS.map((t) => {
-            const count = tabCounts[t.key] || 0
+            const count = loading || loadError ? 0 : t.key ? counts[t.key] || 0 : Object.values(counts).reduce((sum, value) => sum + value, 0)
             return (
               <button
                 key={t.key}
@@ -151,6 +170,11 @@ export default function RequestsPage() {
           <div className="flex flex-col items-center justify-center py-16 gap-4">
             <img src="/kintai/characters/thinking_考え中.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
             <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          </div>
+        ) : loadError ? (
+          <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
+            <p className="font-bold text-red-800">申請一覧を読み込めませんでした。時間をおいて再試行してください。</p>
+            <button onClick={load} className="mt-4 rounded-xl border border-red-300 bg-white px-5 py-2 text-sm font-bold text-red-700 hover:bg-red-100">再試行</button>
           </div>
         ) : requests.length === 0 ? (
           <div className="text-center py-16 space-y-4 fade-in-up">
@@ -250,6 +274,16 @@ export default function RequestsPage() {
                 </div>
               )
             })}
+          </div>
+        )}
+        {!loading && !loadError && nextCursor && (
+          <div className="text-center space-y-2">
+            <p className="text-xs text-slate-500">{requests.length} / {total}件を表示</p>
+            {moreError && <p role="alert" className="text-sm text-red-700">続きの読み込みに失敗しました。再試行するか一覧を更新してください。</p>}
+            <div className="flex justify-center gap-2">
+              <button onClick={loadMore} disabled={moreLoading} className="rounded-xl border border-purple-300 bg-white px-5 py-2 text-sm font-bold text-purple-700 disabled:opacity-50">{moreLoading ? '読み込み中…' : moreError ? '再試行' : 'さらに読み込む'}</button>
+              {moreError && <button onClick={load} className="rounded-xl border border-slate-300 bg-white px-5 py-2 text-sm font-bold text-slate-700">一覧を更新</button>}
+            </div>
           </div>
         )}
       </div>

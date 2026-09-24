@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { REQUEST_TYPE_LABELS, REQUEST_STATUS_LABELS, CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
+import { appendKintaiRequestPage, fetchKintaiRequestPage } from '@/lib/kintai/load-requests'
 
 const TABS = [
   { key: 'pending', label: '未承認' },
@@ -27,37 +28,67 @@ function timeAgo(dateStr: string): string {
 
 export default function ApprovalsPage() {
   const [requests, setRequests] = useState<any[]>([])
-  const [allCounts, setAllCounts] = useState<Record<string, number>>({ pending: 0, approved: 0, rejected: 0 })
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [moreLoading, setMoreLoading] = useState(false)
+  const [moreError, setMoreError] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [total, setTotal] = useState(0)
+  const [allCounts, setAllCounts] = useState<Record<string, number>>({})
+  const requestSeq = useRef(0)
+  const invalidateRequests = useCallback(() => { requestSeq.current++ }, [])
   const [actionError, setActionError] = useState('')
   const [cancellingId, setCancellingId] = useState<string | null>(null)
   const [tab, setTab] = useState('pending')
+  const tabRef = useRef(tab)
   const [rejectingId, setRejectingId] = useState<string | null>(null)
   const [rejectComment, setRejectComment] = useState('')
   const [actionFeedback, setActionFeedback] = useState<Record<string, { type: 'approved' | 'rejected'; message: string }>>({})
+  useEffect(() => { tabRef.current = tab }, [tab])
 
-  const fetchRequests = useCallback((status: string) => {
+  const load = useCallback(() => {
+    if (tabRef.current !== tab) return
+    const seq = ++requestSeq.current
     setLoading(true)
-    fetch(`/api/kintai/requests?status=${status}`)
-      .then(r => r.json())
-      .then(d => {
-        setRequests(d.requests || [])
-        setAllCounts(prev => ({ ...prev, [status]: (d.requests || []).length }))
+    setLoadError(false)
+    setMoreLoading(false)
+    setMoreError(false)
+    setNextCursor(null)
+    fetchKintaiRequestPage<any>(tab)
+      .then((page) => {
+        const rows = appendKintaiRequestPage([], page, page.total)
+        if (requestSeq.current !== seq) return
+        setRequests(rows)
+        setNextCursor(page.nextCursor)
+        setTotal(page.total)
+        setAllCounts(page.counts)
       })
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
+      .catch(() => { if (requestSeq.current === seq) setLoadError(true) })
+      .finally(() => { if (requestSeq.current === seq) setLoading(false) })
+  }, [tab])
 
   useEffect(() => {
-    TABS.forEach(t => {
-      fetch(`/api/kintai/requests?status=${t.key}`)
-        .then(r => r.json())
-        .then(d => setAllCounts(prev => ({ ...prev, [t.key]: (d.requests || []).length })))
-        .catch(console.error)
-    })
-  }, [])
+    load()
+    return invalidateRequests
+  }, [load, invalidateRequests])
 
-  useEffect(() => { fetchRequests(tab) }, [tab, fetchRequests])
+  const loadMore = async () => {
+    if (!nextCursor || moreLoading) return
+    const seq = requestSeq.current
+    setMoreLoading(true)
+    setMoreError(false)
+    try {
+      const page = await fetchKintaiRequestPage<any>(tab, nextCursor)
+      const merged = appendKintaiRequestPage(requests, page, total)
+      if (requestSeq.current !== seq) return
+      setRequests(merged)
+      setNextCursor(page.nextCursor)
+    } catch {
+      if (requestSeq.current === seq) setMoreError(true)
+    } finally {
+      if (requestSeq.current === seq) setMoreLoading(false)
+    }
+  }
 
   const approve = async (id: string) => {
     const request = requests.find(r => r.id === id)
@@ -77,8 +108,7 @@ export default function ApprovalsPage() {
       setActionFeedback(prev => ({ ...prev, [id]: { type: 'approved', message: '承認しました' } }))
       setTimeout(() => {
         setActionFeedback(prev => { const n = { ...prev }; delete n[id]; return n })
-        fetchRequests(tab)
-        setAllCounts(prev => ({ ...prev, pending: Math.max(0, prev.pending - 1), approved: prev.approved + 1 }))
+        load()
       }, 1500)
     } catch (error) { setActionError(error instanceof Error ? error.message : '承認に失敗しました') }
   }
@@ -100,8 +130,7 @@ export default function ApprovalsPage() {
       setActionFeedback(prev => ({ ...prev, [id]: { type: 'rejected', message: '却下しました' } }))
       setTimeout(() => {
         setActionFeedback(prev => { const n = { ...prev }; delete n[id]; return n })
-        fetchRequests(tab)
-        setAllCounts(prev => ({ ...prev, pending: Math.max(0, prev.pending - 1), rejected: prev.rejected + 1 }))
+        load()
       }, 1500)
     } catch (error) { setActionError(error instanceof Error ? error.message : '却下に失敗しました') }
   }
@@ -121,8 +150,7 @@ export default function ApprovalsPage() {
       })
       const result = await response.json()
       if (!response.ok) throw new Error(result.error || '取消に失敗しました')
-      fetchRequests(tab)
-      setAllCounts(prev => ({ ...prev, withdrawn: (prev.withdrawn || 0) + 1 }))
+      load()
     } catch (error) { setActionError(error instanceof Error ? error.message : '取消に失敗しました') }
     finally { setCancellingId(null) }
   }
@@ -145,7 +173,7 @@ export default function ApprovalsPage() {
     return { summary: r.reason || '-', isDetailed: false }
   }
 
-  const pendingCount = allCounts.pending || 0
+  const pendingCount = loading || loadError ? 0 : allCounts.pending || 0
 
   return (
     <>
@@ -179,7 +207,7 @@ export default function ApprovalsPage() {
             <button key={t.key} onClick={() => setTab(t.key)}
               className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center justify-center gap-1.5 ${tab === t.key ? 'bg-white text-[#7f19e6] shadow-sm' : 'text-slate-600 hover:text-slate-800'}`}>
               {t.label}
-              {allCounts[t.key] > 0 && (
+              {!loading && !loadError && allCounts[t.key] > 0 && (
                 <span className={`text-xs min-w-[20px] h-5 flex items-center justify-center rounded-full font-bold ${
                   t.key === 'pending' && tab !== t.key ? 'bg-red-500 text-white' :
                   tab === t.key ? 'bg-[#7f19e6]/10 text-[#7f19e6]' : 'bg-slate-200 text-slate-600'
@@ -195,6 +223,11 @@ export default function ApprovalsPage() {
           <div className="flex flex-col items-center justify-center py-16 gap-4">
             <img src="/kintai/characters/thinking_考え中.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
             <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          </div>
+        ) : loadError ? (
+          <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
+            <p className="font-bold text-red-800">承認申請を読み込めませんでした。時間をおいて再試行してください。</p>
+            <button onClick={load} className="mt-4 rounded-xl border border-red-300 bg-white px-5 py-2 text-sm font-bold text-red-700 hover:bg-red-100">再試行</button>
           </div>
         ) : requests.length === 0 ? (
           <div className="text-center py-16 fade-in-up space-y-4">
@@ -310,6 +343,17 @@ export default function ApprovalsPage() {
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {!loading && !loadError && nextCursor && (
+          <div className="text-center space-y-2">
+            <p className="text-xs text-slate-500">{requests.length} / {total}件を表示</p>
+            {moreError && <p role="alert" className="text-sm text-red-700">続きの読み込みに失敗しました。再試行するか一覧を更新してください。</p>}
+            <div className="flex justify-center gap-2">
+              <button onClick={loadMore} disabled={moreLoading} className="rounded-xl border border-purple-300 bg-white px-5 py-2 text-sm font-bold text-purple-700 disabled:opacity-50">{moreLoading ? '読み込み中…' : moreError ? '再試行' : 'さらに読み込む'}</button>
+              {moreError && <button onClick={load} className="rounded-xl border border-slate-300 bg-white px-5 py-2 text-sm font-bold text-slate-700">一覧を更新</button>}
+            </div>
           </div>
         )}
 

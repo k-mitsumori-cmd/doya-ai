@@ -14,6 +14,11 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const status = searchParams.get('status') || ''
     const type = searchParams.get('type') || ''
+    const hasCursor = searchParams.has('cursor')
+    const cursor = searchParams.get('cursor')
+    if (hasCursor && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
+      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+    }
 
     const where: any = {}
 
@@ -41,17 +46,31 @@ export async function GET(req: NextRequest) {
       where.employeeId = ctx.employeeId
     }
 
-    if (status) where.status = status
     if (type) where.type = type
+    const countsWhere = { ...where }
+    if (status) where.status = status
 
-    const requests = await prisma.kintaiRequest.findMany({
-      where,
-      include: { employee: { select: { name: true, email: true, department: { select: { name: true } } } } },
-      orderBy: { submittedAt: 'desc' },
-      take: 100,
-    })
+    if (cursor) {
+      const scopedCursor = await prisma.kintaiRequest.findFirst({ where: { ...where, id: cursor }, select: { id: true } })
+      if (!scopedCursor) return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+    }
 
-    return NextResponse.json({ requests })
+    const [rows, total, grouped] = await Promise.all([
+      prisma.kintaiRequest.findMany({
+        where,
+        include: { employee: { select: { name: true, email: true, department: { select: { name: true } } } } },
+        orderBy: [{ submittedAt: 'desc' }, { id: 'desc' }],
+        take: 101,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      }),
+      prisma.kintaiRequest.count({ where }),
+      prisma.kintaiRequest.groupBy({ by: ['status'], where: countsWhere, _count: { _all: true } }),
+    ])
+    const requests = rows.slice(0, 100)
+    const nextCursor = rows.length > 100 ? requests[requests.length - 1].id : null
+    const counts = Object.fromEntries(grouped.map((row) => [row.status, row._count._all]))
+
+    return NextResponse.json({ requests, nextCursor, total, counts }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (e) {
     console.error('[kintai/requests GET]', e)
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
