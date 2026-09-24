@@ -100,6 +100,11 @@ if (interviewGeminiRequest.error || interviewGeminiRequest.status !== 0) {
   console.error('Security regression failed: verify-interview-gemini-request.cjs');
   process.exit(1);
 }
+const aioClientLimit = spawnSync(process.execPath, [path.join(__dirname, 'verify-aio-client-limit.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (aioClientLimit.error || aioClientLimit.status !== 0) {
+  console.error('Security regression failed: verify-aio-client-limit.cjs');
+  process.exit(1);
+}
 const seoArticleAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-article-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (seoArticleAdmission.error || seoArticleAdmission.status !== 0) {
   console.error('Security regression failed: verify-seo-article-admission.cjs');

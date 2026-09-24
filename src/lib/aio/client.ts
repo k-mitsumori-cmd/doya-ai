@@ -8,6 +8,17 @@ function withOrg(path: string, orgSlug: string): string {
   return `${path}${sep}org=${encodeURIComponent(orgSlug)}`
 }
 
+export class AioApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code: string | null,
+  ) {
+    super(message)
+    this.name = 'AioApiError'
+  }
+}
+
 export async function aioGet<T = any>(path: string, orgSlug: string): Promise<T> {
   const res = await fetch(withOrg(path, orgSlug), { cache: 'no-store' })
   const data = await res.json().catch(() => ({}))
@@ -27,6 +38,10 @@ export async function aioSend<T = any>(
     body: body != null ? JSON.stringify(body) : undefined,
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error((data as any)?.error || `操作に失敗しました (${res.status})`)
+  if (!res.ok) throw new AioApiError(
+    typeof (data as any)?.error === 'string' ? (data as any).error : `操作に失敗しました (${res.status})`,
+    res.status,
+    typeof (data as any)?.code === 'string' ? (data as any).code : null,
+  )
   return data as T
 }

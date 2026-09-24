@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
-import { aioGet, aioSend } from '@/lib/aio/client'
+import { aioGet, aioSend, AioApiError } from '@/lib/aio/client'
 import { AIO_MAX_PROMPTS_PER_SCAN } from '@/lib/aio/types'
 import Link from 'next/link'
 import { PageHeader } from '@/components/aio/ui'
@@ -21,13 +21,35 @@ const SUGGESTIONS = [
 
 export default function AioPromptsPage() {
   const { orgSlug } = useParams<{ orgSlug: string }>()
+  const loadSequence = useRef(0)
   const [prompts, setPrompts] = useState<Prompt[]>([])
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(true)
   const [adding, setAdding] = useState(false)
+  const [quotaError, setQuotaError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
-  const load = () => aioGet<{ prompts: Prompt[] }>('/api/aio/prompts', orgSlug).then((d) => setPrompts(d.prompts || [])).catch(() => {}).finally(() => setLoading(false))
-  useEffect(() => { load() }, [orgSlug]) // eslint-disable-line react-hooks/exhaustive-deps
+  const load = async () => {
+    const sequence = ++loadSequence.current
+    setLoading(true)
+    setLoadError(null)
+    setPrompts([])
+    try {
+      const data = await aioGet<{ prompts: Prompt[] }>('/api/aio/prompts', orgSlug)
+      if (!Array.isArray(data.prompts)) throw new Error('監視プロンプトを確認できませんでした')
+      if (sequence === loadSequence.current) setPrompts(data.prompts)
+    } catch (e: any) {
+      if (sequence === loadSequence.current) setLoadError(e?.message || '監視プロンプトの取得に失敗しました')
+    } finally {
+      if (sequence === loadSequence.current) setLoading(false)
+    }
+  }
+  useEffect(() => {
+    const sequenceRef = loadSequence
+    setQuotaError(null)
+    load()
+    return () => { sequenceRef.current++ }
+  }, [orgSlug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const add = async (t?: string) => {
     const value = (t ?? text).trim()
@@ -35,11 +57,13 @@ export default function AioPromptsPage() {
     setAdding(true)
     try {
       await aioSend('/api/aio/prompts', orgSlug, 'POST', { text: value })
+      setQuotaError(null)
       setText('')
       toast.success('追加しました')
       load()
     } catch (e: any) {
       toast.error(e.message)
+      if (e instanceof AioApiError && e.code === 'LIMIT') setQuotaError(e.message)
     } finally {
       setAdding(false)
     }
@@ -57,10 +81,16 @@ export default function AioPromptsPage() {
     <div className="max-w-2xl mx-auto p-6">
       <PageHeader icon="quiz" title="監視プロンプト" subtitle="AIに投げて言及をチェックする質問を登録します" />
 
-      {!loading && <div className="mb-5 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm text-purple-900">
+      {!loading && !loadError && <div className="mb-5 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm text-purple-900">
         <p>有効な質問：{prompts.filter(p => p.isActive).length}件 ／ 1回の測定は最大{AIO_MAX_PROMPTS_PER_SCAN}件</p>
         <p>有効な質問をすべて測定します。上限を超える場合は、今回測定しない質問のスイッチを無効にしてください。登録した質問は残ります。</p>
         <Link href={`/aio/${encodeURIComponent(orgSlug)}`} className="font-bold underline">ダッシュボードに戻る</Link>
+      </div>}
+
+      {quotaError && <div role="alert" className="mb-5 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm text-purple-900">
+        <p className="font-black">監視プロンプトの利用枠に達しました</p>
+        <p className="mt-1">{quotaError}</p>
+        <Link href="/aio/pricing" className="mt-2 inline-block font-black underline">料金プランを確認する</Link>
       </div>}
 
       <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-5">
@@ -79,7 +109,12 @@ export default function AioPromptsPage() {
         </div>
       </div>
 
-      {loading ? (
+      {loadError ? (
+        <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+          <p className="font-bold">{loadError}</p>
+          <button onClick={load} className="mt-2 font-black underline">再試行</button>
+        </div>
+      ) : loading ? (
         <p className="text-slate-400 font-bold">読み込み中…</p>
       ) : prompts.length === 0 ? (
         <p className="text-slate-400 font-bold text-center py-8">まだプロンプトがありません。上から追加してください。</p>

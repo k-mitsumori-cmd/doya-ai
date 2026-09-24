@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { readAioDashboard } from '@/lib/aio/dashboard'
-import { aioSend } from '@/lib/aio/client'
+import { aioSend, AioApiError } from '@/lib/aio/client'
+import { TrialNote } from '@/components/TrialCallout'
 import { AIO_MAX_PROMPTS_PER_SCAN, ENGINE_LABEL, type EngineId, type ScanSummary } from '@/lib/aio/types'
 import { DoyaKun, sym, type Mood } from '@/components/aio/ui'
 import toast from 'react-hot-toast'
@@ -41,6 +42,8 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
   const [loading, setLoading] = useState(true)
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorSource, setErrorSource] = useState<'load' | 'scan'>('load')
+  const [scanLimit, setScanLimit] = useState<string | null>(null)
   const [brandName, setBrandName] = useState<string | null>(null)
   const [activePrompts, setActivePrompts] = useState<number | null>(null)
   const [promptTexts, setPromptTexts] = useState<string[]>([])
@@ -50,6 +53,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
   const [lastFailed, setLastFailed] = useState(false)
   // 有料プランか（false の無料ユーザーにはプロ限定セクションをブラー表示）
   const [isPaid, setIsPaid] = useState(false)
+  const [isOwner, setIsOwner] = useState(false)
 
   const load = async () => {
     const sequence = ++loadSequence.current
@@ -60,6 +64,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
       if (sequence !== loadSequence.current) return
       const plan = data.plan.toUpperCase()
       setIsPaid(plan !== 'FREE' && plan !== 'GUEST')
+      setIsOwner(data.isOwner)
       setBrandName(data.profile?.brandName || null)
       const active = data.prompts.filter(p => p.isActive !== false)
       setActivePrompts(active.length)
@@ -74,7 +79,10 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
       } : null)
       setSummary(data.summary)
     } catch (e: any) {
-      if (sequence === loadSequence.current) setError(e?.message || 'データの読み込みに失敗しました')
+      if (sequence === loadSequence.current) {
+        setErrorSource('load')
+        setError(e?.message || 'データの読み込みに失敗しました')
+      }
     } finally {
       if (sequence === loadSequence.current) setLoading(false)
     }
@@ -90,6 +98,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
     if (tooManyPrompts) return
     setRunning(true)
     setError(null)
+    setScanLimit(null)
     toast.loading('スキャン中…（数分かかります）', { id: 'scan' })
     try {
       await aioSend('/api/aio/scans', orgSlug, 'POST')
@@ -98,7 +107,12 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
     } catch (e: any) {
       const msg = e?.message || 'スキャンに失敗しました'
       toast.error(msg, { id: 'scan' })
-      setError(msg)
+      if (e instanceof AioApiError && e.code === 'LIMIT') {
+        setScanLimit(msg)
+      } else {
+        setErrorSource('scan')
+        setError(msg)
+      }
     } finally { setRunning(false); window.dispatchEvent(new Event('aio:usage-changed')) }
   }
 
@@ -161,18 +175,30 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
     <div className="flex items-start gap-3 mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4">
       <span className="text-rose-500 mt-0.5">{sym('error')}</span>
       <div className="min-w-0 flex-1">
-        <div className="text-rose-800 font-black text-sm">読み込みに失敗しました</div>
+        <div className="text-rose-800 font-black text-sm">{errorSource === 'scan' ? 'スキャンに失敗しました' : '読み込みに失敗しました'}</div>
         <p className="text-xs font-bold text-rose-700/80 mt-1 break-words">{error}</p>
       </div>
       <button onClick={load} disabled={running}
         className="shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-rose-600 text-white font-black text-xs hover:bg-rose-700 transition-colors disabled:opacity-50">
-        {sym('refresh', 16)}再試行
+        {sym('refresh', 16)}{errorSource === 'scan' ? '結果を確認' : '再試行'}
       </button>
     </div>
   ) : null
 
+  const scanLimitBanner = scanLimit ? (
+    <div role="alert" className="mb-5 rounded-2xl border border-purple-200 bg-purple-50 px-5 py-4">
+      <p className="text-sm font-black text-purple-900">スキャンの利用枠に達しました</p>
+      <p className="mt-1 text-xs font-bold text-purple-800">{scanLimit}</p>
+      {!isOwner && <p className="mt-2 text-xs font-bold text-purple-700">組織の利用枠を増やすには、組織オーナーにご相談ください。</p>}
+      {!isPaid && isOwner && <TrialNote className="mt-2" />}
+      <Link href="/aio/pricing" className="mt-3 inline-flex rounded-xl bg-purple-700 px-4 py-2 text-xs font-black text-white hover:bg-purple-800">
+        {isPaid && isOwner ? '追加枠について相談する' : '料金プランを確認する'}
+      </Link>
+    </div>
+  ) : null
+
   // 直近スキャンが失敗していたときの通知（エラー読み込みとは別）
-  const failedBanner = !error && lastFailed ? (
+  const failedBanner = !error && !scanLimit && lastFailed ? (
     <div className="flex items-start gap-3 mb-5 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4">
       <span className="text-rose-500 mt-0.5 shrink-0">{sym('warning')}</span>
       <div className="min-w-0 flex-1">
@@ -215,6 +241,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
     return (
       <div className="max-w-2xl mx-auto p-6">
         {errorBanner}
+        {scanLimitBanner}
         {failedBanner}
       {coverageBanner}
         {setupBanner}
@@ -257,6 +284,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
       </div>
 
       {errorBanner}
+      {scanLimitBanner}
       {failedBanner}
       {coverageBanner}
       {setupBanner}
