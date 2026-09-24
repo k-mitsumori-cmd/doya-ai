@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { safeFetchText } from '@/lib/net/safe-fetch'
 
 export const maxDuration = 120 // 2分
 
@@ -26,8 +27,8 @@ export async function POST(
     }
 
     // 記事を取得
-    const article = await prisma.seoArticle.findUnique({
-      where: { id },
+    const article = await prisma.seoArticle.findFirst({
+      where: { id, userId: session.user.id },
       include: {
         references: true,
         knowledgeItems: true,
@@ -56,14 +57,8 @@ export async function POST(
     const competitorContents: { url: string; title: string; content: string }[] = []
     for (const ref of allUrls.slice(0, 5)) {
       try {
-        const res = await fetch(ref.url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; SEOBot/1.0)',
-          },
-          signal: AbortSignal.timeout(10000),
-        })
-        if (res.ok) {
-          const html = await res.text()
+        const html = await safeFetchText(ref.url, { timeoutMs: 10000, maxBytes: 2 * 1024 * 1024 })
+        if (html) {
           // HTMLからテキストを抽出（簡易版）
           const textContent = html
             .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')

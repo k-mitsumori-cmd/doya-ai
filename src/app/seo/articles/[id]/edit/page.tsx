@@ -19,7 +19,6 @@ import {
   Save,
   Loader2,
   CheckCircle2,
-  Wand2,
   Eye,
   Edit3,
   AlertTriangle,
@@ -353,16 +352,6 @@ function SeoRichEditor({ articleId }: { articleId: string }) {
           </button>
         </div>
 
-        <div className="flex items-center gap-1 px-3 border-r border-gray-100">
-          <button
-            onClick={() => {/* TODO: AI書き直し */}}
-            className="p-2 text-indigo-500 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
-            title="AIで書き直す"
-          >
-            <Wand2 className="w-4 h-4" />
-          </button>
-        </div>
-
         <div className="flex items-center gap-1 pl-3">
           <button
             onClick={() => setMode('edit')}
@@ -421,4 +410,3 @@ function SeoRichEditor({ articleId }: { articleId: string }) {
     </main>
   )
 }
-

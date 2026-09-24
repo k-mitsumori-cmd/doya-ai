@@ -89,8 +89,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     const body = BodySchema.parse(await req.json())
 
-    const article = await (prisma as any).seoArticle.findUnique({
-      where: { id: articleId },
+    const article = await (prisma as any).seoArticle.findFirst({
+      where: { id: articleId, userId: String(user.id) },
       select: { id: true, status: true, title: true, finalMarkdown: true, targetChars: true },
     })
     if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
@@ -201,5 +201,4 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ success: false, error: msg }, { status: 500 })
   }
 }
-
 
