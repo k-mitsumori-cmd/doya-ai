@@ -7,7 +7,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getEvaluationReadWhere } from '@/lib/hr/evaluation-access'
 import { prisma } from '@/lib/prisma'
-import { getHrContext } from '@/lib/hr/access'
+import { getHrContext, hasMinRole } from '@/lib/hr/access'
+import { HrMemberRole } from '@/lib/hr/types'
 import { getOneOnOneReadWhere, getOneOnOneViewer, filterOneOnOneFields } from '@/lib/hr/one-on-one-access'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -52,7 +53,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     }
 
     const viewer = await getOneOnOneViewer(hrCtx)
-    return NextResponse.json({ success: true, employee: { ...employee, oneOnOnesAsEmployee: employee.oneOnOnesAsEmployee.map(record => filterOneOnOneFields(record, viewer)) } })
+    return NextResponse.json({ success: true, canManageEmployees: hasMinRole(hrCtx.role, HrMemberRole.ADMIN), employee: { ...employee, oneOnOnesAsEmployee: employee.oneOnOnesAsEmployee.map(record => filterOneOnOneFields(record, viewer)) } })
   } catch (e: any) {
     return NextResponse.json(
       { error: e?.message || 'Failed to fetch employee' },
@@ -71,6 +72,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const hrCtx = await getHrContext()
     if (!hrCtx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!hasMinRole(hrCtx.role, HrMemberRole.ADMIN)) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
     const p = await ctx.params
@@ -189,6 +193,9 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     const hrCtx = await getHrContext()
     if (!hrCtx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!hasMinRole(hrCtx.role, HrMemberRole.ADMIN)) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
     const p = await ctx.params

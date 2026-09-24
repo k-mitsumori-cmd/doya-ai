@@ -50,6 +50,7 @@ interface HrSidebarProps extends SidebarProps {
   employeeCount?: number
   employeeLimit?: number
   plan?: string
+  canManageEmployees?: boolean
 }
 
 function HrSidebarImpl({
@@ -60,6 +61,7 @@ function HrSidebarImpl({
   employeeCount = 0,
   employeeLimit = 5,
   plan,
+  canManageEmployees = false,
 }: HrSidebarProps) {
   const pathname = usePathname()
   const { data: session } = useSession()
@@ -131,7 +133,7 @@ function HrSidebarImpl({
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <nav className="py-4 sm:py-6 px-3 space-y-1">
             <div className="space-y-1">
-              {HR_MAIN_NAV.map((item) => (
+              {HR_MAIN_NAV.filter((item) => item.href !== '/hr/employees/new' || canManageEmployees).map((item) => (
                 <SidebarNavLink
                   key={item.href}
                   item={item}

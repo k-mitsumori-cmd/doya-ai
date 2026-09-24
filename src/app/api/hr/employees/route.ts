@@ -6,7 +6,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { getHrContext } from '@/lib/hr/access'
+import { getHrContext, hasMinRole } from '@/lib/hr/access'
+import { HrMemberRole } from '@/lib/hr/types'
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@/lib/hr/constants'
 import { createWithinEmployeeLimit, employeeLimitMessage } from '@/lib/hr/billing'
 import { recordServiceUsage } from '@/lib/service-usage'
@@ -85,6 +86,10 @@ export async function POST(req: NextRequest) {
     const ctx = await getHrContext()
     if (!ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
     const body = await req.json()

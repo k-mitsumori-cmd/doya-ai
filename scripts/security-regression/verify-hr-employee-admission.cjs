@@ -34,7 +34,8 @@ const ts = require('typescript')
       'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
       '@/lib/auth': {},
       '@/lib/prisma': { prisma: {} },
-      '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'o', userId: 'u', role: 'OWNER' }) },
+      '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'o', userId: 'u', role: 'OWNER' }), hasMinRole: () => true },
+      '@/lib/hr/types': { HrMemberRole: { ADMIN: 'ADMIN' } },
       '@/lib/hr/constants': { DEFAULT_PAGE_SIZE: 20, MAX_PAGE_SIZE: 100 },
       '@/lib/hr/billing': {
         createWithinEmployeeLimit: async (id, create) => { assert.equal(id, 'o'); return { allowed: true, value: await create(tx) } },

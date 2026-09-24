@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const hrEmployeeAccess = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-employee-access.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrEmployeeAccess.error || hrEmployeeAccess.status !== 0) {
+  console.error('Security regression failed: verify-hr-employee-access.cjs');
+  process.exit(1);
+}
 const hrEmployeeAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-employee-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrEmployeeAdmission.error || hrEmployeeAdmission.status !== 0) {
   console.error('Security regression failed: verify-hr-employee-admission.cjs');

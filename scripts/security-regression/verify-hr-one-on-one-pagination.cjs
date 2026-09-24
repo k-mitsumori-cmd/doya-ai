@@ -11,7 +11,8 @@ const {load, check, results} = require('./load-typescript.cjs');
   const api = load(`src/app/api/hr/${service}/route.ts`, {
    'next/server': {NextResponse: Response}, 'next-auth': {}, '@/lib/auth': {},
    '@/lib/prisma': {prisma: {hrOneOnOne: model, hrEmployee: model}},
-   '@/lib/hr/access': {getHrContext: async () => ({role: 'ADMIN', organizationId: 'org'})},
+   '@/lib/hr/access': {getHrContext: async () => ({role: 'ADMIN', organizationId: 'org'}), hasMinRole: () => true},
+   '@/lib/hr/types': {HrMemberRole: {ADMIN: 'ADMIN'}},
    '@/lib/hr/one-on-one-access': {getOneOnOneViewer: async () => ({employeeId: null}), getOneOnOneReadWhere: async () => ({organizationId: 'org'}), filterOneOnOneFields: x => x},
    '@/lib/hr/constants': {DEFAULT_PAGE_SIZE: 20, MAX_PAGE_SIZE: 100},
    '@/lib/hr/billing': {}, '@/lib/service-usage': {},

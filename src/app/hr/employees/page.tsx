@@ -21,13 +21,19 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true)
   const [sortKey, setSortKey] = useState<SortKey>('name')
   const [showImport, setShowImport] = useState(false)
+  const [canManageEmployees, setCanManageEmployees] = useState(false)
 
   async function fetchData() {
     try {
-      const [empRes, deptRes] = await Promise.all([
+      const [empRes, deptRes, usageRes] = await Promise.all([
         fetch('/api/hr/employees'),
         fetch('/api/hr/departments'),
+        fetch('/api/hr/usage'),
       ])
+      if (usageRes.ok) {
+        const usage = await usageRes.json()
+        setCanManageEmployees(usage.canManageEmployees === true)
+      }
       if (empRes.ok) {
         const empData = await empRes.json()
         setEmployees(empData.items ?? empData.employees ?? [])
@@ -73,7 +79,7 @@ export default function EmployeesPage() {
           </h1>
           <p className="text-sm text-slate-500 mt-1">組織のメンバーを管理</p>
         </div>
-        <div className="flex items-center gap-2">
+        {canManageEmployees && <div className="flex items-center gap-2">
           <button
             onClick={() => setShowImport(true)}
             className="flex items-center gap-2 px-5 py-3 bg-white border border-slate-200 text-slate-700 rounded-full text-base font-bold shadow-sm hover:shadow-md hover:border-blue-400 hover:text-blue-600 transition-all"
@@ -88,7 +94,7 @@ export default function EmployeesPage() {
             <span className="material-symbols-outlined text-lg">person_add</span>
             従業員を追加
           </Link>
-        </div>
+        </div>}
       </div>
 
       {/* Sort Controls */}
@@ -149,7 +155,7 @@ export default function EmployeesPage() {
           <p className="text-base text-slate-500 mb-6 max-w-md mx-auto">
             従業員を追加して、タレントマネジメントを始めましょう。
           </p>
-          <div className="flex flex-col items-center gap-4">
+          {canManageEmployees ? <div className="flex flex-col items-center gap-4">
             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Link
                 href="/hr/employees/new"
@@ -166,7 +172,7 @@ export default function EmployeesPage() {
               <span className="material-symbols-outlined text-lg">upload_file</span>
               CSVで一括登録
             </button>
-          </div>
+          </div> : <p className="mt-4 text-sm text-slate-500">従業員の登録は管理者が行います。</p>}
         </motion.div>
       ) : (
         <EmployeeGrid employees={sortedEmployees} departments={departments} />

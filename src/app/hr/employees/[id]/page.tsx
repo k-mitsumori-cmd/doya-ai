@@ -80,6 +80,7 @@ export default function EmployeeDetailPage() {
   const [activeTab, setActiveTab] = useState('profile')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [canManageEmployees, setCanManageEmployees] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -88,6 +89,7 @@ export default function EmployeeDetailPage() {
         const res = await fetch(`/api/hr/employees/${id}`)
         if (!res.ok) throw new Error('従業員データの取得に失敗しました')
         const data = await res.json()
+        setCanManageEmployees(data.canManageEmployees === true)
         const emp = data.employee ?? data
         setEmployee(emp)
         setEvaluations(data.evaluations ?? emp.evaluations ?? [])
@@ -174,13 +176,13 @@ export default function EmployeeDetailPage() {
                 <h1 className="text-3xl font-black text-slate-900">
                   {employee.lastName} {employee.firstName}
                 </h1>
-                <Link
+                {canManageEmployees && <Link
                   href={`/hr/employees/${id}/edit`}
                   className="flex items-center gap-1.5 px-4 py-2 bg-sky-50 text-sky-600 rounded-full text-sm font-bold hover:bg-sky-100 transition-colors"
                 >
                   <span className="material-symbols-outlined text-lg">edit</span>
                   編集
-                </Link>
+                </Link>}
               </div>
               {(employee.lastNameKana || employee.firstNameKana) && (
                 <p className="text-sm text-slate-500 mt-0.5">

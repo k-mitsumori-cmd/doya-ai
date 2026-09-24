@@ -15,7 +15,7 @@ interface HrLayoutProps {
 export default function HrLayout({ children }: HrLayoutProps) {
   const { data: session, status } = useSession()
   const pathname = usePathname()
-  const [usage, setUsage] = useState({ employeeCount: 0, employeeLimit: 5, plan: 'FREE' })
+  const [usage, setUsage] = useState({ employeeCount: 0, employeeLimit: 5, plan: 'FREE', canManageEmployees: false })
   const [hasOrg, setHasOrg] = useState<boolean | null>(null)
   const [usageError, setUsageError] = useState(false)
   const usageRequest = useRef(0)
@@ -45,6 +45,7 @@ export default function HrLayout({ children }: HrLayoutProps) {
         employeeCount: data.employeeCount ?? 0,
         employeeLimit: data.employeeLimit ?? 5,
         plan: data.plan,
+        canManageEmployees: data.canManageEmployees === true,
       })
       setHasOrg(true)
     } catch {
@@ -110,6 +111,10 @@ export default function HrLayout({ children }: HrLayoutProps) {
     return <HrOnboarding />
   }
 
+  if ((pathname === '/hr/employees/new' || /^\/hr\/employees\/[^/]+\/edit$/.test(pathname || '')) && !usage.canManageEmployees) {
+    return <div role="alert" className="min-h-screen flex items-center justify-center bg-slate-50 p-6 text-center font-bold text-slate-700">従業員の登録・編集は管理者のみ利用できます。</div>
+  }
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       {/* Desktop Sidebar (fixed / 画面外フロー) */}
@@ -120,6 +125,7 @@ export default function HrLayout({ children }: HrLayoutProps) {
           employeeCount={usage.employeeCount}
           employeeLimit={usage.employeeLimit}
           plan={usage.plan}
+          canManageEmployees={usage.canManageEmployees}
         />
       </div>
       {/* デスクトップ用スペーサー: fixed サイドバー幅をCSSのみで確保（JSブレークポイント不要） */}
@@ -159,6 +165,7 @@ export default function HrLayout({ children }: HrLayoutProps) {
               employeeCount={usage.employeeCount}
               employeeLimit={usage.employeeLimit}
               plan={usage.plan}
+              canManageEmployees={usage.canManageEmployees}
             />
           </motion.div>
         )}

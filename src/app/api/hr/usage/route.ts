@@ -4,7 +4,7 @@ export const maxDuration = 300
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { getHrContext } from '@/lib/hr/access'
+import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { getOrgPlan, getOrgPlanLimits } from '@/lib/hr/billing'
 import { HrMemberRole } from '@/lib/hr/types'
 
@@ -57,6 +57,7 @@ export async function GET() {
       aiUsageLimit: limits.maxAiUsage === -1 ? 999 : limits.maxAiUsage,
       organizationId: ctx.organizationId,
       canManageBilling: ctx.role === HrMemberRole.OWNER,
+      canManageEmployees: hasMinRole(ctx.role, HrMemberRole.ADMIN),
     })
   } catch {
     return NextResponse.json({ error: '使用状況を取得できませんでした。再読み込みしてください。' }, { status: 503 })
