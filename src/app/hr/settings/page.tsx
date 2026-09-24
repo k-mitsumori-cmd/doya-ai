@@ -27,6 +27,14 @@ interface OrgMember {
   email: string
   role: string
   joinedAt: string
+  employeeId?: string | null
+}
+
+interface EmployeeOption {
+  id: string
+  lastName: string
+  firstName: string
+  email?: string | null
 }
 
 /** 権限の表示名。API の HrMemberRole と対応させること */
@@ -93,6 +101,10 @@ export default function HrSettingsPage() {
   const [myMemberId, setMyMemberId] = useState<string>('')
   const [memberBusy, setMemberBusy] = useState<string | null>(null)
   const [memberMsg, setMemberMsg] = useState<{ id: string; ok: boolean; text: string } | null>(null)
+  const [linkingMemberId, setLinkingMemberId] = useState<string | null>(null)
+  const [employeeSearch, setEmployeeSearch] = useState('')
+  const [employeeOptions, setEmployeeOptions] = useState<EmployeeOption[]>([])
+  const [searchingEmployees, setSearchingEmployees] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
@@ -168,6 +180,50 @@ export default function HrSettingsPage() {
     if (!res.ok) return
     const d = await res.json()
     if (d.members) setMembers(d.members)
+  }
+
+  useEffect(() => {
+    if (!linkingMemberId) return
+    const controller = new AbortController()
+    setSearchingEmployees(true)
+    const timer = window.setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({ search: employeeSearch.trim(), pageSize: '20' })
+        const res = await fetch(`/api/hr/employees?${params}`, { signal: controller.signal })
+        if (!res.ok) throw new Error('従業員候補を取得できませんでした')
+        const data = await res.json()
+        setEmployeeOptions(data.items ?? [])
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setEmployeeOptions([])
+          toast.error(error instanceof Error ? error.message : '従業員候補を取得できませんでした')
+        }
+      } finally {
+        if (!controller.signal.aborted) setSearchingEmployees(false)
+      }
+    }, 250)
+    return () => { window.clearTimeout(timer); controller.abort() }
+  }, [linkingMemberId, employeeSearch])
+
+  const changeEmployeeLink = async (member: OrgMember, employeeId: string | null) => {
+    setMemberBusy(member.id)
+    setMemberMsg(null)
+    try {
+      const res = await fetch(`/api/hr/organization/members/${member.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeId }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || '従業員との紐付けを変更できませんでした')
+      await reloadMembers()
+      setMemberMsg({ id: member.id, ok: true, text: employeeId ? '従業員情報を紐付けました。' : '従業員情報の紐付けを解除しました。' })
+      setLinkingMemberId(null)
+    } catch (error) {
+      setMemberMsg({ id: member.id, ok: false, text: error instanceof Error ? error.message : '従業員との紐付けを変更できませんでした' })
+    } finally {
+      setMemberBusy(null)
+    }
   }
 
   /**
@@ -580,7 +636,7 @@ export default function HrSettingsPage() {
           </h2>
 
           {/* Invite by email */}
-          <div className="flex gap-2 mb-4">
+          {canManageMembers && <div className="flex gap-2 mb-4">
             <input
               type="email"
               value={inviteEmail}
@@ -596,10 +652,10 @@ export default function HrSettingsPage() {
               <span className="material-symbols-outlined text-lg">send</span>
               {inviting ? '送信中...' : '招待'}
             </button>
-          </div>
+          </div>}
 
           {/* Invite URL（メール招待後に表示） */}
-          {inviteUrl && (
+          {canManageMembers && inviteUrl && (
             <div className="mb-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
               <div className="flex items-center gap-2 mb-2">
                 <span className="material-symbols-outlined text-sm text-emerald-600">check_circle</span>
@@ -645,6 +701,9 @@ export default function HrSettingsPage() {
                       <div>
                         <p className="text-base font-bold text-slate-900">{member.name || member.email}</p>
                         <p className="text-xs text-slate-500">{member.email}</p>
+                        {canManageMembers && member.role !== 'OWNER' && (
+                          <p className="text-xs text-slate-500">{member.employeeId ? '従業員連携済み' : '従業員未連携'}</p>
+                        )}
                       </div>
                     </div>
                     {/* ⚠️ 権限の変更・削除は管理者以上のみ。
@@ -662,6 +721,13 @@ export default function HrSettingsPage() {
                             <option key={r} value={r}>{ROLE_LABELS[r]}</option>
                           ))}
                         </select>
+                        <button
+                          onClick={() => { setEmployeeOptions([]); setLinkingMemberId(member.id); setEmployeeSearch(member.email) }}
+                          disabled={memberBusy === member.id}
+                          className="rounded-full border border-blue-200 px-3 py-1.5 text-sm font-bold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
+                        >
+                          従業員連携
+                        </button>
                         <button
                           onClick={() => void removeMember(member)}
                           disabled={memberBusy === member.id}
@@ -693,6 +759,51 @@ export default function HrSettingsPage() {
             <p className="text-lg font-bold text-slate-500 text-center py-4">まだメンバーはいません</p>
           )}
         </div>
+
+        {linkingMemberId && members.find(member => member.id === linkingMemberId) && (
+          <div role="dialog" aria-modal="true" aria-label="従業員情報の紐付け" className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-bold text-slate-900">従業員情報を紐付ける</h3>
+                <button type="button" onClick={() => setLinkingMemberId(null)} className="rounded-lg px-2 py-1 text-slate-600 hover:bg-slate-100" aria-label="閉じる">✕</button>
+              </div>
+              <p className="mb-3 text-sm text-slate-600">{members.find(member => member.id === linkingMemberId)?.email} が閲覧する従業員を選んでください。</p>
+              <input
+                value={employeeSearch}
+                onChange={event => setEmployeeSearch(event.target.value)}
+                placeholder="氏名・メール・社員番号で検索"
+                className="mb-3 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+              />
+              <div className="max-h-64 space-y-2 overflow-y-auto">
+                {employeeOptions.map(employee => (
+                  <button
+                    key={employee.id}
+                    type="button"
+                    disabled={memberBusy === linkingMemberId}
+                    onClick={() => void changeEmployeeLink(members.find(member => member.id === linkingMemberId)!, employee.id)}
+                    className="block w-full rounded-xl border border-slate-200 px-3 py-2 text-left text-sm hover:border-blue-400 hover:bg-blue-50 disabled:opacity-50"
+                  >
+                    <span className="font-bold">{employee.lastName} {employee.firstName}</span>
+                    {employee.email && <span className="ml-2 text-slate-500">{employee.email}</span>}
+                  </button>
+                ))}
+                {searchingEmployees && <p className="py-4 text-center text-sm text-slate-500">検索中...</p>}
+                {!searchingEmployees && employeeOptions.length === 0 && <p className="py-4 text-center text-sm text-slate-500">候補がありません。検索語を変えてください。</p>}
+              </div>
+              {members.find(member => member.id === linkingMemberId)?.employeeId && (
+                <button
+                  type="button"
+                  disabled={memberBusy === linkingMemberId}
+                  onClick={() => void changeEmployeeLink(members.find(member => member.id === linkingMemberId)!, null)}
+                  className="mt-4 text-sm font-bold text-rose-600 disabled:opacity-50"
+                >
+                  紐付けを解除
+                </button>
+              )}
+              {memberMsg?.id === linkingMemberId && !memberMsg.ok && <p role="alert" className="mt-3 text-sm text-rose-700">{memberMsg.text}</p>}
+            </div>
+          </div>
+        )}
 
         {/* 3. Organization Info */}
         <div className="bg-white rounded-3xl shadow-md p-6 mb-6">

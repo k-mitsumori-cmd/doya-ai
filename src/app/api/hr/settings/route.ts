@@ -30,6 +30,7 @@ export async function GET() {
       email: m.user.email || m.invitedEmail || '',
       image: m.user.image || null,
       role: m.role,
+      employeeId: m.employeeId,
       joinedAt: m.acceptedAt?.toISOString() || m.createdAt.toISOString(),
     }))
 

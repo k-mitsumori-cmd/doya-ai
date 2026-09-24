@@ -88,7 +88,24 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       }
       data.status = status
     }
-    if (employeeId !== undefined) data.employeeId = employeeId
+    if (employeeId !== undefined) {
+      if (employeeId !== null && (typeof employeeId !== 'string' || !employeeId)) {
+        return NextResponse.json({ error: '従業員の指定が正しくありません' }, { status: 400 })
+      }
+      if (employeeId !== null) {
+        const employee = await prisma.hrEmployee.findFirst({
+          where: { id: employeeId, organizationId: hrCtx.organizationId },
+          select: { id: true },
+        })
+        if (!employee) return NextResponse.json({ error: '同じ組織の従業員を指定してください' }, { status: 400 })
+        const linkedMember = await prisma.hrOrganizationMember.findFirst({
+          where: { employeeId, NOT: { id: target.id } },
+          select: { id: true },
+        })
+        if (linkedMember) return NextResponse.json({ error: 'この従業員は別のメンバーに紐付いています' }, { status: 409 })
+      }
+      data.employeeId = employeeId
+    }
     if (Object.keys(data).length === 0) {
       return NextResponse.json({ error: '変更する項目がありません' }, { status: 400 })
     }
@@ -100,8 +117,12 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true, member: updated })
   } catch (e: any) {
+    if (e?.code === 'P2002') {
+      return NextResponse.json({ error: 'この従業員は別のメンバーに紐付いています' }, { status: 409 })
+    }
+    console.error('[hr/organization/members PATCH]', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to update member' },
+      { error: 'メンバー情報を更新できませんでした' },
       { status: 500 }
     )
   }

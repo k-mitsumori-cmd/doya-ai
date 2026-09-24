@@ -111,6 +111,11 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  webpack(config) {
+    // ローカルの空き容量が少ない場合だけ、再生成可能な巨大なディスクキャッシュを省く。
+    if (process.env.DOYA_BUILD_NO_WEBPACK_CACHE === '1') config.cache = false
+    return config
+  },
   
   // セキュリティヘッダー
   async headers() {
