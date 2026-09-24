@@ -4,6 +4,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom, ensurePipeline } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
 import { recordServiceUsage } from '@/lib/service-usage'
@@ -13,24 +14,63 @@ export async function GET(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
-  // パイプライン未生成の組織でも必ずステージが返る（カンバンが空にならない）
-  const stages = await ensurePipeline(ctx.organizationId)
+  const pageSize = 100
+  const rawCursor = new URL(req.url).searchParams.get('cursor')
+  let cursor: { updatedAt: Date; id: string } | null = null
+  if (rawCursor) {
+    try {
+      if (rawCursor.length > 512) throw new Error('Cursor is too long')
+      const decoded = JSON.parse(Buffer.from(rawCursor, 'base64url').toString('utf8')) as { updatedAt?: unknown; id?: unknown }
+      if (typeof decoded.updatedAt !== 'string' || typeof decoded.id !== 'string' || !decoded.id || decoded.id.length > 128) {
+        throw new Error('Invalid cursor')
+      }
+      const updatedAt = new Date(decoded.updatedAt)
+      if (Number.isNaN(updatedAt.getTime()) || updatedAt.toISOString() !== decoded.updatedAt) throw new Error('Invalid date')
+      cursor = { updatedAt, id: decoded.id }
+    } catch {
+      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+    }
+  }
 
-  const deals = await prisma.sfaDeal.findMany({
-    where: { organizationId: ctx.organizationId, isActive: true },
-    orderBy: { updatedAt: 'desc' },
-    take: 500,
-  })
+  const where: Prisma.SfaDealWhereInput = { organizationId: ctx.organizationId, isActive: true }
+  if (cursor) {
+    where.OR = [
+      { updatedAt: { lt: cursor.updatedAt } },
+      { updatedAt: cursor.updatedAt, id: { lt: cursor.id } },
+    ]
+  }
+
+  // パイプライン未生成の組織でも必ずステージが返る（カンバンが空にならない）
+  const [stages, page, stageGroups] = await Promise.all([
+    ensurePipeline(ctx.organizationId),
+    prisma.sfaDeal.findMany({ where, orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }], take: pageSize + 1 }),
+    prisma.sfaDeal.groupBy({
+      by: ['stageId'],
+      where: { organizationId: ctx.organizationId, isActive: true },
+      _count: { _all: true },
+      _sum: { amount: true },
+    }),
+  ])
+  const hasMore = page.length > pageSize
+  const deals = page.slice(0, pageSize)
   // 取引先名を引く
   const accIds = Array.from(new Set(deals.map((d) => d.accountId).filter(Boolean))) as string[]
   const accs = accIds.length
-    ? await prisma.sfaAccount.findMany({ where: { id: { in: accIds } }, select: { id: true, name: true } })
+    ? await prisma.sfaAccount.findMany({ where: { id: { in: accIds }, organizationId: ctx.organizationId }, select: { id: true, name: true } })
     : []
   const accMap = Object.fromEntries(accs.map((a) => [a.id, a.name]))
   const withName = deals.map((d) => ({ ...d, accountName: d.accountId ? accMap[d.accountId] || null : null }))
 
   return NextResponse.json(
-    { stages: bigIntToNumber(stages), deals: bigIntToNumber(withName) },
+    {
+      stages: bigIntToNumber(stages),
+      deals: bigIntToNumber(withName),
+      nextCursor: hasMore && deals.length
+        ? Buffer.from(JSON.stringify({ updatedAt: deals[deals.length - 1].updatedAt.toISOString(), id: deals[deals.length - 1].id })).toString('base64url')
+        : null,
+      totalCount: stageGroups.reduce((sum, row) => sum + row._count._all, 0),
+      stageSummary: stageGroups.map((row) => ({ stageId: row.stageId, count: row._count._all, total: (row._sum.amount ?? 0n).toString() })),
+    },
     { headers: { 'Cache-Control': 'no-store' } }
   )
 }

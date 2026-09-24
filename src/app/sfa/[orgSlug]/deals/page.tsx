@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { sfaInit, withOrg } from '@/lib/sfa/client'
 import { ACTIVITY_TYPE_LABEL } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
+import { isSfaSummary, summaryYen, type SfaSummary } from '@/lib/sfa/summary'
 
 interface Stage { id: string; name: string; order: number; probability: number; color: string; isWon: boolean; isLost: boolean }
 interface Deal {
@@ -29,6 +30,23 @@ interface Account { id: string; name: string }
 interface Task { id: string; title: string; status: string; dueDate: string | null; dealId: string | null }
 interface SfaActivityRow { id: string; type: string; subject: string | null; body: string | null; occurredAt: string }
 interface AiTaskCandidate { title: string; dueDate: string | null; checked: boolean }
+interface DealPage {
+  stages: Stage[]
+  deals: Deal[]
+  nextCursor: string | null
+  totalCount: number
+  stageSummary: { stageId: string | null; count: number; total: string }[]
+}
+
+function isDealPage(value: unknown): value is DealPage {
+  if (!value || typeof value !== 'object') return false
+  const page = value as Partial<DealPage>
+  return Array.isArray(page.stages) && Array.isArray(page.deals)
+    && (page.nextCursor === null || typeof page.nextCursor === 'string')
+    && Number.isSafeInteger(page.totalCount) && (page.totalCount as number) >= 0
+    && Array.isArray(page.stageSummary)
+    && page.stageSummary.every((row) => row && (row.stageId === null || typeof row.stageId === 'string') && Number.isSafeInteger(row.count) && row.count >= 0 && typeof row.total === 'string' && /^-?\d+$/.test(row.total))
+}
 
 const STALE_DAYS = 14
 const yen = (n: number) => '¥' + (n || 0).toLocaleString('ja-JP')
@@ -66,6 +84,12 @@ export default function SfaDealsPage() {
   const ready = !!orgSlug
   const [stages, setStages] = useState<Stage[]>([])
   const [deals, setDeals] = useState<Deal[]>([])
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [totalCount, setTotalCount] = useState(0)
+  const [stageSummary, setStageSummary] = useState<DealPage['stageSummary']>([])
+  const [summary, setSummary] = useState<SfaSummary | null>(null)
+  const [summaryError, setSummaryError] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [dealsLoading, setDealsLoading] = useState(true)
@@ -75,6 +99,7 @@ export default function SfaDealsPage() {
   const [activitiesError, setActivitiesError] = useState(false)
   const [activitiesLoading, setActivitiesLoading] = useState(false)
   const dealsRequest = useRef<AbortController | null>(null)
+  const moreDealsRequest = useRef<AbortController | null>(null)
   const tasksRequest = useRef<AbortController | null>(null)
   const accountsRequest = useRef<AbortController | null>(null)
   const activitiesRequest = useRef<AbortController | null>(null)
@@ -88,21 +113,66 @@ export default function SfaDealsPage() {
   const load = useCallback(() => {
     if (!ready) return
     dealsRequest.current?.abort()
+    moreDealsRequest.current?.abort()
     const controller = new AbortController()
     dealsRequest.current = controller
     setDealsLoading(true)
+    setLoadingMore(false)
     setDealsError(false)
+    setSummaryError(false)
+    setSummary(null)
     fetch('/api/sfa/deals', sfaInit(orgSlug, { signal: controller.signal }))
       .then(async (r) => {
         if (!r.ok) throw new Error('商談の取得に失敗しました')
         const d = await r.json()
-        if (!Array.isArray(d.stages) || !Array.isArray(d.deals)) throw new Error('商談の応答形式が不正です')
-        return d as { stages: Stage[]; deals: Deal[] }
+        if (!isDealPage(d)) throw new Error('商談の応答形式が不正です')
+        return d
       })
-      .then((d) => { if (!controller.signal.aborted) { setStages(d.stages); setDeals(d.deals) } })
+      .then((d) => {
+        if (!controller.signal.aborted) {
+          setStages(d.stages); setDeals(d.deals); setNextCursor(d.nextCursor)
+          setTotalCount(d.totalCount); setStageSummary(d.stageSummary)
+        }
+      })
       .catch(() => { if (!controller.signal.aborted) setDealsError(true) })
       .finally(() => { if (!controller.signal.aborted) setDealsLoading(false) })
+    fetch('/api/sfa/summary', sfaInit(orgSlug, { signal: controller.signal }))
+      .then(async (r) => {
+        if (!r.ok) throw new Error('商談集計の取得に失敗しました')
+        const data = await r.json()
+        if (!isSfaSummary(data.summary)) throw new Error('商談集計の応答形式が不正です')
+        return data.summary
+      })
+      .then((data) => { if (!controller.signal.aborted) setSummary(data) })
+      .catch(() => { if (!controller.signal.aborted) setSummaryError(true) })
   }, [ready, orgSlug])
+  const loadMore = useCallback(() => {
+    if (!ready || !nextCursor || dealsLoading || loadingMore) return
+    moreDealsRequest.current?.abort()
+    const controller = new AbortController()
+    moreDealsRequest.current = controller
+    setLoadingMore(true)
+    setDealsError(false)
+    fetch(`/api/sfa/deals?cursor=${encodeURIComponent(nextCursor)}`, sfaInit(orgSlug, { signal: controller.signal }))
+      .then(async (r) => {
+        if (!r.ok) throw new Error('商談の続きの取得に失敗しました')
+        const data = await r.json()
+        if (!isDealPage(data)) throw new Error('商談の応答形式が不正です')
+        return data
+      })
+      .then((data) => {
+        if (controller.signal.aborted) return
+        setDeals((current) => {
+          const seen = new Set(current.map((deal) => deal.id))
+          return [...current, ...data.deals.filter((deal) => !seen.has(deal.id))]
+        })
+        setNextCursor(data.nextCursor)
+        setTotalCount(data.totalCount)
+        setStageSummary(data.stageSummary)
+      })
+      .catch(() => { if (!controller.signal.aborted) setDealsError(true) })
+      .finally(() => { if (!controller.signal.aborted) setLoadingMore(false) })
+  }, [ready, nextCursor, dealsLoading, loadingMore, orgSlug])
   const loadTasks = useCallback(() => {
     if (!ready) return
     tasksRequest.current?.abort()
@@ -156,6 +226,12 @@ export default function SfaDealsPage() {
     if (!ready) return
     setStages([])
     setDeals([])
+    setLoadingMore(false)
+    setNextCursor(null)
+    setTotalCount(0)
+    setStageSummary([])
+    setSummary(null)
+    setSummaryError(false)
     setTasks([])
     setAccounts([])
     setDealsLoading(true)
@@ -164,6 +240,7 @@ export default function SfaDealsPage() {
     loadAccounts()
     return () => {
       dealsRequest.current?.abort()
+      moreDealsRequest.current?.abort()
       tasksRequest.current?.abort()
       accountsRequest.current?.abort()
       activitiesRequest.current?.abort()
@@ -470,9 +547,13 @@ export default function SfaDealsPage() {
   const isStale = (d: Deal) =>
     d.status === 'open' && d.lastActivityAt && Date.now() - new Date(d.lastActivityAt).getTime() > STALE_DAYS * 86400000
 
-  // 重み付きパイプライン（open のみ）
-  const weighted = deals.filter((d) => d.status === 'open').reduce((s, d) => s + (d.amount * d.probability) / 100, 0)
-  const openTotal = deals.filter((d) => d.status === 'open').reduce((s, d) => s + d.amount, 0)
+  const knownStageIds = new Set(stages.map((stage) => stage.id))
+  const unassignedSummary = stageSummary.filter((row) => !row.stageId || !knownStageIds.has(row.stageId))
+  const unassignedCount = unassignedSummary.reduce((sum, row) => sum + row.count, 0)
+  const unassignedTotal = unassignedSummary.reduce((sum, row) => sum + BigInt(row.total), 0n).toString()
+  const boardStages: Stage[] = unassignedCount
+    ? [...stages, { id: '__unassigned__', name: '未分類', order: Number.MAX_SAFE_INTEGER, probability: 0, color: '#94a3b8', isWon: false, isLost: false }]
+    : stages
 
   const detailTasks = detail ? tasks.filter((t) => t.dealId === detail.id) : []
 
@@ -482,8 +563,9 @@ export default function SfaDealsPage() {
         <div>
           <h1 className="text-2xl font-black text-slate-900">商談パイプライン</h1>
           <p className="text-slate-500 font-bold text-sm">
-            総額 {yen(openTotal)}・確度加重 <span className="text-green-600">{yen(Math.round(weighted))}</span>
+            総額 {summary ? summaryYen(summary.openTotal) : '—'}・確度加重 <span className="text-green-600">{summary ? summaryYen(summary.weighted) : '—'}</span>
           </p>
+          <p className="text-slate-400 font-bold text-xs mt-1">表示中 {deals.length}件 / 全{totalCount}件</p>
           <p className="text-slate-400 font-bold text-[11px] mt-0.5 flex items-center gap-0.5">
             <span className="material-symbols-outlined text-[14px] leading-none">drag_indicator</span>
             カードをドラッグしてステージを移動できます
@@ -499,7 +581,7 @@ export default function SfaDealsPage() {
         </div>
       </div>
 
-      {(dealsError || tasksError || accountsError) && (
+      {(dealsError || tasksError || accountsError || summaryError) && (
         <div role="alert" className="mb-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-800 space-y-2">
           {dealsError && <p>商談を読み込めませんでした。表示中の商談がある場合は更新前の情報です。</p>}
           {tasksError && <p>タスクを読み込めませんでした。表示中のタスクがある場合は更新前の情報です。</p>}
@@ -508,6 +590,7 @@ export default function SfaDealsPage() {
             {dealsError && <button type="button" onClick={load} className="rounded-lg bg-white px-3 py-1.5 text-red-800 border border-red-200">商談を再試行</button>}
             {tasksError && <button type="button" onClick={loadTasks} className="rounded-lg bg-white px-3 py-1.5 text-red-800 border border-red-200">タスクを再試行</button>}
             {accountsError && <button type="button" onClick={loadAccounts} className="rounded-lg bg-white px-3 py-1.5 text-red-800 border border-red-200">取引先を再試行</button>}
+            {summaryError && <button type="button" onClick={load} className="rounded-lg bg-white px-3 py-1.5 text-red-800 border border-red-200">金額集計を再試行</button>}
           </div>
         </div>
       )}
@@ -541,25 +624,28 @@ export default function SfaDealsPage() {
 
       {/* カンバン */}
       <div className="flex gap-3 overflow-x-auto pb-4">
-        {stages.map((st) => {
-          const col = deals.filter((d) => d.stageId === st.id)
-          const colTotal = col.reduce((s, d) => s + d.amount, 0)
-          const isDropTarget = dragOverStageId === st.id && !!dragDealId
+        {boardStages.map((st) => {
+          const unassigned = st.id === '__unassigned__'
+          const col = deals.filter((d) => unassigned ? !d.stageId || !knownStageIds.has(d.stageId) : d.stageId === st.id)
+          const allStage = unassigned
+            ? { count: unassignedCount, total: unassignedTotal }
+            : stageSummary.find((row) => row.stageId === st.id)
+          const isDropTarget = !unassigned && dragOverStageId === st.id && !!dragDealId
           return (
             <div
               key={st.id}
-              data-stage-col={st.id}
+              data-stage-col={unassigned ? undefined : st.id}
               className={`flex-shrink-0 w-72 rounded-2xl p-3 transition-colors ${isDropTarget ? 'bg-green-100 ring-2 ring-green-400' : 'bg-slate-100'}`}
             >
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ background: st.color }} />
                   <span className="font-black text-slate-700 text-sm">{st.name}</span>
-                  <span className="text-[11px] font-bold text-slate-400">{col.length}</span>
+                  <span className="text-[11px] font-bold text-slate-400">{allStage?.count ?? 0}</span>
                 </div>
-                <span className="text-[11px] font-bold text-slate-400">{st.probability}%</span>
+                {!unassigned && <span className="text-[11px] font-bold text-slate-400">{st.probability}%</span>}
               </div>
-              <p className="text-[11px] font-bold text-slate-400 mb-2">{yen(colTotal)}</p>
+              <p className="text-[11px] font-bold text-slate-400 mb-2">{summaryYen(allStage?.total ?? '0')}</p>
               <div className="space-y-2">
                 {col.map((d) => {
                   const dealTasks = tasksOf(d.id)
@@ -640,6 +726,7 @@ export default function SfaDealsPage() {
                           onChange={(e) => moveStage(d, e.target.value)}
                           className="mt-2 w-full text-[11px] font-bold rounded-lg border border-slate-200 px-2 py-1.5 bg-slate-50"
                         >
+                          {!knownStageIds.has(d.stageId || '') && <option value="" disabled>ステージを選択</option>}
                           {stages.map((s) => <option key={s.id} value={s.id}>→ {s.name}</option>)}
                         </select>
                         <button
@@ -664,6 +751,20 @@ export default function SfaDealsPage() {
           <p className="text-slate-400 font-bold">{dealsError ? '商談を表示できません' : dealsLoading || !ready ? 'パイプラインを読み込み中…' : '商談ステージはありません'}</p>
         )}
       </div>
+      {nextCursor && (
+        <div className="flex justify-center py-4">
+          <button type="button" onClick={loadMore} disabled={loadingMore || dealsLoading} className="rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 shadow-sm disabled:opacity-50">
+            {loadingMore ? '読み込み中…' : '商談をさらに表示'}
+          </button>
+        </div>
+      )}
+      {!nextCursor && totalCount > deals.length && !dealsLoading && (
+        <div className="flex justify-center py-4">
+          <button type="button" onClick={load} className="rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-700 shadow-sm">
+            更新された商談を読み込む
+          </button>
+        </div>
+      )}
 
       {/* ドラッグ中のゴースト（ポインタ追従） */}
       {ghost && (
