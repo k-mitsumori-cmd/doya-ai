@@ -32,15 +32,28 @@ export async function GET(req: NextRequest) {
   const where = ownerWhere(identity)
   if (!where) return NextResponse.json({ concepts: [] })
 
-  const concepts = await prisma.adImageConcept.findMany({
-    where: { campaign: where },
-    orderBy: { createdAt: 'desc' },
-    take: 50,
-    include: {
-      creatives: { select: { id: true, placementKey: true, size: true, imagePath: true, verify: true } },
-      campaign: { select: { id: true, name: true, brand: { select: { name: true } } } },
-    },
-  })
+  const cursor = new URL(req.url).searchParams.get('cursor')
+  if (new URL(req.url).searchParams.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  if (cursor && !await prisma.adImageConcept.findFirst({ where: { id: cursor, campaign: where }, select: { id: true } })) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+
+  const [rows, total] = await Promise.all([
+    prisma.adImageConcept.findMany({
+      where: { campaign: where },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 21,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      include: {
+        creatives: { select: { id: true, placementKey: true, size: true, imagePath: true, verify: true } },
+        campaign: { select: { id: true, name: true, brand: { select: { name: true } } } },
+      },
+    }),
+    prisma.adImageConcept.count({ where: { campaign: where } }),
+  ])
+  const concepts = rows.slice(0, 20)
 
   // 署名URLは都度発行する（保存しない）
   const withUrls = await Promise.all(
@@ -66,7 +79,9 @@ export async function GET(req: NextRequest) {
     }))
   )
 
-  return NextResponse.json({ concepts: withUrls })
+  return NextResponse.json({ concepts: withUrls, total, nextCursor: rows.length > 20 ? concepts[19].id : null }, {
+    headers: { 'Cache-Control': 'private, no-store' },
+  })
 }
 
 

@@ -51,12 +51,20 @@ function formatDate(iso: string): string {
 export default function AdImageHistoryPage() {
   const [concepts, setConcepts] = useState<Concept[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
   const [openId, setOpenId] = useState<string | null>(null)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [total, setTotal] = useState(0)
 
   const load = useCallback(async () => {
+    setError('')
+    setLoading(true)
+    setConcepts([])
+    setNextCursor(null)
+    setTotal(0)
     try {
-      const res = await fetch('/api/adimage/concepts')
+      const res = await fetch('/api/adimage/concepts', { cache: 'no-store' })
       if (res.status === 401) {
         notifyError(setError, '履歴のご確認にはログインが必要です。')
         return
@@ -66,8 +74,15 @@ export default function AdImageHistoryPage() {
         return
       }
       const data = await res.json()
-      const list: Concept[] = data?.concepts || []
+      if (!Array.isArray(data?.concepts) || !Number.isSafeInteger(data?.total) ||
+          data.total < data.concepts.length ||
+          (data.nextCursor !== null && (typeof data.nextCursor !== 'string' || data.concepts.length !== 20))) {
+        throw new Error('履歴の応答が正しくありません')
+      }
+      const list: Concept[] = data.concepts
       setConcepts(list)
+      setTotal(data.total)
+      setNextCursor(data.nextCursor)
       // 最新のものは開いた状態で見せる（1件も開いていないと何があるか分からない）
       if (list[0]) setOpenId(list[0].id)
     } catch {
@@ -76,6 +91,30 @@ export default function AdImageHistoryPage() {
       setLoading(false)
     }
   }, [])
+
+  const loadMore = async () => {
+    if (!nextCursor || loadingMore) return
+    setLoadingMore(true)
+    setError('')
+    try {
+      const res = await fetch(`/api/adimage/concepts?cursor=${encodeURIComponent(nextCursor)}`, { cache: 'no-store' })
+      if (!res.ok) throw new Error('続きを読み込めませんでした')
+      const data = await res.json()
+      if (!Array.isArray(data?.concepts) || data.total !== total ||
+          (data.nextCursor !== null && (typeof data.nextCursor !== 'string' || data.concepts.length !== 20)) ||
+          concepts.length + data.concepts.length > total ||
+          (data.nextCursor === null && concepts.length + data.concepts.length !== total) ||
+          data.concepts.some((concept: Concept) => concepts.some((existing) => existing.id === concept.id))) {
+        throw new Error('履歴が更新されました。再読み込みしてください')
+      }
+      setConcepts((current) => current.concat(data.concepts))
+      setNextCursor(data.nextCursor)
+    } catch (cause) {
+      notifyError(setError, cause instanceof Error ? cause.message : '続きを読み込めませんでした')
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   useEffect(() => {
     void load()
@@ -87,7 +126,7 @@ export default function AdImageHistoryPage() {
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-4">
           <div>
             <h1 className="text-lg font-bold text-slate-900">これまでに作った広告画像</h1>
-            <p className="text-xs text-slate-500 font-semibold">直近50件を新しい順に表示します。</p>
+            <p className="text-xs text-slate-500 font-semibold">作成した広告画像を新しい順に表示します。</p>
           </div>
           <Link
             href="/adimage"
@@ -100,12 +139,12 @@ export default function AdImageHistoryPage() {
 
       <main className="mx-auto max-w-5xl space-y-4 px-4 py-6">
         {error && (
-          <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>
+          <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}<button type="button" onClick={() => void load()} className="ml-3 underline">最初から読み直す</button></div>
         )}
 
         {loading ? (
           <p className="py-16 text-center text-sm text-slate-500 font-semibold">読み込んでいます…</p>
-        ) : concepts.length === 0 ? (
+        ) : error && concepts.length === 0 ? null : concepts.length === 0 ? (
           <div className="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
             <EmptyState
               kind="not-generated"
@@ -198,6 +237,11 @@ export default function AdImageHistoryPage() {
               </section>
             )
           })
+        )}
+        {nextCursor && !loading && (
+          <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="block w-full rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-bold text-[#0066ff] disabled:opacity-50">
+            {loadingMore ? '読み込み中…' : `さらに表示（${concepts.length}/${total}件）`}
+          </button>
         )}
       </main>
     </div>
