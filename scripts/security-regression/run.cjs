@@ -265,6 +265,11 @@ if (cunningKnowledgeLimit.error || cunningKnowledgeLimit.status !== 0) {
   console.error('Security regression failed: verify-cunning-knowledge-limit-atomic.cjs');
   process.exit(1);
 }
+const doyaslideProjectLimit = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-project-limit-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyaslideProjectLimit.error || doyaslideProjectLimit.status !== 0) {
+  console.error('Security regression failed: verify-doyaslide-project-limit-atomic.cjs');
+  process.exit(1);
+}
 const kintaiInviteAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-invite-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (kintaiInviteAtomic.error || kintaiInviteAtomic.status !== 0) {
   console.error('Security regression failed: verify-kintai-invite-atomic.cjs');
