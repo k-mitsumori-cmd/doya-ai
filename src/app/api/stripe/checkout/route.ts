@@ -78,6 +78,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'ユーザー情報の取得に失敗しました' }, { status: 404 })
     }
 
+    // HR の利用枠は組織オーナーの契約で決まる。メンバー個人の決済へ案内しない。
+    if (requestedServiceId === 'hr' || String(planId).startsWith('hr-') || requestedReturnTo === '/hr' || requestedReturnTo?.startsWith('/hr/')) {
+      const membership = await prisma.hrOrganizationMember.findFirst({
+        where: { userId: dbUser.id, status: 'ACTIVE' },
+        orderBy: { createdAt: 'desc' },
+        select: { role: true },
+      })
+      if (membership && membership.role !== 'OWNER') {
+        return NextResponse.json({
+          code: 'HR_BILLING_OWNER_REQUIRED',
+          error: 'この組織のプランはオーナーのみ変更できます。組織のオーナーにご確認ください。',
+        }, { status: 403 })
+      }
+    }
+
     // ------------------------------------------------------------------
     // 提供終了サービスのプランは受け付けない
     // ------------------------------------------------------------------

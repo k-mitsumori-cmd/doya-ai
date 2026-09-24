@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     // メンバー数制限チェック
     const memberLimitError = await checkMemberLimit(ctx.organizationId)
     if (memberLimitError) {
-      return NextResponse.json({ error: memberLimitError }, { status: 403 })
+      return NextResponse.json({ error: memberLimitError, code: 'HR_ORG_MEMBER_LIMIT', canManageBilling: ctx.role === HrMemberRole.OWNER }, { status: 403 })
     }
 
     const emailNorm = email.trim().toLowerCase()

@@ -6,8 +6,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { stripe, STRIPE_PRICE_IDS } from '@/lib/stripe'
-import { getHrContext, hasMinRole } from '@/lib/hr/access'
+import { stripe, STRIPE_PRICE_IDS, findActiveLikeSubscriptions } from '@/lib/stripe'
+import { getHrContext } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { logAudit } from '@/lib/hr/audit'
 
@@ -33,9 +33,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // ADMIN以上のみ課金操作可能
-    if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // 組織の上限は OWNER の User.plan で決まる。別メンバーが購入しても反映されない。
+    if (ctx.role !== HrMemberRole.OWNER || ctx.userId !== user.id) {
+      return NextResponse.json({ error: 'この組織のプランはオーナーのみ変更できます。', code: 'HR_BILLING_OWNER_REQUIRED' }, { status: 403 })
     }
 
     const body = await req.json()
@@ -63,6 +63,25 @@ export async function POST(req: NextRequest) {
     })
     if (!dbUser) {
       return NextResponse.json({ error: 'ユーザーが見つかりません' }, { status: 404 })
+    }
+
+    // 旧HR専用入口も共通Checkoutと同じ二重契約ガードを通す。
+    try {
+      const existing = await findActiveLikeSubscriptions({
+        email: dbUser.email || user.email,
+        stripeCustomerId: dbUser.stripeCustomerId,
+      })
+      if (existing.length > 0) {
+        return NextResponse.json({
+          code: 'ALREADY_SUBSCRIBED',
+          error: 'すでにご契約が有効です。二重のご請求を防ぐため決済を中断しました。',
+        }, { status: 409 })
+      }
+    } catch {
+      return NextResponse.json({
+        code: 'SUBSCRIPTION_CHECK_UNAVAILABLE',
+        error: '契約状況を確認できなかったため決済を開始していません。時間をおいて再度お試しください。',
+      }, { status: 503 })
     }
 
     let stripeCustomerId = dbUser.stripeCustomerId

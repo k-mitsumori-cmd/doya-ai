@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
     // プラン制限チェック
     const limitError = await checkEmployeeLimit(ctx.organizationId)
     if (limitError) {
-      return NextResponse.json({ error: limitError }, { status: 403 })
+      return NextResponse.json({ error: limitError, code: 'HR_ORG_EMPLOYEE_LIMIT', canManageBilling: ctx.role === 'OWNER' }, { status: 403 })
     }
 
     if (departmentId) {

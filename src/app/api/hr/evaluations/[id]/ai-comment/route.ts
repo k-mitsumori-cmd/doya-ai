@@ -59,7 +59,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     // AI使用量制限チェック
     const aiLimitError = await checkAiUsageLimit(hrCtx.organizationId)
     if (aiLimitError) {
-      return NextResponse.json({ error: aiLimitError }, { status: 403 })
+      return NextResponse.json({ error: aiLimitError, code: 'HR_ORG_AI_LIMIT', canManageBilling: hrCtx.role === 'OWNER' }, { status: 403 })
     }
 
     const prompt = buildEvaluationCommentPrompt({

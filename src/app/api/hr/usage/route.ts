@@ -6,15 +6,16 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getHrContext } from '@/lib/hr/access'
 import { getOrgPlan, getOrgPlanLimits } from '@/lib/hr/billing'
+import { HrMemberRole } from '@/lib/hr/types'
 
 export async function GET() {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ plan: 'FREE', employeeCount: 0, employeeLimit: 5 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // OWNERのUserServiceSubscription(serviceId:'hr')からプラン取得
+    // 組織オーナーの契約プランを基準に使用量を返す。
     const plan = await getOrgPlan(ctx.organizationId)
     const limits = getOrgPlanLimits(plan)
 
@@ -47,7 +48,7 @@ export async function GET() {
 
     return NextResponse.json({
       plan: plan.toLowerCase(),
-      planLabel: plan === 'FREE' ? 'Free' : plan === 'STARTER' ? 'Starter' : plan === 'PRO' ? 'Pro' : plan === 'ENTERPRISE' ? 'Enterprise' : plan,
+      planLabel: plan === 'FREE' ? 'Free' : plan === 'STARTER' ? 'Starter' : plan === 'LIGHT' ? 'Light' : plan === 'PRO' || plan === 'BUNDLE' ? 'Pro' : plan === 'ENTERPRISE' ? 'Enterprise' : plan,
       employeeCount,
       employeeLimit: limits.maxEmployees === -1 ? 999 : limits.maxEmployees,
       memberCount,
@@ -55,8 +56,9 @@ export async function GET() {
       aiUsageCount,
       aiUsageLimit: limits.maxAiUsage === -1 ? 999 : limits.maxAiUsage,
       organizationId: ctx.organizationId,
+      canManageBilling: ctx.role === HrMemberRole.OWNER,
     })
   } catch {
-    return NextResponse.json({ plan: 'FREE', employeeCount: 0, employeeLimit: 5 })
+    return NextResponse.json({ error: '使用状況を取得できませんでした。再読み込みしてください。' }, { status: 503 })
   }
 }

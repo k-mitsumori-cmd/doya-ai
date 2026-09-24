@@ -14,12 +14,16 @@ interface BillingInfo {
   memberLimit: number
   aiUsageCount: number
   aiUsageLimit: number
+  canManageBilling: boolean
 }
 
 // 現在プラン表示用の最小定義（プラン一覧UIは UnifiedPricingPlans に統一）
 const PLAN_DISPLAY: Record<string, { name: string; color: string }> = {
   free: { name: 'Free', color: 'from-slate-400 to-slate-500' },
+  starter: { name: 'Starter', color: 'from-blue-500 to-blue-600' },
+  light: { name: 'Light', color: 'from-blue-500 to-blue-600' },
   pro: { name: 'Pro', color: 'from-purple-500 to-purple-600' },
+  bundle: { name: 'Pro', color: 'from-purple-500 to-purple-600' },
   enterprise: { name: 'Enterprise', color: 'from-amber-500 to-orange-500' },
 }
 
@@ -77,6 +81,7 @@ export default function BillingPage() {
   const [billing, setBilling] = useState<BillingInfo | null>(null)
   const [loading, setLoading] = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
+  const [loadError, setLoadError] = useState(false)
 
   useEffect(() => {
     async function fetchBilling() {
@@ -86,28 +91,10 @@ export default function BillingPage() {
           const data = await res.json()
           setBilling(data)
         } else {
-          setBilling({
-            plan: 'free',
-            planLabel: 'Free',
-            employeeCount: 0,
-            employeeLimit: 5,
-            memberCount: 0,
-            memberLimit: 2,
-            aiUsageCount: 0,
-            aiUsageLimit: 3,
-          })
+          setLoadError(true)
         }
       } catch {
-        setBilling({
-          plan: 'free',
-          planLabel: 'Free',
-          employeeCount: 0,
-          employeeLimit: 5,
-          memberCount: 0,
-          memberLimit: 2,
-          aiUsageCount: 0,
-          aiUsageLimit: 3,
-        })
+        setLoadError(true)
       } finally {
         setLoading(false)
       }
@@ -151,7 +138,19 @@ export default function BillingPage() {
     )
   }
 
-  const planKey = String(billing?.plan || 'free').toLowerCase()
+  if (loadError || !billing) {
+    return (
+      <div className="p-6 lg:p-10 max-w-5xl mx-auto">
+        <div role="alert" className="rounded-2xl bg-white p-8 shadow-md">
+          <h1 className="text-xl font-bold text-slate-900">組織のプランを確認できませんでした</h1>
+          <p className="mt-2 text-sm text-slate-600">しばらくしてから再読み込みしてください。</p>
+          <button type="button" onClick={() => window.location.reload()} className="mt-5 rounded-xl bg-violet-700 px-5 py-3 font-bold text-white">再読み込みする</button>
+        </div>
+      </div>
+    )
+  }
+
+  const planKey = String(billing.plan).toLowerCase()
   const currentPlan = PLAN_DISPLAY[planKey] || PLAN_DISPLAY.free
   const isPaid = planKey !== 'free'
 
@@ -201,7 +200,7 @@ export default function BillingPage() {
                 <h2 className="text-2xl font-black">{currentPlan.name}</h2>
               </div>
             </div>
-            {isPaid && (
+            {isPaid && billing.canManageBilling && (
               <motion.button
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
@@ -266,8 +265,13 @@ export default function BillingPage() {
             </div>
             プラン一覧
           </h2>
-          {/* 全サービス共通の 無料 / プロ(¥9,980) 2プラン */}
-          <UnifiedPricingPlans serviceId="hr" currentPlan={billing?.plan} />
+          {billing.canManageBilling ? (
+            <UnifiedPricingPlans serviceId="hr" currentPlan={billing.plan} />
+          ) : (
+            <div className="rounded-2xl bg-white p-6 text-sm leading-7 text-slate-700 shadow-md">
+              組織のプランはオーナーが管理しています。変更が必要な場合は、オーナーにご確認ください。
+            </div>
+          )}
         </motion.div>
 
         {/* Help */}

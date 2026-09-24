@@ -37,6 +37,12 @@ const fixtureMessages=[
  for(const [s,status,error] of fixtureMessages)await check(s+' actual quota wording: '+error.slice(0,20),async()=>assert.ok(classify('/api/'+s+'/generate',status,{error})));
  await check('billing-independent workspace cap offers cleanup',async()=>assert.equal(classify('/api/aio/quick-start',402,{code:'LIMIT',error:'登録できるワークスペースの上限（3件）に達しました。不要なワークスペースを整理してください。'}).kind,'capacity'));
  await check('public participant is directed to contract owner',async()=>assert.equal(classify('/api/aishodan/room/token/start',429,{error:fixtureMessages[19][2]}).kind,'owner'));
+ await check('HR organization allowance directs owner to organization billing and member to owner',async()=>{
+  for(const [path,code,error] of [['employees','HR_ORG_EMPLOYEE_LIMIT','従業員数の上限（5名）に達しています。'],['organization/invite','HR_ORG_MEMBER_LIMIT','メンバー数の上限（2名）に達しています。'],['evaluations/id/ai-comment','HR_ORG_AI_LIMIT','AI機能の月間利用回数（3回）に達しています。']]){
+   assert.equal(classify('/api/hr/'+path,403,{code,error,canManageBilling:true}).kind,'organization');
+   assert.equal(classify('/api/hr/'+path,403,{code,error,canManageBilling:false}).kind,'owner');
+  }
+ });
  for(const [status,error] of [[429,'リクエストが多すぎます。しばらくしてからお試しください。'],[429,'現在の解析が完了してから、もう一度お試しください。'],[429,'接続の試行回数が上限に達しました。採用ご担当者にお問い合わせください。'],[400,'ファイルサイズが上限 (500MB) を超えています'],[403,'アクセス権限がありません'],[500,'今月の上限に達しました'],[410,'このサービスは提供を終了しました'],[429,'APIの使用量制限に達しました。Google AI Studioでプランをご確認ください']])await check('non-billing error stays non-billing: '+error.slice(0,15),async()=>assert.equal(classify('/api/banner/generate',status,{error}),null));
  await check('external APIs and successful JSON do not produce prompts; response bodies remain readable',async()=>{
   const notices=[];const original=async()=>Response.json({code:'LIMIT',error:'今月の上限に達しました'},{status:429});const fn=observe(original,'http://localhost',x=>notices.push(x));let r=await fn('/api/persona/generate');assert.equal((await r.json()).code,'LIMIT');await new Promise(r=>setTimeout(r,20));assert.equal(notices.length,1);await fn('https://external.invalid/api/persona/generate');await new Promise(r=>setTimeout(r,10));assert.equal(notices.length,1);

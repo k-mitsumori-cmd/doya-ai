@@ -1,6 +1,6 @@
 import { SERVICES } from './services'
 
-export type ServiceLimit = { service: string; name: string; pricingHref: string; kind: 'quota' | 'feature' | 'capacity' | 'owner'; message: string }
+export type ServiceLimit = { service: string; name: string; pricingHref: string; kind: 'quota' | 'feature' | 'capacity' | 'owner' | 'organization'; message: string }
 export const LIMIT_EVENT = 'doya:service-limit'
 const services = new Map(SERVICES.map(s => [s.id, { name: s.name, pricingHref: s.pricingHref.endsWith('/pricing') ? s.pricingHref : '/pricing' }]))
 services.set('promane', { name: 'ドヤプロマネ', pricingHref: '/promane/pricing' })
@@ -23,9 +23,11 @@ export function classifyServiceLimit(path: string, status: number, data: unknown
   // Provider throttles, security/retry limits, file-size validation and busy jobs are not paid allowances.
   if (/RATE_LIMIT|CONCURRENT|BUSY|UNAVAILABLE|REQUEST_IMAGE_LIMIT/.test(code) || /Google AI|Gemini|OpenAI|APIの使用量|接続の試行|ログイン試行|ファイルサイズ|リクエストが多|しばらく|混み合|同時実行|処理中|生成中|現在の解析/.test(message)) return null
   const feature = ['PLAN', 'PAID_ONLY', 'PRO_ONLY', 'DURATION_LIMIT', 'GIF_PRO_ONLY', 'TEMPLATE_PRO_ONLY'].includes(code) || /(?:有料|プロ|Pro|PRO)プラン(?:以上|限定|の機能)|(?:プラン|プロ)(?:を|に|の)アップグレード|上位プラン|Pro以上のプラン|プランでは利用できません|現在のプランでは.{0,30}(?:作成できません|利用できません|までです)/.test(message)
-  const quota = body.limitReached === true || /^(MONTHLY_LIMIT_REACHED|USAGE_LIMIT_EXCEEDED|BANNER_MONTHLY_LIMIT|CHAT_MONTHLY_LIMIT|GUEST_LIMIT|MONTHLY_LIMIT|LIMIT)$/.test(code) || /(?:今月|本日|月間|1日の|無料プラン|お試し|プラン|生成|利用|利用時間|従業員数|メンバー数|プロジェクト数).{0,45}上限|月間利用回数.{0,30}達して|ゲスト(?:は|ユーザーは合計).{0,12}(?:回|分)まで|月間.{0,20}制限|(?:無料|プロ)プランは.{0,40}まで|枠の追加/.test(message)
+  const quota = body.limitReached === true || /^(MONTHLY_LIMIT_REACHED|USAGE_LIMIT_EXCEEDED|BANNER_MONTHLY_LIMIT|CHAT_MONTHLY_LIMIT|GUEST_LIMIT|MONTHLY_LIMIT|LIMIT|HR_ORG_(EMPLOYEE|MEMBER|AI)_LIMIT)$/.test(code) || /(?:今月|本日|月間|1日の|無料プラン|お試し|プラン|生成|利用|利用時間|従業員数|メンバー数|プロジェクト数).{0,45}上限|月間利用回数.{0,30}達して|ゲスト(?:は|ユーザーは合計).{0,12}(?:回|分)まで|月間.{0,20}制限|(?:無料|プロ)プランは.{0,40}まで|枠の追加/.test(message)
   if (!feature && !quota && typeof body.upgradePath !== 'string') return null
-  const kind = /不要なワークスペースを整理/.test(message) ? 'capacity' : /^\/api\/(?:aishodan\/room|mensetsu\/live)\//.test(path) ? 'owner' : quota ? 'quota' : 'feature'
+  const kind = service === 'hr' && /^HR_ORG_(EMPLOYEE|MEMBER|AI)_LIMIT$/.test(code)
+    ? body.canManageBilling === true ? 'organization' : 'owner'
+    : /不要なワークスペースを整理/.test(message) ? 'capacity' : /^\/api\/(?:aishodan\/room|mensetsu\/live)\//.test(path) ? 'owner' : quota ? 'quota' : 'feature'
   return { service, ...config, kind, message }
 }
 

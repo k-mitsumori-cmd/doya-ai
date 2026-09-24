@@ -7,7 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { stripe } from '@/lib/stripe'
-import { getHrContext, hasMinRole } from '@/lib/hr/access'
+import { getHrContext } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { logAudit } from '@/lib/hr/audit'
 
@@ -26,9 +26,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // ADMIN以上のみ
-    if (!hasMinRole(ctx.role, HrMemberRole.ADMIN)) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    // 組織の契約は OWNER のユーザーに紐づく。別メンバーの顧客ポータルを開かない。
+    if (ctx.role !== HrMemberRole.OWNER || ctx.userId !== user.id) {
+      return NextResponse.json({ error: 'この組織のプランはオーナーのみ変更できます。', code: 'HR_BILLING_OWNER_REQUIRED' }, { status: 403 })
     }
 
     // User.stripeCustomerIdを使用（組織ではなくユーザーレベル）

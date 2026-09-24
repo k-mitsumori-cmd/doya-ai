@@ -21,6 +21,7 @@ export function getOrgPlanLimits(plan: string): PlanLimits {
     case 'ENTERPRISE':
       return { maxEmployees: -1, maxAiUsage: -1, maxMembers: -1 }
     case 'PRO':
+    case 'BUNDLE':
       return { maxEmployees: 100, maxAiUsage: -1, maxMembers: -1 }
     case 'STARTER':
     case 'LIGHT':
