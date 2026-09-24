@@ -4,6 +4,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { Prisma } from '@prisma/client'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getHrContext, getOrCreateOrganization, hasMinRole } from '@/lib/hr/access'
@@ -78,11 +79,9 @@ export async function GET() {
     }))
 
     return NextResponse.json({ success: true, organizations })
-  } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message || 'Failed to fetch organizations' },
-      { status: 500 }
-    )
+  } catch (e) {
+    console.error('[hr/organization GET]', e)
+    return NextResponse.json({ error: '組織情報の取得に失敗しました' }, { status: 500 })
   }
 }
 
@@ -97,7 +96,10 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    const body = await req.json()
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
     const {
       name,
       logoUrl,
@@ -111,17 +113,42 @@ export async function PATCH(req: NextRequest) {
       customFields,
     } = body
 
+    if (name !== undefined && (typeof name !== 'string' || !name.trim())) {
+      return NextResponse.json({ error: '組織名を入力してください' }, { status: 400 })
+    }
+    const nullableStrings = { logoUrl, industry, size, address, website }
+    if (Object.values(nullableStrings).some((value) => value != null && typeof value !== 'string')) {
+      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
+    if (fiscalMonth !== undefined && (!Number.isInteger(fiscalMonth) || fiscalMonth < 1 || fiscalMonth > 12)) {
+      return NextResponse.json({ error: '期首月は1〜12月で指定してください' }, { status: 400 })
+    }
+    if (evaluationType !== undefined && (typeof evaluationType !== 'string' || !evaluationType.trim() || evaluationType.length > 32)) {
+      return NextResponse.json({ error: '評価方式の形式が正しくありません' }, { status: 400 })
+    }
+    if (evaluationCycle !== undefined && !['MONTHLY', 'QUARTERLY', 'SEMI', 'ANNUAL'].includes(evaluationCycle)) {
+      return NextResponse.json({ error: '評価期間の形式が正しくありません' }, { status: 400 })
+    }
+    if (customFields !== undefined && customFields !== null && (typeof customFields !== 'object' || JSON.stringify(customFields).length > 20000)) {
+      return NextResponse.json({ error: '追加項目の形式が正しくありません' }, { status: 400 })
+    }
+    if (website && !/^https?:\/\//i.test(website.trim())) {
+      return NextResponse.json({ error: 'WebサイトのURLを確認してください' }, { status: 400 })
+    }
     const data: Record<string, any> = {}
-    if (name !== undefined) data.name = name
-    if (logoUrl !== undefined) data.logoUrl = logoUrl
-    if (industry !== undefined) data.industry = industry
-    if (size !== undefined) data.size = size
-    if (address !== undefined) data.address = address
-    if (website !== undefined) data.website = website
+    if (name !== undefined) data.name = name.trim().slice(0, 120)
+    if (logoUrl !== undefined) data.logoUrl = logoUrl?.trim().slice(0, 10000) || null
+    if (industry !== undefined) data.industry = industry?.trim().slice(0, 100) || null
+    if (size !== undefined) data.size = size?.trim().slice(0, 50) || null
+    if (address !== undefined) data.address = address?.trim().slice(0, 2000) || null
+    if (website !== undefined) data.website = website?.trim().slice(0, 2048) || null
     if (fiscalMonth !== undefined) data.fiscalMonth = fiscalMonth
-    if (evaluationType !== undefined) data.evaluationType = evaluationType
+    if (evaluationType !== undefined) data.evaluationType = evaluationType.trim()
     if (evaluationCycle !== undefined) data.evaluationCycle = evaluationCycle
-    if (customFields !== undefined) data.customFields = customFields
+    if (customFields !== undefined) data.customFields = customFields === null ? Prisma.DbNull : customFields
+    if (Object.keys(data).length === 0) {
+      return NextResponse.json({ error: '変更内容を指定してください' }, { status: 400 })
+    }
 
     const org = await prisma.hrOrganization.update({
       where: { id: ctx.organizationId },
@@ -129,10 +156,8 @@ export async function PATCH(req: NextRequest) {
     })
 
     return NextResponse.json({ success: true, organization: org })
-  } catch (e: any) {
-    return NextResponse.json(
-      { error: e?.message || 'Failed to update organization' },
-      { status: 500 }
-    )
+  } catch (e) {
+    console.error('[hr/organization PATCH]', e)
+    return NextResponse.json({ error: '組織情報の更新に失敗しました' }, { status: 500 })
   }
 }

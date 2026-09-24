@@ -83,6 +83,7 @@ function fixture(service, { failAt, conflictOnce = false } = {}) {
     let creations = 0;
     const route = load(`src/app/api/${service}/organization/route.ts`, {
       'next/server': { NextResponse: Response },
+      '@prisma/client': { Prisma: { DbNull: 'DB_NULL' } },
       'next-auth': { getServerSession: async () => ({ user: { id: 'user', email: 'owner@example.com' } }) },
       '@/lib/auth': { authOptions: {} },
       '@/lib/prisma': { prisma: {} },
