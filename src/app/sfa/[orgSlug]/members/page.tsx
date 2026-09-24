@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
+import { InviteDeliveryNotice } from '@/components/InviteDeliveryNotice'
 import { sfaInit } from '@/lib/sfa/client'
 
 interface Member {
@@ -31,6 +32,7 @@ export default function SfaMembersPage() {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('member')
   const [busy, setBusy] = useState(false)
+  const [inviteUrl, setInviteUrl] = useState('')
 
   const load = useCallback(() => {
     if (!ready) return
@@ -61,7 +63,9 @@ export default function SfaMembersPage() {
       const d = await res.json()
       if (!res.ok) throw new Error(d.error)
       setEmail('')
-      toast.success('招待メールを送信しました')
+      setInviteUrl(d.emailSent ? '' : d.inviteUrl || '')
+      if (d.emailSent) toast.success('招待メールを送信しました')
+      else toast.error('招待メールの送信を確認できませんでした。招待リンクをご確認ください。')
       load()
     } catch (e: any) {
       toast.error(e.message)
@@ -128,6 +132,7 @@ export default function SfaMembersPage() {
             </button>
           </div>
           <p className="text-[11px] font-bold text-slate-400 mt-2">招待リンクの有効期限は48時間です。</p>
+          {inviteUrl ? <InviteDeliveryNotice key={inviteUrl} url={inviteUrl} /> : null}
         </div>
       )}
 

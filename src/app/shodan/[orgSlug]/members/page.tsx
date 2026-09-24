@@ -6,6 +6,7 @@ import { shodanGet, shodanSend } from '@/lib/shodan/client'
 import { ROLE_LABEL, type ShodanRole } from '@/lib/shodan/types'
 import { PageHeader } from '@/components/shodan/ui'
 import toast from 'react-hot-toast'
+import { InviteDeliveryNotice } from '@/components/InviteDeliveryNotice'
 
 const sym = (name: string, size = 18) => <span className="material-symbols-outlined" style={{ fontSize: size }}>{name}</span>
 
@@ -19,6 +20,7 @@ export default function ShodanMembersPage() {
   const [email, setEmail] = useState('')
   const [role, setRole] = useState<ShodanRole>('member')
   const [inviting, setInviting] = useState(false)
+  const [inviteUrl, setInviteUrl] = useState('')
 
   const load = () => {
     shodanGet<{ members: Member[]; myRole: ShodanRole }>('/api/shodan/members', orgSlug)
@@ -33,8 +35,10 @@ export default function ShodanMembersPage() {
     if (!email.trim()) { toast.error('メールアドレスを入力してください'); return }
     setInviting(true)
     try {
-      await shodanSend('/api/shodan/members', orgSlug, 'POST', { email, role })
-      toast.success('招待メールを送信しました')
+      const result = await shodanSend<{ emailSent: boolean; inviteUrl?: string }>('/api/shodan/members', orgSlug, 'POST', { email, role })
+      setInviteUrl(result.emailSent ? '' : result.inviteUrl || '')
+      if (result.emailSent) toast.success('招待メールを送信しました')
+      else toast.error('招待メールの送信を確認できませんでした。招待リンクをご確認ください。')
       setEmail('')
       load()
     } catch (e: any) { toast.error(e.message) } finally { setInviting(false) }
@@ -71,6 +75,7 @@ export default function ShodanMembersPage() {
               {inviting ? '送信中…' : '招待を送る'}
             </button>
           </div>
+          {inviteUrl ? <InviteDeliveryNotice key={inviteUrl} url={inviteUrl} /> : null}
         </div>
       )}
 

@@ -32,11 +32,17 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
   if (!hasMinRole(ctx.role, 'admin')) return NextResponse.json({ error: '招待権限がありません' }, { status: 403 })
 
-  const body = await req.json().catch(() => ({}))
-  const email = (body.email as string)?.trim().toLowerCase()
-  const role = INVITABLE_ROLES.includes(body.role) ? (body.role as string) : 'member'
-  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+  const body = await req.json().catch(() => null)
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+  }
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
+  const role = body.role === undefined ? 'member' : body.role
+  if (!email || email.length > 254 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return NextResponse.json({ error: '有効なメールアドレスを入力してください' }, { status: 400 })
+  }
+  if (typeof role !== 'string' || !INVITABLE_ROLES.includes(role)) {
+    return NextResponse.json({ error: '招待権限の形式が正しくありません' }, { status: 400 })
   }
   // 自分と同格以上の権限では招待できない
   if (rank(role) >= rank(ctx.role)) {
@@ -66,13 +72,13 @@ export async function POST(req: NextRequest) {
 
   const baseUrl = process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'
   const link = `${baseUrl}/aio/invite/${inviteToken}`
-  await sendEmail({
+  const delivery = await sendEmail({
     to: email,
     subject: `【ドヤAIO】${esc(org?.name || '組織')}からの招待`,
     html: `
       <div style="font-family:system-ui,sans-serif;max-width:520px;margin:0 auto">
         <div style="background:linear-gradient(135deg,#7f19e6,#a855f7);padding:24px;border-radius:16px 16px 0 0;color:#fff">
-          <h1 style="margin:0;font-size:20px">🔍 ドヤAIOに招待されました</h1>
+          <h1 style="margin:0;font-size:20px">ドヤAIOに招待されました</h1>
         </div>
         <div style="border:1px solid #e2e8f0;border-top:none;border-radius:0 0 16px 16px;padding:24px">
           <p style="font-weight:700;color:#334155">「${esc(org?.name || '組織')}」のメンバーとして招待されました。</p>
@@ -83,5 +89,5 @@ export async function POST(req: NextRequest) {
       </div>`,
   })
 
-  return NextResponse.json({ ok: true, member: { id: member.id, inviteEmail: email, role } })
+  return NextResponse.json({ ok: true, emailSent: delivery.success, inviteUrl: delivery.success ? undefined : link, member: { id: member.id, inviteEmail: email, role } })
 }

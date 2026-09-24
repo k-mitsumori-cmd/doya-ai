@@ -240,6 +240,11 @@ if (hrOrganizationUpdates.error || hrOrganizationUpdates.status !== 0) {
   console.error('Security regression failed: verify-hr-organization-updates.cjs');
   process.exit(1);
 }
+const teamInviteDelivery = spawnSync(process.execPath, [path.join(__dirname, 'verify-team-invite-delivery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (teamInviteDelivery.error || teamInviteDelivery.status !== 0) {
+  console.error('Security regression failed: verify-team-invite-delivery.cjs');
+  process.exit(1);
+}
 const kintaiInviteAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-invite-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (kintaiInviteAtomic.error || kintaiInviteAtomic.status !== 0) {
   console.error('Security regression failed: verify-kintai-invite-atomic.cjs');
