@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     const account = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
     if (!account?.email || account.email.trim().toLowerCase() !== invitation.email.trim().toLowerCase()) {
-      return NextResponse.json({ error: '招待先のメールアドレスでログインしてください' }, { status: 403 })
+      return NextResponse.json({ error: '招待先のメールアドレスでログインしてください', code: 'INVITE_EMAIL_MISMATCH' }, { status: 403 })
     }
 
     if (invitation.role !== 'MEMBER') {

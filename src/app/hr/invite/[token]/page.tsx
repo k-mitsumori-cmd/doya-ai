@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { signIn, signOut } from 'next-auth/react'
 
 type InviteStatus = 'loading' | 'ready' | 'accepting' | 'success' | 'error' | 'expired'
 
@@ -14,7 +15,10 @@ export default function InviteAcceptPage() {
   const [status, setStatus] = useState<InviteStatus>('loading')
   const [orgName, setOrgName] = useState('')
   const [inviterName, setInviterName] = useState('')
+  const [inviteEmail, setInviteEmail] = useState('')
   const [error, setError] = useState('')
+  const [accountAction, setAccountAction] = useState<'signIn' | 'switch' | null>(null)
+  const callbackUrl = `/hr/invite/${encodeURIComponent(token || '')}`
 
   useEffect(() => {
     if (!token) return
@@ -35,6 +39,7 @@ export default function InviteAcceptPage() {
         const inv = data.invitation || data
         setOrgName(inv.organization?.name || inv.organizationName || inv.orgName || '')
         setInviterName(inv.inviterName || inv.invitedBy || '')
+        setInviteEmail(inv.email || '')
         if (inv.status === 'EXPIRED') {
           setStatus('expired')
           return
@@ -63,6 +68,11 @@ export default function InviteAcceptPage() {
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
+        if (res.status === 401) {
+          setAccountAction('signIn')
+        } else if (res.status === 403 && data.code === 'INVITE_EMAIL_MISMATCH') {
+          setAccountAction('switch')
+        }
         throw new Error(data.error || '招待の受諾に失敗しました')
       }
       setStatus('success')
@@ -120,6 +130,11 @@ export default function InviteAcceptPage() {
               {inviterName && (
                 <p className="text-sm text-slate-500 mb-6">
                   {inviterName} さんからの招待です
+                </p>
+              )}
+              {inviteEmail && (
+                <p className="text-sm text-slate-600 mb-4 break-all">
+                  招待先: <span className="font-bold">{inviteEmail}</span>
                 </p>
               )}
               <motion.button
@@ -240,6 +255,16 @@ export default function InviteAcceptPage() {
               />
               <h2 className="text-xl font-black text-red-600 mb-2">エラーが発生しました</h2>
               <p className="text-sm text-slate-500 mb-6">{error}</p>
+              {accountAction && (
+                <button
+                  onClick={() => accountAction === 'signIn'
+                    ? signIn('google', { callbackUrl })
+                    : signOut({ callbackUrl: `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}` })}
+                  className="w-full mb-3 px-6 py-3 bg-blue-600 text-white rounded-full text-sm font-bold hover:bg-blue-700 transition-all"
+                >
+                  {accountAction === 'switch' ? '別のアカウントでログイン' : 'Googleでログイン'}
+                </button>
+              )}
               <button
                 onClick={() => router.push('/hr/dashboard')}
                 className="px-6 py-3 bg-slate-100 text-slate-700 rounded-full text-sm font-bold hover:bg-slate-200 transition-all"

@@ -50,6 +50,7 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
 
   r = await acceptCase({ accountEmail: 'other@example.com' });
   assert.equal(r.status, 403);
+  assert.equal(r.body.code, 'INVITE_EMAIL_MISMATCH');
   assert.equal(r.claims, 0);
   assert.equal(r.created, 0);
 
