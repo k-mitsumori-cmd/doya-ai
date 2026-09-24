@@ -270,6 +270,11 @@ if (doyaslideProjectLimit.error || doyaslideProjectLimit.status !== 0) {
   console.error('Security regression failed: verify-doyaslide-project-limit-atomic.cjs');
   process.exit(1);
 }
+const doyaslideMonthlyQuota = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-monthly-quota.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyaslideMonthlyQuota.error || doyaslideMonthlyQuota.status !== 0) {
+  console.error('Security regression failed: verify-doyaslide-monthly-quota.cjs');
+  process.exit(1);
+}
 const kintaiInviteAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-invite-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (kintaiInviteAtomic.error || kintaiInviteAtomic.status !== 0) {
   console.error('Security regression failed: verify-kintai-invite-atomic.cjs');

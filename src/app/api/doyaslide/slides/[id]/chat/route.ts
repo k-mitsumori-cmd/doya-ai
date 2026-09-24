@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
 
     // チャット修正も再生成＝1枚分の生成クレジットを原子的に消費（並行でも上限超過しない）
-    const { granted, limit } = await reserveMonthlySlides(userId, 1)
+    const { granted, limit, reservedMonth } = await reserveMonthlySlides(userId, 1)
     if (granted < 1) {
       return NextResponse.json({ error: quotaExceededMessage(limit) }, { status: 403 })
     }
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       saved = true
       return NextResponse.json({ slide: updated, reply })
     } catch (e) {
-      if (!saved) await releaseMonthlySlides(userId, 1)
+      if (!saved) await releaseMonthlySlides(userId, 1, reservedMonth)
       if ((e as { code?: string })?.code === 'P2025') {
         return NextResponse.json({ error: 'スライドが変更されました。再読み込みしてお試しください。' }, { status: 409 })
       }

@@ -32,8 +32,16 @@ export async function getUserDoyaSlideLimits(userId: string): Promise<DoyaSlideL
 
 const DOYASLIDE_SERVICE_ID = 'doyaslide'
 
-function isSameMonth(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth()
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000
+export const DOYASLIDE_PROJECT_SERVICE_ID = 'doyaslide-projects'
+
+export function monthStart(now = new Date()): Date {
+  const jst = new Date(now.getTime() + JST_OFFSET_MS)
+  return new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), 1) - JST_OFFSET_MS)
+}
+
+export function isSameMonth(a: Date, b: Date): boolean {
+  return monthStart(a).getTime() === monthStart(b).getTime()
 }
 
 /** 上限超過時のユーザー向け共通メッセージ（全ルートで使い回す） */
@@ -48,76 +56,64 @@ export async function getMonthlyUsage(userId: string): Promise<number> {
     select: { monthlyUsage: true, lastUsageReset: true },
   })
   if (!sub) return 0
-  return isSameMonth(sub.lastUsageReset, new Date()) ? sub.monthlyUsage : 0
+  return isSameMonth(sub.lastUsageReset, new Date()) ? Math.max(0, sub.monthlyUsage) : 0
 }
 
 /**
  * 当月の生成枚数を「残枠まで」原子的に予約する。
- * monthlyUsage を原子的 increment し結果値で判定するため、並行リクエストでも上限を超えない（TOCTOU回避）。
+ * 利用者行のロック下で月次リセット・残枠判定・予約を1トランザクションに収める。
  * 返り値 granted = 実際に確保できた枚数（min(add, 残枠)）。granted < add のときは一部のみ生成可。
  * 生成に失敗した分は releaseMonthlySlides で戻すこと。
  */
 export async function reserveMonthlySlides(
   userId: string,
   add: number
-): Promise<{ granted: number; limit: number }> {
+): Promise<{ granted: number; limit: number; reservedMonth: Date | null }> {
+  if (!Number.isSafeInteger(add) || add < 1) throw new Error('Invalid slide reservation count')
   const tier = await getUserTier(userId)
   const limit = DOYASLIDE_LIMITS[tier].maxSlidesPerMonth
-  if (limit === -1) return { granted: add, limit: -1 }
+  if (limit === -1) return { granted: add, limit: -1, reservedMonth: null }
 
-  const now = new Date()
-  const existing = await prisma.userServiceSubscription.findUnique({
-    where: { userId_serviceId: { userId, serviceId: DOYASLIDE_SERVICE_ID } },
-    select: { lastUsageReset: true },
-  })
-  if (!existing) {
-    await prisma.userServiceSubscription.upsert({
-      where: { userId_serviceId: { userId, serviceId: DOYASLIDE_SERVICE_ID } },
-      create: { userId, serviceId: DOYASLIDE_SERVICE_ID, monthlyUsage: 0, lastUsageReset: now },
-      update: {},
+  return prisma.$transaction(async (tx) => {
+    const users = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`
+    if (users.length === 0) throw new Error('DoyaSlide account not found')
+    const now = new Date()
+    const where = { userId_serviceId: { userId, serviceId: DOYASLIDE_SERVICE_ID } }
+    const existing = await tx.userServiceSubscription.findUnique({
+      where, select: { monthlyUsage: true, lastUsageReset: true },
     })
-  } else if (!isSameMonth(existing.lastUsageReset, now)) {
-    // 月跨ぎはリセット
-    await prisma.userServiceSubscription.update({
-      where: { userId_serviceId: { userId, serviceId: DOYASLIDE_SERVICE_ID } },
-      data: { monthlyUsage: 0, lastUsageReset: now },
-    })
-  }
-
-  // 原子的インクリメント → 結果値で判定（並行でも各リクエストが一意の値を得る）
-  const updated = await prisma.userServiceSubscription.update({
-    where: { userId_serviceId: { userId, serviceId: DOYASLIDE_SERVICE_ID } },
-    data: { monthlyUsage: { increment: add } },
-    select: { monthlyUsage: true },
+    const current = existing && isSameMonth(existing.lastUsageReset, now)
+      ? Math.max(0, existing.monthlyUsage) : 0
+    const granted = Math.min(add, Math.max(0, limit - current))
+    if (!existing) {
+      await tx.userServiceSubscription.create({
+        data: { userId, serviceId: DOYASLIDE_SERVICE_ID, monthlyUsage: granted, lastUsageReset: now },
+      })
+    } else if (!isSameMonth(existing.lastUsageReset, now) || existing.monthlyUsage !== current || granted > 0) {
+      await tx.userServiceSubscription.update({
+        where, data: { monthlyUsage: current + granted, lastUsageReset: now },
+      })
+    }
+    return { granted, limit, reservedMonth: monthStart(now) }
   })
-
-  if (updated.monthlyUsage <= limit) {
-    return { granted: add, limit }
-  }
-  // 超過分は戻し、残枠ぶんだけ確保
-  const overflow = updated.monthlyUsage - limit
-  const granted = Math.max(0, add - overflow)
-  await prisma.userServiceSubscription.update({
-    where: { userId_serviceId: { userId, serviceId: DOYASLIDE_SERVICE_ID } },
-    data: { monthlyUsage: { decrement: add - granted } },
-  })
-  return { granted, limit }
 }
 
 /** 予約したが生成に失敗した枚数を戻す */
-export async function releaseMonthlySlides(userId: string, n: number): Promise<void> {
-  if (n <= 0) return
-  await prisma.userServiceSubscription
-    .update({
-      where: { userId_serviceId: { userId, serviceId: DOYASLIDE_SERVICE_ID } },
-      data: { monthlyUsage: { decrement: n } },
+export async function releaseMonthlySlides(userId: string, n: number, reservedMonth: Date | null): Promise<void> {
+  if (n <= 0 || !reservedMonth) return // 無制限プランでは予約・返却をしない
+  await prisma.$transaction(async (tx) => {
+    const users = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`
+    if (users.length === 0) return
+    const where = { userId_serviceId: { userId, serviceId: DOYASLIDE_SERVICE_ID } }
+    const existing = await tx.userServiceSubscription.findUnique({
+      where, select: { monthlyUsage: true, lastUsageReset: true },
     })
-    .catch(() => {})
-}
-
-function monthStart(): Date {
-  const now = new Date()
-  return new Date(now.getFullYear(), now.getMonth(), 1)
+    if (!existing || !isSameMonth(existing.lastUsageReset, reservedMonth)) return
+    const decrement = Math.min(Math.max(0, existing.monthlyUsage), n)
+    if (decrement > 0) {
+      await tx.userServiceSubscription.update({ where, data: { monthlyUsage: { decrement } } })
+    }
+  }).catch((error) => { console.error('[doyaslide/quota] refund failed', error) })
 }
 
 /** 当月の画像生成回数をカウント（生成・再生成・チャット修正のたびに1版作られる＝生成枚数） */
@@ -131,5 +127,13 @@ export async function countMonthlySlides(userId: string): Promise<number> {
 }
 
 export async function countProjects(userId: string): Promise<number> {
-  return prisma.doyaSlideProject.count({ where: { userId } })
+  const now = new Date()
+  const [existing, ledger] = await Promise.all([
+    prisma.doyaSlideProject.count({ where: { userId, createdAt: { gte: monthStart(now) } } }),
+    prisma.userServiceSubscription.findUnique({
+      where: { userId_serviceId: { userId, serviceId: DOYASLIDE_PROJECT_SERVICE_ID } },
+      select: { monthlyUsage: true, lastUsageReset: true },
+    }),
+  ])
+  return Math.max(existing, ledger && isSameMonth(ledger.lastUsageReset, now) ? ledger.monthlyUsage : 0)
 }

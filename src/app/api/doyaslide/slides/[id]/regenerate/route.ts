@@ -29,7 +29,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }
 
     // 再生成も1枚分の生成クレジットを原子的に消費（並行でも上限超過しない）
-    const { granted, limit } = await reserveMonthlySlides(userId, 1)
+    const { granted, limit, reservedMonth } = await reserveMonthlySlides(userId, 1)
     if (granted < 1) {
       return NextResponse.json({ error: quotaExceededMessage(limit) }, { status: 403 })
     }
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       saved = true
       return NextResponse.json({ slide: updated })
     } catch (e) {
-      if (!saved) await releaseMonthlySlides(userId, 1)
+      if (!saved) await releaseMonthlySlides(userId, 1, reservedMonth)
       if (markedGenerating) {
         await prisma.doyaSlideSlide.updateMany({
           where: { id: slide.id, version: slide.version, imageUrl: slide.imageUrl, visualPrompt: slide.visualPrompt, status: 'generating' },

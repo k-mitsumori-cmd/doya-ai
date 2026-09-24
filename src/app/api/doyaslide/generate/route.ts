@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 残枠まで原子的に予約（並行でも上限超過しない=TOCTOU回避 / 残枠未満でも作れる分だけ生成）
-    const { granted, limit } = await reserveMonthlySlides(userId, targets.length)
+    const { granted, limit, reservedMonth } = await reserveMonthlySlides(userId, targets.length)
     if (granted <= 0) {
       return NextResponse.json({ error: quotaExceededMessage(limit) }, { status: 403 })
     }
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
 
       // 失敗分＋時間切れで未生成の分のクレジットを戻す
       released = errorCount + timedOut
-      await releaseMonthlySlides(userId, released)
+      await releaseMonthlySlides(userId, released, reservedMonth)
 
       const slides = await prisma.doyaSlideSlide.findMany({ where: { projectId }, orderBy: { index: 'asc' } })
       // 1枚も生成できていない場合のみ error。既存の完成分があれば completed（未完分は再実行で続行可能）
@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ slides, errorCount, skipped, timedOut, limit })
     } catch (e) {
       const unaccounted = Math.max(0, granted - successCount - released)
-      if (unaccounted > 0) await releaseMonthlySlides(userId, unaccounted)
+      if (unaccounted > 0) await releaseMonthlySlides(userId, unaccounted, reservedMonth)
       throw e
     }
   } catch (e: any) {

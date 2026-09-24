@@ -87,7 +87,7 @@ export default function DoyaSlideProjectsPage() {
           <span>プラン: {usage.plan}</span>
           <span className="text-slate-300">|</span>
           <span>
-            プロジェクト {usage.usage?.projects ?? 0}
+            今月のプロジェクト {usage.usage?.projects ?? 0}
             {usage.limits.maxProjects === -1 ? '' : ` / ${usage.limits.maxProjects}`}
           </span>
           <span className="text-slate-300">|</span>
