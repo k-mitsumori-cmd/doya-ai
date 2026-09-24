@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
 
         // ====== レシピ取得 ======
         const recipe = await prisma.interviewRecipe.findUnique({ where: { id: recipeId } })
-        if (!recipe) {
+        if (!recipe || (!recipe.isTemplate && !recipe.isPublic && !(userId && recipe.userId === userId))) {
           controller.enqueue(sseEvent({ type: 'error', message: 'レシピが見つかりません' }))
           controller.close()
           return

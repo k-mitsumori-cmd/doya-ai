@@ -169,6 +169,26 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       }
     }
 
+    if ('recipeId' in data && data.recipeId !== null) {
+      if (typeof data.recipeId !== 'string' || !data.recipeId.trim()) {
+        return NextResponse.json({ success: false, error: 'レシピの指定が正しくありません' }, { status: 400 })
+      }
+      const recipe = await prisma.interviewRecipe.findFirst({
+        where: {
+          id: data.recipeId,
+          OR: [
+            { isTemplate: true },
+            { isPublic: true },
+            ...(userId ? [{ userId }] : []),
+          ],
+        },
+        select: { id: true },
+      })
+      if (!recipe) {
+        return NextResponse.json({ success: false, error: 'レシピが見つかりません' }, { status: 404 })
+      }
+    }
+
     const updated = await prisma.interviewProject.update({
       where: { id },
       data,

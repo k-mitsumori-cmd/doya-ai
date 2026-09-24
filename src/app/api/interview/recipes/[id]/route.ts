@@ -30,7 +30,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     }
 
     // テンプレート・公開以外は所有者のみアクセス可
-    if (!recipe.isTemplate && !recipe.isPublic && recipe.userId !== userId) {
+    if (!recipe.isTemplate && !recipe.isPublic && !(userId && recipe.userId === userId)) {
       return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
     }
 

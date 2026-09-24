@@ -38,12 +38,16 @@ let holdProvider = false;
 let providerEntered = () => {};
 let locks = 0;
 let claimedIdentity;
+let recipeOwner = 'u1';
+let recipeIsTemplate = false;
+let recipeIsPublic = false;
+let budgetCalls = 0;
 const prisma = {
   interviewProject: {
     findUnique: async () => ({ id: 'p1', userId: 'u1', title: 'Test', transcriptions: [{ text: 'material' }], materials: [] }),
     update: async () => { if (failProjectUpdate) throw new Error('update failed'); return {}; },
   },
-  interviewRecipe: { findUnique: async () => ({ id: 'r1', name: 'Test', editingGuidelines: '', category: 'GENERAL' }), update: async () => ({}) },
+  interviewRecipe: { findUnique: async () => ({ id: 'r1', name: 'Test', editingGuidelines: '', category: 'GENERAL', userId: recipeOwner, isTemplate: recipeIsTemplate, isPublic: recipeIsPublic }), update: async () => ({}) },
   interviewDraft: { aggregate: async () => ({ _max: { version: drafts } }) },
   $transaction: async (fn) => {
     let staged = false;
@@ -73,7 +77,7 @@ const { POST } = load('src/app/api/interview/articles/generate/route.ts', {
   '@/lib/interview/prompts': { buildArticlePrompt: () => 'prompt' },
   '@/lib/service-usage': { recordServiceUsage: async () => { if (failUsageTracking) throw new Error('tracking failed'); } },
   '@/lib/interview/article-budget': {
-    claimArticleBudget: async (identity) => { claimedIdentity = identity; return admission; },
+    claimArticleBudget: async (identity) => { budgetCalls++; claimedIdentity = identity; return admission; },
     refundArticleBudget: async () => { refunds++; },
   },
 }, {
@@ -100,7 +104,26 @@ async function events() {
 }
 
 (async () => {
+  recipeOwner = 'other-user';
   let output = await events();
+  assert.equal(output.at(-1).message, 'レシピが見つかりません');
+  assert.equal(budgetCalls, 0);
+  assert.equal(providerCalls, 0);
+  recipeOwner = null;
+  output = await events();
+  assert.equal(output.at(-1).message, 'レシピが見つかりません');
+  assert.equal(budgetCalls, 0);
+  recipeIsTemplate = true;
+  output = await events();
+  assert.equal(output.at(-1).code, 'ARTICLE_LIMIT');
+  assert.equal(budgetCalls, 1);
+  recipeIsTemplate = false;
+  recipeIsPublic = true;
+  output = await events();
+  assert.equal(output.at(-1).code, 'ARTICLE_LIMIT');
+  recipeIsPublic = false;
+  recipeOwner = 'u1';
+  output = await events();
   assert.equal(output.at(-1).code, 'ARTICLE_LIMIT');
   assert.equal(output.at(-1).upgradePath, '/interview/pricing');
   assert.equal(providerCalls, 0);
@@ -152,5 +175,59 @@ async function events() {
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(refunds, 4);
   assert.equal(drafts, 3);
-  console.log('PASS interview article limit: blocked before provider, failed attempt refunded, atomic draft save and versioning');
+  let viewerId = null;
+  let storedOwner = null;
+  const { GET: readRecipe } = load('src/app/api/interview/recipes/[id]/route.ts', {
+    'next/server': { NextResponse: Response },
+    '@/lib/prisma': { prisma: { interviewRecipe: { findUnique: async () => ({
+      id: 'r1', userId: storedOwner, isTemplate: false, isPublic: false, createdAt: new Date(),
+    }) } } },
+    '@/lib/interview/access': { getInterviewUser: async () => ({ userId: viewerId }), requireDatabase: () => null },
+  });
+  const context = { params: Promise.resolve({ id: 'r1' }) };
+  assert.equal((await readRecipe({}, context)).status, 404, 'A guest cannot read an orphaned private recipe');
+  storedOwner = 'other-user';
+  viewerId = 'u1';
+  assert.equal((await readRecipe({}, context)).status, 404, 'Another account cannot read a private recipe');
+  viewerId = 'other-user';
+  assert.equal((await readRecipe({}, context)).status, 200, 'The owner can still read the recipe');
+  let projectWrites = 0;
+  let recipeFound = false;
+  let checkedRecipe = false;
+  const { PUT: updateProject } = load('src/app/api/interview/projects/[id]/route.ts', {
+    'next/server': { NextResponse: Response },
+    '@/lib/prisma': { prisma: {
+      interviewProject: {
+        findUnique: async () => ({ id: 'p1', userId: 'u1', guestId: null }),
+        update: async ({ data }) => { projectWrites++; return { id: 'p1', title: 'Test', status: 'DRAFT', updatedAt: new Date(), ...data }; },
+      },
+      interviewRecipe: { findFirst: async ({ where }) => {
+        checkedRecipe = true;
+        assert.equal(where.id, 'r1');
+        assert.deepEqual(JSON.parse(JSON.stringify(where.OR)), [{ isTemplate: true }, { isPublic: true }, { userId: 'u1' }]);
+        return recipeFound ? { id: 'r1' } : null;
+      } },
+    } },
+    '@/lib/interview/access': {
+      getInterviewUser: async () => ({ userId: 'u1' }),
+      getGuestIdFromRequest: () => null,
+      checkOwnership: () => null,
+      requireDatabase: () => null,
+    },
+    '@/lib/interview/storage-purge-queue': { enqueueInterviewProjectStoragePurge: async () => {} },
+    '@/lib/interview/transcription-budget': { preserveInterviewTranscriptionUsageBeforeDelete: async () => {} },
+  });
+  const updateWith = (recipeId) => updateProject({ json: async () => ({ recipeId }) }, { params: Promise.resolve({ id: 'p1' }) });
+  assert.equal((await updateWith('r1')).status, 404, 'A foreign private recipe cannot be linked');
+  assert.equal(projectWrites, 0);
+  assert.equal((await updateWith(42)).status, 400, 'Malformed recipe IDs are rejected');
+  assert.equal(projectWrites, 0);
+  recipeFound = true;
+  assert.equal((await updateWith('r1')).status, 200, 'An accessible recipe can be linked');
+  assert.equal(projectWrites, 1);
+  checkedRecipe = false;
+  assert.equal((await updateWith(null)).status, 200, 'The recipe can be cleared');
+  assert.equal(checkedRecipe, false);
+  assert.equal(projectWrites, 2);
+  console.log('PASS interview article: private recipe access, blocked quota before provider, failed attempt refund, atomic draft save and versioning');
 })().catch((error) => { console.error(error); process.exitCode = 1; });
