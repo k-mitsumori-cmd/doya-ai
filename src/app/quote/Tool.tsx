@@ -7,10 +7,11 @@
 // 「URL入力 → 品目候補 → 編集 → 見積書作成」までを1画面で完結させる。
 // 迷わせないため、未完了のステップだけを開いた状態にする。
 
-import { useCallback, useEffect, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
 import OrgSwitcher, { clearSelectedOrg, reconcileSelectedOrg, withOrg, type Membership } from '@/components/org/OrgSwitcher'
 import { fetchOrgJson } from '@/lib/org-fetch'
+import { appendQuoteListPage, parseQuoteListPage } from '@/lib/quote/list-pages'
 import { billableLines, calcTotals, yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource, type ProductProfile, type SuggestedItem } from '@/lib/quote/types'
 import { Sparkles } from 'lucide-react'
@@ -58,6 +59,15 @@ export default function QuoteTool() {
 
   const [products, setProducts] = useState<Product[]>([])
   const [docs, setDocs] = useState<DocRow[]>([])
+  const [productCursor, setProductCursor] = useState<string | null>(null)
+  const [productTotal, setProductTotal] = useState(0)
+  const [documentCursor, setDocumentCursor] = useState<string | null>(null)
+  const [documentTotal, setDocumentTotal] = useState(0)
+  const [loadingMoreProducts, setLoadingMoreProducts] = useState(false)
+  const [loadingMoreDocuments, setLoadingMoreDocuments] = useState(false)
+  const [productPageError, setProductPageError] = useState('')
+  const [documentPageError, setDocumentPageError] = useState('')
+  const listVersion = useRef(0)
 
   // 商材の取り込み
   const [url, setUrl] = useState('')
@@ -85,12 +95,26 @@ export default function QuoteTool() {
   const [creating, setCreating] = useState(false)
 
   const [error, setError] = useState('')
+  const [loadFailed, setLoadFailed] = useState(false)
 
   const load = useCallback(async () => {
+    const version = ++listVersion.current
     setLoading(true)
+    setError('')
+    setLoadFailed(false)
+    setNeedsLogin(false)
+    setProducts([])
+    setDocs([])
+    setProductCursor(null)
+    setDocumentCursor(null)
+    setLoadingMoreProducts(false)
+    setLoadingMoreDocuments(false)
+    setProductPageError('')
+    setDocumentPageError('')
     try {
       const r = await fetch('/api/quote/organizations')
       if (r.status === 401) {
+        if (listVersion.current !== version) return
         setNeedsLogin(true)
         return
       }
@@ -104,6 +128,7 @@ export default function QuoteTool() {
         if (scopedData?.current) d = scopedData
         else clearSelectedOrg('quote')
       }
+      if (listVersion.current !== version) return
       setOrg(d.current)
       setMemberships(memberships)
       if (d.current) {
@@ -112,24 +137,76 @@ export default function QuoteTool() {
           fetchOrgJson(withOrg('quote', '/api/quote/documents')),
           fetchOrgJson(withOrg('quote', '/api/quote/issuer')),
         ])
-        if (!Array.isArray(pr.products) || !Array.isArray(dr.documents) || !Object.prototype.hasOwnProperty.call(ir, 'issuer')) {
+        const productPage = parseQuoteListPage<Product>(pr, 'products', 100)
+        const documentPage = parseQuoteListPage<DocRow>(dr, 'documents', 200)
+        if (!Object.prototype.hasOwnProperty.call(ir, 'issuer')) {
           throw new Error('組織のデータを確認できませんでした')
         }
-        setProducts(pr.products || [])
-        setDocs(dr.documents || [])
+        const productRows = appendQuoteListPage([], productPage, productPage.total)
+        const documentRows = appendQuoteListPage([], documentPage, documentPage.total)
+        if (listVersion.current !== version) return
+        setProducts(productRows)
+        setProductTotal(productPage.total)
+        setProductCursor(productPage.nextCursor)
+        setDocs(documentRows)
+        setDocumentTotal(documentPage.total)
+        setDocumentCursor(documentPage.nextCursor)
         setHasIssuer(Boolean(ir.issuer))
-        if ((pr.products || []).length > 0) setSelectedProduct(pr.products[0].id)
+        setSelectedProduct(productRows[0]?.id || '')
       }
     } catch (e) {
-      notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
+      if (listVersion.current === version) {
+        setLoadFailed(true)
+        notifyError(setError, e instanceof Error ? e.message : '読み込みに失敗しました')
+      }
     } finally {
-      setLoading(false)
+      if (listVersion.current === version) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
     void load()
   }, [load])
+
+  async function loadMoreProducts() {
+    if (!productCursor || loadingMoreProducts) return
+    const version = listVersion.current
+    setLoadingMoreProducts(true)
+    setProductPageError('')
+    try {
+      const url = withOrg('quote', '/api/quote/products')
+      const data = await fetchOrgJson(`${url}${url.includes('?') ? '&' : '?'}cursor=${encodeURIComponent(productCursor)}`)
+      const page = parseQuoteListPage<Product>(data, 'products', 100)
+      const merged = appendQuoteListPage(products, page, productTotal)
+      if (listVersion.current !== version) return
+      setProducts(merged)
+      setProductCursor(page.nextCursor)
+    } catch (error) {
+      if (listVersion.current === version) setProductPageError(error instanceof Error ? error.message : '商材を読み込めませんでした')
+    } finally {
+      if (listVersion.current === version) setLoadingMoreProducts(false)
+    }
+  }
+
+  async function loadMoreDocuments() {
+    if (!documentCursor || loadingMoreDocuments) return
+    const version = listVersion.current
+    setLoadingMoreDocuments(true)
+    setDocumentPageError('')
+    try {
+      const url = withOrg('quote', '/api/quote/documents')
+      const data = await fetchOrgJson(`${url}${url.includes('?') ? '&' : '?'}cursor=${encodeURIComponent(documentCursor)}`)
+      const page = parseQuoteListPage<DocRow>(data, 'documents', 200)
+      const merged = appendQuoteListPage(docs, page, documentTotal)
+      if (listVersion.current !== version) return
+      setDocs(merged)
+      setDocumentCursor(page.nextCursor)
+    } catch (error) {
+      if (listVersion.current === version) setDocumentPageError(error instanceof Error ? error.message : '見積書を読み込めませんでした')
+    } finally {
+      if (listVersion.current === version) setLoadingMoreDocuments(false)
+    }
+  }
 
   async function createOrg() {
     if (!orgName.trim()) return
@@ -309,6 +386,15 @@ export default function QuoteTool() {
         {/* ⚠️ 規約(§4.3)ではローディングはドヤくん working。テキストだけにしない */}
         <DoyaKun mood="working" size={88} />
         <p className="text-sm font-bold text-slate-400">読み込んでいます…</p>
+      </div>
+    )
+  }
+
+  if (loadFailed) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 bg-slate-50 px-4 text-center">
+        <p role="alert" className="text-sm font-bold text-rose-700">{error || '組織のデータを読み込めませんでした。'}</p>
+        <button onClick={() => void load()} className="rounded-lg border border-blue-300 bg-white px-5 py-2.5 text-sm font-bold text-blue-700">再試行</button>
       </div>
     )
   }
@@ -507,6 +593,16 @@ export default function QuoteTool() {
                 />
               </label>
             </div>
+            {productCursor && (
+              <div className="mt-3 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-600">
+                <span>{products.length} / {productTotal}件の商材を表示</span>
+                <button onClick={loadMoreProducts} disabled={loadingMoreProducts} className="rounded-lg border border-blue-300 px-3 py-1.5 text-blue-700 disabled:opacity-50">
+                  {loadingMoreProducts ? '読み込み中…' : productPageError ? '再試行' : '商材をさらに表示'}
+                </button>
+                {productPageError && <button onClick={() => void load()} className="text-blue-700 underline">一覧を更新</button>}
+              </div>
+            )}
+            {productPageError && <p role="alert" className="mt-2 text-xs font-semibold text-rose-700">{productPageError}</p>}
             {/* ⚠️ ここが本サービスの主役の操作。押すと何が起きるかを添えて、
                  主要アクションだと分かる見た目にする（AIが動く＝待ち時間が出るボタン） */}
             <button
@@ -826,6 +922,16 @@ export default function QuoteTool() {
               ))}
             </div>
           )}
+          {documentCursor && (
+            <div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-semibold text-slate-600">
+              <span>{docs.length} / {documentTotal}件の見積書を表示</span>
+              <button onClick={loadMoreDocuments} disabled={loadingMoreDocuments} className="rounded-lg border border-blue-300 px-3 py-1.5 text-blue-700 disabled:opacity-50">
+                {loadingMoreDocuments ? '読み込み中…' : documentPageError ? '再試行' : '見積書をさらに表示'}
+              </button>
+              {documentPageError && <button onClick={() => void load()} className="text-blue-700 underline">一覧を更新</button>}
+            </div>
+          )}
+          {documentPageError && <p role="alert" className="mt-2 text-xs font-semibold text-rose-700">{documentPageError}</p>}
         </section>
       </main>
     </div>

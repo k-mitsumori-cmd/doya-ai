@@ -15,16 +15,34 @@ import type { PriceSource } from '@/lib/quote/types'
 export async function GET(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
-  const documents = await prisma.quoteDocument.findMany({
-    where: { organizationId: ctx.organizationId },
-    orderBy: { createdAt: 'desc' },
-    take: 200,
-    select: {
-      id: true, quoteNo: true, title: true, clientCompany: true, status: true,
-      issueDate: true, expiryDate: true, totalInclTax: true, createdAt: true,
-    },
-  })
-  return NextResponse.json({ documents })
+  const { searchParams } = new URL(req.url)
+  const cursor = searchParams.get('cursor')
+  if (searchParams.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  const where = { organizationId: ctx.organizationId }
+  if (cursor && !await prisma.quoteDocument.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  const [rows, total] = await Promise.all([
+    prisma.quoteDocument.findMany({
+      where,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 201,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      select: {
+        id: true, quoteNo: true, title: true, clientCompany: true, status: true,
+        issueDate: true, expiryDate: true, totalInclTax: true, createdAt: true,
+      },
+    }),
+    prisma.quoteDocument.count({ where }),
+  ])
+  const documents = rows.slice(0, 200)
+  return NextResponse.json({
+    documents,
+    total,
+    nextCursor: rows.length > 200 ? documents[documents.length - 1].id : null,
+  }, { headers: { 'Cache-Control': 'private, no-store' } })
 }
 
 const VALID_SOURCES: PriceSource[] = ['own_price', 'market', 'competitor', 'manual', 'ai_estimate', 'unknown']

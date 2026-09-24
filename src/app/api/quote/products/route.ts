@@ -10,12 +10,30 @@ import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
 export async function GET(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
-  const products = await prisma.quoteProduct.findMany({
-    where: { organizationId: ctx.organizationId },
-    orderBy: { createdAt: 'desc' },
-    take: 100,
-  })
-  return NextResponse.json({ products })
+  const { searchParams } = new URL(req.url)
+  const cursor = searchParams.get('cursor')
+  if (searchParams.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  const where = { organizationId: ctx.organizationId }
+  if (cursor && !await prisma.quoteProduct.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  const [rows, total] = await Promise.all([
+    prisma.quoteProduct.findMany({
+      where,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 101,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    }),
+    prisma.quoteProduct.count({ where }),
+  ])
+  const products = rows.slice(0, 100)
+  return NextResponse.json({
+    products,
+    total,
+    nextCursor: rows.length > 100 ? products[products.length - 1].id : null,
+  }, { headers: { 'Cache-Control': 'private, no-store' } })
 }
 
 export async function POST(req: NextRequest) {
