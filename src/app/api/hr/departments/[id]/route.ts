@@ -7,7 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { validDepartmentParent } from '@/lib/department-integrity'
 import { prisma } from '@/lib/prisma'
-import { getHrContext } from '@/lib/hr/access'
+import { getHrContext, hasMinRole } from '@/lib/hr/access'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -21,6 +21,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const hrCtx = await getHrContext()
     if (!hrCtx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!hasMinRole(hrCtx.role, 'ADMIN')) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
     const p = await ctx.params
@@ -84,6 +87,9 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     const hrCtx = await getHrContext()
     if (!hrCtx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!hasMinRole(hrCtx.role, 'ADMIN')) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
     const p = await ctx.params

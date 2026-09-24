@@ -444,13 +444,15 @@ export default function HrSettingsPage() {
               </div>
               部署管理
             </h2>
-            <button
-              onClick={() => setShowDeptModal(true)}
-              className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all"
-            >
-              <span className="material-symbols-outlined text-lg">add</span>
-              部署を追加
-            </button>
+            {canManageMembers && (
+              <button
+                onClick={() => setShowDeptModal(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg hover:bg-blue-700 transition-all"
+              >
+                <span className="material-symbols-outlined text-lg">add</span>
+                部署を追加
+              </button>
+            )}
           </div>
 
           {departments.length > 0 ? (
@@ -475,7 +477,7 @@ export default function HrSettingsPage() {
                       <span className="px-3 py-1.5 rounded-full text-sm font-bold bg-blue-100 text-blue-700">
                         {dept.employeeCount}名
                       </span>
-                      {dept.employeeCount === 0 && (
+                      {canManageMembers && dept.employeeCount === 0 && (
                         <button
                           onClick={() => handleDeleteDept(dept.id)}
                           disabled={deletingDeptId === dept.id}
@@ -496,13 +498,13 @@ export default function HrSettingsPage() {
             <div className="text-center py-8 text-slate-500">
               <span className="material-symbols-outlined text-4xl mb-2 block text-amber-300">apartment</span>
               <p className="text-sm font-bold text-slate-700">まだ部署が作成されていません</p>
-              <p className="text-xs mt-1">「部署を追加」ボタンから作成してください</p>
+              {canManageMembers && <p className="text-xs mt-1">「部署を追加」ボタンから作成してください</p>}
             </div>
           )}
         </div>
 
         {/* Department Create Modal */}
-        {showDeptModal && (
+        {canManageMembers && showDeptModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center">
             <div className="absolute inset-0 bg-black/30" onClick={() => setShowDeptModal(false)} />
             <motion.div

@@ -7,7 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { validDepartmentParent } from '@/lib/department-integrity'
 import { prisma } from '@/lib/prisma'
-import { getHrContext } from '@/lib/hr/access'
+import { getHrContext, hasMinRole } from '@/lib/hr/access'
 
 interface DeptNode {
   id: string
@@ -90,6 +90,9 @@ export async function POST(req: NextRequest) {
     const ctx = await getHrContext()
     if (!ctx) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    if (!hasMinRole(ctx.role, 'ADMIN')) {
+      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
     const body = await req.json()
