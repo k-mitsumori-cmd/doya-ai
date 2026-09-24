@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 import {
   getInterviewUser,
   getGuestIdFromRequest,
@@ -47,33 +48,88 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, stats: { totalProjects, totalDrafts, totalMaterials } })
     }
 
-    const projects = await prisma.interviewProject.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-      include: {
-        _count: {
-          select: {
-            materials: true,
-            drafts: true,
+    const params = req.nextUrl.searchParams
+    const query = (params.get('q') || '').trim()
+    const status = params.get('status') || ''
+    if (query.length > 100 || (status && !['DRAFT', 'EDITING', 'COMPLETED'].includes(status))) {
+      return NextResponse.json({ success: false, error: '検索条件が正しくありません' }, { status: 400 })
+    }
+
+    let cursor: { createdAt: Date; id: string } | null = null
+    const rawCursor = params.get('cursor')
+    if (rawCursor) {
+      try {
+        if (rawCursor.length > 512) throw new Error('Cursor too long')
+        const decoded = JSON.parse(Buffer.from(rawCursor, 'base64url').toString('utf8')) as { createdAt?: unknown; id?: unknown }
+        if (typeof decoded.createdAt !== 'string' || typeof decoded.id !== 'string' || !decoded.id || decoded.id.length > 128) {
+          throw new Error('Invalid cursor')
+        }
+        const createdAt = new Date(decoded.createdAt)
+        if (Number.isNaN(createdAt.getTime()) || createdAt.toISOString() !== decoded.createdAt) throw new Error('Invalid date')
+        cursor = { createdAt, id: decoded.id }
+      } catch {
+        return NextResponse.json({ success: false, error: 'ページ指定が正しくありません' }, { status: 400 })
+      }
+    }
+
+    const scopeWhere: Prisma.InterviewProjectWhereInput = where
+    const searchWhere: Prisma.InterviewProjectWhereInput = {
+      ...scopeWhere,
+      ...(status ? { status } : {}),
+      ...(query ? { OR: [
+        { title: { contains: query, mode: 'insensitive' } },
+        { intervieweeName: { contains: query, mode: 'insensitive' } },
+        { intervieweeCompany: { contains: query, mode: 'insensitive' } },
+      ] } : {}),
+    }
+    const pageWhere: Prisma.InterviewProjectWhereInput = cursor
+      ? { AND: [searchWhere, { OR: [
+        { createdAt: { lt: cursor.createdAt } },
+        { createdAt: cursor.createdAt, id: { lt: cursor.id } },
+      ] }] }
+      : searchWhere
+
+    const [rows, filteredCount, statusGroups] = await Promise.all([
+      prisma.interviewProject.findMany({
+        where: pageWhere,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: 51,
+        include: {
+          _count: {
+            select: {
+              materials: true,
+              drafts: true,
+            },
+          },
+          drafts: {
+            take: 1,
+            orderBy: { version: 'desc' },
+            select: { title: true, content: true },
+          },
+          transcriptions: {
+            where: { status: 'COMPLETED' },
+            take: 1,
+            orderBy: { createdAt: 'desc' },
+            select: { summary: true, text: true },
           },
         },
-        drafts: {
-          take: 1,
-          orderBy: { version: 'desc' },
-          select: { title: true, content: true },
-        },
-        transcriptions: {
-          where: { status: 'COMPLETED' },
-          take: 1,
-          orderBy: { createdAt: 'desc' },
-          select: { summary: true, text: true },
-        },
-      },
-    })
+      }),
+      prisma.interviewProject.count({ where: searchWhere }),
+      prisma.interviewProject.groupBy({ by: ['status'], where: scopeWhere, _count: { _all: true } }),
+    ])
+    const hasMore = rows.length > 50
+    const projects = rows.slice(0, 50)
+    const counts = Object.fromEntries(statusGroups.map((group) => [group.status, group._count._all]))
+    const last = projects[projects.length - 1]
 
     return NextResponse.json({
       success: true,
+      totalCount: statusGroups.reduce((total, group) => total + group._count._all, 0),
+      filteredCount,
+      statusCounts: counts,
+      nextCursor: hasMore && last
+        ? Buffer.from(JSON.stringify({ createdAt: last.createdAt.toISOString(), id: last.id })).toString('base64url')
+        : null,
       projects: projects.map((p) => {
         const latestDraft = p.drafts?.[0]
         const latestTranscription = p.transcriptions?.[0]
@@ -102,7 +158,8 @@ export async function GET(req: NextRequest) {
         }
       }),
     })
-  } catch {
+  } catch (error) {
+    console.error('[interview/projects] List failed:', error)
     return NextResponse.json(
       { success: false, error: 'プロジェクト一覧の取得に失敗しました', projects: [] },
       { status: 500 }

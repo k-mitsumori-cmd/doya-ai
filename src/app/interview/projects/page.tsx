@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
@@ -56,78 +56,67 @@ export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [listError, setListError] = useState(false)
+  const [moreError, setMoreError] = useState(false)
+  const [moreLoading, setMoreLoading] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [totalCount, setTotalCount] = useState(0)
+  const [filteredCount, setFilteredCount] = useState(0)
+  const [statusCounts, setStatusCounts] = useState<Record<string, number>>({})
   const [filter, setFilter] = useState<string>('ALL')
   const [query, setQuery] = useState('')
   const [generatingThumbnail, setGeneratingThumbnail] = useState<string | null>(null)
-  const autoGenRef = useRef<Set<string>>(new Set())
-
-  const generateThumbnailForProject = useCallback(async (projectId: string): Promise<string | null> => {
-    try {
-      const res = await fetch(`/api/interview/projects/${projectId}/thumbnail`, { method: 'POST' })
-      const data = await res.json()
-      if (data.success && data.thumbnailUrl) {
-        return data.thumbnailUrl
-      }
-    } catch (err) {
-      console.error(`[auto-thumbnail] Failed for ${projectId}:`, err)
-    }
-    return null
-  }, [])
+  const requestVersionRef = useRef(0)
 
   useEffect(() => {
-    fetch('/api/interview/projects')
+    const version = ++requestVersionRef.current
+    const controller = new AbortController()
+    setLoading(true)
+    setListError(false)
+    setMoreError(false)
+    setMoreLoading(false)
+    setNextCursor(null)
+    const timeout = setTimeout(() => {
+      const params = new URLSearchParams()
+      if (filter !== 'ALL') params.set('status', filter)
+      if (query.trim()) params.set('q', query.trim())
+      fetch(`/api/interview/projects?${params}`, { signal: controller.signal })
       .then(async (response) => {
         const data = await response.json().catch(() => null)
         if (!response.ok || !data?.success || !Array.isArray(data.projects)) throw new Error('Project list unavailable')
+        if (version !== requestVersionRef.current) return
         setProjects(data.projects)
+        setNextCursor(data.nextCursor || null)
+        setTotalCount(data.totalCount || 0)
+        setFilteredCount(data.filteredCount || 0)
+        setStatusCounts(data.statusCounts || {})
       })
-      .catch(() => setListError(true))
-      .finally(() => setLoading(false))
-  }, [])
+      .catch(() => { if (version === requestVersionRef.current) setListError(true) })
+      .finally(() => { if (version === requestVersionRef.current) setLoading(false) })
+    }, 200)
+    return () => { clearTimeout(timeout); controller.abort() }
+  }, [filter, query])
 
-  // サムネイル未生成プロジェクトの自動生成
-  useEffect(() => {
-    if (loading || projects.length === 0) return
-
-    const pending = projects.filter(
-      (p) => !p.thumbnailUrl && !autoGenRef.current.has(p.id)
-    )
-    if (pending.length === 0) return
-
-    let cancelled = false
-    ;(async () => {
-      for (const p of pending) {
-        if (cancelled) break
-        autoGenRef.current.add(p.id)
-        setGeneratingThumbnail(p.id)
-
-        const url = await generateThumbnailForProject(p.id)
-        if (url && !cancelled) {
-          setProjects((prev) =>
-            prev.map((proj) => (proj.id === p.id ? { ...proj, thumbnailUrl: url } : proj))
-          )
-        }
-
-        setGeneratingThumbnail(null)
-        if (!cancelled) await new Promise((r) => setTimeout(r, 1000))
-      }
-    })()
-
-    return () => { cancelled = true }
-  }, [loading, projects.length, generateThumbnailForProject])
-
-  const filtered = projects.filter((p) => {
-    if (filter !== 'ALL' && p.status !== filter) return false
-    if (query) {
-      const q = query.toLowerCase()
-      return (
-        p.title.toLowerCase().includes(q) ||
-        p.intervieweeName?.toLowerCase().includes(q) ||
-        p.intervieweeCompany?.toLowerCase().includes(q)
-      )
+  const loadMore = async () => {
+    if (!nextCursor || moreLoading) return
+    const version = requestVersionRef.current
+    setMoreLoading(true)
+    setMoreError(false)
+    const params = new URLSearchParams({ cursor: nextCursor })
+    if (filter !== 'ALL') params.set('status', filter)
+    if (query.trim()) params.set('q', query.trim())
+    try {
+      const response = await fetch(`/api/interview/projects?${params}`)
+      const data = await response.json().catch(() => null)
+      if (!response.ok || !data?.success || !Array.isArray(data.projects)) throw new Error('More projects unavailable')
+      if (version !== requestVersionRef.current) return
+      setProjects((current) => [...current, ...data.projects.filter((p: Project) => !current.some((item) => item.id === p.id))])
+      setNextCursor(data.nextCursor || null)
+    } catch {
+      if (version === requestVersionRef.current) setMoreError(true)
+    } finally {
+      if (version === requestVersionRef.current) setMoreLoading(false)
     }
-    return true
-  })
+  }
 
   const getProjectLink = (p: Project) => {
     if (p.draftCount > 0) return `/interview/projects/${p.id}/edit`
@@ -169,12 +158,7 @@ export default function ProjectsPage() {
     return new Date(dateStr).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
   }
 
-  const filterCounts = {
-    ALL: projects.length,
-    DRAFT: projects.filter((p) => p.status === 'DRAFT').length,
-    EDITING: projects.filter((p) => p.status === 'EDITING').length,
-    COMPLETED: projects.filter((p) => p.status === 'COMPLETED').length,
-  }
+  const filterCounts = { ALL: totalCount, DRAFT: statusCounts.DRAFT || 0, EDITING: statusCounts.EDITING || 0, COMPLETED: statusCounts.COMPLETED || 0 }
 
   return (
     <motion.div
@@ -188,8 +172,8 @@ export default function ProjectsPage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900">記事一覧</h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            {projects.length > 0
-              ? `${projects.length}件の記事`
+            {totalCount > 0
+              ? `${totalCount}件の記事`
               : 'インタビュー記事を管理'}
           </p>
         </div>
@@ -208,7 +192,7 @@ export default function ProjectsPage() {
           {(['ALL', 'DRAFT', 'EDITING', 'COMPLETED'] as const).map((s) => (
             <button
               key={s}
-              onClick={() => setFilter(s)}
+              onClick={() => { requestVersionRef.current++; setFilter(s) }}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                 filter === s
                   ? 'bg-[#7f19e6] text-white shadow-sm'
@@ -228,8 +212,9 @@ export default function ProjectsPage() {
           </span>
           <input
             type="text"
+            maxLength={100}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { requestVersionRef.current++; setQuery(e.target.value) }}
             placeholder="検索..."
             className="w-full sm:w-56 pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#7f19e6]/20 focus:border-[#7f19e6] bg-white transition-all"
           />
@@ -257,18 +242,18 @@ export default function ProjectsPage() {
               再読み込み
             </button>
           </div>
-        ) : filtered.length === 0 ? (
+        ) : projects.length === 0 ? (
           <motion.div
             className="text-center py-16"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
           >
             <EmptyState
-              kind={query ? 'no-results' : 'not-generated'}
-              title={query ? '検索結果がありません' : '最初の記事をつくりましょう'}
-              description={query ? '別のキーワードで試してみてください。' : 'インタビュー素材をアップロードすると、記事の作成がはじまります。'}
+              kind={query || filter !== 'ALL' ? 'no-results' : 'not-generated'}
+              title={query || filter !== 'ALL' ? '検索結果がありません' : '最初の記事をつくりましょう'}
+              description={query || filter !== 'ALL' ? '検索条件を変更してみてください。' : 'インタビュー素材をアップロードすると、記事の作成がはじまります。'}
               action={
-                query ? undefined : (
+                query || filter !== 'ALL' ? undefined : (
                   <Link
                     href="/interview"
                     className="inline-flex items-center gap-2 rounded-xl bg-[#0066ff] px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-[#0066ff]/20 transition-colors hover:bg-[#0057db]"
@@ -287,7 +272,7 @@ export default function ProjectsPage() {
             initial="hidden"
             animate="show"
           >
-            {filtered.map((p) => {
+            {projects.map((p) => {
               const status = STATUS_CONFIG[p.status] || STATUS_CONFIG.DRAFT
               const gradient = GENRE_GRADIENTS[p.genre || 'OTHER'] || GENRE_GRADIENTS.OTHER
               const isGenerating = generatingThumbnail === p.id
@@ -401,6 +386,15 @@ export default function ProjectsPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      {!loading && !listError && nextCursor && (
+        <div className="text-center space-y-2">
+          <p className="text-xs text-slate-500">{filteredCount}件中{projects.length}件を表示</p>
+          <button type="button" onClick={loadMore} disabled={moreLoading} className="rounded-xl border border-slate-200 bg-white px-6 py-2.5 text-sm font-bold text-[#7f19e6] hover:bg-slate-50 disabled:opacity-60">
+            {moreLoading ? '読み込み中...' : 'さらに記事を表示'}
+          </button>
+          {moreError && <p role="alert" className="text-sm text-red-700">追加の記事を読み込めませんでした。再度お試しください。</p>}
+        </div>
+      )}
     </motion.div>
   )
 }

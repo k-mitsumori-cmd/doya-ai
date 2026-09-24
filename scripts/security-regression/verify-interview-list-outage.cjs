@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, '../..');
 function route(file, unavailable) {
   const exports = {};
   const prisma = {
-    interviewProject: { findMany: async () => [] },
+    interviewProject: { findMany: async () => [], count: async () => 0, groupBy: async () => [] },
     interviewRecipe: { count: async () => 0, findMany: async () => [] },
   };
   const mocks = {
