@@ -51,24 +51,37 @@ export async function POST(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
-  const body = await req.json().catch(() => ({}))
-  const title = (body.title as string)?.trim()
+  const parsedBody = await req.json().catch(() => null)
+  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
+    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+  }
+  const body = parsedBody as Record<string, unknown>
+  const title = typeof body.title === 'string' ? body.title.trim() : ''
   if (!title) return NextResponse.json({ error: 'タスク名は必須です' }, { status: 400 })
 
   let dueDate: Date | null = null
-  if (typeof body.dueDate === 'string' && body.dueDate) {
-    const d = new Date(body.dueDate)
-    if (!isNaN(d.getTime())) dueDate = d
+  if (body.dueDate != null && body.dueDate !== '') {
+    if (typeof body.dueDate !== 'string') return NextResponse.json({ error: '期日が正しくありません' }, { status: 400 })
+    const day = body.dueDate.match(/^\d{4}-\d{2}-\d{2}(?=$|T)/)?.[0]
+    const parsedDay = day ? new Date(`${day}T00:00:00.000Z`) : null
+    const parsedDate = new Date(body.dueDate)
+    if (!parsedDay || Number.isNaN(parsedDay.getTime()) || parsedDay.toISOString().slice(0, 10) !== day || Number.isNaN(parsedDate.getTime())) {
+      return NextResponse.json({ error: '期日が正しくありません' }, { status: 400 })
+    }
+    dueDate = parsedDate
   }
 
   // 商談への紐付け（IDOR対策: 自組織の商談のみ許可）
   let dealId: string | null = null
-  if (typeof body.dealId === 'string' && body.dealId) {
+  if (body.dealId != null && typeof body.dealId !== 'string') {
+    return NextResponse.json({ error: '商談の指定が正しくありません' }, { status: 400 })
+  }
+  if (typeof body.dealId === 'string' && body.dealId.trim()) {
     const deal = await prisma.sfaDeal.findFirst({
-      where: { id: body.dealId, organizationId: ctx.organizationId },
+      where: { id: body.dealId.trim(), organizationId: ctx.organizationId, isActive: true },
       select: { id: true },
     })
-    if (!deal) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
+    if (!deal) return NextResponse.json({ error: '選択した商談が見つかりません。画面を更新して選び直してください。' }, { status: 400 })
     dealId = deal.id
   }
 
