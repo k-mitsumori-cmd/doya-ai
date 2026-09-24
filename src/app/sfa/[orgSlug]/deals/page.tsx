@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef, type PointerEvent as ReactPointerEvent } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
-import { sfaInit, withOrg } from '@/lib/sfa/client'
+import { sfaInit, withOrg, fetchAllSfaAccounts } from '@/lib/sfa/client'
 import { ACTIVITY_TYPE_LABEL } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
 import { isSfaSummary, summaryYen, type SfaSummary } from '@/lib/sfa/summary'
@@ -96,6 +96,7 @@ export default function SfaDealsPage() {
   const [dealsError, setDealsError] = useState(false)
   const [tasksError, setTasksError] = useState(false)
   const [accountsError, setAccountsError] = useState(false)
+  const [accountsLoading, setAccountsLoading] = useState(true)
   const [activitiesError, setActivitiesError] = useState(false)
   const [activitiesLoading, setActivitiesLoading] = useState(false)
   const dealsRequest = useRef<AbortController | null>(null)
@@ -195,15 +196,11 @@ export default function SfaDealsPage() {
     const controller = new AbortController()
     accountsRequest.current = controller
     setAccountsError(false)
-    fetch('/api/sfa/accounts', sfaInit(orgSlug, { signal: controller.signal }))
-      .then(async (r) => {
-        if (!r.ok) throw new Error('取引先の取得に失敗しました')
-        const d = await r.json()
-        if (!Array.isArray(d.accounts)) throw new Error('取引先の応答形式が不正です')
-        return d as { accounts: Account[] }
-      })
-      .then((d) => { if (!controller.signal.aborted) setAccounts(d.accounts) })
+    setAccountsLoading(true)
+    fetchAllSfaAccounts(orgSlug, controller.signal)
+      .then((all) => { if (!controller.signal.aborted) setAccounts(all) })
       .catch(() => { if (!controller.signal.aborted) setAccountsError(true) })
+      .finally(() => { if (!controller.signal.aborted) setAccountsLoading(false) })
   }, [ready, orgSlug])
   const loadActivities = useCallback((dealId: string) => {
     activitiesRequest.current?.abort()
@@ -234,6 +231,10 @@ export default function SfaDealsPage() {
     setSummaryError(false)
     setTasks([])
     setAccounts([])
+    setAccountId('')
+    setForm((current) => ({ ...current, accountId: '' }))
+    setOpen(false)
+    setDetail(null)
     setDealsLoading(true)
     load()
     loadTasks()
@@ -607,8 +608,8 @@ export default function SfaDealsPage() {
           </div>
           <div>
             <label className="block text-xs font-black text-slate-500 mb-1">取引先</label>
-            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold">
-              <option value="">未選択</option>
+            <select value={accountId} onChange={(e) => setAccountId(e.target.value)} disabled={accountsLoading || accountsError} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold disabled:opacity-50">
+              <option value="">{accountsLoading ? '取引先を読み込み中' : '未選択'}</option>
               {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
           </div>
@@ -866,8 +867,8 @@ export default function SfaDealsPage() {
               </div>
               <div>
                 <label className="block text-xs font-black text-slate-500 mb-1">取引先</label>
-                <select value={form.accountId} onChange={(e) => setForm((f) => ({ ...f, accountId: e.target.value }))} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold">
-                  <option value="">未選択</option>
+                <select value={form.accountId} onChange={(e) => setForm((f) => ({ ...f, accountId: e.target.value }))} disabled={accountsLoading || accountsError} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 font-bold disabled:opacity-50">
+                  <option value="">{accountsLoading ? '取引先を読み込み中' : '未選択'}</option>
                   {accounts.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                 </select>
               </div>

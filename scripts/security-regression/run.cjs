@@ -185,6 +185,11 @@ if (sfaDealsPagination.error || sfaDealsPagination.status !== 0) {
   console.error('Security regression failed: verify-sfa-deals-pagination.cjs');
   process.exit(1);
 }
+const sfaCrmPagination = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-crm-pagination.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaCrmPagination.error || sfaCrmPagination.status !== 0) {
+  console.error('Security regression failed: verify-sfa-crm-pagination.cjs');
+  process.exit(1);
+}
 const sfaDealsUi = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-deals-ui.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaDealsUi.error || sfaDealsUi.status !== 0) {
   console.error('Security regression failed: verify-sfa-deals-ui.cjs');

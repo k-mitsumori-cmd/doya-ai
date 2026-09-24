@@ -105,10 +105,10 @@ export async function POST(req: NextRequest) {
 
   const amount = Number(body.amount) > 0 ? BigInt(Math.round(Number(body.amount))) : BigInt(0)
   // 取引先所有確認
-  let accountId = (body.accountId as string) || null
+  const accountId = typeof body.accountId === 'string' ? body.accountId.trim() || null : null
   if (accountId) {
-    const acc = await prisma.sfaAccount.findFirst({ where: { id: accountId, organizationId: ctx.organizationId } })
-    if (!acc) accountId = null
+    const acc = await prisma.sfaAccount.findFirst({ where: { id: accountId, organizationId: ctx.organizationId, isActive: true }, select: { id: true } })
+    if (!acc) return NextResponse.json({ error: '選択した取引先が見つかりません。再読み込みして選び直してください。' }, { status: 400 })
   }
 
   // 商談日（開始日）。未指定なら作成日を起点にする

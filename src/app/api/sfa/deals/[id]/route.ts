@@ -68,10 +68,11 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       data.accountId = null
     } else {
       const acc = await prisma.sfaAccount.findFirst({
-        where: { id: body.accountId, organizationId: c.organizationId },
+        where: { id: body.accountId, organizationId: c.organizationId, isActive: true },
         select: { id: true },
       })
-      if (acc) data.accountId = acc.id
+      if (!acc) return NextResponse.json({ error: '選択した取引先が見つかりません。再読み込みして選び直してください。' }, { status: 400 })
+      data.accountId = acc.id
     }
   }
 

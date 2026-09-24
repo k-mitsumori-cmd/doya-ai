@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { sfaInit, withOrg } from '@/lib/sfa/client'
@@ -18,20 +18,72 @@ export default function SfaAccountsPage() {
   const ready = !!orgSlug
   const [accounts, setAccounts] = useState<Account[]>([])
   const [q, setQ] = useState('')
+  const [refresh, setRefresh] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [listError, setListError] = useState(false)
+  const [moreError, setMoreError] = useState(false)
+  const [moreLoading, setMoreLoading] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [totalCount, setTotalCount] = useState(0)
+  const requestVersion = useRef(0)
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [industry, setIndustry] = useState('')
   const [prefecture, setPrefecture] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const load = (query = '') => {
+  useEffect(() => {
     if (!ready) return
-    fetch(`/api/sfa/accounts${query ? `?q=${encodeURIComponent(query)}` : ''}`, sfaInit(orgSlug))
-      .then((r) => r.json())
-      .then((d) => setAccounts(d.accounts || []))
-      .catch(() => {})
+    const version = ++requestVersion.current
+    const controller = new AbortController()
+    setLoading(true)
+    setListError(false)
+    setMoreError(false)
+    setMoreLoading(false)
+    setNextCursor(null)
+    const timer = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams()
+        if (q.trim()) params.set('q', q.trim())
+        const response = await fetch(`/api/sfa/accounts?${params}`, sfaInit(orgSlug, { signal: controller.signal }))
+        const data = await response.json().catch(() => null)
+        if (!response.ok || !Array.isArray(data?.accounts)) throw new Error('取引先の取得に失敗しました')
+        if (version !== requestVersion.current) return
+        setAccounts(data.accounts)
+        setNextCursor(data.nextCursor || null)
+        setTotalCount(data.totalCount || 0)
+      } catch {
+        if (version === requestVersion.current) setListError(true)
+      } finally {
+        if (version === requestVersion.current) setLoading(false)
+      }
+    }, q ? 200 : 0)
+    return () => { clearTimeout(timer); controller.abort() }
+  }, [ready, orgSlug, q, refresh])
+
+  const loadMore = async () => {
+    if (!nextCursor || moreLoading) return
+    const version = requestVersion.current
+    setMoreLoading(true)
+    setMoreError(false)
+    const params = new URLSearchParams({ cursor: nextCursor })
+    if (q.trim()) params.set('q', q.trim())
+    try {
+      const response = await fetch(`/api/sfa/accounts?${params}`, sfaInit(orgSlug))
+      const data = await response.json().catch(() => null)
+      if (!response.ok || !Array.isArray(data?.accounts)) throw new Error('取引先の追加取得に失敗しました')
+      if (version !== requestVersion.current) return
+      setAccounts((current) => {
+        const ids = new Set(current.map((account) => account.id))
+        return [...current, ...data.accounts.filter((account: Account) => !ids.has(account.id))]
+      })
+      setNextCursor(data.nextCursor || null)
+    } catch {
+      if (version === requestVersion.current) setMoreError(true)
+    } finally {
+      if (version === requestVersion.current) setMoreLoading(false)
+    }
   }
-  useEffect(() => { if (ready) load() }, [ready, orgSlug]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const create = async () => {
     if (!name.trim()) return
@@ -49,7 +101,7 @@ export default function SfaAccountsPage() {
       setPrefecture('')
       setOpen(false)
       toast.success('取引先を登録しました')
-      load()
+      setRefresh((value) => value + 1)
     } catch (e: any) {
       toast.error(e.message)
     } finally {
@@ -97,15 +149,19 @@ export default function SfaAccountsPage() {
         <input
           value={q}
           onChange={(e) => {
+            requestVersion.current++
             setQ(e.target.value)
-            load(e.target.value)
           }}
-          placeholder="🔍 会社名で検索"
+          maxLength={100}
+          placeholder="会社名で検索"
           className="w-full rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-sm"
         />
       </div>
 
-      <div className="space-y-2">
+      {loading && <p className="mb-3 text-sm text-slate-500">取引先を読み込み中です...</p>}
+      {listError && <div role="alert" className="mb-3 text-sm text-red-700">取引先を読み込めませんでした。<button type="button" onClick={() => setRefresh((value) => value + 1)} className="ml-2 underline">再試行</button></div>}
+      {!loading && !listError && <p className="mb-3 text-xs text-slate-500">{totalCount}件中{accounts.length}件を表示</p>}
+      {!loading && !listError && <div className="space-y-2">
         {accounts.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm p-10 text-center text-slate-400 font-bold">取引先がありません。「新規登録」から追加しましょう。</div>
         ) : (
@@ -121,7 +177,11 @@ export default function SfaAccountsPage() {
             </div>
           ))
         )}
-      </div>
+      </div>}
+      {!loading && !listError && nextCursor && <div className="mt-4 text-center">
+        <button type="button" onClick={loadMore} disabled={moreLoading} className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-green-700 disabled:opacity-50">{moreLoading ? '読み込み中...' : 'さらに表示'}</button>
+        {moreError && <p role="alert" className="mt-2 text-sm text-red-700">追加の取引先を読み込めませんでした。再度お試しください。</p>}
+      </div>}
     </div>
   )
 }
