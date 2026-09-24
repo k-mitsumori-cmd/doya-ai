@@ -5,10 +5,12 @@
 // ============================================
 // 組織作成 → 企業URL調査 → 質問セット生成 → 面接URL発行 までを1画面で完了させる。
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import MensetsuLp from './Lp'
 import { notifyError } from '@/lib/ui/notify'
+import { fetchOrgJson } from '@/lib/org-fetch'
+import { appendMensetsuSessionPage, fetchMensetsuSessionPage } from '@/lib/mensetsu/session-pages'
 import LoadingProgress from '@/components/LoadingProgress'
 
 interface Org {
@@ -74,6 +76,9 @@ export default function MensetsuTool() {
   const [orgName, setOrgName] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [moreError, setMoreError] = useState<string | null>(null)
+  const [moreLoading, setMoreLoading] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
 
@@ -89,6 +94,12 @@ export default function MensetsuTool() {
   const [focus, setFocus] = useState('')
   const [templates, setTemplates] = useState<Template[]>([])
   const [sessions, setSessions] = useState<SessionRow[]>([])
+  const [sessionTotal, setSessionTotal] = useState(0)
+  const [sessionCursor, setSessionCursor] = useState<string | null>(null)
+  const loadVersion = useRef(0)
+  const invalidateLoad = useCallback(() => { loadVersion.current++ }, [])
+  const sessionsRef = useRef(sessions)
+  sessionsRef.current = sessions
   const [issuedUrl, setIssuedUrl] = useState<string | null>(null)
   /** 発行直後のコピーボタンを押したことが分かるようにする */
   const [issuedCopied, setIssuedCopied] = useState(false)
@@ -103,39 +114,94 @@ export default function MensetsuTool() {
 
   // ⚠️ useSession の status で fetch をゲートしない（Cookie認証なので未確定でもAPIは応答する）
   const load = useCallback(async () => {
+    const version = ++loadVersion.current
+    const desiredCount = Math.max(200, sessionsRef.current.length)
+    setLoading(true)
+    setLoadError(null)
+    setMoreError(null)
+    setMoreLoading(false)
     try {
       const res = await fetch('/api/mensetsu/organizations')
-      const data = await res.json()
+      const data = await res.json().catch(() => null)
+      if (loadVersion.current !== version) return
       if (res.status === 401) {
         setOrg(null)
         setNeedsLogin(true)
+        setTemplates([])
+        setSessions([])
+        setSessionTotal(0)
+        setSessionCursor(null)
         return
       }
+      if (!res.ok || !data || typeof data !== 'object' || !Object.prototype.hasOwnProperty.call(data, 'current')) {
+        throw new Error('組織情報を取得できませんでした')
+      }
       setNeedsLogin(false)
-      setOrg(data?.current || null)
-      if (data?.current) {
+      if (data.current) {
         // ⚠️ メンバーはこの画面では使わない（/mensetsu/settings が自分で取得する）
-        const [t, s, c] = await Promise.all([
-          fetch('/api/mensetsu/templates').then((r) => r.json()),
-          fetch('/api/mensetsu/sessions').then((r) => r.json()),
-          fetch('/api/mensetsu/company').then((r) => r.json()),
+        const [t, first, c] = await Promise.all([
+          fetchOrgJson('/api/mensetsu/templates'),
+          fetchMensetsuSessionPage<SessionRow>(),
+          fetchOrgJson('/api/mensetsu/company'),
         ])
-        setTemplates(t?.templates || [])
-        setSessions(s?.sessions || [])
-        setProfile(c?.profile || null)
+        if (!Array.isArray(t?.templates) || !Object.prototype.hasOwnProperty.call(c, 'profile')) {
+          throw new Error('組織のデータを確認できませんでした')
+        }
+        let loaded = appendMensetsuSessionPage([], first, first.total)
+        let cursor = first.nextCursor
+        while (cursor && loaded.length < desiredCount) {
+          const page = await fetchMensetsuSessionPage<SessionRow>(cursor)
+          loaded = appendMensetsuSessionPage(loaded, page, first.total)
+          cursor = page.nextCursor
+        }
+        if (loadVersion.current !== version) return
+        setOrg(data.current)
+        setTemplates(t.templates)
+        setSessions(loaded)
+        setSessionTotal(first.total)
+        setSessionCursor(cursor)
+        setProfile(c.profile || null)
         // ⚠️ 入力欄には登録済みのURLを入れておく。空だと「未登録なのか
         //    登録済みなのに空なのか」が分からない
-        if (c?.profile?.sourceUrl) setCompanyUrl(c.profile.sourceUrl)
-        if (t?.templates?.[0]) setSelectedTemplate(t.templates[0].id)
+        setCompanyUrl(c.profile?.sourceUrl || '')
+        setSelectedTemplate(t.templates[0]?.id || '')
+      } else {
+        setOrg(null)
+        setTemplates([])
+        setSessions([])
+        setSessionTotal(0)
+        setSessionCursor(null)
+        setProfile(null)
       }
+    } catch (e) {
+      if (loadVersion.current === version) setLoadError(e instanceof Error ? e.message : '読み込みに失敗しました')
     } finally {
-      setLoading(false)
+      if (loadVersion.current === version) setLoading(false)
     }
   }, [])
 
   useEffect(() => {
     void load()
-  }, [load])
+    return invalidateLoad
+  }, [load, invalidateLoad])
+
+  const loadMoreSessions = async () => {
+    if (!sessionCursor || moreLoading) return
+    const version = loadVersion.current
+    setMoreLoading(true)
+    setMoreError(null)
+    try {
+      const page = await fetchMensetsuSessionPage<SessionRow>(sessionCursor)
+      const loaded = appendMensetsuSessionPage(sessionsRef.current, page, sessionTotal)
+      if (loadVersion.current !== version) return
+      setSessions(loaded)
+      setSessionCursor(page.nextCursor)
+    } catch (e) {
+      if (loadVersion.current === version) setMoreError(e instanceof Error ? e.message : '続きを読み込めませんでした')
+    } finally {
+      if (loadVersion.current === version) setMoreLoading(false)
+    }
+  }
 
   /**
    * 会社サイトを読み取って会社情報を登録する。
@@ -363,6 +429,15 @@ export default function MensetsuTool() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f2f6ff]">
         <p className="text-sm font-bold text-[#425071]">読み込んでいます…</p>
+      </main>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <main className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[#f2f6ff] px-5 text-center">
+        <p role="alert" className="text-sm font-bold text-[#c2185b]">{loadError}</p>
+        <button onClick={() => void load()} className="rounded-lg border border-[#d8e7ff] bg-white px-5 py-2.5 text-sm font-black text-[#0066ff]">再試行</button>
       </main>
     )
   }
@@ -833,6 +908,16 @@ export default function MensetsuTool() {
                   ))}
                 </ul>
               )}
+              {sessionCursor && (
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3 text-xs font-semibold text-[#425071]">
+                  <span>{sessions.length} / {sessionTotal}件の面接を表示</span>
+                  <button onClick={loadMoreSessions} disabled={moreLoading} className="rounded-lg border border-[#d8e7ff] bg-white px-4 py-2 font-black text-[#0066ff] disabled:opacity-50">
+                    {moreLoading ? '読み込み中…' : moreError ? '再試行' : 'さらに表示'}
+                  </button>
+                  {moreError && <button onClick={() => void load()} className="font-black text-[#0066ff] underline">一覧を更新</button>}
+                </div>
+              )}
+              {moreError && <p role="alert" className="mt-2 text-center text-xs font-bold text-[#c2185b]">{moreError}</p>}
             </section>
 
             {/* ⚠️ メンバーと記録の設定は /mensetsu/settings に移した。

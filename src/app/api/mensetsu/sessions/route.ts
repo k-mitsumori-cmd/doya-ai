@@ -21,28 +21,45 @@ export async function GET(req: NextRequest) {
   const ctx = await getMensetsuContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
-  const status = new URL(req.url).searchParams.get('status') || undefined
-
-  const sessions = await prisma.mensetsuSession.findMany({
-    where: { organizationId: ctx.organizationId, ...(status ? { status } : {}) },
-    orderBy: { createdAt: 'desc' },
-    take: 200,
-    select: {
-      id: true,
-      token: true,
-      candidateName: true,
-      candidateEmail: true,
-      status: true,
-      verdict: true,
-      expiresAt: true,
-      startedAt: true,
-      endedAt: true,
-      evaluatedAt: true,
-      createdAt: true,
-      template: { select: { id: true, name: true, jobTitle: true, durationMin: true } },
-    },
-  })
-  return NextResponse.json({ sessions })
+  const { searchParams } = new URL(req.url)
+  const status = searchParams.get('status') || undefined
+  const cursor = searchParams.get('cursor')
+  if (searchParams.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  const where = { organizationId: ctx.organizationId, ...(status ? { status } : {}) }
+  if (cursor && !await prisma.mensetsuSession.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  const [rows, total] = await Promise.all([
+    prisma.mensetsuSession.findMany({
+      where,
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 201,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      select: {
+        id: true,
+        token: true,
+        candidateName: true,
+        candidateEmail: true,
+        status: true,
+        verdict: true,
+        expiresAt: true,
+        startedAt: true,
+        endedAt: true,
+        evaluatedAt: true,
+        createdAt: true,
+        template: { select: { id: true, name: true, jobTitle: true, durationMin: true } },
+      },
+    }),
+    prisma.mensetsuSession.count({ where }),
+  ])
+  const sessions = rows.slice(0, 200)
+  return NextResponse.json({
+    sessions,
+    total,
+    nextCursor: rows.length > 200 ? sessions[sessions.length - 1].id : null,
+  }, { headers: { 'Cache-Control': 'private, no-store' } })
 }
 
 export async function POST(req: NextRequest) {
