@@ -1,9 +1,10 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
-async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com', inviteRole = 'MEMBER', status = 'PENDING', claimCount = 1 } = {}) {
+async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com', inviteRole = 'MEMBER', status = 'PENDING', claimCount = 1, memberCount = 1 } = {}) {
   let created = 0;
   let claims = 0;
+  let locks = 0;
   let expiredWrites = 0;
   const invitation = {
     id: 'invite-1', token: 'opaque-token', organizationId: 'org-1', email: 'Invited@Example.com',
@@ -18,13 +19,14 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
     user: { findUnique: async () => ({ email: accountEmail }) },
     hrOrganizationMember: { findFirst: async () => null },
     $transaction: async (fn) => fn({
+      $queryRaw: async () => { locks++; return [{ id: 'org-1' }]; },
       hrInvitation: { updateMany: async ({ where }) => {
         claims++;
         assert.equal(where.status, 'PENDING');
         assert.equal(where.id, invitation.id);
         return { count: claimCount };
       } },
-      hrOrganizationMember: { create: async ({ data }) => {
+      hrOrganizationMember: { count: async () => memberCount, create: async ({ data }) => {
         created++;
         assert.equal(data.userId, 'user-1');
         assert.equal(data.role, 'MEMBER');
@@ -38,9 +40,10 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma },
     '@/lib/hr/audit': { logAudit: async () => {} },
+    '@/lib/hr/billing': { getOrgPlan: async () => 'FREE', getOrgPlanLimits: () => ({ maxMembers: 2 }) },
   });
   const response = await POST({ json: async () => ({ token: invitation.token }) });
-  return { status: response.status, body: await response.json(), created, claims, expiredWrites };
+  return { status: response.status, body: await response.json(), created, claims, locks, expiredWrites };
 }
 
 (async () => {
@@ -66,10 +69,18 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
   assert.equal(r.status, 409);
   assert.equal(r.created, 0);
 
+  r = await acceptCase({ memberCount: 2 });
+  assert.equal(r.status, 403);
+  assert.equal(r.body.code, 'HR_ORG_MEMBER_LIMIT');
+  assert.equal(r.locks, 1);
+  assert.equal(r.claims, 0, 'A full organization must not consume the invitation');
+  assert.equal(r.created, 0);
+
   r = await acceptCase();
   assert.equal(r.status, 200);
   assert.equal(r.created, 1);
   assert.equal(r.claims, 1);
+  assert.equal(r.locks, 1);
 
   let sent = 0;
   let createdRole;
