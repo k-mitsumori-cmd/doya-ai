@@ -1,17 +1,28 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 
 export default function DoyaSlidePricingPage() {
-  const [plan, setPlan] = useState<string>('FREE')
-  useEffect(() => {
-    fetch('/api/doyaslide/usage')
-      .then((r) => r.json())
-      .then((d) => setPlan(d.plan || 'FREE'))
-      .catch(() => {})
+  const [plan, setPlan] = useState<string | null>(null)
+  const [planError, setPlanError] = useState(false)
+  const loadPlan = useCallback(async () => {
+    setPlanError(false)
+    try {
+      const response = await fetch('/api/doyaslide/usage', { cache: 'no-store' })
+      if (!response.ok) throw new Error('プランを確認できませんでした')
+      const data = await response.json()
+      if (typeof data.plan !== 'string') throw new Error('プランの応答が不正です')
+      setPlan(data.plan)
+    } catch {
+      setPlan(null)
+      setPlanError(true)
+    }
   }, [])
+  useEffect(() => {
+    void loadPlan()
+  }, [loadPlan])
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -29,6 +40,7 @@ export default function DoyaSlidePricingPage() {
             無料ではじめて、必要になったらプロへ。プロプラン1つでドヤAIの全サービスのプロ機能が使えます。
           </p>
         </div>
+        {planError && <div role="alert" className="mb-6 rounded-xl bg-rose-50 p-4 text-sm font-bold text-rose-700">現在のプランを確認できませんでした。<button type="button" onClick={() => void loadPlan()} className="ml-2 underline">再読み込み</button></div>}
         <UnifiedPricingPlans serviceId="doyaslide" currentPlan={plan} />
       </div>
     </div>

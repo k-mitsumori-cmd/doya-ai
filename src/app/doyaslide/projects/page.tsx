@@ -2,7 +2,7 @@
 
 // ドヤスライド プロジェクト一覧。
 // 2026-06-13: ホーム(/doyaslide)を新規作成ウィザードに変更したため、一覧はこのパスへ移設。
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { EmptyState } from '@/components/EmptyState'
@@ -34,28 +34,49 @@ const STATUS_LABEL: Record<string, string> = {
 export default function DoyaSlideProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
+  const [projectsError, setProjectsError] = useState(false)
   const [usage, setUsage] = useState<any>(null)
+  const [usageError, setUsageError] = useState(false)
+  const loadRequest = useRef(0)
 
-  const load = () => {
+  const load = useCallback(() => {
+    const request = ++loadRequest.current
+    setLoading(true)
+    setProjectsError(false)
     fetch('/api/doyaslide/projects', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => setProjects(d.projects || []))
-      .catch(() => {})
-      .finally(() => setLoading(false))
+      .then(async (response) => {
+        if (!response.ok) throw new Error('プロジェクトを取得できませんでした')
+        const data = await response.json()
+        if (!Array.isArray(data.projects)) throw new Error('プロジェクトの応答が不正です')
+        if (request === loadRequest.current) setProjects(data.projects)
+      })
+      .catch(() => { if (request === loadRequest.current) setProjectsError(true) })
+      .finally(() => { if (request === loadRequest.current) setLoading(false) })
+    setUsage(null)
+    setUsageError(false)
     fetch('/api/doyaslide/usage', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then(setUsage)
-      .catch(() => {})
-  }
-  useEffect(load, [])
+      .then(async (response) => {
+        if (!response.ok) throw new Error('利用状況を取得できませんでした')
+        const data = await response.json()
+        if (!data || !data.limits || !data.usage) throw new Error('利用状況の応答が不正です')
+        if (request === loadRequest.current) setUsage(data)
+      })
+      .catch(() => { if (request === loadRequest.current) setUsageError(true) })
+  }, [])
+  useEffect(() => {
+    const requestCounter = loadRequest
+    load()
+    return () => { requestCounter.current++ }
+  }, [load])
 
   const remove = async (id: string) => {
     if (!confirm('このプロジェクトを削除しますか？')) return
-    const res = await fetch(`/api/doyaslide/projects/${id}`, { method: 'DELETE' })
-    if (res.ok) {
+    try {
+      const res = await fetch(`/api/doyaslide/projects/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('削除に失敗しました')
       toast.success('削除しました')
       setProjects((p) => p.filter((x) => x.id !== id))
-    } else {
+    } catch {
       toast.error('削除に失敗しました')
     }
   }
@@ -98,6 +119,7 @@ export default function DoyaSlideProjectsPage() {
           </span>
         </div>
       )}
+      {usageError && <div role="alert" className="mb-6 rounded-xl bg-rose-50 p-4 text-sm font-bold text-rose-700">利用状況を取得できませんでした。<button type="button" onClick={load} className="ml-2 underline">再読み込み</button></div>}
 
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -105,6 +127,8 @@ export default function DoyaSlideProjectsPage() {
             <div key={i} className="h-48 bg-slate-100 rounded-3xl animate-pulse" />
           ))}
         </div>
+      ) : projectsError ? (
+        <div role="alert" className="rounded-2xl bg-rose-50 p-6 text-center font-bold text-rose-700">プロジェクト一覧を取得できませんでした。<button type="button" onClick={load} className="ml-2 underline">再読み込み</button></div>
       ) : projects.length === 0 ? (
         <div className="rounded-3xl bg-white shadow-sm">
           <EmptyState kind="not-generated" title="最初のスライドを作りましょう" description="テーマを入れるだけで、AIが全スライドを画像で作ります。" action={<Link href="/doyaslide/new" className="inline-flex rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-3 font-black text-white shadow-lg">最初のスライドを作る</Link>} />
