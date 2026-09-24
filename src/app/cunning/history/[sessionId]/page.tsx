@@ -59,6 +59,7 @@ function CunningSessionContent({ sessionId }: { sessionId: string }) {
   const [loading, setLoading] = useState(true)
   const [genLoading, setGenLoading] = useState(false)
   const [genError, setGenError] = useState<string | null>(null)
+  const [canGeneratePartial, setCanGeneratePartial] = useState(false)
 
   const [loadError, setLoadError] = useState<string | null>(null)
   const [retryStep, setRetryStep] = useState(0)
@@ -120,17 +121,21 @@ function CunningSessionContent({ sessionId }: { sessionId: string }) {
     }
   }
 
-  const genReport = async (force: boolean) => {
+  const genReport = async (force: boolean, acceptIncomplete = false) => {
     setGenLoading(true)
     setGenError(null)
+    setCanGeneratePartial(false)
     try {
       const res = await fetch(`/api/cunning/sessions/${sessionId}/report`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ force }),
+        body: JSON.stringify({ force, acceptIncomplete }),
       })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error || '議事録を生成できませんでした。再試行してください。')
+      if (!res.ok) {
+        if (aliveRef.current && d.code === 'AUDIO_PENDING') setCanGeneratePartial(d.canGeneratePartial === true)
+        throw new Error(d.error || '議事録を生成できませんでした。再試行してください。')
+      }
       if (aliveRef.current) setSession((s) => (s?.id === sessionId ? { ...s, report: d.report, reportStatus: d.reportStatus } : s))
     } catch (error) {
       if (aliveRef.current) setGenError(error instanceof Error ? error.message : '議事録を生成できませんでした。再試行してください。')
@@ -174,6 +179,11 @@ function CunningSessionContent({ sessionId }: { sessionId: string }) {
       </div>
 
       {genError && <p role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">{genError}{session.report ? ' 保存済みの議事録は保持されています。' : ''}</p>}
+      {canGeneratePartial && (
+        <button type="button" disabled={genLoading} onClick={() => void genReport(!!session.report, true)} className="mb-4 rounded-xl border border-amber-400 bg-amber-50 px-4 py-2 text-sm font-bold text-amber-900 disabled:opacity-50">
+          保存済みの内容だけで議事録を作成する
+        </button>
+      )}
       {/* 議事録＋評価 */}
       {session.report && (
         <div className="bg-white rounded-2xl shadow-sm p-5 mb-8">
