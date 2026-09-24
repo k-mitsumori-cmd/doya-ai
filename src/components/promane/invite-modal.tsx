@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Button } from '@/components/promane/ui/button'
 import { Input } from '@/components/promane/ui/input'
 import { Badge } from '@/components/promane/ui/badge'
@@ -34,29 +33,99 @@ const ROLE_OPTIONS = [
 ]
 
 const ROLE_LABELS: Record<string, string> = {
-  owner: '👑 オーナー',
-  admin: '⚙️ 管理者',
-  member: '👤 メンバー',
-  guest: '👁 ゲスト',
+  owner: 'オーナー',
+  admin: '管理者',
+  member: 'メンバー',
+  guest: 'ゲスト',
+}
+
+interface SentInvitationPage {
+  invitations: SentInvitation[]
+  total: number
+  nextCursor: string | null
+}
+
+function parseSentInvitationPage(value: unknown): SentInvitationPage {
+  const page = value as SentInvitationPage | null
+  if (!page || !Array.isArray(page.invitations) || page.invitations.length > 50 ||
+      !Number.isSafeInteger(page.total) || page.total < page.invitations.length ||
+      page.invitations.some((invitation) => !invitation || typeof invitation.id !== 'string' || !invitation.id) ||
+      (page.nextCursor !== null && (typeof page.nextCursor !== 'string' || page.invitations.length !== 50 ||
+        page.nextCursor !== page.invitations[49].id))) {
+    throw new Error('招待履歴の応答が正しくありません')
+  }
+  return page
 }
 
 export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteModalProps) {
-  const router = useRouter()
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('member')
   const [sending, setSending] = useState(false)
   const [sentInvitations, setSentInvitations] = useState<SentInvitation[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [historyError, setHistoryError] = useState('')
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [historyTotal, setHistoryTotal] = useState(0)
+  const requestVersion = useRef(0)
+
+  const loadSent = useCallback(async () => {
+    const version = ++requestVersion.current
+    setHistoryError('')
+    setLoading(true)
+    setLoadingMore(false)
+    setSentInvitations([])
+    setNextCursor(null)
+    setHistoryTotal(0)
+    try {
+      const params = new URLSearchParams({ type: 'sent', workspaceId })
+      const response = await fetch(`/api/promane/invitations?${params}`, { cache: 'no-store' })
+      const data = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(data?.error || '招待履歴を取得できませんでした')
+      const page = parseSentInvitationPage(data)
+      if (page.nextCursor === null && page.invitations.length !== page.total) throw new Error('招待履歴の応答が正しくありません')
+      if (version !== requestVersion.current) return
+      setSentInvitations(page.invitations)
+      setNextCursor(page.nextCursor)
+      setHistoryTotal(page.total)
+    } catch (cause) {
+      if (version === requestVersion.current) setHistoryError(cause instanceof Error ? cause.message : '招待履歴を取得できませんでした')
+    } finally {
+      if (version === requestVersion.current) setLoading(false)
+    }
+  }, [workspaceId])
 
   useEffect(() => {
-    if (!open || !canInvite) return
-    setLoading(true)
-    fetch(`/api/promane/invitations?type=sent&workspaceId=${workspaceId}`)
-      .then((r) => r.json())
-      .then((d) => setSentInvitations(d?.invitations || []))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [open, workspaceId, canInvite])
+    if (open && canInvite) void loadSent()
+    const versionRef = requestVersion
+    return () => { versionRef.current++ }
+  }, [open, canInvite, loadSent])
+
+  const loadMore = async () => {
+    if (!nextCursor || loadingMore) return
+    const version = requestVersion.current
+    setHistoryError('')
+    setLoadingMore(true)
+    try {
+      const params = new URLSearchParams({ type: 'sent', workspaceId, cursor: nextCursor })
+      const response = await fetch(`/api/promane/invitations?${params}`, { cache: 'no-store' })
+      const data = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(data?.error || '招待履歴の続きを取得できませんでした')
+      const page = parseSentInvitationPage(data)
+      if (page.total !== historyTotal || sentInvitations.length + page.invitations.length > historyTotal ||
+          page.invitations.some((invitation) => sentInvitations.some((current) => current.id === invitation.id)) ||
+          (page.nextCursor === null && sentInvitations.length + page.invitations.length !== historyTotal)) {
+        throw new Error('招待履歴が更新されました。最初から読み直してください')
+      }
+      if (version !== requestVersion.current) return
+      setSentInvitations(sentInvitations.concat(page.invitations))
+      setNextCursor(page.nextCursor)
+    } catch (cause) {
+      if (version === requestVersion.current) setHistoryError(cause instanceof Error ? cause.message : '招待履歴の続きを取得できませんでした')
+    } finally {
+      if (version === requestVersion.current) setLoadingMore(false)
+    }
+  }
 
   if (!open) return null
 
@@ -84,7 +153,7 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
         return
       }
       if (data.emailSent) {
-        toast.success(`📧 ${email} に招待メールを送信しました！`, {
+        toast.success(`${email} に招待メールを送信しました`, {
           duration: 5000,
           icon: <Image src="/character/success.png" alt="" width={28} height={28} unoptimized />,
         })
@@ -95,10 +164,7 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
         })
       }
       setEmail('')
-      // 一覧再取得
-      const r = await fetch(`/api/promane/invitations?type=sent&workspaceId=${workspaceId}`)
-      const list = await r.json()
-      setSentInvitations(list?.invitations || [])
+      await loadSent()
     } catch (e: any) {
       toast.error(e?.message || 'エラーが発生しました')
     } finally {
@@ -127,7 +193,7 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
         return
       }
       toast.success('招待を取り消しました')
-      setSentInvitations((prev) => prev.filter((i) => i.id !== id))
+      await loadSent()
     } catch (e: any) {
       toast.error(e?.message || 'エラーが発生しました')
     }
@@ -165,7 +231,7 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
             <div className="p-6 border-b border-gray-100 space-y-4">
               <div>
                 <label className="block text-[13px] font-black text-gray-700 mb-2">
-                  📧 メールアドレス <span className="text-rose-500">*</span>
+                  メールアドレス <span className="text-rose-500">*</span>
                 </label>
                 <Input
                   type="email"
@@ -179,7 +245,7 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
 
               <div>
                 <label className="block text-[13px] font-black text-gray-700 mb-2">
-                  🎭 役割
+                  役割
                 </label>
                 <div className="space-y-2">
                   {ROLE_OPTIONS.map((r) => (
@@ -209,7 +275,7 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
 
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
                 <p className="text-[11px] text-amber-800 font-bold leading-relaxed">
-                  🔒 招待は<strong>30日有効</strong>。招待されたメールと同じGoogleアカウントでログインしないと承諾できません。
+                  招待は<strong>30日有効</strong>です。招待されたメールと同じGoogleアカウントでログインしないと承諾できません。
                 </p>
               </div>
 
@@ -229,9 +295,10 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
                 <Mail className="h-4 w-4" />
                 招待履歴
               </h3>
+              {historyError && <div role="alert" className="mb-3 text-[12px] font-semibold text-rose-700">{historyError}<button type="button" onClick={() => void loadSent()} className="ml-2 underline">最初から読み直す</button></div>}
               {loading ? (
                 <p className="text-[12px] text-gray-400 text-center py-4">読み込み中...</p>
-              ) : sentInvitations.length === 0 ? (
+              ) : historyError && sentInvitations.length === 0 ? null : sentInvitations.length === 0 ? (
                 <p className="text-[12px] text-gray-400 text-center py-4">まだ招待を送っていません</p>
               ) : (
                 <div className="space-y-2 max-h-[240px] overflow-y-auto">
@@ -290,6 +357,11 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
                     )
                   })}
                 </div>
+              )}
+              {nextCursor && !loading && (
+                <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="mt-3 w-full rounded-lg border border-blue-200 px-3 py-2 text-[12px] font-bold text-blue-700 disabled:opacity-50">
+                  {loadingMore ? '読み込み中...' : `さらに表示（${sentInvitations.length}/${historyTotal}件）`}
+                </button>
               )}
             </div>
           </>

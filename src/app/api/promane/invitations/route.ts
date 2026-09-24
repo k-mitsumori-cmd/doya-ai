@@ -58,6 +58,10 @@ export async function GET(req: NextRequest) {
     if (type === 'sent') {
       const workspaceId = req.nextUrl.searchParams.get('workspaceId')
       if (!workspaceId) return NextResponse.json({ error: 'workspaceId は必須です' }, { status: 400 })
+      const cursor = req.nextUrl.searchParams.get('cursor')
+      if (req.nextUrl.searchParams.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
+        return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+      }
       // 権限確認: owner/admin のみ
       const member = await prisma.promaneMember.findUnique({
         where: { workspaceId_userId: { workspaceId, userId } },
@@ -65,13 +69,24 @@ export async function GET(req: NextRequest) {
       if (!member || !['owner', 'admin'].includes(member.role)) {
         return NextResponse.json({ error: '権限がありません' }, { status: 403 })
       }
-      const invitations = await prisma.promaneInvitation.findMany({
-        where: { workspaceId },
-        orderBy: { createdAt: 'desc' },
-        take: 50,
-      })
+      const where = { workspaceId }
+      if (cursor && !await prisma.promaneInvitation.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
+        return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+      }
+      const [rows, total] = await Promise.all([
+        prisma.promaneInvitation.findMany({
+          where,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          take: 51,
+          ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        }),
+        prisma.promaneInvitation.count({ where }),
+      ])
+      const invitations = rows.slice(0, 50)
       return NextResponse.json({
         success: true,
+        total,
+        nextCursor: rows.length > 50 ? invitations[invitations.length - 1].id : null,
         invitations: invitations.map((i) => ({
           id: i.id,
           token: i.token, // 取消・コピー用（admin/ownerのみが見ているため安全）
@@ -82,13 +97,13 @@ export async function GET(req: NextRequest) {
           createdAt: i.createdAt,
           isExpired: i.expiresAt < new Date(),
         })),
-      })
+      }, { headers: { 'Cache-Control': 'private, no-store' } })
     }
 
     return NextResponse.json({ error: 'typeは received|sent のみ' }, { status: 400 })
   } catch (e: any) {
     console.error('[promane/invitations][GET]', e)
-    return NextResponse.json({ error: e?.message || '取得に失敗しました' }, { status: 500 })
+    return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }
 
@@ -123,6 +138,6 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ success: true })
   } catch (e: any) {
     console.error('[promane/invitations][DELETE]', e)
-    return NextResponse.json({ error: e?.message || '削除に失敗しました' }, { status: 500 })
+    return NextResponse.json({ error: '削除に失敗しました' }, { status: 500 })
   }
 }
