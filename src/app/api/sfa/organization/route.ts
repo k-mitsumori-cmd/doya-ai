@@ -19,9 +19,12 @@ export async function POST(req: NextRequest) {
     }
     if (!userId) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
 
-    const body = await req.json().catch(() => ({}))
-    const name = (body.name as string)?.trim()
-    const memberName = (body.memberName as string)?.trim()
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
+    const name = typeof body.name === 'string' ? body.name.trim() : ''
+    const memberName = typeof body.memberName === 'string' ? body.memberName.trim() : ''
     if (!name || !memberName) {
       return NextResponse.json({ error: '組織名と氏名は必須です' }, { status: 400 })
     }

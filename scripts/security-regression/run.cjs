@@ -215,6 +215,11 @@ if (sfaLeadCsv.error || sfaLeadCsv.status !== 0) {
   console.error('Security regression failed: verify-sfa-lead-csv.cjs');
   process.exit(1);
 }
+const sfaOrganizationCreate = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-organization-create.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaOrganizationCreate.error || sfaOrganizationCreate.status !== 0) {
+  console.error('Security regression failed: verify-sfa-organization-create.cjs');
+  process.exit(1);
+}
 const sfaLeadsPagination = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-leads-pagination.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaLeadsPagination.error || sfaLeadsPagination.status !== 0) {
   console.error('Security regression failed: verify-sfa-leads-pagination.cjs');

@@ -96,60 +96,68 @@ export function hasMinRole(currentRole: string, minRole: SfaRole): boolean {
 
 /** 初回オンボーディング：組織＋オーナー＋既定パイプライン＋サンプルデータを作成（冪等） */
 export async function getOrCreateOrganization(userId: string, orgName: string, memberName: string) {
-  const existing = await prisma.sfaMember.findFirst({
-    where: { userId, status: 'ACTIVE' },
-    include: { organization: true },
-  })
-  if (existing) return existing.organization
+  // 組織・オーナー・初期データを一括保存し、途中失敗時に使えない組織を残さない。
+  // Serializable は同一ユーザーの同時オンボーディングも再試行可能な競合として検出する。
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const existing = await tx.sfaMember.findFirst({
+          where: { userId, status: 'ACTIVE' },
+          include: { organization: true },
+        })
+        if (existing) return existing.organization
 
-  // slugはASCIIのみ（URL/HTTPヘッダ安全）。日本語社名はハイフン除去後に空になるため org-<timestamp> にフォールバック
-  const base = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
-  const dup = await prisma.sfaOrganization.findUnique({ where: { slug: base } })
-  const slug = dup ? `${base}-${Date.now()}` : base
+        // slugはASCIIのみ（URL/HTTPヘッダ安全）。日本語社名は org-<timestamp> にフォールバック。
+        const base = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
+        const dup = await tx.sfaOrganization.findUnique({ where: { slug: base } })
+        const slug = dup ? `${base}-${Date.now()}` : base
+        const org = await tx.sfaOrganization.create({ data: { name: orgName, slug } })
 
-  const org = await prisma.sfaOrganization.create({ data: { name: orgName, slug } })
+        await tx.sfaMember.create({
+          data: { organizationId: org.id, userId, role: 'owner', status: 'ACTIVE', name: memberName, acceptedAt: new Date() },
+        })
+        const pipeline = await tx.sfaPipeline.create({ data: { organizationId: org.id, name: '標準パイプライン', isDefault: true } })
+        await tx.sfaStage.createMany({
+          data: DEFAULT_STAGES.map((s) => ({
+            pipelineId: pipeline.id,
+            name: s.name,
+            order: s.order,
+            probability: s.probability,
+            color: s.color,
+            isWon: !!s.isWon,
+            isLost: !!s.isLost,
+          })),
+        })
 
-  await prisma.sfaMember.create({
-    data: { organizationId: org.id, userId, role: 'owner', status: 'ACTIVE', name: memberName, acceptedAt: new Date() },
-  })
-
-  // 既定パイプライン＋ステージ
-  const pipeline = await prisma.sfaPipeline.create({ data: { organizationId: org.id, name: '標準パイプライン', isDefault: true } })
-  await prisma.sfaStage.createMany({
-    data: DEFAULT_STAGES.map((s) => ({
-      pipelineId: pipeline.id,
-      name: s.name,
-      order: s.order,
-      probability: s.probability,
-      color: s.color,
-      isWon: !!s.isWon,
-      isLost: !!s.isLost,
-    })),
-  })
-
-  // サンプルデータ（空画面回避）
-  const stages = await prisma.sfaStage.findMany({ where: { pipelineId: pipeline.id }, orderBy: { order: 'asc' } })
-  const proposalStage = stages.find((s) => s.name === '提案') || stages[0]
-  const account = await prisma.sfaAccount.create({
-    data: { organizationId: org.id, name: '株式会社サンプル商事', industry: '製造業', prefecture: '東京都', note: '初期サンプル。編集・削除OK' },
-  })
-  await prisma.sfaDeal.create({
-    data: {
-      organizationId: org.id,
-      accountId: account.id,
-      name: 'サンプル新規導入案件',
-      amount: BigInt(1000000),
-      stageId: proposalStage?.id || null,
-      probability: proposalStage?.probability ?? 40,
-      status: 'open',
-      lastActivityAt: new Date(),
-    },
-  })
-  await prisma.sfaTask.create({
-    data: { organizationId: org.id, title: '初回ヒアリングの日程調整', status: 'open', accountId: account.id },
-  })
-
-  return org
+        // サンプルデータ（空画面回避）
+        const stages = await tx.sfaStage.findMany({ where: { pipelineId: pipeline.id }, orderBy: { order: 'asc' } })
+        const proposalStage = stages.find((s) => s.name === '提案') || stages[0]
+        const account = await tx.sfaAccount.create({
+          data: { organizationId: org.id, name: '株式会社サンプル商事', industry: '製造業', prefecture: '東京都', note: '初期サンプル。編集・削除OK' },
+        })
+        await tx.sfaDeal.create({
+          data: {
+            organizationId: org.id,
+            accountId: account.id,
+            name: 'サンプル新規導入案件',
+            amount: BigInt(1000000),
+            stageId: proposalStage?.id || null,
+            probability: proposalStage?.probability ?? 40,
+            status: 'open',
+            lastActivityAt: new Date(),
+          },
+        })
+        await tx.sfaTask.create({
+          data: { organizationId: org.id, title: '初回ヒアリングの日程調整', status: 'open', accountId: account.id },
+        })
+        return org
+      }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+    } catch (error) {
+      const code = (error as { code?: string })?.code
+      if (attempt === 2 || (code !== 'P2034' && code !== 'P2002')) throw error
+    }
+  }
+  throw new Error('Organization creation retry exhausted')
 }
 
 /**
