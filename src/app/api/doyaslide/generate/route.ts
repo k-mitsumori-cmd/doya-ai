@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/doyaslide/access'
 import { recordServiceUsage } from '@/lib/service-usage'
-import { reserveMonthlySlides, releaseMonthlySlides, quotaExceededMessage } from '@/lib/doyaslide/limits'
+import { reserveMonthlySlides, releaseMonthlySlides, quotaExceededPayload } from '@/lib/doyaslide/limits'
 import { composeSlideImage, type ComposeProject } from '@/lib/doyaslide/generate'
 
 // 並列数を抑えて画像生成（レート制限・タイムアウト対策）
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     // 残枠まで原子的に予約（並行でも上限超過しない=TOCTOU回避 / 残枠未満でも作れる分だけ生成）
     const { granted, limit, reservedMonth } = await reserveMonthlySlides(userId, targets.length)
     if (granted <= 0) {
-      return NextResponse.json({ error: quotaExceededMessage(limit) }, { status: 403 })
+      return NextResponse.json(quotaExceededPayload(limit), { status: 403 })
     }
     const slidesToGen = targets.slice(0, granted)
     const skipped = targets.length - slidesToGen.length
@@ -169,7 +169,7 @@ export async function POST(req: NextRequest) {
         metadata: { errorCount, skipped, timedOut },
       })
 
-      return NextResponse.json({ slides, errorCount, skipped, timedOut, limit })
+      return NextResponse.json({ slides, errorCount, skipped, timedOut, limit, ...(skipped > 0 ? { quota: quotaExceededPayload(limit) } : {}) })
     } catch (e) {
       const unaccounted = Math.max(0, granted - successCount - released)
       if (unaccounted > 0) await releaseMonthlySlides(userId, unaccounted, reservedMonth)

@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { LOGO_POSITIONS, estimateGenSeconds, formatDuration } from '@/lib/doyaslide/constants'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import SlideImage from '@/components/doyaslide/SlideImage'
 
 interface Slide {
@@ -66,6 +67,7 @@ function EditorInner() {
   const [funIdx, setFunIdx] = useState(0)
   const [genElapsed, setGenElapsed] = useState(0)
   const [limitMsg, setLimitMsg] = useState<string | null>(null)
+  const [limitUpgradeUrl, setLimitUpgradeUrl] = useState<string | null>(null)
   const triggered = useRef(false)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const mountedRef = useRef(true)
@@ -86,13 +88,20 @@ function EditorInner() {
   const timePct = estTotalSec > 0 ? Math.min(96, (genElapsed / estTotalSec) * 100) : 0
   const progressPct = generating ? Math.max(countPct, timePct) : countPct
 
-  // 403(上限超過)を検知して常設バナーを出す共通ハンドラ（generate/regenerate/chat で共用）
-  const ensureOk = (res: Response, d: any, fallback: string) => {
+  const showQuotaNotice = useCallback((res: Response, d: any) => {
+    if (res.status !== 403 || d?.code !== 'LIMIT_REACHED') return false
+    setLimitMsg(d?.error || '今月の生成枚数の上限に達しました')
+    setLimitUpgradeUrl(d?.upgradeUrl === '/doyaslide/pricing' ? d.upgradeUrl : null)
+    return true
+  }, [])
+
+  // 上限超過を検知して常設バナーを出す共通ハンドラ（generate/regenerate/chat で共用）
+  const ensureOk = useCallback((res: Response, d: any, fallback: string) => {
     if (!res.ok) {
-      if (res.status === 403) setLimitMsg(d?.error || '今月の生成枚数の上限に達しました')
+      showQuotaNotice(res, d)
       throw new Error(d?.error || fallback)
     }
-  }
+  }, [showQuotaNotice])
 
   const reload = useCallback(async () => {
     const res = await fetch(`/api/doyaslide/projects/${id}`, { cache: 'no-store' })
@@ -126,6 +135,8 @@ function EditorInner() {
 
   const runGenerate = useCallback(async () => {
     setGenerating(true)
+    setLimitMsg(null)
+    setLimitUpgradeUrl(null)
     // 生成中も数秒ごとに再取得してサムネを順次反映
     stopPoll()
     pollRef.current = setInterval(reload, 4000)
@@ -143,9 +154,8 @@ function EditorInner() {
           body: JSON.stringify({ projectId: id, onlyPending: true }),
         })
         const d = await res.json()
-        if (res.status === 403) {
+        if (showQuotaNotice(res, d)) {
           // 月間上限：エラー扱いせず上限案内としてループ停止
-          setLimitMsg(d?.error || '今月の生成枚数の上限に達しました')
           quotaHit = true
           await reload()
           break
@@ -165,9 +175,10 @@ function EditorInner() {
       }
       const remaining = (last.slides || []).filter((s: Slide) => !s.imageUrl).length
       if (quotaHit) {
-        toast.error('今月の生成枚数の上限に達しました（プロにアップグレードで続けられます）')
+        toast.error('今月の生成枚数の上限に達しました')
       } else if (last.skipped > 0) {
-        setLimitMsg(`今月の残り枚数の都合で${last.skipped}枚はスキップしました（上限${last.limit}枚）。プロにアップグレードで続けて生成できます。`)
+        setLimitMsg(`今月の残り枚数の都合で${last.skipped}枚はスキップしました（上限${last.limit}枚）。${last.quota?.error || ''}`)
+        setLimitUpgradeUrl(last.quota?.upgradeUrl === '/doyaslide/pricing' ? last.quota.upgradeUrl : null)
         toast(`${last.skipped}枚は上限のためスキップ${last.errorCount ? `／${last.errorCount}枚は生成失敗（再生成可）` : ''}`)
       } else if (remaining > 0) {
         toast.error(`${remaining}枚が未完成です。「未生成を生成」でもう一度お試しください`)
@@ -181,7 +192,7 @@ function EditorInner() {
       await reload()
       if (mountedRef.current) setGenerating(false)
     }
-  }, [id, reload])
+  }, [id, reload, showQuotaNotice, ensureOk])
 
   const retryStructure = async () => {
     setStructuring(true)
@@ -262,6 +273,8 @@ function EditorInner() {
       const res = await fetch(`/api/doyaslide/slides/${slideId}/regenerate`, { method: 'POST' })
       const d = await res.json()
       ensureOk(res, d, '再生成に失敗しました')
+      setLimitMsg(null)
+      setLimitUpgradeUrl(null)
       toast.success('再生成しました')
       await reload()
       loadVersions(slideId)
@@ -307,6 +320,8 @@ function EditorInner() {
       })
       const d = await res.json()
       ensureOk(res, d, '修正に失敗しました')
+      setLimitMsg(null)
+      setLimitUpgradeUrl(null)
       setChat((c) => ({ ...c, [sid]: [...(c[sid] || []), { role: 'assistant', content: d.reply || '修正しました' }] }))
       toast.success('✨ 修正を反映しました')
       await reload()
@@ -463,13 +478,13 @@ function EditorInner() {
             </p>
           </div>
           <Link
-            href="/doyaslide/pricing"
+            href={limitUpgradeUrl || SUPPORT_CONTACT_URL}
             className="flex-shrink-0 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs font-black shadow hover:shadow-lg transition-all"
           >
-            プロにアップグレード
+            {limitUpgradeUrl ? 'プランを確認' : 'お問い合わせ'}
           </Link>
           <button
-            onClick={() => setLimitMsg(null)}
+            onClick={() => { setLimitMsg(null); setLimitUpgradeUrl(null) }}
             aria-label="閉じる"
             className="flex-shrink-0 text-amber-400 hover:text-amber-600"
           >

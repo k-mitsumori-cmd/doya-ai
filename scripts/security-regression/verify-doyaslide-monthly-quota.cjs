@@ -44,6 +44,15 @@ const limits = load('src/lib/doyaslide/limits.ts', {
 }, { Date: FixedDate });
 
 (async () => {
+  const freeNotice = limits.quotaExceededPayload(20);
+  assert.equal(freeNotice.code, 'LIMIT_REACHED');
+  assert.equal(freeNotice.upgradeUrl, '/doyaslide/pricing');
+  assert.match(freeNotice.error, /月150枚/);
+  const paidNotice = limits.quotaExceededPayload(150);
+  assert.equal(paidNotice.code, 'LIMIT_REACHED');
+  assert.equal(paidNotice.upgradeUrl, undefined);
+  assert.match(paidNotice.error, /来月1日/);
+  assert.doesNotMatch(paidNotice.error, /アップグレード/);
   assert.equal(await limits.getMonthlyUsage('user'), 0, 'JST month rollover must clear displayed usage');
   const results = await Promise.all([
     limits.reserveMonthlySlides('user', 12),

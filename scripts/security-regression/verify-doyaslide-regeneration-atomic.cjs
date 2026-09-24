@@ -52,7 +52,7 @@ function fixture(kind, mode = 'success') {
     '@/lib/doyaslide/limits': {
       reserveMonthlySlides: async () => { reserves++; return { granted: mode === 'quota' ? 0 : 1, limit: 20 }; },
       releaseMonthlySlides: async () => { releases++; },
-      quotaExceededMessage: () => 'quota reached',
+      quotaExceededPayload: () => ({ error: 'quota reached', code: 'LIMIT_REACHED', limit: 20, upgradeUrl: '/doyaslide/pricing' }),
     },
     '@/lib/doyaslide/generate': { composeSlideImage: async () => {
       generations++;

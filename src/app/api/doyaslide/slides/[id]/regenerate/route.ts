@@ -5,7 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/doyaslide/access'
-import { reserveMonthlySlides, releaseMonthlySlides, quotaExceededMessage } from '@/lib/doyaslide/limits'
+import { reserveMonthlySlides, releaseMonthlySlides, quotaExceededPayload } from '@/lib/doyaslide/limits'
 import { composeSlideImage, type ComposeProject } from '@/lib/doyaslide/generate'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     // 再生成も1枚分の生成クレジットを原子的に消費（並行でも上限超過しない）
     const { granted, limit, reservedMonth } = await reserveMonthlySlides(userId, 1)
     if (granted < 1) {
-      return NextResponse.json({ error: quotaExceededMessage(limit) }, { status: 403 })
+      return NextResponse.json(quotaExceededPayload(limit), { status: 403 })
     }
 
     let saved = false

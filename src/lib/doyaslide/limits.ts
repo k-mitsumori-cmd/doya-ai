@@ -46,7 +46,19 @@ export function isSameMonth(a: Date, b: Date): boolean {
 
 /** 上限超過時のユーザー向け共通メッセージ（全ルートで使い回す） */
 export function quotaExceededMessage(limit: number): string {
-  return `今月の生成枚数の上限（${limit}枚）に達しました。生成・再生成・チャット修正はそれぞれ1枚分を消費します。プロにアップグレードしてください。`
+  const detail = `今月の生成枚数の上限（${limit}枚）に達しました。生成・再生成・チャット修正はそれぞれ1枚分を消費します。`
+  return limit === DOYASLIDE_LIMITS.FREE.maxSlidesPerMonth
+    ? `${detail}プロプランでは月${DOYASLIDE_LIMITS.PRO.maxSlidesPerMonth}枚まで生成できます。`
+    : `${detail}来月1日に枠が戻ります。追加をご希望の場合はお問い合わせください。`
+}
+
+export function quotaExceededPayload(limit: number) {
+  return {
+    error: quotaExceededMessage(limit),
+    code: 'LIMIT_REACHED',
+    limit,
+    ...(limit === DOYASLIDE_LIMITS.FREE.maxSlidesPerMonth ? { upgradeUrl: '/doyaslide/pricing' } : {}),
+  }
 }
 
 /** 当月の使用枚数（月が変わっていれば0）。判定・表示の単一ソース（UserServiceSubscription.monthlyUsage）。 */
