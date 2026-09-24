@@ -9,6 +9,7 @@ import { usePathname } from 'next/navigation'
 import { CheckoutButton } from '@/components/CheckoutButton'
 import { TrialBadge, TrialNote, useTrialEligible } from '@/components/TrialCallout'
 import { getServiceById, getPublicServices } from '@/lib/services'
+import { higherPlan } from '@/lib/plan-utils'
 import {
   UNIFIED_PRO_PRICE_LABEL,
   UNIFIED_PRO_PLAN_ID,
@@ -46,7 +47,7 @@ export function UnifiedPricingPlans({
   // （/api/stripe/sync/latest は Stripe を読んで DB に写すだけ）。
   // ⚠️ 未ログインの初回訪問者に出すと「反映？何のこと？」となるので、
   //    ログイン済みかつ無料プランの方にだけ見せる。
-  const { status: authStatus } = useSession()
+  const { data: session, status: authStatus } = useSession()
   const [resyncing, setResyncing] = useState(false)
   const [resyncMessage, setResyncMessage] = useState<string | null>(null)
 
@@ -56,12 +57,12 @@ export function UnifiedPricingPlans({
   const freeLimit = svc.pricing?.free?.limit || '無料でお試し'
   const proLimit = svc.pricing?.pro?.limit || '上限が大幅アップ'
   const features = svc.features || []
-  const plan = (currentPlan || '').toUpperCase()
-  const isPro = plan === 'PRO' || plan === 'BUNDLE' || plan === 'ENTERPRISE'
-  // ⚠️ currentPlan は任意プロップで、渡していない/'FREE' 固定の呼び出し元がある。
-  //    分からないまま「反映されていないのでは」と疑わせる導線を出すと逆効果なので、
-  //    プランが確実に分かっている画面でだけ救済ボタンを見せる。
-  const planKnown = Boolean(currentPlan)
+  // 呼び出し元に FREE 固定の古い料金ページがあっても、契約中の統一プランを優先する。
+  // セッションはサーバー側で User.plan を読み直してから返される。
+  const accountPlan = authStatus === 'authenticated' ? (session?.user as { plan?: string } | undefined)?.plan : undefined
+  const plan = accountPlan ? higherPlan(currentPlan, accountPlan) : (currentPlan || '').toUpperCase()
+  const isPro = authStatus === 'authenticated' && (plan === 'PRO' || plan === 'BUNDLE' || plan === 'ENTERPRISE')
+  const planKnown = Boolean(accountPlan)
 
   const resyncPlan = async () => {
     setResyncing(true)
@@ -89,7 +90,7 @@ export function UnifiedPricingPlans({
       setResyncing(false)
     }
   }
-  const isFree = !isPro && plan === 'FREE'
+  const isFree = authStatus === 'authenticated' && !isPro && plan === 'FREE'
 
   // 全サービス利用の価値づけ：全公開サービスの単体プロ料金の合計（＝個別契約したら相当）
   // ⚠️ 開発中のサービスは公開一覧に出さないが、そのサービス自身の料金ページでは

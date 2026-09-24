@@ -95,12 +95,14 @@ export default function QuoteTool() {
   const [creating, setCreating] = useState(false)
 
   const [error, setError] = useState('')
+  const [upgradeUrl, setUpgradeUrl] = useState<string | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
 
   const load = useCallback(async () => {
     const version = ++listVersion.current
     setLoading(true)
     setError('')
+    setUpgradeUrl(null)
     setLoadFailed(false)
     setNeedsLogin(false)
     setProducts([])
@@ -211,6 +213,7 @@ export default function QuoteTool() {
   async function createOrg() {
     if (!orgName.trim()) return
     setError('')
+    setUpgradeUrl(null)
     const r = await fetch(withOrg('quote', '/api/quote/organizations'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -227,6 +230,7 @@ export default function QuoteTool() {
     if (!url.trim()) return
     setAnalyzing(true)
     setError('')
+    setUpgradeUrl(null)
     setDraftProfile(null)
     try {
       const r = await fetch(withOrg('quote', '/api/quote/products/analyze'), {
@@ -249,6 +253,7 @@ export default function QuoteTool() {
   async function saveProduct() {
     if (!draftProfile || !productName.trim()) return
     setError('')
+    setUpgradeUrl(null)
     const r = await fetch(withOrg('quote', '/api/quote/products'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -270,6 +275,7 @@ export default function QuoteTool() {
     if (!selectedProduct) return
     setSuggesting(true)
     setError('')
+    setUpgradeUrl(null)
     try {
       const r = await fetch(withOrg('quote', '/api/quote/documents/suggest'), {
         method: 'POST',
@@ -358,6 +364,7 @@ export default function QuoteTool() {
     if (items.length === 0) return
     setCreating(true)
     setError('')
+    setUpgradeUrl(null)
     try {
       const product = products.find((p) => p.id === selectedProduct)
       const r = await fetch(withOrg('quote', '/api/quote/documents'), {
@@ -372,7 +379,12 @@ export default function QuoteTool() {
         }),
       })
       const d = await r.json()
-      if (!r.ok) throw new Error(d?.error || '作成に失敗しました')
+      if (!r.ok) {
+        if (r.status === 402 && d?.code === 'LIMIT_REACHED' && d?.upgradeUrl === '/quote/pricing') {
+          setUpgradeUrl(d.upgradeUrl)
+        }
+        throw new Error(d?.error || '作成に失敗しました')
+      }
       window.location.href = `/quote/documents/${d.id}`
     } catch (e) {
       notifyError(setError, e instanceof Error ? e.message : '作成に失敗しました')
@@ -488,7 +500,12 @@ export default function QuoteTool() {
           </div>
         )}
 
-        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
+        {error && (
+          <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">
+            <p>{error}</p>
+            {upgradeUrl && <Link href={upgradeUrl} className="mt-2 inline-block font-bold text-blue-700 underline">プロプランの料金と30日間無料の対象条件を確認する</Link>}
+          </div>
+        )}
 
         {/* --- 1. 商材の取り込み --- */}
         <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
@@ -885,6 +902,12 @@ export default function QuoteTool() {
             >
               {creating ? '作成しています…' : '見積書を作成する'}
             </button>
+            {upgradeUrl && error && (
+              <div role="alert" className="mt-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm font-bold text-blue-900">
+                <p>{error}</p>
+                <Link href={upgradeUrl} className="mt-2 inline-block text-blue-700 underline">プロプランの料金と30日間無料の対象条件を確認する</Link>
+              </div>
+            )}
           </section>
         )}
 

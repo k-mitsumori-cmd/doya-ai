@@ -18,7 +18,7 @@ export function tierFrom(raw: unknown): PlanTier {
   const p = String(raw || '').toUpperCase()
   if (!p || p === 'GUEST') return 'GUEST'
   if (p.includes('ENTERPRISE')) return 'ENTERPRISE'
-  if (p.includes('PRO') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO'
+  if (p.includes('PRO') || p.includes('BUNDLE') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO'
   if (p.includes('LIGHT')) return 'LIGHT'
   if (p.includes('FREE')) return 'FREE'
   return 'FREE'

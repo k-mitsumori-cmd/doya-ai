@@ -55,5 +55,10 @@ function sidebar(service, plan, isLoggedIn) {
     assert.equal(sidebar(service, 'FREE', true), 'FREE')
   }
   assert.deepEqual(await pricing('sfa', Response.json({ onboarded: false, memberships: [] })), { plan: null, error: false })
-  console.log('PASS service plan fallback: Cunning, SFA and DoyaSlide never infer FREE from failed or missing usage')
+  const planUtils = {}
+  vm.runInNewContext(ts.transpileModule(fs.readFileSync('src/lib/plan-utils.ts', 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText, { exports: planUtils })
+  assert.equal(planUtils.higherPlan('FREE', 'BUNDLE'), 'PRO')
+  console.log('PASS service plan fallback: Cunning, SFA and DoyaSlide preserve unknown status; BUNDLE stays PRO')
 })().catch((error) => { console.error(error); process.exitCode = 1 })

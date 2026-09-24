@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
 import { defaultExpiry, nextQuoteNo, recalcDocument } from '@/lib/quote/document'
-import { assertFreeLimit } from '@/lib/plan-limit'
+import { assertFreeLimit, FREE_LIMITS, jstStartOfMonthUtc } from '@/lib/plan-limit'
 import { recordServiceUsage } from '@/lib/service-usage'
 import type { PriceSource } from '@/lib/quote/types'
 
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
   // 無料枠の上限（services.ts の「見積書3件まで」を実際に効かせる）
-  const quota = await assertFreeLimit(
+  const checkQuota = () => assertFreeLimit(
     'quoteDocuments',
     () => prisma.quoteDocument.count({ where: { organizationId: ctx.organizationId } }),
     undefined,
@@ -61,7 +61,15 @@ export async function POST(req: NextRequest) {
         where: { organizationId: ctx.organizationId, createdAt: { gte: since } },
       })
   )
-  if (!quota.ok) return NextResponse.json({ error: quota.reason }, { status: 402 })
+  const quotaResponse = (checked: Awaited<ReturnType<typeof checkQuota>>) => NextResponse.json({
+    error: checked.reason,
+    code: 'LIMIT_REACHED',
+    used: checked.used,
+    limit: checked.limit,
+    ...(checked.limit === FREE_LIMITS.quoteDocuments ? { upgradeUrl: '/quote/pricing' } : {}),
+  }, { status: 402 })
+  const quota = await checkQuota()
+  if (!quota.ok) return quotaResponse(quota)
 
   const body = await req.json().catch(() => ({}))
 
@@ -87,11 +95,20 @@ export async function POST(req: NextRequest) {
   const issuer = await prisma.quoteIssuer.findUnique({ where: { organizationId: ctx.organizationId } })
 
   // 採番の衝突（同時作成）に備えて数回やり直す
-  let doc = null
+  let result: { kind: 'created'; doc: { id: string; quoteNo: string } } | { kind: 'limit' } | null = null
   for (let attempt = 0; attempt < 5; attempt++) {
     const quoteNo = await nextQuoteNo(ctx.organizationId)
     try {
-      doc = await prisma.$transaction(async (tx) => {
+      result = await prisma.$transaction(async (tx) => {
+        // 上限確認と作成を同一の Serializable トランザクションにする。
+        // 複数タブで同時に作っても、片方は競合として再試行され上限を超えない。
+        const used = await tx.quoteDocument.count({
+          where: {
+            organizationId: ctx.organizationId,
+            ...(quota.limit === FREE_LIMITS.quoteDocuments ? {} : { createdAt: { gte: jstStartOfMonthUtc() } }),
+          },
+        })
+        if (quota.limit !== undefined && used >= quota.limit) return { kind: 'limit' } as const
         const created = await tx.quoteDocument.create({
           data: {
             organizationId: ctx.organizationId,
@@ -126,17 +143,24 @@ export async function POST(req: NextRequest) {
           select: { id: true, quoteNo: true },
         })
         await recalcDocument(created.id, tx)
-        return created
-      })
+        return { kind: 'created', doc: created } as const
+      }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
       break
     } catch (err: any) {
-      // P2002 = unique制約違反。採番が競合しただけなのでやり直す
-      if (err?.code !== 'P2002') {
+      // 採番の衝突か同時作成による直列化競合。最新件数を読み直して再試行する。
+      if (err?.code !== 'P2002' && err?.code !== 'P2034') {
         return NextResponse.json({ error: '見積書を作成できませんでした。再読み込みして状態をご確認ください。' }, { status: 500 })
       }
     }
   }
-  if (!doc) return NextResponse.json({ error: '見積書を作成できませんでした' }, { status: 500 })
+  if (result?.kind === 'limit') {
+    // プラン変更が同時に起きた場合は、古い階層のエラーを返さず再操作を促す。
+    const latestQuota = await checkQuota()
+    if (latestQuota.ok) return NextResponse.json({ error: 'プラン情報が更新されました。再読み込みしてからもう一度お試しください。' }, { status: 409 })
+    return quotaResponse(latestQuota)
+  }
+  if (!result) return NextResponse.json({ error: '見積書を作成できませんでした' }, { status: 500 })
+  const doc = result.doc
 
 
   // 利用記録。⚠️ 失敗しても見積書作成は壊さない（throwしない実装）

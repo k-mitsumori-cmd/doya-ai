@@ -6,9 +6,9 @@ function load(file,deps){const exports={};vm.runInNewContext(compile(read(file))
  const results=[];
  for(const source of ['own_price','market','competitor','manual','ai_estimate','unknown','invalid']) {
   let row={id:'d',status:'draft',lineItems:[]};
-  const prisma={quoteIssuer:{findUnique:async()=>null},quoteDocument:{create:async({data})=>{row={...row,...data,lineItems:data.lineItems.create};return row;},findFirst:async()=>row,findUnique:async()=>row,update:async({data})=>row={...row,...data}},quoteLineItem:{deleteMany:async()=>{row.lineItems=[];},createMany:async({data})=>{row.lineItems=data;}}};
+  const prisma={quoteIssuer:{findUnique:async()=>null},quoteDocument:{count:async()=>0,create:async({data})=>{row={...row,...data,lineItems:data.lineItems.create};return row;},findFirst:async()=>row,findUnique:async()=>row,update:async({data})=>row={...row,...data}},quoteLineItem:{deleteMany:async()=>{row.lineItems=[];},createMany:async({data})=>{row.lineItems=data;}}};
   prisma.$transaction=async fn=>fn(prisma);
-  const deps={'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/quote/access':{getQuoteContext:async()=>({organizationId:'o',userId:'u',role:'manager'}),orgSlugFrom:()=> 'org',hasMinRole:()=>true},'@/lib/quote/document':{defaultExpiry:()=>new Date(),nextQuoteNo:async()=> 'Q',recalcDocument:async()=>{}},'@/lib/plan-limit':{assertFreeLimit:async()=>({ok:true})},'@/lib/service-usage':{recordServiceUsage:async()=>{}}};
+  const deps={'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/quote/access':{getQuoteContext:async()=>({organizationId:'o',userId:'u',role:'manager'}),orgSlugFrom:()=> 'org',hasMinRole:()=>true},'@/lib/quote/document':{defaultExpiry:()=>new Date(),nextQuoteNo:async()=> 'Q',recalcDocument:async()=>{}},'@/lib/plan-limit':{assertFreeLimit:async()=>({ok:true,used:0,limit:3}),FREE_LIMITS:{quoteDocuments:3},jstStartOfMonthUtc:()=>new Date()},'@/lib/service-usage':{recordServiceUsage:async()=>{}}};
   const create=load('src/app/api/quote/documents/route.ts',deps),update=load('src/app/api/quote/documents/[id]/route.ts',deps);
   const item={itemName:'Synthetic work',qty:2,unitPrice:100,taxRate:10,priceSource:source,sourceRef:'2 days x 100',rangeMin:100,rangeMax:300};
   for(const method of ['POST','PATCH']) {
