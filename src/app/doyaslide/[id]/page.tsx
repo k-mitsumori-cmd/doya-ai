@@ -55,6 +55,7 @@ function EditorInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
+  const [structuring, setStructuring] = useState(false)
   const [exporting, setExporting] = useState<string | null>(null)
   const [chat, setChat] = useState<Record<string, { role: string; content: string }[]>>({})
   const [chatInput, setChatInput] = useState('')
@@ -181,6 +182,27 @@ function EditorInner() {
       if (mountedRef.current) setGenerating(false)
     }
   }, [id, reload])
+
+  const retryStructure = async () => {
+    setStructuring(true)
+    try {
+      const res = await fetch('/api/doyaslide/structure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ projectId: id }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || '構成の生成に失敗しました')
+      await reload()
+      toast.success('構成ができました。画像の生成を始めます')
+      await runGenerate()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '構成の生成に失敗しました')
+      await reload()
+    } finally {
+      setStructuring(false)
+    }
+  }
 
   useEffect(() => {
     ;(async () => {
@@ -400,7 +422,7 @@ function EditorInner() {
           ) : (
             <button
               onClick={runGenerate}
-              disabled={generating}
+              disabled={generating || total === 0}
               className="inline-flex items-center gap-1 px-5 py-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-black text-sm shadow hover:shadow-lg transition-all disabled:opacity-60"
             >
               <span className={`material-symbols-outlined text-lg ${generating ? 'animate-spin' : ''}`}>
@@ -411,6 +433,23 @@ function EditorInner() {
           )}
         </div>
       </div>
+
+      {total === 0 && (
+        <div className="mb-4 rounded-2xl border border-blue-200 bg-blue-50 p-5 text-center">
+          <p className="font-black text-slate-800">スライドの構成がまだありません</p>
+          <p className="mt-1 text-sm text-slate-600">作成中に処理が止まった場合も、このプロジェクトで再試行できます。</p>
+          <button
+            onClick={retryStructure}
+            disabled={structuring}
+            className="mt-3 rounded-full bg-blue-600 px-5 py-2 text-sm font-black text-white disabled:opacity-50"
+          >
+            {structuring ? '構成を生成中...' : '構成作成を再試行'}
+          </button>
+          {project.status === 'structuring' && (
+            <button onClick={() => reload()} className="ml-3 text-sm font-bold text-blue-700 underline">状態を更新</button>
+          )}
+        </div>
+      )}
 
       {/* 上限超過バナー（消えない・アップグレード導線つき） */}
       {limitMsg && (

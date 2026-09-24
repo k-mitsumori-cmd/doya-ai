@@ -275,6 +275,11 @@ if (doyaslideMonthlyQuota.error || doyaslideMonthlyQuota.status !== 0) {
   console.error('Security regression failed: verify-doyaslide-monthly-quota.cjs');
   process.exit(1);
 }
+const doyaslideStructureSafety = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-structure-safety.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyaslideStructureSafety.error || doyaslideStructureSafety.status !== 0) {
+  console.error('Security regression failed: verify-doyaslide-structure-safety.cjs');
+  process.exit(1);
+}
 const kintaiInviteAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-invite-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (kintaiInviteAtomic.error || kintaiInviteAtomic.status !== 0) {
   console.error('Security regression failed: verify-kintai-invite-atomic.cjs');

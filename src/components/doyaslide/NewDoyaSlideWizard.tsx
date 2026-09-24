@@ -181,6 +181,7 @@ export default function NewDoyaSlideWizard() {
       return
     }
     setBusy(true)
+    let createdProjectId: string | null = null
     try {
       const pRes = await fetch('/api/doyaslide/projects', {
         method: 'POST',
@@ -199,6 +200,7 @@ export default function NewDoyaSlideWizard() {
       if (!pRes.ok) throw new Error(typeof pData?.error === 'string' ? pData.error : JSON.stringify(pData?.error) || '作成に失敗しました')
       const projectId = pData?.project?.id
       if (!projectId) throw new Error('プロジェクトの作成に失敗しました（IDが取得できません）')
+      createdProjectId = projectId
 
       if (logoFile) {
         const fd = new FormData()
@@ -225,6 +227,7 @@ export default function NewDoyaSlideWizard() {
       const m = typeof e?.message === 'string' && e.message ? e.message : e ? String(e) : 'エラーが発生しました'
       toast.error(m)
       setBusy(false)
+      if (createdProjectId) router.push(`/doyaslide/${createdProjectId}`)
     }
   }
 

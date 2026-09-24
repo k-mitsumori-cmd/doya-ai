@@ -25,6 +25,7 @@ interface Project {
 const STATUS_LABEL: Record<string, string> = {
   draft: '下書き',
   structuring: '構成中',
+  structured: '構成済み',
   generating: '生成中',
   completed: '完成',
   error: 'エラー',
