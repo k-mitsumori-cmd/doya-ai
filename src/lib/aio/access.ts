@@ -3,6 +3,7 @@
 // 全API共通の入口。userId でスコープするため他組織は決して解決されない（IDOR安全）。
 // ============================================
 import { getServerSession } from 'next-auth'
+import type { AioOrganization, Prisma } from '@prisma/client'
 import type { NextRequest } from 'next/server'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -103,22 +104,30 @@ export function hasMinRole(currentRole: string, minRole: AioRole): boolean {
 
 /** 初回オンボーディング：組織＋オーナーを作成（冪等） */
 export async function getOrCreateOrganization(userId: string, orgName: string, memberName: string) {
-  const existing = await prisma.aioMember.findFirst({
-    where: { userId, status: 'ACTIVE' },
-    include: { organization: true },
-  })
-  if (existing) return existing.organization
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const existing = await tx.aioMember.findFirst({
+          where: { userId, status: 'ACTIVE' },
+          include: { organization: true },
+        })
+        if (existing) return existing.organization
 
-  // slugはASCIIのみ（URL/HTTPヘッダ安全）。日本語社名はハイフン除去後に空になるため org-<timestamp> にフォールバック
-  const base = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
-  const dup = await prisma.aioOrganization.findUnique({ where: { slug: base } })
-  const slug = dup ? `${base}-${Date.now()}` : base
-
-  const org = await prisma.aioOrganization.create({ data: { name: orgName, slug } })
-  await prisma.aioMember.create({
-    data: { organizationId: org.id, userId, role: 'owner', status: 'ACTIVE', name: memberName, acceptedAt: new Date() },
-  })
-  return org
+        const base = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
+        const dup = await tx.aioOrganization.findUnique({ where: { slug: base } })
+        const slug = dup ? `${base}-${Date.now()}` : base
+        const org = await tx.aioOrganization.create({ data: { name: orgName, slug } })
+        await tx.aioMember.create({
+          data: { organizationId: org.id, userId, role: 'owner', status: 'ACTIVE', name: memberName, acceptedAt: new Date() },
+        })
+        return org
+      }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+    } catch (error) {
+      const code = (error as { code?: string })?.code
+      if (attempt === 2 || (code !== 'P2034' && code !== 'P2002')) throw error
+    }
+  }
+  throw new Error('Organization creation retry exhausted')
 }
 
 /**
@@ -126,21 +135,29 @@ export async function getOrCreateOrganization(userId: string, orgName: string, m
  * URLごとに別ワークスペース＝独立した時系列にするための入口（quick-start）で使う。
  * オーナーとして当該ユーザーを参加させる。
  */
-export async function createAioOrganization(userId: string, orgName: string, memberName: string) {
+export async function createAioOrganization(
+  userId: string,
+  orgName: string,
+  memberName: string,
+  initialize?: (tx: Prisma.TransactionClient, org: AioOrganization) => Promise<void>,
+) {
   const base = orgName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || `org-${Date.now()}`
-  // slug一意性のTOCTOU回避: 衝突(P2002)したら一意サフィックス付きで作り直す（同名同時実行に耐える）
-  let org
+  // quick-start でも組織とオーナーを一括保存する。
   for (let attempt = 0; attempt < 4; attempt++) {
     const slug = attempt === 0 ? base : `${base}-${Date.now()}-${attempt}`
     try {
-      org = await prisma.aioOrganization.create({ data: { name: orgName, slug } })
-      break
-    } catch (e: any) {
-      if (e?.code !== 'P2002' || attempt === 3) throw e
+      return await prisma.$transaction(async (tx) => {
+        const org = await tx.aioOrganization.create({ data: { name: orgName, slug } })
+        await tx.aioMember.create({
+          data: { organizationId: org.id, userId, role: 'owner', status: 'ACTIVE', name: memberName, acceptedAt: new Date() },
+        })
+        if (initialize) await initialize(tx, org)
+        return org
+      })
+    } catch (error) {
+      const code = (error as { code?: string })?.code
+      if (attempt === 3 || code !== 'P2002') throw error
     }
   }
-  await prisma.aioMember.create({
-    data: { organizationId: org!.id, userId, role: 'owner', status: 'ACTIVE', name: memberName, acceptedAt: new Date() },
-  })
-  return org!
+  throw new Error('Organization creation retry exhausted')
 }

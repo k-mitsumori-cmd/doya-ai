@@ -220,6 +220,11 @@ if (sfaOrganizationCreate.error || sfaOrganizationCreate.status !== 0) {
   console.error('Security regression failed: verify-sfa-organization-create.cjs');
   process.exit(1);
 }
+const siblingOnboarding = spawnSync(process.execPath, [path.join(__dirname, 'verify-onboarding-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (siblingOnboarding.error || siblingOnboarding.status !== 0) {
+  console.error('Security regression failed: verify-onboarding-atomic.cjs');
+  process.exit(1);
+}
 const sfaLeadsPagination = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-leads-pagination.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaLeadsPagination.error || sfaLeadsPagination.status !== 0) {
   console.error('Security regression failed: verify-sfa-leads-pagination.cjs');

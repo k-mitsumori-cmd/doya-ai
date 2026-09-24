@@ -34,8 +34,11 @@ export async function POST(req: NextRequest) {
     }
     if (!userId) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
 
-    const body = await req.json().catch(() => ({}))
-    const url = normalizeUrl((body.url as string) || '')
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
+    const url = normalizeUrl(typeof body.url === 'string' ? body.url : '')
     if (!url) return NextResponse.json({ error: '有効なURLを入力してください' }, { status: 400 })
     const host = hostnameOf(url)
 
@@ -68,28 +71,24 @@ export async function POST(req: NextRequest) {
     // 2) 新規: URLからサービス名を自動導出（サイトタイトル→AI整形、失敗時はドメイン名）
     const derived = await deriveBrandFromUrl(url)
     const brandName = derived.brandName
-    const memberName = (session?.user?.name as string)?.trim() || 'オーナー'
-    const org = await createAioOrganization(userId, brandName.slice(0, 120), memberName.slice(0, 80))
+    const memberName = typeof session?.user?.name === 'string' ? session.user.name.trim() || 'オーナー' : 'オーナー'
 
-    // 3) AIでカテゴリ・別名・競合・監視プロンプトを生成
+    // 3) AIでカテゴリ・別名・競合・監視プロンプトを生成。保存前に完了させる。
     const setup = await suggestBrandSetup({ brandName, url })
 
-    // 4) ブランドプロフィールを upsert（入力URLで初期化。category は推定値）
+    // 4) 新規ワークスペースと初期設定を一括保存し、途中失敗時に空の組織を残さない。
     const aliasesData = setup.aliases.length ? (setup.aliases as any) : undefined
     const competitorsData = setup.competitors.length ? (setup.competitors as any) : undefined
-    await prisma.aioBrandProfile.upsert({
-      where: { organizationId: org.id },
-      create: { organizationId: org.id, brandName: brandName.slice(0, 120), brandUrl: url, category: setup.category, aliases: aliasesData, competitors: competitorsData },
-      update: { brandName: brandName.slice(0, 120), brandUrl: url, ...(setup.category ? { category: setup.category } : {}), ...(aliasesData ? { aliases: aliasesData } : {}), ...(competitorsData ? { competitors: competitorsData } : {}) },
-    })
-
-    // 5) 監視プロンプトが未登録なら投入（同URL再実行では既存を尊重し履歴を保つ）
-    const existing = await prisma.aioPrompt.count({ where: { organizationId: org.id } })
-    if (existing === 0 && setup.prompts.length) {
-      await prisma.aioPrompt.createMany({
-        data: setup.prompts.map((text) => ({ organizationId: org.id, text: text.slice(0, 500), isActive: true })),
+    const org = await createAioOrganization(userId, brandName.slice(0, 120), memberName.slice(0, 80), async (tx, created) => {
+      await tx.aioBrandProfile.create({
+        data: { organizationId: created.id, brandName: brandName.slice(0, 120), brandUrl: url, category: setup.category, aliases: aliasesData, competitors: competitorsData },
       })
-    }
+      if (setup.prompts.length) {
+        await tx.aioPrompt.createMany({
+          data: setup.prompts.map((text) => ({ organizationId: created.id, text: text.slice(0, 500), isActive: true })),
+        })
+      }
+    })
 
     return NextResponse.json({ organizationId: org.id, slug: org.slug })
   } catch (e: any) {
