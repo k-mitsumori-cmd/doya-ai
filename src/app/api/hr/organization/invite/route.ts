@@ -28,10 +28,14 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { email, role } = body
+    const { email } = body
 
     if (!email || typeof email !== 'string') {
       return NextResponse.json({ error: 'email is required' }, { status: 400 })
+    }
+    const emailNorm = email.trim().toLowerCase()
+    if (emailNorm.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNorm)) {
+      return NextResponse.json({ error: 'メールアドレスの形式をご確認ください' }, { status: 400 })
     }
 
     // メンバー数制限チェック
@@ -40,8 +44,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: memberLimitError, code: 'HR_ORG_MEMBER_LIMIT', canManageBilling: ctx.role === HrMemberRole.OWNER }, { status: 403 })
     }
 
-    const emailNorm = email.trim().toLowerCase()
-    const inviteRole = role || HrMemberRole.MEMBER
+    // 画面はメンバー招待のみ。リクエスト本文から管理者・オーナー権限を指定させない。
+    const inviteRole = HrMemberRole.MEMBER
 
     const existingMember = await prisma.hrOrganizationMember.findFirst({
       where: {

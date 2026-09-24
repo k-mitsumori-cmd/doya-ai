@@ -34,8 +34,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     // 期限切れチェック
     const expired = new Date() > invitation.expiresAt
     if (expired && invitation.status === 'PENDING') {
-      await prisma.hrInvitation.update({
-        where: { id: invitation.id },
+      await prisma.hrInvitation.updateMany({
+        where: { id: invitation.id, status: 'PENDING', expiresAt: { lte: new Date() } },
         data: { status: 'EXPIRED' },
       })
     }

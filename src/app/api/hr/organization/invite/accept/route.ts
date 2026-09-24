@@ -8,6 +8,8 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { logAudit } from '@/lib/hr/audit'
 
+class InviteNoLongerAvailableError extends Error {}
+
 // POST /api/hr/organization/invite/accept
 // 招待を受諾してメンバーとして参加する
 export async function POST(req: NextRequest) {
@@ -37,6 +39,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '招待が見つかりません' }, { status: 404 })
     }
 
+    const account = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } })
+    if (!account?.email || account.email.trim().toLowerCase() !== invitation.email.trim().toLowerCase()) {
+      return NextResponse.json({ error: '招待先のメールアドレスでログインしてください' }, { status: 403 })
+    }
+
+    if (invitation.role !== 'MEMBER') {
+      return NextResponse.json({ error: 'この招待の権限を確認できません。管理者に再招待を依頼してください' }, { status: 403 })
+    }
+
     if (invitation.status !== 'PENDING') {
       return NextResponse.json(
         { error: 'この招待は既に使用済み、またはキャンセルされています' },
@@ -46,8 +57,8 @@ export async function POST(req: NextRequest) {
 
     if (new Date() > invitation.expiresAt) {
       // 期限切れの場合はステータスを更新
-      await prisma.hrInvitation.update({
-        where: { id: invitation.id },
+      await prisma.hrInvitation.updateMany({
+        where: { id: invitation.id, status: 'PENDING', expiresAt: { lte: new Date() } },
         data: { status: 'EXPIRED' },
       })
       return NextResponse.json(
@@ -72,8 +83,14 @@ export async function POST(req: NextRequest) {
     }
 
     // メンバーとして追加 & 招待ステータスを更新
-    const [member] = await prisma.$transaction([
-      prisma.hrOrganizationMember.create({
+    const member = await prisma.$transaction(async (tx) => {
+      const acceptedAt = new Date()
+      const claimed = await tx.hrInvitation.updateMany({
+        where: { id: invitation.id, status: 'PENDING', expiresAt: { gt: acceptedAt } },
+        data: { status: 'ACCEPTED', acceptedAt },
+      })
+      if (claimed.count !== 1) throw new InviteNoLongerAvailableError()
+      return tx.hrOrganizationMember.create({
         data: {
           organizationId: invitation.organizationId,
           userId,
@@ -81,17 +98,10 @@ export async function POST(req: NextRequest) {
           status: 'ACTIVE',
           invitedEmail: invitation.email,
           invitedAt: invitation.createdAt,
-          acceptedAt: new Date(),
+          acceptedAt,
         },
-      }),
-      prisma.hrInvitation.update({
-        where: { id: invitation.id },
-        data: {
-          status: 'ACCEPTED',
-          acceptedAt: new Date(),
-        },
-      }),
-    ])
+      })
+    })
 
     // 監査ログ
     logAudit({
@@ -116,6 +126,9 @@ export async function POST(req: NextRequest) {
       role: invitation.role,
     })
   } catch (e: any) {
+    if (e instanceof InviteNoLongerAvailableError) {
+      return NextResponse.json({ error: 'この招待は使用済み、または有効期限が切れています' }, { status: 409 })
+    }
     return NextResponse.json(
       { error: e?.message || 'Failed to accept invitation' },
       { status: 500 }

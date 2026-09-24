@@ -25,6 +25,11 @@ if (mensetsuTemplateAtomic.error || mensetsuTemplateAtomic.status !== 0) {
   console.error('Security regression failed: verify-mensetsu-template-atomic.cjs');
   process.exit(1);
 }
+const hrInviteIdentity = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-invite-identity.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrInviteIdentity.error || hrInviteIdentity.status !== 0) {
+  console.error('Security regression failed: verify-hr-invite-identity.cjs');
+  process.exit(1);
+}
 const orgFetch = spawnSync(process.execPath, [path.join(__dirname, 'verify-org-fetch.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (orgFetch.error || orgFetch.status !== 0) {
   console.error('Security regression failed: verify-org-fetch.cjs');
