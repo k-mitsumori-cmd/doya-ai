@@ -13,6 +13,7 @@ type RawRow = Record<string, unknown>
 
 const str = (v: unknown, max: number): string | null => {
   if (v == null) return null
+  if (typeof v !== 'string' && typeof v !== 'number') return null
   const s = String(v).trim()
   return s ? s.slice(0, max) : null
 }
@@ -23,8 +24,11 @@ export async function POST(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
-  const body = await req.json().catch(() => ({}))
-  const rows = Array.isArray(body.rows) ? (body.rows as RawRow[]) : null
+  const body = await req.json().catch(() => null)
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return NextResponse.json({ error: '取込内容が正しくありません' }, { status: 400 })
+  }
+  const rows = Array.isArray(body.rows) ? (body.rows as unknown[]) : null
   if (!rows || rows.length === 0) {
     return NextResponse.json({ error: '取込データがありません' }, { status: 400 })
   }
@@ -36,25 +40,27 @@ export async function POST(req: NextRequest) {
   // name 必須の行のみ採用。属性は raw に保持（スコアリングで利用）。
   const data = rows
     .map((r) => {
-      const name = str(r.name ?? r.companyName ?? r.会社名 ?? r.企業名, 200)
+      if (!r || typeof r !== 'object' || Array.isArray(r)) return null
+      const row = r as RawRow
+      const name = str(row.name ?? row.companyName ?? row.会社名 ?? row.企業名, 200)
       if (!name) return null
       const raw: RawRow = {
-        prefecture: str(r.prefecture ?? r.都道府県, 40),
-        url: str(r.url ?? r.URL ?? r.website, 300),
-        industry: str(r.industry ?? r.業界, 80),
-        employeeCount: r.employeeCount ?? r.従業員数 ?? null,
-        capital: r.capital ?? r.資本金 ?? null,
-        representative: str(r.representative ?? r.代表者, 80),
-        address: str(r.address ?? r.住所, 200),
+        prefecture: str(row.prefecture ?? row.都道府県, 40),
+        url: str(row.url ?? row.URL ?? row.website, 300),
+        industry: str(row.industry ?? row.業界, 80),
+        employeeCount: row.employeeCount ?? row.従業員数 ?? null,
+        capital: row.capital ?? row.資本金 ?? null,
+        representative: str(row.representative ?? row.代表者, 80),
+        address: str(row.address ?? row.住所, 200),
       }
       return {
         organizationId: ctx.organizationId,
         name,
-        corporateNumber: str(r.corporateNumber ?? r.法人番号, 20),
-        contactName: str(r.contactName ?? r.representative ?? r.代表者, 80),
-        email: str(r.email ?? r.メール, 200),
-        phone: str(r.phone ?? r.電話番号 ?? r.tel, 40),
-        note: str(r.note ?? r.メモ, 2000),
+        corporateNumber: str(row.corporateNumber ?? row.法人番号, 20),
+        contactName: str(row.contactName ?? row.representative ?? row.代表者, 80),
+        email: str(row.email ?? row.メール, 200),
+        phone: str(row.phone ?? row.電話番号 ?? row.tel, 40),
+        note: str(row.note ?? row.メモ, 2000),
         source,
         status: 'new' as const,
         assigneeMemberId: ctx.memberId,

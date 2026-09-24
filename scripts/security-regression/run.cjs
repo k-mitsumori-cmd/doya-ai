@@ -205,6 +205,11 @@ if (sfaScoreAccess.error || sfaScoreAccess.status !== 0) {
   console.error('Security regression failed: verify-sfa-score-access.cjs');
   process.exit(1);
 }
+const sfaLeadImport = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-lead-import.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaLeadImport.error || sfaLeadImport.status !== 0) {
+  console.error('Security regression failed: verify-sfa-lead-import.cjs');
+  process.exit(1);
+}
 const sfaLeadsPagination = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-leads-pagination.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaLeadsPagination.error || sfaLeadsPagination.status !== 0) {
   console.error('Security regression failed: verify-sfa-leads-pagination.cjs');
