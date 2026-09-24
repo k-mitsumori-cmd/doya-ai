@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { sfaInit } from '@/lib/sfa/client'
+import { parseLeadCsv } from '@/lib/sfa/lead-csv'
 import { LEAD_STATUS_LABEL } from '@/lib/sfa/constants'
 import type { LeadStatus } from '@/lib/sfa/types'
 
@@ -33,31 +34,6 @@ const SOURCE_LABEL: Record<string, string> = { doyalist: 'ドヤリスト', csv:
 
 const scoreColor = (s: number | null) =>
   s == null ? 'text-slate-300' : s >= 70 ? 'text-green-600' : s >= 40 ? 'text-amber-500' : 'text-slate-400'
-
-// CSV（ヘッダ行つき）をオブジェクト配列に変換。簡易パーサ（カンマ区切り・引用符対応）。
-function parseCsv(text: string): Record<string, string>[] {
-  const lines = text.trim().split(/\r?\n/).filter((l) => l.trim())
-  if (lines.length < 2) return []
-  const split = (line: string) => {
-    const out: string[] = []
-    let cur = '', inQ = false
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i]
-      if (ch === '"') { if (inQ && line[i + 1] === '"') { cur += '"'; i++ } else inQ = !inQ }
-      else if (ch === ',' && !inQ) { out.push(cur); cur = '' }
-      else cur += ch
-    }
-    out.push(cur)
-    return out.map((s) => s.trim())
-  }
-  const headers = split(lines[0])
-  return lines.slice(1).map((line) => {
-    const cells = split(line)
-    const row: Record<string, string> = {}
-    headers.forEach((h, i) => { row[h] = cells[i] || '' })
-    return row
-  })
-}
 
 export default function SfaLeadsPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
@@ -154,10 +130,9 @@ export default function SfaLeadsPage() {
   }
 
   const doImport = async () => {
-    const rows = parseCsv(csv)
-    if (rows.length === 0) { toast.error('ヘッダ行＋1行以上のCSVを貼り付けてください'); return }
-    setBusy(true)
     try {
+      const rows = parseLeadCsv(csv)
+      setBusy(true)
       const res = await fetch('/api/sfa/leads/import', sfaInit(orgSlug, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ source: 'csv', rows }),
