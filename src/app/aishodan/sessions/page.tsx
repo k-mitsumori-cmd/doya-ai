@@ -44,14 +44,23 @@ export default function AishodanSessionsPage() {
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [loading, setLoading] = useState(true)
   const [verdict, setVerdict] = useState('')
+  const [error, setError] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true)
+    setError('')
     try {
       const q = verdict ? `?verdict=${encodeURIComponent(verdict)}` : ''
       const r = await fetch(withOrg('aishodan', `/api/aishodan/sessions${q}`))
-      const d = await r.json()
-      setSessions(d.sessions || [])
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(r.status === 403
+        ? '選択中の組織にアクセスできません。ダッシュボードで組織を選び直してください。'
+        : d?.error || '商談ログを取得できませんでした')
+      if (!Array.isArray(d.sessions)) throw new Error('商談ログを確認できませんでした')
+      setSessions(d.sessions)
+    } catch (e) {
+      setSessions([])
+      setError(e instanceof Error ? e.message : '商談ログを取得できませんでした')
     } finally {
       setLoading(false)
     }
@@ -88,6 +97,12 @@ export default function AishodanSessionsPage() {
         <div className="mt-5 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
           {loading ? (
             <div className="flex flex-col items-center justify-center gap-2 py-6"><DoyaKun mood="working" size={72} /><p className="text-sm font-bold text-slate-400">読み込んでいます…</p></div>
+          ) : error ? (
+            <div role="alert" className="py-6 text-center">
+              <p className="text-sm font-semibold text-red-700">{error}</p>
+              <button type="button" onClick={() => void load()} className="mt-4 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white">再読み込みする</button>
+              <Link href="/aishodan" className="ml-3 inline-block text-sm font-bold text-blue-700 underline">組織を確認する</Link>
+            </div>
           ) : sessions.length === 0 ? (
             <EmptyState
               kind="not-generated"
