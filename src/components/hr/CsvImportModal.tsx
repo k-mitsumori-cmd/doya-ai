@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
+import Link from 'next/link'
 
 interface ImportResultRow {
   row: number
@@ -14,6 +15,7 @@ interface ImportResult {
   imported: number
   failed: number
   details: ImportResultRow[]
+  limitNotice?: { message: string; upgradeUrl?: string; contactUrl?: string }
 }
 
 const SAMPLE_CSV = `lastName,firstName,lastNameKana,firstNameKana,employeeNumber,email,phone,departmentCode,position,grade,employmentType,hireDate,birthDate,gender
@@ -103,7 +105,7 @@ export default function CsvImportModal({
       }
       const imported = data.imported ?? 0
       const failed = data.failed ?? 0
-      setResult({ imported, failed, details: data.details ?? [] })
+      setResult({ imported, failed, details: data.details ?? [], limitNotice: data.limitNotice })
       if (imported > 0) {
         toast.success(`${imported}名を登録しました`)
         onImported()
@@ -157,6 +159,14 @@ export default function CsvImportModal({
                       <p className="text-sm font-bold text-red-600">失敗</p>
                     </div>
                   </div>
+                  {result.limitNotice && (
+                    <div role="alert" className="mb-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+                      <p className="font-bold">{result.limitNotice.message}</p>
+                      <Link href={result.limitNotice.upgradeUrl || result.limitNotice.contactUrl || '/hr/pricing'} className="mt-2 inline-block font-bold underline underline-offset-2">
+                        {result.limitNotice.upgradeUrl ? 'プランと料金を見る' : 'お問い合わせ'} →
+                      </Link>
+                    </div>
+                  )}
                   {result.failed > 0 && (
                     <div className="border border-slate-200 rounded-2xl overflow-hidden">
                       <div className="bg-slate-50 px-4 py-2 text-xs font-bold text-slate-500">エラー詳細</div>

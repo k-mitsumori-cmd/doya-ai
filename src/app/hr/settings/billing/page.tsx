@@ -27,12 +27,13 @@ const PLAN_DISPLAY: Record<string, { name: string; color: string }> = {
   enterprise: { name: 'Enterprise', color: 'from-amber-500 to-orange-500' },
 }
 
-function UsageBar({ label, used, limit, icon, color }: {
+function UsageBar({ label, used, limit, icon, color, canUpgrade = true }: {
   label: string
   used: number
   limit: number
   icon: string
   color: string
+  canUpgrade?: boolean
 }) {
   const pct = limit <= 0 ? 0 : Math.min(100, Math.round((used / limit) * 100))
   const isWarning = pct >= 80
@@ -70,7 +71,9 @@ function UsageBar({ label, used, limit, icon, color }: {
           className={`text-xs font-bold mt-1.5 ${isCritical ? 'text-red-500' : 'text-amber-500'}`}
         >
           <span className="material-symbols-outlined text-xs align-middle mr-0.5">warning</span>
-          {isCritical ? '上限に近づいています! アップグレードを検討してください' : '使用量が80%を超えています'}
+          {used >= limit
+            ? canUpgrade ? '上限に達しました。プランの変更をご検討ください' : '上限に達しました。追加が必要な場合はお問い合わせください'
+            : isCritical ? '上限に近づいています' : '使用量が80%を超えています'}
         </motion.p>
       )}
     </div>
@@ -235,6 +238,7 @@ export default function BillingPage() {
               limit={billing?.employeeLimit ?? 5}
               icon="people"
               color="text-blue-600"
+              canUpgrade={!['pro', 'bundle', 'enterprise'].includes(planKey)}
             />
             <UsageBar
               label="メンバー数"

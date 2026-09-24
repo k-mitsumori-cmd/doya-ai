@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 
 interface Department {
@@ -26,6 +27,7 @@ export default function NewEmployeePage() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [photoFile, setPhotoFile] = useState<File | null>(null)
   const [submitted, setSubmitted] = useState(false)
+  const [limitNotice, setLimitNotice] = useState<{ message: string; href: string; label: string } | null>(null)
 
   const [form, setForm] = useState({
     lastName: '',
@@ -68,6 +70,7 @@ export default function NewEmployeePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setLimitNotice(null)
     setSaving(true)
 
     try {
@@ -103,6 +106,14 @@ export default function NewEmployeePage() {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}))
+        if (errData.code === 'HR_ORG_EMPLOYEE_LIMIT') {
+          setLimitNotice({
+            message: errData.error || '従業員数の上限に達しました。',
+            href: errData.upgradeUrl || errData.contactUrl || '/hr/pricing',
+            label: errData.upgradeUrl ? 'プランと料金を見る' : 'お問い合わせ',
+          })
+          return
+        }
         throw new Error(errData.error || '従業員の登録に失敗しました')
       }
 
@@ -140,6 +151,12 @@ export default function NewEmployeePage() {
           </div>
           <p className="text-sm text-slate-500 mt-1">新しい従業員の情報を登録します</p>
         </div>
+        {limitNotice && (
+          <div role="alert" className="mb-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+            <p className="font-bold">{limitNotice.message}</p>
+            <Link href={limitNotice.href} className="mt-2 inline-block font-bold underline underline-offset-2">{limitNotice.label} →</Link>
+          </div>
+        )}
 
         {/* Step Indicator */}
         <div className="mb-6 bg-white rounded-3xl shadow-md p-4">

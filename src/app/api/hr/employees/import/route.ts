@@ -8,6 +8,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
+import { createWithinEmployeeLimit, employeeLimitMessage } from '@/lib/hr/billing'
 
 function parseCSV(text: string): string[][] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0)
@@ -112,6 +113,7 @@ export async function POST(req: NextRequest) {
     }
 
     const results: { row: number; success: boolean; error?: string; employeeId?: string }[] = []
+    let limitNotice: { message: string; upgradeUrl?: string; contactUrl?: string } | null = null
 
     for (let i = 0; i < dataRows.length; i++) {
       const row = dataRows[i]
@@ -120,6 +122,10 @@ export async function POST(req: NextRequest) {
         const firstName = row[firstNameIdx]
         if (!lastName || !firstName) {
           results.push({ row: i + 2, success: false, error: 'lastName/firstName missing' })
+          continue
+        }
+        if (limitNotice) {
+          results.push({ row: i + 2, success: false, error: limitNotice.message })
           continue
         }
 
@@ -133,39 +139,53 @@ export async function POST(req: NextRequest) {
         const hireDateStr = get('hiredate')
         const birthDateStr = get('birthdate')
 
-        const employee = await prisma.hrEmployee.create({
-          data: {
-            organizationId: ctx.organizationId,
-            employeeNumber: get('employeenumber'),
-            lastName,
-            firstName,
-            lastNameKana: get('lastnamekana'),
-            firstNameKana: get('firstnamekana'),
-            email: get('email'),
-            phone: get('phone'),
-            departmentId,
-            position: get('position'),
-            grade: get('grade'),
-            employmentType: get('employmenttype') || 'FULL_TIME',
-            hireDate: hireDateStr ? new Date(hireDateStr) : null,
-            birthDate: birthDateStr ? new Date(birthDateStr) : null,
-            gender: get('gender'),
-            status: 'ACTIVE',
-          },
-        })
+        const admission = await createWithinEmployeeLimit(ctx.organizationId, async (tx) => {
+          const employee = await tx.hrEmployee.create({
+            data: {
+              organizationId: ctx.organizationId,
+              employeeNumber: get('employeenumber'),
+              lastName,
+              firstName,
+              lastNameKana: get('lastnamekana'),
+              firstNameKana: get('firstnamekana'),
+              email: get('email'),
+              phone: get('phone'),
+              departmentId,
+              position: get('position'),
+              grade: get('grade'),
+              employmentType: get('employmenttype') || 'FULL_TIME',
+              hireDate: hireDateStr ? new Date(hireDateStr) : null,
+              birthDate: birthDateStr ? new Date(birthDateStr) : null,
+              gender: get('gender'),
+              status: 'ACTIVE',
+            },
+          })
 
-        await prisma.hrEmployeeHistory.create({
-          data: {
-            employeeId: employee.id,
-            changeType: 'HIRE',
-            effectiveDate: hireDateStr ? new Date(hireDateStr) : new Date(),
-            reason: 'CSV import',
-          },
+          await tx.hrEmployeeHistory.create({
+            data: {
+              employeeId: employee.id,
+              changeType: 'HIRE',
+              effectiveDate: hireDateStr ? new Date(hireDateStr) : new Date(),
+              reason: 'CSV import',
+            },
+          })
+          return employee
         })
+        if (!admission.allowed) {
+          const message = employeeLimitMessage(admission.plan, admission.limit)
+          const canUpgrade = !['PRO', 'BUNDLE', 'ENTERPRISE'].includes(admission.plan.toUpperCase())
+          limitNotice = canUpgrade
+            ? { message, upgradeUrl: '/hr/pricing' }
+            : { message, contactUrl: 'https://doyamarke.surisuta.jp/contact' }
+          results.push({ row: i + 2, success: false, error: message })
+          continue
+        }
+        const employee = admission.value
 
         results.push({ row: i + 2, success: true, employeeId: employee.id })
       } catch (err: any) {
-        results.push({ row: i + 2, success: false, error: err?.message || 'Unknown error' })
+        console.error('[hr/employees/import][row]', i + 2, err)
+        results.push({ row: i + 2, success: false, error: err?.code === 'P2002' ? '社員番号が重複しています' : 'この行の登録に失敗しました' })
       }
     }
 
@@ -177,10 +197,12 @@ export async function POST(req: NextRequest) {
       imported: successCount,
       failed: failCount,
       details: results,
+      ...(limitNotice ? { code: 'HR_ORG_EMPLOYEE_LIMIT', limitNotice } : {}),
     })
   } catch (e: any) {
+    console.error('[hr/employees/import]', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to import employees' },
+      { error: '従業員の一括登録に失敗しました' },
       { status: 500 }
     )
   }

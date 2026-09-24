@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 
 // ============================================
 // ドヤHR SaaS課金・プラン制限
@@ -38,20 +39,51 @@ export function getOrgPlanLimits(plan: string): PlanLimits {
  * オーナーが ¥9,980 プロを契約していれば組織全体で HR もプロ扱いになる。
  * （UserServiceSubscription.plan はサービス別の使用量管理用で、プラン判定には使わない）
  */
-export async function getOrgPlan(organizationId: string): Promise<string> {
+type OrgPlanReader = Pick<Prisma.TransactionClient, 'hrOrganizationMember' | 'user'>
+
+export async function getOrgPlan(organizationId: string, db: OrgPlanReader = prisma): Promise<string> {
   // 組織のOWNERを取得
-  const owner = await prisma.hrOrganizationMember.findFirst({
+  const owner = await db.hrOrganizationMember.findFirst({
     where: { organizationId, role: 'OWNER', status: 'ACTIVE' },
   })
   if (!owner) return 'FREE'
 
   // OWNER の User.plan（グローバル）をプランの正とする
-  const user = await prisma.user.findUnique({
+  const user = await db.user.findUnique({
     where: { id: owner.userId },
     select: { plan: true },
   })
 
   return user?.plan || 'FREE'
+}
+
+export type HrEmployeeAdmission<T> =
+  | { allowed: true; value: T }
+  | { allowed: false; plan: string; limit: number }
+
+/** 組織単位で従業員追加を直列化し、単件登録とCSV登録に同じ上限を適用する。 */
+export async function createWithinEmployeeLimit<T>(
+  organizationId: string,
+  create: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<HrEmployeeAdmission<T>> {
+  return prisma.$transaction(async (tx) => {
+    const organizations = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "hr_organizations" WHERE id = ${organizationId} FOR UPDATE`
+    if (organizations.length === 0) throw new Error('HR organization not found')
+    const plan = await getOrgPlan(organizationId, tx)
+    const limit = getOrgPlanLimits(plan).maxEmployees
+    if (process.env.DOYA_DISABLE_LIMITS !== '1' && limit >= 0) {
+      const count = await tx.hrEmployee.count({ where: { organizationId, status: 'ACTIVE' } })
+      if (count >= limit) return { allowed: false as const, plan, limit }
+    }
+    return { allowed: true as const, value: await create(tx) }
+  })
+}
+
+export function employeeLimitMessage(plan: string, limit: number): string {
+  const base = `従業員数の上限（${limit}名）に達しています。`
+  return ['PRO', 'BUNDLE', 'ENTERPRISE'].includes(plan.toUpperCase())
+    ? `${base}追加が必要な場合はお問い合わせください。`
+    : `${base}プランを変更すると上限を増やせます。`
 }
 
 /**
@@ -70,7 +102,7 @@ export async function checkEmployeeLimit(organizationId: string): Promise<string
   })
 
   if (count >= limits.maxEmployees) {
-    return `従業員数の上限（${limits.maxEmployees}名）に達しています。プランをアップグレードしてください。`
+    return employeeLimitMessage(plan, limits.maxEmployees)
   }
 
   return null
