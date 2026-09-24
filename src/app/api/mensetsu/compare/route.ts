@@ -10,6 +10,7 @@ export const maxDuration = 300
 //    同じ列で比べることになり誤った採用判断につながる。
 //    テンプレートを指定した場合だけ、評価軸ごとの点数と中央値も返す。
 import { NextRequest, NextResponse } from 'next/server'
+import { createHash } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { getMensetsuContext, orgSlugFrom } from '@/lib/mensetsu/access'
 import { weightedAverage } from '@/lib/mensetsu/evaluate'
@@ -18,8 +19,14 @@ export async function GET(req: NextRequest) {
   const c = await getMensetsuContext(orgSlugFrom(req))
   if (!c) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
 
-  const templateId = new URL(req.url).searchParams.get('templateId') || ''
+  const params = new URL(req.url).searchParams
+  const templateId = params.get('templateId') || ''
   const isAll = !templateId || templateId === 'all'
+  const cursor = params.get('cursor')
+  const expectedRevision = params.get('revision')
+  if (params.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
 
   // 他組織のテンプレートを覗けないよう二重条件
   const template = isAll
@@ -41,8 +48,7 @@ export async function GET(req: NextRequest) {
       status: 'evaluated',
       ...(isAll ? {} : { templateId }),
     },
-    orderBy: { endedAt: 'desc' },
-    take: 50,
+    // 順位と中央値の母集団を最新50件で切らない。返却だけを50件ずつにする。
     select: {
       id: true,
       candidateName: true,
@@ -51,7 +57,7 @@ export async function GET(req: NextRequest) {
       overallComment: true,
       // 「すべて」表示では、どの職種で受けたのかが分からないと比較にならない
       template: { select: { id: true, name: true, jobTitle: true, criteria: { select: { id: true, key: true, weight: true } } } },
-      scores: { select: { criterionId: true, score: true, insufficient: true } },
+      scores: { orderBy: { criterionId: 'asc' }, select: { criterionId: true, score: true, insufficient: true } },
     },
   })
 
@@ -84,6 +90,22 @@ export async function GET(req: NextRequest) {
     }
   })
 
+  candidates.sort((a, b) =>
+    (b.average ?? -1) - (a.average ?? -1) ||
+    (b.endedAt?.getTime() ?? 0) - (a.endedAt?.getTime() ?? 0) ||
+    b.id.localeCompare(a.id)
+  )
+  const revision = createHash('sha256').update(JSON.stringify(candidates)).digest('base64url')
+  const cursorIndex = cursor ? candidates.findIndex((candidate) => candidate.id === cursor) : -1
+  if (cursor && cursorIndex < 0) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  if (cursor && expectedRevision !== revision) {
+    return NextResponse.json({ error: '比較結果が更新されました。最初から読み直してください' }, { status: 409 })
+  }
+  const start = cursorIndex + 1
+  const page = candidates.slice(start, start + 50)
+
   // 評価軸ごとの中央値。相対的に高い/低いを見るための基準線として返す。
   // 平均だと1人の極端な点に引きずられるため中央値を使う。
   const medians: Record<string, number | null> = {}
@@ -110,7 +132,10 @@ export async function GET(req: NextRequest) {
           criteria: template.criteria.map((x) => ({ key: x.key, name: x.name, weight: x.weight })),
         }
       : { id: 'all', name: 'すべて', jobTitle: '', criteria: [] },
-    candidates,
+    candidates: page,
+    total: candidates.length,
+    revision,
+    nextCursor: start + page.length < candidates.length ? page[page.length - 1].id : null,
     medians,
-  })
+  }, { headers: { 'Cache-Control': 'private, no-store' } })
 }

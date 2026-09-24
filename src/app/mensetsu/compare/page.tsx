@@ -3,11 +3,11 @@
 // ============================================
 // ドヤ面接官 候補者の横並び比較（F4-4）
 // ============================================
-// 同じテンプレート（同じ主質問・同じ評価基準）で受けた候補者だけを並べる。
+// 全職種の参考一覧と、同じテンプレートで受けた候補者の比較を切り替える。
 // ⚠️ 点数の高い順に並べているが、これは意思決定そのものではない。
 //    情報不足の軸があると平均は上振れするため、必ず個別レポートを確認してもらう。
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { notifyError } from '@/lib/ui/notify'
 
@@ -64,40 +64,102 @@ export default function ComparePage() {
   const [candidates, setCandidates] = useState<Candidate[]>([])
   const [medians, setMedians] = useState<Record<string, number | null>>({})
   const [loading, setLoading] = useState(true)
+  const [loadingCompare, setLoadingCompare] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [total, setTotal] = useState(0)
+  const [revision, setRevision] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [templatesError, setTemplatesError] = useState<string | null>(null)
+  const requestVersion = useRef(0)
 
-  useEffect(() => {
-    ;(async () => {
-      try {
-        const res = await fetch('/api/mensetsu/templates')
-        const json = await res.json()
-        const list: TemplateRow[] = json?.templates || []
-        setTemplates(list)
-      } finally {
-        setLoading(false)
-      }
-    })()
+  const loadTemplates = useCallback(async () => {
+    setTemplatesError(null)
+    setLoading(true)
+    try {
+      const res = await fetch('/api/mensetsu/templates', { cache: 'no-store' })
+      const json = await res.json().catch(() => null)
+      if (!res.ok || !Array.isArray(json?.templates)) throw new Error('テンプレートを取得できませんでした')
+      setTemplates(json.templates)
+    } catch {
+      setTemplatesError('テンプレートを取得できませんでした')
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
+  useEffect(() => { void loadTemplates() }, [loadTemplates])
+
   const load = useCallback(async () => {
+    const version = ++requestVersion.current
     setError(null)
-    const res = await fetch(`/api/mensetsu/compare?templateId=${encodeURIComponent(templateId)}`)
-    const json = await res.json()
-    if (!res.ok) {
-      notifyError(setError, json?.error || '取得できませんでした')
-      setCandidates([])
-      return
+    setLoadingCompare(true)
+    setLoadingMore(false)
+    setCandidates([])
+    setNextCursor(null)
+    setTotal(0)
+    setRevision('')
+    try {
+      const res = await fetch(`/api/mensetsu/compare?templateId=${encodeURIComponent(templateId)}`, { cache: 'no-store' })
+      const json = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(json?.error || '比較結果を取得できませんでした')
+      if (!json || !Array.isArray(json.candidates) || !Number.isSafeInteger(json.total) ||
+          json.total < json.candidates.length || json.candidates.length > 50 ||
+          (json.nextCursor !== null && (typeof json.nextCursor !== 'string' || json.candidates.length !== 50)) ||
+          typeof json.revision !== 'string' || !/^[a-zA-Z0-9_-]{43}$/.test(json.revision) ||
+          !json.template || !Array.isArray(json.template.criteria) || !json.medians) {
+        throw new Error('比較結果の応答が正しくありません')
+      }
+      if (version !== requestVersion.current) return
+      setCriteria(json.template.criteria)
+      setCandidates(json.candidates)
+      setMedians(json.medians)
+      setTotal(json.total)
+      setNextCursor(json.nextCursor)
+      setRevision(json.revision)
+    } catch (cause) {
+      if (version === requestVersion.current) notifyError(setError, cause instanceof Error ? cause.message : '比較結果を取得できませんでした')
+    } finally {
+      if (version === requestVersion.current) setLoadingCompare(false)
     }
-    setCriteria(json.template.criteria || [])
-    setCandidates(json.candidates || [])
-    setMedians(json.medians || {})
   }, [templateId])
 
   useEffect(() => {
     void load()
+    const versionRef = requestVersion
+    return () => { versionRef.current++ }
   }, [load])
 
-  const sorted = [...candidates].sort((a, b) => (b.average ?? -1) - (a.average ?? -1))
+  const loadMore = async () => {
+    if (!nextCursor || loadingMore) return
+    const version = requestVersion.current
+    setLoadingMore(true)
+    setError(null)
+    try {
+      const params = new URLSearchParams({ templateId, cursor: nextCursor, revision })
+      const res = await fetch(`/api/mensetsu/compare?${params}`, { cache: 'no-store' })
+      const json = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(json?.error || '続きを取得できませんでした')
+      if (!json || !Array.isArray(json.candidates) || json.total !== total || json.revision !== revision ||
+          json.candidates.length > 50 ||
+          (json.nextCursor !== null && (typeof json.nextCursor !== 'string' || json.candidates.length !== 50)) ||
+          candidates.length + json.candidates.length > total ||
+          (json.nextCursor === null && candidates.length + json.candidates.length !== total) ||
+          json.candidates.some((candidate: Candidate) => candidates.some((current) => current.id === candidate.id))) {
+        throw new Error('比較結果が更新されました。最初から読み直してください')
+      }
+      if (version !== requestVersion.current) return
+      setCandidates(candidates.concat(json.candidates))
+      setNextCursor(json.nextCursor)
+      setMedians(json.medians)
+    } catch (cause) {
+      if (version === requestVersion.current) notifyError(setError, cause instanceof Error ? cause.message : '続きを取得できませんでした')
+    } finally {
+      if (version === requestVersion.current) setLoadingMore(false)
+    }
+  }
+
+  const sorted = candidates
 
   if (loading) {
     return (
@@ -115,7 +177,7 @@ export default function ComparePage() {
         </Link>
         <h1 className="mt-3 text-2xl font-black text-[#0a0f3c]">候補者の比較</h1>
         <p className="mt-2 max-w-[68ch] text-sm font-semibold leading-relaxed text-[#425071]">
-          同じテンプレートで面接した候補者を並べます。色は<strong className="font-black text-[#0a0f3c]">その軸の中央値との差</strong>で、
+          {templateId === 'all' ? '評価済みの候補者を職種をまたいで表示します。' : '同じテンプレートで面接した候補者を並べます。'}色は<strong className="font-black text-[#0a0f3c]">その軸の中央値との差</strong>で、
           絶対的な良し悪しではありません。
         </p>
 
@@ -126,16 +188,18 @@ export default function ComparePage() {
           </p>
         </div>
 
-        {templates.length === 0 ? (
+        {templatesError ? (
+          <div role="alert" className="mt-6 text-sm font-semibold text-[#c2185b]">{templatesError}<button type="button" onClick={() => void loadTemplates()} className="ml-3 underline">再読み込み</button></div>
+        ) : templates.length === 0 ? (
           <p className="mt-6 text-sm font-semibold text-[#425071]">テンプレートがまだありません。</p>
         ) : (
           <>
             <select
               value={templateId}
-              onChange={(e) => setTemplateId(e.target.value)}
+              onChange={(e) => { requestVersion.current++; setLoadingCompare(true); setTemplateId(e.target.value) }}
               className="mt-5 rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#0066ff]"
             >
-              <option value="all">すべて（全職種を横断して順位を出す）</option>
+              <option value="all">すべて（職種横断・順位は参考）</option>
               {templates.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
@@ -143,16 +207,17 @@ export default function ComparePage() {
               ))}
             </select>
 
-            {error && <p className="mt-4 text-sm font-bold text-[#c2185b]">{error}</p>}
+            {error && <div role="alert" className="mt-4 text-sm font-bold text-[#c2185b]">{error}<button type="button" onClick={() => void load()} className="ml-3 underline">最初から読み直す</button></div>}
 
             {templateId === 'all' && (
               <p className="mt-3 text-xs font-semibold leading-relaxed text-[#8a94ad]">
-                ⚠️ 職種をまたぐと評価軸そのものが違うため、横並びにできるのは「平均スコア」と「判定」だけです。
-                評価軸ごとの点数を見比べたいときは、上の欄で職種を選んでください。
+                職種ごとに評価基準が違います。全職種の順位と平均スコアは参考値として扱い、評価軸ごとの比較は上の欄で同じテンプレートを選んでください。
               </p>
             )}
 
-            {sorted.length === 0 ? (
+            {loadingCompare ? (
+              <p className="mt-6 text-sm font-semibold text-[#425071]">比較結果を読み込んでいます…</p>
+            ) : error && sorted.length === 0 ? null : sorted.length === 0 ? (
               <p className="mt-6 text-sm font-semibold text-[#425071]">
                 評価済みの面接はまだありません。
               </p>
@@ -282,6 +347,11 @@ export default function ComparePage() {
                   </tbody>
                 </table>
               </div>
+              {nextCursor && (
+                <button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="mt-5 block w-full rounded-xl border border-blue-200 bg-white px-5 py-3 text-sm font-bold text-[#0066ff] disabled:opacity-50">
+                  {loadingMore ? '読み込み中…' : `さらに表示（${sorted.length}/${total}人）`}
+                </button>
+              )}
               </>
             )}
           </>
