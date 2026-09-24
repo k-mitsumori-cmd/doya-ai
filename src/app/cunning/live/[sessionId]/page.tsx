@@ -318,7 +318,7 @@ const SILENCE_PEAK = 8
         recentRef.current = restored.lines.filter(line => line.speaker === 'remote').slice(-12).map(line => line.text)
         try {
           setInterruptedRecording(sessionStorage.getItem(`cunning-live-recording:${sessionId}`) === '1')
-          sessionStorage.removeItem(`cunning-live-recording:${sessionId}`)
+          if (d.session.status !== 'active') sessionStorage.removeItem(`cunning-live-recording:${sessionId}`)
         } catch { /* storage unavailable */ }
         setSessionState(d.session.status === 'active' ? 'ready' : 'ended')
         if (d.session.mode) { setMode(d.session.mode); modeRef.current = d.session.mode }
