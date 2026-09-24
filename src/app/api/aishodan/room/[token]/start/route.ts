@@ -7,7 +7,7 @@ import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { assertRoomUsable, loadRoomByToken, toPublicSession } from '@/lib/aishodan/public'
-import { assertFreeLimit } from '@/lib/plan-limit'
+import { assertFreeLimit, jstStartOfMonthUtc, FREE_LIMITS } from '@/lib/plan-limit'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -63,19 +63,6 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   const existingGid = req.cookies.get(GUEST_COOKIE)?.value
   const guestId = existingGid && existingGid.length >= 16 ? existingGid : randomBytes(16).toString('hex')
 
-  // ⚠️ 部屋の利用上限は「予約」してから作る。
-  //    件数を数えてから作る形だと、同時アクセスで上限を超えられる。
-  const reserved = await prisma.aishodanRoom.updateMany({
-    where: { id: room.id, sessionCount: { lt: room.maxSessions } },
-    data: { sessionCount: { increment: 1 } },
-  })
-  if (reserved.count === 0) {
-    return NextResponse.json(
-      { error: '現在この商談ルームはご利用いただけません。お手数ですが担当者までご連絡ください。' },
-      { status: 429 }
-    )
-  }
-
   const url = new URL(req.url)
   const utm: Record<string, string> = {}
   for (const k of ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term']) {
@@ -83,24 +70,75 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     if (v) utm[k] = v.slice(0, 200)
   }
 
-  const session = await prisma.aishodanSession.create({
-    data: {
-      organizationId: room.organizationId,
-      roomId: room.id,
-      guestId,
-      guestName: body?.name ? String(body.name).slice(0, 100) : null,
-      guestCompany: body?.company ? String(body.company).slice(0, 200) : null,
-      guestEmail: body?.email ? String(body.email).slice(0, 200) : null,
-      status: 'pending',
-      currentPhase: room.scenario.phases && Array.isArray(room.scenario.phases) && (room.scenario.phases as any[])[0]?.key
-        ? (room.scenario.phases as any[])[0].key
-        : 'opening',
-      consentedAt: new Date(),
-      referrer: req.headers.get('referer')?.slice(0, 500) || null,
-      utm: Object.keys(utm).length > 0 ? utm : undefined,
-      purgeAfter: new Date(Date.now() + Math.max(1, room.organization.retentionDays) * 24 * 60 * 60 * 1000),
-    },
-  })
+  const unavailable = '現在この商談ルームはご利用いただけません。お手数ですが担当者までご連絡ください。'
+  let result: { kind: 'created'; session: Awaited<ReturnType<typeof prisma.aishodanSession.create>> } | { kind: 'unavailable' } | { kind: 'expired' } | { kind: 'changed' } | null = null
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      result = await prisma.$transaction(async (tx) => {
+        const currentRoom = await tx.aishodanRoom.findUnique({
+          where: { id: room.id },
+          select: { isActive: true, isPreview: true, expiresAt: true, maxSessions: true, sessionCount: true },
+        })
+        if (!currentRoom?.isActive) return { kind: 'unavailable' } as const
+        if (currentRoom.expiresAt && currentRoom.expiresAt.getTime() < Date.now()) return { kind: 'expired' } as const
+        if (currentRoom.isPreview !== room.isPreview) return { kind: 'changed' } as const
+        if (currentRoom.sessionCount >= currentRoom.maxSessions) return { kind: 'unavailable' } as const
+
+        // 組織全体の枠と、この部屋の枠を同じ直列化トランザクションで確保する。
+        // セッション保存が失敗した場合は部屋の回数もロールバックされる。
+        if (!currentRoom.isPreview && quota.limit !== undefined) {
+          const used = await tx.aishodanSession.count({
+            where: {
+              organizationId: room.organizationId,
+              room: { isPreview: false },
+              ...(quota.limit === FREE_LIMITS.aishodanSessions ? {} : { createdAt: { gte: jstStartOfMonthUtc() } }),
+            },
+          })
+          if (used >= quota.limit) return { kind: 'unavailable' } as const
+        }
+
+        const reserved = await tx.aishodanRoom.updateMany({
+          where: {
+            id: room.id,
+            isActive: true,
+            sessionCount: { lt: currentRoom.maxSessions },
+            OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+          },
+          data: { sessionCount: { increment: 1 } },
+        })
+        if (reserved.count === 0) return { kind: 'unavailable' } as const
+
+        const session = await tx.aishodanSession.create({
+          data: {
+            organizationId: room.organizationId,
+            roomId: room.id,
+            guestId,
+            guestName: body?.name ? String(body.name).slice(0, 100) : null,
+            guestCompany: body?.company ? String(body.company).slice(0, 200) : null,
+            guestEmail: body?.email ? String(body.email).slice(0, 200) : null,
+            status: 'pending',
+            currentPhase: room.scenario.phases && Array.isArray(room.scenario.phases) && (room.scenario.phases as any[])[0]?.key
+              ? (room.scenario.phases as any[])[0].key
+              : 'opening',
+            consentedAt: new Date(),
+            referrer: req.headers.get('referer')?.slice(0, 500) || null,
+            utm: Object.keys(utm).length > 0 ? utm : undefined,
+            purgeAfter: new Date(Date.now() + Math.max(1, room.organization.retentionDays) * 24 * 60 * 60 * 1000),
+          },
+        })
+        return { kind: 'created', session } as const
+      }, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+      break
+    } catch (error: any) {
+      if (error?.code === 'P2034' && attempt < 4) continue
+      console.error('[aishodan/room/start] create failed', error?.code || 'unknown')
+      return NextResponse.json({ error: '商談を開始できませんでした。時間をおいてもう一度お試しください。' }, { status: 503 })
+    }
+  }
+  if (result?.kind === 'expired') return NextResponse.json({ error: 'この商談ルームの公開期間は終了しました。' }, { status: 410 })
+  if (result?.kind === 'changed') return NextResponse.json({ error: '商談ルームの設定が更新されました。再読み込みしてください。' }, { status: 409 })
+  if (!result || result.kind !== 'created') return NextResponse.json({ error: unavailable }, { status: 429 })
+  const session = result.session
 
   const res = NextResponse.json({ session: toPublicSession(session) })
   res.cookies.set(GUEST_COOKIE, guestId, {

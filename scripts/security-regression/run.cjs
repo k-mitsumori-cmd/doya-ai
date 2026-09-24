@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const aishodanStartAtomic = spawnSync(process.execPath, [path.join(__dirname, 'verify-aishodan-room-start-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (aishodanStartAtomic.error || aishodanStartAtomic.status !== 0) {
+  console.error('Security regression failed: verify-aishodan-room-start-atomic.cjs');
+  process.exit(1);
+}
 const seoChatEditOwner = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-chat-edit-owner.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (seoChatEditOwner.error || seoChatEditOwner.status !== 0) {
   console.error('Security regression failed: verify-seo-chat-edit-owner.cjs');
