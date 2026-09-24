@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { shodanGet, shodanSend } from '@/lib/shodan/client'
+import { ShodanApiError, shodanGet, shodanSend } from '@/lib/shodan/client'
 import { DoyaKun, SiteShot, PageHeader, sym } from '@/components/shodan/ui'
 import type { CompanyResearch } from '@/lib/shodan/types'
 import toast from 'react-hot-toast'
@@ -45,6 +45,7 @@ export default function ShodanNewPage() {
   const [phase, setPhase] = useState<Phase>('input')
   const [tick, setTick] = useState(0)
   const [research, setResearch] = useState<CompanyResearch | null>(null)
+  const [limitMessage, setLimitMessage] = useState<string | null>(null)
   const [hasProfile, setHasProfile] = useState<boolean | null>(null)
   const prepIdRef = useRef<string | null>(null)
 
@@ -62,6 +63,7 @@ export default function ShodanNewPage() {
 
   const run = async () => {
     if (!url.trim()) { toast.error('URLを入力してください'); return }
+    setLimitMessage(null)
     setPhase('researching')
     try {
       // フェーズ1：調査
@@ -76,7 +78,11 @@ export default function ShodanNewPage() {
       toast.success('会社情報の調査が完了！提案資料の作成に進みます')
       router.replace(`/shodan/${encodeURIComponent(orgSlug)}/p/${d.id}`)
     } catch (e: any) {
-      toast.error(e.message || '生成に失敗しました')
+      if (e instanceof ShodanApiError && e.code === 'LIMIT') {
+        setLimitMessage(e.message)
+      } else {
+        toast.error(e.message || '生成に失敗しました')
+      }
       // 調査まで終わっていれば結果ページで再生成できる
       if (prepIdRef.current && research) router.replace(`/shodan/${encodeURIComponent(orgSlug)}/p/${prepIdRef.current}`)
       else setPhase('input')
@@ -103,6 +109,14 @@ export default function ShodanNewPage() {
                 className="mt-3 flex items-center gap-1 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 hover:bg-amber-100 transition-colors">
                 {sym('info', 16)}自社情報が未登録です。先に登録すると提案精度UP →（このまま作成も可）
               </Link>
+            )}
+            {limitMessage && (
+              <div role="alert" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                <p className="text-sm font-bold text-amber-900">{limitMessage}</p>
+                <Link href="/shodan/pricing" className="mt-2 inline-flex items-center gap-1 text-sm font-black text-purple-700 underline">
+                  料金プラン・追加枠を確認する {sym('arrow_forward', 16)}
+                </Link>
+              </div>
             )}
             <motion.button onClick={run} whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}
               className="mt-5 w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white font-black text-lg shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2">

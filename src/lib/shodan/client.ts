@@ -8,10 +8,17 @@ function withOrg(path: string, orgSlug: string): string {
   return `${path}${sep}org=${encodeURIComponent(orgSlug)}`
 }
 
+export class ShodanApiError extends Error {
+  constructor(message: string, readonly status: number, readonly code?: string) {
+    super(message)
+    this.name = 'ShodanApiError'
+  }
+}
+
 export async function shodanGet<T = any>(path: string, orgSlug: string): Promise<T> {
   const res = await fetch(withOrg(path, orgSlug), { cache: 'no-store' })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error((data as any)?.error || `取得に失敗しました (${res.status})`)
+  if (!res.ok) throw new ShodanApiError((data as any)?.error || `取得に失敗しました (${res.status})`, res.status, (data as any)?.code)
   return data as T
 }
 
@@ -27,6 +34,6 @@ export async function shodanSend<T = any>(
     body: body != null ? JSON.stringify(body) : undefined,
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error((data as any)?.error || `操作に失敗しました (${res.status})`)
+  if (!res.ok) throw new ShodanApiError((data as any)?.error || `操作に失敗しました (${res.status})`, res.status, (data as any)?.code)
   return data as T
 }

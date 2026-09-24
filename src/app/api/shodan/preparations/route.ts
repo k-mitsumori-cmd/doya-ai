@@ -57,7 +57,12 @@ export async function POST(req: NextRequest) {
   // ⚠️ 有料プランにも上限を置く。1件ごとにサイト巡回とAI呼び出しの実費が出るため、
   //    無制限にすると月額を上回る使われ方を止められない。
   const user = await prisma.user.findUnique({ where: { id: ctx.userId }, select: { plan: true } })
-  {
+  const reservation = await prisma.$transaction(async (tx) => {
+    // 組織ごとに予約を直列化する。件数確認と作成を分けると同時POSTで上限を超える。
+    const organizations = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM shodan_organizations WHERE id = ${ctx.organizationId} FOR NO KEY UPDATE
+    `
+    if (!organizations.length) return { kind: 'missing' } as const
     const limit = isPaidPlan(user?.plan)
       ? String(user?.plan || '').toUpperCase() === 'ENTERPRISE'
         ? SHODAN_MONTHLY_LIMIT.ENTERPRISE
@@ -71,7 +76,7 @@ export async function POST(req: NextRequest) {
     // - 同時POSTでも作成直後から枠を占有し抜け道を塞ぐ
     // - failed は非消費／タイムアウトで詰まった stale processing も除外（GETされず放置されても無料枠を恒久消費しない）
     const staleBefore = new Date(Date.now() - PREP_STALE_MS)
-    const usedThisMonth = await prisma.shodanPreparation.count({
+    const usedThisMonth = await tx.shodanPreparation.count({
       where: {
         organizationId: ctx.organizationId,
         createdAt: { gte: since },
@@ -83,18 +88,27 @@ export async function POST(req: NextRequest) {
       },
     })
     if (usedThisMonth >= limit) {
-      // ⚠️ 既に支払っている方に「プロにご登録を」と返さないこと
-      const reason = isPaidPlan(user?.plan)
-        ? `今月の上限（${limit}件）に達しました。来月1日に枠が戻ります。追加をご希望の場合はお問い合わせよりご相談ください。`
-        : `無料プランは月${limit}件までです。プロプランにご登録いただくと上限が広がります。`
-      return NextResponse.json({ error: reason, code: 'LIMIT' }, { status: 402 })
+      return { kind: 'limit', limit } as const
     }
+    const prep = await tx.shodanPreparation.create({
+      data: { organizationId: ctx.organizationId, createdByMemberId: ctx.memberId, targetUrl, status: 'processing' },
+    })
+    return { kind: 'created', prep } as const
+  })
+
+  if (reservation.kind === 'missing') {
+    return NextResponse.json({ error: '組織が見つかりません' }, { status: 404 })
+  }
+  if (reservation.kind === 'limit') {
+    // ⚠️ 既に支払っている方に「プロにご登録を」と返さないこと
+    const reason = isPaidPlan(user?.plan)
+      ? `今月の上限（${reservation.limit}件）に達しました。来月1日に枠が戻ります。追加をご希望の場合はお問い合わせよりご相談ください。`
+      : `無料プランは月${reservation.limit}件までです。プロプランにご登録いただくと上限が広がります。`
+    return NextResponse.json({ error: reason, code: 'LIMIT', upgradeUrl: '/shodan/pricing' }, { status: 402 })
   }
 
-  // 案件を作成（処理中＝リサーチ実行中）
-  const prep = await prisma.shodanPreparation.create({
-    data: { organizationId: ctx.organizationId, createdByMemberId: ctx.memberId, targetUrl, status: 'processing' },
-  })
+  // 外部調査は組織ロックを解放してから実行する。
+  const prep = reservation.prep
 
   try {
     // フェーズ1: 深掘りリサーチのみ（提案生成は /[id]/generate で実行）。
