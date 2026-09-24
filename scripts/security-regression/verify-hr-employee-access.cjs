@@ -22,6 +22,7 @@ const common = {
     })
     const item = load('src/app/api/hr/employees/[id]/route.ts', {
       ...common,
+      '@/lib/hr/billing': {},
       '@/lib/hr/evaluation-access': {},
       '@/lib/hr/one-on-one-access': {},
     })

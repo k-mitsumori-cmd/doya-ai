@@ -47,6 +47,7 @@ const next = { 'next/server': { NextResponse: Response } }
       ...next,
       '@/lib/hr/access': { getHrContext: async () => ctx, hasMinRole },
       '@/lib/hr/types': { HrMemberRole: { ADMIN: 'ADMIN', MANAGER: 'MANAGER' } },
+      '@/lib/hr/billing': {},
       '@/lib/hr/evaluation-access': { getEvaluationReadWhere: async () => { throw Error('evaluation read before scope') } },
       '@/lib/hr/one-on-one-access': { getOneOnOneReadWhere: async () => { throw Error('1on1 read before scope') } },
       '@/lib/prisma': { prisma: new Proxy({}, { get: () => { throw Error('DB read before scope') } }) },
