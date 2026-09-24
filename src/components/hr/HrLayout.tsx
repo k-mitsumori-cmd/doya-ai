@@ -1,7 +1,7 @@
 'use client'
 
 import { useSession } from 'next-auth/react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Menu, Users2 } from 'lucide-react'
@@ -17,6 +17,8 @@ export default function HrLayout({ children }: HrLayoutProps) {
   const pathname = usePathname()
   const [usage, setUsage] = useState({ employeeCount: 0, employeeLimit: 5, plan: 'FREE' })
   const [hasOrg, setHasOrg] = useState<boolean | null>(null)
+  const [usageError, setUsageError] = useState(false)
+  const usageRequest = useRef(0)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
@@ -24,30 +26,43 @@ export default function HrLayout({ children }: HrLayoutProps) {
   const isPricingPage = pathname === '/hr/pricing'
   const isPublicPage = isLandingPage || isPricingPage
 
+  const loadUsage = useCallback(async () => {
+    const request = ++usageRequest.current
+    setHasOrg(null)
+    setUsageError(false)
+    try {
+      const response = await fetch('/api/hr/usage', { cache: 'no-store' })
+      if (request !== usageRequest.current) return
+      if (response.status === 401) {
+        setHasOrg(false)
+        return
+      }
+      if (!response.ok) throw new Error('使用状況を取得できませんでした')
+      const data = await response.json()
+      if (typeof data.organizationId !== 'string' || typeof data.plan !== 'string') throw new Error('使用状況の応答が不正です')
+      if (request !== usageRequest.current) return
+      setUsage({
+        employeeCount: data.employeeCount ?? 0,
+        employeeLimit: data.employeeLimit ?? 5,
+        plan: data.plan,
+      })
+      setHasOrg(true)
+    } catch {
+      if (request === usageRequest.current) setUsageError(true)
+    }
+  }, [])
+
   useEffect(() => {
+    const requestCounter = usageRequest
     if (session?.user) {
-      fetch('/api/hr/usage')
-        .then((r) => {
-          if (!r.ok) throw new Error('usage fetch failed')
-          return r.json()
-        })
-        .then((data) => {
-          if (data.organizationId) {
-            setHasOrg(true)
-            setUsage({
-              employeeCount: data.employeeCount ?? 0,
-              employeeLimit: data.employeeLimit ?? 5,
-              plan: data.plan ?? 'FREE',
-            })
-          } else {
-            setHasOrg(false)
-          }
-        })
-        .catch(() => setHasOrg(false))
+      void loadUsage()
     } else if (status === 'unauthenticated') {
+      requestCounter.current++
+      setUsageError(false)
       setHasOrg(false)
     }
-  }, [session, status])
+    return () => { requestCounter.current++ }
+  }, [session, status, loadUsage])
 
   // ルートを変えたらモバイルメニューを閉じる
   useEffect(() => {
@@ -56,6 +71,10 @@ export default function HrLayout({ children }: HrLayoutProps) {
 
   if (isPublicPage) {
     return <>{children}</>
+  }
+
+  if (usageError && session?.user) {
+    return <div role="alert" className="min-h-screen flex flex-col items-center justify-center gap-4 bg-slate-50 p-6 text-center"><p className="font-bold text-rose-700">組織情報を取得できませんでした。組織の状態は変更されていません。</p><button type="button" onClick={() => void loadUsage()} className="rounded-xl bg-sky-600 px-5 py-3 font-bold text-white">再読み込み</button></div>
   }
 
   if (status === 'loading' || hasOrg === null) {
