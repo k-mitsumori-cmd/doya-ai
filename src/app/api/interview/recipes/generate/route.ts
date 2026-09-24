@@ -26,6 +26,48 @@ function getModel(): string {
   return process.env.INTERVIEW_GEMINI_MODEL || process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash'
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === 'object' && !Array.isArray(value)
+    ? value as Record<string, unknown> : null
+}
+
+function safeText(value: unknown, maxLength: number): string {
+  return typeof value === 'string' ? value.trim().slice(0, maxLength) : ''
+}
+
+function positiveInt(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? Math.min(Math.floor(value), 100000) : null
+}
+
+function parseGeneratedRecipe(value: unknown) {
+  const source = asRecord(value)
+  if (!source) return null
+  const structure = (Array.isArray(source.structure) ? source.structure : [])
+    .slice(0, 30)
+    .flatMap((entry: unknown) => {
+      const row = asRecord(entry)
+      const section = safeText(row?.section, 200)
+      if (!section) return []
+      return [{
+        section,
+        description: safeText(row?.description, 1000),
+        wordCount: positiveInt(row?.wordCount),
+      }]
+    })
+  const recipe = {
+    name: safeText(source.name, 200),
+    description: safeText(source.description, 2000),
+    editingGuidelines: safeText(source.editingGuidelines, 20000),
+    structure,
+    detectedFormat: source.detectedFormat === 'QA' || source.detectedFormat === 'MONOLOGUE'
+      ? source.detectedFormat : null,
+    styleNotes: safeText(source.styleNotes, 2000),
+    estimatedWordCount: positiveInt(source.estimatedWordCount),
+  }
+  return recipe.editingGuidelines || recipe.structure.length ? recipe : null
+}
+
 export async function POST(req: NextRequest) {
   const dbErr = requireDatabase()
   if (dbErr) return dbErr
@@ -43,8 +85,8 @@ export async function POST(req: NextRequest) {
     if (!body || typeof body !== 'object' || Array.isArray(body)
       || !Array.isArray(body.sampleTexts) || body.sampleTexts.length === 0
       || body.sampleTexts.length > 3 || body.sampleTexts.some((text: unknown) => typeof text !== 'string')
-      || (body.name != null && typeof body.name !== 'string')
-      || (body.category != null && typeof body.category !== 'string')
+      || (body.name != null && (typeof body.name !== 'string' || body.name.length > 200))
+      || (body.category != null && (typeof body.category !== 'string' || body.category.length > 80))
       || (body.autoSave != null && typeof body.autoSave !== 'boolean')) {
       return NextResponse.json(
         { success: false, error: '入力形式を確認してください' },
@@ -119,12 +161,12 @@ ${samplesText}`
     }
 
     const geminiData = await res.json()
-    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
+    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text
 
-    let result: any
+    let parsedResult: unknown
     try {
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/)
-      result = jsonMatch ? JSON.parse(jsonMatch[0]) : null
+      const jsonMatch = typeof rawText === 'string' ? rawText.match(/\{[\s\S]*\}/) : null
+      parsedResult = jsonMatch ? JSON.parse(jsonMatch[0]) : null
     } catch {
       return NextResponse.json(
         { success: false, error: 'レシピの解析に失敗しました' },
@@ -132,10 +174,11 @@ ${samplesText}`
       )
     }
 
+    const result = parseGeneratedRecipe(parsedResult)
     if (!result) {
       return NextResponse.json(
-        { success: false, error: 'レシピの生成に失敗しました' },
-        { status: 500 }
+        { success: false, error: 'レシピの生成結果を読み取れませんでした。再度お試しください。' },
+        { status: 502 }
       )
     }
 
@@ -146,9 +189,9 @@ ${samplesText}`
           userId,
           name: (recipeName || result.name || '自動生成レシピ').trim(),
           description: result.description || null,
-          category: category || result.category || 'custom',
+          category,
           editingGuidelines: result.editingGuidelines || null,
-          proposals: result.structure || [],
+          proposals: result.structure,
           questions: [],
           isPublic: false,
           isTemplate: false,
@@ -180,7 +223,7 @@ ${samplesText}`
       recipe: {
         name: recipeName || result.name || '自動生成レシピ',
         description: result.description,
-        category: result.category,
+        category,
         editingGuidelines: result.editingGuidelines,
         structure: result.structure,
         detectedFormat: result.detectedFormat,
