@@ -9,7 +9,7 @@
 
 import { useCallback, useEffect, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
-import OrgSwitcher, { withOrg, type Membership } from '@/components/org/OrgSwitcher'
+import OrgSwitcher, { clearSelectedOrg, reconcileSelectedOrg, withOrg, type Membership } from '@/components/org/OrgSwitcher'
 import { billableLines, calcTotals, yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource, type ProductProfile, type SuggestedItem } from '@/lib/quote/types'
 import { Sparkles } from 'lucide-react'
@@ -88,14 +88,23 @@ export default function QuoteTool() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await fetch(withOrg('quote', '/api/quote/organizations'))
+      const r = await fetch('/api/quote/organizations')
       if (r.status === 401) {
         setNeedsLogin(true)
         return
       }
-      const d = await r.json()
+      if (!r.ok) throw new Error('組織一覧を取得できませんでした')
+      let d = await r.json()
+      const memberships = Array.isArray(d.memberships) ? d.memberships : []
+      if (reconcileSelectedOrg('quote', memberships)) {
+        const scoped = await fetch(withOrg('quote', '/api/quote/organizations'))
+        if (!scoped.ok) throw new Error('選択中の組織を確認できませんでした')
+        const scopedData = await scoped.json()
+        if (scopedData?.current) d = scopedData
+        else clearSelectedOrg('quote')
+      }
       setOrg(d.current)
-      setMemberships(d.memberships || [])
+      setMemberships(memberships)
       if (d.current) {
         const [pr, dr, ir] = await Promise.all([
           fetch(withOrg('quote', '/api/quote/products')).then((x) => x.json()),

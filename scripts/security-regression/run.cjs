@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const orgSelection = spawnSync(process.execPath, [path.join(__dirname, 'verify-org-selection.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (orgSelection.error || orgSelection.status !== 0) {
+  console.error('Security regression failed: verify-org-selection.cjs');
+  process.exit(1);
+}
 const hrBillingOwner = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-billing-owner.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrBillingOwner.error || hrBillingOwner.status !== 0) {
   console.error('Security regression failed: verify-hr-billing-owner.cjs');

@@ -30,10 +30,38 @@ export function orgStorageKey(service: string): string {
   return `doya.${service}.org`
 }
 
+const selectionOverride = new Map<string, string | null>()
+
 /** 選択中の組織slug（未選択なら null） */
 export function getSelectedOrg(service: string): string | null {
   if (typeof window === 'undefined') return null
-  return window.localStorage.getItem(orgStorageKey(service)) || null
+  const key = orgStorageKey(service)
+  if (selectionOverride.has(key)) return selectionOverride.get(key) || null
+  try {
+    return window.localStorage.getItem(key) || null
+  } catch {
+    return null
+  }
+}
+
+export function clearSelectedOrg(service: string): void {
+  if (typeof window === 'undefined') return
+  const key = orgStorageKey(service)
+  try {
+    window.localStorage.removeItem(key)
+    selectionOverride.delete(key)
+  } catch {
+    selectionOverride.set(key, null)
+  }
+}
+
+/** 所属組織一覧で確認できない端末保存の選択を破棄する。 */
+export function reconcileSelectedOrg(service: string, memberships: Membership[]): string | null {
+  const selected = getSelectedOrg(service)
+  if (!selected) return null
+  if (memberships.some((member) => member.slug === selected)) return selected
+  clearSelectedOrg(service)
+  return null
 }
 
 /**
@@ -67,10 +95,13 @@ export default function OrgSwitcher({ service, memberships, currentSlug, onChang
   const change = useCallback(
     (slug: string) => {
       setValue(slug)
+      const key = orgStorageKey(service)
       try {
-        window.localStorage.setItem(orgStorageKey(service), slug)
+        window.localStorage.setItem(key, slug)
+        selectionOverride.delete(key)
       } catch {
-        // プライベートモード等で保存できなくても、この場の切替は成立させる
+        // プライベートモード等で保存できなくても、この場の切替は成立させる。
+        selectionOverride.set(key, slug)
       }
       onChange()
     },

@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import OrgSwitcher, { withOrg, type Membership } from '@/components/org/OrgSwitcher'
+import OrgSwitcher, { clearSelectedOrg, reconcileSelectedOrg, withOrg, type Membership } from '@/components/org/OrgSwitcher'
 import { SESSION_STATUS_LABELS } from '@/lib/aishodan/types'
 import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
@@ -48,14 +48,23 @@ export default function AishodanPreviewPage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const r = await fetch(withOrg('aishodan', '/api/aishodan/organizations'))
+      const r = await fetch('/api/aishodan/organizations')
       if (r.status === 401) {
         setNeedsLogin(true)
         return
       }
-      const d = await r.json()
+      if (!r.ok) throw new Error('組織一覧を取得できませんでした')
+      let d = await r.json()
+      const memberships = Array.isArray(d.memberships) ? d.memberships : []
+      if (reconcileSelectedOrg('aishodan', memberships)) {
+        const scoped = await fetch(withOrg('aishodan', '/api/aishodan/organizations'))
+        if (!scoped.ok) throw new Error('選択中の組織を確認できませんでした')
+        const scopedData = await scoped.json()
+        if (scopedData?.current) d = scopedData
+        else clearSelectedOrg('aishodan')
+      }
       setOrg(d.current)
-      setMemberships(d.memberships || [])
+      setMemberships(memberships)
       if (d.current) {
         const [pr, sr] = await Promise.all([
           fetch(withOrg('aishodan', '/api/aishodan/products')).then((x) => x.json()),
