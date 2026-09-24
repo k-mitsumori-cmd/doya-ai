@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { sfaInit } from '@/lib/sfa/client'
@@ -63,6 +63,14 @@ export default function SfaLeadsPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
   const ready = !!orgSlug
   const [leads, setLeads] = useState<Lead[]>([])
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [totalCount, setTotalCount] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [listError, setListError] = useState(false)
+  const [moreLoading, setMoreLoading] = useState(false)
+  const [moreError, setMoreError] = useState(false)
+  const requestVersion = useRef(0)
+  const listRequest = useRef<AbortController | null>(null)
   const [filter, setFilter] = useState<LeadStatus | 'all'>('all')
   const [q, setQ] = useState('')
   const [open, setOpen] = useState(false)
@@ -75,15 +83,59 @@ export default function SfaLeadsPage() {
 
   const load = useCallback((status: LeadStatus | 'all' = 'all', query = '') => {
     if (!ready) return
+    const version = ++requestVersion.current
+    listRequest.current?.abort()
+    const controller = new AbortController()
+    listRequest.current = controller
+    setLoading(true)
+    setListError(false)
+    setMoreError(false)
+    setMoreLoading(false)
+    setNextCursor(null)
     const params = new URLSearchParams()
     if (status !== 'all') params.set('status', status)
-    if (query) params.set('q', query)
-    fetch(`/api/sfa/leads${params.toString() ? `?${params}` : ''}`, sfaInit(orgSlug))
-      .then((r) => r.json())
-      .then((d) => setLeads(d.leads || []))
-      .catch(() => {})
+    if (query.trim()) params.set('q', query.trim())
+    fetch(`/api/sfa/leads?${params}`, sfaInit(orgSlug, { signal: controller.signal }))
+      .then(async (response) => {
+        const data = await response.json().catch(() => null)
+        if (!response.ok || !Array.isArray(data?.leads)) throw new Error('リードを読み込めませんでした')
+        if (version !== requestVersion.current) return
+        setLeads(data.leads)
+        setNextCursor(data.nextCursor || null)
+        setTotalCount(data.totalCount || 0)
+      })
+      .catch(() => { if (version === requestVersion.current) setListError(true) })
+      .finally(() => { if (version === requestVersion.current) setLoading(false) })
   }, [ready, orgSlug])
-  useEffect(() => { load(filter, q) }, [load, filter]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const timer = setTimeout(() => load(filter, q), q ? 200 : 0)
+    return () => { clearTimeout(timer); listRequest.current?.abort() }
+  }, [load, filter, q])
+
+  const loadMore = async () => {
+    if (!nextCursor || moreLoading) return
+    const version = requestVersion.current
+    setMoreLoading(true)
+    setMoreError(false)
+    const params = new URLSearchParams({ cursor: nextCursor })
+    if (filter !== 'all') params.set('status', filter)
+    if (q.trim()) params.set('q', q.trim())
+    try {
+      const response = await fetch(`/api/sfa/leads?${params}`, sfaInit(orgSlug))
+      const data = await response.json().catch(() => null)
+      if (!response.ok || !Array.isArray(data?.leads)) throw new Error('追加のリードを読み込めませんでした')
+      if (version !== requestVersion.current) return
+      setLeads((current) => {
+        const ids = new Set(current.map((lead) => lead.id))
+        return [...current, ...data.leads.filter((lead: Lead) => !ids.has(lead.id))]
+      })
+      setNextCursor(data.nextCursor || null)
+    } catch {
+      if (version === requestVersion.current) setMoreError(true)
+    } finally {
+      if (version === requestVersion.current) setMoreLoading(false)
+    }
+  }
 
   const create = async () => {
     if (!name.trim()) return
@@ -121,11 +173,12 @@ export default function SfaLeadsPage() {
   const setStatus = async (lead: Lead, status: LeadStatus) => {
     setLeads((prev) => prev.map((l) => (l.id === lead.id ? { ...l, status } : l)))
     try {
-      await fetch(`/api/sfa/leads/${lead.id}`, sfaInit(orgSlug, {
+      const response = await fetch(`/api/sfa/leads/${lead.id}`, sfaInit(orgSlug, {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }),
       }))
+      if (!response.ok) throw new Error('状態を更新できませんでした')
       load(filter, q)
-    } catch { load(filter, q) }
+    } catch { toast.error('状態を更新できませんでした'); load(filter, q) }
   }
 
   const scoreLead = async (lead: Lead) => {
@@ -136,7 +189,7 @@ export default function SfaLeadsPage() {
       }))
       const d = await res.json()
       if (!res.ok) throw new Error(d.error)
-      setLeads((prev) => prev.map((l) => (l.id === lead.id ? { ...l, score: d.score } : l)))
+      load(filter, q)
       toast.success(`AIスコア ${d.score}点：${d.nextAction || d.reason}`, { duration: 6000 })
     } catch (e: any) { toast.error(e.message) } finally { setScoringId(null) }
   }
@@ -191,19 +244,22 @@ export default function SfaLeadsPage() {
       {/* ステータスフィルタ */}
       <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1">
         {(['all', ...STATUS_ORDER] as const).map((s) => (
-          <button key={s} onClick={() => setFilter(s)} className={`px-3 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-colors ${filter === s ? 'bg-[#7f19e6] text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
+          <button key={s} onClick={() => { if (filter !== s) { requestVersion.current++; setLoading(true); setFilter(s) } }} className={`px-3 py-1.5 rounded-full text-xs font-black whitespace-nowrap transition-colors ${filter === s ? 'bg-[#7f19e6] text-white' : 'bg-white text-slate-500 border border-slate-200'}`}>
             {s === 'all' ? 'すべて' : LEAD_STATUS_LABEL[s]}
           </button>
         ))}
       </div>
 
       <div className="mb-4">
-        <input value={q} onChange={(e) => { setQ(e.target.value); load(filter, e.target.value) }} placeholder="🔍 企業名で検索" className="w-full rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-sm" />
+        <input value={q} maxLength={100} onChange={(e) => { requestVersion.current++; setLoading(true); setQ(e.target.value) }} placeholder="企業名で検索" className="w-full rounded-xl border border-slate-200 px-4 py-2.5 font-bold text-sm" />
       </div>
 
-      <div className="space-y-2">
+      {loading && <p className="mb-3 text-sm text-slate-500">リードを読み込み中です...</p>}
+      {listError && <div role="alert" className="mb-3 text-sm text-red-700">リードを読み込めませんでした。<button type="button" onClick={() => load(filter, q)} className="ml-2 underline">再試行</button></div>}
+      {!loading && !listError && <p className="mb-3 text-xs text-slate-500">{totalCount}件中{leads.length}件を表示</p>}
+      {!loading && !listError && <div className="space-y-2">
         {leads.length === 0 ? (
-          <div className="bg-white rounded-2xl shadow-sm p-10 text-center text-slate-400 font-bold">リードがありません。「リード追加」か「CSV取込」から始めましょう。</div>
+          <div className="bg-white rounded-2xl shadow-sm p-10 text-center text-slate-400 font-bold">{q || filter !== 'all' ? '条件に一致するリードがありません。検索条件を変更してください。' : 'リードがありません。「リード追加」か「CSV取込」から始めましょう。'}</div>
         ) : (
           leads.map((l) => (
             <div key={l.id} className="bg-white rounded-xl shadow-sm p-4">
@@ -218,7 +274,7 @@ export default function SfaLeadsPage() {
                     <span className={`text-[10px] font-black rounded px-1.5 py-0.5 ${STATUS_COLOR[l.status]}`}>{LEAD_STATUS_LABEL[l.status]}</span>
                     <span className="text-[10px] font-bold text-slate-400">{SOURCE_LABEL[l.source] || l.source}</span>
                   </div>
-                  {l.contactName && <p className="text-xs font-bold text-slate-400 mt-0.5">👤 {l.contactName}</p>}
+                  {l.contactName && <p className="text-xs font-bold text-slate-400 mt-0.5">{l.contactName}</p>}
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <button onClick={() => scoreLead(l)} disabled={scoringId === l.id} className="text-xs font-black text-[#7f19e6] hover:underline flex items-center gap-0.5 disabled:opacity-50">
                       <span className="material-symbols-outlined text-[14px]">auto_awesome</span>{scoringId === l.id ? 'AI判定中…' : 'AIスコア'}
@@ -239,7 +295,11 @@ export default function SfaLeadsPage() {
             </div>
           ))
         )}
-      </div>
+      </div>}
+      {!loading && !listError && nextCursor && <div className="mt-4 text-center">
+        <button type="button" onClick={loadMore} disabled={moreLoading} className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-sm font-bold text-green-700 disabled:opacity-50">{moreLoading ? '読み込み中...' : 'さらに表示'}</button>
+        {moreError && <p role="alert" className="mt-2 text-sm text-red-700">追加のリードを読み込めませんでした。再度お試しください。</p>}
+      </div>}
     </div>
   )
 }
