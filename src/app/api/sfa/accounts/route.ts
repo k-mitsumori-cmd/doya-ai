@@ -67,18 +67,25 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
-  const body = await req.json().catch(() => ({}))
-  const name = (body.name as string)?.trim()
+  const parsedBody = await req.json().catch(() => null)
+  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
+    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+  }
+  const body = parsedBody as Record<string, unknown>
+  const name = typeof body.name === 'string' ? body.name.trim() : ''
   if (!name) return NextResponse.json({ error: '会社名は必須です' }, { status: 400 })
+  if (['industry', 'prefecture', 'url', 'note'].some((key) => body[key] != null && typeof body[key] !== 'string')) {
+    return NextResponse.json({ error: '入力項目の形式が正しくありません' }, { status: 400 })
+  }
 
   const account = await prisma.sfaAccount.create({
     data: {
       organizationId: ctx.organizationId,
       name: name.slice(0, 200),
-      industry: (body.industry as string)?.slice(0, 80) || null,
-      prefecture: (body.prefecture as string)?.slice(0, 40) || null,
-      url: (body.url as string)?.slice(0, 300) || null,
-      note: (body.note as string)?.slice(0, 2000) || null,
+      industry: (body.industry as string | undefined)?.slice(0, 80) || null,
+      prefecture: (body.prefecture as string | undefined)?.slice(0, 40) || null,
+      url: (body.url as string | undefined)?.slice(0, 300) || null,
+      note: (body.note as string | undefined)?.slice(0, 2000) || null,
       ownerMemberId: ctx.memberId,
     },
   })

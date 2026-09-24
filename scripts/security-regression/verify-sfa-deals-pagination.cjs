@@ -63,6 +63,7 @@ async function verifyCount(count) {
     '@/lib/prisma': { prisma },
     '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1' }), orgSlugFrom: () => null, ensurePipeline: async () => [{ id: 'stage-1' }] },
     '@/lib/sfa/format': { bigIntToNumber: (value) => JSON.parse(JSON.stringify(value, (_, item) => typeof item === 'bigint' ? Number(item) : item)) },
+    '@/lib/sfa/amount': load('src/lib/sfa/amount.ts'),
     '@/lib/service-usage': { recordServiceUsage: async () => {} },
   }, { Buffer });
 

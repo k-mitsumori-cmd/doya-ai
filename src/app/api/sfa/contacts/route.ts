@@ -73,9 +73,17 @@ export async function POST(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
 
-  const body = await req.json().catch(() => ({}))
-  const name = (body.name as string)?.trim()
+  const parsedBody = await req.json().catch(() => null)
+  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
+    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+  }
+  const body = parsedBody as Record<string, unknown>
+  const name = typeof body.name === 'string' ? body.name.trim() : ''
   if (!name) return NextResponse.json({ error: '氏名は必須です' }, { status: 400 })
+  if (['accountId', 'title', 'department', 'email', 'phone', 'note'].some((key) => body[key] != null && typeof body[key] !== 'string') ||
+      (body.isKeyPerson != null && typeof body.isKeyPerson !== 'boolean')) {
+    return NextResponse.json({ error: '入力項目の形式が正しくありません' }, { status: 400 })
+  }
 
   // 取引先指定があれば所有確認（IDOR対策）
   let accountId: string | null = null
@@ -91,12 +99,12 @@ export async function POST(req: NextRequest) {
       organizationId: ctx.organizationId,
       accountId,
       name: name.slice(0, 80),
-      title: (body.title as string)?.slice(0, 80) || null,
-      department: (body.department as string)?.slice(0, 80) || null,
-      email: (body.email as string)?.slice(0, 200) || null,
-      phone: (body.phone as string)?.slice(0, 40) || null,
+      title: (body.title as string | undefined)?.slice(0, 80) || null,
+      department: (body.department as string | undefined)?.slice(0, 80) || null,
+      email: (body.email as string | undefined)?.slice(0, 200) || null,
+      phone: (body.phone as string | undefined)?.slice(0, 40) || null,
       isKeyPerson: body.isKeyPerson === true,
-      note: (body.note as string)?.slice(0, 2000) || null,
+      note: (body.note as string | undefined)?.slice(0, 2000) || null,
     },
   })
   return NextResponse.json({ contact })

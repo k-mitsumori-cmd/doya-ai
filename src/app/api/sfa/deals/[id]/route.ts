@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
+import { parseSfaAmount } from '@/lib/sfa/amount'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -41,28 +42,54 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   const deal = await owned(c.organizationId, p.id)
   if (!deal) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
 
-  const body = await req.json().catch(() => ({}))
+  const parsedBody = await req.json().catch(() => null)
+  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
+    return NextResponse.json({ error: '更新内容が正しくありません' }, { status: 400 })
+  }
+  const body = parsedBody as Record<string, unknown>
   const data: any = {}
+  if (body.name != null && (typeof body.name !== 'string' || !body.name.trim())) {
+    return NextResponse.json({ error: '商談名は必須です' }, { status: 400 })
+  }
   if (typeof body.name === 'string' && body.name.trim()) data.name = body.name.trim().slice(0, 200)
-  if (body.amount != null && Number(body.amount) >= 0) data.amount = BigInt(Math.round(Number(body.amount)))
+  if ('amount' in body) {
+    const amount = parseSfaAmount(body.amount)
+    if (amount === null) return NextResponse.json({ error: '金額は0以上の有効な数値で入力してください' }, { status: 400 })
+    data.amount = amount
+  }
   if (typeof body.lostReason === 'string') data.lostReason = body.lostReason.slice(0, 300)
   if (typeof body.contactName === 'string') data.contactName = body.contactName.trim().slice(0, 100) || null
   if (typeof body.note === 'string') data.note = body.note.slice(0, 5000) || null
-  if (body.probability != null && !isNaN(Number(body.probability))) {
-    data.probability = Math.max(0, Math.min(100, Math.round(Number(body.probability))))
+  if (body.probability != null) {
+    const probability = Number(body.probability)
+    if ((typeof body.probability !== 'number' && typeof body.probability !== 'string') || !Number.isFinite(probability)) {
+      return NextResponse.json({ error: '確度が正しくありません' }, { status: 400 })
+    }
+    data.probability = Math.max(0, Math.min(100, Math.round(probability)))
   }
   // 日付系（'' はクリア）
   for (const key of ['startDate', 'expectedCloseDate'] as const) {
+    if (body[key] != null && typeof body[key] !== 'string') {
+      return NextResponse.json({ error: '日付が正しくありません' }, { status: 400 })
+    }
     if (typeof body[key] === 'string') {
       if (body[key] === '') {
         data[key] = null
       } else {
-        const d = new Date(body[key])
-        if (!isNaN(d.getTime())) data[key] = d
+        const day = body[key].match(/^\d{4}-\d{2}-\d{2}(?=$|T)/)?.[0]
+        const parsedDay = day ? new Date(`${day}T00:00:00.000Z`) : null
+        const parsedDate = new Date(body[key])
+        if (!parsedDay || Number.isNaN(parsedDay.getTime()) || parsedDay.toISOString().slice(0, 10) !== day || Number.isNaN(parsedDate.getTime())) {
+          return NextResponse.json({ error: '日付が正しくありません' }, { status: 400 })
+        }
+        data[key] = parsedDate
       }
     }
   }
   // 取引先変更（IDOR対策: 自組織のみ。'' で解除）
+  if (body.accountId != null && typeof body.accountId !== 'string') {
+    return NextResponse.json({ error: '取引先の指定が正しくありません' }, { status: 400 })
+  }
   if (typeof body.accountId === 'string') {
     if (body.accountId === '') {
       data.accountId = null
@@ -77,6 +104,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   }
 
   // ステージ移動（所有確認＋確度同期＋受注/失注ステータス）
+  if (body.stageId != null && typeof body.stageId !== 'string') {
+    return NextResponse.json({ error: 'ステージの指定が正しくありません' }, { status: 400 })
+  }
   if (typeof body.stageId === 'string') {
     const stage = await prisma.sfaStage.findUnique({ where: { id: body.stageId }, include: { pipeline: true } })
     if (!stage || stage.pipeline.organizationId !== c.organizationId) {

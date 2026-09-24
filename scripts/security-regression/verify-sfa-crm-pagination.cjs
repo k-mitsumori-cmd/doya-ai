@@ -114,6 +114,7 @@ async function collect(get, type, params, expected) {
   };
   const writeMocks = {
     ...mocks,
+    '@/lib/sfa/amount': load('src/lib/sfa/amount.ts'),
     '@/lib/prisma': { prisma: writePrisma },
     '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1', memberId: 'member', userId: 'owner' }), orgSlugFrom: () => null },
     '@/lib/service-usage': { recordServiceUsage: async () => {} },

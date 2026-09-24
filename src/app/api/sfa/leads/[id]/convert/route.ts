@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
+import { parseSfaAmount } from '@/lib/sfa/amount'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -24,7 +25,16 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ error: '既に転換済みです' }, { status: 409 })
   }
 
-  const body = await req.json().catch(() => ({}))
+  const parsedBody = await req.json().catch(() => null)
+  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
+    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+  }
+  const body = parsedBody as Record<string, unknown>
+  if (body.dealName != null && typeof body.dealName !== 'string') {
+    return NextResponse.json({ error: '商談名が正しくありません' }, { status: 400 })
+  }
+  const amount = body.amount === undefined || body.amount === '' ? 0n : parseSfaAmount(body.amount)
+  if (amount === null) return NextResponse.json({ error: '金額は0以上の有効な数値で入力してください' }, { status: 400 })
   const raw = (lead.raw as Record<string, unknown> | null) || {}
 
   // 既定パイプラインの先頭ステージ（見込み）
@@ -35,8 +45,6 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const firstStage = pipeline
     ? await prisma.sfaStage.findFirst({ where: { pipelineId: pipeline.id }, orderBy: { order: 'asc' } })
     : null
-
-  const amount = body.amount != null && Number(body.amount) >= 0 ? BigInt(Math.round(Number(body.amount))) : BigInt(0)
 
   try {
     const result = await prisma.$transaction(async (tx) => {
@@ -52,9 +60,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
           organizationId: c.organizationId,
           name: lead.name.slice(0, 200),
           corporateNumber: lead.corporateNumber || null,
-          industry: (raw.industry as string)?.slice(0, 80) || null,
-          prefecture: (raw.prefecture as string)?.slice(0, 40) || null,
-          url: (raw.url as string)?.slice(0, 300) || null,
+          industry: typeof raw.industry === 'string' ? raw.industry.slice(0, 80) || null : null,
+          prefecture: typeof raw.prefecture === 'string' ? raw.prefecture.slice(0, 40) || null : null,
+          url: typeof raw.url === 'string' ? raw.url.slice(0, 300) || null : null,
           note: lead.note || null,
           ownerMemberId: c.memberId,
         },
@@ -78,7 +86,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         data: {
           organizationId: c.organizationId,
           accountId: account.id,
-          name: ((body.dealName as string)?.trim() || `${lead.name} 新規商談`).slice(0, 200),
+          name: ((body.dealName as string | undefined)?.trim() || `${lead.name} 新規商談`).slice(0, 200),
           amount,
           stageId: firstStage?.id || null,
           probability: firstStage?.probability ?? 10,

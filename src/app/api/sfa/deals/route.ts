@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom, ensurePipeline } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
+import { parseSfaAmount } from '@/lib/sfa/amount'
 import { recordServiceUsage } from '@/lib/service-usage'
 
 // GET /api/sfa/deals — カンバン用に「ステージ一覧 + 商談一覧（取引先名つき）」を返す
@@ -93,12 +94,24 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const ctx = await getSfaContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
-  const body = await req.json().catch(() => ({}))
-  const name = (body.name as string)?.trim()
+  const parsedBody = await req.json().catch(() => null)
+  if (!parsedBody || typeof parsedBody !== 'object' || Array.isArray(parsedBody)) {
+    return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+  }
+  const body = parsedBody as Record<string, unknown>
+  const name = typeof body.name === 'string' ? body.name.trim() : ''
   if (!name) return NextResponse.json({ error: '商談名は必須です' }, { status: 400 })
+  if (body.stageId != null && typeof body.stageId !== 'string') {
+    return NextResponse.json({ error: 'ステージの指定が正しくありません' }, { status: 400 })
+  }
+  if (body.accountId != null && typeof body.accountId !== 'string') {
+    return NextResponse.json({ error: '取引先の指定が正しくありません' }, { status: 400 })
+  }
+  const amount = body.amount === undefined || body.amount === '' ? 0n : parseSfaAmount(body.amount)
+  if (amount === null) return NextResponse.json({ error: '金額は0以上の有効な数値で入力してください' }, { status: 400 })
 
   // ステージ所有確認（指定が無ければ先頭ステージ）
-  let stageId = (body.stageId as string) || null
+  let stageId = (body.stageId as string | undefined)?.trim() || null
   let probability = 0
   let status: 'open' | 'won' | 'lost' = 'open'
   const stage = stageId
@@ -117,7 +130,6 @@ export async function POST(req: NextRequest) {
     stageId = null
   }
 
-  const amount = Number(body.amount) > 0 ? BigInt(Math.round(Number(body.amount))) : BigInt(0)
   // 取引先所有確認
   const accountId = typeof body.accountId === 'string' ? body.accountId.trim() || null : null
   if (accountId) {
@@ -127,9 +139,15 @@ export async function POST(req: NextRequest) {
 
   // 商談日（開始日）。未指定なら作成日を起点にする
   let startDate = new Date()
-  if (typeof body.startDate === 'string' && body.startDate) {
-    const d = new Date(body.startDate)
-    if (!isNaN(d.getTime())) startDate = d
+  if (body.startDate != null && body.startDate !== '') {
+    if (typeof body.startDate !== 'string') return NextResponse.json({ error: '商談日が正しくありません' }, { status: 400 })
+    const day = body.startDate.match(/^\d{4}-\d{2}-\d{2}(?=$|T)/)?.[0]
+    const parsedDay = day ? new Date(`${day}T00:00:00.000Z`) : null
+    const parsedDate = new Date(body.startDate)
+    if (!parsedDay || Number.isNaN(parsedDay.getTime()) || parsedDay.toISOString().slice(0, 10) !== day || Number.isNaN(parsedDate.getTime())) {
+      return NextResponse.json({ error: '商談日が正しくありません' }, { status: 400 })
+    }
+    startDate = parsedDate
   }
 
   const now = new Date()

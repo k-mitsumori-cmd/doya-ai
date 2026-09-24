@@ -185,9 +185,19 @@ if (sfaDealsPagination.error || sfaDealsPagination.status !== 0) {
   console.error('Security regression failed: verify-sfa-deals-pagination.cjs');
   process.exit(1);
 }
+const sfaAmountInput = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-amount-input.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaAmountInput.error || sfaAmountInput.status !== 0) {
+  console.error('Security regression failed: verify-sfa-amount-input.cjs');
+  process.exit(1);
+}
 const sfaCrmPagination = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-crm-pagination.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaCrmPagination.error || sfaCrmPagination.status !== 0) {
   console.error('Security regression failed: verify-sfa-crm-pagination.cjs');
+  process.exit(1);
+}
+const sfaBasicCreateInput = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-basic-create-input.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaBasicCreateInput.error || sfaBasicCreateInput.status !== 0) {
+  console.error('Security regression failed: verify-sfa-basic-create-input.cjs');
   process.exit(1);
 }
 const sfaLeadsPagination = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-leads-pagination.cjs')], { stdio: 'inherit', timeout: 60000 });
