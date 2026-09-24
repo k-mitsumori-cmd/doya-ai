@@ -28,6 +28,7 @@ export default function CunningTool() {
   const router = useRouter()
   const [mode, setMode] = useState<CunningMode>('sales')
   const [kbs, setKbs] = useState<KB[]>([])
+  const [kbError, setKbError] = useState(false)
   const [companies, setCompanies] = useState<Company[]>([])
   const [applicants, setApplicants] = useState<Applicant[]>([])
   const [companyCursor, setCompanyCursor] = useState<string | null>(null)
@@ -37,9 +38,12 @@ export default function CunningTool() {
   const [loadingMoreProfiles, setLoadingMoreProfiles] = useState<'company' | 'profiles' | null>(null)
   const [profileError, setProfileError] = useState('')
   const [sessions, setSessions] = useState<SessionRow[]>([])
+  const [sessionsError, setSessionsError] = useState(false)
   const [usage, setUsage] = useState<any>(null)
   const [usageError, setUsageError] = useState(false)
   const usageRequest = useRef(0)
+  const knowledgeRequest = useRef(0)
+  const sessionsRequest = useRef(0)
   const usageAbort = useRef<AbortController | null>(null)
   const [kbId, setKbId] = useState('')
   const [companyId, setCompanyId] = useState('')
@@ -48,6 +52,32 @@ export default function CunningTool() {
   const [starting, setStarting] = useState(false)
 
   const def = getMode(mode)
+
+  const loadKnowledge = (request = usageRequest.current) => {
+    const listRequest = ++knowledgeRequest.current
+    setKbError(false)
+    void fetch('/api/cunning/knowledge', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('ナレッジを取得できませんでした')
+        const data = await response.json()
+        if (!Array.isArray(data.bases)) throw new Error('ナレッジの応答が不正です')
+        if (request === usageRequest.current && listRequest === knowledgeRequest.current) setKbs(data.bases)
+      })
+      .catch(() => { if (request === usageRequest.current && listRequest === knowledgeRequest.current) setKbError(true) })
+  }
+
+  const loadSessions = (request = usageRequest.current) => {
+    const listRequest = ++sessionsRequest.current
+    setSessionsError(false)
+    void fetch('/api/cunning/sessions', { cache: 'no-store' })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('履歴を取得できませんでした')
+        const data = await response.json()
+        if (!Array.isArray(data.sessions)) throw new Error('履歴の応答が不正です')
+        if (request === usageRequest.current && listRequest === sessionsRequest.current) setSessions(data.sessions)
+      })
+      .catch(() => { if (request === usageRequest.current && listRequest === sessionsRequest.current) setSessionsError(true) })
+  }
 
   const load = () => {
     const request = ++usageRequest.current
@@ -59,7 +89,7 @@ export default function CunningTool() {
     setCompanyCursor(null)
     setApplicantCursor(null)
     setLoadingMoreProfiles(null)
-    fetch('/api/cunning/knowledge', { cache: 'no-store' }).then((r) => r.json()).then((d) => setKbs(d.bases || [])).catch(() => {})
+    loadKnowledge(request)
     setProfileError('')
     void Promise.all([
       fetch('/api/cunning/company', { cache: 'no-store' }),
@@ -77,7 +107,7 @@ export default function CunningTool() {
       setApplicantCursor(applicantPage.nextCursor)
       setApplicantTotal(applicantPage.total)
     }).catch((error) => { if (request === usageRequest.current) setProfileError(error instanceof Error ? error.message : '一覧を取得できませんでした') })
-    fetch('/api/cunning/sessions', { cache: 'no-store' }).then((r) => r.json()).then((d) => setSessions(d.sessions || [])).catch(() => {})
+    loadSessions(request)
     setUsage(null)
     setUsageError(false)
     const controller = new AbortController()
@@ -120,8 +150,12 @@ export default function CunningTool() {
     }
   }
   useEffect(() => {
+    const requestCounter = usageRequest
+    const knowledgeCounter = knowledgeRequest
+    const sessionsCounter = sessionsRequest
+    const controllerRef = usageAbort
     load()
-    return () => { usageRequest.current++; usageAbort.current?.abort() }
+    return () => { requestCounter.current++; knowledgeCounter.current++; sessionsCounter.current++; controllerRef.current?.abort() }
   }, [])
 
   const start = async () => {
@@ -244,6 +278,7 @@ export default function CunningTool() {
         {/* コンテキスト選択（モードに応じて） */}
         {def.context === 'knowledge' && (
           <div className="bg-white rounded-2xl shadow-sm p-5 mb-6">
+            {kbError && <div role="alert" className="mb-3 rounded-lg bg-rose-50 p-3 text-sm font-bold text-rose-700">ナレッジを取得できませんでした。<button type="button" onClick={() => loadKnowledge()} className="ml-2 underline">再読み込み</button></div>}
             <label className="block text-sm font-black text-slate-700 mb-2">参照ナレッジ（任意）</label>
             <select
               value={kbId}
@@ -343,6 +378,7 @@ export default function CunningTool() {
         </p>
 
         {/* 最近のセッション */}
+        {sessionsError && <div role="alert" className="mt-10 rounded-lg bg-rose-50 p-3 text-sm font-bold text-rose-700">最近のセッションを取得できませんでした。<button type="button" onClick={() => loadSessions()} className="ml-2 underline">再読み込み</button></div>}
         {sessions.length > 0 && (
           <div className="mt-10">
             <h2 className="font-black text-slate-700 mb-3">最近のセッション</h2>

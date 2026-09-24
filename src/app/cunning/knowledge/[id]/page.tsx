@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
@@ -24,19 +24,42 @@ export default function CunningKnowledgeDetail() {
   const id = params.id as string
   const [base, setBase] = useState<Base | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [notFound, setNotFound] = useState(false)
+  const loadRequest = useRef(0)
   const [ingestType, setIngestType] = useState<'text' | 'url'>('text')
   const [text, setText] = useState('')
   const [url, setUrl] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const load = useCallback(() => {
-    fetch(`/api/cunning/knowledge/${id}`, { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => setBase(d.base || null))
-      .catch(() => {})
-      .finally(() => setLoading(false))
+  const load = useCallback(async () => {
+    const request = ++loadRequest.current
+    setLoading(true)
+    setLoadError(false)
+    setNotFound(false)
+    try {
+      const response = await fetch(`/api/cunning/knowledge/${id}`, { cache: 'no-store' })
+      if (request !== loadRequest.current) return
+      if (response.status === 404) {
+        setBase(null)
+        setNotFound(true)
+        return
+      }
+      if (!response.ok) throw new Error('ナレッジを取得できませんでした')
+      const data = await response.json()
+      if (!data.base || !Array.isArray(data.base.chunks)) throw new Error('ナレッジの応答が不正です')
+      if (request === loadRequest.current) setBase(data.base)
+    } catch {
+      if (request === loadRequest.current) setLoadError(true)
+    } finally {
+      if (request === loadRequest.current) setLoading(false)
+    }
   }, [id])
-  useEffect(load, [load])
+  useEffect(() => {
+    const requestCounter = loadRequest
+    void load()
+    return () => { requestCounter.current++ }
+  }, [load])
 
   const ingest = async () => {
     setBusy(true)
@@ -51,7 +74,7 @@ export default function CunningKnowledgeDetail() {
       setText('')
       setUrl('')
       toast.success(`${d.added}件を取り込みました`)
-      load()
+      void load()
     } catch (e: any) {
       toast.error(e.message)
     } finally {
@@ -60,14 +83,22 @@ export default function CunningKnowledgeDetail() {
   }
 
   const removeChunk = async (chunkId: string) => {
-    const res = await fetch(`/api/cunning/knowledge/${id}?chunkId=${chunkId}`, { method: 'DELETE' })
-    if (res.ok) {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/cunning/knowledge/${id}?chunkId=${encodeURIComponent(chunkId)}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('情報を削除できませんでした')
       setBase((b) => (b ? { ...b, chunks: b.chunks.filter((c) => c.id !== chunkId) } : b))
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '情報を削除できませんでした')
+    } finally {
+      setBusy(false)
     }
   }
 
   if (loading) return <div className="p-10 text-slate-400 font-bold">読み込み中…</div>
-  if (!base) return <div className="p-10 text-slate-400 font-bold">ナレッジが見つかりません</div>
+  if (loadError) return <div role="alert" className="p-10 text-rose-700 font-bold">ナレッジを取得できませんでした。<button type="button" onClick={() => void load()} className="ml-2 underline">再読み込み</button></div>
+  if (notFound) return <div className="p-10 text-slate-400 font-bold">ナレッジが見つかりません</div>
+  if (!base) return <div className="p-10 text-slate-400 font-bold">ナレッジを読み込めませんでした。<button type="button" onClick={() => void load()} className="ml-2 underline">再読み込み</button></div>
 
   return (
     <div className="p-6 lg:p-10 max-w-4xl mx-auto">
@@ -133,7 +164,7 @@ export default function CunningKnowledgeDetail() {
             <div key={c.id} className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-start justify-between gap-3">
                 <p className="text-sm text-slate-700 font-medium whitespace-pre-wrap flex-1">{c.content}</p>
-                <button onClick={() => removeChunk(c.id)} className="text-slate-300 hover:text-red-500 flex-shrink-0">
+                <button onClick={() => void removeChunk(c.id)} disabled={busy} aria-label="情報を削除" className="text-slate-300 hover:text-red-500 flex-shrink-0 disabled:opacity-50">
                   <span className="material-symbols-outlined text-lg">delete</span>
                 </button>
               </div>

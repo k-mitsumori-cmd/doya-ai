@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import toast from 'react-hot-toast'
 
@@ -13,6 +13,9 @@ interface KB {
 
 export default function CunningKnowledgePage() {
   const [bases, setBases] = useState<KB[]>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const loadRequest = useRef(0)
   const [name, setName] = useState('')
   const [selected, setSelected] = useState<string>('')
   const [ingestType, setIngestType] = useState<'text' | 'url'>('text')
@@ -20,13 +23,27 @@ export default function CunningKnowledgePage() {
   const [url, setUrl] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const load = () => {
-    fetch('/api/cunning/knowledge', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => setBases(d.bases || []))
-      .catch(() => {})
-  }
-  useEffect(load, [])
+  const load = useCallback(async () => {
+    const request = ++loadRequest.current
+    setLoading(true)
+    setLoadError(false)
+    try {
+      const response = await fetch('/api/cunning/knowledge', { cache: 'no-store' })
+      if (!response.ok) throw new Error('ナレッジを取得できませんでした')
+      const data = await response.json()
+      if (!Array.isArray(data.bases)) throw new Error('ナレッジの応答が不正です')
+      if (request === loadRequest.current) setBases(data.bases)
+    } catch {
+      if (request === loadRequest.current) setLoadError(true)
+    } finally {
+      if (request === loadRequest.current) setLoading(false)
+    }
+  }, [])
+  useEffect(() => {
+    const requestCounter = loadRequest
+    void load()
+    return () => { requestCounter.current++ }
+  }, [load])
 
   const createKB = async () => {
     if (!name.trim()) return
@@ -41,7 +58,7 @@ export default function CunningKnowledgePage() {
       if (!res.ok) throw new Error(d.error)
       setName('')
       toast.success('作成しました')
-      load()
+      void load()
     } catch (e: any) {
       toast.error(e.message)
     } finally {
@@ -63,7 +80,7 @@ export default function CunningKnowledgePage() {
       setText('')
       setUrl('')
       toast.success(`${d.added}件を取り込みました`)
-      load()
+      void load()
     } catch (e: any) {
       toast.error(e.message)
     } finally {
@@ -73,11 +90,17 @@ export default function CunningKnowledgePage() {
 
   const remove = async (id: string) => {
     if (!confirm('このナレッジを削除しますか？')) return
-    const res = await fetch(`/api/cunning/knowledge/${id}`, { method: 'DELETE' })
-    if (res.ok) {
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/cunning/knowledge/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('削除できませんでした')
       toast.success('削除しました')
       if (selected === id) setSelected('')
-      load()
+      void load()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '削除できませんでした')
+    } finally {
+      setBusy(false)
     }
   }
 
@@ -110,6 +133,8 @@ export default function CunningKnowledgePage() {
 
       {/* 一覧 */}
       <div className="space-y-2 mb-6">
+        {loadError && <div role="alert" className="rounded-xl bg-rose-50 p-4 text-sm font-bold text-rose-700">ナレッジ一覧を取得できませんでした。<button type="button" onClick={() => void load()} className="ml-2 underline">再読み込み</button></div>}
+        {loading && <div role="status" className="rounded-xl bg-white p-4 text-sm font-bold text-slate-500">ナレッジを読み込み中…</div>}
         {bases.map((b) => (
           <div
             key={b.id}
@@ -129,13 +154,13 @@ export default function CunningKnowledgePage() {
               >
                 管理
               </Link>
-              <button onClick={() => remove(b.id)} className="text-slate-300 hover:text-red-500">
+              <button onClick={() => void remove(b.id)} disabled={busy} aria-label={`${b.name}を削除`} className="text-slate-300 hover:text-red-500 disabled:opacity-50">
                 <span className="material-symbols-outlined text-lg">delete</span>
               </button>
             </div>
           </div>
         ))}
-        {bases.length === 0 && (
+        {!loading && !loadError && bases.length === 0 && (
           <div className="bg-white rounded-2xl shadow-sm p-10 text-center">
             <img src="/character/thinking.png" alt="" className="w-16 h-16 object-contain mx-auto mb-2" />
             <p className="text-slate-400 font-bold text-sm">まだナレッジがありません。上の入力から作ってみよう！</p>
