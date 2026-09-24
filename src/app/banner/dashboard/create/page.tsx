@@ -828,7 +828,7 @@ function buildHighCtrSampleCopies(category: string, purpose: string) {
 // メインコンポーネント
 // ========================================
 export default function BannerDashboard() {
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
   
   // State
   const [purpose, setPurpose] = useState('sns_ad')
@@ -1127,6 +1127,10 @@ export default function BannerDashboard() {
 
   // 生成履歴をローカルストレージから読み込み
   useEffect(() => {
+    if (sessionStatus !== 'unauthenticated') {
+      setRecentHistory([])
+      return
+    }
     if (typeof window === 'undefined') return
     try {
       const stored = localStorage.getItem('banner_history')
@@ -1138,7 +1142,7 @@ export default function BannerDashboard() {
     } catch {
       setRecentHistory([])
     }
-  }, [generatedBanners.length]) // 生成後も更新
+  }, [sessionStatus, generatedBanners.length]) // ゲストの生成後も更新
 
   useEffect(() => {
     const sizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
@@ -2396,7 +2400,7 @@ export default function BannerDashboard() {
               ======================================== */}
           <div className="space-y-6">
             {/* Recent History (when no generation result) */}
-            {generatedBanners.length === 0 && recentHistory.length > 0 && (
+            {sessionStatus === 'unauthenticated' && generatedBanners.length === 0 && recentHistory.length > 0 && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}

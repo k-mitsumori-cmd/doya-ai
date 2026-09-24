@@ -3,33 +3,47 @@
 import Link from 'next/link'
 import { ArrowLeft, Palette, Save, Check } from 'lucide-react'
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import DashboardSidebar from '@/components/DashboardSidebar'
 
-const BRAND_STORAGE_KEY = 'doya_banner_brand'
+const BRAND_STORAGE_KEY = 'doya_banner_brand:v2'
 
 export default function BannerBrandPage() {
+  const { data: session, status } = useSession()
+  const accountId = status === 'authenticated' ? session?.user?.id : status === 'unauthenticated' ? 'guest' : null
+  if (!accountId) return <div className="min-h-screen bg-gray-50" aria-busy="true" />
+  return <BannerBrandContent key={accountId} storageKey={`${BRAND_STORAGE_KEY}:${accountId}`} />
+}
+
+function BannerBrandContent({ storageKey }: { storageKey: string }) {
   const [primaryColor, setPrimaryColor] = useState('#2563EB')
   const [secondaryColor, setSecondaryColor] = useState('#F97316')
   const [brandName, setBrandName] = useState('')
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState(false)
 
   // 初回読み込み
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(BRAND_STORAGE_KEY)
+      const raw = localStorage.getItem(storageKey)
       if (raw) {
         const data = JSON.parse(raw)
-        if (data.primaryColor) setPrimaryColor(data.primaryColor)
-        if (data.secondaryColor) setSecondaryColor(data.secondaryColor)
-        if (data.brandName) setBrandName(data.brandName)
+        if (typeof data.primaryColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(data.primaryColor)) setPrimaryColor(data.primaryColor)
+        if (typeof data.secondaryColor === 'string' && /^#[0-9a-fA-F]{6}$/.test(data.secondaryColor)) setSecondaryColor(data.secondaryColor)
+        if (typeof data.brandName === 'string') setBrandName(data.brandName.slice(0, 100))
       }
     } catch { /* ignore */ }
-  }, [])
+  }, [storageKey])
 
   const handleSave = () => {
-    localStorage.setItem(BRAND_STORAGE_KEY, JSON.stringify({ primaryColor, secondaryColor, brandName }))
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setSaveError(false)
+    try {
+      localStorage.setItem(storageKey, JSON.stringify({ primaryColor, secondaryColor, brandName }))
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch {
+      setSaveError(true)
+    }
   }
 
   return (
@@ -67,6 +81,7 @@ export default function BannerBrandPage() {
                 type="text"
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
+                maxLength={100}
                 placeholder="例: My Company"
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
               />
@@ -135,15 +150,15 @@ export default function BannerBrandPage() {
               {saved ? <Check className="w-5 h-5" /> : <Save className="w-5 h-5" />}
               {saved ? '保存しました' : '保存する'}
             </button>
+            {saveError && <p role="alert" className="text-sm text-red-600">このブラウザに保存できませんでした。空き容量や保存設定をご確認ください。</p>}
           </div>
         </div>
 
         <p className="text-center text-sm text-gray-500 mt-6">
-          ※ ブランド設定はプロプランのみ利用可能です
+          この設定は現在のブラウザとアカウントにのみ保存され、バナー生成には自動反映されません。
         </p>
         </main>
       </div>
     </div>
   )
 }
-
