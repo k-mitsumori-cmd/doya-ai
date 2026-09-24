@@ -1,7 +1,7 @@
 'use client'
 
 import { useSession, signOut } from 'next-auth/react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
@@ -25,13 +25,35 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
   const { data: session, status } = useSession()
   const pathname = usePathname() || ''
   const [usage, setUsage] = useState<UsageData | null>(null)
+  const [usageError, setUsageError] = useState(false)
+  const usageRequest = useRef(0)
   const [mobileOpen, setMobileOpen] = useState(false)
 
-  useEffect(() => {
-    if (session?.user) {
-      fetch('/api/doyalist/usage').then((r) => r.json()).then((data: UsageData) => setUsage(data)).catch(() => setUsage({ plan: 'FREE' }))
+  const loadUsage = useCallback(async () => {
+    const request = ++usageRequest.current
+    setUsageError(false)
+    try {
+      const response = await fetch('/api/doyalist/usage', { cache: 'no-store' })
+      if (!response.ok) throw new Error('プランを確認できませんでした')
+      const data: UsageData = await response.json()
+      const raw = data?.plan
+      const tier = typeof raw === 'object' && raw !== null ? raw.tier || raw.raw : raw
+      if (typeof tier !== 'string') throw new Error('プランの応答が不正です')
+      if (request === usageRequest.current) setUsage(data)
+    } catch {
+      if (request === usageRequest.current) {
+        setUsage(null)
+        setUsageError(true)
+      }
     }
-  }, [session])
+  }, [])
+
+  useEffect(() => {
+    const requestCounter = usageRequest
+    if (session?.user) void loadUsage()
+    else { requestCounter.current++; setUsage(null); setUsageError(false) }
+    return () => { requestCounter.current++ }
+  }, [session, loadUsage])
 
   if (status === 'loading') {
     return (
@@ -66,10 +88,10 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
   const userName = session.user.name || 'ゲスト'
   const userEmail = session.user.email || ''
   const userImage = session.user.image || ''
-  // プラン情報の一本化: usage.plan.tier > session.user.plan > 'FREE'
+  // APIで確認できたプランだけを表示する
   const planRaw: any = usage?.plan
-  const planTier = (typeof planRaw === 'object' && planRaw !== null ? planRaw.tier || planRaw.raw : planRaw) || (session.user as any)?.plan || 'FREE'
-  const plan = String(planTier).toUpperCase()
+  const planTier = typeof planRaw === 'object' && planRaw !== null ? planRaw.tier || planRaw.raw : planRaw
+  const plan = typeof planTier === 'string' ? planTier.toUpperCase() : 'UNKNOWN'
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -114,6 +136,7 @@ export default function DoyalistLayout({ children }: DoyalistLayoutProps) {
             </div>
           </div>
         </header>
+        {usageError && <div role="alert" className="bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700">現在のプランを確認できませんでした。<button type="button" onClick={() => void loadUsage()} className="ml-2 underline">再読み込み</button></div>}
         <main className="flex-1 min-w-0 bg-slate-50">{children}</main>
       </div>
     </div>
@@ -183,11 +206,11 @@ function Sidebar({ pathname, onNavigate }: { pathname: string; onNavigate?: () =
 }
 
 function PlanBadge({ plan }: { plan: string }) {
-  const label = plan === 'PRO' ? 'プロ' : plan === 'LIGHT' ? 'ライト' : plan === 'ENTERPRISE' ? 'エンタープライズ' : '無料'
-  const cls = plan === 'FREE' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-cyan-50 text-cyan-700 border-cyan-200'
+  const label = plan === 'PRO' ? 'プロ' : plan === 'LIGHT' ? 'ライト' : plan === 'ENTERPRISE' ? 'エンタープライズ' : plan === 'FREE' ? '無料' : 'プラン未確認'
+  const cls = plan === 'FREE' || plan === 'UNKNOWN' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-cyan-50 text-cyan-700 border-cyan-200'
   return (
     <div className="hidden sm:flex items-center gap-1.5">
-      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${cls}`}>{label}プラン</span>
+      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${cls}`}>{label === 'プラン未確認' ? label : `${label}プラン`}</span>
       <Link href="/doyalist/pricing" className="text-xs text-[#0a1530] hover:underline font-medium">プランを見る</Link>
     </div>
   )
@@ -246,7 +269,7 @@ function UserMenu({ name, email, image, plan, onSignOut }: { name: string; email
           <div className="px-4 py-3 border-b border-slate-100">
             <p className="text-sm font-bold text-slate-800">{name}</p>
             <p className="text-xs text-slate-400 mt-0.5">{email}</p>
-            <span className="inline-block mt-1.5 text-xs font-bold px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded-full">{plan} プラン</span>
+            <span className="inline-block mt-1.5 text-xs font-bold px-2 py-0.5 bg-cyan-50 text-cyan-700 rounded-full">{['FREE', 'PRO', 'LIGHT', 'ENTERPRISE'].includes(plan) ? `${plan} プラン` : 'プラン未確認'}</span>
           </div>
           <div className="py-1">
             <Link href="/doyalist/pricing" onClick={() => setOpen(false)} className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
