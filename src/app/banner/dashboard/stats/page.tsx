@@ -46,29 +46,42 @@ interface DailyStats {
 const STATS_CACHE_KEY = 'doya-banner-stats-cache'
 const STATS_CACHE_TTL_MS = 5 * 60 * 1000 // 5分
 
-function readStatsCache(): { items: HistoryItem[]; ts: number } | null {
+function readStatsCache(userId: string): { items: HistoryItem[]; ts: number } | null {
   try {
     const raw = sessionStorage.getItem(STATS_CACHE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed?.items)) return null
+    if (parsed?.userId !== userId || !Array.isArray(parsed?.items)) {
+      sessionStorage.removeItem(STATS_CACHE_KEY)
+      return null
+    }
     return { items: parsed.items, ts: parsed.ts || 0 }
   } catch {
     return null
   }
 }
 
-function writeStatsCache(items: HistoryItem[]) {
+function writeStatsCache(userId: string, items: HistoryItem[]) {
   try {
-    sessionStorage.setItem(STATS_CACHE_KEY, JSON.stringify({ items, ts: Date.now() }))
+    sessionStorage.setItem(STATS_CACHE_KEY, JSON.stringify({ userId, items, ts: Date.now() }))
   } catch {
     // ignore
   }
 }
 
 export default function StatsPage() {
-  const { data: session, status } = useSession()
-  const isGuest = status !== 'loading' && !session
+  const auth = useSession()
+  const userId = auth.status === 'authenticated' ? auth.data?.user?.id : null
+  useEffect(() => {
+    if (auth.status === 'unauthenticated') sessionStorage.removeItem(STATS_CACHE_KEY)
+  }, [auth.status])
+  return <StatsContent key={userId ? `user:${userId}` : `status:${auth.status}`} auth={auth} />
+}
+
+function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
+  const { data: session, status } = auth
+  const userId = status === 'authenticated' ? session?.user?.id : null
+  const isGuest = status !== 'loading' && !userId
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -95,7 +108,7 @@ export default function StatsPage() {
     if (status === 'loading') return
 
     // stale-while-revalidate: キャッシュがあれば即表示→期限切れなら裏で更新
-    const cached = readStatsCache()
+    const cached = userId ? readStatsCache(userId) : null
     if (cached && cached.items.length > 0) {
       setHistory(cached.items)
       setIsLoaded(true)
@@ -136,7 +149,7 @@ export default function StatsPage() {
               bannerCount: Number(item.bannerCount) > 0 ? Number(item.bannerCount) : 1,
             }))
             setHistory(mapped)
-            writeStatsCache(mapped)
+            if (userId) writeStatsCache(userId, mapped)
           }
         } else {
           setHistory([])
@@ -155,7 +168,7 @@ export default function StatsPage() {
       setIsLoading(false)
       setIsStale(false)
     }
-  }, [isGuest, status])
+  }, [isGuest, status, userId])
 
   useEffect(() => {
     loadHistory()

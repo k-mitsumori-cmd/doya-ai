@@ -41,29 +41,42 @@ function formatRelativeTime(date: Date): string {
 const HISTORY_CACHE_KEY = 'doya-history-cache'
 const HISTORY_CACHE_TTL_MS = 60 * 1000 // 1分間有効
 
-function readHistoryCache(): { items: HistoryItem[]; ts: number } | null {
+function readHistoryCache(userId: string): { items: HistoryItem[]; ts: number } | null {
   try {
     const raw = sessionStorage.getItem(HISTORY_CACHE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed?.items)) return null
+    if (parsed?.userId !== userId || !Array.isArray(parsed?.items)) {
+      sessionStorage.removeItem(HISTORY_CACHE_KEY)
+      return null
+    }
     return { items: parsed.items.map((i: any) => ({ ...i, createdAt: new Date(i.createdAt) })), ts: parsed.ts || 0 }
   } catch {
     return null
   }
 }
 
-function writeHistoryCache(items: HistoryItem[]) {
+function writeHistoryCache(userId: string, items: HistoryItem[]) {
   try {
-    sessionStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify({ items: items.map(i => ({ ...i, createdAt: i.createdAt.toISOString() })), ts: Date.now() }))
+    sessionStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify({ userId, items: items.map(i => ({ ...i, createdAt: i.createdAt.toISOString() })), ts: Date.now() }))
   } catch {
     // ignore
   }
 }
 
 export default function BannerHistoryPage() {
-  const { data: session, status } = useSession()
-  const isGuest = status !== 'loading' && !session
+  const auth = useSession()
+  const userId = auth.status === 'authenticated' ? auth.data?.user?.id : null
+  useEffect(() => {
+    if (auth.status === 'unauthenticated') sessionStorage.removeItem(HISTORY_CACHE_KEY)
+  }, [auth.status])
+  return <BannerHistoryContent key={userId ? `user:${userId}` : `status:${auth.status}`} auth={auth} />
+}
+
+function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> }) {
+  const { data: session, status } = auth
+  const userId = status === 'authenticated' ? session?.user?.id : null
+  const isGuest = status !== 'loading' && !userId
   const [history, setHistory] = useState<HistoryItem[]>([])
   const [isLoaded, setIsLoaded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -159,8 +172,8 @@ export default function BannerHistoryPage() {
     if (status === 'loading') return
 
     // キャッシュチェック（stale-while-revalidate）
-    if (!forceRefresh) {
-      const cached = readHistoryCache()
+    if (!forceRefresh && userId) {
+      const cached = readHistoryCache(userId)
       if (cached && cached.items.length > 0) {
         setHistory(cached.items)
         setIsLoaded(true)
@@ -216,7 +229,7 @@ export default function BannerHistoryPage() {
               bannerIds: Array.isArray(item.previewIds) ? item.previewIds.filter((x: any) => typeof x === 'string') : undefined,
             }))
             setHistory(list)
-            writeHistoryCache(list) // キャッシュ保存
+            if (userId) writeHistoryCache(userId, list) // 所有者を記録してキャッシュ保存
           }
         } else {
           toast.error('履歴の取得に失敗しました')
@@ -238,7 +251,7 @@ export default function BannerHistoryPage() {
       setIsStale(false)
       setPhase('idle')
     }
-  }, [isGuest, status, fetchBatchImages])
+  }, [isGuest, status, userId, fetchBatchImages])
 
   useEffect(() => {
     loadHistory()
