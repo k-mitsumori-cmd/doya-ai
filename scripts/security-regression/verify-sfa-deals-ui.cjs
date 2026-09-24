@@ -21,7 +21,7 @@ const { isSfaSummary } = load('src/lib/sfa/summary.ts');
 const summary = { totalCount: 501, openCount: 501, staleCount: 0, openTaskCount: 0, openTotal: '1000000', weighted: '500000', wonTotal: '0' };
 
 function ui({ failSummary = false, failContinuation = false } = {}) {
-  const rows = Array.from({ length: 501 }, (_, index) => ({ id: String(index), stageId: 'stage-1', amount: 1, status: 'open' }));
+  const rows = Array.from({ length: 501 }, (_, index) => ({ id: String(index), stageId: 'stage-1', amount: 1, status: 'open', openTaskCount: 0 }));
   const context = {
     ready: true, orgSlug: 'org-1', nextCursor: null, dealsLoading: false, loadingMore: false,
     stages: [], deals: [], totalCount: 0, stageSummary: [], summary: null,

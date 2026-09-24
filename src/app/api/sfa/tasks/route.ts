@@ -15,9 +15,14 @@ export async function GET(req: NextRequest) {
   if (!Number.isSafeInteger(page) || page < 1 || page > 1000000) {
     return NextResponse.json({ error: 'ページ番号が不正です' }, { status: 400 })
   }
+  const rawDealId = req.nextUrl?.searchParams.get('dealId')
+  const dealId = rawDealId?.trim() || null
+  if (rawDealId !== null && rawDealId !== undefined && (!dealId || dealId.length > 128)) {
+    return NextResponse.json({ error: '商談の指定が正しくありません' }, { status: 400 })
+  }
   const pageSize = 200
   const rows = await prisma.sfaTask.findMany({
-    where: { organizationId: ctx.organizationId },
+    where: { organizationId: ctx.organizationId, ...(dealId ? { dealId } : {}) },
     orderBy: [{ status: 'desc' }, { dueDate: 'asc' }, { createdAt: 'desc' }, { id: 'asc' }],
     skip: (page - 1) * pageSize,
     take: pageSize + 1,

@@ -220,6 +220,11 @@ if (sfaDealsUi.error || sfaDealsUi.status !== 0) {
   console.error('Security regression failed: verify-sfa-deals-ui.cjs');
   process.exit(1);
 }
+const sfaDealTasksUi = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-deal-tasks-ui.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaDealTasksUi.error || sfaDealTasksUi.status !== 0) {
+  console.error('Security regression failed: verify-sfa-deal-tasks-ui.cjs');
+  process.exit(1);
+}
 const sfaExportAll = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-export-all.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaExportAll.error || sfaExportAll.status !== 0) {
   console.error('Security regression failed: verify-sfa-export-all.cjs');

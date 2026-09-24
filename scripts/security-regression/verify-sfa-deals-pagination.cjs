@@ -18,6 +18,13 @@ async function verifyCount(count) {
   const foreign = { ...rows[0], id: 'foreign', organizationId: 'org-2', amount: 9000000n };
   const allRows = [...rows, foreign];
   const active = allRows.filter((row) => row.organizationId === 'org-1' && row.isActive);
+  const targetDealId = rows[count - 1]?.id;
+  const taskRows = targetDealId ? [
+    ...Array.from({ length: 250 }, (_, index) => ({ id: `old-${index}`, dealId: 'other-deal', organizationId: 'org-1', status: 'open' })),
+    ...Array.from({ length: 7 }, (_, index) => ({ id: `target-${index}`, dealId: targetDealId, organizationId: 'org-1', status: 'open' })),
+    { id: 'completed', dealId: targetDealId, organizationId: 'org-1', status: 'done' },
+    { id: 'foreign-task', dealId: targetDealId, organizationId: 'org-2', status: 'open' },
+  ] : [];
   let listQueries = 0;
   let groupQueries = 0;
   const prisma = {
@@ -41,6 +48,15 @@ async function verifyCount(count) {
       },
     },
     sfaAccount: { findMany: async () => [] },
+    sfaTask: { groupBy: async ({ where, by }) => {
+      assert.equal(where.organizationId, 'org-1');
+      assert.deepEqual(JSON.parse(JSON.stringify(by)), ['dealId']);
+      const matches = taskRows.filter((task) => task.organizationId === where.organizationId &&
+        where.dealId.in.includes(task.dealId) && task.status !== 'done');
+      const counts = new Map();
+      for (const task of matches) counts.set(task.dealId, (counts.get(task.dealId) || 0) + 1);
+      return [...counts].map(([dealId, number]) => ({ dealId, _count: { _all: number } }));
+    } },
   };
   const { GET } = load('src/app/api/sfa/deals/route.ts', {
     'next/server': { NextResponse: Response },
@@ -65,6 +81,7 @@ async function verifyCount(count) {
     for (const deal of body.deals) {
       assert(!seen.has(deal.id), 'Each deal is returned once');
       assert.notEqual(deal.id, 'foreign');
+      assert.equal(deal.openTaskCount, deal.id === targetDealId ? 7 : 0);
       seen.add(deal.id);
     }
     cursor = body.nextCursor;

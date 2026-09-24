@@ -55,11 +55,25 @@ export async function GET(req: NextRequest) {
   const deals = page.slice(0, pageSize)
   // 取引先名を引く
   const accIds = Array.from(new Set(deals.map((d) => d.accountId).filter(Boolean))) as string[]
-  const accs = accIds.length
-    ? await prisma.sfaAccount.findMany({ where: { id: { in: accIds }, organizationId: ctx.organizationId }, select: { id: true, name: true } })
-    : []
+  const [accs, taskGroups] = await Promise.all([
+    accIds.length
+      ? prisma.sfaAccount.findMany({ where: { id: { in: accIds }, organizationId: ctx.organizationId }, select: { id: true, name: true } })
+      : Promise.resolve([]),
+    deals.length
+      ? prisma.sfaTask.groupBy({
+          by: ['dealId'],
+          where: { organizationId: ctx.organizationId, dealId: { in: deals.map((d) => d.id) }, status: { not: 'done' } },
+          _count: { _all: true },
+        })
+      : Promise.resolve([]),
+  ])
   const accMap = Object.fromEntries(accs.map((a) => [a.id, a.name]))
-  const withName = deals.map((d) => ({ ...d, accountName: d.accountId ? accMap[d.accountId] || null : null }))
+  const taskCount = new Map(taskGroups.map((row) => [row.dealId, row._count._all]))
+  const withName = deals.map((d) => ({
+    ...d,
+    accountName: d.accountId ? accMap[d.accountId] || null : null,
+    openTaskCount: taskCount.get(d.id) || 0,
+  }))
 
   return NextResponse.json(
     {

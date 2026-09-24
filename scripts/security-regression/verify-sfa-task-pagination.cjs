@@ -2,7 +2,7 @@ const fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),asser
 const {load:loadModule,check,results}=require('./load-typescript.cjs');
 function api(rows){return loadModule('src/app/api/sfa/tasks/route.ts',{
  'next/server':{NextResponse:Response},'@/lib/sfa/access':{getSfaContext:async()=>({organizationId:'org'}),orgSlugFrom:()=>null},
- '@/lib/prisma':{prisma:{sfaTask:{findMany:async({where,orderBy,skip,take})=>rows.filter(r=>r.organizationId===where.organizationId).sort((a,b)=>{for(const order of orderBy){const [k,d]=Object.entries(order)[0];if(a[k]===b[k])continue;return (a[k]<b[k]?-1:1)*(d==='asc'?1:-1)}return 0}).slice(skip,skip+take)}}},
+ '@/lib/prisma':{prisma:{sfaTask:{findMany:async({where,orderBy,skip,take})=>rows.filter(r=>r.organizationId===where.organizationId&&(!where.dealId||r.dealId===where.dealId)).sort((a,b)=>{for(const order of orderBy){const [k,d]=Object.entries(order)[0];if(a[k]===b[k])continue;return (a[k]<b[k]?-1:1)*(d==='asc'?1:-1)}return 0}).slice(skip,skip+take)},sfaDeal:{findMany:async()=>[]}}},
 });}
 const source=fs.readFileSync('src/app/sfa/[orgSlug]/tasks/page.tsx','utf8'),ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let code;
 function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='load')code=n.initializer.arguments[0].getText(ast);ts.forEachChild(n,visit)}visit(ast);
@@ -16,6 +16,14 @@ function ui(fetch){const state={tasks:[],page:0,more:false,error:null,loading:fa
   assert.equal(f.state.tasks.length,count);assert.equal(new Set(f.state.tasks.map(t=>t.id)).size,count);assert.equal(f.state.error,null);
  });
  for(const page of ['0','-1','1.5','bad'])await check('invalid page '+page,async()=>assert.equal((await api([]).GET({nextUrl:new URL('http://offline.invalid/?page='+page)})).status,400));
+ await check('deal filter reaches every task without including other deals or organizations',async()=>{
+  const rows=Array.from({length:501},(_,i)=>({id:String(i).padStart(4,'0'),status:'open',organizationId:'org',createdAt:0,dueDate:null,dealId:i<250?'deal-a':'deal-b'}));
+  rows.push({id:'foreign',status:'open',organizationId:'other',createdAt:0,dueDate:null,dealId:'deal-a'});
+  const route=api(rows);const seen=new Set();let page=1,hasMore;
+  do{const response=await route.GET({nextUrl:new URL(`http://offline.invalid/?dealId=deal-a&page=${page}`)});assert.equal(response.status,200);const body=await response.json();for(const task of body.tasks){assert.equal(task.dealId,'deal-a');assert(!seen.has(task.id));seen.add(task.id)}hasMore=body.hasMore;page++}while(hasMore);
+  assert.equal(seen.size,250);
+  assert.equal((await route.GET({nextUrl:new URL('http://offline.invalid/?dealId=')})).status,400);
+ });
  await check('failed continuation retains rows and page; refresh replaces',async()=>{
   let fail=false;const f=ui(async url=>fail?Response.json({error:'offline'},{status:500}):Response.json({tasks:[{id:'a'}],page:1,hasMore:true}));
   await f.fn();fail=true;await f.fn(2);assert.equal(f.state.tasks.length,1);assert.equal(f.state.page,1);assert.equal(f.state.error,'offline');fail=false;await f.fn();assert.equal(f.state.tasks.length,1);assert.equal(f.state.error,null);

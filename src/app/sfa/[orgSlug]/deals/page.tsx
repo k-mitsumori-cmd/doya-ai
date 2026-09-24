@@ -25,6 +25,7 @@ interface Deal {
   wonAt: string | null
   lostAt: string | null
   lastActivityAt: string | null
+  openTaskCount: number
 }
 interface Account { id: string; name: string }
 interface Task { id: string; title: string; status: string; dueDate: string | null; dealId: string | null }
@@ -42,6 +43,7 @@ function isDealPage(value: unknown): value is DealPage {
   if (!value || typeof value !== 'object') return false
   const page = value as Partial<DealPage>
   return Array.isArray(page.stages) && Array.isArray(page.deals)
+    && page.deals.every((deal) => deal && Number.isSafeInteger(deal.openTaskCount) && deal.openTaskCount >= 0)
     && (page.nextCursor === null || typeof page.nextCursor === 'string')
     && Number.isSafeInteger(page.totalCount) && (page.totalCount as number) >= 0
     && Array.isArray(page.stageSummary)
@@ -92,6 +94,12 @@ export default function SfaDealsPage() {
   const [loadingMore, setLoadingMore] = useState(false)
   const [accounts, setAccounts] = useState<Account[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
+  const [detailTasks, setDetailTasks] = useState<Task[]>([])
+  const [detailTasksPage, setDetailTasksPage] = useState(0)
+  const [detailTasksHasMore, setDetailTasksHasMore] = useState(false)
+  const [detailTasksLoading, setDetailTasksLoading] = useState(false)
+  const [detailTasksError, setDetailTasksError] = useState(false)
+  const [detailTasksRetryPage, setDetailTasksRetryPage] = useState(1)
   const [dealsLoading, setDealsLoading] = useState(true)
   const [dealsError, setDealsError] = useState(false)
   const [tasksError, setTasksError] = useState(false)
@@ -105,6 +113,7 @@ export default function SfaDealsPage() {
   const dealsRequest = useRef<AbortController | null>(null)
   const moreDealsRequest = useRef<AbortController | null>(null)
   const tasksRequest = useRef<AbortController | null>(null)
+  const detailTasksRequest = useRef<AbortController | null>(null)
   const accountsRequest = useRef<AbortController | null>(null)
   const activitiesRequest = useRef<AbortController | null>(null)
   const [open, setOpen] = useState(false)
@@ -193,6 +202,37 @@ export default function SfaDealsPage() {
       .then((d) => { if (!controller.signal.aborted) setTasks(d.tasks) })
       .catch(() => { if (!controller.signal.aborted) setTasksError(true) })
   }, [ready, orgSlug])
+  const loadDetailTasks = useCallback(async (dealId: string, page = 1) => {
+    if (!ready) return
+    detailTasksRequest.current?.abort()
+    const controller = new AbortController()
+    detailTasksRequest.current = controller
+    setDetailTasksLoading(true)
+    setDetailTasksError(false)
+    try {
+      const path = `/api/sfa/tasks?dealId=${encodeURIComponent(dealId)}&page=${page}`
+      const response = await fetch(path, sfaInit(orgSlug, { signal: controller.signal }))
+      const data = await response.json()
+      if (!response.ok || !Array.isArray(data.tasks) || data.page !== page || typeof data.hasMore !== 'boolean' ||
+          !data.tasks.every((task: Task) => task.dealId === dealId)) {
+        throw new Error(data.error || '商談のタスクを取得できませんでした')
+      }
+      if (controller.signal.aborted) return
+      setDetailTasks((current) => page === 1
+        ? data.tasks
+        : [...current, ...data.tasks.filter((task: Task) => !current.some((item) => item.id === task.id))])
+      setDetailTasksPage(page)
+      setDetailTasksHasMore(data.hasMore)
+      setDetailTasksRetryPage(1)
+    } catch {
+      if (!controller.signal.aborted) {
+        setDetailTasksError(true)
+        setDetailTasksRetryPage(page)
+      }
+    } finally {
+      if (!controller.signal.aborted) setDetailTasksLoading(false)
+    }
+  }, [ready, orgSlug])
   const loadAccounts = useCallback(() => {
     if (!ready) return
     accountsRequest.current?.abort()
@@ -261,6 +301,7 @@ export default function SfaDealsPage() {
       dealsRequest.current?.abort()
       moreDealsRequest.current?.abort()
       tasksRequest.current?.abort()
+      detailTasksRequest.current?.abort()
       accountsRequest.current?.abort()
       activitiesRequest.current?.abort()
     }
@@ -384,9 +425,12 @@ export default function SfaDealsPage() {
       }))
       if (!res.ok) throw new Error()
       loadTasks()
+      if (detail?.id === t.dealId) loadDetailTasks(detail.id)
+      load()
     } catch {
       toast.error('更新に失敗しました')
       loadTasks()
+      if (detail?.id === t.dealId) loadDetailTasks(detail.id)
     }
   }
 
@@ -446,6 +490,8 @@ export default function SfaDealsPage() {
       toast.success(`タスクを${ok}件追加しました`)
       setAiModal(null)
       loadTasks()
+      if (detail?.id === aiModal.deal.id) loadDetailTasks(detail.id)
+      load()
     } catch {
       toast.error('追加に失敗しました')
     } finally {
@@ -482,11 +528,16 @@ export default function SfaDealsPage() {
     setDetailActs([])
     setActivitiesCursor(null)
     setActivitiesTotal(0)
+    setDetailTasks([])
+    setDetailTasksPage(0)
+    setDetailTasksHasMore(false)
+    setDetailTasksRetryPage(1)
     setActSubject('')
     setNewTaskTitle('')
     setNewTaskDue('')
     // 活動タイムライン（この商談のみ）
     loadActivities(d.id)
+    loadDetailTasks(d.id)
   }
 
   const saveDetail = async () => {
@@ -536,6 +587,8 @@ export default function SfaDealsPage() {
       if (!res.ok) throw new Error(d.error)
       setNewTaskTitle(''); setNewTaskDue('')
       loadTasks()
+      loadDetailTasks(detail.id)
+      load()
     } catch (e: any) {
       toast.error(e.message)
     } finally {
@@ -575,8 +628,6 @@ export default function SfaDealsPage() {
   const boardStages: Stage[] = unassignedCount
     ? [...stages, { id: '__unassigned__', name: '未分類', order: Number.MAX_SAFE_INTEGER, probability: 0, color: '#94a3b8', isWon: false, isLost: false }]
     : stages
-
-  const detailTasks = detail ? tasks.filter((t) => t.dealId === detail.id) : []
 
   return (
     <div className="p-4 lg:p-6">
@@ -670,6 +721,7 @@ export default function SfaDealsPage() {
               <div className="space-y-2">
                 {col.map((d) => {
                   const dealTasks = tasksOf(d.id)
+                  const previewTasks = dealTasks.slice(0, 3)
                   return (
                     <div
                       key={d.id}
@@ -716,9 +768,9 @@ export default function SfaDealsPage() {
                         </div>
 
                         {/* タスク（未完了。チェックで完了） */}
-                        {dealTasks.length > 0 && (
+                        {d.openTaskCount > 0 && (
                           <div data-no-drag className="mt-2 pt-2 border-t border-slate-100 space-y-1">
-                            {dealTasks.slice(0, 3).map((t) => (
+                            {previewTasks.map((t) => (
                               <div key={t.id} className="flex items-center gap-1.5">
                                 <button
                                   onClick={() => toggleTask(t)}
@@ -733,9 +785,9 @@ export default function SfaDealsPage() {
                                 )}
                               </div>
                             ))}
-                            {dealTasks.length > 3 && (
+                            {d.openTaskCount > previewTasks.length && (
                               <button onClick={() => openDetail(d)} className="text-[10px] font-black text-slate-400 hover:text-green-600">
-                                ほか{dealTasks.length - 3}件のタスク…
+                                ほか{d.openTaskCount - previewTasks.length}件のタスク…
                               </button>
                             )}
                           </div>
@@ -930,7 +982,9 @@ export default function SfaDealsPage() {
                 <button onClick={addDetailTask} disabled={taskBusy || !newTaskTitle.trim()} className="px-4 py-2 rounded-xl bg-green-600 text-white font-black text-sm disabled:opacity-50">追加</button>
               </div>
               <div className="space-y-1.5">
-                {detailTasks.length === 0 && !tasksError && <p className="text-xs font-bold text-slate-300">タスクはまだありません</p>}
+                {detailTasksError && <p role="alert" className="text-xs font-bold text-red-700">商談のタスクを読み込めませんでした。<button type="button" onClick={() => loadDetailTasks(detail.id, detailTasksRetryPage)} className="underline">再試行</button></p>}
+                {detailTasksLoading && <p role="status" className="text-xs font-bold text-slate-400">タスクを読み込んでいます…</p>}
+                {detailTasks.length === 0 && detailTasksPage > 0 && !detailTasksLoading && !detailTasksError && <p className="text-xs font-bold text-slate-300">タスクはまだありません</p>}
                 {detailTasks.map((t) => (
                   <div key={t.id} className="flex items-center gap-2 bg-slate-50 rounded-xl px-3 py-2">
                     <button
@@ -947,6 +1001,8 @@ export default function SfaDealsPage() {
                     )}
                   </div>
                 ))}
+                {detailTasksPage > 0 && <p className="text-xs text-slate-500">{detailTasks.length}件を表示中{detailTasksHasMore ? '（続きがあります）' : ''}</p>}
+                {detailTasksHasMore && <button type="button" onClick={() => loadDetailTasks(detail.id, detailTasksPage + 1)} disabled={detailTasksLoading || detailTasksError} className="rounded-lg border px-3 py-2 text-xs disabled:opacity-50">次の200件を表示</button>}
               </div>
             </div>
 
