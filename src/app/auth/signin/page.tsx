@@ -29,7 +29,7 @@ function SignInContent() {
 
   const handleGoogleLogin = () => {
     setIsLoading(true)
-    signIn('google', { callbackUrl })
+    signIn('google', { callbackUrl }, callbackUrl.startsWith('/hr/invite/') ? { prompt: 'select_account' } : undefined)
   }
 
   return (
