@@ -1,4 +1,4 @@
-const fs=require('fs'),ts=require('typescript'),vm=require('vm'),assert=require('node:assert/strict'),{check}=require('./load-typescript.cjs');
+const fs=require('fs'),ts=require('typescript'),vm=require('vm'),assert=require('node:assert/strict'),{check,load}=require('./load-typescript.cjs');
 const source=fs.readFileSync('src/app/cunning/live/[sessionId]/page.tsx','utf8'),ast=ts.createSourceFile('live.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);
 function decl(name){let out;function walk(n){if(ts.isVariableStatement(n)&&n.declarationList.declarations.some(d=>d.name.getText(ast)===name))out=n.getText(ast);ts.forEachChild(n,walk)}walk(ast);assert(out);return out}
 function run(code,env){vm.runInNewContext(ts.transpileModule(code,{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.CommonJS}}).outputText,{setTranscriptionIssue:()=>{},finishingRef:{current:false},refreshAudioRetry:()=>{},windowClientRef:{current:null},startWindowCycle:()=>{},finalAudioRetryRef:{current:{hasPending:()=>false}},recordingVersionRef:{current:1},recordingClientRef:{current:null},mountedRef:{current:true},pendingTranscriptIdsRef:{current:[]},requestAnswer:()=>{},...env})}
@@ -26,8 +26,8 @@ for(const started of [false,true])await check('unmount '+(started?'records remai
 for(const kind of ['active','ended','http','invalid','stale'])await check('session baseline '+kind,async()=>{
  let cleanup,resolve,state='loading';const baseline={current:0};const pending=new Promise(r=>resolve=r);
  const code=source.slice(source.indexOf('  // Load the saved cumulative baseline'),source.indexOf('  // 確認失敗や旧レスポンス'));
- run(code,{useEffect:f=>cleanup=f(),sessionId:'s',setSessionState:v=>state=v,durationBaseRef:baseline,setMode:()=>{},modeRef:{current:'sales'},fetch:()=>pending});if(kind==='stale')cleanup();
- resolve({ok:kind!=='http',json:async()=>({session:{durationSec:kind==='invalid'?-1:60,status:kind==='ended'?'ended':'active'}})});await flush();await flush();
+ run(code,{useEffect:f=>cleanup=f(),sessionId:'s',setSessionState:v=>state=v,durationBaseRef:baseline,setMode:()=>{},modeRef:{current:'sales'},setLines:()=>{},setAnswers:()=>{},setHistoryIncomplete:()=>{},setInterruptedRecording:()=>{},hasContentRef:{current:false},recentRef:{current:[]},restoreCunningLiveHistory:load('src/lib/cunning/live-history.ts').restoreCunningLiveHistory,fetch:()=>pending});if(kind==='stale')cleanup();
+ resolve({ok:kind!=='http',json:async()=>({session:{id:'s',durationSec:kind==='invalid'?-1:60,status:kind==='ended'?'ended':'active',liveHistory:{transcripts:[],answers:[]}}})});await flush();await flush();
  assert.equal(state,kind==='stale'?'loading':['http','invalid'].includes(kind)?'error':kind==='ended'?'ended':'ready');assert.equal(baseline.current,['http','invalid','stale'].includes(kind)?0:60);cleanup();
 });
 await check('ended/loading session and duplicate start are gated',()=>{const text=decl('start');assert(text.includes("sessionState !== 'ready' || startedRef.current || startingRef.current"));assert(text.indexOf('startingRef.current = true')<text.indexOf('navigator.mediaDevices.getUserMedia'));assert(text.includes('finally'));assert(text.includes('startingRef.current = false'));assert(text.includes('if (!runningRef.current) { mic.getTracks().forEach((t) => t.stop()); return }'))});

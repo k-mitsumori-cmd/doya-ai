@@ -4,7 +4,7 @@ export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
-import { readCunningTranscripts } from '@/lib/cunning/history-read'
+import { readCunningTranscripts, readRecentCunningTranscripts } from '@/lib/cunning/history-read'
 import { encodeCunningTranscriptCursor, encodeCunningCursor } from '@/lib/cunning/history-cursor'
 import { cunningReportFingerprint, cunningReportStatus } from '@/lib/cunning/report-freshness'
 import { writeCunningSession } from '@/lib/cunning/session-write'
@@ -25,17 +25,31 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
   const p = await ctx.params
+  const liveView = new URL(req.url).searchParams.get('view') === 'live'
 
   return prisma.$transaction(async tx => {
     if (!await tx.user.findUnique({ where: { id: userId }, select: { id: true } })) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
     const session = await tx.cunningSession.findUnique({
       where: { id: p.id },
       include: {
-        answers: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], take: 201 },
+        answers: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], take: liveView ? 0 : 201 },
         _count: { select: { transcripts: true, answers: true } },
       },
     })
     if (!session || session.userId !== userId || session.status === 'deleted') return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+    if (liveView) {
+      const liveHistory = {
+        transcripts: await readRecentCunningTranscripts(tx, userId, p.id, 81),
+        answers: (await tx.cunningAnswer.findMany({
+          where: { sessionId: p.id }, orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: 200,
+        })).reverse(),
+        totals: session._count,
+      }
+      return NextResponse.json({ session: {
+        id: session.id, durationSec: session.durationSec, status: session.status,
+        recordingVersion: session.recordingVersion, mode: session.mode, liveHistory,
+      } }, { headers: { 'Cache-Control': 'no-store' } })
+    }
     const transcripts = await readCunningTranscripts(tx, userId, p.id, 501)
     const reportStatus = session.report ? cunningReportStatus(session.report, await cunningReportFingerprint(tx, userId, p.id, session.updatedAt)) : null
     const pagination = {

@@ -25,5 +25,5 @@ for(const kind of ['success','limit','unlimited','http','network','guest','inval
 for(const seconds of [1,-1])await check('timer stop with remaining '+seconds,()=>{
  let callback,ended=0;const elapsedRef={current:0};evaluate(tick,{useEffect:f=>f(),running:true,sessionId:'test',stopAll:()=>{},finishSession:()=>ended++,elapsedRef,remainingSecRef:{current:seconds},setInterval:f=>{callback=f;return 1},clearInterval:()=>{},setElapsed:()=>{},showServiceLimit:()=>{},fetch:()=>Promise.resolve({})});callback();assert.equal(ended,seconds===1?1:0);assert.equal(elapsedRef.current,1);
 });
-await check('both recording controls and handler block unverified usage',()=>{assert.equal((source.match(/disabled=\{allowanceState !== 'ready' \|\| sessionState !== 'ready'\}/g)||[]).length,2);assert(source.includes("if (allowanceState !== 'ready' || remainingSecRef.current === null || remainingSecRef.current === 0) return"))});
+await check('both recording controls and handler block unverified usage',()=>{assert.equal((source.match(/disabled=\{allowanceState !== 'ready' \|\| sessionState !== 'ready' \|\| \(interruptedRecording && recordingVersionRef\.current === 2\)\}/g)||[]).length,2);assert(source.includes("if (allowanceState !== 'ready' || remainingSecRef.current === null || remainingSecRef.current === 0) return"))});
 })().catch(e=>{console.error(e);process.exitCode=1});

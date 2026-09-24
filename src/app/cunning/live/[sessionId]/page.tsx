@@ -5,6 +5,7 @@ import { createFinalAudioRetry } from '@/lib/cunning/final-audio-retry'
 import { createPendingWork } from '@/lib/cunning/pending-work'
 import { createAudioWindowClient, type AudioWindowHandle } from '@/lib/cunning/audio-window-client'
 import { recordingAllowance } from '@/lib/cunning/allowance-client'
+import { restoreCunningLiveHistory } from '@/lib/cunning/live-history'
 
 import { showServiceLimit } from '@/lib/service-limit-ui'
 
@@ -76,6 +77,8 @@ export default function CunningLivePage() {
   const [allowanceState, setAllowanceState] = useState<'loading' | 'ready' | 'error' | 'limit'>('loading')
   const [allowanceRetry, setAllowanceRetry] = useState(0)
   const [sessionState, setSessionState] = useState<'loading' | 'ready' | 'ended' | 'error'>('loading')
+  const [interruptedRecording, setInterruptedRecording] = useState(false)
+  const [historyIncomplete, setHistoryIncomplete] = useState(false)
   const [savingIssue, setSavingIssue] = useState(false)
   const [incompleteAudio, setIncompleteAudio] = useState(false)
   const [, refreshAudioRetry] = useState(0)
@@ -225,6 +228,9 @@ const SILENCE_PEAK = 8
     })
     if (!saved.ok) throw new Error('終了情報の保存に失敗しました')
     }
+    if (complete) {
+      try { sessionStorage.removeItem(`cunning-live-recording:${sessionId}`) } catch { /* storage unavailable */ }
+    }
     setStatusMsg('停止しました')
     } catch {
       endedRef.current = false
@@ -281,17 +287,39 @@ const SILENCE_PEAK = 8
     }
   }, [focusMode, running, captureKind])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const warnBeforeLeave = (event: BeforeUnloadEvent) => {
+      if (!runningRef.current && !finishingRef.current && !finalAudioRetryRef.current.hasPending() &&
+        !windowClientRef.current?.failedCount()) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', warnBeforeLeave)
+    return () => window.removeEventListener('beforeunload', warnBeforeLeave)
+  }, [])
+
   // Load the saved cumulative baseline before any recording starts.
   useEffect(() => {
     let active = true
     setSessionState('loading')
-    fetch(`/api/cunning/sessions/${sessionId}`, { cache: 'no-store' })
+    fetch(`/api/cunning/sessions/${sessionId}?view=live`, { cache: 'no-store' })
       .then(async (r) => { if (!r.ok) throw new Error('Session unavailable'); return r.json() })
       .then((d) => {
         if (!active) return
-        if (!Number.isSafeInteger(d?.session?.durationSec) || d.session.durationSec < 0) throw new Error('Invalid duration')
+        if (!Number.isSafeInteger(d?.session?.durationSec) || d.session.durationSec < 0 || d.session.id !== sessionId) throw new Error('Invalid session')
+        const restored = restoreCunningLiveHistory(d.session.liveHistory)
         recordingVersionRef.current = d.session.recordingVersion === 2 ? 2 : 1
         durationBaseRef.current = d.session.durationSec
+        setLines(restored.lines)
+        setAnswers(restored.answers)
+        setHistoryIncomplete(restored.hasMore)
+        hasContentRef.current = restored.lines.length > 0 || restored.answers.length > 0
+        recentRef.current = restored.lines.filter(line => line.speaker === 'remote').slice(-12).map(line => line.text)
+        try {
+          setInterruptedRecording(sessionStorage.getItem(`cunning-live-recording:${sessionId}`) === '1')
+          sessionStorage.removeItem(`cunning-live-recording:${sessionId}`)
+        } catch { /* storage unavailable */ }
         setSessionState(d.session.status === 'active' ? 'ready' : 'ended')
         if (d.session.mode) { setMode(d.session.mode); modeRef.current = d.session.mode }
       })
@@ -737,6 +765,7 @@ const SILENCE_PEAK = 8
 
   const start = async () => {
     if (sessionState !== 'ready' || startedRef.current || startingRef.current) return
+    if (interruptedRecording && recordingVersionRef.current === 2) return
     if (allowanceState !== 'ready' || remainingSecRef.current === null || remainingSecRef.current === 0) return
     try {
       startingRef.current = true
@@ -851,6 +880,7 @@ const SILENCE_PEAK = 8
       }
       startedRef.current = true
       runningRef.current = true
+      try { sessionStorage.setItem(`cunning-live-recording:${sessionId}`, '1') } catch { /* storage unavailable */ }
       setRunning(true)
       setStatusMsg(
         entertainment
@@ -1045,6 +1075,14 @@ const SILENCE_PEAK = 8
 
   return (
     <div className="p-4 lg:p-6 max-w-6xl mx-auto">
+      {interruptedRecording && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <p>前回の録音中または保存中に画面が閉じられた可能性があります。保存済みの発話と回答を表示していますが、未送信の音声は復元できません。</p>
+        <Link href={`/cunning/history/${sessionId}`} className="mr-4 mt-2 inline-block font-bold underline">保存済みの内容を確認する</Link>
+        <Link href="/cunning" className="mt-2 inline-block font-bold underline">新しいセッションを作成する</Link>
+      </div>}
+      {historyIncomplete && <div role="status" className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm">
+        この画面には保存済み履歴の一部を表示しています。<Link href={`/cunning/history/${sessionId}`} className="font-bold underline">すべての履歴を見る</Link>
+      </div>}
       {!!windowClientRef.current?.failedCount() && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
         <p>保存できていない音声があります。この画面を閉じると、保持している音声を再送できなくなります。</p>
         <p>処理中の場合は5分30秒ほど待って再試行してください。再受付は録音停止後15分以内です。</p>
@@ -1067,7 +1105,7 @@ const SILENCE_PEAK = 8
       {sessionState !== 'ready' && <div role="status" className="mb-4 rounded-xl border border-slate-200 p-4 text-sm">
         {sessionState === 'loading' && 'セッションを確認しています。'}
         {sessionState === 'error' && <><p>セッションを取得できませんでした。</p><button onClick={() => window.location.reload()} className="font-bold underline">再読み込みする</button></>}
-        {sessionState === 'ended' && <><p>このセッションの録音は終了しています。</p><Link href="/cunning" className="font-bold underline">新しいセッションを作成する</Link></>}
+        {sessionState === 'ended' && <><p>このセッションの録音は終了しています。</p><Link href={`/cunning/history/${sessionId}`} className="mr-4 font-bold underline">保存済みの履歴・議事録を見る</Link><Link href="/cunning" className="font-bold underline">新しいセッションを作成する</Link></>}
       </div>}
       {savingIssue && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
         <p>録音を停止しましたが、最後の音声・回答・利用時間・終了情報の保存を確認できませんでした。この画面を閉じずに再試行してください。</p>
@@ -1328,7 +1366,7 @@ const SILENCE_PEAK = 8
                 {/* 開始ボタンを中央に・緑で目立たせる（青のガイド/モードチップと色で区別） */}
                 <button
                   onClick={start}
-                  disabled={allowanceState !== 'ready' || sessionState !== 'ready'}
+                  disabled={allowanceState !== 'ready' || sessionState !== 'ready' || (interruptedRecording && recordingVersionRef.current === 2)}
                   className="mt-1 px-8 py-4 rounded-full bg-gradient-to-r from-emerald-400 to-green-500 text-white font-black text-xl shadow-xl shadow-green-500/30 hover:scale-[1.03] transition-transform flex items-center gap-2"
                 >
                   <span className="material-symbols-outlined text-3xl">play_circle</span>
@@ -1524,7 +1562,7 @@ const SILENCE_PEAK = 8
               ) : (
                 <button
                   onClick={start}
-                  disabled={allowanceState !== 'ready' || sessionState !== 'ready'}
+                  disabled={allowanceState !== 'ready' || sessionState !== 'ready' || (interruptedRecording && recordingVersionRef.current === 2)}
                   className="px-4 py-2 rounded-full bg-gradient-to-r from-[#2D8CFF] to-[#0B5CFF] text-white font-black text-sm"
                 >
                   ライブ開始
