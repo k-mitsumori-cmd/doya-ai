@@ -21,16 +21,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
     }
 
-    const apiToken = process.env.GBIZINFO_API_TOKEN
-    if (!apiToken) {
-      return NextResponse.json({ success: true, estimated: null, note: 'APIキー未設定' })
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力形式を確認してください' }, { status: 400 })
     }
-
-    const body = await req.json().catch(() => ({}))
-    const { industry, region, keywords } = (body || {}) as {
+    const { industry, region, keywords } = body as {
       industry?: string
       region?: string
       keywords?: string[]
+    }
+    if ((industry != null && (typeof industry !== 'string' || industry.length > 100))
+      || (region != null && (typeof region !== 'string' || region.length > 100))
+      || (keywords != null && (!Array.isArray(keywords) || keywords.length > 8
+        || keywords.some((keyword) => typeof keyword !== 'string' || keyword.length > 100)))) {
+      return NextResponse.json({ error: '検索条件の入力形式を確認してください' }, { status: 400 })
+    }
+    const apiToken = process.env.GBIZINFO_API_TOKEN
+    if (!apiToken) {
+      return NextResponse.json({ success: true, estimated: null, note: 'APIキー未設定' })
     }
 
     // 検索キーワードの決定: ユーザータグ > 業種代表語
@@ -50,9 +58,10 @@ export async function POST(req: NextRequest) {
       '人材': ['人材', 'スタッフ'],
       'その他': ['株式会社'],
     }
-    const searchKeywords = (keywords && keywords.length > 0)
-      ? keywords.slice(0, 3)
-      : (industry && INDUSTRY_KEYWORDS[industry]) || ['株式会社']
+    const selectedKeywords = keywords?.map((keyword) => keyword.trim()).filter(Boolean).slice(0, 3) || []
+    const industryKeywords = industry && Object.prototype.hasOwnProperty.call(INDUSTRY_KEYWORDS, industry)
+      ? INDUSTRY_KEYWORDS[industry] : undefined
+    const searchKeywords = selectedKeywords.length > 0 ? selectedKeywords : industryKeywords || ['株式会社']
 
     // 都道府県コード解決（エリア指定の場合は最初の県だけサンプリング）
     const prefCodes = region && region !== '全国' ? resolvePrefectureCodes(region) : []
@@ -143,8 +152,8 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     console.error('[doyalist/estimate]', e)
     return NextResponse.json(
-      { success: false, estimated: null, error: e?.message || '推定に失敗しました' },
-      { status: 200 }
+      { success: false, estimated: null, error: '推定に失敗しました' },
+      { status: 500 }
     )
   }
 }

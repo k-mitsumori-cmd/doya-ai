@@ -21,11 +21,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
     }
 
-    const body = await req.json().catch(() => ({}))
-    const { keyword, industry } = body || {}
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力形式を確認してください' }, { status: 400 })
+    }
+    const { keyword, industry } = body
 
-    if (!keyword || typeof keyword !== 'string' || !keyword.trim()) {
-      return NextResponse.json({ error: 'キーワードを入力してください' }, { status: 400 })
+    if (!keyword || typeof keyword !== 'string' || !keyword.trim() || keyword.length > 1000
+      || (industry != null && (typeof industry !== 'string' || industry.length > 100))) {
+      return NextResponse.json({ error: 'キーワードと業界の入力形式を確認してください' }, { status: 400 })
     }
 
     const userInput = keyword.trim().slice(0, 100)

@@ -97,6 +97,8 @@ export default function DoyalistTool() {
   const [expanding, setExpanding] = useState(false)
   const [aiTags, setAiTags] = useState<string[]>([])
   const [activeTags, setActiveTags] = useState<Set<string>>(new Set())
+  const activeTagList = useMemo(() => Array.from(activeTags), [activeTags])
+  const isSignedIn = Boolean(session?.user)
 
   // 実数プレビュー
   const [estimateLoading, setEstimateLoading] = useState(false)
@@ -142,32 +144,42 @@ export default function DoyalistTool() {
 
   // フィルタ条件変更時に実数を推定
   useEffect(() => {
-    if (!session?.user) return
+    setEstimatedCount(null)
+    setEstimateIsApprox(false)
+    setEstimateNote(null)
+    setEstimateLoading(false)
+    if (!isSignedIn) return
     const ctrl = new AbortController()
     const timer = setTimeout(async () => {
       setEstimateLoading(true)
       try {
-        const tagsList = Array.from(activeTags)
         const res = await fetch('/api/doyalist/estimate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ industry, region, keywords: tagsList.length > 0 ? tagsList : undefined }),
+          body: JSON.stringify({ industry, region, keywords: activeTagList.length > 0 ? activeTagList : undefined }),
           signal: ctrl.signal,
         })
         const data = await res.json()
-        if (data?.success) {
+        if (ctrl.signal.aborted) return
+        if (res.ok && data?.success) {
           setEstimatedCount(typeof data.estimated === 'number' ? data.estimated : null)
           setEstimateIsApprox(!!data.isApprox)
           setEstimateNote(data.note || null)
+        } else {
+          setEstimatedCount(null)
+          setEstimateNote('件数を取得できませんでした')
         }
       } catch {
-        /* abort or error: keep last value */
+        if (!ctrl.signal.aborted) {
+          setEstimatedCount(null)
+          setEstimateNote('件数を取得できませんでした')
+        }
       } finally {
-        setEstimateLoading(false)
+        if (!ctrl.signal.aborted) setEstimateLoading(false)
       }
     }, 400) // デバウンス
     return () => { clearTimeout(timer); ctrl.abort() }
-  }, [session, industry, region, Array.from(activeTags).join(',')])
+  }, [isSignedIn, industry, region, activeTagList])
 
   const toggleTag = (tag: string) => {
     setActiveTags((prev) => {
