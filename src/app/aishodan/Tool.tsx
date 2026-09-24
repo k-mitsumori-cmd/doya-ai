@@ -55,7 +55,7 @@ interface Stats {
   schedulingRate: number
   avgMin: number
   byVerdict: Record<string, number>
-  unanswered: Array<{ id: string; text: string }>
+  unanswered: Array<{ id: string; text: string; count: number }>
 }
 
 const VERDICT_STYLE: Record<string, string> = {
@@ -649,14 +649,14 @@ export default function AishodanTool() {
         {/* 未回答質問 = ナレッジ拡充の優先順位 */}
         {stats && stats.unanswered.length > 0 && (
           <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-base font-bold text-slate-900">その場で答えられなかった質問</h2>
+            <h2 className="text-base font-bold text-slate-900">よく出た未回答の質問</h2>
             <p className="mt-1 text-sm text-slate-600 font-semibold">
               資料に根拠が無く「確認して折り返す」と回答したものです。ここを埋めると商談の質が上がります。
             </p>
             <ul className="mt-4 space-y-2">
               {stats.unanswered.slice(0, 12).map((q) => (
                 <li key={q.id} className="rounded-lg bg-slate-50 px-4 py-2.5 text-sm text-slate-700 font-semibold">
-                  {q.text}
+                  {q.text}{q.count > 1 && <span className="ml-2 whitespace-nowrap text-xs font-bold text-blue-700">{q.count}件の商談</span>}
                 </li>
               ))}
             </ul>

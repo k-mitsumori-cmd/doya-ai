@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   //    動いてしまい、数字が事業の実態を表さなくなる。
   const real = { organizationId: ctx.organizationId, room: { isPreview: false } }
 
-  const [total, evaluated, scheduled, byVerdict, unanswered] = await Promise.all([
+  const [total, evaluated, scheduled, byVerdict] = await Promise.all([
     prisma.aishodanSession.count({ where: real }),
     prisma.aishodanSession.count({ where: { ...real, status: 'evaluated' } }),
     // 一次商談の成果。⚠️ 完了率より、こちらの方が事業上の意味が大きい
@@ -25,12 +25,6 @@ export async function GET(req: NextRequest) {
       by: ['verdict'],
       where: { session: real },
       _count: { verdict: true },
-    }),
-    prisma.aishodanQuestion.findMany({
-      where: { session: real, unanswered: true },
-      orderBy: { createdAt: 'desc' },
-      take: 30,
-      select: { id: true, text: true, createdAt: true },
     }),
   ])
 
@@ -64,6 +58,43 @@ export async function GET(req: NextRequest) {
   }
   const avgMin = durationCount > 0 ? Math.round((durationSum / durationCount) * 10) / 10 : 0
 
+  // 未回答の「新着順」では、何度も出る古い質問が消えてしまう。
+  // 表記ゆれの小さいものだけをまとめ、同じ商談での反復は1件として数える。
+  const unansweredByText = new Map<string, { id: string; text: string; sessions: Set<string>; createdAt: Date }>()
+  let questionCursor: string | undefined
+  while (true) {
+    const rows = await prisma.aishodanQuestion.findMany({
+      where: { session: real, unanswered: true },
+      orderBy: { id: 'asc' },
+      take: 501,
+      ...(questionCursor ? { cursor: { id: questionCursor }, skip: 1 } : {}),
+      select: { id: true, sessionId: true, text: true, createdAt: true },
+    })
+    const page = rows.slice(0, 500)
+    for (const question of page) {
+      const key = question.text.normalize('NFKC').replace(/\s+/g, ' ').trim().toLocaleLowerCase('ja-JP')
+      if (!key) continue
+      const current = unansweredByText.get(key)
+      if (current) {
+        current.sessions.add(question.sessionId)
+        if (question.createdAt > current.createdAt) {
+          current.id = question.id
+          current.text = question.text
+          current.createdAt = question.createdAt
+        }
+      } else {
+        unansweredByText.set(key, { id: question.id, text: question.text, sessions: new Set([question.sessionId]), createdAt: question.createdAt })
+      }
+    }
+    if (rows.length <= 500) break
+    questionCursor = page[page.length - 1].id
+  }
+  const unanswered = [...unansweredByText.values()]
+    .map((item) => ({ ...item, count: item.sessions.size }))
+    .sort((a, b) => b.count - a.count || b.createdAt.getTime() - a.createdAt.getTime() || b.id.localeCompare(a.id))
+    .slice(0, 12)
+    .map(({ id, text, count }) => ({ id, text, count }))
+
   return NextResponse.json({
     total,
     evaluated,
@@ -74,5 +105,5 @@ export async function GET(req: NextRequest) {
     byVerdict: Object.fromEntries(byVerdict.map((v) => [v.verdict, v._count.verdict])),
     unanswered,
     dropoff,
-  })
+  }, { headers: { 'Cache-Control': 'private, no-store' } })
 }
