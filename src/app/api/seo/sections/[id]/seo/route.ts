@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
 
 export const runtime = 'nodejs'
 export const maxDuration = 120
@@ -10,9 +11,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   try {
     const params = await ctx.params
     const id = params.id
-    const { articleId, headingPath } = await req.json()
+    const owner = await getSeoArticleOwner(req)
+    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
 
-    const section = await prisma.seoSection.findUnique({ where: { id } })
+    const section = await prisma.seoSection.findFirst({ where: { id, article: { is: owner } }, include: { article: true } })
     if (!section) {
       return NextResponse.json({ success: false, error: 'セクションが見つかりません' }, { status: 404 })
     }
@@ -22,7 +24,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
 
     // 記事情報を取得してキーワードを取得
-    const article = await prisma.seoArticle.findUnique({ where: { id: section.articleId } })
+    const article = section.article
     const keywords = article?.keywords as string[] || []
 
     const prompt = `あなたはSEO専門家です。以下の見出しと本文を、SEO観点で強化してください。
@@ -48,17 +50,17 @@ ${keywords.join(', ') || '（未設定）'}
 
     const enhanced = await geminiGenerateText({ model: GEMINI_TEXT_MODEL_DEFAULT, parts: [{ text: prompt }] })
 
-    await prisma.seoSection.update({
-      where: { id },
+    const updated = await prisma.seoSection.updateMany({
+      where: { id, article: { is: owner } },
       data: {
         content: enhanced || section.content,
         status: 'reviewed',
       },
     })
+    if (updated.count !== 1) return NextResponse.json({ success: false, error: 'セクションが見つかりません' }, { status: 404 })
 
     return NextResponse.json({ success: true, content: enhanced })
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 500 })
   }
 }
-
