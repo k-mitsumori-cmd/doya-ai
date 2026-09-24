@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { InviteDeliveryNotice } from '@/components/InviteDeliveryNotice'
@@ -27,8 +27,11 @@ export default function SfaMembersPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
   const ready = !!orgSlug
   const [members, setMembers] = useState<Member[]>([])
+  const [loadState, setLoadState] = useState<'loading' | 'error' | 'ready'>('loading')
   const [myRole, setMyRole] = useState('member')
   const [myMemberId, setMyMemberId] = useState('')
+  const requestSeq = useRef(0)
+  const invalidateRequests = useCallback(() => { requestSeq.current++ }, [])
   const [email, setEmail] = useState('')
   const [role, setRole] = useState('member')
   const [busy, setBusy] = useState(false)
@@ -36,18 +39,31 @@ export default function SfaMembersPage() {
 
   const load = useCallback(() => {
     if (!ready) return
+    const seq = ++requestSeq.current
+    setLoadState('loading')
+    setMyRole('member')
+    setMyMemberId('')
     fetch('/api/sfa/members', sfaInit(orgSlug))
-      .then((r) => r.json())
-      .then((d) => {
-        setMembers(d.members || [])
-        setMyRole(d.myRole || 'member')
-        setMyMemberId(d.myMemberId || '')
+      .then(async (r) => {
+        if (!r.ok) throw new Error('Members request failed')
+        return r.json()
       })
-      .catch(() => {})
+      .then((d) => {
+        if (!Array.isArray(d.members) || typeof d.myRole !== 'string') throw new Error('Invalid members response')
+        if (requestSeq.current !== seq) return
+        setMembers(d.members)
+        setMyRole(d.myRole)
+        setMyMemberId(typeof d.myMemberId === 'string' ? d.myMemberId : '')
+        setLoadState('ready')
+      })
+      .catch(() => { if (requestSeq.current === seq) setLoadState('error') })
   }, [ready, orgSlug])
-  useEffect(() => load(), [load])
+  useEffect(() => {
+    load()
+    return invalidateRequests
+  }, [load, invalidateRequests])
 
-  const canManage = myRole === 'admin' || myRole === 'owner'
+  const canManage = loadState === 'ready' && (myRole === 'admin' || myRole === 'owner')
   // 自分より下位の権限のみ付与可能（サーバ側と一致）
   const assignable = ASSIGNABLE.filter((r) => RANK[r.value] < (RANK[myRole] ?? 0))
 
@@ -137,7 +153,14 @@ export default function SfaMembersPage() {
       )}
 
       <div className="space-y-2">
-        {members.map((m) => {
+        {loadState === 'loading' ? (
+          <p className="py-8 text-center text-slate-500">読み込み中…</p>
+        ) : loadState === 'error' ? (
+          <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-8 text-center">
+            <p className="font-bold text-rose-700">メンバー一覧を読み込めませんでした。時間をおいて再試行してください。</p>
+            <button onClick={load} className="mt-4 rounded-xl border border-rose-300 bg-white px-5 py-2 text-sm font-bold text-rose-700 hover:bg-rose-100">再試行</button>
+          </div>
+        ) : members.map((m) => {
           const isSelf = m.id === myMemberId
           // 自分より下位のメンバーのみ編集可（サーバ側と一致）
           const editable = canManage && !isSelf && RANK[m.role] < (RANK[myRole] ?? 0)

@@ -23,16 +23,27 @@ export default function AttendancePage() {
   const [month, setMonth] = useState(new Date().getMonth() + 1)
   const [data, setData] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
+    const controller = new AbortController()
     setLoading(true)
+    setLoadError(false)
+    setData([])
     const monthStr = `${year}-${String(month).padStart(2, '0')}`
-    fetch(`/api/kintai/attendance?month=${monthStr}`)
-      .then((r) => r.json())
-      .then((d) => setData(d.attendances || []))
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [year, month])
+    fetch(`/api/kintai/attendance?month=${monthStr}`, { signal: controller.signal, cache: 'no-store' })
+      .then(async (r) => {
+        if (!r.ok) throw new Error('Attendance request failed')
+        const response = await r.json()
+        if (!Array.isArray(response.attendances)) throw new Error('Invalid attendance response')
+        return response.attendances
+      })
+      .then((attendances) => { if (!controller.signal.aborted) setData(attendances) })
+      .catch(() => { if (!controller.signal.aborted) setLoadError(true) })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+    return () => controller.abort()
+  }, [year, month, retryCount])
 
   const prevMonth = () => {
     if (month === 1) { setYear(year - 1); setMonth(12) }
@@ -123,7 +134,7 @@ export default function AttendancePage() {
         </div>
 
         {/* ===== Summary Pills with Bear Characters ===== */}
-        <div className="grid grid-cols-3 gap-3">
+        {!loading && !loadError && <div className="grid grid-cols-3 gap-3">
           {/* Days pill */}
           <SummaryPillBear
             bearSrc="/kintai/characters/thumbsup_いいね.png"
@@ -163,7 +174,7 @@ export default function AttendancePage() {
             sub="上限目安: 45時間"
             warning={overtimeWarning}
           />
-        </div>
+        </div>}
 
         {/* ===== Table ===== */}
         {loading ? (
@@ -175,6 +186,11 @@ export default function AttendancePage() {
             />
             <div className="w-10 h-10 rounded-full border-4 border-[#7f19e6]/20 border-t-[#7f19e6] animate-spin" />
             <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          </div>
+        ) : loadError ? (
+          <div role="alert" className="rounded-3xl border border-red-200 bg-red-50 p-8 text-center">
+            <p className="font-bold text-red-800">勤怠データを読み込めませんでした。時間をおいて再試行してください。</p>
+            <button onClick={() => setRetryCount(count => count + 1)} className="mt-4 rounded-xl border border-red-300 bg-white px-5 py-2 text-sm font-bold text-red-700 hover:bg-red-100">再試行</button>
           </div>
         ) : !hasData ? (
           /* Empty state with sleeping bear */

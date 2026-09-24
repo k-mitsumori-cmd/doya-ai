@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { ROLE_LABELS, ROLE_DESCRIPTIONS, EMPLOYMENT_TYPE_LABELS } from '@/lib/kintai/types'
+import { loadAllEmployees } from '@/lib/kintai/load-employees'
 import { EmptyState } from '@/components/EmptyState'
 
 const DEPT_COLORS = [
@@ -27,6 +28,7 @@ export default function EmployeesPage() {
   const [departments, setDepartments] = useState<any[]>([])
   const [workRules, setWorkRules] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [search, setSearch] = useState('')
   const [filterDept, setFilterDept] = useState('')
   const [filterStatus, setFilterStatus] = useState<'' | 'active' | 'inactive'>('')
@@ -39,20 +41,37 @@ export default function EmployeesPage() {
   const [togglingIds, setTogglingIds] = useState(new Set<string>())
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [currentUserRole, setCurrentUserRole] = useState('employee')
+  const loadSeq = useRef(0)
 
   const fetchAll = () => {
+    const seq = ++loadSeq.current
     setLoading(true)
+    setLoadError(false)
+    setCurrentUserRole('employee')
+    const readJson = async (url: string) => {
+      const response = await fetch(url, { cache: 'no-store' })
+      if (!response.ok) throw new Error('Employee data request failed')
+      return response.json()
+    }
     Promise.all([
-      fetch('/api/kintai/employees').then(r => r.json()),
-      fetch('/api/kintai/departments').then(r => r.json()),
-      fetch('/api/kintai/work-rules').then(r => r.json()),
-      fetch('/api/kintai/usage').then(r => r.json()),
-    ]).then(([empData, deptData, ruleData, usageData]) => {
-      setEmployees(empData.employees || [])
-      setDepartments(deptData.departments || [])
-      setWorkRules(ruleData.rules || [])
-      if (usageData.role) setCurrentUserRole(usageData.role)
-    }).catch(console.error).finally(() => setLoading(false))
+      loadAllEmployees((page, pageSize) => readJson(`/api/kintai/employees?page=${page}&pageSize=${pageSize}`)),
+      readJson('/api/kintai/departments'),
+      readJson('/api/kintai/work-rules'),
+      readJson('/api/kintai/usage'),
+    ]).then(([allEmployees, deptData, ruleData, usageData]) => {
+      if (!Array.isArray(deptData.departments) || !Array.isArray(ruleData.rules)) {
+        throw new Error('Invalid employee data response')
+      }
+      if (loadSeq.current !== seq) return
+      setEmployees(allEmployees)
+      setDepartments(deptData.departments)
+      setWorkRules(ruleData.rules)
+      setCurrentUserRole(typeof usageData.role === 'string' ? usageData.role : 'employee')
+    }).catch(() => {
+      if (loadSeq.current === seq) setLoadError(true)
+    }).finally(() => {
+      if (loadSeq.current === seq) setLoading(false)
+    })
   }
 
   useEffect(() => { fetchAll() }, [])
@@ -182,13 +201,13 @@ export default function EmployeesPage() {
               <p className="text-xs text-slate-500">チームメンバーを管理しよう</p>
             </div>
           </div>
-          <button onClick={openCreate} className="flex items-center gap-1.5 px-4 py-2 bg-[#7f19e6] text-white text-sm font-bold rounded-lg hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20">
+          <button onClick={openCreate} disabled={loading || loadError} className="flex items-center gap-1.5 px-4 py-2 bg-[#7f19e6] text-white text-sm font-bold rounded-lg hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20 disabled:opacity-50">
             <span className="material-symbols-outlined text-lg">person_add</span>新規登録
           </button>
         </div>
 
         {/* Stats cards */}
-        {!loading && (
+        {!loading && !loadError && (
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-3 fade-in-up-1">
               <img src="/kintai/characters/hello_挨拶.png" alt="" width={40} height={40} className="bear-bounce" />
@@ -267,6 +286,11 @@ export default function EmployeesPage() {
           <div className="flex flex-col items-center justify-center py-16 gap-4">
             <img src="/kintai/characters/thinking_考え中.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
             <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
+          </div>
+        ) : loadError ? (
+          <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-8 text-center">
+            <p className="font-bold text-red-800">従業員データを読み込めませんでした。時間をおいて再試行してください。</p>
+            <button onClick={fetchAll} className="mt-4 rounded-lg border border-red-300 bg-white px-5 py-2 text-sm font-bold text-red-700 hover:bg-red-100">再試行</button>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center fade-in-up">
