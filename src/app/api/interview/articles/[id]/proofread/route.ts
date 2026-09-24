@@ -11,6 +11,7 @@ export const maxDuration = 120
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
+import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -63,7 +64,6 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     // Gemini API で校正実行
     const apiKey = getGeminiApiKey()
     const model = getModel()
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
     const prompt = `あなたはプロの校正者です。以下の日本語記事を校正・校閲してください。
 
@@ -104,21 +104,9 @@ severity は: high(必ず修正), medium(修正推奨), low(好み)
 ====== 校正対象記事 ======
 ${draft.content.slice(0, 60000)}`
 
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
-      }),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      throw new Error(`Gemini API エラー (${res.status}): ${errText.slice(0, 200)}`)
-    }
-
-    const geminiData = await res.json()
+    const geminiData = await generateInterviewContent(apiKey, model, prompt, {
+      temperature: 0.1, maxOutputTokens: 8192,
+    }, 110_000)
     const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
     // JSON抽出
@@ -154,8 +142,8 @@ ${draft.content.slice(0, 60000)}`
   } catch (e: any) {
     console.error('[interview] proofread error:', e?.message)
     return NextResponse.json(
-      { success: false, error: e?.message || '校正に失敗しました' },
-      { status: 500 }
+      { success: false, error: e instanceof InterviewGeminiError ? e.message : '校正に失敗しました' },
+      { status: e instanceof InterviewGeminiError ? 503 : 500 }
     )
   }
 }

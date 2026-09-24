@@ -12,6 +12,7 @@ export const maxDuration = 120
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, requireDatabase } from '@/lib/interview/access'
+import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
 
 function getGeminiApiKey(): string {
   const key =
@@ -106,7 +107,6 @@ export async function POST(req: NextRequest) {
 
     const apiKey = getGeminiApiKey()
     const model = getModel()
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
     const samplesText = sampleTexts.filter((text) => text.trim())
       .slice(0, 3) // 最大3記事
@@ -146,21 +146,9 @@ category は以下のいずれか: interview, panel, pr, news, column, case_stud
 
 ${samplesText}`
 
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
-      }),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      throw new Error(`Gemini API エラー (${res.status}): ${errText.slice(0, 200)}`)
-    }
-
-    const geminiData = await res.json()
+    const geminiData = await generateInterviewContent(apiKey, model, prompt, {
+      temperature: 0.3, maxOutputTokens: 8192,
+    }, 110_000)
     const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text
 
     let parsedResult: unknown
@@ -234,8 +222,8 @@ ${samplesText}`
   } catch (e: any) {
     console.error('[interview] recipe-generate error:', e?.message)
     return NextResponse.json(
-      { success: false, error: e?.message || 'レシピ自動生成に失敗しました' },
-      { status: 500 }
+      { success: false, error: e instanceof InterviewGeminiError ? e.message : 'レシピ自動生成に失敗しました' },
+      { status: e instanceof InterviewGeminiError ? 503 : 500 }
     )
   }
 }

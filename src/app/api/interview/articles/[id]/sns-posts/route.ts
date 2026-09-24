@@ -10,6 +10,7 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
+import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -134,7 +135,6 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const apiKey = getGeminiApiKey()
     const model = getModel()
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
     const platformSection = validPlatforms
       .map((p) => {
@@ -180,21 +180,9 @@ ${articleSummary}
 
 twitter_thread の場合、content内の各ツイートは "---" で区切ってください。`
 
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 8192 },
-      }),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      throw new Error(`Gemini API エラー (${res.status}): ${errText.slice(0, 200)}`)
-    }
-
-    const geminiData = await res.json()
+    const geminiData = await generateInterviewContent(apiKey, model, prompt, {
+      temperature: 0.7, maxOutputTokens: 8192,
+    }, 50_000)
     const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
     let result: any
@@ -212,8 +200,8 @@ twitter_thread の場合、content内の各ツイートは "---" で区切って
   } catch (e: any) {
     console.error('[interview] sns-posts error:', e?.message)
     return NextResponse.json(
-      { success: false, error: e?.message || 'SNS投稿文の生成に失敗しました' },
-      { status: 500 }
+      { success: false, error: e instanceof InterviewGeminiError ? e.message : 'SNS投稿文の生成に失敗しました' },
+      { status: e instanceof InterviewGeminiError ? 503 : 500 }
     )
   }
 }

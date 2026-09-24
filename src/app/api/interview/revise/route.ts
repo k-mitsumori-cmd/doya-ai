@@ -6,6 +6,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
+import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
 
 function getGeminiApiKey(): string {
   const key = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY
@@ -50,27 +51,13 @@ export async function POST(req: NextRequest) {
 
     const apiKey = getGeminiApiKey()
     const model = process.env.INTERVIEW_GEMINI_MODEL || process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash'
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
     const systemPrompt = 'あなたはプロの編集者です。以下の記事に対して、ユーザーの修正指示に従って修正を行ってください。修正した記事全文をMarkdown形式で出力してください。元の記事の構成やトーンはできるだけ維持し、指示された部分のみを修正してください。'
     const userPrompt = systemPrompt + '\n\n====== 修正指示 ======\n' + instruction.trim() + '\n\n====== 修正対象記事 ======\n' + articleContent.slice(0, 60000)
 
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: userPrompt }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 16384 },
-      }),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      console.error('[interview] revise Gemini API error:', res.status, errText.slice(0, 300))
-      throw new Error('AI修正サービスとの通信に失敗しました (' + res.status + ')')
-    }
-
-    const geminiData = await res.json()
+    const geminiData = await generateInterviewContent(apiKey, model, userPrompt, {
+      temperature: 0.3, maxOutputTokens: 16384,
+    }, 180_000)
     const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
     if (!rawText || rawText.trim().length === 0) {
       throw new Error('AIから修正結果が返されませんでした')
@@ -92,6 +79,6 @@ export async function POST(req: NextRequest) {
     })
   } catch (e: any) {
     console.error('[interview] revise error:', e?.message)
-    return NextResponse.json({ success: false, error: e?.message || 'AI修正中にエラーが発生しました' }, { status: 500 })
+    return NextResponse.json({ success: false, error: e instanceof InterviewGeminiError ? e.message : 'AI修正中にエラーが発生しました' }, { status: e instanceof InterviewGeminiError ? 503 : 500 })
   }
 }

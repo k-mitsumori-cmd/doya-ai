@@ -95,6 +95,11 @@ if (interviewRecipeInput.error || interviewRecipeInput.status !== 0) {
   console.error('Security regression failed: verify-interview-recipe-input.cjs');
   process.exit(1);
 }
+const interviewGeminiRequest = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-gemini-request.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewGeminiRequest.error || interviewGeminiRequest.status !== 0) {
+  console.error('Security regression failed: verify-interview-gemini-request.cjs');
+  process.exit(1);
+}
 const seoArticleAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-article-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (seoArticleAdmission.error || seoArticleAdmission.status !== 0) {
   console.error('Security regression failed: verify-seo-article-admission.cjs');

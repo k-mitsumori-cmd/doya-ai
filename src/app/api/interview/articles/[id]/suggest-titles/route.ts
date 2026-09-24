@@ -10,6 +10,7 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
+import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -68,7 +69,6 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const apiKey = getGeminiApiKey()
     const model = getModel()
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
     const articleSummary = draft.content.slice(0, 5000)
 
@@ -101,21 +101,9 @@ ${articleSummary}
 
 type は keyword / emotional / question / number / quote のいずれか`
 
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.8, maxOutputTokens: 4096 },
-      }),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      throw new Error(`Gemini API エラー (${res.status}): ${errText.slice(0, 200)}`)
-    }
-
-    const geminiData = await res.json()
+    const geminiData = await generateInterviewContent(apiKey, model, prompt, {
+      temperature: 0.8, maxOutputTokens: 4096,
+    }, 50_000)
     const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
     let titles: any[] = []
@@ -134,8 +122,8 @@ type は keyword / emotional / question / number / quote のいずれか`
   } catch (e: any) {
     console.error('[interview] suggest-titles error:', e?.message)
     return NextResponse.json(
-      { success: false, error: e?.message || 'タイトル提案に失敗しました' },
-      { status: 500 }
+      { success: false, error: e instanceof InterviewGeminiError ? e.message : 'タイトル提案に失敗しました' },
+      { status: e instanceof InterviewGeminiError ? 503 : 500 }
     )
   }
 }

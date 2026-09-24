@@ -10,6 +10,7 @@ export const maxDuration = 180
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
+import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -132,7 +133,6 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const apiKey = getGeminiApiKey()
     const model = getModel()
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
     const prompt = `You are a professional translator specializing in media and interview content.
 Translate the following Japanese article into ${langConfig.name} (${langConfig.nativeName}).
@@ -168,21 +168,9 @@ Output ONLY the JSON below. No other text.
 
 ${draft.content.slice(0, 60000)}`
 
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 16384 },
-      }),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      throw new Error(`Gemini API エラー (${res.status}): ${errText.slice(0, 200)}`)
-    }
-
-    const geminiData = await res.json()
+    const geminiData = await generateInterviewContent(apiKey, model, prompt, {
+      temperature: 0.3, maxOutputTokens: 16384,
+    }, 170_000)
     const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
     let result: any
@@ -220,8 +208,8 @@ ${draft.content.slice(0, 60000)}`
   } catch (e: any) {
     console.error('[interview] translate error:', e?.message)
     return NextResponse.json(
-      { success: false, error: e?.message || '翻訳に失敗しました' },
-      { status: 500 }
+      { success: false, error: e instanceof InterviewGeminiError ? e.message : '翻訳に失敗しました' },
+      { status: e instanceof InterviewGeminiError ? 503 : 500 }
     )
   }
 }

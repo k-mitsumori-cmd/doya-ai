@@ -11,6 +11,7 @@ export const maxDuration = 120
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
+import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -62,7 +63,6 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const apiKey = getGeminiApiKey()
     const model = getModel()
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
     const prompt = `あなたはプロのファクトチェッカーです。以下の記事に含まれる事実関係・数値・固有名詞・日付・引用を検証してください。
 
@@ -104,21 +104,9 @@ severity: high(重大な誤り), medium(確認推奨), low(軽微), info(参考�
 ====== 検証対象記事 ======
 ${draft.content.slice(0, 60000)}`
 
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 8192 },
-      }),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      throw new Error(`Gemini API エラー (${res.status}): ${errText.slice(0, 200)}`)
-    }
-
-    const geminiData = await res.json()
+    const geminiData = await generateInterviewContent(apiKey, model, prompt, {
+      temperature: 0.1, maxOutputTokens: 8192,
+    }, 110_000)
     const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
 
     let result: any
@@ -139,8 +127,8 @@ ${draft.content.slice(0, 60000)}`
   } catch (e: any) {
     console.error('[interview] fact-check error:', e?.message)
     return NextResponse.json(
-      { success: false, error: e?.message || 'ファクトチェックに失敗しました' },
-      { status: 500 }
+      { success: false, error: e instanceof InterviewGeminiError ? e.message : 'ファクトチェックに失敗しました' },
+      { status: e instanceof InterviewGeminiError ? 503 : 500 }
     )
   }
 }

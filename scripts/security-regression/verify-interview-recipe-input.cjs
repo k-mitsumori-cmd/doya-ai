@@ -11,12 +11,16 @@ const { POST } = load('src/app/api/interview/recipes/generate/route.ts', {
     getInterviewUser: async () => ({ userId: 'user' }),
     requireDatabase: () => null,
   },
+  '@/lib/interview/gemini-request': {
+    InterviewGeminiError: class InterviewGeminiError extends Error {},
+    generateInterviewContent: async (apiKey) => {
+      assert.equal(apiKey, 'test-key');
+      providerCalls++;
+      return { candidates: [{ content: { parts: [{ text: JSON.stringify(modelResult) }] } }] };
+    },
+  },
 }, {
   process: { env: { GEMINI_API_KEY: 'test-key' } },
-  fetch: async () => {
-    providerCalls++;
-    return Response.json({ candidates: [{ content: { parts: [{ text: JSON.stringify(modelResult) }] } }] });
-  },
 });
 const request = (body) => ({ json: async () => body });
 
