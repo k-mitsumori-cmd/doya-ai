@@ -64,6 +64,21 @@ export function reconcileSelectedOrg(service: string, memberships: Membership[])
   return null
 }
 
+/** 詳細画面を直接開いた場合も、端末に残る組織が現在の所属先か確認する。 */
+export async function ensureSelectedOrg(service: 'quote' | 'aishodan'): Promise<void> {
+  if (!getSelectedOrg(service)) return
+  const response = await fetch(`/api/${service}/organizations`)
+  const data = await response.json().catch(() => null)
+  if (!response.ok) {
+    throw new Error(typeof data?.error === 'string' ? data.error : '組織一覧を取得できませんでした')
+  }
+  if (!Array.isArray(data?.memberships) || !data.memberships.every((member: unknown) =>
+    member !== null && typeof member === 'object' && typeof (member as Membership).slug === 'string')) {
+    throw new Error('組織一覧を確認できませんでした')
+  }
+  reconcileSelectedOrg(service, data.memberships)
+}
+
 /**
  * APIのURLに ?org= を付ける。
  * ⚠️ 全てのAPI呼び出しとダウンロードリンクでこれを通すこと。

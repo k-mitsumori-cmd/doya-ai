@@ -8,7 +8,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { withOrg } from '@/components/org/OrgSwitcher'
+import { ensureSelectedOrg, withOrg } from '@/components/org/OrgSwitcher'
 import { useParams } from 'next/navigation'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 import { notifyError } from '@/lib/ui/notify'
@@ -65,6 +65,7 @@ export default function AishodanSessionDetail() {
     if (!id) return
     setLoading(true)
     try {
+      await ensureSelectedOrg('aishodan')
       const r = await fetch(withOrg('aishodan', `/api/aishodan/sessions/${id}`))
       const j = await r.json()
       if (!r.ok) throw new Error(j?.error || '読み込みに失敗しました')

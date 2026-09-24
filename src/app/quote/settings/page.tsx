@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { withOrg } from '@/components/org/OrgSwitcher'
+import { ensureSelectedOrg, withOrg } from '@/components/org/OrgSwitcher'
 import MemberPanel from '@/components/org/MemberPanel'
 import { notifyError } from '@/lib/ui/notify'
 import { DoyaKun } from '@/components/lp'
@@ -43,6 +43,7 @@ export default function QuoteSettingsPage() {
     setError('')
     setMessage('')
     try {
+      await ensureSelectedOrg('quote')
       const r = await fetch(withOrg('quote', '/api/quote/issuer'))
       const d = await r.json()
       if (!r.ok) throw new Error(d?.error || '読み込みに失敗しました')

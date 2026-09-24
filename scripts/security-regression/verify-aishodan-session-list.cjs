@@ -26,6 +26,7 @@ async function run(response) {
     setSessions: (value) => { sessions = value; },
     setError: (value) => { error = value; },
     withOrg: (_service, path) => path,
+    ensureSelectedOrg: async () => {},
     fetch: async () => response,
     Error,
   });

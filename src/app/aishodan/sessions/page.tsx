@@ -6,7 +6,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { withOrg } from '@/components/org/OrgSwitcher'
+import { ensureSelectedOrg, withOrg } from '@/components/org/OrgSwitcher'
 import { SESSION_STATUS_LABELS, VERDICT_LABELS, type Verdict } from '@/lib/aishodan/types'
 import { DoyaKun } from '@/components/lp'
 import { EmptyState } from '@/components/EmptyState'
@@ -50,6 +50,7 @@ export default function AishodanSessionsPage() {
     setLoading(true)
     setError('')
     try {
+      await ensureSelectedOrg('aishodan')
       const q = verdict ? `?verdict=${encodeURIComponent(verdict)}` : ''
       const r = await fetch(withOrg('aishodan', `/api/aishodan/sessions${q}`))
       const d = await r.json().catch(() => ({}))

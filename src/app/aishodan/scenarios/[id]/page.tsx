@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { withOrg } from '@/components/org/OrgSwitcher'
+import { ensureSelectedOrg, withOrg } from '@/components/org/OrgSwitcher'
 import { useParams } from 'next/navigation'
 import { PRICE_POLICY_LABELS, type Guardrails, type Icp, type Persona, type Phase, type PricePolicy, type ProductProfile, type Slot } from '@/lib/aishodan/types'
 import { notifyError } from '@/lib/ui/notify'
@@ -44,6 +44,7 @@ export default function AishodanScenarioPage() {
     if (!id) return
     setLoading(true)
     try {
+      await ensureSelectedOrg('aishodan')
       const r = await fetch(withOrg('aishodan', `/api/aishodan/scenarios/${id}`))
       const d = await r.json()
       if (!r.ok) throw new Error(d?.error || '読み込みに失敗しました')

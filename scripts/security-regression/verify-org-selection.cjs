@@ -5,6 +5,8 @@ const ts = require('typescript');
 
 const values = new Map();
 let denyRemoval = false;
+let orgResponse = Response.json({ memberships: [] });
+let organizationFetches = 0;
 const localStorage = {
   getItem: (key) => values.get(key) ?? null,
   setItem: (key, value) => values.set(key, value),
@@ -24,8 +26,13 @@ vm.runInNewContext(compiled, {
     throw new Error(`Unexpected import: ${name}`);
   },
   window: { localStorage },
+  fetch: async (url) => {
+    assert.match(url, /^\/api\/(quote|aishodan)\/organizations$/);
+    organizationFetches++;
+    return orgResponse;
+  },
 });
-const { orgStorageKey, reconcileSelectedOrg, withOrg } = exported;
+const { orgStorageKey, reconcileSelectedOrg, ensureSelectedOrg, withOrg } = exported;
 
 values.set(orgStorageKey('quote'), 'previous-account-org');
 assert.equal(reconcileSelectedOrg('quote', [{ slug: 'current-org', name: 'Current', role: 'owner' }]), null);
@@ -46,4 +53,28 @@ denyRemoval = true;
 assert.equal(reconcileSelectedOrg('archive', []), null);
 assert.equal(withOrg('archive', '/api/archive/items'), '/api/archive/items');
 denyRemoval = false;
-console.log('PASS organization selection: stale cross-account slug is cleared; valid membership retained per service');
+
+(async () => {
+  const before = organizationFetches;
+  await ensureSelectedOrg('aishodan');
+  assert.equal(organizationFetches, before, 'No saved choice needs no network request');
+
+  values.set(orgStorageKey('aishodan'), 'previous-account-org');
+  orgResponse = Response.json({ memberships: [{ slug: 'current-org', name: 'Current', role: 'owner' }] });
+  await ensureSelectedOrg('aishodan');
+  assert.equal(withOrg('aishodan', '/api/aishodan/sessions'), '/api/aishodan/sessions');
+
+  values.set(orgStorageKey('quote'), 'shared-org');
+  orgResponse = Response.json({ memberships: [{ slug: 'shared-org', name: 'Shared', role: 'member' }] });
+  await ensureSelectedOrg('quote');
+  assert.equal(withOrg('quote', '/api/quote/issuer'), '/api/quote/issuer?org=shared-org');
+
+  orgResponse = Response.json({ error: 'Unavailable' }, { status: 503 });
+  await assert.rejects(ensureSelectedOrg('quote'), /Unavailable/);
+  assert.equal(withOrg('quote', '/api/quote/issuer'), '/api/quote/issuer?org=shared-org');
+
+  orgResponse = Response.json({ memberships: null });
+  await assert.rejects(ensureSelectedOrg('quote'), /組織一覧を確認できませんでした/);
+  assert.equal(withOrg('quote', '/api/quote/issuer'), '/api/quote/issuer?org=shared-org');
+  console.log('PASS organization selection: stale cross-account slug is cleared on direct entry; valid membership retained; outage preserves choice');
+})().catch((error) => { console.error(error); process.exitCode = 1; });

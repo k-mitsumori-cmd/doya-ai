@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { withOrg } from '@/components/org/OrgSwitcher'
+import { ensureSelectedOrg, withOrg } from '@/components/org/OrgSwitcher'
 import { useParams } from 'next/navigation'
 import { yen } from '@/lib/quote/money'
 import { PRICE_SOURCE_LABEL, QUOTE_STATUS_LABEL, type PriceSource } from '@/lib/quote/types'
@@ -82,6 +82,7 @@ export default function QuoteDocumentPage() {
     if (!id) return
     setLoading(true)
     try {
+      await ensureSelectedOrg('quote')
       const r = await fetch(withOrg('quote', `/api/quote/documents/${id}`))
       const d = await r.json()
       if (!r.ok) throw new Error(d?.error || '読み込みに失敗しました')
