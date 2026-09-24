@@ -10,6 +10,7 @@ import { collectCompaniesDetailed } from '@/lib/doyalist/collect'
 import {
   getUserDoyalistLimits,
   countMonthlyCompanies,
+  monthlyCompanyWhere,
 } from '@/lib/doyalist/limits'
 
 /**
@@ -187,15 +188,25 @@ export async function POST(req: NextRequest) {
         source: c.source,
       }
     })
-    await prisma.doyalistCompany.createMany({ data: rows })
-
-    // 直近作成データを取得して返す（createManyはレコードを返さないため）
-    const sourceTypes = ['corporate_number', 'gbizinfo', 'corporate_number+gbizinfo', 'gbizinfo+corporate_number']
-    const created = await prisma.doyalistCompany.findMany({
-      where: { projectId, source: { in: sourceTypes } },
-      orderBy: { createdAt: 'desc' },
-      take: rows.length,
-    })
+    // 外部API取得中に他のリクエストが枠を使うため、保存時にも利用者行をロックして再判定する。
+    const { created, quotaClamped } = limits.maxCompaniesPerMonth < 0
+      ? { created: await prisma.doyalistCompany.createManyAndReturn({ data: rows }), quotaClamped: false }
+      : await prisma.$transaction(async (tx) => {
+        const users = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`
+        if (users.length === 0) throw new Error('ユーザーが見つかりません')
+        const used = await tx.doyalistCompany.count({ where: monthlyCompanyWhere(userId) })
+        const remaining = Math.max(0, limits.maxCompaniesPerMonth - used)
+        const saving = rows.slice(0, remaining)
+        if (saving.length === 0) return { created: [], quotaClamped: true }
+        const created = await tx.doyalistCompany.createManyAndReturn({ data: saving })
+        return { created, quotaClamped: saving.length < rows.length }
+      })
+    if (created.length === 0) {
+      return NextResponse.json(
+        { error: `月間上限（${limits.maxCompaniesPerMonth}社）に達しました。${limits.maxCompaniesPerMonth <= 100 ? 'プロにアップグレードすると枠が広がります。' : '追加枠をご希望の場合はお問い合わせください。'}` },
+        { status: 403 }
+      )
+    }
 
     return NextResponse.json({
       success: true,
@@ -203,6 +214,8 @@ export async function POST(req: NextRequest) {
       companies: created,
       ...(wasClamped ? {
         warning: `1回のリクエストでは最大${MAX_COUNT_PER_REQUEST}社まで生成可能です。${requestedCount}社のリクエストを${count}社に調整しました。`,
+      } : quotaClamped ? {
+        warning: `同時に進んだ生成との兼ね合いで、今月の残り枠に合わせて${created.length}社を保存しました。`,
       } : {}),
     })
   } catch (e: any) {

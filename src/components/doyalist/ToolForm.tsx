@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES } from '@/lib/doyalist/constants'
 
@@ -46,6 +47,20 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
   const [tone, setTone] = useState('formal')
   const [generating, setGenerating] = useState(false)
   const [result, setResult] = useState('')
+  const [limitMessage, setLimitMessage] = useState<string | null>(null)
+
+  useEffect(() => {
+    let active = true
+    fetch('/api/doyalist/usage', { cache: 'no-store' })
+      .then((response) => response.ok ? response.json() : null)
+      .then((data) => {
+        if (!active || data?.remaining?.approaches !== 0) return
+        const limit = data?.limits?.maxApproachesPerMonth
+        setLimitMessage(`今月の営業文生成上限（${limit}回）に達しました。`)
+      })
+      .catch(() => {})
+    return () => { active = false }
+  }, [])
 
   const handleGenerate = async () => {
     if (!serviceInput.trim()) { toast.error('サービス内容またはURLを入力してください'); return }
@@ -58,7 +73,13 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
         body: JSON.stringify({ type, serviceInput, targetIndustry, tone }),
       })
       const data = await res.json()
-      if (!res.ok) { toast.error(data?.error || '生成に失敗しました', { id: tid }); return }
+      if (!res.ok) {
+        if (res.status === 403 && data?.code === 'MONTHLY_LIMIT_REACHED') {
+          setLimitMessage(data?.error || '今月の営業文生成上限に達しました。')
+        }
+        toast.error(data?.error || '生成に失敗しました', { id: tid })
+        return
+      }
       setResult(data.text || '')
       toast.success(
         data.savedToHistory ? '完成 & 履歴に保存しました ✓' : '完成しました（履歴保存は失敗）',
@@ -91,6 +112,15 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
             <p className="text-sm font-medium text-slate-500 mt-0.5">{subtitle}</p>
           </div>
         </div>
+
+        {limitMessage && (
+          <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-900">
+            <span>{limitMessage}</span>
+            <Link href="/doyalist/pricing" className="shrink-0 rounded-full bg-blue-600 px-4 py-2 text-xs font-black text-white">
+              プラン・料金を見る
+            </Link>
+          </div>
+        )}
 
         {/* 2-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -158,7 +188,7 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
 
               <button
                 onClick={handleGenerate}
-                disabled={generating}
+                disabled={generating || Boolean(limitMessage)}
                 className="w-full py-4 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold text-base rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {generating ? (

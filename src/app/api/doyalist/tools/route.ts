@@ -8,6 +8,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { scrapeCompanyWebsite } from '@/lib/doyalist/collect/web-scraper'
+import { reserveMonthlyApproach, releaseMonthlyApproach } from '@/lib/doyalist/limits'
 
 const TOOL_PROJECT_NAME = '__tool_history__'
 
@@ -164,6 +165,11 @@ export async function POST(req: NextRequest) {
     if (!body || !['form', 'email', 'phone'].includes(body.type)) {
       return NextResponse.json({ error: 'typeは form/email/phone のいずれかを指定してください' }, { status: 400 })
     }
+    const textFields: (keyof Input)[] = ['serviceInput', 'targetIndustry', 'myService', 'industry', 'companyName', 'contactPerson', 'myCompany', 'benefit']
+    if (textFields.some((field) => body[field] != null && (typeof body[field] !== 'string' || (body[field] as string).length > 5000))
+      || (body.tone != null && !['formal', 'casual', 'friendly'].includes(body.tone))) {
+      return NextResponse.json({ error: '入力形式を確認してください' }, { status: 400 })
+    }
 
     // URL指定の場合は実際にサイトを取得して内容を要約
     let fetchedSiteInfo: string | null = null
@@ -186,46 +192,59 @@ export async function POST(req: NextRequest) {
 
     const prompt = buildPrompt(body, fetchedSiteInfo)
 
-    const text = await geminiGenerateText({
-      model: GEMINI_TEXT_MODEL_DEFAULT,
-      parts: [{ text: prompt }],
-    })
-
-    if (!text || typeof text !== 'string') {
-      return NextResponse.json({ error: 'AI生成に失敗しました' }, { status: 502 })
+    const { granted, limit, reservedMonth } = await reserveMonthlyApproach(userId)
+    if (!granted) {
+      return NextResponse.json(
+        { error: `今月の営業文生成上限（${limit}回）に達しました。${limit <= 30 ? 'プロにアップグレードすると枠が広がります。' : '追加枠をご希望の場合はお問い合わせください。'}`, code: 'MONTHLY_LIMIT_REACHED' },
+        { status: 403 }
+      )
     }
-
-    const finalText = text.trim()
-
-    // 履歴保存（成功時はsavedToHistoryをtrueで返す。失敗してもAI生成自体は成功扱い）
-    let savedToHistory = false
-    let savedId: string | null = null
+    let generated = false
     try {
-      const projectId = await getOrCreateToolProject(userId)
-      const approachType = body.type === 'form' ? 'form' : body.type === 'email' ? 'email' : 'phone'
-      const subject = body.type === 'email'
-        ? (finalText.match(/^件名[:：]\s*(.+)$/m)?.[1]?.slice(0, 200) || `[メール] ${body.targetIndustry || '営業'}`)
-        : body.type === 'form'
-          ? `[フォーム文面] ${body.targetIndustry || '営業'}`
-          : `[電話スクリプト] ${body.targetIndustry || '営業'}`
-      const created = await prisma.doyalistApproach.create({
-        data: {
-          projectId,
-          type: approachType,
-          subject,
-          body: finalText.slice(0, 8000),
-          status: 'draft',
-        },
-        select: { id: true },
+      const text = await geminiGenerateText({
+        model: GEMINI_TEXT_MODEL_DEFAULT,
+        parts: [{ text: prompt }],
       })
-      savedToHistory = true
-      savedId = created.id
-      console.log(`[doyalist/tools] 履歴保存成功 type=${approachType} id=${created.id} userId=${userId}`)
-    } catch (e) {
-      console.error('[doyalist/tools] 履歴保存失敗（生成自体は成功）', e)
-    }
 
-    return NextResponse.json({ success: true, text: finalText, savedToHistory, savedId })
+      if (!text || typeof text !== 'string' || !text.trim()) {
+        return NextResponse.json({ error: 'AI生成に失敗しました' }, { status: 502 })
+      }
+
+      const finalText = text.trim()
+      generated = true
+
+      // 履歴保存（成功時はsavedToHistoryをtrueで返す。失敗してもAI生成自体は成功扱い）
+      let savedToHistory = false
+      let savedId: string | null = null
+      try {
+        const projectId = await getOrCreateToolProject(userId)
+        const approachType = body.type === 'form' ? 'form' : body.type === 'email' ? 'email' : 'phone'
+        const subject = body.type === 'email'
+          ? (finalText.match(/^件名[:：]\s*(.+)$/m)?.[1]?.slice(0, 200) || `[メール] ${body.targetIndustry || '営業'}`)
+          : body.type === 'form'
+            ? `[フォーム文面] ${body.targetIndustry || '営業'}`
+            : `[電話スクリプト] ${body.targetIndustry || '営業'}`
+        const created = await prisma.doyalistApproach.create({
+          data: {
+            projectId,
+            type: approachType,
+            subject,
+            body: finalText.slice(0, 8000),
+            status: 'draft',
+          },
+          select: { id: true },
+        })
+        savedToHistory = true
+        savedId = created.id
+        console.log(`[doyalist/tools] 履歴保存成功 type=${approachType} id=${created.id} userId=${userId}`)
+      } catch (e) {
+        console.error('[doyalist/tools] 履歴保存失敗（生成自体は成功）', e)
+      }
+
+      return NextResponse.json({ success: true, text: finalText, savedToHistory, savedId })
+    } finally {
+      if (!generated) await releaseMonthlyApproach(userId, reservedMonth)
+    }
   } catch (e: any) {
     console.error('[doyalist/tools]', e)
     return NextResponse.json({ error: e?.message || 'ツール実行に失敗しました' }, { status: 500 })

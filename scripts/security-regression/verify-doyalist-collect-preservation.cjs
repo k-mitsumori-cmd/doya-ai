@@ -6,23 +6,33 @@ function fixture(initialCount, failure, denied) {
   let companies = Array.from({length:initialCount},(_,i)=>({id:'old'+i,name:'Existing '+i}));
   let approaches = initialCount ? [{id:'approach',body:'Keep existing draft'}] : [];
   let mode = failure, calls = 0, writes = 0;
+  const companyStore = {
+    count:async()=>companies.length,
+    createManyAndReturn:async({data})=>{
+      if(mode==='save')throw Error('Synthetic write failure');
+      writes++;
+      const created=data.map((r,i)=>({...r,id:'new'+i}));
+      companies.push(...created);
+      return created;
+    },
+  };
+  const prisma = {
+    doyalistProject:{
+      findUnique:async()=>project && {...project,userId:denied==='foreign'?'other':'user'},
+      delete:async()=>{project=null;companies=[];approaches=[];writes++;},
+    },
+    doyalistCompany:companyStore,
+    $transaction:async(operation)=>operation({$queryRaw:async()=>[{id:'user'}],doyalistCompany:companyStore}),
+  };
   const api = load('src/app/api/doyalist/collect/route.ts', {
     'next/server':{NextResponse:Response},
     'next-auth':{getServerSession:async()=>denied==='anonymous'?null:{user:{id:'user'}}},
     '@/lib/auth':{authOptions:{}},
-    '@/lib/prisma':{prisma:{
-      doyalistProject:{
-        findUnique:async()=>project && {...project,userId:denied==='foreign'?'other':'user'},
-        delete:async()=>{project=null;companies=[];approaches=[];writes++;},
-      },
-      doyalistCompany:{
-        createMany:async({data})=>{if(mode==='save')throw Error('Synthetic write failure');writes++;companies.push(...data.map((r,i)=>({...r,id:'new'+i})));},
-        findMany:async({take})=>companies.slice(-take),
-      },
-    }},
+    '@/lib/prisma':{prisma},
     '@/lib/doyalist/limits':{
       getUserDoyalistLimits:async()=>({maxCompaniesPerMonth:denied==='quota'?0:100}),
       countMonthlyCompanies:async()=>initialCount,
+      monthlyCompanyWhere:()=>({}),
     },
     '@/lib/doyalist/collect':{collectCompaniesDetailed:async()=>{
       calls++;
