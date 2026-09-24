@@ -7,15 +7,26 @@ import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
 
 // GET /api/cunning/profiles — 応募者プロフィール一覧
-export async function GET() {
+export async function GET(req: NextRequest) {
   const userId = await getUserId()
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
-  const profiles = await prisma.cunningApplicantProfile.findMany({
-    where: { userId },
-    orderBy: { updatedAt: 'desc' },
-    take: 50,
-  })
-  return NextResponse.json({ profiles }, { headers: { 'Cache-Control': 'no-store' } })
+  const { searchParams } = new URL(req?.url || 'http://localhost/api/cunning/profiles')
+  const cursor = searchParams.get('cursor')
+  if (searchParams.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  const where = { userId }
+  if (cursor && !await prisma.cunningApplicantProfile.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  const [rows, total] = await Promise.all([prisma.cunningApplicantProfile.findMany({
+    where,
+    orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+    take: 51,
+    ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+  }), prisma.cunningApplicantProfile.count({ where })])
+  const profiles = rows.slice(0, 50)
+  return NextResponse.json({ profiles, total, nextCursor: rows.length > 50 ? profiles[49].id : null }, { headers: { 'Cache-Control': 'private, no-store' } })
 }
 
 // POST /api/cunning/profiles — 応募者プロフィール作成/更新

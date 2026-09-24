@@ -1,7 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
+import { appendCunningProfilePage, parseCunningProfilePage } from '@/lib/cunning/profile-pages'
 
 interface Company {
   id: string
@@ -19,6 +20,13 @@ interface Applicant {
 export default function CunningCompanyPage() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [applicants, setApplicants] = useState<Applicant[]>([])
+  const [companyCursor, setCompanyCursor] = useState<string | null>(null)
+  const [applicantCursor, setApplicantCursor] = useState<string | null>(null)
+  const [companyTotal, setCompanyTotal] = useState(0)
+  const [applicantTotal, setApplicantTotal] = useState(0)
+  const [loadingMore, setLoadingMore] = useState<'company' | 'profiles' | null>(null)
+  const [loadError, setLoadError] = useState('')
+  const loadVersion = useRef(0)
   const [url, setUrl] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
 
@@ -27,17 +35,62 @@ export default function CunningCompanyPage() {
   const [motivation, setMotivation] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
 
-  const load = () => {
-    fetch('/api/cunning/company', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => setCompanies(d.profiles || []))
-      .catch(() => {})
-    fetch('/api/cunning/profiles', { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => setApplicants(d.profiles || []))
-      .catch(() => {})
+  const load = useCallback(async () => {
+    const version = ++loadVersion.current
+    setLoadError('')
+    setCompanies([])
+    setApplicants([])
+    setCompanyCursor(null)
+    setApplicantCursor(null)
+    setLoadingMore(null)
+    try {
+      const responses = await Promise.all([
+        fetch('/api/cunning/company', { cache: 'no-store' }),
+        fetch('/api/cunning/profiles', { cache: 'no-store' }),
+      ])
+      if (responses.some((response) => !response.ok)) throw new Error('企業・プロフィールを取得できませんでした')
+      const [companiesData, applicantsData] = await Promise.all(responses.map((response) => response.json()))
+      const companyPage = parseCunningProfilePage<Company>(companiesData)
+      const applicantPage = parseCunningProfilePage<Applicant>(applicantsData)
+      if (version !== loadVersion.current) return
+      setCompanies(companyPage.profiles)
+      setCompanyCursor(companyPage.nextCursor)
+      setCompanyTotal(companyPage.total)
+      setApplicants(applicantPage.profiles)
+      setApplicantCursor(applicantPage.nextCursor)
+      setApplicantTotal(applicantPage.total)
+    } catch (error) {
+      if (version === loadVersion.current) setLoadError(error instanceof Error ? error.message : '一覧を取得できませんでした')
+    }
+  }, [])
+  useEffect(() => { void load() }, [load])
+
+  async function loadMore(kind: 'company' | 'profiles') {
+    const cursor = kind === 'company' ? companyCursor : applicantCursor
+    if (!cursor || loadingMore) return
+    const version = loadVersion.current
+    setLoadingMore(kind)
+    setLoadError('')
+    try {
+      const response = await fetch(`/api/cunning/${kind}?cursor=${encodeURIComponent(cursor)}`, { cache: 'no-store' })
+      if (!response.ok) throw new Error('続きを取得できませんでした')
+      const data = await response.json()
+      if (version !== loadVersion.current) return
+      if (kind === 'company') {
+        const page = parseCunningProfilePage<Company>(data)
+        setCompanies(appendCunningProfilePage(companies, page, companyTotal))
+        setCompanyCursor(page.nextCursor)
+      } else {
+        const page = parseCunningProfilePage<Applicant>(data)
+        setApplicants(appendCunningProfilePage(applicants, page, applicantTotal))
+        setApplicantCursor(page.nextCursor)
+      }
+    } catch (error) {
+      if (version === loadVersion.current) setLoadError(error instanceof Error ? error.message : '続きを取得できませんでした')
+    } finally {
+      if (version === loadVersion.current) setLoadingMore(null)
+    }
   }
-  useEffect(load, [])
 
   const analyze = async () => {
     if (!url.trim()) return
@@ -83,6 +136,7 @@ export default function CunningCompanyPage() {
 
   return (
     <div className="p-6 lg:p-10 max-w-4xl mx-auto">
+      {loadError && <div role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm font-bold text-rose-700">{loadError}<button type="button" onClick={() => void load()} className="ml-3 underline">再読み込み</button></div>}
       <div className="flex items-center gap-3 mb-1">
         <img src="/character/focus.png" alt="" className="w-12 h-12 object-contain" />
         <h1 className="text-2xl font-black text-slate-900">企業・プロフィール（面接モード）</h1>
@@ -119,6 +173,7 @@ export default function CunningCompanyPage() {
             </div>
           ))}
         </div>
+        {companyCursor && <button type="button" onClick={() => void loadMore('company')} disabled={loadingMore !== null} className="mt-3 rounded-lg border border-blue-300 px-3 py-2 text-sm font-bold text-blue-700 disabled:opacity-50">{loadingMore === 'company' ? '読み込み中…' : `企業をさらに表示（${companies.length}/${companyTotal}件）`}</button>}
       </div>
 
       {/* 応募者プロフィール */}
@@ -161,6 +216,7 @@ export default function CunningCompanyPage() {
             ))}
           </div>
         )}
+        {applicantCursor && <button type="button" onClick={() => void loadMore('profiles')} disabled={loadingMore !== null} className="mt-3 rounded-lg border border-blue-300 px-3 py-2 text-sm font-bold text-blue-700 disabled:opacity-50">{loadingMore === 'profiles' ? '読み込み中…' : `プロフィールをさらに表示（${applicants.length}/${applicantTotal}件）`}</button>}
       </div>
     </div>
   )

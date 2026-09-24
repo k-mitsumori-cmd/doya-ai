@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 import { MODES, MODE_IDS, getMode } from '@/lib/cunning/modes'
 import type { CunningMode } from '@/lib/cunning/types'
 import { recordingAllowance } from '@/lib/cunning/allowance-client'
+import { appendCunningProfilePage, parseCunningProfilePage } from '@/lib/cunning/profile-pages'
 
 interface KB { id: string; name: string; _count: { chunks: number } }
 interface Company { id: string; companyName: string | null; url: string }
@@ -29,6 +30,12 @@ export default function CunningTool() {
   const [kbs, setKbs] = useState<KB[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
   const [applicants, setApplicants] = useState<Applicant[]>([])
+  const [companyCursor, setCompanyCursor] = useState<string | null>(null)
+  const [applicantCursor, setApplicantCursor] = useState<string | null>(null)
+  const [companyTotal, setCompanyTotal] = useState(0)
+  const [applicantTotal, setApplicantTotal] = useState(0)
+  const [loadingMoreProfiles, setLoadingMoreProfiles] = useState<'company' | 'profiles' | null>(null)
+  const [profileError, setProfileError] = useState('')
   const [sessions, setSessions] = useState<SessionRow[]>([])
   const [usage, setUsage] = useState<any>(null)
   const [usageError, setUsageError] = useState(false)
@@ -45,9 +52,31 @@ export default function CunningTool() {
   const load = () => {
     const request = ++usageRequest.current
     usageAbort.current?.abort()
+    setCompanies([])
+    setApplicants([])
+    setCompanyId('')
+    setApplicantId('')
+    setCompanyCursor(null)
+    setApplicantCursor(null)
+    setLoadingMoreProfiles(null)
     fetch('/api/cunning/knowledge', { cache: 'no-store' }).then((r) => r.json()).then((d) => setKbs(d.bases || [])).catch(() => {})
-    fetch('/api/cunning/company', { cache: 'no-store' }).then((r) => r.json()).then((d) => setCompanies(d.profiles || [])).catch(() => {})
-    fetch('/api/cunning/profiles', { cache: 'no-store' }).then((r) => r.json()).then((d) => setApplicants(d.profiles || [])).catch(() => {})
+    setProfileError('')
+    void Promise.all([
+      fetch('/api/cunning/company', { cache: 'no-store' }),
+      fetch('/api/cunning/profiles', { cache: 'no-store' }),
+    ]).then(async (responses) => {
+      if (responses.some((response) => !response.ok)) throw new Error('企業・プロフィールを取得できませんでした')
+      const [companiesData, applicantsData] = await Promise.all(responses.map((response) => response.json()))
+      const companyPage = parseCunningProfilePage<Company>(companiesData)
+      const applicantPage = parseCunningProfilePage<Applicant>(applicantsData)
+      if (request !== usageRequest.current) return
+      setCompanies(companyPage.profiles)
+      setCompanyCursor(companyPage.nextCursor)
+      setCompanyTotal(companyPage.total)
+      setApplicants(applicantPage.profiles)
+      setApplicantCursor(applicantPage.nextCursor)
+      setApplicantTotal(applicantPage.total)
+    }).catch((error) => { if (request === usageRequest.current) setProfileError(error instanceof Error ? error.message : '一覧を取得できませんでした') })
     fetch('/api/cunning/sessions', { cache: 'no-store' }).then((r) => r.json()).then((d) => setSessions(d.sessions || [])).catch(() => {})
     setUsage(null)
     setUsageError(false)
@@ -62,6 +91,33 @@ export default function CunningTool() {
     }).then(data => { if (request === usageRequest.current) setUsage(data) })
       .catch(() => { if (request === usageRequest.current) setUsageError(true) })
       .finally(() => clearTimeout(timeout))
+  }
+
+  async function loadMoreProfiles(kind: 'company' | 'profiles') {
+    const cursor = kind === 'company' ? companyCursor : applicantCursor
+    if (!cursor || loadingMoreProfiles) return
+    const request = usageRequest.current
+    setLoadingMoreProfiles(kind)
+    setProfileError('')
+    try {
+      const response = await fetch(`/api/cunning/${kind}?cursor=${encodeURIComponent(cursor)}`, { cache: 'no-store' })
+      if (!response.ok) throw new Error('続きを取得できませんでした')
+      const data = await response.json()
+      if (request !== usageRequest.current) return
+      if (kind === 'company') {
+        const page = parseCunningProfilePage<Company>(data)
+        setCompanies(appendCunningProfilePage(companies, page, companyTotal))
+        setCompanyCursor(page.nextCursor)
+      } else {
+        const page = parseCunningProfilePage<Applicant>(data)
+        setApplicants(appendCunningProfilePage(applicants, page, applicantTotal))
+        setApplicantCursor(page.nextCursor)
+      }
+    } catch (error) {
+      if (request === usageRequest.current) setProfileError(error instanceof Error ? error.message : '続きを取得できませんでした')
+    } finally {
+      if (request === usageRequest.current) setLoadingMoreProfiles(null)
+    }
   }
   useEffect(() => {
     load()
@@ -206,12 +262,14 @@ export default function CunningTool() {
         )}
         {def.context === 'company' && (
           <div className="bg-white rounded-2xl shadow-sm p-5 mb-6 space-y-4">
+            {profileError && <div role="alert" className="rounded-lg bg-rose-50 p-3 text-sm font-bold text-rose-700">{profileError}<button type="button" onClick={load} className="ml-2 underline">再読み込み</button></div>}
             <div>
               <label className="block text-sm font-black text-slate-700 mb-2">応募先企業（任意）</label>
               <select value={companyId} onChange={(e) => setCompanyId(e.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 font-bold text-slate-700">
                 <option value="">未選択</option>
                 {companies.map((c) => <option key={c.id} value={c.id}>{c.companyName || c.url}</option>)}
               </select>
+              {companyCursor && <button type="button" onClick={() => void loadMoreProfiles('company')} disabled={loadingMoreProfiles !== null} className="mt-2 text-xs font-bold text-blue-700 underline disabled:opacity-50">{loadingMoreProfiles === 'company' ? '読み込み中…' : `企業をさらに表示（${companies.length}/${companyTotal}件）`}</button>}
             </div>
             <div>
               <label className="block text-sm font-black text-slate-700 mb-2">応募者プロフィール（任意）</label>
@@ -219,6 +277,7 @@ export default function CunningTool() {
                 <option value="">未選択</option>
                 {applicants.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
               </select>
+              {applicantCursor && <button type="button" onClick={() => void loadMoreProfiles('profiles')} disabled={loadingMoreProfiles !== null} className="mt-2 text-xs font-bold text-blue-700 underline disabled:opacity-50">{loadingMoreProfiles === 'profiles' ? '読み込み中…' : `プロフィールをさらに表示（${applicants.length}/${applicantTotal}件）`}</button>}
             </div>
             <Link href="/cunning/company" className="inline-block text-xs font-bold text-[#0B5CFF] hover:underline">
               ＋ 企業URLを解析・プロフィールを登録
