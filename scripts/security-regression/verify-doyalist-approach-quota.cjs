@@ -6,6 +6,8 @@ let ledger = null;
 const history = [];
 let modelCalls = 0;
 let failModel = false;
+let historyProject = null;
+let historyProjectsCreated = 0;
 let lockTail = Promise.resolve();
 const approachStore = {
   count: async ({ where }) => history.filter((row) => row.createdAt >= where.createdAt.gte).length,
@@ -26,10 +28,18 @@ const subscriptionStore = {
     return ledger;
   },
 };
-const tx = { $queryRaw: async () => [{ id: 'user' }], doyalistApproach: approachStore, userServiceSubscription: subscriptionStore };
+const projectStore = {
+  findFirst: async () => historyProject,
+  create: async () => {
+    historyProjectsCreated++;
+    historyProject = { id: 'history-project' };
+    return historyProject;
+  },
+};
+const tx = { $queryRaw: async () => [{ id: 'user' }], doyalistApproach: approachStore, doyalistProject: projectStore, userServiceSubscription: subscriptionStore };
 const prisma = {
   user: { findUnique: async () => ({ plan }) },
-  doyalistProject: { findFirst: async () => ({ id: 'history-project' }) },
+  doyalistProject: projectStore,
   doyalistApproach: approachStore,
   userServiceSubscription: subscriptionStore,
   $transaction: async (operation) => {
@@ -70,6 +80,7 @@ const post = (body = { type: 'form', serviceInput: 'サービス' }) => route.PO
   assert.equal(responses.filter((response) => response.status === 200).length, 30);
   assert.equal(responses.filter((response) => response.status === 403).length, 1);
   assert.equal(modelCalls, 30, 'over-limit request must not invoke paid AI');
+  assert.equal(historyProjectsCreated, 1, 'parallel first-time generations must share one history project');
   assert.equal(await limits.countMonthlyApproaches('user'), 30);
   history.length = 0;
   assert.equal(await limits.countMonthlyApproaches('user'), 30, 'history deletion cannot restore consumed quota');
@@ -79,5 +90,5 @@ const post = (body = { type: 'form', serviceInput: 'サービス' }) => route.PO
   assert.equal(ledger.monthlyUsage, 30, 'failed AI response must refund the same-month reservation');
   await limits.releaseMonthlyApproach('user', limits.monthStart(new Date('2026-08-01T00:00:00Z')));
   assert.equal(ledger.monthlyUsage, 30, 'old-month refund must not affect the current quota');
-  console.log('PASS Doyalist approaches: validated input, concurrent cap, no paid over-limit call, deletion safety, failed-call refund');
+  console.log('PASS Doyalist approaches: concurrent cap and history project, no paid over-limit call, deletion safety, failed-call refund');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

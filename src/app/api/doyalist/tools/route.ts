@@ -19,16 +19,24 @@ async function getOrCreateToolProject(userId: string): Promise<string> {
     select: { id: true },
   })
   if (existing) return existing.id
-  const created = await prisma.doyalistProject.create({
-    data: {
-      userId,
-      name: TOOL_PROJECT_NAME,
-      description: 'ツール生成履歴（システム生成・非表示）',
-      status: 'archived', // 一覧に出さない
-    },
-    select: { id: true },
+  return prisma.$transaction(async (tx) => {
+    const users = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`
+    if (users.length === 0) throw new Error('ユーザーが見つかりません')
+    const found = await tx.doyalistProject.findFirst({
+      where: { userId, name: TOOL_PROJECT_NAME }, select: { id: true },
+    })
+    if (found) return found.id
+    const created = await tx.doyalistProject.create({
+      data: {
+        userId,
+        name: TOOL_PROJECT_NAME,
+        description: 'ツール生成履歴（システム生成・非表示）',
+        status: 'archived', // 一覧に出さない
+      },
+      select: { id: true },
+    })
+    return created.id
   })
-  return created.id
 }
 
 type ToolType = 'form' | 'email' | 'phone'
