@@ -30,6 +30,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'メッセージは5000文字以内' }, { status: 400 })
     }
 
+    // 通知が落ちても管理画面から確認できるよう、ログイン済みの声は先に保存する。
+    const saved = userId ? await prisma.serviceFeedback.create({
+      data: {
+        userId,
+        serviceId: 'promane',
+        text: `【${type === 'bug' ? 'バグ報告' : type === 'feature' ? '機能要望' : 'その他'}】${typeof page === 'string' && page ? `（${page.slice(0, 300)}）` : ''}\n${message.trim()}`.slice(0, 5400),
+      },
+      select: { id: true },
+    }).catch((error) => {
+      console.error('[promane/feedback] DB保存失敗', { code: typeof error?.code === 'string' ? error.code : undefined })
+      return null
+    }) : null
+
     // Slack Webhook URL を取得（SystemSetting または環境変数）
     let webhookUrl: string | null = null
     try {
@@ -66,27 +79,33 @@ export async function POST(req: NextRequest) {
       ],
     }
 
-    if (webhookUrl) {
-      try {
-        const r = await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(applyContextComment(slackPayload)),
-        })
-        if (!r.ok) {
-          console.error('[promane/feedback] Slack webhook failed', r.status)
-        }
-      } catch (e) {
-        console.error('[promane/feedback] Slack送信失敗', e)
-      }
-    } else {
-      console.warn('[promane/feedback] Slack Webhook URL未設定。フィードバックを記録のみ。')
-      console.log('[FEEDBACK]', { userName, userEmail, type, page, message })
+    if (!webhookUrl) {
+      console.error('[promane/feedback] Slack Webhook URL未設定', { feedbackId: saved?.id })
+      if (saved) return NextResponse.json({ success: true, stored: true, notified: false })
+      return NextResponse.json({ error: '現在フィードバックを送信できません。内容を残したまま、時間をおいて再試行してください。' }, { status: 503 })
     }
 
-    return NextResponse.json({ success: true })
+    try {
+      const r = await fetch(webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(applyContextComment(slackPayload)),
+        signal: AbortSignal.timeout(10_000),
+      })
+      if (!r.ok) {
+        console.error('[promane/feedback] Slack webhook failed', { status: r.status, feedbackId: saved?.id })
+        if (saved) return NextResponse.json({ success: true, stored: true, notified: false })
+        return NextResponse.json({ error: 'フィードバックを送信できませんでした。内容を残したまま、再試行してください。' }, { status: 503 })
+      }
+    } catch (e) {
+      console.error('[promane/feedback] Slack送信失敗', { feedbackId: saved?.id, error: e instanceof Error ? e.name : 'UnknownError' })
+      if (saved) return NextResponse.json({ success: true, stored: true, notified: false })
+      return NextResponse.json({ error: 'フィードバックを送信できませんでした。内容を残したまま、再試行してください。' }, { status: 503 })
+    }
+
+    return NextResponse.json({ success: true, stored: !!saved, notified: true })
   } catch (e: any) {
     console.error('[promane/feedback]', e)
-    return NextResponse.json({ error: e?.message || 'フィードバック送信に失敗しました' }, { status: 500 })
+    return NextResponse.json({ error: 'フィードバック送信に失敗しました' }, { status: 500 })
   }
 }

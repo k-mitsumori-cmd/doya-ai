@@ -79,8 +79,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: any) {
+    console.error('[interview/articles/[id]] unexpected error', e)
     return NextResponse.json(
-      { success: false, error: e?.message || '取得に失敗しました' },
+      { success: false, error: '取得に失敗しました' },
       { status: 500 }
     )
   }
@@ -158,8 +159,9 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     if (e?.code === 'P2025') {
       return NextResponse.json({ success: false, error: '記事が更新または削除されました。入力をコピーして保管してから最新版を確認してください。', code: 'EDIT_CONFLICT' }, { status: 409 })
     }
+    console.error('[interview/articles/[id]] unexpected error', e)
     return NextResponse.json(
-      { success: false, error: e?.message || '保存に失敗しました' },
+      { success: false, error: '保存に失敗しました' },
       { status: 500 }
     )
   }

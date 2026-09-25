@@ -142,8 +142,9 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (e: any) {
+    console.error('[interview/recipes] unexpected error', e)
     return NextResponse.json(
-      { success: false, error: e?.message || 'レシピ作成に失敗しました' },
+      { success: false, error: 'レシピ作成に失敗しました' },
       { status: 500 }
     )
   }

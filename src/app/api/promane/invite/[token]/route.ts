@@ -53,7 +53,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     })
   } catch (e: any) {
     console.error('[promane/invite/token][GET]', e)
-    return NextResponse.json({ error: e?.message || '招待検証に失敗しました' }, { status: 500 })
+    return NextResponse.json({ error: '招待検証に失敗しました' }, { status: 500 })
   }
 }
 
@@ -140,6 +140,6 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     })
   } catch (e: any) {
     console.error('[promane/invite/token][POST]', e)
-    return NextResponse.json({ error: e?.message || '招待承諾に失敗しました' }, { status: 500 })
+    return NextResponse.json({ error: '招待承諾に失敗しました' }, { status: 500 })
   }
 }

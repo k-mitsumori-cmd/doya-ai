@@ -77,7 +77,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   } catch (e: any) {
     console.error('[promane/workspaces/id][PATCH]', e)
     return NextResponse.json(
-      { error: e?.message || '設定の更新に失敗しました' },
+      { error: '設定の更新に失敗しました' },
       { status: 500 }
     )
   }

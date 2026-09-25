@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     console.error('[promane/clients][POST]', e)
     return NextResponse.json(
-      { error: e?.message || '顧客の追加に失敗しました' },
+      { error: '顧客の追加に失敗しました' },
       { status: 500 }
     )
   }
@@ -109,7 +109,7 @@ export async function DELETE(req: NextRequest) {
   } catch (e: any) {
     console.error('[promane/clients][DELETE]', e)
     return NextResponse.json(
-      { error: e?.message || '削除に失敗しました' },
+      { error: '削除に失敗しました' },
       { status: 500 }
     )
   }

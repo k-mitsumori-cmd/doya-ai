@@ -70,6 +70,6 @@ export async function GET() {
     return NextResponse.json({ success: true, workspaces: result })
   } catch (e: any) {
     console.error('[promane/workspaces][GET]', e)
-    return NextResponse.json({ error: e?.message || 'ワークスペース取得に失敗しました' }, { status: 500 })
+    return NextResponse.json({ error: 'ワークスペース取得に失敗しました' }, { status: 500 })
   }
 }

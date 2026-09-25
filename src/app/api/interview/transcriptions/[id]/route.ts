@@ -56,8 +56,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: any) {
+    console.error('[interview/transcriptions/[id]] unexpected error', e)
     return NextResponse.json(
-      { success: false, error: e?.message || '取得に失敗しました' },
+      { success: false, error: '取得に失敗しました' },
       { status: 500 }
     )
   }

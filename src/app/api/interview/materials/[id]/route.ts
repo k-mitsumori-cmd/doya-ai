@@ -78,8 +78,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: any) {
+    console.error('[interview/materials/[id]] unexpected error', e)
     return NextResponse.json(
-      { success: false, error: e?.message || '取得に失敗しました' },
+      { success: false, error: '取得に失敗しました' },
       { status: 500 }
     )
   }
@@ -131,8 +132,9 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     if (outcome === 'processing') return NextResponse.json({ success: false, error: '文字起こし中は素材を削除できません。完了後に再試行してください。' }, { status: 409 })
     return NextResponse.json({ success: true, fileCleanupPending: true })
   } catch (e: any) {
+    console.error('[interview/materials/[id]] unexpected error', e)
     return NextResponse.json(
-      { success: false, error: e?.message || '削除に失敗しました' },
+      { success: false, error: '削除に失敗しました' },
       { status: 500 }
     )
   }

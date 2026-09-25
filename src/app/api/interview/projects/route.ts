@@ -289,8 +289,9 @@ export async function POST(req: NextRequest) {
 
     return res
   } catch (e: any) {
+    console.error('[interview/projects] unexpected error', e)
     return NextResponse.json(
-      { success: false, error: e?.message || 'プロジェクト作成に失敗しました' },
+      { success: false, error: 'プロジェクト作成に失敗しました' },
       { status: 500 }
     )
   }

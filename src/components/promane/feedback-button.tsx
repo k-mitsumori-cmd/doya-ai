@@ -58,7 +58,8 @@ export function FeedbackButton({
         })
         return
       }
-      toast.success('送信しました！対応します 🙏', {
+      const result = await res.json().catch(() => ({}))
+      toast.success(result.notified === false ? '内容を受け付けました。担当者への通知が遅れています。' : '送信しました！対応します 🙏', {
         icon: <Image src="/character/love.png" alt="" width={28} height={28} unoptimized />,
         duration: 5000,
       })

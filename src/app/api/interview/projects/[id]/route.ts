@@ -123,8 +123,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: any) {
+    console.error('[interview/projects/[id]] unexpected error', e)
     return NextResponse.json(
-      { success: false, error: e?.message || '取得に失敗しました' },
+      { success: false, error: '取得に失敗しました' },
       { status: 500 }
     )
   }
@@ -204,8 +205,9 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: any) {
+    console.error('[interview/projects/[id]] unexpected error', e)
     return NextResponse.json(
-      { success: false, error: e?.message || '更新に失敗しました' },
+      { success: false, error: '更新に失敗しました' },
       { status: 500 }
     )
   }

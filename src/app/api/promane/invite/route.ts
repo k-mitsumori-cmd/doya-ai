@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (e: any) {
     console.error('[promane/invite][POST]', e)
-    return NextResponse.json({ error: e?.message || '招待リンク発行に失敗しました' }, { status: 500 })
+    return NextResponse.json({ error: '招待リンク発行に失敗しました' }, { status: 500 })
   }
 }
 
