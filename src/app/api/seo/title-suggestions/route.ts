@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { z } from 'zod'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { reserveSeoToolCall, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -10,10 +13,10 @@ export const maxDuration = 300
 
 const BodySchema = z.object({
   keyword: z.string().min(1).max(200).optional(),
-  keywords: z.array(z.string().min(1).max(200)).optional(),
-  articleType: z.string().optional(),
-  targetChars: z.number().optional(),
-  tone: z.string().optional(),
+  keywords: z.array(z.string().min(1).max(200)).max(12).optional(),
+  articleType: z.string().max(100).optional(),
+  targetChars: z.number().int().min(1).max(50000).optional(),
+  tone: z.string().max(100).optional(),
   count: z.number().int().min(1).max(10).optional(),
 })
 
@@ -42,6 +45,10 @@ function fallbackTitles(keyword: string, count: number): string[] {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    const userId = String((session?.user as any)?.id || '').trim()
+    if (!userId) return NextResponse.json({ success: false, code: 'LOGIN_REQUIRED', error: 'タイトル候補の生成にはログインしてください。' }, { status: 401 })
+
     const body = BodySchema.parse(await req.json())
     const primary = String(body.keyword || body.keywords?.[0] || '').trim()
     if (!primary) {
@@ -53,6 +60,8 @@ export async function POST(req: NextRequest) {
     const tone = String(body.tone || '').trim()
     const targetChars = Number(body.targetChars || 0) || undefined
     const keywords = Array.isArray(body.keywords) ? body.keywords.map(String).map((s) => s.trim()).filter(Boolean) : []
+
+    await reserveSeoToolCall(userId, 'title-suggestions')
 
     const model =
       process.env.SEO_GEMINI_TEXT_MODEL_TITLE_SUGGESTIONS ||
@@ -107,6 +116,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, titles: merged })
   } catch (e: any) {
+    if (e instanceof z.ZodError || e instanceof SyntaxError) {
+      return NextResponse.json({ success: false, error: '入力形式が正しくありません' }, { status: 400 })
+    }
+    if (e instanceof SeoToolRateLimitError) {
+      return NextResponse.json({ success: false, code: 'RATE_LIMIT', error: `本日のタイトル候補生成の試行回数は上限（${e.limit}回）に達しました。明日お試しください。` }, { status: 429 })
+    }
     console.error('[seo title suggestions] failed', e)
     return NextResponse.json(
       { success: false, error: 'タイトル候補を生成できませんでした。時間をおいて再試行してください。' },
@@ -114,4 +129,3 @@ export async function POST(req: NextRequest) {
     )
   }
 }
-

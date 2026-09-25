@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -655,7 +656,10 @@ export default function SeoTestPage() {
                             placeholder="例：AIライティングツール比較｜料金・特徴・選び方を2026年版で徹底解説"
                             className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-base font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                           />
-                          {titleError && <p className="mt-2 text-xs font-bold text-red-500">{titleError}</p>}
+                          {titleError && <p className="mt-2 text-xs font-bold text-red-500">
+                            {titleError}
+                            {!session?.user && <Link href="/auth/signin" className="ml-2 underline">ログインする</Link>}
+                          </p>}
                           {titleCandidates.length > 0 && (
                             <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {titleCandidates.slice(0, 6).map((t, i) => (

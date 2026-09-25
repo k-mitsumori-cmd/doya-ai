@@ -715,7 +715,10 @@ export default function SeoCreateWizardPage() {
                       className="w-full px-5 py-4 rounded-2xl bg-gray-50 border-2 border-gray-100 text-gray-900 font-bold text-base placeholder:text-gray-300 focus:outline-none focus:border-blue-500 focus:bg-white transition-all"
                     />
                     {titleError ? (
-                      <p className="mt-2 text-xs font-bold text-red-600">{titleError}</p>
+                      <p className="mt-2 text-xs font-bold text-red-600">
+                        {titleError}
+                        {!session?.user && <Link href="/auth/signin" className="ml-2 underline">ログインする</Link>}
+                      </p>
                     ) : (
                       <p className="mt-2 text-xs text-gray-400 font-medium">
                         ボタンで候補を生成→クリックでタイトル確定（後から編集もOK）

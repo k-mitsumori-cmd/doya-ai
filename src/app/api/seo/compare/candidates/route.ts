@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { z } from 'zod'
 import { serpapiSearchGoogle } from '@seo/lib/serpapi'
+import { reserveSeoToolCall, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 export const runtime = 'nodejs'
+export const maxDuration = 120
 
 const BodySchema = z.object({
   query: z.string().min(2).max(200),
@@ -52,7 +56,10 @@ function pickNameFromTitle(title: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    await ensureSeoSchema()
+    const session = await getServerSession(authOptions)
+    const userId = String((session?.user as any)?.id || '').trim()
+    if (!userId) return NextResponse.json({ success: false, code: 'LOGIN_REQUIRED', error: '比較候補の自動収集にはログインしてください。' }, { status: 401 })
+
     const body = BodySchema.parse(await req.json())
 
     // NOTE:
@@ -65,12 +72,15 @@ export async function POST(req: NextRequest) {
         {
           success: false,
           code: 'SEARCH_PROVIDER_NOT_CONFIGURED',
-          error: '候補の自動収集には検索APIキーが必要です（例：SEO_SERPAPI_KEY）。手動で候補を追加してください。',
+          error: '比較候補の自動収集は現在利用できません。手動で候補を追加してください。',
           candidates: [] as Candidate[],
         },
         { status: 503 }
       )
     }
+
+    await ensureSeoSchema()
+    await reserveSeoToolCall(userId, 'compare-candidates')
 
     // SerpAPIで検索 → 上位結果から候補を抽出（完全自動のため精度は100%ではない）
     // NOTE:
@@ -127,8 +137,10 @@ export async function POST(req: NextRequest) {
     if (e?.name === 'ZodError' || e instanceof SyntaxError) {
       return NextResponse.json({ success: false, error: '検索条件が不正です' }, { status: 400 })
     }
+    if (e instanceof SeoToolRateLimitError) {
+      return NextResponse.json({ success: false, code: 'RATE_LIMIT', error: `本日の比較候補検索の試行回数は上限（${e.limit}回）に達しました。明日お試しください。` }, { status: 429 })
+    }
     console.error('[seo compare candidates] failed', e)
     return NextResponse.json({ success: false, error: '比較候補を取得できませんでした。時間をおいて再試行してください。' }, { status: 502 })
   }
 }
-

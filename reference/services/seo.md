@@ -29,6 +29,8 @@
 
 通常の記事作成とスワイプ経由の作成は同じ日本時間の月次枠を使います。作成した下書きも1件に数え、記事を削除しても当月の消費回数は戻りません。初回ログイン後の1時間は記事回数の上限を設けず、1記事の文字数上限はPRO相当です。
 
+タイトル候補生成と比較候補の自動収集はログイン必須です。外部APIの過剰利用を防ぐため、プランの課金枠とは別に、日本時間でタイトル候補生成50回/日、比較候補検索10回/日の運用上限を設けています。失敗した呼び出しも試行回数に含みます。上限到達時は `RATE_LIMIT` を返し、課金プランへの誘導は行いません。
+
 ## APIエンドポイント (50+)
 
 ### 記事CRUD
@@ -72,7 +74,8 @@
 | メソッド | パス | 説明 |
 |---------|------|------|
 | PUT | `/api/seo/sections/[id]` | セクション直接編集 |
-| POST | `/api/seo/articles/[id]/title-suggestions` | タイトル提案 |
+| POST | `/api/seo/title-suggestions` | タイトル候補生成（ログイン必須・50回/日） |
+| POST | `/api/seo/compare/candidates` | 比較候補の自動収集（ログイン必須・10回/日） |
 | POST | `/api/seo/articles/[id]/link-check` | リンクチェック |
 | GET/POST | `/api/seo/articles/[id]/knowledge` | ナレッジ管理 |
 | GET/POST | `/api/seo/articles/[id]/memo` | メモ |

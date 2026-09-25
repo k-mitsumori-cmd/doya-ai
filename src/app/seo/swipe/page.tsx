@@ -580,6 +580,9 @@ export default function SwipeArticlePage() {
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
             <p className="text-red-700 font-bold">{error}</p>
+            {!session?.user && error.includes('ログイン') && (
+              <Link href="/auth/signin" className="mt-2 inline-block text-sm font-bold text-red-700 underline">ログインする</Link>
+            )}
           </div>
         )}
 
@@ -864,6 +867,7 @@ export default function SwipeArticlePage() {
                       type="button"
                       onClick={async () => {
                         setIsGeneratingTitles(true)
+                        setError(null)
                         try {
                           // タイトルを再生成（APIを呼び出す）
                           const res = await fetch('/api/seo/title-suggestions', {
@@ -875,17 +879,21 @@ export default function SwipeArticlePage() {
                               count: 6,
                             }),
                           })
-                          const json = await res.json()
-                          if (json.titles && Array.isArray(json.titles)) {
-                            setFinalData({
-                              ...finalData,
-                              titleCandidates: json.titles,
-                              title: json.titles[0] || finalData.title,
-                            })
-                            setSelectedTitleIndex(0)
+                          const json = await res.json().catch(() => ({}))
+                          if (!res.ok || json?.success === false) {
+                            throw new Error(json?.error || 'タイトル候補を生成できませんでした')
                           }
-                        } catch (e) {
-                          console.error('タイトル再生成エラー:', e)
+                          if (!Array.isArray(json.titles) || json.titles.length === 0) {
+                            throw new Error('タイトル候補を生成できませんでした')
+                          }
+                          setFinalData({
+                            ...finalData,
+                            titleCandidates: json.titles,
+                            title: json.titles[0] || finalData.title,
+                          })
+                          setSelectedTitleIndex(0)
+                        } catch (e: any) {
+                          setError(e?.message || 'タイトル候補を生成できませんでした')
                         } finally {
                           setIsGeneratingTitles(false)
                         }
