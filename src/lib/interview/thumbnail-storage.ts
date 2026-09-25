@@ -39,13 +39,13 @@ export async function uploadInterviewThumbnail(owner: string, projectId: string,
   if (error) throw new Error('サムネイルの保存に失敗しました')
 }
 
-export async function downloadInterviewThumbnail(owner: string, projectId: string): Promise<Blob> {
+export async function signedInterviewThumbnailUrl(owner: string, projectId: string): Promise<string> {
   const storage = getSupabaseAdmin().storage
   const { data: bucket, error: bucketError } = await storage.getBucket(BUCKET_NAME)
   if (bucketError || !bucket || bucket.public) throw new Error('非公開ストレージを確認できません')
-  const { data, error } = await storage.from(BUCKET_NAME).download(thumbnailPath(owner, projectId))
-  if (error || !data || !IMAGE_MIME.has(data.type) || data.size < 1 || data.size > MAX_THUMBNAIL_BYTES) {
+  const { data, error } = await storage.from(BUCKET_NAME).createSignedUrl(thumbnailPath(owner, projectId), 300)
+  if (error || !data?.signedUrl) {
     throw new Error('サムネイルを取得できません')
   }
-  return data
+  return data.signedUrl
 }

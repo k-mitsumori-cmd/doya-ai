@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { callGeminiImageAPI } from '@/lib/resolve-image-model'
-import { THUMBNAIL_STORAGE_MARKER, downloadInterviewThumbnail, thumbnailOwner, thumbnailUrlForClient, uploadInterviewThumbnail } from '@/lib/interview/thumbnail-storage'
+import { THUMBNAIL_STORAGE_MARKER, signedInterviewThumbnailUrl, thumbnailOwner, thumbnailUrlForClient, uploadInterviewThumbnail } from '@/lib/interview/thumbnail-storage'
 import { claimThumbnailLease, releaseThumbnailLease, ThumbnailGenerationInProgressError } from '@/lib/interview/thumbnail-lease'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -177,16 +177,14 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     if (project.thumbnailUrl !== THUMBNAIL_STORAGE_MARKER) {
       return NextResponse.json({ error: '画像が見つかりません' }, { status: 404 })
     }
-    const image = await downloadInterviewThumbnail(thumbnailOwner(project), id)
-    return new Response(image.stream(), {
-      headers: {
-        'Content-Type': image.type,
-        'Content-Length': String(image.size),
-        'Cache-Control': 'private, no-store',
-        'X-Content-Type-Options': 'nosniff',
-      },
-    })
-  } catch {
+    const signedUrl = await signedInterviewThumbnailUrl(thumbnailOwner(project), id)
+    return new Response(null, { status: 302, headers: {
+      Location: signedUrl,
+      'Cache-Control': 'private, no-store',
+      'Referrer-Policy': 'no-referrer',
+    } })
+  } catch (error) {
+    console.error('[interview] thumbnail read failed', error instanceof Error ? error.message : 'unknown')
     return NextResponse.json({ error: '画像を取得できません' }, { status: 500 })
   }
 }

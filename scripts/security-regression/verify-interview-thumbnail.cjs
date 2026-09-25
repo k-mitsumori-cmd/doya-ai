@@ -50,7 +50,11 @@ const { load, check } = require('./load-typescript.cjs')
             assert.equal(bucket, 'private-interview')
             return {
               upload: async (path, bytes, options) => { uploads.push({ path, bytes, options }); return { error: null } },
-              download: async () => ({ data: new Blob(['image'], { type: 'image/png' }), error: null }),
+              createSignedUrl: async (path, seconds) => {
+                assert.equal(path, 'u1/p1/thumbnail')
+                assert.equal(seconds, 300)
+                return { data: { signedUrl: 'https://private.example/thumbnail?token=short-lived' }, error: null }
+              },
             }
           },
         } }),
@@ -63,7 +67,7 @@ const { load, check } = require('./load-typescript.cjs')
     assert.equal(uploads[0].options.upsert, true)
     await assert.rejects(storage.uploadInterviewThumbnail('u1', 'p1', 'text/html', 'AAAA'), /画像形式/)
     await assert.rejects(storage.uploadInterviewThumbnail('u1', 'p1', 'image/png', Buffer.alloc(8 * 1024 * 1024 + 1).toString('base64')), /画像サイズ/)
-    assert.equal((await storage.downloadInterviewThumbnail('u1', 'p1')).type, 'image/png')
+    assert.equal(await storage.signedInterviewThumbnailUrl('u1', 'p1'), 'https://private.example/thumbnail?token=short-lived')
   })
 
   await check('cached thumbnail skips provider; manual regeneration persists private image and remains owner-only', async () => {
@@ -106,7 +110,7 @@ const { load, check } = require('./load-typescript.cjs')
         thumbnailOwner: () => 'u1',
         thumbnailUrlForClient: (_id, stored, date) => stored === 'marker' ? `/image?v=${date.getTime()}` : stored,
         uploadInterviewThumbnail: async () => { uploads++; if (failUpload) throw new Error('storage unavailable') },
-        downloadInterviewThumbnail: async () => new Blob(['image'], { type: 'image/png' }),
+        signedInterviewThumbnailUrl: async () => 'https://private.example/thumbnail?token=short-lived',
       },
       '@/lib/interview/thumbnail-lease': {
         ThumbnailGenerationInProgressError: InProgress,
@@ -126,7 +130,10 @@ const { load, check } = require('./load-typescript.cjs')
     assert.equal(uploads, 1)
     assert.equal(releases, 1)
     assert.equal(project.thumbnailUrl, 'marker')
-    assert.equal((await api.GET(request({}), ctx)).status, 200)
+    const image = await api.GET(request({}), ctx)
+    assert.equal(image.status, 302)
+    assert.equal(image.headers.get('location'), 'https://private.example/thumbnail?token=short-lived')
+    assert.equal(image.headers.get('cache-control'), 'private, no-store')
     blocked = true
     assert.equal((await api.POST(request({ force: true }), ctx)).status, 409)
     assert.equal(providerCalls, 1)

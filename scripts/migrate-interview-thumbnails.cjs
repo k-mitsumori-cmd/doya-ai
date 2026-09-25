@@ -6,6 +6,9 @@ const { createClient } = require('@supabase/supabase-js')
 
 process.loadEnvFile('.env.local')
 const apply = process.argv.includes('--apply')
+const limitArg = process.argv.find(arg => arg.startsWith('--limit='))
+const limit = limitArg ? Number(limitArg.slice('--limit='.length)) : Infinity
+if (!Number.isSafeInteger(limit) && limit !== Infinity || limit < 1) throw new Error('Invalid migration limit')
 const marker = 'interview-thumbnail-storage:v1'
 const bucketName = process.env.INTERVIEW_STORAGE_BUCKET || 'interview-materials'
 const safePart = /^[A-Za-z0-9_-]{1,128}$/
@@ -52,7 +55,7 @@ async function main() {
     orderBy: { id: 'asc' },
   })
   const totalBytes = rows.reduce((sum, row) => sum + (row.thumbnailUrl?.length || 0), 0)
-  console.log(JSON.stringify({ mode: apply ? 'apply' : 'dry-run', count: rows.length, encodedCharacters: totalBytes }))
+  console.log(JSON.stringify({ mode: apply ? 'apply' : 'dry-run', count: rows.length, selected: Math.min(rows.length, limit), encodedCharacters: totalBytes }))
   if (!apply || !rows.length) return
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
@@ -64,7 +67,7 @@ async function main() {
 
   let migrated = 0
   let skipped = 0
-  for (const row of rows) {
+  for (const row of rows.slice(0, limit)) {
     if (!safePart.test(row.id)) throw new Error('Invalid project ID')
     const owner = row.userId || (row.guestId ? `guest_${row.guestId}` : '')
     if (!safePart.test(owner)) throw new Error('Invalid project owner')
