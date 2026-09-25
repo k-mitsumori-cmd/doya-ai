@@ -151,7 +151,7 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
       <div className="p-4 border-t border-slate-100">
         <div className="flex items-center gap-3 px-2 py-2 rounded-2xl bg-gradient-to-r from-[#7f19e6]/5 to-purple-50">
           <img
-            src="/kintai/characters/thumbsup_いいね.png"
+            src="/kintai/characters/thumbsup_%E3%81%84%E3%81%84%E3%81%AD.png"
             alt="応援くま"
             className="w-10 h-10 object-contain sidebar-cheer-bear"
           />

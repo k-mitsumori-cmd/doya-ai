@@ -147,7 +147,7 @@ export default function EmployeesPage() {
           className="bg-white rounded-3xl shadow-md p-12 text-center"
         >
           <motion.img
-            src="/hr/characters/hello_挨拶.png"
+            src="/hr/characters/hello_%E6%8C%A8%E6%8B%B6.png"
             alt="白くまキャラクター"
             className="w-40 mx-auto mb-4"
             animate={{ y: [0, -10, 0] }}

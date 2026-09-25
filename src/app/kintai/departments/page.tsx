@@ -67,7 +67,7 @@ export default function DepartmentsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/kintai/characters/present_プレゼン.png" alt="くまさん" width={80} height={80} className="bear-float" />
+            <img src="/kintai/characters/present_%E3%83%97%E3%83%AC%E3%82%BC%E3%83%B3.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
               <h1 className="text-2xl font-black text-slate-800">部署管理</h1>
               {!loading && (
@@ -84,12 +84,12 @@ export default function DepartmentsPage() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <img src="/kintai/characters/thinking_考え中.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
+            <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
             <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
           </div>
         ) : departments.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center fade-in-up">
-            <img src="/kintai/characters/hello_挨拶.png" alt="" width={120} height={120} className="bear-bounce mb-4" />
+            <img src="/kintai/characters/hello_%E6%8C%A8%E6%8B%B6.png" alt="" width={120} height={120} className="bear-bounce mb-4" />
             <h3 className="text-lg font-bold text-slate-700 mb-1">部署がまだありません</h3>
             <p className="text-sm text-slate-400 mb-6 max-w-xs">最初の部署を作成しましょう！</p>
             <button onClick={openCreate} className="flex items-center gap-1.5 px-5 py-2.5 bg-[#7f19e6] text-white text-sm font-bold rounded-lg hover:bg-[#6a14c2] transition-colors">
@@ -150,7 +150,7 @@ export default function DepartmentsPage() {
             <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm mx-4 space-y-4 fade-in-up" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <img src="/kintai/characters/point_解説.png" alt="" width={40} height={40} className="bear-wiggle" />
+                  <img src="/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png" alt="" width={40} height={40} className="bear-wiggle" />
                   <h2 className="text-lg font-bold text-slate-800">{editing ? '部署を編集' : '部署を追加'}</h2>
                 </div>
                 <button onClick={() => setShowForm(false)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
@@ -180,7 +180,7 @@ export default function DepartmentsPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(null)}>
             <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm mx-4 space-y-4 fade-in-up" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-3">
-                <img src="/kintai/characters/surprise_驚き.png" alt="" width={56} height={56} className="bear-surprise" />
+                <img src="/kintai/characters/surprise_%E9%A9%9A%E3%81%8D.png" alt="" width={56} height={56} className="bear-surprise" />
                 <h2 className="text-lg font-bold text-slate-800">部署を削除</h2>
               </div>
               <div className="space-y-2">

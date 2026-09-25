@@ -5,10 +5,10 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 
 const REQUEST_TYPES = [
-  { key: 'clock_fix', label: '打刻修正', icon: 'edit_clock', desc: '打刻の追加・修正を申請します', disabled: false, bear: '/kintai/characters/working_作業中.png' },
-  { key: 'leave', label: '休暇', icon: 'event_busy', desc: '有給休暇・特別休暇を申請します', disabled: false, bear: '/kintai/characters/ramen_休憩.png' },
-  { key: 'overtime', label: '残業', icon: 'more_time', desc: '残業の事前申請をします', disabled: false, bear: '/kintai/characters/focus_集中.png' },
-  { key: 'holiday_work', label: '休日出勤', icon: 'work_history', desc: '休日出勤を申請します', disabled: false, bear: '/kintai/characters/surprise_驚き.png' },
+  { key: 'clock_fix', label: '打刻修正', icon: 'edit_clock', desc: '打刻の追加・修正を申請します', disabled: false, bear: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png' },
+  { key: 'leave', label: '休暇', icon: 'event_busy', desc: '有給休暇・特別休暇を申請します', disabled: false, bear: '/kintai/characters/ramen_%E4%BC%91%E6%86%A9.png' },
+  { key: 'overtime', label: '残業', icon: 'more_time', desc: '残業の事前申請をします', disabled: false, bear: '/kintai/characters/focus_%E9%9B%86%E4%B8%AD.png' },
+  { key: 'holiday_work', label: '休日出勤', icon: 'work_history', desc: '休日出勤を申請します', disabled: false, bear: '/kintai/characters/surprise_%E9%A9%9A%E3%81%8D.png' },
 ]
 
 export default function NewRequestPage() {
@@ -16,7 +16,7 @@ export default function NewRequestPage() {
     <Suspense fallback={
       <div className="p-4 lg:p-6 max-w-2xl mx-auto flex flex-col items-center justify-center py-20 gap-4">
         <img
-          src="/kintai/characters/thinking_考え中.png"
+          src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png"
           alt="読み込み中"
           style={{ width: 80, height: 80, objectFit: 'contain' }}
         />
@@ -198,7 +198,7 @@ function NewRequestContent() {
     return (
       <>
         <div className="p-4 lg:p-6 max-w-2xl mx-auto flex flex-col items-center justify-center py-20 space-y-5">
-          <img src="/kintai/characters/jump_大喜び.png" alt="成功！" width={140} height={140} className="bear-jump" />
+          <img src="/kintai/characters/jump_%E5%A4%A7%E5%96%9C%E3%81%B3.png" alt="成功！" width={140} height={140} className="bear-jump" />
           <h2 className="text-2xl font-bold text-slate-800 fade-in-scale">申請が完了しました！</h2>
           <p className="text-sm text-slate-500 fade-in-scale" style={{ animationDelay: '0.2s' }}>承認されるまでしばらくお待ちください</p>
           <div className="w-6 h-6 rounded-full border-2 border-slate-200 border-t-[#7f19e6] animate-spin mt-4" />
@@ -233,7 +233,7 @@ function NewRequestContent() {
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5">
             <img
-              src={step === 1 ? '/kintai/characters/thinking_考え中.png' : '/kintai/characters/point_解説.png'}
+              src={step === 1 ? '/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png' : '/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png'}
               alt=""
               width={36}
               height={36}

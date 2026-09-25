@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const staticAssetUrls = spawnSync(process.execPath, [path.join(__dirname, 'verify-static-asset-urls.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (staticAssetUrls.error || staticAssetUrls.status !== 0) {
+  console.error('Security regression failed: verify-static-asset-urls.cjs');
+  process.exit(1);
+}
 const sfaAiLimit = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-ai-limit.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaAiLimit.error || sfaAiLimit.status !== 0) {
   console.error('Security regression failed: verify-sfa-ai-limit.cjs');

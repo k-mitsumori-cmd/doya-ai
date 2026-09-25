@@ -7,9 +7,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 
 const STEP_CHARACTERS = [
-  '/hr/characters/hello_挨拶.png',
-  '/hr/characters/focus_集中.png',
-  '/hr/characters/success_成功.png',
+  '/hr/characters/hello_%E6%8C%A8%E6%8B%B6.png',
+  '/hr/characters/focus_%E9%9B%86%E4%B8%AD.png',
+  '/hr/characters/success_%E6%88%90%E5%8A%9F.png',
 ]
 
 const INDUSTRY_OPTIONS = [

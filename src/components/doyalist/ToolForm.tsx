@@ -6,11 +6,11 @@ import toast, { Toaster } from 'react-hot-toast'
 import { INDUSTRIES } from '@/lib/doyalist/constants'
 
 const CHARS = {
-  point: '/kintai/characters/point_解説.png',
-  working: '/kintai/characters/working_作業中.png',
-  jump: '/kintai/characters/jump_大喜び.png',
-  thinking: '/kintai/characters/thinking_考え中.png',
-  success: '/kintai/characters/success_成功.png',
+  point: '/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png',
+  working: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png',
+  jump: '/kintai/characters/jump_%E5%A4%A7%E5%96%9C%E3%81%B3.png',
+  thinking: '/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png',
+  success: '/kintai/characters/success_%E6%88%90%E5%8A%9F.png',
 }
 
 interface Props {

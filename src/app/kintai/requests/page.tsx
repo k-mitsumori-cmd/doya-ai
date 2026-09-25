@@ -126,7 +126,7 @@ export default function RequestsPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/kintai/characters/point_解説.png" alt="くまさん" width={80} height={80} className="bear-float" />
+            <img src="/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
               <h1 className="text-xl font-bold text-slate-800">申請一覧</h1>
               <p className="text-xs text-slate-500">打刻修正や休暇の申請を管理</p>
@@ -168,7 +168,7 @@ export default function RequestsPage() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <img src="/kintai/characters/thinking_考え中.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
+            <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
             <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
           </div>
         ) : loadError ? (
@@ -180,7 +180,7 @@ export default function RequestsPage() {
           <div className="text-center py-16 space-y-4 fade-in-up">
             {tab === 'pending' ? (
               <>
-                <img src="/kintai/characters/thinking_考え中.png" alt="" width={100} height={100} className="bear-wiggle mx-auto" />
+                <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="" width={100} height={100} className="bear-wiggle mx-auto" />
                 <div>
                   <p className="text-slate-600 font-bold text-lg">承認待ちの申請はありません</p>
                   <p className="text-sm text-slate-400 mt-1">新しい申請が届くまでお待ちください</p>
@@ -188,7 +188,7 @@ export default function RequestsPage() {
               </>
             ) : (
               <>
-                <img src="/kintai/characters/love_大好き.png" alt="" width={120} height={120} className="bear-bounce mx-auto" />
+                <img src="/kintai/characters/love_%E5%A4%A7%E5%A5%BD%E3%81%8D.png" alt="" width={120} height={120} className="bear-bounce mx-auto" />
                 <div>
                   <p className="text-slate-600 font-bold text-lg">申請を作成してみましょう！</p>
                   <p className="text-sm text-slate-400 mt-1">打刻修正や休暇の申請ができます</p>

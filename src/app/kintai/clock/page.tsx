@@ -13,15 +13,15 @@ const STANDARD_WORK_MINUTES = 480
 
 // Character paths
 const CHARS = {
-  sleep: '/kintai/characters/sleep_居眠り.png',
-  working: '/kintai/characters/working_作業中.png',
-  ramen: '/kintai/characters/ramen_休憩.png',
-  success: '/kintai/characters/success_成功.png',
-  jump: '/kintai/characters/jump_大喜び.png',
-  surprise: '/kintai/characters/surprise_驚き.png',
-  thinking: '/kintai/characters/thinking_考え中.png',
-  error: '/kintai/characters/error_泣き.png',
-  hello: '/kintai/characters/hello_挨拶.png',
+  sleep: '/kintai/characters/sleep_%E5%B1%85%E7%9C%A0%E3%82%8A.png',
+  working: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png',
+  ramen: '/kintai/characters/ramen_%E4%BC%91%E6%86%A9.png',
+  success: '/kintai/characters/success_%E6%88%90%E5%8A%9F.png',
+  jump: '/kintai/characters/jump_%E5%A4%A7%E5%96%9C%E3%81%B3.png',
+  surprise: '/kintai/characters/surprise_%E9%A9%9A%E3%81%8D.png',
+  thinking: '/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png',
+  error: '/kintai/characters/error_%E6%B3%A3%E3%81%8D.png',
+  hello: '/kintai/characters/hello_%E6%8C%A8%E6%8B%B6.png',
 }
 
 // Timeline character mini-icons per event type

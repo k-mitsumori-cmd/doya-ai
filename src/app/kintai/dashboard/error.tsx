@@ -33,7 +33,7 @@ export default function DashboardErrorBoundary({
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6">
-      <img src="/kintai/characters/error_泣き.png" alt="エラー" style={{ width: 120, height: 120, objectFit: 'contain' }} />
+      <img src="/kintai/characters/error_%E6%B3%A3%E3%81%8D.png" alt="エラー" style={{ width: 120, height: 120, objectFit: 'contain' }} />
       <h2 className="text-2xl font-black text-slate-800">エラーが発生しました</h2>
       <div className="bg-red-50 border-2 border-red-200 rounded-2xl px-5 py-3 max-w-lg text-center">
         <p className="text-base font-bold text-red-700">{error.message}</p>

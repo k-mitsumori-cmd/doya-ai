@@ -55,8 +55,8 @@ function planLabel(tier: string): string {
 }
 
 const CHARS = {
-  point: '/kintai/characters/point_解説.png',
-  working: '/kintai/characters/working_作業中.png',
+  point: '/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png',
+  working: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png',
 }
 
 export default function SettingsPage() {

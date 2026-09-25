@@ -43,7 +43,7 @@ export default function UpgradeBanner({
       >
         {/* Animated icon */}
         <motion.img
-          src={isCritical ? '/hr/characters/surprise_驚き.png' : '/hr/characters/point_解説.png'}
+          src={isCritical ? '/hr/characters/surprise_%E9%A9%9A%E3%81%8D.png' : '/hr/characters/point_%E8%A7%A3%E8%AA%AC.png'}
           alt="白くまキャラクター"
           className="w-12 flex-shrink-0"
           animate={{ y: [0, -4, 0] }}

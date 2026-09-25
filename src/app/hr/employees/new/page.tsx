@@ -154,7 +154,7 @@ export default function NewEmployeePage() {
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-black text-slate-900">従業員を追加</h1>
             <img
-              src="/hr/characters/working_作業中.png"
+              src="/hr/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png"
               alt="白くまキャラクター"
               className="w-16 opacity-70"
             />

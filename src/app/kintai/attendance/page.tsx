@@ -86,7 +86,7 @@ export default function AttendancePage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
-              src="/kintai/characters/present_プレゼン.png"
+              src="/kintai/characters/present_%E3%83%97%E3%83%AC%E3%82%BC%E3%83%B3.png"
               alt="レポートくま"
               className="w-16 h-16 object-contain bear-header-float"
             />
@@ -137,7 +137,7 @@ export default function AttendancePage() {
         {!loading && !loadError && <div className="grid grid-cols-3 gap-3">
           {/* Days pill */}
           <SummaryPillBear
-            bearSrc="/kintai/characters/thumbsup_いいね.png"
+            bearSrc="/kintai/characters/thumbsup_%E3%81%84%E3%81%84%E3%81%AD.png"
             bearAlt="出勤くま"
             label="出勤日数"
             value={`${totalDays}`}
@@ -149,7 +149,7 @@ export default function AttendancePage() {
           />
           {/* Total work pill */}
           <SummaryPillBear
-            bearSrc="/kintai/characters/working_作業中.png"
+            bearSrc="/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png"
             bearAlt="作業くま"
             label="労働時間"
             value={formatMinutesJa(totalWork)}
@@ -162,7 +162,7 @@ export default function AttendancePage() {
           />
           {/* Overtime pill */}
           <SummaryPillBear
-            bearSrc={overtimeWarning ? '/kintai/characters/surprise_驚き.png' : '/kintai/characters/focus_集中.png'}
+            bearSrc={overtimeWarning ? '/kintai/characters/surprise_%E9%A9%9A%E3%81%8D.png' : '/kintai/characters/focus_%E9%9B%86%E4%B8%AD.png'}
             bearAlt={overtimeWarning ? '驚きくま' : '集中くま'}
             label="残業時間"
             value={formatMinutesJa(totalOvertime)}
@@ -180,7 +180,7 @@ export default function AttendancePage() {
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
             <img
-              src="/kintai/characters/thinking_考え中.png"
+              src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png"
               alt="読み込み中"
               className="w-20 h-20 object-contain bear-loading-float"
             />
@@ -196,7 +196,7 @@ export default function AttendancePage() {
           /* Empty state with sleeping bear */
           <div className="bg-white rounded-3xl border border-slate-200/80 shadow-lg shadow-slate-200/30 p-10 flex flex-col items-center justify-center gap-4">
             <img
-              src="/kintai/characters/sleep_居眠り.png"
+              src="/kintai/characters/sleep_%E5%B1%85%E7%9C%A0%E3%82%8A.png"
               alt="データなし"
               className="w-24 h-24 object-contain bear-empty-float"
             />

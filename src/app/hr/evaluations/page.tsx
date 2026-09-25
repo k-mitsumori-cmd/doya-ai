@@ -166,7 +166,7 @@ export default function EvaluationsPage() {
         ) : (
           <div className="bg-white rounded-3xl shadow-lg p-12 text-center">
             <motion.img
-              src="/hr/characters/point_解説.png"
+              src="/hr/characters/point_%E8%A7%A3%E8%AA%AC.png"
               alt="白くまキャラクター"
               className="w-40 mx-auto mb-4"
               animate={{ y: [0, -10, 0] }}

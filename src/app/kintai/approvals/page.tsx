@@ -183,7 +183,7 @@ export default function ApprovalsPage() {
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <img src="/kintai/characters/thumbsup_いいね.png" alt="くまさん" width={80} height={80} className="bear-float" />
+            <img src="/kintai/characters/thumbsup_%E3%81%84%E3%81%84%E3%81%AD.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
               <h1 className="text-xl font-bold text-slate-800">承認管理</h1>
               <p className="text-xs text-slate-500">申請の承認・却下を管理</p>
@@ -221,7 +221,7 @@ export default function ApprovalsPage() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <img src="/kintai/characters/thinking_考え中.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
+            <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
             <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
           </div>
         ) : loadError ? (
@@ -233,13 +233,13 @@ export default function ApprovalsPage() {
           <div className="text-center py-16 fade-in-up space-y-4">
             {tab === 'pending' ? (
               <>
-                <img src="/kintai/characters/success_成功.png" alt="" width={120} height={120} className="bear-bounce mx-auto" />
+                <img src="/kintai/characters/success_%E6%88%90%E5%8A%9F.png" alt="" width={120} height={120} className="bear-bounce mx-auto" />
                 <p className="text-lg font-bold text-slate-700">すべて承認済みです！</p>
                 <p className="text-sm text-slate-400">未承認の申請はありません</p>
               </>
             ) : (
               <>
-                <img src="/kintai/characters/thinking_考え中.png" alt="" width={80} height={80} className="bear-wiggle mx-auto" />
+                <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="" width={80} height={80} className="bear-wiggle mx-auto" />
                 <p className="text-slate-500 font-medium">該当する申請はありません</p>
               </>
             )}
@@ -262,7 +262,7 @@ export default function ApprovalsPage() {
                       feedback.type === 'approved' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                     }`}>
                       <img
-                        src={feedback.type === 'approved' ? '/kintai/characters/thumbsup_いいね.png' : '/kintai/characters/error_泣き.png'}
+                        src={feedback.type === 'approved' ? '/kintai/characters/thumbsup_%E3%81%84%E3%81%84%E3%81%AD.png' : '/kintai/characters/error_%E6%B3%A3%E3%81%8D.png'}
                         alt=""
                         width={28}
                         height={28}
@@ -362,7 +362,7 @@ export default function ApprovalsPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setRejectingId(null)}>
             <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm mx-4 space-y-4 fade-in-up" onClick={e => e.stopPropagation()}>
               <div className="flex items-center gap-3">
-                <img src="/kintai/characters/error_泣き.png" alt="" width={48} height={48} className="bear-wiggle" />
+                <img src="/kintai/characters/error_%E6%B3%A3%E3%81%8D.png" alt="" width={48} height={48} className="bear-wiggle" />
                 <h2 className="text-lg font-bold text-slate-800">申請を却下</h2>
               </div>
               <div>

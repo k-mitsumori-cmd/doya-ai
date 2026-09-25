@@ -62,7 +62,7 @@ export default function AiInsightPanel({
         {loading ? (
           <div className="flex items-center gap-4 py-4">
             <motion.img
-              src="/hr/characters/working_作業中.png"
+              src="/hr/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png"
               alt="白くまキャラクター"
               className="w-24"
               animate={{ y: [0, -10, 0] }}
@@ -81,7 +81,7 @@ export default function AiInsightPanel({
               </div>
               {content && (
                 <img
-                  src="/hr/characters/surprise_驚き.png"
+                  src="/hr/characters/surprise_%E9%A9%9A%E3%81%8D.png"
                   alt="白くまキャラクター"
                   className="w-16 h-16 object-contain shrink-0 self-start"
                 />

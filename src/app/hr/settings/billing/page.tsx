@@ -177,7 +177,7 @@ export default function BillingPage() {
             <p className="text-sm text-slate-500 mt-1">プランと使用量を管理</p>
           </div>
           <motion.img
-            src="/hr/characters/present_プレゼン.png"
+            src="/hr/characters/present_%E3%83%97%E3%83%AC%E3%82%BC%E3%83%B3.png"
             alt="白くまキャラクター"
             className="w-16 drop-shadow-md"
             animate={{ y: [0, -8, 0] }}
@@ -286,7 +286,7 @@ export default function BillingPage() {
           className="mt-8 bg-white rounded-3xl shadow-md p-6 flex items-center gap-4"
         >
           <img
-            src="/hr/characters/point_解説.png"
+            src="/hr/characters/point_%E8%A7%A3%E8%AA%AC.png"
             alt="白くまキャラクター"
             className="w-16 flex-shrink-0"
           />

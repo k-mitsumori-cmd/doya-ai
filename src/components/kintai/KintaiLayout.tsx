@@ -78,7 +78,7 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-4">
           <img
-            src="/kintai/characters/thinking_考え中.png"
+            src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png"
             alt="読み込み中"
             className="layout-bear-float"
             style={{ width: 100, height: 100, objectFit: 'contain' }}
@@ -96,7 +96,7 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-violet-50 p-6">
         <div className="text-center bg-white rounded-3xl border border-slate-200 shadow-2xl p-12 max-w-md">
           <img
-            src="/kintai/characters/hello_挨拶.png"
+            src="/kintai/characters/hello_%E6%8C%A8%E6%8B%B6.png"
             alt="挨拶するクマ"
             className="login-bear-bounce mx-auto mb-4"
             style={{ width: 120, height: 120, objectFit: 'contain' }}

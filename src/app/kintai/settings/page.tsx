@@ -97,7 +97,7 @@ export default function SettingsPage() {
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <img src="/kintai/characters/focus_集中.png" alt="くまさん" width={80} height={80} className="bear-float" />
+            <img src="/kintai/characters/focus_%E9%9B%86%E4%B8%AD.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
               <h1 className="text-2xl font-black text-slate-800">就業ルール設定</h1>
               <p className="text-xs text-slate-500">勤務時間やフレックスを設定しよう</p>
@@ -110,18 +110,18 @@ export default function SettingsPage() {
 
         {/* Explanation with bear */}
         <div className="flex items-center gap-3 bg-[#7f19e6]/5 border border-[#7f19e6]/10 rounded-xl px-4 py-3">
-          <img src="/kintai/characters/point_解説.png" alt="" width={40} height={40} className="bear-wiggle shrink-0" />
+          <img src="/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png" alt="" width={40} height={40} className="bear-wiggle shrink-0" />
           <p className="text-sm text-slate-600">就業ルールは従業員に割り当てて使用します。複数のルールを作成して、異なる勤務形態に対応できます。</p>
         </div>
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <img src="/kintai/characters/thinking_考え中.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
+            <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
             <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
           </div>
         ) : rules.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-center fade-in-up">
-            <img src="/kintai/characters/thinking_考え中.png" alt="" width={120} height={120} className="bear-float mb-4" />
+            <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="" width={120} height={120} className="bear-float mb-4" />
             <h3 className="text-lg font-bold text-slate-700 mb-1">就業ルールがありません</h3>
             <p className="text-sm text-slate-400 mb-6">ルールを作成して従業員に割り当てましょう。</p>
             <button onClick={openCreate} className="flex items-center gap-1.5 px-5 py-2.5 bg-[#7f19e6] text-white text-sm font-bold rounded-lg hover:bg-[#6a14c2] transition-colors">
@@ -230,7 +230,7 @@ export default function SettingsPage() {
             <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md mx-4 space-y-5 max-h-[90vh] overflow-y-auto fade-in-up" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <img src="/kintai/characters/focus_集中.png" alt="" width={40} height={40} className="bear-wiggle" />
+                  <img src="/kintai/characters/focus_%E9%9B%86%E4%B8%AD.png" alt="" width={40} height={40} className="bear-wiggle" />
                   <h2 className="text-lg font-bold text-slate-800">{editing ? 'ルールを編集' : 'ルールを追加'}</h2>
                 </div>
                 <button onClick={() => setShowForm(false)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">
@@ -311,7 +311,7 @@ export default function SettingsPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(null)}>
             <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm mx-4 space-y-4 fade-in-up" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-3">
-                <img src="/kintai/characters/surprise_驚き.png" alt="" width={56} height={56} className="bear-wiggle" />
+                <img src="/kintai/characters/surprise_%E9%A9%9A%E3%81%8D.png" alt="" width={56} height={56} className="bear-wiggle" />
                 <h2 className="text-lg font-bold text-slate-800">ルールを削除</h2>
               </div>
               <div className="space-y-2">

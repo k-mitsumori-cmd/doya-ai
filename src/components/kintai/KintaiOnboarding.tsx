@@ -57,21 +57,21 @@ export default function KintaiOnboarding() {
         <div className="flex justify-center mb-[-20px] relative z-20">
           {loading ? (
             <img
-              src="/kintai/characters/thinking_考え中.png"
+              src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png"
               alt="考え中のクマ"
               className="bear-think-spin"
               style={{ width: 140, height: 140, objectFit: 'contain' }}
             />
           ) : error ? (
             <img
-              src="/kintai/characters/error_泣き.png"
+              src="/kintai/characters/error_%E6%B3%A3%E3%81%8D.png"
               alt="泣いているクマ"
               className="bear-error-shake"
               style={{ width: 140, height: 140, objectFit: 'contain' }}
             />
           ) : (
             <img
-              src="/kintai/characters/hello_挨拶.png"
+              src="/kintai/characters/hello_%E6%8C%A8%E6%8B%B6.png"
               alt="挨拶するクマ"
               className="bear-gentle-bounce bear-bounce-in"
               style={{ width: 140, height: 140, objectFit: 'contain' }}
@@ -134,7 +134,7 @@ export default function KintaiOnboarding() {
             {error && (
               <div className="mt-5 p-4 bg-red-50 border-2 border-red-200 rounded-2xl flex items-center gap-3">
                 <img
-                  src="/kintai/characters/error_泣き.png"
+                  src="/kintai/characters/error_%E6%B3%A3%E3%81%8D.png"
                   alt="エラー"
                   style={{ width: 36, height: 36, objectFit: 'contain' }}
                 />
@@ -151,7 +151,7 @@ export default function KintaiOnboarding() {
               {loading ? (
                 <span className="flex items-center justify-center gap-3">
                   <img
-                    src="/kintai/characters/thinking_考え中.png"
+                    src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png"
                     alt="考え中"
                     style={{ width: 28, height: 28, objectFit: 'contain' }}
                   />

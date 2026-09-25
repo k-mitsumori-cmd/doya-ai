@@ -28,8 +28,8 @@ interface ApproachSummary {
 }
 
 const CHARS = {
-  thinking: '/kintai/characters/thinking_考え中.png',
-  sleep: '/kintai/characters/sleep_居眠り.png',
+  thinking: '/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png',
+  sleep: '/kintai/characters/sleep_%E5%B1%85%E7%9C%A0%E3%82%8A.png',
 }
 
 const TABS: { v: 'all' | 'list' | 'form' | 'email' | 'phone'; l: string; icon: string }[] = [

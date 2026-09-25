@@ -84,7 +84,7 @@ export default function AdminAttendancePage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/kintai/characters/present_プレゼン.png" alt="くまさん" width={80} height={80} className="bear-float" />
+            <img src="/kintai/characters/present_%E3%83%97%E3%83%AC%E3%82%BC%E3%83%B3.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
               <h1 className="text-2xl font-black text-slate-800">部署勤怠管理</h1>
               <p className="text-sm font-bold text-slate-500">チームの出勤状況をチェック</p>
@@ -136,21 +136,21 @@ export default function AdminAttendancePage() {
         {!loading && filtered.length > 0 && (
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 flex items-center gap-3 fade-in-up-1">
-              <img src="/kintai/characters/working_作業中.png" alt="" width={44} height={44} className="bear-bounce" />
+              <img src="/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png" alt="" width={44} height={44} className="bear-bounce" />
               <div>
                 <p className="text-xl font-bold text-slate-800">{stats.working}<span className="text-sm font-normal text-slate-500 ml-0.5">名</span></p>
                 <p className="text-xs text-green-600 font-medium">出勤中</p>
               </div>
             </div>
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 flex items-center gap-3 fade-in-up-2">
-              <img src="/kintai/characters/sleep_居眠り.png" alt="" width={44} height={44} className="bear-float" style={{ animationDelay: '0.3s' }} />
+              <img src="/kintai/characters/sleep_%E5%B1%85%E7%9C%A0%E3%82%8A.png" alt="" width={44} height={44} className="bear-float" style={{ animationDelay: '0.3s' }} />
               <div>
                 <p className="text-xl font-bold text-slate-800">{stats.notClocked}<span className="text-sm font-normal text-slate-500 ml-0.5">名</span></p>
                 <p className="text-xs text-red-500 font-medium">未出勤</p>
               </div>
             </div>
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-3 flex items-center gap-3 fade-in-up-3">
-              <img src="/kintai/characters/success_成功.png" alt="" width={44} height={44} className="bear-bounce" style={{ animationDelay: '0.6s' }} />
+              <img src="/kintai/characters/success_%E6%88%90%E5%8A%9F.png" alt="" width={44} height={44} className="bear-bounce" style={{ animationDelay: '0.6s' }} />
               <div>
                 <p className="text-xl font-bold text-slate-800">{stats.clockedOut}<span className="text-sm font-normal text-slate-500 ml-0.5">名</span></p>
                 <p className="text-xs text-blue-600 font-medium">退勤済</p>
@@ -161,7 +161,7 @@ export default function AdminAttendancePage() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <img src="/kintai/characters/thinking_考え中.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
+            <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
             <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
           </div>
         ) : loadError ? (
@@ -189,7 +189,7 @@ export default function AdminAttendancePage() {
                   <tr>
                     <td colSpan={8} className="px-4 py-12 text-center">
                       <div className="flex flex-col items-center gap-3">
-                        <img src="/kintai/characters/thinking_考え中.png" alt="" width={80} height={80} className="bear-wiggle" />
+                        <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="" width={80} height={80} className="bear-wiggle" />
                         <p className="text-slate-400 font-medium">データがありません</p>
                       </div>
                     </td>

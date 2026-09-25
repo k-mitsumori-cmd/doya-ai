@@ -10,7 +10,7 @@ export default function KintaiError({
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-6">
       <img
-        src="/kintai/characters/error_泣き.png"
+        src="/kintai/characters/error_%E6%B3%A3%E3%81%8D.png"
         alt="エラー"
         style={{ width: 120, height: 120, objectFit: 'contain' }}
       />

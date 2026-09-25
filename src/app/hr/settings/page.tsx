@@ -494,7 +494,7 @@ export default function HrSettingsPage() {
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-black text-slate-900">設定</h1>
             <img
-              src="/hr/characters/thumbsup_いいね.png"
+              src="/hr/characters/thumbsup_%E3%81%84%E3%81%84%E3%81%AD.png"
               alt="白くまキャラクター"
               className="w-14"
             />

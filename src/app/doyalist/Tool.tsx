@@ -31,14 +31,14 @@ interface Company {
 }
 
 const CHARS = {
-  hello: '/kintai/characters/hello_挨拶.png',
-  thinking: '/kintai/characters/thinking_考え中.png',
-  working: '/kintai/characters/working_作業中.png',
-  jump: '/kintai/characters/jump_大喜び.png',
-  success: '/kintai/characters/success_成功.png',
-  point: '/kintai/characters/point_解説.png',
-  thumbsup: '/kintai/characters/thumbsup_いいね.png',
-  sleep: '/kintai/characters/sleep_居眠り.png',
+  hello: '/kintai/characters/hello_%E6%8C%A8%E6%8B%B6.png',
+  thinking: '/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png',
+  working: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png',
+  jump: '/kintai/characters/jump_%E5%A4%A7%E5%96%9C%E3%81%B3.png',
+  success: '/kintai/characters/success_%E6%88%90%E5%8A%9F.png',
+  point: '/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png',
+  thumbsup: '/kintai/characters/thumbsup_%E3%81%84%E3%81%84%E3%81%AD.png',
+  sleep: '/kintai/characters/sleep_%E5%B1%85%E7%9C%A0%E3%82%8A.png',
 }
 
 // "全国" を含むエリア配列を構築

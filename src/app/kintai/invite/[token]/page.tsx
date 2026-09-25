@@ -48,7 +48,7 @@ export default function InvitePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-violet-50">
         <div className="text-center">
-          <img src="/kintai/characters/thinking_考え中.png" alt="" className="w-24 h-24 mx-auto animate-bounce" style={{ objectFit: 'contain' }} />
+          <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="" className="w-24 h-24 mx-auto animate-bounce" style={{ objectFit: 'contain' }} />
           <p className="mt-4 text-lg font-bold text-slate-500">招待情報を確認中...</p>
         </div>
       </div>
@@ -59,7 +59,7 @@ export default function InvitePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-violet-50 p-6">
         <div className="bg-white rounded-3xl shadow-2xl p-12 max-w-md text-center">
-          <img src="/kintai/characters/error_泣き.png" alt="" className="w-24 h-24 mx-auto mb-4" style={{ objectFit: 'contain' }} />
+          <img src="/kintai/characters/error_%E6%B3%A3%E3%81%8D.png" alt="" className="w-24 h-24 mx-auto mb-4" style={{ objectFit: 'contain' }} />
           <h1 className="text-2xl font-black text-slate-900 mb-2">招待エラー</h1>
           <p className="text-base font-bold text-slate-500 mb-6">{error}</p>
           <a href="/kintai" className="inline-flex items-center gap-2 px-8 py-3 bg-[#7f19e6] text-white font-bold rounded-full hover:bg-[#6a14c2] transition-all shadow-lg">
@@ -73,7 +73,7 @@ export default function InvitePage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-violet-50 p-6">
       <div className="bg-white rounded-3xl shadow-2xl p-12 max-w-md text-center">
-        <img src="/kintai/characters/hello_挨拶.png" alt="" className="w-28 h-28 mx-auto mb-4" style={{ objectFit: 'contain' }} />
+        <img src="/kintai/characters/hello_%E6%8C%A8%E6%8B%B6.png" alt="" className="w-28 h-28 mx-auto mb-4" style={{ objectFit: 'contain' }} />
         <h1 className="text-2xl font-black text-slate-900 mb-2">招待が届いています！</h1>
         <div className="bg-purple-50 rounded-2xl p-5 mb-6">
           <p className="text-lg font-black text-[#7f19e6] mb-1">{invite?.organizationName}</p>

@@ -195,7 +195,7 @@ export default function EmployeesPage() {
         {/* Header */}
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <img src="/kintai/characters/point_解説.png" alt="くまさん" width={80} height={80} className="bear-float" />
+            <img src="/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png" alt="くまさん" width={80} height={80} className="bear-float" />
             <div>
               <h1 className="text-xl font-bold text-slate-800">従業員管理</h1>
               <p className="text-xs text-slate-500">チームメンバーを管理しよう</p>
@@ -210,21 +210,21 @@ export default function EmployeesPage() {
         {!loading && !loadError && (
           <div className="grid grid-cols-3 gap-3">
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-3 fade-in-up-1">
-              <img src="/kintai/characters/hello_挨拶.png" alt="" width={40} height={40} className="bear-bounce" />
+              <img src="/kintai/characters/hello_%E6%8C%A8%E6%8B%B6.png" alt="" width={40} height={40} className="bear-bounce" />
               <div>
                 <p className="text-2xl font-bold text-slate-800">{stats.total}<span className="text-sm font-normal text-slate-500 ml-0.5">名</span></p>
                 <p className="text-xs text-slate-500">全従業員</p>
               </div>
             </div>
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-3 fade-in-up-2">
-              <img src="/kintai/characters/thumbsup_いいね.png" alt="" width={40} height={40} className="bear-bounce" style={{ animationDelay: '0.3s' }} />
+              <img src="/kintai/characters/thumbsup_%E3%81%84%E3%81%84%E3%81%AD.png" alt="" width={40} height={40} className="bear-bounce" style={{ animationDelay: '0.3s' }} />
               <div>
                 <p className="text-2xl font-bold text-slate-800">{stats.active}<span className="text-sm font-normal text-slate-500 ml-0.5">名</span></p>
                 <p className="text-xs text-green-600">有効</p>
               </div>
             </div>
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4 flex items-center gap-3 fade-in-up-3">
-              <img src="/kintai/characters/sleep_居眠り.png" alt="" width={40} height={40} className="bear-float" style={{ animationDelay: '0.6s' }} />
+              <img src="/kintai/characters/sleep_%E5%B1%85%E7%9C%A0%E3%82%8A.png" alt="" width={40} height={40} className="bear-float" style={{ animationDelay: '0.6s' }} />
               <div>
                 <p className="text-2xl font-bold text-slate-800">{stats.inactive}<span className="text-sm font-normal text-slate-500 ml-0.5">名</span></p>
                 <p className="text-xs text-slate-400">無効</p>
@@ -284,7 +284,7 @@ export default function EmployeesPage() {
 
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
-            <img src="/kintai/characters/thinking_考え中.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
+            <img src="/kintai/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png" alt="読み込み中..." width={80} height={80} className="bear-spin" />
             <p className="text-sm text-slate-500 font-medium">読み込み中...</p>
           </div>
         ) : loadError ? (
@@ -439,7 +439,7 @@ export default function EmployeesPage() {
             <div className="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-lg mx-4 space-y-5 max-h-[90vh] overflow-y-auto fade-in-up" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <img src="/kintai/characters/point_解説.png" alt="" width={48} height={48} className="bear-wiggle" />
+                  <img src="/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png" alt="" width={48} height={48} className="bear-wiggle" />
                   <h2 className="text-lg font-bold text-slate-800">{editing ? '従業員を編集' : '従業員を登録'}</h2>
                 </div>
                 <button onClick={() => setShowForm(false)} className="p-1 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100">

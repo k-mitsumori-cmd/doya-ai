@@ -267,7 +267,7 @@ export default function OneOnOnePage() {
         ) : !listError ? (
           <div className="bg-white rounded-3xl shadow-lg p-12 text-center">
             <motion.img
-              src="/hr/characters/present_プレゼン.png"
+              src="/hr/characters/present_%E3%83%97%E3%83%AC%E3%82%BC%E3%83%B3.png"
               alt="白くまキャラクター"
               className="w-40 mx-auto mb-4"
               animate={{ y: [0, -10, 0] }}

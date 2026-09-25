@@ -160,7 +160,7 @@ export default function OrgChartView({ departments, orgName }: OrgChartViewProps
     return (
       <div className="text-center py-16">
         <motion.img
-          src="/hr/characters/thinking_考え中.png"
+          src="/hr/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png"
           alt="白くまキャラクター"
           className="w-40 mx-auto mb-4"
           animate={{ y: [0, -10, 0] }}

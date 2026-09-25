@@ -155,7 +155,7 @@ export default function HrDashboardPage() {
           <p className="text-sm text-slate-500 mt-1">組織の概況をひと目で確認</p>
         </div>
         <motion.img
-          src="/hr/characters/thumbsup_いいね.png"
+          src="/hr/characters/thumbsup_%E3%81%84%E3%81%84%E3%81%AD.png"
           alt="白くまキャラクター"
           className="w-16 drop-shadow-md"
           animate={{ y: [0, -8, 0] }}
@@ -258,7 +258,7 @@ export default function HrDashboardPage() {
           >
             {/* Setup Guide Character */}
             <motion.img
-              src="/hr/characters/point_解説.png"
+              src="/hr/characters/point_%E8%A7%A3%E8%AA%AC.png"
               alt="白くまキャラクター"
               className="hidden sm:block w-40 flex-shrink-0 drop-shadow-lg"
               animate={{ y: [0, -10, 0] }}

@@ -154,7 +154,7 @@ export default function EmployeeDetailPage() {
         <div className="bg-white rounded-3xl shadow-md p-6 mb-6 relative">
           <div className="absolute top-4 right-4">
             <img
-              src="/hr/characters/focus_集中.png"
+              src="/hr/characters/focus_%E9%9B%86%E4%B8%AD.png"
               alt="白くまキャラクター"
               className="w-14 opacity-80"
             />
@@ -308,7 +308,7 @@ export default function EmployeeDetailPage() {
             ) : (
               <div className="text-center py-8 text-slate-500">
                 <motion.img
-                  src="/hr/characters/thinking_考え中.png"
+                  src="/hr/characters/thinking_%E8%80%83%E3%81%88%E4%B8%AD.png"
                   alt="白くまキャラクター"
                   className="w-24 mx-auto mb-3"
                   animate={{ y: [0, -10, 0] }}
@@ -365,7 +365,7 @@ export default function EmployeeDetailPage() {
             ) : (
               <div className="text-center py-8 text-slate-500">
                 <motion.img
-                  src="/hr/characters/ramen_休憩.png"
+                  src="/hr/characters/ramen_%E4%BC%91%E6%86%A9.png"
                   alt="白くまキャラクター"
                   className="w-24 mx-auto mb-3"
                   animate={{ y: [0, -10, 0] }}

@@ -34,13 +34,13 @@ export default function KintaiPricingPage() {
       <div className="p-6 lg:p-10 max-w-6xl mx-auto relative">
         {/* Floating bears */}
         <img
-          src="/kintai/characters/thumbsup_いいね.png"
+          src="/kintai/characters/thumbsup_%E3%81%84%E3%81%84%E3%81%AD.png"
           alt=""
           className="bear-float hidden lg:block absolute -left-4 top-40 opacity-40"
           style={{ width: 80, height: 80, objectFit: 'contain' }}
         />
         <img
-          src="/kintai/characters/jump_大喜び.png"
+          src="/kintai/characters/jump_%E5%A4%A7%E5%96%9C%E3%81%B3.png"
           alt=""
           className="bear-float-2 hidden lg:block absolute -right-4 top-96 opacity-40"
           style={{ width: 70, height: 70, objectFit: 'contain' }}
@@ -49,7 +49,7 @@ export default function KintaiPricingPage() {
         {/* Header */}
         <div className="text-center mb-12 pricing-fade-in">
           <img
-            src="/kintai/characters/present_プレゼン.png"
+            src="/kintai/characters/present_%E3%83%97%E3%83%AC%E3%82%BC%E3%83%B3.png"
             alt="プレゼンするクマ"
             className="bear-float mx-auto mb-4"
             style={{ width: 120, height: 120, objectFit: 'contain' }}
@@ -85,7 +85,7 @@ export default function KintaiPricingPage() {
         {/* CTA section */}
         <div className="bg-white rounded-3xl shadow-lg p-8 text-center pricing-fade-in-4">
           <img
-            src="/kintai/characters/hello_挨拶.png"
+            src="/kintai/characters/hello_%E6%8C%A8%E6%8B%B6.png"
             alt="挨拶するクマ"
             className="bear-float-2 mx-auto mb-4"
             style={{ width: 100, height: 100, objectFit: 'contain' }}

@@ -117,7 +117,7 @@ export default function InviteAcceptPage() {
               exit={{ opacity: 0, y: -10 }}
             >
               <motion.img
-                src="/hr/characters/hello_挨拶.png"
+                src="/hr/characters/hello_%E6%8C%A8%E6%8B%B6.png"
                 alt="白くまキャラクター"
                 className="w-32 mx-auto mb-4 drop-shadow-lg"
                 animate={{ y: [0, -8, 0], rotate: [0, 3, -3, 0] }}
@@ -161,7 +161,7 @@ export default function InviteAcceptPage() {
               exit={{ opacity: 0 }}
             >
               <motion.img
-                src="/hr/characters/working_作業中.png"
+                src="/hr/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png"
                 alt="白くまキャラクター"
                 className="w-28 mx-auto mb-4"
                 animate={{ rotate: [0, 5, -5, 0] }}
@@ -188,7 +188,7 @@ export default function InviteAcceptPage() {
               transition={{ type: 'spring', damping: 15, stiffness: 200 }}
             >
               <motion.img
-                src="/hr/characters/jump_大喜び.png"
+                src="/hr/characters/jump_%E5%A4%A7%E5%96%9C%E3%81%B3.png"
                 alt="白くまキャラクター"
                 className="w-36 mx-auto mb-4 drop-shadow-lg"
                 animate={{
@@ -247,7 +247,7 @@ export default function InviteAcceptPage() {
               animate={{ opacity: 1, y: 0 }}
             >
               <motion.img
-                src="/hr/characters/error_泣き.png"
+                src="/hr/characters/error_%E6%B3%A3%E3%81%8D.png"
                 alt="白くまキャラクター"
                 className="w-28 mx-auto mb-4"
                 animate={{ y: [0, -5, 0] }}
@@ -282,7 +282,7 @@ export default function InviteAcceptPage() {
               animate={{ opacity: 1, y: 0 }}
             >
               <motion.img
-                src="/hr/characters/sleep_居眠り.png"
+                src="/hr/characters/sleep_%E5%B1%85%E7%9C%A0%E3%82%8A.png"
                 alt="白くまキャラクター"
                 className="w-28 mx-auto mb-4"
                 animate={{ y: [0, -3, 0] }}
