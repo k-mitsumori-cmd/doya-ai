@@ -18,6 +18,7 @@ walk(ast);
     ['confirmed','sent','manager',false], ['confirmed','draft','manager',false],
     ['sent','draft','manager',false], ['draft','confirmed','manager',false],
     ['confirmed',undefined,'manager',false], ['confirmed','sent','member',false],
+    ['confirmed','draft','member',false],
     ['confirmed','sent','manager',true],
   ]) {
     let row = {id:'d', organizationId:'o', status, notes:'original', lineItems:[{itemName:'original',qty:1,unitPrice:100}]};
@@ -48,6 +49,30 @@ walk(ast);
       else {assert.deepEqual(bodies,[{status:next}]);assert.equal(itemWrites,0);assert.equal(row.notes,'original');assert.equal(JSON.stringify(row.lineItems),originalItems);}
     }
     results.push({status,next:next||'save',role,saving,outcome:'PASS'});
+  }
+  // Direct API calls must not bypass the UI's approval sequence or edit a sealed quote.
+  for (const [status, body, role, expected] of [
+    ['draft', {status:'sent'}, 'manager', 409],
+    ['sent', {status:'confirmed'}, 'manager', 409],
+    ['confirmed', {status:'draft'}, 'member', 403],
+    ['confirmed', {notes:'changed'}, 'manager', 409],
+    ['sent', {clientCompany:'changed'}, 'manager', 409],
+  ]) {
+    let writes = 0;
+    const prisma = {
+      quoteDocument: {findFirst:async()=>({id:'d',status}), update:async()=>{writes++;}, findUnique:async()=>({id:'d',status})},
+      quoteLineItem: {deleteMany:async()=>{writes++;},createMany:async()=>{writes++;}},
+      $transaction:async fn=>fn(prisma),
+    };
+    const deps = {'next/server':{NextResponse:Response}, '@/lib/prisma':{prisma},
+      '@/lib/quote/access':{getQuoteContext:async()=>({organizationId:'o',userId:'u',role}),hasMinRole:()=>role==='manager',orgSlugFrom:()=> 'org'},
+      '@/lib/quote/document':{recalcDocument:async()=>{}}};
+    const exported = {};
+    vm.runInNewContext(compile(read('src/app/api/quote/documents/[id]/route.ts')), {exports:exported,require:n=>{assert(n in deps,n);return deps[n];}});
+    const response = await exported.PATCH({json:async()=>body},{params:Promise.resolve({id:'d'})});
+    assert.equal(response.status,expected);
+    assert.equal(writes,0);
+    results.push({status,body,role,outcome:'PASS'});
   }
   console.log(JSON.stringify(results,null,2));
 })().catch(e=>{console.error(e);process.exitCode=1;});

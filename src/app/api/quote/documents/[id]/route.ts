@@ -83,19 +83,28 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
         if (!['draft', 'confirmed', 'sent'].includes(next)) {
           return NextResponse.json({ error: 'ステータスが不正です' }, { status: 400 })
         }
-        if (next !== 'draft' && !hasMinRole(ctx.role, 'manager')) {
-          return NextResponse.json({ error: '見積書を確定する権限がありません' }, { status: 403 })
+        if (next !== existing.status && !hasMinRole(ctx.role, 'manager')) {
+          return NextResponse.json({ error: '見積書の承認状態を変更する権限がありません' }, { status: 403 })
         }
-        data.status = next
-        if (next === 'confirmed') {
-          data.confirmedBy = ctx.userId
-          data.confirmedAt = new Date()
-        } else if (next === 'sent') {
-          data.sentAt = new Date()
-        } else {
-          // 下書きに戻したら確定の記録は消す（誰がいつ確定したかを偽らせない）
-          data.confirmedBy = null
-          data.confirmedAt = null
+        if (next === 'sent' && existing.status !== 'confirmed') {
+          return NextResponse.json({ error: '送付済みにする前に見積書を確定してください' }, { status: 409 })
+        }
+        if (next === 'confirmed' && existing.status !== 'draft') {
+          return NextResponse.json({ error: '見積書をいったん下書きに戻してから確定してください' }, { status: 409 })
+        }
+        if (next !== existing.status) {
+          data.status = next
+          if (next === 'confirmed') {
+            data.confirmedBy = ctx.userId
+            data.confirmedAt = new Date()
+          } else if (next === 'sent') {
+            data.sentAt = new Date()
+          } else {
+            // 下書きに戻したら以前の承認・送付記録を残さない。
+            data.confirmedBy = null
+            data.confirmedAt = null
+            data.sentAt = null
+          }
         }
       }
 
@@ -108,16 +117,10 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
       const nextStatus = typeof data.status === 'string' ? (data.status as string) : existing.status
       const touchesAmounts =
         Array.isArray(body?.items) || 'discountType' in body || 'discountValue' in body
-      if (touchesAmounts && existing.status !== 'draft' && nextStatus !== 'draft') {
-        return NextResponse.json(
-          {
-            error:
-              '確定済みの見積書の金額は変更できません。金額を直す場合は、いったん下書きに戻してから編集してください。',
-          },
-          { status: 409 }
-        )
+      const touchesContent = touchesAmounts || Object.keys(body).some((key) => key !== 'status')
+      if (touchesContent && existing.status !== 'draft' && nextStatus !== 'draft') {
+        return NextResponse.json({ error: '確定済みの見積書は変更できません。いったん下書きに戻してから編集してください。' }, { status: 409 })
       }
-
       // --- 明細の差し替え ---
       if (Array.isArray(body?.items)) {
         const items = body.items.slice(0, 60).filter((i: any) => i && i.itemName)
