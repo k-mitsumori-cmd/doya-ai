@@ -147,8 +147,10 @@ src/lib/doyaslide/        # 10 ファイル
 
 - Supabase Storage 公開バケット `doyaslide`。
   - 生成画像: `{userId}/{projectId}/{uuid}.png`（ロゴ合成前後）
-  - スタイルプレビュー（共有）: `style-previews/v2-gptimg2/{style}-{page}.png`
+  - スタイルプレビュー（共有）: `style-previews/v5-styles6/{style}-{page}.png`
   - ロゴ: `{userId}/logos/{uuid}.{ext}`
+
+共有スタイルプレビューは保存先の確認に失敗した場合、画像生成を開始しない。同じスタイルの生成はDB上の期限付きleaseで一度に1要求に制限し、生成中の閲覧には再取得指示を返す。画面は10秒後に再取得する。外部画像APIの運用保護枠は全スタイル合計で日本時間の1日120枚とし、生成前に不足ページ数を確保する。既存キャッシュは未ログインでも閲覧可能。
 
 ## 環境変数
 

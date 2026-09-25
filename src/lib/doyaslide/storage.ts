@@ -84,16 +84,13 @@ const knownStylePreviews = new Set<string>()
 export async function stylePreviewExists(style: string, page = 0): Promise<boolean> {
   const key = `${style}-${page}`
   if (knownStylePreviews.has(key)) return true
-  try {
-    const { data } = await getSupabase()
-      .storage.from(BUCKET)
-      .list(STYLE_PREVIEW_DIR, { search: `${key}.png`, limit: 100 })
-    const exists = !!data?.some((f) => f.name === `${key}.png`)
-    if (exists) knownStylePreviews.add(key)
-    return exists
-  } catch {
-    return false
-  }
+  const { data, error } = await getSupabase()
+    .storage.from(BUCKET)
+    .list(STYLE_PREVIEW_DIR, { search: `${key}.png`, limit: 100 })
+  if (error || !data) throw new Error('スタイルプレビューの保存状況を確認できません')
+  const exists = data.some((f) => f.name === `${key}.png`)
+  if (exists) knownStylePreviews.add(key)
+  return exists
 }
 
 /** スタイルプレビュー画像を固定パス(該当ページ)に保存（upsert）して公開URLを返す */

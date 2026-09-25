@@ -13,6 +13,7 @@ import {
   DOC_TYPE_DESC,
   ASPECT_LABELS,
   STYLE_PRESETS,
+  STYLE_PREVIEW_SAMPLE_SLIDES,
   MIN_SLIDES,
   MAX_SLIDES,
   estimateGenSeconds,
@@ -73,6 +74,12 @@ export default function NewDoyaSlideWizard() {
   const [previews, setPreviews] = useState<Record<string, string[]>>({})
   const [previewPage, setPreviewPage] = useState(0)
   const fetchedStyles = useRef<Set<string>>(new Set())
+  const previewRetryTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+
+  useEffect(() => {
+    const timers = previewRetryTimers.current
+    return () => { for (const timer of timers.values()) clearTimeout(timer); timers.clear() }
+  }, [])
 
   const refreshUsage = useCallback(async () => {
     const response = await fetch('/api/doyaslide/usage', { cache: 'no-store' })
@@ -101,13 +108,23 @@ export default function NewDoyaSlideWizard() {
   }, [authStatus, refreshUsage])
 
   const loadPreview = (s: string): Promise<void> => {
-    if (previews[s] || fetchedStyles.current.has(s)) return Promise.resolve()
+    if (previews[s]?.length === STYLE_PREVIEW_SAMPLE_SLIDES.length || fetchedStyles.current.has(s)) return Promise.resolve()
     fetchedStyles.current.add(s)
     return fetch(`/api/doyaslide/style-preview?style=${s}`)
       .then((r) => r.json())
       .then((d) => {
         const urls: string[] = d.urls || (d.url ? [d.url] : [])
         if (urls.length) setPreviews((p) => ({ ...p, [s]: urls }))
+        if (d.pending) {
+          fetchedStyles.current.delete(s)
+          if (!previewRetryTimers.current.has(s)) {
+            const timer = setTimeout(() => {
+              previewRetryTimers.current.delete(s)
+              void loadPreview(s)
+            }, 10000)
+            previewRetryTimers.current.set(s, timer)
+          }
+        }
       })
       .catch(() => {
         fetchedStyles.current.delete(s)

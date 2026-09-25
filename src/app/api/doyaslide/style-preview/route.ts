@@ -9,6 +9,7 @@ import { buildImagePrompt } from '@/lib/doyaslide/prompts'
 import { STYLE_PRESETS, getStylePreviewColor, STYLE_PREVIEW_SAMPLE_SLIDES } from '@/lib/doyaslide/constants'
 import { stylePreviewPublicUrl, uploadStylePreview, stylePreviewExists } from '@/lib/doyaslide/storage'
 import { normalizeGeneratedSlide } from '@/lib/doyaslide/aspect'
+import { claimStylePreviewLease, releaseStylePreviewLease, reserveStylePreviewImages, StylePreviewBudgetError, StylePreviewInProgressError } from '@/lib/doyaslide/style-preview-lease'
 
 const SAMPLE_SLIDES = STYLE_PREVIEW_SAMPLE_SLIDES
 
@@ -26,18 +27,32 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: '無効なスタイルです' }, { status: 400 })
     }
 
-    // スタイルごとに代表カラーを変えて、一覧を多彩に見せる
-    const themeColor = getStylePreviewColor(style)
-    // 全ページ並列生成（直列だと cold cache 時に 3ページ×約130秒 > maxDuration=300 で関数が落ちる）
-    const results = await Promise.all(
-      SAMPLE_SLIDES.map(async (slide, page) => {
+    // Storageの確認失敗時は生成しない。読み取り障害を「未生成」と誤判定しない。
+    const cached = await Promise.all(SAMPLE_SLIDES.map((_, page) => stylePreviewExists(style, page)))
+    const cachedUrls = cached.map((exists, page) => exists ? stylePreviewPublicUrl(style, page) : null)
+    if (!userId || cached.every(Boolean)) {
+      const urls = cachedUrls.filter((url): url is string => !!url)
+      return NextResponse.json({ url: urls[0] ?? null, urls, pending: false })
+    }
+
+    let token: string
+    try {
+      token = await claimStylePreviewLease(style)
+    } catch (error) {
+      if (!(error instanceof StylePreviewInProgressError)) throw error
+      const urls = cachedUrls.filter((url): url is string => !!url)
+      return NextResponse.json({ url: urls[0] ?? null, urls, pending: true }, { status: 202 })
+    }
+
+    try {
+      // 別の要求が先に生成している可能性があるため、lease取得後に再確認する。
+      const current = await Promise.all(SAMPLE_SLIDES.map((_, page) => stylePreviewExists(style, page)))
+      const missing = current.filter(exists => !exists).length
+      if (missing > 0) await reserveStylePreviewImages(missing)
+      const themeColor = getStylePreviewColor(style)
+      const results = await Promise.all(SAMPLE_SLIDES.map(async (slide, page) => {
+        if (current[page]) return stylePreviewPublicUrl(style, page)
         try {
-          // キャッシュ確認（Storage上に存在すれば再利用。HEADは公開URLで信頼できないため list で判定）
-          if (await stylePreviewExists(style, page)) {
-            return stylePreviewPublicUrl(style, page)
-          }
-          // 匿名アクセスでコールドキャッシュを生成すると費用が集中するため、閲覧だけに限定する。
-          if (!userId) return null
           const prompt = buildImagePrompt({
             slide,
             themeColor,
@@ -51,17 +66,19 @@ export async function GET(req: NextRequest) {
           const normalized = await normalizeGeneratedSlide(img.base64, img.mimeType, 'wide')
           return await uploadStylePreview(style, normalized.base64, page)
         } catch (e: any) {
-          // 1ページ失敗しても成功した他ページは返す（全体500にしない）
           console.error(`[doyaslide/style-preview] ${style}-${page} failed:`, e?.message)
           return null
         }
+      }))
+      const urls = results.filter((url): url is string => !!url)
+      return NextResponse.json({ url: urls[0] ?? null, urls, pending: false })
+    } finally {
+      await releaseStylePreviewLease(style, token).catch(error => {
+        console.error('[doyaslide/style-preview] lease release failed', error)
       })
-    )
-    const urls = results.filter((u): u is string => !!u)
-
-    // 後方互換: 先頭ページを url としても返す（全滅時は null）
-    return NextResponse.json({ url: urls[0] ?? null, urls })
+    }
   } catch (e: any) {
+    if (e instanceof StylePreviewBudgetError) return NextResponse.json({ error: '本日のスタイル見本生成枠に達しました。既存の見本をご利用ください。', code: 'STYLE_PREVIEW_DAILY_CAP' }, { status: 429 })
     console.error('[doyaslide/style-preview]', e?.message)
     return NextResponse.json({ error: 'プレビュー生成に失敗しました' }, { status: 500 })
   }
