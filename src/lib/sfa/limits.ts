@@ -1,7 +1,7 @@
 import type { Prisma } from '@prisma/client'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { tierFrom } from '@/lib/plan-utils'
+import { tierFrom, type PlanTier } from '@/lib/plan-utils'
 
 type Tx = Prisma.TransactionClient
 type Resource = 'members' | 'accounts' | 'deals'
@@ -31,12 +31,7 @@ export function sfaQuotaResponse(limit: SfaQuotaExceeded, canManageBilling = fal
 }
 
 /** SFA は組織の資源を使うため、操作したメンバーではなく組織オーナーの契約で判定する。 */
-export async function checkSfaQuota(
-  tx: Tx,
-  organizationId: string,
-  requested: Requested,
-  options: { countPendingInvites?: boolean } = {}
-): Promise<SfaQuotaExceeded | null> {
+export async function sfaOwnerPlanTier(tx: Tx, organizationId: string): Promise<PlanTier> {
   const owner = await tx.sfaMember.findFirst({
     where: { organizationId, role: 'owner', status: 'ACTIVE', userId: { not: null } },
     orderBy: { createdAt: 'asc' },
@@ -45,7 +40,16 @@ export async function checkSfaQuota(
   const user = owner?.userId
     ? await tx.user.findUnique({ where: { id: owner.userId }, select: { plan: true } })
     : null
-  const tier = tierFrom(user?.plan)
+  return tierFrom(user?.plan)
+}
+
+export async function checkSfaQuota(
+  tx: Tx,
+  organizationId: string,
+  requested: Requested,
+  options: { countPendingInvites?: boolean } = {}
+): Promise<SfaQuotaExceeded | null> {
+  const tier = await sfaOwnerPlanTier(tx, organizationId)
   const limits = LIMITS[tier === 'GUEST' ? 'FREE' : tier]
   for (const resource of ['members', 'accounts', 'deals'] as const) {
     const increment = requested[resource] ?? 0

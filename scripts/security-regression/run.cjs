@@ -1,5 +1,15 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const sfaAiLimit = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-ai-limit.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaAiLimit.error || sfaAiLimit.status !== 0) {
+  console.error('Security regression failed: verify-sfa-ai-limit.cjs');
+  process.exit(1);
+}
+const sfaAiRoutes = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-ai-routes.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaAiRoutes.error || sfaAiRoutes.status !== 0) {
+  console.error('Security regression failed: verify-sfa-ai-routes.cjs');
+  process.exit(1);
+}
 const sfaLimits = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-limits.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaLimits.error || sfaLimits.status !== 0) {
   console.error('Security regression failed: verify-sfa-limits.cjs');

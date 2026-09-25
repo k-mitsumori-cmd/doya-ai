@@ -47,6 +47,8 @@ const fixtureMessages=[
   const body={code:'SFA_LIMIT_REACHED',limitReached:true,error:'取引先の上限（50件）に達しました。'};
   assert.equal(classify('/api/sfa/accounts',402,{...body,canManageBilling:false}).kind,'owner');
   assert.equal(classify('/api/sfa/accounts',402,{...body,canManageBilling:true}).kind,'quota');
+  assert.equal(classify('/api/sfa/ai/score',402,{...body,code:'SFA_AI_LIMIT_REACHED',canManageBilling:false}).kind,'owner');
+  assert.equal(classify('/api/sfa/ai/next-action',402,{...body,code:'SFA_AI_LIMIT_REACHED',canManageBilling:true}).kind,'quota');
  });
  for(const [status,error] of [[429,'リクエストが多すぎます。しばらくしてからお試しください。'],[429,'現在の解析が完了してから、もう一度お試しください。'],[429,'接続の試行回数が上限に達しました。採用ご担当者にお問い合わせください。'],[400,'ファイルサイズが上限 (500MB) を超えています'],[403,'アクセス権限がありません'],[500,'今月の上限に達しました'],[410,'このサービスは提供を終了しました'],[429,'APIの使用量制限に達しました。Google AI Studioでプランをご確認ください']])await check('non-billing error stays non-billing: '+error.slice(0,15),async()=>assert.equal(classify('/api/banner/generate',status,{error}),null));
  await check('external APIs and successful JSON do not produce prompts; response bodies remain readable',async()=>{

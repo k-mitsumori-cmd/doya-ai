@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { suggestNextAction } from '@/lib/sfa/ai'
+import { reserveSfaAiUsage, completeSfaAiUsage, releaseSfaAiUsage, sfaAiLimitResponse } from '@/lib/sfa/ai-limit'
 import { ACTIVITY_TYPE_LABEL } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
 
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
 
   // IDOR対策
   const deal = await prisma.sfaDeal.findUnique({ where: { id: dealId } })
-  if (!deal || deal.organizationId !== ctx.organizationId) {
+  if (!deal || deal.organizationId !== ctx.organizationId || !deal.isActive) {
     return NextResponse.json({ error: '見つかりません' }, { status: 404 })
   }
 
@@ -43,6 +44,15 @@ export async function POST(req: NextRequest) {
     ? Math.floor((Date.now() - new Date(deal.lastActivityAt).getTime()) / 86400000)
     : null
 
+  let reservation: Awaited<ReturnType<typeof reserveSfaAiUsage>>
+  try {
+    reservation = await reserveSfaAiUsage(ctx.organizationId, ctx.userId, 'next-action')
+  } catch (e) {
+    console.error('[sfa/ai/next-action] quota reservation failed', e)
+    return NextResponse.json({ error: '利用状況を確認できません。しばらくしてから再試行してください' }, { status: 503 })
+  }
+  if ('limit' in reservation) return sfaAiLimitResponse(reservation, ctx.role === 'owner')
+
   try {
     const result = await suggestNextAction({
       dealName: deal.name,
@@ -56,8 +66,10 @@ export async function POST(req: NextRequest) {
         return `${label}: ${a.subject || a.body || ''}`.trim()
       }),
     })
+    await completeSfaAiUsage(reservation.id)
     return NextResponse.json(result, { headers: { 'Cache-Control': 'no-store' } })
   } catch (e: any) {
+    await releaseSfaAiUsage(reservation.id).catch((releaseError) => console.error('[sfa/ai/next-action] quota release failed', releaseError))
     console.error('[sfa/ai/next-action]', e?.message)
     return NextResponse.json({ error: '提案の生成に失敗しました' }, { status: 500 })
   }

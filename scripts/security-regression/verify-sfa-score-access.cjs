@@ -11,13 +11,14 @@ async function run(body, lead) {
   let writes = 0;
   const prisma = { sfaLead: {
     findUnique: async () => lead,
-    update: async () => { writes++; return lead; },
+    updateMany: async () => { writes++; return { count: 1 }; },
   } };
   const deps = {
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
     '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org' }), orgSlugFrom: () => 'org' },
     '@/lib/sfa/ai': { scoreLead: async () => { aiCalls++; return { score: 70 }; } },
+    '@/lib/sfa/ai-limit': { reserveSfaAiUsage: async () => ({ id: 'reservation' }), completeSfaAiUsage: async () => {}, releaseSfaAiUsage: async () => {} },
   };
   const exported = {};
   vm.runInNewContext(code, { exports: exported, require: (name) => { assert(name in deps, name); return deps[name]; } });

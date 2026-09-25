@@ -44,11 +44,12 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
     const route = load('src/app/api/sfa/ai/next-action/route.ts', {
       'next/server': server,
       '@/lib/prisma': { prisma: {
-        sfaDeal: { findUnique: async () => ({ id: 'deal', organizationId: 'org', name: 'Deal', amount: 100, probability: 50 }) },
+        sfaDeal: { findUnique: async () => ({ id: 'deal', organizationId: 'org', isActive: true, name: 'Deal', amount: 100, probability: 50 }) },
         sfaActivity: { findMany: async () => [] },
       } },
       '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org' }), orgSlugFrom: () => 'org' },
       '@/lib/sfa/ai': { suggestNextAction: async () => { calls++; return { action: 'Follow up' }; } },
+      '@/lib/sfa/ai-limit': { reserveSfaAiUsage: async () => ({ id: 'reservation' }), completeSfaAiUsage: async () => {}, releaseSfaAiUsage: async () => {} },
       '@/lib/sfa/constants': { ACTIVITY_TYPE_LABEL: {} },
     });
     await checkRoute('SFA next action', route.POST, [null, { dealId: {} }, { dealId: 42 }], { dealId: 'deal' }, () => calls);
