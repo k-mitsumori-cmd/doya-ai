@@ -6,7 +6,7 @@ import { Loader2, CheckCircle2, XCircle } from 'lucide-react'
 export default function GenerateImagesPage() {
   const [generating, setGenerating] = useState(false)
   const [result, setResult] = useState<{ success: boolean; generated?: number; error?: string } | null>(null)
-  const [count, setCount] = useState(20)
+  const [count, setCount] = useState(15)
 
   const handleGenerate = async () => {
     setGenerating(true)
@@ -52,9 +52,9 @@ export default function GenerateImagesPage() {
             <input
               type="number"
               min="1"
-              max="100"
+              max="15"
               value={count}
-              onChange={(e) => setCount(parseInt(e.target.value, 10) || 20)}
+              onChange={(e) => setCount(parseInt(e.target.value, 10) || 15)}
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none font-bold text-gray-900"
             />
             <p className="text-xs text-gray-500 mt-2">

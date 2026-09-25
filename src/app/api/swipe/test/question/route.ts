@@ -10,6 +10,8 @@ import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { v4 as uuidv4 } from 'uuid'
+import { SwipeQuestionSchema } from '@/lib/swipe-request'
+import { reserveSeoToolCall, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 // カード生成（質問生成）専用のモデル
 const CARD_GENERATION_MODEL = 'gemini-2.5-flash'
@@ -22,12 +24,11 @@ const CARD_GENERATION_MODEL = 'gemini-2.5-flash'
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    const body = await req.json().catch(() => ({}))
-    const { sessionId, answers } = body
-
-    if (!sessionId || !Array.isArray(answers)) {
-      return NextResponse.json({ error: 'sessionId and answers are required' }, { status: 400 })
-    }
+    const userId = String((session?.user as any)?.id || '').trim()
+    if (!userId) return NextResponse.json({ code: 'LOGIN_REQUIRED', error: '質問を生成するにはログインしてください。' }, { status: 401 })
+    const parsed = SwipeQuestionSchema.safeParse(await req.json().catch(() => null))
+    if (!parsed.success) return NextResponse.json({ error: '回答内容を確認してください。' }, { status: 400 })
+    const { sessionId, answers } = parsed.data
 
     // セッションを取得
     const swipeSession = await prisma.swipeSession.findUnique({
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
     if (!swipeSession) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
+    if (swipeSession.userId !== userId) return NextResponse.json({ error: 'このセッションにはアクセスできません。' }, { status: 403 })
 
     const currentYear = new Date().getFullYear()
     const normalizeTitleYear = (title: string) => {
@@ -65,6 +67,8 @@ export async function POST(req: NextRequest) {
         finalData: result.finalData,
       })
     }
+
+    await reserveSeoToolCall(userId, 'swipe-questions')
 
     // これまでの回答を整理
     const answersText = answers.map((a: any) => `Q: ${a.question}\nA: ${a.answer === 'yes' ? 'はい' : 'いいえ'}`).join('\n\n')
@@ -445,10 +449,11 @@ JSONのみを出力してください。`
       })
     }
   } catch (error: any) {
+    if (error instanceof SeoToolRateLimitError) return NextResponse.json({ code: 'SWIPE_QUESTION_LIMIT', error: `本日の質問生成上限（${error.limit}回）に達しました。明日お試しください。` }, { status: 429 })
     console.error('[swipe/test/question] error:', error)
     return NextResponse.json(
-      { error: error?.message || 'Internal server error' },
-      { status: 500 }
+      { error: '質問の生成に失敗しました。時間をおいて再試行してください。' },
+      { status: 503 }
     )
   }
 }

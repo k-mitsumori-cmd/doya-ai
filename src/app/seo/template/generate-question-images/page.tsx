@@ -76,7 +76,7 @@ export default function GenerateQuestionImagesPage() {
             <input
               type="number"
               min="1"
-              max="100"
+              max="30"
               value={count}
               onChange={(e) => setCount(parseInt(e.target.value, 10) || 30)}
               className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none font-bold text-gray-900"
@@ -169,4 +169,3 @@ export default function GenerateQuestionImagesPage() {
     </div>
   )
 }
-

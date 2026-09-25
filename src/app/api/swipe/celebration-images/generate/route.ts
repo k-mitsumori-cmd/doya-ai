@@ -5,8 +5,8 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireAdmin } from '@/lib/admin-guard'
+import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
 
@@ -15,13 +15,12 @@ import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gem
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const denied = await requireAdmin()
+    if (denied) return denied
 
-    const body = await req.json().catch(() => ({}))
-    const { count = 20 } = body // デフォルト20枚生成
+    const parsed = z.object({ count: z.number().int().min(1).max(15).optional() }).safeParse(await req.json().catch(() => ({})))
+    if (!parsed.success) return NextResponse.json({ error: '生成枚数は1〜15枚で指定してください。' }, { status: 400 })
+    const count = parsed.data.count ?? 15
 
     const categories = [
       { category: 'thanks', prompts: [
@@ -93,8 +92,8 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('[celebration-images/generate] error:', error)
     return NextResponse.json(
-      { error: error?.message || 'Internal server error' },
-      { status: 500 }
+      { error: '画像の生成に失敗しました。' },
+      { status: 503 }
     )
   }
 }

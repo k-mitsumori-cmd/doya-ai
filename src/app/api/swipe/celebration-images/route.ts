@@ -10,7 +10,11 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url)
     const category = searchParams.get('category') || 'thanks'
-    const count = parseInt(searchParams.get('count') || '1', 10)
+    const countRaw = searchParams.get('count') || '1'
+    const count = Number(countRaw)
+    if (category.length > 100 || !Number.isInteger(count) || count < 1 || count > 10) {
+      return NextResponse.json({ error: '画像の取得条件を確認してください。' }, { status: 400 })
+    }
 
     // 指定カテゴリの画像をランダムに取得
     const images = await prisma.swipeCelebrationImage.findMany({
@@ -47,8 +51,8 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error('[celebration-images] error:', error)
     return NextResponse.json(
-      { error: error?.message || 'Internal server error' },
-      { status: 500 }
+      { error: '画像の読み込みに失敗しました。' },
+      { status: 503 }
     )
   }
 }

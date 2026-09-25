@@ -1,7 +1,7 @@
 # ドヤSwipe
 
 ## 概要
-- **パス**: `/swipe`
+- **パス**: `/seo/swipe`
 - **サービスID**: (SEOサービスの一部)
 - **説明**: Tinder風UIでスワイプ → 質問に答えるだけでSEO記事を自動生成
 - **ステータス**: active
@@ -21,9 +21,11 @@
 | POST | `/api/swipe/start` | セッション開始 (UUID発行 + 質問ツリー返却) |
 | POST | `/api/swipe/generate` | スワイプ結果 → SEO記事生成開始 |
 | POST | `/api/swipe/log` | スワイプログ保存 |
-| * | `/api/swipe/test/*` | テスト (祝賀画像, 質問画像) |
-| * | `/api/swipe/celebration-images/*` | 祝賀画像生成 |
-| * | `/api/swipe/question-images/*` | 質問カード画像生成 |
+| POST | `/api/swipe/test/start` | 現行画面のAI質問開始 |
+| POST | `/api/swipe/test/question` | 現行画面の次の質問 |
+| POST | `/api/swipe/test/finalize` | 現行画面の記事生成開始 |
+| GET | `/api/swipe/celebration-images`, `/api/swipe/question-images` | 登録済み画像の取得 |
+| POST | `/api/swipe/celebration-images/generate`, `/api/swipe/question-images/generate`, `/api/swipe/question-images/clear` | 管理者専用の画像保守 |
 
 ## スワイプ → 記事条件マッピング
 
@@ -57,7 +59,7 @@ q18: 'yes' → テンプレート付き
 
 ## ファイル構成
 ```
-src/app/swipe/
+src/app/seo/swipe/
   └── page.tsx              # スワイプUI
 
 src/app/api/swipe/
@@ -75,4 +77,7 @@ prisma/ (SEOと同じ質問定義)
 ## 補足
 - 質問定義は `@seo/lib/swipe-questions` に格納
 - SEO記事生成と料金制限を共有 (seoPlan / seoAccess)
-- ゲスト/ログインの回数制限はSEOと同一
+- 記事作成はログイン必須。現行画面・旧APIとも同じ月間SEO記事枠を消費する。
+- 1つのスワイプセッションから作る記事は1件。通信結果を受け取れなかった再送では既存ジョブを返す。
+- AI質問生成はログイン必須で、外部API保護のため日本時間の1日50回まで。記事の有料プラン枠とは別の運用上限。
+- 管理用画像の生成・全削除は管理者認証が必要。通常のログインだけでは実行できない。

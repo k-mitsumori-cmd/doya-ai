@@ -46,6 +46,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
+    if (swipeSession.generatedArticleId) {
+      const job = await prisma.seoJob.findFirst({ where: { articleId: swipeSession.generatedArticleId, article: { userId } }, orderBy: { id: 'asc' } })
+      if (job) return NextResponse.json({ success: true, articleId: job.articleId, jobId: job.id })
+      return NextResponse.json({ error: '既存の記事の状態を確認できません。' }, { status: 409 })
+    }
+
     // スワイプ結果から記事生成パラメータを構築
     const swipes = Array.isArray(swipeSession.swipes) ? (swipeSession.swipes as any[]) : []
     const swipeMap = new Map<string, 'yes' | 'no' | 'hold'>()
@@ -124,7 +130,7 @@ export async function POST(req: NextRequest) {
       },
       afterCreate: async (tx, created) => {
         await tx.swipeSession.update({
-          where: { sessionId },
+          where: { sessionId, userId, generatedArticleId: null },
           data: {
             finalConditions: finalConditions as any,
             primaryInfo: primaryInfo as any,
@@ -147,6 +153,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ code: 'SEO_ARTICLE_LIMIT',
         error: error.guest ? '記事を生成するにはログインしてください。' : `今月の生成回数の上限に達しました（${error.limit}回/月）。プランをアップグレードすると増やせます。`,
       }, { status: 429 })
+    }
+    if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2025') {
+      return NextResponse.json({ error: 'この記事はすでに生成されています。画面を更新して確認してください。' }, { status: 409 })
     }
     console.error('[swipe/generate] failed')
     return NextResponse.json(

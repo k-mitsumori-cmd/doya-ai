@@ -10,6 +10,10 @@ import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { v4 as uuidv4 } from 'uuid'
+import { z } from 'zod'
+import { reserveSeoToolCall, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
+
+const StartSchema = z.object({ keywords: z.array(z.string().trim().min(1).max(100)).min(1).max(10) })
 
 // カード生成（質問生成）専用のモデル
 const CARD_GENERATION_MODEL = 'gemini-2.5-flash'
@@ -21,31 +25,15 @@ const CARD_GENERATION_MODEL = 'gemini-2.5-flash'
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    const body = await req.json().catch(() => ({}))
-    const { keywords } = body
-
-    if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
-      return NextResponse.json({ error: 'keywords is required (array)' }, { status: 400 })
-    }
+    const userId = String((session?.user as any)?.id || '').trim()
+    if (!userId) return NextResponse.json({ code: 'LOGIN_REQUIRED', error: 'スワイプ記事を作成するにはログインしてください。' }, { status: 401 })
+    const parsed = StartSchema.safeParse(await req.json().catch(() => null))
+    if (!parsed.success) return NextResponse.json({ error: 'キーワードは1〜10個、各100文字以内で入力してください。' }, { status: 400 })
+    const { keywords } = parsed.data
+    await reserveSeoToolCall(userId, 'swipe-questions')
 
     // session_idを生成
     const sessionId = uuidv4()
-
-    // ゲストIDを取得（未ログイン時）
-    const guestId = session?.user?.id
-      ? undefined
-      : req.cookies.get('guest_id')?.value || uuidv4()
-
-    // セッションをDBに保存
-    await prisma.swipeSession.create({
-      data: {
-        sessionId,
-        userId: session?.user?.id || null,
-        guestId: session?.user?.id ? null : guestId,
-        mainKeyword: keywords.join(', '),
-        swipes: [],
-      },
-    })
 
     // キーワードの関連キーワードを詳細に調査して質問を生成
     const keywordAnalysisPrompt = `あなたはSEOキーワード分析の専門家です。
@@ -210,7 +198,6 @@ JSONのみを出力してください。必ず8問すべてを生成してくだ
     // 質問生成（エラー時はエラーを返す）
     // カード生成専用のモデルを使用
     let questionData: any
-    let aiGenerationError: string | null = null
     
     try {
     const aiResponse = await geminiGenerateText({
@@ -240,16 +227,13 @@ JSONのみを出力してください。必ず8問すべてを生成してくだ
       }
     } catch (e: any) {
       console.error('[swipe/test/start] AI question generation failed:', e?.message)
-      aiGenerationError = e?.message || 'AI質問生成に失敗しました'
       
       // エラーをクライアントに返す
       return NextResponse.json(
         { 
           error: 'AI質問生成に失敗しました', 
-          details: aiGenerationError,
-          sessionId, // セッションIDは返す（リトライ用）
         }, 
-        { status: 500 }
+        { status: 503 }
       )
     }
 
@@ -267,17 +251,28 @@ JSONのみを出力してください。必ず8問すべてを生成してくだ
           },
         ]
 
+    // AI生成に失敗した試行では未使用のセッションを保存しない。
+    await prisma.swipeSession.create({
+      data: {
+        sessionId,
+        userId,
+        guestId: null,
+        mainKeyword: keywords.join(', '),
+        swipes: [],
+      },
+    })
+
     return NextResponse.json({
       success: true,
       sessionId,
       questions,
-      guestId: session?.user?.id ? undefined : guestId,
     })
   } catch (error: any) {
+    if (error instanceof SeoToolRateLimitError) return NextResponse.json({ code: 'SWIPE_QUESTION_LIMIT', error: `本日の質問生成上限（${error.limit}回）に達しました。明日お試しください。` }, { status: 429 })
     console.error('[swipe/test/start] error:', error)
     return NextResponse.json(
-      { error: error?.message || 'Internal server error' },
-      { status: 500 }
+      { error: '質問の生成に失敗しました。時間をおいて再試行してください。' },
+      { status: 503 }
     )
   }
 }

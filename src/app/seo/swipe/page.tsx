@@ -67,14 +67,23 @@ export default function SwipeArticlePage() {
   } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   // ユーザープラン情報
   const userPlan = useMemo(() => {
     const user: any = session?.user || null
     const plan = user?.seoPlan || user?.plan || (user ? 'FREE' : 'GUEST')
-    return String(plan).toUpperCase() as 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE'
+    return String(plan).toUpperCase() as 'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE'
   }, [session])
-  const charLimit = useMemo(() => CHAR_LIMITS[userPlan] || 10000, [userPlan])
+  const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
+  const firstLoginTime = firstLoginAt ? Date.parse(firstLoginAt) : Number.NaN
+  const seoTrialActive = Number.isFinite(firstLoginTime) && now < firstLoginTime + 60 * 60 * 1000
+  const charLimit = useMemo(() => CHAR_LIMITS[seoTrialActive ? 'PRO' : userPlan] || 10000, [userPlan, seoTrialActive])
   const isLoggedIn = !!session?.user
 
   const thinkingMessages = useMemo(
@@ -160,6 +169,10 @@ export default function SwipeArticlePage() {
 
   // セッション開始
   const handleStart = async () => {
+    if (!isLoggedIn) {
+      setError('スワイプ記事を作成するにはログインしてください。')
+      return
+    }
     const keywordList = keywords.split(',').map(k => k.trim()).filter(Boolean)
     if (keywordList.length === 0) {
       setError('キーワードを入力してください（カンマ区切りで複数入力可）')
@@ -283,11 +296,12 @@ export default function SwipeArticlePage() {
 
   // 次の質問バッチを生成（リトライ機能付き）
   const loadNextQuestions = useCallback(async (retryCount = 0) => {
-    if (!sessionId || isGeneratingQuestion) return
+    if (!sessionId || (isGeneratingQuestion && retryCount === 0)) return
 
     setIsGeneratingQuestion(true)
     setIsTransitioningQuestion(true)
     setError(null) // エラーをクリア
+    let retryable = true
     try {
       const res = await fetch('/api/swipe/test/question', {
         method: 'POST',
@@ -301,8 +315,9 @@ export default function SwipeArticlePage() {
       const json = await res.json().catch(() => ({}))
 
       if (!res.ok || json?.error) {
+        retryable = res.status >= 500
         // リトライ（最大3回）
-        if (retryCount < 3) {
+        if (retryCount < 3 && retryable) {
           console.warn(`[質問生成リトライ] 試行回数: ${retryCount + 1}`)
           await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1))) // 指数バックオフ
           return loadNextQuestions(retryCount + 1)
@@ -440,7 +455,7 @@ export default function SwipeArticlePage() {
         })
       } else {
         // 質問が空の場合はリトライ
-        if (retryCount < 3) {
+        if (retryable && retryCount < 3) {
           console.warn(`[質問が空] リトライ: ${retryCount + 1}`)
           await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)))
           return loadNextQuestions(retryCount + 1)
@@ -461,7 +476,7 @@ export default function SwipeArticlePage() {
     } finally {
       setIsGeneratingQuestion(false)
     }
-  }, [sessionId, answers, isGeneratingQuestion, questionQueue.length])
+  }, [sessionId, answers, isGeneratingQuestion, questionQueue.length, charLimit, keywords])
 
   // 「考え中」表示は、次の質問がキューに入ってから消す（ラグ防止）
   useEffect(() => {
@@ -582,6 +597,9 @@ export default function SwipeArticlePage() {
             <p className="text-red-700 font-bold">{error}</p>
             {!session?.user && error.includes('ログイン') && (
               <Link href="/auth/signin" className="mt-2 inline-block text-sm font-bold text-red-700 underline">ログインする</Link>
+            )}
+            {session?.user && error.includes('今月の生成回数の上限') && (
+              <Link href="/seo/dashboard/plan" className="mt-2 inline-block text-sm font-bold text-red-700 underline">プランと30日間無料の対象条件を確認する</Link>
             )}
           </div>
         )}
@@ -953,7 +971,7 @@ export default function SwipeArticlePage() {
                 <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">
                   文字数目安
                   <span className="ml-2 text-[10px] font-bold text-gray-400 normal-case">
-                    ({userPlan === 'GUEST' ? 'ゲスト' : userPlan === 'FREE' ? '無料' : userPlan === 'PRO' ? 'プロ' : 'プロ'}プラン: 最大{charLimit.toLocaleString()}字)
+                    ({seoTrialActive ? '初回お試し' : userPlan === 'GUEST' ? 'ゲスト' : userPlan === 'FREE' ? '無料' : userPlan === 'LIGHT' ? 'ライト' : userPlan === 'PRO' ? 'プロ' : 'エンタープライズ'}プラン: 最大{charLimit.toLocaleString()}字)
                   </span>
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">

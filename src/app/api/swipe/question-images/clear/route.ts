@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
+import { requireAdmin } from '@/lib/admin-guard'
 import prisma from '@/lib/prisma'
 
 /**
@@ -9,10 +8,8 @@ import prisma from '@/lib/prisma'
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
+    const denied = await requireAdmin()
+    if (denied) return denied
 
     const body = await req.json().catch(() => ({}))
     const category = typeof body?.category === 'string' && body.category.trim() ? body.category.trim() : null
@@ -29,9 +26,8 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('[question-images/clear] error:', error)
     return NextResponse.json(
-      { error: error?.message || 'Internal server error' },
-      { status: 500 }
+      { error: '画像の削除に失敗しました。' },
+      { status: 503 }
     )
   }
 }
-
