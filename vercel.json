@@ -21,6 +21,10 @@
   },
   "crons": [
     {
+      "path": "/api/cron/seo-image-purge",
+      "schedule": "10 * * * *"
+    },
+    {
       "path": "/api/cron/interview-storage-purge",
       "schedule": "*/15 * * * *"
     },

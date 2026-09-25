@@ -161,3 +161,14 @@ export async function readFileAsBuffer(relOrAbsPath: string) {
   assertInside(base, target)
   return fs.promises.readFile(target)
 }
+
+/** Only purge names created by the private SEO image writer. Legacy local paths are ignored. */
+export async function removeSeoStoredImages(paths: string[]) {
+  const keys = paths.filter(value => value.startsWith(DURABLE_PREFIX)).map(durablePath)
+  if (!keys.length) return
+  await ensurePrivateBucket()
+  for (let i = 0; i < keys.length; i += 100) {
+    const { error } = await getStorageClient().storage.from(SEO_BUCKET).remove(keys.slice(i, i + 100))
+    if (error) throw new Error('SEO image removal failed')
+  }
+}

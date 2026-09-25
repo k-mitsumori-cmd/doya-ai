@@ -29,6 +29,11 @@ const { load, check } = require('./load-typescript.cjs')
         const buf = objects.get(key)
         return buf ? { data: new Blob([buf]), error: null } : { data: null, error: { statusCode: '404' } }
       },
+      remove: async keys => {
+        calls.push(['remove', name, keys])
+        for (const key of keys) objects.delete(key)
+        return { data: keys, error: null }
+      },
     }),
   }
   const mocks = {
@@ -53,6 +58,13 @@ const { load, check } = require('./load-typescript.cjs')
   })
   await check('missing durable image reports ENOENT and never falls back to ephemeral files', async () => {
     await assert.rejects(create().readFileAsBuffer('supabase:images/missing.png'), { code: 'ENOENT' })
+  })
+  await check('durable deletion accepts only generated image paths', async () => {
+    const image = await create().saveBase64ToFile({ base64: 'AA==', filename: 'delete.png', subdir: 'images' })
+    await assert.rejects(create().removeSeoStoredImages([image.relativePath, 'supabase:images/../other.png']))
+    assert.equal(objects.size, 2)
+    await create().removeSeoStoredImages([image.relativePath, 'images/legacy.png'])
+    assert.equal(objects.size, 1)
   })
   await check('public bucket is rejected before storing private images', async () => {
     bucket = { name: 'seo-generated-images', public: true }

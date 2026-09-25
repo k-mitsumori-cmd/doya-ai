@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
+import { queueSeoArticleImagePurge, purgeQueuedSeoImages } from '@/lib/seo-image-purge'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -70,10 +71,15 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
       await tx.seoReference.deleteMany({ where: { articleId: id } })
       await tx.seoAuditReport.deleteMany({ where: { articleId: id } })
       await tx.seoUserMemo.deleteMany({ where: { articleId: id } })
+      await queueSeoArticleImagePurge(tx, id)
       await tx.seoImage.deleteMany({ where: { articleId: id } })
       await tx.seoLinkCheckResult.deleteMany({ where: { articleId: id } })
       await tx.seoKnowledgeItem.deleteMany({ where: { articleId: id } })
       await tx.seoArticle.delete({ where: { id, ...owner } })
+    })
+
+    await purgeQueuedSeoImages(prisma, 1, id).catch(() => {
+      console.error('[seo article delete] storage cleanup queued for retry')
     })
 
     return NextResponse.json({ success: true })
