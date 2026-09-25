@@ -1,10 +1,11 @@
-import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
+import { requireSeoImageAccess } from '@/lib/seo-image-access'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { guessArticleGenreJa, pickRandomPatterns, buildBannerPromptFromPattern } from '@seo/lib/bannerPlan'
 import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { reserveSeoToolCalls, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -15,10 +16,10 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
   const articleId = params.id
 
   try {
-    const owner = await getSeoArticleOwner(_req)
-    if (!owner) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
+    const access = await requireSeoImageAccess()
+    if (!access.ok) return access.response
     await ensureSeoSchema()
-    const article = await (prisma as any).seoArticle.findFirst({ where: { id: articleId, ...owner } })
+    const article = await (prisma as any).seoArticle.findFirst({ where: { id: articleId, userId: access.userId } })
     if (!article) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
 
     await ensureSeoStorage()
@@ -40,6 +41,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
 
     // 12パターンからランダムに4つ選択
     const selectedPatterns = pickRandomPatterns(4)
+    await reserveSeoToolCalls(access.userId, 'article-images', selectedPatterns.length)
 
     // 各パターンで1枚ずつ生成（計4枚）
     const results: any[] = []
@@ -89,6 +91,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
 
     return NextResponse.json({ success: true, images: results, image: results[0] })
   } catch (e: any) {
+    if (e instanceof SeoToolRateLimitError) return NextResponse.json({ code: 'SEO_IMAGE_DAILY_LIMIT', error: `本日の追加画像生成上限（${e.limit}枚）に達しました。明日お試しください。` }, { status: 429 })
     console.error('[seo banner] failed', { articleId, error: e?.message || 'unknown error', stack: e?.stack })
     return NextResponse.json(
       { success: false, error: 'バナーを生成できませんでした。時間をおいて再試行してください。' },

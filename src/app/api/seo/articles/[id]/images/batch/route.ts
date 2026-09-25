@@ -1,13 +1,14 @@
 import { z } from 'zod'
-import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
+import { requireSeoImageAccess } from '@/lib/seo-image-access'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
+import { reserveSeoToolCalls, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 export const runtime = 'nodejs'
-export const maxDuration = 120
+export const maxDuration = 300
 
 const BodySchema = z.object({
   diagrams: z.array(z.object({
@@ -23,8 +24,8 @@ const BodySchema = z.object({
 export async function POST(req: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
-    const owner = await getSeoArticleOwner(req)
-    if (!owner) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
+    const access = await requireSeoImageAccess()
+    if (!access.ok) return access.response
     await ensureSeoSchema()
     const articleId = params.id
     const parsed = BodySchema.safeParse(await req.json().catch(() => null))
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     const { diagrams } = parsed.data
 
     const article = await (prisma as any).seoArticle.findFirst({
-      where: { id: articleId, ...owner },
+      where: { id: articleId, userId: access.userId },
       select: { id: true, title: true },
     })
 
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     }
 
     await ensureSeoStorage()
+    await reserveSeoToolCalls(access.userId, 'article-images', diagrams.length)
 
     const results: { title: string; success: boolean; imageId?: string; error?: string }[] = []
 
@@ -115,6 +117,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
       },
     }, { status: failCount ? 502 : 200 })
   } catch (e: any) {
+    if (e instanceof SeoToolRateLimitError) return NextResponse.json({ code: 'SEO_IMAGE_DAILY_LIMIT', error: `本日の追加画像生成上限（${e.limit}枚）に達しました。明日お試しください。` }, { status: 429 })
     console.error('Batch diagram generation error:', e)
     return NextResponse.json({ success: false, error: '図解を生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }

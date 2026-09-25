@@ -50,6 +50,20 @@ function database(initial) {
     assert.equal(db.rows.get(key), 'corrupt')
   })
 
+  await check('SEO image batch reservation is atomic and cannot exceed the daily ceiling', async () => {
+    const key = admission.seoToolUsageKey('owner', 'article-images')
+    const db = database([[key, '2026-09-25:96']])
+    const now = new Date('2026-09-25T12:00:00Z')
+    const outcomes = await Promise.allSettled([
+      admission.reserveSeoToolCalls('owner', 'article-images', 4, db, now),
+      admission.reserveSeoToolCalls('owner', 'article-images', 4, db, now),
+    ])
+    assert.equal(outcomes.filter(result => result.status === 'fulfilled').length, 1)
+    assert.equal(outcomes.filter(result => result.reason instanceof admission.SeoToolRateLimitError).length, 1)
+    assert.equal(db.rows.get(key), '2026-09-25:100')
+    await assert.rejects(admission.reserveSeoToolCalls('owner', 'article-images', 101, db, now), /Invalid SEO tool reservation amount/)
+  })
+
   await check('SEO public provider routes reject anonymous and exhausted requests before provider calls', async () => {
     for (const fixture of [
       { file: 'src/app/api/seo/title-suggestions/route.ts', provider: '@seo/lib/gemini', method: 'geminiGenerateJson', body: { keyword: 'SEO' } },

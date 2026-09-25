@@ -89,10 +89,10 @@ export function seoGuestTotalArticleLimit(): number {
 }
 
 export function canUseSeoImages(args: { isLoggedIn: boolean; plan: SeoPlanCode; trialActive: boolean }) {
-  // 要件: 画像生成（バナー/図解）は LIGHT 以上から。例外として「初回ログイン後1時間」は使い放題。
+  // 画像生成（バナー/図解）はLIGHT以上から。初回ログイン後1時間は無料プランでも利用可。
+  // 外部画像APIの運用上限は seo-tool-admission 側で別途適用する。
   if (args.trialActive) return true
   if (!args.isLoggedIn) return false
   return args.plan === 'LIGHT' || args.plan === 'PRO' || args.plan === 'ENTERPRISE'
 }
-
 

@@ -1,30 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { geminiGenerateImagePng, geminiGenerateJson, GEMINI_IMAGE_MODEL_DEFAULT, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { guessArticleGenreJa, pickRandomPatterns, buildBannerPromptFromPattern } from '@seo/lib/bannerPlan'
+import { requireSeoImageAccess } from '@/lib/seo-image-access'
+import { reserveSeoToolCalls, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
+import { claimSeoImageLease, releaseSeoImageLease, SeoImageGenerationInProgressError } from '@/lib/seo-image-lease'
 
 export const runtime = 'nodejs'
-export const maxDuration = 120 // 120秒のタイムアウト（複数画像生成のため）
-
-type PlanCode = 'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
-
-function normalizePlan(raw: any): PlanCode {
-  const s = String(raw || '').toUpperCase().trim()
-  if (s === 'PRO') return 'PRO'
-  if (s === 'ENTERPRISE') return 'ENTERPRISE'
-  if (s === 'LIGHT') return 'LIGHT'
-  if (s === 'FREE') return 'FREE'
-  if (s === 'GUEST') return 'GUEST'
-  return 'UNKNOWN'
-}
-
-function isPaid(plan: PlanCode) {
-  return plan === 'LIGHT' || plan === 'PRO' || plan === 'ENTERPRISE'
-}
+export const maxDuration = 300 // 最大14枚を順次生成するため
 
 function clampText(s: string, max: number) {
   const str = String(s || '')
@@ -69,25 +54,22 @@ function applyDiagramTemplate(rawTemplate: string, vars: Record<string, string>)
 
 /**
  * 1クリックで「バナー(4枚候補) + 図解(最大10)」を生成（既存があれば不足分だけ生成）
- * - 有料のみ
+ * - LIGHT以上、または初回ログイン後1時間のお試しで利用可
  */
 export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
+    const access = await requireSeoImageAccess()
+    if (!access.ok) return access.response
     await ensureSeoSchema()
-    const session = await getServerSession(authOptions)
-    const user: any = session?.user || null
-    const userId = String(user?.id || '')
-    const plan = normalizePlan(user?.seoPlan || user?.plan || (userId ? 'FREE' : 'GUEST'))
-    
-    if (!userId) {
-      return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
-    }
-    if (!isPaid(plan)) {
-      return NextResponse.json({ success: false, error: '画像生成は有料プラン限定です' }, { status: 403 })
-    }
+    const userId = access.userId
 
     const p = await ctx.params
     const articleId = p.id
+    const permitted = await (prisma as any).seoArticle.findUnique({ where: { id: articleId }, select: { userId: true } })
+    if (!permitted) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
+    if (String(permitted.userId || '') !== userId) return NextResponse.json({ success: false, error: 'forbidden' }, { status: 403 })
+    const leaseToken = await claimSeoImageLease(articleId)
+    try {
     const article = await (prisma as any).seoArticle.findUnique({
       where: { id: articleId },
       include: { images: { orderBy: { createdAt: 'desc' } } },
@@ -127,6 +109,12 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     const MAX_BANNERS = 4
     const existingBanners = (article.images || []).filter((x: any) => x.kind === 'BANNER')
     const bannersToGenerate = Math.max(0, MAX_BANNERS - existingBanners.length)
+    const MAX_DIAGRAMS = 10
+    const existingDiagrams = (article.images || []).filter((x: any) => x.kind === 'DIAGRAM')
+    const remain = Math.max(0, MAX_DIAGRAMS - existingDiagrams.length)
+    if (bannersToGenerate + remain > 0) {
+      await reserveSeoToolCalls(userId, 'article-images', bannersToGenerate + remain)
+    }
 
     if (bannersToGenerate > 0) {
       // 12パターンからランダムに必要数を選択
@@ -175,9 +163,6 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     }
 
     // === 図解候補を提案して最大10枚生成（既にある場合は不足分のみ）===
-    const MAX_DIAGRAMS = 10
-    const existingDiagrams = (article.images || []).filter((x: any) => x.kind === 'DIAGRAM')
-    const remain = Math.max(0, MAX_DIAGRAMS - existingDiagrams.length)
     
     if (remain > 0) {
       const suggestPrompt = `
@@ -263,7 +248,14 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
       include: { images: { orderBy: { createdAt: 'desc' } } },
     })
     return NextResponse.json({ success: true, images: refreshed?.images || [] })
+    } finally {
+      await releaseSeoImageLease(articleId, leaseToken).catch(error => {
+        console.error('[seo image ensure] lease release failed', error)
+      })
+    }
   } catch (e: any) {
+    if (e instanceof SeoImageGenerationInProgressError) return NextResponse.json({ code: 'SEO_IMAGE_IN_PROGRESS', error: 'この記事の画像は生成中です。完了後に再読み込みしてください。' }, { status: 409 })
+    if (e instanceof SeoToolRateLimitError) return NextResponse.json({ code: 'SEO_IMAGE_DAILY_LIMIT', error: `本日の追加画像生成上限（${e.limit}枚）に達しました。明日お試しください。` }, { status: 429 })
     console.error('Ensure images error:', e)
     return NextResponse.json({ success: false, error: '画像を生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }

@@ -1,28 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { ensureSeoStorage, saveBase64ToFile } from '@seo/lib/storage'
 import { geminiGenerateImagePng, GEMINI_IMAGE_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { z } from 'zod'
+import { requireSeoImageAccess } from '@/lib/seo-image-access'
+import { reserveSeoToolCalls, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60 // 60秒のタイムアウト
-
-type PlanCode = 'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
-function normalizePlan(raw: any): PlanCode {
-  const s = String(raw || '').toUpperCase().trim()
-  if (s === 'PRO') return 'PRO'
-  if (s === 'ENTERPRISE') return 'ENTERPRISE'
-  if (s === 'LIGHT') return 'LIGHT'
-  if (s === 'FREE') return 'FREE'
-  if (s === 'GUEST') return 'GUEST'
-  return 'UNKNOWN'
-}
-function isPaid(plan: PlanCode) {
-  return plan === 'LIGHT' || plan === 'PRO' || plan === 'ENTERPRISE'
-}
 
 const BodySchema = z.object({
   prompt: z.string().min(1).max(20000),
@@ -34,17 +20,10 @@ const BodySchema = z.object({
  */
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
+    const access = await requireSeoImageAccess()
+    if (!access.ok) return access.response
     await ensureSeoSchema()
-    const session = await getServerSession(authOptions)
-    const user: any = session?.user || null
-    const userId = String(user?.id || '')
-    const plan = normalizePlan(user?.seoPlan || user?.plan || (userId ? 'FREE' : 'GUEST'))
-    if (!userId) {
-      return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
-    }
-    if (!isPaid(plan)) {
-      return NextResponse.json({ success: false, error: '画像の再生成は有料プラン限定です' }, { status: 403 })
-    }
+    const userId = access.userId
 
     const p = await ctx.params
     const id = p.id
@@ -60,6 +39,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
 
     await ensureSeoStorage()
+    await reserveSeoToolCalls(userId, 'article-images', 1)
 
     const kind = String(imgRec.kind || 'BANNER')
     const prompt = body.prompt.trim()
@@ -95,6 +75,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     return NextResponse.json({ success: true, image: newRec })
   } catch (e: any) {
+    if (e instanceof SeoToolRateLimitError) return NextResponse.json({ code: 'SEO_IMAGE_DAILY_LIMIT', error: `本日の追加画像生成上限（${e.limit}枚）に達しました。明日お試しください。` }, { status: 429 })
     console.error('Image regeneration error:', e)
     if (e?.name === 'ZodError' || e instanceof SyntaxError) {
       return NextResponse.json({ success: false, error: '入力形式が正しくありません' }, { status: 400 })

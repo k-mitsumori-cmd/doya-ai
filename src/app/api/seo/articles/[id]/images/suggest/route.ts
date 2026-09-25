@@ -1,4 +1,4 @@
-import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
+import { requireSeoImageAccess } from '@/lib/seo-image-access'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 // ⚠️ AI生成を行うルートは maxDuration を必ず入れること。
@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { geminiGenerateJson } from '@seo/lib/gemini'
 import { z } from 'zod'
+import { reserveSeoToolCall, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 /**
  * 記事内容から図解の候補を自動提案するAPI
@@ -26,10 +27,10 @@ const SuggestSchema = z.object({
 export async function POST(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   try {
-    const owner = await getSeoArticleOwner(_req)
-    if (!owner) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
+    const access = await requireSeoImageAccess()
+    if (!access.ok) return access.response
     const article = await (prisma as any).seoArticle.findFirst({
-      where: { id: params.id, ...owner },
+      where: { id: params.id, userId: access.userId },
       select: {
         title: true,
         outline: true,
@@ -49,6 +50,8 @@ export async function POST(_req: NextRequest, props: { params: Promise<{ id: str
         error: '記事内容がありません。先に記事を生成してください。',
       }, { status: 400 })
     }
+
+    await reserveSeoToolCall(access.userId, 'image-suggestions')
 
     // 見出しを抽出
     const headings = content.match(/^#{1,3}\s+.+$/gm) || []
@@ -97,8 +100,8 @@ ${content.slice(0, 4000)}
       suggestions: result.diagrams || [],
     })
   } catch (e: any) {
+    if (e instanceof SeoToolRateLimitError) return NextResponse.json({ code: 'SEO_IMAGE_SUGGESTION_LIMIT', error: `本日の図解案の生成上限（${e.limit}回）に達しました。明日お試しください。` }, { status: 429 })
     console.error('Diagram suggest error:', e)
     return NextResponse.json({ success: false, error: '図解案を生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
-
