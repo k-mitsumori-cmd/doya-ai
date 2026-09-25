@@ -12,18 +12,20 @@ let createWrites = 0;
 let updateWrites = 0;
 let conversionWrites = 0;
 const format = { bigIntToNumber: (value) => JSON.parse(JSON.stringify(value, (_, item) => typeof item === 'bigint' ? Number(item) : item)) };
+const createPrisma = {
+  sfaStage: { findFirst: async () => null },
+  sfaDeal: { create: async ({ data }) => { createWrites++; return { id: 'deal-1', ...data }; } },
+};
 const common = {
   'next/server': { NextResponse: Response },
   '@/lib/sfa/amount': amount,
   '@/lib/sfa/format': format,
   '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1', memberId: 'member-1', userId: 'user-1' }), orgSlugFrom: () => null },
+  '@/lib/sfa/limits': { withSfaAdmission: async (_org, _requested, create) => ({ created: await create(createPrisma) }), sfaQuotaResponse: () => Response.json({}, { status: 402 }) },
 };
 const create = load('src/app/api/sfa/deals/route.ts', {
   ...common,
-  '@/lib/prisma': { prisma: {
-    sfaStage: { findFirst: async () => null },
-    sfaDeal: { create: async ({ data }) => { createWrites++; return { id: 'deal-1', ...data }; } },
-  } },
+  '@/lib/prisma': { prisma: createPrisma },
   '@/lib/service-usage': { recordServiceUsage: async () => {} },
 }).POST;
 const update = load('src/app/api/sfa/deals/[id]/route.ts', {

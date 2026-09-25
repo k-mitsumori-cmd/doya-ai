@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
+import { sfaQuotaResponse, withSfaAdmission } from '@/lib/sfa/limits'
 
 // GET /api/sfa/accounts — 取引先一覧（組織スコープ）
 export async function GET(req: NextRequest) {
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '入力項目の形式が正しくありません' }, { status: 400 })
   }
 
-  const account = await prisma.sfaAccount.create({
+  const admitted = await withSfaAdmission(ctx.organizationId, { accounts: 1 }, (tx) => tx.sfaAccount.create({
     data: {
       organizationId: ctx.organizationId,
       name: name.slice(0, 200),
@@ -88,6 +89,7 @@ export async function POST(req: NextRequest) {
       note: (body.note as string | undefined)?.slice(0, 2000) || null,
       ownerMemberId: ctx.memberId,
     },
-  })
-  return NextResponse.json({ account: bigIntToNumber(account) })
+  }))
+  if (admitted.limit) return sfaQuotaResponse(admitted.limit, ctx.role === 'owner')
+  return NextResponse.json({ account: bigIntToNumber(admitted.created) })
 }

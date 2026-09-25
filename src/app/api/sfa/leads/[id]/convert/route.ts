@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
 import { parseSfaAmount } from '@/lib/sfa/amount'
+import { sfaQuotaResponse, withSfaAdmission } from '@/lib/sfa/limits'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     : null
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
+    const admitted = await withSfaAdmission(c.organizationId, { accounts: 1, deals: 1 }, async (tx) => {
       // 同じリードの同時転換と、確認後の無効化を条件付き更新で検出する。
       // 後続の作成が失敗すれば、この予約も同じトランザクションで戻る。
       const claimed = await tx.sfaLead.updateMany({
@@ -104,6 +105,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
       return { account, deal }
     })
+    if (admitted.limit) return sfaQuotaResponse(admitted.limit, c.role === 'owner')
+    const result = admitted.created
 
     if (!result) return NextResponse.json({ error: '既に転換済み、または無効化されたリードです。再読み込みして状態をご確認ください。' }, { status: 409 })
     return NextResponse.json({ ok: true, ...bigIntToNumber(result) })

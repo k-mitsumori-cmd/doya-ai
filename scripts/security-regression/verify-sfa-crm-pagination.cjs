@@ -54,6 +54,7 @@ const mocks = {
   '@/lib/prisma': { prisma },
   '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1' }), orgSlugFrom: () => null },
   '@/lib/sfa/format': { bigIntToNumber: (value) => value },
+  '@/lib/sfa/limits': { withSfaAdmission: async () => { throw Error('GET must not admit quota') }, sfaQuotaResponse: () => Response.json({}, { status: 402 }) },
 };
 const accountGet = load('src/app/api/sfa/accounts/route.ts', mocks).GET;
 const contactGet = load('src/app/api/sfa/contacts/route.ts', mocks).GET;
@@ -118,6 +119,7 @@ async function collect(get, type, params, expected) {
     '@/lib/prisma': { prisma: writePrisma },
     '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1', memberId: 'member', userId: 'owner' }), orgSlugFrom: () => null },
     '@/lib/service-usage': { recordServiceUsage: async () => {} },
+    '@/lib/sfa/limits': { withSfaAdmission: async (_org, _requested, create) => ({ created: await create(writePrisma) }), sfaQuotaResponse: () => Response.json({}, { status: 402 }) },
   };
   const createContact = load('src/app/api/sfa/contacts/route.ts', writeMocks).POST;
   const createDeal = load('src/app/api/sfa/deals/route.ts', writeMocks).POST;

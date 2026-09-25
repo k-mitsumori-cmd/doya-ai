@@ -1,5 +1,15 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const sfaLimits = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-limits.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaLimits.error || sfaLimits.status !== 0) {
+  console.error('Security regression failed: verify-sfa-limits.cjs');
+  process.exit(1);
+}
+const sfaAdmissionRoutes = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-admission-routes.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaAdmissionRoutes.error || sfaAdmissionRoutes.status !== 0) {
+  console.error('Security regression failed: verify-sfa-admission-routes.cjs');
+  process.exit(1);
+}
 const hrEmployeeReactivation = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-employee-reactivation.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrEmployeeReactivation.error || hrEmployeeReactivation.status !== 0) {
   console.error('Security regression failed: verify-hr-employee-reactivation.cjs');

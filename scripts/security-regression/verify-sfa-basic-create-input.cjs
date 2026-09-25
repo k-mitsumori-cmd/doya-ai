@@ -15,6 +15,7 @@ const mocks = {
   '@/lib/prisma': { prisma },
   '@/lib/sfa/access': { getSfaContext: async () => ({ organizationId: 'org-1', memberId: 'member-1' }), orgSlugFrom: () => null },
   '@/lib/sfa/format': { bigIntToNumber: (value) => value },
+  '@/lib/sfa/limits': { withSfaAdmission: async (_org, _requested, create) => ({ created: await create(prisma) }), sfaQuotaResponse: () => Response.json({ error: 'limit' }, { status: 402 }) },
 };
 const createAccount = load('src/app/api/sfa/accounts/route.ts', mocks).POST;
 const createContact = load('src/app/api/sfa/contacts/route.ts', mocks).POST;

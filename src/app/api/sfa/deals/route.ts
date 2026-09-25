@@ -9,6 +9,7 @@ import { getSfaContext, orgSlugFrom, ensurePipeline } from '@/lib/sfa/access'
 import { bigIntToNumber } from '@/lib/sfa/format'
 import { parseSfaAmount } from '@/lib/sfa/amount'
 import { recordServiceUsage } from '@/lib/service-usage'
+import { sfaQuotaResponse, withSfaAdmission } from '@/lib/sfa/limits'
 
 // GET /api/sfa/deals — カンバン用に「ステージ一覧 + 商談一覧（取引先名つき）」を返す
 export async function GET(req: NextRequest) {
@@ -151,7 +152,7 @@ export async function POST(req: NextRequest) {
   }
 
   const now = new Date()
-  const deal = await prisma.sfaDeal.create({
+  const admitted = await withSfaAdmission(ctx.organizationId, { deals: 1 }, (tx) => tx.sfaDeal.create({
     data: {
       organizationId: ctx.organizationId,
       name: name.slice(0, 200),
@@ -166,7 +167,9 @@ export async function POST(req: NextRequest) {
       startDate,
       lastActivityAt: now,
     },
-  })
+  }))
+  if (admitted.limit) return sfaQuotaResponse(admitted.limit, ctx.role === 'owner')
+  const deal = admitted.created
   await recordServiceUsage({
     userId: ctx.userId,
     serviceId: 'sfa',

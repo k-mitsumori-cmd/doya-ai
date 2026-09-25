@@ -9,8 +9,10 @@ import { escapeHtml } from '@/lib/html-escape'
 import { getSfaContext, hasMinRole, orgSlugFrom } from '@/lib/sfa/access'
 import { ROLE_HIERARCHY } from '@/lib/sfa/types'
 import { sendEmail } from '@/lib/email'
+import { sfaQuotaResponse, withSfaAdmission } from '@/lib/sfa/limits'
 
 const INVITABLE_ROLES = ['member', 'manager', 'admin']
+const INVITE_TTL_MS = 48 * 60 * 60 * 1000
 const rank = (role: string) => ROLE_HIERARCHY[role] ?? 0
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -49,27 +51,44 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '自分と同格以上の権限では招待できません' }, { status: 403 })
   }
 
-  // 既に同メールで招待中/参加中なら重複を作らない
-  const dup = await prisma.sfaMember.findFirst({
-    where: { organizationId: ctx.organizationId, inviteEmail: email, status: { in: ['PENDING', 'ACTIVE'] } },
-  })
-  if (dup) {
-    return NextResponse.json(
-      { error: dup.status === 'ACTIVE' ? '既に参加済みのメンバーです' : '既に招待済みです' },
-      { status: 409 }
-    )
+  const duplicateWhere = {
+    organizationId: ctx.organizationId,
+    inviteEmail: email,
+    OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gte: new Date(Date.now() - INVITE_TTL_MS) } }],
+  }
+  const existingInvite = await prisma.sfaMember.findFirst({ where: duplicateWhere })
+  if (existingInvite) {
+    return NextResponse.json({ error: existingInvite.status === 'ACTIVE' ? '既に参加済みのメンバーです' : '既に招待済みです' }, { status: 409 })
   }
 
   const org = await prisma.sfaOrganization.findUnique({ where: { id: ctx.organizationId } })
   const inviteToken = crypto.randomUUID()
-  let member
+  let admitted
   try {
-    member = await prisma.sfaMember.create({
-      data: { organizationId: ctx.organizationId, role, status: 'PENDING', inviteEmail: email, inviteToken },
-    })
+    admitted = await withSfaAdmission(ctx.organizationId, { members: 1 }, async (tx) => {
+      const dup = await tx.sfaMember.findFirst({
+        where: duplicateWhere,
+      })
+      if (dup) return { kind: 'duplicate' as const, status: dup.status }
+      await tx.sfaMember.deleteMany({
+        where: { organizationId: ctx.organizationId, inviteEmail: email, status: 'PENDING', createdAt: { lt: new Date(Date.now() - INVITE_TTL_MS) } },
+      })
+      const member = await tx.sfaMember.create({
+        data: { organizationId: ctx.organizationId, role, status: 'PENDING', inviteEmail: email, inviteToken },
+      })
+      return { kind: 'created' as const, member }
+    }, { countPendingInvites: true })
   } catch {
     return NextResponse.json({ error: '招待の作成に失敗しました（既に招待済みかもしれません）' }, { status: 409 })
   }
+  if (admitted.limit) return sfaQuotaResponse(admitted.limit, ctx.role === 'owner')
+  if (admitted.created.kind === 'duplicate') {
+    return NextResponse.json(
+      { error: admitted.created.status === 'ACTIVE' ? '既に参加済みのメンバーです' : '既に招待済みです' },
+      { status: 409 }
+    )
+  }
+  const member = admitted.created.member
 
   const baseUrl = process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'
   const link = `${baseUrl}/sfa/invite/${inviteToken}`

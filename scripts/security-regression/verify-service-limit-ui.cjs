@@ -43,6 +43,11 @@ const fixtureMessages=[
    assert.equal(classify('/api/hr/'+path,403,{code,error,canManageBilling:false}).kind,'owner');
   }
  });
+ await check('SFA organization allowance directs members to owner and owner to plan',async()=>{
+  const body={code:'SFA_LIMIT_REACHED',limitReached:true,error:'取引先の上限（50件）に達しました。'};
+  assert.equal(classify('/api/sfa/accounts',402,{...body,canManageBilling:false}).kind,'owner');
+  assert.equal(classify('/api/sfa/accounts',402,{...body,canManageBilling:true}).kind,'quota');
+ });
  for(const [status,error] of [[429,'リクエストが多すぎます。しばらくしてからお試しください。'],[429,'現在の解析が完了してから、もう一度お試しください。'],[429,'接続の試行回数が上限に達しました。採用ご担当者にお問い合わせください。'],[400,'ファイルサイズが上限 (500MB) を超えています'],[403,'アクセス権限がありません'],[500,'今月の上限に達しました'],[410,'このサービスは提供を終了しました'],[429,'APIの使用量制限に達しました。Google AI Studioでプランをご確認ください']])await check('non-billing error stays non-billing: '+error.slice(0,15),async()=>assert.equal(classify('/api/banner/generate',status,{error}),null));
  await check('external APIs and successful JSON do not produce prompts; response bodies remain readable',async()=>{
   const notices=[];const original=async()=>Response.json({code:'LIMIT',error:'今月の上限に達しました'},{status:429});const fn=observe(original,'http://localhost',x=>notices.push(x));let r=await fn('/api/persona/generate');assert.equal((await r.json()).code,'LIMIT');await new Promise(r=>setTimeout(r,20));assert.equal(notices.length,1);await fn('https://external.invalid/api/persona/generate');await new Promise(r=>setTimeout(r,10));assert.equal(notices.length,1);

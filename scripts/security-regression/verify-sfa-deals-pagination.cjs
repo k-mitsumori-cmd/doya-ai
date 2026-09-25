@@ -65,6 +65,7 @@ async function verifyCount(count) {
     '@/lib/sfa/format': { bigIntToNumber: (value) => JSON.parse(JSON.stringify(value, (_, item) => typeof item === 'bigint' ? Number(item) : item)) },
     '@/lib/sfa/amount': load('src/lib/sfa/amount.ts'),
     '@/lib/service-usage': { recordServiceUsage: async () => {} },
+    '@/lib/sfa/limits': { withSfaAdmission: async () => { throw Error('GET must not admit quota') }, sfaQuotaResponse: () => Response.json({}, { status: 402 }) },
   }, { Buffer });
 
   const seen = new Set();

@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sfaQuotaResponse, withSfaAdmission } from '@/lib/sfa/limits'
 
 type Ctx = { params: Promise<{ token: string }> }
 const INVITE_TTL_MS = 48 * 60 * 60 * 1000
@@ -67,10 +68,20 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   }
 
   try {
-    await prisma.sfaMember.update({
-      where: { id: member.id },
+    const admitted = await withSfaAdmission(member.organizationId, { members: 1 }, (tx) => tx.sfaMember.updateMany({
+      where: {
+        id: member.id,
+        organizationId: member.organizationId,
+        status: 'PENDING',
+        inviteToken: p.token,
+        createdAt: { gte: new Date(Date.now() - INVITE_TTL_MS) },
+      },
       data: { userId, name: userName, status: 'ACTIVE', acceptedAt: new Date(), inviteToken: null },
-    })
+    }))
+    if (admitted.limit) return sfaQuotaResponse(admitted.limit)
+    if (admitted.created.count !== 1) {
+      return NextResponse.json({ error: '招待は既に使用されたか、有効期限が切れています' }, { status: 409 })
+    }
   } catch {
     return NextResponse.json({ error: '既にこの組織に所属しています' }, { status: 409 })
   }
