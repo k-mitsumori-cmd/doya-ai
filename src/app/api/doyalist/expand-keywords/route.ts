@@ -84,6 +84,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, tags })
   } catch (e: any) {
     console.error('[doyalist/expand-keywords]', e)
-    return NextResponse.json({ error: e?.message || 'タグ展開に失敗しました' }, { status: 500 })
+    return NextResponse.json({ error: 'タグ展開に失敗しました' }, { status: 500 })
   }
 }

@@ -193,7 +193,7 @@ export async function GET(req: NextRequest) {
   } catch (e: any) {
     console.error('[doyalist/export][GET]', e)
     return NextResponse.json(
-      { error: e?.message || 'エクスポートに失敗しました' },
+      { error: 'エクスポートに失敗しました' },
       { status: 500 }
     )
   }

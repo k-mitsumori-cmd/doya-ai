@@ -70,7 +70,7 @@ export async function GET() {
   } catch (e: any) {
     console.error('[doyalist/usage][GET]', e)
     return NextResponse.json(
-      { error: e?.message || '利用状況の取得に失敗しました' },
+      { error: '利用状況の取得に失敗しました' },
       { status: 500 }
     )
   }

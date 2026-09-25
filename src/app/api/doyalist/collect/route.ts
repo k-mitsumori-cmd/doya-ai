@@ -220,7 +220,7 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     console.error('[doyalist/collect][POST]', e)
     return NextResponse.json(
-      { error: e?.message || '企業生成に失敗しました' },
+      { error: '企業生成に失敗しました' },
       { status: 500 }
     )
   }

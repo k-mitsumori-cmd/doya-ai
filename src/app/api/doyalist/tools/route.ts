@@ -255,6 +255,6 @@ export async function POST(req: NextRequest) {
     }
   } catch (e: any) {
     console.error('[doyalist/tools]', e)
-    return NextResponse.json({ error: e?.message || 'ツール実行に失敗しました' }, { status: 500 })
+    return NextResponse.json({ error: 'ツール実行に失敗しました' }, { status: 500 })
   }
 }

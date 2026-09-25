@@ -51,7 +51,7 @@ export async function GET() {
   } catch (e: any) {
     console.error('[doyalist/projects][GET]', e)
     return NextResponse.json(
-      { error: e?.message || 'プロジェクトの取得に失敗しました' },
+      { error: 'プロジェクトの取得に失敗しました' },
       { status: 500 }
     )
   }
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     console.error('[doyalist/projects][POST]', e)
     return NextResponse.json(
-      { error: e?.message || 'プロジェクトの作成に失敗しました' },
+      { error: 'プロジェクトの作成に失敗しました' },
       { status: 500 }
     )
   }

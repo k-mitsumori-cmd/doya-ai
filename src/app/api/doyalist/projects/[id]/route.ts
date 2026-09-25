@@ -76,7 +76,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
   } catch (e: any) {
     console.error('[doyalist/projects/[id]][GET]', e)
     return NextResponse.json(
-      { error: e?.message || 'プロジェクトの取得に失敗しました' },
+      { error: 'プロジェクトの取得に失敗しました' },
       { status: 500 }
     )
   }
@@ -116,7 +116,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   } catch (e: any) {
     console.error('[doyalist/projects/[id]][PATCH]', e)
     return NextResponse.json(
-      { error: e?.message || 'プロジェクトの更新に失敗しました' },
+      { error: 'プロジェクトの更新に失敗しました' },
       { status: 500 }
     )
   }
@@ -149,7 +149,7 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
   } catch (e: any) {
     console.error('[doyalist/projects/[id]][DELETE]', e)
     return NextResponse.json(
-      { error: e?.message || 'プロジェクトの削除に失敗しました' },
+      { error: 'プロジェクトの削除に失敗しました' },
       { status: 500 }
     )
   }

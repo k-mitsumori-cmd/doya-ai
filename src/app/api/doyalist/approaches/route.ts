@@ -116,7 +116,7 @@ export async function DELETE(req: NextRequest) {
   } catch (e: any) {
     console.error('[doyalist/approaches][DELETE]', e)
     return NextResponse.json(
-      { error: e?.message || '削除に失敗しました' },
+      { error: '削除に失敗しました' },
       { status: 500 }
     )
   }
