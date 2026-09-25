@@ -42,6 +42,7 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
   const [wsOpen, setWsOpen] = useState(false)
   const base = `/sfa/${orgSlug}`
   const currentWs = memberships.find((m) => m.slug === orgSlug)
+  const pricingHref = `/sfa/pricing?org=${encodeURIComponent(orgSlug)}`
 
   const MAIN_NAV: NavItem[] = [
     { href: base, label: 'ダッシュボード', icon: LayoutDashboard },
@@ -54,14 +55,15 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
   ]
   const SUB_NAV: NavItem[] = [
     { href: `${base}/members`, label: 'メンバー', icon: UserPlus },
-    { href: '/sfa/pricing', label: '料金プラン', icon: Tag },
+    { href: pricingHref, label: '料金プラン', icon: Tag },
   ]
 
   const planLabel = (() => {
     if (!plan) return isLoggedIn ? '未確認' : 'GUEST'
     const p = plan.toUpperCase()
     if (p === 'ENTERPRISE') return 'ENTERPRISE'
-    if (['PRO', 'BUSINESS', 'STARTER', 'LIGHT', 'BASIC'].includes(p)) return 'PRO'
+    if (p === 'LIGHT') return 'LIGHT'
+    if (['PRO', 'BUSINESS', 'STARTER', 'BASIC'].includes(p)) return 'PRO'
     return p === 'FREE' ? 'FREE' : '未確認'
   })()
 
@@ -151,7 +153,7 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
             </div>
           </nav>
 
-          {sessionReady && (isMobile || !isCollapsed) && (planLabel === 'FREE' || planLabel === 'GUEST') && (
+          {sessionReady && (isMobile || !isCollapsed) && (planLabel === 'FREE' || planLabel === 'GUEST' || planLabel === 'LIGHT') && (
             <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md relative overflow-hidden">
               <div className="hidden md:block relative z-10">
                 <div className="flex items-center gap-2 mb-2">
@@ -161,10 +163,12 @@ function SfaSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile, pla
                   <p className="text-xs font-black text-white">プラン案内</p>
                 </div>
                 <p className="text-[11px] text-white font-bold mb-1">現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}</p>
-                <p className="text-[10px] text-lime-100 font-bold opacity-80">プロプラン：¥9,980/月<TrialInlineSuffix /></p>
-                <Link href="/sfa/pricing" className="mt-3 w-full py-2 bg-white text-green-700 text-[11px] font-black rounded-lg hover:bg-green-50 transition-colors shadow-md block text-center">
-                  プロにアップグレード
-                </Link>
+                {currentWs?.role === 'owner' && <p className="text-[10px] text-lime-100 font-bold opacity-80">プロプラン：¥9,980/月<TrialInlineSuffix /></p>}
+                {currentWs?.role === 'owner' ? (
+                  <Link href={pricingHref} className="mt-3 w-full py-2 bg-white text-green-700 text-[11px] font-black rounded-lg hover:bg-green-50 transition-colors shadow-md block text-center">
+                    プロにアップグレード
+                  </Link>
+                ) : <p className="mt-3 text-[11px] font-bold text-white">利用枠の変更は組織の契約者にご相談ください。</p>}
               </div>
             </div>
           )}

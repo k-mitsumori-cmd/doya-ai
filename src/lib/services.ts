@@ -1188,7 +1188,7 @@ export const SERVICES: Service[] = [
     pricing: {
       free: {
         name: '無料プラン',
-        limit: '合計60分 / ナレッジ1個',
+        limit: '月60分 / ナレッジ1個',
         dailyLimit: -1,
         price: 0,
       },

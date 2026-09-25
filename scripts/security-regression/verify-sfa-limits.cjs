@@ -79,6 +79,10 @@ function fixture(plan = 'FREE', counts = {}) {
   assert.equal(lightLimit.limit.resource, 'accounts');
   assert.equal((await light.limits.sfaQuotaResponse(lightLimit.limit).json()).upgradeUrl, '/sfa/pricing');
 
+  const missingPlan = fixture(null, { accounts: 50 });
+  assert.equal(await missingPlan.limits.sfaOwnerPlanTier(missingPlan.tx, 'org'), 'FREE');
+  assert.equal((await missingPlan.limits.withSfaAdmission('org', { accounts: 1 }, (tx) => tx.sfaAccount.create())).limit.resource, 'accounts');
+
   const paid = fixture('PRO', { members: 49, accounts: 50, deals: 50 });
   assert.equal((await paid.limits.withSfaAdmission('org', { accounts: 1, deals: 1 }, async (tx) => {
     await tx.sfaAccount.create();

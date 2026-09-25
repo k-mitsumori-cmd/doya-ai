@@ -10,6 +10,11 @@ if (sfaAiRoutes.error || sfaAiRoutes.status !== 0) {
   console.error('Security regression failed: verify-sfa-ai-routes.cjs');
   process.exit(1);
 }
+const sfaUsagePlan = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-usage-plan.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaUsagePlan.error || sfaUsagePlan.status !== 0) {
+  console.error('Security regression failed: verify-sfa-usage-plan.cjs');
+  process.exit(1);
+}
 const sfaLimits = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-limits.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaLimits.error || sfaLimits.status !== 0) {
   console.error('Security regression failed: verify-sfa-limits.cjs');

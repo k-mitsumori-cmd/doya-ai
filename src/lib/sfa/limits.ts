@@ -40,7 +40,8 @@ export async function sfaOwnerPlanTier(tx: Tx, organizationId: string): Promise<
   const user = owner?.userId
     ? await tx.user.findUnique({ where: { id: owner.userId }, select: { plan: true } })
     : null
-  return tierFrom(user?.plan)
+  // 認証済みの組織オーナーにプラン行が無い場合は無料枠。GUEST と表示・案内しない。
+  return tierFrom(user?.plan ?? 'FREE')
 }
 
 export async function checkSfaQuota(
