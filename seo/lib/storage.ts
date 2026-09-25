@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { prisma } from '@/lib/prisma'
 
 const SEO_BUCKET = process.env.SEO_STORAGE_BUCKET || 'seo-generated-images'
 const DURABLE_PREFIX = 'supabase:'
@@ -125,6 +126,9 @@ export async function saveBase64ToFile({ base64, filename, subdir }: SaveBase64A
   if (isDurableStorage()) {
     if (safeSubdir !== 'images' || extension.toLowerCase() !== '.png') throw new Error('Invalid SEO image destination')
     const key = durablePath(`${DURABLE_PREFIX}images/${storedFilename}`)
+    // Persist intent before writing bytes. A crash after upload leaves a retryable record.
+    const pendingKey = `seo-image-pending:v1:${randomUUID()}`
+    await prisma.systemSetting.create({ data: { key: pendingKey, value: JSON.stringify({ path: `${DURABLE_PREFIX}${key}`, createdAt: new Date().toISOString() }) } })
     const { error } = await getStorageClient().storage.from(SEO_BUCKET).upload(key, buf, { contentType: 'image/png', upsert: false })
     if (error) throw new Error('SEO image upload failed')
     return { absolutePath: '', relativePath: `${DURABLE_PREFIX}${key}` }

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { purgeQueuedSeoImages } from '@/lib/seo-image-purge'
+import { purgeQueuedSeoImages, reconcilePendingSeoImages } from '@/lib/seo-image-purge'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -11,8 +11,10 @@ export async function GET(request: Request) {
     return Response.json({ error: 'Unauthorized' }, { status: 401 })
   }
   try {
-    const result = await purgeQueuedSeoImages(prisma)
-    return Response.json({ ok: result.failed === 0, ...result }, { status: result.failed ? 503 : 200 })
+    const deleted = await purgeQueuedSeoImages(prisma)
+    const pending = await reconcilePendingSeoImages(prisma)
+    const failed = deleted.failed + pending.failed
+    return Response.json({ ok: failed === 0, deleted, pending }, { status: failed ? 503 : 200 })
   } catch {
     return Response.json({ error: 'SEO image cleanup unavailable' }, { status: 503 })
   }

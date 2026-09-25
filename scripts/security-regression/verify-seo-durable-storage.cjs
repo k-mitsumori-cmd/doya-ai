@@ -6,6 +6,7 @@ const { load, check } = require('./load-typescript.cjs')
 
 ;(async () => {
   const objects = new Map()
+  const pending = new Map()
   const calls = []
   let bucket = null
   const storage = {
@@ -41,6 +42,7 @@ const { load, check } = require('./load-typescript.cjs')
     'node:path': path,
     'node:crypto': crypto,
     '@supabase/supabase-js': { createClient: () => ({ storage }) },
+    '@/lib/prisma': { prisma: { systemSetting: { create: async ({ data }) => { pending.set(data.key, data.value); return data } } } },
   }
   const env = { VERCEL: '1', SUPABASE_URL: 'https://example.invalid', SUPABASE_SERVICE_ROLE_KEY: 'test' }
   const create = () => load('seo/lib/storage.ts', mocks, { process: { cwd: () => '/var/task', env }, Blob })
@@ -52,6 +54,8 @@ const { load, check } = require('./load-typescript.cjs')
     assert.equal(calls.filter(call => call[0] === 'createBucket').length, 1)
     assert.equal(bucket.public, false)
     assert.equal(calls.find(call => call[0] === 'upload')[3].upsert, false)
+    assert.equal(pending.size, 1)
+    assert.equal(JSON.parse([...pending.values()][0]).path, saved.relativePath)
     const reader = create()
     assert.equal((await reader.readFileAsBuffer(saved.relativePath)).toString(), 'test-png')
     await assert.rejects(reader.readFileAsBuffer('supabase:images/../secret.png'))
@@ -73,5 +77,15 @@ const { load, check } = require('./load-typescript.cjs')
   await check('missing server credentials fail closed before any local write', async () => {
     const withoutKey = load('seo/lib/storage.ts', mocks, { process: { cwd: () => '/var/task', env: { VERCEL: '1', SUPABASE_URL: env.SUPABASE_URL } }, Blob })
     await assert.rejects(withoutKey.saveBase64ToFile({ base64: 'AA==', filename: 'image.png', subdir: 'images' }), /not configured/)
+  })
+  await check('failed pending reservation prevents an untracked upload', async () => {
+    bucket = { name: 'seo-generated-images', public: false }
+    const before = calls.filter(call => call[0] === 'upload').length
+    const blocked = load('seo/lib/storage.ts', {
+      ...mocks,
+      '@/lib/prisma': { prisma: { systemSetting: { create: async () => { throw Error('database unavailable') } } } },
+    }, { process: { cwd: () => '/var/task', env }, Blob })
+    await assert.rejects(blocked.saveBase64ToFile({ base64: 'AA==', filename: 'image.png', subdir: 'images' }), /database unavailable/)
+    assert.equal(calls.filter(call => call[0] === 'upload').length, before)
   })
 })().catch(error => { console.error(error); process.exitCode = 1 })
