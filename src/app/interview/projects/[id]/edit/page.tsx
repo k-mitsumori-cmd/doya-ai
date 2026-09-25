@@ -461,15 +461,17 @@ export default function EditPage() {
         setHasUnsavedChanges(false)
         setLastSaved(new Date())
       }
+      return true
     }).catch((error: unknown) => {
       if (sequence === saveSequenceRef.current) {
         setSaveError(error instanceof Error ? error.message : '保存に失敗しました。再試行してください。')
       }
+      return false
     }).finally(() => {
       if (sequence === saveSequenceRef.current) setSaving(false)
     })
-    saveQueueRef.current = task
-    await task
+    saveQueueRef.current = task.then(() => {})
+    return task
   }, [draftId, title])
 
   const handleContentChange = (newContent: string) => {
@@ -495,7 +497,9 @@ export default function EditPage() {
 
   const handleSave = async () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
-    await autoSave(content)
+    if (!await autoSave(content)) {
+      throw new Error('記事を保存できませんでした。内容を確認してから再試行してください。')
+    }
   }
 
   // バナー画像生成 (Nano Banana Pro)
@@ -871,8 +875,8 @@ ${htmlBody}
       } else {
         setReviseError(data.error || 'AI修正に失敗しました')
       }
-    } catch {
-      setReviseError('AI修正の実行中にエラーが発生しました')
+    } catch (error) {
+      setReviseError(error instanceof Error ? error.message : 'AI修正の実行中にエラーが発生しました')
     } finally {
       setReviseLoading(false)
     }
@@ -1288,6 +1292,7 @@ ${htmlBody}
                   <input
                     type="text"
                     value={reviseInstruction}
+                    maxLength={4000}
                     onChange={(e) => setReviseInstruction(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey && reviseInstruction.trim() && !reviseLoading) {
@@ -2044,6 +2049,7 @@ ${htmlBody}
                       <p className="text-xs font-semibold text-slate-700 mb-2">修正指示</p>
                       <textarea
                         value={reviseInstruction}
+                        maxLength={4000}
                         onChange={(e) => setReviseInstruction(e.target.value)}
                         placeholder={'修正指示を入力してください\n例: 「冒頭をもっとインパクトのある書き出しに変更してください」'}
                         className="w-full px-3 py-3 border border-slate-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none leading-relaxed"

@@ -45,15 +45,21 @@ export async function POST(req: NextRequest) {
     if (!articleContent || typeof articleContent !== 'string' || articleContent.trim().length < 10) {
       return NextResponse.json({ success: false, error: '修正対象の記事内容が短すぎます' }, { status: 400 })
     }
+    if (articleContent.length > 60000) {
+      return NextResponse.json({ success: false, error: '記事が長すぎます。60,000文字以内にしてから修正してください' }, { status: 400 })
+    }
     if (!instruction || typeof instruction !== 'string' || instruction.trim().length < 2) {
       return NextResponse.json({ success: false, error: '修正指示を入力してください' }, { status: 400 })
+    }
+    if (instruction.length > 4000) {
+      return NextResponse.json({ success: false, error: '修正指示は4,000文字以内で入力してください' }, { status: 400 })
     }
 
     const apiKey = getGeminiApiKey()
     const model = process.env.INTERVIEW_GEMINI_MODEL || process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash'
 
     const systemPrompt = 'あなたはプロの編集者です。以下の記事に対して、ユーザーの修正指示に従って修正を行ってください。修正した記事全文をMarkdown形式で出力してください。元の記事の構成やトーンはできるだけ維持し、指示された部分のみを修正してください。'
-    const userPrompt = systemPrompt + '\n\n====== 修正指示 ======\n' + instruction.trim() + '\n\n====== 修正対象記事 ======\n' + articleContent.slice(0, 60000)
+    const userPrompt = systemPrompt + '\n\n====== 修正指示 ======\n' + instruction.trim() + '\n\n====== 修正対象記事 ======\n' + articleContent
 
     const geminiData = await generateInterviewContent(apiKey, model, userPrompt, {
       temperature: 0.3, maxOutputTokens: 16384,
@@ -70,6 +76,9 @@ export async function POST(req: NextRequest) {
     else if (revisedContent.startsWith(tb)) revisedContent = revisedContent.slice(3)
     if (revisedContent.endsWith(tb)) revisedContent = revisedContent.slice(0, -3)
     revisedContent = revisedContent.trim()
+    if (!revisedContent) {
+      throw new Error('AIから修正結果が返されませんでした')
+    }
 
     return NextResponse.json({
       success: true,
