@@ -1615,8 +1615,8 @@ export const SERVICES: Service[] = [
       '媒体ごとにサイズを作り直すのが面倒',
     ],
     pricing: {
-      free: { name: '無料プラン', limit: '1日5コンセプトまで', dailyLimit: 5, price: 0 },
-      pro: { name: 'プロプラン', limit: '1日40コンセプト / 改善無制限 / ZIP一括', dailyLimit: 40, price: UNIFIED_PRO_PRICE },
+      free: { name: '無料プラン', limit: '画像1日3枚・月15枚（改善含む）/ 新規コンセプト1日5件', dailyLimit: 5, price: 0 },
+      pro: { name: 'プロプラン', limit: '画像1日50枚・月300枚（改善含む）/ 新規コンセプト1日40件 / ZIP一括', dailyLimit: 40, price: UNIFIED_PRO_PRICE },
     },
     status: 'active',
     // 2026-09-07: 17サービスのLP公開依頼に合わせて公開。

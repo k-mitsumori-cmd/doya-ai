@@ -38,6 +38,7 @@ const ROWS: ShowcaseRow[] = [
 ]
 
 export default function AdImageLp() {
+  const freeLimit = SVC.pricing?.free?.limit || '画像1日3枚・月15枚'
   return (
     <LpShell serviceName={SVC.name} icon="wallpaper" ctaHref={CTA} ctaLabel="無料ではじめる" accent={ACCENT}>
       <ProductHero
@@ -45,7 +46,7 @@ export default function AdImageLp() {
         title="URLを貼るだけで、"
         highlight="入稿できる広告画像。"
         subtitle="媒体・配置ごとにサイズの揃った広告画像が出ます。文字は画像に描き込み済みで、そのまま入稿できます。"
-        note="無料プランで1日5コンセプトまでお試しいただけます。クレジットカードの登録は不要です。"
+        note={`無料プランは${freeLimit}。クレジットカードの登録は不要です。`}
         ctaHref={CTA}
         ctaLabel="無料ではじめる"
         subCtaHref="/adimage/pricing"
@@ -78,7 +79,7 @@ export default function AdImageLp() {
 
       <CtaBand
         title="今週の差し替えから、間に合います"
-        subtitle="無料プランで1日5コンセプトまで。プロプランなら月額9,980円で、ドヤシリーズの全サービスが使えます。"
+        subtitle={`無料プランは${freeLimit}。プロプランなら月額9,980円で、ドヤシリーズの全サービスが使えます。`}
         ctaHref={CTA}
         ctaLabel="無料ではじめる"
         note="クレジットカードの登録は不要です"

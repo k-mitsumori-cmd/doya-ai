@@ -8,15 +8,32 @@ for(const [name,plan,request,today,month,concepts,code,reset] of [
 for(const kind of ['generate','refine'])await check(kind+' route returns diagnosis before any generation or writes',async()=>{
  const fs=require('fs'),ts=require('typescript');const file=kind==='generate'?'src/app/api/adimage/concepts/route.ts':'src/app/api/adimage/concepts/[id]/refine/route.ts';
  const source=fs.readFileSync(file,'utf8'),ast=ts.createSourceFile(file,source,ts.ScriptTarget.Latest,true);const mocks={};for(const n of ast.statements)if(ts.isImportDeclaration(n))mocks[n.moduleSpecifier.text]={};
- const access=fixture(0,0,0),identity={userId:'private-user-id',guestId:null,plan:'FREE'};let generated=0,writes=0;
+ const access=fixture(0,0,0),identity={userId:'private-user-id',guestId:null,plan:'FREE'};let generated=0,writes=0,quotaOptions;
  const database={adImageBrand:{findFirst:async()=>({id:'brand'})},adImageConcept:{findFirst:async()=>({id:'c',campaign:{brand:{}},feedbacks:[],creatives:Array.from({length:5},(_,i)=>({placementKey:'p'+i}))})}};
  mocks['next/server']={NextResponse:Response};mocks['@/lib/prisma']={prisma:database};
- mocks['@/lib/adimage/access']={...access,getIdentity:async()=>identity};
+ mocks['@/lib/adimage/access']={...access,getIdentity:async()=>identity,assertQuota:async(...args)=>{quotaOptions=args[2];return access.assertQuota(...args)}};
  mocks['@/lib/adimage/placements']={findPlacement:key=>({key}),groupByGenSize:()=>[{}],DEFAULT_PLACEMENT_KEYS:[]};
  mocks['@/lib/adimage/copy']={normalizeCopy:x=>x};mocks['@/lib/adimage/feedback']={REFINE_CHIPS:[]};mocks['@/lib/adimage/generate']={generateBaked:async()=>{generated++}};
  for(const model of Object.values(database))model.create=async()=>{writes++;throw Error('write forbidden')};
  const api=load(file,mocks);const response=await api.POST({json:async()=>({brandId:'brand',copy:{headline:'synthetic',cta:'synthetic'},placements:['p0','p1','p2','p3','p4'],note:'synthetic'})},{params:Promise.resolve({id:'c'})});
- const body=await response.json();assert.equal(response.status,429);assert.equal(body.code,'DAILY_IMAGE_LIMIT');assert.equal(body.usage.requested,5);assert.equal(response.headers.get('cache-control'),'no-store');assert.match(body.diagnosticId,/^[a-f0-9]{24}$/);assert.equal(generated,0);assert.equal(writes,0);assert(!JSON.stringify(body).includes('private-user-id'));
+ const body=await response.json();assert.equal(response.status,429);assert.equal(body.code,'DAILY_IMAGE_LIMIT');assert.equal(body.usage.requested,5);assert.equal(response.headers.get('cache-control'),'no-store');assert.match(body.diagnosticId,/^[a-f0-9]{24}$/);assert.equal(generated,0);assert.equal(writes,0);assert(!JSON.stringify(body).includes('private-user-id'));assert.equal(quotaOptions?.checkConceptLimit,kind==='refine'?false:undefined);
+});
+await check('refinement ignores new-concept cap but still consumes image allowance',async()=>{
+ const identity={userId:'u',guestId:null,plan:'PRO'};
+ assert.equal((await fixture(0,0,40).assertQuota(identity,1)).code,'DAILY_CONCEPT_LIMIT');
+ assert.equal((await fixture(0,0,40).assertQuota(identity,1,{checkConceptLimit:false})).ok,true);
+ assert.equal((await fixture(50,50,40).assertQuota(identity,1,{checkConceptLimit:false})).code,'DAILY_IMAGE_LIMIT');
+});
+await check('advertised AdImage allowances include actual image and concept caps',async()=>{
+ const svc=services.SERVICES.find(s=>s.id==='adimage');
+ const access=fixture(0,0,0);
+ for(const [plan,copy] of [['FREE',svc.pricing.free.limit],['PRO',svc.pricing.pro.limit]]){
+  assert.ok(copy.includes(`1日${access.DAILY_IMAGE_LIMIT[plan]}枚`));
+  assert.ok(copy.includes(`月${access.MONTHLY_IMAGE_LIMIT[plan]}枚`));
+  assert.ok(copy.includes(`1日${access.DAILY_CONCEPT_LIMIT[plan]}件`));
+  assert.ok(copy.includes('改善含む'));
+  assert.ok(!copy.includes('無制限'));
+ }
 });
 for(const [at,expected] of [['2026-12-31T14:59:59Z','2026-12-31T15:00:00.000Z'],['2028-02-28T15:00:00Z','2028-02-29T15:00:00.000Z'],['2026-09-30T15:00:00Z','2026-10-31T15:00:00.000Z']])await check('monthly reset boundary '+at,async()=>{const r=await fixture(0,15,0,at).assertQuota({userId:'u',guestId:null,plan:'FREE'},1);assert.equal(r.resetAt,expected)});
 await check('allowed request logs no denial',async()=>{logs=[];const result=await fixture(0,0,0).assertQuota({userId:'u',guestId:null,plan:'FREE'},1);assert.equal(result.ok,true);assert.equal(logs.length,0)});

@@ -187,7 +187,8 @@ function quotaDenied(
 
 export async function assertQuota(
   id: AdImageIdentity,
-  requestedImages = 1
+  requestedImages = 1,
+  options: { checkConceptLimit?: boolean } = {}
 ): Promise<{ ok: true } | AdImageQuotaDenied> {
   if (requestedImages > MAX_PLACEMENTS_PER_RUN) {
     return quotaDenied(`一度に生成できるのは${MAX_PLACEMENTS_PER_RUN}枚までです。配置やパターン数を減らしてください。`,
@@ -209,13 +210,16 @@ export async function assertQuota(
         { period: 'month', unit: 'image', limit: monthlyImages, used: usedMonth, requested: requestedImages })
     }
   }
-  const used = await conceptsToday(id)
-  const limit = DAILY_CONCEPT_LIMIT[id.plan]
-  if (used >= limit) {
-    return quotaDenied(id.plan === 'PRO'
-      ? '本日の生成上限に達しました。明日また実行できます。'
-      : '本日の生成上限に達しました。明日また実行できます。プロプランで上限を増やせます。',
-      'DAILY_CONCEPT_LIMIT', id.plan, { period: 'day', unit: 'concept', limit, used, requested: 1 })
+  // 改善は新規コンセプトを作らない。画像枚数の枠だけを消費する。
+  if (options.checkConceptLimit !== false) {
+    const used = await conceptsToday(id)
+    const limit = DAILY_CONCEPT_LIMIT[id.plan]
+    if (used >= limit) {
+      return quotaDenied(id.plan === 'PRO'
+        ? '本日の生成上限に達しました。明日また実行できます。'
+        : '本日の生成上限に達しました。明日また実行できます。プロプランで上限を増やせます。',
+        'DAILY_CONCEPT_LIMIT', id.plan, { period: 'day', unit: 'concept', limit, used, requested: 1 })
+    }
   }
   return { ok: true }
 }

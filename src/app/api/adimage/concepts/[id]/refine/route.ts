@@ -88,7 +88,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
   // ⚠️ 枠の判定は**実際に作る枚数**で行う。既定の1枚で見ていたため、
   //    残り2枚の人が改善を押すと3枚以上作れて上限を超えていた。
   //    生成を始める前に見ること（走らせてから弾くと課金だけ発生する）。
-  const quota = await assertQuota(identity, placementKeys.length)
+  const quota = await assertQuota(identity, placementKeys.length, { checkConceptLimit: false })
   if (!quota.ok) {
     const { ok: _ok, reason, ...details } = quota
     return NextResponse.json({ error: reason, ...details }, { status: 429, headers: { 'Cache-Control': 'no-store' } })
