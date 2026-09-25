@@ -70,8 +70,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true, department: updated })
   } catch (e: any) {
+    console.error('[hr/departments/[id]] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to update department' },
+      { error: 'Failed to update department' },
       { status: 500 }
     )
   }
@@ -123,8 +124,9 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
+    console.error('[hr/departments/[id]] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to delete department' },
+      { error: 'Failed to delete department' },
       { status: 500 }
     )
   }

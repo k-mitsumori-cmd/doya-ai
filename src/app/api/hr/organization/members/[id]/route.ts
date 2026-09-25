@@ -161,8 +161,9 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
+    console.error('[hr/organization/members/[id]] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to remove member' },
+      { error: 'Failed to remove member' },
       { status: 500 }
     )
   }

@@ -93,8 +93,9 @@ export async function GET() {
       })),
     })
   } catch (e: any) {
+    console.error('[hr/org-chart] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to fetch org chart' },
+      { error: 'Failed to fetch org chart' },
       { status: 500 }
     )
   }

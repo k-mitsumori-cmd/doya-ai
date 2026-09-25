@@ -74,8 +74,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: any) {
+    console.error('[hr/evaluations/[id]] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to fetch evaluation' },
+      { error: 'Failed to fetch evaluation' },
       { status: 500 }
     )
   }
@@ -189,8 +190,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (e?.code === 'P2025') {
       return NextResponse.json({ error: '評価が確定または変更されています。再読み込みして状態をご確認ください。' }, { status: 409 })
     }
+    console.error('[hr/evaluations/[id]] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to update evaluation' },
+      { error: 'Failed to update evaluation' },
       { status: 500 }
     )
   }

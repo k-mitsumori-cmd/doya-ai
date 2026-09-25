@@ -143,8 +143,9 @@ export async function POST(req: NextRequest) {
       inviteUrl,
     })
   } catch (e: any) {
+    console.error('[hr/organization/invite] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to create invitation' },
+      { error: 'Failed to create invitation' },
       { status: 500 }
     )
   }

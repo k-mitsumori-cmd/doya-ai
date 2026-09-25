@@ -73,8 +73,9 @@ export async function GET() {
       })),
     })
   } catch (e: any) {
+    console.error('[hr/departments] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to fetch departments' },
+      { error: 'Failed to fetch departments' },
       { status: 500 }
     )
   }
@@ -146,8 +147,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, department })
   } catch (e: any) {
+    console.error('[hr/departments] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to create department' },
+      { error: 'Failed to create department' },
       { status: 500 }
     )
   }

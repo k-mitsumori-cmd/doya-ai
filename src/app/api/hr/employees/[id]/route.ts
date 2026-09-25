@@ -61,8 +61,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     const viewer = await getOneOnOneViewer(hrCtx)
     return NextResponse.json({ success: true, canManageEmployees: hasMinRole(hrCtx.role, HrMemberRole.ADMIN), employee: { ...employee, oneOnOnesAsEmployee: employee.oneOnOnesAsEmployee.map(record => filterOneOnOneFields(record, viewer)) } })
   } catch (e: any) {
+    console.error('[hr/employees/[id]] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to fetch employee' },
+      { error: 'Failed to fetch employee' },
       { status: 500 }
     )
   }

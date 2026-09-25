@@ -81,8 +81,9 @@ export async function POST(req: NextRequest) {
       url: portalSession.url,
     })
   } catch (e: any) {
+    console.error('[hr/billing/portal] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to create portal session' },
+      { error: 'Failed to create portal session' },
       { status: 500 }
     )
   }

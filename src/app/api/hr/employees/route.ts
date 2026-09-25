@@ -72,8 +72,9 @@ export async function GET(req: NextRequest) {
       totalPages: Math.ceil(total / pageSize),
     })
   } catch (e: any) {
+    console.error('[hr/employees] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to fetch employees' },
+      { error: 'Failed to fetch employees' },
       { status: 500 }
     )
   }

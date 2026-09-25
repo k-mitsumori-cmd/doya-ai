@@ -86,8 +86,9 @@ export async function GET(req: NextRequest) {
       totalPages: Math.ceil(total / pageSize),
     })
   } catch (e: any) {
+    console.error('[hr/evaluations] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to fetch evaluations' },
+      { error: 'Failed to fetch evaluations' },
       { status: 500 }
     )
   }
@@ -167,8 +168,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, evaluation })
   } catch (e: any) {
+    console.error('[hr/evaluations] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to create evaluation' },
+      { error: 'Failed to create evaluation' },
       { status: 500 }
     )
   }

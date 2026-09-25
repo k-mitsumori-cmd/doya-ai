@@ -45,8 +45,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: any) {
+    console.error('[hr/evaluations/periods/[id]] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to fetch evaluation period' },
+      { error: 'Failed to fetch evaluation period' },
       { status: 500 }
     )
   }
@@ -82,8 +83,9 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
+    console.error('[hr/evaluations/periods/[id]] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to delete evaluation period' },
+      { error: 'Failed to delete evaluation period' },
       { status: 500 }
     )
   }
@@ -132,8 +134,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true, period: updated })
   } catch (e: any) {
+    console.error('[hr/evaluations/periods/[id]] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to update evaluation period' },
+      { error: 'Failed to update evaluation period' },
       { status: 500 }
     )
   }

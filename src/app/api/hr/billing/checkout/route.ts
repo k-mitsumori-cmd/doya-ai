@@ -159,8 +159,9 @@ export async function POST(req: NextRequest) {
       url: checkoutSession.url,
     })
   } catch (e: any) {
+    console.error('[hr/billing/checkout] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to create checkout session' },
+      { error: 'Failed to create checkout session' },
       { status: 500 }
     )
   }

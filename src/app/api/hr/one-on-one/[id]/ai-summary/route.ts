@@ -92,8 +92,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ success: true, aiSummary })
   } catch (e: any) {
     if (e?.code === 'P2025') return NextResponse.json({ error: '要約中に1on1が更新されました。内容を確認して再試行してください。' }, { status: 409 })
+    console.error('[hr/one-on-one/[id]/ai-summary] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to generate AI summary' },
+      { error: 'Failed to generate AI summary' },
       { status: 500 }
     )
   }

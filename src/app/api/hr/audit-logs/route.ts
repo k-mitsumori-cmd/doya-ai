@@ -53,8 +53,9 @@ export async function GET(req: NextRequest) {
       totalPages: Math.ceil(total / pageSize),
     })
   } catch (e: any) {
+    console.error('[hr/audit-logs] unexpected error', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to fetch audit logs' },
+      { error: 'Failed to fetch audit logs' },
       { status: 500 }
     )
   }
