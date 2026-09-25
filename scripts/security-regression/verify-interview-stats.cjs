@@ -20,6 +20,7 @@ const prisma = {
 const route = load('src/app/api/interview/projects/route.ts', {
   'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },
   '@/lib/prisma': { prisma },
+  '@/lib/interview/thumbnail-storage': { thumbnailUrlForClient: (_id, url) => url },
   '@/lib/interview/access': {
     requireDatabase: () => null,
     getInterviewUser: async () => ({ userId: owner }),

@@ -129,7 +129,9 @@ export default function ProjectsPage() {
     e.stopPropagation()
     setGeneratingThumbnail(projectId)
     try {
-      const res = await fetch(`/api/interview/projects/${projectId}/thumbnail`, { method: 'POST' })
+      const res = await fetch(`/api/interview/projects/${projectId}/thumbnail`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force: true }),
+      })
       const data = await res.json()
       if (data.success && data.thumbnailUrl) {
         setProjects((prev) =>

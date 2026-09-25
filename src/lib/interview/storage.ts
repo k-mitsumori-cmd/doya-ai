@@ -12,7 +12,7 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { randomUUID } from 'node:crypto'
 
-const BUCKET_NAME = process.env.INTERVIEW_STORAGE_BUCKET || 'interview-materials'
+export const BUCKET_NAME = process.env.INTERVIEW_STORAGE_BUCKET || 'interview-materials'
 
 let _client: SupabaseClient | null = null
 let _bucketReady = false

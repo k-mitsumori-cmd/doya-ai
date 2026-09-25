@@ -175,6 +175,11 @@ if (interviewReviseInput.error || interviewReviseInput.status !== 0) {
   console.error('Security regression failed: verify-interview-revise-input.cjs');
   process.exit(1);
 }
+const interviewThumbnail = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-thumbnail.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewThumbnail.error || interviewThumbnail.status !== 0) {
+  console.error('Security regression failed: verify-interview-thumbnail.cjs');
+  process.exit(1);
+}
 const interviewRecipeInput = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-recipe-input.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewRecipeInput.error || interviewRecipeInput.status !== 0) {
   console.error('Security regression failed: verify-interview-recipe-input.cjs');

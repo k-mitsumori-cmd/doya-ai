@@ -215,6 +215,7 @@ async function events() {
       requireDatabase: () => null,
     },
     '@/lib/interview/storage-purge-queue': { enqueueInterviewProjectStoragePurge: async () => {} },
+    '@/lib/interview/thumbnail-storage': { thumbnailUrlForClient: (_id, url) => url },
     '@/lib/interview/transcription-budget': { preserveInterviewTranscriptionUsageBeforeDelete: async () => {} },
   });
   const updateWith = (recipeId) => updateProject({ json: async () => ({ recipeId }) }, { params: Promise.resolve({ id: 'p1' }) });

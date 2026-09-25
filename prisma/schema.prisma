@@ -654,7 +654,7 @@ model InterviewProject {
   title  String
   status String @default("DRAFT") // DRAFT | PLANNING | RECORDING | TRANSCRIBING | EDITING | REVIEWING | COMPLETED
 
-  thumbnailUrl String? @db.Text // プロジェクトサムネイル画像URL (base64 data URL)
+  thumbnailUrl String? @db.Text // 旧base64 data URL または private Storage のマーカー
 
   // インタビュー対象者情報
   intervieweeName    String?

@@ -13,6 +13,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { callGeminiImageAPI } from '@/lib/resolve-image-model'
+import { THUMBNAIL_STORAGE_MARKER, downloadInterviewThumbnail, thumbnailOwner, thumbnailUrlForClient, uploadInterviewThumbnail } from '@/lib/interview/thumbnail-storage'
+import { claimThumbnailLease, releaseThumbnailLease, ThumbnailGenerationInProgressError } from '@/lib/interview/thumbnail-lease'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -159,10 +161,41 @@ function extractVisualKeywords(text: string): string {
     : ''
 }
 
+export async function GET(req: NextRequest, ctx: Ctx) {
+  const dbErr = requireDatabase()
+  if (dbErr) return dbErr
+  try {
+    const id = await resolveId(ctx)
+    const { userId } = await getInterviewUser()
+    const guestId = !userId ? getGuestIdFromRequest(req) : null
+    const project = await prisma.interviewProject.findUnique({
+      where: { id }, select: { userId: true, guestId: true, thumbnailUrl: true },
+    })
+    if (!project) return NextResponse.json({ error: '見つかりませんでした' }, { status: 404 })
+    const ownerErr = checkOwnership(project, userId, guestId)
+    if (ownerErr) return ownerErr
+    if (project.thumbnailUrl !== THUMBNAIL_STORAGE_MARKER) {
+      return NextResponse.json({ error: '画像が見つかりません' }, { status: 404 })
+    }
+    const image = await downloadInterviewThumbnail(thumbnailOwner(project), id)
+    return new Response(image.stream(), {
+      headers: {
+        'Content-Type': image.type,
+        'Content-Length': String(image.size),
+        'Cache-Control': 'private, no-store',
+        'X-Content-Type-Options': 'nosniff',
+      },
+    })
+  } catch {
+    return NextResponse.json({ error: '画像を取得できません' }, { status: 500 })
+  }
+}
+
 export async function POST(req: NextRequest, ctx: Ctx) {
   const dbErr = requireDatabase()
   if (dbErr) return dbErr
 
+  let lease: { id: string; token: string } | null = null
   try {
     const id = await resolveId(ctx)
     const { userId } = await getInterviewUser()
@@ -171,10 +204,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     // リクエストボディから記事内容・タイトルを受け取る（オプション）
     let articleContent = ''
     let articleTitle = ''
+    let force = false
     try {
       const body = await req.json()
-      articleContent = body?.articleContent || ''
-      articleTitle = body?.articleTitle || ''
+      articleContent = typeof body?.articleContent === 'string' ? body.articleContent.slice(0, 2000) : ''
+      articleTitle = typeof body?.articleTitle === 'string' ? body.articleTitle.slice(0, 200) : ''
+      force = body?.force === true
     } catch {
       // ボディなしの場合は無視
     }
@@ -192,6 +227,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         intervieweeCompany: true,
         intervieweeRole: true,
         thumbnailUrl: true,
+        updatedAt: true,
       },
     })
 
@@ -201,6 +237,22 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const ownerErr = checkOwnership(project, userId, guestId)
     if (ownerErr) return ownerErr
+
+    if (project.thumbnailUrl && !force) {
+      return NextResponse.json({ success: true, thumbnailUrl: thumbnailUrlForClient(id, project.thumbnailUrl, project.updatedAt) })
+    }
+    const token = await claimThumbnailLease(id)
+    lease = { id, token }
+    // A concurrent request may have finished between the first read and the lease.
+    const current = await prisma.interviewProject.findUnique({
+      where: { id }, select: { id: true, userId: true, guestId: true, thumbnailUrl: true, updatedAt: true },
+    })
+    if (!current || checkOwnership(current, userId, guestId)) {
+      return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
+    }
+    if (current.thumbnailUrl && !force) {
+      return NextResponse.json({ success: true, thumbnailUrl: thumbnailUrlForClient(id, current.thumbnailUrl, current.updatedAt) })
+    }
 
     const apiKey = process.env.GOOGLE_GENAI_API_KEY
     if (!apiKey) {
@@ -321,13 +373,14 @@ OUTPUT: A single ultra-high-quality photorealistic image that would be suitable 
       const inline = part?.inlineData || part?.inline_data
       if (inline?.data && typeof inline.data === 'string') {
         const mimeType = inline?.mimeType || 'image/png'
-        const thumbnailUrl = `data:${mimeType};base64,${inline.data}`
-
-        // DBに保存
-        await prisma.interviewProject.update({
-          where: { id },
-          data: { thumbnailUrl },
+        await uploadInterviewThumbnail(thumbnailOwner(project), id, mimeType, inline.data)
+        const updated = await prisma.$transaction(async tx => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${id}))`
+          const existing = await tx.interviewProject.findUnique({ where: { id }, select: { id: true, userId: true, guestId: true } })
+          if (!existing || checkOwnership(existing, userId, guestId)) throw new Error('Project removed during thumbnail generation')
+          return tx.interviewProject.update({ where: { id }, data: { thumbnailUrl: THUMBNAIL_STORAGE_MARKER }, select: { updatedAt: true } })
         })
+        const thumbnailUrl = thumbnailUrlForClient(id, THUMBNAIL_STORAGE_MARKER, updated.updatedAt)
 
         return NextResponse.json({
           success: true,
@@ -338,10 +391,17 @@ OUTPUT: A single ultra-high-quality photorealistic image that would be suitable 
 
     return NextResponse.json({ success: false, error: '画像の抽出に失敗しました' }, { status: 500 })
   } catch (error) {
-    console.error('Thumbnail generation error:', error)
+    if (error instanceof ThumbnailGenerationInProgressError) {
+      return NextResponse.json({ success: false, error: 'サムネイルを生成中です。少し待ってから再試行してください。', code: 'THUMBNAIL_GENERATING' }, { status: 409 })
+    }
+    console.error('Thumbnail generation error:', error instanceof Error ? error.message : 'unknown')
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'サムネイル生成中にエラーが発生しました' },
+      { success: false, error: 'サムネイル生成中にエラーが発生しました' },
       { status: 500 }
     )
+  } finally {
+    if (lease) await releaseThumbnailLease(lease.id, lease.token).catch(() => {
+      console.error('[interview] thumbnail lease release failed')
+    })
   }
 }

@@ -82,9 +82,6 @@ export default function NewProject() {
         return
       }
 
-      // サムネイル生成をバックグラウンドで実行（fire-and-forget）
-      fetch(`/api/interview/projects/${data.project.id}/thumbnail`, { method: 'POST' }).catch(() => {})
-
       // 素材アップロード画面へ遷移
       router.push(`/interview/projects/${data.project.id}/materials`)
     } catch {

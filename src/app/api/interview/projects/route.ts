@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
+import { thumbnailUrlForClient } from '@/lib/interview/thumbnail-storage'
 import {
   getInterviewUser,
   getGuestIdFromRequest,
@@ -142,7 +143,7 @@ export async function GET(req: NextRequest) {
           intervieweeCompany: p.intervieweeCompany,
           genre: p.genre,
           theme: p.theme,
-          thumbnailUrl: p.thumbnailUrl || null,
+          thumbnailUrl: thumbnailUrlForClient(p.id, p.thumbnailUrl, p.updatedAt),
           materialCount: p._count.materials,
           draftCount: p._count.drafts,
           articleTitle: latestDraft?.title || null,

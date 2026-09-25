@@ -66,6 +66,7 @@ const projectRoute = load('src/app/api/interview/projects/[id]/route.ts', {
   '@/lib/interview/access': { requireDatabase: () => null, getInterviewUser: async () => ({ userId: 'owner' }), checkOwnership: () => null },
   '@/lib/interview/transcription-budget': { preserveInterviewTranscriptionUsageBeforeDelete: async () => {} },
   '@/lib/interview/storage-purge-queue': { enqueueInterviewProjectStoragePurge: async (tx, project) => { assert.equal(tx, deleteTx); assert.equal(project.id, 'old-project'); await tx.systemSetting.create() } },
+  '@/lib/interview/thumbnail-storage': { thumbnailUrlForClient: (_id, url) => url },
 })
 const request = (url, authorization) => ({ nextUrl: new URL(url), headers: { get: name => name === 'authorization' ? authorization : null } })
 

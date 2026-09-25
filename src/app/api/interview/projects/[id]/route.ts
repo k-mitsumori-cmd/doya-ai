@@ -10,6 +10,7 @@ import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { enqueueInterviewProjectStoragePurge } from '@/lib/interview/storage-purge-queue'
 import { preserveInterviewTranscriptionUsageBeforeDelete } from '@/lib/interview/transcription-budget'
+import { thumbnailUrlForClient } from '@/lib/interview/thumbnail-storage'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -97,7 +98,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         intervieweeBio: project.intervieweeBio,
         genre: project.genre,
         theme: project.theme,
-        thumbnailUrl: project.thumbnailUrl || null,
+        thumbnailUrl: thumbnailUrlForClient(project.id, project.thumbnailUrl, project.updatedAt),
         purpose: project.purpose,
         targetAudience: project.targetAudience,
         tone: project.tone,

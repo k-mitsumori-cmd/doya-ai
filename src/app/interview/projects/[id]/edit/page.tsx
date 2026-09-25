@@ -503,14 +503,14 @@ export default function EditPage() {
   }
 
   // バナー画像生成 (Nano Banana Pro)
-  const generateBanner = useCallback(async () => {
+  const generateBanner = useCallback(async (force: boolean) => {
     if (bannerGenerating) return
     setBannerGenerating(true)
     try {
       const res = await fetch(`/api/interview/projects/${projectId}/thumbnail`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ articleContent: content.slice(0, 2000), articleTitle: title }),
+        body: JSON.stringify({ articleContent: content.slice(0, 2000), articleTitle: title, force }),
       })
       const data = await res.json()
       if (data.success && data.thumbnailUrl) {
@@ -521,13 +521,13 @@ export default function EditPage() {
     } finally {
       setBannerGenerating(false)
     }
-  }, [projectId, content, bannerGenerating])
+  }, [projectId, content, title, bannerGenerating])
 
   // バナー自動生成: 記事読み込み完了時にバナーが未生成なら自動で作成
   useEffect(() => {
     if (!loading && content.trim().length > 100 && !bannerUrl && !bannerGenerating && !bannerAutoTriedRef.current) {
       bannerAutoTriedRef.current = true
-      generateBanner()
+      generateBanner(false)
     }
   }, [loading, content, bannerUrl, bannerGenerating, generateBanner])
 
@@ -1171,7 +1171,7 @@ ${htmlBody}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-transparent" />
                         <button
-                          onClick={generateBanner}
+                          onClick={() => generateBanner(true)}
                           disabled={bannerGenerating}
                           className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity px-3 py-1.5 bg-white/90 backdrop-blur-sm rounded-lg text-xs font-bold text-slate-700 hover:bg-white shadow-lg flex items-center gap-1.5"
                         >
@@ -1182,7 +1182,7 @@ ${htmlBody}
                     ) : content.trim() ? (
                       <div className="mb-8 -mx-4 sm:-mx-6 md:-mx-8 -mt-6 sm:-mt-10">
                         <button
-                          onClick={generateBanner}
+                          onClick={() => generateBanner(true)}
                           disabled={bannerGenerating}
                           className="w-full h-[120px] bg-gradient-to-r from-slate-50 via-slate-100 to-slate-50 border-b border-slate-200 flex flex-col items-center justify-center gap-2 hover:from-[#7f19e6]/5 hover:via-[#7f19e6]/10 hover:to-[#7f19e6]/5 transition-all group"
                         >
