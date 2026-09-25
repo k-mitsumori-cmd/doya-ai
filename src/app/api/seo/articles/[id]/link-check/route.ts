@@ -80,8 +80,9 @@ export async function POST(
 
     return NextResponse.json({ success: true, count: results.length })
   } catch (e: any) {
+    console.error('[seo link-check] failed', e)
     return NextResponse.json(
-      { success: false, error: e?.message || '不明なエラー' },
+      { success: false, error: 'リンクをチェックできませんでした。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }

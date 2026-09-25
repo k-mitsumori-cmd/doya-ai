@@ -55,6 +55,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   } catch (e: any) {
     if (e instanceof z.ZodError) return NextResponse.json({ success: false, error: '入力内容が不正です' }, { status: 400 })
     if (e?.code === 'P2025') return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
-    return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 500 })
+    console.error('[seo articles/[id]/content/route.ts] failed', e)
+    return NextResponse.json({ success: false, error: '記事を保存できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

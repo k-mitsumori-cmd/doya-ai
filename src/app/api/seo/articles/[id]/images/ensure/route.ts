@@ -265,6 +265,6 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     return NextResponse.json({ success: true, images: refreshed?.images || [] })
   } catch (e: any) {
     console.error('Ensure images error:', e)
-    return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 500 })
+    return NextResponse.json({ success: false, error: '画像を生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

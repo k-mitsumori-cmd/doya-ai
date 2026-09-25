@@ -67,6 +67,7 @@ ${keywords.join(', ') || '（未設定）'}
 
     return NextResponse.json({ success: true, content: regenerated })
   } catch (e: any) {
-    return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 500 })
+    console.error('[seo sections/[id]/regenerate/route.ts] failed', e)
+    return NextResponse.json({ success: false, error: 'セクションを再生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

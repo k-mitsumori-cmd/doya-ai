@@ -67,8 +67,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     return NextResponse.json({ success: true, image: rec })
   } catch (e: any) {
+    console.error('[seo diagram] failed', e)
     return NextResponse.json(
-      { success: false, error: e?.message || '不明なエラー' },
+      { success: false, error: '図解を生成できませんでした。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }

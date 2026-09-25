@@ -48,7 +48,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     const msg = e?.message || '不明なエラー'
     console.error('[seo article get] failed', { articleId: id, msg, error: e })
     return NextResponse.json(
-      { success: false, error: msg },
+      { success: false, error: '記事の操作に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }
@@ -82,7 +82,7 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
     const msg = e?.message || '不明なエラー'
     console.error('[seo article delete] failed', { articleId: id, msg, error: e })
     return NextResponse.json(
-      { success: false, error: msg },
+      { success: false, error: '記事の操作に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }

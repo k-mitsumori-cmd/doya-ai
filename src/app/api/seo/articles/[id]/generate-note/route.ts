@@ -152,7 +152,7 @@ export async function POST(_req: NextRequest, props: { params: Promise<{ id: str
     })
   } catch (e: any) {
     console.error('Note generation error:', e)
-    return NextResponse.json({ success: false, error: e?.message || 'Unknown error' }, { status: 500 })
+    return NextResponse.json({ success: false, error: '記事を生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
 

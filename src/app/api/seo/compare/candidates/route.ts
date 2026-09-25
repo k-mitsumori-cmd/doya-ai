@@ -124,8 +124,11 @@ export async function POST(req: NextRequest) {
       provider: 'serpapi',
     })
   } catch (e: any) {
-    return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 400 })
+    if (e?.name === 'ZodError' || e instanceof SyntaxError) {
+      return NextResponse.json({ success: false, error: '検索条件が不正です' }, { status: 400 })
+    }
+    console.error('[seo compare candidates] failed', e)
+    return NextResponse.json({ success: false, error: '比較候補を取得できませんでした。時間をおいて再試行してください。' }, { status: 502 })
   }
 }
-
 

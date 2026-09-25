@@ -139,7 +139,7 @@ export async function POST(
   } catch (error: any) {
     console.error('[competitor-analysis] error:', error)
     return NextResponse.json(
-      { error: error?.message || 'Internal server error' },
+      { error: '競合を分析できませんでした。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }

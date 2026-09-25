@@ -198,7 +198,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   } catch (e: any) {
     const msg = e?.message || '不明なエラー'
     console.error('[seo chat-edit] failed', { articleId, msg })
-    return NextResponse.json({ success: false, error: msg }, { status: 500 })
+    return NextResponse.json({ success: false, error: '記事を編集できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
 

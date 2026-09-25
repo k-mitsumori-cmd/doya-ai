@@ -22,7 +22,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
   } catch (e: any) {
     console.error('[seo research] failed', { articleId: id, error: e?.message || 'unknown error', stack: e?.stack })
     return NextResponse.json(
-      { success: false, error: e?.message || '不明なエラー' },
+      { success: false, error: '記事の調査に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }

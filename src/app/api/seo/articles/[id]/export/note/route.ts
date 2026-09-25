@@ -73,7 +73,8 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ id: stri
       },
     })
   } catch (e: any) {
-    return NextResponse.json({ success: false, error: e?.message || 'Unknown error' }, { status: 500 })
+    console.error('[seo note export] failed', e)
+    return NextResponse.json({ success: false, error: '記事を書き出せませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
 

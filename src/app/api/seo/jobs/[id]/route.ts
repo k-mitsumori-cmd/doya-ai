@@ -51,7 +51,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     const msg = e?.message || '不明なエラー'
     console.error('[seo job get] failed', { msg })
     return NextResponse.json(
-      { success: false, error: msg },
+      { success: false, error: 'ジョブを取得できませんでした。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }

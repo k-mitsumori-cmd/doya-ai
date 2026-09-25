@@ -92,10 +92,11 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
         // レート制限を避けるため少し待つ
         await new Promise((resolve) => setTimeout(resolve, 500))
       } catch (err: any) {
+        console.error('[seo diagram batch] item failed', err)
         results.push({
           title: diagram.title,
           success: false,
-          error: err?.message || '不明なエラー',
+          error: '図解を生成できませんでした。時間をおいて再試行してください。',
         })
       }
     }
@@ -115,6 +116,6 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     }, { status: failCount ? 502 : 200 })
   } catch (e: any) {
     console.error('Batch diagram generation error:', e)
-    return NextResponse.json({ success: false, error: e?.message || 'Unknown error' }, { status: 500 })
+    return NextResponse.json({ success: false, error: '図解を生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

@@ -96,6 +96,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ success: true, image: newRec })
   } catch (e: any) {
     console.error('Image regeneration error:', e)
-    return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 400 })
+    if (e?.name === 'ZodError' || e instanceof SyntaxError) {
+      return NextResponse.json({ success: false, error: '入力形式が正しくありません' }, { status: 400 })
+    }
+    return NextResponse.json({ success: false, error: '画像を再生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

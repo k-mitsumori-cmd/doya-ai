@@ -57,6 +57,7 @@ ${section.content}
 
     return NextResponse.json({ success: true, content: enhanced })
   } catch (e: any) {
-    return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 500 })
+    console.error('[seo sections/[id]/cv/route.ts] failed', e)
+    return NextResponse.json({ success: false, error: 'セクションを強化できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

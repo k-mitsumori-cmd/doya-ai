@@ -98,7 +98,7 @@ ${content.slice(0, 4000)}
     })
   } catch (e: any) {
     console.error('Diagram suggest error:', e)
-    return NextResponse.json({ success: false, error: e?.message || 'Unknown error' }, { status: 500 })
+    return NextResponse.json({ success: false, error: '図解案を生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
 

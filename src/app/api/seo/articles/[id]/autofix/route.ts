@@ -120,7 +120,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     return NextResponse.json({ success: true, changed: true, finalMarkdown: after })
   } catch (e: any) {
-    return NextResponse.json({ success: false, error: e?.message || '不明なエラー' }, { status: 500 })
+    console.error('[seo articles/[id]/autofix/route.ts] failed', e)
+    return NextResponse.json({ success: false, error: '記事を修正できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
 

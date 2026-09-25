@@ -27,24 +27,24 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     const m = String(msg || '')
     const hint = (() => {
       if (m.includes('GOOGLE_GENAI_API_KEY') || m.includes('Gemini APIキーが設定されていません')) {
-        return 'Vercelの環境変数に GOOGLE_GENAI_API_KEY（推奨）/ GOOGLE_API_KEY / GEMINI_API_KEY を設定して再デプロイしてください。'
+        return '生成サービスの設定を確認しています。時間をおいて再試行してください。'
       }
       // Google側の請求停止/課金未設定など（代表的な文言を拾う）
       if (/billing|payment|請求|課金|PERMISSION_DENIED|permission denied/i.test(m)) {
-        return 'Google側の請求設定（Billing）が無効/停止している可能性があります。対象プロジェクトのBillingを有効化し、Generative Language API(Gemini)が利用可能な状態にしてから再実行してください。'
+        return '生成サービスを利用できない状態です。時間をおいて再試行してください。'
       }
       if (/quota|RESOURCE_EXHAUSTED|rate limit/i.test(m)) {
         return 'APIのクォータ/レート制限に達している可能性があります。時間を置くか、クォータを増やして再実行してください。'
       }
       // データベース接続プールエラー
       if (/MaxClientsInSessionMode|max clients reached|pool_size/i.test(m)) {
-        return 'データベース接続プールの上限に達しています。しばらく待ってから再試行してください。'
+        return '一時的に混み合っています。時間をおいて再試行してください。'
       }
       return undefined
     })()
     console.error('[seo advance] failed', { jobId: id, msg, error: e, stack: e?.stack })
     return NextResponse.json(
-      { success: false, error: msg, hint },
+      { success: false, error: '生成処理を進められませんでした。時間をおいて再試行してください。', hint },
       { status: 500 }
     )
   }

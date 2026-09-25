@@ -67,7 +67,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
     console.error('[seo outline] failed', { articleId: id, error: e?.message || 'unknown error', stack: e?.stack })
     return NextResponse.json(
-      { success: false, error: e?.message || '不明なエラー' },
+      { success: false, error: '構成案を生成できませんでした。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }

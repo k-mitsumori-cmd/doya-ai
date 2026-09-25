@@ -114,9 +114,9 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
 
     return NextResponse.json({ success: true, items })
   } catch (e: any) {
-    const msg = e?.message || '不明なエラー'
+    console.error('[seo article check] failed', e)
     // 例外時でも必ずJSONで返す（res.json() を壊さない）
-    return NextResponse.json({ success: false, error: msg }, { status: 500 })
+    return NextResponse.json({ success: false, error: '記事をチェックできませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
 

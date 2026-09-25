@@ -107,8 +107,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, titles: merged })
   } catch (e: any) {
+    console.error('[seo title suggestions] failed', e)
     return NextResponse.json(
-      { success: false, error: e?.message || '不明なエラー' },
+      { success: false, error: 'タイトル候補を生成できませんでした。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }

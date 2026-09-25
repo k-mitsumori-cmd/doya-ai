@@ -50,8 +50,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
     console.error('[seo memo] failed', { articleId: id, error: e?.message || 'unknown error', stack: e?.stack })
     return NextResponse.json(
-      { success: false, error: e?.message || '不明なエラー' },
-      { status: 400 }
+      { success: false, error: 'メモを保存できませんでした。時間をおいて再試行してください。' },
+      { status: 500 }
     )
   }
 }

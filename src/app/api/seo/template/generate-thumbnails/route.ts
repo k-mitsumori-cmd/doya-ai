@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/admin-guard'
 import { prisma } from '@/lib/prisma'
 import { generateBanners } from '@/lib/nanobanner'
 
@@ -413,6 +414,8 @@ async function generateTemplateImage(
 
 // POST: テンプレート画像をバッチ生成
 export async function POST(request: NextRequest) {
+  const denied = await requireAdmin()
+  if (denied) return denied
   try {
     const body = await request.json().catch(() => ({}))
     const { templateIds, limit = 3 } = body as { templateIds?: string[]; limit?: number }
@@ -482,7 +485,7 @@ export async function POST(request: NextRequest) {
         await new Promise((resolve) => setTimeout(resolve, 3000))
       } catch (error: any) {
         console.error(`[SEO Template Gen] Error for ${templateId}:`, error.message)
-        results.push({ id: templateId, status: 'error', error: error.message })
+        results.push({ id: templateId, status: 'error', error: '画像を生成できませんでした。時間をおいて再試行してください。' })
 
         // エラー時は5秒待機
         await new Promise((resolve) => setTimeout(resolve, 5000))
@@ -501,7 +504,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('[SEO Template Gen] Unexpected error:', error.message)
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'テンプレート画像を生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
 
@@ -540,12 +543,14 @@ export async function GET() {
     })
   } catch (error: any) {
     console.error('[SEO Template Gen] GET error:', error.message)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'テンプレート一覧を取得できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
 
 // DELETE: 生成済みテンプレート画像を全て削除
 export async function DELETE() {
+  const denied = await requireAdmin()
+  if (denied) return denied
   try {
     // seo-article-で始まるテンプレートを全て削除
     const result = await prisma.bannerTemplate.deleteMany({
@@ -564,6 +569,6 @@ export async function DELETE() {
     })
   } catch (error: any) {
     console.error('[SEO Template Gen] DELETE error:', error.message)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'テンプレート画像を削除できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

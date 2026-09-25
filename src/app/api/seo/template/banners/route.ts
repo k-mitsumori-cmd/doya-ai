@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireAdmin } from '@/lib/admin-guard'
 import { generateBanners, isNanobannerConfigured } from '@/lib/nanobanner'
 import { articleTemplates } from '@/app/seo/template/data'
 
@@ -301,6 +302,8 @@ ${customPrompt}
 
 // 単一テンプレートのバナーを生成
 export async function POST(request: NextRequest) {
+  const denied = await requireAdmin()
+  if (denied) return denied
   try {
     const body = await request.json()
     const { 
@@ -408,13 +411,15 @@ export async function POST(request: NextRequest) {
     console.error('Banner generation error:', error)
     return NextResponse.json({
       success: false,
-      error: error.message || 'Internal server error',
+      error: 'バナーを生成できませんでした。時間をおいて再試行してください。',
     }, { status: 500 })
   }
 }
 
 // 全テンプレートのバナーを一括生成（バッチ処理用）
 export async function PUT(request: NextRequest) {
+  const denied = await requireAdmin()
+  if (denied) return denied
   try {
     const body = await request.json()
     const { templateIds } = body
@@ -461,7 +466,7 @@ export async function PUT(request: NextRequest) {
           results.push({
             templateId: template.id,
             imageUrl: null,
-            error: result.error || 'Generation failed',
+            error: 'バナーを生成できませんでした。時間をおいて再試行してください。',
           })
         }
 
@@ -471,7 +476,7 @@ export async function PUT(request: NextRequest) {
         results.push({
           templateId: template.id,
           imageUrl: null,
-          error: error.message,
+          error: 'バナーを生成できませんでした。時間をおいて再試行してください。',
         })
       }
     }
@@ -487,7 +492,7 @@ export async function PUT(request: NextRequest) {
     console.error('Batch banner generation error:', error)
     return NextResponse.json({
       success: false,
-      error: error.message || 'Internal server error',
+      error: 'バナーを生成できませんでした。時間をおいて再試行してください。',
     }, { status: 500 })
   }
 }
