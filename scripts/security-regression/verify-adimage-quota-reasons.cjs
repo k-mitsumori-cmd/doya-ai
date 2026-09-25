@@ -18,6 +18,18 @@ for(const kind of ['generate','refine'])await check(kind+' route returns diagnos
  const api=load(file,mocks);const response=await api.POST({json:async()=>({brandId:'brand',copy:{headline:'synthetic',cta:'synthetic'},placements:['p0','p1','p2','p3','p4'],note:'synthetic'})},{params:Promise.resolve({id:'c'})});
  const body=await response.json();assert.equal(response.status,429);assert.equal(body.code,'DAILY_IMAGE_LIMIT');assert.equal(body.usage.requested,5);assert.equal(response.headers.get('cache-control'),'no-store');assert.match(body.diagnosticId,/^[a-f0-9]{24}$/);assert.equal(generated,0);assert.equal(writes,0);assert(!JSON.stringify(body).includes('private-user-id'));assert.equal(quotaOptions?.checkConceptLimit,kind==='refine'?false:undefined);
 });
+for(const kind of ['generate','refine'])await check(kind+' atomic reservation denial blocks image provider',async()=>{
+ const fs=require('fs'),ts=require('typescript');const file=kind==='generate'?'src/app/api/adimage/concepts/route.ts':'src/app/api/adimage/concepts/[id]/refine/route.ts';
+ const ast=ts.createSourceFile(file,fs.readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true),mocks={};for(const n of ast.statements)if(ts.isImportDeclaration(n))mocks[n.moduleSpecifier.text]={};
+ const identity={userId:'private-user-id',guestId:null,plan:'FREE'};let generated=0,claimed=0,writes=0;
+ mocks['next/server']={NextResponse:Response};mocks['@/lib/prisma']={prisma:{adImageBrand:{findFirst:async()=>({id:'brand',name:'brand'})},adImageConcept:{findFirst:async()=>({id:'c',campaignId:'campaign',campaign:{brand:{name:'brand'}},feedbacks:[],creatives:[{placementKey:'p1'}],copy:{},generation:1})}}};
+ mocks['@/lib/adimage/access']={getIdentity:async()=>identity,requireUser:()=>({ok:true}),ensureGuestId:id=>({identity:id,newGuestId:null}),ownerWhere:()=>({userId:identity.userId}),assertQuota:async()=>({ok:true})};
+ mocks['@/lib/adimage/image-budget']={claimImageBudget:async()=>{claimed++;return{ok:false,reason:'quota reached',code:'DAILY_IMAGE_LIMIT',usage:{requested:1}}},releaseImageBudget:async()=>{throw Error('no reservation')},settleImageBudget:async()=>{writes++}};
+ mocks['@/lib/adimage/placements']={findPlacement:key=>({key}),groupByGenSize:()=>[{placements:[{key:'p1'}]}],DEFAULT_PLACEMENT_KEYS:['p1']};
+ mocks['@/lib/adimage/copy']={normalizeCopy:x=>x};mocks['@/lib/adimage/feedback']={REFINE_CHIPS:[]};mocks['@/lib/adimage/generate']={generateBaked:async()=>{generated++}};
+ const api=load(file,mocks),res=await api.POST({json:async()=>({brandId:'brand',copy:{headline:'h',cta:'c'},placements:['p1'],note:'revise'})},{params:Promise.resolve({id:'c'})});
+ assert.equal(res.status,429);assert.equal((await res.json()).code,'DAILY_IMAGE_LIMIT');assert.equal(res.headers.get('cache-control'),'no-store');assert.equal(claimed,1);assert.equal(generated,0);assert.equal(writes,0);
+});
 await check('refinement ignores new-concept cap but still consumes image allowance',async()=>{
  const identity={userId:'u',guestId:null,plan:'PRO'};
  assert.equal((await fixture(0,0,40).assertQuota(identity,1)).code,'DAILY_CONCEPT_LIMIT');

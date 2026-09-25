@@ -10,6 +10,7 @@ import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { assertQuota, getIdentity, ownerWhere, requireUser } from '@/lib/adimage/access'
+import { claimImageBudget, releaseImageBudget, settleImageBudget } from '@/lib/adimage/image-budget'
 import { directivesToPromptLines, REFINE_CHIPS } from '@/lib/adimage/feedback'
 import { extractRefPalette } from '@/lib/adimage/ref-palette'
 import { exportToSize, generateBaked } from '@/lib/adimage/generate'
@@ -93,6 +94,14 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     const { ok: _ok, reason, ...details } = quota
     return NextResponse.json({ error: reason, ...details }, { status: 429, headers: { 'Cache-Control': 'no-store' } })
   }
+  const claim = await claimImageBudget(identity, placementKeys.length, false)
+  if (!claim.ok) {
+    const { ok: _ok, reason, ...details } = claim
+    return NextResponse.json({ error: reason, ...details }, { status: 429, headers: { 'Cache-Control': 'no-store' } })
+  }
+  const reservation = claim.reservation
+  let budgetSettled = false
+  try {
   // ⚠️ 世代番号だけでパスを決めると、同じ親コンセプトから2回改善したときに
   //    パスが衝突し、uploadPng(upsert:true) が**先に作った画像を上書きする**。
   //    先の世代のレコードはそのパスを指したままなので、画像だけが黙って差し替わる。
@@ -192,7 +201,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     )
   }
 
-  const next = await prisma.adImageConcept.create({
+  const next = await settleImageBudget(reservation, creativeRows.length, (tx) => tx.adImageConcept.create({
     data: {
       campaignId: concept.campaignId,
       label: `${concept.label}（改善${concept.generation}）`,
@@ -211,7 +220,8 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
       creatives: { create: creativeRows },
     },
     include: { creatives: true },
-  })
+  }))
+  budgetSettled = true
 
   // どの指示から生まれたかを記録する（効果を後から検証するため）
   if (concept.feedbacks[0]) {
@@ -257,4 +267,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     needsReview: creatives.some((c) => (c.verify as any)?.needsReview),
     failedPlacements,
   })
+  } finally {
+    if (!budgetSettled) await releaseImageBudget(reservation)
+  }
 }

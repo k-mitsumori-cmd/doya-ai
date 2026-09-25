@@ -140,7 +140,7 @@ export async function imagesSince(id: AdImageIdentity, since: Date): Promise<num
  * 枚数の上限に達したときの文面。
  * ⚠️ プロプランの方に「プロにご登録を」と返さないこと（既に払っている）。
  */
-function limitMessage(
+export function limitMessage(
   plan: AdImagePlan,
   period: string,
   limit: number,
@@ -168,7 +168,7 @@ export interface AdImageQuotaDenied {
   resetAt: string | null
 }
 
-function quotaDenied(
+export function quotaDenied(
   reason: string, code: AdImageQuotaDenied['code'], plan: AdImagePlan,
   usage: AdImageQuotaDenied['usage']
 ): AdImageQuotaDenied {

@@ -159,7 +159,7 @@ export async function getUsageSummary(
     // ---- 画像を作るもの（枚数が実費に直結する）----
     case 'adimage': {
       const where = { userId }
-      const [total, today, month] = await Promise.all([
+      const [total, today, month, budget] = await Promise.all([
         prisma.adImageCreative.count({ where: { concept: { campaign: where } } }),
         prisma.adImageCreative.count({
           where: { concept: { campaign: where }, createdAt: { gte: jstStartOfTodayUtc() } },
@@ -167,6 +167,7 @@ export async function getUsageSummary(
         prisma.adImageCreative.count({
           where: { concept: { campaign: where }, createdAt: { gte: jstStartOfMonthUtc() } },
         }),
+        import('@/lib/adimage/image-budget').then(({ readImageBudgetUsage }) => readImageBudgetUsage(userId)),
       ])
       // ⚠️ 上限は adimage/access.ts が正本。ここでは同じ値を参照するだけ
       const { DAILY_IMAGE_LIMIT, MONTHLY_IMAGE_LIMIT } = await import('@/lib/adimage/access')
@@ -177,8 +178,8 @@ export async function getUsageSummary(
         total,
         planLabel,
         meters: [
-          { label: '今日', used: today, limit: DAILY_IMAGE_LIMIT[p] },
-          { label: '今月', used: month, limit: MONTHLY_IMAGE_LIMIT[p] },
+          { label: '今日', used: budget?.today ?? today, limit: DAILY_IMAGE_LIMIT[p] },
+          { label: '今月', used: budget?.month ?? month, limit: MONTHLY_IMAGE_LIMIT[p] },
         ],
       }
     }

@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import sharp from 'sharp'
 import { prisma } from '@/lib/prisma'
 import { assertQuota, ensureGuestId, getIdentity, GUEST_COOKIE, ownerWhere, requireUser } from '@/lib/adimage/access'
+import { claimImageBudget, releaseImageBudget, settleImageBudget } from '@/lib/adimage/image-budget'
 import type { CompositionKey } from '@/lib/adimage/placements'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { DEFAULT_PLACEMENT_KEYS, findPlacement, groupByGenSize } from '@/lib/adimage/placements'
@@ -142,7 +143,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
 
-  const requestedVariations = Math.max(1, Math.min(3, Number(body?.variations) || 1))
+  const requestedVariations = Math.max(1, Math.min(3, Math.trunc(Number(body?.variations)) || 1))
 
   const brandId = String(body?.brandId || '')
   if (!brandId) return NextResponse.json({ error: 'ブランドを指定してください' }, { status: 400 })
@@ -164,7 +165,7 @@ export async function POST(req: NextRequest) {
     ? body.placements.map((k: unknown) => String(k))
     : DEFAULT_PLACEMENT_KEYS
   // 実在する配置だけに絞る。⚠️ 生成回数が費用に直結するので上限も設ける
-  const placementKeys = requested.filter((k) => findPlacement(k)).slice(0, 13)
+  const placementKeys = [...new Set(requested.filter((k) => findPlacement(k)))].slice(0, 13)
   if (placementKeys.length === 0) {
     return NextResponse.json({ error: '配置を選択してください' }, { status: 400 })
   }
@@ -178,6 +179,14 @@ export async function POST(req: NextRequest) {
     const { ok: _ok, reason, ...details } = quota
     return NextResponse.json({ error: reason, ...details }, { status: 429, headers: { 'Cache-Control': 'no-store' } })
   }
+  const claim = await claimImageBudget(identity, placementKeys.length * requestedVariations, true)
+  if (!claim.ok) {
+    const { ok: _ok, reason, ...details } = claim
+    return NextResponse.json({ error: reason, ...details }, { status: 429, headers: { 'Cache-Control': 'no-store' } })
+  }
+  const reservation = claim.reservation
+  let budgetSettled = false
+  try {
 
   const brand: BrandProfile = {
     name: brandRow.name,
@@ -210,7 +219,7 @@ export async function POST(req: NextRequest) {
 
   // ⚠️ 同じサイズで見比べたいという要望に応えるための「3パターン」。
   //    構図を変えて同じサイズを複数回作る。枚数の枠もそのぶん消費する。
-  const variations = Math.max(1, Math.min(3, Number(body?.variations) || 1))
+  const variations = requestedVariations
   // 利用者が自分で書いたプロンプト（上級者向け）。空なら自動組み立て
   const customPrompt = String(body?.customPrompt || '').slice(0, 4000)
 
@@ -357,7 +366,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const concept = await prisma.adImageConcept.create({
+  const concept = await settleImageBudget(reservation, creativeRows.length, (tx) => tx.adImageConcept.create({
     data: {
       campaignId: campaign.id,
       label: String(body?.label || 'コンセプト').slice(0, 120),
@@ -376,7 +385,8 @@ export async function POST(req: NextRequest) {
       creatives: { create: creativeRows },
     },
     include: { creatives: true },
-  })
+  }))
+  budgetSettled = true
 
   const creatives = await Promise.all(
     concept.creatives.map(async (cr) => ({
@@ -418,4 +428,7 @@ export async function POST(req: NextRequest) {
     })
   }
   return res
+  } finally {
+    if (!budgetSettled) await releaseImageBudget(reservation)
+  }
 }
