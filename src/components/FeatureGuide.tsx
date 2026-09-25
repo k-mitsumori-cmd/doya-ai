@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
   HelpCircle, 
@@ -21,18 +21,58 @@ interface FeatureGuideProps {
   imageMode?: 'auto' | 'off'
 }
 
-export function FeatureGuide({ featureId, title, description, steps, imageMode = 'auto' }: FeatureGuideProps) {
+export function FeatureGuide({ featureId, title, description, steps, imageMode = 'off' }: FeatureGuideProps) {
   const [isOpen, setIsOpen] = useState(false)
   const [guideImage, setGuideImage] = useState<string | null>(null)
+  const [imageAttempted, setImageAttempted] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [page, setPage] = useState(0)
 
+  const generateImage = useCallback(async () => {
+    setImageAttempted(true)
+    setIsLoading(true)
+    try {
+      // ハング対策: 画像生成APIが応答しない場合でもUIが固まらないようtimeout
+      const controller = new AbortController()
+      const timeoutMs = 12000
+      const t = setTimeout(() => controller.abort(), timeoutMs)
+      let res: Response
+      try {
+        res = await fetch('/api/guide/image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            featureName: title,
+            description: `A professional guide banner for "${title}" feature. ${description}`,
+          }),
+          signal: controller.signal,
+        })
+      } finally {
+        clearTimeout(t)
+      }
+      if (!res.ok) throw new Error('ガイド画像を取得できませんでした')
+      const data = await res.json()
+      if (data.imageUrl) {
+        setGuideImage(data.imageUrl)
+      }
+    } catch (error) {
+      console.error('Failed to generate guide image:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [title, description])
+
+  useEffect(() => {
+    setGuideImage(null)
+    setImageAttempted(false)
+  }, [featureId])
+
   useEffect(() => {
     // 初めて開くときに画像を生成
-    if (imageMode !== 'off' && isOpen && !guideImage && !isLoading) {
+    if (imageMode === 'auto' && isOpen && !guideImage && !isLoading && !imageAttempted) {
       generateImage()
     }
-  }, [isOpen, guideImage, isLoading, imageMode, featureId])
+  }, [isOpen, guideImage, isLoading, imageMode, imageAttempted, generateImage])
 
   // スライド位置を機能ごとに保存（戻った時に続きから見られる）
   useEffect(() => {
@@ -57,34 +97,6 @@ export function FeatureGuide({ featureId, title, description, steps, imageMode =
       // ignore
     }
   }, [isOpen, featureId, page])
-
-  const generateImage = async () => {
-    setIsLoading(true)
-    try {
-      // ハング対策: 画像生成APIが応答しない場合でもUIが固まらないようtimeout
-      const controller = new AbortController()
-      const timeoutMs = 12000
-      const t = setTimeout(() => controller.abort(), timeoutMs)
-      const res = await fetch('/api/guide/image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          featureName: title,
-          description: `A professional guide banner for "${title}" feature. ${description}`
-        }),
-        signal: controller.signal,
-      })
-      clearTimeout(t)
-      const data = await res.json()
-      if (data.imageUrl) {
-        setGuideImage(data.imageUrl)
-      }
-    } catch (error) {
-      console.error('Failed to generate guide image:', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   const pages = [
     { kind: 'intro' as const, title: '概要', body: description },
@@ -285,5 +297,3 @@ export function FeatureGuide({ featureId, title, description, steps, imageMode =
     </>
   )
 }
-
-
