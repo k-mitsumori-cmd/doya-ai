@@ -24,6 +24,7 @@ import DashboardSidebar from '@/components/DashboardSidebar'
 import { useSession } from 'next-auth/react'
 import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
+import { bannerDailyStats } from '@/lib/banner/daily-stats'
 
 // 1バナー生成で削減できる推定時間（分）
 const ESTIMATED_TIME_SAVED_PER_BANNER = 45 // デザイナーが1バナー作るのに平均45分
@@ -36,11 +37,6 @@ interface HistoryItem {
   size: string
   createdAt: string
   bannerCount: number // バッチ内の画像枚数
-}
-
-interface DailyStats {
-  date: string
-  count: number
 }
 
 const STATS_CACHE_KEY = 'doya-banner-stats-cache-v2'
@@ -202,17 +198,7 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
 
   const estimateBasisText = `根拠：\n- 1枚あたりの制作時間を ${ESTIMATED_TIME_SAVED_PER_BANNER} 分と仮定\n- デザイナー時給を ${HOURLY_DESIGNER_RATE.toLocaleString()} 円と仮定\n\n計算：\n- 推定削減時間 = 累計生成枚数 × ${ESTIMATED_TIME_SAVED_PER_BANNER} 分 ÷ 60\n- 推定コスト削減 = 推定削減時間（時間）× ${HOURLY_DESIGNER_RATE.toLocaleString()} 円`
 
-  // 日別統計（バナー枚数ベース）
-  const dailyStats: DailyStats[] = history.reduce((acc, item) => {
-    const date = new Date(item.createdAt).toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
-    const existing = acc.find(d => d.date === date)
-    if (existing) {
-      existing.count += item.bannerCount
-    } else {
-      acc.push({ date, count: item.bannerCount })
-    }
-    return acc
-  }, [] as DailyStats[]).slice(-7).reverse()
+  const dailyStats = bannerDailyStats(history)
 
   // カテゴリ別統計（バナー枚数ベース）
   const categoryStats = history.reduce((acc, item) => {
@@ -513,7 +499,7 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
               </div>
             </div>
             
-            {dailyStats.length > 0 ? (
+            {totalBanners > 0 ? (
               <div className="flex items-end justify-between gap-2 h-40">
                 {dailyStats.map((day, i) => {
                   const maxCount = Math.max(...dailyStats.map(d => d.count), 1)
