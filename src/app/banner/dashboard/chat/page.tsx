@@ -243,6 +243,7 @@ export default function BannerChatPage() {
         body: JSON.stringify({
           messages: [...messages, { id: 'tmp', role: 'user', content: text, createdAt: Date.now() }]
             .filter((m) => m.role === 'user' || m.role === 'assistant')
+            .slice(-12)
             .map((m) => ({ role: m.role, content: m.content })),
         }),
       })
@@ -595,6 +596,7 @@ export default function BannerChatPage() {
                   <textarea
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
+                    maxLength={2000}
                     placeholder="バナーの要件を入力..."
                     rows={2}
                     className="w-full bg-white border border-slate-200 rounded-xl sm:rounded-2xl py-3 sm:py-4 pl-4 sm:pl-6 pr-12 sm:pr-14 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all shadow-sm font-medium resize-none"

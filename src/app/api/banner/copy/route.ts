@@ -491,8 +491,24 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const body = (await req.json()) as CopyRequest
-    const prompt = buildCopyPrompt(body)
+    const rawBody = await req.text()
+    if (Buffer.byteLength(rawBody, 'utf8') > 8_192) {
+      return NextResponse.json({ error: '入力が長すぎます。' }, { status: 413 })
+    }
+    let body: unknown
+    try { body = JSON.parse(rawBody) }
+    catch { return NextResponse.json({ error: '入力形式が正しくありません。' }, { status: 400 }) }
+    const input = body as Partial<CopyRequest> | null
+    if (!input || typeof input !== 'object' || Array.isArray(input) ||
+      typeof input.category !== 'string' || input.category.length > 32 ||
+      typeof input.purpose !== 'string' || input.purpose.length > 32 ||
+      (input.base !== undefined && (typeof input.base !== 'string' || input.base.length > 2000)) ||
+      (input.companyName !== undefined && (typeof input.companyName !== 'string' || input.companyName.length > 120)) ||
+      (input.target !== undefined && (typeof input.target !== 'string' || input.target.length > 500))) {
+      return NextResponse.json({ error: '入力内容を確認してください。' }, { status: 400 })
+    }
+    const bodyValidated = input as CopyRequest
+    const prompt = buildCopyPrompt(bodyValidated)
     const raw = await callGemini(prompt, apiKey)
     const parsed = extractJsonObject(raw)
     const itemsRaw = Array.isArray((parsed as any)?.items) ? (parsed as any).items : []
@@ -513,19 +529,19 @@ export async function POST(req: NextRequest) {
 
     if (suggestions.length === 0) {
       return NextResponse.json(
-        { error: 'AIの出力を解析できませんでした。', raw },
+        { error: 'AIの出力を解析できませんでした。もう一度お試しください。' },
         { status: 502 }
       )
     }
 
     return NextResponse.json({ suggestions })
   } catch (e: any) {
+    console.error('Banner copy failed:', e)
     return NextResponse.json(
-      { error: e?.message || 'AIコピー生成に失敗しました。' },
+      { error: 'AIコピー生成に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }
 }
-
 
 

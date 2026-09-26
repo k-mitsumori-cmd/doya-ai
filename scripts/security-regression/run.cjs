@@ -310,6 +310,11 @@ if (bannerTemplatePlan.error || bannerTemplatePlan.status !== 0) {
   console.error('Security regression failed: verify-banner-template-plan.cjs');
   process.exit(1);
 }
+const bannerTextInput = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-text-input.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (bannerTextInput.error || bannerTextInput.status !== 0) {
+  console.error('Security regression failed: verify-banner-text-input.cjs');
+  process.exit(1);
+}
 const serviceMetadata = spawnSync(process.execPath, [path.join(__dirname, 'verify-service-metadata.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (serviceMetadata.error || serviceMetadata.status !== 0) {
   console.error('Security regression failed: verify-service-metadata.cjs');

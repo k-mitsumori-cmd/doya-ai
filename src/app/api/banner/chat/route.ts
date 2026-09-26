@@ -423,15 +423,25 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const body = await req.json()
-    const messages = Array.isArray(body?.messages) ? (body.messages as ChatMessage[]) : []
-
-    if (messages.length === 0) {
+    const rawBody = await req.text()
+    if (Buffer.byteLength(rawBody, 'utf8') > 32_768) {
+      return NextResponse.json({ error: '会話が長すぎます。新しい会話でお試しください。' }, { status: 413 })
+    }
+    let body: unknown
+    try { body = JSON.parse(rawBody) }
+    catch { return NextResponse.json({ error: '入力形式が正しくありません。' }, { status: 400 }) }
+    const candidate = body && typeof body === 'object' ? (body as { messages?: unknown }).messages : undefined
+    if (!Array.isArray(candidate) || candidate.length === 0 || candidate.length > 12 ||
+      candidate.some((message) => !message || typeof message !== 'object' ||
+        !['user', 'assistant'].includes(message.role) ||
+        typeof message.content !== 'string' || !message.content.trim() || message.content.length > 2000) ||
+      candidate[candidate.length - 1].role !== 'user') {
       return NextResponse.json(
-        { error: 'メッセージが空です。' },
+        { error: '会話の内容が正しくありません。入力を確認してください。' },
         { status: 400 }
       )
     }
+    const messages = candidate as ChatMessage[]
 
     const rawText = await callGemini(messages, apiKey)
     const parsed = extractJsonObject(rawText)
@@ -485,12 +495,12 @@ export async function POST(req: NextRequest) {
       }),
     })
   } catch (e: any) {
+    console.error('Banner chat failed:', e)
     return NextResponse.json(
-      { error: e?.message || 'AIチャット処理に失敗しました。' },
+      { error: 'AIチャット処理に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }
 }
-
 
 
