@@ -305,6 +305,11 @@ if (bannerMonthlyQuota.error || bannerMonthlyQuota.status !== 0) {
   console.error('Security regression failed: verify-banner-monthly-quota.cjs');
   process.exit(1);
 }
+const bannerTemplatePlan = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-template-plan.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (bannerTemplatePlan.error || bannerTemplatePlan.status !== 0) {
+  console.error('Security regression failed: verify-banner-template-plan.cjs');
+  process.exit(1);
+}
 const serviceMetadata = spawnSync(process.execPath, [path.join(__dirname, 'verify-service-metadata.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (serviceMetadata.error || serviceMetadata.status !== 0) {
   console.error('Security regression failed: verify-service-metadata.cjs');

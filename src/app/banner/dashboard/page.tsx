@@ -1218,6 +1218,7 @@ function BannerTestPageInner() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           template: selectedTemplate.category,
+          templateId: selectedTemplate.id,
           size: sizeString,
           industry: selectedTemplate.industry,
           mainTitle: serviceName,

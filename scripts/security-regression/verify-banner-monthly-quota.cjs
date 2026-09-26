@@ -116,5 +116,8 @@ function fixture(initial = null, accountPlan = 'FREE') {
   }
   const fromUrl = fs.readFileSync(path.join(root, 'src/app/api/banner/from-url/route.ts'), 'utf8')
   assert(fromUrl.includes('Math.min(desiredCount, getBannerMaxImagesPerRequest(actualPlan))'), 'URL preview must not reject a batch larger than the server will generate')
+  const templateGenerate = fs.readFileSync(path.join(root, 'src/app/api/banner/test/generate/route.ts'), 'utf8')
+  assert(templateGenerate.includes("requestedCustomPrompt && bannerPlan !== 'ENTERPRISE'"), 'template detailed instructions must be server-gated')
+  assert(templateGenerate.indexOf("requestedCustomPrompt && bannerPlan !== 'ENTERPRISE'") < templateGenerate.indexOf('for (let i = 0; i < targetCount; i++)'), 'plan gate must precede paid generation')
   console.log('PASS banner quota atomically limits parallel calls, resets JST month, clamps paid count, and fails closed on DB errors')
 })().catch(error => { console.error(error); process.exitCode = 1 })

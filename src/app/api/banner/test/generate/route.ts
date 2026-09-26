@@ -3,11 +3,14 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { reserveBannerMonthlyImages, releaseBannerMonthlyImages, type BannerReservation } from '@/lib/banner/monthly-quota'
 import { generateBanners } from '@/lib/nanobanner'
+import { prisma } from '@/lib/prisma'
+import { BANNER_PROMPTS_V2 } from '@/lib/banner-prompts-v2'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
 
 type TestGenerateRequest = {
+  templateId?: string
   template?: string
   size?: string
   industry?: string
@@ -206,6 +209,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as TestGenerateRequest
     const {
+      templateId,
       template,
       size = '1200x628',
       industry = '',
@@ -257,6 +261,41 @@ export async function POST(request: NextRequest) {
       targetCount = reservation.count
     }
 
+    const requestedCustomPrompt = typeof customPrompt === 'string' ? customPrompt.trim() : ''
+    const sessionPlan = session?.user as { bannerPlan?: string; plan?: string } | undefined
+    const bannerPlan = reservation?.plan || String(sessionPlan?.bannerPlan || sessionPlan?.plan || 'FREE').toUpperCase()
+    if (requestedCustomPrompt && bannerPlan !== 'ENTERPRISE') {
+      if (reservation) {
+        await releaseBannerMonthlyImages(reservation, reservation.count).catch(() => console.error('Test banner quota release failed'))
+        reservation = null
+      }
+      return NextResponse.json({
+        error: '詳細指示はEnterpriseプランで利用できます。',
+        code: 'PLAN_UPGRADE_REQUIRED',
+        upgradeUrl: '/banner/pricing',
+      }, { status: 403 })
+    }
+
+    let effectiveBasePrompt = typeof basePrompt === 'string' ? basePrompt : ''
+    if (bannerPlan !== 'ENTERPRISE') {
+      const id = typeof templateId === 'string' ? templateId.trim() : ''
+      if (!id || id.length > 120) {
+        if (reservation) await releaseBannerMonthlyImages(reservation, reservation.count).catch(() => console.error('Test banner quota release failed'))
+        reservation = null
+        return NextResponse.json({ error: 'テンプレートを選び直してください。' }, { status: 400 })
+      }
+      const savedTemplate = await prisma.bannerTemplate.findUnique({
+        where: { templateId: id },
+        select: { prompt: true, isActive: true },
+      })
+      if (!savedTemplate?.isActive) {
+        if (reservation) await releaseBannerMonthlyImages(reservation, reservation.count).catch(() => console.error('Test banner quota release failed'))
+        reservation = null
+        return NextResponse.json({ error: 'テンプレートが見つかりません。選び直してください。' }, { status: 404 })
+      }
+      effectiveBasePrompt = BANNER_PROMPTS_V2.find((prompt) => prompt.id === id)?.fullPrompt || savedTemplate.prompt
+    }
+
     // 複数のバリエーションを生成（同じ入力でも異なるプロンプト）
     const banners: string[] = []
     const prompts: string[] = []
@@ -271,9 +310,9 @@ export async function POST(request: NextRequest) {
         subTitle,
         accentText,
         variationIndex: i,
-        basePrompt,
+        basePrompt: effectiveBasePrompt,
         templateDisplayTitle,
-        customPrompt, // エンタープライズ限定：カスタムプロンプト
+        customPrompt: requestedCustomPrompt || undefined,
       })
       prompts.push(prompt)
     }
