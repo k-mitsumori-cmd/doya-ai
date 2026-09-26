@@ -23,13 +23,17 @@ const gallery = load('src/app/api/banner/gallery/route.ts', {
   '@/lib/prisma': { prisma },
   '@/lib/pricing': { BANNER_PRICING: {} },
 })
+const access = load('src/lib/banner/history-access.ts', {
+  '@/lib/prisma': { prisma },
+  '@/lib/pricing': { BANNER_PRICING: { historyDays: { free: 7, pro: -1 } }, isWithinFreeHour: () => false },
+})
 const history = load('src/app/api/banner/history/route.ts', {
   'next/server': nextServer,
   'next-auth': { getServerSession: async () => ({ user: { id: 'owner', plan: 'FREE' } }) },
   '@/lib/auth': { authOptions: {} },
   '@/lib/prisma': { prisma },
+  '@/lib/banner/history-access': access,
   '@/lib/banner/history-cursor': load('src/lib/banner/history-cursor.ts'),
-  '@/lib/pricing': { BANNER_PRICING: { historyDays: { free: 7, pro: -1 } }, isWithinFreeHour: () => false },
   sharp: () => { throw new Error('image processing is not needed') },
 })
 

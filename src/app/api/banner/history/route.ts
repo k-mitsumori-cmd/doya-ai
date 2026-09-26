@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { BANNER_PRICING, isWithinFreeHour } from '@/lib/pricing'
 import sharp from 'sharp'
 import { decodeBannerHistoryCursor, encodeBannerHistoryCursor } from '@/lib/banner/history-cursor'
+import { bannerHistoryCutoff } from '@/lib/banner/history-access'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -27,17 +27,6 @@ type HistoryBatch = {
   // 一覧表示用（最初の数枚だけ）: 画像は別APIでバイナリ配信
   previewThumbs?: string[]
   previewIds?: string[]
-}
-
-// 契約の正本はDB。古いセッションに残った有料プラン表示で履歴権限を与えない。
-async function isProUserByDb(userId: string): Promise<boolean> {
-  const sub = await prisma.userServiceSubscription.findUnique({
-    where: { userId_serviceId: { userId, serviceId: 'banner' } },
-    select: { plan: true },
-  })
-  const account = !sub ? await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } }) : null
-  const plan = String(sub?.plan || account?.plan || 'FREE').toUpperCase()
-  return ['LIGHT', 'PRO', 'ENTERPRISE', 'BUNDLE', 'BASIC', 'STARTER', 'BUSINESS'].includes(plan)
 }
 
 async function toJpegThumbDataUrl(output: unknown): Promise<string | null> {
@@ -72,28 +61,16 @@ export async function GET(request: NextRequest) {
     const includeImages = (searchParams.get('images') || '1') !== '0'
     const thumbMode = (searchParams.get('thumb') || '0') === '1'
 
-    // 有料プラン判定（1時間生成し放題中も有料扱い）
+    // 画像取得APIと同じ契約・保存期間で閲覧を制限する。
     const firstLoginAt = (session?.user as any)?.firstLoginAt
-    const isFreeHourActive = isWithinFreeHour(firstLoginAt)
-    const isPro = isFreeHourActive || (await isProUserByDb(userId))
-    const historyDays = isPro ? BANNER_PRICING.historyDays.pro : BANNER_PRICING.historyDays.free
+    const cutoffDate = await bannerHistoryCutoff(userId, firstLoginAt)
 
-    // 無料ユーザーは履歴閲覧不可（ただし1時間生成し放題中は解放）
-    if (historyDays === 0) {
+    if (!cutoffDate) {
       return NextResponse.json({
         items: [],
         message: '履歴機能は有料プラン限定です。プランをアップグレードしてください。',
         requiresUpgrade: true,
       })
-    }
-
-    // プラン別の閲覧期間。GET時に履歴は削除しない（プラン変更後のデータ消失を防ぐ）。
-    const cutoffDate = new Date()
-    if (historyDays > 0) {
-      cutoffDate.setDate(cutoffDate.getDate() - historyDays)
-    } else {
-      // -1（無制限）: 保存済みの全履歴を返す
-      cutoffDate.setTime(0)
     }
 
     // 単一バッチの画像だけ返す（履歴一覧を軽くするため）
@@ -124,7 +101,7 @@ export async function GET(request: NextRequest) {
               userId,
               serviceId: 'banner',
               outputType: 'IMAGE',
-              createdAt: { gte: start, lte: end },
+              createdAt: { gte: start > cutoffDate ? start : cutoffDate, lte: end },
             },
             orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
             take: 12,

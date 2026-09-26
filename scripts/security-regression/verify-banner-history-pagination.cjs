@@ -25,11 +25,15 @@ const prisma = {
       .sort((a, b) => b.createdAt - a.createdAt || b.id.localeCompare(a.id)).slice(0, take)
   } },
 }
+const access = load('src/lib/banner/history-access.ts', {
+  '@/lib/prisma': { prisma },
+  '@/lib/pricing': { BANNER_PRICING: { historyDays: { free: 0, pro: -1 } }, isWithinFreeHour: () => false },
+})
 const route = load('src/app/api/banner/history/route.ts', {
   'next/server': { NextResponse: { json: (body, init) => new Response(JSON.stringify(body), init) } },
   'next-auth': { getServerSession: async () => ({ user: { id: 'owner', bannerPlan: 'PRO', plan: 'PRO' } }) },
   '@/lib/auth': { authOptions: {} }, '@/lib/prisma': { prisma },
-  '@/lib/pricing': { BANNER_PRICING: { historyDays: { free: 0, pro: -1 } }, isWithinFreeHour: () => false },
+  '@/lib/banner/history-access': access,
   '@/lib/banner/history-cursor': cursors,
   sharp: () => { throw new Error('image processing is not needed') },
 })

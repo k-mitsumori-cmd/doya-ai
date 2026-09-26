@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { bannerHistoryCutoff } from '@/lib/banner/history-access'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -15,6 +16,8 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url)
     const id = searchParams.get('id') || ''
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
+    const cutoffDate = await bannerHistoryCutoff(userId, (session?.user as any)?.firstLoginAt)
+    if (!cutoffDate) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
     const g = await prisma.generation.findFirst({
       where: {
@@ -22,6 +25,7 @@ export async function GET(req: NextRequest) {
         userId,
         serviceId: 'banner',
         outputType: 'IMAGE',
+        createdAt: { gte: cutoffDate },
       },
       select: { output: true },
     })
@@ -33,7 +37,7 @@ export async function GET(req: NextRequest) {
       {
         headers: {
           // 個人履歴なので private のみ。短時間のブラウザキャッシュは許可。
-          'Cache-Control': 'private, max-age=60',
+          'Cache-Control': 'private, no-store',
         },
       }
     )
@@ -42,5 +46,4 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'failed' }, { status: 500 })
   }
 }
-
 

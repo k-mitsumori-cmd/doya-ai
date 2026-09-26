@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import sharp from 'sharp'
 import { safeFetchResource } from '@/lib/net/safe-fetch'
+import { bannerHistoryCutoff } from '@/lib/banner/history-access'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -53,6 +54,8 @@ export async function GET(req: NextRequest) {
     const id = searchParams.get('id') || ''
     if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
     const w = Math.min(Math.max(Number(searchParams.get('w')) || 320, 40), 640)
+    const cutoffDate = await bannerHistoryCutoff(userId, (session?.user as any)?.firstLoginAt)
+    if (!cutoffDate) return NextResponse.json({ error: 'not found' }, { status: 404 })
 
     const g = await prisma.generation.findFirst({
       where: {
@@ -60,6 +63,7 @@ export async function GET(req: NextRequest) {
         userId,
         serviceId: 'banner',
         outputType: 'IMAGE',
+        createdAt: { gte: cutoffDate },
       },
       select: { output: true },
     })
@@ -76,7 +80,7 @@ export async function GET(req: NextRequest) {
           status: 304,
           headers: {
             ETag: etag,
-            'Cache-Control': 'private, max-age=86400, stale-while-revalidate=604800',
+            'Cache-Control': 'private, no-store',
           },
         })
       }
@@ -84,7 +88,7 @@ export async function GET(req: NextRequest) {
         status: 200,
         headers: {
           'Content-Type': 'image/webp',
-          'Cache-Control': 'private, max-age=86400, stale-while-revalidate=604800',
+          'Cache-Control': 'private, no-store',
           ETag: etag,
         },
       })
@@ -111,7 +115,7 @@ export async function GET(req: NextRequest) {
         status: 304,
         headers: {
           ETag: etag,
-          'Cache-Control': 'private, max-age=60',
+          'Cache-Control': 'private, no-store',
         },
       })
     }
@@ -121,7 +125,7 @@ export async function GET(req: NextRequest) {
       headers: {
         'Content-Type': 'image/webp',
         // 個人履歴だが、同一ブラウザ内では長めにキャッシュして体感速度を優先
-        'Cache-Control': 'private, max-age=86400, stale-while-revalidate=604800',
+        'Cache-Control': 'private, no-store',
         ETag: etag,
       },
     })
@@ -133,10 +137,8 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         'Content-Type': 'image/webp',
-        'Cache-Control': 'private, max-age=300',
+        'Cache-Control': 'private, no-store',
       },
     })
   }
 }
-
-
