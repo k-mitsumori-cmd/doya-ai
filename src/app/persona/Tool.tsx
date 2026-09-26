@@ -7,6 +7,7 @@ import { savePersonaRecord, savePersonaImage, savedPersonaPath } from '@/lib/per
 import { includedPersonaImages } from '@/lib/persona/image-entitlements'
 import { isPersonaDisplayData, hasValidPersonaImages } from '@/lib/persona/display-data'
 import PersonaUsagePanel from '@/components/persona/PersonaUsagePanel'
+import { TrialNote } from '@/components/TrialCallout'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Sparkles,
@@ -187,6 +188,8 @@ const FAKE_CANDIDATES = [
   { name: '中村 拓也', age: 33, gender: '男性', occupation: 'プロダクトマネージャー', trait: '仮説思考・実行力' },
 ]
 
+class PersonaQuotaError extends Error {}
+
 /** API エラーをユーザーフレンドリーなメッセージに変換 */
 function toFriendlyError(e: unknown, res?: Response | null): string {
   // ネットワークエラー（fetch 自体が失敗）
@@ -196,7 +199,7 @@ function toFriendlyError(e: unknown, res?: Response | null): string {
   // HTTP ステータスに基づくメッセージ
   if (res) {
     if (res.status === 429) {
-      return 'リクエスト回数の上限に達しました。しばらく時間を置いてから再度お試しください。'
+      return e instanceof PersonaQuotaError ? e.message : 'リクエスト回数の上限に達しました。しばらく時間を置いてから再度お試しください。'
     }
     if (res.status >= 500) {
       return 'サーバーエラーが発生しました。しばらくしてから再度お試しください。'
@@ -239,6 +242,8 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [errorAction, setErrorAction] = useState<'generate' | 'modify' | null>(null)
+  const [quotaNotice, setQuotaNotice] = useState<'text' | 'image' | null>(null)
   const [accessWarning, setAccessWarning] = useState('')
   const [generatedData, updateGeneratedData] = useState<GeneratedData | null>(null)
   const currentPersona = useRef<GeneratedData | null>(null)
@@ -255,6 +260,8 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
     currentRecordId.current = null
     currentServerRecord.current = false
     setAccessWarning('')
+    setErrorAction(null)
+    setQuotaNotice(null)
     imageAttempts.current = {}
     imageRequests.current = {}
     scenePrompts.current = {}
@@ -475,6 +482,7 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
   const handleGenerate = async () => {
     if (!alive.current || textRequest.current) return
     if (!url.trim()) {
+      setErrorAction(null)
       setError('URLを入力してください')
       return
     }
@@ -486,7 +494,9 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
     textRequest.current = request
     const isCurrent = () => alive.current && textRequest.current === request
     setLoading(true)
+    setErrorAction(null)
     setError('')
+    setQuotaNotice(null)
     setPortraitError('')
     setGeneratedData(null)
     setPortraitImage(null)
@@ -512,11 +522,12 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
 
       if (!res.ok) {
         if (isCurrent() && data?.code === 'REQUEST_CONFLICT') generationAttempt.current = null
+        if (isCurrent() && data?.code === 'DAILY_LIMIT_REACHED') setQuotaNotice('text')
         const msg =
           (data && (data.error || data.message)) ||
           (raw && raw.slice(0, 200)) ||
           'ペルソナ生成に失敗しました'
-        throw new Error(msg)
+        throw data?.code === 'DAILY_LIMIT_REACHED' ? new PersonaQuotaError(msg) : new Error(msg)
       }
 
       if (!isPersonaDisplayData(data?.data)) {
@@ -535,7 +546,7 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
         savePersonaRecord(accountStorage, record)
       } catch { setError(typeof data.projectId === 'string' ? 'ペルソナはサーバーに保存しましたが、このブラウザのコピーを保存できませんでした。保存済み履歴から開き直せます。' : '生成は完了しましたが、このブラウザに履歴を保存できませんでした。画面を閉じる前に結果をダウンロードしてください。') }
     } catch (e) {
-      if (isCurrent()) setError(toFriendlyError(e, res))
+      if (isCurrent()) { setError(toFriendlyError(e, res)); setErrorAction(e instanceof PersonaQuotaError ? null : 'generate') }
     } finally {
       if (isCurrent()) { textRequest.current = null; setLoading(false) }
     }
@@ -574,10 +585,13 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
 
       if (!isCurrent()) return
       if (!res.ok || !data) {
-        throw new Error(data?.error || 'ポートレート生成に失敗しました')
+        if (data?.code === 'DAILY_LIMIT_REACHED') setQuotaNotice('image')
+        const message = data?.error || 'ポートレート生成に失敗しました'
+        throw data?.code === 'DAILY_LIMIT_REACHED' ? new PersonaQuotaError(message) : new Error(message)
       }
 
       if (data.success && data.image) {
+        setQuotaNotice(null)
         delete imageAttempts.current.portrait
         setPortraitImage(data.image)
         try {
@@ -624,8 +638,13 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
       try { data = raw ? JSON.parse(raw) : null } catch { data = null }
 
       if (!isCurrent()) return
-      if (!res.ok || !data?.success || typeof data?.image !== 'string' || !data.image) throw new Error('シーン画像を生成できませんでした。')
+      if (!res.ok || !data?.success || typeof data?.image !== 'string' || !data.image) {
+        if (data?.code === 'DAILY_LIMIT_REACHED') setQuotaNotice('image')
+        const message = data?.error || 'シーン画像を生成できませんでした。'
+        throw data?.code === 'DAILY_LIMIT_REACHED' ? new PersonaQuotaError(message) : new Error(message)
+      }
       if (data.image) {
+        setQuotaNotice(null)
         delete imageAttempts.current[sceneKey]
         setSceneImages(prev => isCurrent() ? { ...prev, [sceneKey]: data.image } : prev)
         try {
@@ -653,7 +672,9 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
     const isCurrent = () => alive.current && textRequest.current === request
 
     setModifying(true)
+    setErrorAction(null)
     setError('')
+    setQuotaNotice(null)
     setPortraitError('')
 
     let res: Response | null = null
@@ -674,8 +695,9 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
 
       if (!res.ok) {
         if (isCurrent() && data?.code === 'REQUEST_CONFLICT') generationAttempt.current = null
+        if (isCurrent() && data?.code === 'DAILY_LIMIT_REACHED') setQuotaNotice('text')
         const msg = (data && (data.error || data.message)) || 'ペルソナ変更に失敗しました'
-        throw new Error(msg)
+        throw data?.code === 'DAILY_LIMIT_REACHED' ? new PersonaQuotaError(msg) : new Error(msg)
       }
 
       if (!isPersonaDisplayData(data?.data)) {
@@ -701,7 +723,7 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
         savePersonaRecord(accountStorage, record)
       } catch { setError(typeof data.projectId === 'string' ? '変更結果はサーバーに保存しましたが、このブラウザのコピーを保存できませんでした。保存済み履歴から開き直せます。' : '変更は完了しましたが、このブラウザに保存できませんでした。画面を閉じる前に結果をダウンロードしてください。') }
     } catch (e) {
-      if (isCurrent()) setError(toFriendlyError(e, res))
+      if (isCurrent()) { setError(toFriendlyError(e, res)); setErrorAction(e instanceof PersonaQuotaError ? null : 'modify') }
     } finally {
       if (isCurrent()) { textRequest.current = null; setModifying(false) }
     }
@@ -826,10 +848,10 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
       return (
         <div className={`rounded-lg border border-red-200 bg-red-50 p-3 flex flex-col items-center justify-center gap-2 export-hide ${className}`}>
           <p role="alert" className="text-xs text-red-700">{sceneErrors[sceneKey]}</p>
-          <button type="button" className="rounded bg-white px-3 py-2 text-sm text-purple-700 border border-purple-200" onClick={() => {
+          {quotaNotice !== 'image' && <button type="button" className="rounded bg-white px-3 py-2 text-sm text-purple-700 border border-purple-200" onClick={() => {
             const prompt = scenePrompts.current[sceneKey]
             if (prompt) void handleGenerateScene(prompt, sceneKey)
-          }}>この画像を再試行する</button>
+          }}>この画像を再試行する</button>}
         </div>
       )
     }
@@ -842,6 +864,14 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50/30">
       <div className="max-w-6xl mx-auto p-4 lg:p-8">
         <PersonaUsagePanel refreshKey={`${loading}-${modifying}-${portraitLoading}-${Object.keys(sceneImages).length}-${Object.values(sceneLoading).filter(Boolean).length}`} />
+        {quotaNotice && (
+          <div role="alert" className="mb-6 rounded-xl border border-purple-300 bg-purple-50 p-4 text-sm text-purple-950">
+            <p className="font-bold">{quotaNotice === 'text' ? '本日のペルソナ生成・文章変更の枠に達しました。' : '本日の追加画像・再生成の枠に達しました。'}</p>
+            <p className="mt-1">枠は毎日0時（日本時間）にリセットされます。追加で使う場合はプランをご確認ください。</p>
+            <a href="/persona/pricing" className="mt-2 inline-block font-bold text-purple-700 underline underline-offset-2">プランと利用枠を確認する</a>
+            <TrialNote className="mt-2" />
+          </div>
+        )}
         {/* Header */}
         <div className="mb-6 flex items-start justify-between">
           <div>
@@ -943,13 +973,15 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
               <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <p>{error}</p>
-                <button
-                  onClick={handleGenerate}
-                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-red-700 hover:text-red-900 underline underline-offset-2"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  再試行
-                </button>
+                {errorAction && quotaNotice !== 'text' && (
+                  <button
+                    onClick={errorAction === 'modify' ? handleModify : handleGenerate}
+                    className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-red-700 hover:text-red-900 underline underline-offset-2"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    {errorAction === 'modify' ? '変更を再試行' : '再試行'}
+                  </button>
+                )}
               </div>
               <button
                 onClick={() => setError('')}
