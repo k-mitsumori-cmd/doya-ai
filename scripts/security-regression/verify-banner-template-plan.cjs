@@ -3,7 +3,7 @@ const { load } = require('./load-typescript.cjs')
 
 const templateAccess = load('src/lib/banner/template-access.ts')
 
-function fixture(plan, customPrompt, templateId = 't1') {
+function fixture(plan, customPrompt, templateId = 't1', dbError = false) {
   let modelCalls = 0
   const modelPrompts = []
   const releases = []
@@ -15,7 +15,10 @@ function fixture(plan, customPrompt, templateId = 't1') {
     'next/server': { NextResponse: { json: (body, opts) => new Response(JSON.stringify(body), { status: opts?.status ?? 200 }) } },
     'next-auth': { getServerSession: async () => ({ user: { id: 'user', plan: 'ENTERPRISE' } }) },
     '@/lib/auth': { authOptions: {} },
-    '@/lib/prisma': { prisma: { bannerTemplate: { findUnique: async () => ({ prompt: '保存済みテンプレート', isActive: true }) } } },
+    '@/lib/prisma': { prisma: { bannerTemplate: { findUnique: async () => {
+      if (dbError) throw Error('SENSITIVE_DB_DETAIL')
+      return { prompt: '保存済みテンプレート', isActive: true }
+    } } } },
     '@/lib/banner-prompts-v2': { BANNER_PROMPTS_V2: [{ id: 't1', fullPrompt: '公式テンプレートの見た目、余白、配色、文字組み、写真の配置を維持して制作する。十分な長さを持つデザイン指示です。' }] },
     '@/lib/banner/template-access': templateAccess,
     '@/lib/banner/monthly-quota': {
@@ -62,6 +65,13 @@ function fixture(plan, customPrompt, templateId = 't1') {
   run = fixture('PRO', undefined, 't21')
   assert.equal((await run.api.POST(run.request)).status, 200)
   assert.equal(run.modelCalls, 1)
+
+  run = fixture('FREE', undefined, 't1', true)
+  const failed = await run.api.POST(run.request)
+  assert.equal(failed.status, 500)
+  assert(!JSON.stringify(await failed.json()).includes('SENSITIVE_DB_DETAIL'))
+  assert.equal(run.modelCalls, 0)
+  assert.deepEqual(run.releases, [1])
 
   run = fixture('ENTERPRISE', '有料の詳細指示')
   assert.equal((await run.api.POST(run.request)).status, 200)

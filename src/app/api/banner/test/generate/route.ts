@@ -385,6 +385,6 @@ export async function POST(request: NextRequest) {
   } catch (err: any) {
     if (reservation) await releaseBannerMonthlyImages(reservation, reservation.count).catch(() => console.error('Test banner quota release failed'))
     console.error('Test banner generation error:', err)
-    return NextResponse.json({ error: err.message || '生成に失敗しました' }, { status: 500 })
+    return NextResponse.json({ error: '生成に失敗しました。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

@@ -5,7 +5,7 @@ const denied = new Response(JSON.stringify({ error: 'admin required' }), { statu
 const nextServer = { NextResponse: { json: (body, opts) => new Response(JSON.stringify(body), { status: opts?.status ?? 200 }) } }
 
 ;(async () => {
-  for (const route of ['test/debug', 'test/health', 'models']) {
+  for (const route of ['test/debug', 'test/health', 'test/templates-minimal', 'models']) {
     let sideEffects = 0
     const api = load(`src/app/api/banner/${route}/route.ts`, {
       'next/server': nextServer,

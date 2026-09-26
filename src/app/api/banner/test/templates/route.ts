@@ -830,8 +830,16 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
-    const limit = parseInt(searchParams.get('limit') || '100')
-    const offset = parseInt(searchParams.get('offset') || '0')
+    const limitParam = searchParams.get('limit')
+    const offsetParam = searchParams.get('offset')
+    const limit = limitParam === null ? 100 : Number(limitParam)
+    const offset = offsetParam === null ? 0 : Number(offsetParam)
+    if ((limitParam !== null && !/^\d+$/.test(limitParam)) ||
+      (offsetParam !== null && !/^\d+$/.test(offsetParam)) ||
+      !Number.isSafeInteger(limit) || limit < 1 || limit > 100 ||
+      !Number.isSafeInteger(offset) || offset < 0 || offset > 10_000) {
+      return NextResponse.json({ error: 'ページ指定が正しくありません。' }, { status: 400 })
+    }
     const minimal = searchParams.get('minimal') === 'true'
 
     // DBから既存のテンプレート情報を取得（isActive=true かつ画像あり のみ）
@@ -979,7 +987,7 @@ export async function GET(request: NextRequest) {
   } catch (err: any) {
     console.error('[Templates API] Get templates error:', err.message)
     const errorResponse = NextResponse.json(
-      { error: err.message || '取得に失敗しました', dbError: true },
+      { error: 'テンプレートを取得できませんでした。時間をおいて再試行してください。', dbError: true },
       { status: 500 }
     )
     errorResponse.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')

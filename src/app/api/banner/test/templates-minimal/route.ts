@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requireBannerAdmin } from '@/lib/banner-admin-guard'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
+  const denied = requireBannerAdmin(request)
+  if (denied) return denied
   try {
     // DBから最小限のデータのみ取得
     const dbTemplates = await prisma.bannerTemplate.findMany({
@@ -36,7 +39,7 @@ export async function GET(request: NextRequest) {
   } catch (err: any) {
     console.error('[Templates Minimal API] Error:', err)
     return NextResponse.json(
-      { error: err.message, stack: err.stack },
+      { error: 'テンプレート診断情報を取得できませんでした。' },
       { status: 500 }
     )
   }
