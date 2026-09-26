@@ -922,13 +922,13 @@ export async function GET(request: NextRequest) {
 
     // DBテンプレートをV2プロンプト情報と結合して返す（生成済み）
     const readyTemplates = dbTemplates.map((t) => {
-      // キャッシュバスター廃止: CDN immutable キャッシュを活用
       // 事前サムネイルがある Storage の画像は、配信ルートを挟まず直接その URL を返す。
       // ⚠️ imageUrl 列を select しても重くならないのは、498件すべてが短いURLになった後だから。
       //    base64 が残っている状態でこれをやると1.79MB×件数を読むことになる。
+      const imageVersion = new Date(t.updatedAt).getTime()
       const imageApiUrl = hasPreparedVariants(t.imageUrl)
-        ? (t.imageUrl as string)
-        : `/api/banner/test/image/${t.templateId}`
+        ? `${t.imageUrl}${(t.imageUrl as string).includes('?') ? '&' : '?'}v=${imageVersion}`
+        : `/api/banner/test/image/${encodeURIComponent(t.templateId)}?v=${imageVersion}`
       const v2Prompt = v2PromptsMap.get(t.templateId)
       const fullPrompt = v2Prompt?.fullPrompt || t.prompt || ''
 

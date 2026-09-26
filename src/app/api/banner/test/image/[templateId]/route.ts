@@ -6,12 +6,6 @@ import { templateImageUrl } from '@/lib/banner-template-storage'
 export const runtime = 'nodejs'
 // force-dynamic を削除 → Vercel CDN が s-maxage に従いキャッシュする
 
-// サーバーサイドメモリキャッシュ（同一インスタンス内でDBアクセスを削減）
-// キーに w/fmt を含めてバリエーション別にキャッシュ
-const IMAGE_CACHE = new Map<string, { buffer: Buffer; contentType: string; ts: number }>()
-const MEMORY_CACHE_TTL = 6 * 60 * 60 * 1000 // 6時間（cold start 軽減）
-const MEMORY_CACHE_MAX = 2000
-
 // 静的フォールバック画像（生成中プレースホルダー）
 // ⚠️ 実体のあるファイルを指すこと。generating-placeholder.svg は存在せず 404 だった。
 const FALLBACK_IMAGE = '/banner-samples/cat-other.webp'
@@ -33,21 +27,6 @@ export async function GET(
   const wParam = Number(searchParams.get('w') || '0')
   const resizeWidth = wParam > 0 && wParam <= 1920 ? Math.floor(wParam) : 0
   const fmt = searchParams.get('fmt') === 'webp' ? 'webp' : ''
-
-  // メモリキャッシュキー（バリエーション別）
-  const cacheKey = `${templateId}:w${resizeWidth}:${fmt || 'orig'}`
-
-  // メモリキャッシュチェック
-  const cached = IMAGE_CACHE.get(cacheKey)
-  if (cached && Date.now() - cached.ts < MEMORY_CACHE_TTL) {
-    return new NextResponse(new Uint8Array(cached.buffer), {
-      headers: {
-        'Content-Type': cached.contentType,
-        'Cache-Control': 'public, max-age=31536000, s-maxage=31536000, immutable',
-        'X-Cache': 'HIT',
-      },
-    })
-  }
 
   const staticFallbackUrl = FALLBACK_IMAGE
 
@@ -109,18 +88,11 @@ export async function GET(
         contentType = `image/${matches[1]}`
       }
 
-      // メモリキャッシュに保存
-      IMAGE_CACHE.set(cacheKey, { buffer, contentType, ts: Date.now() })
-      // キャッシュサイズ制限
-      if (IMAGE_CACHE.size > MEMORY_CACHE_MAX) {
-        const oldest = IMAGE_CACHE.keys().next().value
-        if (oldest) IMAGE_CACHE.delete(oldest)
-      }
-
       return new NextResponse(new Uint8Array(buffer), {
         headers: {
           'Content-Type': contentType,
-          'Cache-Control': 'public, max-age=31536000, s-maxage=31536000, immutable',
+          // DBの同じtemplateIdは再生成で更新される。1年のimmutableキャッシュは使わない。
+          'Cache-Control': 'public, max-age=60, s-maxage=600, stale-while-revalidate=3600',
           'Vary': 'Accept',
         },
       })
