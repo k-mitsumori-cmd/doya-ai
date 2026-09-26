@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { sfaInit } from '@/lib/sfa/client'
+import { isJstOverdue, jstDateKey } from '@/lib/sfa/task-date'
 import { ACTIVITY_TYPE_LABEL } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
 
@@ -25,8 +26,7 @@ interface SfaActivityRow {
   occurredAt: string
 }
 
-const isOverdue = (t: Task) =>
-  t.status !== 'done' && t.dueDate && new Date(t.dueDate).getTime() < new Date().setHours(0, 0, 0, 0)
+const isOverdue = (t: Task) => t.status !== 'done' && isJstOverdue(t.dueDate)
 
 export default function SfaTasksPage() {
   const orgSlug = (useParams().orgSlug as string) || ''
@@ -211,11 +211,9 @@ export default function SfaTasksPage() {
     await updateTask(t, { dueDate: value })
   }
 
-  // 'YYYY-MM-DD'（<input type="date"> 用、ローカル日付）
+  // 'YYYY-MM-DD'（<input type="date"> 用、日本時間の暦日）
   const toDateInput = (iso: string | null) => {
-    if (!iso) return ''
-    const d = new Date(iso)
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    return jstDateKey(iso) || ''
   }
 
   const open = tasks.filter((t) => t.status !== 'done')

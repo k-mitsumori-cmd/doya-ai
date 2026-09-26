@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { sfaInit } from '@/lib/sfa/client'
+import { jstDateKey } from '@/lib/sfa/task-date'
 import { isSfaSummary, summaryYen, type SfaSummary } from '@/lib/sfa/summary'
 import { Character } from '@/components/promane/character'
 
@@ -139,13 +140,12 @@ function SfaDashboardContent({ orgSlug }: { orgSlug: string }) {
   }
 
   const fmtDue = (s: string | null) => {
-    if (!s) return null
-    const d = new Date(s)
-    const today = new Date()
-    const diff = Math.ceil((d.getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 86400000)
-    const label = `${d.getMonth() + 1}/${d.getDate()}`
-    if (diff < 0) return { label: `${label}（期限切れ）`, cls: 'text-red-500' }
-    if (diff === 0) return { label: `${label}（今日）`, cls: 'text-amber-600' }
+    const dueDay = jstDateKey(s)
+    const today = jstDateKey(new Date())
+    if (!dueDay || !today) return null
+    const label = `${Number(dueDay.slice(5, 7))}/${Number(dueDay.slice(8, 10))}`
+    if (dueDay < today) return { label: `${label}（期限切れ）`, cls: 'text-red-500' }
+    if (dueDay === today) return { label: `${label}（今日）`, cls: 'text-amber-600' }
     return { label, cls: 'text-slate-400' }
   }
 
