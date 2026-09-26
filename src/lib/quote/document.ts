@@ -11,9 +11,10 @@ import { billableLines, calcTotals } from './money'
  *    DBの unique([organizationId, quoteNo]) を最終防衛線にし、
  *    衝突したら採番し直す。連番の穴は許容する（欠番より重複の方が害が大きい）。
  */
-export async function nextQuoteNo(organizationId: string): Promise<string> {
-  const now = new Date()
-  const ym = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}`
+export async function nextQuoteNo(organizationId: string, now = new Date()): Promise<string> {
+  // 見積番号の年月は利用者が見る日本時間。実行環境のTZ（VercelではUTC）に依存させない。
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  const ym = `${jst.getUTCFullYear()}${String(jst.getUTCMonth() + 1).padStart(2, '0')}`
   const prefix = `Q-${ym}-`
   const last = await prisma.quoteDocument.findFirst({
     where: { organizationId, quoteNo: { startsWith: prefix } },

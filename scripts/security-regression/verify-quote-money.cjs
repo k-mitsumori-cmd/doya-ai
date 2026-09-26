@@ -26,4 +26,15 @@ assert.equal(large.taxByRate[8],160000000);assert.equal(large.taxByRate[10],1999
 const pdf=load('src/lib/quote/pdf.ts',{'./money':money,'@/lib/pdf/japanese-font':{PDF_FONT_STACK:'sans-serif',registerJapaneseFonts:async()=>{}}});
 const html=pdf.renderQuoteHtml({quoteNo:'Q-test',title:'test',status:'draft',issueDate:new Date(),expiryDate:new Date(),clientCompany:null,clientDept:null,clientPerson:null,issuer:{companyName:"合成会社"},discountType:'amount',discountValue:1,lineItems:[8,10].map(taxRate=>({itemName:'item',qty:1,unitPrice:100,unit:'式',taxRate,priceSource:'manual'}))});
 assert.match(html,/<th>小計<\/th><td>¥200<\/td>/);assert.match(html,/<th>税抜合計<\/th><td>¥199<\/td>/);assert.match(html,/<th>値引き<\/th><td>-¥1<\/td>/);
-console.log(JSON.stringify({outcome:'PASS',calculationCases:cases,pdfSubtotal:true,pdfDiscount:true,pdfExclTax:true},null,2));
+const boundaryHtml=pdf.renderQuoteHtml({quoteNo:'Q-202701-0001',title:'test',status:'draft',issueDate:new Date('2026-12-31T15:00:00Z'),expiryDate:new Date('2027-01-30T14:59:59Z'),clientCompany:null,clientDept:null,clientPerson:null,issuer:{companyName:"合成会社"},discountType:null,discountValue:0,lineItems:[]});
+assert.match(boundaryHtml,/発行日: 2027年1月1日/);
+assert.match(boundaryHtml,/有効期限: 2027年1月30日/);
+let lastQuoteNo=null;
+const document=load('src/lib/quote/document.ts',{'@/lib/prisma':{prisma:{quoteDocument:{findFirst:async({where})=>lastQuoteNo?.startsWith(where.quoteNo.startsWith)?{quoteNo:lastQuoteNo}:null}}},'./money':money});
+;(async()=>{
+ assert.equal(await document.nextQuoteNo('org',new Date('2026-12-31T14:59:59Z')),'Q-202612-0001');
+ assert.equal(await document.nextQuoteNo('org',new Date('2026-12-31T15:00:00Z')),'Q-202701-0001');
+ lastQuoteNo='Q-202701-0004';
+ assert.equal(await document.nextQuoteNo('org',new Date('2026-12-31T15:00:00Z')),'Q-202701-0005');
+ console.log(JSON.stringify({outcome:'PASS',calculationCases:cases,pdfSubtotal:true,pdfDiscount:true,pdfExclTax:true,jstMonthBoundary:true},null,2));
+})().catch(error=>{console.error(error);process.exitCode=1});

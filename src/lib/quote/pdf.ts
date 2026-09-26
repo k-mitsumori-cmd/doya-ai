@@ -64,7 +64,9 @@ function yen(n: number): string {
 }
 
 function jpDate(d: Date): string {
-  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`
+  // 発行日・有効期限も見積番号と同じ日本時間で印字する。
+  const jst = new Date(d.getTime() + 9 * 60 * 60 * 1000)
+  return `${jst.getUTCFullYear()}年${jst.getUTCMonth() + 1}月${jst.getUTCDate()}日`
 }
 
 /**
