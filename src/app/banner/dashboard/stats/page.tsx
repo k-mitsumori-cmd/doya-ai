@@ -43,7 +43,7 @@ interface DailyStats {
   count: number
 }
 
-const STATS_CACHE_KEY = 'doya-banner-stats-cache'
+const STATS_CACHE_KEY = 'doya-banner-stats-cache-v2'
 const STATS_CACHE_TTL_MS = 5 * 60 * 1000 // 5分
 
 function readStatsCache(userId: string): { items: HistoryItem[]; ts: number } | null {
@@ -104,11 +104,11 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
   }, [isLoading, isLoaded])
 
   // ログインユーザーはAPIから、ゲストは統計閲覧不可
-  const loadHistory = useCallback(async () => {
+  const loadHistory = useCallback(async (forceRefresh = false) => {
     if (status === 'loading') return
 
     // stale-while-revalidate: キャッシュがあれば即表示→期限切れなら裏で更新
-    const cached = userId ? readStatsCache(userId) : null
+    const cached = !forceRefresh && userId ? readStatsCache(userId) : null
     if (cached && cached.items.length > 0) {
       setHistory(cached.items)
       setIsLoaded(true)
@@ -126,34 +126,40 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
         setHistory([])
         setRequiresUpgrade(true)
       } else {
-        // ログインユーザーはAPIから取得
-        const controller = new AbortController()
-        const timeout = window.setTimeout(() => controller.abort(), 15_000)
-        // 統計は画像不要なので軽量モードで取得
-        const res = await fetch('/api/banner/history?take=200&images=0', { signal: controller.signal }) // 最大200バッチで集計
-        window.clearTimeout(timeout)
-        if (res.ok) {
+        // 全ページを取得してから集計する。途中までの件数を累計として表示しない。
+        const merged = new Map<string, HistoryItem>()
+        const seenCursors = new Set<string>()
+        let cursor: string | null = null
+        for (let pageNumber = 0; pageNumber < 1000; pageNumber++) {
+          const controller = new AbortController()
+          const timeout = window.setTimeout(() => controller.abort(), 15_000)
+          let res: Response
+          try { res = await fetch(`/api/banner/history?take=50&images=0${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`, { signal: controller.signal }) }
+          finally { window.clearTimeout(timeout) }
           const data = await res.json()
-          // 有料プラン限定チェック
-          if (data.requiresUpgrade) {
-            setHistory([])
-            setRequiresUpgrade(true)
-          } else {
-            const items = Array.isArray(data.items) ? data.items : []
-            const mapped: HistoryItem[] = items.map((item: any) => ({
-              id: item.id,
-              category: item.category || '',
-              keyword: item.keyword || '',
-              size: item.size || '',
-              createdAt: item.createdAt || new Date().toISOString(),
-              bannerCount: Number(item.bannerCount) > 0 ? Number(item.bannerCount) : 1,
-            }))
-            setHistory(mapped)
-            if (userId) writeStatsCache(userId, mapped)
+          if (!res.ok) throw new Error(data?.error || '統計の取得に失敗しました')
+          if (data.requiresUpgrade) { setHistory([]); setRequiresUpgrade(true); sessionStorage.removeItem(STATS_CACHE_KEY); return }
+          if (!Array.isArray(data.items) || !(data.nextCursor === null || typeof data.nextCursor === 'string')) throw new Error('履歴の応答が不正です')
+          for (const item of data.items) {
+            if (!item || typeof item.id !== 'string' || !item.id) throw new Error('履歴の応答が不正です')
+            const count = Number(item.bannerCount) > 0 ? Number(item.bannerCount) : 1
+            const old = merged.get(item.id)
+            if (old) old.bannerCount += count
+            else merged.set(item.id, {
+              id: item.id, category: item.category || '', keyword: item.keyword || '', size: item.size || '',
+              createdAt: item.createdAt || new Date().toISOString(), bannerCount: count,
+            })
           }
-        } else {
-          setHistory([])
-          setErrorMessage('統計の取得に失敗しました（再読み込み/再試行してください）')
+          if (!data.nextCursor) {
+            const all = [...merged.values()].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+            setHistory(all)
+            if (userId) writeStatsCache(userId, all)
+            break
+          }
+          if (seenCursors.has(data.nextCursor) || data.items.length === 0) throw new Error('履歴の取得位置が繰り返されました')
+          seenCursors.add(data.nextCursor)
+          cursor = data.nextCursor
+          if (pageNumber === 999) throw new Error('履歴が多いため一度に集計できませんでした。サポートへお問い合わせください。')
         }
       }
     } catch (e: any) {
@@ -296,7 +302,7 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
               <p className="text-slate-500 mb-8 max-w-md mx-auto leading-relaxed">{errorMessage}</p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button
-                  onClick={() => loadHistory()}
+                  onClick={() => loadHistory(true)}
                   disabled={isLoading}
                   className="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl transition-all shadow-lg shadow-blue-100 hover:scale-105 disabled:opacity-60"
                 >
@@ -401,7 +407,7 @@ function StatsContent({ auth }: { auth: ReturnType<typeof useSession> }) {
             
             <div className="flex items-center gap-3 sm:gap-6">
               <button
-                onClick={() => loadHistory()}
+                onClick={() => loadHistory(true)}
                 disabled={isLoading}
                 className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
                 title="更新"

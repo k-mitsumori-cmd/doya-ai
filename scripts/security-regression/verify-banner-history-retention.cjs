@@ -28,6 +28,7 @@ const history = load('src/app/api/banner/history/route.ts', {
   'next-auth': { getServerSession: async () => ({ user: { id: 'owner', plan: 'FREE' } }) },
   '@/lib/auth': { authOptions: {} },
   '@/lib/prisma': { prisma },
+  '@/lib/banner/history-cursor': load('src/lib/banner/history-cursor.ts'),
   '@/lib/pricing': { BANNER_PRICING: { historyDays: { free: 7, pro: -1 } }, isWithinFreeHour: () => false },
   sharp: () => { throw new Error('image processing is not needed') },
 })

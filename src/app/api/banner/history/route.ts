@@ -4,11 +4,13 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PRICING, isWithinFreeHour } from '@/lib/pricing'
 import sharp from 'sharp'
+import { decodeBannerHistoryCursor, encodeBannerHistoryCursor } from '@/lib/banner/history-cursor'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 function parseIntParam(v: string | null, fallback: number) {
+  if (v === null || v.trim() === '') return fallback
   const n = Number(v)
   return Number.isFinite(n) ? Math.floor(n) : fallback
 }
@@ -27,23 +29,15 @@ type HistoryBatch = {
   previewIds?: string[]
 }
 
-// ユーザーが有料プランかどうかを判定（DB優先。セッションにもフォールバック）
+// 契約の正本はDB。古いセッションに残った有料プラン表示で履歴権限を与えない。
 async function isProUserByDb(userId: string): Promise<boolean> {
   const sub = await prisma.userServiceSubscription.findUnique({
     where: { userId_serviceId: { userId, serviceId: 'banner' } },
     select: { plan: true },
   })
-  const plan = (sub?.plan || 'FREE').toUpperCase()
-  return plan === 'LIGHT' || plan === 'PRO' || plan === 'ENTERPRISE'
-}
-
-function isProFromSession(session: any): boolean {
-  const bannerPlan = String(session?.user?.bannerPlan || '').toUpperCase()
-  const globalPlan = String(session?.user?.plan || '').toUpperCase()
-  const isPaid = (p: string) => p === 'LIGHT' || p === 'PRO' || p === 'ENTERPRISE'
-  // bannerPlan があればそれを優先。無ければ global plan を見る
-  if (bannerPlan) return isPaid(bannerPlan)
-  return !!(globalPlan && isPaid(globalPlan))
+  const account = !sub ? await prisma.user.findUnique({ where: { id: userId }, select: { plan: true } }) : null
+  const plan = String(sub?.plan || account?.plan || 'FREE').toUpperCase()
+  return ['LIGHT', 'PRO', 'ENTERPRISE', 'BUNDLE', 'BASIC', 'STARTER', 'BUSINESS'].includes(plan)
 }
 
 async function toJpegThumbDataUrl(output: unknown): Promise<string | null> {
@@ -81,7 +75,7 @@ export async function GET(request: NextRequest) {
     // 有料プラン判定（1時間生成し放題中も有料扱い）
     const firstLoginAt = (session?.user as any)?.firstLoginAt
     const isFreeHourActive = isWithinFreeHour(firstLoginAt)
-    const isPro = isFreeHourActive || isProFromSession(session) || (await isProUserByDb(userId))
+    const isPro = isFreeHourActive || (await isProUserByDb(userId))
     const historyDays = isPro ? BANNER_PRICING.historyDays.pro : BANNER_PRICING.historyDays.free
 
     // 無料ユーザーは履歴閲覧不可（ただし1時間生成し放題中は解放）
@@ -170,6 +164,12 @@ export async function GET(request: NextRequest) {
     const takeRaw = parseIntParam(searchParams.get('take'), 20)
     const takeBatches = Math.min(Math.max(takeRaw, 1), 50)
     const takeRows = takeBatches * 12 // 1バッチ最大10枚を想定し余裕を持たせる
+    let cursor: ReturnType<typeof decodeBannerHistoryCursor> | null = null
+    try {
+      if (searchParams.has('cursor')) cursor = decodeBannerHistoryCursor(searchParams.get('cursor') || '', userId)
+    } catch {
+      return NextResponse.json({ error: '履歴の取得位置が正しくありません。最初から読み直してください。' }, { status: 400, headers: { 'Cache-Control': 'private, no-store' } })
+    }
 
     // images=0 の場合は output を取らず、レスポンスを極力軽くする
     const rows = await prisma.generation.findMany({
@@ -178,9 +178,10 @@ export async function GET(request: NextRequest) {
         serviceId: 'banner',
         outputType: 'IMAGE',
         createdAt: { gte: cutoffDate }, // 保存期間内のみ取得
+        ...(cursor ? { OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }] } : {}),
       },
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take: takeRows,
+      take: takeRows + 1,
       select: includeImages
         ? { id: true, output: true, createdAt: true, input: true, metadata: true }
         : { id: true, createdAt: true, input: true, metadata: true },
@@ -188,6 +189,7 @@ export async function GET(request: NextRequest) {
 
     const byBatch = new Map<string, HistoryBatch & { _createdAtMs: number }>()
 
+    let processed = 0
     for (const r of rows) {
       const meta: any = r.metadata || {}
       const input: any = r.input || {}
@@ -197,6 +199,9 @@ export async function GET(request: NextRequest) {
         batchId ||
         // 古いデータの救済：近い作成時刻＋入力でまとめる
         `${createdAtIso.slice(0, 16)}|${String(input?.keyword || meta?.keyword || '')}|${String(input?.size || meta?.size || '')}`
+      if (byBatch.size >= takeBatches && !byBatch.has(key)) break
+      if (processed >= takeRows) break
+      processed++
 
       const createdAtMs = r.createdAt.getTime()
       const cur = byBatch.get(key)
@@ -237,7 +242,9 @@ export async function GET(request: NextRequest) {
       .slice(0, takeBatches)
       .map(({ _createdAtMs, ...x }) => x)
 
-    return NextResponse.json({ items })
+    const nextCursor = rows.length > processed && processed > 0
+      ? encodeBannerHistoryCursor(rows[processed - 1], userId) : null
+    return NextResponse.json({ items, nextCursor }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
   } catch (e: any) {
     console.error('[banner history] failed', e)
     return NextResponse.json({ error: '履歴の取得に失敗しました' }, { status: 500 })
@@ -305,4 +312,3 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: '削除に失敗しました' }, { status: 500 })
   }
 }
-

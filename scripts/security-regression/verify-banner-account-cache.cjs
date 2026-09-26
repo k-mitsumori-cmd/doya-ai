@@ -46,7 +46,7 @@ function harness(file, keyName, reader, writer, component) {
       const item = component === 'BannerHistoryPage'
         ? { id: 'private', createdAt: new Date(), banners: [], bannerCount: 1 }
         : { id: 'private', createdAt: new Date().toISOString(), bannerCount: 1 }
-      app.writer('account-a', [item])
+      app.writer('account-a', [item], null)
       assert.equal(app.reader('account-a').items[0].id, 'private')
       assert.equal(app.reader('account-b'), null)
       assert.equal(app.values.has('test-cache'), false)

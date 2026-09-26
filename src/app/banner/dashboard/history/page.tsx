@@ -38,27 +38,26 @@ function formatRelativeTime(date: Date): string {
   return date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric' })
 }
 
-const HISTORY_CACHE_KEY = 'doya-history-cache'
-const HISTORY_CACHE_TTL_MS = 60 * 1000 // 1分間有効
+const HISTORY_CACHE_KEY = 'doya-history-cache-v2'
 
-function readHistoryCache(userId: string): { items: HistoryItem[]; ts: number } | null {
+function readHistoryCache(userId: string): { items: HistoryItem[]; nextCursor: string | null } | null {
   try {
     const raw = sessionStorage.getItem(HISTORY_CACHE_KEY)
     if (!raw) return null
     const parsed = JSON.parse(raw)
-    if (parsed?.userId !== userId || !Array.isArray(parsed?.items)) {
+    if (parsed?.userId !== userId || !Array.isArray(parsed?.items) || !(parsed.nextCursor === null || typeof parsed.nextCursor === 'string')) {
       sessionStorage.removeItem(HISTORY_CACHE_KEY)
       return null
     }
-    return { items: parsed.items.map((i: any) => ({ ...i, createdAt: new Date(i.createdAt) })), ts: parsed.ts || 0 }
+    return { items: parsed.items.map((i: any) => ({ ...i, createdAt: new Date(i.createdAt) })), nextCursor: parsed.nextCursor }
   } catch {
     return null
   }
 }
 
-function writeHistoryCache(userId: string, items: HistoryItem[]) {
+function writeHistoryCache(userId: string, items: HistoryItem[], nextCursor: string | null) {
   try {
-    sessionStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify({ userId, items: items.map(i => ({ ...i, createdAt: i.createdAt.toISOString() })), ts: Date.now() }))
+    sessionStorage.setItem(HISTORY_CACHE_KEY, JSON.stringify({ userId, items: items.map(i => ({ ...i, createdAt: i.createdAt.toISOString() })), nextCursor, ts: Date.now() }))
   } catch {
     // ignore
   }
@@ -78,6 +77,8 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
   const userId = status === 'authenticated' ? session?.user?.id : null
   const isGuest = status !== 'loading' && !userId
   const [history, setHistory] = useState<HistoryItem[]>([])
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [isLoaded, setIsLoaded] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [requiresUpgrade, setRequiresUpgrade] = useState(false)
@@ -176,14 +177,10 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
       const cached = readHistoryCache(userId)
       if (cached && cached.items.length > 0) {
         setHistory(cached.items)
+        setNextCursor(cached.nextCursor)
         setIsLoaded(true)
         setIsLoading(false)
-        const isExpired = Date.now() - cached.ts > HISTORY_CACHE_TTL_MS
-        if (!isExpired) {
-          // まだ有効 → API呼ばない
-          return
-        }
-        // 期限切れ → バックグラウンドで更新（stale表示中）
+        // 履歴権限や新しい生成は変わり得るため、キャッシュ表示後も必ず正本を確認する。
         setIsStale(true)
       }
     }
@@ -209,8 +206,11 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
           // 有料プラン限定チェック
           if (data.requiresUpgrade) {
             setHistory([])
+            setNextCursor(null)
             setRequiresUpgrade(true)
+            sessionStorage.removeItem(HISTORY_CACHE_KEY)
           } else {
+            if (!(data.nextCursor === null || typeof data.nextCursor === 'string')) throw new Error('履歴の取得位置が不正です')
             const items = Array.isArray(data.items) ? data.items : []
             const list: HistoryItem[] = items.map((item: any) => ({
               id: item.id,
@@ -229,17 +229,22 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
               bannerIds: Array.isArray(item.previewIds) ? item.previewIds.filter((x: any) => typeof x === 'string') : undefined,
             }))
             setHistory(list)
-            if (userId) writeHistoryCache(userId, list) // 所有者を記録してキャッシュ保存
+            setNextCursor(data.nextCursor)
+            if (userId) writeHistoryCache(userId, list, data.nextCursor)
           }
         } else {
           toast.error('履歴の取得に失敗しました')
           setErrorMessage('履歴の取得に失敗しました（再読み込み/再試行してください）')
           setHistory([])
+          setNextCursor(null)
+          sessionStorage.removeItem(HISTORY_CACHE_KEY)
         }
       }
     } catch (e) {
       console.error('History load error:', e)
       setHistory([])
+      setNextCursor(null)
+      sessionStorage.removeItem(HISTORY_CACHE_KEY)
       if ((e as any)?.name === 'AbortError') {
         setErrorMessage('履歴の取得がタイムアウトしました（通信状況をご確認のうえ再試行してください）')
       } else {
@@ -252,6 +257,43 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
       setPhase('idle')
     }
   }, [isGuest, status, userId, fetchBatchImages])
+
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || isLoadingMore || !userId) return
+    setIsLoadingMore(true)
+    try {
+      const controller = new AbortController()
+      const timeout = window.setTimeout(() => controller.abort(), 15_000)
+      let res: Response
+      try { res = await fetch(`/api/banner/history?take=30&images=0&cursor=${encodeURIComponent(nextCursor)}`, { signal: controller.signal }) }
+      finally { window.clearTimeout(timeout) }
+      const data = await res.json()
+      if (!res.ok || !Array.isArray(data.items) || !(data.nextCursor === null || typeof data.nextCursor === 'string') || data.nextCursor === nextCursor) throw new Error(data?.error || '古い履歴を読み込めませんでした')
+      const page: HistoryItem[] = data.items.map((item: any) => ({
+        id: item.id, category: item.category || '', keyword: item.keyword || '', size: item.size || '',
+        createdAt: new Date(item.createdAt),
+        banners: Array.isArray(item.previewThumbs) ? item.previewThumbs.filter((x: unknown) => typeof x === 'string') : [],
+        bannerIds: Array.isArray(item.previewIds) ? item.previewIds.filter((x: unknown) => typeof x === 'string') : [],
+        bannerCount: Number(item.bannerCount) > 0 ? Number(item.bannerCount) : 1,
+      }))
+      setHistory(previous => {
+        const merged = new Map(previous.map(item => [item.id, item]))
+        for (const item of page) {
+          const old = merged.get(item.id)
+          if (!old) { merged.set(item.id, item); continue }
+          const ids = [...new Set([...(old.bannerIds || []), ...(item.bannerIds || [])])].slice(0, 3)
+          const byId = new Map<string, string>([...(old.bannerIds || []).map((id, i): [string, string] => [id, old.banners[i]]), ...(item.bannerIds || []).map((id, i): [string, string] => [id, item.banners[i]])])
+          merged.set(item.id, { ...old, bannerCount: old.bannerCount + item.bannerCount, bannerIds: ids, banners: ids.map(id => byId.get(id) || '') })
+        }
+        const all = [...merged.values()].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        writeHistoryCache(userId, all, data.nextCursor)
+        return all
+      })
+      setNextCursor(data.nextCursor)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '古い履歴を読み込めませんでした')
+    } finally { setIsLoadingMore(false) }
+  }, [nextCursor, isLoadingMore, userId])
 
   useEffect(() => {
     loadHistory()
@@ -332,7 +374,9 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
       try {
         const res = await fetch(`/api/banner/history?batchId=${encodeURIComponent(id)}`, { method: 'DELETE' })
         if (res.ok) {
-          setHistory(history.filter(item => item.id !== id))
+          const updated = history.filter(item => item.id !== id)
+          setHistory(updated)
+          if (userId) writeHistoryCache(userId, updated, nextCursor)
           toast.success('削除しました')
         } else {
           toast.error('削除に失敗しました')
@@ -380,7 +424,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
               
               <div className="flex items-center gap-3 sm:gap-6">
                 <button
-                  onClick={() => loadHistory()}
+                  onClick={() => loadHistory(true)}
                   disabled={isLoading}
                   className="p-2.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-all"
                   title="更新"
@@ -720,6 +764,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
               ))}
             </div>
           )}
+          {!requiresUpgrade && nextCursor && !errorMessage && <div className="mt-8 text-center"><button type="button" onClick={() => void loadMore()} disabled={isLoadingMore} className="rounded-2xl border border-blue-200 bg-white px-8 py-3 font-black text-blue-700 shadow-sm hover:bg-blue-50 disabled:opacity-50">{isLoadingMore ? '古い履歴を読み込み中…' : '古い履歴をさらに表示'}</button></div>}
         </main>
       </div>
     </div>
