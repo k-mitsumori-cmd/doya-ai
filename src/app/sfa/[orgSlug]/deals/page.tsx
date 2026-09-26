@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef, type PointerEvent as ReactPoi
 import { useParams } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { sfaInit, withOrg, fetchAllSfaAccounts } from '@/lib/sfa/client'
+import { isJstOverdue, jstDateKey } from '@/lib/sfa/task-date'
 import { ACTIVITY_TYPE_LABEL } from '@/lib/sfa/constants'
 import type { ActivityType } from '@/lib/sfa/types'
 import { isSfaSummary, summaryYen, type SfaSummary } from '@/lib/sfa/summary'
@@ -52,21 +53,14 @@ function isDealPage(value: unknown): value is DealPage {
 
 const STALE_DAYS = 14
 const yen = (n: number) => '¥' + (n || 0).toLocaleString('ja-JP')
-// Date → 'YYYY-MM-DD'（ローカル日付、<input type="date"> 用）
-const toDateInput = (d: Date) => {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-const isoToDateInput = (iso: string | null) => (iso ? toDateInput(new Date(iso)) : '')
+// 日本時間の暦日を <input type="date"> に表示する。
+const toDateInput = (d: Date) => jstDateKey(d) || ''
+const isoToDateInput = (iso: string | null) => jstDateKey(iso) || ''
 const fmtShortDate = (iso: string | null) => {
-  if (!iso) return null
-  const dt = new Date(iso)
-  return `${dt.getMonth() + 1}/${dt.getDate()}`
+  const day = jstDateKey(iso)
+  return day ? `${Number(day.slice(5, 7))}/${Number(day.slice(8, 10))}` : null
 }
-const isTaskOverdue = (t: Task) =>
-  t.status !== 'done' && !!t.dueDate && new Date(t.dueDate).getTime() < new Date().setHours(0, 0, 0, 0)
+const isTaskOverdue = (t: Task) => t.status !== 'done' && isJstOverdue(t.dueDate)
 // 商談日からの経過期間ラベル
 const elapsedLabel = (d: Deal): string | null => {
   if (!d.startDate) return null
