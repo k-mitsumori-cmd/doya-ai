@@ -1,6 +1,7 @@
 'use client'
 
 import { templateImageUrl } from '@/lib/banner-template-storage'
+import { getBannerTemplateTier } from '@/lib/banner/template-access'
 import { Suspense, useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import { Sparkles, Loader2, Download, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Play, ImageIcon, Maximize2, X, Upload, User, Image as ImageLucide, Square, RectangleHorizontal, RectangleVertical, Crown, Menu, Lock, LogIn, FileText, Copy, Check } from 'lucide-react'
@@ -62,7 +63,6 @@ type PlanConfig = {
   label: string
   maxCountPerGeneration: number // 1回の生成で作れる枚数
   monthlyLimit: number // 月間の生成上限
-  imagesPerGenre: number // 各ジャンルで使える画像数（左から何枚目まで）
   allUnlocked: boolean // 全画像解放かどうか
 }
 
@@ -71,35 +71,30 @@ const PLAN_CONFIG: Record<PlanType, PlanConfig> = {
     label: 'ゲスト',
     maxCountPerGeneration: 3,
     monthlyLimit: 0,
-    imagesPerGenre: 1,
     allUnlocked: false,
   },
   FREE: {
     label: 'ログインプラン',
     maxCountPerGeneration: 3,
     monthlyLimit: 15,
-    imagesPerGenre: 3,
     allUnlocked: false,
   },
   LIGHT: {
     label: 'ライトプラン',
     maxCountPerGeneration: 3,
     monthlyLimit: 50,
-    imagesPerGenre: 5,
     allUnlocked: false,
   },
   PRO: {
     label: 'PROプラン',
     maxCountPerGeneration: 5,
     monthlyLimit: 150,
-    imagesPerGenre: Infinity,
     allUnlocked: true,
   },
   ENTERPRISE: {
     label: 'Enterpriseプラン',
     maxCountPerGeneration: 10,
     monthlyLimit: 1000,
-    imagesPerGenre: Infinity,
     allUnlocked: true,
   },
 }
@@ -110,24 +105,11 @@ type LockType = 'login' | 'pro' | 'enterprise' | null
 // テンプレートIDからティア（FREE/LIGHT/PRO）を決定論的に判定
 // ハッシュベースなので並び順に依存せず、常に同じ結果になる
 // FREE=ログインで利用可(50%), LIGHT=ライトプラン(25%), PRO=PROプラン以上(25%)
-type TemplateTier = 'FREE' | 'LIGHT' | 'PRO'
 type PlanFilterType = 'すべて' | 'FREE' | 'LIGHT' | 'PRO'
-
-const getTemplateTier = (templateId: string): TemplateTier => {
-  let hash = 0
-  for (let i = 0; i < templateId.length; i++) {
-    hash = ((hash << 5) - hash) + templateId.charCodeAt(i)
-    hash |= 0
-  }
-  const bucket = Math.abs(hash) % 100
-  if (bucket < 50) return 'FREE'        // 50% - ログインでDL可
-  if (bucket < 75) return 'LIGHT'       // 25% - ライトプランでDL可
-  return 'PRO'                          // 25% - PROプラン以上でDL可
-}
 
 // 後方互換: PRO以上のテンプレートかどうか
 const isProOnlyTemplate = (templateId: string): boolean => {
-  return getTemplateTier(templateId) === 'PRO'
+  return getBannerTemplateTier(templateId) === 'PRO'
 }
 
 // 後方互換性のためのPLAN_LIMITS
@@ -349,7 +331,7 @@ function BannerTestPageInner() {
     // PRO / ENTERPRISE は全解放
     if (planConfig.allUnlocked) return null
 
-    const tier = getTemplateTier(template.id)
+    const tier = getBannerTemplateTier(template.id)
 
     if (currentPlan === 'GUEST') {
       // ゲスト: すべてロック（ログイン促進）
@@ -930,7 +912,7 @@ function BannerTestPageInner() {
     templates.forEach((t) => {
       if (!t) return
       // プランティアフィルタ
-      if (activePlanFilter !== 'すべて' && getTemplateTier(t.id) !== activePlanFilter) return
+      if (activePlanFilter !== 'すべて' && getBannerTemplateTier(t.id) !== activePlanFilter) return
       const category = categoryMapping[t.industry] || t.industry || 'その他'
       if (!grouped[category]) grouped[category] = []
       grouped[category].push(t)
@@ -945,7 +927,7 @@ function BannerTestPageInner() {
   const filteredTemplates = useMemo(() => {
     let result = activeFilter === 'すべて' ? templates : (allTemplatesByCategory[activeFilter] || [])
     if (activePlanFilter !== 'すべて') {
-      result = result.filter((t) => getTemplateTier(t.id) === activePlanFilter)
+      result = result.filter((t) => getBannerTemplateTier(t.id) === activePlanFilter)
     }
     return result
   }, [activeFilter, activePlanFilter, templates, allTemplatesByCategory])

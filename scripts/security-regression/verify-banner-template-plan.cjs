@@ -1,7 +1,9 @@
 const assert = require('node:assert/strict')
 const { load } = require('./load-typescript.cjs')
 
-function fixture(plan, customPrompt) {
+const templateAccess = load('src/lib/banner/template-access.ts')
+
+function fixture(plan, customPrompt, templateId = 't1') {
   let modelCalls = 0
   const modelPrompts = []
   const releases = []
@@ -15,6 +17,7 @@ function fixture(plan, customPrompt) {
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma: { bannerTemplate: { findUnique: async () => ({ prompt: '保存済みテンプレート', isActive: true }) } } },
     '@/lib/banner-prompts-v2': { BANNER_PROMPTS_V2: [{ id: 't1', fullPrompt: '公式テンプレートの見た目、余白、配色、文字組み、写真の配置を維持して制作する。十分な長さを持つデザイン指示です。' }] },
+    '@/lib/banner/template-access': templateAccess,
     '@/lib/banner/monthly-quota': {
       reserveBannerMonthlyImages: async () => ({ state: 'reserved', reservation }),
       releaseBannerMonthlyImages: async (_, count) => { releases.push(count) },
@@ -23,7 +26,7 @@ function fixture(plan, customPrompt) {
   }, { console: { log() {}, error() {} } })
   const request = new Request('https://local.test/api/banner/test/generate', {
     method: 'POST', headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ templateId: 't1', mainTitle: 'テスト', size: '1080x1080', count: 1, basePrompt: 'EVIL OVERRIDE THAT SHOULD NEVER BE USED FOR FREE USERS', customPrompt }),
+    body: JSON.stringify({ templateId, mainTitle: 'テスト', size: '1080x1080', count: 1, basePrompt: 'EVIL OVERRIDE THAT SHOULD NEVER BE USED FOR FREE USERS', customPrompt }),
   })
   return { api, request, get modelCalls() { return modelCalls }, modelPrompts, releases }
 }
@@ -42,8 +45,26 @@ function fixture(plan, customPrompt) {
   assert(run.modelPrompts[0].includes('公式テンプレートの見た目'))
   assert(!run.modelPrompts[0].includes('EVIL OVERRIDE'))
 
+  run = fixture('FREE', undefined, 'brand-001')
+  assert.equal((await run.api.POST(run.request)).status, 403)
+  assert.equal(run.modelCalls, 0)
+  assert.deepEqual(run.releases, [1])
+
+  run = fixture('LIGHT', undefined, 'brand-001')
+  assert.equal((await run.api.POST(run.request)).status, 200)
+  assert.equal(run.modelCalls, 1)
+
+  run = fixture('LIGHT', undefined, 't21')
+  assert.equal((await run.api.POST(run.request)).status, 403)
+  assert.equal(run.modelCalls, 0)
+  assert.deepEqual(run.releases, [1])
+
+  run = fixture('PRO', undefined, 't21')
+  assert.equal((await run.api.POST(run.request)).status, 200)
+  assert.equal(run.modelCalls, 1)
+
   run = fixture('ENTERPRISE', '有料の詳細指示')
   assert.equal((await run.api.POST(run.request)).status, 200)
   assert.equal(run.modelCalls, 1)
-  console.log('PASS template generation enforces Enterprise detailed instructions before paid image calls and refunds rejected reservations')
+  console.log('PASS template generation enforces plan tiers, canonical prompts, and Enterprise instructions before paid image calls')
 })().catch(error => { console.error(error); process.exitCode = 1 })

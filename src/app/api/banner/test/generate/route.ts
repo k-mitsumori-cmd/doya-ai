@@ -5,6 +5,7 @@ import { reserveBannerMonthlyImages, releaseBannerMonthlyImages, type BannerRese
 import { generateBanners } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PROMPTS_V2 } from '@/lib/banner-prompts-v2'
+import { canUseBannerTemplate } from '@/lib/banner/template-access'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -292,6 +293,15 @@ export async function POST(request: NextRequest) {
         if (reservation) await releaseBannerMonthlyImages(reservation, reservation.count).catch(() => console.error('Test banner quota release failed'))
         reservation = null
         return NextResponse.json({ error: 'テンプレートが見つかりません。選び直してください。' }, { status: 404 })
+      }
+      if (!canUseBannerTemplate(bannerPlan, id)) {
+        if (reservation) await releaseBannerMonthlyImages(reservation, reservation.count).catch(() => console.error('Test banner quota release failed'))
+        reservation = null
+        return NextResponse.json({
+          error: 'このテンプレートは上位プランで利用できます。',
+          code: 'PLAN_UPGRADE_REQUIRED',
+          upgradeUrl: '/banner/pricing',
+        }, { status: 403 })
       }
       effectiveBasePrompt = BANNER_PROMPTS_V2.find((prompt) => prompt.id === id)?.fullPrompt || savedTemplate.prompt
     }

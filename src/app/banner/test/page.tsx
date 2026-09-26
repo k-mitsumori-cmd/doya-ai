@@ -10,6 +10,7 @@ import Image from 'next/image'
 import BannerLimitModal from '@/components/banner/BannerLimitModal'
 import { useBannerQuota } from '@/components/banner/useBannerQuota'
 import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
+import { getBannerTemplateTier } from '@/lib/banner/template-access'
 
 type BannerTemplate = {
   id: string
@@ -59,7 +60,6 @@ type PlanType = 'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE'
 type PlanConfig = {
   label: string
   maxCountPerGeneration: number // 1回の生成で作れる枚数
-  imagesPerGenre: number // 各ジャンルで使える画像数（左から何枚目まで）
   allUnlocked: boolean // 全画像解放かどうか
 }
 
@@ -67,31 +67,26 @@ const PLAN_CONFIG: Record<PlanType, PlanConfig> = {
   GUEST: {
     label: 'ゲスト',
     maxCountPerGeneration: 3,
-    imagesPerGenre: 1, // 各ジャンル左から1枚目のみ
     allUnlocked: false,
   },
   FREE: {
     label: 'ベーシック',
     maxCountPerGeneration: 3,
-    imagesPerGenre: 3, // 各ジャンル左から3枚目まで
     allUnlocked: false,
   },
   LIGHT: {
     label: 'ライトプラン',
     maxCountPerGeneration: 3,
-    imagesPerGenre: 5,
     allUnlocked: false,
   },
   PRO: {
     label: 'PROプラン',
     maxCountPerGeneration: 5,
-    imagesPerGenre: Infinity, // 全画像
     allUnlocked: true,
   },
   ENTERPRISE: {
     label: 'Enterpriseプラン',
     maxCountPerGeneration: 10,
-    imagesPerGenre: Infinity, // 全画像
     allUnlocked: true,
   },
 }
@@ -224,22 +219,13 @@ function BannerTestPageInner() {
   const planLimits = useMemo(() => PLAN_LIMITS[userPlan] || PLAN_LIMITS.FREE, [userPlan])
   
   // 画像のロック状態を判定する関数
-  const getImageLockType = useCallback((template: BannerTemplate, indexInGenre: number): LockType => {
+  const getImageLockType = useCallback((template: BannerTemplate): LockType => {
     // PRO以上は全解放
     if (planConfig.allUnlocked) return null
-    
-    // ジャンル内のインデックスで判定
-    if (indexInGenre < planConfig.imagesPerGenre) {
-      return null // 解放済み
-    }
-    
-    // ロックされている場合、どのプランで解放されるか
-    if (currentPlan === 'GUEST') {
-      return 'login' // ログインで解放
-    }
-    if (currentPlan === 'FREE' || currentPlan === 'LIGHT') {
-      return 'pro' // PROで解放
-    }
+    if (currentPlan === 'GUEST') return 'login'
+    const tier = getBannerTemplateTier(template.id)
+    if (currentPlan === 'FREE' && tier !== 'FREE') return 'pro'
+    if (currentPlan === 'LIGHT' && tier === 'PRO') return 'pro'
     return null
   }, [currentPlan, planConfig])
   
@@ -1258,7 +1244,7 @@ function BannerTestPageInner() {
                           const isLast = index === categoryTemplates.length - 1
                           
                           // ロック状態を判定
-                          const lockType = getImageLockType(template, index)
+                          const lockType = getImageLockType(template)
                           const isLocked = lockType !== null
                           
                           return (
