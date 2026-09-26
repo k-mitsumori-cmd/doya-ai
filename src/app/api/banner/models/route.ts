@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { isNanobannerConfigured } from '@/lib/nanobanner'
+import { requireBannerAdmin } from '@/lib/banner-admin-guard'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
@@ -13,7 +14,9 @@ function getApiKey(): string | null {
   )
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const denied = requireBannerAdmin(request)
+  if (denied) return denied
   try {
     if (!isNanobannerConfigured()) {
       return NextResponse.json(
@@ -34,9 +37,9 @@ export async function GET() {
       },
     })
     if (!res.ok) {
-      const t = await res.text()
+      console.error('[Banner models] ListModels failed:', res.status)
       return NextResponse.json(
-        { error: `ListModels failed: ${res.status}`, detail: t.substring(0, 800) },
+        { error: 'AIモデル一覧を取得できませんでした。' },
         { status: 502 }
       )
     }
@@ -61,8 +64,8 @@ export async function GET() {
       allModels: models.map((m: any) => ({ name: m?.name, supportedGenerationMethods: m?.supportedGenerationMethods })),
     })
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'models endpoint error' }, { status: 500 })
+    console.error('[Banner models] Unexpected failure:', e)
+    return NextResponse.json({ error: 'AIモデル一覧を取得できませんでした。' }, { status: 500 })
   }
 }
-
 
