@@ -16,7 +16,7 @@ import {
   TrendingUp, Layers, Link2
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerDailyLimitByUserPlan, getBannerMaxImagesPerRequest, getGuestUsage, getUserUsage, incrementUserUsage, setGuestUsage } from '@/lib/pricing'
 import { DashboardLayout } from '@/components/DashboardLayout' // New import
 import { FeatureGuide } from '@/components/FeatureGuide'
 import { CheckoutButton } from '@/components/CheckoutButton'
@@ -898,7 +898,7 @@ export default function BannerDashboard() {
   const [personImages, setPersonImages] = useState<string[]>([])
   const [personFileNames, setPersonFileNames] = useState<string[]>([])
 
-  // 生成枚数（デフォルト3 / 有料は最大10）
+  // 生成枚数（デフォルト3 / プラン別の1回上限まで）
   const [generateCount, setGenerateCount] = useState<number>(3)
   // 月次上限に達したときのアップセルモーダル（429 / MONTHLY_LIMIT_REACHED）
   const [limitModal, setLimitModal] = useState<{ open: boolean; used?: number; limit?: number; message?: string; upgradeUrl?: string }>({ open: false })
@@ -1045,13 +1045,14 @@ export default function BannerDashboard() {
     const p = String(bannerPlan || '').toUpperCase()
     if (!p || p === 'GUEST') return 'GUEST' as const
     if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
-    if (p.includes('PRO') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
+    if (p.includes('PRO') || p.includes('BUNDLE') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
     if (p.includes('LIGHT')) return 'LIGHT' as const
     if (p.includes('FREE')) return 'FREE' as const
     return 'FREE' as const
   }, [bannerPlan])
   const isEnterpriseUser = !isGuest && planTier === 'ENTERPRISE'
   const isPaidUser = !isGuest && (planTier === 'LIGHT' || planTier === 'PRO' || planTier === 'ENTERPRISE')
+  const maxCount = getBannerMaxImagesPerRequest(bannerPlan)
   const currentSizes = SIZE_PRESETS[purpose] || SIZE_PRESETS.default
   const guestRemaining = BANNER_PRICING.guestLimit - guestUsageCount
   const [userUsageCount, setUserUsageCount] = useState(0)
@@ -1061,10 +1062,9 @@ export default function BannerDashboard() {
 
   useEffect(() => {
     // Keep the last one or two monthly credits usable; the API allows counts from one.
-    const max = isPaidUser ? 10 : 3
     if (generateCount < 1) setGenerateCount(1)
-    if (generateCount > max) setGenerateCount(max)
-  }, [isPaidUser, generateCount])
+    if (generateCount > maxCount) setGenerateCount(maxCount)
+  }, [maxCount, generateCount])
   
   // タブ状態（バックグラウンドでも進行するが、閉じる/更新すると中断される可能性が高い）
   useEffect(() => {
@@ -2113,14 +2113,14 @@ export default function BannerDashboard() {
                   <div>
                     <p className="text-sm font-black text-slate-800">生成枚数</p>
                     <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                      デフォルトは3枚（A/B/C）。有料プランは最大10枚まで増やせます。
+                      デフォルトは3枚（A/B/C）。PROは最大5枚、Enterpriseは最大10枚まで増やせます。
                       <span className="ml-1 font-bold text-slate-700">枚数を増やすほど時間がかかります。</span>
                     </p>
                   </div>
                   <div className="text-right">
                     <p className="text-xs font-black text-slate-900 tabular-nums">{generateCount}枚</p>
                     <p className="text-[10px] text-slate-400 font-bold">
-                      {isPaidUser ? '最大10枚' : '無料は1〜3枚'}
+                      {`最大${maxCount}枚`}
                     </p>
                   </div>
                 </div>
@@ -2130,7 +2130,7 @@ export default function BannerDashboard() {
                     <button
                       key={n}
                       type="button"
-                      disabled={!isPaidUser && n > 3}
+                      disabled={n > maxCount}
                       onClick={() => setGenerateCount(n)}
                       className={`px-3 py-2 rounded-xl text-xs font-black border transition-colors ${
                         generateCount === n

@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 生成枚数（デフォルト3 / 有料は最大10）
+    // 生成枚数（デフォルト3。プラン別の1回上限は予約時に強制）
     const requestedCountRaw = Number(count)
     const requestedCount = Number.isFinite(requestedCountRaw) ? Math.floor(requestedCountRaw) : 3
 
@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
 
     // 生成枚数（サーバ側で厳密に強制する：フロント改ざん対策）
     // - デフォルト3枚
-    // - 有料のみ最大10枚
+    // - LIGHTは3枚、PROは5枚、Enterpriseは10枚（予約時に強制）
     const userId = !isGuest ? ((session?.user as any)?.id as string | undefined) : undefined
     let desiredCount = Math.max(1, Math.min(3, requestedCount || 3))
 

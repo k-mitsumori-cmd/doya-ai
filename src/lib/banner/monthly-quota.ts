@@ -1,6 +1,6 @@
 import type { PrismaClient } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { getBannerMonthlyLimitByUserPlan, shouldResetMonthlyUsage } from '@/lib/pricing'
+import { getBannerMonthlyLimitByUserPlan, getBannerMaxImagesPerRequest, shouldResetMonthlyUsage } from '@/lib/pricing'
 
 type BannerQuotaDb = Pick<PrismaClient, 'user' | 'userServiceSubscription'>
 
@@ -25,10 +25,6 @@ export type BannerQuotaClaim =
 
 const SERVICE_ID = 'banner'
 const MAX_RETRIES = 20
-
-function paidBannerPlan(plan: string) {
-  return ['LIGHT', 'PRO', 'ENTERPRISE', 'BUNDLE', 'BASIC', 'STARTER', 'BUSINESS'].includes(plan)
-}
 
 function usage(limit: number, used: number): BannerQuotaUsage {
   return {
@@ -75,7 +71,7 @@ export async function reserveBannerMonthlyImages(
     }
 
     const plan = String(current.plan || 'FREE').toUpperCase()
-    const count = Math.min(requestedCount, paidBannerPlan(plan) ? 10 : 3)
+    const count = Math.min(requestedCount, getBannerMaxImagesPerRequest(plan))
     const limit = getBannerMonthlyLimitByUserPlan(plan)
     if (limit >= 0 && current.monthlyUsage + count > limit) {
       return { state: 'limit', plan, usage: usage(limit, current.monthlyUsage) }

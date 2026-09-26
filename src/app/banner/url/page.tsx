@@ -12,7 +12,7 @@ import LoadingProgress from '@/components/LoadingProgress'
 import UpgradeSuccessModal from '@/components/UpgradeSuccessModal'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
 import { FreeHourPopup } from '@/components/FreeHourPopup'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, ENTERPRISE_CONTACT_MAILTO, isWithinFreeHour } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, ENTERPRISE_CONTACT_MAILTO, isWithinFreeHour, getBannerMaxImagesPerRequest } from '@/lib/pricing'
 import { CheckoutButton } from '@/components/CheckoutButton'
 
 const DEFAULT_FREE_SIZE = '1080x1080'
@@ -76,7 +76,7 @@ function BannerUrlAutoPageInner() {
     const p = bannerPlan
     if (!p || p === 'GUEST') return 'GUEST' as const
     if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
-    if (p.includes('PRO') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
+    if (p.includes('PRO') || p.includes('BUNDLE') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
     if (p.includes('LIGHT')) return 'LIGHT' as const
     if (p.includes('FREE')) return 'FREE' as const
     return 'FREE' as const
@@ -84,6 +84,7 @@ function BannerUrlAutoPageInner() {
   const isPaidUser = bannerPlanTier === 'LIGHT' || bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
   const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
   const isFreeHourActive = !isGuest && isWithinFreeHour(firstLoginAt)
+  const maxCount = isFreeHourActive ? 10 : getBannerMaxImagesPerRequest(bannerPlan)
 
   const [targetUrl, setTargetUrl] = useState('')
   const [isGenerating, setIsGenerating] = useState(false)
@@ -175,15 +176,14 @@ function BannerUrlAutoPageInner() {
 
   const canGenerate = useMemo(() => targetUrl.trim().length > 8 && !isGenerating, [targetUrl, isGenerating])
 
-  // 無料/有料/1時間生成し放題別に枚数上限を制限（UI改ざん防止）
+  // サーバーのプラン別1回上限と同じ枚数だけ選べるようにする
   useEffect(() => {
     const canUseUnlimited = isPaidUser || isFreeHourActive
-    const maxCount = canUseUnlimited ? 10 : 3
     if (count < 1) setCount(1)
     if (count > maxCount) setCount(maxCount)
     if (!canUseUnlimited && size !== DEFAULT_FREE_SIZE) setSize(DEFAULT_FREE_SIZE)
     if (!size) setSize(DEFAULT_FREE_SIZE)
-  }, [isPaidUser, isFreeHourActive, count, size])
+  }, [isPaidUser, isFreeHourActive, maxCount, count, size])
 
   const handleGenerate = async () => {
     const url = targetUrl.trim()
@@ -494,9 +494,7 @@ function BannerUrlAutoPageInner() {
                         </div>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => {
-                            const maxFree = 3
-                            const canUseUnlimited = isPaidUser || isFreeHourActive
-                            const disabled = !canUseUnlimited && n > maxFree
+                            const disabled = n > maxCount
                             return (
                               <button
                                 key={n}
@@ -516,7 +514,7 @@ function BannerUrlAutoPageInner() {
                             )
                           })}
                         </div>
-                        {!(isPaidUser || isFreeHourActive) && <p className="mt-2 text-[10px] text-slate-500 font-bold">※ 無料は3枚まで。有料プランで最大10枚。</p>}
+                        <p className="mt-2 text-[10px] text-slate-500 font-bold">※ 1回あたり無料・LIGHTは3枚、PROは5枚、Enterpriseは10枚まで。</p>
                       </div>
 
                       {/* サイズ */}
@@ -872,7 +870,7 @@ function BannerUrlAutoPageInner() {
                   <p className="mt-1 text-lg font-black">プロプラン</p>
                   <p className="mt-2 text-sm font-black">月額 ¥9,980</p>
                   <p className="mt-2 text-[11px] text-white/80 font-bold leading-relaxed">
-                    月{BANNER_PRICING.proLimit}枚まで生成 / 最大10枚生成 / サイズ指定OK
+                    月{BANNER_PRICING.proLimit}枚まで生成 / 1回最大5枚 / サイズ指定OK
                   </p>
                   <div className="mt-3">
                     {bannerPlanTier === 'PRO' ? (
@@ -926,4 +924,3 @@ function BannerUrlAutoPageInner() {
     </div>
   )
 }
-

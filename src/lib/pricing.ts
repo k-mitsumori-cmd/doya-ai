@@ -358,6 +358,14 @@ export function getBannerMonthlyLimitByUserPlan(plan: string | null | undefined)
   return BANNER_PRICING.freeLimit
 }
 
+/** バナー画像の1リクエスト上限。画面と全生成APIで共有する。 */
+export function getBannerMaxImagesPerRequest(plan: string | null | undefined): number {
+  const p = String(plan || 'FREE').toUpperCase()
+  if (p === 'ENTERPRISE') return 10
+  if (['PRO', 'BUNDLE', 'BASIC', 'STARTER', 'BUSINESS'].includes(p)) return 5
+  return 3
+}
+
 /** @deprecated 後方互換用。新コードでは getBannerMonthlyLimitByUserPlan を使うこと */
 export const getBannerDailyLimitByUserPlan = getBannerMonthlyLimitByUserPlan
 

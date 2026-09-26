@@ -70,7 +70,7 @@ const PLAN_CONFIG: Record<PlanType, PlanConfig> = {
   GUEST: {
     label: 'ゲスト',
     maxCountPerGeneration: 3,
-    monthlyLimit: 3,
+    monthlyLimit: 0,
     imagesPerGenre: 1,
     allUnlocked: false,
   },
@@ -98,7 +98,7 @@ const PLAN_CONFIG: Record<PlanType, PlanConfig> = {
   ENTERPRISE: {
     label: 'Enterpriseプラン',
     maxCountPerGeneration: 10,
-    monthlyLimit: 3000,
+    monthlyLimit: 1000,
     imagesPerGenre: Infinity,
     allUnlocked: true,
   },
@@ -254,10 +254,6 @@ function BannerTestPageInner() {
   const [limitModal, setLimitModal] = useState<{ open: boolean; used?: number; limit?: number; message?: string; upgradeUrl?: string }>({ open: false })
   const quota = useBannerQuota(setLimitModal)
   
-  // トライアル状態（ログイン後1時間は全機能解放）
-  const [isTrialActive, setIsTrialActive] = useState(false)
-  const [trialRemainingMinutes, setTrialRemainingMinutes] = useState(0)
-  
   // フォームエリアの可視性（ヒーローセクションの縮小制御用）
   const [isFormVisible, setIsFormVisible] = useState(false)
   const formRef = useRef<HTMLDivElement>(null)
@@ -300,65 +296,6 @@ function BannerTestPageInner() {
     if (!isLoadingTemplates) setLoadingProgress(100)
   }, [isLoadingTemplates])
 
-  // トライアル判定（ログイン後1時間）
-  useEffect(() => {
-    if (!session?.user) {
-      setIsTrialActive(false)
-      setTrialRemainingMinutes(0)
-      return
-    }
-    
-    const TRIAL_DURATION_MS = 60 * 60 * 1000 // 1時間
-    const TRIAL_STORAGE_KEY = 'bannerTrialStartTime'
-    
-    // トライアル開始時刻を取得または設定
-    let trialStartTime: number
-    const stored = localStorage.getItem(TRIAL_STORAGE_KEY)
-    const userId = (session.user as any)?.id || session.user?.email || 'unknown'
-    
-    if (stored) {
-      try {
-        const data = JSON.parse(stored)
-        // 同じユーザーのトライアル情報か確認
-        if (data.userId === userId) {
-          trialStartTime = data.startTime
-        } else {
-          // 別ユーザーの場合は新規トライアル開始
-          trialStartTime = Date.now()
-          localStorage.setItem(TRIAL_STORAGE_KEY, JSON.stringify({ userId, startTime: trialStartTime }))
-        }
-      } catch {
-        trialStartTime = Date.now()
-        localStorage.setItem(TRIAL_STORAGE_KEY, JSON.stringify({ userId, startTime: trialStartTime }))
-      }
-    } else {
-      // 初回ログイン：トライアル開始
-      trialStartTime = Date.now()
-      localStorage.setItem(TRIAL_STORAGE_KEY, JSON.stringify({ userId, startTime: trialStartTime }))
-    }
-    
-    // トライアル残り時間を計算
-    const updateTrialStatus = () => {
-      const elapsed = Date.now() - trialStartTime
-      const remaining = TRIAL_DURATION_MS - elapsed
-      
-      if (remaining > 0) {
-        setIsTrialActive(true)
-        setTrialRemainingMinutes(Math.ceil(remaining / 60000))
-      } else {
-        setIsTrialActive(false)
-        setTrialRemainingMinutes(0)
-      }
-    }
-    
-    updateTrialStatus()
-    
-    // 1分ごとに更新
-    const interval = setInterval(updateTrialStatus, 60000)
-    
-    return () => clearInterval(interval)
-  }, [session])
-  
   // フォームエリアの可視性を検知（ヒーローセクションの縮小制御用）
   useEffect(() => {
     if (!formRef.current) return
@@ -383,21 +320,17 @@ function BannerTestPageInner() {
   }, [selectedTemplate, selectedBanner])
   
   // ユーザープラン（GUEST / FREE / PRO / ENTERPRISE）
-  // トライアル中はENTERPRISEとして扱う
   const currentPlan = useMemo((): PlanType => {
     if (!session?.user) return 'GUEST'
-    
-    // トライアル中は全機能解放（ENTERPRISE扱い）
-    if (isTrialActive) return 'ENTERPRISE'
     
     const user = session.user as any
     const plan = user?.bannerPlan || user?.plan || 'FREE'
     const upperPlan = String(plan).toUpperCase()
     if (upperPlan === 'ENTERPRISE') return 'ENTERPRISE'
-    if (upperPlan === 'PRO') return 'PRO'
+    if (['PRO', 'BUNDLE', 'BASIC', 'STARTER', 'BUSINESS'].includes(upperPlan)) return 'PRO'
     if (upperPlan === 'LIGHT') return 'LIGHT'
     return 'FREE'
-  }, [session, isTrialActive])
+  }, [session])
 
   const planConfig = useMemo(() => PLAN_CONFIG[currentPlan], [currentPlan])
 
@@ -1417,27 +1350,14 @@ function BannerTestPageInner() {
           <div className="w-9" /> {/* スペーサー */}
         </div>
         
-        {/* トライアルバナー（ログイン後1時間） */}
-        {isTrialActive && (
-          <div className="fixed top-12 md:top-0 left-0 md:left-[240px] right-0 z-40 bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 text-white py-2 px-3 sm:px-4 flex items-center justify-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium shadow-lg">
-            <Sparkles className="w-4 h-4 animate-pulse flex-shrink-0" />
-            <span className="hidden sm:inline">全機能無料トライアル中！</span>
-            <span className="sm:hidden">トライアル中</span>
-            <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-bold flex-shrink-0">
-              残り {trialRemainingMinutes}分
-            </span>
-            <span className="hidden md:inline text-white/80">- すべての機能をお試しください</span>
-          </div>
-        )}
-        
         {/* ローディング画面は廃止: テンプレートギャラリーのスケルトンで代替 */}
 
         {/* Netflix風のメインコンテンツ */}
-        <div className={`relative ${isTrialActive ? 'pt-20 md:pt-10' : 'pt-12 md:pt-0'}`}>
+        <div className="relative pt-12 md:pt-0">
           {/* 大きなヒーロー画像（選択されたバナーまたはテンプレート）- 固定表示、フォーム表示時は縮小 */}
           <div
             data-tour="hero-preview"
-            className={`fixed ${isTrialActive ? 'top-20 md:top-10' : 'top-12 md:top-0'} left-0 md:left-[240px] right-0 z-20 overflow-hidden transition-all duration-500 ease-in-out ${
+            className={`fixed top-12 md:top-0 left-0 md:left-[240px] right-0 z-20 overflow-hidden transition-all duration-500 ease-in-out ${
               isHeroCollapsed
                 ? 'h-[0vh] sm:h-[0vh] md:h-[0vh] lg:h-[0vh]'
                 : isFormVisible
@@ -2167,16 +2087,16 @@ function BannerTestPageInner() {
                       </div>
                     </div>
                     <p className="text-[10px] sm:text-xs text-gray-400 mb-2 sm:mb-3">
-                      1〜5枚から選択。
+                      1〜{planLimits.maxCount}枚から選択。
                       {userPlan === 'FREE' ? (
-                        <span className="text-yellow-400"> 有料プランは最大5枚まで増やせます。</span>
+                        <span className="text-yellow-400"> PROプランでは1回最大5枚まで選べます。</span>
                       ) : (
                         <span className="text-green-400"> {planLimits.label}で最大{planLimits.maxCount}枚まで生成可能。</span>
                       )}
                       <span className="text-orange-400 font-medium"> 枚数を増やすほど時間がかかります。</span>
                     </p>
                     <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                      {[1, 2, 3, 4, 5].map((num) => {
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num) => {
                         const isDisabled = num > planLimits.maxCount
                         return (
                           <button
@@ -2207,27 +2127,6 @@ function BannerTestPageInner() {
                       </div>
                     )}
                   </div>
-                  
-                  {/* トライアル情報（トライアル中の場合） */}
-                  {isTrialActive && (
-                    <div className="p-3 sm:p-4 bg-gradient-to-r from-purple-900/50 to-pink-900/50 rounded-lg sm:rounded-xl border border-purple-500/50">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Sparkles className="w-4 h-4 text-purple-400 animate-pulse" />
-                        <span className="text-xs sm:text-sm font-bold text-purple-300">無料トライアル中</span>
-                        <span className="ml-auto bg-purple-600 px-2 py-0.5 rounded-full text-[10px] font-bold text-white">
-                          残り {trialRemainingMinutes}分
-                        </span>
-                      </div>
-                      <p className="text-[10px] sm:text-xs text-purple-200/80">
-                        すべての機能が無料でお試しいただけます。
-                      </p>
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200"><Check className="h-3 w-3" />全画像解放</span>
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200"><Check className="h-3 w-3" />生成枠は使用状況をご確認ください</span>
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-600/30 rounded text-[9px] text-purple-200"><Check className="h-3 w-3" />詳細指示</span>
-                      </div>
-                    </div>
-                  )}
                   
                   <BannerQuotaNotice quota={quota} />
                   {/* ロゴ・人物写真アップロード */}
@@ -2556,7 +2455,7 @@ function BannerTestPageInner() {
                         aspectRatio: `${selectedSize.width} / ${selectedSize.height}`,
                       }}
                       onClick={() => {
-                        if (currentPlan === 'ENTERPRISE' || isTrialActive) {
+                        if (currentPlan === 'ENTERPRISE') {
                           setEditingBanner(banner)
                           setEditPrompt('')
                           setShowEditModal(true)
@@ -2573,7 +2472,7 @@ function BannerTestPageInner() {
                       {/* オーバーレイ（ホバー時） */}
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all flex items-center justify-center">
                         <div className="opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center gap-2">
-                          {(currentPlan === 'ENTERPRISE' || isTrialActive) ? (
+                          {(currentPlan === 'ENTERPRISE') ? (
                             <>
                               <div className="w-12 h-12 rounded-full bg-purple-600 flex items-center justify-center">
                                 <Sparkles className="w-6 h-6 text-white" />
@@ -2615,7 +2514,7 @@ function BannerTestPageInner() {
                           <Maximize2 className="w-4 h-4" />
                           拡大
                         </button>
-                        {(currentPlan === 'ENTERPRISE' || isTrialActive) ? (
+                        {(currentPlan === 'ENTERPRISE') ? (
                           <button
                             onClick={() => {
                               setEditingBanner(banner)
@@ -2642,7 +2541,7 @@ function BannerTestPageInner() {
                       </div>
                       
                       {/* プロンプト閲覧ボタン（エンタープライズ限定） */}
-                      {(currentPlan === 'ENTERPRISE' || isTrialActive) ? (
+                      {(currentPlan === 'ENTERPRISE') ? (
                         <button
                           onClick={() => {
                             setViewingPromptBanner(banner)

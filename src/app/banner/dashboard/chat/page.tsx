@@ -11,6 +11,7 @@ import toast from 'react-hot-toast'
 import BannerLimitModal from '@/components/banner/BannerLimitModal'
 import { useBannerQuota } from '@/components/banner/useBannerQuota'
 import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
+import { getBannerMaxImagesPerRequest } from '@/lib/pricing'
 
 type ChatMsg = {
   id: string
@@ -191,18 +192,16 @@ export default function BannerChatPage() {
 
   const canSend = input.trim().length > 0 && !isThinking && !isGenerating && !isRefining
 
-  const isGuest = !session
   const bannerPlan = session
     ? String((session.user as any)?.bannerPlan || (session.user as any)?.plan || 'FREE').toUpperCase()
     : 'GUEST'
-  const isProUser = !isGuest && bannerPlan === 'PRO'
+  const maxCount = getBannerMaxImagesPerRequest(bannerPlan)
 
   useEffect(() => {
     // Keep the last one or two monthly credits usable; the API allows counts from one.
-    const max = isProUser ? 10 : 3
     if (generateCount < 1) setGenerateCount(1)
-    if (generateCount > max) setGenerateCount(max)
-  }, [isProUser, generateCount])
+    if (generateCount > maxCount) setGenerateCount(maxCount)
+  }, [maxCount, generateCount])
 
   const summary = useMemo(() => {
     if (!proposedSpec) return null
@@ -826,7 +825,7 @@ export default function BannerChatPage() {
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">生成枚数</p>
                         <div className="flex items-start justify-between gap-4">
                           <p className="text-xs text-slate-600 font-bold leading-relaxed">
-                            デフォルト3枚（A/B/C）。有料プランは最大10枚まで。<span className="text-slate-900">枚数が多いほど時間がかかります。</span>
+                            デフォルト3枚（A/B/C）。PROは最大5枚、Enterpriseは最大10枚。<span className="text-slate-900">枚数が多いほど時間がかかります。</span>
                           </p>
                           <p className="text-xs font-black text-slate-900 tabular-nums whitespace-nowrap">{generateCount}枚</p>
                         </div>
@@ -835,7 +834,7 @@ export default function BannerChatPage() {
                             <button
                               key={n}
                               type="button"
-                              disabled={!isProUser && n > 3}
+                              disabled={n > maxCount}
                               onClick={() => setGenerateCount(n)}
                               className={`px-3 py-2 rounded-xl text-xs font-black border transition-colors ${
                                 generateCount === n
@@ -847,9 +846,9 @@ export default function BannerChatPage() {
                             </button>
                           ))}
                         </div>
-                        {!isProUser && (
+                        {maxCount === 3 && (
                           <p className="mt-3 text-[11px] text-slate-500 font-medium">
-                            ※ 4枚以上は有料プラン限定です。
+                            ※ 4枚以上はPROプラン以上で利用できます。
                           </p>
                         )}
                       </div>
@@ -1010,4 +1009,3 @@ export default function BannerChatPage() {
     </div>
   )
 }
-

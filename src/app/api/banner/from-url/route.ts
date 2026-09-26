@@ -5,7 +5,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { generateBanners, isNanobannerConfigured, getModelDisplayName } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
-import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, shouldResetMonthlyUsage, getCurrentMonthJST, isWithinFreeHour } from '@/lib/pricing'
+import { BANNER_PRICING, HIGH_USAGE_CONTACT_URL, getBannerMonthlyLimitByUserPlan, getBannerMaxImagesPerRequest, shouldResetMonthlyUsage, getCurrentMonthJST, isWithinFreeHour } from '@/lib/pricing'
 import { reserveBannerMonthlyImages, releaseBannerMonthlyImages, type BannerReservation } from '@/lib/banner/monthly-quota'
 import { isFirstServiceUse, notifyFirstServiceUse, notifyServiceActivity } from '@/lib/service-usage'
 import crypto from 'crypto'
@@ -1439,7 +1439,7 @@ export async function POST(request: NextRequest) {
     // ==============================
     // 枚数/サイズの強制（改ざん対策）
     // - 無料/ゲスト：1〜3枚・1080x1080固定
-    // - 有料または1時間生成し放題中：1〜10枚、サイズ指定可（範囲チェック）
+    // - プラン別の1回上限は予約時に強制（LIGHT 3 / PRO 5 / Enterprise 10）
     // ==============================
     const canUseUnlimited = isPaidUser || isFreeHourActive
     let desiredCount = canUseUnlimited
@@ -1480,7 +1480,7 @@ export async function POST(request: NextRequest) {
           const actualPlan = planRaw
           const monthlyLimit = getBannerMonthlyLimitByUserPlan(actualPlan)
           const used = shouldResetMonthlyUsage(bannerSub?.lastUsageReset) ? 0 : bannerSub?.monthlyUsage || 0
-          const previewCount = Math.min(desiredCount, isPaidUser ? 10 : 3)
+          const previewCount = Math.min(desiredCount, getBannerMaxImagesPerRequest(actualPlan))
           if (monthlyLimit >= 0 && used + previewCount > monthlyLimit) {
             return NextResponse.json(
               {

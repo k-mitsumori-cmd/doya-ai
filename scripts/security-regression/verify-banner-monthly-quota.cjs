@@ -61,15 +61,25 @@ function fixture(initial = null, accountPlan = 'FREE') {
   const pro = fixture({ id: 'banner-sub', plan: 'PRO', monthlyUsage: 140, lastUsageReset: new Date() })
   const paid = await reserveBannerMonthlyImages('u3', 50, pro.db)
   assert.equal(paid.state, 'reserved')
-  assert.equal(paid.reservation.count, 10)
+  assert.equal(paid.reservation.count, 5)
+  assert.equal(pro.row.monthlyUsage, 145)
+  assert.equal((await reserveBannerMonthlyImages('u3', 50, pro.db)).state, 'reserved')
   assert.equal(pro.row.monthlyUsage, 150)
   assert.equal((await reserveBannerMonthlyImages('u3', 1, pro.db)).state, 'limit')
+
+  for (const [plan, expected] of [['LIGHT', 3], ['ENTERPRISE', 10], ['BUNDLE', 5]]) {
+    const paidPlan = fixture({ id: 'banner-sub', plan, monthlyUsage: 0, lastUsageReset: new Date() })
+    const claim = await reserveBannerMonthlyImages(`u-${plan}`, 50, paidPlan.db)
+    assert.equal(claim.state, 'reserved')
+    assert.equal(claim.reservation.count, expected, `${plan} images per request`)
+    assert.equal(paidPlan.row.monthlyUsage, expected)
+  }
 
   const newPaid = fixture(null, 'PRO')
   const paidFirstUse = await reserveBannerMonthlyImages('u6', 10, newPaid.db)
   assert.equal(paidFirstUse.state, 'reserved')
   assert.equal(newPaid.row.plan, 'PRO')
-  assert.equal(newPaid.row.monthlyUsage, 10)
+  assert.equal(newPaid.row.monthlyUsage, 5)
 
   const reset = fixture({ id: 'banner-sub', plan: 'FREE', monthlyUsage: 15, lastUsageReset: new Date() })
   const blocked = await reserveBannerMonthlyImages('u4', 1, reset.db)
@@ -94,5 +104,17 @@ function fixture(initial = null, accountPlan = 'FREE') {
       assert(source.includes('if (reservation && !charged)'), 'failed refinement must refund its reservation')
     }
   }
+  for (const page of ['dashboard/page.tsx', 'test/page.tsx']) {
+    const source = fs.readFileSync(path.join(root, 'src/app/banner', page), 'utf8')
+    assert(!source.includes('bannerTrialStartTime'), `${page} must not grant a local-only free hour`)
+    assert(!source.includes('isTrialActive'), `${page} must not treat a free user as ENTERPRISE`)
+    assert(source.includes('[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((num)'), `${page} must allow one remaining credit and all ENTERPRISE batch sizes`)
+  }
+  for (const page of ['dashboard/create/page.tsx', 'dashboard/chat/page.tsx', 'url/page.tsx']) {
+    const source = fs.readFileSync(path.join(root, 'src/app/banner', page), 'utf8')
+    assert(source.includes('getBannerMaxImagesPerRequest('), `${page} must use the server batch cap`)
+  }
+  const fromUrl = fs.readFileSync(path.join(root, 'src/app/api/banner/from-url/route.ts'), 'utf8')
+  assert(fromUrl.includes('Math.min(desiredCount, getBannerMaxImagesPerRequest(actualPlan))'), 'URL preview must not reject a batch larger than the server will generate')
   console.log('PASS banner quota atomically limits parallel calls, resets JST month, clamps paid count, and fails closed on DB errors')
 })().catch(error => { console.error(error); process.exitCode = 1 })
