@@ -3,7 +3,7 @@ const { load } = require('./load-typescript.cjs')
 
 const templateAccess = load('src/lib/banner/template-access.ts')
 
-function fixture(plan, customPrompt, templateId = 't1', dbError = false) {
+function fixture(plan, customPrompt, templateId = 't1', dbError = false, atLimit = false) {
   let modelCalls = 0
   const modelPrompts = []
   const releases = []
@@ -21,8 +21,9 @@ function fixture(plan, customPrompt, templateId = 't1', dbError = false) {
     } } } },
     '@/lib/banner-prompts-v2': { BANNER_PROMPTS_V2: [{ id: 't1', fullPrompt: '公式テンプレートの見た目、余白、配色、文字組み、写真の配置を維持して制作する。十分な長さを持つデザイン指示です。' }] },
     '@/lib/banner/template-access': templateAccess,
+    '@/lib/pricing': { HIGH_USAGE_CONTACT_URL: 'https://example.test/contact' },
     '@/lib/banner/monthly-quota': {
-      reserveBannerMonthlyImages: async () => ({ state: 'reserved', reservation }),
+      reserveBannerMonthlyImages: async () => atLimit ? { state: 'limit', plan, usage: reservation.usage } : { state: 'reserved', reservation },
       releaseBannerMonthlyImages: async (_, count) => { releases.push(count) },
     },
     '@/lib/nanobanner': { generateBanners: async (_, __, ___, options) => { modelCalls++; modelPrompts.push(options.customImagePrompt); return { banners: ['data:image/png;base64,AAAA'] } } },
@@ -76,5 +77,12 @@ function fixture(plan, customPrompt, templateId = 't1', dbError = false) {
   run = fixture('ENTERPRISE', '有料の詳細指示')
   assert.equal((await run.api.POST(run.request)).status, 200)
   assert.equal(run.modelCalls, 1)
-  console.log('PASS template generation enforces plan tiers, canonical prompts, and Enterprise instructions before paid image calls')
+  for (const plan of ['FREE', 'PRO']) {
+    run = fixture(plan, undefined, 't1', false, true)
+    const blocked = await run.api.POST(run.request)
+    assert.equal(blocked.status, 429)
+    assert.equal((await blocked.json()).upgradeUrl, plan === 'FREE' ? '/banner/pricing' : 'https://example.test/contact')
+    assert.equal(run.modelCalls, 0)
+  }
+  console.log('PASS template generation enforces plan tiers, canonical prompts, quota guidance and Enterprise instructions before paid image calls')
 })().catch(error => { console.error(error); process.exitCode = 1 })

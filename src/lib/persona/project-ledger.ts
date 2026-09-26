@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto'
 import type { PrismaClient, Prisma } from '@prisma/client'
 import { getPersonaDailyLimitByUserPlan, isWithinFreeHour } from '@/lib/pricing'
+import { isPaidPlan } from '@/lib/unified-plan'
 import { includedPersonaImages } from './image-entitlements'
 import { personaUsageDay } from './usage-day'
 
@@ -36,7 +37,7 @@ export async function reservePersonaProject(db: PrismaClient, input: ProjectInpu
     const limit = getPersonaDailyLimitByUserPlan(user.plan)
     const used = bucket.used + bucket.reserved
     if (limit >= 0 && !isWithinFreeHour(user.firstLoginAt) && used >= limit) {
-      return { state: 'limit' as const, used, limit, resetAt: new Date(day.getTime() + 86400000).toISOString() }
+      return { state: 'limit' as const, used, limit, resetAt: new Date(day.getTime() + 86400000).toISOString(), upgradeAvailable: !isPaidPlan(user.plan) }
     }
     const lease = { status: 'pending', usageDay: day, leaseToken: randomUUID(), leaseExpiresAt: new Date(now.getTime() + 15 * 60000), failureCode: null }
     const project = existing

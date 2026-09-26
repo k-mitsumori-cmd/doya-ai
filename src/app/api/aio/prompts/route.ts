@@ -48,6 +48,6 @@ export async function POST(req: NextRequest) {
     return { kind: 'created', prompt } as const
   })
   if (result.kind === 'billing') return NextResponse.json({ error: '組織の契約情報を確認できません。組織オーナーにお問い合わせください。', code: 'BILLING_OWNER' }, { status: 409 })
-  if (result.kind === 'limit') return NextResponse.json({ error: `無料プランは監視プロンプト${FREE_PROMPT_LIMIT}件までです。組織オーナーのプランをアップグレードしてください。`, code: 'LIMIT', upgradeUrl: '/aio/pricing' }, { status: 402 })
+  if (result.kind === 'limit') return NextResponse.json({ error: `無料プランは監視プロンプト${FREE_PROMPT_LIMIT}件までです。組織オーナーのプランをアップグレードしてください。`, code: 'LIMIT', canManageBilling: ctx.role === 'owner', ...(ctx.role === 'owner' ? { upgradeUrl: '/aio/pricing' } : {}) }, { status: 402 })
   return NextResponse.json({ ok: true, prompt: result.prompt })
 }

@@ -63,6 +63,7 @@ function fixture(initialUsed = 4, plan = 'FREE') {
     assert.equal(response.status, 402)
     assert.match(response.body.error, /お問い合わせ/)
     assert.doesNotMatch(response.body.error, /プロプランにご登録/)
+    assert.equal(response.body.upgradeUrl, undefined)
     assert.equal(f.researchCalls, 0)
   })
 })().catch((error) => { console.error(error); process.exitCode = 1 })

@@ -31,6 +31,7 @@ export interface RunAndPersistResult {
   error?: string
   // 失敗理由の機械可読コード（INFLIGHT=実行中で拒否 等）。呼び出し側でHTTPステータスを出し分ける用。
   code?: string
+  upgradeAvailable?: boolean
 }
 
 /**
@@ -98,7 +99,7 @@ export async function runAndPersistScan(
     const used = await tx.aioScan.count({
       where: { organizationId, createdAt: { gte: quota.since }, status: { not: 'failed' } },
     })
-    if (used >= quota.limit) return { kind: 'limit', error: quota.error } as const
+    if (used >= quota.limit) return { kind: 'limit', error: quota.error, upgradeAvailable: !quota.paid } as const
     const scan = await tx.aioScan.create({
       data: { organizationId, status: 'processing', engines: engines as any, repetitions },
     })
@@ -111,7 +112,7 @@ export async function runAndPersistScan(
   }
   if (reservation.kind === 'billing') return { id: '', status: 'failed', code: 'BILLING_OWNER', error: '組織の契約情報を確認できません。組織オーナーにお問い合わせください。' }
   if (reservation.kind === 'unpaid') return { id: '', status: 'failed', code: 'PAID_REQUIRED', error: '定期スキャンは有料プランの組織で利用できます。' }
-  if (reservation.kind === 'limit') return { id: '', status: 'failed', code: 'LIMIT', error: reservation.error }
+  if (reservation.kind === 'limit') return { id: '', status: 'failed', code: 'LIMIT', error: reservation.error, upgradeAvailable: reservation.upgradeAvailable }
   const scan = reservation.scan
 
   try {

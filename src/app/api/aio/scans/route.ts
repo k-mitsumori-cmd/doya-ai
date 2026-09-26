@@ -57,7 +57,8 @@ export async function POST(req: NextRequest) {
   if (result.status === 'failed') {
     if (result.code === 'PROMPT_LIMIT') return NextResponse.json({ error: result.error, code: result.code }, { status: 400 })
     if (result.code === 'LIMIT') {
-      return NextResponse.json({ error: result.error, code: 'LIMIT', upgradeUrl: '/aio/pricing' }, { status: 402 })
+      const canManageBilling = ctx.role === 'owner'
+      return NextResponse.json({ error: result.error, code: 'LIMIT', canManageBilling, ...(canManageBilling && result.upgradeAvailable ? { upgradeUrl: '/aio/pricing' } : {}) }, { status: 402 })
     }
     if (result.code === 'BILLING_OWNER') {
       return NextResponse.json({ error: result.error, code: result.code }, { status: 409 })

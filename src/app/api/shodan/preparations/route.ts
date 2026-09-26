@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
     const reason = isPaidPlan(user?.plan)
       ? `今月の上限（${reservation.limit}件）に達しました。来月1日に枠が戻ります。追加をご希望の場合はお問い合わせよりご相談ください。`
       : `無料プランは月${reservation.limit}件までです。プロプランにご登録いただくと上限が広がります。`
-    return NextResponse.json({ error: reason, code: 'LIMIT', upgradeUrl: '/shodan/pricing' }, { status: 402 })
+    return NextResponse.json({ error: reason, code: 'LIMIT', ...(!isPaidPlan(user?.plan) ? { upgradeUrl: '/shodan/pricing' } : {}) }, { status: 402 })
   }
 
   // 外部調査は組織ロックを解放してから実行する。

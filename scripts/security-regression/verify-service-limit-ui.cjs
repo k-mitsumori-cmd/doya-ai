@@ -36,6 +36,7 @@ const fixtureMessages=[
  });
  for(const [s,status,error] of fixtureMessages)await check(s+' actual quota wording: '+error.slice(0,20),async()=>assert.ok(classify('/api/'+s+'/generate',status,{error})));
  await check('billing-independent workspace cap offers cleanup',async()=>assert.equal(classify('/api/aio/quick-start',402,{code:'LIMIT',error:'登録できるワークスペースの上限（3件）に達しました。不要なワークスペースを整理してください。'}).kind,'capacity'));
+ await check('AIO organization quota sends members to the owner',async()=>{const body={code:'LIMIT',error:'無料プランは直近7日間で1回までです。'};assert.equal(classify('/api/aio/scans',402,{...body,canManageBilling:false}).kind,'owner');assert.equal(classify('/api/aio/scans',402,{...body,canManageBilling:true}).kind,'quota')});
  await check('public participant is directed to contract owner',async()=>assert.equal(classify('/api/aishodan/room/token/start',429,{error:fixtureMessages[19][2]}).kind,'owner'));
  await check('HR organization allowance directs owner to organization billing and member to owner',async()=>{
   for(const [path,code,error] of [['employees','HR_ORG_EMPLOYEE_LIMIT','従業員数の上限（5名）に達しています。'],['organization/invite','HR_ORG_MEMBER_LIMIT','メンバー数の上限（2名）に達しています。'],['evaluations/id/ai-comment','HR_ORG_AI_LIMIT','AI機能の月間利用回数（3回）に達しています。']]){

@@ -6,6 +6,7 @@ import { generateBanners } from '@/lib/nanobanner'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PROMPTS_V2 } from '@/lib/banner-prompts-v2'
 import { canUseBannerTemplate } from '@/lib/banner/template-access'
+import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 
 export const runtime = 'nodejs'
 export const maxDuration = 300
@@ -256,7 +257,8 @@ export async function POST(request: NextRequest) {
       }
       if (claim.state === 'limit') return NextResponse.json({
         error: `今月の生成枚数の上限（${claim.usage.monthlyLimit}枚）に達しました。`,
-        code: 'MONTHLY_LIMIT_REACHED', usage: claim.usage, upgradeUrl: '/banner/pricing',
+        code: 'MONTHLY_LIMIT_REACHED', usage: claim.usage,
+        upgradeUrl: claim.plan === 'FREE' ? '/banner/pricing' : (HIGH_USAGE_CONTACT_URL || '/banner/pricing'),
       }, { status: 429 })
       reservation = claim.reservation
       targetCount = reservation.count
