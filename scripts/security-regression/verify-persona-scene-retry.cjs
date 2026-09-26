@@ -15,4 +15,16 @@ const compiled=ts.transpileModule('('+callback+');',{compilerOptions:{target:ts.
  else if(['success','save-fails'].includes(scenario)){assert.equal(images['scene-1'],'image');assert.equal(loading['scene-1'],false);assert.equal(errors['scene-1'],'')}
  else{assert.ok(errors['scene-1']);assert.equal(loading['scene-1'],false);assert.equal(images['scene-1'],undefined);assert.equal(saved,0);const retry=run(env.scenePrompts.current['scene-1'],'scene-1');assert.equal(pending.length,2);assert.deepEqual(pending[1].body,pending[0].body);pending[1].resolve(Response.json({success:true,image:'recovered'}));await retry;assert.equal(images['scene-1'],'recovered');assert.equal(errors['scene-1'],'');assert.equal(saved,1)}
  console.log('PASS scene',scenario);
-}})().catch(e=>{console.error(e);process.exitCode=1});
+ }
+ const persona={persona:{name:'A'}}, pending=[];let notice=null,images={};
+ const env={crypto:require('node:crypto'),PersonaQuotaError:class PersonaQuotaError extends Error {},generatedData:persona,currentPersona:{current:persona},imageAttempts:{current:{}},sceneImages:{'extra-1':'previous-image'},currentRecordId:{current:'a'},imageRequests:{current:{}},scenePending:{current:new Set()},scenePrompts:{current:{}},setSceneErrors(){},setSceneImages:f=>images=f(images),setSceneLoading(){},setError(){},setQuotaNotice:v=>notice=typeof v==='function'?v(notice):v,accountStorage:{},savePersonaImage(){},toFriendlyError:e=>e.message,fetch:()=>new Promise(resolve=>pending.push(resolve))};
+ const run=vm.runInNewContext(compiled,env);
+ const denied=run('extra scene','extra-1');const included=run('included scene','included-1');assert.equal(pending.length,2);
+ pending[0](Response.json({code:'DAILY_LIMIT_REACHED',error:'本日の画像上限に達しました'},{status:429}));await denied;
+ assert.equal(notice,'image','quota response must show the image limit');
+ pending[1](Response.json({success:true,image:'included-image'}));await included;
+ assert.equal(images['included-1'],'included-image');assert.equal(notice,'image','included image success must not clear a concurrent quota notice');
+ const regenerated=run('extra scene','extra-1');pending[2](Response.json({success:true,image:'regenerated-image'}));await regenerated;
+ assert.equal(images['extra-1'],'regenerated-image');assert.equal(notice,null,'successful regeneration clears its own quota notice');
+ console.log('PASS concurrent included image preserves quota notice until regeneration succeeds');
+})().catch(e=>{console.error(e);process.exitCode=1});

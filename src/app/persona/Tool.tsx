@@ -591,7 +591,7 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
       }
 
       if (data.success && data.image) {
-        setQuotaNotice(null)
+        if (intent !== 'included') setQuotaNotice(current => current === 'image' ? null : current)
         delete imageAttempts.current.portrait
         setPortraitImage(data.image)
         try {
@@ -644,7 +644,7 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
         throw data?.code === 'DAILY_LIMIT_REACHED' ? new PersonaQuotaError(message) : new Error(message)
       }
       if (data.image) {
-        setQuotaNotice(null)
+        if (intent !== 'included') setQuotaNotice(current => current === 'image' ? null : current)
         delete imageAttempts.current[sceneKey]
         setSceneImages(prev => isCurrent() ? { ...prev, [sceneKey]: data.image } : prev)
         try {
