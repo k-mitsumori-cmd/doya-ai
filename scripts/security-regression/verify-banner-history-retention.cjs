@@ -33,6 +33,7 @@ const history = load('src/app/api/banner/history/route.ts', {
   '@/lib/auth': { authOptions: {} },
   '@/lib/prisma': { prisma },
   '@/lib/banner/history-access': access,
+  '@/lib/banner/legacy-history': load('src/lib/banner/legacy-history.ts'),
   '@/lib/banner/history-cursor': load('src/lib/banner/history-cursor.ts'),
   sharp: () => { throw new Error('image processing is not needed') },
 })

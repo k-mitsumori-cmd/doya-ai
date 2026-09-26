@@ -34,6 +34,7 @@ const route = load('src/app/api/banner/history/route.ts', {
   'next-auth': { getServerSession: async () => ({ user: { id: 'owner', bannerPlan: 'PRO', plan: 'PRO' } }) },
   '@/lib/auth': { authOptions: {} }, '@/lib/prisma': { prisma },
   '@/lib/banner/history-access': access,
+  '@/lib/banner/legacy-history': load('src/lib/banner/legacy-history.ts'),
   '@/lib/banner/history-cursor': cursors,
   sharp: () => { throw new Error('image processing is not needed') },
 })

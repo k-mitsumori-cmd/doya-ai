@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma'
 import sharp from 'sharp'
 import { decodeBannerHistoryCursor, encodeBannerHistoryCursor } from '@/lib/banner/history-cursor'
 import { bannerHistoryCutoff } from '@/lib/banner/history-access'
+import { matchesLegacyBannerBatch, parseLegacyBannerBatchId } from '@/lib/banner/legacy-history'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -27,6 +28,31 @@ type HistoryBatch = {
   // 一覧表示用（最初の数枚だけ）: 画像は別APIでバイナリ配信
   previewThumbs?: string[]
   previewIds?: string[]
+}
+
+async function legacyBannerIds(userId: string, batchId: string, cutoffDate: Date): Promise<string[] | null> {
+  const legacy = parseLegacyBannerBatchId(batchId)
+  if (!legacy) return null
+  const ids: string[] = []
+  let cursor: { id: string; createdAt: Date } | null = null
+  // Scan only this user's images in the encoded minute. Select no image body until matching IDs are known.
+  for (;;) {
+    const rows: { id: string; createdAt: Date; input: unknown; metadata: unknown }[] = await prisma.generation.findMany({
+      where: {
+        userId, serviceId: 'banner', outputType: 'IMAGE',
+        createdAt: { gte: legacy.start > cutoffDate ? legacy.start : cutoffDate, lte: legacy.end },
+        ...(cursor ? { OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }] } : {}),
+      },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 101,
+      select: { id: true, createdAt: true, input: true, metadata: true },
+    })
+    const page = rows.slice(0, 100)
+    for (const row of page) if (matchesLegacyBannerBatch(row, legacy.keyword, legacy.size)) ids.push(row.id)
+    if (rows.length <= 100) break
+    cursor = { id: page[page.length - 1].id, createdAt: page[page.length - 1].createdAt }
+  }
+  return ids
 }
 
 async function toJpegThumbDataUrl(output: unknown): Promise<string | null> {
@@ -85,39 +111,15 @@ export async function GET(request: NextRequest) {
           metadata: { path: ['batchId'], equals: batchIdParam },
         },
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        take: 12,
-        select: { id: true, output: true, createdAt: true, input: true, metadata: true },
+        select: { id: true },
       })
 
       // 古いデータ救済：fallback key（YYYY-MM-DDTHH:MM|keyword|size）でも探す
       let rows = rowsByBatch
-      if (rows.length === 0 && batchIdParam.includes('|')) {
-        const [tsPart, kwPart, sizePart] = batchIdParam.split('|')
-        if (tsPart && kwPart !== undefined && sizePart !== undefined) {
-          const start = new Date(`${tsPart}:00.000Z`)
-          const end = new Date(`${tsPart}:59.999Z`)
-          rows = await prisma.generation.findMany({
-            where: {
-              userId,
-              serviceId: 'banner',
-              outputType: 'IMAGE',
-              createdAt: { gte: start > cutoffDate ? start : cutoffDate, lte: end },
-            },
-            orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-            take: 12,
-            select: { id: true, output: true, createdAt: true, input: true, metadata: true },
-          })
-            // keyword/size が一致するものだけ残す
-            .then((rs) =>
-              rs.filter((r) => {
-                const meta: any = r.metadata || {}
-                const input: any = r.input || {}
-                const kw = String(input?.keyword || meta?.keyword || '')
-                const sz = String(input?.size || meta?.size || '')
-                return kw === kwPart && sz === sizePart
-              })
-            )
-        }
+      if (batchIdParam.includes('|')) {
+        const ids = await legacyBannerIds(userId, batchIdParam, cutoffDate)
+        if (ids === null && rows.length === 0) return NextResponse.json({ error: '履歴の識別子が不正です' }, { status: 400 })
+        if (ids) rows = [...rows, ...ids.map(id => ({ id }))]
       }
 
       // 返却は「サムネURL」にしてJSONを軽くする（画像は別APIでバイナリ配信）
@@ -240,48 +242,21 @@ export async function DELETE(request: NextRequest) {
     const batchId = searchParams.get('batchId') || ''
     if (!batchId) return NextResponse.json({ error: 'batchId is required' }, { status: 400 })
 
-    // metadata.batchId が一致するものを削除（自分の分だけ）
-    const deleted = await prisma.generation.deleteMany({
+    // 旧形式は先に対象を確定し、新旧の画像を一度の削除で扱う。
+    const legacyIds = batchId.includes('|') ? await legacyBannerIds(userId, batchId, new Date(0)) : []
+    if (legacyIds === null) return NextResponse.json({ error: '履歴の識別子が不正です' }, { status: 400 })
+
+    await prisma.generation.deleteMany({
       where: {
         userId,
         serviceId: 'banner',
         outputType: 'IMAGE',
-        metadata: { path: ['batchId'], equals: batchId },
+        OR: [
+          { metadata: { path: ['batchId'], equals: batchId } },
+          ...(legacyIds.length > 0 ? [{ id: { in: legacyIds } }] : []),
+        ],
       },
     })
-
-    // 古いデータ救済（fallback key）の場合
-    if (deleted.count === 0 && batchId.includes('|')) {
-      const [tsPart, kwPart, sizePart] = batchId.split('|')
-      if (tsPart && kwPart !== undefined && sizePart !== undefined) {
-        const start = new Date(`${tsPart}:00.000Z`)
-        const end = new Date(`${tsPart}:59.999Z`)
-        const rows = await prisma.generation.findMany({
-          where: {
-            userId,
-            serviceId: 'banner',
-            outputType: 'IMAGE',
-            createdAt: { gte: start, lte: end },
-          },
-          select: { id: true, input: true, metadata: true },
-          take: 20,
-        })
-        const ids = rows
-          .filter((r) => {
-            const meta: any = r.metadata || {}
-            const input: any = r.input || {}
-            const kw = String(input?.keyword || meta?.keyword || '')
-            const sz = String(input?.size || meta?.size || '')
-            return kw === kwPart && sz === sizePart
-          })
-          .map((r) => r.id)
-        if (ids.length > 0) {
-          await prisma.generation.deleteMany({
-            where: { id: { in: ids }, userId, serviceId: 'banner', outputType: 'IMAGE' },
-          })
-        }
-      }
-    }
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
