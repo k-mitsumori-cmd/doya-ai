@@ -56,7 +56,7 @@ export async function getCunningUsage(userId: string): Promise<CunningUsage> {
 }
 
 /** セッション開始可否（当月の利用時間が上限内か）。上限到達なら理由を返す。 */
-export async function canStartSession(userId: string): Promise<{ ok: boolean; reason?: string; code?: 'LIMIT' | 'RECORDING_RESERVED' }> {
+export async function canStartSession(userId: string): Promise<{ ok: boolean; reason?: string; code?: 'LIMIT' | 'RECORDING_RESERVED'; upgradeAvailable?: boolean }> {
   const usage = await readCunningRecordingUsage(prisma, userId)
   if (!usage) return { ok: false, reason: 'ログインが必要です' }
   const { limits } = usage
@@ -67,6 +67,7 @@ export async function canStartSession(userId: string): Promise<{ ok: boolean; re
     return {
       ok: false,
       code: 'LIMIT',
+      upgradeAvailable: limits.tier === 'FREE',
       reason: limits.tier === 'FREE'
         ? `今月の利用時間の上限（${limits.maxMinutesPerMonth}分）に達しました。プロプランで上限を増やせます。`
         : `今月の利用時間の上限（${limits.maxMinutesPerMonth}分）に達しました。来月1日に枠が戻ります。追加をご希望の場合はお問い合わせください。`,

@@ -17,8 +17,8 @@ export default function ServiceLimitProvider() {
   const panel = useRef<HTMLDivElement>(null)
   const eligible = useTrialEligible()
   const sessionPlan = (session?.user as any)?.plan
-  // LIGHT は有料でも PRO へのアップグレード余地がある。
-  const paid = isPaidPlan(sessionPlan) && tierFrom(sessionPlan) !== 'LIGHT'
+  // LIGHT は通常 PRO への余地があるが、カンニングの録音枠は両プランで同じ。
+  const paid = isPaidPlan(sessionPlan) && (tierFrom(sessionPlan) !== 'LIGHT' || limit?.service === 'cunning')
   const dismiss = () => setNotice(null)
 
   useEffect(() => {

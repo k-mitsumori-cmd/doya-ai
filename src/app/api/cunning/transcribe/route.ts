@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     } else {
       if (session.status !== 'active') return NextResponse.json({ error: '終了したセッションでは文字起こしできません' }, { status: 409 })
       const allowance = await canStartSession(userId)
-      if (!allowance.ok) return NextResponse.json({ error: allowance.reason, code: allowance.code ?? 'LIMIT', ...(allowance.code === 'RECORDING_RESERVED' ? {} : { upgradeUrl: '/cunning/pricing' }) }, { status: 403 })
+      if (!allowance.ok) return NextResponse.json({ error: allowance.reason, code: allowance.code ?? 'LIMIT', ...(allowance.upgradeAvailable ? { upgradeUrl: '/cunning/pricing' } : {}) }, { status: 403 })
     }
 
     const { text } = await transcribeChunk(audio, { filename: 'chunk.webm', language })

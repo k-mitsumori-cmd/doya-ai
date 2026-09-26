@@ -47,7 +47,7 @@ export async function readCunningRecordingUsage(db: PrismaClient, userId: string
 }
 
 type Command = { action: 'start'; requestKey: string } | { action: 'heartbeat' | 'stop'; token: string }
-type Result = { state: 'active'; token: string; expiresAt: Date; validForMs: number } | { state: 'missing' | 'conflict' | 'stopped' | 'limit' | 'legacy' }
+type Result = { state: 'active'; token: string; expiresAt: Date; validForMs: number } | { state: 'limit'; upgradeAvailable: boolean } | { state: 'missing' | 'conflict' | 'stopped' | 'legacy' }
 
 async function closeExpired(tx: Prisma.TransactionClient, lease: CunningRecordingLease) {
   await tx.cunningRecordingLease.update({ where: { sessionId: lease.sessionId }, data: { stoppedAt: lease.expiresAt } })
@@ -131,7 +131,7 @@ export async function updateCunningRecording(db: PrismaClient, userId: string, s
         await tx.cunningRecordingLease.update({ where: { sessionId }, data: { stoppedAt: clock } })
         await tx.cunningSession.updateMany({ where: { id: sessionId, status: 'active' }, data: { status: 'ended', endedAt: clock } })
       }
-      return { state: 'limit' }
+      return { state: 'limit', upgradeAvailable: tierFrom(user.plan) === 'FREE' }
     }
     const expiresAt = new Date(clock.getTime() + allowedMs)
     if (!lease) lease = await tx.cunningRecordingLease.create({ data: { sessionId, userId, requestKey: key, token: randomUUID(), startedAt: clock, settledThrough: clock, expiresAt } })

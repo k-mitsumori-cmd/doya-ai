@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
   const can = await canStartSession(userId)
-  if (!can.ok) return NextResponse.json({ error: can.reason, code: can.code, ...(can.code === 'LIMIT' ? { upgradeUrl: '/cunning/pricing' } : {}) }, { status: 403 })
+  if (!can.ok) return NextResponse.json({ error: can.reason, code: can.code, ...(can.upgradeAvailable ? { upgradeUrl: '/cunning/pricing' } : {}) }, { status: 403 })
 
   let input: ReturnType<typeof parseCunningSessionInput>
   try { input = parseCunningSessionInput(await req.json()) }

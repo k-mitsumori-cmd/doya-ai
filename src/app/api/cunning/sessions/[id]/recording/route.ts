@@ -25,7 +25,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const result = await updateCunningRecording(prisma, userId, id, command)
     if (result.state === 'active' || (result.state === 'stopped' && input.action === 'stop')) return Response.json(result, { headers })
     if (result.state === 'missing') return Response.json({ error: 'セッションが見つかりません' }, { status: 404, headers })
-    if (result.state === 'limit') return Response.json({ error: '今月の利用時間の上限に達しました。', code: 'LIMIT', upgradeUrl: '/cunning/pricing' }, { status: 403, headers })
+    if (result.state === 'limit') return Response.json({ error: result.upgradeAvailable ? '今月の利用時間の上限に達しました。プロプランで上限を増やせます。' : '今月の利用時間の上限に達しました。来月1日に枠が戻ります。追加をご希望の場合はお問い合わせください。', code: 'LIMIT', ...(result.upgradeAvailable ? { upgradeUrl: '/cunning/pricing' } : {}) }, { status: 403, headers })
     const error = result.state === 'legacy' ? 'このセッションは旧方式です。新しいセッションを開始してください。'
       : result.state === 'conflict' ? '別の録音が開始されているか、録音識別子が無効です。'
       : '録音の有効期限が切れています。新しいセッションを開始してください。'

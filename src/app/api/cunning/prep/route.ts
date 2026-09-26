@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       if (!admission.accepted) return NextResponse.json({ error: '録音の有効期限が切れています。', code: 'RECORDING_ENDED' }, { status: 409 })
     } else {
       const allowance = await canStartSession(userId)
-      if (!allowance.ok) return NextResponse.json({ error: allowance.reason, code: allowance.code ?? 'LIMIT', ...(allowance.code === 'RECORDING_RESERVED' ? {} : { upgradeUrl: '/cunning/pricing' }) }, { status: 403 })
+      if (!allowance.ok) return NextResponse.json({ error: allowance.reason, code: allowance.code ?? 'LIMIT', ...(allowance.upgradeAvailable ? { upgradeUrl: '/cunning/pricing' } : {}) }, { status: 403 })
     }
 
     let chunks: KnowledgeChunkLite[] | undefined

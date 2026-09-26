@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       } else {
         if (ctx.status !== 'active') return NextResponse.json({ error: '終了したセッションでは回答生成できません' }, { status: 409 })
         const allowance = await canStartSession(userId)
-        if (!allowance.ok) return NextResponse.json({ error: allowance.reason, code: allowance.code ?? 'LIMIT', ...(allowance.code === 'RECORDING_RESERVED' ? {} : { upgradeUrl: '/cunning/pricing' }) }, { status: 403 })
+        if (!allowance.ok) return NextResponse.json({ error: allowance.reason, code: allowance.code ?? 'LIMIT', ...(allowance.upgradeAvailable ? { upgradeUrl: '/cunning/pricing' } : {}) }, { status: 403 })
       }
       mode = ctx.mode
       company = ctx.company
