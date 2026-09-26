@@ -82,7 +82,7 @@ export interface NextActionResult {
 }
 
 /** 次アクション提案：停滞・履歴から商談の「次の一手」「失注リスク」と、登録可能なタスク候補を提案。 */
-export async function suggestNextAction(input: NextActionInput): Promise<NextActionResult> {
+export async function suggestNextAction(input: NextActionInput, now = new Date()): Promise<NextActionResult> {
   const facts = [
     `商談名: ${input.dealName}`,
     input.accountName ? `取引先: ${input.accountName}` : '',
@@ -96,8 +96,8 @@ export async function suggestNextAction(input: NextActionInput): Promise<NextAct
   ].filter(Boolean).join('\n')
 
   // 期日提案の基準日（AIに「3日後」等を実日付で計算させる）
-  const today = new Date()
-  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+  const todayJst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  const todayStr = `${todayJst.getUTCFullYear()}-${String(todayJst.getUTCMonth() + 1).padStart(2, '0')}-${String(todayJst.getUTCDate()).padStart(2, '0')}`
 
   const prompt = [
     'あなたは日本のBtoB営業のマネージャーです。次の商談を前に進めるための「次の一手」を提案してください。',
@@ -130,7 +130,10 @@ export async function suggestNextAction(input: NextActionInput): Promise<NextAct
         .map((t) => {
           let due: string | null = null
           if (typeof t.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(t.dueDate)) {
-            due = t.dueDate < todayStr ? todayStr : t.dueDate // 過去日は今日に丸める
+            const parsed = new Date(`${t.dueDate}T00:00:00Z`)
+            if (!Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === t.dueDate) {
+              due = t.dueDate < todayStr ? todayStr : t.dueDate // 過去日は日本時間の今日に丸める
+            }
           }
           return { title: t.title.trim().slice(0, 100), dueDate: due }
         })

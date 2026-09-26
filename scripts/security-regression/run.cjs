@@ -10,6 +10,11 @@ if (quoteWriteRecovery.error || quoteWriteRecovery.status !== 0) {
   console.error('Security regression failed: verify-quote-write-recovery.cjs');
   process.exit(1);
 }
+const sfaNextActionDate = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-next-action-date.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (sfaNextActionDate.error || sfaNextActionDate.status !== 0) {
+  console.error('Security regression failed: verify-sfa-next-action-date.cjs');
+  process.exit(1);
+}
 const sfaAiLimit = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-ai-limit.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaAiLimit.error || sfaAiLimit.status !== 0) {
   console.error('Security regression failed: verify-sfa-ai-limit.cjs');
