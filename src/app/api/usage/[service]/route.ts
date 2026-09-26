@@ -38,7 +38,11 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       if (!summary) return NextResponse.json({ error: '組織の契約情報を確認できません', summary: null }, { status: 409 })
       return NextResponse.json({ signedIn: true, summary }, { headers: { 'Cache-Control': 'private, no-store' } })
     }
-    const summary = await getUsageSummary(service, user.id, user.plan)
+    const orgSlug = new URL(_req.url).searchParams.get('org')?.trim() || undefined
+    const summary = await getUsageSummary(service, user.id, user.plan, orgSlug)
+    if (!summary && orgSlug && ['mensetsu', 'aishodan', 'quote', 'shodan'].includes(service)) {
+      return NextResponse.json({ error: '組織にアクセスできません', summary: null }, { status: 403 })
+    }
     if (!summary) return NextResponse.json({ signedIn: true, summary: null })
     return NextResponse.json({ signedIn: true, summary }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (e) {

@@ -89,22 +89,40 @@ function planLabelOf(plan: string | null | undefined): string {
   return isPaidPlan(p) ? 'プロ' : '無料'
 }
 
-/** 組織スコープ型サービスで、ユーザーが所属する組織のID一覧 */
+/** 上限判定と同じ組織を選ぶ。明示された他組織は null として拒否する。 */
 async function orgIdsOf(
   model: 'mensetsuMember' | 'aishodanMember' | 'quoteMember' | 'shodanMember' | 'aioMember',
-  userId: string
-): Promise<string[]> {
-  // ⚠️ **1組織ぶんだけ返す。** 上限の判定（assertFreeLimit 等）は常に
-  //    「いま見ている組織」1件で行うため、所属する全組織を合算して表示すると、
-  //    2組織に2件ずつある人が「4 / 3 使い切りました」と出るのに
-  //    どちらの組織でもまだ作れる、という食い違いが起きる。
-  // ⚠️ 組織の選択はサービスごとの画面が持っており、サイドバーからは分からない。
-  //    最初に参加した1件（=多くの人にとって唯一の組織）で代表させる。
-  const row = await (prisma as any)[model].findFirst({
-    where: { userId, status: 'ACTIVE' },
-    orderBy: { createdAt: 'asc' },
-    select: { organizationId: true },
-  })
+  userId: string,
+  orgSlug?: string
+): Promise<string[] | null> {
+  const members = (prisma as any)[model]
+  let row
+  if (orgSlug) {
+    row = await members.findFirst({
+      where: { userId, status: 'ACTIVE', organization: { slug: orgSlug } },
+      select: { organizationId: true },
+    })
+    if (!row) return null
+  } else if (model === 'quoteMember' || model === 'aishodanMember') {
+    // 両サービスの access.ts と同じく、自分が作った組織を優先する。
+    row = await members.findFirst({
+      where: { userId, status: 'ACTIVE', role: 'owner' },
+      orderBy: { createdAt: 'asc' },
+      select: { organizationId: true },
+    })
+    row ??= await members.findFirst({
+      where: { userId, status: 'ACTIVE' },
+      orderBy: { createdAt: 'asc' },
+      select: { organizationId: true },
+    })
+  } else {
+    // 面接官・商談準備の既定組織は最後に参加した組織。
+    row = await members.findFirst({
+      where: { userId, status: 'ACTIVE' },
+      orderBy: { createdAt: 'desc' },
+      select: { organizationId: true },
+    })
+  }
   return row ? [row.organizationId] : []
 }
 
@@ -151,7 +169,8 @@ async function orgScoped(opts: {
 export async function getUsageSummary(
   service: string,
   userId: string,
-  plan: string | null | undefined
+  plan: string | null | undefined,
+  orgSlug?: string
 ): Promise<UsageSummary | null> {
   const planLabel = planLabelOf(plan)
 
@@ -231,7 +250,8 @@ export async function getUsageSummary(
 
     // ---- 組織スコープ型 ----
     case 'mensetsu': {
-      const orgIds = await orgIdsOf('mensetsuMember', userId)
+      const orgIds = await orgIdsOf('mensetsuMember', userId, orgSlug)
+      if (!orgIds) return null
       return orgScoped({
         title: '実施した面接',
         unit: '件',
@@ -247,12 +267,22 @@ export async function getUsageSummary(
     }
 
     case 'aishodan': {
-      const orgIds = await orgIdsOf('aishodanMember', userId)
+      const orgIds = await orgIdsOf('aishodanMember', userId, orgSlug)
+      if (!orgIds) return null
+      // 公開商談ルームの上限判定は組織オーナーのプランを使う。
+      const owner = orgIds[0] ? await prisma.aishodanMember.findFirst({
+        where: { organizationId: orgIds[0], status: 'ACTIVE', role: 'owner', userId: { not: null } },
+        select: { userId: true },
+        orderBy: { createdAt: 'asc' },
+      }) : null
+      const ownerPlan = owner?.userId
+        ? (await prisma.user.findUnique({ where: { id: owner.userId }, select: { plan: true } }))?.plan
+        : 'FREE'
       return orgScoped({
         title: '実施した商談',
         unit: '件',
         key: 'aishodanSessions',
-        plan,
+        plan: ownerPlan,
         orgIds,
         countAll: (ids) =>
           prisma.aishodanSession.count({
@@ -270,7 +300,8 @@ export async function getUsageSummary(
     }
 
     case 'quote': {
-      const orgIds = await orgIdsOf('quoteMember', userId)
+      const orgIds = await orgIdsOf('quoteMember', userId, orgSlug)
+      if (!orgIds) return null
       return orgScoped({
         title: '作った見積書',
         unit: '件',
@@ -286,7 +317,8 @@ export async function getUsageSummary(
     }
 
     case 'shodan': {
-      const orgIds = await orgIdsOf('shodanMember', userId)
+      const orgIds = await orgIdsOf('shodanMember', userId, orgSlug)
+      if (!orgIds) return null
       const total = orgIds.length
         ? await prisma.shodanPreparation.count({ where: { organizationId: { in: orgIds } } })
         : 0

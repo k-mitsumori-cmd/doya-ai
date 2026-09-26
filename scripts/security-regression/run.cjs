@@ -20,6 +20,11 @@ if (sfaUsagePlan.error || sfaUsagePlan.status !== 0) {
   console.error('Security regression failed: verify-sfa-usage-plan.cjs');
   process.exit(1);
 }
+const orgUsageSelection = spawnSync(process.execPath, [path.join(__dirname, 'verify-org-usage-selection.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (orgUsageSelection.error || orgUsageSelection.status !== 0) {
+  console.error('Security regression failed: verify-org-usage-selection.cjs');
+  process.exit(1);
+}
 const sfaLimits = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-limits.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaLimits.error || sfaLimits.status !== 0) {
   console.error('Security regression failed: verify-sfa-limits.cjs');

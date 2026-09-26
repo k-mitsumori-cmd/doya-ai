@@ -88,7 +88,7 @@ function ShodanSidebarImpl({ orgSlug, orgName, isCollapsed: controlledIsCollapse
 
           {/* プランバナー */}
           {/* 作った数と残り。数字は /api/usage/shodan から受け取るだけ */}
-          <SidebarUsagePanel service="shodan" show={sessionReady && (isMobile || !isCollapsed)} />
+          <SidebarUsagePanel service="shodan" organizationSlug={orgSlug} show={sessionReady && (isMobile || !isCollapsed)} />
           {sessionReady && (isMobile || !isCollapsed) && (
             <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md relative overflow-hidden">
               <div className="relative z-10">
