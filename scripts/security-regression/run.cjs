@@ -25,6 +25,11 @@ if (hrAiAdmission.error || hrAiAdmission.status !== 0) {
   console.error('Security regression failed: verify-hr-ai-admission.cjs');
   process.exit(1);
 }
+const retiredGenericGenerate = spawnSync(process.execPath, [path.join(__dirname, 'verify-retired-generic-generate.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (retiredGenericGenerate.error || retiredGenericGenerate.status !== 0) {
+  console.error('Security regression failed: verify-retired-generic-generate.cjs');
+  process.exit(1);
+}
 const sfaAiLimit = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-ai-limit.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaAiLimit.error || sfaAiLimit.status !== 0) {
   console.error('Security regression failed: verify-sfa-ai-limit.cjs');

@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { SAMPLE_TEMPLATES } from '@/lib/templates'
 import { generateTextWithGemini, getGeminiModelName } from '@/lib/gemini-text'
 import { recordServiceUsage } from '@/lib/service-usage'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 
 // レート制限用（本番環境ではRedisなどを使用することを推奨）
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
@@ -28,6 +29,7 @@ function checkRateLimit(ip: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  if (SERVICE_RETIRED) return retiredServiceResponse('カンタンマーケAI')
   try {
     const disableLimits = process.env.DOYA_DISABLE_LIMITS === '1'
     // IPアドレスでのレート制限
