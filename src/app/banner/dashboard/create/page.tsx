@@ -1487,6 +1487,17 @@ export default function BannerDashboard() {
       const parsed = await safeReadJson(response)
       const data = parsed.data || {}
       
+      if (parsed.status === 429 && data?.code === 'MONTHLY_LIMIT_REACHED') {
+        quota.acceptLimit(data?.usage)
+        setLimitModal({
+          open: true,
+          used: data?.usage?.monthlyUsed,
+          limit: data?.usage?.monthlyLimit,
+          message: data?.error,
+          upgradeUrl: data?.upgradeUrl,
+        })
+        return
+      }
       if (!parsed.ok || !data.success) {
         const msg = data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || '修正に失敗しました'
         throw new Error(msg)
@@ -1502,6 +1513,7 @@ export default function BannerDashboard() {
       const newBanners = [...generatedBanners]
       newBanners[selectedBanner] = data.refinedImage
       setGeneratedBanners(newBanners)
+      void quota.refresh()
       
       setRefineInstruction('')
       toast.success('バナーを修正しました！')

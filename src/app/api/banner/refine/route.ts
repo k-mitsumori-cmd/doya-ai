@@ -4,6 +4,8 @@ import { authOptions } from '@/lib/auth'
 import sharp from 'sharp'
 import { sendErrorNotification } from '@/lib/notifications'
 import { resolveImageModel } from '@/lib/resolve-image-model'
+import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
+import { reserveBannerMonthlyImages, releaseBannerMonthlyImages, type BannerReservation, type BannerQuotaUsage } from '@/lib/banner/monthly-quota'
 
 /** 画像を1024x1024以内に縮小してAPIに送れるサイズにする（nanobanner.tsの巨大バンドル回避） */
 async function compressForApi(dataUrl: string): Promise<string> {
@@ -56,6 +58,9 @@ interface RefineResponse {
   refinedImage?: string
   error?: string
   message?: string
+  code?: string
+  usage?: BannerQuotaUsage
+  upgradeUrl?: string
 }
 
 function getApiKey(): string {
@@ -102,9 +107,12 @@ async function enforceExactSizePng(dataUrl: string, size?: string): Promise<stri
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse<RefineResponse>> {
+  let reservation: BannerReservation | null = null
+  let charged = false
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    const userId = session?.user?.id
+    if (!userId) {
       return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
     }
 
@@ -128,6 +136,26 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
     const apiKey = getApiKey()
     const compressed = await compressForApi(originalImage)
     const img = parseDataUrl(compressed)
+
+    if (process.env.DOYA_DISABLE_LIMITS !== '1') {
+      let claim
+      try { claim = await reserveBannerMonthlyImages(userId, 1) }
+      catch {
+        console.error('Banner refine quota reservation unavailable')
+        return NextResponse.json({ success: false, error: '生成枠を確認できませんでした。時間をおいて再試行してください。' }, { status: 503 })
+      }
+      if (claim.state === 'limit') {
+        const paid = claim.plan !== 'FREE'
+        return NextResponse.json({
+          success: false,
+          error: paid ? '今月の生成上限に達しました。追加の生成枠についてご相談ください。' : '今月の生成上限に達しました。プランをご確認ください。',
+          code: 'MONTHLY_LIMIT_REACHED',
+          usage: claim.usage,
+          upgradeUrl: paid ? (HIGH_USAGE_CONTACT_URL || '/banner/pricing') : '/banner/pricing',
+        }, { status: 429 })
+      }
+      reservation = claim.reservation
+    }
 
     const prompt = createEditPrompt(instruction, category, size)
     // ⚠️ 環境変数 DOYA_BANNER_IMAGE_MODEL には "nano-banana-pro" という**エイリアス**が入っている。
@@ -184,11 +212,13 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
         const refinedImageRaw = `data:${mimeType};base64,${imgPart.inlineData.data}`
         const refinedImage = await enforceExactSizePng(refinedImageRaw, size)
 
-        return NextResponse.json({
+        const result = NextResponse.json({
           success: true,
           refinedImage,
           message: `Nano Banana Pro で画像を修正しました（model: ${model}${model === modelsToTry[0] ? '' : ' / fallback'}）`,
         })
+        charged = true
+        return result
       } catch (e: any) {
         lastError = e
         continue
@@ -210,6 +240,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
       success: false,
       error: error.message || 'バナーの再生成に失敗しました',
     }, { status: 500 })
+  } finally {
+    if (reservation && !charged) {
+      await releaseBannerMonthlyImages(reservation, 1).catch(() => console.error('Banner refine quota release failed'))
+    }
   }
 }
 

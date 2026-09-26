@@ -83,11 +83,16 @@ function fixture(initial = null, accountPlan = 'FREE') {
   await assert.rejects(() => reserveBannerMonthlyImages('u5', 3, offline.db), /database unavailable/)
   assert.equal(offline.row, null)
   const root = path.resolve(__dirname, '../..')
-  for (const route of ['generate', 'from-url', 'test/generate']) {
+  for (const route of ['generate', 'from-url', 'test/generate', 'refine']) {
     const source = fs.readFileSync(path.join(root, 'src/app/api/banner', route, 'route.ts'), 'utf8')
     assert(source.includes('reserveBannerMonthlyImages('), `${route} must reserve before paid image generation`)
     assert(source.includes('releaseBannerMonthlyImages('), `${route} must return unused reservations`)
     assert(!/monthlyUsage:\s*\{\s*increment:/.test(source), `${route} must not charge after generation`)
+    if (route === 'refine') {
+      assert(source.indexOf('reserveBannerMonthlyImages(') < source.indexOf('resolveImageModel(apiKey)'), 'refine must reserve before calling Gemini')
+      assert(source.includes("code: 'MONTHLY_LIMIT_REACHED'"), 'refine must report the monthly limit')
+      assert(source.includes('if (reservation && !charged)'), 'failed refinement must refund its reservation')
+    }
   }
   console.log('PASS banner quota atomically limits parallel calls, resets JST month, clamps paid count, and fails closed on DB errors')
 })().catch(error => { console.error(error); process.exitCode = 1 })

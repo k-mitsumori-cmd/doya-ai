@@ -401,11 +401,23 @@ export default function BannerChatPage() {
       })
       const parsed = await safeReadJson(res)
       const data = parsed.data || {}
+      if (parsed.status === 429 && data?.code === 'MONTHLY_LIMIT_REACHED') {
+        quota.acceptLimit(data?.usage)
+        setLimitModal({
+          open: true,
+          used: data?.usage?.monthlyUsed,
+          limit: data?.usage?.monthlyLimit,
+          message: data?.error,
+          upgradeUrl: data?.upgradeUrl,
+        })
+        return
+      }
       if (!parsed.ok || !data?.success) throw new Error(data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || '修正に失敗しました')
       const refined = String(data.refinedImage || '')
       if (!refined.startsWith('data:')) throw new Error('修正画像が取得できませんでした')
 
       setGeneratedBanners((prev) => prev.map((b, i) => (i === idx ? refined : b)))
+      void quota.refresh()
       pushAssistant('修正できました。気になる点があれば、さらに指示して改善できます。')
       toast.success('AIで修正しました')
 
@@ -998,5 +1010,4 @@ export default function BannerChatPage() {
     </div>
   )
 }
-
 
