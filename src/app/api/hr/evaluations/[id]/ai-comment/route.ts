@@ -10,7 +10,7 @@ import { getHrContext } from '@/lib/hr/access'
 import { canReadEvaluation } from '@/lib/hr/evaluation-access'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { buildEvaluationCommentPrompt } from '@/lib/hr/prompts'
-import { checkAiUsageLimit, incrementAiUsage } from '@/lib/hr/billing'
+import { reserveAiUsage, releaseAiUsage } from '@/lib/hr/billing'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -56,39 +56,39 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: '確定済みの評価は変更できません' }, { status: 409 })
     }
 
-    // AI使用量制限チェック
-    const aiLimitError = await checkAiUsageLimit(hrCtx.organizationId)
-    if (aiLimitError) {
-      return NextResponse.json({ error: aiLimitError, code: 'HR_ORG_AI_LIMIT', canManageBilling: hrCtx.role === 'OWNER' }, { status: 403 })
+    const admission = await reserveAiUsage(hrCtx.organizationId)
+    if (!admission.granted) {
+      return NextResponse.json({ error: admission.error, code: 'HR_ORG_AI_LIMIT', canManageBilling: hrCtx.role === 'OWNER' }, { status: 403 })
     }
+    let saved = false
+    try {
+      const prompt = buildEvaluationCommentPrompt({
+        employeeName: `${evaluation.employee.lastName} ${evaluation.employee.firstName}`,
+        position: evaluation.employee.position,
+        department: evaluation.employee.department?.name,
+        periodName: evaluation.period.name,
+        goals: evaluation.goals as any,
+        competencies: evaluation.competencies as any,
+        selfRating: evaluation.selfRating,
+        managerRating: evaluation.managerRating,
+        selfComment: evaluation.selfComment,
+        managerComment: evaluation.managerComment,
+      })
 
-    const prompt = buildEvaluationCommentPrompt({
-      employeeName: `${evaluation.employee.lastName} ${evaluation.employee.firstName}`,
-      position: evaluation.employee.position,
-      department: evaluation.employee.department?.name,
-      periodName: evaluation.period.name,
-      goals: evaluation.goals as any,
-      competencies: evaluation.competencies as any,
-      selfRating: evaluation.selfRating,
-      managerRating: evaluation.managerRating,
-      selfComment: evaluation.selfComment,
-      managerComment: evaluation.managerComment,
-    })
+      const aiComment = await geminiGenerateText({
+        model: GEMINI_TEXT_MODEL_DEFAULT,
+        parts: [{ text: prompt }],
+      })
 
-    const aiComment = await geminiGenerateText({
-      model: GEMINI_TEXT_MODEL_DEFAULT,
-      parts: [{ text: prompt }],
-    })
-
-    await prisma.hrEvaluation.update({
-      where: { id, status: { not: 'FINALIZED' }, updatedAt: evaluation.updatedAt },
-      data: { aiComment },
-    })
-
-    // AI使用カウントをインクリメント
-    await incrementAiUsage(hrCtx.organizationId)
-
-    return NextResponse.json({ success: true, aiComment })
+      await prisma.hrEvaluation.update({
+        where: { id, status: { not: 'FINALIZED' }, updatedAt: evaluation.updatedAt },
+        data: { aiComment },
+      })
+      saved = true
+      return NextResponse.json({ success: true, aiComment })
+    } finally {
+      if (!saved) await releaseAiUsage(admission.reservation)
+    }
   } catch (e: any) {
     if (e?.code === 'P2025') {
       return NextResponse.json({ error: '生成中に評価が変更されました。再読み込みして内容を確認してください。' }, { status: 409 })

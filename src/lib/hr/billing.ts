@@ -108,53 +108,54 @@ export async function checkEmployeeLimit(organizationId: string): Promise<string
   return null
 }
 
-/**
- * AI使用回数の制限チェック（月次リセット付き）
- * @returns null = OK, string = エラーメッセージ
- */
-export async function checkAiUsageLimit(organizationId: string): Promise<string | null> {
-  if (process.env.DOYA_DISABLE_LIMITS === '1') return null
-
-  const plan = await getOrgPlan(organizationId)
-  const limits = getOrgPlanLimits(plan)
-  if (limits.maxAiUsage === -1) return null
-
-  const org = await prisma.hrOrganization.findUnique({
-    where: { id: organizationId },
-    select: { aiUsageCount: true, aiUsageResetAt: true },
-  })
-  if (!org) return '組織が見つかりません'
-
-  // 月次リセット判定
-  const now = new Date()
-  const resetAt = org.aiUsageResetAt ? new Date(org.aiUsageResetAt) : new Date(0)
-  const needsReset =
-    now.getFullYear() !== resetAt.getFullYear() ||
-    now.getMonth() !== resetAt.getMonth()
-
-  if (needsReset) {
-    // リセット実行
-    await prisma.hrOrganization.update({
-      where: { id: organizationId },
-      data: { aiUsageCount: 0, aiUsageResetAt: now },
-    })
-    return null // リセット後は0なのでOK
-  }
-
-  if (org.aiUsageCount >= limits.maxAiUsage) {
-    return `AI機能の月間利用回数（${limits.maxAiUsage}回）に達しています。プランをアップグレードしてください。`
-  }
-
-  return null
+/** 日本時間の当月1日0時。実行環境のタイムゾーンに依存しない。 */
+export function hrJstMonthStart(now = new Date()): Date {
+  const jst = new Date(now.getTime() + 9 * 60 * 60 * 1000)
+  return new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), 1) - 9 * 60 * 60 * 1000)
 }
 
-/**
- * AI使用カウントをインクリメント
- */
-export async function incrementAiUsage(organizationId: string): Promise<void> {
-  await prisma.hrOrganization.update({
-    where: { id: organizationId },
-    data: { aiUsageCount: { increment: 1 } },
+export type HrAiReservation = { organizationId: string; resetAt: Date }
+export type HrAiAdmission =
+  | { granted: true; reservation: HrAiReservation }
+  | { granted: false; error: string }
+
+/** 組織行をロックし、月次リセットと枠の確保を同一トランザクションで行う。 */
+export async function reserveAiUsage(organizationId: string, now = new Date()): Promise<HrAiAdmission> {
+  return prisma.$transaction(async (tx) => {
+    const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "hr_organizations" WHERE id = ${organizationId} FOR UPDATE`
+    if (rows.length === 0) return { granted: false as const, error: '組織が見つかりません' }
+
+    const org = await tx.hrOrganization.findUnique({
+      where: { id: organizationId },
+      select: { aiUsageCount: true, aiUsageResetAt: true },
+    })
+    if (!org) return { granted: false as const, error: '組織が見つかりません' }
+
+    const resetAt = org.aiUsageResetAt ?? new Date(0)
+    const newMonth = hrJstMonthStart(now).getTime() !== hrJstMonthStart(resetAt).getTime()
+    const current = newMonth ? 0 : org.aiUsageCount
+    const plan = await getOrgPlan(organizationId, tx)
+    const limit = getOrgPlanLimits(plan).maxAiUsage
+    if (process.env.DOYA_DISABLE_LIMITS !== '1' && limit >= 0 && current >= limit) {
+      return { granted: false as const, error: `AI機能の月間利用回数（${limit}回）に達しています。プランをアップグレードしてください。` }
+    }
+
+    const reservationResetAt = newMonth ? now : resetAt
+    await tx.hrOrganization.update({
+      where: { id: organizationId },
+      data: newMonth
+        ? { aiUsageCount: 1, aiUsageResetAt: reservationResetAt }
+        : { aiUsageCount: { increment: 1 } },
+    })
+    return { granted: true as const, reservation: { organizationId, resetAt: reservationResetAt } }
+  })
+}
+
+/** 保存できなかった生成だけ返却する。月替わり後の新しい枠は減らさない。 */
+export async function releaseAiUsage({ organizationId, resetAt }: HrAiReservation): Promise<void> {
+  await prisma.hrOrganization.updateMany({
+    where: { id: organizationId, aiUsageResetAt: resetAt, aiUsageCount: { gt: 0 } },
+    data: { aiUsageCount: { decrement: 1 } },
   })
 }
 

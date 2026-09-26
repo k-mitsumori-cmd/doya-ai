@@ -5,7 +5,7 @@ export const maxDuration = 300
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getHrContext, hasMinRole } from '@/lib/hr/access'
-import { getOrgPlan, getOrgPlanLimits } from '@/lib/hr/billing'
+import { getOrgPlan, getOrgPlanLimits, hrJstMonthStart } from '@/lib/hr/billing'
 import { HrMemberRole } from '@/lib/hr/types'
 
 export async function GET() {
@@ -34,17 +34,9 @@ export async function GET() {
     })
 
     // 月次リセット判定
-    let aiUsageCount = org?.aiUsageCount ?? 0
-    if (org?.aiUsageResetAt) {
-      const now = new Date()
-      const resetAt = new Date(org.aiUsageResetAt)
-      const needsReset =
-        now.getFullYear() !== resetAt.getFullYear() ||
-        now.getMonth() !== resetAt.getMonth()
-      if (needsReset) {
-        aiUsageCount = 0
-      }
-    }
+    const aiUsageCount = org?.aiUsageResetAt &&
+      hrJstMonthStart(org.aiUsageResetAt).getTime() === hrJstMonthStart().getTime()
+      ? org.aiUsageCount : 0
 
     return NextResponse.json({
       plan: plan.toLowerCase(),

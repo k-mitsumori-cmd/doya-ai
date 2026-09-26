@@ -10,7 +10,7 @@ import { getHrContext } from '@/lib/hr/access'
 import { canAccessOneOnOne, getOneOnOneViewer, canViewManagerNotes } from '@/lib/hr/one-on-one-access'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { buildOneOnOneSummaryPrompt } from '@/lib/hr/prompts'
-import { checkAiUsageLimit, incrementAiUsage } from '@/lib/hr/billing'
+import { reserveAiUsage, releaseAiUsage } from '@/lib/hr/billing'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -61,35 +61,35 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       )
     }
 
-    // AI使用量制限チェック
-    const aiLimitError = await checkAiUsageLimit(hrCtx.organizationId)
-    if (aiLimitError) {
-      return NextResponse.json({ error: aiLimitError, code: 'HR_ORG_AI_LIMIT', canManageBilling: hrCtx.role === 'OWNER' }, { status: 403 })
+    const admission = await reserveAiUsage(hrCtx.organizationId)
+    if (!admission.granted) {
+      return NextResponse.json({ error: admission.error, code: 'HR_ORG_AI_LIMIT', canManageBilling: hrCtx.role === 'OWNER' }, { status: 403 })
     }
+    let saved = false
+    try {
+      const prompt = buildOneOnOneSummaryPrompt({
+        employeeName: `${oneOnOne.employee.lastName} ${oneOnOne.employee.firstName}`,
+        managerName: `${oneOnOne.manager.lastName} ${oneOnOne.manager.firstName}`,
+        agenda: oneOnOne.agenda as any,
+        managerNotes: oneOnOne.managerNotes,
+        employeeNotes: oneOnOne.employeeNotes,
+        conductedAt: oneOnOne.conductedAt?.toISOString() || null,
+      })
 
-    const prompt = buildOneOnOneSummaryPrompt({
-      employeeName: `${oneOnOne.employee.lastName} ${oneOnOne.employee.firstName}`,
-      managerName: `${oneOnOne.manager.lastName} ${oneOnOne.manager.firstName}`,
-      agenda: oneOnOne.agenda as any,
-      managerNotes: oneOnOne.managerNotes,
-      employeeNotes: oneOnOne.employeeNotes,
-      conductedAt: oneOnOne.conductedAt?.toISOString() || null,
-    })
+      const aiSummary = await geminiGenerateText({
+        model: GEMINI_TEXT_MODEL_DEFAULT,
+        parts: [{ text: prompt }],
+      })
 
-    const aiSummary = await geminiGenerateText({
-      model: GEMINI_TEXT_MODEL_DEFAULT,
-      parts: [{ text: prompt }],
-    })
-
-    await prisma.hrOneOnOne.update({
-      where: { id, status: { not: 'COMPLETED' }, updatedAt: oneOnOne.updatedAt },
-      data: { aiSummary },
-    })
-
-    // AI使用カウントをインクリメント
-    await incrementAiUsage(hrCtx.organizationId)
-
-    return NextResponse.json({ success: true, aiSummary })
+      await prisma.hrOneOnOne.update({
+        where: { id, status: { not: 'COMPLETED' }, updatedAt: oneOnOne.updatedAt },
+        data: { aiSummary },
+      })
+      saved = true
+      return NextResponse.json({ success: true, aiSummary })
+    } finally {
+      if (!saved) await releaseAiUsage(admission.reservation)
+    }
   } catch (e: any) {
     if (e?.code === 'P2025') return NextResponse.json({ error: '要約中に1on1が更新されました。内容を確認して再試行してください。' }, { status: 409 })
     console.error('[hr/one-on-one/[id]/ai-summary] unexpected error', e)

@@ -20,6 +20,11 @@ if (sfaTaskDate.error || sfaTaskDate.status !== 0) {
   console.error('Security regression failed: verify-sfa-task-date.cjs');
   process.exit(1);
 }
+const hrAiAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-ai-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrAiAdmission.error || hrAiAdmission.status !== 0) {
+  console.error('Security regression failed: verify-hr-ai-admission.cjs');
+  process.exit(1);
+}
 const sfaAiLimit = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-ai-limit.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaAiLimit.error || sfaAiLimit.status !== 0) {
   console.error('Security regression failed: verify-sfa-ai-limit.cjs');
