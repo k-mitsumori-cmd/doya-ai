@@ -5,6 +5,11 @@ if (staticAssetUrls.error || staticAssetUrls.status !== 0) {
   console.error('Security regression failed: verify-static-asset-urls.cjs');
   process.exit(1);
 }
+const quoteWriteRecovery = spawnSync(process.execPath, [path.join(__dirname, 'verify-quote-write-recovery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (quoteWriteRecovery.error || quoteWriteRecovery.status !== 0) {
+  console.error('Security regression failed: verify-quote-write-recovery.cjs');
+  process.exit(1);
+}
 const sfaAiLimit = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-ai-limit.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaAiLimit.error || sfaAiLimit.status !== 0) {
   console.error('Security regression failed: verify-sfa-ai-limit.cjs');

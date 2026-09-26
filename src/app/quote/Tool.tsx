@@ -50,6 +50,8 @@ export default function QuoteTool() {
   const [loading, setLoading] = useState(true)
   const [org, setOrg] = useState<{ slug: string; name: string; role: string } | null>(null)
   const [orgName, setOrgName] = useState('')
+  const [creatingOrg, setCreatingOrg] = useState(false)
+  const creatingOrgRequest = useRef(false)
   const [memberships, setMemberships] = useState<Membership[]>([])
   /** 未ログイン。⚠️ 組織が無いのか、そもそもログインしていないのかを区別する。
    *  区別しないと、未ログインの人に「組織を作成」フォームを見せてしまい、
@@ -75,6 +77,8 @@ export default function QuoteTool() {
   const [draftProfile, setDraftProfile] = useState<ProductProfile | null>(null)
   const [draftUrl, setDraftUrl] = useState('')
   const [productName, setProductName] = useState('')
+  const [savingProduct, setSavingProduct] = useState(false)
+  const savingProductRequest = useRef(false)
 
   // 品目生成
   const [selectedProduct, setSelectedProduct] = useState<string>('')
@@ -96,6 +100,7 @@ export default function QuoteTool() {
 
   const [error, setError] = useState('')
   const [upgradeUrl, setUpgradeUrl] = useState<string | null>(null)
+  const [productSaveUncertain, setProductSaveUncertain] = useState(false)
   const [loadFailed, setLoadFailed] = useState(false)
 
   const load = useCallback(async () => {
@@ -103,6 +108,7 @@ export default function QuoteTool() {
     setLoading(true)
     setError('')
     setUpgradeUrl(null)
+    setProductSaveUncertain(false)
     setLoadFailed(false)
     setNeedsLogin(false)
     setProducts([])
@@ -211,19 +217,28 @@ export default function QuoteTool() {
   }
 
   async function createOrg() {
-    if (!orgName.trim()) return
+    if (!orgName.trim() || creatingOrgRequest.current) return
+    creatingOrgRequest.current = true
+    setCreatingOrg(true)
     setError('')
     setUpgradeUrl(null)
-    const r = await fetch(withOrg('quote', '/api/quote/organizations'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: orgName.trim() }),
-    })
-    if (!r.ok) {
-      setError((await r.json().catch(() => ({})))?.error || '作成に失敗しました')
-      return
+    try {
+      const r = await fetch(withOrg('quote', '/api/quote/organizations'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: orgName.trim() }),
+      })
+      if (!r.ok) {
+        const data = await r.json().catch(() => null)
+        throw new Error(data?.error || '組織を作成できませんでした')
+      }
+      await load()
+    } catch (e) {
+      notifyError(setError, e instanceof Error ? e.message : '組織を作成できませんでした。通信状態をご確認ください')
+    } finally {
+      creatingOrgRequest.current = false
+      setCreatingOrg(false)
     }
-    await load()
   }
 
   async function analyze() {
@@ -251,24 +266,40 @@ export default function QuoteTool() {
   }
 
   async function saveProduct() {
-    if (!draftProfile || !productName.trim()) return
+    if (!draftProfile || !productName.trim() || savingProductRequest.current) return
+    savingProductRequest.current = true
+    setSavingProduct(true)
     setError('')
     setUpgradeUrl(null)
-    const r = await fetch(withOrg('quote', '/api/quote/products'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: productName.trim(), sourceUrl: draftUrl, profile: draftProfile }),
-    })
-    const d = await r.json()
-    if (!r.ok) {
-      notifyError(setError, d?.error || '登録に失敗しました')
-      return
+    setProductSaveUncertain(false)
+    let responseReceived = false
+    let responseOk = false
+    try {
+      const r = await fetch(withOrg('quote', '/api/quote/products'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: productName.trim(), sourceUrl: draftUrl, profile: draftProfile }),
+      })
+      responseReceived = true
+      responseOk = r.ok
+      const d = await r.json().catch(() => null)
+      if (!r.ok) throw new Error(d?.error || '商材を登録できませんでした')
+      if (typeof d?.product?.id !== 'string') throw new Error('登録結果を確認できませんでした。商材一覧を再読み込みして確認してください')
+      setDraftProfile(null)
+      setUrl('')
+      setProductName('')
+      await load()
+      setSelectedProduct(d.product.id)
+    } catch (e) {
+      setProductSaveUncertain(!responseReceived || responseOk)
+      const message = !responseReceived
+        ? '通信が切れました。保存された可能性があります。商材一覧を再読み込みしてから再試行してください'
+        : e instanceof Error ? e.message : '商材を登録できませんでした'
+      notifyError(setError, message)
+    } finally {
+      savingProductRequest.current = false
+      setSavingProduct(false)
     }
-    setDraftProfile(null)
-    setUrl('')
-    setProductName('')
-    await load()
-    setSelectedProduct(d.product.id)
   }
 
   async function suggest() {
@@ -435,10 +466,10 @@ export default function QuoteTool() {
           {error && <p className="mt-3 text-sm text-rose-600 font-semibold">{error}</p>}
           <button
             onClick={createOrg}
-            disabled={!orgName.trim()}
+            disabled={!orgName.trim() || creatingOrg}
             className="mt-4 w-full rounded-lg bg-[#0066ff] px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
           >
-            組織を作成する
+            {creatingOrg ? '作成しています…' : '組織を作成する'}
           </button>
         </div>
       </div>
@@ -504,6 +535,7 @@ export default function QuoteTool() {
           <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">
             <p>{error}</p>
             {upgradeUrl && <Link href={upgradeUrl} className="mt-2 inline-block font-bold text-blue-700 underline">プロプランの料金と30日間無料の対象条件を確認する</Link>}
+            {productSaveUncertain && <button type="button" onClick={() => void load()} className="mt-2 block font-bold text-blue-700 underline">商材一覧を再読み込み</button>}
           </div>
         )}
 
@@ -565,10 +597,10 @@ export default function QuoteTool() {
                 />
                 <button
                   onClick={saveProduct}
-                  disabled={!productName.trim()}
+                  disabled={!productName.trim() || savingProduct}
                   className="rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none disabled:translate-y-0 disabled:hover:bg-slate-200 disabled:hover:translate-y-0"
                 >
-                  商材として保存
+                  {savingProduct ? '保存しています…' : '商材として保存'}
                 </button>
               </div>
             </div>
