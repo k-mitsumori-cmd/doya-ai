@@ -12,6 +12,7 @@ import {
 } from '@/lib/aio/types'
 import { runAndPersistScan } from '@/lib/aio/run'
 import { recordServiceUsage } from '@/lib/service-usage'
+import { decodeAioScanCursor, encodeAioScanCursor } from '@/lib/aio/scan-cursor'
 
 // ⚠️ 上限の正本は lib/aio/types.ts。ここに数字を書かない
 //    （サイドバーの表示も同じ定義を読む）
@@ -20,18 +21,23 @@ import { recordServiceUsage } from '@/lib/service-usage'
 export async function GET(req: NextRequest) {
   const ctx = await getAioContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: 'ログイン/組織が必要です' }, { status: 401 })
+  const rawCursor = req.nextUrl.searchParams.get('cursor')
+  let cursor: ReturnType<typeof decodeAioScanCursor> | null = null
+  try { if (req.nextUrl.searchParams.has('cursor')) cursor = decodeAioScanCursor(rawCursor || '', ctx.organizationId) }
+  catch { return NextResponse.json({ error: '履歴の取得位置が正しくありません。最初から読み直してください。' }, { status: 400, headers: { 'Cache-Control': 'private, no-store' } }) }
   const rows = await prisma.aioScan.findMany({
-    where: { organizationId: ctx.organizationId, status: { not: 'deleted' } },
-    orderBy: { createdAt: 'desc' },
+    where: { organizationId: ctx.organizationId, status: { not: 'deleted' }, ...(cursor ? { OR: [{ createdAt: { lt: cursor.createdAt } }, { createdAt: cursor.createdAt, id: { lt: cursor.id } }] } : {}) },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     select: {
       id: true, status: true, engines: true, repetitions: true,
       awarenessPct: true, shareOfVoice: true, ownCitationPct: true,
       createdAt: true, updatedAt: true,
     },
-    take: 60,
+    take: 61,
   })
-  const items = rows.map((r) => ({ ...r, status: effectiveScanStatus(r.status, r.updatedAt) }))
-  return NextResponse.json({ items }, { headers: { 'Cache-Control': 'no-store' } })
+  const page = rows.slice(0, 60)
+  const items = page.map((r) => ({ ...r, status: effectiveScanStatus(r.status, r.updatedAt) }))
+  return NextResponse.json({ items, nextCursor: rows.length > 60 ? encodeAioScanCursor(page[page.length - 1], ctx.organizationId) : null }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
 }
 
 // POST /api/aio/scans — スキャンを実行（プロンプト×エンジン×反復 → 集計 → 保存）

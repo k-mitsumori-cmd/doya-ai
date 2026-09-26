@@ -4,7 +4,7 @@
 import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, CreditCard, Zap, Eye, ScanSearch } from 'lucide-react'
+import { LayoutDashboard, CreditCard, Zap, Eye, ScanSearch, History } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { aioTheme } from '@/components/sidebar/themes'
@@ -48,6 +48,7 @@ function AioSidebarImpl({ orgSlug, orgName, organizationPlan, isOwner = true, is
   const NAV: NavItem[] = [
     { href: `${base}/scan`, label: 'URL AI調査', icon: ScanSearch, hot: true },
     { href: base, label: 'ダッシュボード', icon: LayoutDashboard },
+    { href: `${base}/history`, label: 'スキャン履歴', icon: History },
     { href: '/aio/pricing', label: '料金プラン', icon: CreditCard },
   ]
 

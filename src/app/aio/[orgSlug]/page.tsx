@@ -276,6 +276,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Link href={`/aio/${encodeURIComponent(orgSlug)}/history`} className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-purple-200 text-purple-700 font-black text-sm hover:bg-purple-50 transition-colors">スキャン履歴</Link>
           <Link href="/aio" className="inline-flex items-center gap-1 px-4 py-2.5 rounded-xl border-2 border-purple-200 text-purple-700 font-black text-sm hover:bg-purple-50 transition-colors">
             {sym('add', 18)}別のURLを調べる
           </Link>
