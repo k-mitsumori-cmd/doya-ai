@@ -28,6 +28,7 @@ export default function ServiceLimitProvider() {
       if (!active || account.current !== key) return
       // These four banner screens already own a richer quota modal.
       if (next.service === 'banner' && ['/banner/dashboard', '/banner/test', '/banner/dashboard/create', '/banner/dashboard/chat'].includes(window.location.pathname)) return
+      if (next.service === 'kintai' && window.location.pathname === '/kintai/employees') return
       setNotice({ key, limit: next })
     }
     const wrapped = observeServiceLimits(original, window.location.origin, notify)

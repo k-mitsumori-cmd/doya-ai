@@ -27,6 +27,8 @@ export function classifyServiceLimit(path: string, status: number, data: unknown
   if (!feature && !quota && typeof body.upgradePath !== 'string') return null
   const kind = service === 'aio' && code === 'LIMIT' && body.canManageBilling === false
     ? 'owner'
+    : service === 'kintai' && code === 'KINTAI_EMPLOYEE_LIMIT' && body.canManageBilling === false
+    ? 'owner'
     : service === 'sfa' && ['SFA_LIMIT_REACHED', 'SFA_AI_LIMIT_REACHED'].includes(code) && body.canManageBilling !== true
     ? 'owner'
     : service === 'hr' && /^HR_ORG_(EMPLOYEE|MEMBER|AI)_LIMIT$/.test(code)

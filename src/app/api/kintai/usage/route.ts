@@ -35,6 +35,7 @@ export async function GET() {
     // Get the organization owner's plan
     const owner = await prisma.kintaiMember.findFirst({
       where: { organizationId: membership.organizationId, role: 'system_admin' },
+      orderBy: { createdAt: 'asc' },
       select: { userId: true },
     })
     const ownerUser = owner ? await prisma.user.findUnique({

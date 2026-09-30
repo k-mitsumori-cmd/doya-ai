@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { escapeHtml } from '@/lib/html-escape'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
-import { lockKintaiEmployeeAdmission, reachedKintaiEmployeeLimit } from '@/lib/kintai/employee-admission'
+import { kintaiEmployeeLimitPayload, lockKintaiEmployeeAdmission, reachedKintaiEmployeeLimit } from '@/lib/kintai/employee-admission'
 import { sendEmail } from '@/lib/email'
 
 const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
     })
     if (!admission.allowed) {
       return NextResponse.json(
-        { error: `従業員数が上限（${admission.limit}名）に達しています。プランをアップグレードしてください。`, code: 'KINTAI_EMPLOYEE_LIMIT', upgradeUrl: '/kintai/pricing' },
+        kintaiEmployeeLimitPayload(admission.limit, ctx.userId),
         { status: 403 },
       )
     }

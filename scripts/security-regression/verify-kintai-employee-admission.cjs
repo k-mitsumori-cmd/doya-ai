@@ -2,9 +2,10 @@ const assert = require('node:assert/strict')
 const { webcrypto } = require('node:crypto')
 const { load, check } = require('./load-typescript.cjs')
 
-const pricing = { getKintaiEmployeeLimitByUserPlan: () => 1 }
-const admission = load('src/lib/kintai/employee-admission.ts', { '@/lib/pricing': pricing })
-const access = { getKintaiContext: async () => ({ organizationId: 'org', role: 'system_admin' }), hasMinRole: () => true }
+const pricing = { getKintaiEmployeeLimitByUserPlan: () => 1, HIGH_USAGE_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' }
+const planUtils = load('src/lib/plan-utils.ts')
+const admission = load('src/lib/kintai/employee-admission.ts', { '@/lib/pricing': pricing, '@/lib/plan-utils': planUtils })
+const access = { getKintaiContext: async () => ({ organizationId: 'org', userId: 'owner', role: 'system_admin' }), hasMinRole: () => true }
 
 ;(async () => {
   await check('concurrent employee creation counts and writes under the same organization lock', async () => {
@@ -49,7 +50,10 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', role: '
     assert.deepEqual(responses.map(r => r.status).sort(), [201, 403])
     assert.equal(lockCalls, 2)
     assert.equal(creates, 1)
-    assert.equal((await responses.find(r => r.status === 403).json()).code, 'KINTAI_EMPLOYEE_LIMIT')
+    const denied = await responses.find(r => r.status === 403).json()
+    assert.equal(denied.code, 'KINTAI_EMPLOYEE_LIMIT')
+    assert.equal(denied.canManageBilling, true)
+    assert.equal(denied.upgradeUrl, '/kintai/pricing')
   })
 
   await check('reactivation enforces the quota and foreign references never reach update', async () => {
@@ -82,6 +86,35 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', role: '
     assert.equal(updates, 0)
     assert.equal((await patch({ isActive: true })).status, 200)
     assert.equal(updates, 1)
+  })
+
+  await check('employee cap action follows the organization owner and paid tier', async () => {
+    for (const [plan,actor,expectedAction] of [
+      ['FREE','owner','upgradeUrl'], ['LIGHT','owner','upgradeUrl'],
+      ['PRO','owner','contactUrl'], ['ENTERPRISE','owner','contactUrl'],
+      ['FREE','admin','owner'], ['PRO','admin','owner'],
+    ]) {
+      const tx = {
+        kintaiMember: { findFirst: async (args) => {
+          assert.equal(args.orderBy.createdAt,'asc')
+          return { userId:'owner' }
+        } },
+        user: { findUnique: async () => ({ plan }) },
+        kintaiEmployee: { count: async () => 1 },
+      }
+      const reached = await admission.reachedKintaiEmployeeLimit(tx,'org')
+      const body = admission.kintaiEmployeeLimitPayload(reached,actor)
+      assert.equal(body.limitReached,undefined)
+      assert.equal(body.canManageBilling,actor==='owner')
+      if (expectedAction==='owner') {
+        assert.equal(body.upgradeUrl,undefined)
+        assert.equal(body.contactUrl,undefined)
+        assert.match(body.error,/組織の契約者/)
+      } else {
+        assert.equal(typeof body[expectedAction],'string')
+        assert.equal(body[expectedAction==='upgradeUrl'?'contactUrl':'upgradeUrl'],undefined)
+      }
+    }
   })
 
   await check('invalid employee listing pagination is rejected before querying', async () => {

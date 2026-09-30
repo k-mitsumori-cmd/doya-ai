@@ -38,7 +38,7 @@ export default function EmployeesPage() {
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState({ name: '', nameKana: '', email: '', departmentId: '', workRuleId: '', employmentType: 'full_time', hireDate: '', role: 'employee' })
   const [saving, setSaving] = useState(false)
-  const [limitNotice, setLimitNotice] = useState<string | null>(null)
+  const [limitNotice, setLimitNotice] = useState<{ message: string; href?: string; action?: string } | null>(null)
   const togglingRef = useRef(new Set<string>())
   const [togglingIds, setTogglingIds] = useState(new Set<string>())
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -106,6 +106,16 @@ export default function EmployeesPage() {
     return Object.keys(errs).length === 0
   }
 
+  const showEmployeeLimit = (data: any) => {
+    const canManageBilling = data.canManageBilling === true
+    const upgradeAvailable = data.upgradeAvailable === true
+    setLimitNotice({
+      message: typeof data.error === 'string' ? data.error : '従業員数の上限に達しました。',
+      href: canManageBilling ? upgradeAvailable ? '/kintai/pricing' : typeof data.contactUrl === 'string' && data.contactUrl.startsWith('https://') ? data.contactUrl : 'https://doyamarke.surisuta.jp/contact' : undefined,
+      action: canManageBilling ? upgradeAvailable ? 'プランを確認する' : '追加の利用枠を相談する' : undefined,
+    })
+  }
+
   const handleSave = async () => {
     if (!validate()) return
     setSaving(true)
@@ -115,7 +125,7 @@ export default function EmployeesPage() {
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
       if (!res.ok) {
         const d = await res.json().catch(() => ({}))
-        if (d.code === 'KINTAI_EMPLOYEE_LIMIT') { setLimitNotice(d.error); return }
+        if (d.code === 'KINTAI_EMPLOYEE_LIMIT') { showEmployeeLimit(d); return }
         alert((d.error || '保存に失敗しました') + (d.detail ? '\n\n詳細: ' + d.detail : ''))
         return
       }
@@ -139,7 +149,7 @@ export default function EmployeesPage() {
       })
       const result = await res.json().catch(() => null)
       if (!res.ok) {
-        if (result?.code === 'KINTAI_EMPLOYEE_LIMIT') { setLimitNotice(result.error); return }
+        if (result?.code === 'KINTAI_EMPLOYEE_LIMIT') { showEmployeeLimit(result); return }
         alert(typeof result?.error === 'string' ? result.error : `${action}できませんでした。もう一度お試しください。`)
         return
       }
@@ -218,8 +228,8 @@ export default function EmployeesPage() {
 
         {limitNotice && (
           <div role="alert" className="rounded-xl border border-purple-200 bg-purple-50 p-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm font-medium text-purple-900">{limitNotice}</p>
-            <Link href="/kintai/pricing" className="rounded-lg bg-[#7f19e6] px-4 py-2 text-sm font-bold text-white hover:bg-[#6a14c2]">プランを見る</Link>
+            <p className="text-sm font-medium text-purple-900">{limitNotice.message}</p>
+            {limitNotice.href && <Link href={limitNotice.href} className="rounded-lg bg-[#7f19e6] px-4 py-2 text-sm font-bold text-white hover:bg-[#6a14c2]">{limitNotice.action}</Link>}
           </div>
         )}
 
@@ -534,8 +544,8 @@ export default function EmployeesPage() {
 
               {limitNotice && (
                 <div role="alert" className="rounded-xl border border-purple-200 bg-purple-50 p-3 space-y-2">
-                  <p className="text-sm font-medium text-purple-900">{limitNotice}</p>
-                  <Link href="/kintai/pricing" className="inline-block text-sm font-bold text-[#7f19e6] underline">プランを見る</Link>
+                  <p className="text-sm font-medium text-purple-900">{limitNotice.message}</p>
+                  {limitNotice.href && <Link href={limitNotice.href} className="inline-block text-sm font-bold text-[#7f19e6] underline">{limitNotice.action}</Link>}
                 </div>
               )}
               <div className="flex gap-3 pt-2">

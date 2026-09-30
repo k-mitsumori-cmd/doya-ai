@@ -5,7 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
-import { lockKintaiEmployeeAdmission, reachedKintaiEmployeeLimit } from '@/lib/kintai/employee-admission'
+import { kintaiEmployeeLimitPayload, lockKintaiEmployeeAdmission, reachedKintaiEmployeeLimit } from '@/lib/kintai/employee-admission'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -76,7 +76,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         const limit = await reachedKintaiEmployeeLimit(tx, kctx.organizationId)
         if (limit !== null) {
           return NextResponse.json(
-            { error: `従業員数が上限（${limit}名）に達しています。プランをアップグレードしてください。`, code: 'KINTAI_EMPLOYEE_LIMIT', upgradeUrl: '/kintai/pricing' },
+            kintaiEmployeeLimitPayload(limit, kctx.userId),
             { status: 403 },
           )
         }

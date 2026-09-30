@@ -51,6 +51,11 @@ const fixtureMessages=[
   assert.equal(classify('/api/sfa/ai/score',402,{...body,code:'SFA_AI_LIMIT_REACHED',canManageBilling:false}).kind,'owner');
   assert.equal(classify('/api/sfa/ai/next-action',402,{...body,code:'SFA_AI_LIMIT_REACHED',canManageBilling:true}).kind,'quota');
  });
+ await check('Kintai employee cap directs non-contract admins to the owner',async()=>{
+  const body={code:'KINTAI_EMPLOYEE_LIMIT',error:'従業員数が上限（100名）に達しています。',canManageBilling:false};
+  assert.equal(classify('/api/kintai/employees',403,body).kind,'owner');
+  assert.equal(classify('/api/kintai/employees',403,{...body,canManageBilling:true}).kind,'quota');
+ });
  await check('Cunning pricing period agrees with the server monthly quota',async()=>{
   const {CUNNING_LIMITS}=load('src/lib/cunning/limit-config.ts');
   assert.equal(CUNNING_LIMITS.FREE.maxMinutesPerMonth,60);
