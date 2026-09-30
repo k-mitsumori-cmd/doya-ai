@@ -36,6 +36,8 @@ export type AuditSubscription = {
   planId: string
   tier: string
   amount: number
+  monthlyAmount: number
+  billingInterval: 'month' | 'year' | 'other'
   currency: string
   createdAt: Date
   trialEnd: Date | null
@@ -55,6 +57,7 @@ export type BillingAudit = {
   /** Stripe に生きた契約が無いのに DB が有料のまま（＝過剰付与・解約の反映漏れ） */
   overGranted: Array<{ email: string | null; plan: string }>
   duplicates: Array<{ email: string; subs: AuditSubscription[] }>
+  unknownBillingIntervals: AuditSubscription[]
   webhookOk: boolean
   webhookDetail: string
   mrr: number
@@ -93,14 +96,25 @@ async function listAllSubscriptions(): Promise<any[]> {
 /** 本番の Webhook エンドポイントが登録され有効かを確認する */
 export async function checkWebhookEndpoint(): Promise<{ ok: boolean; detail: string }> {
   try {
-    const res = await stripe.webhookEndpoints.list({ limit: 100 })
-    const target = res.data.find((e) => String(e.url) === BILLING_WEBHOOK_EXPECTED_URL)
+    const endpoints: Array<{ id: string; url: string; status: string; enabled_events: string[] }> = []
+    let cursor: string | undefined
+    const cursors = new Set<string>()
+    while (true) {
+      const res = await stripe.webhookEndpoints.list({ limit: 100, ...(cursor ? { starting_after: cursor } : {}) })
+      endpoints.push(...res.data)
+      if (!res.has_more) break
+      const next = res.data[res.data.length - 1]?.id
+      if (!next || cursors.has(next)) throw new Error('Webhook endpoint pagination did not advance')
+      cursors.add(next)
+      cursor = next
+    }
+    const target = endpoints.find((e) => String(e.url) === BILLING_WEBHOOK_EXPECTED_URL)
     if (!target) {
       return {
         ok: false,
         detail:
           `本番の Stripe Webhook エンドポイント（${BILLING_WEBHOOK_EXPECTED_URL}）が Stripe に登録されていません。` +
-          `現在登録されているURL: ${res.data.map((e) => e.url).join(' / ') || '（0件）'}`,
+          `現在登録されているURL: ${endpoints.map((e) => e.url).join(' / ') || '（0件）'}`,
       }
     }
     if (String(target.status) !== 'enabled') {
@@ -153,6 +167,13 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
     const cust = typeof s.customer === 'object' ? s.customer : null
     const email = (cust?.email as string | undefined)?.toLowerCase() || null
     const { planId } = resolvePlanIdFromSubscription(s)
+    const price = s.items?.data?.[0]?.price
+    const interval = price?.recurring?.interval
+    const intervalCount = Math.max(1, Number(price?.recurring?.interval_count || 1))
+    const amount = Number(price?.unit_amount || 0)
+    const billingInterval: AuditSubscription['billingInterval'] = interval === 'year' ? 'year' : interval === 'month' ? 'month' : 'other'
+    const monthlyAmount = billingInterval === 'year' ? amount / (12 * intervalCount) :
+      billingInterval === 'month' ? amount / intervalCount : 0
     const dbUser = email ? userByEmail.get(email) : undefined
     return {
       id: s.id,
@@ -162,7 +183,9 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
       name: (cust?.name as string | undefined) || dbUser?.name || null,
       planId,
       tier: planTierFromPlanId(planId),
-      amount: s.items?.data?.[0]?.price?.unit_amount ?? 0,
+      amount,
+      monthlyAmount,
+      billingInterval,
       currency: String(s.items?.data?.[0]?.price?.currency || 'jpy'),
       createdAt: new Date(s.created * 1000),
       trialEnd: s.trial_end ? new Date(s.trial_end * 1000) : null,
@@ -255,7 +278,8 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
   // MRR（トライアル中は未課金なので除外）
   const mrr = subscriptions
     .filter((s) => s.status === 'active' || s.status === 'past_due')
-    .reduce((sum, s) => sum + s.amount, 0)
+    .reduce((sum, s) => sum + s.monthlyAmount, 0)
+  const unknownBillingIntervals = subscriptions.filter((s) => s.billingInterval === 'other')
 
   return {
     subscriptions,
@@ -265,6 +289,7 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
     serviceDrift,
     overGranted,
     duplicates,
+    unknownBillingIntervals,
     webhookOk: webhook.ok,
     webhookDetail: webhook.detail,
     mrr,
@@ -279,7 +304,9 @@ function subLine(s: AuditSubscription): string {
   const who = s.name ? `${s.name}（${s.email || '不明'}）` : s.email || '不明'
   const trial = s.trialEnd && s.trialEnd > new Date() ? `トライアル中（${jstDate(s.trialEnd)}まで無料）` : '課金中'
   const cancel = s.cancelAtPeriodEnd ? '・解約予約あり' : ''
-  return `・${who} ｜ ${s.tier} ｜ ${trial}${cancel} ｜ ${yen(s.amount)}/月 ｜ 申込 ${jstDateTime(s.createdAt)}`
+  const priceLabel = s.billingInterval === 'year' ? `${yen(s.amount)}/年` :
+    s.billingInterval === 'month' ? `${yen(s.amount)}/月` : `${yen(s.amount)}（請求周期未確認）`
+  return `・${who} ｜ ${s.tier} ｜ ${trial}${cancel} ｜ ${priceLabel} ｜ 申込 ${jstDateTime(s.createdAt)}`
 }
 
 /** 日次/週次レポートの本文を組み立てる */
@@ -290,7 +317,8 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
     audit.mismatched.length > 0 ||
     audit.duplicates.length > 0 ||
     audit.serviceDrift.length > 0 ||
-    audit.overGranted.length > 0
+    audit.overGranted.length > 0 ||
+    audit.unknownBillingIntervals.length > 0
 
   lines.push(hasProblem ? '<!channel>' : '')
   lines.push(`:credit_card: *[課金レポート/${opts.windowLabel}]* ${jstDateTime(new Date())}`)
@@ -308,7 +336,7 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
   const active = audit.subscriptions.filter((s) => s.status === 'active').length
   const pastDue = audit.subscriptions.filter((s) => s.status === 'past_due').length
   lines.push(
-    `*契約の現在数: ${audit.subscriptions.length}件*（課金中 ${active} / トライアル ${trialing} / 支払い遅延 ${pastDue}）｜ 月次売上見込 ${yen(audit.mrr)}`
+    `*契約の現在数: ${audit.subscriptions.length}件*（課金中 ${active} / トライアル ${trialing} / 支払い遅延 ${pastDue}）｜ 月次売上見込 ${yen(Math.round(audit.mrr))}`
   )
 
   if (audit.canceledInWindow.length > 0) {
@@ -358,6 +386,13 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
     }
     if (audit.overGranted.length > 20) lines.push(`・ほか ${audit.overGranted.length - 20}名`)
     lines.push('・解約の反映漏れ、または運営による手動付与（招待/検証アカウント等）の可能性があります。')
+  }
+
+  if (audit.unknownBillingIntervals.length > 0) {
+    lines.push('')
+    lines.push(`:warning: *請求周期を確認できない契約: ${audit.unknownBillingIntervals.length}件*`)
+    for (const s of audit.unknownBillingIntervals) lines.push(`・${s.email || s.customerId} ｜ sub: ${s.id}`)
+    lines.push('・月次売上見込にはこれらの契約を含めていません。Stripeの価格設定を確認してください。')
   }
 
   if (!hasProblem) {
