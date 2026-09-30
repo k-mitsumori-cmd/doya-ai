@@ -5,6 +5,7 @@ import {
   stripe,
   ACTIVE_LIKE_STATUSES,
   resolvePlanIdFromSubscription,
+  getPlanIdFromStripePriceId,
   planTierFromPlanId,
   findActiveLikeSubscriptions,
 } from '@/lib/stripe'
@@ -146,6 +147,13 @@ type WebhookUser = { id: string; email: string | null; name: string | null; plan
 
 const USER_SELECT = { id: true, email: true, name: true, plan: true } as const
 
+function isDoyaSubscription(subscription: Stripe.Subscription): boolean {
+  const { planId, priceId } = resolvePlanIdFromSubscription(subscription as any)
+  return Boolean(subscription.metadata?.userId) ||
+    planTierFromPlanId(planId) !== 'FREE' ||
+    getPlanIdFromStripePriceId(priceId) !== null
+}
+
 /**
  * サブスクリプションからユーザーを特定する（reference/11-billing-spec.md INV-6 / R-1）。
  *
@@ -184,6 +192,7 @@ async function findUserForSubscription(subscription: Stripe.Subscription): Promi
       }
     } catch (e: any) {
       console.error(`[Webhook] customer retrieve failed: ${customerId}`, e?.message)
+      throw e
     }
   }
 
@@ -196,7 +205,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   const subscriptionId = session.subscription as string
 
   if (!userId) {
-    console.error('No userId found in checkout session')
+    if (session.metadata?.planId && planTierFromPlanId(session.metadata.planId) !== 'FREE') {
+      throw new Error(`[Webhook] checkout.session.completed: user not found for session ${session.id}`)
+    }
+    console.log(`[Webhook] checkout.session.completed: unrelated session ${session.id} skipped`)
     return
   }
 
@@ -241,22 +253,20 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
 }
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
+  if (!isDoyaSubscription(subscription)) return
   const user = await findUserForSubscription(subscription)
   if (!user) {
-    console.error(
-      `[Webhook] subscription.created: user not found for subscription ${subscription.id} — subscription will NOT be recorded`
-    )
-    return
+    throw new Error(`[Webhook] subscription.created: user not found for subscription ${subscription.id}`)
   }
   await updateUserSubscription(user.id, subscription)
 }
 
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
+  if (!isDoyaSubscription(subscription)) return
   const user = await findUserForSubscription(subscription)
 
   if (!user) {
-    console.error(`[Webhook] subscription.updated: user not found for subscription ${subscription.id}`)
-    return
+    throw new Error(`[Webhook] subscription.updated: user not found for subscription ${subscription.id}`)
   }
 
   // canceled / unpaid は FREE に戻す。
@@ -275,12 +285,12 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
 const TIER_RANK: Record<string, number> = { FREE: 0, LIGHT: 1, PRO: 2, BUNDLE: 3, ENTERPRISE: 4 }
 
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  if (!isDoyaSubscription(subscription)) return
   const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id
   const user = await findUserForSubscription(subscription)
 
   if (!user) {
-    console.error(`[Webhook] subscription.deleted: user not found for subscription ${subscription.id}`)
-    return
+    throw new Error(`[Webhook] subscription.deleted: user not found for subscription ${subscription.id}`)
   }
 
   // ------------------------------------------------------------------

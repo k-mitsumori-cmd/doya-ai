@@ -59,5 +59,45 @@ async function webhook(){
  let f=routeFixture();await f.f.sync({userId:'u1',plan:'PRO'});const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},'@/lib/prisma':{prisma:{user:{findUnique:async()=>f.f.state.user}},withRetry:fn=>fn()},'@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({type:'customer.subscription.deleted',data:{object:f.sub}}),findActiveLikeSubscriptions:async()=>{if(fail)throw Error('temporary stripe error');return[]}}};let r=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));assert.equal(r.status,fail?500:200);assert.equal(f.f.state.user.plan,fail?'PRO':'FREE');assert(ids.every(id=>f.f.state.services[id].plan===(fail?'PRO':'FREE')));
  });
  await check('webhook failed service sync returns 500 for retry',async()=>{let f=routeFixture();f.f.fail='seo';const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},'@/lib/prisma':{prisma:{user:{findUnique:async()=>f.f.state.user}},withRetry:fn=>fn()},'@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({type:'customer.subscription.updated',data:{object:f.sub}})}};assert.equal((await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}))).status,500);assert.equal(f.f.state.user.plan,'FREE')});
+ for(const type of ['customer.subscription.created','customer.subscription.updated','customer.subscription.deleted']){
+  await check(type+' unresolved Doya user requests Stripe retry',async()=>{
+   let f=routeFixture();f.sub.metadata.userId='missing';f.legacyEmail='other@example.test';
+   const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+    '@/lib/prisma':{prisma:{user:{findUnique:async()=>null,findFirst:async()=>null}},withRetry:fn=>fn()},
+    '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({type,data:{object:f.sub}})}};
+   const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+   assert.equal(response.status,500);assert.equal(f.writes,0);
+  });
+ }
+ await check('Stripe customer lookup outage requests retry',async()=>{
+  let f=routeFixture();f.sub.metadata={planId:'banner-pro'};f.mocks['@/lib/stripe'].stripe.customers.retrieve=async()=>{throw Error('temporary Stripe failure')};
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/prisma':{prisma:{user:{findUnique:async()=>null,findFirst:async()=>null}},withRetry:fn=>fn()},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({type:'customer.subscription.updated',data:{object:f.sub}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,500);assert.equal(f.writes,0);
+ });
+ await check('known Doya price still requests retry when plan metadata is corrupt',async()=>{
+  let f=routeFixture();f.sub.metadata={planId:'invalid-plan'};
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/prisma':{prisma:{user:{findUnique:async()=>null,findFirst:async()=>null}},withRetry:fn=>fn()},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({type:'customer.subscription.updated',data:{object:f.sub}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,500);assert.equal(f.writes,0);
+ });
+ await check('unrelated subscription is acknowledged without Doya changes',async()=>{
+  let f=routeFixture();f.sub.metadata={};f.sub.items.data[0].price.id='price_other_app';
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({type:'customer.subscription.updated',data:{object:f.sub}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,200);assert.equal(f.writes,0);
+ });
+ await check('Doya checkout without user identity requests retry',async()=>{
+  let f=routeFixture();f.checkout.client_reference_id=null;f.checkout.metadata={planId:'banner-pro'};
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({type:'checkout.session.completed',data:{object:f.checkout}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,500);assert.equal(f.writes,0);
+ });
 }
 (async()=>{await atomic();await routes();await webhook();console.log(JSON.stringify({passed:results.length,allServices:ids.length,networkRequests:0,productionWrites:0,results},null,2))})().catch(e=>{console.error(e);process.exitCode=1});
