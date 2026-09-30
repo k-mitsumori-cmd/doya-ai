@@ -49,15 +49,22 @@ export async function GET(request: Request) {
       note: '初回起動: 過去コンタクトは取り込まず、以降の新規のみ対象',
     })
   }
-  const since = (cursorRow.value as { ts?: number })?.ts ?? now
+  const since = (cursorRow.value as { ts?: number } | null)?.ts
+  if (typeof since !== 'number' || !Number.isSafeInteger(since) || since < 0 || since > now) {
+    console.error('[hubspot-sync] invalid saved cursor')
+    return NextResponse.json({ error: '同期位置を確認できませんでした' }, { status: 503 })
+  }
 
   // 新規コンタクト取得
   let contacts
   try {
-    contacts = await fetchContactsCreatedAfter(since)
+    // 同じ作成時刻の別コンタクトを取りこぼさないよう、前回境界を1ms重ねる。
+    // 既存ユーザー・エンロールメントは再実行しても重複作成しない。
+    contacts = await fetchContactsCreatedAfter(Math.max(0, since - 1))
   } catch (e) {
+    console.error('[hubspot-sync] contact fetch failed:', e)
     return NextResponse.json(
-      { error: e instanceof Error ? e.message : String(e) },
+      { error: 'HubSpotのコンタクトを取得できませんでした' },
       { status: 502 }
     )
   }
@@ -109,12 +116,15 @@ export async function GET(request: Request) {
     }
   }
 
-  // カーソル前進（処理した最大createdate。取得0件なら現在時刻へ）
-  const newCursor = contacts.length ? maxTs : now
-  await prisma.dripSetting.update({
-    where: { key: CURSOR_KEY },
-    data: { value: { ts: newCursor } },
-  })
+  // 一件でも失敗した場合、次回の再試行のためカーソルを進めない。
+  const retryPending = errors > 0
+  const newCursor = retryPending ? since : maxTs > since ? maxTs : now
+  if (!retryPending) {
+    await prisma.dripSetting.update({
+      where: { key: CURSOR_KEY },
+      data: { value: { ts: newCursor } },
+    })
+  }
 
   // 実際に配信リストへ追加できたリードがあればSlack通知（mail01_メール配信通知）
   if (addedLeads.length > 0) {
@@ -129,5 +139,6 @@ export async function GET(request: Request) {
     skippedNoEmail,
     errors,
     cursor: newCursor,
-  })
+    retryPending,
+  }, { status: retryPending ? 503 : 200 })
 }

@@ -82,6 +82,9 @@ export async function fetchContactsCreatedAfter(
 
     after = data.paging?.next?.after
     if (!after) break
+    if (page === maxPages - 1) {
+      throw new Error('HubSpot search reached the page limit before all contacts were fetched')
+    }
   }
 
   return out
