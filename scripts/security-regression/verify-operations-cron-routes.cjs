@@ -1,4 +1,6 @@
 const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
 const { load, check, results } = require('./load-typescript.cjs')
 
 const json = (body, options) => ({ body, status: options?.status || 200 })
@@ -114,6 +116,34 @@ function feedbackFixture({ fail = false } = {}) {
     const failure = await route.GET(request('aio-scan'))
     assert.equal(failure.status, 500)
     assert(!JSON.stringify(failure.body).includes('private database detail'))
+  })
+  await check('scheduled reports retain internal diagnostics without returning them', async () => {
+    const alerts = []
+    const route = load('src/app/api/cron/drip-report-evening/route.ts', {
+      'next/server': { NextResponse: { json } },
+      '@/lib/notifications': {
+        sendDripReport: async () => { throw Error('private provider detail') },
+        sendErrorNotification: async (details) => { alerts.push(details) },
+      },
+      '@/lib/prisma': { withRetry: async (fn) => fn() },
+    }, { process: { env: { CRON_SECRET: 'secret' } } })
+    const response = await route.GET(request('drip-report-evening'))
+    assert.equal(response.status, 500)
+    assert(!JSON.stringify(response.body).includes('private provider detail'))
+    assert(!Object.hasOwn(response.body, 'stack'))
+    assert.match(alerts[0].errorMessage, /private provider detail/)
+  })
+  await check('no cron route returns raw exception message or stack fields', async () => {
+    const cronRoot = path.resolve(__dirname, '../../src/app/api/cron')
+    const routeFiles = fs.readdirSync(cronRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(cronRoot, entry.name, 'route.ts'))
+      .filter((file) => fs.existsSync(file))
+    for (const file of routeFiles) {
+      const source = fs.readFileSync(file, 'utf8')
+      assert(!/\berror:\s*(?:error|err|e)(?:\?\.)?message\b/.test(source), file)
+      assert(!/\bstack:\s*(?:error|err|e)(?:\?\.)?stack\b/.test(source), file)
+    }
   })
   console.log(JSON.stringify({ passed: results.length, results }, null, 2))
 })().catch((error) => { console.error(error); process.exitCode = 1 })

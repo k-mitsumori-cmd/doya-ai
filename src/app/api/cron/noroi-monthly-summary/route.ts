@@ -30,7 +30,7 @@ export async function GET(request: Request) {
       timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
     }).catch(() => {})
     return NextResponse.json(
-      { error: error?.message || 'Failed to send noroi monthly summary' },
+      { error: '定期処理を完了できませんでした' },
       { status: 500 },
     )
   }
