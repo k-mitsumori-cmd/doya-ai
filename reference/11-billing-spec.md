@@ -153,10 +153,8 @@ if (planTierFromPlanId(planId) !== 'FREE') { ... }
 
 有料か否かの一行判定は `isPaidPlan(plan)`（`src/lib/unified-plan.ts`）。`FREE` と `GUEST` 以外が有料。
 
-> ⚠️ **罠: `src/lib/plan-utils.ts` の `tierFromPlanId()` を使ってはいけない。**
-> 利用箇所0の死にコードだが、`*-starter` を **PRO** と判定し（`planTierFromPlanId` は LIGHT）、
-> `bundle` も扱わない。名前が紛らわしいので、planId から階層を出すときは
-> **必ず `stripe.ts` の `planTierFromPlanId()`** を import すること。
+> 旧 `tierFromPlanId()` は `*-starter` を PRO と誤判定する未使用関数だったため削除済み。
+> planId から階層を出すときは **必ず `stripe.ts` の `planTierFromPlanId()`** を import すること。
 
 ---
 
@@ -350,7 +348,7 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
 | **R-11** | サイドバーの「お問い合わせ・改善依頼」（全21サービスに設置）が `/api/feedback` に `{service, message}` を送るのに、API は `{serviceId, text}` しか読んでいなかった | **常に400。問い合わせ・不具合報告が一度も運営に届いていなかった**（`ServiceFeedback` 0件で確認） | **対応済**: API が両方のキー形式を受け取る。種別・発生画面も本文とSlack通知に残す |
 | **R-12** | Stripe 本番の Webhook エンドポイント（`https://doya-ai.surisuta.jp/api/stripe/webhook`）が**そもそも登録されていなかった**。登録されていたのは ゆるせん / 呪い日記 の2つだけ。8月の障害の一次原因が未解消のままで、課金・解約の反映が Webhook 経由では一度も動いていなかった（全イベント `pending_webhooks=0`） | 反映は決済直後の同期と手動再同期だけに依存。どちらも失敗すると無音で無料のまま | **対応済(2026-08-22)**: `we_1U7AHIKamgiT5EJ0k3swFTb3` を作成。`api_version` は **2023-10-16 に固定**（2025以降は `subscription.current_period_end` が items 側へ移動し現行コードが壊れるため）。署名シークレットを Vercel Production に設定し再デプロイ。実イベントで DB が5秒以内に自動修正されることを検証済み |
 | **R-13** | 運営が手で付けた上位プラン（契約は¥9,980だが DB は ENTERPRISE 等）は、`updateUserSubscription()` が Stripe の価格から算出した階層で上書きするため、**次回請求の `customer.subscription.updated` で静かに消える**。監査も毎日「過剰付与」として critical を鳴らし続ける | 意図した付与が勝手に消える／本物の異常が警告に埋もれる | **対応済**: `SystemSetting.billing_manual_grants`（または env `BILLING_MANUAL_GRANT_EMAILS`）に登録したアカウントは、監査の対象外とし、Webhook でも **DB の方が上位なら降格しない**（`src/lib/billing-manual-grants.ts`） |
-| **R-8** | `src/lib/plan-utils.ts` の `tierFromPlanId()` が `planTierFromPlanId()` と食い違う（`*-starter`→PRO / `bundle` 未対応）。現在は利用箇所0 | 誤って使うと階層判定が壊れる | 未対応（§3.4 で使用禁止を明記。削除が望ましい） |
+| **R-8** | `src/lib/plan-utils.ts` の `tierFromPlanId()` が `planTierFromPlanId()` と食い違う（`*-starter`→PRO / `bundle` 未対応）。利用箇所0 | 誤って使うと階層判定が壊れる | **対応済**: 未使用の誤判定関数を削除し、`stripe.ts` の正本へ一本化 |
 | **R-5** | `checkout/route.ts` の `priceMap` は提供終了サービスの planId も解決してしまう（価格が統一なので過剰請求にはならないが契約レコードは残る）。`retiredPlanPrefixes` で入口を塞いでいるだけ | 直POSTで不要な契約レコードが作られる | 緩和済み |
 | **R-6** | `STRIPE_PRICE_*` の個別 env が未設定のため全サービスが banner の価格を共有している。将来サービス別価格を導入すると `getPlanIdFromStripePriceId()` の逆引き結果が変わる | 階層判定は壊れないが、planId 表示が変わる | 設計上の前提 |
 

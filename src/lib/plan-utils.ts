@@ -100,15 +100,3 @@ export function planPrice(tier: PlanTier): number {
 export function isPaidTier(tier: PlanTier): boolean {
   return tier === 'LIGHT' || tier === 'PRO' || tier === 'ENTERPRISE'
 }
-
-/**
- * dispatchEvent用のplanTier判定。
- * planIdの文字列からPlanTierを推定する。
- */
-export function tierFromPlanId(planId: string): PlanTier {
-  const p = String(planId || '').toLowerCase()
-  if (p.includes('enterprise')) return 'ENTERPRISE'
-  if (p.includes('light')) return 'LIGHT'
-  if (p.includes('pro') || p.includes('basic') || p.includes('starter') || p.includes('business')) return 'PRO'
-  return 'FREE'
-}
