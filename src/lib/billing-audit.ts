@@ -72,7 +72,8 @@ function jstDateTime(d: Date): string {
 async function listAllSubscriptions(): Promise<any[]> {
   const out: any[] = []
   let startingAfter: string | undefined
-  for (let page = 0; page < 20; page++) {
+  const cursors = new Set<string>()
+  while (true) {
     const res: any = await stripe.subscriptions.list({
       status: 'all',
       limit: 100,
@@ -80,8 +81,11 @@ async function listAllSubscriptions(): Promise<any[]> {
       ...(startingAfter ? { starting_after: startingAfter } : {}),
     })
     out.push(...res.data)
-    if (!res.has_more || res.data.length === 0) break
-    startingAfter = res.data[res.data.length - 1].id
+    if (!res.has_more) break
+    const next = res.data[res.data.length - 1]?.id
+    if (!next || cursors.has(next)) throw new Error('Billing audit subscription pagination did not advance')
+    cursors.add(next)
+    startingAfter = next
   }
   return out
 }
@@ -403,22 +407,31 @@ export async function runMonthlyRevenue(now = new Date()): Promise<MonthlyRevenu
   // 前月に発行され、実際に入金された請求書を集める
   const invoices: any[] = []
   let startingAfter: string | undefined
-  for (let page = 0; page < 20; page++) {
+  const cursors = new Set<string>()
+  while (true) {
     const res: any = await stripe.invoices.list({
       created: { gte: Math.floor(since.getTime() / 1000), lt: Math.floor(until.getTime() / 1000) },
       limit: 100,
       ...(startingAfter ? { starting_after: startingAfter } : {}),
     })
     invoices.push(...res.data)
-    if (!res.has_more || res.data.length === 0) break
-    startingAfter = res.data[res.data.length - 1].id
+    if (!res.has_more) break
+    const next = res.data[res.data.length - 1]?.id
+    if (!next || cursors.has(next)) throw new Error('Monthly invoice pagination did not advance')
+    cursors.add(next)
+    startingAfter = next
   }
-  const paid = invoices.filter((i) => i.status === 'paid' && (i.amount_paid || 0) > 0)
+  // Stripeアカウントは他アプリと共有。月次売上もドヤAIの契約に紐づく請求書だけ数える。
+  const all = (await listAllSubscriptions()).filter((s) => isDoyaSubscription(s))
+  const doyaSubscriptionIds = new Set(all.map((s) => s.id))
+  const paid = invoices.filter((i) => {
+    const subscriptionId = typeof i.subscription === 'string' ? i.subscription : i.subscription?.id
+    return subscriptionId && doyaSubscriptionIds.has(subscriptionId) && i.status === 'paid' && (i.amount_paid || 0) > 0
+  })
   const paidTotal = paid.reduce((sum, i) => sum + (i.amount_paid || 0), 0)
   const refundTotal = paid.reduce((sum, i) => sum + (i.post_payment_credit_notes_amount || 0), 0)
 
   // 契約の現況
-  const all = await listAllSubscriptions()
   const live = all.filter((s) => ACTIVE_LIKE_STATUSES.has(String(s.status)))
   const activeCount = live.filter((s) => s.status === 'active').length
   const trialingCount = live.filter((s) => s.status === 'trialing').length
@@ -462,7 +475,7 @@ export function formatMonthlyRevenueMessage(r: MonthlyRevenue): string {
   if (r.refundTotal > 0) lines.push(`・返金 -${yen(r.refundTotal)}`)
   lines.push('')
   lines.push(`*契約の現況*`)
-  lines.push(`・課金中: ${r.activeCount}件（毎月 ${yen(r.activeCount * 9980)} の見込み）`)
+  lines.push(`・課金中: ${r.activeCount}件`)
   lines.push(`・無料トライアル中: ${r.trialingCount}件（**まだ売上ではありません**）`)
   lines.push(`・${r.label}の新規申し込み: ${r.newSubscriptions}件 ｜ 解約: ${r.canceled}件`)
 

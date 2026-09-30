@@ -627,3 +627,8 @@ if (adminStripeOwnership.error || adminStripeOwnership.status !== 0) {
   console.error('Security regression failed: verify-admin-stripe-ownership.cjs');
   process.exit(1);
 }
+const billingAuditScope = spawnSync(process.execPath, [path.join(__dirname, 'verify-billing-audit-scope.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (billingAuditScope.error || billingAuditScope.status !== 0) {
+  console.error('Security regression failed: verify-billing-audit-scope.cjs');
+  process.exit(1);
+}
