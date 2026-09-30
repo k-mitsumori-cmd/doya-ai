@@ -46,12 +46,12 @@ export async function GET(request: NextRequest) {
     const windowHours = overrideWindow > 0 ? overrideWindow : 24
     const audit = await runBillingAudit(windowHours)
     const label = overrideWindow > 0 ? `直近${overrideWindow}時間` : '昨日'
-
-    await postPlainToSlack(formatBillingAuditMessage(audit, { windowLabel: label }))
+    // 集計に失敗した後の再実行で日次レポートが重複しないよう、全種類を先に作る。
+    const reports = [formatBillingAuditMessage(audit, { windowLabel: label })]
 
     if (isMonday && overrideWindow === 0) {
       const weekly = await runBillingAudit(24 * 7)
-      await postPlainToSlack(formatBillingAuditMessage(weekly, { windowLabel: '直近7日' }))
+      reports.push(formatBillingAuditMessage(weekly, { windowLabel: '直近7日' }))
     }
 
     // 毎月1日は前月の売上も報告する。
@@ -60,8 +60,9 @@ export async function GET(request: NextRequest) {
     const isFirstOfMonth = jstNow.getUTCDate() === 1
     if ((isFirstOfMonth && overrideWindow === 0) || url.searchParams.get('monthly') === '1') {
       const revenue = await runMonthlyRevenue()
-      await postPlainToSlack(formatMonthlyRevenueMessage(revenue))
+      reports.push(formatMonthlyRevenueMessage(revenue))
     }
+    for (const report of reports) await postPlainToSlack(report)
 
     // 重大な異常はアラート基盤にも流す（専用チャンネル/デデュープ付き）
     if (!audit.webhookOk) {
@@ -150,6 +151,6 @@ export async function GET(request: NextRequest) {
       detail: String(error?.message || error),
       dedupKey: 'billing-audit-failed',
     }).catch(() => {})
-    return NextResponse.json({ error: error?.message || 'failed' }, { status: 500 })
+    return NextResponse.json({ error: '課金監査を完了できませんでした' }, { status: 500 })
   }
 }
