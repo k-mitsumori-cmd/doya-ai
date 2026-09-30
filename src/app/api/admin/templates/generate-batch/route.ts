@@ -84,6 +84,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}))
     const { templateIds, limit = 5 } = body as { templateIds?: string[], limit?: number }
 
+    if (!Number.isInteger(limit) || limit < 1 || limit > 5 ||
+        (templateIds !== undefined && (!Array.isArray(templateIds) || !templateIds.every(id => typeof id === 'string')))) {
+      return NextResponse.json({ error: '生成件数は1〜5件で指定してください' }, { status: 400 })
+    }
+
     // 対象テンプレートを決定
     const targetIds = templateIds || NEW_TEMPLATE_IDS
     const newPrompts = BANNER_PROMPTS_V2.filter(p => targetIds.includes(p.id))
@@ -141,9 +146,9 @@ export async function POST(request: NextRequest) {
         // レート制限対策: 2秒待機
         await new Promise(resolve => setTimeout(resolve, 2000))
         
-      } catch (error: any) {
-        console.error(`[Generate Batch] Error for ${prompt.id}:`, error.message)
-        results.push({ id: prompt.id, status: 'error', error: error.message })
+      } catch (error) {
+        console.error(`[Generate Batch] Error for ${prompt.id}:`, error)
+        results.push({ id: prompt.id, status: 'error', error: '画像生成または保存に失敗しました' })
         
         // エラー時は5秒待機
         await new Promise(resolve => setTimeout(resolve, 5000))
@@ -164,9 +169,9 @@ export async function POST(request: NextRequest) {
       }
     })
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Generate Batch] Error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'テンプレートの一括生成に失敗しました' }, { status: 500 })
   }
 }
 
@@ -196,9 +201,9 @@ export async function GET() {
       })),
       pendingTemplates: pendingIds
     })
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Generate Batch GET] Error:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'テンプレートの生成状況を取得できませんでした' }, { status: 500 })
   }
 }
 // Force rebuild 1769342650

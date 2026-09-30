@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const adminTemplateErrors = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-template-errors.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (adminTemplateErrors.error || adminTemplateErrors.status !== 0) {
+  console.error('Security regression failed: verify-admin-template-errors.cjs');
+  process.exit(1);
+}
 const privateUsageResponses = spawnSync(process.execPath, [path.join(__dirname, 'verify-private-usage-responses.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (privateUsageResponses.error || privateUsageResponses.status !== 0) {
   console.error('Security regression failed: verify-private-usage-responses.cjs');
