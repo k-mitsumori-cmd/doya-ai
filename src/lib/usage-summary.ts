@@ -11,7 +11,6 @@ import { prisma } from '@/lib/prisma'
 import { getPersonaUsage } from '@/lib/persona/usage'
 import {
   BANNER_PRICING,
-  DOYALIST_PRICING,
   PERSONA_PRICING,
   SEO_PRICING,
   getBannerMonthlyLimitByUserPlan,
@@ -23,6 +22,8 @@ import {
 import { FREE_LIMITS, PRO_MONTHLY_LIMITS, ENTERPRISE_MONTHLY_LIMITS } from '@/lib/plan-limit'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { PREP_STALE_MS, SHODAN_MONTHLY_LIMIT } from '@/lib/shodan/types'
+import { countMonthlyCompanies, DOYALIST_LIMITS } from '@/lib/doyalist/limits'
+import { tierFrom } from '@/lib/plan-utils'
 
 /** 1本の枠。limit が null なら上限なし */
 export interface UsageMeter {
@@ -358,20 +359,14 @@ export async function getUsageSummary(
     case 'aio': return null
 
     case 'doyalist': {
-      const p = String(plan || 'FREE').toUpperCase()
-      const limit =
-        p === 'ENTERPRISE'
-          ? DOYALIST_PRICING.enterpriseLimit ?? DOYALIST_PRICING.proLimit
-          : isPaidPlan(p)
-            ? DOYALIST_PRICING.proLimit
-            : DOYALIST_PRICING.freeLimit
+      const limits = DOYALIST_LIMITS[tierFrom(plan || 'FREE')]
       return {
         title: '集めた企業',
         unit: '社',
         total: null,
         planLabel,
         meters: [
-          { label: '今月', used: await subscriptionUsage(userId, 'doyalist', 'monthly'), limit: norm(limit) },
+          { label: '今月', used: await countMonthlyCompanies(userId), limit: norm(limits.maxCompaniesPerMonth) },
         ],
       }
     }

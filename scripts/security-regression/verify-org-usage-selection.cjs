@@ -42,6 +42,8 @@ const summary = load('src/lib/usage-summary.ts', {
   },
   '@/lib/unified-plan': { isPaidPlan: (plan) => plan === 'PRO' || plan === 'ENTERPRISE' },
   '@/lib/shodan/types': { PREP_STALE_MS: 300000, SHODAN_MONTHLY_LIMIT: { FREE: 1, PRO: 30, ENTERPRISE: 200 } },
+  '@/lib/doyalist/limits': {},
+  '@/lib/plan-utils': {},
 })
 
 ;(async () => {

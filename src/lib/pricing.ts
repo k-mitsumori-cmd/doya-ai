@@ -1879,10 +1879,10 @@ export const DOYALIST_PRICING: ServicePricing = {
   serviceName: 'ドヤリスト',
   serviceIcon: '📋',
   guestLimit: 0,
-  freeLimit: 10,       // 月10社収集
-  lightLimit: 100,     // 月100社
-  proLimit: 500,       // 月500社
-  enterpriseLimit: 5000, // ⚠️ 無制限にしない（gBizINFO収集とAI整形の実費が出る）
+  freeLimit: 100,      // 月100社収集（doyalist/limits.ts と一致）
+  lightLimit: 5000,    // 月5,000社
+  proLimit: 5000,      // 月5,000社
+  enterpriseLimit: -1, // 上限なし
   historyDays: {
     free: 30,
     pro: -1,
@@ -1894,11 +1894,11 @@ export const DOYALIST_PRICING: ServicePricing = {
       price: 0,
       priceLabel: '¥0',
       period: '',
-      description: '1プロジェクト / 月10社 / 月5アプローチ',
+      description: 'プロジェクト無制限 / 月100社 / 月30アプローチ',
       features: [
-        { text: '1プロジェクトまで', included: true },
-        { text: '月10社まで収集', included: true },
-        { text: '月5アプローチ生成', included: true },
+        { text: 'プロジェクト無制限', included: true },
+        { text: '月100社まで収集', included: true },
+        { text: '月30アプローチ生成', included: true },
         { text: 'CSV/Excelエクスポート', included: false },
         { text: '優先サポート', included: false },
       ],
@@ -1910,12 +1910,12 @@ export const DOYALIST_PRICING: ServicePricing = {
       price: 2980,
       priceLabel: '¥2,980',
       period: '/月（税込）',
-      description: '5プロジェクト / 月100社 / 月50アプローチ',
+      description: 'プロジェクト無制限 / 月5,000社 / 月500アプローチ',
       color: 'blue',
       features: [
-        { text: '5プロジェクトまで', included: true },
-        { text: '月100社まで収集', included: true },
-        { text: '月50アプローチ生成', included: true },
+        { text: 'プロジェクト無制限', included: true },
+        { text: '月5,000社まで収集', included: true },
+        { text: '月500アプローチ生成', included: true },
         { text: 'CSV/Excelエクスポート', included: true },
       ],
       cta: 'ライトプランを始める',
@@ -1926,13 +1926,13 @@ export const DOYALIST_PRICING: ServicePricing = {
       price: 9980,
       priceLabel: '¥9,980',
       period: '/月（税込）',
-      description: '無制限プロジェクト / 月500社 / 月200アプローチ',
+      description: 'プロジェクト無制限 / 月5,000社 / 月500アプローチ',
       popular: true,
       color: 'purple',
       features: [
         { text: '無制限プロジェクト', included: true },
-        { text: '月500社まで収集', included: true },
-        { text: '月200アプローチ生成', included: true },
+        { text: '月5,000社まで収集', included: true },
+        { text: '月500アプローチ生成', included: true },
         { text: 'CSV/Excelエクスポート', included: true },
         { text: '優先サポート', included: true },
       ],
