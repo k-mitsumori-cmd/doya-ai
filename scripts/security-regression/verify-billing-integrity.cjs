@@ -87,6 +87,22 @@ async function webhook(){
    assert.equal(response.status,500);assert.equal(f.writes,0);
   });
  }
+ await check('explicit missing userId cannot fall back to another customer or email owner',async()=>{
+  let f=routeFixture();f.sub.metadata.userId='missing';
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/prisma':{prisma:{user:{findUnique:async()=>null,findFirst:async()=>f.f.state.user}},withRetry:fn=>fn()},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt-missing',type:'customer.subscription.updated',data:{object:f.sub}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,500);assert.equal(f.writes,0);
+ });
+ await check('legacy subscription without userId can resolve verified customer email',async()=>{
+  let f=routeFixture();f.sub.metadata={planId:'banner-pro'};let lookups=0;
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/prisma':{prisma:{user:{findFirst:async()=>++lookups===1?null:f.f.state.user}},withRetry:fn=>fn()},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt-legacy',type:'customer.subscription.updated',data:{object:f.sub}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,200);assert.equal(f.writes,1);assert.equal(lookups,2);
+ });
  await check('Stripe customer lookup outage requests retry',async()=>{
   let f=routeFixture();f.sub.metadata={planId:'banner-pro'};f.mocks['@/lib/stripe'].stripe.customers.retrieve=async()=>{throw Error('temporary Stripe failure')};
   const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},

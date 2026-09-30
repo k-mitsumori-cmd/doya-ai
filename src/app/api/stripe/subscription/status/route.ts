@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { stripe, findActiveLikeSubscriptions, resolvePlanIdFromSubscription } from '@/lib/stripe'
+import { stripe, findActiveLikeSubscriptions, isDoyaSubscription, resolvePlanIdFromSubscription } from '@/lib/stripe'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,7 +64,10 @@ export async function GET(request: NextRequest) {
       }
       throw e
     }
-    if (!ACTIVE_LIKE.has(String(sub.status))) return privateJson({ ok: true, hasSubscription: false })
+    if (!ACTIVE_LIKE.has(String(sub.status)) || !isDoyaSubscription(sub)) return privateJson({ ok: true, hasSubscription: false })
+    if (sub.metadata?.userId && sub.metadata.userId !== user.id) {
+      return privateJson({ error: '契約情報の一致を確認できませんでした。' }, { status: 409 })
+    }
     const customerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id
     const expectedCustomerId = live[0]?.customerId || user.stripeCustomerId
     if (!expectedCustomerId || customerId !== expectedCustomerId) {
@@ -86,4 +89,3 @@ export async function GET(request: NextRequest) {
     return privateJson({ error: '契約状態を確認できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
-

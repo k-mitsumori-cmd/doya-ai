@@ -206,8 +206,8 @@ async function findUserForSubscription(subscription: Stripe.Subscription): Promi
   // 1) checkout が subscription_data.metadata に入れている userId（最も確実）
   const metaUserId = subscription.metadata?.userId
   if (metaUserId) {
-    const byId = await prisma.user.findUnique({ where: { id: metaUserId }, select: USER_SELECT })
-    if (byId) return byId
+    // 明示IDが存在しない場合、同じ顧客/メールの別ユーザーへ付け替えない。
+    return prisma.user.findUnique({ where: { id: metaUserId }, select: USER_SELECT })
   }
 
   // 2) DB に保存済みの customerId

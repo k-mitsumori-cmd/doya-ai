@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { stripe, findActiveLikeSubscriptions, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
+import { stripe, findActiveLikeSubscriptions, isDoyaSubscription, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 
 // ========================================
@@ -52,7 +52,8 @@ export async function POST(request: NextRequest) {
     const subscriptionId = live[0]!.id
     const current = await stripe.subscriptions.retrieve(subscriptionId)
     const customerId = typeof current.customer === 'string' ? current.customer : current.customer?.id
-    if (customerId !== live[0]!.customerId || !ACTIVE_LIKE_STATUSES.has(current.status)) {
+    if (customerId !== live[0]!.customerId || !ACTIVE_LIKE_STATUSES.has(current.status) ||
+        !isDoyaSubscription(current) || (current.metadata?.userId && current.metadata.userId !== user.id)) {
       return NextResponse.json({ error: '契約の状態が変更されました。再読み込みしてご確認ください。' }, { status: 409 })
     }
     // 再送時は、すでに継続中なら変更せず現在の状態を返す。

@@ -8,6 +8,19 @@ function fixture(fail,mode='period_end'){
 }
 function callback(file){const source=fs.readFileSync(file,'utf8'),ast=ts.createSourceFile('x.tsx',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);let code;function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='handleCancelSubscription')code=n.initializer.getText(ast);if(ts.isJsxAttribute(n)&&n.name.getText(ast)==='onClick'&&n.initializer?.expression?.getText(ast).includes("fetch('/api/stripe/subscription/cancel'"))code=n.initializer.expression.getText(ast);ts.forEachChild(n,visit)}visit(ast);assert.ok(code);return ts.transpileModule('('+code+')',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;}
 (async()=>{
+ for(const scenario of ['foreign-app','other-user','own-legacy'])await check('saved subscription fallback '+scenario,async()=>{
+  const calls=[];
+  const subscription={id:'saved',status:'active',customer:'customer-split',metadata:{userId:scenario==='other-user'?'other':'u1'},items:{data:[{price:{id:'price_banner_pro_monthly'}}]}};
+  const api=load('src/app/api/stripe/subscription/cancel/route.ts',{
+   'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{email:'owner@example.invalid'}})},'@/lib/auth':{},
+   '@/lib/prisma':{prisma:{user:{findUnique:async()=>({id:'u1',email:'owner@example.invalid',stripeCustomerId:'old',stripeSubscriptionId:'saved',serviceSubscriptions:[]}),update:async()=>{}}}},
+   '@/lib/stripe':{findActiveLikeSubscriptions:async()=>[],ACTIVE_LIKE_STATUSES:new Set(['active']),isDoyaSubscription:()=>scenario!=='foreign-app',resolvePlanIdFromSubscription:()=>({planId:'banner-pro',priceId:'price_banner_pro_monthly'}),stripe:{subscriptions:{retrieve:async()=>subscription,update:async id=>{calls.push(id);return{id,status:'active',cancel_at_period_end:true,current_period_end:2000000000}}}}},
+   '@/lib/alert':{notifyAlert:async()=>{}}
+  });
+  const response=await api.POST({json:async()=>({})});
+  assert.equal(response.status,scenario==='own-legacy'?200:404);
+  assert.equal(calls.join(','),scenario==='own-legacy'?'saved':'');
+ });
  for(const mode of ['period_end','immediate'])for(const fail of [[],['a'],['b'],['a','b']])await check(mode+' fails='+fail.join(','),async()=>{const f=fixture(fail,mode),res=await f.run(),body=await res.json();assert.equal(res.status,fail.length===0?200:fail.length===2?500:502);assert.deepEqual(f.calls,['a','b']);assert.equal(body.ok===true,fail.length===0);assert.equal(JSON.stringify(body).includes('synthetic failure'),false);if(fail.length===1){assert.equal(body.code,'CANCELLATION_INCOMPLETE');assert.equal(body.failedCount,1);assert.equal(body.canceledCount,1);assert.equal(f.alerts.length,1)}if(fail.length<2){const id=fail.includes('a')?'b':'a';assert.equal(f.writes[0].data.stripeSubscriptionId,id);assert.equal(f.writes[0].data.stripeCustomerId,'customer-'+id)}else assert.equal(f.writes.length,0)});
  for(const file of ['src/app/banner/dashboard/plan/page.tsx','src/app/banner/dashboard/settings/page.tsx','src/app/seo/dashboard/plan/page.tsx'])for(const fail of [[],['a']])await check(file+' '+(fail.length?'partial failure':'success'),async()=>{
  const errors=[],success=[],storage=[],closed=[];let loaded=0;const noop=()=>{};

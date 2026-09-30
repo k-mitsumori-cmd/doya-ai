@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { stripe, findActiveLikeSubscriptions, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
+import { stripe, findActiveLikeSubscriptions, isDoyaSubscription, resolvePlanIdFromSubscription, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import { notifyAlert } from '@/lib/alert'
 
@@ -67,19 +67,29 @@ export async function POST(request: NextRequest) {
       if (dbId) {
         try {
           const s = await stripe.subscriptions.retrieve(dbId)
-          if (ACTIVE_LIKE_STATUSES.has(String(s.status))) {
+          const customerId = typeof s.customer === 'string' ? s.customer : String(s.customer?.id || '')
+          if (ACTIVE_LIKE_STATUSES.has(String(s.status)) && isDoyaSubscription(s) &&
+              (!s.metadata?.userId || s.metadata.userId === user.id) && customerId) {
+            // DBに残るIDだけでは本人の契約と確定できない。旧契約はStripe顧客メールで救済。
+            const customer = s.metadata?.userId === user.id || customerId === user.stripeCustomerId
+              ? null : await stripe.customers.retrieve(customerId)
+            const belongsToUser = s.metadata?.userId === user.id || customerId === user.stripeCustomerId ||
+              (!customer?.deleted && customer?.email?.trim().toLowerCase() === user.email?.trim().toLowerCase())
+            if (!belongsToUser) return NextResponse.json({ error: '契約情報の一致を確認できませんでした。' }, { status: 409 })
+            const { priceId, planId } = resolvePlanIdFromSubscription(s)
             live = [
               {
                 id: s.id,
                 status: String(s.status),
-                customerId: typeof s.customer === 'string' ? s.customer : String((s.customer as any)?.id || ''),
-                priceId: s.items.data[0]?.price.id || null,
-                planId: String(s.metadata?.planId || ''),
+                customerId,
+                priceId,
+                planId,
               },
             ]
           }
         } catch (e: any) {
-          console.error('[Cancel] DBのsubscriptionIdがStripeに存在しない:', dbId, e?.message)
+          if (e?.code !== 'resource_missing') throw e
+          console.warn('[Cancel] 保存済みsubscriptionIdがStripeに存在しない:', dbId)
         }
       }
     }
@@ -178,4 +188,3 @@ export async function POST(request: NextRequest) {
     )
   }
 }
-
