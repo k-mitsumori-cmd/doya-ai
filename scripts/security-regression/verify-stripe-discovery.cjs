@@ -9,6 +9,14 @@ function fixture({customers=1,subscriptions=1,fail='',repeat=false,emptyStored=f
 (async()=>{
 for(const n of [0,1,100,101,205])await check('all '+n+' customers searched, no duplicate stored customer',async()=>{const f=fixture({customers:n});const rows=await f.module.findActiveLikeSubscriptions({email:'x@example.invalid',stripeCustomerId:n?'c0':null});assert.equal(rows.length,n);assert.equal(f.calls.filter(c=>c.kind==='subscriptions').length,n)});
 for(const n of [0,1,100,101,205])await check('active contract after '+n+' subscription records',async()=>{const f=fixture({subscriptions:n});const rows=await f.module.findActiveLikeSubscriptions({stripeCustomerId:'c0'});assert.equal(rows.length,n?1:0);if(n)assert.equal(rows[0].id,'sc0-'+(n-1))});
+await check('shared-account discovery ignores foreign active subscriptions',async()=>{
+ const f=fixture({customers:0});f.module.stripe.subscriptions.list=async()=>({data:[
+  {id:'foreign',status:'active',metadata:{userId:'u1',planId:'premium'},items:{data:[{price:{id:'price_other_app'}}]}},
+  {id:'doya',status:'active',metadata:{userId:'u1',planId:'banner-pro'},items:{data:[{price:{id:'price_banner_pro_monthly'}}]}},
+ ],has_more:false});
+ const rows=await f.module.findActiveLikeSubscriptions({stripeCustomerId:'c0'});
+ assert.equal(rows.map(s=>s.id).join(','),'doya');
+});
 for(const kind of ['customers','subscriptions'])await check(kind+' second page failure is not partial success',async()=>{const f=fixture({customers:101,subscriptions:101,fail:kind});await assert.rejects(f.module.findActiveLikeSubscriptions({email:'x@example.invalid'}))});
 for(const kind of ['customers','subscriptions'])await check('portal customer lookup propagates '+kind+' pagination failure',async()=>{const f=fixture({customers:101,subscriptions:101,fail:kind});await assert.rejects(f.module.resolveBillingCustomerId({email:'x@example.invalid',stripeCustomerId:'old-customer'}))});
 await check('portal selects customer with a live contract',async()=>{const f=fixture({customers:2,subscriptions:1,emptyStored:true});assert.equal(await f.module.resolveBillingCustomerId({email:'x@example.invalid',stripeCustomerId:'stale'}),'c0')});

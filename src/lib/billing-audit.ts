@@ -15,6 +15,7 @@
 import {
   stripe,
   resolvePlanIdFromSubscription,
+  isDoyaSubscription,
   planTierFromPlanId,
   ALL_SERVICE_IDS,
   ACTIVE_LIKE_STATUSES,
@@ -125,7 +126,7 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
   const since = new Date(Date.now() - windowHours * 3600_000)
   const all = await listAllSubscriptions()
 
-  const live = all.filter((s) => ACTIVE_LIKE_STATUSES.has(String(s.status)))
+  const live = all.filter((s) => ACTIVE_LIKE_STATUSES.has(String(s.status)) && isDoyaSubscription(s))
 
   // メール一括でDBのプランを引く
   const emails = Array.from(
@@ -171,7 +172,7 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
   const newInWindow = subscriptions.filter((s) => s.createdAt >= since)
 
   const canceledInWindow = all
-    .filter((s) => String(s.status) === 'canceled' && s.ended_at && new Date(s.ended_at * 1000) >= since)
+    .filter((s) => String(s.status) === 'canceled' && isDoyaSubscription(s) && s.ended_at && new Date(s.ended_at * 1000) >= since)
     .map((s) => ({
       id: s.id,
       email: (typeof s.customer === 'object' ? (s.customer?.email as string | undefined) : null) || null,

@@ -6,6 +6,8 @@ import {
   ACTIVE_LIKE_STATUSES,
   resolvePlanIdFromSubscription,
   getPlanIdFromStripePriceId,
+  isDoyaPlanId,
+  isDoyaSubscription,
   planTierFromPlanId,
   findActiveLikeSubscriptions,
 } from '@/lib/stripe'
@@ -177,24 +179,17 @@ type WebhookUser = { id: string; email: string | null; name: string | null; plan
 
 const USER_SELECT = { id: true, email: true, name: true, plan: true } as const
 
-function isDoyaSubscription(subscription: Stripe.Subscription): boolean {
-  const { planId, priceId } = resolvePlanIdFromSubscription(subscription as any)
-  return Boolean(subscription.metadata?.userId) ||
-    planTierFromPlanId(planId) !== 'FREE' ||
-    getPlanIdFromStripePriceId(priceId) !== null
-}
-
 /** 同じStripeアカウントにある別アプリの請求を、ドヤAIの通知に混ぜない。 */
 async function isDoyaInvoice(invoice: Stripe.Invoice): Promise<boolean> {
-  if (invoice.lines?.data?.some((line) => getPlanIdFromStripePriceId(line.price?.id) !== null)) {
-    return true
-  }
   const subscription = invoice.subscription
-  if (!subscription) return false
-  const resolved = typeof subscription === 'string'
-    ? await stripe.subscriptions.retrieve(subscription)
-    : subscription
-  return isDoyaSubscription(resolved)
+  if (subscription) {
+    const resolved = typeof subscription === 'string'
+      ? await stripe.subscriptions.retrieve(subscription)
+      : subscription
+    // 明示された他アプリの識別子は、共有価格IDより優先する。
+    return isDoyaSubscription(resolved)
+  }
+  return Boolean(invoice.lines?.data?.some((line) => getPlanIdFromStripePriceId(line.price?.id) !== null))
 }
 
 /**
@@ -244,34 +239,39 @@ async function findUserForSubscription(subscription: Stripe.Subscription): Promi
 
 async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<EventNotification | null> {
   const userId = session.client_reference_id || session.metadata?.userId
-  const customerId = session.customer as string
-  const subscriptionId = session.subscription as string
+  const customerId = typeof session.customer === 'string' ? session.customer : session.customer?.id
+  const subscriptionId = typeof session.subscription === 'string' ? session.subscription : session.subscription?.id
+  const explicitDoya = session.metadata?.app === 'doya-ai' || isDoyaPlanId(session.metadata?.planId)
 
-  if (!userId) {
-    if (session.metadata?.planId && planTierFromPlanId(session.metadata.planId) !== 'FREE') {
-      throw new Error(`[Webhook] checkout.session.completed: user not found for session ${session.id}`)
-    }
+  if (session.metadata?.app && session.metadata.app !== 'doya-ai') return null
+  if (!subscriptionId) {
+    if (explicitDoya) throw new Error(`[Webhook] checkout.session.completed: subscription missing for session ${session.id}`)
     console.log(`[Webhook] checkout.session.completed: unrelated session ${session.id} skipped`)
     return null
   }
+  const sub = await stripe.subscriptions.retrieve(subscriptionId)
+  if (!isDoyaSubscription(sub)) return null
+  if (!userId || !customerId) {
+    throw new Error(`[Webhook] checkout.session.completed: user/customer missing for session ${session.id}`)
+  }
+  const subCustomerId = typeof sub.customer === 'string' ? sub.customer : sub.customer?.id
+  if (subCustomerId !== customerId ||
+      (session.metadata?.userId && session.metadata.userId !== userId) ||
+      (sub.metadata?.userId && sub.metadata.userId !== userId)) {
+    throw new Error(`[Webhook] checkout.session.completed: identity mismatch for session ${session.id}`)
+  }
+  if (!ACTIVE_LIKE_STATUSES.has(String(sub.status))) return null
 
   console.log(`Checkout completed for user: ${userId}`)
 
-  // ユーザーにStripe Customer IDを保存（DB接続エラー時はリトライ）
-  const user = await withRetry(() => prisma.user.update({
+  // 課金情報は syncUnifiedBilling でまとめて保存する。通知用のユーザーは先に読む。
+  const user = await withRetry(() => prisma.user.findUnique({
     where: { id: userId },
-    data: {
-      stripeCustomerId: customerId,
-    },
     select: { email: true, name: true },
   }))
+  if (!user) throw new Error(`[Webhook] checkout.session.completed: user not found for session ${session.id}`)
 
-  // サブスクリプション情報を取得
-  let sub: Stripe.Subscription | null = null
-  if (subscriptionId) {
-    sub = await stripe.subscriptions.retrieve(subscriptionId)
-    await updateUserSubscription(userId, sub)
-  }
+  await updateUserSubscription(userId, sub)
 
   // ------------------------------------------------------------------
   // 申し込み通知（無料トライアルか、即課金かを必ず区別する）

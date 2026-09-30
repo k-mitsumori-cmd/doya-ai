@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { stripe, ACTIVE_LIKE_STATUSES, resolvePlanIdFromSubscription, planTierFromPlanId } from '@/lib/stripe'
+import { stripe, ACTIVE_LIKE_STATUSES, isDoyaSubscription, resolvePlanIdFromSubscription, planTierFromPlanId } from '@/lib/stripe'
 import { syncUnifiedBilling } from '@/lib/billing-sync'
 import { prisma } from '@/lib/prisma'
 import { sendEventNotification } from '@/lib/notifications'
@@ -68,6 +68,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '決済が完了していません' }, { status: 409 })
     }
     const subscription = await stripe.subscriptions.retrieve(subscriptionId)
+    if (!isDoyaSubscription(subscription)) {
+      return NextResponse.json({ error: 'この決済はドヤAIの契約ではありません。' }, { status: 403 })
+    }
     if (!ACTIVE_LIKE_STATUSES.has(String(subscription.status))) {
       return NextResponse.json({ error: 'この契約は有効ではありません。現在の契約を再同期してください。' }, { status: 409 })
     }

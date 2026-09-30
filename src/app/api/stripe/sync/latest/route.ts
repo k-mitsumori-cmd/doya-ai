@@ -5,7 +5,9 @@ import { syncUnifiedBilling } from '@/lib/billing-sync'
 import { prisma } from '@/lib/prisma'
 import {
   stripe,
+  findActiveLikeSubscriptions,
   resolvePlanIdFromSubscription,
+  isDoyaSubscription,
   planTierFromPlanId,
   ACTIVE_LIKE_STATUSES,
 } from '@/lib/stripe'
@@ -36,35 +38,14 @@ export async function POST(_req: NextRequest) {
     })
     if (!user?.id || !user.email) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
-    // Customer特定（DB優先 → メール横断で全顧客）
-    // checkout は customer_email で都度 Customer を作るため、同一メールで顧客が分裂しうる。
-    // 1件だけ見ると「契約はあるのに見つからない」が起きるので全部見る。
-    const customerIds = new Set<string>()
-    if (user.stripeCustomerId) customerIds.add(user.stripeCustomerId)
-    const listed = await stripe.customers.list({ email: user.email, limit: 100 })
-    for (const c of listed.data) customerIds.add(c.id)
-    if (customerIds.size === 0) {
-      return NextResponse.json({ error: 'Stripe customer not found' }, { status: 404 })
-    }
-
-    // 全顧客のアクティブ系サブスクを集める
-    const candidates: Array<{
-      subscription: Awaited<ReturnType<typeof stripe.subscriptions.retrieve>>
-      priceId: string | null
-      planId: string
-      tier: string
-      customerId: string
-    }> = []
-    for (const cid of customerIds) {
-      const subs = await stripe.subscriptions.list({ customer: cid, status: 'all', limit: 100 })
-      for (const s of subs.data) {
-        if (!ACTIVE_LIKE_STATUSES.has(String(s.status))) continue
-        const { planId, priceId } = resolvePlanIdFromSubscription(s as any)
-        const tier = planTierFromPlanId(planId)
-        if (tier === 'FREE') continue
-        candidates.push({ subscription: s as any, priceId, planId, tier, customerId: cid })
-      }
-    }
+    // 共通探索は全Customer/Subscriptionページを読み、他アプリの契約を除外する。
+    const candidates = (await findActiveLikeSubscriptions({
+      email: user.email,
+      stripeCustomerId: user.stripeCustomerId,
+    })).map((subscription) => ({
+      ...subscription,
+      tier: planTierFromPlanId(subscription.planId),
+    })).filter((subscription) => subscription.tier !== 'FREE')
 
     if (candidates.length === 0) {
       return NextResponse.json({ error: 'No active subscription found' }, { status: 404 })
@@ -73,15 +54,21 @@ export async function POST(_req: NextRequest) {
     // 最上位の階層を採用
     candidates.sort((a, b) => (TIER_RANK[b.tier] ?? 0) - (TIER_RANK[a.tier] ?? 0))
     const best = candidates[0]!
-    const subscription = best.subscription
-    const priceId = best.priceId
-    const bestPlanId = best.planId
-    const customerId = best.customerId
+    const subscription = await stripe.subscriptions.retrieve(best.id)
+    const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id
+    if (!ACTIVE_LIKE_STATUSES.has(String(subscription.status)) ||
+        !isDoyaSubscription(subscription) || customerId !== best.customerId ||
+        (subscription.metadata?.userId && subscription.metadata.userId !== user.id)) {
+      return NextResponse.json({ error: '契約情報の一致を確認できませんでした。' }, { status: 409 })
+    }
+    const { planId: bestPlanId, priceId } = resolvePlanIdFromSubscription(subscription)
+    const currentTier = planTierFromPlanId(bestPlanId)
+    if (currentTier === 'FREE') return NextResponse.json({ error: '契約プランを確認できませんでした。' }, { status: 409 })
     // User.plan は階層をそのまま持ち、サービス行だけ BUNDLE→PRO に落とす。
     // （webhook / sync と同じ規約。以前はここだけ User.plan にも PRO を書いていた）
     const before = await prisma.user.findUnique({ where: { id: user.id }, select: { plan: true, name: true } })
     const { userPlan } = await syncUnifiedBilling({
-      userId: user.id, plan: best.tier,
+      userId: user.id, plan: currentTier,
       stripeCustomerId: customerId, stripeSubscriptionId: subscription.id,
       stripePriceId: priceId, stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
     })

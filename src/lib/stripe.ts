@@ -230,7 +230,7 @@ export const ALL_SERVICE_IDS = [
 // ========================================
 // 価格ID ↔ プランID 変換（厳密マッピング）
 // ========================================
-export type PlanId = 'seo-light' | 'seo-pro' | 'seo-enterprise' | 'banner-light' | 'banner-basic' | 'banner-pro' | 'banner-enterprise' | 'interview-light' | 'interview-pro' | 'interview-enterprise' | 'copy-light' | 'copy-pro' | 'copy-enterprise' | 'lp-light' | 'lp-pro' | 'lp-enterprise' | 'voice-light' | 'voice-pro' | 'voice-enterprise' | 'movie-light' | 'movie-pro' | 'movie-enterprise' | 'adsim-light' | 'adsim-pro' | 'adsim-enterprise' | 'hr-starter' | 'hr-pro' | 'hr-enterprise' | 'bundle'
+export type PlanId = 'seo-light' | 'seo-pro' | 'seo-enterprise' | 'banner-light' | 'banner-basic' | 'banner-starter' | 'banner-business' | 'banner-pro' | 'banner-enterprise' | 'interview-light' | 'interview-pro' | 'interview-enterprise' | 'copy-light' | 'copy-pro' | 'copy-enterprise' | 'lp-light' | 'lp-pro' | 'lp-enterprise' | 'voice-light' | 'voice-pro' | 'voice-enterprise' | 'movie-light' | 'movie-pro' | 'movie-enterprise' | 'adsim-light' | 'adsim-pro' | 'adsim-enterprise' | 'hr-starter' | 'hr-pro' | 'hr-enterprise' | 'bundle'
 export type ServiceId = 'seo' | 'banner' | 'interview' | 'copy' | 'lp' | 'voice' | 'movie' | 'adsim' | 'hr' | 'bundle'
 
 export function getServiceIdFromPlanId(planId: PlanId): ServiceId {
@@ -256,6 +256,30 @@ export function planTierFromPlanId(planId: string | null | undefined): 'FREE' | 
   if (id.endsWith('-light') || id.endsWith('-starter')) return 'LIGHT'
   // -pro / banner-basic / banner-business など有料の既定は PRO
   return 'PRO'
+}
+
+/** 共有Stripeアカウントで他アプリの任意の planId を有料契約と誤認しない。 */
+const DOYA_PLAN_IDS = new Set<string>([
+  'bundle',
+  ...['seo', 'banner', 'interview', 'copy', 'lp', 'voice', 'movie', 'adsim', 'hr']
+    .flatMap((service) => ['light', 'pro', 'enterprise'].map((tier) => `${service}-${tier}`)),
+  'banner-basic', 'banner-starter', 'banner-business', 'hr-starter',
+])
+
+export function isDoyaPlanId(planId: string | null | undefined): boolean {
+  return Boolean(planId && DOYA_PLAN_IDS.has(planId))
+}
+
+export function isDoyaSubscription(subscription: {
+  metadata?: Record<string, string> | null
+  items: { data: Array<{ price: { id: string } }> }
+}): boolean {
+  // 新規契約の明示マーカーを優先。マーカーのない旧契約は既知の価格/プランで救済する。
+  if (subscription.metadata?.app && subscription.metadata.app !== 'doya-ai') return false
+  const priceId = subscription.items.data[0]?.price.id
+  return subscription.metadata?.app === 'doya-ai' ||
+    getPlanIdFromStripePriceId(priceId) !== null ||
+    isDoyaPlanId(subscription.metadata?.planId)
 }
 
 /**
@@ -291,7 +315,7 @@ export async function findActiveLikeSubscriptions(params: {
     while (true) {
       const subs = await stripe.subscriptions.list({ customer: cid, status: 'all', limit: 100, ...(cursor ? { starting_after: cursor } : {}) })
       for (const s of subs.data) {
-        if (!ACTIVE_LIKE_STATUSES.has(String(s.status)) || subscriptionIds.has(s.id)) continue
+        if (!ACTIVE_LIKE_STATUSES.has(String(s.status)) || subscriptionIds.has(s.id) || !isDoyaSubscription(s)) continue
         const { planId, priceId } = resolvePlanIdFromSubscription(s as any)
         subscriptionIds.add(s.id)
         out.push({ id: s.id, status: String(s.status), customerId: cid, priceId, planId })
@@ -337,7 +361,7 @@ export function resolvePlanIdFromSubscription(subscription: {
   items: { data: Array<{ price: { id: string } }> }
 }): { planId: string; priceId: string | null } {
   const priceId = subscription.items.data[0]?.price.id || null
-  const fromMeta = subscription.metadata?.planId || null
+  const fromMeta = isDoyaPlanId(subscription.metadata?.planId) ? subscription.metadata?.planId : null
   const fromPrice = getPlanIdFromStripePriceId(priceId)
   return { planId: String(fromMeta || fromPrice || ''), priceId }
 }
@@ -350,6 +374,8 @@ export function getPlanIdFromStripePriceId(priceId: string | null | undefined): 
     ['seo-enterprise', STRIPE_PRICE_IDS.seo.enterprise],
     ['banner-light', STRIPE_PRICE_IDS.banner.light],
     ['banner-basic', STRIPE_PRICE_IDS.banner.basic],
+    ['banner-starter', STRIPE_PRICE_IDS.banner.starter],
+    ['banner-business', STRIPE_PRICE_IDS.banner.business],
     ['banner-pro', STRIPE_PRICE_IDS.banner.pro],
     ['banner-enterprise', STRIPE_PRICE_IDS.banner.enterprise],
     ['interview-light', STRIPE_PRICE_IDS.interview.light],
@@ -424,16 +450,18 @@ export async function createCheckoutSession({
     customer_email: userEmail,
     client_reference_id: userId,
     metadata: {
-      userId,
       ...(metadata || {}),
+      app: 'doya-ai',
+      userId,
     },
     // 日本語化
     locale: 'ja',
     // サブスクリプション設定
     subscription_data: mode === 'subscription' ? {
       metadata: {
-        userId,
         ...(metadata || {}),
+        app: 'doya-ai',
+        userId,
       },
       // 初月無料トライアル。トライアル中に支払い方法が無ければ更新せず解約（請求事故防止）。
       ...(trial ? {
