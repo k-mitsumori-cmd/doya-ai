@@ -25,7 +25,9 @@ export async function getKintaiContext(): Promise<KintaiContext | null> {
   return {
     userId,
     organizationId: membership.organizationId,
-    role: membership.role as KintaiMemberRole,
+    // 無効化後も本人の勤怠履歴は読めるが、以前の管理権限は使わせない。
+    role: membership.employee.isActive ? membership.role as KintaiMemberRole : 'employee',
+    isActive: membership.employee.isActive,
     memberId: membership.id,
     employeeId: membership.employee.id,
   }

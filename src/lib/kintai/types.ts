@@ -11,6 +11,7 @@ export interface KintaiContext {
   userId: string
   organizationId: string
   role: KintaiMemberRole
+  isActive: boolean
   memberId: string
   employeeId: string
 }

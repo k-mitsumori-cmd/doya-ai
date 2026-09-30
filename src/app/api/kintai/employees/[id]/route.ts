@@ -66,12 +66,15 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (isActive !== undefined) data.isActive = isActive
 
     return await prisma.$transaction(async (tx) => {
-      if (isActive === true) await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
+      if (isActive !== undefined || role !== undefined) await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
       const existingEmp = await tx.kintaiEmployee.findFirst({
         where: { id: p.id, organizationId: kctx.organizationId },
         include: { member: { select: { id: true, role: true } } },
       })
       if (!existingEmp) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+      if (isActive === false && existingEmp.member?.role === 'system_admin') {
+        return NextResponse.json({ error: 'システム管理者の権限を別の有効な管理者に引き継いでから無効化してください' }, { status: 409 })
+      }
       if (isActive === true && !existingEmp.isActive) {
         const limit = await reachedKintaiEmployeeLimit(tx, kctx.organizationId)
         if (limit !== null) {
@@ -93,6 +96,20 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       if (roleChanged && kctx.role !== 'system_admin' &&
           (role === 'system_admin' || existingEmp.member?.role === 'system_admin')) {
         return NextResponse.json({ error: 'システム管理者の権限変更はシステム管理者のみ可能です' }, { status: 403 })
+      }
+      if (roleChanged && existingEmp.member?.role === 'system_admin') {
+        const otherAdmins = await tx.kintaiMember.count({
+          where: {
+            organizationId: kctx.organizationId,
+            id: { not: existingEmp.member.id },
+            role: 'system_admin',
+            status: 'ACTIVE',
+            employee: { is: { isActive: true } },
+          },
+        })
+        if (otherAdmins === 0) {
+          return NextResponse.json({ error: '最後のシステム管理者は権限を変更できません' }, { status: 409 })
+        }
       }
 
       // すべての検証後に保存し、権限更新が失敗した場合は従業員情報も戻す。
@@ -123,18 +140,22 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
     const p = await ctx.params
 
-    // Organization scoping: verify the employee belongs to the caller's org
-    const existingEmp = await prisma.kintaiEmployee.findFirst({
-      where: { id: p.id, organizationId: kctx.organizationId },
+    return await prisma.$transaction(async (tx) => {
+      await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
+      const existingEmp = await tx.kintaiEmployee.findFirst({
+        where: { id: p.id, organizationId: kctx.organizationId },
+        include: { member: { select: { role: true } } },
+      })
+      if (!existingEmp) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+      if (existingEmp.member?.role === 'system_admin') {
+        return NextResponse.json({ error: 'システム管理者の権限を別の有効な管理者に引き継いでから無効化してください' }, { status: 409 })
+      }
+      await tx.kintaiEmployee.update({
+        where: { id: p.id },
+        data: { isActive: false },
+      })
+      return NextResponse.json({ success: true })
     })
-    if (!existingEmp) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
-
-    await prisma.kintaiEmployee.update({
-      where: { id: p.id },
-      data: { isActive: false },
-    })
-
-    return NextResponse.json({ success: true })
   } catch (e) {
     console.error('[kintai/employees/[id] DELETE]', e)
     return NextResponse.json({ error: '無効化に失敗しました' }, { status: 500 })

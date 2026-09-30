@@ -8,6 +8,8 @@ const cases=[
  {name:'invalid-role',actor:'system_admin',old:'employee',role:'unknown',http:400},
  {name:'empty-role',actor:'system_admin',old:'employee',role:'',http:400},
  {name:'allowed-promotion',actor:'system_admin',old:'employee',role:'system_admin',http:200},
+ {name:'reject-last-admin-demotion',actor:'system_admin',old:'system_admin',role:'employee',otherAdmins:0,http:409},
+ {name:'allow-admin-transfer',actor:'system_admin',old:'system_admin',role:'employee',otherAdmins:1,http:200},
  {name:'role-write-failure',actor:'system_admin',old:'employee',role:'manager',fail:'member',http:500},
  {name:'employee-write-failure',actor:'system_admin',old:'employee',role:'manager',fail:'employee',http:500},
  {name:'foreign-employee',actor:'system_admin',old:'employee',role:'manager',foreign:true,http:404},
@@ -17,9 +19,9 @@ const cases=[
 for(const c of cases){
  let row={id:'target',organizationId:c.foreign?'other':'org',name:'before',member:{id:'member',role:c.old}},attempts=[],rollbacks=0;
  const before=JSON.stringify(row);
- const tx={kintaiEmployee:{findFirst:async({where})=>where.id===row.id&&where.organizationId===row.organizationId?structuredClone(row):null,update:async({data})=>{attempts.push('employee');if(c.fail==='employee')throw Error('synthetic failure');row={...row,...data};return structuredClone(row)}},kintaiMember:{update:async({data})=>{attempts.push('member');if(c.fail==='member')throw Error('synthetic failure');row.member={...row.member,...data};return structuredClone(row.member)}}};
+ const tx={kintaiEmployee:{findFirst:async({where})=>where.id===row.id&&where.organizationId===row.organizationId?structuredClone(row):null,update:async({data})=>{attempts.push('employee');if(c.fail==='employee')throw Error('synthetic failure');row={...row,...data};return structuredClone(row)}},kintaiMember:{count:async()=>c.otherAdmins??0,update:async({data})=>{attempts.push('member');if(c.fail==='member')throw Error('synthetic failure');row.member={...row.member,...data};return structuredClone(row.member)}}};
  const prisma={$transaction:async fn=>{const saved=structuredClone(row);try{return await fn(tx)}catch(e){row=saved;rollbacks++;throw e}}};
- const api=load('src/app/api/kintai/employees/[id]/route.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/kintai/access':{getKintaiContext:async()=>({organizationId:'org',role:c.actor}),hasMinRole:access.hasMinRole},'@/lib/kintai/employee-admission':{}});
+ const api=load('src/app/api/kintai/employees/[id]/route.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/kintai/access':{getKintaiContext:async()=>({organizationId:'org',role:c.actor}),hasMinRole:access.hasMinRole},'@/lib/kintai/employee-admission':{lockKintaiEmployeeAdmission:async()=>{}}});
  const r=await api.PATCH({json:async()=>({name:'after',role:c.role})},{params:Promise.resolve({id:'target'})});
  const changed=JSON.stringify(row)!==before;
  const ok=r.status===c.http&&(c.http===200?row.name==='after'&&row.member.role===c.role:!changed)&&(c.http===400||c.http===403||c.http===404?attempts.length===0:true)&&(c.fail?rollbacks===1:true);

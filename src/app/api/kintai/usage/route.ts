@@ -46,7 +46,8 @@ export async function GET() {
     return NextResponse.json({
       organizationId: membership.organizationId,
       employeeId: membership.employee.id,
-      role: membership.role,
+      role: membership.employee.isActive ? membership.role : 'employee',
+      isActive: membership.employee.isActive,
       employeeName: membership.employee.name,
       plan: ownerUser?.plan || 'FREE',
     })

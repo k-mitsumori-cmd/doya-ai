@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
   try {
     const ctx = await getKintaiContext()
     if (!ctx) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+    if (ctx.isActive === false) return NextResponse.json({ error: '無効化された従業員は申請を作成できません' }, { status: 403 })
 
     const { type, details, reason } = await req.json()
     // SEC: タイプ値のホワイトリスト検証

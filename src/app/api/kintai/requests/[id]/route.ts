@@ -61,6 +61,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
   try {
     const kctx = await getKintaiContext()
     if (!kctx) return NextResponse.json({ error: '認証が必要です' }, { status: 401 })
+    if (kctx.isActive === false) return NextResponse.json({ error: '無効化された従業員は申請を変更できません' }, { status: 403 })
 
     const p = await ctx.params
     const body = await req.json()
