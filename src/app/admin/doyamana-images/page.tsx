@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
@@ -53,6 +53,7 @@ export default function DoyamanaImagesPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [pagination, setPagination] = useState<Pagination>({ page: 1, limit: 20, total: 0, totalPages: 0 })
   const [loading, setLoading] = useState(true)
+  const latestRequest = useRef(0)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   
   // フィルタ
@@ -67,17 +68,20 @@ export default function DoyamanaImagesPage() {
   const fetchCategories = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/doyamana/categories')
+      if (!res.ok) throw new Error('カテゴリ取得失敗')
       const data = await res.json()
-      if (data.categories) {
-        setCategories(data.categories)
-      }
+      if (!Array.isArray(data.categories)) throw new Error('カテゴリ応答が不正です')
+      setCategories(data.categories)
     } catch (error) {
       console.error('カテゴリ取得エラー:', error)
+      setCategories([])
     }
   }, [])
 
   const fetchImages = useCallback(async () => {
+    const requestId = ++latestRequest.current
     setLoading(true)
+    setSelectedIds(new Set())
     try {
       const params = new URLSearchParams({
         page: pagination.page.toString(),
@@ -88,17 +92,24 @@ export default function DoyamanaImagesPage() {
       })
       
       const res = await fetch(`/api/admin/doyamana/images?${params}`)
+      if (!res.ok) throw new Error('画像取得失敗')
       const data = await res.json()
-      
-      if (data.images) {
-        setImages(data.images)
-        setPagination(data.pagination)
+      if (!Array.isArray(data.images) || !data.pagination ||
+          !Number.isInteger(data.pagination.page) || !Number.isInteger(data.pagination.limit) ||
+          !Number.isInteger(data.pagination.total) || !Number.isInteger(data.pagination.totalPages)) {
+        throw new Error('画像応答が不正です')
       }
+      if (requestId !== latestRequest.current) return
+      setImages(data.images)
+      setPagination(data.pagination)
     } catch (error) {
+      if (requestId !== latestRequest.current) return
       console.error('画像取得エラー:', error)
+      setImages([])
+      setPagination(current => ({ ...current, total: 0, totalPages: 0 }))
       toast.error('画像の取得に失敗しました')
     } finally {
-      setLoading(false)
+      if (requestId === latestRequest.current) setLoading(false)
     }
   }, [pagination.page, pagination.limit, categoryFilter, statusFilter, searchQuery])
 
@@ -170,14 +181,14 @@ export default function DoyamanaImagesPage() {
         if (res.ok) {
           toast.success(`${selectedIds.size}件の画像を削除しました（サービス上からも削除されます）`)
           setSelectedIds(new Set())
-        }
+        } else throw new Error('一括削除に失敗しました')
       } else if (deleteTarget) {
         const res = await fetch(`/api/admin/doyamana/images/${deleteTarget}`, {
           method: 'DELETE',
         })
         if (res.ok) {
           toast.success('画像を削除しました（サービス上からも削除されます）')
-        }
+        } else throw new Error('削除に失敗しました')
       }
       fetchImages()
     } catch {
