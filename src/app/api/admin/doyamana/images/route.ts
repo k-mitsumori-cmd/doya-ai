@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url)
-    const genre = searchParams.get('category') // フロントエンドからはcategoryとして送られるが、実際はgenre
+    const genre = searchParams.get('category')
     const status = searchParams.get('status') // 'active' | 'inactive' | 'all'
     const search = searchParams.get('search')
     const rawPage = searchParams.get('page') || '1'
@@ -43,10 +43,15 @@ export async function GET(request: NextRequest) {
         .filter(p => p.genre === genre)
         .map(p => p.id)
       
-      if (GENRES.some(g => g.name === genre) || filteredTemplateIds.length > 0) {
+      const managedCategory = await prisma.doyamanaCategory.findUnique({
+        where: { id: genre }, select: { slug: true },
+      })
+      if (managedCategory) {
+        where.category = managedCategory.slug
+      } else if (GENRES.some(g => g.name === genre) || filteredTemplateIds.length > 0) {
         where.OR = [{ templateId: { in: filteredTemplateIds } }, { industry: genre }]
       } else {
-        where.templateId = { in: [] }
+        where.industry = genre
       }
     }
     
@@ -145,10 +150,18 @@ export async function POST(request: NextRequest) {
     const templateId = isNewForm ? `custom-${randomUUID()}` : body.templateId
 
     if (isNewForm && !selectedGenre && typeof categoryId === 'string' && categoryId.length <= 100) {
-      const existing = await prisma.bannerTemplate.findFirst({
-        where: { industry: categoryId }, select: { category: true },
+      const managed = await prisma.doyamanaCategory.findUnique({
+        where: { id: categoryId }, select: { name: true, slug: true, isActive: true },
       })
-      category = existing?.category
+      if (managed?.isActive) {
+        industry = managed.name
+        category = managed.slug
+      } else if (!managed) {
+        const existing = await prisma.bannerTemplate.findFirst({
+          where: { industry: categoryId }, select: { category: true },
+        })
+        category = existing?.category
+      }
     }
 
     if (typeof templateId !== 'string' || !templateId || templateId.length > 100 ||
@@ -203,11 +216,11 @@ export async function PATCH(request: NextRequest) {
   if (denied) return denied
 
   try {
-    const body = await request.json()
+    const body = await readOperationalJson(request, 16 * 1024)
     const { action, ids } = body
 
     if (!action || !Array.isArray(ids) || ids.length === 0 || ids.length > 100 ||
-        !ids.every((id: unknown) => typeof id === 'string')) {
+        !ids.every((id: unknown) => typeof id === 'string' && id.length > 0 && id.length <= 100)) {
       return NextResponse.json(
         { error: 'アクションとIDリストは必須です' },
         { status: 400 }
@@ -243,6 +256,9 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json({ success: true, count: result.count })
   } catch (error) {
+    if (error instanceof OperationalBodyError) {
+      return NextResponse.json({ error: error.status === 413 ? '一括操作の対象が多すぎます' : 'リクエストが不正です' }, { status: error.status })
+    }
     console.error('[PATCH /api/admin/doyamana/images] Error:', error)
     return NextResponse.json(
       { error: '一括操作に失敗しました' },

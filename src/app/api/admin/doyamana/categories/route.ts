@@ -1,92 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { BANNER_PROMPTS_V2, GENRES } from '@/lib/banner-prompts-v2'
 import { requireAdmin } from '@/lib/admin-guard'
+import { isReservedDoyamanaCategory, listDoyamanaCategories } from '@/lib/doyamana-categories'
+import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 
 export const dynamic = 'force-dynamic'
 
-// V2プロンプトのマップを作成（templateId -> V2プロンプト情報）
-const v2PromptsMap = new Map(BANNER_PROMPTS_V2.map(p => [p.id, p]))
-
-// カテゴリ一覧取得（V2プロンプトのgenreを使用）
 export async function GET(request: NextRequest) {
   // ⚠️ 管理者APIは各ルートが自分で認証する（middlewareは見ていない）
   const denied = await requireAdmin()
   if (denied) return denied
 
   try {
-    // BannerTemplateからテンプレートIDを取得
-    const templates = await prisma.bannerTemplate.findMany({
-      select: {
-        templateId: true,
-        industry: true,
-        isActive: true,
-      }
-    })
-
-    // V2プロンプトのgenreごとに集計
-    const genreMap = new Map<string, {
-      name: string,
-      slug: string,
-      imageCount: number,
-      activeCount: number,
-    }>(GENRES.map(g => [g.name, {
-      name: g.name,
-      slug: g.id,
-      imageCount: 0,
-      activeCount: 0,
-    }]))
-
-    templates.forEach(t => {
-      // V2プロンプトからgenreを取得
-      const v2Prompt = v2PromptsMap.get(t.templateId)
-      const genre = v2Prompt?.genre || t.industry
-      if (!genre) return
-      
-      const existing = genreMap.get(genre)
-      if (existing) {
-        existing.imageCount++
-        if (t.isActive) existing.activeCount++
-      } else {
-        genreMap.set(genre, {
-          name: genre, // genreはすでに日本語名
-          slug: genre,
-          imageCount: 1,
-          activeCount: t.isActive ? 1 : 0,
-        })
-      }
-    })
-
-    // 配列に変換
-    const categories = Array.from(genreMap.entries()).map(([genre, data], index) => ({
-      id: genre, // genreをIDとして使用
-      name: data.name,
-      slug: data.slug,
-      description: `${data.imageCount}件の画像`,
-      order: index,
-      isActive: true,
-      imageCount: data.imageCount,
-      activeImageCount: data.activeCount,
-      totalUsage: 0, // 使用回数は別途トラッキングが必要
-    }))
-
-    // GENRES定義の順序でソート（定義されていないものは最後）
-    const genreOrder = GENRES.map(g => g.name)
-    categories.sort((a, b) => {
-      const aIndex = genreOrder.indexOf(a.name as any)
-      const bIndex = genreOrder.indexOf(b.name as any)
-      if (aIndex === -1 && bIndex === -1) return a.name.localeCompare(b.name, 'ja')
-      if (aIndex === -1) return 1
-      if (bIndex === -1) return -1
-      return aIndex - bIndex
-    })
-
-    return NextResponse.json({ categories })
+    const { categories } = await listDoyamanaCategories()
+    const activeOnly = new URL(request.url).searchParams.get('activeOnly') === 'true'
+    return NextResponse.json({ categories: activeOnly ? categories.filter(category => category.isActive) : categories })
   } catch (error) {
     console.error('[GET /api/admin/doyamana/categories] Error:', error)
     return NextResponse.json(
       { error: 'カテゴリ一覧の取得に失敗しました' },
       { status: 500 }
     )
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const denied = await requireAdmin()
+  if (denied) return denied
+  try {
+    const body = await readOperationalJson(request, 16 * 1024)
+    const name = typeof body.name === 'string' ? body.name.trim() : ''
+    const slug = typeof body.slug === 'string' ? body.slug.trim().toLowerCase() : ''
+    const description = body.description === null ? null : typeof body.description === 'string' ? body.description.trim() : null
+    if (!name || name.length > 100 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 60 ||
+        (body.description !== null && body.description !== undefined && typeof body.description !== 'string') ||
+        (description && description.length > 1000) ||
+        !Number.isInteger(body.order) || (body.order as number) < 0 || (body.order as number) > 100000 ||
+        typeof body.isActive !== 'boolean' || isReservedDoyamanaCategory(name, slug)) {
+      return NextResponse.json({ error: 'カテゴリの入力内容が不正か、標準カテゴリと重複しています' }, { status: 400 })
+    }
+    const [sameName, sameSlug, usedTemplate] = await Promise.all([
+      prisma.doyamanaCategory.findFirst({ where: { name }, select: { id: true } }),
+      prisma.doyamanaCategory.findUnique({ where: { slug }, select: { id: true } }),
+      prisma.bannerTemplate.findFirst({ where: { OR: [{ industry: name }, { category: slug }] }, select: { id: true } }),
+    ])
+    if (sameName || sameSlug || usedTemplate) {
+      return NextResponse.json({ error: '同じ名前かスラッグのカテゴリが既にあります' }, { status: 409 })
+    }
+    const category = await prisma.doyamanaCategory.create({
+      data: { name, slug, description, order: body.order as number, isActive: body.isActive },
+    })
+    return NextResponse.json({ category }, { status: 201 })
+  } catch (error) {
+    if (error instanceof OperationalBodyError) {
+      return NextResponse.json({ error: 'カテゴリの入力内容が不正です' }, { status: error.status })
+    }
+    console.error('[POST /api/admin/doyamana/categories] Error:', error)
+    return NextResponse.json({ error: 'カテゴリの作成に失敗しました' }, { status: 500 })
   }
 }

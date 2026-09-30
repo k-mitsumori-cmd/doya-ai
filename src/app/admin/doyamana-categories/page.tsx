@@ -12,6 +12,7 @@ import {
   Eye,
   Save,
   X,
+  Trash2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -23,8 +24,7 @@ interface Category {
   order: number
   isActive: boolean
   imageCount: number
-  totalUsage: number
-  createdAt: string
+  isManaged: boolean
 }
 
 export default function DoyamanaCategoriesPage() {
@@ -49,12 +49,14 @@ export default function DoyamanaCategoriesPage() {
       const res = await fetch('/api/admin/doyamana/categories?includeStats=true')
       const data = await res.json()
       
+      if (!res.ok || !Array.isArray(data.categories)) throw new Error(data.error || 'カテゴリ応答が不正です')
       if (data.categories) {
         setCategories(data.categories)
       }
     } catch (error) {
       console.error('カテゴリ取得エラー:', error)
       toast.error('カテゴリの取得に失敗しました')
+      setCategories([])
     } finally {
       setLoading(false)
     }
@@ -134,6 +136,19 @@ export default function DoyamanaCategoriesPage() {
     }
   }
 
+  const handleDelete = async (category: Category) => {
+    if (!category.isManaged || !window.confirm(`「${category.name}」を削除しますか？`)) return
+    try {
+      const res = await fetch(`/api/admin/doyamana/categories/${encodeURIComponent(category.id)}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || '削除に失敗しました')
+      toast.success('カテゴリを削除しました')
+      fetchCategories()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '削除に失敗しました')
+    }
+  }
+
   const generateSlug = () => {
     // 日本語をローマ字に変換（簡易版）
     const romanized = name
@@ -166,7 +181,7 @@ export default function DoyamanaCategoriesPage() {
             ドヤマナAI カテゴリ管理
           </h1>
           <p className="text-white/50 text-sm mt-1">
-            カテゴリの追加・編集・無効化を行います
+            標準カテゴリの確認と、追加カテゴリの作成・編集・無効化を行います
           </p>
         </div>
         <div className="flex gap-3">
@@ -198,20 +213,19 @@ export default function DoyamanaCategoriesPage() {
               <th className="p-4 text-left text-white/60 text-sm font-medium">表示順</th>
               <th className="p-4 text-left text-white/60 text-sm font-medium">状態</th>
               <th className="p-4 text-left text-white/60 text-sm font-medium">登録数</th>
-              <th className="p-4 text-left text-white/60 text-sm font-medium">使用回数</th>
               <th className="p-4 text-left text-white/60 text-sm font-medium">操作</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-white/40">
+                <td colSpan={6} className="p-8 text-center text-white/40">
                   読み込み中...
                 </td>
               </tr>
             ) : categories.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-8 text-center text-white/40">
+                <td colSpan={6} className="p-8 text-center text-white/40">
                   カテゴリがありません
                 </td>
               </tr>
@@ -220,6 +234,7 @@ export default function DoyamanaCategoriesPage() {
                 <tr key={category.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                   <td className="p-4">
                     <span className="text-white font-medium">{category.name}</span>
+                    {!category.isManaged && <span className="ml-2 text-white/40 text-xs">標準・既存</span>}
                     {category.description && (
                       <p className="text-white/40 text-xs mt-1 truncate max-w-xs">
                         {category.description}
@@ -249,21 +264,22 @@ export default function DoyamanaCategoriesPage() {
                     <span className="text-white/80">{category.imageCount}件</span>
                   </td>
                   <td className="p-4">
-                    <span className="text-white/80">{category.totalUsage}回</span>
-                  </td>
-                  <td className="p-4">
                     <div className="flex gap-2">
-                      <Link href={`/admin/doyamana-categories/${category.id}`}>
+                      <Link href={`/admin/doyamana-categories/${encodeURIComponent(category.id)}`}>
                         <button className="p-2 bg-white/10 rounded-lg text-white/60 hover:text-white hover:bg-white/20 transition-colors">
                           <Eye className="w-4 h-4" />
                         </button>
                       </Link>
-                      <button
-                        onClick={() => openEditModal(category)}
-                        className="p-2 bg-white/10 rounded-lg text-white/60 hover:text-white hover:bg-white/20 transition-colors"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
+                      {category.isManaged && <>
+                        <button onClick={() => openEditModal(category)} aria-label={`${category.name}を編集`}
+                          className="p-2 bg-white/10 rounded-lg text-white/60 hover:text-white hover:bg-white/20 transition-colors">
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleDelete(category)} aria-label={`${category.name}を削除`}
+                          className="p-2 bg-white/10 rounded-lg text-red-300 hover:bg-red-500/20 transition-colors">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>}
                     </div>
                   </td>
                 </tr>
@@ -279,8 +295,8 @@ export default function DoyamanaCategoriesPage() {
         <div className="text-amber-300/80 text-sm">
           <p className="font-medium mb-1">カテゴリ削除について</p>
           <p className="text-amber-300/60">
-            画像が登録されているカテゴリは削除できません。先に画像を削除または別カテゴリに移動してください。
-            OFFにしたカテゴリは画像登録時に選択できなくなります。
+            標準・既存カテゴリは編集できません。追加カテゴリは画像が登録されている間は削除できず、スラッグも変更できません。
+            OFFにした追加カテゴリは新規画像の登録時に選択できなくなります。
           </p>
         </div>
       </div>
@@ -325,17 +341,19 @@ export default function DoyamanaCategoriesPage() {
                     value={slug}
                     onChange={(e) => setSlug(e.target.value)}
                     placeholder="例: seo"
-                    className="flex-1 bg-white/10 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    disabled={Boolean(editingCategory?.imageCount)}
+                    className="flex-1 bg-white/10 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
                   />
                   <button
                     type="button"
                     onClick={generateSlug}
-                    className="px-3 py-2 bg-white/10 text-white/60 rounded-lg hover:bg-white/20 hover:text-white transition-colors text-sm"
+                    disabled={Boolean(editingCategory?.imageCount)}
+                    className="px-3 py-2 bg-white/10 text-white/60 rounded-lg hover:bg-white/20 hover:text-white transition-colors text-sm disabled:opacity-50"
                   >
                     自動生成
                   </button>
                 </div>
-                <p className="text-white/40 text-xs mt-1">URLに使用される識別子（英数字とハイフンのみ）</p>
+                <p className="text-white/40 text-xs mt-1">英数字とハイフンのみ。画像登録後は変更できません。</p>
               </div>
 
               <div>

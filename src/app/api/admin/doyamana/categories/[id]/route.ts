@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/admin-guard'
+import { isReservedDoyamanaCategory, listDoyamanaCategories } from '@/lib/doyamana-categories'
+import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 
 export const dynamic = 'force-dynamic'
 
-// カテゴリ詳細取得（使用回数可視化含む）
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   // ⚠️ 管理者APIは各ルートが自分で認証する（middlewareは見ていない）
@@ -16,31 +17,8 @@ export async function GET(
   try {
     const { id } = await params
 
-    const category = await prisma.doyamanaCategory.findUnique({
-      where: { id },
-      include: {
-        images: {
-          where: { isDeleted: false },
-          select: {
-            id: true,
-            imageUrl: true,
-            thumbnailUrl: true,
-            promptSummary: true,
-            usageCount: true,
-            isActive: true,
-            order: true,
-            createdAt: true,
-          },
-          orderBy: [
-            { usageCount: 'desc' },
-            { order: 'asc' }
-          ]
-        },
-        _count: {
-          select: { images: true }
-        }
-      }
-    })
+    const { categories, templateIds } = await listDoyamanaCategories()
+    const category = categories.find(item => item.id === id)
 
     if (!category) {
       return NextResponse.json(
@@ -49,27 +27,26 @@ export async function GET(
       )
     }
 
-    // 統計計算
-    const totalUsage = category.images.reduce((sum, img) => sum + img.usageCount, 0)
-    const activeImageCount = category.images.filter(img => img.isActive).length
+    const templates = await prisma.bannerTemplate.findMany({
+      where: { id: { in: templateIds.get(id) || [] } },
+      select: { id: true, templateId: true, prompt: true, isActive: true, sortOrder: true, createdAt: true },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
+    })
 
     return NextResponse.json({
-      category: {
-        id: category.id,
-        name: category.name,
-        slug: category.slug,
-        description: category.description,
-        order: category.order,
-        isActive: category.isActive,
-        createdAt: category.createdAt,
-        updatedAt: category.updatedAt,
-      },
+      category,
       stats: {
-        totalImages: category._count.images,
-        activeImages: activeImageCount,
-        totalUsage,
+        totalImages: category.imageCount,
+        activeImages: category.activeImageCount,
       },
-      images: category.images,
+      images: templates.map(template => ({
+        id: template.id,
+        imageUrl: `/api/banner/test/image/${encodeURIComponent(template.templateId)}`,
+        promptSummary: template.prompt.slice(0, 100),
+        isActive: template.isActive,
+        order: template.sortOrder,
+        createdAt: template.createdAt,
+      })),
     })
   } catch (error) {
     console.error('[GET /api/admin/doyamana/categories/[id]] Error:', error)
@@ -80,7 +57,6 @@ export async function GET(
   }
 }
 
-// カテゴリ更新
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -91,38 +67,52 @@ export async function PUT(
 
   try {
     const { id } = await params
-    const body = await request.json()
-    const { name, slug, description, order, isActive } = body
-
-    // スラッグの重複チェック（自分以外）
-    if (slug) {
-      const existing = await prisma.doyamanaCategory.findFirst({
-        where: {
-          slug,
-          NOT: { id }
-        }
-      })
-      if (existing) {
-        return NextResponse.json(
-          { error: 'このスラッグは既に使用されています' },
-          { status: 400 }
-        )
-      }
+    const existing = await prisma.doyamanaCategory.findUnique({ where: { id } })
+    if (!existing) return NextResponse.json({ error: '追加カテゴリが見つかりません。標準カテゴリは編集できません' }, { status: 404 })
+    const previousName = existing.name
+    const previousSlug = existing.slug
+    const body = await readOperationalJson(request, 16 * 1024)
+    const name = typeof body.name === 'string' ? body.name.trim() : ''
+    const slug = typeof body.slug === 'string' ? body.slug.trim().toLowerCase() : ''
+    const description = body.description === null ? null : typeof body.description === 'string' ? body.description.trim() : null
+    if (!name || name.length > 100 || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 60 ||
+        (body.description !== null && body.description !== undefined && typeof body.description !== 'string') ||
+        (description && description.length > 1000) ||
+        !Number.isInteger(body.order) || (body.order as number) < 0 || (body.order as number) > 100000 ||
+        typeof body.isActive !== 'boolean' || isReservedDoyamanaCategory(name, slug)) {
+      return NextResponse.json({ error: 'カテゴリの入力内容が不正か、標準カテゴリと重複しています' }, { status: 400 })
     }
-
-    const category = await prisma.doyamanaCategory.update({
-      where: { id },
-      data: {
-        ...(name && { name }),
-        ...(slug && { slug }),
-        ...(description !== undefined && { description }),
-        ...(order !== undefined && { order }),
-        ...(isActive !== undefined && { isActive }),
+    const [sameName, sameSlug, usedByOther, imageCount] = await Promise.all([
+      prisma.doyamanaCategory.findFirst({ where: { name, NOT: { id } }, select: { id: true } }),
+      prisma.doyamanaCategory.findFirst({ where: { slug, NOT: { id } }, select: { id: true } }),
+      prisma.bannerTemplate.findFirst({
+        where: { OR: [{ industry: name }, { category: slug }], NOT: { category: previousSlug } },
+        select: { id: true },
+      }),
+      prisma.bannerTemplate.count({ where: { category: previousSlug } }),
+    ])
+    if (sameName || sameSlug || usedByOther) {
+      return NextResponse.json({ error: '同じ名前かスラッグのカテゴリが既にあります' }, { status: 409 })
+    }
+    if (slug !== previousSlug && imageCount > 0) {
+      return NextResponse.json({ error: '画像が登録されているカテゴリのスラッグは変更できません' }, { status: 409 })
+    }
+    const category = await prisma.$transaction(async transaction => {
+      const updated = await transaction.doyamanaCategory.update({
+        where: { id },
+        data: { name, slug, description, order: body.order as number, isActive: body.isActive as boolean },
+      })
+      if (name !== previousName && imageCount > 0) {
+        await transaction.bannerTemplate.updateMany({
+          where: { category: previousSlug }, data: { industry: name },
+        })
       }
+      return updated
     })
 
     return NextResponse.json({ category })
   } catch (error) {
+    if (error instanceof OperationalBodyError) return NextResponse.json({ error: 'カテゴリの入力内容が不正です' }, { status: error.status })
     console.error('[PUT /api/admin/doyamana/categories/[id]] Error:', error)
     return NextResponse.json(
       { error: 'カテゴリの更新に失敗しました' },
@@ -131,9 +121,8 @@ export async function PUT(
   }
 }
 
-// カテゴリ削除（使用中は不可）
 export async function DELETE(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   // ⚠️ 管理者APIは各ルートが自分で認証する（middlewareは見ていない）
@@ -143,15 +132,17 @@ export async function DELETE(
   try {
     const { id } = await params
 
-    // 使用中チェック
-    const imageCount = await prisma.doyamanaImage.count({
-      where: { categoryId: id, isDeleted: false }
-    })
+    const category = await prisma.doyamanaCategory.findUnique({ where: { id } })
+    if (!category) return NextResponse.json({ error: '追加カテゴリが見つかりません。標準カテゴリは削除できません' }, { status: 404 })
+    const [imageCount, legacyImageCount] = await Promise.all([
+      prisma.bannerTemplate.count({ where: { category: category.slug } }),
+      prisma.doyamanaImage.count({ where: { categoryId: id } }),
+    ])
 
-    if (imageCount > 0) {
+    if (imageCount + legacyImageCount > 0) {
       return NextResponse.json(
-        { error: `このカテゴリには${imageCount}件の画像が登録されているため削除できません。先に画像を削除または移動してください。` },
-        { status: 400 }
+        { error: `このカテゴリには${imageCount + legacyImageCount}件の画像が登録されているため削除できません` },
+        { status: 409 }
       )
     }
 

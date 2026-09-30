@@ -20,13 +20,14 @@ const prisma = { bannerTemplate: {
   delete: async (options) => throwOrReturn(null, options),
   deleteMany: async (options) => throwOrReturn({ count: 0 }, options),
   updateMany: async (options) => throwOrReturn({ count: 0 }, options),
-} }
+}, doyamanaCategory: { findUnique: async () => null } }
 const mocks = {
   'node:crypto': { randomUUID: () => '00000000-0000-4000-8000-000000000000' },
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
   '@/lib/banner-prompts-v2': { BANNER_PROMPTS_V2: [{ id: 'known', genre: '既知' }], GENRES: [{ id: 'known', name: '既知', category: 'it' }] },
   '@/lib/admin-guard': { requireAdmin: async () => null },
+  '@/lib/doyamana-categories': { listDoyamanaCategories: async () => throwOrReturn(null) },
   '@/lib/banner-admin-image-storage': { bannerAdminImageExists: async () => true },
   '@/lib/operational-json': { readOperationalJson: async req => req.json(), OperationalBodyError: class extends Error {} },
 }
@@ -67,7 +68,7 @@ async function privateFailure(response) {
   fail = false
   const unknown = await images.GET({ url: 'https://example.test/api/admin/doyamana/images?category=unknown' })
   assert.equal(unknown.status, 200)
-  assert.equal(JSON.stringify(lastWhere), JSON.stringify({ templateId: { in: [] } }))
+  assert.equal(JSON.stringify(lastWhere), JSON.stringify({ industry: 'unknown' }))
 
   console.log('PASS Doyamana admin APIs bound reads and writes, filter unknown genres, and hide database details')
 })().catch((error) => { console.error(error); process.exitCode = 1 })

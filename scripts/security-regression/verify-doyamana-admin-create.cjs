@@ -8,12 +8,15 @@ const prisma = { bannerTemplate: {
   findFirst: async () => null,
   create: async ({ data }) => { calls.push(data); return { id: 'created', ...data } },
   update: async ({ data }) => { calls.push(data); return { id: 'updated', ...data } },
-} }
+}, doyamanaCategory: { findUnique: async () => null } }
 const mocks = {
   'node:crypto': { randomUUID: () => '00000000-0000-4000-8000-000000000000' },
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
   '@/lib/admin-guard': { requireAdmin: async () => null },
+  '@/lib/doyamana-categories': {
+    listDoyamanaCategories: async () => ({ categories: [{ id: 'ファッション・アパレル', name: 'ファッション・アパレル', imageCount: 0, isActive: true }], templateIds: new Map() }),
+  },
   '@/lib/banner-prompts-v2': {
     BANNER_PROMPTS_V2: [],
     GENRES: [{ id: 'fashion', name: 'ファッション・アパレル', category: 'ec' }],

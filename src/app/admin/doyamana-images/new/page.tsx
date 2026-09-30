@@ -38,16 +38,17 @@ export default function NewDoyamanaImagePage() {
     try {
       const res = await fetch('/api/admin/doyamana/categories?activeOnly=true')
       const data = await res.json()
-      if (data.categories) {
-        setCategories(data.categories)
-        if (data.categories.length > 0 && !categoryId) {
-          setCategoryId(data.categories[0].id)
-        }
-      }
+      if (!res.ok || !Array.isArray(data.categories)) throw new Error(data.error || 'カテゴリ応答が不正です')
+      setCategories(data.categories)
+      setCategoryId(current => data.categories.some((category: Category) => category.id === current)
+        ? current : data.categories[0]?.id || '')
     } catch (error) {
       console.error('カテゴリ取得エラー:', error)
+      toast.error('カテゴリの取得に失敗しました')
+      setCategories([])
+      setCategoryId('')
     }
-  }, [categoryId])
+  }, [])
 
   useEffect(() => {
     fetchCategories()

@@ -5,6 +5,11 @@ if (doyamanaCreate.error || doyamanaCreate.status !== 0) {
   console.error('Security regression failed: verify-doyamana-admin-create.cjs');
   process.exit(1);
 }
+const doyamanaCategories = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyamana-categories.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyamanaCategories.error || doyamanaCategories.status !== 0) {
+  console.error('Security regression failed: verify-doyamana-categories.cjs');
+  process.exit(1);
+}
 const hubspotSyncRetry = spawnSync(process.execPath, [path.join(__dirname, 'verify-hubspot-sync-retry.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hubspotSyncRetry.error || hubspotSyncRetry.status !== 0) {
   console.error('Security regression failed: verify-hubspot-sync-retry.cjs');
