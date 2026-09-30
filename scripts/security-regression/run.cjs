@@ -607,3 +607,8 @@ for (const file of ['verify-doyaslide-style-preview.cjs', 'verify-seo-image-purg
     process.exit(1);
   }
 }
+const cunningReload = spawnSync(process.execPath, [path.join(__dirname, 'verify-cunning-final-answer-reload.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (cunningReload.error || cunningReload.status !== 0) {
+  console.error('Security regression failed: verify-cunning-final-answer-reload.cjs');
+  process.exit(1);
+}

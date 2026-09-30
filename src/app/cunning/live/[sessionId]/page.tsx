@@ -6,6 +6,7 @@ import { createPendingWork } from '@/lib/cunning/pending-work'
 import { createAudioWindowClient, type AudioWindowHandle } from '@/lib/cunning/audio-window-client'
 import { recordingAllowance } from '@/lib/cunning/allowance-client'
 import { restoreCunningLiveHistory } from '@/lib/cunning/live-history'
+import { clearFinalAnswerRecovery, loadFinalAnswerRecovery, saveFinalAnswerRecovery, type FinalAnswerRecovery } from '@/lib/cunning/final-answer-recovery'
 
 import { showServiceLimit } from '@/lib/service-limit-ui'
 
@@ -80,6 +81,8 @@ export default function CunningLivePage() {
   const [interruptedRecording, setInterruptedRecording] = useState(false)
   const [historyIncomplete, setHistoryIncomplete] = useState(false)
   const [savingIssue, setSavingIssue] = useState(false)
+  const [storedFinalAnswer, setStoredFinalAnswer] = useState<FinalAnswerRecovery | null>(null)
+  const [retryingFinalAnswer, setRetryingFinalAnswer] = useState(false)
   const [incompleteAudio, setIncompleteAudio] = useState(false)
   const [, refreshAudioRetry] = useState(0)
   const [running, setRunning] = useState(false)
@@ -310,6 +313,12 @@ const SILENCE_PEAK = 8
         if (!Number.isSafeInteger(d?.session?.durationSec) || d.session.durationSec < 0 || d.session.id !== sessionId) throw new Error('Invalid session')
         const restored = restoreCunningLiveHistory(d.session.liveHistory)
         recordingVersionRef.current = d.session.recordingVersion === 2 ? 2 : 1
+        const recovery = recordingVersionRef.current === 2 && d.session.status === 'ended'
+          ? loadFinalAnswerRecovery(sessionId) : null
+        if (recovery && restored.answers.some(answer => answer.finalTranscriptId === recovery.finalTranscriptId)) {
+          clearFinalAnswerRecovery(sessionId)
+          setStoredFinalAnswer(null)
+        } else setStoredFinalAnswer(recovery)
         durationBaseRef.current = d.session.durationSec
         setLines(restored.lines)
         setAnswers(restored.answers)
@@ -418,7 +427,7 @@ const SILENCE_PEAK = 8
   }, [stopAll])
 
   const performAnswer = useCallback(
-    async (question: string, opts: { force?: boolean; finalTranscriptId?: string; contextTranscriptIds?: string[]; language?: 'ja' | 'en' | 'auto' } = {}) => {
+    async (question: string, opts: { force?: boolean; finalTranscriptId?: string; contextTranscriptIds?: string[]; language?: 'ja' | 'en' | 'auto'; recordingToken?: string; recentTranscript?: string } = {}) => {
       const q = question.trim()
       if (!q) return
       if (recordingVersionRef.current === 2 && !opts.finalTranscriptId && !runningRef.current) {
@@ -445,15 +454,26 @@ const SILENCE_PEAK = 8
           body: JSON.stringify({
             sessionId,
             question: q,
-            ...(recordingVersionRef.current === 2 ? { recordingToken: recordingClientRef.current?.token(), finalTranscriptId: opts.finalTranscriptId, contextTranscriptIds: opts.contextTranscriptIds } : {}),
-            recentTranscript: recentRef.current.slice(-4).join(' / '),
+            ...(recordingVersionRef.current === 2 ? { recordingToken: opts.recordingToken ?? recordingClientRef.current?.token(), finalTranscriptId: opts.finalTranscriptId, contextTranscriptIds: opts.contextTranscriptIds } : {}),
+            recentTranscript: opts.recentTranscript ?? recentRef.current.slice(-4).join(' / '),
             language: answerLanguage,
           }),
         })
         const d = await res.json()
-        if (!res.ok) { transcriptionFailed(res.status, d); throw new Error(d.error || '回答生成に失敗しました') }
+        if (!res.ok) {
+          if (opts.finalTranscriptId && (res.status === 404 || ['expired', 'exhausted', 'conflict'].includes(d.reason))) {
+            clearFinalAnswerRecovery(sessionId)
+            setStoredFinalAnswer(null)
+          }
+          transcriptionFailed(res.status, d)
+          throw new Error(d.error || '回答生成に失敗しました')
+        }
         hasContentRef.current = true
-        if (opts.finalTranscriptId) workRef.current.resolve(`answer:${opts.finalTranscriptId}`)
+        if (opts.finalTranscriptId) {
+          workRef.current.resolve(`answer:${opts.finalTranscriptId}`)
+          clearFinalAnswerRecovery(sessionId)
+          setStoredFinalAnswer(null)
+        }
         setAnswers((prev) =>
           prev.map((c) =>
             c.id === cardId
@@ -473,7 +493,7 @@ const SILENCE_PEAK = 8
     [sessionId, transcriptionFailed]
   )
 
-  const requestAnswer = useCallback((question: string, opts: { force?: boolean; finalTranscriptId?: string; contextTranscriptIds?: string[]; language?: 'ja' | 'en' | 'auto' } = {}) =>
+  const requestAnswer = useCallback((question: string, opts: { force?: boolean; finalTranscriptId?: string; contextTranscriptIds?: string[]; language?: 'ja' | 'en' | 'auto'; recordingToken?: string; recentTranscript?: string } = {}) =>
     workRef.current.track(performAnswer(question, opts)), [performAnswer])
 
   // 集計中の発話を「ひとまとまりの質問/発話」として確定し、トリガー該当なら回答
@@ -495,6 +515,15 @@ const SILENCE_PEAK = 8
     if (ids.length > 64) throw new Error('保存された発話が多いため、最後の回答をまとめられませんでした')
     if (question && (getMode(modeRef.current).trigger === 'any' || looksLikeQuestion(question))) {
       finalAnswerLanguageRef.current ??= langRef.current
+      const recordingToken = recordingClientRef.current?.token()
+      if (recordingToken) {
+        const recovery: FinalAnswerRecovery = {
+          sessionId, recordingToken, finalTranscriptId, contextTranscriptIds: ids,
+          question, recentTranscript: recentRef.current.slice(-4).join(' / ').slice(0, 1000),
+          language: finalAnswerLanguageRef.current, savedAt: Date.now(),
+        }
+        if (saveFinalAnswerRecovery(recovery)) setStoredFinalAnswer(recovery)
+      }
       const saved = await requestAnswer(question, { force: true, finalTranscriptId, contextTranscriptIds: ids, language: finalAnswerLanguageRef.current })
       if (!saved) throw new Error('最後の回答を保存できませんでした')
     }
@@ -1071,6 +1100,28 @@ const SILENCE_PEAK = 8
     } else setStatusMsg('音声を保存できませんでした。処理中の場合は時間をおいて再試行してください')
   }
 
+  const retrySavedFinalAnswer = async () => {
+    if (retryingFinalAnswer || finishingRef.current) return
+    const recovery = loadFinalAnswerRecovery(sessionId)
+    if (!recovery || recovery.finalTranscriptId !== storedFinalAnswer?.finalTranscriptId) {
+      setStoredFinalAnswer(null)
+      setTranscriptionIssue({ message: '最後の回答の再試行情報が失われました。保存済みの内容を履歴で確認してください。', limit: false })
+      return
+    }
+    setRetryingFinalAnswer(true)
+    try {
+      const saved = await requestAnswer(recovery.question, {
+        force: true, recordingToken: recovery.recordingToken, finalTranscriptId: recovery.finalTranscriptId,
+        contextTranscriptIds: recovery.contextTranscriptIds, language: recovery.language,
+        recentTranscript: recovery.recentTranscript,
+      })
+      if (saved) {
+        setTranscriptionIssue(null)
+        await finishRef.current()
+      }
+    } finally { setRetryingFinalAnswer(false) }
+  }
+
   const mm = String(Math.floor(elapsed / 60)).padStart(2, '0')
   const ss = String(elapsed % 60).padStart(2, '0')
   const latest = answers[0]
@@ -1112,6 +1163,10 @@ const SILENCE_PEAK = 8
       {savingIssue && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm">
         <p>録音を停止しましたが、最後の音声・回答・利用時間・終了情報の保存を確認できませんでした。この画面を閉じずに再試行してください。</p>
         <button onClick={() => void finishSession()} className="mt-2 font-bold underline">終了情報を保存し直す</button>
+      </div>}
+      {sessionState === 'ended' && storedFinalAnswer && !windowClientRef.current && <div role="alert" className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+        <p>最後の回答が保存されたか確認できません。保存済みの同じ発話を使って再試行できます。受付期限や回数はサーバーで確認します。</p>
+        <button type="button" disabled={retryingFinalAnswer} onClick={() => void retrySavedFinalAnswer()} className="mt-2 font-bold underline disabled:opacity-50">最後の回答を再試行する</button>
       </div>}
       {/* ヘッダー */}
       <div className="flex items-center justify-between mb-4">

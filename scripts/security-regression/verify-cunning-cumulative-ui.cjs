@@ -26,7 +26,7 @@ for(const started of [false,true])await check('unmount '+(started?'records remai
 for(const kind of ['active','ended','http','invalid','stale'])await check('session baseline '+kind,async()=>{
  let cleanup,resolve,state='loading';const baseline={current:0};const pending=new Promise(r=>resolve=r);
  const code=source.slice(source.indexOf('  // Load the saved cumulative baseline'),source.indexOf('  // 確認失敗や旧レスポンス'));
- run(code,{useEffect:f=>cleanup=f(),sessionId:'s',setSessionState:v=>state=v,durationBaseRef:baseline,setMode:()=>{},modeRef:{current:'sales'},setLines:()=>{},setAnswers:()=>{},setHistoryIncomplete:()=>{},setInterruptedRecording:()=>{},hasContentRef:{current:false},recentRef:{current:[]},restoreCunningLiveHistory:load('src/lib/cunning/live-history.ts').restoreCunningLiveHistory,fetch:()=>pending});if(kind==='stale')cleanup();
+ run(code,{useEffect:f=>cleanup=f(),sessionId:'s',setSessionState:v=>state=v,durationBaseRef:baseline,setMode:()=>{},modeRef:{current:'sales'},setLines:()=>{},setAnswers:()=>{},setStoredFinalAnswer:()=>{},setHistoryIncomplete:()=>{},setInterruptedRecording:()=>{},hasContentRef:{current:false},recentRef:{current:[]},restoreCunningLiveHistory:load('src/lib/cunning/live-history.ts').restoreCunningLiveHistory,fetch:()=>pending});if(kind==='stale')cleanup();
  resolve({ok:kind!=='http',json:async()=>({session:{id:'s',durationSec:kind==='invalid'?-1:60,status:kind==='ended'?'ended':'active',liveHistory:{transcripts:[],answers:[]}}})});await flush();await flush();
  assert.equal(state,kind==='stale'?'loading':['http','invalid'].includes(kind)?'error':kind==='ended'?'ended':'ready');assert.equal(baseline.current,['http','invalid','stale'].includes(kind)?0:60);cleanup();
 });
