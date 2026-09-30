@@ -31,7 +31,6 @@ type CreateArgs = {
   userId: string | null
   guestId: string | null
   plan: SeoPlanCode
-  trialActive: boolean
   articleData: Omit<Prisma.SeoArticleUncheckedCreateInput, 'userId' | 'guestId'>
   createJob: boolean
   afterCreate?: (tx: Prisma.TransactionClient, article: SeoArticle) => Promise<void>
@@ -39,7 +38,7 @@ type CreateArgs = {
 
 /** Both SEO creation routes share this serialized monthly admission and atomic article/job save. */
 export async function createSeoArticleWithinLimit(args: CreateArgs, db: PrismaClient = prisma) {
-  const { userId, guestId, plan, trialActive, articleData, createJob, afterCreate } = args
+  const { userId, guestId, plan, articleData, createJob, afterCreate } = args
   if (!userId) throw new SeoArticleQuotaError(0, true)
 
   return db.$transaction(async (tx) => {
@@ -48,10 +47,8 @@ export async function createSeoArticleWithinLimit(args: CreateArgs, db: PrismaCl
     const now = new Date()
     const key = seoArticleUsageKey(userId, now)
     const used = await getSeoArticleMonthlyUsage(tx, userId, now)
-    if (!trialActive) {
-      const limit = seoMonthlyArticleLimit(plan)
-      if (limit >= 0 && used >= limit) throw new SeoArticleQuotaError(limit, false)
-    }
+    const limit = seoMonthlyArticleLimit(plan)
+    if (limit >= 0 && used >= limit) throw new SeoArticleQuotaError(limit, false)
     // Use the same post-lock time for admission and creation, including at a JST month boundary.
     const article = await tx.seoArticle.create({ data: { ...articleData, userId, guestId: null, createdAt: now } })
     const job = createJob ? await tx.seoJob.create({ data: { articleId: article.id, status: 'queued', step: 'init', progress: 0 } }) : null

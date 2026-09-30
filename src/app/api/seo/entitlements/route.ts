@@ -29,7 +29,7 @@ export async function GET(_req: NextRequest) {
     const trial = isTrialActive(user?.firstLoginAt || null)
     const trialActive = isLoggedIn && trial.active
 
-    // 生成回数（記事）: GUEST=累計1、ログイン=月次上限（トライアル中は無制限）
+    // 生成回数（記事）: ゲストは生成不可、ログイン後は月次上限。
     let usedArticlesThisMonth = 0
     let usedArticlesTotal = 0
     let articleLimit = 0

@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     if (!articleInput.success) return NextResponse.json({ error: 'キーワードまたは記事条件を確認してください。' }, { status: 400 })
 
     const { article, job } = await createSeoArticleWithinLimit({
-      userId, guestId: null, plan, trialActive, createJob: true,
+      userId, guestId: null, plan, createJob: true,
       articleData: { ...articleInput.data, referenceImages: articleInput.data.referenceImages ?? undefined },
       afterCreate: async (tx, created) => {
         // Extended unique where makes this an atomic one-time claim. A losing

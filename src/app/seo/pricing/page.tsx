@@ -139,7 +139,7 @@ export default function SeoPricingPage() {
           ) : (
             <Link href="/auth/signin">
               <button className="px-8 py-4 rounded-full bg-blue-600 text-white font-black text-base hover:bg-blue-700 transition-colors shadow-lg shadow-blue-100">
-                ログインして無料トライアルを開始する
+                ログインして無料プランを始める
               </button>
             </Link>
           )}
@@ -185,5 +185,4 @@ export default function SeoPricingPage() {
     </div>
   )
 }
-
 

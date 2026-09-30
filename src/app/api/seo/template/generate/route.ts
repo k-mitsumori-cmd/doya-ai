@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
 
     // 記事を作成
     const { article, job } = await createSeoArticleWithinLimit({
-      userId, guestId: null, plan, trialActive, createJob: true,
+      userId, guestId: null, plan, createJob: true,
       articleData: {
         ...validated,
         referenceImages: validated.referenceImages ?? undefined,

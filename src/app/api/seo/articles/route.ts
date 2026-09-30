@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { article, job } = await createSeoArticleWithinLimit({
-      userId: userId || null, guestId, plan, trialActive, createJob,
+      userId: userId || null, guestId, plan, createJob,
       articleData: {
         status: createJob ? 'RUNNING' : 'DRAFT',
         title: input.title,

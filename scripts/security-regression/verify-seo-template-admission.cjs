@@ -19,7 +19,7 @@ function fixture(file, { guest = false, trial = false, exhausted = false } = {})
         admitted++;
         assert.equal(args.userId, 'u1');
         assert.equal(args.createJob, true);
-        assert.equal(args.trialActive, trial);
+        assert.equal(Object.hasOwn(args, 'trialActive'), false, 'trial state cannot bypass article admission');
         if (exhausted) throw new QuotaError(3, false);
         return { article: { id: 'a1' }, job: { id: 'j1' } };
       },
@@ -49,5 +49,5 @@ function fixture(file, { guest = false, trial = false, exhausted = false } = {})
     assert.equal((await res.json()).jobId, 'j1');
     assert.equal(f.checkedPlan, 'PRO', 'trial uses PRO character allowance');
   }
-  console.log('PASS SEO template and swipe routes: guest block, monthly cap, trial character allowance');
+  console.log('PASS SEO template and swipe routes: guest block, monthly cap, legacy trial flag excluded from admission');
 })().catch(error => { console.error(error); process.exitCode = 1; });

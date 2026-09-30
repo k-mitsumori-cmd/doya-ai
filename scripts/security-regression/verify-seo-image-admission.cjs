@@ -1,10 +1,13 @@
 const assert = require('node:assert/strict')
 const { load, check } = require('./load-typescript.cjs')
 
-const seoAccess = load('src/lib/seoAccess.ts', { 'next/server': { NextResponse: Response } })
+const pricing = load('src/lib/pricing.ts', { './unified-plan': {
+  UNIFIED_PRO_PRICE: 9980, UNIFIED_PRO_PRICE_LABEL: '¥9,980', isPaidPlan: () => false,
+} })
+const seoAccess = load('src/lib/seoAccess.ts', { 'next/server': { NextResponse: Response }, '@/lib/pricing': pricing })
 
 ;(async () => {
-  await check('SEO image access matches plan entitlements including the first-hour trial', async () => {
+  await check('SEO image access does not restore the retired first-hour entitlement', async () => {
     let user = null
     const access = load('src/lib/seo-image-access.ts', {
       'next-auth': { getServerSession: async () => user ? { user } : null },
@@ -18,7 +21,7 @@ const seoAccess = load('src/lib/seoAccess.ts', { 'next/server': { NextResponse: 
     assert.equal(free.response.status, 403)
     assert.equal((await free.response.json()).code, 'SEO_IMAGE_PLAN_REQUIRED')
     user.firstLoginAt = new Date().toISOString()
-    assert.equal((await access.requireSeoImageAccess()).userId, 'owner', 'active first-hour trial can generate')
+    assert.equal((await access.requireSeoImageAccess()).response.status, 403, 'recent login does not bypass the plan')
     user = { id: 'owner', seoPlan: 'LIGHT', firstLoginAt: '2020-01-01T00:00:00Z' }
     assert.equal((await access.requireSeoImageAccess()).userId, 'owner')
   })

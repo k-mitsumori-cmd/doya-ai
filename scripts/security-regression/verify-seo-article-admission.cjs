@@ -1,7 +1,11 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
-const access = load('src/lib/seoAccess.ts', { 'next/server': {} });
+const pricing = load('src/lib/pricing.ts', { './unified-plan': {
+  UNIFIED_PRO_PRICE: 9980, UNIFIED_PRO_PRICE_LABEL: '¥9,980', isPaidPlan: () => false,
+} });
+const access = load('src/lib/seoAccess.ts', { 'next/server': {}, '@/lib/pricing': pricing });
+assert.deepEqual(JSON.parse(JSON.stringify(access.isTrialActive(new Date().toISOString()))), { active: false, remainingMs: 0 });
 const { createSeoArticleWithinLimit, getSeoArticleMonthlyUsage, seoArticleUsageKey, SeoArticleQuotaError } = load('src/lib/seo-article-admission.ts', {
   'node:crypto': require('node:crypto'), '@/lib/prisma': { prisma: {} }, '@/lib/seoAccess': access,
 });
@@ -42,7 +46,7 @@ const db = {
   },
 };
 const create = (overrides = {}) => createSeoArticleWithinLimit({
-  userId: 'u1', guestId: null, plan: 'FREE', trialActive: false,
+  userId: 'u1', guestId: null, plan: 'FREE',
   articleData: { title: 'test', keywords: [] }, createJob: true, ...overrides,
 }, db);
 
@@ -70,9 +74,8 @@ const create = (overrides = {}) => createSeoArticleWithinLimit({
   assert.notEqual(seoArticleUsageKey('u1', new Date('2026-09-30T14:59:59Z')),
     seoArticleUsageKey('u1', new Date('2026-09-30T15:00:00Z')), 'JST month boundary resets ledger');
 
-  const trial = await create({ trialActive: true, createJob: false });
-  assert.equal(trial.job, null);
-  assert.equal(rows.length, 3);
+  await assert.rejects(create({ trialActive: true, createJob: false }), SeoArticleQuotaError);
+  assert.equal(rows.length, 2);
   await assert.rejects(create(), SeoArticleQuotaError);
-  console.log('PASS SEO article admission: guest blocked, monthly concurrent cap, rollback, deletion-resistant ledger, trial bypass');
+  console.log('PASS SEO article admission: guest blocked, monthly concurrent cap, rollback, deletion-resistant ledger, legacy trial flag cannot bypass quota');
 })().catch(error => { console.error(error); process.exitCode = 1; });

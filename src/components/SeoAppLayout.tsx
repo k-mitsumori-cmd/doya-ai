@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ExternalLink, Menu, Plus, Timer, X } from 'lucide-react'
 import Link from 'next/link'
 import { SeoSidebar } from '@/components/SeoSidebar'
+import { getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
 
 type SeoPlanCode = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
 
@@ -23,23 +24,12 @@ export function SeoAppLayout({
   const [trialRemainSec, setTrialRemainSec] = React.useState<number | null>(null)
 
   React.useEffect(() => {
-    if (!isLoggedIn) {
+    if (!isLoggedIn || !isWithinFreeHour(firstLoginAt)) {
       setTrialRemainSec(null)
       return
     }
-    const iso = String(firstLoginAt || '').trim()
-    if (!iso) {
-      setTrialRemainSec(null)
-      return
-    }
-    const start = Date.parse(iso)
-    if (!Number.isFinite(start)) {
-      setTrialRemainSec(null)
-      return
-    }
-    const ends = start + 60 * 60 * 1000
     const tick = () => {
-      const remain = Math.max(0, Math.floor((ends - Date.now()) / 1000))
+      const remain = Math.floor(getFreeHourRemainingMs(firstLoginAt) / 1000)
       setTrialRemainSec(remain > 0 ? remain : null)
     }
     tick()
@@ -190,7 +180,6 @@ export function SeoAppLayout({
     </div>
   )
 }
-
 
 
 

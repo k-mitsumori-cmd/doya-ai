@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
 
 export type SeoPlanCode = 'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE'
 
@@ -34,14 +35,8 @@ export function setGuestCookie(res: NextResponse, guestId: string) {
 }
 
 export function isTrialActive(firstLoginAtIso: string | null | undefined): { active: boolean; remainingMs: number } {
-  const iso = String(firstLoginAtIso || '').trim()
-  if (!iso) return { active: false, remainingMs: 0 }
-  const start = Date.parse(iso)
-  if (!Number.isFinite(start)) return { active: false, remainingMs: 0 }
-  const ends = start + 60 * 60 * 1000 // 1時間
-  const now = Date.now()
-  const remainingMs = Math.max(0, ends - now)
-  return { active: remainingMs > 0, remainingMs }
+  // 全サービス共通の廃止済み判定を使う。SEOだけ無料の無制限枠を復活させない。
+  return { active: isWithinFreeHour(firstLoginAtIso), remainingMs: getFreeHourRemainingMs(firstLoginAtIso) }
 }
 
 export function jstDayRange(now = new Date()): { start: Date; end: Date } {
@@ -89,10 +84,9 @@ export function seoGuestTotalArticleLimit(): number {
 }
 
 export function canUseSeoImages(args: { isLoggedIn: boolean; plan: SeoPlanCode; trialActive: boolean }) {
-  // 画像生成（バナー/図解）はLIGHT以上から。初回ログイン後1時間は無料プランでも利用可。
+  // 画像生成（バナー/図解）はLIGHT以上から。1時間無料特典は共通判定で廃止済み。
   // 外部画像APIの運用上限は seo-tool-admission 側で別途適用する。
   if (args.trialActive) return true
   if (!args.isLoggedIn) return false
   return args.plan === 'LIGHT' || args.plan === 'PRO' || args.plan === 'ENTERPRISE'
 }
-

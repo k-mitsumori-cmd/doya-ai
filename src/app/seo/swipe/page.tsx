@@ -67,23 +67,13 @@ export default function SwipeArticlePage() {
   } | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [now, setNow] = useState(() => Date.now())
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 60_000)
-    return () => window.clearInterval(timer)
-  }, [])
-
   // ユーザープラン情報
   const userPlan = useMemo(() => {
     const user: any = session?.user || null
     const plan = user?.seoPlan || user?.plan || (user ? 'FREE' : 'GUEST')
     return String(plan).toUpperCase() as 'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE'
   }, [session])
-  const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
-  const firstLoginTime = firstLoginAt ? Date.parse(firstLoginAt) : Number.NaN
-  const seoTrialActive = Number.isFinite(firstLoginTime) && now < firstLoginTime + 60 * 60 * 1000
-  const charLimit = useMemo(() => CHAR_LIMITS[seoTrialActive ? 'PRO' : userPlan] || 10000, [userPlan, seoTrialActive])
+  const charLimit = useMemo(() => CHAR_LIMITS[userPlan] || 10000, [userPlan])
   const isLoggedIn = !!session?.user
 
   const thinkingMessages = useMemo(
@@ -971,7 +961,7 @@ export default function SwipeArticlePage() {
                 <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">
                   文字数目安
                   <span className="ml-2 text-[10px] font-bold text-gray-400 normal-case">
-                    ({seoTrialActive ? '初回お試し' : userPlan === 'GUEST' ? 'ゲスト' : userPlan === 'FREE' ? '無料' : userPlan === 'LIGHT' ? 'ライト' : userPlan === 'PRO' ? 'プロ' : 'エンタープライズ'}プラン: 最大{charLimit.toLocaleString()}字)
+                    ({userPlan === 'GUEST' ? 'ゲスト' : userPlan === 'FREE' ? '無料' : userPlan === 'LIGHT' ? 'ライト' : userPlan === 'PRO' ? 'プロ' : 'エンタープライズ'}プラン: 最大{charLimit.toLocaleString()}字)
                   </span>
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
