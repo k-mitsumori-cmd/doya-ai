@@ -55,6 +55,9 @@ export type BillingAudit = {
   newInWindow: AuditSubscription[]
   canceledInWindow: Array<{ id: string; email: string | null; endedAt: Date | null }>
   mismatched: AuditSubscription[]
+  /** 有効なStripe契約の最上位階層とUser.planの不一致。手動の上位付与は除外する。 */
+  tierDrift: Array<{ userId: string; email: string | null; stripeTier: string; dbPlan: string; subscriptionIds: string[] }>
+  unmappedPlans: AuditSubscription[]
   /** User.plan は有料なのにサービス別の行が揃っていない（INV-2 違反）。障害#5 の再発検知 */
   serviceDrift: Array<{ email: string | null; userPlan: string; expected: string; broken: string[] }>
   /** Stripe に生きた契約が無いのに DB が有料のまま（＝過剰付与・解約の反映漏れ） */
@@ -65,6 +68,8 @@ export type BillingAudit = {
   webhookDetail: string
   mrr: number
 }
+
+const PLAN_RANK: Record<string, number> = { FREE: 0, GUEST: 0, LIGHT: 1, PRO: 2, BUNDLE: 3, ENTERPRISE: 4 }
 
 function jstDate(d: Date): string {
   return d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit' })
@@ -229,7 +234,29 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
   // 課金されているのに DB が FREE / ユーザーが見つからない＝反映漏れ
   const mismatched = subscriptions
     .filter((s) => !s.dbUserFound || s.dbPlan === 'FREE' || s.dbPlan === 'GUEST' || s.dbPlan === null)
-    .filter((s) => (s.declaredUserId && !s.dbUserFound) || !manualGrantEmails.has(String(s.email || '').toLowerCase()))
+
+  // User.plan が有料でも契約より下位／上位なら、全サービス行が揃っていても異常。
+  // 顧客分裂による複数契約は最上位の階層を採用し、同一利用者を一度だけ報告する。
+  const highestTierByUser = new Map<string, { tier: string; subs: AuditSubscription[] }>()
+  for (const sub of subscriptions) {
+    if (!sub.userId || !PLAN_RANK[sub.tier]) continue
+    const previous = highestTierByUser.get(sub.userId)
+    if (previous) {
+      previous.subs.push(sub)
+      if (PLAN_RANK[sub.tier] > PLAN_RANK[previous.tier]) previous.tier = sub.tier
+    } else {
+      highestTierByUser.set(sub.userId, { tier: sub.tier, subs: [sub] })
+    }
+  }
+  const tierDrift: BillingAudit['tierDrift'] = []
+  for (const [userId, { tier, subs }] of highestTierByUser) {
+    const dbUser = resolvedUserById.get(userId)
+    if (!dbUser || dbUser.plan === 'FREE' || dbUser.plan === 'GUEST' || dbUser.plan === tier) continue
+    const manualGrant = manualGrantEmails.has(String(dbUser.email || '').toLowerCase())
+    if (manualGrant && (PLAN_RANK[dbUser.plan] ?? -1) >= PLAN_RANK[tier]) continue
+    tierDrift.push({ userId, email: dbUser.email, stripeTier: tier, dbPlan: dbUser.plan, subscriptionIds: subs.map((s) => s.id) })
+  }
+  const unmappedPlans = subscriptions.filter((sub) => !sub.planId)
 
   // 同一ユーザーの分裂Customerも二重契約として検出する。
   const byOwner = new Map<string, AuditSubscription[]>()
@@ -303,6 +330,8 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
     newInWindow,
     canceledInWindow,
     mismatched,
+    tierDrift,
+    unmappedPlans,
     serviceDrift,
     overGranted,
     duplicates,
@@ -332,6 +361,8 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
   const hasProblem =
     !audit.webhookOk ||
     audit.mismatched.length > 0 ||
+    audit.tierDrift.length > 0 ||
+    audit.unmappedPlans.length > 0 ||
     audit.duplicates.length > 0 ||
     audit.serviceDrift.length > 0 ||
     audit.overGranted.length > 0 ||
@@ -378,6 +409,24 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
     lines.push('・対処: 本人にいずれかの料金ページ（例 /pricing）で「課金状態を確認してプランを反映する」を押してもらうか、運営で反映してください。')
   }
 
+  if (audit.tierDrift.length > 0) {
+    lines.push('')
+    lines.push(`:rotating_light: *Stripe契約とDBプランの階層不一致: ${audit.tierDrift.length}名*`)
+    for (const d of audit.tierDrift) {
+      lines.push(`・${d.email || d.userId} ｜ Stripe: ${d.stripeTier} ｜ DB: ${d.dbPlan} ｜ sub: ${d.subscriptionIds.join(', ')}`)
+    }
+    lines.push('・対処: 契約の価格と手動付与の有無を確認し、必要ならプランを再同期してください。')
+  }
+
+  if (audit.unmappedPlans.length > 0) {
+    lines.push('')
+    lines.push(`:rotating_light: *プランを特定できない契約: ${audit.unmappedPlans.length}件*`)
+    for (const sub of audit.unmappedPlans) {
+      lines.push(`・${sub.email || sub.customerId} ｜ sub: ${sub.id} ｜ Stripe状態: ${sub.status}`)
+    }
+    lines.push('・契約の価格IDとプラン設定を確認してください。階層の整合性を判定できません。')
+  }
+
   if (audit.duplicates.length > 0) {
     lines.push('')
     lines.push(`:rotating_light: *同一利用者で契約が重複: ${audit.duplicates.length}件（過剰請求の恐れ）*`)
@@ -414,7 +463,7 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
 
   if (!hasProblem) {
     lines.push('')
-    lines.push('整合性チェック: 異常なし（Webhook正常・反映漏れ0・サービス別ズレ0・重複0・過剰付与0）')
+    lines.push('整合性チェック: 異常なし（Webhook正常・反映漏れ0・階層ズレ0・プラン不明0・サービス別ズレ0・重複0・過剰付与0）')
   }
 
   return lines.filter((l) => l !== undefined).join('\n')

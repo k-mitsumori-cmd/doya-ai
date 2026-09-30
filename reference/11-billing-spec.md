@@ -317,7 +317,9 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
 
 | 検出項目 | 条件 | 通知 |
 |---------|------|------|
-| **反映漏れ** | Stripe に生きた契約があるのに DB が `FREE` / `GUEST` / ユーザー未登録。契約の `metadata.userId` を優先し、IDのない旧契約だけ顧客メールで照合する | `<!channel>` + `notifyAlert(critical)` |
+| **反映漏れ** | Stripe に生きた契約があるのに DB が `FREE` / `GUEST` / ユーザー未登録。手動付与リストの登録有無にかかわらず報告する。契約の `metadata.userId` を優先し、IDのない旧契約だけ顧客メールで照合する | `<!channel>` + `notifyAlert(critical)` |
+| **契約とDBの階層不一致** | 同一利用者の有効契約の最上位階層と `User.plan` が異なる。手動付与リストの利用者でもDBが契約より下位なら報告する。意図的な上位付与だけ除外する | `<!channel>` + `notifyAlert(critical)` |
+| **契約プラン不明** | Doya契約として識別できる有効契約で、価格・メタデータからプランIDを解決できない。階層照合はできないため独立して報告する | `<!channel>` + `notifyAlert(critical)` |
 | **サービス別プランのズレ** | `User.plan` は有料なのに `ALL_SERVICE_IDS` の行が揃っていない（値違い or 行が無い＝INV-2 違反） | `<!channel>` + `notifyAlert(critical)`。dedupKey `billing-service-plan-drift`／12時間クールダウンなので1日1通に集約される |
 | **過剰付与** | Stripe に生きた契約が無いのに DB が有料のまま（解約の反映漏れ／手動付与） | Slack レポートのみ（運営の手動付与で誤検知しうるため critical にしない） |
 | **二重契約** | 同一利用者に生きた契約が2本以上。Stripe顧客やメールが分かれていても `metadata.userId` で集約する | 同上 |

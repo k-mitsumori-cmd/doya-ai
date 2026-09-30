@@ -18,6 +18,8 @@ import { notifyAlert } from '@/lib/alert'
  * Stripe を直接読むため **Webhook が死んでいても必ず届く**。
  * - その日に有料契約したアカウントを一覧で通知
  * - 課金されているのに DB が FREE の方を検出（＝反映漏れ。2026-08 に2名発生）
+ * - 契約は有効でもStripeの階層とDBプランが異なる方を検出
+ * - Doya契約なのに価格からプランを特定できない状態を検出
  * - 同一利用者の重複契約（顧客メールが分かれた場合も過剰請求を検出）
  * - 有料なのに UserServiceSubscription が揃っていない（障害#5 と同じ状態）を検出
  * - Stripe に契約が無いのに DB が有料のまま（＝過剰付与）を検出
@@ -85,6 +87,26 @@ export async function GET(request: NextRequest) {
         cooldownMs: 12 * 3600_000,
       })
     }
+    if (audit.tierDrift.length > 0) {
+      await notifyAlert({
+        level: 'critical',
+        title: `Stripe契約とDBプランの階層が異なる利用者が ${audit.tierDrift.length} 名います`,
+        detail: audit.tierDrift
+          .map((d) => `${d.email || d.userId} / Stripe:${d.stripeTier} / DB:${d.dbPlan} / sub:${d.subscriptionIds.join(',')}`)
+          .join('\n'),
+        dedupKey: 'billing-tier-drift',
+        cooldownMs: 12 * 3600_000,
+      })
+    }
+    if (audit.unmappedPlans.length > 0) {
+      await notifyAlert({
+        level: 'critical',
+        title: `Stripe契約のプランを特定できないものが ${audit.unmappedPlans.length} 件あります`,
+        detail: audit.unmappedPlans.map((s) => `${s.email || s.customerId} / sub:${s.id} / status:${s.status}`).join('\n'),
+        dedupKey: 'billing-unmapped-plan',
+        cooldownMs: 12 * 3600_000,
+      })
+    }
     if (audit.serviceDrift.length > 0) {
       await notifyAlert({
         level: 'critical',
@@ -113,6 +135,8 @@ export async function GET(request: NextRequest) {
       new: audit.newInWindow.length,
       live: audit.subscriptions.length,
       mismatched: audit.mismatched.length,
+      tierDrift: audit.tierDrift.length,
+      unmappedPlans: audit.unmappedPlans.length,
       serviceDrift: audit.serviceDrift.length,
       overGranted: audit.overGranted.length,
       duplicates: audit.duplicates.length,

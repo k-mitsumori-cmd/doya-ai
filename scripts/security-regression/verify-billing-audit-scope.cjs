@@ -15,7 +15,7 @@ function page(rows, query) {
   const data = rows.slice(start, start+100)
   return { data, has_more: start+data.length < rows.length }
 }
-function fixture({ subs, invoices, subList, invoiceList, endpoints = [], webhookList, users = [], serviceRows = [] }) {
+function fixture({ subs, invoices, subList, invoiceList, endpoints = [], webhookList, users = [], serviceRows = [], manualGrants = [] }) {
   let subscriptionCalls = 0, invoiceCalls = 0, webhookCalls = 0
   const stripe = { subscriptions: { list: async (q) => { subscriptionCalls++; return subList ? subList(q) : page(subs, q) } },
     invoices: { list: async (q) => { invoiceCalls++; return invoiceList ? invoiceList(q) : page(invoices, q) } },
@@ -23,7 +23,8 @@ function fixture({ subs, invoices, subList, invoiceList, endpoints = [], webhook
   const module = load('src/lib/billing-audit.ts', {
     '@/lib/stripe': { stripe, ACTIVE_LIKE_STATUSES: new Set(['active','trialing','past_due']),
       isDoyaSubscription: (sub) => sub.metadata.app === 'doya-ai', ALL_SERVICE_IDS: ['banner'],
-      resolvePlanIdFromSubscription: () => ({ planId: 'banner-pro' }), planTierFromPlanId: () => 'PRO' },
+      resolvePlanIdFromSubscription: (sub) => ({ planId: Object.hasOwn(sub.metadata, 'planId') ? sub.metadata.planId : 'banner-pro' }),
+      planTierFromPlanId: (id) => !id ? 'FREE' : id === 'bundle' ? 'BUNDLE' : id.endsWith('-light') ? 'LIGHT' : id.endsWith('-enterprise') ? 'ENTERPRISE' : 'PRO' },
     '@/lib/prisma': { prisma: {
       user: { findMany: async ({ where }) => {
         if (where.id) return users.filter((user) => where.id.in.includes(user.id))
@@ -32,7 +33,7 @@ function fixture({ subs, invoices, subList, invoiceList, endpoints = [], webhook
       } },
       userServiceSubscription: { findMany: async ({ where }) => serviceRows.filter((row) => where.userId.in.includes(row.userId)) },
     } },
-    '@/lib/billing-manual-grants': { getManualGrantEmails: async () => new Set() },
+    '@/lib/billing-manual-grants': { getManualGrantEmails: async () => new Set(manualGrants) },
   })
   return { module, get subscriptionCalls() { return subscriptionCalls }, get invoiceCalls() { return invoiceCalls }, get webhookCalls() { return webhookCalls } }
 }
@@ -110,6 +111,61 @@ function fixture({ subs, invoices, subList, invoiceList, endpoints = [], webhook
     assert.equal(audit.subscriptions[0].userId, 'legacy-user')
     assert.equal(audit.mismatched.length, 0)
     assert.equal(audit.overGranted.length, 0)
+  })
+  await check('billing audit detects paid tier drift in both directions', async () => {
+    const under = subscription('under', 'doya-ai'); under.metadata.userId = 'under-user'
+    const over = subscription('over', 'doya-ai'); over.metadata.userId = 'over-user'; over.metadata.planId = 'banner-light'
+    const users = [
+      { id: 'under-user', email: 'under@example.invalid', name: 'Under', plan: 'LIGHT' },
+      { id: 'over-user', email: 'over@example.invalid', name: 'Over', plan: 'PRO' },
+    ]
+    const serviceRows = users.map((u) => ({ userId: u.id, serviceId: 'banner', plan: u.plan }))
+    const audit = await fixture({ subs: [under, over], invoices: [], users, serviceRows }).module.runBillingAudit()
+    assert.equal(audit.mismatched.length, 0)
+    assert.equal(audit.serviceDrift.length, 0)
+    assert.equal(audit.tierDrift.length, 2)
+    assert.deepEqual(JSON.parse(JSON.stringify(audit.tierDrift.map((d) => [d.email, d.stripeTier, d.dbPlan]))), [
+      ['under@example.invalid', 'PRO', 'LIGHT'], ['over@example.invalid', 'LIGHT', 'PRO'],
+    ])
+  })
+  await check('billing audit compares highest active tier once and honors only higher manual grants', async () => {
+    const light = subscription('light', 'doya-ai'); light.metadata.userId = 'same-user'; light.metadata.planId = 'banner-light'
+    const pro = subscription('pro', 'doya-ai'); pro.metadata.userId = 'same-user'
+    const manual = subscription('manual', 'doya-ai'); manual.metadata.userId = 'manual-user'; manual.metadata.planId = 'banner-light'
+    const users = [
+      { id: 'same-user', email: 'same@example.invalid', name: 'Same', plan: 'PRO' },
+      { id: 'manual-user', email: 'manual@example.invalid', name: 'Manual', plan: 'ENTERPRISE' },
+    ]
+    const audit = await fixture({ subs: [light, pro, manual], invoices: [], users,
+      serviceRows: users.map((u) => ({ userId: u.id, serviceId: 'banner', plan: u.plan })),
+      manualGrants: ['manual@example.invalid'] }).module.runBillingAudit()
+    assert.equal(audit.duplicates.length, 1)
+    assert.equal(audit.tierDrift.length, 0)
+  })
+  await check('manual-grant list never hides a FREE account or a paid tier above its grant', async () => {
+    const free = subscription('free', 'doya-ai'); free.metadata.userId = 'free-user'
+    const under = subscription('under-manual', 'doya-ai'); under.metadata.userId = 'under-manual-user'
+    const users = [
+      { id: 'free-user', email: 'free@example.invalid', name: 'Free', plan: 'FREE' },
+      { id: 'under-manual-user', email: 'under-manual@example.invalid', name: 'Under', plan: 'LIGHT' },
+    ]
+    const audit = await fixture({ subs: [free, under], invoices: [], users,
+      manualGrants: users.map((u) => u.email),
+      serviceRows: [{ userId: 'under-manual-user', serviceId: 'banner', plan: 'LIGHT' }] }).module.runBillingAudit()
+    assert.equal(audit.mismatched.length, 1)
+    assert.equal(audit.mismatched[0].email, 'free@example.invalid')
+    assert.equal(audit.tierDrift.length, 1)
+    assert.equal(audit.tierDrift[0].email, 'under-manual@example.invalid')
+  })
+  await check('a marked Doya contract with an unmapped price cannot pass as healthy', async () => {
+    const unknown = subscription('unmapped', 'doya-ai')
+    unknown.metadata.userId = 'known-user'; unknown.metadata.planId = ''
+    const users = [{ id: 'known-user', email: 'known@example.invalid', name: 'Known', plan: 'PRO' }]
+    const audit = await fixture({ subs: [unknown], invoices: [], users,
+      serviceRows: [{ userId: 'known-user', serviceId: 'banner', plan: 'PRO' }] }).module.runBillingAudit()
+    assert.equal(audit.unmappedPlans.length, 1)
+    assert.equal(audit.unmappedPlans[0].id, 'unmapped')
+    assert(fixture({ subs: [], invoices: [] }).module.formatBillingAuditMessage(audit, { windowLabel: '24時間' }).includes('プランを特定できない契約'))
   })
   await check('webhook endpoint check reaches page two', async () => {
     const endpoints = Array.from({ length: 100 }, (_, i) => ({ id: 'endpoint-'+i, url: 'https://other.example/'+i, status: 'enabled', enabled_events: [] }))
