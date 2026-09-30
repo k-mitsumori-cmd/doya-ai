@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'node:crypto'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { stripe, ACTIVE_LIKE_STATUSES, isDoyaSubscription, resolvePlanIdFromSubscription, planTierFromPlanId } from '@/lib/stripe'
 import { syncUnifiedBilling } from '@/lib/billing-sync'
 import { prisma } from '@/lib/prisma'
-import { sendEventNotification } from '@/lib/notifications'
+import { deliverStripeWebhookNotification } from '@/lib/stripe-webhook-notifications'
 
 // ========================================
 // Stripe決済直後の同期（Webhook遅延/不達の保険）
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, email: true, name: true, plan: true, stripeCustomerId: true },
+      select: { id: true, email: true, name: true, stripeCustomerId: true },
     })
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
@@ -81,22 +82,28 @@ export async function POST(request: NextRequest) {
     const { planId, priceId } = resolvePlanIdFromSubscription(subscription as any)
     const resolvedPlan = planTierFromPlanId(planId)
     if (resolvedPlan === 'FREE') return NextResponse.json({ error: '契約プランを確認できませんでした。再度同期してください。' }, { status: 409 })
+    const notice = subscriptionNotice(subscription as any)
+    const notificationId = `billing-sync:${subscription.id}:${randomUUID()}`
     const { userPlan } = await syncUnifiedBilling({
       userId: user.id, plan: resolvedPlan,
       stripeCustomerId: customerId, stripeSubscriptionId: subscription.id,
       stripePriceId: priceId, stripeCurrentPeriodEnd: new Date(subscription.current_period_end * 1000),
+      notificationOnUpgrade: {
+        id: notificationId,
+        payload: {
+          type: notice.type,
+          userEmail: user.email,
+          userName: user.name,
+          details: `${notice.text} ｜ 決済直後の同期で反映（sub: ${subscription.id}）`,
+        },
+      },
     })
-
-    // 課金通知は Webhook ハンドラにしか無く、Webhook が不達だと運営が誰も気づけない。
-    // 決済直後の同期経路からも通知する（FREE→有料の遷移時のみ）。
-    if (user.plan === 'FREE' && userPlan !== 'FREE') {
-      const notice = subscriptionNotice(subscription as any)
-      sendEventNotification({
-        type: notice.type,
-        userEmail: user.email,
-        userName: user.name,
-        details: `${notice.text} ｜ 決済直後の同期で反映（sub: ${subscription.id}）`,
-      }).catch(() => {})
+    // 送信失敗はキューに残し、Cronが再試行する。FREE→有料の遷移ごとに固有IDを持つ。
+    try {
+      await deliverStripeWebhookNotification(notificationId)
+    } catch (error) {
+      // 登録は確定済み。送信の一時障害はCronへ委ね、購入者の同期成功を維持する。
+      console.error('Stripe sync notification delivery deferred:', notificationId, error)
     }
 
     return NextResponse.json({

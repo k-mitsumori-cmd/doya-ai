@@ -3,6 +3,7 @@ const { load } = require('./load-typescript.cjs')
 
 const secret = 'PRIVATE_STRIPE_INTERNAL'
 const common = {
+  'node:crypto': require('node:crypto'),
   'next/server': { NextResponse: Response },
   'next-auth': { getServerSession: async () => { throw new Error(secret) } },
   '@/lib/auth': { authOptions: {} },
@@ -12,6 +13,7 @@ const common = {
   '@/lib/trial': {},
   '@/lib/billing-sync': {},
   '@/lib/notifications': {},
+  '@/lib/stripe-webhook-notifications': {},
   '@/lib/alert': {},
 }
 

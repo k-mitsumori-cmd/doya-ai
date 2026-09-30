@@ -1,6 +1,8 @@
 import { prisma, withRetry } from '@/lib/prisma'
+import type { Prisma } from '@prisma/client'
 import { ALL_SERVICE_IDS } from '@/lib/stripe'
 import { MANUAL_GRANTS_SETTING_KEY, parseManualGrantEmails } from '@/lib/billing-manual-grants'
+import type { EventNotification } from '@/lib/notifications'
 
 const PLAN_RANK: Record<string, number> = { FREE: 0, LIGHT: 1, PRO: 2, BUNDLE: 3, ENTERPRISE: 4 }
 
@@ -14,12 +16,14 @@ type BillingSyncInput = {
   /** 明示的な管理者のプラン変更のみ false。Stripe起点の同期は付与済み権利を保護。 */
   preserveManualGrant?: boolean
   role?: string
+  /** 決済同期の FREE→有料通知。権限反映と同じTXで再送キューに保存する。 */
+  notificationOnUpgrade?: { id: string; payload: EventNotification }
 }
 
 /**
  * User・全サービス・所有HR組織を一括反映する。
  * 途中失敗は全件ロールバックし、呼び出し元へ伝える。利用カウンタは既存値を保持。
- * 外部API/通知はトランザクションに含めない。
+ * 通知の登録は同じトランザクションで行い、外部への実送信は含めない。
  */
 export async function syncUnifiedBilling(input: BillingSyncInput) {
   if (!Object.hasOwn(PLAN_RANK, input.plan)) throw new Error('Invalid billing plan')
@@ -70,6 +74,16 @@ export async function syncUnifiedBilling(input: BillingSyncInput) {
             where: { id: { in: ownerships.map((m) => m.organizationId) } },
             data: { plan: servicePlan === 'LIGHT' ? 'STARTER' : servicePlan },
           })
+          if (input.notificationOnUpgrade && current.plan === 'FREE' && userPlan !== 'FREE') {
+            await tx.stripeWebhookNotification.createMany({
+              data: [{
+                eventId: input.notificationOnUpgrade.id,
+                eventType: 'billing.sync',
+                payload: input.notificationOnUpgrade.payload as unknown as Prisma.InputJsonValue,
+              }],
+              skipDuplicates: true,
+            })
+          }
           return { userPlan, servicePlan, previousPlan: current.plan }
         }, { isolationLevel: 'Serializable', maxWait: 10_000, timeout: 30_000 })
       } catch (error) {
