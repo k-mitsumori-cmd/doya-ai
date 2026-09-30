@@ -170,12 +170,10 @@ function CunningSessionContent({ sessionId }: { sessionId: string }) {
         >
           {genLoading ? '生成中…' : session.report ? '議事録を再生成' : '議事録・評価を生成'}
         </button>
-        <Link
-          href={session.status === 'active' ? `/cunning/live/${session.id}` : '/cunning'}
-          className="px-4 py-2 rounded-full bg-gradient-to-r from-[#0B5CFF] to-blue-600 text-white font-black text-sm"
-        >
-          {session.status === 'active' ? 'このセッションを開く' : '新しいセッションを作成する'}
+        <Link href={`/cunning/live/${session.id}`} className="px-4 py-2 rounded-full bg-gradient-to-r from-[#0B5CFF] to-blue-600 text-white font-black text-sm">
+          {session.status === 'active' ? 'このセッションを開く' : '保存状況・再試行を確認する'}
         </Link>
+        {session.status !== 'active' && <Link href="/cunning" className="px-4 py-2 rounded-full border border-slate-200 bg-white text-slate-700 font-black text-sm">新しいセッションを作成する</Link>}
       </div>
 
       {genError && <p role="alert" className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900">{genError}{session.report ? ' 保存済みの議事録は保持されています。' : ''}</p>}
