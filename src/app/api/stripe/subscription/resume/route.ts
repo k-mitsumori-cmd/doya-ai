@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { stripe, findActiveLikeSubscriptions, isDoyaSubscription, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
+import { stripe, findActiveLikeSubscriptions, isDoyaSubscriptionOwnedByUser, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 
 // ========================================
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'User not found' }, { status: 404 })
 
     // 統一契約はサービス名や古いDB参照で絞らず、現在の契約を横断して探す。
-    const live = await findActiveLikeSubscriptions({ email: session.user.email, stripeCustomerId: user.stripeCustomerId })
+    const live = await findActiveLikeSubscriptions({ userId: user.id, email: session.user.email, stripeCustomerId: user.stripeCustomerId })
     if (live.length === 0) {
       return NextResponse.json({ error: '継続できる契約が見つかりません。すでに契約が終了している可能性があります。' }, { status: 404 })
     }
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const current = await stripe.subscriptions.retrieve(subscriptionId)
     const customerId = typeof current.customer === 'string' ? current.customer : current.customer?.id
     if (customerId !== live[0]!.customerId || !ACTIVE_LIKE_STATUSES.has(current.status) ||
-        !isDoyaSubscription(current) || (current.metadata?.userId && current.metadata.userId !== user.id)) {
+        !(await isDoyaSubscriptionOwnedByUser(current, { id: user.id, email: session.user.email }))) {
       return NextResponse.json({ error: '契約の状態が変更されました。再読み込みしてご確認ください。' }, { status: 409 })
     }
     // 再送時は、すでに継続中なら変更せず現在の状態を返す。

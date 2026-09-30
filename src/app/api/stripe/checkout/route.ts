@@ -129,6 +129,7 @@ export async function POST(request: NextRequest) {
     // 生きている契約がある場合は決済させず、409 で呼び出し側に再同期させる。
     try {
       const existing = await findActiveLikeSubscriptions({
+        userId: dbUser.id,
         email: session.user.email,
         stripeCustomerId: dbUser.stripeCustomerId,
       })

@@ -8,7 +8,7 @@ import {
   stripe,
   findActiveLikeSubscriptions,
   resolvePlanIdFromSubscription,
-  isDoyaSubscription,
+  isDoyaSubscriptionOwnedByUser,
   planTierFromPlanId,
   ACTIVE_LIKE_STATUSES,
 } from '@/lib/stripe'
@@ -41,6 +41,7 @@ export async function POST(_req: NextRequest) {
 
     // 共通探索は全Customer/Subscriptionページを読み、他アプリの契約を除外する。
     const candidates = (await findActiveLikeSubscriptions({
+      userId: user.id,
       email: user.email,
       stripeCustomerId: user.stripeCustomerId,
     })).map((subscription) => ({
@@ -58,8 +59,8 @@ export async function POST(_req: NextRequest) {
     const subscription = await stripe.subscriptions.retrieve(best.id)
     const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer.id
     if (!ACTIVE_LIKE_STATUSES.has(String(subscription.status)) ||
-        !isDoyaSubscription(subscription) || customerId !== best.customerId ||
-        (subscription.metadata?.userId && subscription.metadata.userId !== user.id)) {
+        customerId !== best.customerId ||
+        !(await isDoyaSubscriptionOwnedByUser(subscription, user))) {
       return NextResponse.json({ error: '契約情報の一致を確認できませんでした。' }, { status: 409 })
     }
     const { planId: bestPlanId, priceId } = resolvePlanIdFromSubscription(subscription)

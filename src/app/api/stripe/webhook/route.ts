@@ -344,7 +344,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Pro
   // 照会失敗時は変更せずエラーを返し、Stripeの再送で再確認する。
   try {
     const remaining = (
-      await findActiveLikeSubscriptions({ email: user.email, stripeCustomerId: customerId })
+      await findActiveLikeSubscriptions({ userId: user.id, email: user.email, stripeCustomerId: customerId })
     ).filter((s) => s.id !== subscription.id)
 
     if (remaining.length > 0) {

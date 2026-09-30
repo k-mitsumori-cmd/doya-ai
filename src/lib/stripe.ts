@@ -282,23 +282,44 @@ export function isDoyaSubscription(subscription: {
     isDoyaPlanId(subscription.metadata?.planId)
 }
 
+/** 保存済みの顧客IDだけを本人確認として扱わない。旧契約はStripe顧客メールで照合する。 */
+export async function isDoyaSubscriptionOwnedByUser(
+  subscription: Stripe.Subscription,
+  user: { id: string; email?: string | null }
+): Promise<boolean> {
+  if (!isDoyaSubscription(subscription)) return false
+  if (subscription.metadata?.userId) return subscription.metadata.userId === user.id
+  if (!user.email) return false
+  const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id
+  if (!customerId) return false
+  const customer = await stripe.customers.retrieve(customerId)
+  return !customer.deleted && customer.email?.trim().toLowerCase() === user.email.trim().toLowerCase()
+}
+
 /**
  * そのメール／顧客に紐づく「生きている」サブスクリプションを全部返す。
  * checkout は customer_email で都度 Customer を作るため顧客が分裂しうるので、
  * 必ずメール横断で見る。二重契約ガードと再同期・監査で共用する。
  */
 export async function findActiveLikeSubscriptions(params: {
+  userId: string
   email?: string | null
   stripeCustomerId?: string | null
 }): Promise<Array<{ id: string; status: string; customerId: string; priceId: string | null; planId: string }>> {
   const customerIds = new Set<string>()
+  const expectedEmail = params.email?.trim().toLowerCase() || ''
+  const verifiedCustomerEmails = new Map<string, boolean>()
   if (params.stripeCustomerId) customerIds.add(params.stripeCustomerId)
   if (params.email) {
     let cursor: string | undefined
     const cursors = new Set<string>()
     while (true) {
       const customers = await stripe.customers.list({ email: params.email, limit: 100, ...(cursor ? { starting_after: cursor } : {}) })
-      for (const c of customers.data) customerIds.add(c.id)
+      for (const c of customers.data) {
+        const matches = Boolean(expectedEmail && c.email?.trim().toLowerCase() === expectedEmail)
+        verifiedCustomerEmails.set(c.id, matches)
+        if (matches) customerIds.add(c.id)
+      }
       if (!customers.has_more) break
       const next = customers.data[customers.data.length - 1]?.id
       if (!next || cursors.has(next)) throw new Error('Customer pagination did not advance')
@@ -309,6 +330,14 @@ export async function findActiveLikeSubscriptions(params: {
 
   const out: Array<{ id: string; status: string; customerId: string; priceId: string | null; planId: string }> = []
   const subscriptionIds = new Set<string>()
+  const customerMatchesEmail = async (customerId: string): Promise<boolean> => {
+    if (!expectedEmail) return false
+    if (!verifiedCustomerEmails.has(customerId)) {
+      const customer = await stripe.customers.retrieve(customerId)
+      verifiedCustomerEmails.set(customerId, !customer.deleted && customer.email?.trim().toLowerCase() === expectedEmail)
+    }
+    return verifiedCustomerEmails.get(customerId) === true
+  }
   for (const cid of customerIds) {
     let cursor: string | undefined
     const cursors = new Set<string>()
@@ -316,6 +345,11 @@ export async function findActiveLikeSubscriptions(params: {
       const subs = await stripe.subscriptions.list({ customer: cid, status: 'all', limit: 100, ...(cursor ? { starting_after: cursor } : {}) })
       for (const s of subs.data) {
         if (!ACTIVE_LIKE_STATUSES.has(String(s.status)) || subscriptionIds.has(s.id) || !isDoyaSubscription(s)) continue
+        if (s.metadata?.userId) {
+          if (s.metadata.userId !== params.userId) continue
+        } else if (!(await customerMatchesEmail(cid))) {
+          continue
+        }
         const { planId, priceId } = resolvePlanIdFromSubscription(s as any)
         subscriptionIds.add(s.id)
         out.push({ id: s.id, status: String(s.status), customerId: cid, priceId, planId })
@@ -342,18 +376,65 @@ export async function findActiveLikeSubscriptions(params: {
  * 仕様: reference/11-billing-spec.md
  */
 export async function resolveBillingCustomerId(params: {
+  userId: string
   email?: string | null
   stripeCustomerId?: string | null
 }): Promise<string | null> {
   // Stripe の検索失敗を「契約なし」と扱うと、分裂した古い顧客の空ポータルを開いてしまう。
   // 呼び出し元に失敗を伝え、再試行できる状態にする。
   const live = await findActiveLikeSubscriptions(params)
-  if (live.length === 0) return params.stripeCustomerId || null
-  // 保存済みの顧客が実際に契約を持っているならそれを優先（既存の見え方を変えない）
-  if (params.stripeCustomerId && live.some((s) => s.customerId === params.stripeCustomerId)) {
-    return params.stripeCustomerId
+  // Portal は契約単位ではなく顧客単位で履歴も表示する。本人の契約があっても
+  // 同じ Customer に別アプリ・別ユーザーの契約が混在すれば開かない。
+  const candidates = [...new Set([
+    ...(params.stripeCustomerId && live.some((s) => s.customerId === params.stripeCustomerId)
+      ? [params.stripeCustomerId] : []),
+    ...live.map((s) => s.customerId),
+    ...(live.length === 0 && params.stripeCustomerId ? [params.stripeCustomerId] : []),
+  ])]
+  for (const customerId of candidates) {
+    if (await isSafeBillingPortalCustomer(customerId, params)) return customerId
   }
-  return live[0]!.customerId || params.stripeCustomerId || null
+  return null
+}
+
+async function isSafeBillingPortalCustomer(
+  customerId: string,
+  user: { userId: string; email?: string | null }
+): Promise<boolean> {
+  if (!user.email) return false
+  const customer = await stripe.customers.retrieve(customerId)
+  if (customer.deleted || customer.email?.trim().toLowerCase() !== user.email.trim().toLowerCase()) return false
+  let cursor: string | undefined
+  const cursors = new Set<string>()
+  const ownSubscriptionIds = new Set<string>()
+  while (true) {
+    const subs = await stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 100, ...(cursor ? { starting_after: cursor } : {}) })
+    for (const sub of subs.data) {
+      if (!isDoyaSubscription(sub) || (sub.metadata?.userId && sub.metadata.userId !== user.userId)) return false
+      ownSubscriptionIds.add(sub.id)
+    }
+    if (!subs.has_more) break
+    const next = subs.data[subs.data.length - 1]?.id
+    if (!next || cursors.has(next)) throw new Error('Subscription pagination did not advance')
+    cursors.add(next)
+    cursor = next
+  }
+  if (ownSubscriptionIds.size === 0) return false
+  // 請求履歴も顧客単位で表示されるため、別契約や単発決済の請求書が混ざる場合は閉じる。
+  cursor = undefined
+  cursors.clear()
+  while (true) {
+    const invoices: Stripe.ApiList<Stripe.Invoice> = await stripe.invoices.list({ customer: customerId, limit: 100, ...(cursor ? { starting_after: cursor } : {}) })
+    for (const invoice of invoices.data) {
+      const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id
+      if (!subscriptionId || !ownSubscriptionIds.has(subscriptionId)) return false
+    }
+    if (!invoices.has_more) return true
+    const next: string | undefined = invoices.data[invoices.data.length - 1]?.id
+    if (!next || cursors.has(next)) throw new Error('Invoice pagination did not advance')
+    cursors.add(next)
+    cursor = next
+  }
 }
 
 export function resolvePlanIdFromSubscription(subscription: {

@@ -45,9 +45,11 @@ export async function GET(request: NextRequest) {
       where: { email: session.user.email },
       select: { id: true, stripeCustomerId: true },
     })
+    if (!user) return NextResponse.redirect(portalFailureUrl(request, 'missing'))
 
     // ⚠️ 顧客分裂・customerId 未保存でもポータルへ到達させる（reference/11-billing-spec.md）
     const customerId = await resolveBillingCustomerId({
+      userId: user.id,
       email: session.user.email,
       stripeCustomerId: user?.stripeCustomerId,
     })

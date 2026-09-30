@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createHash } from 'node:crypto'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { stripe, findActiveLikeSubscriptions, isDoyaSubscription, resolvePlanIdFromSubscription, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
+import { stripe, findActiveLikeSubscriptions, isDoyaSubscriptionOwnedByUser, resolvePlanIdFromSubscription, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import { notifyAlert } from '@/lib/alert'
 import { enqueueBillingOperationalNotification, deliverStripeWebhookNotification } from '@/lib/stripe-webhook-notifications'
@@ -59,6 +59,7 @@ export async function POST(request: NextRequest) {
     //    統一プランは「1契約＝全サービス」なので、解約の意図は**課金を止めること**。
     //    メール横断で生きている契約を全部拾い、すべて止める。
     let live = await findActiveLikeSubscriptions({
+      userId: user.id,
       email: user.email,
       stripeCustomerId: user.stripeCustomerId,
     })
@@ -70,14 +71,11 @@ export async function POST(request: NextRequest) {
         try {
           const s = await stripe.subscriptions.retrieve(dbId)
           const customerId = typeof s.customer === 'string' ? s.customer : String(s.customer?.id || '')
-          if (ACTIVE_LIKE_STATUSES.has(String(s.status)) && isDoyaSubscription(s) &&
-              (!s.metadata?.userId || s.metadata.userId === user.id) && customerId) {
-            // DBに残るIDだけでは本人の契約と確定できない。旧契約はStripe顧客メールで救済。
-            const customer = s.metadata?.userId === user.id || customerId === user.stripeCustomerId
-              ? null : await stripe.customers.retrieve(customerId)
-            const belongsToUser = s.metadata?.userId === user.id || customerId === user.stripeCustomerId ||
-              (!customer?.deleted && customer?.email?.trim().toLowerCase() === user.email?.trim().toLowerCase())
-            if (!belongsToUser) return NextResponse.json({ error: '契約情報の一致を確認できませんでした。' }, { status: 409 })
+          if (ACTIVE_LIKE_STATUSES.has(String(s.status)) && customerId) {
+            // 保存済みIDの一致だけでは他人の契約を操作し得るため、Stripe側の所有者を照合。
+            if (!(await isDoyaSubscriptionOwnedByUser(s, user))) {
+              return NextResponse.json({ error: '契約情報の一致を確認できませんでした。' }, { status: 409 })
+            }
             const { priceId, planId } = resolvePlanIdFromSubscription(s)
             live = [
               {
@@ -114,6 +112,12 @@ export async function POST(request: NextRequest) {
     const results: Array<CancelOk | CancelNg> = []
     for (const s of live) {
       try {
+        const current = await stripe.subscriptions.retrieve(s.id)
+        if (current.id !== s.id || !ACTIVE_LIKE_STATUSES.has(String(current.status)) ||
+            !(await isDoyaSubscriptionOwnedByUser(current, user))) {
+          results.push({ subscriptionId: s.id, error: '契約情報の一致を確認できませんでした' })
+          continue
+        }
         const updated =
           mode === 'immediate'
             ? await stripe.subscriptions.cancel(s.id)

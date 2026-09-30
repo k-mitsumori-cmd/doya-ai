@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
-import { findActiveLikeSubscriptions, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
+import { findActiveLikeSubscriptions, isDoyaSubscriptionOwnedByUser, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
 import { syncUnifiedBilling } from '@/lib/billing-sync'
 import { prisma } from '@/lib/prisma'
 import { summarizeBannerMonthlyQuota } from '@/lib/admin/banner-quota'
@@ -262,17 +262,31 @@ export async function DELETE(req: NextRequest) {
     }
 
     // 契約照会・停止に失敗した場合はアカウントを残す。課金中の顧客を孤立させない。
-    const live = await findActiveLikeSubscriptions({ email: user.email, stripeCustomerId: user.stripeCustomerId })
+    const live = await findActiveLikeSubscriptions({ userId: user.id, email: user.email, stripeCustomerId: user.stripeCustomerId })
     const ids = new Set(live.map((subscription) => subscription.id))
     if (user.stripeSubscriptionId && !ids.has(user.stripeSubscriptionId)) {
       try {
         const stored = await stripe.subscriptions.retrieve(user.stripeSubscriptionId)
-        if (ACTIVE_LIKE_STATUSES.has(String(stored.status))) ids.add(stored.id)
+        if (ACTIVE_LIKE_STATUSES.has(String(stored.status))) {
+          if (!(await isDoyaSubscriptionOwnedByUser(stored, user))) {
+            return NextResponse.json({ error: '保存済み契約の所有者を確認できませんでした。アカウントを削除していません。' }, { status: 409 })
+          }
+          ids.add(stored.id)
+        }
       } catch (error: any) {
         if (error?.code !== 'resource_missing') throw error
       }
     }
-    for (const subscriptionId of ids) await stripe.subscriptions.cancel(subscriptionId)
+    const cancelIds: string[] = []
+    for (const subscriptionId of ids) {
+      // 探索後に契約が別顧客へ移されても、管理操作で他人の請求を止めない。
+      const current = await stripe.subscriptions.retrieve(subscriptionId)
+      if (current.id !== subscriptionId || !(await isDoyaSubscriptionOwnedByUser(current, user))) {
+        return NextResponse.json({ error: '契約の所有者を確認できませんでした。アカウントを削除していません。' }, { status: 409 })
+      }
+      if (ACTIVE_LIKE_STATUSES.has(String(current.status))) cancelIds.push(subscriptionId)
+    }
+    for (const subscriptionId of cancelIds) await stripe.subscriptions.cancel(subscriptionId)
 
     // 部分削除を防ぐ。外部のStripe操作はトランザクションの外に置く。
     await prisma.$transaction(async (tx) => {

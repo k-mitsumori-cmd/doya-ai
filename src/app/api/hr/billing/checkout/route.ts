@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
     // 旧HR専用入口も共通Checkoutと同じ二重契約ガードを通す。
     try {
       const existing = await findActiveLikeSubscriptions({
+        userId: user.id,
         email: dbUser.email || user.email,
         stripeCustomerId: dbUser.stripeCustomerId,
       })

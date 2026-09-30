@@ -48,10 +48,12 @@ export async function GET(request: NextRequest) {
       where: { email: session.user.email },
       select: { id: true, stripeCustomerId: true },
     })
+    if (!user) return NextResponse.redirect(portalFailureUrl(request, 'missing'))
 
     // ⚠️ DBの顧客IDだけを見ない。顧客が分裂していると「契約はあるのにポータルが空」になり、
     //    null のままだとポータル自体が開けない（reference/11-billing-spec.md）。
     const customerId = await resolveBillingCustomerId({
+      userId: user.id,
       email: session.user.email,
       stripeCustomerId: user?.stripeCustomerId,
     })
@@ -95,8 +97,10 @@ export async function POST(request: NextRequest) {
       where: { email: session.user.email },
       select: { id: true, stripeCustomerId: true },
     })
+    if (!user) return NextResponse.json({ error: 'ユーザー情報を確認できませんでした。' }, { status: 404 })
 
     const customerId = await resolveBillingCustomerId({
+      userId: user.id,
       email: session.user.email,
       stripeCustomerId: user?.stripeCustomerId,
     })
