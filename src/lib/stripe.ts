@@ -321,17 +321,15 @@ export async function resolveBillingCustomerId(params: {
   email?: string | null
   stripeCustomerId?: string | null
 }): Promise<string | null> {
-  try {
-    const live = await findActiveLikeSubscriptions(params)
-    if (live.length === 0) return params.stripeCustomerId || null
-    // 保存済みの顧客が実際に契約を持っているならそれを優先（既存の見え方を変えない）
-    if (params.stripeCustomerId && live.some((s) => s.customerId === params.stripeCustomerId)) {
-      return params.stripeCustomerId
-    }
-    return live[0]!.customerId || params.stripeCustomerId || null
-  } catch {
-    return params.stripeCustomerId || null
+  // Stripe の検索失敗を「契約なし」と扱うと、分裂した古い顧客の空ポータルを開いてしまう。
+  // 呼び出し元に失敗を伝え、再試行できる状態にする。
+  const live = await findActiveLikeSubscriptions(params)
+  if (live.length === 0) return params.stripeCustomerId || null
+  // 保存済みの顧客が実際に契約を持っているならそれを優先（既存の見え方を変えない）
+  if (params.stripeCustomerId && live.some((s) => s.customerId === params.stripeCustomerId)) {
+    return params.stripeCustomerId
   }
+  return live[0]!.customerId || params.stripeCustomerId || null
 }
 
 export function resolvePlanIdFromSubscription(subscription: {
