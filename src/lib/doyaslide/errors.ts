@@ -2,10 +2,10 @@
 // ドヤスライド エラー詳細の安全な整形
 // ========================================
 // 本番では内部エラー（Prisma/外部API等）の生メッセージをクライアントに露出しない。
-// 開発時、または DOYA_DEBUG=1 のときだけ詳細を付与して原因特定を容易にする。
+// 開発時だけ詳細を付与する。本番ではデバッグ用環境変数があっても露出しない。
 
 export function isDoyaDebug(): boolean {
-  return process.env.NODE_ENV !== 'production' || process.env.DOYA_DEBUG === '1'
+  return process.env.NODE_ENV !== 'production'
 }
 
 /** デバッグ時のみ実エラーメッセージを ": ..." として返す。本番は空文字。 */
