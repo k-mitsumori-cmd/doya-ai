@@ -11,8 +11,9 @@ import {
 } from '@/lib/stripe'
 import { prisma, withRetry } from '@/lib/prisma'
 import { syncUnifiedBilling } from '@/lib/billing-sync'
-import { sendEventNotification } from '@/lib/notifications'
+import type { EventNotification } from '@/lib/notifications'
 import { claimStripeWebhookEvent, finishStripeWebhookEvent } from '@/lib/stripe-webhook-receipts'
+import { enqueueStripeWebhookNotification, deliverStripeWebhookNotification } from '@/lib/stripe-webhook-notifications'
 import Stripe from 'stripe'
 
 // ========================================
@@ -64,13 +65,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Webhook processing in progress' }, { status: 503 })
     }
     receiptToken = receipt.token
+    let notification: EventNotification | null = null
     switch (event.type) {
       // ========================================
       // Checkout完了
       // ========================================
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
-        await handleCheckoutCompleted(session)
+        notification = await handleCheckoutCompleted(session)
         break
       }
 
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest) {
       // ========================================
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription
-        await handleSubscriptionUpdated(subscription)
+        notification = await handleSubscriptionUpdated(subscription)
         break
       }
 
@@ -97,7 +99,7 @@ export async function POST(request: NextRequest) {
       // ========================================
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription
-        await handleSubscriptionDeleted(subscription)
+        notification = await handleSubscriptionDeleted(subscription)
         break
       }
 
@@ -106,7 +108,7 @@ export async function POST(request: NextRequest) {
       // ========================================
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice
-        await handlePaymentSucceeded(invoice)
+        notification = await handlePaymentSucceeded(invoice)
         break
       }
 
@@ -115,7 +117,7 @@ export async function POST(request: NextRequest) {
       // ========================================
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice
-        await handlePaymentFailed(invoice)
+        notification = await handlePaymentFailed(invoice)
         break
       }
 
@@ -123,7 +125,19 @@ export async function POST(request: NextRequest) {
         console.log(`Unhandled event type: ${event.type}`)
     }
 
+    if (notification) {
+      await enqueueStripeWebhookNotification(event.id, event.type, receipt.token, {
+        ...notification,
+        occurredAt: new Date((event.created || Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+      })
+    }
     await finishStripeWebhookEvent(event.id, receipt.token, true)
+    if (notification) {
+      // 送信失敗はDBにpendingとして残す。Stripe本体の再処理は不要。
+      await deliverStripeWebhookNotification(event.id).catch((error) => {
+        console.error('[Webhook] notification dispatch failed:', event.id, error)
+      })
+    }
     return NextResponse.json({ received: true })
 
   } catch (error: any) {
@@ -228,7 +242,7 @@ async function findUserForSubscription(subscription: Stripe.Subscription): Promi
   return null
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promise<EventNotification | null> {
   const userId = session.client_reference_id || session.metadata?.userId
   const customerId = session.customer as string
   const subscriptionId = session.subscription as string
@@ -238,7 +252,7 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
       throw new Error(`[Webhook] checkout.session.completed: user not found for session ${session.id}`)
     }
     console.log(`[Webhook] checkout.session.completed: unrelated session ${session.id} skipped`)
-    return
+    return null
   }
 
   console.log(`Checkout completed for user: ${userId}`)
@@ -253,9 +267,10 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   }))
 
   // サブスクリプション情報を取得
+  let sub: Stripe.Subscription | null = null
   if (subscriptionId) {
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-    await updateUserSubscription(userId, subscription)
+    sub = await stripe.subscriptions.retrieve(subscriptionId)
+    await updateUserSubscription(userId, sub)
   }
 
   // ------------------------------------------------------------------
@@ -263,22 +278,20 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
   // ------------------------------------------------------------------
   // ⚠️ 「申し込み＝売上」ではない。初月無料の方はこの時点で1円も入金されていない。
   //    区別せずに通知すると、売上の見込みが立たず、入金遅れにも気づけない。
-  if (subscriptionId) {
-    const sub = await stripe.subscriptions.retrieve(subscriptionId).catch(() => null)
-    if (sub) {
-      const amount = sub.items.data[0]?.price.unit_amount ?? 0
-      const isTrial = sub.status === 'trialing' && Boolean(sub.trial_end)
-      sendEventNotification({
-        type: isTrial ? 'trial_start' : 'subscription',
-        userEmail: user.email,
-        userName: user.name,
-        details: isTrial
-          ? `プロプラン（初月無料・30日）｜ ${jstDate(sub.trial_end! * 1000)} まで無料 ｜ ` +
-            `初回請求 ${jstDate(sub.current_period_end * 1000)} に ${yen(amount)}（現時点の入金はありません）`
-          : `プロプラン（無料期間なし）｜ ${yen(amount)} を請求 ｜ 次回請求 ${jstDate(sub.current_period_end * 1000)}`,
-      }).catch(() => {})
+  if (sub) {
+    const amount = sub.items.data[0]?.price.unit_amount ?? 0
+    const isTrial = sub.status === 'trialing' && Boolean(sub.trial_end)
+    return {
+      type: isTrial ? 'trial_start' : 'subscription',
+      userEmail: user.email,
+      userName: user.name,
+      details: isTrial
+        ? `プロプラン（初月無料・30日）｜ ${jstDate(sub.trial_end! * 1000)} まで無料 ｜ ` +
+          `初回請求 ${jstDate(sub.current_period_end * 1000)} に ${yen(amount)}（現時点の入金はありません）`
+        : `プロプラン（無料期間なし）｜ ${yen(amount)} を請求 ｜ 次回請求 ${jstDate(sub.current_period_end * 1000)}`,
     }
   }
+  return null
 }
 
 async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
@@ -290,8 +303,8 @@ async function handleSubscriptionCreated(subscription: Stripe.Subscription) {
   await updateUserSubscription(user.id, subscription)
 }
 
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  if (!isDoyaSubscription(subscription)) return
+async function handleSubscriptionUpdated(subscription: Stripe.Subscription): Promise<EventNotification | null> {
+  if (!isDoyaSubscription(subscription)) return null
   const user = await findUserForSubscription(subscription)
 
   if (!user) {
@@ -304,17 +317,17 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
   //   updateUserSubscription は status を見ず PRO 付与するため、ここで弾かないと未入金のまま PRO が残る。
   if (subscription.status === 'canceled' || subscription.status === 'unpaid') {
     console.log(`Subscription ${subscription.status} via updated event for user: ${user.id}`)
-    await handleSubscriptionDeleted(subscription)
-    return
+    return handleSubscriptionDeleted(subscription)
   }
 
   await updateUserSubscription(user.id, subscription)
+  return null
 }
 
 const TIER_RANK: Record<string, number> = { FREE: 0, LIGHT: 1, PRO: 2, BUNDLE: 3, ENTERPRISE: 4 }
 
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  if (!isDoyaSubscription(subscription)) return
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Promise<EventNotification | null> {
+  if (!isDoyaSubscription(subscription)) return null
   const customerId = typeof subscription.customer === 'string' ? subscription.customer : subscription.customer?.id
   const user = await findUserForSubscription(subscription)
 
@@ -345,7 +358,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
       )
       const live = await stripe.subscriptions.retrieve(keep.id)
       await updateUserSubscription(user.id, live)
-      return
+      return null
     }
   } catch (e: any) {
     console.error(`[Webhook] subscription.deleted: 残存契約の照会に失敗（プラン変更を中止） user=${user.id}`, e?.message)
@@ -356,22 +369,23 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     userId: user.id, plan: 'FREE', stripeSubscriptionId: null,
     stripePriceId: null, stripeCurrentPeriodEnd: null,
   })
-  sendEventNotification({
+  const notification: EventNotification = {
     type: 'cancellation', userEmail: user.email, userName: user.name,
     details: `プラン: ${synced.previousPlan} → ${synced.userPlan}`,
-  }).catch(() => {})
+  }
   console.log(`Subscription canceled for user: ${user.id} (plan: ${synced.userPlan})`)
+  return notification
 }
 
-async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
+async function handlePaymentSucceeded(invoice: Stripe.Invoice): Promise<EventNotification | null> {
   // ------------------------------------------------------------------
   // 入金通知（ここが唯一「本当にお金が入った」瞬間）
   // ------------------------------------------------------------------
   // ⚠️ トライアル開始時にも金額0円の請求書が発行される。これを通知すると
   //    「課金された」と誤認するので、実際に入金があったものだけ通知する。
   const paid = invoice.amount_paid || 0
-  if (paid <= 0) return
-  if (!await isDoyaInvoice(invoice)) return
+  if (paid <= 0) return null
+  if (!await isDoyaInvoice(invoice)) return null
   console.log(`Payment succeeded for Doya invoice: ${invoice.id}`)
 
   const customerId = invoice.customer as string
@@ -391,7 +405,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
           : reason || '不明'
 
   const nextAt = invoice.lines?.data?.[0]?.period?.end
-  sendEventNotification({
+  return {
     type: 'payment',
     userEmail: user?.email || invoice.customer_email,
     userName: user?.name,
@@ -399,22 +413,22 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
       `${yen(paid)} が入金されました（${label}）` +
       (nextAt ? ` ｜ 次回請求 ${jstDate(nextAt * 1000)}` : '') +
       ` ｜ invoice: ${invoice.id}`,
-  }).catch(() => {})
+  }
 }
 
-async function handlePaymentFailed(invoice: Stripe.Invoice) {
-  if (!await isDoyaInvoice(invoice)) return
+async function handlePaymentFailed(invoice: Stripe.Invoice): Promise<EventNotification | null> {
+  if (!await isDoyaInvoice(invoice)) return null
   console.log(`Payment failed for Doya invoice: ${invoice.id}`)
   const customerId = invoice.customer as string
   const user = customerId
     ? await prisma.user.findFirst({ where: { stripeCustomerId: customerId } })
     : null
-  sendEventNotification({
+  return {
     type: 'payment_failed',
     userEmail: user?.email || invoice.customer_email,
     userName: user?.name,
     details: `invoice: ${invoice.id}`,
-  }).catch(() => {})
+  }
 }
 
 // ========================================

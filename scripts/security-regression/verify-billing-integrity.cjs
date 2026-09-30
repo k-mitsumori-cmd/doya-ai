@@ -33,10 +33,10 @@ async function atomic(){
 }
 const Resp={json:(body,opts)=>({body,status:opts?.status??200})};
 function routeFixture(){
- const f=fixture();let signed=true,writes=0,notices=0,legacyEmail='owner@example.test';let checkout={id:'cs1',client_reference_id:'u1',customer_email:'owner@example.test',customer:'cus1',subscription:'sub1',status:'complete'};
+ const f=fixture();let signed=true,writes=0,notices=0,queued=null,legacyEmail='owner@example.test';let checkout={id:'cs1',client_reference_id:'u1',customer_email:'owner@example.test',customer:'cus1',subscription:'sub1',status:'complete'};
  let sub={id:'sub1',customer:'cus1',status:'active',metadata:{userId:'u1',planId:'banner-pro'},current_period_end:1900000000,items:{data:[{price:{id:'price_banner_pro_monthly',unit_amount:9980}}]},trial_end:null};
  const stripe={checkout:{sessions:{retrieve:async()=>checkout}},customers:{retrieve:async()=>({id:'cus1',email:legacyEmail}),list:async()=>({data:[{id:'cus1'}]})},subscriptions:{retrieve:async()=>sub,list:async()=>({data:[sub]})}};
- const mocks={'next/server':{NextResponse:Resp},'next-auth':{getServerSession:async()=>signed?{user:{email:'owner@example.test'}}:null},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:{user:{findUnique:async()=>f.state.user,update:async()=>{throw Error('Non-atomic user write')}}}},'@/lib/stripe':{...stripeModule,stripe},'@/lib/billing-sync':{syncUnifiedBilling:async i=>{writes++;return f.sync(i)}},'@/lib/notifications':{sendEventNotification:async()=>{notices++}},'@/lib/stripe-webhook-receipts':{claimStripeWebhookEvent:async()=>({kind:'claimed',token:'test-claim'}),finishStripeWebhookEvent:async()=>{}}};
+ const mocks={'next/server':{NextResponse:Resp},'next-auth':{getServerSession:async()=>signed?{user:{email:'owner@example.test'}}:null},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:{user:{findUnique:async()=>f.state.user,update:async()=>{throw Error('Non-atomic user write')}}}},'@/lib/stripe':{...stripeModule,stripe},'@/lib/billing-sync':{syncUnifiedBilling:async i=>{writes++;return f.sync(i)}},'@/lib/notifications':{sendEventNotification:async()=>{notices++}},'@/lib/stripe-webhook-receipts':{claimStripeWebhookEvent:async()=>({kind:'claimed',token:'test-claim'}),finishStripeWebhookEvent:async()=>{}},'@/lib/stripe-webhook-notifications':{enqueueStripeWebhookNotification:async(_id,_type,_token,payload)=>{queued=payload},deliverStripeWebhookNotification:async()=>{if(queued)notices++;return 'sent'}}};
  return {f,checkout,sub,mocks,get writes(){return writes},get notices(){return notices},set signed(x){signed=x},set legacyEmail(x){legacyEmail=x}};
 }
 const req=()=>new Request('https://local.test/api/stripe/sync',{method:'POST',body:JSON.stringify({sessionId:'cs1'})});
@@ -133,6 +133,28 @@ async function webhook(){
    '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt1',type:'invoice.payment_succeeded',data:{object:invoice}})}};
   const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
   assert.equal(response.status,500);assert.equal(f.notices,0);
+ });
+ await check('notification queue failure requests Stripe retry before receipt completion',async()=>{
+  let f=routeFixture(),finishes=[];
+  f.mocks['@/lib/stripe-webhook-notifications'].enqueueStripeWebhookNotification=async()=>{throw Error('queue unavailable')};
+  f.mocks['@/lib/stripe-webhook-receipts'].finishStripeWebhookEvent=async(_id,_token,success)=>{finishes.push(success)};
+  let invoice={id:'in1',customer:'cus1',amount_paid:9980,subscription:null,lines:{data:[{price:{id:'price_banner_pro_monthly'}}]}};
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/prisma':{prisma:{user:{findFirst:async()=>f.f.state.user}},withRetry:fn=>fn()},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt1',type:'invoice.payment_succeeded',data:{object:invoice}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,500);assert.deepEqual(finishes,[false]);assert.equal(f.notices,0);
+ });
+ await check('queued notification delivery outage keeps Stripe receipt processed',async()=>{
+  let f=routeFixture(),finishes=[];
+  f.mocks['@/lib/stripe-webhook-notifications'].deliverStripeWebhookNotification=async()=>{throw Error('delivery unavailable')};
+  f.mocks['@/lib/stripe-webhook-receipts'].finishStripeWebhookEvent=async(_id,_token,success)=>{finishes.push(success)};
+  let invoice={id:'in1',customer:'cus1',amount_paid:9980,subscription:null,lines:{data:[{price:{id:'price_banner_pro_monthly'}}]}};
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/prisma':{prisma:{user:{findFirst:async()=>f.f.state.user}},withRetry:fn=>fn()},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt1',type:'invoice.payment_succeeded',data:{object:invoice}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,200);assert.deepEqual(finishes,[true]);assert.equal(f.notices,0);
  });
 }
 (async()=>{await atomic();await routes();await webhook();console.log(JSON.stringify({passed:results.length,allServices:ids.length,networkRequests:0,productionWrites:0,results},null,2))})().catch(e=>{console.error(e);process.exitCode=1});

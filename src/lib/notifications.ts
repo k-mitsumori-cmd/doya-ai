@@ -117,7 +117,7 @@ async function getSlackWebhookUrl(): Promise<string> {
   return row?.value || ''
 }
 
-async function postSlackPayload(payload: Record<string, unknown>): Promise<void> {
+async function postSlackPayload(payload: Record<string, unknown>, signal?: AbortSignal): Promise<void> {
   const url = await getSlackWebhookUrl()
   if (!url) {
     throw new Error('Slack webhook URL is not configured (slack_webhook not found in SystemSetting)')
@@ -126,6 +126,7 @@ async function postSlackPayload(payload: Record<string, unknown>): Promise<void>
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(voicePayload(payload)),
+    signal,
   })
   if (!res.ok) {
     const body = await res.text().catch(() => '')
@@ -133,8 +134,8 @@ async function postSlackPayload(payload: Record<string, unknown>): Promise<void>
   }
 }
 
-async function postToSlack(text: string): Promise<void> {
-  await postSlackPayload({ text })
+async function postToSlack(text: string, signal?: AbortSignal): Promise<void> {
+  await postSlackPayload({ text }, signal)
 }
 
 /** プレーンテキストで運用チャンネルに投稿する（課金監査レポート等） */
@@ -209,31 +210,43 @@ const CHANNEL_PING: Record<EventType, boolean> = {
   payment_failed: true,
 }
 
-export async function sendEventNotification(event: {
+export type EventNotification = {
   type: EventType
+  occurredAt?: string
   userId?: string
   userEmail?: string | null
   userName?: string | null
   details?: string
-}): Promise<void> {
+}
+
+function formatEventNotification(event: EventNotification): string {
+  const now = new Date(event.occurredAt || Date.now()).toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
+  const emoji = EVENT_EMOJI[event.type]
+  const label = EVENT_LABEL[event.type]
+  const who = event.userName || event.userEmail || '不明'
+
+  const lines = [
+    ...(CHANNEL_PING[event.type] ? ['<!channel>'] : []),
+    `${emoji} *【ドヤAI】${label}*\n発生時刻：${now}（日本時間）`,
+    `- ユーザー: ${who}${event.userEmail ? ` (${event.userEmail})` : ''}`,
+  ]
+  if (event.type === 'signup' && event.userId) {
+    const userUrl = `https://doya-ai.surisuta.jp/admin/users?userId=${encodeURIComponent(event.userId)}`
+    lines.push(`- ユーザーURL：<${userUrl}|このユーザーの登録情報を開く>（管理者ログインが必要）`)
+  }
+  if (event.details) lines.push(`- ${event.details}`)
+
+  return lines.join('\n')
+}
+
+/** Webhookの再送可能な通知キューで使う。失敗を呼び出し元へ返す。 */
+export async function sendEventNotificationStrict(event: EventNotification): Promise<void> {
+  await postToSlack(formatEventNotification(event), AbortSignal.timeout(8_000))
+}
+
+export async function sendEventNotification(event: EventNotification): Promise<void> {
   try {
-    const now = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
-    const emoji = EVENT_EMOJI[event.type]
-    const label = EVENT_LABEL[event.type]
-    const who = event.userName || event.userEmail || '不明'
-
-    const lines = [
-      ...(CHANNEL_PING[event.type] ? ['<!channel>'] : []),
-      `${emoji} *【ドヤAI】${label}*\n発生時刻：${now}（日本時間）`,
-      `- ユーザー: ${who}${event.userEmail ? ` (${event.userEmail})` : ''}`,
-    ]
-    if (event.type === 'signup' && event.userId) {
-      const userUrl = `https://doya-ai.surisuta.jp/admin/users?userId=${encodeURIComponent(event.userId)}`
-      lines.push(`- ユーザーURL：<${userUrl}|このユーザーの登録情報を開く>（管理者ログインが必要）`)
-    }
-    if (event.details) lines.push(`- ${event.details}`)
-
-    await postToSlack(lines.join('\n'))
+    await postToSlack(formatEventNotification(event))
   } catch (e) {
     console.error('[Notification] Failed to sendEventNotification:', e)
   }
@@ -1033,4 +1046,3 @@ export async function sendGCPUsageReport(): Promise<void> {
 
   await postToSlack(lines.join('\n'))
 }
-

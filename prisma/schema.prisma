@@ -339,6 +339,23 @@ model StripeWebhookEvent {
   @@index([lastReceivedAt])
 }
 
+// Webhook処理後の運営通知を再送可能にする。StripeのイベントIDで重複登録を防ぐ。
+model StripeWebhookNotification {
+  eventId        String    @id
+  eventType      String
+  payload        Json
+  status         String    @default("pending") // pending | sending | sent
+  attempts       Int       @default(0)
+  nextAttemptAt  DateTime  @default(now())
+  leaseExpiresAt DateTime?
+  claimToken     String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  sentAt         DateTime?
+
+  @@index([status, nextAttemptAt, createdAt])
+}
+
 // ============================================
 // 管理者関連
 // ============================================

@@ -617,3 +617,8 @@ if (stripeWebhookReceipts.error || stripeWebhookReceipts.status !== 0) {
   console.error('Security regression failed: verify-stripe-webhook-receipts.cjs');
   process.exit(1);
 }
+const stripeWebhookNotifications = spawnSync(process.execPath, [path.join(__dirname, 'verify-stripe-webhook-notifications.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (stripeWebhookNotifications.error || stripeWebhookNotifications.status !== 0) {
+  console.error('Security regression failed: verify-stripe-webhook-notifications.cjs');
+  process.exit(1);
+}

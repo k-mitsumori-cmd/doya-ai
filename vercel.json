@@ -33,6 +33,10 @@
       "schedule": "0 23 * * *"
     },
     {
+      "path": "/api/cron/stripe-notifications",
+      "schedule": "*/5 * * * *"
+    },
+    {
       "path": "/api/cron/daily-summary",
       "schedule": "0 0 * * *"
     },
