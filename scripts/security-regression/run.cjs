@@ -622,3 +622,8 @@ if (stripeWebhookNotifications.error || stripeWebhookNotifications.status !== 0)
   console.error('Security regression failed: verify-stripe-webhook-notifications.cjs');
   process.exit(1);
 }
+const adminStripeOwnership = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-stripe-ownership.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (adminStripeOwnership.error || adminStripeOwnership.status !== 0) {
+  console.error('Security regression failed: verify-admin-stripe-ownership.cjs');
+  process.exit(1);
+}

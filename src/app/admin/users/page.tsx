@@ -1058,7 +1058,9 @@ export default function AdminUsersPage() {
                               toast.success('サブスクリプションをキャンセルしました')
                               await fetchUsers()
                             } else {
-                              toast.error('キャンセルに失敗しました')
+                              const body = await res.json().catch(() => ({}))
+                              toast.error(body?.error || 'キャンセルに失敗しました')
+                              if (body?.code === 'BILLING_SYNC_INCOMPLETE') await fetchUsers()
                             }
                           } catch (e) {
                             toast.error('エラーが発生しました')

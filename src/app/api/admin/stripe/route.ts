@@ -2,15 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { verifyAdminSession, COOKIE_NAME } from '@/lib/admin-auth'
 import { prisma } from '@/lib/prisma'
-import Stripe from 'stripe'
-import { ALL_SERVICE_IDS } from '@/lib/stripe'
+import { stripe, findActiveLikeSubscriptions, isDoyaSubscriptionOwnedByUser, resolvePlanIdFromSubscription, planTierFromPlanId, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
+import { syncUnifiedBilling } from '@/lib/billing-sync'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2023-10-16',
-})
+const PLAN_RANK: Record<string, number> = { FREE: 0, LIGHT: 1, PRO: 2, BUNDLE: 3, ENTERPRISE: 4 }
 
 // ユーザーのStripe情報を取得
 export async function GET(request: NextRequest) {
@@ -49,6 +46,9 @@ export async function GET(request: NextRequest) {
     if (user.stripeSubscriptionId) {
       try {
         const subscription = await stripe.subscriptions.retrieve(user.stripeSubscriptionId)
+        if (!(await isDoyaSubscriptionOwnedByUser(subscription, user))) {
+          return NextResponse.json({ error: '契約の所有者を確認できませんでした' }, { status: 409 })
+        }
         subscriptionInfo = {
           id: subscription.id,
           status: subscription.status,
@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
         }
       } catch (e) {
         console.error('Stripe subscription fetch error:', e)
+        return NextResponse.json({ error: '契約情報を確認できませんでした' }, { status: 502 })
       }
     }
 
@@ -81,6 +82,7 @@ export async function GET(request: NextRequest) {
 
 // Stripeサブスクリプションを管理（キャンセル、再開など）
 export async function POST(request: NextRequest) {
+  let canceledSubscriptionId: string | null = null
   try {
     const cookieStore = await cookies()
     const token = cookieStore.get(COOKIE_NAME)?.value
@@ -100,6 +102,8 @@ export async function POST(request: NextRequest) {
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
+        id: true,
+        email: true,
         stripeSubscriptionId: true,
         stripeCustomerId: true,
       },
@@ -107,6 +111,15 @@ export async function POST(request: NextRequest) {
 
     if (!user?.stripeSubscriptionId) {
       return NextResponse.json({ error: 'Stripeサブスクリプションがありません' }, { status: 400 })
+    }
+    if (!['cancel', 'cancel_immediately', 'resume'].includes(action)) {
+      return NextResponse.json({ error: '不明なactionです' }, { status: 400 })
+    }
+    const current = await stripe.subscriptions.retrieve(user.stripeSubscriptionId)
+    if (current.id !== user.stripeSubscriptionId ||
+        !(await isDoyaSubscriptionOwnedByUser(current, user)) ||
+        !ACTIVE_LIKE_STATUSES.has(String(current.status))) {
+      return NextResponse.json({ error: '契約の所有者または状態を確認できませんでした' }, { status: 409 })
     }
 
     let result
@@ -118,36 +131,46 @@ export async function POST(request: NextRequest) {
         })
         break
 
-      case 'cancel_immediately':
+      case 'cancel_immediately': {
         // 即時キャンセル
         result = await stripe.subscriptions.cancel(user.stripeSubscriptionId)
-        // DBも更新（User + 全サービス）
-        await prisma.user.update({
-          where: { id: userId },
-          data: {
-            plan: 'FREE',
-            stripeSubscriptionId: null,
-            stripePriceId: null,
-            stripeCurrentPeriodEnd: null,
-          },
-        })
-        // 統一課金: 全サービスをFREEに戻す
-        for (const serviceId of ALL_SERVICE_IDS) {
-          await prisma.userServiceSubscription.update({
-            where: { userId_serviceId: { userId, serviceId } },
-            data: {
-              plan: 'FREE',
-              stripeSubscriptionId: null,
-              stripePriceId: null,
-              stripeCurrentPeriodEnd: null,
-            },
-          }).catch((e: any) => {
-            if (e?.code !== 'P2025') {
-              console.error(`[Admin] Failed to reset service subscription: user=${userId} service=${serviceId}`, e?.message)
-            }
-          })
+        if (result.id !== user.stripeSubscriptionId || result.status !== 'canceled') {
+          return NextResponse.json({
+            code: 'CANCELLATION_UNCONFIRMED',
+            error: 'Stripeでの即時解約を確認できませんでした。契約状態を再読み込みしてください。',
+          }, { status: 502 })
+        }
+        canceledSubscriptionId = result.id
+        // 二重契約が残っているなら有料権利を保つ。全サービスの反映は同一TXで行う。
+        const remaining = await findActiveLikeSubscriptions({ userId: user.id, email: user.email, stripeCustomerId: user.stripeCustomerId })
+        const best = remaining
+          .map((sub) => ({ ...sub, tier: planTierFromPlanId(sub.planId) }))
+          .filter((sub) => sub.tier !== 'FREE')
+          .sort((a, b) => PLAN_RANK[b.tier]! - PLAN_RANK[a.tier]!)[0]
+        if (remaining.length > 0 && !best) {
+          return NextResponse.json({ code: 'BILLING_SYNC_INCOMPLETE', error: '残存契約のプランを確認できませんでした。課金状態を再同期してください。' }, { status: 502 })
+        }
+        if (best) {
+          const survivor = await stripe.subscriptions.retrieve(best.id)
+          const survivorCustomerId = typeof survivor.customer === 'string' ? survivor.customer : survivor.customer.id
+          if (survivor.id !== best.id || survivorCustomerId !== best.customerId || !ACTIVE_LIKE_STATUSES.has(String(survivor.status)) ||
+              !(await isDoyaSubscriptionOwnedByUser(survivor, user))) {
+            return NextResponse.json({ code: 'BILLING_SYNC_INCOMPLETE', error: '残存契約を確認できませんでした。課金状態を再同期してください。' }, { status: 502 })
+          }
+          const { planId, priceId } = resolvePlanIdFromSubscription(survivor)
+          const tier = planTierFromPlanId(planId)
+          if (tier === 'FREE') {
+            return NextResponse.json({ code: 'BILLING_SYNC_INCOMPLETE', error: '残存契約のプランを確認できませんでした。課金状態を再同期してください。' }, { status: 502 })
+          }
+          await syncUnifiedBilling({ userId: user.id, plan: tier,
+            stripeCustomerId: survivorCustomerId, stripeSubscriptionId: survivor.id,
+            stripePriceId: priceId, stripeCurrentPeriodEnd: new Date(survivor.current_period_end * 1000) })
+        } else {
+          await syncUnifiedBilling({ userId: user.id, plan: 'FREE', stripeSubscriptionId: null,
+            stripePriceId: null, stripeCurrentPeriodEnd: null })
         }
         break
+      }
 
       case 'resume':
         // キャンセル予定を取り消し
@@ -158,6 +181,7 @@ export async function POST(request: NextRequest) {
 
       default:
         return NextResponse.json({ error: '不明なactionです' }, { status: 400 })
+
     }
 
     return NextResponse.json({
@@ -171,7 +195,12 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('Admin stripe POST error:', error)
+    if (canceledSubscriptionId) {
+      return NextResponse.json({
+        code: 'BILLING_SYNC_INCOMPLETE',
+        error: 'Stripeでの即時解約は完了しましたが、アプリの契約表示を更新できませんでした。再同期して状態を確認してください。',
+      }, { status: 502 })
+    }
     return NextResponse.json({ error: 'Stripe操作に失敗しました' }, { status: 500 })
   }
 }
-
