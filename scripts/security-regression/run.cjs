@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const shodanLimitGuidance = spawnSync(process.execPath, [path.join(__dirname, 'verify-shodan-limit-guidance.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shodanLimitGuidance.error || shodanLimitGuidance.status !== 0) {
+  console.error('Security regression failed: verify-shodan-limit-guidance.cjs');
+  process.exit(1);
+}
 const kintaiEmployeeAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-employee-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (kintaiEmployeeAdmission.error || kintaiEmployeeAdmission.status !== 0) {
   console.error('Security regression failed: verify-kintai-employee-admission.cjs');
