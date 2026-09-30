@@ -34,6 +34,10 @@ const common = {
     '@/lib/prisma': {},
     '@/lib/billing-sync': {},
     '@/lib/notifications': {},
+    '@/lib/stripe-webhook-receipts': {
+      claimStripeWebhookEvent: async () => ({ kind: 'claimed', token: 'test-claim' }),
+      finishStripeWebhookEvent: async () => {},
+    },
     stripe: {},
   }
   const webhook = load('src/app/api/stripe/webhook/route.ts', webhookMocks, { process: { env: { STRIPE_WEBHOOK_SECRET: 'test-secret' } } })

@@ -12,6 +12,7 @@ import {
 import { prisma, withRetry } from '@/lib/prisma'
 import { syncUnifiedBilling } from '@/lib/billing-sync'
 import { sendEventNotification } from '@/lib/notifications'
+import { claimStripeWebhookEvent, finishStripeWebhookEvent } from '@/lib/stripe-webhook-receipts'
 import Stripe from 'stripe'
 
 // ========================================
@@ -55,7 +56,14 @@ export async function POST(request: NextRequest) {
 
   console.log(`Stripe webhook received: ${event.type}`)
 
+  let receiptToken: string | null = null
   try {
+    const receipt = await claimStripeWebhookEvent(event.id, event.type)
+    if (receipt.kind === 'processed') return NextResponse.json({ received: true })
+    if (receipt.kind === 'inflight') {
+      return NextResponse.json({ error: 'Webhook processing in progress' }, { status: 503 })
+    }
+    receiptToken = receipt.token
     switch (event.type) {
       // ========================================
       // Checkout完了
@@ -115,10 +123,18 @@ export async function POST(request: NextRequest) {
         console.log(`Unhandled event type: ${event.type}`)
     }
 
+    await finishStripeWebhookEvent(event.id, receipt.token, true)
     return NextResponse.json({ received: true })
 
   } catch (error: any) {
     console.error('Webhook handler error:', error)
+    if (receiptToken) {
+      try {
+        await finishStripeWebhookEvent(event.id, receiptToken, false)
+      } catch (receiptError) {
+        console.error('Webhook receipt update failed:', receiptError)
+      }
+    }
     return NextResponse.json(
       { error: 'Webhook processing failed' },
       { status: 500 }

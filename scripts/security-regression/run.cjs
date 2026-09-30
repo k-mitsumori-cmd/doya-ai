@@ -612,3 +612,8 @@ if (cunningReload.error || cunningReload.status !== 0) {
   console.error('Security regression failed: verify-cunning-final-answer-reload.cjs');
   process.exit(1);
 }
+const stripeWebhookReceipts = spawnSync(process.execPath, [path.join(__dirname, 'verify-stripe-webhook-receipts.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (stripeWebhookReceipts.error || stripeWebhookReceipts.status !== 0) {
+  console.error('Security regression failed: verify-stripe-webhook-receipts.cjs');
+  process.exit(1);
+}

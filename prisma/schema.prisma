@@ -323,6 +323,22 @@ model SystemSetting {
   value String @db.Text
 }
 
+// 署名検証済みのStripe通知を記録し、再送時の二重処理を防ぐ。
+model StripeWebhookEvent {
+  id              String    @id
+  type            String
+  status          String    @default("processing") // processing | processed | failed
+  attempts        Int       @default(1)
+  firstReceivedAt DateTime @default(now())
+  lastReceivedAt  DateTime  @default(now())
+  processedAt     DateTime?
+  leaseExpiresAt  DateTime?
+  claimToken      String?
+
+  @@index([status, lastReceivedAt])
+  @@index([lastReceivedAt])
+}
+
 // ============================================
 // 管理者関連
 // ============================================
