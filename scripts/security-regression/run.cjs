@@ -530,6 +530,11 @@ if (kintaiExport.error || kintaiExport.status !== 0) {
   console.error('Security regression failed: verify-kintai-export.cjs');
   process.exit(1);
 }
+const kintaiAdminHistory = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-admin-history.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiAdminHistory.error || kintaiAdminHistory.status !== 0) {
+  console.error('Security regression failed: verify-kintai-admin-history.cjs');
+  process.exit(1);
+}
 const doyalistHelperInput = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyalist-helper-input.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (doyalistHelperInput.error || doyalistHelperInput.status !== 0) {
   console.error('Security regression failed: verify-doyalist-helper-input.cjs');

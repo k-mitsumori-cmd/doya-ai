@@ -17,8 +17,17 @@ export async function GET(req: NextRequest) {
     const dateParam = searchParams.get('date') || new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' })
 
     // @db.Date フィールドはUTC midnightで保存されるためUTC基準でクエリ
+    if (!/^\d{4}-(0[1-9]|1[0-2])-([0-2]\d|3[01])$/.test(dateParam)) {
+      return NextResponse.json({ error: '対象日が正しくありません' }, { status: 400 })
+    }
     const dateObj = new Date(dateParam + 'T00:00:00.000Z')
+    if (Number.isNaN(dateObj.getTime()) || dateObj.toISOString().slice(0, 10) !== dateParam) {
+      return NextResponse.json({ error: '対象日が正しくありません' }, { status: 400 })
+    }
     const nextDay = new Date(dateObj.getTime() + 86400000)
+    const jstOffsetMs = 9 * 60 * 60 * 1000
+    const clockDayStart = new Date(dateObj.getTime() - jstOffsetMs)
+    const clockDayEnd = new Date(clockDayStart.getTime() + 86400000)
 
     let departmentScope: { departmentId?: string; id?: string } = {}
     if (!hasMinRole(ctx.role, 'hr_admin')) {
@@ -29,7 +38,15 @@ export async function GET(req: NextRequest) {
     }
 
     const allEmployees = await prisma.kintaiEmployee.findMany({
-      where: { organizationId: ctx.organizationId, isActive: true, ...departmentScope },
+      where: {
+        organizationId: ctx.organizationId,
+        ...departmentScope,
+        OR: [
+          { isActive: true },
+          { attendances: { some: { date: { gte: dateObj, lt: nextDay } } } },
+          { clockRecords: { some: { timestamp: { gte: clockDayStart, lt: clockDayEnd } } } },
+        ],
+      },
       include: { department: { select: { name: true } } },
       orderBy: { name: 'asc' },
     })
@@ -44,9 +61,6 @@ export async function GET(req: NextRequest) {
     const attMap = new Map(attendances.map(a => [a.employeeId, a]))
 
     // 出勤中（退勤前）の従業員をclock recordsから検出
-    const jstOffsetMs = 9 * 60 * 60 * 1000
-    const clockDayStart = new Date(dateObj.getTime() - jstOffsetMs)
-    const clockDayEnd = new Date(clockDayStart.getTime() + 86400000)
     const todayClockRecords = await prisma.kintaiClockRecord.findMany({
       where: {
         employeeId: { in: allEmployees.map(e => e.id) },
@@ -100,7 +114,7 @@ export async function GET(req: NextRequest) {
       }
     })
 
-    return NextResponse.json({ employees })
+    return NextResponse.json({ employees }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (e) {
     console.error('[kintai/attendance/admin GET]', e)
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
