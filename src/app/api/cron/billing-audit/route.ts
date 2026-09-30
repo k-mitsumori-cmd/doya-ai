@@ -38,7 +38,12 @@ export async function GET(request: NextRequest) {
 
   try {
     const url = new URL(request.url)
-    const overrideWindow = Number(url.searchParams.get('window')) || 0
+    const rawWindow = url.searchParams.get('window')
+    const overrideWindow = rawWindow === null ? 0 : Number(rawWindow)
+    // 手動期間の誤入力を通常の定期配信として扱わない。日付計算が有効な範囲に限る。
+    if (rawWindow !== null && (!Number.isSafeInteger(overrideWindow) || overrideWindow < 1 || overrideWindow > 87600)) {
+      return NextResponse.json({ error: '対象期間は1～87600時間で指定してください' }, { status: 400 })
+    }
 
     // JSTの曜日（月曜=1）。月曜は週次（168h）も出す。
     const jstNow = new Date(Date.now() + 9 * 3600_000)

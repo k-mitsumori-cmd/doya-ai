@@ -75,6 +75,24 @@ function fixture({ now, monthlyFails = false, weeklyFails = false, deliveryFails
     assert.equal((await f.route.GET(f.request('?monthly=1'))).status, 200)
     assert.deepEqual(f.posts, ['audit:昨日', 'monthly report', 'monthly report'])
   })
+  await check('invalid manual windows do not become scheduled sends', async () => {
+    for (const value of ['', '0', '-1', '1.5', 'NaN', 'Infinity', '87601']) {
+      const f = fixture()
+      const response = await f.route.GET(f.request(`?window=${value}`))
+      assert.equal(response.status, 400)
+      assert.deepEqual(f.calls, [])
+      assert.deepEqual(f.posts, [])
+      assert.deepEqual(f.reportKeys, [])
+    }
+  })
+  await check('valid manual window still sends a manual report', async () => {
+    const f = fixture()
+    const response = await f.route.GET(f.request('?window=168'))
+    assert.equal(response.status, 200)
+    assert.deepEqual(f.calls, ['audit:168'])
+    assert.deepEqual(f.posts, ['audit:直近168時間'])
+    assert.deepEqual(f.reportKeys, [])
+  })
   await check('unauthorized cron exits before any reads or posts', async () => {
     const f = fixture()
     const request = f.request()
