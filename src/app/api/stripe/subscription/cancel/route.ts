@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createHash } from 'node:crypto'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { stripe, findActiveLikeSubscriptions, isDoyaSubscription, resolvePlanIdFromSubscription, ACTIVE_LIKE_STATUSES } from '@/lib/stripe'
 import { prisma } from '@/lib/prisma'
 import { notifyAlert } from '@/lib/alert'
+import { enqueueBillingOperationalNotification, deliverStripeWebhookNotification } from '@/lib/stripe-webhook-notifications'
 
 // ========================================
 // サブスクリプション解約（アプリ側直通）
@@ -129,7 +131,9 @@ export async function POST(request: NextRequest) {
     }
 
     const succeeded = results.filter((r): r is CancelOk => !('error' in r))
+    const failed = results.filter((r): r is CancelNg => 'error' in r)
     if (succeeded.length === 0) {
+      await notifyCancellationFailure(user, results, failed)
       return NextResponse.json(
         { error: '解約処理に失敗しました。お手数ですがお問い合わせください。', results },
         { status: 500 }
@@ -151,13 +155,8 @@ export async function POST(request: NextRequest) {
     } catch {}
 
     // 一部でも失敗が残っていたら運営が気づけるようにする（課金が止まっていない可能性）
-    if (succeeded.length < results.length) {
-      notifyAlert({
-        level: 'critical',
-        title: '解約処理の一部が失敗しました（課金が止まっていない可能性）',
-        detail: `user=${user.email}\n${JSON.stringify(results)}`,
-        dedupKey: `cancel-partial-failure:${user.id}`,
-      }).catch(() => {})
+    if (failed.length > 0) {
+      await notifyCancellationFailure(user, results, failed)
       return NextResponse.json({
         ok: false,
         code: 'CANCELLATION_INCOMPLETE',
@@ -186,5 +185,42 @@ export async function POST(request: NextRequest) {
       { error: '解約処理を完了できませんでした。時間をおいて再試行し、解消しない場合はお問い合わせください。' },
       { status: 500 }
     )
+  }
+}
+
+async function notifyCancellationFailure(
+  user: { id: string; email: string | null },
+  results: Array<{ subscriptionId: string; error?: string }>,
+  failed: Array<{ subscriptionId: string; error: string }>
+): Promise<void> {
+  const failedIds = failed.map((item) => item.subscriptionId).sort().join(',')
+  // 同じ失敗の連打は10分単位でまとめ、異なる失敗対象や次の時間帯は再通知する。
+  const digest = createHash('sha256').update(failedIds).digest('hex').slice(0, 12)
+  const eventId = `billing-cancel-failed:${user.id}:${Math.floor(Date.now() / 600_000)}:${digest}`
+  const details = `解約 ${results.length} 件中 ${failed.length} 件失敗。対象: ${failedIds}。課金が続く可能性があります。`
+  try {
+    await enqueueBillingOperationalNotification(eventId, 'billing.cancel.failed', {
+      type: 'cancellation_incomplete', userId: user.id, userEmail: user.email, details,
+    })
+  } catch (error) {
+    // DB障害で登録できない場合は従来の直接通知を試みる。利用者への失敗応答は維持する。
+    console.error('[Cancel] failure notification enqueue failed:', eventId, error)
+    try {
+      await notifyAlert({
+        level: 'critical',
+        title: '解約処理に失敗しました（課金が止まっていない可能性）',
+        detail: `user=${user.email}\n${details}`,
+        dedupKey: `cancel-failure:${user.id}:${digest}`,
+      })
+    } catch (fallbackError) {
+      console.error('[Cancel] failure notification fallback failed:', eventId, fallbackError)
+    }
+    return
+  }
+  try {
+    await deliverStripeWebhookNotification(eventId)
+  } catch (error) {
+    // 登録済みならCronが再送する。ここで直接送ると二重通知になり得る。
+    console.error('[Cancel] failure notification delivery deferred:', eventId, error)
   }
 }

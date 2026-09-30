@@ -91,7 +91,20 @@ const outbox = load('src/lib/stripe-webhook-notifications.ts', {
     assert.equal(rows.size, 1)
     assert.equal(rows.get('evt1').payload.type, 'payment_failed')
   })
+  await check('billing operation notice is durable and deduplicated without webhook receipt', async () => {
+    const id = 'billing-cancel-failed:u1:1:abc'
+    const alert = { type: 'cancellation_incomplete', userEmail: 'owner@example.test', details: 'partial cancellation' }
+    failWrite = true
+    await assert.rejects(() => outbox.enqueueBillingOperationalNotification(id, 'billing.cancel.failed', alert))
+    failWrite = false
+    await outbox.enqueueBillingOperationalNotification(id, 'billing.cancel.failed', alert)
+    await outbox.enqueueBillingOperationalNotification(id, 'billing.cancel.failed', alert)
+    assert.equal(rows.get(id).payload.type, 'cancellation_incomplete')
+    assert.equal([...rows.keys()].filter((key) => key === id).length, 1)
+    assert.equal(await outbox.deliverStripeWebhookNotification(id), 'sent')
+  })
   await check('concurrent workers cannot send the same notice twice', async () => {
+    const before = deliveries
     releaseDelivery = true
     const first = outbox.deliverStripeWebhookNotification('evt1')
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -99,7 +112,7 @@ const outbox = load('src/lib/stripe-webhook-notifications.ts', {
     releaseDelivery()
     assert.equal(await first, 'sent')
     releaseDelivery = null
-    assert.equal(deliveries, 1)
+    assert.equal(deliveries, before + 1)
     assert.equal(rows.get('evt1').status, 'sent')
   })
   await check('Slack failure remains pending and later Cron retry succeeds', async () => {

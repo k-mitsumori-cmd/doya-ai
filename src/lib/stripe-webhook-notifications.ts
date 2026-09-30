@@ -6,6 +6,18 @@ import { sendEventNotificationStrict, type EventNotification } from '@/lib/notif
 const LEASE_MS = 2 * 60 * 1000
 const BATCH_SIZE = 25
 
+/** Stripe APIの同期・解約経路で発生した運営通知も同じ再送キューへ保存する。 */
+export async function enqueueBillingOperationalNotification(
+  eventId: string,
+  eventType: string,
+  payload: EventNotification
+): Promise<void> {
+  await prisma.stripeWebhookNotification.createMany({
+    data: [{ eventId, eventType, payload: payload as unknown as Prisma.InputJsonValue }],
+    skipDuplicates: true,
+  })
+}
+
 /** Webhook受信履歴の所有者だけが通知を登録できる。同じイベントIDは一度だけ登録する。 */
 export async function enqueueStripeWebhookNotification(
   eventId: string,
