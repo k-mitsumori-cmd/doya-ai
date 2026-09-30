@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { REQUEST_TYPE_LABELS, REQUEST_STATUS_LABELS, CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 import { appendKintaiRequestPage, fetchKintaiRequestPage } from '@/lib/kintai/load-requests'
+import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
 
 const TABS = [
   { key: '', label: 'すべて' },
@@ -45,6 +46,8 @@ function getInitials(name: string): string {
 }
 
 export default function RequestsPage() {
+  const { isActive } = useKintaiAccess()
+  const canWrite = isActive !== false
   const [requests, setRequests] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -132,13 +135,13 @@ export default function RequestsPage() {
               <p className="text-xs text-slate-500">打刻修正や休暇の申請を管理</p>
             </div>
           </div>
-          <Link
+          {canWrite && <Link
             href="/kintai/requests/new"
             className="flex items-center gap-1.5 px-4 py-2.5 bg-[#7f19e6] text-white text-sm font-bold rounded-xl hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20"
           >
             <span className="material-symbols-outlined text-lg">add_circle</span>
             新規申請
-          </Link>
+          </Link>}
         </div>
 
         {/* Tabs with counts */}
@@ -190,16 +193,16 @@ export default function RequestsPage() {
               <>
                 <img src="/kintai/characters/love_%E5%A4%A7%E5%A5%BD%E3%81%8D.png" alt="" width={120} height={120} className="bear-bounce mx-auto" />
                 <div>
-                  <p className="text-slate-600 font-bold text-lg">申請を作成してみましょう！</p>
-                  <p className="text-sm text-slate-400 mt-1">打刻修正や休暇の申請ができます</p>
+                  <p className="text-slate-600 font-bold text-lg">{canWrite ? '申請を作成してみましょう！' : '表示する申請はありません'}</p>
+                  {canWrite && <p className="text-sm text-slate-400 mt-1">打刻修正や休暇の申請ができます</p>}
                 </div>
-                <Link
+                {canWrite && <Link
                   href="/kintai/requests/new"
                   className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-[#7f19e6] text-white text-sm font-bold rounded-xl hover:bg-[#6a14c2] transition-colors shadow-sm shadow-[#7f19e6]/20"
                 >
                   <span className="material-symbols-outlined text-lg">add_circle</span>
                   新規申請を作成
-                </Link>
+                </Link>}
               </>
             )}
           </div>
@@ -239,7 +242,7 @@ export default function RequestsPage() {
 
                       {r.type === 'leave' && r.status === 'approved' && <p className="mt-2 text-xs text-slate-600">日程変更は管理者に承認取消を依頼し、取消後に本人が再申請してください。</p>}
                       {r.type === 'leave' && r.status === 'withdrawn' && r.details?.leaveCancellation && (
-                        <div className="mt-2 text-xs text-slate-600"><p>承認取消: {r.details.leaveCancellation.reason}</p><Link href="/kintai/requests/new?type=leave" className="underline">自分の休暇を新規申請する</Link></div>
+                        <div className="mt-2 text-xs text-slate-600"><p>承認取消: {r.details.leaveCancellation.reason}</p>{canWrite && <Link href="/kintai/requests/new?type=leave" className="underline">自分の休暇を新規申請する</Link>}</div>
                       )}
                       {summary && (
                         <p className="text-xs text-[#7f19e6] mt-1 font-medium">{summary}</p>
@@ -260,7 +263,7 @@ export default function RequestsPage() {
 
                     {/* Actions */}
                     <div className="shrink-0">
-                      {r.status === 'pending' && (
+                      {canWrite && r.status === 'pending' && (
                         <button
                           onClick={() => withdraw(r.id)}
                           className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-red-600 border-2 border-red-200 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"

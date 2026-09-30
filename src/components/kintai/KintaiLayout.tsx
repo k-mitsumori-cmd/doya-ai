@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import KintaiSidebar from './KintaiSidebar'
 import KintaiOnboarding from './KintaiOnboarding'
+import { KintaiAccessContext } from './KintaiAccessContext'
 
 interface KintaiLayoutProps {
   children: React.ReactNode
@@ -15,6 +16,7 @@ interface UsageData {
   organizationId: string | null
   employeeId?: string
   role?: string
+  isActive?: boolean
   employeeName?: string
   plan?: string
 }
@@ -127,6 +129,7 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
   const employeeName = usage?.employeeName || session?.user?.name || 'ゲスト'
 
   return (
+    <KintaiAccessContext.Provider value={{ isActive: usage?.isActive ?? null }}>
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50/30">
       <KintaiSidebar role={role} />
       <div className="flex-1 min-w-0 flex flex-col">
@@ -152,9 +155,17 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
             </div>
           </div>
         </header>
-        <main className="flex-1 min-w-0">{children}</main>
+        <main className="flex-1 min-w-0">
+          {usage?.isActive === false && (
+            <div role="status" className="mx-4 mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 lg:mx-6">
+              従業員情報が無効化されています。勤怠と申請の履歴は閲覧できますが、打刻や申請の操作はできません。管理者にご確認ください。
+            </div>
+          )}
+          {children}
+        </main>
       </div>
     </div>
+    </KintaiAccessContext.Provider>
   )
 }
 

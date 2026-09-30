@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
 import { formatMinutesJa } from '@/lib/kintai/format'
 import { ATTENDANCE_STATUS_LABELS } from '@/lib/kintai/types'
+import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
 
 const WEEKDAYS = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -19,6 +20,7 @@ function countWorkingDays(year: number, month: number): number {
 }
 
 export default function AttendancePage() {
+  const { isActive } = useKintaiAccess()
   const [year, setYear] = useState(new Date().getFullYear())
   const [month, setMonth] = useState(new Date().getMonth() + 1)
   const [data, setData] = useState<any[]>([])
@@ -338,7 +340,7 @@ export default function AttendancePage() {
                         </td>
                         {/* Edit button */}
                         <td className="px-3 py-3 text-center">
-                          {!isFuture && att && (
+                          {isActive !== false && !isFuture && att && (
                             <Link
                               href={`/kintai/requests/new?type=clock_fix&date=${dateStr}`}
                               className="inline-flex items-center justify-center gap-1 min-w-[64px] px-3 py-2 text-xs font-bold text-[#7f19e6] bg-[#7f19e6]/5 hover:bg-[#7f19e6]/10 active:bg-[#7f19e6]/15 rounded-xl transition-colors"

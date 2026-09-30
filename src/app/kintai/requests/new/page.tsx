@@ -3,6 +3,8 @@
 import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
+import Link from 'next/link'
+import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
 
 const REQUEST_TYPES = [
   { key: 'clock_fix', label: '打刻修正', icon: 'edit_clock', desc: '打刻の追加・修正を申請します', disabled: false, bear: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png' },
@@ -12,6 +14,14 @@ const REQUEST_TYPES = [
 ]
 
 export default function NewRequestPage() {
+  const { isActive } = useKintaiAccess()
+  if (isActive === false) {
+    return <div className="mx-auto max-w-xl space-y-4 px-4 py-16 text-center">
+      <h1 className="text-xl font-bold text-slate-800">新規申請は利用できません</h1>
+      <p className="text-sm text-slate-600">従業員情報が無効化されています。過去の申請は引き続き確認できます。</p>
+      <Link href="/kintai/requests" className="inline-block rounded-xl bg-[#7f19e6] px-4 py-2.5 text-sm font-bold text-white">申請履歴を見る</Link>
+    </div>
+  }
   return (
     <Suspense fallback={
       <div className="p-4 lg:p-6 max-w-2xl mx-auto flex flex-col items-center justify-center py-20 gap-4">

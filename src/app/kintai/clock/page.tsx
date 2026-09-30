@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { CLOCK_TYPE_LABELS } from '@/lib/kintai/types'
 import { formatMinutesJa } from '@/lib/kintai/format'
+import Link from 'next/link'
+import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
 
 type ClockStatus = 'not_clocked_in' | 'working' | 'on_break' | 'clocked_out'
 
@@ -33,6 +35,7 @@ const TIMELINE_CHAR: Record<string, string> = {
 }
 
 export default function ClockPage() {
+  const { isActive } = useKintaiAccess()
   const [now, setNow] = useState(new Date())
   const [status, setStatus] = useState<ClockStatus>('not_clocked_in')
   const [records, setRecords] = useState<any[]>([])
@@ -191,6 +194,17 @@ export default function ClockPage() {
       statusSub: `勤務時間: ${formatMinutesJa(workMinutes)}`,
     },
   }[status]
+
+  if (isActive === false) {
+    return <div className="mx-auto max-w-xl space-y-4 px-4 py-16 text-center">
+      <h1 className="text-xl font-bold text-slate-800">打刻は利用できません</h1>
+      <p className="text-sm text-slate-600">従業員情報が無効化されています。過去の勤怠や申請は引き続き確認できます。</p>
+      <div className="flex justify-center gap-3">
+        <Link href="/kintai/attendance" className="rounded-xl bg-[#7f19e6] px-4 py-2.5 text-sm font-bold text-white">勤怠履歴を見る</Link>
+        <Link href="/kintai/requests" className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">申請履歴を見る</Link>
+      </div>
+    </div>
+  }
 
   if (loading) {
     return (

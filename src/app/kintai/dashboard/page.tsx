@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { formatMinutesJa } from '@/lib/kintai/format'
+import { useKintaiAccess } from '@/components/kintai/KintaiAccessContext'
 
 export default function DashboardPage() {
+  const { isActive } = useKintaiAccess()
   const [data, setData] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -121,12 +123,15 @@ export default function DashboardPage() {
       </div>
 
       {/* クイックアクション */}
-      <div className="grid grid-cols-3 gap-4">
-        {[
+      <div className={`grid gap-4 ${isActive === false ? 'grid-cols-2' : 'grid-cols-3'}`}>
+        {(isActive === false ? [
+          { href: '/kintai/attendance', bear: '/kintai/characters/focus_%E9%9B%86%E4%B8%AD.png', label: '勤怠履歴', bg: 'from-emerald-500 to-green-600' },
+          { href: '/kintai/requests', bear: '/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png', label: '申請履歴', bg: 'from-blue-500 to-indigo-600' },
+        ] : [
           { href: '/kintai/clock', bear: '/kintai/characters/working_%E4%BD%9C%E6%A5%AD%E4%B8%AD.png', label: '打刻', bg: 'from-purple-600 to-purple-800' },
           { href: '/kintai/requests/new', bear: '/kintai/characters/point_%E8%A7%A3%E8%AA%AC.png', label: '申請', bg: 'from-blue-500 to-indigo-600' },
           { href: '/kintai/attendance', bear: '/kintai/characters/focus_%E9%9B%86%E4%B8%AD.png', label: '勤怠一覧', bg: 'from-emerald-500 to-green-600' },
-        ].map((a) => (
+        ]).map((a) => (
           <Link key={a.label} href={a.href} className={`rounded-2xl bg-gradient-to-br ${a.bg} p-5 text-white text-center hover:shadow-xl hover:scale-[1.02] transition-all`}>
             <img src={a.bear} alt="" width={56} height={56} style={{ objectFit: 'contain', margin: '0 auto' }} />
             <p className="text-base font-black mt-2">{a.label}</p>
