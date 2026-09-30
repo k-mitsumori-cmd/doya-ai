@@ -14,6 +14,16 @@ function fixture(){
  return {sync,get state(){return state},set fail(v){fail=v},set grant(v){grant=v},get attempts(){return attempts}};
 }
 async function atomic(){
+ await check('malformed manual grants cannot silently become an empty exemption list',async()=>{
+  assert.deepEqual(json(grants.parseManualGrantEmails('OWNER@example.test, other@example.test')),['OWNER@example.test',' other@example.test']);
+  assert.deepEqual(json(grants.parseManualGrantEmails('["OWNER@example.test"]')),['OWNER@example.test']);
+  for(const value of ['["owner@example.test"','[1]','{"email":"owner@example.test"}','"owner@example.test"','not-an-email',','])
+   assert.throws(()=>grants.parseManualGrantEmails(value));
+  const f=fixture();await f.sync({userId:'u1',plan:'ENTERPRISE',preserveManualGrant:false});
+  const before=json(f.state);f.grant='["owner@example.test"';
+  await assert.rejects(()=>f.sync({userId:'u1',plan:'PRO'}));
+  assert.deepEqual(json(f.state),before);
+ });
  await check('unified billing covers every service and retains usage',async()=>{let f=fixture();await f.sync({userId:'u1',plan:'PRO',stripeSubscriptionId:'sub1'});assert.equal(f.state.user.plan,'PRO');assert.equal(Object.keys(f.state.services).length,ids.length);assert(ids.every(id=>f.state.services[id].plan==='PRO'));assert.equal(f.state.services.banner.dailyUsage,7);assert.equal(f.state.services.banner.monthlyUsage,29);assert.equal(f.state.hr,'PRO');f.state.services.writing={plan:'PRO',dailyUsage:4};await f.sync({userId:'u1',plan:'FREE'});assert.equal(f.state.services.writing.plan,'FREE');assert.equal(f.state.services.writing.dailyUsage,4)});
  for(const fail of ['seo','hr','grants'])await check('billing '+fail+' failure rolls back all changes',async()=>{let f=fixture(),before=json(f.state);f.fail=fail;await assert.rejects(()=>f.sync({userId:'u1',plan:'PRO'}));assert.deepEqual(json(f.state),before)});
  await check('serialization conflict retries bounded transaction',async()=>{let f=fixture();f.fail='serialization';await f.sync({userId:'u1',plan:'PRO'});assert.equal(f.attempts,3)});

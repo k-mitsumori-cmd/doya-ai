@@ -27,15 +27,19 @@ const CACHE_MS = 60_000
 export function parseManualGrantEmails(raw: string | null | undefined): string[] {
   const v = String(raw || '').trim()
   if (!v) return []
+  let entries: unknown[]
   if (v.startsWith('[')) {
-    try {
-      const arr = JSON.parse(v)
-      return Array.isArray(arr) ? arr.map((x) => String(x)) : []
-    } catch {
-      return []
-    }
-  }
-  return v.split(',')
+    // A malformed exemption list must fail the billing transaction. Treating
+    // it as empty can silently downgrade an account on the next Stripe event.
+    const arr: unknown = JSON.parse(v)
+    if (!Array.isArray(arr)) throw new Error('Invalid manual grant list')
+    entries = arr
+  } else entries = v.split(',')
+  if (entries.some(email => typeof email !== 'string')) throw new Error('Invalid manual grant list')
+  const emails = (entries as string[]).filter(email => email.trim())
+  if ((entries.length > 0 && emails.length === 0) ||
+      emails.some(email => !/^[^\s,@"'\[\]{}]+@[^\s,@"'\[\]{}]+$/.test(email.trim()))) throw new Error('Invalid manual grant list')
+  return emails
 }
 
 /** 手動付与として扱うメールアドレス（小文字）の集合 */
@@ -47,14 +51,15 @@ export async function getManualGrantEmails(): Promise<Set<string>> {
     const t = e.trim().toLowerCase()
     if (t) emails.add(t)
   }
+  let value: string | null | undefined
   try {
-    const row = await prisma.systemSetting.findUnique({ where: { key: MANUAL_GRANTS_SETTING_KEY } })
-    for (const e of parseManualGrantEmails(row?.value)) {
-      const t = e.trim().toLowerCase()
-      if (t) emails.add(t)
-    }
+    value = (await prisma.systemSetting.findUnique({ where: { key: MANUAL_GRANTS_SETTING_KEY } }))?.value
   } catch {
     // 参照できなくても監査自体は続ける（除外されないだけで安全側）
+  }
+  for (const e of parseManualGrantEmails(value)) {
+    const t = e.trim().toLowerCase()
+    if (t) emails.add(t)
   }
 
   cache = { at: Date.now(), emails }
