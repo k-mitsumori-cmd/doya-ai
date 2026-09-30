@@ -15,7 +15,15 @@ export async function GET(request: Request) {
   if (!['daily', 'watch', 'reviews', 'weekly', 'cost', 'travel'].includes(mode)) return NextResponse.json({ error: 'invalid_mode' }, { status: 400 });
   const slot = mode === 'watch' ? String(Math.floor(Date.now() / 900000)) : mode === 'reviews' ? String(Math.floor(Date.now() / 14400000)) : jstDay();
   const key = 'job:' + mode + ':' + slot;
-  if (!dry && (await readOps('done:' + key) || !await claimOps(key, 360000))) return NextResponse.json({ skipped: true });
+  const rolling = mode === 'watch' || mode === 'reviews';
+  const doneKey = rolling ? 'done:job:' + mode : 'done:' + key;
+  if (!dry) {
+    const lastDone = await readOps<{ slot?: string }>(doneKey);
+    // 旧バージョンで記録済みの枠も、切り替え当日には再実行しない。
+    if ((rolling ? lastDone?.slot === slot || await readOps('done:' + key) : lastDone) || !await claimOps(key, 360000)) {
+      return NextResponse.json({ skipped: true });
+    }
+  }
   try {
     let result: unknown;
     if (mode === 'daily') result = await collectDailyOperations(dry);
@@ -26,7 +34,7 @@ export async function GET(request: Request) {
       result = '【旅行ツール】今日の集客チェック、いくよ！\n' + await dailyOperationsSection('travel');
       if (!dry) await sendOps('travel', String(result), 'travel-daily:' + jstDay(), 'steady');
     } else result = dry ? { note: 'watchは送信を伴うためdryでは実行しません' } : await monitorReportDelivery();
-    if (!dry) await writeOps('done:' + key, { at: new Date().toISOString() });
+    if (!dry) await writeOps(doneKey, { at: new Date().toISOString(), ...(rolling ? { slot } : {}) });
     return NextResponse.json({ ok: true, mode, dry, result });
   } catch (error) {
     console.error('[service-operations] job failed', mode);

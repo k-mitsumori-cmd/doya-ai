@@ -647,3 +647,8 @@ if (operationsCronRoutes.error || operationsCronRoutes.status !== 0) {
   console.error('Security regression failed: verify-operations-cron-routes.cjs');
   process.exit(1);
 }
+const serviceOperationsRolling = spawnSync(process.execPath, [path.join(__dirname, 'verify-service-operations-rolling.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (serviceOperationsRolling.error || serviceOperationsRolling.status !== 0) {
+  console.error('Security regression failed: verify-service-operations-rolling.cjs');
+  process.exit(1);
+}
