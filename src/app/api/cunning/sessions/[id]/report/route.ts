@@ -41,7 +41,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         where: { id: p.id },
         include: {
           transcripts: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], select: { text: true, speaker: true, audioReceivedAt: true, createdAt: true, audioWindow: { select: { sequence: true } } } },
-          answers: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], select: { questionText: true, summary: true, script: true } },
+          answers: { orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], select: { questionText: true, summary: true, script: true, finalTranscriptId: true } },
           audioWindows: { select: { speaker: true, sequence: true, transcriptId: true, claimedAt: true, transcript: { select: { recordingFinal: true } } } },
         },
       })
@@ -55,16 +55,23 @@ export async function POST(req: NextRequest, ctx: Ctx) {
           if (!last.has(window.speaker) || last.get(window.speaker)!.sequence < window.sequence) last.set(window.speaker, window)
         }
         if ([...last.values()].some(window => !window.transcript?.recordingFinal)) audioPending = true
-        if (audioPending) {
-          const lease = await tx.cunningRecordingLease.findUnique({ where: { sessionId: p.id }, select: { userId: true, stoppedAt: true, expiresAt: true } })
+        const lease = await tx.cunningRecordingLease.findUnique({ where: { sessionId: p.id }, select: {
+          userId: true, stoppedAt: true, expiresAt: true, finalRemoteAcceptedAt: true,
+          finalAnswerInputHash: true, finalAnswerClaimedAt: true,
+        } })
+        // A final answer may fail after all audio is saved. Keep that failed
+        // attempt visible in the report gate, including after a page reload.
+        const answerPending = !!lease?.finalAnswerInputHash && !current.answers.some(answer => answer.finalTranscriptId)
+        if (audioPending || answerPending) {
           const now = (await tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`)[0].now
           const recoveryEnd = lease?.stoppedAt
-            ? Math.min(lease.stoppedAt.getTime(), lease.expiresAt.getTime()) + 15 * 60 * 1000
+            ? Math.max(Math.min(lease.stoppedAt.getTime(), lease.expiresAt.getTime()), answerPending ? lease.finalRemoteAcceptedAt?.getTime() ?? 0 : 0) + 15 * 60 * 1000
             : Infinity
           const providerStillWorking = current.audioWindows.some(window => !window.transcriptId && window.claimedAt && now.getTime() < window.claimedAt.getTime() + 330000)
+            || (answerPending && !!lease?.finalAnswerClaimedAt && now.getTime() < lease.finalAnswerClaimedAt.getTime() + 330000)
           const canGeneratePartial = current.status === 'ended' && lease?.userId === userId && now.getTime() > recoveryEnd &&
             !providerStillWorking && (current.transcripts.length > 0 || current.answers.length > 0)
-          if (!acceptIncomplete || !canGeneratePartial) return { audioPending: true as const, canGeneratePartial }
+          if (!acceptIncomplete || !canGeneratePartial) return { inputPending: true as const, answerPending, canGeneratePartial }
           incompleteInput = true
         }
       }
@@ -80,9 +87,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return { session: { ...current, updatedAt: revision }, cached: false, fingerprint, incompleteInput }
     })
     if (!snapshot) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
-    if ('audioPending' in snapshot) return NextResponse.json({ error: snapshot.canGeneratePartial
-      ? '一部の音声を復旧できませんでした。保存済みの内容だけで議事録を作成できます。'
-      : '保存されていない音声、または確定前の音声があります。音声の保存を完了してから議事録を作成してください。', code: 'AUDIO_PENDING', canGeneratePartial: snapshot.canGeneratePartial }, { status: 409, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
+    if ('inputPending' in snapshot) return NextResponse.json({ error: snapshot.canGeneratePartial
+      ? '一部の音声または回答を復旧できませんでした。保存済みの内容だけで議事録を作成できます。'
+      : snapshot.answerPending ? '最後の回答が保存されていません。録音画面で再試行するか、復旧期限後に保存済みの内容だけで議事録を作成してください。'
+        : '保存されていない音声、または確定前の音声があります。音声の保存を完了してから議事録を作成してください。', code: 'AUDIO_PENDING', canGeneratePartial: snapshot.canGeneratePartial }, { status: 409, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
     const { session } = snapshot
     if (snapshot.cached) return NextResponse.json({ report: session.report, reportStatus: cunningReportStatus(session.report, snapshot.fingerprint) }, { headers: { 'Cache-Control': 'no-store' } })
 

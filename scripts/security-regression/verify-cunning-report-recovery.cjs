@@ -1,17 +1,19 @@
 const assert = require('node:assert/strict')
 const { load, check } = require('./load-typescript.cjs')
 
-async function scenario({ nowMs, status = 'ended', owner = 'u', hasContent = true, acceptIncomplete = false, missingAudio = true, claimedAt = null, settleExpired = false }) {
+async function scenario({ nowMs, status = 'ended', owner = 'u', hasContent = true, acceptIncomplete = false, missingAudio = true, claimedAt = null, settleExpired = false, missingFinalAnswer = false, finalClaimedAt = null, finalAnswerSaved = false }) {
   let providerCalls = 0
   let usageReads = 0
   let current = {
     id: 's', userId: owner, status, recordingVersion: 2, updatedAt: new Date(1000),
     mode: 'sales', personaNote: null, report: null,
     transcripts: hasContent ? [{ text: '保存済み', speaker: 'remote', createdAt: new Date(2000), audioReceivedAt: null, audioWindow: { sequence: 0 } }] : [],
-    answers: [],
+    answers: finalAnswerSaved ? [{ questionText: '質問', summary: '要点', script: '回答', finalTranscriptId: 'final' }] : [],
     audioWindows: missingAudio ? [{ speaker: 'remote', sequence: 1, transcriptId: null, transcript: null, claimedAt }] : [],
   }
-  const lease = { userId: owner, stoppedAt: settleExpired ? null : new Date(10000), expiresAt: new Date(70000) }
+  const lease = { userId: owner, stoppedAt: settleExpired ? null : new Date(10000), expiresAt: new Date(70000),
+    finalRemoteAcceptedAt: missingFinalAnswer ? new Date(11000) : null,
+    finalAnswerInputHash: missingFinalAnswer ? 'hash' : null, finalAnswerClaimedAt: finalClaimedAt }
   const model = {
     findUnique: async () => current,
     update: async ({ data }) => { current = { ...current, ...data }; return current },
@@ -71,6 +73,35 @@ async function scenario({ nowMs, status = 'ended', owner = 'u', hasContent = tru
     const result = await scenario({ nowMs: 70000 + 15 * 60000 + 1, status: 'active', settleExpired: true, acceptIncomplete: true })
     assert.equal(result.status, 200)
     assert.equal(result.body.report.incompleteInput, true)
+  })
+  await check('failed final answer cannot be silently omitted from a report', async () => {
+    const result = await scenario({ nowMs: 12000, missingAudio: false, missingFinalAnswer: true })
+    assert.equal(result.status, 409)
+    assert.equal(result.body.canGeneratePartial, false)
+    assert.match(result.body.error, /最後の回答/)
+    assert.equal(result.providerCalls, 0)
+  })
+  await check('saved final answer permits a complete report', async () => {
+    const result = await scenario({ nowMs: 12000, missingAudio: false, missingFinalAnswer: true, finalAnswerSaved: true })
+    assert.equal(result.status, 200)
+    assert.equal(result.body.report.incompleteInput, false)
+  })
+  await check('missing final answer needs explicit partial recovery after the deadline', async () => {
+    const input = { nowMs: 11000 + 15 * 60000 + 1, missingAudio: false, missingFinalAnswer: true }
+    const blocked = await scenario(input)
+    assert.equal(blocked.status, 409)
+    assert.equal(blocked.body.canGeneratePartial, true)
+    assert.equal(blocked.providerCalls, 0)
+    const accepted = await scenario({ ...input, acceptIncomplete: true })
+    assert.equal(accepted.status, 200)
+    assert.equal(accepted.body.report.incompleteInput, true)
+  })
+  await check('running final answer cannot be omitted during partial recovery', async () => {
+    const result = await scenario({ nowMs: 11000 + 15 * 60000 + 1, missingAudio: false,
+      missingFinalAnswer: true, finalClaimedAt: new Date(11000 + 14 * 60000), acceptIncomplete: true })
+    assert.equal(result.status, 409)
+    assert.equal(result.body.canGeneratePartial, false)
+    assert.equal(result.providerCalls, 0)
   })
   for (const [name, input, expected] of [
     ['before recovery deadline', { nowMs: 10000 + 15 * 60000, acceptIncomplete: true }, 409],
