@@ -37,6 +37,8 @@ async function main() {
   })
   const usageResponse = await usage.GET()
   assert.equal((await usageResponse.json()).role, 'employee')
+  assert.equal(usageResponse.headers.get('cache-control'), 'private, no-store')
+  assert.equal(usageResponse.headers.get('vary'), 'Cookie')
 
   const common = { 'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma }, '@/lib/kintai/access': { getKintaiContext: async () => ({ ...inactive, role: 'system_admin' }), hasMinRole: access.hasMinRole } }
   const employeeRoute = load('src/app/api/kintai/employees/[id]/route.ts', { ...common,

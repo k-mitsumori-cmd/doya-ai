@@ -28,25 +28,30 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
   const [hasOrg, setHasOrg] = useState<boolean | null>(null)
   const [usageError, setUsageError] = useState(false)
   const usageRequest = useRef(0)
+  const previousPathname = useRef(pathname)
 
   const isLandingPage = pathname === '/kintai'
   const isPricingPage = pathname === '/kintai/pricing'
   const isInvitePage = pathname?.startsWith('/kintai/invite')
   const isPublicPage = isLandingPage || isPricingPage || isInvitePage
 
-  const loadUsage = useCallback(async () => {
+  const loadUsage = useCallback(async (preserveView = false) => {
     const request = ++usageRequest.current
-    setHasOrg(null)
-    setUsage(null)
-    setUsageError(false)
+    if (!preserveView) {
+      setHasOrg(null)
+      setUsage(null)
+      setUsageError(false)
+    }
     try {
       const response = await fetch('/api/kintai/usage', { cache: 'no-store' })
       if (!response.ok) throw new Error('利用状況を確認できませんでした')
       const data: UsageData = await response.json()
       if (data.organizationId !== null && typeof data.organizationId !== 'string') throw new Error('利用状況の応答が不正です')
+      if (data.organizationId && typeof data.isActive !== 'boolean') throw new Error('従業員の状態を確認できませんでした')
       if (request !== usageRequest.current) return
       setUsage(data.organizationId ? data : null)
       setHasOrg(Boolean(data.organizationId))
+      setUsageError(false)
     } catch {
       if (request === usageRequest.current) setUsageError(true)
     }
@@ -64,6 +69,19 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
     }
     return () => { requestCounter.current++ }
   }, [session, status, loadUsage])
+
+  useEffect(() => {
+    if (previousPathname.current === pathname) return
+    previousPathname.current = pathname
+    if (session?.user) void loadUsage(true)
+  }, [pathname, session?.user, loadUsage])
+
+  useEffect(() => {
+    if (!session?.user) return
+    const refresh = () => { void loadUsage(true) }
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
+  }, [session?.user, loadUsage])
 
   // Public pages render children directly
   if (isPublicPage) {

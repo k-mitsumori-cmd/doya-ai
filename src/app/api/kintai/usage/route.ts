@@ -7,6 +7,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
+const privateHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -19,7 +21,7 @@ export async function GET() {
       userId = dbUser?.id
     }
     if (!userId) {
-      return NextResponse.json({ organizationId: null })
+      return NextResponse.json({ organizationId: null }, { headers: privateHeaders })
     }
 
     const membership = await prisma.kintaiMember.findFirst({
@@ -29,7 +31,7 @@ export async function GET() {
     })
 
     if (!membership || !membership.employee) {
-      return NextResponse.json({ organizationId: null })
+      return NextResponse.json({ organizationId: null }, { headers: privateHeaders })
     }
 
     // Get the organization owner's plan
@@ -50,12 +52,12 @@ export async function GET() {
       isActive: membership.employee.isActive,
       employeeName: membership.employee.name,
       plan: ownerUser?.plan || 'FREE',
-    })
+    }, { headers: privateHeaders })
   } catch (e) {
     console.error('[kintai/usage] Error:', e)
     return NextResponse.json(
       { error: '利用状況を確認できませんでした。再試行してください。' },
-      { status: 503, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } }
+      { status: 503, headers: privateHeaders }
     )
   }
 }

@@ -32,7 +32,7 @@ async function serverFailure() {
   return exports.GET()
 }
 
-async function layout(response) {
+async function layout(response, preserveView = false) {
   const state = { usage: { organizationId: 'old' }, hasOrg: true, error: false }
   const loadUsage = callback('src/components/kintai/KintaiLayout.tsx', 'loadUsage', {
     usageRequest: { current: 0 }, fetch: async () => response,
@@ -40,7 +40,7 @@ async function layout(response) {
     setHasOrg: (value) => { state.hasOrg = value },
     setUsageError: (value) => { state.error = value },
   })
-  await loadUsage()
+  await loadUsage(preserveView)
   return state
 }
 
@@ -62,10 +62,12 @@ async function pricing(response) {
 
   const failed = Response.json({ error: 'unavailable' }, { status: 503 })
   assert.deepEqual(await layout(failed), { usage: null, hasOrg: null, error: true })
+  assert.deepEqual(await layout(failed, true), { usage: { organizationId: 'old' }, hasOrg: true, error: true })
   assert.deepEqual(await layout(Response.json({ organizationId: null })), { usage: null, hasOrg: false, error: false })
-  assert.deepEqual(await layout(Response.json({ organizationId: 'owned', role: 'system_admin', plan: 'PRO' })), {
-    usage: { organizationId: 'owned', role: 'system_admin', plan: 'PRO' }, hasOrg: true, error: false,
+  assert.deepEqual(await layout(Response.json({ organizationId: 'owned', role: 'system_admin', isActive: true, plan: 'PRO' })), {
+    usage: { organizationId: 'owned', role: 'system_admin', isActive: true, plan: 'PRO' }, hasOrg: true, error: false,
   })
+  assert.deepEqual(await layout(Response.json({ organizationId: 'owned', role: 'system_admin', plan: 'PRO' })), { usage: null, hasOrg: null, error: true })
   assert.deepEqual(await pricing(failed), { plan: null, error: true })
   assert.deepEqual(await pricing(Response.json({ organizationId: null })), { plan: null, error: false })
   assert.deepEqual(await pricing(Response.json({ organizationId: 'owned', plan: 'PRO' })), { plan: 'PRO', error: false })
