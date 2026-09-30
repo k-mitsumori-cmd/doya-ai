@@ -637,3 +637,8 @@ if (billingAuditRoute.error || billingAuditRoute.status !== 0) {
   console.error('Security regression failed: verify-billing-audit-route.cjs');
   process.exit(1);
 }
+const billingReportDelivery = spawnSync(process.execPath, [path.join(__dirname, 'verify-billing-report-delivery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (billingReportDelivery.error || billingReportDelivery.status !== 0) {
+  console.error('Security regression failed: verify-billing-report-delivery.cjs');
+  process.exit(1);
+}

@@ -1,8 +1,10 @@
 const assert = require('node:assert/strict')
 const { load, check, results } = require('./load-typescript.cjs')
 
-function fixture({ now, monthlyFails = false, weeklyFails = false } = {}) {
+function fixture({ now, monthlyFails = false, weeklyFails = false, deliveryFailsOnce = false } = {}) {
   const posts = []
+  const delivered = new Set()
+  const reportKeys = []
   const alerts = []
   const calls = []
   const timestamp = Date.parse(now || '2026-10-01T00:00:00Z')
@@ -18,13 +20,21 @@ function fixture({ now, monthlyFails = false, weeklyFails = false } = {}) {
       formatMonthlyRevenueMessage: () => 'monthly report',
     },
     '@/lib/notifications': { postPlainToSlack: async (message) => { posts.push(message) } },
+    '@/lib/billing-report-delivery': { deliverBillingReport: async (key, message) => {
+      reportKeys.push(key)
+      if (delivered.has(key)) return 'already_sent'
+      if (deliveryFailsOnce && key.endsWith(':monthly')) { deliveryFailsOnce = false; throw Error('private Slack failure') }
+      posts.push(message)
+      delivered.add(key)
+      return 'sent'
+    } },
     '@/lib/alert': { notifyAlert: async (details) => { alerts.push(details) } },
   }, { Date: FixedDate, process: { env: { CRON_SECRET: 'secret' } } })
   const request = (suffix = '') => ({
     url: `https://example.invalid/api/cron/billing-audit${suffix}`,
     headers: { get: (name) => name === 'authorization' ? 'Bearer secret' : null },
   })
-  return { route, request, posts, alerts, calls }
+  return { route, request, posts, alerts, calls, reportKeys }
 }
 
 ;(async () => {
@@ -46,7 +56,24 @@ function fixture({ now, monthlyFails = false, weeklyFails = false } = {}) {
   await check('successful first-of-month report sends daily then monthly once', async () => {
     const f = fixture()
     assert.equal((await f.route.GET(f.request())).status, 200)
+    assert.equal((await f.route.GET(f.request())).status, 200)
     assert.deepEqual(f.posts, ['audit:昨日', 'monthly report'])
+    assert.deepEqual(f.reportKeys, [
+      '2026-10-01:daily', '2026-10-01:monthly', '2026-10-01:daily', '2026-10-01:monthly',
+    ])
+  })
+  await check('retry after monthly delivery failure skips the delivered daily report', async () => {
+    const f = fixture({ deliveryFailsOnce: true })
+    assert.equal((await f.route.GET(f.request())).status, 500)
+    assert.deepEqual(f.posts, ['audit:昨日'])
+    assert.equal((await f.route.GET(f.request())).status, 200)
+    assert.deepEqual(f.posts, ['audit:昨日', 'monthly report'])
+  })
+  await check('explicit monthly resend preserves manual behavior without repeating the daily report', async () => {
+    const f = fixture()
+    await f.route.GET(f.request())
+    assert.equal((await f.route.GET(f.request('?monthly=1'))).status, 200)
+    assert.deepEqual(f.posts, ['audit:昨日', 'monthly report', 'monthly report'])
   })
   await check('unauthorized cron exits before any reads or posts', async () => {
     const f = fixture()

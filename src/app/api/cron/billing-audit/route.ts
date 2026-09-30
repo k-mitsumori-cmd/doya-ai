@@ -10,6 +10,7 @@ import {
   formatMonthlyRevenueMessage,
 } from '@/lib/billing-audit'
 import { postPlainToSlack } from '@/lib/notifications'
+import { deliverBillingReport } from '@/lib/billing-report-delivery'
 import { notifyAlert } from '@/lib/alert'
 
 /**
@@ -47,11 +48,13 @@ export async function GET(request: NextRequest) {
     const audit = await runBillingAudit(windowHours)
     const label = overrideWindow > 0 ? `直近${overrideWindow}時間` : '昨日'
     // 集計に失敗した後の再実行で日次レポートが重複しないよう、全種類を先に作る。
-    const reports = [formatBillingAuditMessage(audit, { windowLabel: label })]
+    const reports: Array<{ kind: 'daily' | 'weekly' | 'monthly'; text: string }> = [
+      { kind: 'daily', text: formatBillingAuditMessage(audit, { windowLabel: label }) },
+    ]
 
     if (isMonday && overrideWindow === 0) {
       const weekly = await runBillingAudit(24 * 7)
-      reports.push(formatBillingAuditMessage(weekly, { windowLabel: '直近7日' }))
+      reports.push({ kind: 'weekly', text: formatBillingAuditMessage(weekly, { windowLabel: '直近7日' }) })
     }
 
     // 毎月1日は前月の売上も報告する。
@@ -60,9 +63,18 @@ export async function GET(request: NextRequest) {
     const isFirstOfMonth = jstNow.getUTCDate() === 1
     if ((isFirstOfMonth && overrideWindow === 0) || url.searchParams.get('monthly') === '1') {
       const revenue = await runMonthlyRevenue()
-      reports.push(formatMonthlyRevenueMessage(revenue))
+      reports.push({ kind: 'monthly', text: formatMonthlyRevenueMessage(revenue) })
     }
-    for (const report of reports) await postPlainToSlack(report)
+    const dayKey = [jstNow.getUTCFullYear(), String(jstNow.getUTCMonth() + 1).padStart(2, '0'),
+      String(jstNow.getUTCDate()).padStart(2, '0')].join('-')
+    for (const report of reports) {
+      // 手動の期間指定と明示的な月次再送は従来どおり送る。定期実行は日付別の配信記録を使う。
+      if (overrideWindow > 0 || (report.kind === 'monthly' && url.searchParams.get('monthly') === '1')) {
+        await postPlainToSlack(report.text)
+      } else {
+        await deliverBillingReport(`${dayKey}:${report.kind}`, report.text)
+      }
+    }
 
     // 重大な異常はアラート基盤にも流す（専用チャンネル/デデュープ付き）
     if (!audit.webhookOk) {
