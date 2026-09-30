@@ -10,39 +10,54 @@ import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { createWithinEmployeeLimit, employeeLimitMessage } from '@/lib/hr/billing'
 
-function parseCSV(text: string): string[][] {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0)
-  return lines.map((line) => {
-    const result: string[] = []
-    let current = ''
-    let inQuotes = false
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i]
-      if (inQuotes) {
-        if (ch === '"') {
-          if (i + 1 < line.length && line[i + 1] === '"') {
-            current += '"'
-            i++
-          } else {
-            inQuotes = false
-          }
-        } else {
-          current += ch
-        }
+const MAX_CSV_CHARS = 1_000_000
+const MAX_CSV_ROWS = 500
+
+function parseCSV(text: string): { row: number; cells: string[] }[] {
+  const rows: { row: number; cells: string[] }[] = []
+  let cells: string[] = []
+  let cell = ''
+  let quoted = false
+  let closedQuote = false
+  let line = 1
+  let rowLine = 1
+  const finishCell = () => { cells.push(cell.trim()); cell = ''; closedQuote = false }
+  const finishRow = () => {
+    finishCell()
+    if (cells.some((value) => value !== '')) rows.push({ row: rowLine, cells })
+    cells = []
+    rowLine = line + 1
+  }
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (quoted) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { cell += '"'; i++ }
+        else { quoted = false; closedQuote = true }
+      } else if (ch === '\r' && text[i + 1] === '\n') {
+        cell += '\n'; i++; line++
       } else {
-        if (ch === '"') {
-          inQuotes = true
-        } else if (ch === ',') {
-          result.push(current.trim())
-          current = ''
-        } else {
-          current += ch
-        }
+        cell += ch
+        if (ch === '\n' || ch === '\r') line++
       }
+    } else if (ch === '"' && cell === '' && !closedQuote) {
+      quoted = true
+    } else if (ch === ',') {
+      finishCell()
+    } else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++
+      finishRow()
+      line++
+    } else if (ch === '"' || closedQuote) {
+      throw new Error(`CSVの${line}行目に不正な引用符があります`)
+    } else {
+      cell += ch
     }
-    result.push(current.trim())
-    return result
-  })
+  }
+  if (quoted) throw new Error(`CSVの${rowLine}行目の引用符が閉じられていません`)
+  if (cell !== '' || cells.length > 0 || closedQuote) finishRow()
+  return rows
 }
 
 export async function POST(req: NextRequest) {
@@ -67,13 +82,24 @@ export async function POST(req: NextRequest) {
     if (!csvText || typeof csvText !== 'string') {
       return NextResponse.json({ error: 'csvText is required' }, { status: 400 })
     }
+    if (csvText.length > MAX_CSV_CHARS) {
+      return NextResponse.json({ error: 'CSVは100万文字以内にしてください' }, { status: 413 })
+    }
 
-    const rows = parseCSV(csvText)
+    let rows: { row: number; cells: string[] }[]
+    try {
+      rows = parseCSV(csvText.replace(/^\uFEFF/, ''))
+    } catch (error) {
+      return NextResponse.json({ error: (error as Error).message }, { status: 400 })
+    }
     if (rows.length < 2) {
       return NextResponse.json({ error: 'CSV must have header and at least one data row' }, { status: 400 })
     }
+    if (rows.length - 1 > MAX_CSV_ROWS) {
+      return NextResponse.json({ error: `一度に登録できるのは${MAX_CSV_ROWS}名までです` }, { status: 413 })
+    }
 
-    const headers = rows[0].map((h) => h.toLowerCase().trim())
+    const headers = rows[0].cells.map((h) => h.toLowerCase().trim())
     const dataRows = rows.slice(1)
 
     const colMap: Record<string, number> = {}
@@ -116,16 +142,16 @@ export async function POST(req: NextRequest) {
     let limitNotice: { message: string; upgradeUrl?: string; contactUrl?: string } | null = null
 
     for (let i = 0; i < dataRows.length; i++) {
-      const row = dataRows[i]
+      const { cells: row, row: rowNumber } = dataRows[i]
       try {
         const lastName = row[lastNameIdx]
         const firstName = row[firstNameIdx]
         if (!lastName || !firstName) {
-          results.push({ row: i + 2, success: false, error: 'lastName/firstName missing' })
+          results.push({ row: rowNumber, success: false, error: 'lastName/firstName missing' })
           continue
         }
         if (limitNotice) {
-          results.push({ row: i + 2, success: false, error: limitNotice.message })
+          results.push({ row: rowNumber, success: false, error: limitNotice.message })
           continue
         }
 
@@ -177,15 +203,15 @@ export async function POST(req: NextRequest) {
           limitNotice = canUpgrade
             ? { message, upgradeUrl: '/hr/pricing' }
             : { message, contactUrl: 'https://doyamarke.surisuta.jp/contact' }
-          results.push({ row: i + 2, success: false, error: message })
+          results.push({ row: rowNumber, success: false, error: message })
           continue
         }
         const employee = admission.value
 
-        results.push({ row: i + 2, success: true, employeeId: employee.id })
+        results.push({ row: rowNumber, success: true, employeeId: employee.id })
       } catch (err: any) {
-        console.error('[hr/employees/import][row]', i + 2, err)
-        results.push({ row: i + 2, success: false, error: err?.code === 'P2002' ? '社員番号が重複しています' : 'この行の登録に失敗しました' })
+        console.error('[hr/employees/import][row]', rowNumber, err)
+        results.push({ row: rowNumber, success: false, error: err?.code === 'P2002' ? '社員番号が重複しています' : 'この行の登録に失敗しました' })
       }
     }
 

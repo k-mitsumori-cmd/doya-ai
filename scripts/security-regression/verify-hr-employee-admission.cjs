@@ -80,6 +80,37 @@ const ts = require('typescript')
     assert.match(data.limitNotice.contactUrl, /contact/)
   })
 
+  await check('CSV import preserves quoted newlines and rejects malformed or oversized input before writes', async () => {
+    const saved = []
+    const api = load('src/app/api/hr/employees/import/route.ts', {
+      'next/server': { NextResponse: Response },
+      'next-auth': { getServerSession: async () => ({ user: { id: 'u' } }) },
+      '@/lib/auth': {},
+      '@/lib/prisma': { prisma: {} },
+      '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'o', role: 'ADMIN' }), hasMinRole: () => true },
+      '@/lib/hr/types': { HrMemberRole: { ADMIN: 'ADMIN' } },
+      '@/lib/hr/billing': {
+        createWithinEmployeeLimit: async (_id, create) => ({ allowed: true, value: await create({
+          hrEmployee: { create: async ({ data }) => { saved.push(data); return { id: 'e' } } },
+          hrEmployeeHistory: { create: async () => ({}) },
+        }) }),
+        employeeLimitMessage: () => '',
+      },
+    })
+    const post = csvText => api.POST({ json: async () => ({ csvText }) })
+    const good = await post('\uFEFFlastName,firstName,position\r\n"山\r\n田",太郎,"営業""部"\r\n佐藤,花子,開発')
+    assert.equal(good.status, 200)
+    assert.deepEqual(saved.map(x => [x.lastName, x.position]), [['山\n田', '営業"部'], ['佐藤', '開発']])
+    assert.deepEqual((await good.json()).details.map(x => x.row), [2, 4])
+    for (const input of ['lastName,firstName\n"山田,太郎', 'lastName,firstName\n山"田,太郎']) {
+      const response = await post(input)
+      assert.equal(response.status, 400)
+    }
+    assert.equal((await post('lastName,firstName\n' + '山田,太郎\n'.repeat(501))).status, 413)
+    assert.equal((await post('lastName,firstName\n' + 'a'.repeat(1_000_000))).status, 413)
+    assert.equal(saved.length, 2)
+  })
+
   await check('new employee photo uploads only after admission and is attached to the saved employee', async () => {
     const source = fs.readFileSync('src/app/hr/employees/new/page.tsx', 'utf8')
     const ast = ts.createSourceFile('new-page.tsx', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
