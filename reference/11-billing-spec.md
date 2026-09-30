@@ -330,6 +330,12 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
 期待URL: `STRIPE_WEBHOOK_EXPECTED_URL`（既定 `https://doya-ai.surisuta.jp/api/stripe/webhook`）
 必須購読イベント: `checkout.session.completed` / `customer.subscription.created` / `.updated` / `.deleted`
 
+### 8.3 月次売上レポートの計上日
+
+`runMonthlyRevenue()` は前月の日本時間（1日0:00以上、翌月1日0:00未満）を対象にする。
+入金は請求書の作成日ではなく `status_transitions.paid_at` で計上するため、前月以前に作成され当月に支払われた請求書も含む。Doya契約に紐づく円建ての支払済み請求書だけを集計し、一覧の全ページを確認する。
+返金は請求書の累計 `post_payment_credit_notes_amount` ではなく、同期間に作成された Stripe Refund のうち成功済みでDoya請求書に紐づく金額を控除する。処理中の返金は未控除額として別表示し、失敗・キャンセル済みは控除しない。返金の処理結果が後日に変わる場合、過去に送信した月次レポートは自動更新されないため、必要に応じてStripeで再照合する。
+
 > **監査は検知のみで自動修復しない。** 誤検知で契約状態を勝手に書き換えるほうが危険なため。
 > 修復は §10 のランブックに従って行う。
 

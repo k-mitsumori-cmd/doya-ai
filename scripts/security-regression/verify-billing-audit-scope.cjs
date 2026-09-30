@@ -7,7 +7,7 @@ const subscription = (id, app = 'another-app') => ({ id, status: 'active', creat
   current_period_end: created + 30*86400, trial_end: null, cancel_at_period_end: false,
   items: { data: [{ price: { id: 'price_'+id, unit_amount: 9980, currency: 'jpy' } }] } })
 const invoice = (id, subscriptionId, amount) => ({ id, subscription: subscriptionId, status: 'paid', amount_paid: amount,
-  post_payment_credit_notes_amount: 0 })
+  created, currency: 'jpy', status_transitions: { paid_at: created }, post_payment_credit_notes_amount: 0 })
 function page(rows, query) {
   const index = query.starting_after ? rows.findIndex((row) => row.id === query.starting_after) : -1
   if (query.starting_after && index < 0) throw Error('unknown cursor')
@@ -15,10 +15,16 @@ function page(rows, query) {
   const data = rows.slice(start, start+100)
   return { data, has_more: start+data.length < rows.length }
 }
-function fixture({ subs, invoices, subList, invoiceList, endpoints = [], webhookList, users = [], serviceRows = [], manualGrants = [] }) {
-  let subscriptionCalls = 0, invoiceCalls = 0, webhookCalls = 0
+function fixture({ subs, invoices, refunds = [], charges = {}, paymentIntents = {}, subList, invoiceList, refundList,
+  endpoints = [], webhookList, users = [], serviceRows = [], manualGrants = [] }) {
+  let subscriptionCalls = 0, invoiceCalls = 0, refundCalls = 0, webhookCalls = 0
+  const invoiceQueries = []
+  const refundQueries = []
   const stripe = { subscriptions: { list: async (q) => { subscriptionCalls++; return subList ? subList(q) : page(subs, q) } },
-    invoices: { list: async (q) => { invoiceCalls++; return invoiceList ? invoiceList(q) : page(invoices, q) } },
+    invoices: { list: async (q) => { invoiceCalls++; invoiceQueries.push(q); return invoiceList ? invoiceList(q) : page(invoices, q) } },
+    refunds: { list: async (q) => { refundCalls++; refundQueries.push(q); return refundList ? refundList(q) : page(refunds, q) } },
+    charges: { retrieve: async (id) => charges[id] },
+    paymentIntents: { retrieve: async (id) => paymentIntents[id] },
     webhookEndpoints: { list: async (q) => { webhookCalls++; return webhookList ? webhookList(q) : page(endpoints, q) } } }
   const module = load('src/lib/billing-audit.ts', {
     '@/lib/stripe': { stripe, ACTIVE_LIKE_STATUSES: new Set(['active','trialing','past_due']),
@@ -35,7 +41,8 @@ function fixture({ subs, invoices, subList, invoiceList, endpoints = [], webhook
     } },
     '@/lib/billing-manual-grants': { getManualGrantEmails: async () => new Set(manualGrants) },
   })
-  return { module, get subscriptionCalls() { return subscriptionCalls }, get invoiceCalls() { return invoiceCalls }, get webhookCalls() { return webhookCalls } }
+  return { module, invoiceQueries, refundQueries, get subscriptionCalls() { return subscriptionCalls },
+    get invoiceCalls() { return invoiceCalls }, get refundCalls() { return refundCalls }, get webhookCalls() { return webhookCalls } }
 }
 
 ;(async () => {
@@ -50,7 +57,70 @@ function fixture({ subs, invoices, subList, invoiceList, endpoints = [], webhook
     assert.equal(report.paidCount, 1); assert.equal(report.paidTotal, 9980); assert.equal(report.netTotal, 9980)
     assert.equal(report.activeCount, 1); assert.equal(report.newSubscriptions, 1)
     assert.equal(f.subscriptionCalls, 21); assert.equal(f.invoiceCalls, 21)
+    assert.equal(f.refundCalls, 1)
+    assert.equal(f.invoiceQueries[0].status, 'paid')
     assert.equal(f.module.formatMonthlyRevenueMessage(report).includes('毎月 ¥9,980 の見込み'), false)
+  })
+  await check('monthly revenue uses paid date across invoice creation months and JST boundaries', async () => {
+    const sepStart = Math.floor(Date.parse('2026-08-31T15:00:00Z') / 1000)
+    const octStart = Math.floor(Date.parse('2026-09-30T15:00:00Z') / 1000)
+    const late = invoice('late', 'doya', 3000); late.created = sepStart - 86400; late.status_transitions.paid_at = sepStart
+    const onTime = invoice('on-time', 'doya', 4000); onTime.created = sepStart + 1; onTime.status_transitions.paid_at = octStart - 1
+    const nextMonth = invoice('next-month', 'doya', 5000); nextMonth.created = sepStart + 2; nextMonth.status_transitions.paid_at = octStart
+    const previousMonth = invoice('previous-month', 'doya', 6000); previousMonth.created = sepStart - 86401; previousMonth.status_transitions.paid_at = sepStart - 1
+    const rows = [late, onTime, nextMonth, previousMonth]
+    const f = fixture({ subs: [subscription('doya', 'doya-ai')], invoices: [],
+      invoiceList: async (query) => ({ data: rows.filter((row) =>
+        row.created < query.created.lt && (query.created.gte === undefined || row.created >= query.created.gte)), has_more: false }) })
+    const report = await f.module.runMonthlyRevenue(now)
+    assert.equal(report.paidCount, 2)
+    assert.equal(report.paidTotal, 7000)
+    assert.equal(report.netTotal, 7000)
+    assert.equal(f.invoiceQueries[0].created.gte, undefined)
+  })
+  await check('paid Doya invoice without payment timestamp stops the monthly report', async () => {
+    const missing = invoice('missing-paid-at', 'doya', 9980)
+    missing.status_transitions.paid_at = null
+    const f = fixture({ subs: [subscription('doya', 'doya-ai')], invoices: [missing] })
+    await assert.rejects(f.module.runMonthlyRevenue(now), /payment timestamp/i)
+  })
+  await check('monthly revenue subtracts successful refunds in their own month, not invoice credit-note totals', async () => {
+    const oldInvoice = invoice('old-invoice', 'doya', 5000)
+    oldInvoice.created = Math.floor(Date.parse('2026-08-01T00:00:00Z') / 1000)
+    oldInvoice.status_transitions.paid_at = oldInvoice.created + 30
+    oldInvoice.post_payment_credit_notes_amount = 2000 // 残高クレジット等は現金返金ではない
+    const currentInvoice = invoice('current-invoice', 'doya', 4000)
+    const refunds = [
+      { id: 'old-refund', amount: 1200, currency: 'jpy', status: 'succeeded', charge: { invoice: oldInvoice.id } },
+      { id: 'pending-refund', amount: 500, currency: 'jpy', status: 'pending', charge: { invoice: currentInvoice.id } },
+      { id: 'foreign-refund', amount: 3000, currency: 'jpy', status: 'succeeded', charge: { invoice: 'foreign-invoice' } },
+      { id: 'non-invoice-refund', amount: 900, currency: 'jpy', status: 'succeeded', charge: { invoice: null } },
+      { id: 'other-currency', amount: 200, currency: 'usd', status: 'succeeded', charge: { invoice: currentInvoice.id } },
+    ]
+    const f = fixture({ subs: [subscription('doya', 'doya-ai')], invoices: [oldInvoice, currentInvoice], refunds })
+    const report = await f.module.runMonthlyRevenue(now)
+    assert.equal(report.paidCount, 1)
+    assert.equal(report.paidTotal, 4000)
+    assert.equal(report.refundTotal, 1200)
+    assert.equal(report.netTotal, 2800)
+    assert.equal(report.pendingRefundCount, 1)
+    assert.equal(report.pendingRefundTotal, 500)
+    assert.equal(f.refundQueries[0].created.gte, Math.floor(Date.parse('2026-08-31T15:00:00Z') / 1000))
+    assert.equal(f.refundQueries[0].created.lt, Math.floor(Date.parse('2026-09-30T15:00:00Z') / 1000))
+    assert(f.module.formatMonthlyRevenueMessage(report).includes('処理中の返金 1件'))
+  })
+  await check('monthly refunds resolve invoice from a referenced charge or payment intent', async () => {
+    const refunds = [
+      { id: 'charge-refund', amount: 100, currency: 'jpy', status: 'succeeded', charge: 'ch_1', payment_intent: null },
+      { id: 'intent-refund', amount: 200, currency: 'jpy', status: 'succeeded', charge: { invoice: null }, payment_intent: 'pi_1' },
+    ]
+    const f = fixture({ subs: [subscription('doya', 'doya-ai')], invoices: [invoice('doya-invoice', 'doya', 9980)], refunds,
+      charges: { ch_1: { invoice: 'doya-invoice' } }, paymentIntents: { pi_1: { invoice: 'doya-invoice' } } })
+    assert.equal((await f.module.runMonthlyRevenue(now)).refundTotal, 300)
+  })
+  await check('monthly refund repeated cursor fails instead of publishing partial totals', async () => {
+    const f = fixture({ subs: [], invoices: [], refundList: async () => ({ data: [{ id: 'same', currency: 'usd' }], has_more: true }) })
+    await assert.rejects(f.module.runMonthlyRevenue(now), /refund pagination did not advance/)
   })
   await check('monthly invoice repeated cursor fails instead of publishing partial totals', async () => {
     const f = fixture({ subs: [], invoices: [], invoiceList: async () => ({ data: [invoice('same', 'doya', 9980)], has_more: true }) })

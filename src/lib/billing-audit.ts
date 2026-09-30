@@ -481,6 +481,8 @@ export type MonthlyRevenue = {
   paidCount: number
   paidTotal: number
   refundTotal: number
+  pendingRefundCount: number
+  pendingRefundTotal: number
   netTotal: number
   newSubscriptions: number
   canceled: number
@@ -504,33 +506,85 @@ function jstMonthRange(now = new Date()): { since: Date; until: Date; label: str
 
 export async function runMonthlyRevenue(now = new Date()): Promise<MonthlyRevenue> {
   const { since, until, label } = jstMonthRange(now)
+  const sinceSeconds = Math.floor(since.getTime() / 1000)
+  const untilSeconds = Math.floor(until.getTime() / 1000)
 
-  // 前月に発行され、実際に入金された請求書を集める
-  const invoices: any[] = []
+  // Stripeアカウントは他アプリと共有。請求書を集計する前にDoya契約を確定する。
+  const all = (await listAllSubscriptions()).filter((s) => isDoyaSubscription(s))
+  const doyaSubscriptionIds = new Set(all.map((s) => s.id))
+
+  // 請求書の作成月と入金月は異なりうる。前月より前に作成された請求書も
+  // paid_at が前月に入っていれば計上するため、履歴を最後までページングする。
+  const paid: any[] = []
+  const doyaInvoiceIds = new Set<string>()
   let startingAfter: string | undefined
   const cursors = new Set<string>()
   while (true) {
     const res: any = await stripe.invoices.list({
-      created: { gte: Math.floor(since.getTime() / 1000), lt: Math.floor(until.getTime() / 1000) },
+      status: 'paid',
+      created: { lt: untilSeconds },
       limit: 100,
       ...(startingAfter ? { starting_after: startingAfter } : {}),
     })
-    invoices.push(...res.data)
+    for (const invoice of res.data) {
+      const subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : invoice.subscription?.id
+      if (!subscriptionId || !doyaSubscriptionIds.has(subscriptionId) || invoice.status !== 'paid' || (invoice.amount_paid || 0) <= 0) continue
+      const paidAt = invoice.status_transitions?.paid_at
+      if (!Number.isSafeInteger(paidAt) || paidAt <= 0) throw new Error(`Monthly invoice payment timestamp is missing: ${invoice.id}`)
+      if (invoice.currency !== 'jpy') throw new Error(`Monthly invoice currency is not JPY: ${invoice.id}`)
+      doyaInvoiceIds.add(invoice.id)
+      if (paidAt >= sinceSeconds && paidAt < untilSeconds) paid.push(invoice)
+    }
     if (!res.has_more) break
     const next = res.data[res.data.length - 1]?.id
     if (!next || cursors.has(next)) throw new Error('Monthly invoice pagination did not advance')
     cursors.add(next)
     startingAfter = next
   }
-  // Stripeアカウントは他アプリと共有。月次売上もドヤAIの契約に紐づく請求書だけ数える。
-  const all = (await listAllSubscriptions()).filter((s) => isDoyaSubscription(s))
-  const doyaSubscriptionIds = new Set(all.map((s) => s.id))
-  const paid = invoices.filter((i) => {
-    const subscriptionId = typeof i.subscription === 'string' ? i.subscription : i.subscription?.id
-    return subscriptionId && doyaSubscriptionIds.has(subscriptionId) && i.status === 'paid' && (i.amount_paid || 0) > 0
-  })
   const paidTotal = paid.reduce((sum, i) => sum + (i.amount_paid || 0), 0)
-  const refundTotal = paid.reduce((sum, i) => sum + (i.post_payment_credit_notes_amount || 0), 0)
+
+  // 請求書の post_payment_credit_notes_amount は累計であり、残高クレジットや
+  // Stripe外の調整も含む。返金作成月の Refund を請求書へ紐付けて別途集計する。
+  let refundTotal = 0
+  let pendingRefundCount = 0
+  let pendingRefundTotal = 0
+  startingAfter = undefined
+  cursors.clear()
+  while (true) {
+    const res: any = await stripe.refunds.list({
+      created: { gte: sinceSeconds, lt: untilSeconds },
+      limit: 100,
+      expand: ['data.charge', 'data.payment_intent'],
+      ...(startingAfter ? { starting_after: startingAfter } : {}),
+    })
+    for (const refund of res.data) {
+      if (refund.currency !== 'jpy') continue
+      let charge = refund.charge
+      if (typeof charge === 'string') charge = await stripe.charges.retrieve(charge)
+      let paymentIntent = refund.payment_intent
+      if (!charge?.invoice && typeof paymentIntent === 'string') paymentIntent = await stripe.paymentIntents.retrieve(paymentIntent)
+      const invoice = charge?.invoice || paymentIntent?.invoice
+      const invoiceId = typeof invoice === 'string' ? invoice : invoice?.id
+      if (!invoiceId) {
+        if (!charge && !paymentIntent) throw new Error(`Monthly refund invoice cannot be resolved: ${refund.id}`)
+        continue // 共有Stripeアカウントの請求書を持たない決済
+      }
+      if (!doyaInvoiceIds.has(invoiceId)) continue
+      if (!Number.isSafeInteger(refund.amount) || refund.amount <= 0) throw new Error(`Monthly refund amount is invalid: ${refund.id}`)
+      if (refund.status === 'succeeded') refundTotal += refund.amount
+      else if (refund.status === 'pending' || refund.status === 'requires_action') {
+        pendingRefundCount++
+        pendingRefundTotal += refund.amount
+      } else if (refund.status !== 'failed' && refund.status !== 'canceled') {
+        throw new Error(`Monthly refund status is unknown: ${refund.id}`)
+      }
+    }
+    if (!res.has_more) break
+    const next = res.data[res.data.length - 1]?.id
+    if (!next || cursors.has(next)) throw new Error('Monthly refund pagination did not advance')
+    cursors.add(next)
+    startingAfter = next
+  }
 
   // 契約の現況
   const live = all.filter((s) => ACTIVE_LIKE_STATUSES.has(String(s.status)))
@@ -558,6 +612,8 @@ export async function runMonthlyRevenue(now = new Date()): Promise<MonthlyRevenu
     paidCount: paid.length,
     paidTotal,
     refundTotal,
+    pendingRefundCount,
+    pendingRefundTotal,
     netTotal: paidTotal - refundTotal,
     newSubscriptions,
     canceled,
@@ -574,6 +630,7 @@ export function formatMonthlyRevenueMessage(r: MonthlyRevenue): string {
   lines.push(`*${r.label}の売上: ${yen(r.netTotal)}*`)
   lines.push(`・入金 ${r.paidCount}件 ｜ 合計 ${yen(r.paidTotal)}`)
   if (r.refundTotal > 0) lines.push(`・返金 -${yen(r.refundTotal)}`)
+  if (r.pendingRefundCount > 0) lines.push(`・処理中の返金 ${r.pendingRefundCount}件 ｜ ${yen(r.pendingRefundTotal)}（上記の売上から未控除）`)
   lines.push('')
   lines.push(`*契約の現況*`)
   lines.push(`・課金中: ${r.activeCount}件`)
