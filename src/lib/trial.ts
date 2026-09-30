@@ -26,18 +26,28 @@ export async function isTrialEligible(params: {
   stripeCustomerId?: string | null
 }): Promise<boolean> {
   const customerIds = new Set<string>()
-  if (params.stripeCustomerId) customerIds.add(params.stripeCustomerId)
+  const expectedEmail = params.email?.trim().toLowerCase() || ''
   if (params.email) {
     let cursor: string | undefined
     const seen = new Set<string>()
     while (true) {
       const customers = await stripe.customers.list({ email: params.email, limit: 100, ...(cursor ? { starting_after: cursor } : {}) })
-      for (const c of customers.data) customerIds.add(c.id)
+      for (const c of customers.data) {
+        if (c.email?.trim().toLowerCase() === expectedEmail) customerIds.add(c.id)
+      }
       if (!customers.has_more) break
       const next = customers.data[customers.data.length - 1]?.id
       if (!next || seen.has(next)) throw new Error('Trial customer pagination did not advance')
       seen.add(next)
       cursor = next
+    }
+  }
+  if (params.stripeCustomerId && !customerIds.has(params.stripeCustomerId)) {
+    // DBに保存されたIDだけでは本人の顧客と確定できない。別人の履歴で無料対象外にしない。
+    if (!expectedEmail) throw new Error('Trial customer email is required')
+    const stored = await stripe.customers.retrieve(params.stripeCustomerId)
+    if (!stored.deleted && stored.email?.trim().toLowerCase() === expectedEmail) {
+      customerIds.add(stored.id)
     }
   }
   for (const cid of customerIds) {
