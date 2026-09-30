@@ -19,6 +19,11 @@ for(const routePath of ['portal','portal/redirect'])for(const outcome of ['missi
  const url='https://doya.example/api/stripe/'+routePath+'?returnTo=%2Fpersona';const response=await api.GET({url,nextUrl:new URL(url)});
  assert.equal(response.status,302);const location=new URL(response.headers.get('location'));assert.equal(location.pathname,'/billing/portal-unavailable');assert.equal(location.searchParams.get('reason'),outcome);assert.equal(location.searchParams.get('returnTo'),'/persona');assert.equal(opened,0);
 });
+for(const routePath of ['portal','portal/redirect'])await check(routePath+' login returns to the requested billing flow',async()=>{
+ const api=load(`src/app/api/stripe/${routePath}/route.ts`,{'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>null},'@/lib/auth':{},'@/lib/prisma':{prisma:{user:{findUnique:async()=>{throw Error('unexpected DB read')}}}},'@/lib/stripe':{}});
+ const url='https://doya.example/api/stripe/'+routePath+'?returnTo=%2Fpersona';const response=await api.GET({url,nextUrl:new URL(url)});
+ assert.equal(response.status,302);const location=new URL(response.headers.get('location'));assert.equal(location.pathname,'/auth/signin');assert.equal(location.searchParams.get('callbackUrl'),`/api/stripe/${routePath}?returnTo=%2Fpersona`);
+});
 await check('repeating cursor rejected instead of infinite loop',async()=>{const f=fixture({repeat:true});await assert.rejects(f.module.findActiveLikeSubscriptions({email:'x@example.invalid'}));assert.equal(f.calls.length,2)});
 for(const outcome of ['failure','existing','none'])await check('checkout gate '+outcome,async()=>{
  const f=fixture();let created=0;const api=load('src/app/api/stripe/checkout/route.ts',{'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{email:'x@example.invalid'}})},'@/lib/auth':{},'@/lib/prisma':{prisma:{user:{findUnique:async()=>({id:'user'})}}},'@/lib/unified-plan':{UNIFIED_TRIAL_DAYS:30},'@/lib/trial':{isTrialEligible:async()=>true},'@/lib/stripe':{...f.module,findActiveLikeSubscriptions:async()=>{if(outcome==='failure')throw Error('offline');return outcome==='none'?[]:[{id:'s',status:'active'}]},createCheckoutSession:async()=>{created++;return{id:'session',url:'https://offline.invalid/checkout'}}}});

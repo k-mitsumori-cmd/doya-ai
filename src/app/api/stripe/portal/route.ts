@@ -27,15 +27,21 @@ function portalFailureUrl(request: NextRequest, reason: 'missing' | 'error'): UR
   return url
 }
 
+function portalSignInUrl(request: NextRequest): URL {
+  const returnTo = safeReturnPath(request.nextUrl.searchParams.get('returnTo'))
+  const callbackUrl = `/api/stripe/portal?returnTo=${encodeURIComponent(returnTo)}`
+  const url = new URL('/auth/signin', request.url)
+  url.searchParams.set('callbackUrl', callbackUrl)
+  return url
+}
+
 // GET /api/stripe/portal?returnTo=/banner/dashboard/plan
 // 互換用（リンク遷移で確実に開きたいケース向け）
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user?.email) {
-      return NextResponse.redirect(
-        new URL(`/auth/signin?callbackUrl=${encodeURIComponent('/banner/dashboard/plan')}`, request.url)
-      )
+      return NextResponse.redirect(portalSignInUrl(request))
     }
 
     const user = await prisma.user.findUnique({
