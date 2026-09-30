@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const bannerMaintenanceBatch = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-maintenance-batch.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (bannerMaintenanceBatch.error || bannerMaintenanceBatch.status !== 0) {
+  console.error('Security regression failed: verify-banner-maintenance-batch.cjs');
+  process.exit(1);
+}
 const adminTemplateErrors = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-template-errors.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (adminTemplateErrors.error || adminTemplateErrors.status !== 0) {
   console.error('Security regression failed: verify-admin-template-errors.cjs');

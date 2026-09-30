@@ -75,7 +75,7 @@ export async function GET(request: Request) {
     })
   } catch (err: any) {
     console.error('[Cleanup Non-Nano] Error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: 'テンプレートの整理に失敗しました' }, { status: 500 })
   }
 }
 
@@ -128,6 +128,6 @@ export async function DELETE(request: Request) {
     })
   } catch (err: any) {
     console.error('[Cleanup Non-Nano] Error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    return NextResponse.json({ error: 'テンプレートの取得に失敗しました' }, { status: 500 })
   }
 }

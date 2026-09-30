@@ -6,6 +6,7 @@ import { BANNER_PROMPTS_V2, BannerPromptV2 } from '@/lib/banner-prompts-v2'
 export const runtime = 'nodejs'
 export const maxDuration = 300 // 5分
 export const dynamic = 'force-dynamic'
+const MAX_BATCH_SIZE = 5
 
 /**
  * 高品質バナー画像生成API（V2）
@@ -21,8 +22,15 @@ export async function POST(request: NextRequest) {
   if (denied) return denied
 
   try {
-    const body = await request.json()
+    const body = await request.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'リクエスト形式が不正です' }, { status: 400 })
+    }
     const { promptIds, batchSize = 5 } = body
+    if (!Number.isInteger(batchSize) || batchSize < 1 || batchSize > MAX_BATCH_SIZE ||
+        (promptIds !== undefined && (!Array.isArray(promptIds) || promptIds.length > MAX_BATCH_SIZE || !promptIds.every(id => typeof id === 'string')))) {
+      return NextResponse.json({ error: '生成件数は1〜5件で指定してください' }, { status: 400 })
+    }
 
     // DBから既に生成済みのテンプレートIDを取得
     const existingTemplates = await prisma.bannerTemplate.findMany({
@@ -127,12 +135,12 @@ export async function POST(request: NextRequest) {
         // レート制限対策（3秒待機）
         await new Promise(resolve => setTimeout(resolve, 3000))
         
-      } catch (err: any) {
-        console.error(`[Generate V2] Error for ${prompt.id}:`, err.message)
+      } catch (err) {
+        console.error(`[Generate V2] Error for ${prompt.id}:`, err)
         errors.push({
           id: prompt.id,
           name: prompt.name,
-          error: err.message,
+          error: '画像生成または保存に失敗しました',
         })
       }
     }
@@ -146,10 +154,10 @@ export async function POST(request: NextRequest) {
       totalPrompts: BANNER_PROMPTS_V2.length,
     })
     
-  } catch (err: any) {
+  } catch (err) {
     console.error('[Generate V2] Error:', err)
     return NextResponse.json(
-      { error: err.message || '生成に失敗しました' },
+      { error: '生成に失敗しました' },
       { status: 500 }
     )
   }
@@ -206,10 +214,10 @@ export async function GET(request: NextRequest) {
       promptStatus,
     })
     
-  } catch (err: any) {
+  } catch (err) {
     console.error('[Generate V2] Status error:', err)
     return NextResponse.json(
-      { error: err.message || 'ステータス取得に失敗しました' },
+      { error: 'ステータス取得に失敗しました' },
       { status: 500 }
     )
   }

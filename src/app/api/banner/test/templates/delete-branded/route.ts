@@ -87,7 +87,7 @@ export async function DELETE(request: Request) {
   } catch (error) {
     console.error('[DELETE /api/banner/test/templates/delete-branded] Error:', error)
     return NextResponse.json(
-      { error: 'テンプレートの削除に失敗しました', details: String(error) },
+      { error: 'テンプレートの削除に失敗しました' },
       { status: 500 }
     )
   }
@@ -124,7 +124,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('[GET /api/banner/test/templates/delete-branded] Error:', error)
     return NextResponse.json(
-      { error: '確認に失敗しました', details: String(error) },
+      { error: '確認に失敗しました' },
       { status: 500 }
     )
   }

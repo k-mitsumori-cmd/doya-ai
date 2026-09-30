@@ -997,22 +997,28 @@ export async function GET(request: NextRequest) {
 
 // POST: テンプレートのバナーを生成（初期データ生成用）
 export async function POST(request: NextRequest) {
-  // ⚠️ 有料の画像生成を回すAPI。generateAll:true で200件超を一気に生成するため、
-  //    認証が無いと外部から費用を垂れ流せる。兄弟ルート（add/bootstrap/cleanup等）は
-  //    2026-08-22 に塞いだが、この親ルートのPOSTだけ取り残されていた。
+  // 有料の画像生成を回す保守API。管理者認証と1リクエスト5件の上限を課す。
   const denied = requireBannerAdmin(request)
   if (denied) return denied
 
   try {
+    const body = await request.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'リクエスト形式が不正です' }, { status: 400 })
+    }
+    const { templateIds, generateAll = false } = body
+    if (generateAll !== false || !Array.isArray(templateIds) || templateIds.length < 1 ||
+        templateIds.length > 5 || !templateIds.every((id: unknown) => typeof id === 'string')) {
+      return NextResponse.json({ error: 'テンプレートIDを1〜5件指定してください' }, { status: 400 })
+    }
+
+    const templatesToGenerate = BANNER_TEMPLATE_PROMPTS.filter((t) => templateIds.includes(t.id))
+    if (templatesToGenerate.length === 0) {
+      return NextResponse.json({ error: '生成対象のテンプレートがありません' }, { status: 400 })
+    }
+
     // 動的インポート（sharpの初期化エラーを回避）
     const { generateBanners } = await import('@/lib/nanobanner')
-    
-    const body = await request.json()
-    const { templateIds, generateAll = false } = body
-
-    const templatesToGenerate = generateAll
-      ? [...BANNER_TEMPLATE_PROMPTS, ...generateMoreVariations()]
-      : BANNER_TEMPLATE_PROMPTS.filter((t) => templateIds?.includes(t.id))
 
     const results = []
 
@@ -1051,8 +1057,8 @@ export async function POST(request: NextRequest) {
       generated: results,
       count: results.length,
     })
-  } catch (err: any) {
+  } catch (err) {
     console.error('Generate templates error:', err)
-    return NextResponse.json({ error: err.message || '生成に失敗しました' }, { status: 500 })
+    return NextResponse.json({ error: '生成に失敗しました' }, { status: 500 })
   }
 }

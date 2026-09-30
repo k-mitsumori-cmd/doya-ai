@@ -15,7 +15,10 @@ export async function POST(request: NextRequest) {
   if (denied) return denied
 
   try {
-    const body = await request.json()
+    const body = await request.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: 'リクエスト形式が不正です' }, { status: 400 })
+    }
     const { 
       generateAll = false, 
       templateIds = [],
@@ -23,13 +26,17 @@ export async function POST(request: NextRequest) {
       setFirstAsFeatured = true, // 最初のテンプレートをfeaturedに設定
     } = body
 
+    if (generateAll !== false || !Array.isArray(templateIds) || templateIds.length < 1 ||
+        templateIds.length > 5 || !templateIds.every((id: unknown) => typeof id === 'string') ||
+        typeof skipExisting !== 'boolean' || typeof setFirstAsFeatured !== 'boolean') {
+      return NextResponse.json({ error: 'テンプレートIDを1〜5件指定してください' }, { status: 400 })
+    }
+
     // 全テンプレートを取得
     const allTemplates = [...BANNER_TEMPLATE_PROMPTS, ...generateMoreVariations()]
     
     // 生成対象を決定
-    const templatesToGenerate = generateAll
-      ? allTemplates
-      : allTemplates.filter((t) => templateIds.includes(t.id))
+    const templatesToGenerate = allTemplates.filter((t) => templateIds.includes(t.id))
 
     if (templatesToGenerate.length === 0) {
       return NextResponse.json({ error: '生成対象のテンプレートがありません' }, { status: 400 })
@@ -119,11 +126,11 @@ export async function POST(request: NextRequest) {
           console.log(`[Bootstrap] 待機中... (${i + 1}/${templatesToGenerate.length}完了)`)
           await new Promise((resolve) => setTimeout(resolve, 10000)) // 10秒待機に短縮
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error(`[Bootstrap] エラー (${template.id}):`, err)
         errors.push({
           templateId: template.id,
-          error: err.message || '生成に失敗しました',
+          error: '生成または保存に失敗しました',
         })
       }
     }
@@ -136,10 +143,10 @@ export async function POST(request: NextRequest) {
       results,
       errors: errors.length > 0 ? errors : undefined,
     })
-  } catch (err: any) {
+  } catch (err) {
     console.error('[Bootstrap] エラー:', err)
     return NextResponse.json(
-      { error: err.message || '一括生成に失敗しました' },
+      { error: '一括生成に失敗しました' },
       { status: 500 }
     )
   }

@@ -46,10 +46,7 @@ export async function DELETE(request: NextRequest) {
   } catch (err: any) {
     console.error('[Cleanup API] Error:', err)
     return NextResponse.json(
-      {
-        error: err.message || 'クリーンアップに失敗しました',
-        details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-      },
+      { error: 'クリーンアップに失敗しました' },
       { status: 500 }
     )
   }
@@ -81,10 +78,7 @@ export async function GET(request: NextRequest) {
   } catch (err: any) {
     console.error('[Cleanup API] Error:', err)
     return NextResponse.json(
-      {
-        error: err.message || '取得に失敗しました',
-        details: process.env.NODE_ENV === 'development' ? err.stack : undefined,
-      },
+      { error: '取得に失敗しました' },
       { status: 500 }
     )
   }
