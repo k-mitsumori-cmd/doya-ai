@@ -505,6 +505,21 @@ if (doyalistApproachQuota.error || doyalistApproachQuota.status !== 0) {
   console.error('Security regression failed: verify-doyalist-approach-quota.cjs');
   process.exit(1);
 }
+const adminUserExport = spawnSync(process.execPath, [path.join(__dirname, 'verify-admin-user-export-csv.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (adminUserExport.error || adminUserExport.status !== 0) {
+  console.error('Security regression failed: verify-admin-user-export-csv.cjs');
+  process.exit(1);
+}
+const doyalistWorksheet = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyalist-worksheet.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyalistWorksheet.error || doyalistWorksheet.status !== 0) {
+  console.error('Security regression failed: verify-doyalist-worksheet.cjs');
+  process.exit(1);
+}
+const kintaiExport = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-export.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiExport.error || kintaiExport.status !== 0) {
+  console.error('Security regression failed: verify-kintai-export.cjs');
+  process.exit(1);
+}
 const doyalistHelperInput = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyalist-helper-input.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (doyalistHelperInput.error || doyalistHelperInput.status !== 0) {
   console.error('Security regression failed: verify-doyalist-helper-input.cjs');

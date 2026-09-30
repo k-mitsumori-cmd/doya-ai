@@ -11,7 +11,7 @@ const projects = [{ id: 'archive', name: 'Archive', status: 'archived' }, { id: 
 let owner = 'owner', failData = false
 const prisma = {
   doyalistProject: { findMany: async q => { assert.equal(q.where.userId, 'owner'); assert.equal(q.where.status, undefined); return projects } },
-  doyalistCompany: { findMany: async q => { if (failData) throw Error('synthetic DB failure'); return q.where.projectId === 'archive' ? [{ name: '=formula', createdAt: new Date('2026-09-23'), enrichedData: {} }] : [] } },
+  doyalistCompany: { findMany: async q => { if (failData) throw Error('synthetic DB failure'); return q.where.projectId === 'archive' ? [{ name: '=formula', createdAt: new Date('2026-09-23'), enrichedData: {} }, { name: ' \t=hidden', createdAt: new Date('2026-09-23'), enrichedData: {} }] : [] } },
   doyalistApproach: { findMany: async () => [] },
 }
 const route = load('src/app/api/doyalist/export-all/route.ts', {
@@ -33,6 +33,7 @@ const route = load('src/app/api/doyalist/export-all/route.ts', {
     const archive = await zip.file(names.find(name => name.includes('archive'))).async('string')
     const empty = await zip.file(names.find(name => name.includes('empty'))).async('string')
     assert(archive.includes("'=formula"))
+    assert(archive.includes("' \t=hidden"))
     assert(empty.includes('企業一覧'))
   })
   await check('unauthenticated export rejected before data access', async () => {

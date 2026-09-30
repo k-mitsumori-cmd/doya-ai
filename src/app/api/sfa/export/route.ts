@@ -9,7 +9,7 @@ import { getSfaContext, orgSlugFrom } from '@/lib/sfa/access'
 function csvCell(v: unknown): string {
   const s = v == null ? '' : typeof v === 'bigint' ? String(v) : String(v)
   // CSVインジェクション対策（先頭の = + - @ をエスケープ）＋ダブルクオート
-  const safe = /^[=+\-@]/.test(s) ? `'${s}` : s
+  const safe = /^[\s\u0000-\u001f\uFEFF]*[=+\-@]/.test(s) ? `'${s}` : s
   return `"${safe.replace(/"/g, '""')}"`
 }
 const BATCH_SIZE = 500

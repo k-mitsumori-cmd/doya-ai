@@ -11,11 +11,23 @@ import { buildDoyalistCsv } from '@/lib/doyalist/export-csv'
 function xmlEscape(value: any): string {
   if (value === null || value === undefined) return ''
   return String(value)
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;')
+}
+
+function worksheetName(projectName: string): string {
+  const cleaned = String(projectName || '').replace(/[\/\\?*:\[\]\u0000-\u001F]/g, '_')
+    .trim().replace(/^'+|'+$/g, '').trim() || 'プロジェクト'
+  let prefix = ''
+  for (const character of cleaned) {
+    if (prefix.length + character.length > 28) break
+    prefix += character
+  }
+  return `${prefix}_企業`
 }
 
 function buildXlsXml(
@@ -102,7 +114,7 @@ function buildXlsXml(
 <?mso-application progid="Excel.Sheet"?>
 <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
- <Worksheet ss:Name="${xmlEscape(project.name)}_企業">
+ <Worksheet ss:Name="${xmlEscape(worksheetName(project.name))}">
   <Table>
    ${header(companyHeaders)}
    ${companyRows}

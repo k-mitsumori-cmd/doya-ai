@@ -42,7 +42,10 @@ export async function GET(req: NextRequest) {
     let year: number
     let month: number
 
-    if (monthParam && /^\d{4}-\d{2}$/.test(monthParam)) {
+    if (monthParam !== null && !/^[1-9]\d{3}-(0[1-9]|1[0-2])$/.test(monthParam)) {
+      return NextResponse.json({ error: '対象年月が正しくありません' }, { status: 400 })
+    }
+    if (monthParam) {
       const [y, m] = monthParam.split('-').map(Number)
       year = y
       month = m

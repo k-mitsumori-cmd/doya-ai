@@ -131,12 +131,9 @@ export async function GET(request: NextRequest) {
     const csvContent = BOM + [
       headers.join(','),
       ...rows.map(row => row.map(cell => {
-        // カンマや改行を含む場合はダブルクォートで囲む
-        const cellStr = String(cell)
-        if (cellStr.includes(',') || cellStr.includes('\n') || cellStr.includes('"')) {
-          return `"${cellStr.replace(/"/g, '""')}"`
-        }
-        return cellStr
+        const value = String(cell)
+        const guarded = /^[\s\u0000-\u001f\uFEFF]*[=+\-@]/.test(value) ? `'${value}` : value
+        return `"${guarded.replace(/"/g, '""')}"`
       }).join(','))
     ].join('\n')
 
@@ -151,5 +148,4 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'エクスポートに失敗しました' }, { status: 500 })
   }
 }
-
 

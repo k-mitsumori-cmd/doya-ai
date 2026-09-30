@@ -6,6 +6,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 
+function csvCell(value: string): string {
+  // Quoting alone does not prevent spreadsheet applications from running formulas.
+  const guarded = /^[\s\u0000-\u001f\uFEFF]*[=+\-@]/.test(value) ? `'${value}` : value
+  return `"${guarded.replace(/"/g, '""')}"`
+}
+
+function xmlText(value: string): string {
+  return value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&apos;')
+}
+
 export async function GET(req: NextRequest) {
   try {
     const ctx = await getKintaiContext()
@@ -14,9 +26,19 @@ export async function GET(req: NextRequest) {
     }
 
     const { searchParams } = new URL(req.url)
-    const year = parseInt(searchParams.get('year') || String(new Date().getFullYear()))
-    const month = parseInt(searchParams.get('month') || String(new Date().getMonth() + 1))
+    const jstNow = new Date(Date.now() + 9 * 60 * 60 * 1000)
+    const yearParam = searchParams.get('year')
+    const monthParam = searchParams.get('month')
+    if ((yearParam !== null && !/^[1-9]\d{3}$/.test(yearParam)) ||
+        (monthParam !== null && !/^(0?[1-9]|1[0-2])$/.test(monthParam))) {
+      return NextResponse.json({ error: '対象年月が正しくありません' }, { status: 400 })
+    }
+    const year = yearParam === null ? jstNow.getUTCFullYear() : Number(yearParam)
+    const month = monthParam === null ? jstNow.getUTCMonth() + 1 : Number(monthParam)
     const format = searchParams.get('format') || 'csv' // csv or excel
+    if (format !== 'csv' && format !== 'excel') {
+      return NextResponse.json({ error: '出力形式が正しくありません' }, { status: 400 })
+    }
 
     const jstOffset = 9 * 60 * 60 * 1000
     const monthStart = new Date(Date.UTC(year, month - 1, 1) - jstOffset)
@@ -62,7 +84,7 @@ export async function GET(req: NextRequest) {
         }
       }
 
-      const csvContent = BOM + [header, ...rows].map(r => r.map(c => `"${c}"`).join(',')).join('\n')
+      const csvContent = BOM + [header, ...rows].map(r => r.map(c => csvCell(c)).join(',')).join('\n')
 
       return new NextResponse(csvContent, {
         headers: {
@@ -98,8 +120,8 @@ export async function GET(req: NextRequest) {
         const clockIn = att.clockIn ? new Date(att.clockIn).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour12: false, hour: '2-digit', minute: '2-digit' }) : ''
         const clockOut = att.clockOut ? new Date(att.clockOut).toLocaleTimeString('ja-JP', { timeZone: 'Asia/Tokyo', hour12: false, hour: '2-digit', minute: '2-digit' }) : ''
         xmlRows += `<Row>
-  <Cell><Data ss:Type="String">${emp.name}</Data></Cell>
-  <Cell><Data ss:Type="String">${emp.department?.name || ''}</Data></Cell>
+  <Cell><Data ss:Type="String">${xmlText(emp.name)}</Data></Cell>
+  <Cell><Data ss:Type="String">${xmlText(emp.department?.name || '')}</Data></Cell>
   <Cell><Data ss:Type="String">${date}</Data></Cell>
   <Cell><Data ss:Type="String">${clockIn}</Data></Cell>
   <Cell><Data ss:Type="String">${clockOut}</Data></Cell>
@@ -107,7 +129,7 @@ export async function GET(req: NextRequest) {
   <Cell><Data ss:Type="Number">${att.overtimeMinutes}</Data></Cell>
   <Cell><Data ss:Type="Number">${att.lateMinutes}</Data></Cell>
   <Cell><Data ss:Type="Number">${att.earlyLeaveMinutes}</Data></Cell>
-  <Cell><Data ss:Type="String">${att.status}</Data></Cell>
+  <Cell><Data ss:Type="String">${xmlText(att.status)}</Data></Cell>
 </Row>`
       }
     }

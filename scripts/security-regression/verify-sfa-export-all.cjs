@@ -5,7 +5,7 @@ function fixture(type, count, failure = null) {
   const createdAt = new Date('2026-09-01T00:00:00.000Z');
   const rows = Array.from({ length: count }, (_, index) => ({
     id: String(index).padStart(6, '0'), organizationId: 'org-1', isActive: true, createdAt,
-    name: index === 0 ? '=unsafe' : `record-${index}`,
+    name: index === 0 ? '=unsafe' : index === 1 ? ' \t=unsafe' : `record-${index}`,
     industry: null, prefecture: null, address: null, url: null, corporateNumber: null,
     employeeCount: null, creditRank: null,
     accountId: index === 0 ? 'account-1' : null, stageId: index === 0 ? 'stage-1' : null,
@@ -65,6 +65,7 @@ function fixture(type, count, failure = null) {
     assert.equal(csv.trimEnd().split('\r\n').length, 5002, `${type} exports header plus all 5001 records`);
     assert(!csv.includes('foreign-secret'));
     assert(csv.includes("'=unsafe"), 'Formula-like input remains escaped');
+    assert(csv.includes("' \t=unsafe"), 'Whitespace before a formula is also escaped');
     if (type === 'deals') {
       assert(csv.includes('9007199254740993'), 'Large yen amount stays exact');
       assert(csv.includes('取引先'));

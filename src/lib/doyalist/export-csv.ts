@@ -3,7 +3,7 @@ function csvEscape(value: any): string {
   let s = String(value)
   // CSV式インジェクション対策: =/+/-/@/タブ/改行で始まる値の先頭にシングルクォート付与
   // Excel/LibreOffice等が数式として実行するのを防ぐ
-  if (/^[=+\-@\t\r]/.test(s)) {
+  if (/^[\s\u0000-\u001f\uFEFF]*[=+\-@]/.test(s)) {
     s = "'" + s
   }
   if (/[",\n\r]/.test(s)) {
