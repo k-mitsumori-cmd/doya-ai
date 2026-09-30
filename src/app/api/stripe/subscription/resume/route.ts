@@ -74,9 +74,8 @@ export async function POST(request: NextRequest) {
   } catch (e: any) {
     console.error('Subscription resume error:', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to resume subscription' },
+      { error: '契約の再開を確認できませんでした。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }
 }
-

@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         })
       } catch (e: any) {
         console.error(`[Cancel] 解約に失敗: sub=${s.id}`, e?.message)
-        results.push({ subscriptionId: s.id, error: e?.message || 'failed' })
+        results.push({ subscriptionId: s.id, error: '解約処理に失敗しました' })
       }
     }
 
@@ -173,10 +173,9 @@ export async function POST(request: NextRequest) {
   } catch (e: any) {
     console.error('Subscription cancel error:', e)
     return NextResponse.json(
-      { error: e?.message || 'Failed to cancel subscription' },
+      { error: '解約処理を完了できませんでした。時間をおいて再試行し、解消しない場合はお問い合わせください。' },
       { status: 500 }
     )
   }
 }
-
 

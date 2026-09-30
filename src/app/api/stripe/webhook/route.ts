@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   } catch (err: any) {
     console.error('Webhook signature verification failed:', err.message)
     return NextResponse.json(
-      { error: `Webhook Error: ${err.message}` },
+      { error: 'Webhook signature verification failed' },
       { status: 400 }
     )
   }
@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Webhook handler error:', error)
     return NextResponse.json(
-      { error: error.message },
+      { error: 'Webhook processing failed' },
       { status: 500 }
     )
   }

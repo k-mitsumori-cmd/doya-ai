@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Portal session error:', error)
     return NextResponse.json(
-      { error: error.message || 'ポータルセッションの作成に失敗しました' },
+      { error: 'ポータルセッションの作成に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }

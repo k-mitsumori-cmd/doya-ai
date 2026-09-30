@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (e: any) {
     console.error('Stripe sync error:', e)
-    return NextResponse.json({ error: e?.message || 'Failed to sync subscription' }, { status: 500 })
+    return NextResponse.json({ error: '契約情報を同期できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
 

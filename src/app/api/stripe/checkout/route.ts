@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: error.message || '決済セッションの作成に失敗しました' },
+      { error: '決済セッションの作成に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }
     )
   }
