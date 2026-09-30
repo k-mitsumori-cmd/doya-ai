@@ -1884,7 +1884,7 @@ export const DOYALIST_PRICING: ServicePricing = {
   proLimit: 5000,      // 月5,000社
   enterpriseLimit: -1, // 上限なし
   historyDays: {
-    free: 30,
+    free: -1,
     pro: -1,
   },
   plans: [
@@ -1899,7 +1899,7 @@ export const DOYALIST_PRICING: ServicePricing = {
         { text: 'プロジェクト無制限', included: true },
         { text: '月100社まで収集', included: true },
         { text: '月30アプローチ生成', included: true },
-        { text: 'CSV/Excelエクスポート', included: false },
+        { text: 'CSV/Excelエクスポート', included: true },
         { text: '優先サポート', included: false },
       ],
       cta: '無料で試す',

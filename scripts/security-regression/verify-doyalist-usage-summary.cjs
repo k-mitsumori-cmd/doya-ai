@@ -65,5 +65,10 @@ const { GET } = load('src/app/api/usage/[service]/route.ts', {
   }
   assert.equal(companyQueries, 4)
   assert.equal(subscriptionQueries, 0, 'unrelated subscription ledger cannot represent collected companies')
+  const freeCard = pricing.DOYALIST_PRICING.plans.find((plan) => plan.id === 'doyalist-free')
+  assert.equal(freeCard.features.find((feature) => feature.text === 'CSV/Excelエクスポート')?.included, true,
+    'the authenticated export routes do not require a paid plan')
+  assert.equal(pricing.DOYALIST_PRICING.historyDays.free, -1,
+    'project and approach history APIs do not apply a free-plan date cutoff')
   console.log('PASS Doyalist sidebar, pricing and collection admission agree for all plans and actual monthly company records')
 })().catch((error) => { console.error(error); process.exitCode = 1 })
