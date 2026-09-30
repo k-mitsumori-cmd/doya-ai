@@ -13,6 +13,8 @@ import {
   remaining,
 } from '@/lib/promane/limits'
 
+const privateHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+
 /**
  * GET /api/promane/usage
  * プロマネのプラン・利用状況を返す
@@ -23,7 +25,7 @@ export async function GET() {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
-      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+      return NextResponse.json({ error: 'ログインが必要です' }, { status: 401, headers: privateHeaders })
     }
 
     const [user, limits, projectsUsed, workspacesUsed] = await Promise.all([
@@ -56,12 +58,12 @@ export async function GET() {
         projects: remaining(projectsUsed, limits.maxProjects),
         workspaces: remaining(workspacesUsed, limits.maxWorkspaces),
       },
-    })
+    }, { headers: privateHeaders })
   } catch (e: any) {
     console.error('[promane/usage][GET]', e)
     return NextResponse.json(
       { error: '利用状況の取得に失敗しました' },
-      { status: 500 }
+      { status: 500, headers: privateHeaders }
     )
   }
 }

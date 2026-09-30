@@ -15,6 +15,8 @@ import { getUsageSummary } from '@/lib/usage-summary'
 
 type Ctx = { params: Promise<{ service: string }> }
 
+const privateHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+
 export async function GET(_req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const service = String(p.service || '').trim()
@@ -23,31 +25,31 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     const session = await getServerSession(authOptions)
     const email = session?.user?.email
     const sid = (session?.user as any)?.id as string | undefined
-    if (!sid && !email) return NextResponse.json({ signedIn: false })
+    if (!sid && !email) return NextResponse.json({ signedIn: false }, { headers: privateHeaders })
 
     const user = await prisma.user.findFirst({
       where: sid ? { id: sid } : { email: email as string },
       select: { id: true, plan: true },
     })
-    if (!user) return NextResponse.json({ signedIn: false })
+    if (!user) return NextResponse.json({ signedIn: false }, { headers: privateHeaders })
 
     if (service === 'aio') {
       const aio = await getAioContext(orgSlugFrom(_req))
-      if (!aio) return NextResponse.json({ error: '組織にアクセスできません', summary: null }, { status: 403 })
+      if (!aio) return NextResponse.json({ error: '組織にアクセスできません', summary: null }, { status: 403, headers: privateHeaders })
       const summary = await getAioUsage(aio.organizationId)
-      if (!summary) return NextResponse.json({ error: '組織の契約情報を確認できません', summary: null }, { status: 409 })
-      return NextResponse.json({ signedIn: true, summary }, { headers: { 'Cache-Control': 'private, no-store' } })
+      if (!summary) return NextResponse.json({ error: '組織の契約情報を確認できません', summary: null }, { status: 409, headers: privateHeaders })
+      return NextResponse.json({ signedIn: true, summary }, { headers: privateHeaders })
     }
     const orgSlug = new URL(_req.url).searchParams.get('org')?.trim() || undefined
     const summary = await getUsageSummary(service, user.id, user.plan, orgSlug)
     if (!summary && orgSlug && ['mensetsu', 'aishodan', 'quote', 'shodan'].includes(service)) {
-      return NextResponse.json({ error: '組織にアクセスできません', summary: null }, { status: 403 })
+      return NextResponse.json({ error: '組織にアクセスできません', summary: null }, { status: 403, headers: privateHeaders })
     }
-    if (!summary) return NextResponse.json({ signedIn: true, summary: null })
-    return NextResponse.json({ signedIn: true, summary }, { headers: { 'Cache-Control': 'private, no-store' } })
+    if (!summary) return NextResponse.json({ signedIn: true, summary: null }, { headers: privateHeaders })
+    return NextResponse.json({ signedIn: true, summary }, { headers: privateHeaders })
   } catch (e) {
     console.error('[usage]', service, e instanceof Error ? e.message : e)
     // ⚠️ 表示だけの機能なので、失敗してもサイドバーは壊さない
-    return NextResponse.json({ signedIn: true, summary: null })
+    return NextResponse.json({ signedIn: true, summary: null }, { headers: privateHeaders })
   }
 }

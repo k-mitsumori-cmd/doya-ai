@@ -8,11 +8,13 @@ import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { getOrgPlan, getOrgPlanLimits, hrJstMonthStart } from '@/lib/hr/billing'
 import { HrMemberRole } from '@/lib/hr/types'
 
+const privateHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+
 export async function GET() {
   try {
     const ctx = await getHrContext()
     if (!ctx) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401, headers: privateHeaders })
     }
 
     // 組織オーナーの契約プランを基準に使用量を返す。
@@ -51,8 +53,8 @@ export async function GET() {
       canManageBilling: ctx.role === HrMemberRole.OWNER,
       canManageEmployees: hasMinRole(ctx.role, HrMemberRole.ADMIN),
       hasLinkedEmployee: Boolean(ctx.employeeId),
-    })
+    }, { headers: privateHeaders })
   } catch {
-    return NextResponse.json({ error: '使用状況を取得できませんでした。再読み込みしてください。' }, { status: 503 })
+    return NextResponse.json({ error: '使用状況を取得できませんでした。再読み込みしてください。' }, { status: 503, headers: privateHeaders })
   }
 }

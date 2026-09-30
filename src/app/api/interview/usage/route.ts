@@ -10,13 +10,15 @@ import { normalizePlan } from '@/lib/interview/access'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const privateHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     const user = session?.user as any
 
     if (!user?.id) {
-      return NextResponse.json({ success: false, error: '未認証' }, { status: 401 })
+      return NextResponse.json({ success: false, error: '未認証' }, { status: 401, headers: privateHeaders })
     }
 
     // プラン別の上限分数
@@ -44,12 +46,12 @@ export async function GET() {
       reservedMinutes,
       limitMinutes,
       plan: String(plan).toUpperCase(),
-    })
+    }, { headers: privateHeaders })
   } catch (error) {
     console.error('Usage API error:', error)
     return NextResponse.json(
       { success: false, error: '利用状況の取得に失敗しました' },
-      { status: 500 }
+      { status: 500, headers: privateHeaders }
     )
   }
 }

@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const privateUsageResponses = spawnSync(process.execPath, [path.join(__dirname, 'verify-private-usage-responses.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (privateUsageResponses.error || privateUsageResponses.status !== 0) {
+  console.error('Security regression failed: verify-private-usage-responses.cjs');
+  process.exit(1);
+}
 const shodanLimitGuidance = spawnSync(process.execPath, [path.join(__dirname, 'verify-shodan-limit-guidance.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (shodanLimitGuidance.error || shodanLimitGuidance.status !== 0) {
   console.error('Security regression failed: verify-shodan-limit-guidance.cjs');

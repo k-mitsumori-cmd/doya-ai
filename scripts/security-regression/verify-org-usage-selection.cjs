@@ -81,5 +81,7 @@ const summary = load('src/lib/usage-summary.ts', {
   assert.equal(seen[0][3], 'team-a', 'usage API forwards the selected organization')
   const forbidden = await route.GET(new Request('https://example.test/api/usage/shodan?org=foreign'), { params: Promise.resolve({ service: 'shodan' }) })
   assert.equal(forbidden.status, 403, 'foreign organization cannot fall back to another organization')
+  assert.equal(forbidden.headers.get('cache-control'), 'private, no-store')
+  assert.equal(forbidden.headers.get('vary'), 'Cookie')
   console.log('PASS organization usage: selected org, default org, owner plan, foreign org rejection')
 })().catch((error) => { console.error(error); process.exitCode = 1 })
