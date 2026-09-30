@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { load, check } = require('./load-typescript.cjs')
 
-function fixture(initialUsed = 4, plan = 'FREE') {
+function fixture(initialUsed = 4, ownerPlan = 'FREE', viewerPlan = 'PRO', viewerRole = 'owner') {
   const rows = Array.from({ length: initialUsed }, (_, i) => ({ id: `old-${i}`, status: 'researched' }))
   let chain = Promise.resolve()
   let locks = 0
@@ -21,9 +21,18 @@ function fixture(initialUsed = 4, plan = 'FREE') {
         return row
       },
     },
+    shodanMember: { findFirst: async ({ where }) => {
+      assert.equal(where.organizationId, 'org-1')
+      assert.equal(where.role, 'owner')
+      return { userId: 'owner-1' }
+    } },
+    user: { findUnique: async ({ where }) => {
+      assert.equal(where.id, 'owner-1')
+      return { plan: ownerPlan }
+    } },
   }
   const prisma = {
-    user: { findUnique: async () => ({ plan }) },
+    user: { findUnique: async () => ({ plan: viewerPlan }) },
     $transaction: (fn) => {
       const result = chain.then(() => fn(tx))
       chain = result.catch(() => {})
@@ -35,11 +44,13 @@ function fixture(initialUsed = 4, plan = 'FREE') {
       return row
     } },
   }
+  const organizationPlan = load('src/lib/shodan/organization-plan.ts', { '@/lib/prisma': { prisma } })
   const route = load('src/app/api/shodan/preparations/route.ts', {
     'next/server': { NextResponse: { json: (body, opts = {}) => ({ body, status: opts.status || 200 }) } },
     '@/lib/prisma': { prisma },
-    '@/lib/shodan/access': { getShodanContext: async () => ({ userId: 'user-1', organizationId: 'org-1', memberId: 'member-1' }), orgSlugFrom: () => 'org' },
+    '@/lib/shodan/access': { getShodanContext: async () => ({ userId: 'user-1', organizationId: 'org-1', memberId: 'member-1', role: viewerRole }), orgSlugFrom: () => 'org' },
     '@/lib/shodan/research': { researchCompany: async () => { researchCalls++; return { companyName: 'Example' } } },
+    '@/lib/shodan/organization-plan': organizationPlan,
     '@/lib/shodan/types': { effectivePrepStatus: (status) => status, PREP_STALE_MS: 360000, SHODAN_MONTHLY_LIMIT: { FREE: 5, PRO: 50, ENTERPRISE: 300 } },
     '@/lib/plan-limit': { jstStartOfMonthUtc: () => new Date('2026-08-31T15:00:00Z') },
   })
@@ -58,12 +69,21 @@ function fixture(initialUsed = 4, plan = 'FREE') {
     assert.equal(f.rows.length, 5)
   })
   await check('paid cap does not invite an existing subscriber to subscribe again', async () => {
-    const f = fixture(50, 'PRO')
+    const f = fixture(50, 'PRO', 'FREE')
     const response = await f.post()
     assert.equal(response.status, 402)
     assert.match(response.body.error, /お問い合わせ/)
     assert.doesNotMatch(response.body.error, /プロプランにご登録/)
     assert.equal(response.body.upgradeUrl, undefined)
+    assert.equal(response.body.contactUrl, 'https://doyamarke.surisuta.jp/contact')
     assert.equal(f.researchCalls, 0)
+  })
+  await check('member sees owner guidance rather than a personal checkout', async () => {
+    const f = fixture(5, 'FREE', 'PRO', 'member')
+    const response = await f.post()
+    assert.equal(response.status, 402)
+    assert.match(response.body.error, /組織オーナー/)
+    assert.equal(response.body.upgradeUrl, undefined)
+    assert.equal(response.body.canManageBilling, false)
   })
 })().catch((error) => { console.error(error); process.exitCode = 1 })

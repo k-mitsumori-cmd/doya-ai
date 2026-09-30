@@ -33,6 +33,7 @@ const route = load('src/app/api/shodan/preparations/route.ts', {
   '@/lib/prisma': { prisma },
   '@/lib/shodan/access': { getShodanContext: async () => ({ organizationId: 'own-org' }), orgSlugFrom: () => 'own-org' },
   '@/lib/shodan/research': {},
+  '@/lib/shodan/organization-plan': {},
   '@/lib/shodan/types': { effectivePrepStatus: (status) => status, PREP_STALE_MS: 360000, SHODAN_MONTHLY_LIMIT: { FREE: 5, PRO: 50, ENTERPRISE: 300 } },
   '@/lib/plan-limit': {},
 })
