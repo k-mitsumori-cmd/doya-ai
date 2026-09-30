@@ -18,7 +18,7 @@ import { notifyAlert } from '@/lib/alert'
  * Stripe を直接読むため **Webhook が死んでいても必ず届く**。
  * - その日に有料契約したアカウントを一覧で通知
  * - 課金されているのに DB が FREE の方を検出（＝反映漏れ。2026-08 に2名発生）
- * - 同一メールの重複契約（＝過剰請求）を検出
+ * - 同一利用者の重複契約（顧客メールが分かれた場合も過剰請求を検出）
  * - 有料なのに UserServiceSubscription が揃っていない（障害#5 と同じ状態）を検出
  * - Stripe に契約が無いのに DB が有料のまま（＝過剰付与）を検出
  * - 本番 Webhook エンドポイントの登録・購読イベントを点検
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
     if (audit.duplicates.length > 0) {
       await notifyAlert({
         level: 'critical',
-        title: `同一メールで契約が重複しています（${audit.duplicates.length}件・過剰請求の恐れ）`,
+        title: `同一利用者で契約が重複しています（${audit.duplicates.length}件・過剰請求の恐れ）`,
         detail: audit.duplicates.map((d) => `${d.email}: ${d.subs.map((s) => `${s.id}(${s.status})`).join(' / ')}`).join('\n'),
         dedupKey: 'billing-duplicate-subscription',
         cooldownMs: 12 * 3600_000,
