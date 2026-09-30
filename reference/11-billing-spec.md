@@ -317,10 +317,10 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
 
 | 検出項目 | 条件 | 通知 |
 |---------|------|------|
-| **反映漏れ** | Stripe に生きた契約があるのに DB が `FREE` / ユーザー未登録 | `<!channel>` + `notifyAlert(critical)` |
+| **反映漏れ** | Stripe に生きた契約があるのに DB が `FREE` / `GUEST` / ユーザー未登録。契約の `metadata.userId` を優先し、IDのない旧契約だけ顧客メールで照合する | `<!channel>` + `notifyAlert(critical)` |
 | **サービス別プランのズレ** | `User.plan` は有料なのに `ALL_SERVICE_IDS` の行が揃っていない（値違い or 行が無い＝INV-2 違反） | `<!channel>` + `notifyAlert(critical)`。dedupKey `billing-service-plan-drift`／12時間クールダウンなので1日1通に集約される |
 | **過剰付与** | Stripe に生きた契約が無いのに DB が有料のまま（解約の反映漏れ／手動付与） | Slack レポートのみ（運営の手動付与で誤検知しうるため critical にしない） |
-| **二重契約** | 同一メールに生きた契約が2本以上 | 同上 |
+| **二重契約** | 同一利用者に生きた契約が2本以上。Stripe顧客やメールが分かれていても `metadata.userId` で集約する | 同上 |
 | **Webhook 異常** | 期待URLが未登録 / `enabled` でない / 必須イベント未購読 | 同上（AI修復手順つき） |
 | 新規契約 | 直近24h（月曜は168hも併記） | 通常通知 |
 | 解約 | 直近24hに `ended_at` | 通常通知 |

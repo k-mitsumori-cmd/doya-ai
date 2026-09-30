@@ -15,16 +15,23 @@ function page(rows, query) {
   const data = rows.slice(start, start+100)
   return { data, has_more: start+data.length < rows.length }
 }
-function fixture({ subs, invoices, subList, invoiceList, endpoints = [], webhookList }) {
+function fixture({ subs, invoices, subList, invoiceList, endpoints = [], webhookList, users = [], serviceRows = [] }) {
   let subscriptionCalls = 0, invoiceCalls = 0, webhookCalls = 0
   const stripe = { subscriptions: { list: async (q) => { subscriptionCalls++; return subList ? subList(q) : page(subs, q) } },
     invoices: { list: async (q) => { invoiceCalls++; return invoiceList ? invoiceList(q) : page(invoices, q) } },
     webhookEndpoints: { list: async (q) => { webhookCalls++; return webhookList ? webhookList(q) : page(endpoints, q) } } }
   const module = load('src/lib/billing-audit.ts', {
     '@/lib/stripe': { stripe, ACTIVE_LIKE_STATUSES: new Set(['active','trialing','past_due']),
-      isDoyaSubscription: (sub) => sub.metadata.app === 'doya-ai', ALL_SERVICE_IDS: [],
+      isDoyaSubscription: (sub) => sub.metadata.app === 'doya-ai', ALL_SERVICE_IDS: ['banner'],
       resolvePlanIdFromSubscription: () => ({ planId: 'banner-pro' }), planTierFromPlanId: () => 'PRO' },
-    '@/lib/prisma': { prisma: { user: { findMany: async () => [] } } },
+    '@/lib/prisma': { prisma: {
+      user: { findMany: async ({ where }) => {
+        if (where.id) return users.filter((user) => where.id.in.includes(user.id))
+        if (where.email) return users.filter((user) => where.email.in.includes(user.email.toLowerCase()))
+        return users.filter((user) => !['FREE', 'GUEST'].includes(user.plan))
+      } },
+      userServiceSubscription: { findMany: async ({ where }) => serviceRows.filter((row) => where.userId.in.includes(row.userId)) },
+    } },
     '@/lib/billing-manual-grants': { getManualGrantEmails: async () => new Set() },
   })
   return { module, get subscriptionCalls() { return subscriptionCalls }, get invoiceCalls() { return invoiceCalls }, get webhookCalls() { return webhookCalls } }
@@ -64,6 +71,45 @@ function fixture({ subs, invoices, subList, invoiceList, endpoints = [], webhook
     const message = f.module.formatBillingAuditMessage(audit, { windowLabel: '直近24時間' })
     assert(message.includes('¥119,760/年')); assert(message.includes('月次売上見込 ¥19,960'))
     assert(message.includes('請求周期を確認できない契約'))
+  })
+  await check('billing audit maps owner ID across changed customer email and split customers', async () => {
+    const first = subscription('first', 'doya-ai')
+    const second = subscription('second', 'doya-ai')
+    first.metadata.userId = second.metadata.userId = 'user-1'
+    first.customer.email = 'old@example.invalid'
+    second.customer.email = 'second@example.invalid'
+    const users = [{ id: 'user-1', email: 'current@example.invalid', name: 'Current', plan: 'PRO' }]
+    const f = fixture({ subs: [first, second], invoices: [], users,
+      serviceRows: [{ userId: 'user-1', serviceId: 'banner', plan: 'PRO' }] })
+    const audit = await f.module.runBillingAudit()
+    assert.equal(audit.mismatched.length, 0)
+    assert.equal(audit.overGranted.length, 0)
+    assert.equal(audit.serviceDrift.length, 0)
+    assert.equal(audit.duplicates.length, 1)
+    assert(audit.subscriptions.every((sub) => sub.userId === 'user-1' && sub.email === 'current@example.invalid'))
+  })
+  await check('billing audit does not attach a missing owner ID to a customer-email match', async () => {
+    const wrong = subscription('wrong', 'doya-ai')
+    wrong.metadata.userId = 'missing-user'
+    wrong.customer.email = 'paid@example.invalid'
+    const users = [{ id: 'user-2', email: 'paid@example.invalid', name: 'Unrelated', plan: 'PRO' }]
+    const f = fixture({ subs: [wrong], invoices: [], users })
+    const audit = await f.module.runBillingAudit()
+    assert.equal(audit.subscriptions[0].declaredUserId, 'missing-user')
+    assert.equal(audit.subscriptions[0].dbUserFound, false)
+    assert.equal(audit.mismatched.length, 1)
+    assert.equal(audit.overGranted.length, 1)
+  })
+  await check('billing audit retains customer-email fallback for legacy subscriptions', async () => {
+    const legacy = subscription('legacy', 'doya-ai')
+    legacy.customer.email = 'legacy@example.invalid'
+    const users = [{ id: 'legacy-user', email: 'legacy@example.invalid', name: 'Legacy', plan: 'PRO' }]
+    const f = fixture({ subs: [legacy], invoices: [], users,
+      serviceRows: [{ userId: 'legacy-user', serviceId: 'banner', plan: 'PRO' }] })
+    const audit = await f.module.runBillingAudit()
+    assert.equal(audit.subscriptions[0].userId, 'legacy-user')
+    assert.equal(audit.mismatched.length, 0)
+    assert.equal(audit.overGranted.length, 0)
   })
   await check('webhook endpoint check reaches page two', async () => {
     const endpoints = Array.from({ length: 100 }, (_, i) => ({ id: 'endpoint-'+i, url: 'https://other.example/'+i, status: 'enabled', enabled_events: [] }))

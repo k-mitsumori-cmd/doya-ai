@@ -29,6 +29,9 @@ export const BILLING_WEBHOOK_EXPECTED_URL =
 
 export type AuditSubscription = {
   id: string
+  /** Stripe 契約に記録された所有者。DB に存在しなくても保持して異常を検知する。 */
+  declaredUserId: string | null
+  userId: string | null
   status: string
   customerId: string
   email: string | null
@@ -146,26 +149,40 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
 
   const live = all.filter((s) => ACTIVE_LIKE_STATUSES.has(String(s.status)) && isDoyaSubscription(s))
 
-  // メール一括でDBのプランを引く
+  // 新契約は metadata.userId が所有者の正本。メール変更後の顧客や同一メールの
+  // 別人に契約を誤帰属させない。メール照合は userId のない旧契約だけに使う。
+  const userIds = Array.from(new Set(live.map((s) => String(s.metadata?.userId || '').trim()).filter(Boolean)))
   const emails = Array.from(
     new Set(
       live
+        .filter((s) => !String(s.metadata?.userId || '').trim())
         .map((s) => (typeof s.customer === 'object' ? s.customer?.email : null))
         .filter((e): e is string => Boolean(e))
         .map((e) => e.toLowerCase())
     )
   )
-  const users = emails.length
+  const usersById = userIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: userIds } },
+        select: { id: true, email: true, name: true, plan: true },
+      })
+    : []
+  const usersByEmail = emails.length
     ? await prisma.user.findMany({
         where: { email: { in: emails, mode: 'insensitive' } },
         select: { id: true, email: true, name: true, plan: true },
       })
     : []
-  const userByEmail = new Map(users.map((u) => [String(u.email).toLowerCase(), u]))
+  const userById = new Map(usersById.map((u) => [u.id, u]))
+  const userByEmail = new Map(usersByEmail.map((u) => [String(u.email).toLowerCase(), u]))
+  const resolvedUserById = new Map([...usersByEmail, ...usersById].map((u) => [u.id, u]))
 
   const subscriptions: AuditSubscription[] = live.map((s) => {
     const cust = typeof s.customer === 'object' ? s.customer : null
-    const email = (cust?.email as string | undefined)?.toLowerCase() || null
+    const customerEmail = (cust?.email as string | undefined)?.toLowerCase() || null
+    const metadataUserId = String(s.metadata?.userId || '').trim()
+    const dbUser = metadataUserId ? userById.get(metadataUserId) : customerEmail ? userByEmail.get(customerEmail) : undefined
+    const email = dbUser?.email?.toLowerCase() || customerEmail
     const { planId } = resolvePlanIdFromSubscription(s)
     const price = s.items?.data?.[0]?.price
     const interval = price?.recurring?.interval
@@ -174,13 +191,14 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
     const billingInterval: AuditSubscription['billingInterval'] = interval === 'year' ? 'year' : interval === 'month' ? 'month' : 'other'
     const monthlyAmount = billingInterval === 'year' ? amount / (12 * intervalCount) :
       billingInterval === 'month' ? amount / intervalCount : 0
-    const dbUser = email ? userByEmail.get(email) : undefined
     return {
       id: s.id,
+      declaredUserId: metadataUserId || null,
+      userId: dbUser?.id ?? null,
       status: String(s.status),
       customerId: typeof s.customer === 'string' ? s.customer : String(cust?.id || ''),
       email,
-      name: (cust?.name as string | undefined) || dbUser?.name || null,
+      name: dbUser?.name || (cust?.name as string | undefined) || null,
       planId,
       tier: planTierFromPlanId(planId),
       amount,
@@ -206,22 +224,24 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
       endedAt: s.ended_at ? new Date(s.ended_at * 1000) : null,
     }))
 
-  const manualGrantEmailsEarly = await getManualGrantEmails()
+  const manualGrantEmails = await getManualGrantEmails()
 
   // 課金されているのに DB が FREE / ユーザーが見つからない＝反映漏れ
   const mismatched = subscriptions
-    .filter((s) => !s.dbUserFound || s.dbPlan === 'FREE' || s.dbPlan === null)
-    .filter((s) => !manualGrantEmailsEarly.has(String(s.email || '').toLowerCase()))
+    .filter((s) => !s.dbUserFound || s.dbPlan === 'FREE' || s.dbPlan === 'GUEST' || s.dbPlan === null)
+    .filter((s) => (s.declaredUserId && !s.dbUserFound) || !manualGrantEmails.has(String(s.email || '').toLowerCase()))
 
-  // 同一メールで生きている契約が2本以上＝二重契約（過剰請求）
-  const byEmail = new Map<string, AuditSubscription[]>()
+  // 同一ユーザーの分裂Customerも二重契約として検出する。
+  const byOwner = new Map<string, AuditSubscription[]>()
   for (const s of subscriptions) {
-    if (!s.email) continue
-    byEmail.set(s.email, [...(byEmail.get(s.email) || []), s])
+    const ownerId = s.declaredUserId || s.userId
+    const owner = ownerId ? `user:${ownerId}` : s.email ? `email:${s.email}` : s.customerId ? `customer:${s.customerId}` : null
+    if (!owner) continue
+    byOwner.set(owner, [...(byOwner.get(owner) || []), s])
   }
-  const duplicates = Array.from(byEmail.entries())
+  const duplicates = Array.from(byOwner.entries())
     .filter(([, subs]) => subs.length > 1)
-    .map(([email, subs]) => ({ email, subs }))
+    .map(([, subs]) => ({ email: subs[0]?.email || subs[0]?.userId || subs[0]?.customerId || '不明', subs }))
 
   // ------------------------------------------------------------------
   // INV-2 違反の検知（reference/11-billing-spec.md R-3）
@@ -229,13 +249,7 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
   // User.plan だけを見ていると、障害#5（UserServiceSubscription の一意制約で
   // banner 以外がプロにならない）と同じ状態が起きても監査が沈黙する。
   // 有料契約者について、全サービス行が期待どおり揃っているかを突き合わせる。
-  const paidUserIds = subscriptions
-    .map((s) => (s.email ? userByEmail.get(s.email) : undefined))
-    .filter((u): u is NonNullable<typeof u> => Boolean(u))
-    .map((u) => u.id)
-  const uniquePaidUserIds = Array.from(new Set(paidUserIds))
-
-  const manualGrantEmails = await getManualGrantEmails()
+  const uniquePaidUserIds = Array.from(new Set(subscriptions.map((s) => s.userId).filter((id): id is string => Boolean(id))))
 
   const serviceDrift: BillingAudit['serviceDrift'] = []
   if (uniquePaidUserIds.length > 0) {
@@ -248,9 +262,12 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
       if (!byUser.has(r.userId)) byUser.set(r.userId, new Map())
       byUser.get(r.userId)!.set(r.serviceId, r.plan)
     }
+    const checkedUsers = new Set<string>()
     for (const sub of subscriptions) {
-      const dbUser = sub.email ? userByEmail.get(sub.email) : undefined
+      const dbUser = sub.userId ? resolvedUserById.get(sub.userId) : undefined
       if (!dbUser || dbUser.plan === 'FREE') continue // 反映漏れは mismatched 側で報告済み
+      if (checkedUsers.has(dbUser.id)) continue
+      checkedUsers.add(dbUser.id)
       const expected = dbUser.plan === 'BUNDLE' ? 'PRO' : dbUser.plan
       const rowsOfUser = byUser.get(dbUser.id) || new Map<string, string>()
       const broken = ALL_SERVICE_IDS.filter((sid) => (rowsOfUser.get(sid) ?? 'MISSING') !== expected)
@@ -263,13 +280,13 @@ export async function runBillingAudit(windowHours = 24): Promise<BillingAudit> {
   // ------------------------------------------------------------------
   // 過剰付与の検知（解約が反映されていない／手動更新の消し忘れ）
   // ------------------------------------------------------------------
-  const liveEmails = new Set(subscriptions.map((s) => s.email).filter((e): e is string => Boolean(e)))
+  const liveUserIds = new Set(subscriptions.map((s) => s.userId).filter((id): id is string => Boolean(id)))
   const paidInDb = await prisma.user.findMany({
     where: { plan: { notIn: ['FREE', 'GUEST'] } },
-    select: { email: true, plan: true },
+    select: { id: true, email: true, plan: true },
   })
   const overGranted = paidInDb
-    .filter((u) => !u.email || !liveEmails.has(String(u.email).toLowerCase()))
+    .filter((u) => !liveUserIds.has(u.id))
     .filter((u) => !manualGrantEmails.has(String(u.email || '').toLowerCase()))
     .map((u) => ({ email: u.email, plan: u.plan }))
 
@@ -363,7 +380,7 @@ export function formatBillingAuditMessage(audit: BillingAudit, opts: { windowLab
 
   if (audit.duplicates.length > 0) {
     lines.push('')
-    lines.push(`:rotating_light: *同一メールで契約が重複: ${audit.duplicates.length}件（過剰請求の恐れ）*`)
+    lines.push(`:rotating_light: *同一利用者で契約が重複: ${audit.duplicates.length}件（過剰請求の恐れ）*`)
     for (const d of audit.duplicates) {
       lines.push(`・${d.email}: ${d.subs.map((s) => `${s.id}(${s.status})`).join(' / ')}`)
     }
