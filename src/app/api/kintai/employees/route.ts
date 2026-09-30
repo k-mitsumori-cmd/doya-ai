@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { escapeHtml } from '@/lib/html-escape'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
-import { getKintaiEmployeeLimitByUserPlan } from '@/lib/pricing'
+import { lockKintaiEmployeeAdmission, reachedKintaiEmployeeLimit } from '@/lib/kintai/employee-admission'
 import { sendEmail } from '@/lib/email'
 
 const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
@@ -23,8 +23,18 @@ export async function GET(req: NextRequest) {
     const departmentId = searchParams.get('departmentId') || ''
     const employmentType = searchParams.get('employmentType') || ''
     const isActive = searchParams.get('isActive')
-    const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
-    const pageSize = Math.min(200, Math.max(1, parseInt(searchParams.get('pageSize') || '50')))
+    const pageText = searchParams.get('page') || '1'
+    const pageSizeText = searchParams.get('pageSize') || '50'
+    if (!/^\d+$/.test(pageText) || !/^\d+$/.test(pageSizeText) ||
+        Number(pageText) < 1 || Number(pageText) > 10_000_000 ||
+        Number(pageSizeText) < 1 || Number(pageSizeText) > 200) {
+      return NextResponse.json({ error: 'pageまたはpageSizeが正しくありません' }, { status: 400 })
+    }
+    const page = Number(pageText)
+    const pageSize = Number(pageSizeText)
+    if (isActive !== null && isActive !== '' && isActive !== 'true' && isActive !== 'false') {
+      return NextResponse.json({ error: 'isActiveが正しくありません' }, { status: 400 })
+    }
 
     const where: any = { organizationId: ctx.organizationId }
     if (search) {
@@ -63,30 +73,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 
-    // --- Employee limit check ---
-    const owner = await prisma.kintaiMember.findFirst({
-      where: { organizationId: ctx.organizationId, role: 'system_admin' },
-      select: { userId: true },
-    })
-    const ownerUser = owner ? await prisma.user.findUnique({
-      where: { id: owner.userId },
-      select: { plan: true },
-    }) : null
-    const plan = ownerUser?.plan || 'FREE'
-    const limit = getKintaiEmployeeLimitByUserPlan(plan)
-
-    if (limit !== -1) {
-      const activeCount = await prisma.kintaiEmployee.count({
-        where: { organizationId: ctx.organizationId, isActive: true },
-      })
-      if (activeCount >= limit) {
-        return NextResponse.json(
-          { error: `従業員数が上限（${limit}名）に達しています。プランをアップグレードしてください。` },
-          { status: 403 },
-        )
-      }
-    }
-
     const body = await req.json()
     const { name, nameKana, email, departmentId, workRuleId, employmentType, hireDate, role } = body
     if (!name || !email) {
@@ -114,7 +100,11 @@ export async function POST(req: NextRequest) {
     }
 
     const inviteToken = crypto.randomUUID()
-    const employee = await prisma.kintaiEmployee.create({
+    const admission = await prisma.$transaction(async (tx) => {
+      await lockKintaiEmployeeAdmission(tx, ctx.organizationId)
+      const limit = await reachedKintaiEmployeeLimit(tx, ctx.organizationId)
+      if (limit !== null) return { allowed: false as const, limit }
+      const employee = await tx.kintaiEmployee.create({
       data: {
         organizationId: ctx.organizationId,
         name,
@@ -136,7 +126,16 @@ export async function POST(req: NextRequest) {
         },
       },
       include: { department: true, workRule: true, member: { select: { id: true, role: true, status: true, inviteToken: true } } },
+      })
+      return { allowed: true as const, employee }
     })
+    if (!admission.allowed) {
+      return NextResponse.json(
+        { error: `従業員数が上限（${admission.limit}名）に達しています。プランをアップグレードしてください。`, code: 'KINTAI_EMPLOYEE_LIMIT', upgradeUrl: '/kintai/pricing' },
+        { status: 403 },
+      )
+    }
+    const employee = admission.employee
 
     // 招待メールを自動送信
     const org = await prisma.kintaiOrganization.findUnique({

@@ -5,6 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
+import { lockKintaiEmployeeAdmission, reachedKintaiEmployeeLimit } from '@/lib/kintai/employee-admission'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -50,6 +51,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (role !== undefined && !allowedRoles.includes(role)) {
       return NextResponse.json({ error: '無効なロールです' }, { status: 400 })
     }
+    if (isActive !== undefined && typeof isActive !== 'boolean') {
+      return NextResponse.json({ error: 'isActiveが正しくありません' }, { status: 400 })
+    }
 
     const data: any = {}
     if (name !== undefined) data.name = name
@@ -62,11 +66,29 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (isActive !== undefined) data.isActive = isActive
 
     return await prisma.$transaction(async (tx) => {
+      if (isActive === true) await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
       const existingEmp = await tx.kintaiEmployee.findFirst({
         where: { id: p.id, organizationId: kctx.organizationId },
         include: { member: { select: { id: true, role: true } } },
       })
       if (!existingEmp) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
+      if (isActive === true && !existingEmp.isActive) {
+        const limit = await reachedKintaiEmployeeLimit(tx, kctx.organizationId)
+        if (limit !== null) {
+          return NextResponse.json(
+            { error: `従業員数が上限（${limit}名）に達しています。プランをアップグレードしてください。`, code: 'KINTAI_EMPLOYEE_LIMIT', upgradeUrl: '/kintai/pricing' },
+            { status: 403 },
+          )
+        }
+      }
+      if (departmentId) {
+        const department = await tx.kintaiDepartment.findFirst({ where: { id: departmentId, organizationId: kctx.organizationId }, select: { id: true } })
+        if (!department) return NextResponse.json({ error: '指定された部署が見つかりません' }, { status: 400 })
+      }
+      if (workRuleId) {
+        const rule = await tx.kintaiWorkRule.findFirst({ where: { id: workRuleId, organizationId: kctx.organizationId }, select: { id: true } })
+        if (!rule) return NextResponse.json({ error: '指定された就業ルールが見つかりません' }, { status: 400 })
+      }
       const roleChanged = role !== undefined && !!existingEmp.member && role !== existingEmp.member.role
       if (roleChanged && kctx.role !== 'system_admin' &&
           (role === 'system_admin' || existingEmp.member?.role === 'system_admin')) {

@@ -19,7 +19,7 @@ for(const c of cases){
  const before=JSON.stringify(row);
  const tx={kintaiEmployee:{findFirst:async({where})=>where.id===row.id&&where.organizationId===row.organizationId?structuredClone(row):null,update:async({data})=>{attempts.push('employee');if(c.fail==='employee')throw Error('synthetic failure');row={...row,...data};return structuredClone(row)}},kintaiMember:{update:async({data})=>{attempts.push('member');if(c.fail==='member')throw Error('synthetic failure');row.member={...row.member,...data};return structuredClone(row.member)}}};
  const prisma={$transaction:async fn=>{const saved=structuredClone(row);try{return await fn(tx)}catch(e){row=saved;rollbacks++;throw e}}};
- const api=load('src/app/api/kintai/employees/[id]/route.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/kintai/access':{getKintaiContext:async()=>({organizationId:'org',role:c.actor}),hasMinRole:access.hasMinRole}});
+ const api=load('src/app/api/kintai/employees/[id]/route.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/kintai/access':{getKintaiContext:async()=>({organizationId:'org',role:c.actor}),hasMinRole:access.hasMinRole},'@/lib/kintai/employee-admission':{}});
  const r=await api.PATCH({json:async()=>({name:'after',role:c.role})},{params:Promise.resolve({id:'target'})});
  const changed=JSON.stringify(row)!==before;
  const ok=r.status===c.http&&(c.http===200?row.name==='after'&&row.member.role===c.role:!changed)&&(c.http===400||c.http===403||c.http===404?attempts.length===0:true)&&(c.fail?rollbacks===1:true);

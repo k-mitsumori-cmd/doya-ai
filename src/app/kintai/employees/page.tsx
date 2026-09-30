@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 import { ROLE_LABELS, ROLE_DESCRIPTIONS, EMPLOYMENT_TYPE_LABELS } from '@/lib/kintai/types'
 import { loadAllEmployees } from '@/lib/kintai/load-employees'
 import { EmptyState } from '@/components/EmptyState'
+import Link from 'next/link'
 
 const DEPT_COLORS = [
   '#7f19e6', '#2563eb', '#0891b2', '#059669', '#d97706',
@@ -37,6 +38,7 @@ export default function EmployeesPage() {
   const [editing, setEditing] = useState<any>(null)
   const [form, setForm] = useState({ name: '', nameKana: '', email: '', departmentId: '', workRuleId: '', employmentType: 'full_time', hireDate: '', role: 'employee' })
   const [saving, setSaving] = useState(false)
+  const [limitNotice, setLimitNotice] = useState<string | null>(null)
   const togglingRef = useRef(new Set<string>())
   const [togglingIds, setTogglingIds] = useState(new Set<string>())
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -111,7 +113,13 @@ export default function EmployeesPage() {
       const url = editing ? `/api/kintai/employees/${editing.id}` : '/api/kintai/employees'
       const method = editing ? 'PATCH' : 'POST'
       const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
-      if (!res.ok) { const d = await res.json(); alert((d.error || '保存に失敗しました') + (d.detail ? '\n\n詳細: ' + d.detail : '')); return }
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}))
+        if (d.code === 'KINTAI_EMPLOYEE_LIMIT') { setLimitNotice(d.error); return }
+        alert((d.error || '保存に失敗しました') + (d.detail ? '\n\n詳細: ' + d.detail : ''))
+        return
+      }
+      setLimitNotice(null)
       setShowForm(false)
       fetchAll()
     } catch { alert('通信エラー') } finally { setSaving(false) }
@@ -131,9 +139,11 @@ export default function EmployeesPage() {
       })
       const result = await res.json().catch(() => null)
       if (!res.ok) {
+        if (result?.code === 'KINTAI_EMPLOYEE_LIMIT') { setLimitNotice(result.error); return }
         alert(typeof result?.error === 'string' ? result.error : `${action}できませんでした。もう一度お試しください。`)
         return
       }
+      setLimitNotice(null)
       if (result?.employee?.id !== emp.id || typeof result.employee.isActive !== 'boolean') {
         alert('更新結果を確認できませんでした。画面を再読み込みして状態をご確認ください。')
         return
@@ -205,6 +215,13 @@ export default function EmployeesPage() {
             <span className="material-symbols-outlined text-lg">person_add</span>新規登録
           </button>
         </div>
+
+        {limitNotice && (
+          <div role="alert" className="rounded-xl border border-purple-200 bg-purple-50 p-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm font-medium text-purple-900">{limitNotice}</p>
+            <Link href="/kintai/pricing" className="rounded-lg bg-[#7f19e6] px-4 py-2 text-sm font-bold text-white hover:bg-[#6a14c2]">プランを見る</Link>
+          </div>
+        )}
 
         {/* Stats cards */}
         {!loading && !loadError && (
@@ -515,6 +532,12 @@ export default function EmployeesPage() {
                 </div>
               </div>
 
+              {limitNotice && (
+                <div role="alert" className="rounded-xl border border-purple-200 bg-purple-50 p-3 space-y-2">
+                  <p className="text-sm font-medium text-purple-900">{limitNotice}</p>
+                  <Link href="/kintai/pricing" className="inline-block text-sm font-bold text-[#7f19e6] underline">プランを見る</Link>
+                </div>
+              )}
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setShowForm(false)} className="flex-1 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-colors">キャンセル</button>
                 <button onClick={handleSave} disabled={saving} className="flex-1 py-2.5 bg-[#7f19e6] text-white font-bold rounded-xl hover:bg-[#6a14c2] transition-colors disabled:opacity-50">

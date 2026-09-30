@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const kintaiEmployeeAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-employee-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiEmployeeAdmission.error || kintaiEmployeeAdmission.status !== 0) {
+  console.error('Security regression failed: verify-kintai-employee-admission.cjs');
+  process.exit(1);
+}
 const staticAssetUrls = spawnSync(process.execPath, [path.join(__dirname, 'verify-static-asset-urls.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (staticAssetUrls.error || staticAssetUrls.status !== 0) {
   console.error('Security regression failed: verify-static-asset-urls.cjs');

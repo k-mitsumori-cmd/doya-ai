@@ -4,9 +4,9 @@ const ast=ts.createSourceFile('page.tsx',source,ts.ScriptTarget.Latest,true,ts.S
 function visit(n){if(ts.isVariableDeclaration(n)&&n.name.getText(ast)==='toggleActive')callback=n.initializer.getText(ast);ts.forEachChild(n,visit)}visit(ast);if(!callback)throw Error('Callback missing');
 const code=ts.transpileModule('globalThis.toggle='+callback,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
 function harness(fetcher,initial=false,confirm=true){
- let rows=[{id:'employee',name:'synthetic',isActive:initial},{id:'other',name:'other',isActive:true}],calls=0,confirms=0,pending=new Set();const alerts=[];
- const sandbox={Set,window:{confirm:()=>{confirms++;return confirm}},JSON,alert:s=>alerts.push(s),togglingRef:{current:new Set()},setTogglingIds:v=>{pending=v},setEmployees:fn=>{rows=fn(rows)},fetch:async(...a)=>{calls++;return fetcher(...a)}};
- vm.runInNewContext(code,sandbox);return {toggle:()=>sandbox.toggle({...rows[0]}),state:()=>({rows,calls,confirms,alerts,pending:pending.size,locked:sandbox.togglingRef.current.size})};
+ let rows=[{id:'employee',name:'synthetic',isActive:initial},{id:'other',name:'other',isActive:true}],calls=0,confirms=0,pending=new Set(),notice=null;const alerts=[];
+ const sandbox={Set,window:{confirm:()=>{confirms++;return confirm}},JSON,alert:s=>alerts.push(s),setLimitNotice:v=>{notice=v},togglingRef:{current:new Set()},setTogglingIds:v=>{pending=v},setEmployees:fn=>{rows=fn(rows)},fetch:async(...a)=>{calls++;return fetcher(...a)}};
+ vm.runInNewContext(code,sandbox);return {toggle:()=>sandbox.toggle({...rows[0]}),state:()=>({rows,calls,confirms,alerts,notice,pending:pending.size,locked:sandbox.togglingRef.current.size})};
 }
 const success=active=>Response.json({employee:{id:'employee',isActive:active}});
 (async()=>{const results=[];
@@ -27,5 +27,7 @@ let resolve;const wait=new Promise(r=>{resolve=r});const duplicate=harness(()=>w
 results.push({name:'concurrent-duplicate',outcome:during.calls===1&&during.confirms===1&&during.locked===1&&duplicate.state().rows[0].isActive&&duplicate.state().locked===0?'PASS':'FAIL'});
 let attempt=0;const retry=harness(()=>++attempt===1?Response.json({error:'temporary'},{status:500}):success(true));await retry.toggle();await retry.toggle();
 results.push({name:'retry-after-failure',outcome:retry.state().calls===2&&retry.state().alerts.length===1&&retry.state().rows[0].isActive&&retry.state().locked===0?'PASS':'FAIL'});
+const limit=harness(()=>Response.json({code:'KINTAI_EMPLOYEE_LIMIT',error:'上限です'},{status:403}));await limit.toggle();
+results.push({name:'quota-upgrade-notice',outcome:limit.state().notice==='上限です'&&limit.state().alerts.length===0&&limit.state().rows[0].isActive===false?'PASS':'FAIL'});
 console.log(JSON.stringify({cases:results.length,results},null,2));if(results.some(r=>r.outcome==='FAIL'))process.exitCode=1;
 })().catch(e=>{console.error(e);process.exitCode=1});
