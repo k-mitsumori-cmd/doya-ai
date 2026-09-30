@@ -19,6 +19,13 @@ function safeReturnPath(raw: string | null | undefined): string {
   return v
 }
 
+function portalFailureUrl(request: NextRequest, reason: 'missing' | 'error'): URL {
+  const url = new URL('/billing/portal-unavailable', request.url)
+  url.searchParams.set('reason', reason)
+  url.searchParams.set('returnTo', safeReturnPath(request.nextUrl.searchParams.get('returnTo')))
+  return url
+}
+
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -38,10 +45,7 @@ export async function GET(request: NextRequest) {
     })
 
     if (!customerId) {
-      // ポータルを開けないケースも「画面遷移」させて気づけるようにする
-      const u = new URL('/banner/dashboard/plan', request.url)
-      u.searchParams.set('portal', 'missing')
-      return NextResponse.redirect(u)
+      return NextResponse.redirect(portalFailureUrl(request, 'missing'))
     }
     if (user?.id && customerId !== user.stripeCustomerId) {
       await prisma.user.update({ where: { id: user.id }, data: { stripeCustomerId: customerId } }).catch(() => {})
@@ -59,10 +63,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.redirect(portalSession.url)
   } catch (e: any) {
-    const u = new URL('/banner/dashboard/plan', request.url)
-    u.searchParams.set('portal', 'error')
-    return NextResponse.redirect(u)
+    return NextResponse.redirect(portalFailureUrl(request, 'error'))
   }
 }
-
 
