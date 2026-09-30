@@ -8,6 +8,8 @@ import { serviceLabelOf } from '@/lib/attribution'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
+const privateHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+
 export async function GET(request: NextRequest) {
   try {
     // 管理者認証チェック
@@ -16,7 +18,7 @@ export async function GET(request: NextRequest) {
 
     const { valid } = await verifyAdminSession(token || null)
     if (!valid) {
-      return NextResponse.json({ error: '管理者認証が必要です' }, { status: 401 })
+      return NextResponse.json({ error: '管理者認証が必要です' }, { status: 401, headers: privateHeaders })
     }
 
     // 今日の開始時刻（UTC）
@@ -347,15 +349,12 @@ export async function GET(request: NextRequest) {
       
       // メタ情報
       lastUpdated: new Date().toISOString(),
-    })
+    }, { headers: privateHeaders })
   } catch (error) {
     console.error('Admin stats error:', error)
     return NextResponse.json(
-      { 
-        error: '統計データの取得に失敗しました',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
+      { error: '統計データの取得に失敗しました' },
+      { status: 500, headers: privateHeaders }
     )
   }
 }

@@ -7,6 +7,8 @@ import { shouldResetMonthlyUsage, getBannerMonthlyLimitByUserPlan } from '@/lib/
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
+const privateHeaders = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' }
+
 /**
  * プランページ用の統計API
  * - 累計生成枚数（全期間）
@@ -24,7 +26,7 @@ export async function GET(request: NextRequest) {
         totalBanners: 0,
         todayUsage: 0,
         monthlyUsage: 0,
-      })
+      }, { headers: privateHeaders })
     }
 
     // 累計生成枚数（全期間）
@@ -50,10 +52,9 @@ export async function GET(request: NextRequest) {
       totalBanners: totalCount,
       monthlyUsage,
       monthlyLimit,
-    })
+    }, { headers: privateHeaders })
   } catch (e: any) {
     console.error('[banner stats] failed', e)
-    return NextResponse.json({ error: '統計の取得に失敗しました' }, { status: 500 })
+    return NextResponse.json({ error: '統計の取得に失敗しました' }, { status: 500, headers: privateHeaders })
   }
 }
-
