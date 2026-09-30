@@ -149,6 +149,13 @@ const nextConfig = {
           },
         ],
       },
+      {
+        source: '/api/admin/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store' },
+          { key: 'Vary', value: 'Cookie' },
+        ],
+      },
       // Public LP comparison can embed this presentation within this site only.
       {
         source: '/banner/landing',
