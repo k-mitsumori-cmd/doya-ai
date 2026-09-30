@@ -223,7 +223,8 @@ User.plan → isPaidPlan() / 各サービスの上限テーブル
 
 - 全経路が **upsert / 絶対値の更新**のみ（インクリメントや差分適用をしない）ので、何度実行しても同じ結果になる。
 - `StripeSuccessSync` は `handledRef` と URL からの `session_id` 削除で二重発火を防ぐ。
-- **Webhook のイベント重複排除（idempotency key の記録）は未実装**（§8 残存リスク R-4）。上記の冪等性で実害は出ていない。
+- Webhook は署名検証後に `StripeWebhookEvent` へイベントID・種類・処理状態・処理試行回数を記録する。完了済みIDは再処理せず、処理中の重複には503を返す。失敗または5分のリース失効後はStripeの再送で取得し直す。通知本文・署名シークレットは保存しない。
+- 上記はDB反映処理の重複抑止であり、非同期の運営通知の到達保証ではない。実際のStripe配送経路は別途監視・点検する。
 
 ### 4.3 決済後のリダイレクトと反映UI
 
@@ -341,7 +342,7 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
 | **R-1** | Webhook のユーザー特定が `stripeCustomerId` **単独**だった。顧客分裂（§2.3）で別顧客の契約だと**ユーザーが見つからず解約が反映されない** | 解約したのに PRO のまま | **対応済**: `findUserForSubscription()` が metadata.userId → customerId → Stripe顧客のメール の3段で解決 |
 | **R-2** | `handleSubscriptionDeleted()` が「他に生きている契約があるか」を確認せずに FREE に落としていた | 二重契約の片方を解約した瞬間、残った有効契約があるのに FREE に落ちる | **対応済**: 残存契約があれば FREE にせず、最上位の契約で再反映する（照会失敗時は従来どおり FREE） |
 | **R-3** | 日次監査の反映漏れ判定が `User.plan` しか見ておらず、`UserServiceSubscription` 行のズレ（INV-2 違反）を検出しなかった | 障害#5 と同じ状態が再発しても監査が沈黙する | **対応済**: `serviceDrift`（INV-2違反）と `overGranted`（過剰付与）を追加 |
-| **R-4** | Webhook 受信イベントの記録テーブルが無い | 「Webhook が届いていたか」を事後に検証できない | 未対応（§4.2 の冪等性で実害は出ていない） |
+| **R-4** | Webhook 受信イベントの記録テーブルが無い | 「Webhook が届いていたか」を事後に検証できない | **対応済(2026-10-01)**: `StripeWebhookEvent` を本番DBへ先行追加し、イベントID・状態・試行回数を記録。完了済み通知の重複処理を防止。署名付きの無害な本番テスト通知で記録と再送を確認（Stripe実配送の往復試験は未実施） |
 | **R-7** | セッションのサービス別プラン（`seoPlan` 等）が `UserServiceSubscription` の行だけから作られており、`User.plan` との上位採用になっていない。消費側が `x || plan` 形式で `'FREE'` が truthy なため、行が古いとそのサービスだけ無料に落ちる | INV-2 が破れると権利が消える | **対応済**: `src/lib/auth.ts` の `session()` が `higherPlan(User.plan, サービス行)` で上位採用（`src/lib/plan-utils.ts`）。行が欠けても権利を失わず、管理画面での個別付与も失われない |
 | **R-9** | 解約API（`/api/stripe/subscription/cancel`）が「DBの subscriptionId → 無ければ `stripeCustomerId` の `status:'active'` を検索」だけで対象を決めていた。顧客分裂（§2.3）で別顧客側の契約に到達できず、`trialing` も検索対象外。二重契約時は片方しか止まらない | **利用者が自分で課金を止められない**（2026-08 の二重契約者は active の ¥9,980 を解約ボタンでもポータルでも止められなかった） | **対応済**: `findActiveLikeSubscriptions()` でメール横断に生存契約を集め、**生きているものを全部**解約する。DBのIDは最後のフォールバックで、生存確認してから使う。一部失敗時は `notifyAlert(critical)` |
 | **R-10** | カスタマーポータル（`/api/stripe/portal`・`/portal/redirect`）が `User.stripeCustomerId` 単独。null なら開けず（`?portal=missing`）、分裂していると**契約が1件も出てこない別顧客の画面**が開く | 解約・支払い方法変更ができない | **対応済**: `resolveBillingCustomerId()` が生存契約の持ち主を返し、DBの値も実在する顧客へ寄せる |
