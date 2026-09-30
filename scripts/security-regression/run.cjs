@@ -642,3 +642,8 @@ if (billingReportDelivery.error || billingReportDelivery.status !== 0) {
   console.error('Security regression failed: verify-billing-report-delivery.cjs');
   process.exit(1);
 }
+const operationsCronRoutes = spawnSync(process.execPath, [path.join(__dirname, 'verify-operations-cron-routes.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (operationsCronRoutes.error || operationsCronRoutes.status !== 0) {
+  console.error('Security regression failed: verify-operations-cron-routes.cjs');
+  process.exit(1);
+}

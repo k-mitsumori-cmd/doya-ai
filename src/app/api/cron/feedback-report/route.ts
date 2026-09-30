@@ -27,14 +27,22 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const days = Number(new URL(request.url).searchParams.get('days')) || 7
+    const rawDays = new URL(request.url).searchParams.get('days')
+    const days = rawDays === null ? 7 : Number(rawDays)
+    if (!Number.isSafeInteger(days) || days < 1 || days > 3650) {
+      return NextResponse.json({ error: '対象期間は1～3650日で指定してください' }, { status: 400 })
+    }
     const since = new Date(Date.now() - days * 86400_000)
+    const period = { createdAt: { gte: since } }
 
-    const [recent, total, lastOne] = await Promise.all([
+    const [received, byService, recent, total, lastOne] = await Promise.all([
+      prisma.serviceFeedback.count({ where: period }),
+      prisma.serviceFeedback.groupBy({ by: ['serviceId'], where: period, _count: { _all: true } }),
       prisma.serviceFeedback.findMany({
-        where: { createdAt: { gte: since } },
+        where: period,
         orderBy: { createdAt: 'desc' },
-        select: { createdAt: true, serviceId: true, rating: true, text: true },
+        take: 5,
+        select: { createdAt: true, serviceId: true, text: true },
       }),
       prisma.serviceFeedback.count(),
       prisma.serviceFeedback.findFirst({
@@ -42,9 +50,6 @@ export async function GET(request: NextRequest) {
         select: { createdAt: true },
       }),
     ])
-
-    const byService = new Map<string, number>()
-    for (const r of recent) byService.set(r.serviceId, (byService.get(r.serviceId) || 0) + 1)
 
     const jstDateTime = (d: Date) => d.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
     const daysSinceLast = lastOne
@@ -54,17 +59,17 @@ export async function GET(request: NextRequest) {
     const lines: string[] = []
     lines.push(`:inbox_tray: *[お問い合わせ受信レポート/直近${days}日]* ${jstDateTime(new Date())}`)
     lines.push('')
-    lines.push(`*受信件数: ${recent.length}件*（累計 ${total}件）`)
+    lines.push(`*受信件数: ${received}件*（累計 ${total}件）`)
 
-    if (recent.length > 0) {
+    if (received > 0) {
       lines.push('')
       lines.push('*サービス別*')
-      for (const [serviceId, count] of [...byService.entries()].sort((a, b) => b[1] - a[1])) {
-        lines.push(`・${serviceLabelOf(serviceId)}: ${count}件`)
+      for (const row of [...byService].sort((a, b) => b._count._all - a._count._all)) {
+        lines.push(`・${serviceLabelOf(row.serviceId)}: ${row._count._all}件`)
       }
       lines.push('')
       lines.push('*直近の内容*')
-      for (const r of recent.slice(0, 5)) {
+      for (const r of recent) {
         const head = String(r.text).replace(/\n/g, ' ').slice(0, 60)
         lines.push(`・${jstDateTime(r.createdAt)} ｜ ${serviceLabelOf(r.serviceId)} ｜ ${head}…`)
       }
@@ -93,7 +98,7 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({ ok: true, days, received: recent.length, total, daysSinceLast })
+    return NextResponse.json({ ok: true, days, received, total, daysSinceLast })
   } catch (error: any) {
     console.error('[Cron] feedback-report error:', error)
     await notifyAlert({
@@ -102,6 +107,6 @@ export async function GET(request: NextRequest) {
       detail: String(error?.message || error),
       dedupKey: 'feedback-report-failed',
     }).catch(() => {})
-    return NextResponse.json({ error: error?.message || 'failed' }, { status: 500 })
+    return NextResponse.json({ error: 'お問い合わせ受信レポートを完了できませんでした' }, { status: 500 })
   }
 }

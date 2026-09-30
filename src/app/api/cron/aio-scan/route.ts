@@ -102,11 +102,12 @@ export async function GET(request: Request) {
         const r = await runAndPersistScan(org.id, { scheduled: true })
         if (r.status === 'done') success++
         else failed++
-        results.push({ organizationId: org.id, slug: org.slug, status: r.status, error: r.error })
+        results.push({ organizationId: org.id, slug: org.slug, status: r.status,
+          ...(r.status === 'done' ? {} : { error: 'スキャンに失敗しました' }) })
       } catch (e: any) {
         failed++
         console.error(`[cron/aio-scan] 組織 ${org.slug} で例外`, e?.message)
-        results.push({ organizationId: org.id, slug: org.slug, status: 'failed', error: e?.message })
+        results.push({ organizationId: org.id, slug: org.slug, status: 'failed', error: 'スキャンに失敗しました' })
       }
     }
 
@@ -123,6 +124,6 @@ export async function GET(request: Request) {
     })
   } catch (error: any) {
     console.error('[cron/aio-scan] error:', error?.message)
-    return NextResponse.json({ error: error?.message || 'aio-scan cron failed' }, { status: 500 })
+    return NextResponse.json({ error: '定期スキャンを完了できませんでした' }, { status: 500 })
   }
 }

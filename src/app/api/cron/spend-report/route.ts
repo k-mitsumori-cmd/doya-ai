@@ -25,6 +25,6 @@ export async function GET(request: Request) {
       pathname: '/api/cron/spend-report',
       timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
     }).catch(() => {})
-    return NextResponse.json({ error: error?.message || 'Failed to send spend report' }, { status: 500 })
+    return NextResponse.json({ error: '利用額レポートを完了できませんでした' }, { status: 500 })
   }
 }
