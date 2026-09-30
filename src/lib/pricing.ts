@@ -1762,7 +1762,7 @@ export const KINTAI_PRICING: ServicePricing = {
   // ⚠️ 無制限にしない
   enterpriseLimit: 1000,
   historyDays: {
-    free: 90,
+    free: -1,
     pro: -1,
   },
   plans: [
@@ -1777,8 +1777,8 @@ export const KINTAI_PRICING: ServicePricing = {
         { text: '従業員5名まで', included: true },
         { text: '打刻・勤怠管理', included: true },
         { text: '月次レポート', included: true },
-        { text: 'データ保存90日間', included: true },
-        { text: 'CSV/Excelエクスポート', included: false },
+        { text: '勤怠履歴の閲覧', included: true },
+        { text: '管理者のCSV/Excelエクスポート', included: true },
         { text: '優先サポート', included: false },
       ],
       cta: '無料で始める',
@@ -1829,7 +1829,7 @@ export const KINTAI_PRICING: ServicePricing = {
       description: '100名以上の大規模組織に',
       color: 'slate',
       features: [
-        { text: '従業員数無制限', included: true },
+        { text: '従業員1,000名まで', included: true },
         { text: '打刻・勤怠管理', included: true },
         { text: '月次レポート', included: true },
         { text: 'データ保存無制限', included: true },

@@ -45,7 +45,14 @@ export async function GET(req: NextRequest) {
     const monthEnd = new Date(Date.UTC(year, month, 1) - jstOffset)
 
     const employees = await prisma.kintaiEmployee.findMany({
-      where: { organizationId: ctx.organizationId, isActive: true },
+      // 退職・無効化後でも、対象月に勤怠がある従業員は過去月の出力に含める。
+      where: {
+        organizationId: ctx.organizationId,
+        OR: [
+          { isActive: true },
+          { attendances: { some: { date: { gte: monthStart, lt: monthEnd } } } },
+        ],
+      },
       include: {
         department: { select: { name: true } },
         attendances: {
@@ -90,6 +97,7 @@ export async function GET(req: NextRequest) {
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
           'Content-Disposition': `attachment; filename="kintai_${year}-${String(month).padStart(2, '0')}.csv"`,
+          'Cache-Control': 'private, no-store',
         },
       })
     }
@@ -132,6 +140,20 @@ export async function GET(req: NextRequest) {
   <Cell><Data ss:Type="String">${xmlText(att.status)}</Data></Cell>
 </Row>`
       }
+      if (emp.attendances.length === 0) {
+        xmlRows += `<Row>
+  <Cell><Data ss:Type="String">${xmlText(emp.name)}</Data></Cell>
+  <Cell><Data ss:Type="String">${xmlText(emp.department?.name || '')}</Data></Cell>
+  <Cell><Data ss:Type="String"></Data></Cell>
+  <Cell><Data ss:Type="String"></Data></Cell>
+  <Cell><Data ss:Type="String"></Data></Cell>
+  <Cell><Data ss:Type="Number">0</Data></Cell>
+  <Cell><Data ss:Type="Number">0</Data></Cell>
+  <Cell><Data ss:Type="Number">0</Data></Cell>
+  <Cell><Data ss:Type="Number">0</Data></Cell>
+  <Cell><Data ss:Type="String">データなし</Data></Cell>
+</Row>`
+      }
     }
 
     const xmlFooter = `</Table></Worksheet></Workbook>`
@@ -141,6 +163,7 @@ export async function GET(req: NextRequest) {
       headers: {
         'Content-Type': 'application/vnd.ms-excel',
         'Content-Disposition': `attachment; filename="kintai_${year}-${String(month).padStart(2, '0')}.xls"`,
+        'Cache-Control': 'private, no-store',
       },
     })
   } catch (e) {
