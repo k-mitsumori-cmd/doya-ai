@@ -237,7 +237,7 @@ export default function DoyamanaImagesPage() {
           >
             <option value="all">すべて</option>
             {categories.map(cat => (
-              <option key={cat.id} value={cat.slug}>{cat.name}</option>
+              <option key={cat.id} value={cat.id}>{cat.name}</option>
             ))}
           </select>
         </div>

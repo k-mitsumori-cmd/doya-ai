@@ -54,15 +54,21 @@ const request = body => ({ url: 'https://example.test/admin', json: async () => 
   assert.equal(calls[0].sortOrder, 0)
   assert.equal(calls[0].isActive, false)
 
-  prisma.bannerTemplate.findMany = async () => [{
+  let lastImageWhere
+  prisma.bannerTemplate.findMany = async options => {
+    lastImageWhere = options.where
+    return [{
     id: 'created', templateId: calls[0].templateId, industry: calls[0].industry,
     category: calls[0].category, prompt: calls[0].prompt, imageUrl: calls[0].imageUrl,
     isActive: false, isFeatured: false, size: '1200x628', sortOrder: 0,
     createdAt: new Date(), updatedAt: new Date(),
-  }]
+    }]
+  }
   prisma.bannerTemplate.count = async () => 1
   const imageList = await images.GET({ url: 'https://example.test/api/admin/doyamana/images' })
   assert.equal((await imageList.json()).images[0].displayTitle, 'ファッション・アパレル')
+  await images.GET({ url: 'https://example.test/api/admin/doyamana/images?category=ファッション・アパレル' })
+  assert.equal(lastImageWhere.OR[1].industry, 'ファッション・アパレル')
 
   for (const bad of [
     { ...payload, categoryId: '存在しない' },
