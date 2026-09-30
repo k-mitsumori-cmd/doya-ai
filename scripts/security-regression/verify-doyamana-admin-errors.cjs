@@ -22,10 +22,13 @@ const prisma = { bannerTemplate: {
   updateMany: async (options) => throwOrReturn({ count: 0 }, options),
 } }
 const mocks = {
+  'node:crypto': { randomUUID: () => '00000000-0000-4000-8000-000000000000' },
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
-  '@/lib/banner-prompts-v2': { BANNER_PROMPTS_V2: [{ id: 'known', genre: '既知' }], GENRES: [{ name: '既知' }] },
+  '@/lib/banner-prompts-v2': { BANNER_PROMPTS_V2: [{ id: 'known', genre: '既知' }], GENRES: [{ id: 'known', name: '既知', category: 'it' }] },
   '@/lib/admin-guard': { requireAdmin: async () => null },
+  '@/lib/banner-admin-image-storage': { bannerAdminImageExists: async () => true },
+  '@/lib/operational-json': { readOperationalJson: async req => req.json(), OperationalBodyError: class extends Error {} },
 }
 const base = 'src/app/api/admin/doyamana'
 const images = load(`${base}/images/route.ts`, mocks)

@@ -12,6 +12,7 @@ import {
   X,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { uploadBannerAdminImage } from '@/lib/banner-admin-image-upload-client'
 
 interface Category {
   id: string
@@ -27,10 +28,10 @@ export default function NewDoyamanaImagePage() {
   
   // フォーム
   const [categoryId, setCategoryId] = useState('')
-  const [imageUrl, setImageUrl] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [prompt, setPrompt] = useState('')
-  const [order, setOrder] = useState(0)
+  const [order, setOrder] = useState(1000)
   const [isActive, setIsActive] = useState(true)
 
   const fetchCategories = useCallback(async () => {
@@ -61,11 +62,15 @@ export default function NewDoyamanaImagePage() {
       toast.error('ファイルサイズは5MB以下にしてください')
       return
     }
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      toast.error('PNG・JPEG・WEBP形式の画像を選択してください')
+      return
+    }
+    setImageFile(file)
 
     const reader = new FileReader()
     reader.onload = (event) => {
       const base64 = event.target?.result as string
-      setImageUrl(base64)
       setImagePreview(base64)
     }
     reader.readAsDataURL(file)
@@ -78,7 +83,7 @@ export default function NewDoyamanaImagePage() {
       toast.error('カテゴリを選択してください')
       return
     }
-    if (!imageUrl) {
+    if (!imageFile) {
       toast.error('画像をアップロードしてください')
       return
     }
@@ -89,12 +94,13 @@ export default function NewDoyamanaImagePage() {
 
     setLoading(true)
     try {
+      const uploadedImageUrl = await uploadBannerAdminImage(imageFile)
       const res = await fetch('/api/admin/doyamana/images', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           categoryId,
-          imageUrl,
+          imageUrl: uploadedImageUrl,
           prompt: prompt.trim(),
           order,
           isActive,
@@ -150,8 +156,8 @@ export default function NewDoyamanaImagePage() {
               <button
                 type="button"
                 onClick={() => {
-                  setImageUrl('')
                   setImagePreview(null)
+                  setImageFile(null)
                 }}
                 className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors"
               >
@@ -188,7 +194,7 @@ export default function NewDoyamanaImagePage() {
           </select>
           {categories.length === 0 && (
             <p className="text-amber-400 text-sm mt-2">
-              ※ 有効なカテゴリがありません。先にカテゴリを作成してください。
+              ※ カテゴリを読み込めませんでした。画面を再読み込みしてください。
             </p>
           )}
         </div>

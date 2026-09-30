@@ -15,13 +15,11 @@ export async function GET(request: NextRequest) {
   if (denied) return denied
 
   try {
-    const { searchParams } = new URL(request.url)
-    const includeStats = searchParams.get('includeStats') === 'true'
-
     // BannerTemplateからテンプレートIDを取得
     const templates = await prisma.bannerTemplate.findMany({
       select: {
         templateId: true,
+        industry: true,
         isActive: true,
       }
     })
@@ -32,12 +30,18 @@ export async function GET(request: NextRequest) {
       slug: string,
       imageCount: number,
       activeCount: number,
-    }>()
+    }>(GENRES.map(g => [g.name, {
+      name: g.name,
+      slug: g.id,
+      imageCount: 0,
+      activeCount: 0,
+    }]))
 
     templates.forEach(t => {
       // V2プロンプトからgenreを取得
       const v2Prompt = v2PromptsMap.get(t.templateId)
-      const genre = v2Prompt?.genre || 'その他'
+      const genre = v2Prompt?.genre || t.industry
+      if (!genre) return
       
       const existing = genreMap.get(genre)
       if (existing) {
@@ -46,7 +50,7 @@ export async function GET(request: NextRequest) {
       } else {
         genreMap.set(genre, {
           name: genre, // genreはすでに日本語名
-          slug: genre, // slugもgenreを使用
+          slug: genre,
           imageCount: 1,
           activeCount: t.isActive ? 1 : 0,
         })

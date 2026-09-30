@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { BANNER_PROMPTS_V2, GENRES } from '@/lib/banner-prompts-v2'
 import { requireAdmin } from '@/lib/admin-guard'
+import { randomUUID } from 'node:crypto'
+import { bannerAdminImageExists } from '@/lib/banner-admin-image-storage'
+import { readOperationalJson, OperationalBodyError } from '@/lib/operational-json'
 
 export const dynamic = 'force-dynamic'
 
@@ -40,7 +43,11 @@ export async function GET(request: NextRequest) {
         .filter(p => p.genre === genre)
         .map(p => p.id)
       
-      where.templateId = { in: filteredTemplateIds }
+      if (GENRES.some(g => g.name === genre) || filteredTemplateIds.length > 0) {
+        where.OR = [{ templateId: { in: filteredTemplateIds } }, { industry: genre }]
+      } else {
+        where.templateId = { in: [] }
+      }
     }
     
     if (status === 'active') {
@@ -51,19 +58,23 @@ export async function GET(request: NextRequest) {
     // 'all' の場合はフィルタなし
     
     if (search) {
-      where.OR = [
+      const searchConditions = [
         { prompt: { contains: search, mode: 'insensitive' } },
         { industry: { contains: search, mode: 'insensitive' } },
         { templateId: { contains: search, mode: 'insensitive' } },
       ]
+      if (where.OR) {
+        where.AND = [{ OR: where.OR }, { OR: searchConditions }]
+        delete where.OR
+      } else {
+        where.OR = searchConditions
+      }
     }
 
     const [images, total] = await Promise.all([
       prisma.bannerTemplate.findMany({
         where,
-        orderBy: [
-          { createdAt: 'desc' }
-        ],
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'desc' }],
         skip: (page - 1) * limit,
         take: limit,
       }),
@@ -90,11 +101,12 @@ export async function GET(request: NextRequest) {
         isActive: img.isActive,
         isFeatured: img.isFeatured,
         size: img.size,
+        sortOrder: img.sortOrder,
         createdAt: img.createdAt,
         updatedAt: img.updatedAt,
         // 追加情報
-        displayTitle: v2Prompt?.displayTitle || '',
-        name: v2Prompt?.name || '',
+        displayTitle: v2Prompt?.displayTitle || img.industry,
+        name: v2Prompt?.name || img.industry,
       }
     })
 
@@ -123,12 +135,35 @@ export async function POST(request: NextRequest) {
   if (denied) return denied
 
   try {
-    const body = await request.json()
-    const { templateId, industry, category, prompt, size, imageUrl, previewUrl, isFeatured, isActive } = body
+    const body = await readOperationalJson(request, 64 * 1024)
+    const { categoryId, order, size, imageUrl, previewUrl, isFeatured, isActive } = body
+    const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : ''
+    const isNewForm = categoryId !== undefined
+    const selectedGenre = GENRES.find(g => g.name === categoryId)
+    let industry = isNewForm ? categoryId : body.industry
+    let category = isNewForm ? selectedGenre?.category : body.category
+    const templateId = isNewForm ? `custom-${randomUUID()}` : body.templateId
 
-    if (!templateId || !industry || !category || !prompt) {
+    if (isNewForm && !selectedGenre && typeof categoryId === 'string' && categoryId.length <= 100) {
+      const existing = await prisma.bannerTemplate.findFirst({
+        where: { industry: categoryId }, select: { category: true },
+      })
+      category = existing?.category
+    }
+
+    if (typeof templateId !== 'string' || !templateId || templateId.length > 100 ||
+        typeof industry !== 'string' || !industry.trim() || industry.length > 100 ||
+        typeof category !== 'string' || !category.trim() || category.length > 100 ||
+        !prompt || prompt.length > 20000 ||
+        (size !== undefined && (typeof size !== 'string' || !/^\d{2,5}x\d{2,5}$/.test(size))) ||
+        (imageUrl !== undefined && imageUrl !== null && (typeof imageUrl !== 'string' || imageUrl.length > 2048)) ||
+        (previewUrl !== undefined && previewUrl !== null && (typeof previewUrl !== 'string' || previewUrl.length > 2048)) ||
+        (isActive !== undefined && typeof isActive !== 'boolean') ||
+        (isFeatured !== undefined && typeof isFeatured !== 'boolean') ||
+        (order !== undefined && (!Number.isInteger(order) || (order as number) < 0 || (order as number) > 100000)) ||
+        (isNewForm && (typeof imageUrl !== 'string' || !await bannerAdminImageExists(imageUrl)))) {
       return NextResponse.json(
-        { error: 'テンプレートID、業種、カテゴリ、プロンプトは必須です' },
+        { error: '画像または登録内容が不正です。画像を再アップロードしてください' },
         { status: 400 }
       )
     }
@@ -139,16 +174,20 @@ export async function POST(request: NextRequest) {
         industry,
         category,
         prompt,
-        size: size || '1200x628',
-        imageUrl,
-        previewUrl,
-        isFeatured: isFeatured || false,
+        size: (size as string | undefined) || '1200x628',
+        imageUrl: imageUrl as string | null | undefined,
+        previewUrl: previewUrl as string | null | undefined,
+        isFeatured: isFeatured === true,
         isActive: isActive !== false,
+        sortOrder: typeof order === 'number' ? order : 1000,
       },
     })
 
     return NextResponse.json({ image })
   } catch (error) {
+    if (error instanceof OperationalBodyError) {
+      return NextResponse.json({ error: error.status === 413 ? '登録内容が大きすぎます' : 'リクエストが不正です' }, { status: error.status })
+    }
     console.error('[POST /api/admin/doyamana/images] Error:', error)
     return NextResponse.json(
       { error: '画像の作成に失敗しました' },

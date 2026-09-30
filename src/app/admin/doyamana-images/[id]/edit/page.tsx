@@ -14,6 +14,7 @@ import {
   AlertTriangle,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { uploadBannerAdminImage } from '@/lib/banner-admin-image-upload-client'
 
 export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
@@ -28,7 +29,8 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
   const [category, setCategory] = useState('')
   const [prompt, setPrompt] = useState('')
   const [size, setSize] = useState('1200x628')
-  const [imageUrl, setImageUrl] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imageRemoved, setImageRemoved] = useState(false)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isActive, setIsActive] = useState(true)
   const [isFeatured, setIsFeatured] = useState(false)
@@ -45,7 +47,8 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
         setCategory(data.image.category)
         setPrompt(data.image.prompt)
         setSize(data.image.size || '1200x628')
-        setImageUrl(data.image.imageUrl || '')
+        setImageFile(null)
+        setImageRemoved(false)
         setIsActive(data.image.isActive)
         setIsFeatured(data.image.isFeatured)
         
@@ -81,12 +84,17 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
       toast.error('ファイルサイズは5MB以下にしてください')
       return
     }
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      toast.error('PNG・JPEG・WEBP形式の画像を選択してください')
+      return
+    }
+    setImageFile(file)
 
     const reader = new FileReader()
     reader.onload = (event) => {
       const base64 = event.target?.result as string
-      setImageUrl(base64)
       setImagePreview(base64)
+      setImageRemoved(false)
     }
     reader.readAsDataURL(file)
   }
@@ -113,6 +121,7 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
 
     setLoading(true)
     try {
+      const uploadedImageUrl = imageFile ? await uploadBannerAdminImage(imageFile) : imageRemoved ? null : undefined
       const res = await fetch(`/api/admin/doyamana/images/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -122,7 +131,7 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
           category: category.trim(),
           prompt: prompt.trim(),
           size,
-          imageUrl: imageUrl || null,
+          imageUrl: uploadedImageUrl,
           isActive,
           isFeatured,
         }),
@@ -204,8 +213,9 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
               <button
                 type="button"
                 onClick={() => {
-                  setImageUrl('')
                   setImagePreview(null)
+                  setImageFile(null)
+                  setImageRemoved(true)
                 }}
                 className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white hover:bg-red-600 transition-colors"
               >

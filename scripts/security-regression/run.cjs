@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const doyamanaCreate = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyamana-admin-create.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyamanaCreate.error || doyamanaCreate.status !== 0) {
+  console.error('Security regression failed: verify-doyamana-admin-create.cjs');
+  process.exit(1);
+}
 const hubspotSyncRetry = spawnSync(process.execPath, [path.join(__dirname, 'verify-hubspot-sync-retry.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hubspotSyncRetry.error || hubspotSyncRetry.status !== 0) {
   console.error('Security regression failed: verify-hubspot-sync-retry.cjs');

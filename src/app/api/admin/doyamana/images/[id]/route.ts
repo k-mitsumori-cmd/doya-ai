@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/admin-guard'
+import { readOperationalJson, OperationalBodyError } from '@/lib/operational-json'
+import { bannerAdminImageExists } from '@/lib/banner-admin-image-storage'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,8 +67,20 @@ export async function PUT(
 
   try {
     const { id } = await params
-    const body = await request.json()
+    const body = await readOperationalJson(request, 64 * 1024)
     const { templateId, industry, category, prompt, size, imageUrl, previewUrl, isFeatured, isActive } = body
+
+    if ((templateId !== undefined && (typeof templateId !== 'string' || !templateId.trim() || templateId.length > 100)) ||
+        (industry !== undefined && (typeof industry !== 'string' || !industry.trim() || industry.length > 100)) ||
+        (category !== undefined && (typeof category !== 'string' || !category.trim() || category.length > 100)) ||
+        (prompt !== undefined && (typeof prompt !== 'string' || !prompt.trim() || prompt.length > 20000)) ||
+        (size !== undefined && (typeof size !== 'string' || !/^\d{2,5}x\d{2,5}$/.test(size))) ||
+        (imageUrl !== undefined && imageUrl !== null && (typeof imageUrl !== 'string' || !await bannerAdminImageExists(imageUrl))) ||
+        (previewUrl !== undefined && previewUrl !== null && (typeof previewUrl !== 'string' || previewUrl.length > 2048)) ||
+        (isFeatured !== undefined && typeof isFeatured !== 'boolean') ||
+        (isActive !== undefined && typeof isActive !== 'boolean')) {
+      return NextResponse.json({ error: '更新内容が不正です' }, { status: 400 })
+    }
 
     const image = await prisma.bannerTemplate.update({
       where: { id },
@@ -85,6 +99,9 @@ export async function PUT(
 
     return NextResponse.json({ image })
   } catch (error) {
+    if (error instanceof OperationalBodyError) {
+      return NextResponse.json({ error: error.status === 413 ? '更新内容が大きすぎます' : 'リクエストが不正です' }, { status: error.status })
+    }
     console.error('[PUT /api/admin/doyamana/images/[id]] Error:', error)
     return NextResponse.json(
       { error: '画像の更新に失敗しました' },

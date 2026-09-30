@@ -917,9 +917,6 @@ export async function GET(request: NextRequest) {
     // V2プロンプトMap（モジュールレベルでキャッシュ済み）
     const v2PromptsMap = getV2PromptsMap()
 
-    // DB上で画像生成済みのテンプレートIDセット
-    const generatedIds = new Set(dbTemplates.map((t) => t.templateId))
-
     // DBテンプレートをV2プロンプト情報と結合して返す（生成済み）
     const readyTemplates = dbTemplates.map((t) => {
       // 事前サムネイルがある Storage の画像は、配信ルートを挟まず直接その URL を返す。
@@ -938,8 +935,8 @@ export async function GET(request: NextRequest) {
         category: v2Prompt?.category || t.category,
         imageUrl: imageApiUrl,
         isFeatured: t.isFeatured || false,
-        displayTitle: v2Prompt?.displayTitle || v2Prompt?.name || '',
-        name: v2Prompt?.name || '',
+        displayTitle: v2Prompt?.displayTitle || v2Prompt?.name || t.industry,
+        name: v2Prompt?.name || t.industry,
         isPending: false,
       }
 
@@ -963,6 +960,18 @@ export async function GET(request: NextRequest) {
     const featuredTemplateId = featuredTemplate?.templateId || readyTemplates[0]?.id || null
 
     const totalAvailable = v2PromptsMap.size
+    // カスタム画像や現在のページ外の行を差し引くと負数・過大値になる。
+    let pendingCount: number | null = null
+    try {
+      const generatedBuiltInCount = await prisma.bannerTemplate.count({
+        where: {
+          isActive: true,
+          imageUrl: { not: null },
+          templateId: { in: [...v2PromptsMap.keys()] },
+        },
+      })
+      pendingCount = Math.max(0, totalAvailable - generatedBuiltInCount)
+    } catch { /* 件数を確認できない場合は推測値を返さない */ }
 
     const response = NextResponse.json({
       templates,
@@ -971,7 +980,7 @@ export async function GET(request: NextRequest) {
       generatedCount: dbTemplates.length,
       totalAvailable,
       dbTotalCount,
-      pendingCount: totalAvailable - dbTemplates.length,
+      pendingCount,
       loadTime: Date.now() - startTime,
     })
 

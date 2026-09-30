@@ -39,5 +39,22 @@ class NextResponse extends Response {
   assert.equal(listing.status, 200)
   const body = await listing.json()
   assert.equal(body.templates[0].imageUrl, `/api/banner/test/image/template-1?v=${updatedAt.getTime()}`)
+  assert.equal(body.templates[0].displayTitle, 'it')
+  assert.equal(body.pendingCount, 0)
+
+  const customOnly = load('src/app/api/banner/test/templates/route.ts', {
+    'next/server': { NextResponse },
+    '@/lib/prisma': { prisma: { bannerTemplate: {
+      findMany: async () => [{ templateId: 'custom-1', imageUrl: 'https://storage.test/image.webp', updatedAt, industry: '住宅・不動産', category: 'ec', prompt: 'custom', isFeatured: false }],
+      count: async ({ where }) => where.templateId ? 0 : 1,
+    } } },
+    '@/lib/banner-admin-guard': { requireBannerAdmin: () => null },
+    '@/lib/banner-template-storage': { hasPreparedVariants: () => false },
+    '@/lib/banner-prompts-v2': { BANNER_PROMPTS_V2: [{ id: 'built-in-1', fullPrompt: 'prompt', genre: '住宅・不動産', category: 'ec', name: 'built-in' }] },
+  })
+  const customResult = await customOnly.GET(new Request('https://local.test/api/banner/test/templates?limit=1'))
+  const customBody = await customResult.json()
+  assert.equal(customBody.templates[0].displayTitle, '住宅・不動産')
+  assert.equal(customBody.pendingCount, 1)
   console.log('PASS regenerated banner templates use versioned URLs and do not serve stale in-process image bytes')
 })().catch(error => { console.error(error); process.exitCode = 1 })
