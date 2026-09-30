@@ -6,6 +6,7 @@ const prisma = { bannerTemplate: {
   findMany: async () => [],
   count: async () => 0,
   findFirst: async () => null,
+  findUnique: async () => ({ templateId: 'official-1', industry: '保存済みの業種', category: 'it' }),
   create: async ({ data }) => { calls.push(data); return { id: 'created', ...data } },
   update: async ({ data }) => { calls.push(data); return { id: 'updated', ...data } },
 }, doyamanaCategory: { findUnique: async () => null } }
@@ -16,9 +17,12 @@ const mocks = {
   '@/lib/admin-guard': { requireAdmin: async () => null },
   '@/lib/doyamana-categories': {
     listDoyamanaCategories: async () => ({ categories: [{ id: 'ファッション・アパレル', name: 'ファッション・アパレル', imageCount: 0, isActive: true }], templateIds: new Map() }),
+    resolveDoyamanaCategorySelection: async (id, current) => id === 'ファッション・アパレル'
+      ? { industry: id, category: 'ec' }
+      : id === current?.industry ? current : null,
   },
   '@/lib/banner-prompts-v2': {
-    BANNER_PROMPTS_V2: [],
+    BANNER_PROMPTS_V2: [{ id: 'official-1', genre: 'コードの業種', fullPrompt: 'コードのプロンプト', name: '公式名' }],
     GENRES: [{ id: 'fashion', name: 'ファッション・アパレル', category: 'ec' }],
   },
   '@/lib/banner-admin-image-storage': {
@@ -65,13 +69,22 @@ const request = body => ({ url: 'https://example.test/admin', json: async () => 
     category: calls[0].category, prompt: calls[0].prompt, imageUrl: calls[0].imageUrl,
     isActive: false, isFeatured: false, size: '1200x628', sortOrder: 0,
     createdAt: new Date(), updatedAt: new Date(),
+    }, {
+      id: 'official', templateId: 'official-1', industry: '保存済みの業種',
+      category: 'it', prompt: '保存済みのプロンプト', imageUrl: 'https://storage.test/admin/image.webp',
+      isActive: true, isFeatured: false, size: '1200x628', sortOrder: 1,
+      createdAt: new Date(), updatedAt: new Date(),
     }]
   }
-  prisma.bannerTemplate.count = async () => 1
+  prisma.bannerTemplate.count = async () => 2
   const imageList = await images.GET({ url: 'https://example.test/api/admin/doyamana/images' })
-  assert.equal((await imageList.json()).images[0].displayTitle, 'ファッション・アパレル')
+  const listedImages = (await imageList.json()).images
+  assert.equal(listedImages[0].displayTitle, 'ファッション・アパレル')
+  assert.equal(listedImages[1].industry, '保存済みの業種')
+  assert.equal(listedImages[1].prompt, '保存済みのプロンプト')
+  assert.equal(listedImages[1].displayTitle, '保存済みの業種')
   await images.GET({ url: 'https://example.test/api/admin/doyamana/images?category=ファッション・アパレル' })
-  assert.equal(lastImageWhere.OR[1].industry, 'ファッション・アパレル')
+  assert.equal(lastImageWhere.industry, 'ファッション・アパレル')
 
   for (const bad of [
     { ...payload, categoryId: '存在しない' },
@@ -91,6 +104,12 @@ const request = body => ({ url: 'https://example.test/admin', json: async () => 
   assert.equal((await detail.PUT(request({ imageUrl: null }), ctx)).status, 200)
   assert.equal(calls.at(-1).imageUrl, null)
   assert.equal((await detail.PUT(request({ imageUrl: 'https://other.test/image.webp' }), ctx)).status, 400)
+  assert.equal((await detail.PUT(request({ templateId: 'renamed' }), ctx)).status, 409)
+  assert.equal((await detail.PUT(request({ industry: '自由入力' }), ctx)).status, 400)
+  assert.equal((await detail.PUT(request({ categoryId: '存在しない' }), ctx)).status, 400)
+  assert.equal((await detail.PUT(request({ categoryId: 'ファッション・アパレル' }), ctx)).status, 200)
+  assert.equal(calls.at(-1).industry, 'ファッション・アパレル')
+  assert.equal(calls.at(-1).category, 'ec')
 
   const { readOperationalJson, OperationalBodyError } = load('src/lib/operational-json.ts')
   await assert.rejects(

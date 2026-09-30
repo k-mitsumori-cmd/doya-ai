@@ -47,7 +47,7 @@ function buildTestBannerPrompt(params: {
   const [width, height] = size.split('x')
   
   // basePromptがある場合は、それをベースにカスタマイズ（スタイルを維持）
-  if (basePrompt && basePrompt.length > 50) {
+  if (basePrompt && basePrompt.trim()) {
     // 元のプロンプトをそのまま使用し、テキストのみ差し替え
     // 元のプロンプトが英語の場合はそのまま使用
     
@@ -305,7 +305,7 @@ export async function POST(request: NextRequest) {
           upgradeUrl: '/banner/pricing',
         }, { status: 403 })
       }
-      effectiveBasePrompt = BANNER_PROMPTS_V2.find((prompt) => prompt.id === id)?.fullPrompt || savedTemplate.prompt
+      effectiveBasePrompt = savedTemplate.prompt || BANNER_PROMPTS_V2.find((prompt) => prompt.id === id)?.fullPrompt || ''
     }
 
     // 複数のバリエーションを生成（同じ入力でも異なるプロンプト）

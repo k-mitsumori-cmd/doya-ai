@@ -865,6 +865,7 @@ export async function GET(request: NextRequest) {
           isFeatured: true,
           industry: true,
           category: true,
+          size: true,
           updatedAt: true,
           sortOrder: true,
           imageUrl: true,
@@ -927,16 +928,16 @@ export async function GET(request: NextRequest) {
         ? `${t.imageUrl}${(t.imageUrl as string).includes('?') ? '&' : '?'}v=${imageVersion}`
         : `/api/banner/test/image/${encodeURIComponent(t.templateId)}?v=${imageVersion}`
       const v2Prompt = v2PromptsMap.get(t.templateId)
-      const fullPrompt = v2Prompt?.fullPrompt || t.prompt || ''
+      const fullPrompt = t.prompt || v2Prompt?.fullPrompt || ''
 
       const baseTemplate = {
         id: t.templateId,
-        industry: v2Prompt?.genre || t.industry,
-        category: v2Prompt?.category || t.category,
+        industry: t.industry,
+        category: t.category,
         imageUrl: imageApiUrl,
         isFeatured: t.isFeatured || false,
-        displayTitle: v2Prompt?.displayTitle || v2Prompt?.name || t.industry,
-        name: v2Prompt?.name || t.industry,
+        displayTitle: v2Prompt && v2Prompt.genre === t.industry ? (v2Prompt.displayTitle || v2Prompt.name) : t.industry,
+        name: v2Prompt && v2Prompt.genre === t.industry ? v2Prompt.name : t.industry,
         isPending: false,
       }
 
@@ -945,7 +946,7 @@ export async function GET(request: NextRequest) {
           ...baseTemplate,
           prompt: fullPrompt,
           previewUrl: imageApiUrl,
-          size: '1200x628',
+          size: t.size || '1200x628',
           hasGeneratedImage: true,
         }
       }
@@ -989,7 +990,7 @@ export async function GET(request: NextRequest) {
     if (fresh) {
       response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate')
     } else {
-      response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=7200')
+      response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=60')
     }
 
     return response

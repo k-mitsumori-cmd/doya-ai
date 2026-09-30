@@ -16,6 +16,14 @@ import {
 import toast from 'react-hot-toast'
 import { uploadBannerAdminImage } from '@/lib/banner-admin-image-upload-client'
 
+interface CategoryOption {
+  id: string
+  name: string
+  slug: string
+  isActive: boolean
+  isManaged: boolean
+}
+
 export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const router = useRouter()
@@ -25,8 +33,8 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
   
   // フォーム
   const [templateId, setTemplateId] = useState('')
-  const [industry, setIndustry] = useState('')
-  const [category, setCategory] = useState('')
+  const [categories, setCategories] = useState<CategoryOption[]>([])
+  const [categoryId, setCategoryId] = useState('')
   const [prompt, setPrompt] = useState('')
   const [size, setSize] = useState('1200x628')
   const [imageFile, setImageFile] = useState<File | null>(null)
@@ -38,13 +46,21 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
   const fetchImage = useCallback(async () => {
     setFetching(true)
     try {
-      const res = await fetch(`/api/admin/doyamana/images/${id}`)
-      const data = await res.json()
+      const [res, categoryRes] = await Promise.all([
+        fetch(`/api/admin/doyamana/images/${id}`),
+        fetch('/api/admin/doyamana/categories'),
+      ])
+      if (!res.ok || !categoryRes.ok) throw new Error('編集情報の取得に失敗しました')
+      const [data, categoryData] = await Promise.all([res.json(), categoryRes.json()])
+      if (!Array.isArray(categoryData.categories)) throw new Error('カテゴリ応答が不正です')
+      const availableCategories = categoryData.categories as CategoryOption[]
+      setCategories(availableCategories)
       
       if (data.image) {
         setTemplateId(data.image.templateId)
-        setIndustry(data.image.industry)
-        setCategory(data.image.category)
+        const selected = availableCategories.find(cat => cat.isManaged && cat.slug === data.image.category)
+          || availableCategories.find(cat => !cat.isManaged && cat.name === data.image.industry)
+        setCategoryId(selected?.id || '')
         setPrompt(data.image.prompt)
         setSize(data.image.size || '1200x628')
         setImageFile(null)
@@ -57,7 +73,7 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
           if (data.image.imageUrl.startsWith('data:')) {
             setImagePreview(data.image.imageUrl)
           } else {
-            setImagePreview(`/api/banner/test/image/${data.image.templateId}`)
+            setImagePreview(`/api/banner/test/image/${encodeURIComponent(data.image.templateId)}?v=${new Date(data.image.updatedAt).getTime()}`)
           }
         }
       } else {
@@ -102,16 +118,8 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (!templateId.trim()) {
-      toast.error('テンプレートIDを入力してください')
-      return
-    }
-    if (!industry.trim()) {
-      toast.error('業種を入力してください')
-      return
-    }
-    if (!category.trim()) {
-      toast.error('カテゴリを入力してください')
+    if (!categoryId) {
+      toast.error('カテゴリを選択してください')
       return
     }
     if (!prompt.trim()) {
@@ -126,9 +134,7 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          templateId: templateId.trim(),
-          industry: industry.trim(),
-          category: category.trim(),
+          categoryId,
           prompt: prompt.trim(),
           size,
           imageUrl: uploadedImageUrl,
@@ -237,40 +243,33 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
           )}
         </div>
 
-        {/* テンプレートID */}
+        {/* テンプレートIDは公開画像URLと生成履歴の参照キーなので変更しない */}
         <div className="bg-white/5 rounded-xl p-6">
-          <label className="block text-white font-medium mb-3">テンプレートID *</label>
+          <label className="block text-white font-medium mb-3">テンプレートID</label>
           <input
             type="text"
             value={templateId}
-            onChange={(e) => setTemplateId(e.target.value)}
-            placeholder="例: fashion-001"
-            className="w-full bg-white/10 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            readOnly
+            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white/60"
           />
         </div>
 
-        {/* 業種 */}
-        <div className="bg-white/5 rounded-xl p-6">
-          <label className="block text-white font-medium mb-3">業種 *</label>
-          <input
-            type="text"
-            value={industry}
-            onChange={(e) => setIndustry(e.target.value)}
-            placeholder="例: ファッション・アパレル"
-            className="w-full bg-white/10 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
-        </div>
-
-        {/* カテゴリ */}
+        {/* 業種とカテゴリは必ず対で変更する */}
         <div className="bg-white/5 rounded-xl p-6">
           <label className="block text-white font-medium mb-3">カテゴリ *</label>
-          <input
-            type="text"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            placeholder="例: ec"
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
             className="w-full bg-white/10 border border-white/10 rounded-lg px-4 py-3 text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-          />
+          >
+            <option value="">カテゴリを選択してください</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id} disabled={!cat.isActive && cat.id !== categoryId}>
+                {cat.name}{!cat.isActive ? '（停止中）' : ''}
+              </option>
+            ))}
+          </select>
+          {!categoryId && <p className="text-amber-300 text-sm mt-2">現在のカテゴリが見つかりません。管理カテゴリを確認してください。</p>}
         </div>
 
         {/* サイズ */}

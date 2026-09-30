@@ -28,18 +28,24 @@ class NextResponse extends Response {
   const templatesRoute = load('src/app/api/banner/test/templates/route.ts', {
     'next/server': { NextResponse },
     '@/lib/prisma': { prisma: { bannerTemplate: {
-      findMany: async () => [{ templateId: 'template-1', imageUrl, updatedAt, industry: 'it', category: 'it', prompt: 'official', isFeatured: true }],
+      findMany: async () => [{ templateId: 'template-1', imageUrl, updatedAt, industry: '編集した業種', category: 'edited', prompt: '保存した独自プロンプト', size: '1024x1024', isFeatured: true }],
       count: async () => 1,
     } } },
     '@/lib/banner-admin-guard': { requireBannerAdmin: () => null },
     '@/lib/banner-template-storage': { hasPreparedVariants: () => false },
-    '@/lib/banner-prompts-v2': { BANNER_PROMPTS_V2: [] },
+    '@/lib/banner-prompts-v2': { BANNER_PROMPTS_V2: [{ id: 'template-1', fullPrompt: 'コード定義の旧プロンプト', genre: 'コード定義の旧業種', category: 'it', name: 'Code title' }] },
   })
   const listing = await templatesRoute.GET(new Request('https://local.test/api/banner/test/templates?limit=1'))
   assert.equal(listing.status, 200)
   const body = await listing.json()
   assert.equal(body.templates[0].imageUrl, `/api/banner/test/image/template-1?v=${updatedAt.getTime()}`)
-  assert.equal(body.templates[0].displayTitle, 'it')
+  assert.equal(body.templates[0].displayTitle, '編集した業種')
+  assert.equal(body.templates[0].name, '編集した業種')
+  assert.equal(body.templates[0].industry, '編集した業種')
+  assert.equal(body.templates[0].category, 'edited')
+  assert.equal(body.templates[0].prompt, '保存した独自プロンプト')
+  assert.equal(body.templates[0].size, '1024x1024')
+  assert.match(listing.headers.get('cache-control'), /s-maxage=60/)
   assert.equal(body.pendingCount, 0)
 
   const customOnly = load('src/app/api/banner/test/templates/route.ts', {

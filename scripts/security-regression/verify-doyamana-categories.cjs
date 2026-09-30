@@ -3,7 +3,7 @@ const { load } = require('./load-typescript.cjs')
 const { randomUUID } = require('node:crypto')
 
 const templates = [
-  { id: 'built', templateId: 'v2', industry: '旧業種', category: 'it', prompt: '標準', isActive: true, sortOrder: 0, createdAt: new Date() },
+  { id: 'built', templateId: 'v2', industry: '標準業種', category: 'it', prompt: '標準', isActive: true, sortOrder: 0, createdAt: new Date() },
   { id: 'custom', templateId: 'custom-1', industry: '独自業種', category: 'custom-genre', prompt: '独自のプロンプト', isActive: true, sortOrder: 1, createdAt: new Date() },
 ]
 const categories = [{ id: 'custom-id', name: '独自業種', slug: 'custom-genre', description: null, order: 20, isActive: true, createdAt: new Date() }]
@@ -15,10 +15,12 @@ const prisma = {
       return ids ? templates.filter(item => ids.includes(item.id)) : templates
     },
     findFirst: async ({ where }) => templates.find(item =>
+      where.industry ? item.industry === where.industry :
       item.category !== where.NOT?.category &&
       (where.OR || []).some(condition =>
         (condition.industry && item.industry === condition.industry) ||
         (condition.category && item.category === condition.category))) || null,
+    findUnique: async ({ where }) => templates.find(item => item.id === where.id) || null,
     count: async ({ where }) => templates.filter(item => item.category === where.category).length,
     updateMany: async ({ where, data }) => {
       const rows = templates.filter(item => item.category === where.category)
@@ -26,6 +28,7 @@ const prisma = {
       return { count: rows.length }
     },
     create: async ({ data }) => { const row = { id: `image-${nextId++}`, createdAt: new Date(), ...data }; templates.push(row); return row },
+    update: async ({ where, data }) => { const row = templates.find(item => item.id === where.id); Object.assign(row, data); return row },
   },
   doyamanaCategory: {
     findMany: async () => categories,
@@ -62,6 +65,10 @@ const images = load('src/app/api/admin/doyamana/images/route.ts', {
   'node:crypto': { randomUUID },
   '@/lib/banner-admin-image-storage': { bannerAdminImageExists: async url => url === 'https://storage.test/new.webp' },
 })
+const imageDetail = load('src/app/api/admin/doyamana/images/[id]/route.ts', {
+  ...mocks,
+  '@/lib/banner-admin-image-storage': { bannerAdminImageExists: async url => url === 'https://storage.test/new.webp' },
+})
 const request = (body, url = 'https://example.test/api/admin/doyamana/categories') => ({
   url, json: async () => body,
 })
@@ -74,6 +81,10 @@ const context = id => ({ params: Promise.resolve({ id }) })
   assert.equal(result.categories.find(item => item.id === '標準業種').imageCount, 1)
   assert.equal(result.categories.find(item => item.id === 'custom-id').imageCount, 1)
   assert.equal(result.categories.find(item => item.id === 'custom-id').isManaged, true)
+  templates[0].industry = '変更後の業種'
+  result = await (await list.GET(request(null))).json()
+  assert.equal(result.categories.find(item => item.id === '変更後の業種').imageCount, 1)
+  assert.equal(result.categories.find(item => item.id === '標準業種').imageCount, 0)
 
   response = await detail.GET(request(null), context('custom-id'))
   result = await response.json()
@@ -97,9 +108,19 @@ const context = id => ({ params: Promise.resolve({ id }) })
   assert.equal(response.status, 200)
   assert.equal(templates.at(-1).industry, '追加業種')
   assert.equal(templates.at(-1).category, 'new-genre')
+  response = await imageDetail.PUT(request({ categoryId: added.id }), context('built'))
+  assert.equal(response.status, 200)
+  assert.equal(templates[0].industry, '追加業種')
+  assert.equal(templates[0].category, 'new-genre')
+  assert.equal((await imageDetail.PUT(request({ templateId: 'renamed' }), context('built'))).status, 409)
+  response = await imageDetail.PUT(request({ categoryId: '標準業種' }), context('built'))
+  assert.equal(response.status, 200)
+  assert.equal(templates[0].industry, '標準業種')
+  assert.equal(templates[0].category, 'it')
   response = await detail.PUT(request({ name: '追加業種', slug: 'new-genre', description: null, order: 22, isActive: false }), context(added.id))
   assert.equal(response.status, 200)
   assert.equal((await images.POST(request({ categoryId: added.id, imageUrl: 'https://storage.test/new.webp', prompt: '不可' }))).status, 400)
+  assert.equal((await imageDetail.PUT(request({ categoryId: added.id }), context('built'))).status, 400)
   assert.equal((await detail.DELETE(request(null), context(added.id))).status, 409)
   templates.pop()
   assert.equal((await detail.DELETE(request(null), context(added.id))).status, 200)

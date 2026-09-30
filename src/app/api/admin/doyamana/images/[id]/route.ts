@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/admin-guard'
 import { readOperationalJson, OperationalBodyError } from '@/lib/operational-json'
 import { bannerAdminImageExists } from '@/lib/banner-admin-image-storage'
+import { resolveDoyamanaCategorySelection } from '@/lib/doyamana-categories'
 
 export const dynamic = 'force-dynamic'
 
@@ -68,11 +69,12 @@ export async function PUT(
   try {
     const { id } = await params
     const body = await readOperationalJson(request, 64 * 1024)
-    const { templateId, industry, category, prompt, size, imageUrl, previewUrl, isFeatured, isActive } = body
+    const { templateId, industry, category, categoryId, prompt, size, imageUrl, previewUrl, isFeatured, isActive } = body
 
     if ((templateId !== undefined && (typeof templateId !== 'string' || !templateId.trim() || templateId.length > 100)) ||
         (industry !== undefined && (typeof industry !== 'string' || !industry.trim() || industry.length > 100)) ||
         (category !== undefined && (typeof category !== 'string' || !category.trim() || category.length > 100)) ||
+        (categoryId !== undefined && (typeof categoryId !== 'string' || !categoryId.trim() || categoryId.length > 100)) ||
         (prompt !== undefined && (typeof prompt !== 'string' || !prompt.trim() || prompt.length > 20000)) ||
         (size !== undefined && (typeof size !== 'string' || !/^\d{2,5}x\d{2,5}$/.test(size))) ||
         (imageUrl !== undefined && imageUrl !== null && (typeof imageUrl !== 'string' || !await bannerAdminImageExists(imageUrl))) ||
@@ -82,12 +84,27 @@ export async function PUT(
       return NextResponse.json({ error: '更新内容が不正です' }, { status: 400 })
     }
 
+    const current = await prisma.bannerTemplate.findUnique({
+      where: { id }, select: { templateId: true, industry: true, category: true },
+    })
+    if (!current) return NextResponse.json({ error: '画像が見つかりません' }, { status: 404 })
+    if (templateId !== undefined && templateId !== current.templateId) {
+      return NextResponse.json({ error: 'テンプレートIDは変更できません' }, { status: 409 })
+    }
+    if ((industry !== undefined && industry !== current.industry) ||
+        (category !== undefined && category !== current.category)) {
+      return NextResponse.json({ error: 'カテゴリは一覧から選択してください' }, { status: 400 })
+    }
+    const selection = typeof categoryId === 'string'
+      ? await resolveDoyamanaCategorySelection(categoryId, current) : null
+    if (categoryId !== undefined && !selection) {
+      return NextResponse.json({ error: '選択したカテゴリは利用できません' }, { status: 400 })
+    }
+
     const image = await prisma.bannerTemplate.update({
       where: { id },
       data: {
-        ...(templateId && { templateId }),
-        ...(industry && { industry }),
-        ...(category && { category }),
+        ...(selection && { industry: selection.industry, category: selection.category }),
         ...(prompt && { prompt }),
         ...(size && { size }),
         ...(imageUrl !== undefined && { imageUrl }),

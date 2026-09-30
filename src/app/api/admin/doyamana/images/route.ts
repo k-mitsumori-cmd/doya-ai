@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { BANNER_PROMPTS_V2, GENRES } from '@/lib/banner-prompts-v2'
+import { BANNER_PROMPTS_V2 } from '@/lib/banner-prompts-v2'
 import { requireAdmin } from '@/lib/admin-guard'
 import { randomUUID } from 'node:crypto'
 import { bannerAdminImageExists } from '@/lib/banner-admin-image-storage'
 import { readOperationalJson, OperationalBodyError } from '@/lib/operational-json'
+import { resolveDoyamanaCategorySelection } from '@/lib/doyamana-categories'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,21 +36,13 @@ export async function GET(request: NextRequest) {
     // フィルタ条件構築
     const where: Record<string, unknown> = {}
     
-    // genreフィルタ: V2プロンプトのgenreに基づいてtemplateIdでフィルタ
-    let filteredTemplateIds: string[] | null = null
+    // 管理カテゴリはslug、標準・既存カテゴリは保存済み業種で絞る。
     if (genre && genre !== 'all') {
-      // 指定されたgenreに一致するV2プロンプトのIDを取得
-      filteredTemplateIds = BANNER_PROMPTS_V2
-        .filter(p => p.genre === genre)
-        .map(p => p.id)
-      
       const managedCategory = await prisma.doyamanaCategory.findUnique({
         where: { id: genre }, select: { slug: true },
       })
       if (managedCategory) {
         where.category = managedCategory.slug
-      } else if (GENRES.some(g => g.name === genre) || filteredTemplateIds.length > 0) {
-        where.OR = [{ templateId: { in: filteredTemplateIds } }, { industry: genre }]
       } else {
         where.industry = genre
       }
@@ -95,14 +88,13 @@ export async function GET(request: NextRequest) {
       return {
         id: img.id,
         templateId: img.templateId,
-        // V2プロンプトのgenreを優先、なければDBのindustryを使用
-        category: v2Prompt?.genre || img.industry,
-        industry: v2Prompt?.genre || img.industry,
-        prompt: v2Prompt?.fullPrompt || img.prompt,
-        promptSummary: (v2Prompt?.fullPrompt || img.prompt).substring(0, 50) + ((v2Prompt?.fullPrompt || img.prompt).length > 50 ? '...' : ''),
+        category: img.industry,
+        industry: img.industry,
+        prompt: img.prompt,
+        promptSummary: img.prompt.substring(0, 50) + (img.prompt.length > 50 ? '...' : ''),
         // サービスと同じ画像URLを使用（一貫性のため）
-        imageUrl: imageApiUrl,
-        previewUrl: imageApiUrl,
+        imageUrl: `${imageApiUrl}?v=${new Date(img.updatedAt).getTime()}`,
+        previewUrl: `${imageApiUrl}?v=${new Date(img.updatedAt).getTime()}`,
         isActive: img.isActive,
         isFeatured: img.isFeatured,
         size: img.size,
@@ -110,8 +102,8 @@ export async function GET(request: NextRequest) {
         createdAt: img.createdAt,
         updatedAt: img.updatedAt,
         // 追加情報
-        displayTitle: v2Prompt?.displayTitle || img.industry,
-        name: v2Prompt?.name || img.industry,
+        displayTitle: v2Prompt?.genre === img.industry ? (v2Prompt.displayTitle || v2Prompt.name) : img.industry,
+        name: v2Prompt?.genre === img.industry ? v2Prompt.name : img.industry,
       }
     })
 
@@ -144,25 +136,11 @@ export async function POST(request: NextRequest) {
     const { categoryId, order, size, imageUrl, previewUrl, isFeatured, isActive } = body
     const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : ''
     const isNewForm = categoryId !== undefined
-    const selectedGenre = GENRES.find(g => g.name === categoryId)
-    let industry = isNewForm ? categoryId : body.industry
-    let category = isNewForm ? selectedGenre?.category : body.category
+    const selection = isNewForm && typeof categoryId === 'string'
+      ? await resolveDoyamanaCategorySelection(categoryId) : null
+    const industry = isNewForm ? selection?.industry : body.industry
+    const category = isNewForm ? selection?.category : body.category
     const templateId = isNewForm ? `custom-${randomUUID()}` : body.templateId
-
-    if (isNewForm && !selectedGenre && typeof categoryId === 'string' && categoryId.length <= 100) {
-      const managed = await prisma.doyamanaCategory.findUnique({
-        where: { id: categoryId }, select: { name: true, slug: true, isActive: true },
-      })
-      if (managed?.isActive) {
-        industry = managed.name
-        category = managed.slug
-      } else if (!managed) {
-        const existing = await prisma.bannerTemplate.findFirst({
-          where: { industry: categoryId }, select: { category: true },
-        })
-        category = existing?.category
-      }
-    }
 
     if (typeof templateId !== 'string' || !templateId || templateId.length > 100 ||
         typeof industry !== 'string' || !industry.trim() || industry.length > 100 ||

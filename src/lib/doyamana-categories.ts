@@ -1,7 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { BANNER_PROMPTS_V2, GENRES } from '@/lib/banner-prompts-v2'
-
-const promptGenres = new Map(BANNER_PROMPTS_V2.map(prompt => [prompt.id, prompt.genre]))
+import { GENRES } from '@/lib/banner-prompts-v2'
 
 export interface DoyamanaCategoryView {
   id: string
@@ -44,10 +42,8 @@ export async function listDoyamanaCategories() {
   const managedBySlug = new Map(managed.map(category => [category.slug, category.id]))
 
   for (const template of templates) {
-    const genre = promptGenres.get(template.templateId) || template.industry
-    const id = promptGenres.has(template.templateId)
-      ? genre
-      : managedBySlug.get(template.category) || genre
+    const genre = template.industry
+    const id = managedBySlug.get(template.category) || genre
     if (!categories.has(id)) {
       categories.set(id, {
         id, name: genre, slug: genre, description: null,
@@ -72,4 +68,29 @@ export async function listDoyamanaCategories() {
 
 export function isReservedDoyamanaCategory(name: string, slug: string) {
   return GENRES.some(genre => genre.name === name || genre.id === slug || genre.category === slug)
+}
+
+/** Resolve an admin genre selection to the pair used by the public banner library. */
+export async function resolveDoyamanaCategorySelection(
+  categoryId: string,
+  current?: { industry: string; category: string },
+): Promise<{ industry: string; category: string } | null> {
+  if (!categoryId || categoryId.length > 100) return null
+  if (current?.industry === categoryId) return current
+
+  const standard = GENRES.find(genre => genre.name === categoryId)
+  if (standard) return { industry: standard.name, category: standard.category }
+
+  const managed = await prisma.doyamanaCategory.findUnique({
+    where: { id: categoryId }, select: { name: true, slug: true, isActive: true },
+  })
+  if (managed) {
+    if (!managed.isActive && current?.category !== managed.slug) return null
+    return { industry: managed.name, category: managed.slug }
+  }
+
+  const existing = await prisma.bannerTemplate.findFirst({
+    where: { industry: categoryId }, select: { category: true },
+  })
+  return existing ? { industry: categoryId, category: existing.category } : null
 }

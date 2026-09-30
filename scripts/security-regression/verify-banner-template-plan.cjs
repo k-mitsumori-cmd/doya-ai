@@ -46,7 +46,7 @@ function fixture(plan, customPrompt, templateId = 't1', dbError = false, atLimit
   run = fixture('FREE', undefined)
   assert.equal((await run.api.POST(run.request)).status, 200)
   assert.equal(run.modelCalls, 1)
-  assert(run.modelPrompts[0].includes('公式テンプレートの見た目'))
+  assert(run.modelPrompts[0].includes('保存済みテンプレート'))
   assert(!run.modelPrompts[0].includes('EVIL OVERRIDE'))
 
   run = fixture('FREE', undefined, 'brand-001')
