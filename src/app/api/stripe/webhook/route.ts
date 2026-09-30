@@ -170,6 +170,19 @@ function isDoyaSubscription(subscription: Stripe.Subscription): boolean {
     getPlanIdFromStripePriceId(priceId) !== null
 }
 
+/** 同じStripeアカウントにある別アプリの請求を、ドヤAIの通知に混ぜない。 */
+async function isDoyaInvoice(invoice: Stripe.Invoice): Promise<boolean> {
+  if (invoice.lines?.data?.some((line) => getPlanIdFromStripePriceId(line.price?.id) !== null)) {
+    return true
+  }
+  const subscription = invoice.subscription
+  if (!subscription) return false
+  const resolved = typeof subscription === 'string'
+    ? await stripe.subscriptions.retrieve(subscription)
+    : subscription
+  return isDoyaSubscription(resolved)
+}
+
 /**
  * サブスクリプションからユーザーを特定する（reference/11-billing-spec.md INV-6 / R-1）。
  *
@@ -351,8 +364,6 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
 }
 
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
-  console.log(`Payment succeeded for invoice: ${invoice.id}`)
-
   // ------------------------------------------------------------------
   // 入金通知（ここが唯一「本当にお金が入った」瞬間）
   // ------------------------------------------------------------------
@@ -360,6 +371,8 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
   //    「課金された」と誤認するので、実際に入金があったものだけ通知する。
   const paid = invoice.amount_paid || 0
   if (paid <= 0) return
+  if (!await isDoyaInvoice(invoice)) return
+  console.log(`Payment succeeded for Doya invoice: ${invoice.id}`)
 
   const customerId = invoice.customer as string
   const user = customerId
@@ -390,14 +403,15 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
 }
 
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
-  console.log(`Payment failed for invoice: ${invoice.id}`)
+  if (!await isDoyaInvoice(invoice)) return
+  console.log(`Payment failed for Doya invoice: ${invoice.id}`)
   const customerId = invoice.customer as string
   const user = customerId
     ? await prisma.user.findFirst({ where: { stripeCustomerId: customerId } })
     : null
   sendEventNotification({
     type: 'payment_failed',
-    userEmail: user?.email,
+    userEmail: user?.email || invoice.customer_email,
     userName: user?.name,
     details: `invoice: ${invoice.id}`,
   }).catch(() => {})

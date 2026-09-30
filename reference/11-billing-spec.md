@@ -351,6 +351,7 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
 | **R-13** | 運営が手で付けた上位プラン（契約は¥9,980だが DB は ENTERPRISE 等）は、`updateUserSubscription()` が Stripe の価格から算出した階層で上書きするため、**次回請求の `customer.subscription.updated` で静かに消える**。監査も毎日「過剰付与」として critical を鳴らし続ける | 意図した付与が勝手に消える／本物の異常が警告に埋もれる | **対応済**: `SystemSetting.billing_manual_grants`（または env `BILLING_MANUAL_GRANT_EMAILS`）に登録したアカウントは、監査の対象外とし、Webhook でも **DB の方が上位なら降格しない**（`src/lib/billing-manual-grants.ts`） |
 | **R-8** | `src/lib/plan-utils.ts` の `tierFromPlanId()` が `planTierFromPlanId()` と食い違う（`*-starter`→PRO / `bundle` 未対応）。利用箇所0 | 誤って使うと階層判定が壊れる | **対応済**: 未使用の誤判定関数を削除し、`stripe.ts` の正本へ一本化 |
 | **R-14** | ドヤAIの Webhook でユーザーを特定できない場合や Stripe 顧客照会が失敗した場合、成功応答してイベントを失っていた | 契約開始・更新・解約がDBに反映されず、Stripeの自動再送も止まる | **対応済**: ドヤAIと判別できる契約は500を返して再送を受ける。別アプリの契約は処理対象外とし、回帰テストで両方を確認 |
+| **R-15** | 同じStripeアカウントの別アプリの請求イベントを、ドヤAIの入金・失敗通知として扱っていた | 運営への誤通知と請求状況の誤認 | 請求行のドヤAI価格または契約のドヤAI識別情報を確認してから通知する。判別用のStripe照会に失敗した場合は500を返し、再送を受ける。別アプリ・ドヤAI・照会失敗の回帰テストを追加 |
 | **R-5** | `checkout/route.ts` の `priceMap` は提供終了サービスの planId も解決してしまう（価格が統一なので過剰請求にはならないが契約レコードは残る）。`retiredPlanPrefixes` で入口を塞いでいるだけ | 直POSTで不要な契約レコードが作られる | 緩和済み |
 | **R-6** | `STRIPE_PRICE_*` の個別 env が未設定のため全サービスが banner の価格を共有している。将来サービス別価格を導入すると `getPlanIdFromStripePriceId()` の逆引き結果が変わる | 階層判定は壊れないが、planId 表示が変わる | 設計上の前提 |
 

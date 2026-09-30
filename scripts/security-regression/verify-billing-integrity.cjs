@@ -106,5 +106,33 @@ async function webhook(){
   const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
   assert.equal(response.status,500);assert.equal(f.writes,0);
  });
+ for(const type of ['invoice.payment_succeeded','invoice.payment_failed']){
+  for(const own of [true,false])await check(type+' '+(own?'Doya invoice notifies':'other app invoice does not notify'),async()=>{
+   let f=routeFixture();let invoice={id:'in1',customer:'cus1',customer_email:'owner@example.test',amount_paid:9980,
+    subscription:null,billing_reason:'subscription_cycle',lines:{data:[{price:{id:own?'price_banner_pro_monthly':'price_other_app'},period:{end:1900000000}}]}};
+   const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+    '@/lib/prisma':{prisma:{user:{findFirst:async()=>f.f.state.user}},withRetry:fn=>fn()},
+    '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt1',type,data:{object:invoice}})}};
+   const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+   assert.equal(response.status,200);assert.equal(f.notices,own?1:0);
+  });
+ }
+ await check('Doya invoice without line price resolves subscription metadata',async()=>{
+  let f=routeFixture();let invoice={id:'in1',customer:'cus1',customer_email:'owner@example.test',amount_paid:9980,
+   subscription:'sub1',lines:{data:[{price:null,period:{end:1900000000}}]}};
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/prisma':{prisma:{user:{findFirst:async()=>f.f.state.user}},withRetry:fn=>fn()},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt1',type:'invoice.payment_succeeded',data:{object:invoice}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,200);assert.equal(f.notices,1);
+ });
+ await check('invoice classification outage requests retry without false notification',async()=>{
+  let f=routeFixture();f.mocks['@/lib/stripe'].stripe.subscriptions.retrieve=async()=>{throw Error('temporary Stripe failure')};
+  let invoice={id:'in1',customer:'cus1',amount_paid:9980,subscription:'sub1',lines:{data:[{price:null}]}};
+  const mocks={...f.mocks,'next/headers':{headers:async()=>new Headers({'stripe-signature':'mock'})},
+   '@/lib/stripe':{...f.mocks['@/lib/stripe'],constructWebhookEvent:()=>({id:'evt1',type:'invoice.payment_succeeded',data:{object:invoice}})}};
+  const response=await load('src/app/api/stripe/webhook/route.ts',mocks,{process:{env:{STRIPE_WEBHOOK_SECRET:'mock'}}}).POST(new Request('https://local.test',{method:'POST',body:'x'}));
+  assert.equal(response.status,500);assert.equal(f.notices,0);
+ });
 }
 (async()=>{await atomic();await routes();await webhook();console.log(JSON.stringify({passed:results.length,allServices:ids.length,networkRequests:0,productionWrites:0,results},null,2))})().catch(e=>{console.error(e);process.exitCode=1});
