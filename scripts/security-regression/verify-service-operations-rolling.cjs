@@ -71,5 +71,18 @@ function fixture() {
     assert.equal(f.calls.daily, 2)
     assert(f.rows.has('done:job:daily:2026-10-01'))
   })
+  await check('invalid manual mode or dry-run values do not send or claim', async () => {
+    const f = fixture()
+    for (const query of ['mode=', 'mode=unknown', 'mode=watch&dry=yes', 'mode=watch&dry=']) {
+      const response = await f.route.GET({
+        url: `https://example.invalid/api/cron/service-operations?${query}`,
+        headers: { get: (name) => name === 'authorization' ? 'Bearer secret' : null },
+      })
+      assert.equal(response.status, 400)
+    }
+    assert.equal(f.calls.watch, 0)
+    assert.equal(f.calls.claims, 0)
+    assert.equal(f.rows.size, 0)
+  })
   console.log(JSON.stringify({ passed: results.length, results }, null, 2))
 })().catch((error) => { console.error(error); process.exitCode = 1 })

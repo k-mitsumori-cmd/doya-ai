@@ -11,7 +11,12 @@ export const maxDuration = 300;
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  const url = new URL(request.url), mode = url.searchParams.get('mode') || 'watch', dry = url.searchParams.get('dry') === '1';
+  const url = new URL(request.url);
+  const rawMode = url.searchParams.get('mode');
+  const mode = rawMode === null ? 'watch' : rawMode;
+  const rawDry = url.searchParams.get('dry');
+  if (rawDry !== null && rawDry !== '0' && rawDry !== '1') return NextResponse.json({ error: 'invalid_dry' }, { status: 400 });
+  const dry = rawDry === '1';
   if (!['daily', 'watch', 'reviews', 'weekly', 'cost', 'travel'].includes(mode)) return NextResponse.json({ error: 'invalid_mode' }, { status: 400 });
   const slot = mode === 'watch' ? String(Math.floor(Date.now() / 900000)) : mode === 'reviews' ? String(Math.floor(Date.now() / 14400000)) : jstDay();
   const key = 'job:' + mode + ':' + slot;
