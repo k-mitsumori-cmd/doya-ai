@@ -57,6 +57,15 @@ const fixtureMessages=[
   assert.match(SERVICES.find(s=>s.id==='cunning').pricing.free.limit,/月60分/);
  });
  for(const [status,error] of [[429,'リクエストが多すぎます。しばらくしてからお試しください。'],[429,'現在の解析が完了してから、もう一度お試しください。'],[429,'接続の試行回数が上限に達しました。採用ご担当者にお問い合わせください。'],[400,'ファイルサイズが上限 (500MB) を超えています'],[403,'アクセス権限がありません'],[500,'今月の上限に達しました'],[410,'このサービスは提供を終了しました'],[429,'APIの使用量制限に達しました。Google AI Studioでプランをご確認ください']])await check('non-billing error stays non-billing: '+error.slice(0,15),async()=>assert.equal(classify('/api/banner/generate',status,{error}),null));
+ await check('provider safety ceilings do not show a paid upgrade',async()=>{
+  for(const [route,code,error] of [
+   ['/api/seo/images/id/regenerate','SEO_IMAGE_DAILY_LIMIT','本日の追加画像生成上限（100枚）に達しました。明日お試しください。'],
+   ['/api/seo/articles/id/images/suggest','SEO_IMAGE_SUGGESTION_LIMIT','本日の図解案の生成上限（50回）に達しました。明日お試しください。'],
+   ['/api/swipe/test/question','SWIPE_QUESTION_LIMIT','本日の質問生成上限（50回）に達しました。明日お試しください。'],
+   ['/api/doyaslide/style-preview','STYLE_PREVIEW_DAILY_CAP','本日のスタイル見本生成枠に達しました。既存の見本をご利用ください。'],
+  ]) assert.equal(classify(route,429,{code,error}),null,code);
+  assert.ok(classify('/api/seo/articles',429,{code:'SEO_ARTICLE_LIMIT',error:'今月の生成回数の上限に達しました（3回/月）。'}));
+ });
  await check('external APIs and successful JSON do not produce prompts; response bodies remain readable',async()=>{
   const notices=[];const original=async()=>Response.json({code:'LIMIT',error:'今月の上限に達しました'},{status:429});const fn=observe(original,'http://localhost',x=>notices.push(x));let r=await fn('/api/persona/generate');assert.equal((await r.json()).code,'LIMIT');await new Promise(r=>setTimeout(r,20));assert.equal(notices.length,1);await fn('https://external.invalid/api/persona/generate');await new Promise(r=>setTimeout(r,10));assert.equal(notices.length,1);
   const success=observe(async()=>Response.json({code:'LIMIT'}),'http://localhost',x=>notices.push(x));await success('/api/persona/generate');assert.equal(notices.length,1);
@@ -69,6 +78,6 @@ const fixtureMessages=[
  function visitFile(file){const source=ts.createSourceFile(file,fs.readFileSync(file,'utf8'),ts.ScriptTarget.Latest,true);function value(n){if(!n)return undefined;if(ts.isStringLiteral(n)||ts.isNoSubstitutionTemplateLiteral(n))return n.text;if(ts.isNumericLiteral(n))return Number(n.text);if(n.kind===ts.SyntaxKind.TrueKeyword)return true;if(ts.isTemplateExpression(n))return n.head.text+n.templateSpans.map(s=>'3'+s.literal.text).join('');if(ts.isObjectLiteralExpression(n))return Object.fromEntries(n.properties.filter(ts.isPropertyAssignment).map(p=>[p.name.getText(source).replace(/['"]/g,''),value(p.initializer)]));}
  function visit(n){if(ts.isCallExpression(n)&&n.expression.getText(source)==='NextResponse.json'){let body=value(n.arguments[0]),init=value(n.arguments[1]);if(body&&init&&[400,402,403,429].includes(init.status)){const route='/api/'+file.split('src/app/api/')[1].replace(/\/route.ts$/,'');literals.push({file,status:init.status,error:body.error,code:body.code,classified:!!classify(route,init.status,body)});}}ts.forEachChild(n,visit)}visit(source)}
  function walk(dir){for(const x of fs.readdirSync(dir,{withFileTypes:true})){const p=path.join(dir,x.name);if(x.isDirectory())walk(p);else if(x.name==='route.ts')visitFile(p)}}walk('src/app/api');
- const out='docs/audits/2026-09-19-all-service-limits';if(fs.existsSync(out)){fs.writeFileSync(path.join(out,'api-error-inventory.json'),JSON.stringify(literals,null,2));fs.writeFileSync(path.join(out,'service-matrix.json'),JSON.stringify(SERVICES.map(s=>({id:s.id,name:s.name,status:s.status,pricingHref:lib.SERVICE_LIMIT_DESTINATIONS[s.id].pricingHref,classifiedResponses:literals.filter(x=>x.classified&&x.file.startsWith('src/app/api/'+s.id+'/')).map(x=>x.file)})),null,2));}
+ const out='docs/audits/2026-09-19-all-service-limits';if(process.env.DOYA_UPDATE_SERVICE_LIMIT_AUDIT==='1'&&fs.existsSync(out)){fs.writeFileSync(path.join(out,'api-error-inventory.json'),JSON.stringify(literals,null,2));fs.writeFileSync(path.join(out,'service-matrix.json'),JSON.stringify(SERVICES.map(s=>({id:s.id,name:s.name,status:s.status,pricingHref:lib.SERVICE_LIMIT_DESTINATIONS[s.id].pricingHref,classifiedResponses:literals.filter(x=>x.classified&&x.file.startsWith('src/app/api/'+s.id+'/')).map(x=>x.file)})),null,2));}
  console.log(JSON.stringify({passed:results.length,results},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1});
