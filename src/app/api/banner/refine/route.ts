@@ -238,7 +238,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
     }).catch(() => {})
     return NextResponse.json({
       success: false,
-      error: error.message || 'バナーの再生成に失敗しました',
+      error: 'バナーの再生成に失敗しました',
     }, { status: 500 })
   } finally {
     if (reservation && !charged) {

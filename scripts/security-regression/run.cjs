@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const bannerRefineCronErrors = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-refine-cron-errors.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (bannerRefineCronErrors.error || bannerRefineCronErrors.status !== 0) {
+  console.error('Security regression failed: verify-banner-refine-cron-errors.cjs');
+  process.exit(1);
+}
 const bannerMaintenanceBatch = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-maintenance-batch.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (bannerMaintenanceBatch.error || bannerMaintenanceBatch.status !== 0) {
   console.error('Security regression failed: verify-banner-maintenance-batch.cjs');

@@ -278,7 +278,7 @@ export async function GET(request: Request) {
     })
   } catch (e) {
     console.error('[Drip] Cron error:', e)
-    return NextResponse.json({ error: String(e) }, { status: 500 })
+    return NextResponse.json({ error: '配信処理に失敗しました' }, { status: 500 })
   }
 }
 

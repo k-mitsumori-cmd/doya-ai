@@ -163,6 +163,19 @@ const nextConfig = {
           { key: 'Vary', value: 'Cookie' },
         ],
       },
+      {
+        source: '/api/cron/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store' },
+        ],
+      },
+      {
+        source: '/api/banner/test/templates/:path+',
+        headers: [
+          { key: 'Cache-Control', value: 'private, no-store' },
+          { key: 'Vary', value: 'Cookie, Authorization' },
+        ],
+      },
       // Public LP comparison can embed this presentation within this site only.
       {
         source: '/banner/landing',

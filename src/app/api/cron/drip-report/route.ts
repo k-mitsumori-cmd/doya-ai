@@ -45,6 +45,6 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: true, slot, timestamp: new Date().toISOString() })
   } catch (e) {
     console.error('[DripReport] Cron error:', e)
-    return NextResponse.json({ error: String(e) }, { status: 500 })
+    return NextResponse.json({ error: '配信レポートを作成できませんでした' }, { status: 500 })
   }
 }
