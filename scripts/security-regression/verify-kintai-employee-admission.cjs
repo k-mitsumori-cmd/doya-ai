@@ -10,28 +10,31 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', role: '
   await check('concurrent employee creation counts and writes under the same organization lock', async () => {
     let activeCount = 0
     let creates = 0
+    let lockCalls = 0
     let previous = Promise.resolve()
     const prisma = {
       $transaction: async (work) => {
-        let release
-        const done = new Promise(resolve => { release = resolve })
-        const before = previous
-        previous = done
-        await before
+        let release = () => {}
+        const tx = {
+          $queryRaw: async () => {
+            lockCalls++
+            const before = previous
+            previous = new Promise(resolve => { release = resolve })
+            await before
+            return [{ id: 'org' }]
+          },
+          kintaiMember: { findFirst: async () => ({ userId: 'owner' }) },
+          user: { findUnique: async () => ({ plan: 'FREE' }) },
+          kintaiEmployee: {
+            count: async () => activeCount,
+            create: async () => { creates++; activeCount++; return { id: 'e' } },
+          },
+        }
         try { return await work(tx) } finally { release() }
       },
       kintaiDepartment: { findFirst: async () => null },
       kintaiWorkRule: { findFirst: async () => null },
       kintaiOrganization: { findUnique: async () => ({ name: '会社' }) },
-    }
-    const tx = {
-      $queryRaw: async () => [{ id: 'org' }],
-      kintaiMember: { findFirst: async () => ({ userId: 'owner' }) },
-      user: { findUnique: async () => ({ plan: 'FREE' }) },
-      kintaiEmployee: {
-        count: async () => activeCount,
-        create: async () => { creates++; activeCount++; return { id: 'e' } },
-      },
     }
     const api = load('src/app/api/kintai/employees/route.ts', {
       'next/server': { NextResponse: Response },
@@ -44,6 +47,7 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', role: '
     const request = () => ({ json: async () => ({ name: '山田', email: 'yamada@example.test' }) })
     const responses = await Promise.all([api.POST(request()), api.POST(request())])
     assert.deepEqual(responses.map(r => r.status).sort(), [201, 403])
+    assert.equal(lockCalls, 2)
     assert.equal(creates, 1)
     assert.equal((await responses.find(r => r.status === 403).json()).code, 'KINTAI_EMPLOYEE_LIMIT')
   })
