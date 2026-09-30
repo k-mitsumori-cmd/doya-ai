@@ -13,12 +13,14 @@ import {
   Users,
   Building2,
   Settings,
+  Gem,
 } from 'lucide-react'
 import { hasMinRole } from '@/lib/kintai/access-client'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 
 interface KintaiSidebarProps {
   role: string
+  employeeActive: boolean
   onClose?: () => void
 }
 
@@ -37,7 +39,7 @@ const CHEER_MESSAGES = [
   '休憩も大事だよ！',
 ]
 
-export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
+export default function KintaiSidebar({ role, employeeActive, onClose }: KintaiSidebarProps) {
   const pathname = usePathname()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [cheerIndex, setCheerIndex] = useState(0)
@@ -64,24 +66,24 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
   }
 
   const baseItems: NavItem[] = [
-    { href: '/kintai/dashboard', icon: <span className="text-lg">📊</span>, label: 'マイページ' },
-    { href: '/kintai/clock', icon: <span className="text-lg">⏰</span>, label: '打刻' },
-    { href: '/kintai/attendance', icon: <span className="text-lg">📅</span>, label: '勤怠一覧' },
-    { href: '/kintai/requests', icon: <span className="text-lg">📝</span>, label: 'マイ申請' },
+    { href: '/kintai/dashboard', icon: <LayoutDashboard className="h-5 w-5" />, label: 'マイページ' },
+    ...(employeeActive ? [{ href: '/kintai/clock', icon: <Clock className="h-5 w-5" />, label: '打刻' }] : []),
+    { href: '/kintai/attendance', icon: <CalendarDays className="h-5 w-5" />, label: '勤怠一覧' },
+    { href: '/kintai/requests', icon: <FileText className="h-5 w-5" />, label: 'マイ申請' },
   ]
 
   const managerItems: NavItem[] = hasMinRole(role, 'manager')
     ? [
-        { href: '/kintai/approvals', icon: <span className="text-lg">✅</span>, label: '承認管理' },
-        { href: '/kintai/admin/attendance', icon: <span className="text-lg">📈</span>, label: '部署勤怠' },
+        { href: '/kintai/approvals', icon: <CheckSquare className="h-5 w-5" />, label: '承認管理' },
+        { href: '/kintai/admin/attendance', icon: <BarChart3 className="h-5 w-5" />, label: '部署勤怠' },
       ]
     : []
 
   const adminItems: NavItem[] = hasMinRole(role, 'hr_admin')
     ? [
-        { href: '/kintai/employees', icon: <span className="text-lg">👥</span>, label: '従業員管理' },
-        { href: '/kintai/departments', icon: <span className="text-lg">🏢</span>, label: '部署管理' },
-        { href: '/kintai/settings', icon: <span className="text-lg">⚙️</span>, label: '就業ルール' },
+        { href: '/kintai/employees', icon: <Users className="h-5 w-5" />, label: '従業員管理' },
+        { href: '/kintai/departments', icon: <Building2 className="h-5 w-5" />, label: '部署管理' },
+        { href: '/kintai/settings', icon: <Settings className="h-5 w-5" />, label: '就業ルール' },
       ]
     : []
 
@@ -142,7 +144,7 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
       <div className="px-3 mb-2 mt-2">
         <Link href="/kintai/pricing" onClick={closeMobile}
           className="flex items-center gap-3 px-4 py-3 rounded-full text-base font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 transition-all">
-          <span className="text-lg">💎</span>
+          <Gem className="h-5 w-5" />
           料金プラン
         </Link>
       </div>
@@ -156,7 +158,7 @@ export default function KintaiSidebar({ role, onClose }: KintaiSidebarProps) {
             className="w-10 h-10 object-contain sidebar-cheer-bear"
           />
           <p className="text-xs font-bold text-[#7f19e6]/80 leading-snug sidebar-cheer-text">
-            {CHEER_MESSAGES[cheerIndex]}
+            {employeeActive ? CHEER_MESSAGES[cheerIndex] : '過去の勤怠と申請を確認できます'}
           </p>
         </div>
       </div>

@@ -13,7 +13,10 @@ const mocks = {
   react: React,
   'react/jsx-runtime': require('react/jsx-runtime'),
   'next/link': { __esModule: true, default: Link },
-  'next/navigation': { useRouter: () => ({ push() {} }), useSearchParams: () => new URLSearchParams() },
+  'next/navigation': { useRouter: () => ({ push() {} }), useSearchParams: () => new URLSearchParams(), usePathname: () => '/kintai/dashboard' },
+  'lucide-react': require('lucide-react'),
+  '@/lib/kintai/access-client': { hasMinRole: () => false },
+  '@/components/ToolSwitcherMenu': { ToolSwitcherMenu: () => null },
   '@/components/kintai/KintaiAccessContext': { useKintaiAccess: () => ({ isActive }) },
   '@/lib/kintai/types': { CLOCK_TYPE_LABELS: {}, REQUEST_TYPE_LABELS: {}, REQUEST_STATUS_LABELS: {} },
   '@/lib/kintai/format': { formatMinutesJa: () => '0分' },
@@ -37,6 +40,7 @@ function page(file) {
 const requests = page('src/app/kintai/requests/page.tsx')
 const newRequest = page('src/app/kintai/requests/new/page.tsx')
 const clock = page('src/app/kintai/clock/page.tsx')
+const sidebar = page('src/components/kintai/KintaiSidebar.tsx')
 
 const render = Component => renderToStaticMarkup(React.createElement(Component))
 isActive = false
@@ -48,8 +52,12 @@ const inactiveClock = render(clock)
 assert.match(inactiveClock, /打刻は利用できません/)
 assert.match(inactiveClock, /href="\/kintai\/attendance"/)
 assert.doesNotMatch(inactiveClock, /出勤する/)
+const inactiveSidebar = renderToStaticMarkup(React.createElement(sidebar, { role: 'employee', employeeActive: false }))
+assert.doesNotMatch(inactiveSidebar, /href="\/kintai\/clock"/)
+assert.match(inactiveSidebar, /href="\/kintai\/attendance"/)
 
 isActive = true
 assert.match(render(requests), /href="\/kintai\/requests\/new"/)
 assert.doesNotMatch(render(newRequest), /新規申請は利用できません/)
+assert.match(renderToStaticMarkup(React.createElement(sidebar, { role: 'employee', employeeActive: true })), /href="\/kintai\/clock"/)
 console.log('Kintai disabled pages: PASS')

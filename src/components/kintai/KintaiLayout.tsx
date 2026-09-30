@@ -131,7 +131,7 @@ export default function KintaiLayout({ children }: KintaiLayoutProps) {
   return (
     <KintaiAccessContext.Provider value={{ isActive: usage?.isActive ?? null }}>
     <div className="flex min-h-screen bg-gradient-to-br from-slate-50 via-white to-purple-50/30">
-      <KintaiSidebar role={role} />
+      <KintaiSidebar role={role} employeeActive={usage?.isActive !== false} />
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Top bar */}
         <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-100 px-4 lg:px-6 py-3 shadow-sm">
