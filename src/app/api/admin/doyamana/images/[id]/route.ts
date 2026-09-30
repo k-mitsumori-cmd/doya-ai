@@ -48,7 +48,7 @@ export async function GET(
   } catch (error) {
     console.error('[GET /api/admin/doyamana/images/[id]] Error:', error)
     return NextResponse.json(
-      { error: '画像の取得に失敗しました', details: String(error) },
+      { error: '画像の取得に失敗しました' },
       { status: 500 }
     )
   }
@@ -87,7 +87,7 @@ export async function PUT(
   } catch (error) {
     console.error('[PUT /api/admin/doyamana/images/[id]] Error:', error)
     return NextResponse.json(
-      { error: '画像の更新に失敗しました', details: String(error) },
+      { error: '画像の更新に失敗しました' },
       { status: 500 }
     )
   }
@@ -113,7 +113,7 @@ export async function DELETE(
   } catch (error) {
     console.error('[DELETE /api/admin/doyamana/images/[id]] Error:', error)
     return NextResponse.json(
-      { error: '画像の削除に失敗しました', details: String(error) },
+      { error: '画像の削除に失敗しました' },
       { status: 500 }
     )
   }

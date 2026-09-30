@@ -19,8 +19,15 @@ export async function GET(request: NextRequest) {
     const genre = searchParams.get('category') // フロントエンドからはcategoryとして送られるが、実際はgenre
     const status = searchParams.get('status') // 'active' | 'inactive' | 'all'
     const search = searchParams.get('search')
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '20')
+    const rawPage = searchParams.get('page') || '1'
+    const rawLimit = searchParams.get('limit') || '20'
+    const page = Number(rawPage)
+    const limit = Number(rawLimit)
+    if (!Number.isInteger(page) || page < 1 || page > 100000 ||
+        !Number.isInteger(limit) || limit < 1 || limit > 100 ||
+        (search && search.length > 200)) {
+      return NextResponse.json({ error: '検索条件またはページ指定が不正です' }, { status: 400 })
+    }
 
     // フィルタ条件構築
     const where: Record<string, unknown> = {}
@@ -33,9 +40,7 @@ export async function GET(request: NextRequest) {
         .filter(p => p.genre === genre)
         .map(p => p.id)
       
-      if (filteredTemplateIds.length > 0) {
-        where.templateId = { in: filteredTemplateIds }
-      }
+      where.templateId = { in: filteredTemplateIds }
     }
     
     if (status === 'active') {
@@ -105,7 +110,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('[GET /api/admin/doyamana/images] Error:', error)
     return NextResponse.json(
-      { error: '画像一覧の取得に失敗しました', details: String(error) },
+      { error: '画像一覧の取得に失敗しました' },
       { status: 500 }
     )
   }
@@ -146,7 +151,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[POST /api/admin/doyamana/images] Error:', error)
     return NextResponse.json(
-      { error: '画像の作成に失敗しました', details: String(error) },
+      { error: '画像の作成に失敗しました' },
       { status: 500 }
     )
   }
@@ -162,7 +167,8 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const { action, ids } = body
 
-    if (!action || !ids || !Array.isArray(ids) || ids.length === 0) {
+    if (!action || !Array.isArray(ids) || ids.length === 0 || ids.length > 100 ||
+        !ids.every((id: unknown) => typeof id === 'string')) {
       return NextResponse.json(
         { error: 'アクションとIDリストは必須です' },
         { status: 400 }
@@ -200,7 +206,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('[PATCH /api/admin/doyamana/images] Error:', error)
     return NextResponse.json(
-      { error: '一括操作に失敗しました', details: String(error) },
+      { error: '一括操作に失敗しました' },
       { status: 500 }
     )
   }

@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const doyamanaAdminErrors = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyamana-admin-errors.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyamanaAdminErrors.error || doyamanaAdminErrors.status !== 0) {
+  console.error('Security regression failed: verify-doyamana-admin-errors.cjs');
+  process.exit(1);
+}
 const doyaslideErrorDebug = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-error-debug.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (doyaslideErrorDebug.error || doyaslideErrorDebug.status !== 0) {
   console.error('Security regression failed: verify-doyaslide-error-debug.cjs');

@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('[GET /api/admin/doyamana/categories] Error:', error)
     return NextResponse.json(
-      { error: 'カテゴリ一覧の取得に失敗しました', details: String(error) },
+      { error: 'カテゴリ一覧の取得に失敗しました' },
       { status: 500 }
     )
   }
