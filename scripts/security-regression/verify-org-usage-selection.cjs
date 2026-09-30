@@ -31,10 +31,8 @@ const prisma = {
     findUnique: async ({ where }) => ({ plan: where.id === 'free-owner' ? 'FREE' : 'PRO' }),
   },
 }
-const shodanPlan = load('src/lib/shodan/organization-plan.ts', { '@/lib/prisma': { prisma } })
 const summary = load('src/lib/usage-summary.ts', {
   '@/lib/prisma': { prisma },
-  '@/lib/shodan/organization-plan': shodanPlan,
   '@/lib/persona/usage': { getPersonaUsage: async () => null },
   '@/lib/pricing': {},
   '@/lib/plan-limit': {
@@ -53,10 +51,6 @@ const summary = load('src/lib/usage-summary.ts', {
   assert.equal(quote.meters[0].used, 2, 'quote uses owned organization before newer membership')
   const shodan = await summary.getUsageSummary('shodan', 'viewer', 'PRO', 'team-a')
   assert.equal(shodan.meters[0].used, 2, 'selected organization controls shodan usage')
-  assert.equal(shodan.meters[0].limit, 1, 'FREE owner controls shared Shodan quota despite PRO viewer')
-  assert.equal(shodan.planLabel, '無料')
-  const paidShodan = await summary.getUsageSummary('shodan', 'viewer', 'FREE', 'team-b')
-  assert.equal(paidShodan.meters[0].limit, 30, 'PRO owner controls shared Shodan quota despite FREE viewer')
   assert.equal(await summary.getUsageSummary('shodan', 'viewer', 'PRO', 'foreign'), null)
 
   const aishodan = await summary.getUsageSummary('aishodan', 'viewer', 'PRO')

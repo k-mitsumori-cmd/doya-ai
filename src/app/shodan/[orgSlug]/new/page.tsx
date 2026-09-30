@@ -46,7 +46,6 @@ export default function ShodanNewPage() {
   const [tick, setTick] = useState(0)
   const [research, setResearch] = useState<CompanyResearch | null>(null)
   const [limitMessage, setLimitMessage] = useState<string | null>(null)
-  const [limitAction, setLimitAction] = useState<{ href: string; label: string } | null>(null)
   const [hasProfile, setHasProfile] = useState<boolean | null>(null)
   const prepIdRef = useRef<string | null>(null)
 
@@ -65,7 +64,6 @@ export default function ShodanNewPage() {
   const run = async () => {
     if (!url.trim()) { toast.error('URLを入力してください'); return }
     setLimitMessage(null)
-    setLimitAction(null)
     setPhase('researching')
     try {
       // フェーズ1：調査
@@ -82,7 +80,6 @@ export default function ShodanNewPage() {
     } catch (e: any) {
       if (e instanceof ShodanApiError && e.code === 'LIMIT') {
         setLimitMessage(e.message)
-        setLimitAction(e.actionUrl && e.actionLabel ? { href: e.actionUrl, label: e.actionLabel } : null)
       } else {
         toast.error(e.message || '生成に失敗しました')
       }
@@ -116,9 +113,9 @@ export default function ShodanNewPage() {
             {limitMessage && (
               <div role="alert" className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                 <p className="text-sm font-bold text-amber-900">{limitMessage}</p>
-                {limitAction && <Link href={limitAction.href} className="mt-2 inline-flex items-center gap-1 text-sm font-black text-purple-700 underline">
-                  {limitAction.label} {sym('arrow_forward', 16)}
-                </Link>}
+                <Link href="/shodan/pricing" className="mt-2 inline-flex items-center gap-1 text-sm font-black text-purple-700 underline">
+                  料金プラン・追加枠を確認する {sym('arrow_forward', 16)}
+                </Link>
               </div>
             )}
             <motion.button onClick={run} whileHover={{ y: -2 }} whileTap={{ scale: 0.98 }}

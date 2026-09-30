@@ -9,13 +9,7 @@ function withOrg(path: string, orgSlug: string): string {
 }
 
 export class ShodanApiError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-    readonly code?: string,
-    readonly actionUrl?: string,
-    readonly actionLabel?: string,
-  ) {
+  constructor(message: string, readonly status: number, readonly code?: string) {
     super(message)
     this.name = 'ShodanApiError'
   }
@@ -40,12 +34,6 @@ export async function shodanSend<T = any>(
     body: body != null ? JSON.stringify(body) : undefined,
   })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new ShodanApiError(
-    (data as any)?.error || `操作に失敗しました (${res.status})`,
-    res.status,
-    (data as any)?.code,
-    (data as any)?.upgradeUrl || (data as any)?.contactUrl,
-    (data as any)?.upgradeUrl ? '料金プランを確認する' : (data as any)?.contactUrl ? '追加枠について問い合わせる' : undefined,
-  )
+  if (!res.ok) throw new ShodanApiError((data as any)?.error || `操作に失敗しました (${res.status})`, res.status, (data as any)?.code)
   return data as T
 }

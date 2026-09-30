@@ -23,7 +23,6 @@ import {
 import { FREE_LIMITS, PRO_MONTHLY_LIMITS, ENTERPRISE_MONTHLY_LIMITS } from '@/lib/plan-limit'
 import { isPaidPlan } from '@/lib/unified-plan'
 import { PREP_STALE_MS, SHODAN_MONTHLY_LIMIT } from '@/lib/shodan/types'
-import { getShodanOrganizationPlan } from '@/lib/shodan/organization-plan'
 
 /** 1本の枠。limit が null なら上限なし */
 export interface UsageMeter {
@@ -340,8 +339,7 @@ export async function getUsageSummary(
             },
           })
         : 0
-      const organizationPlan = orgIds[0] ? await getShodanOrganizationPlan(orgIds[0]) : 'FREE'
-      const p = organizationPlan.toUpperCase()
+      const p = String(plan || 'FREE').toUpperCase()
       const limit = isPaidPlan(p)
         ? p === 'ENTERPRISE'
           ? SHODAN_MONTHLY_LIMIT.ENTERPRISE
@@ -351,7 +349,7 @@ export async function getUsageSummary(
         title: '調べた企業',
         unit: '件',
         total,
-        planLabel: planLabelOf(organizationPlan),
+        planLabel,
         meters: [{ label: '今月', used, limit }],
       }
     }
