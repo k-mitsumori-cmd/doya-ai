@@ -137,7 +137,7 @@ export async function* generateForMultiplePlatforms(
       yield {
         type: 'generation_error',
         platform,
-        data: { error: e instanceof Error ? e.message : String(e) },
+        data: { error: '生成に失敗しました。時間をおいて再度お試しください。' },
         index: i,
         total,
       }

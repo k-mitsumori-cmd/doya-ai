@@ -696,7 +696,7 @@ async function extractCandidatesFromSerpOrganic(args: {
       at: Date.now(),
       kind: 'error',
       title: '検索結果からの候補抽出（AI）に失敗しました',
-      detail: String(e?.message || e || '').slice(0, 240),
+      detail: '処理に失敗しました。時間をおいて再試行してください。',
     })
     return []
   }
@@ -1532,7 +1532,7 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
           at: Date.now(),
           kind: 'error',
           title: 'Gemini知識からの候補生成に失敗しました',
-          detail: String(e?.message || e || '').slice(0, 200),
+          detail: '処理に失敗しました。時間をおいて再試行してください。',
         })
       }
     }
@@ -1698,7 +1698,7 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
         at: Date.now(),
         kind: 'error',
         title: 'SerpAPI検索に失敗しました',
-        detail: String(e?.message || e || '').slice(0, 240),
+        detail: '処理に失敗しました。時間をおいて再試行してください。',
       })
     }
     if (comparisonMediaUrls.length >= maxMediaToCollect) break
@@ -1765,7 +1765,7 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
         at: Date.now(),
         kind: 'warn',
         title: '比較記事の解析に失敗',
-        detail: `${shortHost(mediaUrl)}: ${String(e?.message || e || '').slice(0, 100)}`,
+        detail: '比較記事を解析できませんでした。次の候補へ進みます。',
       })
     }
   }
@@ -1811,7 +1811,7 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
             at: Date.now(),
             kind: 'error',
             title: 'SerpAPI検索に失敗しました',
-            detail: String(e?.message || e || '').slice(0, 240),
+            detail: '処理に失敗しました。時間をおいて再試行してください。',
           })
           break
         }
@@ -1881,7 +1881,7 @@ async function ensureComparisonCandidates(article: any, jobId?: string): Promise
         at: Date.now(),
         kind: 'error',
         title: 'Gemini知識からの候補生成に失敗しました',
-        detail: String(e?.message || e || '').slice(0, 200),
+        detail: '処理に失敗しました。時間をおいて再試行してください。',
       })
     }
   }
@@ -3407,7 +3407,7 @@ async function integrate(jobId: string) {
         at: Date.now(),
         kind: 'warn',
         title: '追補セクション生成に失敗（継続します）',
-        detail: e?.message || 'unknown error',
+        detail: '追補セクションを生成できませんでした。次の処理へ進みます。',
       })
       // フォールバックで前進させる
       parts.push(

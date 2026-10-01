@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
           success: false, 
           error: 'バリデーションエラー',
           details: issues,
-          message: e?.message || '不明なエラー',
+          message: '入力内容を確認してください。',
         },
         { status: 400 }
       )

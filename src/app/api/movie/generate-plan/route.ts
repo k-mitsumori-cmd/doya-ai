@@ -38,8 +38,8 @@ export async function POST(req: NextRequest) {
             controller.enqueue(encoder.encode(`data: ${JSON.stringify({ plan })}\n\n`))
           }
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`))
-        } catch (error) {
-          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: String(error) })}\n\n`))
+        } catch {
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: '企画の生成に失敗しました。時間をおいて再度お試しください。' })}\n\n`))
         } finally {
           controller.close()
         }

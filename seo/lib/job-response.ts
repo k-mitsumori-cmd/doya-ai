@@ -4,6 +4,15 @@ const PUBLIC_JOB_ERRORS = new Set([
   '生成サービスからの応答が遅れています。時間をおいて再試行してください。',
   '生成処理を完了できませんでした。時間をおいて再試行してください。',
 ])
+const LEGACY_RAW_ERROR_EVENTS = new Set([
+  '同じエラーが連続したため生成を停止しました',
+  '一時的なエラーが発生しました（自動で再試行します）',
+  '検索結果からの候補抽出（AI）に失敗しました',
+  'Gemini知識からの候補生成に失敗しました',
+  'SerpAPI検索に失敗しました',
+  '比較記事の解析に失敗',
+  '追補セクション生成に失敗（継続します）',
+])
 
 export function publicSeoJob<T extends object>(job: T): Omit<T, 'executionToken' | 'executionExpiresAt'> {
   const { executionToken, executionExpiresAt, ...publicJob } = job as T & {
@@ -22,8 +31,7 @@ export function publicSeoJob<T extends object>(job: T): Omit<T, 'executionToken'
           researchEvents: record.researchEvents.map(event => {
             if (!event || typeof event !== 'object' || Array.isArray(event)) return event
             const item = event as Record<string, unknown>
-            if (item.title !== '同じエラーが連続したため生成を停止しました'
-              && item.title !== '一時的なエラーが発生しました（自動で再試行します）') return event
+            if (!LEGACY_RAW_ERROR_EVENTS.has(String(item.title || ''))) return event
             return { ...item, detail: '生成処理でエラーが発生しました。' }
           }),
         }

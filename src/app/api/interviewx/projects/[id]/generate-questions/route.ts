@@ -242,7 +242,7 @@ ${templateQuestions ? JSON.stringify(templateQuestions, null, 2) : '（テンプ
       } catch (e: any) {
         console.error('[interviewx] generate-questions error:')
         try {
-          controller.enqueue(sseEvent({ type: 'error', message: e?.message || '質問生成に失敗しました' }))
+          controller.enqueue(sseEvent({ type: 'error', message: '質問生成に失敗しました。時間をおいて再度お試しください。' }))
         } catch {
           // controller already closed
         }

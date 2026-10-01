@@ -56,4 +56,20 @@ const response = { NextResponse: Response }
       assert(!JSON.stringify(await result.json()).includes(secret))
     })
   }
+
+  await check('movie plan stream hides provider failure', async () => {
+    const route = load('src/app/api/movie/generate-plan/route.ts', {
+      'next/server': response,
+      'next-auth': { getServerSession: async () => ({ user: { email: 'test@example.com' } }) },
+      '@/lib/auth': { authOptions: {} },
+      '@/lib/movie/access': { getGuestIdFromRequest: () => null },
+      '@/lib/movie/gemini': { generatePlansStream: async function* () { throw new Error(secret) } },
+      '@/lib/retired-service': { SERVICE_RETIRED: false },
+    }, { ReadableStream, TextEncoder })
+    const result = await route.POST({ json: async () => ({ productInfo: {}, persona: null, config: {} }) })
+    assert.equal(result.status, 200)
+    const body = await result.text()
+    assert(body.includes('error'))
+    assert(!body.includes(secret))
+  })
 })().catch((error) => { console.error(error); process.exitCode = 1 })
