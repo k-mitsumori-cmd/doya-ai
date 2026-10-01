@@ -400,17 +400,19 @@ export default function NewDoyaSlideWizard() {
               setTitle(e.target.value)
               setTitleEdited(true)
             }}
+            maxLength={120}
             placeholder="例: 新サービス〇〇の提案 / AI活用セミナー"
             className={inputCls}
           />
 
           <div className="mt-3 flex items-center justify-between">
             <label className="text-sm font-black text-slate-700">詳しい内容・伝えたいこと</label>
-            <span className="text-[11px] font-black text-blue-600">詳しく書くほど資料に反映しやすくなります</span>
+            <span className="text-[11px] font-black text-blue-600">{brief.length.toLocaleString('ja-JP')} / 20,000文字</span>
           </div>
           <textarea
             value={brief}
             onChange={(e) => setBrief(e.target.value)}
+            maxLength={20000}
             placeholder={
               'ここに「誰に・何を・どう伝えたいか」をたっぷり書いてください。\n例) 対象は中小企業の経営者。導入で月20時間の工数削減ができること、料金プラン、導入事例を入れたい。最後は無料相談に誘導。\n\n※ 箇条書きでもOK。たくさん書くほど、いいスライドになります！'
             }

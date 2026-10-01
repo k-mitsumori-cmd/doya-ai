@@ -88,7 +88,7 @@
 | メソッド | パス | 説明 |
 |---------|------|------|
 | GET/POST | `/projects` | 一覧取得 / 新規作成（上限チェック） |
-| GET/PATCH/DELETE | `/projects/[id]` | 取得 / 更新 / 削除（userId 所有確認） |
+| GET/PATCH/DELETE | `/projects/[id]` | 取得 / 更新 / 削除（userId 所有確認。更新はタイトル・テーマカラー・スタイル・比率・補足のみ、型と値を検証） |
 | PUT | `/projects/[id]/logo-config` | ロゴ位置・サイズ・背景チップ変更（全スライド再合成） |
 | POST | `/assets/logo` | ロゴアップロード |
 | POST | `/structure` | Gemini でスライド構成生成 |
@@ -136,6 +136,7 @@ src/lib/doyaslide/        # 10 ファイル
 ## 課金・アクセス制御
 
 - **統一プラン方式**。プラン判定は `User.plan` 単一参照（`src/lib/doyaslide/limits.ts` の `getUserTier` → `tierFrom`）。
+- プロジェクトの補足入力は最大20,000文字。作成・更新APIの両方で検証する。
 - 上限（`limits.ts`）: 無料=月3プロジェクト/20枚、プロ=プロジェクト無制限/月150枚。
 - 参考URL解析と資料構成生成は、外部AI・取得先の保護のため、それぞれ全プラン共通で日本時間1日50回の運用上限を設ける。月間のプロジェクト・スライド枠とは別で、プラン変更で解除されない。
 - 料金ページは `UnifiedPricingPlans`（serviceId="doyaslide"）。

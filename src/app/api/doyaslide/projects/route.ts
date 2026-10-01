@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'タイトル（テーマ）は必須です' }, { status: 400 })
     }
     if ((docType != null && (typeof docType !== 'string' || !DOC_TYPES.some((item) => item.value === docType)))
-      || (customBrief != null && typeof customBrief !== 'string')
+      || (customBrief != null && (typeof customBrief !== 'string' || customBrief.length > 20000))
       || (slideCount != null && (typeof slideCount !== 'number' || !Number.isSafeInteger(slideCount) || slideCount < MIN_SLIDES || slideCount > MAX_SLIDES))
       || (aspectRatio != null && (typeof aspectRatio !== 'string' || !Object.prototype.hasOwnProperty.call(ASPECT_TO_SIZE, aspectRatio)))
       || (themeColor != null && (typeof themeColor !== 'string' || !/^#[0-9a-fA-F]{6}$/.test(themeColor)))
