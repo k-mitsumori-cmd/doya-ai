@@ -209,7 +209,7 @@ export async function POST(req: NextRequest) {
 
           safeEnqueue(`data: ${JSON.stringify({ type: 'done' })}\n\n`)
         } catch (e: any) {
-          console.error('[generate-copy stream error]', e)
+          console.error('[generate-copy stream error]')
           const message = e?.message?.includes('quota') || e?.message?.includes('429')
             ? 'API利用制限に達しました。しばらく時間をおいてお試しください。'
             : `コピー生成に失敗しました: ${e?.message || '不明なエラー'}`
@@ -230,7 +230,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[POST /api/lp/generate-copy]', error)
+    console.error('[POST /api/lp/generate-copy]')
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ productInfo })
   } catch (error) {
-    console.error('[POST /api/lp/analyze-url]', error)
+    console.error('[POST /api/lp/analyze-url]')
     return NextResponse.json({ error: 'AIによる解析中にエラーが発生しました。もう一度お試しください。' }, { status: 500 })
   }
 }

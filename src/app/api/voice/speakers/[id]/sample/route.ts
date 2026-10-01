@@ -53,7 +53,7 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ id: stri
       format: result.format,
     })
   } catch (error) {
-    console.error('Speaker sample API error:', error)
+    console.error('Speaker sample API error:')
     return NextResponse.json(
       { success: false, error: 'サンプル音声の生成に失敗しました' },
       { status: 500 }

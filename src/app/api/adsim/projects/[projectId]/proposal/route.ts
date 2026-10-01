@@ -97,7 +97,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ projectI
             safeEnqueue({ type: 'done', sections: collected })
           } catch (err) {
             const message = err instanceof Error ? err.message : String(err)
-            console.error('[adsim] proposal stream error:', err)
+            console.error('[adsim] proposal stream error:')
             safeEnqueue({ type: 'error', error: message })
           } finally {
             try {
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ projectI
     return NextResponse.json({ project: updated, sections })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[adsim] proposal error:', error)
+    console.error('[adsim] proposal error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

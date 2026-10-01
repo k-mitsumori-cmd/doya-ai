@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, productInfo })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Copy analyze-url error:', error)
+    console.error('Copy analyze-url error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

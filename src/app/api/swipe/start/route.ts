@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       questions: SWIPE_QUESTIONS,
     })
   } catch (error: any) {
-    console.error('[swipe/start] error:', error)
+    console.error('[swipe/start] error:')
     return NextResponse.json(
       { error: 'スワイプの開始に失敗しました。' },
       { status: 503 }

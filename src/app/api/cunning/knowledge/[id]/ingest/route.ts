@@ -78,7 +78,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (e instanceof CunningScrapeTooLargeError) {
       return NextResponse.json({ error: 'ページが大きすぎます。別のURLをお試しください。' }, { status: 413 })
     }
-    console.error('[cunning/ingest]', e?.message)
+    console.error('[cunning/ingest]')
     return NextResponse.json({ error: '取り込みに失敗しました' }, { status: 500 })
   }
 }

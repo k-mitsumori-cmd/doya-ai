@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data })
   } catch (e: any) {
-    console.error('[adbanner/generate]', e?.message)
+    console.error('[adbanner/generate]')
     return NextResponse.json({ success: false, error: 'バナー生成に失敗しました' }, { status: 500 })
   }
 }

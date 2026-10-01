@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ projects })
   } catch (error) {
-    console.error('[GET /api/lp/projects]', error)
+    console.error('[GET /api/lp/projects]')
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ project })
   } catch (error) {
-    console.error('[POST /api/lp/projects]', error)
+    console.error('[POST /api/lp/projects]')
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

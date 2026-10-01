@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
           // レート制限対策: 少し待機
           await new Promise(resolve => setTimeout(resolve, 2000))
         } catch (e: any) {
-          console.error(`[question-image] Failed to generate for category ${category}:`, e.message)
+          console.error("[api/swipe/question-images/generate] failed")
         }
       }
       if (generatedCount >= count) break
@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
       images: generated,
     })
   } catch (error: any) {
-    console.error('[question-images/generate] error:', error)
+    console.error('[question-images/generate] error:')
     return NextResponse.json(
       { error: '画像の生成に失敗しました。' },
       { status: 503 }

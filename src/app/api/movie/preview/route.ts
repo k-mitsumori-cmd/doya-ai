@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       thumbnail: thumbnailInfo,
     })
   } catch (error) {
-    console.error('[POST /api/movie/preview]', error)
+    console.error('[POST /api/movie/preview]')
     return NextResponse.json({ error: 'プレビュー保存に失敗しました' }, { status: 500 })
   }
 }

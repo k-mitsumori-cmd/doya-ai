@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (e: any) {
-    console.error('[interviewx/projects] GET error:', e?.message)
+    console.error('[interviewx/projects] GET error:')
     return NextResponse.json(
       { success: false, error: 'プロジェクト一覧の取得に失敗しました' },
       { status: 500 }
@@ -178,7 +178,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, project }, { status: 201 })
   } catch (e: any) {
-    console.error('[interviewx/projects] POST error:', e?.message)
+    console.error('[interviewx/projects] POST error:')
     return NextResponse.json(
       { success: false, error: 'プロジェクト作成に失敗しました' },
       { status: 500 }

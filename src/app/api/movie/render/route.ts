@@ -133,14 +133,14 @@ export async function POST(req: NextRequest) {
 
     // バックグラウンド実行（awaitしない）
     renderVideo(job.id, config, userId ?? guestId ?? 'guest').catch(async (err) => {
-      console.error('[renderVideo]', err)
+      console.error('[renderVideo]')
       await failRenderJob(job.id, String(err))
       await prisma.movieProject.update({ where: { id: projectId }, data: { status: 'failed' } })
     })
 
     return NextResponse.json({ jobId: job.id, status: 'queued' })
   } catch (error) {
-    console.error('[POST /api/movie/render]', error)
+    console.error('[POST /api/movie/render]')
     return NextResponse.json({ error: 'レンダリング開始に失敗しました' }, { status: 500 })
   }
 }

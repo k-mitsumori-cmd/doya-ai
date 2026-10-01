@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
         error: `本日の企業URL解析の運用上限（${CUNNING_COMPANY_DAILY_LIMIT}回）に達しました。明日お試しください。`,
       }, { status: 429 })
     }
-    console.error('[cunning/company/analyze]', e?.message)
+    console.error('[cunning/company/analyze]')
     return NextResponse.json({ error: '企業ページの解析に失敗しました' }, { status: 500 })
   }
 }

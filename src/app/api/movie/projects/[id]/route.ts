@@ -36,7 +36,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     return NextResponse.json({ project })
   } catch (error) {
-    console.error('[GET /api/movie/projects/[id]]', error)
+    console.error('[GET /api/movie/projects/[id]]')
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 }
@@ -88,7 +88,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     return NextResponse.json({ project: updated })
   } catch (error) {
-    console.error('[PUT /api/movie/projects/[id]]', error)
+    console.error('[PUT /api/movie/projects/[id]]')
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 }
@@ -118,7 +118,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     await prisma.movieProject.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[DELETE /api/movie/projects/[id]]', error)
+    console.error('[DELETE /api/movie/projects/[id]]')
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 }

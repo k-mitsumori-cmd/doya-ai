@@ -139,7 +139,7 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ id: stri
       },
     })
   } catch (e) {
-    console.error('[InterviewX] export/html error:', e)
+    console.error('[InterviewX] export/html error:')
     return NextResponse.json({ success: false, error: 'HTMLエクスポートに失敗しました' }, { status: 500 })
   }
 }

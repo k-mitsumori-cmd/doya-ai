@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
   try {
     pages = await crawlProductSite(url.toString())
   } catch (err) {
-    console.error('[aishodan] crawl failed', err instanceof Error ? err.message : err)
+    console.error('[aishodan] crawl failed')
     await releaseReservation(productId)
     return NextResponse.json({ error: 'サイトを読み取れませんでした。URLをご確認ください。' }, { status: 502 })
   }
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
   try {
     profile = await generateProfile(pages)
   } catch (err) {
-    console.error('[aishodan] profile failed', err instanceof Error ? err.message : err)
+    console.error('[aishodan] profile failed')
     await releaseReservation(productId)
     return NextResponse.json({ error: '商材情報の生成に失敗しました。時間をおいて再度お試しください。' }, { status: 502 })
   }

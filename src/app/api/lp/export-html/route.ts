@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     }
     return new NextResponse(html, { headers })
   } catch (error) {
-    console.error('[POST /api/lp/export-html]', error)
+    console.error('[POST /api/lp/export-html]')
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

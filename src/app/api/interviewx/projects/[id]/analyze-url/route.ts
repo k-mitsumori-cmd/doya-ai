@@ -136,7 +136,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       robotsWarning: scraped.robotsWarning || null,
     })
   } catch (e: any) {
-    console.error('[interviewx] analyze-url error:', e?.message)
+    console.error('[interviewx] analyze-url error:')
     const msg = e?.message?.includes('内部ネットワーク')
       ? e.message
       : e?.message?.includes('テキストを抽出')

@@ -122,7 +122,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ projectId
     return NextResponse.json({ error: 'unsupported format' }, { status: 400 })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[adsim] export error:', error)
+    console.error('[adsim] export error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

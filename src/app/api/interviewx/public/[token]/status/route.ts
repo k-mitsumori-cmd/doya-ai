@@ -80,7 +80,7 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ token: s
       draft: ['REVIEW', 'FEEDBACK'].includes(project.status) ? latestDraft : null,
     })
   } catch (e: any) {
-    console.error('[interviewx] status GET error:', e?.message)
+    console.error('[interviewx] status GET error:')
     return NextResponse.json(
       { success: false, error: 'サーバーエラーが発生しました' },
       { status: 500 }

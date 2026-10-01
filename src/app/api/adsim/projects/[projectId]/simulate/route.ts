@@ -74,7 +74,7 @@ export async function POST(_req: NextRequest, props: { params: Promise<{ project
     return NextResponse.json({ project: updated, simulation: result })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[adsim] simulate error:', error)
+    console.error('[adsim] simulate error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

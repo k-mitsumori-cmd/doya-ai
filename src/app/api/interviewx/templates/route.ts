@@ -63,7 +63,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, templates })
   } catch (e: any) {
-    console.error('[interviewx/templates] GET error:', e?.message)
+    console.error('[interviewx/templates] GET error:')
     return NextResponse.json(
       { success: false, error: 'テンプレート取得に失敗しました' },
       { status: 500 }
@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, template }, { status: 201 })
   } catch (e: any) {
-    console.error('[interviewx/templates] POST error:', e?.message)
+    console.error('[interviewx/templates] POST error:')
     return NextResponse.json(
       { success: false, error: 'テンプレート作成に失敗しました' },
       { status: 500 }

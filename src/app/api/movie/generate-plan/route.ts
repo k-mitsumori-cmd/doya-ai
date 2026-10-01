@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[POST /api/movie/generate-plan]', error)
+    console.error('[POST /api/movie/generate-plan]')
     return new Response(JSON.stringify({ error: '企画生成に失敗しました' }), { status: 500 })
   }
 }

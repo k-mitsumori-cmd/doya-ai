@@ -35,7 +35,7 @@ export async function GET(
     })
   } catch (error) {
     // トラッキングエラーでもGIFは返す（ユーザー体験を損なわない）
-    console.error('[Drip] Open tracking error:', error)
+    console.error('[Drip] Open tracking error:')
   }
 
   return new NextResponse(TRANSPARENT_GIF, {

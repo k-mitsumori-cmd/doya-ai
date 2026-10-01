@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
       totalPages: Math.ceil(total / limit),
     })
   } catch (error) {
-    console.error('Voice projects GET error:', error)
+    console.error('Voice projects GET error:')
     return NextResponse.json(
       { success: false, error: 'プロジェクト一覧の取得に失敗しました', projects: [] },
       { status: 500 }
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Voice projects POST error:', error)
+    console.error('Voice projects POST error:')
     return NextResponse.json(
       { success: false, error: 'プロジェクト作成に失敗しました' },
       { status: 500 }

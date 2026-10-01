@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
       charCount,
     })
   } catch (error: any) {
-    console.error('Voice generate API error:', error)
+    console.error('Voice generate API error:')
 
     // エラーの種類に応じたメッセージ
     let errorMessage = '音声生成に失敗しました'

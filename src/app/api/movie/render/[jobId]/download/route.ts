@@ -91,7 +91,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ jobI
       },
     })
   } catch (error) {
-    console.error('[GET /api/movie/render/[jobId]/download]', error)
+    console.error('[GET /api/movie/render/[jobId]/download]')
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 }

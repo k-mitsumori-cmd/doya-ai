@@ -29,7 +29,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, speakers })
   } catch (error) {
-    console.error('Speakers API error:', error)
+    console.error('Speakers API error:')
     return NextResponse.json(
       { success: false, error: 'スピーカー一覧の取得に失敗しました' },
       { status: 500 }

@@ -117,7 +117,7 @@ JSONのみを出力してください。`
         }
       }
     } catch (e) {
-      console.warn('[keyword analysis] error:', e)
+      console.warn('[keyword analysis] error:')
       // エラー時は空配列のまま
     }
 
@@ -226,7 +226,7 @@ JSONのみを出力してください。必ず8問すべてを生成してくだ
         throw new Error('AI質問生成のレスポンスからJSONを抽出できませんでした')
       }
     } catch (e: any) {
-      console.error('[swipe/test/start] AI question generation failed:', e?.message)
+      console.error('[swipe/test/start] AI question generation failed:')
       
       // エラーをクライアントに返す
       return NextResponse.json(
@@ -269,7 +269,7 @@ JSONのみを出力してください。必ず8問すべてを生成してくだ
     })
   } catch (error: any) {
     if (error instanceof SeoToolRateLimitError) return NextResponse.json({ code: 'SWIPE_QUESTION_LIMIT', error: `本日の質問生成上限（${error.limit}回）に達しました。明日お試しください。` }, { status: 429 })
-    console.error('[swipe/test/start] error:', error)
+    console.error('[swipe/test/start] error:')
     return NextResponse.json(
       { error: '質問の生成に失敗しました。時間をおいて再試行してください。' },
       { status: 503 }

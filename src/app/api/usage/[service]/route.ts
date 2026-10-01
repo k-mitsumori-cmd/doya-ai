@@ -48,7 +48,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     if (!summary) return NextResponse.json({ signedIn: true, summary: null }, { headers: privateHeaders })
     return NextResponse.json({ signedIn: true, summary }, { headers: privateHeaders })
   } catch (e) {
-    console.error('[usage]', service, e instanceof Error ? e.message : e)
+    console.error('[usage]')
     // ⚠️ 表示だけの機能なので、失敗してもサイドバーは壊さない
     return NextResponse.json({ signedIn: true, summary: null }, { headers: privateHeaders })
   }

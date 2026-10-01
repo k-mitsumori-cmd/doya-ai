@@ -95,7 +95,7 @@ function App() {
       },
     })
   } catch (error: any) {
-    console.error('Export error:', error)
+    console.error('Export error:')
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }

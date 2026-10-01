@@ -253,7 +253,7 @@ ${message}
     return NextResponse.json({ ok: true, summary, simulation: simResult })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[adsim] chat-edit error:', error)
+    console.error('[adsim] chat-edit error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

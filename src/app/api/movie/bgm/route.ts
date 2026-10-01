@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ tracks: filteredTracks, plan: userPlan })
   } catch (error) {
-    console.error('[GET /api/movie/bgm]', error)
+    console.error('[GET /api/movie/bgm]')
     return NextResponse.json({ error: 'BGMの取得に失敗しました' }, { status: 500 })
   }
 }

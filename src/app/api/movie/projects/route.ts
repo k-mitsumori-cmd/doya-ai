@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ projects })
   } catch (error) {
-    console.error('[GET /api/movie/projects]', error)
+    console.error('[GET /api/movie/projects]')
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 }
@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ project })
   } catch (error) {
-    console.error('[POST /api/movie/projects]', error)
+    console.error('[POST /api/movie/projects]')
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 }

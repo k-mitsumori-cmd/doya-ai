@@ -37,7 +37,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ project })
   } catch (error) {
-    console.error('[GET /api/lp/projects/[id]]', error)
+    console.error('[GET /api/lp/projects/[id]]')
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
@@ -132,7 +132,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ project: result })
   } catch (error) {
-    console.error('[PUT /api/lp/projects/[id]]', error)
+    console.error('[PUT /api/lp/projects/[id]]')
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }
@@ -161,7 +161,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[DELETE /api/lp/projects/[id]]', error)
+    console.error('[DELETE /api/lp/projects/[id]]')
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
   }
 }

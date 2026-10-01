@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
       durationMs: updated.durationMs,
     })
   } catch (error: any) {
-    console.error('Voice record trim error:', error)
+    console.error('Voice record trim error:')
 
     let errorMessage = 'トリミングに失敗しました'
     let statusCode = 500

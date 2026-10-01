@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     const productInfo = await analyzeProduct({ name, url, description, features, target, usp, industry })
     return NextResponse.json({ productInfo })
   } catch (error) {
-    console.error('[POST /api/movie/analyze-product]', error)
+    console.error('[POST /api/movie/analyze-product]')
     return NextResponse.json({ error: '商品情報の解析に失敗しました' }, { status: 500 })
   }
 }

@@ -116,7 +116,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true, questions: updatedQuestions })
   } catch (e: any) {
-    console.error('[interviewx/questions] PUT error:', e?.message)
+    console.error('[interviewx/questions] PUT error:')
     return NextResponse.json(
       { success: false, error: '質問の更新に失敗しました' },
       { status: 500 }

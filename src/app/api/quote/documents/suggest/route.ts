@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     })
     return NextResponse.json({ items })
   } catch (err) {
-    console.error('[quote] suggest failed', err instanceof Error ? err.message : err)
+    console.error('[quote] suggest failed')
     return NextResponse.json({ error: '品目の生成に失敗しました。時間をおいて再度お試しください。' }, { status: 502 })
   }
 }

@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
       await postToSlackBlocks(title, blocks)
       notified = true
     } catch (e: any) {
-      console.error(`[Feedback] Slack通知に失敗 (${attempt + 1}/2):`, e?.message)
+      console.error("[api/feedback] failed")
     }
   }
   if (!notified) {

@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
       storagePath,
     })
   } catch (error: any) {
-    console.error('Voice record upload error:', error)
+    console.error('Voice record upload error:')
 
     let errorMessage = '録音のアップロードに失敗しました'
     let statusCode = 500

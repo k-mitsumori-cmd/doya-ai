@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (error: any) {
-    console.error('Generation error:', error)
+    console.error('Generation error:')
     
     // Gemini APIのエラーハンドリング
     if (error.message?.includes('quota') || error.message?.includes('RESOURCE_EXHAUSTED')) {

@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, projectId: project.id })
   } catch (error: any) {
-    console.error('Opening analyze error:', error)
+    console.error('Opening analyze error:')
     sendErrorNotification({
       errorMessage: error?.message || 'Opening analyze failed',
       errorStack: error?.stack,
@@ -86,7 +86,7 @@ async function analyzeAndGenerate(projectId: string, url: string) {
       data: { status: 'READY' },
     })
   } catch (error: any) {
-    console.error('analyzeAndGenerate error:', error)
+    console.error('analyzeAndGenerate error:')
     sendErrorNotification({
       errorMessage: `Opening animation generation failed for ${url}: ${error?.message}`,
       errorStack: error?.stack,

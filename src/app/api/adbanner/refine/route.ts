@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
     })
     return NextResponse.json({ success: true, data: { id: created.id, size: created.size, variantLabel: created.variantLabel, model: created.model, feedback: null, generation: created.generation, createdAt: created.createdAt, imageUrl: await signedUrl(created.imagePath) } })
   } catch (e: any) {
-    console.error('[adbanner/refine]', e?.message)
+    console.error('[adbanner/refine]')
     return NextResponse.json({ success: false, error: '再生成に失敗しました' }, { status: 500 })
   }
 }

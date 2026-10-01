@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ projects, total })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[adsim] projects GET error:', error)
+    console.error('[adsim] projects GET error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ project })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('[adsim] projects POST error:', error)
+    console.error('[adsim] projects POST error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

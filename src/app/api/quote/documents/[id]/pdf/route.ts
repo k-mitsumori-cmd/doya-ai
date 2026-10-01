@@ -74,7 +74,7 @@ export async function GET(req: NextRequest, ctxParam: Ctx) {
       },
     })
   } catch (err) {
-    console.error('[quote] pdf failed', err instanceof Error ? err.message : err)
+    console.error('[quote] pdf failed')
     return NextResponse.json({ error: 'PDFの生成に失敗しました' }, { status: 500 })
   }
 }

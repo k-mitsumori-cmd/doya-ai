@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ scenes })
   } catch (error) {
-    console.error('[POST /api/movie/generate-scenes]', error)
+    console.error('[POST /api/movie/generate-scenes]')
     return NextResponse.json({ error: 'シーン生成に失敗しました' }, { status: 500 })
   }
 }

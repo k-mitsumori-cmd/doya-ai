@@ -96,7 +96,7 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ token: s
       },
     })
   } catch (e: any) {
-    console.error('[interviewx] public GET error:', e?.message)
+    console.error('[interviewx] public GET error:')
     return NextResponse.json(
       { success: false, error: 'サーバーエラーが発生しました' },
       { status: 500 }

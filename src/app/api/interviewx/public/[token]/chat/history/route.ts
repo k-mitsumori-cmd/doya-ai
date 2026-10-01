@@ -79,7 +79,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       isComplete: response.status === 'COMPLETED',
     })
   } catch (e: any) {
-    console.error('[interviewx-chat] history error:', e?.message)
+    console.error('[interviewx-chat] history error:')
     return NextResponse.json(
       { success: false, error: 'サーバーエラーが発生しました' },
       { status: 500 }

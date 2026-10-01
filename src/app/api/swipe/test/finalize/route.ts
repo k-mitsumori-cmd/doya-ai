@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     if (error instanceof SeoArticleQuotaError) return NextResponse.json({ code: 'SEO_ARTICLE_LIMIT', error: `今月の生成回数の上限に達しました（${error.limit}回/月）。プランをアップグレードすると増やせます。`, upgradeUrl: '/seo/dashboard/plan' }, { status: 429 })
     if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2025') return NextResponse.json({ error: 'この記事はすでに生成されています。画面を更新して確認してください。' }, { status: 409 })
-    console.error('[swipe/test/finalize] error:', error)
+    console.error('[swipe/test/finalize] error:')
     return NextResponse.json({ error: '記事の作成に失敗しました。時間をおいて再試行してください。' }, { status: 503 })
   }
 }

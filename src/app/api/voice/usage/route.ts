@@ -45,7 +45,7 @@ export async function GET() {
       plan: String(plan).toUpperCase(),
     })
   } catch (error) {
-    console.error('Voice usage API error:', error)
+    console.error('Voice usage API error:')
     return NextResponse.json(
       { success: false, error: '利用状況の取得に失敗しました' },
       { status: 500 }

@@ -50,7 +50,7 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ id: stri
       },
     })
   } catch (error) {
-    console.error('Voice project GET error:', error)
+    console.error('Voice project GET error:')
     return NextResponse.json(
       { success: false, error: 'プロジェクトの取得に失敗しました' },
       { status: 500 }
@@ -132,7 +132,7 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
       },
     })
   } catch (error) {
-    console.error('Voice project PUT error:', error)
+    console.error('Voice project PUT error:')
     return NextResponse.json(
       { success: false, error: 'プロジェクトの更新に失敗しました' },
       { status: 500 }
@@ -171,7 +171,7 @@ export async function DELETE(_req: NextRequest, props: { params: Promise<{ id: s
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Voice project DELETE error:', error)
+    console.error('Voice project DELETE error:')
     return NextResponse.json(
       { success: false, error: 'プロジェクトの削除に失敗しました' },
       { status: 500 }

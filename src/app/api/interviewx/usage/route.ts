@@ -65,7 +65,7 @@ export async function GET() {
       },
     })
   } catch (e: any) {
-    console.error('[interviewx/usage] GET error:', e?.message)
+    console.error('[interviewx/usage] GET error:')
     return NextResponse.json(
       { success: false, error: '利用状況の取得に失敗しました' },
       { status: 500 }

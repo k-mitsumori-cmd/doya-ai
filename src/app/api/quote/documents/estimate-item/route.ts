@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     })
     return NextResponse.json({ item })
   } catch (err) {
-    console.error('[quote] estimate-item failed', err instanceof Error ? err.message : err)
+    console.error('[quote] estimate-item failed')
     return NextResponse.json(
       { error: '見積もりの生成に失敗しました。時間をおいて再度お試しください。' },
       { status: 502 }

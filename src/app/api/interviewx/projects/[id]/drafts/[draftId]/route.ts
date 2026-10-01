@@ -63,7 +63,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true, draft })
   } catch (e: any) {
-    console.error('[interviewx/drafts/[draftId]] GET error:', e?.message)
+    console.error('[interviewx/drafts/[draftId]] GET error:')
     return NextResponse.json(
       { success: false, error: 'ドラフト取得に失敗しました' },
       { status: 500 }

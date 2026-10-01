@@ -253,7 +253,7 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
 
         controller.close()
       } catch (e: any) {
-        console.error('[interviewx] generate-summary error:', e?.message)
+        console.error('[interviewx] generate-summary error:')
         try {
           controller.enqueue(sseEvent({ type: 'error', message: e?.message || '要約生成に失敗しました' }))
         } catch {

@@ -34,7 +34,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     const { signedUrl, token, path } = await createSignedUploadUrl(pathFor(s.id))
     return NextResponse.json({ signedUrl, token, path })
   } catch (e: any) {
-    console.error('[mensetsu/live/[token]/recording] unexpected error', e)
+    console.error('[mensetsu/live/[token]/recording] unexpected error')
     return NextResponse.json({ error: 'URLの発行に失敗しました' }, { status: 502 })
   }
 }

@@ -40,7 +40,7 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ id: stri
       },
     })
   } catch (e) {
-    console.error('[InterviewX] export/markdown error:', e)
+    console.error('[InterviewX] export/markdown error:')
     return NextResponse.json({ success: false, error: 'Markdownエクスポートに失敗しました' }, { status: 500 })
   }
 }

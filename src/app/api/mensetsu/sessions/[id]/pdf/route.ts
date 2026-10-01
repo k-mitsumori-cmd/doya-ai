@@ -86,7 +86,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: any) {
-    console.error('[mensetsu] pdf error', e?.message)
+    console.error('[mensetsu] pdf error')
     return NextResponse.json({ error: 'PDFの生成に失敗しました' }, { status: 502 })
   }
 }

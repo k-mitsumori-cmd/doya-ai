@@ -46,7 +46,7 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     // ⚠️ await しない。応募者の画面はここで返さないと終了操作が固まる。
     //    失敗しても面接は completed のまま残り、担当者が一覧から手で評価できる。
     void runEvaluation(s.id).catch((e) => {
-      console.error('[mensetsu] 自動評価に失敗', s.id, e instanceof Error ? e.message : e)
+      console.error('[mensetsu] 自動評価に失敗')
     })
   }
 

@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
       })),
     })
   } catch (error: any) {
-    console.error('[question-images] error:', error)
+    console.error('[question-images] error:')
     return NextResponse.json(
       { error: '画像の読み込みに失敗しました。' },
       { status: 503 }

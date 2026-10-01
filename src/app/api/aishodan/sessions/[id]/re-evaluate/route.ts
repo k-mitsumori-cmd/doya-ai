@@ -81,7 +81,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
       unansweredQuestions: unanswered.map((q) => q.text),
     })
   } catch (err) {
-    console.error('[aishodan] re-evaluate failed', err instanceof Error ? err.message : err)
+    console.error('[aishodan] re-evaluate failed')
     // ⚠️ 失敗しても商談ログは触らない。手で判定を入れる経路（PATCH）が残っている
     return NextResponse.json(
       { error: '判定を作成できませんでした。時間をおいてもう一度お試しいただくか、判定を手で入力してください。' },

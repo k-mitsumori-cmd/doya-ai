@@ -226,7 +226,7 @@ export async function POST(req: NextRequest) {
                 })}\n\n`)
               }
             } catch (e) {
-              console.error(`Writer type ${writerType} generation failed:`, e)
+              console.error("[api/copy/generate] failed")
               safeEnqueue(`data: ${JSON.stringify({
                 type: 'writer_error',
                 writerType,
@@ -256,7 +256,7 @@ export async function POST(req: NextRequest) {
           })}\n\n`)
         } catch (e: unknown) {
           const errMsg = e instanceof Error ? e.message : 'Unknown error'
-          console.error('Copy generate stream error:', e)
+          console.error('Copy generate stream error:')
           safeEnqueue(`data: ${JSON.stringify({ type: 'error', message: errMsg })}\n\n`)
           await prisma.copyProject.update({
             where: { id: projectId },
@@ -277,7 +277,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Copy generate error:', error)
+    console.error('Copy generate error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

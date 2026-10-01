@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ section: updated })
   } catch (error: any) {
-    console.error('[POST /api/lp/brushup-section]', error)
+    console.error('[POST /api/lp/brushup-section]')
     const statusCode = error?.code === 'P2025' ? 404 : 500
     const message = statusCode === 404 ? 'セクションが見つかりません' : 'サーバーエラーが発生しました'
     return NextResponse.json({ error: message }, { status: statusCode })

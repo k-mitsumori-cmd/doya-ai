@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, ...result })
   } catch (err: any) {
-    console.error('[slashslide/publish/google-slides] error:', err)
+    console.error('[slashslide/publish/google-slides] error:')
     return NextResponse.json({ error: err?.message || 'Unknown error' }, { status: 500 })
   }
 }

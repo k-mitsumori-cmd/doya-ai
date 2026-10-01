@@ -165,7 +165,7 @@ JSONのみを出力してください。`
     }
   } catch (error: any) {
     if (error instanceof SeoToolRateLimitError) return NextResponse.json({ code: 'SWIPE_QUESTION_LIMIT', error: `本日の質問生成上限（${error.limit}回）に達しました。明日お試しください。` }, { status: 429 })
-    console.error('[swipe/test/question] error:', error)
+    console.error('[swipe/test/question] error:')
     return NextResponse.json(
       { error: '質問の生成に失敗しました。時間をおいて再試行してください。' },
       { status: 503 }

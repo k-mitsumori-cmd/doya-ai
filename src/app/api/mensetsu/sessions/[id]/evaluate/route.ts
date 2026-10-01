@@ -28,7 +28,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (!r.ok) return NextResponse.json({ error: r.reason }, { status: r.status })
     return NextResponse.json({ ok: true, verdict: r.verdict })
   } catch (e: any) {
-    console.error('[mensetsu/sessions/[id]/evaluate] unexpected error', e)
+    console.error('[mensetsu/sessions/[id]/evaluate] unexpected error')
     return NextResponse.json({ error: '評価に失敗しました' }, { status: 502 })
   }
 }

@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     await uploadFile(path, buf, file.type)
     return NextResponse.json({ success: true, data: { path, url: await signedUrl(path) } })
   } catch (e: any) {
-    console.error('[adbanner/logo]', e?.message)
+    console.error('[adbanner/logo]')
     return NextResponse.json({ success: false, error: 'ロゴのアップロードに失敗しました' }, { status: 500 })
   }
 }

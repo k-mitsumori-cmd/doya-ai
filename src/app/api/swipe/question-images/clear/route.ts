@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       category: category ?? 'ALL',
     })
   } catch (error: any) {
-    console.error('[question-images/clear] error:', error)
+    console.error('[question-images/clear] error:')
     return NextResponse.json(
       { error: '画像の削除に失敗しました。' },
       { status: 503 }

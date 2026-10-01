@@ -110,7 +110,7 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ id: stri
       },
     })
   } catch (error: any) {
-    console.error('Voice download API error:', error)
+    console.error('Voice download API error:')
 
     let errorMessage = 'ダウンロードに失敗しました'
     let statusCode = 500

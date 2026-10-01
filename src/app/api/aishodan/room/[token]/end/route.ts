@@ -88,7 +88,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     })
   } catch (err) {
     // ⚠️ 評価に失敗しても商談ログは残す。completed のまま置き、後から再評価できる状態にする。
-    console.error('[aishodan] evaluate failed', err instanceof Error ? err.message : err)
+    console.error('[aishodan] evaluate failed')
     // ⚠️ ここで黙って返すと、ホストは商談が行われたことすら知らないまま
     //    実際の見込み客が一覧の中で放置される。判定が出ていなくても必ず通知する。
     try {

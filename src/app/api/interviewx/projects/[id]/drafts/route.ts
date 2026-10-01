@@ -57,7 +57,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true, drafts })
   } catch (e: any) {
-    console.error('[interviewx/drafts] GET error:', e?.message)
+    console.error('[interviewx/drafts] GET error:')
     return NextResponse.json(
       { success: false, error: 'ドラフト一覧の取得に失敗しました' },
       { status: 500 }

@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
       await postToSlackBlocks(title, blocks)
       notified = true
     } catch (e: any) {
-      console.error(`[CaseStudy] Slack通知に失敗 (${attempt + 1}/2):`, e?.message)
+      console.error("[api/campaign/case-study] failed")
     }
   }
   if (!notified) {

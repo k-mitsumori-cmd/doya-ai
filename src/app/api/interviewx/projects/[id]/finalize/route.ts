@@ -67,7 +67,7 @@ export async function POST(
       draftId: latestDraft?.id,
     })
   } catch (e) {
-    console.error('[InterviewX] finalize error:', e)
+    console.error('[InterviewX] finalize error:')
     return NextResponse.json({ success: false, error: '完了処理に失敗しました' }, { status: 500 })
   }
 }

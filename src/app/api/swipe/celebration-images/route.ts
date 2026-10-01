@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
       })),
     })
   } catch (error: any) {
-    console.error('[celebration-images] error:', error)
+    console.error('[celebration-images] error:')
     return NextResponse.json(
       { error: '画像の読み込みに失敗しました。' },
       { status: 503 }

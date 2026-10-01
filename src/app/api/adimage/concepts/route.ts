@@ -337,7 +337,7 @@ export async function POST(req: NextRequest) {
         }
         return { group, result, rows }
       } catch (err) {
-        console.error('[adimage] generate failed', group.genKey, err instanceof Error ? err.message : err)
+        console.error('[adimage] generate failed')
         return { group, result: null, rows: [] }
       }
     })

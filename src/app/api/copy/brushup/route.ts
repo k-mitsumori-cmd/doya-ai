@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, copy: updated })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Copy brushup error:', error)
+    console.error('Copy brushup error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

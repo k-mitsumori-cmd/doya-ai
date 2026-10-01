@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const slideSpec = await generateSlideSpec(input)
     return NextResponse.json({ ok: true, slideSpec })
   } catch (err: any) {
-    console.error('[slashslide/generate] error:', err)
+    console.error('[slashslide/generate] error:')
     return NextResponse.json({ error: err?.message || 'Unknown error' }, { status: 500 })
   }
 }

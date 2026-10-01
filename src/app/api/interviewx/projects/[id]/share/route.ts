@@ -90,7 +90,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       shareToken: project.shareToken,
     })
   } catch (e: any) {
-    console.error('[interviewx/share] POST error:', e?.message)
+    console.error('[interviewx/share] POST error:')
     return NextResponse.json(
       { success: false, error: '共有URL生成に失敗しました' },
       { status: 500 }

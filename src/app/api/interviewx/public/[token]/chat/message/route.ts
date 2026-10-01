@@ -184,7 +184,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       isComplete: shouldEnd,
     })
   } catch (e: any) {
-    console.error('[interviewx-chat] message error:', e?.message)
+    console.error('[interviewx-chat] message error:')
     return NextResponse.json(
       { success: false, error: 'メッセージの送信に失敗しました' },
       { status: 500 }

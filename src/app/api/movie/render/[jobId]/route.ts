@@ -58,7 +58,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ jobI
       createdAt: job.createdAt.toISOString(),
     })
   } catch (error) {
-    console.error('[GET /api/movie/render/[jobId]]', error)
+    console.error('[GET /api/movie/render/[jobId]]')
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 }

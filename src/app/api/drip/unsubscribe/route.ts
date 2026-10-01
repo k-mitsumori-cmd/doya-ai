@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true })
     }
     // DB接続エラー等 → 500を返してユーザーにリトライを促す
-    console.error('[Drip] Unsubscribe error:', e?.message)
+    console.error('[Drip] Unsubscribe error:')
     return NextResponse.json({ error: 'サーバーエラーが発生しました' }, { status: 500 })
   }
 }

@@ -69,7 +69,7 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true, project })
   } catch (e: any) {
-    console.error('[interviewx/projects/[id]] GET error:', e?.message)
+    console.error('[interviewx/projects/[id]] GET error:')
     return NextResponse.json(
       { success: false, error: 'プロジェクト取得に失敗しました' },
       { status: 500 }
@@ -143,7 +143,7 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true, project })
   } catch (e: any) {
-    console.error('[interviewx/projects/[id]] PUT error:', e?.message)
+    console.error('[interviewx/projects/[id]] PUT error:')
     return NextResponse.json(
       { success: false, error: 'プロジェクト更新に失敗しました' },
       { status: 500 }
@@ -185,7 +185,7 @@ export async function DELETE(_req: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true, message: 'プロジェクトを削除しました' })
   } catch (e: any) {
-    console.error('[interviewx/projects/[id]] DELETE error:', e?.message)
+    console.error('[interviewx/projects/[id]] DELETE error:')
     return NextResponse.json(
       { success: false, error: 'プロジェクト削除に失敗しました' },
       { status: 500 }

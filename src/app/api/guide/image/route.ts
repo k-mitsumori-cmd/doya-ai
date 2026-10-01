@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
     if (error?.name === 'ZodError' || error instanceof SyntaxError) {
       return NextResponse.json({ error: '入力形式が正しくありません' }, { status: 400 })
     }
-    console.error('Guide image generation error:', error)
+    console.error('Guide image generation error:')
     return NextResponse.json({ error: 'ガイド画像を生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

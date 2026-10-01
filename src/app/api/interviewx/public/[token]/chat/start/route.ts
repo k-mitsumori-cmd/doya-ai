@@ -153,7 +153,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
       resumed: false,
     })
   } catch (e: any) {
-    console.error('[interviewx-chat] start error:', e?.message)
+    console.error('[interviewx-chat] start error:')
     return NextResponse.json(
       { success: false, error: 'チャット開始に失敗しました' },
       { status: 500 }

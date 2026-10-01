@@ -40,7 +40,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
     return NextResponse.json({ project })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Copy projects [id] GET error:', error)
+    console.error('Copy projects [id] GET error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
@@ -100,7 +100,7 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
     return NextResponse.json({ success: true, project: updated })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Copy projects [id] PUT error:', error)
+    console.error('Copy projects [id] PUT error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
@@ -133,7 +133,7 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Copy projects [id] DELETE error:', error)
+    console.error('Copy projects [id] DELETE error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

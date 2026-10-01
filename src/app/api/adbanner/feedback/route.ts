@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
     await prisma.adBannerCreative.update({ where: { id: creative.id }, data: { feedback: fb as any } })
     return NextResponse.json({ success: true, data: fb })
   } catch (e: any) {
-    console.error('[adbanner/feedback]', e?.message)
+    console.error('[adbanner/feedback]')
     return NextResponse.json({ success: false, error: 'フィードバックの生成に失敗しました' }, { status: 500 })
   }
 }

@@ -43,7 +43,7 @@ export async function GET(
     })
   } catch (error) {
     // トラッキングエラーでもリダイレクトは行う（ユーザー体験を損なわない）
-    console.error('[Drip] Click tracking error:', error)
+    console.error('[Drip] Click tracking error:')
   }
 
   return NextResponse.redirect(originalUrl, 302)

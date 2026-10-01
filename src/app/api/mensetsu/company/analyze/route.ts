@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ profile: saved, pageCount: pages.length })
   } catch (e: any) {
-    console.error('[mensetsu/company/analyze] unexpected error', e)
+    console.error('[mensetsu/company/analyze] unexpected error')
     return NextResponse.json(
       { error: '企業サイトの解析に失敗しました' },
       { status: 502 }

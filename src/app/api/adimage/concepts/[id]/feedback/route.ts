@@ -80,7 +80,7 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
       directives: result.directives,
     })
   } catch (err) {
-    console.error('[adimage] feedback failed', err instanceof Error ? err.message : err)
+    console.error('[adimage] feedback failed')
     return NextResponse.json({ error: '採点に失敗しました。時間をおいて再度お試しください。' }, { status: 502 })
   }
 }

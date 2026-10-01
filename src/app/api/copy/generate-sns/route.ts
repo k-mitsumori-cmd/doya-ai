@@ -183,7 +183,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, copies: savedItems, snsCopies })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Copy generate-sns error:', error)
+    console.error('Copy generate-sns error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

@@ -1557,7 +1557,7 @@ export async function POST(req: NextRequest) {
         sendEvent('complete', { result })
 
       } catch (err: any) {
-        console.error('[shindan/generate] SSE Error:', err)
+        console.error('[shindan/generate] SSE Error:')
         const payload = `event: error\ndata: ${JSON.stringify({ error: err?.message || '診断に失敗しました。もう一度お試しください。' })}\n\n`
         controller.enqueue(encoder.encode(payload))
       } finally {

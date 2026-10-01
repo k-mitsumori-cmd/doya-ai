@@ -238,7 +238,7 @@ async function fetchYouTubeTranscript(
       }
     }
   } catch (e) {
-    console.warn('[tenkai] YouTube HTML parse failed:', e instanceof Error ? e.message : 'unknown')
+    console.warn('[tenkai] YouTube HTML parse failed:')
   }
 
   // === 方法2: Innertube API ===
@@ -262,7 +262,7 @@ async function fetchYouTubeTranscript(
       }
     }
   } catch (e) {
-    console.warn('[tenkai] YouTube Innertube API failed:', e instanceof Error ? e.message : 'unknown')
+    console.warn('[tenkai] YouTube Innertube API failed:')
   }
 
   // === 方法3: timedtext API直接アクセス ===
@@ -276,7 +276,7 @@ async function fetchYouTubeTranscript(
       }
     }
   } catch (e) {
-    console.warn('[tenkai] YouTube timedtext API failed:', e instanceof Error ? e.message : 'unknown')
+    console.warn('[tenkai] YouTube timedtext API failed:')
   }
 
   throw new Error(

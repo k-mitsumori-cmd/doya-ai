@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('[swipe/log] error:', error)
+    console.error('[swipe/log] error:')
     return NextResponse.json(
       { error: 'スワイプの保存に失敗しました。' },
       { status: 503 }

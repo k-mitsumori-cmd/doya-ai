@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ suggestions })
   } catch (error) {
-    console.error('[POST /api/lp/suggest-fields]', error)
+    console.error('[POST /api/lp/suggest-fields]')
     return NextResponse.json(
       { error: 'AIによる提案の生成に失敗しました。もう一度お試しください。' },
       { status: 500 }

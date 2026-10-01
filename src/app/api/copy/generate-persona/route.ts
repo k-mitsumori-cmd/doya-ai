@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, persona })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Unknown error'
-    console.error('Copy generate-persona error:', error)
+    console.error('Copy generate-persona error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
