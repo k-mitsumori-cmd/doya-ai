@@ -72,6 +72,9 @@ function fixture(initialCount, failure, denied) {
     const api=load('src/app/api/doyalist/projects/route.ts',{
       'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{id:'user'}})},
       '@/lib/auth':{authOptions:{}},'@/lib/doyalist/limits':{},
+      '@/lib/doyalist/stream-json':streamJson,
+      '@/lib/operational-json':operationalJson,
+      '@/lib/doyalist/project-input':load('src/lib/doyalist/project-input.ts'),
       '@/lib/prisma':{prisma:{doyalistProject:{findMany:async({where})=>rows.filter(r=>
         r.userId===where.userId&&r.status!==where.status.not&&(!where.companies?.some||r._count.companies>0))}}},
     });

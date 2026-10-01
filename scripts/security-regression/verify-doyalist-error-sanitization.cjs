@@ -7,6 +7,9 @@ const secret = 'DATABASE_URL=private-and-sensitive'
 const failure = () => { throw Error(secret) }
 const identity = { user: { id: 'owner' } }
 const streamJson = load('src/lib/doyalist/stream-json.ts', {}, { TextEncoder, ReadableStream, Uint8Array })
+const operationalJson = load('src/lib/operational-json.ts', {}, { TextDecoder, Uint8Array })
+const projectInput = load('src/lib/doyalist/project-input.ts')
+const request = (body) => new Request('https://doya.test/api/doyalist/projects', { method: 'POST', body: JSON.stringify(body) })
 
 function route(file, prisma) {
   return load(file, {
@@ -15,6 +18,8 @@ function route(file, prisma) {
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma },
     '@/lib/doyalist/stream-json': streamJson,
+    '@/lib/operational-json': operationalJson,
+    '@/lib/doyalist/project-input': projectInput,
     '@/lib/doyalist/limits': { getUserDoyalistLimits: async () => ({ maxProjects: -1 }) },
   })
 }
@@ -31,7 +36,7 @@ async function expectSafe(promise, expected) {
       doyalistProject: { findMany: failure, create: failure },
     })
     await expectSafe(api.GET(), 'プロジェクトの取得に失敗しました')
-    await expectSafe(api.POST({ json: async () => ({ name: 'valid' }) }), 'プロジェクトの作成に失敗しました')
+    await expectSafe(api.POST(request({ name: 'valid' })), 'プロジェクトの作成に失敗しました')
   })
   await check('Doyalist project detail, update and deletion keep database errors private', async () => {
     const prisma = { doyalistProject: {
@@ -41,7 +46,7 @@ async function expectSafe(promise, expected) {
     const api = route('src/app/api/doyalist/projects/[id]/route.ts', prisma)
     const context = { params: Promise.resolve({ id: 'p' }) }
     await expectSafe(api.GET({}, context), 'プロジェクトの取得に失敗しました')
-    await expectSafe(api.PATCH({ json: async () => ({ name: 'updated' }) }, context), 'プロジェクトの更新に失敗しました')
+    await expectSafe(api.PATCH(request({ name: 'updated' }), context), 'プロジェクトの更新に失敗しました')
     await expectSafe(api.DELETE({}, context), 'プロジェクトの削除に失敗しました')
   })
   await check('Doyalist project detail streams owned company records and keeps counts', async () => {

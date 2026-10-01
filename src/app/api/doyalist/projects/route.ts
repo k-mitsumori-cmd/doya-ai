@@ -7,6 +7,9 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getUserDoyalistLimits } from '@/lib/doyalist/limits'
+import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
+import { MAX_DOYALIST_PROJECT_BODY_BYTES, parseDoyalistProjectInput } from '@/lib/doyalist/project-input'
+import { streamDoyalistJsonArray } from '@/lib/doyalist/stream-json'
 
 /**
  * GET /api/doyalist/projects
@@ -47,9 +50,9 @@ export async function GET() {
       updatedAt: p.updatedAt,
     }))
 
-    return NextResponse.json({ success: true, projects: result })
-  } catch (e: any) {
-    console.error('[doyalist/projects][GET]', e)
+    return streamDoyalistJsonArray({ success: true }, 'projects', result)
+  } catch {
+    console.error('[doyalist/projects][GET] failed')
     return NextResponse.json(
       { error: 'プロジェクトの取得に失敗しました' },
       { status: 500 }
@@ -69,18 +72,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
     }
 
-    const body = await req.json()
-    const { name, description, industry, region, targetSize, keywords } = body || {}
-
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return NextResponse.json({ error: 'プロジェクト名は必須です' }, { status: 400 })
+    let body: Record<string, unknown>
+    try {
+      body = await readOperationalJson(req, MAX_DOYALIST_PROJECT_BODY_BYTES)
+    } catch (error) {
+      if (error instanceof OperationalBodyError) {
+        return NextResponse.json({ error: '入力形式またはサイズを確認してください' }, { status: error.status })
+      }
+      throw error
     }
-    if (name.trim().length > 200) {
-      return NextResponse.json({ error: 'プロジェクト名は200文字以内で入力してください' }, { status: 400 })
-    }
-    if (description && typeof description === 'string' && description.length > 5000) {
-      return NextResponse.json({ error: '説明は5000文字以内で入力してください' }, { status: 400 })
-    }
+    const input = parseDoyalistProjectInput(body, 'create')
+    if (!input.ok) return NextResponse.json({ error: input.error }, { status: 400 })
 
     // プラン上限チェック
     const limits = await getUserDoyalistLimits(userId)
@@ -105,19 +107,19 @@ export async function POST(req: NextRequest) {
     const project = await prisma.doyalistProject.create({
       data: {
         userId,
-        name: name.trim(),
-        description: description || null,
-        industry: industry || null,
-        region: region || null,
-        targetSize: targetSize || null,
-        keywords: keywords || null,
+        name: input.data.name!,
+        description: input.data.description || null,
+        industry: input.data.industry || null,
+        region: input.data.region || null,
+        targetSize: input.data.targetSize || null,
+        keywords: input.data.keywords || null,
         status: 'active',
       },
     })
 
     return NextResponse.json({ success: true, project })
-  } catch (e: any) {
-    console.error('[doyalist/projects][POST]', e)
+  } catch {
+    console.error('[doyalist/projects][POST] failed')
     return NextResponse.json(
       { error: 'プロジェクトの作成に失敗しました' },
       { status: 500 }

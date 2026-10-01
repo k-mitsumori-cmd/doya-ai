@@ -7,6 +7,8 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { streamDoyalistJsonArray } from '@/lib/doyalist/stream-json'
+import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
+import { MAX_DOYALIST_PROJECT_BODY_BYTES, parseDoyalistProjectInput } from '@/lib/doyalist/project-input'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -100,21 +102,26 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: guard.error }, { status: guard.status })
     }
 
-    const body = await req.json()
-    const data: Record<string, any> = {}
-    const fields = ['name', 'description', 'industry', 'region', 'targetSize', 'keywords', 'status']
-    for (const k of fields) {
-      if (body[k] !== undefined) data[k] = body[k]
+    let body: Record<string, unknown>
+    try {
+      body = await readOperationalJson(req, MAX_DOYALIST_PROJECT_BODY_BYTES)
+    } catch (error) {
+      if (error instanceof OperationalBodyError) {
+        return NextResponse.json({ error: '入力形式またはサイズを確認してください' }, { status: error.status })
+      }
+      throw error
     }
+    const input = parseDoyalistProjectInput(body, 'update')
+    if (!input.ok) return NextResponse.json({ error: input.error }, { status: 400 })
 
     const project = await prisma.doyalistProject.update({
       where: { id },
-      data,
+      data: input.data,
     })
 
     return NextResponse.json({ success: true, project })
-  } catch (e: any) {
-    console.error('[doyalist/projects/[id]][PATCH]', e)
+  } catch {
+    console.error('[doyalist/projects/[id]][PATCH] failed')
     return NextResponse.json(
       { error: 'プロジェクトの更新に失敗しました' },
       { status: 500 }
