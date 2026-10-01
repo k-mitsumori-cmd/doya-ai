@@ -43,6 +43,47 @@ async function expectSafe(promise, expected) {
     await expectSafe(api.GET(), 'プロジェクトの取得に失敗しました')
     await expectSafe(api.POST(request({ name: 'valid' })), 'プロジェクトの作成に失敗しました')
   })
+  await check('Doyalist project list pages histories larger than the response limit', async () => {
+    const projects = Array.from({ length: 5001 }, (_, index) => ({
+      id: `project-${String(5000 - index).padStart(5, '0')}`,
+      name: 'x'.repeat(1000), status: 'active',
+      _count: { companies: index, approaches: 0 },
+    }))
+    let calls = 0
+    const api = route('src/app/api/doyalist/projects/route.ts', {
+      doyalistProject: { findMany: async (query) => {
+        calls++
+        assert.equal(query.where.userId, 'owner')
+        assert.equal(query.where.status.not, 'archived')
+        assert(query.take <= 200)
+        assert.equal(JSON.stringify(query.orderBy), JSON.stringify([{ updatedAt: 'desc' }, { id: 'desc' }]))
+        const offset = query.cursor ? projects.findIndex(project => project.id === query.cursor.id) + 1 : 0
+        return projects.slice(offset, offset + query.take)
+      } },
+    })
+    const response = await api.GET()
+    assert.equal(response.status, 200)
+    const body = await response.text()
+    assert(Buffer.byteLength(body) > 4.5 * 1024 * 1024)
+    const result = JSON.parse(body)
+    assert.equal(result.projects.length, projects.length)
+    assert.equal(result.projects.at(-1).id, projects.at(-1).id)
+    assert.equal(result.projects[42].companyCount, 42)
+    assert(calls > 20)
+  })
+  await check('Doyalist project list aborts an incomplete stream on a later DB failure', async () => {
+    const api = route('src/app/api/doyalist/projects/route.ts', {
+      doyalistProject: { findMany: async (query) => {
+        if (query.cursor) throw Error(secret)
+        return Array.from({ length: 200 }, (_, index) => ({
+          id: `project-${index}`, _count: { companies: 0, approaches: 0 },
+        }))
+      } },
+    })
+    const response = await api.GET()
+    assert.equal(response.status, 200)
+    await assert.rejects(response.text())
+  })
   await check('Doyalist project detail, update and deletion keep database errors private', async () => {
     const prisma = { doyalistProject: {
       findUnique: async () => ({ id: 'p', userId: 'owner' }),

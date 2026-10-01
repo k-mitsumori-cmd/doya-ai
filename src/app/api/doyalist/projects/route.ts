@@ -3,13 +3,16 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getUserDoyalistLimits } from '@/lib/doyalist/limits'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 import { MAX_DOYALIST_PROJECT_BODY_BYTES, parseDoyalistProjectInput } from '@/lib/doyalist/project-input'
-import { streamDoyalistJsonArray } from '@/lib/doyalist/stream-json'
+import { streamDoyalistJsonIterable } from '@/lib/doyalist/stream-json'
+
+const PROJECT_PAGE_SIZE = 200
 
 /**
  * GET /api/doyalist/projects
@@ -23,7 +26,7 @@ export async function GET() {
       return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
     }
 
-    const projects = await prisma.doyalistProject.findMany({
+    const query = {
       where: {
         userId,
         status: { not: 'archived' },
@@ -32,25 +35,41 @@ export async function GET() {
       include: {
         _count: { select: { companies: true, approaches: true } },
       },
-      orderBy: { updatedAt: 'desc' },
-    })
+      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+      take: PROJECT_PAGE_SIZE,
+    } satisfies Prisma.DoyalistProjectFindManyArgs
+    // The first DB read must finish before sending 200, so failures keep the JSON error contract.
+    const firstPage = await prisma.doyalistProject.findMany(query)
 
-    const result = projects.map((p) => ({
-      id: p.id,
-      name: p.name,
-      description: p.description,
-      industry: p.industry,
-      region: p.region,
-      targetSize: p.targetSize,
-      keywords: p.keywords,
-      status: p.status,
-      companyCount: p._count.companies,
-      approachCount: p._count.approaches,
-      createdAt: p.createdAt,
-      updatedAt: p.updatedAt,
-    }))
+    async function* projects() {
+      let page = firstPage
+      while (page.length > 0) {
+        for (const p of page) {
+          yield {
+            id: p.id,
+            name: p.name,
+            description: p.description,
+            industry: p.industry,
+            region: p.region,
+            targetSize: p.targetSize,
+            keywords: p.keywords,
+            status: p.status,
+            companyCount: p._count.companies,
+            approachCount: p._count.approaches,
+            createdAt: p.createdAt,
+            updatedAt: p.updatedAt,
+          }
+        }
+        if (page.length < PROJECT_PAGE_SIZE) break
+        page = await prisma.doyalistProject.findMany({
+          ...query,
+          cursor: { id: page[page.length - 1].id },
+          skip: 1,
+        })
+      }
+    }
 
-    return streamDoyalistJsonArray({ success: true }, 'projects', result)
+    return streamDoyalistJsonIterable({ success: true }, 'projects', projects())
   } catch {
     console.error('[doyalist/projects][GET] failed')
     return NextResponse.json(
