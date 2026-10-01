@@ -1,4 +1,5 @@
 import { safeFetchText, safeFetchResource } from '@/lib/net/safe-fetch'
+import { requestBannerTextProvider } from '@/lib/banner/provider-response'
 import { installSafeBrowserRequests, SAFE_BROWSER_ARGS } from '@/lib/net/safe-browser'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
@@ -225,12 +226,8 @@ async function callGeminiForJson(prompt: string, apiKey: string): Promise<any> {
         ],
       })
 
-      const attempt = async (jsonMode: boolean) =>
-        fetch(`${endpoint}?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(buildBody(jsonMode)),
-        })
+      const attempt = (jsonMode: boolean) =>
+        requestBannerTextProvider(`${endpoint}?key=${apiKey}`, buildBody(jsonMode))
 
       let res = await attempt(true)
       if (res.status === 502 || res.status === 503) {
@@ -239,7 +236,7 @@ async function callGeminiForJson(prompt: string, apiKey: string): Promise<any> {
       }
 
       if (!res.ok) {
-        const t = await res.text()
+        const t = res.text
         // JSONモードが弾かれたら通常モードで再試行
         if (res.status === 400 && (t.includes('responseMimeType') || t.includes('responseSchema') || t.includes('INVALID_ARGUMENT'))) {
           let retry = await attempt(false)
@@ -248,13 +245,13 @@ async function callGeminiForJson(prompt: string, apiKey: string): Promise<any> {
             retry = await attempt(false)
           }
           if (retry.ok) {
-            const json = await retry.json()
+            const json = JSON.parse(retry.text)
             const text = json?.candidates?.[0]?.content?.parts?.map((p: any) => (p?.text ? String(p.text) : '')).join('\n').trim()
             const parsed = coerceJson(text)
             if (parsed) return parsed
             lastErr = `Gemini ${model} retry ok but parse failed`
           } else {
-            lastErr = `Gemini ${model} error (retry): ${retry.status} - ${(await retry.text()).substring(0, 400)}`
+            lastErr = `Gemini ${model} error (retry): ${retry.status} - ${retry.text.substring(0, 400)}`
           }
           continue
         }
@@ -262,7 +259,7 @@ async function callGeminiForJson(prompt: string, apiKey: string): Promise<any> {
         continue
       }
 
-      const json = await res.json()
+      const json = JSON.parse(res.text)
       const text = json?.candidates?.[0]?.content?.parts?.map((p: any) => (p?.text ? String(p.text) : '')).join('\n').trim()
       const parsed = coerceJson(text)
       if (!parsed) {
