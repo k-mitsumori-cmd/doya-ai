@@ -7,16 +7,24 @@ const { NextResponse } = require('next/server')
 const { load, check } = require('./load-typescript.cjs')
 
 const csv = load('src/lib/doyalist/export-csv.ts')
-const projects = [{ id: 'archive', name: 'Archive', status: 'archived' }, { id: 'empty', name: 'Empty', status: 'active' }]
+let projects = [{ id: 'archive', name: 'Archive', status: 'archived' }, { id: 'empty', name: 'Empty', status: 'active' }]
 let owner = 'owner', failData = false
 const prisma = {
-  doyalistProject: { findMany: async q => { assert.equal(q.where.userId, 'owner'); assert.equal(q.where.status, undefined); return projects } },
+  doyalistProject: { findMany: async q => {
+    assert.equal(q.where.userId, 'owner'); assert.equal(q.where.status, undefined)
+    assert(q.take <= 100, 'project reads must stay bounded')
+    const offset = q.cursor ? projects.findIndex(project => project.id === q.cursor.id) + 1 : 0
+    return projects.slice(offset, offset + q.take)
+  } },
   doyalistCompany: { findMany: async q => { if (failData) throw Error('synthetic DB failure'); return q.where.projectId === 'archive' ? [{ name: '=formula', createdAt: new Date('2026-09-23'), enrichedData: {} }, { name: ' \t=hidden', createdAt: new Date('2026-09-23'), enrichedData: {} }] : [] } },
   doyalistApproach: { findMany: async () => [] },
 }
+const stream = load('src/lib/doyalist/export-stream.ts', {
+  '@/lib/prisma': { prisma }, '@/lib/doyalist/export-csv': csv,
+})
 const route = load('src/app/api/doyalist/export-all/route.ts', {
   'next/server': { NextResponse }, 'next-auth': { getServerSession: async () => owner ? { user: { id: owner } } : null },
-  '@/lib/auth': { authOptions: {} }, '@/lib/prisma': { prisma }, '@/lib/doyalist/export-csv': csv,
+  '@/lib/auth': { authOptions: {} }, '@/lib/prisma': { prisma }, '@/lib/doyalist/export-stream': stream,
   archiver: require('archiver'), 'node:stream': require('node:stream'),
 })
 
@@ -41,6 +49,15 @@ const route = load('src/app/api/doyalist/export-all/route.ts', {
     const response = await route.GET(new Request('https://local.invalid/api/doyalist/export-all'))
     assert.equal(response.status, 401)
     owner = 'owner'
+  })
+  await check('all-project ZIP pages beyond the first hundred projects', async () => {
+    const original = projects
+    projects = Array.from({ length: 101 }, (_, index) => ({ id: `project-${index}`, name: `Project ${index}` }))
+    const response = await route.GET(new Request('https://local.invalid/api/doyalist/export-all'))
+    const zip = await JSZip.loadAsync(Buffer.from(await response.arrayBuffer()))
+    assert.equal(Object.keys(zip.files).length, 101)
+    assert(Object.keys(zip.files).some(name => name.includes('project-100')))
+    projects = original
   })
   await check('stream data failure rejects the downloaded response', async () => {
     failData = true

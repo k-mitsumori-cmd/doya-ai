@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { buildDoyalistCsv } from '@/lib/doyalist/export-csv'
+import { encodeDoyalistExport, iterateDoyalistCsv } from '@/lib/doyalist/export-stream'
 import archiver from 'archiver'
 import { PassThrough, Readable } from 'node:stream'
 
@@ -21,12 +21,14 @@ export async function GET(req: NextRequest) {
   if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
   try {
-    const projects = await prisma.doyalistProject.findMany({
+    const PAGE_SIZE = 100
+    const firstProjects = await prisma.doyalistProject.findMany({
       where: { userId },
       select: { id: true, name: true },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      take: PAGE_SIZE,
     })
-    if (!projects.length) return NextResponse.json({ error: 'エクスポートするプロジェクトがありません' }, { status: 404 })
+    if (!firstProjects.length) return NextResponse.json({ error: 'エクスポートするプロジェクトがありません' }, { status: 404 })
 
     const archive = archiver('zip', { zlib: { level: 6 } })
     const output = new PassThrough()
@@ -37,15 +39,28 @@ export async function GET(req: NextRequest) {
     output.once('close', () => req.signal.removeEventListener('abort', cancel))
 
     void (async () => {
-      for (const [index, project] of projects.entries()) {
-        if (output.destroyed) return
-        const [companies, approaches] = await Promise.all([
-          prisma.doyalistCompany.findMany({ where: { projectId: project.id }, orderBy: [{ score: 'desc' }, { createdAt: 'desc' }] }),
-          prisma.doyalistApproach.findMany({ where: { projectId: project.id }, orderBy: { createdAt: 'desc' } }),
-        ])
-        const name = `${String(index + 1).padStart(4, '0')}_${safeName(project.name)}_${safeName(project.id)}.csv`
-        archive.append(buildDoyalistCsv(companies, approaches), { name })
+      let projects = firstProjects
+      let index = 0
+      while (projects.length) {
+        for (const project of projects) {
+          if (output.destroyed) return
+          index++
+          const name = `${String(index).padStart(4, '0')}_${safeName(project.name)}_${safeName(project.id)}.csv`
+          const input = Readable.from(encodeDoyalistExport(iterateDoyalistCsv(project.id)))
+          input.on('error', error => { archive.abort(); output.destroy(error) })
+          archive.append(input, { name })
+        }
+        if (projects.length < PAGE_SIZE || output.destroyed) break
+        projects = await prisma.doyalistProject.findMany({
+          where: { userId },
+          select: { id: true, name: true },
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          take: PAGE_SIZE,
+          cursor: { id: projects[projects.length - 1].id },
+          skip: 1,
+        })
       }
+      if (output.destroyed) return
       await archive.finalize()
     })().catch(error => { archive.abort(); output.destroy(error) })
 

@@ -12,13 +12,7 @@ function csvEscape(value: any): string {
   return s
 }
 
-export function buildDoyalistCsv(companies: any[], approaches: any[]): string {
-  const BOM = '﻿'
-  const lines: string[] = []
-
-  // 企業セクション
-  lines.push('# 企業一覧')
-  const companyHeaders = [
+export const DOYALIST_COMPANY_HEADERS = [
     '法人番号',
     '企業名',
     '業種',
@@ -32,12 +26,19 @@ export function buildDoyalistCsv(companies: any[], approaches: any[]): string {
     '事業概要',
     '取得元',
     '作成日',
-  ]
-  lines.push(companyHeaders.map(csvEscape).join(','))
-  for (const c of companies) {
-    const ed = (c.enrichedData as any) || {}
-    lines.push(
-      [
+]
+
+export const DOYALIST_APPROACH_HEADERS = [
+  'アプローチID', '企業ID', 'タイプ', '件名', '本文', 'ステータス', '作成日',
+]
+
+export function doyalistCsvHeader(labels: string[]): string {
+  return labels.map(csvEscape).join(',')
+}
+
+export function doyalistCompanyCsvRow(c: any): string {
+  const ed = (c.enrichedData as any) || {}
+  return [
         ed.corporateNumber || '',
         c.name,
         c.industry || ed.industry || '',
@@ -51,28 +52,11 @@ export function buildDoyalistCsv(companies: any[], approaches: any[]): string {
         ed.businessSummary || c.description || '',
         c.source || '',
         c.createdAt instanceof Date ? c.createdAt.toISOString().slice(0, 10) : String(c.createdAt).slice(0, 10),
-      ]
-        .map(csvEscape)
-        .join(',')
-    )
-  }
+  ].map(csvEscape).join(',')
+}
 
-  // アプローチセクション
-  lines.push('')
-  lines.push('# アプローチ一覧')
-  const approachHeaders = [
-    'アプローチID',
-    '企業ID',
-    'タイプ',
-    '件名',
-    '本文',
-    'ステータス',
-    '作成日',
-  ]
-  lines.push(approachHeaders.map(csvEscape).join(','))
-  for (const a of approaches) {
-    lines.push(
-      [
+export function doyalistApproachCsvRow(a: any): string {
+  return [
         a.id,
         a.companyId || '',
         a.type,
@@ -80,11 +64,18 @@ export function buildDoyalistCsv(companies: any[], approaches: any[]): string {
         a.body || '',
         a.status,
         a.createdAt instanceof Date ? a.createdAt.toISOString() : a.createdAt,
-      ]
-        .map(csvEscape)
-        .join(',')
-    )
-  }
+  ].map(csvEscape).join(',')
+}
 
-  return BOM + lines.join('\r\n')
+export function buildDoyalistCsv(companies: any[], approaches: any[]): string {
+  const lines = [
+    '# 企業一覧',
+    doyalistCsvHeader(DOYALIST_COMPANY_HEADERS),
+    ...companies.map(doyalistCompanyCsvRow),
+    '',
+    '# アプローチ一覧',
+    doyalistCsvHeader(DOYALIST_APPROACH_HEADERS),
+    ...approaches.map(doyalistApproachCsvRow),
+  ]
+  return '\uFEFF' + lines.join('\r\n')
 }

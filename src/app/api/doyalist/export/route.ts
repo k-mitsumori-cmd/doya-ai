@@ -6,7 +6,15 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { buildDoyalistCsv } from '@/lib/doyalist/export-csv'
+import { Readable } from 'node:stream'
+import {
+  type DoyalistExportFirstPage,
+  encodeDoyalistExport,
+  iterateDoyalistApproaches,
+  iterateDoyalistCompanies,
+  iterateDoyalistCsv,
+  preflightDoyalistExport,
+} from '@/lib/doyalist/export-stream'
 
 function xmlEscape(value: any): string {
   if (value === null || value === undefined) return ''
@@ -30,22 +38,14 @@ function worksheetName(projectName: string): string {
   return `${prefix}_企業`
 }
 
-function buildXlsXml(
-  project: any,
-  companies: any[],
-  approaches: any[]
-): string {
-  const cell = (v: any, type: 'String' | 'Number' = 'String') => {
-    if (v === null || v === undefined || v === '') {
-      return '<Cell><Data ss:Type="String"></Data></Cell>'
-    }
-    if (type === 'Number') {
-      return `<Cell><Data ss:Type="Number">${xmlEscape(v)}</Data></Cell>`
-    }
-    return `<Cell><Data ss:Type="String">${xmlEscape(v)}</Data></Cell>`
+function cell(v: any): string {
+  if (v === null || v === undefined || v === '') {
+    return '<Cell><Data ss:Type="String"></Data></Cell>'
   }
+  return `<Cell><Data ss:Type="String">${xmlEscape(v)}</Data></Cell>`
+}
 
-  const companyHeaders = [
+const companyHeaders = [
     '法人番号',
     '企業名',
     '業種',
@@ -59,8 +59,8 @@ function buildXlsXml(
     '事業概要',
     '取得元',
     '作成日',
-  ]
-  const approachHeaders = [
+]
+const approachHeaders = [
     'アプローチID',
     '企業ID',
     'タイプ',
@@ -68,12 +68,11 @@ function buildXlsXml(
     '本文',
     'ステータス',
     '作成日',
-  ]
+]
 
-  const companyRows = companies
-    .map((c) => {
-      const ed = (c.enrichedData as any) || {}
-      const cells = [
+function companyXmlRow(c: any): string {
+  const ed = (c.enrichedData as any) || {}
+  const cells = [
         cell(ed.corporateNumber || ''),
         cell(c.name),
         cell(c.industry || ed.industry || ''),
@@ -87,14 +86,12 @@ function buildXlsXml(
         cell(ed.businessSummary || c.description || ''),
         cell(c.source || ''),
         cell(c.createdAt instanceof Date ? c.createdAt.toISOString().slice(0, 10) : String(c.createdAt).slice(0, 10)),
-      ]
-      return `<Row>${cells.join('')}</Row>`
-    })
-    .join('')
+  ]
+  return `<Row>${cells.join('')}</Row>`
+}
 
-  const approachRows = approaches
-    .map((a) => {
-      const cells = [
+function approachXmlRow(a: any): string {
+  const cells = [
         cell(a.id),
         cell(a.companyId || ''),
         cell(a.type),
@@ -102,28 +99,34 @@ function buildXlsXml(
         cell(a.body || ''),
         cell(a.status),
         cell(a.createdAt instanceof Date ? a.createdAt.toISOString() : a.createdAt),
-      ]
-      return `<Row>${cells.join('')}</Row>`
-    })
-    .join('')
+  ]
+  return `<Row>${cells.join('')}</Row>`
+}
 
-  const header = (labels: string[]) =>
-    `<Row>${labels.map((l) => cell(l)).join('')}</Row>`
+function header(labels: string[]): string {
+  return `<Row>${labels.map(cell).join('')}</Row>`
+}
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
+async function* iterateXlsXml(projectName: string, projectId: string, firstPage: DoyalistExportFirstPage): AsyncGenerator<string> {
+  yield `<?xml version="1.0" encoding="UTF-8"?>
 <?mso-application progid="Excel.Sheet"?>
 <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
- <Worksheet ss:Name="${xmlEscape(worksheetName(project.name))}">
+ <Worksheet ss:Name="${xmlEscape(worksheetName(projectName))}">
   <Table>
-   ${header(companyHeaders)}
-   ${companyRows}
-  </Table>
+   ${header(companyHeaders)}\n`
+  for await (const company of iterateDoyalistCompanies(projectId, firstPage.companies)) {
+    yield `${companyXmlRow(company)}\n`
+  }
+  yield `  </Table>
  </Worksheet>
  <Worksheet ss:Name="アプローチ">
   <Table>
-   ${header(approachHeaders)}
-   ${approachRows}
+   ${header(approachHeaders)}\n`
+  for await (const approach of iterateDoyalistApproaches(projectId, firstPage.approaches)) {
+    yield `${approachXmlRow(approach)}\n`
+  }
+  yield `
   </Table>
  </Worksheet>
 </Workbook>`
@@ -165,25 +168,17 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'アクセス権がありません' }, { status: 403 })
     }
 
-    const [companies, approaches] = await Promise.all([
-      prisma.doyalistCompany.findMany({
-        where: { projectId },
-        orderBy: [{ score: 'desc' }, { createdAt: 'desc' }],
-      }),
-      prisma.doyalistApproach.findMany({
-        where: { projectId },
-        orderBy: { createdAt: 'desc' },
-      }),
-    ])
-
+    // Fail with a normal 500 response if the database is already unavailable.
+    const firstPage = await preflightDoyalistExport(projectId)
     const safeName = (project.name || 'doyalist').replace(/[\\/:*?"<>|]/g, '_')
 
     if (format === 'csv') {
-      const csv = buildDoyalistCsv(companies, approaches)
-      return new NextResponse(csv, {
+      const body = Readable.toWeb(Readable.from(encodeDoyalistExport(iterateDoyalistCsv(projectId, firstPage)))) as ReadableStream
+      return new NextResponse(body, {
         status: 200,
         headers: {
           'Content-Type': 'text/csv; charset=utf-8',
+          'Cache-Control': 'private, no-store',
           'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(
             safeName
           )}.csv`,
@@ -192,18 +187,19 @@ export async function GET(req: NextRequest) {
     }
 
     // excel (XML SpreadSheet 2003)
-    const xml = buildXlsXml(project, companies, approaches)
-    return new NextResponse(xml, {
+    const body = Readable.toWeb(Readable.from(encodeDoyalistExport(iterateXlsXml(project.name, projectId, firstPage)))) as ReadableStream
+    return new NextResponse(body, {
       status: 200,
       headers: {
         'Content-Type': 'application/vnd.ms-excel; charset=utf-8',
+        'Cache-Control': 'private, no-store',
         'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(
           safeName
         )}.xls`,
       },
     })
-  } catch (e: any) {
-    console.error('[doyalist/export][GET]', e)
+  } catch {
+    console.error('[doyalist/export][GET] failed')
     return NextResponse.json(
       { error: 'エクスポートに失敗しました' },
       { status: 500 }
