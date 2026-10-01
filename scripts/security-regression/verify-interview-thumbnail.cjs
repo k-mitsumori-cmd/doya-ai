@@ -79,6 +79,9 @@ const { load, check } = require('./load-typescript.cjs')
     let blocked = false
     let failUpload = false
     let writes = 0
+    let budgetState = 'allowed'
+    let budgetClaims = 0
+    let budgetRefunds = 0
     const project = { id: 'p1', userId: 'u1', guestId: null, thumbnailUrl: 'data:image/png;base64,AAAA', updatedAt: new Date(1000), title: 'Article', genre: 'OTHER' }
     class InProgress extends Error {}
     const api = load('src/app/api/interview/projects/[id]/thumbnail/route.ts', {
@@ -96,7 +99,7 @@ const { load, check } = require('./load-typescript.cjs')
         }),
       } },
       '@/lib/interview/access': {
-        getInterviewUser: async () => ({ userId: owner }),
+        getInterviewUser: async () => ({ userId: owner, plan: 'FREE' }),
         getGuestIdFromRequest: () => null,
         checkOwnership: resource => resource.userId === owner ? null : Response.json({ error: 'not found' }, { status: 404 }),
         requireDatabase: () => null,
@@ -117,18 +120,32 @@ const { load, check } = require('./load-typescript.cjs')
         claimThumbnailLease: async () => { leases++; if (blocked) throw new InProgress(); return 'token' },
         releaseThumbnailLease: async () => { releases++ },
       },
+      '@/lib/interview/aux-budget': {
+        claimAuxBudget: async () => { budgetClaims++; return budgetState === 'allowed' ? { state: 'allowed', claim: { key: 'k', day: '2026-10-01' } } : { state: 'limit', limit: 5 } },
+        refundAuxBudget: async () => { budgetRefunds++ },
+        auxAdmissionError: admission => Response.json({ code: 'INTERVIEW_AUX_LIMIT_REACHED', error: 'limit', limit: admission.limit }, { status: 429 }),
+      },
     }, { process: { env: { GOOGLE_GENAI_API_KEY: 'test' } } })
     const ctx = { params: Promise.resolve({ id: 'p1' }) }
     const request = body => ({ json: async () => body, cookies: {} })
     assert.equal((await api.POST(request({}), ctx)).status, 200)
     assert.equal(providerCalls, 0)
     assert.equal(leases, 0)
+    assert.equal(budgetClaims, 0)
+    budgetState = 'limit'
+    const limited = await api.POST(request({ force: true }), ctx)
+    assert.equal(limited.status, 429)
+    assert.equal((await limited.json()).code, 'INTERVIEW_AUX_LIMIT_REACHED')
+    assert.equal(providerCalls, 0, 'No paid image call after reaching the manual quota')
+    assert.equal(releases, 1)
+    budgetState = 'allowed'
     const generated = await api.POST(request({ force: true }), ctx)
     assert.equal(generated.status, 200)
     assert.equal((await generated.json()).thumbnailUrl, '/image?v=2000')
     assert.equal(providerCalls, 1)
     assert.equal(uploads, 1)
-    assert.equal(releases, 1)
+    assert.equal(releases, 2)
+    assert.equal(budgetRefunds, 0)
     assert.equal(project.thumbnailUrl, 'marker')
     const image = await api.GET(request({}), ctx)
     assert.equal(image.status, 302)
@@ -141,7 +158,8 @@ const { load, check } = require('./load-typescript.cjs')
     failUpload = true
     assert.equal((await api.POST(request({ force: true }), ctx)).status, 500)
     assert.equal(writes, 1, 'A failed upload must not change the project record')
-    assert.equal(releases, 2)
+    assert.equal(releases, 3)
+    assert.equal(budgetRefunds, 1, 'A failed generation must refund its manual quota')
     owner = 'other'
     assert.equal((await api.GET(request({}), ctx)).status, 404)
     assert.equal(uploads, 2)

@@ -65,6 +65,7 @@ export default function ProjectsPage() {
   const [filter, setFilter] = useState<string>('ALL')
   const [query, setQuery] = useState('')
   const [generatingThumbnail, setGeneratingThumbnail] = useState<string | null>(null)
+  const [thumbnailLimitMessage, setThumbnailLimitMessage] = useState<string | null>(null)
   const requestVersionRef = useRef(0)
 
   useEffect(() => {
@@ -134,11 +135,15 @@ export default function ProjectsPage() {
       })
       const data = await res.json()
       if (data.success && data.thumbnailUrl) {
+        setThumbnailLimitMessage(null)
         setProjects((prev) =>
           prev.map((p) => (p.id === projectId ? { ...p, thumbnailUrl: data.thumbnailUrl } : p))
         )
         toast.success('サムネイルを生成しました')
       } else {
+        if (res.status === 429 && data.code === 'INTERVIEW_AUX_LIMIT_REACHED') {
+          setThumbnailLimitMessage(data.error || '本日の追加AI編集枠を使い切りました。')
+        }
         toast.error(data.error || 'サムネイル生成に失敗しました')
       }
     } catch (err) {
@@ -187,6 +192,13 @@ export default function ProjectsPage() {
           新規作成
         </Link>
       </div>
+
+      {thumbnailLimitMessage && (
+        <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 flex flex-wrap items-center justify-between gap-3">
+          <span>{thumbnailLimitMessage}</span>
+          <Link href="/interview/pricing" className="font-bold underline underline-offset-2">プランを見る</Link>
+        </div>
+      )}
 
       {/* フィルター & 検索 */}
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">

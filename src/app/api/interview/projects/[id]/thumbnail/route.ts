@@ -15,6 +15,7 @@ import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabas
 import { callGeminiImageAPI } from '@/lib/resolve-image-model'
 import { THUMBNAIL_STORAGE_MARKER, signedInterviewThumbnailUrl, thumbnailOwner, thumbnailUrlForClient, uploadInterviewThumbnail } from '@/lib/interview/thumbnail-storage'
 import { claimThumbnailLease, releaseThumbnailLease, ThumbnailGenerationInProgressError } from '@/lib/interview/thumbnail-lease'
+import { auxAdmissionError, claimAuxBudget, refundAuxBudget, type AuxClaim } from '@/lib/interview/aux-budget'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -194,9 +195,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   if (dbErr) return dbErr
 
   let lease: { id: string; token: string } | null = null
+  let auxClaim: AuxClaim | null = null
   try {
     const id = await resolveId(ctx)
-    const { userId } = await getInterviewUser()
+    const { userId, plan } = await getInterviewUser()
     const guestId = !userId ? getGuestIdFromRequest(req) : null
 
     // リクエストボディから記事内容・タイトルを受け取る（オプション）
@@ -250,6 +252,13 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }
     if (current.thumbnailUrl && !force) {
       return NextResponse.json({ success: true, thumbnailUrl: thumbnailUrlForClient(id, current.thumbnailUrl, current.updatedAt) })
+    }
+    // The first image belongs to the project. Explicit regeneration spends one
+    // shared manual AI-edit credit before reaching the paid image provider.
+    if (current.thumbnailUrl && force) {
+      const admission = await claimAuxBudget({ userId, guestId, plan })
+      if (admission.state !== 'allowed') return auxAdmissionError(admission)
+      auxClaim = admission.claim
     }
 
     const apiKey = process.env.GOOGLE_GENAI_API_KEY
@@ -379,6 +388,7 @@ OUTPUT: A single ultra-high-quality photorealistic image that would be suitable 
           return tx.interviewProject.update({ where: { id }, data: { thumbnailUrl: THUMBNAIL_STORAGE_MARKER }, select: { updatedAt: true } })
         })
         const thumbnailUrl = thumbnailUrlForClient(id, THUMBNAIL_STORAGE_MARKER, updated.updatedAt)
+        auxClaim = null
 
         return NextResponse.json({
           success: true,
@@ -398,6 +408,7 @@ OUTPUT: A single ultra-high-quality photorealistic image that would be suitable 
       { status: 500 }
     )
   } finally {
+    if (auxClaim) await refundAuxBudget(auxClaim)
     if (lease) await releaseThumbnailLease(lease.id, lease.token).catch(() => {
       console.error('[interview] thumbnail lease release failed')
     })
