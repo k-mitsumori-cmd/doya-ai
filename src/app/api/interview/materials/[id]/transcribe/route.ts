@@ -294,7 +294,7 @@ function getErrorHint(e: any): string | undefined {
   if (/GOOGLE_SPEECH/i.test(m)) {
     return 'INTERVIEW_GOOGLE_SPEECH_API_KEY を環境変数に設定してください'
   }
-  if (/ASSEMBLYAI/i.test(m)) {
+  if (/ASSEMBLYAI_API_KEY/i.test(m)) {
     return 'ASSEMBLYAI_API_KEY を環境変数に設定してください'
   }
   if (/タイムアウト/i.test(m)) {

@@ -2,7 +2,7 @@
 // ドヤインタビュー — 文字起こしサービス
 // ============================================
 // 全ファイルを AssemblyAI REST API で処理
-// URL を渡すだけ — サーバーでのダウンロード不要、サイズ無制限
+// URL を渡すだけ — サーバーでのダウンロード不要。利用枠と単体時間は送信前に検証する。
 // 話者分離 (speaker diarization) 対応
 
 import { getSignedFileUrl } from './storage'
@@ -19,6 +19,35 @@ interface TranscriptionResult {
 export class InterviewTranscriptionTerminalError extends Error {}
 
 const ASSEMBLYAI_BASE_URL = 'https://api.assemblyai.com/v2'
+const SUBMIT_TIMEOUT_MS = 30_000
+const POLL_REQUEST_TIMEOUT_MS = 20_000
+const SUBMIT_RESPONSE_MAX_BYTES = 64 * 1024
+// A three-hour transcript can contain word timings and speaker utterances.
+const TRANSCRIPT_RESPONSE_MAX_BYTES = 32 * 1024 * 1024
+
+async function readAssemblyJson(response: Response, maxBytes: number): Promise<any> {
+  if (Number(response.headers.get('content-length')) > maxBytes) {
+    void response.body?.cancel().catch(() => {})
+    throw new Error('文字起こしサービスの応答が大きすぎます')
+  }
+  if (!response.body) throw new Error('文字起こしサービスの応答が空です')
+  const reader = response.body.getReader()
+  const chunks: Buffer[] = []
+  let length = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      length += value.byteLength
+      if (length > maxBytes) throw new Error('文字起こしサービスの応答が大きすぎます')
+      chunks.push(Buffer.from(value))
+    }
+    return JSON.parse(Buffer.concat(chunks, length).toString('utf8'))
+  } finally {
+    void reader.cancel().catch(() => {})
+    reader.releaseLock()
+  }
+}
 
 /**
  * 文字起こしを実行
@@ -134,15 +163,16 @@ async function submitJob(
       speech_models: ['universal-2'],
       speaker_labels: true,
     }),
+    signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
   })
 
   if (!res.ok) {
-    const errText = await res.text()
-    throw new Error(`AssemblyAI ジョブ送信失敗 (${res.status}): ${errText}`)
+    void res.body?.cancel().catch(() => {})
+    throw new Error(`AssemblyAI ジョブ送信失敗 (${res.status})`)
   }
 
-  const data = await res.json()
-  if (!data.id) {
+  const data = await readAssemblyJson(res, SUBMIT_RESPONSE_MAX_BYTES)
+  if (typeof data?.id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(data.id)) {
     throw new Error('AssemblyAI からトランスクリプトIDが返されませんでした')
   }
 
@@ -164,20 +194,24 @@ async function pollTranscript(
   while (Date.now() - startTime < maxWaitMs) {
     await new Promise((r) => setTimeout(r, interval))
 
+    const remainingMs = maxWaitMs - (Date.now() - startTime)
+    if (remainingMs <= 0) break
     const res = await fetch(`${ASSEMBLYAI_BASE_URL}/transcript/${transcriptId}`, {
       headers: { Authorization: apiKey },
+      signal: AbortSignal.timeout(Math.min(POLL_REQUEST_TIMEOUT_MS, remainingMs)),
     })
 
     if (!res.ok) {
-      throw new Error(`AssemblyAI ポーリング失敗 (${res.status}): ${await res.text()}`)
+      void res.body?.cancel().catch(() => {})
+      throw new Error(`AssemblyAI ポーリング失敗 (${res.status})`)
     }
 
-    const data = await res.json()
+    const data = await readAssemblyJson(res, TRANSCRIPT_RESPONSE_MAX_BYTES)
 
     if (data.status === 'completed') return data
 
     if (data.status === 'error') {
-      throw new InterviewTranscriptionTerminalError(`AssemblyAI 文字起こし失敗: ${data.error || '不明なエラー'}`)
+      throw new InterviewTranscriptionTerminalError('AssemblyAI 文字起こしに失敗しました')
     }
 
     const elapsed = Math.round((Date.now() - startTime) / 1000)
