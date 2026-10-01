@@ -523,13 +523,19 @@ export default function EditPage() {
       const data = await res.json()
       if (data.success && data.thumbnailUrl) {
         setBannerUrl(data.thumbnailUrl)
+      } else {
+        if (res.status === 429 && data.code === 'INTERVIEW_AUX_LIMIT_REACHED') {
+          setAuxLimitMessage(data.error || '本日の追加AI編集枠を使い切りました。')
+        }
+        showToast(data.error || 'バナー画像を生成できませんでした。時間をおいて再試行してください。', 'error')
       }
     } catch (e) {
       console.error('[banner] generation failed:', e)
+      showToast('バナー画像を生成できませんでした。通信状態を確認して再試行してください。', 'error')
     } finally {
       setBannerGenerating(false)
     }
-  }, [projectId, content, title, bannerGenerating])
+  }, [projectId, content, title, bannerGenerating, showToast])
 
   // バナー自動生成: 記事読み込み完了時にバナーが未生成なら自動で作成
   useEffect(() => {
