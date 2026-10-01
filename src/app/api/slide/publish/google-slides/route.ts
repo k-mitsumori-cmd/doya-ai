@@ -3,6 +3,7 @@
 // SlideSpec を Google Slides に変換して共有URLを返す
 // =============================================================================
 import { NextRequest, NextResponse } from 'next/server'
+import { SERVICE_RETIRED, retiredServiceResponse } from '@/lib/retired-service'
 import { z } from 'zod'
 import { createGoogleSlideFromSpec } from '@/lib/slide/googleSlides'
 import type { SlideSpec } from '@/lib/slide/types'
@@ -26,6 +27,8 @@ const bodySchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
+  // 旧画面のリダイレクトではAPIへの直接POSTを止められない。
+  if (SERVICE_RETIRED) return retiredServiceResponse('旧ドヤスライド')
   try {
     const json = await req.json()
     const parsed = bodySchema.safeParse(json)
@@ -47,4 +50,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err?.message || 'Unknown error' }, { status: 500 })
   }
 }
-

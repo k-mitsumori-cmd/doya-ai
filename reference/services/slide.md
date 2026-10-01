@@ -6,7 +6,7 @@
 > - `/slide`・`/slide/create`・`/slide/:path*`・`/slashslide` 系は `next.config.js` のリダイレクトで `/doyaslide` へ集約。
 > - スライド専用ドメイン（`SLIDE_HOSTS`）も `middleware.ts` で `/doyaslide` を配信。
 > - 旧 `src/app/slide/*`・`src/app/slashslide/*`・`src/app/api/slide/*`・`src/app/api/slashslide/*` のファイルは
->   到達不能だが**削除せず残置**（参照: feedback「削除→再作成禁止」）。新規開発で参照・拡張しないこと。
+>   **削除せず残置**（参照: feedback「削除→再作成禁止」）。画面はリダイレクトし、APIへの直接POSTは410で停止する。新規開発で参照・拡張しないこと。
 >
 > 以下は旧仕様の歴史的記録。
 
