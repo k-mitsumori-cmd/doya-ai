@@ -742,3 +742,8 @@ if (imageGeneratorResponse.error || imageGeneratorResponse.status !== 0) {
   console.error('Security regression failed: verify-image-generator-response.cjs');
   process.exit(1);
 }
+const openaiImageResponse = spawnSync(process.execPath, [path.join(__dirname, 'verify-openai-image-response.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (openaiImageResponse.error || openaiImageResponse.status !== 0) {
+  console.error('Security regression failed: verify-openai-image-response.cjs');
+  process.exit(1);
+}

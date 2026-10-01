@@ -13,6 +13,8 @@ import OpenAI, { toFile } from 'openai'
 
 const OPENAI_IMAGE_ENDPOINT = 'https://api.openai.com/v1/images/generations'
 const OPENAI_IMAGE_MODEL = process.env.OPENAI_IMAGE_MODEL || 'gpt-image-2'
+const OPENAI_IMAGE_RESPONSE_MAX_BYTES = 32 * 1024 * 1024
+const OPENAI_ERROR_RESPONSE_MAX_BYTES = 64 * 1024
 
 export type GptImageQuality = 'low' | 'medium' | 'high' | 'auto'
 // gpt-image-2 は3プリセット固定ではなく、幅・高さが16の倍数なら任意サイズを受け付ける
@@ -66,17 +68,41 @@ export async function generateImageGpt(params: {
     })
 
     if (!res.ok) {
-      const errText = await res.text()
+      const errText = await readLimitedOpenAiResponse(res, OPENAI_ERROR_RESPONSE_MAX_BYTES)
       throw new Error(`OpenAI image generation failed (${res.status}): ${errText.slice(0, 500)}`)
     }
 
-    const json = await res.json()
+    const json = JSON.parse(await readLimitedOpenAiResponse(res, OPENAI_IMAGE_RESPONSE_MAX_BYTES))
     const data = Array.isArray(json?.data) ? json.data : []
     return data.map((d: any) => ({
       b64: String(d?.b64_json || ''),
       revisedPrompt: d?.revised_prompt ? String(d.revised_prompt) : undefined,
     }))
   })
+}
+
+async function readLimitedOpenAiResponse(res: Response, maxBytes: number): Promise<string> {
+  if (Number(res.headers.get('content-length')) > maxBytes) {
+    void res.body?.cancel().catch(() => {})
+    throw new Error('OpenAI image response is too large')
+  }
+  if (!res.body) return ''
+  const reader = res.body.getReader()
+  const chunks: Buffer[] = []
+  let length = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      length += value.byteLength
+      if (length > maxBytes) throw new Error('OpenAI image response is too large')
+      chunks.push(Buffer.from(value))
+    }
+    return Buffer.concat(chunks, length).toString('utf8')
+  } finally {
+    void reader.cancel().catch(() => {})
+    reader.releaseLock()
+  }
 }
 
 /** 背景の扱い。透過はロゴ・アイコンなど切り抜きが要る用途だけで指定する。 */
