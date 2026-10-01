@@ -1,4 +1,5 @@
 import { safeFetchText, htmlToText } from '@/lib/net/safe-fetch'
+import { fetchCollectionJson } from './provider-json'
 
 interface ScrapedCompanyInfo {
   companyName?: string
@@ -69,18 +70,18 @@ JSON形式で回答（JSON以外の文字は含めないでください）:
 }`
 
   try {
-    const response = await fetch(endpoint, {
+    const response = await fetchCollectionJson(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_API_KEY },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
       }),
-    })
+    }, { timeoutMs: 30_000, maxBytes: 1024 * 1024 })
 
     if (!response.ok) return null
 
-    const data = await response.json()
+    const data = response.data
     const responseText = data.candidates?.[0]?.content?.parts?.[0]?.text
     if (!responseText) return null
 

@@ -128,6 +128,12 @@ export async function POST(req: NextRequest) {
     if (collected.length === 0) {
       // 0件は検索結果であり、既存プロジェクトを削除する指示ではない。
       // APIが応答していたかどうかで原因を区別
+      if (collectedResult.budgetExhausted) {
+        return NextResponse.json(
+          { error: '企業データの取得が時間内に完了しませんでした。時間をおいて再試行してください。', code: 'collection_timeout' },
+          { status: 503 }
+        )
+      }
       if (!collectedResult.apiOk) {
         return NextResponse.json(
           { error: '企業データAPIから応答がありませんでした。時間をおいて再試行してください。', code: 'api_error' },
@@ -207,15 +213,17 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    const warnings = [
+      wasClamped ? `1回のリクエストでは最大${MAX_COUNT_PER_REQUEST}社まで生成可能です。${requestedCount}社のリクエストを${count}社に調整しました。` : null,
+      quotaClamped ? `同時に進んだ生成との兼ね合いで、今月の残り枠に合わせて${created.length}社を保存しました。` : null,
+      collectedResult.budgetExhausted ? `取得に時間がかかったため、取得できた${created.length}社を保存しました。再収集の前に保存済みの一覧をご確認ください。` : null,
+    ].filter((message): message is string => Boolean(message))
+
     return NextResponse.json({
       success: true,
       generated: created.length,
       companies: created,
-      ...(wasClamped ? {
-        warning: `1回のリクエストでは最大${MAX_COUNT_PER_REQUEST}社まで生成可能です。${requestedCount}社のリクエストを${count}社に調整しました。`,
-      } : quotaClamped ? {
-        warning: `同時に進んだ生成との兼ね合いで、今月の残り枠に合わせて${created.length}社を保存しました。`,
-      } : {}),
+      ...(warnings.length > 0 ? { warning: warnings.join(' ') } : {}),
     })
   } catch (e: any) {
     console.error('[doyalist/collect][POST]', e)

@@ -37,7 +37,7 @@ function fixture(initialCount, failure, denied) {
     '@/lib/doyalist/collect':{collectCompaniesDetailed:async()=>{
       calls++;
       if(mode==='throw')throw Error('Synthetic upstream failure');
-      return {apiOk:mode!=='unavailable',companies:['empty','unavailable'].includes(mode)?[]:[{companyName:'New company',source:'gbizinfo'}]};
+      return {apiOk:mode!=='unavailable',budgetExhausted:mode==='timeout',companies:['empty','unavailable','timeout'].includes(mode)?[]:[{companyName:'New company',source:'gbizinfo'}]};
     }},
   });
   return {
@@ -64,11 +64,11 @@ function fixture(initialCount, failure, denied) {
     const body=await response.json();assert.deepEqual(body.projects.map(p=>p.id),['empty','saved']);
     assert.equal(body.projects[0].companyCount,0);
   });
-  for(const size of [0,2])for(const mode of ['throw','empty','unavailable','save']) {
+  for(const size of [0,2])for(const mode of ['throw','empty','unavailable','timeout','save']) {
     await check(`preserve ${size} existing companies on ${mode}, then retry`,async()=>{
       const f=fixture(size,mode), before=structuredClone(f.state());
       const response=await f.post();
-      assert.equal(response.status,mode==='empty'?422:mode==='save'?500:502);
+      assert.equal(response.status,mode==='empty'?422:mode==='save'?500:mode==='timeout'?503:502);
       const after=f.state();
       assert.deepEqual(after.project,before.project);
       assert.deepEqual(after.companies,before.companies);

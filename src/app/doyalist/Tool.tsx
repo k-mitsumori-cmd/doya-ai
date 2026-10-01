@@ -91,6 +91,7 @@ export default function DoyalistTool() {
   const [savedListId, setSavedListId] = useState<string | null>(null)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [errorHint, setErrorHint] = useState<string | null>(null)
+  const [warningMsg, setWarningMsg] = useState<string | null>(null)
   const [showQuotaPricing, setShowQuotaPricing] = useState(false)
 
   // AI変換タグ
@@ -224,7 +225,7 @@ export default function DoyalistTool() {
   const handleGenerate = async () => {
     if (!session?.user) { toast.error('ログインしてください'); return }
     setGenerating(true); setCompanies([]); setVisibleCount(PAGE_SIZE)
-    setErrorMsg(null); setErrorHint(null); setShowQuotaPricing(false)
+    setErrorMsg(null); setErrorHint(null); setWarningMsg(null); setShowQuotaPricing(false)
     const tid = toast.loading('リストを抽出中...')
     try {
       const pid = await createProject()
@@ -249,6 +250,8 @@ export default function DoyalistTool() {
         setShowQuotaPricing(res.status === 403 && ['MONTHLY_LIMIT_REACHED', 'MONTHLY_REQUEST_EXCEEDS_REMAINING'].includes(data?.code))
         setErrorHint(data?.hint || (res.status === 422
           ? 'AI変換タグの一部を OFF にする / 業界・地域を変えると改善する可能性があります'
+          : res.status === 503
+            ? '取得に時間がかかっています。件数や検索条件を絞って再試行してください。'
           : res.status === 502
             ? '少し時間をおいてから再試行してください（外部APIに一時的な障害の可能性）'
             : null))
@@ -260,7 +263,10 @@ export default function DoyalistTool() {
       setCompanies(list)
       setSavedListId(pid)
       toast.success(`${list.length}社のリストができました`, { id: tid })
-      if (data?.warning) toast(data.warning, { icon: 'ℹ️', duration: 5000 })
+      if (typeof data?.warning === 'string') {
+        setWarningMsg(data.warning)
+        toast(data.warning, { duration: 5000 })
+      }
     } catch (e: any) {
       const msg = e?.message || '通信エラーが発生しました'
       toast.error(msg, { id: tid, duration: 6000 })
@@ -511,6 +517,13 @@ export default function DoyalistTool() {
                 )}
               </button>
 
+              {warningMsg && (
+                <div role="status" className="mt-3 p-4 bg-amber-50 border-2 border-amber-200 rounded-xl flex items-start gap-3">
+                  <span className="material-symbols-outlined text-amber-600 text-xl flex-shrink-0">info</span>
+                  <p className="flex-1 min-w-0 text-sm font-bold text-amber-900">{warningMsg}</p>
+                  <button onClick={() => setWarningMsg(null)} className="text-amber-700 hover:text-amber-900 text-xl flex-shrink-0" aria-label="通知を閉じる">×</button>
+                </div>
+              )}
               {/* エラー表示（toastだけだと見落としやすいので持続表示） */}
               {errorMsg && (
                 <div className="mt-3 p-4 bg-rose-50 border-2 border-rose-200 rounded-xl flex items-start gap-3">

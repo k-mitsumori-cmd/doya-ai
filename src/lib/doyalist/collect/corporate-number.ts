@@ -1,3 +1,5 @@
+import { fetchCollectionJson } from './provider-json'
+
 const API_BASE = 'https://api.houjin-bangou.nta.go.jp/4'
 
 interface CorporateNumberResult {
@@ -16,13 +18,13 @@ interface SearchParams {
   prefecture?: string
   from?: number
   count?: number
+  timeoutMs?: number
 }
 
 export async function searchCorporateNumber(params: SearchParams): Promise<CorporateNumberResult[]> {
   const apiKey = process.env.CORPORATE_NUMBER_API_KEY
   if (!apiKey) {
-    console.warn('CORPORATE_NUMBER_API_KEY not set, returning empty results')
-    return []
+    throw new Error('CORPORATE_NUMBER_API_KEY が設定されていません')
   }
 
   const url = new URL(`${API_BASE}/name`)
@@ -34,12 +36,15 @@ export async function searchCorporateNumber(params: SearchParams): Promise<Corpo
   if (params.from) url.searchParams.set('from', String(params.from))
   url.searchParams.set('count', String(params.count || 50))
 
-  const response = await fetch(url.toString())
+  const response = await fetchCollectionJson(url.toString(), {}, {
+    timeoutMs: Math.min(12_000, Math.max(1, params.timeoutMs ?? 12_000)),
+    maxBytes: 4 * 1024 * 1024,
+  })
   if (!response.ok) {
     throw new Error(`Corporate number API error: ${response.status}`)
   }
 
-  const data = await response.json()
+  const data = response.data
 
   if (!data?.['hojin-infos']?.['hojin-info']) {
     return []

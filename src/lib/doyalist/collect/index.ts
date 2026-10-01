@@ -29,6 +29,8 @@ interface CollectOptions {
   enrich?: boolean
   /** 詳細取得の最大件数（コスト/時間制限） */
   enrichLimit?: number
+  /** Search and enrichment budget; leave the route time to persist results. */
+  budgetMs?: number
 }
 
 export interface CollectResult {
@@ -37,6 +39,8 @@ export interface CollectResult {
   apiOk: boolean
   /** ヒット数が0だったか（filterが厳しすぎる可能性） */
   zeroHits: boolean
+  /** Some provider calls were skipped after the request time budget expired. */
+  budgetExhausted: boolean
 }
 
 export async function collectCompanies(options: CollectOptions): Promise<CollectedCompany[]> {
@@ -56,10 +60,14 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
     sources = ['corporate_number', 'gbizinfo'],
     enrich = true,
     enrichLimit = 300,
+    budgetMs = 210_000,
   } = options
 
   const allCompanies: CollectedCompany[] = []
   let anyApiSuccess = false
+  let budgetExhausted = false
+  const deadline = Date.now() + Math.max(0, budgetMs)
+  const remainingMs = () => Math.max(0, deadline - Date.now())
 
   // エリア/都道府県の展開
   const rawArea = criteria.areas?.[0]
@@ -81,11 +89,13 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
   if (sources.includes('corporate_number')) {
     for (const keyword of (criteria.keywords || []).slice(0, 3)) {
       if (!keyword) continue
+      if (remainingMs() === 0) { budgetExhausted = true; break }
       try {
         const results = await searchCorporateNumber({
           keyword,
           prefecture: targetPrefectures[0] && targetPrefectures.length === 1 ? targetPrefectures[0] : undefined,
           count: Math.min(50, maxResults),
+          timeoutMs: remainingMs(),
         })
         anyApiSuccess = true
         for (const r of results) {
@@ -98,8 +108,8 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
             rawData: r as any,
           })
         }
-      } catch (e) {
-        console.error('[collect] Corporate number API error:', e)
+      } catch {
+        console.error('[collect] Corporate number API error')
       }
     }
   }
@@ -129,6 +139,7 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
       if (!keyword) continue
       for (const pref of targetPrefectures) {
         if (tempPool.length >= targetPoolSize) break outer
+        if (remainingMs() === 0) { budgetExhausted = true; break outer }
 
         const remaining = targetPoolSize - tempPool.length
         // 必要ページ数を計算 (API上限10まで)
@@ -139,6 +150,7 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
 
         for (let p = 0; p < pagesToFetch; p++) {
           if (tempPool.length >= targetPoolSize) break outer
+          if (remainingMs() === 0) { budgetExhausted = true; break outer }
           const page = startPage + p
           if (page > GBIZ_MAX_PAGE) break // API上限保護
           try {
@@ -149,6 +161,7 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
               maxEmployees: criteria.companySize?.maxEmployees,
               page,
               limit: GBIZ_PAGE_SIZE,
+              timeoutMs: remainingMs(),
             })
 
             if (status === 200 || status === 404) anyApiSuccess = true
@@ -172,9 +185,9 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
               })
             }
             // limit=1000 だとレスポンスが重いので少し長めに待つ
-            await new Promise((r) => setTimeout(r, 150))
-          } catch (e) {
-            console.error('[collect] gBizINFO API error (page', page, ', pref', pref, '):', e)
+            if (remainingMs() > 150) await new Promise((r) => setTimeout(r, 150))
+          } catch {
+            console.error('[collect] gBizINFO API error (page', page, ', pref', pref, ')')
             break
           }
         }
@@ -205,11 +218,13 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
         (!c.representative || !c.employeeCount || !c.capital || !c.website || !c.businessSummary)
     )
     const targetForDetail = needsDetail.slice(0, enrichLimit)
-    if (targetForDetail.length > 0) {
+    if (targetForDetail.length > 0 && remainingMs() === 0) budgetExhausted = true
+    if (targetForDetail.length > 0 && remainingMs() > 0) {
       const details = await getGbizCompanyDetailsBatch(
         targetForDetail.map((c) => c.corporateNumber!),
-        { concurrency: 12 }
+        { concurrency: 12, budgetMs: remainingMs() }
       )
+      if (remainingMs() === 0) budgetExhausted = true
       for (const c of deduplicated) {
         if (!c.corporateNumber) continue
         const d = details.get(c.corporateNumber)
@@ -231,6 +246,7 @@ export async function collectCompaniesDetailed(options: CollectOptions): Promise
     companies: deduplicated,
     apiOk: anyApiSuccess,
     zeroHits: deduplicated.length === 0,
+    budgetExhausted,
   }
 }
 

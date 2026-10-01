@@ -1,4 +1,5 @@
 import { resolvePrefectureCodes } from './prefecture-codes'
+import { fetchCollectionJson } from './provider-json'
 
 const API_BASE = 'https://info.gbiz.go.jp/hojin/v1'
 
@@ -30,6 +31,7 @@ interface SearchParams {
   maxEmployees?: number
   page?: number
   limit?: number
+  timeoutMs?: number
 }
 
 function mapHojinItem(item: any): GbizCompanyInfo {
@@ -84,11 +86,14 @@ export async function searchGbizInfo(params: SearchParams): Promise<{ companies:
   // 大きい limit を使うと少ないAPI呼び出しで大量取得可能。
   url.searchParams.set('limit', String(Math.min(params.limit || 1000, 5000)))
 
-  const response = await fetch(url.toString(), {
+  const response = await fetchCollectionJson(url.toString(), {
     headers: {
       'Accept': 'application/json',
       'X-hojinInfo-api-token': apiToken,
     },
+  }, {
+    timeoutMs: Math.min(15_000, Math.max(1, params.timeoutMs ?? 15_000)),
+    maxBytes: 32 * 1024 * 1024,
   })
 
   // 404 = 検索結果なし（API仕様上、ヒットゼロでも404）→ 空配列を返す
@@ -96,11 +101,11 @@ export async function searchGbizInfo(params: SearchParams): Promise<{ companies:
     return { companies: [], totalCount: 0, status: 404 }
   }
   if (!response.ok) {
-    console.error(`gBizINFO API error: ${response.status} ${url.toString()}`)
+    console.error(`gBizINFO API error: ${response.status}`)
     return { companies: [], totalCount: 0, status: response.status }
   }
 
-  const data = await response.json()
+  const data = response.data
   const companies: GbizCompanyInfo[] = (data['hojin-infos'] || []).map(mapHojinItem)
   return {
     companies,
@@ -112,25 +117,28 @@ export async function searchGbizInfo(params: SearchParams): Promise<{ companies:
 /**
  * gBizINFO 詳細（フル情報: 代表者・従業員数・資本金・URL・事業概要等）
  */
-export async function getGbizCompanyDetail(corporateNumber: string): Promise<GbizCompanyInfo | null> {
+export async function getGbizCompanyDetail(corporateNumber: string, timeoutMs = 10_000): Promise<GbizCompanyInfo | null> {
   const apiToken = process.env.GBIZINFO_API_TOKEN
   if (!apiToken) return null
   if (!corporateNumber || !/^\d{13}$/.test(corporateNumber)) return null
 
   try {
-    const response = await fetch(`${API_BASE}/hojin/${corporateNumber}`, {
+    const response = await fetchCollectionJson(`${API_BASE}/hojin/${corporateNumber}`, {
       headers: {
         'Accept': 'application/json',
         'X-hojinInfo-api-token': apiToken,
       },
+    }, {
+      timeoutMs: Math.min(10_000, Math.max(1, timeoutMs)),
+      maxBytes: 2 * 1024 * 1024,
     })
     if (!response.ok) return null
-    const data = await response.json()
+    const data = response.data
     const item = data['hojin-infos']?.[0]
     if (!item) return null
     return mapHojinItem(item)
   } catch (e) {
-    console.error(`[gbizinfo] detail fetch failed for ${corporateNumber}`, e)
+    console.error(`[gbizinfo] detail fetch failed for ${corporateNumber}`)
     return null
   }
 }
@@ -145,7 +153,7 @@ export async function getGbizCompanyDetailsBatch(
   options: { concurrency?: number; signal?: AbortSignal; budgetMs?: number } = {}
 ): Promise<Map<string, GbizCompanyInfo>> {
   const concurrency = Math.max(1, Math.min(20, options.concurrency || 12))
-  const budgetMs = options.budgetMs || 240000 // デフォルト 4分
+  const budgetMs = options.budgetMs ?? 240000 // デフォルト 4分
   const startTime = Date.now()
   const result = new Map<string, GbizCompanyInfo>()
   const queue = [...new Set(corporateNumbers.filter(Boolean))]
@@ -156,13 +164,13 @@ export async function getGbizCompanyDetailsBatch(
     while (queue.length > 0) {
       if (options.signal?.aborted) return
       // wall-clock 予算チェック
-      if (Date.now() - startTime > budgetMs) {
+      if (Date.now() - startTime >= budgetMs) {
         exhausted = true
         return
       }
       const num = queue.shift()
       if (!num) continue
-      const detail = await getGbizCompanyDetail(num)
+      const detail = await getGbizCompanyDetail(num, Math.min(10_000, Math.max(1, budgetMs - (Date.now() - startTime))))
       if (detail) result.set(num, detail)
       processed++
     }
