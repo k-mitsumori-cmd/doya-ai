@@ -737,3 +737,8 @@ if (nanobannerFileFetch.error || nanobannerFileFetch.status !== 0) {
   console.error('Security regression failed: verify-nanobanner-file-fetch.cjs');
   process.exit(1);
 }
+const imageGeneratorResponse = spawnSync(process.execPath, [path.join(__dirname, 'verify-image-generator-response.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (imageGeneratorResponse.error || imageGeneratorResponse.status !== 0) {
+  console.error('Security regression failed: verify-image-generator-response.cjs');
+  process.exit(1);
+}

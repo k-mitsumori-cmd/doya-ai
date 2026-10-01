@@ -19,6 +19,8 @@ import { withTimeout } from './fetch-timeout'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 const NANO_BANANA_PRO_PREVIEW_MODEL = 'nano-banana-pro-preview'
+const GEMINI_IMAGE_RESPONSE_MAX_BYTES = 32 * 1024 * 1024
+const GEMINI_ERROR_RESPONSE_MAX_BYTES = 64 * 1024
 
 export interface ImageInput {
   mimeType: string
@@ -184,11 +186,11 @@ async function callNanoBananaProPreview(
     })
 
     if (!res.ok) {
-      const errText = await res.text()
+      const errText = await readLimitedGeminiResponse(res, GEMINI_ERROR_RESPONSE_MAX_BYTES)
       throw new Error(`nano-banana-pro-preview failed (${res.status}): ${errText.slice(0, 300)}`)
     }
 
-    const json = await res.json()
+    const json = JSON.parse(await readLimitedGeminiResponse(res, GEMINI_IMAGE_RESPONSE_MAX_BYTES))
     const candidates = Array.isArray(json?.candidates) ? json.candidates : []
     for (const c of candidates) {
       const cParts = c?.content?.parts
@@ -207,6 +209,30 @@ async function callNanoBananaProPreview(
 
     throw new Error('nano-banana-pro-preview returned no image data')
   })
+}
+
+async function readLimitedGeminiResponse(res: Response, maxBytes: number): Promise<string> {
+  if (Number(res.headers.get('content-length')) > maxBytes) {
+    void res.body?.cancel().catch(() => {})
+    throw new Error('Gemini image response is too large')
+  }
+  if (!res.body) return ''
+  const reader = res.body.getReader()
+  const chunks: Buffer[] = []
+  let length = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      length += value.byteLength
+      if (length > maxBytes) throw new Error('Gemini image response is too large')
+      chunks.push(Buffer.from(value))
+    }
+    return Buffer.concat(chunks, length).toString('utf8')
+  } finally {
+    void reader.cancel().catch(() => {})
+    reader.releaseLock()
+  }
 }
 
 /**
