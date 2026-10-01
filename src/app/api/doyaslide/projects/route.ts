@@ -53,8 +53,8 @@ export async function GET(req: NextRequest) {
       total,
       nextCursor: rows.length > limit ? page[page.length - 1].id : null,
     }, { headers: { 'Cache-Control': 'private, no-store' } })
-  } catch (e) {
-    console.error('[doyaslide/projects GET]', e)
+  } catch {
+    console.error('[doyaslide/projects][GET] failed')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ project }, { status: 201 })
   } catch (e: any) {
-    console.error('[doyaslide/projects POST]', e?.stack || e)
+    console.error('[doyaslide/projects][POST] failed')
     return NextResponse.json({ error: `作成に失敗しました${errorSuffix(e)}` }, { status: 500 })
   }
 }

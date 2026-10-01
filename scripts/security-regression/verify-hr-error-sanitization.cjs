@@ -66,5 +66,7 @@ async function expectSafe(promise, expected) {
     } }
     visit(root)
     assert(checked >= 33)
+    const evaluationSource = fs.readFileSync(path.join(root, 'evaluations/route.ts'), 'utf8')
+    assert(!/console\.(?:error|warn)\([^\n]*,\s*(?:e|err|error)\b/.test(evaluationSource), 'evaluation routes log an internal error object')
   })
 })().catch(error => { console.error(error); process.exitCode = 1 })

@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict')
+const fs = require('node:fs')
 const { load, check } = require('./load-typescript.cjs')
 
 const projects = Array.from({ length: 75 }, (_, index) => ({
@@ -34,6 +35,11 @@ const api = load('src/app/api/doyaslide/projects/route.ts', {
 const req = (query) => ({ nextUrl: new URL(`https://doya.test/api/doyaslide/projects?${query}`) })
 
 ;(async () => {
+  await check('DoyaSlide project failures keep raw exceptions out of logs', async () => {
+    const source = fs.readFileSync('src/app/api/doyaslide/projects/route.ts', 'utf8')
+    assert(!/console\.(?:error|warn)\([^\n]*,\s*(?:e|err|error)\b/.test(source))
+    assert(!/console\.(?:error|warn)\([^\n]*\.stack\b/.test(source))
+  })
   await check('DoyaSlide list pages summaries and reads only one cover per project', async () => {
     const seen = []
     let cursor = null
