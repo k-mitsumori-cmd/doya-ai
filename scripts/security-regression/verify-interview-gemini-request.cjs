@@ -25,9 +25,20 @@ const { generateInterviewContent, InterviewGeminiError } = load('src/lib/intervi
   response = new Response('private provider detail', { status: 503 });
   await assert.rejects(() => generateInterviewContent('private-test-key', 'gemini-test', 'prompt', config, 50000),
     (error) => error instanceof InterviewGeminiError && !error.message.includes('private'));
+  response = new Response('x', { headers: { 'Content-Length': String(4 * 1024 * 1024 + 1) } });
+  await assert.rejects(() => generateInterviewContent('private-test-key', 'gemini-test', 'prompt', config, 50000),
+    (error) => error instanceof InterviewGeminiError && !error.message.includes('large'));
+  response = new Response(new ReadableStream({
+    start(controller) { controller.enqueue(new Uint8Array(4 * 1024 * 1024 + 1)); controller.close(); },
+  }));
+  await assert.rejects(() => generateInterviewContent('private-test-key', 'gemini-test', 'prompt', config, 50000),
+    (error) => error instanceof InterviewGeminiError && !error.message.includes('large'));
+  response = new Response('private provider detail');
+  await assert.rejects(() => generateInterviewContent('private-test-key', 'gemini-test', 'prompt', config, 50000),
+    (error) => error instanceof InterviewGeminiError && !error.message.includes('private'));
   rejectFetch = true;
   await assert.rejects(() => generateInterviewContent('private-test-key', 'gemini-test', 'prompt', config, 50000),
     (error) => error instanceof InterviewGeminiError && !error.message.includes('private'));
-  assert.equal(calls, 3);
-  console.log('PASS interview Gemini: key in header, bounded request, provider details never exposed');
+  assert.equal(calls, 6);
+  console.log('PASS interview Gemini: key in header, bounded request and response, provider details never exposed');
 })().catch((error) => { console.error(error); process.exitCode = 1; });
