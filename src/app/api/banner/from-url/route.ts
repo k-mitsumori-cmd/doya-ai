@@ -1639,7 +1639,7 @@ export async function POST(request: NextRequest) {
       : 0
     if (generatedImageCount === 0) {
       if (reservation) await releaseBannerMonthlyImages(reservation, reservation.count).catch(() => console.error('URL banner quota release failed'))
-      return NextResponse.json({ error: result.error || 'バナーの生成に失敗しました。再試行してください。' }, { status: 500 })
+      return NextResponse.json({ error: 'バナーの生成に失敗しました。時間をおいて再試行してください。' }, { status: 500 })
     }
 
     // ==============================
@@ -1697,8 +1697,8 @@ export async function POST(request: NextRequest) {
             })
           }
         }
-      } catch (e: any) {
-        console.error('from-url history persist failed:', e)
+      } catch {
+        console.error('from-url history persist failed')
       }
     }
 
@@ -1751,7 +1751,10 @@ export async function POST(request: NextRequest) {
       usedModel: result.usedModel || undefined,
       usedModelDisplay: result.usedModel ? getModelDisplayName(result.usedModel) : undefined,
       usage: usageInfo || undefined,
-      warning: result.error || (quotaSettlementFailed ? '生成枚数の反映を確認できませんでした。残り枚数を再読み込みしてください。' : undefined),
+      warning: [
+        result.error ? '一部の画像を生成できませんでした。再試行してください。' : null,
+        quotaSettlementFailed ? '生成枚数の反映を確認できませんでした。残り枚数を再読み込みしてください。' : null,
+      ].filter(Boolean).join(' ') || undefined,
     })
 
     // ゲストの場合: Cookie をセット
@@ -1766,8 +1769,8 @@ export async function POST(request: NextRequest) {
     }
 
     return res
-  } catch (e: any) {
-    console.error('from-url error:', e)
-    return NextResponse.json({ error: e?.message || 'URLからの自動生成に失敗しました' }, { status: 500 })
+  } catch {
+    console.error('from-url failed')
+    return NextResponse.json({ error: 'URLからの自動生成に失敗しました。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

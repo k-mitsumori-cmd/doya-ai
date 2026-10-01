@@ -40,6 +40,11 @@ if (bannerTextProviderResponse.error || bannerTextProviderResponse.status !== 0)
   console.error('Security regression failed: verify-banner-text-provider-response.cjs');
   process.exit(1);
 }
+const bannerErrorBoundaries = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-error-boundaries.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (bannerErrorBoundaries.error || bannerErrorBoundaries.status !== 0) {
+  console.error('Security regression failed: verify-banner-error-boundaries.cjs');
+  process.exit(1);
+}
 const bannerGalleryPages = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-gallery-pages.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (bannerGalleryPages.error || bannerGalleryPages.status !== 0) {
   console.error('Security regression failed: verify-banner-gallery-pages.cjs');

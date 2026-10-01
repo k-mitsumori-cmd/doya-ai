@@ -268,7 +268,7 @@ export async function POST(request: NextRequest) {
     if (generatedImageCount === 0) {
       if (reservation) await releaseBannerMonthlyImages(reservation, reservation.count).catch(() => console.error('Banner quota release failed'))
       return NextResponse.json(
-        { error: result.error || 'バナーの生成に失敗しました。再試行してください。' },
+        { error: 'バナーの生成に失敗しました。時間をおいて再試行してください。' },
         { status: 500 }
       )
     }
@@ -324,8 +324,8 @@ export async function POST(request: NextRequest) {
             })
           }
         }
-      } catch (e: any) {
-        console.error('Banner history persist failed:', e)
+      } catch {
+        console.error('Banner history persist failed')
         // 履歴保存失敗でも生成自体は成功しているので落とさない
       }
     }
@@ -352,7 +352,10 @@ export async function POST(request: NextRequest) {
     const res = NextResponse.json({
       banners: result.banners,
       isGuest,
-      warning: result.error || (quotaSettlementFailed ? '生成枚数の反映を確認できませんでした。残り枚数を再読み込みしてください。' : undefined),
+      warning: [
+        result.error ? '一部の画像を生成できませんでした。再試行してください。' : null,
+        quotaSettlementFailed ? '生成枚数の反映を確認できませんでした。残り枚数を再読み込みしてください。' : null,
+      ].filter(Boolean).join(' ') || undefined,
       usage: usageInfo || undefined,
       usedModel: result.usedModel || undefined,
       usedModelDisplay: result.usedModel ? getModelDisplayName(result.usedModel) : undefined,
@@ -370,11 +373,10 @@ export async function POST(request: NextRequest) {
 
     return res
 
-  } catch (error: any) {
-    console.error('Banner generation API error:', error)
+  } catch {
+    console.error('Banner generation API failed')
     sendErrorNotification({
-      errorMessage: error?.message || 'Banner generation failed',
-      errorStack: error?.stack,
+      errorMessage: 'Banner generation failed',
       pathname: '/api/banner/generate',
       requestMethod: 'POST',
       timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),

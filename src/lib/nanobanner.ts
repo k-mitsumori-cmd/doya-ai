@@ -1249,7 +1249,7 @@ export async function generateBanners(
     console.error('GOOGLE_GENAI_API_KEY not configured')
     return { 
       banners: [], 
-      error: 'APIキーが設定されていません。環境変数 GOOGLE_GENAI_API_KEY を設定してください。' 
+      error: '画像生成サービスを利用できません。時間をおいて再試行してください。'
     }
   }
 
@@ -1259,13 +1259,12 @@ export async function generateBanners(
   const targetCount = Math.max(1, Math.min(10, Number.isFinite(count) ? Math.floor(count) : 3))
 
   console.log(`Starting ${isYouTube ? 'YouTube thumbnail' : 'banner'} generation with Nano Banana Pro`)
-  console.log(`Category: ${category}, Purpose: ${options.purpose}, Size: ${size}`)
   console.log(`Model(Image/NanoBanana): ${imageModel}`)
   console.log(`Model(Text/Gemini): ${textModel}`)
 
   try {
     const banners: string[] = Array(targetCount).fill('')
-    const errors: string[] = []
+    let hadQuotaError = false
     let usedModel: string | undefined = undefined
     const variationMode = options?.variationMode || 'diverse'
     const creativePresets = variationMode === 'similar' ? SIMILAR_CREATIVE_PRESETS : DIVERSE_CREATIVE_PRESETS
@@ -1304,8 +1303,8 @@ export async function generateBanners(
       if (!hasStrictInputs && !hasCustomPrompt) {
         try {
           finalPrompt = await refinePromptWithGemini3Flash(basePrompt)
-        } catch (e: any) {
-          console.warn('Gemini prompt refine failed. Using base prompt.', e?.message || e)
+        } catch {
+          console.warn('Gemini prompt refine failed. Using base prompt.')
         }
       }
 
@@ -1338,8 +1337,9 @@ export async function generateBanners(
         try {
           await runOne(i)
         } catch (error: any) {
-          console.error(`${isYouTube ? 'Thumbnail' : 'Banner'} ${patternLabel} generation failed:`, error.message)
-          errors.push(`${patternLabel}: ${error.message}`)
+          const reason = typeof error?.message === 'string' ? error.message.toLowerCase() : ''
+          if (reason.includes('使用量制限') || reason.includes('quota') || reason.includes('429')) hadQuotaError = true
+          console.error(`${isYouTube ? 'Thumbnail' : 'Banner'} ${patternLabel} generation failed`)
           const [w, h] = size.split('x')
           banners[i] = `https://placehold.co/${w}x${h}/EF4444/FFFFFF?text=Error:+Pattern+${patternLabel}`
         } finally {
@@ -1356,24 +1356,17 @@ export async function generateBanners(
     // 全て失敗した場合
     if (banners.every(b => b.startsWith('https://placehold'))) {
       // 429エラー（使用量制限）のチェック
-      const isQuotaError = errors.some((e: string) => 
-        e.includes('使用量制限') || 
-        e.includes('quota') || 
-        e.includes('429') ||
-        e.toLowerCase().includes('exceeded your current quota')
-      )
-      
-      if (isQuotaError) {
+      if (hadQuotaError) {
         return {
           banners,
-          error: `⚠️ APIの使用量制限に達しました。\n\n【原因】\nGoogle AI Studio のAPI使用量制限に達しています。\n\n【対処法】\n・しばらく時間をおいてから再試行してください（通常、1時間ごとにリセットされます）\n・Google AI Studio でプランと請求情報をご確認ください\n・プランのアップグレードを検討してください\n\n詳細: https://ai.google.dev/gemini-api`,
+          error: '画像生成サービスの利用上限に達しています。時間をおいて再試行してください。',
           usedModel: undefined,
         }
       }
       
       return {
         banners,
-        error: `⚠️ Nano Banana Pro で${isYouTube ? 'サムネイル' : 'バナー'}生成に失敗しました。\n\n【原因】\n${errors.join('\n')}\n\n【対処法】\n・GOOGLE_GENAI_API_KEY が正しいか確認\n・APIキーが有効になっているか確認\n・Google AI Studio でAPIキーを再発行してみてください`,
+        error: `${isYouTube ? 'サムネイル' : 'バナー'}の生成に失敗しました。時間をおいて再試行してください。`,
         usedModel: undefined,
       }
     }
@@ -1382,34 +1375,27 @@ export async function generateBanners(
     const failedCount = banners.filter(b => b.startsWith('https://placehold')).length
     if (failedCount > 0) {
       // 429エラー（使用量制限）のチェック
-      const isQuotaError = errors.some((e: string) => 
-        e.includes('使用量制限') || 
-        e.includes('quota') || 
-        e.includes('429') ||
-        e.toLowerCase().includes('exceeded your current quota')
-      )
-      
-      if (isQuotaError) {
+      if (hadQuotaError) {
         return { 
           banners,
-          error: `⚠️ 一部のパターンでAPIの使用量制限に達しました。\n\n赤いプレースホルダーが表示されているパターンは、しばらく時間をおいてから再試行してください。\n\n詳細: https://ai.google.dev/gemini-api`,
+          error: '一部の画像は画像生成サービスの利用上限により生成できませんでした。時間をおいて再試行してください。',
           usedModel,
         }
       }
       
       return { 
         banners,
-        error: `⚠️ ${failedCount}件のパターンで生成に失敗しました。赤いプレースホルダーが表示されているパターンは再試行してください。`,
+        error: `${failedCount}件の画像を生成できませんでした。再試行してください。`,
         usedModel,
       }
     }
 
     return { banners, usedModel }
-  } catch (error: any) {
-    console.error('generateBanners error:', error)
+  } catch {
+    console.error('generateBanners failed')
     return { 
       banners: [], 
-      error: error.message || `${isYouTube ? 'サムネイル' : 'バナー'}生成中にエラーが発生しました` 
+      error: `${isYouTube ? 'サムネイル' : 'バナー'}の生成に失敗しました。時間をおいて再試行してください。`
     }
   }
 }

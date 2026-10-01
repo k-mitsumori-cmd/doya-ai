@@ -30,7 +30,6 @@ async function compressForApi(dataUrl: string): Promise<string> {
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 const REFINE_TIMEOUT_MS = 170_000
 const REFINE_IMAGE_RESPONSE_MAX_BYTES = 32 * 1024 * 1024
-const REFINE_ERROR_RESPONSE_MAX_BYTES = 64 * 1024
 
 async function readGeminiRefineResponse(res: Response, maxBytes: number): Promise<string> {
   if (Number(res.headers.get('content-length')) > maxBytes) {
@@ -203,9 +202,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
         })
 
         if (!response.ok) {
-          const errorText = await readGeminiRefineResponse(response, REFINE_ERROR_RESPONSE_MAX_BYTES)
-          console.error('Nano Banana Pro refine error:', response.status, errorText.slice(0, 300))
-          throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 300)}`)
+          void response.body?.cancel().catch(() => {})
+          console.error('Nano Banana Pro refine request failed:', response.status)
+          throw new Error(`Image provider status: ${response.status}`)
         }
 
         const data = JSON.parse(await readGeminiRefineResponse(response, REFINE_IMAGE_RESPONSE_MAX_BYTES))
@@ -232,11 +231,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
 
     throw lastError || new Error('バナーの再生成に失敗しました')
 
-  } catch (error: any) {
-    console.error('Banner refine error:', error)
+  } catch {
+    console.error('Banner refine failed')
     sendErrorNotification({
-      errorMessage: error?.message || 'Banner refine failed',
-      errorStack: error?.stack,
+      errorMessage: 'Banner refine failed',
       pathname: '/api/banner/refine',
       requestMethod: 'POST',
       timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
