@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result)
   } catch (error) {
-    console.error('[Drip] Sequences list error:', error)
+    console.error('[Drip] Sequences list error:')
     return NextResponse.json({ error: 'シーケンス一覧の取得に失敗しました' }, { status: 500 })
   }
 }
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(sequence, { status: 201 })
   } catch (error) {
-    console.error('[Drip] Sequence create error:', error)
+    console.error('[Drip] Sequence create error:')
     return NextResponse.json({ error: 'シーケンスの作成に失敗しました' }, { status: 500 })
   }
 }

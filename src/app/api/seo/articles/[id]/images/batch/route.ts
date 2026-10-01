@@ -94,7 +94,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
         // レート制限を避けるため少し待つ
         await new Promise((resolve) => setTimeout(resolve, 500))
       } catch (err: any) {
-        console.error('[seo diagram batch] item failed', err)
+        console.error('[seo diagram batch] item failed')
         results.push({
           title: diagram.title,
           success: false,
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ id: stri
     }, { status: failCount ? 502 : 200 })
   } catch (e: any) {
     if (e instanceof SeoToolRateLimitError) return NextResponse.json({ code: 'SEO_IMAGE_DAILY_LIMIT', error: `本日の追加画像生成上限（${e.limit}枚）に達しました。明日お試しください。` }, { status: 429 })
-    console.error('Batch diagram generation error:', e)
+    console.error('Batch diagram generation error:')
     return NextResponse.json({ success: false, error: '図解を生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

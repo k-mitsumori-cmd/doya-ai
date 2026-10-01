@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
       }
     })
   } catch (error) {
-    console.error('[GET /api/admin/doyamana/images] Error:', error)
+    console.error('[GET /api/admin/doyamana/images] Error:')
     return NextResponse.json(
       { error: '画像一覧の取得に失敗しました' },
       { status: 500 }
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof OperationalBodyError) {
       return NextResponse.json({ error: error.status === 413 ? '登録内容が大きすぎます' : 'リクエストが不正です' }, { status: error.status })
     }
-    console.error('[POST /api/admin/doyamana/images] Error:', error)
+    console.error('[POST /api/admin/doyamana/images] Error:')
     return NextResponse.json(
       { error: '画像の作成に失敗しました' },
       { status: 500 }
@@ -237,7 +237,7 @@ export async function PATCH(request: NextRequest) {
     if (error instanceof OperationalBodyError) {
       return NextResponse.json({ error: error.status === 413 ? '一括操作の対象が多すぎます' : 'リクエストが不正です' }, { status: error.status })
     }
-    console.error('[PATCH /api/admin/doyamana/images] Error:', error)
+    console.error('[PATCH /api/admin/doyamana/images] Error:')
     return NextResponse.json(
       { error: '一括操作に失敗しました' },
       { status: 500 }

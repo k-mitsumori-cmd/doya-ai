@@ -26,7 +26,7 @@ export async function GET() {
       email: adminUser.email,
     })
   } catch (e) {
-    console.error('[admin/2fa/status]', e)
+    console.error('[admin/2fa/status]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }

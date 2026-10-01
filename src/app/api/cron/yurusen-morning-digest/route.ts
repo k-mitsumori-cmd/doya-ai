@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     const result = await sendYurusenMorningDigest({ deliver: !dry })
     return NextResponse.json({ success: true, ...result })
   } catch (error: any) {
-    console.error('[Cron] yurusen-morning-digest error:', error)
+    console.error('[Cron] yurusen-morning-digest error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to send Yurusen morning digest',
       errorStack: error?.stack,

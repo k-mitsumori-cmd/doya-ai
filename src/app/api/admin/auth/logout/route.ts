@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Admin logout error:', error)
+    console.error('Admin logout error:')
     return NextResponse.json(
       { error: 'ログアウト処理中にエラーが発生しました' },
       { status: 500 }

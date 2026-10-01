@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     await withRetry(() => sendDripReport('evening'))
     return NextResponse.json({ success: true, slot: 'evening' })
   } catch (error: any) {
-    console.error('[Cron] drip-report-evening error:', error)
+    console.error('[Cron] drip-report-evening error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to send drip report (evening)',
       errorStack: error?.stack,

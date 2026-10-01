@@ -49,7 +49,7 @@ export async function GET(
 
     return NextResponse.json({ image: formattedImage })
   } catch (error) {
-    console.error('[GET /api/admin/doyamana/images/[id]] Error:', error)
+    console.error('[GET /api/admin/doyamana/images/[id]] Error:')
     return NextResponse.json(
       { error: '画像の取得に失敗しました' },
       { status: 500 }
@@ -119,7 +119,7 @@ export async function PUT(
     if (error instanceof OperationalBodyError) {
       return NextResponse.json({ error: error.status === 413 ? '更新内容が大きすぎます' : 'リクエストが不正です' }, { status: error.status })
     }
-    console.error('[PUT /api/admin/doyamana/images/[id]] Error:', error)
+    console.error('[PUT /api/admin/doyamana/images/[id]] Error:')
     return NextResponse.json(
       { error: '画像の更新に失敗しました' },
       { status: 500 }
@@ -145,7 +145,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[DELETE /api/admin/doyamana/images/[id]] Error:', error)
+    console.error('[DELETE /api/admin/doyamana/images/[id]] Error:')
     return NextResponse.json(
       { error: '画像の削除に失敗しました' },
       { status: 500 }

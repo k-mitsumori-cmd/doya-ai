@@ -68,7 +68,7 @@ export async function GET() {
 
     return NextResponse.json({ users: result })
   } catch (error) {
-    console.error('[Drip] Users list error:', error)
+    console.error('[Drip] Users list error:')
     return NextResponse.json({ error: 'ユーザーの取得に失敗しました' }, { status: 500 })
   }
 }

@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(result)
   } catch (error) {
-    console.error('[Drip] Settings get error:', error)
+    console.error('[Drip] Settings get error:')
     return NextResponse.json({ error: '設定の取得に失敗しました' }, { status: 500 })
   }
 }
@@ -92,7 +92,7 @@ export async function PUT(request: NextRequest) {
 
     return NextResponse.json(result)
   } catch (error) {
-    console.error('[Drip] Settings update error:', error)
+    console.error('[Drip] Settings update error:')
     return NextResponse.json({ error: '設定の更新に失敗しました' }, { status: 500 })
   }
 }

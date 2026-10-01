@@ -49,7 +49,7 @@ export async function PUT(
 
     return NextResponse.json(segment)
   } catch (error) {
-    console.error('[Drip] Segment update error:', error)
+    console.error('[Drip] Segment update error:')
     return NextResponse.json({ error: 'セグメントの更新に失敗しました' }, { status: 500 })
   }
 }
@@ -87,7 +87,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: 'セグメントを削除しました' })
   } catch (error) {
-    console.error('[Drip] Segment delete error:', error)
+    console.error('[Drip] Segment delete error:')
     return NextResponse.json({ error: 'セグメントの削除に失敗しました' }, { status: 500 })
   }
 }

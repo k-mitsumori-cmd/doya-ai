@@ -89,7 +89,7 @@ export async function POST(_req: NextRequest) {
       await deliverStripeWebhookNotification(notificationId)
     } catch (error) {
       // 登録は確定済み。送信の一時障害はCronへ委ね、購入者の同期成功を維持する。
-      console.error('Stripe sync/latest notification delivery deferred:', notificationId, error)
+      console.error('Stripe sync/latest notification delivery deferred:')
     }
 
     return NextResponse.json({
@@ -101,7 +101,7 @@ export async function POST(_req: NextRequest) {
       status: subscription.status,
     })
   } catch (e: any) {
-    console.error('Stripe sync/latest error:', e)
+    console.error('Stripe sync/latest error:')
     return NextResponse.json({ error: '契約情報を再同期できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

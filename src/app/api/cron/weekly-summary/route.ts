@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     await withRetry(() => sendWeeklySummary())
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('[Cron] weekly-summary error:', error)
+    console.error('[Cron] weekly-summary error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to send weekly summary',
       errorStack: error?.stack,

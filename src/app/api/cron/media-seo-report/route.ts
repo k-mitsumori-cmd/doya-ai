@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     const result = await sendMediaSeoReport({ dryRun })
     return NextResponse.json({ success: true, ...result })
   } catch (error: any) {
-    console.error('[Cron] media-seo-report error:', error)
+    console.error('[Cron] media-seo-report error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to send media SEO report',
       errorStack: error?.stack,

@@ -351,7 +351,7 @@ export async function GET(request: NextRequest) {
       lastUpdated: new Date().toISOString(),
     }, { headers: privateHeaders })
   } catch (error) {
-    console.error('Admin stats error:', error)
+    console.error('Admin stats error:')
     return NextResponse.json(
       { error: '統計データの取得に失敗しました' },
       { status: 500, headers: privateHeaders }

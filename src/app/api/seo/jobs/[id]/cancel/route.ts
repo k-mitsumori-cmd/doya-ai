@@ -29,7 +29,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     return NextResponse.json({ success: true, job: publicSeoJob(updated) })
   } catch (e: any) {
     if (e?.code === 'P2025') return NextResponse.json({ success: false, error: 'ジョブの状態またはアクセス権が変わりました。再読み込みしてください。' }, { status: 409 })
-    console.error('[seo jobs/[id]/cancel/route.ts] failed', e)
+    console.error('[seo jobs/[id]/cancel/route.ts] failed')
     return NextResponse.json({ success: false, error: 'ジョブを停止できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

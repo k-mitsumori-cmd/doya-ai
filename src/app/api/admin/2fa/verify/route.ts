@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (e) {
-    console.error('[admin/2fa/verify]', e)
+    console.error('[admin/2fa/verify]')
     return NextResponse.json({ error: '検証に失敗しました' }, { status: 500 })
   }
 }

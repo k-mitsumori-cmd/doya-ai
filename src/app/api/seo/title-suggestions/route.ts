@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
     if (e instanceof SeoToolRateLimitError) {
       return NextResponse.json({ success: false, code: 'RATE_LIMIT', error: `本日のタイトル候補生成の試行回数は上限（${e.limit}回）に達しました。明日お試しください。` }, { status: 429 })
     }
-    console.error('[seo title suggestions] failed', e)
+    console.error('[seo title suggestions] failed')
     return NextResponse.json(
       { success: false, error: 'タイトル候補を生成できませんでした。時間をおいて再試行してください。' },
       { status: 500 }

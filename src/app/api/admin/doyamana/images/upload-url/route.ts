@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
   try {
     return NextResponse.json(await createBannerAdminUpload(mimeType))
   } catch (error) {
-    console.error('[POST /api/admin/doyamana/images/upload-url] Error:', error)
+    console.error('[POST /api/admin/doyamana/images/upload-url] Error:')
     return NextResponse.json({ error: '画像アップロードの準備に失敗しました' }, { status: 502 })
   }
 }

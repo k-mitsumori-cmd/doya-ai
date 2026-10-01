@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ ok: true, days, received, total, daysSinceLast })
   } catch (error: any) {
-    console.error('[Cron] feedback-report error:', error)
+    console.error('[Cron] feedback-report error:')
     await notifyAlert({
       level: 'critical',
       title: 'お問い合わせ受信レポートcronが失敗しました',

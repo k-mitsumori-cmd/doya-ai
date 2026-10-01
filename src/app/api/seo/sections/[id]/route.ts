@@ -31,7 +31,7 @@ export async function PUT(req: NextRequest, ctx: { params: Promise<{ id: string 
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    console.error('[seo sections/[id]/route.ts] failed', e)
+    console.error('[seo sections/[id]/route.ts] failed')
     return NextResponse.json({ success: false, error: 'セクションを保存できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

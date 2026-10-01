@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
         await new Promise(resolve => setTimeout(resolve, 2000))
         
       } catch (error) {
-        console.error(`[Generate Batch] Error for ${prompt.id}:`, error)
+        console.error("[api/admin/templates/generate-batch] failed")
         results.push({ id: prompt.id, status: 'error', error: '画像生成または保存に失敗しました' })
         
         // エラー時は5秒待機
@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('[Generate Batch] Error:', error)
+    console.error('[Generate Batch] Error:')
     return NextResponse.json({ error: 'テンプレートの一括生成に失敗しました' }, { status: 500 })
   }
 }
@@ -202,7 +202,7 @@ export async function GET() {
       pendingTemplates: pendingIds
     })
   } catch (error) {
-    console.error('[Generate Batch GET] Error:', error)
+    console.error('[Generate Batch GET] Error:')
     return NextResponse.json({ error: 'テンプレートの生成状況を取得できませんでした' }, { status: 500 })
   }
 }

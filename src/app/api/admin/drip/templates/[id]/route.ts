@@ -41,7 +41,7 @@ export async function GET(
 
     return NextResponse.json(template)
   } catch (error) {
-    console.error('[Drip] Template detail error:', error)
+    console.error('[Drip] Template detail error:')
     return NextResponse.json({ error: 'テンプレートの取得に失敗しました' }, { status: 500 })
   }
 }
@@ -81,7 +81,7 @@ export async function PUT(
 
     return NextResponse.json(template)
   } catch (error) {
-    console.error('[Drip] Template update error:', error)
+    console.error('[Drip] Template update error:')
     return NextResponse.json({ error: 'テンプレートの更新に失敗しました' }, { status: 500 })
   }
 }
@@ -119,7 +119,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: 'テンプレートを削除しました' })
   } catch (error) {
-    console.error('[Drip] Template delete error:', error)
+    console.error('[Drip] Template delete error:')
     return NextResponse.json({ error: 'テンプレートの削除に失敗しました' }, { status: 500 })
   }
 }

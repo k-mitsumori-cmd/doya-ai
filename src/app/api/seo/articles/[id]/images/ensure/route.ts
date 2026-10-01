@@ -157,7 +157,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
             await new Promise((r) => setTimeout(r, 500))
           }
         } catch (err: any) {
-          console.error(`Banner ${bi + 1} (${pattern.label}) generation failed:`, err?.message)
+          console.error("[api/seo/articles/[id]/images/ensure] failed")
         }
       }
     }
@@ -250,13 +250,13 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     return NextResponse.json({ success: true, images: refreshed?.images || [] })
     } finally {
       await releaseSeoImageLease(articleId, leaseToken).catch(error => {
-        console.error('[seo image ensure] lease release failed', error)
+        console.error('[seo image ensure] lease release failed')
       })
     }
   } catch (e: any) {
     if (e instanceof SeoImageGenerationInProgressError) return NextResponse.json({ code: 'SEO_IMAGE_IN_PROGRESS', error: 'この記事の画像は生成中です。完了後に再読み込みしてください。' }, { status: 409 })
     if (e instanceof SeoToolRateLimitError) return NextResponse.json({ code: 'SEO_IMAGE_DAILY_LIMIT', error: `本日の追加画像生成上限（${e.limit}枚）に達しました。明日お試しください。` }, { status: 429 })
-    console.error('Ensure images error:', e)
+    console.error('Ensure images error:')
     return NextResponse.json({ success: false, error: '画像を生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

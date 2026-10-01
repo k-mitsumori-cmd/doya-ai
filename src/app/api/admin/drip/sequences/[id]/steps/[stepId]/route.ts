@@ -45,7 +45,7 @@ export async function PUT(
 
     return NextResponse.json(step)
   } catch (error) {
-    console.error('[Drip] Step update error:', error)
+    console.error('[Drip] Step update error:')
     return NextResponse.json({ error: 'ステップの更新に失敗しました' }, { status: 500 })
   }
 }
@@ -76,7 +76,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: 'ステップを削除しました' })
   } catch (error) {
-    console.error('[Drip] Step delete error:', error)
+    console.error('[Drip] Step delete error:')
     return NextResponse.json({ error: 'ステップの削除に失敗しました' }, { status: 500 })
   }
 }

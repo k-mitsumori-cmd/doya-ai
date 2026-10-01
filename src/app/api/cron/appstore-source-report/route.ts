@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     const result = await sendAppStoreSourceReport()
     return NextResponse.json({ success: true, ...result })
   } catch (error: any) {
-    console.error('[Cron] appstore-source-report error:', error)
+    console.error('[Cron] appstore-source-report error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to send App Store source report',
       errorStack: error?.stack,

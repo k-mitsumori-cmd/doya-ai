@@ -48,7 +48,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         { status: 400 }
       )
     }
-    console.error('[seo memo] failed', { articleId: id, error: e?.message || 'unknown error', stack: e?.stack })
+    console.error('[seo memo] failed')
     return NextResponse.json(
       { success: false, error: 'メモを保存できませんでした。時間をおいて再試行してください。' },
       { status: 500 }

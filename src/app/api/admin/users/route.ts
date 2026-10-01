@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
             interval: subscription.items.data[0]?.price?.recurring?.interval || 'month',
           }
         } catch (e) {
-          console.error(`Stripe fetch error for user ${user.id}:`, e)
+          console.error("[api/admin/users] failed")
           stripeInfoMap[user.id] = null
         }
       })
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(formattedUsers)
   } catch (error) {
-    console.error('Admin users error:', error)
+    console.error('Admin users error:')
     return NextResponse.json(
       { error: 'ユーザー一覧の取得に失敗しました' },
       { status: 500 }
@@ -220,7 +220,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json(updatedUser)
   } catch (error) {
-    console.error('Admin user update error:', error)
+    console.error('Admin user update error:')
     return NextResponse.json(
       { error: 'ユーザーの更新に失敗しました' },
       { status: 500 }
@@ -302,7 +302,7 @@ export async function DELETE(req: NextRequest) {
       message: `ユーザー ${user.email || userId} を削除しました` 
     })
   } catch (error) {
-    console.error('Admin user delete error:', error)
+    console.error('Admin user delete error:')
     return NextResponse.json(
       { error: 'ユーザーの削除に失敗しました' },
       { status: 500 }

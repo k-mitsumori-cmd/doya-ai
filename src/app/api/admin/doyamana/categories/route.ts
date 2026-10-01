@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const activeOnly = new URL(request.url).searchParams.get('activeOnly') === 'true'
     return NextResponse.json({ categories: activeOnly ? categories.filter(category => category.isActive) : categories })
   } catch (error) {
-    console.error('[GET /api/admin/doyamana/categories] Error:', error)
+    console.error('[GET /api/admin/doyamana/categories] Error:')
     return NextResponse.json(
       { error: 'カテゴリ一覧の取得に失敗しました' },
       { status: 500 }
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof OperationalBodyError) {
       return NextResponse.json({ error: 'カテゴリの入力内容が不正です' }, { status: error.status })
     }
-    console.error('[POST /api/admin/doyamana/categories] Error:', error)
+    console.error('[POST /api/admin/doyamana/categories] Error:')
     return NextResponse.json({ error: 'カテゴリの作成に失敗しました' }, { status: 500 })
   }
 }

@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     const result = await sendNoroiMorningDigest({ deliver: !dry })
     return NextResponse.json({ success: true, ...result })
   } catch (error: any) {
-    console.error('[Cron] noroi-morning-digest error:', error)
+    console.error('[Cron] noroi-morning-digest error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to send Noroi morning digest',
       errorStack: error?.stack,

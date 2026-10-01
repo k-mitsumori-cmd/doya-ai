@@ -144,7 +144,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Export users error:', error)
+    console.error('Export users error:')
     return NextResponse.json({ error: 'エクスポートに失敗しました' }, { status: 500 })
   }
 }

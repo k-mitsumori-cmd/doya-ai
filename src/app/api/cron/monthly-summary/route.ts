@@ -17,7 +17,7 @@ export async function GET(request: Request) {
     await withRetry(() => sendMonthlySummary())
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('[Cron] monthly-summary error:', error)
+    console.error('[Cron] monthly-summary error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to send monthly summary',
       errorStack: error?.stack,

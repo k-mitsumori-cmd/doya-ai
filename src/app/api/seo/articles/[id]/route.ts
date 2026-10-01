@@ -47,7 +47,7 @@ export async function GET(_req: NextRequest, ctx: { params: Promise<{ id: string
     })
   } catch (e: any) {
     const msg = e?.message || '不明なエラー'
-    console.error('[seo article get] failed', { articleId: id, msg, error: e })
+    console.error('[seo article get] failed')
     return NextResponse.json(
       { success: false, error: '記事の操作に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }
@@ -86,7 +86,7 @@ export async function DELETE(_req: NextRequest, ctx: { params: Promise<{ id: str
   } catch (e: any) {
     if (e?.code === 'P2025') return NextResponse.json({ success: false, error: '記事が見つかりません' }, { status: 404 })
     const msg = e?.message || '不明なエラー'
-    console.error('[seo article delete] failed', { articleId: id, msg, error: e })
+    console.error('[seo article delete] failed')
     return NextResponse.json(
       { success: false, error: '記事の操作に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }

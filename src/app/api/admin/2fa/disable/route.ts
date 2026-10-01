@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (e) {
-    console.error('[admin/2fa/disable]', e)
+    console.error('[admin/2fa/disable]')
     return NextResponse.json({ error: '無効化に失敗しました' }, { status: 500 })
   }
 }

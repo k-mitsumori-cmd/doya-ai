@@ -388,7 +388,7 @@ export async function POST(request: NextRequest) {
           await new Promise(resolve => setTimeout(resolve, 2000))
         }
       } catch (error: any) {
-        console.error(`Banner ${i + 1} generation error:`, error.message)
+        console.error("[api/seo/template/banners] failed")
       }
     }
 
@@ -408,7 +408,7 @@ export async function POST(request: NextRequest) {
       count: banners.length,
     })
   } catch (error: any) {
-    console.error('Banner generation error:', error)
+    console.error('Banner generation error:')
     return NextResponse.json({
       success: false,
       error: 'バナーを生成できませんでした。時間をおいて再試行してください。',
@@ -489,7 +489,7 @@ export async function PUT(request: NextRequest) {
       failCount: results.filter(r => !r.imageUrl).length,
     })
   } catch (error: any) {
-    console.error('Batch banner generation error:', error)
+    console.error('Batch banner generation error:')
     return NextResponse.json({
       success: false,
       error: 'バナーを生成できませんでした。時間をおいて再試行してください。',

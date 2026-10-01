@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
       }
     } catch (e: any) {
       // 既存契約を確認できない状態では、二重契約を防ぐため決済を作らない。
-      console.error('[Checkout] duplicate-subscription check failed:', e?.message)
+      console.error('[Checkout] duplicate-subscription check failed:')
       return NextResponse.json({
         code: 'SUBSCRIPTION_CHECK_UNAVAILABLE',
         error: '現在の契約状況を確認できませんでした。二重のご請求を防ぐため決済を開始していません。時間をおいて再度お試しください。',
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error: any) {
-    console.error('Checkout session error:', error)
+    console.error('Checkout session error:')
 
     // Stripeの「test/liveモード不一致」をユーザーが復旧できる形で案内
     if (looksLikeStripeModeMismatch(error)) {

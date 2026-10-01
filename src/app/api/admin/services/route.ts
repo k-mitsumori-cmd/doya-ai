@@ -73,7 +73,7 @@ export async function GET() {
       services,
     })
   } catch (e) {
-    console.error('[admin/services]', e)
+    console.error('[admin/services]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }

@@ -178,7 +178,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         { status: 400 }
       )
     }
-    console.error('[vibe-edit] failed', { articleId, error: e?.message, stack: e?.stack })
+    console.error('[vibe-edit] failed')
     return NextResponse.json(
       { success: false, error: '記事を編集できませんでした。時間をおいて再試行してください。' },
       { status: 500 }

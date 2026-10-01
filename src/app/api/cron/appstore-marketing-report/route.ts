@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     const result = await sendAppStoreMarketingReport()
     return NextResponse.json({ success: true, ...result })
   } catch (error: any) {
-    console.error('[Cron] appstore-marketing-report error:', error)
+    console.error('[Cron] appstore-marketing-report error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to send App Store marketing report',
       errorStack: error?.stack,

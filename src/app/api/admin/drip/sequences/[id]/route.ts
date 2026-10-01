@@ -41,7 +41,7 @@ export async function GET(
 
     return NextResponse.json(sequence)
   } catch (error) {
-    console.error('[Drip] Sequence detail error:', error)
+    console.error('[Drip] Sequence detail error:')
     return NextResponse.json({ error: 'シーケンスの取得に失敗しました' }, { status: 500 })
   }
 }
@@ -83,7 +83,7 @@ export async function PUT(
 
     return NextResponse.json(sequence)
   } catch (error) {
-    console.error('[Drip] Sequence update error:', error)
+    console.error('[Drip] Sequence update error:')
     return NextResponse.json({ error: 'シーケンスの更新に失敗しました' }, { status: 500 })
   }
 }
@@ -116,7 +116,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: 'シーケンスを削除しました' })
   } catch (error) {
-    console.error('[Drip] Sequence delete error:', error)
+    console.error('[Drip] Sequence delete error:')
     return NextResponse.json({ error: 'シーケンスの削除に失敗しました' }, { status: 500 })
   }
 }

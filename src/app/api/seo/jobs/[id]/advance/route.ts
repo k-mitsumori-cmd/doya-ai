@@ -42,7 +42,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
       }
       return undefined
     })()
-    console.error('[seo advance] failed', { jobId: id, msg, error: e, stack: e?.stack })
+    console.error('[seo advance] failed')
     return NextResponse.json(
       { success: false, error: '生成処理を進められませんでした。時間をおいて再試行してください。', hint },
       { status: 500 }

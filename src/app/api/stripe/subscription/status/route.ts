@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
       priceId,
     })
   } catch (e: any) {
-    console.error('Subscription status error:', e)
+    console.error('Subscription status error:')
     return privateJson({ error: '契約状態を確認できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

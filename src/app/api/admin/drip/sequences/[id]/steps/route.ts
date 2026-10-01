@@ -61,7 +61,7 @@ export async function POST(
 
     return NextResponse.json(step, { status: 201 })
   } catch (error) {
-    console.error('[Drip] Step create error:', error)
+    console.error('[Drip] Step create error:')
     return NextResponse.json({ error: 'ステップの追加に失敗しました' }, { status: 500 })
   }
 }
@@ -108,7 +108,7 @@ export async function PUT(
 
     return NextResponse.json(updatedSteps)
   } catch (error) {
-    console.error('[Drip] Step reorder error:', error)
+    console.error('[Drip] Step reorder error:')
     return NextResponse.json({ error: 'ステップの並び替えに失敗しました' }, { status: 500 })
   }
 }

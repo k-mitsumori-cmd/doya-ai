@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
       webhookOk: audit.webhookOk,
     })
   } catch (error: any) {
-    console.error('[Cron] billing-audit error:', error)
+    console.error('[Cron] billing-audit error:')
     await notifyAlert({
       level: 'critical',
       title: '課金監査cronが失敗しました',

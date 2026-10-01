@@ -33,7 +33,7 @@ export async function GET() {
 
     return NextResponse.json(admins)
   } catch (error) {
-    console.error('Get admin users error:', error)
+    console.error('Get admin users error:')
     return NextResponse.json({ error: '管理者一覧の取得に失敗しました' }, { status: 500 })
   }
 }
@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(newAdmin, { status: 201 })
   } catch (error) {
-    console.error('Create admin user error:', error)
+    console.error('Create admin user error:')
     return NextResponse.json({ error: '管理者の作成に失敗しました' }, { status: 500 })
   }
 }

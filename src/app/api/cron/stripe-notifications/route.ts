@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const result = await deliverPendingStripeWebhookNotifications()
     return NextResponse.json(result, { status: result.failed > 0 ? 503 : 200 })
   } catch (error) {
-    console.error('[Stripe webhook notification] cron failed:', error)
+    console.error('[Stripe webhook notification] cron failed:')
     return NextResponse.json({ error: 'Notification retry failed' }, { status: 500 })
   }
 }

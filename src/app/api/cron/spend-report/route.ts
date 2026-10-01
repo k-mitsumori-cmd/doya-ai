@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     await sendSpendReport()
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('[Cron] spend-report error:', error)
+    console.error('[Cron] spend-report error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to send spend report',
       errorStack: error?.stack,

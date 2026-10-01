@@ -53,7 +53,7 @@ export async function GET() {
 
     return NextResponse.json({ organizations: result })
   } catch (e) {
-    console.error('[admin/kintai/organizations]', e)
+    console.error('[admin/kintai/organizations]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }

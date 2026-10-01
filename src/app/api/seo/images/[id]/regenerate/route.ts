@@ -76,7 +76,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     return NextResponse.json({ success: true, image: newRec })
   } catch (e: any) {
     if (e instanceof SeoToolRateLimitError) return NextResponse.json({ code: 'SEO_IMAGE_DAILY_LIMIT', error: `本日の追加画像生成上限（${e.limit}枚）に達しました。明日お試しください。` }, { status: 429 })
-    console.error('Image regeneration error:', e)
+    console.error('Image regeneration error:')
     if (e?.name === 'ZodError' || e instanceof SyntaxError) {
       return NextResponse.json({ success: false, error: '入力形式が正しくありません' }, { status: 400 })
     }

@@ -277,7 +277,7 @@ export async function GET(request: Request) {
       totalEnrollments: enrollments.length,
     })
   } catch (e) {
-    console.error('[Drip] Cron error:', e)
+    console.error('[Drip] Cron error:')
     return NextResponse.json({ error: '配信処理に失敗しました' }, { status: 500 })
   }
 }

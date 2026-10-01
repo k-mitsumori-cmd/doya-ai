@@ -40,7 +40,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, selectedId: imageId })
   } catch (e: any) {
-    console.error('[select-banner] error:', e?.message)
+    console.error('[select-banner] error:')
     return NextResponse.json({ success: false, error: 'バナーを選択できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

@@ -65,7 +65,7 @@ export async function GET(
 
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   } catch (err: any) {
-    console.error(`[SEO Template Image] Error for ${templateId}:`, err.message)
+    console.error("[api/seo/template/image/template/[templateId]] failed")
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 }

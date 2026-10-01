@@ -47,7 +47,7 @@ export async function GET() {
       })),
     })
   } catch (e) {
-    console.error('[admin/kintai/employees]', e)
+    console.error('[admin/kintai/employees]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }

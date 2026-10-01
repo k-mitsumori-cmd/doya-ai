@@ -61,7 +61,7 @@ ${section.content}
     return NextResponse.json({ success: true, content: enhanced })
   } catch (e: any) {
     if (e instanceof SeoToolRateLimitError) return NextResponse.json({ success: false, code: 'SEO_TEXT_DAILY_LIMIT', error: `本日のAI編集の運用上限（${e.limit}回）に達しました。明日お試しください。` }, { status: 429 })
-    console.error('[seo sections/[id]/cv/route.ts] failed', e)
+    console.error('[seo sections/[id]/cv/route.ts] failed')
     return NextResponse.json({ success: false, error: 'セクションを強化できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

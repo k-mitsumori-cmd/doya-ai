@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     const result = await sendAnalyticsReport({ forceMonthly })
     return NextResponse.json({ success: true, ...result })
   } catch (error: any) {
-    console.error('[Cron] analytics-report error:', error)
+    console.error('[Cron] analytics-report error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to send analytics report',
       errorStack: error?.stack,

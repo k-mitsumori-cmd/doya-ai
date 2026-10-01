@@ -49,7 +49,7 @@ export async function GET(
       })),
     })
   } catch (error) {
-    console.error('[GET /api/admin/doyamana/categories/[id]] Error:', error)
+    console.error('[GET /api/admin/doyamana/categories/[id]] Error:')
     return NextResponse.json(
       { error: 'カテゴリの取得に失敗しました' },
       { status: 500 }
@@ -113,7 +113,7 @@ export async function PUT(
     return NextResponse.json({ category })
   } catch (error) {
     if (error instanceof OperationalBodyError) return NextResponse.json({ error: 'カテゴリの入力内容が不正です' }, { status: error.status })
-    console.error('[PUT /api/admin/doyamana/categories/[id]] Error:', error)
+    console.error('[PUT /api/admin/doyamana/categories/[id]] Error:')
     return NextResponse.json(
       { error: 'カテゴリの更新に失敗しました' },
       { status: 500 }
@@ -152,7 +152,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('[DELETE /api/admin/doyamana/categories/[id]] Error:', error)
+    console.error('[DELETE /api/admin/doyamana/categories/[id]] Error:')
     return NextResponse.json(
       { error: 'カテゴリの削除に失敗しました' },
       { status: 500 }

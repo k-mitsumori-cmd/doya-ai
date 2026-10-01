@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
       adminUser: session.adminUser,
     })
   } catch (error) {
-    console.error('Admin session check error:', error)
+    console.error('Admin session check error:')
     return NextResponse.json(
       { authenticated: false, error: 'セッション確認中にエラーが発生しました' },
       { status: 500 }

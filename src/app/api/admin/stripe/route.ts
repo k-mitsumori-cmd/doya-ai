@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
           interval: subscription.items.data[0]?.price?.recurring?.interval,
         }
       } catch (e) {
-        console.error('Stripe subscription fetch error:', e)
+        console.error('Stripe subscription fetch error:')
         return NextResponse.json({ error: '契約情報を確認できませんでした' }, { status: 502 })
       }
     }
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       subscription: subscriptionInfo,
     })
   } catch (error) {
-    console.error('Admin stripe GET error:', error)
+    console.error('Admin stripe GET error:')
     return NextResponse.json({ error: 'エラーが発生しました' }, { status: 500 })
   }
 }
@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Admin stripe POST error:', error)
+    console.error('Admin stripe POST error:')
     if (canceledSubscriptionId) {
       return NextResponse.json({
         code: 'BILLING_SYNC_INCOMPLETE',

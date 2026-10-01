@@ -101,7 +101,7 @@ ${content.slice(0, 4000)}
     })
   } catch (e: any) {
     if (e instanceof SeoToolRateLimitError) return NextResponse.json({ code: 'SEO_IMAGE_SUGGESTION_LIMIT', error: `本日の図解案の生成上限（${e.limit}回）に達しました。明日お試しください。` }, { status: 429 })
-    console.error('Diagram suggest error:', e)
+    console.error('Diagram suggest error:')
     return NextResponse.json({ success: false, error: '図解案を生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

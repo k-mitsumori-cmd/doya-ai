@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
           })
         }
       } catch (error) {
-        console.error('Password verification error:', error)
+        console.error('Password verification error:')
         passwordValid = false
       }
     }
@@ -277,7 +277,7 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Admin login error:', error)
+    console.error('Admin login error:')
     // エラーの詳細をログに出力
     const errorMessage = error instanceof Error ? error.message : 'Unknown error'
     const errorStack = error instanceof Error ? error.stack : ''

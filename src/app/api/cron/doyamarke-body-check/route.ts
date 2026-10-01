@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     const result = await runDoyamarkeBodyCheck({ dryRun })
     return NextResponse.json({ success: true, ...result })
   } catch (error: any) {
-    console.error('[Cron] doyamarke-body-check error:', error)
+    console.error('[Cron] doyamarke-body-check error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to run doyamarke body check',
       errorStack: error?.stack,

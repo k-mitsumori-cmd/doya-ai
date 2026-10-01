@@ -140,7 +140,7 @@ export async function POST(req: NextRequest) {
     if (e instanceof SeoToolRateLimitError) {
       return NextResponse.json({ success: false, code: 'RATE_LIMIT', error: `本日の比較候補検索の試行回数は上限（${e.limit}回）に達しました。明日お試しください。` }, { status: 429 })
     }
-    console.error('[seo compare candidates] failed', e)
+    console.error('[seo compare candidates] failed')
     return NextResponse.json({ success: false, error: '比較候補を取得できませんでした。時間をおいて再試行してください。' }, { status: 502 })
   }
 }

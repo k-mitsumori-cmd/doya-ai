@@ -67,7 +67,7 @@ export async function GET(
       timeline: logs,
     })
   } catch (error) {
-    console.error('[Drip] User timeline error:', error)
+    console.error('[Drip] User timeline error:')
     return NextResponse.json({ error: 'タイムラインの取得に失敗しました' }, { status: 500 })
   }
 }

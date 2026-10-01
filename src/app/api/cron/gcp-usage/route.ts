@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     await withRetry(() => sendGCPUsageReport())
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    console.error('[Cron] gcp-usage error:', error)
+    console.error('[Cron] gcp-usage error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to send GCP usage report',
       errorStack: error?.stack,

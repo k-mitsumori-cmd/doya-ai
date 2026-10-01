@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
       sequencePerformance,
     })
   } catch (error) {
-    console.error('[Drip] Dashboard error:', error)
+    console.error('[Drip] Dashboard error:')
     return NextResponse.json({ error: 'ダッシュボードデータの取得に失敗しました' }, { status: 500 })
   }
 }

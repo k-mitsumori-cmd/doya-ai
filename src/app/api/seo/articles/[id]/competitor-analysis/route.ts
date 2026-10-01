@@ -140,7 +140,7 @@ export async function POST(
     })
   } catch (error: any) {
     if (error instanceof SeoToolRateLimitError) return NextResponse.json({ success: false, code: 'SEO_TEXT_DAILY_LIMIT', error: `本日のAI編集の運用上限（${error.limit}回）に達しました。明日お試しください。` }, { status: 429 })
-    console.error('[competitor-analysis] error:', error)
+    console.error('[competitor-analysis] error:')
     return NextResponse.json(
       { error: '競合を分析できませんでした。時間をおいて再試行してください。' },
       { status: 500 }

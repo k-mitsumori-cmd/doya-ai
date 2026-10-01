@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     const result = await sendNoroiEngagementReport()
     return NextResponse.json({ success: true, ...result })
   } catch (error: any) {
-    console.error('[Cron] noroi-engagement-report error:', error)
+    console.error('[Cron] noroi-engagement-report error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to send noroi engagement report',
       errorStack: error?.stack,

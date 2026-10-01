@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       currentPeriodEnd: updated.current_period_end,
     })
   } catch (e: any) {
-    console.error('Subscription resume error:', e)
+    console.error('Subscription resume error:')
     return NextResponse.json(
       { error: '契約の再開を確認できませんでした。時間をおいて再試行してください。' },
       { status: 500 }

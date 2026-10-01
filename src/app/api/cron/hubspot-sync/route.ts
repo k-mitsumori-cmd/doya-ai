@@ -62,7 +62,7 @@ export async function GET(request: Request) {
     // 既存ユーザー・エンロールメントは再実行しても重複作成しない。
     contacts = await fetchContactsCreatedAfter(Math.max(0, since - 1))
   } catch (e) {
-    console.error('[hubspot-sync] contact fetch failed:', e)
+    console.error('[hubspot-sync] contact fetch failed:')
     return NextResponse.json(
       { error: 'HubSpotのコンタクトを取得できませんでした' },
       { status: 502 }
@@ -112,7 +112,7 @@ export async function GET(request: Request) {
       processed++
     } catch (e) {
       errors++
-      console.error('[hubspot-sync] contact failed:', email, e)
+      console.error('[hubspot-sync] contact failed:')
     }
   }
 

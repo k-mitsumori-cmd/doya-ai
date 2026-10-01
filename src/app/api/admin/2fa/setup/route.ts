@@ -31,7 +31,7 @@ export async function POST() {
 
     return NextResponse.json({ secret, qrDataUrl })
   } catch (e) {
-    console.error('[admin/2fa/setup]', e)
+    console.error('[admin/2fa/setup]')
     return NextResponse.json({ error: 'セットアップに失敗しました' }, { status: 500 })
   }
 }

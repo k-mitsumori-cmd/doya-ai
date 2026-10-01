@@ -73,7 +73,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     // データベース接続プールエラーの特別処理
     const msg = e?.message || '不明なエラー'
     if (msg.includes('MaxClientsInSessionMode') || msg.includes('max clients reached')) {
-      console.error('[seo jobs] database connection pool exhausted', { articleId, error: msg, stack: e?.stack })
+      console.error('[seo jobs] database connection pool exhausted')
       return NextResponse.json(
         { 
           success: false, 
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         { status: 503 }
       )
     }
-    console.error('[seo jobs] failed', { articleId, error: msg, stack: e?.stack })
+    console.error('[seo jobs] failed')
     return NextResponse.json({ success: false, error: '再生成を開始できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

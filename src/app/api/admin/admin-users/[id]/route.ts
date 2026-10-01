@@ -97,7 +97,7 @@ export async function PATCH(
 
     return NextResponse.json(updatedAdmin)
   } catch (error) {
-    console.error('Update admin user error:', error)
+    console.error('Update admin user error:')
     return NextResponse.json({ error: '管理者の更新に失敗しました' }, { status: 500 })
   }
 }
@@ -150,7 +150,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Delete admin user error:', error)
+    console.error('Delete admin user error:')
     return NextResponse.json({ error: '管理者の削除に失敗しました' }, { status: 500 })
   }
 }

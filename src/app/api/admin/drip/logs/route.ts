@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('[Drip] Logs list error:', error)
+    console.error('[Drip] Logs list error:')
     return NextResponse.json({ error: 'ログの取得に失敗しました' }, { status: 500 })
   }
 }

@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     const result = await sendNoroiSummaryReport('monthly')
     return NextResponse.json({ success: true, ...result })
   } catch (error: any) {
-    console.error('[Cron] noroi-monthly-summary error:', error)
+    console.error('[Cron] noroi-monthly-summary error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to send noroi monthly summary',
       errorStack: error?.stack,

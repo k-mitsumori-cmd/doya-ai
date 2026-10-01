@@ -155,7 +155,7 @@ export async function POST(_req: NextRequest, props: { params: Promise<{ id: str
     })
   } catch (e: any) {
     if (e instanceof SeoToolRateLimitError) return NextResponse.json({ success: false, code: 'SEO_TEXT_DAILY_LIMIT', error: `本日のAI編集の運用上限（${e.limit}回）に達しました。明日お試しください。` }, { status: 429 })
-    console.error('Note generation error:', e)
+    console.error('Note generation error:')
     return NextResponse.json({ success: false, error: '記事を生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

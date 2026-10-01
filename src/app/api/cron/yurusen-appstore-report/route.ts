@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     const result = await sendYurusenAppStoreReport({ date })
     return NextResponse.json({ success: true, ...result })
   } catch (error: any) {
-    console.error('[Cron] yurusen-appstore-report error:', error)
+    console.error('[Cron] yurusen-appstore-report error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to send yurusen App Store report',
       errorStack: error?.stack,

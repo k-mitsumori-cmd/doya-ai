@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
           currentPeriodEnd: updated.current_period_end,
         })
       } catch (e: any) {
-        console.error(`[Cancel] 解約に失敗: sub=${s.id}`, e?.message)
+        console.error("[api/stripe/subscription/cancel] failed")
         results.push({ subscriptionId: s.id, error: '解約処理に失敗しました' })
       }
     }
@@ -184,7 +184,7 @@ export async function POST(request: NextRequest) {
       results,
     })
   } catch (e: any) {
-    console.error('Subscription cancel error:', e)
+    console.error('Subscription cancel error:')
     return NextResponse.json(
       { error: '解約処理を完了できませんでした。時間をおいて再試行し、解消しない場合はお問い合わせください。' },
       { status: 500 }
@@ -208,7 +208,7 @@ async function notifyCancellationFailure(
     })
   } catch (error) {
     // DB障害で登録できない場合は従来の直接通知を試みる。利用者への失敗応答は維持する。
-    console.error('[Cancel] failure notification enqueue failed:', eventId, error)
+    console.error('[Cancel] failure notification enqueue failed:')
     try {
       await notifyAlert({
         level: 'critical',
@@ -225,6 +225,6 @@ async function notifyCancellationFailure(
     await deliverStripeWebhookNotification(eventId)
   } catch (error) {
     // 登録済みならCronが再送する。ここで直接送ると二重通知になり得る。
-    console.error('[Cancel] failure notification delivery deferred:', eventId, error)
+    console.error('[Cancel] failure notification delivery deferred:')
   }
 }

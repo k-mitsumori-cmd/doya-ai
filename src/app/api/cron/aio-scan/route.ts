@@ -106,7 +106,7 @@ export async function GET(request: Request) {
           ...(r.status === 'done' ? {} : { error: 'スキャンに失敗しました' }) })
       } catch (e: any) {
         failed++
-        console.error(`[cron/aio-scan] 組織 ${org.slug} で例外`, e?.message)
+        console.error("[api/cron/aio-scan] failed")
         results.push({ organizationId: org.id, slug: org.slug, status: 'failed', error: 'スキャンに失敗しました' })
       }
     }
@@ -123,7 +123,7 @@ export async function GET(request: Request) {
       results,
     })
   } catch (error: any) {
-    console.error('[cron/aio-scan] error:', error?.message)
+    console.error('[cron/aio-scan] error:')
     return NextResponse.json({ error: '定期スキャンを完了できませんでした' }, { status: 500 })
   }
 }

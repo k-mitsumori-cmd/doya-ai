@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(segments)
   } catch (error) {
-    console.error('[Drip] Segments list error:', error)
+    console.error('[Drip] Segments list error:')
     return NextResponse.json({ error: 'セグメント一覧の取得に失敗しました' }, { status: 500 })
   }
 }
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(segment, { status: 201 })
   } catch (error) {
-    console.error('[Drip] Segment create error:', error)
+    console.error('[Drip] Segment create error:')
     return NextResponse.json({ error: 'セグメントの作成に失敗しました' }, { status: 500 })
   }
 }

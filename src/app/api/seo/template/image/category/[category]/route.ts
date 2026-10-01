@@ -122,7 +122,7 @@ export async function GET(
 
     return serveFallbackImage(category)
   } catch (err: any) {
-    console.error(`[SEO Category Image] Error for ${category}:`, err.message)
+    console.error("[api/seo/template/image/category/[category]] failed")
     return serveFallbackImage(category)
   }
 }

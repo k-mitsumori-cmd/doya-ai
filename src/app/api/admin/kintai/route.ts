@@ -89,7 +89,7 @@ export async function GET() {
       organizations: orgList,
     })
   } catch (e) {
-    console.error('[admin/kintai]', e)
+    console.error('[admin/kintai]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }

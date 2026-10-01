@@ -112,7 +112,7 @@ export async function POST() {
       steps: stepConfigs.length,
     })
   } catch (e) {
-    console.error('[Drip Seed] Error:', e)
+    console.error('[Drip Seed] Error:')
     return NextResponse.json({ error: '初期データの登録に失敗しました' }, { status: 500 })
   }
 }

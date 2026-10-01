@@ -81,7 +81,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
 
         if (i < selectedPatterns.length - 1) await new Promise((r) => setTimeout(r, 500))
       } catch (err: any) {
-        console.error(`Banner ${i + 1} (${pattern.label}) generation failed:`, err?.message)
+        console.error("[api/seo/articles/[id]/images/banner] failed")
       }
     }
 
@@ -92,7 +92,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     return NextResponse.json({ success: true, images: results, image: results[0] })
   } catch (e: any) {
     if (e instanceof SeoToolRateLimitError) return NextResponse.json({ code: 'SEO_IMAGE_DAILY_LIMIT', error: `本日の追加画像生成上限（${e.limit}枚）に達しました。明日お試しください。` }, { status: 429 })
-    console.error('[seo banner] failed', { articleId, error: e?.message || 'unknown error', stack: e?.stack })
+    console.error('[seo banner] failed')
     return NextResponse.json(
       { success: false, error: 'バナーを生成できませんでした。時間をおいて再試行してください。' },
       { status: 500 }

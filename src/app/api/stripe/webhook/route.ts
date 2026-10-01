@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
   try {
     event = constructWebhookEvent(body, signature, webhookSecret)
   } catch (err: any) {
-    console.error('Webhook signature verification failed:', err.message)
+    console.error('Webhook signature verification failed:')
     return NextResponse.json(
       { error: 'Webhook signature verification failed' },
       { status: 400 }
@@ -137,13 +137,13 @@ export async function POST(request: NextRequest) {
     if (notification) {
       // 送信失敗はDBにpendingとして残す。Stripe本体の再処理は不要。
       await deliverStripeWebhookNotification(event.id).catch((error) => {
-        console.error('[Webhook] notification dispatch failed:', event.id, error)
+        console.error('[Webhook] notification dispatch failed:')
       })
     }
     return NextResponse.json({ received: true })
 
   } catch (error: any) {
-    console.error('Webhook handler error:', error)
+    console.error('Webhook handler error:')
     if (receiptToken) {
       try {
         await finishStripeWebhookEvent(event.id, receiptToken, false)
@@ -229,7 +229,7 @@ async function findUserForSubscription(subscription: Stripe.Subscription): Promi
         if (byEmail) return byEmail
       }
     } catch (e: any) {
-      console.error(`[Webhook] customer retrieve failed: ${customerId}`, e?.message)
+      console.error("[api/stripe/webhook] failed")
       throw e
     }
   }
@@ -361,7 +361,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription): Pro
       return null
     }
   } catch (e: any) {
-    console.error(`[Webhook] subscription.deleted: 残存契約の照会に失敗（プラン変更を中止） user=${user.id}`, e?.message)
+    console.error("[api/stripe/webhook] failed")
     throw e
   }
 

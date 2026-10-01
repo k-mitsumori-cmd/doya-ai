@@ -484,7 +484,7 @@ export async function POST(request: NextRequest) {
         // レート制限対策: 3秒待機
         await new Promise((resolve) => setTimeout(resolve, 3000))
       } catch (error: any) {
-        console.error(`[SEO Template Gen] Error for ${templateId}:`, error.message)
+        console.error("[api/seo/template/generate-thumbnails] failed")
         results.push({ id: templateId, status: 'error', error: '画像を生成できませんでした。時間をおいて再試行してください。' })
 
         // エラー時は5秒待機
@@ -503,7 +503,7 @@ export async function POST(request: NextRequest) {
       remaining: targetIds.length - existingIds.size - pendingIds.length,
     })
   } catch (error: any) {
-    console.error('[SEO Template Gen] Unexpected error:', error.message)
+    console.error('[SEO Template Gen] Unexpected error:')
     return NextResponse.json({ error: 'テンプレート画像を生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
@@ -542,7 +542,7 @@ export async function GET() {
       missingIds: Object.keys(SEO_TEMPLATE_PROMPTS).filter((id) => !templateMap[id]),
     })
   } catch (error: any) {
-    console.error('[SEO Template Gen] GET error:', error.message)
+    console.error('[SEO Template Gen] GET error:')
     return NextResponse.json({ error: 'テンプレート一覧を取得できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
@@ -568,7 +568,7 @@ export async function DELETE() {
       deletedCount: result.count,
     })
   } catch (error: any) {
-    console.error('[SEO Template Gen] DELETE error:', error.message)
+    console.error('[SEO Template Gen] DELETE error:')
     return NextResponse.json({ error: 'テンプレート画像を削除できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

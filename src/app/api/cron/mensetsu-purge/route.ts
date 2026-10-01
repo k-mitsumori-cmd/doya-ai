@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
       } catch (e: any) {
         storageOk = false
         storageFailures.push(s.recordingPath)
-        console.error('[mensetsu-purge] storage delete failed', s.recordingPath, e?.message)
+        console.error('[mensetsu-purge] storage delete failed')
       }
     }
 
@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
       purgedSessions++
     } catch (e: any) {
       // 1件の失敗で全体を止めない。次回のcronで再試行される。
-      console.error('[mensetsu-purge] failed', s.id, e?.message)
+      console.error('[mensetsu-purge] failed')
     }
 
   }

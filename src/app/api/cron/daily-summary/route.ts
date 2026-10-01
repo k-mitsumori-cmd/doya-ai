@@ -62,7 +62,7 @@ async function resetExpiredSubscriptions() {
           if (stripeErr?.statusCode === 404 || stripeErr?.code === 'resource_missing') {
             shouldReset = true
           } else {
-            console.error(`[Cron] Stripe API error for user ${user.id}:`, stripeErr?.message)
+            console.error("[api/cron/daily-summary] failed")
             continue
           }
         }
@@ -96,7 +96,7 @@ async function resetExpiredSubscriptions() {
         }).catch((e: any) => {
           // レコードが存在しない場合は無視（全サービス分を一律更新するため）
           if (e?.code !== 'P2025') {
-            console.error(`[Cron] Failed to reset service subscription: user=${user.id} service=${serviceId}`, e?.message)
+            console.error("[api/cron/daily-summary] failed")
           }
         })
       }
@@ -104,7 +104,7 @@ async function resetExpiredSubscriptions() {
       resetCount++
       console.log(`[Cron] Reset expired subscription: user=${user.id} email=${user.email} oldPlan=${user.plan}`)
     } catch (err: any) {
-      console.error(`[Cron] Failed to reset user ${user.id}:`, err?.message)
+      console.error("[api/cron/daily-summary] failed")
     }
   }
 
@@ -130,7 +130,7 @@ export async function GET(request: Request) {
     await withRetry(() => sendDailySummary())
     return NextResponse.json({ success: true, expiredResets: resetCount })
   } catch (error: any) {
-    console.error('[Cron] daily-summary error:', error)
+    console.error('[Cron] daily-summary error:')
     await sendErrorNotification({
       errorMessage: error?.message || 'Failed to send daily summary',
       errorStack: error?.stack,
