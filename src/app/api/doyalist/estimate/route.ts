@@ -6,8 +6,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { resolvePrefectureCodes } from '@/lib/doyalist/collect/prefecture-codes'
+import { fetchCollectionJson } from '@/lib/doyalist/collect/provider-json'
+import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 
 const API_BASE = 'https://info.gbiz.go.jp/hojin/v1'
+const MAX_REQUEST_BYTES = 8 * 1024
+const MAX_PROVIDER_BYTES = 4 * 1024 * 1024
 
 /**
  * POST /api/doyalist/estimate
@@ -21,9 +25,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
     }
 
-    const body = await req.json().catch(() => null)
-    if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      return NextResponse.json({ error: '入力形式を確認してください' }, { status: 400 })
+    let body: Record<string, unknown>
+    try {
+      body = await readOperationalJson(req, MAX_REQUEST_BYTES)
+    } catch (error) {
+      if (error instanceof OperationalBodyError) {
+        return NextResponse.json({ error: '入力形式またはサイズを確認してください' }, { status: error.status })
+      }
+      throw error
     }
     const { industry, region, keywords } = body as {
       industry?: string
@@ -85,19 +94,25 @@ export async function POST(req: NextRequest) {
       u.searchParams.set('limit', String(SAMPLE_LIMIT))
       u.searchParams.set('page', String(page))
       try {
-        const r = await fetch(u.toString(), {
+        const response = await fetchCollectionJson(u.toString(), {
           headers: { 'Accept': 'application/json', 'X-hojinInfo-api-token': apiToken! },
-          signal: AbortSignal.timeout(12000),
+        }, {
+          timeoutMs: 12000,
+          maxBytes: MAX_PROVIDER_BYTES,
         })
-        if (r.status === 404) return 0  // ヒット0件
-        if (!r.ok) {
-          console.warn(`[estimate] gBizINFO ${r.status} for "${kw}" page=${page}`)
+        if (response.status === 404) return 0  // ヒット0件
+        if (!response.ok) {
+          console.warn(`[estimate] gBizINFO HTTP ${response.status} page=${page}`)
           return null  // エラー
         }
-        const data = await r.json()
-        return (data['hojin-infos'] || []).length
-      } catch (e: any) {
-        console.warn(`[estimate] fetch error for "${kw}" page=${page}:`, e?.message || e)
+        const rows = response.data?.['hojin-infos']
+        if (!Array.isArray(rows) || rows.length > SAMPLE_LIMIT) {
+          console.warn(`[estimate] gBizINFO invalid response page=${page}`)
+          return null
+        }
+        return rows.length
+      } catch {
+        console.warn(`[estimate] gBizINFO request failed page=${page}`)
         return null
       }
     }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isNanobannerConfigured } from '@/lib/nanobanner'
 import { requireBannerAdmin } from '@/lib/banner-admin-guard'
+import { readBannerVisionJson } from '@/lib/banner/vision-response'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 
@@ -35,8 +36,10 @@ export async function GET(request: NextRequest) {
       headers: {
         'x-goog-api-key': apiKey,
       },
+      signal: AbortSignal.timeout(15_000),
     })
     if (!res.ok) {
+      void res.body?.cancel().catch(() => {})
       console.error('[Banner models] ListModels failed:', res.status)
       return NextResponse.json(
         { error: 'AIモデル一覧を取得できませんでした。' },
@@ -44,7 +47,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const json = await res.json()
+    const json = await readBannerVisionJson(res)
     const models = Array.isArray(json?.models) ? json.models : []
 
     // 診断用の全一覧とは別に、設定候補は Nano Banana Pro の画像モデルだけを提示する。
@@ -62,8 +65,8 @@ export async function GET(request: NextRequest) {
       allGenerateContentModels: candidates,
       allModels: models.map((m: any) => ({ name: m?.name, supportedGenerationMethods: m?.supportedGenerationMethods })),
     })
-  } catch (e: any) {
-    console.error('[Banner models] Unexpected failure:', e)
+  } catch {
+    console.error('[Banner models] Model list request failed')
     return NextResponse.json({ error: 'AIモデル一覧を取得できませんでした。' }, { status: 500 })
   }
 }

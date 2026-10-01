@@ -31,17 +31,21 @@ const api = load('src/app/api/banner/refine/route.ts', {
   console: { error() {}, log() {}, warn() {} },
 })
 const request = () => ({ json: async () => ({ originalImage: 'data:image/png;base64,AA==', instruction: '文字を修正' }) })
+const modelResponse = load('src/lib/banner/vision-response.ts')
+let modelFetchOptions
+let modelListResponse = new Response(JSON.stringify({ models: [
+  { name: 'models/gemini-3-pro-image', supportedGenerationMethods: ['generateContent'] },
+  { name: 'models/gemini-2.5-flash-image', supportedGenerationMethods: ['generateContent'] },
+  { name: 'models/gemini-3.1-flash-image', supportedGenerationMethods: ['generateContent'] },
+] }))
 const modelsRoute = load('src/app/api/banner/models/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/nanobanner': { isNanobannerConfigured: () => true },
   '@/lib/banner-admin-guard': { requireBannerAdmin: () => null },
+  '@/lib/banner/vision-response': modelResponse,
 }, {
-  process: { env },
-  fetch: async () => new Response(JSON.stringify({ models: [
-    { name: 'models/gemini-3-pro-image', supportedGenerationMethods: ['generateContent'] },
-    { name: 'models/gemini-2.5-flash-image', supportedGenerationMethods: ['generateContent'] },
-    { name: 'models/gemini-3.1-flash-image', supportedGenerationMethods: ['generateContent'] },
-  ] })),
+  process: { env }, AbortSignal,
+  fetch: async (_url, options) => { modelFetchOptions = options; return modelListResponse },
 })
 
 ;(async () => {
@@ -56,6 +60,13 @@ const modelsRoute = load('src/app/api/banner/models/route.ts', {
     assert.equal(result.status, 200)
     const body = await result.json()
     assert.deepEqual(body.suggestedImageModels, ['models/gemini-3-pro-image'])
+    assert.ok(modelFetchOptions.signal, 'model list request must have a deadline')
+  })
+  await check('admin model list rejects oversized provider responses', async () => {
+    modelListResponse = new Response('x', { headers: { 'content-length': String(1024 * 1024 + 1) } })
+    const result = await modelsRoute.GET(new Request('https://local.test/api/banner/models'))
+    assert.equal(result.status, 500)
+    assert.equal((await result.json()).error, 'AIモデル一覧を取得できませんでした。')
   })
   await check('banner refine uses the official Pro image endpoint with timeout and bounded response', async () => {
     const result = await api.POST(request())
