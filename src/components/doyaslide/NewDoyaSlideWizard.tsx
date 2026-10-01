@@ -27,12 +27,9 @@ type Aspect = 'wide' | 'square' | 'vertical'
 const COLOR_SWATCHES = ['#2563eb', '#7f19e6', '#e11d48', '#059669', '#f59e0b', '#0f172a']
 const ASPECT_ICON: Record<Aspect, string> = { wide: 'crop_16_9', square: 'crop_square', vertical: 'crop_portrait' }
 const FUN_MESSAGES = [
-  '🔍 Webで最新情報をリサーチ中…',
-  '📚 集めた情報を読み込んでいます…',
-  '🧠 刺さる構成を設計しています…',
-  '🎨 スライドをどんどん描いています…',
-  '✨ いい感じに仕上げています…',
-  'あと少し！わくわく…',
+  '入力内容を処理しています…',
+  '資料の作成を進めています…',
+  '処理の完了をお待ちください…',
 ]
 
 // 生成中に見せる作業ステップ（実パイプライン: 検索→分析→構成→生成）
@@ -59,6 +56,7 @@ export default function NewDoyaSlideWizard() {
   const [url, setUrl] = useState('')
   const [urlBusy, setUrlBusy] = useState(false)
   const [importedRef, setImportedRef] = useState('')
+  const [importedUrl, setImportedUrl] = useState('')
   const [slideCount, setSlideCount] = useState(8)
   const [aspect, setAspect] = useState<Aspect>('wide')
   const [style, setStyle] = useState('corporate')
@@ -185,26 +183,34 @@ export default function NewDoyaSlideWizard() {
     setTitle(s.title)
     setBrief(s.brief)
     setTitleEdited(false)
-    toast.success('サンプルを入力しました ✨')
+    toast.success('サンプルを入力しました')
   }
 
   const importUrl = async () => {
-    if (!url.trim()) {
+    const requestedUrl = url.trim()
+    if (!requestedUrl) {
       toast.error('URLを入力してください')
       return
     }
+    setImportedRef('')
+    setImportedUrl('')
     setUrlBusy(true)
     try {
       const res = await fetch('/api/doyaslide/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: url.trim() }),
+        body: JSON.stringify({ url: requestedUrl }),
       })
       const d = await res.json()
       if (!res.ok) throw new Error(d.error || '取り込みに失敗しました')
-      setTitle(d.title || title)
-      setBrief(d.brief || brief)
-      setImportedRef(d.referenceText || '')
+      if (typeof d.referenceText !== 'string' || !d.referenceText.trim()) {
+        throw new Error('URLの本文を取得できませんでした。別のURLをお試しいただくか、URLを削除して内容を直接入力してください。')
+      }
+      const replacingImportedUrl = !!importedUrl && importedUrl !== requestedUrl
+      setTitle(d.title || (replacingImportedUrl ? '' : title))
+      setBrief(d.brief || (replacingImportedUrl ? '' : brief))
+      setImportedRef(d.referenceText)
+      setImportedUrl(requestedUrl)
       setTitleEdited(true)
       if (d.aiAnalyzed) {
         toast.success('URLの内容を取り込み、AIで資料案を作成しました')
@@ -229,6 +235,10 @@ export default function NewDoyaSlideWizard() {
 
   const submit = async () => {
     if (authStatus !== 'authenticated' || loginRequired) return
+    if (url.trim() && (importedUrl !== url.trim() || !importedRef)) {
+      toast.error('参考URLを「取り込む」で読み込んでから作成してください。URLを使わない場合は入力欄を空にしてください。')
+      return
+    }
     if (!title.trim()) {
       toast.error('テーマ（タイトル）を入力してください')
       return
@@ -272,7 +282,7 @@ export default function NewDoyaSlideWizard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectId,
-          ...(importedRef ? { referenceText: importedRef } : url.trim() ? { referenceUrl: url.trim() } : {}),
+          ...(url.trim() ? { referenceText: importedRef } : {}),
         }),
       })
       const sData = await sRes.json()
@@ -336,7 +346,7 @@ export default function NewDoyaSlideWizard() {
           <Link href="/auth/signin?callbackUrl=/doyaslide/new" className="rounded-full bg-blue-600 px-4 py-2 text-xs font-black text-white">ログインして始める</Link>
         </div>
       )}
-      <DoyaChar mood="hello" size={64} bubble="テーマを決めるだけ！迷ったら「サンプルを入れる」でOK 👇" className="mb-5" />
+      <DoyaChar mood="hello" size={64} bubble="テーマを決めるだけです。迷ったら「サンプルを入れる」をお試しください。" className="mb-5" />
 
       <div className="space-y-5">
         {/* ① 資料タイプ（説明つきカード） */}
@@ -396,7 +406,7 @@ export default function NewDoyaSlideWizard() {
 
           <div className="mt-3 flex items-center justify-between">
             <label className="text-sm font-black text-slate-700">詳しい内容・伝えたいこと</label>
-            <span className="text-[11px] font-black text-blue-600">💡 詳しく書くほど精度UP</span>
+            <span className="text-[11px] font-black text-blue-600">詳しく書くほど資料に反映しやすくなります</span>
           </div>
           <textarea
             value={brief}
@@ -411,12 +421,16 @@ export default function NewDoyaSlideWizard() {
           <div className="mt-3 rounded-xl bg-blue-50/60 border-2 border-dashed border-blue-200 p-3">
             <p className="text-xs font-bold text-blue-700 mb-2 flex items-center gap-1">
               <span className="material-symbols-outlined text-base">link</span>
-              URLから取り込む（このURLを入力すると、内容を調べて自動で反映します）
+              URLから取り込む（URLを入力したら「取り込む」を押してください）
             </p>
             <div className="flex gap-2">
               <input
                 value={url}
-                onChange={(e) => setUrl(e.target.value)}
+                onChange={(e) => {
+                  setUrl(e.target.value)
+                  setImportedRef('')
+                }}
+                disabled={urlBusy}
                 placeholder="https://example.com/service"
                 className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-blue-400"
               />
@@ -431,6 +445,9 @@ export default function NewDoyaSlideWizard() {
                 取り込む
               </button>
             </div>
+            {url.trim() && importedUrl === url.trim() && importedRef && (
+              <p role="status" className="mt-2 text-xs font-bold text-emerald-700">参考URLの本文を取り込み済みです。</p>
+            )}
           </div>
         </div>
 

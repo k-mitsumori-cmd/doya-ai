@@ -26,7 +26,7 @@
 ```
 1. /doyaslide/new で 資料タイプ・テーマ・補足・枚数・比率・カラー・スタイル・ロゴ を入力
    - スタイルは32種（後述）から選択。右に複数ページの仕上がりプレビューを表示
-   - 参考URLを入れると analyze で内容を取り込み（タイトル・brief・参考テキスト）
+   - 参考URLは「取り込む」で analyze を実行し、本文取得に成功してからプロジェクト作成へ進む（タイトル・brief・参考テキスト）。URLを変更した場合は再取込が必要
 2. POST /api/doyaslide/projects でプロジェクト作成
 3. (ロゴあれば) POST /api/doyaslide/assets/logo でアップロード
 4. POST /api/doyaslide/structure → Gemini が各スライドの role/headline/subText/visualPrompt を生成
