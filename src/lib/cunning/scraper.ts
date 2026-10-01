@@ -10,6 +10,49 @@ import net from 'net'
 import { Agent } from 'undici'
 import { withTimeout } from '@/lib/fetch-timeout'
 
+export const CUNNING_SCRAPE_MAX_BYTES = 4 * 1024 * 1024
+
+export class CunningScrapeTooLargeError extends Error {
+  constructor() {
+    super('Cunning source page exceeds the HTML byte limit')
+  }
+}
+
+/** Bound decoded response bytes before turning the page into a string. */
+export async function readBoundedHtml(response: Response): Promise<string> {
+  const declared = response.headers.get('content-length')
+  if (declared && Number(declared) > CUNNING_SCRAPE_MAX_BYTES) {
+    await response.body?.cancel().catch(() => {})
+    throw new CunningScrapeTooLargeError()
+  }
+  if (!response.body) throw new Error('URL取得に失敗しました')
+
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      size += value.byteLength
+      if (size > CUNNING_SCRAPE_MAX_BYTES) {
+        await reader.cancel().catch(() => {})
+        throw new CunningScrapeTooLargeError()
+      }
+      chunks.push(value)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+  const bytes = new Uint8Array(size)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return new TextDecoder().decode(bytes)
+}
+
 export interface ScrapeResult {
   url: string
   title: string
@@ -188,7 +231,7 @@ export async function scrapeUrl(url: string, maxChars = 12000): Promise<ScrapeRe
     if (res.status >= 300 && res.status < 400) throw new Error('リダイレクトが多すぎます')
     if (!res.ok) throw new Error(`URL取得に失敗しました (${res.status})`)
 
-    const html = await res.text()
+    const html = await readBoundedHtml(res)
     const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)
     const finalUrl = current.url.toString()
     const title = titleMatch ? stripHtml(titleMatch[1]).slice(0, 200) : finalUrl

@@ -6,7 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
 import { chunkText, CUNNING_KNOWLEDGE_MAX_CHUNKS } from '@/lib/cunning/rag'
-import { scrapeUrl } from '@/lib/cunning/scraper'
+import { scrapeUrl, CunningScrapeTooLargeError } from '@/lib/cunning/scraper'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -75,6 +75,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ added: chunks.length })
   } catch (e: any) {
+    if (e instanceof CunningScrapeTooLargeError) {
+      return NextResponse.json({ error: 'ページが大きすぎます。別のURLをお試しください。' }, { status: 413 })
+    }
     console.error('[cunning/ingest]', e?.message)
     return NextResponse.json({ error: '取り込みに失敗しました' }, { status: 500 })
   }

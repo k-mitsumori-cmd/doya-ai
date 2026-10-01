@@ -184,6 +184,7 @@
 | CunningApplicantProfile | cunning_applicant_profile | userId, name, resume, motivation |
 
 > 埋め込み検索は pgvector が理想。導入していない場合はJSON保存＋アプリ側コサイン類似度で代替（MVP）。
+> URL取り込み・企業解析はHTML本文を最大4MiBまで読み込み、超過時は413を返す。取得後に検索・解析用テキストへ短縮する。
 
 ---
 

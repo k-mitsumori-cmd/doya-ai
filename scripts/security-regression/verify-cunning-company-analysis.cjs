@@ -60,6 +60,7 @@ function database(initial) {
         calls++
         return { extract: { companyName: 'Acme', businessSummary: 'Summary', requirements: {} }, rawText: 'Text' }
       } },
+      '@/lib/cunning/scraper': { CunningScrapeTooLargeError: class extends Error {} },
     })
     const request = url => ({ json: async () => ({ url }) })
     for (const url of ['ftp://example.com', 'invalid', 'https://example.com/' + 'a'.repeat(2050)]) {

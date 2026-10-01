@@ -37,6 +37,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
       '@/lib/prisma': { prisma: { cunningCompanyProfile: { create: async () => ({ id: 'profile' }) } } },
       '@/lib/cunning/access': { getUserId: async () => 'user' },
       '@/lib/cunning/company-budget': { reserveCunningCompanyAnalysis: async () => {}, CUNNING_COMPANY_DAILY_LIMIT: 50, CunningCompanyDailyLimitError: class extends Error {} },
+      '@/lib/cunning/scraper': { CunningScrapeTooLargeError: class extends Error {} },
       '@/lib/cunning/company': { analyzeCompanyUrl: async () => { calls++; return { extract: { companyName: 'Acme' }, rawText: 'Text' }; } },
     });
     await checkRoute('Cunning company analyze', route.POST, [null, { url: [] }, { url: 42 }, { url: 'ftp://example.com' }, { url: 'not-a-url' }, { url: 'https://example.com/' + 'a'.repeat(2050) }], { url: 'https://example.com' }, () => calls);
@@ -81,7 +82,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
       } },
       '@/lib/cunning/access': { getUserId: async () => 'user' },
       '@/lib/cunning/rag': { chunkText: () => ['Chunk'], CUNNING_KNOWLEDGE_MAX_CHUNKS: 500 },
-      '@/lib/cunning/scraper': { scrapeUrl: async () => ({ text: 'Text', url: 'https://example.com', title: 'Title' }) },
+      '@/lib/cunning/scraper': { scrapeUrl: async () => ({ text: 'Text', url: 'https://example.com', title: 'Title' }), CunningScrapeTooLargeError: class extends Error {} },
     });
     await checkRoute('Cunning knowledge ingest', (req) => route.POST(req, params),
       [null, { type: {} }, { type: 'text', text: {} }, { type: 'url', url: [] }, { type: 'url', url: 'ftp://example.com' }, { type: 'text', text: 'a'.repeat(20001) }, { type: 'text', text: 'Text', label: 3 }],

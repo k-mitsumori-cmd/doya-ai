@@ -54,7 +54,7 @@ const { load, check } = require('./load-typescript.cjs')
       '@/lib/prisma': { prisma: db },
       '@/lib/cunning/access': { getUserId: async () => 'owner' },
       '@/lib/cunning/rag': { chunkText: () => ['Chunk'], CUNNING_KNOWLEDGE_MAX_CHUNKS: 500 },
-      '@/lib/cunning/scraper': { scrapeUrl: async () => ({ text: 'Text', url: 'https://example.com', title: 'Example' }) },
+      '@/lib/cunning/scraper': { scrapeUrl: async () => ({ text: 'Text', url: 'https://example.com', title: 'Example' }), CunningScrapeTooLargeError: class extends Error {} },
     })
     const request = { json: async () => ({ type: 'text', text: 'Text' }) }
     const ctx = { params: Promise.resolve({ id: 'base' }) }

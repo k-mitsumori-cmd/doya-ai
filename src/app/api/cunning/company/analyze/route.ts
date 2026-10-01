@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
 import { analyzeCompanyUrl } from '@/lib/cunning/company'
 import { reserveCunningCompanyAnalysis, CUNNING_COMPANY_DAILY_LIMIT, CunningCompanyDailyLimitError } from '@/lib/cunning/company-budget'
+import { CunningScrapeTooLargeError } from '@/lib/cunning/scraper'
 
 // POST /api/cunning/company/analyze — 採用URL解析 → 企業プロファイル保存
 // body: { url: string }
@@ -52,6 +53,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ profile })
   } catch (e: any) {
+    if (e instanceof CunningScrapeTooLargeError) {
+      return NextResponse.json({ error: 'ページが大きすぎます。別の採用ページのURLをお試しください。' }, { status: 413 })
+    }
     if (e instanceof CunningCompanyDailyLimitError) {
       return NextResponse.json({
         code: 'CUNNING_COMPANY_DAILY_LIMIT',
