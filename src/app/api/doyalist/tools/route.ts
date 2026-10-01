@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { scrapeCompanyWebsite } from '@/lib/doyalist/collect/web-scraper'
 import { reserveMonthlyApproach, releaseMonthlyApproach } from '@/lib/doyalist/limits'
+import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 
 const TOOL_PROJECT_NAME = '__tool_history__'
 
@@ -169,15 +170,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
     }
 
-    const body = (await req.json().catch(() => null)) as Input | null
-    if (!body || !['form', 'email', 'phone'].includes(body.type)) {
+    let requestBody: Record<string, unknown>
+    try {
+      requestBody = await readOperationalJson(req, 24 * 1024)
+    } catch (error) {
+      if (error instanceof OperationalBodyError) {
+        return NextResponse.json({ error: '入力形式またはサイズを確認してください' }, { status: error.status })
+      }
+      throw error
+    }
+    if (!['form', 'email', 'phone'].includes(requestBody.type as string)) {
       return NextResponse.json({ error: 'typeは form/email/phone のいずれかを指定してください' }, { status: 400 })
     }
-    const textFields: (keyof Input)[] = ['serviceInput', 'targetIndustry', 'myService', 'industry', 'companyName', 'contactPerson', 'myCompany', 'benefit']
-    if (textFields.some((field) => body[field] != null && (typeof body[field] !== 'string' || (body[field] as string).length > 5000))
-      || (body.tone != null && !['formal', 'casual', 'friendly'].includes(body.tone))) {
+    const fieldLimits = {
+      serviceInput: 5000, myService: 5000, benefit: 2000,
+      targetIndustry: 100, industry: 100,
+      companyName: 200, contactPerson: 200, myCompany: 200,
+    } as const
+    if (Object.entries(fieldLimits).some(([field, maxLength]) => requestBody[field] != null
+      && (typeof requestBody[field] !== 'string' || (requestBody[field] as string).length > maxLength))
+      || (requestBody.tone != null && !['formal', 'casual', 'friendly'].includes(requestBody.tone as string))) {
       return NextResponse.json({ error: '入力形式を確認してください' }, { status: 400 })
     }
+    const body = requestBody as unknown as Input
 
     // URL指定の場合は実際にサイトを取得して内容を要約
     let fetchedSiteInfo: string | null = null
@@ -193,8 +208,8 @@ export async function POST(req: NextRequest) {
             scraped.industry ? `業種: ${scraped.industry}` : '',
           ].filter(Boolean).join('\n')
         }
-      } catch (e) {
-        console.warn('[doyalist/tools] URL取得失敗（プロンプトはURLからの推測に切替）', e)
+      } catch {
+        console.warn('[doyalist/tools] URL取得失敗（プロンプトはURLからの推測に切替）')
       }
     }
 
@@ -244,17 +259,16 @@ export async function POST(req: NextRequest) {
         })
         savedToHistory = true
         savedId = created.id
-        console.log(`[doyalist/tools] 履歴保存成功 type=${approachType} id=${created.id} userId=${userId}`)
-      } catch (e) {
-        console.error('[doyalist/tools] 履歴保存失敗（生成自体は成功）', e)
+      } catch {
+        console.error('[doyalist/tools] 履歴保存失敗（生成自体は成功）')
       }
 
       return NextResponse.json({ success: true, text: finalText, savedToHistory, savedId })
     } finally {
       if (!generated) await releaseMonthlyApproach(userId, reservedMonth)
     }
-  } catch (e: any) {
-    console.error('[doyalist/tools]', e)
+  } catch {
+    console.error('[doyalist/tools] failed')
     return NextResponse.json({ error: 'ツール実行に失敗しました' }, { status: 500 })
   }
 }

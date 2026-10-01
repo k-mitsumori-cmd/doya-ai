@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
+const operationalJson = load('src/lib/operational-json.ts', {}, { TextDecoder, Uint8Array });
 
 let plan = 'FREE';
 let ledger = null;
@@ -70,11 +71,19 @@ const route = load('src/app/api/doyalist/tools/route.ts', {
   },
   '@/lib/doyalist/collect/web-scraper': { scrapeCompanyWebsite: async () => null },
   '@/lib/doyalist/limits': limits,
+  '@/lib/operational-json': operationalJson,
 });
-const post = (body = { type: 'form', serviceInput: 'サービス' }) => route.POST({ json: async () => body });
+const post = (body = { type: 'form', serviceInput: 'サービス' }) => route.POST(new Request('https://doya.test/api/doyalist/tools', {
+  method: 'POST', body: JSON.stringify(body),
+}));
 
 (async () => {
   assert.equal((await post({ type: 'form', serviceInput: {} })).status, 400);
+  for (const body of [null, [], { type: 'form', targetIndustry: 'x'.repeat(101) },
+    { type: 'email', serviceInput: 'x'.repeat(5001) }, { type: 'phone', tone: 'invalid' }]) {
+    assert.equal((await post(body)).status, 400);
+  }
+  assert.equal((await post({ type: 'form', serviceInput: 'サービス', padding: 'x'.repeat(25000) })).status, 413);
   assert.equal(modelCalls, 0);
   const responses = await Promise.all(Array.from({ length: 31 }, () => post()));
   assert.equal(responses.filter((response) => response.status === 200).length, 30);
