@@ -712,3 +712,8 @@ if (adimageRefPaletteFetch.error || adimageRefPaletteFetch.status !== 0) {
   console.error('Security regression failed: verify-adimage-ref-palette-fetch.cjs');
   process.exit(1);
 }
+const doyaslideStorageFetch = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-storage-fetch.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyaslideStorageFetch.error || doyaslideStorageFetch.status !== 0) {
+  console.error('Security regression failed: verify-doyaslide-storage-fetch.cjs');
+  process.exit(1);
+}

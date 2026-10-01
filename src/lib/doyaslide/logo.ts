@@ -6,6 +6,7 @@
 import sharp, { type OverlayOptions } from 'sharp'
 import { LOGO_SIZE_RATIO } from './constants'
 import type { LogoPosition, LogoSize } from './types'
+import { safeFetchResource } from '@/lib/net/safe-fetch'
 
 export interface LogoCompositeOptions {
   position: LogoPosition
@@ -96,11 +97,15 @@ export async function fetchBuffer(url: string): Promise<Buffer> {
     throw new Error('不正なURLです')
   }
   if (u.protocol !== 'https:') throw new Error('httpsのURLのみ許可されています')
-  if (SUPABASE_HOST && u.host !== SUPABASE_HOST) {
+  if (!SUPABASE_HOST || u.host !== SUPABASE_HOST) {
     throw new Error('許可されていないホストです')
   }
-  const res = await fetch(url, { redirect: 'error' })
-  if (!res.ok) throw new Error(`画像取得失敗: ${res.status}`)
-  const ab = await res.arrayBuffer()
-  return Buffer.from(ab)
+  const image = await safeFetchResource(url, {
+    timeoutMs: 25_000,
+    maxBytes: 8 * 1024 * 1024,
+    maxRedirects: 0,
+    accept: 'image/png,image/jpeg,image/webp',
+  })
+  if (!image) throw new Error('画像取得失敗')
+  return image.body
 }
