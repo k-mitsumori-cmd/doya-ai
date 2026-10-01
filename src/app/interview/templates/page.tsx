@@ -191,7 +191,7 @@ export default function TemplatesPage() {
         setCreateError(data.error || 'プロジェクトの作成に失敗しました')
       }
     } catch (e) {
-      console.error('Template project creation error:', e)
+      console.error('Template project creation error:')
       setCreateError('通信エラーが発生しました。もう一度お試しください。')
     } finally {
       setCreating(false)

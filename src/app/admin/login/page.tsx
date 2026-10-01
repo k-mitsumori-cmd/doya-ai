@@ -71,7 +71,7 @@ export default function AdminLoginPage() {
         size: 'flexible',
       })
     } catch (e) {
-      console.error('Turnstile render error:', e)
+      console.error('Turnstile render error:')
     }
   }, [])
 
@@ -189,7 +189,7 @@ export default function AdminLoginPage() {
       router.push('/admin')
       router.refresh()
     } catch (error) {
-      console.error('Login error:', error)
+      console.error('Login error:')
       setError('ログイン処理中にエラーが発生しました。再度お試しください。')
       setIsLoading(false)
     }

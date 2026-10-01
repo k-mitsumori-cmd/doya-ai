@@ -56,7 +56,7 @@ export function FeatureGuide({ featureId, title, description, steps, imageMode =
         setGuideImage(data.imageUrl)
       }
     } catch (error) {
-      console.error('Failed to generate guide image:', error)
+      console.error('Failed to generate guide image:')
     } finally {
       setIsLoading(false)
     }

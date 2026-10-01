@@ -148,7 +148,7 @@ export default function QuestionsPage() {
         )
       }
     } catch (e) {
-      console.error(e)
+      console.error("[source/interviewx/projects/[id]/questions/page] failed")
     } finally {
       setSaving(false)
     }

@@ -3,8 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const ts = require('typescript');
 
-const apiRoot = path.join(__dirname, '../../src/app/api');
-const libRoot = path.join(__dirname, '../../src/lib');
+const srcRoot = path.join(__dirname, '../../src');
+const seoRoot = path.join(__dirname, '../../seo');
 const exceptionNames = /^(e|err|error|releaseError|notifyErr|lastError|errorText|responseText|providerError)$/;
 
 function exposesException(node) {
@@ -23,14 +23,6 @@ function exposesException(node) {
   return unsafe;
 }
 
-function* routes(dir) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const file = path.join(dir, entry.name);
-    if (entry.isDirectory()) yield* routes(file);
-    else if (entry.name === 'route.ts') yield file;
-  }
-}
-
 function* libraries(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const file = path.join(dir, entry.name);
@@ -40,8 +32,10 @@ function* libraries(dir) {
 }
 
 const violations = [];
-for (const file of [...routes(apiRoot), ...libraries(libRoot)]) {
-  const rel = path.relative(path.join(__dirname, '../../src'), file);
+for (const file of [...libraries(srcRoot), ...libraries(seoRoot)]) {
+  const rel = path.relative(path.join(__dirname, '../..'), file);
+  // CLI password-validation messages are intended operator output, not runtime exception logging.
+  if (rel.startsWith(`src${path.sep}scripts${path.sep}`)) continue;
   const source = fs.readFileSync(file, 'utf8');
   const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
   function visit(node) {
@@ -58,4 +52,4 @@ for (const file of [...routes(apiRoot), ...libraries(libRoot)]) {
 }
 
 assert.deepEqual(violations, [], `Raw exception data in server logs: ${violations.join(', ')}`);
-console.log('PASS API and library error/warning logs do not include raw exception objects, messages, or stacks');
+console.log('PASS server and client error/warning logs do not include raw exception objects, messages, or stacks');

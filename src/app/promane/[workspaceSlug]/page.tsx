@@ -231,7 +231,7 @@ async function safeDashboardData(workspaceId: string) {
   try {
     return await getDashboardData(workspaceId);
   } catch (e) {
-    console.error('[dashboard] getDashboardData failed', e);
+    console.error('[dashboard] getDashboardData failed');
     return { projectStats: [], activeProjects: 0, totalRevenue: 0, totalCost: 0, totalProfit: 0, totalProfitRate: 0 };
   }
 }
@@ -239,7 +239,7 @@ async function safeChartData(workspaceId: string) {
   try {
     return await getChartData(workspaceId);
   } catch (e) {
-    console.error('[dashboard] getChartData failed', e);
+    console.error('[dashboard] getChartData failed');
     return { taskSummary: [], revenueData: [], activities: [] };
   }
 }
@@ -247,7 +247,7 @@ async function safeMyAssignments(workspaceId: string, memberId: string) {
   try {
     return await getMyAssignmentsData(workspaceId, memberId);
   } catch (e) {
-    console.error('[dashboard] getMyAssignmentsData failed', e);
+    console.error('[dashboard] getMyAssignmentsData failed');
     return { tasks: [] as any[], myProjects: [] as any[] };
   }
 }

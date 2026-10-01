@@ -32,7 +32,7 @@ class Boundary extends React.Component<ClientErrorBoundaryProps, ClientErrorBoun
 
   componentDidCatch(err: unknown) {
     // eslint-disable-next-line no-console
-    console.error('[ClientErrorBoundary]', err)
+    console.error('[ClientErrorBoundary]')
   }
 
   reset = () => {
@@ -41,7 +41,7 @@ class Boundary extends React.Component<ClientErrorBoundaryProps, ClientErrorBoun
       this.props.onReset?.()
     } catch (e) {
       // eslint-disable-next-line no-console
-      console.warn('[ClientErrorBoundary] onReset failed', e)
+      console.warn('[ClientErrorBoundary] onReset failed')
     }
   }
 

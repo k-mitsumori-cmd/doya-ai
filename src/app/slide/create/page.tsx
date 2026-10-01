@@ -85,7 +85,7 @@ export default function DoyaSlideCreate() {
       setSlideSpec(data.slideSpec.slides ?? data.slideSpec)
       setPhase('preview')
     } catch (err: any) {
-      console.error(err)
+      console.error("[source/slide/create/page] failed")
       setError(err.message)
       setPhase('input')
     }
@@ -114,7 +114,7 @@ export default function DoyaSlideCreate() {
       setPublishedUrl(data.url)
       setPhase('done')
     } catch (err: any) {
-      console.error(err)
+      console.error("[source/slide/create/page] failed")
       setError(err.message)
       setPhase('preview')
     }

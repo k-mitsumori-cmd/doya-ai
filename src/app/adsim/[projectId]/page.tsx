@@ -136,7 +136,7 @@ export default function AdSimProjectPage() {
       if (d.userPlan) setUserPlan(d.userPlan)
       if (d.usage) setUsage(d.usage)
     } catch (err) {
-      console.error('[adsim preview] fetch error:', err)
+      console.error('[adsim preview] fetch error:')
       setProject(null)
     } finally {
       setLoading(false)

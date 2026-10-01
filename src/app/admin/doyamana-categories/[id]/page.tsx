@@ -56,7 +56,7 @@ export default function DoyamanaCategoryDetailPage({ params }: { params: Promise
         throw new Error('カテゴリ応答が不正です')
       }
     } catch (error) {
-      console.error('カテゴリ取得エラー:', error)
+      console.error('カテゴリ取得エラー:')
       toast.error(error instanceof Error ? error.message : 'カテゴリの取得に失敗しました')
     } finally {
       setLoading(false)

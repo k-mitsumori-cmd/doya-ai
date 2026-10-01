@@ -64,7 +64,7 @@ async function notifySlackClaudeCreditExhausted(errorDetail: string): Promise<vo
     console.log('[Slack] Credit exhaustion alert sent')
   } catch (e: any) {
     // 通知失敗で処理を止めない
-    console.error('[Slack] Failed to send credit alert:', e?.message)
+    console.error('[Slack] Failed to send credit alert:')
   }
 }
 
@@ -600,7 +600,7 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
         maxTokens: Math.min(requestedTokens, 16384),
       })
     } catch (e: any) {
-      console.warn('[ChatGPT] Last resort also failed:', e?.message?.substring(0, 200))
+      console.warn('[ChatGPT] Last resort also failed:')
     }
   }
 

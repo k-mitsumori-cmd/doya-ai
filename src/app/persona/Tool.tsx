@@ -814,7 +814,7 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
         pdf.save(`persona-${persona?.name || 'export'}.pdf`)
       }
     } catch (e) {
-      console.error('Export error:', e)
+      console.error('Export error:')
     } finally {
       // 念のためクラスも除去
       resumeRef.current?.classList.remove('exporting')

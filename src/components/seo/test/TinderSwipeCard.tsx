@@ -62,7 +62,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
           setIsSwiping(false) // リセット
         }, 100)
       } catch (error) {
-        console.error('Swipe animation error:', error)
+        console.error('Swipe animation error:')
         // エラー時もコールバックを呼び出す
         onSwipe(direction)
         setIsSwiping(false)
@@ -101,7 +101,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
         setIsSwiping(false) // リセット
       }, 100)
     } catch (error) {
-      console.error('Swipe animation error:', error)
+      console.error('Swipe animation error:')
       // エラー時もコールバックを呼び出す
       onSwipe(decision)
       setIsSwiping(false)
@@ -180,7 +180,7 @@ export function TinderSwipeCard({ question, onSwipe, index, total, questionImage
                   }}
                   onError={(e) => {
                     // 画像読み込みエラー時は再取得を試みる
-                    console.error(`[画像読み込みエラー] category: ${question.category}`, e)
+                    console.error('[画像読み込みエラー]')
                     const target = e.target as HTMLImageElement
                     // エラー時は親要素を更新せず、そのまま表示（フォールバック画像は表示しない）
                   }}

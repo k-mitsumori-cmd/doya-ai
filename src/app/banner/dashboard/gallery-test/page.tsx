@@ -134,7 +134,7 @@ function GalleryTestInner() {
           } catch {}
         }
       } catch (err) {
-        console.error('Failed to fetch templates:', err)
+        console.error('Failed to fetch templates:')
         toast.error('テンプレートの取得に失敗しました')
       } finally {
         setIsLoading(false)

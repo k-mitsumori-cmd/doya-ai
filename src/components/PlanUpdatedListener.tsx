@@ -33,7 +33,7 @@ export default function PlanUpdatedListener() {
           localStorage.setItem('doya:plan-updated:last', JSON.stringify({ ...detail, at: Date.now() }))
         } catch {}
       } catch (e) {
-        console.error('PlanUpdatedListener error:', e)
+        console.error('PlanUpdatedListener error:')
       }
     }
 

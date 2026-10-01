@@ -43,7 +43,7 @@ export default function NewDoyamanaImagePage() {
       setCategoryId(current => data.categories.some((category: Category) => category.id === current)
         ? current : data.categories[0]?.id || '')
     } catch (error) {
-      console.error('カテゴリ取得エラー:', error)
+      console.error('カテゴリ取得エラー:')
       toast.error('カテゴリの取得に失敗しました')
       setCategories([])
       setCategoryId('')

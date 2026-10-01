@@ -83,7 +83,7 @@ export default function SlashSlideCreate() {
       setSlideSpec(data.slideSpec.slides ?? data.slideSpec)
       setPhase('preview')
     } catch (err: any) {
-      console.error(err)
+      console.error("[source/slashslide/create/page] failed")
       setError(err.message)
       setPhase('input')
     }
@@ -112,7 +112,7 @@ export default function SlashSlideCreate() {
       setPublishedUrl(data.url)
       setPhase('done')
     } catch (err: any) {
-      console.error(err)
+      console.error("[source/slashslide/create/page] failed")
       setError(err.message)
       setPhase('preview')
     }

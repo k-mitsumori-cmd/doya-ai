@@ -82,12 +82,11 @@ async function upsertAdmin() {
 
     await prisma.$disconnect()
   } catch (error) {
-    console.error('❌ 管理者ユーザーの作成/更新に失敗しました:', error)
+    console.error('管理者ユーザーの作成/更新に失敗しました:')
     await prisma.$disconnect()
     process.exit(1)
   }
 }
 
 upsertAdmin()
-
 

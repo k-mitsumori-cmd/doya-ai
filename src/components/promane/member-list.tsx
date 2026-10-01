@@ -85,7 +85,7 @@ export function MemberList({
       setEditingId(null);
       router.refresh();
     } catch (e: any) {
-      console.error("[promane/member] rate update exception", e);
+      console.error("[promane/member] rate update exception");
       toast.error(e?.message || "通信エラーが発生しました", { duration: 6000 });
     }
   }

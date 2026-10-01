@@ -81,7 +81,7 @@ export default function EditDoyamanaImagePage({ params }: { params: Promise<{ id
         router.push('/admin/doyamana-images')
       }
     } catch (error) {
-      console.error('画像取得エラー:', error)
+      console.error('画像取得エラー:')
       toast.error('画像の取得に失敗しました')
     } finally {
       setFetching(false)

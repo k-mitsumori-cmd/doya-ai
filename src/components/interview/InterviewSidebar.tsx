@@ -259,7 +259,7 @@ function InterviewSidebarImpl({
         window.location.href = data.url
       }
     } catch (e) {
-      console.error('Checkout error:', e)
+      console.error('Checkout error:')
     } finally {
       setIsUpgrading(false)
     }

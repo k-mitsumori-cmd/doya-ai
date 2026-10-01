@@ -23,7 +23,7 @@ export default function OpeningLandingPage() {
         router.push(`/opening/projects/${data.projectId}`)
       }
     } catch (e) {
-      console.error(e)
+      console.error("[source/opening/page] failed")
     } finally {
       setIsLoading(false)
     }

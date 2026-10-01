@@ -349,7 +349,7 @@ export default function MaterialsPage() {
         } catch (uploadErr: any) {
           const is5xx = /Upload failed: 5\d\d/.test(uploadErr?.message || '')
           if (is5xx && attempt < maxRetries) {
-            console.warn(`[interview] Upload attempt ${attempt} failed (${uploadErr.message}), retrying in ${attempt * 3}s...`)
+            console.warn(`[interview] Upload attempt ${attempt} failed, retrying in ${attempt * 3}s...`)
             // プログレスをリセットして再試行
             setUploads((prev) => {
               const next = new Map(prev)

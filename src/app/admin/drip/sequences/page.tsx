@@ -57,7 +57,7 @@ export default function SequenceListPage() {
       const data = await res.json()
       setSequences(data.sequences ?? data ?? [])
     } catch (err) {
-      console.error('Sequences fetch error:', err)
+      console.error('Sequences fetch error:')
       toast.error('シーケンスの取得に失敗しました')
     } finally {
       setIsLoading(false)

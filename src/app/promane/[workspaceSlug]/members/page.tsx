@@ -12,7 +12,7 @@ async function safeMembers(workspaceId: string) {
       orderBy: { createdAt: "asc" },
     });
   } catch (e) {
-    console.error('[members] fetch failed', e);
+    console.error('[members] fetch failed');
     return [];
   }
 }

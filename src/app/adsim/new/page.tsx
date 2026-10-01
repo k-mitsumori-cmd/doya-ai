@@ -88,7 +88,7 @@ export default function AdSimNewPage() {
       toast.success('生成完了！結果ページへ移動します', { id: 'auto', duration: 2000 })
       setTimeout(() => router.push(`/adsim/${data.projectId}`), 800)
     } catch (err) {
-      console.error(err)
+      console.error("[source/adsim/new/page] failed")
       setProgressStep('idle')
       toast.error(err instanceof Error ? err.message : '生成に失敗しました', { id: 'auto', duration: 5000 })
     } finally {

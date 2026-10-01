@@ -54,7 +54,7 @@ export default function DoyamanaCategoriesPage() {
         setCategories(data.categories)
       }
     } catch (error) {
-      console.error('カテゴリ取得エラー:', error)
+      console.error('カテゴリ取得エラー:')
       toast.error('カテゴリの取得に失敗しました')
       setCategories([])
     } finally {

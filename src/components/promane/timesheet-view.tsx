@@ -48,7 +48,7 @@ export function TimesheetView({ workspaceSlug, memberId, entries, projects, tota
       setShowForm(false);
       router.refresh();
     } catch (e: any) {
-      console.error("[promane/time] create exception", e);
+      console.error("[promane/time] create exception");
       toast.error(e?.message || "記録に失敗しました", { duration: 6000 });
     } finally {
       setLoading(false);

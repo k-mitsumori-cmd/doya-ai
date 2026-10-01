@@ -229,7 +229,7 @@ export default function SwipeArticlePage() {
             } catch (e) {
               retryCount++
               if (retryCount >= maxRetries) {
-                console.warn(`[画像取得失敗] category: ${category}, リトライ上限に達しました`, e)
+                console.warn("[source/seo/swipe/page] warning")
                 // 最後の試行でも失敗した場合、デフォルトカテゴリから取得を試みる
                 try {
                   const defaultRes = await fetch(`/api/swipe/question-images?category=確認&count=1`)
@@ -270,7 +270,7 @@ export default function SwipeArticlePage() {
           return newMap
         })
       }).catch((e) => {
-        console.warn('[画像取得一括エラー]', e)
+        console.warn('[画像取得一括エラー]')
         // エラーは無視
       })
       
@@ -355,7 +355,7 @@ export default function SwipeArticlePage() {
             })
           }
         } catch (e) {
-          console.warn('Failed to load celebration image:', e)
+          console.warn('Failed to load celebration image:')
         }
         
         setStep('confirm')
@@ -399,7 +399,7 @@ export default function SwipeArticlePage() {
               } catch (e) {
                 retryCount++
                 if (retryCount >= maxRetries) {
-                  console.warn(`[画像取得失敗] category: ${category}, リトライ上限に達しました`, e)
+                  console.warn("[source/seo/swipe/page] warning")
                   // 最後の試行でも失敗した場合、デフォルトカテゴリから取得を試みる
                   try {
                     const defaultRes = await fetch(`/api/swipe/question-images?category=確認&count=1`)
@@ -440,7 +440,7 @@ export default function SwipeArticlePage() {
             return newMap
           })
         }).catch((e) => {
-          console.warn('[画像取得一括エラー]', e)
+          console.warn('[画像取得一括エラー]')
           // エラーは無視
         })
       } else {
@@ -453,7 +453,7 @@ export default function SwipeArticlePage() {
         throw new Error('質問が生成されませんでした')
       }
     } catch (e: any) {
-      console.error('[loadNextQuestions] error:', e)
+      console.error('[loadNextQuestions] error:')
       setError(e.message || 'エラーが発生しました')
       // エラー時も質問キューが空でない場合は続行
       if (questionQueue.length === 0) {
@@ -513,7 +513,7 @@ export default function SwipeArticlePage() {
         await loadNextQuestions()
       }
     } catch (e: any) {
-      console.error('[handleSwipe] error:', e)
+      console.error('[handleSwipe] error:')
       setError(e.message || 'スワイプ処理中にエラーが発生しました')
     }
   }

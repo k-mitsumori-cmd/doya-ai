@@ -291,7 +291,7 @@ export default function NewDoyaSlideWizard() {
       toast.success('構成ができました！画像生成に進みます')
       router.push(`/doyaslide/${projectId}?generate=1`)
     } catch (e: any) {
-      console.error('[doyaslide/new submit]', e)
+      console.error('[doyaslide/new submit]')
       const m = typeof e?.message === 'string' && e.message ? e.message : e ? String(e) : 'エラーが発生しました'
       toast.error(m)
       setBusy(false)

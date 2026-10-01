@@ -614,7 +614,7 @@ async function maybeAutoResearchComparison(article: any, jobId?: string) {
     })
     await researchAndStore(article.id, { maxUrls: Math.min(2, urlsFromCandidates.length), jobId })
   } catch (e) {
-    console.warn('[comparison research] researchAndStore failed', e)
+    console.warn('[comparison research] researchAndStore failed')
   }
 }
 
@@ -1154,7 +1154,7 @@ async function extractServicesFromComparisonArticle(
       }))
       .slice(0, 60)
   } catch (e) {
-    console.warn('[extractServicesFromComparisonArticle] failed', e)
+    console.warn('[extractServicesFromComparisonArticle] failed')
     return []
   }
 }
@@ -3468,7 +3468,7 @@ async function integrate(jobId: string) {
       }
     } catch (summaryErr: any) {
       // エラー時もフォールバックでまとめを追加（記事が途中で終わるのを防ぐ）
-      console.warn('[seo integrate] summary generation failed:', summaryErr?.message)
+      console.warn('[seo integrate] summary generation failed:')
       parts.push('')
       parts.push('## まとめ')
       parts.push('')
@@ -3699,7 +3699,7 @@ async function integrate(jobId: string) {
             }
           }
         } catch (e) {
-          console.warn('Diagram auto-suggestion failed, using defaults', e)
+          console.warn('Diagram auto-suggestion failed, using defaults')
           // フォールバック: 固定のアイデア
           const diagramIdeas = [
             { title: 'プロセスの流れ', description: '課題から解決、そして成果に至るまでのステップバイステップのフロー図' },
@@ -3712,7 +3712,7 @@ async function integrate(jobId: string) {
       }
     }
   } catch (e) {
-    console.error('Asset generation failed', e)
+    console.error('Asset generation failed')
   }
 
   // 差別化②: 内部リンク提案（記事本文から抽出して提案）
@@ -4029,7 +4029,7 @@ async function advanceOwnedSeoJob(jobId: string): Promise<{ jobId: string }> {
         await generateSection(jobId)
       } catch (sectionErr: any) {
         // 同じ失敗を同一リクエストで繰り返さず、外側の失敗処理へ渡す。
-        console.error(`[seo generateSection] failed for job ${jobId}:`, sectionErr?.message)
+        console.error("[source/lib/pipeline] failed")
         throw sectionErr
       }
 
@@ -4115,7 +4115,7 @@ export async function runPipelineUntilTimeout(jobId: string, timeoutMs = 25000):
         break
       }
     } catch (e) {
-      console.error('[runPipelineUntilTimeout] error:', e)
+      console.error('[runPipelineUntilTimeout] error:')
       break
     }
   }

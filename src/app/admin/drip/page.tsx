@@ -77,7 +77,7 @@ export default function DripDashboardPage() {
         toast.success('データを更新しました')
       }
     } catch (err) {
-      console.error('Dashboard fetch error:', err)
+      console.error('Dashboard fetch error:')
       toast.error('データの取得に失敗しました')
     } finally {
       setIsRefreshing(false)

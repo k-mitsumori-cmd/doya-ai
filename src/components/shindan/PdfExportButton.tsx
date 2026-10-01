@@ -41,7 +41,7 @@ export default function PdfExportButton({ targetRef, fileName = 'doya-shindan-re
 
       pdf.save(`${fileName}.pdf`)
     } catch (err) {
-      console.error('PDF export failed:', err)
+      console.error('PDF export failed:')
       alert('PDF生成に失敗しました。もう一度お試しください。')
     } finally {
       setExporting(false)

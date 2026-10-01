@@ -74,7 +74,7 @@ export function FinanceTab({
       setShowForm(false);
       router.refresh();
     } catch (e: any) {
-      console.error("[promane/expense] create exception", e);
+      console.error("[promane/expense] create exception");
       toast.error(e?.message || "通信エラーが発生しました");
     } finally {
       setLoading(false);

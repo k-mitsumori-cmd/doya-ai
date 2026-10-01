@@ -175,7 +175,7 @@ export default function CreatePage() {
           customInstructions: selectedVoice === 'casual' ? 'カジュアルで親しみやすいトーンで生成してください' : undefined,
         }),
       }).catch((err) => {
-        console.error('[tenkai] 生成開始エラー:', err)
+        console.error('[tenkai] 生成開始エラー:')
       })
 
       // 5. プロジェクト詳細ページへ遷移

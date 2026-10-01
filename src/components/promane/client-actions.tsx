@@ -63,7 +63,7 @@ export function ClientActions({ workspaceSlug, clients }: { workspaceSlug: strin
       setOpen(false);
       router.refresh();
     } catch (e: any) {
-      console.error("[promane/client] create exception", e);
+      console.error("[promane/client] create exception");
       toast.error(e?.message || "通信エラーが発生しました", { duration: 6000 });
     } finally {
       setLoading(false);
@@ -91,7 +91,7 @@ export function ClientActions({ workspaceSlug, clients }: { workspaceSlug: strin
       toast.success("顧客を削除しました");
       router.refresh();
     } catch (e: any) {
-      console.error("[promane/client] delete exception", e);
+      console.error("[promane/client] delete exception");
       toast.error(e?.message || "通信エラーが発生しました");
     }
   }

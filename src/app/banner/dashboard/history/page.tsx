@@ -241,7 +241,7 @@ function BannerHistoryContent({ auth }: { auth: ReturnType<typeof useSession> })
         }
       }
     } catch (e) {
-      console.error('History load error:', e)
+      console.error('History load error:')
       setHistory([])
       setNextCursor(null)
       sessionStorage.removeItem(HISTORY_CACHE_KEY)

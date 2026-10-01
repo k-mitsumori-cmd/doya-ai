@@ -46,10 +46,9 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error('Failed to check admin users:', e)
+  console.error('Failed to check admin users:')
   process.exit(1)
 })
-
 
 
 

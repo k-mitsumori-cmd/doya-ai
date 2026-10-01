@@ -73,7 +73,7 @@ export default function DoyamanaImagesPage() {
       if (!Array.isArray(data.categories)) throw new Error('カテゴリ応答が不正です')
       setCategories(data.categories)
     } catch (error) {
-      console.error('カテゴリ取得エラー:', error)
+      console.error('カテゴリ取得エラー:')
       setCategories([])
     }
   }, [])
@@ -104,7 +104,7 @@ export default function DoyamanaImagesPage() {
       setPagination(data.pagination)
     } catch (error) {
       if (requestId !== latestRequest.current) return
-      console.error('画像取得エラー:', error)
+      console.error('画像取得エラー:')
       setImages([])
       setPagination(current => ({ ...current, total: 0, totalPages: 0 }))
       toast.error('画像の取得に失敗しました')

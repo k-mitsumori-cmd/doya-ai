@@ -46,7 +46,7 @@ export default function AdminAccountsPage() {
         toast.error('管理者一覧の取得に失敗しました')
       }
     } catch (error) {
-      console.error('Fetch admins error:', error)
+      console.error('Fetch admins error:')
       toast.error('エラーが発生しました')
     } finally {
       setIsLoading(false)
@@ -95,7 +95,7 @@ export default function AdminAccountsPage() {
         toast.error(data.error || '追加に失敗しました')
       }
     } catch (error) {
-      console.error('Add admin error:', error)
+      console.error('Add admin error:')
       toast.error('エラーが発生しました')
     } finally {
       setIsSaving(false)
@@ -119,7 +119,7 @@ export default function AdminAccountsPage() {
         toast.error('更新に失敗しました')
       }
     } catch (error) {
-      console.error('Toggle admin error:', error)
+      console.error('Toggle admin error:')
       toast.error('エラーが発生しました')
     }
   }
@@ -149,7 +149,7 @@ export default function AdminAccountsPage() {
         toast.error(data.error || 'パスワードリセットに失敗しました')
       }
     } catch (error) {
-      console.error('Reset password error:', error)
+      console.error('Reset password error:')
       toast.error('エラーが発生しました')
     }
   }
@@ -172,7 +172,7 @@ export default function AdminAccountsPage() {
         toast.error(data.error || '削除に失敗しました')
       }
     } catch (error) {
-      console.error('Delete admin error:', error)
+      console.error('Delete admin error:')
       toast.error('エラーが発生しました')
     }
   }

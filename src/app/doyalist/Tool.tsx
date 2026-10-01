@@ -217,7 +217,7 @@ export default function DoyalistTool() {
       const createdData = await create.json()
       return createdData?.project?.id || createdData?.id || null
     } catch (e) {
-      console.error('[doyalist] createProject', e)
+      console.error('[doyalist] createProject')
       return null
     }
   }
@@ -272,7 +272,7 @@ export default function DoyalistTool() {
       toast.error(msg, { id: tid, duration: 6000 })
       setErrorMsg(msg)
       setErrorHint('ネットワーク接続を確認の上、再試行してください')
-      console.error('[doyalist/collect] exception', e)
+      console.error('[doyalist/collect] exception')
     } finally {
       setGenerating(false)
     }

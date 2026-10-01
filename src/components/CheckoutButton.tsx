@@ -96,7 +96,7 @@ export function CheckoutButton({
         throw new Error('リダイレクトURLが取得できませんでした')
       }
     } catch (error: any) {
-      console.error('Checkout error:', error)
+      console.error('Checkout error:')
       toast.error(error.message || '決済処理中にエラーが発生しました')
     } finally {
       setIsLoading(false)

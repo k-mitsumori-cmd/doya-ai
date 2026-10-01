@@ -40,7 +40,7 @@ export default function OpeningDashboardPage() {
         router.push(`/opening/projects/${data.projectId}`)
       }
     } catch (e) {
-      console.error(e)
+      console.error("[source/opening/dashboard/page] failed")
     } finally {
       setIsLoading(false)
     }

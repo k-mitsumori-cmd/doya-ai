@@ -66,7 +66,7 @@ async function generateBannerForTemplate(template: typeof articleTemplates[0], i
       }
     }
   } catch (error: any) {
-    console.error(`❌ Error generating banner for ${template.id}:`, error.message)
+    console.error("[source/seo/template/generate-banners] failed")
     return {
       id: template.id,
       imageUrl: null,

@@ -71,7 +71,7 @@ export default function AnalyticsPage() {
         toast.success('データを更新しました', { icon: '🔄' })
       }
     } catch (error) {
-      console.error('Analytics fetch error:', error)
+      console.error('Analytics fetch error:')
       toast.error('データの取得に失敗しました')
     } finally {
       setIsRefreshing(false)

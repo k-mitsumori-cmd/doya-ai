@@ -530,7 +530,7 @@ export default function EditPage() {
         showToast(data.error || 'バナー画像を生成できませんでした。時間をおいて再試行してください。', 'error')
       }
     } catch (e) {
-      console.error('[banner] generation failed:', e)
+      console.error('[banner] generation failed:')
       showToast('バナー画像を生成できませんでした。通信状態を確認して再試行してください。', 'error')
     } finally {
       setBannerGenerating(false)

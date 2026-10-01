@@ -781,11 +781,11 @@ function BannerTestPageInner() {
         }
 
         if (lastError && templates.length === 0) {
-          console.error('Failed to fetch templates after retries:', lastError)
+          console.error('Failed to fetch templates after retries:')
           toast.error('テンプレートの取得に失敗しました。ページを再読み込みしてください。')
         }
       } catch (err: any) {
-        console.error('Failed to fetch templates:', err)
+        console.error('Failed to fetch templates:')
         toast.error('テンプレートの取得に失敗しました')
       } finally {
         setIsLoadingTemplates(false)
@@ -826,7 +826,7 @@ function BannerTestPageInner() {
       }
       setFetchProgress(100)
     } catch (e) {
-      console.error('[Templates] Background fetch failed:', e)
+      console.error('[Templates] Background fetch failed:')
     } finally {
       setHasMoreFromApi(false)
       setIsFetchingAll(false)
@@ -1263,7 +1263,7 @@ function BannerTestPageInner() {
         throw new Error('バナーが生成されませんでした')
       }
     } catch (err: any) {
-      console.error('Generate error:', err)
+      console.error('Generate error:')
       toast.error(err.message || '生成に失敗しました')
       setShowGenerationModal(false)
       clearInterval(messageInterval)
@@ -3258,7 +3258,7 @@ function BannerTestPageInner() {
                           throw new Error(result.error || '修正に失敗しました')
                         }
                       } catch (err: any) {
-                        console.error('Edit error:', err)
+                        console.error('Edit error:')
                         toast.error(err.message || '修正に失敗しました')
                       } finally {
                         setIsEditing(false)

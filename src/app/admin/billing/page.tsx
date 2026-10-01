@@ -65,7 +65,7 @@ export default function BillingPage() {
         toast.success('データを更新しました', { icon: '🔄' })
       }
     } catch (error) {
-      console.error('Billing fetch error:', error)
+      console.error('Billing fetch error:')
       toast.error('データの取得に失敗しました')
     } finally {
       setIsRefreshing(false)

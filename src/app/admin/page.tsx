@@ -126,7 +126,7 @@ export default function AdminDashboard() {
         toast.success('データを更新しました', { icon: '🔄' })
       }
     } catch (err) {
-      console.error('Stats load error:', err)
+      console.error('Stats load error:')
       setError(err instanceof Error ? err.message : '統計データの取得中にエラーが発生しました')
     } finally {
       setIsRefreshing(false)

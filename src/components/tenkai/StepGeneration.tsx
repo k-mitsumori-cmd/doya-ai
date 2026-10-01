@@ -151,7 +151,7 @@ export default function StepGeneration({
         }
       } catch (e: unknown) {
         if (e instanceof Error && e.name !== 'AbortError') {
-          console.error('[StepGeneration] SSE error:', e.message)
+          console.error('[StepGeneration] SSE error:')
         }
         setIsConnected(false)
       }

@@ -14,7 +14,7 @@ export default function PromaneError({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error('[Promane Error]', error)
+    console.error('[Promane Error]')
   }, [error])
 
   return (

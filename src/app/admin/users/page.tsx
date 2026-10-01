@@ -134,7 +134,7 @@ export default function AdminUsersPage() {
       setUsers(data)
       setEditingUser(previous => previous ? data.find((user: User) => user.id === previous.id) ?? null : null)
     } catch (error) {
-      console.error('Users fetch error:', error)
+      console.error('Users fetch error:')
       toast.error('ユーザー一覧の取得に失敗しました')
     } finally {
       setIsLoading(false)
@@ -189,7 +189,7 @@ export default function AdminUsersPage() {
       toast.success('ユーザー情報を更新しました')
       return true
     } catch (error) {
-      console.error('Update error:', error)
+      console.error('Update error:')
       toast.error('更新に失敗しました')
       return false
     } finally {
@@ -237,7 +237,7 @@ export default function AdminUsersPage() {
       toast.success('プランを更新しました（コンプリートパック）')
       return true
     } catch (error) {
-      console.error('Update error:', error)
+      console.error('Update error:')
       toast.error('更新に失敗しました')
       return false
     } finally {
@@ -306,7 +306,7 @@ export default function AdminUsersPage() {
       
       toast.success(`${format.toUpperCase()}形式でエクスポートしました`)
     } catch (error) {
-      console.error('Export error:', error)
+      console.error('Export error:')
       toast.error('エクスポートに失敗しました')
     } finally {
       setIsExporting(false)
@@ -340,7 +340,7 @@ export default function AdminUsersPage() {
       // ユーザー一覧を更新
       setUsers(prev => prev.filter(u => u.id !== user.id))
     } catch (error) {
-      console.error('Delete error:', error)
+      console.error('Delete error:')
       toast.error(error instanceof Error ? error.message : '削除に失敗しました')
     } finally {
       setDeletingUserId(null)

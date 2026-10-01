@@ -127,7 +127,7 @@ export function ProjectForm({
         icon: <Image src="/character/error.png" alt="" width={28} height={28} unoptimized />,
         duration: 6000,
       });
-      console.error("[promane/project] save failed", e);
+      console.error("[promane/project] save failed");
     } finally {
       setLoading(false);
     }

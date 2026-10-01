@@ -147,7 +147,7 @@ export default function ProjectsPage() {
         toast.error(data.error || 'サムネイル生成に失敗しました')
       }
     } catch (err) {
-      console.error('Thumbnail generation failed:', err)
+      console.error('Thumbnail generation failed:')
       toast.error('サムネイル生成中にエラーが発生しました')
     } finally {
       setGeneratingThumbnail(null)

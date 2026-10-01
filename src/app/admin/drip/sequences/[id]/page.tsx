@@ -128,7 +128,7 @@ export default function SequenceEditorPage() {
         })
       }
     } catch (err) {
-      console.error('Sequence editor fetch error:', err)
+      console.error('Sequence editor fetch error:')
       toast.error('データの取得に失敗しました')
     } finally {
       setIsLoading(false)
