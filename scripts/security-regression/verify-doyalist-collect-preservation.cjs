@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const {load, check, results} = require('./load-typescript.cjs');
 const operationalJson = load('src/lib/operational-json.ts', {}, {TextDecoder, Uint8Array});
+const streamJson = load('src/lib/doyalist/stream-json.ts', {}, {TextEncoder, ReadableStream, Uint8Array});
 
 function fixture(initialCount, failure, denied) {
   let project = {id:'project',userId:'user',industry:'IT',region:'全国'};
@@ -31,6 +32,7 @@ function fixture(initialCount, failure, denied) {
     '@/lib/auth':{authOptions:{}},
     '@/lib/prisma':{prisma},
     '@/lib/operational-json':operationalJson,
+    '@/lib/doyalist/stream-json':streamJson,
     '@/lib/doyalist/limits':{
       getUserDoyalistLimits:async()=>({maxCompaniesPerMonth:denied==='quota'?0:100}),
       countMonthlyCompanies:async()=>initialCount,

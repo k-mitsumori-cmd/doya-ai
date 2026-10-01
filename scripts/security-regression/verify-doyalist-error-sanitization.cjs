@@ -6,6 +6,7 @@ const root = path.resolve(__dirname, '../../src/app/api/doyalist')
 const secret = 'DATABASE_URL=private-and-sensitive'
 const failure = () => { throw Error(secret) }
 const identity = { user: { id: 'owner' } }
+const streamJson = load('src/lib/doyalist/stream-json.ts', {}, { TextEncoder, ReadableStream, Uint8Array })
 
 function route(file, prisma) {
   return load(file, {
@@ -13,6 +14,7 @@ function route(file, prisma) {
     'next-auth': { getServerSession: async () => identity },
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma },
+    '@/lib/doyalist/stream-json': streamJson,
     '@/lib/doyalist/limits': { getUserDoyalistLimits: async () => ({ maxProjects: -1 }) },
   })
 }
@@ -41,6 +43,19 @@ async function expectSafe(promise, expected) {
     await expectSafe(api.GET({}, context), 'プロジェクトの取得に失敗しました')
     await expectSafe(api.PATCH({ json: async () => ({ name: 'updated' }) }, context), 'プロジェクトの更新に失敗しました')
     await expectSafe(api.DELETE({}, context), 'プロジェクトの削除に失敗しました')
+  })
+  await check('Doyalist project detail streams owned company records and keeps counts', async () => {
+    const api = route('src/app/api/doyalist/projects/[id]/route.ts', {
+      doyalistProject: { findUnique: async () => ({ id: 'p', userId: 'owner' }) },
+      doyalistCompany: { findMany: async () => [{ id: 'one', status: 'new' }, { id: 'two', status: 'won' }] },
+      doyalistApproach: { findMany: async () => [], count: async () => 0 },
+    })
+    const response = await api.GET({}, { params: Promise.resolve({ id: 'p' }) })
+    assert.equal(response.status, 200)
+    const data = await response.json()
+    assert.deepEqual(data.companies.map((company) => company.id), ['one', 'two'])
+    assert.equal(data.summary.companyCount, 2)
+    assert.equal(data.summary.statusCounts.won, 1)
   })
   await check('Doyalist API 5xx handlers never interpolate internal error messages', async () => {
     const files = []

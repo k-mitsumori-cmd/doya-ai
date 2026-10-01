@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { streamDoyalistJsonArray } from '@/lib/doyalist/stream-json'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -62,17 +63,16 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       statusCounts[c.status] = (statusCounts[c.status] || 0) + 1
     }
 
-    return NextResponse.json({
+    return streamDoyalistJsonArray({
       success: true,
       project: guard.project,
-      companies,
       approaches,
       summary: {
         companyCount: companies.length,
         approachCount,
         statusCounts,
       },
-    })
+    }, 'companies', companies)
   } catch (e: any) {
     console.error('[doyalist/projects/[id]][GET]', e)
     return NextResponse.json(

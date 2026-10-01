@@ -8,6 +8,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { collectCompaniesDetailed } from '@/lib/doyalist/collect'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
+import { streamDoyalistJsonArray } from '@/lib/doyalist/stream-json'
 import {
   getUserDoyalistLimits,
   countMonthlyCompanies,
@@ -227,12 +228,11 @@ export async function POST(req: NextRequest) {
       collectedResult.budgetExhausted ? `取得に時間がかかったため、取得できた${created.length}社を保存しました。再収集の前に保存済みの一覧をご確認ください。` : null,
     ].filter((message): message is string => Boolean(message))
 
-    return NextResponse.json({
+    return streamDoyalistJsonArray({
       success: true,
       generated: created.length,
-      companies: created,
       ...(warnings.length > 0 ? { warning: warnings.join(' ') } : {}),
-    })
+    }, 'companies', created)
   } catch {
     console.error('[doyalist/collect][POST] failed')
     return NextResponse.json(

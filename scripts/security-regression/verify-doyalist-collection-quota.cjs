@@ -1,6 +1,7 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 const operationalJson = load('src/lib/operational-json.ts', {}, { TextDecoder, Uint8Array });
+const streamJson = load('src/lib/doyalist/stream-json.ts', {}, { TextEncoder, ReadableStream, Uint8Array });
 
 const companies = [
   { source: 'gbizinfo', createdAt: new Date('2026-08-31T14:59:59Z') },
@@ -47,6 +48,7 @@ const route = load('src/app/api/doyalist/collect/route.ts', {
   '@/lib/auth': { authOptions: {} },
   '@/lib/prisma': { prisma },
   '@/lib/operational-json': operationalJson,
+  '@/lib/doyalist/stream-json': streamJson,
   '@/lib/doyalist/limits': limits,
   '@/lib/doyalist/collect': {
     collectCompaniesDetailed: async ({ maxResults }) => {
