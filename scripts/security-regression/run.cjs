@@ -727,3 +727,8 @@ if (bodyCheckFetch.error || bodyCheckFetch.status !== 0) {
   console.error('Security regression failed: verify-body-check-fetch.cjs');
   process.exit(1);
 }
+const aioBrandFetch = spawnSync(process.execPath, [path.join(__dirname, 'verify-aio-brand-fetch.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (aioBrandFetch.error || aioBrandFetch.status !== 0) {
+  console.error('Security regression failed: verify-aio-brand-fetch.cjs');
+  process.exit(1);
+}

@@ -4,68 +4,15 @@
 // 組織作成を意識させない“即・現状チェック”フローで使う。
 // 失敗時は名前ベースの汎用プロンプトにフォールバックする（必ず何か返す）。
 // ============================================
-import dns from 'node:dns/promises'
-import net from 'node:net'
 import { geminiGenerateJson } from '@seo/lib/gemini'
+import { safeFetchText } from '@/lib/net/safe-fetch'
 
-// ---- SSRF対策: 内部/プライベート宛先へのサーバ側フェッチを防ぐ ----
-// プライベート/ループバック/リンクローカル/メタデータ等のIPを弾く
-function ipIsPrivate(ip: string): boolean {
-  if (net.isIPv4(ip)) {
-    const [a, b] = ip.split('.').map(Number)
-    if (a === 0 || a === 127 || a === 10) return true // 0.0.0.0/8, loopback, 10/8
-    if (a === 169 && b === 254) return true // link-local（169.254.169.254 クラウドメタデータ含む）
-    if (a === 172 && b >= 16 && b <= 31) return true // 172.16/12
-    if (a === 192 && b === 168) return true // 192.168/16
-    if (a === 100 && b >= 64 && b <= 127) return true // 100.64/10 CGNAT
-    return false
-  }
-  if (net.isIPv6(ip)) {
-    const v = ip.toLowerCase().replace(/^\[|\]$/g, '')
-    if (v === '::1' || v === '::') return true
-    if (v.startsWith('fc') || v.startsWith('fd') || v.startsWith('fe80')) return true // ULA / link-local
-    const m = v.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/) // IPv4-mapped
-    if (m) return ipIsPrivate(m[1])
-    return false
-  }
-  return true // 解釈不能は安全側で拒否
-}
-
-// ホスト名が公開アドレスに解決されるか（内部名/プライベートIPは拒否）
-async function hostIsPublic(hostname: string): Promise<boolean> {
-  const h = hostname.toLowerCase().replace(/\.$/, '')
-  if (!h || h === 'localhost' || h.endsWith('.local') || h.endsWith('.internal') || h.endsWith('.localhost')) return false
-  if (net.isIP(h)) return !ipIsPrivate(h)
-  try {
-    const addrs = await dns.lookup(h, { all: true })
-    return addrs.length > 0 && addrs.every((a) => !ipIsPrivate(a.address))
-  } catch {
-    return false
-  }
-}
-
-// SSRF安全なHTML取得：スキームをhttp/sに限定し、各ホップでホストを再検証（リダイレクトは手動追従）
-async function safeFetchHtml(startUrl: string, maxHops = 3): Promise<string> {
-  let url = startUrl
-  for (let hop = 0; hop <= maxHops; hop++) {
-    const u = new URL(url)
-    if (u.protocol !== 'http:' && u.protocol !== 'https:') throw new Error('unsupported scheme')
-    if (!(await hostIsPublic(u.hostname))) throw new Error('blocked non-public host')
-    const res = await fetch(url, {
-      signal: AbortSignal.timeout(6000),
-      headers: { 'user-agent': 'Mozilla/5.0 (compatible; DoyaAIO/1.0; +https://doya-ai.surisuta.jp)' },
-      redirect: 'manual',
-    })
-    if (res.status >= 300 && res.status < 400) {
-      const loc = res.headers.get('location')
-      if (!loc) break
-      url = new URL(loc, url).toString() // 相対も解決し、次ループで再検証
-      continue
-    }
-    if (!res.ok) throw new Error(`http ${res.status}`)
-    return (await res.text()).slice(0, 30000)
-  }
-  throw new Error('too many redirects')
+// The shared fetcher pins the validated IP across each hop and bounds the
+// decompressed HTML before we inspect its title.
+async function safeFetchHtml(url: string): Promise<string> {
+  const html = await safeFetchText(url, { timeoutMs: 24_000, maxBytes: 2 * 1024 * 1024, maxRedirects: 3 })
+  if (html === null) throw new Error('site fetch failed')
+  return html.slice(0, 30000)
 }
 
 // URLにスキームが無ければ https:// を前置して正規化（無効なら null）
