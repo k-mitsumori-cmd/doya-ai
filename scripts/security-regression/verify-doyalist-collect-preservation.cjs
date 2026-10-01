@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const {load, check, results} = require('./load-typescript.cjs');
+const operationalJson = load('src/lib/operational-json.ts', {}, {TextDecoder, Uint8Array});
 
 function fixture(initialCount, failure, denied) {
   let project = {id:'project',userId:'user',industry:'IT',region:'全国'};
@@ -29,6 +30,7 @@ function fixture(initialCount, failure, denied) {
     'next-auth':{getServerSession:async()=>denied==='anonymous'?null:{user:{id:'user'}}},
     '@/lib/auth':{authOptions:{}},
     '@/lib/prisma':{prisma},
+    '@/lib/operational-json':operationalJson,
     '@/lib/doyalist/limits':{
       getUserDoyalistLimits:async()=>({maxCompaniesPerMonth:denied==='quota'?0:100}),
       countMonthlyCompanies:async()=>initialCount,
@@ -43,10 +45,21 @@ function fixture(initialCount, failure, denied) {
   return {
     state:()=>({project,companies,approaches,calls,writes}),
     retry:()=>{mode=null;},
-    post:()=>api.POST({json:async()=>({projectId:'project',count:1})}),
+    post:(body={projectId:'project',count:1})=>api.POST(new Request('https://doya.test/api/doyalist/collect',{method:'POST',body:JSON.stringify(body)})),
   };
 }
 (async()=>{
+  await check('invalid count, project ID and oversized requests stop before collection',async()=>{
+    const f=fixture(0,null);
+    for(const body of [
+      {projectId:'project',count:'10'}, {projectId:'project',count:0},
+      {projectId:'project',count:1.5}, {projectId:'project',count:null},
+      {projectId:' '.repeat(129),count:1},
+    ])assert.equal((await f.post(body)).status,400,JSON.stringify(body));
+    assert.equal((await f.post({projectId:'project',count:1,padding:'x'.repeat(9000)})).status,413);
+    assert.equal(f.state().calls,0);
+    assert.equal(f.state().writes,0);
+  });
   await check('empty projects remain visible for owner cleanup; foreign and archived stay excluded',async()=>{
     const rows=[
       {id:'empty',userId:'user',status:'active',name:'Empty',_count:{companies:0,approaches:0}},

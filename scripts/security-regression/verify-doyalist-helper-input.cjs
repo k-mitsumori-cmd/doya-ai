@@ -32,10 +32,11 @@ const expand = load('src/app/api/doyalist/expand-keywords/route.ts', {
     GEMINI_TEXT_MODEL_DEFAULT: 'test',
     geminiGenerateJson: async () => { modelCalls++; return { tags: ['営業', '販売'] }; },
   },
+  '@/lib/operational-json': operationalJson,
 });
-const post = (route, body) => route === estimate
-  ? route.POST(new Request('https://doya.test/api/doyalist/estimate', { method: 'POST', body: JSON.stringify(body) }))
-  : route.POST({ json: async () => body });
+const post = (route, body) => route.POST(new Request('https://doya.test/api/doyalist/helper', {
+  method: 'POST', body: JSON.stringify(body),
+}));
 
 (async () => {
   for (const bad of [null, [], { keywords: 'abc' }, { keywords: [{}] }, { region: {} }, { industry: 4 },
@@ -59,6 +60,8 @@ const post = (route, body) => route === estimate
     assert.equal((await post(expand, bad)).status, 400, JSON.stringify(bad));
   }
   assert.equal(modelCalls, 0, 'invalid keyword input must not invoke paid AI');
+  assert.equal((await post(expand, { keyword: '営業', padding: 'x'.repeat(5000) })).status, 413);
+  assert.equal(modelCalls, 0, 'oversized body must not invoke paid AI');
   assert.equal((await post(expand, { keyword: '営業', industry: 'IT' })).status, 200);
   assert.equal(modelCalls, 1);
   console.log('PASS Doyalist helpers: malformed input rejected before external APIs and safe industry fallback');

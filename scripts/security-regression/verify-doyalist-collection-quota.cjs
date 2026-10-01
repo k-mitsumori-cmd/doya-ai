@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
+const operationalJson = load('src/lib/operational-json.ts', {}, { TextDecoder, Uint8Array });
 
 const companies = [
   { source: 'gbizinfo', createdAt: new Date('2026-08-31T14:59:59Z') },
@@ -45,6 +46,7 @@ const route = load('src/app/api/doyalist/collect/route.ts', {
   'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },
   '@/lib/auth': { authOptions: {} },
   '@/lib/prisma': { prisma },
+  '@/lib/operational-json': operationalJson,
   '@/lib/doyalist/limits': limits,
   '@/lib/doyalist/collect': {
     collectCompaniesDetailed: async ({ maxResults }) => {
@@ -58,7 +60,9 @@ const route = load('src/app/api/doyalist/collect/route.ts', {
     },
   },
 });
-const post = () => route.POST({ json: async () => ({ projectId: 'project-1', count: 70 }) });
+const post = () => route.POST(new Request('https://doya.test/api/doyalist/collect', {
+  method: 'POST', body: JSON.stringify({ projectId: 'project-1', count: 70 }),
+}));
 
 (async () => {
   assert.equal(limits.monthStart(new Date('2026-09-30T14:59:59Z')).toISOString(), '2026-08-31T15:00:00.000Z');

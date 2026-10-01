@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 
 /**
  * POST /api/doyalist/expand-keywords
@@ -21,9 +22,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
     }
 
-    const body = await req.json().catch(() => null)
-    if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      return NextResponse.json({ error: '入力形式を確認してください' }, { status: 400 })
+    let body: Record<string, unknown>
+    try {
+      body = await readOperationalJson(req, 4 * 1024)
+    } catch (error) {
+      if (error instanceof OperationalBodyError) {
+        return NextResponse.json({ error: '入力形式またはサイズを確認してください' }, { status: error.status })
+      }
+      throw error
     }
     const { keyword, industry } = body
 
@@ -68,8 +74,8 @@ export async function POST(req: NextRequest) {
         prompt,
         model: GEMINI_TEXT_MODEL_DEFAULT,
       })
-    } catch (e: any) {
-      console.error('[doyalist/expand-keywords] gemini error', e)
+    } catch {
+      console.error('[doyalist/expand-keywords] Gemini request failed')
       return NextResponse.json({ error: 'AI変換に失敗しました' }, { status: 502 })
     }
 
@@ -82,8 +88,8 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ success: true, tags })
-  } catch (e: any) {
-    console.error('[doyalist/expand-keywords]', e)
+  } catch {
+    console.error('[doyalist/expand-keywords] failed')
     return NextResponse.json({ error: 'タグ展開に失敗しました' }, { status: 500 })
   }
 }

@@ -7,6 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { collectCompaniesDetailed } from '@/lib/doyalist/collect'
+import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 import {
   getUserDoyalistLimits,
   countMonthlyCompanies,
@@ -27,17 +28,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
     }
 
-    const body = await req.json().catch(() => ({}))
-    const { projectId } = body || {}
-    const rawCount = Number(body?.count ?? 10)
-    const requestedCount = Number.isFinite(rawCount) ? Math.floor(rawCount) : 10
-    const MAX_COUNT_PER_REQUEST = 10000 // 1回最大10,000社（Vercel maxDuration=300s以内）
-    const count = Math.max(1, Math.min(MAX_COUNT_PER_REQUEST, requestedCount))
-    const wasClamped = requestedCount > MAX_COUNT_PER_REQUEST
-
-    if (!projectId || typeof projectId !== 'string') {
-      return NextResponse.json({ error: 'projectIdは必須です' }, { status: 400 })
+    let body: Record<string, unknown>
+    try {
+      body = await readOperationalJson(req, 8 * 1024)
+    } catch (error) {
+      if (error instanceof OperationalBodyError) {
+        return NextResponse.json({ error: '入力形式またはサイズを確認してください' }, { status: error.status })
+      }
+      throw error
     }
+    const { projectId } = body
+    const requestedCount = body.count === undefined ? 10 : body.count
+    if (typeof projectId !== 'string' || !projectId.trim() || projectId.length > 128
+      || typeof requestedCount !== 'number' || !Number.isSafeInteger(requestedCount) || requestedCount < 1) {
+      return NextResponse.json({ error: 'プロジェクトと件数の入力形式を確認してください' }, { status: 400 })
+    }
+    const MAX_COUNT_PER_REQUEST = 10000 // 1回最大10,000社（Vercel maxDuration=300s以内）
+    const count = Math.min(MAX_COUNT_PER_REQUEST, requestedCount)
+    const wasClamped = requestedCount > MAX_COUNT_PER_REQUEST
 
     // プロジェクト所有権確認
     const project = await prisma.doyalistProject.findUnique({ where: { id: projectId } })
@@ -114,8 +122,8 @@ export async function POST(req: NextRequest) {
         // 1万社で 約3分（並列12 × 200ms × 833ラウンド）
         enrichLimit: Math.min(count, 10000),
       })
-    } catch (e: any) {
-      console.error('[doyalist/collect] API error', e)
+    } catch {
+      console.error('[doyalist/collect] Collection provider failed')
       // 再収集先には既存企業・アプローチがあり得るため、失敗で削除しない。
       return NextResponse.json(
         { error: '企業データの取得に失敗しました。しばらく経ってから再試行してください。' },
@@ -225,8 +233,8 @@ export async function POST(req: NextRequest) {
       companies: created,
       ...(warnings.length > 0 ? { warning: warnings.join(' ') } : {}),
     })
-  } catch (e: any) {
-    console.error('[doyalist/collect][POST]', e)
+  } catch {
+    console.error('[doyalist/collect][POST] failed')
     return NextResponse.json(
       { error: '企業生成に失敗しました' },
       { status: 500 }
