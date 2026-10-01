@@ -45,11 +45,12 @@ ${section.content}
 **や*などの記号は使わないでください。`
 
     const enhanced = await geminiGenerateText({ model: GEMINI_TEXT_MODEL_DEFAULT, parts: [{ text: prompt }] })
+    if (!enhanced?.trim()) return NextResponse.json({ success: false, error: 'AIから文章を取得できませんでした。時間をおいて再試行してください。' }, { status: 502 })
 
     const updated = await prisma.seoSection.updateMany({
       where: { id, article: { is: owner } },
       data: {
-        content: enhanced || section.content,
+        content: enhanced,
         status: 'reviewed',
       },
     })

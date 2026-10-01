@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 
-function fixture(identity, kind) {
+function fixture(identity, kind, aiOutput = 'Revised body') {
   const article = { id: 'article-1', userId: kind === 'user' ? 'owner' : null, guestId: kind === 'guest' ? 'guest' : null, title: 'Private title', keywords: [] };
   const section = { id: 'section-1', articleId: article.id, article, headingPath: 'H2: Private', content: 'Private body' };
   let reads = 0;
@@ -22,7 +22,7 @@ function fixture(identity, kind) {
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
     '@/lib/seoArticleOwner': owner,
-    '@seo/lib/gemini': { geminiGenerateText: async () => { aiCalls++; return 'Revised body'; }, GEMINI_TEXT_MODEL_DEFAULT: 'test' },
+    '@seo/lib/gemini': { geminiGenerateText: async () => { aiCalls++; return aiOutput; }, GEMINI_TEXT_MODEL_DEFAULT: 'test' },
   };
   const routes = {
     edit: load('src/app/api/seo/sections/[id]/route.ts', mocks),
@@ -50,6 +50,12 @@ function fixture(identity, kind) {
         assert.equal(counts.aiCalls, allowed && aiAction ? 1 : 0);
       }
     }
+  }
+  for (const action of ['seo', 'cv']) {
+    const f = fixture('owner', 'user', '   ');
+    const response = await f.routes[action].POST({}, { params: Promise.resolve({ id: 'section-1' }) });
+    assert.equal(response.status, 502, `${action} must reject blank AI output`);
+    assert.deepEqual(f.counts(), { reads: 1, writes: 0, aiCalls: 1 });
   }
   console.log('PASS SEO sections: edit and all AI actions require article ownership before provider and at write');
 })().catch((error) => { console.error(error); process.exitCode = 1; });
