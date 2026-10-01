@@ -102,9 +102,9 @@ export async function POST(req: NextRequest) {
     })
   } catch (e: any) {
     const msg = e?.message?.includes('内部ネットワーク')
-      ? e.message
+      ? '内部ネットワークのURLは利用できません。'
       : e?.message?.includes('テキストを抽出')
-        ? e.message
+        ? 'ページからテキストを抽出できませんでした。'
         : 'URL調査に失敗しました'
     return NextResponse.json(
       { success: false, error: msg },

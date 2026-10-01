@@ -35,4 +35,25 @@ const response = { NextResponse: Response }
       assert(!JSON.stringify(await result.json()).includes(secret))
     })
   }
+
+  for (const routeName of ['analyze-url-preview', 'projects/[id]/analyze-url']) {
+    await check(`interviewx ${routeName} hides source errors`, async () => {
+      const route = load(`src/app/api/interviewx/${routeName}/route.ts`, {
+        'next/server': response,
+        '@/lib/retired-service': { SERVICE_RETIRED: false },
+        '@/lib/prisma': { prisma: { interviewXProject: { findUnique: async () => ({ id: 'project', userId: 'user', companyUrl: 'https://example.com' }) } } },
+        '@/lib/interviewx/access': {
+          getInterviewXUser: async () => ({ userId: 'user' }),
+          requireAuth: () => null,
+          requireDatabase: () => null,
+          checkOwnership: () => null,
+        },
+        '@/lib/tenkai/scraper': { scrapeUrl: async () => { throw new Error(`内部ネットワーク ${secret}`) } },
+        '@/lib/interviewx/prompts': {},
+      })
+      const result = await route.POST({ json: async () => ({ url: 'https://example.com' }) }, { params: Promise.resolve({ id: 'project' }) })
+      assert.equal(result.status, 500)
+      assert(!JSON.stringify(await result.json()).includes(secret))
+    })
+  }
 })().catch((error) => { console.error(error); process.exitCode = 1 })
