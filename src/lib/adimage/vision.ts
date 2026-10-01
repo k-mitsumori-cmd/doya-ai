@@ -17,6 +17,8 @@ import { withTimeout } from '@/lib/fetch-timeout'
 
 const ENDPOINT = 'https://api.openai.com/v1/chat/completions'
 const MODEL = process.env.ADIMAGE_VISION_MODEL || 'gpt-4o'
+const VISION_RESPONSE_MAX_BYTES = 1024 * 1024
+const VISION_ERROR_MAX_BYTES = 64 * 1024
 
 export interface VisionRequest {
   prompt: string
@@ -48,12 +50,36 @@ async function callVision(req: VisionRequest): Promise<string> {
       signal,
     })
     if (!res.ok) {
-      const t = await res.text().catch(() => '')
+      const t = await readBoundedVisionResponse(res, VISION_ERROR_MAX_BYTES).catch(() => '')
       throw new Error(`vision failed (${res.status}): ${t.slice(0, 300)}`)
     }
-    const json = await res.json()
+    const json = JSON.parse(await readBoundedVisionResponse(res, VISION_RESPONSE_MAX_BYTES))
     return String(json?.choices?.[0]?.message?.content || '')
   })
+}
+
+async function readBoundedVisionResponse(res: Response, maxBytes: number): Promise<string> {
+  if (Number(res.headers.get('content-length')) > maxBytes) {
+    void res.body?.cancel().catch(() => {})
+    throw new Error('Vision response is too large')
+  }
+  if (!res.body) return ''
+  const reader = res.body.getReader()
+  const chunks: Buffer[] = []
+  let length = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      length += value.byteLength
+      if (length > maxBytes) throw new Error('Vision response is too large')
+      chunks.push(Buffer.from(value))
+    }
+    return Buffer.concat(chunks, length).toString('utf8')
+  } finally {
+    void reader.cancel().catch(() => {})
+    reader.releaseLock()
+  }
 }
 
 function stripFences(s: string): string {

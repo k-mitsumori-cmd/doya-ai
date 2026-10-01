@@ -752,3 +752,8 @@ if (aioEngineResponses.error || aioEngineResponses.status !== 0) {
   console.error('Security regression failed: verify-aio-engine-responses.cjs');
   process.exit(1);
 }
+const adimageVisionResponse = spawnSync(process.execPath, [path.join(__dirname, 'verify-adimage-vision-response.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (adimageVisionResponse.error || adimageVisionResponse.status !== 0) {
+  console.error('Security regression failed: verify-adimage-vision-response.cjs');
+  process.exit(1);
+}
