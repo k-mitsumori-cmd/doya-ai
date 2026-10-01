@@ -767,6 +767,11 @@ if (bannerVisionResponse.error || bannerVisionResponse.status !== 0) {
   console.error('Security regression failed: verify-banner-vision-response.cjs');
   process.exit(1);
 }
+const personaGenerateBounds = spawnSync(process.execPath, [path.join(__dirname, 'verify-persona-generate-bounds.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (personaGenerateBounds.error || personaGenerateBounds.status !== 0) {
+  console.error('Security regression failed: verify-persona-generate-bounds.cjs');
+  process.exit(1);
+}
 const bannerProModels = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-pro-models.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (bannerProModels.error || bannerProModels.status !== 0) {
   console.error('Security regression failed: verify-banner-pro-models.cjs');

@@ -11,6 +11,8 @@ import { reservePersonaProject, settlePersonaProject } from '@/lib/persona/proje
 import { includedPersonaImages } from '@/lib/persona/image-entitlements'
 import { parsePersonaResult, PersonaResultValidationError, type PersonaResult } from '@/lib/persona/result-schema'
 import { recordServiceUsage } from '@/lib/service-usage'
+import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
+import { readPersonaProviderJson } from '@/lib/persona/provider-response'
 
 
 export const runtime = 'nodejs'
@@ -97,7 +99,7 @@ async function geminiGenerateJson(prompt: string): Promise<PersonaResult> {
         throw new Error(`Gemini API error: ${res.status}`)
       }
 
-      const data = await res.json()
+      const data = await readPersonaProviderJson(res)
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || ''
       
       if (!text || text.trim().length === 0) {
@@ -121,14 +123,28 @@ async function geminiGenerateJson(prompt: string): Promise<PersonaResult> {
 export async function POST(req: NextRequest) {
   let reservation: { userId: string; id: string; leaseToken: string } | null = null
   try {
-    const body = await req.json().catch(() => null)
-    if (!body || typeof body !== 'object' || Array.isArray(body)) {
-      return NextResponse.json({ error: '入力内容を確認してください。' }, { status: 400 })
+    const session = await getServerSession(authOptions)
+    const userId = session?.user?.id
+    if (!userId) return NextResponse.json({ error: 'ペルソナの生成にはログインが必要です。', code: 'LOGIN_REQUIRED' }, { status: 401 })
+    let body: Record<string, unknown>
+    try {
+      body = await readOperationalJson(req, 1024 * 1024)
+    } catch (error) {
+      const status = error instanceof OperationalBodyError ? error.status : 400
+      return NextResponse.json({ error: status === 413 ? '入力内容が大きすぎます。' : '入力内容を確認してください。' }, { status })
     }
     const { url, additionalInfo, serviceName, existingPersona, modifications } = body
 
     // 修正モード: existingPersona + modifications がある場合
     const isModifyMode = !!existingPersona && !!modifications
+
+    if ((serviceName !== undefined && (typeof serviceName !== 'string' || serviceName.length > 200)) ||
+        (additionalInfo !== undefined && (typeof additionalInfo !== 'string' || additionalInfo.length > 8000)) ||
+        (modifications !== undefined && (typeof modifications !== 'string' || modifications.length > 8000)) ||
+        (existingPersona !== undefined && (!existingPersona || typeof existingPersona !== 'object' || Array.isArray(existingPersona) || JSON.stringify(existingPersona).length > 262144)) ||
+        (!!existingPersona !== !!modifications)) {
+      return NextResponse.json({ error: '入力内容を確認してください。' }, { status: 400 })
+    }
 
     if (!isModifyMode && (!url || typeof url !== 'string')) {
       return NextResponse.json({ error: 'URLが必要です' }, { status: 400 })
@@ -137,10 +153,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'URLの入力内容を確認してください。' }, { status: 400 })
     }
 
-    // 認証チェック
-    const session = await getServerSession(authOptions)
-    const userId = session?.user?.id
-    if (!userId) return NextResponse.json({ error: 'ペルソナの生成にはログインが必要です。', code: 'LOGIN_REQUIRED' }, { status: 401 })
     const requestKey = body.requestKey ?? randomUUID()
     if (typeof requestKey !== 'string' || !/^[a-zA-Z0-9_-]{1,100}$/.test(requestKey)) {
       return NextResponse.json({ error: '生成要求のIDを確認してください。' }, { status: 400 })
@@ -178,7 +190,7 @@ ${JSON.stringify(existingPersona, null, 2)}
 ${modifications}`
     } else {
       // ===== 新規生成モード =====
-      const html = await safeFetchText(url, {
+      const html = await safeFetchText(url as string, {
         timeoutMs: 10000,
         maxBytes: 2 * 1024 * 1024,
         maxRedirects: 3,

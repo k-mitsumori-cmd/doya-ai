@@ -930,6 +930,7 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
                       type="text"
                       value={serviceName}
                       onChange={(e) => setServiceName(e.target.value)}
+                      maxLength={200}
                       placeholder="例: ドヤマーケ"
                       className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500"
                     />
@@ -939,6 +940,7 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
                     <textarea
                       value={additionalInfo}
                       onChange={(e) => setAdditionalInfo(e.target.value)}
+                      maxLength={8000}
                       placeholder="ターゲット層や商品の特徴など、補足情報があれば入力してください"
                       rows={3}
                       className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500 resize-none"
@@ -1136,6 +1138,7 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
                 <textarea
                   value={modificationInput}
                   onChange={(e) => setModificationInput(e.target.value)}
+                  maxLength={8000}
                   placeholder="例: 年齢を45歳にして / BtoB向けに変更して / 女性のペルソナにして / もっと具体的なエピソードを追加して"
                   className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500/50 resize-none bg-gray-50"
                   rows={2}
