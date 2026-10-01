@@ -1,14 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { BANNER_PRICING } from '@/lib/pricing'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
-
-function parseIntParam(v: string | null, fallback: number) {
-  const n = Number(v)
-  return Number.isFinite(n) ? n : fallback
-}
 
 function asBoolFromJson(value: any): boolean {
   return value === true
@@ -17,9 +11,14 @@ function asBoolFromJson(value: any): boolean {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const takeRaw = parseIntParam(searchParams.get('take'), 24)
-    const take = Math.min(Math.max(takeRaw, 1), 60)
-    const cursor = searchParams.get('cursor') || undefined
+    const take = searchParams.has('take') ? Number(searchParams.get('take')) : 24
+    if (!Number.isSafeInteger(take) || take < 1 || take > 60) {
+      return NextResponse.json({ error: 'ページ件数が正しくありません' }, { status: 400 })
+    }
+    const cursor = searchParams.get('cursor')
+    if (searchParams.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
+      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+    }
 
     // 公開ギャラリーには直近3ヶ月分を表示する。閲覧時に利用者の履歴を削除しない。
     const retentionDays = 90
@@ -28,18 +27,22 @@ export async function GET(request: NextRequest) {
 
     // IMPORTANT: generation.output (dataURL) は巨大なので、一覧では絶対に取得しない
     // -> select で必要最小限に絞って、タイムアウト/メモリ増を回避する
-    const items = await prisma.generation.findMany({
-      where: {
-        serviceId: 'banner',
-        outputType: 'IMAGE',
-        createdAt: { gte: cutoffDate },
-        metadata: {
-          path: ['shared'],
-          equals: true,
-        },
+    const where = {
+      serviceId: 'banner',
+      outputType: 'IMAGE',
+      createdAt: { gte: cutoffDate },
+      metadata: {
+        path: ['shared'],
+        equals: true,
       },
+    } as const
+    if (cursor && !await prisma.generation.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
+      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+    }
+    const rows = await prisma.generation.findMany({
+      where,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take,
+      take: take + 1,
       ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       select: {
         id: true,
@@ -49,6 +52,7 @@ export async function GET(request: NextRequest) {
       },
     })
 
+    const items = rows.slice(0, take)
     const shaped = items.map((g) => {
       const meta: any = g.metadata || {}
       const shareProfile = asBoolFromJson(meta?.shareProfile)
@@ -68,7 +72,7 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    const nextCursor = items.length === take ? items[items.length - 1]?.id : null
+    const nextCursor = rows.length > take ? items[items.length - 1].id : null
 
     return NextResponse.json(
       { items: shaped, nextCursor },
@@ -79,9 +83,8 @@ export async function GET(request: NextRequest) {
         },
       }
     )
-  } catch (e: any) {
-    console.error('Gallery list error:', e)
+  } catch {
+    console.error('[banner/gallery] failed')
     return NextResponse.json({ error: 'ギャラリーの取得に失敗しました' }, { status: 500 })
   }
 }
-
