@@ -21,6 +21,35 @@ export interface AskOptions {
 }
 
 const SYSTEM = 'あなたは役立つアシスタントです。質問に日本語で簡潔に答えてください。サービス名・ブランド名・企業名は具体的に挙げてください。'
+const ENGINE_TIMEOUT_MS = 60_000
+const SEARCH_TIMEOUT_MS = 20_000
+const ENGINE_RESPONSE_MAX_BYTES = 1024 * 1024
+const SEARCH_RESPONSE_MAX_BYTES = 2 * 1024 * 1024
+const PROVIDER_ERROR_MAX_BYTES = 64 * 1024
+
+async function readProviderResponse(res: Response, maxBytes: number): Promise<string> {
+  if (Number(res.headers.get('content-length')) > maxBytes) {
+    void res.body?.cancel().catch(() => {})
+    throw new Error('AIO provider response is too large')
+  }
+  if (!res.body) return ''
+  const reader = res.body.getReader()
+  const chunks: Buffer[] = []
+  let length = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      length += value.byteLength
+      if (length > maxBytes) throw new Error('AIO provider response is too large')
+      chunks.push(Buffer.from(value))
+    }
+    return Buffer.concat(chunks, length).toString('utf8')
+  } finally {
+    void reader.cancel().catch(() => {})
+    reader.releaseLock()
+  }
+}
 
 // 検索結果を回答の根拠として注入するブロック（実際の検索付きAIの挙動を再現）
 function groundedPrompt(prompt: string, hits?: SerperHit[]): { content: string; citations: string[] } {
@@ -83,6 +112,7 @@ export async function askEngine(engine: EngineId, prompt: string, opts?: AskOpti
     case 'claude': {
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method: 'POST',
+        signal: AbortSignal.timeout(ENGINE_TIMEOUT_MS),
         headers: {
           'Content-Type': 'application/json',
           'x-api-key': process.env.ANTHROPIC_API_KEY || '',
@@ -96,13 +126,14 @@ export async function askEngine(engine: EngineId, prompt: string, opts?: AskOpti
           messages: [{ role: 'user', content: g.content }],
         }),
       })
-      if (!res.ok) throw new Error(`Claude API ${res.status}: ${await res.text()}`)
-      const data = await res.json()
+      if (!res.ok) throw new Error(`Claude API ${res.status}: ${(await readProviderResponse(res, PROVIDER_ERROR_MAX_BYTES)).slice(0, 300)}`)
+      const data = JSON.parse(await readProviderResponse(res, ENGINE_RESPONSE_MAX_BYTES))
       return { text: data.content?.[0]?.text || '', citations: g.citations }
     }
     case 'perplexity': {
       const res = await fetch('https://api.perplexity.ai/chat/completions', {
         method: 'POST',
+        signal: AbortSignal.timeout(ENGINE_TIMEOUT_MS),
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${process.env.PERPLEXITY_API_KEY || ''}`,
@@ -117,8 +148,8 @@ export async function askEngine(engine: EngineId, prompt: string, opts?: AskOpti
           max_tokens: 700,
         }),
       })
-      if (!res.ok) throw new Error(`Perplexity API ${res.status}: ${await res.text()}`)
-      const data = await res.json()
+      if (!res.ok) throw new Error(`Perplexity API ${res.status}: ${(await readProviderResponse(res, PROVIDER_ERROR_MAX_BYTES)).slice(0, 300)}`)
+      const data = JSON.parse(await readProviderResponse(res, ENGINE_RESPONSE_MAX_BYTES))
       const text: string = data.choices?.[0]?.message?.content || ''
       // Perplexity は citations / search_results にURL配列を返す（バージョン差を吸収）
       const citations: string[] = Array.isArray(data.citations)
@@ -148,11 +179,12 @@ export async function serperSearch(query: string, num = 10): Promise<SerperHit[]
   try {
     const res = await fetch('https://google.serper.dev/search', {
       method: 'POST',
+      signal: AbortSignal.timeout(SEARCH_TIMEOUT_MS),
       headers: { 'X-API-KEY': key, 'Content-Type': 'application/json' },
       body: JSON.stringify({ q: query, gl: 'jp', hl: 'ja', num }),
     })
     if (!res.ok) return []
-    const data = await res.json()
+    const data = JSON.parse(await readProviderResponse(res, SEARCH_RESPONSE_MAX_BYTES))
     const organic: any[] = Array.isArray(data.organic) ? data.organic : []
     return organic
       .map((o) => {
