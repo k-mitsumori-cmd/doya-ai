@@ -25,11 +25,12 @@
 
 ```
 1. /doyaslide/new で 資料タイプ・テーマ・補足・枚数・比率・カラー・スタイル・ロゴ を入力
-   - スタイルは12種（後述）から選択。右に複数ページの仕上がりプレビューを表示
+   - スタイルは32種（後述）から選択。右に複数ページの仕上がりプレビューを表示
    - 参考URLを入れると analyze で内容を取り込み（タイトル・brief・参考テキスト）
 2. POST /api/doyaslide/projects でプロジェクト作成
 3. (ロゴあれば) POST /api/doyaslide/assets/logo でアップロード
 4. POST /api/doyaslide/structure → Gemini が各スライドの role/headline/subText/visualPrompt を生成
+   - 応答が指定枚数に足りない、または必須項目が空なら保存せず再試行可能なエラーにする
 5. /doyaslide/[id]?generate=1 に遷移 → POST /api/doyaslide/generate で全スライドを並行的に画像化
 6. エディタでプレビュー・チャット修正・再生成・ロゴ位置/サイズ調整・バージョン巻き戻し
 7. PNG(ZIP) / PDF で書き出し（POST /api/doyaslide/export）
@@ -44,10 +45,10 @@
 - 品質: 本番スライド=`medium`、スタイルプレビュー=`medium`（gpt-image-2 は `auto` 非対応）。2026-08-27 に high から変更（実測で high は約2.8倍の時間・4.3倍の単価、仕上がりの差は採用判断に足りなかった）
 - 構成テキスト（Gemini）は `@seo/lib/gemini` 系ではなく `src/lib/doyaslide/` 内で組み立て
 
-## スタイルプリセット（12種 = ビジネス系6 + 遊び系6、2026-06-12 再拡張）
+## スタイルプリセット（32種 = ビジネス系6 + 遊び系6 + デザインテンプレート20）
 
 `src/lib/doyaslide/constants.ts: STYLE_PRESETS`。directive（アートディレクション）に加え、遊び系は専用 `layout` を持ち企業資料テンプレートを使わない。
-一度6種に削減→ユーザー要望で12種へ再拡張。旧 LEGACY_STYLE_DIRECTIVES は撤去（全12値がフルプリセットに復帰）。
+以下は基本の12種。追加のデザインテンプレート20種の名称と指定値は `STYLE_PRESETS` を正本とする。
 
 | value | ラベル | group | レイアウト |
 |-------|--------|-------|-----------|

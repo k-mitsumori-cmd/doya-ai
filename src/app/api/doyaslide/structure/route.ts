@@ -12,6 +12,14 @@ import { serpapiSearchGoogle, hasSerpApiKey } from '@seo/lib/serpapi'
 import { errorSuffix } from '@/lib/doyaslide/errors'
 import type { SlideStructure } from '@/lib/doyaslide/types'
 import { reserveDoyaSlideTextCall, DoyaSlideTextLimitError } from '@/lib/doyaslide/text-budget'
+import { z } from 'zod'
+
+const SlideSchema = z.object({
+  role: z.string().trim().min(1).max(120),
+  headline: z.string().trim().min(1).max(500),
+  subText: z.string().trim().min(1).max(10000),
+  visualPrompt: z.string().trim().min(1).max(10000),
+})
 
 // POST /api/doyaslide/structure — 資料タイプのひな型でスライド構成を生成
 export async function POST(req: NextRequest) {
@@ -95,10 +103,11 @@ export async function POST(req: NextRequest) {
       'SlideStructure'
     )
 
-    const slides = Array.isArray(result?.slides) ? result.slides : []
-    if (slides.length === 0) {
+    const parsed = z.object({ slides: z.array(SlideSchema).length(project.slideCount) }).safeParse(result)
+    if (!parsed.success) {
       return NextResponse.json({ error: '構成の生成に失敗しました。もう一度お試しください。' }, { status: 502 })
     }
+    const slides = parsed.data.slides
 
     // 構成と状態を一括確定し、既存スライドや履歴は一切削除しない。
     await prisma.$transaction(async (tx) => {
@@ -109,15 +118,13 @@ export async function POST(req: NextRequest) {
         throw new Error('Structure state changed before save')
       }
       await tx.doyaSlideSlide.createMany({
-        data: slides.slice(0, project.slideCount).map((s, i) => ({
+        data: slides.map((s, i) => ({
           projectId,
           index: i + 1,
-          role: typeof s?.role === 'string' ? s.role.slice(0, 120) : null,
-          headline: typeof s?.headline === 'string' ? s.headline.slice(0, 500) : null,
-          subText: typeof s?.subText === 'string' ? s.subText.slice(0, 10000) : null,
-          visualPrompt: typeof s?.visualPrompt === 'string' && s.visualPrompt.trim()
-            ? s.visualPrompt.slice(0, 10000)
-            : typeof s?.headline === 'string' && s.headline.trim() ? s.headline.slice(0, 500) : project.title,
+          role: s.role,
+          headline: s.headline,
+          subText: s.subText,
+          visualPrompt: s.visualPrompt,
           status: 'pending',
         })),
       })

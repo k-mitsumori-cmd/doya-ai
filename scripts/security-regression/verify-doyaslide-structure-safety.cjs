@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const { z } = require('zod');
 const { load } = require('./load-typescript.cjs');
 
 let project = {
@@ -7,7 +8,8 @@ let project = {
 };
 const slides = [];
 let modelCalls = 0;
-let modelResult = { slides: [{ headline: '表紙', visualPrompt: 'cover' }] };
+const validSlide = (headline) => ({ role: '本文', headline, subText: '内容', visualPrompt: '図解' });
+let modelResult = { slides: [validSlide('表紙'), validSlide('本文')] };
 let resumeModel;
 let modelGate = null;
 const matches = (where) => project && project.id === where.id
@@ -33,6 +35,7 @@ const tx = { doyaSlideProject: projectStore, doyaSlideSlide: slideStore };
 const prisma = { ...tx, $transaction: async (operation) => operation(tx) };
 const route = load('src/app/api/doyaslide/structure/route.ts', {
   'next/server': { NextResponse: Response },
+  zod: { z },
   '@/lib/prisma': { prisma },
   '@seo/lib/gemini': {
     GEMINI_TEXT_MODEL_DEFAULT: 'test',
@@ -65,7 +68,7 @@ const post = (body) => route.POST({ json: async () => body });
   assert.equal(modelCalls, 1);
   resumeModel();
   assert.equal((await first).status, 200);
-  assert.equal(slides.length, 1);
+  assert.equal(slides.length, 2);
   assert.equal(project.status, 'structured');
   const saved = structuredClone(slides);
   assert.equal((await post({ projectId: 'project-1' })).status, 409, 'replay must preserve existing slides');
@@ -78,8 +81,13 @@ const post = (body) => route.POST({ json: async () => body });
   modelResult = { slides: [] };
   assert.equal((await post({ projectId: 'project-1' })).status, 502);
   assert.equal(project.status, 'error', 'failed model response must release the claim for retry');
-  modelResult = { slides: [{ headline: '再試行' }] };
+  modelResult = { slides: [validSlide('1枚だけ')] };
+  assert.equal((await post({ projectId: 'project-1' })).status, 502, 'partial decks must not be saved');
+  modelResult = { slides: [validSlide('表紙'), { ...validSlide('本文'), visualPrompt: ' ' }] };
+  assert.equal((await post({ projectId: 'project-1' })).status, 502, 'blank visual direction must not reach image generation');
+  assert.equal(slides.length, 0);
+  modelResult = { slides: [validSlide('再試行'), validSlide('本文')] };
   assert.equal((await post({ projectId: 'project-1' })).status, 200);
-  assert.equal(slides.length, 1);
+  assert.equal(slides.length, 2);
   console.log('PASS DoyaSlide structure: input validation, one active claim, no replay deletion, retry after failure');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

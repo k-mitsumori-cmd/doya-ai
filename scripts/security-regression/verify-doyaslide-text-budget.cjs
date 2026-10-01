@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict')
 const { createHash } = require('node:crypto')
+const { z } = require('zod')
 const { load, check } = require('./load-typescript.cjs')
 
 const budget = load('src/lib/doyaslide/text-budget.ts', {
@@ -92,6 +93,7 @@ function database(initial) {
     const updatedAt = new Date(0)
     const api = load('src/app/api/doyaslide/structure/route.ts', {
       'next/server': { NextResponse: Response },
+      zod: { z },
       '@/lib/doyaslide/access': { getUserId: async () => 'owner' },
       '@/lib/doyaslide/text-budget': {
         DoyaSlideTextLimitError: budget.DoyaSlideTextLimitError,
