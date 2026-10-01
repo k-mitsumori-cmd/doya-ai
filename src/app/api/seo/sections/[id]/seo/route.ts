@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
-import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
+import { getSeoGenerationOwner } from '@/lib/seoArticleOwner'
 
 export const runtime = 'nodejs'
 export const maxDuration = 120
@@ -11,8 +11,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   try {
     const params = await ctx.params
     const id = params.id
-    const owner = await getSeoArticleOwner(req)
-    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
+    const owner = await getSeoGenerationOwner(req)
+    if (!owner) return NextResponse.json({ success: false, code: 'LOGIN_REQUIRED', error: 'この生成操作にはログインしてください。' }, { status: 401 })
 
     const section = await prisma.seoSection.findFirst({ where: { id, article: { is: owner } }, include: { article: true } })
     if (!section) {

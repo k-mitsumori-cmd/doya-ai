@@ -7,7 +7,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
+import { getSeoGenerationOwner } from '@/lib/seoArticleOwner'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 
@@ -39,7 +39,7 @@ const CheckResultSchema = z.object({
 
 export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const owner = await getSeoArticleOwner(_req)
+    const owner = await getSeoGenerationOwner(_req)
     if (!owner) return NextResponse.json({ success: false, error: 'ログインが必要です' }, { status: 401 })
     await ensureSeoSchema()
     const p = await ctx.params
@@ -119,5 +119,4 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     return NextResponse.json({ success: false, error: '記事をチェックできませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
-
 

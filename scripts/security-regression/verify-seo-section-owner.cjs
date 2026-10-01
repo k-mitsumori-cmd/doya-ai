@@ -40,12 +40,14 @@ function fixture(identity, kind) {
         const f = fixture(identity, kind);
         const handler = f.routes[action][action === 'edit' ? 'PUT' : 'POST'];
         const response = await handler({ json: async () => ({ content: 'Changed', headingPath: 'H2: Private' }) }, { params: Promise.resolve({ id: 'section-1' }) });
-        const allowed = kind === 'user' ? identity === 'owner' : identity === 'guest';
-        assert.equal(response.status, allowed ? 200 : identity === 'anonymous' ? 401 : 404, `${kind}/${identity}/${action}`);
+        const aiAction = action !== 'edit';
+        const allowed = kind === 'user' ? identity === 'owner' : !aiAction && identity === 'guest';
+        const loginDenied = aiAction && ['guest', 'other-guest', 'anonymous'].includes(identity);
+        assert.equal(response.status, allowed ? 200 : loginDenied || identity === 'anonymous' ? 401 : 404, `${kind}/${identity}/${action}`);
         const counts = f.counts();
-        assert.equal(counts.reads, identity === 'anonymous' ? 0 : 1);
+        assert.equal(counts.reads, loginDenied || identity === 'anonymous' ? 0 : 1);
         assert.equal(counts.writes, allowed ? 1 : 0);
-        assert.equal(counts.aiCalls, allowed && action !== 'edit' ? 1 : 0);
+        assert.equal(counts.aiCalls, allowed && aiAction ? 1 : 0);
       }
     }
   }

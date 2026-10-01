@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
-import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
+import { getSeoGenerationOwner } from '@/lib/seoArticleOwner'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 
 export const runtime = 'nodejs'
@@ -86,8 +86,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   }
 
   try {
-    const owner = await getSeoArticleOwner(req)
-    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
+    const owner = await getSeoGenerationOwner(req)
+    if (!owner) return NextResponse.json({ success: false, code: 'LOGIN_REQUIRED', error: 'この生成操作にはログインしてください。' }, { status: 401 })
     await ensureSeoSchema()
 
     const bodyRaw = await req.json().catch(() => ({}))
@@ -181,4 +181,3 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     )
   }
 }
-

@@ -1,5 +1,5 @@
 import { publicSeoJob } from '@seo/lib/job-response'
-import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
+import { getSeoGenerationOwner } from '@/lib/seoArticleOwner'
 import { NextRequest, NextResponse } from 'next/server'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { prisma } from '@/lib/prisma'
@@ -8,8 +8,8 @@ export const runtime = 'nodejs'
 
 export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const owner = await getSeoArticleOwner(_req)
-    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
+    const owner = await getSeoGenerationOwner(_req)
+    if (!owner) return NextResponse.json({ success: false, code: 'LOGIN_REQUIRED', error: 'この生成操作にはログインしてください。' }, { status: 401 })
     await ensureSeoSchema()
     const params = await ctx.params
     const id = params.id
@@ -29,5 +29,3 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     return NextResponse.json({ success: false, error: 'ジョブを再開できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
-
-

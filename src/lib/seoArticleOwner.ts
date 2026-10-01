@@ -11,3 +11,9 @@ export async function getSeoArticleOwner(req: NextRequest): Promise<{ userId: st
   const guestId = getGuestIdFromRequest(req)
   return guestId ? { userId: null, guestId } : null
 }
+
+/** Legacy guest drafts remain readable, but provider-backed generation requires an account. */
+export async function getSeoGenerationOwner(req: NextRequest): Promise<{ userId: string } | null> {
+  const owner = await getSeoArticleOwner(req)
+  return owner?.userId ? { userId: owner.userId } : null
+}

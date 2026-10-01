@@ -101,6 +101,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
 
     const body = AddCandidatesBodySchema.parse(await req.json())
+    if (body.regenerate && !owner.userId) {
+      return NextResponse.json({ success: false, code: 'LOGIN_REQUIRED', error: '記事を再生成するにはログインしてください。' }, { status: 401 })
+    }
     const existing = Array.isArray(article.comparisonCandidates) ? article.comparisonCandidates : []
 
     // 新しい候補を追加（重複を除去）
@@ -208,4 +211,3 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ id: stri
     return NextResponse.json({ success: false, error: '比較候補を保存できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
-

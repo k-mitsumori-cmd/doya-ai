@@ -1,5 +1,5 @@
 import { publicSeoJob } from '@seo/lib/job-response'
-import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
+import { getSeoGenerationOwner } from '@/lib/seoArticleOwner'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
@@ -7,8 +7,8 @@ import { ensureSeoSchema } from '@seo/lib/bootstrap'
 // ジョブが error / 途中失敗した場合でも、ユーザーがワンクリックでやり直せるようにする
 export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   try {
-    const owner = await getSeoArticleOwner(_req)
-    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
+    const owner = await getSeoGenerationOwner(_req)
+    if (!owner) return NextResponse.json({ success: false, code: 'LOGIN_REQUIRED', error: 'この生成操作にはログインしてください。' }, { status: 401 })
     await ensureSeoSchema()
     const p = await ctx.params
     const id = p.id
@@ -39,5 +39,3 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     return NextResponse.json({ success: false, error: 'ジョブをやり直せませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
-
-

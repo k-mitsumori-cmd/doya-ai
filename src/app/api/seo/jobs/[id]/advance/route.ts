@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma'
-import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
+import { getSeoGenerationOwner } from '@/lib/seoArticleOwner'
 import { NextRequest, NextResponse } from 'next/server'
 import { advanceSeoJob } from '@seo/lib/pipeline'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
@@ -14,8 +14,8 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
   const id = params.id
   
   try {
-    const owner = await getSeoArticleOwner(_req)
-    if (!owner) return NextResponse.json({ success: false, error: 'ログインまたはゲスト認証が必要です' }, { status: 401 })
+    const owner = await getSeoGenerationOwner(_req)
+    if (!owner) return NextResponse.json({ success: false, code: 'LOGIN_REQUIRED', error: 'この生成操作にはログインしてください。' }, { status: 401 })
     await ensureSeoSchema()
     const job = await prisma.seoJob.findFirst({ where: { id, article: owner }, select: { id: true } })
     if (!job) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
