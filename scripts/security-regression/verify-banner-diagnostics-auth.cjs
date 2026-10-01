@@ -10,6 +10,7 @@ const nextServer = { NextResponse: { json: (body, opts) => new Response(JSON.str
     const api = load(`src/app/api/banner/${route}/route.ts`, {
       'next/server': nextServer,
       '@/lib/banner-admin-guard': { requireBannerAdmin: () => denied },
+      '@/lib/banner/vision-response': { readBannerVisionJson: async () => { sideEffects++; throw Error('PROVIDER SHOULD NOT BE READ') } },
       '@/lib/prisma': { prisma: new Proxy({}, { get() { sideEffects++; throw Error('DB SHOULD NOT BE READ') } }) },
       '@/lib/nanobanner': { isNanobannerConfigured: () => { sideEffects++; throw Error('PROVIDER SHOULD NOT BE READ') } },
     }, { fetch: async () => { sideEffects++; throw Error('PROVIDER SHOULD NOT BE CALLED') } })
