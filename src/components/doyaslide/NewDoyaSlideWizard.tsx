@@ -206,7 +206,11 @@ export default function NewDoyaSlideWizard() {
       setBrief(d.brief || brief)
       setImportedRef(d.referenceText || '')
       setTitleEdited(true)
-      toast.success('URLの内容を取り込みました')
+      if (d.aiAnalyzed) {
+        toast.success('URLの内容を取り込み、AIで資料案を作成しました')
+      } else {
+        toast('URL本文を取り込みました。AI提案は利用できなかったため、タイトルと説明をご確認ください。')
+      }
     } catch (e: any) {
       toast.error(e.message)
     } finally {

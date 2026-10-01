@@ -30,14 +30,20 @@ export async function POST(req: NextRequest) {
     const result = await geminiGenerateJson<{ title: string; brief: string }>(
       { prompt: buildAnalyzePrompt(scraped), model: GEMINI_TEXT_MODEL_DEFAULT },
       'UrlAnalysis'
-    ).catch(() => null)
+    ).catch(() => {
+      console.warn('[doyaslide/analyze] AI proposal unavailable; using page content')
+      return null
+    })
+    const proposedTitle = typeof result?.title === 'string' ? result.title.trim().slice(0, 200) : ''
+    const proposedBrief = typeof result?.brief === 'string' ? result.brief.trim().slice(0, 2000) : ''
 
     // Gemini が落ちても、取得済みのページ情報をフォールバックとして返す（手動編集を継続できる）
     return NextResponse.json({
-      title: result?.title || scraped.title || '',
-      brief: result?.brief || scraped.description || '',
+      title: proposedTitle || scraped.title || '',
+      brief: proposedBrief || scraped.description || '',
       referenceText: scraped.text.slice(0, 6000), // structure で再スクレイプせず再利用するため
       sourceTitle: scraped.title,
+      aiAnalyzed: !!(proposedTitle || proposedBrief),
     })
   } catch (e: any) {
     console.error('[doyaslide/analyze]', e?.message)
