@@ -1127,25 +1127,26 @@ function SeoArticleInner() {
     }
   }, [latestJobId, load])
 
-  // 途中から再開（タイトル/キーワードは維持、既存セクションも維持）
+  // 失敗ジョブはそのまま再開し、既に進行中のジョブを作り直す場合だけ月次枠を使用する。
   const resumeFromCurrent = useCallback(async () => {
     if (!article?.id || resumeBusy) return
     setResumeBusy(true)
     setResumeNotice(null)
     setArticleLimitMessage(null)
     try {
-      const res = await fetch(`/api/seo/articles/${article.id}/jobs`, {
+      const retryFailedJob = latestJob?.status === 'error' && !!latestJobId
+      const res = await fetch(retryFailedJob ? `/api/seo/jobs/${latestJobId}/resume` : `/api/seo/articles/${article.id}/jobs`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resetSections: false, autoStart: true }),
+        ...(retryFailedJob ? {} : { body: JSON.stringify({ resetSections: false, autoStart: true }) }),
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) {
         if (res.status === 429 && json?.code === 'SEO_ARTICLE_LIMIT') setArticleLimitMessage(json.error || '今月の記事生成枠に達しました。')
         throw new Error(json?.error || `再開に失敗しました (${res.status})`)
       }
-      const jobId = json.jobId
-      setResumeNotice('新しい生成ジョブを開始しました。既に生成ジョブがあった場合は今月の記事生成枠を1回使用します。')
+      const jobId = retryFailedJob ? latestJobId : json.jobId
+      setResumeNotice(retryFailedJob ? '失敗したジョブを再開しました。月間枠は追加消費しません。' : '新しい生成ジョブを開始しました。既に生成ジョブがあった場合は今月の記事生成枠を1回使用します。')
       if (jobId) router.push(`/seo/jobs/${jobId}?auto=1`)
       else await load({ showLoading: false })
     } catch (e: any) {
@@ -1154,7 +1155,7 @@ function SeoArticleInner() {
       setResumeBusy(false)
       setTimeout(() => setResumeNotice(null), 4500)
     }
-  }, [article?.id, load, resumeBusy, router])
+  }, [article?.id, latestJob?.status, latestJobId, load, resumeBusy, router])
 
   useEffect(() => {
     if (!autoRun || !latestJob) return
@@ -1543,10 +1544,10 @@ function SeoArticleInner() {
                 onClick={resumeFromCurrent}
                 disabled={resumeBusy}
                 className="flex-1 sm:flex-none h-11 sm:h-12 rounded-xl sm:rounded-2xl px-4 sm:px-6 font-black text-xs sm:text-sm"
-                title="新しい生成ジョブを作成します。既に生成ジョブがある場合は今月の記事生成枠を1回使用します。"
+                title={latestJob?.status === 'error' ? '失敗したジョブを再開します。月間枠は追加消費しません。' : '新しい生成ジョブを作成します。既に生成ジョブがある場合は今月の記事生成枠を1回使用します。'}
               >
                 {resumeBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
-                {resumeBusy ? '開始中...' : '続きから再生成'}
+                {resumeBusy ? '開始中...' : latestJob?.status === 'error' ? '失敗箇所から再開' : '続きから再生成'}
               </Button>
             )}
             <Button variant="ghost" onClick={() => load({ showLoading: true })} className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center">
