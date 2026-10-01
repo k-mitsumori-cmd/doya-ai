@@ -722,3 +722,8 @@ if (shodanSlideFetch.error || shodanSlideFetch.status !== 0) {
   console.error('Security regression failed: verify-shodan-slide-fetch.cjs');
   process.exit(1);
 }
+const bodyCheckFetch = spawnSync(process.execPath, [path.join(__dirname, 'verify-body-check-fetch.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (bodyCheckFetch.error || bodyCheckFetch.status !== 0) {
+  console.error('Security regression failed: verify-body-check-fetch.cjs');
+  process.exit(1);
+}

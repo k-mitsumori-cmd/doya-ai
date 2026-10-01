@@ -1,4 +1,5 @@
 import { voicePayload } from './slack-voice'
+import { safeFetchResource } from './net/safe-fetch'
 
 // ============================================================
 // ドヤマーケ記事の本文消失チェック（doyamarke.surisuta.jp / Studio CMS）
@@ -21,6 +22,7 @@ const MIN_BODY_CHARS = 1000
 const SHORT_BODY_CHARS = 1500
 const CONCURRENCY = 6
 const FETCH_TIMEOUT_MS = 20000
+const ARTICLE_HOST = 'doyamarke.surisuta.jp'
 
 // もともと短い誘導用の記事（本文消失ではない）
 const KNOWN_SHORT = new Set(['small-business-marketing-start-guide', 'lead-nurturing-btob-guide'])
@@ -28,18 +30,19 @@ const KNOWN_SHORT = new Set(['small-business-marketing-start-guide', 'lead-nurtu
 export type BodyCheckIssue = { slug: string; url: string; reason: string }
 
 async function fetchText(url: string): Promise<{ status: number; text: string }> {
-  const ctrl = new AbortController()
-  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS)
-  try {
-    const res = await fetch(url, {
-      signal: ctrl.signal,
-      headers: { 'User-Agent': 'doya-ai-body-check/1.0' },
-      cache: 'no-store',
-    })
-    return { status: res.status, text: res.ok ? await res.text() : '' }
-  } finally {
-    clearTimeout(timer)
-  }
+  const target = new URL(url)
+  if (target.protocol !== 'https:' || target.hostname !== ARTICLE_HOST) throw new Error('想定外の取得先です')
+  let failedStatus = 0
+  const resource = await safeFetchResource(url, {
+    timeoutMs: FETCH_TIMEOUT_MS,
+    maxBytes: 4 * 1024 * 1024,
+    maxRedirects: 3,
+    accept: 'text/html,application/xhtml+xml,application/xml,text/xml',
+    onFailure: failure => { failedStatus = failure.status || 0 },
+  })
+  if (resource) return { status: resource.status || 200, text: resource.body.toString('utf8') }
+  if (failedStatus) return { status: failedStatus, text: '' }
+  throw new Error('ページを取得できませんでした')
 }
 
 export function measureArticle(html: string): { h2: number; chars: number } {
@@ -81,6 +84,12 @@ export async function runDoyamarkeBodyCheck(opts: { dryRun?: boolean } = {}): Pr
   if (sm.status !== 200) throw new Error(`sitemap HTTP ${sm.status}`)
   const urls = Array.from(sm.text.matchAll(/<loc>([^<]+)<\/loc>/g)).map((x) => x[1].trim())
   if (urls.length === 0) throw new Error('sitemap has no URLs')
+  if (urls.some(url => {
+    try {
+      const target = new URL(url)
+      return target.protocol !== 'https:' || target.hostname !== ARTICLE_HOST || !target.pathname.startsWith('/notes/')
+    } catch { return true }
+  })) throw new Error('sitemap has unexpected URLs')
 
   const issues: BodyCheckIssue[] = []
   let i = 0
