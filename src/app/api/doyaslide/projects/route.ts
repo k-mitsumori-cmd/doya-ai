@@ -10,19 +10,49 @@ import { getDocType, DOC_TYPES, ASPECT_TO_SIZE, STYLE_PRESETS, MIN_SLIDES, MAX_S
 import { errorSuffix } from '@/lib/doyaslide/errors'
 
 // GET /api/doyaslide/projects — 自分のプロジェクト一覧
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const userId = await getUserId()
     if (!userId) return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
 
-    const projects = await prisma.doyaSlideProject.findMany({
-      where: { userId },
-      orderBy: { updatedAt: 'desc' },
-      include: {
-        slides: { select: { id: true, index: true, imageUrl: true }, orderBy: { index: 'asc' } },
-      },
-    })
-    return NextResponse.json({ projects })
+    const params = req.nextUrl.searchParams
+    const limit = Number(params.get('limit') || '30')
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 30) {
+      return NextResponse.json({ error: 'ページ件数が正しくありません' }, { status: 400 })
+    }
+    const cursor = params.get('cursor')
+    if (params.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
+      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+    }
+    const where = { userId }
+    if (cursor && !await prisma.doyaSlideProject.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
+      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+    }
+    const [rows, total] = await Promise.all([
+      prisma.doyaSlideProject.findMany({
+        where,
+        orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+        take: limit + 1,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        select: {
+          id: true, title: true, docType: true, status: true, aspectRatio: true, updatedAt: true,
+          _count: { select: { slides: { where: { imageUrl: { not: null } } } } },
+          slides: { where: { imageUrl: { not: null } }, orderBy: { index: 'asc' }, take: 1, select: { imageUrl: true } },
+        },
+      }),
+      prisma.doyaSlideProject.count({ where }),
+    ])
+    const page = rows.slice(0, limit)
+    return NextResponse.json({
+      projects: page.map((project) => ({
+        id: project.id, title: project.title, docType: project.docType,
+        status: project.status, aspectRatio: project.aspectRatio, updatedAt: project.updatedAt,
+        coverUrl: project.slides[0]?.imageUrl ?? null,
+        generatedSlides: project._count.slides,
+      })),
+      total,
+      nextCursor: rows.length > limit ? page[page.length - 1].id : null,
+    }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (e) {
     console.error('[doyaslide/projects GET]', e)
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })

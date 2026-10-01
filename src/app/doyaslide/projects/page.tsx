@@ -7,11 +7,6 @@ import Link from 'next/link'
 import toast from 'react-hot-toast'
 import { EmptyState } from '@/components/EmptyState'
 
-interface SlideThumb {
-  id: string
-  index: number
-  imageUrl: string | null
-}
 interface Project {
   id: string
   title: string
@@ -19,7 +14,8 @@ interface Project {
   status: string
   aspectRatio: string
   updatedAt: string
-  slides: SlideThumb[]
+  coverUrl: string | null
+  generatedSlides: number
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -35,6 +31,9 @@ export default function DoyaSlideProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [projectsError, setProjectsError] = useState(false)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [total, setTotal] = useState(0)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
   const [usage, setUsage] = useState<any>(null)
   const [usageError, setUsageError] = useState(false)
   const loadRequest = useRef(0)
@@ -43,12 +42,25 @@ export default function DoyaSlideProjectsPage() {
     const request = ++loadRequest.current
     setLoading(true)
     setProjectsError(false)
-    fetch('/api/doyaslide/projects', { cache: 'no-store' })
+    setLoadingMore(false)
+    fetch('/api/doyaslide/projects?limit=30', { cache: 'no-store' })
       .then(async (response) => {
         if (!response.ok) throw new Error('プロジェクトを取得できませんでした')
         const data = await response.json()
-        if (!Array.isArray(data.projects)) throw new Error('プロジェクトの応答が不正です')
-        if (request === loadRequest.current) setProjects(data.projects)
+        if (!Array.isArray(data.projects) || data.projects.length > 30 ||
+            !Number.isSafeInteger(data.total) || data.total < data.projects.length ||
+            (data.projects.length === 0 && data.total !== 0) ||
+            data.projects.some((project: Project) => !project || typeof project.id !== 'string' || !project.id ||
+              typeof project.title !== 'string' || !Number.isSafeInteger(project.generatedSlides) || project.generatedSlides < 0) ||
+            (data.nextCursor !== null && (typeof data.nextCursor !== 'string' ||
+              data.projects.length !== 30 || data.nextCursor !== data.projects[29]?.id))) {
+          throw new Error('プロジェクトの応答が不正です')
+        }
+        if (request === loadRequest.current) {
+          setProjects(data.projects)
+          setTotal(data.total)
+          setNextCursor(data.nextCursor)
+        }
       })
       .catch(() => { if (request === loadRequest.current) setProjectsError(true) })
       .finally(() => { if (request === loadRequest.current) setLoading(false) })
@@ -69,13 +81,40 @@ export default function DoyaSlideProjectsPage() {
     return () => { requestCounter.current++ }
   }, [load])
 
+  const loadMore = async () => {
+    if (!nextCursor || loadingMore) return
+    const request = loadRequest.current
+    setLoadingMore(true)
+    try {
+      const response = await fetch(`/api/doyaslide/projects?limit=30&cursor=${encodeURIComponent(nextCursor)}`, { cache: 'no-store' })
+      if (!response.ok) throw new Error('続きを取得できませんでした')
+      const data = await response.json()
+      if (!Array.isArray(data.projects) || data.projects.length > 30 || data.total !== total ||
+          data.projects.some((project: Project) => !project || typeof project.id !== 'string' || !project.id ||
+            typeof project.title !== 'string' || !Number.isSafeInteger(project.generatedSlides) || project.generatedSlides < 0) ||
+          (data.nextCursor !== null && (typeof data.nextCursor !== 'string' ||
+            data.projects.length !== 30 || data.nextCursor !== data.projects[29]?.id)) ||
+          data.projects.some((project: Project) => projects.some((existing) => existing.id === project.id)) ||
+          (data.nextCursor === null && projects.length + data.projects.length !== total)) {
+        throw new Error('履歴が更新されました。再読み込みしてください')
+      }
+      if (request !== loadRequest.current) return
+      setProjects([...projects, ...data.projects])
+      setNextCursor(data.nextCursor)
+    } catch {
+      if (request === loadRequest.current) toast.error('続きを取得できませんでした。再読み込みしてください')
+    } finally {
+      if (request === loadRequest.current) setLoadingMore(false)
+    }
+  }
+
   const remove = async (id: string) => {
     if (!confirm('このプロジェクトを削除しますか？')) return
     try {
       const res = await fetch(`/api/doyaslide/projects/${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error('削除に失敗しました')
       toast.success('削除しました')
-      setProjects((p) => p.filter((x) => x.id !== id))
+      load()
     } catch {
       toast.error('削除に失敗しました')
     }
@@ -134,9 +173,10 @@ export default function DoyaSlideProjectsPage() {
           <EmptyState kind="not-generated" title="最初のスライドを作りましょう" description="テーマを入れるだけで、AIが全スライドを画像で作ります。" action={<Link href="/doyaslide/new" className="inline-flex rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-6 py-3 font-black text-white shadow-lg">最初のスライドを作る</Link>} />
         </div>
       ) : (
+        <>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {projects.map((p) => {
-            const cover = p.slides.find((s) => s.imageUrl)?.imageUrl
+            const cover = p.coverUrl
             return (
               <div key={p.id} className="group bg-white rounded-3xl shadow-sm hover:shadow-lg transition-all overflow-hidden">
                 <Link href={`/doyaslide/${p.id}`}>
@@ -165,13 +205,15 @@ export default function DoyaSlideProjectsPage() {
                     <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">
                       {STATUS_LABEL[p.status] || p.status}
                     </span>
-                    <span>{p.slides.filter((s) => s.imageUrl).length}枚</span>
+                    <span>{p.generatedSlides}枚</span>
                   </div>
                 </div>
               </div>
             )
           })}
         </div>
+        {nextCursor && <div className="mt-6 text-center"><button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="rounded-full border border-indigo-300 px-6 py-2 text-sm font-bold text-indigo-700 disabled:opacity-50">{loadingMore ? '読み込み中…' : `さらに表示（${projects.length}/${total}件）`}</button></div>}
+        </>
       )}
     </div>
   )

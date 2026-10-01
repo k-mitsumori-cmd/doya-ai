@@ -40,11 +40,13 @@ async function projectList(projectResponse, usageResponse) {
   const state = { projects: ['previous'], loading: false, projectsError: false, usageError: false, usage: null }
   const load = callback('src/app/doyaslide/projects/page.tsx', 'load', {
     loadRequest: { current: 0 },
-    fetch: async (url) => url === '/api/doyaslide/projects' ? projectResponse : usageResponse,
+    fetch: async (url) => url.startsWith('/api/doyaslide/projects?limit=30') ? projectResponse : usageResponse,
     setLoading: (value) => { state.loading = value },
+    setLoadingMore: () => {},
     setProjectsError: (value) => { state.projectsError = value },
     setUsageError: (value) => { state.usageError = value },
     setProjects: (value) => { state.projects = value },
+    setTotal: () => {}, setNextCursor: () => {},
     setUsage: (value) => { state.usage = value },
   })
   load()
@@ -77,12 +79,41 @@ async function pricing(response) {
   assert.equal(failedProjects.projectsError, true)
   assert.deepEqual(failedProjects.projects, ['previous'])
   assert.equal(failedProjects.loading, false)
-  const emptyProjects = await projectList(Response.json({ projects: [] }), validUsage)
+  const emptyProjects = await projectList(Response.json({ projects: [], total: 0, nextCursor: null }), validUsage)
   assert.equal(emptyProjects.projectsError, false)
   assert.deepEqual(emptyProjects.projects, [])
-  const failedUsageList = await projectList(Response.json({ projects: [] }), failure)
+  const failedUsageList = await projectList(Response.json({ projects: [], total: 0, nextCursor: null }), failure)
   assert.equal(failedUsageList.usageError, true)
   assert.equal(failedUsageList.usage, null)
+
+  const loaded = Array.from({ length: 30 }, (_, index) => ({ id: `project-${index}` }))
+  const moreState = { projects: loaded, cursor: 'project-29', loading: false, error: '' }
+  const loadMore = callback('src/app/doyaslide/projects/page.tsx', 'loadMore', {
+    nextCursor: moreState.cursor, loadingMore: false, loadRequest: { current: 1 },
+    total: 31, projects: loaded, encodeURIComponent,
+    fetch: async () => Response.json({ projects: [{ id: 'project-30', title: 'Next', generatedSlides: 1 }], total: 31, nextCursor: null }),
+    setLoadingMore: (value) => { moreState.loading = value },
+    setProjects: (value) => { moreState.projects = value },
+    setNextCursor: (value) => { moreState.cursor = value },
+    toast: { error: (value) => { moreState.error = value } },
+  })
+  await loadMore()
+  assert.equal(moreState.projects.length, 31)
+  assert.equal(moreState.cursor, null)
+  assert.equal(moreState.loading, false)
+  assert.equal(moreState.error, '')
+
+  const staleState = { projects: loaded, error: '' }
+  const staleMore = callback('src/app/doyaslide/projects/page.tsx', 'loadMore', {
+    nextCursor: 'project-29', loadingMore: false, loadRequest: { current: 1 },
+    total: 31, projects: loaded, encodeURIComponent,
+    fetch: async () => Response.json({ projects: [{ id: 'project-29', title: 'Duplicate', generatedSlides: 1 }], total: 31, nextCursor: null }),
+    setLoadingMore: () => {}, setProjects: (value) => { staleState.projects = value },
+    setNextCursor: () => {}, toast: { error: (value) => { staleState.error = value } },
+  })
+  await staleMore()
+  assert.equal(staleState.projects.length, 30)
+  assert.ok(staleState.error)
 
   assert.deepEqual(await pricing(failure), { plan: null, error: true })
   assert.deepEqual(await pricing(Response.json({ plan: 'PRO' })), { plan: 'PRO', error: false })

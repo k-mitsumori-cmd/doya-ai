@@ -10,6 +10,11 @@ if (hrEvaluationPagination.error || hrEvaluationPagination.status !== 0) {
   console.error('Security regression failed: verify-hr-evaluation-pagination.cjs');
   process.exit(1);
 }
+const doyaSlideProjectPages = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-project-pages.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyaSlideProjectPages.error || doyaSlideProjectPages.status !== 0) {
+  console.error('Security regression failed: verify-doyaslide-project-pages.cjs');
+  process.exit(1);
+}
 const interviewAiOutput = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-ai-output.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewAiOutput.error || interviewAiOutput.status !== 0) {
   console.error('Security regression failed: verify-interview-ai-output.cjs');
