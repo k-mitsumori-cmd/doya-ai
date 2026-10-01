@@ -31,7 +31,7 @@ export async function GET() {
       usage: { projects, slidesThisMonth },
     })
   } catch (e) {
-    console.error('[doyaslide/usage]', e)
+    console.error('[doyaslide/usage]')
     return NextResponse.json(
       { error: '利用状況を確認できませんでした。再試行してください。' },
       { status: 503, headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } }

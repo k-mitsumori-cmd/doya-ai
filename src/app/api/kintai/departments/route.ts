@@ -20,7 +20,7 @@ export async function GET() {
 
     return NextResponse.json({ departments })
   } catch (e) {
-    console.error('[kintai/departments GET]', e)
+    console.error('[kintai/departments GET]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ department: dept }, { status: 201 })
   } catch (e) {
-    console.error('[kintai/departments POST]', e)
+    console.error('[kintai/departments POST]')
     return NextResponse.json({ error: '作成に失敗しました' }, { status: 500 })
   }
 }

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     await prisma.$connect()
     checks.dbConnection = 'ok'
   } catch (err: any) {
-    console.error('[Banner health] Database connection failed:', err)
+    console.error('[Banner health] Database connection failed:')
     checks.dbConnection = 'error'
     return NextResponse.json(checks, { status: 500 })
   }
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     checks.bannerTemplateTable = 'ok'
     checks.templateCount = count
   } catch (err: any) {
-    console.error('[Banner health] Template count failed:', err)
+    console.error('[Banner health] Template count failed:')
     checks.bannerTemplateTable = 'error'
   }
 

@@ -29,7 +29,7 @@ async function resizeImage(input: Buffer, w: number): Promise<Buffer> {
       .webp({ quality: 30 })
       .toBuffer()
   } catch (e) {
-    console.error('[thumb] sharp resize failed:', e)
+    console.error('[thumb] sharp resize failed:')
     // sharpが失敗したら元の画像をそのまま返す（サイズは大きいがエラーより良い）
     return input
   }
@@ -132,7 +132,7 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (e: any) {
-    console.error('[banner thumb] failed:', e)
+    console.error('[banner thumb] failed:')
     // エラーでもプレースホルダー画像を返す（imgタグが壊れないように）
     return new NextResponse(PLACEHOLDER_PNG, {
       status: 200,

@@ -61,7 +61,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     const viewer = await getOneOnOneViewer(hrCtx)
     return NextResponse.json({ success: true, canManageEmployees: hasMinRole(hrCtx.role, HrMemberRole.ADMIN), employee: { ...employee, oneOnOnesAsEmployee: employee.oneOnOnesAsEmployee.map(record => filterOneOnOneFields(record, viewer)) } })
   } catch (e: any) {
-    console.error('[hr/employees/[id]] unexpected error', e)
+    console.error('[hr/employees/[id]] unexpected error')
     return NextResponse.json(
       { error: 'Failed to fetch employee' },
       { status: 500 }
@@ -204,7 +204,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true, employee: updated })
   } catch (e: any) {
-    console.error('[hr/employees PATCH]', e)
+    console.error('[hr/employees PATCH]')
     return NextResponse.json(
       { error: '従業員情報を更新できませんでした' },
       { status: 500 }
@@ -254,7 +254,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    console.error('[hr/employees DELETE]', e)
+    console.error('[hr/employees DELETE]')
     return NextResponse.json(
       { error: '従業員情報を削除できませんでした' },
       { status: 500 }

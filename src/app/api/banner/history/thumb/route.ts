@@ -130,7 +130,7 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (e: any) {
-    console.error('[banner history thumb] failed:', e)
+    console.error('[banner history thumb] failed:')
     // <img> を壊さないため、エラーでも画像を返す
     const buf = await getPlaceholderWebp()
     return new NextResponse(new Uint8Array(buf), {

@@ -62,7 +62,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       while (next < batch.length) {
         const i = batch[next++]
         try { images[i] = await raceTimeout('slideGen', 220000, generateSlideImage(sctx!.userId, prep!.id, list[i], i, { brand })) }
-        catch (e) { console.error('[shodan/slides] slide failed', (e as any)?.message) }
+        catch (e) { console.error('[shodan/slides] slide failed') }
       }
     }
     await Promise.all(Array.from({ length: Math.min(concurrency, batch.length) }, worker))
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
         images.splice(0, images.length, ...merged.slice(0, list.length))
       } catch (e) {
         if (e instanceof SlideImageConflict) return NextResponse.json({ error: e.message }, { status: 409 })
-        console.error('[shodan/slides] save failed', (e as Error)?.message)
+        console.error('[shodan/slides] save failed')
         return NextResponse.json({ error: 'スライド画像の保存に失敗しました。再読み込みしてご確認ください。' }, { status: 500 })
       }
     }

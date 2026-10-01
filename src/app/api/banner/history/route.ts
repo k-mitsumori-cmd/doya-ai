@@ -225,7 +225,7 @@ export async function GET(request: NextRequest) {
       ? encodeBannerHistoryCursor(rows[processed - 1], userId) : null
     return NextResponse.json({ items, nextCursor }, { headers: { 'Cache-Control': 'private, no-store', Vary: 'Cookie' } })
   } catch (e: any) {
-    console.error('[banner history] failed', e)
+    console.error('[banner history] failed')
     return NextResponse.json({ error: '履歴の取得に失敗しました' }, { status: 500 })
   }
 }
@@ -260,7 +260,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    console.error('[banner history] delete failed', e)
+    console.error('[banner history] delete failed')
     return NextResponse.json({ error: '削除に失敗しました' }, { status: 500 })
   }
 }

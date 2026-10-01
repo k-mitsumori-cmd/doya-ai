@@ -200,7 +200,7 @@ ${draft.content.slice(0, 60000)}`
       wordCount: result.content.length,
     })
   } catch (e: any) {
-    console.error('[interview] translate error:', e?.message)
+    console.error('[interview] translate error:')
     return NextResponse.json(
       { success: false, error: e instanceof InterviewGeminiError ? e.message : '翻訳に失敗しました' },
       { status: e instanceof InterviewGeminiError ? 503 : 500 }

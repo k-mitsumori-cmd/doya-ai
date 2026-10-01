@@ -83,7 +83,7 @@ Output a single high-quality lifestyle photograph.
 
     return await generateAndSavePersonaImage(resolved.input, requestBody)
   } catch (error) {
-    console.error('Scene generation error:', error)
+    console.error('Scene generation error:')
     return NextResponse.json(
       { error: 'シーン画像生成中にエラーが発生しました' },
       { status: 500 }

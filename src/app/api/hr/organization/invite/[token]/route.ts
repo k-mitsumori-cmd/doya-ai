@@ -57,7 +57,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: any) {
-    console.error('[hr/organization/invite/[token]] unexpected error', e)
+    console.error('[hr/organization/invite/[token]] unexpected error')
     return NextResponse.json(
       { error: 'Failed to fetch invitation' },
       { status: 500 }

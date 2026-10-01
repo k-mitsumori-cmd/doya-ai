@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
           successCount++
         } catch (e: any) {
           errorCount++
-          console.error('[doyaslide/generate] slide failed', slide.index, e?.message)
+          console.error('[doyaslide/generate] slide failed')
           await prisma.doyaSlideSlide.updateMany({
             where: { id: slide.id, version: slide.version, imageUrl: slide.imageUrl, visualPrompt: slide.visualPrompt, status: 'generating' },
             data: { status: 'error' },
@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
     }
   } catch (e: any) {
     if (e?.code === 'P2025') return NextResponse.json({ error: 'スライドが変更されました。再読み込みしてお試しください。' }, { status: 409 })
-    console.error('[doyaslide/generate]', e?.message)
+    console.error('[doyaslide/generate]')
     return NextResponse.json({ error: '生成に失敗しました' }, { status: 500 })
   }
 }

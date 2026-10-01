@@ -58,7 +58,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
             themeColor: project.themeColor,
           })
         } catch (e) {
-          console.warn('[doyaslide/chat] Vision再プロンプト失敗、通常再生成にフォールバック:', (e as any)?.message)
+          console.warn('[doyaslide/chat] Vision再プロンプト失敗、通常再生成にフォールバック:')
         }
       }
 
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       throw e
     }
   } catch (e: any) {
-    console.error('[doyaslide/chat]', e?.message)
+    console.error('[doyaslide/chat]')
     return NextResponse.json({ error: '修正に失敗しました' }, { status: 500 })
   }
 }

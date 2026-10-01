@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
     const jstDate = new Date(targetDate.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10)
     return NextResponse.json({ records, activeShiftRecords, clockStatus, date: jstDate })
   } catch (error) {
-    console.error('[kintai/clock GET]', error)
+    console.error('[kintai/clock GET]')
     return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 })
   }
 }
@@ -237,7 +237,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ record, message: '打刻しました' })
   } catch (error) {
     if (error instanceof ClockTransitionError) return NextResponse.json({ error: error.message }, { status: error.status })
-    console.error('[kintai/clock POST]', error)
+    console.error('[kintai/clock POST]')
     return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 })
   }
 }

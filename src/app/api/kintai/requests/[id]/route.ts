@@ -52,7 +52,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ request })
   } catch (e) {
-    console.error('[kintai/requests/[id] GET]', e)
+    console.error('[kintai/requests/[id] GET]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }
@@ -156,7 +156,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if ((e as { code?: string })?.code === 'P2025') return NextResponse.json({ error: '対象の打刻が変更されています。再読み込みしてください。' }, { status: 409 })
     if (e instanceof RequestConflict) return NextResponse.json({ error: e.message }, { status: 409 })
     if (e instanceof InvalidCorrection) return NextResponse.json({ error: e.message }, { status: 400 })
-    console.error('[kintai/requests/[id] PATCH]', e)
+    console.error('[kintai/requests/[id] PATCH]')
     return NextResponse.json({ error: '更新に失敗しました' }, { status: 500 })
   }
 }

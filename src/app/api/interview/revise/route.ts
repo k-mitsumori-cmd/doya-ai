@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
       revisedLength: revisedContent.length,
     })
   } catch (e: any) {
-    console.error('[interview] revise error:', e?.message)
+    console.error('[interview] revise error:')
     return NextResponse.json({ success: false, error: e instanceof InterviewGeminiError ? e.message : 'AI修正中にエラーが発生しました' }, { status: e instanceof InterviewGeminiError ? 503 : 500 })
   } finally {
     if (claim && !completed) await refundAuxBudget(claim)

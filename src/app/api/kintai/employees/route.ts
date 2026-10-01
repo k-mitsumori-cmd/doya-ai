@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ employees, total, page, pageSize })
   } catch (e) {
-    console.error('[kintai/employees GET]', e)
+    console.error('[kintai/employees GET]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }
@@ -174,11 +174,11 @@ export async function POST(req: NextRequest) {
         </div>
       `,
       tags: [{ name: 'service', value: 'kintai-invite' }],
-    }).catch(e => console.error('[kintai/employees] invite email failed:', e))
+    }).catch(e => console.error('[kintai/employees] invite email failed:'))
 
     return NextResponse.json({ employee, inviteUrl }, { status: 201 })
   } catch (e: any) {
-    console.error('[kintai/employees POST]', e?.message?.substring(0, 500))
+    console.error('[kintai/employees POST]')
     let msg = '作成に失敗しました'
     if (e?.code === 'P2002') msg = 'このメールアドレスは既に登録されています'
     else if (e?.code === 'P2003') msg = '指定された部署または就業ルールが見つかりません'

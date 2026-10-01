@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
       }
     )
   } catch (e: any) {
-    console.error('[banner image] failed:', e)
+    console.error('[banner image] failed:')
     return NextResponse.json({ error: 'failed' }, { status: 500 })
   }
 }

@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
           const normalized = await normalizeGeneratedSlide(img.base64, img.mimeType, 'wide')
           return await uploadStylePreview(style, normalized.base64, page)
         } catch (e: any) {
-          console.error(`[doyaslide/style-preview] ${style}-${page} failed:`, e?.message)
+          console.error("[api/doyaslide/style-preview] failed")
           return null
         }
       }))
@@ -74,12 +74,12 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ url: urls[0] ?? null, urls, pending: false })
     } finally {
       await releaseStylePreviewLease(style, token).catch(error => {
-        console.error('[doyaslide/style-preview] lease release failed', error)
+        console.error('[doyaslide/style-preview] lease release failed')
       })
     }
   } catch (e: any) {
     if (e instanceof StylePreviewBudgetError) return NextResponse.json({ error: '本日のスタイル見本生成枠に達しました。既存の見本をご利用ください。', code: 'STYLE_PREVIEW_DAILY_CAP' }, { status: 429 })
-    console.error('[doyaslide/style-preview]', e?.message)
+    console.error('[doyaslide/style-preview]')
     return NextResponse.json({ error: 'プレビュー生成に失敗しました' }, { status: 500 })
   }
 }

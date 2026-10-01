@@ -101,7 +101,7 @@ Single high-quality banner image at exactly ${width}x${height} pixels.
 
     return await generateAndSavePersonaImage(resolved.input, requestBody, { size }, { width, height })
   } catch (error) {
-    console.error('Banner generation error:', error)
+    console.error('Banner generation error:')
     return NextResponse.json(
       { error: 'バナー生成中にエラーが発生しました' },
       { status: 500 }

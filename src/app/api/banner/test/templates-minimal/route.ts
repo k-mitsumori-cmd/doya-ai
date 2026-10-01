@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       message: 'Minimal response for testing',
     })
   } catch (err: any) {
-    console.error('[Templates Minimal API] Error:', err)
+    console.error('[Templates Minimal API] Error:')
     return NextResponse.json(
       { error: 'テンプレート診断情報を取得できませんでした。' },
       { status: 500 }

@@ -36,7 +36,7 @@ export async function GET() {
       })),
     })
   } catch (e: any) {
-    console.error('[hr/evaluations/periods] unexpected error', e)
+    console.error('[hr/evaluations/periods] unexpected error')
     return NextResponse.json(
       { error: 'Failed to fetch evaluation periods' },
       { status: 500 }
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, period })
   } catch (e: any) {
-    console.error('[hr/evaluations/periods] unexpected error', e)
+    console.error('[hr/evaluations/periods] unexpected error')
     return NextResponse.json(
       { error: 'Failed to create evaluation period' },
       { status: 500 }

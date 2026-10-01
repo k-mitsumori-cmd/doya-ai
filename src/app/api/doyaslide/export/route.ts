@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
           const buf = await sharp(raw).png().toBuffer()
           return { index: s.index, buf }
         } catch (e) {
-          console.error(`[doyaslide/export] slide#${s.index} 取得失敗:`, (e as any)?.message)
+          console.error("[api/doyaslide/export] failed")
           return null
         }
       })
@@ -99,7 +99,7 @@ export async function GET(req: NextRequest) {
       { headers: { 'Cache-Control': 'no-store' } }
     )
   } catch (e: any) {
-    console.error('[doyaslide/export]', e?.message)
+    console.error('[doyaslide/export]')
     return NextResponse.json({ error: `エクスポートに失敗しました${errorSuffix(e)}` }, { status: 500 })
   }
 }

@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (e: any) {
-    console.error('[promane/repair]', e)
+    console.error('[promane/repair]')
     return NextResponse.json(
       { error: 'データ修復に失敗しました' },
       { status: 500 }

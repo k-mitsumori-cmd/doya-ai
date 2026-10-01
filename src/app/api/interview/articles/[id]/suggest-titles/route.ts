@@ -128,7 +128,7 @@ type は keyword / emotional / question / number / quote のいずれか`
       titles,
     })
   } catch (e: any) {
-    console.error('[interview] suggest-titles error:', e?.message)
+    console.error('[interview] suggest-titles error:')
     return NextResponse.json(
       { success: false, error: e instanceof InterviewGeminiError ? e.message : 'タイトル提案に失敗しました' },
       { status: e instanceof InterviewGeminiError ? 503 : 500 }

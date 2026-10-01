@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, stored: !!saved, notified: true })
   } catch (e: any) {
-    console.error('[promane/feedback]', e)
+    console.error('[promane/feedback]')
     return NextResponse.json({ error: 'フィードバック送信に失敗しました' }, { status: 500 })
   }
 }

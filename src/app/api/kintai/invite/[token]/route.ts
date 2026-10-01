@@ -39,7 +39,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       role: member.role,
     })
   } catch (e) {
-    console.error('[kintai/invite/[token] GET]', e)
+    console.error('[kintai/invite/[token] GET]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }
     return NextResponse.json({ error: '参加に失敗しました。再度お試しください。' }, { status: 500 })
   } catch (e: any) {
-    console.error('[kintai/invite/[token] POST]', e?.message, e?.code)
+    console.error('[kintai/invite/[token] POST]')
     return NextResponse.json({ error: '参加に失敗しました。管理者にお問い合わせください。' }, { status: 500 })
   }
 }

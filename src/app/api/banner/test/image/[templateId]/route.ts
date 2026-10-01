@@ -120,7 +120,7 @@ export async function GET(
 
     return fallback()
   } catch (err: any) {
-    console.error(`[Image API] Error for ${templateId}:`, err.message)
+    console.error("[api/banner/test/image/[templateId]] failed")
     return fallback()
   }
 }

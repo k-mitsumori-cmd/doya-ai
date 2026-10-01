@@ -84,7 +84,7 @@ export async function GET() {
       evaluationPeriods,
     })
   } catch (e: any) {
-    console.error('[hr/dashboard] unexpected error', e)
+    console.error('[hr/dashboard] unexpected error')
     return NextResponse.json({ error: 'Failed' }, { status: 500 })
   }
 }

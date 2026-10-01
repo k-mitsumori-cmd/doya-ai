@@ -63,7 +63,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       }, viewer),
     })
   } catch (e: any) {
-    console.error('[hr/one-on-one/[id]] unexpected error', e)
+    console.error('[hr/one-on-one/[id]] unexpected error')
     return NextResponse.json(
       { error: 'Failed to fetch 1on1 record' },
       { status: 500 }
@@ -172,7 +172,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     })
   } catch (e: any) {
     if (e?.code === 'P2025') return NextResponse.json({ error: '1on1が完了または削除されました。内容をご確認ください。' }, { status: 409 })
-    console.error('[hr/one-on-one/[id]] unexpected error', e)
+    console.error('[hr/one-on-one/[id]] unexpected error')
     return NextResponse.json(
       { error: 'Failed to update 1on1 record' },
       { status: 500 }

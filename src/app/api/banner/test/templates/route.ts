@@ -33,7 +33,7 @@ function getV2PromptsMap(): Map<string, V2PromptInfo> {
       })
     }
   } catch (e: any) {
-    console.error('[Templates API] Failed to build V2 prompts map:', e.message)
+    console.error('[Templates API] Failed to build V2 prompts map:')
   }
   return _v2PromptsMapCache
 }
@@ -883,7 +883,7 @@ export async function GET(request: NextRequest) {
 
       console.log(`[Templates API] Fetched ${dbTemplates.length} active templates (offset=${offset}, limit=${limit}) in ${Date.now() - startTime}ms`)
     } catch (err: any) {
-      console.error('[Templates API] Database error:', err.message)
+      console.error('[Templates API] Database error:')
       dbError = err.message
     }
 
@@ -995,7 +995,7 @@ export async function GET(request: NextRequest) {
 
     return response
   } catch (err: any) {
-    console.error('[Templates API] Get templates error:', err.message)
+    console.error('[Templates API] Get templates error:')
     const errorResponse = NextResponse.json(
       { error: 'テンプレートを取得できませんでした。時間をおいて再試行してください。', dbError: true },
       { status: 500 }
@@ -1058,7 +1058,7 @@ export async function POST(request: NextRequest) {
           })
         }
       } catch (err: any) {
-        console.error(`Template ${template.id} generation failed:`, err)
+        console.error("[api/banner/test/templates] failed")
         // エラーでも続行
       }
     }
@@ -1068,7 +1068,7 @@ export async function POST(request: NextRequest) {
       count: results.length,
     })
   } catch (err) {
-    console.error('Generate templates error:', err)
+    console.error('Generate templates error:')
     return NextResponse.json({ error: '生成に失敗しました' }, { status: 500 })
   }
 }

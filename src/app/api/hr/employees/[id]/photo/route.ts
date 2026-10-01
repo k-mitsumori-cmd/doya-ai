@@ -75,7 +75,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       thumbnailUrl: updated.thumbnailUrl,
     })
   } catch (e: any) {
-    console.error('[hr/employees/photo]', e)
+    console.error('[hr/employees/photo]')
     return NextResponse.json(
       { error: '写真の保存に失敗しました' },
       { status: 500 }

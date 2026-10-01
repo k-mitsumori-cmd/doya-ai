@@ -120,7 +120,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (e?.code === 'P2002') {
       return NextResponse.json({ error: 'この従業員は別のメンバーに紐付いています' }, { status: 409 })
     }
-    console.error('[hr/organization/members PATCH]', e)
+    console.error('[hr/organization/members PATCH]')
     return NextResponse.json(
       { error: 'メンバー情報を更新できませんでした' },
       { status: 500 }
@@ -161,7 +161,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    console.error('[hr/organization/members/[id]] unexpected error', e)
+    console.error('[hr/organization/members/[id]] unexpected error')
     return NextResponse.json(
       { error: 'Failed to remove member' },
       { status: 500 }

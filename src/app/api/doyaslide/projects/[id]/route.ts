@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     if (!project) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
     return NextResponse.json({ project })
   } catch (e) {
-    console.error('[doyaslide/projects/[id] GET]', e)
+    console.error('[doyaslide/projects/[id] GET]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }
@@ -72,7 +72,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const project = await prisma.doyaSlideProject.update({ where: { id: p.id, userId }, data })
     return NextResponse.json({ project })
   } catch (e) {
-    console.error('[doyaslide/projects/[id] PATCH]', e)
+    console.error('[doyaslide/projects/[id] PATCH]')
     return NextResponse.json({ error: '更新に失敗しました' }, { status: 500 })
   }
 }
@@ -88,7 +88,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     if (deleted.count === 0) return NextResponse.json({ error: '見つかりません' }, { status: 404 })
     return NextResponse.json({ success: true })
   } catch (e) {
-    console.error('[doyaslide/projects/[id] DELETE]', e)
+    console.error('[doyaslide/projects/[id] DELETE]')
     return NextResponse.json({ error: '削除に失敗しました' }, { status: 500 })
   }
 }

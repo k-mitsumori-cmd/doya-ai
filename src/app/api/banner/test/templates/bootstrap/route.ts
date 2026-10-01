@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
           await new Promise((resolve) => setTimeout(resolve, 10000)) // 10秒待機に短縮
         }
       } catch (err) {
-        console.error(`[Bootstrap] エラー (${template.id}):`, err)
+        console.error("[api/banner/test/templates/bootstrap] failed")
         errors.push({
           templateId: template.id,
           error: '生成または保存に失敗しました',
@@ -144,7 +144,7 @@ export async function POST(request: NextRequest) {
       errors: errors.length > 0 ? errors : undefined,
     })
   } catch (err) {
-    console.error('[Bootstrap] エラー:', err)
+    console.error('[Bootstrap] エラー:')
     return NextResponse.json(
       { error: '一括生成に失敗しました' },
       { status: 500 }

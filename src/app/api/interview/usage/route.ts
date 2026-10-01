@@ -48,7 +48,7 @@ export async function GET() {
       plan: String(plan).toUpperCase(),
     }, { headers: privateHeaders })
   } catch (error) {
-    console.error('Usage API error:', error)
+    console.error('Usage API error:')
     return NextResponse.json(
       { success: false, error: '利用状況の取得に失敗しました' },
       { status: 500, headers: privateHeaders }

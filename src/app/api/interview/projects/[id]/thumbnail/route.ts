@@ -185,7 +185,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       'Referrer-Policy': 'no-referrer',
     } })
   } catch (error) {
-    console.error('[interview] thumbnail read failed', error instanceof Error ? error.message : 'unknown')
+    console.error('[interview] thumbnail read failed')
     return NextResponse.json({ error: '画像を取得できません' }, { status: 500 })
   }
 }
@@ -402,7 +402,7 @@ OUTPUT: A single ultra-high-quality photorealistic image that would be suitable 
     if (error instanceof ThumbnailGenerationInProgressError) {
       return NextResponse.json({ success: false, error: 'サムネイルを生成中です。少し待ってから再試行してください。', code: 'THUMBNAIL_GENERATING' }, { status: 409 })
     }
-    console.error('Thumbnail generation error:', error instanceof Error ? error.message : 'unknown')
+    console.error('Thumbnail generation error:')
     return NextResponse.json(
       { success: false, error: 'サムネイル生成中にエラーが発生しました' },
       { status: 500 }

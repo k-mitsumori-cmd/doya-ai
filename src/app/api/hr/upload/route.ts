@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url })
   } catch (e: any) {
-    console.error('[hr/upload]', e?.message)
+    console.error('[hr/upload]')
     return NextResponse.json(
       { error: 'アップロードに失敗しました' },
       { status: 500 }

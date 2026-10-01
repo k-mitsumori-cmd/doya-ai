@@ -49,7 +49,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ department: dept })
   } catch (e) {
-    console.error('[kintai/departments/[id] PATCH]', e)
+    console.error('[kintai/departments/[id] PATCH]')
     return NextResponse.json({ error: '更新に失敗しました' }, { status: 500 })
   }
 }
@@ -77,7 +77,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     await prisma.kintaiDepartment.delete({ where: { id: p.id } })
     return NextResponse.json({ success: true })
   } catch (e) {
-    console.error('[kintai/departments/[id] DELETE]', e)
+    console.error('[kintai/departments/[id] DELETE]')
     return NextResponse.json({ error: '削除に失敗しました' }, { status: 500 })
   }
 }

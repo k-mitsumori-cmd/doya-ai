@@ -50,6 +50,11 @@ if (errorNotificationPrivacy.error || errorNotificationPrivacy.status !== 0) {
   console.error('Security regression failed: verify-error-notification-privacy.cjs');
   process.exit(1);
 }
+const apiErrorLogPrivacy = spawnSync(process.execPath, [path.join(__dirname, 'verify-api-error-log-privacy.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (apiErrorLogPrivacy.error || apiErrorLogPrivacy.status !== 0) {
+  console.error('Security regression failed: verify-api-error-log-privacy.cjs');
+  process.exit(1);
+}
 const bannerGalleryPages = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-gallery-pages.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (bannerGalleryPages.error || bannerGalleryPages.status !== 0) {
   console.error('Security regression failed: verify-banner-gallery-pages.cjs');

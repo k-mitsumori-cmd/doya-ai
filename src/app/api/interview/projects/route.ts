@@ -160,7 +160,7 @@ export async function GET(req: NextRequest) {
       }),
     })
   } catch (error) {
-    console.error('[interview/projects] List failed:', error)
+    console.error('[interview/projects] List failed:')
     return NextResponse.json(
       { success: false, error: 'プロジェクト一覧の取得に失敗しました', projects: [] },
       { status: 500 }
@@ -290,7 +290,7 @@ export async function POST(req: NextRequest) {
 
     return res
   } catch (e: any) {
-    console.error('[interview/projects] unexpected error', e)
+    console.error('[interview/projects] unexpected error')
     return NextResponse.json(
       { success: false, error: 'プロジェクト作成に失敗しました' },
       { status: 500 }

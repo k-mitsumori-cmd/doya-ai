@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
       inviteUrl,
       expiresAt,
     }).catch((e) => {
-      console.error('[HrInvite] Failed to send invitation email:', e)
+      console.error('[HrInvite] Failed to send invitation email:')
     })
 
     // 監査ログ
@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
       inviteUrl,
     })
   } catch (e: any) {
-    console.error('[hr/organization/invite] unexpected error', e)
+    console.error('[hr/organization/invite] unexpected error')
     return NextResponse.json(
       { error: 'Failed to create invitation' },
       { status: 500 }

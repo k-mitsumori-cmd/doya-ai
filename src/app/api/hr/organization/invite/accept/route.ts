@@ -151,7 +151,7 @@ export async function POST(req: NextRequest) {
     if (e?.code === 'P2002') {
       return NextResponse.json({ error: '既にこの組織のメンバーです' }, { status: 409 })
     }
-    console.error('[hr/organization/invite/accept]', e)
+    console.error('[hr/organization/invite/accept]')
     return NextResponse.json(
       { error: '招待を受諾できませんでした' },
       { status: 500 }

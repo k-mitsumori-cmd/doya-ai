@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, organization: org })
   } catch (e) {
-    console.error('[hr/organization] Error:', e)
+    console.error('[hr/organization] Error:')
     return NextResponse.json({ error: '組織の作成に失敗しました' }, { status: 500 })
   }
 }
@@ -80,7 +80,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, organizations })
   } catch (e) {
-    console.error('[hr/organization GET]', e)
+    console.error('[hr/organization GET]')
     return NextResponse.json({ error: '組織情報の取得に失敗しました' }, { status: 500 })
   }
 }
@@ -157,7 +157,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, organization: org })
   } catch (e) {
-    console.error('[hr/organization PATCH]', e)
+    console.error('[hr/organization PATCH]')
     return NextResponse.json({ error: '組織情報の更新に失敗しました' }, { status: 500 })
   }
 }

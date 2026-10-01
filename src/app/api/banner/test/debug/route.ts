@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       templates: debugInfo,
     })
   } catch (err: any) {
-    console.error('[Debug API] Error:', err)
+    console.error('[Debug API] Error:')
     return NextResponse.json(
       { error: '診断情報を取得できませんでした。' },
       { status: 500 }

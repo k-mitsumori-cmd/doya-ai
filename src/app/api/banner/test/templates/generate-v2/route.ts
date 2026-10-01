@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
         await new Promise(resolve => setTimeout(resolve, 3000))
         
       } catch (err) {
-        console.error(`[Generate V2] Error for ${prompt.id}:`, err)
+        console.error("[api/banner/test/templates/generate-v2] failed")
         errors.push({
           id: prompt.id,
           name: prompt.name,
@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
     })
     
   } catch (err) {
-    console.error('[Generate V2] Error:', err)
+    console.error('[Generate V2] Error:')
     return NextResponse.json(
       { error: '生成に失敗しました' },
       { status: 500 }
@@ -215,7 +215,7 @@ export async function GET(request: NextRequest) {
     })
     
   } catch (err) {
-    console.error('[Generate V2] Status error:', err)
+    console.error('[Generate V2] Status error:')
     return NextResponse.json(
       { error: 'ステータス取得に失敗しました' },
       { status: 500 }

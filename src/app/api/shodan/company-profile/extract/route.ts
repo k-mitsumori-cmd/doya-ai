@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
       gaps: draft.gaps,
     })
   } catch (e: any) {
-    console.error('[shodan/company-profile/extract]', e?.message)
+    console.error('[shodan/company-profile/extract]')
     return NextResponse.json({ error: '自社情報の抽出に失敗しました。URLを確認して再度お試しください。' }, { status: 500 })
   }
 }

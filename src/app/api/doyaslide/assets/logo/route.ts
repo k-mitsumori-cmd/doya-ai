@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url })
   } catch (e: any) {
-    console.error('[doyaslide/assets/logo]', e?.message)
+    console.error('[doyaslide/assets/logo]')
     return NextResponse.json({ error: 'アップロードに失敗しました' }, { status: 500 })
   }
 }

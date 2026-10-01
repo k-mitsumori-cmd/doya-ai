@@ -19,7 +19,7 @@ export async function GET() {
 
     return NextResponse.json({ rules })
   } catch (e) {
-    console.error('[kintai/work-rules GET]', e)
+    console.error('[kintai/work-rules GET]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ rule }, { status: 201 })
   } catch (e) {
-    console.error('[kintai/work-rules POST]', e)
+    console.error('[kintai/work-rules POST]')
     return NextResponse.json({ error: '作成に失敗しました' }, { status: 500 })
   }
 }

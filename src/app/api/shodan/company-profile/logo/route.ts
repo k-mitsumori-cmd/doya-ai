@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     await uploadFile(path, buf, file.type)
     return NextResponse.json({ ok: true, path, url: await signedUrl(path) })
   } catch (e: any) {
-    console.error('[shodan/company-profile/logo]', e?.message)
+    console.error('[shodan/company-profile/logo]')
     return NextResponse.json({ error: 'ロゴのアップロードに失敗しました' }, { status: 500 })
   }
 }

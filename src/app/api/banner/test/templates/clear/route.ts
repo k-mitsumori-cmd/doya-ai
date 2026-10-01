@@ -29,7 +29,7 @@ export async function DELETE(request: NextRequest) {
       beforeCount,
     })
   } catch (err: any) {
-    console.error('[Clear Templates] Error:', err)
+    console.error('[Clear Templates] Error:')
     return NextResponse.json(
       { error: '削除に失敗しました' },
       { status: 500 }
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
       recentTemplates: templates,
     })
   } catch (err: any) {
-    console.error('[Clear Templates] Count error:', err)
+    console.error('[Clear Templates] Count error:')
     return NextResponse.json(
       { error: 'カウントに失敗しました' },
       { status: 500 }

@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, workspace })
   } catch (e: any) {
-    console.error('[promane/workspaces/create]', e)
+    console.error('[promane/workspaces/create]')
     return NextResponse.json(
       { error: 'ワークスペース作成に失敗しました。時間をおいて再試行してください' },
       { status: 500 }

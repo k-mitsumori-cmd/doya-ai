@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
         const scraped = await scrapeUrlText(referenceUrl)
         ref = `${ref}\n【参考URL: ${scraped.title}】\n${scraped.text}`.trim()
       } catch (e) {
-        console.warn('[doyaslide/structure] URL取得スキップ:', (e as any)?.message)
+        console.warn('[doyaslide/structure] URL取得スキップ:')
       }
     }
 
@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
           ref = `${ref}\n\n【Web検索の参考情報（最新の事実・数値・具体例の素材）】\n${research}`.trim().slice(0, 6000)
         }
       } catch (e) {
-        console.warn('[doyaslide/structure] Web検索スキップ:', (e as any)?.message)
+        console.warn('[doyaslide/structure] Web検索スキップ:')
       }
     }
 
@@ -142,14 +142,14 @@ export async function POST(req: NextRequest) {
         error: `本日の資料構成生成の運用上限（${e.limit}回）に達しました。明日お試しください。`,
       }, { status: 429 })
     }
-    console.error('[doyaslide/structure]', e?.stack || e?.message)
+    console.error('[doyaslide/structure]')
     return NextResponse.json({ error: `構成の生成に失敗しました${errorSuffix(e)}` }, { status: 500 })
   } finally {
     if (claimedProjectId && claimedAt) {
       await prisma.doyaSlideProject.updateMany({
         where: { id: claimedProjectId, status: 'structuring', updatedAt: claimedAt, slides: { none: {} } },
         data: { status: 'error' },
-      }).catch((error) => console.error('[doyaslide/structure] failed to release claim', error))
+      }).catch((error) => console.error('[doyaslide/structure] failed to release claim'))
     }
   }
 }

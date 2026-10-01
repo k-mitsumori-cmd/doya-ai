@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ employee })
   } catch (e) {
-    console.error('[kintai/employees/[id] GET]', e)
+    console.error('[kintai/employees/[id] GET]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }
@@ -126,7 +126,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ employee })
     })
   } catch (e) {
-    console.error('[kintai/employees/[id] PATCH]', e)
+    console.error('[kintai/employees/[id] PATCH]')
     return NextResponse.json({ error: '更新に失敗しました' }, { status: 500 })
   }
 }
@@ -157,7 +157,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ success: true })
     })
   } catch (e) {
-    console.error('[kintai/employees/[id] DELETE]', e)
+    console.error('[kintai/employees/[id] DELETE]')
     return NextResponse.json({ error: '無効化に失敗しました' }, { status: 500 })
   }
 }

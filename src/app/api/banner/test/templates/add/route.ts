@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       template: created 
     })
   } catch (error) {
-    console.error('[Add Template] Error:', error)
+    console.error('[Add Template] Error:')
     return NextResponse.json(
       { error: 'テンプレートの保存に失敗しました' },
       { status: 500 }

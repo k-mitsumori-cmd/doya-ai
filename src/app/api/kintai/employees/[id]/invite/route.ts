@@ -88,7 +88,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       emailSent: emailResult.success,
     })
   } catch (e) {
-    console.error('[kintai/employees/[id]/invite POST]', e)
+    console.error('[kintai/employees/[id]/invite POST]')
     return NextResponse.json({ error: '招待リンクの作成に失敗しました' }, { status: 500 })
   }
 }

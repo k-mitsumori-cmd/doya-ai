@@ -358,7 +358,7 @@ export async function POST(request: NextRequest) {
           // エラーでも続行（部分的な成功を許容）
         }
       } catch (err: any) {
-        console.error(`Banner ${i + 1} generation failed:`, err)
+        console.error("[api/banner/test/generate] failed")
         // エラーでも続行
       }
     }
@@ -386,7 +386,7 @@ export async function POST(request: NextRequest) {
     })
   } catch (err: any) {
     if (reservation) await releaseBannerMonthlyImages(reservation, reservation.count).catch(() => console.error('Test banner quota release failed'))
-    console.error('Test banner generation error:', err)
+    console.error('Test banner generation error:')
     return NextResponse.json({ error: '生成に失敗しました。時間をおいて再試行してください。' }, { status: 500 })
   }
 }

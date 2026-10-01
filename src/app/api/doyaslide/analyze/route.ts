@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
         error: `本日の参考URL解析の運用上限（${e.limit}回）に達しました。明日お試しいただくか、資料タイトルと補足を直接入力してください。`,
       }, { status: 429 })
     }
-    console.error('[doyaslide/analyze]', e?.message)
+    console.error('[doyaslide/analyze]')
     return NextResponse.json({ error: '解析に失敗しました' }, { status: 500 })
   }
 }

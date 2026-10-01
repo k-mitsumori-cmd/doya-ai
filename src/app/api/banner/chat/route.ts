@@ -502,7 +502,7 @@ export async function POST(req: NextRequest) {
       }),
     })
   } catch (e: any) {
-    console.error('Banner chat failed:', e)
+    console.error('Banner chat failed:')
     return NextResponse.json(
       { error: 'AIチャット処理に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }

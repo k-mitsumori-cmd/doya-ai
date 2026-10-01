@@ -210,7 +210,7 @@ export async function POST(req: NextRequest) {
 
         results.push({ row: rowNumber, success: true, employeeId: employee.id })
       } catch (err: any) {
-        console.error('[hr/employees/import][row]', rowNumber, err)
+        console.error('[hr/employees/import][row]')
         results.push({ row: rowNumber, success: false, error: err?.code === 'P2002' ? '社員番号が重複しています' : 'この行の登録に失敗しました' })
       }
     }
@@ -226,7 +226,7 @@ export async function POST(req: NextRequest) {
       ...(limitNotice ? { code: 'HR_ORG_EMPLOYEE_LIMIT', limitNotice } : {}),
     })
   } catch (e: any) {
-    console.error('[hr/employees/import]', e)
+    console.error('[hr/employees/import]')
     return NextResponse.json(
       { error: '従業員の一括登録に失敗しました' },
       { status: 500 }

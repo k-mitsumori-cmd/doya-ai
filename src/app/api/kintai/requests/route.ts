@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ requests, nextCursor, total, counts }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (e) {
-    console.error('[kintai/requests GET]', e)
+    console.error('[kintai/requests GET]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }
@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ request }, { status: 201 })
   } catch (e) {
-    console.error('[kintai/requests POST]', e)
+    console.error('[kintai/requests POST]')
     return NextResponse.json({ error: '申請の作成に失敗しました' }, { status: 500 })
   }
 }

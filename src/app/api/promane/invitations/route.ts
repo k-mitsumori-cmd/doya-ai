@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ error: 'typeは received|sent のみ' }, { status: 400 })
   } catch (e: any) {
-    console.error('[promane/invitations][GET]', e)
+    console.error('[promane/invitations][GET]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }
@@ -137,7 +137,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.promaneInvitation.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    console.error('[promane/invitations][DELETE]', e)
+    console.error('[promane/invitations][DELETE]')
     return NextResponse.json({ error: '削除に失敗しました' }, { status: 500 })
   }
 }

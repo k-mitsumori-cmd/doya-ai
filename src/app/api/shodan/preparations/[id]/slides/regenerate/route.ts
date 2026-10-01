@@ -56,7 +56,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     return NextResponse.json({ success: true, data: { index, image: { title: img.title, role: img.role, imageUrl: await signedUrl(img.imagePath) } } })
   } catch (e: any) {
     if (e instanceof SlideImageConflict) return NextResponse.json({ error: e.message }, { status: 409 })
-    console.error('[shodan/slides/regenerate]', e?.message)
+    console.error('[shodan/slides/regenerate]')
     return NextResponse.json({ error: '再生成に失敗しました' }, { status: 500 })
   }
 }

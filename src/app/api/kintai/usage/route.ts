@@ -54,7 +54,7 @@ export async function GET() {
       plan: ownerUser?.plan || 'FREE',
     }, { headers: privateHeaders })
   } catch (e) {
-    console.error('[kintai/usage] Error:', e)
+    console.error('[kintai/usage] Error:')
     return NextResponse.json(
       { error: '利用状況を確認できませんでした。再試行してください。' },
       { status: 503, headers: privateHeaders }

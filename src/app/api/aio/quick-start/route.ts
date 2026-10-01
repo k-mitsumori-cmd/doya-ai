@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ organizationId: org.id, slug: org.slug })
   } catch (e: any) {
-    console.error('[aio/quick-start]', e?.message)
+    console.error('[aio/quick-start]')
     return NextResponse.json({ error: '開始処理に失敗しました' }, { status: 500 })
   }
 }

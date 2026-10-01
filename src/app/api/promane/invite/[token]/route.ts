@@ -52,7 +52,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: any) {
-    console.error('[promane/invite/token][GET]', e)
+    console.error('[promane/invite/token][GET]')
     return NextResponse.json({ error: '招待検証に失敗しました' }, { status: 500 })
   }
 }
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       workspaceSlug: invitation.workspace.slug,
     })
   } catch (e: any) {
-    console.error('[promane/invite/token][POST]', e)
+    console.error('[promane/invite/token][POST]')
     return NextResponse.json({ error: '招待承諾に失敗しました' }, { status: 500 })
   }
 }

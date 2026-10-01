@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
       deletedCount, skippedCount, failedCount,
     }, { status: failedCount ? 503 : 200 })
   } catch (error) {
-    console.error('Cleanup error:', error)
+    console.error('Cleanup error:')
     return NextResponse.json(
       { success: false, error: 'クリーンアップ処理中にエラーが発生しました' },
       { status: 500 }

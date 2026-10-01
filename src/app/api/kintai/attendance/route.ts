@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
       month,
     })
   } catch (error) {
-    console.error('[kintai/attendance GET]', error)
+    console.error('[kintai/attendance GET]')
     return NextResponse.json({ error: 'サーバーエラー' }, { status: 500 })
   }
 }

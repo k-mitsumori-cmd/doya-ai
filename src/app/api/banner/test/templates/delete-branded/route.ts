@@ -85,7 +85,7 @@ export async function DELETE(request: Request) {
       templates: templatesToDelete
     })
   } catch (error) {
-    console.error('[DELETE /api/banner/test/templates/delete-branded] Error:', error)
+    console.error('[DELETE /api/banner/test/templates/delete-branded] Error:')
     return NextResponse.json(
       { error: 'テンプレートの削除に失敗しました' },
       { status: 500 }
@@ -122,7 +122,7 @@ export async function GET(request: Request) {
       targetIds: BRANDED_TEMPLATE_IDS
     })
   } catch (error) {
-    console.error('[GET /api/banner/test/templates/delete-branded] Error:', error)
+    console.error('[GET /api/banner/test/templates/delete-branded] Error:')
     return NextResponse.json(
       { error: '確認に失敗しました' },
       { status: 500 }

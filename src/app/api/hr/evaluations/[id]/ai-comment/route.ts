@@ -93,7 +93,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (e?.code === 'P2025') {
       return NextResponse.json({ error: '生成中に評価が変更されました。再読み込みして内容を確認してください。' }, { status: 409 })
     }
-    console.error('[hr/evaluations/[id]/ai-comment] unexpected error', e)
+    console.error('[hr/evaluations/[id]/ai-comment] unexpected error')
     return NextResponse.json(
       { error: 'Failed to generate AI comment' },
       { status: 500 }

@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
       message: `オーナー権限を ${targetMember.user?.name || targetMember.user?.email || targetMemberId} に譲渡しました`,
     })
   } catch (e: any) {
-    console.error('[hr/organization/transfer-owner] unexpected error', e)
+    console.error('[hr/organization/transfer-owner] unexpected error')
     return NextResponse.json(
       { error: 'Failed to transfer ownership' },
       { status: 500 }

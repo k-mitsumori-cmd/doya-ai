@@ -44,7 +44,7 @@ export async function DELETE(request: NextRequest) {
       deletedTemplates: errorTemplates.map(t => t.templateId),
     })
   } catch (err: any) {
-    console.error('[Cleanup API] Error:', err)
+    console.error('[Cleanup API] Error:')
     return NextResponse.json(
       { error: 'クリーンアップに失敗しました' },
       { status: 500 }
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
       validCount: totalCount - errorCount,
     })
   } catch (err: any) {
-    console.error('[Cleanup API] Error:', err)
+    console.error('[Cleanup API] Error:')
     return NextResponse.json(
       { error: '取得に失敗しました' },
       { status: 500 }

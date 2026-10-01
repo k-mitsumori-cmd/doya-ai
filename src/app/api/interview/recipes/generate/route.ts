@@ -239,7 +239,7 @@ ${samplesText}`
       },
     })
   } catch (e: any) {
-    console.error('[interview] recipe-generate error:', e?.message)
+    console.error('[interview] recipe-generate error:')
     return NextResponse.json(
       { success: false, error: e instanceof InterviewGeminiError ? e.message : 'レシピ自動生成に失敗しました' },
       { status: e instanceof InterviewGeminiError ? 503 : 500 }

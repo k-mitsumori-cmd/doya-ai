@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
     })
     return NextResponse.json({ id: prep.id, status: 'researched', research })
   } catch (e: any) {
-    console.error('[shodan/preparations] research failed', e?.message)
+    console.error('[shodan/preparations] research failed')
     await prisma.shodanPreparation.update({
       where: { id: prep.id },
       data: { status: 'failed', errorMessage: (e?.message || '調査に失敗しました').slice(0, 500) },

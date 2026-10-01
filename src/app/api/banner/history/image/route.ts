@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
       }
     )
   } catch (e: any) {
-    console.error('[banner history image] failed', e)
+    console.error('[banner history image] failed')
     return NextResponse.json({ error: 'failed' }, { status: 500 })
   }
 }

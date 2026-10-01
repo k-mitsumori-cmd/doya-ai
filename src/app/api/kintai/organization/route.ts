@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ organization: org })
   } catch (e) {
-    console.error('[kintai/organization] Error:', e)
+    console.error('[kintai/organization] Error:')
     return NextResponse.json({ error: '組織の作成に失敗しました' }, { status: 500 })
   }
 }

@@ -74,7 +74,7 @@ Output a single high-quality portrait image.
 
     return await generateAndSavePersonaImage(resolved.input, requestBody)
   } catch (error) {
-    console.error('Portrait generation error:', error)
+    console.error('Portrait generation error:')
     return NextResponse.json(
       { error: 'ポートレート生成中にエラーが発生しました' },
       { status: 500 }

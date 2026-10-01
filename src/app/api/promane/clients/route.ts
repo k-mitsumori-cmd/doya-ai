@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, client })
   } catch (e: any) {
-    console.error('[promane/clients][POST]', e)
+    console.error('[promane/clients][POST]')
     return NextResponse.json(
       { error: '顧客の追加に失敗しました' },
       { status: 500 }
@@ -107,7 +107,7 @@ export async function DELETE(req: NextRequest) {
     await prisma.promaneClient.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    console.error('[promane/clients][DELETE]', e)
+    console.error('[promane/clients][DELETE]')
     return NextResponse.json(
       { error: '削除に失敗しました' },
       { status: 500 }

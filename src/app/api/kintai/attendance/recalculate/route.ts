@@ -20,7 +20,7 @@ export async function POST() {
 
     return NextResponse.json({ message: `${fixed}件の勤怠データを再計算しました`, fixed })
   } catch (error) {
-    console.error('[kintai/attendance/recalculate]', error)
+    console.error('[kintai/attendance/recalculate]')
     return NextResponse.json({ error: '再計算に失敗しました' }, { status: 500 })
   }
 }

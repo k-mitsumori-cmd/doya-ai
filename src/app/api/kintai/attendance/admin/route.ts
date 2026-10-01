@@ -116,7 +116,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ employees }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (e) {
-    console.error('[kintai/attendance/admin GET]', e)
+    console.error('[kintai/attendance/admin GET]')
     return NextResponse.json({ error: '取得に失敗しました' }, { status: 500 })
   }
 }

@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
       monthlyLimit,
     }, { headers: privateHeaders })
   } catch (e: any) {
-    console.error('[banner stats] failed', e)
+    console.error('[banner stats] failed')
     return NextResponse.json({ error: '統計の取得に失敗しました' }, { status: 500, headers: privateHeaders })
   }
 }

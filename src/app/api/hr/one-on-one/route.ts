@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
       totalPages: Math.ceil(total / pageSize),
     })
   } catch (e: any) {
-    console.error('[hr/one-on-one] unexpected error', e)
+    console.error('[hr/one-on-one] unexpected error')
     return NextResponse.json(
       { error: 'Failed to fetch 1on1 records' },
       { status: 500 }
@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, oneOnOne })
   } catch (e: any) {
-    console.error('[hr/one-on-one] unexpected error', e)
+    console.error('[hr/one-on-one] unexpected error')
     return NextResponse.json(
       { error: 'Failed to create 1on1 record' },
       { status: 500 }

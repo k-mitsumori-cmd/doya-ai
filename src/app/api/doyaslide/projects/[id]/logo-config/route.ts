@@ -52,12 +52,12 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
                 const imageUrl = await uploadComposedImage(userId, p.id, composed)
                 await prisma.doyaSlideSlide.update({ where: { id: s.id }, data: { imageUrl } })
               } catch (e) {
-                console.error('[doyaslide/logo-config] recomposite failed', s.index, (e as any)?.message)
+                console.error('[doyaslide/logo-config] recomposite failed')
               }
             })
           )
         } catch (e) {
-          console.error('[doyaslide/logo-config] logo fetch failed', (e as any)?.message)
+          console.error('[doyaslide/logo-config] logo fetch failed')
         }
       }
     }
@@ -68,7 +68,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
     })
     return NextResponse.json({ project: result })
   } catch (e) {
-    console.error('[doyaslide/logo-config]', e)
+    console.error('[doyaslide/logo-config]')
     return NextResponse.json({ error: '更新に失敗しました' }, { status: 500 })
   }
 }

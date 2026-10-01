@@ -205,7 +205,7 @@ twitter_thread の場合、content内の各ツイートは "---" で区切って
       posts,
     })
   } catch (e: any) {
-    console.error('[interview] sns-posts error:', e?.message)
+    console.error('[interview] sns-posts error:')
     return NextResponse.json(
       { success: false, error: e instanceof InterviewGeminiError ? e.message : 'SNS投稿文の生成に失敗しました' },
       { status: e instanceof InterviewGeminiError ? 503 : 500 }

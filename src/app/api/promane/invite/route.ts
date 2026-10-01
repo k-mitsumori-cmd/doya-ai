@@ -121,7 +121,7 @@ export async function POST(req: NextRequest) {
       emailError: emailResult.success ? undefined : emailResult.error,
     })
   } catch (e: any) {
-    console.error('[promane/invite][POST]', e)
+    console.error('[promane/invite][POST]')
     return NextResponse.json({ error: '招待リンク発行に失敗しました' }, { status: 500 })
   }
 }

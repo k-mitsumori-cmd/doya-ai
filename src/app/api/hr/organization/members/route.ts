@@ -33,7 +33,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, members })
   } catch (e: any) {
-    console.error('[hr/organization/members] unexpected error', e)
+    console.error('[hr/organization/members] unexpected error')
     return NextResponse.json(
       { error: 'Failed to fetch members' },
       { status: 500 }

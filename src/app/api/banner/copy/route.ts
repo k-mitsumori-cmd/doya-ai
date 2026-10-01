@@ -542,7 +542,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ suggestions })
   } catch (e: any) {
-    console.error('Banner copy failed:', e)
+    console.error('Banner copy failed:')
     return NextResponse.json(
       { error: 'AIコピー生成に失敗しました。時間をおいて再試行してください。' },
       { status: 500 }

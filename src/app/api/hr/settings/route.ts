@@ -50,7 +50,7 @@ export async function GET() {
       myMemberId: ctx.memberId,
     })
   } catch (e) {
-    console.error('[hr/settings GET]', e)
+    console.error('[hr/settings GET]')
     return NextResponse.json({ error: '設定の取得に失敗しました' }, { status: 500 })
   }
 }
@@ -94,7 +94,7 @@ export async function PUT(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (e) {
-    console.error('[hr/settings PUT]', e)
+    console.error('[hr/settings PUT]')
     return NextResponse.json({ error: '設定の保存に失敗しました' }, { status: 500 })
   }
 }

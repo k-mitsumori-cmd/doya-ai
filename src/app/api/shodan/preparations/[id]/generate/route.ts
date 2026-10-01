@@ -74,7 +74,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ id: prep.id, status: 'done' })
   } catch (e: any) {
-    console.error('[shodan/generate] failed', e?.message)
+    console.error('[shodan/generate] failed')
     // 開始時から未変更の資料だけに失敗を記録。既存の本文・画像・状態は保持する。
     await prisma.shodanPreparation.updateMany({
       where: { id: prep.id, organizationId: sctx.organizationId, updatedAt: prep.updatedAt },

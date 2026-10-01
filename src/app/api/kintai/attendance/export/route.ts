@@ -167,7 +167,7 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (e) {
-    console.error('[kintai/attendance/export]', e)
+    console.error('[kintai/attendance/export]')
     return NextResponse.json({ error: 'エクスポートに失敗しました' }, { status: 500 })
   }
 }

@@ -66,7 +66,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if ((e as { code?: string })?.code === 'P2025') {
       return NextResponse.json({ error: 'スライドの状態が変更されました。再読み込みしてお試しください。' }, { status: 409 })
     }
-    console.error('[doyaslide/revert]', e)
+    console.error('[doyaslide/revert]')
     return NextResponse.json({ error: '巻き戻しに失敗しました' }, { status: 500 })
   }
 }

@@ -77,7 +77,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       throw e
     }
   } catch (e: any) {
-    console.error('[doyaslide/regenerate]', e?.message)
+    console.error('[doyaslide/regenerate]')
     return NextResponse.json({ error: '再生成に失敗しました' }, { status: 500 })
   }
 }

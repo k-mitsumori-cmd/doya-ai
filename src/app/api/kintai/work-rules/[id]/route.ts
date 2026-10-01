@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ rule })
   } catch (e) {
-    console.error('[kintai/work-rules/[id] PATCH]', e)
+    console.error('[kintai/work-rules/[id] PATCH]')
     return NextResponse.json({ error: '更新に失敗しました' }, { status: 500 })
   }
 }
@@ -69,7 +69,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     await prisma.kintaiWorkRule.delete({ where: { id: p.id } })
     return NextResponse.json({ success: true })
   } catch (e) {
-    console.error('[kintai/work-rules/[id] DELETE]', e)
+    console.error('[kintai/work-rules/[id] DELETE]')
     return NextResponse.json({ error: '削除に失敗しました' }, { status: 500 })
   }
 }

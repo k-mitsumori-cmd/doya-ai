@@ -51,7 +51,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: any) {
-    console.error('[interview/recipes/[id]] unexpected error', e)
+    console.error('[interview/recipes/[id]] unexpected error')
     return NextResponse.json(
       { success: false, error: '取得に失敗しました' },
       { status: 500 }
@@ -102,7 +102,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       recipe: { id: updated.id, name: updated.name, updatedAt: updated.updatedAt.toISOString() },
     })
   } catch (e: any) {
-    console.error('[interview/recipes/[id]] unexpected error', e)
+    console.error('[interview/recipes/[id]] unexpected error')
     return NextResponse.json(
       { success: false, error: '更新に失敗しました' },
       { status: 500 }
@@ -141,7 +141,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     await prisma.interviewRecipe.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (e: any) {
-    console.error('[interview/recipes/[id]] unexpected error', e)
+    console.error('[interview/recipes/[id]] unexpected error')
     return NextResponse.json(
       { success: false, error: '削除に失敗しました' },
       { status: 500 }

@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   try {
     reservation = await reserveSfaAiUsage(ctx.organizationId, ctx.userId, 'next-action')
   } catch (e) {
-    console.error('[sfa/ai/next-action] quota reservation failed', e)
+    console.error('[sfa/ai/next-action] quota reservation failed')
     return NextResponse.json({ error: '利用状況を確認できません。しばらくしてから再試行してください' }, { status: 503 })
   }
   if ('limit' in reservation) return sfaAiLimitResponse(reservation, ctx.role === 'owner')
@@ -69,8 +69,8 @@ export async function POST(req: NextRequest) {
     await completeSfaAiUsage(reservation.id)
     return NextResponse.json(result, { headers: { 'Cache-Control': 'no-store' } })
   } catch (e: any) {
-    await releaseSfaAiUsage(reservation.id).catch((releaseError) => console.error('[sfa/ai/next-action] quota release failed', releaseError))
-    console.error('[sfa/ai/next-action]', e?.message)
+    await releaseSfaAiUsage(reservation.id).catch((releaseError) => console.error('[sfa/ai/next-action] quota release failed'))
+    console.error('[sfa/ai/next-action]')
     return NextResponse.json({ error: '提案の生成に失敗しました' }, { status: 500 })
   }
 }

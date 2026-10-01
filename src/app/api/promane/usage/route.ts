@@ -60,7 +60,7 @@ export async function GET() {
       },
     }, { headers: privateHeaders })
   } catch (e: any) {
-    console.error('[promane/usage][GET]', e)
+    console.error('[promane/usage][GET]')
     return NextResponse.json(
       { error: '利用状況の取得に失敗しました' },
       { status: 500, headers: privateHeaders }

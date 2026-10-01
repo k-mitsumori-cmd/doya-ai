@@ -71,7 +71,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (e?.code === 'P2025') {
       return NextResponse.json({ error: '評価が確定または変更されています。再読み込みして状態をご確認ください。' }, { status: 409 })
     }
-    console.error('[hr/evaluations/[id]/submit] unexpected error', e)
+    console.error('[hr/evaluations/[id]/submit] unexpected error')
     return NextResponse.json(
       { error: 'Failed to submit evaluation' },
       { status: 500 }

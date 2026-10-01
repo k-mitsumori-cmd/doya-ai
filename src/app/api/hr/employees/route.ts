@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
       totalPages: Math.ceil(total / pageSize),
     })
   } catch (e: any) {
-    console.error('[hr/employees] unexpected error', e)
+    console.error('[hr/employees] unexpected error')
     return NextResponse.json(
       { error: 'Failed to fetch employees' },
       { status: 500 }
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, employee })
   } catch (e: any) {
-    console.error('[hr/employees][POST]', e)
+    console.error('[hr/employees][POST]')
     return NextResponse.json(
       { error: '従業員の登録に失敗しました' },
       { status: 500 }

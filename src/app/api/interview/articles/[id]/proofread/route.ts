@@ -157,7 +157,7 @@ ${draft.content.slice(0, 60000)}`
       checks: result.checks || {},
     })
   } catch (e: any) {
-    console.error('[interview] proofread error:', e?.message)
+    console.error('[interview] proofread error:')
     return NextResponse.json(
       { success: false, error: e instanceof InterviewGeminiError ? e.message : '校正に失敗しました' },
       { status: e instanceof InterviewGeminiError ? 503 : 500 }

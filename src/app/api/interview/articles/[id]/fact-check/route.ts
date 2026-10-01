@@ -131,7 +131,7 @@ ${draft.content.slice(0, 60000)}`
       warnings: result.warnings,
     })
   } catch (e: any) {
-    console.error('[interview] fact-check error:', e?.message)
+    console.error('[interview] fact-check error:')
     return NextResponse.json(
       { success: false, error: e instanceof InterviewGeminiError ? e.message : 'ファクトチェックに失敗しました' },
       { status: e instanceof InterviewGeminiError ? 503 : 500 }
