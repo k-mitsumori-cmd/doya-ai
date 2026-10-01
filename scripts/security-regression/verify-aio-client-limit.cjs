@@ -3,6 +3,7 @@ const { load } = require('./load-typescript.cjs');
 
 let membershipRole = 'owner';
 const { aioSend, aioGet, AioApiError } = load('src/lib/aio/client.ts', {}, {
+  AbortSignal,
   fetch: async (url, init) => {
     const path = new URL(url, 'https://example.test').pathname;
     assert.equal(new URL(url, 'https://example.test').searchParams.get('org'), 'acme');

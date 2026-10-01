@@ -8,6 +8,26 @@ function withOrg(path: string, orgSlug: string): string {
   return `${path}${sep}org=${encodeURIComponent(orgSlug)}`
 }
 
+const READ_TIMEOUT_MS = 30_000
+const WRITE_TIMEOUT_MS = 310_000 // API route maxDuration is 300 seconds.
+
+async function requestJson(path: string, orgSlug: string, init: RequestInit, timeoutMs: number) {
+  const signal = AbortSignal.timeout(timeoutMs)
+  try {
+    const res = await fetch(withOrg(path, orgSlug), { ...init, signal })
+    const data = await res.json().catch((error) => {
+      if (signal.aborted) throw error
+      return {}
+    })
+    return { res, data }
+  } catch (error) {
+    if (signal.aborted) throw new Error(timeoutMs === READ_TIMEOUT_MS
+      ? '読み込みが時間内に完了しませんでした。再試行してください。'
+      : '通信が時間内に完了しませんでした。操作履歴を確認してください。')
+    throw error
+  }
+}
+
 export class AioApiError extends Error {
   constructor(
     message: string,
@@ -20,8 +40,7 @@ export class AioApiError extends Error {
 }
 
 export async function aioGet<T = any>(path: string, orgSlug: string): Promise<T> {
-  const res = await fetch(withOrg(path, orgSlug), { cache: 'no-store' })
-  const data = await res.json().catch(() => ({}))
+  const { res, data } = await requestJson(path, orgSlug, { cache: 'no-store' }, READ_TIMEOUT_MS)
   if (!res.ok) throw new Error((data as any)?.error || `取得に失敗しました (${res.status})`)
   return data as T
 }
@@ -32,12 +51,11 @@ export async function aioSend<T = any>(
   method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   body?: unknown
 ): Promise<T> {
-  const res = await fetch(withOrg(path, orgSlug), {
+  const { res, data } = await requestJson(path, orgSlug, {
     method,
     headers: { 'Content-Type': 'application/json' },
     body: body != null ? JSON.stringify(body) : undefined,
-  })
-  const data = await res.json().catch(() => ({}))
+  }, WRITE_TIMEOUT_MS)
   if (!res.ok) throw new AioApiError(
     typeof (data as any)?.error === 'string' ? (data as any).error : `操作に失敗しました (${res.status})`,
     res.status,

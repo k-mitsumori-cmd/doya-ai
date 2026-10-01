@@ -8,6 +8,7 @@ const { load, check } = require('./load-typescript.cjs')
   ]) {
     await check(`Shodan ${name} limit guidance follows the server action`, async () => {
       const client = load('src/lib/shodan/client.ts', {}, {
+        AbortSignal,
         fetch: async () => Response.json(response, { status: 402 }),
       })
       await assert.rejects(client.shodanSend('/api/shodan/preparations', 'team', 'POST', { url: 'https://example.test' }), error => {

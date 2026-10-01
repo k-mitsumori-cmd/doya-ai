@@ -29,6 +29,7 @@ export default function ShodanListPage() {
   const [total, setTotal] = useState(0)
   const [hasProfile, setHasProfile] = useState<boolean | null>(null)
   const requestSeq = useRef(0)
+  const watchInFlight = useRef(false)
   const itemsRef = useRef<Item[] | null>(null)
   itemsRef.current = items
   const invalidateRequests = useCallback(() => { requestSeq.current++ }, [])
@@ -88,6 +89,8 @@ export default function ShodanListPage() {
     const processingIds = items?.filter((x) => x.status === 'processing').map((x) => x.id) || []
     if (!processingIds.length) return
     const t = setInterval(() => {
+      if (watchInFlight.current) return
+      watchInFlight.current = true
       const seq = requestSeq.current
       const chunks: string[][] = []
       for (let i = 0; i < processingIds.length; i += 100) chunks.push(processingIds.slice(i, i + 100))
@@ -100,6 +103,7 @@ export default function ShodanListPage() {
           setItems((prev) => prev ? mergePreparationUpdates(prev, updates) : prev)
         })
         .catch(() => { if (requestSeq.current === seq) setRefreshError(true) })
+        .finally(() => { watchInFlight.current = false })
     }, 5000)
     return () => clearInterval(t)
   }, [items, orgSlug])
