@@ -11,19 +11,79 @@ import { getUserDoyalistLimits } from '@/lib/doyalist/limits'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 import { MAX_DOYALIST_PROJECT_BODY_BYTES, parseDoyalistProjectInput } from '@/lib/doyalist/project-input'
 import { streamDoyalistJsonIterable } from '@/lib/doyalist/stream-json'
+import { jstStartOfMonthUtc } from '@/lib/plan-limit'
 
 const PROJECT_PAGE_SIZE = 200
+const HISTORY_PAGE_SIZE = 50
+
+async function paginatedProjects(req: NextRequest, userId: string) {
+  const params = req.nextUrl.searchParams
+  const limit = Number(params.get('limit'))
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > HISTORY_PAGE_SIZE) {
+    return NextResponse.json({ error: 'ページ件数が正しくありません' }, { status: 400 })
+  }
+  const cursor = params.get('cursor')
+  if (params.has('cursor') && (!cursor || cursor.length > 128 || !/^[a-zA-Z0-9_-]+$/.test(cursor))) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  const search = params.get('search')?.trim() || ''
+  if (search.length > 200) {
+    return NextResponse.json({ error: '検索語は200文字以内にしてください' }, { status: 400 })
+  }
+  const owner = { userId, status: { not: 'archived' } }
+  const where = {
+    ...owner,
+    ...(search ? { OR: [
+      { name: { contains: search, mode: 'insensitive' as const } },
+      { industry: { contains: search, mode: 'insensitive' as const } },
+      { region: { contains: search, mode: 'insensitive' as const } },
+    ] } : {}),
+  }
+  if (cursor && !await prisma.doyalistProject.findFirst({ where: { ...where, id: cursor }, select: { id: true } })) {
+    return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+  }
+  const [rows, total, allTotal, thisMonth, totalCompanies] = await Promise.all([
+    prisma.doyalistProject.findMany({
+      where,
+      include: { _count: { select: { companies: true, approaches: true } } },
+      orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+    }),
+    prisma.doyalistProject.count({ where }),
+    prisma.doyalistProject.count({ where: owner }),
+    prisma.doyalistProject.count({ where: { ...owner, createdAt: { gte: jstStartOfMonthUtc() } } }),
+    prisma.doyalistCompany.count({ where: { project: owner } }),
+  ])
+  const page = rows.slice(0, limit)
+  return NextResponse.json({
+    success: true,
+    projects: page.map((p) => ({
+      id: p.id, name: p.name, description: p.description, industry: p.industry,
+      region: p.region, targetSize: p.targetSize, keywords: p.keywords,
+      status: p.status, companyCount: p._count.companies,
+      approachCount: p._count.approaches, createdAt: p.createdAt, updatedAt: p.updatedAt,
+    })),
+    total,
+    nextCursor: rows.length > limit ? page[page.length - 1].id : null,
+    summary: { allTotal, thisMonth, totalCompanies },
+  }, { headers: { 'Cache-Control': 'private, no-store' } })
+}
 
 /**
  * GET /api/doyalist/projects
  * ログインユーザーのプロジェクト一覧（企業件数付き）を返す
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     const userId = (session?.user as any)?.id as string | undefined
     if (!userId) {
       return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
+    }
+
+    if (req?.nextUrl?.searchParams.has('limit')) {
+      return await paginatedProjects(req, userId)
     }
 
     const query = {

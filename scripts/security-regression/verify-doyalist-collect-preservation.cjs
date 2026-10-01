@@ -73,6 +73,7 @@ function fixture(initialCount, failure, denied) {
       'next/server':{NextResponse:Response},'next-auth':{getServerSession:async()=>({user:{id:'user'}})},
       '@/lib/auth':{authOptions:{}},'@/lib/doyalist/limits':{},
       '@/lib/doyalist/stream-json':streamJson,
+      '@/lib/plan-limit':{jstStartOfMonthUtc:()=>new Date('2026-10-01T00:00:00Z')},
       '@/lib/operational-json':operationalJson,
       '@/lib/doyalist/project-input':load('src/lib/doyalist/project-input.ts'),
       '@/lib/prisma':{prisma:{doyalistProject:{findMany:async({where})=>rows.filter(r=>

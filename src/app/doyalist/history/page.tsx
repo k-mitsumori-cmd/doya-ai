@@ -6,6 +6,7 @@ import toast, { Toaster } from 'react-hot-toast'
 import { EmptyState } from '@/components/EmptyState'
 import { UiIcon, type UiIconName } from '@/components/icons'
 import { appendApproachPage, parseApproachPage, type ApproachSummaryCounts } from '@/lib/doyalist/approach-pages'
+import { appendProjectPage, parseProjectPage, type ProjectSummaryCounts } from '@/lib/doyalist/project-pages'
 import { getApproachTypeLabel } from '@/lib/doyalist/labels'
 
 interface ListSummary {
@@ -52,31 +53,48 @@ export default function HistoryPage() {
   const [loadingProjects, setLoadingProjects] = useState(true)
   const [loadingApproaches, setLoadingApproaches] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
+  const [loadingMoreProjects, setLoadingMoreProjects] = useState(false)
   const [projectsError, setProjectsError] = useState('')
   const [approachesError, setApproachesError] = useState('')
   const [approachSummary, setApproachSummary] = useState<ApproachSummaryCounts | null>(null)
+  const [projectSummary, setProjectSummary] = useState<ProjectSummaryCounts | null>(null)
+  const [projectTotal, setProjectTotal] = useState(0)
+  const [projectNextCursor, setProjectNextCursor] = useState<string | null>(null)
   const [approachTotal, setApproachTotal] = useState(0)
   const [nextCursor, setNextCursor] = useState<string | null>(null)
   const requestVersion = useRef(0)
+  const projectRequestVersion = useRef(0)
   const [tab, setTab] = useState<typeof TABS[number]['v']>('all')
   const [search, setSearch] = useState('')
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const loadProjects = useCallback(async () => {
+    const version = ++projectRequestVersion.current
     setProjectsError('')
     setLoadingProjects(true)
+    setLoadingMoreProjects(false)
+    setLists([])
+    setProjectTotal(0)
+    setProjectNextCursor(null)
+    setProjectSummary(null)
     try {
-      const response = await fetch('/api/doyalist/projects', { cache: 'no-store' })
+      const params = new URLSearchParams({ limit: '50' })
+      if (search.trim()) params.set('search', search.trim())
+      const response = await fetch(`/api/doyalist/projects?${params}`, { cache: 'no-store' })
       const data = await response.json().catch(() => null)
       if (!response.ok) throw new Error(response.status === 401 ? '履歴の確認にはログインが必要です' : 'リスト履歴を取得できませんでした')
-      if (!data || !Array.isArray(data.projects)) throw new Error('リスト履歴の応答が正しくありません')
-      setLists(data.projects)
+      const page = parseProjectPage<ListSummary>(data)
+      if (version !== projectRequestVersion.current) return
+      setLists(page.projects)
+      setProjectTotal(page.total)
+      setProjectNextCursor(page.nextCursor)
+      setProjectSummary(page.summary)
     } catch (error) {
-      setProjectsError(error instanceof Error ? error.message : 'リスト履歴を取得できませんでした')
+      if (version === projectRequestVersion.current) setProjectsError(error instanceof Error ? error.message : 'リスト履歴を取得できませんでした')
     } finally {
-      setLoadingProjects(false)
+      if (version === projectRequestVersion.current) setLoadingProjects(false)
     }
-  }, [])
+  }, [search])
 
   const loadApproaches = useCallback(async () => {
     const version = ++requestVersion.current
@@ -105,7 +123,11 @@ export default function HistoryPage() {
     }
   }, [search, tab])
 
-  useEffect(() => { void loadProjects() }, [loadProjects])
+  useEffect(() => {
+    const timer = setTimeout(() => void loadProjects(), search.trim() ? 250 : 0)
+    const versionRef = projectRequestVersion
+    return () => { clearTimeout(timer); versionRef.current++ }
+  }, [loadProjects, search])
   useEffect(() => {
     const timer = setTimeout(() => void loadApproaches(), search.trim() ? 250 : 0)
     const versionRef = requestVersion
@@ -136,6 +158,29 @@ export default function HistoryPage() {
     }
   }
 
+  async function loadMoreProjects() {
+    if (!projectNextCursor || loadingMoreProjects) return
+    const version = projectRequestVersion.current
+    setLoadingMoreProjects(true)
+    setProjectsError('')
+    try {
+      const params = new URLSearchParams({ limit: '50', cursor: projectNextCursor })
+      if (search.trim()) params.set('search', search.trim())
+      const response = await fetch(`/api/doyalist/projects?${params}`, { cache: 'no-store' })
+      const data = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(data?.error || 'リスト履歴の続きを取得できませんでした')
+      const page = parseProjectPage<ListSummary>(data)
+      if (version !== projectRequestVersion.current) return
+      setLists(appendProjectPage(lists, page, projectTotal))
+      setProjectNextCursor(page.nextCursor)
+      setProjectSummary(page.summary)
+    } catch (error) {
+      if (version === projectRequestVersion.current) setProjectsError(error instanceof Error ? error.message : 'リスト履歴の続きを取得できませんでした')
+    } finally {
+      if (version === projectRequestVersion.current) setLoadingMoreProjects(false)
+    }
+  }
+
   const handleDeleteList = async (id: string, name: string) => {
     if (!confirm(`「${name}」を削除しますか？`)) return
     try {
@@ -145,6 +190,7 @@ export default function HistoryPage() {
       setLists((prev) => prev.filter((l) => l.id !== id))
       setApproachSummary(null)
       setExpandedId(null)
+      void loadProjects()
       void loadApproaches()
     } catch (e: any) {
       toast.error(e?.message || '削除に失敗しました')
@@ -171,21 +217,17 @@ export default function HistoryPage() {
   }
 
   const stats = useMemo(() => {
-    const total = lists.length + (approachSummary?.allTotal || 0)
-    const jstNow = new Date(Date.now() + 9 * 3600_000)
-    const monthStart = Date.UTC(jstNow.getUTCFullYear(), jstNow.getUTCMonth(), 1) - 9 * 3600_000
-    const listThisMonth = lists.filter((l) => new Date(l.createdAt).getTime() >= monthStart).length
+    const total = (projectSummary?.allTotal || 0) + (approachSummary?.allTotal || 0)
+    const listThisMonth = projectSummary?.thisMonth || 0
     const apprThisMonth = approachSummary?.thisMonth || 0
-    const totalCompanies = lists.reduce((sum, l) => sum + (l.companyCount || 0), 0)
+    const totalCompanies = projectSummary?.totalCompanies || 0
     return { total, thisMonth: listThisMonth + apprThisMonth, totalCompanies }
-  }, [lists, approachSummary])
+  }, [projectSummary, approachSummary])
 
   const filteredLists = useMemo(() => {
     if (tab !== 'all' && tab !== 'list') return []
-    if (!search.trim()) return lists
-    const q = search.trim().toLowerCase()
-    return lists.filter((l) => l.name.toLowerCase().includes(q) || l.industry?.toLowerCase().includes(q) || l.region?.toLowerCase().includes(q))
-  }, [lists, search, tab])
+    return lists
+  }, [lists, tab])
 
   const filteredApproaches = tab === 'list' ? [] : approaches
 
@@ -218,7 +260,7 @@ export default function HistoryPage() {
         {projectsError && <div role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{projectsError}<button type="button" onClick={() => void loadProjects()} className="ml-3 underline">再読み込み</button></div>}
         {approachesError && <div role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-sm font-semibold text-rose-700">{approachesError}<button type="button" onClick={() => void loadApproaches()} className="ml-3 underline">再読み込み</button></div>}
 
-        {!projectsError && approachSummary && <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        {!projectsError && projectSummary && approachSummary && <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <StatCard icon="chart" label="合計件数" value={stats.total} color="cyan" />
           <StatCard icon="calendar" label="今月の生成" value={stats.thisMonth} color="emerald" />
           <StatCard icon="building" label="累計企業数" value={stats.totalCompanies} color="violet" />
@@ -228,8 +270,8 @@ export default function HistoryPage() {
           <div className="px-5 py-4 border-b border-slate-200 flex flex-wrap items-center gap-3">
             <div className="flex gap-1 flex-wrap">
               {TABS.map((t) => {
-                const count = t.v === 'all' ? lists.length + (approachSummary?.allTotal || 0)
-                  : t.v === 'list' ? lists.length
+                const count = t.v === 'all' ? (projectSummary?.allTotal || 0) + (approachSummary?.allTotal || 0)
+                  : t.v === 'list' ? (projectSummary?.allTotal || 0)
                   : approachSummary?.countsByType[t.v] || 0
                 return (
                   <button
@@ -360,6 +402,7 @@ export default function HistoryPage() {
             </div>
           )}
           {tab !== 'list' && nextCursor && !loadingApproaches && <div className="border-t border-slate-100 px-5 py-4"><button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="rounded-lg border border-blue-300 px-4 py-2 text-sm font-bold text-blue-700 disabled:opacity-50">{loadingMore ? '読み込み中…' : `営業文履歴をさらに表示（${approaches.length}/${approachTotal}件）`}</button></div>}
+          {(tab === 'all' || tab === 'list') && projectNextCursor && !loadingProjects && <div className="border-t border-slate-100 px-5 py-4"><button type="button" onClick={() => void loadMoreProjects()} disabled={loadingMoreProjects} className="rounded-lg border border-cyan-300 px-4 py-2 text-sm font-bold text-cyan-700 disabled:opacity-50">{loadingMoreProjects ? '読み込み中…' : `リスト履歴をさらに表示（${lists.length}/${projectTotal}件）`}</button></div>}
         </div>
       </div>
     </div>

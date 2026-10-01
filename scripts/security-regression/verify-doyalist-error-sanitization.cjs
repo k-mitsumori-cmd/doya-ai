@@ -26,6 +26,7 @@ function route(file, prisma) {
     '@/lib/operational-json': operationalJson,
     '@/lib/doyalist/project-input': projectInput,
     '@/lib/doyalist/limits': { getUserDoyalistLimits: async () => ({ maxProjects: -1 }) },
+    '@/lib/plan-limit': { jstStartOfMonthUtc: () => new Date('2026-10-01T00:00:00Z') },
   })
 }
 async function expectSafe(promise, expected) {
@@ -70,6 +71,43 @@ async function expectSafe(promise, expected) {
     assert.equal(result.projects.at(-1).id, projects.at(-1).id)
     assert.equal(result.projects[42].companyCount, 42)
     assert(calls > 20)
+  })
+  await check('Doyalist history pages and searches projects with global counts', async () => {
+    const projects = Array.from({ length: 120 }, (_, index) => ({
+      id: `project-${String(119 - index).padStart(3, '0')}`,
+      name: index < 60 ? `Tokyo ${index}` : `Osaka ${index}`,
+      _count: { companies: index, approaches: 0 },
+    }))
+    const api = route('src/app/api/doyalist/projects/route.ts', {
+      doyalistProject: {
+        findFirst: async ({ where }) => projects.find(project => project.id === where.id && (!where.OR || project.name.includes('Tokyo'))),
+        findMany: async (query) => {
+          assert(query.take <= 51)
+          assert.equal(query.where.userId, 'owner')
+          const rows = query.where.OR ? projects.filter(project => project.name.includes('Tokyo')) : projects
+          const offset = query.cursor ? rows.findIndex(project => project.id === query.cursor.id) + 1 : 0
+          return rows.slice(offset, offset + query.take)
+        },
+        count: async ({ where }) => where.createdAt ? 20 : where.OR ? 60 : 120,
+      },
+      doyalistCompany: { count: async ({ where }) => { assert.equal(where.project.userId, 'owner'); return 1000 } },
+    })
+    const req = (query) => ({ nextUrl: { searchParams: new URL(`https://doya.test/api/doyalist/projects?${query}`).searchParams } })
+    const first = await api.GET(req('limit=50&search=Tokyo'))
+    assert.equal(first.status, 200)
+    const firstPage = await first.json()
+    assert.equal(firstPage.projects.length, 50)
+    assert.equal(firstPage.total, 60)
+    assert.equal(firstPage.summary.allTotal, 120)
+    assert.equal(firstPage.summary.thisMonth, 20)
+    assert.equal(firstPage.summary.totalCompanies, 1000)
+    assert.equal(firstPage.nextCursor, firstPage.projects[49].id)
+    const second = await api.GET(req(`limit=50&search=Tokyo&cursor=${firstPage.nextCursor}`))
+    const secondPage = await second.json()
+    assert.equal(secondPage.projects.length, 10)
+    assert.equal(secondPage.nextCursor, null)
+    assert.equal((await api.GET(req('limit=51'))).status, 400)
+    assert.equal((await api.GET(req('limit=50&cursor=foreign'))).status, 400)
   })
   await check('Doyalist project list aborts an incomplete stream on a later DB failure', async () => {
     const api = route('src/app/api/doyalist/projects/route.ts', {

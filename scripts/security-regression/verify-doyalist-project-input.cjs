@@ -21,6 +21,7 @@ const mocks = {
   '@/lib/operational-json': operationalJson,
   '@/lib/doyalist/project-input': projectInput,
   '@/lib/doyalist/stream-json': streamJson,
+  '@/lib/plan-limit': { jstStartOfMonthUtc: () => new Date('2026-10-01T00:00:00Z') },
   '@/lib/doyalist/export-stream': {},
 }
 const create = load('src/app/api/doyalist/projects/route.ts', mocks)
