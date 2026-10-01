@@ -169,6 +169,7 @@ export default function BannerChatPage() {
   const [isThinking, setIsThinking] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [limitModal, setLimitModal] = useState<{ open: boolean; used?: number; limit?: number; message?: string; upgradeUrl?: string }>({ open: false })
+  const [textLimit, setTextLimit] = useState<number | null>(null)
   const quota = useBannerQuota(setLimitModal)
   const [isRefining, setIsRefining] = useState(false)
   const [proposedSpec, setProposedSpec] = useState<BannerSpec | null>(null)
@@ -249,8 +250,15 @@ export default function BannerChatPage() {
       })
       const parsed = await safeReadJson(res)
       const data = parsed.data || {}
+      if (parsed.status === 429 && data?.code === 'DAILY_TEXT_LIMIT_REACHED') {
+        const limit = Number(data?.usage?.dailyLimit)
+        setTextLimit(Number.isFinite(limit) && limit > 0 ? limit : null)
+        pushAssistant(data?.error || '本日のAI相談の上限に達しました。')
+        return
+      }
       if (!parsed.ok) throw new Error(data?.error || normalizeNonJsonApiError(parsed.status, parsed.text) || 'AIチャットに失敗しました')
 
+      setTextLimit(null)
       pushAssistant(String(data.reply || '了解です。'))
       if (data.spec) {
         setProposedSpec(data.spec as BannerSpec)
@@ -592,6 +600,14 @@ export default function BannerChatPage() {
               </div>
 
               <div className="p-3 sm:p-6 border-t border-gray-100 bg-slate-50/30">
+                {textLimit !== null && (
+                  <div role="status" className="mb-3 rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-slate-800">
+                    <p>本日のAI相談・コピー提案の上限（{textLimit}回）に達しました。日本時間の翌日にリセットされます。</p>
+                    <Link href="/banner/pricing" className="mt-2 inline-flex items-center gap-1 font-bold text-blue-700 underline">
+                      プランを確認する <ArrowRight className="h-4 w-4" />
+                    </Link>
+                  </div>
+                )}
                 <div className="relative">
                   <textarea
                     value={input}

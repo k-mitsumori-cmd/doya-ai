@@ -7,6 +7,9 @@ function fixture(route, providerStatus = 200) {
     'next/server': { NextResponse: { json: (body, opts) => new Response(JSON.stringify(body), { status: opts?.status ?? 200 }) } },
     'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },
     '@/lib/auth': { authOptions: {} },
+    '@/lib/banner/text-budget': {
+      reserveBannerTextCall: async () => ({ state: 'allowed', usage: { dailyLimit: 10, dailyUsed: 1, dailyRemaining: 9 } }),
+    },
   }, {
     process: { env: { GOOGLE_AI_API_KEY: 'test-key' } },
     fetch: async () => {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { reserveBannerTextCall, bannerTextLimitPayload } from '@/lib/banner/text-budget'
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
 
@@ -411,7 +412,7 @@ async function callGemini(messages: ChatMessage[], apiKey: string): Promise<stri
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
     }
 
@@ -442,6 +443,15 @@ export async function POST(req: NextRequest) {
       )
     }
     const messages = candidate as ChatMessage[]
+
+    let admission
+    try { admission = await reserveBannerTextCall(session.user.id) }
+    catch {
+      return NextResponse.json({ error: '利用状況を確認できません。時間をおいて再試行してください。' }, { status: 503 })
+    }
+    if (admission.state === 'limit') {
+      return NextResponse.json(bannerTextLimitPayload(admission.usage), { status: 429 })
+    }
 
     const rawText = await callGemini(messages, apiKey)
     const parsed = extractJsonObject(rawText)
@@ -502,5 +512,4 @@ export async function POST(req: NextRequest) {
     )
   }
 }
-
 

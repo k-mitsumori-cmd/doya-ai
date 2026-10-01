@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const bannerTextBudget = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-text-budget.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (bannerTextBudget.error || bannerTextBudget.status !== 0) {
+  console.error('Security regression failed: verify-banner-text-budget.cjs');
+  process.exit(1);
+}
 const doyamanaCreate = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyamana-admin-create.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (doyamanaCreate.error || doyamanaCreate.status !== 0) {
   console.error('Security regression failed: verify-doyamana-admin-create.cjs');

@@ -12,7 +12,7 @@ export default function BannerPricingPage() {
     const p = String(bannerPlanRaw || '').toUpperCase()
     if (!p || p === 'GUEST') return 'GUEST' as const
     if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
-    if (p.includes('PRO') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS')) return 'PRO' as const
+    if (p.includes('PRO') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS') || p.includes('BUNDLE')) return 'PRO' as const
     if (p.includes('LIGHT')) return 'LIGHT' as const
     if (p.includes('FREE')) return 'FREE' as const
     return 'FREE' as const
@@ -39,6 +39,9 @@ export default function BannerPricingPage() {
         <h1 className="text-center text-3xl sm:text-4xl font-black text-slate-900 mt-6 mb-10">
           料金プラン
         </h1>
+        <p className="mb-6 rounded-xl bg-blue-50 px-4 py-3 text-sm leading-relaxed text-slate-700">
+          バナー画像の月間枚数とは別に、AI相談とコピー提案は共通の日次枠を使います。無料プランは1日10回、LIGHTは30回、PROは100回、Enterpriseは1,000回です。日本時間の翌日にリセットされます。
+        </p>
 
         <div className="mb-6 flex flex-col items-center gap-2">
           <p className="text-sm font-black text-slate-800">

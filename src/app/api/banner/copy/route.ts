@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { reserveBannerTextCall, bannerTextLimitPayload } from '@/lib/banner/text-budget'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 function getPrimaryTextModel(): string {
@@ -479,7 +480,7 @@ function buildCopyPrompt(input: CopyRequest) {
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
-    if (!session?.user) {
+    if (!session?.user?.id) {
       return NextResponse.json({ error: 'ログインが必要です' }, { status: 401 })
     }
 
@@ -509,6 +510,14 @@ export async function POST(req: NextRequest) {
     }
     const bodyValidated = input as CopyRequest
     const prompt = buildCopyPrompt(bodyValidated)
+    let admission
+    try { admission = await reserveBannerTextCall(session.user.id) }
+    catch {
+      return NextResponse.json({ error: '利用状況を確認できません。時間をおいて再試行してください。' }, { status: 503 })
+    }
+    if (admission.state === 'limit') {
+      return NextResponse.json(bannerTextLimitPayload(admission.usage), { status: 429 })
+    }
     const raw = await callGemini(prompt, apiKey)
     const parsed = extractJsonObject(raw)
     const itemsRaw = Array.isArray((parsed as any)?.items) ? (parsed as any).items : []
@@ -543,5 +552,4 @@ export async function POST(req: NextRequest) {
     )
   }
 }
-
 
