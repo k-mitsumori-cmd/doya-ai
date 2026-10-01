@@ -198,9 +198,10 @@ export async function notifyAlert(opts: {
       })),
     })
     if (!res.ok) {
-      console.error('notifyAlert: slack webhook failed', res.status, await res.text().catch(() => ''))
+      void res.body?.cancel().catch(() => {})
+      console.error('notifyAlert: slack webhook failed', res.status)
     }
-  } catch (e) {
-    console.error('notifyAlert: failed to post', e)
+  } catch {
+    console.error('notifyAlert: failed to post')
   }
 }

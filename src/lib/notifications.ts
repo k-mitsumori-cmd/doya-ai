@@ -1,10 +1,11 @@
 import { dailyOperationsSection } from './service-operations-daily';
+import { createHash } from 'node:crypto';
 import { recordReportDelivered } from './service-operations-state';
 import { voicePayload } from './slack-voice';
 import { prisma, withRetry } from './prisma'
 import { fetchGCPUsageReport } from './gcp-usage'
 import { serviceLabelOf } from './attribution'
-import { recordErrorAndCheckBurst, shouldSend, notifyAlert, burstThreshold, buildAiRepairPrompt, firstAppFrame } from './alert'
+import { recordErrorAndCheckBurst, shouldSend, notifyAlert, burstThreshold, buildAiRepairPrompt } from './alert'
 
 export type ErrorNotificationData = {
   errorMessage: string
@@ -22,6 +23,32 @@ export type ErrorNotificationData = {
   requestBody?: string
 }
 
+function safeErrorLocation(data: ErrorNotificationData): string {
+  try {
+    const pathname = new URL(data.pathname || data.requestUrl || '/', 'https://doya.invalid').pathname
+    const parts = pathname.split('/').filter(Boolean).slice(0, 2)
+    return parts.every((part) => /^[a-z][a-z0-9-]{0,39}$/.test(part))
+      ? `/${parts.join('/')}`
+      : '/api'
+  } catch {
+    return '/api'
+  }
+}
+
+function safeErrorNotification(data: ErrorNotificationData): ErrorNotificationData {
+  const method = typeof data.requestMethod === 'string' && /^(GET|POST|PUT|PATCH|DELETE|HEAD)$/.test(data.requestMethod)
+    ? data.requestMethod : undefined
+  const status = Number.isInteger(data.httpStatus) && data.httpStatus! >= 100 && data.httpStatus! <= 599
+    ? data.httpStatus : undefined
+  return {
+    errorMessage: 'サーバー処理でエラーを検知しました。発生箇所と時刻を確認してください。',
+    pathname: safeErrorLocation(data),
+    requestMethod: method,
+    httpStatus: status,
+    timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
+  }
+}
+
 /**
  * APIエラー通知（Slack等）を送信する
  * - 設定は `SystemSetting` の `slack_webhook` を参照
@@ -29,35 +56,32 @@ export type ErrorNotificationData = {
  */
 export async function sendErrorNotification(data: ErrorNotificationData): Promise<void> {
   try {
+    const safe = safeErrorNotification(data)
     // バーストへ計上（クールダウン判定より前＝deduped でも件数には数える）
     const { count, burst } = recordErrorAndCheckBurst()
 
-    // 同一シグネチャ（path＋メッセージ）は 5 分クールダウンして連投を防ぐ
-    const sig = `err:${data.pathname || data.requestUrl || ''}:${(data.errorMessage || '').slice(0, 120)}`
+    // 詳細を外部に出さず、異なるエラーを同一箇所で潰さないための内部署名。
+    const digest = createHash('sha256').update(`${data.pathname || data.requestUrl || ''}:${data.errorMessage || ''}`).digest('hex')
+    const sig = `err:${safe.pathname}:${digest}`
     if (shouldSend(sig, 5 * 60_000)) {
       const slackWebhook = await withRetry(() => prisma.systemSetting.findUnique({
         where: { key: 'slack_webhook' },
       }))
       const webhookUrl = slackWebhook?.value || ''
       if (webhookUrl) {
-        const errorType = data.errorMessage.includes(':')
-          ? data.errorMessage.split(':')[0]?.trim()
-          : ''
         const aiPrompt = buildAiRepairPrompt({
           system: 'ドヤAI (09_Cursol・Next.js/Prisma)',
-          where: `${data.requestMethod || ''} ${data.pathname || data.requestUrl || ''}`.trim(),
-          errorType,
-          message: data.errorMessage,
-          originFile: firstAppFrame(data.errorStack),
-          stack: data.errorStack ? data.errorStack.split('\n').slice(0, 6).join('\n') : undefined,
+          where: `${safe.requestMethod || ''} ${safe.pathname || ''}`.trim(),
+          errorType: 'ServerError',
+          message: safe.errorMessage,
           env: process.env.VERCEL_ENV || process.env.NODE_ENV || 'unknown',
-          extra: { httpStatus: data.httpStatus, userId: data.userId, digest: data.errorDigest },
+          extra: { httpStatus: safe.httpStatus },
         })
         await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(voicePayload({
-            text: `${formatErrorMessage(data)}\n\n*AIへの修正依頼（コピペ用）*\n\`\`\`${aiPrompt.slice(0, 2800)}\`\`\``,
+            text: `${formatErrorMessage(safe)}\n\n*AIへの修正依頼（コピペ用）*\n\`\`\`${aiPrompt.slice(0, 2800)}\`\`\``,
           })),
         })
       }
@@ -68,13 +92,13 @@ export async function sendErrorNotification(data: ErrorNotificationData): Promis
       await notifyAlert({
         level: 'critical',
         title: 'エラー急増を検知',
-        context: data.pathname || data.requestUrl || 'api',
+        context: safe.pathname || 'api',
         detail: `直近5分で ${count} 件のAPIエラー（しきい値 ${burstThreshold()} 件）。障害の可能性があります。`,
       })
     }
-  } catch (e) {
+  } catch {
     // 通知の失敗で処理自体を止めない
-    console.error('[Notification] Failed to sendErrorNotification:', e)
+    console.error('[Notification] Failed to sendErrorNotification')
   }
 }
 
@@ -84,27 +108,10 @@ function formatErrorMessage(data: ErrorNotificationData): string {
   if (data.pathname) lines.push(`- 発生した画面・処理: ${data.pathname}`)
   if (data.httpStatus) lines.push(`- HTTP応答コード: ${data.httpStatus}`)
   if (data.requestMethod) lines.push(`- リクエストの種類: ${data.requestMethod}`)
-  if (data.requestUrl) lines.push(`- 対象URL: ${data.requestUrl}`)
-  if (data.userId || data.userEmail) lines.push(`- 調査用ユーザー識別子: ${data.userId || ''} ${data.userEmail || ''}`.trim())
   lines.push('')
-  lines.push(`*システムが返したエラー*`)
-  lines.push(truncate(data.errorMessage, 1800))
-  if (data.requestBody) {
-    lines.push('')
-    lines.push(`*調査用：送信データ*`)
-    lines.push(truncate(data.requestBody, 1200))
-  }
-  if (data.errorStack) {
-    lines.push('')
-    lines.push(`*調査用：処理の経路*`)
-    lines.push(truncate(data.errorStack, 1800))
-  }
+  lines.push(`*状況*`)
+  lines.push(data.errorMessage)
   return lines.join('\n')
-}
-
-function truncate(s: string, max: number): string {
-  const str = String(s || '')
-  return str.length > max ? `${str.slice(0, max)}…` : str
 }
 
 // ========================================
@@ -129,8 +136,8 @@ async function postSlackPayload(payload: Record<string, unknown>, signal?: Abort
     signal,
   })
   if (!res.ok) {
-    const body = await res.text().catch(() => '')
-    throw new Error(`Slack webhook returned ${res.status}: ${body}`)
+    void res.body?.cancel().catch(() => {})
+    throw new Error(`Slack webhook returned ${res.status}`)
   }
 }
 
@@ -251,8 +258,8 @@ export async function sendEventNotificationStrict(event: EventNotification): Pro
 export async function sendEventNotification(event: EventNotification): Promise<void> {
   try {
     await postToSlack(formatEventNotification(event))
-  } catch (e) {
-    console.error('[Notification] Failed to sendEventNotification:', e)
+  } catch {
+    console.error('[Notification] Failed to sendEventNotification')
   }
 }
 
@@ -341,8 +348,8 @@ export async function formatFirstUseLines(since: Date, until?: Date, limit = 15)
     })
     if (entries.length > limit) lines.push(`  - ほか${entries.length - limit}件`)
     return lines
-  } catch (e) {
-    console.error('[Notification] formatFirstUseLines failed:', e)
+  } catch {
+    console.error('[Notification] formatFirstUseLines failed')
     return ['  - (集計に失敗)']
   }
 }
@@ -822,8 +829,8 @@ export async function sendHubspotSyncNotification(
       ...leads.map((l) => `- ${l.name || '(名前なし)'}（${l.email}）`),
     ]
     await postDripToSlack(lines.join('\n'))
-  } catch (e) {
-    console.error('[Notification] Failed to sendHubspotSyncNotification:', e)
+  } catch {
+    console.error('[Notification] Failed to sendHubspotSyncNotification')
   }
 }
 
