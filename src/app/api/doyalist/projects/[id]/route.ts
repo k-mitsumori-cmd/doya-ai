@@ -75,8 +75,8 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
         statusCounts,
       },
     }, 'companies', companies)
-  } catch (e: any) {
-    console.error('[doyalist/projects/[id]][GET]', e)
+  } catch {
+    console.error('[doyalist/projects/[id]][GET] failed')
     return NextResponse.json(
       { error: 'プロジェクトの取得に失敗しました' },
       { status: 500 }
@@ -153,8 +153,8 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
     })
 
     return NextResponse.json({ success: true })
-  } catch (e: any) {
-    console.error('[doyalist/projects/[id]][DELETE]', e)
+  } catch {
+    console.error('[doyalist/projects/[id]][DELETE] failed')
     return NextResponse.json(
       { error: 'プロジェクトの削除に失敗しました' },
       { status: 500 }

@@ -73,6 +73,9 @@ async function expectSafe(promise, expected) {
     for (const file of files) {
       const source = fs.readFileSync(file, 'utf8')
       assert(!/error:\s*(?:e|err|error)\??\.(?:message|stack)/.test(source), `${file} exposes an internal error`)
+      assert(!/console\.(?:error|warn)\([^\n]*,\s*(?:e|err|error)\b/.test(source), `${file} logs an internal error object`)
     }
+    const limits = fs.readFileSync('src/lib/doyalist/limits.ts', 'utf8')
+    assert(!/console\.(?:error|warn)\([^\n]*,\s*(?:e|err|error)\b/.test(limits), 'quota refund logs an internal error object')
   })
 })().catch(error => { console.error(error); process.exitCode = 1 })

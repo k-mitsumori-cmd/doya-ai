@@ -75,8 +75,8 @@ export async function GET(req: NextRequest) {
       nextCursor: rows.length > PAGE_SIZE ? approaches[PAGE_SIZE - 1].id : null,
       summary: { allTotal, thisMonth, countsByType },
     }, { headers: { 'Cache-Control': 'private, no-store' } })
-  } catch (e: any) {
-    console.error('[doyalist/approaches][GET]', e)
+  } catch {
+    console.error('[doyalist/approaches][GET] failed')
     return NextResponse.json(
       { error: '履歴の取得に失敗しました' },
       { status: 500 }
@@ -113,8 +113,8 @@ export async function DELETE(req: NextRequest) {
 
     await prisma.doyalistApproach.delete({ where: { id } })
     return NextResponse.json({ success: true })
-  } catch (e: any) {
-    console.error('[doyalist/approaches][DELETE]', e)
+  } catch {
+    console.error('[doyalist/approaches][DELETE] failed')
     return NextResponse.json(
       { error: '削除に失敗しました' },
       { status: 500 }

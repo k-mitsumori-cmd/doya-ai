@@ -69,8 +69,8 @@ export async function GET() {
         approaches: remaining(approachesUsed, limits.maxApproachesPerMonth),
       },
     }, { headers: privateHeaders })
-  } catch (e: any) {
-    console.error('[doyalist/usage][GET]', e)
+  } catch {
+    console.error('[doyalist/usage][GET] failed')
     return NextResponse.json(
       { error: '利用状況の取得に失敗しました' },
       { status: 500, headers: privateHeaders }

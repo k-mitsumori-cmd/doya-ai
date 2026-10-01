@@ -144,7 +144,7 @@ export async function releaseMonthlyApproach(userId: string, reservedMonth: Date
     })
     if (!ledger || !isSameMonth(ledger.lastUsageReset, reservedMonth) || ledger.monthlyUsage <= 0) return
     await tx.userServiceSubscription.update({ where, data: { monthlyUsage: { decrement: 1 } } })
-  }).catch((error) => console.error('[doyalist/approaches] quota refund failed', error))
+  }).catch(() => console.error('[doyalist/approaches] quota refund failed'))
 }
 
 /** 利用可能な残り企業生成数（-1 = unlimited） */
