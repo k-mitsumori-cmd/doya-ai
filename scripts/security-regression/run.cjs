@@ -20,6 +20,11 @@ if (bannerTextBudget.error || bannerTextBudget.status !== 0) {
   console.error('Security regression failed: verify-banner-text-budget.cjs');
   process.exit(1);
 }
+const bannerTextProviderResponse = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-text-provider-response.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (bannerTextProviderResponse.error || bannerTextProviderResponse.status !== 0) {
+  console.error('Security regression failed: verify-banner-text-provider-response.cjs');
+  process.exit(1);
+}
 const doyamanaCreate = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyamana-admin-create.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (doyamanaCreate.error || doyamanaCreate.status !== 0) {
   console.error('Security regression failed: verify-doyamana-admin-create.cjs');

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { reserveBannerTextCall, bannerTextLimitPayload } from '@/lib/banner/text-budget'
+import { requestBannerTextProvider } from '@/lib/banner/provider-response'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
 function getPrimaryTextModel(): string {
@@ -132,12 +133,8 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
         ],
       })
 
-      const attempt = async (jsonMode: boolean) =>
-        fetch(`${endpoint}?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(buildBody(jsonMode)),
-        })
+      const attempt = (jsonMode: boolean) =>
+        requestBannerTextProvider(`${endpoint}?key=${apiKey}`, buildBody(jsonMode))
 
       // 502/503 が出ることがあるため軽いリトライ
       let res = await attempt(true)
@@ -147,7 +144,7 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
       }
 
       if (!res.ok) {
-        const t = await res.text()
+        const t = res.text
         // JSONモードが弾かれたら通常モードで再試行
         if (
           res.status === 400 &&
@@ -159,13 +156,13 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
             retry = await attempt(false)
           }
           if (retry.ok) {
-            const json = await retry.json()
+            const json = JSON.parse(retry.text)
             const text = Array.isArray(json?.candidates?.[0]?.content?.parts)
               ? json.candidates[0].content.parts.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim()
               : ''
             if (text) return text
           } else {
-            const t2 = await retry.text()
+            const t2 = retry.text
             lastError = `Gemini ${model} error (retry): ${retry.status} - ${t2.substring(0, 600)}`
             continue
           }
@@ -174,7 +171,7 @@ async function callGemini(prompt: string, apiKey: string): Promise<string> {
         continue
       }
 
-      const json = await res.json()
+      const json = JSON.parse(res.text)
       const text = Array.isArray(json?.candidates?.[0]?.content?.parts)
         ? json.candidates[0].content.parts.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim()
         : ''
@@ -552,4 +549,3 @@ export async function POST(req: NextRequest) {
     )
   }
 }
-

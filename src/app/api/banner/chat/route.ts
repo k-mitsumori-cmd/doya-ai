@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { reserveBannerTextCall, bannerTextLimitPayload } from '@/lib/banner/text-budget'
+import { requestBannerTextProvider } from '@/lib/banner/provider-response'
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string }
 
@@ -351,12 +352,8 @@ async function callGemini(messages: ChatMessage[], apiKey: string): Promise<stri
         ],
       })
 
-      const attempt = async (jsonMode: boolean) =>
-        fetch(`${endpoint}?key=${apiKey}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(buildBody(jsonMode)),
-        })
+      const attempt = (jsonMode: boolean) =>
+        requestBannerTextProvider(`${endpoint}?key=${apiKey}`, buildBody(jsonMode))
 
       let res = await attempt(true)
       if (res.status === 502 || res.status === 503) {
@@ -365,7 +362,7 @@ async function callGemini(messages: ChatMessage[], apiKey: string): Promise<stri
       }
 
       if (!res.ok) {
-        const t = await res.text()
+        const t = res.text
         // JSONモードが弾かれたら通常モードで再試行
         if (
           res.status === 400 &&
@@ -377,14 +374,14 @@ async function callGemini(messages: ChatMessage[], apiKey: string): Promise<stri
             retry = await attempt(false)
           }
           if (retry.ok) {
-            const json = await retry.json()
+            const json = JSON.parse(retry.text)
             const text = json?.candidates?.[0]?.content?.parts
               ?.map((p: any) => (p?.text ? String(p.text) : ''))
               .join('\n')
               .trim()
             if (text) return text
           } else {
-            const t2 = await retry.text()
+            const t2 = retry.text
             lastError = `Gemini ${model} error (retry): ${retry.status} - ${t2.substring(0, 240)}`
             continue
           }
@@ -393,7 +390,7 @@ async function callGemini(messages: ChatMessage[], apiKey: string): Promise<stri
         continue
       }
 
-      const json = await res.json()
+      const json = JSON.parse(res.text)
       const text = json?.candidates?.[0]?.content?.parts?.map((p: any) => (p?.text ? String(p.text) : '')).join('\n').trim()
       if (!text) {
         lastError = `Gemini ${model} returned empty text`
@@ -512,4 +509,3 @@ export async function POST(req: NextRequest) {
     )
   }
 }
-

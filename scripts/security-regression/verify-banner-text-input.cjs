@@ -10,16 +10,19 @@ function fixture(route, providerStatus = 200) {
     '@/lib/banner/text-budget': {
       reserveBannerTextCall: async () => ({ state: 'allowed', usage: { dailyLimit: 10, dailyUsed: 1, dailyRemaining: 9 } }),
     },
+    '@/lib/banner/provider-response': {
+      requestBannerTextProvider: async () => {
+        providerCalls++
+        if (providerStatus !== 200) return { ok: false, status: providerStatus, text: 'SENSITIVE_PROVIDER_DETAIL' }
+        const text = route === 'copy'
+          ? JSON.stringify({ items: [{ catch: '有効な提案' }], suggestions: ['有効な提案'] })
+          : JSON.stringify({ reply: 'どんな写真を使いますか？', spec: { purpose: 'sns_ad', category: 'other', size: '1080x1080', keyword: 'テスト' } })
+        return { ok: true, status: 200, text: JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] }) }
+      },
+    },
   }, {
     process: { env: { GOOGLE_AI_API_KEY: 'test-key' } },
-    fetch: async () => {
-      providerCalls++
-      if (providerStatus !== 200) return new Response('SENSITIVE_PROVIDER_DETAIL', { status: providerStatus })
-      const text = route === 'copy'
-        ? JSON.stringify({ items: [{ catch: '有効な提案' }], suggestions: ['有効な提案'] })
-        : JSON.stringify({ reply: 'どんな写真を使いますか？', spec: { purpose: 'sns_ad', category: 'other', size: '1080x1080', keyword: 'テスト' } })
-      return new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] }), { status: 200 })
-    },
+    fetch: async () => { throw new Error('unexpected direct provider call') },
   })
   return { api, get providerCalls() { return providerCalls } }
 }

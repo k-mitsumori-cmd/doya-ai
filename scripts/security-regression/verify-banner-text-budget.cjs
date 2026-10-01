@@ -54,6 +54,7 @@ async function main() {
         reserveBannerTextCall: async () => denied,
         bannerTextLimitPayload: budget.bannerTextLimitPayload,
       },
+      '@/lib/banner/provider-response': { requestBannerTextProvider: async () => { providerCalled = true; throw new Error('provider must not be called') } },
     }, {
       process: { env: { GOOGLE_AI_API_KEY: 'local-test-key' } },
       fetch: async () => { providerCalled = true; throw new Error('provider must not be called') },
@@ -75,6 +76,7 @@ async function main() {
       '@/lib/banner/text-budget': {
         reserveBannerTextCall: async () => { throw new Error('database unavailable') },
       },
+      '@/lib/banner/provider-response': { requestBannerTextProvider: async () => { providerCalled = true; throw new Error('provider must not be called') } },
     }, {
       process: { env: { GOOGLE_AI_API_KEY: 'local-test-key' } },
       fetch: async () => { providerCalled = true; throw new Error('provider must not be called') },
