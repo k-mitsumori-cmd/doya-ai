@@ -26,9 +26,12 @@
 
 import sharp from 'sharp'
 import { generateImageWithFallback } from './image-generator'
+import { safeFetchResource } from './net/safe-fetch'
 
 // Google AI Studio API 設定
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
+const GEMINI_TEXT_TIMEOUT_MS = 30_000
+const GEMINI_TEXT_RESPONSE_MAX_BYTES = 512 * 1024
 
 
 type GeminiModel = {
@@ -53,10 +56,15 @@ export async function compressForApi(dataUrl: string): Promise<string> {
 }
 
 async function fetchAsBase64(url: string): Promise<string> {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`fileUri fetch failed: ${res.status}`)
-  const ab = await res.arrayBuffer()
-  return Buffer.from(ab).toString('base64')
+  if (!url.startsWith('https://')) throw new Error('fileUri must use HTTPS')
+  const image = await safeFetchResource(url, {
+    accept: 'image/*',
+    timeoutMs: 30_000,
+    maxRedirects: 2,
+    maxBytes: 16 * 1024 * 1024,
+  })
+  if (!image?.body.length) throw new Error('fileUri fetch failed')
+  return image.body.toString('base64')
 }
 
 function normalizeModelId(model: string): string {
@@ -1117,6 +1125,7 @@ async function refinePromptWithGemini3Flash(originalPrompt: string): Promise<str
       const endpoint = `${GEMINI_API_BASE}/models/${model}:generateContent`
       const res = await fetch(endpoint, {
         method: 'POST',
+        signal: AbortSignal.timeout(GEMINI_TEXT_TIMEOUT_MS),
         headers: {
           'Content-Type': 'application/json',
           'x-goog-api-key': apiKey,
@@ -1124,12 +1133,12 @@ async function refinePromptWithGemini3Flash(originalPrompt: string): Promise<str
         body: JSON.stringify(requestBody),
       })
 
+      const responseText = await readGeminiTextResponse(res)
       if (!res.ok) {
-        const t = await res.text()
-        throw new Error(`Gemini prompt error: ${res.status} - ${t.substring(0, 300)}`)
+        throw new Error(`Gemini prompt error: ${res.status} - ${responseText.substring(0, 300)}`)
       }
 
-      const json = await res.json()
+      const json = JSON.parse(responseText)
       const parts = json?.candidates?.[0]?.content?.parts
       const text = Array.isArray(parts)
         ? parts.map((p: any) => (typeof p?.text === 'string' ? p.text : '')).join('\n').trim()
@@ -1143,6 +1152,31 @@ async function refinePromptWithGemini3Flash(originalPrompt: string): Promise<str
   }
 
   throw lastErr || new Error('Gemini prompt refine failed')
+}
+
+async function readGeminiTextResponse(res: Response): Promise<string> {
+  const declaredLength = Number(res.headers.get('content-length'))
+  if (declaredLength > GEMINI_TEXT_RESPONSE_MAX_BYTES) {
+    void res.body?.cancel().catch(() => {})
+    throw new Error('Gemini prompt response is too large')
+  }
+  if (!res.body) return ''
+  const reader = res.body.getReader()
+  const chunks: Buffer[] = []
+  let length = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      length += value.byteLength
+      if (length > GEMINI_TEXT_RESPONSE_MAX_BYTES) throw new Error('Gemini prompt response is too large')
+      chunks.push(Buffer.from(value))
+    }
+    return Buffer.concat(chunks, length).toString('utf8')
+  } finally {
+    void reader.cancel().catch(() => {})
+    reader.releaseLock()
+  }
 }
 
 const EXTRA_VARIANT_HINTS: string[] = [

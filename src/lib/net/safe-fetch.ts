@@ -105,7 +105,7 @@ export interface SafeFetchOptions {
   headersOnly?: boolean
   timeoutMs?: number
   maxRedirects?: number
-  /** Maximum decompressed response bytes (default 2 MiB, ceiling 8 MiB). */
+  /** Maximum decompressed response bytes (default 2 MiB, ceiling 16 MiB). */
   maxBytes?: number
   /** Optional parent deadline, e.g. a bounded browser resource-loading session. */
   signal?: AbortSignal
@@ -139,7 +139,7 @@ export async function safeFetchResource(rawUrl: string, opts: SafeFetchOptions =
     Number.isFinite(value) && value! >= 0 ? Math.min(Math.floor(value!), ceiling) : fallback
   const timeoutMs = bounded(opts.timeoutMs, 10000, 120000)
   const maxRedirects = bounded(opts.maxRedirects, 3, 10)
-  const maxBytes = bounded(opts.maxBytes, 2 * 1024 * 1024, 8 * 1024 * 1024)
+  const maxBytes = bounded(opts.maxBytes, 2 * 1024 * 1024, 16 * 1024 * 1024)
   const controller = new AbortController()
   const abortFromParent = () => controller.abort()
   if (opts.signal?.aborted) controller.abort()

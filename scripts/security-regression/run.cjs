@@ -732,3 +732,8 @@ if (aioBrandFetch.error || aioBrandFetch.status !== 0) {
   console.error('Security regression failed: verify-aio-brand-fetch.cjs');
   process.exit(1);
 }
+const nanobannerFileFetch = spawnSync(process.execPath, [path.join(__dirname, 'verify-nanobanner-file-fetch.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (nanobannerFileFetch.error || nanobannerFileFetch.status !== 0) {
+  console.error('Security regression failed: verify-nanobanner-file-fetch.cjs');
+  process.exit(1);
+}
