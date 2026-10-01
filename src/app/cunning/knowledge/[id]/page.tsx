@@ -130,14 +130,17 @@ export default function CunningKnowledgeDetail() {
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
+            maxLength={20000}
             rows={5}
             placeholder="サービス概要・料金・FAQ・想定問答などを貼り付け"
             className="w-full rounded-xl border border-slate-200 px-4 py-3 font-medium"
           />
         ) : (
           <input
+            type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
+            maxLength={2048}
             placeholder="https://example.com/service"
             className="w-full rounded-xl border border-slate-200 px-4 py-3 font-bold"
           />

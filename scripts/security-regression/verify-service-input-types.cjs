@@ -72,14 +72,19 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
       'next/server': server,
       '@/lib/prisma': { prisma: {
         cunningKnowledgeBase: { findUnique: async () => ({ userId: 'user' }), update: async () => ({}) },
-        cunningKnowledgeChunk: { createMany: async () => { calls++; return { count: 1 }; } },
+        cunningKnowledgeChunk: { count: async () => 0, createMany: async () => { calls++; return { count: 1 }; } },
+        $transaction: async (callback) => callback({
+          $executeRaw: async () => {},
+          cunningKnowledgeChunk: { count: async () => 0, createMany: async () => { calls++; return { count: 1 }; } },
+          cunningKnowledgeBase: { update: async () => ({}) },
+        }),
       } },
       '@/lib/cunning/access': { getUserId: async () => 'user' },
-      '@/lib/cunning/rag': { chunkText: () => ['Chunk'] },
+      '@/lib/cunning/rag': { chunkText: () => ['Chunk'], CUNNING_KNOWLEDGE_MAX_CHUNKS: 500 },
       '@/lib/cunning/scraper': { scrapeUrl: async () => ({ text: 'Text', url: 'https://example.com', title: 'Title' }) },
     });
     await checkRoute('Cunning knowledge ingest', (req) => route.POST(req, params),
-      [null, { type: {} }, { type: 'text', text: {} }, { type: 'url', url: [] }, { type: 'text', text: 'Text', label: 3 }],
+      [null, { type: {} }, { type: 'text', text: {} }, { type: 'url', url: [] }, { type: 'url', url: 'ftp://example.com' }, { type: 'text', text: 'a'.repeat(20001) }, { type: 'text', text: 'Text', label: 3 }],
       { type: 'text', text: 'Text' }, () => calls);
   }
   {

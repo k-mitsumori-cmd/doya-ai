@@ -5,7 +5,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
-import { chunkText } from '@/lib/cunning/rag'
+import { chunkText, CUNNING_KNOWLEDGE_MAX_CHUNKS } from '@/lib/cunning/rag'
 import { scrapeUrl } from '@/lib/cunning/scraper'
 
 type Ctx = { params: Promise<{ id: string }> }
@@ -40,6 +40,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (type === 'url') {
       const url = typeof body.url === 'string' ? body.url.trim() : ''
       if (!url) return NextResponse.json({ error: 'URLを入力してください' }, { status: 400 })
+      if (url.length > 2048 || !/^https?:\/\//i.test(url)) return NextResponse.json({ error: 'httpまたはhttpsのURLを入力してください' }, { status: 400 })
+      try { new URL(url) } catch { return NextResponse.json({ error: 'URLの形式を確認してください' }, { status: 400 }) }
       const scraped = await scrapeUrl(url)
       rawText = scraped.text
       sourceUrl = scraped.url
@@ -47,6 +49,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     } else {
       rawText = typeof body.text === 'string' ? body.text.trim() : ''
       if (!rawText) return NextResponse.json({ error: 'テキストを入力してください' }, { status: 400 })
+      if (rawText.length > 20000) return NextResponse.json({ error: 'テキストは20,000文字以内にしてください' }, { status: 400 })
       sourceLabel = sourceLabel || '手入力テキスト'
     }
 
@@ -55,15 +58,20 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: '取り込めるテキストがありませんでした' }, { status: 400 })
     }
 
-    await prisma.cunningKnowledgeChunk.createMany({
-      data: chunks.map((content) => ({
-        knowledgeBaseId: p.id,
-        content,
-        sourceUrl,
-        sourceLabel,
-      })),
-    })
-    await prisma.cunningKnowledgeBase.update({ where: { id: p.id }, data: { updatedAt: new Date() } })
+    const added = await prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`cunning-knowledge:${p.id}`}))`
+      const count = await tx.cunningKnowledgeChunk.count({ where: { knowledgeBaseId: p.id } })
+      if (count + chunks.length > CUNNING_KNOWLEDGE_MAX_CHUNKS) return false
+      await tx.cunningKnowledgeChunk.createMany({
+        data: chunks.map((content) => ({ knowledgeBaseId: p.id, content, sourceUrl, sourceLabel })),
+      })
+      await tx.cunningKnowledgeBase.update({ where: { id: p.id }, data: { updatedAt: new Date() } })
+      return true
+    }, { timeout: 15000 })
+    if (!added) return NextResponse.json({
+      code: 'CUNNING_KNOWLEDGE_CAPACITY',
+      error: `ナレッジは1つにつき${CUNNING_KNOWLEDGE_MAX_CHUNKS}件までです。不要な情報を削除してからお試しください。`,
+    }, { status: 409 })
 
     return NextResponse.json({ added: chunks.length })
   } catch (e: any) {

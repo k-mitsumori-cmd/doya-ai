@@ -6,6 +6,8 @@
 import { prisma } from '@/lib/prisma'
 import type { KnowledgeChunkLite } from './types'
 
+export const CUNNING_KNOWLEDGE_MAX_CHUNKS = 500
+
 /** テキストを意味のまとまり（段落/文）でチャンク化。長すぎる塊は文字数で分割。 */
 export function chunkText(text: string, target = 600, max = 1000): string[] {
   const blocks = text
@@ -27,12 +29,21 @@ export function chunkText(text: string, target = 600, max = 1000): string[] {
       const sentences = block.split(/(?<=[。．!?！？])/)
       let sb = ''
       for (const s of sentences) {
-        if ((sb + s).length > max) {
+        let rest = s
+        while (rest.length > max) {
           if (sb.trim()) chunks.push(sb.trim())
-          sb = s
-        } else {
-          sb += s
+          sb = ''
+          let cut = max
+          // Do not split a UTF-16 surrogate pair in the middle of an emoji.
+          if (cut < rest.length && /[\uD800-\uDBFF]/.test(rest[cut - 1])) cut--
+          const part = rest.slice(0, cut).trim()
+          if (part) chunks.push(part)
+          rest = rest.slice(cut)
         }
+        if ((sb + rest).length > max) {
+          if (sb.trim()) chunks.push(sb.trim())
+          sb = rest
+        } else sb += rest
       }
       if (sb.trim()) chunks.push(sb.trim())
       continue
@@ -81,8 +92,9 @@ export async function retrieveChunks(
 ): Promise<KnowledgeChunkLite[]> {
   const chunks = await prisma.cunningKnowledgeChunk.findMany({
     where: { knowledgeBaseId },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     select: { id: true, content: true, sourceUrl: true, sourceLabel: true },
-    take: 500,
+    take: CUNNING_KNOWLEDGE_MAX_CHUNKS,
   })
   if (chunks.length === 0) return []
   const qg = bigrams(query)

@@ -692,3 +692,8 @@ if (cunningCompanyAnalysis.error || cunningCompanyAnalysis.status !== 0) {
   console.error('Security regression failed: verify-cunning-company-analysis.cjs');
   process.exit(1);
 }
+const cunningKnowledgeIngest = spawnSync(process.execPath, [path.join(__dirname, 'verify-cunning-knowledge-ingest.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (cunningKnowledgeIngest.error || cunningKnowledgeIngest.status !== 0) {
+  console.error('Security regression failed: verify-cunning-knowledge-ingest.cjs');
+  process.exit(1);
+}

@@ -39,9 +39,10 @@ export async function POST(req: NextRequest) {
 
     let chunks: KnowledgeChunkLite[] | undefined
     if (ctx.knowledgeBaseId) {
-      // 事前準備は全体傾向を見るため、先頭の代表チャンクを多めに渡す
+      // 事前準備には直近に追加したチャンクを優先して渡す。
       chunks = await prisma.cunningKnowledgeChunk.findMany({
         where: { knowledgeBaseId: ctx.knowledgeBaseId },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         select: { id: true, content: true, sourceUrl: true, sourceLabel: true },
         take: 10,
       })

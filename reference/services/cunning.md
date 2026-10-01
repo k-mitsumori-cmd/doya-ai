@@ -160,7 +160,7 @@
 |---------|------|------|
 | GET | `/api/cunning/knowledge` | ナレッジベース一覧 |
 | POST | `/api/cunning/knowledge` | ナレッジベース作成 |
-| POST | `/api/cunning/knowledge/[id]/ingest` | ファイル/URL/テキスト取り込み（チャンク化＋埋め込み） |
+| POST | `/api/cunning/knowledge/[id]/ingest` | URL/テキスト取り込み（字句検索用にチャンク化して保存）。手入力は20,000文字以内、1ナレッジにつき最大500件。上限時は不要な情報を削除して再試行。 |
 | DELETE | `/api/cunning/knowledge/[id]` | 削除 |
 
 ### 企業コンテキスト（面接モード）
