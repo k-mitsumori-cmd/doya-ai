@@ -53,7 +53,7 @@ export const authOptions: NextAuthOptions = {
 
             // ドリップ配信: 自動エンロール（DB接続エラー時はリトライ）
             withRetry(() => enrollUserInDripSequences(user.id)).catch((e) => {
-              console.error('[Drip] Auto-enroll failed:', e)
+              console.error('[Drip] Auto-enroll failed:')
             })
           } else {
             // ログイン通知（どのサービスからのログインか＋流入経路つき）
@@ -66,7 +66,7 @@ export const authOptions: NextAuthOptions = {
             }).catch(() => {})
           }
         } catch (e) {
-          console.error('Failed to set firstLoginAt:', e)
+          console.error('Failed to set firstLoginAt:')
         }
       }
       return true;
@@ -167,10 +167,10 @@ export const authOptions: NextAuthOptions = {
 
         // ドリップ配信: 自動エンロール
         await withRetry(() => enrollUserInDripSequences(user.id)).catch((e) => {
-          console.error('[Drip] Auto-enroll failed (createUser):', e)
+          console.error('[Drip] Auto-enroll failed (createUser):')
         })
       } catch (e) {
-        console.error('[events.createUser] failed:', e)
+        console.error('[events.createUser] failed:')
       }
     },
   },

@@ -751,7 +751,7 @@ async function loadYtSnapshot(): Promise<YtSnapshot> {
     const row = await prisma.systemSetting.findUnique({ where: { key: YT_SNAPSHOT_KEY } })
     return row ? JSON.parse(row.value) : {}
   } catch (e) {
-    console.error('[analytics-report] failed to load YouTube snapshot:', e)
+    console.error('[analytics-report] failed to load YouTube snapshot:')
     return {}
   }
 }
@@ -1252,7 +1252,7 @@ export async function sendAnalyticsReport(
   // スナップショットは最後に保存（月次のprevMonth計算に旧値を使うため）
   if (ytSummaries.length > 0) {
     await saveYtSnapshot(ytSummaries).catch((e) => {
-      console.error('[analytics-report] failed to save YouTube snapshot:', e)
+      console.error('[analytics-report] failed to save YouTube snapshot:')
       allErrors.push('YouTube: スナップショット保存に失敗')
     })
   }

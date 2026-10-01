@@ -122,9 +122,9 @@ export async function renderVideo(
     await completeRenderJob(jobId, outputUrl)
     return outputUrl
   } catch (error) {
-    console.error('[renderVideo] Fatal error:', error)
+    console.error('[renderVideo] Fatal error:')
     await failRenderJob(jobId, String(error)).catch((e) =>
-      console.error('[renderVideo] failRenderJob also failed:', e)
+      console.error('[renderVideo] failRenderJob also failed:')
     )
     throw error
   }

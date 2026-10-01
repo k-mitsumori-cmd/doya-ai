@@ -96,7 +96,7 @@ async function recordServiceUsageImpl(opts: ServiceUsageOptions): Promise<void> 
       await notifyServiceActivity(opts)
     }
   } catch (e) {
-    console.error('[Usage] recordServiceUsage failed:', opts.serviceId, e instanceof Error ? e.message : e)
+    console.error('[Usage] recordServiceUsage failed:')
   }
 }
 
@@ -221,7 +221,7 @@ export async function notifyFirstServiceUse(opts: {
 
     await postToSlackBlocks(`[初回利用] ${label} - ${who}`, blocks)
   } catch (e) {
-    console.error('[Usage] notifyFirstServiceUse failed:', serviceId, e instanceof Error ? e.message : e)
+    console.error('[Usage] notifyFirstServiceUse failed:')
   }
 }
 
@@ -236,5 +236,5 @@ export async function notifyServiceActivity(opts: Pick<ServiceUsageOptions, 'ser
       `日時：${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}（日本時間）`,
     ].join('\n');
     await postToSlackBlocks(text, [{ type: 'section', text: { type: 'plain_text', text } }]);
-  } catch (error) { console.error('[Usage] notification failed', error); }
+  } catch (error) { console.error('[Usage] notification failed'); }
 }

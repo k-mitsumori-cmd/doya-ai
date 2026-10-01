@@ -33,6 +33,6 @@ export async function logAudit(params: LogAuditParams): Promise<void> {
       },
     })
   } catch (e) {
-    console.error('[HrAudit] Failed to write audit log:', e)
+    console.error('[HrAudit] Failed to write audit log:')
   }
 }

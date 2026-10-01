@@ -106,7 +106,7 @@ export async function deleteFile(storagePath: string): Promise<void> {
     .remove([storagePath])
 
   if (error) {
-    console.error(`[tenkai] File delete failed: ${storagePath}`, error.message)
+    console.error("[lib/tenkai/storage] failed")
   }
 }
 

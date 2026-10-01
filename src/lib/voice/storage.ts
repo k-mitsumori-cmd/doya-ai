@@ -109,7 +109,7 @@ export async function deleteVoiceAudio(opts: {
       await supabase.storage.from(BUCKET_NAME).remove(paths)
     }
   } catch (err) {
-    console.warn('Storage cleanup failed:', err)
+    console.warn('Storage cleanup failed:')
   }
 }
 

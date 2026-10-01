@@ -51,15 +51,14 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
     })
 
     if (!res.ok) {
-      const err = await res.text()
-      console.error('[Email] Resend API error:', res.status, err)
+      console.error('[Email] Resend API error:', res.status)
       return { success: false, error: `Resend API error: ${res.status}` }
     }
 
     const data = await res.json()
     return { success: true, id: data.id }
-  } catch (e) {
-    console.error('[Email] Failed to send:', e)
-    return { success: false, error: String(e) }
+  } catch {
+    console.error('[Email] Failed to send:')
+    return { success: false, error: 'メールの送信に失敗しました。' }
   }
 }

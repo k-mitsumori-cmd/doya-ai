@@ -48,7 +48,7 @@ function parseJson<T>(text: string, fallback: T): T {
     if (start !== -1 && end !== -1) jsonStr = jsonStr.slice(start, end + 1)
     return JSON.parse(jsonStr) as T
   } catch (e) {
-    console.error('Copy gemini JSON parse failed:', e)
+    console.error('Copy gemini JSON parse failed:')
     return fallback
   }
 }
@@ -61,7 +61,7 @@ function parseJsonArray<T>(text: string, fallback: T[]): T[] {
     if (start !== -1 && end !== -1) jsonStr = jsonStr.slice(start, end + 1)
     return JSON.parse(jsonStr) as T[]
   } catch (e) {
-    console.error('Copy gemini JSON array parse failed:', e)
+    console.error('Copy gemini JSON array parse failed:')
     return fallback
   }
 }
@@ -260,7 +260,7 @@ NGワード: ${ngWords}
     const items = parseJsonArray<DisplayCopyItem>(text, [])
     return items.map(item => ({ ...item, writerType }))
   } catch (e) {
-    console.error(`Copy generation failed for ${writerType}:`, e)
+    console.error("[lib/copy/gemini] failed")
     return []
   }
 }
@@ -433,7 +433,7 @@ ${persona.name}（${persona.age}）
       })
       results.push(item)
     } catch (e) {
-      console.error(`SNS copy generation failed for ${platform}:`, e)
+      console.error("[lib/copy/gemini] failed")
     }
   }
 

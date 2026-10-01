@@ -4,6 +4,7 @@ const path = require('node:path');
 const ts = require('typescript');
 
 const apiRoot = path.join(__dirname, '../../src/app/api');
+const libRoot = path.join(__dirname, '../../src/lib');
 const exceptionNames = /^(e|err|error|releaseError|notifyErr|lastError|errorText|responseText|providerError)$/;
 
 function exposesException(node) {
@@ -30,9 +31,17 @@ function* routes(dir) {
   }
 }
 
+function* libraries(dir) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const file = path.join(dir, entry.name);
+    if (entry.isDirectory()) yield* libraries(file);
+    else if (/\.tsx?$/.test(entry.name) && !entry.name.endsWith('.d.ts')) yield file;
+  }
+}
+
 const violations = [];
-for (const file of routes(apiRoot)) {
-  const rel = path.relative(apiRoot, file);
+for (const file of [...routes(apiRoot), ...libraries(libRoot)]) {
+  const rel = path.relative(path.join(__dirname, '../../src'), file);
   const source = fs.readFileSync(file, 'utf8');
   const ast = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true);
   function visit(node) {
@@ -49,4 +58,4 @@ for (const file of routes(apiRoot)) {
 }
 
 assert.deepEqual(violations, [], `Raw exception data in server logs: ${violations.join(', ')}`);
-console.log('PASS API error and warning logs do not include raw exception objects, messages, or stacks');
+console.log('PASS API and library error/warning logs do not include raw exception objects, messages, or stacks');

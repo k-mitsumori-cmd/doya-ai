@@ -83,7 +83,7 @@ recommendedTemplatesは6つすべてを、このサイトに合う順番で並�
     if (start !== -1 && end !== -1) jsonStr = jsonStr.slice(start, end + 1)
     return JSON.parse(jsonStr)
   } catch (e) {
-    console.error('Opening analyzeWithAI JSON parse failed:', e)
+    console.error('Opening analyzeWithAI JSON parse failed:')
     return {
       industry: 'IT・テクノロジー',
       tone: 'professional',
@@ -127,7 +127,7 @@ export async function generateExportCode(config: {
     const code = await generateText(prompt)
     return code.replace(/```tsx?\n?/g, '').replace(/```/g, '').trim()
   } catch (e) {
-    console.error('Opening generateExportCode failed, using default:', e)
+    console.error('Opening generateExportCode failed, using default:')
     return getDefaultExportCode(config)
   }
 }

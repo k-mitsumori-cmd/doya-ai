@@ -100,7 +100,7 @@ export async function verifyTurnstileToken(
       hostname: result.hostname,
     }
   } catch (error) {
-    console.error('Turnstile verification error:', error)
+    console.error('Turnstile verification error:')
     return {
       success: false,
       error: 'CAPTCHA検証中にエラーが発生しました',

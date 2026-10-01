@@ -94,7 +94,7 @@ export async function generateBanners(input: GenerateInput): Promise<GeneratedCr
         const c = await raceTimeout('adbannerGen', 150000, genOne(input, i)) // 1枚あたりハードタイムアウト＝ハング防止
         if (c) out.push(c)
       } catch (e) {
-        console.error('[adbanner] genOne failed', (e as any)?.message)
+        console.error('[adbanner] genOne failed')
       }
     }
   }

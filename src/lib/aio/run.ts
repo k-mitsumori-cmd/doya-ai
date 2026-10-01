@@ -165,7 +165,7 @@ export async function runAndPersistScan(
     return { id: scan.id, status: 'done', summary: s, recommendations: out.recommendations }
   } catch (e: any) {
     // 生の例外メッセージはDB保存・クライアント返却しない（内部情報漏えい防止）。詳細はサーバログのみ。
-    console.error('[aio/run] failed', e?.message)
+    console.error('[aio/run] failed')
     await prisma.aioScan
       .updateMany({
         where: { id: scan.id, organizationId, status: 'processing' },

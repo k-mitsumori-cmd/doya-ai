@@ -86,7 +86,7 @@ export async function deliverStripeWebhookNotification(eventId: string): Promise
         nextAttemptAt: new Date(Date.now() + backoffMs),
       },
     })
-    console.error('[Stripe webhook notification] delivery failed:', eventId, error)
+    console.error('[Stripe webhook notification] delivery failed:')
     return 'failed'
   }
 }

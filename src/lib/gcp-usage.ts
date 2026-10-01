@@ -277,7 +277,7 @@ export async function fetchGCPUsageReport(): Promise<GCPUsageReport> {
       },
     }
   } catch (err: any) {
-    console.error('[GCP Usage] Failed to fetch usage report:', err.message)
+    console.error('[GCP Usage] Failed to fetch usage report:')
     return {
       projectId,
       periodStart: startTime,

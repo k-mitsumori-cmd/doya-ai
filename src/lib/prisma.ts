@@ -55,7 +55,7 @@ function getDatabaseUrl(): string {
     return url.toString()
   } catch (e) {
     // URL解析に失敗した場合は元のURLを返す
-    console.warn('[Prisma] Failed to parse DATABASE_URL, using as-is:', e)
+    console.warn('[Prisma] Failed to parse DATABASE_URL, using as-is:')
     return baseUrl
   }
 }
@@ -155,10 +155,7 @@ export async function withRetry<T>(
       lastError = error
       if (attempt < maxRetries && isConnectionError(error)) {
         const delay = 1000 * (attempt + 1)
-        console.warn(
-          `[Prisma] Connection error on attempt ${attempt + 1}, retrying in ${delay}ms...`,
-          (error as { message?: string }).message,
-        )
+        console.warn(`[Prisma] Connection error on attempt ${attempt + 1}, retrying in ${delay}ms...`)
         await new Promise((resolve) => setTimeout(resolve, delay))
         await resetPrismaClient()
       } else {

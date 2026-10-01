@@ -102,7 +102,7 @@ export async function composeSlideImage(
       imageUrl = await raceTimeout('uploadComposedImage', UPLOAD_TIMEOUT_MS, uploadComposedImage(userId, project.id, composed))
     } catch (e) {
       // 合成に失敗してもロゴ無し画像で続行
-      console.error('[doyaslide] ロゴ合成失敗:', (e as any)?.message)
+      console.error('[doyaslide] ロゴ合成失敗:')
       imageUrl = rawImageUrl
     }
   }

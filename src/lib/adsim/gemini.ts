@@ -152,7 +152,7 @@ export async function generateProposalSections(
         )
         return { key: sec.key, title: sec.title, content: content.trim() }
       } catch (err) {
-        console.error(`[adsim] section ${sec.key} failed`, err)
+        console.error("[lib/adsim/gemini] failed")
         return {
           key: sec.key,
           title: sec.title,
@@ -187,7 +187,7 @@ export async function* generateProposalSectionsStream(
         )
         return { key: sec.key, title: sec.title, content: content.trim() }
       } catch (err) {
-        console.error(`[adsim] section ${sec.key} failed`, err)
+        console.error("[lib/adsim/gemini] failed")
         return {
           key: sec.key,
           title: sec.title,

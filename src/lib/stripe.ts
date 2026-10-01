@@ -641,7 +641,7 @@ async function getOrCreateCustomerPortalConfigurationId(): Promise<string | null
 
     return created?.id || null
   } catch (e) {
-    console.error('[Stripe] Failed to get/create customer portal configuration:', e)
+    console.error('[Stripe] Failed to get/create customer portal configuration:')
     return null
   }
 }

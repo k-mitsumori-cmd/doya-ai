@@ -44,7 +44,7 @@ export async function registerJapaneseFonts(_chromium: unknown, tag = 'pdf'): Pr
   try {
     fs.mkdirSync(FONT_DIR, { recursive: true })
   } catch (err) {
-    console.error(`[${tag}] フォントディレクトリを作れません:`, err instanceof Error ? err.message : err)
+    console.error("[lib/pdf/japanese-font] failed")
     return
   }
   if (fs.existsSync(path.join(FONT_DIR, 'fonts.conf'))) {
@@ -63,7 +63,7 @@ export async function registerJapaneseFonts(_chromium: unknown, tag = 'pdf'): Pr
       // ⚠️ symlink ではなく copy。symlink 先(/var/task)が読めない構成があるため。
       fs.copyFileSync(src, dst)
     } catch (err) {
-      console.error(`[${tag}] フォント配置に失敗:`, file, err instanceof Error ? err.message : err)
+      console.error("[lib/pdf/japanese-font] failed")
     }
   }
 

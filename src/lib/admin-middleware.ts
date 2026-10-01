@@ -51,7 +51,7 @@ export async function getAdminSession(): Promise<{
       adminUser: data.adminUser,
     }
   } catch (error) {
-    console.error('Admin session check error:', error)
+    console.error('Admin session check error:')
     return { authenticated: false }
   }
 }

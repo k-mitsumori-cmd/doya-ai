@@ -120,8 +120,7 @@ export async function generateTextWithGemini(
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        console.warn(`Gemini ${model} error: ${response.status}`, errorText.substring(0, 300))
+        console.warn('[Gemini text] provider request failed', response.status)
         continue // 次のモデルを試行
       }
 
@@ -138,7 +137,7 @@ export async function generateTextWithGemini(
       console.log(`Successfully generated with ${model}`)
       return text
     } catch (error: any) {
-      console.warn(`Gemini ${model} failed:`, error?.message || error)
+      console.warn("[lib/gemini-text] warning")
       continue
     }
   }
@@ -230,4 +229,3 @@ export async function generateChatWithGemini(
 export function getGeminiModelName(): string {
   return 'Gemini 2.0 Flash'
 }
-

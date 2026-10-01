@@ -54,7 +54,7 @@ export async function verifyCreative(input: VerifyInput): Promise<VerifyResult> 
   try {
     return await verifyCreativeInner(input)
   } catch (err) {
-    console.error('[adimage] verify failed', err instanceof Error ? err.message : err)
+    console.error('[adimage] verify failed')
     // 検査できなかったものを合格にしない。「要確認」で人に判断させる。
     return { ocrMatch: false, extraText: [], safeAreaOk: true, retries: 0, needsReview: true }
   }

@@ -42,7 +42,7 @@ export async function generateAnimations(analysis: SiteAnalysis): Promise<Genera
       analysis.brand.tone = aiResult.tone
     }
   } catch (e) {
-    console.error('Opening analyzeWithAI failed, using default order:', e)
+    console.error('Opening analyzeWithAI failed, using default order:')
     recommendedOrder = TEMPLATES.map(t => t.id)
   }
 

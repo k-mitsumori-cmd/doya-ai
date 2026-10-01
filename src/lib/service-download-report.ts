@@ -38,7 +38,7 @@ export async function sendServiceDownloadReports(dryRun = false) {
   let latest: Awaited<ReturnType<typeof getLatestDailyRows>> = null;
   let fetchFailed = false;
   try { latest = await getLatestDailyRows(makeJwt()); }
-  catch (error) { fetchFailed = true; console.error('[daily-downloads] Apple report fetch failed', error); }
+  catch (error) { fetchFailed = true; console.error('[daily-downloads] Apple report fetch failed'); }
   const today = jstDate(0);
   return Promise.all(DOWNLOAD_APPS.map(async app => {
     let text = downloadMessage(app.name, latest?.reportDate ?? null, latest ? countDownloads(latest.rows, app.id) : null);
@@ -60,6 +60,6 @@ export async function sendServiceDownloadReports(dryRun = false) {
       await prisma.systemSetting.upsert({ where: { key }, create: { key, value: today }, update: { value: today } });
       await recordReportDelivered(serviceKey + '-downloads');
       return { app: app.name, sent: true, reportDate: latest?.reportDate ?? null };
-    } catch (error) { console.error('[daily-downloads]', app.name, error); return { app: app.name, sent: false, error: 'notification_failed' }; }
+    } catch (error) { console.error('[daily-downloads]'); return { app: app.name, sent: false, error: 'notification_failed' }; }
   }));
 }

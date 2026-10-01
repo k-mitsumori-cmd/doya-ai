@@ -51,7 +51,7 @@ JSONのみ返してください。説明文は不要です。
     const json = text.replace(/^```json?\n?/, '').replace(/\n?```$/, '')
     return JSON.parse(json) as ProductInfo
   } catch (error) {
-    console.error('[analyzeProduct] Gemini API error, using fallback:', error)
+    console.error('[analyzeProduct] Gemini API error, using fallback:')
     return {
       name: input.name ?? '不明',
       description: input.description ?? '',
@@ -114,7 +114,7 @@ JSONのみ返してください。
       await new Promise(r => setTimeout(r, 200))
     }
   } catch (error) {
-    console.error('[generatePlansStream]', error)
+    console.error('[generatePlansStream]')
     const bgmMoods = ['コーポレート', 'エネルギッシュ', '感動的']
     for (let i = 0; i < 3; i++) {
       const plan: MoviePlan = {
@@ -214,7 +214,7 @@ JSONのみ返してください。
     // orderを正規化
     return scenes.map((s, i) => ({ ...s, order: i }))
   } catch (error) {
-    console.error('[generateScenes] Gemini API error, using fallback:', error)
+    console.error('[generateScenes] Gemini API error, using fallback:')
     // テンプレートがある場合はテンプレートのdefaultScenesをベースにフォールバック
     if (template) {
       const scaleFactor = config.duration / template.duration

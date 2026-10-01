@@ -125,7 +125,7 @@ export async function releaseMonthlySlides(userId: string, n: number, reservedMo
     if (decrement > 0) {
       await tx.userServiceSubscription.update({ where, data: { monthlyUsage: { decrement } } })
     }
-  }).catch((error) => { console.error('[doyaslide/quota] refund failed', error) })
+  }).catch((error) => { console.error('[doyaslide/quota] refund failed') })
 }
 
 /** 当月の画像生成回数をカウント（生成・再生成・チャット修正のたびに1版作られる＝生成枚数） */
