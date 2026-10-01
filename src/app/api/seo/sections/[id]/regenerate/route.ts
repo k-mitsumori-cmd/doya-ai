@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { getSeoGenerationOwner } from '@/lib/seoArticleOwner'
+import { reserveSeoToolCall, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 export const runtime = 'nodejs'
 export const maxDuration = 120
@@ -24,6 +25,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     const article = section.article
     const keywords = (article?.keywords as string[]) || []
     const heading = body.headingPath || section.headingPath || ''
+    await reserveSeoToolCall(owner.userId, 'article-text-tools')
 
     const prompt = `あなたはプロのSEOライターです。以下の見出しに対応する本文を新しく生成してください。
 
@@ -39,7 +41,7 @@ ${keywords.join(', ') || '（未設定）'}
 【指示】
 - 見出しに対応した内容を網羅的に記述してください
 - 読者の検索意図を満たす具体的な情報を提供してください
-- 具体例や数字を含めて信頼性を高めてください
+- 具体例や数字は提供された記事情報で確認できる場合のみ使い、実績や数値を作らないでください
 - 日本語で自然な文章にしてください
 - 800〜1500文字程度で記述してください
 - **や*などのMarkdown装飾記号は使わないでください
@@ -67,6 +69,7 @@ ${keywords.join(', ') || '（未設定）'}
 
     return NextResponse.json({ success: true, content: regenerated })
   } catch (e: any) {
+    if (e instanceof SeoToolRateLimitError) return NextResponse.json({ success: false, code: 'SEO_TEXT_DAILY_LIMIT', error: `本日のAI編集の運用上限（${e.limit}回）に達しました。明日お試しください。` }, { status: 429 })
     console.error('[seo sections/[id]/regenerate/route.ts] failed', e)
     return NextResponse.json({ success: false, error: 'セクションを再生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }

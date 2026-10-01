@@ -22,6 +22,7 @@ function fixture(identity, kind, aiOutput = 'Revised body') {
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
     '@/lib/seoArticleOwner': owner,
+    '@/lib/seo-tool-admission': { reserveSeoToolCall: async () => {}, SeoToolRateLimitError: class extends Error {} },
     '@seo/lib/gemini': { geminiGenerateText: async () => { aiCalls++; return aiOutput; }, GEMINI_TEXT_MODEL_DEFAULT: 'test' },
   };
   const routes = {

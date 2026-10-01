@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { getSeoGenerationOwner } from '@/lib/seoArticleOwner'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { reserveSeoToolCall, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -113,6 +114,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       }, { status: 400 })
     }
 
+    await reserveSeoToolCall(owner.userId, 'article-text-tools')
+
     const currentContent = body.currentContent || section.content
 
     // AIで修正
@@ -167,6 +170,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       message: `「${body.sectionHeading}」を修正しました`,
     })
   } catch (e: any) {
+    if (e instanceof SeoToolRateLimitError) return NextResponse.json({ success: false, code: 'SEO_TEXT_DAILY_LIMIT', error: `本日のAI編集の運用上限（${e.limit}回）に達しました。明日お試しください。` }, { status: 429 })
     if (e?.code === 'P2025') return NextResponse.json({ success: false, error: '編集中に記事またはアクセス権が変更されました。再読み込みしてから編集してください。' }, { status: 409 })
     if (e?.name === 'ZodError') {
       return NextResponse.json(

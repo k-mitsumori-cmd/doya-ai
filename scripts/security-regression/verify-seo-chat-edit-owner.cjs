@@ -10,6 +10,7 @@ async function run(identity, plan) {
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => identity ? { user: { id: identity, plan } } : null },
     '@/lib/auth': { authOptions: {} },
+    '@/lib/seo-tool-admission': { reserveSeoToolCall: async () => {}, SeoToolRateLimitError: class extends Error {} },
     '@/lib/prisma': { prisma: { seoArticle: { findFirst: async ({ where }) => {
       reads++;
       assert.equal(where.id, article.id);

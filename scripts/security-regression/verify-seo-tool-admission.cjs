@@ -64,6 +64,95 @@ function database(initial) {
     await assert.rejects(admission.reserveSeoToolCalls('owner', 'article-images', 101, db, now), /Invalid SEO tool reservation amount/)
   })
 
+  await check('SEO manual text tools share one atomic JST daily provider ceiling', async () => {
+    const key = admission.seoToolUsageKey('owner', 'article-text-tools')
+    const db = database([[key, '2026-09-25:99']])
+    const now = new Date('2026-09-25T12:00:00Z')
+    const attempts = await Promise.allSettled([
+      admission.reserveSeoToolCall('owner', 'article-text-tools', db, now),
+      admission.reserveSeoToolCall('owner', 'article-text-tools', db, now),
+    ])
+    assert.equal(attempts.filter(result => result.status === 'fulfilled').length, 1)
+    assert.equal(attempts.filter(result => result.reason instanceof admission.SeoToolRateLimitError).length, 1)
+    assert.equal(db.rows.get(key), '2026-09-25:100')
+    assert.equal((await admission.reserveSeoToolCall('owner', 'article-text-tools', db, new Date('2026-09-25T15:00:00Z'))).used, 1)
+  })
+
+  await check('SEO section regeneration rejects the shared text cap before the provider', async () => {
+    let limited = true
+    let providerCalls = 0
+    let writes = 0
+    const api = load('src/app/api/seo/sections/[id]/regenerate/route.ts', {
+      'next/server': { NextResponse: Response },
+      '@/lib/seoArticleOwner': { getSeoGenerationOwner: async () => ({ userId: 'owner' }) },
+      '@/lib/prisma': { prisma: { seoSection: {
+        findFirst: async () => ({ id: 'section', headingPath: '見出し', content: '本文', article: { title: '記事', keywords: [] } }),
+        updateMany: async () => { writes++; return { count: 1 } },
+      } } },
+      '@/lib/seo-tool-admission': {
+        SeoToolRateLimitError: admission.SeoToolRateLimitError,
+        reserveSeoToolCall: async (userId, tool) => { assert.equal(userId, 'owner'); assert.equal(tool, 'article-text-tools'); if (limited) throw new admission.SeoToolRateLimitError(100) },
+      },
+      '@seo/lib/gemini': { geminiGenerateText: async () => { providerCalls++; return '新しい本文' }, GEMINI_TEXT_MODEL_DEFAULT: 'test' },
+    })
+    const ctx = { params: Promise.resolve({ id: 'section' }) }
+    const request = { json: async () => ({ headingPath: '見出し' }) }
+    const blocked = await api.POST(request, ctx)
+    assert.equal(blocked.status, 429)
+    assert.equal((await blocked.json()).code, 'SEO_TEXT_DAILY_LIMIT')
+    assert.equal(providerCalls, 0)
+    assert.equal(writes, 0)
+    limited = false
+    assert.equal((await api.POST(request, ctx)).status, 200)
+    assert.equal(providerCalls, 1)
+    assert.equal(writes, 1)
+  })
+
+  await check('SEO note conversion rejects empty AI output without saving it', async () => {
+    let writes = 0
+    const api = load('src/app/api/seo/articles/[id]/generate-note/route.ts', {
+      'next/server': { NextResponse: Response },
+      '@/lib/seoArticleOwner': { getSeoGenerationOwner: async () => ({ userId: 'owner' }) },
+      '@/lib/prisma': { prisma: {
+        seoArticle: { findFirst: async () => ({ id: 'article', title: '記事', keywords: [] }) },
+        seoKnowledgeItem: { create: async () => { writes++ } },
+      } },
+      '@/lib/seo-tool-admission': { reserveSeoToolCall: async () => {}, SeoToolRateLimitError: admission.SeoToolRateLimitError },
+      '@seo/lib/gemini': { geminiGenerateText: async () => '   ' },
+    })
+    const response = await api.POST({}, { params: Promise.resolve({ id: 'article' }) })
+    assert.equal(response.status, 502)
+    assert.equal(writes, 0)
+  })
+
+  await check('SEO reference parsing enforces the text cap and labels AI fallback honestly', async () => {
+    let limited = true
+    let aiCalls = 0
+    const api = load('src/app/api/seo/reference/parse/route.ts', {
+      'next/server': { NextResponse: Response },
+      'next-auth': { getServerSession: async () => ({ user: { id: 'owner' } }) },
+      '@/lib/auth': { authOptions: {} },
+      '@/lib/net/safe-fetch': { safeFetchText: async () => { throw Error('No URL fetch expected') } },
+      '@/lib/seo-tool-admission': {
+        SeoToolRateLimitError: admission.SeoToolRateLimitError,
+        reserveSeoToolCall: async (userId, tool) => { assert.equal(userId, 'owner'); assert.equal(tool, 'article-text-tools'); if (limited) throw new admission.SeoToolRateLimitError(100) },
+      },
+      '@seo/lib/gemini': { GEMINI_TEXT_MODEL_DEFAULT: 'test', geminiGenerateJson: async () => { aiCalls++; return { axes: 'invalid' } } },
+      zod: require('zod'),
+    })
+    const request = { json: async () => ({ text: '## 見出し\n本文です。' }) }
+    assert.equal((await api.POST(request)).status, 429)
+    assert.equal(aiCalls, 0)
+    limited = false
+    const response = await api.POST(request)
+    const body = await response.json()
+    assert.equal(response.status, 200)
+    assert.equal(body.aiAnalyzed, false)
+    assert.equal(body.usedModel, null)
+    assert.deepEqual(JSON.parse(JSON.stringify(body.template.axes)), [])
+    assert.equal(aiCalls, 1)
+  })
+
   await check('SEO public provider routes reject anonymous and exhausted requests before provider calls', async () => {
     for (const fixture of [
       { file: 'src/app/api/seo/title-suggestions/route.ts', provider: '@seo/lib/gemini', method: 'geminiGenerateJson', body: { keyword: 'SEO' } },

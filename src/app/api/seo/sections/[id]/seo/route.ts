@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { getSeoGenerationOwner } from '@/lib/seoArticleOwner'
+import { reserveSeoToolCall, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 export const runtime = 'nodejs'
 export const maxDuration = 120
@@ -26,6 +27,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     // 記事情報を取得してキーワードを取得
     const article = section.article
     const keywords = article?.keywords as string[] || []
+    await reserveSeoToolCall(owner.userId, 'article-text-tools')
 
     const prompt = `あなたはSEO専門家です。以下の見出しと本文を、SEO観点で強化してください。
 
@@ -42,7 +44,7 @@ ${keywords.join(', ') || '（未設定）'}
 - キーワードを自然に含める（詰め込みすぎない）
 - 見出しに対応した内容を網羅的に記述
 - 読者の検索意図を満たす情報を追加
-- 具体例や数字を追加して信頼性を高める
+- 具体例や数字は元の本文・記事情報で確認できる場合のみ使い、存在しない事実を追加しない
 - 文章の流れを自然に保つ
 
 強化後の本文のみを出力してください。見出しは含めないでください。
@@ -62,6 +64,7 @@ ${keywords.join(', ') || '（未設定）'}
 
     return NextResponse.json({ success: true, content: enhanced })
   } catch (e: any) {
+    if (e instanceof SeoToolRateLimitError) return NextResponse.json({ success: false, code: 'SEO_TEXT_DAILY_LIMIT', error: `本日のAI編集の運用上限（${e.limit}回）に達しました。明日お試しください。` }, { status: 429 })
     console.error('[seo sections/[id]/seo/route.ts] failed', e)
     return NextResponse.json({ success: false, error: 'セクションを強化できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }

@@ -20,6 +20,7 @@ async function run(identity, url) {
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => identity ? { user: { id: identity } } : null },
     '@/lib/auth': { authOptions: {} },
+    '@/lib/seo-tool-admission': { reserveSeoToolCall: async () => {}, SeoToolRateLimitError: class extends Error {} },
     '@/lib/prisma': { __esModule: true, default: prisma },
     '@seo/lib/gemini': { geminiGenerateText: async () => { aiCalls++; return 'Analysis'; }, GEMINI_TEXT_MODEL_DEFAULT: 'test' },
     '@/lib/net/safe-fetch': { safeFetchText: async (target) => {

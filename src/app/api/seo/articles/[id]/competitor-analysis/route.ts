@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { safeFetchText } from '@/lib/net/safe-fetch'
+import { reserveSeoToolCall, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 export const maxDuration = 120 // 2分
 
@@ -86,6 +87,7 @@ export async function POST(
         error: '競合記事の取得に失敗しました。参照URLを確認してください。',
       }, { status: 400 })
     }
+    await reserveSeoToolCall(session.user.id, 'article-text-tools')
 
     // 本記事の概要（最初の5000文字）
     const articleSummary = articleContent.slice(0, 5000)
@@ -137,6 +139,7 @@ export async function POST(
       analyzedCompetitors: competitorContents.length,
     })
   } catch (error: any) {
+    if (error instanceof SeoToolRateLimitError) return NextResponse.json({ success: false, code: 'SEO_TEXT_DAILY_LIMIT', error: `本日のAI編集の運用上限（${error.limit}回）に達しました。明日お試しください。` }, { status: 429 })
     console.error('[competitor-analysis] error:', error)
     return NextResponse.json(
       { error: '競合を分析できませんでした。時間をおいて再試行してください。' },

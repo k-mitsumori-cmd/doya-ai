@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { geminiGenerateText, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { getSeoGenerationOwner } from '@/lib/seoArticleOwner'
+import { reserveSeoToolCall, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 // POST: セクションをCV強化
 export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -24,6 +25,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (!section.content) {
       return NextResponse.json({ success: false, error: 'セクションに本文がありません' }, { status: 400 })
     }
+    await reserveSeoToolCall(owner.userId, 'article-text-tools')
 
     const prompt = `あなたはコンバージョン率最適化（CRO）の専門家です。以下の見出しと本文を、CV（コンバージョン）観点で強化してください。
 
@@ -37,7 +39,7 @@ ${section.content}
 - 読者の行動を促す文言を追加
 - 比較表や選び方のポイントがあれば強調
 - 「今すぐ」「無料」「限定」などの行動喚起ワードを適切に配置
-- 読者の不安を解消する信頼性要素（実績、口コミ、保証など）を追加
+- 元の本文に実在する実績、口コミ、保証がある場合のみ信頼性要素として活用する。存在しない実績や保証を作らない
 - CTA（行動喚起）の文脈を自然に作る
 - 過度に広告的にならないよう注意
 
@@ -58,6 +60,7 @@ ${section.content}
 
     return NextResponse.json({ success: true, content: enhanced })
   } catch (e: any) {
+    if (e instanceof SeoToolRateLimitError) return NextResponse.json({ success: false, code: 'SEO_TEXT_DAILY_LIMIT', error: `本日のAI編集の運用上限（${e.limit}回）に達しました。明日お試しください。` }, { status: 429 })
     console.error('[seo sections/[id]/cv/route.ts] failed', e)
     return NextResponse.json({ success: false, error: 'セクションを強化できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }

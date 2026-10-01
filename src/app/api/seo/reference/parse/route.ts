@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { safeFetchText } from '@/lib/net/safe-fetch'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { z } from 'zod'
+import { reserveSeoToolCall, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -13,6 +14,14 @@ const BodySchema = z.object({
   url: z.string().url().max(8192).optional(),
   text: z.string().max(300_000).optional(),
   titleHint: z.string().max(200).optional(),
+})
+
+const TemplateSchema = z.object({
+  axes: z.array(z.string().max(200)).max(20),
+  tables: z.array(z.string().max(200)).max(20),
+  faq: z.array(z.string().max(300)).max(20),
+  summary: z.string().max(2000),
+  scoringCriteria: z.array(z.string().max(200)).max(20),
 })
 
 function extractHeadingsFromText(text: string): { h2: string[]; h3: string[] } {
@@ -77,6 +86,7 @@ export async function POST(req: NextRequest) {
     }
 
     const headings = extractHeadingsFromText(extractedText)
+    await reserveSeoToolCall(session.user.id, 'article-text-tools')
 
     // 比較記事テンプレ生成のための「軸抽出」をAIに依頼（UIプレビュー用）
     const model = GEMINI_TEXT_MODEL_DEFAULT
@@ -103,14 +113,20 @@ export async function POST(req: NextRequest) {
       extractedText.slice(0, 60000),
     ].join('\n')
 
-    let template: any = null
+    let template: z.infer<typeof TemplateSchema> = { axes: [], tables: [], faq: [], summary: '', scoringCriteria: [] }
+    let aiAnalyzed = false
     try {
-      template = await geminiGenerateJson<any>(
+      const result = await geminiGenerateJson<z.infer<typeof TemplateSchema>>(
         { model, prompt, generationConfig: { temperature: 0.2, maxOutputTokens: 2048 } },
         'COMPARISON_TEMPLATE_JSON'
       )
+      const parsed = TemplateSchema.safeParse(result)
+      if (parsed.success) {
+        template = parsed.data
+        aiAnalyzed = true
+      }
     } catch {
-      template = { axes: [], tables: [], faq: [], summary: '', scoringCriteria: [] }
+      // Keep the extracted headings available when the AI proposal fails.
     }
 
     return NextResponse.json({
@@ -119,11 +135,12 @@ export async function POST(req: NextRequest) {
       title,
       headings,
       template,
-      usedModel: model,
+      aiAnalyzed,
+      usedModel: aiAnalyzed ? model : null,
     })
-  } catch {
+  } catch (error) {
+    if (error instanceof SeoToolRateLimitError) return NextResponse.json({ success: false, code: 'SEO_TEXT_DAILY_LIMIT', error: `本日のAI編集の運用上限（${error.limit}回）に達しました。明日お試しください。` }, { status: 429 })
     return NextResponse.json({ success: false, error: '参考記事の入力を確認してください' }, { status: 400 })
   }
 }
-
 

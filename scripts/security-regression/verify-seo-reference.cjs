@@ -12,6 +12,7 @@ function harness(route,{auth=true,result='<title>Company</title><body>Business</
   if(name==='next-auth')return {getServerSession:async()=>auth?{user:{id:'mock-user'}}:null};
   if(name==='@/lib/auth')return {authOptions:{}};
   if(name==='zod')return zod;
+  if(name==='@/lib/seo-tool-admission')return {reserveSeoToolCall:async()=>{},SeoToolRateLimitError:class extends Error{}};
   if(name==='@/lib/net/safe-fetch')return {safeFetchText:async(url,opts)=>{calls.push({url,opts});active++;peak=Math.max(peak,active);await new Promise(r=>setTimeout(r,1));active--;if(failure)throw Error('secret internal error');return result;}};
   if(name==='@seo/lib/gemini')return {GEMINI_TEXT_MODEL_DEFAULT:'mock',geminiGenerateJson:async args=>{models.push(args);return {axes:[],tables:[],faq:[],summary:'ok',scoringCriteria:[]};}};
   throw Error('Unexpected import '+name);
@@ -24,7 +25,7 @@ function harness(route,{auth=true,result='<title>Company</title><body>Business</
  await test('meta rejects more than thirty before fetch',async()=>{const x=harness('meta');assert.equal((await x.POST(x.req({urls:Array(31).fill('https://example.test')}))).status,400);assert.equal(x.calls.length,0);});
  await test('meta safe-fetch denial produces failed item',async()=>{const x=harness('meta',{result:null});const out=await x.POST(x.req({urls:['http://127.1']}));assert.equal(out.body.items[0].ok,false);assert.equal(out.body.items[0].title,null);});
  await test('parse safe-fetch denial prevents model call',async()=>{const x=harness('parse',{result:null});assert.equal((await x.POST(x.req({url:'http://127.1'}))).status,422);assert.equal(x.models.length,0);});
- await test('parse successful URL retains title and model extraction',async()=>{const x=harness('parse');const out=await x.POST(x.req({url:'https://example.test'}));assert.equal(out.body.title,'Company');assert.equal(out.body.template.summary,'ok');assert.equal(x.calls.length,1);assert.equal(x.models.length,1);});
+ await test('parse successful URL retains title and model extraction',async()=>{const x=harness('parse');const out=await x.POST(x.req({url:'https://example.test'}));assert.equal(out.body.title,'Company');assert.equal(out.body.template.summary,'ok');assert.equal(out.body.aiAnalyzed,true);assert.equal(x.calls.length,1);assert.equal(x.models.length,1);});
  await test('parse pasted text bypasses network',async()=>{const x=harness('parse');const out=await x.POST(x.req({text:'## Heading\nBusiness detail',titleHint:'Sample'}));assert.equal(out.body.title,'Sample');assert.equal(x.calls.length,0);assert.equal(x.models.length,1);});
  for(const route of ['meta','parse'])await test(route+' unexpected exception does not echo internal detail',async()=>{const x=harness(route,{failure:true});const out=await x.POST(x.req({url:'https://example.test',urls:['https://example.test']}));assert.equal(out.status,400);assert.ok(!JSON.stringify(out).includes('secret'));});
  console.log(JSON.stringify({passed,failed:0,networkRequests:0,modelRequests:0}));

@@ -10,6 +10,7 @@ import { prisma } from '@/lib/prisma'
 import { getSeoGenerationOwner } from '@/lib/seoArticleOwner'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
+import { reserveSeoToolCall, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 type CheckItem = {
   id: string
@@ -56,6 +57,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
         { status: 400 }
       )
     }
+    await reserveSeoToolCall(owner.userId, 'article-text-tools')
 
     const refs = Array.isArray(article.references) ? article.references : []
     const sources = refs
@@ -114,9 +116,9 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
 
     return NextResponse.json({ success: true, items })
   } catch (e: any) {
+    if (e instanceof SeoToolRateLimitError) return NextResponse.json({ success: false, code: 'SEO_TEXT_DAILY_LIMIT', error: `本日のAI編集の運用上限（${e.limit}回）に達しました。明日お試しください。` }, { status: 429 })
     console.error('[seo article check] failed', e)
     // 例外時でも必ずJSONで返す（res.json() を壊さない）
     return NextResponse.json({ success: false, error: '記事をチェックできませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
-

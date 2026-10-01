@@ -8,6 +8,7 @@ export const maxDuration = 300
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { geminiGenerateText } from '@seo/lib/gemini'
+import { reserveSeoToolCall, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 /**
  * note記事に特化した生成API
@@ -37,7 +38,7 @@ const NOTE_ARTICLE_PROMPT = `
 
 ### 構成
 - 冒頭: 読者の共感を呼ぶ問いかけ、または意外性のある一文で始める
-- 導入: なぜこの記事を書いたのか、自分の経験を交えて
+- 導入: なぜこの記事を書くのかを示す。提供情報に実体験がある場合のみ経験を書く
 - 本論: 見出しは2〜4個程度、各セクションは簡潔に
 - 結び: 読者への励ましやメッセージ、次のアクションの提案
 
@@ -45,20 +46,20 @@ const NOTE_ARTICLE_PROMPT = `
 - 見出しは ## と ### のみ使用（# は使わない）
 - 段落は3〜5行ごとに空行を入れる
 - 箇条書きは控えめに（多くても1セクションに1回）
-- 絵文字は控えめに使用可（1記事に3〜5個程度）
+- 絵文字は使用しない
 - 太字（**強調**）は本当に重要な箇所のみ
 
 ### 避けるべきこと
 - 長い一文（60文字以上）
 - 堅苦しいビジネス文体
 - 情報の羅列だけ（体験や意見がない）
-- 過度な装飾や絵文字の乱用
+- 過度な装飾
 - SEO臭い見出し（「〜とは？」「〜5選」の連発）
 
 ### noteで好まれる要素
 - 失敗談や試行錯誤のプロセス
 - 「最初は〜だったけど」という変化の物語
-- 具体的なエピソードや数字
+- 提供情報で確認できる具体的なエピソードや数字。存在しない体験や数値は作らない
 - 読者が「自分もやってみよう」と思える実践的な内容
 - 最後に温かいメッセージ
 
@@ -106,6 +107,7 @@ export async function POST(_req: NextRequest, props: { params: Promise<{ id: str
     if (!article) {
       return NextResponse.json({ success: false, error: 'Article not found' }, { status: 404 })
     }
+    await reserveSeoToolCall(owner.userId, 'article-text-tools')
 
     // 参考情報をまとめる
     const refSummaries = (article.references || [])
@@ -132,6 +134,7 @@ export async function POST(_req: NextRequest, props: { params: Promise<{ id: str
         maxOutputTokens: 16000,
       },
     })
+    if (!noteMarkdown?.trim()) return NextResponse.json({ success: false, error: 'AIから記事を取得できませんでした。時間をおいて再試行してください。' }, { status: 502 })
 
     // 記事を更新（note用のマークダウンとして保存）
     // finalMarkdownとは別にnoteMarkdownを保存するか、
@@ -151,6 +154,7 @@ export async function POST(_req: NextRequest, props: { params: Promise<{ id: str
       message: 'note記事を生成しました',
     })
   } catch (e: any) {
+    if (e instanceof SeoToolRateLimitError) return NextResponse.json({ success: false, code: 'SEO_TEXT_DAILY_LIMIT', error: `本日のAI編集の運用上限（${e.limit}回）に達しました。明日お試しください。` }, { status: 429 })
     console.error('Note generation error:', e)
     return NextResponse.json({ success: false, error: '記事を生成できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }

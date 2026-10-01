@@ -10,6 +10,7 @@ import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { geminiGenerateJson } from '@seo/lib/gemini'
 import { z } from 'zod'
+import { reserveSeoToolCall, SeoToolRateLimitError } from '@/lib/seo-tool-admission'
 
 export const runtime = 'nodejs'
 
@@ -132,6 +133,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     }
 
     const inputMd = target ? target.section : md
+    await reserveSeoToolCall(String(user.id), 'article-text-tools')
 
     const model =
       process.env.SEO_GEMINI_TEXT_MODEL_CHAT ||
@@ -196,9 +198,9 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       usedModel: model,
     })
   } catch (e: any) {
+    if (e instanceof SeoToolRateLimitError) return NextResponse.json({ success: false, code: 'SEO_TEXT_DAILY_LIMIT', error: `本日のAI編集の運用上限（${e.limit}回）に達しました。明日お試しください。` }, { status: 429 })
     const msg = e?.message || '不明なエラー'
     console.error('[seo chat-edit] failed', { articleId, msg })
     return NextResponse.json({ success: false, error: '記事を編集できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
-

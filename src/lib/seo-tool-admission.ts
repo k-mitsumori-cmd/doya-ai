@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import type { PrismaClient } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 
-export type SeoTool = 'title-suggestions' | 'compare-candidates' | 'swipe-questions' | 'article-images' | 'image-suggestions'
+export type SeoTool = 'title-suggestions' | 'compare-candidates' | 'swipe-questions' | 'article-images' | 'image-suggestions' | 'article-text-tools'
 
 // These ceilings protect external provider capacity; they are not paid plan allowances.
 export const SEO_TOOL_DAILY_LIMITS: Record<SeoTool, number> = {
@@ -11,6 +11,7 @@ export const SEO_TOOL_DAILY_LIMITS: Record<SeoTool, number> = {
   'swipe-questions': 50,
   'article-images': 100,
   'image-suggestions': 50,
+  'article-text-tools': 100,
 }
 
 export class SeoToolRateLimitError extends Error {
