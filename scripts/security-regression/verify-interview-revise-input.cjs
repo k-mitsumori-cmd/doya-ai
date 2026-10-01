@@ -10,7 +10,7 @@ const { POST } = load('src/app/api/interview/revise/route.ts', {
     id: 'draft-1', project: { userId: 'user-1', guestId: null },
   }) } } },
   '@/lib/interview/access': {
-    getInterviewUser: async () => ({ userId: 'user-1' }),
+    getInterviewUser: async () => ({ userId: 'user-1', plan: 'FREE' }),
     getGuestIdFromRequest: () => null,
     checkOwnership: () => null,
     requireDatabase: () => null,
@@ -22,6 +22,10 @@ const { POST } = load('src/app/api/interview/revise/route.ts', {
       lastPrompt = prompt;
       return { candidates: [{ content: { parts: [{ text: providerText }] } }] };
     },
+  },
+  '@/lib/interview/aux-budget': {
+    claimAuxBudget: async () => ({ state: 'allowed', claim: { key: 'test', day: '2026-10-01' }, limit: 5 }),
+    refundAuxBudget: async () => {},
   },
 }, { process: { env: { GEMINI_API_KEY: 'test-key' } } });
 

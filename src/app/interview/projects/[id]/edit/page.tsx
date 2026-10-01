@@ -307,6 +307,7 @@ export default function EditPage() {
 
   // 右パネル
   const [rightPanel, setRightPanel] = useState<RightPanel>('proofread')
+  const [auxLimitMessage, setAuxLimitMessage] = useState<string | null>(null)
 
   // 校正
   const [proofLoading, setProofLoading] = useState(false)
@@ -355,6 +356,13 @@ export default function EditPage() {
     setToast({ message, type })
     toastTimerRef.current = setTimeout(() => setToast(null), 3500)
   }, [])
+  const noteAuxLimit = (res: Response, data: { success?: boolean; code?: string; error?: string }) => {
+    if (res.status === 429 && data.code === 'INTERVIEW_AUX_LIMIT_REACHED') {
+      setAuxLimitMessage(data.error || '本日の追加AI編集枠を使い切りました。')
+    } else if (data.success) {
+      setAuxLimitMessage(null)
+    }
+  }
 
   // エクスポートドロップダウン外クリック閉じ
   useEffect(() => {
@@ -675,6 +683,7 @@ ${htmlBody}
         body: JSON.stringify({}),
       })
       const data = await res.json()
+      noteAuxLimit(res, data)
       if (data.success) {
         setProofResult({ score: data.score, summary: data.summary, suggestions: data.suggestions || [], checks: data.checks || {} })
       } else { showToast(data.error || '校正に失敗しました', 'error') }
@@ -747,6 +756,7 @@ ${htmlBody}
         body: JSON.stringify({ platform: titlePlatform, count: 5 }),
       })
       const data = await res.json()
+      noteAuxLimit(res, data)
       if (data.success) setSuggestedTitles(data.titles || [])
       else showToast(data.error || 'タイトル提案に失敗しました', 'error')
     } catch { showToast('タイトル提案中にエラーが発生しました', 'error') }
@@ -767,6 +777,7 @@ ${htmlBody}
         body: JSON.stringify({}),
       })
       const data = await res.json()
+      noteAuxLimit(res, data)
       if (data.success) {
         setFactResult({ reliability: data.reliability, summary: data.summary, claims: data.claims || [], warnings: data.warnings || [] })
       } else { showToast(data.error || 'ファクトチェックに失敗しました', 'error') }
@@ -788,6 +799,7 @@ ${htmlBody}
         body: JSON.stringify({ platforms: snsSelectedPlatforms, tone: snsTone, articleUrl: snsArticleUrl }),
       })
       const data = await res.json()
+      noteAuxLimit(res, data)
       if (data.success) setSnsPosts(data.posts || [])
       else showToast(data.error || 'SNS投稿生成に失敗しました', 'error')
     } catch { showToast('SNS投稿生成中にエラーが発生しました', 'error') }
@@ -819,6 +831,7 @@ ${htmlBody}
         body: JSON.stringify({ language: translateLang }),
       })
       const data = await res.json()
+      noteAuxLimit(res, data)
       if (data.success) {
         setTranslationResult({
           language: data.language, languageName: data.languageName,
@@ -869,6 +882,7 @@ ${htmlBody}
         }),
       })
       const data = await res.json()
+      noteAuxLimit(res, data)
       if (data.success) {
         setContentBeforeRevision(content)
         setRevisedContent(data.revisedContent)
@@ -1352,6 +1366,13 @@ ${htmlBody}
 
               {/* パネルコンテンツ */}
               <div className="bg-white border border-slate-200 border-t-0 rounded-b-xl p-4 sm:p-6 overflow-y-auto shadow-sm" style={{ maxHeight: 'calc(100vh - 320px)' }}>
+                {auxLimitMessage && (
+                  <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4" role="alert">
+                    <p className="text-sm font-semibold text-amber-900">{auxLimitMessage}</p>
+                    <p className="mt-1 text-xs text-amber-800">利用枠は日本時間の翌日0時に切り替わります。</p>
+                    <a href="/interview/pricing" className="mt-2 inline-flex text-sm font-bold text-blue-700 underline underline-offset-2">プランと利用枠を見る</a>
+                  </div>
+                )}
                 <AnimatePresence mode="wait">
 
                 {/* ===== Markdownソース ===== */}

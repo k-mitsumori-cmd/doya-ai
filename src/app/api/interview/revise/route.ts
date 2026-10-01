@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
+import { auxAdmissionError, claimAuxBudget, refundAuxBudget, type AuxClaim } from '@/lib/interview/aux-budget'
 
 function getGeminiApiKey(): string {
   const key = process.env.GOOGLE_GENAI_API_KEY || process.env.GEMINI_API_KEY
@@ -18,8 +19,10 @@ export async function POST(req: NextRequest) {
   const dbErr = requireDatabase()
   if (dbErr) return dbErr
 
+  let claim: AuxClaim | null = null
+  let completed = false
   try {
-    const { userId } = await getInterviewUser()
+    const { userId, plan } = await getInterviewUser()
     const guestId = !userId ? getGuestIdFromRequest(req) : null
     if (!userId && !guestId) {
       return NextResponse.json({ success: false, error: '認証が必要です' }, { status: 401 })
@@ -57,6 +60,9 @@ export async function POST(req: NextRequest) {
 
     const apiKey = getGeminiApiKey()
     const model = process.env.INTERVIEW_GEMINI_MODEL || process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash'
+    const admission = await claimAuxBudget({ userId, guestId, plan })
+    if (admission.state !== 'allowed') return auxAdmissionError(admission)
+    claim = admission.claim
 
     const systemPrompt = 'あなたはプロの編集者です。以下の記事に対して、ユーザーの修正指示に従って修正を行ってください。修正した記事全文をMarkdown形式で出力してください。元の記事の構成やトーンはできるだけ維持し、指示された部分のみを修正してください。'
     const userPrompt = systemPrompt + '\n\n====== 修正指示 ======\n' + instruction.trim() + '\n\n====== 修正対象記事 ======\n' + articleContent
@@ -80,6 +86,7 @@ export async function POST(req: NextRequest) {
       throw new Error('AIから修正結果が返されませんでした')
     }
 
+    completed = true
     return NextResponse.json({
       success: true,
       revisedContent,
@@ -89,5 +96,7 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     console.error('[interview] revise error:', e?.message)
     return NextResponse.json({ success: false, error: e instanceof InterviewGeminiError ? e.message : 'AI修正中にエラーが発生しました' }, { status: e instanceof InterviewGeminiError ? 503 : 500 })
+  } finally {
+    if (claim && !completed) await refundAuxBudget(claim)
   }
 }

@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const interviewAuxBudget = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-aux-budget.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewAuxBudget.error || interviewAuxBudget.status !== 0) {
+  console.error('Security regression failed: verify-interview-aux-budget.cjs');
+  process.exit(1);
+}
 const interviewAiOutput = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-ai-output.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewAiOutput.error || interviewAiOutput.status !== 0) {
   console.error('Security regression failed: verify-interview-ai-output.cjs');

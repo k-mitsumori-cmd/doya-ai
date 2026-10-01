@@ -12,6 +12,7 @@ import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
 import { parseSnsOutput } from '@/lib/interview/ai-output'
+import { auxAdmissionError, claimAuxBudget, refundAuxBudget, type AuxClaim } from '@/lib/interview/aux-budget'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -96,9 +97,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const dbErr = requireDatabase()
   if (dbErr) return dbErr
 
+  let claim: AuxClaim | null = null
+  let completed = false
   try {
     const draftId = await resolveId(ctx)
-    const { userId } = await getInterviewUser()
+    const { userId, plan } = await getInterviewUser()
     const guestId = !userId ? getGuestIdFromRequest(req) : null
 
     const draft = await prisma.interviewDraft.findUnique({
@@ -124,7 +127,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (!body || typeof body !== 'object' || Array.isArray(body)
       || (body.platforms != null && (!Array.isArray(body.platforms) || body.platforms.length < 1
         || body.platforms.length > Object.keys(PLATFORM_SPECS).length
-        || body.platforms.some((p: unknown) => typeof p !== 'string' || !(p in PLATFORM_SPECS))))
+        || body.platforms.some((p: unknown) => typeof p !== 'string' || !Object.prototype.hasOwnProperty.call(PLATFORM_SPECS, p))))
       || (body.articleUrl != null && (typeof body.articleUrl !== 'string' || body.articleUrl.length > 2000))
       || (body.tone != null && !['professional', 'casual', 'humorous'].includes(body.tone))) {
       return NextResponse.json(
@@ -138,6 +141,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const apiKey = getGeminiApiKey()
     const model = getModel()
+    const admission = await claimAuxBudget({ userId, guestId, plan })
+    if (admission.state !== 'allowed') return auxAdmissionError(admission)
+    claim = admission.claim
 
     const platformSection = validPlatforms
       .map((p) => {
@@ -193,6 +199,7 @@ twitter_thread の場合、content内の各ツイートは "---" で区切って
       return NextResponse.json({ success: false, error: 'SNS投稿文を読み取れませんでした。再度お試しください。' }, { status: 502 })
     }
 
+    completed = true
     return NextResponse.json({
       success: true,
       posts,
@@ -203,5 +210,7 @@ twitter_thread の場合、content内の各ツイートは "---" で区切って
       { success: false, error: e instanceof InterviewGeminiError ? e.message : 'SNS投稿文の生成に失敗しました' },
       { status: e instanceof InterviewGeminiError ? 503 : 500 }
     )
+  } finally {
+    if (claim && !completed) await refundAuxBudget(claim)
   }
 }

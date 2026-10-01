@@ -12,6 +12,7 @@ import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
 import { parseTranslationOutput } from '@/lib/interview/ai-output'
+import { auxAdmissionError, claimAuxBudget, refundAuxBudget, type AuxClaim } from '@/lib/interview/aux-budget'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -90,9 +91,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const dbErr = requireDatabase()
   if (dbErr) return dbErr
 
+  let claim: AuxClaim | null = null
+  let completed = false
   try {
     const draftId = await resolveId(ctx)
-    const { userId } = await getInterviewUser()
+    const { userId, plan } = await getInterviewUser()
     const guestId = !userId ? getGuestIdFromRequest(req) : null
 
     const draft = await prisma.interviewDraft.findUnique({
@@ -127,7 +130,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ success: false, error: '言語の指定を確認してください' }, { status: 400 })
     }
     const targetLang: string = body.language || 'en'
-    const langConfig = LANGUAGE_CONFIG[targetLang]
+    const langConfig = Object.prototype.hasOwnProperty.call(LANGUAGE_CONFIG, targetLang)
+      ? LANGUAGE_CONFIG[targetLang] : null
 
     if (!langConfig) {
       return NextResponse.json(
@@ -138,6 +142,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const apiKey = getGeminiApiKey()
     const model = getModel()
+    const admission = await claimAuxBudget({ userId, guestId, plan })
+    if (admission.state !== 'allowed') return auxAdmissionError(admission)
+    claim = admission.claim
 
     const prompt = `You are a professional translator specializing in media and interview content.
 Translate the following Japanese article into ${langConfig.name} (${langConfig.nativeName}).
@@ -181,6 +188,7 @@ ${draft.content.slice(0, 60000)}`
       return NextResponse.json({ success: false, error: '翻訳結果を読み取れませんでした。再度お試しください。' }, { status: 502 })
     }
 
+    completed = true
     return NextResponse.json({
       success: true,
       language: targetLang,
@@ -197,5 +205,7 @@ ${draft.content.slice(0, 60000)}`
       { success: false, error: e instanceof InterviewGeminiError ? e.message : '翻訳に失敗しました' },
       { status: e instanceof InterviewGeminiError ? 503 : 500 }
     )
+  } finally {
+    if (claim && !completed) await refundAuxBudget(claim)
   }
 }

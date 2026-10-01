@@ -12,6 +12,7 @@ import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
 import { parseTitleOutput } from '@/lib/interview/ai-output'
+import { auxAdmissionError, claimAuxBudget, refundAuxBudget, type AuxClaim } from '@/lib/interview/aux-budget'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -45,9 +46,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const dbErr = requireDatabase()
   if (dbErr) return dbErr
 
+  let claim: AuxClaim | null = null
+  let completed = false
   try {
     const draftId = await resolveId(ctx)
-    const { userId } = await getInterviewUser()
+    const { userId, plan } = await getInterviewUser()
     const guestId = !userId ? getGuestIdFromRequest(req) : null
 
     const draft = await prisma.interviewDraft.findUnique({
@@ -64,7 +67,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const body = await req.json().catch(() => null)
     if (!body || typeof body !== 'object' || Array.isArray(body)
-      || (body.platform != null && (typeof body.platform !== 'string' || !(body.platform in PLATFORM_PROMPTS)))
+      || (body.platform != null && (typeof body.platform !== 'string' || !Object.prototype.hasOwnProperty.call(PLATFORM_PROMPTS, body.platform)))
       || (body.count != null && (!Number.isInteger(body.count) || body.count < 1 || body.count > 10))) {
       return NextResponse.json({ success: false, error: '提案条件を確認してください。件数は1〜10件です。' }, { status: 400 })
     }
@@ -75,6 +78,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const apiKey = getGeminiApiKey()
     const model = getModel()
+    const admission = await claimAuxBudget({ userId, guestId, plan })
+    if (admission.state !== 'allowed') return auxAdmissionError(admission)
+    claim = admission.claim
 
     const articleSummary = draft.content.slice(0, 5000)
 
@@ -115,6 +121,7 @@ type は keyword / emotional / question / number / quote のいずれか`
       return NextResponse.json({ success: false, error: 'タイトル案を読み取れませんでした。再度お試しください。' }, { status: 502 })
     }
 
+    completed = true
     return NextResponse.json({
       success: true,
       platform,
@@ -126,5 +133,7 @@ type は keyword / emotional / question / number / quote のいずれか`
       { success: false, error: e instanceof InterviewGeminiError ? e.message : 'タイトル提案に失敗しました' },
       { status: e instanceof InterviewGeminiError ? 503 : 500 }
     )
+  } finally {
+    if (claim && !completed) await refundAuxBudget(claim)
   }
 }

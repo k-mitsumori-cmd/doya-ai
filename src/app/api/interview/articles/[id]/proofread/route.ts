@@ -13,6 +13,7 @@ import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
 import { parseProofreadOutput } from '@/lib/interview/ai-output'
+import { auxAdmissionError, claimAuxBudget, claimIncludedProofread, finishIncludedProofread, refundAuxBudget, refundIncludedProofread, type AuxClaim, type IncludedProofreadClaim } from '@/lib/interview/aux-budget'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -38,9 +39,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const dbErr = requireDatabase()
   if (dbErr) return dbErr
 
+  let auxClaim: AuxClaim | null = null
+  let includedClaim: IncludedProofreadClaim | null = null
+  let completed = false
   try {
     const draftId = await resolveId(ctx)
-    const { userId } = await getInterviewUser()
+    const { userId, plan } = await getInterviewUser()
     const guestId = !userId ? getGuestIdFromRequest(req) : null
 
     const draft = await prisma.interviewDraft.findUnique({
@@ -65,6 +69,19 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     // Gemini API で校正実行
     const apiKey = getGeminiApiKey()
     const model = getModel()
+    const previousReview = await prisma.interviewReview.findFirst({ where: { draftId: draft.id }, select: { id: true } })
+    const included = previousReview ? { state: 'already' as const } : await claimIncludedProofread(draft.id)
+    if (included.state === 'allowed') {
+      includedClaim = included.claim
+    } else if (included.state === 'busy') {
+      return NextResponse.json({ success: false, error: 'この記事の校正を実行中です。完了後に再度お試しください。' }, { status: 409 })
+    } else if (included.state === 'unavailable') {
+      return NextResponse.json({ success: false, error: '利用状況を確認できません。時間をおいて再試行してください。' }, { status: 503 })
+    } else {
+      const admission = await claimAuxBudget({ userId, guestId, plan })
+      if (admission.state !== 'allowed') return auxAdmissionError(admission)
+      auxClaim = admission.claim
+    }
 
     const prompt = `あなたはプロの校正者です。以下の日本語記事を校正・校閲してください。
 
@@ -126,6 +143,11 @@ ${draft.content.slice(0, 60000)}`
       },
     })
 
+    completed = true
+    if (includedClaim && !await finishIncludedProofread(includedClaim)) {
+      console.error('[interview] included proofread could not be settled')
+    }
+
     return NextResponse.json({
       success: true,
       reviewId: review.id,
@@ -140,5 +162,8 @@ ${draft.content.slice(0, 60000)}`
       { success: false, error: e instanceof InterviewGeminiError ? e.message : '校正に失敗しました' },
       { status: e instanceof InterviewGeminiError ? 503 : 500 }
     )
+  } finally {
+    if (!completed && includedClaim) await refundIncludedProofread(includedClaim)
+    if (!completed && auxClaim) await refundAuxBudget(auxClaim)
   }
 }

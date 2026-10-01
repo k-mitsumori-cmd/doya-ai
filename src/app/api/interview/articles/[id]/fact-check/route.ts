@@ -13,6 +13,7 @@ import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
 import { parseFactCheckOutput } from '@/lib/interview/ai-output'
+import { auxAdmissionError, claimAuxBudget, refundAuxBudget, type AuxClaim } from '@/lib/interview/aux-budget'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -38,9 +39,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
   const dbErr = requireDatabase()
   if (dbErr) return dbErr
 
+  let claim: AuxClaim | null = null
+  let completed = false
   try {
     const draftId = await resolveId(ctx)
-    const { userId } = await getInterviewUser()
+    const { userId, plan } = await getInterviewUser()
     const guestId = !userId ? getGuestIdFromRequest(req) : null
 
     const draft = await prisma.interviewDraft.findUnique({
@@ -64,6 +67,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const apiKey = getGeminiApiKey()
     const model = getModel()
+    const admission = await claimAuxBudget({ userId, guestId, plan })
+    if (admission.state !== 'allowed') return auxAdmissionError(admission)
+    claim = admission.claim
 
     const prompt = `あなたは記事の確認候補を抽出する編集者です。渡されるのは記事本文だけで、外部資料や一次資料にはアクセスできません。記事内の矛盾や、公開前に裏付けを確認すべき数値・固有名詞・日付・引用を挙げてください。
 
@@ -114,6 +120,7 @@ ${draft.content.slice(0, 60000)}`
       return NextResponse.json({ success: false, error: 'ファクトチェック結果を読み取れませんでした。再度お試しください。' }, { status: 502 })
     }
 
+    completed = true
     return NextResponse.json({
       success: true,
       evidenceScope: 'article_only',
@@ -129,5 +136,7 @@ ${draft.content.slice(0, 60000)}`
       { success: false, error: e instanceof InterviewGeminiError ? e.message : 'ファクトチェックに失敗しました' },
       { status: e instanceof InterviewGeminiError ? 503 : 500 }
     )
+  } finally {
+    if (claim && !completed) await refundAuxBudget(claim)
   }
 }
