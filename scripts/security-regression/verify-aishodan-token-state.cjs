@@ -1,12 +1,15 @@
 const assert=require('node:assert/strict');const{load,check,results}=require('./load-typescript.cjs');
 function fixture(options={}){
  const row={id:'s',organizationId:'o',roomId:'r',guestId:'g',status:'pending',startedAt:null,endedAt:null,consentedAt:new Date(),tokenIssueCount:0,room:{isActive:true,organization:{name:'Synthetic',retentionDays:30},scenario:{product:{id:'p',name:'Synthetic'}}},...options.row};
- let fetches=0,starts=0,reservations=0,reads=0;
+ let fetches=0,starts=0,reservations=0,reads=0,timeoutMs=0;
  function matches(where){return Object.entries(where).every(([k,v])=>v&&typeof v==='object'?('in'in v?v.in.includes(row[k]):'not'in v?row[k]!==v.not:'lt'in v?row[k]<v.lt:false):row[k]===v)}
  const prisma={aishodanSession:{findFirst:async()=>{reads++;return options.missingAfter&&reads>1?null:{...row,room:{...row.room}}},updateMany:async({where,data})=>{if(options.beforeReserve&&data.tokenIssueCount)options.beforeReserve(row);if(!matches(where))return{count:0};if(data.tokenIssueCount){row.tokenIssueCount++;reservations++}else{Object.assign(row,data);starts++}return{count:1}}}};
  const session=load('src/lib/aishodan/session.ts',{'@/lib/prisma':{prisma}});
- const api=load('src/app/api/aishodan/room/[token]/token/route.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/aishodan/session':session,'@/lib/aishodan/public':{toScenarioConfig:()=>({durationMin:10})},'@/lib/aishodan/engine':{buildSalesInstructions:()=> 'Synthetic'},'@/lib/aishodan/knowledge':{retrieve:async()=>[]}}, {process:{env:{OPENAI_API_KEY:'synthetic-test-key'}},fetch:async()=>{fetches++;options.duringFetch?.(row);return Response.json({value:'SYNTHETIC_SECRET',expires_at:1})}});
- return{row,get stats(){return{fetches,starts,reservations}},run:()=>api.POST({json:async()=>({sessionId:'s'}),cookies:{get:()=>({value:'g'})}},{params:Promise.resolve({token:'t'})})};
+ const logs=[];
+ const operational=load('src/lib/operational-json.ts',{}, {TextDecoder});
+ const realtime=load('src/lib/realtime-token-response.ts');
+ const api=load('src/app/api/aishodan/room/[token]/token/route.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/aishodan/session':session,'@/lib/aishodan/public':{toScenarioConfig:()=>({durationMin:10})},'@/lib/aishodan/engine':{buildSalesInstructions:()=> 'Synthetic'},'@/lib/aishodan/knowledge':{retrieve:async()=>[]},'@/lib/operational-json':operational,'@/lib/realtime-token-response':realtime}, {AbortSignal:{timeout:ms=>{timeoutMs=ms;return AbortSignal.timeout(ms)}},process:{env:{OPENAI_API_KEY:'synthetic-test-key'}},console:{error:(...parts)=>logs.push(parts)},fetch:async(_url,init)=>{fetches++;assert.ok(init.signal);options.duringFetch?.(row);if(options.fetchError)throw Error('synthetic upstream error');return options.providerResponse?.()||Response.json({value:'SYNTHETIC_SECRET',expires_at:1})}});
+ return{row,logs,get timeoutMs(){return timeoutMs},get stats(){return{fetches,starts,reservations}},run:(body=JSON.stringify({sessionId:'s'}))=>{const req=new Response(body);req.cookies={get:()=>({value:'g'})};return api.POST(req,{params:Promise.resolve({token:'t'})})}};
 }
 (async()=>{
  await check('initial connection starts once',async()=>{const f=fixture();assert.equal((await f.run()).status,200);assert.equal(f.row.status,'live');assert.deepEqual(f.stats,{fetches:1,starts:1,reservations:1})});
@@ -18,5 +21,10 @@ function fixture(options={}){
  for(const [name,mutate,status] of [['consent revoked',r=>r.consentedAt=null,403],['room disabled',r=>r.room.isActive=false,410],['room expires',r=>r.room.expiresAt=new Date(0),410]])await check(name+' while pending suppresses secret',async()=>{const f=fixture({duringFetch:mutate});const res=await f.run();assert.equal(res.status,status);assert.equal((await res.text()).includes('SYNTHETIC_SECRET'),false)});
  await check('quota remains 429 for active session',async()=>{const f=fixture({row:{tokenIssueCount:12}});assert.equal((await f.run()).status,429);assert.equal(f.stats.fetches,0)});
  await check('removed session suppresses secret',async()=>{const f=fixture({missingAfter:true});assert.equal((await f.run()).status,404)});
+ await check('oversized request is rejected before session lookup or provider call',async()=>{const f=fixture();assert.equal((await f.run('x'.repeat(2049))).status,413);assert.deepEqual(f.stats,{fetches:0,starts:0,reservations:0})});
+ await check('malformed request is rejected before provider call',async()=>{const f=fixture();assert.equal((await f.run('{bad json')).status,400);assert.equal(f.stats.fetches,0)});
+ await check('provider failure never logs response body',async()=>{const f=fixture({providerResponse:()=>new Response('SENSITIVE_RESPONSE_BODY',{status:500})});const res=await f.run();assert.equal(res.status,502);assert.equal(JSON.stringify(f.logs).includes('SENSITIVE_RESPONSE_BODY'),false)});
+ await check('oversized provider response is rejected without leaking body',async()=>{const f=fixture({providerResponse:()=>new Response('SENSITIVE_RESPONSE_BODY'.repeat(15000))});const res=await f.run();assert.equal(res.status,502);assert.equal(JSON.stringify(f.logs).includes('SENSITIVE_RESPONSE_BODY'),false)});
+ await check('provider connection error is bounded and sanitized',async()=>{const f=fixture({fetchError:true});assert.equal((await f.run()).status,502);assert.equal(f.stats.fetches,1);assert.equal(f.timeoutMs,15000)});
  console.log(JSON.stringify({passed:results.length,results},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1});

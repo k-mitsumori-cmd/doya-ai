@@ -19,6 +19,8 @@ import { assertSessionUsable, loadGuestSession } from '@/lib/aishodan/session'
 import { toScenarioConfig } from '@/lib/aishodan/public'
 import { ADVANCE_TOOL, LOOKUP_TOOL, RECORD_TOOL, buildSalesInstructions } from '@/lib/aishodan/engine'
 import { retrieve } from '@/lib/aishodan/knowledge'
+import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
+import { REALTIME_REQUEST_TIMEOUT_MS, readRealtimeJson, realtimeClientSecret } from '@/lib/realtime-token-response'
 import type { ProductProfile } from '@/lib/aishodan/types'
 
 type Ctx = { params: Promise<{ token: string }> }
@@ -28,7 +30,13 @@ const REALTIME_VOICE = process.env.AISHODAN_REALTIME_VOICE || 'alloy'
 
 export async function POST(req: NextRequest, ctxParam: Ctx) {
   const p = await ctxParam.params
-  const body = await req.json().catch(() => ({}))
+  let body: Record<string, unknown>
+  try {
+    body = await readOperationalJson(req, 2048)
+  } catch (error) {
+    const status = error instanceof OperationalBodyError ? error.status : 400
+    return NextResponse.json({ error: status === 413 ? 'リクエストが大きすぎます' : 'リクエストの形式が正しくありません' }, { status })
+  }
   const s = await loadGuestSession(req, p.token, String(body?.sessionId || ''))
   if (!s) return NextResponse.json({ error: '商談が見つかりません' }, { status: 404 })
 
@@ -93,13 +101,14 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
     hasScheduling: Boolean(cfg.schedulingUrl),
   })
 
-  let res: Response
+  let data: any
   try {
     // ⚠️ 旧 /v1/realtime/sessions（フラットな body）は廃止され 404 になる。
     //    現行は /v1/realtime/client_secrets で、設定は session の下にネストし、
     //    音声まわりは audio.input / audio.output に分かれる。
-    res = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
+    const res = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
+      signal: AbortSignal.timeout(REALTIME_REQUEST_TIMEOUT_MS),
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         session: {
@@ -130,24 +139,24 @@ export async function POST(req: NextRequest, ctxParam: Ctx) {
         },
       }),
     })
+    if (!res.ok) {
+      void res.body?.cancel().catch(() => {})
+      console.error('[aishodan] realtime session error', res.status)
+      return NextResponse.json(
+        { error: '商談を開始できませんでした。時間をおいて再度お試しください。' },
+        { status: 502 }
+      )
+    }
+    data = await readRealtimeJson(res)
   } catch {
+    console.error('[aishodan] realtime session request failed')
     return NextResponse.json({ error: '音声商談サーバーに接続できませんでした' }, { status: 502 })
   }
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '')
-    console.error('[aishodan] realtime session error', res.status, detail.slice(0, 500))
-    return NextResponse.json(
-      { error: '商談を開始できませんでした。時間をおいて再度お試しください。' },
-      { status: 502 }
-    )
-  }
-
-  const data = await res.json()
   // 新形式は { value, expires_at, session } を直接返す（旧形式の client_secret.value ではない）
-  const clientSecret: string | null = data?.value ?? data?.client_secret?.value ?? null
+  const clientSecret = realtimeClientSecret(data)
   if (!clientSecret) {
-    console.error('[aishodan] realtime: client secret missing', JSON.stringify(data).slice(0, 300))
+    console.error('[aishodan] realtime: client secret missing')
     return NextResponse.json({ error: '商談を開始できませんでした。' }, { status: 502 })
   }
 

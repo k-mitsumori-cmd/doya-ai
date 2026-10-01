@@ -18,6 +18,7 @@ import { prisma } from '@/lib/prisma'
 import { assertUsable, loadSessionByToken } from '@/lib/mensetsu/public'
 import { ADVANCE_TOOL, buildInterviewerInstructions } from '@/lib/mensetsu/interview'
 import { LEVEL_LABELS, type MensetsuLevel } from '@/lib/mensetsu/types'
+import { REALTIME_REQUEST_TIMEOUT_MS, readRealtimeJson, realtimeClientSecret } from '@/lib/realtime-token-response'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -35,6 +36,11 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   }
   const usable = assertUsable(s)
   if (!usable.ok) return NextResponse.json({ error: usable.reason }, { status: usable.status })
+  if (s.endedAt) return NextResponse.json({ error: 'この面接は既に終了しています。' }, { status: 409 })
+  const graceMs = (s.template.durationMin * 60 + 10 * 60) * 1000
+  if (s.startedAt && Date.now() - s.startedAt.getTime() > graceMs) {
+    return NextResponse.json({ error: 'この面接の実施時間を過ぎています。採用ご担当者にお問い合わせください。' }, { status: 410 })
+  }
 
   // --- 発行の上限（未認証で叩ける口なので必須）---
   // ⚠️ ここは1回叩くごとに OPENAI_API_KEY 課金の Realtime 資格情報が1つ生まれる。
@@ -48,23 +54,20 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
   //    updateMany の条件付き加算で「席を予約」し、更新件数0なら上限到達とみなす。
   const MAX_ISSUES = 12
   const reserved = await prisma.mensetsuSession.updateMany({
-    where: { id: s.id, tokenIssueCount: { lt: MAX_ISSUES } },
+    where: { id: s.id, tokenIssueCount: { lt: MAX_ISSUES }, status: { in: ['pending', 'consented', 'live'] }, consentedAt: { not: null }, endedAt: null, expiresAt: { gt: new Date() } },
     data: { tokenIssueCount: { increment: 1 } },
   })
   if (reserved.count === 0) {
+    const current = await loadSessionByToken(p.token)
+    if (!current) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
+    if (!current.consentedAt) return NextResponse.json({ error: '先に同意が必要です' }, { status: 403 })
+    const allowed = assertUsable(current)
+    if (!allowed.ok) return NextResponse.json({ error: allowed.reason }, { status: allowed.status })
+    if (current.endedAt) return NextResponse.json({ error: 'この面接は既に終了しています。' }, { status: 409 })
     return NextResponse.json(
       { error: '接続の試行回数が上限に達しました。採用ご担当者にお問い合わせください。' },
       { status: 429 }
     )
-  }
-  if (s.startedAt) {
-    const graceMs = (s.template.durationMin * 60 + 10 * 60) * 1000
-    if (Date.now() - s.startedAt.getTime() > graceMs) {
-      return NextResponse.json(
-        { error: 'この面接の実施時間を過ぎています。採用ご担当者にお問い合わせください。' },
-        { status: 410 }
-      )
-    }
   }
 
   const apiKey = process.env.OPENAI_API_KEY
@@ -83,13 +86,14 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
     candidateName: s.candidateName,
   })
 
-  let res: Response
+  let data: any
   try {
     // ⚠️ 旧 `/v1/realtime/sessions`（フラットな body）は廃止され 404 になる。
     //    現行は `/v1/realtime/client_secrets` で、設定は session の下にネストし、
     //    音声まわりは audio.input / audio.output に分かれる。2026-08-07 に実機で確認。
-    res = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
+    const res = await fetch('https://api.openai.com/v1/realtime/client_secrets', {
       method: 'POST',
+      signal: AbortSignal.timeout(REALTIME_REQUEST_TIMEOUT_MS),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
@@ -129,38 +133,58 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
         },
       }),
     })
+    if (!res.ok) {
+      void res.body?.cancel().catch(() => {})
+      console.error('[mensetsu] realtime session error', res.status)
+      return NextResponse.json(
+        { error: '面接セッションを開始できませんでした。時間をおいて再度お試しください。' },
+        { status: 502 }
+      )
+    }
+    data = await readRealtimeJson(res)
   } catch {
+    console.error('[mensetsu] realtime session request failed')
     return NextResponse.json({ error: '音声面接サーバーに接続できませんでした' }, { status: 502 })
   }
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '')
-    console.error('[mensetsu] realtime session error', res.status, detail.slice(0, 500))
-    return NextResponse.json(
-      { error: '面接セッションを開始できませんでした。時間をおいて再度お試しください。' },
-      { status: 502 }
-    )
-  }
-
-  const data = await res.json()
   // 新形式は { value, expires_at, session } を直接返す（旧形式の client_secret.value ではない）
-  const clientSecret: string | null = data?.value ?? data?.client_secret?.value ?? null
+  const clientSecret = realtimeClientSecret(data)
   if (!clientSecret) {
-    console.error('[mensetsu] realtime: client secret missing', JSON.stringify(data).slice(0, 300))
+    console.error('[mensetsu] realtime: client secret missing')
     return NextResponse.json({ error: '面接セッションを開始できませんでした。' }, { status: 502 })
   }
 
-  // 発行回数は上の予約で加算済み
-  if (!s.startedAt) {
+  // 外部API待機中に終了・同意撤回された面接へ資格情報を渡さない。
+  let current = await loadSessionByToken(p.token)
+  if (!current) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
+  if (!current.consentedAt) return NextResponse.json({ error: '先に同意が必要です' }, { status: 403 })
+  let allowed = assertUsable(current)
+  if (!allowed.ok) return NextResponse.json({ error: allowed.reason }, { status: allowed.status })
+  if (current.endedAt) return NextResponse.json({ error: 'この面接は既に終了しています。' }, { status: 409 })
+
+  // 発行回数は上の予約で加算済み。並列開始でも開始時刻を上書きしない。
+  if (!current.startedAt) {
     // 保持期限は実施日から数え直す。発行時点の仮の値のままだと、
     // 同意画面で伝えた「実施から◯日間保管」と実態がずれる。
     const purgeAfter = new Date(
       Date.now() + Math.max(1, s.organization.retentionDays) * 24 * 60 * 60 * 1000
     )
-    await prisma.mensetsuSession.update({
-      where: { id: s.id },
+    await prisma.mensetsuSession.updateMany({
+      where: { id: s.id, status: { in: ['pending', 'consented', 'live'] }, consentedAt: { not: null }, endedAt: null, startedAt: null, expiresAt: { gt: new Date() } },
       data: { status: 'live', startedAt: new Date(), purgeAfter },
     })
+  }
+
+  current = await loadSessionByToken(p.token)
+  if (!current) return NextResponse.json({ error: '面接が見つかりません' }, { status: 404 })
+  if (!current.consentedAt) return NextResponse.json({ error: '先に同意が必要です' }, { status: 403 })
+  allowed = assertUsable(current)
+  if (!allowed.ok) return NextResponse.json({ error: allowed.reason }, { status: allowed.status })
+  if (current.endedAt || current.status !== 'live' || !current.startedAt) {
+    return NextResponse.json({ error: '面接の状態が変わりました。再読み込みしてご確認ください。' }, { status: 409 })
+  }
+  if (Date.now() - current.startedAt.getTime() > graceMs) {
+    return NextResponse.json({ error: 'この面接の実施時間を過ぎています。採用ご担当者にお問い合わせください。' }, { status: 410 })
   }
 
   return NextResponse.json({
