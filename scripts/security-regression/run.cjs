@@ -762,6 +762,11 @@ if (adimageVisionResponse.error || adimageVisionResponse.status !== 0) {
   console.error('Security regression failed: verify-adimage-vision-response.cjs');
   process.exit(1);
 }
+const bannerVisionResponse = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-vision-response.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (bannerVisionResponse.error || bannerVisionResponse.status !== 0) {
+  console.error('Security regression failed: verify-banner-vision-response.cjs');
+  process.exit(1);
+}
 const bannerProModels = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-pro-models.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (bannerProModels.error || bannerProModels.status !== 0) {
   console.error('Security regression failed: verify-banner-pro-models.cjs');

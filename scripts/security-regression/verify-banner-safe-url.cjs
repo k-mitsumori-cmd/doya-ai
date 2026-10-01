@@ -9,6 +9,7 @@ function harness(auth=true){const exports={},calls=[];let reads=0,model=0,browse
  if(name==='next-auth')return{getServerSession:async()=>auth?{user:{id:'mock',plan:'FREE'}}:null};
  if(name==='@/lib/auth')return{authOptions:{}};
  if(name==='@/lib/banner/provider-response')return{requestBannerTextProvider:async()=>{throw Error('Provider must not run')}};
+ if(name==='@/lib/banner/vision-response')return{readBannerVisionJson:async()=>{throw Error('Vision must not run')}};
  if(name==='@/lib/net/safe-fetch')return{safeFetchText:async(url,opts)=>{calls.push({url,opts});return null;},safeFetchResource:async()=>{throw Error('unexpected resource');}};
  if(name==='@/lib/net/safe-browser')return{SAFE_BROWSER_ARGS:[],installSafeBrowserRequests:async()=>{browser++;throw Error('Browser must not run');}};
  if(name==='@/lib/nanobanner')return{isNanobannerConfigured:()=>true,generateBanners:async()=>{model++;throw Error('Model must not run');}};

@@ -1,5 +1,6 @@
 import { safeFetchText, safeFetchResource } from '@/lib/net/safe-fetch'
 import { requestBannerTextProvider } from '@/lib/banner/provider-response'
+import { readBannerVisionJson } from '@/lib/banner/vision-response'
 import { installSafeBrowserRequests, SAFE_BROWSER_ARGS } from '@/lib/net/safe-browser'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
@@ -860,16 +861,17 @@ async function detectPeopleViaVision(imageUrls: string[]): Promise<'あり' | '�
         features: [{ type: 'FACE_DETECTION', maxResults: 3 }],
       })),
     }
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 10_000)
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-      signal: controller.signal,
-    }).finally(() => clearTimeout(timeout))
-    if (!res.ok) return '不明'
-    const json: any = await res.json().catch(() => null)
+      signal: AbortSignal.timeout(10_000),
+    })
+    if (!res.ok) {
+      void res.body?.cancel().catch(() => {})
+      return '不明'
+    }
+    const json: any = await readBannerVisionJson(res)
     const responses: any[] = Array.isArray(json?.responses) ? json.responses : []
     for (const r of responses) {
       const faces: any[] = Array.isArray(r?.faceAnnotations) ? r.faceAnnotations : []
@@ -1350,21 +1352,19 @@ async function extractPaletteViaVision(imageUrls: string[]): Promise<string[]> {
     })),
   }
 
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), 10_000)
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-    signal: controller.signal,
-  }).finally(() => clearTimeout(timeout))
+    signal: AbortSignal.timeout(10_000),
+  })
 
   if (!res.ok) {
-    const t = await res.text().catch(() => '')
-    throw new Error(`Vision API error: ${res.status} ${t.slice(0, 200)}`)
+    void res.body?.cancel().catch(() => {})
+    throw new Error(`Vision API error: ${res.status}`)
   }
 
-  const json: any = await res.json()
+  const json: any = await readBannerVisionJson(res)
   const responses: any[] = Array.isArray(json?.responses) ? json.responses : []
 
   const weights = new Map<string, number>()
