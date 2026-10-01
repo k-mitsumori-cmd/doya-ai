@@ -32,6 +32,8 @@ let drafts = 0;
 let refunds = 0;
 let failProvider = false;
 let invalidKey = false;
+let oversizedEvent = false;
+let oversizedProviderError = false;
 let failProjectUpdate = false;
 let failUsageTracking = false;
 let holdProvider = false;
@@ -76,12 +78,13 @@ const { POST } = load('src/app/api/interview/articles/generate/route.ts', {
   },
   '@/lib/interview/prompts': { buildArticlePrompt: () => 'prompt' },
   '@/lib/service-usage': { recordServiceUsage: async () => { if (failUsageTracking) throw new Error('tracking failed'); } },
+  '@/lib/interview/gemini-request': load('src/lib/interview/gemini-request.ts'),
   '@/lib/interview/article-budget': {
     claimArticleBudget: async (identity) => { budgetCalls++; claimedIdentity = identity; return admission; },
     refundArticleBudget: async () => { refunds++; },
   },
 }, {
-  TextEncoder, TextDecoder, ReadableStream, AbortController,
+  TextEncoder, TextDecoder, ReadableStream, AbortController, AbortSignal,
   process: { env: { GEMINI_API_KEY: 'test-key' } },
   fetch: async (url, init) => {
     providerCalls++;
@@ -92,7 +95,9 @@ const { POST } = load('src/app/api/interview/articles/generate/route.ts', {
       init.signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
     });
     if (failProvider) return new Response('provider failed', { status: 500 });
+    if (oversizedProviderError) return new Response('private', { status: 400, headers: { 'content-length': String(64 * 1024 + 1) } });
     if (invalidKey) return new Response(JSON.stringify({ error: { status: 'INVALID_ARGUMENT', message: 'API key not valid. Please pass a valid API key.' } }), { status: 400, headers: { 'content-type': 'application/json' } });
+    if (oversizedEvent) return new Response(`data: ${JSON.stringify({ candidates: [{ content: { parts: [{ text: 'x'.repeat(600000) }] } }] })}\n`);
     return new Response('data: {"candidates":[{"content":{"parts":[{"text":"article"},{"text":" end"}]}}]}');
   },
 });
@@ -175,6 +180,19 @@ async function events() {
   await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(refunds, 4);
   assert.equal(drafts, 3);
+  holdProvider = false;
+  oversizedProviderError = true;
+  output = await events();
+  assert.equal(output.at(-1).type, 'error');
+  assert.equal(output.at(-1).code, undefined);
+  assert.equal(refunds, 5);
+  oversizedProviderError = false;
+  oversizedEvent = true;
+  output = await events();
+  assert.equal(output.at(-1).type, 'error');
+  assert.equal(refunds, 6);
+  assert.equal(drafts, 3);
+  oversizedEvent = false;
   let viewerId = null;
   let storedOwner = null;
   const { GET: readRecipe } = load('src/app/api/interview/recipes/[id]/route.ts', {

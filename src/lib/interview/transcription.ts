@@ -19,16 +19,16 @@ interface TranscriptionResult {
 export class InterviewTranscriptionTerminalError extends Error {}
 
 const ASSEMBLYAI_BASE_URL = 'https://api.assemblyai.com/v2'
-const SUBMIT_TIMEOUT_MS = 30_000
-const POLL_REQUEST_TIMEOUT_MS = 20_000
-const SUBMIT_RESPONSE_MAX_BYTES = 64 * 1024
+export const SUBMIT_TIMEOUT_MS = 30_000
+export const POLL_REQUEST_TIMEOUT_MS = 20_000
+export const SUBMIT_RESPONSE_MAX_BYTES = 64 * 1024
 // A three-hour transcript can contain word timings and speaker utterances.
-const TRANSCRIPT_RESPONSE_MAX_BYTES = 32 * 1024 * 1024
+export const TRANSCRIPT_RESPONSE_MAX_BYTES = 32 * 1024 * 1024
 
-async function readAssemblyJson(response: Response, maxBytes: number): Promise<any> {
+export async function readAssemblyJson(response: Response, maxBytes: number): Promise<any> {
   if (Number(response.headers.get('content-length')) > maxBytes) {
     void response.body?.cancel().catch(() => {})
-    throw new Error('文字起こしサービスの応答が大きすぎます')
+    throw new InterviewTranscriptionTerminalError('文字起こしサービスの応答が大きすぎます')
   }
   if (!response.body) throw new Error('文字起こしサービスの応答が空です')
   const reader = response.body.getReader()
@@ -39,7 +39,7 @@ async function readAssemblyJson(response: Response, maxBytes: number): Promise<a
       const { done, value } = await reader.read()
       if (done) break
       length += value.byteLength
-      if (length > maxBytes) throw new Error('文字起こしサービスの応答が大きすぎます')
+      if (length > maxBytes) throw new InterviewTranscriptionTerminalError('文字起こしサービスの応答が大きすぎます')
       chunks.push(Buffer.from(value))
     }
     return JSON.parse(Buffer.concat(chunks, length).toString('utf8'))

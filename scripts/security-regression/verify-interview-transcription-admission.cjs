@@ -34,6 +34,7 @@ const stream = load('src/app/api/interview/materials/[id]/transcribe-stream/rout
   'node:crypto': { randomUUID: () => 'uuid' },
   'next/server': {},
   '@/lib/interview/storage': { getSignedFileUrl: async () => { throw Error('storage should not run') } },
+  '@/lib/interview/transcription': { readAssemblyJson: async () => { throw Error('provider should not run') } },
 }, globals)
 const context = { params: Promise.resolve({ id: 'm1' }) }
 

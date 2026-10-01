@@ -21,6 +21,12 @@ import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabas
 import { buildArticlePrompt } from '@/lib/interview/prompts'
 import { recordServiceUsage } from '@/lib/service-usage'
 import { claimArticleBudget, refundArticleBudget, type ArticleClaim } from '@/lib/interview/article-budget'
+import { readInterviewGeminiResponse } from '@/lib/interview/gemini-request'
+
+const ARTICLE_PROVIDER_TIMEOUT_MS = 240_000
+const ARTICLE_PROVIDER_STREAM_MAX_BYTES = 8 * 1024 * 1024
+const ARTICLE_PROVIDER_EVENT_MAX_CHARS = 512 * 1024
+const ARTICLE_TEXT_MAX_CHARS = 512 * 1024
 
 function getGeminiApiKey(): string {
   const key =
@@ -174,7 +180,7 @@ export async function POST(req: NextRequest) {
 
         const geminiRes = await fetch(endpoint, {
           method: 'POST',
-          signal: providerAbort.signal,
+          signal: AbortSignal.any([providerAbort.signal, AbortSignal.timeout(ARTICLE_PROVIDER_TIMEOUT_MS)]),
           headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
@@ -194,7 +200,7 @@ export async function POST(req: NextRequest) {
         if (!geminiRes.ok) {
           let invalidKey = false
           try {
-            const providerError = await geminiRes.json()
+            const providerError = await readInterviewGeminiResponse(geminiRes, 64 * 1024)
             invalidKey = geminiRes.status === 400 &&
               typeof providerError?.error?.message === 'string' &&
               /API key not valid/i.test(providerError.error.message)
@@ -222,28 +228,35 @@ export async function POST(req: NextRequest) {
 
         const decoder = new TextDecoder()
         let buffer = ''
+        let receivedBytes = 0
         const consumeLine = (line: string) => {
           if (!line.startsWith('data: ')) return
           const jsonStr = line.slice(6).trim()
           if (!jsonStr || jsonStr === '[DONE]') return
+          if (jsonStr.length > ARTICLE_PROVIDER_EVENT_MAX_CHARS) throw new Error('Article provider event is too large')
+          let parsed: any
           try {
-            const parsed = JSON.parse(jsonStr)
-            const parts = parsed?.candidates?.[0]?.content?.parts
-            const text = Array.isArray(parts)
-              ? parts.map((part) => typeof part?.text === 'string' ? part.text : '').join('')
-              : ''
-            if (text) {
-              fullText += text
-              controller.enqueue(sseEvent({ type: 'chunk', text }))
-            }
+            parsed = JSON.parse(jsonStr)
           } catch {
             // Ignore malformed provider events without exposing their content.
+            return
+          }
+          const parts = parsed?.candidates?.[0]?.content?.parts
+          const text = Array.isArray(parts)
+            ? parts.map((part: any) => typeof part?.text === 'string' ? part.text : '').join('')
+            : ''
+          if (text) {
+            if (fullText.length + text.length > ARTICLE_TEXT_MAX_CHARS) throw new Error('Article text is too large')
+            fullText += text
+            controller.enqueue(sseEvent({ type: 'chunk', text }))
           }
         }
 
         while (true) {
           const { done, value } = await reader.read()
           if (done) break
+          receivedBytes += value.byteLength
+          if (receivedBytes > ARTICLE_PROVIDER_STREAM_MAX_BYTES) throw new Error('Article provider stream is too large')
 
           buffer += decoder.decode(value, { stream: true })
 
@@ -252,6 +265,7 @@ export async function POST(req: NextRequest) {
           buffer = lines.pop() || '' // 最後の不完全な行をバッファに戻す
 
           for (const line of lines) consumeLine(line)
+          if (buffer.length > ARTICLE_PROVIDER_EVENT_MAX_CHARS) throw new Error('Article provider event is too large')
         }
         buffer += decoder.decode()
         for (const line of buffer.split('\n')) consumeLine(line)
@@ -319,6 +333,7 @@ export async function POST(req: NextRequest) {
 
         controller.close()
       } catch {
+        providerAbort.abort()
         if (!cancelled) {
           console.error('[interview] article generation failed')
           try {

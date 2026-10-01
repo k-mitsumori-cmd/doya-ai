@@ -22,6 +22,7 @@ import { getSignedFileUrl } from '@/lib/interview/storage'
 import { getInterviewGuestLimits } from '@/lib/pricing'
 import { inspectInterviewMediaDuration } from '@/lib/interview/media-duration'
 import { reserveInterviewTranscription, settleInterviewTranscription, releaseInterviewTranscription } from '@/lib/interview/transcription-budget'
+import { readAssemblyJson, SUBMIT_TIMEOUT_MS, POLL_REQUEST_TIMEOUT_MS, SUBMIT_RESPONSE_MAX_BYTES, TRANSCRIPT_RESPONSE_MAX_BYTES, InterviewTranscriptionTerminalError } from '@/lib/interview/transcription'
 import type { TranscriptionSegment } from '@/lib/interview/types'
 
 const ASSEMBLYAI_BASE_URL = 'https://api.assemblyai.com/v2'
@@ -242,6 +243,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           const submitRes = await fetch(`${ASSEMBLYAI_BASE_URL}/transcript`, {
             method: 'POST',
             headers: { Authorization: apiKey, 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(SUBMIT_TIMEOUT_MS),
             body: JSON.stringify({
               audio_url: fileUrl,
               language_code: 'ja',
@@ -251,12 +253,15 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           })
 
           if (!submitRes.ok) {
+            void submitRes.body?.cancel().catch(() => {})
             ambiguousSubmission = false
             terminalFailure = true
             throw new Error(`音声認識エンジンへの送信に失敗しました (${submitRes.status})`)
           }
-          const submitData = await submitRes.json()
-          if (!submitData.id) throw new Error('トランスクリプトIDが返されませんでした')
+          const submitData = await readAssemblyJson(submitRes, SUBMIT_RESPONSE_MAX_BYTES)
+          if (typeof submitData?.id !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(submitData.id)) {
+            throw new Error('トランスクリプトIDが返されませんでした')
+          }
           assemblyAiId = submitData.id
 
           // AssemblyAIジョブIDをDBに保存 (再接続用)
@@ -282,11 +287,18 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         while (Date.now() - pollStart < MAX_POLL_DURATION_MS) {
           await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS))
 
+          const remainingMs = MAX_POLL_DURATION_MS - (Date.now() - pollStart)
+          if (remainingMs <= 0) break
+
           const pollRes = await fetch(`${ASSEMBLYAI_BASE_URL}/transcript/${assemblyAiId}`, {
             headers: { Authorization: apiKey },
+            signal: AbortSignal.timeout(Math.min(POLL_REQUEST_TIMEOUT_MS, remainingMs)),
           })
-          if (!pollRes.ok) throw new Error(`ポーリングエラー (${pollRes.status})`)
-          const data = await pollRes.json()
+          if (!pollRes.ok) {
+            void pollRes.body?.cancel().catch(() => {})
+            throw new Error(`ポーリングエラー (${pollRes.status})`)
+          }
+          const data = await readAssemblyJson(pollRes, TRANSCRIPT_RESPONSE_MAX_BYTES)
           const elapsed = Math.round((Date.now() - pollStart) / 1000)
 
           if (data.status === 'completed') {
@@ -297,7 +309,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
           if (data.status === 'error') {
             terminalFailure = true
-            throw new Error(data.error || '音声認識に失敗しました')
+            throw new InterviewTranscriptionTerminalError('音声認識に失敗しました')
           }
 
           // 進捗メッセージ
@@ -394,6 +406,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
         controller.close()
       } catch (err: any) {
         console.error('[interview] transcribe-stream error')
+        if (err instanceof InterviewTranscriptionTerminalError) terminalFailure = true
 
         if (quotaEnabled && budgetTranscriptionId) {
           const completed = await prisma.interviewTranscription.findUnique({

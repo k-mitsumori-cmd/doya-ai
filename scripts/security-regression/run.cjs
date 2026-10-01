@@ -772,6 +772,11 @@ if (personaGenerateBounds.error || personaGenerateBounds.status !== 0) {
   console.error('Security regression failed: verify-persona-generate-bounds.cjs');
   process.exit(1);
 }
+const interviewStreamProvider = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-transcribe-stream-provider.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewStreamProvider.error || interviewStreamProvider.status !== 0) {
+  console.error('Security regression failed: verify-interview-transcribe-stream-provider.cjs');
+  process.exit(1);
+}
 const bannerProModels = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-pro-models.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (bannerProModels.error || bannerProModels.status !== 0) {
   console.error('Security regression failed: verify-banner-pro-models.cjs');

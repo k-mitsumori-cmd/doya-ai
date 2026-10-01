@@ -7,8 +7,8 @@ type GenerationConfig = {
 // room for Japanese JSON while rejecting a runaway provider response.
 const INTERVIEW_GEMINI_RESPONSE_MAX_BYTES = 4 * 1024 * 1024
 
-async function readInterviewGeminiResponse(response: Response): Promise<any> {
-  if (Number(response.headers.get('content-length')) > INTERVIEW_GEMINI_RESPONSE_MAX_BYTES) {
+export async function readInterviewGeminiResponse(response: Response, maxBytes = INTERVIEW_GEMINI_RESPONSE_MAX_BYTES): Promise<any> {
+  if (Number(response.headers.get('content-length')) > maxBytes) {
     void response.body?.cancel().catch(() => {})
     throw new Error('Interview Gemini response too large')
   }
@@ -21,7 +21,7 @@ async function readInterviewGeminiResponse(response: Response): Promise<any> {
       const { done, value } = await reader.read()
       if (done) break
       length += value.byteLength
-      if (length > INTERVIEW_GEMINI_RESPONSE_MAX_BYTES) throw new Error('Interview Gemini response too large')
+      if (length > maxBytes) throw new Error('Interview Gemini response too large')
       chunks.push(Buffer.from(value))
     }
     return JSON.parse(Buffer.concat(chunks, length).toString('utf8'))
