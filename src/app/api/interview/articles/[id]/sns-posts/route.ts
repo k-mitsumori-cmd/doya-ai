@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
+import { parseSnsOutput } from '@/lib/interview/ai-output'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -119,19 +120,21 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const ownerErr = checkOwnership(draft.project, userId, guestId)
     if (ownerErr) return ownerErr
 
-    const body = await req.json()
-    const platforms: string[] = body.platforms || ['twitter']
-    const articleUrl: string = body.articleUrl || ''
-    const tone: string = body.tone || 'professional'
-
-    // バリデーション
-    const validPlatforms = platforms.filter((p) => p in PLATFORM_SPECS)
-    if (validPlatforms.length === 0) {
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)
+      || (body.platforms != null && (!Array.isArray(body.platforms) || body.platforms.length < 1
+        || body.platforms.length > Object.keys(PLATFORM_SPECS).length
+        || body.platforms.some((p: unknown) => typeof p !== 'string' || !(p in PLATFORM_SPECS))))
+      || (body.articleUrl != null && (typeof body.articleUrl !== 'string' || body.articleUrl.length > 2000))
+      || (body.tone != null && !['professional', 'casual', 'humorous'].includes(body.tone))) {
       return NextResponse.json(
-        { success: false, error: '有効なプラットフォームを指定してください' },
+        { success: false, error: '投稿条件を確認してください' },
         { status: 400 }
       )
     }
+    const validPlatforms: string[] = [...new Set<string>(body.platforms || ['twitter'])]
+    const articleUrl: string = body.articleUrl || ''
+    const tone: string = body.tone || 'professional'
 
     const apiKey = getGeminiApiKey()
     const model = getModel()
@@ -183,19 +186,16 @@ twitter_thread の場合、content内の各ツイートは "---" で区切って
     const geminiData = await generateInterviewContent(apiKey, model, prompt, {
       temperature: 0.7, maxOutputTokens: 8192,
     }, 50_000)
-    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
-
-    let result: any
-    try {
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/)
-      result = jsonMatch ? JSON.parse(jsonMatch[0]) : { posts: [] }
-    } catch {
-      result = { posts: [] }
+    const result = parseSnsOutput(geminiData?.candidates?.[0]?.content?.parts?.[0]?.text)
+    const posts = result?.posts.filter((post) => validPlatforms.includes(post.platform))
+      .map((post) => ({ ...post, characterCount: post.content.length }))
+    if (!posts?.length) {
+      return NextResponse.json({ success: false, error: 'SNS投稿文を読み取れませんでした。再度お試しください。' }, { status: 502 })
     }
 
     return NextResponse.json({
       success: true,
-      posts: result.posts || [],
+      posts,
     })
   } catch (e: any) {
     console.error('[interview] sns-posts error:', e?.message)

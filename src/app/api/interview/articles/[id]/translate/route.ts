@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
+import { parseTranslationOutput } from '@/lib/interview/ai-output'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -120,7 +121,11 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       )
     }
 
-    const body = await req.json()
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)
+      || (body.language != null && typeof body.language !== 'string')) {
+      return NextResponse.json({ success: false, error: '言語の指定を確認してください' }, { status: 400 })
+    }
     const targetLang: string = body.language || 'en'
     const langConfig = LANGUAGE_CONFIG[targetLang]
 
@@ -171,39 +176,20 @@ ${draft.content.slice(0, 60000)}`
     const geminiData = await generateInterviewContent(apiKey, model, prompt, {
       temperature: 0.3, maxOutputTokens: 16384,
     }, 170_000)
-    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
-
-    let result: any
-    try {
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/)
-      result = jsonMatch ? JSON.parse(jsonMatch[0]) : null
-    } catch {
-      result = null
-    }
-
-    if (!result || !result.content) {
-      // JSONパース失敗の場合、テキスト全体を翻訳結果として使用
-      return NextResponse.json({
-        success: true,
-        language: targetLang,
-        languageName: langConfig.name,
-        title: draft.title || '',
-        content: rawText,
-        seoTitle: '',
-        seoDescription: '',
-        wordCount: rawText.length,
-      })
+    const result = parseTranslationOutput(geminiData?.candidates?.[0]?.content?.parts?.[0]?.text)
+    if (!result) {
+      return NextResponse.json({ success: false, error: '翻訳結果を読み取れませんでした。再度お試しください。' }, { status: 502 })
     }
 
     return NextResponse.json({
       success: true,
       language: targetLang,
       languageName: langConfig.name,
-      title: result.title || '',
-      content: result.content || '',
-      seoTitle: result.seoTitle || '',
-      seoDescription: result.seoDescription || '',
-      wordCount: (result.content || '').length,
+      title: result.title,
+      content: result.content,
+      seoTitle: result.seoTitle,
+      seoDescription: result.seoDescription,
+      wordCount: result.content.length,
     })
   } catch (e: any) {
     console.error('[interview] translate error:', e?.message)

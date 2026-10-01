@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
+import { parseTitleOutput } from '@/lib/interview/ai-output'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -61,11 +62,16 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const ownerErr = checkOwnership(draft.project, userId, guestId)
     if (ownerErr) return ownerErr
 
-    const body = await req.json()
+    const body = await req.json().catch(() => null)
+    if (!body || typeof body !== 'object' || Array.isArray(body)
+      || (body.platform != null && (typeof body.platform !== 'string' || !(body.platform in PLATFORM_PROMPTS)))
+      || (body.count != null && (!Number.isInteger(body.count) || body.count < 1 || body.count > 10))) {
+      return NextResponse.json({ success: false, error: '提案条件を確認してください。件数は1〜10件です。' }, { status: 400 })
+    }
     const platform = body.platform || 'seo'
-    const count = Math.min(body.count || 5, 10)
+    const count = body.count || 5
 
-    const platformGuide = PLATFORM_PROMPTS[platform] || PLATFORM_PROMPTS.seo
+    const platformGuide = PLATFORM_PROMPTS[platform]
 
     const apiKey = getGeminiApiKey()
     const model = getModel()
@@ -104,14 +110,9 @@ type は keyword / emotional / question / number / quote のいずれか`
     const geminiData = await generateInterviewContent(apiKey, model, prompt, {
       temperature: 0.8, maxOutputTokens: 4096,
     }, 50_000)
-    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
-
-    let titles: any[] = []
-    try {
-      const jsonMatch = rawText.match(/\[[\s\S]*\]/)
-      titles = jsonMatch ? JSON.parse(jsonMatch[0]) : []
-    } catch {
-      titles = []
+    const titles = parseTitleOutput(geminiData?.candidates?.[0]?.content?.parts?.[0]?.text)
+    if (!titles) {
+      return NextResponse.json({ success: false, error: 'タイトル案を読み取れませんでした。再度お試しください。' }, { status: 502 })
     }
 
     return NextResponse.json({

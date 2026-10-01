@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
+import { parseFactCheckOutput } from '@/lib/interview/ai-output'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -107,14 +108,9 @@ ${draft.content.slice(0, 60000)}`
     const geminiData = await generateInterviewContent(apiKey, model, prompt, {
       temperature: 0.1, maxOutputTokens: 8192,
     }, 110_000)
-    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || ''
-
-    let result: any
-    try {
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/)
-      result = jsonMatch ? JSON.parse(jsonMatch[0]) : { reliability: 0, summary: '解析失敗', claims: [] }
-    } catch {
-      result = { reliability: 0, summary: 'ファクトチェック結果の解析に失敗しました', claims: [], raw: rawText.slice(0, 1000) }
+    const result = parseFactCheckOutput(geminiData?.candidates?.[0]?.content?.parts?.[0]?.text)
+    if (!result) {
+      return NextResponse.json({ success: false, error: 'ファクトチェック結果を読み取れませんでした。再度お試しください。' }, { status: 502 })
     }
 
     return NextResponse.json({
