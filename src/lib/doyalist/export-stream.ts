@@ -12,9 +12,13 @@ export const DOYALIST_EXPORT_PAGE_SIZE = 200
 const companyOrder = [{ score: 'desc' as const }, { createdAt: 'desc' as const }, { id: 'desc' as const }]
 const approachOrder = [{ createdAt: 'desc' as const }, { id: 'desc' as const }]
 
+export function readFirstDoyalistCompanyPage(projectId: string) {
+  return prisma.doyalistCompany.findMany({ where: { projectId }, orderBy: companyOrder, take: DOYALIST_EXPORT_PAGE_SIZE })
+}
+
 export async function preflightDoyalistExport(projectId: string) {
   const [companies, approaches] = await Promise.all([
-    prisma.doyalistCompany.findMany({ where: { projectId }, orderBy: companyOrder, take: DOYALIST_EXPORT_PAGE_SIZE }),
+    readFirstDoyalistCompanyPage(projectId),
     prisma.doyalistApproach.findMany({ where: { projectId }, orderBy: approachOrder, take: DOYALIST_EXPORT_PAGE_SIZE }),
   ])
   return { companies, approaches }

@@ -21,6 +21,7 @@ const mocks = {
   '@/lib/operational-json': operationalJson,
   '@/lib/doyalist/project-input': projectInput,
   '@/lib/doyalist/stream-json': streamJson,
+  '@/lib/doyalist/export-stream': {},
 }
 const create = load('src/app/api/doyalist/projects/route.ts', mocks)
 const detail = load('src/app/api/doyalist/projects/[id]/route.ts', mocks)

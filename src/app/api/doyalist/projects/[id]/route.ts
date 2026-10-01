@@ -6,7 +6,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { streamDoyalistJsonArray } from '@/lib/doyalist/stream-json'
+import { streamDoyalistJsonIterable } from '@/lib/doyalist/stream-json'
+import { iterateDoyalistCompanies, readFirstDoyalistCompanyPage } from '@/lib/doyalist/export-stream'
 import { OperationalBodyError, readOperationalJson } from '@/lib/operational-json'
 import { MAX_DOYALIST_PROJECT_BODY_BYTES, parseDoyalistProjectInput } from '@/lib/doyalist/project-input'
 
@@ -46,10 +47,12 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: guard.error }, { status: guard.status })
     }
 
-    const [companies, approaches, approachCount] = await Promise.all([
-      prisma.doyalistCompany.findMany({
+    const [firstCompanies, statusGroups, approaches, approachCount] = await Promise.all([
+      readFirstDoyalistCompanyPage(id),
+      prisma.doyalistCompany.groupBy({
+        by: ['status'],
         where: { projectId: id },
-        orderBy: [{ score: 'desc' }, { createdAt: 'desc' }],
+        _count: { _all: true },
       }),
       prisma.doyalistApproach.findMany({
         where: { projectId: id },
@@ -59,22 +62,19 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
       prisma.doyalistApproach.count({ where: { projectId: id } }),
     ])
 
-    // ステータス別件数
-    const statusCounts: Record<string, number> = {}
-    for (const c of companies) {
-      statusCounts[c.status] = (statusCounts[c.status] || 0) + 1
-    }
+    const statusCounts = Object.fromEntries(statusGroups.map((group) => [group.status, group._count._all]))
+    const companyCount = statusGroups.reduce((sum, group) => sum + group._count._all, 0)
 
-    return streamDoyalistJsonArray({
+    return streamDoyalistJsonIterable({
       success: true,
       project: guard.project,
       approaches,
       summary: {
-        companyCount: companies.length,
+        companyCount,
         approachCount,
         statusCounts,
       },
-    }, 'companies', companies)
+    }, 'companies', iterateDoyalistCompanies(id, firstCompanies))
   } catch {
     console.error('[doyalist/projects/[id]][GET] failed')
     return NextResponse.json(

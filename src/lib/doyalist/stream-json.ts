@@ -37,3 +37,52 @@ export function streamDoyalistJsonArray<T>(
     },
   })
 }
+
+/** Stream an async database cursor without retaining the complete result set. */
+export function streamDoyalistJsonIterable<T>(
+  fields: Record<string, unknown>,
+  arrayKey: string,
+  rows: AsyncIterable<T>,
+): Response {
+  const encoder = new TextEncoder()
+  const metadata = JSON.stringify(fields)
+  const opening = `${metadata === '{}' ? '{' : `${metadata.slice(0, -1)},`}${JSON.stringify(arrayKey)}:[`
+  const iterator = rows[Symbol.asyncIterator]()
+  let opened = false
+  let emitted = 0
+  const body = new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      try {
+        if (!opened) {
+          controller.enqueue(encoder.encode(opening))
+          opened = true
+          return
+        }
+        const batch: string[] = []
+        for (let index = 0; index < 25; index++) {
+          const next = await iterator.next()
+          if (next.done) break
+          batch.push(JSON.stringify(next.value))
+        }
+        if (batch.length) {
+          controller.enqueue(encoder.encode(`${emitted ? ',' : ''}${batch.join(',')}`))
+          emitted += batch.length
+          return
+        }
+        controller.enqueue(encoder.encode(']}'))
+        controller.close()
+      } catch (error) {
+        controller.error(error)
+      }
+    },
+    async cancel() {
+      await iterator.return?.()
+    },
+  })
+  return new Response(body, {
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Cache-Control': 'private, no-store',
+    },
+  })
+}
