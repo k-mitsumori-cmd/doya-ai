@@ -38,9 +38,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, slideSpec })
   } catch (err: any) {
     console.error('[slashslide/generate] error:')
-    return NextResponse.json({ error: err?.message || 'Unknown error' }, { status: 500 })
+    return NextResponse.json({ error: '資料の生成に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })
   }
 }
-
 
 

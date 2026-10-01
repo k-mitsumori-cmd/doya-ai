@@ -72,7 +72,7 @@ export async function GET() {
       },
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = '利用状況の取得に失敗しました'
     console.error('[tenkai] usage error:', message)
     return NextResponse.json(
       { error: message || '利用状況の取得に失敗しました' },

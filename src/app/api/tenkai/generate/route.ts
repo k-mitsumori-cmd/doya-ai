@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
 
                 await incrementTenkaiUsage(userId, result.tokensUsed as number)
               } catch (dbErr: unknown) {
-                const dbMessage = dbErr instanceof Error ? dbErr.message : 'unknown'
+                const dbMessage = '処理に失敗しました。時間をおいて再度お試しください。'
                 console.error('[tenkai] Output save error:', dbMessage)
                 safeEnqueue(`data: ${JSON.stringify({ type: 'generation_error', platform: event.platform, data: { error: 'DB保存に失敗しました' } })}\n\n`)
               }
@@ -198,7 +198,7 @@ export async function POST(req: NextRequest) {
           safeEnqueue('data: [DONE]\n\n')
           safeClose()
         } catch (e: unknown) {
-          const errMessage = e instanceof Error ? e.message : '生成中にエラーが発生しました'
+          const errMessage = '生成中にエラーが発生しました'
           console.error('[tenkai] SSE stream error:', errMessage)
           safeEnqueue(`data: ${JSON.stringify({ type: 'error', data: { error: errMessage } })}\n\n`)
           // プロジェクトステータスをreadyに戻す
@@ -221,7 +221,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : '生成に失敗しました'
+    const message = '生成に失敗しました'
     console.error('[tenkai] generate error:', message)
 
     // ステータスを ready に戻す（generating のまま放置を防止）

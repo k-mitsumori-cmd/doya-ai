@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ brandVoices })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
+    const message = '処理に失敗しました。時間をおいて再度お試しください。'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, brandVoice })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
+    const message = '処理に失敗しました。時間をおいて再度お試しください。'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
@@ -114,7 +114,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
+    const message = '処理に失敗しました。時間をおいて再度お試しください。'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

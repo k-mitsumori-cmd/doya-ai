@@ -153,8 +153,8 @@ export async function POST(req: NextRequest) {
 
             try {
               copyData = await geminiGenerateJson<typeof copyData>({ model: GEMINI_TEXT_MODEL_DEFAULT, prompt }) || {}
-            } catch (genErr) {
-              console.error(`[generate-copy] Section "${sectionDef.name}" generation failed:`, genErr)
+            } catch {
+              console.error('[generate-copy] Section generation failed')
               copyData = { headline: sectionDef.name, body: '（コピー生成に失敗しました。ブラッシュアップ機能で再生成してください）' }
               failedCount++
             }

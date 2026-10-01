@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
       })),
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'テンプレート一覧の取得に失敗しました'
     console.error('[tenkai] templates list error:', message)
     return NextResponse.json(
       { error: message || 'テンプレート一覧の取得に失敗しました' },
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'テンプレート作成に失敗しました'
     console.error('[tenkai] template create error:', message)
     return NextResponse.json(
       { error: message || 'テンプレート作成に失敗しました' },

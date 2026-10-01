@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
       content: reply,
     })
   } catch (err) {
-    const message = err instanceof Error ? err.message : '予期せぬエラー'
+    const message = '返信を生成できませんでした。時間をおいて再度お試しください。'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

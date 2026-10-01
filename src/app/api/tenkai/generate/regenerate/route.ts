@@ -147,7 +147,7 @@ ${JSON.stringify(existingOutput.content, null, 2).slice(0, 2000)}`
       validation: result.validation,
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = '再生成に失敗しました'
     console.error('[tenkai] regenerate error:', message)
     return NextResponse.json(
       { error: message || '再生成に失敗しました' },

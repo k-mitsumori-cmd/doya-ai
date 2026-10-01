@@ -187,9 +187,9 @@ ${message}
     try {
       raw = await generateTextWithGemini(prompt, {}, { temperature: 0.1, maxOutputTokens: 1024 })
     } catch (geminiErr) {
-      console.error('[chat-edit] Gemini call failed:', geminiErr)
+      console.error('[chat-edit] Gemini call failed')
       return NextResponse.json(
-        { error: `AI 呼び出しに失敗しました: ${geminiErr instanceof Error ? geminiErr.message : 'unknown'}` },
+        { error: 'AIによる編集に失敗しました。時間をおいて再度お試しください。' },
         { status: 502 }
       )
     }
@@ -252,7 +252,7 @@ ${message}
 
     return NextResponse.json({ ok: true, summary, simulation: simResult })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
+    const message = '処理に失敗しました。時間をおいて再度お試しください。'
     console.error('[adsim] chat-edit error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }

@@ -359,7 +359,7 @@ export async function POST(req: NextRequest) {
       transcriptMethod: transcript.method,
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'YouTube字幕の取得に失敗しました'
+    const message = 'YouTube字幕の取得に失敗しました'
     console.error('[tenkai] ingest/youtube error:', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }

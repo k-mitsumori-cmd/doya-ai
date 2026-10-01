@@ -50,7 +50,7 @@ export async function GET() {
       })),
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'ブランドボイス一覧の取得に失敗しました'
     console.error('[tenkai] brand-voices list error:', message)
     return NextResponse.json(
       { error: message || 'ブランドボイス一覧の取得に失敗しました' },
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'ブランドボイスの作成に失敗しました'
     console.error('[tenkai] brand-voice create error:', message)
     return NextResponse.json(
       { error: message || 'ブランドボイスの作成に失敗しました' },

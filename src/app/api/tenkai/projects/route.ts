@@ -116,7 +116,7 @@ export async function GET(req: NextRequest) {
       },
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'プロジェクト一覧の取得に失敗しました'
     console.error('[tenkai] projects list error:', message)
     return NextResponse.json(
       { error: message || 'プロジェクト一覧の取得に失敗しました' },
@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'プロジェクト作成に失敗しました'
     console.error('[tenkai] project create error:', message)
     return NextResponse.json(
       { error: message || 'プロジェクト作成に失敗しました' },

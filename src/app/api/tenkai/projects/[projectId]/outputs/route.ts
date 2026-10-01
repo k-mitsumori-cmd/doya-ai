@@ -72,7 +72,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       })),
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = '出力一覧の取得に失敗しました'
     console.error('[tenkai] outputs list error:', message)
     return NextResponse.json(
       { error: message || '出力一覧の取得に失敗しました' },

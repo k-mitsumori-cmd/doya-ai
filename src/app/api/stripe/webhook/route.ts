@@ -147,8 +147,8 @@ export async function POST(request: NextRequest) {
     if (receiptToken) {
       try {
         await finishStripeWebhookEvent(event.id, receiptToken, false)
-      } catch (receiptError) {
-        console.error('Webhook receipt update failed:', receiptError)
+      } catch {
+        console.error('Webhook receipt update failed')
       }
     }
     return NextResponse.json(

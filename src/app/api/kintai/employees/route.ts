@@ -184,6 +184,6 @@ export async function POST(req: NextRequest) {
     else if (e?.code === 'P2003') msg = '指定された部署または就業ルールが見つかりません'
     else if (e?.message?.includes('Unique constraint')) msg = '同じデータが既に存在します'
     else if (e?.message?.includes('Foreign key constraint')) msg = '指定された部署または就業ルールが見つかりません'
-    return NextResponse.json({ error: msg, detail: e?.message?.substring(0, 300) }, { status: 500 })
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }

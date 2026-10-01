@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
 
           safeEnqueue({ type: 'done', postId: post.id, totalReplies: starsCount })
         } catch (error) {
-          const message = error instanceof Error ? error.message : '不明なエラー'
+          const message = '文章の生成に失敗しました。時間をおいて再度お試しください。'
           safeEnqueue({ type: 'error', message })
         } finally {
           safeClose()
@@ -197,7 +197,7 @@ export async function POST(req: NextRequest) {
 
     return res
   } catch (err) {
-    const message = err instanceof Error ? err.message : '予期せぬエラー'
+    const message = '文章の生成に失敗しました。時間をおいて再度お試しください。'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

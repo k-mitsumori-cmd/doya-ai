@@ -89,8 +89,8 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ id: stri
         if (!res.ok) throw new Error(`HTTP ${res.status}`)
         const buffer = await res.arrayBuffer()
         audioBase64 = Buffer.from(buffer).toString('base64')
-      } catch (fetchErr) {
-        console.warn('Failed to fetch outputUrl, falling back to regeneration:', fetchErr)
+      } catch {
+        console.warn('Failed to fetch outputUrl, falling back to regeneration')
         // outputUrlからの取得に失敗した場合は再生成にフォールバック
         audioBase64 = await regenerateAudio(project)
       }

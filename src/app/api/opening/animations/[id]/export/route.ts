@@ -96,6 +96,6 @@ function App() {
     })
   } catch (error: any) {
     console.error('Export error:')
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'アニメーションを出力できませんでした。時間をおいて再度お試しください。' }, { status: 500 })
   }
 }

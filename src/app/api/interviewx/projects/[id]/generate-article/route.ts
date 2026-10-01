@@ -163,8 +163,7 @@ export async function POST(_req: NextRequest, { params }: RouteParams) {
         })
 
         if (!geminiRes.ok || !geminiRes.body) {
-          const errText = await geminiRes.text().catch(() => '')
-          console.error('[interviewx] Gemini API error:', geminiRes.status, errText)
+          console.error('[interviewx] Gemini API error:', geminiRes.status)
           throw new Error(`AI API エラー (${geminiRes.status})`)
         }
 

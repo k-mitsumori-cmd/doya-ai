@@ -27,6 +27,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ projects })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'プロジェクト一覧を取得できませんでした。時間をおいて再度お試しください。' }, { status: 500 })
   }
 }

@@ -49,7 +49,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ template })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'テンプレートの取得に失敗しました'
     console.error('[tenkai] template detail error:', message)
     return NextResponse.json(
       { error: message || 'テンプレートの取得に失敗しました' },
@@ -109,7 +109,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ template: updated })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'テンプレートの更新に失敗しました'
     console.error('[tenkai] template update error:', message)
     return NextResponse.json(
       { error: message || 'テンプレートの更新に失敗しました' },
@@ -153,7 +153,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'テンプレートの削除に失敗しました'
     console.error('[tenkai] template delete error:', message)
     return NextResponse.json(
       { error: message || 'テンプレートの削除に失敗しました' },

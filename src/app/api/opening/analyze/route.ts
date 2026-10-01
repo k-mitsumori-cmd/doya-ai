@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     })
 
     // Async: analyze and generate (don't await for faster response)
-    analyzeAndGenerate(project.id, url).catch(console.error)
+    analyzeAndGenerate(project.id, url).catch(() => console.error('[opening/analyze] background generation failed'))
 
     return NextResponse.json({ success: true, projectId: project.id })
   } catch (error: any) {
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       requestMethod: 'POST',
       timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
     }).catch(() => {})
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 })
+    return NextResponse.json({ success: false, error: '解析を開始できませんでした。時間をおいて再度お試しください。' }, { status: 500 })
   }
 }
 

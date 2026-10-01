@@ -88,8 +88,7 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     })
 
     if (!geminiRes.ok) {
-      const errText = await geminiRes.text()
-      console.error('[interviewx] Gemini analyze-url error:', geminiRes.status, errText)
+      console.error('[interviewx] Gemini analyze-url error:', geminiRes.status)
       return NextResponse.json(
         { success: false, error: `AI分析エラー (${geminiRes.status})` },
         { status: 502 }

@@ -17,23 +17,19 @@ import { prisma } from '@/lib/prisma'
 import { MITSUBOSHI_BRAND, MITSUBOSHI_CLAUDE_MODEL } from '@/lib/mitsuboshi/_shared/constants'
 
 export async function GET(req: NextRequest) {
-  const checks: Record<string, { ok: boolean; detail?: string }> = {}
+  const checks: Record<string, { ok: boolean }> = {}
 
   // 1. DB 到達確認（軽いクエリで Supabase まで往復できるか確認）
   try {
     await prisma.$queryRaw`SELECT 1`
     checks.database = { ok: true }
-  } catch (err) {
-    checks.database = {
-      ok: false,
-      detail: err instanceof Error ? err.message : String(err),
-    }
+  } catch {
+    checks.database = { ok: false }
   }
 
   // 2. Anthropic API キー設定確認（実 API は叩かない）
   checks.anthropic = {
     ok: Boolean(process.env.ANTHROPIC_API_KEY),
-    detail: process.env.ANTHROPIC_API_KEY ? undefined : 'ANTHROPIC_API_KEY 未設定',
   }
 
   // 3. サブドメイン rewrite チェック（middleware が走った形跡を host ヘッダで返す）
@@ -41,7 +37,6 @@ export async function GET(req: NextRequest) {
   const mitsuboshiHosts = (process.env.MITSUBOSHI_HOSTS || '').split(',').map((s) => s.trim()).filter(Boolean)
   checks.subdomain = {
     ok: mitsuboshiHosts.length === 0 || mitsuboshiHosts.some((h) => host === h || host.endsWith(`.${h}`)),
-    detail: `host=${host} configured=${mitsuboshiHosts.join(',') || 'none'}`,
   }
 
   const allOk = Object.values(checks).every((c) => c.ok)

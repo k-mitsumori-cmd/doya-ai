@@ -216,8 +216,8 @@ async function notifyCancellationFailure(
         detail: `user=${user.email}\n${details}`,
         dedupKey: `cancel-failure:${user.id}:${digest}`,
       })
-    } catch (fallbackError) {
-      console.error('[Cancel] failure notification fallback failed:', eventId, fallbackError)
+    } catch {
+      console.error('[Cancel] failure notification fallback failed:', eventId)
     }
     return
   }

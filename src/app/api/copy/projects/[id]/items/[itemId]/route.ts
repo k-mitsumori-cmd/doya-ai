@@ -54,7 +54,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
+    const message = '処理に失敗しました。時間をおいて再度お試しください。'
     console.error('Copy item DELETE error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }

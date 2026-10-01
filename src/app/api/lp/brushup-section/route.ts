@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     try {
       result = await geminiGenerateJson<{ headline: string; body: string }>({ model: GEMINI_TEXT_MODEL_DEFAULT, prompt })
     } catch (genErr: any) {
-      console.error('[brushup-section] Gemini generation failed:', genErr)
+      console.error('[brushup-section] Gemini generation failed')
       const errMsg = genErr?.message?.includes('quota') || genErr?.message?.includes('429')
         ? 'API利用制限に達しました。しばらく時間をおいてお試しください。'
         : 'AIによるブラッシュアップに失敗しました。もう一度お試しください。'

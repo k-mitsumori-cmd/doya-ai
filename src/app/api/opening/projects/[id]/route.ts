@@ -44,7 +44,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
 
     return NextResponse.json({ project })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'プロジェクトを取得できませんでした。時間をおいて再度お試しください。' }, { status: 500 })
   }
 }
 
@@ -68,6 +68,6 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ id: st
     await prisma.openingProject.delete({ where: { id: params.id } })
     return NextResponse.json({ success: true })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'プロジェクトを削除できませんでした。時間をおいて再度お試しください。' }, { status: 500 })
   }
 }

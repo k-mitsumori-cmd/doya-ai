@@ -19,7 +19,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ id: strin
 
     return NextResponse.json({ animation })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'アニメーションを取得できませんでした。時間をおいて再度お試しください。' }, { status: 500 })
   }
 }
 
@@ -38,6 +38,6 @@ export async function PUT(req: NextRequest, props: { params: Promise<{ id: strin
 
     return NextResponse.json({ success: true, animation })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: 'アニメーションを更新できませんでした。時間をおいて再度お試しください。' }, { status: 500 })
   }
 }

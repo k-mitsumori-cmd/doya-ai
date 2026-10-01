@@ -76,7 +76,7 @@ export async function DELETE(req: NextRequest) {
       },
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'アカウント削除に失敗しました'
+    const message = 'アカウント削除に失敗しました'
     console.error('[tenkai] account delete error:', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }

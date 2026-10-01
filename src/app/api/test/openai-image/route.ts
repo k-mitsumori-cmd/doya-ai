@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (e: any) {
     return NextResponse.json(
-      { success: false, error: e?.message || 'unknown error' },
+      { success: false, error: '画像生成に失敗しました。' },
       { status: 500 }
     )
   }

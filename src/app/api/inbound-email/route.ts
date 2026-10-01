@@ -91,13 +91,13 @@ export async function POST(request: NextRequest) {
     await postToSlackBlocks('お問い合わせメールが届きました', [
       { type: 'section', text: { type: 'mrkdwn', text: lines.join('\n') } },
     ])
-  } catch (e: any) {
+  } catch {
     // 通知経路が落ちていること自体を見えるようにする（黙って捨てない）
     await notifyAlert({
       level: 'critical',
       title: '受信メールの Slack 通知に失敗しました',
       context: 'お問い合わせメールが届いていますが、通知できていません',
-      detail: `from=${from} / subject=${subject}\n${e?.message || e}`,
+      detail: `from=${from} / subject=${subject}\nSlack通知処理が失敗しました。`,
       dedupKey: 'inbound-email-notify-failed',
     }).catch(() => {})
     return NextResponse.json({ error: 'notify failed' }, { status: 500 })

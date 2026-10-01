@@ -21,6 +21,6 @@ export const authLogger = {
       return
     }
     // Keep unexpected authentication, database, state and PKCE failures visible.
-    console.error(`[next-auth][error][${code}]`, metadata)
+    console.error(`[next-auth][error][${code}]`)
   },
 }

@@ -44,7 +44,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ brandVoice })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'ブランドボイスの取得に失敗しました'
     console.error('[tenkai] brand-voice detail error:', message)
     return NextResponse.json(
       { error: message || 'ブランドボイスの取得に失敗しました' },
@@ -122,7 +122,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ brandVoice: updated })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'ブランドボイスの更新に失敗しました'
     console.error('[tenkai] brand-voice update error:', message)
     return NextResponse.json(
       { error: message || 'ブランドボイスの更新に失敗しました' },
@@ -159,7 +159,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'ブランドボイスの削除に失敗しました'
     console.error('[tenkai] brand-voice delete error:', message)
     return NextResponse.json(
       { error: message || 'ブランドボイスの削除に失敗しました' },

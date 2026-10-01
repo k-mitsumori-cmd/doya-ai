@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       language: 'ja',
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'テキストの保存に失敗しました'
     console.error('[tenkai] ingest/text error:', message)
     return NextResponse.json(
       { error: message || 'テキストの保存に失敗しました' },

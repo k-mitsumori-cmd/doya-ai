@@ -30,8 +30,7 @@ export async function POST(req: NextRequest) {
     const profile = await analyzeProduct(url.toString())
     return NextResponse.json({ profile, sourceUrl: url.toString() })
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'サイトの解析に失敗しました'
-    console.error('[quote] analyze failed', msg)
-    return NextResponse.json({ error: msg }, { status: 502 })
+    console.error('[quote] analyze failed')
+    return NextResponse.json({ error: 'サイトの解析に失敗しました。時間をおいて再度お試しください。' }, { status: 502 })
   }
 }

@@ -107,10 +107,9 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : '不明なエラー'
-    console.error('[/api/logo/generate] Error:', message)
+    console.error('[/api/logo/generate] Error')
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: 'ロゴの生成に失敗しました。時間をおいて再度お試しください。' },
       { status: 500, headers: { 'Cache-Control': 'no-store' } }
     )
   }

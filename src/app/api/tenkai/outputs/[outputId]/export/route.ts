@@ -94,7 +94,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'エクスポートに失敗しました'
     console.error('[tenkai] export error:', message)
     return NextResponse.json(
       { error: message || 'エクスポートに失敗しました' },

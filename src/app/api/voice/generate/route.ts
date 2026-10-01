@@ -188,8 +188,8 @@ export async function POST(req: NextRequest) {
             audioBase64: result.audioBase64,
             format: outputFormat,
           })
-        } catch (storageErr) {
-          console.warn('Storage upload failed, continuing without outputUrl:', storageErr)
+        } catch {
+          console.warn('Storage upload failed, continuing without outputUrl')
         }
       }
 

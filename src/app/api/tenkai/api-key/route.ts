@@ -66,7 +66,7 @@ export async function GET() {
       },
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'APIキー取得に失敗しました'
+    const message = 'APIキー取得に失敗しました'
     console.error('[tenkai] api-key GET error:', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }
@@ -119,7 +119,7 @@ export async function POST() {
       message: 'このAPIキーは一度しか表示されません。安全な場所に保存してください。',
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'APIキー生成に失敗しました'
+    const message = 'APIキー生成に失敗しました'
     console.error('[tenkai] api-key POST error:', message)
     return NextResponse.json({ error: message }, { status: 500 })
   }

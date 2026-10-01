@@ -50,8 +50,7 @@ export async function callGeminiJson(
   }).finally(() => clearTimeout(timeout))
 
   if (!res.ok) {
-    const errText = await res.text().catch(() => '')
-    console.error('[interviewx-chat] Gemini error:', res.status, errText)
+    console.error('[interviewx-chat] Gemini error:', res.status)
     throw new Error(`AI API エラー (${res.status})`)
   }
 

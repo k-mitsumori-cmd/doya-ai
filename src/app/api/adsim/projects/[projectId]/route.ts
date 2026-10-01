@@ -61,7 +61,7 @@ export async function GET(_req: NextRequest, props: { params: Promise<{ projectI
       usage: { bannerThisMonth, chatThisMonth, projectsThisMonth },
     })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
+    const message = '処理に失敗しました。時間をおいて再度お試しください。'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
@@ -96,7 +96,7 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ project
     })
     return NextResponse.json({ project })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
+    const message = '処理に失敗しました。時間をおいて再度お試しください。'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
@@ -120,7 +120,7 @@ export async function DELETE(_req: NextRequest, props: { params: Promise<{ proje
     await prisma.adSimProject.delete({ where: { id: params.projectId } })
     return NextResponse.json({ ok: true })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
+    const message = '処理に失敗しました。時間をおいて再度お試しください。'
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }

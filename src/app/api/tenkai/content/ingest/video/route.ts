@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       storagePath,
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = '動画アップロード準備に失敗しました'
     console.error('[tenkai] ingest/video error:', message)
     return NextResponse.json(
       { error: message || '動画アップロード準備に失敗しました' },

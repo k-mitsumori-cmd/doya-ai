@@ -135,7 +135,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       validation: result.validation,
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = '生成に失敗しました'
     console.error('[tenkai] generate/platform error:', message)
     return NextResponse.json(
       { error: message || '生成に失敗しました' },

@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
       language: scraped.language,
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'URLからのコンテンツ取得に失敗しました'
     console.error('[tenkai] ingest/url error:', message)
     return NextResponse.json(
       { error: message || 'URLからのコンテンツ取得に失敗しました' },

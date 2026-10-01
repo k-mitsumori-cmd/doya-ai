@@ -83,7 +83,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'プロジェクト詳細の取得に失敗しました'
     console.error('[tenkai] project detail error:', message)
     return NextResponse.json(
       { error: message || 'プロジェクト詳細の取得に失敗しました' },
@@ -148,7 +148,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       },
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'プロジェクト更新に失敗しました'
     console.error('[tenkai] project update error:', message)
     return NextResponse.json(
       { error: message || 'プロジェクト更新に失敗しました' },
@@ -187,7 +187,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'プロジェクト削除に失敗しました'
     console.error('[tenkai] project delete error:', message)
     return NextResponse.json(
       { error: message || 'プロジェクト削除に失敗しました' },

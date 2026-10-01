@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
       analysis,
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = 'コンテンツ分析に失敗しました'
     console.error('[tenkai] analyze error:', message)
 
     // ステータスを draft に戻す（analyzing のまま放置を防止）

@@ -55,6 +55,11 @@ if (apiErrorLogPrivacy.error || apiErrorLogPrivacy.status !== 0) {
   console.error('Security regression failed: verify-api-error-log-privacy.cjs');
   process.exit(1);
 }
+const apiErrorResponsePrivacy = spawnSync(process.execPath, [path.join(__dirname, 'verify-api-error-response-privacy.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (apiErrorResponsePrivacy.error || apiErrorResponsePrivacy.status !== 0) {
+  console.error('Security regression failed: verify-api-error-response-privacy.cjs');
+  process.exit(1);
+}
 const emailErrorPrivacy = spawnSync(process.execPath, [path.join(__dirname, 'verify-email-error-privacy.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (emailErrorPrivacy.error || emailErrorPrivacy.status !== 0) {
   console.error('Security regression failed: verify-email-error-privacy.cjs');

@@ -37,6 +37,6 @@ export async function GET(req: NextRequest) {
       remaining,
     })
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: '利用状況を取得できませんでした。時間をおいて再度お試しください。' }, { status: 500 })
   }
 }

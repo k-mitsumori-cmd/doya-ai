@@ -47,9 +47,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, ...result })
   } catch (err: any) {
     console.error('[slashslide/publish/google-slides] error:')
-    return NextResponse.json({ error: err?.message || 'Unknown error' }, { status: 500 })
+    return NextResponse.json({ error: 'Googleスライドへの出力に失敗しました。時間をおいて再度お試しください。' }, { status: 500 })
   }
 }
-
 
 

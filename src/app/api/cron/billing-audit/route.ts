@@ -165,7 +165,7 @@ export async function GET(request: NextRequest) {
     await notifyAlert({
       level: 'critical',
       title: '課金監査cronが失敗しました',
-      detail: String(error?.message || error),
+      detail: '課金監査処理が失敗しました。実行時刻と対象の状態を確認してください。',
       dedupKey: 'billing-audit-failed',
     }).catch(() => {})
     return NextResponse.json({ error: '課金監査を完了できませんでした' }, { status: 500 })

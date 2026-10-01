@@ -158,8 +158,7 @@ ${templateQuestions ? JSON.stringify(templateQuestions, null, 2) : '（テンプ
         })
 
         if (!geminiRes.ok) {
-          const errText = await geminiRes.text()
-          console.error('[interviewx] Gemini API error:', geminiRes.status, errText)
+          console.error('[interviewx] Gemini API error:', geminiRes.status)
           controller.enqueue(sseEvent({
             type: 'error',
             message: `AI API エラー (${geminiRes.status})`,

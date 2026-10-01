@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Unknown error'
+    const message = '処理に失敗しました。時間をおいて再度お試しください。'
     console.error('[adsim] auto-generate error:')
     return NextResponse.json({ error: message }, { status: 500 })
   }

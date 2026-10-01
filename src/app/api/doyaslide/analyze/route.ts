@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     try {
       scraped = await scrapeUrlText(url)
     } catch (e: any) {
-      return NextResponse.json({ error: e?.message || 'URLの取得に失敗しました' }, { status: 400 })
+      return NextResponse.json({ error: 'URLの取得に失敗しました。入力内容をご確認ください。' }, { status: 400 })
     }
 
     const result = await geminiGenerateJson<{ title: string; brief: string }>(

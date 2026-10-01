@@ -70,7 +70,7 @@ export async function PUT(req: NextRequest, ctx: Ctx) {
       updatedAt: updated.updatedAt.toISOString(),
     })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = '出力の更新に失敗しました'
     console.error('[tenkai] output update error:', message)
     return NextResponse.json(
       { error: message || '出力の更新に失敗しました' },
@@ -109,7 +109,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
     return NextResponse.json({ success: true })
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'エラーが発生しました'
+    const message = '出力の削除に失敗しました'
     console.error('[tenkai] output delete error:', message)
     return NextResponse.json(
       { error: message || '出力の削除に失敗しました' },

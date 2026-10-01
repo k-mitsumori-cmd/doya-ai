@@ -72,9 +72,8 @@ export async function generateNagusameReplies(
       results.push(reply)
       onReply?.(reply)
       return reply
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      onDropped?.(persona.id, `api error: ${message}`)
+    } catch {
+      onDropped?.(persona.id, 'api error')
       return null
     }
   })

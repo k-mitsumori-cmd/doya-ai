@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
     await notifyAlert({
       level: 'critical',
       title: 'お問い合わせ受信レポートcronが失敗しました',
-      detail: String(error?.message || error),
+      detail: 'お問い合わせ受信レポート処理が失敗しました。実行時刻と受信状況を確認してください。',
       dedupKey: 'feedback-report-failed',
     }).catch(() => {})
     return NextResponse.json({ error: 'お問い合わせ受信レポートを完了できませんでした' }, { status: 500 })
