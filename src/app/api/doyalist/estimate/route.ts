@@ -74,18 +74,16 @@ export async function POST(req: NextRequest) {
 
     // 都道府県コード解決（エリア指定の場合は最初の県だけサンプリング）
     const prefCodes = region && region !== '全国' ? resolvePrefectureCodes(region) : []
+    if (region && region !== '全国' && prefCodes.length === 0) {
+      return NextResponse.json({ success: true, estimated: null, note: '地域を判定できませんでした' })
+    }
     const samplePrefCode = prefCodes[0]
 
-    // gBizINFO API は totalCount を返さないので、実際にデータを取得して件数測定
-    // 軽量化: limit=1000 (約100KB) で page=1, page=10 を確認
-    // - page1<1000 → 実数
-    // - page1==1000 → page10で総数推定 (10000+ / 中間値)
+    // gBizINFO のキーワード検索ヒット数をサンプリングする。
+    // 業種・規模など収集時の絞り込み後の件数を保証するものではない。
     const SAMPLE_LIMIT = 1000
     const MAX_PAGE = 10
-    let totalEstimate = 0
-    let isApprox = false
-    let detailNotice: string | null = null
-    let anyError = false
+    const sampledKeywords = [...new Set(searchKeywords)].slice(0, 2)
 
     async function fetchPage(kw: string, page: number): Promise<number | null> {
       const u = new URL(`${API_BASE}/hojin`)
@@ -117,32 +115,12 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    for (const kw of searchKeywords.slice(0, 2)) {
-      const c1 = await fetchPage(kw, 1)
-      if (c1 === null) { anyError = true; continue }
-      if (c1 < SAMPLE_LIMIT) {
-        // 実数
-        totalEstimate += c1
-        continue
-      }
-      // 1000満タン → 10ページ目で「10,000+」かチェック
-      isApprox = true
-      const cMax = await fetchPage(kw, MAX_PAGE)
-      if (cMax === null) {
-        totalEstimate += SAMPLE_LIMIT // 取得失敗時は 1000+ 扱い
-      } else if (cMax >= SAMPLE_LIMIT) {
-        totalEstimate += SAMPLE_LIMIT * MAX_PAGE // 10000+
-      } else if (cMax > 0) {
-        // 中間値: (MAX_PAGE-1)*1000 + cMax
-        totalEstimate += (MAX_PAGE - 1) * SAMPLE_LIMIT + cMax
-      } else {
-        // page10で0件 → 最後のページを二分探索的に推定
-        // 簡略化: 1000+ (実態は1000-10000のどこか)
-        totalEstimate += SAMPLE_LIMIT * 5
-      }
-    }
-
-    if (totalEstimate === 0 && anyError) {
+    // 並列に取得し、2キーワード×2ページでも30秒の関数期限内に収める。
+    const firstPages = await Promise.all(sampledKeywords.map((kw) => fetchPage(kw, 1)))
+    const lastPages = await Promise.all(sampledKeywords.map((kw, index) =>
+      firstPages[index] === SAMPLE_LIMIT ? fetchPage(kw, MAX_PAGE) : Promise.resolve(null)))
+    if (firstPages.some((count) => count === null)
+      || firstPages.some((count, index) => count === SAMPLE_LIMIT && lastPages[index] === null)) {
       return NextResponse.json({
         success: true,
         estimated: null,
@@ -150,22 +128,27 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // エリア指定だが複数県の場合の補足
-    if (region && region !== '全国' && prefCodes.length > 1) {
-      detailNotice = `${prefCodes.length}県を順次検索します`
-      // エリア全体の概算: 単県サンプル × 県数 の 70% (重複考慮)
-      totalEstimate = Math.round(totalEstimate * prefCodes.length * 0.7)
-      isApprox = true
-    }
+    // キーワード同士の重複は不明。合算せず、確実に確認できた最大値を下限とする。
+    // 10ページ目が空のときも、未確認の中間ページを推測で補わない。
+    const lowerBounds = firstPages.map((first, index) => {
+      if (first !== SAMPLE_LIMIT) return first!
+      const last = lastPages[index]!
+      return last > 0 ? (MAX_PAGE - 1) * SAMPLE_LIMIT + last : SAMPLE_LIMIT
+    })
+    const estimated = Math.max(0, ...lowerBounds)
+    const isApprox = sampledKeywords.length > 1 || searchKeywords.length > sampledKeywords.length
+      || prefCodes.length > 1 || firstPages.some((count) => count === SAMPLE_LIMIT)
 
     return NextResponse.json({
       success: true,
-      estimated: totalEstimate,
+      estimated,
       isApprox,
-      note: detailNotice,
+      note: isApprox
+        ? 'キーワード検索で確認した下限です。業種・規模などで絞り込んだ実際の取得数とは異なります'
+        : 'キーワード検索のヒット数です。業種・規模などで絞り込んだ実際の取得数とは異なります',
     })
-  } catch (e: any) {
-    console.error('[doyalist/estimate]', e)
+  } catch {
+    console.error('[doyalist/estimate] failed')
     return NextResponse.json(
       { success: false, estimated: null, error: '推定に失敗しました' },
       { status: 500 }

@@ -563,18 +563,17 @@ export default function DoyalistTool() {
 
                 {/* 実数推定 */}
                 <div className="mt-3 pt-3 border-t border-slate-100">
-                  <p className="text-[10px] font-bold text-slate-500">この条件に該当する企業数（推定）</p>
+                  <p className="text-[10px] font-bold text-slate-500">gBizINFOのキーワード検索ヒット数（参考）</p>
                   {estimateLoading ? (
                     <p className="text-sm font-bold text-slate-400 mt-1">計測中...</p>
-                  ) : estimatedCount !== null && estimatedCount > 0 ? (
+                  ) : estimatedCount !== null ? (
                     <>
                       <p className={`text-2xl font-black mt-1 ${
-                        (estimateIsApprox || estimatedCount >= count) ? 'text-emerald-600' : 'text-amber-600'
+                        estimatedCount >= count ? 'text-emerald-600' : estimateIsApprox ? 'text-slate-700' : 'text-amber-600'
                       }`}>
-                        {estimateIsApprox ? '約 ' : ''}
+                        {estimateIsApprox ? '少なくとも ' : ''}
                         <CountUp value={estimatedCount} />
-                        <span className="text-sm font-bold ml-0.5">社{estimateIsApprox ? '以上' : ''}</span>
-                        {estimateIsApprox && <span className="material-symbols-outlined ml-1 animate-bounce inline-block text-xl align-middle">celebration</span>}
+                        <span className="text-sm font-bold ml-0.5">社</span>
                       </p>
                       {!estimateIsApprox && estimatedCount < count && (
                         <p className="text-[10px] text-amber-700 mt-1 font-bold inline-flex items-center gap-1">
@@ -586,7 +585,7 @@ export default function DoyalistTool() {
                       )}
                     </>
                   ) : (
-                    <p className="text-[10px] text-slate-400 mt-1">推定不可</p>
+                    <p className="text-[10px] text-slate-400 mt-1">{estimateNote || '推定不可'}</p>
                   )}
                 </div>
               </div>

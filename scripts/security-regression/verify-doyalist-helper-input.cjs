@@ -4,19 +4,21 @@ const { load } = require('./load-typescript.cjs');
 let externalCalls = 0;
 let modelCalls = 0;
 let providerRows = [];
+let providerResponse;
 const operationalJson = load('src/lib/operational-json.ts', {}, { TextDecoder, Uint8Array });
 const estimate = load('src/app/api/doyalist/estimate/route.ts', {
   'next/server': { NextResponse: Response },
   'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },
   '@/lib/auth': { authOptions: {} },
-  '@/lib/doyalist/collect/prefecture-codes': { resolvePrefectureCodes: () => [] },
+  '@/lib/doyalist/collect/prefecture-codes': { resolvePrefectureCodes: (region) => region === '関東' ? ['13', '14'] : [] },
   '@/lib/operational-json': operationalJson,
   '@/lib/doyalist/collect/provider-json': {
     fetchCollectionJson: async (url, _init, limits) => {
       externalCalls++;
-      assert.equal(new URL(url).searchParams.get('name'), '株式会社');
       assert.equal(limits.timeoutMs, 12000);
       assert.equal(limits.maxBytes, 4 * 1024 * 1024);
+      if (providerResponse) return providerResponse(new URL(url));
+      assert.equal(new URL(url).searchParams.get('name'), '株式会社');
       return { ok: true, status: 200, data: { 'hojin-infos': providerRows } };
     },
   },
@@ -54,6 +56,42 @@ const post = (route, body) => route.POST(new Request('https://doya.test/api/doya
   providerRows = { length: 0 };
   const malformed = await post(estimate, { keywords: [''] });
   assert.equal((await malformed.json()).estimated, null, 'invalid provider data must not be reported as zero matches');
+  providerRows = [];
+
+  providerResponse = (url) => url.searchParams.get('name') === '営業'
+    ? { ok: false, status: 503, data: null }
+    : { ok: true, status: 200, data: { 'hojin-infos': Array(5) } };
+  const partial = await post(estimate, { keywords: ['株式会社', '営業'] });
+  assert.equal((await partial.json()).estimated, null, 'partial provider failure must not show a misleading count');
+
+  providerResponse = (url) => ({ ok: true, status: 200, data: {
+    'hojin-infos': Array(url.searchParams.get('name') === '営業' ? 700 : 800),
+  } });
+  const overlapping = await post(estimate, { keywords: ['株式会社', '営業'] });
+  assert.deepEqual(await overlapping.json(), {
+    success: true, estimated: 800, isApprox: true,
+    note: 'キーワード検索で確認した下限です。業種・規模などで絞り込んだ実際の取得数とは異なります',
+  }, 'overlapping keyword matches must not be added together');
+
+  providerResponse = (url) => ({ ok: true, status: 200, data: {
+    'hojin-infos': Array(url.searchParams.get('page') === '10' ? 0 : 1000),
+  } });
+  const unknownMiddle = await post(estimate, { keywords: ['株式会社'] });
+  assert.equal((await unknownMiddle.json()).estimated, 1000,
+    'an empty tenth page proves only the first 1000 matches, not a guessed 5000');
+  providerResponse = (url) => {
+    assert.equal(url.searchParams.get('prefecture'), '13');
+    return { ok: true, status: 200, data: { 'hojin-infos': Array(800) } };
+  };
+  const multiPrefecture = await post(estimate, { region: '関東', keywords: ['株式会社'] });
+  const regionCount = await multiPrefecture.json();
+  assert.equal(regionCount.estimated, 800, 'a first-prefecture sample must not be multiplied into a fabricated regional count');
+  assert.equal(regionCount.isApprox, true);
+  const beforeUnknownRegion = externalCalls;
+  const unknownRegion = await post(estimate, { region: '不明な地域', keywords: ['株式会社'] });
+  assert.equal((await unknownRegion.json()).estimated, null);
+  assert.equal(externalCalls, beforeUnknownRegion, 'unknown region must not query nationwide by accident');
+  providerResponse = undefined;
 
   for (const bad of [null, [], { keyword: '' }, { keyword: 4 }, { keyword: '営業', industry: {} },
     { keyword: 'x'.repeat(1001) }]) {
