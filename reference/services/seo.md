@@ -116,6 +116,8 @@
 - `SeoKnowledgeItem` — ナレッジ (trend / insight / prompt / note)
 - `SeoUserMemo` — ユーザーメモ
 
+参考URLと比較記事・公式サイトのHTML取得は、接続先と各リダイレクト先の公開IP確認、検証済みIPへの接続固定、30秒の共通タイムアウト、展開後本文4 MiBの上限を適用します。取得できない場合は空の抽出結果として扱い、記事生成を継続します。
+
 ## ファイル構成
 ```
 src/app/seo/

@@ -702,3 +702,8 @@ if (cunningScrapeSize.error || cunningScrapeSize.status !== 0) {
   console.error('Security regression failed: verify-cunning-scrape-size.cjs');
   process.exit(1);
 }
+const seoExtractFetch = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-extract-fetch.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (seoExtractFetch.error || seoExtractFetch.status !== 0) {
+  console.error('Security regression failed: verify-seo-extract-fetch.cjs');
+  process.exit(1);
+}
