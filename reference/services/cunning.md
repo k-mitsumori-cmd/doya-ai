@@ -209,7 +209,7 @@ src/lib/cunning/
   ├── classify.ts           — 質問判定
   ├── rag.ts                — チャンク化・埋め込み・検索
   ├── company.ts            — 採用URL解析
-  ├── scraper.ts            — URL取り込み（tenkai/scraperを流用）
+  ├── scraper.ts            — URL取り込み（共通SSRF検証・固定IP接続・4MiB上限）
   ├── access.ts             — アクセス制御・使用量管理
   └── types.ts              — 型定義
 ```
