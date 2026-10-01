@@ -24,11 +24,13 @@ export async function GET(req: NextRequest) {
     const periodId = url.searchParams.get('periodId') || ''
     const employeeId = url.searchParams.get('employeeId') || ''
     const status = url.searchParams.get('status') || ''
-    const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'))
-    const pageSize = Math.min(
-      MAX_PAGE_SIZE,
-      Math.max(1, parseInt(url.searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE)))
-    )
+    const page = Number(url.searchParams.get('page') || '1')
+    const requestedPageSize = Number(url.searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE))
+    if (!Number.isSafeInteger(page) || page < 1 || page > 1_000_000 ||
+        !Number.isSafeInteger(requestedPageSize) || requestedPageSize < 1) {
+      return NextResponse.json({ error: 'ページ番号・件数が不正です' }, { status: 400 })
+    }
+    const pageSize = Math.min(MAX_PAGE_SIZE, requestedPageSize)
 
     const where: any = { period: { is: { organizationId: ctx.organizationId } } }
     if (reader.employeeId !== null) {
@@ -66,7 +68,7 @@ export async function GET(req: NextRequest) {
           },
           period: { select: { id: true, name: true, startDate: true, endDate: true } },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),

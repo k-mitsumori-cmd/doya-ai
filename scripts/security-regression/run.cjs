@@ -5,6 +5,11 @@ if (interviewAuxBudget.error || interviewAuxBudget.status !== 0) {
   console.error('Security regression failed: verify-interview-aux-budget.cjs');
   process.exit(1);
 }
+const hrEvaluationPagination = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-evaluation-pagination.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrEvaluationPagination.error || hrEvaluationPagination.status !== 0) {
+  console.error('Security regression failed: verify-hr-evaluation-pagination.cjs');
+  process.exit(1);
+}
 const interviewAiOutput = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-ai-output.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewAiOutput.error || interviewAiOutput.status !== 0) {
   console.error('Security regression failed: verify-interview-ai-output.cjs');
