@@ -6,7 +6,7 @@ const vm = require('node:vm')
 const ts = require('../../node_modules/typescript')
 const { check } = require('./load-typescript.cjs')
 
-const source = fs.readFileSync(path.join(__dirname, '../../src/lib/nanobanner.ts'), 'utf8') + '\nexport { fetchAsBase64, refinePromptWithGemini3Flash, readGeminiTextResponse }\n'
+const source = fs.readFileSync(path.join(__dirname, '../../src/lib/nanobanner.ts'), 'utf8') + '\nexport { fetchAsBase64, refinePromptWithGemini3Flash, readGeminiTextResponse, assertNanoBananaOnly }\n'
 const compiled = ts.transpileModule(source, { compilerOptions: {
   module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true,
 } }).outputText
@@ -57,5 +57,14 @@ vm.runInNewContext(compiled, {
     const tooLarge = new Response('x', { headers: { 'content-length': String(512 * 1024 + 1) } })
     await assert.rejects(moduleExports.readGeminiTextResponse(tooLarge), /too large/)
     await assert.rejects(moduleExports.readGeminiTextResponse(new Response(Buffer.alloc(512 * 1024 + 1))), /too large/)
+  })
+  await check('banner image configuration permits Pro IDs and rejects non-Pro models', async () => {
+    for (const model of ['gemini-3-pro-image', 'models/gemini-3-pro-image-preview', 'nano-banana-pro']) {
+      assert.doesNotThrow(() => moduleExports.assertNanoBananaOnly(model))
+    }
+    for (const model of ['nano-banana', 'gemini-2.5-flash-image', 'gemini-3.1-flash-image']) {
+      assert.throws(() => moduleExports.assertNanoBananaOnly(model), /Nano Banana Pro/)
+    }
+    assert.equal(moduleExports.getModelDisplayName('gemini-3-pro-image'), 'Nano Banana Pro')
   })
 })().catch(error => { console.error(error); process.exitCode = 1 })

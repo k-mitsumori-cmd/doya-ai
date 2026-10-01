@@ -2,10 +2,10 @@
 // 画像生成 統一ディスパッチャ
 // ========================================
 // メイン: gpt-image-2 (OpenAI ChatGPT Images 2.0)
-// フォールバック: nano-banana-pro-preview (Google Gemini 3 系)
+// フォールバック: gemini-3-pro-image (Nano Banana Pro)
 //
 // 入力画像（人物/ロゴ/参照）あり → gpt-image-2 をスキップして
-//   直接 nano-banana-pro-preview を使用
+//   直接 gemini-3-pro-image を使用
 //   理由: gpt-image-2 generations は入力画像非対応、edits 経由は別実装
 //
 // フォールバック発動条件:
@@ -18,7 +18,7 @@ import { editImageGpt, generateImageGpt, GptImageBackground, GptImageQuality, Gp
 import { withTimeout } from './fetch-timeout'
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-const NANO_BANANA_PRO_PREVIEW_MODEL = 'nano-banana-pro-preview'
+const NANO_BANANA_PRO_MODEL = 'gemini-3-pro-image'
 const GEMINI_IMAGE_RESPONSE_MAX_BYTES = 32 * 1024 * 1024
 const GEMINI_ERROR_RESPONSE_MAX_BYTES = 64 * 1024
 
@@ -33,7 +33,7 @@ export interface ImageGenRequest {
   prompt: string
   size: string
   /**
-   * Gemini（nano-banana-pro-preview）へ渡す比率。
+   * Gemini（Nano Banana Pro）へ渡す比率。
    * ⚠️ Gemini は size を受け取れず、指定が無いと**必ず1:1で返す**。
    *    size だけ渡してフォールバックすると正方形の絵になり、呼び出し元が
    *    目標サイズへ contain で収めるため左右に帯が出る（2026-08-27 利用者報告）。
@@ -81,7 +81,7 @@ export async function generateImageWithFallback(
     } catch (e: any) {
       const msg = e?.message || String(e)
       console.warn(
-        `[image-gen] gpt-image-2 失敗 → nano-banana-pro-preview にフォールバック: ${msg.slice(0, 200)}`
+        `[image-gen] gpt-image-2 失敗 → Nano Banana Pro にフォールバック: ${msg.slice(0, 200)}`
       )
       const r = await callNanoBananaProPreview(req)
       return { ...r, fallbackUsed: true, primaryError: msg }
@@ -93,7 +93,7 @@ export async function generateImageWithFallback(
     return { ...r, fallbackUsed: false }
   } catch (e: any) {
     const msg = e?.message || String(e)
-    console.warn(`[image-gen] OpenAI参照画像編集失敗 → nano-banana-pro-preview にフォールバック: ${msg.slice(0, 200)}`)
+    console.warn(`[image-gen] OpenAI参照画像編集失敗 → Nano Banana Pro にフォールバック: ${msg.slice(0, 200)}`)
     const r = await callNanoBananaProPreview(req)
     return { ...r, fallbackUsed: true, primaryError: msg }
   }
@@ -149,7 +149,7 @@ async function callNanoBananaProPreview(
     throw new Error('GOOGLE_GENAI_API_KEY (Gemini API key) が設定されていません')
   }
 
-  const endpoint = `${GEMINI_API_BASE}/models/${NANO_BANANA_PRO_PREVIEW_MODEL}:generateContent`
+  const endpoint = `${GEMINI_API_BASE}/models/${NANO_BANANA_PRO_MODEL}:generateContent`
 
   const parts: any[] = []
   for (const img of req.inputImages || []) {
@@ -174,7 +174,7 @@ async function callNanoBananaProPreview(
 
   // フォールバックは短めに（primaryで時間を使った後なので全体が長引かないように）。本文読み取りまでタイムアウトで覆う。
   const timeoutMs = req.fallbackTimeoutMs ?? (Number(process.env.DOYA_FALLBACK_TIMEOUT_MS) || 45000)
-  return withTimeout(NANO_BANANA_PRO_PREVIEW_MODEL, timeoutMs, async (signal) => {
+  return withTimeout(NANO_BANANA_PRO_MODEL, timeoutMs, async (signal) => {
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -187,7 +187,7 @@ async function callNanoBananaProPreview(
 
     if (!res.ok) {
       const errText = await readLimitedGeminiResponse(res, GEMINI_ERROR_RESPONSE_MAX_BYTES)
-      throw new Error(`nano-banana-pro-preview failed (${res.status}): ${errText.slice(0, 300)}`)
+      throw new Error(`Nano Banana Pro failed (${res.status}): ${errText.slice(0, 300)}`)
     }
 
     const json = JSON.parse(await readLimitedGeminiResponse(res, GEMINI_IMAGE_RESPONSE_MAX_BYTES))
@@ -201,13 +201,13 @@ async function callNanoBananaProPreview(
           return {
             base64: inline.data,
             mimeType: inline.mimeType || inline.mime_type || 'image/png',
-            model: NANO_BANANA_PRO_PREVIEW_MODEL,
+            model: NANO_BANANA_PRO_MODEL,
           }
         }
       }
     }
 
-    throw new Error('nano-banana-pro-preview returned no image data')
+    throw new Error('Nano Banana Pro returned no image data')
   })
 }
 

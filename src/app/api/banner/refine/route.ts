@@ -24,27 +24,37 @@ async function compressForApi(dataUrl: string): Promise<string> {
 // ========================================
 // POST /api/banner/refine
 // 修正指示に基づいて「元画像 + 指示」で画像を修正（再生成）
-// Nano Banana Pro（Gemini 2.0 Flash Experimental）+ Google AI Studio APIキー
+// Nano Banana Pro（Gemini 3 Pro Image）+ Google AI Studio APIキー
 // 参考: https://ai.google.dev/gemini-api/docs/image-generation?hl=ja
 
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-function getNanoBananaImageModel(): string {
-  // Nano Banana Pro ONLY（Gemini 3）
-  return (
-    process.env.DOYA_BANNER_IMAGE_MODEL ||
-    process.env.NANO_BANANA_PRO_MODEL ||
-    process.env.GEMINI_IMAGE_MODEL ||
-    'gemini-3-pro-image-preview'
-  )
-}
+const REFINE_TIMEOUT_MS = 170_000
+const REFINE_IMAGE_RESPONSE_MAX_BYTES = 32 * 1024 * 1024
+const REFINE_ERROR_RESPONSE_MAX_BYTES = 64 * 1024
 
-function getImageFallbackModel(): string {
-  // Nano Banana Pro の範囲内でフォールバック
-  return process.env.DOYA_BANNER_IMAGE_FALLBACK_MODEL || 'nano-banana-pro-preview'
+async function readGeminiRefineResponse(res: Response, maxBytes: number): Promise<string> {
+  if (Number(res.headers.get('content-length')) > maxBytes) {
+    void res.body?.cancel().catch(() => {})
+    throw new Error('バナー修正の応答が大きすぎます')
+  }
+  if (!res.body) return ''
+  const reader = res.body.getReader()
+  const chunks: Buffer[] = []
+  let length = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      length += value.byteLength
+      if (length > maxBytes) throw new Error('バナー修正の応答が大きすぎます')
+      chunks.push(Buffer.from(value))
+    }
+    return Buffer.concat(chunks, length).toString('utf8')
+  } finally {
+    void reader.cancel().catch(() => {})
+    reader.releaseLock()
+  }
 }
-
-// 最終フォールバックも Gemini 3 系のみ（Gemini 2.0 は禁止）
-const LAST_RESORT_IMAGE_MODEL = 'gemini-3-flash-preview'
 
 interface RefineRequest {
   originalImage: string
@@ -158,15 +168,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
     }
 
     const prompt = createEditPrompt(instruction, category, size)
-    // ⚠️ 環境変数 DOYA_BANNER_IMAGE_MODEL には "nano-banana-pro" という**エイリアス**が入っている。
-    //    これは実在の Gemini モデルIDではないため、生のまま models/{id}:generateContent に渡すと
-    //    毎回 404 になり、1往復を捨てたうえで console.error → Slackにエラー通知が飛んでいた（2026-09-18 調査）。
-    //    resolveImageModel() は ListModels API で実モデルIDへ解決し、失敗時もフォールバック列を返す。
-    //    ここに getNanoBananaImageModel()（生値）を混ぜ戻さないこと。エイリアスが再びAPIへ流れる。
-    const resolved = await resolveImageModel(apiKey).catch(() => [] as string[])
-    const modelsToTry = Array.from(
-      new Set([...resolved, getImageFallbackModel(), LAST_RESORT_IMAGE_MODEL])
-    )
+    // 設定エイリアスは公式の Nano Banana Pro モデルIDに解決する。
+    // 未対応モデルはここで拒否し、画像品質の異なるモデルへ黙って落とさない。
+    const modelsToTry = await resolveImageModel(apiKey)
     let lastError: any = null
 
     for (const model of modelsToTry) {
@@ -190,6 +194,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
 
         const response = await fetch(endpoint, {
           method: 'POST',
+          signal: AbortSignal.timeout(REFINE_TIMEOUT_MS),
           headers: {
             'Content-Type': 'application/json',
             'x-goog-api-key': apiKey,
@@ -198,12 +203,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<RefineRes
         })
 
         if (!response.ok) {
-          const errorText = await response.text()
-          console.error('Nano Banana Pro refine error:', response.status, errorText)
+          const errorText = await readGeminiRefineResponse(response, REFINE_ERROR_RESPONSE_MAX_BYTES)
+          console.error('Nano Banana Pro refine error:', response.status, errorText.slice(0, 300))
           throw new Error(`API Error: ${response.status} - ${errorText.substring(0, 300)}`)
         }
 
-        const data = await response.json()
+        const data = JSON.parse(await readGeminiRefineResponse(response, REFINE_IMAGE_RESPONSE_MAX_BYTES))
 
         const parts = data?.candidates?.[0]?.content?.parts
         const imgPart = Array.isArray(parts) ? parts.find((p: any) => p?.inlineData?.data) : null

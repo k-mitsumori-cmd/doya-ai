@@ -47,16 +47,15 @@ export async function GET(request: NextRequest) {
     const json = await res.json()
     const models = Array.isArray(json?.models) ? json.models : []
 
-    // “画像生成っぽい”候補（名前に banana/image が含まれ、generateContent対応のものを優先）
+    // 診断用の全一覧とは別に、設定候補は Nano Banana Pro の画像モデルだけを提示する。
     const candidates = models
       .filter((m: any) => Array.isArray(m?.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
       .map((m: any) => String(m?.name || ''))
       .filter(Boolean)
 
-    const imageCandidates = candidates.filter((n: string) => {
-      const l = n.toLowerCase()
-      return l.includes('banana') || l.includes('image')
-    })
+    const imageCandidates = candidates.filter((n: string) =>
+      /^(models\/)?gemini-3-pro-image(?:-preview)?$/i.test(n)
+    )
 
     return NextResponse.json({
       suggestedImageModels: imageCandidates,
@@ -68,4 +67,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'AIモデル一覧を取得できませんでした。' }, { status: 500 })
   }
 }
-

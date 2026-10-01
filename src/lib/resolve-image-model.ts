@@ -2,21 +2,15 @@
 // 画像生成モデル名解決ユーティリティ
 // ========================================
 // メイン: gpt-image-2 (OpenAI ChatGPT Images 2.0)
-// フォールバック: nano-banana-pro-preview (Google Gemini 3 系)
-// 入力画像（inlineData）あり → nano-banana-pro-preview 直行
+// フォールバック: Nano Banana Pro (Gemini 3 Pro Image)
+// 入力画像（inlineData）あり → Nano Banana Pro 直行
 // ※ 呼び出し元との互換のため、戻り値は Response オブジェクト（Gemini 形式 JSON）
 
 import { generateImageWithFallback } from './image-generator'
 
-const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta'
-
-type GeminiModel = {
-  name?: string
-  supportedGenerationMethods?: string[]
-} & Record<string, any>
-
-let modelsCache: { at: number; models: GeminiModel[] } | null = null
-const MODELS_CACHE_TTL_MS = 10 * 60 * 1000 // 10分
+const PRO_IMAGE_MODEL = 'gemini-3-pro-image'
+const PRO_IMAGE_PREVIEW_MODEL = 'gemini-3-pro-image-preview'
+const PRO_ALIASES = new Set(['nano-banana-pro', 'nanobanana-pro', 'nano_banana_pro', 'nano-banana-pro-preview'])
 
 function normalizeModelId(model: string): string {
   const m = String(model || '').trim()
@@ -24,99 +18,26 @@ function normalizeModelId(model: string): string {
   return m.startsWith('models/') ? m.slice('models/'.length) : m
 }
 
-async function listModels(apiKey: string): Promise<GeminiModel[]> {
-  const now = Date.now()
-  if (modelsCache && now - modelsCache.at < MODELS_CACHE_TTL_MS) return modelsCache.models
-
-  const res = await fetch(`${GEMINI_API_BASE}/models`, {
-    method: 'GET',
-    headers: { 'x-goog-api-key': apiKey },
-  })
-  if (!res.ok) {
-    const t = await res.text()
-    throw new Error(`ListModels failed: ${res.status} - ${t.substring(0, 300)}`)
-  }
-  const json = await res.json()
-  const models = Array.isArray(json?.models) ? (json.models as GeminiModel[]) : []
-  modelsCache = { at: now, models }
-  return models
-}
-
-function isGenerateContentSupported(m: GeminiModel): boolean {
-  const methods = m?.supportedGenerationMethods
-  return Array.isArray(methods) && methods.includes('generateContent')
-}
-
-const KNOWN_ALIASES = ['nano-banana-pro', 'nanobanana-pro', 'nano_banana_pro', 'nano-banana']
-
-// nanobanner.ts と同じフォールバック候補
-const FALLBACK_MODELS = [
-  'nano-banana-pro-preview',
-  'gemini-3-pro-image-preview',
-  'gemini-2.5-flash-image',
-]
-
 /**
  * 画像生成モデル名を解決する
- * "nano-banana-pro" などのエイリアスを実際のGemini APIモデルIDに変換
+ * Pro のエイリアスだけを公式の Gemini 3 Pro Image モデルIDへ変換する。
  *
- * @returns 解決済みモデルIDのリスト（フォールバック順）
+ * @returns Nano Banana Pro に限定されたモデルIDのリスト
  */
-export async function resolveImageModel(apiKey: string): Promise<string[]> {
+export async function resolveImageModel(_apiKey: string): Promise<string[]> {
   const configured = normalizeModelId(
     process.env.DOYA_BANNER_IMAGE_MODEL ||
     process.env.NANO_BANANA_PRO_MODEL ||
     process.env.GEMINI_IMAGE_MODEL ||
     'nano-banana-pro'
-  )
-  const lower = configured.toLowerCase()
-  const isAlias = KNOWN_ALIASES.includes(lower)
-
-  // エイリアスでなければそのまま返す（+ フォールバック付き）
-  if (!isAlias) {
-    return [configured, ...FALLBACK_MODELS].filter((v, i, a) => a.indexOf(v) === i)
-  }
-
-  // ListModels APIから実モデルを検索
-  try {
-    const models = await listModels(apiKey)
-    const candidates = models
-      .filter((m) => isGenerateContentSupported(m))
-      .map((m) => normalizeModelId(String(m?.name || '')))
-      .filter(Boolean)
-
-    console.log('[resolve-image-model] Available generateContent models:', candidates.slice(0, 20).join(', '))
-
-    // "banana" を含むモデルを最優先
-    const banana = candidates.find((n) => n.toLowerCase().includes('banana'))
-    if (banana) {
-      return [banana, ...FALLBACK_MODELS].filter((v, i, a) => a.indexOf(v) === i)
-    }
-
-    // 次点: "image" を含む Gemini 3 系モデル
-    const gemini3Image = candidates.find((n) => {
-      const l = n.toLowerCase()
-      return l.includes('image') && (l.includes('gemini-3') || l.includes('gemini3'))
-    })
-    if (gemini3Image) {
-      return [gemini3Image, ...FALLBACK_MODELS].filter((v, i, a) => a.indexOf(v) === i)
-    }
-
-    // 次点: "image" を含む任意のモデル
-    const imagey = candidates.find((n) => n.toLowerCase().includes('image'))
-    if (imagey) {
-      return [imagey, ...FALLBACK_MODELS].filter((v, i, a) => a.indexOf(v) === i)
-    }
-  } catch (e) {
-    console.warn('[resolve-image-model] ListModels failed, using fallback:', e)
-  }
-
-  // ListModels失敗時のフォールバック
-  return [...FALLBACK_MODELS]
+  ).toLowerCase()
+  if (PRO_ALIASES.has(configured) || configured === PRO_IMAGE_MODEL) return [PRO_IMAGE_MODEL]
+  if (configured === PRO_IMAGE_PREVIEW_MODEL) return [PRO_IMAGE_PREVIEW_MODEL, PRO_IMAGE_MODEL]
+  throw new Error(`画像生成モデル（${configured}）は Nano Banana Pro ではありません。`)
 }
 
 /**
- * 画像生成 API を呼び出す（メイン: gpt-image-2 / フォールバック: nano-banana-pro-preview）
+ * 画像生成 API を呼び出す（メイン: gpt-image-2 / フォールバック: gemini-3-pro-image）
  *
  * 互換: 呼び出し元4ファイル（persona/portrait, persona/scene, persona/banner,
  * interview/projects/[id]/thumbnail）が `response.json()` で Gemini 形式を期待するため、
@@ -156,7 +77,7 @@ export async function callGeminiImageAPI(
 
   console.log(
     `[image-api] dispatching (inputImages=${inputImages.length})` +
-      ` → primary: gpt-image-2, fallback: nano-banana-pro-preview`
+      ` → primary: gpt-image-2, fallback: gemini-3-pro-image`
   )
 
   const result = await generateImageWithFallback({

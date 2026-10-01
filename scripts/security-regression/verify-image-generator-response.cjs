@@ -39,6 +39,7 @@ vm.runInNewContext(compiled, {
     assert.equal(result.base64, 'aGVsbG8=')
     assert.equal(result.fallbackUsed, true)
     assert.equal(requests.length, 1)
+    assert.equal(requests[0].url, 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image:generateContent')
     assert.equal(requests[0].options.method, 'POST')
     assert.ok(requests[0].options.signal)
   })
