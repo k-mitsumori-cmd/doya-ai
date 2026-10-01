@@ -3,13 +3,19 @@ const { load } = require('./load-typescript.cjs');
 
 let providerCalls = 0;
 let saved = 0;
+let claims = 0;
+let refunded = 0;
 let modelResult = { name: 'Sample', category: 'interview', structure: [{ section: '導入', wordCount: 200 }] };
 const { POST } = load('src/app/api/interview/recipes/generate/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma: { interviewRecipe: { create: async () => { saved++; return {}; } } } },
   '@/lib/interview/access': {
-    getInterviewUser: async () => ({ userId: 'user' }),
+    getInterviewUser: async () => ({ userId: 'user', plan: 'FREE' }),
     requireDatabase: () => null,
+  },
+  '@/lib/interview/recipe-budget': {
+    claimRecipeBudget: async () => { claims++; return { state: 'allowed', claim: { key: 'test', day: '2026-10-01' }, limit: 5 }; },
+    refundRecipeBudget: async () => { refunded++; },
   },
   '@/lib/interview/gemini-request': {
     InterviewGeminiError: class InterviewGeminiError extends Error {},
@@ -28,12 +34,13 @@ const request = (body) => ({ json: async () => body });
   for (const bad of [null, [], {}, { sampleTexts: 'text' }, { sampleTexts: [123] },
     { sampleTexts: [] }, { sampleTexts: Array(4).fill('text') },
     { sampleTexts: ['text'], name: {} }, { sampleTexts: ['text'], autoSave: 'false' },
-    { sampleTexts: ['text'], name: 'x'.repeat(201) }]) {
+    { sampleTexts: ['text'], name: 'x'.repeat(201) }, { sampleTexts: ['x'.repeat(15001)] }]) {
     const response = await POST(request(bad));
     assert.equal(response.status, 400, JSON.stringify(bad));
   }
   assert.equal(providerCalls, 0, 'invalid recipe input must not call the paid AI provider');
   assert.equal(saved, 0);
+  assert.equal(claims, 0);
 
   const response = await POST(request({ sampleTexts: ['', 'sample article'], category: 'custom', autoSave: false }));
   assert.equal(response.status, 200);
@@ -49,6 +56,7 @@ const request = (body) => ({ json: async () => body });
   const malformed = await POST(request({ sampleTexts: ['sample article'] }));
   assert.equal(malformed.status, 502, 'malformed AI output must not reach the preview');
   assert.equal(saved, 0);
+  assert.equal(refunded, 1, 'failed recipe output must return its daily allowance');
 
   modelResult = { name: 'Safe', description: { invalid: true },
     structure: [{ section: '本文', wordCount: 'many' }, { section: { invalid: true } }] };

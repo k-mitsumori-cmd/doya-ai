@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, requireDatabase } from '@/lib/interview/access'
 import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
+import { claimRecipeBudget, refundRecipeBudget, type RecipeClaim } from '@/lib/interview/recipe-budget'
 
 function getGeminiApiKey(): string {
   const key =
@@ -73,8 +74,10 @@ export async function POST(req: NextRequest) {
   const dbErr = requireDatabase()
   if (dbErr) return dbErr
 
+  let claim: RecipeClaim | null = null
+  let completed = false
   try {
-    const { userId } = await getInterviewUser()
+    const { userId, plan } = await getInterviewUser()
     if (!userId) {
       return NextResponse.json(
         { success: false, error: 'レシピ自動生成にはログインが必要です' },
@@ -85,12 +88,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => null)
     if (!body || typeof body !== 'object' || Array.isArray(body)
       || !Array.isArray(body.sampleTexts) || body.sampleTexts.length === 0
-      || body.sampleTexts.length > 3 || body.sampleTexts.some((text: unknown) => typeof text !== 'string')
+      || body.sampleTexts.length > 3 || body.sampleTexts.some((text: unknown) => typeof text !== 'string' || text.length > 15000)
       || (body.name != null && (typeof body.name !== 'string' || body.name.length > 200))
       || (body.category != null && (typeof body.category !== 'string' || body.category.length > 80))
       || (body.autoSave != null && typeof body.autoSave !== 'boolean')) {
       return NextResponse.json(
-        { success: false, error: '入力形式を確認してください' },
+        { success: false, error: '入力形式を確認してください。サンプル記事は各15,000文字以内です。' },
         { status: 400 }
       )
     }
@@ -107,6 +110,20 @@ export async function POST(req: NextRequest) {
 
     const apiKey = getGeminiApiKey()
     const model = getModel()
+    const admission = await claimRecipeBudget(userId, plan)
+    if (admission.state === 'limit') {
+      return NextResponse.json({
+        success: false,
+        error: `本日のレシピ自動生成の上限（${admission.limit}回）に達しました。`,
+        code: 'DAILY_RECIPE_LIMIT_REACHED',
+        limit: admission.limit,
+        upgradeUrl: '/interview/pricing',
+      }, { status: 429 })
+    }
+    if (admission.state === 'unavailable') {
+      return NextResponse.json({ success: false, error: '利用状況を確認できません。時間をおいて再試行してください。' }, { status: 503 })
+    }
+    claim = admission.claim
 
     const samplesText = sampleTexts.filter((text) => text.trim())
       .slice(0, 3) // 最大3記事
@@ -186,6 +203,7 @@ ${samplesText}`
         },
       })
 
+      completed = true
       return NextResponse.json({
         success: true,
         saved: true,
@@ -205,6 +223,7 @@ ${samplesText}`
     }
 
     // プレビューのみ
+    completed = true
     return NextResponse.json({
       success: true,
       saved: false,
@@ -225,5 +244,7 @@ ${samplesText}`
       { success: false, error: e instanceof InterviewGeminiError ? e.message : 'レシピ自動生成に失敗しました' },
       { status: e instanceof InterviewGeminiError ? 503 : 500 }
     )
+  } finally {
+    if (claim && !completed) await refundRecipeBudget(claim)
   }
 }

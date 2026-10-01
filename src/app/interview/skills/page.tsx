@@ -103,6 +103,7 @@ export default function SkillManagementPage() {
   // AI自動生成
   const [showAiModal, setShowAiModal] = useState(false)
   const [aiSampleText, setAiSampleText] = useState('')
+  const [aiDailyLimit, setAiDailyLimit] = useState<number | null>(null)
   const [aiName, setAiName] = useState('')
   const [aiCategory, setAiCategory] = useState('custom')
   const [aiGenerating, setAiGenerating] = useState(false)
@@ -211,7 +212,12 @@ export default function SkillManagementPage() {
         }),
       })
       const data = await res.json()
+      if (res.status === 429 && data.code === 'DAILY_RECIPE_LIMIT_REACHED') {
+        setAiDailyLimit(Number(data.limit) || 5)
+        return
+      }
       if (data.success) {
+        setAiDailyLimit(null)
         setAiPreview(data.recipe)
       } else {
         alert(data.error || 'スキル生成に失敗しました')
@@ -636,12 +642,20 @@ export default function SkillManagementPage() {
                 <textarea
                   value={aiSampleText}
                   onChange={(e) => setAiSampleText(e.target.value)}
+                  maxLength={15000}
                   placeholder="お手本にしたいインタビュー記事のテキストをここに貼り付けてください...&#10;&#10;AIが構成・文体・トーンを分析してスキルを生成します。"
                   rows={10}
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm font-mono outline-none focus:ring-2 focus:ring-[#7f19e6] resize-y"
                 />
-                <p className="text-[10px] text-slate-400 mt-1">{aiSampleText.length.toLocaleString()}文字</p>
+                <p className="text-[10px] text-slate-400 mt-1">{aiSampleText.length.toLocaleString()} / 15,000文字</p>
               </div>
+
+              {aiDailyLimit !== null && (
+                <div role="status" className="rounded-lg border border-purple-200 bg-purple-50 p-3 text-sm text-slate-700">
+                  <p>本日のレシピ自動生成の上限（{aiDailyLimit}回）に達しました。日本時間の翌日にリセットされます。</p>
+                  <Link href="/interview/pricing" className="mt-2 inline-block font-bold text-purple-700 underline">プランを確認する</Link>
+                </div>
+              )}
 
               {!aiPreview && (
                 <button
