@@ -5,10 +5,10 @@
 - **パス**: `/doyaslide`
 - **サービスID**: `doyaslide`
 - **説明**: AIが**全スライドを1枚絵のフル画像**としてド派手に生成するスライド作成ツール
-- **ステータス**: coming_soon（services.ts 登録済み・公開判断待ち）
+- **ステータス**: active（`src/lib/services.ts` の現行登録）
 - **カテゴリ**: image
 - **アイコン**: 🖼️ / グラデーション `from-blue-500 to-indigo-600`
-- **本番URL（予定）**: `https://doya-ai.surisuta.jp/doyaslide`
+- **本番URL**: `https://doya-ai.surisuta.jp/doyaslide`
 
 > **旧 `/slide`・`/slashslide`（Gemini→Googleスライド下書き型）はこのサービスに統合・廃止済み**。
 > `/slide`・`/slashslide` への全アクセスは `next.config.js` のリダイレクトで `/doyaslide` に集約される。
@@ -136,6 +136,7 @@ src/lib/doyaslide/        # 10 ファイル
 
 - **統一プラン方式**。プラン判定は `User.plan` 単一参照（`src/lib/doyaslide/limits.ts` の `getUserTier` → `tierFrom`）。
 - 上限（`limits.ts`）: 無料=月3プロジェクト/20枚、プロ=プロジェクト無制限/月150枚。
+- 参考URL解析と資料構成生成は、外部AI・取得先の保護のため、それぞれ全プラン共通で日本時間1日50回の運用上限を設ける。月間のプロジェクト・スライド枠とは別で、プラン変更で解除されない。
 - 料金ページは `UnifiedPricingPlans`（serviceId="doyaslide"）。
 - `stripe.ts` の `ALL_SERVICE_IDS` に `doyaslide` 登録済み。
 
@@ -163,9 +164,8 @@ src/lib/doyaslide/        # 10 ファイル
 | `NEXT_PUBLIC_STRIPE_DOYASLIDE_PRO_PRICE_ID` | （任意）専用Price ID。未設定なら統一プランにフォールバック |
 | `SLIDE_HOSTS` | スライド専用ドメイン（middleware が `/doyaslide` にリライト） |
 
-## 公開前の残タスク（2026-06-02 時点）
+## 現状の確認事項
 
-- `status: 'coming_soon' → 'active'`（services.ts）
-- `public/doyaslide/logo.png` 配置（ToolSwitcher/LP の公式ロゴ用。現状 Lucide フォールバック）
-- `/doyaslide/guide`（使い方ガイド）の整備
-- エラー報告フォーム（§17.2）— 全社未実装のため共通対応待ち
+- `status: 'active'` で公開中。`public/doyaslide/logo.png` も配置済み。
+- `/doyaslide/guide` の専用ページは未実装で、`services.ts` のガイド導線は `/doyaslide` を指す。
+- エラー報告フォーム（§17.2）は共通対応の進捗を別途確認する。

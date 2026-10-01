@@ -43,6 +43,7 @@ const route = load('src/app/api/doyaslide/structure/route.ts', {
     },
   },
   '@/lib/doyaslide/access': { getUserId: async () => 'user-1' },
+  '@/lib/doyaslide/text-budget': { reserveDoyaSlideTextCall: async () => {} },
   '@/lib/doyaslide/prompts': { buildStructurePrompt: () => 'prompt' },
   '@/lib/doyaslide/scrape': { scrapeUrlText: async () => ({ title: '', text: '' }) },
   '@seo/lib/serpapi': { hasSerpApiKey: () => false },

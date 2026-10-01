@@ -11,6 +11,7 @@ import { scrapeUrlText } from '@/lib/doyaslide/scrape'
 import { serpapiSearchGoogle, hasSerpApiKey } from '@seo/lib/serpapi'
 import { errorSuffix } from '@/lib/doyaslide/errors'
 import type { SlideStructure } from '@/lib/doyaslide/types'
+import { reserveDoyaSlideTextCall, DoyaSlideTextLimitError } from '@/lib/doyaslide/text-budget'
 
 // POST /api/doyaslide/structure — 資料タイプのひな型でスライド構成を生成
 export async function POST(req: NextRequest) {
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
     }
     claimedProjectId = projectId
     claimedAt = claimTime
+    await reserveDoyaSlideTextCall(userId, 'structure')
 
     // 参考URLがあれば内容を取得して参考情報に加える（失敗しても構成生成は続行）
     let ref = referenceText || ''
@@ -127,6 +129,12 @@ export async function POST(req: NextRequest) {
     const created = await prisma.doyaSlideSlide.findMany({ where: { projectId }, orderBy: { index: 'asc' } })
     return NextResponse.json({ slides: created })
   } catch (e: any) {
+    if (e instanceof DoyaSlideTextLimitError) {
+      return NextResponse.json({
+        code: 'DOYASLIDE_TEXT_DAILY_LIMIT',
+        error: `本日の資料構成生成の運用上限（${e.limit}回）に達しました。明日お試しください。`,
+      }, { status: 429 })
+    }
     console.error('[doyaslide/structure]', e?.stack || e?.message)
     return NextResponse.json({ error: `構成の生成に失敗しました${errorSuffix(e)}` }, { status: 500 })
   } finally {

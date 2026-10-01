@@ -45,6 +45,11 @@ if (doyaslideErrorDebug.error || doyaslideErrorDebug.status !== 0) {
   console.error('Security regression failed: verify-doyaslide-error-debug.cjs');
   process.exit(1);
 }
+const doyaslideTextBudget = spawnSync(process.execPath, [path.join(__dirname, 'verify-doyaslide-text-budget.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (doyaslideTextBudget.error || doyaslideTextBudget.status !== 0) {
+  console.error('Security regression failed: verify-doyaslide-text-budget.cjs');
+  process.exit(1);
+}
 const bannerRefineCronErrors = spawnSync(process.execPath, [path.join(__dirname, 'verify-banner-refine-cron-errors.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (bannerRefineCronErrors.error || bannerRefineCronErrors.status !== 0) {
   console.error('Security regression failed: verify-banner-refine-cron-errors.cjs');

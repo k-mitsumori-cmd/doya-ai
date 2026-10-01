@@ -24,6 +24,7 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
       'next/server': server,
       '@seo/lib/gemini': { geminiGenerateJson: async () => ({ title: 'Title', brief: 'Brief' }), GEMINI_TEXT_MODEL_DEFAULT: 'mock' },
       '@/lib/doyaslide/access': { getUserId: async () => 'user' },
+      '@/lib/doyaslide/text-budget': { reserveDoyaSlideTextCall: async () => {} },
       '@/lib/doyaslide/scrape': { scrapeUrlText: async () => { calls++; return { title: 'Title', description: 'Brief', text: 'Text' }; } },
       '@/lib/doyaslide/prompts': { buildAnalyzePrompt: () => 'prompt' },
     });
