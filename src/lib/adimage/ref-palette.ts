@@ -10,6 +10,7 @@
 //
 // ⚠️ 追加のAPIは使わない。sharp でローカルに数えるだけなので費用は発生しない。
 import sharp from 'sharp'
+import { safeFetchResource } from '@/lib/net/safe-fetch'
 
 /** 明るさ。白飛び・黒つぶれを外すのに使う */
 function luminance(r: number, g: number, b: number): number {
@@ -26,10 +27,14 @@ function toHex(r: number, g: number, b: number): string {
  */
 export async function extractRefPalette(imageUrl: string, max = 4): Promise<string[]> {
   try {
-    const res = await fetch(imageUrl)
-    if (!res.ok) return []
+    const image = await safeFetchResource(imageUrl, {
+      timeoutMs: 10_000,
+      maxBytes: 8 * 1024 * 1024,
+      accept: 'image/avif,image/webp,image/png,image/jpeg,image/*',
+    })
+    if (!image) return []
     // ⚠️ 小さく潰してから数える。原寸で数えても結果は変わらず時間だけかかる
-    const { data, info } = await sharp(Buffer.from(await res.arrayBuffer()))
+    const { data, info } = await sharp(image.body)
       .resize(64, 64, { fit: 'fill' })
       .removeAlpha()
       .raw()

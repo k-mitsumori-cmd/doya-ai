@@ -707,3 +707,8 @@ if (seoExtractFetch.error || seoExtractFetch.status !== 0) {
   console.error('Security regression failed: verify-seo-extract-fetch.cjs');
   process.exit(1);
 }
+const adimageRefPaletteFetch = spawnSync(process.execPath, [path.join(__dirname, 'verify-adimage-ref-palette-fetch.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (adimageRefPaletteFetch.error || adimageRefPaletteFetch.status !== 0) {
+  console.error('Security regression failed: verify-adimage-ref-palette-fetch.cjs');
+  process.exit(1);
+}
