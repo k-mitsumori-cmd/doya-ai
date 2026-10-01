@@ -8,6 +8,8 @@ import { getHrContext, hasMinRole } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@/lib/hr/constants'
 
+const MAX_PAGE = 10000
+
 // GET /api/hr/audit-logs
 // 監査ログ一覧（ADMIN以上のみ）
 export async function GET(req: NextRequest) {
@@ -22,11 +24,12 @@ export async function GET(req: NextRequest) {
     }
 
     const url = req.nextUrl
-    const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'))
-    const pageSize = Math.min(
-      MAX_PAGE_SIZE,
-      Math.max(1, parseInt(url.searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE)))
-    )
+    const page = url.searchParams.has('page') ? Number(url.searchParams.get('page')) : 1
+    const pageSize = url.searchParams.has('pageSize') ? Number(url.searchParams.get('pageSize')) : DEFAULT_PAGE_SIZE
+    if (!Number.isSafeInteger(page) || page < 1 || page > MAX_PAGE
+      || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > MAX_PAGE_SIZE) {
+      return NextResponse.json({ error: 'ページ指定が正しくありません' }, { status: 400 })
+    }
     const action = url.searchParams.get('action') || ''
     const userId = url.searchParams.get('userId') || ''
 
@@ -37,7 +40,7 @@ export async function GET(req: NextRequest) {
     const [items, total] = await Promise.all([
       prisma.hrAuditLog.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
@@ -52,8 +55,8 @@ export async function GET(req: NextRequest) {
       pageSize,
       totalPages: Math.ceil(total / pageSize),
     })
-  } catch (e: any) {
-    console.error('[hr/audit-logs] unexpected error', e)
+  } catch {
+    console.error('[hr/audit-logs] failed')
     return NextResponse.json(
       { error: 'Failed to fetch audit logs' },
       { status: 500 }
