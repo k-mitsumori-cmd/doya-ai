@@ -96,10 +96,10 @@ const TYPE_LABELS: Record<string, string> = {
 }
 
 const CLAIM_STATUS: Record<string, { label: string; color: string }> = {
-  verified: { label: '確認済', color: 'bg-green-100 text-green-600' },
+  verified: { label: '資料照合待ち', color: 'bg-slate-100 text-slate-600' },
   suspicious: { label: '要確認', color: 'bg-yellow-100 text-yellow-700' },
-  error: { label: '誤り', color: 'bg-red-100 text-red-600' },
-  unverifiable: { label: '検証不能', color: 'bg-slate-100 text-slate-500' },
+  error: { label: '記事内の矛盾', color: 'bg-red-100 text-red-600' },
+  unverifiable: { label: '資料照合待ち', color: 'bg-slate-100 text-slate-600' },
 }
 
 const CLAIM_CATEGORY: Record<string, string> = {
@@ -939,10 +939,6 @@ ${htmlBody}
     (proofResult?.score ?? 0) >= 80 ? 'text-green-600' :
     (proofResult?.score ?? 0) >= 60 ? 'text-yellow-600' : 'text-red-600'
 
-  const factScoreColor =
-    (factResult?.reliability ?? 0) >= 80 ? 'text-green-600' :
-    (factResult?.reliability ?? 0) >= 60 ? 'text-yellow-600' : 'text-red-600'
-
   const TABS: { key: RightPanel; label: string }[] = [
     { key: 'preview', label: '💻' },
     { key: 'proofread', label: '✅' },
@@ -953,7 +949,7 @@ ${htmlBody}
   ]
   const TAB_NAMES: Record<string, string> = {
     preview: 'Markdown', proofread: '校正', titles: 'タイトル',
-    factcheck: 'ファクトチェック', sns: 'SNS投稿', translate: '翻訳',
+    factcheck: '確認候補', sns: 'SNS投稿', translate: '翻訳',
   }
 
   return (
@@ -1671,14 +1667,14 @@ ${htmlBody}
                   <div className="space-y-4">
                     <div className="flex items-center gap-2 pb-4 border-b border-slate-100">
                       <span className="material-symbols-outlined text-blue-600">fact_check</span>
-                      <h3 className="text-sm font-bold tracking-tight text-slate-900">ファクトチェック</h3>
+                      <h3 className="text-sm font-bold tracking-tight text-slate-900">事実確認の候補</h3>
                     </div>
 
                     {factLoading && (
                       <div className="text-center py-12">
                         <div className="inline-block w-10 h-10 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-4" />
-                        <p className="text-sm text-slate-600 font-medium">AIが検証しています...</p>
-                        <p className="text-xs text-slate-400 mt-1">事実関係を確認中</p>
+                        <p className="text-sm text-slate-600 font-medium">AIが確認候補を抽出しています...</p>
+                        <p className="text-xs text-slate-400 mt-1">記事内の記述を確認中</p>
                       </div>
                     )}
 
@@ -1687,14 +1683,14 @@ ${htmlBody}
                         <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
                           <span className="material-symbols-outlined text-blue-600 text-[32px]">fact_check</span>
                         </div>
-                        <p className="text-sm text-slate-700 font-medium mb-2">記事の事実関係を検証</p>
-                        <p className="text-xs text-slate-500 mb-6">数値・固有名詞・日付・主張をAIがチェック</p>
+                        <p className="text-sm text-slate-700 font-medium mb-2">確認が必要な記述を抽出</p>
+                        <p className="text-xs text-slate-500 mb-6">数値・固有名詞・日付を記事内からAIが確認します。外部資料との照合は行いません。</p>
                         <button
                           onClick={handleFactCheck}
                           className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/20 flex items-center gap-2 mx-auto"
                         >
                           <span className="material-symbols-outlined text-[18px]">play_arrow</span>
-                          <span>ファクトチェック実行</span>
+                          <span>確認候補を抽出</span>
                         </button>
                       </div>
                     )}
@@ -1703,10 +1699,14 @@ ${htmlBody}
                       <>
                         <div className="bg-gradient-to-br from-blue-50 to-white border border-blue-100 rounded-2xl p-6">
                           <div className="text-center">
-                            <div className={`text-5xl font-black mb-2 ${factScoreColor}`}>{factResult.reliability}</div>
-                            <div className="text-xs text-slate-500 font-medium">信頼性スコア / 100</div>
+                            <div className="text-5xl font-black mb-2 text-blue-700">{factResult.reliability}</div>
+                            <div className="text-xs text-slate-500 font-medium">記事内の整合性（AI参考値） / 100</div>
                           </div>
                         </div>
+
+                        <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3 leading-relaxed">
+                          AIは外部資料と照合していません。公開前に数値・固有名詞・日付・引用を一次資料で確認してください。
+                        </p>
 
                         <div className="bg-slate-50 rounded-lg p-4">
                           <p className="text-sm text-slate-700 leading-relaxed">{factResult.summary}</p>
@@ -1725,7 +1725,7 @@ ${htmlBody}
 
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
-                            <p className="text-sm font-bold tracking-tight text-slate-900">検証項目</p>
+                            <p className="text-sm font-bold tracking-tight text-slate-900">確認候補</p>
                             <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">{factResult.claims.length}件</span>
                           </div>
 

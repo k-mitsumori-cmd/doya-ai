@@ -22,7 +22,9 @@ const factCheck = z.object({
   claims: z.array(z.object({
     text,
     category: text,
-    status: text,
+    // The model only sees the article. It cannot verify an external fact.
+    status: z.enum(['verified', 'suspicious', 'error', 'unverifiable'])
+      .transform((status) => status === 'verified' ? 'unverifiable' : status),
     detail: text,
     severity: text,
   })).max(100).default([]),

@@ -65,7 +65,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const apiKey = getGeminiApiKey()
     const model = getModel()
 
-    const prompt = `あなたはプロのファクトチェッカーです。以下の記事に含まれる事実関係・数値・固有名詞・日付・引用を検証してください。
+    const prompt = `あなたは記事の確認候補を抽出する編集者です。渡されるのは記事本文だけで、外部資料や一次資料にはアクセスできません。記事内の矛盾や、公開前に裏付けを確認すべき数値・固有名詞・日付・引用を挙げてください。
 
 【チェック項目】
 1. 数値データ: 統計、金額、パーセンテージの妥当性
@@ -76,9 +76,10 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 6. 一般常識: 明らかな事実誤認
 
 【重要】
-- 検証できない主張は「要確認」として報告
+- 外部資料による真偽判定はできません。「確認済」とは判定せず、資料照合が必要な記述は unverifiable または suspicious としてください
 - インタビュー対象者の個人的な意見や体験談は事実確認の対象外
-- 確実に誤りと判断できるものと、確認推奨のものを区別すること
+- error は記事本文の中だけで明白に矛盾する場合に限ってください
+- reliability は記事内の整合性についてのAI参考値であり、外部的な事実の正確さの点数ではありません
 
 【出力形式】
 以下のJSON形式のみ出力してください。
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     {
       "text": "検証対象の文章",
       "category": "number",
-      "status": "verified",
+      "status": "unverifiable",
       "detail": "検証結果の詳細",
       "severity": "low"
     }
@@ -99,8 +100,8 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 }
 
 category: number(数値), name(固有名詞), date(日付), claim(主張), quote(引用), general(一般)
-status: verified(確認済), suspicious(要確認), error(誤り), unverifiable(検証不能)
-severity: high(重大な誤り), medium(確認推奨), low(軽微), info(参考情報)
+status: suspicious(要確認), error(記事内の矛盾), unverifiable(一次資料との照合待ち)
+severity: high(重大な矛盾), medium(確認推奨), low(軽微), info(参考情報)
 
 ====== 検証対象記事 ======
 ${draft.content.slice(0, 60000)}`
@@ -115,10 +116,12 @@ ${draft.content.slice(0, 60000)}`
 
     return NextResponse.json({
       success: true,
-      reliability: result.reliability ?? 0,
-      summary: result.summary || '',
-      claims: result.claims || [],
-      warnings: result.warnings || [],
+      evidenceScope: 'article_only',
+      sourceVerified: false,
+      reliability: result.reliability,
+      summary: result.summary,
+      claims: result.claims,
+      warnings: result.warnings,
     })
   } catch (e: any) {
     console.error('[interview] fact-check error:', e?.message)
