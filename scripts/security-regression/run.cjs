@@ -687,3 +687,8 @@ if (serviceOperationsRolling.error || serviceOperationsRolling.status !== 0) {
   console.error('Security regression failed: verify-service-operations-rolling.cjs');
   process.exit(1);
 }
+const cunningCompanyAnalysis = spawnSync(process.execPath, [path.join(__dirname, 'verify-cunning-company-analysis.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (cunningCompanyAnalysis.error || cunningCompanyAnalysis.status !== 0) {
+  console.error('Security regression failed: verify-cunning-company-analysis.cjs');
+  process.exit(1);
+}

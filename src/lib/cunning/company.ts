@@ -3,6 +3,7 @@
 // ============================================
 import { geminiGenerateJson, GEMINI_TEXT_MODEL_DEFAULT } from '@seo/lib/gemini'
 import { scrapeUrl } from './scraper'
+import { z } from 'zod'
 
 export interface CompanyProfileExtract {
   companyName: string
@@ -46,9 +47,26 @@ export async function analyzeCompanyUrl(url: string): Promise<{
     '--- 本文ここまで ---',
   ].join('\n')
 
-  const extract = await geminiGenerateJson<CompanyProfileExtract>(
+  const response = await geminiGenerateJson<CompanyProfileExtract>(
     { prompt, model: GEMINI_TEXT_MODEL_DEFAULT },
     'CompanyProfile'
   )
+  const item = z.string().trim().max(1000)
+  const list = z.array(item).max(30)
+  const schema = z.object({
+    companyName: z.string().trim().max(200),
+    businessSummary: z.string().trim().max(4000),
+    requirements: z.object({
+      idealCandidate: list,
+      responsibilities: list,
+      values: list,
+      keywords: list,
+    }),
+  })
+  const extract = schema.parse(response)
+  if (!extract.companyName && !extract.businessSummary &&
+      Object.values(extract.requirements).every(items => items.length === 0)) {
+    throw new Error('Company profile extraction returned no information')
+  }
   return { extract, rawText: scraped.text }
 }

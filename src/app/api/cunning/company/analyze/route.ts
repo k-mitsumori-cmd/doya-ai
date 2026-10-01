@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getUserId } from '@/lib/cunning/access'
 import { analyzeCompanyUrl } from '@/lib/cunning/company'
+import { reserveCunningCompanyAnalysis, CUNNING_COMPANY_DAILY_LIMIT, CunningCompanyDailyLimitError } from '@/lib/cunning/company-budget'
 
 // POST /api/cunning/company/analyze — 採用URL解析 → 企業プロファイル保存
 // body: { url: string }
@@ -18,6 +19,14 @@ export async function POST(req: NextRequest) {
     const url = body && typeof body === 'object' && !Array.isArray(body) && typeof body.url === 'string'
       ? body.url.trim() : ''
     if (!url) return NextResponse.json({ error: 'URLを入力してください' }, { status: 400 })
+    if (url.length > 2048 || !/^https?:\/\//i.test(url)) {
+      return NextResponse.json({ error: 'httpまたはhttpsのURLを入力してください' }, { status: 400 })
+    }
+    try { new URL(url) } catch {
+      return NextResponse.json({ error: 'URLの形式を確認してください' }, { status: 400 })
+    }
+
+    await reserveCunningCompanyAnalysis(userId)
 
     const { extract, rawText } = await analyzeCompanyUrl(url)
 
@@ -43,6 +52,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ profile })
   } catch (e: any) {
+    if (e instanceof CunningCompanyDailyLimitError) {
+      return NextResponse.json({
+        code: 'CUNNING_COMPANY_DAILY_LIMIT',
+        error: `本日の企業URL解析の運用上限（${CUNNING_COMPANY_DAILY_LIMIT}回）に達しました。明日お試しください。`,
+      }, { status: 429 })
+    }
     console.error('[cunning/company/analyze]', e?.message)
     return NextResponse.json({ error: '企業ページの解析に失敗しました' }, { status: 500 })
   }

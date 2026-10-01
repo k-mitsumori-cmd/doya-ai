@@ -36,9 +36,10 @@ async function checkRoute(name, handler, invalid, valid, getWrites) {
       'next/server': server,
       '@/lib/prisma': { prisma: { cunningCompanyProfile: { create: async () => ({ id: 'profile' }) } } },
       '@/lib/cunning/access': { getUserId: async () => 'user' },
+      '@/lib/cunning/company-budget': { reserveCunningCompanyAnalysis: async () => {}, CUNNING_COMPANY_DAILY_LIMIT: 50, CunningCompanyDailyLimitError: class extends Error {} },
       '@/lib/cunning/company': { analyzeCompanyUrl: async () => { calls++; return { extract: { companyName: 'Acme' }, rawText: 'Text' }; } },
     });
-    await checkRoute('Cunning company analyze', route.POST, [null, { url: [] }, { url: 42 }], { url: 'https://example.com' }, () => calls);
+    await checkRoute('Cunning company analyze', route.POST, [null, { url: [] }, { url: 42 }, { url: 'ftp://example.com' }, { url: 'not-a-url' }, { url: 'https://example.com/' + 'a'.repeat(2050) }], { url: 'https://example.com' }, () => calls);
   }
   {
     let calls = 0;

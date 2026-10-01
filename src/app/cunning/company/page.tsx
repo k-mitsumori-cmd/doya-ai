@@ -150,9 +150,12 @@ export default function CunningCompanyPage() {
         <p className="font-black text-slate-700 mb-3">応募先企業の採用URLを解析</p>
         <div className="flex gap-2">
           <input
+            type="url"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             placeholder="https://example.com/recruit"
+            maxLength={2048}
+            aria-label="応募先企業の採用URL"
             className="flex-1 rounded-xl border border-slate-200 px-4 py-3 font-bold"
           />
           <button

@@ -166,7 +166,7 @@
 ### 企業コンテキスト（面接モード）
 | メソッド | パス | 説明 |
 |---------|------|------|
-| POST | `/api/cunning/company/analyze` | 採用URL解析 → 企業プロファイル抽出 |
+| POST | `/api/cunning/company/analyze` | 採用URL解析 → 企業プロファイル抽出。1ユーザー1日50回（JST）の運用上限。失敗した解析も計上し、翌日にリセット。課金プランの利用枠とは別。 |
 | GET/POST | `/api/cunning/profiles` | 応募者プロフィール管理 |
 
 ---
