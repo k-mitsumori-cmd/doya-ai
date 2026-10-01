@@ -717,3 +717,8 @@ if (doyaslideStorageFetch.error || doyaslideStorageFetch.status !== 0) {
   console.error('Security regression failed: verify-doyaslide-storage-fetch.cjs');
   process.exit(1);
 }
+const shodanSlideFetch = spawnSync(process.execPath, [path.join(__dirname, 'verify-shodan-slide-fetch.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shodanSlideFetch.error || shodanSlideFetch.status !== 0) {
+  console.error('Security regression failed: verify-shodan-slide-fetch.cjs');
+  process.exit(1);
+}
