@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
-import { getSeoGenerationOwner } from '@/lib/seoArticleOwner'
+import { getSeoGenerationOwner, getSeoGenerationPlanForUser } from '@/lib/seoArticleOwner'
+import { runSeoArticleRegenerationWithinLimit, SeoArticleNotFoundError, SeoArticleQuotaError } from '@/lib/seo-article-admission'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -23,12 +23,14 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
   try {
     const owner = await getSeoGenerationOwner(req)
     if (!owner) return NextResponse.json({ success: false, code: 'LOGIN_REQUIRED', error: 'この生成操作にはログインしてください。' }, { status: 401 })
+    const plan = await getSeoGenerationPlanForUser(owner.userId)
+    if (!plan) return NextResponse.json({ success: false, code: 'LOGIN_REQUIRED', error: 'ログイン情報を確認できません。再ログインしてください。' }, { status: 401 })
     await ensureSeoSchema()
 
     if (!articleId) return NextResponse.json({ success: false, error: 'invalid id' }, { status: 400 })
 
     const body = BodySchema.parse(await req.json())
-    const job = await prisma.$transaction(async (tx) => {
+    const job = await runSeoArticleRegenerationWithinLimit({ userId: owner.userId, articleId, plan, action: async (tx) => {
       // Claim the owned parent before resetting content or creating the new job.
       await tx.seoArticle.update({
         where: { id: articleId, ...owner },
@@ -47,10 +49,12 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       return tx.seoJob.create({
         data: { articleId, status: 'queued', step: 'init', progress: 0, error: null, cursor: 0 },
       })
-    })
+    } })
 
     return NextResponse.json({ success: true, jobId: job.id, articleId, autoStart: body.autoStart })
   } catch (e: any) {
+    if (e instanceof SeoArticleQuotaError) return NextResponse.json({ success: false, code: 'SEO_ARTICLE_LIMIT', error: `今月の生成回数の上限に達しました（${e.limit}回/月）。`, upgradeUrl: '/seo/pricing' }, { status: 429 })
+    if (e instanceof SeoArticleNotFoundError) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     if (e?.code === 'P2025') return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     if (e instanceof SyntaxError) return NextResponse.json({ success: false, error: '入力形式が正しくありません' }, { status: 400 })
     // バリデーションエラーの詳細を返す

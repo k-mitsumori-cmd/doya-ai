@@ -2,7 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { ensureSeoSchema } from '@seo/lib/bootstrap'
 import { getSeoArticleOwner } from '@/lib/seoArticleOwner'
+import { getSeoGenerationPlanForUser } from '@/lib/seoArticleOwner'
+import { runSeoArticleRegenerationWithinLimit, SeoArticleNotFoundError, SeoArticleQuotaError } from '@/lib/seo-article-admission'
 import { z } from 'zod'
+import type { Prisma } from '@prisma/client'
 
 export const runtime = 'nodejs'
 
@@ -104,6 +107,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
     if (body.regenerate && !owner.userId) {
       return NextResponse.json({ success: false, code: 'LOGIN_REQUIRED', error: '記事を再生成するにはログインしてください。' }, { status: 401 })
     }
+    const plan = body.regenerate && owner.userId ? await getSeoGenerationPlanForUser(owner.userId) : null
+    if (body.regenerate && !plan) return NextResponse.json({ success: false, code: 'LOGIN_REQUIRED', error: 'ログイン情報を確認できません。再ログインしてください。' }, { status: 401 })
     const existing = Array.isArray(article.comparisonCandidates) ? article.comparisonCandidates : []
 
     // 新しい候補を追加（重複を除去）
@@ -119,7 +124,7 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
 
     const merged = uniqCandidatesByName([...existing, ...newCandidates])
 
-    const newJobId = await prisma.$transaction(async (tx) => {
+    const saveCandidates = async (tx: Prisma.TransactionClient) => {
       await tx.seoArticle.update({
         where: { id, ...owner, updatedAt: article.updatedAt },
         data: {
@@ -141,7 +146,10 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
         data: { articleId: id, status: 'queued', step: 'init', progress: 0 },
       })
       return job.id
-    })
+    }
+    const newJobId = body.regenerate && owner.userId && plan
+      ? await runSeoArticleRegenerationWithinLimit({ userId: owner.userId, articleId: id, plan, action: saveCandidates })
+      : await prisma.$transaction(saveCandidates)
 
     return NextResponse.json({
       success: true,
@@ -151,6 +159,8 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ id: string
       jobId: newJobId,
     })
   } catch (e: any) {
+    if (e instanceof SeoArticleQuotaError) return NextResponse.json({ success: false, code: 'SEO_ARTICLE_LIMIT', error: `今月の生成回数の上限に達しました（${e.limit}回/月）。`, upgradeUrl: '/seo/pricing' }, { status: 429 })
+    if (e instanceof SeoArticleNotFoundError) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     if (e?.code === 'P2025') return NextResponse.json({ success: false, error: '記事が更新されたか、アクセス権が変わりました。再読み込みしてから操作してください。' }, { status: 409 })
     if (e?.name === 'SyntaxError' || e?.name === 'ZodError') return NextResponse.json({ success: false, error: '入力形式が正しくありません' }, { status: 400 })
     if (e?.name === 'ZodError') {

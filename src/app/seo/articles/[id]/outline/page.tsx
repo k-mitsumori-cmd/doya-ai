@@ -42,6 +42,7 @@ export default function SeoOutlineEditPage() {
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [articleLimitReached, setArticleLimitReached] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -133,6 +134,7 @@ export default function SeoOutlineEditPage() {
     if (generating || headings.length === 0) return
     setGenerating(true)
     setError(null)
+    setArticleLimitReached(false)
     try {
       // まず保存
       await save()
@@ -144,6 +146,7 @@ export default function SeoOutlineEditPage() {
       })
       const json = await res.json()
       if (!res.ok || json?.success === false) {
+        if (res.status === 429 && json?.code === 'SEO_ARTICLE_LIMIT') setArticleLimitReached(true)
         throw new Error(json?.error || 'ジョブ作成に失敗しました')
       }
       const jobId = json.jobId || json.job?.id
@@ -278,6 +281,7 @@ export default function SeoOutlineEditPage() {
             className="mx-4 md:mx-8 mt-4 p-4 rounded-2xl bg-red-50 border border-red-100 text-red-700 text-sm font-bold"
           >
             {error}
+            {articleLimitReached && <Link href="/seo/pricing" className="ml-2 underline underline-offset-2">プランを見る</Link>}
           </motion.div>
         )}
       </AnimatePresence>
@@ -454,4 +458,3 @@ export default function SeoOutlineEditPage() {
     </main>
   )
 }
-

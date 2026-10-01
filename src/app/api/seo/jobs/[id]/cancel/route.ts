@@ -15,7 +15,8 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     const job = await (prisma as any).seoJob.findFirst({ where: { id, article: owner }, select: { id: true, status: true, supersededAt: true, articleId: true } })
     if (!job) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     if (job.supersededAt) return NextResponse.json({ success: false, code: 'JOB_SUPERSEDED', error: 'このジョブは新しい生成に置き換えられました。記事画面から最新の生成状況を確認してください。' }, { status: 409 })
-    if (job.status === 'done') return NextResponse.json({ success: true, job })
+    if (job.status === 'done' || job.status === 'cancelled') return NextResponse.json({ success: true, job })
+    if (job.status !== 'queued' && job.status !== 'running' && job.status !== 'paused') return NextResponse.json({ success: false, code: 'JOB_NOT_ACTIVE', error: '終了したジョブは停止できません。' }, { status: 409 })
 
     const updated = await prisma.$transaction(async (tx) => {
       await tx.seoArticle.update({ where: { id: job.articleId, ...owner }, data: { status: 'ERROR' } })
@@ -32,5 +33,4 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     return NextResponse.json({ success: false, error: 'ジョブを停止できませんでした。時間をおいて再試行してください。' }, { status: 500 })
   }
 }
-
 

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getGuestIdFromRequest } from '@/lib/seoAccess'
+import { getGuestIdFromRequest, normalizeSeoPlan, type SeoPlanCode } from '@/lib/seoAccess'
 
 /** User-owned articles cannot be accessed with an old guest cookie after account claim. */
 export async function getSeoArticleOwner(req: NextRequest): Promise<{ userId: string } | { userId: null; guestId: string } | null> {
@@ -16,4 +16,12 @@ export async function getSeoArticleOwner(req: NextRequest): Promise<{ userId: st
 export async function getSeoGenerationOwner(req: NextRequest): Promise<{ userId: string } | null> {
   const owner = await getSeoArticleOwner(req)
   return owner?.userId ? { userId: owner.userId } : null
+}
+
+/** Re-read the authenticated plan before charging a provider-backed generation. */
+export async function getSeoGenerationPlanForUser(userId: string): Promise<SeoPlanCode | null> {
+  const session = await getServerSession(authOptions)
+  const user = session?.user as any
+  if (!userId || String(user?.id || '').trim() !== userId) return null
+  return normalizeSeoPlan(user?.seoPlan || user?.plan || 'FREE')
 }

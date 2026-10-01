@@ -9,6 +9,10 @@ export class SeoArticleQuotaError extends Error {
   }
 }
 
+export class SeoArticleNotFoundError extends Error {
+  constructor() { super('SEO article not found') }
+}
+
 export function seoArticleUsageKey(userId: string, now: Date): string {
   const month = new Date(now.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(0, 7)
   return `seo-article-usage:v1:${createHash('sha256').update(userId).digest('hex')}:${month}`
@@ -55,5 +59,32 @@ export async function createSeoArticleWithinLimit(args: CreateArgs, db: PrismaCl
     if (afterCreate) await afterCreate(tx, article)
     await tx.systemSetting.upsert({ where: { key }, create: { key, value: String(used + 1) }, update: { value: String(used + 1) } })
     return { article, job }
+  }, { timeout: 15000 })
+}
+
+/** A draft's first job is included in its creation; later full regenerations use the monthly pool. */
+export async function runSeoArticleRegenerationWithinLimit<T>(args: {
+  userId: string
+  articleId: string
+  plan: SeoPlanCode
+  action: (tx: Prisma.TransactionClient) => Promise<T>
+}, db: PrismaClient = prisma): Promise<T> {
+  const { userId, articleId, plan, action } = args
+  return db.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${'seo-article:' + userId}))`
+    const article = await tx.seoArticle.findFirst({ where: { id: articleId, userId }, select: { id: true } })
+    if (!article) throw new SeoArticleNotFoundError()
+    const previousJobs = await tx.seoJob.count({ where: { articleId } })
+    const isRegeneration = previousJobs > 0
+    const now = new Date()
+    const key = seoArticleUsageKey(userId, now)
+    const used = isRegeneration ? await getSeoArticleMonthlyUsage(tx, userId, now) : 0
+    const limit = seoMonthlyArticleLimit(plan)
+    if (isRegeneration && limit >= 0 && used >= limit) throw new SeoArticleQuotaError(limit, false)
+    const result = await action(tx)
+    if (isRegeneration) {
+      await tx.systemSetting.upsert({ where: { key }, create: { key, value: String(used + 1) }, update: { value: String(used + 1) } })
+    }
+    return result
   }, { timeout: 15000 })
 }

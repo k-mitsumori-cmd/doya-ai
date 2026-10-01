@@ -558,6 +558,7 @@ function SeoArticleInner() {
   const [resumeBusy, setResumeBusy] = useState(false)
   const [resumeNotice, setResumeNotice] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [articleLimitMessage, setArticleLimitMessage] = useState<string | null>(null)
   const [memo, setMemo] = useState('')
   const [tab, setTab] = useState<typeof TABS[number]['id']>('preview')
   const [markdownDraft, setMarkdownDraft] = useState('')
@@ -771,6 +772,7 @@ function SeoArticleInner() {
       })
       const json = await res.json()
       if (!res.ok || !json.success) {
+        if (res.status === 429 && json?.code === 'SEO_ARTICLE_LIMIT') setArticleLimitMessage(json.error || '今月の記事生成枠に達しました。')
         throw new Error(json.error || '追加に失敗しました')
       }
       // 成功したらフォームをリセット
@@ -1130,6 +1132,7 @@ function SeoArticleInner() {
     if (!article?.id || resumeBusy) return
     setResumeBusy(true)
     setResumeNotice(null)
+    setArticleLimitMessage(null)
     try {
       const res = await fetch(`/api/seo/articles/${article.id}/jobs`, {
         method: 'POST',
@@ -1138,10 +1141,11 @@ function SeoArticleInner() {
       })
       const json = await res.json().catch(() => ({}))
       if (!res.ok || json?.success === false) {
+        if (res.status === 429 && json?.code === 'SEO_ARTICLE_LIMIT') setArticleLimitMessage(json.error || '今月の記事生成枠に達しました。')
         throw new Error(json?.error || `再開に失敗しました (${res.status})`)
       }
       const jobId = json.jobId
-      setResumeNotice('途中から生成を再開しました（ジョブ画面で進捗を確認できます）')
+      setResumeNotice('新しい生成ジョブを開始しました。既に生成ジョブがあった場合は今月の記事生成枠を1回使用します。')
       if (jobId) router.push(`/seo/jobs/${jobId}?auto=1`)
       else await load({ showLoading: false })
     } catch (e: any) {
@@ -1353,6 +1357,7 @@ function SeoArticleInner() {
                   <button
                     type="button"
                     onClick={() => handleAddService(true)}
+                    title="記事を再生成するため、今月の記事生成枠を1回使用します。"
                     className="flex-1 px-4 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                     disabled={addingService || !newServiceName.trim()}
                   >
@@ -1538,10 +1543,10 @@ function SeoArticleInner() {
                 onClick={resumeFromCurrent}
                 disabled={resumeBusy}
                 className="flex-1 sm:flex-none h-11 sm:h-12 rounded-xl sm:rounded-2xl px-4 sm:px-6 font-black text-xs sm:text-sm"
-                title="途中から続き生成（タイトル/キーワードは変更しません）"
+                title="新しい生成ジョブを作成します。既に生成ジョブがある場合は今月の記事生成枠を1回使用します。"
               >
                 {resumeBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Play className="w-4 h-4 mr-2" />}
-                {resumeBusy ? '再開中...' : '途中から再開'}
+                {resumeBusy ? '開始中...' : '続きから再生成'}
               </Button>
             )}
             <Button variant="ghost" onClick={() => load({ showLoading: true })} className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-white border border-gray-100 shadow-sm flex items-center justify-center">
@@ -1562,6 +1567,11 @@ function SeoArticleInner() {
         {resumeNotice && (
           <div className="mt-3 rounded-2xl bg-blue-50 border border-blue-100 px-4 py-3 text-xs sm:text-sm font-black text-blue-900">
             {resumeNotice}
+          </div>
+        )}
+        {articleLimitMessage && (
+          <div role="alert" className="mt-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs sm:text-sm font-bold text-amber-900">
+            {articleLimitMessage} <Link href="/seo/pricing" className="ml-2 underline underline-offset-2">プランを見る</Link>
           </div>
         )}
 

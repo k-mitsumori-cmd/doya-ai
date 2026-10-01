@@ -320,6 +320,11 @@ if (seoArticleAdmission.error || seoArticleAdmission.status !== 0) {
   console.error('Security regression failed: verify-seo-article-admission.cjs');
   process.exit(1);
 }
+const seoRegenerationAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-regeneration-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (seoRegenerationAdmission.error || seoRegenerationAdmission.status !== 0) {
+  console.error('Security regression failed: verify-seo-regeneration-admission.cjs');
+  process.exit(1);
+}
 const seoTemplateAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-template-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (seoTemplateAdmission.error || seoTemplateAdmission.status !== 0) {
   console.error('Security regression failed: verify-seo-template-admission.cjs');

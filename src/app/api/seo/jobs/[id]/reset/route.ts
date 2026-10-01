@@ -19,6 +19,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
     })
     if (!job) return NextResponse.json({ success: false, error: 'not found' }, { status: 404 })
     if (job.supersededAt) return NextResponse.json({ success: false, code: 'JOB_SUPERSEDED', error: 'このジョブは新しい生成に置き換えられました。記事画面から最新の生成状況を確認してください。' }, { status: 409 })
+    if (job.status !== 'error') return NextResponse.json({ success: false, code: 'JOB_NOT_FAILED', error: '失敗したジョブだけやり直せます。記事を再生成する場合は記事画面から操作してください。' }, { status: 409 })
 
     const resetJob = await prisma.$transaction(async (tx) => {
       await tx.seoArticle.update({
@@ -27,7 +28,7 @@ export async function POST(_req: NextRequest, ctx: { params: Promise<{ id: strin
       })
       await tx.seoSection.deleteMany({ where: { jobId: id } })
       return tx.seoJob.update({
-        where: { id, article: owner, updatedAt: job.updatedAt, supersededAt: null },
+        where: { id, article: owner, updatedAt: job.updatedAt, status: 'error', supersededAt: null },
         data: { executionToken: null, executionExpiresAt: null, status: 'queued', step: 'init', progress: 0, cursor: 0, error: null, startedAt: null, finishedAt: null },
       })
     })
