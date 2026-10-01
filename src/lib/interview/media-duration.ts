@@ -5,6 +5,33 @@ const MAX_RANGE_BYTES = 1024 * 1024
 const MAX_INSPECTION_BYTES = 32 * 1024 * 1024
 const MAX_INSPECTION_REQUESTS = 64
 
+async function readExactRange(response: Response, length: number): Promise<Uint8Array> {
+  const declaredLength = Number(response.headers.get('content-length'))
+  if (declaredLength > length || !response.body) {
+    await response.body?.cancel()
+    throw new Error('ファイルの長さを確認できません')
+  }
+  const bytes = new Uint8Array(length)
+  const reader = response.body.getReader()
+  let received = 0
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      if (received + value.byteLength > length) throw new Error('ファイルの長さを確認できません')
+      bytes.set(value, received)
+      received += value.byteLength
+    }
+  } catch (error) {
+    await reader.cancel().catch(() => {})
+    throw error
+  } finally {
+    reader.releaseLock()
+  }
+  if (received !== length) throw new Error('ファイルの長さを確認できません')
+  return bytes
+}
+
 /** Inspect the stored object itself; browser-provided duration is never an admission authority. */
 export async function inspectInterviewMediaDuration(filePath: string, fileSize: bigint | number | null): Promise<number> {
   const size = Number(fileSize)
@@ -39,8 +66,7 @@ export async function inspectInterviewMediaDuration(filePath: string, fileSize: 
         await response.body?.cancel()
         throw new Error('ファイルの分割取得に対応していません')
       }
-      const bytes = new Uint8Array(await response.arrayBuffer())
-      if (bytes.length !== length) throw new Error('ファイルの長さを確認できません')
+      const bytes = await readExactRange(response, length)
       totalBytes += bytes.length
       return bytes
     })

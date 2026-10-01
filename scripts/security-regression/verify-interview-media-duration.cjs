@@ -22,6 +22,11 @@ const { inspectInterviewMediaDuration } = load('src/lib/interview/media-duration
     assert.ok(match)
     const start = Number(match[1]), end = Number(match[2])
     const body = wav.subarray(start, mode === 'short' ? end : end + 1)
+    if (mode === 'oversize') {
+      return new Response(new ReadableStream({
+        pull(controller) { controller.enqueue(new Uint8Array(end - start + 2)) },
+      }), { status: 206, headers: { 'content-range': `bytes ${start}-${end}/${wav.length}` } })
+    }
     return new Response(body, { status: mode === 'full' ? 200 : 206, headers: {
       'content-range': `bytes ${start}-${end}/${wav.length}`,
     } })
@@ -37,6 +42,8 @@ const { inspectInterviewMediaDuration } = load('src/lib/interview/media-duration
   mode = 'full'
   await assert.rejects(() => inspectInterviewMediaDuration('owner/project/file.wav', wav.length), /分割取得/)
   mode = 'short'
+  await assert.rejects(() => inspectInterviewMediaDuration('owner/project/file.wav', wav.length), /長さ/)
+  mode = 'oversize'
   await assert.rejects(() => inspectInterviewMediaDuration('owner/project/file.wav', wav.length), /長さ/)
   await assert.rejects(() => inspectInterviewMediaDuration('owner/project/file.wav', null), /長さ/)
   console.log('PASS stored media duration is measured from bounded ranges and fails closed on untrusted responses')
