@@ -38,6 +38,8 @@ vm.runInNewContext(compiled, {
     const result = await moduleExports.generateImageWithFallback({ prompt: 'test', size: '1024x1024' })
     assert.equal(result.base64, 'aGVsbG8=')
     assert.equal(result.fallbackUsed, true)
+    assert.equal(result.primaryError, 'メインの画像生成サービスを利用できませんでした')
+    assert(!JSON.stringify(result).includes('simulated primary failure'))
     assert.equal(requests.length, 1)
     assert.equal(requests[0].url, 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image:generateContent')
     assert.equal(requests[0].options.method, 'POST')

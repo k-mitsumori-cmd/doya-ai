@@ -247,8 +247,8 @@ export default function SwipeArticlePage() {
                       })
                     }
                   }
-                } catch (defaultError) {
-                  console.warn(`[デフォルト画像取得も失敗] category: ${category}`, defaultError)
+                } catch {
+                  console.warn('[デフォルト画像取得も失敗]')
                 }
               } else {
                 // リトライ前に待機
@@ -417,8 +417,8 @@ export default function SwipeArticlePage() {
                         })
                       }
                     }
-                  } catch (defaultError) {
-                    console.warn(`[デフォルト画像取得も失敗] category: ${category}`, defaultError)
+                  } catch {
+                    console.warn('[デフォルト画像取得も失敗]')
                   }
                 } else {
                   // リトライ前に待機

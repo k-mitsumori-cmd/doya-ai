@@ -78,24 +78,20 @@ export async function generateImageWithFallback(
     try {
       const r = await callOpenAI(req)
       return { ...r, fallbackUsed: false }
-    } catch (e: any) {
-      const msg = e?.message || String(e)
-      console.warn(
-        `[image-gen] gpt-image-2 失敗 → Nano Banana Pro にフォールバック: ${msg.slice(0, 200)}`
-      )
+    } catch {
+      console.warn('[image-gen] gpt-image-2 失敗。Nano Banana Pro にフォールバックします')
       const r = await callNanoBananaProPreview(req)
-      return { ...r, fallbackUsed: true, primaryError: msg }
+      return { ...r, fallbackUsed: true, primaryError: 'メインの画像生成サービスを利用できませんでした' }
     }
   }
 
   try {
     const r = await callOpenAIEdit(req)
     return { ...r, fallbackUsed: false }
-  } catch (e: any) {
-    const msg = e?.message || String(e)
-    console.warn(`[image-gen] OpenAI参照画像編集失敗 → Nano Banana Pro にフォールバック: ${msg.slice(0, 200)}`)
+  } catch {
+    console.warn('[image-gen] OpenAI参照画像編集に失敗。Nano Banana Pro にフォールバックします')
     const r = await callNanoBananaProPreview(req)
-    return { ...r, fallbackUsed: true, primaryError: msg }
+    return { ...r, fallbackUsed: true, primaryError: 'メインの画像編集サービスを利用できませんでした' }
   }
 }
 

@@ -4065,7 +4065,12 @@ async function advanceOwnedSeoJob(jobId: string): Promise<{ jobId: string }> {
     await integrate(jobId)
     return { jobId }
   } catch (e: any) {
-    const msg = e?.message || 'unknown error'
+    const failureText = typeof e?.message === 'string' ? e.message : ''
+    const msg = /quota|RESOURCE_EXHAUSTED|rate limit|429/i.test(failureText)
+      ? '生成サービスの利用上限に達しました。時間をおいて再試行してください。'
+      : /timeout|timed out|AbortError/i.test(failureText)
+        ? '生成サービスからの応答が遅れています。時間をおいて再試行してください。'
+        : '生成処理を完了できませんでした。時間をおいて再試行してください。'
     // 同じエラーが連続している場合はerrorステータスにして無限リトライを防止
     const prevError = String(job.error || '').trim()
     const isSameError = prevError && prevError === msg.trim()
@@ -4129,4 +4134,3 @@ export async function runPipelineUntilTimeout(jobId: string, timeoutMs = 25000):
 
   return { jobId, status: currentJob?.status || 'error', step: currentJob?.step || 'unknown' }
 }
-

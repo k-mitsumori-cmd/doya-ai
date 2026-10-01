@@ -29,7 +29,7 @@ function isClaudeCreditError(status: number, body: string): boolean {
   return false
 }
 
-async function notifySlackClaudeCreditExhausted(errorDetail: string): Promise<void> {
+async function notifySlackClaudeCreditExhausted(status: number): Promise<void> {
   const webhookUrl = process.env.SLACK_WEBHOOK_URL
   if (!webhookUrl) return
 
@@ -57,7 +57,7 @@ async function notifySlackClaudeCreditExhausted(errorDetail: string): Promise<vo
           `- チャージ後、自動的にClaude Sonnet 4.6での生成に復帰します`,
           ``,
           `*エラー詳細:*`,
-          `\`${errorDetail.substring(0, 300)}\``,
+          `\`HTTP ${status}\``,
         ].join('\n'),
       }),
     })
@@ -144,11 +144,11 @@ async function generateTextWithClaude(
 
       // クレジット切れ検知 → Slack通知
       if (isClaudeCreditError(response.status, errorText)) {
-        notifySlackClaudeCreditExhausted(`${response.status} - ${errorText.substring(0, 300)}`)
+        notifySlackClaudeCreditExhausted(response.status)
           .catch(() => {}) // fire-and-forget
       }
 
-      throw new Error(`Claude API Error: ${response.status} - ${errorText.substring(0, 500)}`)
+      throw new Error(`Claude API Error: ${response.status}`)
     } catch (e: any) {
       // 明示的にthrowされた4xxエラーはそのまま再throw
       if (e?.message?.startsWith('Claude API Error:') && !/429|529|5\d\d/.test(e.message)) {
@@ -199,8 +199,7 @@ async function generateTextWithChatGPT(prompt: string, options?: { temperature?:
   })
 
   if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`OpenAI API Error: ${response.status} - ${errorText.substring(0, 500)}`)
+    throw new Error(`OpenAI API Error: ${response.status}`)
   }
 
   const json = await response.json()
@@ -498,11 +497,11 @@ export async function geminiGenerateText(req: GenerateContentRequest): Promise<s
       console.warn('[Claude] Primary returned empty, falling back to Gemini...')
     } catch (e: any) {
       const msg = e?.message || ''
-      console.warn('[Claude] Primary failed, falling back to Gemini:', msg.substring(0, 200))
+      console.warn('[Claude] Primary failed, falling back to Gemini')
 
       // クレジット切れの場合はSlack通知（エラーメッセージから判定）
       if (/credit|billing|balance|payment|insufficient|402/i.test(msg)) {
-        notifySlackClaudeCreditExhausted(msg.substring(0, 300)).catch(() => {})
+        notifySlackClaudeCreditExhausted(402).catch(() => {})
       }
     }
   }
@@ -729,5 +728,3 @@ function mapAspectRatioToSize(aspectRatio: string): string {
   if (a === '9:21') return '1024x1536'
   return '1024x1024'
 }
-
-
