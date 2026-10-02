@@ -6,14 +6,23 @@ import Image from "next/image";
 
 async function safeMembers(workspaceId: string) {
   try {
-    return await prisma.promaneMember.findMany({
-      where: { workspaceId },
-      include: { user: { select: { email: true } }, timeEntries: { select: { duration: true } } },
-      orderBy: { createdAt: "asc" },
-    });
+    const [members, totals] = await Promise.all([
+      prisma.promaneMember.findMany({
+        where: { workspaceId },
+        include: { user: { select: { email: true } } },
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.promaneTimeEntry.groupBy({
+        by: ['memberId'],
+        where: { member: { workspaceId } },
+        _sum: { duration: true },
+      }),
+    ]);
+    const totalByMember = new Map(totals.map((row) => [row.memberId, row._sum.duration ?? 0]));
+    return members.map((member) => ({ ...member, totalMinutes: totalByMember.get(member.id) ?? 0 }));
   } catch (e) {
     console.error('[members] fetch failed');
-    return [];
+    return null;
   }
 }
 
@@ -27,6 +36,13 @@ export default async function MembersPage({ params }: { params: Promise<{ worksp
   const canInvite = !!myMember && ['owner', 'admin'].includes(myMember.role);
 
   const members = await safeMembers(workspace.id);
+  if (!members) {
+    return (
+      <div role="alert" className="p-8 text-rose-700">
+        メンバー情報を読み込めませんでした。時間をおいてページを再読み込みしてください。
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 max-w-[1200px]">
@@ -45,7 +61,7 @@ export default async function MembersPage({ params }: { params: Promise<{ worksp
         members={members.map((m) => ({
           id: m.id, displayName: m.displayName, role: m.role, email: m.user.email,
           hourlyRate: m.hourlyRate,
-          totalMinutes: m.timeEntries.reduce((sum, te) => sum + te.duration, 0),
+          totalMinutes: m.totalMinutes,
         }))}
       />
     </div>
