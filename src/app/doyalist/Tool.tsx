@@ -80,7 +80,9 @@ export default function DoyalistTool() {
   const [prefecture, setPrefecture] = useState('')
   const [size, setSize] = useState('指定なし')
   const [keywords, setKeywords] = useState('')
-  const [count, setCount] = useState(100)
+  const [countInput, setCountInput] = useState('100')
+  const count = Number(countInput)
+  const validCount = /^\d+$/.test(countInput) && Number.isSafeInteger(count) && count >= 1 && count <= 10000
 
   const handleAreaChange = (v: string) => { setArea(v); setPrefecture('') }
   const region = prefecture || area
@@ -224,10 +226,29 @@ export default function DoyalistTool() {
 
   const handleGenerate = async () => {
     if (!session?.user) { toast.error('ログインしてください'); return }
+    if (!validCount) { toast.error('抽出件数は1〜10,000社で入力してください'); return }
     setGenerating(true); setCompanies([]); setVisibleCount(PAGE_SIZE)
     setErrorMsg(null); setErrorHint(null); setWarningMsg(null); setQuotaAction(null)
     const tid = toast.loading('リストを抽出中...')
     try {
+      // 上限到達が分かっている場合は空のプロジェクトを作らずに案内する。
+      // 同時操作による使用数の変化は収集API側でも再判定する。
+      const usageRes = await fetch('/api/doyalist/usage', { cache: 'no-store' }).catch(() => null)
+      if (usageRes?.ok) {
+        const usage = await usageRes.json().catch(() => null)
+        const available = usage?.remaining?.companies
+        if (typeof available === 'number' && available >= 0 && count > available) {
+          const max = usage?.limits?.maxCompaniesPerMonth
+          const msg = available === 0
+            ? `今月の企業生成上限${typeof max === 'number' ? `（${max}社）` : ''}に達しました。`
+            : `月間上限${typeof max === 'number' ? `（${max}社）` : ''}を超えます。残り${available}社まで生成可能です。`
+          setErrorMsg(msg)
+          setErrorHint(available > 0 ? `件数を${available}社以下に変更すると、残り枠を利用できます。` : null)
+          setQuotaAction(usage?.plan?.tier === 'FREE' || usage?.plan?.tier === 'GUEST' ? 'pricing' : 'contact')
+          toast.error(msg, { id: tid, duration: 6000 })
+          return
+        }
+      }
       const pid = await createProject()
       if (!pid) {
         toast.error('準備に失敗しました', { id: tid })
@@ -490,11 +511,25 @@ export default function DoyalistTool() {
                 </label>
                 <div className="grid grid-cols-4 gap-2">
                   {COUNT_OPTIONS.map((c) => (
-                    <button key={c} onClick={() => setCount(c)} className={`py-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${count === c ? 'bg-[#0a1530] text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>
+                    <button key={c} onClick={() => setCountInput(String(c))} className={`py-3 rounded-xl text-xs sm:text-sm font-bold transition-all ${count === c ? 'bg-[#0a1530] text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'}`}>
                       {c.toLocaleString()}社
                     </button>
                   ))}
                 </div>
+                <label className="mt-3 block text-xs font-bold text-slate-700" htmlFor="doyalist-custom-count">任意の件数（1〜10,000社）</label>
+                <input
+                  id="doyalist-custom-count"
+                  type="number"
+                  min={1}
+                  max={10000}
+                  step={1}
+                  inputMode="numeric"
+                  value={countInput}
+                  onChange={(event) => setCountInput(event.target.value)}
+                  aria-invalid={!validCount}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800 focus:border-cyan-500 focus:outline-none"
+                />
+                {!validCount && <p className="mt-1 text-xs font-medium text-rose-700">1〜10,000社の整数を入力してください。</p>}
                 {count >= 500 && (
                   <p className="text-xs font-medium text-cyan-700 mt-2 inline-flex items-center gap-1">
                     <span className="material-symbols-outlined text-sm">schedule</span>{count.toLocaleString()}社の抽出（詳細情報の取得込み）は約 {Math.max(20, Math.ceil(count / 60))}〜{Math.ceil(count / 30)}秒かかります
@@ -509,7 +544,7 @@ export default function DoyalistTool() {
 
               <button
                 onClick={handleGenerate}
-                disabled={generating}
+                disabled={generating || !validCount}
                 className="w-full py-4 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white font-bold text-base rounded-xl shadow-lg shadow-cyan-500/30 hover:shadow-xl active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {generating ? (
