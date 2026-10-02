@@ -2,19 +2,21 @@
 
 import React, { memo, useMemo, useState, useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Mic,
   BookOpen,
   Zap,
-  Loader2,
   FolderOpen,
   Settings,
   LayoutTemplate,
 } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
-import { SUPPORT_CONTACT_URL, INTERVIEW_PRICING } from '@/lib/pricing'
+import { HIGH_USAGE_CONTACT_URL, INTERVIEW_PRICING } from '@/lib/pricing'
+import { higherPlan } from '@/lib/plan-utils'
+import { UNIFIED_PRO_PLAN_ID, UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
+import { CheckoutButton } from '@/components/CheckoutButton'
 import { markLogoutToastPending } from '@/components/LogoutToastListener'
 import { ToolSwitcherMenu } from '@/components/ToolSwitcherMenu'
 import { TrialInlineSuffix } from '@/components/TrialCallout'
@@ -202,31 +204,20 @@ function InterviewSidebarImpl({
   forceExpanded,
 }: SidebarProps) {
   const pathname = usePathname()
-  const router = useRouter()
   const { data: session } = useSession()
   const { isCollapsed, showLabel, toggle } = useSidebarState({ controlledIsCollapsed, onToggle, forceExpanded, isMobile })
   const isLoggedIn = !!session?.user
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
-  const [isUpgrading, setIsUpgrading] = useState(false)
 
   // プラン判定
   const planLabel = useMemo(() => {
-    const interviewPlan = String((session?.user as any)?.interviewPlan || '').toUpperCase()
-    const globalPlan = String((session?.user as any)?.plan || '').toUpperCase()
-    const p = interviewPlan || globalPlan || (isLoggedIn ? 'FREE' : 'GUEST')
-    if (p === 'ENTERPRISE') return 'ENTERPRISE'
-    if (p === 'PRO') return 'PRO'
-    if (p === 'LIGHT') return 'LIGHT'
-    if (p === 'FREE') return 'FREE'
-    return isLoggedIn ? 'FREE' : 'GUEST'
+    if (!isLoggedIn) return 'GUEST'
+    return higherPlan((session?.user as any)?.interviewPlan, (session?.user as any)?.plan)
   }, [session, isLoggedIn])
 
   const nextPlanLabel = useMemo(() => {
-    if (planLabel === 'GUEST' || planLabel === 'FREE') return 'LIGHT'
-    if (planLabel === 'LIGHT') return 'PRO'
-    if (planLabel === 'PRO') return 'ENTERPRISE'
-    return 'CONSULT'
+    return planLabel === 'FREE' || planLabel === 'LIGHT' ? 'PRO' : 'CONSULT'
   }, [planLabel])
 
   const confirmLogout = async () => {
@@ -238,30 +229,6 @@ function InterviewSidebarImpl({
     } finally {
       setIsLoggingOut(false)
       setIsLogoutDialogOpen(false)
-    }
-  }
-
-  // Stripe Checkout へ遷移
-  const handleUpgrade = async (planId: string) => {
-    if (!isLoggedIn) {
-      router.push(`/auth/signin?callbackUrl=${encodeURIComponent(pathname || '/interview/projects')}`)
-      return
-    }
-    setIsUpgrading(true)
-    try {
-      const res = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ planId, billingPeriod: 'monthly' }),
-      })
-      const data = await res.json()
-      if (data.url) {
-        window.location.href = data.url
-      }
-    } catch (e) {
-      console.error('Checkout error:')
-    } finally {
-      setIsUpgrading(false)
     }
   }
 
@@ -305,7 +272,7 @@ function InterviewSidebarImpl({
       <div className="mx-3 mb-2">
         {nextPlanLabel === 'CONSULT' ? (
           <a
-            href={SUPPORT_CONTACT_URL}
+            href={HIGH_USAGE_CONTACT_URL}
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition-colors"
@@ -314,25 +281,22 @@ function InterviewSidebarImpl({
               <Zap className="w-3.5 h-3.5 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[11px] font-black text-white">上限UP相談</p>
+              <p className="text-[11px] font-black text-white">利用枠の追加を相談</p>
             </div>
           </a>
         ) : (
-          <button
-            onClick={() => handleUpgrade(nextPlanLabel === 'LIGHT' ? 'interview-light' : nextPlanLabel === 'PRO' ? 'interview-pro' : 'interview-enterprise')}
-            disabled={isUpgrading}
-            className="w-full flex items-center gap-2.5 p-2.5 rounded-xl bg-white/10 border border-white/10 hover:bg-white/15 transition-colors disabled:opacity-60"
+          <CheckoutButton
+            planId={UNIFIED_PRO_PLAN_ID}
+            variant="secondary"
+            className="w-full p-2.5 bg-white/10 border border-white/10 hover:bg-white/15"
           >
-            <div className="w-7 h-7 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
-              {isUpgrading ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" /> : <Zap className="w-3.5 h-3.5 text-white" />}
-            </div>
             <div className="flex-1 min-w-0 text-left">
-              <p className="text-[11px] font-black text-white">{nextPlanLabel}にアップグレード</p>
+              <p className="text-[11px] font-black text-white">PROにアップグレード</p>
               <p className="text-[9px] text-white/50 font-bold">
-                {nextPlanLabel === 'LIGHT' ? <>月額¥2,980<TrialInlineSuffix /></> : nextPlanLabel === 'PRO' ? <>月額¥9,980<TrialInlineSuffix /></> : <>月額¥49,800<TrialInlineSuffix /></>}
+                月額{UNIFIED_PRO_PRICE_LABEL}<TrialInlineSuffix />
               </p>
             </div>
-          </button>
+          </CheckoutButton>
         )}
       </div>
     )

@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation'
 import { Activity, Clock, Zap } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
 import { TrialInlineSuffix } from '@/components/TrialCallout'
+import { higherPlan } from '@/lib/plan-utils'
+import { UNIFIED_PRO_PRICE_LABEL } from '@/lib/unified-plan'
 import { shindanTheme } from '@/components/sidebar/themes'
 import {
   SidebarShell,
@@ -45,11 +47,7 @@ function ShindanSidebarImpl({
 
   const planLabel = (() => {
     if (!isLoggedIn) return 'GUEST'
-    const p = String((session?.user as any)?.shindanPlan || (session?.user as any)?.plan || 'FREE').toUpperCase()
-    if (p === 'ENTERPRISE') return 'ENTERPRISE'
-    if (p === 'PRO' || p === 'BASIC' || p === 'STARTER' || p === 'BUSINESS') return 'PRO'
-    if (p === 'LIGHT') return 'LIGHT'
-    return 'FREE'
+    return higherPlan((session?.user as any)?.shindanPlan, (session?.user as any)?.plan)
   })()
 
   const isActive = (href: string) => {
@@ -97,9 +95,9 @@ function ShindanSidebarImpl({
               </p>
               <p className="text-[10px] text-teal-100 font-bold leading-relaxed opacity-80">
                 {planLabel === 'GUEST' || planLabel === 'FREE'
-                  ? <>LIGHT：¥2,980/月<TrialInlineSuffix />で1日10回</>
+                  ? <>PRO：{UNIFIED_PRO_PRICE_LABEL}/月<TrialInlineSuffix />で1日20回</>
                   : planLabel === 'LIGHT'
-                  ? <>PRO：¥9,980/月<TrialInlineSuffix />で1日20回</>
+                  ? <>PRO：{UNIFIED_PRO_PRICE_LABEL}/月<TrialInlineSuffix />で1日20回</>
                   : planLabel === 'PRO'
                   ? 'ご利用中のプランです'
                   : 'ENTERPRISEプランご利用中'}
@@ -109,7 +107,7 @@ function ShindanSidebarImpl({
                 href="/pricing"
                 className="mt-3 w-full py-2 bg-white text-teal-600 text-[11px] font-black rounded-lg hover:bg-teal-50 transition-colors shadow-md block text-center"
               >
-                {planLabel === 'GUEST' || planLabel === 'FREE' ? 'ライトを始める' : 'PROにアップグレード'}
+                PROプランを見る
               </Link>
               )}
             </div>
@@ -123,7 +121,7 @@ function ShindanSidebarImpl({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[11px] text-white font-bold leading-snug truncate">
-                  {planLabel === 'GUEST' ? 'ゲスト' : planLabel === 'LIGHT' ? 'ライト' : planLabel} → {planLabel === 'GUEST' || planLabel === 'FREE' ? 'LIGHT' : 'PRO'}
+                  {planLabel === 'GUEST' ? 'ゲスト' : planLabel === 'LIGHT' ? 'ライト' : planLabel} → PRO
                 </p>
               </div>
               <span className="flex-shrink-0 px-3 py-1.5 bg-white text-teal-600 text-[10px] font-black rounded-lg hover:bg-teal-50 transition-colors shadow-md whitespace-nowrap">

@@ -28,6 +28,8 @@ import {
 } from 'lucide-react'
 import { AiThinkingStrip } from '@seo/components/AiThinkingStrip'
 import { UiIcon, type UiIconName } from '@/components/icons'
+import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
+import { higherPlan } from '@/lib/plan-utils'
 
 function normalizeUrlInput(raw: string): string | null {
   const s = String(raw || '')
@@ -335,10 +337,7 @@ export default function SeoCreateWizardPage() {
     if (!isLoggedIn) return 'GUEST'
     const seoPlan = (session?.user as any)?.seoPlan
     const plan = (session?.user as any)?.plan
-    const p = String(seoPlan || plan || 'FREE').toUpperCase()
-    if (p === 'ENTERPRISE') return 'ENTERPRISE'
-    if (p === 'PRO') return 'PRO'
-    return 'FREE'
+    return higherPlan(seoPlan, plan)
   }, [session, isLoggedIn])
   
   const charLimit = CHAR_LIMITS[userPlan] || 10000
@@ -357,7 +356,6 @@ export default function SeoCreateWizardPage() {
   const [error, setError] = useState<string | null>(null)
   const [errorCta, setErrorCta] = useState<null | { label: string; href: string }>(null)
   const [showHelp, setShowHelp] = useState(false)
-  const [showUpgradePopup, setShowUpgradePopup] = useState(false)
 
   // プレビュー用の計算
   const preview = useMemo(() => {
@@ -933,7 +931,7 @@ export default function SeoCreateWizardPage() {
                     <label className="block text-xs font-black text-gray-500 uppercase tracking-widest mb-3">
                       文字数目安
                       <span className="ml-2 text-[10px] font-bold text-gray-400 normal-case">
-                        ({userPlan === 'GUEST' ? 'ゲスト' : userPlan === 'FREE' ? '無料' : userPlan === 'PRO' ? 'プロ' : 'プロ'}プラン: 最大{charLimit.toLocaleString()}字)
+                        ({userPlan === 'GUEST' ? 'ゲスト' : userPlan === 'FREE' ? '無料' : userPlan === 'LIGHT' ? 'ライト' : userPlan === 'PRO' ? 'プロ' : 'Enterprise'}プラン: 最大{charLimit.toLocaleString()}字)
                       </span>
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -952,13 +950,13 @@ export default function SeoCreateWizardPage() {
                                   : 'GUEST'
                         const requiredLabel =
                           requiredPlan === 'ENTERPRISE'
-                            ? 'Enterpriseが必要'
+                            ? '個別相談が必要'
                             : requiredPlan === 'PRO'
                               ? 'PROが必要'
                               : requiredPlan === 'FREE'
                                 ? 'ログインが必要'
                                 : 'ゲストOK'
-                        const hint = locked ? `${requiredLabel}（クリックでアップグレード）` : `${preset.value.toLocaleString()}字を選択`
+                        const hint = locked ? `${requiredLabel}（クリックで利用条件を確認）` : `${preset.value.toLocaleString()}字を選択`
 
                         return (
                           <button
@@ -966,7 +964,11 @@ export default function SeoCreateWizardPage() {
                             type="button"
                             onClick={() => {
                               if (locked) {
-                                window.location.href = isLoggedIn ? '/seo/dashboard/plan' : '/seo/pricing'
+                                if (requiredPlan === 'ENTERPRISE') {
+                                  window.open(HIGH_USAGE_CONTACT_URL, '_blank', 'noopener,noreferrer')
+                                } else {
+                                  window.location.href = '/seo/pricing'
+                                }
                                 return
                               }
                               setTargetChars(preset.value)
@@ -985,7 +987,7 @@ export default function SeoCreateWizardPage() {
                                 <div className="absolute inset-0 bg-white/35" />
                                 <div className="absolute right-2 top-2 inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-900/85 text-white text-[9px] font-black shadow">
                                   <Lock className="w-3 h-3" />
-                                  {requiredPlan === 'ENTERPRISE' ? 'Enterprise' : requiredPlan === 'PRO' ? 'PRO' : requiredPlan === 'FREE' ? 'LOGIN' : 'GUEST'}
+                                  {requiredPlan === 'ENTERPRISE' ? '相談' : requiredPlan === 'PRO' ? 'PRO' : requiredPlan === 'FREE' ? 'LOGIN' : 'GUEST'}
                                 </div>
                               </div>
                             )}
@@ -1003,15 +1005,15 @@ export default function SeoCreateWizardPage() {
                       })}
                       {/* プランアップグレード誘導 */}
                       {userPlan !== 'ENTERPRISE' && (
-                        <Link href="/seo/pricing" className="block">
+                        <a href={userPlan === 'PRO' ? HIGH_USAGE_CONTACT_URL : '/seo/pricing'} target={userPlan === 'PRO' ? '_blank' : undefined} rel={userPlan === 'PRO' ? 'noopener noreferrer' : undefined} className="block">
                           <div className="p-3 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50/50 text-center hover:border-blue-300 hover:bg-blue-50/30 transition-all cursor-pointer">
                             <div className="flex items-center justify-center gap-1 text-sm font-black text-gray-400">
                               <Lock className="w-3.5 h-3.5" />
                               <span>もっと長く</span>
                             </div>
-                            <p className="text-[10px] text-gray-400 mt-0.5">プランをアップグレード</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{userPlan === 'PRO' ? '利用について相談する' : 'プランを確認する'}</p>
                           </div>
-                        </Link>
+                        </a>
                       )}
                     </div>
                   </div>
@@ -1334,110 +1336,6 @@ export default function SeoCreateWizardPage() {
         )}
       </AnimatePresence>
 
-      {/* アップグレード提案ポップアップ（429:プラン制限時） */}
-      <AnimatePresence>
-        {showUpgradePopup && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[300] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
-            onClick={() => setShowUpgradePopup(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0, y: 20 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-              className="relative bg-gradient-to-br from-white to-blue-50 rounded-3xl p-8 max-w-lg w-full shadow-2xl border border-blue-100"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                type="button"
-                onClick={() => setShowUpgradePopup(false)}
-                className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-              
-              <div className="text-center">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ delay: 0.15, type: 'spring', damping: 15 }}
-                  className="w-20 h-20 rounded-3xl bg-gradient-to-br from-amber-400 to-orange-500 text-white mx-auto mb-6 flex items-center justify-center shadow-lg shadow-orange-200"
-                >
-                  <Lock className="w-10 h-10" />
-                </motion.div>
-                
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.25 }}
-                >
-                  <h3 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">
-                    今月の生成上限に達しました
-                  </h3>
-                  <p className="text-slate-600 font-bold">
-                    {userPlan === 'GUEST' || userPlan === 'FREE'
-                      ? 'LIGHTプラン以上にアップグレードすると、月最大30記事まで生成できます！'
-                      : 'Enterpriseプランにアップグレードすると、月最大200記事まで生成できます！'}
-                  </p>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.35 }}
-                  className="mt-6 bg-white rounded-2xl p-5 border border-slate-100 text-left"
-                >
-                  <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">
-                    アップグレードで解放される機能
-                  </p>
-                  <div className="space-y-2.5 text-sm font-bold text-gray-700">
-                    {userPlan === 'GUEST' || userPlan === 'FREE' ? (
-                      <>
-                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>月30記事まで生成可能（PROプラン）</span></div>
-                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>図解/バナー自動生成</span></div>
-                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>SEO改善提案のAI自動修正</span></div>
-                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>20,000字まで生成可能</span></div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>月200記事まで生成可能（Enterprise）</span></div>
-                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>優先サポート対応</span></div>
-                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>チーム利用・複数アカウント対応</span></div>
-                        <div className="flex items-start gap-2"><CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 flex-shrink-0" /><span>API連携・カスタム開発相談</span></div>
-                      </>
-                    )}
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 }}
-                  className="mt-6 grid gap-3"
-                >
-                  <Link href="/seo/pricing">
-                    <button type="button" className="w-full h-14 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-base hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
-                      <Zap className="w-5 h-5" />
-                      {userPlan === 'GUEST' || userPlan === 'FREE' ? 'PROプランを見る →' : 'Enterpriseプランを見る →'}
-                    </button>
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => setShowUpgradePopup(false)}
-                    className="w-full h-12 rounded-2xl bg-white border border-slate-200 text-slate-700 font-black text-sm hover:bg-slate-50 transition-colors"
-                  >
-                    閉じる
-                  </button>
-                </motion.div>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </main>
   )
 }
