@@ -826,11 +826,27 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
   const SceneImageSlot = ({ sceneKey, className = '' }: { sceneKey: string; className?: string }) => {
     const img = sceneImages[sceneKey]
     const isLoading = sceneLoading[sceneKey]
+    let scenePrompt = scenePrompts.current[sceneKey] || null
+    if (!scenePrompt && img && generatedData) {
+      try { scenePrompt = includedPersonaImages(generatedData).find(slot => slot.kind === 'scene' && slot.key === sceneKey)?.prompt || null }
+      catch { /* Older saved data can show an image without a regenerable prompt. */ }
+    }
 
     if (img) {
       return (
-        <div className={`rounded-lg overflow-hidden shadow-md ${className}`}>
+        <div className={`relative rounded-lg overflow-hidden shadow-md ${className}`}>
           <img src={img} alt="" className="w-full h-full object-cover object-center" />
+          {sceneErrors[sceneKey] && (
+            <p role="alert" className="absolute inset-x-2 top-2 max-h-[50%] overflow-y-auto rounded bg-red-50 p-2 text-xs text-red-700 shadow export-hide">
+              {sceneErrors[sceneKey]}
+            </p>
+          )}
+          {scenePrompt && (
+            <button type="button" onClick={() => void handleGenerateScene(scenePrompt, sceneKey)} disabled={isLoading}
+              className="absolute bottom-2 right-2 rounded bg-white/95 px-2 py-1 text-xs font-bold text-purple-800 shadow disabled:opacity-60 export-hide">
+              {isLoading ? '再生成中...' : '再生成（追加枠1枚）'}
+            </button>
+          )}
         </div>
       )
     }
@@ -1253,15 +1269,22 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
                             </div>
                           )}
                         </div>
-                        <div className="mt-2 export-hide">
+                        <div className="mt-2 flex flex-wrap justify-center gap-1 export-hide">
                           {portraitImage ? (
-                            <button
-                              onClick={() => downloadImage(portraitImage, `persona-${persona.name}.png`)}
-                              className="px-2 py-1 rounded bg-purple-600 text-white text-[10px] font-bold hover:bg-purple-500 inline-flex items-center gap-1"
-                            >
-                              <Download className="w-2.5 h-2.5" />
-                              保存
-                            </button>
+                            <>
+                              <button
+                                onClick={() => downloadImage(portraitImage, `persona-${persona.name}.png`)}
+                                className="px-2 py-1 rounded bg-purple-600 text-white text-[10px] font-bold hover:bg-purple-500 inline-flex items-center gap-1"
+                              >
+                                <Download className="w-2.5 h-2.5" />
+                                保存
+                              </button>
+                              <button type="button" onClick={handleGeneratePortrait} disabled={portraitLoading}
+                                aria-label="ポートレートを再生成します。追加画像枠を1枚使用します"
+                                className="rounded border border-purple-300 px-2 py-1 text-[10px] font-bold text-purple-700 disabled:opacity-60">
+                                {portraitLoading ? '再生成中...' : '再生成（1枚）'}
+                              </button>
+                            </>
                           ) : !portraitLoading ? (
                             <button
                               onClick={handleGeneratePortrait}
