@@ -83,4 +83,47 @@ const response = { NextResponse: Response }
       return true
     })
   })
+
+  await check('movie render failure stores a safe message', async () => {
+    let stored
+    const render = load('src/lib/movie/render.ts', {
+      '@/lib/prisma': { prisma: { movieRenderJob: { update: async (args) => { stored = args.data; return args.data } } } },
+      './storage': {},
+      './kling': {},
+    })
+    await render.failRenderJob('job-1', secret)
+    assert.equal(stored.status, 'failed')
+    assert(!JSON.stringify(stored).includes(secret))
+  })
+
+  await check('movie render status hides previously stored failure details', async () => {
+    const route = load('src/app/api/movie/render/[jobId]/route.ts', {
+      'next/server': response,
+      'next-auth': { getServerSession: async () => ({ user: { email: 'test@example.com' } }) },
+      '@/lib/auth': { authOptions: {} },
+      '@/lib/prisma': { prisma: {
+        user: { findUnique: async () => ({ id: 'user-1' }) },
+        movieProject: { findUnique: async () => ({ userId: 'user-1', guestId: null }) },
+      } },
+      '@/lib/movie/render': { getRenderJob: async () => ({ id: 'job-1', projectId: 'project-1', status: 'failed', error: secret, createdAt: new Date() }) },
+      '@/lib/movie/access': { getGuestIdFromRequest: () => null },
+      '@/lib/retired-service': { SERVICE_RETIRED: false },
+    })
+    const result = await route.GET({}, { params: Promise.resolve({ jobId: 'job-1' }) })
+    assert.equal(result.status, 200)
+    assert(!JSON.stringify(await result.json()).includes(secret))
+  })
+
+  await check('shodan detail hides previously stored provider failure details', async () => {
+    const route = load('src/app/api/shodan/preparations/[id]/route.ts', {
+      'next/server': response,
+      '@/lib/prisma': { prisma: { shodanPreparation: { findFirst: async () => ({ id: 'prep-1', organizationId: 'org-1', status: 'failed', errorMessage: secret, slideImages: [] }) } } },
+      '@/lib/shodan/access': { getShodanContext: async () => ({ organizationId: 'org-1' }), orgSlugFrom: () => 'org' },
+      '@/lib/shodan/types': { effectivePrepStatus: () => 'failed' },
+      '@/lib/shodan/storage': { signedUrl: async () => '' },
+    })
+    const result = await route.GET({}, { params: Promise.resolve({ id: 'prep-1' }) })
+    assert.equal(result.status, 200)
+    assert(!JSON.stringify(await result.json()).includes(secret))
+  })
 })().catch((error) => { console.error(error); process.exitCode = 1 })

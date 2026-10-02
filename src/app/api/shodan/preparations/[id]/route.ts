@@ -28,7 +28,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   if (item.status === 'processing' && effectivePrepStatus(item.status, item.updatedAt) === 'failed') {
     item = await prisma.shodanPreparation.update({
       where: { id: item.id },
-      data: { status: 'failed', errorMessage: item.errorMessage || '生成がタイムアウトしました。再度お試しください。' },
+      data: { status: 'failed', errorMessage: '生成がタイムアウトしました。再度お試しください。' },
     })
   }
   // 提案スライド画像は非公開保存のため、表示用に署名URLへ変換して返す
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
   const slideImages = stored.length
     ? await Promise.all(stored.map(async (s) => ({ title: s.title, role: s.role, imageUrl: await signedUrl(s.imagePath) })))
     : item.slideImages
-  return NextResponse.json({ item: { ...item, slideImages } }, { headers: { 'Cache-Control': 'no-store' } })
+  return NextResponse.json({ item: { ...item, errorMessage: item.errorMessage ? '処理に失敗しました。再度お試しください。' : null, slideImages } }, { headers: { 'Cache-Control': 'no-store' } })
 }
 
 // DELETE /api/shodan/preparations/[id]

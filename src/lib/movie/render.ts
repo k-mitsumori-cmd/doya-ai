@@ -30,10 +30,10 @@ export async function updateRenderProgress(jobId: string, progress: number) {
   })
 }
 
-export async function failRenderJob(jobId: string, error: string) {
+export async function failRenderJob(jobId: string) {
   return prisma.movieRenderJob.update({
     where: { id: jobId },
-    data: { status: 'failed', error, progress: 0 },
+    data: { status: 'failed', error: '動画の生成に失敗しました。時間をおいて再度お試しください。', progress: 0 },
   })
 }
 
@@ -123,7 +123,7 @@ export async function renderVideo(
     return outputUrl
   } catch (error) {
     console.error('[renderVideo] Fatal error:')
-    await failRenderJob(jobId, String(error)).catch((e) =>
+    await failRenderJob(jobId).catch(() =>
       console.error('[renderVideo] failRenderJob also failed:')
     )
     throw error

@@ -9,5 +9,6 @@ function fixture(mode='normal'){
  for(const mode of ['ai-error','empty-body','empty-slides','blank-title','db-error'])await check(mode+' preserves existing complete document',async()=>{const f=fixture(mode);assert.equal((await f.run()).status,500);assert.equal(f.row.proposalMarkdown,'old');assert.equal(f.row.slideImages[0].imagePath,'old');assert.equal(f.row.status,'done');assert.equal(f.usage,0)});
  for(const mode of ['newer-success','transferred'])await check(mode+' rejects old generation',async()=>{const f=fixture(mode);assert.equal((await f.run()).status,409);assert.equal(f.usage,0);assert.equal(f.row.slideImages[0].imagePath,'old')});
  await check('late failure does not mark newer result as failed',async()=>{const f=fixture('newer-failure');assert.equal((await f.run()).status,500);assert.equal(f.row.proposalMarkdown,'another writer');assert.equal(f.row.errorMessage,null)});
+ await check('provider failure details are not saved with the proposal',async()=>{const f=fixture('ai-error');assert.equal((await f.run()).status,500);assert(!String(f.row.errorMessage).includes('synthetic provider failure'))});
  console.log(JSON.stringify({passed:results.length,results},null,2));
 })().catch(e=>{console.error(e);process.exitCode=1});

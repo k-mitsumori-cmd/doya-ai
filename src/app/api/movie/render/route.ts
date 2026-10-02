@@ -132,9 +132,9 @@ export async function POST(req: NextRequest) {
     }
 
     // バックグラウンド実行（awaitしない）
-    renderVideo(job.id, config, userId ?? guestId ?? 'guest').catch(async (err) => {
+    renderVideo(job.id, config, userId ?? guestId ?? 'guest').catch(async () => {
       console.error('[renderVideo]')
-      await failRenderJob(job.id, String(err))
+      await failRenderJob(job.id)
       await prisma.movieProject.update({ where: { id: projectId }, data: { status: 'failed' } })
     })
 

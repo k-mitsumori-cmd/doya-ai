@@ -153,11 +153,11 @@ export async function POST(req: NextRequest) {
       data: { research: research as any, targetName: research.companyName || null, status: 'researched' },
     })
     return NextResponse.json({ id: prep.id, status: 'researched', research })
-  } catch (e: any) {
+  } catch {
     console.error('[shodan/preparations] research failed')
     await prisma.shodanPreparation.update({
       where: { id: prep.id },
-      data: { status: 'failed', errorMessage: (e?.message || '調査に失敗しました').slice(0, 500) },
+      data: { status: 'failed', errorMessage: '企業調査に失敗しました。URLを確認して再実行してください。' },
     }).catch(() => {})
     return NextResponse.json({ id: prep.id, status: 'failed', error: '企業調査に失敗しました。URLを確認して再実行してください。' }, { status: 500 })
   }

@@ -73,12 +73,12 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     })
 
     return NextResponse.json({ id: prep.id, status: 'done' })
-  } catch (e: any) {
+  } catch {
     console.error('[shodan/generate] failed')
     // 開始時から未変更の資料だけに失敗を記録。既存の本文・画像・状態は保持する。
     await prisma.shodanPreparation.updateMany({
       where: { id: prep.id, organizationId: sctx.organizationId, updatedAt: prep.updatedAt },
-      data: { errorMessage: (e?.message || '提案生成に失敗しました').slice(0, 500) },
+      data: { errorMessage: '提案資料の生成に失敗しました。再生成をお試しください。' },
     }).catch(() => {})
     return NextResponse.json({ id: prep.id, error: '提案資料の生成に失敗しました。再生成をお試しください。' }, { status: 500 })
   }

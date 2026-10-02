@@ -52,7 +52,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ jobI
       progress: job.progress,
       outputUrl: job.outputUrl,
       format: job.format,
-      error: job.error,
+      error: job.error ? '動画の生成に失敗しました。時間をおいて再度お試しください。' : null,
       startedAt: job.startedAt?.toISOString() ?? null,
       completedAt: job.completedAt?.toISOString() ?? null,
       createdAt: job.createdAt.toISOString(),
