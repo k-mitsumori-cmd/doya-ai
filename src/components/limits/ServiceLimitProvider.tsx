@@ -61,6 +61,8 @@ export default function ServiceLimitProvider() {
     ? 'この組織の利用枠に達しました。組織の契約者に利用枠の確認を依頼してください。'
     : limit.service === 'promane'
       ? 'ワークスペースの利用枠に達しました。ワークスペースの契約者に利用枠の確認を依頼してください。'
+      : ['quote', 'mensetsu', 'aishodan'].includes(limit.service)
+        ? 'この組織の利用枠に達しました。組織の契約者に利用枠の確認を依頼してください。'
       : 'このサービスの契約者の利用枠に達しました。招待元の担当者に利用枠の確認を依頼してください。'
   const sfaOrg = limit.service === 'sfa' ? window.location.pathname.match(/^\/sfa\/([^/]+)/)?.[1] : undefined
   const pricingHref = sfaOrg ? `/sfa/pricing?org=${sfaOrg}` : limit.pricingHref

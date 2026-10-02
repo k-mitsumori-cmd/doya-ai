@@ -85,6 +85,7 @@ export async function POST(req: NextRequest) {
   const quotaResponse = (checked: Awaited<ReturnType<typeof checkQuota>>) => NextResponse.json({
     error: canManageBilling ? checked.reason : `この組織の利用上限（${checked.limit}件）に達しました。利用枠の変更は組織の契約者にご相談ください。`,
     code: 'LIMIT_REACHED',
+    canManageBilling,
     ...(canManageBilling && checked.limit === FREE_LIMITS.aishodanProducts ? { upgradeUrl: '/aishodan/pricing' } : {}),
   }, { status: 402 })
   const quota = await checkQuota()

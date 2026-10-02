@@ -27,6 +27,8 @@ export function classifyServiceLimit(path: string, status: number, data: unknown
   if (!feature && !quota && typeof body.upgradePath !== 'string') return null
   const kind = service === 'promane' && ['LIMIT', 'PROMANE_MEMBER_LIMIT_REACHED'].includes(code) && body.canManageBilling === false
     ? 'owner'
+    : ['quote', 'mensetsu', 'aishodan'].includes(service) && code === 'LIMIT_REACHED' && body.canManageBilling === false
+    ? 'owner'
     : service === 'aio' && code === 'LIMIT' && body.canManageBilling === false
     ? 'owner'
     : service === 'kintai' && code === 'KINTAI_EMPLOYEE_LIMIT' && body.canManageBilling === false

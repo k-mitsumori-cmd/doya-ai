@@ -100,11 +100,14 @@ async function main() {
     assert.equal(quotaOwner, 'owner')
     const memberBody = await memberResponse.json()
     assert.equal(memberBody.upgradeUrl, undefined)
+    assert.equal(memberBody.canManageBilling, false)
     assert.match(memberBody.error, /組織の契約者/)
     actorRole = 'owner'
     const ownerResponse = await route.POST(req())
     assert.equal(ownerResponse.status, 402)
-    assert.equal((await ownerResponse.json()).upgradeUrl, `/${service}/pricing`)
+    const ownerBody = await ownerResponse.json()
+    assert.equal(ownerBody.upgradeUrl, `/${service}/pricing`)
+    assert.equal(ownerBody.canManageBilling, true)
     ownerLookupFails = true
     const failed = await route.POST(req())
     assert.equal(failed.status, 503)
