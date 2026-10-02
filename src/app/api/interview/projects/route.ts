@@ -184,24 +184,6 @@ export async function POST(req: NextRequest) {
       guestId = ensureGuestId()
     }
 
-    // 日次の生成枠は記事保存時に消費する。プロジェクト作成は枠に含めない。
-    if (!userId) {
-      const limit = interviewGuestTotalLimit()
-      const used = await prisma.interviewProject.count({ where: { guestId: guestId! } })
-      if (used >= limit) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'ゲスト利用の上限に達しました。ログインすると追加利用できます。',
-            code: 'GUEST_LIMIT',
-            actionUrl: '/auth/signin?callbackUrl=/interview',
-            actionLabel: 'ログインはこちら',
-          },
-          { status: 429 }
-        )
-      }
-    }
-
     const body = await req.json()
     const {
       title,
@@ -261,8 +243,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const project = await prisma.interviewProject.create({
-      data: {
+    const projectData = {
         userId: userId || null,
         guestId: userId ? null : guestId,
         title: title.trim().slice(0, 200),
@@ -277,8 +258,46 @@ export async function POST(req: NextRequest) {
         targetAudience: targetAudience ? String(targetAudience).slice(0, 200) : null,
         tone: tone || 'friendly',
         mediaType: mediaType || null,
-      },
-    })
+    } satisfies Prisma.InterviewProjectUncheckedCreateInput
+
+    // 日次の記事生成枠は記事保存時に消費する。ゲストの累計件数は
+    // 同じゲストIDからの同時作成でも超過しないよう、確認と作成を直列化する。
+    const project = userId
+      ? await prisma.interviewProject.create({ data: projectData })
+      : await prisma.$transaction(async (tx) => {
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-guest-project'), hashtext(${guestId!}))`
+          const key = `interview-guest-project:v1:${guestId!}`
+          const [currentProjects, ledger] = await Promise.all([
+            tx.interviewProject.count({ where: { guestId: guestId! } }),
+            tx.systemSetting.findUnique({ where: { key }, select: { value: true } }),
+          ])
+          const historicalProjects = ledger ? Number(ledger.value) : 0
+          if (!Number.isSafeInteger(historicalProjects) || historicalProjects < 0) {
+            throw new Error('Invalid interview guest project ledger')
+          }
+          const used = Math.max(currentProjects, historicalProjects)
+          if (used >= interviewGuestTotalLimit()) return null
+          const created = await tx.interviewProject.create({ data: projectData })
+          await tx.systemSetting.upsert({
+            where: { key },
+            create: { key, value: String(used + 1) },
+            update: { value: String(used + 1) },
+          })
+          return created
+        })
+
+    if (!project) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'ゲスト利用の上限に達しました。ログインすると追加利用できます。',
+          code: 'GUEST_LIMIT',
+          actionUrl: '/auth/signin?callbackUrl=/interview',
+          actionLabel: 'ログインはこちら',
+        },
+        { status: 429 }
+      )
+    }
 
     const res = NextResponse.json({
       success: true,

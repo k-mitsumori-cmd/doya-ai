@@ -33,12 +33,46 @@ const route = load('src/app/api/interview/materials/upload-url/route.ts', {
 const post = (fileSize) => route.POST({ json: async () => ({ projectId: 'p1', fileName: 'audio.wav', mimeType: 'audio/wav', fileSize }) })
 const preflight = (fileSize) => route.POST({ json: async () => ({ preflight: true, fileName: 'audio.wav', mimeType: 'audio/wav', fileSize }) })
 let guestProjectWrites = 0
+let guestProjectUsed = 3
+let guestProjectLockCalls = 0
+let guestProjectLedger = null
+let guestProjectLedgerWrites = 0
+let guestProjectQueue = Promise.resolve()
+const projectTx = {
+  $executeRaw: async (parts, id) => {
+    assert.match(parts.join('?'), /pg_advisory_xact_lock\(hashtext\('interview-guest-project'\), hashtext\(\?\)\)/)
+    assert.equal(id, 'guest1')
+    guestProjectLockCalls++
+  },
+  interviewProject: {
+    count: async () => guestProjectUsed,
+    create: async () => {
+      guestProjectWrites++
+      guestProjectUsed++
+      return { id: `project-${guestProjectWrites}`, title: 'new interview', status: 'DRAFT', createdAt: new Date() }
+    },
+  },
+  systemSetting: {
+    findUnique: async () => guestProjectLedger === null ? null : { value: String(guestProjectLedger) },
+    upsert: async ({ create, update }) => {
+      assert.equal(create.key, 'interview-guest-project:v1:guest1')
+      assert.equal(create.value, update.value)
+      guestProjectLedger = Number(create.value)
+      guestProjectLedgerWrites++
+    },
+  },
+}
 const projects = load('src/app/api/interview/projects/route.ts', {
   'next/server': { NextResponse: Response },
-  '@/lib/prisma': { prisma: { interviewProject: {
-    count: async () => 3,
-    create: async () => { guestProjectWrites++; return { id: 'unexpected' } },
-  } } },
+  '@/lib/prisma': { prisma: {
+    $transaction: async (work) => {
+      const previous = guestProjectQueue
+      let release
+      guestProjectQueue = new Promise((resolve) => { release = resolve })
+      await previous
+      try { return await work(projectTx) } finally { release() }
+    },
+  } },
   '@/lib/interview/thumbnail-storage': { thumbnailUrlForClient: () => null },
   '@/lib/interview/access': {
     getInterviewUser: async () => ({ userId: null, plan: 'GUEST' }),
@@ -54,6 +88,23 @@ const projects = load('src/app/api/interview/projects/route.ts', {
   assert.equal(body.code, 'GUEST_LIMIT')
   assert.equal(body.actionUrl, '/auth/signin?callbackUrl=/interview')
   assert.equal(guestProjectWrites, 0)
+
+  guestProjectUsed = 2
+  const concurrent = await Promise.all([
+    projects.POST({ json: async () => ({ title: 'new interview' }) }),
+    projects.POST({ json: async () => ({ title: 'new interview' }) }),
+  ])
+  assert.deepEqual(concurrent.map((result) => result.status).sort(), [200, 429])
+  assert.equal(guestProjectWrites, 1)
+  assert.equal(guestProjectUsed, 3)
+  assert.equal(guestProjectLockCalls, 3)
+  assert.equal(guestProjectLedger, 3)
+  assert.equal(guestProjectLedgerWrites, 1)
+
+  guestProjectUsed = 0 // 以前作ったプロジェクトを削除した後も、累計枠は戻らない。
+  response = await projects.POST({ json: async () => ({ title: 'new interview' }) })
+  assert.equal(response.status, 429)
+  assert.equal(guestProjectWrites, 1)
 
   plan = 'GUEST'
   response = await preflight(150 * mb)
