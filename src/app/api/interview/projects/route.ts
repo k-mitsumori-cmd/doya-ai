@@ -190,7 +190,13 @@ export async function POST(req: NextRequest) {
       const used = await prisma.interviewProject.count({ where: { guestId: guestId! } })
       if (used >= limit) {
         return NextResponse.json(
-          { success: false, error: 'ゲスト利用の上限に達しました。ログインすると追加利用できます。', code: 'GUEST_LIMIT' },
+          {
+            success: false,
+            error: 'ゲスト利用の上限に達しました。ログインすると追加利用できます。',
+            code: 'GUEST_LIMIT',
+            actionUrl: '/auth/signin?callbackUrl=/interview',
+            actionLabel: 'ログインはこちら',
+          },
           { status: 429 }
         )
       }

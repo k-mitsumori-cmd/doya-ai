@@ -192,7 +192,7 @@ export default function InterviewTool() {
       })
       const projectData = await projectRes.json()
       if (!projectData.success) {
-        throw new Error(projectData.error || 'プロジェクト作成失敗')
+        rejectUploadPreparation(projectData)
       }
 
       const projectId = projectData.project.id

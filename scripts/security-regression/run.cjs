@@ -345,6 +345,11 @@ if (interviewUploadConfirm.error || interviewUploadConfirm.status !== 0) {
   console.error('Security regression failed: verify-interview-upload-confirm.cjs');
   process.exit(1);
 }
+const interviewUploadLimitActions = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-upload-limit-actions.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewUploadLimitActions.error || interviewUploadLimitActions.status !== 0) {
+  console.error('Security regression failed: verify-interview-upload-limit-actions.cjs');
+  process.exit(1);
+}
 const interviewArticleLimit = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-article-limit.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewArticleLimit.error || interviewArticleLimit.status !== 0) {
   console.error('Security regression failed: verify-interview-article-limit.cjs');

@@ -32,12 +32,33 @@ const route = load('src/app/api/interview/materials/upload-url/route.ts', {
 })
 const post = (fileSize) => route.POST({ json: async () => ({ projectId: 'p1', fileName: 'audio.wav', mimeType: 'audio/wav', fileSize }) })
 const preflight = (fileSize) => route.POST({ json: async () => ({ preflight: true, fileName: 'audio.wav', mimeType: 'audio/wav', fileSize }) })
+let guestProjectWrites = 0
+const projects = load('src/app/api/interview/projects/route.ts', {
+  'next/server': { NextResponse: Response },
+  '@/lib/prisma': { prisma: { interviewProject: {
+    count: async () => 3,
+    create: async () => { guestProjectWrites++; return { id: 'unexpected' } },
+  } } },
+  '@/lib/interview/thumbnail-storage': { thumbnailUrlForClient: () => null },
+  '@/lib/interview/access': {
+    getInterviewUser: async () => ({ userId: null, plan: 'GUEST' }),
+    getGuestIdFromRequest: () => 'guest1', ensureGuestId: () => 'guest1', setGuestCookie: () => {},
+    interviewGuestTotalLimit: () => 3, requireDatabase: () => null,
+  },
+})
 
 ;(async () => {
-  plan = 'GUEST'
-  let response = await preflight(150 * mb)
-  assert.equal(response.status, 400)
+  let response = await projects.POST({ json: async () => ({ title: 'new interview' }) })
+  assert.equal(response.status, 429)
   let body = await response.json()
+  assert.equal(body.code, 'GUEST_LIMIT')
+  assert.equal(body.actionUrl, '/auth/signin?callbackUrl=/interview')
+  assert.equal(guestProjectWrites, 0)
+
+  plan = 'GUEST'
+  response = await preflight(150 * mb)
+  assert.equal(response.status, 400)
+  body = await response.json()
   assert.equal(body.code, 'GUEST_UPLOAD_LIMIT')
   assert.equal(body.actionUrl, '/auth/signin?callbackUrl=/interview')
   assert.equal(projectLookups, 0)
