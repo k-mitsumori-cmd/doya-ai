@@ -7,7 +7,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { sendEmail } from '@/lib/email'
-import crypto from 'crypto'
+import { issuePromaneInvitation } from '@/lib/promane/invite-admission'
 
 /**
  * POST /api/promane/invite
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}))
     const { workspaceId, email, role = 'member' } = body || {}
 
-    if (!workspaceId || !email) {
+    if (typeof workspaceId !== 'string' || !workspaceId || typeof email !== 'string' || !email) {
       return NextResponse.json({ error: 'workspaceId と email は必須です' }, { status: 400 })
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -35,76 +35,37 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'role が不正です' }, { status: 400 })
     }
 
-    // 自分が workspace owner/admin か確認
-    const myMember = await prisma.promaneMember.findUnique({
-      where: { workspaceId_userId: { workspaceId, userId } },
+    const issued = await issuePromaneInvitation({
+      workspaceId,
+      userId,
+      email: email.toLowerCase(),
+      role,
     })
-    if (!myMember || !['owner', 'admin'].includes(myMember.role)) {
-      return NextResponse.json({ error: '招待権限がありません（owner/admin のみ）' }, { status: 403 })
+    if (!issued.success) {
+      const { status, ...response } = issued.response
+      return NextResponse.json(response, { status })
     }
-
-    // 既存メンバーは招待不要
-    const existingMember = await prisma.promaneMember.findFirst({
-      where: { workspaceId, user: { email } },
-    })
-    if (existingMember) {
-      return NextResponse.json({ error: '既にメンバーです' }, { status: 409 })
-    }
-
-    // 既存の未承諾招待を確認（重複防止）
-    const existingInvite = await prisma.promaneInvitation.findFirst({
-      where: {
-        workspaceId,
-        email: email.toLowerCase(),
-        acceptedAt: null,
-        expiresAt: { gt: new Date() },
-      },
-    })
-    if (existingInvite) {
-      const inviteUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://doya-ai.surisuta.jp'}/promane/invite/${existingInvite.token}`
-      return NextResponse.json({ success: true, token: existingInvite.token, inviteUrl, reused: true })
-    }
-
-    // ワークスペース名・招待者名を取得（メール内で使用）
-    const [workspace, inviter] = await Promise.all([
-      prisma.promaneWorkspace.findUnique({ where: { id: workspaceId }, select: { name: true } }),
-      prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } }),
-    ])
-    if (!workspace) {
-      return NextResponse.json({ error: 'ワークスペースが見つかりません' }, { status: 404 })
-    }
-
-    // 新規招待作成（30日有効）
-    const token = crypto.randomBytes(32).toString('hex')
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-
-    const invitation = await prisma.promaneInvitation.create({
-      data: {
-        workspaceId,
-        email: email.toLowerCase(),
-        role,
-        token,
-        invitedById: userId,
-        expiresAt,
-      },
-    })
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://doya-ai.surisuta.jp'
-    const inviteUrl = `${baseUrl}/promane/invite/${token}`
+    const inviteUrl = `${baseUrl}/promane/invite/${issued.invitation.token}`
+    if (issued.reused) {
+      return NextResponse.json({ success: true, token: issued.invitation.token, inviteUrl, reused: true })
+    }
 
     // 招待メール送信（Resend）
+    const inviter = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } })
     const roleLabel = role === 'admin' ? '管理者' : role === 'guest' ? 'ゲスト' : 'メンバー'
     const inviterName = inviter?.name || inviter?.email || '招待者'
     const emailResult = await sendEmail({
       to: email,
-      subject: `【ドヤプロマネ】${workspace.name} へ招待されました`,
+      subject: `【ドヤプロマネ】${issued.workspaceName} へ招待されました`,
       html: buildInviteEmailHtml({
-        workspaceName: workspace.name,
+        workspaceName: issued.workspaceName,
         inviterName,
         inviterEmail: inviter?.email || '',
         roleLabel,
         inviteUrl,
-        expiresAt,
+        expiresAt: issued.invitation.expiresAt,
       }),
       tags: [
         { name: 'service', value: 'promane' },
@@ -114,9 +75,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      token: invitation.token,
+      token: issued.invitation.token,
       inviteUrl,
-      expiresAt: invitation.expiresAt,
+      expiresAt: issued.invitation.expiresAt,
       emailSent: emailResult.success,
       emailError: emailResult.success ? undefined : emailResult.error,
     })

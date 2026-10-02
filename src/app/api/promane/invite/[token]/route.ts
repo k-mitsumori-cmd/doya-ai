@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { acceptPromaneInvitation } from '@/lib/promane/invite-admission'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -73,71 +74,16 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const p = await ctx.params
     const { token } = p
-
-    const invitation = await prisma.promaneInvitation.findUnique({
-      where: { token },
-      include: { workspace: { select: { id: true, slug: true } } },
-    })
-    if (!invitation) {
-      return NextResponse.json({ error: '招待リンクが見つかりません' }, { status: 404 })
-    }
-    if (invitation.acceptedAt) {
-      return NextResponse.json({ error: '既に承諾済みです' }, { status: 410 })
-    }
-    if (invitation.expiresAt < new Date()) {
-      return NextResponse.json({ error: '有効期限が切れています' }, { status: 410 })
+    if (!token || token.length > 128) {
+      return NextResponse.json({ error: '招待リンクが正しくありません' }, { status: 400 })
     }
 
-    // セキュリティ: 招待リンクが漏洩した場合の不正参加を防ぐため、メール一致を必須化
-    // 招待されたメールと別のGoogleアカウントでログインしている場合は拒否
-    if (!userEmail || userEmail.toLowerCase() !== invitation.email.toLowerCase()) {
-      return NextResponse.json(
-        {
-          error: `この招待は ${invitation.email} 宛です。一旦ログアウトし、招待されたGoogleアカウントでログインしてください。`,
-          code: 'email_mismatch',
-          expectedEmail: invitation.email,
-        },
-        { status: 403 }
-      )
+    const admission = await acceptPromaneInvitation({ token, userId, email: userEmail, displayName: userName })
+    if (!admission.success) {
+      const { status, ...body } = admission.response
+      return NextResponse.json(body, { status })
     }
-
-    // 既にメンバーか確認
-    const existing = await prisma.promaneMember.findUnique({
-      where: { workspaceId_userId: { workspaceId: invitation.workspaceId, userId } },
-    })
-    if (existing) {
-      // 既にメンバー → 招待は承諾扱いにして直接リダイレクト
-      await prisma.promaneInvitation.update({
-        where: { id: invitation.id },
-        data: { acceptedAt: new Date() },
-      })
-      return NextResponse.json({
-        success: true,
-        workspaceSlug: invitation.workspace.slug,
-        alreadyMember: true,
-      })
-    }
-
-    // トランザクションでメンバー作成&招待承諾
-    await prisma.$transaction([
-      prisma.promaneMember.create({
-        data: {
-          workspaceId: invitation.workspaceId,
-          userId,
-          role: invitation.role,
-          displayName: userName || invitation.email.split('@')[0],
-        },
-      }),
-      prisma.promaneInvitation.update({
-        where: { id: invitation.id },
-        data: { acceptedAt: new Date() },
-      }),
-    ])
-
-    return NextResponse.json({
-      success: true,
-      workspaceSlug: invitation.workspace.slug,
-    })
+    return NextResponse.json(admission)
   } catch (e: any) {
     console.error('[promane/invite/token][POST]')
     return NextResponse.json({ error: '招待承諾に失敗しました' }, { status: 500 })
