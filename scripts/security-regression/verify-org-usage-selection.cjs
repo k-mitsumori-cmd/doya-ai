@@ -41,6 +41,7 @@ const summary = load('src/lib/usage-summary.ts', {
     ENTERPRISE_MONTHLY_LIMITS: { mensetsuSessions: 200, aishodanSessions: 200, quoteDocuments: 500 },
   },
   '@/lib/unified-plan': { isPaidPlan: (plan) => plan === 'PRO' || plan === 'ENTERPRISE' },
+  '@/lib/organization-billing': { getOrganizationBilling: async (_service, organizationId) => ({ plan: organizationId === 'org-a' ? 'FREE' : 'PRO' }) },
   '@/lib/shodan/types': { PREP_STALE_MS: 300000, SHODAN_MONTHLY_LIMIT: { FREE: 1, PRO: 30, ENTERPRISE: 200 } },
   '@/lib/doyalist/limits': {},
   '@/lib/plan-utils': {},
@@ -49,8 +50,10 @@ const summary = load('src/lib/usage-summary.ts', {
 ;(async () => {
   const interview = await summary.getUsageSummary('mensetsu', 'viewer', 'PRO')
   assert.equal(interview.meters[0].used, 4, 'interview uses newest organization by default')
+  assert.equal(interview.meters[0].limit, 30)
   const quote = await summary.getUsageSummary('quote', 'viewer', 'PRO')
   assert.equal(quote.meters[0].used, 2, 'quote uses owned organization before newer membership')
+  assert.equal(quote.meters[0].limit, 3, 'quote shows the FREE owner limit even for a PRO member')
   const shodan = await summary.getUsageSummary('shodan', 'viewer', 'PRO', 'team-a')
   assert.equal(shodan.meters[0].used, 2, 'selected organization controls shodan usage')
   assert.equal(await summary.getUsageSummary('shodan', 'viewer', 'PRO', 'foreign'), null)

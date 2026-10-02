@@ -7,6 +7,7 @@ export const maxDuration = 300
 import { randomBytes } from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getOrganizationOwnerUserId } from '@/lib/organization-billing'
 import { interviewUrl } from '@/lib/mensetsu/interview-url'
 import { assertFreeLimit, FREE_LIMITS, jstStartOfMonthUtc } from '@/lib/plan-limit'
 import { recordServiceUsage } from '@/lib/service-usage'
@@ -65,24 +66,31 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const ctx = await getMensetsuContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  let ownerUserId: string | null
+  try {
+    ownerUserId = await getOrganizationOwnerUserId('mensetsu', ctx.organizationId)
+  } catch {
+    return NextResponse.json({ error: '組織の契約情報を確認できませんでした。再試行してください。' }, { status: 503 })
+  }
+  const canManageBilling = ctx.userId === ownerUserId && ctx.role === 'owner'
 
   // 無料枠の上限（services.ts の宣言を実際に効かせる）
   // ⚠️ 面接1件ごとに Realtime の通話料が発生する。有料プランにも月次の上限が要る
   const checkQuota = () => assertFreeLimit(
     'mensetsuSessions',
     () => prisma.mensetsuSession.count({ where: { organizationId: ctx.organizationId } }),
-    undefined,
+    ownerUserId,
     (since) =>
       prisma.mensetsuSession.count({
         where: { organizationId: ctx.organizationId, createdAt: { gte: since } },
       })
   )
   const quotaResponse = (checked: Awaited<ReturnType<typeof checkQuota>>) => NextResponse.json({
-    error: checked.reason,
+    error: canManageBilling ? checked.reason : `この組織の利用上限（${checked.limit}件）に達しました。利用枠の変更は組織の契約者にご相談ください。`,
     code: 'LIMIT_REACHED',
     used: checked.used,
     limit: checked.limit,
-    ...(checked.limit === FREE_LIMITS.mensetsuSessions ? { upgradeUrl: '/mensetsu/pricing' } : {}),
+    ...(canManageBilling && checked.limit === FREE_LIMITS.mensetsuSessions ? { upgradeUrl: '/mensetsu/pricing' } : {}),
   }, { status: 402 })
   const quota = await checkQuota()
   if (!quota.ok) return quotaResponse(quota)

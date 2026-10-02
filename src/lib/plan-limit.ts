@@ -111,37 +111,23 @@ async function planTierOf(userId: string | null | undefined): Promise<'FREE' | '
   return isPaidPlan(user?.plan) ? 'PRO' : 'FREE'
 }
 
-/** ログイン中ユーザーのプラン区分 */
-async function currentPlanTier(): Promise<'FREE' | 'PRO' | 'ENTERPRISE'> {
-  const session = await getServerSession(authOptions)
-  const email = session?.user?.email
-  const id = (session?.user as any)?.id as string | undefined
-  if (!id && !email) return 'FREE'
-  const user = await prisma.user.findFirst({
-    where: id ? { id } : { email: email as string },
-    select: { id: true },
-  })
-  return planTierOf(user?.id)
-}
-
 /**
  * 上限を超えていないか判定する。
  * @param key        上限の種類
  * @param countUsed  現在の利用数を数える関数（組織スコープで数えること）
- * @param ownerUserId ログイン中ユーザーではなく、指定ユーザーのプランで判定する（ゲスト起点の処理用）
+ * @param ownerUserId 組織の契約者。操作したメンバーの個人契約で組織枠を変えない。オーナー不在は null。
  * @param countSince  **有料プラン用**。指定日時以降の利用数を数える関数。
  *                    渡さないと有料プランは無制限になるため、実費が発生する処理では必ず渡すこと。
  *
- * ⚠️ 有料判定は「ログイン中ユーザー」で行う。組織単位ではない。
- *    統一プランは個人の契約なので、判定すべきは契約者のプラン。
+ * ⚠️ 使用数は組織単位なので、有料判定も必ずその組織の契約者で行う。
  */
 export async function assertFreeLimit(
   key: FreeLimitKey,
   countUsed: () => Promise<number>,
-  ownerUserId?: string | null,
+  ownerUserId: string | null,
   countSince?: (since: Date) => Promise<number>
 ): Promise<QuotaResult> {
-  const tier = ownerUserId !== undefined ? await planTierOf(ownerUserId) : await currentPlanTier()
+  const tier = await planTierOf(ownerUserId)
 
   if (tier !== 'FREE') {
     const table = tier === 'ENTERPRISE' ? ENTERPRISE_MONTHLY_LIMITS : PRO_MONTHLY_LIMITS

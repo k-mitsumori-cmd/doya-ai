@@ -37,6 +37,7 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
     crypto: require('node:crypto'),
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
+    '@/lib/organization-billing': { getOrganizationOwnerUserId: async () => 'user' },
     '@/lib/mensetsu/interview-url': { interviewUrl: (token) => `https://example.com/interview/${token}` },
     '@/lib/plan-limit': {
       assertFreeLimit: async () => ++quotaChecks === 1
@@ -46,7 +47,7 @@ async function exercise({ limit = 3, used = 0, conflictOnce = false, createFails
       jstStartOfMonthUtc: () => new Date(),
     },
     '@/lib/service-usage': { recordServiceUsage: async () => {} },
-    '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', userId: 'user' }), orgSlugFrom: () => 'org' },
+    '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', userId: 'user', role: 'owner' }), orgSlugFrom: () => 'org' },
   }
   const exports = {}
   vm.runInNewContext(compiled, { exports, require: (name) => { assert.ok(name in dependencies, name); return dependencies[name] }, console, Date, URL })

@@ -8,6 +8,7 @@
 //    「使い切った」と誤解されるため。
 import React, { useEffect, useState } from 'react'
 import { Image as ImageIcon } from 'lucide-react'
+import Link from 'next/link'
 
 interface Meter {
   label: string
@@ -61,11 +62,13 @@ export function SidebarUsagePanel({
   show,
   refreshEvent,
   organizationSlug,
+  pricingHref,
 }: {
   service: string
   show: boolean
   refreshEvent?: string
   organizationSlug?: string
+  pricingHref?: string
 }) {
   const requestUrl = `/api/usage/${service}${organizationSlug ? `?org=${encodeURIComponent(organizationSlug)}` : ''}`
   const [loaded, setLoaded] = useState<{ url: string; summary: Summary | null } | null>(null)
@@ -126,6 +129,11 @@ export function SidebarUsagePanel({
         <p className="text-[11px] font-bold text-white/85 leading-relaxed">
           {summary.planLabel}プランのため<span className="text-white">上限はありません</span>
         </p>
+      )}
+      {pricingHref && (
+        <Link href={pricingHref} className="mt-3 block rounded-lg bg-white px-3 py-2 text-center text-[11px] font-black text-slate-800 hover:bg-slate-100">
+          組織のプランと利用枠を確認
+        </Link>
       )}
     </div>
   )

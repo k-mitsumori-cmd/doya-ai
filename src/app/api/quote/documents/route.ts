@@ -6,6 +6,7 @@ export const maxDuration = 300
 // POST /api/quote/documents — 見積書を作成（品目つき）
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getOrganizationOwnerUserId } from '@/lib/organization-billing'
 import { getQuoteContext, orgSlugFrom } from '@/lib/quote/access'
 import { defaultExpiry, nextQuoteNo, recalcDocument } from '@/lib/quote/document'
 import { assertFreeLimit, FREE_LIMITS, jstStartOfMonthUtc } from '@/lib/plan-limit'
@@ -50,23 +51,30 @@ const VALID_SOURCES: PriceSource[] = ['own_price', 'market', 'competitor', 'manu
 export async function POST(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  let ownerUserId: string | null
+  try {
+    ownerUserId = await getOrganizationOwnerUserId('quote', ctx.organizationId)
+  } catch {
+    return NextResponse.json({ error: '組織の契約情報を確認できませんでした。再試行してください。' }, { status: 503 })
+  }
+  const canManageBilling = ctx.userId === ownerUserId && ctx.role === 'owner'
 
   // 無料枠の上限（services.ts の「見積書3件まで」を実際に効かせる）
   const checkQuota = () => assertFreeLimit(
     'quoteDocuments',
     () => prisma.quoteDocument.count({ where: { organizationId: ctx.organizationId } }),
-    undefined,
+    ownerUserId,
     (since) =>
       prisma.quoteDocument.count({
         where: { organizationId: ctx.organizationId, createdAt: { gte: since } },
       })
   )
   const quotaResponse = (checked: Awaited<ReturnType<typeof checkQuota>>) => NextResponse.json({
-    error: checked.reason,
+    error: canManageBilling ? checked.reason : `この組織の利用上限（${checked.limit}件）に達しました。利用枠の変更は組織の契約者にご相談ください。`,
     code: 'LIMIT_REACHED',
     used: checked.used,
     limit: checked.limit,
-    ...(checked.limit === FREE_LIMITS.quoteDocuments ? { upgradeUrl: '/quote/pricing' } : {}),
+    ...(canManageBilling && checked.limit === FREE_LIMITS.quoteDocuments ? { upgradeUrl: '/quote/pricing' } : {}),
   }, { status: 402 })
   const quota = await checkQuota()
   if (!quota.ok) return quotaResponse(quota)

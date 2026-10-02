@@ -42,6 +42,7 @@ const prisma = {
 const common = {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
+  '@/lib/organization-billing': {},
   '@/lib/aishodan/access': { getAishodanContext: async () => ({ organizationId: 'own-org' }), orgSlugFrom: () => 'own-org' },
 }
 const routes = {

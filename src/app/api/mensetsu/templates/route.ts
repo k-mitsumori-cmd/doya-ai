@@ -6,6 +6,7 @@ export const maxDuration = 300
 // POST /api/mensetsu/templates — 質問セット＋ルーブリックを生成して保存（F3-4）
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getOrganizationOwnerUserId } from '@/lib/organization-billing'
 import { assertFreeLimit, FREE_LIMITS } from '@/lib/plan-limit'
 import { getMensetsuContext, orgSlugFrom } from '@/lib/mensetsu/access'
 import { generateTemplate } from '@/lib/mensetsu/template'
@@ -45,6 +46,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const ctx = await getMensetsuContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  let ownerUserId: string | null
+  try {
+    ownerUserId = await getOrganizationOwnerUserId('mensetsu', ctx.organizationId)
+  } catch {
+    return NextResponse.json({ error: '組織の契約情報を確認できませんでした。再試行してください。' }, { status: 503 })
+  }
+  const canManageBilling = ctx.userId === ownerUserId && ctx.role === 'owner'
 
   try {
     await prisma.mensetsuTemplate.deleteMany({
@@ -62,14 +70,14 @@ export async function POST(req: NextRequest) {
 
   // 無料枠の上限（services.ts の宣言を実際に効かせる）。AI呼び出し前に確認する。
   const checkQuota = () => assertFreeLimit('mensetsuTemplates', () =>
-    prisma.mensetsuTemplate.count({ where: { organizationId: ctx.organizationId } })
+    prisma.mensetsuTemplate.count({ where: { organizationId: ctx.organizationId } }), ownerUserId
   )
   const quotaResponse = (checked: Awaited<ReturnType<typeof checkQuota>>) => NextResponse.json({
-    error: checked.reason,
+    error: canManageBilling ? checked.reason : `この組織の利用上限（${checked.limit}件）に達しました。利用枠の変更は組織の契約者にご相談ください。`,
     code: 'LIMIT_REACHED',
     used: checked.used,
     limit: checked.limit,
-    ...(checked.limit === FREE_LIMITS.mensetsuTemplates ? { upgradeUrl: '/mensetsu/pricing' } : {}),
+    ...(canManageBilling && checked.limit === FREE_LIMITS.mensetsuTemplates ? { upgradeUrl: '/mensetsu/pricing' } : {}),
   }, { status: 402 })
   const quota = await checkQuota()
   if (!quota.ok) return quotaResponse(quota)

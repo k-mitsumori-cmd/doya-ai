@@ -50,7 +50,8 @@ const prisma = {
 const route = load('src/app/api/aishodan/products/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
-  '@/lib/aishodan/access': { getAishodanContext: async () => ({ organizationId: 'org', userId: 'user' }), orgSlugFrom: () => 'org' },
+  '@/lib/organization-billing': { getOrganizationOwnerUserId: async () => 'user' },
+  '@/lib/aishodan/access': { getAishodanContext: async () => ({ organizationId: 'org', userId: 'user', role: 'owner' }), orgSlugFrom: () => 'org' },
   '@/lib/aishodan/knowledge': {
     crawlProductSite: async () => {
       crawlCalls++

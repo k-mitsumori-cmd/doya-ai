@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
+import { OrganizationPricingPlans } from '@/components/OrganizationPricingPlans'
 
 // ⚠️ 料金は統一プラン。サービスごとに個別課金しないこと。
 //    金額の正本は src/lib/unified-plan.ts と UnifiedPricingPlans。ここには書かない。
@@ -22,7 +22,7 @@ export default function MensetsuPricingPage() {
             無料ではじめて、必要になったらプロへ。プロプラン1つでドヤAIの全サービスのプロ機能が使えます。
           </p>
         </div>
-        <UnifiedPricingPlans serviceId="mensetsu" currentPlan="FREE" />
+        <OrganizationPricingPlans serviceId="mensetsu" />
       </div>
     </div>
   )

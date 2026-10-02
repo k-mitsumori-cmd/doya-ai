@@ -25,6 +25,7 @@ const route = load('src/app/api/mensetsu/sessions/route.ts', {
   crypto: { randomBytes: () => Buffer.alloc(24) },
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
+  '@/lib/organization-billing': {},
   '@/lib/mensetsu/interview-url': {},
   '@/lib/plan-limit': {},
   '@/lib/service-usage': {},

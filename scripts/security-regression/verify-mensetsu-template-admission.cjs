@@ -48,11 +48,12 @@ const prisma = {
 const route = load('src/app/api/mensetsu/templates/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma },
+  '@/lib/organization-billing': { getOrganizationOwnerUserId: async () => 'user' },
   '@/lib/plan-limit': { FREE_LIMITS: { mensetsuTemplates: 1 }, assertFreeLimit: async (_key, count) => {
     const used = await count()
     return used >= 1 ? { ok: false, used, limit: 1, reason: '無料枠に達しました' } : { ok: true, used, limit: 1 }
   } },
-  '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org' }), orgSlugFrom: () => 'org' },
+  '@/lib/mensetsu/access': { getMensetsuContext: async () => ({ organizationId: 'org', userId: 'user', role: 'owner' }), orgSlugFrom: () => 'org' },
   '@/lib/mensetsu/template': { generateTemplate: async () => {
     generateCalls++
     if (waitForGeneration) await waitForGeneration

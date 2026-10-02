@@ -45,14 +45,16 @@ async function layout(response, preserveView = false) {
 }
 
 async function pricing(response) {
-  const state = { plan: 'FREE', error: false, loading: true, hasOrg: false, canManageBilling: false }
+  const state = { plan: 'FREE', error: false, loading: true, hasOrg: false, canManageBilling: false, loadedIdentity: '' }
   const loadPlan = callback('src/app/kintai/pricing/page.tsx', 'loadPlan', {
+    identity: 'user', request: { current: 0 },
     fetch: async () => response,
     setUserPlan: (value) => { state.plan = value },
     setPlanError: (value) => { state.error = value },
     setLoading: (value) => { state.loading = value },
     setHasOrganization: (value) => { state.hasOrg = value },
     setCanManageBilling: (value) => { state.canManageBilling = value },
+    setLoadedIdentity: (value) => { state.loadedIdentity = value },
   })
   await loadPlan()
   return state
@@ -71,11 +73,11 @@ async function pricing(response) {
     usage: { organizationId: 'owned', role: 'system_admin', isActive: true, plan: 'PRO' }, hasOrg: true, error: false,
   })
   assert.deepEqual(await layout(Response.json({ organizationId: 'owned', role: 'system_admin', plan: 'PRO' })), { usage: null, hasOrg: null, error: true })
-  assert.deepEqual(await pricing(failed), { plan: null, error: true, loading: false, hasOrg: false, canManageBilling: false })
-  assert.deepEqual(await pricing(Response.json({ organizationId: null })), { plan: null, error: false, loading: false, hasOrg: false, canManageBilling: false })
-  assert.deepEqual(await pricing(Response.json({ organizationId: 'owned', plan: 'PRO', canManageBilling: false })), { plan: 'PRO', error: false, loading: false, hasOrg: true, canManageBilling: false })
-  assert.deepEqual(await pricing(Response.json({ organizationId: 'owned', plan: 'PRO', canManageBilling: true })), { plan: 'PRO', error: false, loading: false, hasOrg: true, canManageBilling: true })
-  assert.deepEqual(await pricing(Response.json({ organizationId: 'owned', plan: 'PRO' })), { plan: null, error: true, loading: false, hasOrg: false, canManageBilling: false })
+  assert.deepEqual(await pricing(failed), { plan: null, error: true, loading: false, hasOrg: false, canManageBilling: false, loadedIdentity: 'user' })
+  assert.deepEqual(await pricing(Response.json({ organizationId: null })), { plan: null, error: false, loading: false, hasOrg: false, canManageBilling: false, loadedIdentity: 'user' })
+  assert.deepEqual(await pricing(Response.json({ organizationId: 'owned', plan: 'PRO', canManageBilling: false })), { plan: 'PRO', error: false, loading: false, hasOrg: true, canManageBilling: false, loadedIdentity: 'user' })
+  assert.deepEqual(await pricing(Response.json({ organizationId: 'owned', plan: 'PRO', canManageBilling: true })), { plan: 'PRO', error: false, loading: false, hasOrg: true, canManageBilling: true, loadedIdentity: 'user' })
+  assert.deepEqual(await pricing(Response.json({ organizationId: 'owned', plan: 'PRO' })), { plan: null, error: true, loading: false, hasOrg: false, canManageBilling: false, loadedIdentity: 'user' })
   const pricingSource = fs.readFileSync('src/app/kintai/pricing/page.tsx', 'utf8')
   assert.ok(pricingSource.includes('対象者は30日間無料'))
   assert.ok(!pricingSource.includes('全プラン14日間'))

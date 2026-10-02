@@ -6,6 +6,7 @@ export const maxDuration = 300
 // POST /api/aishodan/products — サービスURLから商材を作成（クロール→チャンク化→プロフィール生成→シナリオ作成）
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getOrganizationOwnerUserId } from '@/lib/organization-billing'
 import { getAishodanContext, orgSlugFrom } from '@/lib/aishodan/access'
 import { crawlProductSite, generateProfile, ingestPages } from '@/lib/aishodan/knowledge'
 import { DEFAULT_GUARDRAILS, DEFAULT_ICP, DEFAULT_PERSONA, DEFAULT_PHASES, DEFAULT_SLOTS } from '@/lib/aishodan/defaults'
@@ -54,6 +55,13 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const ctx = await getAishodanContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
+  let ownerUserId: string | null
+  try {
+    ownerUserId = await getOrganizationOwnerUserId('aishodan', ctx.organizationId)
+  } catch {
+    return NextResponse.json({ error: '組織の契約情報を確認できませんでした。再試行してください。' }, { status: 503 })
+  }
+  const canManageBilling = ctx.userId === ownerUserId && ctx.role === 'owner'
 
   try {
     await prisma.aishodanProduct.deleteMany({
@@ -72,12 +80,12 @@ export async function POST(req: NextRequest) {
   // 無料枠の上限（services.ts の「商材1件」を実際に効かせる）
   // ⚠️ クロール＋LLM生成の前に判定する。後ろに置くと費用だけ発生する。
   const checkQuota = () => assertFreeLimit('aishodanProducts', () =>
-    prisma.aishodanProduct.count({ where: { organizationId: ctx.organizationId } })
+    prisma.aishodanProduct.count({ where: { organizationId: ctx.organizationId } }), ownerUserId
   )
   const quotaResponse = (checked: Awaited<ReturnType<typeof checkQuota>>) => NextResponse.json({
-    error: checked.reason,
+    error: canManageBilling ? checked.reason : `この組織の利用上限（${checked.limit}件）に達しました。利用枠の変更は組織の契約者にご相談ください。`,
     code: 'LIMIT_REACHED',
-    ...(checked.limit === FREE_LIMITS.aishodanProducts ? { upgradeUrl: '/aishodan/pricing' } : {}),
+    ...(canManageBilling && checked.limit === FREE_LIMITS.aishodanProducts ? { upgradeUrl: '/aishodan/pricing' } : {}),
   }, { status: 402 })
   const quota = await checkQuota()
   if (!quota.ok) return quotaResponse(quota)

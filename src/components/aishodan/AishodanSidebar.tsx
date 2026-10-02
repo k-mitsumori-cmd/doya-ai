@@ -5,11 +5,9 @@
 //    独自のヘッダーやナビを作らないこと。reference/06-ui-patterns.md §7 が正本。
 // ⚠️ ToolSwitcherMenu を必ず含める（他サービスへ移れなくなる）。
 import React, { memo, useState } from 'react'
-import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { MessagesSquare, DoorOpen, ClipboardList, CreditCard, Zap, Settings } from 'lucide-react'
+import { MessagesSquare, DoorOpen, ClipboardList, CreditCard, Settings } from 'lucide-react'
 import { useSession, signOut } from 'next-auth/react'
-import { TrialInlineSuffix } from '@/components/TrialCallout'
 import { aishodanTheme } from '@/components/sidebar/themes'
 import {
   SidebarShell,
@@ -47,16 +45,6 @@ function AishodanSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
     { href: BASE + '/settings', label: '設定', icon: Settings },
     { href: BASE + '/pricing', label: '料金プラン', icon: CreditCard },
   ]
-
-  const planLabel = (() => {
-    if (!isLoggedIn) return 'GUEST'
-    const p = String((session?.user as any)?.plan || 'FREE').toUpperCase()
-    if (p === 'ENTERPRISE') return 'ENTERPRISE'
-    if (['PRO', 'BASIC', 'STARTER', 'BUSINESS', 'BUNDLE'].includes(p)) return 'PRO'
-    if (p === 'LIGHT') return 'LIGHT'
-    return 'FREE'
-  })()
-  const isPro = planLabel === 'PRO' || planLabel === 'ENTERPRISE'
 
   const isActive = (href: string) => {
     if (href === BASE) return pathname === BASE
@@ -96,26 +84,7 @@ function AishodanSidebarImpl({ isCollapsed: c, onToggle, forceExpanded, isMobile
 
           {/* プラン案内。⚠️ 金額の正本は unified-plan.ts。ここに別の数字を書かない */}
           {/* 作った数と残り。数字は /api/usage/aishodan から受け取るだけ */}
-          <SidebarUsagePanel service="aishodan" show={sessionReady && (isMobile || !isCollapsed)} />
-          {sessionReady && !isPro && (isMobile || !isCollapsed) && (
-            <div className="mx-3 md:mx-4 my-2 md:my-4 p-3 md:p-4 rounded-xl md:rounded-2xl bg-gradient-to-br from-white/20 to-white/5 border border-white/20 backdrop-blur-md">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-md flex-shrink-0">
-                  <Zap className="w-4 h-4" />
-                </div>
-                <p className="text-xs font-black text-white">現在：{planLabel === 'GUEST' ? 'ゲスト' : planLabel}</p>
-              </div>
-              <p className="text-[10px] text-white/85 font-bold leading-relaxed mb-2">
-                プロプラン ¥9,980/月で商談は無制限。ログと適合判定、チーム招待も使えます<TrialInlineSuffix />
-              </p>
-              <Link
-                href="/aishodan/pricing"
-                className="block w-full py-2 bg-white text-slate-800 text-[11px] font-black rounded-lg text-center shadow-md transition-colors hover:bg-slate-50"
-              >
-                プロにアップグレード
-              </Link>
-            </div>
-          )}
+          <SidebarUsagePanel service="aishodan" show={sessionReady && (isMobile || !isCollapsed)} pricingHref="/aishodan/pricing" />
         </div>
 
         <ToolSwitcherMenu currentService="aishodan" showLabel={showLabel} isCollapsed={isCollapsed} className="px-3 sm:px-4 pb-2" />

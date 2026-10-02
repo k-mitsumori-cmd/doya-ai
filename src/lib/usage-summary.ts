@@ -24,6 +24,7 @@ import { isPaidPlan } from '@/lib/unified-plan'
 import { PREP_STALE_MS, SHODAN_MONTHLY_LIMIT } from '@/lib/shodan/types'
 import { countMonthlyCompanies, DOYALIST_LIMITS } from '@/lib/doyalist/limits'
 import { tierFrom } from '@/lib/plan-utils'
+import { getOrganizationBilling } from '@/lib/organization-billing'
 
 /** 1本の枠。limit が null なら上限なし */
 export interface UsageMeter {
@@ -253,11 +254,12 @@ export async function getUsageSummary(
     case 'mensetsu': {
       const orgIds = await orgIdsOf('mensetsuMember', userId, orgSlug)
       if (!orgIds) return null
+      const orgPlan = orgIds[0] ? (await getOrganizationBilling('mensetsu', orgIds[0])).plan : 'FREE'
       return orgScoped({
         title: '実施した面接',
         unit: '件',
         key: 'mensetsuSessions',
-        plan,
+        plan: orgPlan,
         orgIds,
         countAll: (ids) => prisma.mensetsuSession.count({ where: { organizationId: { in: ids } } }),
         countSince: (ids, since) =>
@@ -271,14 +273,7 @@ export async function getUsageSummary(
       const orgIds = await orgIdsOf('aishodanMember', userId, orgSlug)
       if (!orgIds) return null
       // 公開商談ルームの上限判定は組織オーナーのプランを使う。
-      const owner = orgIds[0] ? await prisma.aishodanMember.findFirst({
-        where: { organizationId: orgIds[0], status: 'ACTIVE', role: 'owner', userId: { not: null } },
-        select: { userId: true },
-        orderBy: { createdAt: 'asc' },
-      }) : null
-      const ownerPlan = owner?.userId
-        ? (await prisma.user.findUnique({ where: { id: owner.userId }, select: { plan: true } }))?.plan
-        : 'FREE'
+      const ownerPlan = orgIds[0] ? (await getOrganizationBilling('aishodan', orgIds[0])).plan : 'FREE'
       return orgScoped({
         title: '実施した商談',
         unit: '件',
@@ -303,11 +298,12 @@ export async function getUsageSummary(
     case 'quote': {
       const orgIds = await orgIdsOf('quoteMember', userId, orgSlug)
       if (!orgIds) return null
+      const orgPlan = orgIds[0] ? (await getOrganizationBilling('quote', orgIds[0])).plan : 'FREE'
       return orgScoped({
         title: '作った見積書',
         unit: '件',
         key: 'quoteDocuments',
-        plan,
+        plan: orgPlan,
         orgIds,
         countAll: (ids) => prisma.quoteDocument.count({ where: { organizationId: { in: ids } } }),
         countSince: (ids, since) =>
