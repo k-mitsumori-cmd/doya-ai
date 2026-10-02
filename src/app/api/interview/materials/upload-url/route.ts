@@ -39,11 +39,12 @@ export async function POST(req: NextRequest) {
     const fileName = body?.fileName
     const mimeType = body?.mimeType
     const fileSize = body?.fileSize
+    const preflight = body?.preflight === true
 
     // バリデーション
-    if (typeof projectId !== 'string' || !projectId || typeof fileName !== 'string' || !fileName || typeof mimeType !== 'string' || !mimeType) {
+    if ((!preflight && (typeof projectId !== 'string' || !projectId)) || typeof fileName !== 'string' || !fileName || typeof mimeType !== 'string' || !mimeType) {
       return NextResponse.json(
-        { success: false, error: 'projectId, fileName, mimeType は必須です' },
+        { success: false, error: preflight ? 'fileName, mimeType は必須です' : 'projectId, fileName, mimeType は必須です' },
         { status: 400 }
       )
     }
@@ -69,24 +70,26 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // プロジェクト所有者チェック
-    const project = await prisma.interviewProject.findUnique({
-      where: { id: projectId },
-      select: { id: true, userId: true, guestId: true },
-    })
+    if (!preflight) {
+      // 署名付きURLの発行には、既存プロジェクトの所有者確認が必須。
+      const project = await prisma.interviewProject.findUnique({
+        where: { id: projectId },
+        select: { id: true, userId: true, guestId: true },
+      })
 
-    if (!project) {
-      return NextResponse.json(
-        { success: false, error: 'プロジェクトが見つかりません' },
-        { status: 404 }
-      )
-    }
+      if (!project) {
+        return NextResponse.json(
+          { success: false, error: 'プロジェクトが見つかりません' },
+          { status: 404 }
+        )
+      }
 
-    if (userId && project.userId !== userId) {
-      return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
-    }
-    if (!userId && guestId && project.guestId !== guestId) {
-      return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
+      if (userId && project.userId !== userId) {
+        return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
+      }
+      if (!userId && guestId && project.guestId !== guestId) {
+        return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
+      }
     }
 
     // ストレージの実際の設定を確定してからサイズを判定する。
@@ -115,6 +118,10 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
+
+    // ダッシュボードの新規アップロードでは、容量判定を先に行い、
+    // 上限超過で空のプロジェクト（ゲスト件数枠）を作らない。
+    if (preflight) return NextResponse.json({ success: true })
 
     // ストレージパス生成
     const storagePath = buildStoragePath({

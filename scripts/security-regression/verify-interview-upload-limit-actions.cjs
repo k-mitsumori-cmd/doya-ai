@@ -6,10 +6,11 @@ let plan = 'FREE'
 let storageMax = 3000 * mb
 let signedCalls = 0
 let materialWrites = 0
+let projectLookups = 0
 const route = load('src/app/api/interview/materials/upload-url/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma: {
-    interviewProject: { findUnique: async () => ({ id: 'p1', userId: 'u1', guestId: 'guest1' }) },
+    interviewProject: { findUnique: async () => { projectLookups++; return { id: 'p1', userId: 'u1', guestId: 'guest1' } } },
     interviewMaterial: { create: async () => { materialWrites++; return { id: 'material1' } } },
   } },
   '@/lib/interview/access': {
@@ -30,34 +31,47 @@ const route = load('src/app/api/interview/materials/upload-url/route.ts', {
   },
 })
 const post = (fileSize) => route.POST({ json: async () => ({ projectId: 'p1', fileName: 'audio.wav', mimeType: 'audio/wav', fileSize }) })
+const preflight = (fileSize) => route.POST({ json: async () => ({ preflight: true, fileName: 'audio.wav', mimeType: 'audio/wav', fileSize }) })
 
 ;(async () => {
   plan = 'GUEST'
-  let response = await post(150 * mb)
+  let response = await preflight(150 * mb)
   assert.equal(response.status, 400)
   let body = await response.json()
   assert.equal(body.code, 'GUEST_UPLOAD_LIMIT')
   assert.equal(body.actionUrl, '/auth/signin?callbackUrl=/interview')
+  assert.equal(projectLookups, 0)
+
+  response = await preflight(80 * mb)
+  body = await response.json()
+  assert.equal(body.success, true)
+  assert.equal(projectLookups, 0)
+  assert.equal(signedCalls, 0)
+  assert.equal(materialWrites, 0)
+
+  response = await post(150 * mb)
+  body = await response.json()
+  assert.equal(body.code, 'GUEST_UPLOAD_LIMIT')
 
   plan = 'FREE'
-  response = await post(600 * mb)
+  response = await preflight(600 * mb)
   body = await response.json()
   assert.equal(body.code, 'PLAN_UPLOAD_LIMIT')
   assert.equal(body.actionUrl, '/interview/pricing')
 
   plan = 'PRO'
-  response = await post(2500 * mb)
+  response = await preflight(2500 * mb)
   body = await response.json()
   assert.equal(body.code, 'PLAN_UPLOAD_LIMIT')
   assert.equal(body.actionUrl, 'https://doyamarke.surisuta.jp/contact')
 
   storageMax = 1500 * mb
-  response = await post(1800 * mb)
+  response = await preflight(1800 * mb)
   body = await response.json()
   assert.equal(body.code, 'STORAGE_UPLOAD_LIMIT')
   assert.equal(body.actionUrl, undefined)
   assert.match(body.error, /分割または圧縮/)
   assert.equal(signedCalls, 0)
   assert.equal(materialWrites, 0)
-  console.log('PASS Interview upload limits separate guest, plan, paid contact and storage ceiling before writes')
+  console.log('PASS Interview upload preflight rejects limits before creating a project or upload records')
 })().catch((error) => { console.error(error); process.exitCode = 1 })

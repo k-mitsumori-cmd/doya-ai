@@ -156,6 +156,17 @@ export default function InterviewTool() {
   const uploadFromDashboard = useCallback(async (file: File) => {
     const uploadKey = `${file.name}_${Date.now()}`
     const title = getProjectTitle(file)
+    const rejectUploadPreparation = (data: { code?: string; error?: string; actionUrl?: string; actionLabel?: string }) => {
+      if (data.code === 'GUEST_UPLOAD_LIMIT' || (data.code === 'PLAN_UPLOAD_LIMIT' && data.actionUrl === '/interview/pricing')) {
+        setUpsellLimitType('upload')
+        setUpsellIsGuest(data.code === 'GUEST_UPLOAD_LIMIT')
+        setUpsellOpen(true)
+      }
+      const err: any = new Error(data.error || 'アップロードURL取得失敗')
+      err.actionUrl = data.actionUrl
+      err.actionLabel = data.actionLabel
+      throw err
+    }
 
     setUploads((prev) => {
       const next = new Map(prev)
@@ -164,6 +175,15 @@ export default function InterviewTool() {
     })
 
     try {
+      // ファイル形式と実効容量を先に確認し、上限超過で空のプロジェクトを作らない。
+      const preflightRes = await fetch('/api/interview/materials/upload-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ preflight: true, fileName: file.name, mimeType: file.type, fileSize: file.size }),
+      })
+      const preflightData = await preflightRes.json()
+      if (!preflightData.success) rejectUploadPreparation(preflightData)
+
       // Step 1: プロジェクト自動作成
       const projectRes = await fetch('/api/interview/projects', {
         method: 'POST',
@@ -196,17 +216,7 @@ export default function InterviewTool() {
         }),
       })
       const urlData = await urlRes.json()
-      if (!urlData.success) {
-        if (urlData.code === 'GUEST_UPLOAD_LIMIT' || (urlData.code === 'PLAN_UPLOAD_LIMIT' && urlData.actionUrl === '/interview/pricing')) {
-          setUpsellLimitType('upload')
-          setUpsellIsGuest(urlData.code === 'GUEST_UPLOAD_LIMIT')
-          setUpsellOpen(true)
-        }
-        const err: any = new Error(urlData.error || 'アップロードURL取得失敗')
-        err.actionUrl = urlData.actionUrl
-        err.actionLabel = urlData.actionLabel
-        throw err
-      }
+      if (!urlData.success) rejectUploadPreparation(urlData)
 
       const { signedUrl, materialId } = urlData
 
