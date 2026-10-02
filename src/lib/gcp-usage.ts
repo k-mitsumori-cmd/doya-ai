@@ -286,7 +286,7 @@ export async function fetchGCPUsageReport(): Promise<GCPUsageReport> {
       otherApis: [],
       estimatedCost: zeroCost,
       monthly: zeroMonthly,
-      error: err.message,
+      error: '利用量データを取得できませんでした。',
     }
   }
 }

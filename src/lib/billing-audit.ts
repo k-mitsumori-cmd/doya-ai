@@ -140,8 +140,8 @@ export async function checkWebhookEndpoint(): Promise<{ ok: boolean; detail: str
       return { ok: false, detail: `Webhook が必要イベントを購読していません: ${missing.join(', ')}（id: ${target.id}）` }
     }
     return { ok: true, detail: `OK（id: ${target.id}）` }
-  } catch (e: any) {
-    return { ok: false, detail: `Webhook エンドポイントの確認に失敗: ${e?.message || e}` }
+  } catch {
+    return { ok: false, detail: 'Webhook エンドポイントを確認できませんでした。' }
   }
 }
 

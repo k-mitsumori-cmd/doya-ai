@@ -31,8 +31,7 @@ export async function GET(request: Request) {
   } catch (error: any) {
     console.error('[Cron] gcp-usage error:')
     await sendErrorNotification({
-      errorMessage: error?.message || 'Failed to send GCP usage report',
-      errorStack: error?.stack,
+      errorMessage: 'GCP usage report failed',
       pathname: '/api/cron/gcp-usage',
       timestamp: new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }),
     }).catch(() => {})

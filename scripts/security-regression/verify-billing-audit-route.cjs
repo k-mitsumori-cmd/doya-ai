@@ -46,6 +46,7 @@ function fixture({ now, monthlyFails = false, weeklyFails = false, deliveryFails
     assert.deepEqual(f.calls, ['audit:24', 'monthly'])
     assert.equal(f.alerts.length, 1)
     assert(!JSON.stringify(response.body).includes('private monthly failure'))
+    assert(!JSON.stringify(f.alerts).includes('private monthly failure'))
   })
   await check('weekly calculation failure sends no partial daily report', async () => {
     const f = fixture({ now: '2026-10-05T00:00:00Z', weeklyFails: true })

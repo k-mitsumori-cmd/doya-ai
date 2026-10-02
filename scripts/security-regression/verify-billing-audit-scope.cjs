@@ -247,7 +247,8 @@ function fixture({ subs, invoices, refunds = [], charges = {}, paymentIntents = 
   await check('webhook endpoint repeating cursor reports failure', async () => {
     const f = fixture({ subs: [], invoices: [], webhookList: async () => ({ data: [{ id: 'same', url: 'https://other.example', status: 'enabled', enabled_events: [] }], has_more: true }) })
     const result = await f.module.checkWebhookEndpoint(); assert.equal(result.ok, false)
-    assert(result.detail.includes('pagination did not advance'))
+    assert.equal(result.detail, 'Webhook エンドポイントを確認できませんでした。')
+    assert.equal(f.webhookCalls, 2)
   })
   console.log(JSON.stringify({ passed: results.length, results }, null, 2))
 })().catch((error) => { console.error(error); process.exitCode = 1 })
