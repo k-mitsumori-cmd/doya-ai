@@ -94,7 +94,7 @@ async function main(){
  assert.equal(states.size,2);pass('Daily changes reuse one bounded row per user');
 
  class Resp {static json(body,opts){return{body,status:opts?.status??200,cookies:{set(){}}}}}
- let signedIn=true,forcedError=null,conceptCalls=0,dbWrites=0,receivedManual,brandCalls=0,conceptFailure=false,persistenceFailure=false;
+ let signedIn=true,forcedError=null,conceptCalls=0,dbWrites=0,receivedManual,brandCalls=0,conceptFailure=false,persistenceFailure=false,identityPlan='FREE';
  let admissionReason=null;const finishes=[];let budgetCalls=0;
  const operationalJson=moduleAt('src/lib/operational-json.ts');
  const apiLogs=[];
@@ -102,7 +102,7 @@ async function main(){
   '@/lib/operational-json':operationalJson,
   '@/lib/adimage/analysis-budget':{claimAnalysisBudget:async()=>{budgetCalls++;return admissionReason?{ok:false,reason:admissionReason}:{ok:true,lease:{key:'test',token:'test'}}},finishAnalysisBudget:async(_lease,refund)=>finishes.push(refund)},
   'next/server':{NextResponse:Resp},'@/lib/prisma':{prisma:{adImageBrand:{create:async()=>{if(persistenceFailure)throw Error('private-db-canary');dbWrites++;return{id:'mock-brand'}}}}},
-  '@/lib/adimage/access':{getIdentity:async()=>({}),requireUser:()=>({ok:signedIn,reason:'login'}),ensureGuestId:()=>({identity:{userId:'test',plan:'FREE'}}),ownerWhere:()=>({userId:'test'})},
+  '@/lib/adimage/access':{getIdentity:async()=>({}),requireUser:()=>({ok:signedIn,reason:'login'}),ensureGuestId:()=>({identity:{userId:'test',plan:identityPlan}}),ownerWhere:()=>({userId:'test'})},
   '@/lib/adimage/brand':{...brand,analyzeBrand:async(_url,text)=>{brandCalls++;receivedManual=text;if(forcedError)throw forcedError;return{name:'Test',valueProps:[],colors:[]}}},
   '@/lib/adimage/copy':{generateConcepts:async()=>{conceptCalls++;if(conceptFailure)throw Error('private-concept-canary');return[{copy:{headline:'Mock'}}]},findRiskyExpressions:()=>[]}
  },{console:{warn:(...a)=>apiLogs.push(['warn',...a]),error:(...a)=>apiLogs.push(['error',...a])}});
@@ -110,7 +110,7 @@ async function main(){
  signedIn=false;assert.equal((await api.POST(req({url:'https://example.com'}))).status,401);signedIn=true;pass('Unauthenticated request remains 401');
  for(const body of [null,[],{url:{toString:1}},{url:'https://example.com/'+ 'a'.repeat(8192)},{url:'https://example.com',appeal:{}},{url:'https://user:pass@example.com'},{url:'https://example.com',manualText:'short'},{url:'https://example.com',manualText:'a'.repeat(14001)},{url:'https://example.com',manualText:{}}]){assert.equal((await api.POST(req(body))).status,400);}assert.equal(dbWrites,0);assert.equal(budgetCalls,0);pass('Credentials, object URL, null, overlong URL and invalid manual input rejected before budget or AI');
  assert.equal((await api.POST(req({url:'https://example.com',unused:'x'.repeat(65536)}))).status,413);assert.equal(budgetCalls,0);pass('Whole JSON body rejected at 64 KiB before budget or AI');
- for(const reason of ['busy','limit','unavailable']){admissionReason=reason;assert.equal((await api.POST(req({url:'https://example.com'}))).status,reason==='unavailable'?503:429);}assert.equal(brandCalls,0);admissionReason=null;pass('Busy, daily limit and DB outage block AI');
+ for(const reason of ['busy','limit','unavailable']){admissionReason=reason;const denied=await api.POST(req({url:'https://example.com'}));assert.equal(denied.status,reason==='unavailable'?503:429);if(reason==='limit'){assert.equal(denied.body.code,'ANALYSIS_DAILY_LIMIT');assert.equal(denied.body.upgradeUrl,'/adimage/pricing');}else assert.equal(denied.body.upgradeUrl,undefined);}assert.equal(brandCalls,0);identityPlan='PRO';admissionReason='limit';const proDenied=await api.POST(req({url:'https://example.com'}));assert.equal(proDenied.body.upgradeUrl,undefined);assert.equal(proDenied.body.contactUrl,'https://doyamarke.surisuta.jp/contact');identityPlan='FREE';admissionReason=null;pass('Busy, daily limit and DB outage block AI with the correct plan action');
  forcedError=new brand.BrandSourceError({reason:'http',status:404});let r=await api.POST(req({url:'https://example.com'}));assert.equal(r.status,422);assert(r.body.canUseManualInput);assert.equal(apiLogs.pop()[0],'warn');assert.equal(conceptCalls,0);assert.equal(finishes.pop(),true);pass('404 returns manual recovery without an operational alert');
  forcedError=new brand.BrandSourceError({reason:'timeout'});r=await api.POST(req({url:'https://example.com'}));assert.equal(r.status,503);assert(r.body.canUseManualInput);assert.equal(apiLogs.pop()[0],'error');assert.equal(finishes.pop(),true);pass('Timeout remains an error and permits manual recovery');
  forcedError=new Error('private-error-canary');r=await api.POST(req({url:'https://example.com'}));assert.equal(r.status,502);assert(!JSON.stringify(r.body).includes('private-error-canary'));const privateFailureLog=apiLogs.pop();assert.equal(privateFailureLog[0],'error');assert(!JSON.stringify(privateFailureLog).includes('private-error-canary'));assert.equal(finishes.pop(),false);pass('AI exceptions remain errors without leaking details to client');

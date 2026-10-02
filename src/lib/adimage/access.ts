@@ -166,6 +166,8 @@ export interface AdImageQuotaDenied {
   diagnosticId: string
   usage: { period: 'request' | 'day' | 'month'; unit: 'image' | 'concept'; limit: number; used: number; requested: number }
   resetAt: string | null
+  upgradeUrl?: string
+  contactUrl?: string
 }
 
 export function quotaDenied(
@@ -182,7 +184,11 @@ export function quotaDenied(
   // No identity, brand, prompt, URL, cookies or exception payloads. An expected
   // allowance rejection is informational, not console.error / a runtime incident.
   console.info('[adimage] quota denied', { diagnosticId, code, plan, ...usage, resetAt })
-  return { ok: false, reason, code, limitReached: usage.period !== 'request', diagnosticId, usage, resetAt }
+  return {
+    ok: false, reason, code, limitReached: usage.period !== 'request', diagnosticId, usage, resetAt,
+    ...(usage.period !== 'request' && plan === 'FREE' ? { upgradeUrl: '/adimage/pricing' } : {}),
+    ...(usage.period !== 'request' && plan === 'PRO' ? { contactUrl: 'https://doyamarke.surisuta.jp/contact' } : {}),
+  }
 }
 
 export async function assertQuota(

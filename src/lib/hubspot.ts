@@ -58,8 +58,7 @@ export async function fetchContactsCreatedAfter(
     })
 
     if (!res.ok) {
-      const text = await res.text().catch(() => '')
-      throw new Error(`HubSpot search failed: ${res.status} ${text.slice(0, 300)}`)
+      throw new Error(`HubSpot search failed: ${res.status}`)
     }
 
     const data = (await res.json()) as {

@@ -53,9 +53,9 @@ export async function transcribeChunk(
       })
       if (!res.ok) {
         const body = (await res.text()).slice(0, 300)
-        const err: any = new Error(`transcribe failed (${res.status}): ${body}`)
+        const err: any = new Error(`transcribe failed (${res.status})`)
         err.status = res.status
-        err.body = body
+        err.modelIssue = /model|does not exist|not found|unsupported/i.test(body)
         throw err
       }
       const json = await res.json()
@@ -70,7 +70,7 @@ export async function transcribeChunk(
     const modelIssue =
       e?.status === 404 ||
       e?.status === 400 ||
-      /model|does not exist|not found|unsupported/i.test(e?.body || e?.message || '')
+      e?.modelIssue === true
     if (TRANSCRIBE_MODEL !== 'whisper-1' && modelIssue) {
       console.warn('[cunning/transcribe] %s 失敗、whisper-1にフォールバック', TRANSCRIBE_MODEL)
       return await callModel('whisper-1')

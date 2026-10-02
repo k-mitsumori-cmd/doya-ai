@@ -55,7 +55,7 @@ export async function reviseSlidePrompt(params: {
       signal,
     })
     if (!res.ok) {
-      throw new Error(`vision reprompt failed (${res.status}): ${(await res.text()).slice(0, 200)}`)
+      throw new Error(`vision reprompt failed (${res.status})`)
     }
     const json = await res.json()
     const text = ((json?.candidates?.[0]?.content?.parts as any[]) || [])

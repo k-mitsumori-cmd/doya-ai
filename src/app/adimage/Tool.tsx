@@ -60,6 +60,7 @@ const REFS_PAGE_SIZE = 30
 export default function AdImageTool() {
   const [step, setStep] = useState<Step>('input')
   const [error, setError] = useState('')
+  const [limitAction, setLimitAction] = useState<'pricing' | 'contact' | null>(null)
 
   // 入力
   /**
@@ -165,11 +166,13 @@ export default function AdImageTool() {
   const analyze = useCallback(async () => {
     if (!url.trim()) return
     if (useManualText && manualText.trim().length < 50) {
+      setLimitAction(null)
       setError('サービスの説明を50文字以上で入力してください。')
       return
     }
     setAnalyzing(true)
     setError('')
+    setLimitAction(null)
     try {
       const r = await fetch('/api/adimage/analyze', {
         method: 'POST',
@@ -182,7 +185,10 @@ export default function AdImageTool() {
       }
       const d = await r.json()
       if (!r.ok && d?.canUseManualInput) setUseManualText(true)
-      if (!r.ok) throw new Error(d?.error || '解析に失敗しました')
+      if (!r.ok) {
+        if (d?.limitReached === true) setLimitAction(d?.contactUrl === 'https://doyamarke.surisuta.jp/contact' ? 'contact' : d?.upgradeUrl === '/adimage/pricing' ? 'pricing' : null)
+        throw new Error(d?.error || '解析に失敗しました')
+      }
       setBrandId(d.brandId)
       setBrand(d.brand)
       setDrafts(d.concepts || [])
@@ -200,6 +206,7 @@ export default function AdImageTool() {
     if (!brandId) return
     setLogoBusy(true)
     setError('')
+    setLimitAction(null)
     try {
       const fd = new FormData()
       fd.append('file', file)
@@ -298,6 +305,7 @@ export default function AdImageTool() {
     setAdvice('')
     setGenerating(true)
     setError('')
+    setLimitAction(null)
     setScores(null)
     setDirectives([])
     try {
@@ -320,7 +328,10 @@ export default function AdImageTool() {
       })
       const d = await r.json()
       if (!isCurrent()) return
-      if (!r.ok) throw new Error(d?.error || '生成に失敗しました')
+      if (!r.ok) {
+        if (d?.limitReached === true) setLimitAction(d?.contactUrl === 'https://doyamarke.surisuta.jp/contact' ? 'contact' : d?.upgradeUrl === '/adimage/pricing' ? 'pricing' : null)
+        throw new Error(d?.error || '生成に失敗しました')
+      }
       setConceptId(d.conceptId)
       setCreatives(d.creatives || [])
       setNeedsReview(Boolean(d.needsReview))
@@ -348,6 +359,7 @@ export default function AdImageTool() {
     const isCurrent = () => imageOperation.current.revision === revision && imageOperation.current.feedback === feedback
     setScoring(true)
     setError('')
+    setLimitAction(null)
     try {
       const r = await fetch(`/api/adimage/concepts/${conceptId}/feedback`, {
         method: 'POST',
@@ -376,6 +388,7 @@ export default function AdImageTool() {
     setScoring(false)
     setRefining(true)
     setError('')
+    setLimitAction(null)
     try {
       const r = await fetch(`/api/adimage/concepts/${conceptId}/refine`, {
         method: 'POST',
@@ -384,7 +397,10 @@ export default function AdImageTool() {
       })
       const d = await r.json()
       if (!isCurrent()) return
-      if (!r.ok) throw new Error(d?.error || '改善に失敗しました')
+      if (!r.ok) {
+        if (d?.limitReached === true) setLimitAction(d?.contactUrl === 'https://doyamarke.surisuta.jp/contact' ? 'contact' : d?.upgradeUrl === '/adimage/pricing' ? 'pricing' : null)
+        throw new Error(d?.error || '改善に失敗しました')
+      }
       setConceptId(d.conceptId)
       // ⚠️ setCreatives より先に入れる。順序を逆にすると一瞬だけ前後が同じに見える
       setPreviousCreatives(d.previousCreatives || [])
@@ -460,7 +476,13 @@ export default function AdImageTool() {
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 px-4 py-6">
-        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">{error}</div>}
+        {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 font-semibold">
+          <p>{error}</p>
+          {limitAction && <Link
+            href={limitAction === 'pricing' ? '/adimage/pricing' : 'https://doyamarke.surisuta.jp/contact'}
+            className="mt-3 inline-flex rounded-lg bg-[#0017C1] px-4 py-2 text-sm font-bold text-white hover:bg-[#0017C1]/85"
+          >{limitAction === 'pricing' ? 'プランと無料体験を見る' : '追加枠を相談する'}</Link>}
+        </div>}
 
         {/* ⚠️ 2〜4のセクションは入力が進むまで描画されない。この行が無いと
              初回は「1.」だけの画面になり、全部で何工程あるのか分からなくなる。 */}

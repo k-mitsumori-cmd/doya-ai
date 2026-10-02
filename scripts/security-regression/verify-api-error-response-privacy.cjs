@@ -126,4 +126,60 @@ const response = { NextResponse: Response }
     assert.equal(result.status, 200)
     assert(!JSON.stringify(await result.json()).includes(secret))
   })
+
+  await check('slide vision failure does not include provider response bodies', async () => {
+    const vision = load('src/lib/doyaslide/vision.ts', {
+      '@/lib/fetch-timeout': { withTimeout: async (_label, _ms, fn) => fn(new AbortController().signal) },
+    }, {
+      process: { env: { GOOGLE_GENAI_API_KEY: 'offline-test-key' } },
+      fetch: async () => new Response(secret, { status: 503 }),
+    })
+    await assert.rejects(vision.reviseSlidePrompt({ imageBase64: 'AA==', mimeType: 'image/png', userInstruction: 'test', themeColor: '#000000' }), error => {
+      assert(!String(error).includes(secret))
+      return true
+    })
+  })
+
+  await check('cunning transcription preserves fallback without retaining provider response bodies', async () => {
+    const models = []
+    const transcribe = load('src/lib/cunning/transcribe.ts', {
+      '@/lib/fetch-timeout': { withTimeout: async (_label, _ms, fn) => fn(new AbortController().signal) },
+    }, {
+      process: { env: { OPENAI_API_KEY: 'offline-test-key' } },
+      Blob, FormData, AbortController,
+      fetch: async (_url, options) => {
+        const model = options.body.get('model')
+        models.push(model)
+        return model === 'gpt-4o-transcribe'
+          ? new Response(`unsupported model ${secret}`, { status: 400 })
+          : Response.json({ text: '文字起こし成功' })
+      },
+    })
+    const result = await transcribe.transcribeChunk(new Blob(['audio']), { filename: 'chunk.webm' })
+    assert.deepEqual(models, ['gpt-4o-transcribe', 'whisper-1'])
+    assert.equal(result.text, '文字起こし成功')
+    const failing = load('src/lib/cunning/transcribe.ts', {
+      '@/lib/fetch-timeout': { withTimeout: async (_label, _ms, fn) => fn(new AbortController().signal) },
+    }, {
+      process: { env: { OPENAI_API_KEY: 'offline-test-key' } },
+      Blob, FormData, AbortController,
+      fetch: async () => new Response(secret, { status: 503 }),
+    })
+    await assert.rejects(failing.transcribeChunk(new Blob(['audio'])), error => {
+      assert(!String(error).includes(secret))
+      assert(!JSON.stringify(error).includes(secret))
+      return true
+    })
+  })
+
+  await check('HubSpot sync failure does not include provider response bodies', async () => {
+    const hubspot = load('src/lib/hubspot.ts', {}, {
+      process: { env: { HUBSPOT_PRIVATE_APP_TOKEN: 'offline-test-key' } },
+      fetch: async () => new Response(secret, { status: 503 }),
+    })
+    await assert.rejects(hubspot.fetchContactsCreatedAfter(0, 1), error => {
+      assert(!String(error).includes(secret))
+      return true
+    })
+  })
 })().catch((error) => { console.error(error); process.exitCode = 1 })

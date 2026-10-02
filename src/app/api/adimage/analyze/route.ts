@@ -52,11 +52,19 @@ export async function POST(req: NextRequest) {
   }
 
   const admission = await claimAnalysisBudget(identity)
-  if (!admission.ok) return NextResponse.json({ error: admission.reason === 'busy'
-    ? '現在の解析が完了してから、もう一度お試しください。'
-    : admission.reason === 'limit' ? '本日のブランド解析の上限に達しました。明日またご利用ください。'
-    : '現在、解析の利用状況を確認できません。時間をおいてお試しください。'
-  }, { status: admission.reason === 'unavailable' ? 503 : 429 })
+  if (!admission.ok) {
+    const message = admission.reason === 'busy'
+      ? '現在の解析が完了してから、もう一度お試しください。'
+      : admission.reason === 'limit' ? '本日のブランド解析の上限に達しました。明日またご利用ください。'
+      : '現在、解析の利用状況を確認できません。時間をおいてお試しください。'
+    return NextResponse.json({
+      error: message,
+      ...(admission.reason === 'limit' ? {
+        code: 'ANALYSIS_DAILY_LIMIT', limitReached: true,
+        ...(identity.plan === 'FREE' ? { upgradeUrl: '/adimage/pricing' } : { contactUrl: 'https://doyamarke.surisuta.jp/contact' }),
+      } : {}),
+    }, { status: admission.reason === 'unavailable' ? 503 : 429 })
+  }
 
   let refund = false
   try {
