@@ -22,4 +22,5 @@
 - `POST /api/interview/claim-guest` は認証・同一オリジン・ゲストCookieを確認する。進行中の文字起こしがある場合は409を返し、所有者や使用量を変更しない。
 - 所有者変更、記事生成と追加AI編集の日次使用量、文字起こし当月使用時間の合算を1トランザクションで行う。既存のゲストStorageパスは保持し、新しい素材・サムネイル・削除キューも同じ名前空間を使う。
 - ゲストCookieは移管成功後だけ削除する。ログイン前に作ったプロジェクトへのリンクは、移管が成功するまで画面を表示せず、失敗時は再試行できる。
+- 署名付きアップロードURLの発行中に所有者が変わる競合を防ぐため、素材レコードを作る直前にプロジェクトのライフサイクルロック内で所有者を再確認する。
 - `verify-interview-guest-claim.cjs`、`verify-interview-storage-purge-queue.cjs`、`verify-interview-project-pagination.cjs`、`verify-interview-transcription-budget.cjs` で、所有者隔離、冪等性、使用量、保存先、旧Cookieの拒否を検証する。ローカルの全体ビルド、CI、本番デプロイ、実ブラウザ操作は別途確認する。

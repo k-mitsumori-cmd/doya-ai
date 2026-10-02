@@ -7,18 +7,34 @@ let storageMax = 3000 * mb
 let signedCalls = 0
 let materialWrites = 0
 let projectLookups = 0
+let claimedDuringSigning = false
+let simulateClaimDuringSigning = false
+const interviewProject = { findUnique: async () => {
+  projectLookups++
+  return { id: 'p1', userId: claimedDuringSigning ? 'other-account' : plan === 'GUEST' ? null : 'u1', guestId: 'guest1' }
+} }
+const interviewMaterial = { create: async () => { materialWrites++; return { id: 'material1' } } }
 const route = load('src/app/api/interview/materials/upload-url/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma: {
-    interviewProject: { findUnique: async () => { projectLookups++; return { id: 'p1', userId: plan === 'GUEST' ? null : 'u1', guestId: 'guest1' } } },
-    interviewMaterial: { create: async () => { materialWrites++; return { id: 'material1' } } },
+    interviewProject,
+    interviewMaterial,
+    $transaction: async work => work({
+      $executeRaw: async () => 1,
+      interviewProject,
+      interviewMaterial,
+    }),
   } },
   '@/lib/interview/access': {
     getInterviewUser: async () => ({ userId: plan === 'GUEST' ? null : 'u1', plan }),
     getGuestIdFromRequest: () => 'guest1', ensureGuestId: () => 'guest1', setGuestCookie: () => {}, requireDatabase: () => null,
   },
   '@/lib/interview/storage': {
-    createSignedUploadUrl: async () => { signedCalls++; return { signedUrl: 'signed', path: 'path', token: 'token' } },
+    createSignedUploadUrl: async () => {
+      signedCalls++
+      if (simulateClaimDuringSigning) claimedDuringSigning = true
+      return { signedUrl: 'signed', path: 'path', token: 'token' }
+    },
     buildStoragePath: () => 'path', ensureBucket: async () => {}, getDetectedMaxFileSize: () => storageMax,
   },
   '@/lib/interview/types': {
@@ -145,5 +161,18 @@ const projects = load('src/app/api/interview/projects/route.ts', {
   assert.match(body.error, /分割または圧縮/)
   assert.equal(signedCalls, 0)
   assert.equal(materialWrites, 0)
+  plan = 'GUEST'
+  simulateClaimDuringSigning = true
+  response = await post(80 * mb)
+  assert.equal(response.status, 404)
+  assert.equal(materialWrites, 0)
+  assert.equal(signedCalls, 1)
+  simulateClaimDuringSigning = false
+  claimedDuringSigning = false
+  response = await post(80 * mb)
+  assert.equal(response.status, 200)
+  assert.equal(materialWrites, 1)
+  assert.equal(signedCalls, 2)
+  console.log('PASS Interview upload rechecks ownership after signing before material write')
   console.log('PASS Interview upload preflight rejects limits before creating a project or upload records')
 })().catch((error) => { console.error(error); process.exitCode = 1 })

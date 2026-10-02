@@ -139,18 +139,28 @@ export async function POST(req: NextRequest) {
     // 署名付きアップロードURL生成 (Supabase Storage)
     const uploadData = await createSignedUploadUrl(storagePath)
 
-    // 素材レコードを「アップロード待ち」として先に作成
-    const material = await prisma.interviewMaterial.create({
-      data: {
-        projectId,
-        type: materialType,
-        fileName,
-        filePath: storagePath,
-        fileSize: fileSize ? BigInt(fileSize) : null,
-        mimeType,
-        status: 'UPLOADED', // confirm で COMPLETED に更新
-      },
+    // 署名発行中にゲストプロジェクトがアカウントへ移管されても、旧Cookieでは素材を追加させない。
+    const material = await prisma.$transaction(async tx => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${projectId}))`
+      const currentProject = await tx.interviewProject.findUnique({
+        where: { id: projectId }, select: { userId: true, guestId: true },
+      })
+      if (!currentProject || (userId
+        ? currentProject.userId !== userId
+        : currentProject.userId !== null || currentProject.guestId !== guestId)) return null
+      return tx.interviewMaterial.create({
+        data: {
+          projectId,
+          type: materialType,
+          fileName,
+          filePath: storagePath,
+          fileSize: BigInt(fileSize),
+          mimeType,
+          status: 'UPLOADED', // confirm で COMPLETED に更新
+        },
+      })
     })
+    if (!material) return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
 
     // レスポンス
     const res = NextResponse.json({
