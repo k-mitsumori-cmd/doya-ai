@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
       const member = await prisma.promaneMember.findUnique({
         where: { workspaceId_userId: { workspaceId, userId } },
       })
-      if (!member || !['owner', 'admin'].includes(member.role)) {
+      if (!member?.isActive || !['owner', 'admin'].includes(member.role)) {
         return NextResponse.json({ error: '権限がありません' }, { status: 403 })
       }
       const where = { workspaceId }
@@ -130,7 +130,7 @@ export async function DELETE(req: NextRequest) {
     const member = await prisma.promaneMember.findUnique({
       where: { workspaceId_userId: { workspaceId: inv.workspaceId, userId } },
     })
-    if (!member || !['owner', 'admin'].includes(member.role)) {
+    if (!member?.isActive || !['owner', 'admin'].includes(member.role)) {
       return NextResponse.json({ error: '権限がありません' }, { status: 403 })
     }
 

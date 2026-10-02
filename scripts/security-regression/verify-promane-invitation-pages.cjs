@@ -13,11 +13,15 @@ const invitations = Array.from({ length: 121 }, (_, index) => ({
 }))
 invitations.push({ ...invitations[0], id: 'foreign-invite', workspaceId: 'foreign-workspace' })
 let failCount = false
+let memberActive = true
+let deletions = 0
 const prisma = {
   promaneMember: { findUnique: async ({ where }) =>
     where.workspaceId_userId.workspaceId === 'own-workspace' && where.workspaceId_userId.userId === 'owner'
-      ? { role: 'owner' } : null },
+      ? { role: 'owner', isActive: memberActive } : null },
   promaneInvitation: {
+    findUnique: async () => ({ workspaceId: 'own-workspace', acceptedAt: null }),
+    delete: async () => { deletions++ },
     findFirst: async ({ where }) => invitations.find((row) => row.workspaceId === where.workspaceId && row.id === where.id) || null,
     findMany: async ({ where, orderBy, take, cursor }) => {
       assert.equal(where.workspaceId, 'own-workspace')
@@ -70,6 +74,15 @@ const request = (query) => ({ nextUrl: new URL(`http://offline.invalid/api/proma
   await check('nonmembers cannot list invitation tokens', async () => {
     const response = await route.GET({ nextUrl: new URL('http://offline.invalid/?type=sent&workspaceId=foreign-workspace') })
     assert.equal(response.status, 403)
+  })
+  await check('inactive owners cannot list or delete invitation tokens', async () => {
+    memberActive = false
+    const listed = await route.GET(request(''))
+    assert.equal(listed.status, 403)
+    const deleted = await route.DELETE({ nextUrl: new URL('http://offline.invalid/api/promane/invitations?id=invite-001') })
+    assert.equal(deleted.status, 403)
+    assert.equal(deletions, 0)
+    memberActive = true
   })
   await check('database errors do not disclose internal details', async () => {
     failCount = true
