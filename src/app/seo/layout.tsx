@@ -18,10 +18,12 @@ export default async function SeoLayout({ children }: { children: React.ReactNod
   const isLoggedIn = !!user?.id
   const planRaw = String(user?.seoPlan || user?.plan || (isLoggedIn ? 'FREE' : 'GUEST')).toUpperCase()
   const currentPlan =
-    planRaw === 'PRO'
+    planRaw === 'PRO' || planRaw === 'BUNDLE' || planRaw === 'BASIC' || planRaw === 'STARTER' || planRaw === 'BUSINESS'
       ? 'PRO'
       : planRaw === 'ENTERPRISE'
         ? 'ENTERPRISE'
+        : planRaw === 'LIGHT'
+          ? 'LIGHT'
         : planRaw === 'FREE'
           ? 'FREE'
           : planRaw === 'GUEST'

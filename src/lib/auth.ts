@@ -126,7 +126,8 @@ export const authOptions: NextAuthOptions = {
           ;(session.user as any).id = user.id;
           (session.user as any).role = (user as any).role || 'USER';
           (session.user as any).plan = (user as any).plan || 'FREE';
-          (session.user as any).bannerPlan = 'FREE'
+          // DBの再取得に失敗しても、手元の有料プランをFREEへ誤って落とさない。
+          (session.user as any).bannerPlan = (session.user as any).plan
         }
       }
       return session;

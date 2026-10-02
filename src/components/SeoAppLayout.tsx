@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { SeoSidebar } from '@/components/SeoSidebar'
 import { getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
 
-type SeoPlanCode = 'GUEST' | 'FREE' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
+type SeoPlanCode = 'GUEST' | 'FREE' | 'LIGHT' | 'PRO' | 'ENTERPRISE' | 'UNKNOWN'
 
 export function SeoAppLayout({
   children,
@@ -42,6 +42,8 @@ export function SeoAppLayout({
       ? 'プロ'
       : currentPlan === 'ENTERPRISE'
         ? 'エンタープライズ'
+        : currentPlan === 'LIGHT'
+          ? 'ライト'
         : currentPlan === 'GUEST'
           ? 'ゲスト'
         : currentPlan === 'FREE'
@@ -53,6 +55,8 @@ export function SeoAppLayout({
       ? 'bg-violet-50 text-violet-700 border-violet-100'
       : currentPlan === 'PRO'
         ? 'bg-amber-50 text-amber-700 border-amber-100'
+        : currentPlan === 'LIGHT'
+          ? 'bg-blue-50 text-blue-700 border-blue-100'
         : currentPlan === 'GUEST'
           ? 'bg-white/70 text-gray-700 border-gray-200'
         : 'bg-gray-50 text-gray-600 border-gray-100'
@@ -180,8 +184,6 @@ export function SeoAppLayout({
     </div>
   )
 }
-
-
 
 
 
