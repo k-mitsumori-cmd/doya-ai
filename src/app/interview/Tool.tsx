@@ -975,9 +975,9 @@ export default function InterviewTool() {
               <span className="material-symbols-outlined text-[#7f19e6] text-3xl">lock</span>
             </div>
             <p className="text-slate-900 font-bold mb-1">ログインしてプロジェクトを管理</p>
-            <p className="text-slate-500 text-sm mb-4">ログインすると、過去のプロジェクト一覧の閲覧や管理ができます</p>
+            <p className="text-slate-500 text-sm mb-4">ログイン後に作成したプロジェクトの一覧を閲覧・管理できます</p>
             <Link
-              href="/api/auth/signin"
+              href="/auth/signin?callbackUrl=/interview"
               className="inline-flex items-center gap-2 bg-[#7f19e6] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#6b12c9] transition-all shadow-lg shadow-[#7f19e6]/25 min-h-[44px]"
             >
               <span className="material-symbols-outlined text-lg">login</span>

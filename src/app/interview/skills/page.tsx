@@ -306,7 +306,7 @@ export default function SkillManagementPage() {
           <h2 className="text-xl font-black text-slate-900 mb-2">ログインが必要です</h2>
           <p className="text-slate-500 text-sm mb-6">スキル管理を利用するにはログインしてください</p>
           <Link
-            href="/api/auth/signin"
+            href="/auth/signin?callbackUrl=/interview/skills"
             className="inline-flex items-center gap-2 bg-[#7f19e6] text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-[#6b12c9] transition-all shadow-lg shadow-[#7f19e6]/25"
           >
             <span className="material-symbols-outlined text-lg">login</span>
