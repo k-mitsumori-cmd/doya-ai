@@ -7,6 +7,8 @@ import { savePersonaRecord, savePersonaImage, savedPersonaPath } from '@/lib/per
 import { includedPersonaImages } from '@/lib/persona/image-entitlements'
 import { isPersonaDisplayData, hasValidPersonaImages } from '@/lib/persona/display-data'
 import PersonaUsagePanel from '@/components/persona/PersonaUsagePanel'
+import PersonaBannerGenerator from '@/components/persona/PersonaBannerGenerator'
+import { isPaidPlan } from '@/lib/unified-plan'
 import { TrialNote } from '@/components/TrialCallout'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -216,6 +218,7 @@ export type PersonaRestoredRecord = {
   sourceUrl?: string | null
   timestamp: number
   portrait?: string
+  bannerImage?: string
   sceneImages?: Record<string, string>
 }
 
@@ -223,10 +226,10 @@ export default function PersonaTool({ initialRecord }: { initialRecord?: Persona
   const { data: session, status } = useSession()
   const userId = session?.user?.id
   if (status !== 'authenticated' || !userId) return <p role="status" className="p-6">{status === 'loading' ? 'ログイン状態を確認しています。' : 'ペルソナを利用するにはログインしてください。'}</p>
-  return <AccountPersonaTool key={`${userId}:${initialRecord?.id || ''}`} userId={userId} initialRecord={initialRecord} />
+  return <AccountPersonaTool key={`${userId}:${initialRecord?.id || ''}`} userId={userId} plan={session.user.plan} initialRecord={initialRecord} />
 }
 
-function AccountPersonaTool({ userId, initialRecord }: { userId: string; initialRecord?: PersonaRestoredRecord }) {
+function AccountPersonaTool({ userId, plan, initialRecord }: { userId: string; plan?: string | null; initialRecord?: PersonaRestoredRecord }) {
   const accountStorage = useMemo(() => personaBrowserStorage(userId), [userId])
   const textRequest = useRef<symbol | null>(null)
   const generationAttempt = useRef<{ input: string; key: string } | null>(null)
@@ -287,6 +290,7 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
   const portraitAutoTriggered = useRef(false)
   const sceneAutoTriggered = useRef(false)
   const [imageGenerationRequest, setImageGenerationRequest] = useState(0)
+  const [bannerUsageRevision, setBannerUsageRevision] = useState(0)
   const requestMissingImages = () => {
     if (!alive.current || !generatedData || currentPersona.current !== generatedData || textRequest.current || portraitLoading || Object.values(sceneLoading).some(Boolean) || autoGenerateFor.current === generatedData) return
     autoGenerateFor.current = generatedData
@@ -879,7 +883,7 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-purple-50/30">
       <div className="max-w-6xl mx-auto p-4 lg:p-8">
-        <PersonaUsagePanel refreshKey={`${loading}-${modifying}-${portraitLoading}-${Object.keys(sceneImages).length}-${Object.values(sceneLoading).filter(Boolean).length}`} />
+        <PersonaUsagePanel refreshKey={`${loading}-${modifying}-${portraitLoading}-${Object.keys(sceneImages).length}-${Object.values(sceneLoading).filter(Boolean).length}-${bannerUsageRevision}`} />
         {quotaNotice && (
           <div role="alert" className="mb-6 rounded-xl border border-purple-300 bg-purple-50 p-4 text-sm text-purple-950">
             <p className="font-bold">{quotaNotice === 'text' ? '本日のペルソナ生成・文章変更の枠に達しました。' : '本日の追加画像・再生成の枠に達しました。'}</p>
@@ -1138,6 +1142,14 @@ function AccountPersonaTool({ userId, initialRecord }: { userId: string; initial
         {/* ===== Results ===== */}
         {generatedData && persona && (
           <div className="space-y-6">
+            <PersonaBannerGenerator
+              key={currentRecordId.current || 'unsaved'}
+              projectId={currentServerRecord.current ? currentRecordId.current : null}
+              isPaid={isPaidPlan(plan)}
+              catchphrases={generatedData.summary?.catchphrases || []}
+              initialImage={initialRecord?.id === currentRecordId.current ? initialRecord.bannerImage : undefined}
+              onUsageChanged={() => setBannerUsageRevision(value => value + 1)}
+            />
             {autoGenerateFor.current !== generatedData && (
               <div className="rounded-xl border border-purple-200 bg-purple-50 p-4 export-hide">
                 <p className="text-sm text-gray-700">履歴の閲覧では画像を自動生成しません。必要な場合は、未保存の画像を生成できます。ボタンを押すと画像生成を実行します。</p>

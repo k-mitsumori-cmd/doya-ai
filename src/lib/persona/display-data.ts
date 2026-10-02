@@ -43,7 +43,8 @@ export function isPersonaDisplayData(value: unknown): boolean {
   } catch { return false }
 }
 
-export function hasValidPersonaImages(value: { portrait?: unknown; sceneImages?: unknown }): boolean {
+export function hasValidPersonaImages(value: { portrait?: unknown; bannerImage?: unknown; sceneImages?: unknown }): boolean {
   if (value.portrait != null && (typeof value.portrait !== 'string' || value.portrait.length > 16777216)) return false
+  if (value.bannerImage != null && (typeof value.bannerImage !== 'string' || value.bannerImage.length > 16777216)) return false
   return value.sceneImages == null || (object(value.sceneImages) && Object.keys(value.sceneImages).length <= 200 && Object.values(value.sceneImages).every(url => typeof url === 'string' && url.length <= 16777216))
 }

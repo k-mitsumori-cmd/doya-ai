@@ -61,6 +61,7 @@ export async function readPersonaProject(db: PrismaClient, userId: string, id: s
   return {
     id: project.id, data: project.data, sourceUrl: project.sourceUrl ?? null, timestamp: project.createdAt.getTime(), includedImages: project.includedImages,
     portrait: images.find(image => image.kind === 'portrait' && image.slotKey === 'portrait')?.url,
+    bannerImage: images.find(image => image.kind === 'banner' && image.slotKey === 'banner-default')?.url,
     sceneImages: Object.fromEntries(images.filter(image => image.kind === 'scene').map(image => [image.slotKey, image.url])),
     images,
   }

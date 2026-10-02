@@ -42,6 +42,7 @@ export async function generateAndSavePersonaImage(input: ResolvedImage, requestB
   const attempt = await reservePersonaImage(prisma, { ...input, inputHash })
   if (attempt.state === 'unauthorized') return error('再度ログインしてください。', 401, 'LOGIN_REQUIRED')
   if (attempt.state === 'not_found') return error('ペルソナが見つかりません。', 404)
+  if (attempt.state === 'plan_required') return NextResponse.json({ error: 'バナー画像生成は有料プランで利用できます。', code: 'PRO_REQUIRED', upgradeUrl: '/persona/pricing' }, { status: 403 })
   if (attempt.state === 'invalid_grant' || attempt.state === 'missing_original') return error('対象の画像を確認してください。', 400)
   if (attempt.state === 'conflict') return error('この画像生成の要求IDは再利用できません。', 409, 'REQUEST_CONFLICT')
   if (attempt.state === 'pending') return error('この画像を生成中です。しばらくしてから再度お試しください。', 409, 'GENERATION_PENDING')

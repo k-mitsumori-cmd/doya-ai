@@ -32,6 +32,7 @@ export async function reservePersonaImage(db: PrismaClient, input: ReserveImage,
     if (!user) return { state: 'unauthorized' as const }
     const project = await tx.personaProject.findFirst({ where: { id: input.projectId, userId: input.userId, status: 'succeeded', deletedAt: null } })
     if (!project) return { state: 'not_found' as const }
+    if (input.kind === 'banner' && !isPaidPlan(user.plan)) return { state: 'plan_required' as const }
     if (input.intent === 'included') {
       const grants = project.includedImages
       if (!Array.isArray(grants) || !grants.some(slot => slot && typeof slot === 'object' && !Array.isArray(slot) && slot.key === input.slotKey && slot.kind === input.kind)) {
