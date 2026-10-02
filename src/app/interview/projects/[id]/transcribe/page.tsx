@@ -307,7 +307,7 @@ export default function TranscribePage() {
             <p className="text-sm text-slate-500 truncate">
               {mediaInfo?.fileName || 'リアルタイムで音声をテキストに変換しています'}
             </p>
-            <p className="text-xs text-slate-400 mt-0.5">1回の文字起こし上限: 約3時間（180分）</p>
+            <p className="text-xs text-slate-400 mt-0.5">1回の文字起こしは利用可能な残り時間内（技術上の上限は約180分）</p>
           </div>
         </div>
       </div>

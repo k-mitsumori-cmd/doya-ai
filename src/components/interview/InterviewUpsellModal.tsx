@@ -23,16 +23,16 @@ const LIMIT_INFO: Record<
     icon: 'mic',
     title: '文字起こしの上限に達しました',
     description:
-      '今月の文字起こし分数の上限に達しました。LIGHTプラン（毎月60分）やPROプラン（毎月150分）にアップグレードできます。（1回の文字起こしは最大約3時間）',
+      '今月の文字起こし分数の上限に達しました。PROプランでは毎月150分まで利用できます。',
     guestTitle: '文字起こしの上限に達しました',
     guestDescription:
-      'ゲスト利用の上限に達しました。無料登録するだけで毎月30分まで文字起こしが利用できます。（1回の文字起こしは最大約3時間）',
+      'ゲスト利用の上限に達しました。無料登録すると毎月30分まで文字起こしを利用できます。',
   },
   upload: {
     icon: 'cloud_upload',
     title: 'アップロード容量の上限に達しました',
     description:
-      'アップロード容量の上限に達しました。LIGHTプラン（1GB）やPROプラン（2GB）にアップグレードできます。',
+      'アップロード容量の上限に達しました。PROプランでは最大2GBまでアップロードできます。',
     guestTitle: 'アップロード容量の上限を超えています',
     guestDescription:
       'ゲスト利用ではアップロード容量に制限があります。無料登録するだけで最大500MBまでアップロードできます。',
@@ -41,7 +41,7 @@ const LIMIT_INFO: Record<
     icon: 'auto_awesome',
     title: '生成回数の上限に達しました',
     description:
-      '本日の記事生成回数の上限に達しました。LIGHTプラン（1日10回）やPROプラン（1日30回）にアップグレードできます。',
+      '本日の記事生成回数の上限に達しました。PROプランでは1日30回まで利用できます。',
     guestTitle: 'ゲスト利用の上限に達しました',
     guestDescription:
       'ゲスト利用の上限に達しました。無料登録するだけで1日5回まで利用でき、すべての基本機能が使えます。',
@@ -49,7 +49,7 @@ const LIMIT_INFO: Record<
 }
 
 const PRO_FEATURES = [
-  { icon: 'mic', text: '毎月150分まで文字起こし（1回最大約3時間）', highlight: true },
+  { icon: 'mic', text: '毎月150分まで文字起こし', highlight: true },
   { icon: 'cloud_upload', text: 'アップロード最大2GB', highlight: false },
   { icon: 'fact_check', text: 'ファクトチェック機能', highlight: false },
   { icon: 'translate', text: '10言語への翻訳', highlight: false },
@@ -59,7 +59,7 @@ const PRO_FEATURES = [
 ]
 
 const FREE_FEATURES = [
-  { icon: 'mic', text: '毎月30分の文字起こし（1回最大約3時間）', highlight: true },
+  { icon: 'mic', text: '毎月30分の文字起こし', highlight: true },
   { icon: 'cloud_upload', text: 'アップロード最大500MB', highlight: true },
   { icon: 'auto_awesome', text: '1日5回まで記事生成', highlight: false },
   { icon: 'edit_note', text: 'リッチエディタで記事編集', highlight: false },
@@ -277,7 +277,7 @@ export default function InterviewUpsellModal({
                 transition={{ delay: 0.9 }}
                 onClick={() => {
                   onClose()
-                  router.push(isGuest ? '/api/auth/signin' : '/interview/settings')
+                  router.push(isGuest ? '/auth/signin?callbackUrl=/interview' : '/interview/pricing')
                 }}
                 className="w-full py-4 px-6 rounded-2xl font-bold text-white transition-all transform hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-r from-[#7f19e6] to-blue-600 hover:from-[#152e70] hover:to-blue-700 shadow-lg shadow-[#7f19e6]/30"
               >

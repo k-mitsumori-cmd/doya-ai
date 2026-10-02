@@ -19,7 +19,14 @@ const seoAccess = load('src/lib/seoAccess.ts', { 'next/server': { NextResponse: 
     user = { id: 'owner', seoPlan: 'FREE', firstLoginAt: '2020-01-01T00:00:00Z' }
     const free = await access.requireSeoImageAccess()
     assert.equal(free.response.status, 403)
-    assert.equal((await free.response.json()).code, 'SEO_IMAGE_PLAN_REQUIRED')
+    const freeBody = await free.response.json()
+    assert.equal(freeBody.code, 'SEO_IMAGE_PLAN_REQUIRED')
+    assert.equal(freeBody.upgradeUrl, '/seo/pricing')
+    user.seoPlan = 'LIGHT'
+    const legacyLight = await access.requireSeoImageAccess()
+    assert.equal(legacyLight.ok, true)
+    assert.equal(legacyLight.userId, 'owner')
+    user.seoPlan = 'FREE'
     user.firstLoginAt = new Date().toISOString()
     assert.equal((await access.requireSeoImageAccess()).response.status, 403, 'recent login does not bypass the plan')
     user = { id: 'owner', seoPlan: 'LIGHT', firstLoginAt: '2020-01-01T00:00:00Z' }

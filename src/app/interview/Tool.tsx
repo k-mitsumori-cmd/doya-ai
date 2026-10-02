@@ -78,8 +78,8 @@ const UPLOAD_STEPS = [
 ]
 
 const UPLOAD_TIPS = [
-  { icon: 'auto_awesome', text: 'AI文字起こしは95%以上の精度で音声をテキスト化します', emoji: '✨' },
-  { icon: 'speed', text: '30分の音声でも約1〜2分で文字起こしが完了します（1回最大約3時間）', emoji: '⚡' },
+  { icon: 'auto_awesome', text: 'AIが音声を文字起こしします。結果は編集して整えられます', emoji: '✨' },
+  { icon: 'speed', text: '処理時間は音声の長さや混雑状況によって変わります', emoji: '⚡' },
   { icon: 'mic', text: '複数の話者がいても、AIが自動で話者を分離します', emoji: '🎙️' },
   { icon: 'article', text: '文字起こし結果からプロ品質の記事を自動生成します', emoji: '📝' },
   { icon: 'edit_note', text: '生成された記事はエディタで自由に編集できます', emoji: '✏️' },
@@ -381,7 +381,7 @@ export default function InterviewTool() {
         return next
       })
     }
-  }, [])
+  }, [router])
 
   const handleFiles = (files: FileList | File[]) => {
     for (const file of Array.from(files)) {

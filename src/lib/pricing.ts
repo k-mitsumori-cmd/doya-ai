@@ -496,7 +496,7 @@ export const INTERVIEW_PRICING = {
       features: [
         { text: 'ゲスト: 文字起こし合計5分まで / 100MBまで', included: true },
         { text: 'ログイン: 毎月30分まで / 500MBまで', included: true },
-        { text: '1回の文字起こし: 最大約3時間', included: true },
+        { text: '1回の文字起こしは利用可能な残り時間内', included: true },
         { text: 'AI記事生成 + スキル選択', included: true },
         { text: '記事生成・再生成: ログイン時5回/日（ゲスト2回/日）', included: true },
         { text: '校正・タイトル提案', included: true },
@@ -515,7 +515,7 @@ export const INTERVIEW_PRICING = {
       features: [
         { text: '毎月60分まで文字起こし', included: true },
         { text: '記事生成・再生成: 10回/日', included: true },
-        { text: '1回の文字起こし: 最大約3時間', included: true },
+        { text: '1回の文字起こしは利用可能な残り時間内', included: true },
         { text: 'アップロード最大1GB', included: true },
         { text: 'ファクトチェック・翻訳', included: true },
         { text: 'SNS投稿文生成', included: true },
@@ -535,7 +535,7 @@ export const INTERVIEW_PRICING = {
       features: [
         { text: '毎月150分まで文字起こし', included: true },
         { text: '記事生成・再生成: 30回/日', included: true },
-        { text: '1回の文字起こし: 最大約3時間', included: true },
+        { text: '1回の文字起こしは利用可能な残り時間内', included: true },
         { text: 'アップロード最大2GB', included: true },
         { text: 'ファクトチェック・翻訳', included: true },
         { text: 'SNS投稿文生成', included: true },

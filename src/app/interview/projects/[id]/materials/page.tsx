@@ -73,8 +73,8 @@ const FILE_TYPE_ICONS: Record<string, string> = {
 
 
 const UPLOAD_TIPS = [
-  { icon: 'auto_awesome', text: 'AI文字起こしは95%以上の精度で音声をテキスト化します' },
-  { icon: 'speed', text: '30分の音声ファイルでも約1〜2分で文字起こしが完了します' },
+  { icon: 'auto_awesome', text: 'AIが音声を文字起こしします。結果は確認・編集できます' },
+  { icon: 'speed', text: '処理時間は音声の長さや混雑状況によって変わります' },
   { icon: 'mic', text: '複数の話者がいる場合も、AIが自動で話者を分離します' },
   { icon: 'translate', text: '日本語・英語をはじめ、多言語の文字起こしに対応しています' },
   { icon: 'article', text: '文字起こし結果からAIが自動でプロ品質の記事を生成します' },
@@ -813,7 +813,7 @@ export default function MaterialsPage() {
       >
         {[
           { icon: 'speed', title: '高速アップロード', desc: 'Supabase Storage直接転送で大容量ファイルも高速にアップロード。', gradient: 'from-blue-500 to-cyan-500' },
-          { icon: 'closed_caption', title: '高精度文字起こし', desc: 'AssemblyAI搭載のAIモデルが95%以上の精度で文字起こし。1回あたり最大約3時間まで対応。', gradient: 'from-[#7f19e6] to-[#a855f7]' },
+          { icon: 'closed_caption', title: 'AI文字起こし', desc: '音声をAIが文字起こしします。1回の利用時間は残り枠内です。', gradient: 'from-[#7f19e6] to-[#a855f7]' },
           { icon: 'security', title: '安全・セキュア', desc: 'SSL/TLS暗号化転送。音声データはセキュアに保管されます。', gradient: 'from-emerald-500 to-green-500' },
         ].map((feature, i) => (
           <motion.div

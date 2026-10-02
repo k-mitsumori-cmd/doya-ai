@@ -14,7 +14,7 @@ export async function requireSeoImageAccess(): Promise<{ ok: true; userId: strin
   const plan = normalizeSeoPlan(user?.seoPlan || user?.plan || 'FREE')
   const trialActive = isTrialActive(user?.firstLoginAt || null).active
   if (!canUseSeoImages({ isLoggedIn: true, plan, trialActive })) {
-    return { ok: false, response: NextResponse.json({ code: 'SEO_IMAGE_PLAN_REQUIRED', error: '画像生成はLIGHT以上のプランで利用できます。', upgradeUrl: '/seo/dashboard/plan' }, { status: 403 }) }
+    return { ok: false, response: NextResponse.json({ code: 'SEO_IMAGE_PLAN_REQUIRED', error: '画像生成には有料プランが必要です。', upgradeUrl: '/seo/pricing' }, { status: 403 }) }
   }
   return { ok: true, userId }
 }
