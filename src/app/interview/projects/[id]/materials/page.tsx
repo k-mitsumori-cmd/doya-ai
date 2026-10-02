@@ -383,7 +383,10 @@ export default function MaterialsPage() {
 
       const confirmData = await confirmRes.json()
       if (!confirmData.success) {
-        throw new Error(confirmData.error || '確認処理に失敗')
+        const err: any = new Error(confirmData.error || '確認処理に失敗')
+        err.actionUrl = confirmData.actionUrl
+        err.actionLabel = confirmData.actionLabel
+        throw err
       }
 
       // 完了

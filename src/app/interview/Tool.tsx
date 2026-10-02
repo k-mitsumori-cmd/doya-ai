@@ -197,7 +197,7 @@ export default function InterviewTool() {
       })
       const urlData = await urlRes.json()
       if (!urlData.success) {
-        if (urlData.code === 'GUEST_UPLOAD_LIMIT' || urlData.code === 'PLAN_UPLOAD_LIMIT') {
+        if (urlData.code === 'GUEST_UPLOAD_LIMIT' || (urlData.code === 'PLAN_UPLOAD_LIMIT' && urlData.actionUrl === '/interview/pricing')) {
           setUpsellLimitType('upload')
           setUpsellIsGuest(urlData.code === 'GUEST_UPLOAD_LIMIT')
           setUpsellOpen(true)
@@ -300,7 +300,12 @@ export default function InterviewTool() {
         body: JSON.stringify({ materialId }),
       })
       const confirmData = await confirmRes.json()
-      if (!confirmData.success) throw new Error(confirmData.error || '確認処理失敗')
+      if (!confirmData.success) {
+        const err: any = new Error(confirmData.error || '確認処理失敗')
+        err.actionUrl = confirmData.actionUrl
+        err.actionLabel = confirmData.actionLabel
+        throw err
+      }
 
       // Step 5: 音声/動画ならリアルタイム文字起こしページへ遷移
       const isAudioVideo = file.type.startsWith('audio/') || file.type.startsWith('video/')

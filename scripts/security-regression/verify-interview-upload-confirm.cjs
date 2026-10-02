@@ -91,12 +91,26 @@ const request = () => ({ cookies: { get: () => guestId ? { value: guestId } : un
     currentSize = 101
     const res = await confirm.POST(request())
     assert.equal(res.status, 413)
-    assert.equal((await res.json()).code, 'UPLOAD_LIMIT_REACHED')
+    const body = await res.json()
+    assert.equal(body.code, 'UPLOAD_LIMIT_REACHED')
+    assert.equal(body.limitSource, 'plan')
+    assert.equal(body.actionUrl, '/auth/signin?callbackUrl=/interview')
     assert.equal(currentStatus, 'ERROR')
     assert.equal(currentFileUrl, null)
     assert.equal(signedReads, 0)
     assert.equal(queued.length, 1)
     assert.match(queued[0].key, /^interview-file-purge:v1:material-1$/)
+  })
+
+  await check('storage ceiling does not claim that an upgrade will help', async () => {
+    currentStatus = 'UPLOADED'; currentSize = 501; queued = []
+    const res = await confirm.POST(request())
+    assert.equal(res.status, 413)
+    const body = await res.json()
+    assert.equal(body.limitSource, 'storage')
+    assert.equal(body.actionUrl, undefined)
+    assert.match(body.error, /分割または圧縮/)
+    assert.equal(queued.length, 1)
   })
 
   await check('valid file stores storage-reported size after ownership check', async () => {

@@ -10,7 +10,7 @@
 ## 機能
 
 ### Phase 1 (MVP)
-- Supabase Storage 大容量ファイル直接アップロード (5GB+)
+- Supabase Storage へのファイル直接アップロード。実効上限はプラン・Storage バケット・環境設定のうち最小値
 - 署名付きURL方式 (Vercelボディサイズ制限バイパス)
 - プロジェクトCRUD + フロントエンド
 - 素材アップロード (upload-url → confirm → XHR直接PUT)
@@ -46,6 +46,8 @@
 | PRO | 毎月150分 | 2GB | 30回/日 | ¥9,980 |
 | Enterprise | 毎月1,000分 | 5GB | 100回/日 | ¥49,980 |
 
+表のアップロード上限はプランごとの最大値です。実際に受け付ける1ファイルの容量は、プラン上限、Supabase Storage バケットで確認できた上限、`INTERVIEW_MAX_FILE_SIZE_MB`（未設定時は5GB）の最小値です。プラン上限に達した場合はゲストにログイン、FREE/LIGHTに料金ページ、PRO/Enterpriseに問い合わせを案内します。Storage 側の上限に達した場合は、プラン変更で解決するとは案内せず、ファイルの分割または圧縮を案内します。署名付きURL発行前と、直接アップロード後の実サイズ確認時の両方で判定します。
+
 記事生成回数は日本時間の日次枠です。記事の初回生成と同じプロジェクトでの再生成を、それぞれ1回として数えます。プロジェクト作成だけでは消費せず、生成失敗時は予約した回数を返却します。AI修正・校正・タイトル提案は、この生成回数には含みません。
 
 記事1件につき最初の校正1回は記事生成に含まれます。同じ記事の追加校正と、AI修正・タイトル提案・記事内の確認候補抽出・SNS投稿文・翻訳は共通の追加AI編集日次枠を各1回使用します。ゲスト2回、無料5回、LIGHT10回、PRO30回、Enterprise100回です。日本時間の日付切り替えで枠が戻り、生成失敗時は予約回数を返却します。同時校正の重複実行は拒否します。
@@ -67,7 +69,7 @@
 | メソッド | パス | 説明 |
 |---------|------|------|
 | POST | `/api/interview/materials/upload-url` | 署名付きURL取得 |
-| POST | `/api/interview/materials/[id]/confirm` | アップロード確認 |
+| POST | `/api/interview/materials/confirm` | アップロード確認 |
 | DELETE | `/api/interview/materials/[id]` | 素材削除 |
 | POST | `/api/interview/materials/[id]/transcribe` | 文字起こし開始 |
 
@@ -112,8 +114,8 @@
 2. ブラウザ → PUT <signedUrl> (XHR直接アップロード)
    → Vercelの4.5MBボディ制限をバイパス
 
-3. POST /api/interview/materials/[id]/confirm
-   → DB更新 (status: UPLOADED)
+3. POST /api/interview/materials/confirm
+   → 実サイズと所有者を確認し、DB更新 (status: COMPLETED)
 
 4. POST /api/interview/materials/[id]/transcribe
    → AssemblyAI にURL渡し → ポーリングで完了待ち

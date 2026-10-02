@@ -12,7 +12,7 @@ import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { ensureBucket, getDetectedMaxFileSize, getFileMetadata, getSignedFileUrl } from '@/lib/interview/storage'
 import { getMaxFileSize } from '@/lib/interview/types'
-import { getInterviewGuestLimits, getInterviewLimitsByPlan } from '@/lib/pricing'
+import { getInterviewGuestLimits, getInterviewLimitsByPlan, SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { enqueueInterviewMaterialStoragePurge } from '@/lib/interview/storage-purge-queue'
 
 export async function POST(req: NextRequest) {
@@ -75,17 +75,31 @@ export async function POST(req: NextRequest) {
     const storageMax = Math.min(getDetectedMaxFileSize(), getMaxFileSize())
     const maxSize = planMax > 0 ? Math.min(planMax, storageMax) : storageMax
     if (metadata.size > maxSize) {
+      const storageLimited = metadata.size > storageMax
+      const isGuest = !userId
+      const contact = plan === 'PRO' || plan === 'ENTERPRISE'
       await prisma.$transaction(async (tx) => {
         const rejected = await tx.interviewMaterial.updateMany({
           where: { id: material.id, status: 'UPLOADED', fileUrl: null },
-          data: { status: 'ERROR', error: 'ファイルサイズがプランの上限を超えています' },
+          data: { status: 'ERROR', error: storageLimited ? 'ファイルサイズがアップロード先の容量上限を超えています' : 'ファイルサイズがプランの上限を超えています' },
         })
         if (rejected.count) await enqueueInterviewMaterialStoragePurge(tx, {
           id: material.id, projectId: material.projectId, filePath: storagePath,
           userId: material.project.userId, guestId: material.project.guestId,
         })
       })
-      return NextResponse.json({ success: false, error: '実際のファイルサイズがアップロード上限を超えています。', code: 'UPLOAD_LIMIT_REACHED' }, { status: 413 })
+      return NextResponse.json({
+        success: false,
+        error: storageLimited
+          ? '実際のファイルサイズがアップロード先の容量上限を超えています。ファイルを分割または圧縮してください。'
+          : '実際のファイルサイズが現在のプランの上限を超えています。',
+        code: 'UPLOAD_LIMIT_REACHED',
+        limitSource: storageLimited ? 'storage' : 'plan',
+        ...(!storageLimited ? {
+          actionUrl: isGuest ? '/auth/signin?callbackUrl=/interview' : contact ? SUPPORT_CONTACT_URL : '/interview/pricing',
+          actionLabel: isGuest ? 'ログインはこちら' : contact ? '容量について相談する' : 'プランと無料体験を見る',
+        } : {}),
+      }, { status: 413 })
     }
 
     // 署名付きURLを取得してDBに保存

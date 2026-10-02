@@ -19,7 +19,7 @@ import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, ensureGuestId, setGuestCookie, requireDatabase } from '@/lib/interview/access'
 import { createSignedUploadUrl, buildStoragePath, ensureBucket, getDetectedMaxFileSize } from '@/lib/interview/storage'
 import { ALLOWED_MIME_TYPES, ALLOWED_EXTENSIONS, getMaxFileSize } from '@/lib/interview/types'
-import { getInterviewLimitsByPlan, getInterviewGuestLimits } from '@/lib/pricing'
+import { getInterviewLimitsByPlan, getInterviewGuestLimits, SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 export async function POST(req: NextRequest) {
   const dbErr = requireDatabase()
@@ -98,13 +98,19 @@ export async function POST(req: NextRequest) {
     if (fileSize > maxSize) {
       const mb = Math.round(maxSize / 1024 / 1024)
       const isGuest = !userId
+      const storageLimited = fileSize > storageMax
+      const contact = plan === 'PRO' || plan === 'ENTERPRISE'
       return NextResponse.json(
         {
           success: false,
-          error: `ファイルサイズが上限 (${mb}MB) を超えています。`,
-          code: isGuest ? 'GUEST_UPLOAD_LIMIT' : 'PLAN_UPLOAD_LIMIT',
-          actionUrl: isGuest ? '/auth/signin?callbackUrl=/interview' : '/interview/settings',
-          actionLabel: isGuest ? 'ログインはこちら' : 'アップグレードはこちら',
+          error: storageLimited
+            ? `アップロード先の容量上限（${mb}MB）を超えています。ファイルを分割または圧縮してください。`
+            : `現在のプランのファイル上限（${mb}MB）を超えています。`,
+          code: storageLimited ? 'STORAGE_UPLOAD_LIMIT' : isGuest ? 'GUEST_UPLOAD_LIMIT' : 'PLAN_UPLOAD_LIMIT',
+          ...(!storageLimited ? {
+            actionUrl: isGuest ? '/auth/signin?callbackUrl=/interview' : contact ? SUPPORT_CONTACT_URL : '/interview/pricing',
+            actionLabel: isGuest ? 'ログインはこちら' : contact ? '容量について相談する' : 'プランと無料体験を見る',
+          } : {}),
         },
         { status: 400 }
       )
