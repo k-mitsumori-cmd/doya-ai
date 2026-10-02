@@ -8,6 +8,7 @@ const companies = [
   { source: 'manual', createdAt: new Date() },
 ];
 let nextId = 1;
+let plan = 'FREE';
 let lockTail = Promise.resolve();
 let collectorCalls = 0;
 let releaseCollectors;
@@ -26,7 +27,7 @@ const companyStore = {
 };
 const tx = { $queryRaw: async () => [{ id: 'user' }], doyalistCompany: companyStore };
 const prisma = {
-  user: { findUnique: async () => ({ plan: 'FREE' }) },
+  user: { findUnique: async () => ({ plan }) },
   doyalistCompany: companyStore,
   doyalistProject: { findUnique: async () => ({ id: 'project-1', userId: 'user', industry: null, region: null, keywords: '' }) },
   $transaction: async (operation) => {
@@ -40,7 +41,7 @@ const prisma = {
 };
 const limits = load('src/lib/doyalist/limits.ts', {
   '@/lib/prisma': { prisma },
-  '@/lib/plan-utils': { tierFrom: () => 'FREE' },
+  '@/lib/plan-utils': { tierFrom: (value) => value },
 });
 const route = load('src/app/api/doyalist/collect/route.ts', {
   'next/server': { NextResponse: Response },
@@ -81,11 +82,23 @@ const post = () => route.POST(new Request('https://doya.test/api/doyalist/collec
   const removed = companies.pop();
   const partial = await post();
   assert.equal(partial.status, 403);
-  assert.equal((await partial.json()).code, 'MONTHLY_REQUEST_EXCEEDS_REMAINING');
+  const partialBody = await partial.json();
+  assert.equal(partialBody.code, 'MONTHLY_REQUEST_EXCEEDS_REMAINING');
+  assert.equal(partialBody.upgradeUrl, '/doyalist/pricing');
   companies.push(removed);
   const exhausted = await post();
   assert.equal(exhausted.status, 403);
-  assert.equal((await exhausted.json()).code, 'MONTHLY_LIMIT_REACHED');
+  const exhaustedBody = await exhausted.json();
+  assert.equal(exhaustedBody.code, 'MONTHLY_LIMIT_REACHED');
+  assert.equal(exhaustedBody.upgradeUrl, '/doyalist/pricing');
   assert.equal(collectorCalls, 2, 'both quota errors must stop before external collection');
+  plan = 'PRO';
+  companies.push(...Array.from({ length: 4900 }, () => ({ source: 'gbizinfo', createdAt: new Date() })));
+  const paidDenied = await post();
+  assert.equal(paidDenied.status, 403);
+  const paidBody = await paidDenied.json();
+  assert.equal(paidBody.contactUrl, 'https://doyamarke.surisuta.jp/contact');
+  assert.equal(paidBody.upgradeUrl, undefined);
+  assert.equal(collectorCalls, 2, 'paid users over quota must not call collection providers');
   console.log('PASS Doyalist collection: JST month, actual source count, concurrent cap, exact created rows');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

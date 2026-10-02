@@ -59,9 +59,12 @@ export async function POST(req: NextRequest) {
 
     // プラン上限チェック
     const limits = await getUserDoyalistLimits(userId)
+    const quotaAction = limits.tier === 'FREE' || limits.tier === 'GUEST'
+      ? { upgradeUrl: '/doyalist/pricing' }
+      : { contactUrl: 'https://doyamarke.surisuta.jp/contact' }
     if (limits.maxCompaniesPerMonth === 0) {
       return NextResponse.json(
-        { error: '現在のプランでは企業生成を利用できません', code: 'MONTHLY_LIMIT_REACHED' },
+        { error: '現在のプランでは企業生成を利用できません', code: 'MONTHLY_LIMIT_REACHED', ...quotaAction },
         { status: 403 }
       )
     }
@@ -73,6 +76,7 @@ export async function POST(req: NextRequest) {
           {
             error: `月間上限（${limits.maxCompaniesPerMonth}社）を超えます。残り${available}社まで生成可能です`,
             code: available === 0 ? 'MONTHLY_LIMIT_REACHED' : 'MONTHLY_REQUEST_EXCEEDS_REMAINING',
+            ...quotaAction,
           },
           { status: 403 }
         )
@@ -217,7 +221,7 @@ export async function POST(req: NextRequest) {
       })
     if (created.length === 0) {
       return NextResponse.json(
-        { error: `月間上限（${limits.maxCompaniesPerMonth}社）に達しました。${limits.maxCompaniesPerMonth <= 100 ? 'プロにアップグレードすると枠が広がります。' : '追加枠をご希望の場合はお問い合わせください。'}`, code: 'MONTHLY_LIMIT_REACHED' },
+        { error: `月間上限（${limits.maxCompaniesPerMonth}社）に達しました。${limits.tier === 'FREE' ? 'プロにアップグレードすると枠が広がります。' : '追加枠をご希望の場合はお問い合わせください。'}`, code: 'MONTHLY_LIMIT_REACHED', ...quotaAction },
         { status: 403 }
       )
     }

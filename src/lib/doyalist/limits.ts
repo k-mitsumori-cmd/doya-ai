@@ -107,11 +107,12 @@ export async function countMonthlyApproaches(userId: string): Promise<number> {
 }
 
 /** 月間営業文枠をAI呼び出し前に確保する。複数端末からの同時生成も直列化する。 */
-export async function reserveMonthlyApproach(userId: string): Promise<{ granted: boolean; limit: number; reservedMonth: Date | null }> {
+export async function reserveMonthlyApproach(userId: string): Promise<{ granted: boolean; limit: number; tier: PlanTier; reservedMonth: Date | null }> {
   const limits = await getUserDoyalistLimits(userId)
   const limit = limits.maxApproachesPerMonth
-  if (limit < 0) return { granted: true, limit, reservedMonth: null }
-  if (limit === 0) return { granted: false, limit, reservedMonth: null }
+  const tier = limits.tier
+  if (limit < 0) return { granted: true, limit, tier, reservedMonth: null }
+  if (limit === 0) return { granted: false, limit, tier, reservedMonth: null }
   return prisma.$transaction(async (tx) => {
     const users = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "User" WHERE id = ${userId} FOR UPDATE`
     if (users.length === 0) throw new Error('ユーザーが見つかりません')
@@ -122,13 +123,13 @@ export async function reserveMonthlyApproach(userId: string): Promise<{ granted:
       tx.userServiceSubscription.findUnique({ where, select: { monthlyUsage: true, lastUsageReset: true } }),
     ])
     const used = Math.max(history, ledger && isSameMonth(ledger.lastUsageReset, now) ? Math.max(0, ledger.monthlyUsage) : 0)
-    if (used >= limit) return { granted: false, limit, reservedMonth: null }
+    if (used >= limit) return { granted: false, limit, tier, reservedMonth: null }
     await tx.userServiceSubscription.upsert({
       where,
       create: { userId, serviceId: APPROACH_QUOTA_SERVICE_ID, monthlyUsage: used + 1, lastUsageReset: now },
       update: { monthlyUsage: used + 1, lastUsageReset: now },
     })
-    return { granted: true, limit, reservedMonth: monthStart(now) }
+    return { granted: true, limit, tier, reservedMonth: monthStart(now) }
   })
 }
 

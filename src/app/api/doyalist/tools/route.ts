@@ -215,10 +215,15 @@ export async function POST(req: NextRequest) {
 
     const prompt = buildPrompt(body, fetchedSiteInfo)
 
-    const { granted, limit, reservedMonth } = await reserveMonthlyApproach(userId)
+    const { granted, limit, tier, reservedMonth } = await reserveMonthlyApproach(userId)
     if (!granted) {
+      const free = tier === 'FREE' || tier === 'GUEST'
       return NextResponse.json(
-        { error: `今月の営業文生成上限（${limit}回）に達しました。${limit <= 30 ? 'プロにアップグレードすると枠が広がります。' : '追加枠をご希望の場合はお問い合わせください。'}`, code: 'MONTHLY_LIMIT_REACHED' },
+        {
+          error: `今月の営業文生成上限（${limit}回）に達しました。${free ? 'プロにアップグレードすると枠が広がります。' : '追加枠をご希望の場合はお問い合わせください。'}`,
+          code: 'MONTHLY_LIMIT_REACHED',
+          ...(free ? { upgradeUrl: '/doyalist/pricing' } : { contactUrl: 'https://doyamarke.surisuta.jp/contact' }),
+        },
         { status: 403 }
       )
     }

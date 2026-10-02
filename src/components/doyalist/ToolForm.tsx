@@ -48,6 +48,7 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
   const [generating, setGenerating] = useState(false)
   const [result, setResult] = useState('')
   const [limitMessage, setLimitMessage] = useState<string | null>(null)
+  const [limitAction, setLimitAction] = useState<'pricing' | 'contact' | null>(null)
 
   useEffect(() => {
     let active = true
@@ -57,6 +58,7 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
         if (!active || data?.remaining?.approaches !== 0) return
         const limit = data?.limits?.maxApproachesPerMonth
         setLimitMessage(`今月の営業文生成上限（${limit}回）に達しました。`)
+        setLimitAction(data?.plan?.tier === 'FREE' || data?.plan?.tier === 'GUEST' ? 'pricing' : 'contact')
       })
       .catch(() => {})
     return () => { active = false }
@@ -64,7 +66,7 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
 
   const handleGenerate = async () => {
     if (!serviceInput.trim()) { toast.error('サービス内容またはURLを入力してください'); return }
-    setGenerating(true); setResult('')
+    setGenerating(true); setResult(''); setLimitMessage(null); setLimitAction(null)
     const tid = toast.loading('AIが文章を作成中...')
     try {
       const res = await fetch('/api/doyalist/tools', {
@@ -76,6 +78,7 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
       if (!res.ok) {
         if (res.status === 403 && data?.code === 'MONTHLY_LIMIT_REACHED') {
           setLimitMessage(data?.error || '今月の営業文生成上限に達しました。')
+          setLimitAction(data?.upgradeUrl === '/doyalist/pricing' ? 'pricing' : data?.contactUrl === 'https://doyamarke.surisuta.jp/contact' ? 'contact' : null)
         }
         toast.error(data?.error || '生成に失敗しました', { id: tid })
         return
@@ -116,9 +119,9 @@ export default function ToolForm({ type, title, subtitle, emoji }: Props) {
         {limitMessage && (
           <div className="mb-5 flex items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-900">
             <span>{limitMessage}</span>
-            <Link href="/doyalist/pricing" className="shrink-0 rounded-full bg-blue-600 px-4 py-2 text-xs font-black text-white">
-              プラン・料金を見る
-            </Link>
+            {limitAction && <Link href={limitAction === 'pricing' ? '/doyalist/pricing' : 'https://doyamarke.surisuta.jp/contact'} className="shrink-0 rounded-full bg-blue-600 px-4 py-2 text-xs font-black text-white">
+              {limitAction === 'pricing' ? 'プラン・料金を見る' : '追加枠を相談する'}
+            </Link>}
           </div>
         )}
 
