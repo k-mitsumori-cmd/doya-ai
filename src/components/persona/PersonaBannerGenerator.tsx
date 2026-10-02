@@ -87,11 +87,11 @@ export default function PersonaBannerGenerator({ projectId, isPaid, catchphrases
         <p>{error}</p>
         {(errorCode === 'DAILY_LIMIT_REACHED' || errorCode === 'PRO_REQUIRED') && <a href="/persona/pricing" className="mt-2 inline-block font-bold underline">プランと利用枠を確認する</a>}
       </div>}
-      {image && <div className="mt-5">
-        <p className="mb-2 text-sm font-medium text-gray-700">保存済みのバナー画像</p>
-        <img src={image} alt="生成したペルソナ向けバナー画像" className="max-h-[500px] max-w-full rounded-lg border border-gray-200 object-contain" />
-        <a href={image} download="persona-banner.png" className="mt-2 inline-block text-sm font-bold text-purple-700 underline">画像を保存する</a>
-      </div>}
     </>}
+    {image && <div className="mt-5">
+      <p className="mb-2 text-sm font-medium text-gray-700">保存済みのバナー画像</p>
+      <img src={image} alt="生成したペルソナ向けバナー画像" className="max-h-[500px] max-w-full rounded-lg border border-gray-200 object-contain" />
+      <a href={image} download="persona-banner.png" className="mt-2 inline-block text-sm font-bold text-purple-700 underline">画像を保存する</a>
+    </div>}
   </section>
 }
