@@ -30,7 +30,7 @@ export async function uploadRecording(
   await ensureBucket()
   const supabase = getSupabaseAdmin()
   const { error } = await supabase.storage.from(BUCKET).upload(path, buffer, { contentType, upsert: true })
-  if (error) throw new Error(`録音の保存に失敗しました: ${error.message}`)
+  if (error) throw new Error('録音の保存に失敗しました')
   return path
 }
 
@@ -66,7 +66,7 @@ export async function createSignedUploadUrl(
   const supabase = getSupabaseAdmin()
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUploadUrl(path)
   if (error || !data) {
-    throw new Error(`アップロードURLの発行に失敗しました: ${error?.message || 'unknown'}`)
+    throw new Error('アップロードURLの発行に失敗しました')
   }
   return { signedUrl: data.signedUrl, token: data.token, path }
 }
@@ -88,5 +88,5 @@ export async function recordingExists(path: string): Promise<boolean> {
 export async function deleteRecording(path: string): Promise<void> {
   const supabase = getSupabaseAdmin()
   const { error } = await supabase.storage.from(BUCKET).remove([path])
-  if (error) throw new Error(`録音の削除に失敗しました: ${error.message}`)
+  if (error) throw new Error('録音の削除に失敗しました')
 }

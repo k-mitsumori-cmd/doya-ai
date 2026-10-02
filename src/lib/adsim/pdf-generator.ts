@@ -424,7 +424,7 @@ export async function generatePdfBuffer(input: PdfInput): Promise<Uint8Array> {
     const c = await import('@sparticuz/chromium')
     chromium = (c as any).default || c
   } catch (err) {
-    throw new Error(`puppeteer 初期化失敗: ${err instanceof Error ? err.message : String(err)}`)
+    throw new Error('PDF生成の初期化に失敗しました')
   }
 
   const html = renderHtml(input)

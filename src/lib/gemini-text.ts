@@ -211,8 +211,7 @@ export async function generateChatWithGemini(
   })
 
   if (!response.ok) {
-    const errorText = await response.text()
-    throw new Error(`Gemini API error: ${response.status} - ${errorText.substring(0, 300)}`)
+    throw new Error(`Gemini API error: ${response.status}`)
   }
 
   const data = await response.json()

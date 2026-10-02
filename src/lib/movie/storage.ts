@@ -35,7 +35,7 @@ export async function uploadMovieFile(
     .from(BUCKET)
     .upload(path, buffer, { contentType, upsert: true })
 
-  if (error) throw new Error(`Supabase upload error: ${error.message}`)
+  if (error) throw new Error('Supabase upload error')
 
   const { data } = await getSupabase().storage
     .from(BUCKET)

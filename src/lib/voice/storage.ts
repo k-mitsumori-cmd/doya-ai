@@ -41,7 +41,7 @@ async function ensureBucket(): Promise<void> {
       public: false,
     })
     if (error && !error.message?.includes('already exists')) {
-      throw new Error(`Bucket作成失敗: ${error.message}`)
+      throw new Error('保存先を準備できませんでした')
     }
   }
   _bucketReady = true
@@ -71,7 +71,7 @@ export async function uploadVoiceAudio(opts: {
     })
 
   if (error) {
-    throw new Error(`音声アップロード失敗: ${error.message}`)
+    throw new Error('音声を保存できませんでした')
   }
 
   // 署名付きURL（1年有効）
@@ -80,7 +80,7 @@ export async function uploadVoiceAudio(opts: {
     .createSignedUrl(storagePath, 365 * 24 * 3600)
 
   if (urlError || !data?.signedUrl) {
-    throw new Error(`署名付きURL取得失敗: ${urlError?.message || '不明なエラー'}`)
+    throw new Error('署名付きURLを取得できませんでした')
   }
 
   return data.signedUrl

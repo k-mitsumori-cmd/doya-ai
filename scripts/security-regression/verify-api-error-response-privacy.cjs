@@ -72,4 +72,15 @@ const response = { NextResponse: Response }
     assert(body.includes('error'))
     assert(!body.includes(secret))
   })
+
+  await check('shared Gemini chat does not include provider response bodies in errors', async () => {
+    const gemini = load('src/lib/gemini-text.ts', {}, {
+      process: { env: { GOOGLE_GENAI_API_KEY: 'offline-test-key' } },
+      fetch: async () => new Response(secret, { status: 503 }),
+    })
+    await assert.rejects(gemini.generateChatWithGemini([{ role: 'user', text: 'test' }]), error => {
+      assert(!String(error).includes(secret))
+      return true
+    })
+  })
 })().catch((error) => { console.error(error); process.exitCode = 1 })

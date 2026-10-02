@@ -22,7 +22,7 @@ export async function uploadPng(path: string, buffer: Buffer): Promise<string> {
   await ensureBucket()
   const supabase = getSupabaseAdmin()
   const { error } = await supabase.storage.from(BUCKET).upload(path, buffer, { contentType: 'image/png', upsert: true })
-  if (error) throw new Error(`画像の保存に失敗しました: ${error.message}`)
+  if (error) throw new Error('画像の保存に失敗しました')
   return path
 }
 
@@ -31,7 +31,7 @@ export async function uploadFile(path: string, buffer: Buffer, contentType: stri
   await ensureBucket()
   const supabase = getSupabaseAdmin()
   const { error } = await supabase.storage.from(BUCKET).upload(path, buffer, { contentType, upsert: true })
-  if (error) throw new Error(`アップロードに失敗しました: ${error.message}`)
+  if (error) throw new Error('アップロードに失敗しました')
   return path
 }
 

@@ -41,7 +41,7 @@ export async function uploadPng(path: string, buffer: Buffer): Promise<string> {
     contentType: 'image/png',
     upsert: true,
   })
-  if (error) throw new Error(`画像の保存に失敗しました: ${error.message}`)
+  if (error) throw new Error('画像の保存に失敗しました')
   return path
 }
 

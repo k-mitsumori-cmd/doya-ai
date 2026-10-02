@@ -34,7 +34,7 @@ async function uploadBuffer(buffer: Buffer, path: string, contentType: string): 
   const { error } = await getSupabase()
     .storage.from(BUCKET)
     .upload(path, buffer, { contentType, upsert: true })
-  if (error) throw new Error(`Supabase upload error: ${error.message}`)
+  if (error) throw new Error('Supabase upload error')
   const { data } = getSupabase().storage.from(BUCKET).getPublicUrl(path)
   if (!data?.publicUrl) throw new Error('公開URLの生成に失敗しました')
   return data.publicUrl
@@ -120,7 +120,7 @@ export async function uploadExportFile(
   const { error } = await getSupabase()
     .storage.from(BUCKET)
     .upload(path, buffer, { contentType, upsert: false })
-  if (error) throw new Error(`Supabase upload error: ${error.message}`)
+  if (error) throw new Error('Supabase upload error')
   const { data } = getSupabase()
     .storage.from(BUCKET)
     .getPublicUrl(path, { download: `${baseName}.${ext}` })

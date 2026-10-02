@@ -92,8 +92,7 @@ export async function generateSpeech(options: TtsOptions): Promise<TtsResult> {
   )
 
   if (!response.ok) {
-    const err = await response.text()
-    throw new Error(`Google TTS API error: ${response.status} ${err}`)
+    throw new Error(`Google TTS API error: ${response.status}`)
   }
 
   const data = await response.json()

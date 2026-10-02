@@ -44,7 +44,7 @@ export async function uploadHrPhoto(
     .storage.from(BUCKET)
     .upload(path, buffer, { contentType, upsert: true })
 
-  if (error) throw new Error(`Supabase upload error: ${error.message}`)
+  if (error) throw new Error('Supabase upload error')
 
   const { data } = getSupabase().storage.from(BUCKET).getPublicUrl(path)
   if (!data?.publicUrl) throw new Error('公開URLの生成に失敗しました')

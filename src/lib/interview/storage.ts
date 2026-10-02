@@ -53,7 +53,7 @@ export async function ensureBucket(): Promise<void> {
       public: false,
     })
     if (error && !error.message?.includes('already exists')) {
-      throw new Error(`Bucket作成失敗: ${error.message}`)
+      throw new Error('保存先を準備できませんでした')
     }
   }
 
@@ -108,7 +108,7 @@ export async function createSignedUploadUrl(
     .createSignedUploadUrl(storagePath)
 
   if (error || !data) {
-    throw new Error(`アップロードURL生成失敗: ${error?.message || '不明なエラー'}`)
+    throw new Error('アップロードURLを生成できませんでした')
   }
 
   return {
@@ -132,7 +132,7 @@ export async function getSignedFileUrl(
     .createSignedUrl(storagePath, expiresInSeconds)
 
   if (error || !data?.signedUrl) {
-    throw new Error(`署名付きURL取得失敗: ${error?.message || '不明なエラー'}`)
+    throw new Error('署名付きURLを取得できませんでした')
   }
 
   return data.signedUrl
