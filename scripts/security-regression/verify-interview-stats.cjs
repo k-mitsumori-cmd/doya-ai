@@ -10,12 +10,12 @@ let countCalls = 0
 let listCalls = 0
 const prisma = {
   interviewProject: {
-    findMany: async ({ where, take }) => { assert.equal(JSON.stringify(where), JSON.stringify(owner ? { userId: owner } : { guestId: 'guest-1' })); assert.equal(take, 51); listCalls++; return projects },
-    count: async ({ where }) => { assert.equal(JSON.stringify(where), JSON.stringify(owner ? { userId: owner } : { guestId: 'guest-1' })); countCalls++; return 73 },
-    groupBy: async ({ where }) => { assert.equal(JSON.stringify(where), JSON.stringify(owner ? { userId: owner } : { guestId: 'guest-1' })); return [{ status: 'DRAFT', _count: { _all: 73 } }] },
+    findMany: async ({ where, take }) => { assert.equal(JSON.stringify(where), JSON.stringify(owner ? { userId: owner } : { guestId: 'guest-1', userId: null })); assert.equal(take, 51); listCalls++; return projects },
+    count: async ({ where }) => { assert.equal(JSON.stringify(where), JSON.stringify(owner ? { userId: owner } : { guestId: 'guest-1', userId: null })); countCalls++; return 73 },
+    groupBy: async ({ where }) => { assert.equal(JSON.stringify(where), JSON.stringify(owner ? { userId: owner } : { guestId: 'guest-1', userId: null })); return [{ status: 'DRAFT', _count: { _all: 73 } }] },
   },
-  interviewDraft: { count: async ({ where }) => { assert.equal(JSON.stringify(where.project.is), JSON.stringify(owner ? { userId: owner } : { guestId: 'guest-1' })); countCalls++; return 140 } },
-  interviewMaterial: { count: async ({ where }) => { assert.equal(JSON.stringify(where.project.is), JSON.stringify(owner ? { userId: owner } : { guestId: 'guest-1' })); countCalls++; return 80 } },
+  interviewDraft: { count: async ({ where }) => { assert.equal(JSON.stringify(where.project.is), JSON.stringify(owner ? { userId: owner } : { guestId: 'guest-1', userId: null })); countCalls++; return 140 } },
+  interviewMaterial: { count: async ({ where }) => { assert.equal(JSON.stringify(where.project.is), JSON.stringify(owner ? { userId: owner } : { guestId: 'guest-1', userId: null })); countCalls++; return 80 } },
 }
 const route = load('src/app/api/interview/projects/route.ts', {
   'next/server': { NextResponse: { json: (body, options) => ({ body, status: options?.status ?? 200 }) } },

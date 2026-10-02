@@ -103,7 +103,9 @@ export function checkOwnership(
       )
     }
   } else if (currentGuestId) {
-    if (String(resource.guestId || '') !== currentGuestId) {
+    // Once a guest project is claimed, its guestId remains only as a storage
+    // namespace. The old cookie must no longer authorize anonymous access.
+    if (resource.userId || String(resource.guestId || '') !== currentGuestId) {
       return NextResponse.json(
         { success: false, error: '見つかりませんでした' },
         { status: 404 }

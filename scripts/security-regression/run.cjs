@@ -335,6 +335,11 @@ if (interviewStorageQueue.error || interviewStorageQueue.status !== 0) {
   console.error('Security regression failed: verify-interview-storage-purge-queue.cjs');
   process.exit(1);
 }
+const interviewGuestClaim = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-guest-claim.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (interviewGuestClaim.error || interviewGuestClaim.status !== 0) {
+  console.error('Security regression failed: verify-interview-guest-claim.cjs');
+  process.exit(1);
+}
 const interviewMaterialDelete = spawnSync(process.execPath, [path.join(__dirname, 'verify-interview-material-delete.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (interviewMaterialDelete.error || interviewMaterialDelete.status !== 0) {
   console.error('Security regression failed: verify-interview-material-delete.cjs');

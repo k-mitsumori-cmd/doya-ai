@@ -11,7 +11,7 @@ function thumbnailPath(owner: string, projectId: string): string {
 }
 
 export function thumbnailOwner(project: { userId: string | null; guestId: string | null }): string {
-  const owner = project.userId || (project.guestId ? `guest_${project.guestId}` : '')
+  const owner = project.guestId ? `guest_${project.guestId}` : project.userId || ''
   if (!SAFE_PART.test(owner)) throw new Error('サムネイルの所有者を確認できません')
   return owner
 }

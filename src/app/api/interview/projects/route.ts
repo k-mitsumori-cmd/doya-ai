@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
 
     const where = userId
       ? { userId }
-      : { guestId: guestId! }
+      : { guestId: guestId!, userId: null }
 
     if (statsOnly) {
       const [totalProjects, totalDrafts, totalMaterials] = await Promise.all([

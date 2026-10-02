@@ -111,6 +111,14 @@ export async function reserveInterviewTranscription(identity: Identity, material
   try {
     return await prisma.$transaction(async tx => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-project-lifecycle'), hashtext(${material.projectId}))`
+      const project = await tx.interviewProject.findUnique({
+        where: { id: material.projectId }, select: { userId: true, guestId: true },
+      })
+      if (!project || (identity.userId
+        ? project.userId !== identity.userId
+        : project.userId !== null || project.guestId !== identity.guestId)) {
+        return { state: 'unavailable' }
+      }
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext('interview-transcription'), hashtext(${config.quotaKey}))`
       const existing = await tx.interviewTranscription.findFirst({
         where: { materialId: material.id, status: 'PROCESSING' }, orderBy: { createdAt: 'desc' },

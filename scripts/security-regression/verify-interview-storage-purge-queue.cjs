@@ -109,5 +109,18 @@ const cron = load('src/app/api/cron/interview-storage-purge/route.ts', {
   assert.equal(await storage.purgeInterviewProjectStorageBatch('owner/project-1'), false)
   assert.equal(await storage.purgeInterviewProjectStorageBatch('owner/project-1'), true)
   assert.deepEqual([...objects], ['other/project-1/keep'])
+  rows.clear()
+  const claimed = { id: 'claimed-project', userId: 'account-owner', guestId: 'guest-owner' }
+  assert.match(storage.buildStoragePath({ userId: claimed.userId, guestId: claimed.guestId, projectId: claimed.id, fileName: 'voice.mp3' }), /^guest_guest-owner\/claimed-project\//)
+  const thumbnail = load('src/lib/interview/thumbnail-storage.ts', { './storage': {} })
+  assert.equal(thumbnail.thumbnailOwner(claimed), 'guest_guest-owner')
+  await queue.enqueueInterviewProjectStoragePurge(db, claimed, now)
+  assert.match(rows.get('interview-storage-purge:v1:claimed-project'), /\|guest_guest-owner\/claimed-project$/)
+  rows.clear()
+  await queue.enqueueInterviewMaterialStoragePurge(db, {
+    id: 'claimed-material', projectId: claimed.id, filePath: 'guest_guest-owner/claimed-project/voice.mp3',
+    userId: claimed.userId, guestId: claimed.guestId,
+  }, now)
+  assert.match(rows.get('interview-file-purge:v1:claimed-material'), /\|guest_guest-owner\/claimed-project\/voice.mp3$/)
   console.log('PASS interview storage purge is durable, leased, delayed for uploads and namespace-bound')
 })().catch(error => { console.error(error); process.exitCode = 1 })

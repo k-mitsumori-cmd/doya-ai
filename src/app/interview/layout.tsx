@@ -1,10 +1,13 @@
 import { Metadata } from 'next'
 import { getServerSession } from 'next-auth'
+import { cookies } from 'next/headers'
 import { authOptions } from '@/lib/auth'
 import { buildServiceMetadata } from '@/lib/seo'
 import { getServiceById } from '@/lib/services'
 import { LpJsonLd } from '@/components/lp'
 import InterviewLayout from '@/components/interview/InterviewLayout'
+import InterviewGuestClaimGate from '@/components/interview/InterviewGuestClaimGate'
+import { INTERVIEW_GUEST_COOKIE } from '@/lib/interview/access'
 
 export const metadata: Metadata = buildServiceMetadata('interview', {
   keywords: ['インタビュー記事', '文字起こし', 'AI記事生成', '取材', 'ライティング', '議事録'],
@@ -17,6 +20,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
   const user = session?.user as any
 
   const isLoggedIn = !!user?.id
+  const guestCookiePresent = isLoggedIn && !!(await cookies()).get(INTERVIEW_GUEST_COOKIE)?.value
   let currentPlan = 'GUEST'
   if (isLoggedIn) {
     const raw = user?.interviewPlan || user?.plan || 'FREE'
@@ -82,7 +86,9 @@ export default async function Layout({ children }: { children: React.ReactNode }
         .interview-root .font-black { font-weight: 900 !important; }
       ` }} />
       <div className="interview-root">
-        {isLoggedIn ? <InterviewLayout currentPlan={currentPlan} isLoggedIn={isLoggedIn}>{children}</InterviewLayout> : children}
+        <InterviewGuestClaimGate enabled={guestCookiePresent}>
+          {isLoggedIn ? <InterviewLayout currentPlan={currentPlan} isLoggedIn={isLoggedIn}>{children}</InterviewLayout> : children}
+        </InterviewGuestClaimGate>
       </div>
     </>
   )

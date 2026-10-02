@@ -70,6 +70,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    let projectStorageGuestId: string | null = null
     if (!preflight) {
       // 署名付きURLの発行には、既存プロジェクトの所有者確認が必須。
       const project = await prisma.interviewProject.findUnique({
@@ -90,6 +91,10 @@ export async function POST(req: NextRequest) {
       if (!userId && guestId && project.guestId !== guestId) {
         return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
       }
+      if (!userId && project.userId) {
+        return NextResponse.json({ success: false, error: '見つかりませんでした' }, { status: 404 })
+      }
+      projectStorageGuestId = project.guestId
     }
 
     // ストレージの実際の設定を確定してからサイズを判定する。
@@ -126,7 +131,7 @@ export async function POST(req: NextRequest) {
     // ストレージパス生成
     const storagePath = buildStoragePath({
       userId,
-      guestId,
+      guestId: projectStorageGuestId || guestId,
       projectId,
       fileName,
     })

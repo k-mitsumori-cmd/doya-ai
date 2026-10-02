@@ -10,7 +10,7 @@ let projectLookups = 0
 const route = load('src/app/api/interview/materials/upload-url/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma: {
-    interviewProject: { findUnique: async () => { projectLookups++; return { id: 'p1', userId: 'u1', guestId: 'guest1' } } },
+    interviewProject: { findUnique: async () => { projectLookups++; return { id: 'p1', userId: plan === 'GUEST' ? null : 'u1', guestId: 'guest1' } } },
     interviewMaterial: { create: async () => { materialWrites++; return { id: 'material1' } } },
   } },
   '@/lib/interview/access': {

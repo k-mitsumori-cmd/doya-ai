@@ -14,6 +14,7 @@ const systemSetting = {
 }
 const tx = {
   $executeRaw: async () => 1, systemSetting,
+  interviewProject: { findUnique: async () => ({ userId: 'owner', guestId: 'guest-owner' }) },
   interviewTranscription: {
     findFirst: async ({ where }) => transcripts.find(x => x.materialId === where.materialId && x.status === where.status) || null,
     create: async ({ data }) => { const row = { ...data, id: `t${++sequence}` }; transcripts.push(row); return row },
@@ -50,6 +51,7 @@ const at = new Date('2026-09-24T00:00:00.000Z')
   await budget.releaseInterviewTranscription(tx, 'm2', 't2')
   assert.deepEqual(JSON.parse(JSON.stringify(await budget.getInterviewTranscriptionUsage(identity, at))), { usedSeconds: 1201, reservedSeconds: 0, limitSeconds: 1800 })
   assert.equal((await budget.reserveInterviewTranscription(identity, { id: 'm3', projectId: 'p1' }, 10801, at)).state, 'too-long')
+  assert.equal((await budget.reserveInterviewTranscription({ userId: null, guestId: 'guest-owner', plan: 'GUEST' }, { id: 'm3', projectId: 'p1' }, 60, at)).state, 'unavailable', 'claimed projects reject in-flight guest reservations')
   assert.equal(baselineCalls, 1)
   baselineDuration = 240
   const secondOwner = { userId: 'other-owner', guestId: null, plan: 'FREE' }

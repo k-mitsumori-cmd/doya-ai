@@ -11,11 +11,14 @@ const rows = Array.from({ length: 123 }, (_, index) => ({
   _count: { materials: 0, drafts: 0 }, drafts: [], transcriptions: [],
 }));
 rows.push({ ...rows[0], id: 'foreign', userId: 'other' });
+rows.push({ ...rows[0], id: 'guest-only', userId: null, guestId: 'guest-owner' });
+rows.push({ ...rows[0], id: 'guest-claimed', userId: 'account-owner', guestId: 'guest-owner' });
 
 function matches(row, where) {
   if (where.AND && !where.AND.every((part) => matches(row, part))) return false;
   if (where.OR && !where.OR.some((part) => matches(row, part))) return false;
-  if (where.userId && row.userId !== where.userId) return false;
+  if (Object.prototype.hasOwnProperty.call(where, 'userId') && row.userId !== where.userId) return false;
+  if (Object.prototype.hasOwnProperty.call(where, 'guestId') && row.guestId !== where.guestId) return false;
   if (where.status && row.status !== where.status) return false;
   if (where.id?.lt && !(row.id < where.id.lt)) return false;
   if (where.createdAt?.lt && !(row.createdAt < where.createdAt.lt)) return false;
@@ -38,12 +41,13 @@ const prisma = { interviewProject: {
     return [...groups].map(([status, count]) => ({ status, _count: { _all: count } }));
   },
 } };
+let currentUserId = 'owner';
 const { GET } = load('src/app/api/interview/projects/route.ts', {
   'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
   '@/lib/prisma': { prisma },
   '@/lib/interview/thumbnail-storage': { thumbnailUrlForClient: (_id, url) => url },
   '@/lib/interview/access': {
-    getInterviewUser: async () => ({ userId: 'owner' }), getGuestIdFromRequest: () => null,
+    getInterviewUser: async () => ({ userId: currentUserId }), getGuestIdFromRequest: () => 'guest-owner',
     requireDatabase: () => null,
   },
 }, { Buffer, console });
@@ -83,5 +87,11 @@ async function collect(params, expected) {
   await collect({ q: '検索対象', status: 'EDITING' }, 30);
   assert.equal((await get({ cursor: 'invalid' })).status, 400);
   assert.equal((await get({ q: 'a'.repeat(101) })).status, 400);
+  currentUserId = null;
+  const guestResponse = await get({});
+  assert.equal(guestResponse.status, 200);
+  const guestBody = await guestResponse.json();
+  assert.equal(guestBody.totalCount, 1);
+  assert.equal(guestBody.projects[0].id, 'guest-only');
   console.log('PASS Interview projects: pagination reaches 123, search and status span all pages, owner scope, malformed input rejected');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -143,7 +143,7 @@ export default function SkillSelectionPage() {
             </p>
           </div>
           <Link
-            href="/api/auth/signin"
+            href={`/auth/signin?callbackUrl=${encodeURIComponent(`/interview/projects/${projectId}/skill`)}`}
             className="inline-flex items-center gap-2 px-6 py-3 bg-[#7f19e6] text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:bg-[#6b12c9] transition-all"
           >
             <span className="material-symbols-outlined">login</span>

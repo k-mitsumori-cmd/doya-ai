@@ -33,7 +33,7 @@ export async function enqueueInterviewProjectStoragePurge(
   project: { id: string; userId: string | null; guestId: string | null },
   now = new Date(),
 ): Promise<void> {
-  const owner = project.userId || (project.guestId ? `guest_${project.guestId}` : null)
+  const owner = project.guestId ? `guest_${project.guestId}` : project.userId
   if (!owner || !SAFE_PART.test(owner) || !SAFE_PART.test(project.id)) {
     throw new Error('ストレージ削除対象を確認できません')
   }
@@ -51,7 +51,7 @@ export async function enqueueInterviewMaterialStoragePurge(
   material: { id: string; projectId: string; filePath: string; userId: string | null; guestId: string | null },
   now = new Date(),
 ): Promise<void> {
-  const owner = material.userId || (material.guestId ? `guest_${material.guestId}` : null)
+  const owner = material.guestId ? `guest_${material.guestId}` : material.userId
   const parts = material.filePath.split('/')
   if (!owner || !SAFE_PART.test(owner) || !SAFE_PART.test(material.projectId) || !SAFE_PART.test(material.id) ||
     parts.length !== 3 || parts[0] !== owner || parts[1] !== material.projectId || !SAFE_FILE.test(parts[2])) {

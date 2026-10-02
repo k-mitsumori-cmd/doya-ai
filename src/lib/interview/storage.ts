@@ -204,7 +204,9 @@ export function buildStoragePath(opts: {
   projectId: string
   fileName: string
 }): string {
-  const owner = opts.userId || `guest_${opts.guestId || 'anon'}`
+  // Claimed guest projects keep their original storage namespace. Passing
+  // both IDs must continue to write beside their existing guest files.
+  const owner = opts.guestId ? `guest_${opts.guestId}` : opts.userId || 'guest_anon'
   if (!/^[A-Za-z0-9_-]{1,128}$/.test(owner) || !/^[A-Za-z0-9_-]{1,128}$/.test(opts.projectId)) {
     throw new Error('不正なストレージ識別子です')
   }
