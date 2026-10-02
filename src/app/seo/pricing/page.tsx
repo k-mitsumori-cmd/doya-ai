@@ -3,26 +3,19 @@
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import { getFreeHourRemainingMs, isWithinFreeHour } from '@/lib/pricing'
+import { higherPlan } from '@/lib/plan-utils'
 import SeoCancelScheduleNotice from '@/components/SeoCancelScheduleNotice'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Sparkles, X, Timer } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
-function planTierFrom(raw: any) {
-  const p = String(raw || '').toUpperCase()
-  if (!p || p === 'GUEST') return 'GUEST' as const
-  if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
-  if (p.includes('PRO')) return 'PRO' as const
-  if (p.includes('LIGHT')) return 'LIGHT' as const
-  return 'FREE' as const
-}
-
 export default function SeoPricingPage() {
   const { data: session } = useSession()
-  const seoPlanRaw = String((session?.user as any)?.seoPlan || (session ? 'FREE' : 'GUEST')).toUpperCase()
-  const tier = planTierFrom(seoPlanRaw)
   const isLoggedIn = !!session?.user?.email
+  const tier = isLoggedIn
+    ? higherPlan((session?.user as any)?.seoPlan, (session?.user as any)?.plan)
+    : 'GUEST'
   const firstLoginAt = (session?.user as any)?.firstLoginAt as string | null | undefined
   const isFreeHourActive = isLoggedIn && isWithinFreeHour(firstLoginAt)
   const [freeHourRemainingMs, setFreeHourRemainingMs] = useState(() => getFreeHourRemainingMs(firstLoginAt))
@@ -185,4 +178,3 @@ export default function SeoPricingPage() {
     </div>
   )
 }
-

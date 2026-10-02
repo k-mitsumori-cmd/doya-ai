@@ -4,20 +4,14 @@ import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import BannerCancelScheduleNotice from '@/components/BannerCancelScheduleNotice'
 import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
+import { higherPlan } from '@/lib/plan-utils'
 
 export default function BannerPricingPage() {
   const { data: session } = useSession()
-  const bannerPlanRaw = String((session?.user as any)?.bannerPlan || (session?.user as any)?.plan || (session ? 'FREE' : 'GUEST')).toUpperCase()
-  const bannerPlanTier = (() => {
-    const p = String(bannerPlanRaw || '').toUpperCase()
-    if (!p || p === 'GUEST') return 'GUEST' as const
-    if (p.includes('ENTERPRISE')) return 'ENTERPRISE' as const
-    if (p.includes('PRO') || p.includes('BASIC') || p.includes('STARTER') || p.includes('BUSINESS') || p.includes('BUNDLE')) return 'PRO' as const
-    if (p.includes('LIGHT')) return 'LIGHT' as const
-    if (p.includes('FREE')) return 'FREE' as const
-    return 'FREE' as const
-  })()
   const isLoggedIn = !!session?.user?.email
+  const bannerPlanTier = isLoggedIn
+    ? higherPlan((session?.user as any)?.bannerPlan, (session?.user as any)?.plan)
+    : 'GUEST'
   const isPaid = bannerPlanTier === 'LIGHT' || bannerPlanTier === 'PRO' || bannerPlanTier === 'ENTERPRISE'
 
   return (
