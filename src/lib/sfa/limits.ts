@@ -18,15 +18,18 @@ export type SfaQuotaExceeded = { resource: Resource; used: number; limit: number
 
 export function sfaQuotaResponse(limit: SfaQuotaExceeded, canManageBilling = false) {
   const label = { members: 'メンバー', accounts: '取引先', deals: '商談' }[limit.resource]
+  const guidance = canManageBilling
+    ? limit.upgradeAvailable ? 'プロプランで枠を広げられます。' : '追加をご希望の場合はお問い合わせください。'
+    : '利用枠の変更は組織の契約者にご相談ください。'
   return NextResponse.json({
-    error: `${label}の上限（${limit.limit}${limit.resource === 'members' ? '名' : '件'}）に達しました。${limit.upgradeAvailable ? 'プロプランで枠を広げられます。' : '追加をご希望の場合はお問い合わせください。'}`,
+    error: `${label}の上限（${limit.limit}${limit.resource === 'members' ? '名' : '件'}）に達しました。${guidance}`,
     code: 'SFA_LIMIT_REACHED',
     limitReached: true,
     canManageBilling,
     resource: limit.resource,
     used: limit.used,
     limit: limit.limit,
-    ...(limit.upgradeAvailable ? { upgradeUrl: '/sfa/pricing' } : {}),
+    ...(canManageBilling && limit.upgradeAvailable ? { upgradeUrl: '/sfa/pricing' } : {}),
   }, { status: 402 })
 }
 

@@ -65,10 +65,10 @@ export async function getUserPromaneLimits(userId: string, db: LimitReader = pri
   return PROMANE_LIMITS[tier];
 }
 
-/** ユーザーの全workspaceでのプロジェクト総数 */
+/** 契約者が所有する全workspaceのプロジェクト総数。招待先の案件は消費しない。 */
 export async function countUserProjects(userId: string, db: LimitReader = prisma): Promise<number> {
   return db.promaneProject.count({
-    where: { workspace: { members: { some: { userId, isActive: true } } } },
+    where: { workspace: { userId } },
   });
 }
 

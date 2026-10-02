@@ -53,6 +53,7 @@ export async function createProject(workspaceSlug: string, data: {
 }) {
   const { userId } = await requirePromaneAuthAction();
   const workspace = await requireWritableWorkspace(workspaceSlug, userId);
+  if (!workspace.userId) throw new Error('ワークスペースの契約者を確認できません');
 
   validatePromaneProjectText(data);
 
@@ -76,14 +77,17 @@ export async function createProject(workspaceSlug: string, data: {
     }
 
     // プラン上限チェック (ドヤAI共通)
-    const limits = await getUserPromaneLimits(userId, tx);
+    const limits = await getUserPromaneLimits(workspace.userId, tx);
     if (limits.maxProjects === 0) {
       return { error: "現在のプランではプロジェクトを作成できません", code: "LIMIT" as const };
     }
     if (limits.maxProjects > 0) {
-      const current = await countUserProjects(userId, tx);
+      const current = await countUserProjects(workspace.userId, tx);
       if (current >= limits.maxProjects) {
-        return { error: `プラン上限 (${limits.maxProjects}件) に達しました。プランをアップグレードしてください`, code: "LIMIT" as const };
+        const guidance = userId === workspace.userId
+          ? 'プランをご確認ください'
+          : '利用枠の変更はワークスペースの契約者にご相談ください';
+        return { error: `プラン上限 (${limits.maxProjects}件) に達しました。${guidance}`, code: "LIMIT" as const };
       }
     }
 

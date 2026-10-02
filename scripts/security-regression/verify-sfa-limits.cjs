@@ -56,9 +56,12 @@ function fixture(plan = 'FREE', counts = {}) {
   assert.equal(free.state.deals, 50);
   assert.equal(free.selectedUser, 'owner', 'the organization owner pays for the shared quota');
   const blocked = responses.find((r) => r.limit);
-  const response = free.limits.sfaQuotaResponse(blocked.limit);
+  const response = free.limits.sfaQuotaResponse(blocked.limit, true);
   assert.equal(response.status, 402);
   assert.equal((await response.json()).upgradeUrl, '/sfa/pricing');
+  const memberResponse = await free.limits.sfaQuotaResponse(blocked.limit, false).json();
+  assert.equal(memberResponse.upgradeUrl, undefined);
+  assert.match(memberResponse.error, /組織の契約者/);
 
   const mixed = fixture('FREE', { accounts: 49, deals: 50 });
   let called = false;
@@ -77,7 +80,7 @@ function fixture(plan = 'FREE', counts = {}) {
   const light = fixture('LIGHT', { accounts: 1000 });
   const lightLimit = await light.limits.withSfaAdmission('org', { accounts: 1 }, (tx) => tx.sfaAccount.create());
   assert.equal(lightLimit.limit.resource, 'accounts');
-  assert.equal((await light.limits.sfaQuotaResponse(lightLimit.limit).json()).upgradeUrl, '/sfa/pricing');
+  assert.equal((await light.limits.sfaQuotaResponse(lightLimit.limit, true).json()).upgradeUrl, '/sfa/pricing');
 
   const missingPlan = fixture(null, { accounts: 50 });
   assert.equal(await missingPlan.limits.sfaOwnerPlanTier(missingPlan.tx, 'org'), 'FREE');
