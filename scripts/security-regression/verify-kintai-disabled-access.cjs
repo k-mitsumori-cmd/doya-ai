@@ -3,10 +3,13 @@ const { load } = require('./load-typescript.cjs')
 
 async function main() {
   let active = false
+  let ownerId = 'owner'
   let writes = 0
   const prisma = {
     kintaiMember: {
-      findFirst: async () => ({ id: 'member', organizationId: 'org', role: 'hr_admin', status: 'ACTIVE', employee: { id: 'emp', name: 'Former', isActive: active } }),
+      findFirst: async ({ where } = {}) => where?.role === 'system_admin'
+        ? { userId: ownerId }
+        : { id: 'member', organizationId: 'org', role: 'hr_admin', status: 'ACTIVE', employee: { id: 'emp', name: 'Former', isActive: active } },
       findUnique: async () => ({ role: 'system_admin' }),
     },
     kintaiEmployee: {
@@ -36,9 +39,14 @@ async function main() {
     '@/lib/auth': { authOptions: {} }, '@/lib/prisma': { prisma },
   })
   const usageResponse = await usage.GET()
-  assert.equal((await usageResponse.json()).role, 'employee')
+  const memberUsage = await usageResponse.json()
+  assert.equal(memberUsage.role, 'employee')
+  assert.equal(memberUsage.canManageBilling, false)
   assert.equal(usageResponse.headers.get('cache-control'), 'private, no-store')
   assert.equal(usageResponse.headers.get('vary'), 'Cookie')
+  ownerId = 'user'
+  const ownerUsage = await usage.GET()
+  assert.equal((await ownerUsage.json()).canManageBilling, true)
 
   const common = { 'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma }, '@/lib/kintai/access': { getKintaiContext: async () => ({ ...inactive, role: 'system_admin' }), hasMinRole: access.hasMinRole } }
   const employeeRoute = load('src/app/api/kintai/employees/[id]/route.ts', { ...common,

@@ -52,6 +52,7 @@ export async function GET() {
       isActive: membership.employee.isActive,
       employeeName: membership.employee.name,
       plan: ownerUser?.plan || 'FREE',
+      canManageBilling: owner?.userId === userId,
     }, { headers: privateHeaders })
   } catch (e) {
     console.error('[kintai/usage] Error:')

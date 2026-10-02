@@ -6,22 +6,34 @@ import { UnifiedPricingPlans } from '@/components/UnifiedPricingPlans'
 
 export default function KintaiPricingPage() {
   const [userPlan, setUserPlan] = useState<string | null>(null)
+  const [canManageBilling, setCanManageBilling] = useState(false)
+  const [hasOrganization, setHasOrganization] = useState(false)
   const [planError, setPlanError] = useState(false)
+  const [loading, setLoading] = useState(true)
   const loadPlan = useCallback(async () => {
     setPlanError(false)
+    setLoading(true)
     try {
       const response = await fetch('/api/kintai/usage', { cache: 'no-store' })
       if (!response.ok) throw new Error('プランを確認できませんでした')
       const data = await response.json()
       if (data.organizationId === null) {
         setUserPlan(null)
+        setCanManageBilling(false)
+        setHasOrganization(false)
         return
       }
-      if (typeof data.plan !== 'string') throw new Error('プランの応答が不正です')
+      if (typeof data.plan !== 'string' || typeof data.canManageBilling !== 'boolean') throw new Error('プランの応答が不正です')
       setUserPlan(data.plan)
+      setCanManageBilling(data.canManageBilling)
+      setHasOrganization(true)
     } catch {
       setUserPlan(null)
+      setCanManageBilling(false)
+      setHasOrganization(false)
       setPlanError(true)
+    } finally {
+      setLoading(false)
     }
   }, [])
   useEffect(() => {
@@ -72,18 +84,24 @@ export default function KintaiPricingPage() {
 
         {/* Plans grid (統一プラン: 無料 / プロ¥9,980) */}
         {planError && <div role="alert" className="mb-6 rounded-xl bg-rose-50 p-4 text-sm font-bold text-rose-700">現在のプランを確認できませんでした。<button type="button" onClick={() => void loadPlan()} className="ml-2 underline">再読み込み</button></div>}
-        <UnifiedPricingPlans serviceId="kintai" currentPlan={userPlan} className="my-12" />
+        {loading && <p className="text-center text-sm font-bold text-slate-500">組織のプランを確認しています…</p>}
+        {!loading && !planError && hasOrganization && !canManageBilling && (
+          <div role="status" className="mx-auto my-12 max-w-xl rounded-2xl border border-violet-200 bg-violet-50 p-6 text-sm leading-7 text-violet-900">
+            この組織の現在のプランは{userPlan}です。ご自身の契約を変更しても組織の従業員上限は増えません。利用枠の変更は組織の契約者にご相談ください。
+          </div>
+        )}
+        {!loading && !planError && (!hasOrganization || canManageBilling) && <UnifiedPricingPlans serviceId="kintai" currentPlan={userPlan} className="my-12" />}
 
         {/* Trial notice */}
-        <div className="text-center mb-8">
+        {(!hasOrganization || canManageBilling) && !loading && !planError && <div className="text-center mb-8">
           <p className="text-sm text-slate-500">
             <span className="material-symbols-outlined text-sm align-middle mr-1">info</span>
             新規の月額プロプラン対象者は30日間無料。対象可否は申込時に確認できます。
           </p>
-        </div>
+        </div>}
 
         {/* CTA section */}
-        <div className="bg-white rounded-3xl shadow-lg p-8 text-center pricing-fade-in-4">
+        {!loading && !planError && !hasOrganization && <div className="bg-white rounded-3xl shadow-lg p-8 text-center pricing-fade-in-4">
           <img
             src="/kintai/characters/hello_%E6%8C%A8%E6%8B%B6.png"
             alt="挨拶するクマ"
@@ -102,7 +120,7 @@ export default function KintaiPricingPage() {
             <span className="material-symbols-outlined text-lg">rocket_launch</span>
             無料で始める
           </Link>
-        </div>
+        </div>}
       </div>
     </div>
   )
