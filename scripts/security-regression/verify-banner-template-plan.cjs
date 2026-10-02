@@ -39,7 +39,9 @@ function fixture(plan, customPrompt, templateId = 't1', dbError = false, atLimit
   let run = fixture('FREE', '有料の詳細指示')
   const denied = await run.api.POST(run.request)
   assert.equal(denied.status, 403)
-  assert.equal((await denied.json()).code, 'PLAN_UPGRADE_REQUIRED')
+  const deniedBody = await denied.json()
+  assert.equal(deniedBody.code, 'PLAN_UPGRADE_REQUIRED')
+  assert.equal(deniedBody.upgradeUrl, 'https://example.test/contact')
   assert.equal(run.modelCalls, 0)
   assert.deepEqual(run.releases, [1])
 
@@ -50,7 +52,9 @@ function fixture(plan, customPrompt, templateId = 't1', dbError = false, atLimit
   assert(!run.modelPrompts[0].includes('EVIL OVERRIDE'))
 
   run = fixture('FREE', undefined, 'brand-001')
-  assert.equal((await run.api.POST(run.request)).status, 403)
+  const lockedTemplate = await run.api.POST(run.request)
+  assert.equal(lockedTemplate.status, 403)
+  assert.equal((await lockedTemplate.json()).upgradeUrl, '/banner/pricing')
   assert.equal(run.modelCalls, 0)
   assert.deepEqual(run.releases, [1])
 

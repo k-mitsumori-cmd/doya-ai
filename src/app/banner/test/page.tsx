@@ -11,6 +11,7 @@ import BannerLimitModal from '@/components/banner/BannerLimitModal'
 import { useBannerQuota } from '@/components/banner/useBannerQuota'
 import BannerQuotaNotice from '@/components/banner/BannerQuotaNotice'
 import { getBannerTemplateTier } from '@/lib/banner/template-access'
+import { HIGH_USAGE_CONTACT_URL } from '@/lib/pricing'
 
 type BannerTemplate = {
   id: string
@@ -1706,18 +1707,18 @@ function BannerTestPageInner() {
                         <div className="flex items-center gap-3">
                           <Lock className="w-5 h-5 text-purple-400" />
                           <div>
-                            <p className="text-sm text-gray-300">プロプラン限定機能</p>
+                            <p className="text-sm text-gray-300">個別契約でご案内する機能</p>
                             <p className="text-xs text-gray-500 mt-1">
                               詳細な生成指示を入力して、より細かくバナーをカスタマイズできます
                             </p>
                           </div>
                         </div>
                         <a
-                          href="/banner/dashboard/plan"
+                          href={HIGH_USAGE_CONTACT_URL}
                           className="mt-3 inline-flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 transition-colors"
                         >
                           <Crown className="w-3 h-3" />
-                          プランをアップグレード
+                          利用について相談する
                         </a>
                       </div>
                     ) : showCustomPrompt ? (
@@ -1959,6 +1960,7 @@ function BannerTestPageInner() {
                         ) : (
                           <button
                             onClick={() => {
+                              setLockedTemplate(null)
                               setLockModalType('pro')
                               setShowLockModal(true)
                             }}
@@ -1986,6 +1988,7 @@ function BannerTestPageInner() {
                       ) : (
                         <button
                           onClick={() => {
+                            setLockedTemplate(null)
                             setLockModalType('enterprise')
                             setShowLockModal(true)
                           }}
@@ -2410,7 +2413,7 @@ function BannerTestPageInner() {
 
       {/* 🔒 ロックモーダル */}
       <AnimatePresence>
-        {showLockModal && lockedTemplate && (
+        {showLockModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -2447,14 +2450,14 @@ function BannerTestPageInner() {
                         ? 'ログインが必要です' 
                         : lockModalType === 'pro'
                           ? 'PROプランで解放'
-                          : 'Enterpriseプランで解放'}
+                          : '個別契約でご案内'}
                     </h3>
                     <p className="text-white/80 text-xs sm:text-sm">
                       {lockModalType === 'login' 
                         ? 'この画像を使用するにはログインしてください' 
                         : lockModalType === 'pro'
                           ? 'この画像はPROプランで使用できます'
-                          : 'この画像はEnterpriseプランで使用できます'}
+                          : 'この機能のご利用は個別にご相談ください'}
                     </p>
                   </div>
                 </div>
@@ -2462,7 +2465,7 @@ function BannerTestPageInner() {
               
               {/* 画像プレビュー */}
               <div className="p-4 sm:p-6">
-                <div className="relative aspect-video rounded-lg overflow-hidden mb-3 sm:mb-4 border border-gray-700">
+                {lockedTemplate && <div className="relative aspect-video rounded-lg overflow-hidden mb-3 sm:mb-4 border border-gray-700">
                   {lockedTemplate.imageUrl ? (
                     <img
                       src={lockedTemplate.imageUrl}
@@ -2479,15 +2482,15 @@ function BannerTestPageInner() {
                       <Lock className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
                     </div>
                   </div>
-                </div>
+                </div>}
                 
                 <p className="text-gray-300 text-center mb-4 sm:mb-6 text-xs sm:text-sm md:text-base px-2">
-                  「{lockedTemplate.displayTitle || lockedTemplate.name || lockedTemplate.industry}」を使用するには
+                  {lockedTemplate ? `「${lockedTemplate.displayTitle || lockedTemplate.name || lockedTemplate.industry}」を使用するには` : 'この機能を利用するには'}
                   {lockModalType === 'login' 
                     ? 'ログインしてください' 
                     : lockModalType === 'pro'
                       ? 'PROプランにアップグレードしてください'
-                      : 'Enterpriseプランにアップグレードしてください'}
+                      : '個別に利用条件をご相談ください'}
                 </p>
                 
                 {/* アクションボタン */}
@@ -2508,11 +2511,11 @@ function BannerTestPageInner() {
                     </a>
                   ) : (
                     <a
-                      href="/banner/dashboard/plan"
+                      href={lockModalType === 'enterprise' ? HIGH_USAGE_CONTACT_URL : '/banner/dashboard/plan'}
                       className="flex-1 py-2.5 sm:py-3 px-3 sm:px-4 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-white font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 sm:gap-2 text-sm sm:text-base"
                     >
                       <Crown className="w-4 h-4 sm:w-5 sm:h-5" />
-                      プランを見る
+                      {lockModalType === 'enterprise' ? '利用について相談する' : 'プランを見る'}
                     </a>
                   )}
                 </div>

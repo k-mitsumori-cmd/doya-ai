@@ -40,7 +40,7 @@ export default function BannerPricingPage() {
           料金プラン
         </h1>
         <p className="mb-6 rounded-xl bg-blue-50 px-4 py-3 text-sm leading-relaxed text-slate-700">
-          バナー画像の月間枚数とは別に、AI相談とコピー提案は共通の日次枠を使います。無料プランは1日10回、LIGHTは30回、PROは100回、Enterpriseは1,000回です。日本時間の翌日にリセットされます。
+          バナー画像の月間枚数とは別に、AI相談とコピー提案は共通の日次枠を使います。無料プランは1日10回、PROは100回です。既存のLIGHT契約は30回、個別契約のEnterprise相当は1,000回です。日本時間の翌日にリセットされます。
         </p>
 
         <div className="mb-6 flex flex-col items-center gap-2">

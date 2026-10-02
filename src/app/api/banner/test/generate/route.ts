@@ -273,9 +273,9 @@ export async function POST(request: NextRequest) {
         reservation = null
       }
       return NextResponse.json({
-        error: '詳細指示はEnterpriseプランで利用できます。',
+        error: '詳細指示は個別契約でご案内している機能です。ご利用を希望される場合はお問い合わせください。',
         code: 'PLAN_UPGRADE_REQUIRED',
-        upgradeUrl: '/banner/pricing',
+        upgradeUrl: HIGH_USAGE_CONTACT_URL,
       }, { status: 403 })
     }
 
@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
         if (reservation) await releaseBannerMonthlyImages(reservation, reservation.count).catch(() => console.error('Test banner quota release failed'))
         reservation = null
         return NextResponse.json({
-          error: 'このテンプレートは上位プランで利用できます。',
+          error: 'このテンプレートは現在のプランでは利用できません。利用条件をご確認ください。',
           code: 'PLAN_UPGRADE_REQUIRED',
           upgradeUrl: '/banner/pricing',
         }, { status: 403 })
