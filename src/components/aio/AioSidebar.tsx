@@ -44,12 +44,13 @@ function AioSidebarImpl({ orgSlug, orgName, organizationPlan, isOwner = true, is
   const [isLoggingOut, setIsLoggingOut] = useState(false)
 
   const base = `/aio/${encodeURIComponent(orgSlug)}`
+  const pricingHref = `/aio/pricing?org=${encodeURIComponent(orgSlug)}`
   // URL一本フローに合わせ、ブランド設定/監視プロンプトはナビから外す（自動セットアップ。ページ自体は残置）
   const NAV: NavItem[] = [
     { href: `${base}/scan`, label: 'URL AI調査', icon: ScanSearch, hot: true },
     { href: base, label: 'ダッシュボード', icon: LayoutDashboard },
     { href: `${base}/history`, label: 'スキャン履歴', icon: History },
-    { href: '/aio/pricing', label: '料金プラン', icon: CreditCard },
+    { href: pricingHref, label: '料金プラン', icon: CreditCard },
   ]
 
   const planLabel = (() => {
@@ -109,7 +110,7 @@ function AioSidebarImpl({ orgSlug, orgName, organizationPlan, isOwner = true, is
                     ? 'ご利用中のプランの内容をご確認いただけます。'
                     : <>プロプラン ¥9,980/月<TrialInlineSuffix />でSoV・引用元・改善アクションも閲覧</>}
                 </p>
-                <Link href="/aio/pricing" className="w-full py-2 bg-white text-fuchsia-700 text-[11px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md block text-center">
+                <Link href={pricingHref} className="w-full py-2 bg-white text-fuchsia-700 text-[11px] font-black rounded-lg hover:bg-purple-50 transition-colors shadow-md block text-center">
                   {!isOwner || organizationPlan === null || planLabel === 'PRO' || planLabel === 'ENTERPRISE' ? 'プランを確認する' : 'プロにアップグレード'}
                 </Link>
               </div>

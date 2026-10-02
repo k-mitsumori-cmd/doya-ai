@@ -385,6 +385,21 @@ if (aioClientLimit.error || aioClientLimit.status !== 0) {
   console.error('Security regression failed: verify-aio-client-limit.cjs');
   process.exit(1);
 }
+const aioPricingScope = spawnSync(process.execPath, [path.join(__dirname, 'verify-aio-pricing-scope.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (aioPricingScope.error || aioPricingScope.status !== 0) {
+  console.error('Security regression failed: verify-aio-pricing-scope.cjs');
+  process.exit(1);
+}
+const aioPlanCta = spawnSync(process.execPath, [path.join(__dirname, 'verify-aio-plan-cta.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (aioPlanCta.error || aioPlanCta.status !== 0) {
+  console.error('Security regression failed: verify-aio-plan-cta.cjs');
+  process.exit(1);
+}
+const unifiedPricingOrg = spawnSync(process.execPath, [path.join(__dirname, 'verify-unified-pricing-org.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (unifiedPricingOrg.error || unifiedPricingOrg.status !== 0) {
+  console.error('Security regression failed: verify-unified-pricing-org.cjs');
+  process.exit(1);
+}
 const seoArticleAdmission = spawnSync(process.execPath, [path.join(__dirname, 'verify-seo-article-admission.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (seoArticleAdmission.error || seoArticleAdmission.status !== 0) {
   console.error('Security regression failed: verify-seo-article-admission.cjs');

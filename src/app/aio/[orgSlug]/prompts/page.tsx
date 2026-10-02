@@ -90,7 +90,7 @@ export default function AioPromptsPage() {
       {quotaError && <div role="alert" className="mb-5 rounded-xl border border-purple-200 bg-purple-50 p-4 text-sm text-purple-900">
         <p className="font-black">監視プロンプトの利用枠に達しました</p>
         <p className="mt-1">{quotaError}</p>
-        <Link href="/aio/pricing" className="mt-2 inline-block font-black underline">料金プランを確認する</Link>
+        <Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`} className="mt-2 inline-block font-black underline">料金プランを確認する</Link>
       </div>}
 
       <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-5">

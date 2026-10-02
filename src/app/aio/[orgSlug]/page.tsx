@@ -191,7 +191,7 @@ function OrganizationDashboard({ orgSlug }: { orgSlug: string }) {
       <p className="mt-1 text-xs font-bold text-purple-800">{scanLimit}</p>
       {!isOwner && <p className="mt-2 text-xs font-bold text-purple-700">組織の利用枠を増やすには、組織オーナーにご相談ください。</p>}
       {!isPaid && isOwner && <TrialNote className="mt-2" />}
-      <Link href="/aio/pricing" className="mt-3 inline-flex rounded-xl bg-purple-700 px-4 py-2 text-xs font-black text-white hover:bg-purple-800">
+      <Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`} className="mt-3 inline-flex rounded-xl bg-purple-700 px-4 py-2 text-xs font-black text-white hover:bg-purple-800">
         {isPaid && isOwner ? '追加枠について相談する' : '料金プランを確認する'}
       </Link>
     </div>
@@ -458,7 +458,7 @@ function ProGate({ locked, orgSlug, children, note }: { locked: boolean; orgSlug
     <div className="relative">
       <div className="blur-[6px] pointer-events-none select-none" aria-hidden>{children}</div>
       <div className="absolute inset-0 grid place-items-center rounded-2xl bg-white/30">
-        <Link href={`/aio/pricing`}
+        <Link href={`/aio/pricing?org=${encodeURIComponent(orgSlug)}`}
           className="flex flex-col items-center gap-2 text-center px-6 py-5 rounded-2xl bg-white/95 border border-purple-200 shadow-lg shadow-purple-500/10 hover:-translate-y-0.5 transition-all">
           <span className="material-symbols-outlined text-purple-600 text-[28px]">lock</span>
           <span className="font-black text-slate-900 text-sm">ここから先はプロプランで閲覧できます</span>

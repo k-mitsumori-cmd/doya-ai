@@ -11,6 +11,7 @@ import { TrialBadge, TrialNote, useTrialEligible } from '@/components/TrialCallo
 import { getServiceById, getPublicServices } from '@/lib/services'
 import { higherPlan } from '@/lib/plan-utils'
 import {
+  isPaidPlan,
   UNIFIED_PRO_PRICE_LABEL,
   UNIFIED_PRO_PLAN_ID,
   UNIFIED_PLAN_COPY,
@@ -33,10 +34,14 @@ function Sym({ name, size = 20, className = '', fill = false, style }: { name: s
 export function UnifiedPricingPlans({
   serviceId,
   currentPlan,
+  planSource = 'account',
+  canPurchase = true,
   className,
 }: {
   serviceId: string
   currentPlan?: string | null
+  planSource?: 'account' | 'organization'
+  canPurchase?: boolean
   className?: string
 }) {
   const pathname = usePathname()
@@ -60,9 +65,10 @@ export function UnifiedPricingPlans({
   // 呼び出し元に FREE 固定の古い料金ページがあっても、契約中の統一プランを優先する。
   // セッションはサーバー側で User.plan を読み直してから返される。
   const accountPlan = authStatus === 'authenticated' ? (session?.user as { plan?: string } | undefined)?.plan : undefined
-  const plan = accountPlan ? higherPlan(currentPlan, accountPlan) : (currentPlan || '').toUpperCase()
+  const plan = planSource === 'organization' ? (!currentPlan ? '' : currentPlan.toUpperCase() === 'ENTERPRISE' ? 'ENTERPRISE' : isPaidPlan(currentPlan) ? 'PRO' : 'FREE')
+    : accountPlan ? higherPlan(currentPlan, accountPlan) : (currentPlan || '').toUpperCase()
   const isPro = authStatus === 'authenticated' && (plan === 'PRO' || plan === 'BUNDLE' || plan === 'ENTERPRISE')
-  const planKnown = Boolean(accountPlan)
+  const planKnown = planSource === 'organization' ? Boolean(currentPlan) : Boolean(accountPlan)
 
   const resyncPlan = async () => {
     setResyncing(true)
@@ -151,7 +157,7 @@ export function UnifiedPricingPlans({
           </ul>
 
           {isFree ? (
-            <span className="block w-full rounded-full bg-slate-100 px-6 py-3.5 text-center text-sm font-black text-slate-500 ring-1 ring-slate-200">現在のプラン</span>
+            <span className="block w-full rounded-full bg-slate-100 px-6 py-3.5 text-center text-sm font-black text-slate-500 ring-1 ring-slate-200">{planSource === 'organization' ? '組織の現在のプラン' : '現在のプラン'}</span>
           ) : (
             <Link href={svc.dashboardHref} className="block w-full rounded-full bg-white px-6 py-3.5 text-center text-sm font-black text-slate-900 ring-2 ring-slate-300 transition hover:bg-slate-50">
               無料ではじめる
@@ -200,7 +206,9 @@ export function UnifiedPricingPlans({
           </div>
 
           {isPro ? (
-            <span className="block w-full rounded-full bg-white/20 px-6 py-3.5 text-center text-sm font-black text-white ring-1 ring-white/30">ご利用中のプラン</span>
+            <span className="block w-full rounded-full bg-white/20 px-6 py-3.5 text-center text-sm font-black text-white ring-1 ring-white/30">{planSource === 'organization' ? '組織でご利用中のプラン' : 'ご利用中のプラン'}</span>
+          ) : !canPurchase ? (
+            <span className="block w-full rounded-full bg-white/20 px-6 py-3.5 text-center text-sm font-black text-white ring-1 ring-white/30">組織の契約変更はオーナーにご相談ください</span>
           ) : (
             <CheckoutButton
               planId={UNIFIED_PRO_PLAN_ID}
@@ -298,7 +306,7 @@ export function UnifiedPricingPlans({
              どのサービスからでも契約できるのに、救済はバナー専用画面にしか無く、
              他サービスから契約した方は自力で直せなかった（2026-08）。
              料金表は全サービスに出るので、ここに置けば必ず届く。 */}
-      {authStatus === 'authenticated' && planKnown && !isPro && (
+      {canPurchase && authStatus === 'authenticated' && planKnown && !isPro && (
         <div className="mt-6 text-center">
           <button
             type="button"
@@ -319,11 +327,11 @@ export function UnifiedPricingPlans({
       )}
 
       {/* プラン管理・解約 */}
-      <div className="mt-4 text-center">
+      {canPurchase && <div className="mt-4 text-center">
         <a href={`/api/stripe/portal?returnTo=${encodeURIComponent(returnTo)}`} className="text-xs font-bold text-slate-400 transition hover:text-slate-600 hover:underline">
           ご契約中の方：お支払い方法の変更・プランの解約はこちら
         </a>
-      </div>
+      </div>}
     </section>
   )
 }

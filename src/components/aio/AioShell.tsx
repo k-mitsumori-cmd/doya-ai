@@ -25,7 +25,7 @@ export default function AioShell({ orgSlug, orgName, children }: { orgSlug: stri
     { href: `${base}/prompts`, label: '監視プロンプト', icon: ListChecks },
     { href: `${base}/settings`, label: 'ブランド設定', icon: Building2 },
     { href: `${base}/members`, label: 'メンバー', icon: Users },
-    { href: '/aio/pricing', label: '料金プラン', icon: CreditCard },
+    { href: `/aio/pricing?org=${encodeURIComponent(orgSlug)}`, label: '料金プラン', icon: CreditCard },
   ]
   const isActive = (href: string) => (href === base ? pathname === base : pathname === href || pathname.startsWith(href + '/'))
 
