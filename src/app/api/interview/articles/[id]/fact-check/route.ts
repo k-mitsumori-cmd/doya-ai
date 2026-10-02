@@ -68,7 +68,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const apiKey = getGeminiApiKey()
     const model = getModel()
     const admission = await claimAuxBudget({ userId, guestId, plan })
-    if (admission.state !== 'allowed') return auxAdmissionError(admission)
+    if (admission.state !== 'allowed') return auxAdmissionError(admission, plan)
     claim = admission.claim
 
     const prompt = `あなたは記事の確認候補を抽出する編集者です。渡されるのは記事本文だけで、外部資料や一次資料にはアクセスできません。記事内の矛盾や、公開前に裏付けを確認すべき数値・固有名詞・日付・引用を挙げてください。

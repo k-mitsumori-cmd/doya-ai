@@ -257,7 +257,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     // shared manual AI-edit credit before reaching the paid image provider.
     if (current.thumbnailUrl && force) {
       const admission = await claimAuxBudget({ userId, guestId, plan })
-      if (admission.state !== 'allowed') return auxAdmissionError(admission)
+      if (admission.state !== 'allowed') return auxAdmissionError(admission, plan)
       auxClaim = admission.claim
     }
 

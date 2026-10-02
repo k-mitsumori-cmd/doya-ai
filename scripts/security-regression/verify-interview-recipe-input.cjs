@@ -9,6 +9,7 @@ let modelResult = { name: 'Sample', category: 'interview', structure: [{ section
 const { POST } = load('src/app/api/interview/recipes/generate/route.ts', {
   'next/server': { NextResponse: Response },
   '@/lib/prisma': { prisma: { interviewRecipe: { create: async () => { saved++; return {}; } } } },
+  '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
   '@/lib/interview/access': {
     getInterviewUser: async () => ({ userId: 'user', plan: 'FREE' }),
     requireDatabase: () => null,

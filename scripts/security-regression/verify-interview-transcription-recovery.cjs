@@ -59,7 +59,7 @@ const { POST } = load('src/app/api/interview/materials/[id]/transcribe/route.ts'
       return result
     },
   },
-  '@/lib/pricing': { getInterviewGuestLimits: () => ({ transcriptionMinutes: 5 }) },
+  '@/lib/pricing': { getInterviewGuestLimits: () => ({ transcriptionMinutes: 5 }), SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
   '@/lib/interview/media-duration': { inspectInterviewMediaDuration: async () => 200 },
   '@/lib/interview/transcription-budget': {
     reserveInterviewTranscription: async () => admission,

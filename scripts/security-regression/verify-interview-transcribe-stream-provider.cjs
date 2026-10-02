@@ -30,7 +30,7 @@ function fixture(mode) {
     '@/lib/prisma': { prisma },
     '@/lib/interview/access': { getInterviewUser: async () => ({ userId: 'owner', plan: 'FREE' }), getGuestIdFromRequest: () => null, checkOwnership: () => null },
     '@/lib/interview/storage': { getSignedFileUrl: async () => 'https://storage.invalid/audio' },
-    '@/lib/pricing': { getInterviewGuestLimits: () => ({ transcriptionMinutes: 5 }) },
+    '@/lib/pricing': { getInterviewGuestLimits: () => ({ transcriptionMinutes: 5 }), SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
     '@/lib/interview/media-duration': { inspectInterviewMediaDuration: async () => 60 },
     '@/lib/interview/transcription-budget': {},
     '@/lib/interview/transcription': transcription,

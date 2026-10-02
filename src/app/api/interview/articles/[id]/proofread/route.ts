@@ -79,7 +79,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ success: false, error: '利用状況を確認できません。時間をおいて再試行してください。' }, { status: 503 })
     } else {
       const admission = await claimAuxBudget({ userId, guestId, plan })
-      if (admission.state !== 'allowed') return auxAdmissionError(admission)
+      if (admission.state !== 'allowed') return auxAdmissionError(admission, plan)
       auxClaim = admission.claim
     }
 

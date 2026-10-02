@@ -14,6 +14,7 @@ import { prisma } from '@/lib/prisma'
 import { getInterviewUser, requireDatabase } from '@/lib/interview/access'
 import { generateInterviewContent, InterviewGeminiError } from '@/lib/interview/gemini-request'
 import { claimRecipeBudget, refundRecipeBudget, type RecipeClaim } from '@/lib/interview/recipe-budget'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 function getGeminiApiKey(): string {
   const key =
@@ -117,7 +118,7 @@ export async function POST(req: NextRequest) {
         error: `本日のレシピ自動生成の上限（${admission.limit}回）に達しました。`,
         code: 'DAILY_RECIPE_LIMIT_REACHED',
         limit: admission.limit,
-        upgradeUrl: '/interview/pricing',
+        ...(plan === 'PRO' || plan === 'ENTERPRISE' ? { contactUrl: SUPPORT_CONTACT_URL } : { upgradeUrl: '/interview/pricing' }),
       }, { status: 429 })
     }
     if (admission.state === 'unavailable') {

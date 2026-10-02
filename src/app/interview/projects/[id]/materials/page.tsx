@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 // ============================================
 // プラン別のファイルサイズ上限に対応した直接アップロードUI
@@ -44,6 +45,7 @@ interface TranscriptionProgress {
   status: 'starting' | 'processing' | 'completed' | 'error'
   error?: string
   limitReached?: boolean
+  limitAction?: 'pricing' | 'contact' | null
   durationMinutes?: number | null
 }
 
@@ -481,6 +483,7 @@ export default function MaterialsPage() {
           const next = new Map(prev)
           const info = next.get(materialId)
           if (info) next.set(materialId, { ...info, status: 'error', limitReached: true,
+            limitAction: data.actionUrl === SUPPORT_CONTACT_URL ? 'contact' : data.actionUrl === '/interview/pricing' ? 'pricing' : null,
             error: data.error || '文字起こしの上限に達しました。プランを確認してください。' })
           return next
         })
@@ -1104,13 +1107,13 @@ export default function MaterialsPage() {
                       <span className="material-symbols-outlined text-sm">refresh</span>
                       再試行
                     </button>}
-                    {info.limitReached && (
-                      <button
-                        onClick={() => router.push('/interview/pricing')}
+                    {info.limitReached && info.limitAction && (
+                      <a
+                        href={info.limitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'}
                         className="flex items-center gap-1 px-3 py-1.5 bg-[#7f19e6] text-white rounded-lg text-xs font-medium hover:bg-[#6b12c9] transition-colors shadow-sm shrink-0 self-start sm:self-auto"
                       >
-                        プランと無料体験を見る
-                      </button>
+                        {info.limitAction === 'contact' ? '追加枠を相談する' : 'プランと無料体験を見る'}
+                      </a>
                     )}
                   </div>
                 )}

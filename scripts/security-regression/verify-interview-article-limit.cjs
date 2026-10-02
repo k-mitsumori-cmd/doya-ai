@@ -27,6 +27,7 @@ assert.equal(interviewArticleDailyLimit('PRO'), 30);
 assert.equal(interviewArticleDailyLimit('ENTERPRISE'), 100);
 
 let admission = { state: 'limit', limit: 5 };
+let userPlan = 'FREE';
 let providerCalls = 0;
 let drafts = 0;
 let refunds = 0;
@@ -71,7 +72,7 @@ const { POST } = load('src/app/api/interview/articles/generate/route.ts', {
   'next/server': {},
   '@/lib/prisma': { prisma },
   '@/lib/interview/access': {
-    getInterviewUser: async () => ({ userId: 'u1', plan: 'FREE' }),
+    getInterviewUser: async () => ({ userId: 'u1', plan: userPlan }),
     getGuestIdFromRequest: () => null,
     checkOwnership: () => null,
     requireDatabase: () => null,
@@ -83,6 +84,7 @@ const { POST } = load('src/app/api/interview/articles/generate/route.ts', {
     claimArticleBudget: async (identity) => { budgetCalls++; claimedIdentity = identity; return admission; },
     refundArticleBudget: async () => { refunds++; },
   },
+  '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
 }, {
   TextEncoder, TextDecoder, ReadableStream, AbortController, AbortSignal,
   process: { env: { GEMINI_API_KEY: 'test-key' } },
@@ -131,6 +133,11 @@ async function events() {
   output = await events();
   assert.equal(output.at(-1).code, 'ARTICLE_LIMIT');
   assert.equal(output.at(-1).upgradePath, '/interview/pricing');
+  userPlan = 'PRO';
+  output = await events();
+  assert.equal(output.at(-1).contactUrl, 'https://doyamarke.surisuta.jp/contact');
+  assert.equal(output.at(-1).upgradePath, undefined);
+  userPlan = 'FREE';
   assert.equal(providerCalls, 0);
   assert.equal(drafts, 0);
   assert.equal(refunds, 0);

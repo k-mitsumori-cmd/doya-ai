@@ -34,6 +34,7 @@ async function main() {
         claimRecipeBudget: async () => state === 'limit' ? { state, limit: 5 } : { state },
         refundRecipeBudget: async () => { throw new Error('no claim to refund') },
       },
+      '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
     }, { process: { env: { GEMINI_API_KEY: 'local-test-key' } } })
     const response = await POST({ json: async () => ({ sampleTexts: ['有効な記事'] }) })
     assert.equal(response.status, state === 'limit' ? 429 : 503)
@@ -44,6 +45,17 @@ async function main() {
     }
     assert.equal(providerCalls, 0)
   }
+  const { POST: paidPost } = load('src/app/api/interview/recipes/generate/route.ts', {
+    'next/server': { NextResponse: Response },
+    '@/lib/prisma': { prisma: {} },
+    '@/lib/interview/access': { getInterviewUser: async () => ({ userId: 'user', plan: 'PRO' }), requireDatabase: () => null },
+    '@/lib/interview/gemini-request': { InterviewGeminiError: class InterviewGeminiError extends Error {}, generateInterviewContent: async () => { throw new Error('provider must not be called') } },
+    '@/lib/interview/recipe-budget': { claimRecipeBudget: async () => ({ state: 'limit', limit: 30 }), refundRecipeBudget: async () => {} },
+    '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
+  }, { process: { env: { GEMINI_API_KEY: 'local-test-key' } } })
+  const paidBody = await (await paidPost({ json: async () => ({ sampleTexts: ['有効な記事'] }) })).json()
+  assert.equal(paidBody.contactUrl, 'https://doyamarke.surisuta.jp/contact')
+  assert.equal(paidBody.upgradeUrl, undefined)
   console.log('PASS recipe generation limits calls before AI, refunds failure, and rejects oversized samples')
 }
 

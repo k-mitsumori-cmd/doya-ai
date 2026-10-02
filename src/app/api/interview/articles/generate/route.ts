@@ -20,6 +20,7 @@ import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { buildArticlePrompt } from '@/lib/interview/prompts'
 import { recordServiceUsage } from '@/lib/service-usage'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { claimArticleBudget, refundArticleBudget, type ArticleClaim } from '@/lib/interview/article-budget'
 import { readInterviewGeminiResponse } from '@/lib/interview/gemini-request'
 
@@ -139,7 +140,8 @@ export async function POST(req: NextRequest) {
         const admission = await claimArticleBudget({ userId, guestId, plan })
         if (admission.state !== 'allowed') {
           controller.enqueue(sseEvent(admission.state === 'limit'
-            ? { type: 'error', code: 'ARTICLE_LIMIT', message: `本日の記事生成上限（${admission.limit}回）に達しました。`, upgradePath: '/interview/pricing' }
+            ? { type: 'error', code: 'ARTICLE_LIMIT', message: `本日の記事生成上限（${admission.limit}回）に達しました。`,
+                ...(plan === 'PRO' || plan === 'ENTERPRISE' ? { contactUrl: SUPPORT_CONTACT_URL } : { upgradePath: '/interview/pricing' }) }
             : { type: 'error', message: '利用状況を確認できません。しばらくしてから再試行してください。' }))
           controller.close()
           return

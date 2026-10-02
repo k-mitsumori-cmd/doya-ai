@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import type { InterviewPlanCode } from './types'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 const AUX_LIMIT: Record<InterviewPlanCode, number> = {
   GUEST: 2,
@@ -17,14 +18,14 @@ export type AuxAdmission =
   | { state: 'limit'; limit: number }
   | { state: 'unavailable' }
 
-export function auxAdmissionError(admission: Exclude<AuxAdmission, { state: 'allowed' }>): NextResponse {
+export function auxAdmissionError(admission: Exclude<AuxAdmission, { state: 'allowed' }>, plan: InterviewPlanCode): NextResponse {
   if (admission.state === 'limit') {
     return NextResponse.json({
       success: false,
       code: 'INTERVIEW_AUX_LIMIT_REACHED',
       error: `本日の追加AI編集上限（${admission.limit}回）に達しました。`,
       limit: admission.limit,
-      upgradeUrl: '/interview/pricing',
+      ...(plan === 'PRO' || plan === 'ENTERPRISE' ? { contactUrl: SUPPORT_CONTACT_URL } : { upgradeUrl: '/interview/pricing' }),
     }, { status: 429 })
   }
   return NextResponse.json({ success: false, error: '利用状況を確認できません。時間をおいて再試行してください。' }, { status: 503 })

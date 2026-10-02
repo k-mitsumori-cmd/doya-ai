@@ -14,7 +14,7 @@ import { randomUUID } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership, requireDatabase } from '@/lib/interview/access'
 import { transcribeFromUrl, transcribeExistingJob, InterviewTranscriptionTerminalError } from '@/lib/interview/transcription'
-import { getInterviewGuestLimits } from '@/lib/pricing'
+import { getInterviewGuestLimits, SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { inspectInterviewMediaDuration } from '@/lib/interview/media-duration'
 import { reserveInterviewTranscription, settleInterviewTranscription, releaseInterviewTranscription } from '@/lib/interview/transcription-budget'
 
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       }
       const admission = await reserveInterviewTranscription({ userId, guestId, plan }, { id: materialId, projectId: material.project.id }, mediaSeconds)
       if (admission.state === 'limit') {
-        return NextResponse.json({ success: false, error: `今月の文字起こし残り時間を超えるファイルです。`, code: 'TRANSCRIPTION_LIMIT', limitExceeded: true, actionUrl: '/interview/pricing', usedMinutes: Math.ceil(admission.usedSeconds / 60), limitMinutes: Math.ceil(admission.limitSeconds / 60) }, { status: 429 })
+        return NextResponse.json({ success: false, error: `今月の文字起こし残り時間を超えるファイルです。`, code: 'TRANSCRIPTION_LIMIT', limitExceeded: true, actionUrl: plan === 'PRO' || plan === 'ENTERPRISE' ? SUPPORT_CONTACT_URL : '/interview/pricing', usedMinutes: Math.ceil(admission.usedSeconds / 60), limitMinutes: Math.ceil(admission.limitSeconds / 60) }, { status: 429 })
       }
       if (admission.state === 'too-long') {
         return NextResponse.json({ success: false, error: `1回の文字起こしは${Math.ceil(admission.maxSeconds / 60)}分までです。`, code: 'TRANSCRIPTION_TOO_LONG' }, { status: 400 })
@@ -139,6 +139,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
           success: false,
           error: `ゲストユーザーは合計${guestLimits.transcriptionMinutes}分までの文字起こしが可能です。無料登録で月${30}分に拡大できます。`,
           limitExceeded: true,
+          actionUrl: '/interview/pricing',
           usedMinutes: Math.ceil(usedSeconds / 60),
           limitMinutes: guestLimits.transcriptionMinutes,
         }, { status: 403 })

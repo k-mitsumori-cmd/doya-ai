@@ -142,7 +142,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const apiKey = getGeminiApiKey()
     const model = getModel()
     const admission = await claimAuxBudget({ userId, guestId, plan })
-    if (admission.state !== 'allowed') return auxAdmissionError(admission)
+    if (admission.state !== 'allowed') return auxAdmissionError(admission, plan)
     claim = admission.claim
 
     const platformSection = validPlatforms

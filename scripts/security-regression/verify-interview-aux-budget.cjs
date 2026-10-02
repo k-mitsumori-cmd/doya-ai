@@ -6,6 +6,7 @@ async function main() {
   const helper = load('src/lib/interview/aux-budget.ts', {
     'node:crypto': crypto,
     'next/server': { NextResponse: Response },
+    '@/lib/pricing': { SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
     '@/lib/prisma': { prisma: {
       $queryRaw: async () => [{ value: '{"day":"2026-10-01","count":1}' }],
       $executeRaw: async () => 1,
@@ -16,6 +17,11 @@ async function main() {
   assert.equal(helper.interviewAuxDailyLimit('LIGHT'), 10);
   assert.equal(helper.interviewAuxDailyLimit('PRO'), 30);
   assert.equal(helper.interviewAuxDailyLimit('ENTERPRISE'), 100);
+  const freeLimit = await helper.auxAdmissionError({ state: 'limit', limit: 5 }, 'FREE').json();
+  assert.equal(freeLimit.upgradeUrl, '/interview/pricing');
+  const paidLimit = await helper.auxAdmissionError({ state: 'limit', limit: 30 }, 'PRO').json();
+  assert.equal(paidLimit.contactUrl, 'https://doyamarke.surisuta.jp/contact');
+  assert.equal(paidLimit.upgradeUrl, undefined);
   assert.equal((await helper.claimAuxBudget({ userId: 'u1', guestId: null, plan: 'FREE' })).state, 'allowed');
 
   let providerCalls = 0;

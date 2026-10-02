@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 type RightPanel = 'preview' | 'proofread' | 'titles' | 'factcheck' | 'sns' | 'translate' | 'revise'
 
@@ -308,6 +309,7 @@ export default function EditPage() {
   // 右パネル
   const [rightPanel, setRightPanel] = useState<RightPanel>('proofread')
   const [auxLimitMessage, setAuxLimitMessage] = useState<string | null>(null)
+  const [auxLimitAction, setAuxLimitAction] = useState<'pricing' | 'contact' | null>(null)
 
   // 校正
   const [proofLoading, setProofLoading] = useState(false)
@@ -356,11 +358,13 @@ export default function EditPage() {
     setToast({ message, type })
     toastTimerRef.current = setTimeout(() => setToast(null), 3500)
   }, [])
-  const noteAuxLimit = (res: Response, data: { success?: boolean; code?: string; error?: string }) => {
+  const noteAuxLimit = (res: Response, data: { success?: boolean; code?: string; error?: string; upgradeUrl?: string; contactUrl?: string }) => {
     if (res.status === 429 && data.code === 'INTERVIEW_AUX_LIMIT_REACHED') {
       setAuxLimitMessage(data.error || '本日の追加AI編集枠を使い切りました。')
+      setAuxLimitAction(data.contactUrl === SUPPORT_CONTACT_URL ? 'contact' : data.upgradeUrl === '/interview/pricing' ? 'pricing' : null)
     } else if (data.success) {
       setAuxLimitMessage(null)
+      setAuxLimitAction(null)
     }
   }
 
@@ -526,6 +530,7 @@ export default function EditPage() {
       } else {
         if (res.status === 429 && data.code === 'INTERVIEW_AUX_LIMIT_REACHED') {
           setAuxLimitMessage(data.error || '本日の追加AI編集枠を使い切りました。')
+          setAuxLimitAction(data.contactUrl === SUPPORT_CONTACT_URL ? 'contact' : data.upgradeUrl === '/interview/pricing' ? 'pricing' : null)
         }
         showToast(data.error || 'バナー画像を生成できませんでした。時間をおいて再試行してください。', 'error')
       }
@@ -1376,7 +1381,7 @@ ${htmlBody}
                   <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4" role="alert">
                     <p className="text-sm font-semibold text-amber-900">{auxLimitMessage}</p>
                     <p className="mt-1 text-xs text-amber-800">利用枠は日本時間の翌日0時に切り替わります。</p>
-                    <a href="/interview/pricing" className="mt-2 inline-flex text-sm font-bold text-blue-700 underline underline-offset-2">プランと利用枠を見る</a>
+                    {auxLimitAction && <a href={auxLimitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'} className="mt-2 inline-flex text-sm font-bold text-blue-700 underline underline-offset-2">{auxLimitAction === 'contact' ? '追加枠を相談する' : 'プランと利用枠を見る'}</a>}
                   </div>
                 )}
                 <AnimatePresence mode="wait">

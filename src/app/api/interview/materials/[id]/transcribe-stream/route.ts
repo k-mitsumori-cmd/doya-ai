@@ -19,7 +19,7 @@ import { randomUUID } from 'node:crypto'
 import { prisma } from '@/lib/prisma'
 import { getInterviewUser, getGuestIdFromRequest, checkOwnership } from '@/lib/interview/access'
 import { getSignedFileUrl } from '@/lib/interview/storage'
-import { getInterviewGuestLimits } from '@/lib/pricing'
+import { getInterviewGuestLimits, SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { inspectInterviewMediaDuration } from '@/lib/interview/media-duration'
 import { reserveInterviewTranscription, settleInterviewTranscription, releaseInterviewTranscription } from '@/lib/interview/transcription-budget'
 import { readAssemblyJson, SUBMIT_TIMEOUT_MS, POLL_REQUEST_TIMEOUT_MS, SUBMIT_RESPONSE_MAX_BYTES, TRANSCRIPT_RESPONSE_MAX_BYTES, InterviewTranscriptionTerminalError } from '@/lib/interview/transcription'
@@ -113,7 +113,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           })
           const usedSeconds = guestUsage._sum.duration || 0
           if (usedSeconds >= limitSeconds) {
-            sendEvent('fail', { message: `ゲストユーザーは合計${guestLimits.transcriptionMinutes}分までの文字起こしが可能です。`, limitExceeded: true })
+            sendEvent('fail', { message: `ゲストユーザーは合計${guestLimits.transcriptionMinutes}分までの文字起こしが可能です。`, limitExceeded: true, upgradePath: '/interview/pricing' })
             controller.close()
             return
           }
@@ -137,7 +137,8 @@ export async function GET(req: NextRequest, ctx: Ctx) {
           }
           const admission = await reserveInterviewTranscription({ userId, guestId, plan }, { id: materialId, projectId: material.project.id }, mediaSeconds)
           if (admission.state === 'limit') {
-            sendEvent('fail', { message: '今月の文字起こし残り時間を超えるファイルです。', code: 'TRANSCRIPTION_LIMIT', limitExceeded: true, upgradePath: '/interview/pricing' })
+            sendEvent('fail', { message: '今月の文字起こし残り時間を超えるファイルです。', code: 'TRANSCRIPTION_LIMIT', limitExceeded: true,
+              ...(plan === 'PRO' || plan === 'ENTERPRISE' ? { contactUrl: SUPPORT_CONTACT_URL } : { upgradePath: '/interview/pricing' }) })
             controller.close()
             return
           }

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { EmptyState } from '@/components/EmptyState'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 
 interface Project {
   id: string
@@ -66,6 +67,7 @@ export default function ProjectsPage() {
   const [query, setQuery] = useState('')
   const [generatingThumbnail, setGeneratingThumbnail] = useState<string | null>(null)
   const [thumbnailLimitMessage, setThumbnailLimitMessage] = useState<string | null>(null)
+  const [thumbnailLimitAction, setThumbnailLimitAction] = useState<'pricing' | 'contact' | null>(null)
   const requestVersionRef = useRef(0)
 
   useEffect(() => {
@@ -136,6 +138,7 @@ export default function ProjectsPage() {
       const data = await res.json()
       if (data.success && data.thumbnailUrl) {
         setThumbnailLimitMessage(null)
+        setThumbnailLimitAction(null)
         setProjects((prev) =>
           prev.map((p) => (p.id === projectId ? { ...p, thumbnailUrl: data.thumbnailUrl } : p))
         )
@@ -143,6 +146,7 @@ export default function ProjectsPage() {
       } else {
         if (res.status === 429 && data.code === 'INTERVIEW_AUX_LIMIT_REACHED') {
           setThumbnailLimitMessage(data.error || '本日の追加AI編集枠を使い切りました。')
+          setThumbnailLimitAction(data.contactUrl === SUPPORT_CONTACT_URL ? 'contact' : data.upgradeUrl === '/interview/pricing' ? 'pricing' : null)
         }
         toast.error(data.error || 'サムネイル生成に失敗しました')
       }
@@ -196,7 +200,7 @@ export default function ProjectsPage() {
       {thumbnailLimitMessage && (
         <div role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 flex flex-wrap items-center justify-between gap-3">
           <span>{thumbnailLimitMessage}</span>
-          <Link href="/interview/pricing" className="font-bold underline underline-offset-2">プランを見る</Link>
+          {thumbnailLimitAction && <Link href={thumbnailLimitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'} className="font-bold underline underline-offset-2">{thumbnailLimitAction === 'contact' ? '追加枠を相談する' : 'プランを見る'}</Link>}
         </div>
       )}
 

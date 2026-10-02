@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
     const apiKey = getGeminiApiKey()
     const model = process.env.INTERVIEW_GEMINI_MODEL || process.env.GEMINI_TEXT_MODEL || 'gemini-2.5-flash'
     const admission = await claimAuxBudget({ userId, guestId, plan })
-    if (admission.state !== 'allowed') return auxAdmissionError(admission)
+    if (admission.state !== 'allowed') return auxAdmissionError(admission, plan)
     claim = admission.claim
 
     const systemPrompt = 'あなたはプロの編集者です。以下の記事に対して、ユーザーの修正指示に従って修正を行ってください。修正した記事全文をMarkdown形式で出力してください。元の記事の構成やトーンはできるだけ維持し、指示された部分のみを修正してください。'

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
+import { SUPPORT_CONTACT_URL } from '@/lib/pricing'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface Recipe {
@@ -104,6 +105,7 @@ export default function SkillManagementPage() {
   const [showAiModal, setShowAiModal] = useState(false)
   const [aiSampleText, setAiSampleText] = useState('')
   const [aiDailyLimit, setAiDailyLimit] = useState<number | null>(null)
+  const [aiLimitAction, setAiLimitAction] = useState<'pricing' | 'contact' | null>(null)
   const [aiName, setAiName] = useState('')
   const [aiCategory, setAiCategory] = useState('custom')
   const [aiGenerating, setAiGenerating] = useState(false)
@@ -214,10 +216,12 @@ export default function SkillManagementPage() {
       const data = await res.json()
       if (res.status === 429 && data.code === 'DAILY_RECIPE_LIMIT_REACHED') {
         setAiDailyLimit(Number(data.limit) || 5)
+        setAiLimitAction(data.contactUrl === SUPPORT_CONTACT_URL ? 'contact' : data.upgradeUrl === '/interview/pricing' ? 'pricing' : null)
         return
       }
       if (data.success) {
         setAiDailyLimit(null)
+        setAiLimitAction(null)
         setAiPreview(data.recipe)
       } else {
         alert(data.error || 'スキル生成に失敗しました')
@@ -653,7 +657,7 @@ export default function SkillManagementPage() {
               {aiDailyLimit !== null && (
                 <div role="status" className="rounded-lg border border-purple-200 bg-purple-50 p-3 text-sm text-slate-700">
                   <p>本日のレシピ自動生成の上限（{aiDailyLimit}回）に達しました。日本時間の翌日にリセットされます。</p>
-                  <Link href="/interview/pricing" className="mt-2 inline-block font-bold text-purple-700 underline">プランを確認する</Link>
+                  {aiLimitAction && <Link href={aiLimitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'} className="mt-2 inline-block font-bold text-purple-700 underline">{aiLimitAction === 'contact' ? '追加枠を相談する' : 'プランを確認する'}</Link>}
                 </div>
               )}
 

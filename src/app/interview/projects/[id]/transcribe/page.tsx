@@ -64,6 +64,7 @@ export default function TranscribePage() {
   const [segments, setSegments] = useState<TranscriptionSegment[]>([])
   const [errorMessage, setErrorMessage] = useState('')
   const [limitReached, setLimitReached] = useState(false)
+  const [limitAction, setLimitAction] = useState<'pricing' | 'contact' | null>(null)
   const [needsSupport, setNeedsSupport] = useState(false)
   const [transcriptionId, setTranscriptionId] = useState<string | null>(null)
   const [durationMinutes, setDurationMinutes] = useState<number | null>(null)
@@ -222,6 +223,7 @@ export default function TranscribePage() {
       isCompleteRef.current = true
       setErrorMessage(data.message || '文字起こしに失敗しました')
       setLimitReached(data.code === 'TRANSCRIPTION_LIMIT' || data.limitExceeded === true)
+      setLimitAction(data.contactUrl === SUPPORT_CONTACT_URL ? 'contact' : data.upgradePath === '/interview/pricing' ? 'pricing' : null)
       setNeedsSupport(data.code === 'TRANSCRIPTION_SUBMISSION_UNKNOWN')
       setCurrentStep('error')
       eventSource.close()
@@ -713,13 +715,13 @@ export default function TranscribePage() {
                 >
                   サポートに問い合わせる
                 </a>
-              ) : limitReached ? (
-                <button
-                  onClick={() => router.push('/interview/pricing')}
+              ) : limitReached && limitAction ? (
+                <a
+                  href={limitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'}
                   className="flex items-center gap-2 py-2.5 px-5 rounded-xl font-bold text-white bg-[#7f19e6] hover:bg-[#6b12c9] transition-colors"
                 >
-                  プランと無料体験を見る
-                </button>
+                  {limitAction === 'contact' ? '追加枠を相談する' : 'プランと無料体験を見る'}
+                </a>
               ) : (
                 <button
                   onClick={() => window.location.reload()}

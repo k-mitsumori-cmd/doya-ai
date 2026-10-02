@@ -4,6 +4,7 @@ const { load } = require('./load-typescript.cjs')
 let providerCalls = 0
 let durationCalls = 0
 let processing = null
+let userPlan = 'FREE'
 const material = { id: 'm1', projectId: 'p1', project: { id: 'p1', userId: 'u1', guestId: null },
   type: 'audio', filePath: 'private/audio.wav', fileUrl: 'https://storage.example.test/signed', fileSize: 1024n, mimeType: 'audio/wav' }
 const prisma = {
@@ -13,9 +14,9 @@ const prisma = {
 let admission = { state: 'limit', limitSeconds: 1800, usedSeconds: 1700, reservedSeconds: 0, requiredSeconds: 200 }
 const shared = {
   '@/lib/prisma': { prisma },
-  '@/lib/interview/access': { getInterviewUser: async () => ({ userId: 'u1', plan: 'FREE' }),
+  '@/lib/interview/access': { getInterviewUser: async () => ({ userId: 'u1', plan: userPlan }),
     getGuestIdFromRequest: () => null, checkOwnership: () => null, requireDatabase: () => null },
-  '@/lib/pricing': { getInterviewGuestLimits: () => ({ transcriptionMinutes: 5 }) },
+  '@/lib/pricing': { getInterviewGuestLimits: () => ({ transcriptionMinutes: 5 }), SUPPORT_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' },
   '@/lib/interview/media-duration': { inspectInterviewMediaDuration: async () => { durationCalls++; return 200 } },
   '@/lib/interview/transcription-budget': { reserveInterviewTranscription: async () => admission,
     settleInterviewTranscription: async () => { throw Error('unexpected settlement') },
@@ -58,7 +59,13 @@ const context = { params: Promise.resolve({ id: 'm1' }) }
   assert.match(text, /event: fail/)
   assert.match(text, /TRANSCRIPTION_LIMIT/)
   assert.match(text, /interview\/pricing/)
-  assert.equal(durationCalls, 2)
+  userPlan = 'PRO'
+  const paidBlocked = await post.POST({ json: async () => ({}) }, context)
+  assert.equal(paidBlocked.body.actionUrl, 'https://doyamarke.surisuta.jp/contact')
+  const paidStream = await stream.GET({}, context)
+  assert.match(await paidStream.text(), /doyamarke\.surisuta\.jp\/contact/)
+  userPlan = 'FREE'
+  assert.equal(durationCalls, 4)
   assert.equal(providerCalls, 0)
 
   admission = { state: 'processing', transcriptionId: 't1', externalJobId: 'submitting:uuid' }

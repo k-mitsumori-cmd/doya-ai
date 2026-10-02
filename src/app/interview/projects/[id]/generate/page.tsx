@@ -313,7 +313,7 @@ export default function GeneratePage() {
   const [draftId, setDraftId] = useState<string | null>(null)
   const [wordCount, setWordCount] = useState(0)
   const [error, setError] = useState('')
-  const [limitReached, setLimitReached] = useState(false)
+  const [limitAction, setLimitAction] = useState<'pricing' | 'contact' | null>(null)
   const [providerConfigurationError, setProviderConfigurationError] = useState(false)
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null)
   const [showCelebration, setShowCelebration] = useState(false)
@@ -343,7 +343,7 @@ export default function GeneratePage() {
     setStatus('generating')
     setGeneratedText('')
     setError('')
-    setLimitReached(false)
+    setLimitAction(null)
     setProviderConfigurationError(false)
     setProgress('接続中...')
     setThumbnailUrl(null)
@@ -433,7 +433,9 @@ export default function GeneratePage() {
               case 'error':
                 receivedError = true
                 setError(event.message)
-                setLimitReached(event.code === 'ARTICLE_LIMIT')
+                setLimitAction(event.code === 'ARTICLE_LIMIT'
+                  ? event.contactUrl === SUPPORT_CONTACT_URL ? 'contact' : event.upgradePath === '/interview/pricing' ? 'pricing' : null
+                  : null)
                 setProviderConfigurationError(event.code === 'ARTICLE_PROVIDER_CONFIGURATION')
                 setStatus('error')
                 break
@@ -713,7 +715,7 @@ export default function GeneratePage() {
                 <div className="flex-1">
                   <p className="font-medium mb-1">エラーが発生しました</p>
                   <p className="text-red-500">{error}</p>
-                  {limitReached && <a href="/interview/pricing" className="mt-3 inline-block font-semibold text-blue-700 underline">プランを見る</a>}
+                  {limitAction && <a href={limitAction === 'contact' ? SUPPORT_CONTACT_URL : '/interview/pricing'} className="mt-3 inline-block font-semibold text-blue-700 underline">{limitAction === 'contact' ? '追加枠を相談する' : 'プランを見る'}</a>}
                   {providerConfigurationError && <a href={SUPPORT_CONTACT_URL} target="_blank" rel="noreferrer" className="mt-3 inline-block font-semibold text-blue-700 underline">サポートに問い合わせる</a>}
                 </div>
               </div>
