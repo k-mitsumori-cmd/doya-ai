@@ -56,12 +56,12 @@ function fixture({ used = 2, max = 3, existing = null, email = 'invited@example.
   };
 }
 
-function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, conflicts = 0, existingInvite = false, existingRole = 'member' } = {}) {
+function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, inviterRole = 'admin', conflicts = 0, existingInvite = false, existingRole = 'member' } = {}) {
   let attempts = 0;
   let writes = 0;
   const tx = {
     promaneMember: {
-      findUnique: async () => ({ role: 'admin', isActive: inviterActive }),
+      findUnique: async () => ({ role: inviterRole, isActive: inviterActive }),
       findFirst: async () => null,
       count: async ({ where }) => {
         assert.equal(where.isActive, true);
@@ -146,7 +146,15 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
     const f = issueFixture({ pending: 2 });
     const result = await f.run();
     assert.equal(result.response.code, 'PROMANE_MEMBER_LIMIT_REACHED');
+    assert.equal(result.response.limitReached, true);
+    assert.equal(result.response.canManageBilling, false);
     assert.deepEqual(f.state(), { attempts: 1, writes: 0 });
+  });
+  await check('workspace owner receives owner billing guidance at the seat cap', async () => {
+    const f = issueFixture({ pending: 2, inviterRole: 'owner' });
+    const result = await f.run();
+    assert.equal(result.response.canManageBilling, true);
+    assert.match(result.response.error, /プランをご確認/);
   });
   await check('existing invitation is reused only while an active seat remains', async () => {
     const reusable = issueFixture({ existingInvite: true });
@@ -181,6 +189,7 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
     const result = await f.run();
     assert.equal(result.success, false);
     assert.equal(result.response.code, 'PROMANE_MEMBER_LIMIT_REACHED');
+    assert.equal(result.response.canManageBilling, false);
     assert.match(result.response.error, /契約者にご相談/);
     assert.deepEqual(f.state(), { attempts: 1, memberWrites: 0, inviteWrites: 0 });
   });

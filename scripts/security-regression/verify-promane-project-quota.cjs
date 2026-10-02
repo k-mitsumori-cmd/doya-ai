@@ -80,8 +80,12 @@ function fixture({ conflicts = 0, used = 2, max = 3, member = true, otherError =
     }
   });
   await check('member sees owner guidance while owner sees plan guidance', async () => {
-    assert.match((await fixture({ used: 3 }).run()).error, /契約者にご相談/);
-    assert.match((await fixture({ used: 3, actor: 'owner' }).run()).error, /プランをご確認/);
+    const member = await fixture({ used: 3 }).run();
+    assert.match(member.error, /契約者にご相談/);
+    assert.equal(member.canManageBilling, false);
+    const owner = await fixture({ used: 3, actor: 'owner' }).run();
+    assert.match(owner.error, /プランをご確認/);
+    assert.equal(owner.canManageBilling, true);
   });
   await check('membership recheck denies before quota or write', async () => {
     const f = fixture({ member: false });

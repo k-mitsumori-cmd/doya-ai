@@ -3,7 +3,14 @@ import crypto from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { getUserPromaneLimits } from '@/lib/promane/limits'
 
-type AdmissionError = { status: number; error: string; code?: string; expectedEmail?: string }
+type AdmissionError = {
+  status: number
+  error: string
+  code?: string
+  expectedEmail?: string
+  limitReached?: boolean
+  canManageBilling?: boolean
+}
 type AdmissionResult =
   | { success: true; workspaceSlug: string; alreadyMember: boolean }
   | { success: false; response: AdmissionError }
@@ -43,10 +50,12 @@ export async function issuePromaneInvitation(args: {
         const atLimit = (count: number) => limits.maxMembersPerWorkspace >= 0 && count >= limits.maxMembersPerWorkspace
         const limitResponse = () => ({
           success: false as const,
-          response: {
-            status: 403,
-            error: `メンバーと有効な招待の上限（${limits.maxMembersPerWorkspace}名）に達しました。利用枠の変更はワークスペースの契約者にご相談ください。`,
-            code: 'PROMANE_MEMBER_LIMIT_REACHED',
+            response: {
+              status: 403,
+            error: `メンバーと有効な招待の上限（${limits.maxMembersPerWorkspace}名）に達しました。${inviter.role === 'owner' ? 'プランをご確認ください。' : '利用枠の変更はワークスペースの契約者にご相談ください。'}`,
+              code: 'PROMANE_MEMBER_LIMIT_REACHED',
+              limitReached: true,
+              canManageBilling: inviter.role === 'owner',
           },
         })
         if (atLimit(active)) return limitResponse()
@@ -141,6 +150,8 @@ export async function acceptPromaneInvitation(args: {
                 status: 403,
                 error: `メンバーの上限（${limits.maxMembersPerWorkspace}名）に達しました。利用枠の変更はワークスペースの契約者にご相談ください。`,
                 code: 'PROMANE_MEMBER_LIMIT_REACHED',
+                limitReached: true,
+                canManageBilling: false,
               },
             }
           }
