@@ -56,7 +56,7 @@ function fixture({ used = 2, max = 3, existing = null, email = 'invited@example.
   };
 }
 
-function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, conflicts = 0, existingInvite = false } = {}) {
+function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, conflicts = 0, existingInvite = false, existingRole = 'member' } = {}) {
   let attempts = 0;
   let writes = 0;
   const tx = {
@@ -70,7 +70,7 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
     },
     promaneWorkspace: { findUnique: async () => ({ name: 'Team', userId: 'owner' }) },
     promaneInvitation: {
-      findFirst: async () => existingInvite ? { token: 'existing', expiresAt: new Date(Date.now() + 60000) } : null,
+      findFirst: async () => existingInvite ? { token: 'existing', role: existingRole, expiresAt: new Date(Date.now() + 60000) } : null,
       count: async ({ where }) => {
         assert.equal(where.acceptedAt, null);
         assert.ok(where.expiresAt.gt instanceof Date);
@@ -155,6 +155,11 @@ function issueFixture({ active = 1, pending = 1, max = 3, inviterActive = true, 
     const full = issueFixture({ existingInvite: true, active: 3 });
     assert.equal((await full.run()).response.code, 'PROMANE_MEMBER_LIMIT_REACHED');
     assert.equal(full.state().writes, 0);
+  });
+  await check('a different role cannot silently reuse the old invitation', async () => {
+    const f = issueFixture({ existingInvite: true, existingRole: 'guest' });
+    assert.equal((await f.run()).response.code, 'PROMANE_INVITE_ROLE_CONFLICT');
+    assert.equal(f.state().writes, 0);
   });
   await check('inactive inviter cannot create an invitation', async () => {
     const f = issueFixture({ inviterActive: false });

@@ -152,14 +152,16 @@ export function InviteModal({ workspaceId, open, onClose, canInvite }: InviteMod
         })
         return
       }
-      if (data.emailSent) {
+      if (data.reused) {
+        toast.info('発行済みの招待リンクがあります。下の一覧からコピーできます', { duration: 6000 })
+      } else if (data.emailSent) {
         toast.success(`${email} に招待メールを送信しました`, {
           duration: 5000,
           icon: <Image src="/character/success.png" alt="" width={28} height={28} unoptimized />,
         })
       } else {
-        toast.success(`招待リンクを発行しました（メール送信は失敗）`, {
-          duration: 5000,
+        toast.warning('招待リンクは発行しました。メールを送れなかったため、下の一覧からコピーして共有してください', {
+          duration: 7000,
           icon: <Image src="/character/thinking.png" alt="" width={28} height={28} unoptimized />,
         })
       }

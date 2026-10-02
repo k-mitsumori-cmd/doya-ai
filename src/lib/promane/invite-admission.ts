@@ -19,10 +19,10 @@ export async function issuePromaneInvitation(args: {
   email: string
   role: 'admin' | 'member' | 'guest'
 }): Promise<IssueResult> {
-  const now = new Date()
   for (let attempt = 0; attempt < 5; attempt++) {
     try {
       return await prisma.$transaction(async (tx) => {
+        const now = new Date()
         const inviter = await tx.promaneMember.findUnique({
           where: { workspaceId_userId: { workspaceId: args.workspaceId, userId: args.userId } },
         })
@@ -54,6 +54,16 @@ export async function issuePromaneInvitation(args: {
           where: { workspaceId: args.workspaceId, email: args.email, acceptedAt: null, expiresAt: { gt: now } },
         })
         if (existingInvite) {
+          if (existingInvite.role !== args.role) {
+            return {
+              success: false,
+              response: {
+                status: 409,
+                error: 'このメールアドレスには別の役割で有効な招待があります。役割を変える場合は、既存の招待を取り消してから再度招待してください。',
+                code: 'PROMANE_INVITE_ROLE_CONFLICT',
+              },
+            }
+          }
           return {
             success: true,
             invitation: { token: existingInvite.token, expiresAt: existingInvite.expiresAt },
