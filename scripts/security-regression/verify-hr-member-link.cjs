@@ -3,10 +3,12 @@ const { load, check, results } = require('./load-typescript.cjs')
 
 function fixture({ role = 'ADMIN', foreign = false, occupied = false, uniqueRace = false } = {}) {
   const writes = []
-  const prisma = {
+  const tx = {
+    $queryRaw: async sql => sql.join('?').includes('hr_organizations') ? [{ id: 'org' }] : [{ id: 'admin' }, { id: 'target' }],
     hrOrganizationMember: {
       findFirst: async ({ where }) => {
-        if (where.id === 'target') return { id: 'target', role: 'MEMBER', employeeId: null }
+        if (where.id === 'admin') return { id: 'admin', role, status: 'ACTIVE', userId: 'user-admin' }
+        if (where.id === 'target') return { id: 'target', role: 'MEMBER', status: 'ACTIVE', userId: 'user-target', employeeId: null }
         if (where.employeeId) return occupied ? { id: 'someone-else' } : null
         throw Error('unexpected membership query')
       },
@@ -24,14 +26,16 @@ function fixture({ role = 'ADMIN', foreign = false, occupied = false, uniqueRace
       },
     },
   }
+  const prisma = { $transaction: async fn => fn(tx) }
   const api = load('src/app/api/hr/organization/members/[id]/route.ts', {
     'next/server': { NextResponse: Response },
     '@/lib/prisma': { prisma },
     '@/lib/hr/access': {
-      getHrContext: async () => ({ organizationId: 'org', memberId: 'admin', role }),
+      getHrContext: async () => ({ organizationId: 'org', memberId: 'admin', userId: 'user-admin', role }),
       hasMinRole: actual => actual === 'ADMIN' || actual === 'OWNER',
     },
     '@/lib/hr/types': { HrMemberRole: { OWNER: 'OWNER', ADMIN: 'ADMIN', MANAGER: 'MANAGER', MEMBER: 'MEMBER' } },
+    '@/lib/hr/constants': { ROLE_HIERARCHY: { OWNER: 4, ADMIN: 3, MANAGER: 2, MEMBER: 1 } },
   })
   return {
     writes,

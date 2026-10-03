@@ -5,31 +5,36 @@ const roles = { OWNER: 'OWNER', ADMIN: 'ADMIN', MANAGER: 'MANAGER', MEMBER: 'MEM
 const common = {
   'next/server': { NextResponse: Response },
   '@/lib/hr/types': { HrMemberRole: roles },
+  '@/lib/hr/constants': { ROLE_HIERARCHY: { OWNER: 4, ADMIN: 3, MANAGER: 2, MEMBER: 1 } },
 }
 
 function memberRoute({ targetRole = 'MEMBER', changedBeforeWrite = false } = {}) {
   let writes = 0
-  const prisma = {
+  const tx = {
+    $queryRaw: async sql => sql.join('?').includes('hr_organizations') ? [{ id: 'org' }] : [{ id: 'actor' }, { id: 'target' }],
     hrOrganizationMember: {
-      findFirst: async () => ({ id: 'target', role: targetRole }),
+      findFirst: async ({ where }) => where.id === 'actor'
+        ? { id: 'actor', userId: 'user-actor', role: 'OWNER', status: 'ACTIVE' }
+        : { id: 'target', userId: 'user-target', role: targetRole, status: 'ACTIVE' },
       findUnique: async () => ({ id: 'target' }),
       updateMany: async ({ where }) => {
-        assert.equal(where.role.not, 'OWNER')
+        assert.equal(where.role, targetRole)
         writes++
         return { count: changedBeforeWrite ? 0 : 1 }
       },
       deleteMany: async ({ where }) => {
-        assert.equal(where.role.not, 'OWNER')
+        assert.equal(where.role, targetRole)
         writes++
         return { count: changedBeforeWrite ? 0 : 1 }
       },
     },
   }
+  const prisma = { $transaction: async fn => fn(tx) }
   const route = load('src/app/api/hr/organization/members/[id]/route.ts', {
     ...common,
     '@/lib/prisma': { prisma },
     '@/lib/hr/access': {
-      getHrContext: async () => ({ organizationId: 'org', memberId: 'actor', role: 'OWNER' }),
+      getHrContext: async () => ({ organizationId: 'org', memberId: 'actor', userId: 'user-actor', role: 'OWNER' }),
       hasMinRole: () => true,
     },
   })
