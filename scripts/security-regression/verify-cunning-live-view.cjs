@@ -26,6 +26,7 @@ const route = load('src/app/api/cunning/sessions/[id]/route.ts', {
   '@/lib/cunning/history-cursor': {},
   '@/lib/cunning/report-freshness': {},
   '@/lib/cunning/session-write': {},
+  '@/lib/cunning/recording-ledger': {},
   '@/lib/cunning/modes': { MODE_IDS: ['sales'] },
 });
 

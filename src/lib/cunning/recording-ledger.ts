@@ -69,6 +69,19 @@ async function settle(tx: Prisma.TransactionClient, lease: CunningRecordingLease
   return end
 }
 
+/** Finish an active reservation before a session is soft-deleted. The caller
+ * holds the User -> Session write lock, as recording commands do. Keep usage
+ * allocations for billing, but release the unused part of the reservation. */
+export async function stopCunningRecordingForDeletion(tx: Prisma.TransactionClient, sessionId: string) {
+  const lease = await tx.cunningRecordingLease.findUnique({ where: { sessionId } })
+  if (!lease || lease.stoppedAt) return
+  const [{ now }] = await tx.$queryRaw<{ now: Date }[]>`SELECT clock_timestamp() AS now`
+  const stoppedAt = new Date(Math.max(lease.settledThrough.getTime(), Math.min(now.getTime(), lease.expiresAt.getTime())))
+  await settle(tx, lease, stoppedAt)
+  await tx.cunningUsageAllocation.updateMany({ where: { sessionId }, data: { reservedMs: 0n } })
+  await tx.cunningRecordingLease.update({ where: { sessionId }, data: { stoppedAt } })
+}
+
 /** Server clock and User row serialize reservation across tabs, sessions and both audio channels.
  * Not yet wired to routes: legacy duration backfill and client cutover must precede activation.
  * testNow is for deterministic local DB tests only; routes must never forward client time.
