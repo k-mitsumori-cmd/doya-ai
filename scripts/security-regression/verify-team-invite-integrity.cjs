@@ -110,12 +110,18 @@ function creationFixture(service) {
   return {
     pending,
     sent: () => sent,
-    invite: () => api.POST({ json: async () => ({ email: invitedEmail, role: 'member' }) }),
+    invite: (role = 'member') => api.POST({ json: async () => ({ email: invitedEmail, role }) }),
   }
 }
 
 ;(async () => {
   for (const service of services) {
+    await check(`${service.id} rejects unknown invite roles before saving`, async () => {
+      const fixture = creationFixture(service)
+      assert.equal((await fixture.invite('admni')).status, 400)
+      assert.equal(fixture.pending.length, 0)
+      assert.equal(fixture.sent(), 0)
+    })
     await check(`${service.id} invite requires the invited account`, async () => {
       const fixture = acceptanceFixture(service)
       fixture.setAccountEmail('other@example.test')

@@ -49,7 +49,11 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
   const email = String(body?.email || '').trim().toLowerCase()
-  const role = (ROLES.includes(body?.role) ? body.role : 'member') as AishodanRole
+  const requestedRole = body?.role
+  if (requestedRole !== undefined && !ROLES.includes(requestedRole)) {
+    return NextResponse.json({ error: '招待権限の形式が正しくありません' }, { status: 400 })
+  }
+  const role = (requestedRole ?? 'member') as AishodanRole
 
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return NextResponse.json({ error: 'メールアドレスの形式が正しくありません' }, { status: 400 })
