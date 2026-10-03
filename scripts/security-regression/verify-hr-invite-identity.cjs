@@ -84,20 +84,25 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
 
   let sent = 0;
   let createdRole;
+  let created = 0;
+  let currentRole = 'ADMIN';
   const { POST } = load('src/app/api/hr/organization/invite/route.ts', {
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => ({ user: { id: 'admin-1', name: 'Admin' } }) },
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma: { $transaction: async (work) => work({
-      $queryRaw: async () => [{ id: 'org-1' }],
+      $queryRaw: async sql => sql.join('?').includes('hr_organization_members')
+        ? currentRole === 'ADMIN' ? [{ id: 'actor' }] : []
+        : [{ id: 'org-1' }],
       hrOrganizationMember: { findFirst: async () => null },
       hrInvitation: { findFirst: async () => null, create: async ({ data }) => {
+        created++;
         createdRole = data.role;
         return { ...data, id: 'invite-2' };
       } },
       hrOrganization: { findUnique: async () => ({ name: 'Example' }) },
     }) } },
-    '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'org-1', userId: 'admin-1', role: 'ADMIN' }), hasMinRole: () => true },
+    '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'org-1', memberId: 'actor', userId: 'admin-1', role: 'ADMIN' }), hasMinRole: () => true },
     '@/lib/hr/types': { HrMemberRole: { OWNER: 'OWNER', ADMIN: 'ADMIN', MANAGER: 'MANAGER', MEMBER: 'MEMBER' } },
     '@/lib/hr/billing': { checkMemberLimit: async () => null },
     '@/lib/hr/email': { sendInvitationEmail: async () => { sent++; return true; } },
@@ -112,6 +117,10 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
   const badEmail = await POST({ json: async () => ({ email: 'not-an-address', role: 'OWNER' }) });
   assert.equal(badEmail.status, 400);
   assert.equal(sent, 1);
+  currentRole = 'MEMBER';
+  assert.equal((await POST({ json: async () => ({ email: 'another@example.com' }) })).status, 403);
+  assert.equal(created, 1);
+  assert.equal(sent, 1, 'revoked inviter must not send email');
   for (const [role, plan, expectedField] of [
     ['OWNER', 'FREE', 'upgradeUrl'],
     ['ADMIN', 'PRO', 'contactUrl'],

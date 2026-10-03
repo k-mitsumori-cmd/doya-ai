@@ -59,6 +59,10 @@ export async function POST(req: NextRequest) {
     const result = await prisma.$transaction(async (tx) => {
       const organizations = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "hr_organizations" WHERE id = ${ctx.organizationId} FOR UPDATE`
       if (organizations.length === 0) return { status: 404 as const, error: '組織が見つかりません' }
+      const actor = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM hr_organization_members
+        WHERE id = ${ctx.memberId} AND "organizationId" = ${ctx.organizationId}
+        AND "userId" = ${ctx.userId} AND status = 'ACTIVE' AND role IN ('OWNER', 'ADMIN') FOR UPDATE`
+      if (actor.length === 0) return { status: 403 as const, error: '招待権限が変更されました。再読み込みしてください' }
 
       const existingMember = await tx.hrOrganizationMember.findFirst({
         where: { organizationId: ctx.organizationId, user: { email: emailNorm }, status: 'ACTIVE' },
