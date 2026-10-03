@@ -5,6 +5,7 @@ const { load, check } = require('./load-typescript.cjs')
 const pricing = { getKintaiEmployeeLimitByUserPlan: () => 1, HIGH_USAGE_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' }
 const planUtils = load('src/lib/plan-utils.ts')
 const admission = load('src/lib/kintai/employee-admission.ts', { '@/lib/pricing': pricing, '@/lib/plan-utils': planUtils })
+const manager = load('src/lib/kintai/manager-admission.ts')
 const inviteToken = load('src/lib/kintai/invite-token.ts', {}, { crypto: webcrypto })
 const access = { getKintaiContext: async () => ({ organizationId: 'org', userId: 'owner', memberId: 'owner-member', role: 'system_admin' }), hasMinRole: () => true }
 
@@ -19,7 +20,10 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', userId:
       $transaction: async (work) => {
         let release = () => {}
         const tx = {
-          $queryRaw: async () => {
+          $queryRaw: async (strings) => {
+            if (String(strings[0]).includes('kintai_members')) {
+              return [{ role: 'system_admin', status: 'ACTIVE', isActive: true }]
+            }
             lockCalls++
             const before = previous
             previous = new Promise(resolve => { release = resolve })
@@ -45,6 +49,7 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', userId:
       '@/lib/html-escape': { escapeHtml: x => x },
       '@/lib/kintai/access': access,
       '@/lib/kintai/employee-admission': admission,
+      '@/lib/kintai/manager-admission': manager,
       '@/lib/kintai/invite-token': inviteToken,
       '@/lib/email': { sendEmail: async ({ subject }) => { sends++; assert.ok(subject.includes('組織')); return { success: false } } },
     }, { crypto: webcrypto })
@@ -85,6 +90,7 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', userId:
       '@/lib/prisma': { prisma: { $transaction: async work => work(tx) } },
       '@/lib/kintai/access': access,
       '@/lib/kintai/employee-admission': admission,
+      '@/lib/kintai/manager-admission': manager,
     })
     const patch = body => api.PATCH({ json: async () => body }, { params: Promise.resolve({ id: 'e' }) })
     assert.equal((await patch({ isActive: true })).status, 403)
@@ -95,6 +101,42 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', userId:
     assert.equal(updates, 0)
     assert.equal((await patch({ isActive: true })).status, 200)
     assert.equal(updates, 1)
+  })
+
+  await check('revoked employee managers cannot create an invitation or send email', async () => {
+    for (const scenario of [
+      { role: 'employee', status: 'ACTIVE', isActive: true, requestedRole: 'employee' },
+      { role: 'system_admin', status: 'INACTIVE', isActive: true, requestedRole: 'employee' },
+      { role: 'system_admin', status: 'ACTIVE', isActive: false, requestedRole: 'employee' },
+      { role: 'hr_admin', status: 'ACTIVE', isActive: true, requestedRole: 'system_admin' },
+    ]) {
+      let creates = 0
+      let sends = 0
+      const tx = {
+        $queryRaw: async (strings) => String(strings[0]).includes('kintai_members')
+          ? [{ role: scenario.role, status: scenario.status, isActive: scenario.isActive }]
+          : [{ id: 'org' }],
+        kintaiEmployee: { create: async () => { creates++; throw Error('unauthorized create') } },
+      }
+      const prisma = {
+        $transaction: async work => work(tx),
+        kintaiOrganization: { findUnique: async () => { throw Error('unauthorized lookup') } },
+      }
+      const api = load('src/app/api/kintai/employees/route.ts', {
+        'next/server': { NextResponse: Response },
+        '@/lib/prisma': { prisma },
+        '@/lib/html-escape': { escapeHtml: x => x },
+        '@/lib/kintai/access': access,
+        '@/lib/kintai/employee-admission': admission,
+        '@/lib/kintai/manager-admission': manager,
+        '@/lib/kintai/invite-token': inviteToken,
+        '@/lib/email': { sendEmail: async () => { sends++; throw Error('unauthorized email') } },
+      }, { crypto: webcrypto })
+      const response = await api.POST({ json: async () => ({ name: '山田', email: 'yamada@example.test', role: scenario.requestedRole }) })
+      assert.equal(response.status, 403, JSON.stringify(scenario))
+      assert.equal(creates, 0)
+      assert.equal(sends, 0)
+    }
   })
 
   await check('employee cap action follows the organization owner and paid tier', async () => {
@@ -134,6 +176,7 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', userId:
       '@/lib/html-escape': { escapeHtml: x => x },
       '@/lib/kintai/access': access,
       '@/lib/kintai/employee-admission': admission,
+      '@/lib/kintai/manager-admission': manager,
       '@/lib/kintai/invite-token': inviteToken,
       '@/lib/email': { sendEmail: async () => {} },
     })

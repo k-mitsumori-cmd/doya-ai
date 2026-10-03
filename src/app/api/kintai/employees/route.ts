@@ -7,6 +7,7 @@ import { prisma } from '@/lib/prisma'
 import { escapeHtml } from '@/lib/html-escape'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { kintaiEmployeeLimitPayload, lockKintaiEmployeeAdmission, reachedKintaiEmployeeLimit } from '@/lib/kintai/employee-admission'
+import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
 import { sendEmail } from '@/lib/email'
 import { createKintaiInviteToken } from '@/lib/kintai/invite-token'
 
@@ -75,6 +76,9 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
     const { name, nameKana, email, departmentId, workRuleId, employmentType, hireDate, role } = body
     if (!name || !email) {
       return NextResponse.json({ error: '氏名とメールは必須です' }, { status: 400 })
@@ -93,18 +97,16 @@ export async function POST(req: NextRequest) {
     // SEC: ロール値のホワイトリスト検証 + 権限エスカレーション防止
     const ALL_ROLES = ['employee', 'manager', 'hr_admin', 'system_admin'] as const
     const assignRole = ALL_ROLES.includes(role) ? role : 'employee'
-    if (role === 'system_admin' && ctx.role !== 'system_admin') {
-      return NextResponse.json({ error: 'システム管理者のみがシステム管理者権限を付与できます' }, { status: 403 })
-    }
-    if (role === 'hr_admin' && !hasMinRole(ctx.role, 'system_admin')) {
-      // hr_adminはhr_admin以下の権限のみ付与可能だが、自分と同等は許可
-    }
-
     const inviteToken = createKintaiInviteToken()
     const admission = await prisma.$transaction(async (tx) => {
       await lockKintaiEmployeeAdmission(tx, ctx.organizationId)
+      const actorRole = await lockCurrentKintaiManager(tx, ctx)
+      if (!actorRole) return { kind: 'forbidden' as const }
+      if (assignRole === 'system_admin' && actorRole !== 'system_admin') {
+        return { kind: 'admin-only' as const }
+      }
       const limit = await reachedKintaiEmployeeLimit(tx, ctx.organizationId)
-      if (limit !== null) return { allowed: false as const, limit }
+      if (limit !== null) return { kind: 'limit' as const, limit }
       const employee = await tx.kintaiEmployee.create({
       data: {
         organizationId: ctx.organizationId,
@@ -128,9 +130,15 @@ export async function POST(req: NextRequest) {
       },
       include: { department: true, workRule: true, member: { select: { id: true, role: true, status: true, inviteToken: true } } },
       })
-      return { allowed: true as const, employee }
+      return { kind: 'created' as const, employee }
     })
-    if (!admission.allowed) {
+    if (admission.kind === 'forbidden') {
+      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+    }
+    if (admission.kind === 'admin-only') {
+      return NextResponse.json({ error: 'システム管理者のみがシステム管理者権限を付与できます' }, { status: 403 })
+    }
+    if (admission.kind === 'limit') {
       return NextResponse.json(
         kintaiEmployeeLimitPayload(admission.limit, ctx.userId),
         { status: 403 },

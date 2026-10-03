@@ -16,7 +16,7 @@ for(const mode of ['active','disable-patch','disable-delete','membership-inactiv
   : employee.isActive?[{id:employee.id}]:[];
  prisma.$transaction=async fn=>fn(prisma);
  const access=load('src/lib/kintai/access.ts',{'next-auth':{getServerSession:async()=>({user:{id:actor}})},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma},'./types':types});
- const deps={'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/kintai/access':access,'@/lib/kintai/employee-admission':{lockKintaiEmployeeAdmission:async()=>{}}};
+ const deps={'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/kintai/access':access,'@/lib/kintai/employee-admission':{lockKintaiEmployeeAdmission:async()=>{}},'@/lib/kintai/manager-admission':load('src/lib/kintai/manager-admission.ts',{})};
  const edit=load('src/app/api/kintai/employees/[id]/route.ts',deps);
  const clock=load('src/app/api/kintai/clock/route.ts',{...deps,'@/lib/kintai/shift-records':shift,'@/lib/kintai/recalculate':{recalculateDayForEmployee:()=>{throw Error('Unexpected recalculation')}},'@/lib/service-usage':{recordServiceUsage:async()=>{}}});
  let disableStatus=null;

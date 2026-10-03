@@ -1,6 +1,6 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),ts=require('typescript');
 function load(file,deps){const exported={};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../../',file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports:exported,Date,console:{error(){}},require:n=>{if(n in deps)return deps[n];throw Error(n)}});return exported}
-const types=load('src/lib/kintai/types.ts',{}),access=load('src/lib/kintai/access.ts',{'./types':types,'next-auth':{},'@/lib/auth':{},'@/lib/prisma':{}});
+const types=load('src/lib/kintai/types.ts',{}),access=load('src/lib/kintai/access.ts',{'./types':types,'next-auth':{},'@/lib/auth':{},'@/lib/prisma':{}}),manager=load('src/lib/kintai/manager-admission.ts',{});
 const cases=[
  {name:'unchanged-admin-role',actor:'hr_admin',old:'system_admin',role:'system_admin',http:200},
  {name:'reject-promotion',actor:'hr_admin',old:'employee',role:'system_admin',http:403},
@@ -25,7 +25,7 @@ for(const c of cases){
  const before=JSON.stringify(row);
  const tx={$queryRaw:async()=>[{role:c.currentActor??c.actor,status:c.actorStatus??'ACTIVE',isActive:c.actorActive??true}],kintaiEmployee:{findFirst:async({where})=>where.id===row.id&&where.organizationId===row.organizationId?structuredClone(row):null,update:async({data})=>{attempts.push('employee');if(c.fail==='employee')throw Error('synthetic failure');row={...row,...data};return structuredClone(row)}},kintaiMember:{count:async()=>c.otherAdmins??0,update:async({data})=>{attempts.push('member');if(c.fail==='member')throw Error('synthetic failure');row.member={...row.member,...data};return structuredClone(row.member)}}};
  const prisma={$transaction:async fn=>{const saved=structuredClone(row);try{return await fn(tx)}catch(e){row=saved;rollbacks++;throw e}}};
- const api=load('src/app/api/kintai/employees/[id]/route.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/kintai/access':{getKintaiContext:async()=>({organizationId:'org',userId:'actor',memberId:'actor-member',role:c.actor}),hasMinRole:access.hasMinRole},'@/lib/kintai/employee-admission':{lockKintaiEmployeeAdmission:async()=>{}}});
+ const api=load('src/app/api/kintai/employees/[id]/route.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/kintai/access':{getKintaiContext:async()=>({organizationId:'org',userId:'actor',memberId:'actor-member',role:c.actor}),hasMinRole:access.hasMinRole},'@/lib/kintai/employee-admission':{lockKintaiEmployeeAdmission:async()=>{}},'@/lib/kintai/manager-admission':manager});
  const r=await api.PATCH({json:async()=>({name:'after',role:c.role})},{params:Promise.resolve({id:'target'})});
  const changed=JSON.stringify(row)!==before;
  const ok=r.status===c.http&&(c.http===200?row.name==='after'&&row.member.role===c.role:!changed)&&(c.http===400||c.http===403||c.http===404?attempts.length===0:true)&&(c.fail?rollbacks===1:true);
@@ -39,13 +39,13 @@ for(const c of [
  let writes=0;
  const tx={$queryRaw:async()=>[{role:c.actorRole,status:c.status,isActive:c.active}],kintaiEmployee:{findFirst:async()=>({id:'target',member:{role:'employee'}}),update:async()=>{writes++;return {id:'target',isActive:false}}}};
  const prisma={$transaction:async fn=>fn(tx)};
- const api=load('src/app/api/kintai/employees/[id]/route.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/kintai/access':{getKintaiContext:async()=>({organizationId:'org',userId:'actor',memberId:'actor-member',role:'system_admin'}),hasMinRole:access.hasMinRole},'@/lib/kintai/employee-admission':{lockKintaiEmployeeAdmission:async()=>{}}});
+ const api=load('src/app/api/kintai/employees/[id]/route.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/kintai/access':{getKintaiContext:async()=>({organizationId:'org',userId:'actor',memberId:'actor-member',role:'system_admin'}),hasMinRole:access.hasMinRole},'@/lib/kintai/employee-admission':{lockKintaiEmployeeAdmission:async()=>{}},'@/lib/kintai/manager-admission':manager});
  const r=await api.DELETE({}, {params:Promise.resolve({id:'target'})});
  results.push({name:c.name,outcome:r.status===c.http&&writes===c.writes?'PASS':'FAIL',http:r.status,writes});
 }
 for(const [name,body] of [['null-body',null],['array-body',[]]]){
  let transactions=0;
- const api=load('src/app/api/kintai/employees/[id]/route.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma:{$transaction:async()=>{transactions++;throw Error('unexpected transaction')}}},'@/lib/kintai/access':{getKintaiContext:async()=>({organizationId:'org',userId:'actor',memberId:'actor-member',role:'system_admin'}),hasMinRole:access.hasMinRole},'@/lib/kintai/employee-admission':{lockKintaiEmployeeAdmission:async()=>{}}});
+ const api=load('src/app/api/kintai/employees/[id]/route.ts',{'next/server':{NextResponse:Response},'@/lib/prisma':{prisma:{$transaction:async()=>{transactions++;throw Error('unexpected transaction')}}},'@/lib/kintai/access':{getKintaiContext:async()=>({organizationId:'org',userId:'actor',memberId:'actor-member',role:'system_admin'}),hasMinRole:access.hasMinRole},'@/lib/kintai/employee-admission':{lockKintaiEmployeeAdmission:async()=>{}},'@/lib/kintai/manager-admission':manager});
  const r=await api.PATCH({json:async()=>body},{params:Promise.resolve({id:'target'})});
  results.push({name,outcome:r.status===400&&transactions===0?'PASS':'FAIL',http:r.status,transactions});
 }

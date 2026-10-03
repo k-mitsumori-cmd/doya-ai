@@ -52,6 +52,7 @@ async function main() {
   const common = { 'next/server': { NextResponse: Response }, '@/lib/prisma': { prisma }, '@/lib/kintai/access': { getKintaiContext: async () => ({ ...inactive, role: 'system_admin' }), hasMinRole: access.hasMinRole } }
   const employeeRoute = load('src/app/api/kintai/employees/[id]/route.ts', { ...common,
     '@/lib/kintai/employee-admission': { lockKintaiEmployeeAdmission: async () => {}, reachedKintaiEmployeeLimit: async () => null, kintaiEmployeeLimitPayload: () => ({}) },
+    '@/lib/kintai/manager-admission': load('src/lib/kintai/manager-admission.ts'),
   })
   const params = { params: Promise.resolve({ id: 'emp' }) }
   assert.equal((await employeeRoute.PATCH({ json: async () => ({ isActive: false }) }, params)).status, 409)
