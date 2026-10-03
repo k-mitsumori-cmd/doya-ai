@@ -29,6 +29,7 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
+      canCreatePeriods: hasMinRole(ctx.role, HrMemberRole.ADMIN),
       periods: periods.map((p) => ({
         ...p,
         evaluationTemplate: p.evaluationTemplate as any,

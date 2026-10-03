@@ -22,7 +22,7 @@ function extract(file, functionName) {
 }
 
 function run(code, response) {
-  const state = { loading: false, loadError: false, auditLogsError: false, stats: null, periods: null, settings: null, departments: null }
+  const state = { loading: false, loadError: false, auditLogsError: false, canCreatePeriods: false, stats: null, periods: null, settings: null, departments: null }
   const controller = new AbortController()
   const env = {
     fetch: async (...args) => typeof response === 'function' ? response(...args) : response,
@@ -36,6 +36,7 @@ function run(code, response) {
     setRecentOneOnOnes: () => {},
     setEvaluationPeriods: () => {},
     setPeriods: value => { state.periods = value },
+    setCanCreatePeriods: value => { state.canCreatePeriods = value },
     setSettings: value => { state.settings = value },
     setMembers: () => {},
     setMyRole: () => {},
@@ -72,16 +73,18 @@ function run(code, response) {
   }
   await check('dashboard: valid zero counts are genuinely empty', async () => {
     const code = extract('src/app/hr/dashboard/page.tsx', 'fetchDashboard')
-    const state = await run(code, Response.json({ orgName: 'Example', employeeCount: 0, departmentCount: 0, activeEvaluations: 0, monthlyOneOnOnes: 0, recentOneOnOnes: [], evaluationPeriods: [] }))
+    const state = await run(code, Response.json({ orgName: 'Example', canManageEmployees: false, canCreatePeriods: false, employeeCount: 0, departmentCount: 0, activeEvaluations: 0, monthlyOneOnOnes: 0, recentOneOnOnes: [], evaluationPeriods: [] }))
     assert.equal(state.loadError, false)
     assert.equal(state.stats.orgName, 'Example')
     assert.equal(state.stats.employeeCount, 0)
+    assert.equal(state.stats.canCreatePeriods, false)
   })
   await check('evaluations: valid empty list is distinct from an outage', async () => {
     const code = extract('src/app/hr/evaluations/page.tsx', 'fetchPeriods')
-    const state = await run(code, Response.json({ success: true, periods: [] }))
+    const state = await run(code, Response.json({ success: true, periods: [], canCreatePeriods: false }))
     assert.equal(state.loadError, false)
     assert.equal(state.periods.length, 0)
+    assert.equal(state.canCreatePeriods, false)
   })
   await check('settings: audit outage does not hide valid organization and departments', async () => {
     const code = extract('src/app/hr/settings/page.tsx', 'fetchSettings')

@@ -22,6 +22,8 @@ function useCountUp(target: number, loading: boolean) {
 }
 
 interface DashboardStats {
+  canManageEmployees: boolean
+  canCreatePeriods: boolean
   employeeCount: number
   departmentCount: number
   activeEvaluations: number
@@ -109,6 +111,8 @@ function getGreeting(): string {
 
 export default function HrDashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
+    canManageEmployees: false,
+    canCreatePeriods: false,
     employeeCount: 0,
     departmentCount: 0,
     activeEvaluations: 0,
@@ -133,6 +137,8 @@ export default function HrDashboardPage() {
         if (
           !data || typeof data !== 'object' ||
           typeof data.orgName !== 'string' ||
+          typeof data.canManageEmployees !== 'boolean' ||
+          typeof data.canCreatePeriods !== 'boolean' ||
           typeof data.employeeCount !== 'number' ||
           typeof data.departmentCount !== 'number' ||
           typeof data.activeEvaluations !== 'number' ||
@@ -142,6 +148,8 @@ export default function HrDashboardPage() {
         ) throw new Error('ダッシュボードの応答が不正です')
         if (controller.signal.aborted) return
         setStats({
+          canManageEmployees: data.canManageEmployees,
+          canCreatePeriods: data.canCreatePeriods,
           employeeCount: data.employeeCount,
           departmentCount: data.departmentCount,
           activeEvaluations: data.activeEvaluations,
@@ -263,7 +271,7 @@ export default function HrDashboardPage() {
           </div>
         </motion.div>
 
-        <motion.div
+        {stats.canManageEmployees ? <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -342,7 +350,11 @@ export default function HrDashboardPage() {
               )
             })}
           </motion.div>
-        </motion.div>
+        </motion.div> : (
+          <div className="mb-8 rounded-3xl bg-white p-6 shadow-md text-sm font-bold text-slate-600">
+            初期設定は組織の管理者が行います。設定が完了すると、従業員や評価の情報をここで確認できます。
+          </div>
+        )}
         </>
       )}
 
@@ -453,14 +465,14 @@ export default function HrDashboardPage() {
             <div className="text-center py-8 text-slate-400">
               <span className="material-symbols-outlined text-5xl mb-3 block text-red-300">assessment</span>
               <p className="text-lg font-bold text-slate-700">評価期間が設定されていません</p>
-              <p className="text-sm text-slate-500 mt-1">MBO評価をオンラインで管理してみましょう</p>
-              <Link
+              <p className="text-sm text-slate-500 mt-1">{stats.canCreatePeriods ? 'MBO評価をオンラインで管理してみましょう' : '管理者が評価期間を作成すると、ここに表示されます。'}</p>
+              {stats.canCreatePeriods && <Link
                 href="/hr/evaluations"
                 className="inline-flex items-center gap-1 mt-4 px-5 py-2.5 bg-red-500 text-white rounded-full text-sm font-bold shadow-md hover:shadow-lg transition-all"
               >
                 <span className="material-symbols-outlined text-lg">add</span>
                 評価期間を作成
-              </Link>
+              </Link>}
             </div>
           )}
         </div>
@@ -470,7 +482,7 @@ export default function HrDashboardPage() {
       <div className="mt-8 bg-white rounded-3xl shadow-md p-6">
         <h2 className="text-lg font-black text-slate-900 mb-4">クイックアクション</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          {QUICK_ACTIONS.map((action) => (
+          {QUICK_ACTIONS.filter((action) => stats.canManageEmployees || action.href !== '/hr/employees/new').map((action) => (
             <motion.div key={action.href} whileHover={{ scale: 1.03, y: -2 }}>
               <Link
                 href={action.href}
@@ -479,7 +491,7 @@ export default function HrDashboardPage() {
                 <div className={`w-10 h-10 rounded-2xl ${action.iconBg} flex items-center justify-center`}>
                   <span className={`material-symbols-outlined ${action.iconColor}`}>{action.icon}</span>
                 </div>
-                <span className="text-base font-bold text-slate-700">{action.label}</span>
+                <span className="text-base font-bold text-slate-700">{action.href === '/hr/evaluations' && !stats.canCreatePeriods ? '評価を確認' : action.label}</span>
               </Link>
             </motion.div>
           ))}

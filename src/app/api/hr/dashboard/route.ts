@@ -5,7 +5,8 @@ export const maxDuration = 300
 import { NextResponse } from 'next/server'
 import { getEvaluationReadWhere } from '@/lib/hr/evaluation-access'
 import { prisma } from '@/lib/prisma'
-import { getHrContext } from '@/lib/hr/access'
+import { getHrContext, hasMinRole } from '@/lib/hr/access'
+import { HrMemberRole } from '@/lib/hr/types'
 import { getOneOnOneReadWhere } from '@/lib/hr/one-on-one-access'
 
 export async function GET() {
@@ -76,6 +77,8 @@ export async function GET() {
 
     return NextResponse.json({
       orgName: org?.name || '',
+      canManageEmployees: hasMinRole(ctx.role, HrMemberRole.ADMIN),
+      canCreatePeriods: hasMinRole(ctx.role, HrMemberRole.ADMIN),
       employeeCount,
       departmentCount,
       activeEvaluations,

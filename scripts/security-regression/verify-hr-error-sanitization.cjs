@@ -47,7 +47,8 @@ async function expectSafe(promise, expected) {
         hrDepartment: { count: async () => 0 }, hrEvaluationPeriod: { findMany: async () => [] },
         hrOneOnOne: { count: async () => 0, findMany: async () => [] },
       } },
-      '@/lib/hr/access': { getHrContext: async () => ctx },
+      '@/lib/hr/access': { getHrContext: async () => ctx, hasMinRole: () => true },
+      '@/lib/hr/types': { HrMemberRole: { ADMIN: 'ADMIN' } },
       '@/lib/hr/evaluation-access': { getEvaluationReadWhere: async () => ({}) },
       '@/lib/hr/one-on-one-access': { getOneOnOneReadWhere: async () => ({}) },
     })
