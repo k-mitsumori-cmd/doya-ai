@@ -14,17 +14,30 @@ export default function AdminAttendancePage() {
   const [date, setDate] = useState(new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Tokyo' }))
   const [employees, setEmployees] = useState<any[]>([])
   const [departments, setDepartments] = useState<any[]>([])
+  const [departmentsLoading, setDepartmentsLoading] = useState(true)
+  const [departmentsError, setDepartmentsError] = useState(false)
+  const [departmentsRetryCount, setDepartmentsRetryCount] = useState(0)
   const [deptFilter, setDeptFilter] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
   const [retryCount, setRetryCount] = useState(0)
 
   useEffect(() => {
-    fetch('/api/kintai/departments')
-      .then(r => r.json())
-      .then(d => setDepartments(d.departments || []))
-      .catch(console.error)
-  }, [])
+    const controller = new AbortController()
+    setDepartmentsLoading(true)
+    setDepartmentsError(false)
+    fetch('/api/kintai/departments', { signal: controller.signal, cache: 'no-store' })
+      .then(async r => {
+        if (!r.ok) throw new Error('Department request failed')
+        const data = await r.json()
+        if (!Array.isArray(data.departments)) throw new Error('Invalid department response')
+        return data.departments
+      })
+      .then(data => { if (!controller.signal.aborted) setDepartments(data) })
+      .catch(() => { if (!controller.signal.aborted) setDepartmentsError(true) })
+      .finally(() => { if (!controller.signal.aborted) setDepartmentsLoading(false) })
+    return () => controller.abort()
+  }, [departmentsRetryCount])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -126,11 +139,19 @@ export default function AdminAttendancePage() {
           </div>
           <span className={`text-sm font-bold min-w-[180px] text-center ${dayOfWeek === 0 ? 'text-red-600' : dayOfWeek === 6 ? 'text-blue-600' : 'text-slate-700'}`}>{dateLabel}</span>
           <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)}
+            disabled={departmentsLoading || (departmentsError && departments.length === 0)}
+            aria-label="部署で絞り込む"
             className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#7f19e6]/30 focus:border-[#7f19e6] bg-white">
-            <option value="">すべての部署</option>
+            <option value="">{departmentsLoading && departments.length === 0 ? '部署を読み込み中...' : departmentsError && departments.length === 0 ? '部署を読み込めませんでした' : 'すべての部署'}</option>
             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
           </select>
         </div>
+        {departmentsError && (
+          <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            部署の絞り込み候補を読み込めませんでした。勤怠データは引き続き確認できます。
+            <button onClick={() => setDepartmentsRetryCount(count => count + 1)} className="ml-3 font-bold underline hover:text-red-950">再試行</button>
+          </div>
+        )}
 
         {/* Summary stats with bears */}
         {!loading && filtered.length > 0 && (
