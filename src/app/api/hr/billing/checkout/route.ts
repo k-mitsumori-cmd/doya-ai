@@ -39,7 +39,8 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { plan, interval = 'monthly' } = body // plan: 'starter' | 'pro' | 'enterprise', interval: 'monthly' | 'yearly'
+    const plan = body?.plan // plan: 'starter' | 'pro' | 'enterprise'
+    const interval = String(body?.interval ?? 'monthly') // 'monthly' | 'yearly'
 
     if (!plan || !HR_PLAN_PRICES[plan]) {
       return NextResponse.json(
@@ -48,7 +49,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const priceId = HR_PLAN_PRICES[plan][interval === 'yearly' ? 'yearly' : 'monthly']
+    if (interval !== 'monthly' && interval !== 'yearly') {
+      return NextResponse.json({ error: `無効な課金間隔です: ${interval}` }, { status: 400 })
+    }
+
+    const priceId = HR_PLAN_PRICES[plan][interval]
     if (!priceId) {
       return NextResponse.json(
         { error: `無効な課金間隔です: ${interval}` },

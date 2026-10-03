@@ -71,6 +71,9 @@ const generic = load('src/app/api/stripe/checkout/route.ts', {
   assert.equal(customerCalls + checkoutCalls + portalCalls, 0, 'mismatched identity must not reach Stripe');
 
   ctxUserId = 'u1';
+  response = await checkout.POST({ json: async () => ({ plan: 'pro', interval: 'weekly' }) });
+  assert.equal(response.status, 400);
+  assert.equal(checkoutCalls, 0, 'invalid billing interval must not create a checkout');
   existingSubscription = true;
   response = await checkout.POST(req);
   assert.equal(response.status, 409);

@@ -240,7 +240,7 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
                      再試行ボタンで /api/stripe/sync/latest を叩く   ← INV-10
 ```
 
-旧HR専用の `/api/hr/billing/checkout` も戻りURLに `session_id={CHECKOUT_SESSION_ID}` を付け、同じルートレイアウトの同期を通す。旧入口からの申込でもWebhookだけに依存しない。
+旧HR専用の `/api/hr/billing/checkout` も戻りURLに `session_id={CHECKOUT_SESSION_ID}` を付け、同じルートレイアウトの同期を通す。旧入口からの申込でもWebhookだけに依存しない。`interval` は `monthly` / `yearly` のみ受け付け、無効値ではCheckoutを作成しない。
 
 `successPath` は `checkout/route.ts` が planId のサービス名から決める（`seo`→`/seo`, `banner`→`/banner`,
 `interview`→`/interview/projects`, それ以外→`/`）。
