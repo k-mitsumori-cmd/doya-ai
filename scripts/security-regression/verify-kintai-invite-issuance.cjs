@@ -1,13 +1,16 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
 const tokenHelpers = load('src/lib/kintai/invite-token.ts', {}, { crypto: require('node:crypto').webcrypto });
+const manager = load('src/lib/kintai/manager-admission.ts');
 
-function fixture({ status = 'PENDING', isActive = true, member = true, race = false } = {}) {
+function fixture({ status = 'PENDING', isActive = true, member = true, race = false, actorRole = 'hr_admin', actorStatus = 'ACTIVE', actorActive = true } = {}) {
   const row = { id: 'employee', organizationId: 'org', name: 'Test', email: 'test@example.com', isActive,
     member: member ? { id: 'member', status, inviteToken: 'old-token' } : null };
   let sends = 0;
   let updates = 0;
   const prisma = {
+    $transaction: async work => work(prisma),
+    $queryRaw: async () => [{ role: actorRole, status: actorStatus, isActive: actorActive }],
     kintaiEmployee: { findFirst: async () => row },
     kintaiMember: { updateMany: async ({ where, data }) => {
       updates++;
@@ -26,7 +29,9 @@ function fixture({ status = 'PENDING', isActive = true, member = true, race = fa
     'next/server': { NextResponse: { json: (body, init) => Response.json(body, init) } },
     '@/lib/prisma': { prisma },
     '@/lib/html-escape': { escapeHtml: (value) => value },
-    '@/lib/kintai/access': { getKintaiContext: async () => ({ organizationId: 'org', role: 'hr_admin' }), hasMinRole: () => true },
+    '@/lib/kintai/access': { getKintaiContext: async () => ({ organizationId: 'org', userId: 'actor', memberId: 'actor-member', role: 'hr_admin' }), hasMinRole: () => true },
+    '@/lib/kintai/employee-admission': { lockKintaiEmployeeAdmission: async () => {} },
+    '@/lib/kintai/manager-admission': manager,
     '@/lib/email': { sendEmail: async () => { sends++; return { success: true }; } },
     '@/lib/kintai/invite-token': tokenHelpers,
   });
@@ -52,5 +57,11 @@ function fixture({ status = 'PENDING', isActive = true, member = true, race = fa
   assert.equal((await inactive.post()).status, 200);
   assert.equal(inactive.row.member.status, 'PENDING');
   assert.equal(inactive.sends, 1);
+  for (const options of [{ actorRole: 'employee' }, { actorStatus: 'INACTIVE' }, { actorActive: false }]) {
+    const revoked = fixture(options);
+    assert.equal((await revoked.post()).status, 403);
+    assert.equal(revoked.updates, 0);
+    assert.equal(revoked.sends, 0);
+  }
   console.log('PASS Kintai issuance: active guard, inactive reactivation, race guard, renewed expiry, mock delivery');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

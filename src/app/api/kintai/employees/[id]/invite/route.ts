@@ -5,6 +5,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { escapeHtml } from '@/lib/html-escape'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
+import { lockKintaiEmployeeAdmission } from '@/lib/kintai/employee-admission'
+import { lockCurrentKintaiManager } from '@/lib/kintai/manager-admission'
 import { sendEmail } from '@/lib/email'
 import { createKintaiInviteToken } from '@/lib/kintai/invite-token'
 
@@ -19,37 +21,54 @@ export async function POST(req: NextRequest, ctx: Ctx) {
 
     const p = await ctx.params
 
-    const employee = await prisma.kintaiEmployee.findFirst({
-      where: { id: p.id, organizationId: kctx.organizationId },
-      include: { member: true },
+    const token = createKintaiInviteToken()
+    const admission = await prisma.$transaction(async (tx) => {
+      await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
+      if (!(await lockCurrentKintaiManager(tx, kctx))) return { kind: 'forbidden' as const }
+
+      const employee = await tx.kintaiEmployee.findFirst({
+        where: { id: p.id, organizationId: kctx.organizationId },
+        include: { member: true },
+      })
+      if (!employee) return { kind: 'missing' as const }
+      if (!employee.email) return { kind: 'no-email' as const }
+      if (!employee.isActive || !employee.member || !['PENDING', 'INACTIVE'].includes(employee.member.status)) {
+        return { kind: 'not-invitable' as const }
+      }
+
+      const updated = await tx.kintaiMember.updateMany({
+        where: {
+          id: employee.member.id,
+          organizationId: kctx.organizationId,
+          status: employee.member.status,
+          inviteToken: employee.member.inviteToken,
+        },
+        data: {
+          inviteToken: token,
+          inviteEmail: employee.email,
+          status: 'PENDING',
+        },
+      })
+      return updated.count === 1
+        ? { kind: 'created' as const, employee }
+        : { kind: 'changed' as const }
     })
-    if (!employee) {
+    if (admission.kind === 'forbidden') {
+      return NextResponse.json({ error: '権限がありません' }, { status: 403 })
+    }
+    if (admission.kind === 'missing') {
       return NextResponse.json({ error: '従業員が見つかりません' }, { status: 404 })
     }
-    if (!employee.email) {
+    if (admission.kind === 'no-email') {
       return NextResponse.json({ error: 'メールアドレスが設定されていません' }, { status: 400 })
     }
-    if (!employee.isActive || !employee.member || !['PENDING', 'INACTIVE'].includes(employee.member.status)) {
+    if (admission.kind === 'not-invitable') {
       return NextResponse.json({ error: '招待できるのは未参加の有効な従業員のみです' }, { status: 409 })
     }
-
-    const token = createKintaiInviteToken()
-    const updated = await prisma.kintaiMember.updateMany({
-      where: {
-        id: employee.member.id,
-        organizationId: kctx.organizationId,
-        status: employee.member.status,
-        inviteToken: employee.member.inviteToken,
-      },
-      data: {
-        inviteToken: token,
-        inviteEmail: employee.email,
-        status: 'PENDING',
-      },
-    })
-    if (updated.count !== 1) {
+    if (admission.kind === 'changed') {
       return NextResponse.json({ error: '招待状態が変更されました。画面を更新して再度お試しください' }, { status: 409 })
     }
+    const employee = admission.employee
 
     const baseUrl = process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'
     const inviteUrl = `${baseUrl}/kintai/invite/${token}`
