@@ -10,7 +10,6 @@ import { HrMemberRole } from '@/lib/hr/types'
 type Ctx = { params: Promise<{ id: string }> }
 
 const VALID_ROLES: string[] = [
-  HrMemberRole.OWNER,
   HrMemberRole.ADMIN,
   HrMemberRole.MANAGER,
   HrMemberRole.MEMBER,
@@ -41,8 +40,8 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Member not found' }, { status: 404 })
     }
 
-    if (target.role === HrMemberRole.OWNER && hrCtx.role !== HrMemberRole.OWNER) {
-      return NextResponse.json({ error: 'Cannot modify owner' }, { status: 403 })
+    if (target.role === HrMemberRole.OWNER) {
+      return NextResponse.json({ error: 'オーナーの変更には譲渡機能を使用してください' }, { status: 403 })
     }
 
     // ⚠️ 自分自身の権限・状態は変えられない。
@@ -64,8 +63,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       if (!VALID_ROLES.includes(role)) {
         return NextResponse.json({ error: '権限の指定が正しくありません' }, { status: 400 })
       }
-      // ⚠️ 自分より上の権限を与えさせない。これが無いと ADMIN が
-      //    他人を OWNER に昇格させ、実質オーナーを増やせてしまう（権限昇格）。
+      // 通常の編集では OWNER を付与できない。オーナー変更は譲渡機能のみ。
       if (!hasMinRole(hrCtx.role, role)) {
         return NextResponse.json(
           { error: 'ご自身より上の権限は付与できません' },
@@ -110,12 +108,16 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: '変更する項目がありません' }, { status: 400 })
     }
 
-    const updated = await prisma.hrOrganizationMember.update({
-      where: { id },
+    const updated = await prisma.hrOrganizationMember.updateMany({
+      // 読み取り後に譲渡先が OWNER になっても変更できないようにする。
+      where: { id, organizationId: hrCtx.organizationId, role: { not: HrMemberRole.OWNER } },
       data,
     })
-
-    return NextResponse.json({ success: true, member: updated })
+    if (updated.count === 0) {
+      return NextResponse.json({ error: 'メンバーの状態が変わりました。再読み込みしてください' }, { status: 409 })
+    }
+    const member = await prisma.hrOrganizationMember.findUnique({ where: { id } })
+    return NextResponse.json({ success: true, member })
   } catch (e: any) {
     if (e?.code === 'P2002') {
       return NextResponse.json({ error: 'この従業員は別のメンバーに紐付いています' }, { status: 409 })
@@ -157,7 +159,13 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       return NextResponse.json({ error: 'Cannot remove yourself' }, { status: 400 })
     }
 
-    await prisma.hrOrganizationMember.delete({ where: { id } })
+    const deleted = await prisma.hrOrganizationMember.deleteMany({
+      // 譲渡処理と競合しても、新オーナーを削除しない。
+      where: { id, organizationId: hrCtx.organizationId, role: { not: HrMemberRole.OWNER } },
+    })
+    if (deleted.count === 0) {
+      return NextResponse.json({ error: 'メンバーの状態が変わりました。再読み込みしてください' }, { status: 409 })
+    }
 
     return NextResponse.json({ success: true })
   } catch (e: any) {

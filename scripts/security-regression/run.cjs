@@ -220,6 +220,11 @@ if (hrMemberLink.error || hrMemberLink.status !== 0) {
   console.error('Security regression failed: verify-hr-member-link.cjs');
   process.exit(1);
 }
+const hrOwnerTransfer = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-owner-transfer.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrOwnerTransfer.error || hrOwnerTransfer.status !== 0) {
+  console.error('Security regression failed: verify-hr-owner-transfer.cjs');
+  process.exit(1);
+}
 const hrEmployeeReads = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-employee-reads.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrEmployeeReads.error || hrEmployeeReads.status !== 0) {
   console.error('Security regression failed: verify-hr-employee-reads.cjs');

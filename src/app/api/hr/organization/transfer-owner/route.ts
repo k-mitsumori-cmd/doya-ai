@@ -8,6 +8,8 @@ import { getHrContext } from '@/lib/hr/access'
 import { HrMemberRole } from '@/lib/hr/types'
 import { logAudit } from '@/lib/hr/audit'
 
+class TransferConflict extends Error {}
+
 // POST /api/hr/organization/transfer-owner
 // オーナー権限を別メンバーに譲渡する
 export async function POST(req: NextRequest) {
@@ -32,45 +34,45 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'targetMemberId is required' }, { status: 400 })
     }
 
-    // 譲渡先メンバーを確認
-    const targetMember = await prisma.hrOrganizationMember.findFirst({
-      where: {
-        id: targetMemberId,
-        organizationId: ctx.organizationId,
-        status: 'ACTIVE',
-      },
-      include: {
-        user: { select: { name: true, email: true } },
-      },
-    })
-
-    if (!targetMember) {
-      return NextResponse.json(
-        { error: '対象メンバーが見つかりません' },
-        { status: 404 }
-      )
-    }
-
-    if (targetMember.userId === ctx.userId) {
+    if (targetMemberId === ctx.memberId) {
       return NextResponse.json(
         { error: '自分自身にオーナーを譲渡することはできません' },
         { status: 400 }
       )
     }
 
-    // トランザクションで権限変更
-    await prisma.$transaction([
-      // 新オーナーに変更
-      prisma.hrOrganizationMember.update({
-        where: { id: targetMemberId },
+    // 同じ組織への譲渡を直列化し、ロック後の権限と在籍状態を再確認する。
+    const targetMember = await prisma.$transaction(async (tx) => {
+      const organizations = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "hr_organizations" WHERE id = ${ctx.organizationId} FOR UPDATE`
+      if (organizations.length === 0) throw new TransferConflict('組織が見つかりません')
+
+      const owners = await tx.hrOrganizationMember.findMany({
+        where: { organizationId: ctx.organizationId, role: HrMemberRole.OWNER, status: 'ACTIVE' },
+        select: { id: true },
+        take: 2,
+      })
+      if (owners.length !== 1 || owners[0].id !== ctx.memberId) {
+        throw new TransferConflict('オーナー権限が変更されました。再読み込みしてください')
+      }
+
+      const target = await tx.hrOrganizationMember.findFirst({
+        where: { id: targetMemberId, organizationId: ctx.organizationId, status: 'ACTIVE', role: { not: HrMemberRole.OWNER } },
+        include: { user: { select: { name: true, email: true } } },
+      })
+      if (!target) throw new TransferConflict('譲渡先の状態が変わりました。再読み込みしてください')
+
+      const promoted = await tx.hrOrganizationMember.updateMany({
+        where: { id: targetMemberId, organizationId: ctx.organizationId, status: 'ACTIVE', role: { not: HrMemberRole.OWNER } },
         data: { role: HrMemberRole.OWNER },
-      }),
-      // 旧オーナー(自分)をADMINに降格
-      prisma.hrOrganizationMember.update({
-        where: { id: ctx.memberId },
+      })
+      if (promoted.count !== 1) throw new TransferConflict('譲渡先の状態が変わりました。再読み込みしてください')
+      const demoted = await tx.hrOrganizationMember.updateMany({
+        where: { id: ctx.memberId, organizationId: ctx.organizationId, status: 'ACTIVE', role: HrMemberRole.OWNER },
         data: { role: HrMemberRole.ADMIN },
-      }),
-    ])
+      })
+      if (demoted.count !== 1) throw new TransferConflict('オーナー権限が変更されました。再読み込みしてください')
+      return target
+    })
 
     // 監査ログ
     logAudit({
@@ -92,6 +94,9 @@ export async function POST(req: NextRequest) {
       message: `オーナー権限を ${targetMember.user?.name || targetMember.user?.email || targetMemberId} に譲渡しました`,
     })
   } catch (e: any) {
+    if (e instanceof TransferConflict) {
+      return NextResponse.json({ error: 'オーナー権限または譲渡先の状態が変わりました。再読み込みしてください' }, { status: 409 })
+    }
     console.error('[hr/organization/transfer-owner] unexpected error')
     return NextResponse.json(
       { error: 'Failed to transfer ownership' },

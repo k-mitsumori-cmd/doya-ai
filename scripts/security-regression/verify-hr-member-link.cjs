@@ -10,11 +10,12 @@ function fixture({ role = 'ADMIN', foreign = false, occupied = false, uniqueRace
         if (where.employeeId) return occupied ? { id: 'someone-else' } : null
         throw Error('unexpected membership query')
       },
-      update: async ({ data }) => {
+      updateMany: async ({ data }) => {
         if (uniqueRace) throw Object.assign(Error('private constraint'), { code: 'P2002' })
         writes.push(data)
-        return { id: 'target', ...data }
+        return { count: 1 }
       },
+      findUnique: async () => ({ id: 'target' }),
     },
     hrEmployee: {
       findFirst: async ({ where }) => {
