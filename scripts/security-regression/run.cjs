@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const hrLoadErrorUi = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-load-error-ui.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (hrLoadErrorUi.error || hrLoadErrorUi.status !== 0) {
+  console.error('Security regression failed: verify-hr-load-error-ui.cjs');
+  process.exit(1);
+}
 const signInCallback = spawnSync(process.execPath, [path.join(__dirname, 'verify-signin-callback.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (signInCallback.error || signInCallback.status !== 0) {
   console.error('Security regression failed: verify-signin-callback.cjs');

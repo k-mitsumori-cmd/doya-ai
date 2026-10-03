@@ -106,6 +106,9 @@ export default function HrSettingsPage() {
   const [employeeOptions, setEmployeeOptions] = useState<EmployeeOption[]>([])
   const [searchingEmployees, setSearchingEmployees] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [auditLogsError, setAuditLogsError] = useState(false)
+  const [retryKey, setRetryKey] = useState(0)
   const [saving, setSaving] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviting, setInviting] = useState(false)
@@ -127,54 +130,62 @@ export default function HrSettingsPage() {
   const [transferring, setTransferring] = useState(false)
 
   useEffect(() => {
+    const controller = new AbortController()
     async function fetchSettings() {
+      setLoading(true)
+      setLoadError(false)
+      setAuditLogsError(false)
       try {
         const [settingsRes, deptRes] = await Promise.all([
-          fetch('/api/hr/settings'),
-          fetch('/api/hr/departments'),
+          fetch('/api/hr/settings', { cache: 'no-store', signal: controller.signal }),
+          fetch('/api/hr/departments', { cache: 'no-store', signal: controller.signal }),
         ])
-        if (settingsRes.ok) {
-          const data = await settingsRes.json()
-          if (data.settings) setSettings(data.settings)
-          if (data.members) setMembers(data.members)
-          if (data.myRole) setMyRole(data.myRole)
-          if (data.myMemberId) setMyMemberId(data.myMemberId)
-        }
-        if (deptRes.ok) {
-          const deptData = await deptRes.json()
-          setDepartments(
-            (deptData.flat ?? deptData.departments ?? []).map((d: any) => ({
-              id: d.id,
-              name: d.name,
-              code: d.code,
-              sortOrder: d.sortOrder ?? 0,
-              employeeCount: d.employeeCount ?? d._count?.employees ?? 0,
-            }))
-          )
-        }
+        if (!settingsRes.ok || !deptRes.ok) throw new Error('設定を取得できませんでした')
+        const [data, deptData] = await Promise.all([settingsRes.json(), deptRes.json()])
+        if (
+          !data?.settings || typeof data.settings.name !== 'string' ||
+          !Array.isArray(data.members) || !ROLE_RANK[data.myRole] ||
+          typeof data.myMemberId !== 'string' ||
+          !deptData?.success || !Array.isArray(deptData.flat)
+        ) throw new Error('設定の応答が不正です')
+        if (controller.signal.aborted) return
+        setSettings(data.settings)
+        setMembers(data.members)
+        setMyRole(data.myRole)
+        setMyMemberId(data.myMemberId)
+        setDepartments(deptData.flat.map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          code: d.code,
+          sortOrder: d.sortOrder ?? 0,
+          employeeCount: d.employeeCount ?? d._count?.employees ?? 0,
+        })))
         // Fetch audit logs
         try {
-          const logRes = await fetch('/api/hr/audit-logs?pageSize=10')
-          if (logRes.ok) {
-            const logData = await logRes.json()
-            const rawLogs = logData.items ?? logData.logs ?? []
-            setAuditLogs(rawLogs.map((l: any) => ({
-              id: l.id,
-              action: l.action,
-              actor: l.userName || l.actor || '',
-              target: l.target || '',
-              timestamp: l.createdAt || l.timestamp || '',
-            })))
-          }
-        } catch {}
+          const logRes = await fetch('/api/hr/audit-logs?pageSize=10', { cache: 'no-store', signal: controller.signal })
+          if (!logRes.ok) throw new Error('監査ログを取得できませんでした')
+          const logData = await logRes.json()
+          const rawLogs = logData.items ?? logData.logs
+          if (!Array.isArray(rawLogs)) throw new Error('監査ログの応答が不正です')
+          if (!controller.signal.aborted) setAuditLogs(rawLogs.map((l: any) => ({
+            id: l.id,
+            action: l.action,
+            actor: l.userName || l.actor || '',
+            target: l.target || '',
+            timestamp: l.createdAt || l.timestamp || '',
+          })))
+        } catch {
+          if (!controller.signal.aborted) setAuditLogsError(true)
+        }
       } catch {
-        // API not ready
+        if (!controller.signal.aborted) setLoadError(true)
       } finally {
-        setLoading(false)
+        if (!controller.signal.aborted) setLoading(false)
       }
     }
-    fetchSettings()
-  }, [])
+    void fetchSettings()
+    return () => controller.abort()
+  }, [retryKey])
 
   /** メンバー一覧を読み直す */
   const reloadMembers = async () => {
@@ -491,6 +502,20 @@ export default function HrSettingsPage() {
           <div className="h-8 w-32 bg-slate-200 rounded" />
           <div className="h-64 bg-slate-100 rounded-3xl" />
           <div className="h-40 bg-slate-100 rounded-3xl" />
+        </div>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div role="alert" className="p-6 lg:p-10 max-w-3xl mx-auto">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
+          <h1 className="text-xl font-black text-rose-800">組織設定を取得できませんでした</h1>
+          <p className="mt-2 text-sm font-bold text-rose-700">設定や部署の情報は変更されていません。時間をおいて再試行してください。</p>
+          <button type="button" onClick={() => setRetryKey((key) => key + 1)} className="mt-4 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">
+            再試行する
+          </button>
         </div>
       </div>
     )
@@ -953,7 +978,11 @@ export default function HrSettingsPage() {
             </div>
             監査ログ
           </h2>
-          {auditLogs.length > 0 ? (
+          {auditLogsError ? (
+            <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">
+              監査ログを取得できませんでした。<button type="button" onClick={() => setRetryKey((key) => key + 1)} className="ml-2 underline">再試行する</button>
+            </div>
+          ) : auditLogs.length > 0 ? (
             <div className="space-y-2">
               {auditLogs.map((log) => {
                 const actionInfo = AUDIT_ACTION_MAP[log.action] ?? {

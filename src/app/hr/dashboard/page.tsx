@@ -118,30 +118,61 @@ export default function HrDashboardPage() {
   const [recentOneOnOnes, setRecentOneOnOnes] = useState<RecentOneOnOne[]>([])
   const [evaluationPeriods, setEvaluationPeriods] = useState<EvaluationPeriod[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [retryKey, setRetryKey] = useState(0)
 
   useEffect(() => {
+    const controller = new AbortController()
     async function fetchDashboard() {
+      setLoading(true)
+      setLoadError(false)
       try {
-        const res = await fetch('/api/hr/dashboard')
-        if (!res.ok) throw new Error()
+        const res = await fetch('/api/hr/dashboard', { cache: 'no-store', signal: controller.signal })
+        if (!res.ok) throw new Error('ダッシュボードを取得できませんでした')
         const data = await res.json()
+        if (
+          !data || typeof data !== 'object' ||
+          typeof data.orgName !== 'string' ||
+          typeof data.employeeCount !== 'number' ||
+          typeof data.departmentCount !== 'number' ||
+          typeof data.activeEvaluations !== 'number' ||
+          typeof data.monthlyOneOnOnes !== 'number' ||
+          !Array.isArray(data.recentOneOnOnes) ||
+          !Array.isArray(data.evaluationPeriods)
+        ) throw new Error('ダッシュボードの応答が不正です')
+        if (controller.signal.aborted) return
         setStats({
-          employeeCount: data.employeeCount ?? 0,
-          departmentCount: data.departmentCount ?? 0,
-          activeEvaluations: data.activeEvaluations ?? 0,
-          monthlyOneOnOnes: data.monthlyOneOnOnes ?? 0,
-          orgName: data.orgName ?? '',
+          employeeCount: data.employeeCount,
+          departmentCount: data.departmentCount,
+          activeEvaluations: data.activeEvaluations,
+          monthlyOneOnOnes: data.monthlyOneOnOnes,
+          orgName: data.orgName,
         })
-        setRecentOneOnOnes(data.recentOneOnOnes ?? [])
-        setEvaluationPeriods(data.evaluationPeriods ?? [])
+        setRecentOneOnOnes(data.recentOneOnOnes)
+        setEvaluationPeriods(data.evaluationPeriods)
       } catch {
-        // API not ready yet — show empty state
+        if (!controller.signal.aborted) setLoadError(true)
       } finally {
-        setLoading(false)
+        if (!controller.signal.aborted) setLoading(false)
       }
     }
-    fetchDashboard()
-  }, [])
+    void fetchDashboard()
+    return () => controller.abort()
+  }, [retryKey])
+
+  if (loadError) {
+    return (
+      <div role="alert" className="p-6 lg:p-10 max-w-7xl mx-auto">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
+          <h1 className="text-xl font-black text-rose-800">ダッシュボードを取得できませんでした</h1>
+          <p className="mt-2 text-sm font-bold text-rose-700">組織の情報は変更されていません。時間をおいて再試行してください。</p>
+          <button type="button" onClick={() => setRetryKey((key) => key + 1)} className="mt-4 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">
+            再試行する
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="p-6 lg:p-10 max-w-7xl mx-auto">

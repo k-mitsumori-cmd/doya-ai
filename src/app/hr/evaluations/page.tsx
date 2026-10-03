@@ -2,7 +2,7 @@
 
 import toast from 'react-hot-toast'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 
@@ -20,29 +20,33 @@ interface EvaluationPeriod {
 export default function EvaluationsPage() {
   const [periods, setPeriods] = useState<EvaluationPeriod[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [newPeriod, setNewPeriod] = useState({ name: '', startDate: '', endDate: '' })
   const [creating, setCreating] = useState(false)
 
-  useEffect(() => {
-    fetchPeriods()
-  }, [])
-
-  async function fetchPeriods() {
+  const fetchPeriods = useCallback(async () => {
+    setLoading(true)
+    setLoadError(false)
     try {
-      const res = await fetch('/api/hr/evaluations/periods')
-      if (!res.ok) throw new Error()
+      const res = await fetch('/api/hr/evaluations/periods', { cache: 'no-store' })
+      if (!res.ok) throw new Error('評価期間を取得できませんでした')
       const data = await res.json()
-      setPeriods(data.items ?? data.periods ?? [])
+      if (!data?.success || !Array.isArray(data.periods)) throw new Error('評価期間の応答が不正です')
+      setPeriods(data.periods)
     } catch {
-      // API not ready
+      setLoadError(true)
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    void fetchPeriods()
+  }, [fetchPeriods])
 
   async function handleCreatePeriod() {
-    if (!newPeriod.name || !newPeriod.startDate || !newPeriod.endDate) return
+    if (loading || loadError || !newPeriod.name || !newPeriod.startDate || !newPeriod.endDate) return
     setCreating(true)
     try {
       const res = await fetch('/api/hr/evaluations/periods', {
@@ -53,7 +57,7 @@ export default function EvaluationsPage() {
       if (!res.ok) throw new Error('評価期間の作成に失敗しました')
       setShowCreateModal(false)
       setNewPeriod({ name: '', startDate: '', endDate: '' })
-      fetchPeriods()
+      await fetchPeriods()
     } catch (e: any) {
       toast.error(e.message)
     } finally {
@@ -79,7 +83,8 @@ export default function EvaluationsPage() {
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all"
+            disabled={loading || loadError}
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-full text-base font-bold shadow-lg shadow-blue-500/25 hover:shadow-xl hover:bg-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <span className="material-symbols-outlined text-lg">add</span>
             評価期間を作成
@@ -92,6 +97,14 @@ export default function EvaluationsPage() {
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-40 bg-white rounded-3xl shadow-md animate-pulse" />
             ))}
+          </div>
+        ) : loadError ? (
+          <div role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-6">
+            <h2 className="text-lg font-black text-rose-800">評価期間を取得できませんでした</h2>
+            <p className="mt-2 text-sm font-bold text-rose-700">登録済みの評価期間は変更されていません。時間をおいて再試行してください。</p>
+            <button type="button" onClick={() => void fetchPeriods()} className="mt-4 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700">
+              再試行する
+            </button>
           </div>
         ) : periods.length > 0 ? (
           <motion.div
@@ -214,7 +227,8 @@ export default function EvaluationsPage() {
         {/* FAB */}
         <button
           onClick={() => setShowCreateModal(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-500/30 flex items-center justify-center hover:bg-blue-700 hover:shadow-2xl transition-all z-40"
+          disabled={loading || loadError}
+          className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 text-white rounded-full shadow-xl shadow-blue-500/30 flex items-center justify-center hover:bg-blue-700 hover:shadow-2xl transition-all z-40 disabled:opacity-50 disabled:cursor-not-allowed"
           aria-label="評価期間を作成"
         >
           <span className="material-symbols-outlined text-3xl">add</span>
