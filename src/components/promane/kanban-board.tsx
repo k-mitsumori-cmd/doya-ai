@@ -82,7 +82,15 @@ export function KanbanBoard({
       prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
     );
 
-    await moveTask(workspaceSlug, taskId, newStatus, task.order);
+    try {
+      await moveTask(workspaceSlug, taskId, newStatus, task.order);
+    } catch (error) {
+      setTasks((prev) => prev.map((item) =>
+        item.id === taskId ? { ...item, status: task.status } : item
+      ));
+      toast.error(error instanceof Error ? error.message : "タスクの移動に失敗しました");
+      return;
+    }
 
     if (newStatus === "done") {
       toast.success(`🎉 「${task.title}」完了おめでとう！！`, {

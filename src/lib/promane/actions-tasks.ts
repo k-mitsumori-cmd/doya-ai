@@ -5,6 +5,21 @@ import { requirePromaneAuthAction, requireWritableWorkspace } from "@/lib/proman
 import { revalidatePath } from "next/cache";
 import { parsePromaneWorkDate } from "./time-input";
 
+const TASK_STATUSES = ["todo", "in_progress", "review", "done"];
+const TASK_PRIORITIES = ["low", "medium", "high", "urgent"];
+
+function validateTaskFields(status?: string, priority?: string, order?: number) {
+  if (status !== undefined && !TASK_STATUSES.includes(status)) {
+    throw new Error("タスクの状態が不正です");
+  }
+  if (priority !== undefined && !TASK_PRIORITIES.includes(priority)) {
+    throw new Error("タスクの優先度が不正です");
+  }
+  if (order !== undefined && (!Number.isSafeInteger(order) || order < 0)) {
+    throw new Error("タスクの並び順が不正です");
+  }
+}
+
 /**
  * 日付バリデーション: startDate <= dueDate を保証
  * 不正な場合は例外をthrow（フロントでcatch→エラー表示）
@@ -39,6 +54,7 @@ export async function createTask(workspaceSlug: string, data: {
 
   if (!data.title?.trim()) throw new Error("タスク名は必須です");
   if (!data.projectId) throw new Error("projectId は必須です");
+  validateTaskFields(data.status, data.priority);
 
   // セキュリティ: projectId が自分の workspace のものか確認 (IDOR防止)
   const project = await prisma.promaneProject.findFirst({
@@ -103,6 +119,7 @@ export async function updateTask(workspaceSlug: string, taskId: string, data: {
   if (data.title !== undefined && (typeof data.title !== "string" || !data.title.trim())) {
     throw new Error("タスク名は空にできません");
   }
+  validateTaskFields(data.status, data.priority, data.order);
 
   // Read retained dates and write in one serializable transaction. Otherwise
   // two partial updates can each validate against an obsolete opposite date.
@@ -174,6 +191,7 @@ export async function deleteTask(workspaceSlug: string, taskId: string) {
 export async function moveTask(workspaceSlug: string, taskId: string, newStatus: string, newOrder: number) {
   const { userId } = await requirePromaneAuthAction();
   const workspace = await requireWritableWorkspace(workspaceSlug, userId);
+  validateTaskFields(newStatus, undefined, newOrder);
 
   // セキュリティ: workspace所属確認 (IDOR防止)
   const existing = await prisma.promaneTask.findFirst({
