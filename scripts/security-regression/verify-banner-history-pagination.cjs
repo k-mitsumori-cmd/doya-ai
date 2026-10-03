@@ -28,6 +28,7 @@ const prisma = {
 const access = load('src/lib/banner/history-access.ts', {
   '@/lib/prisma': { prisma },
   '@/lib/pricing': { BANNER_PRICING: { historyDays: { free: 0, pro: -1 } }, isWithinFreeHour: () => false },
+  '@/lib/plan-utils': load('src/lib/plan-utils.ts'),
 })
 const route = load('src/app/api/banner/history/route.ts', {
   'next/server': { NextResponse: { json: (body, init) => new Response(JSON.stringify(body), init) } },

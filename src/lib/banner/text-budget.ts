@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import type { PrismaClient } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { higherPlan } from '@/lib/plan-utils'
 
 type BannerTextDb = Pick<PrismaClient, '$transaction' | 'user' | 'userServiceSubscription'>
 
@@ -38,7 +39,7 @@ export async function reserveBannerTextCall(userId: string, db: BannerTextDb = p
     db.user.findUnique({ where: { id: userId }, select: { plan: true } }),
   ])
   if (!account) throw new Error('Banner text account unavailable')
-  const limit = bannerTextDailyLimit(subscription?.plan || account.plan)
+  const limit = bannerTextDailyLimit(higherPlan(subscription?.plan, account.plan))
   if (limit < 0) return { state: 'allowed', usage: dailyUsage(limit, 0) }
 
   const key = `banner-text:v1:${createHash('sha256').update(userId).digest('hex')}`

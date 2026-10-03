@@ -2,15 +2,18 @@ const assert = require('node:assert/strict')
 const { load, check } = require('./load-typescript.cjs')
 
 let plan = 'FREE'
+let accountPlan = 'FREE'
 let userId = 'owner'
 let imageDate = new Date(Date.now() - 12 * 86_400_000)
 const prisma = {
   userServiceSubscription: { findUnique: async () => ({ plan }) },
+  user: { findUnique: async () => ({ plan: accountPlan }) },
   generation: { findFirst: async ({ where }) => where.userId === 'owner' && where.id === 'owned-image' && imageDate >= where.createdAt.gte ? { output: 'data:image/png;base64,AA==' } : null },
 }
 const access = load('src/lib/banner/history-access.ts', {
   '@/lib/prisma': { prisma },
   '@/lib/pricing': { BANNER_PRICING: { historyDays: { free: 7, pro: -1 } }, isWithinFreeHour: () => false },
+  '@/lib/plan-utils': load('src/lib/plan-utils.ts'),
 })
 const route = load('src/app/api/banner/history/image/route.ts', {
   'next/server': { NextResponse: { json: (body, init) => new Response(JSON.stringify(body), init) } },
@@ -37,6 +40,11 @@ const get = id => route.GET({ url: `https://local.test/api/banner/history/image?
     assert.equal((await get('foreign-image')).status, 404)
     userId = 'other'
     assert.equal((await get('owned-image')).status, 404)
+  })
+  await check('paid account keeps old images when banner service row is stale', async () => {
+    userId = 'owner'; plan = 'FREE'; accountPlan = 'PRO'
+    assert.equal((await get('owned-image')).status, 200)
+    accountPlan = 'FREE'
   })
   await check('anonymous image access is rejected', async () => {
     userId = ''

@@ -4,6 +4,8 @@ const { load } = require('./load-typescript.cjs')
 
 async function main() {
   const values = new Map()
+  let accountPlan = 'FREE'
+  let servicePlan = null
   const tx = {
     $executeRaw: async () => {},
     systemSetting: {
@@ -12,13 +14,14 @@ async function main() {
     },
   }
   const db = {
-    user: { findUnique: async () => ({ plan: 'FREE' }) },
-    userServiceSubscription: { findUnique: async () => null },
+    user: { findUnique: async () => ({ plan: accountPlan }) },
+    userServiceSubscription: { findUnique: async () => servicePlan ? { plan: servicePlan } : null },
     $transaction: async (fn) => fn(tx),
   }
   const budget = load('src/lib/banner/text-budget.ts', {
     'node:crypto': crypto,
     '@/lib/prisma': { prisma: db },
+    '@/lib/plan-utils': load('src/lib/plan-utils.ts'),
   })
   assert.equal(budget.bannerTextDailyLimit('FREE'), 10)
   assert.equal(budget.bannerTextDailyLimit('LIGHT'), 30)
@@ -43,6 +46,12 @@ async function main() {
   await assert.rejects(budget.reserveBannerTextCall('member-1', db), /ledger invalid/)
   const other = await budget.reserveBannerTextCall('member-2', db)
   assert.equal(other.state, 'allowed')
+  accountPlan = 'PRO'; servicePlan = 'FREE'
+  const restoredPaid = await budget.reserveBannerTextCall('member-stale', db)
+  assert.equal(restoredPaid.usage.dailyLimit, 100)
+  accountPlan = 'FREE'; servicePlan = 'PRO'
+  const individualGrant = await budget.reserveBannerTextCall('member-grant', db)
+  assert.equal(individualGrant.usage.dailyLimit, 100)
 
   for (const route of ['src/app/api/banner/chat/route.ts', 'src/app/api/banner/copy/route.ts']) {
     let providerCalled = false
