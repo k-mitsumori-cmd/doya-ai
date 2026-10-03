@@ -1,4 +1,5 @@
 import { sendEmail } from '@/lib/email'
+import { escapeHtml } from '@/lib/html-escape'
 
 // ============================================
 // ドヤHR メール送信
@@ -15,9 +16,9 @@ interface InvitationEmailParams {
 
 /**
  * 招待メールを送信する
- * RESEND_API_KEY が未設定の場合はconsole.logにフォールバック
+ * 送信設定がない場合は失敗として返し、招待URLをログに残さない。
  */
-export async function sendInvitationEmail(params: InvitationEmailParams): Promise<void> {
+export async function sendInvitationEmail(params: InvitationEmailParams): Promise<boolean> {
   const roleName = getRoleDisplayName(params.role)
   const expiresLabel = formatDate(params.expiresAt)
   const inviterLabel = params.inviterName || '管理者'
@@ -35,11 +36,11 @@ export async function sendInvitationEmail(params: InvitationEmailParams): Promis
     <div style="padding: 32px;">
       <p style="font-size: 16px; color: #333;">こんにちは、</p>
       <p style="font-size: 15px; color: #555; line-height: 1.7;">
-        <strong>${inviterLabel}</strong> さんから
-        <strong>${params.organizationName}</strong> の${roleName}として招待されました。
+        <strong>${escapeHtml(inviterLabel)}</strong> さんから
+        <strong>${escapeHtml(params.organizationName)}</strong> の${roleName}として招待されました。
       </p>
       <div style="text-align: center; margin: 32px 0;">
-        <a href="${params.inviteUrl}"
+        <a href="${escapeHtml(params.inviteUrl)}"
            style="display: inline-block; background: #7f19e6; color: #ffffff; text-decoration: none;
                   padding: 14px 40px; border-radius: 6px; font-size: 15px; font-weight: bold;">
           招待を受ける
@@ -52,7 +53,7 @@ export async function sendInvitationEmail(params: InvitationEmailParams): Promis
       <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
       <p style="font-size: 12px; color: #bbb;">
         招待URLが開けない場合はこちらをコピーしてブラウザに貼り付けてください:<br/>
-        <span style="word-break: break-all;">${params.inviteUrl}</span>
+        <span style="word-break: break-all;">${escapeHtml(params.inviteUrl)}</span>
       </p>
     </div>
   </div>
@@ -62,11 +63,8 @@ export async function sendInvitationEmail(params: InvitationEmailParams): Promis
 
   const apiKey = process.env.RESEND_API_KEY
   if (!apiKey) {
-    console.log('[HrEmail] RESEND_API_KEY not set — invitation email logged instead of sent')
-    console.log(`  To: ${params.to}`)
-    console.log(`  Subject: ${subject}`)
-    console.log(`  InviteURL: ${params.inviteUrl}`)
-    return
+    console.warn('[HrEmail] Invitation email provider is not configured')
+    return false
   }
 
   const result = await sendEmail({
@@ -80,8 +78,9 @@ export async function sendInvitationEmail(params: InvitationEmailParams): Promis
   })
 
   if (!result.success) {
-    console.error('[HrEmail] Failed to send invitation email:', result.error)
+    console.error('[HrEmail] Failed to send invitation email')
   }
+  return result.success
 }
 
 function getRoleDisplayName(role: string): string {

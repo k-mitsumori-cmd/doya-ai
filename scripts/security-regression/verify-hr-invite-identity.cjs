@@ -88,18 +88,19 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
     'next/server': { NextResponse: Response },
     'next-auth': { getServerSession: async () => ({ user: { id: 'admin-1', name: 'Admin' } }) },
     '@/lib/auth': { authOptions: {} },
-    '@/lib/prisma': { prisma: {
+    '@/lib/prisma': { prisma: { $transaction: async (work) => work({
+      $queryRaw: async () => [{ id: 'org-1' }],
       hrOrganizationMember: { findFirst: async () => null },
       hrInvitation: { findFirst: async () => null, create: async ({ data }) => {
         createdRole = data.role;
         return { ...data, id: 'invite-2' };
       } },
       hrOrganization: { findUnique: async () => ({ name: 'Example' }) },
-    } },
+    }) } },
     '@/lib/hr/access': { getHrContext: async () => ({ organizationId: 'org-1', userId: 'admin-1', role: 'ADMIN' }), hasMinRole: () => true },
     '@/lib/hr/types': { HrMemberRole: { OWNER: 'OWNER', ADMIN: 'ADMIN', MANAGER: 'MANAGER', MEMBER: 'MEMBER' } },
     '@/lib/hr/billing': { checkMemberLimit: async () => null },
-    '@/lib/hr/email': { sendInvitationEmail: async () => { sent++; } },
+    '@/lib/hr/email': { sendInvitationEmail: async () => { sent++; return true; } },
     '@/lib/hr/audit': { logAudit: async () => {} },
     crypto: require('node:crypto'),
   }, { process: { env: { NEXTAUTH_URL: 'https://example.com' } } });
@@ -107,6 +108,7 @@ async function acceptCase({ signedIn = true, accountEmail = 'invited@example.com
   assert.equal(response.status, 200);
   assert.equal(createdRole, 'MEMBER');
   assert.equal(sent, 1, 'Only the mocked sender is called; no external email is sent');
+  assert.equal((await response.json()).emailSent, true);
   const badEmail = await POST({ json: async () => ({ email: 'not-an-address', role: 'OWNER' }) });
   assert.equal(badEmail.status, 400);
   assert.equal(sent, 1);

@@ -119,6 +119,7 @@ export default function HrSettingsPage() {
   const [deletingDeptId, setDeletingDeptId] = useState<string | null>(null)
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([])
   const [inviteUrl, setInviteUrl] = useState('')
+  const [inviteEmailSent, setInviteEmailSent] = useState(false)
   const [inviteUrlCopied, setInviteUrlCopied] = useState(false)
   const [generatingInviteUrl, setGeneratingInviteUrl] = useState(false)
   const [showTransferModal, setShowTransferModal] = useState(false)
@@ -335,7 +336,10 @@ export default function HrSettingsPage() {
       if (!res.ok) throw new Error(data.error || '招待の送信に失敗しました')
       setInviteLimitNotice(null)
       setInviteEmail('')
-      toast.success('招待を送信しました')
+      setInviteEmailSent(data.emailSent === true)
+      setInviteUrlCopied(false)
+      if (data.emailSent === true) toast.success('招待メールを送信しました')
+      else toast.error('招待リンクを作成しましたが、メールを送信できませんでした。リンクをコピーして共有してください。')
       if (data.inviteUrl) {
         setInviteUrl(data.inviteUrl)
       }
@@ -467,6 +471,8 @@ export default function HrSettingsPage() {
   }
 
   const AUDIT_ACTION_MAP: Record<string, { icon: string; color: string; label: string }> = {
+    INVITE_SENT: { icon: 'mail', color: 'text-blue-600', label: '招待メール送信' },
+    INVITE_CREATED: { icon: 'link', color: 'text-amber-600', label: '招待リンク作成（メール未送信）' },
     MEMBER_INVITED: { icon: 'person_add', color: 'text-blue-600', label: 'メンバー招待' },
     MEMBER_JOINED: { icon: 'group_add', color: 'text-emerald-600', label: 'メンバー参加' },
     MEMBER_REMOVED: { icon: 'person_remove', color: 'text-red-500', label: 'メンバー削除' },
@@ -683,10 +689,10 @@ export default function HrSettingsPage() {
 
           {/* Invite URL（メール招待後に表示） */}
           {canManageMembers && inviteUrl && (
-            <div className="mb-4 p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
+            <div className={`mb-4 p-4 rounded-2xl border ${inviteEmailSent ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
               <div className="flex items-center gap-2 mb-2">
-                <span className="material-symbols-outlined text-sm text-emerald-600">check_circle</span>
-                <span className="text-sm font-bold text-emerald-700">招待を送信しました！以下のURLを共有することもできます</span>
+                <span className={`material-symbols-outlined text-sm ${inviteEmailSent ? 'text-emerald-600' : 'text-amber-600'}`}>{inviteEmailSent ? 'check_circle' : 'info'}</span>
+                <span className={`text-sm font-bold ${inviteEmailSent ? 'text-emerald-700' : 'text-amber-800'}`}>{inviteEmailSent ? '招待メールを送信しました。以下のURLを共有することもできます。' : '招待メールを送信できませんでした。以下のURLをコピーして共有してください。'}</span>
               </div>
               <div className="flex gap-2">
                 <input

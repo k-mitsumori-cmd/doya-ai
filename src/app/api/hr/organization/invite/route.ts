@@ -54,85 +54,66 @@ export async function POST(req: NextRequest) {
     // 画面はメンバー招待のみ。リクエスト本文から管理者・オーナー権限を指定させない。
     const inviteRole = HrMemberRole.MEMBER
 
-    const existingMember = await prisma.hrOrganizationMember.findFirst({
-      where: {
-        organizationId: ctx.organizationId,
-        user: { email: emailNorm },
-        status: 'ACTIVE',
-      },
-    })
-    if (existingMember) {
-      return NextResponse.json(
-        { error: 'This user is already a member' },
-        { status: 400 }
-      )
-    }
-
-    const pendingInvite = await prisma.hrInvitation.findFirst({
-      where: {
-        organizationId: ctx.organizationId,
-        email: emailNorm,
-        status: 'PENDING',
-        expiresAt: { gt: new Date() },
-      },
-    })
-    if (pendingInvite) {
-      return NextResponse.json(
-        { error: 'A pending invitation already exists for this email' },
-        { status: 400 }
-      )
-    }
-
     const token = randomBytes(32).toString('hex')
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    const result = await prisma.$transaction(async (tx) => {
+      const organizations = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM "hr_organizations" WHERE id = ${ctx.organizationId} FOR UPDATE`
+      if (organizations.length === 0) return { status: 404 as const, error: '組織が見つかりません' }
 
-    // 組織名を取得
-    const org = await prisma.hrOrganization.findUnique({
-      where: { id: ctx.organizationId },
-      select: { name: true },
-    })
+      const existingMember = await tx.hrOrganizationMember.findFirst({
+        where: { organizationId: ctx.organizationId, user: { email: emailNorm }, status: 'ACTIVE' },
+      })
+      if (existingMember) return { status: 400 as const, error: 'このユーザーは既にメンバーです' }
 
-    const invitation = await prisma.hrInvitation.create({
-      data: {
-        organizationId: ctx.organizationId,
-        email: emailNorm,
-        role: inviteRole,
-        token,
-        invitedBy: ctx.userId,
-        status: 'PENDING',
-        expiresAt,
-      },
+      const pendingInvite = await tx.hrInvitation.findFirst({
+        where: { organizationId: ctx.organizationId, email: emailNorm, status: 'PENDING', expiresAt: { gt: new Date() } },
+      })
+      if (pendingInvite) return { status: 400 as const, error: 'このメールアドレスには有効な招待が既にあります' }
+
+      const organization = await tx.hrOrganization.findUnique({
+        where: { id: ctx.organizationId }, select: { name: true },
+      })
+      const invitation = await tx.hrInvitation.create({
+        data: { organizationId: ctx.organizationId, email: emailNorm, role: inviteRole, token,
+          invitedBy: ctx.userId, status: 'PENDING', expiresAt },
+      })
+      return { invitation, organizationName: organization?.name || '組織' }
     })
+    if ('error' in result) return NextResponse.json({ error: result.error }, { status: result.status })
+    const { invitation, organizationName } = result
 
     // 招待URL生成
     const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.surisuta.jp'
     const inviteUrl = `${baseUrl}/hr/invite/${token}`
 
-    // 招待メール送信（非同期、エラーでも招待自体は成功）
-    sendInvitationEmail({
-      to: emailNorm,
-      organizationName: org?.name || '組織',
-      inviterName: user?.name || null,
-      role: inviteRole,
-      inviteUrl,
-      expiresAt,
-    }).catch((e) => {
-      console.error('[HrInvite] Failed to send invitation email:')
-    })
+    let emailSent = false
+    try {
+      emailSent = await sendInvitationEmail({
+        to: emailNorm,
+        organizationName,
+        inviterName: user?.name || null,
+        role: inviteRole,
+        inviteUrl,
+        expiresAt,
+      })
+    } catch {
+      console.error('[HrInvite] Failed to send invitation email')
+    }
 
     // 監査ログ
-    logAudit({
+    await logAudit({
       organizationId: ctx.organizationId,
       userId: ctx.userId,
       userName: user?.name || null,
-      action: 'INVITE_SENT',
+      action: emailSent ? 'INVITE_SENT' : 'INVITE_CREATED',
       target: 'invitation',
       targetId: invitation.id,
-      details: { email: emailNorm, role: inviteRole },
-    }).catch(() => {})
+      details: { email: emailNorm, role: inviteRole, emailSent },
+    })
 
     return NextResponse.json({
       success: true,
+      emailSent,
       invitation: {
         id: invitation.id,
         email: invitation.email,
