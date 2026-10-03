@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requirePromaneAuthAction, requireWritableWorkspace } from "@/lib/promane/auth";
 import { revalidatePath } from "next/cache";
+import { parsePromaneWorkDate } from "./time-input";
 
 /**
  * 日付バリデーション: startDate <= dueDate を保証
@@ -12,8 +13,8 @@ function validateDates(
   startDate?: string | Date | null,
   dueDate?: string | Date | null
 ): { startDate: Date | null; dueDate: Date | null } {
-  const start = startDate ? (startDate instanceof Date ? startDate : new Date(startDate)) : null;
-  const end = dueDate ? (dueDate instanceof Date ? dueDate : new Date(dueDate)) : null;
+  const start = startDate == null || startDate === "" ? null : startDate instanceof Date ? startDate : parsePromaneWorkDate(startDate);
+  const end = dueDate == null || dueDate === "" ? null : dueDate instanceof Date ? dueDate : parsePromaneWorkDate(dueDate);
   if (start && isNaN(start.getTime())) throw new Error("開始日の形式が不正です");
   if (end && isNaN(end.getTime())) throw new Error("終了日の形式が不正です");
   if (start && end && end < start) {
@@ -99,44 +100,57 @@ export async function updateTask(workspaceSlug: string, taskId: string, data: {
   const { userId } = await requirePromaneAuthAction();
   const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
-  // セキュリティ: タスクが自分のworkspaceに属するか確認 (IDOR防止)
-  const existing = await prisma.promaneTask.findFirst({
-    where: { id: taskId, project: { workspaceId: workspace.id } },
-    select: { startDate: true, dueDate: true, projectId: true },
-  });
-  if (!existing) throw new Error("タスクが見つかりません");
-
-  if (data.assigneeId) {
-    const member = await prisma.promaneMember.findFirst({
-      where: { id: data.assigneeId, workspaceId: workspace.id, isActive: true }, select: { id: true },
-    });
-    if (!member) throw new Error("担当者がワークスペースに所属していません");
-  }
-
-  // 部分更新で日付の整合性を保証
-  if (data.startDate !== undefined || data.dueDate !== undefined) {
-    const finalStart = data.startDate !== undefined ? data.startDate : existing.startDate;
-    const finalEnd = data.dueDate !== undefined ? data.dueDate : existing.dueDate;
-    validateDates(finalStart, finalEnd);
-  }
-
-  if (data.title !== undefined && !data.title.trim()) {
+  if (data.title !== undefined && (typeof data.title !== "string" || !data.title.trim())) {
     throw new Error("タスク名は空にできません");
   }
 
-  const task = await prisma.promaneTask.update({
-    where: { id: taskId },
-    data: {
-      ...(data.title !== undefined && { title: data.title.trim().slice(0, 200) }),
-      ...(data.description !== undefined && { description: data.description?.slice(0, 5000) || null }),
-      ...(data.status !== undefined && { status: data.status }),
-      ...(data.priority !== undefined && { priority: data.priority }),
-      ...(data.assigneeId !== undefined && { assigneeId: data.assigneeId }),
-      ...(data.startDate !== undefined && { startDate: data.startDate ? new Date(data.startDate) : null }),
-      ...(data.dueDate !== undefined && { dueDate: data.dueDate ? new Date(data.dueDate) : null }),
-      ...(data.order !== undefined && { order: data.order }),
-    },
-  });
+  // Read retained dates and write in one serializable transaction. Otherwise
+  // two partial updates can each validate against an obsolete opposite date.
+  let task: Awaited<ReturnType<typeof prisma.promaneTask.update>> | undefined;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      task = await prisma.$transaction(async tx => {
+        const actor = await tx.promaneMember.findFirst({
+          where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ["owner", "admin", "member"] } },
+          select: { id: true },
+        });
+        if (!actor) throw new Error("ワークスペースの変更権限がありません");
+        const existing = await tx.promaneTask.findFirst({
+          where: { id: taskId, project: { workspaceId: workspace.id } },
+          select: { startDate: true, dueDate: true, projectId: true },
+        });
+        if (!existing) throw new Error("タスクが見つかりません");
+        if (data.assigneeId) {
+          const member = await tx.promaneMember.findFirst({
+            where: { id: data.assigneeId, workspaceId: workspace.id, isActive: true }, select: { id: true },
+          });
+          if (!member) throw new Error("担当者がワークスペースに所属していません");
+        }
+        const dates = data.startDate !== undefined || data.dueDate !== undefined
+          ? validateDates(data.startDate !== undefined ? data.startDate : existing.startDate,
+            data.dueDate !== undefined ? data.dueDate : existing.dueDate)
+          : null;
+        return tx.promaneTask.update({
+          where: { id: taskId },
+          data: {
+            ...(data.title !== undefined && { title: data.title.trim().slice(0, 200) }),
+            ...(data.description !== undefined && { description: data.description?.slice(0, 5000) || null }),
+            ...(data.status !== undefined && { status: data.status }),
+            ...(data.priority !== undefined && { priority: data.priority }),
+            ...(data.assigneeId !== undefined && { assigneeId: data.assigneeId }),
+            ...(data.startDate !== undefined && { startDate: dates!.startDate }),
+            ...(data.dueDate !== undefined && { dueDate: dates!.dueDate }),
+            ...(data.order !== undefined && { order: data.order }),
+          },
+        });
+      }, { isolationLevel: "Serializable" });
+      break;
+    } catch (error) {
+      if (!(error && typeof error === "object" && "code" in error && error.code === "P2034")) throw error;
+      if (attempt === 2) throw new Error("同時にタスクが変更されました。少し待って再度保存してください");
+    }
+  }
+  if (!task) throw new Error("タスクを保存できませんでした");
 
   revalidatePath(`/promane/${workspaceSlug}/projects/${task.projectId}`);
   return task;
