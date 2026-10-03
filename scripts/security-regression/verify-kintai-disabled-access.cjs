@@ -18,6 +18,7 @@ async function main() {
     },
     user: { findUnique: async () => ({ plan: 'FREE' }) },
     $transaction: async fn => fn(prisma),
+    $queryRaw: async () => [{ role: 'system_admin', status: 'ACTIVE', isActive: true }],
   }
   const access = load('src/lib/kintai/access.ts', {
     'next-auth': { getServerSession: async () => ({ user: { id: 'user' } }) },

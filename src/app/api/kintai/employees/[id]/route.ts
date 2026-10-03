@@ -3,11 +3,42 @@ export const dynamic = 'force-dynamic'
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
+import type { KintaiContext, KintaiMemberRole } from '@/lib/kintai/types'
 import { kintaiEmployeeLimitPayload, lockKintaiEmployeeAdmission, reachedKintaiEmployeeLimit } from '@/lib/kintai/employee-admission'
 
 type Ctx = { params: Promise<{ id: string }> }
+
+async function mutateEmployee<T>(work: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await prisma.$transaction(work, { isolationLevel: 'Serializable', maxWait: 10000, timeout: 30000 })
+    } catch (error) {
+      if ((error as { code?: string })?.code !== 'P2034' || attempt === 2) throw error
+    }
+  }
+  throw new Error('Kintai employee mutation retry exhausted')
+}
+
+async function currentManagerRole(tx: Prisma.TransactionClient, ctx: KintaiContext): Promise<KintaiMemberRole | null> {
+  // Lock both actor records until the mutation commits. A role revocation or
+  // deactivation that has already committed must win over the cached context.
+  const rows = await tx.$queryRaw<{ role: string; status: string; isActive: boolean }[]>`
+    SELECT m.role, m.status, e."isActive" AS "isActive"
+    FROM "kintai_members" m
+    JOIN "kintai_employees" e ON e."memberId" = m.id
+    WHERE m.id = ${ctx.memberId}
+      AND m."organizationId" = ${ctx.organizationId}
+      AND m."userId" = ${ctx.userId}
+    FOR UPDATE OF m, e
+  `
+  const actor = rows[0]
+  return actor?.status === 'ACTIVE' && actor.isActive && hasMinRole(actor.role, 'hr_admin')
+    ? actor.role as KintaiMemberRole
+    : null
+}
 
 export async function GET(req: NextRequest, ctx: Ctx) {
   try {
@@ -45,6 +76,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const p = await ctx.params
 
     const body = await req.json()
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return NextResponse.json({ error: '入力内容が正しくありません' }, { status: 400 })
+    }
     const { name, nameKana, email, departmentId, workRuleId, employmentType, hireDate, isActive, role } = body
 
     const allowedRoles = ['employee', 'manager', 'hr_admin', 'system_admin']
@@ -65,8 +99,10 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     if (hireDate !== undefined) data.hireDate = hireDate ? new Date(hireDate) : null
     if (isActive !== undefined) data.isActive = isActive
 
-    return await prisma.$transaction(async (tx) => {
-      if (isActive !== undefined || role !== undefined) await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
+    return await mutateEmployee(async (tx) => {
+      await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
+      const actorRole = await currentManagerRole(tx, kctx)
+      if (!actorRole) return NextResponse.json({ error: '権限がありません' }, { status: 403 })
       const existingEmp = await tx.kintaiEmployee.findFirst({
         where: { id: p.id, organizationId: kctx.organizationId },
         include: { member: { select: { id: true, role: true } } },
@@ -93,7 +129,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         if (!rule) return NextResponse.json({ error: '指定された就業ルールが見つかりません' }, { status: 400 })
       }
       const roleChanged = role !== undefined && !!existingEmp.member && role !== existingEmp.member.role
-      if (roleChanged && kctx.role !== 'system_admin' &&
+      if (roleChanged && actorRole !== 'system_admin' &&
           (role === 'system_admin' || existingEmp.member?.role === 'system_admin')) {
         return NextResponse.json({ error: 'システム管理者の権限変更はシステム管理者のみ可能です' }, { status: 403 })
       }
@@ -140,8 +176,10 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
 
     const p = await ctx.params
 
-    return await prisma.$transaction(async (tx) => {
+    return await mutateEmployee(async (tx) => {
       await lockKintaiEmployeeAdmission(tx, kctx.organizationId)
+      const actorRole = await currentManagerRole(tx, kctx)
+      if (!actorRole) return NextResponse.json({ error: '権限がありません' }, { status: 403 })
       const existingEmp = await tx.kintaiEmployee.findFirst({
         where: { id: p.id, organizationId: kctx.organizationId },
         include: { member: { select: { role: true } } },

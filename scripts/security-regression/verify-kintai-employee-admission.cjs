@@ -6,7 +6,7 @@ const pricing = { getKintaiEmployeeLimitByUserPlan: () => 1, HIGH_USAGE_CONTACT_
 const planUtils = load('src/lib/plan-utils.ts')
 const admission = load('src/lib/kintai/employee-admission.ts', { '@/lib/pricing': pricing, '@/lib/plan-utils': planUtils })
 const inviteToken = load('src/lib/kintai/invite-token.ts', {}, { crypto: webcrypto })
-const access = { getKintaiContext: async () => ({ organizationId: 'org', userId: 'owner', role: 'system_admin' }), hasMinRole: () => true }
+const access = { getKintaiContext: async () => ({ organizationId: 'org', userId: 'owner', memberId: 'owner-member', role: 'system_admin' }), hasMinRole: () => true }
 
 ;(async () => {
   await check('concurrent employee creation counts and writes under the same organization lock', async () => {
@@ -67,7 +67,9 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', userId:
     let updates = 0
     let count = 1
     const tx = {
-      $queryRaw: async () => [{ id: 'org' }],
+      $queryRaw: async (strings) => String(strings[0]).includes('kintai_members')
+        ? [{ role: 'system_admin', status: 'ACTIVE', isActive: true }]
+        : [{ id: 'org' }],
       kintaiMember: { findFirst: async () => ({ userId: 'owner' }) },
       user: { findUnique: async () => ({ plan: 'FREE' }) },
       kintaiEmployee: {

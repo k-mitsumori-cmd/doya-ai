@@ -11,7 +11,9 @@ for(const mode of ['active','disable-patch','disable-delete','membership-inactiv
   if(where.userId==='user'&&where.status===status)return {id:'member',userId:'user',organizationId:'org',role:'employee',status,employee:{...employee}};
   return null;
  },findUnique:async()=>({role:'employee'})},kintaiEmployee:{findFirst:async({where})=>where.id===employee.id&&where.organizationId===employee.organizationId&&(where.isActive===undefined||where.isActive===employee.isActive)?{...employee}:null,update:async({data})=>{employee={...employee,...data};return {...employee}}},kintaiAttendance:{findFirst:async()=>null},kintaiClockRecord:{findMany:async()=>records,create:async({data})=>{const row={id:'clock',...data};records.push(row);return row}}};
- prisma.$queryRaw=async()=>employee.isActive?[{id:employee.id}]:[];
+ prisma.$queryRaw=async(strings)=>String(strings[0]).includes('kintai_members')
+  ? [{role:'system_admin',status:'ACTIVE',isActive:true}]
+  : employee.isActive?[{id:employee.id}]:[];
  prisma.$transaction=async fn=>fn(prisma);
  const access=load('src/lib/kintai/access.ts',{'next-auth':{getServerSession:async()=>({user:{id:actor}})},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma},'./types':types});
  const deps={'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/kintai/access':access,'@/lib/kintai/employee-admission':{lockKintaiEmployeeAdmission:async()=>{}}};
