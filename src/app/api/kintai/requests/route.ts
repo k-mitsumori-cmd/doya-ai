@@ -87,6 +87,9 @@ export async function POST(req: NextRequest) {
     if (!type || !ALLOWED_TYPES.includes(type)) {
       return NextResponse.json({ error: '無効な申請種別です' }, { status: 400 })
     }
+    if (!details || typeof details !== 'object' || Array.isArray(details)) {
+      return NextResponse.json({ error: '申請内容が正しくありません' }, { status: 400 })
+    }
 
     // バリデーション: 各申請種別ごとの必須フィールドチェック
     if (type === 'clock_fix') {
@@ -119,8 +122,24 @@ export async function POST(req: NextRequest) {
       if ((+end - +start) / 86400000 + 1 > 366) return NextResponse.json({ error: '1件の休暇申請は366日以内で指定してください。' }, { status: 400 })
     }
     if (type === 'overtime') {
-      if (!details?.date) return NextResponse.json({ error: '対象日は必須です' }, { status: 400 })
-      if (!details?.hours && !details?.minutes) return NextResponse.json({ error: '残業時間を入力してください' }, { status: 400 })
+      if (typeof details.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(details.date) ||
+          !Number.isFinite(new Date(`${details.date}T00:00:00Z`).getTime()) ||
+          new Date(`${details.date}T00:00:00Z`).toISOString().slice(0, 10) !== details.date ||
+          !Number.isInteger(details.hours) || details.hours < 0 || details.hours > 24 ||
+          !Number.isInteger(details.minutes) || details.minutes < 0 || details.minutes > 59 ||
+          details.hours * 60 + details.minutes < 1 || details.hours * 60 + details.minutes > 1440) {
+        return NextResponse.json({ error: '残業の日付・時間をご確認ください。' }, { status: 400 })
+      }
+    }
+    if (type === 'holiday_work') {
+      if (typeof details.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(details.date) ||
+          !Number.isFinite(new Date(`${details.date}T00:00:00Z`).getTime()) ||
+          new Date(`${details.date}T00:00:00Z`).toISOString().slice(0, 10) !== details.date ||
+          typeof details.startTime !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(details.startTime) ||
+          typeof details.endTime !== 'string' || !/^([01]\d|2[0-3]):[0-5]\d$/.test(details.endTime) ||
+          details.startTime === details.endTime) {
+        return NextResponse.json({ error: '休日出勤の日付・時刻をご確認ください。' }, { status: 400 })
+      }
     }
     if (typeof reason !== 'string' || !reason.trim()) {
       return NextResponse.json({ error: '理由を入力してください' }, { status: 400 })
