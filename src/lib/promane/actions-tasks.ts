@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import type { Prisma } from "@prisma/client";
 import { requirePromaneAuthAction, requireWritableWorkspace } from "@/lib/promane/auth";
 import { revalidatePath } from "next/cache";
 import { parsePromaneWorkDate } from "./time-input";
@@ -18,6 +19,25 @@ function validateTaskFields(status?: string, priority?: string, order?: number) 
   if (order !== undefined && (!Number.isSafeInteger(order) || order < 0)) {
     throw new Error("タスクの並び順が不正です");
   }
+}
+
+async function retryTaskTransaction<T>(commit: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try { return await commit(); }
+    catch (error) {
+      if (!(error && typeof error === "object" && "code" in error && error.code === "P2034")) throw error;
+      if (attempt === 2) throw new Error("同時にタスクが変更されました。少し待って再度保存してください");
+    }
+  }
+  throw new Error("タスクを保存できませんでした");
+}
+
+async function requireCurrentTaskWriter(tx: Prisma.TransactionClient, workspaceId: string, userId: string) {
+  const actor = await tx.promaneMember.findFirst({
+    where: { workspaceId, userId, isActive: true, role: { in: ["owner", "admin", "member"] } },
+    select: { id: true },
+  });
+  if (!actor) throw new Error("ワークスペースの変更権限がありません");
 }
 
 /**
@@ -56,48 +76,44 @@ export async function createTask(workspaceSlug: string, data: {
   if (!data.projectId) throw new Error("projectId は必須です");
   validateTaskFields(data.status, data.priority);
 
-  // セキュリティ: projectId が自分の workspace のものか確認 (IDOR防止)
-  const project = await prisma.promaneProject.findFirst({
-    where: { id: data.projectId, workspaceId: workspace.id },
-    select: { id: true },
-  });
-  if (!project) throw new Error("プロジェクトが見つかりません");
-
-  if (data.assigneeId) {
-    const member = await prisma.promaneMember.findFirst({
-      where: { id: data.assigneeId, workspaceId: workspace.id, isActive: true }, select: { id: true },
-    });
-    if (!member) throw new Error("担当者がワークスペースに所属していません");
-  }
-  if (data.parentId) {
-    const parent = await prisma.promaneTask.findFirst({
-      where: { id: data.parentId, projectId: data.projectId }, select: { id: true },
-    });
-    if (!parent) throw new Error("親タスクが同じプロジェクトに存在しません");
-  }
-
-  // 日付バリデーション
   const { startDate, dueDate } = validateDates(data.startDate, data.dueDate);
-
-  const maxOrder = await prisma.promaneTask.aggregate({
-    where: { projectId: data.projectId, status: data.status || "todo" },
-    _max: { order: true },
-  });
-
-  const task = await prisma.promaneTask.create({
-    data: {
-      projectId: data.projectId,
-      title: data.title.trim().slice(0, 200),
-      description: data.description?.slice(0, 5000) || null,
-      status: data.status || "todo",
-      priority: data.priority || "medium",
-      assigneeId: data.assigneeId || null,
-      parentId: data.parentId || null,
-      startDate,
-      dueDate,
-      order: (maxOrder._max.order ?? -1) + 1,
-    },
-  });
+  const task = await retryTaskTransaction(() => prisma.$transaction(async tx => {
+    await requireCurrentTaskWriter(tx, workspace.id, userId);
+    const project = await tx.promaneProject.findFirst({
+      where: { id: data.projectId, workspaceId: workspace.id }, select: { id: true },
+    });
+    if (!project) throw new Error("プロジェクトが見つかりません");
+    if (data.assigneeId) {
+      const member = await tx.promaneMember.findFirst({
+        where: { id: data.assigneeId, workspaceId: workspace.id, isActive: true }, select: { id: true },
+      });
+      if (!member) throw new Error("担当者がワークスペースに所属していません");
+    }
+    if (data.parentId) {
+      const parent = await tx.promaneTask.findFirst({
+        where: { id: data.parentId, projectId: data.projectId }, select: { id: true },
+      });
+      if (!parent) throw new Error("親タスクが同じプロジェクトに存在しません");
+    }
+    const maxOrder = await tx.promaneTask.aggregate({
+      where: { projectId: data.projectId, status: data.status || "todo" },
+      _max: { order: true },
+    });
+    return tx.promaneTask.create({
+      data: {
+        projectId: data.projectId,
+        title: data.title.trim().slice(0, 200),
+        description: data.description?.slice(0, 5000) || null,
+        status: data.status || "todo",
+        priority: data.priority || "medium",
+        assigneeId: data.assigneeId || null,
+        parentId: data.parentId || null,
+        startDate,
+        dueDate,
+        order: (maxOrder._max.order ?? -1) + 1,
+      },
+    });
+  }, { isolationLevel: "Serializable" }));
 
   revalidatePath(`/promane/${workspaceSlug}/projects/${data.projectId}`);
   return task;
@@ -127,11 +143,7 @@ export async function updateTask(workspaceSlug: string, taskId: string, data: {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       task = await prisma.$transaction(async tx => {
-        const actor = await tx.promaneMember.findFirst({
-          where: { workspaceId: workspace.id, userId, isActive: true, role: { in: ["owner", "admin", "member"] } },
-          select: { id: true },
-        });
-        if (!actor) throw new Error("ワークスペースの変更権限がありません");
+        await requireCurrentTaskWriter(tx, workspace.id, userId);
         const existing = await tx.promaneTask.findFirst({
           where: { id: taskId, project: { workspaceId: workspace.id } },
           select: { startDate: true, dueDate: true, projectId: true },
@@ -177,15 +189,17 @@ export async function deleteTask(workspaceSlug: string, taskId: string) {
   const { userId } = await requirePromaneAuthAction();
   const workspace = await requireWritableWorkspace(workspaceSlug, userId);
 
-  // セキュリティ: workspace所属確認 (IDOR防止)
-  const existing = await prisma.promaneTask.findFirst({
-    where: { id: taskId, project: { workspaceId: workspace.id } },
-    select: { id: true, projectId: true },
-  });
-  if (!existing) throw new Error("タスクが見つかりません");
-
-  await prisma.promaneTask.delete({ where: { id: taskId } });
-  revalidatePath(`/promane/${workspaceSlug}/projects/${existing.projectId}`);
+  const projectId = await retryTaskTransaction(() => prisma.$transaction(async tx => {
+    await requireCurrentTaskWriter(tx, workspace.id, userId);
+    const existing = await tx.promaneTask.findFirst({
+      where: { id: taskId, project: { workspaceId: workspace.id } },
+      select: { id: true, projectId: true },
+    });
+    if (!existing) throw new Error("タスクが見つかりません");
+    await tx.promaneTask.delete({ where: { id: taskId } });
+    return existing.projectId;
+  }, { isolationLevel: "Serializable" }));
+  revalidatePath(`/promane/${workspaceSlug}/projects/${projectId}`);
 }
 
 export async function moveTask(workspaceSlug: string, taskId: string, newStatus: string, newOrder: number) {
@@ -193,17 +207,17 @@ export async function moveTask(workspaceSlug: string, taskId: string, newStatus:
   const workspace = await requireWritableWorkspace(workspaceSlug, userId);
   validateTaskFields(newStatus, undefined, newOrder);
 
-  // セキュリティ: workspace所属確認 (IDOR防止)
-  const existing = await prisma.promaneTask.findFirst({
-    where: { id: taskId, project: { workspaceId: workspace.id } },
-    select: { id: true },
-  });
-  if (!existing) throw new Error("タスクが見つかりません");
-
-  const task = await prisma.promaneTask.update({
-    where: { id: taskId },
-    data: { status: newStatus, order: newOrder },
-  });
+  const task = await retryTaskTransaction(() => prisma.$transaction(async tx => {
+    await requireCurrentTaskWriter(tx, workspace.id, userId);
+    const existing = await tx.promaneTask.findFirst({
+      where: { id: taskId, project: { workspaceId: workspace.id } },
+      select: { id: true },
+    });
+    if (!existing) throw new Error("タスクが見つかりません");
+    return tx.promaneTask.update({
+      where: { id: taskId }, data: { status: newStatus, order: newOrder },
+    });
+  }, { isolationLevel: "Serializable" }));
 
   revalidatePath(`/promane/${workspaceSlug}/projects/${task.projectId}`);
   return task;
