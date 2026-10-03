@@ -51,6 +51,11 @@ function sameHost(a: string, b: string): boolean {
     return ha === hb || ha.endsWith('.' + hb) || hb.endsWith('.' + ha)
   } catch { return false }
 }
+function sameCompanyHost(a: string, b: string): boolean {
+  try {
+    return new URL(a).hostname.replace(/^www\./, '') === new URL(b).hostname.replace(/^www\./, '')
+  } catch { return false }
+}
 
 // ---- マーケティング実施状況の検出 ----
 function detectMarketing(html: string, links: { href: string; text: string }[]) {
@@ -173,6 +178,14 @@ async function researchPressReleases(companyName: string | undefined): Promise<{
 }
 
 // ---- gBizINFO で実従業員数などの公的データを引く ----
+function normalizeCompanyName(name: string): string {
+  return name.trim()
+    .replace(/^(株式会社|有限会社|合同会社)\s*/, '')
+    .replace(/\s*(株式会社|有限会社|合同会社)$/, '')
+    .replace(/[\s\u3000・･]/g, '')
+    .toLowerCase()
+}
+
 async function lookupGbiz(companyName: string | undefined, targetUrl: string) {
   if (!companyName) return { company: null, status: 'skipped' as const }
   const cleaned = companyName.replace(/[|｜\-–—].*$/, '').trim().slice(0, 40)
@@ -180,8 +193,20 @@ async function lookupGbiz(companyName: string | undefined, targetUrl: string) {
   const r = await searchGbizInfo({ keyword: cleaned, limit: 20 }).catch(() => null)
   if (!r || (r.status !== 200 && r.status !== 404)) return { company: null, status: 'failed' as const }
   if (!r.companies.length) return { company: null, status: 'ok' as const }
-  const byUrl = r.companies.find((c) => c.companyUrl && sameHost(c.companyUrl, targetUrl))
-  const company = byUrl || r.companies.find((c) => c.name.includes(cleaned) || cleaned.includes(c.name.replace(/^(株式会社|有限会社|合同会社)/, ''))) || r.companies[0]
+  const normalized = normalizeCompanyName(cleaned)
+  const hostMatches = r.companies.filter((c) => c.companyUrl && sameCompanyHost(c.companyUrl, targetUrl))
+  const exactNameMatches = r.companies.filter((c) => normalized && normalizeCompanyName(c.name) === normalized)
+  // 検索APIは類似名を返し得る。URLか社名で一意に照合できなければ公的情報を紐付けない。
+  let company: (typeof r.companies)[number] | null = null
+  if (hostMatches.length === 1) {
+    company = hostMatches[0]
+  } else if (hostMatches.length > 1) {
+    const bothMatches = hostMatches.filter((c) => exactNameMatches.includes(c))
+    if (bothMatches.length === 1) company = bothMatches[0]
+  } else if (exactNameMatches.length === 1 && r.totalCount <= r.companies.length) {
+    // 検索結果がページ上限で切れている場合、同名の別法人が後続ページにあるか判断できない。
+    company = exactNameMatches[0]
+  }
   return { company, status: 'ok' as const }
 }
 

@@ -54,4 +54,51 @@ const facts = load('src/lib/shodan/ai.ts', {
       homepage: 'failed', gbizinfo: 'skipped', prtimes: 'skipped',
     })
   })
+
+  await check('Shodan never attaches the first unrelated gBizINFO company', async () => {
+    const result = await researcher({
+      homepage: '<html><title>Example</title></html>',
+      basic: { companyName: 'Example' },
+      gbiz: { status: 200, totalCount: 1, companies: [
+        { name: 'Another Company', corporateNumber: '1111111111111', employeeNumber: '999' },
+      ] },
+      press: '<html></html>',
+    })
+    assert.equal(result.companyName, 'Example')
+    assert.equal(result.corporateNumber, undefined)
+    assert.equal(result.employeeCount, null)
+    assert.equal(result.sourceStatus.gbizinfo, 'ok')
+  })
+
+  await check('Shodan selects only a unique normalized name or matching company site', async () => {
+    const base = { homepage: '<html><title>Example</title></html>', basic: { companyName: 'Example' }, press: '<html></html>' }
+    const matched = await researcher({ ...base, gbiz: { status: 200, totalCount: 2, companies: [
+      { name: 'Another Company', corporateNumber: '1111111111111', employeeNumber: '999' },
+      { name: '株式会社 Example', corporateNumber: '2222222222222', employeeNumber: '24' },
+    ] } })
+    assert.equal(matched.corporateNumber, '2222222222222')
+    assert.equal(matched.employeeCount, 24)
+
+    const ambiguous = await researcher({ ...base, gbiz: { status: 200, totalCount: 2, companies: [
+      { name: '株式会社 Example', corporateNumber: '2222222222222', employeeNumber: '24' },
+      { name: 'Example合同会社', corporateNumber: '3333333333333', employeeNumber: '240' },
+    ] } })
+    assert.equal(ambiguous.corporateNumber, undefined)
+    assert.equal(ambiguous.employeeCount, null)
+
+    const siteMatched = await researcher({ ...base, gbiz: { status: 200, totalCount: 1, companies: [
+      { name: 'Legal Holding Name', companyUrl: 'https://www.example.test/about', corporateNumber: '4444444444444', employeeNumber: '40' },
+    ] } })
+    assert.equal(siteMatched.corporateNumber, '4444444444444')
+
+    const subdomainOnly = await researcher({ ...base, gbiz: { status: 200, totalCount: 1, companies: [
+      { name: 'Different Subsidiary', companyUrl: 'https://sub.example.test', corporateNumber: '5555555555555', employeeNumber: '50' },
+    ] } })
+    assert.equal(subdomainOnly.corporateNumber, undefined)
+
+    const truncated = await researcher({ ...base, gbiz: { status: 200, totalCount: 21, companies: [
+      { name: 'Example株式会社', corporateNumber: '6666666666666', employeeNumber: '60' },
+    ] } })
+    assert.equal(truncated.corporateNumber, undefined)
+  })
 })().catch((error) => { console.error(error); process.exitCode = 1 })
