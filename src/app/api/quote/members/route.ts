@@ -15,6 +15,7 @@ import { escapeHtml } from '@/lib/html-escape'
 import { ROLE_HIERARCHY, type QuoteRole } from '@/lib/quote/types'
 
 const ROLES: QuoteRole[] = ['owner', 'admin', 'manager', 'member']
+const INVITE_TTL_MS = 48 * 60 * 60 * 1000
 
 export async function GET(req: NextRequest) {
   const c = await getQuoteContext(orgSlugFrom(req))
@@ -62,28 +63,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'オーナー権限は招待では付与できません' }, { status: 400 })
   }
 
-  const dup = await prisma.quoteMember.findFirst({
-    where: { organizationId: c.organizationId, inviteEmail: email, status: { in: ['ACTIVE', 'PENDING'] } },
-    select: { id: true, status: true },
-  })
-  if (dup) {
-    return NextResponse.json(
-      { error: dup.status === 'ACTIVE' ? 'このメールの方は既にメンバーです' : '既に招待済みです' },
-      { status: 409 }
-    )
-  }
-
   const token = randomBytes(24).toString('base64url')
-  const member = await prisma.quoteMember.create({
-    data: {
-      organizationId: c.organizationId,
-      role,
-      status: 'PENDING',
-      inviteEmail: email,
-      inviteToken: token,
-    },
-    select: { id: true, role: true, status: true, inviteEmail: true },
-  })
+  let result
+  try {
+    result = await prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM quote_organizations WHERE id = ${c.organizationId} FOR UPDATE`
+      if (rows.length === 0) return { kind: 'missing' as const }
+      const cutoff = new Date(Date.now() - INVITE_TTL_MS)
+      const duplicate = await tx.quoteMember.findFirst({
+        where: { organizationId: c.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gte: cutoff } }] },
+        select: { status: true },
+      })
+      if (duplicate) return { kind: 'duplicate' as const, status: duplicate.status }
+      await tx.quoteMember.deleteMany({ where: { organizationId: c.organizationId, inviteEmail: email, status: 'PENDING', createdAt: { lt: cutoff } } })
+      const member = await tx.quoteMember.create({
+        data: { organizationId: c.organizationId, role, status: 'PENDING', inviteEmail: email, inviteToken: token },
+        select: { id: true, role: true, status: true, inviteEmail: true },
+      })
+      return { kind: 'created' as const, member }
+    })
+  } catch {
+    return NextResponse.json({ error: '招待を作成できませんでした。再試行してください' }, { status: 409 })
+  }
+  if (result.kind === 'missing') return NextResponse.json({ error: '組織が見つかりません' }, { status: 404 })
+  if (result.kind === 'duplicate') return NextResponse.json({ error: result.status === 'ACTIVE' ? 'このメールの方は既にメンバーです' : '既に招待済みです' }, { status: 409 })
+  const member = result.member
 
   // ⚠️ 外部向けリンクに VERCEL_URL を使わない（デプロイ保護でログイン画面に飛ぶ）
   const base = process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'
@@ -95,7 +99,7 @@ export async function POST(req: NextRequest) {
     html: `
       <div style="font-family:sans-serif;line-height:1.8;color:#0a0f3c">
         <p>${escapeHtml(c.organizationName)} の見積もり管理（ドヤ見積もりAI）に招待されました。</p>
-        <p>下のリンクを開いてログインすると参加できます。</p>
+        <p>下のリンクを開いてログインすると参加できます（有効期限は48時間です）。</p>
         <p><a href="${escapeHtml(url)}" style="color:#0066ff">${escapeHtml(url)}</a></p>
         <p style="color:#8a94ad;font-size:13px">
           このリンクはあなた専用です。他の方に転送しないでください。<br>

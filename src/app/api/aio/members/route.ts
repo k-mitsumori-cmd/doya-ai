@@ -11,6 +11,7 @@ import { ROLE_HIERARCHY } from '@/lib/aio/types'
 import { sendEmail } from '@/lib/email'
 
 const INVITABLE_ROLES = ['member', 'manager', 'admin']
+const INVITE_TTL_MS = 48 * 60 * 60 * 1000
 const rank = (role: string) => ROLE_HIERARCHY[role] ?? 0
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 
@@ -49,26 +50,34 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '自分と同格以上の権限では招待できません' }, { status: 403 })
   }
 
-  const dup = await prisma.aioMember.findFirst({
-    where: { organizationId: ctx.organizationId, inviteEmail: email, status: { in: ['PENDING', 'ACTIVE'] } },
-  })
-  if (dup) {
-    return NextResponse.json(
-      { error: dup.status === 'ACTIVE' ? '既に参加済みのメンバーです' : '既に招待済みです' },
-      { status: 409 }
-    )
-  }
-
   const org = await prisma.aioOrganization.findUnique({ where: { id: ctx.organizationId } })
   const inviteToken = crypto.randomUUID()
-  let member
+  let result
   try {
-    member = await prisma.aioMember.create({
-      data: { organizationId: ctx.organizationId, role, status: 'PENDING', inviteEmail: email, inviteToken },
+    result = await prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM aio_organizations WHERE id = ${ctx.organizationId} FOR UPDATE`
+      if (rows.length === 0) return { kind: 'missing' as const }
+      const cutoff = new Date(Date.now() - INVITE_TTL_MS)
+      const duplicate = await tx.aioMember.findFirst({
+        where: { organizationId: ctx.organizationId, inviteEmail: email, OR: [{ status: 'ACTIVE' }, { status: 'PENDING', createdAt: { gte: cutoff } }] },
+      })
+      if (duplicate) return { kind: 'duplicate' as const, status: duplicate.status }
+      await tx.aioMember.deleteMany({
+        where: { organizationId: ctx.organizationId, inviteEmail: email, status: 'PENDING', createdAt: { lt: cutoff } },
+      })
+      const member = await tx.aioMember.create({
+        data: { organizationId: ctx.organizationId, role, status: 'PENDING', inviteEmail: email, inviteToken },
+      })
+      return { kind: 'created' as const, member }
     })
   } catch {
     return NextResponse.json({ error: '招待の作成に失敗しました（既に招待済みかもしれません）' }, { status: 409 })
   }
+  if (result.kind === 'missing') return NextResponse.json({ error: '組織が見つかりません' }, { status: 404 })
+  if (result.kind === 'duplicate') {
+    return NextResponse.json({ error: result.status === 'ACTIVE' ? '既に参加済みのメンバーです' : '既に招待済みです' }, { status: 409 })
+  }
+  const member = result.member
 
   const baseUrl = process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'
   const link = `${baseUrl}/aio/invite/${inviteToken}`

@@ -9,6 +9,7 @@ import { prisma } from '@/lib/prisma'
 import { resolveUserId } from '@/lib/mensetsu/access'
 
 type Ctx = { params: Promise<{ token: string }> }
+const INVITE_TTL_MS = 48 * 60 * 60 * 1000
 
 const ROLE_LABEL: Record<string, string> = {
   owner: 'オーナー',
@@ -27,6 +28,7 @@ async function load(token: string) {
       status: true,
       inviteEmail: true,
       userId: true,
+      createdAt: true,
       organization: { select: { id: true, name: true } },
     },
   })
@@ -36,6 +38,9 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
   const p = await ctx.params
   const m = await load(p.token)
   if (!m) return NextResponse.json({ error: '招待が見つかりません' }, { status: 404 })
+  if (m.status === 'PENDING' && m.createdAt.getTime() < Date.now() - INVITE_TTL_MS) {
+    return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
+  }
 
   // ⚠️ 未ログインでも開ける画面なので、返すのは表示に要る最小限だけ。
   //    招待されたメールアドレスもここでは返さない（総当たりで宛先を探られないように）。
@@ -55,30 +60,40 @@ export async function POST(_req: NextRequest, ctx: Ctx) {
 
   const m = await load(p.token)
   if (!m) return NextResponse.json({ error: '招待が見つかりません' }, { status: 404 })
-  if (m.status === 'ACTIVE') {
+  if (m.status !== 'PENDING') {
     return NextResponse.json({ error: 'この招待は既に使われています' }, { status: 409 })
   }
-
-  // 同じ組織に既に参加していれば、招待は消化して終わり
-  const already = await prisma.mensetsuMember.findFirst({
-    where: { organizationId: m.organization.id, userId, status: 'ACTIVE' },
-    select: { id: true },
-  })
-  if (already) {
-    await prisma.mensetsuMember.delete({ where: { id: m.id } })
-    return NextResponse.json({ ok: true, alreadyMember: true })
+  if (m.createdAt.getTime() < Date.now() - INVITE_TTL_MS) {
+    return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
   }
-
-  await prisma.mensetsuMember.update({
-    where: { id: m.id },
-    data: {
-      userId,
-      status: 'ACTIVE',
-      acceptedAt: new Date(),
-      // ⚠️ 使い終わった招待トークンは必ず無効化する。
-      //    残しておくと、リンクが転送された第三者が後から入れてしまう。
-      inviteToken: null,
-    },
-  })
-  return NextResponse.json({ ok: true, organizationName: m.organization.name })
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM mensetsu_organizations WHERE id = ${m.organization.id} FOR UPDATE`
+      if (rows.length === 0) return 'unavailable' as const
+      const invite = await tx.mensetsuMember.findUnique({ where: { id: m.id } })
+      if (!invite || invite.status !== 'PENDING' || invite.inviteToken !== p.token) return 'unavailable' as const
+      const now = new Date()
+      if (invite.createdAt.getTime() < now.getTime() - INVITE_TTL_MS) return 'expired' as const
+      const account = await tx.user.findUnique({ where: { id: userId }, select: { email: true } })
+      if (!invite.inviteEmail || !account?.email || account.email.trim().toLowerCase() !== invite.inviteEmail.trim().toLowerCase()) return 'mismatch' as const
+      if (invite.role === 'owner') return 'unavailable' as const
+      const already = await tx.mensetsuMember.findFirst({ where: { organizationId: m.organization.id, userId, status: 'ACTIVE' }, select: { id: true } })
+      if (already) {
+        await tx.mensetsuMember.deleteMany({ where: { id: invite.id, status: 'PENDING', inviteToken: p.token } })
+        return 'already' as const
+      }
+      const claimed = await tx.mensetsuMember.updateMany({
+        where: { id: invite.id, status: 'PENDING', inviteToken: p.token, createdAt: { gte: new Date(now.getTime() - INVITE_TTL_MS) } },
+        data: { userId, status: 'ACTIVE', acceptedAt: now, inviteToken: null },
+      })
+      return claimed.count === 1 ? 'accepted' as const : 'unavailable' as const
+    })
+    if (result === 'mismatch') return NextResponse.json({ error: '招待先のメールアドレスでログインしてください' }, { status: 403 })
+    if (result === 'expired') return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
+    if (result === 'unavailable') return NextResponse.json({ error: 'この招待は既に使用済みです' }, { status: 409 })
+    if (result === 'already') return NextResponse.json({ ok: true, alreadyMember: true })
+    return NextResponse.json({ ok: true, organizationName: m.organization.name })
+  } catch {
+    return NextResponse.json({ error: '招待を承諾できませんでした。再読み込みしてください' }, { status: 409 })
+  }
 }

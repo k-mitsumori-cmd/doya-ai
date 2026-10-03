@@ -11,9 +11,11 @@ function fixture(service, { deliverySuccess = true, role = 'owner', expiredInvit
     [model]: {
       findFirst: async () => null,
       deleteMany: async ({ where }) => { if (expiredInvite && where.status === 'PENDING' && where.createdAt.lt instanceof Date) staleRemoved++; return { count: expiredInvite ? 1 : 0 }; },
-      create: async () => { creations++; return { id: 'member' }; },
+      create: async ({ data }) => { creations++; return { id: 'member', ...data }; },
     },
     [orgModel]: { findUnique: async () => ({ name: 'Acme' }) },
+    $queryRaw: async () => [{ id: 'org' }],
+    $transaction: async (fn) => fn(prisma),
   };
   const api = load(`src/app/api/${service}/members/route.ts`, {
     'next/server': { NextResponse: Response },

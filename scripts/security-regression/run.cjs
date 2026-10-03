@@ -300,6 +300,11 @@ if (hrInviteIdentity.error || hrInviteIdentity.status !== 0) {
   console.error('Security regression failed: verify-hr-invite-identity.cjs');
   process.exit(1);
 }
+const teamInviteIntegrity = spawnSync(process.execPath, [path.join(__dirname, 'verify-team-invite-integrity.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (teamInviteIntegrity.error || teamInviteIntegrity.status !== 0) {
+  console.error('Security regression failed: verify-team-invite-integrity.cjs');
+  process.exit(1);
+}
 const orgFetch = spawnSync(process.execPath, [path.join(__dirname, 'verify-org-fetch.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (orgFetch.error || orgFetch.status !== 0) {
   console.error('Security regression failed: verify-org-fetch.cjs');

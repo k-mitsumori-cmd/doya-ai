@@ -57,21 +57,33 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     )
   }
 
-  const existing = await prisma.aioMember.findFirst({
-    where: { organizationId: member.organizationId, userId, status: 'ACTIVE' },
-  })
-  if (existing) {
-    await prisma.aioMember.delete({ where: { id: member.id } }).catch(() => {})
-    return NextResponse.json({ ok: true, organizationSlug: member.organization.slug, alreadyMember: true })
-  }
-
   try {
-    await prisma.aioMember.update({
-      where: { id: member.id },
-      data: { userId, name: userName, status: 'ACTIVE', acceptedAt: new Date(), inviteToken: null },
+    const result = await prisma.$transaction(async (tx) => {
+      const rows = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM aio_organizations WHERE id = ${member.organizationId} FOR UPDATE`
+      if (rows.length === 0) return 'unavailable' as const
+      const invite = await tx.aioMember.findUnique({ where: { id: member.id } })
+      if (!invite || invite.status !== 'PENDING' || invite.inviteToken !== p.token) return 'unavailable' as const
+      const now = new Date()
+      if (invite.createdAt.getTime() < now.getTime() - INVITE_TTL_MS) return 'expired' as const
+      const account = await tx.user.findUnique({ where: { id: userId }, select: { email: true } })
+      if (!invite.inviteEmail || !account?.email || account.email.trim().toLowerCase() !== invite.inviteEmail.trim().toLowerCase()) return 'mismatch' as const
+      if (invite.role === 'owner') return 'unavailable' as const
+      const existing = await tx.aioMember.findFirst({ where: { organizationId: member.organizationId, userId, status: 'ACTIVE' } })
+      if (existing) {
+        await tx.aioMember.deleteMany({ where: { id: invite.id, status: 'PENDING', inviteToken: p.token } })
+        return 'already' as const
+      }
+      const claimed = await tx.aioMember.updateMany({
+        where: { id: invite.id, status: 'PENDING', inviteToken: p.token, createdAt: { gte: new Date(now.getTime() - INVITE_TTL_MS) } },
+        data: { userId, name: userName, status: 'ACTIVE', acceptedAt: now, inviteToken: null },
+      })
+      return claimed.count === 1 ? 'accepted' as const : 'unavailable' as const
     })
+    if (result === 'expired') return NextResponse.json({ error: '招待の有効期限が切れています' }, { status: 410 })
+    if (result === 'mismatch') return NextResponse.json({ error: '招待先のメールアドレスでログインしてください' }, { status: 403 })
+    if (result === 'unavailable') return NextResponse.json({ error: 'この招待は既に使用済みです' }, { status: 409 })
+    return NextResponse.json({ ok: true, organizationSlug: member.organization.slug, ...(result === 'already' ? { alreadyMember: true } : {}) })
   } catch {
-    return NextResponse.json({ error: '既にこの組織に所属しています' }, { status: 409 })
+    return NextResponse.json({ error: '招待を承諾できませんでした。再読み込みしてください' }, { status: 409 })
   }
-  return NextResponse.json({ ok: true, organizationSlug: member.organization.slug })
 }
