@@ -181,6 +181,8 @@ export default function HrSettingsPage() {
     if (!res.ok) return
     const d = await res.json()
     if (d.members) setMembers(d.members)
+    if (d.myRole) setMyRole(d.myRole)
+    if (d.myMemberId) setMyMemberId(d.myMemberId)
   }
 
   useEffect(() => {
@@ -455,6 +457,7 @@ export default function HrSettingsPage() {
       }
       setShowTransferModal(false)
       setTransferEmail('')
+      await reloadMembers()
       toast.success('オーナーを移譲しました')
     } catch (e: any) {
       toast.error(e.message)
@@ -1041,6 +1044,10 @@ export default function HrSettingsPage() {
                 <p className="text-sm text-red-700">
                   オーナー権限を移譲すると、あなたの権限は「管理者」に変更されます。
                   新しいオーナーは組織の全設定を変更できるようになります。
+                </p>
+                <p className="text-sm text-red-700 mt-2">
+                  組織の利用上限は新しいオーナーの契約プランで判定されます。
+                  現在のオーナーの有料契約は引き継がれません。移譲先のプランを事前に確認してください。
                 </p>
               </div>
               <div className="mb-4">
