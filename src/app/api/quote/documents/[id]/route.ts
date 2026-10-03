@@ -24,6 +24,19 @@ function quoteInteger(value: unknown, fallback: number, min: number): number | n
   return Number.isSafeInteger(parsed) && parsed >= min && parsed <= 2147483647 ? parsed : null
 }
 
+function quoteExpiryDate(value: unknown): Date | null {
+  if (typeof value !== 'string') return null
+  const input = value.trim()
+  const calendarDay = input.slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(calendarDay)) return null
+  const day = new Date(`${calendarDay}T00:00:00.000Z`)
+  if (Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== calendarDay) return null
+  if (input === calendarDay) return day
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(input)) return null
+  const date = new Date(input)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
 export async function GET(req: NextRequest, ctxParam: Ctx) {
   const p = await ctxParam.params
   const ctx = await getQuoteContext(orgSlugFrom(req))
@@ -55,6 +68,10 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return NextResponse.json({ error: '更新内容が不正です' }, { status: 400 })
   }
+  const expiryDate = 'expiryDate' in body ? quoteExpiryDate(body.expiryDate) : undefined
+  if ('expiryDate' in body && !expiryDate) {
+    return NextResponse.json({ error: '有効期限は正しい日付で入力してください。変更は保存されていません。' }, { status: 400 })
+  }
   if ('discountValue' in body && quoteInteger(body.discountValue, 0, 0) === null) {
     return NextResponse.json({ error: '割引額・割引率は範囲内の整数で入力してください。変更は保存されていません。' }, { status: 400 })
   }
@@ -81,10 +98,7 @@ export async function PATCH(req: NextRequest, ctxParam: Ctx) {
           data[f] = v == null || String(v).trim() === '' ? null : String(v).slice(0, 2000)
         }
       }
-      if ('expiryDate' in body && body.expiryDate) {
-        const d = new Date(body.expiryDate)
-        if (!Number.isNaN(d.getTime())) data.expiryDate = d
-      }
+      if (expiryDate) data.expiryDate = expiryDate
       if ('discountType' in body) {
         data.discountType = body.discountType === 'rate' || body.discountType === 'amount' ? body.discountType : null
       }

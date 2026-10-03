@@ -57,6 +57,19 @@ function quoteInteger(value: unknown, fallback: number, min: number): number | n
   return Number.isSafeInteger(parsed) && parsed >= min && parsed <= 2147483647 ? parsed : null
 }
 
+function quoteExpiryDate(value: unknown): Date | null {
+  if (typeof value !== 'string') return null
+  const input = value.trim()
+  const calendarDay = input.slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(calendarDay)) return null
+  const day = new Date(`${calendarDay}T00:00:00.000Z`)
+  if (Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== calendarDay) return null
+  if (input === calendarDay) return day
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(input)) return null
+  const date = new Date(input)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
 export async function POST(req: NextRequest) {
   const ctx = await getQuoteContext(orgSlugFrom(req))
   if (!ctx) return NextResponse.json({ error: '組織が見つかりません' }, { status: 401 })
@@ -99,6 +112,10 @@ export async function POST(req: NextRequest) {
 
   const title = String(body?.title || '').trim() || 'お見積り'
   const items: any[] = Array.isArray(body?.items) ? body.items.slice(0, 60) : []
+  const expiryDate = body?.expiryDate == null || body.expiryDate === '' ? defaultExpiry() : quoteExpiryDate(body.expiryDate)
+  if (!expiryDate) {
+    return NextResponse.json({ error: '有効期限は正しい日付で入力してください。見積書は保存されていません。' }, { status: 400 })
+  }
   const validItems = items.filter((i) => i && i.itemName)
   if (validItems.some((i) => quoteInteger(i.qty, 1, 1) === null || quoteInteger(i.unitPrice, 0, 0) === null)) {
     return NextResponse.json({ error: '数量と単価は範囲内の整数で入力してください。見積書は保存されていません。' }, { status: 400 })
@@ -140,7 +157,7 @@ export async function POST(req: NextRequest) {
             clientCompany: body?.clientCompany ? String(body.clientCompany).slice(0, 200) : null,
             clientDept: body?.clientDept ? String(body.clientDept).slice(0, 200) : null,
             clientPerson: body?.clientPerson ? String(body.clientPerson).slice(0, 200) : null,
-            expiryDate: body?.expiryDate ? new Date(body.expiryDate) : defaultExpiry(),
+            expiryDate,
             paymentTerms: body?.paymentTerms ? String(body.paymentTerms).slice(0, 2000) : issuer?.paymentTerms ?? null,
             deliveryTerms: body?.deliveryTerms ? String(body.deliveryTerms).slice(0, 2000) : issuer?.deliveryTerms ?? null,
             notes: body?.notes ? String(body.notes).slice(0, 2000) : issuer?.notes ?? null,

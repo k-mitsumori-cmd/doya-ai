@@ -23,5 +23,21 @@ function load(file,deps){const exports={};vm.runInNewContext(compile(read(file))
    results.push({method,field,length,outcome:'PASS'});
   }
  }
+ // Invalid dates must never be silently ignored or converted to a different calendar day.
+ for(const [value,valid] of [['2026-02-28',true],['2026-02-28T12:30:00.000+09:00',true],['2026-02-30',false],['2026-13-01',false],['not-a-date',false],[12345,false]]) {
+  let row={id:'d',status:'draft',lineItems:[]},writes=0;
+  const prisma={quoteIssuer:{findUnique:async()=>null},quoteDocument:{count:async()=>0,create:async({data})=>{writes++;row={...row,...data,lineItems:[]};return row;},findFirst:async()=>row,findUnique:async()=>row,update:async({data})=>{writes++;row={...row,...data};return row;}},quoteLineItem:{deleteMany:async()=>{},createMany:async()=>{}}};
+  prisma.$transaction=async fn=>fn(prisma);
+  const deps={'next/server':{NextResponse:Response},'@/lib/prisma':{prisma},'@/lib/quote/access':{getQuoteContext:async()=>({organizationId:'o',userId:'u',role:'manager'}),orgSlugFrom:()=> 'org',hasMinRole:()=>true},'@/lib/quote/document':{defaultExpiry:()=>new Date(),nextQuoteNo:async()=> 'Q',recalcDocument:async()=>{}},'@/lib/plan-limit':{assertFreeLimit:async()=>({ok:true,used:0,limit:3}),FREE_LIMITS:{quoteDocuments:3},jstStartOfMonthUtc:()=>new Date()},'@/lib/organization-billing':{getOrganizationOwnerUserId:async()=> 'u'},'@/lib/service-usage':{recordServiceUsage:async()=>{}}};
+  const create=load('src/app/api/quote/documents/route.ts',deps),update=load('src/app/api/quote/documents/[id]/route.ts',deps);
+  for(const [method,handler] of [['POST',req=>create.POST(req)],['PATCH',req=>update.PATCH(req,{params:Promise.resolve({id:'d'})})]]) {
+   writes=0;row={id:'d',status:'draft',lineItems:[]};
+   const response=await handler({json:async()=>({expiryDate:value})});
+   assert.equal(response.status,valid?200:400,`${method} ${value}`);
+   assert.equal(writes,valid?1:0,`${method} ${value} write count`);
+   if(valid) assert.equal(row.expiryDate.toISOString().slice(0,10),'2026-02-28');
+   results.push({method,expiryDate:value,outcome:'PASS'});
+  }
+ }
  console.log(JSON.stringify(results,null,2));
 })().catch(e=>{console.error(e);process.exitCode=1;});
