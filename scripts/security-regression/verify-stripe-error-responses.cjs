@@ -12,6 +12,7 @@ const common = {
   '@/lib/unified-plan': { UNIFIED_TRIAL_DAYS: 30 },
   '@/lib/trial': {},
   '@/lib/billing-sync': {},
+  '@/lib/billing-subscription-notice': {},
   '@/lib/notifications': {},
   '@/lib/stripe-webhook-notifications': {},
   '@/lib/alert': {},
@@ -35,6 +36,7 @@ const common = {
     '@/lib/stripe': { constructWebhookEvent: () => { throw new Error(secret) } },
     '@/lib/prisma': {},
     '@/lib/billing-sync': {},
+    '@/lib/billing-subscription-notice': {},
     '@/lib/notifications': {},
     '@/lib/stripe-webhook-receipts': {
       claimStripeWebhookEvent: async () => ({ kind: 'claimed', token: 'test-claim' }),

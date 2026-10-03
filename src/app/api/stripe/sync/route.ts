@@ -6,6 +6,7 @@ import { stripe, ACTIVE_LIKE_STATUSES, isDoyaSubscription, resolvePlanIdFromSubs
 import { syncUnifiedBilling } from '@/lib/billing-sync'
 import { prisma } from '@/lib/prisma'
 import { deliverStripeWebhookNotification } from '@/lib/stripe-webhook-notifications'
+import { billingSubscriptionNotice } from '@/lib/billing-subscription-notice'
 
 // ========================================
 // Stripe決済直後の同期（Webhook遅延/不達の保険）
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
     const { planId, priceId } = resolvePlanIdFromSubscription(subscription as any)
     const resolvedPlan = planTierFromPlanId(planId)
     if (resolvedPlan === 'FREE') return NextResponse.json({ error: '契約プランを確認できませんでした。再度同期してください。' }, { status: 409 })
-    const notice = subscriptionNotice(subscription as any)
+    const notice = billingSubscriptionNotice(subscription, planId)
     const notificationId = `billing-sync:${subscription.id}:${randomUUID()}`
     const { userPlan } = await syncUnifiedBilling({
       userId: user.id, plan: resolvedPlan,
@@ -119,21 +120,5 @@ export async function POST(request: NextRequest) {
   } catch (e: any) {
     console.error('Stripe sync error:')
     return NextResponse.json({ error: '契約情報を同期できませんでした。時間をおいて再試行してください。' }, { status: 500 })
-  }
-}
-
-/** 通知文面の共通ヘルパー（無料トライアルと即課金を必ず区別する） */
-function subscriptionNotice(sub: { status: string; trial_end: number | null; current_period_end: number; items: any }) {
-  const yen = (n: number) => `¥${Number(n || 0).toLocaleString('ja-JP')}`
-  const jstDate = (ms: number) =>
-    new Date(ms).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' })
-  const amount = sub.items?.data?.[0]?.price?.unit_amount ?? 0
-  const isTrial = sub.status === 'trialing' && Boolean(sub.trial_end)
-  return {
-    type: (isTrial ? 'trial_start' : 'subscription') as 'trial_start' | 'subscription',
-    text: isTrial
-      ? `プロプラン（初月無料・30日）｜ ${jstDate(sub.trial_end! * 1000)} まで無料 ｜ ` +
-        `初回請求 ${jstDate(sub.current_period_end * 1000)} に ${yen(amount)}（現時点の入金はありません）`
-      : `プロプラン（無料期間なし）｜ ${yen(amount)} を請求 ｜ 次回請求 ${jstDate(sub.current_period_end * 1000)}`,
   }
 }

@@ -13,6 +13,7 @@ import {
   ACTIVE_LIKE_STATUSES,
 } from '@/lib/stripe'
 import { deliverStripeWebhookNotification } from '@/lib/stripe-webhook-notifications'
+import { billingSubscriptionNotice } from '@/lib/billing-subscription-notice'
 
 // ========================================
 // Stripe再同期（session_id が無い/リダイレクト未経由の救済）
@@ -69,7 +70,7 @@ export async function POST(_req: NextRequest) {
     // User.plan は階層をそのまま持ち、サービス行だけ BUNDLE→PRO に落とす。
     // （webhook / sync と同じ規約。以前はここだけ User.plan にも PRO を書いていた）
     const before = await prisma.user.findUnique({ where: { id: user.id }, select: { name: true } })
-    const notice = subscriptionNotice(subscription as any)
+    const notice = billingSubscriptionNotice(subscription, bestPlanId)
     const notificationId = `billing-sync:${subscription.id}:${randomUUID()}`
     await syncUnifiedBilling({
       userId: user.id, plan: currentTier,
@@ -103,21 +104,5 @@ export async function POST(_req: NextRequest) {
   } catch (e: any) {
     console.error('Stripe sync/latest error:')
     return NextResponse.json({ error: '契約情報を再同期できませんでした。時間をおいて再試行してください。' }, { status: 500 })
-  }
-}
-
-/** 通知文面の共通ヘルパー（無料トライアルと即課金を必ず区別する） */
-function subscriptionNotice(sub: { status: string; trial_end: number | null; current_period_end: number; items: any }) {
-  const yen = (n: number) => `¥${Number(n || 0).toLocaleString('ja-JP')}`
-  const jstDate = (ms: number) =>
-    new Date(ms).toLocaleDateString('ja-JP', { timeZone: 'Asia/Tokyo', year: 'numeric', month: 'long', day: 'numeric' })
-  const amount = sub.items?.data?.[0]?.price?.unit_amount ?? 0
-  const isTrial = sub.status === 'trialing' && Boolean(sub.trial_end)
-  return {
-    type: (isTrial ? 'trial_start' : 'subscription') as 'trial_start' | 'subscription',
-    text: isTrial
-      ? `プロプラン（初月無料・30日）｜ ${jstDate(sub.trial_end! * 1000)} まで無料 ｜ ` +
-        `初回請求 ${jstDate(sub.current_period_end * 1000)} に ${yen(amount)}（現時点の入金はありません）`
-      : `プロプラン（無料期間なし）｜ ${yen(amount)} を請求 ｜ 次回請求 ${jstDate(sub.current_period_end * 1000)}`,
   }
 }

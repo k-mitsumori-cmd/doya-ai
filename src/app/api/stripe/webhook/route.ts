@@ -16,6 +16,7 @@ import { syncUnifiedBilling } from '@/lib/billing-sync'
 import type { EventNotification } from '@/lib/notifications'
 import { claimStripeWebhookEvent, finishStripeWebhookEvent } from '@/lib/stripe-webhook-receipts'
 import { enqueueStripeWebhookNotification, deliverStripeWebhookNotification } from '@/lib/stripe-webhook-notifications'
+import { billingSubscriptionNotice } from '@/lib/billing-subscription-notice'
 import Stripe from 'stripe'
 
 // ========================================
@@ -279,16 +280,13 @@ async function handleCheckoutCompleted(session: Stripe.Checkout.Session): Promis
   // ⚠️ 「申し込み＝売上」ではない。初月無料の方はこの時点で1円も入金されていない。
   //    区別せずに通知すると、売上の見込みが立たず、入金遅れにも気づけない。
   if (sub) {
-    const amount = sub.items.data[0]?.price.unit_amount ?? 0
-    const isTrial = sub.status === 'trialing' && Boolean(sub.trial_end)
+    const { planId } = resolvePlanIdFromSubscription(sub)
+    const notice = billingSubscriptionNotice(sub, planId)
     return {
-      type: isTrial ? 'trial_start' : 'subscription',
+      type: notice.type,
       userEmail: user.email,
       userName: user.name,
-      details: isTrial
-        ? `プロプラン（初月無料・30日）｜ ${jstDate(sub.trial_end! * 1000)} まで無料 ｜ ` +
-          `初回請求 ${jstDate(sub.current_period_end * 1000)} に ${yen(amount)}（現時点の入金はありません）`
-        : `プロプラン（無料期間なし）｜ ${yen(amount)} を請求 ｜ 次回請求 ${jstDate(sub.current_period_end * 1000)}`,
+      details: notice.text,
     }
   }
   return null

@@ -1,5 +1,6 @@
 const assert=require('node:assert/strict');const {load,check,results}=require('./verify-data-integrity.cjs');
 const stripeModule=load('src/lib/stripe.ts',{stripe:class{}});const ids=Array.from(stripeModule.ALL_SERVICE_IDS);
+const subscriptionNotice=load('src/lib/billing-subscription-notice.ts');
 const grants=load('src/lib/billing-manual-grants.ts',{'@/lib/prisma':{prisma:{}}});
 const json=v=>JSON.parse(JSON.stringify(v));
 function fixture(){
@@ -38,11 +39,20 @@ function routeFixture(){
  const f=fixture();let signed=true,writes=0,notices=0,queued=null,legacyEmail='owner@example.test';let checkout={id:'cs1',client_reference_id:'u1',customer_email:'owner@example.test',customer:'cus1',subscription:'sub1',status:'complete'};
  let sub={id:'sub1',customer:'cus1',status:'active',metadata:{userId:'u1',planId:'banner-pro'},current_period_end:1900000000,items:{data:[{price:{id:'price_banner_pro_monthly',unit_amount:9980}}]},trial_end:null};
  const stripe={checkout:{sessions:{retrieve:async()=>checkout}},customers:{retrieve:async()=>({id:'cus1',email:legacyEmail}),list:async()=>({data:[{id:'cus1'}]})},subscriptions:{retrieve:async()=>sub,list:async()=>({data:[sub]})}};
- const mocks={'node:crypto':require('node:crypto'),'next/server':{NextResponse:Resp},'next-auth':{getServerSession:async()=>signed?{user:{email:'owner@example.test'}}:null},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:{user:{findUnique:async()=>f.state.user,update:async()=>{throw Error('Non-atomic user write')}}}},'@/lib/stripe':{...stripeModule,stripe,findActiveLikeSubscriptions:async()=>stripeModule.isDoyaSubscription(sub)?[{id:sub.id,status:sub.status,customerId:typeof sub.customer==='string'?sub.customer:sub.customer.id,priceId:sub.items.data[0]?.price.id||null,planId:stripeModule.resolvePlanIdFromSubscription(sub).planId}]:[]},'@/lib/billing-sync':{syncUnifiedBilling:async i=>{writes++;return f.sync(i)}},'@/lib/notifications':{sendEventNotification:async()=>{notices++}},'@/lib/stripe-webhook-receipts':{claimStripeWebhookEvent:async()=>({kind:'claimed',token:'test-claim'}),finishStripeWebhookEvent:async()=>{}},'@/lib/stripe-webhook-notifications':{enqueueStripeWebhookNotification:async(_id,_type,_token,payload)=>{queued=payload},deliverStripeWebhookNotification:async id=>{const row=f.state.notices[id];if(row&&row.status==='pending'){row.status='sent';notices++;return 'sent'}if(queued){queued=null;notices++;return 'sent'}return 'skipped'}}};
+ const mocks={'node:crypto':require('node:crypto'),'next/server':{NextResponse:Resp},'next-auth':{getServerSession:async()=>signed?{user:{email:'owner@example.test'}}:null},'@/lib/auth':{authOptions:{}},'@/lib/prisma':{prisma:{user:{findUnique:async()=>f.state.user,update:async()=>{throw Error('Non-atomic user write')}}}},'@/lib/stripe':{...stripeModule,stripe,findActiveLikeSubscriptions:async()=>stripeModule.isDoyaSubscription(sub)?[{id:sub.id,status:sub.status,customerId:typeof sub.customer==='string'?sub.customer:sub.customer.id,priceId:sub.items.data[0]?.price.id||null,planId:stripeModule.resolvePlanIdFromSubscription(sub).planId}]:[]},'@/lib/billing-subscription-notice':subscriptionNotice,'@/lib/billing-sync':{syncUnifiedBilling:async i=>{writes++;return f.sync(i)}},'@/lib/notifications':{sendEventNotification:async()=>{notices++}},'@/lib/stripe-webhook-receipts':{claimStripeWebhookEvent:async()=>({kind:'claimed',token:'test-claim'}),finishStripeWebhookEvent:async()=>{}},'@/lib/stripe-webhook-notifications':{enqueueStripeWebhookNotification:async(_id,_type,_token,payload)=>{queued=payload},deliverStripeWebhookNotification:async id=>{const row=f.state.notices[id];if(row&&row.status==='pending'){row.status='sent';notices++;return 'sent'}if(queued){queued=null;notices++;return 'sent'}return 'skipped'}}};
  return {f,checkout,sub,mocks,get writes(){return writes},get notices(){return notices},set signed(x){signed=x},set legacyEmail(x){legacyEmail=x}};
 }
 const req=()=>new Request('https://local.test/api/stripe/sync',{method:'POST',body:JSON.stringify({sessionId:'cs1'})});
 async function routes(){
+ await check('subscription notice uses verified plan and status without inventing payment or trial duration',async()=>{
+  const format=subscriptionNotice.billingSubscriptionNotice;
+  const trial=format({status:'trialing',trial_end:1900000000,current_period_end:1900000000},'banner-light');
+  assert.equal(trial.type,'trial_start');assert.match(trial.text,/ライトプラン/);assert.match(trial.text,/無料体験終了予定/);assert.doesNotMatch(trial.text,/30日|請求|入金|プロプラン/);
+  const overdue=format({status:'past_due',current_period_end:1900000000},'bundle');
+  assert.equal(overdue.type,'subscription');assert.match(overdue.text,/バンドル/);assert.match(overdue.text,/請求状態の確認が必要/);assert.doesNotMatch(overdue.text,/を請求|無料期間なし/);
+  const enterprise=format({status:'active'},'seo-enterprise');
+  assert.match(enterprise.text,/エンタープライズ/);assert.doesNotMatch(enterprise.text,/Invalid Date|請求/);
+ });
  await check('shared Stripe classifier rejects foreign metadata and preserves legacy Doya prices',async()=>{
   const foreign={metadata:{userId:'u1',planId:'premium'},items:{data:[{price:{id:'price_other_app'}}]}};
   assert.equal(stripeModule.isDoyaSubscription(foreign),false);
@@ -53,6 +63,12 @@ async function routes(){
   assert.equal(stripeModule.resolvePlanIdFromSubscription({...foreign,items:{data:[{price:{id:'price_banner_pro_monthly'}}]}}).planId,'seo-pro');
  });
  await check('checkout own active contract syncs all services',async()=>{let f=routeFixture(),api=load('src/app/api/stripe/sync/route.ts',f.mocks);let r=await api.POST(req());assert.equal(r.status,200);assert.equal(f.f.state.user.plan,'PRO');assert.equal(f.notices,1)});
+ for(const route of ['sync','sync/latest'])await check(route+' queues actual LIGHT trial without a fixed 30-day promise',async()=>{
+  let f=routeFixture();f.sub.metadata.planId='banner-light';f.sub.status='trialing';f.sub.trial_end=1900000000;
+  assert.equal((await load('src/app/api/stripe/'+route+'/route.ts',f.mocks).POST(req())).status,200);
+  const payload=Object.values(f.f.state.notices)[0].payload;
+  assert.equal(payload.type,'trial_start');assert.match(payload.details,/ライトプラン/);assert.doesNotMatch(payload.details,/プロプラン|30日|初回請求/);
+ });
  for(const route of ['sync','sync/latest']){
   await check(route+' registers only one notification per paid transition',async()=>{let f=routeFixture(),api=load('src/app/api/stripe/'+route+'/route.ts',f.mocks);assert.equal((await api.POST(req())).status,200);assert.equal((await api.POST(req())).status,200);assert.equal(Object.keys(f.f.state.notices).length,1);assert.equal(f.notices,1);await f.f.sync({userId:'u1',plan:'FREE'});assert.equal((await api.POST(req())).status,200);assert.equal(Object.keys(f.f.state.notices).length,2);assert.equal(f.notices,2)});
   await check(route+' delivery outage leaves durable pending notification',async()=>{let f=routeFixture(),notification=f.mocks['@/lib/stripe-webhook-notifications'];const deliver=notification.deliverStripeWebhookNotification;notification.deliverStripeWebhookNotification=async()=> 'failed';const api=load('src/app/api/stripe/'+route+'/route.ts',f.mocks);assert.equal((await api.POST(req())).status,200);const [id]=Object.keys(f.f.state.notices);assert(id.startsWith('billing-sync:sub1:'));assert.equal(f.f.state.notices[id].status,'pending');assert.equal(f.notices,0);assert.equal(await deliver(id),'sent');assert.equal(f.notices,1)});
