@@ -9,7 +9,7 @@ function fixture(options = {}) {
         if (options.allFail || engine === options.failEngine || prompt === options.failPrompt) throw Error('private provider error');
         return { text: options.empty ? '  ' : 'Synthetic answer', citations: [] };
       },
-      serperSearch: async () => [], domainOf: () => '',
+      serperSearch: async (prompt) => options.searchFail || prompt === options.searchFailPrompt ? null : [], domainOf: () => '',
     },
     './analyze': { analyzeAnswer: async () => {
       if (options.analysisFail) throw Error('private analysis error');
@@ -62,6 +62,20 @@ function fixture(options = {}) {
     assert.equal(r.summary.coverage.failures.length, 4);
     assert(f.state.rows.every(r => r.answerText));
     assert.equal(f.state.scans[0].summary.coverage.succeeded, 4);
+  });
+  await check('search outage cannot produce a successful memory-based search scan', async () => {
+    const f = fixture({ searchFail: true });
+    const result = await f.run();
+    assert.equal(result.status, 'failed');
+    assert.equal(result.summary, undefined);
+    assert.equal(f.state.rows.length, 0);
+  });
+  await check('one failed search query leaves that prompt unmeasured', async () => {
+    const r = await fixture({ searchFailPrompt: 'question2' }).run();
+    assert.equal(r.summary.coverage.attempted, 8);
+    assert.equal(r.summary.coverage.succeeded, 4);
+    assert.equal(r.summary.coverage.failed, 4);
+    assert(r.summary.promptBreakdown.find(p => p.promptId === 'p2').perEngine.every(e => e.total === 0));
   });
   await check('failed prompt stays unmeasured, other prompt remains measured', async () => {
     const r = await fixture({ failPrompt: 'question2' }).run();

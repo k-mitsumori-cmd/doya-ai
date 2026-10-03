@@ -4,7 +4,7 @@
 // → 改善アクションを生成。DB非依存の純ロジック（API側で永続化する）。
 // ============================================
 import { geminiGenerateJson } from '@seo/lib/gemini'
-import { askEngine, serperSearch, domainOf } from './engines'
+import { askEngine, serperSearch, domainOf, type SerperHit } from './engines'
 import { analyzeAnswer } from './analyze'
 import type {
   EngineId,
@@ -67,9 +67,11 @@ export async function executeScan(
   mode: 'search' | 'memory' = 'search'
 ): Promise<ScanOutput> {
   // 0) プロンプトごとに1回だけWeb検索（グラウンディング＆引用元分析で共用）
-  const hitsList = await pMap(prompts, 4, (p) => serperSearch(p.text, 8))
-  const hitsByPrompt = new Map<string, typeof hitsList[number]>()
-  prompts.forEach((p, i) => hitsByPrompt.set(p.id, hitsList[i] || []))
+  const hitsList = mode === 'search'
+    ? await pMap(prompts, 4, (p) => serperSearch(p.text, 8))
+    : prompts.map(() => [] as SerperHit[])
+  const hitsByPrompt = new Map<string, SerperHit[] | null>()
+  prompts.forEach((p, i) => hitsByPrompt.set(p.id, hitsList[i]))
 
   // 1) 全ラン（プロンプト×エンジン×反復）を組み立て
   type Job = { prompt: ScanPromptInput; engine: EngineId; iteration: number }
@@ -84,7 +86,11 @@ export async function executeScan(
   const outcomes = await pMap(jobs, 6, async (job): Promise<ScanRunRow | null> => {
     try {
       const groundingHits = mode === 'search' ? hitsByPrompt.get(job.prompt.id) : undefined
-      const ans = await askEngine(job.engine, job.prompt.text, { groundingHits })
+      // 検索障害を「結果0件」として記憶ベースの回答へすり替えない。
+      if (mode === 'search' && job.engine !== 'perplexity' && groundingHits == null) {
+        throw new Error('SEARCH_UNAVAILABLE')
+      }
+      const ans = await askEngine(job.engine, job.prompt.text, { groundingHits: groundingHits || undefined })
       if (!ans.text.trim()) throw new Error('EMPTY_ANSWER')
       const ext = await analyzeAnswer({
         answerText: ans.text,

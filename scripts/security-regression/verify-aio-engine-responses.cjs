@@ -41,6 +41,16 @@ vm.runInNewContext(compiled, {
     assert.equal(hits[0].domain, 'example.test')
     assert.ok(calls[2].options.signal)
   })
+  await check('Serper distinguishes a valid zero-hit search from an unavailable provider', async () => {
+    nextResponse = new Response(JSON.stringify({ organic: [] }))
+    assert.equal((await moduleExports.serperSearch('question', 8)).length, 0)
+    nextResponse = new Response('unavailable', { status: 503 })
+    assert.equal(await moduleExports.serperSearch('question', 8), null)
+    nextResponse = new Response('{invalid')
+    assert.equal(await moduleExports.serperSearch('question', 8), null)
+    nextResponse = new Response(JSON.stringify({ error: 'provider failure' }))
+    assert.equal(await moduleExports.serperSearch('question', 8), null)
+  })
   await check('provider response rejects oversized headers and streamed bodies', async () => {
     const declared = new Response('x', { headers: { 'content-length': String(1024 * 1024 + 1) } })
     await assert.rejects(moduleExports.readProviderResponse(declared, 1024 * 1024), /too large/)

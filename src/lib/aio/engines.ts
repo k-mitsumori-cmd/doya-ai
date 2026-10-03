@@ -172,10 +172,10 @@ export interface SerperHit {
   snippet: string
 }
 
-/** プロンプト相当の検索クエリで上位URLを取得（引用元候補）。キー無ければ空配列。 */
-export async function serperSearch(query: string, num = 10): Promise<SerperHit[]> {
+/** プロンプト相当の検索クエリで上位URLを取得。検索成功の0件は[]、取得失敗はnull。 */
+export async function serperSearch(query: string, num = 10): Promise<SerperHit[] | null> {
   const key = process.env.SERPER_API_KEY
-  if (!key) return []
+  if (!key) return null
   try {
     const res = await fetch('https://google.serper.dev/search', {
       method: 'POST',
@@ -183,9 +183,10 @@ export async function serperSearch(query: string, num = 10): Promise<SerperHit[]
       headers: { 'X-API-KEY': key, 'Content-Type': 'application/json' },
       body: JSON.stringify({ q: query, gl: 'jp', hl: 'ja', num }),
     })
-    if (!res.ok) return []
+    if (!res.ok) return null
     const data = JSON.parse(await readProviderResponse(res, SEARCH_RESPONSE_MAX_BYTES))
-    const organic: any[] = Array.isArray(data.organic) ? data.organic : []
+    if (!Array.isArray(data?.organic)) return null
+    const organic: any[] = data.organic
     return organic
       .map((o) => {
         const link = o?.link as string
@@ -200,7 +201,7 @@ export async function serperSearch(query: string, num = 10): Promise<SerperHit[]
       })
       .filter(Boolean) as SerperHit[]
   } catch {
-    return []
+    return null
   }
 }
 
