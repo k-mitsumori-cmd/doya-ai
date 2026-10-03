@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { isKintaiInviteExpired } from '@/lib/kintai/invite-token'
 
 type Ctx = { params: Promise<{ token: string }> }
 
@@ -22,8 +23,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     }
 
     // 招待トークン有効期限チェック（48時間）
-    const INVITE_EXPIRY_MS = 48 * 60 * 60 * 1000
-    if (member.createdAt && Date.now() - new Date(member.createdAt).getTime() > INVITE_EXPIRY_MS) {
+    if (isKintaiInviteExpired(member.inviteToken, member.createdAt)) {
       return NextResponse.json({ error: '招待リンクの有効期限（48時間）が切れています。管理者に再招待を依頼してください。' }, { status: 410 })
     }
 
@@ -65,7 +65,6 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     }
 
     const p = await ctx.params
-    const INVITE_EXPIRY_MS = 48 * 60 * 60 * 1000
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
         const result = await prisma.$transaction(async (tx) => {
@@ -74,7 +73,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
             include: { organization: { select: { name: true } }, employee: { select: { email: true } } },
           })
           if (!member) return { status: 404, error: '無効または期限切れの招待リンクです' }
-          if (member.createdAt && Date.now() - new Date(member.createdAt).getTime() > INVITE_EXPIRY_MS) {
+          if (isKintaiInviteExpired(member.inviteToken, member.createdAt)) {
             return { status: 410, error: '招待リンクの有効期限（48時間）が切れています。管理者に再招待を依頼してください。' }
           }
           if (!member.employee) return { status: 409, error: '従業員情報が見つかりません。管理者にお問い合わせください。' }

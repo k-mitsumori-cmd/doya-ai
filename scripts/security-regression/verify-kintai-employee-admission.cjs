@@ -5,6 +5,7 @@ const { load, check } = require('./load-typescript.cjs')
 const pricing = { getKintaiEmployeeLimitByUserPlan: () => 1, HIGH_USAGE_CONTACT_URL: 'https://doyamarke.surisuta.jp/contact' }
 const planUtils = load('src/lib/plan-utils.ts')
 const admission = load('src/lib/kintai/employee-admission.ts', { '@/lib/pricing': pricing, '@/lib/plan-utils': planUtils })
+const inviteToken = load('src/lib/kintai/invite-token.ts', {}, { crypto: webcrypto })
 const access = { getKintaiContext: async () => ({ organizationId: 'org', userId: 'owner', role: 'system_admin' }), hasMinRole: () => true }
 
 ;(async () => {
@@ -43,6 +44,7 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', userId:
       '@/lib/html-escape': { escapeHtml: x => x },
       '@/lib/kintai/access': access,
       '@/lib/kintai/employee-admission': admission,
+      '@/lib/kintai/invite-token': inviteToken,
       '@/lib/email': { sendEmail: async () => {} },
     }, { crypto: webcrypto })
     const request = () => ({ json: async () => ({ name: '山田', email: 'yamada@example.test' }) })
@@ -125,6 +127,7 @@ const access = { getKintaiContext: async () => ({ organizationId: 'org', userId:
       '@/lib/html-escape': { escapeHtml: x => x },
       '@/lib/kintai/access': access,
       '@/lib/kintai/employee-admission': admission,
+      '@/lib/kintai/invite-token': inviteToken,
       '@/lib/email': { sendEmail: async () => {} },
     })
     for (const query of ['page=abc', 'page=1abc', 'page=0', 'page=10000001', 'pageSize=NaN', 'pageSize=201', 'isActive=maybe']) {

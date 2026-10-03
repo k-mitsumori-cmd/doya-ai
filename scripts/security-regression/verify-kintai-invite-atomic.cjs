@@ -1,9 +1,10 @@
 const assert = require('node:assert/strict');
 const { load } = require('./load-typescript.cjs');
+const tokenHelpers = load('src/lib/kintai/invite-token.ts', {}, { crypto: require('node:crypto').webcrypto });
 
-function fixture({ email = 'invited@example.com', employee = true, existing = false, failClaim = false, conflictOnce = false } = {}) {
+function fixture({ email = 'invited@example.com', employee = true, existing = false, failClaim = false, conflictOnce = false, token = 'token', createdAt = new Date() } = {}) {
   let rows = [
-    { id: 'invite', organizationId: 'org', userId: 'pending', status: 'PENDING', inviteToken: 'token', inviteEmail: 'invited@example.com', createdAt: new Date(), employee: employee ? { email: 'invited@example.com' } : null, organization: { name: 'Acme' } },
+    { id: 'invite', organizationId: 'org', userId: 'pending', status: 'PENDING', inviteToken: token, inviteEmail: 'invited@example.com', createdAt, employee: employee ? { email: 'invited@example.com' } : null, organization: { name: 'Acme' } },
     { id: 'old', organizationId: 'other', userId: 'user', status: 'ACTIVE' },
   ];
   if (existing) rows.push({ id: 'existing', organizationId: 'org', userId: 'user', status: 'ACTIVE', employee: { email } });
@@ -45,8 +46,9 @@ function fixture({ email = 'invited@example.com', employee = true, existing = fa
     'next-auth': { getServerSession: async () => ({ user: { id: 'user', email } }) },
     '@/lib/auth': { authOptions: {} },
     '@/lib/prisma': { prisma },
+    '@/lib/kintai/invite-token': tokenHelpers,
   });
-  return { post: () => route.POST({}, { params: Promise.resolve({ token: 'token' }) }), get rows() { return rows; }, get transactions() { return transactions; }, get deletions() { return deletions; } };
+  return { post: () => route.POST({}, { params: Promise.resolve({ token }) }), get: () => route.GET({}, { params: Promise.resolve({ token }) }), get rows() { return rows; }, get transactions() { return transactions; }, get deletions() { return deletions; } };
 }
 
 (async () => {
@@ -72,5 +74,11 @@ function fixture({ email = 'invited@example.com', employee = true, existing = fa
   const retry = fixture({ conflictOnce: true });
   assert.equal((await retry.post()).status, 200);
   assert.equal(retry.transactions, 2);
+  const oldDate = new Date(Date.now() - 72 * 60 * 60 * 1000);
+  assert.equal((await fixture({ createdAt: oldDate }).post()).status, 410);
+  const reissued = fixture({ token: tokenHelpers.createKintaiInviteToken(), createdAt: oldDate });
+  assert.equal((await reissued.post()).status, 200);
+  assert.equal(tokenHelpers.isKintaiInviteExpired(tokenHelpers.createKintaiInviteToken(Date.now() - 49 * 60 * 60 * 1000), oldDate), true);
+  assert.equal(tokenHelpers.isKintaiInviteExpired('v2.invalid', new Date()), true);
   console.log('PASS Kintai invite: email match, no destructive merge, atomic transfer, retry and replay rejection');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

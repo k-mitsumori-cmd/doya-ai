@@ -6,6 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { escapeHtml } from '@/lib/html-escape'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { sendEmail } from '@/lib/email'
+import { createKintaiInviteToken } from '@/lib/kintai/invite-token'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -28,16 +29,27 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     if (!employee.email) {
       return NextResponse.json({ error: 'メールアドレスが設定されていません' }, { status: 400 })
     }
+    if (!employee.isActive || !employee.member || !['PENDING', 'INACTIVE'].includes(employee.member.status)) {
+      return NextResponse.json({ error: '招待できるのは未参加の有効な従業員のみです' }, { status: 409 })
+    }
 
-    const token = crypto.randomUUID()
-    await prisma.kintaiMember.update({
-      where: { id: employee.member!.id },
+    const token = createKintaiInviteToken()
+    const updated = await prisma.kintaiMember.updateMany({
+      where: {
+        id: employee.member.id,
+        organizationId: kctx.organizationId,
+        status: employee.member.status,
+        inviteToken: employee.member.inviteToken,
+      },
       data: {
         inviteToken: token,
         inviteEmail: employee.email,
         status: 'PENDING',
       },
     })
+    if (updated.count !== 1) {
+      return NextResponse.json({ error: '招待状態が変更されました。画面を更新して再度お試しください' }, { status: 409 })
+    }
 
     const baseUrl = process.env.NEXTAUTH_URL || 'https://doya-ai.surisuta.jp'
     const inviteUrl = `${baseUrl}/kintai/invite/${token}`

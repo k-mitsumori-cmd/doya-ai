@@ -8,6 +8,7 @@ import { escapeHtml } from '@/lib/html-escape'
 import { getKintaiContext, hasMinRole } from '@/lib/kintai/access'
 import { kintaiEmployeeLimitPayload, lockKintaiEmployeeAdmission, reachedKintaiEmployeeLimit } from '@/lib/kintai/employee-admission'
 import { sendEmail } from '@/lib/email'
+import { createKintaiInviteToken } from '@/lib/kintai/invite-token'
 
 const esc = (s: string) => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
 
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
       // hr_adminはhr_admin以下の権限のみ付与可能だが、自分と同等は許可
     }
 
-    const inviteToken = crypto.randomUUID()
+    const inviteToken = createKintaiInviteToken()
     const admission = await prisma.$transaction(async (tx) => {
       await lockKintaiEmployeeAdmission(tx, ctx.organizationId)
       const limit = await reachedKintaiEmployeeLimit(tx, ctx.organizationId)

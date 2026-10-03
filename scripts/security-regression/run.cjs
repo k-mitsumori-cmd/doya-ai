@@ -640,6 +640,11 @@ if (kintaiInviteAtomic.error || kintaiInviteAtomic.status !== 0) {
   console.error('Security regression failed: verify-kintai-invite-atomic.cjs');
   process.exit(1);
 }
+const kintaiInviteIssuance = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-invite-issuance.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiInviteIssuance.error || kintaiInviteIssuance.status !== 0) {
+  console.error('Security regression failed: verify-kintai-invite-issuance.cjs');
+  process.exit(1);
+}
 const sfaLeadsPagination = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-leads-pagination.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaLeadsPagination.error || sfaLeadsPagination.status !== 0) {
   console.error('Security regression failed: verify-sfa-leads-pagination.cjs');

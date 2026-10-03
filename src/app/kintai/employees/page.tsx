@@ -386,7 +386,7 @@ export default function EmployeesPage() {
                         <div className="flex flex-col items-center gap-1">
                           {emp.member?.status === 'PENDING' ? (
                             <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-yellow-100 text-yellow-700">📩 招待中</span>
-                          ) : emp.member?.status === 'ACTIVE' && !emp.member?.inviteToken ? (
+                          ) : emp.member?.status === 'ACTIVE' ? (
                             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">✅ 参加済</span>
                           ) : (
                             <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-500">未参加</span>
@@ -404,15 +404,17 @@ export default function EmployeesPage() {
                           <button onClick={() => openEdit(emp)} className="p-1.5 text-slate-400 hover:text-[#7f19e6] hover:bg-purple-50 rounded-lg transition-colors" title="編集">
                             <span className="material-symbols-outlined text-lg">edit</span>
                           </button>
-                          <button
+                          {emp.isActive && (emp.member?.status === 'PENDING' || emp.member?.status === 'INACTIVE') && <button
                             onClick={async () => {
                               if (!confirm(`${emp.name} さんに招待メールを送信しますか？`)) return
                               try {
                                 const res = await fetch(`/api/kintai/employees/${emp.id}/invite`, { method: 'POST' })
                                 const data = await res.json()
                                 if (data.inviteUrl) {
-                                  await navigator.clipboard.writeText(data.inviteUrl).catch(() => {})
-                                  alert(`招待${data.emailSent ? 'メールを送信し、' : ''}リンクをコピーしました！\n\n${data.inviteUrl}`)
+                                  let copied = false
+                                  try { await navigator.clipboard.writeText(data.inviteUrl); copied = true } catch {}
+                                  fetchAll()
+                                  alert(`${data.emailSent ? '招待メールを送信しました。' : '招待メールは送信できませんでした。'}\n${copied ? 'リンクをコピーしました。' : 'リンクをコピーできませんでした。以下のURLを手動でコピーしてください。'}\n\n${data.inviteUrl}`)
                                 } else {
                                   alert(data.error || '招待の作成に失敗しました')
                                 }
@@ -422,7 +424,7 @@ export default function EmployeesPage() {
                             title="招待メールを送信"
                           >
                             <span className="material-symbols-outlined text-lg">mail</span>
-                          </button>
+                          </button>}
                           <button
                             onClick={() => toggleActive(emp)}
                             disabled={togglingIds.has(emp.id)}
