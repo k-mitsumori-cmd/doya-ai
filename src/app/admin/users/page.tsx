@@ -8,7 +8,7 @@ import {
   ChevronDown, Download, Check, X, Edit3, RotateCcw, Zap, Calendar, AlertTriangle, Trash2
 } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
-import { higherPlan } from '@/lib/plan-utils'
+import { isPaidTier, tierFrom } from '@/lib/plan-utils'
 
 interface ServiceSubscription {
   id: string
@@ -45,26 +45,9 @@ interface User {
   stripeInfo: StripeInfo | null
   totalGenerations: number
   bannerQuota: { used: number; limit: number; remaining: number | null }
+  seoQuota: { used: number; limit: number; remaining: number | null }
   serviceSubscriptions: ServiceSubscription[]
   services: string[]
-}
-
-// コンプリートパック（共通プラン）設定
-// バナーAIとライティングAIは同じプランで連動
-const COMPLETE_PACK_PLANS: Record<string, { 
-  label: string
-  writingLimit: number
-  color: string
-}> = {
-  FREE: { label: 'おためし', writingLimit: 1, color: 'gray' },
-  PRO: { label: 'プロ', writingLimit: 5, color: 'amber' },
-  ENTERPRISE: { label: 'エンタープライズ', writingLimit: 50, color: 'rose' },
-}
-
-// サービス別の表示設定（プランは共通）
-const SERVICE_DISPLAY = {
-  banner: { name: 'ドヤバナーAI', emoji: '🎨', unit: '枚' },
-  writing: { name: 'ドヤライティングAI', emoji: '✍️', unit: '件' },
 }
 
 // プラン定義は src/lib/admin/plans.ts と src/lib/pricing.ts で一元管理
@@ -77,17 +60,6 @@ const PLAN_STYLES: Record<string, { bg: string; text: string; border: string; la
 }
 
 const PLAN_OPTIONS = ['FREE', 'LIGHT', 'PRO', 'BUNDLE', 'ENTERPRISE']
-
-// 残り生成可能数を計算（共通プラン）
-function getRemainingGenerations(plan: string, dailyUsage: number): number {
-  const planConfig = COMPLETE_PACK_PLANS[plan] || COMPLETE_PACK_PLANS.FREE
-  return Math.max(0, planConfig.writingLimit - dailyUsage)
-}
-
-function getDailyLimit(plan: string): number {
-  const planConfig = COMPLETE_PACK_PLANS[plan] || COMPLETE_PACK_PLANS.FREE
-  return planConfig.writingLimit
-}
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -428,7 +400,7 @@ export default function AdminUsersPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {[
             { label: '総ユーザー', value: users.length, icon: Users, color: 'from-blue-500 to-cyan-500' },
-            { label: '有料会員', value: users.filter(u => ['PRO', 'BUSINESS', 'ENTERPRISE'].includes(u.plan)).length, icon: Crown, color: 'from-amber-500 to-orange-500' },
+            { label: '有料会員', value: users.filter(u => isPaidTier(tierFrom(u.plan))).length, icon: Crown, color: 'from-amber-500 to-orange-500' },
             { label: 'Stripe連携', value: users.filter(u => u.stripeSubscriptionId).length, icon: Zap, color: 'from-violet-500 to-fuchsia-500' },
             { label: '管理者', value: users.filter(u => u.role === 'ADMIN').length, icon: Shield, color: 'from-emerald-500 to-green-500' },
           ].map((stat, index) => (
@@ -498,7 +470,7 @@ export default function AdminUsersPage() {
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">ユーザー</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">プラン</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">🎨 バナー残り</th>
-                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">✍️ ライティング残り</th>
+                <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">✍️ 記事残り・今月</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">課金状態</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">合計生成</th>
                 <th className="text-left px-6 py-4 text-xs font-medium text-white/40 uppercase tracking-wider">登録日</th>
@@ -581,21 +553,16 @@ export default function AdminUsersPage() {
                         )
                       })()}
                     </td>
-                    {/* ライティング残り生成数 列 */}
+                    {/* SEOの記事生成・再生成と同じ月次台帳 */}
                     <td className="px-6 py-4">
                       {(() => {
-                        // コンプリートパックなのでbannerのプランを参照（共通プラン）
-                        const writingSub = user.serviceSubscriptions?.find((s) => s.serviceId === 'writing')
-                        const currentPlan = higherPlan(writingSub?.plan, user.plan)
-                        const dailyUsage = writingSub?.dailyUsage || 0
-                        const remaining = getRemainingGenerations(currentPlan, dailyUsage)
-                        const limit = getDailyLimit(currentPlan)
+                        const { remaining, limit } = user.seoQuota
                         return (
                           <div className="flex items-center gap-1">
-                            <span className={`text-lg font-bold ${remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                              {remaining}
+                            <span className={`text-lg font-bold ${remaining === null || remaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {remaining === null ? '無制限' : remaining}
                             </span>
-                            <span className="text-white/30 text-xs">/ {limit}件</span>
+                            {limit >= 0 && <span className="text-white/30 text-xs">/ {limit}本</span>}
                           </div>
                         )
                       })()}
@@ -771,7 +738,6 @@ export default function AdminUsersPage() {
                   
                   {(() => {
                     const bannerSub = editingUser.serviceSubscriptions?.find((s) => s.serviceId === 'banner')
-                    const writingSub = editingUser.serviceSubscriptions?.find((s) => s.serviceId === 'writing')
                     const currentPlan = editingUser.plan || 'FREE'
                     const planStyle = PLAN_STYLES[currentPlan] || PLAN_STYLES.FREE
                     
@@ -779,10 +745,7 @@ export default function AdminUsersPage() {
                     const bannerRemaining = editingUser.bannerQuota.remaining
                     const bannerLimit = editingUser.bannerQuota.limit
                     
-                    const writingUsage = writingSub?.dailyUsage || 0
-                    const writingPlan = higherPlan(writingSub?.plan, editingUser.plan)
-                    const writingRemaining = getRemainingGenerations(writingPlan, writingUsage)
-                    const writingLimit = getDailyLimit(writingPlan)
+                    const { used: seoUsed, remaining: seoRemaining, limit: seoLimit } = editingUser.seoQuota
                     
                     return (
                       <>
@@ -842,7 +805,7 @@ export default function AdminUsersPage() {
                           </button>
                         </div>
                         
-                        {/* ライティングAI 使用状況 */}
+                        {/* 記事生成・再生成の月次使用状況 */}
                         <div className="p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
                           <div className="flex items-center gap-2 mb-2">
                             <span>✍️</span>
@@ -850,28 +813,18 @@ export default function AdminUsersPage() {
                           </div>
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <p className="text-xs text-white/40 mb-1">本日の残り</p>
-                              <p className={`text-xl font-bold ${writingRemaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                                {writingRemaining}<span className="text-xs text-white/40 ml-1">/ {writingLimit}件</span>
+                              <p className="text-xs text-white/40 mb-1">今月の残り</p>
+                              <p className={`text-xl font-bold ${seoRemaining === null || seoRemaining > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {seoRemaining === null ? '無制限' : seoRemaining}{seoLimit >= 0 && <span className="text-xs text-white/40 ml-1">/ {seoLimit}本</span>}
                               </p>
                             </div>
                             <div>
-                              <p className="text-xs text-white/40 mb-1">本日の使用</p>
+                              <p className="text-xs text-white/40 mb-1">今月の使用（再生成含む）</p>
                               <p className="text-xl font-bold text-white">
-                                {writingUsage}<span className="text-xs text-white/40 ml-1">件</span>
+                                {seoUsed}<span className="text-xs text-white/40 ml-1">本</span>
                               </p>
                             </div>
                           </div>
-                          <button
-                            onClick={async () => {
-                              await handleResetUsage(editingUser.id, 'writing', 'daily')
-                            }}
-                            disabled={isSaving || !writingSub}
-                            title={writingSub ? '使用回数をリセット' : 'サブスクリプション未作成のためリセット不可'}
-                            className="w-full mt-2 px-3 py-1.5 text-xs bg-emerald-500/20 text-emerald-400 rounded-lg hover:bg-emerald-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                          >
-                            🔄 使用回数をリセット
-                          </button>
                         </div>
                       </>
                     )

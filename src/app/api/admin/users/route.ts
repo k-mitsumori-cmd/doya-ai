@@ -5,7 +5,9 @@ import { findActiveLikeSubscriptions, isDoyaSubscriptionOwnedByUser, ACTIVE_LIKE
 import { syncUnifiedBilling } from '@/lib/billing-sync'
 import { prisma } from '@/lib/prisma'
 import { summarizeBannerMonthlyQuota } from '@/lib/admin/banner-quota'
-import { shouldResetDailyUsage, shouldResetMonthlyUsage } from '@/lib/pricing'
+import { getSeoMonthlyLimitByUserPlan, shouldResetDailyUsage, shouldResetMonthlyUsage } from '@/lib/pricing'
+import { getSeoArticleMonthlyUsageForUsers } from '@/lib/seo-article-admission'
+import { higherPlan } from '@/lib/plan-utils'
 import Stripe from 'stripe'
 
 // cookies() を使用するため、静的最適化を無効化
@@ -57,6 +59,7 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { createdAt: 'desc' },
     })
+    const seoUsageByUser = await getSeoArticleMonthlyUsageForUsers(prisma, users.map(user => user.id))
 
     // Stripe情報を取得（サブスクリプションがあるユーザーのみ）
     const stripeInfoMap: Record<string, any> = {}
@@ -84,33 +87,40 @@ export async function GET(request: NextRequest) {
       })
     )
 
-    const formattedUsers = users.map((user: any) => ({
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      image: user.image,
-      plan: user.plan,
-      role: user.role,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      stripeCustomerId: user.stripeCustomerId,
-      stripeSubscriptionId: user.stripeSubscriptionId,
-      stripeInfo: stripeInfoMap[user.id] || null,
-      totalGenerations: user._count.generations,
-      bannerQuota: summarizeBannerMonthlyQuota(user.serviceSubscriptions.find((sub: any) => sub.serviceId === 'banner') ?? null, user.plan),
-      // サービス別の情報
-      serviceSubscriptions: user.serviceSubscriptions.map((sub: any) => ({
-        id: sub.id,
-        serviceId: sub.serviceId,
-        plan: sub.plan,
-        dailyUsage: sub.dailyUsage,
-        monthlyUsage: sub.monthlyUsage,
-        lastUsageReset: sub.lastUsageReset,
-        hasStripe: !!sub.stripeSubscriptionId,
-      })),
-      // 利用中のサービスID一覧
-      services: user.serviceSubscriptions.map((sub: any) => sub.serviceId),
-    }))
+    const formattedUsers = users.map((user: any) => {
+      const seoSub = user.serviceSubscriptions.find((sub: any) => sub.serviceId === 'seo')
+      const seoPlan = higherPlan(seoSub?.plan, user.plan)
+      const seoLimit = getSeoMonthlyLimitByUserPlan(seoPlan)
+      const seoUsed = seoUsageByUser.get(user.id) ?? 0
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+        plan: user.plan,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+        stripeCustomerId: user.stripeCustomerId,
+        stripeSubscriptionId: user.stripeSubscriptionId,
+        stripeInfo: stripeInfoMap[user.id] || null,
+        totalGenerations: user._count.generations,
+        bannerQuota: summarizeBannerMonthlyQuota(user.serviceSubscriptions.find((sub: any) => sub.serviceId === 'banner') ?? null, user.plan),
+        seoQuota: { used: seoUsed, limit: seoLimit, remaining: seoLimit < 0 ? null : Math.max(0, seoLimit - seoUsed) },
+        // サービス別の情報
+        serviceSubscriptions: user.serviceSubscriptions.map((sub: any) => ({
+          id: sub.id,
+          serviceId: sub.serviceId,
+          plan: sub.plan,
+          dailyUsage: sub.dailyUsage,
+          monthlyUsage: sub.monthlyUsage,
+          lastUsageReset: sub.lastUsageReset,
+          hasStripe: !!sub.stripeSubscriptionId,
+        })),
+        // 利用中のサービスID一覧
+        services: user.serviceSubscriptions.map((sub: any) => sub.serviceId),
+      }
+    })
 
     return NextResponse.json(formattedUsers)
   } catch (error) {

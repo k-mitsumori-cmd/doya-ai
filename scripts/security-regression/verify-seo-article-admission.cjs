@@ -6,7 +6,7 @@ const pricing = load('src/lib/pricing.ts', { './unified-plan': {
 } });
 const access = load('src/lib/seoAccess.ts', { 'next/server': {}, '@/lib/pricing': pricing });
 assert.deepEqual(JSON.parse(JSON.stringify(access.isTrialActive(new Date().toISOString()))), { active: false, remainingMs: 0 });
-const { createSeoArticleWithinLimit, getSeoArticleMonthlyUsage, seoArticleUsageKey, SeoArticleQuotaError } = load('src/lib/seo-article-admission.ts', {
+const { createSeoArticleWithinLimit, getSeoArticleMonthlyUsage, getSeoArticleMonthlyUsageForUsers, seoArticleUsageKey, SeoArticleQuotaError } = load('src/lib/seo-article-admission.ts', {
   'node:crypto': require('node:crypto'), '@/lib/prisma': { prisma: {} }, '@/lib/seoAccess': access,
 });
 
@@ -70,6 +70,16 @@ const create = (overrides = {}) => createSeoArticleWithinLimit({
   assert.equal(await getSeoArticleMonthlyUsage({ seoArticle: {
     count: async () => rows.length,
   }, systemSetting: { findUnique: async ({ where }) => ({ value: usage.get(where.key) }) } }, 'u1'), 3);
+  const batchNow = new Date('2026-09-20T00:00:00Z');
+  const batch = await getSeoArticleMonthlyUsageForUsers({
+    seoArticle: { groupBy: async ({ where }) => {
+      assert.deepEqual(Array.from(where.userId.in), ['u1', 'u2']);
+      return [{ userId: 'u1', _count: { _all: 2 } }, { userId: 'u2', _count: { _all: 1 } }];
+    } },
+    systemSetting: { findMany: async () => [{ key: seoArticleUsageKey('u1', batchNow), value: '3' }] },
+  }, ['u1', 'u2', 'u1'], batchNow);
+  assert.equal(batch.get('u1'), 3, 'batch usage keeps regenerations in the ledger');
+  assert.equal(batch.get('u2'), 1, 'batch usage keeps saved articles without a ledger');
   await assert.rejects(create(), SeoArticleQuotaError);
   assert.notEqual(seoArticleUsageKey('u1', new Date('2026-09-30T14:59:59Z')),
     seoArticleUsageKey('u1', new Date('2026-09-30T15:00:00Z')), 'JST month boundary resets ledger');

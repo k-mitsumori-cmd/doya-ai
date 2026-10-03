@@ -31,6 +31,38 @@ export async function getSeoArticleMonthlyUsage(db: Prisma.TransactionClient, us
   return Math.max(savedArticles, ledgerCount)
 }
 
+/** Admin list equivalent of getSeoArticleMonthlyUsage, using two queries for all users. */
+export async function getSeoArticleMonthlyUsageForUsers(db: Prisma.TransactionClient, userIds: string[], now = new Date()): Promise<Map<string, number>> {
+  const ids = [...new Set(userIds)]
+  if (ids.length === 0) return new Map()
+  const { start, end } = jstMonthRange(now)
+  const keyByUser = new Map(ids.map(id => [id, seoArticleUsageKey(id, now)]))
+  const [articles, ledgers] = await Promise.all([
+    db.seoArticle.groupBy({
+      by: ['userId'],
+      where: { userId: { in: ids }, createdAt: { gte: start, lt: end } },
+      _count: { _all: true },
+    }),
+    db.systemSetting.findMany({
+      where: { key: { in: [...keyByUser.values()] } },
+      select: { key: true, value: true },
+    }),
+  ])
+  const counts = new Map(ids.map(id => [id, 0]))
+  for (const row of articles) {
+    if (row.userId) counts.set(row.userId, row._count._all)
+  }
+  const userByKey = new Map([...keyByUser].map(([userId, key]) => [key, userId]))
+  for (const ledger of ledgers) {
+    if (!/^\d+$/.test(ledger.value)) throw new Error('SEO usage ledger invalid')
+    const count = Number(ledger.value)
+    if (!Number.isSafeInteger(count)) throw new Error('SEO usage ledger invalid')
+    const userId = userByKey.get(ledger.key)
+    if (userId) counts.set(userId, Math.max(counts.get(userId) ?? 0, count))
+  }
+  return counts
+}
+
 type CreateArgs = {
   userId: string | null
   guestId: string | null
