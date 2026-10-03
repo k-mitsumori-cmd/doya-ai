@@ -5,6 +5,7 @@
 // 環境変数: RESEND_API_KEY, RESEND_FROM_EMAIL
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
+const SEND_EMAIL_TIMEOUT_MS = 12_000
 
 export interface SendEmailParams {
   to: string | string[]
@@ -32,10 +33,13 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
   }
 
   const fromEmail = params.from || process.env.RESEND_FROM_EMAIL || 'noreply@doya-ai.surisuta.jp'
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), SEND_EMAIL_TIMEOUT_MS)
 
   try {
     const res = await fetch(RESEND_API_URL, {
       method: 'POST',
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
@@ -60,5 +64,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
   } catch {
     console.error('[Email] Failed to send:')
     return { success: false, error: 'メールの送信に失敗しました。' }
+  } finally {
+    clearTimeout(timeout)
   }
 }
