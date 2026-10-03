@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict')
 const { load, check } = require('./load-typescript.cjs')
 
-function fixture(initialUsed = 4, plan = 'FREE') {
+function fixture(initialUsed = 4, plan = 'FREE', researchResult = { companyName: 'Example' }) {
   const rows = Array.from({ length: initialUsed }, (_, i) => ({ id: `old-${i}`, status: 'researched' }))
   let chain = Promise.resolve()
   let locks = 0
@@ -39,7 +39,7 @@ function fixture(initialUsed = 4, plan = 'FREE') {
     'next/server': { NextResponse: { json: (body, opts = {}) => ({ body, status: opts.status || 200 }) } },
     '@/lib/prisma': { prisma },
     '@/lib/shodan/access': { getShodanContext: async () => ({ userId: 'user-1', organizationId: 'org-1', memberId: 'member-1' }), orgSlugFrom: () => 'org' },
-    '@/lib/shodan/research': { researchCompany: async () => { researchCalls++; return { companyName: 'Example' } } },
+    '@/lib/shodan/research': { researchCompany: async () => { researchCalls++; return researchResult } },
     '@/lib/shodan/types': { effectivePrepStatus: (status) => status, PREP_STALE_MS: 360000, SHODAN_MONTHLY_LIMIT: { FREE: 5, PRO: 50, ENTERPRISE: 300 } },
     '@/lib/plan-limit': { jstStartOfMonthUtc: () => new Date('2026-08-31T15:00:00Z') },
   })
@@ -66,5 +66,12 @@ function fixture(initialUsed = 4, plan = 'FREE') {
     assert.equal(response.body.upgradeUrl, undefined)
     assert.equal(response.body.contactUrl, 'https://doyamarke.surisuta.jp/contact')
     assert.equal(f.researchCalls, 0)
+  })
+  await check('unusable Shodan research fails and releases the reserved monthly slot', async () => {
+    const f = fixture(4, 'FREE', { sourceStatus: { homepage: 'failed', gbizinfo: 'skipped', prtimes: 'skipped' } })
+    const response = await f.post()
+    assert.equal(response.status, 500)
+    assert.equal(f.rows.at(-1).status, 'failed')
+    assert.equal(f.rows.filter((row) => row.status !== 'failed').length, 4)
   })
 })().catch((error) => { console.error(error); process.exitCode = 1 })

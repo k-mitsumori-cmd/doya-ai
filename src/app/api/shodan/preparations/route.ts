@@ -148,6 +148,10 @@ export async function POST(req: NextRequest) {
     // フェーズ1: 深掘りリサーチのみ（提案生成は /[id]/generate で実行）。
     // リサーチ結果を即返すことで、画面に「実際に調べた内容」を表示できる。
     const research = await researchCompany(targetUrl)
+    // 企業情報を一切取得できなかった調査は成功扱いにせず、月次枠を消費しない。
+    if (research.sourceStatus?.homepage === 'failed' && !research.companyName && !research.description) {
+      throw new Error('company research yielded no usable facts')
+    }
     await prisma.shodanPreparation.update({
       where: { id: prep.id },
       data: { research: research as any, targetName: research.companyName || null, status: 'researched' },

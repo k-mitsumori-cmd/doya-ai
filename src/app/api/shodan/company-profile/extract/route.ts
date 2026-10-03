@@ -32,6 +32,9 @@ export async function POST(req: NextRequest) {
 
   try {
     const research = await researchCompany(url)
+    if (research.sourceStatus?.homepage === 'failed' && !research.companyName && !research.description) {
+      throw new Error('company research yielded no usable facts')
+    }
     const draft = await draftOwnProfile(research)
     return NextResponse.json({
       suggested: {

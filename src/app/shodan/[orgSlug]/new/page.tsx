@@ -26,14 +26,17 @@ const RESEARCH_TICKER = [
 const RESEARCH_MOODS = ['focus', 'thinking', 'point', 'working', 'thinking', 'point', 'working', 'present'] as const
 
 function findingsFrom(r: CompanyResearch) {
+  const homepageChecked = r.sourceStatus?.homepage === 'ok'
+  const homepageMessage = r.sourceStatus?.homepage === 'failed' ? 'サイトを取得できず未確認' : 'サイトの取得状況が未確認'
+  const employeeUnavailable = r.sourceStatus?.homepage === 'failed' || r.sourceStatus?.gbizinfo === 'failed'
   return [
     { icon: 'apartment', label: '企業名', value: r.companyName || '（不明）' },
-    { icon: 'groups', label: '実従業員数', value: r.employeeCount != null ? `約${r.employeeCount}名（${r.employeeCountSource === 'gbizinfo' ? '公的データ' : r.employeeCountSource === 'website' ? 'サイト記載' : '推定'}）` : '記載なし' },
+    { icon: 'groups', label: '実従業員数', value: r.employeeCount != null ? `約${r.employeeCount}名（${r.employeeCountSource === 'gbizinfo' ? '公的データ' : r.employeeCountSource === 'website' ? 'サイト記載' : '推定'}）` : employeeUnavailable ? '取得できず・未確認' : '確認できず' },
     { icon: 'category', label: '業種', value: r.industry || '—' },
-    { icon: 'campaign', label: 'マーケ施策', value: r.marketing.summary },
-    { icon: 'public', label: '保有サイト/メディア', value: r.ownedMedia.hasOwnedMedia ? `${r.ownedMedia.mediaUrls.length}件の関連ページ` : '公式サイトのみ確認' },
-    { icon: 'share', label: 'SNS/チャネル', value: r.marketing.snsChannels.length ? r.marketing.snsChannels.join('、') : '確認できず' },
-    { icon: 'campaign', label: 'プレスリリース', value: r.pressReleases?.length ? `直近${r.pressReleases.length}件を確認（PR TIMES）` : 'PR TIMESでヒットなし' },
+    { icon: 'campaign', label: 'マーケ施策', value: homepageChecked ? r.marketing.summary : r.sourceStatus?.homepage === 'failed' ? '公式サイトを取得できず未確認' : 'サイトの取得状況が未確認' },
+    { icon: 'public', label: '保有サイト/メディア', value: r.ownedMedia.hasOwnedMedia ? `${r.ownedMedia.mediaUrls.length}件の関連ページ` : homepageChecked ? '取得したページでは確認できず' : homepageMessage },
+    { icon: 'share', label: 'SNS/チャネル', value: r.marketing.snsChannels.length ? r.marketing.snsChannels.join('、') : homepageChecked ? '取得したページでは確認できず' : homepageMessage },
+    { icon: 'campaign', label: 'プレスリリース', value: r.pressReleases?.length ? `${r.pressReleases.length}件を確認（PR TIMES）` : r.sourceStatus?.prtimes === 'ok' ? '取得した範囲でヒットなし' : r.sourceStatus?.prtimes === 'failed' ? 'PR TIMESを取得できず未確認' : '未確認' },
   ]
 }
 

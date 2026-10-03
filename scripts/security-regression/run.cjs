@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const shodanSourceStatus = spawnSync(process.execPath, [path.join(__dirname, 'verify-shodan-source-status.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (shodanSourceStatus.error || shodanSourceStatus.status !== 0) {
+  console.error('Security regression failed: verify-shodan-source-status.cjs');
+  process.exit(1);
+}
 const hrOneOnOneMonth = spawnSync(process.execPath, [path.join(__dirname, 'verify-hr-one-on-one-month.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (hrOneOnOneMonth.error || hrOneOnOneMonth.status !== 0) {
   console.error('Security regression failed: verify-hr-one-on-one-month.cjs');

@@ -337,10 +337,10 @@ export default function ShodanResultPage() {
             </div>
           )}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-            <Stat icon="groups" label="実従業員数" value={r.employeeCount != null ? `約${r.employeeCount}名` : '不明'} sub={r.employeeCount != null ? (r.employeeCountSource === 'gbizinfo' ? 'gBizINFO 公的データ' : r.employeeCountSource === 'website' ? 'サイト記載' : '') : '公的データ・サイトに記載なし'} />
-            <Stat icon="campaign" label="マーケ実施" value={r.marketing.snsChannels.length || r.marketing.martechTools.length ? '実施あり' : '痕跡少'} sub={r.marketing.summary} />
-            <Stat icon="public" label="保有サイト/メディア" value={r.ownedMedia.hasOwnedMedia ? `${r.ownedMedia.mediaUrls.length}件` : '確認できず'} sub={r.ownedMedia.mediaUrls[0] ? (() => { try { return new URL(r.ownedMedia.mediaUrls[0]).hostname } catch { return '関連ページあり' } })() : '公式サイトのみ'} />
-            <Stat icon="share" label="SNS/チャネル" value={r.marketing.snsChannels.length ? `${r.marketing.snsChannels.length}媒体` : '確認できず'} sub={r.marketing.snsChannels.join('、') || r.marketing.martechTools.join('、') || '—'} />
+            <Stat icon="groups" label="実従業員数" value={r.employeeCount != null ? `約${r.employeeCount}名` : '未確認'} sub={r.employeeCount != null ? (r.employeeCountSource === 'gbizinfo' ? 'gBizINFO 公的データ' : r.employeeCountSource === 'website' ? 'サイト記載' : '') : r.sourceStatus?.gbizinfo === 'failed' || r.sourceStatus?.homepage === 'failed' ? '取得できなかった情報源があります' : '取得した範囲では確認できず'} />
+            <Stat icon="campaign" label="マーケ実施" value={r.sourceStatus?.homepage !== 'ok' ? '未確認' : r.marketing.snsChannels.length || r.marketing.martechTools.length ? '実施あり' : '取得範囲で痕跡なし'} sub={r.sourceStatus?.homepage !== 'ok' ? '公式サイトの取得状況を確認できません' : r.marketing.summary} />
+            <Stat icon="public" label="保有サイト/メディア" value={r.ownedMedia.hasOwnedMedia ? `${r.ownedMedia.mediaUrls.length}件` : '未確認'} sub={r.ownedMedia.mediaUrls[0] ? (() => { try { return new URL(r.ownedMedia.mediaUrls[0]).hostname } catch { return '関連ページあり' } })() : r.sourceStatus?.homepage === 'ok' ? '取得したページでは確認できず' : r.sourceStatus?.homepage === 'failed' ? '公式サイトを取得できず' : 'サイトの取得状況が未確認'} />
+            <Stat icon="share" label="SNS/チャネル" value={r.marketing.snsChannels.length ? `${r.marketing.snsChannels.length}媒体` : '未確認'} sub={r.marketing.snsChannels.join('、') || (r.sourceStatus?.homepage === 'ok' ? '取得したページでは確認できず' : r.sourceStatus?.homepage === 'failed' ? '公式サイトを取得できず' : 'サイトの取得状況が未確認')} />
           </div>
           <div className="grid md:grid-cols-2 gap-x-6 gap-y-1.5 text-sm">
             {r.industry && <div><span className="font-black text-slate-400">業種：</span><span className="font-bold text-slate-700">{r.industry}</span></div>}

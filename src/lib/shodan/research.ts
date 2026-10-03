@@ -153,32 +153,36 @@ function parsePrtimes(html: string): PressRelease[] {
   return out
 }
 
-async function researchPressReleases(companyName: string | undefined): Promise<PressRelease[]> {
-  if (!companyName) return []
+async function researchPressReleases(companyName: string | undefined): Promise<{ items: PressRelease[]; status: 'ok' | 'failed' | 'skipped' }> {
+  if (!companyName) return { items: [], status: 'skipped' }
   const name = companyName.replace(/[|｜\-–—].*$/, '').trim().slice(0, 40)
-  if (!name) return []
+  if (!name) return { items: [], status: 'skipped' }
   const urls = [
     `https://prtimes.jp/main/html/searchrlp/company_name/${encodeURIComponent(name)}`,
     `https://prtimes.jp/main/action.php?run=html&page=searchkey&search_word=${encodeURIComponent(name)}`,
   ]
+  let fetched = false
   for (const u of urls) {
     const html = await safeFetchText(u, { timeoutMs: 9000 }).catch(() => null)
     if (!html) continue
+    fetched = true
     const items = parsePrtimes(html)
-    if (items.length) return items.slice(0, 8)
+    if (items.length) return { items: items.slice(0, 8), status: 'ok' }
   }
-  return []
+  return { items: [], status: fetched ? 'ok' : 'failed' }
 }
 
 // ---- gBizINFO で実従業員数などの公的データを引く ----
 async function lookupGbiz(companyName: string | undefined, targetUrl: string) {
-  if (!companyName) return null
+  if (!companyName) return { company: null, status: 'skipped' as const }
   const cleaned = companyName.replace(/[|｜\-–—].*$/, '').trim().slice(0, 40)
-  if (!cleaned) return null
+  if (!cleaned) return { company: null, status: 'skipped' as const }
   const r = await searchGbizInfo({ keyword: cleaned, limit: 20 }).catch(() => null)
-  if (!r || !r.companies.length) return null
+  if (!r || (r.status !== 200 && r.status !== 404)) return { company: null, status: 'failed' as const }
+  if (!r.companies.length) return { company: null, status: 'ok' as const }
   const byUrl = r.companies.find((c) => c.companyUrl && sameHost(c.companyUrl, targetUrl))
-  return byUrl || r.companies.find((c) => c.name.includes(cleaned) || cleaned.includes(c.name.replace(/^(株式会社|有限会社|合同会社)/, ''))) || r.companies[0]
+  const company = byUrl || r.companies.find((c) => c.name.includes(cleaned) || cleaned.includes(c.name.replace(/^(株式会社|有限会社|合同会社)/, ''))) || r.companies[0]
+  return { company, status: 'ok' as const }
 }
 
 function parseEmployee(s?: string | null): number | null {
@@ -193,7 +197,7 @@ function parseEmployee(s?: string | null): number | null {
  */
 export async function researchCompany(targetUrl: string): Promise<CompanyResearch> {
   // ホームページは一度だけ取得し、リンク抽出・マーケ検出・会社情報抽出で共有する
-  const homepage = await safeFetchText(targetUrl, { timeoutMs: 12000 })
+  const homepage = await safeFetchText(targetUrl, { timeoutMs: 12000 }).catch(() => null)
   const links = homepage ? extractLinks(homepage, targetUrl) : []
   const titleName = homepage ? extractTitle(homepage) : undefined
 
@@ -203,21 +207,29 @@ export async function researchCompany(targetUrl: string): Promise<CompanyResearc
   const mediaInfo = summarizeOwnedMedia(findMediaUrls(links, targetUrl))
 
   const companyName = basic?.companyName || titleName
-  const [gbiz, pressReleases] = await Promise.all([
+  const [gbizResult, pressResult] = await Promise.all([
     lookupGbiz(companyName, targetUrl),
     researchPressReleases(companyName),
   ])
+  const gbiz = gbizResult.company
 
   const employeeFromGbiz = parseEmployee(gbiz?.employeeNumber)
   const employeeFromSite = parseEmployee(basic?.employeeCount)
   const employeeCount = employeeFromGbiz ?? employeeFromSite
   const employeeCountSource: CompanyResearch['employeeCountSource'] = employeeFromGbiz != null ? 'gbizinfo' : employeeFromSite != null ? 'website' : 'unknown'
 
-  const marketing = detectMarketing(homepage || '', links)
+  const marketing = homepage
+    ? detectMarketing(homepage, links)
+    : { ...detectMarketing('', []), summary: '公式サイトを取得できず、マーケ施策は未確認' }
 
   const research: CompanyResearch = {
     companyName: gbiz?.name || companyName,
     url: targetUrl,
+    sourceStatus: {
+      homepage: homepage ? 'ok' : 'failed',
+      gbizinfo: gbizResult.status,
+      prtimes: pressResult.status,
+    },
     corporateNumber: gbiz?.corporateNumber,
     employeeCount,
     employeeCountSource,
@@ -230,7 +242,7 @@ export async function researchCompany(targetUrl: string): Promise<CompanyResearc
     services: basic?.services || undefined,
     ogImage: homepage ? extractOgImage(homepage, targetUrl) : null,
     crawledUrls: Array.from(new Set([targetUrl, ...mediaInfo.mediaUrls])).slice(0, 5),
-    pressReleases,
+    pressReleases: pressResult.items,
     marketing,
     ownedMedia: mediaInfo,
     rawNotes: homepage ? htmlToText(homepage).slice(0, 1500) : undefined,

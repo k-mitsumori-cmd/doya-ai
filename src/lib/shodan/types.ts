@@ -41,6 +41,12 @@ export function effectivePrepStatus(status: string, updatedAt: Date | string): s
 export interface CompanyResearch {
   companyName?: string
   url: string
+  // 外部ソースの取得可否。旧レコードでは未定義なので「未確認」として扱う。
+  sourceStatus?: {
+    homepage: 'ok' | 'failed'
+    gbizinfo: 'ok' | 'failed' | 'skipped'
+    prtimes: 'ok' | 'failed' | 'skipped'
+  }
   // 公的データ（gBizINFO）
   corporateNumber?: string
   employeeCount?: number | null // 実従業員数
