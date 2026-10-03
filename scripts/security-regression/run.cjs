@@ -180,6 +180,11 @@ if (kintaiDepartmentMutation.error || kintaiDepartmentMutation.status !== 0) {
   console.error('Security regression failed: verify-kintai-department-mutation-atomic.cjs');
   process.exit(1);
 }
+const kintaiWorkRuleMutation = spawnSync(process.execPath, [path.join(__dirname, 'verify-kintai-work-rule-mutation-atomic.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (kintaiWorkRuleMutation.error || kintaiWorkRuleMutation.status !== 0) {
+  console.error('Security regression failed: verify-kintai-work-rule-mutation-atomic.cjs');
+  process.exit(1);
+}
 const staticAssetUrls = spawnSync(process.execPath, [path.join(__dirname, 'verify-static-asset-urls.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (staticAssetUrls.error || staticAssetUrls.status !== 0) {
   console.error('Security regression failed: verify-static-asset-urls.cjs');
