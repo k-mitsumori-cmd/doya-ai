@@ -1,5 +1,10 @@
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
+const signInCallback = spawnSync(process.execPath, [path.join(__dirname, 'verify-signin-callback.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (signInCallback.error || signInCallback.status !== 0) {
+  console.error('Security regression failed: verify-signin-callback.cjs');
+  process.exit(1);
+}
 const organizationBilling = spawnSync(process.execPath, [path.join(__dirname, 'verify-organization-billing.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (organizationBilling.error || organizationBilling.status !== 0) {
   console.error('Security regression failed: verify-organization-billing.cjs');
