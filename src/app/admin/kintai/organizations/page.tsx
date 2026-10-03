@@ -5,14 +5,28 @@ import { useEffect, useState } from 'react'
 export default function AdminKintaiOrgsPage() {
   const [orgs, setOrgs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [expandedOrg, setExpandedOrg] = useState<string | null>(null)
 
+  async function fetchOrganizations() {
+    setLoading(true)
+    setLoadError(false)
+    setOrgs([])
+    try {
+      const response = await fetch('/api/admin/kintai/organizations', { cache: 'no-store' })
+      if (!response.ok) throw new Error('Failed to fetch organizations')
+      const data = await response.json()
+      if (!Array.isArray(data?.organizations)) throw new Error('Invalid organizations response')
+      setOrgs(data.organizations)
+    } catch {
+      setLoadError(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   useEffect(() => {
-    fetch('/api/admin/kintai/organizations')
-      .then(r => r.json())
-      .then(d => setOrgs(d.organizations || []))
-      .catch(console.error)
-      .finally(() => setLoading(false))
+    void fetchOrganizations()
   }, [])
 
   if (loading) {
@@ -29,8 +43,15 @@ export default function AdminKintaiOrgsPage() {
         <h1 className="text-2xl font-bold text-white flex items-center gap-3">
           <span className="text-3xl">🏢</span> 組織一覧
         </h1>
-        <p className="text-sm text-white/40 mt-1">全{orgs.length}組織</p>
+        {!loadError && <p className="text-sm text-white/40 mt-1">全{orgs.length}組織</p>}
       </div>
+
+      {loadError && (
+        <div role="alert" className="rounded-xl border border-red-400/30 bg-red-500/10 p-4 text-sm text-red-200">
+          組織情報を取得できませんでした。
+          <button type="button" onClick={() => void fetchOrganizations()} className="ml-2 font-bold underline">再読み込み</button>
+        </div>
+      )}
 
       <div className="space-y-4">
         {orgs.map(org => (
