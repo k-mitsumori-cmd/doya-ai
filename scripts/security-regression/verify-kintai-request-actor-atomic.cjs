@@ -14,12 +14,16 @@ function fixture(options = {}) {
   }
   let writes = 0
   let admissionLocks = 0
+  let actorQuery
   const db = {
-    $queryRaw: async () => [{
-      role: options.currentRole || context.role,
-      status: options.memberStatus || 'ACTIVE',
-      isActive: options.employeeActive !== false,
-    }],
+    $queryRaw: async (strings, ...values) => {
+      actorQuery = { sql: strings.join('?'), values }
+      return [{
+        role: options.currentRole || context.role,
+        status: options.memberStatus || 'ACTIVE',
+        isActive: options.employeeActive !== false,
+      }]
+    },
     kintaiRequest: {
       findUnique: async () => request,
       updateMany: async ({ data }) => {
@@ -55,6 +59,7 @@ function fixture(options = {}) {
     act: () => route.PATCH({ json: async () => ({ status: 'rejected' }) }, { params: Promise.resolve({ id: 'request' }) }),
     writes: () => writes,
     admissionLocks: () => admissionLocks,
+    actorQuery: () => actorQuery,
   }
 }
 
@@ -74,6 +79,9 @@ async function main() {
   const valid = fixture({ cachedRole: 'manager' })
   assert.equal((await valid.act()).status, 200)
   assert.equal(valid.writes(), 1)
+  assert.match(valid.actorQuery().sql, /e\.id = \?/)
+  assert.match(valid.actorQuery().sql, /e\."organizationId" = \?/)
+  assert.deepEqual(valid.actorQuery().values, ['member', 'org', 'user', 'actor', 'org'])
   console.log('PASS 現在も同部署の管理者')
 }
 

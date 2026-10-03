@@ -13,6 +13,8 @@ export async function lockCurrentKintaiActor(
     WHERE m.id = ${ctx.memberId}
       AND m."organizationId" = ${ctx.organizationId}
       AND m."userId" = ${ctx.userId}
+      AND e.id = ${ctx.employeeId}
+      AND e."organizationId" = ${ctx.organizationId}
     FOR UPDATE OF m, e
   `
   const actor = rows[0]
