@@ -650,6 +650,11 @@ if (hrInviteIssuance.error || hrInviteIssuance.status !== 0) {
   console.error('Security regression failed: verify-hr-invite-issuance.cjs');
   process.exit(1);
 }
+const promaneInviteDelivery = spawnSync(process.execPath, [path.join(__dirname, 'verify-promane-invite-delivery.cjs')], { stdio: 'inherit', timeout: 60000 });
+if (promaneInviteDelivery.error || promaneInviteDelivery.status !== 0) {
+  console.error('Security regression failed: verify-promane-invite-delivery.cjs');
+  process.exit(1);
+}
 const sfaLeadsPagination = spawnSync(process.execPath, [path.join(__dirname, 'verify-sfa-leads-pagination.cjs')], { stdio: 'inherit', timeout: 60000 });
 if (sfaLeadsPagination.error || sfaLeadsPagination.status !== 0) {
   console.error('Security regression failed: verify-sfa-leads-pagination.cjs');

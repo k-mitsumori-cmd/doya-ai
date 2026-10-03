@@ -53,33 +53,43 @@ export async function POST(req: NextRequest) {
     }
 
     // 招待メール送信（Resend）
-    const inviter = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } })
+    let inviter: { name: string | null; email: string | null } | null = null
+    try {
+      inviter = await prisma.user.findUnique({ where: { id: userId }, select: { name: true, email: true } })
+    } catch {
+      console.error('[promane/invite] inviter lookup failed after invitation creation')
+    }
     const roleLabel = role === 'admin' ? '管理者' : role === 'guest' ? 'ゲスト' : 'メンバー'
     const inviterName = inviter?.name || inviter?.email || '招待者'
-    const emailResult = await sendEmail({
-      to: email,
-      subject: `【ドヤプロマネ】${issued.workspaceName} へ招待されました`,
-      html: buildInviteEmailHtml({
-        workspaceName: issued.workspaceName,
-        inviterName,
-        inviterEmail: inviter?.email || '',
-        roleLabel,
-        inviteUrl,
-        expiresAt: issued.invitation.expiresAt,
-      }),
-      tags: [
-        { name: 'service', value: 'promane' },
-        { name: 'type', value: 'invitation' },
-      ],
-    })
+    let emailSent = false
+    try {
+      const emailResult = await sendEmail({
+        to: email,
+        subject: `【ドヤプロマネ】${issued.workspaceName.replace(/[\r\n]/g, ' ')} へ招待されました`,
+        html: buildInviteEmailHtml({
+          workspaceName: issued.workspaceName,
+          inviterName,
+          inviteeEmail: email,
+          roleLabel,
+          inviteUrl,
+          expiresAt: issued.invitation.expiresAt,
+        }),
+        tags: [
+          { name: 'service', value: 'promane' },
+          { name: 'type', value: 'invitation' },
+        ],
+      })
+      emailSent = emailResult.success
+    } catch {
+      console.error('[promane/invite] email delivery failed after invitation creation')
+    }
 
     return NextResponse.json({
       success: true,
       token: issued.invitation.token,
       inviteUrl,
       expiresAt: issued.invitation.expiresAt,
-      emailSent: emailResult.success,
-      emailError: emailResult.success ? undefined : emailResult.error,
+      emailSent,
     })
   } catch (e: any) {
     console.error('[promane/invite][POST]')
@@ -90,7 +100,7 @@ export async function POST(req: NextRequest) {
 function buildInviteEmailHtml(args: {
   workspaceName: string
   inviterName: string
-  inviterEmail: string
+  inviteeEmail: string
   roleLabel: string
   inviteUrl: string
   expiresAt: Date
@@ -168,7 +178,7 @@ function buildInviteEmailHtml(args: {
           <div style="background-color:#fef3c7;border:1px solid #fbbf24;border-radius:8px;padding:12px 16px;margin:24px 0 0;">
             <p style="color:#92400e;font-size:12px;line-height:1.6;margin:0;font-weight:600;">
               🔒 <strong>セキュリティのお願い</strong><br>
-              招待は <strong>${escapeHtml(args.inviterEmail || '不明')}</strong> 宛のメールアドレスでログインしないと承諾できません。<br>
+              招待は <strong>${escapeHtml(args.inviteeEmail)}</strong> 宛のメールアドレスでログインしないと承諾できません。<br>
               心当たりがない場合はこのメールを無視してください。
             </p>
           </div>
