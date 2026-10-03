@@ -240,6 +240,8 @@ Checkout → success_url = {base}{successPath}?success=true&plan=...&session_id=
                      再試行ボタンで /api/stripe/sync/latest を叩く   ← INV-10
 ```
 
+旧HR専用の `/api/hr/billing/checkout` も戻りURLに `session_id={CHECKOUT_SESSION_ID}` を付け、同じルートレイアウトの同期を通す。旧入口からの申込でもWebhookだけに依存しない。
+
 `successPath` は `checkout/route.ts` が planId のサービス名から決める（`seo`→`/seo`, `banner`→`/banner`,
 `interview`→`/interview/projects`, それ以外→`/`）。
 **このパスを変えても反映は壊れない**（ルートレイアウトに置いてあるため）。これが INV-8 の意味。

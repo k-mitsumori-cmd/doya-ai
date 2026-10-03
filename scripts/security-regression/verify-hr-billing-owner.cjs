@@ -11,13 +11,14 @@ let checkoutCalls = 0;
 let portalCalls = 0;
 let genericCheckoutCalls = 0;
 let existingSubscription = false;
+let checkoutOptions = null;
 const prisma = {
   user: { findUnique: async () => ({ id: 'u1', stripeCustomerId: 'cus_test', email: 'test@example.invalid', name: 'Test' }) },
   hrOrganizationMember: { findFirst: async () => ({ role }) },
 };
 const stripe = {
   customers: { retrieve: async () => { customerCalls++; return { id: 'cus_test' }; } },
-  checkout: { sessions: { create: async () => { checkoutCalls++; return { id: 'cs_test', url: 'https://offline.invalid/checkout' }; } } },
+  checkout: { sessions: { create: async (options) => { checkoutCalls++; checkoutOptions = options; return { id: 'cs_test', url: 'https://offline.invalid/checkout' }; } } },
   billingPortal: { sessions: { create: async () => { portalCalls++; return { url: 'https://offline.invalid/portal' }; } } },
 };
 const common = {
@@ -82,5 +83,6 @@ const generic = load('src/app/api/stripe/checkout/route.ts', {
   assert.equal(response.status, 200);
   assert.equal(checkoutCalls, 1);
   assert.equal(portalCalls, 1);
+  assert.match(checkoutOptions.success_url, /\/hr\/settings\/billing\?success=true&session_id=\{CHECKOUT_SESSION_ID\}$/);
   console.log('PASS HR billing: non-owner and mismatched identity rejected before Stripe; owner accepted');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

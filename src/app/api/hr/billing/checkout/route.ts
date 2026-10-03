@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.surisuta.jp'
+    const baseUrl = (process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'https://doya-ai.surisuta.jp').replace(/\/+$/, '')
 
     const checkoutSession = await stripe.checkout.sessions.create({
       mode: 'subscription',
@@ -127,7 +127,8 @@ export async function POST(req: NextRequest) {
       allow_promotion_codes: true,
       customer: stripeCustomerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${baseUrl}/hr/settings/billing?success=true`,
+      // 旧HR専用入口でもルートレイアウトの本人確認付き同期を必ず通す。
+      success_url: `${baseUrl}/hr/settings/billing?success=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${baseUrl}/hr/settings/billing`,
       locale: 'ja',
       subscription_data: {
